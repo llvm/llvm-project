@@ -7,7 +7,7 @@
 ; Function Attrs: nounwind ssp
 define i32 @sfu() {
 entry:
-  %bf.load = load i32, i32* getelementptr inbounds (%union.opcode, %union.opcode* @opcode, i32 0, i32 0), align 4
+  %bf.load = load i32, ptr @opcode, align 4
   %bf.lshr = lshr i32 %bf.load, 26
   %bf.clear = and i32 %bf.lshr, 7
   switch i32 %bf.clear, label %return [

@@ -15,6 +15,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include <list>
+#include <optional>
 #include <unordered_map>
 
 namespace clang {
@@ -72,9 +73,9 @@ public:
   /// same category in the code that should be sorted after \p IncludeName. If
   /// \p IncludeName already exists (with exactly the same spelling), this
   /// returns std::nullopt.
-  llvm::Optional<tooling::Replacement> insert(llvm::StringRef Header,
-                                              bool IsAngled,
-                                              IncludeDirective Directive) const;
+  std::optional<tooling::Replacement> insert(llvm::StringRef Header,
+                                             bool IsAngled,
+                                             IncludeDirective Directive) const;
 
   /// Removes all existing #includes and #imports of \p Header quoted with <> if
   /// \p IsAngled is true or "" if \p IsAngled is false.

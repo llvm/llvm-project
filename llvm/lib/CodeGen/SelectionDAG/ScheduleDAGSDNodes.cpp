@@ -192,7 +192,7 @@ static void RemoveUnusedGlue(SDNode *N, SelectionDAG *DAG) {
          "expected an unused glue value");
 
   CloneNodeWithValues(N, DAG,
-                      makeArrayRef(N->value_begin(), N->getNumValues() - 1));
+                      ArrayRef(N->value_begin(), N->getNumValues() - 1));
 }
 
 /// ClusterNeighboringLoads - Force nearby loads together by "gluing" them.
@@ -464,7 +464,7 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
     // Find all predecessors and successors of the group.
     for (SDNode *N = SU.getNode(); N; N = N->getGluedNode()) {
       if (N->isMachineOpcode() &&
-          TII->get(N->getMachineOpcode()).getImplicitDefs()) {
+          !TII->get(N->getMachineOpcode()).implicit_defs().empty()) {
         SU.hasPhysRegClobbers = true;
         unsigned NumUsed = InstrEmitter::CountResults(N);
         while (NumUsed != 0 && !N->hasAnyUseOfValue(NumUsed - 1))
@@ -848,8 +848,7 @@ EmitPhysRegCopy(SUnit *SU, DenseMap<SUnit*, Register> &VRBaseMap,
 /// not necessarily refer to returned BB. The emitter may split blocks.
 MachineBasicBlock *ScheduleDAGSDNodes::
 EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
-  InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos,
-                       DAG->getUseInstrRefDebugInfo());
+  InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos);
   DenseMap<SDValue, Register> VRBaseMap;
   DenseMap<SUnit*, Register> CopyVRBaseMap;
   SmallVector<std::pair<unsigned, MachineInstr*>, 32> Orders;

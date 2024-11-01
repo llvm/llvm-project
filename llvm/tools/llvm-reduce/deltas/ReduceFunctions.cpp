@@ -25,14 +25,16 @@ using namespace llvm;
 
 /// Removes all the Defined Functions
 /// that aren't inside any of the desired Chunks.
-static void extractFunctionsFromModule(Oracle &O, Module &Program) {
+static void extractFunctionsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  Module &Program = WorkItem.getModule();
+
   // Record all out-of-chunk functions.
   SmallPtrSet<Constant *, 8> FuncsToRemove;
   for (Function &F : Program.functions()) {
     // Intrinsics don't have function bodies that are useful to
     // reduce. Additionally, intrinsics may have additional operand
     // constraints. But, do drop intrinsics that are not referenced.
-    if ((!F.isIntrinsic() || F.use_empty()) && !hasAliasUse(F) &&
+    if ((!F.isIntrinsic() || F.use_empty()) && !hasAliasOrBlockAddressUse(F) &&
         !O.shouldKeep())
       FuncsToRemove.insert(&F);
   }

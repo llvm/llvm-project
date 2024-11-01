@@ -19,7 +19,7 @@
 
 ; Check that kernel launch is generated in host IR.
 ; the declare would not be generated unless a call to a kernel exists.
-; HOST-IR: declare void @polly_launchKernel(i8*, i32, i32, i32, i32, i32, i8*)
+; HOST-IR: declare void @polly_launchKernel(ptr, i32, i32, i32, i32, i32, ptr)
 ; ModuleID = 'test/GPGPU/bounds-construction-with-ignore-param-bounds.ll'
 
 ; C pseudocode
@@ -34,15 +34,15 @@ target datalayout = "e-p:64:64:64-S128-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind uwtable
-define void @f(i32 *%arr, i64 %niters, i64 %stride) unnamed_addr #1 {
+define void @f(ptr %arr, i64 %niters, i64 %stride) unnamed_addr #1 {
 entry:
   br label %loop
 
 loop:                                             ; preds = %loop, %entry
   %indvar = phi i64 [ 0, %entry ], [ %indvar.next, %loop ]
   %idx = mul nuw nsw i64 %indvar, %stride
-  %slot = getelementptr i32, i32* %arr, i64 %idx
-  store i32 1, i32* %slot, align 4
+  %slot = getelementptr i32, ptr %arr, i64 %idx
+  store i32 1, ptr %slot, align 4
   %indvar.next = add nuw nsw i64 %indvar, 1
   %check = icmp sgt i64 %indvar.next, %niters
   br i1 %check, label %exit, label %loop

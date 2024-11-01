@@ -17,10 +17,11 @@ define <2 x i1> @reverse_v2i1(<2 x i1> %a) {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vmv.x.s a0, v9
-; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1
+; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vfirst.m a1, v0
+; CHECK-NEXT:    seqz a1, a1
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
@@ -40,9 +41,7 @@ define <4 x i1> @reverse_v4i1(<4 x i1> %a) {
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    addi a0, sp, 15
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
-; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
 ; CHECK-NEXT:    addi a0, sp, 14
 ; CHECK-NEXT:    vse8.v v9, (a0)
@@ -53,6 +52,9 @@ define <4 x i1> @reverse_v4i1(<4 x i1> %a) {
 ; CHECK-NEXT:    addi a0, sp, 12
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vfirst.m a1, v0
+; CHECK-NEXT:    seqz a1, a1
+; CHECK-NEXT:    sb a1, 15(sp)
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -67,10 +69,11 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; RV32-BITS-UNKNOWN:       # %bb.0:
 ; RV32-BITS-UNKNOWN-NEXT:    addi sp, sp, -16
 ; RV32-BITS-UNKNOWN-NEXT:    .cfi_def_cfa_offset 16
-; RV32-BITS-UNKNOWN-NEXT:    vsetivli zero, 0, e8, mf8, ta, ma
+; RV32-BITS-UNKNOWN-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32-BITS-UNKNOWN-NEXT:    vfirst.m a0, v0
+; RV32-BITS-UNKNOWN-NEXT:    seqz a0, a0
+; RV32-BITS-UNKNOWN-NEXT:    sb a0, 15(sp)
 ; RV32-BITS-UNKNOWN-NEXT:    vmv.x.s a0, v0
-; RV32-BITS-UNKNOWN-NEXT:    andi a1, a0, 1
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 15(sp)
 ; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 30
 ; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
 ; RV32-BITS-UNKNOWN-NEXT:    sb a1, 14(sp)
@@ -93,7 +96,6 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; RV32-BITS-UNKNOWN-NEXT:    srli a0, a0, 31
 ; RV32-BITS-UNKNOWN-NEXT:    sb a0, 8(sp)
 ; RV32-BITS-UNKNOWN-NEXT:    addi a0, sp, 8
-; RV32-BITS-UNKNOWN-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV32-BITS-UNKNOWN-NEXT:    vle8.v v8, (a0)
 ; RV32-BITS-UNKNOWN-NEXT:    vand.vi v8, v8, 1
 ; RV32-BITS-UNKNOWN-NEXT:    vmsne.vi v0, v8, 0
@@ -104,10 +106,11 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; RV32-BITS-256:       # %bb.0:
 ; RV32-BITS-256-NEXT:    addi sp, sp, -16
 ; RV32-BITS-256-NEXT:    .cfi_def_cfa_offset 16
-; RV32-BITS-256-NEXT:    vsetivli zero, 0, e8, mf8, ta, ma
+; RV32-BITS-256-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32-BITS-256-NEXT:    vfirst.m a0, v0
+; RV32-BITS-256-NEXT:    seqz a0, a0
+; RV32-BITS-256-NEXT:    sb a0, 15(sp)
 ; RV32-BITS-256-NEXT:    vmv.x.s a0, v0
-; RV32-BITS-256-NEXT:    andi a1, a0, 1
-; RV32-BITS-256-NEXT:    sb a1, 15(sp)
 ; RV32-BITS-256-NEXT:    slli a1, a0, 30
 ; RV32-BITS-256-NEXT:    srli a1, a1, 31
 ; RV32-BITS-256-NEXT:    sb a1, 14(sp)
@@ -130,7 +133,6 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; RV32-BITS-256-NEXT:    srli a0, a0, 31
 ; RV32-BITS-256-NEXT:    sb a0, 8(sp)
 ; RV32-BITS-256-NEXT:    addi a0, sp, 8
-; RV32-BITS-256-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV32-BITS-256-NEXT:    vle8.v v8, (a0)
 ; RV32-BITS-256-NEXT:    vand.vi v8, v8, 1
 ; RV32-BITS-256-NEXT:    vmsne.vi v0, v8, 0
@@ -141,10 +143,11 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; RV32-BITS-512:       # %bb.0:
 ; RV32-BITS-512-NEXT:    addi sp, sp, -16
 ; RV32-BITS-512-NEXT:    .cfi_def_cfa_offset 16
-; RV32-BITS-512-NEXT:    vsetivli zero, 0, e8, mf8, ta, ma
+; RV32-BITS-512-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32-BITS-512-NEXT:    vfirst.m a0, v0
+; RV32-BITS-512-NEXT:    seqz a0, a0
+; RV32-BITS-512-NEXT:    sb a0, 15(sp)
 ; RV32-BITS-512-NEXT:    vmv.x.s a0, v0
-; RV32-BITS-512-NEXT:    andi a1, a0, 1
-; RV32-BITS-512-NEXT:    sb a1, 15(sp)
 ; RV32-BITS-512-NEXT:    slli a1, a0, 30
 ; RV32-BITS-512-NEXT:    srli a1, a1, 31
 ; RV32-BITS-512-NEXT:    sb a1, 14(sp)
@@ -167,7 +170,6 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; RV32-BITS-512-NEXT:    srli a0, a0, 31
 ; RV32-BITS-512-NEXT:    sb a0, 8(sp)
 ; RV32-BITS-512-NEXT:    addi a0, sp, 8
-; RV32-BITS-512-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV32-BITS-512-NEXT:    vle8.v v8, (a0)
 ; RV32-BITS-512-NEXT:    vand.vi v8, v8, 1
 ; RV32-BITS-512-NEXT:    vmsne.vi v0, v8, 0
@@ -178,10 +180,11 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; RV64-BITS-UNKNOWN:       # %bb.0:
 ; RV64-BITS-UNKNOWN-NEXT:    addi sp, sp, -16
 ; RV64-BITS-UNKNOWN-NEXT:    .cfi_def_cfa_offset 16
-; RV64-BITS-UNKNOWN-NEXT:    vsetivli zero, 0, e8, mf8, ta, ma
+; RV64-BITS-UNKNOWN-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV64-BITS-UNKNOWN-NEXT:    vfirst.m a0, v0
+; RV64-BITS-UNKNOWN-NEXT:    seqz a0, a0
+; RV64-BITS-UNKNOWN-NEXT:    sb a0, 15(sp)
 ; RV64-BITS-UNKNOWN-NEXT:    vmv.x.s a0, v0
-; RV64-BITS-UNKNOWN-NEXT:    andi a1, a0, 1
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 15(sp)
 ; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 62
 ; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
 ; RV64-BITS-UNKNOWN-NEXT:    sb a1, 14(sp)
@@ -204,7 +207,6 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; RV64-BITS-UNKNOWN-NEXT:    srli a0, a0, 63
 ; RV64-BITS-UNKNOWN-NEXT:    sb a0, 8(sp)
 ; RV64-BITS-UNKNOWN-NEXT:    addi a0, sp, 8
-; RV64-BITS-UNKNOWN-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV64-BITS-UNKNOWN-NEXT:    vle8.v v8, (a0)
 ; RV64-BITS-UNKNOWN-NEXT:    vand.vi v8, v8, 1
 ; RV64-BITS-UNKNOWN-NEXT:    vmsne.vi v0, v8, 0
@@ -215,10 +217,11 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; RV64-BITS-256:       # %bb.0:
 ; RV64-BITS-256-NEXT:    addi sp, sp, -16
 ; RV64-BITS-256-NEXT:    .cfi_def_cfa_offset 16
-; RV64-BITS-256-NEXT:    vsetivli zero, 0, e8, mf8, ta, ma
+; RV64-BITS-256-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV64-BITS-256-NEXT:    vfirst.m a0, v0
+; RV64-BITS-256-NEXT:    seqz a0, a0
+; RV64-BITS-256-NEXT:    sb a0, 15(sp)
 ; RV64-BITS-256-NEXT:    vmv.x.s a0, v0
-; RV64-BITS-256-NEXT:    andi a1, a0, 1
-; RV64-BITS-256-NEXT:    sb a1, 15(sp)
 ; RV64-BITS-256-NEXT:    slli a1, a0, 62
 ; RV64-BITS-256-NEXT:    srli a1, a1, 63
 ; RV64-BITS-256-NEXT:    sb a1, 14(sp)
@@ -241,7 +244,6 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; RV64-BITS-256-NEXT:    srli a0, a0, 63
 ; RV64-BITS-256-NEXT:    sb a0, 8(sp)
 ; RV64-BITS-256-NEXT:    addi a0, sp, 8
-; RV64-BITS-256-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV64-BITS-256-NEXT:    vle8.v v8, (a0)
 ; RV64-BITS-256-NEXT:    vand.vi v8, v8, 1
 ; RV64-BITS-256-NEXT:    vmsne.vi v0, v8, 0
@@ -252,10 +254,11 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; RV64-BITS-512:       # %bb.0:
 ; RV64-BITS-512-NEXT:    addi sp, sp, -16
 ; RV64-BITS-512-NEXT:    .cfi_def_cfa_offset 16
-; RV64-BITS-512-NEXT:    vsetivli zero, 0, e8, mf8, ta, ma
+; RV64-BITS-512-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV64-BITS-512-NEXT:    vfirst.m a0, v0
+; RV64-BITS-512-NEXT:    seqz a0, a0
+; RV64-BITS-512-NEXT:    sb a0, 15(sp)
 ; RV64-BITS-512-NEXT:    vmv.x.s a0, v0
-; RV64-BITS-512-NEXT:    andi a1, a0, 1
-; RV64-BITS-512-NEXT:    sb a1, 15(sp)
 ; RV64-BITS-512-NEXT:    slli a1, a0, 62
 ; RV64-BITS-512-NEXT:    srli a1, a1, 63
 ; RV64-BITS-512-NEXT:    sb a1, 14(sp)
@@ -278,7 +281,6 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; RV64-BITS-512-NEXT:    srli a0, a0, 63
 ; RV64-BITS-512-NEXT:    sb a0, 8(sp)
 ; RV64-BITS-512-NEXT:    addi a0, sp, 8
-; RV64-BITS-512-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV64-BITS-512-NEXT:    vle8.v v8, (a0)
 ; RV64-BITS-512-NEXT:    vand.vi v8, v8, 1
 ; RV64-BITS-512-NEXT:    vmsne.vi v0, v8, 0
@@ -293,10 +295,12 @@ define <16 x i1> @reverse_v16i1(<16 x i1> %a) {
 ; RV32-BITS-UNKNOWN:       # %bb.0:
 ; RV32-BITS-UNKNOWN-NEXT:    addi sp, sp, -16
 ; RV32-BITS-UNKNOWN-NEXT:    .cfi_def_cfa_offset 16
+; RV32-BITS-UNKNOWN-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; RV32-BITS-UNKNOWN-NEXT:    vfirst.m a0, v0
+; RV32-BITS-UNKNOWN-NEXT:    seqz a0, a0
+; RV32-BITS-UNKNOWN-NEXT:    sb a0, 15(sp)
 ; RV32-BITS-UNKNOWN-NEXT:    vsetivli zero, 0, e16, mf4, ta, ma
 ; RV32-BITS-UNKNOWN-NEXT:    vmv.x.s a0, v0
-; RV32-BITS-UNKNOWN-NEXT:    andi a1, a0, 1
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 15(sp)
 ; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 30
 ; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
 ; RV32-BITS-UNKNOWN-NEXT:    sb a1, 14(sp)
@@ -354,10 +358,12 @@ define <16 x i1> @reverse_v16i1(<16 x i1> %a) {
 ; RV32-BITS-256:       # %bb.0:
 ; RV32-BITS-256-NEXT:    addi sp, sp, -16
 ; RV32-BITS-256-NEXT:    .cfi_def_cfa_offset 16
+; RV32-BITS-256-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; RV32-BITS-256-NEXT:    vfirst.m a0, v0
+; RV32-BITS-256-NEXT:    seqz a0, a0
+; RV32-BITS-256-NEXT:    sb a0, 15(sp)
 ; RV32-BITS-256-NEXT:    vsetivli zero, 0, e16, mf4, ta, ma
 ; RV32-BITS-256-NEXT:    vmv.x.s a0, v0
-; RV32-BITS-256-NEXT:    andi a1, a0, 1
-; RV32-BITS-256-NEXT:    sb a1, 15(sp)
 ; RV32-BITS-256-NEXT:    slli a1, a0, 30
 ; RV32-BITS-256-NEXT:    srli a1, a1, 31
 ; RV32-BITS-256-NEXT:    sb a1, 14(sp)
@@ -415,10 +421,12 @@ define <16 x i1> @reverse_v16i1(<16 x i1> %a) {
 ; RV32-BITS-512:       # %bb.0:
 ; RV32-BITS-512-NEXT:    addi sp, sp, -16
 ; RV32-BITS-512-NEXT:    .cfi_def_cfa_offset 16
+; RV32-BITS-512-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; RV32-BITS-512-NEXT:    vfirst.m a0, v0
+; RV32-BITS-512-NEXT:    seqz a0, a0
+; RV32-BITS-512-NEXT:    sb a0, 15(sp)
 ; RV32-BITS-512-NEXT:    vsetivli zero, 0, e16, mf4, ta, ma
 ; RV32-BITS-512-NEXT:    vmv.x.s a0, v0
-; RV32-BITS-512-NEXT:    andi a1, a0, 1
-; RV32-BITS-512-NEXT:    sb a1, 15(sp)
 ; RV32-BITS-512-NEXT:    slli a1, a0, 30
 ; RV32-BITS-512-NEXT:    srli a1, a1, 31
 ; RV32-BITS-512-NEXT:    sb a1, 14(sp)
@@ -476,10 +484,12 @@ define <16 x i1> @reverse_v16i1(<16 x i1> %a) {
 ; RV64-BITS-UNKNOWN:       # %bb.0:
 ; RV64-BITS-UNKNOWN-NEXT:    addi sp, sp, -16
 ; RV64-BITS-UNKNOWN-NEXT:    .cfi_def_cfa_offset 16
+; RV64-BITS-UNKNOWN-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; RV64-BITS-UNKNOWN-NEXT:    vfirst.m a0, v0
+; RV64-BITS-UNKNOWN-NEXT:    seqz a0, a0
+; RV64-BITS-UNKNOWN-NEXT:    sb a0, 15(sp)
 ; RV64-BITS-UNKNOWN-NEXT:    vsetivli zero, 0, e16, mf4, ta, ma
 ; RV64-BITS-UNKNOWN-NEXT:    vmv.x.s a0, v0
-; RV64-BITS-UNKNOWN-NEXT:    andi a1, a0, 1
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 15(sp)
 ; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 62
 ; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
 ; RV64-BITS-UNKNOWN-NEXT:    sb a1, 14(sp)
@@ -537,10 +547,12 @@ define <16 x i1> @reverse_v16i1(<16 x i1> %a) {
 ; RV64-BITS-256:       # %bb.0:
 ; RV64-BITS-256-NEXT:    addi sp, sp, -16
 ; RV64-BITS-256-NEXT:    .cfi_def_cfa_offset 16
+; RV64-BITS-256-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; RV64-BITS-256-NEXT:    vfirst.m a0, v0
+; RV64-BITS-256-NEXT:    seqz a0, a0
+; RV64-BITS-256-NEXT:    sb a0, 15(sp)
 ; RV64-BITS-256-NEXT:    vsetivli zero, 0, e16, mf4, ta, ma
 ; RV64-BITS-256-NEXT:    vmv.x.s a0, v0
-; RV64-BITS-256-NEXT:    andi a1, a0, 1
-; RV64-BITS-256-NEXT:    sb a1, 15(sp)
 ; RV64-BITS-256-NEXT:    slli a1, a0, 62
 ; RV64-BITS-256-NEXT:    srli a1, a1, 63
 ; RV64-BITS-256-NEXT:    sb a1, 14(sp)
@@ -598,10 +610,12 @@ define <16 x i1> @reverse_v16i1(<16 x i1> %a) {
 ; RV64-BITS-512:       # %bb.0:
 ; RV64-BITS-512-NEXT:    addi sp, sp, -16
 ; RV64-BITS-512-NEXT:    .cfi_def_cfa_offset 16
+; RV64-BITS-512-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; RV64-BITS-512-NEXT:    vfirst.m a0, v0
+; RV64-BITS-512-NEXT:    seqz a0, a0
+; RV64-BITS-512-NEXT:    sb a0, 15(sp)
 ; RV64-BITS-512-NEXT:    vsetivli zero, 0, e16, mf4, ta, ma
 ; RV64-BITS-512-NEXT:    vmv.x.s a0, v0
-; RV64-BITS-512-NEXT:    andi a1, a0, 1
-; RV64-BITS-512-NEXT:    sb a1, 15(sp)
 ; RV64-BITS-512-NEXT:    slli a1, a0, 62
 ; RV64-BITS-512-NEXT:    srli a1, a1, 63
 ; RV64-BITS-512-NEXT:    sb a1, 14(sp)
@@ -670,103 +684,105 @@ define <32 x i1> @reverse_v32i1(<32 x i1> %a) {
 ; RV32-BITS-UNKNOWN-NEXT:    addi s0, sp, 64
 ; RV32-BITS-UNKNOWN-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-BITS-UNKNOWN-NEXT:    andi sp, sp, -32
-; RV32-BITS-UNKNOWN-NEXT:    vsetivli zero, 0, e32, mf2, ta, ma
-; RV32-BITS-UNKNOWN-NEXT:    vmv.x.s a0, v0
-; RV32-BITS-UNKNOWN-NEXT:    andi a1, a0, 1
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 31(sp)
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a0, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 0(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 30
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 30(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 29
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 29(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 28
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 28(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 27
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 27(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 26
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 26(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 25
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 25(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 24
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 24(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 23
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 23(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 22
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 22(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 21
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 21(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 20
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 20(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 19
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 19(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 18
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 18(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 17
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 17(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 16
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 16(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 15
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 15(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 14
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 14(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 13
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 13(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 12
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 12(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 11
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 11(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 10
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 10(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 9
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 9(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 8
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 8(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 7
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 7(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 6
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 6(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 5
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 5(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 4
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 4(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 3
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 3(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 2
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 2(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a0, a0, 1
-; RV32-BITS-UNKNOWN-NEXT:    srli a0, a0, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a0, 1(sp)
 ; RV32-BITS-UNKNOWN-NEXT:    li a0, 32
+; RV32-BITS-UNKNOWN-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; RV32-BITS-UNKNOWN-NEXT:    vfirst.m a1, v0
+; RV32-BITS-UNKNOWN-NEXT:    seqz a1, a1
+; RV32-BITS-UNKNOWN-NEXT:    sb a1, 31(sp)
+; RV32-BITS-UNKNOWN-NEXT:    vsetivli zero, 0, e32, mf2, ta, ma
+; RV32-BITS-UNKNOWN-NEXT:    vmv.x.s a1, v0
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a1, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 0(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 30
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 30(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 29
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 29(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 28
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 28(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 27
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 27(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 26
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 26(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 25
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 25(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 24
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 24(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 23
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 23(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 22
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 22(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 21
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 21(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 20
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 20(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 19
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 19(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 18
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 18(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 17
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 17(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 16
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 16(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 15
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 15(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 14
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 14(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 13
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 13(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 12
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 12(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 11
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 11(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 10
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 10(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 9
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 9(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 8
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 8(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 7
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 7(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 6
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 6(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 5
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 5(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 4
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 4(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 3
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 3(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 2
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 2(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a1, a1, 1
+; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a1, 1(sp)
 ; RV32-BITS-UNKNOWN-NEXT:    mv a1, sp
 ; RV32-BITS-UNKNOWN-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; RV32-BITS-UNKNOWN-NEXT:    vle8.v v8, (a1)
@@ -789,103 +805,105 @@ define <32 x i1> @reverse_v32i1(<32 x i1> %a) {
 ; RV32-BITS-256-NEXT:    addi s0, sp, 64
 ; RV32-BITS-256-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-BITS-256-NEXT:    andi sp, sp, -32
-; RV32-BITS-256-NEXT:    vsetivli zero, 0, e32, mf2, ta, ma
-; RV32-BITS-256-NEXT:    vmv.x.s a0, v0
-; RV32-BITS-256-NEXT:    andi a1, a0, 1
-; RV32-BITS-256-NEXT:    sb a1, 31(sp)
-; RV32-BITS-256-NEXT:    srli a1, a0, 31
-; RV32-BITS-256-NEXT:    sb a1, 0(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 30
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 30(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 29
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 29(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 28
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 28(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 27
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 27(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 26
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 26(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 25
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 25(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 24
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 24(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 23
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 23(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 22
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 22(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 21
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 21(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 20
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 20(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 19
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 19(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 18
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 18(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 17
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 17(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 16
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 16(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 15
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 15(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 14
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 14(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 13
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 13(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 12
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 12(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 11
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 11(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 10
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 10(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 9
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 9(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 8
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 8(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 7
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 7(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 6
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 6(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 5
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 5(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 4
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 4(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 3
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 3(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 2
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 2(sp)
-; RV32-BITS-256-NEXT:    slli a0, a0, 1
-; RV32-BITS-256-NEXT:    srli a0, a0, 31
-; RV32-BITS-256-NEXT:    sb a0, 1(sp)
 ; RV32-BITS-256-NEXT:    li a0, 32
+; RV32-BITS-256-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; RV32-BITS-256-NEXT:    vfirst.m a1, v0
+; RV32-BITS-256-NEXT:    seqz a1, a1
+; RV32-BITS-256-NEXT:    sb a1, 31(sp)
+; RV32-BITS-256-NEXT:    vsetivli zero, 0, e32, mf2, ta, ma
+; RV32-BITS-256-NEXT:    vmv.x.s a1, v0
+; RV32-BITS-256-NEXT:    srli a2, a1, 31
+; RV32-BITS-256-NEXT:    sb a2, 0(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 30
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 30(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 29
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 29(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 28
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 28(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 27
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 27(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 26
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 26(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 25
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 25(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 24
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 24(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 23
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 23(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 22
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 22(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 21
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 21(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 20
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 20(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 19
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 19(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 18
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 18(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 17
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 17(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 16
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 16(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 15
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 15(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 14
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 14(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 13
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 13(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 12
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 12(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 11
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 11(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 10
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 10(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 9
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 9(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 8
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 8(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 7
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 7(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 6
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 6(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 5
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 5(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 4
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 4(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 3
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 3(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 2
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 2(sp)
+; RV32-BITS-256-NEXT:    slli a1, a1, 1
+; RV32-BITS-256-NEXT:    srli a1, a1, 31
+; RV32-BITS-256-NEXT:    sb a1, 1(sp)
 ; RV32-BITS-256-NEXT:    mv a1, sp
 ; RV32-BITS-256-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; RV32-BITS-256-NEXT:    vle8.v v8, (a1)
@@ -908,103 +926,105 @@ define <32 x i1> @reverse_v32i1(<32 x i1> %a) {
 ; RV32-BITS-512-NEXT:    addi s0, sp, 64
 ; RV32-BITS-512-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-BITS-512-NEXT:    andi sp, sp, -32
-; RV32-BITS-512-NEXT:    vsetivli zero, 0, e32, mf2, ta, ma
-; RV32-BITS-512-NEXT:    vmv.x.s a0, v0
-; RV32-BITS-512-NEXT:    andi a1, a0, 1
-; RV32-BITS-512-NEXT:    sb a1, 31(sp)
-; RV32-BITS-512-NEXT:    srli a1, a0, 31
-; RV32-BITS-512-NEXT:    sb a1, 0(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 30
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 30(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 29
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 29(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 28
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 28(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 27
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 27(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 26
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 26(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 25
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 25(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 24
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 24(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 23
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 23(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 22
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 22(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 21
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 21(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 20
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 20(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 19
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 19(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 18
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 18(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 17
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 17(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 16
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 16(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 15
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 15(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 14
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 14(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 13
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 13(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 12
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 12(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 11
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 11(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 10
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 10(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 9
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 9(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 8
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 8(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 7
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 7(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 6
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 6(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 5
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 5(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 4
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 4(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 3
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 3(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 2
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 2(sp)
-; RV32-BITS-512-NEXT:    slli a0, a0, 1
-; RV32-BITS-512-NEXT:    srli a0, a0, 31
-; RV32-BITS-512-NEXT:    sb a0, 1(sp)
 ; RV32-BITS-512-NEXT:    li a0, 32
+; RV32-BITS-512-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; RV32-BITS-512-NEXT:    vfirst.m a1, v0
+; RV32-BITS-512-NEXT:    seqz a1, a1
+; RV32-BITS-512-NEXT:    sb a1, 31(sp)
+; RV32-BITS-512-NEXT:    vsetivli zero, 0, e32, mf2, ta, ma
+; RV32-BITS-512-NEXT:    vmv.x.s a1, v0
+; RV32-BITS-512-NEXT:    srli a2, a1, 31
+; RV32-BITS-512-NEXT:    sb a2, 0(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 30
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 30(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 29
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 29(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 28
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 28(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 27
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 27(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 26
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 26(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 25
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 25(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 24
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 24(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 23
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 23(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 22
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 22(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 21
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 21(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 20
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 20(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 19
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 19(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 18
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 18(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 17
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 17(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 16
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 16(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 15
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 15(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 14
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 14(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 13
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 13(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 12
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 12(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 11
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 11(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 10
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 10(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 9
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 9(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 8
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 8(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 7
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 7(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 6
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 6(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 5
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 5(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 4
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 4(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 3
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 3(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 2
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 2(sp)
+; RV32-BITS-512-NEXT:    slli a1, a1, 1
+; RV32-BITS-512-NEXT:    srli a1, a1, 31
+; RV32-BITS-512-NEXT:    sb a1, 1(sp)
 ; RV32-BITS-512-NEXT:    mv a1, sp
 ; RV32-BITS-512-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; RV32-BITS-512-NEXT:    vle8.v v8, (a1)
@@ -1027,103 +1047,105 @@ define <32 x i1> @reverse_v32i1(<32 x i1> %a) {
 ; RV64-BITS-UNKNOWN-NEXT:    addi s0, sp, 64
 ; RV64-BITS-UNKNOWN-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-BITS-UNKNOWN-NEXT:    andi sp, sp, -32
-; RV64-BITS-UNKNOWN-NEXT:    vsetivli zero, 0, e32, mf2, ta, ma
-; RV64-BITS-UNKNOWN-NEXT:    vmv.x.s a0, v0
-; RV64-BITS-UNKNOWN-NEXT:    andi a1, a0, 1
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 31(sp)
-; RV64-BITS-UNKNOWN-NEXT:    srliw a1, a0, 31
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 0(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 62
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 30(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 61
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 29(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 60
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 28(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 59
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 27(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 58
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 26(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 57
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 25(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 56
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 24(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 55
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 23(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 54
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 22(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 53
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 21(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 52
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 20(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 51
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 19(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 50
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 18(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 49
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 17(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 48
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 16(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 47
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 15(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 46
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 14(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 45
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 13(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 44
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 12(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 43
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 11(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 42
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 10(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 41
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 9(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 40
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 8(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 39
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 7(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 38
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 6(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 37
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 5(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 36
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 4(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 35
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 3(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 34
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 2(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a0, a0, 33
-; RV64-BITS-UNKNOWN-NEXT:    srli a0, a0, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a0, 1(sp)
 ; RV64-BITS-UNKNOWN-NEXT:    li a0, 32
+; RV64-BITS-UNKNOWN-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; RV64-BITS-UNKNOWN-NEXT:    vfirst.m a1, v0
+; RV64-BITS-UNKNOWN-NEXT:    seqz a1, a1
+; RV64-BITS-UNKNOWN-NEXT:    sb a1, 31(sp)
+; RV64-BITS-UNKNOWN-NEXT:    vsetivli zero, 0, e32, mf2, ta, ma
+; RV64-BITS-UNKNOWN-NEXT:    vmv.x.s a1, v0
+; RV64-BITS-UNKNOWN-NEXT:    srliw a2, a1, 31
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 0(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 62
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 30(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 61
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 29(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 60
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 28(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 59
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 27(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 58
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 26(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 57
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 25(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 56
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 24(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 55
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 23(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 54
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 22(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 53
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 21(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 52
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 20(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 51
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 19(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 50
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 18(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 49
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 17(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 48
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 16(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 47
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 15(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 46
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 14(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 45
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 13(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 44
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 12(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 43
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 11(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 42
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 10(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 41
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 9(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 40
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 8(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 39
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 7(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 38
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 6(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 37
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 5(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 36
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 4(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 35
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 3(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 34
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 2(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a1, a1, 33
+; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a1, 1(sp)
 ; RV64-BITS-UNKNOWN-NEXT:    mv a1, sp
 ; RV64-BITS-UNKNOWN-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; RV64-BITS-UNKNOWN-NEXT:    vle8.v v8, (a1)
@@ -1146,103 +1168,105 @@ define <32 x i1> @reverse_v32i1(<32 x i1> %a) {
 ; RV64-BITS-256-NEXT:    addi s0, sp, 64
 ; RV64-BITS-256-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-BITS-256-NEXT:    andi sp, sp, -32
-; RV64-BITS-256-NEXT:    vsetivli zero, 0, e32, mf2, ta, ma
-; RV64-BITS-256-NEXT:    vmv.x.s a0, v0
-; RV64-BITS-256-NEXT:    andi a1, a0, 1
-; RV64-BITS-256-NEXT:    sb a1, 31(sp)
-; RV64-BITS-256-NEXT:    srliw a1, a0, 31
-; RV64-BITS-256-NEXT:    sb a1, 0(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 62
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 30(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 61
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 29(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 60
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 28(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 59
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 27(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 58
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 26(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 57
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 25(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 56
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 24(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 55
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 23(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 54
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 22(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 53
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 21(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 52
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 20(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 51
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 19(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 50
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 18(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 49
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 17(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 48
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 16(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 47
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 15(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 46
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 14(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 45
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 13(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 44
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 12(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 43
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 11(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 42
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 10(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 41
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 9(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 40
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 8(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 39
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 7(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 38
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 6(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 37
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 5(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 36
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 4(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 35
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 3(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 34
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 2(sp)
-; RV64-BITS-256-NEXT:    slli a0, a0, 33
-; RV64-BITS-256-NEXT:    srli a0, a0, 63
-; RV64-BITS-256-NEXT:    sb a0, 1(sp)
 ; RV64-BITS-256-NEXT:    li a0, 32
+; RV64-BITS-256-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; RV64-BITS-256-NEXT:    vfirst.m a1, v0
+; RV64-BITS-256-NEXT:    seqz a1, a1
+; RV64-BITS-256-NEXT:    sb a1, 31(sp)
+; RV64-BITS-256-NEXT:    vsetivli zero, 0, e32, mf2, ta, ma
+; RV64-BITS-256-NEXT:    vmv.x.s a1, v0
+; RV64-BITS-256-NEXT:    srliw a2, a1, 31
+; RV64-BITS-256-NEXT:    sb a2, 0(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 62
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 30(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 61
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 29(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 60
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 28(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 59
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 27(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 58
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 26(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 57
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 25(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 56
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 24(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 55
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 23(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 54
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 22(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 53
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 21(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 52
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 20(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 51
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 19(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 50
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 18(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 49
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 17(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 48
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 16(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 47
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 15(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 46
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 14(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 45
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 13(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 44
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 12(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 43
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 11(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 42
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 10(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 41
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 9(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 40
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 8(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 39
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 7(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 38
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 6(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 37
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 5(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 36
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 4(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 35
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 3(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 34
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 2(sp)
+; RV64-BITS-256-NEXT:    slli a1, a1, 33
+; RV64-BITS-256-NEXT:    srli a1, a1, 63
+; RV64-BITS-256-NEXT:    sb a1, 1(sp)
 ; RV64-BITS-256-NEXT:    mv a1, sp
 ; RV64-BITS-256-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; RV64-BITS-256-NEXT:    vle8.v v8, (a1)
@@ -1265,103 +1289,105 @@ define <32 x i1> @reverse_v32i1(<32 x i1> %a) {
 ; RV64-BITS-512-NEXT:    addi s0, sp, 64
 ; RV64-BITS-512-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-BITS-512-NEXT:    andi sp, sp, -32
-; RV64-BITS-512-NEXT:    vsetivli zero, 0, e32, mf2, ta, ma
-; RV64-BITS-512-NEXT:    vmv.x.s a0, v0
-; RV64-BITS-512-NEXT:    andi a1, a0, 1
-; RV64-BITS-512-NEXT:    sb a1, 31(sp)
-; RV64-BITS-512-NEXT:    srliw a1, a0, 31
-; RV64-BITS-512-NEXT:    sb a1, 0(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 62
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 30(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 61
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 29(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 60
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 28(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 59
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 27(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 58
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 26(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 57
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 25(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 56
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 24(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 55
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 23(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 54
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 22(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 53
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 21(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 52
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 20(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 51
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 19(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 50
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 18(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 49
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 17(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 48
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 16(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 47
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 15(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 46
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 14(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 45
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 13(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 44
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 12(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 43
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 11(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 42
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 10(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 41
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 9(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 40
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 8(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 39
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 7(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 38
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 6(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 37
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 5(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 36
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 4(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 35
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 3(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 34
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 2(sp)
-; RV64-BITS-512-NEXT:    slli a0, a0, 33
-; RV64-BITS-512-NEXT:    srli a0, a0, 63
-; RV64-BITS-512-NEXT:    sb a0, 1(sp)
 ; RV64-BITS-512-NEXT:    li a0, 32
+; RV64-BITS-512-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; RV64-BITS-512-NEXT:    vfirst.m a1, v0
+; RV64-BITS-512-NEXT:    seqz a1, a1
+; RV64-BITS-512-NEXT:    sb a1, 31(sp)
+; RV64-BITS-512-NEXT:    vsetivli zero, 0, e32, mf2, ta, ma
+; RV64-BITS-512-NEXT:    vmv.x.s a1, v0
+; RV64-BITS-512-NEXT:    srliw a2, a1, 31
+; RV64-BITS-512-NEXT:    sb a2, 0(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 62
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 30(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 61
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 29(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 60
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 28(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 59
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 27(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 58
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 26(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 57
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 25(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 56
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 24(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 55
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 23(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 54
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 22(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 53
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 21(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 52
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 20(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 51
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 19(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 50
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 18(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 49
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 17(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 48
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 16(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 47
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 15(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 46
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 14(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 45
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 13(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 44
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 12(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 43
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 11(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 42
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 10(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 41
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 9(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 40
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 8(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 39
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 7(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 38
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 6(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 37
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 5(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 36
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 4(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 35
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 3(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 34
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 2(sp)
+; RV64-BITS-512-NEXT:    slli a1, a1, 33
+; RV64-BITS-512-NEXT:    srli a1, a1, 63
+; RV64-BITS-512-NEXT:    sb a1, 1(sp)
 ; RV64-BITS-512-NEXT:    mv a1, sp
 ; RV64-BITS-512-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; RV64-BITS-512-NEXT:    vle8.v v8, (a1)
@@ -1388,199 +1414,201 @@ define <64 x i1> @reverse_v64i1(<64 x i1> %a) {
 ; RV32-BITS-UNKNOWN-NEXT:    addi s0, sp, 128
 ; RV32-BITS-UNKNOWN-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-BITS-UNKNOWN-NEXT:    andi sp, sp, -64
-; RV32-BITS-UNKNOWN-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV32-BITS-UNKNOWN-NEXT:    vmv.x.s a0, v0
-; RV32-BITS-UNKNOWN-NEXT:    andi a1, a0, 1
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 63(sp)
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a0, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 32(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 30
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 62(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 29
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 61(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 28
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 60(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 27
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 59(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 26
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 58(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 25
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 57(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 24
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 56(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 23
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 55(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 22
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 54(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 21
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 53(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 20
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 52(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 19
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 51(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 18
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 50(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 17
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 49(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 16
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 48(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 15
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 47(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 14
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 46(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 13
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 45(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 12
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 44(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 11
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 43(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 10
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 42(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 9
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 41(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 8
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 40(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 7
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 39(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 6
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 38(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 5
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 37(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 4
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 36(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 3
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 35(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 2
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 34(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a0, a0, 1
-; RV32-BITS-UNKNOWN-NEXT:    srli a0, a0, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a0, 33(sp)
-; RV32-BITS-UNKNOWN-NEXT:    vslidedown.vi v8, v0, 1
-; RV32-BITS-UNKNOWN-NEXT:    vmv.x.s a0, v8
-; RV32-BITS-UNKNOWN-NEXT:    andi a1, a0, 1
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 31(sp)
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a0, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 0(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 30
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 30(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 29
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 29(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 28
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 28(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 27
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 27(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 26
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 26(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 25
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 25(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 24
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 24(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 23
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 23(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 22
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 22(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 21
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 21(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 20
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 20(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 19
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 19(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 18
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 18(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 17
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 17(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 16
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 16(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 15
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 15(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 14
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 14(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 13
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 13(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 12
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 12(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 11
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 11(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 10
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 10(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 9
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 9(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 8
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 8(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 7
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 7(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 6
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 6(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 5
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 5(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 4
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 4(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 3
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 3(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a1, a0, 2
-; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a1, 2(sp)
-; RV32-BITS-UNKNOWN-NEXT:    slli a0, a0, 1
-; RV32-BITS-UNKNOWN-NEXT:    srli a0, a0, 31
-; RV32-BITS-UNKNOWN-NEXT:    sb a0, 1(sp)
 ; RV32-BITS-UNKNOWN-NEXT:    li a0, 64
+; RV32-BITS-UNKNOWN-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV32-BITS-UNKNOWN-NEXT:    vfirst.m a1, v0
+; RV32-BITS-UNKNOWN-NEXT:    seqz a1, a1
+; RV32-BITS-UNKNOWN-NEXT:    sb a1, 63(sp)
+; RV32-BITS-UNKNOWN-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-BITS-UNKNOWN-NEXT:    vmv.x.s a1, v0
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a1, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 32(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 30
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 62(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 29
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 61(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 28
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 60(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 27
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 59(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 26
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 58(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 25
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 57(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 24
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 56(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 23
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 55(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 22
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 54(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 21
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 53(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 20
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 52(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 19
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 51(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 18
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 50(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 17
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 49(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 16
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 48(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 15
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 47(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 14
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 46(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 13
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 45(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 12
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 44(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 11
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 43(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 10
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 42(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 9
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 41(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 8
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 40(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 7
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 39(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 6
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 38(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 5
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 37(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 4
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 36(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 3
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 35(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 2
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 34(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a1, a1, 1
+; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a1, 33(sp)
+; RV32-BITS-UNKNOWN-NEXT:    vslidedown.vi v8, v0, 1
+; RV32-BITS-UNKNOWN-NEXT:    vmv.x.s a1, v8
+; RV32-BITS-UNKNOWN-NEXT:    andi a2, a1, 1
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 31(sp)
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a1, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 0(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 30
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 30(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 29
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 29(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 28
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 28(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 27
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 27(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 26
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 26(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 25
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 25(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 24
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 24(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 23
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 23(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 22
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 22(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 21
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 21(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 20
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 20(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 19
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 19(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 18
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 18(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 17
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 17(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 16
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 16(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 15
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 15(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 14
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 14(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 13
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 13(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 12
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 12(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 11
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 11(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 10
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 10(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 9
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 9(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 8
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 8(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 7
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 7(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 6
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 6(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 5
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 5(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 4
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 4(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 3
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 3(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a2, a1, 2
+; RV32-BITS-UNKNOWN-NEXT:    srli a2, a2, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a2, 2(sp)
+; RV32-BITS-UNKNOWN-NEXT:    slli a1, a1, 1
+; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
+; RV32-BITS-UNKNOWN-NEXT:    sb a1, 1(sp)
 ; RV32-BITS-UNKNOWN-NEXT:    mv a1, sp
 ; RV32-BITS-UNKNOWN-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; RV32-BITS-UNKNOWN-NEXT:    vle8.v v8, (a1)
@@ -1603,199 +1631,201 @@ define <64 x i1> @reverse_v64i1(<64 x i1> %a) {
 ; RV32-BITS-256-NEXT:    addi s0, sp, 128
 ; RV32-BITS-256-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-BITS-256-NEXT:    andi sp, sp, -64
-; RV32-BITS-256-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV32-BITS-256-NEXT:    vmv.x.s a0, v0
-; RV32-BITS-256-NEXT:    andi a1, a0, 1
-; RV32-BITS-256-NEXT:    sb a1, 63(sp)
-; RV32-BITS-256-NEXT:    srli a1, a0, 31
-; RV32-BITS-256-NEXT:    sb a1, 32(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 30
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 62(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 29
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 61(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 28
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 60(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 27
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 59(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 26
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 58(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 25
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 57(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 24
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 56(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 23
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 55(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 22
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 54(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 21
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 53(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 20
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 52(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 19
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 51(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 18
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 50(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 17
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 49(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 16
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 48(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 15
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 47(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 14
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 46(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 13
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 45(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 12
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 44(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 11
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 43(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 10
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 42(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 9
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 41(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 8
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 40(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 7
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 39(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 6
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 38(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 5
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 37(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 4
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 36(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 3
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 35(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 2
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 34(sp)
-; RV32-BITS-256-NEXT:    slli a0, a0, 1
-; RV32-BITS-256-NEXT:    srli a0, a0, 31
-; RV32-BITS-256-NEXT:    sb a0, 33(sp)
-; RV32-BITS-256-NEXT:    vslidedown.vi v8, v0, 1
-; RV32-BITS-256-NEXT:    vmv.x.s a0, v8
-; RV32-BITS-256-NEXT:    andi a1, a0, 1
-; RV32-BITS-256-NEXT:    sb a1, 31(sp)
-; RV32-BITS-256-NEXT:    srli a1, a0, 31
-; RV32-BITS-256-NEXT:    sb a1, 0(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 30
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 30(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 29
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 29(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 28
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 28(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 27
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 27(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 26
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 26(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 25
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 25(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 24
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 24(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 23
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 23(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 22
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 22(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 21
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 21(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 20
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 20(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 19
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 19(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 18
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 18(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 17
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 17(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 16
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 16(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 15
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 15(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 14
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 14(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 13
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 13(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 12
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 12(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 11
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 11(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 10
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 10(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 9
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 9(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 8
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 8(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 7
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 7(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 6
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 6(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 5
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 5(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 4
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 4(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 3
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 3(sp)
-; RV32-BITS-256-NEXT:    slli a1, a0, 2
-; RV32-BITS-256-NEXT:    srli a1, a1, 31
-; RV32-BITS-256-NEXT:    sb a1, 2(sp)
-; RV32-BITS-256-NEXT:    slli a0, a0, 1
-; RV32-BITS-256-NEXT:    srli a0, a0, 31
-; RV32-BITS-256-NEXT:    sb a0, 1(sp)
 ; RV32-BITS-256-NEXT:    li a0, 64
+; RV32-BITS-256-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV32-BITS-256-NEXT:    vfirst.m a1, v0
+; RV32-BITS-256-NEXT:    seqz a1, a1
+; RV32-BITS-256-NEXT:    sb a1, 63(sp)
+; RV32-BITS-256-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-BITS-256-NEXT:    vmv.x.s a1, v0
+; RV32-BITS-256-NEXT:    srli a2, a1, 31
+; RV32-BITS-256-NEXT:    sb a2, 32(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 30
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 62(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 29
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 61(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 28
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 60(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 27
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 59(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 26
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 58(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 25
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 57(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 24
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 56(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 23
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 55(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 22
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 54(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 21
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 53(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 20
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 52(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 19
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 51(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 18
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 50(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 17
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 49(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 16
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 48(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 15
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 47(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 14
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 46(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 13
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 45(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 12
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 44(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 11
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 43(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 10
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 42(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 9
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 41(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 8
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 40(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 7
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 39(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 6
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 38(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 5
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 37(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 4
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 36(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 3
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 35(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 2
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 34(sp)
+; RV32-BITS-256-NEXT:    slli a1, a1, 1
+; RV32-BITS-256-NEXT:    srli a1, a1, 31
+; RV32-BITS-256-NEXT:    sb a1, 33(sp)
+; RV32-BITS-256-NEXT:    vslidedown.vi v8, v0, 1
+; RV32-BITS-256-NEXT:    vmv.x.s a1, v8
+; RV32-BITS-256-NEXT:    andi a2, a1, 1
+; RV32-BITS-256-NEXT:    sb a2, 31(sp)
+; RV32-BITS-256-NEXT:    srli a2, a1, 31
+; RV32-BITS-256-NEXT:    sb a2, 0(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 30
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 30(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 29
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 29(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 28
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 28(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 27
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 27(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 26
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 26(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 25
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 25(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 24
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 24(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 23
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 23(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 22
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 22(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 21
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 21(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 20
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 20(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 19
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 19(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 18
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 18(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 17
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 17(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 16
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 16(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 15
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 15(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 14
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 14(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 13
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 13(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 12
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 12(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 11
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 11(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 10
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 10(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 9
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 9(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 8
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 8(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 7
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 7(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 6
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 6(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 5
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 5(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 4
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 4(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 3
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 3(sp)
+; RV32-BITS-256-NEXT:    slli a2, a1, 2
+; RV32-BITS-256-NEXT:    srli a2, a2, 31
+; RV32-BITS-256-NEXT:    sb a2, 2(sp)
+; RV32-BITS-256-NEXT:    slli a1, a1, 1
+; RV32-BITS-256-NEXT:    srli a1, a1, 31
+; RV32-BITS-256-NEXT:    sb a1, 1(sp)
 ; RV32-BITS-256-NEXT:    mv a1, sp
 ; RV32-BITS-256-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; RV32-BITS-256-NEXT:    vle8.v v8, (a1)
@@ -1818,199 +1848,201 @@ define <64 x i1> @reverse_v64i1(<64 x i1> %a) {
 ; RV32-BITS-512-NEXT:    addi s0, sp, 128
 ; RV32-BITS-512-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-BITS-512-NEXT:    andi sp, sp, -64
-; RV32-BITS-512-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV32-BITS-512-NEXT:    vmv.x.s a0, v0
-; RV32-BITS-512-NEXT:    andi a1, a0, 1
-; RV32-BITS-512-NEXT:    sb a1, 63(sp)
-; RV32-BITS-512-NEXT:    srli a1, a0, 31
-; RV32-BITS-512-NEXT:    sb a1, 32(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 30
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 62(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 29
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 61(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 28
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 60(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 27
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 59(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 26
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 58(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 25
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 57(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 24
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 56(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 23
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 55(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 22
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 54(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 21
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 53(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 20
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 52(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 19
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 51(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 18
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 50(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 17
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 49(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 16
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 48(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 15
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 47(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 14
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 46(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 13
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 45(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 12
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 44(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 11
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 43(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 10
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 42(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 9
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 41(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 8
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 40(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 7
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 39(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 6
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 38(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 5
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 37(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 4
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 36(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 3
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 35(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 2
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 34(sp)
-; RV32-BITS-512-NEXT:    slli a0, a0, 1
-; RV32-BITS-512-NEXT:    srli a0, a0, 31
-; RV32-BITS-512-NEXT:    sb a0, 33(sp)
-; RV32-BITS-512-NEXT:    vslidedown.vi v8, v0, 1
-; RV32-BITS-512-NEXT:    vmv.x.s a0, v8
-; RV32-BITS-512-NEXT:    andi a1, a0, 1
-; RV32-BITS-512-NEXT:    sb a1, 31(sp)
-; RV32-BITS-512-NEXT:    srli a1, a0, 31
-; RV32-BITS-512-NEXT:    sb a1, 0(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 30
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 30(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 29
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 29(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 28
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 28(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 27
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 27(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 26
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 26(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 25
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 25(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 24
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 24(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 23
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 23(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 22
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 22(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 21
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 21(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 20
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 20(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 19
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 19(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 18
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 18(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 17
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 17(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 16
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 16(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 15
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 15(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 14
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 14(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 13
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 13(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 12
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 12(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 11
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 11(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 10
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 10(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 9
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 9(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 8
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 8(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 7
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 7(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 6
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 6(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 5
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 5(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 4
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 4(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 3
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 3(sp)
-; RV32-BITS-512-NEXT:    slli a1, a0, 2
-; RV32-BITS-512-NEXT:    srli a1, a1, 31
-; RV32-BITS-512-NEXT:    sb a1, 2(sp)
-; RV32-BITS-512-NEXT:    slli a0, a0, 1
-; RV32-BITS-512-NEXT:    srli a0, a0, 31
-; RV32-BITS-512-NEXT:    sb a0, 1(sp)
 ; RV32-BITS-512-NEXT:    li a0, 64
+; RV32-BITS-512-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV32-BITS-512-NEXT:    vfirst.m a1, v0
+; RV32-BITS-512-NEXT:    seqz a1, a1
+; RV32-BITS-512-NEXT:    sb a1, 63(sp)
+; RV32-BITS-512-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-BITS-512-NEXT:    vmv.x.s a1, v0
+; RV32-BITS-512-NEXT:    srli a2, a1, 31
+; RV32-BITS-512-NEXT:    sb a2, 32(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 30
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 62(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 29
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 61(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 28
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 60(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 27
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 59(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 26
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 58(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 25
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 57(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 24
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 56(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 23
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 55(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 22
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 54(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 21
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 53(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 20
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 52(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 19
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 51(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 18
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 50(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 17
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 49(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 16
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 48(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 15
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 47(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 14
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 46(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 13
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 45(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 12
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 44(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 11
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 43(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 10
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 42(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 9
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 41(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 8
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 40(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 7
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 39(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 6
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 38(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 5
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 37(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 4
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 36(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 3
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 35(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 2
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 34(sp)
+; RV32-BITS-512-NEXT:    slli a1, a1, 1
+; RV32-BITS-512-NEXT:    srli a1, a1, 31
+; RV32-BITS-512-NEXT:    sb a1, 33(sp)
+; RV32-BITS-512-NEXT:    vslidedown.vi v8, v0, 1
+; RV32-BITS-512-NEXT:    vmv.x.s a1, v8
+; RV32-BITS-512-NEXT:    andi a2, a1, 1
+; RV32-BITS-512-NEXT:    sb a2, 31(sp)
+; RV32-BITS-512-NEXT:    srli a2, a1, 31
+; RV32-BITS-512-NEXT:    sb a2, 0(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 30
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 30(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 29
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 29(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 28
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 28(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 27
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 27(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 26
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 26(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 25
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 25(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 24
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 24(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 23
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 23(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 22
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 22(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 21
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 21(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 20
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 20(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 19
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 19(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 18
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 18(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 17
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 17(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 16
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 16(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 15
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 15(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 14
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 14(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 13
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 13(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 12
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 12(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 11
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 11(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 10
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 10(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 9
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 9(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 8
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 8(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 7
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 7(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 6
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 6(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 5
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 5(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 4
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 4(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 3
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 3(sp)
+; RV32-BITS-512-NEXT:    slli a2, a1, 2
+; RV32-BITS-512-NEXT:    srli a2, a2, 31
+; RV32-BITS-512-NEXT:    sb a2, 2(sp)
+; RV32-BITS-512-NEXT:    slli a1, a1, 1
+; RV32-BITS-512-NEXT:    srli a1, a1, 31
+; RV32-BITS-512-NEXT:    sb a1, 1(sp)
 ; RV32-BITS-512-NEXT:    mv a1, sp
 ; RV32-BITS-512-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; RV32-BITS-512-NEXT:    vle8.v v8, (a1)
@@ -2033,198 +2065,200 @@ define <64 x i1> @reverse_v64i1(<64 x i1> %a) {
 ; RV64-BITS-UNKNOWN-NEXT:    addi s0, sp, 128
 ; RV64-BITS-UNKNOWN-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-BITS-UNKNOWN-NEXT:    andi sp, sp, -64
-; RV64-BITS-UNKNOWN-NEXT:    vsetivli zero, 0, e64, m1, ta, ma
-; RV64-BITS-UNKNOWN-NEXT:    vmv.x.s a0, v0
-; RV64-BITS-UNKNOWN-NEXT:    andi a1, a0, 1
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 63(sp)
-; RV64-BITS-UNKNOWN-NEXT:    srliw a1, a0, 31
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 32(sp)
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a0, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 0(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 62
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 62(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 61
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 61(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 60
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 60(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 59
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 59(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 58
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 58(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 57
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 57(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 56
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 56(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 55
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 55(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 54
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 54(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 53
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 53(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 52
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 52(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 51
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 51(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 50
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 50(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 49
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 49(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 48
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 48(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 47
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 47(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 46
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 46(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 45
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 45(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 44
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 44(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 43
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 43(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 42
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 42(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 41
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 41(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 40
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 40(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 39
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 39(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 38
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 38(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 37
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 37(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 36
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 36(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 35
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 35(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 34
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 34(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 33
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 33(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 31
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 31(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 30
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 30(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 29
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 29(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 28
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 28(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 27
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 27(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 26
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 26(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 25
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 25(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 24
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 24(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 23
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 23(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 22
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 22(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 21
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 21(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 20
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 20(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 19
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 19(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 18
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 18(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 17
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 17(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 16
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 16(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 15
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 15(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 14
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 14(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 13
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 13(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 12
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 12(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 11
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 11(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 10
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 10(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 9
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 9(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 8
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 8(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 7
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 7(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 6
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 6(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 5
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 5(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 4
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 4(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 3
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 3(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a1, a0, 2
-; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a1, 2(sp)
-; RV64-BITS-UNKNOWN-NEXT:    slli a0, a0, 1
-; RV64-BITS-UNKNOWN-NEXT:    srli a0, a0, 63
-; RV64-BITS-UNKNOWN-NEXT:    sb a0, 1(sp)
 ; RV64-BITS-UNKNOWN-NEXT:    li a0, 64
+; RV64-BITS-UNKNOWN-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV64-BITS-UNKNOWN-NEXT:    vfirst.m a1, v0
+; RV64-BITS-UNKNOWN-NEXT:    seqz a1, a1
+; RV64-BITS-UNKNOWN-NEXT:    sb a1, 63(sp)
+; RV64-BITS-UNKNOWN-NEXT:    vsetivli zero, 0, e64, m1, ta, ma
+; RV64-BITS-UNKNOWN-NEXT:    vmv.x.s a1, v0
+; RV64-BITS-UNKNOWN-NEXT:    srliw a2, a1, 31
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 32(sp)
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a1, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 0(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 62
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 62(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 61
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 61(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 60
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 60(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 59
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 59(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 58
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 58(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 57
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 57(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 56
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 56(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 55
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 55(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 54
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 54(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 53
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 53(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 52
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 52(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 51
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 51(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 50
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 50(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 49
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 49(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 48
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 48(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 47
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 47(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 46
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 46(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 45
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 45(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 44
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 44(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 43
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 43(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 42
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 42(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 41
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 41(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 40
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 40(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 39
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 39(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 38
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 38(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 37
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 37(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 36
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 36(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 35
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 35(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 34
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 34(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 33
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 33(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 31
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 31(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 30
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 30(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 29
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 29(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 28
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 28(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 27
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 27(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 26
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 26(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 25
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 25(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 24
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 24(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 23
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 23(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 22
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 22(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 21
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 21(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 20
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 20(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 19
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 19(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 18
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 18(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 17
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 17(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 16
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 16(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 15
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 15(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 14
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 14(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 13
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 13(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 12
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 12(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 11
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 11(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 10
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 10(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 9
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 9(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 8
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 8(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 7
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 7(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 6
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 6(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 5
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 5(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 4
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 4(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 3
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 3(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a2, a1, 2
+; RV64-BITS-UNKNOWN-NEXT:    srli a2, a2, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a2, 2(sp)
+; RV64-BITS-UNKNOWN-NEXT:    slli a1, a1, 1
+; RV64-BITS-UNKNOWN-NEXT:    srli a1, a1, 63
+; RV64-BITS-UNKNOWN-NEXT:    sb a1, 1(sp)
 ; RV64-BITS-UNKNOWN-NEXT:    mv a1, sp
 ; RV64-BITS-UNKNOWN-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; RV64-BITS-UNKNOWN-NEXT:    vle8.v v8, (a1)
@@ -2247,198 +2281,200 @@ define <64 x i1> @reverse_v64i1(<64 x i1> %a) {
 ; RV64-BITS-256-NEXT:    addi s0, sp, 128
 ; RV64-BITS-256-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-BITS-256-NEXT:    andi sp, sp, -64
-; RV64-BITS-256-NEXT:    vsetivli zero, 0, e64, m1, ta, ma
-; RV64-BITS-256-NEXT:    vmv.x.s a0, v0
-; RV64-BITS-256-NEXT:    andi a1, a0, 1
-; RV64-BITS-256-NEXT:    sb a1, 63(sp)
-; RV64-BITS-256-NEXT:    srliw a1, a0, 31
-; RV64-BITS-256-NEXT:    sb a1, 32(sp)
-; RV64-BITS-256-NEXT:    srli a1, a0, 63
-; RV64-BITS-256-NEXT:    sb a1, 0(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 62
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 62(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 61
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 61(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 60
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 60(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 59
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 59(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 58
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 58(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 57
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 57(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 56
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 56(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 55
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 55(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 54
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 54(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 53
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 53(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 52
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 52(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 51
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 51(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 50
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 50(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 49
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 49(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 48
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 48(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 47
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 47(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 46
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 46(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 45
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 45(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 44
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 44(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 43
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 43(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 42
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 42(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 41
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 41(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 40
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 40(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 39
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 39(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 38
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 38(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 37
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 37(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 36
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 36(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 35
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 35(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 34
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 34(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 33
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 33(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 31
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 31(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 30
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 30(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 29
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 29(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 28
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 28(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 27
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 27(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 26
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 26(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 25
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 25(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 24
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 24(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 23
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 23(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 22
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 22(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 21
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 21(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 20
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 20(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 19
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 19(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 18
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 18(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 17
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 17(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 16
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 16(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 15
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 15(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 14
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 14(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 13
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 13(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 12
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 12(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 11
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 11(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 10
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 10(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 9
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 9(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 8
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 8(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 7
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 7(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 6
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 6(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 5
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 5(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 4
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 4(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 3
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 3(sp)
-; RV64-BITS-256-NEXT:    slli a1, a0, 2
-; RV64-BITS-256-NEXT:    srli a1, a1, 63
-; RV64-BITS-256-NEXT:    sb a1, 2(sp)
-; RV64-BITS-256-NEXT:    slli a0, a0, 1
-; RV64-BITS-256-NEXT:    srli a0, a0, 63
-; RV64-BITS-256-NEXT:    sb a0, 1(sp)
 ; RV64-BITS-256-NEXT:    li a0, 64
+; RV64-BITS-256-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV64-BITS-256-NEXT:    vfirst.m a1, v0
+; RV64-BITS-256-NEXT:    seqz a1, a1
+; RV64-BITS-256-NEXT:    sb a1, 63(sp)
+; RV64-BITS-256-NEXT:    vsetivli zero, 0, e64, m1, ta, ma
+; RV64-BITS-256-NEXT:    vmv.x.s a1, v0
+; RV64-BITS-256-NEXT:    srliw a2, a1, 31
+; RV64-BITS-256-NEXT:    sb a2, 32(sp)
+; RV64-BITS-256-NEXT:    srli a2, a1, 63
+; RV64-BITS-256-NEXT:    sb a2, 0(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 62
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 62(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 61
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 61(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 60
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 60(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 59
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 59(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 58
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 58(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 57
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 57(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 56
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 56(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 55
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 55(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 54
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 54(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 53
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 53(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 52
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 52(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 51
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 51(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 50
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 50(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 49
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 49(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 48
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 48(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 47
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 47(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 46
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 46(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 45
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 45(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 44
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 44(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 43
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 43(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 42
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 42(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 41
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 41(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 40
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 40(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 39
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 39(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 38
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 38(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 37
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 37(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 36
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 36(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 35
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 35(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 34
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 34(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 33
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 33(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 31
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 31(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 30
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 30(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 29
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 29(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 28
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 28(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 27
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 27(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 26
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 26(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 25
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 25(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 24
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 24(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 23
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 23(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 22
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 22(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 21
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 21(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 20
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 20(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 19
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 19(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 18
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 18(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 17
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 17(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 16
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 16(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 15
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 15(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 14
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 14(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 13
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 13(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 12
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 12(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 11
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 11(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 10
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 10(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 9
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 9(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 8
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 8(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 7
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 7(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 6
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 6(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 5
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 5(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 4
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 4(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 3
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 3(sp)
+; RV64-BITS-256-NEXT:    slli a2, a1, 2
+; RV64-BITS-256-NEXT:    srli a2, a2, 63
+; RV64-BITS-256-NEXT:    sb a2, 2(sp)
+; RV64-BITS-256-NEXT:    slli a1, a1, 1
+; RV64-BITS-256-NEXT:    srli a1, a1, 63
+; RV64-BITS-256-NEXT:    sb a1, 1(sp)
 ; RV64-BITS-256-NEXT:    mv a1, sp
 ; RV64-BITS-256-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; RV64-BITS-256-NEXT:    vle8.v v8, (a1)
@@ -2461,198 +2497,200 @@ define <64 x i1> @reverse_v64i1(<64 x i1> %a) {
 ; RV64-BITS-512-NEXT:    addi s0, sp, 128
 ; RV64-BITS-512-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-BITS-512-NEXT:    andi sp, sp, -64
-; RV64-BITS-512-NEXT:    vsetivli zero, 0, e64, m1, ta, ma
-; RV64-BITS-512-NEXT:    vmv.x.s a0, v0
-; RV64-BITS-512-NEXT:    andi a1, a0, 1
-; RV64-BITS-512-NEXT:    sb a1, 63(sp)
-; RV64-BITS-512-NEXT:    srliw a1, a0, 31
-; RV64-BITS-512-NEXT:    sb a1, 32(sp)
-; RV64-BITS-512-NEXT:    srli a1, a0, 63
-; RV64-BITS-512-NEXT:    sb a1, 0(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 62
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 62(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 61
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 61(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 60
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 60(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 59
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 59(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 58
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 58(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 57
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 57(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 56
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 56(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 55
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 55(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 54
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 54(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 53
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 53(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 52
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 52(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 51
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 51(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 50
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 50(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 49
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 49(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 48
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 48(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 47
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 47(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 46
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 46(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 45
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 45(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 44
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 44(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 43
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 43(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 42
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 42(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 41
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 41(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 40
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 40(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 39
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 39(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 38
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 38(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 37
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 37(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 36
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 36(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 35
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 35(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 34
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 34(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 33
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 33(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 31
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 31(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 30
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 30(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 29
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 29(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 28
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 28(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 27
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 27(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 26
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 26(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 25
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 25(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 24
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 24(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 23
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 23(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 22
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 22(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 21
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 21(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 20
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 20(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 19
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 19(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 18
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 18(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 17
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 17(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 16
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 16(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 15
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 15(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 14
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 14(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 13
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 13(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 12
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 12(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 11
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 11(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 10
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 10(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 9
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 9(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 8
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 8(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 7
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 7(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 6
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 6(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 5
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 5(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 4
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 4(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 3
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 3(sp)
-; RV64-BITS-512-NEXT:    slli a1, a0, 2
-; RV64-BITS-512-NEXT:    srli a1, a1, 63
-; RV64-BITS-512-NEXT:    sb a1, 2(sp)
-; RV64-BITS-512-NEXT:    slli a0, a0, 1
-; RV64-BITS-512-NEXT:    srli a0, a0, 63
-; RV64-BITS-512-NEXT:    sb a0, 1(sp)
 ; RV64-BITS-512-NEXT:    li a0, 64
+; RV64-BITS-512-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; RV64-BITS-512-NEXT:    vfirst.m a1, v0
+; RV64-BITS-512-NEXT:    seqz a1, a1
+; RV64-BITS-512-NEXT:    sb a1, 63(sp)
+; RV64-BITS-512-NEXT:    vsetivli zero, 0, e64, m1, ta, ma
+; RV64-BITS-512-NEXT:    vmv.x.s a1, v0
+; RV64-BITS-512-NEXT:    srliw a2, a1, 31
+; RV64-BITS-512-NEXT:    sb a2, 32(sp)
+; RV64-BITS-512-NEXT:    srli a2, a1, 63
+; RV64-BITS-512-NEXT:    sb a2, 0(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 62
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 62(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 61
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 61(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 60
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 60(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 59
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 59(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 58
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 58(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 57
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 57(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 56
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 56(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 55
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 55(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 54
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 54(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 53
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 53(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 52
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 52(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 51
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 51(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 50
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 50(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 49
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 49(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 48
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 48(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 47
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 47(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 46
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 46(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 45
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 45(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 44
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 44(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 43
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 43(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 42
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 42(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 41
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 41(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 40
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 40(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 39
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 39(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 38
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 38(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 37
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 37(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 36
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 36(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 35
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 35(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 34
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 34(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 33
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 33(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 31
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 31(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 30
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 30(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 29
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 29(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 28
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 28(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 27
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 27(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 26
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 26(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 25
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 25(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 24
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 24(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 23
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 23(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 22
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 22(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 21
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 21(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 20
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 20(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 19
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 19(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 18
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 18(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 17
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 17(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 16
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 16(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 15
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 15(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 14
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 14(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 13
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 13(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 12
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 12(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 11
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 11(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 10
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 10(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 9
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 9(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 8
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 8(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 7
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 7(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 6
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 6(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 5
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 5(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 4
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 4(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 3
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 3(sp)
+; RV64-BITS-512-NEXT:    slli a2, a1, 2
+; RV64-BITS-512-NEXT:    srli a2, a2, 63
+; RV64-BITS-512-NEXT:    sb a2, 2(sp)
+; RV64-BITS-512-NEXT:    slli a1, a1, 1
+; RV64-BITS-512-NEXT:    srli a1, a1, 63
+; RV64-BITS-512-NEXT:    sb a1, 1(sp)
 ; RV64-BITS-512-NEXT:    mv a1, sp
 ; RV64-BITS-512-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; RV64-BITS-512-NEXT:    vle8.v v8, (a1)
@@ -2681,7 +2719,7 @@ define <2 x i8> @reverse_v2i8(<2 x i8> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -2771,7 +2809,7 @@ define <2 x i16> @reverse_v2i16(<2 x i16> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -2846,7 +2884,7 @@ define <2 x i32> @reverse_v2i32(<2 x i32> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -2906,9 +2944,9 @@ define <2 x i64> @reverse_v2i64(<2 x i64> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %res = call <2 x i64> @llvm.experimental.vector.reverse.v2i64(<2 x i64> %a)
   ret <2 x i64> %res
@@ -3050,7 +3088,7 @@ define <2 x half> @reverse_v2f16(<2 x half> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -3125,7 +3163,7 @@ define <2 x float> @reverse_v2f32(<2 x float> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -3185,9 +3223,9 @@ define <2 x double> @reverse_v2f64(<2 x double> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %res = call <2 x double> @llvm.experimental.vector.reverse.v2f64(<2 x double> %a)
   ret <2 x double> %res

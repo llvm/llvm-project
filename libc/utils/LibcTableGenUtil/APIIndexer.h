@@ -21,7 +21,7 @@ namespace llvm_libc {
 
 class APIIndexer {
 private:
-  llvm::Optional<llvm::StringRef> StdHeader;
+  std::optional<llvm::StringRef> StdHeader;
 
   // TableGen classes in spec.td.
   llvm::Record *NamedTypeClass;

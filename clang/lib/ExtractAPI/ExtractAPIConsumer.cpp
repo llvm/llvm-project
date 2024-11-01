@@ -48,9 +48,9 @@ using namespace extractapi;
 
 namespace {
 
-Optional<std::string> getRelativeIncludeName(const CompilerInstance &CI,
-                                             StringRef File,
-                                             bool *IsQuoted = nullptr) {
+std::optional<std::string> getRelativeIncludeName(const CompilerInstance &CI,
+                                                  StringRef File,
+                                                  bool *IsQuoted = nullptr) {
   assert(CI.hasFileManager() &&
          "CompilerInstance does not have a FileNamager!");
 

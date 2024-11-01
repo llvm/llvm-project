@@ -14,7 +14,7 @@ bb:
 
 bb1:                                              ; preds = %bb19, %bb
   %tmp2 = phi i32 [ undef, %bb ], [ %tmp5, %bb19 ]
-  %tmp3 = phi i32* [ @global, %bb ], [ %tmp20, %bb19 ]
+  %tmp3 = phi ptr [ @global, %bb ], [ %tmp20, %bb19 ]
   %tmp4 = icmp ugt i32 %tmp2, 5
   %tmp5 = select i1 %tmp4, i32 %tmp2, i32 5
   br label %bb6
@@ -24,12 +24,12 @@ bb6:                                              ; preds = %bb1
 
 bb7:                                              ; preds = %bb10, %bb6
   %tmp8 = phi i8 [ 7, %bb6 ], [ %tmp11, %bb10 ]
-  store i32 2, i32* %tmp3, align 4
-  %tmp9 = load i8, i8* %tmp, align 8
+  store i32 2, ptr %tmp3, align 4
+  %tmp9 = load i8, ptr %tmp, align 8
   br label %bb10
 
 bb10:                                             ; preds = %bb7
-  store i32 undef, i32* @global.1, align 4
+  store i32 undef, ptr @global.1, align 4
   %tmp11 = add nuw nsw i8 %tmp8, 1
   %tmp12 = icmp eq i8 %tmp11, 72
   br i1 %tmp12, label %bb13, label %bb7
@@ -39,7 +39,7 @@ bb13:                                             ; preds = %bb10
   br i1 %tmp14, label %bb15, label %bb16
 
 bb15:                                             ; preds = %bb13
-  store i8 0, i8* %tmp, align 8
+  store i8 0, ptr %tmp, align 8
   br label %bb16
 
 bb16:                                             ; preds = %bb15, %bb13
@@ -52,7 +52,7 @@ bb18:                                             ; preds = %bb17
   br label %bb19
 
 bb19:                                             ; preds = %bb18, %bb17
-  %tmp20 = phi i32* [ %tmp3, %bb17 ], [ bitcast (void ()* @hoge to i32*), %bb18 ]
+  %tmp20 = phi ptr [ %tmp3, %bb17 ], [ @hoge, %bb18 ]
   br label %bb1
 }
 

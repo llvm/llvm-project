@@ -345,7 +345,7 @@ int main() {
 // CHECK: [[PRIVATE_S_ARR_REF:%.+]] = getelementptr inbounds [[PRIVATES_TMAIN_TY]], [[PRIVATES_TMAIN_TY]]* [[PRIVATES]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
 // CHECK: getelementptr inbounds [2 x [[S_INT_TY]]], [2 x [[S_INT_TY]]]* [[PRIVATE_S_ARR_REF]], i{{.+}} 0, i{{.+}} 0
 // CHECK: bitcast [2 x [[S_INT_TY]]]* [[S_ARR_ADDR]] to [[S_INT_TY]]*
-// CHECK: getelementptr [[S_INT_TY]], [[S_INT_TY]]* %{{.+}}, i{{.+}} 2
+// CHECK: getelementptr inbounds [[S_INT_TY]], [[S_INT_TY]]* %{{.+}}, i{{.+}} 2
 // CHECK: call void [[S_INT_TY_COPY_CONSTR]]([[S_INT_TY]]* {{[^,]*}} [[S_ARR_CUR:%[^,]+]],
 // CHECK: getelementptr [[S_INT_TY]], [[S_INT_TY]]* [[S_ARR_CUR]], i{{.+}} 1
 // CHECK: icmp eq

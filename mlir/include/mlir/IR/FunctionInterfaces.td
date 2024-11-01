@@ -14,13 +14,13 @@
 #ifndef MLIR_IR_FUNCTIONINTERFACES_TD_
 #define MLIR_IR_FUNCTIONINTERFACES_TD_
 
-include "mlir/IR/OpBase.td"
+include "mlir/IR/SymbolInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // FunctionOpInterface
 //===----------------------------------------------------------------------===//
 
-def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
+def FunctionOpInterface : OpInterface<"FunctionOpInterface", [Symbol]> {
   let cppNamespace = "::mlir";
   let description = [{
     This interfaces provides support for interacting with operations that
@@ -164,14 +164,6 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     }]>,
   ];
 
-  let extraClassDeclaration = [{
-    //===------------------------------------------------------------------===//
-    // Name
-    //===------------------------------------------------------------------===//
-
-    /// Return the name of the function.
-    StringRef getName() { return SymbolTable::getSymbolName(*this); }
-  }];
   let extraTraitClassDeclaration = [{
     //===------------------------------------------------------------------===//
     // Builders

@@ -115,7 +115,8 @@ public:
   /// By default this will lookup for registered operations and return the
   /// `parse()` method registered on the RegisteredOperationName. Dialects can
   /// override this behavior and handle unregistered operations as well.
-  virtual Optional<ParseOpHook> getParseOperationHook(StringRef opName) const;
+  virtual std::optional<ParseOpHook>
+  getParseOperationHook(StringRef opName) const;
 
   /// Print an operation registered to this dialect.
   /// This hook is invoked for registered operation which don't override the

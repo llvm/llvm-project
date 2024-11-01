@@ -116,7 +116,6 @@ clang/bindings/python/tests/cindex/INPUTS/header3.h
 clang/examples/Attribute/Attribute.cpp
 clang/examples/CallSuperAttribute/CallSuperAttrInfo.cpp
 clang/examples/PluginsOrder/PluginsOrder.cpp
-clang/include/clang/Analysis/AnalysisDiagnostic.h
 clang/include/clang/Analysis/BodyFarm.h
 clang/include/clang/Analysis/IssueHash.h
 clang/include/clang/Analysis/MacroExpansionContext.h
@@ -609,8 +608,6 @@ clang/tools/clang-fuzzer/ExampleClangLoopProtoFuzzer.cpp
 clang/tools/clang-fuzzer/handle-llvm/handle_llvm.h
 clang/tools/clang-linker-wrapper/ClangLinkerWrapper.cpp
 clang/tools/clang-linker-wrapper/OffloadWrapper.cpp
-clang/tools/clang-nvlink-wrapper/ClangNvlinkWrapper.cpp
-clang/tools/clang-offload-wrapper/ClangOffloadWrapper.cpp
 clang/tools/clang-pseudo/ClangPseudo.cpp
 clang/tools/clang-refactor/ClangRefactor.cpp
 clang/tools/clang-refactor/TestSupport.cpp
@@ -1612,7 +1609,7 @@ clang-tools-extra/clangd/unittests/tweaks/DefineOutlineTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/DumpASTTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/DumpRecordLayoutTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/DumpSymbolTests.cpp
-clang-tools-extra/clangd/unittests/tweaks/ExpandAutoTypeTests.cpp
+clang-tools-extra/clangd/unittests/tweaks/ExpandDeducedTypeTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/ExpandMacroTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/ExtractFunctionTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/ExtractVariableTests.cpp
@@ -5484,7 +5481,7 @@ llvm/include/llvm/Support/CodeGenCoverage.h
 llvm/include/llvm/Support/CRC.h
 llvm/include/llvm/Support/CSKYAttributeParser.h
 llvm/include/llvm/Support/CSKYAttributes.h
-llvm/include/llvm/Support/CSKYTargetParser.h
+llvm/include/llvm/TargetParser/CSKYTargetParser.h
 llvm/include/llvm/Support/DataTypes.h
 llvm/include/llvm/Support/DebugCounter.h
 llvm/include/llvm/Support/Discriminator.h
@@ -5511,7 +5508,7 @@ llvm/include/llvm/Support/PGOOptions.h
 llvm/include/llvm/Support/PointerLikeTypeTraits.h
 llvm/include/llvm/Support/RISCVAttributeParser.h
 llvm/include/llvm/Support/RISCVAttributes.h
-llvm/include/llvm/Support/RISCVISAInfo.h
+llvm/include/llvm/TargetParser/RISCVISAInfo.h
 llvm/include/llvm/Support/RWMutex.h
 llvm/include/llvm/Support/ScopedPrinter.h
 llvm/include/llvm/Support/SHA256.h
@@ -5523,7 +5520,7 @@ llvm/include/llvm/Support/SourceMgr.h
 llvm/include/llvm/Support/SuffixTree.h
 llvm/include/llvm/Support/SymbolRemappingReader.h
 llvm/include/llvm/Support/SystemUtils.h
-llvm/include/llvm/Support/TargetParser.h
+llvm/include/llvm/TargetParser/TargetParser.h
 llvm/include/llvm/Support/TrailingObjects.h
 llvm/include/llvm/Support/Unicode.h
 llvm/include/llvm/Support/UnicodeCharRanges.h
@@ -5537,7 +5534,7 @@ llvm/include/llvm/TableGen/Parser.h
 llvm/include/llvm/TableGen/StringToOffsetTable.h
 llvm/include/llvm/Target/CGPassBuilderOption.h
 llvm/include/llvm/Target/CodeGenCWrappers.h
-llvm/include/llvm/Testing/Support/Annotations.h
+llvm/include/llvm/Testing/Annotations/Annotations.h
 llvm/include/llvm/Testing/Support/SupportHelpers.h
 llvm/include/llvm/TextAPI/Architecture.h
 llvm/include/llvm/TextAPI/ArchitectureSet.h
@@ -6840,7 +6837,7 @@ llvm/lib/Target/XCore/MCTargetDesc/XCoreMCAsmInfo.h
 llvm/lib/Target/XCore/MCTargetDesc/XCoreMCTargetDesc.cpp
 llvm/lib/Target/XCore/MCTargetDesc/XCoreMCTargetDesc.h
 llvm/lib/Target/XCore/TargetInfo/XCoreTargetInfo.cpp
-llvm/lib/Testing/Support/Annotations.cpp
+llvm/lib/Testing/Annotations/Annotations.cpp
 llvm/lib/Testing/Support/Error.cpp
 llvm/lib/Testing/Support/SupportHelpers.cpp
 llvm/lib/TextAPI/ArchitectureSet.cpp
@@ -7311,6 +7308,7 @@ llvm/unittests/MC/AMDGPU/DwarfRegMappings.cpp
 llvm/unittests/MC/SystemZ/SystemZAsmLexerTest.cpp
 llvm/unittests/ObjCopy/ObjCopyTest.cpp
 llvm/unittests/Object/ArchiveTest.cpp
+llvm/unittests/Object/ELFObjectFileTest.cpp
 llvm/unittests/Object/ELFTest.cpp
 llvm/unittests/Object/ELFTypesTest.cpp
 llvm/unittests/Object/MinidumpTest.cpp

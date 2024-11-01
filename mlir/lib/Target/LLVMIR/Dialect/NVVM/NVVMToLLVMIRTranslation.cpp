@@ -25,6 +25,32 @@ using namespace mlir;
 using namespace mlir::LLVM;
 using mlir::LLVM::detail::createIntrinsicCall;
 
+static llvm::Intrinsic::ID getReduxIntrinsicId(llvm::Type *resultType,
+                                               NVVM::ReduxKind kind) {
+  if (!resultType->isIntegerTy(32))
+    llvm_unreachable("unsupported data type for redux");
+
+  switch (kind) {
+  case NVVM::ReduxKind::ADD:
+    return llvm::Intrinsic::nvvm_redux_sync_add;
+  case NVVM::ReduxKind::UMAX:
+    return llvm::Intrinsic::nvvm_redux_sync_umax;
+  case NVVM::ReduxKind::UMIN:
+    return llvm::Intrinsic::nvvm_redux_sync_umin;
+  case NVVM::ReduxKind::AND:
+    return llvm::Intrinsic::nvvm_redux_sync_and;
+  case NVVM::ReduxKind::OR:
+    return llvm::Intrinsic::nvvm_redux_sync_or;
+  case NVVM::ReduxKind::XOR:
+    return llvm::Intrinsic::nvvm_redux_sync_xor;
+  case NVVM::ReduxKind::MAX:
+    return llvm::Intrinsic::nvvm_redux_sync_max;
+  case NVVM::ReduxKind::MIN:
+    return llvm::Intrinsic::nvvm_redux_sync_min;
+  }
+  llvm_unreachable("unknown redux kind");
+}
+
 static llvm::Intrinsic::ID getShflIntrinsicId(llvm::Type *resultType,
                                               NVVM::ShflKind kind,
                                               bool withPredicate) {

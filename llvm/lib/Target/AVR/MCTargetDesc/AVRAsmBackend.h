@@ -42,6 +42,7 @@ public:
                   uint64_t Value, bool IsResolved,
                   const MCSubtargetInfo *STI) const override;
 
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
   unsigned getNumFixupKinds() const override {

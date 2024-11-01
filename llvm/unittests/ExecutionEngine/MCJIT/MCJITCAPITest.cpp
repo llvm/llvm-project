@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This test suite verifies basic MCJIT functionality when invoked form the C
+// This test suite verifies basic MCJIT functionality when invoked from the C
 // API.
 //
 //===----------------------------------------------------------------------===//

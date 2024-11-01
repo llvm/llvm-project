@@ -903,6 +903,12 @@ void OMPClauseProfiler::VisitOMPAffinityClause(const OMPAffinityClause *C) {
 }
 void OMPClauseProfiler::VisitOMPOrderClause(const OMPOrderClause *C) {}
 void OMPClauseProfiler::VisitOMPBindClause(const OMPBindClause *C) {}
+void OMPClauseProfiler::VisitOMPXDynCGroupMemClause(
+    const OMPXDynCGroupMemClause *C) {
+  VistOMPClauseWithPreInit(C);
+  if (Expr *Size = C->getSize())
+    Profiler->VisitStmt(Size);
+}
 } // namespace
 
 void
@@ -1622,8 +1628,8 @@ void StmtProfiler::VisitRequiresExpr(const RequiresExpr *S) {
     } else {
       ID.AddInteger(concepts::Requirement::RK_Nested);
       auto *NestedReq = cast<concepts::NestedRequirement>(Req);
-      ID.AddBoolean(NestedReq->isSubstitutionFailure());
-      if (!NestedReq->isSubstitutionFailure())
+      ID.AddBoolean(NestedReq->hasInvalidConstraint());
+      if (!NestedReq->hasInvalidConstraint())
         Visit(NestedReq->getConstraintExpr());
     }
   }

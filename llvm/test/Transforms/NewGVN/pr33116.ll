@@ -13,7 +13,7 @@ define void @b() {
 ; CHECK:       c:
 ; CHECK-NEXT:    br i1 undef, label [[IF_G:%.*]], label [[IF_E]]
 ; CHECK:       if.g:
-; CHECK-NEXT:    store i32 undef, i32* @a
+; CHECK-NEXT:    store i32 undef, ptr @a
 ; CHECK-NEXT:    br label [[WHILE_D]]
 ; CHECK:       if.e:
 ; CHECK-NEXT:    br label [[F]]
@@ -30,7 +30,7 @@ c:                                                ; preds = %f, %0
   br i1 undef, label %if.g, label %if.e
 
 if.g:                                             ; preds = %c
-  store i32 undef, i32* @a
+  store i32 undef, ptr @a
   br label %while.d
 
 if.e:                                             ; preds = %c, %f

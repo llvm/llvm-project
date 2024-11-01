@@ -47,11 +47,11 @@ def SPIRV_GroupFMulKHROp : SPIRV_KhrVendorOp<"GroupFMul", [Pure,
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
     op ::= ssa-id `=` `spirv.KHR.GroupFMul` scope operation ssa-use
                             `:` float-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %0 = spirv.KHR.GroupFMul <Workgroup> <Reduce> %value : f32
     ```
   }];
@@ -117,11 +117,11 @@ def SPIRV_GroupBroadcastOp : SPIRV_Op<"GroupBroadcast",
                    `vector<` integer-literal `x` integer-type `>`
     group-broadcast-op ::= ssa-id `=` `spirv.GroupBroadcast` scope ssa_use,
                    ssa_use `:` integer-float-scalar-vector-type `,` localid-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %scalar_value = ... : f32
     %vector_value = ... : vector<4xf32>
     %scalar_localid = ... : i32
@@ -185,11 +185,11 @@ def SPIRV_GroupFAddOp : SPIRV_Op<"GroupFAdd", [Pure,
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
     op ::= ssa-id `=` `spirv.GroupFAdd` scope operation ssa-use
                             `:` float-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %0 = spirv.GroupFAdd <Workgroup> <Reduce> %value : f32
     ```
   }];
@@ -247,11 +247,11 @@ def SPIRV_GroupFMaxOp : SPIRV_Op<"GroupFMax", [Pure,
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
     op ::= ssa-id `=` `spirv.GroupFMax` scope operation ssa-use
                             `:` float-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %0 = spirv.GroupFMax <Workgroup> <Reduce> %value : f32
     ```
   }];
@@ -309,11 +309,11 @@ def SPIRV_GroupFMinOp : SPIRV_Op<"GroupFMin", [Pure,
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
     op ::= ssa-id `=` `spirv.GroupFMin` scope operation ssa-use
                             `:` float-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %0 = spirv.GroupFMin <Workgroup> <Reduce> %value : f32
     ```
   }];
@@ -371,11 +371,11 @@ def SPIRV_GroupIAddOp : SPIRV_Op<"GroupIAdd", [Pure,
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
     op ::= ssa-id `=` `spirv.GroupIAdd` scope operation ssa-use
                             `:` integer-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %0 = spirv.GroupIAdd <Workgroup> <Reduce> %value : i32
     ```
   }];
@@ -434,11 +434,11 @@ def SPIRV_GroupIMulKHROp : SPIRV_KhrVendorOp<"GroupIMul", [Pure,
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
     op ::= ssa-id `=` `spirv.KHR.GroupIMul` scope operation ssa-use
                             `:` integer-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %0 = spirv.KHR.GroupIMul <Workgroup> <Reduce> %value : i32
     ```
   }];
@@ -497,11 +497,11 @@ def SPIRV_GroupSMaxOp : SPIRV_Op<"GroupSMax", [Pure,
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
     op ::= ssa-id `=` `spirv.GroupSMax` scope operation ssa-use
                             `:` integer-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %0 = spirv.GroupSMax <Workgroup> <Reduce> %value : i32
     ```
   }];
@@ -560,11 +560,11 @@ def SPIRV_GroupSMinOp : SPIRV_Op<"GroupSMin", [Pure,
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
     op ::= ssa-id `=` `spirv.GroupSMin` scope operation ssa-use
                             `:` integer-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %0 = spirv.GroupSMin <Workgroup> <Reduce> %value : i32
     ```
   }];
@@ -622,11 +622,11 @@ def SPIRV_GroupUMaxOp : SPIRV_Op<"GroupUMax", [Pure,
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
     op ::= ssa-id `=` `spirv.GroupUMax` scope operation ssa-use
                             `:` integer-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %0 = spirv.GroupUMax <Workgroup> <Reduce> %value : i32
     ```
   }];
@@ -685,11 +685,11 @@ def SPIRV_GroupUMinOp : SPIRV_Op<"GroupUMin", [Pure,
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
     op ::= ssa-id `=` `spirv.GroupUMin` scope operation ssa-use
                             `:` integer-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %0 = spirv.GroupUMin <Workgroup> <Reduce> %value : i32
     ```
   }];
@@ -742,11 +742,11 @@ def SPIRV_INTELSubgroupBlockReadOp : SPIRV_IntelVendorOp<"SubgroupBlockRead", []
     ```
     subgroup-block-read-INTEL-op ::= ssa-id `=` `spirv.INTEL.SubgroupBlockRead`
                                 storage-class ssa_use `:` spirv-element-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %0 = spirv.INTEL.SubgroupBlockRead "StorageBuffer" %ptr : i32
     ```
   }];
@@ -792,11 +792,11 @@ def SPIRV_INTELSubgroupBlockWriteOp : SPIRV_IntelVendorOp<"SubgroupBlockWrite", 
     ```
     subgroup-block-write-INTEL-op ::= ssa-id `=` `spirv.INTEL.SubgroupBlockWrite`
                       storage-class ssa_use `,` ssa-use `:` spirv-element-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     spirv.INTEL.SubgroupBlockWrite "StorageBuffer" %ptr, %value : i32
     ```
   }];

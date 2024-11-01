@@ -83,8 +83,8 @@ struct GSS {
     const ForestNode *Payload = nullptr;
 
     llvm::ArrayRef<const Node *> parents() const {
-      return llvm::makeArrayRef(reinterpret_cast<const Node *const *>(this + 1),
-                                ParentCount);
+      return llvm::ArrayRef(reinterpret_cast<const Node *const *>(this + 1),
+                            ParentCount);
     };
     // Parents are stored as a trailing array of Node*.
   };

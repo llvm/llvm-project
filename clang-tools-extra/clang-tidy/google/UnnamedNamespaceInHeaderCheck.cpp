@@ -13,10 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace google {
-namespace build {
+namespace clang::tidy::google::build {
 
 UnnamedNamespaceInHeaderCheck::UnnamedNamespaceInHeaderCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -54,7 +51,4 @@ void UnnamedNamespaceInHeaderCheck::check(
     diag(Loc, "do not use unnamed namespaces in header files");
 }
 
-} // namespace build
-} // namespace google
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::google::build

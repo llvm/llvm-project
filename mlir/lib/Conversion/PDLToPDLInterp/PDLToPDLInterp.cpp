@@ -595,7 +595,7 @@ void PatternLowering::generate(SuccessNode *successNode, Block *&currentBlock) {
   // Grab the root kind if present.
   StringAttr rootKindAttr;
   if (pdl::OperationOp rootOp = root.getDefiningOp<pdl::OperationOp>())
-    if (Optional<StringRef> rootKind = rootOp.getOpName())
+    if (std::optional<StringRef> rootKind = rootOp.getOpName())
       rootKindAttr = builder.getStringAttr(*rootKind);
 
   builder.setInsertionPointToEnd(currentBlock);

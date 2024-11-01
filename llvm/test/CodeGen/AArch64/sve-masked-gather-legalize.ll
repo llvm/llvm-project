@@ -6,7 +6,7 @@ target triple = "aarch64-linux-gnu"
 
 ; Test for multiple uses of the mgather where the s/zext should not be combined
 
-define <vscale x 2 x i64> @masked_sgather_sext(i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %mask, <vscale x 2 x i8> %vals) #0 {
+define <vscale x 2 x i64> @masked_sgather_sext(ptr %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %mask, <vscale x 2 x i8> %vals) #0 {
 ; CHECK-LABEL: masked_sgather_sext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0, z0.d]
@@ -17,8 +17,8 @@ define <vscale x 2 x i64> @masked_sgather_sext(i8* %base, <vscale x 2 x i64> %of
 ; CHECK-NEXT:    sxtb z0.d, p0/m, z0.d
 ; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z2.d
 ; CHECK-NEXT:    ret
-  %ptrs = getelementptr i8, i8* %base, <vscale x 2 x i64> %offsets
-  %data = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x i8*> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> undef)
+  %ptrs = getelementptr i8, ptr %base, <vscale x 2 x i64> %offsets
+  %data = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x ptr> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> undef)
   %data.sext = sext <vscale x 2 x i8> %data to <vscale x 2 x i64>
   %add = add <vscale x 2 x i8> %data, %vals
   %add.sext = sext <vscale x 2 x i8> %add to <vscale x 2 x i64>
@@ -26,7 +26,7 @@ define <vscale x 2 x i64> @masked_sgather_sext(i8* %base, <vscale x 2 x i64> %of
   ret <vscale x 2 x i64> %mul
 }
 
-define <vscale x 2 x i64> @masked_sgather_zext(i8* %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %mask, <vscale x 2 x i8> %vals) #0 {
+define <vscale x 2 x i64> @masked_sgather_zext(ptr %base, <vscale x 2 x i64> %offsets, <vscale x 2 x i1> %mask, <vscale x 2 x i8> %vals) #0 {
 ; CHECK-LABEL: masked_sgather_zext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0, z0.d]
@@ -36,8 +36,8 @@ define <vscale x 2 x i64> @masked_sgather_zext(i8* %base, <vscale x 2 x i64> %of
 ; CHECK-NEXT:    and z1.d, z1.d, #0xff
 ; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %ptrs = getelementptr i8, i8* %base, <vscale x 2 x i64> %offsets
-  %data = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x i8*> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> undef)
+  %ptrs = getelementptr i8, ptr %base, <vscale x 2 x i64> %offsets
+  %data = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x ptr> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> undef)
   %data.zext = zext <vscale x 2 x i8> %data to <vscale x 2 x i64>
   %add = add <vscale x 2 x i8> %data, %vals
   %add.zext = zext <vscale x 2 x i8> %add to <vscale x 2 x i64>
@@ -48,36 +48,36 @@ define <vscale x 2 x i64> @masked_sgather_zext(i8* %base, <vscale x 2 x i64> %of
 ; Tests that exercise various type legalisation scenarios for ISD::MGATHER.
 
 ; Code generate load of an illegal datatype via promotion.
-define <vscale x 2 x i8> @masked_gather_nxv2i8(<vscale x 2 x i8*> %ptrs, <vscale x 2 x i1> %mask) #0 {
+define <vscale x 2 x i8> @masked_gather_nxv2i8(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv2i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    ret
-  %data = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x i8*> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> undef)
+  %data = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x ptr> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> undef)
   ret <vscale x 2 x i8> %data
 }
 
 ; Code generate load of an illegal datatype via promotion.
-define <vscale x 2 x i16> @masked_gather_nxv2i16(<vscale x 2 x i16*> %ptrs, <vscale x 2 x i1> %mask) #0 {
+define <vscale x 2 x i16> @masked_gather_nxv2i16(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv2i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    ret
-  %data = call <vscale x 2 x i16> @llvm.masked.gather.nxv2i16(<vscale x 2 x i16*> %ptrs, i32 2, <vscale x 2 x i1> %mask, <vscale x 2 x i16> undef)
+  %data = call <vscale x 2 x i16> @llvm.masked.gather.nxv2i16(<vscale x 2 x ptr> %ptrs, i32 2, <vscale x 2 x i1> %mask, <vscale x 2 x i16> undef)
   ret <vscale x 2 x i16> %data
 }
 
 ; Code generate load of an illegal datatype via promotion.
-define <vscale x 2 x i32> @masked_gather_nxv2i32(<vscale x 2 x i32*> %ptrs, <vscale x 2 x i1> %mask) #0 {
+define <vscale x 2 x i32> @masked_gather_nxv2i32(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    ret
-  %data = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x i32*> %ptrs, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> undef)
+  %data = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x ptr> %ptrs, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> undef)
   ret <vscale x 2 x i32> %data
 }
 
-define <vscale x 4 x half> @masked_gather_nxv4f16(<vscale x 4 x half*> %ptrs, <vscale x 4 x i1> %mask) #0 {
+define <vscale x 4 x half> @masked_gather_nxv4f16(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv4f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
@@ -86,23 +86,23 @@ define <vscale x 4 x half> @masked_gather_nxv4f16(<vscale x 4 x half*> %ptrs, <v
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %data = call <vscale x 4 x half> @llvm.masked.gather.nxv4f16(<vscale x 4 x half*> %ptrs, i32 0, <vscale x 4 x i1> %mask, <vscale x 4 x half> undef)
+  %data = call <vscale x 4 x half> @llvm.masked.gather.nxv4f16(<vscale x 4 x ptr> %ptrs, i32 0, <vscale x 4 x i1> %mask, <vscale x 4 x half> undef)
   ret <vscale x 4 x half> %data
 }
 
-define <vscale x 2 x float> @masked_gather_nxv2f32(float* %base, <vscale x 2 x i16> %indices, <vscale x 2 x i1> %mask) #0 {
+define <vscale x 2 x float> @masked_gather_nxv2f32(ptr %base, <vscale x 2 x i16> %indices, <vscale x 2 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    sxth z0.d, p1/m, z0.d
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, z0.d, lsl #2]
 ; CHECK-NEXT:    ret
-  %ptrs = getelementptr float, float* %base, <vscale x 2 x i16> %indices
-  %data = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32(<vscale x 2 x float*> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x float> undef)
+  %ptrs = getelementptr float, ptr %base, <vscale x 2 x i16> %indices
+  %data = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32(<vscale x 2 x ptr> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x float> undef)
   ret <vscale x 2 x float> %data
 }
 
-define <vscale x 8 x half> @masked_gather_nxv8f16(<vscale x 8 x half*> %ptrs, <vscale x 8 x i1> %mask) #0 {
+define <vscale x 8 x half> @masked_gather_nxv8f16(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
@@ -119,11 +119,11 @@ define <vscale x 8 x half> @masked_gather_nxv8f16(<vscale x 8 x half*> %ptrs, <v
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
 ; CHECK-NEXT:    ret
-  %data = call <vscale x 8 x half> @llvm.masked.gather.nxv8f16(<vscale x 8 x half*> %ptrs, i32 2, <vscale x 8 x i1> %mask, <vscale x 8 x half> undef)
+  %data = call <vscale x 8 x half> @llvm.masked.gather.nxv8f16(<vscale x 8 x ptr> %ptrs, i32 2, <vscale x 8 x i1> %mask, <vscale x 8 x half> undef)
   ret <vscale x 8 x half> %data
 }
 
-define <vscale x 8 x bfloat> @masked_gather_nxv8bf16(bfloat* %base, <vscale x 8 x i16> %indices, <vscale x 8 x i1> %mask) #0 {
+define <vscale x 8 x bfloat> @masked_gather_nxv8bf16(ptr %base, <vscale x 8 x i16> %indices, <vscale x 8 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv8bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sunpkhi z1.s, z0.h
@@ -134,12 +134,12 @@ define <vscale x 8 x bfloat> @masked_gather_nxv8bf16(bfloat* %base, <vscale x 8 
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0, z0.s, sxtw #1]
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %ptrs = getelementptr bfloat, bfloat* %base, <vscale x 8 x i16> %indices
-  %data = call <vscale x 8 x bfloat> @llvm.masked.gather.nxv8bf16(<vscale x 8 x bfloat*> %ptrs, i32 1, <vscale x 8 x i1> %mask, <vscale x 8 x bfloat> undef)
+  %ptrs = getelementptr bfloat, ptr %base, <vscale x 8 x i16> %indices
+  %data = call <vscale x 8 x bfloat> @llvm.masked.gather.nxv8bf16(<vscale x 8 x ptr> %ptrs, i32 1, <vscale x 8 x i1> %mask, <vscale x 8 x bfloat> undef)
   ret <vscale x 8 x bfloat> %data
 }
 
-define <vscale x 4 x double> @masked_gather_nxv4f64(double* %base, <vscale x 4 x i16> %indices, <vscale x 4 x i1> %mask) #0 {
+define <vscale x 4 x double> @masked_gather_nxv4f64(ptr %base, <vscale x 4 x i16> %indices, <vscale x 4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.s
@@ -152,12 +152,12 @@ define <vscale x 4 x double> @masked_gather_nxv4f64(double* %base, <vscale x 4 x
 ; CHECK-NEXT:    ld1d { z0.d }, p1/z, [x0, z0.d, lsl #3]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0, z1.d, lsl #3]
 ; CHECK-NEXT:    ret
-  %ptrs = getelementptr double, double* %base, <vscale x 4 x i16> %indices
-  %data = call <vscale x 4 x double> @llvm.masked.gather.nxv4f64(<vscale x 4 x double*> %ptrs, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x double> undef)
+  %ptrs = getelementptr double, ptr %base, <vscale x 4 x i16> %indices
+  %data = call <vscale x 4 x double> @llvm.masked.gather.nxv4f64(<vscale x 4 x ptr> %ptrs, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x double> undef)
   ret <vscale x 4 x double> %data
 }
 
-define <vscale x 8 x float> @masked_gather_nxv8f32(float* %base, <vscale x 8 x i32> %offsets, <vscale x 8 x i1> %mask) #0 {
+define <vscale x 8 x float> @masked_gather_nxv8f32(ptr %base, <vscale x 8 x i32> %offsets, <vscale x 8 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    punpklo p1.h, p0.b
@@ -166,13 +166,13 @@ define <vscale x 8 x float> @masked_gather_nxv8f32(float* %base, <vscale x 8 x i
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, z1.s, uxtw #2]
 ; CHECK-NEXT:    ret
   %offsets.zext = zext <vscale x 8 x i32> %offsets to <vscale x 8 x i64>
-  %ptrs = getelementptr float, float* %base, <vscale x 8 x i64> %offsets.zext
-  %vals = call <vscale x 8 x float> @llvm.masked.gather.nxv8f32(<vscale x 8 x float*> %ptrs, i32 4, <vscale x 8 x i1> %mask, <vscale x 8 x float> undef)
+  %ptrs = getelementptr float, ptr %base, <vscale x 8 x i64> %offsets.zext
+  %vals = call <vscale x 8 x float> @llvm.masked.gather.nxv8f32(<vscale x 8 x ptr> %ptrs, i32 4, <vscale x 8 x i1> %mask, <vscale x 8 x float> undef)
   ret <vscale x 8 x float> %vals
 }
 
 ; Code generate the worst case scenario when all vector types are legal.
-define <vscale x 16 x i8> @masked_gather_nxv16i8(i8* %base, <vscale x 16 x i8> %indices, <vscale x 16 x i1> %mask) #0 {
+define <vscale x 16 x i8> @masked_gather_nxv16i8(ptr %base, <vscale x 16 x i8> %indices, <vscale x 16 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sunpkhi z1.h, z0.b
@@ -195,13 +195,13 @@ define <vscale x 16 x i8> @masked_gather_nxv16i8(i8* %base, <vscale x 16 x i8> %
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  %ptrs = getelementptr i8, i8* %base, <vscale x 16 x i8> %indices
-  %data = call <vscale x 16 x i8> @llvm.masked.gather.nxv16i8(<vscale x 16 x i8*> %ptrs, i32 1, <vscale x 16 x i1> %mask, <vscale x 16 x i8> undef)
+  %ptrs = getelementptr i8, ptr %base, <vscale x 16 x i8> %indices
+  %data = call <vscale x 16 x i8> @llvm.masked.gather.nxv16i8(<vscale x 16 x ptr> %ptrs, i32 1, <vscale x 16 x i1> %mask, <vscale x 16 x i8> undef)
   ret <vscale x 16 x i8> %data
 }
 
 ; Code generate the worst case scenario when all vector types are illegal.
-define <vscale x 32 x i32> @masked_gather_nxv32i32(i32* %base, <vscale x 32 x i32> %indices, <vscale x 32 x i1> %mask) #0 {
+define <vscale x 32 x i32> @masked_gather_nxv32i32(ptr %base, <vscale x 32 x i32> %indices, <vscale x 32 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv32i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    punpklo p2.h, p0.b
@@ -225,16 +225,16 @@ define <vscale x 32 x i32> @masked_gather_nxv32i32(i32* %base, <vscale x 32 x i3
 ; CHECK-NEXT:    ld1w { z6.s }, p1/z, [x0, z6.s, sxtw #2]
 ; CHECK-NEXT:    ld1w { z7.s }, p0/z, [x0, z7.s, sxtw #2]
 ; CHECK-NEXT:    ret
-  %ptrs = getelementptr i32, i32* %base, <vscale x 32 x i32> %indices
-  %data = call <vscale x 32 x i32> @llvm.masked.gather.nxv32i32(<vscale x 32 x i32*> %ptrs, i32 4, <vscale x 32 x i1> %mask, <vscale x 32 x i32> undef)
+  %ptrs = getelementptr i32, ptr %base, <vscale x 32 x i32> %indices
+  %data = call <vscale x 32 x i32> @llvm.masked.gather.nxv32i32(<vscale x 32 x ptr> %ptrs, i32 4, <vscale x 32 x i1> %mask, <vscale x 32 x i32> undef)
   ret <vscale x 32 x i32> %data
 }
 
 ; TODO: Currently, the sign extend gets applied to the values after a 'uzp1' of two
 ; registers, so it doesn't get folded away. Same for any other vector-of-pointers
-; style gathers which don't fit in an <vscale x 2 x type*> single register. Better folding
+; style gathers which don't fit in an <vscale x 2 x ptr> single register. Better folding
 ; is required before we can check those off.
-define <vscale x 4 x i32> @masked_sgather_nxv4i8(<vscale x 4 x i8*> %ptrs, <vscale x 4 x i1> %mask) #0 {
+define <vscale x 4 x i32> @masked_sgather_nxv4i8(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_sgather_nxv4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
@@ -245,23 +245,23 @@ define <vscale x 4 x i32> @masked_sgather_nxv4i8(<vscale x 4 x i8*> %ptrs, <vsca
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    sxtb z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ret
-  %vals = call <vscale x 4 x i8> @llvm.masked.gather.nxv4i8(<vscale x 4 x i8*> %ptrs, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i8> undef)
+  %vals = call <vscale x 4 x i8> @llvm.masked.gather.nxv4i8(<vscale x 4 x ptr> %ptrs, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i8> undef)
   %svals = sext <vscale x 4 x i8> %vals to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %svals
 }
 
 attributes #0 = { nounwind "target-features"="+sve,+bf16" }
 
-declare <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x i8*>, i32, <vscale x 2 x i1>, <vscale x 2 x i8>)
-declare <vscale x 2 x i16> @llvm.masked.gather.nxv2i16(<vscale x 2 x i16*>, i32, <vscale x 2 x i1>, <vscale x 2 x i16>)
-declare <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x i32*>, i32, <vscale x 2 x i1>, <vscale x 2 x i32>)
-declare <vscale x 4 x i8> @llvm.masked.gather.nxv4i8(<vscale x 4 x i8*>, i32, <vscale x 4 x i1>, <vscale x 4 x i8>)
-declare <vscale x 16 x i8> @llvm.masked.gather.nxv16i8(<vscale x 16 x i8*>, i32, <vscale x 16 x i1>, <vscale x 16 x i8>)
-declare <vscale x 32 x i32> @llvm.masked.gather.nxv32i32(<vscale x 32 x i32*>, i32, <vscale x 32 x i1>, <vscale x 32 x i32>)
+declare <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x i8>)
+declare <vscale x 2 x i16> @llvm.masked.gather.nxv2i16(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x i16>)
+declare <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x i32>)
+declare <vscale x 4 x i8> @llvm.masked.gather.nxv4i8(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x i8>)
+declare <vscale x 16 x i8> @llvm.masked.gather.nxv16i8(<vscale x 16 x ptr>, i32, <vscale x 16 x i1>, <vscale x 16 x i8>)
+declare <vscale x 32 x i32> @llvm.masked.gather.nxv32i32(<vscale x 32 x ptr>, i32, <vscale x 32 x i1>, <vscale x 32 x i32>)
 
-declare <vscale x 4 x half> @llvm.masked.gather.nxv4f16(<vscale x 4 x half*>, i32, <vscale x 4 x i1>, <vscale x 4 x half>)
-declare <vscale x 8 x half> @llvm.masked.gather.nxv8f16(<vscale x 8 x half*>, i32, <vscale x 8 x i1>, <vscale x 8 x half>)
-declare <vscale x 8 x bfloat> @llvm.masked.gather.nxv8bf16(<vscale x 8 x bfloat*>, i32, <vscale x 8 x i1>, <vscale x 8 x bfloat>)
-declare <vscale x 2 x float> @llvm.masked.gather.nxv2f32(<vscale x 2 x float*>, i32, <vscale x 2 x i1>, <vscale x 2 x float>)
-declare <vscale x 8 x float> @llvm.masked.gather.nxv8f32(<vscale x 8 x float*>, i32, <vscale x 8 x i1>, <vscale x 8 x float>)
-declare <vscale x 4 x double> @llvm.masked.gather.nxv4f64(<vscale x 4 x double*>, i32, <vscale x 4 x i1>, <vscale x 4 x double>)
+declare <vscale x 4 x half> @llvm.masked.gather.nxv4f16(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x half>)
+declare <vscale x 8 x half> @llvm.masked.gather.nxv8f16(<vscale x 8 x ptr>, i32, <vscale x 8 x i1>, <vscale x 8 x half>)
+declare <vscale x 8 x bfloat> @llvm.masked.gather.nxv8bf16(<vscale x 8 x ptr>, i32, <vscale x 8 x i1>, <vscale x 8 x bfloat>)
+declare <vscale x 2 x float> @llvm.masked.gather.nxv2f32(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x float>)
+declare <vscale x 8 x float> @llvm.masked.gather.nxv8f32(<vscale x 8 x ptr>, i32, <vscale x 8 x i1>, <vscale x 8 x float>)
+declare <vscale x 4 x double> @llvm.masked.gather.nxv4f64(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x double>)

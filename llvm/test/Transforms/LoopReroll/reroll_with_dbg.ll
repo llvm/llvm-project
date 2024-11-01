@@ -1,5 +1,5 @@
 ;RUN: opt < %s -passes=loop-reroll -S | FileCheck %s
-;void foo(float * restrict a, float * restrict b, int n) {
+;void foo(ptr restrict a, ptr restrict b, int n) {
 ;  for(int i = 0; i < n; i+=4) {
 ;    a[i] = b[i];
 ;    a[i+1] = b[i+1];
@@ -11,12 +11,12 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv4t--linux-gnueabi"
 
 ; Function Attrs: nounwind
-define void @foo(float* noalias nocapture %a, float* noalias nocapture readonly %b, i32 %n) #0 !dbg !4 {
+define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i32 %n) #0 !dbg !4 {
 entry:
 ;CHECK-LABEL: @foo
 
-  tail call void @llvm.dbg.value(metadata float* %a, metadata !12, metadata !22), !dbg !23
-  tail call void @llvm.dbg.value(metadata float* %b, metadata !13, metadata !22), !dbg !24
+  tail call void @llvm.dbg.value(metadata ptr %a, metadata !12, metadata !22), !dbg !23
+  tail call void @llvm.dbg.value(metadata ptr %b, metadata !13, metadata !22), !dbg !24
   tail call void @llvm.dbg.value(metadata i32 %n, metadata !14, metadata !22), !dbg !25
   tail call void @llvm.dbg.value(metadata i32 0, metadata !15, metadata !22), !dbg !26
   %cmp.30 = icmp sgt i32 %n, 0, !dbg !27
@@ -42,33 +42,25 @@ for.body:                                         ; preds = %for.body.preheader,
 ;CHECK: %indvar.next = add i32 %indvar, 1
 ;CHECK: icmp eq i32 %indvar
   %i.031 = phi i32 [ %add13, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds float, float* %b, i32 %i.031, !dbg !30
-  %0 = bitcast float* %arrayidx to i32*, !dbg !30
-  %1 = load i32, i32* %0, align 4, !dbg !30, !tbaa !33
-  %arrayidx1 = getelementptr inbounds float, float* %a, i32 %i.031, !dbg !37
-  %2 = bitcast float* %arrayidx1 to i32*, !dbg !38
-  store i32 %1, i32* %2, align 4, !dbg !38, !tbaa !33
+  %arrayidx = getelementptr inbounds float, ptr %b, i32 %i.031, !dbg !30
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !30, !tbaa !33
+  %arrayidx1 = getelementptr inbounds float, ptr %a, i32 %i.031, !dbg !37
+  store i32 %0, ptr %arrayidx1, align 4, !dbg !38, !tbaa !33
   %add = or i32 %i.031, 1, !dbg !39
-  %arrayidx2 = getelementptr inbounds float, float* %b, i32 %add, !dbg !40
-  %3 = bitcast float* %arrayidx2 to i32*, !dbg !40
-  %4 = load i32, i32* %3, align 4, !dbg !40, !tbaa !33
-  %arrayidx4 = getelementptr inbounds float, float* %a, i32 %add, !dbg !41
-  %5 = bitcast float* %arrayidx4 to i32*, !dbg !42
-  store i32 %4, i32* %5, align 4, !dbg !42, !tbaa !33
+  %arrayidx2 = getelementptr inbounds float, ptr %b, i32 %add, !dbg !40
+  %1 = load i32, ptr %arrayidx2, align 4, !dbg !40, !tbaa !33
+  %arrayidx4 = getelementptr inbounds float, ptr %a, i32 %add, !dbg !41
+  store i32 %1, ptr %arrayidx4, align 4, !dbg !42, !tbaa !33
   %add5 = or i32 %i.031, 2, !dbg !43
-  %arrayidx6 = getelementptr inbounds float, float* %b, i32 %add5, !dbg !44
-  %6 = bitcast float* %arrayidx6 to i32*, !dbg !44
-  %7 = load i32, i32* %6, align 4, !dbg !44, !tbaa !33
-  %arrayidx8 = getelementptr inbounds float, float* %a, i32 %add5, !dbg !45
-  %8 = bitcast float* %arrayidx8 to i32*, !dbg !46
-  store i32 %7, i32* %8, align 4, !dbg !46, !tbaa !33
+  %arrayidx6 = getelementptr inbounds float, ptr %b, i32 %add5, !dbg !44
+  %2 = load i32, ptr %arrayidx6, align 4, !dbg !44, !tbaa !33
+  %arrayidx8 = getelementptr inbounds float, ptr %a, i32 %add5, !dbg !45
+  store i32 %2, ptr %arrayidx8, align 4, !dbg !46, !tbaa !33
   %add9 = or i32 %i.031, 3, !dbg !47
-  %arrayidx10 = getelementptr inbounds float, float* %b, i32 %add9, !dbg !48
-  %9 = bitcast float* %arrayidx10 to i32*, !dbg !48
-  %10 = load i32, i32* %9, align 4, !dbg !48, !tbaa !33
-  %arrayidx12 = getelementptr inbounds float, float* %a, i32 %add9, !dbg !49
-  %11 = bitcast float* %arrayidx12 to i32*, !dbg !50
-  store i32 %10, i32* %11, align 4, !dbg !50, !tbaa !33
+  %arrayidx10 = getelementptr inbounds float, ptr %b, i32 %add9, !dbg !48
+  %3 = load i32, ptr %arrayidx10, align 4, !dbg !48, !tbaa !33
+  %arrayidx12 = getelementptr inbounds float, ptr %a, i32 %add9, !dbg !49
+  store i32 %3, ptr %arrayidx12, align 4, !dbg !50, !tbaa !33
   %add13 = add nuw nsw i32 %i.031, 4, !dbg !51
   tail call void @llvm.dbg.value(metadata i32 %add13, metadata !15, metadata !22), !dbg !26
   %cmp = icmp slt i32 %add13, %n, !dbg !27

@@ -116,17 +116,11 @@ entry:
 define <2 x i64> @dupzext_v2i16_v2i64(i16 %src, <2 x i16> %b) {
 ; CHECK-LABEL: dupzext_v2i16_v2i64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and w8, w0, #0xffff
 ; CHECK-NEXT:    movi d1, #0x00ffff0000ffff
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    and x8, x0, #0xffff
+; CHECK-NEXT:    dup v2.2s, w8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    mov x10, v0.d[1]
-; CHECK-NEXT:    mul x9, x8, x9
-; CHECK-NEXT:    mul x8, x8, x10
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    umull v0.2d, v2.2s, v0.2s
 ; CHECK-NEXT:    ret
 entry:
     %in = zext i16 %src to i64
@@ -191,23 +185,23 @@ entry:
     ret <4 x i32> %out
 }
 
-define void @typei1_orig(i64 %a, i8* %p, <8 x i16>* %q) {
+define void @typei1_orig(i64 %a, ptr %p, ptr %q) {
 ; CHECK-LABEL: typei1_orig:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, #0
 ; CHECK-NEXT:    ldr q0, [x2]
 ; CHECK-NEXT:    cset w8, gt
-; CHECK-NEXT:    neg v0.8h, v0.8h
-; CHECK-NEXT:    dup v1.8h, w8
-; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    cmtst v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    dup v1.8h, w8
+; CHECK-NEXT:    cmeq v1.8h, v1.8h, #0
+; CHECK-NEXT:    bic v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    mov v0.d[1], v2.d[0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
     %tmp = xor <16 x i1> zeroinitializer, <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
-    %tmp6 = load <8 x i16>, <8 x i16>* %q, align 2
+    %tmp6 = load <8 x i16>, ptr %q, align 2
     %tmp7 = sub <8 x i16> zeroinitializer, %tmp6
     %tmp8 = shufflevector <8 x i16> %tmp7, <8 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
     %tmp9 = icmp slt i64 0, %a
@@ -218,20 +212,18 @@ define void @typei1_orig(i64 %a, i8* %p, <8 x i16>* %q) {
     %tmp14 = icmp ne <16 x i16> %tmp13, zeroinitializer
     %tmp15 = and <16 x i1> %tmp14, %tmp
     %tmp16 = sext <16 x i1> %tmp15 to <16 x i8>
-    %tmp17 = bitcast i8* %p to <16 x i8>*
-    store <16 x i8> %tmp16, <16 x i8>* %tmp17, align 1
+    store <16 x i8> %tmp16, ptr %p, align 1
     ret void
 }
 
 define <8 x i16> @typei1_v8i1_v8i16(i1 %src, <8 x i1> %b) {
 ; CHECK-LABEL: typei1_v8i1_v8i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.8b, #1
 ; CHECK-NEXT:    and w8, w0, #0x1
+; CHECK-NEXT:    movi v1.8b, #1
+; CHECK-NEXT:    dup v2.8b, w8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    dup v1.8h, w8
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    mul v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    umull v0.8h, v2.8b, v0.8b
 ; CHECK-NEXT:    ret
 entry:
     %in = zext i1 %src to i16

@@ -47,7 +47,7 @@ class LinalgStructuredBase_Op<string mnemonic, list<Trait> props>
     }
 
     void getSuccessorRegions(
-        Optional<unsigned> index, ArrayRef<Attribute> operands,
+        std::optional<unsigned> index, ArrayRef<Attribute> operands,
         SmallVectorImpl<RegionSuccessor> &regions) {
       // Op has a region, but conceptually the control flow does not enter the
       // region.
@@ -255,6 +255,16 @@ def MapOp : LinalgStructuredBase_Op<"map", [
             linalg.yield %0: f32
           }
     ```
+
+    Shortened print form is available. Applies to simple maps with one 
+    non-yield operation inside the body.
+
+    The example above will be printed as:
+    ```
+      %add = linalg.map { arith.addf }
+          ins(%lhs, %rhs : tensor<64xf32>, tensor<64xf32>)
+          outs(%init: tensor<64xf32>)
+    ```
   }];
 
   let arguments = (ins
@@ -329,9 +339,21 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
           outs(%init:tensor<16x64xf32>)
           dimensions = [1]
           (%in: f32, %out: f32) {
-            %0 = arith.addf %in, %out: f32
+            %0 = arith.addf %out, %in: f32
             linalg.yield %0: f32
           }
+    ```
+
+    Shortened print form is available. Applies to simple (not variadic) reduces
+    with one non-yield operation inside the body. Applies only if the operation
+    takes `%out` as the first argument.
+
+    The example above will be printed as:
+    ```
+          %reduce = linalg.reduce { arith.addf }
+          ins(%input:tensor<16x32x64xf32>)
+          outs(%init:tensor<16x64xf32>)
+          dimensions = [1]
     ```
   }];
 

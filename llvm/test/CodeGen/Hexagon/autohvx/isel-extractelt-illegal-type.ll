@@ -9,9 +9,9 @@ target triple = "hexagon"
 declare i32 @llvm.hexagon.A2.subh.l16.sat.ll(i32, i32) #0
 
 ; Function Attrs: nounwind readonly
-define dso_local signext i16 @f0(i16* nocapture readonly %a0) local_unnamed_addr #1 {
+define dso_local signext i16 @f0(ptr nocapture readonly %a0) local_unnamed_addr #1 {
 b0:
-  %v0 = load <8 x i16>, <8 x i16>* undef, align 2, !tbaa !0
+  %v0 = load <8 x i16>, ptr undef, align 2, !tbaa !0
   %v1 = shufflevector <8 x i16> %v0, <8 x i16> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   %v2 = shufflevector <8 x i16> %v1, <8 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   %v3 = lshr <16 x i16> %v2, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>

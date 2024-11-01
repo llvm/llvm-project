@@ -14,9 +14,7 @@
 using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::internal;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 static constexpr int UnsignedASCIIUpperBound = 127;
 
@@ -168,6 +166,4 @@ void SignedCharMisuseCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

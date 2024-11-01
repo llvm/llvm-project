@@ -904,23 +904,23 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; GFX10-NEXT:    v_mov_b32_e32 v18, s19
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v2
 ; GFX10-NEXT:    v_cmp_eq_u32_e64 s4, 1, v2
-; GFX10-NEXT:    v_cmp_eq_u32_e64 s5, 3, v2
-; GFX10-NEXT:    v_cmp_eq_u32_e64 s10, 2, v2
-; GFX10-NEXT:    v_cmp_eq_u32_e64 s6, 4, v2
+; GFX10-NEXT:    v_cmp_eq_u32_e64 s5, 2, v2
+; GFX10-NEXT:    v_cmp_eq_u32_e64 s6, 3, v2
 ; GFX10-NEXT:    v_cmp_eq_u32_e64 s7, 5, v2
+; GFX10-NEXT:    v_cmp_eq_u32_e64 s10, 4, v2
 ; GFX10-NEXT:    v_cmp_eq_u32_e64 s8, 6, v2
 ; GFX10-NEXT:    v_cmp_eq_u32_e64 s9, 7, v2
 ; GFX10-NEXT:    v_cndmask_b32_e32 v3, v3, v0, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v5, v5, v0, s4
 ; GFX10-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v6, v6, v1, s4
-; GFX10-NEXT:    v_cndmask_b32_e64 v7, v7, v0, s10
-; GFX10-NEXT:    v_cndmask_b32_e64 v9, v9, v0, s5
-; GFX10-NEXT:    v_cndmask_b32_e64 v8, v8, v1, s10
-; GFX10-NEXT:    v_cndmask_b32_e64 v10, v10, v1, s5
-; GFX10-NEXT:    v_cndmask_b32_e64 v11, v11, v0, s6
+; GFX10-NEXT:    v_cndmask_b32_e64 v7, v7, v0, s5
+; GFX10-NEXT:    v_cndmask_b32_e64 v9, v9, v0, s6
+; GFX10-NEXT:    v_cndmask_b32_e64 v8, v8, v1, s5
+; GFX10-NEXT:    v_cndmask_b32_e64 v10, v10, v1, s6
+; GFX10-NEXT:    v_cndmask_b32_e64 v11, v11, v0, s10
 ; GFX10-NEXT:    v_cndmask_b32_e64 v13, v13, v0, s7
-; GFX10-NEXT:    v_cndmask_b32_e64 v12, v12, v1, s6
+; GFX10-NEXT:    v_cndmask_b32_e64 v12, v12, v1, s10
 ; GFX10-NEXT:    v_cndmask_b32_e64 v14, v14, v1, s7
 ; GFX10-NEXT:    v_cndmask_b32_e64 v15, v15, v0, s8
 ; GFX10-NEXT:    v_cndmask_b32_e64 v17, v17, v0, s9

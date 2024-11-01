@@ -79,20 +79,20 @@
 ; TODO-NEXT: }
 
 
-; KERNEL-IR: define ptx_kernel void @FUNC_foo_SCOP_0_KERNEL_1(i8 addrspace(1)* %MemRef_sum_0__phi)
-; KERNEL-IR:  store float 0.000000e+00, float* %sum.0.phiops
-; KERNEL-IR:  [[REGA:%.+]] = addrspacecast i8 addrspace(1)* %MemRef_sum_0__phi to float*
-; KERNEL-IR:  [[REGB:%.+]] = load float, float* %sum.0.phiops
-; KERNEL-IR:  store float [[REGB]], float* [[REGA]]
+; KERNEL-IR: define ptx_kernel void @FUNC_foo_SCOP_0_KERNEL_1(ptr addrspace(1) %MemRef_sum_0__phi)
+; KERNEL-IR:  store float 0.000000e+00, ptr %sum.0.phiops
+; KERNEL-IR:  [[REGA:%.+]] = addrspacecast ptr addrspace(1) %MemRef_sum_0__phi to ptr
+; KERNEL-IR:  [[REGB:%.+]] = load float, ptr %sum.0.phiops
+; KERNEL-IR:  store float [[REGB]], ptr [[REGA]]
 
-; KERNEL-IR: define ptx_kernel void @FUNC_foo_SCOP_0_KERNEL_2(i8 addrspace(1)* %MemRef_A, i8 addrspace(1)* %MemRef_sum_0__phi, i8 addrspace(1)* %MemRef_sum_0)
+; KERNEL-IR: define ptx_kernel void @FUNC_foo_SCOP_0_KERNEL_2(ptr addrspace(1) %MemRef_A, ptr addrspace(1) %MemRef_sum_0__phi, ptr addrspace(1) %MemRef_sum_0)
 
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 @.str = private unnamed_addr constant [4 x i8] c"%f\0A\00", align 1
 
-define float @foo(float* %A) {
+define float @foo(ptr %A) {
 bb:
   br label %bb3
 
@@ -103,8 +103,8 @@ bb3:                                              ; preds = %bb6, %bb
 
 bb4:                                              ; preds = %bb3
   %tmp = sitofp i64 %i.0 to float
-  %tmp5 = getelementptr inbounds float, float* %A, i64 %i.0
-  store float %tmp, float* %tmp5, align 4
+  %tmp5 = getelementptr inbounds float, ptr %A, i64 %i.0
+  store float %tmp, ptr %tmp5, align 4
   br label %bb6
 
 bb6:                                              ; preds = %bb4
@@ -121,10 +121,10 @@ bb9:                                              ; preds = %bb15, %bb8
 
 bb10:                                             ; preds = %bb9
   %tmp11 = sitofp i64 %i1.0 to float
-  %tmp12 = getelementptr inbounds float, float* %A, i64 %i1.0
-  %tmp13 = load float, float* %tmp12, align 4
+  %tmp12 = getelementptr inbounds float, ptr %A, i64 %i1.0
+  %tmp13 = load float, ptr %tmp12, align 4
   %tmp14 = fadd float %tmp13, %tmp11
-  store float %tmp14, float* %tmp12, align 4
+  store float %tmp14, ptr %tmp12, align 4
   br label %bb15
 
 bb15:                                             ; preds = %bb10
@@ -144,8 +144,8 @@ bb19:                                             ; preds = %bb18
   br label %bb20
 
 bb20:                                             ; preds = %bb19
-  %tmp21 = getelementptr inbounds float, float* %A, i64 %i2.0
-  %tmp22 = load float, float* %tmp21, align 4
+  %tmp21 = getelementptr inbounds float, ptr %A, i64 %i2.0
+  %tmp22 = load float, ptr %tmp21, align 4
   %tmp23 = fadd float %sum.0, %tmp22
   %tmp24 = add nuw nsw i64 %i2.0, 1
   br label %bb18
@@ -158,12 +158,11 @@ bb25:                                             ; preds = %bb18
 define i32 @main() {
 bb:
   %A = alloca [32 x float], align 16
-  %tmp = getelementptr inbounds [32 x float], [32 x float]* %A, i64 0, i64 0
-  %tmp1 = call float @foo(float* %tmp)
+  %tmp1 = call float @foo(ptr %A)
   %tmp2 = fpext float %tmp1 to double
-  %tmp3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), double %tmp2) #2
+  %tmp3 = call i32 (ptr, ...) @printf(ptr @.str, double %tmp2) #2
   ret i32 0
 }
 
-declare i32 @printf(i8*, ...) #1
+declare i32 @printf(ptr, ...) #1
 

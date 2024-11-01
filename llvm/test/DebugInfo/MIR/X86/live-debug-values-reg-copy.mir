@@ -111,6 +111,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
+debugInstrRef: true
 registers:
 liveins:
   - { reg: '$edi', virtual-reg: '' }

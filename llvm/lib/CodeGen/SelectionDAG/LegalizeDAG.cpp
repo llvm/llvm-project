@@ -552,16 +552,16 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
     // Promote to a byte-sized store with upper bits zero if not
     // storing an integral number of bytes.  For example, promote
     // TRUNCSTORE:i1 X -> TRUNCSTORE:i8 (and X, 1)
-    EVT NVT = EVT::getIntegerVT(*DAG.getContext(), StSize.getFixedSize());
+    EVT NVT = EVT::getIntegerVT(*DAG.getContext(), StSize.getFixedValue());
     Value = DAG.getZeroExtendInReg(Value, dl, StVT);
     SDValue Result =
         DAG.getTruncStore(Chain, dl, Value, Ptr, ST->getPointerInfo(), NVT,
                           ST->getOriginalAlign(), MMOFlags, AAInfo);
     ReplaceNode(SDValue(Node, 0), Result);
-  } else if (!StVT.isVector() && !isPowerOf2_64(StWidth.getFixedSize())) {
+  } else if (!StVT.isVector() && !isPowerOf2_64(StWidth.getFixedValue())) {
     // If not storing a power-of-2 number of bits, expand as two stores.
     assert(!StVT.isVector() && "Unsupported truncstore!");
-    unsigned StWidthBits = StWidth.getFixedSize();
+    unsigned StWidthBits = StWidth.getFixedValue();
     unsigned LogStWidth = Log2_32(StWidthBits);
     assert(LogStWidth < 32);
     unsigned RoundWidth = 1 << LogStWidth;
@@ -769,10 +769,10 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
 
     Value = Result;
     Chain = Ch;
-  } else if (!isPowerOf2_64(SrcWidth.getKnownMinSize())) {
+  } else if (!isPowerOf2_64(SrcWidth.getKnownMinValue())) {
     // If not loading a power-of-2 number of bits, expand as two loads.
     assert(!SrcVT.isVector() && "Unsupported extload!");
-    unsigned SrcWidthBits = SrcWidth.getFixedSize();
+    unsigned SrcWidthBits = SrcWidth.getFixedValue();
     unsigned LogSrcWidth = Log2_32(SrcWidthBits);
     assert(LogSrcWidth < 32);
     unsigned RoundWidth = 1 << LogSrcWidth;
@@ -1078,7 +1078,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     SimpleFinishLegalizing = false;
     break;
   case ISD::EXTRACT_ELEMENT:
-  case ISD::FLT_ROUNDS_:
+  case ISD::GET_ROUNDING:
   case ISD::MERGE_VALUES:
   case ISD::EH_RETURN:
   case ISD::FRAME_TO_ARGS_OFFSET:
@@ -2741,7 +2741,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
                                   FA, Offset));
     break;
   }
-  case ISD::FLT_ROUNDS_:
+  case ISD::GET_ROUNDING:
     Results.push_back(DAG.getConstant(1, dl, Node->getValueType(0)));
     Results.push_back(Node->getOperand(0));
     break;

@@ -1318,8 +1318,8 @@ NVPTXTargetLowering::LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const {
 std::string NVPTXTargetLowering::getPrototype(
     const DataLayout &DL, Type *retTy, const ArgListTy &Args,
     const SmallVectorImpl<ISD::OutputArg> &Outs, MaybeAlign retAlignment,
-    Optional<std::pair<unsigned, const APInt &>> VAInfo, const CallBase &CB,
-    unsigned UniqueCallSite) const {
+    std::optional<std::pair<unsigned, const APInt &>> VAInfo,
+    const CallBase &CB, unsigned UniqueCallSite) const {
   auto PtrVT = getPointerTy(DL);
 
   bool isABI = (STI.getSmVersion() >= 20);
@@ -1414,13 +1414,10 @@ std::string NVPTXTargetLowering::getPrototype(
       continue;
     }
 
-    Align ParamByValAlign = Outs[OIdx].Flags.getNonZeroByValAlign();
-
-    // Try to increase alignment. This code matches logic in LowerCall when
-    // alignment increase is performed to increase vectorization options.
     Type *ETy = Args[i].IndirectType;
-    Align AlignCandidate = getFunctionParamOptimizedAlign(F, ETy, DL);
-    ParamByValAlign = std::max(ParamByValAlign, AlignCandidate);
+    Align InitialAlign = Outs[OIdx].Flags.getNonZeroByValAlign();
+    Align ParamByValAlign =
+        getFunctionByValParamAlign(F, ETy, InitialAlign, DL);
 
     O << ".param .align " << ParamByValAlign.value() << " .b8 ";
     O << "_";
@@ -1430,7 +1427,10 @@ std::string NVPTXTargetLowering::getPrototype(
   if (VAInfo)
     O << (first ? "" : ",") << " .param .align " << VAInfo->second
       << " .b8 _[]\n";
-  O << ");";
+  O << ")";
+  if (shouldEmitPTXNoReturn(&CB, *nvTM))
+    O << " .noreturn";
+  O << ";";
 
   return Prototype;
 }
@@ -1557,17 +1557,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       // The ByValAlign in the Outs[OIdx].Flags is always set at this point,
       // so we don't need to worry whether it's naturally aligned or not.
       // See TargetLowering::LowerCallTo().
-      ArgAlign = Outs[OIdx].Flags.getNonZeroByValAlign();
-
-      // Try to increase alignment to enhance vectorization options.
-      if (const Function *DirectCallee = CB->getCalledFunction())
-        ArgAlign = std::max(
-            ArgAlign, getFunctionParamOptimizedAlign(DirectCallee, ETy, DL));
-
-      // Enforce minumum alignment of 4 to work around ptxas miscompile
-      // for sm_50+. See corresponding alignment adjustment in
-      // emitFunctionParamList() for details.
-      ArgAlign = std::max(ArgAlign, Align(4));
+      Align InitialAlign = Outs[OIdx].Flags.getNonZeroByValAlign();
+      ArgAlign = getFunctionByValParamAlign(CB->getCalledFunction(), ETy,
+                                            InitialAlign, DL);
       if (IsVAArg)
         VAOffset = alignTo(VAOffset, ArgAlign);
     } else {
@@ -1812,16 +1804,18 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     SDVTList ProtoVTs = DAG.getVTList(MVT::Other, MVT::Glue);
     std::string Proto = getPrototype(
         DL, RetTy, Args, Outs, retAlignment,
-        HasVAArgs ? Optional<std::pair<unsigned, const APInt &>>(std::make_pair(
-                        CLI.NumFixedArgs,
-                        cast<ConstantSDNode>(VADeclareParam->getOperand(1))
-                            ->getAPIntValue()))
-                  : std::nullopt,
+        HasVAArgs
+            ? std::optional<std::pair<unsigned, const APInt &>>(std::make_pair(
+                  CLI.NumFixedArgs,
+                  cast<ConstantSDNode>(VADeclareParam->getOperand(1))
+                      ->getAPIntValue()))
+            : std::nullopt,
         *CB, UniqueCallSite);
-    const char *ProtoStr =
-      nvTM->getManagedStrPool()->getManagedString(Proto.c_str())->c_str();
+    const char *ProtoStr = nvTM->getStrPool().save(Proto).data();
     SDValue ProtoOps[] = {
-      Chain, DAG.getTargetExternalSymbol(ProtoStr, MVT::i32), InFlag,
+        Chain,
+        DAG.getTargetExternalSymbol(ProtoStr, MVT::i32),
+        InFlag,
     };
     Chain = DAG.getNode(NVPTXISD::CallPrototype, dl, ProtoVTs, ProtoOps);
     InFlag = Chain.getValue(1);
@@ -1997,7 +1991,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     InFlag = Ret.getValue(2);
 
     if (ProxyRegTruncates[i]) {
-      Ret = DAG.getNode(ISD::TRUNCATE, dl, ProxyRegTruncates[i].value(), Ret);
+      Ret = DAG.getNode(ISD::TRUNCATE, dl, *ProxyRegTruncates[i], Ret);
     }
 
     InVals.push_back(Ret);
@@ -2630,9 +2624,9 @@ SDValue NVPTXTargetLowering::getParamSymbol(SelectionDAG &DAG, int idx,
   else
     ParamStr << "_param_" << idx;
 
-  std::string *SavedStr =
-    nvTM->getManagedStrPool()->getManagedString(ParamSym.c_str());
-  return DAG.getTargetExternalSymbol(SavedStr->c_str(), v);
+  StringRef SavedStr =
+    nvTM->getStrPool().save(ParamSym);
+  return DAG.getTargetExternalSymbol(SavedStr.data(), v);
 }
 
 SDValue NVPTXTargetLowering::LowerFormalArguments(
@@ -2751,11 +2745,11 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
                           DAG.getConstant(Offsets[VecIdx], dl, PtrVT));
           Value *srcValue = Constant::getNullValue(PointerType::get(
               EltVT.getTypeForEVT(F->getContext()), ADDRESS_SPACE_PARAM));
-          SDValue P =
-              DAG.getLoad(VecVT, dl, Root, VecAddr,
-                          MachinePointerInfo(srcValue), aggregateIsPacked,
-                          MachineMemOperand::MODereferenceable |
-                              MachineMemOperand::MOInvariant);
+          SDValue P = DAG.getLoad(VecVT, dl, Root, VecAddr,
+                                  MachinePointerInfo(srcValue),
+                                  MaybeAlign(aggregateIsPacked ? 1 : 0),
+                                  MachineMemOperand::MODereferenceable |
+                                      MachineMemOperand::MOInvariant);
           if (P.getNode())
             P.getNode()->setIROrder(idx + 1);
           for (unsigned j = 0; j < NumElts; ++j) {
@@ -4503,6 +4497,29 @@ Align NVPTXTargetLowering::getFunctionParamOptimizedAlign(
 
   assert(!isKernelFunction(*F) && "Expect kernels to have non-local linkage");
   return Align(std::max(uint64_t(16), ABITypeAlign));
+}
+
+/// Helper for computing alignment of a device function byval parameter.
+Align NVPTXTargetLowering::getFunctionByValParamAlign(
+    const Function *F, Type *ArgTy, Align InitialAlign,
+    const DataLayout &DL) const {
+  Align ArgAlign = InitialAlign;
+  // Try to increase alignment to enhance vectorization options.
+  if (F)
+    ArgAlign = std::max(ArgAlign, getFunctionParamOptimizedAlign(F, ArgTy, DL));
+
+  // Work around a bug in ptxas. When PTX code takes address of
+  // byval parameter with alignment < 4, ptxas generates code to
+  // spill argument into memory. Alas on sm_50+ ptxas generates
+  // SASS code that fails with misaligned access. To work around
+  // the problem, make sure that we align byval parameters by at
+  // least 4.
+  // TODO: this will need to be undone when we get to support multi-TU
+  // device-side compilation as it breaks ABI compatibility with nvcc.
+  // Hopefully ptxas bug is fixed by then.
+  ArgAlign = std::max(ArgAlign, Align(4));
+
+  return ArgAlign;
 }
 
 /// isLegalAddressingMode - Return true if the addressing mode represented

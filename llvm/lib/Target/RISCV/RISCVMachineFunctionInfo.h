@@ -72,7 +72,7 @@ private:
   SmallVector<Register, 8> SExt32Registers;
 
 public:
-  RISCVMachineFunctionInfo(const MachineFunction &MF) {}
+  RISCVMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI) {}
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,

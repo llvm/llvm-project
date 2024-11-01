@@ -1116,51 +1116,46 @@ TEST_F(DILocationTest, cloneTemporary) {
 }
 
 TEST_F(DILocationTest, discriminatorEncoding) {
-  EXPECT_EQ(0U, DILocation::encodeDiscriminator(0, 0, 0).value());
+  EXPECT_EQ(0U, *DILocation::encodeDiscriminator(0, 0, 0));
 
   // Encode base discriminator as a component: lsb is 0, then the value.
   // The other components are all absent, so we leave all the other bits 0.
-  EXPECT_EQ(2U, DILocation::encodeDiscriminator(1, 0, 0).value());
+  EXPECT_EQ(2U, *DILocation::encodeDiscriminator(1, 0, 0));
 
   // Base discriminator component is empty, so lsb is 1. Next component is not
   // empty, so its lsb is 0, then its value (1). Next component is empty.
   // So the bit pattern is 101.
-  EXPECT_EQ(5U, DILocation::encodeDiscriminator(0, 1, 0).value());
+  EXPECT_EQ(5U, *DILocation::encodeDiscriminator(0, 1, 0));
 
   // First 2 components are empty, so the bit pattern is 11. Then the
   // next component - ending up with 1011.
-  EXPECT_EQ(0xbU, DILocation::encodeDiscriminator(0, 0, 1).value());
+  EXPECT_EQ(0xbU, *DILocation::encodeDiscriminator(0, 0, 1));
 
   // The bit pattern for the first 2 components is 11. The next bit is 0,
   // because the last component is not empty. We have 29 bits usable for
   // encoding, but we cap it at 12 bits uniformously for all components. We
   // encode the last component over 14 bits.
-  EXPECT_EQ(0xfffbU, DILocation::encodeDiscriminator(0, 0, 0xfff).value());
+  EXPECT_EQ(0xfffbU, *DILocation::encodeDiscriminator(0, 0, 0xfff));
 
-  EXPECT_EQ(0x102U, DILocation::encodeDiscriminator(1, 1, 0).value());
+  EXPECT_EQ(0x102U, *DILocation::encodeDiscriminator(1, 1, 0));
 
-  EXPECT_EQ(0x13eU, DILocation::encodeDiscriminator(0x1f, 1, 0).value());
+  EXPECT_EQ(0x13eU, *DILocation::encodeDiscriminator(0x1f, 1, 0));
 
-  EXPECT_EQ(0x87feU, DILocation::encodeDiscriminator(0x1ff, 1, 0).value());
+  EXPECT_EQ(0x87feU, *DILocation::encodeDiscriminator(0x1ff, 1, 0));
 
-  EXPECT_EQ(0x1f3eU, DILocation::encodeDiscriminator(0x1f, 0x1f, 0).value());
+  EXPECT_EQ(0x1f3eU, *DILocation::encodeDiscriminator(0x1f, 0x1f, 0));
 
-  EXPECT_EQ(0x3ff3eU, DILocation::encodeDiscriminator(0x1f, 0x1ff, 0).value());
+  EXPECT_EQ(0x3ff3eU, *DILocation::encodeDiscriminator(0x1f, 0x1ff, 0));
 
-  EXPECT_EQ(0x1ff87feU,
-            DILocation::encodeDiscriminator(0x1ff, 0x1ff, 0).value());
+  EXPECT_EQ(0x1ff87feU, *DILocation::encodeDiscriminator(0x1ff, 0x1ff, 0));
 
-  EXPECT_EQ(0xfff9f3eU,
-            DILocation::encodeDiscriminator(0x1f, 0x1f, 0xfff).value());
+  EXPECT_EQ(0xfff9f3eU, *DILocation::encodeDiscriminator(0x1f, 0x1f, 0xfff));
 
-  EXPECT_EQ(0xffc3ff3eU,
-            DILocation::encodeDiscriminator(0x1f, 0x1ff, 0x1ff).value());
+  EXPECT_EQ(0xffc3ff3eU, *DILocation::encodeDiscriminator(0x1f, 0x1ff, 0x1ff));
 
-  EXPECT_EQ(0xffcf87feU,
-            DILocation::encodeDiscriminator(0x1ff, 0x1f, 0x1ff).value());
+  EXPECT_EQ(0xffcf87feU, *DILocation::encodeDiscriminator(0x1ff, 0x1f, 0x1ff));
 
-  EXPECT_EQ(0xe1ff87feU,
-            DILocation::encodeDiscriminator(0x1ff, 0x1ff, 7).value());
+  EXPECT_EQ(0xe1ff87feU, *DILocation::encodeDiscriminator(0x1ff, 0x1ff, 7));
 }
 
 TEST_F(DILocationTest, discriminatorEncodingNegativeTests) {
@@ -1182,36 +1177,35 @@ TEST_F(DILocationTest, discriminatorSpecialCases) {
   EXPECT_EQ(0U, L1->getBaseDiscriminator());
   EXPECT_EQ(1U, L1->getDuplicationFactor());
 
-  EXPECT_EQ(L1, L1->cloneWithBaseDiscriminator(0).value());
-  EXPECT_EQ(L1, L1->cloneByMultiplyingDuplicationFactor(0).value());
-  EXPECT_EQ(L1, L1->cloneByMultiplyingDuplicationFactor(1).value());
+  EXPECT_EQ(L1, *L1->cloneWithBaseDiscriminator(0));
+  EXPECT_EQ(L1, *L1->cloneByMultiplyingDuplicationFactor(0));
+  EXPECT_EQ(L1, *L1->cloneByMultiplyingDuplicationFactor(1));
 
-  auto L2 = L1->cloneWithBaseDiscriminator(1).value();
+  auto L2 = *L1->cloneWithBaseDiscriminator(1);
   EXPECT_EQ(0U, L1->getBaseDiscriminator());
   EXPECT_EQ(1U, L1->getDuplicationFactor());
 
   EXPECT_EQ(1U, L2->getBaseDiscriminator());
   EXPECT_EQ(1U, L2->getDuplicationFactor());
 
-  auto L3 = L2->cloneByMultiplyingDuplicationFactor(2).value();
+  auto L3 = *L2->cloneByMultiplyingDuplicationFactor(2);
   EXPECT_EQ(1U, L3->getBaseDiscriminator());
   EXPECT_EQ(2U, L3->getDuplicationFactor());
 
-  EXPECT_EQ(L2, L2->cloneByMultiplyingDuplicationFactor(1).value());
+  EXPECT_EQ(L2, *L2->cloneByMultiplyingDuplicationFactor(1));
 
-  auto L4 = L3->cloneByMultiplyingDuplicationFactor(4).value();
+  auto L4 = *L3->cloneByMultiplyingDuplicationFactor(4);
   EXPECT_EQ(1U, L4->getBaseDiscriminator());
   EXPECT_EQ(8U, L4->getDuplicationFactor());
 
-  auto L5 = L4->cloneWithBaseDiscriminator(2).value();
+  auto L5 = *L4->cloneWithBaseDiscriminator(2);
   EXPECT_EQ(2U, L5->getBaseDiscriminator());
   EXPECT_EQ(8U, L5->getDuplicationFactor());
 
   // Check extreme cases
-  auto L6 = L1->cloneWithBaseDiscriminator(0xfff).value();
+  auto L6 = *L1->cloneWithBaseDiscriminator(0xfff);
   EXPECT_EQ(0xfffU, L6->getBaseDiscriminator());
-  EXPECT_EQ(0xfffU, L6->cloneByMultiplyingDuplicationFactor(0xfff)
-                        .value()
+  EXPECT_EQ(0xfffU, (*L6->cloneByMultiplyingDuplicationFactor(0xfff))
                         ->getDuplicationFactor());
 
   // Check we return std::nullopt for unencodable cases.
@@ -2225,8 +2219,8 @@ TEST_F(DIFileTest, EmptySource) {
   DIFile *N = DIFile::get(Context, "file", "dir");
   EXPECT_EQ(std::nullopt, N->getSource());
 
-  std::optional<DIFile::ChecksumInfo<StringRef>> Checksum = std::nullopt;
-  std::optional<StringRef> Source = std::nullopt;
+  std::optional<DIFile::ChecksumInfo<StringRef>> Checksum;
+  std::optional<StringRef> Source;
   N = DIFile::get(Context, "file", "dir", Checksum, Source);
   EXPECT_EQ(Source, N->getSource());
 
@@ -2937,7 +2931,7 @@ typedef MetadataTest DIExpressionTest;
 TEST_F(DIExpressionTest, get) {
   uint64_t Elements[] = {2, 6, 9, 78, 0};
   auto *N = DIExpression::get(Context, Elements);
-  EXPECT_EQ(makeArrayRef(Elements), N->getElements());
+  EXPECT_EQ(ArrayRef(Elements), N->getElements());
   EXPECT_EQ(N, DIExpression::get(Context, Elements));
 
   EXPECT_EQ(5u, N->getNumElements());
@@ -2986,7 +2980,7 @@ TEST_F(DIExpressionTest, isValid) {
   } while (false)
 
   // Empty expression should be valid.
-  EXPECT_TRUE(DIExpression::get(Context, std::nullopt));
+  EXPECT_TRUE(DIExpression::get(Context, std::nullopt)->isValid());
 
   // Valid constructions.
   EXPECT_VALID(dwarf::DW_OP_plus_uconst, 6);
@@ -2998,6 +2992,8 @@ TEST_F(DIExpressionTest, isValid) {
   EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_LLVM_fragment, 3, 7);
   EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_plus_uconst, 6,
                dwarf::DW_OP_LLVM_fragment, 3, 7);
+  EXPECT_VALID(dwarf::DW_OP_LLVM_entry_value, 1);
+  EXPECT_VALID(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_entry_value, 1);
 
   // Invalid constructions.
   EXPECT_INVALID(~0u);
@@ -3007,6 +3003,11 @@ TEST_F(DIExpressionTest, isValid) {
   EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3, 7, dwarf::DW_OP_plus_uconst, 3);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3, 7, dwarf::DW_OP_deref);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_entry_value, 2);
+  EXPECT_INVALID(dwarf::DW_OP_plus_uconst, 5, dwarf::DW_OP_LLVM_entry_value, 1);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus_uconst, 5,
+                 dwarf::DW_OP_LLVM_entry_value, 1);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_LLVM_entry_value, 1);
 
 #undef EXPECT_VALID
 #undef EXPECT_INVALID
@@ -3088,6 +3089,204 @@ TEST_F(DIExpressionTest, createFragmentExpression) {
 #undef EXPECT_INVALID_FRAGMENT
 }
 
+TEST_F(DIExpressionTest, convertToUndefExpression) {
+#define EXPECT_UNDEF_OPS_EQUAL(TestExpr, Expected)                             \
+  do {                                                                         \
+    const DIExpression *Undef =                                                \
+        DIExpression::convertToUndefExpression(TestExpr);                      \
+    EXPECT_EQ(Undef, Expected);                                                \
+  } while (false)
+#define GET_EXPR(...) DIExpression::get(Context, {__VA_ARGS__})
+
+  // Expressions which are single-location and non-complex should be unchanged.
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(), GET_EXPR());
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_LLVM_fragment, 0, 32),
+                         GET_EXPR(dwarf::DW_OP_LLVM_fragment, 0, 32));
+
+  // Variadic expressions should become single-location.
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_LLVM_arg, 0), GET_EXPR());
+  EXPECT_UNDEF_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_fragment, 32, 32),
+      GET_EXPR(dwarf::DW_OP_LLVM_fragment, 32, 32));
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_LLVM_arg, 0,
+                                  dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_mul),
+                         GET_EXPR());
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_LLVM_arg, 0,
+                                  dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_mul,
+                                  dwarf::DW_OP_LLVM_fragment, 64, 32),
+                         GET_EXPR(dwarf::DW_OP_LLVM_fragment, 64, 32));
+
+  // Any stack-computing ops should be removed.
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_plus_uconst, 8), GET_EXPR());
+  EXPECT_UNDEF_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 8, dwarf::DW_OP_LLVM_fragment, 0, 16),
+      GET_EXPR(dwarf::DW_OP_LLVM_fragment, 0, 16));
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_constu, 24, dwarf::DW_OP_shra),
+                         GET_EXPR());
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_constu, 24, dwarf::DW_OP_shra,
+                                  dwarf::DW_OP_LLVM_fragment, 8, 16),
+                         GET_EXPR(dwarf::DW_OP_LLVM_fragment, 8, 16));
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_deref), GET_EXPR());
+  EXPECT_UNDEF_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_deref, dwarf::DW_OP_LLVM_fragment, 16, 16),
+      GET_EXPR(dwarf::DW_OP_LLVM_fragment, 16, 16));
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_constu, 4, dwarf::DW_OP_minus),
+                         GET_EXPR());
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_constu, 4, dwarf::DW_OP_minus,
+                                  dwarf::DW_OP_LLVM_fragment, 24, 16),
+                         GET_EXPR(dwarf::DW_OP_LLVM_fragment, 24, 16));
+
+  // Stack-value operators are also not preserved.
+  EXPECT_UNDEF_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 8, dwarf::DW_OP_stack_value),
+      GET_EXPR());
+  EXPECT_UNDEF_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_plus_uconst, 8,
+                                  dwarf::DW_OP_stack_value,
+                                  dwarf::DW_OP_LLVM_fragment, 32, 16),
+                         GET_EXPR(dwarf::DW_OP_LLVM_fragment, 32, 16));
+
+#undef EXPECT_UNDEF_OPS_EQUAL
+#undef GET_EXPR
+}
+
+TEST_F(DIExpressionTest, convertToVariadicExpression) {
+#define EXPECT_CONVERT_IS_NOOP(TestExpr)                                       \
+  do {                                                                         \
+    const DIExpression *Variadic =                                             \
+        DIExpression::convertToVariadicExpression(TestExpr);                   \
+    EXPECT_EQ(Variadic, TestExpr);                                             \
+  } while (false)
+#define EXPECT_VARIADIC_OPS_EQUAL(TestExpr, Expected)                          \
+  do {                                                                         \
+    const DIExpression *Variadic =                                             \
+        DIExpression::convertToVariadicExpression(TestExpr);                   \
+    EXPECT_EQ(Variadic, Expected);                                             \
+  } while (false)
+#define GET_EXPR(...) DIExpression::get(Context, {__VA_ARGS__})
+
+  // Expressions which are already variadic should be unaffected.
+  EXPECT_CONVERT_IS_NOOP(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_stack_value));
+  EXPECT_CONVERT_IS_NOOP(GET_EXPR(dwarf::DW_OP_LLVM_arg, 0,
+                                  dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_plus,
+                                  dwarf::DW_OP_stack_value));
+  EXPECT_CONVERT_IS_NOOP(GET_EXPR(dwarf::DW_OP_constu, 5, dwarf::DW_OP_LLVM_arg,
+                                  0, dwarf::DW_OP_plus,
+                                  dwarf::DW_OP_stack_value));
+  EXPECT_CONVERT_IS_NOOP(GET_EXPR(dwarf::DW_OP_LLVM_arg, 0,
+                                  dwarf::DW_OP_stack_value,
+                                  dwarf::DW_OP_LLVM_fragment, 0, 32));
+
+  // Other expressions should receive a leading `LLVM_arg 0`.
+  EXPECT_VARIADIC_OPS_EQUAL(GET_EXPR(), GET_EXPR(dwarf::DW_OP_LLVM_arg, 0));
+  EXPECT_VARIADIC_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 4),
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus_uconst, 4));
+  EXPECT_VARIADIC_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 4, dwarf::DW_OP_stack_value),
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus_uconst, 4,
+               dwarf::DW_OP_stack_value));
+  EXPECT_VARIADIC_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 6, dwarf::DW_OP_stack_value,
+               dwarf::DW_OP_LLVM_fragment, 32, 32),
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus_uconst, 6,
+               dwarf::DW_OP_stack_value, dwarf::DW_OP_LLVM_fragment, 32, 32));
+  EXPECT_VARIADIC_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_plus_uconst, 14,
+                                     dwarf::DW_OP_LLVM_fragment, 32, 32),
+                            GET_EXPR(dwarf::DW_OP_LLVM_arg, 0,
+                                     dwarf::DW_OP_plus_uconst, 14,
+                                     dwarf::DW_OP_LLVM_fragment, 32, 32));
+
+#undef EXPECT_CONVERT_IS_NOOP
+#undef EXPECT_VARIADIC_OPS_EQUAL
+#undef GET_EXPR
+}
+
+TEST_F(DIExpressionTest, convertToNonVariadicExpression) {
+#define EXPECT_CONVERT_IS_NOOP(TestExpr)                                       \
+  do {                                                                         \
+    std::optional<const DIExpression *> NonVariadic =                          \
+        DIExpression::convertToNonVariadicExpression(TestExpr);                \
+    EXPECT_TRUE(NonVariadic.has_value());                                      \
+    EXPECT_EQ(*NonVariadic, TestExpr);                                         \
+  } while (false)
+#define EXPECT_NON_VARIADIC_OPS_EQUAL(TestExpr, Expected)                      \
+  do {                                                                         \
+    std::optional<const DIExpression *> NonVariadic =                          \
+        DIExpression::convertToNonVariadicExpression(TestExpr);                \
+    EXPECT_TRUE(NonVariadic.has_value());                                      \
+    EXPECT_EQ(*NonVariadic, Expected);                                         \
+  } while (false)
+#define EXPECT_INVALID_CONVERSION(TestExpr)                                    \
+  do {                                                                         \
+    std::optional<const DIExpression *> NonVariadic =                          \
+        DIExpression::convertToNonVariadicExpression(TestExpr);                \
+    EXPECT_FALSE(NonVariadic.has_value());                                     \
+  } while (false)
+#define GET_EXPR(...) DIExpression::get(Context, {__VA_ARGS__})
+
+  // Expressions which are already non-variadic should be unaffected.
+  EXPECT_CONVERT_IS_NOOP(GET_EXPR());
+  EXPECT_CONVERT_IS_NOOP(GET_EXPR(dwarf::DW_OP_plus_uconst, 4));
+  EXPECT_CONVERT_IS_NOOP(
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 4, dwarf::DW_OP_stack_value));
+  EXPECT_CONVERT_IS_NOOP(GET_EXPR(dwarf::DW_OP_plus_uconst, 6,
+                                  dwarf::DW_OP_stack_value,
+                                  dwarf::DW_OP_LLVM_fragment, 32, 32));
+  EXPECT_CONVERT_IS_NOOP(GET_EXPR(dwarf::DW_OP_plus_uconst, 14,
+                                  dwarf::DW_OP_LLVM_fragment, 32, 32));
+
+  // Variadic expressions with a single leading `LLVM_arg 0` and no other
+  // LLVM_args should have the leading arg removed.
+  EXPECT_NON_VARIADIC_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_LLVM_arg, 0), GET_EXPR());
+  EXPECT_NON_VARIADIC_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_stack_value),
+      GET_EXPR(dwarf::DW_OP_stack_value));
+  EXPECT_NON_VARIADIC_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_fragment, 16, 32),
+      GET_EXPR(dwarf::DW_OP_LLVM_fragment, 16, 32));
+  EXPECT_NON_VARIADIC_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_stack_value,
+               dwarf::DW_OP_LLVM_fragment, 24, 32),
+      GET_EXPR(dwarf::DW_OP_stack_value, dwarf::DW_OP_LLVM_fragment, 24, 32));
+  EXPECT_NON_VARIADIC_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus_uconst, 4),
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 4));
+  EXPECT_NON_VARIADIC_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus_uconst, 4,
+               dwarf::DW_OP_stack_value),
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 4, dwarf::DW_OP_stack_value));
+  EXPECT_NON_VARIADIC_OPS_EQUAL(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus_uconst, 6,
+               dwarf::DW_OP_stack_value, dwarf::DW_OP_LLVM_fragment, 32, 32),
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 6, dwarf::DW_OP_stack_value,
+               dwarf::DW_OP_LLVM_fragment, 32, 32));
+  EXPECT_NON_VARIADIC_OPS_EQUAL(GET_EXPR(dwarf::DW_OP_LLVM_arg, 0,
+                                         dwarf::DW_OP_plus_uconst, 14,
+                                         dwarf::DW_OP_LLVM_fragment, 32, 32),
+                                GET_EXPR(dwarf::DW_OP_plus_uconst, 14,
+                                         dwarf::DW_OP_LLVM_fragment, 32, 32));
+
+  // Variadic expressions that have any LLVM_args other than a leading
+  // `LLVM_arg 0` cannot be converted and so should return std::nullopt.
+  EXPECT_INVALID_CONVERSION(GET_EXPR(
+      dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_mul));
+  EXPECT_INVALID_CONVERSION(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_arg, 1,
+               dwarf::DW_OP_plus, dwarf::DW_OP_stack_value));
+  EXPECT_INVALID_CONVERSION(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_arg, 0,
+               dwarf::DW_OP_minus, dwarf::DW_OP_stack_value));
+  EXPECT_INVALID_CONVERSION(GET_EXPR(dwarf::DW_OP_constu, 5,
+                                     dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_div,
+                                     dwarf::DW_OP_stack_value));
+
+#undef EXPECT_CONVERT_IS_NOOP
+#undef EXPECT_NON_VARIADIC_OPS_EQUAL
+#undef EXPECT_INVALID_CONVERSION
+#undef GET_EXPR
+}
+
 TEST_F(DIExpressionTest, replaceArg) {
 #define EXPECT_REPLACE_ARG_EQ(Expr, OldArg, NewArg, ...)                       \
   do {                                                                         \
@@ -3114,6 +3313,49 @@ TEST_F(DIExpressionTest, replaceArg) {
                         dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_mul);
 
 #undef EXPECT_REPLACE_ARG_EQ
+}
+
+TEST_F(DIExpressionTest, isEqualExpression) {
+#define EXPECT_EQ_DEBUG_VALUE(ExprA, DirectA, ExprB, DirectB)                  \
+  EXPECT_TRUE(DIExpression::isEqualExpression(ExprA, DirectA, ExprB, DirectB))
+#define EXPECT_NE_DEBUG_VALUE(ExprA, DirectA, ExprB, DirectB)                  \
+  EXPECT_FALSE(DIExpression::isEqualExpression(ExprA, DirectA, ExprB, DirectB))
+#define GET_EXPR(...) DIExpression::get(Context, {__VA_ARGS__})
+
+  EXPECT_EQ_DEBUG_VALUE(GET_EXPR(), false, GET_EXPR(), false);
+  EXPECT_NE_DEBUG_VALUE(GET_EXPR(), false, GET_EXPR(), true);
+  EXPECT_EQ_DEBUG_VALUE(
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 32), true,
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 32, dwarf::DW_OP_deref), false);
+  EXPECT_NE_DEBUG_VALUE(
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 16, dwarf::DW_OP_deref), true,
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 16, dwarf::DW_OP_deref), false);
+  EXPECT_EQ_DEBUG_VALUE(
+      GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus_uconst, 5), false,
+      GET_EXPR(dwarf::DW_OP_plus_uconst, 5), false);
+  EXPECT_NE_DEBUG_VALUE(GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus),
+                        false,
+                        GET_EXPR(dwarf::DW_OP_LLVM_arg, 0,
+                                 dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus),
+                        false);
+  EXPECT_NE_DEBUG_VALUE(GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_constu,
+                                 8, dwarf::DW_OP_minus),
+                        false,
+                        GET_EXPR(dwarf::DW_OP_constu, 8, dwarf::DW_OP_LLVM_arg,
+                                 0, dwarf::DW_OP_minus),
+                        false);
+  // These expressions are actually equivalent, but we do not currently identify
+  // commutative operations with different operand orders as being equivalent.
+  EXPECT_NE_DEBUG_VALUE(GET_EXPR(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_constu,
+                                 8, dwarf::DW_OP_plus),
+                        false,
+                        GET_EXPR(dwarf::DW_OP_constu, 8, dwarf::DW_OP_LLVM_arg,
+                                 0, dwarf::DW_OP_plus),
+                        false);
+
+#undef EXPECT_EQ_DEBUG_VALUE
+#undef EXPECT_NE_DEBUG_VALUE
+#undef GET_EXPR
 }
 
 TEST_F(DIExpressionTest, foldConstant) {

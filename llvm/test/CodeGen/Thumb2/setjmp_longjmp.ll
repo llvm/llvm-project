@@ -2,10 +2,10 @@
 ; RUN: llc %s -o - | FileCheck %s
 target triple = "thumbv7-apple-ios"
 
-declare i32 @llvm.eh.sjlj.setjmp(i8*)
-declare void @llvm.eh.sjlj.longjmp(i8*)
-declare i8* @llvm.frameaddress(i32)
-declare i8* @llvm.stacksave()
+declare i32 @llvm.eh.sjlj.setjmp(ptr)
+declare void @llvm.eh.sjlj.longjmp(ptr)
+declare ptr @llvm.frameaddress(i32)
+declare ptr @llvm.stacksave()
 @g = external global i32
 
 define void @double_foobar() {
@@ -80,46 +80,44 @@ define void @double_foobar() {
 ; CHECK-NEXT:    ldr r7, [r0]
 ; CHECK-NEXT:    bx r1
 entry:
-  %buf = alloca [5 x i8*], align 4
-  %bufptr = bitcast [5 x i8*]* %buf to i8*
-  %arraydecay = getelementptr inbounds [5 x i8*], [5 x i8*]* %buf, i32 0, i32 0
+  %buf = alloca [5 x ptr], align 4
 
-  %fa = tail call i8* @llvm.frameaddress(i32 0)
-  store i8* %fa, i8** %arraydecay, align 4
-  %ss = tail call i8* @llvm.stacksave()
-  %ssgep = getelementptr [5 x i8*], [5 x i8*]* %buf, i32 0, i32 2
-  store i8* %ss, i8** %ssgep, align 4
+  %fa = tail call ptr @llvm.frameaddress(i32 0)
+  store ptr %fa, ptr %buf, align 4
+  %ss = tail call ptr @llvm.stacksave()
+  %ssgep = getelementptr [5 x ptr], ptr %buf, i32 0, i32 2
+  store ptr %ss, ptr %ssgep, align 4
 
-  %setjmpres = call i32 @llvm.eh.sjlj.setjmp(i8* %bufptr)
+  %setjmpres = call i32 @llvm.eh.sjlj.setjmp(ptr %buf)
   %tobool = icmp ne i32 %setjmpres, 0
   br i1 %tobool, label %if.then, label %if.else
 
 if.then:
-  store volatile i32 1, i32* @g, align 4
+  store volatile i32 1, ptr @g, align 4
   br label %if.end
 
 if.else:
-  store volatile i32 0, i32* @g, align 4
-  call void @llvm.eh.sjlj.longjmp(i8* %bufptr)
+  store volatile i32 0, ptr @g, align 4
+  call void @llvm.eh.sjlj.longjmp(ptr %buf)
   unreachable
 
 if.end:
-  %fa2 = tail call i8* @llvm.frameaddress(i32 0)
-  store i8* %fa2, i8** %arraydecay, align 4
-  %ss2 = tail call i8* @llvm.stacksave()
-  store i8* %ss2, i8** %ssgep, align 4
+  %fa2 = tail call ptr @llvm.frameaddress(i32 0)
+  store ptr %fa2, ptr %buf, align 4
+  %ss2 = tail call ptr @llvm.stacksave()
+  store ptr %ss2, ptr %ssgep, align 4
 
-  %setjmpres2 = call i32 @llvm.eh.sjlj.setjmp(i8* %bufptr)
+  %setjmpres2 = call i32 @llvm.eh.sjlj.setjmp(ptr %buf)
   %tobool2 = icmp ne i32 %setjmpres2, 0
   br i1 %tobool2, label %if2.then, label %if2.else
 
 if2.then:
-  store volatile i32 3, i32* @g, align 4
+  store volatile i32 3, ptr @g, align 4
   br label %if2.end
 
 if2.else:
-  store volatile i32 2, i32* @g, align 4
-  call void @llvm.eh.sjlj.longjmp(i8* %bufptr)
+  store volatile i32 2, ptr @g, align 4
+  call void @llvm.eh.sjlj.longjmp(ptr %buf)
   unreachable
 
 if2.end:

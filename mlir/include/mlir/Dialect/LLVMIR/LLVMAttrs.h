@@ -16,6 +16,7 @@
 
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/OpImplementation.h"
+#include <optional>
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.h.inc"
 
@@ -36,6 +37,16 @@ public:
 class DIScopeAttr : public DINodeAttr {
 public:
   using DINodeAttr::DINodeAttr;
+
+  /// Support LLVM type casting.
+  static bool classof(Attribute attr);
+};
+
+/// This class represents a LLVM attribute that describes a local debug info
+/// scope.
+class DILocalScopeAttr : public DIScopeAttr {
+public:
+  using DIScopeAttr::DIScopeAttr;
 
   /// Support LLVM type casting.
   static bool classof(Attribute attr);
@@ -80,31 +91,31 @@ public:
 
   /// Set the `disable_licm` option to the provided value. If no value
   /// is provided the option is deleted.
-  LoopOptionsAttrBuilder &setDisableLICM(Optional<bool> value);
+  LoopOptionsAttrBuilder &setDisableLICM(std::optional<bool> value);
 
   /// Set the `interleave_count` option to the provided value. If no value
   /// is provided the option is deleted.
-  LoopOptionsAttrBuilder &setInterleaveCount(Optional<uint64_t> count);
+  LoopOptionsAttrBuilder &setInterleaveCount(std::optional<uint64_t> count);
 
   /// Set the `disable_unroll` option to the provided value. If no value
   /// is provided the option is deleted.
-  LoopOptionsAttrBuilder &setDisableUnroll(Optional<bool> value);
+  LoopOptionsAttrBuilder &setDisableUnroll(std::optional<bool> value);
 
   /// Set the `disable_pipeline` option to the provided value. If no value
   /// is provided the option is deleted.
-  LoopOptionsAttrBuilder &setDisablePipeline(Optional<bool> value);
+  LoopOptionsAttrBuilder &setDisablePipeline(std::optional<bool> value);
 
   /// Set the `pipeline_initiation_interval` option to the provided value.
   /// If no value is provided the option is deleted.
   LoopOptionsAttrBuilder &
-  setPipelineInitiationInterval(Optional<uint64_t> count);
+  setPipelineInitiationInterval(std::optional<uint64_t> count);
 
   /// Returns true if any option has been set.
   bool empty() { return options.empty(); }
 
 private:
   template <typename T>
-  LoopOptionsAttrBuilder &setOption(LoopOptionCase tag, Optional<T> value);
+  LoopOptionsAttrBuilder &setOption(LoopOptionCase tag, std::optional<T> value);
 
   friend class LoopOptionsAttr;
   SmallVector<LoopOptionsAttr::OptionValuePair> options;

@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
   BinaryFormat
   Option
   Support
+  TargetParser
   DebugInfoCodeView
   DebugInfoMSF
   DebugInfoPDB

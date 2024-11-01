@@ -39,6 +39,7 @@ shared_library("libclang") {
     "//llvm/lib/IR",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
   ]
   if (current_os == "win" || current_os == "mac") {
     deps += [ ":exports" ]

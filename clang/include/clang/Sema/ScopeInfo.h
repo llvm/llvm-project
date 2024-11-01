@@ -233,6 +233,9 @@ public:
   /// modified in the function.
   llvm::SmallPtrSet<const ParmVarDecl *, 8> ModifiedNonNullParams;
 
+  /// The set of GNU address of label extension "&&label".
+  llvm::SmallVector<AddrLabelExpr *, 4> AddrLabels;
+
 public:
   /// Represents a simple identification of a weak object.
   ///
@@ -1028,7 +1031,7 @@ public:
   }
 
   void visitPotentialCaptures(
-      llvm::function_ref<void(VarDecl *, Expr *)> Callback) const;
+      llvm::function_ref<void(ValueDecl *, Expr *)> Callback) const;
 };
 
 FunctionScopeInfo::WeakObjectProfileTy::WeakObjectProfileTy()

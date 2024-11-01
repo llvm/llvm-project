@@ -185,8 +185,7 @@ void AArch64StackTaggingPreRA::uncheckUsesOf(unsigned TaggedReg, int FI) {
         UseI.getOperand(OpIdx).ChangeToFrameIndex(FI);
         UseI.getOperand(OpIdx).setTargetFlags(AArch64II::MO_TAGGED);
       }
-    } else if (UseI.isCopy() &&
-               Register::isVirtualRegister(UseI.getOperand(0).getReg())) {
+    } else if (UseI.isCopy() && UseI.getOperand(0).getReg().isVirtual()) {
       uncheckUsesOf(UseI.getOperand(0).getReg(), FI);
     }
   }
@@ -266,7 +265,7 @@ std::optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
       continue;
 
     Register RetagReg = I->getOperand(0).getReg();
-    if (!Register::isVirtualRegister(RetagReg))
+    if (!RetagReg.isVirtual())
       continue;
 
     int Score = 0;
@@ -285,7 +284,7 @@ std::optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
           continue;
         if (UseI.isCopy()) {
           Register DstReg = UseI.getOperand(0).getReg();
-          if (Register::isVirtualRegister(DstReg))
+          if (DstReg.isVirtual())
             WorkList.push_back(DstReg);
           continue;
         }

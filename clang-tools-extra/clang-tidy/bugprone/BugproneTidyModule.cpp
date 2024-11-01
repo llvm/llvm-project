@@ -76,8 +76,7 @@
 #include "UseAfterMoveCheck.h"
 #include "VirtualNearMissCheck.h"
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace bugprone {
 
 class BugproneModule : public ClangTidyModule {
@@ -220,5 +219,4 @@ static ClangTidyModuleRegistry::Add<bugprone::BugproneModule>
 // and thus register the BugproneModule.
 volatile int BugproneModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

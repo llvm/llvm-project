@@ -323,7 +323,7 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   if (TII.isMIMG(MI)) {
     uint64_t DMaskImm =
         TII.getNamedOperand(MI, AMDGPU::OpName::dmask)->getImm();
-    return countPopulation(DMaskImm);
+    return llvm::popcount(DMaskImm);
   }
   if (TII.isMTBUF(Opc)) {
     return AMDGPU::getMTBUFElements(Opc);
@@ -1784,7 +1784,7 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
       return AMDGPU::FLAT_STORE_DWORDX4;
     }
   case MIMG:
-    assert((countPopulation(CI.DMask | Paired.DMask) == Width) &&
+    assert(((unsigned)llvm::popcount(CI.DMask | Paired.DMask) == Width) &&
            "No overlaps");
     return AMDGPU::getMaskedMIMGOp(CI.I->getOpcode(), Width);
   }
@@ -1793,8 +1793,9 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
 std::pair<unsigned, unsigned>
 SILoadStoreOptimizer::getSubRegIdxs(const CombineInfo &CI,
                                     const CombineInfo &Paired) {
-  assert((CI.InstClass != MIMG || (countPopulation(CI.DMask | Paired.DMask) ==
-                                   CI.Width + Paired.Width)) &&
+  assert((CI.InstClass != MIMG ||
+          ((unsigned)llvm::popcount(CI.DMask | Paired.DMask) ==
+           CI.Width + Paired.Width)) &&
          "No overlaps");
 
   unsigned Idx0;

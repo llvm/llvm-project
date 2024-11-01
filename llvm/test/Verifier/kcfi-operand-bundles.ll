@@ -1,6 +1,6 @@
 ; RUN: not opt -passes=verify < %s 2>&1 | FileCheck %s
 
-define void @test_kcfi_bundle(i64 %arg0, i32 %arg1, void()* %arg2) {
+define void @test_kcfi_bundle(i64 %arg0, i32 %arg1, ptr %arg2) {
 ; CHECK: Multiple kcfi operand bundles
 ; CHECK-NEXT: call void %arg2() [ "kcfi"(i32 42), "kcfi"(i32 42) ]
   call void %arg2() [ "kcfi"(i32 42), "kcfi"(i32 42) ]

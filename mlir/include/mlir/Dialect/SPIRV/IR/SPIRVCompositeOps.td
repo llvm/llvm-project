@@ -258,11 +258,11 @@ def SPIRV_VectorInsertDynamicOp : SPIRV_Op<"VectorInsertDynamic", [
                                   ssa-use `[` ssa-use `]`
                                   `:` `vector<` integer-literal `x` scalar-type `>` `,`
                                   integer-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %scalar = ... : f32
     %2 = spirv.VectorInsertDynamic %scalar %0[%1] : f32, vector<8xf32>, i32
     ```

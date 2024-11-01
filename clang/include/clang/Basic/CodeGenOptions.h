@@ -60,6 +60,7 @@ public:
     LIBMVEC,           // GLIBC vector math library.
     MASSV,             // IBM MASS vector library.
     SVML,              // Intel short vector math library.
+    SLEEF,             // SLEEF SIMD Library for Evaluating Elementary Functions.
     Darwin_libsystem_m // Use Darwin's libsytem_m vector functions.
   };
 
@@ -135,6 +136,19 @@ public:
     NonLeaf,     // Keep non-leaf frame pointers.
     All,         // Keep all frame pointers.
   };
+
+  static StringRef getFramePointerKindName(FramePointerKind Kind) {
+    switch (Kind) {
+    case FramePointerKind::None:
+      return "none";
+    case FramePointerKind::NonLeaf:
+      return "non-leaf";
+    case FramePointerKind::All:
+      return "all";
+    }
+
+    llvm_unreachable("invalid FramePointerKind");
+  }
 
   enum class SwiftAsyncFramePointerKind {
     Auto, // Choose Swift async extended frame info based on deployment target.

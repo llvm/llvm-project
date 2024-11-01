@@ -5,31 +5,30 @@
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc"
 
-define internal void @add({i32, i32}* %this, i32* sret(i32) %r) {
+define internal void @add(ptr %this, ptr sret(i32) %r) {
 ;
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@add
-; TUNIT-SAME: ({ i32, i32 }* noalias nocapture nofree nonnull readnone align 8 dereferenceable(8) [[THIS:%.*]], i32* noalias nocapture nofree noundef nonnull writeonly sret(i32) align 4 dereferenceable(4) [[R:%.*]]) #[[ATTR0:[0-9]+]] {
-; TUNIT-NEXT:    store i32 undef, i32* [[R]], align 4
+; TUNIT-SAME: (ptr noalias nocapture nofree nonnull readnone align 8 dereferenceable(8) [[THIS:%.*]], ptr noalias nocapture nofree noundef nonnull writeonly sret(i32) align 4 dereferenceable(4) [[R:%.*]]) #[[ATTR0:[0-9]+]] {
+; TUNIT-NEXT:    store i32 undef, ptr [[R]], align 4
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@add
-; CGSCC-SAME: ({ i32, i32 }* noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[THIS:%.*]], i32* noalias nocapture nofree noundef nonnull writeonly sret(i32) align 4 dereferenceable(4) [[R:%.*]]) #[[ATTR0:[0-9]+]] {
-; CGSCC-NEXT:    [[AP:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[THIS]], i32 0, i32 0
-; CGSCC-NEXT:    [[BP:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[THIS]], i32 0, i32 1
-; CGSCC-NEXT:    [[A:%.*]] = load i32, i32* [[AP]], align 4
-; CGSCC-NEXT:    [[B:%.*]] = load i32, i32* [[BP]], align 4
+; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[THIS:%.*]], ptr noalias nocapture nofree noundef nonnull writeonly sret(i32) align 4 dereferenceable(4) [[R:%.*]]) #[[ATTR0:[0-9]+]] {
+; CGSCC-NEXT:    [[BP:%.*]] = getelementptr { i32, i32 }, ptr [[THIS]], i32 0, i32 1
+; CGSCC-NEXT:    [[A:%.*]] = load i32, ptr [[THIS]], align 8
+; CGSCC-NEXT:    [[B:%.*]] = load i32, ptr [[BP]], align 4
 ; CGSCC-NEXT:    [[AB:%.*]] = add i32 [[A]], [[B]]
-; CGSCC-NEXT:    store i32 [[AB]], i32* [[R]], align 4
+; CGSCC-NEXT:    store i32 [[AB]], ptr [[R]], align 4
 ; CGSCC-NEXT:    ret void
 ;
-  %ap = getelementptr {i32, i32}, {i32, i32}* %this, i32 0, i32 0
-  %bp = getelementptr {i32, i32}, {i32, i32}* %this, i32 0, i32 1
-  %a = load i32, i32* %ap
-  %b = load i32, i32* %bp
+  %ap = getelementptr {i32, i32}, ptr %this, i32 0, i32 0
+  %bp = getelementptr {i32, i32}, ptr %this, i32 0, i32 1
+  %a = load i32, ptr %ap
+  %b = load i32, ptr %bp
   %ab = add i32 %a, %b
-  store i32 %ab, i32* %r
+  store i32 %ab, ptr %r
   ret void
 }
 
@@ -38,7 +37,7 @@ define void @f() {
 ; TUNIT-LABEL: define {{[^@]+}}@f
 ; TUNIT-SAME: () #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:    [[R:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    call void @add({ i32, i32 }* noalias nocapture nofree nonnull readnone align 8 dereferenceable(8) undef, i32* noalias nocapture nofree noundef nonnull writeonly sret(i32) align 4 dereferenceable(4) [[R]]) #[[ATTR2:[0-9]+]]
+; TUNIT-NEXT:    call void @add(ptr noalias nocapture nofree nonnull readnone align 8 dereferenceable(8) undef, ptr noalias nocapture nofree noundef nonnull writeonly sret(i32) align 4 dereferenceable(4) [[R]]) #[[ATTR2:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
@@ -46,13 +45,13 @@ define void @f() {
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:    [[R:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    [[PAIR:%.*]] = alloca { i32, i32 }, align 8
-; CGSCC-NEXT:    call void @add({ i32, i32 }* noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[PAIR]], i32* noalias nocapture nofree noundef nonnull writeonly sret(i32) align 4 dereferenceable(4) [[R]]) #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    call void @add(ptr noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[PAIR]], ptr noalias nocapture nofree noundef nonnull writeonly sret(i32) align 4 dereferenceable(4) [[R]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
   %r = alloca i32
   %pair = alloca {i32, i32}
 
-  call void @add({i32, i32}* %pair, i32* sret(i32) %r)
+  call void @add(ptr %pair, ptr sret(i32) %r)
   ret void
 }
 ;.

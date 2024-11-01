@@ -10,9 +10,9 @@
 #define FORTRAN_OPTIMIZER_SUPPORT_INTERNALNAMES_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
+#include <optional>
 
 static constexpr llvm::StringRef typeDescriptorSeparator = ".dt.";
 static constexpr llvm::StringRef bindingTableSeparator = ".v.";
@@ -53,13 +53,13 @@ struct NameUniquer {
   struct DeconstructedName {
     DeconstructedName(llvm::StringRef name) : name{name} {}
     DeconstructedName(llvm::ArrayRef<std::string> modules,
-                      llvm::Optional<std::string> host, llvm::StringRef name,
+                      std::optional<std::string> host, llvm::StringRef name,
                       llvm::ArrayRef<std::int64_t> kinds)
         : modules{modules.begin(), modules.end()}, host{host}, name{name},
           kinds{kinds.begin(), kinds.end()} {}
 
     llvm::SmallVector<std::string> modules;
-    llvm::Optional<std::string> host;
+    std::optional<std::string> host;
     std::string name;
     llvm::SmallVector<std::int64_t> kinds;
   };
@@ -72,12 +72,12 @@ struct NameUniquer {
 
   /// Unique a (global) constant name
   static std::string doConstant(llvm::ArrayRef<llvm::StringRef> modules,
-                                llvm::Optional<llvm::StringRef> host,
+                                std::optional<llvm::StringRef> host,
                                 llvm::StringRef name);
 
   /// Unique a dispatch table name
   static std::string doDispatchTable(llvm::ArrayRef<llvm::StringRef> modules,
-                                     llvm::Optional<llvm::StringRef> host,
+                                     std::optional<llvm::StringRef> host,
                                      llvm::StringRef name,
                                      llvm::ArrayRef<std::int64_t> kinds);
 
@@ -87,39 +87,39 @@ struct NameUniquer {
   /// Unique an intrinsic type descriptor
   static std::string
   doIntrinsicTypeDescriptor(llvm::ArrayRef<llvm::StringRef> modules,
-                            llvm::Optional<llvm::StringRef> host,
+                            std::optional<llvm::StringRef> host,
                             IntrinsicType type, std::int64_t kind);
 
   /// Unique a procedure name
   static std::string doProcedure(llvm::ArrayRef<llvm::StringRef> modules,
-                                 llvm::Optional<llvm::StringRef> host,
+                                 std::optional<llvm::StringRef> host,
                                  llvm::StringRef name);
 
   /// Unique a derived type name
   static std::string doType(llvm::ArrayRef<llvm::StringRef> modules,
-                            llvm::Optional<llvm::StringRef> host,
+                            std::optional<llvm::StringRef> host,
                             llvm::StringRef name,
                             llvm::ArrayRef<std::int64_t> kinds);
 
   /// Unique a (derived) type descriptor name
   static std::string doTypeDescriptor(llvm::ArrayRef<llvm::StringRef> modules,
-                                      llvm::Optional<llvm::StringRef> host,
+                                      std::optional<llvm::StringRef> host,
                                       llvm::StringRef name,
                                       llvm::ArrayRef<std::int64_t> kinds);
   static std::string doTypeDescriptor(llvm::ArrayRef<std::string> modules,
-                                      llvm::Optional<std::string> host,
+                                      std::optional<std::string> host,
                                       llvm::StringRef name,
                                       llvm::ArrayRef<std::int64_t> kinds);
 
   /// Unique a (global) variable name. A variable with save attribute
   /// defined inside a subprogram also needs to be handled here
   static std::string doVariable(llvm::ArrayRef<llvm::StringRef> modules,
-                                llvm::Optional<llvm::StringRef> host,
+                                std::optional<llvm::StringRef> host,
                                 llvm::StringRef name);
 
   /// Unique a namelist group name
   static std::string doNamelistGroup(llvm::ArrayRef<llvm::StringRef> modules,
-                                     llvm::Optional<llvm::StringRef> host,
+                                     std::optional<llvm::StringRef> host,
                                      llvm::StringRef name);
 
   /// Entry point for the PROGRAM (called by the runtime)

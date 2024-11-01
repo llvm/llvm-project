@@ -1833,7 +1833,7 @@ Triple::ArchType WasmObjectFile::getArch() const {
   return HasMemory64 ? Triple::wasm64 : Triple::wasm32;
 }
 
-SubtargetFeatures WasmObjectFile::getFeatures() const {
+Expected<SubtargetFeatures> WasmObjectFile::getFeatures() const {
   return SubtargetFeatures();
 }
 

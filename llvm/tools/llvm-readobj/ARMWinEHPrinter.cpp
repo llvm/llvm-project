@@ -1248,7 +1248,7 @@ bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
     }
     if (RF.C()) {
       // Count the number of registers pushed below R11
-      int FpOffset = 4 * countPopulation(GPRMask & ((1U << 11) - 1));
+      int FpOffset = 4 * llvm::popcount(GPRMask & ((1U << 11) - 1));
       if (FpOffset)
         SW.startLine() << "add.w r11, sp, #" << FpOffset << "\n";
       else

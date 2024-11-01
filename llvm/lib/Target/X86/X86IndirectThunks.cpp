@@ -61,23 +61,28 @@ static const char R11LVIThunkName[] = "__llvm_lvi_thunk_r11";
 namespace {
 struct RetpolineThunkInserter : ThunkInserter<RetpolineThunkInserter> {
   const char *getThunkPrefix() { return RetpolineNamePrefix; }
-  bool mayUseThunk(const MachineFunction &MF) {
+  bool mayUseThunk(const MachineFunction &MF, bool InsertedThunks) {
+    if (InsertedThunks)
+      return false;
     const auto &STI = MF.getSubtarget<X86Subtarget>();
     return (STI.useRetpolineIndirectCalls() ||
             STI.useRetpolineIndirectBranches()) &&
            !STI.useRetpolineExternalThunk();
   }
-  void insertThunks(MachineModuleInfo &MMI);
+  bool insertThunks(MachineModuleInfo &MMI, MachineFunction &MF);
   void populateThunk(MachineFunction &MF);
 };
 
 struct LVIThunkInserter : ThunkInserter<LVIThunkInserter> {
   const char *getThunkPrefix() { return LVIThunkNamePrefix; }
-  bool mayUseThunk(const MachineFunction &MF) {
+  bool mayUseThunk(const MachineFunction &MF, bool InsertedThunks) {
+    if (InsertedThunks)
+      return false;
     return MF.getSubtarget<X86Subtarget>().useLVIControlFlowIntegrity();
   }
-  void insertThunks(MachineModuleInfo &MMI) {
+  bool insertThunks(MachineModuleInfo &MMI, MachineFunction &MF) {
     createThunkFunction(MMI, R11LVIThunkName);
+    return true;
   }
   void populateThunk(MachineFunction &MF) {
     assert (MF.size() == 1);
@@ -132,13 +137,15 @@ private:
 
 } // end anonymous namespace
 
-void RetpolineThunkInserter::insertThunks(MachineModuleInfo &MMI) {
+bool RetpolineThunkInserter::insertThunks(MachineModuleInfo &MMI,
+                                          MachineFunction &MF) {
   if (MMI.getTarget().getTargetTriple().getArch() == Triple::x86_64)
     createThunkFunction(MMI, R11RetpolineName);
   else
     for (StringRef Name : {EAXRetpolineName, ECXRetpolineName, EDXRetpolineName,
                            EDIRetpolineName})
       createThunkFunction(MMI, Name);
+  return true;
 }
 
 void RetpolineThunkInserter::populateThunk(MachineFunction &MF) {

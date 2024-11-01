@@ -251,8 +251,8 @@ bool EvexToVexInstPass::CompressEvexToVexImpl(MachineInstr &MI) const {
 
   // Use the VEX.L bit to select the 128 or 256-bit table.
   ArrayRef<X86EvexToVexCompressTableEntry> Table =
-    (Desc.TSFlags & X86II::VEX_L) ? makeArrayRef(X86EvexToVex256CompressTable)
-                                  : makeArrayRef(X86EvexToVex128CompressTable);
+      (Desc.TSFlags & X86II::VEX_L) ? ArrayRef(X86EvexToVex256CompressTable)
+                                    : ArrayRef(X86EvexToVex128CompressTable);
 
   const auto *I = llvm::lower_bound(Table, MI.getOpcode());
   if (I == Table.end() || I->EvexOpcode != MI.getOpcode())

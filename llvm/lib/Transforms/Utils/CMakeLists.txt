@@ -46,6 +46,7 @@ add_llvm_component_library(LLVMTransformUtils
   LoopVersioning.cpp
   LowerAtomic.cpp
   LowerGlobalDtors.cpp
+  LowerIFunc.cpp
   LowerInvoke.cpp
   LowerMemIntrinsics.cpp
   LowerSwitch.cpp
@@ -92,4 +93,5 @@ add_llvm_component_library(LLVMTransformUtils
   Analysis
   Core
   Support
+  TargetParser
   )

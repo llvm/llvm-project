@@ -414,7 +414,7 @@ XCOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
         Twine::utohexstr(OffsetToRaw) + " and size 0x" +
         Twine::utohexstr(SectionSize) + " goes past the end of the file");
 
-  return makeArrayRef(ContentStart,SectionSize);
+  return ArrayRef(ContentStart, SectionSize);
 }
 
 uint64_t XCOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {
@@ -712,7 +712,7 @@ Triple::ArchType XCOFFObjectFile::getArch() const {
   return is64Bit() ? Triple::ppc64 : Triple::ppc;
 }
 
-SubtargetFeatures XCOFFObjectFile::getFeatures() const {
+Expected<SubtargetFeatures> XCOFFObjectFile::getFeatures() const {
   return SubtargetFeatures();
 }
 

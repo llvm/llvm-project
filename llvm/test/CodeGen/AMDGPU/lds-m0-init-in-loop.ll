@@ -18,7 +18,7 @@
 
 ; GCN: .LBB0_3:
 ; GCN-NEXT: s_endpgm
-define amdgpu_kernel void @copy_local_to_global_loop_m0_init(i32 addrspace(1)* noalias nocapture %out, i32 addrspace(3)* noalias nocapture readonly %in, i32 %n) #0 {
+define amdgpu_kernel void @copy_local_to_global_loop_m0_init(ptr addrspace(1) noalias nocapture %out, ptr addrspace(3) noalias nocapture readonly %in, i32 %n) #0 {
 bb:
   %tmp = icmp sgt i32 %n, 0
   br i1 %tmp, label %.lr.ph.preheader, label %._crit_edge
@@ -35,10 +35,10 @@ bb:
 .lr.ph:                                           ; preds = %.lr.ph, %.lr.ph.preheader
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %.lr.ph.preheader ]
   %i.01 = phi i32 [ %tmp4, %.lr.ph ], [ 0, %.lr.ph.preheader ]
-  %tmp1 = getelementptr inbounds i32, i32 addrspace(3)* %in, i32 %i.01
-  %tmp2 = load i32, i32 addrspace(3)* %tmp1, align 4
-  %tmp3 = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %indvars.iv
-  store i32 %tmp2, i32 addrspace(1)* %tmp3, align 4
+  %tmp1 = getelementptr inbounds i32, ptr addrspace(3) %in, i32 %i.01
+  %tmp2 = load i32, ptr addrspace(3) %tmp1, align 4
+  %tmp3 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %indvars.iv
+  store i32 %tmp2, ptr addrspace(1) %tmp3, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %tmp4 = add nuw nsw i32 %i.01, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32

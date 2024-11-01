@@ -10,6 +10,7 @@ unittest("JITLinkTests") {
     "//llvm/lib/Object",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
   ]
   sources = [

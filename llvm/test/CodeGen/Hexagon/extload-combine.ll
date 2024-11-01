@@ -18,8 +18,8 @@ define i64 @short_test1() #0 {
 ; CHECK: [[VAR:r[0-9]+]] = memuh(##
 ; CHECK: combine(#0,[[VAR]])
 entry:
-  store i16 0, i16* @a, align 2
-  %0 = load i16, i16* @b, align 2
+  store i16 0, ptr @a, align 2
+  %0 = load i16, ptr @b, align 2
   %conv2 = zext i16 %0 to i64
   ret i64 %conv2
 }
@@ -29,8 +29,8 @@ define i64 @short_test2() #0 {
 ; CHECK: [[VAR1:r[0-9]+]] = memh(##
 ; CHECK: sxtw([[VAR1]])
 entry:
-  store i16 0, i16* @a, align 2
-  %0 = load i16, i16* @c, align 2
+  store i16 0, ptr @a, align 2
+  %0 = load i16, ptr @c, align 2
   %conv2 = sext i16 %0 to i64
   ret i64 %conv2
 }
@@ -40,8 +40,8 @@ define i64 @char_test1() #0 {
 ; CHECK: [[VAR2:r[0-9]+]] = memub(##
 ; CHECK: combine(#0,[[VAR2]])
 entry:
-  store i8 0, i8* @char_a, align 1
-  %0 = load i8, i8* @char_b, align 1
+  store i8 0, ptr @char_a, align 1
+  %0 = load i8, ptr @char_b, align 1
   %conv2 = zext i8 %0 to i64
   ret i64 %conv2
 }
@@ -51,8 +51,8 @@ define i64 @char_test2() #0 {
 ; CHECK: [[VAR3:r[0-9]+]] = memb(##
 ; CHECK: sxtw([[VAR3]])
 entry:
-  store i8 0, i8* @char_a, align 1
-  %0 = load i8, i8* @char_c, align 1
+  store i8 0, ptr @char_a, align 1
+  %0 = load i8, ptr @char_c, align 1
   %conv2 = sext i8 %0 to i64
   ret i64 %conv2
 }
@@ -62,8 +62,8 @@ define i64 @int_test1() #0 {
 ; CHECK: [[VAR4:r[0-9]+]] = memw(##
 ; CHECK: combine(#0,[[VAR4]])
 entry:
-  store i32 0, i32* @int_a, align 4
-  %0 = load i32, i32* @int_b, align 4
+  store i32 0, ptr @int_a, align 4
+  %0 = load i32, ptr @int_b, align 4
   %conv = zext i32 %0 to i64
   ret i64 %conv
 }
@@ -73,8 +73,8 @@ define i64 @int_test2() #0 {
 ; CHECK: [[VAR5:r[0-9]+]] = memw(##
 ; CHECK: sxtw([[VAR5]])
 entry:
-  store i32 0, i32* @int_a, align 4
-  %0 = load i32, i32* @int_c, align 4
+  store i32 0, ptr @int_a, align 4
+  %0 = load i32, ptr @int_c, align 4
   %conv = sext i32 %0 to i64
   ret i64 %conv
 }

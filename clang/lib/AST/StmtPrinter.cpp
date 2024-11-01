@@ -54,6 +54,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <optional>
 #include <string>
 
 using namespace clang;
@@ -2275,7 +2276,7 @@ void StmtPrinter::VisitCXXNewExpr(CXXNewExpr *E) {
   if (E->isArray()) {
     llvm::raw_string_ostream s(TypeS);
     s << '[';
-    if (Optional<Expr *> Size = E->getArraySize())
+    if (std::optional<Expr *> Size = E->getArraySize())
       (*Size)->printPretty(s, Helper, Policy);
     s << ']';
   }
@@ -2528,7 +2529,7 @@ void StmtPrinter::VisitRequiresExpr(RequiresExpr *E) {
     } else {
       auto *NestedReq = cast<concepts::NestedRequirement>(Req);
       OS << "requires ";
-      if (NestedReq->isSubstitutionFailure())
+      if (NestedReq->hasInvalidConstraint())
         OS << "<<error-expression>>";
       else
         PrintExpr(NestedReq->getConstraintExpr());

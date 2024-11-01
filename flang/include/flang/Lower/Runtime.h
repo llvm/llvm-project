@@ -16,10 +16,7 @@
 #ifndef FORTRAN_LOWER_RUNTIME_H
 #define FORTRAN_LOWER_RUNTIME_H
 
-namespace llvm {
-template <typename T>
-class Optional;
-}
+#include <optional>
 
 namespace mlir {
 class Location;
@@ -77,9 +74,9 @@ void genPointerAssociateRemapping(fir::FirOpBuilder &, mlir::Location,
 
 mlir::Value genCpuTime(fir::FirOpBuilder &, mlir::Location);
 void genDateAndTime(fir::FirOpBuilder &, mlir::Location,
-                    llvm::Optional<fir::CharBoxValue> date,
-                    llvm::Optional<fir::CharBoxValue> time,
-                    llvm::Optional<fir::CharBoxValue> zone, mlir::Value values);
+                    std::optional<fir::CharBoxValue> date,
+                    std::optional<fir::CharBoxValue> time,
+                    std::optional<fir::CharBoxValue> zone, mlir::Value values);
 
 void genRandomInit(fir::FirOpBuilder &, mlir::Location, mlir::Value repeatable,
                    mlir::Value imageDistinct);

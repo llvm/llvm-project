@@ -398,8 +398,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, {MVT::i32, MVT::i64},
                      Expand);
 
-  if (Subtarget->hasFlatAddressSpace())
-    setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
+  setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
 
   setOperationAction(ISD::BITREVERSE, {MVT::i32, MVT::i64}, Legal);
 
@@ -1014,7 +1013,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
           // IR type. Check the dmask for the real number of elements loaded.
           unsigned DMask
             = cast<ConstantInt>(CI.getArgOperand(0))->getZExtValue();
-          MaxNumLanes = DMask == 0 ? 1 : countPopulation(DMask);
+          MaxNumLanes = DMask == 0 ? 1 : llvm::popcount(DMask);
         }
       }
 
@@ -1029,7 +1028,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Type *DataTy = CI.getArgOperand(0)->getType();
       if (RsrcIntr->IsImage) {
         unsigned DMask = cast<ConstantInt>(CI.getArgOperand(1))->getZExtValue();
-        unsigned DMaskLanes = DMask == 0 ? 1 : countPopulation(DMask);
+        unsigned DMaskLanes = DMask == 0 ? 1 : llvm::popcount(DMask);
         Info.memVT = memVTFromLoadIntrData(DataTy, DMaskLanes);
       } else
         Info.memVT = EVT::getEVT(DataTy);
@@ -1716,7 +1715,7 @@ SDValue SITargetLowering::getLDSKernelId(SelectionDAG &DAG,
   std::optional<uint32_t> KnownSize =
       AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
   if (KnownSize.has_value())
-    return DAG.getConstant(KnownSize.value(), SL, MVT::i32);
+    return DAG.getConstant(*KnownSize, SL, MVT::i32);
   return SDValue();
 }
 
@@ -1972,8 +1971,7 @@ static ArgDescriptor allocateVGPR32Input(CCState &CCInfo, unsigned Mask = ~0u,
   if (Arg.isSet())
     return ArgDescriptor::createArg(Arg, Mask);
 
-  ArrayRef<MCPhysReg> ArgVGPRs
-    = makeArrayRef(AMDGPU::VGPR_32RegClass.begin(), 32);
+  ArrayRef<MCPhysReg> ArgVGPRs = ArrayRef(AMDGPU::VGPR_32RegClass.begin(), 32);
   unsigned RegIdx = CCInfo.getFirstUnallocated(ArgVGPRs);
   if (RegIdx == ArgVGPRs.size()) {
     // Spill to stack required.
@@ -1995,7 +1993,7 @@ static ArgDescriptor allocateVGPR32Input(CCState &CCInfo, unsigned Mask = ~0u,
 static ArgDescriptor allocateSGPR32InputImpl(CCState &CCInfo,
                                              const TargetRegisterClass *RC,
                                              unsigned NumArgRegs) {
-  ArrayRef<MCPhysReg> ArgSGPRs = makeArrayRef(RC->begin(), 32);
+  ArrayRef<MCPhysReg> ArgSGPRs = ArrayRef(RC->begin(), 32);
   unsigned RegIdx = CCInfo.getFirstUnallocated(ArgSGPRs);
   if (RegIdx == ArgSGPRs.size())
     report_fatal_error("ran out of SGPRs for arguments");
@@ -2453,8 +2451,7 @@ SDValue SITargetLowering::LowerFormalArguments(
       unsigned PsInputBits = Info->getPSInputAddr() & Info->getPSInputEnable();
       if ((PsInputBits & 0x7F) == 0 ||
           ((PsInputBits & 0xF) == 0 && (PsInputBits >> 11 & 1)))
-        Info->markPSInputEnabled(
-            countTrailingZeros(Info->getPSInputAddr(), ZB_Undefined));
+        Info->markPSInputEnabled(countTrailingZeros(Info->getPSInputAddr()));
     }
   } else if (IsKernel) {
     assert(Info->hasWorkGroupIDX() && Info->hasWorkItemIDX());
@@ -2870,7 +2867,7 @@ void SITargetLowering::passSpecialInputs(
       std::optional<uint32_t> Id =
           AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
       if (Id.has_value()) {
-        InputReg = DAG.getConstant(Id.value(), DL, ArgVT);
+        InputReg = DAG.getConstant(*Id, DL, ArgVT);
       } else {
         InputReg = DAG.getUNDEF(ArgVT);
       }
@@ -4895,7 +4892,8 @@ SDValue SITargetLowering::lowerIntrinsicLoad(MemSDNode *M, bool IsFormat,
                 : AMDGPUISD::BUFFER_LOAD_FORMAT;
   } else {
     // TODO: Support non-format TFE loads.
-    assert(!IsTFE);
+    if (IsTFE)
+      return SDValue();
     Opc = AMDGPUISD::BUFFER_LOAD;
   }
 
@@ -6433,7 +6431,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     auto *DMaskConst =
         cast<ConstantSDNode>(Op.getOperand(ArgOffset + Intr->DMaskIndex));
     DMask = DMaskConst->getZExtValue();
-    DMaskLanes = BaseOpcode->Gather4 ? 4 : countPopulation(DMask);
+    DMaskLanes = BaseOpcode->Gather4 ? 4 : llvm::popcount(DMask);
 
     if (BaseOpcode->Store) {
       VData = Op.getOperand(2);
@@ -6831,8 +6829,7 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
     return Val;
 
   // Preserve the known bits after expansion to a copy.
-  EVT SmallVT =
-      EVT::getIntegerVT(*DAG.getContext(), 32 - countLeadingZeros(MaxID));
+  EVT SmallVT = EVT::getIntegerVT(*DAG.getContext(), llvm::bit_width(MaxID));
   return DAG.getNode(ISD::AssertZext, SL, MVT::i32, Val,
                      DAG.getValueType(SmallVT));
 }
@@ -8594,7 +8591,7 @@ SDValue SITargetLowering::handleByteShortBufferStores(SelectionDAG &DAG,
   Ops[1] = BufferStoreExt;
   unsigned Opc = (VDataType == MVT::i8) ? AMDGPUISD::BUFFER_STORE_BYTE :
                                  AMDGPUISD::BUFFER_STORE_SHORT;
-  ArrayRef<SDValue> OpsRef = makeArrayRef(&Ops[0], 9);
+  ArrayRef<SDValue> OpsRef = ArrayRef(&Ops[0], 9);
   return DAG.getMemIntrinsicNode(Opc, DL, M->getVTList(), OpsRef, VDataType,
                                      M->getMemOperand());
 }
@@ -9674,7 +9671,7 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
     // It can be optimized out using SDWA for GFX8+ in the SDWA peephole pass,
     // given that we are selecting 8 or 16 bit fields starting at byte boundary.
     uint64_t Mask = CRHS->getZExtValue();
-    unsigned Bits = countPopulation(Mask);
+    unsigned Bits = llvm::popcount(Mask);
     if (getSubtarget()->hasSDWA() && LHS->getOpcode() == ISD::SRL &&
         (Bits == 8 || Bits == 16) && isShiftedMask_64(Mask) && !(Mask & 1)) {
       if (auto *CShift = dyn_cast<ConstantSDNode>(LHS->getOperand(1))) {
@@ -10794,16 +10791,19 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
   SelectionDAG &DAG = DCI.DAG;
 
   EVT VecVT = Vec.getValueType();
-  EVT EltVT = VecVT.getVectorElementType();
+  EVT VecEltVT = VecVT.getVectorElementType();
+  EVT ResVT = N->getValueType(0);
+
+  unsigned VecSize = VecVT.getSizeInBits();
+  unsigned VecEltSize = VecEltVT.getSizeInBits();
 
   if ((Vec.getOpcode() == ISD::FNEG ||
        Vec.getOpcode() == ISD::FABS) && allUsesHaveSourceMods(N)) {
     SDLoc SL(N);
-    EVT EltVT = N->getValueType(0);
     SDValue Idx = N->getOperand(1);
-    SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
-                              Vec.getOperand(0), Idx);
-    return DAG.getNode(Vec.getOpcode(), SL, EltVT, Elt);
+    SDValue Elt =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT, Vec.getOperand(0), Idx);
+    return DAG.getNode(Vec.getOpcode(), SL, ResVT, Elt);
   }
 
   // ScalarRes = EXTRACT_VECTOR_ELT ((vector-BINOP Vec1, Vec2), Idx)
@@ -10811,9 +10811,8 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
   // Vec1Elt = EXTRACT_VECTOR_ELT(Vec1, Idx)
   // Vec2Elt = EXTRACT_VECTOR_ELT(Vec2, Idx)
   // ScalarRes = scalar-BINOP Vec1Elt, Vec2Elt
-  if (Vec.hasOneUse() && DCI.isBeforeLegalize()) {
+  if (Vec.hasOneUse() && DCI.isBeforeLegalize() && VecEltVT == ResVT) {
     SDLoc SL(N);
-    EVT EltVT = N->getValueType(0);
     SDValue Idx = N->getOperand(1);
     unsigned Opc = Vec.getOpcode();
 
@@ -10833,20 +10832,17 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
     case ISD::FMINNUM:
     case ISD::FMAXNUM_IEEE:
     case ISD::FMINNUM_IEEE: {
-      SDValue Elt0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
+      SDValue Elt0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT,
                                  Vec.getOperand(0), Idx);
-      SDValue Elt1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
+      SDValue Elt1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT,
                                  Vec.getOperand(1), Idx);
 
       DCI.AddToWorklist(Elt0.getNode());
       DCI.AddToWorklist(Elt1.getNode());
-      return DAG.getNode(Opc, SL, EltVT, Elt0, Elt1, Vec->getFlags());
+      return DAG.getNode(Opc, SL, ResVT, Elt0, Elt1, Vec->getFlags());
     }
     }
   }
-
-  unsigned VecSize = VecVT.getSizeInBits();
-  unsigned EltSize = EltVT.getSizeInBits();
 
   // EXTRACT_VECTOR_ELT (<n x e>, var-idx) => n x select (e, const-idx)
   if (shouldExpandVectorDynExt(N)) {
@@ -10855,7 +10851,7 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
     SDValue V;
     for (unsigned I = 0, E = VecVT.getVectorNumElements(); I < E; ++I) {
       SDValue IC = DAG.getVectorIdxConstant(I, SL);
-      SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT, Vec, IC);
+      SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT, Vec, IC);
       if (I == 0)
         V = Elt;
       else
@@ -10871,15 +10867,11 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
   // elements. This exposes more load reduction opportunities by replacing
   // multiple small extract_vector_elements with a single 32-bit extract.
   auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (isa<MemSDNode>(Vec) &&
-      EltSize <= 16 &&
-      EltVT.isByteSized() &&
-      VecSize > 32 &&
-      VecSize % 32 == 0 &&
-      Idx) {
+  if (isa<MemSDNode>(Vec) && VecEltSize <= 16 && VecEltVT.isByteSized() &&
+      VecSize > 32 && VecSize % 32 == 0 && Idx) {
     EVT NewVT = getEquivalentMemType(*DAG.getContext(), VecVT);
 
-    unsigned BitIndex = Idx->getZExtValue() * EltSize;
+    unsigned BitIndex = Idx->getZExtValue() * VecEltSize;
     unsigned EltIdx = BitIndex / 32;
     unsigned LeftoverBitIdx = BitIndex % 32;
     SDLoc SL(N);
@@ -10894,9 +10886,16 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
                               DAG.getConstant(LeftoverBitIdx, SL, MVT::i32));
     DCI.AddToWorklist(Srl.getNode());
 
-    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, EltVT.changeTypeToInteger(), Srl);
+    EVT VecEltAsIntVT = VecEltVT.changeTypeToInteger();
+    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, VecEltAsIntVT, Srl);
     DCI.AddToWorklist(Trunc.getNode());
-    return DAG.getNode(ISD::BITCAST, SL, EltVT, Trunc);
+
+    if (VecEltVT == ResVT) {
+      return DAG.getNode(ISD::BITCAST, SL, VecEltVT, Trunc);
+    }
+
+    assert(ResVT.isScalarInteger());
+    return DAG.getAnyExtOrTrunc(Trunc, SL, ResVT);
   }
 
   return SDValue();
@@ -11745,7 +11744,7 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
     return Node;
   }
 
-  unsigned OldBitsSet = countPopulation(OldDmask);
+  unsigned OldBitsSet = llvm::popcount(OldDmask);
   // Work out which is the TFE/LWE lane if that is enabled.
   if (UsesTFC) {
     TFCLane = OldBitsSet;
@@ -11809,7 +11808,7 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
   if (NewDmask == OldDmask)
     return Node;
 
-  unsigned BitsSet = countPopulation(NewDmask);
+  unsigned BitsSet = llvm::popcount(NewDmask);
 
   // Check for TFE or LWE - increase the number of channels by one to account
   // for the extra return value
@@ -12053,7 +12052,7 @@ void SITargetLowering::AddIMGInit(MachineInstr &MI) const {
   unsigned dmask = MO_Dmask->getImm();
   // Determine the number of active lanes taking into account the
   // Gather4 special case
-  unsigned ActiveLanes = TII->isGather4(MI) ? 4 : countPopulation(dmask);
+  unsigned ActiveLanes = TII->isGather4(MI) ? 4 : llvm::popcount(dmask);
 
   bool Packed = !Subtarget->hasUnpackedD16VMem();
 
@@ -12115,7 +12114,7 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     // Prefer VGPRs over AGPRs in mAI instructions where possible.
     // This saves a chain-copy of registers and better balance register
     // use between vgpr and agpr as agpr tuples tend to be big.
-    if (MI.getDesc().OpInfo) {
+    if (!MI.getDesc().operands().empty()) {
       unsigned Opc = MI.getOpcode();
       const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
       for (auto I : { AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0),
@@ -12342,7 +12341,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
 
   auto Ret = TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
   if (Ret.first)
-    Ret.second = TRI->getPhysRegClass(Ret.first);
+    Ret.second = TRI->getPhysRegBaseClass(Ret.first);
 
   return Ret;
 }
@@ -12636,7 +12635,8 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
       // We can report everything over the maximum size as 0. We can't report
       // based on the actual size because we don't know if it's accurate or not
       // at any given point.
-      Known.Zero.setHighBits(countLeadingZeros(getSubtarget()->getLocalMemorySize()));
+      Known.Zero.setHighBits(
+          countLeadingZeros(getSubtarget()->getAddressableLocalMemorySize()));
       break;
     }
     }

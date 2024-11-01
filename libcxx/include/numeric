@@ -175,6 +175,7 @@ template<class T>
 #  include <concepts>
 #  include <functional>
 #  include <iterator>
+#  include <type_traits>
 #endif
 
 #endif // _LIBCPP_NUMERIC

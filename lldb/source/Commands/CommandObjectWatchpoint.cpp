@@ -196,7 +196,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_watchpoint_list_options);
+      return llvm::ArrayRef(g_watchpoint_list_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -479,7 +479,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_watchpoint_delete_options);
+      return llvm::ArrayRef(g_watchpoint_delete_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -605,7 +605,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_watchpoint_ignore_options);
+      return llvm::ArrayRef(g_watchpoint_ignore_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -730,7 +730,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_watchpoint_modify_options);
+      return llvm::ArrayRef(g_watchpoint_modify_options);
     }
 
     // Instance variables to hold the values for command options.

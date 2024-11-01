@@ -23,6 +23,7 @@
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Host.h"
+#include <optional>
 
 using namespace clang;
 using namespace tooling;
@@ -147,7 +148,7 @@ public:
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
       ScanningOutputFormat Format, bool OptimizeArgs, bool EagerLoadModules,
-      bool DisableFree, llvm::Optional<StringRef> ModuleName = std::nullopt)
+      bool DisableFree, std::optional<StringRef> ModuleName = std::nullopt)
       : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
         DepFS(std::move(DepFS)), Format(Format), OptimizeArgs(OptimizeArgs),
         EagerLoadModules(EagerLoadModules), DisableFree(DisableFree),
@@ -215,7 +216,7 @@ public:
           DepFS;
       ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
           [LocalDepFS = std::move(LocalDepFS)](FileEntryRef File)
-          -> Optional<ArrayRef<dependency_directives_scan::Directive>> {
+          -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
         if (llvm::ErrorOr<EntryRef> Entry =
                 LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
           return Entry->getDirectiveTokens();
@@ -302,8 +303,8 @@ private:
   bool OptimizeArgs;
   bool EagerLoadModules;
   bool DisableFree;
-  Optional<StringRef> ModuleName;
-  Optional<CompilerInstance> ScanInstanceStorage;
+  std::optional<StringRef> ModuleName;
+  std::optional<CompilerInstance> ScanInstanceStorage;
   std::shared_ptr<ModuleDepCollector> MDC;
   std::vector<std::string> LastCC1Arguments;
   bool Scanned = false;
@@ -339,7 +340,7 @@ DependencyScanningWorker::DependencyScanningWorker(
 
 llvm::Error DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
-    DependencyConsumer &Consumer, llvm::Optional<StringRef> ModuleName) {
+    DependencyConsumer &Consumer, std::optional<StringRef> ModuleName) {
   std::vector<const char *> CLI;
   for (const std::string &Arg : CommandLine)
     CLI.push_back(Arg.c_str());
@@ -372,7 +373,7 @@ static bool forEachDriverJob(
     Argv.push_back(Arg.c_str());
 
   const std::unique_ptr<driver::Compilation> Compilation(
-      Driver->BuildCompilation(llvm::makeArrayRef(Argv)));
+      Driver->BuildCompilation(llvm::ArrayRef(Argv)));
   if (!Compilation)
     return false;
 
@@ -386,11 +387,11 @@ static bool forEachDriverJob(
 bool DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
     DependencyConsumer &Consumer, DiagnosticConsumer &DC,
-    llvm::Optional<StringRef> ModuleName) {
+    std::optional<StringRef> ModuleName) {
   // Reset what might have been modified in the previous worker invocation.
   BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
 
-  Optional<std::vector<std::string>> ModifiedCommandLine;
+  std::optional<std::vector<std::string>> ModifiedCommandLine;
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> ModifiedFS;
   if (ModuleName) {
     ModifiedCommandLine = CommandLine;

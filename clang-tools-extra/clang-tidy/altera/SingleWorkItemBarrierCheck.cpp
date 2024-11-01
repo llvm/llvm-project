@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace altera {
+namespace clang::tidy::altera {
 
 void SingleWorkItemBarrierCheck::registerMatchers(MatchFinder *Finder) {
   // Find any function that calls barrier but does not call an ID function.
@@ -79,6 +77,4 @@ void SingleWorkItemBarrierCheck::storeOptions(
   Options.store(Opts, "AOCVersion", AOCVersion);
 }
 
-} // namespace altera
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::altera

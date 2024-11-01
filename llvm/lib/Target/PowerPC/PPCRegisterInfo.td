@@ -728,6 +728,7 @@ def immZero : Operand<i32> {
 }
 
 def fpimm0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
+def fpimm0neg : PatLeaf<(fpimm), [{return N->isExactlyValue(-0.0);}]>;
 
 def PPCDirectBrAsmOperand : AsmOperandClass {
   let Name = "DirectBr"; let PredicateMethod = "isDirectBr";

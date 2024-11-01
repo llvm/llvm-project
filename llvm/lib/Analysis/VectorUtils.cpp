@@ -538,6 +538,20 @@ bool llvm::widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
   return true;
 }
 
+void llvm::getShuffleMaskWithWidestElts(ArrayRef<int> Mask,
+                                        SmallVectorImpl<int> &ScaledMask) {
+  std::array<SmallVector<int, 16>, 2> TmpMasks;
+  SmallVectorImpl<int> *Output = &TmpMasks[0], *Tmp = &TmpMasks[1];
+  ArrayRef<int> InputMask = Mask;
+  for (unsigned Scale = 2; Scale <= InputMask.size(); ++Scale) {
+    while (widenShuffleMaskElts(Scale, InputMask, *Output)) {
+      InputMask = *Output;
+      std::swap(Output, Tmp);
+    }
+  }
+  ScaledMask.assign(InputMask.begin(), InputMask.end());
+}
+
 void llvm::processShuffleMasks(
     ArrayRef<int> Mask, unsigned NumOfSrcRegs, unsigned NumOfDestRegs,
     unsigned NumOfUsedRegs, function_ref<void()> NoInputAction,

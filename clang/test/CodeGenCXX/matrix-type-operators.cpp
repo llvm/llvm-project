@@ -66,7 +66,7 @@ void test_DoubleWrapper1_Sub1(MyMatrix<double, 10, 9> &m) {
   // NOOPT:       [[MATRIX:%.*]] = load <90 x double>, ptr {{.*}}, align 8{{$}}
   // OPT:         [[MATRIX:%.*]] = load <90 x double>, ptr {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:  [[SCALAR:%.*]] = call noundef double @_ZN14DoubleWrapper1cvdEv(ptr {{[^,]*}} %w1)
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> poison, <90 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fsub <90 x double> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK:       store <90 x double> [[RES]], ptr {{.*}}, align 8
@@ -81,7 +81,7 @@ void test_DoubleWrapper1_Sub2(MyMatrix<double, 10, 9> &m) {
   // CHECK:       [[SCALAR:%.*]] = call noundef double @_ZN14DoubleWrapper1cvdEv(ptr {{[^,]*}} %w1)
   // NOOPT:       [[MATRIX:%.*]] = load <90 x double>, ptr {{.*}}, align 8{{$}}
   // OPT:         [[MATRIX:%.*]] = load <90 x double>, ptr {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> poison, <90 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fsub <90 x double> [[SCALAR_EMBED1]], [[MATRIX]]
   // CHECK:       store <90 x double> [[RES]], ptr {{.*}}, align 8
@@ -103,7 +103,7 @@ void test_DoubleWrapper2_Add1(MyMatrix<double, 10, 9> &m) {
   // NOOPT:       [[MATRIX:%.*]] = load <90 x double>, ptr {{.+}}, align 8{{$}}
   // OPT:         [[MATRIX:%.*]] = load <90 x double>, ptr {{.+}}, align 8, !tbaa !{{[0-9]+}}{{$}}
   // CHECK:       [[SCALAR:%.*]] = call noundef double @_ZN14DoubleWrapper2cvdEv(ptr {{[^,]*}} %w2)
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> poison, <90 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fadd <90 x double> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK:       store <90 x double> [[RES]], ptr {{.*}}, align 8
@@ -118,7 +118,7 @@ void test_DoubleWrapper2_Add2(MyMatrix<double, 10, 9> &m) {
   // CHECK:       [[SCALAR:%.*]] = call noundef double @_ZN14DoubleWrapper2cvdEv(ptr {{[^,]*}} %w2)
   // NOOPT:       [[MATRIX:%.*]] = load <90 x double>, ptr {{.*}}, align 8{{$}}
   // OPT:         [[MATRIX:%.*]] = load <90 x double>, ptr {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> poison, <90 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fadd <90 x double> [[SCALAR_EMBED1]], [[MATRIX]]
   // CHECK:       store <90 x double> [[RES]], ptr {{.*}}, align 8
@@ -141,7 +141,7 @@ void test_IntWrapper_Add(MyMatrix<double, 10, 9> &m) {
   // OPT:         [[MATRIX:%.*]] = load <90 x double>, ptr {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:  [[SCALAR:%.*]] = call noundef i32 @_ZN10IntWrappercviEv(ptr {{[^,]*}} %w3)
   // CHECK-NEXT:  [[SCALAR_FP:%.*]] = sitofp i32 %call to double
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR_FP]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR_FP]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> poison, <90 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fadd <90 x double> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK:       store <90 x double> [[RES]], ptr {{.*}}, align 8
@@ -157,7 +157,7 @@ void test_IntWrapper_Sub(MyMatrix<double, 10, 9> &m) {
   // CHECK-NEXT:  [[SCALAR_FP:%.*]] = sitofp i32 %call to double
   // NOOPT:       [[MATRIX:%.*]] = load <90 x double>, ptr {{.*}}, align 8{{$}}
   // OPT:         [[MATRIX:%.*]] = load <90 x double>, ptr {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR_FP]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR_FP]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> poison, <90 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fsub <90 x double> [[SCALAR_EMBED1]], [[MATRIX]]
   // CHECK:       store <90 x double> [[RES]], ptr {{.*}}, align 8
@@ -200,7 +200,7 @@ void test_IntWrapper_Multiply(MyMatrix<double, 10, 9> &m, IntWrapper &w3) {
   // CHECK-NEXT:  [[SCALAR_FP:%.*]] = sitofp i32 %call to double
   // NOOPT:       [[MATRIX:%.*]] = load <90 x double>, ptr {{.*}}, align 8{{$}}
   // OPT:         [[MATRIX:%.*]] = load <90 x double>, ptr {{.*}}, align 8, !tbaa !{{[0-9]+}}{{$}}
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR_FP]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR_FP]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> poison, <90 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fmul <90 x double> [[SCALAR_EMBED1]], [[MATRIX]]
   // CHECK:       store <90 x double> [[RES]], ptr {{.*}}, align 8

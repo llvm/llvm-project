@@ -22,9 +22,9 @@ func.func @test_rebox_1(%arg0: !fir.box<!fir.array<?x?xf32>>) {
   %0 = fir.slice %c5, %undef, %undef, %c6, %c80, %c3 : (index, index, index, index, index, index) -> !fir.slice<2>
   %1 = fir.shift %c3, %c4 : (index, index) -> !fir.shift<2>
 
-  // CHECK: %[[INSTRIDE_0_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 7, i64 0, i32 2
+  // CHECK: %[[INSTRIDE_0_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 7, i32 0, i32 2
   // CHECK: %[[INSTRIDE_0:.]] = load i64, ptr %[[INSTRIDE_0_GEP]]
-  // CHECK: %[[INSTRIDE_1_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 7, i64 1, i32 2
+  // CHECK: %[[INSTRIDE_1_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 7, i32 1, i32 2
   // CHECK: %[[INSTRIDE_1:.*]] = load i64, ptr %[[INSTRIDE_1_GEP]]
   // CHECK: %[[INBASE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 0
   // CHECK: %[[INBASE:.*]] = load ptr, ptr %[[INBASE_GEP]]
@@ -86,7 +86,7 @@ func.func @test_rebox_3(%arg0: !fir.box<!fir.array<?xf32>>) {
   %c4 = arith.constant 4 : index
   %c5 = arith.constant 5 : index
   %1 = fir.shape_shift %c2, %c3, %c3, %c4, %c4, %c5 : (index, index, index, index, index, index) -> !fir.shapeshift<3>
-  // CHECK: %[[INSTRIDE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 7, i64 0, i32 2
+  // CHECK: %[[INSTRIDE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 7, i32 0, i32 2
   // CHECK: %[[INSTRIDE:.*]] = load i64, ptr %[[INSTRIDE_GEP]]
   // CHECK: %[[INBASE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 0
   // CHECK: %[[INBASE:.*]] = load ptr, ptr %[[INBASE_GEP]]
@@ -115,9 +115,9 @@ func.func @test_rebox_3(%arg0: !fir.box<!fir.array<?xf32>>) {
 // CHECK-SAME: ptr %[[INPUT:.*]])
 func.func @test_rebox_4(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>) {
   // CHECK: %[[NEWBOX_STORAGE:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
-  // CHECK: %[[EXTENT_GEP:.*]] = getelementptr {{{.*}}}, ptr %[[INPUT]], i32 0, i32 7, i64 0, i32 1
+  // CHECK: %[[EXTENT_GEP:.*]] = getelementptr {{{.*}}}, ptr %[[INPUT]], i32 0, i32 7, i32 0, i32 1
   // CHECK: %[[EXTENT:.*]] = load i64, ptr %[[EXTENT_GEP]]
-  // CHECK: %[[STRIDE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[INPUT]], i32 0, i32 7, i64 0, i32 2
+  // CHECK: %[[STRIDE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[INPUT]], i32 0, i32 7, i32 0, i32 2
   // CHECK: %[[STRIDE:.*]] = load i64, ptr %[[STRIDE_GEP]]
   // CHECK: %[[BASE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[INPUT]], i32 0, i32 0
   // CHECK: %[[BASE:.*]] = load ptr, ptr %[[BASE_GEP]]

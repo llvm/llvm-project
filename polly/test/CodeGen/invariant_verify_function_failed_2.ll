@@ -34,12 +34,12 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-%struct.s = type { i32, i32, i32, i32, i32, i32, [6 x [33 x i64]], [6 x [33 x i64]], [6 x [33 x i64]], [6 x [33 x i64]], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i16**, i16*, i16*, i16**, i16**, i16***, i8*, i16***, i64***, i64***, i16****, i8**, i8**, %struct.s*, %struct.s*, %struct.s*, i32, i32, i32, i32, i32, i32, i32 }
+%struct.s = type { i32, i32, i32, i32, i32, i32, [6 x [33 x i64]], [6 x [33 x i64]], [6 x [33 x i64]], [6 x [33 x i64]], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i32, i32, i32, i32, i32, i32, i32 }
 
-@enc_picture = external global %struct.s*, align 8
+@enc_picture = external global ptr, align 8
 
 ; Function Attrs: nounwind uwtable
-define void @compute_colocated(%struct.s*** %listX, i1* %A, i32* %B) #0 {
+define void @compute_colocated(ptr %listX, ptr %A, ptr %B) #0 {
 entry:
   br label %for.body2414
 
@@ -52,28 +52,26 @@ if.else2454:                                      ; preds = %for.body2414
   br i1 %cmp2455, label %if.then2457, label %if.else2493
 
 if.then2457:                                      ; preds = %if.else2454
-  %arrayidx2461 = getelementptr inbounds %struct.s**, %struct.s*** %listX, i64 %indvars.iv902
-  %tmp1 = load %struct.s**, %struct.s*** %arrayidx2461, align 8, !tbaa !1
-  %arrayidx2462 = getelementptr inbounds %struct.s*, %struct.s** %tmp1, i64 0
-  %tmp2 = load %struct.s*, %struct.s** %arrayidx2462, align 8, !tbaa !1
-  %poc2463 = getelementptr inbounds %struct.s, %struct.s* %tmp2, i64 0, i32 1
-  %tmp3 = load i32, i32* %poc2463, align 4, !tbaa !5
+  %arrayidx2461 = getelementptr inbounds ptr, ptr %listX, i64 %indvars.iv902
+  %tmp1 = load ptr, ptr %arrayidx2461, align 8, !tbaa !1
+  %tmp2 = load ptr, ptr %tmp1, align 8, !tbaa !1
+  %poc2463 = getelementptr inbounds %struct.s, ptr %tmp2, i64 0, i32 1
+  %tmp3 = load i32, ptr %poc2463, align 4, !tbaa !5
   %sub2464 = sub nsw i32 0, %tmp3
   br label %cond.false2468
 
 cond.false2468:                                   ; preds = %if.then2457
   %cmp2477 = icmp sgt i32 %sub2464, 127
-  store i1 %cmp2477, i1* %A
+  store i1 %cmp2477, ptr %A
   br label %for.inc2621
 
 if.else2493:                                      ; preds = %if.else2454
-  %arrayidx2497 = getelementptr inbounds %struct.s**, %struct.s*** %listX, i64 %indvars.iv902
-  %tmp4 = load %struct.s**, %struct.s*** %arrayidx2497, align 8, !tbaa !1
-  %arrayidx2498 = getelementptr inbounds %struct.s*, %struct.s** %tmp4, i64 0
-  %tmp5 = load %struct.s*, %struct.s** %arrayidx2498, align 8, !tbaa !1
-  %poc2499 = getelementptr inbounds %struct.s, %struct.s* %tmp5, i64 0, i32 1
-  %tmp6 = load i32, i32* %poc2499, align 4, !tbaa !5
-  store i32 %tmp6, i32* %B
+  %arrayidx2497 = getelementptr inbounds ptr, ptr %listX, i64 %indvars.iv902
+  %tmp4 = load ptr, ptr %arrayidx2497, align 8, !tbaa !1
+  %tmp5 = load ptr, ptr %tmp4, align 8, !tbaa !1
+  %poc2499 = getelementptr inbounds %struct.s, ptr %tmp5, i64 0, i32 1
+  %tmp6 = load i32, ptr %poc2499, align 4, !tbaa !5
+  store i32 %tmp6, ptr %B
   br label %for.inc2621
 
 for.inc2621:                                      ; preds = %if.else2493, %cond.false2468

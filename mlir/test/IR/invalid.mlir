@@ -369,7 +369,7 @@ func.func @dialect_type_empty_namespace(!<"">) -> () { // expected-error {{inval
 
 // -----
 
-func.func @dialect_type_missing_greater(!foo<) -> () { // expected-error {{unbalanced ')' character in pretty dialect name}}
+func.func @dialect_type_missing_greater(!foo<) -> () { // expected-error {{unbalanced '<' character in pretty dialect name}}
   return
 
 // -----
@@ -414,7 +414,7 @@ func.func @invalid_nested_dominance() {
 
 // -----
 
-// expected-error @+1 {{unbalanced ']' character in pretty dialect name}}
+// expected-error @+1 {{unbalanced '<' character in pretty dialect name}}
 func.func @invalid_unknown_type_dialect_name() -> !invalid.dialect<!x@#]!@#>
 
 // -----
@@ -582,7 +582,7 @@ func.func @invalid_region_dominance() {
 
 // -----
 
-// expected-error @+1 {{unbalanced ')' character in pretty dialect name}}
+// expected-error @+1 {{unbalanced '<' character in pretty dialect name}}
 func.func @bad_arrow(%arg : !unreg.ptr<(i32)->)
 
 // -----

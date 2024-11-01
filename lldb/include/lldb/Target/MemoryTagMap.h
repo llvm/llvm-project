@@ -11,8 +11,8 @@
 
 #include "lldb/Target/MemoryTagManager.h"
 #include "lldb/lldb-private.h"
-#include "llvm/ADT/Optional.h"
 #include <map>
+#include <optional>
 
 namespace lldb_private {
 
@@ -66,8 +66,8 @@ public:
   ///    If some of the range was tagged it will have items and some
   ///    of them may be std::nullopt.
   ///    (this saves the caller checking whether all items are std::nullopt)
-  std::vector<llvm::Optional<lldb::addr_t>> GetTags(lldb::addr_t addr,
-                                                    size_t len) const;
+  std::vector<std::optional<lldb::addr_t>> GetTags(lldb::addr_t addr,
+                                                   size_t len) const;
 
 private:
   /// Lookup the tag for address
@@ -79,7 +79,7 @@ private:
   /// \return
   ///     The tag for the granule that address refers to, or std::nullopt
   ///     if it has no memory tag.
-  llvm::Optional<lldb::addr_t> GetTag(lldb::addr_t addr) const;
+  std::optional<lldb::addr_t> GetTag(lldb::addr_t addr) const;
 
   // A map of granule aligned addresses to their memory tag
   std::map<lldb::addr_t, lldb::addr_t> m_addr_to_tag;
@@ -87,7 +87,7 @@ private:
   // Memory tag manager used to align addresses and get granule size.
   // Ideally this would be a const& but only certain architectures will
   // have a memory tag manager class to provide here. So for a method
-  // returning a MemoryTagMap, Optional<MemoryTagMap> allows it to handle
+  // returning a MemoryTagMap, std::optional<MemoryTagMap> allows it to handle
   // architectures without memory tagging. Optionals cannot hold references
   // so we go with a pointer that we assume will be not be null.
   const MemoryTagManager *m_manager;

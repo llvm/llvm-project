@@ -828,6 +828,17 @@ TEST_F(BracesRemoverTest, RemoveBraces) {
                "}",
                Style);
 
+  verifyFormat("if (foo)\n"
+               "  f();\n"
+               "else if (bar || baz)\n"
+               "  g();",
+               "if (foo) {\n"
+               "  f();\n"
+               "} else if (bar || baz) {\n"
+               "  g();\n"
+               "}",
+               Style);
+
   Style.ColumnLimit = 0;
   verifyFormat("if (a)\n"
                "  b234567890223456789032345678904234567890 = "

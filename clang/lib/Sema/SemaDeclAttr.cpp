@@ -39,7 +39,6 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Assumptions.h"
@@ -47,6 +46,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang;
 using namespace sema;
@@ -217,7 +217,7 @@ template <typename AttrInfo>
 static bool checkUInt32Argument(Sema &S, const AttrInfo &AI, const Expr *Expr,
                                 uint32_t &Val, unsigned Idx = UINT_MAX,
                                 bool StrictlyUnsigned = false) {
-  Optional<llvm::APSInt> I = llvm::APSInt(32);
+  std::optional<llvm::APSInt> I = llvm::APSInt(32);
   if (Expr->isTypeDependent() ||
       !(I = Expr->getIntegerConstantExpr(S.Context))) {
     if (Idx != UINT_MAX)
@@ -309,7 +309,7 @@ static bool checkFunctionOrMethodParameterIndex(
   unsigned NumParams =
       (HP ? getFunctionOrMethodNumParams(D) : 0) + HasImplicitThisParam;
 
-  Optional<llvm::APSInt> IdxInt;
+  std::optional<llvm::APSInt> IdxInt;
   if (IdxExpr->isTypeDependent() ||
       !(IdxInt = IdxExpr->getIntegerConstantExpr(S.Context))) {
     S.Diag(getAttrLoc(AI), diag::err_attribute_argument_n_type)
@@ -1690,7 +1690,7 @@ void Sema::AddAssumeAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
   }
 
   if (!E->isValueDependent()) {
-    Optional<llvm::APSInt> I = llvm::APSInt(64);
+    std::optional<llvm::APSInt> I = llvm::APSInt(64);
     if (!(I = E->getIntegerConstantExpr(Context))) {
       if (OE)
         Diag(AttrLoc, diag::err_attribute_argument_n_type)
@@ -2677,7 +2677,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         if (IOSToWatchOSMapping) {
           if (auto MappedVersion = IOSToWatchOSMapping->map(
                   Version, MinimumWatchOSVersion, std::nullopt)) {
-            return MappedVersion.value();
+            return *MappedVersion;
           }
         }
 
@@ -2686,10 +2686,10 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         if (NewMajor >= 2) {
           if (Version.getMinor()) {
             if (Version.getSubminor())
-              return VersionTuple(NewMajor, Version.getMinor().value(),
-                                  Version.getSubminor().value());
+              return VersionTuple(NewMajor, *Version.getMinor(),
+                                  *Version.getSubminor());
             else
-              return VersionTuple(NewMajor, Version.getMinor().value());
+              return VersionTuple(NewMajor, *Version.getMinor());
           }
           return VersionTuple(NewMajor);
         }
@@ -3037,7 +3037,7 @@ static void handleSentinelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   unsigned sentinel = (unsigned)SentinelAttr::DefaultSentinel;
   if (AL.getNumArgs() > 0) {
     Expr *E = AL.getArgAsExpr(0);
-    Optional<llvm::APSInt> Idx = llvm::APSInt(32);
+    std::optional<llvm::APSInt> Idx = llvm::APSInt(32);
     if (E->isTypeDependent() || !(Idx = E->getIntegerConstantExpr(S.Context))) {
       S.Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
           << AL << 1 << AANT_ArgumentIntegerConstant << E->getSourceRange();
@@ -3056,7 +3056,7 @@ static void handleSentinelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   unsigned nullPos = (unsigned)SentinelAttr::DefaultNullPos;
   if (AL.getNumArgs() > 1) {
     Expr *E = AL.getArgAsExpr(1);
-    Optional<llvm::APSInt> Idx = llvm::APSInt(32);
+    std::optional<llvm::APSInt> Idx = llvm::APSInt(32);
     if (E->isTypeDependent() || !(Idx = E->getIntegerConstantExpr(S.Context))) {
       S.Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
           << AL << 2 << AANT_ArgumentIntegerConstant << E->getSourceRange();
@@ -3450,6 +3450,42 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   return false;
 }
 
+// Check Target Version attrs
+bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, StringRef &AttrStr,
+                                  bool &isDefault) {
+  enum FirstParam { Unsupported };
+  enum SecondParam { None };
+  enum ThirdParam { Target, TargetClones, TargetVersion };
+  if (AttrStr.trim() == "default")
+    isDefault = true;
+  llvm::SmallVector<StringRef, 8> Features;
+  AttrStr.split(Features, "+");
+  for (auto &CurFeature : Features) {
+    CurFeature = CurFeature.trim();
+    if (CurFeature == "default")
+      continue;
+    if (!Context.getTargetInfo().validateCpuSupports(CurFeature))
+      return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << CurFeature << TargetVersion;
+  }
+  return false;
+}
+
+static void handleTargetVersionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef Str;
+  SourceLocation LiteralLoc;
+  bool isDefault = false;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &LiteralLoc) ||
+      S.checkTargetVersionAttr(LiteralLoc, Str, isDefault))
+    return;
+  // Do not create default only target_version attribute
+  if (!isDefault) {
+    TargetVersionAttr *NewAttr =
+        ::new (S.Context) TargetVersionAttr(S.Context, AL, Str);
+    D->addAttr(NewAttr);
+  }
+}
+
 static void handleTargetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Str;
   SourceLocation LiteralLoc;
@@ -3461,10 +3497,10 @@ static void handleTargetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(NewAttr);
 }
 
-bool Sema::checkTargetClonesAttrString(SourceLocation LiteralLoc, StringRef Str,
-                                       const StringLiteral *Literal,
-                                       bool &HasDefault, bool &HasCommas,
-                                       SmallVectorImpl<StringRef> &Strings) {
+bool Sema::checkTargetClonesAttrString(
+    SourceLocation LiteralLoc, StringRef Str, const StringLiteral *Literal,
+    bool &HasDefault, bool &HasCommas, bool &HasNotDefault,
+    SmallVectorImpl<SmallString<64>> &StringsBuffer) {
   enum FirstParam { Unsupported, Duplicate, Unknown };
   enum SecondParam { None, CPU, Tune };
   enum ThirdParam { Target, TargetClones };
@@ -3483,29 +3519,75 @@ bool Sema::checkTargetClonesAttrString(SourceLocation LiteralLoc, StringRef Str,
         getLangOpts(), Context.getTargetInfo());
 
     bool DefaultIsDupe = false;
+    bool HasCodeGenImpact = false;
     if (Cur.empty())
       return Diag(CurLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << "" << TargetClones;
 
-    if (Cur.startswith("arch=")) {
-      if (!Context.getTargetInfo().isValidCPUName(
-              Cur.drop_front(sizeof("arch=") - 1)))
+    if (Context.getTargetInfo().getTriple().isAArch64()) {
+      // AArch64 target clones specific
+      if (Cur == "default") {
+        DefaultIsDupe = HasDefault;
+        HasDefault = true;
+        if (llvm::is_contained(StringsBuffer, Cur) || DefaultIsDupe)
+          Diag(CurLoc, diag::warn_target_clone_duplicate_options);
+        else
+          StringsBuffer.push_back(Cur);
+      } else {
+        std::pair<StringRef, StringRef> CurParts = {{}, Cur};
+        llvm::SmallVector<StringRef, 8> CurFeatures;
+        while (!CurParts.second.empty()) {
+          CurParts = CurParts.second.split('+');
+          StringRef CurFeature = CurParts.first.trim();
+          if (!Context.getTargetInfo().validateCpuSupports(CurFeature)) {
+            Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                << Unsupported << None << CurFeature << TargetClones;
+            continue;
+          }
+          std::string Options;
+          if (Context.getTargetInfo().getFeatureDepOptions(CurFeature, Options))
+            HasCodeGenImpact = true;
+          CurFeatures.push_back(CurFeature);
+        }
+        // Canonize TargetClones Attributes
+        llvm::sort(CurFeatures);
+        SmallString<64> Res;
+        for (auto &CurFeat : CurFeatures) {
+          if (!Res.equals(""))
+            Res.append("+");
+          Res.append(CurFeat);
+        }
+        if (llvm::is_contained(StringsBuffer, Res) || DefaultIsDupe)
+          Diag(CurLoc, diag::warn_target_clone_duplicate_options);
+        else if (!HasCodeGenImpact)
+          // Ignore features in target_clone attribute that don't impact
+          // code generation
+          Diag(CurLoc, diag::warn_target_clone_no_impact_options);
+        else if (!Res.empty()) {
+          StringsBuffer.push_back(Res);
+          HasNotDefault = true;
+        }
+      }
+    } else {
+      // Other targets ( currently X86 )
+      if (Cur.startswith("arch=")) {
+        if (!Context.getTargetInfo().isValidCPUName(
+                Cur.drop_front(sizeof("arch=") - 1)))
+          return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << CPU << Cur.drop_front(sizeof("arch=") - 1)
+                 << TargetClones;
+      } else if (Cur == "default") {
+        DefaultIsDupe = HasDefault;
+        HasDefault = true;
+      } else if (!Context.getTargetInfo().isValidFeatureName(Cur))
         return Diag(CurLoc, diag::warn_unsupported_target_attribute)
-               << Unsupported << CPU << Cur.drop_front(sizeof("arch=") - 1)
-               << TargetClones;
-    } else if (Cur == "default") {
-      DefaultIsDupe = HasDefault;
-      HasDefault = true;
-    } else if (!Context.getTargetInfo().isValidFeatureName(Cur))
-      return Diag(CurLoc, diag::warn_unsupported_target_attribute)
-             << Unsupported << None << Cur << TargetClones;
-
-    if (llvm::is_contained(Strings, Cur) || DefaultIsDupe)
-      Diag(CurLoc, diag::warn_target_clone_duplicate_options);
-    // Note: Add even if there are duplicates, since it changes name mangling.
-    Strings.push_back(Cur);
+               << Unsupported << None << Cur << TargetClones;
+      if (llvm::is_contained(StringsBuffer, Cur) || DefaultIsDupe)
+        Diag(CurLoc, diag::warn_target_clone_duplicate_options);
+      // Note: Add even if there are duplicates, since it changes name mangling.
+      StringsBuffer.push_back(Cur);
+    }
   }
-
   if (Str.rtrim().endswith(","))
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
            << Unsupported << None << "" << TargetClones;
@@ -3513,6 +3595,10 @@ bool Sema::checkTargetClonesAttrString(SourceLocation LiteralLoc, StringRef Str,
 }
 
 static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (S.Context.getTargetInfo().getTriple().isAArch64() &&
+      !S.Context.getTargetInfo().hasFeature("fmv"))
+    return;
+
   // Ensure we don't combine these with themselves, since that causes some
   // confusing behavior.
   if (const auto *Other = D->getAttr<TargetClonesAttr>()) {
@@ -3524,7 +3610,8 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
 
   SmallVector<StringRef, 2> Strings;
-  bool HasCommas = false, HasDefault = false;
+  SmallVector<SmallString<64>, 2> StringsBuffer;
+  bool HasCommas = false, HasDefault = false, HasNotDefault = false;
 
   for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
     StringRef CurStr;
@@ -3533,12 +3620,20 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         S.checkTargetClonesAttrString(
             LiteralLoc, CurStr,
             cast<StringLiteral>(AL.getArgAsExpr(I)->IgnoreParenCasts()),
-            HasDefault, HasCommas, Strings))
+            HasDefault, HasCommas, HasNotDefault, StringsBuffer))
       return;
   }
+  for (auto &SmallStr : StringsBuffer)
+    Strings.push_back(SmallStr.str());
 
   if (HasCommas && AL.getNumArgs() > 1)
     S.Diag(AL.getLoc(), diag::warn_target_clone_mixed_values);
+
+  if (S.Context.getTargetInfo().getTriple().isAArch64() && !HasDefault) {
+    // Add default attribute if there is no one
+    HasDefault = true;
+    Strings.push_back("default");
+  }
 
   if (!HasDefault) {
     S.Diag(AL.getLoc(), diag::err_target_clone_must_have_default);
@@ -3555,6 +3650,10 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       return;
     }
   }
+
+  // No multiversion if we have default version only.
+  if (S.Context.getTargetInfo().getTriple().isAArch64() && !HasNotDefault)
+    return;
 
   cast<FunctionDecl>(D)->setIsMultiVersion();
   TargetClonesAttr *NewAttr = ::new (S.Context)
@@ -5406,7 +5505,7 @@ static Expr *makeLaunchBoundsArgExpr(Sema &S, Expr *E,
   if (E->isValueDependent())
     return E;
 
-  Optional<llvm::APSInt> I = llvm::APSInt(64);
+  std::optional<llvm::APSInt> I = llvm::APSInt(64);
   if (!(I = E->getIntegerConstantExpr(S.Context))) {
     S.Diag(E->getExprLoc(), diag::err_attribute_argument_n_type)
         << &AL << Idx << AANT_ArgumentIntegerConstant << E->getSourceRange();
@@ -6452,9 +6551,9 @@ validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
   }
 
   StringRef CurrentParam;
-  llvm::Optional<unsigned> SelfLocation;
+  std::optional<unsigned> SelfLocation;
   unsigned NewValueCount = 0;
-  llvm::Optional<unsigned> NewValueLocation;
+  std::optional<unsigned> NewValueLocation;
   do {
     std::tie(CurrentParam, Parameters) = Parameters.split(':');
 
@@ -7190,7 +7289,7 @@ static void handleMSP430InterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   Expr *NumParamsExpr = static_cast<Expr *>(AL.getArgAsExpr(0));
-  Optional<llvm::APSInt> NumParams = llvm::APSInt(32);
+  std::optional<llvm::APSInt> NumParams = llvm::APSInt(32);
   if (!(NumParams = NumParamsExpr->getIntegerConstantExpr(S.Context))) {
     S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
         << AL << AANT_ArgumentIntegerConstant
@@ -8906,6 +9005,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_Target:
     handleTargetAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_TargetVersion:
+    handleTargetVersionAttr(S, D, AL);
     break;
   case ParsedAttr::AT_TargetClones:
     handleTargetClonesAttr(S, D, AL);

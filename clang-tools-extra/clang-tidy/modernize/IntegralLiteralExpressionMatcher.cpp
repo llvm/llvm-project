@@ -12,9 +12,7 @@
 #include <cctype>
 #include <stdexcept>
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 // Validate that this literal token is a valid integer literal.  A literal token
 // could be a floating-point token, which isn't acceptable as a value for an
@@ -285,6 +283,4 @@ LiteralSize IntegralLiteralExpressionMatcher::largestLiteralSize() const {
   return LargestSize;
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

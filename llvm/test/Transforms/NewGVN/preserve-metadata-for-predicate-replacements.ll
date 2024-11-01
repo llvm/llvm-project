@@ -6,10 +6,10 @@ declare void @use(i32)
 ; Make sure !tbaa metadata is preserved when only ssa_copy calls introduced by
 ; PredicateInfo are replaced.
 
-define i32 @test(i32* %p1, i32* %p2, i1 %c) {
+define i32 @test(ptr %p1, ptr %p2, i1 %c) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[P1:%.*]], align 8, !tbaa !0
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[P1:%.*]], align 8, !tbaa !0
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp slt i32 [[LV]], 1
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[EXIT:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.false:
@@ -29,7 +29,7 @@ define i32 @test(i32* %p1, i32* %p2, i1 %c) {
 ; CHECK-NEXT:    ret i32 [[LV]]
 ;
 entry:
-  %lv = load i32, i32* %p1, align 8, !tbaa !0
+  %lv = load i32, ptr %p1, align 8, !tbaa !0
   %cmp.1 = icmp slt i32 %lv, 1
   br i1 %cmp.1, label %exit, label %if.false
 

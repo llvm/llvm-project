@@ -2,9 +2,9 @@
 # RUN: llc -mtriple=x86_64-linux-gnu -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK
 
 --- |
-  define i32* @test_gep_i32(i32* %arr) {
-    %arrayidx = getelementptr i32, i32* %arr, i32 5
-    ret i32* %arrayidx
+  define ptr @test_gep_i32(ptr %arr) {
+    %arrayidx = getelementptr i32, ptr %arr, i32 5
+    ret ptr %arrayidx
   }
 ...
 ---

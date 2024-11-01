@@ -159,69 +159,104 @@ protected:
     return val;
   }
 
-  /// Construct code sequence to extract the specifc value from a `fir.box`.
-  mlir::Value getValueFromBox(mlir::Location loc, mlir::Value box,
-                              mlir::Type resultTy,
+  /// Construct code sequence to extract the specific value from a `fir.box`.
+  mlir::Value getValueFromBox(mlir::Location loc, mlir::Type boxTy,
+                              mlir::Value box, mlir::Type resultTy,
                               mlir::ConversionPatternRewriter &rewriter,
-                              unsigned boxValue) const {
-    auto pty = mlir::LLVM::LLVMPointerType::get(resultTy);
-    auto p = rewriter.create<mlir::LLVM::GEPOp>(
-        loc, pty, box,
-        llvm::ArrayRef<mlir::LLVM::GEPArg>{
-            0, static_cast<std::int32_t>(boxValue)});
-    return rewriter.create<mlir::LLVM::LoadOp>(loc, resultTy, p);
+                              int boxValue) const {
+    if (box.getType().isa<mlir::LLVM::LLVMPointerType>()) {
+      auto pty = mlir::LLVM::LLVMPointerType::get(resultTy);
+      auto p = rewriter.create<mlir::LLVM::GEPOp>(
+          loc, pty, box, llvm::ArrayRef<mlir::LLVM::GEPArg>{0, boxValue});
+      auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(loc, resultTy, p);
+      attachTBAATag(loadOp, boxTy, nullptr, p);
+      return loadOp;
+    }
+    return rewriter.create<mlir::LLVM::ExtractValueOp>(loc, box, boxValue);
   }
 
   /// Method to construct code sequence to get the triple for dimension `dim`
   /// from a box.
   llvm::SmallVector<mlir::Value, 3>
   getDimsFromBox(mlir::Location loc, llvm::ArrayRef<mlir::Type> retTys,
-                 mlir::Value box, mlir::Value dim,
+                 mlir::Type boxTy, mlir::Value box, mlir::Value dim,
                  mlir::ConversionPatternRewriter &rewriter) const {
-    mlir::LLVM::LoadOp l0 =
-        loadFromOffset(loc, box, 0, kDimsPosInBox, dim, 0, retTys[0], rewriter);
-    mlir::LLVM::LoadOp l1 =
-        loadFromOffset(loc, box, 0, kDimsPosInBox, dim, 1, retTys[1], rewriter);
-    mlir::LLVM::LoadOp l2 =
-        loadFromOffset(loc, box, 0, kDimsPosInBox, dim, 2, retTys[2], rewriter);
-    return {l0.getResult(), l1.getResult(), l2.getResult()};
+    mlir::Value l0 =
+        loadDimFieldFromBox(loc, boxTy, box, dim, 0, retTys[0], rewriter);
+    mlir::Value l1 =
+        loadDimFieldFromBox(loc, boxTy, box, dim, 1, retTys[1], rewriter);
+    mlir::Value l2 =
+        loadDimFieldFromBox(loc, boxTy, box, dim, 2, retTys[2], rewriter);
+    return {l0, l1, l2};
   }
 
-  mlir::LLVM::LoadOp
-  loadFromOffset(mlir::Location loc, mlir::Value a, int32_t c0, int32_t cDims,
-                 mlir::Value dim, int off, mlir::Type ty,
+  llvm::SmallVector<mlir::Value, 3>
+  getDimsFromBox(mlir::Location loc, llvm::ArrayRef<mlir::Type> retTys,
+                 mlir::Type boxTy, mlir::Value box, int dim,
                  mlir::ConversionPatternRewriter &rewriter) const {
-    auto pty = mlir::LLVM::LLVMPointerType::get(ty);
-    mlir::LLVM::GEPOp p = genGEP(loc, pty, rewriter, a, c0, cDims, dim, off);
-    return rewriter.create<mlir::LLVM::LoadOp>(loc, ty, p);
+    mlir::Value l0 =
+        getDimFieldFromBox(loc, boxTy, box, dim, 0, retTys[0], rewriter);
+    mlir::Value l1 =
+        getDimFieldFromBox(loc, boxTy, box, dim, 1, retTys[1], rewriter);
+    mlir::Value l2 =
+        getDimFieldFromBox(loc, boxTy, box, dim, 2, retTys[2], rewriter);
+    return {l0, l1, l2};
   }
 
   mlir::Value
-  loadStrideFromBox(mlir::Location loc, mlir::Value box, unsigned dim,
-                    mlir::ConversionPatternRewriter &rewriter) const {
+  loadDimFieldFromBox(mlir::Location loc, mlir::Type boxTy, mlir::Value box,
+                      mlir::Value dim, int off, mlir::Type ty,
+                      mlir::ConversionPatternRewriter &rewriter) const {
+    assert(box.getType().isa<mlir::LLVM::LLVMPointerType>() &&
+           "descriptor inquiry with runtime dim can only be done on descriptor "
+           "in memory");
+    auto pty = mlir::LLVM::LLVMPointerType::get(ty);
+    mlir::LLVM::GEPOp p = genGEP(loc, pty, rewriter, box, 0,
+                                 static_cast<int>(kDimsPosInBox), dim, off);
+    auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(loc, ty, p);
+    attachTBAATag(loadOp, boxTy, nullptr, p);
+    return loadOp;
+  }
+
+  mlir::Value
+  getDimFieldFromBox(mlir::Location loc, mlir::Type boxTy, mlir::Value box,
+                     int dim, int off, mlir::Type ty,
+                     mlir::ConversionPatternRewriter &rewriter) const {
+    if (box.getType().isa<mlir::LLVM::LLVMPointerType>()) {
+      auto pty = mlir::LLVM::LLVMPointerType::get(ty);
+      mlir::LLVM::GEPOp p = genGEP(loc, pty, rewriter, box, 0,
+                                   static_cast<int>(kDimsPosInBox), dim, off);
+      auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(loc, ty, p);
+      attachTBAATag(loadOp, boxTy, nullptr, p);
+      return loadOp;
+    }
+    return rewriter.create<mlir::LLVM::ExtractValueOp>(
+        loc, box, llvm::ArrayRef<std::int64_t>{kDimsPosInBox, dim, off});
+  }
+
+  mlir::Value
+  getStrideFromBox(mlir::Location loc, mlir::Type boxTy, mlir::Value box,
+                   unsigned dim,
+                   mlir::ConversionPatternRewriter &rewriter) const {
     auto idxTy = lowerTy().indexType();
-    auto dimValue = genConstantIndex(loc, idxTy, rewriter, dim);
-    return loadFromOffset(loc, box, 0, kDimsPosInBox, dimValue, kDimStridePos,
-                          idxTy, rewriter);
+    return getDimFieldFromBox(loc, boxTy, box, dim, kDimStridePos, idxTy,
+                              rewriter);
   }
 
   /// Read base address from a fir.box. Returned address has type ty.
   mlir::Value
-  loadBaseAddrFromBox(mlir::Location loc, mlir::Type ty, mlir::Value box,
-                      mlir::ConversionPatternRewriter &rewriter) const {
-    auto pty = mlir::LLVM::LLVMPointerType::get(ty);
-    mlir::LLVM::GEPOp p = genGEP(loc, pty, rewriter, box, 0,
-                                 static_cast<std::int32_t>(kAddrPosInBox));
-    return rewriter.create<mlir::LLVM::LoadOp>(loc, ty, p);
+  getBaseAddrFromBox(mlir::Location loc, mlir::Type resultTy, mlir::Type boxTy,
+                     mlir::Value box,
+                     mlir::ConversionPatternRewriter &rewriter) const {
+    return getValueFromBox(loc, boxTy, box, resultTy, rewriter, kAddrPosInBox);
   }
 
   mlir::Value
-  loadElementSizeFromBox(mlir::Location loc, mlir::Type ty, mlir::Value box,
-                         mlir::ConversionPatternRewriter &rewriter) const {
-    auto pty = mlir::LLVM::LLVMPointerType::get(ty);
-    mlir::LLVM::GEPOp p = genGEP(loc, pty, rewriter, box, 0,
-                                 static_cast<std::int32_t>(kElemLenPosInBox));
-    return rewriter.create<mlir::LLVM::LoadOp>(loc, ty, p);
+  getElementSizeFromBox(mlir::Location loc, mlir::Type resultTy,
+                        mlir::Type boxTy, mlir::Value box,
+                        mlir::ConversionPatternRewriter &rewriter) const {
+    return getValueFromBox(loc, boxTy, box, resultTy, rewriter,
+                           kElemLenPosInBox);
   }
 
   // Get the element type given an LLVM type that is of the form
@@ -254,24 +289,23 @@ protected:
 
   /// Read the address of the type descriptor from a box.
   mlir::Value
-  loadTypeDescAddress(mlir::Location loc, mlir::Type ty, mlir::Value box,
+  loadTypeDescAddress(mlir::Location loc, mlir::Type boxTy, mlir::Value box,
                       mlir::ConversionPatternRewriter &rewriter) const {
-    unsigned typeDescFieldId = getTypeDescFieldId(ty);
+    unsigned typeDescFieldId = getTypeDescFieldId(boxTy);
     mlir::Type tdescType = lowerTy().convertTypeDescType(rewriter.getContext());
-    auto pty = mlir::LLVM::LLVMPointerType::get(tdescType);
-    mlir::LLVM::GEPOp p = genGEP(loc, pty, rewriter, box, 0,
-                                 static_cast<std::int32_t>(typeDescFieldId));
-    return rewriter.create<mlir::LLVM::LoadOp>(loc, tdescType, p);
+    return getValueFromBox(loc, boxTy, box, tdescType, rewriter,
+                           typeDescFieldId);
   }
 
   // Load the attribute from the \p box and perform a check against \p maskValue
   // The final comparison is implemented as `(attribute & maskValue) != 0`.
-  mlir::Value genBoxAttributeCheck(mlir::Location loc, mlir::Value box,
+  mlir::Value genBoxAttributeCheck(mlir::Location loc, mlir::Type boxTy,
+                                   mlir::Value box,
                                    mlir::ConversionPatternRewriter &rewriter,
                                    unsigned maskValue) const {
     mlir::Type attrTy = rewriter.getI32Type();
     mlir::Value attribute =
-        getValueFromBox(loc, box, attrTy, rewriter, kAttributePosInBox);
+        getValueFromBox(loc, boxTy, box, attrTy, rewriter, kAttributePosInBox);
     mlir::LLVM::ConstantOp attrMask =
         genConstantOffset(loc, rewriter, maskValue);
     auto maskRes =
@@ -316,6 +350,11 @@ protected:
 
   fir::LLVMTypeConverter &lowerTy() const {
     return *static_cast<fir::LLVMTypeConverter *>(this->getTypeConverter());
+  }
+
+  void attachTBAATag(mlir::Operation *op, mlir::Type baseFIRType,
+                     mlir::Type accessFIRType, mlir::LLVM::GEPOp gep) const {
+    lowerTy().attachTBAATag(op, baseFIRType, accessFIRType, gep);
   }
 
   const fir::FIRToLLVMPassOptions &options;
@@ -482,7 +521,8 @@ struct BoxAddrOpConversion : public FIROpConversion<fir::BoxAddrOp> {
     auto loc = boxaddr.getLoc();
     mlir::Type ty = convertType(boxaddr.getType());
     if (auto argty = boxaddr.getVal().getType().dyn_cast<fir::BaseBoxType>()) {
-      rewriter.replaceOp(boxaddr, loadBaseAddrFromBox(loc, ty, a, rewriter));
+      rewriter.replaceOp(boxaddr,
+                         getBaseAddrFromBox(loc, ty, argty, a, rewriter));
     } else {
       rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractValueOp>(boxaddr, a, 0);
     }
@@ -513,7 +553,7 @@ struct BoxCharLenOpConversion : public FIROpConversion<fir::BoxCharLenOp> {
 };
 
 /// Lower `fir.box_dims` to a sequence of operations to extract the requested
-/// dimension infomartion from the boxed value.
+/// dimension information from the boxed value.
 /// Result in a triple set of GEPs and loads.
 struct BoxDimsOpConversion : public FIROpConversion<fir::BoxDimsOp> {
   using FIROpConversion::FIROpConversion;
@@ -526,9 +566,9 @@ struct BoxDimsOpConversion : public FIROpConversion<fir::BoxDimsOp> {
         convertType(boxdims.getResult(1).getType()),
         convertType(boxdims.getResult(2).getType()),
     };
-    auto results =
-        getDimsFromBox(boxdims.getLoc(), resultTypes, adaptor.getOperands()[0],
-                       adaptor.getOperands()[1], rewriter);
+    auto results = getDimsFromBox(
+        boxdims.getLoc(), resultTypes, boxdims.getVal().getType(),
+        adaptor.getOperands()[0], adaptor.getOperands()[1], rewriter);
     rewriter.replaceOp(boxdims, results);
     return mlir::success();
   }
@@ -542,10 +582,11 @@ struct BoxEleSizeOpConversion : public FIROpConversion<fir::BoxEleSizeOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::BoxEleSizeOp boxelesz, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    mlir::Value a = adaptor.getOperands()[0];
+    mlir::Value box = adaptor.getOperands()[0];
     auto loc = boxelesz.getLoc();
     auto ty = convertType(boxelesz.getType());
-    auto elemSize = getValueFromBox(loc, a, ty, rewriter, kElemLenPosInBox);
+    auto elemSize = getElementSizeFromBox(loc, ty, boxelesz.getVal().getType(),
+                                          box, rewriter);
     rewriter.replaceOp(boxelesz, elemSize);
     return mlir::success();
   }
@@ -561,8 +602,8 @@ struct BoxIsAllocOpConversion : public FIROpConversion<fir::BoxIsAllocOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Value box = adaptor.getOperands()[0];
     auto loc = boxisalloc.getLoc();
-    mlir::Value check =
-        genBoxAttributeCheck(loc, box, rewriter, kAttrAllocatable);
+    mlir::Value check = genBoxAttributeCheck(loc, boxisalloc.getVal().getType(),
+                                             box, rewriter, kAttrAllocatable);
     rewriter.replaceOp(boxisalloc, check);
     return mlir::success();
   }
@@ -578,8 +619,8 @@ struct BoxIsArrayOpConversion : public FIROpConversion<fir::BoxIsArrayOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Value a = adaptor.getOperands()[0];
     auto loc = boxisarray.getLoc();
-    auto rank =
-        getValueFromBox(loc, a, rewriter.getI32Type(), rewriter, kRankPosInBox);
+    auto rank = getValueFromBox(loc, boxisarray.getVal().getType(), a,
+                                rewriter.getI32Type(), rewriter, kRankPosInBox);
     auto c0 = genConstantOffset(loc, rewriter, 0);
     rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
         boxisarray, mlir::LLVM::ICmpPredicate::ne, rank, c0);
@@ -597,7 +638,8 @@ struct BoxIsPtrOpConversion : public FIROpConversion<fir::BoxIsPtrOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Value box = adaptor.getOperands()[0];
     auto loc = boxisptr.getLoc();
-    mlir::Value check = genBoxAttributeCheck(loc, box, rewriter, kAttrPointer);
+    mlir::Value check = genBoxAttributeCheck(loc, boxisptr.getVal().getType(),
+                                             box, rewriter, kAttrPointer);
     rewriter.replaceOp(boxisptr, check);
     return mlir::success();
   }
@@ -614,7 +656,8 @@ struct BoxRankOpConversion : public FIROpConversion<fir::BoxRankOp> {
     mlir::Value a = adaptor.getOperands()[0];
     auto loc = boxrank.getLoc();
     mlir::Type ty = convertType(boxrank.getType());
-    auto result = getValueFromBox(loc, a, ty, rewriter, kRankPosInBox);
+    auto result = getValueFromBox(loc, boxrank.getVal().getType(), a, ty,
+                                  rewriter, kRankPosInBox);
     rewriter.replaceOp(boxrank, result);
     return mlir::success();
   }
@@ -661,7 +704,8 @@ struct BoxTypeCodeOpConversion : public FIROpConversion<fir::BoxTypeCodeOp> {
     mlir::Value box = adaptor.getOperands()[0];
     auto loc = box.getLoc();
     auto ty = convertType(op.getType());
-    auto typeCode = getValueFromBox(loc, box, ty, rewriter, kTypePosInBox);
+    auto typeCode = getValueFromBox(loc, op.getBox().getType(), box, ty,
+                                    rewriter, kTypePosInBox);
     rewriter.replaceOp(op, typeCode);
     return mlir::success();
   }
@@ -974,6 +1018,14 @@ struct DispatchOpConversion : public FIROpConversion<fir::DispatchOp> {
     auto descPtr = adaptor.getOperands()[0]
                        .getType()
                        .dyn_cast<mlir::LLVM::LLVMPointerType>();
+
+    // TODO: the following loads from the type descriptor related
+    // data structures must have proper TBAA access tags.
+    // These loads cannot alias with any real data accesses nor
+    // with any box accesses. Moreover, they can probably be marked
+    // as reading from constant memory (fourth operand of a TBAA
+    // tag may be set to true). These accesses probably deserve
+    // separate sub-root in the TBAA graph.
 
     // Load the descriptor.
     auto desc = rewriter.create<mlir::LLVM::LoadOp>(
@@ -1294,6 +1346,10 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
   static bool isDerivedType(fir::BaseBoxType boxTy) {
     return static_cast<bool>(unwrapIfDerived(boxTy));
   }
+  static bool hasAddendum(fir::BaseBoxType boxTy) {
+    return static_cast<bool>(unwrapIfDerived(boxTy)) ||
+           fir::isUnlimitedPolymorphicType(boxTy);
+  }
 
   // Get the element size and CFI type code of the boxed value.
   std::tuple<mlir::Value, mlir::Value> getSizeAndTypeCode(
@@ -1501,6 +1557,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     auto llvmBoxPtrTy = convTy.template cast<mlir::LLVM::LLVMPointerType>();
     auto llvmBoxTy = llvmBoxPtrTy.getElementType();
     bool isUnlimitedPolymorphic = fir::isUnlimitedPolymorphicType(boxTy);
+    bool useInputType = fir::isPolymorphicType(boxTy) || isUnlimitedPolymorphic;
     mlir::Value descriptor =
         rewriter.create<mlir::LLVM::UndefOp>(loc, llvmBoxTy);
     descriptor =
@@ -1521,7 +1578,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     if (hasAddendum) {
       unsigned typeDescFieldId = getTypeDescFieldId(boxTy);
       if (!typeDesc) {
-        if (isUnlimitedPolymorphic) {
+        if (useInputType) {
           mlir::Type innerType = fir::unwrapInnerType(inputType);
           if (innerType && innerType.template isa<fir::RecordType>()) {
             auto recTy = innerType.template dyn_cast<fir::RecordType>();
@@ -1550,8 +1607,8 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
   std::tuple<fir::BaseBoxType, mlir::Value, mlir::Value>
   consDescriptorPrefix(BOX box, mlir::Type inputType,
                        mlir::ConversionPatternRewriter &rewriter, unsigned rank,
-                       mlir::ValueRange lenParams,
-                       mlir::Value typeDesc = {}) const {
+                       mlir::ValueRange lenParams, mlir::Value sourceBox = {},
+                       mlir::Type sourceBoxType = {}) const {
     auto loc = box.getLoc();
     auto boxTy = box.getType().template dyn_cast<fir::BaseBoxType>();
     bool useInputType = fir::isPolymorphicType(boxTy) &&
@@ -1568,6 +1625,19 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     // information.
     auto [eleSize, cfiTy] = getSizeAndTypeCode(
         loc, rewriter, useInputType ? inputType : boxTy.getEleTy(), typeparams);
+
+    mlir::Value typeDesc;
+    // When emboxing to a polymorphic box, get the type descriptor, type code
+    // and element size from the source box if any.
+    if (fir::isPolymorphicType(boxTy) && sourceBox) {
+      typeDesc =
+          this->loadTypeDescAddress(loc, sourceBoxType, sourceBox, rewriter);
+      mlir::Type idxTy = this->lowerTy().indexType();
+      eleSize = this->getElementSizeFromBox(loc, idxTy, sourceBoxType,
+                                            sourceBox, rewriter);
+      cfiTy = this->getValueFromBox(loc, sourceBoxType, sourceBox,
+                                    cfiTy.getType(), rewriter, kTypePosInBox);
+    }
     auto mod = box->template getParentOfType<mlir::ModuleOp>();
     mlir::Value descriptor = populateDescriptor(
         loc, mod, boxTy, inputType, rewriter, rank, eleSize, cfiTy, typeDesc);
@@ -1582,6 +1652,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
                        mlir::Value typeDesc = {}) const {
     auto loc = box.getLoc();
     auto boxTy = box.getType().dyn_cast<fir::BaseBoxType>();
+    auto inputBoxTy = box.getBox().getType().dyn_cast<fir::BaseBoxType>();
     llvm::SmallVector<mlir::Value> typeparams = lenParams;
     if (!box.getSubstr().empty() && fir::hasDynamicSize(boxTy.getEleTy()))
       typeparams.push_back(box.getSubstr()[1]);
@@ -1589,16 +1660,22 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     auto [eleSize, cfiTy] =
         getSizeAndTypeCode(loc, rewriter, boxTy.getEleTy(), typeparams);
 
-    // Reboxing a polymorphic entities. eleSize and type code need to
-    // be retrived from the initial box and propagated to the new box.
-    if (fir::isPolymorphicType(boxTy) &&
-        fir::isPolymorphicType(box.getBox().getType())) {
+    // Reboxing to a polymorphic entity. eleSize and type code need to
+    // be retrieved from the initial box and propagated to the new box.
+    // If the initial box has an addendum, the type desc must be propagated as
+    // well.
+    if (fir::isPolymorphicType(boxTy)) {
       mlir::Type idxTy = this->lowerTy().indexType();
-      eleSize = this->loadElementSizeFromBox(loc, idxTy, loweredBox, rewriter);
-      cfiTy = this->getValueFromBox(loc, loweredBox, cfiTy.getType(), rewriter,
-                                    kTypePosInBox);
-      typeDesc = this->loadTypeDescAddress(loc, box.getBox().getType(),
-                                           loweredBox, rewriter);
+      eleSize =
+          this->getElementSizeFromBox(loc, idxTy, boxTy, loweredBox, rewriter);
+      cfiTy = this->getValueFromBox(loc, boxTy, loweredBox, cfiTy.getType(),
+                                    rewriter, kTypePosInBox);
+      // TODO: For initial box that are unlimited polymorphic entities, this
+      // code must be made conditional because unlimited polymorphic entities
+      // with intrinsic type spec does not have addendum.
+      if (hasAddendum(inputBoxTy))
+        typeDesc = this->loadTypeDescAddress(loc, box.getBox().getType(),
+                                             loweredBox, rewriter);
     }
 
     auto mod = box->template getParentOfType<mlir::ModuleOp>();
@@ -1618,7 +1695,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
                   mlir::Value base, mlir::Value outerOffset,
                   mlir::ValueRange cstInteriorIndices,
                   mlir::ValueRange componentIndices,
-                  llvm::Optional<mlir::Value> substringOffset) const {
+                  std::optional<mlir::Value> substringOffset) const {
     llvm::SmallVector<mlir::LLVM::GEPArg> gepArgs{outerOffset};
     mlir::Type resultTy =
         base.getType().cast<mlir::LLVM::LLVMPointerType>().getElementType();
@@ -1688,19 +1765,26 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
                        xbox.getSubcomponent().size());
   }
 
+  static bool isInGlobalOp(mlir::ConversionPatternRewriter &rewriter) {
+    auto *thisBlock = rewriter.getInsertionBlock();
+    return thisBlock &&
+           mlir::isa<mlir::LLVM::GlobalOp>(thisBlock->getParentOp());
+  }
+
   /// If the embox is not in a globalOp body, allocate storage for the box;
   /// store the value inside and return the generated alloca. Return the input
   /// value otherwise.
   mlir::Value
   placeInMemoryIfNotGlobalInit(mlir::ConversionPatternRewriter &rewriter,
-                               mlir::Location loc, mlir::Value boxValue) const {
-    auto *thisBlock = rewriter.getInsertionBlock();
-    if (thisBlock && mlir::isa<mlir::LLVM::GlobalOp>(thisBlock->getParentOp()))
+                               mlir::Location loc, mlir::Type boxTy,
+                               mlir::Value boxValue) const {
+    if (isInGlobalOp(rewriter))
       return boxValue;
     auto boxPtrTy = mlir::LLVM::LLVMPointerType::get(boxValue.getType());
     auto alloca =
         this->genAllocaWithType(loc, boxPtrTy, defaultAlign, rewriter);
-    rewriter.create<mlir::LLVM::StoreOp>(loc, boxValue, alloca);
+    auto storeOp = rewriter.create<mlir::LLVM::StoreOp>(loc, boxValue, alloca);
+    this->attachTBAATag(storeOp, boxTy, boxTy, nullptr);
     return alloca;
   }
 };
@@ -1729,20 +1813,25 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
   matchAndRewrite(fir::EmboxOp embox, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::ValueRange operands = adaptor.getOperands();
-    mlir::Value tdesc;
-    if (embox.getTdesc())
-      tdesc = operands[embox.getTdescOffset()];
+    mlir::Value sourceBox;
+    mlir::Type sourceBoxType;
+    if (embox.getSourceBox()) {
+      sourceBox = operands[embox.getSourceBoxOffset()];
+      sourceBoxType = embox.getSourceBox().getType();
+    }
     assert(!embox.getShape() && "There should be no dims on this embox op");
     auto [boxTy, dest, eleSize] = consDescriptorPrefix(
         embox, fir::unwrapRefType(embox.getMemref().getType()), rewriter,
-        /*rank=*/0, /*lenParams=*/operands.drop_front(1), tdesc);
+        /*rank=*/0, /*lenParams=*/operands.drop_front(1), sourceBox,
+        sourceBoxType);
     dest = insertBaseAddress(rewriter, embox.getLoc(), dest, operands[0]);
     if (isDerivedTypeWithLenParams(boxTy)) {
       TODO(embox.getLoc(),
            "fir.embox codegen of derived with length parameters");
       return mlir::failure();
     }
-    auto result = placeInMemoryIfNotGlobalInit(rewriter, embox.getLoc(), dest);
+    auto result =
+        placeInMemoryIfNotGlobalInit(rewriter, embox.getLoc(), boxTy, dest);
     rewriter.replaceOp(embox, result);
     return mlir::success();
   }
@@ -1756,12 +1845,16 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
   matchAndRewrite(fir::cg::XEmboxOp xbox, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::ValueRange operands = adaptor.getOperands();
-    mlir::Value tdesc;
-    if (xbox.getTdesc())
-      tdesc = operands[xbox.getTdescOffset()];
+    mlir::Value sourceBox;
+    mlir::Type sourceBoxType;
+    if (xbox.getSourceBox()) {
+      sourceBox = operands[xbox.getSourceBoxOffset()];
+      sourceBoxType = xbox.getSourceBox().getType();
+    }
     auto [boxTy, dest, eleSize] = consDescriptorPrefix(
         xbox, fir::unwrapRefType(xbox.getMemref().getType()), rewriter,
-        xbox.getOutRank(), operands.drop_front(xbox.lenParamOffset()), tdesc);
+        xbox.getOutRank(), operands.drop_front(xbox.lenParamOffset()),
+        sourceBox, sourceBoxType);
     // Generate the triples in the dims field of the descriptor
     auto i64Ty = mlir::IntegerType::get(xbox.getContext(), 64);
     mlir::Value base = operands[0];
@@ -1907,7 +2000,7 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
     if (hasSlice || hasSubcomp || hasSubstr) {
       // Shift the base address.
       llvm::SmallVector<mlir::Value> fieldIndices;
-      llvm::Optional<mlir::Value> substringOffset;
+      std::optional<mlir::Value> substringOffset;
       if (hasSubcomp)
         getSubcomponentIndices(xbox, xbox.getMemref(), operands, fieldIndices);
       if (hasSubstr)
@@ -1919,7 +2012,8 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
     if (isDerivedTypeWithLenParams(boxTy))
       TODO(loc, "fir.embox codegen of derived with length parameters");
 
-    mlir::Value result = placeInMemoryIfNotGlobalInit(rewriter, loc, dest);
+    mlir::Value result =
+        placeInMemoryIfNotGlobalInit(rewriter, loc, boxTy, dest);
     rewriter.replaceOp(xbox, result);
     return mlir::success();
   }
@@ -1944,12 +2038,24 @@ struct XReboxOpConversion : public EmboxCommonConversion<fir::cg::XReboxOp> {
     mlir::Value loweredBox = adaptor.getOperands()[0];
     mlir::ValueRange operands = adaptor.getOperands();
 
+    // Inside a fir.global, the input box was produced as an llvm.struct<>
+    // because objects cannot be handled in memory inside a fir.global body that
+    // must be constant foldable. However, the type translation are not
+    // contextual, so the fir.box<T> type of the operation that produced the
+    // fir.box was translated to an llvm.ptr<llvm.struct<>> and the MLIR pass
+    // manager inserted a builtin.unrealized_conversion_cast that was inserted
+    // and needs to be removed here.
+    if (isInGlobalOp(rewriter))
+      if (auto unrealizedCast =
+              loweredBox.getDefiningOp<mlir::UnrealizedConversionCastOp>())
+        loweredBox = unrealizedCast.getInputs()[0];
+
     // Create new descriptor and fill its non-shape related data.
     llvm::SmallVector<mlir::Value, 2> lenParams;
     mlir::Type inputEleTy = getInputEleTy(rebox);
     if (auto charTy = inputEleTy.dyn_cast<fir::CharacterType>()) {
-      mlir::Value len =
-          loadElementSizeFromBox(loc, idxTy, loweredBox, rewriter);
+      mlir::Value len = getElementSizeFromBox(
+          loc, idxTy, rebox.getBox().getType(), loweredBox, rewriter);
       if (charTy.getFKind() != 1) {
         mlir::Value width =
             genConstantIndex(loc, idxTy, rewriter, charTy.getFKind());
@@ -1976,22 +2082,22 @@ struct XReboxOpConversion : public EmboxCommonConversion<fir::cg::XReboxOp> {
     llvm::SmallVector<mlir::Value> inputExtents;
     llvm::SmallVector<mlir::Value> inputStrides;
     const unsigned inputRank = rebox.getRank();
-    for (unsigned i = 0; i < inputRank; ++i) {
-      mlir::Value dim = genConstantIndex(loc, idxTy, rewriter, i);
+    for (unsigned dim = 0; dim < inputRank; ++dim) {
       llvm::SmallVector<mlir::Value, 3> dimInfo =
-          getDimsFromBox(loc, {idxTy, idxTy, idxTy}, loweredBox, dim, rewriter);
+          getDimsFromBox(loc, {idxTy, idxTy, idxTy}, rebox.getBox().getType(),
+                         loweredBox, dim, rewriter);
       inputExtents.emplace_back(dimInfo[1]);
       inputStrides.emplace_back(dimInfo[2]);
     }
 
     mlir::Type baseTy = getBaseAddrTypeFromBox(loweredBox.getType());
-    mlir::Value baseAddr =
-        loadBaseAddrFromBox(loc, baseTy, loweredBox, rewriter);
+    mlir::Value baseAddr = getBaseAddrFromBox(
+        loc, baseTy, rebox.getBox().getType(), loweredBox, rewriter);
 
     if (!rebox.getSlice().empty() || !rebox.getSubcomponent().empty())
-      return sliceBox(rebox, dest, baseAddr, inputExtents, inputStrides,
+      return sliceBox(rebox, boxTy, dest, baseAddr, inputExtents, inputStrides,
                       operands, rewriter);
-    return reshapeBox(rebox, dest, baseAddr, inputExtents, inputStrides,
+    return reshapeBox(rebox, boxTy, dest, baseAddr, inputExtents, inputStrides,
                       operands, rewriter);
   }
 
@@ -1999,9 +2105,9 @@ private:
   /// Write resulting shape and base address in descriptor, and replace rebox
   /// op.
   mlir::LogicalResult
-  finalizeRebox(fir::cg::XReboxOp rebox, mlir::Value dest, mlir::Value base,
-                mlir::ValueRange lbounds, mlir::ValueRange extents,
-                mlir::ValueRange strides,
+  finalizeRebox(fir::cg::XReboxOp rebox, mlir::Type destBoxTy, mlir::Value dest,
+                mlir::Value base, mlir::ValueRange lbounds,
+                mlir::ValueRange extents, mlir::ValueRange strides,
                 mlir::ConversionPatternRewriter &rewriter) const {
     mlir::Location loc = rebox.getLoc();
     mlir::Value zero =
@@ -2023,16 +2129,16 @@ private:
     }
     dest = insertBaseAddress(rewriter, loc, dest, base);
     mlir::Value result =
-        placeInMemoryIfNotGlobalInit(rewriter, rebox.getLoc(), dest);
+        placeInMemoryIfNotGlobalInit(rewriter, rebox.getLoc(), destBoxTy, dest);
     rewriter.replaceOp(rebox, result);
     return mlir::success();
   }
 
   // Apply slice given the base address, extents and strides of the input box.
   mlir::LogicalResult
-  sliceBox(fir::cg::XReboxOp rebox, mlir::Value dest, mlir::Value base,
-           mlir::ValueRange inputExtents, mlir::ValueRange inputStrides,
-           mlir::ValueRange operands,
+  sliceBox(fir::cg::XReboxOp rebox, mlir::Type destBoxTy, mlir::Value dest,
+           mlir::Value base, mlir::ValueRange inputExtents,
+           mlir::ValueRange inputStrides, mlir::ValueRange operands,
            mlir::ConversionPatternRewriter &rewriter) const {
     mlir::Location loc = rebox.getLoc();
     mlir::Type voidPtrTy = ::getVoidPtrType(rebox.getContext());
@@ -2047,7 +2153,7 @@ private:
       base = rewriter.create<mlir::LLVM::BitcastOp>(loc, llvmElePtrTy, base);
 
       llvm::SmallVector<mlir::Value> fieldIndices;
-      llvm::Optional<mlir::Value> substringOffset;
+      std::optional<mlir::Value> substringOffset;
       if (!rebox.getSubcomponent().empty())
         getSubcomponentIndices(rebox, rebox.getBox(), operands, fieldIndices);
       if (!rebox.getSubstr().empty())
@@ -2060,8 +2166,9 @@ private:
     if (rebox.getSlice().empty())
       // The array section is of the form array[%component][substring], keep
       // the input array extents and strides.
-      return finalizeRebox(rebox, dest, base, /*lbounds*/ std::nullopt,
-                           inputExtents, inputStrides, rewriter);
+      return finalizeRebox(rebox, destBoxTy, dest, base,
+                           /*lbounds*/ std::nullopt, inputExtents, inputStrides,
+                           rewriter);
 
     // Strides from the fir.box are in bytes.
     base = rewriter.create<mlir::LLVM::BitcastOp>(loc, voidPtrTy, base);
@@ -2110,24 +2217,24 @@ private:
         slicedStrides.emplace_back(stride);
       }
     }
-    return finalizeRebox(rebox, dest, base, /*lbounds*/ std::nullopt,
+    return finalizeRebox(rebox, destBoxTy, dest, base, /*lbounds*/ std::nullopt,
                          slicedExtents, slicedStrides, rewriter);
   }
 
   /// Apply a new shape to the data described by a box given the base address,
   /// extents and strides of the box.
   mlir::LogicalResult
-  reshapeBox(fir::cg::XReboxOp rebox, mlir::Value dest, mlir::Value base,
-             mlir::ValueRange inputExtents, mlir::ValueRange inputStrides,
-             mlir::ValueRange operands,
+  reshapeBox(fir::cg::XReboxOp rebox, mlir::Type destBoxTy, mlir::Value dest,
+             mlir::Value base, mlir::ValueRange inputExtents,
+             mlir::ValueRange inputStrides, mlir::ValueRange operands,
              mlir::ConversionPatternRewriter &rewriter) const {
     mlir::ValueRange reboxShifts{operands.begin() + rebox.shiftOffset(),
                                  operands.begin() + rebox.shiftOffset() +
                                      rebox.getShift().size()};
     if (rebox.getShape().empty()) {
       // Only setting new lower bounds.
-      return finalizeRebox(rebox, dest, base, reboxShifts, inputExtents,
-                           inputStrides, rewriter);
+      return finalizeRebox(rebox, destBoxTy, dest, base, reboxShifts,
+                           inputExtents, inputStrides, rewriter);
     }
 
     mlir::Location loc = rebox.getLoc();
@@ -2153,8 +2260,8 @@ private:
       // nextStride = extent * stride;
       stride = rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, extent, stride);
     }
-    return finalizeRebox(rebox, dest, base, reboxShifts, newExtents, newStrides,
-                         rewriter);
+    return finalizeRebox(rebox, destBoxTy, dest, base, reboxShifts, newExtents,
+                         newStrides, rewriter);
   }
 
   /// Return scalar element type of the input box.
@@ -2393,7 +2500,8 @@ struct XArrayCoorOpConversion
       // that was just computed.
       if (baseIsBoxed) {
         // Use stride in bytes from the descriptor.
-        mlir::Value stride = loadStrideFromBox(loc, operands[0], i, rewriter);
+        mlir::Value stride = getStrideFromBox(loc, coor.getMemref().getType(),
+                                              operands[0], i, rewriter);
         auto sc = rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, diff, stride);
         offset = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, sc, offset);
       } else {
@@ -2413,8 +2521,8 @@ struct XArrayCoorOpConversion
       // Working with byte offsets. The base address is read from the fir.box.
       // and need to be casted to i8* to do the pointer arithmetic.
       mlir::Type baseTy = getBaseAddrTypeFromBox(operands[0].getType());
-      mlir::Value base =
-          loadBaseAddrFromBox(loc, baseTy, operands[0], rewriter);
+      mlir::Value base = getBaseAddrFromBox(
+          loc, baseTy, coor.getMemref().getType(), operands[0], rewriter);
       mlir::Type voidPtrTy = getVoidPtrType();
       base = rewriter.create<mlir::LLVM::BitcastOp>(loc, voidPtrTy, base);
       llvm::SmallVector<mlir::LLVM::GEPArg> args{offset};
@@ -2625,8 +2733,8 @@ private:
     // 2.4. TODO: Either document or disable any other case that the following
     //  implementation might convert.
     mlir::Value resultAddr =
-        loadBaseAddrFromBox(loc, getBaseAddrTypeFromBox(boxBaseAddr.getType()),
-                            boxBaseAddr, rewriter);
+        getBaseAddrFromBox(loc, getBaseAddrTypeFromBox(boxBaseAddr.getType()),
+                           boxObjTy, boxBaseAddr, rewriter);
     // Component Type
     auto cpnTy = fir::dyn_cast_ptrOrBoxEleTy(boxObjTy);
     mlir::Type voidPtrTy = ::getVoidPtrType(coor.getContext());
@@ -2644,7 +2752,7 @@ private:
         for (unsigned index = i, lastIndex = i + arrTy.getDimension();
              index < lastIndex; ++index) {
           mlir::Value stride =
-              loadStrideFromBox(loc, operands[0], index - i, rewriter);
+              getStrideFromBox(loc, boxObjTy, operands[0], index - i, rewriter);
           auto sc = rewriter.create<mlir::LLVM::MulOp>(loc, idxTy,
                                                        operands[index], stride);
           off = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, sc, off);
@@ -2725,7 +2833,7 @@ private:
       if (hasKnownShape && hasSubdimension) {
         offs.push_back(0);
       }
-      llvm::Optional<int> dims;
+      std::optional<int> dims;
       llvm::SmallVector<mlir::Value> arrIdx;
       for (std::size_t i = 1, sz = operands.size(); i < sz; ++i) {
         mlir::Value nxtOpnd = operands[i];
@@ -2930,7 +3038,7 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
   // TODO: String comparaison should be avoided. Replace linkName with an
   // enumeration.
   mlir::LLVM::Linkage
-  convertLinkage(llvm::Optional<llvm::StringRef> optLinkage) const {
+  convertLinkage(std::optional<llvm::StringRef> optLinkage) const {
     if (optLinkage) {
       auto name = *optLinkage;
       if (name == "internal")
@@ -2964,24 +3072,28 @@ struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
       auto inputBoxStorage = adaptor.getOperands()[0];
       mlir::Location loc = load.getLoc();
       fir::SequenceType seqTy = fir::unwrapUntilSeqType(boxTy);
-      mlir::Type eleTy = fir::unwrapPassByRefType(boxTy);
-      // fir.box of assumed rank and polymorphic entities do not have a storage
+      // fir.box of assumed rank do not have a storage
       // size that is know at compile time. The copy needs to be runtime driven
       // depending on the actual dynamic rank or type.
-      if (eleTy.isa<mlir::NoneType>() || (seqTy && seqTy.hasUnknownShape()))
-        TODO(loc, "loading polymorphic or assumed rank fir.box");
+      if (seqTy && seqTy.hasUnknownShape())
+        TODO(loc, "loading or assumed rank fir.box");
       mlir::Type boxPtrTy = inputBoxStorage.getType();
       auto boxValue = rewriter.create<mlir::LLVM::LoadOp>(
           loc, boxPtrTy.cast<mlir::LLVM::LLVMPointerType>().getElementType(),
           inputBoxStorage);
+      attachTBAATag(boxValue, boxTy, boxTy, nullptr);
       auto newBoxStorage =
           genAllocaWithType(loc, boxPtrTy, defaultAlign, rewriter);
-      rewriter.create<mlir::LLVM::StoreOp>(loc, boxValue, newBoxStorage);
+      auto storeOp =
+          rewriter.create<mlir::LLVM::StoreOp>(loc, boxValue, newBoxStorage);
+      attachTBAATag(storeOp, boxTy, boxTy, nullptr);
       rewriter.replaceOp(load, newBoxStorage.getResult());
     } else {
-      rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(
-          load, convertType(load.getType()), adaptor.getOperands(),
-          load->getAttrs());
+      mlir::Type loadTy = convertType(load.getType());
+      auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(
+          load.getLoc(), loadTy, adaptor.getOperands(), load->getAttrs());
+      attachTBAATag(loadOp, load.getType(), load.getType(), nullptr);
+      rewriter.replaceOp(load, loadOp.getResult());
     }
     return mlir::success();
   }
@@ -3002,7 +3114,7 @@ struct NoReassocOpConversion : public FIROpConversion<fir::NoReassocOp> {
 };
 
 static void genCondBrOp(mlir::Location loc, mlir::Value cmp, mlir::Block *dest,
-                        llvm::Optional<mlir::ValueRange> destOps,
+                        std::optional<mlir::ValueRange> destOps,
                         mlir::ConversionPatternRewriter &rewriter,
                         mlir::Block *newBlock) {
   if (destOps)
@@ -3013,7 +3125,7 @@ static void genCondBrOp(mlir::Location loc, mlir::Value cmp, mlir::Block *dest,
 }
 
 template <typename A, typename B>
-static void genBrOp(A caseOp, mlir::Block *dest, llvm::Optional<B> destOps,
+static void genBrOp(A caseOp, mlir::Block *dest, std::optional<B> destOps,
                     mlir::ConversionPatternRewriter &rewriter) {
   if (destOps)
     rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(caseOp, *destOps, dest);
@@ -3023,7 +3135,7 @@ static void genBrOp(A caseOp, mlir::Block *dest, llvm::Optional<B> destOps,
 
 static void genCaseLadderStep(mlir::Location loc, mlir::Value cmp,
                               mlir::Block *dest,
-                              llvm::Optional<mlir::ValueRange> destOps,
+                              std::optional<mlir::ValueRange> destOps,
                               mlir::ConversionPatternRewriter &rewriter) {
   auto *thisBlock = rewriter.getInsertionBlock();
   auto *newBlock = createBlock(rewriter, dest);
@@ -3069,9 +3181,9 @@ struct SelectCaseOpConversion : public FIROpConversion<fir::SelectCaseOp> {
     auto loc = caseOp.getLoc();
     for (unsigned t = 0; t != conds; ++t) {
       mlir::Block *dest = caseOp.getSuccessor(t);
-      llvm::Optional<mlir::ValueRange> destOps =
+      std::optional<mlir::ValueRange> destOps =
           caseOp.getSuccessorOperands(adaptor.getOperands(), t);
-      llvm::Optional<mlir::ValueRange> cmpOps =
+      std::optional<mlir::ValueRange> cmpOps =
           *caseOp.getCompareOperands(adaptor.getOperands(), t);
       mlir::Value caseArg = *(cmpOps.value().begin());
       mlir::Attribute attr = cases[t];
@@ -3208,19 +3320,24 @@ struct StoreOpConversion : public FIROpConversion<fir::StoreOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::StoreOp store, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    if (store.getValue().getType().isa<fir::BaseBoxType>()) {
+    mlir::Location loc = store.getLoc();
+    mlir::Type storeTy = store.getValue().getType();
+    mlir::LLVM::StoreOp newStoreOp;
+    if (auto boxTy = storeTy.dyn_cast<fir::BaseBoxType>()) {
       // fir.box value is actually in memory, load it first before storing it.
-      mlir::Location loc = store.getLoc();
       mlir::Type boxPtrTy = adaptor.getOperands()[0].getType();
       auto val = rewriter.create<mlir::LLVM::LoadOp>(
           loc, boxPtrTy.cast<mlir::LLVM::LLVMPointerType>().getElementType(),
           adaptor.getOperands()[0]);
-      rewriter.replaceOpWithNewOp<mlir::LLVM::StoreOp>(
-          store, val, adaptor.getOperands()[1]);
+      attachTBAATag(val, boxTy, boxTy, nullptr);
+      newStoreOp = rewriter.create<mlir::LLVM::StoreOp>(
+          loc, val, adaptor.getOperands()[1]);
     } else {
-      rewriter.replaceOpWithNewOp<mlir::LLVM::StoreOp>(
-          store, adaptor.getOperands()[0], adaptor.getOperands()[1]);
+      newStoreOp = rewriter.create<mlir::LLVM::StoreOp>(
+          loc, adaptor.getOperands()[0], adaptor.getOperands()[1]);
     }
+    attachTBAATag(newStoreOp, storeTy, storeTy, nullptr);
+    rewriter.eraseOp(store);
     return mlir::success();
   }
 };
@@ -3660,7 +3777,8 @@ public:
     }
 
     auto *context = getModule().getContext();
-    fir::LLVMTypeConverter typeConverter{getModule()};
+    fir::LLVMTypeConverter typeConverter{getModule(),
+                                         options.applyTBAA || applyTBAA};
     mlir::RewritePatternSet pattern(context);
     pattern.insert<
         AbsentOpConversion, AddcOpConversion, AddrOfOpConversion,

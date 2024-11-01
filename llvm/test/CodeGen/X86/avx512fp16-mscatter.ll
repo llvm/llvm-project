@@ -7,10 +7,10 @@ define void @test_mscatter_v16f16(ptr %base, <16 x i32> %index, <16 x half> %val
 ; CHECK-NEXT:    vpbroadcastq %rdi, %zmm3
 ; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
 ; CHECK-NEXT:    vpmovsxdq %ymm2, %zmm2
-; CHECK-NEXT:    vpaddq %zmm2, %zmm3, %zmm4
-; CHECK-NEXT:    vpaddq %zmm2, %zmm4, %zmm2
+; CHECK-NEXT:    vpaddq %zmm2, %zmm2, %zmm2
+; CHECK-NEXT:    vpaddq %zmm2, %zmm3, %zmm2
 ; CHECK-NEXT:    vpmovsxdq %ymm0, %zmm0
-; CHECK-NEXT:    vpaddq %zmm0, %zmm3, %zmm3
+; CHECK-NEXT:    vpaddq %zmm0, %zmm0, %zmm0
 ; CHECK-NEXT:    vpaddq %zmm0, %zmm3, %zmm0
 ; CHECK-NEXT:    vmovq %xmm0, %rax
 ; CHECK-NEXT:    vmovsh %xmm1, (%rax)

@@ -33,8 +33,8 @@ using namespace llvm;
 #define PRINT_ALIAS_INSTR
 #include "X86GenAsmWriter1.inc"
 
-void X86IntelInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
-  OS << markup("<reg:") << getRegisterName(RegNo) << markup(">");
+void X86IntelInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+  OS << markup("<reg:") << getRegisterName(Reg) << markup(">");
 }
 
 void X86IntelInstPrinter::printInst(const MCInst *MI, uint64_t Address,

@@ -23,20 +23,14 @@
 #include "llvm/Target/TargetOptions.h"
 using namespace llvm;
 
-DwarfCFIExceptionBase::DwarfCFIExceptionBase(AsmPrinter *A) : EHStreamer(A) {}
-
-void DwarfCFIExceptionBase::markFunctionEnd() {
-  // Map all labels and get rid of any dead landing pads.
-  if (!Asm->MF->getLandingPads().empty()) {
-    MachineFunction *NonConstMF = const_cast<MachineFunction*>(Asm->MF);
-    NonConstMF->tidyLandingPads();
-  }
-}
-
-DwarfCFIException::DwarfCFIException(AsmPrinter *A)
-    : DwarfCFIExceptionBase(A) {}
+DwarfCFIException::DwarfCFIException(AsmPrinter *A) : EHStreamer(A) {}
 
 DwarfCFIException::~DwarfCFIException() = default;
+
+void DwarfCFIException::addPersonality(const GlobalValue *Personality) {
+  if (!llvm::is_contained(Personalities, Personality))
+    Personalities.push_back(Personality);
+}
 
 /// endModule - Emit all exception information that should come after the
 /// content.
@@ -52,13 +46,12 @@ void DwarfCFIException::endModule() {
   if ((PerEncoding & 0x80) != dwarf::DW_EH_PE_indirect)
     return;
 
-  // Emit references to all used personality functions
-  for (const Function *Personality : MMI->getPersonalities()) {
-    if (!Personality)
-      continue;
+  // Emit indirect reference table for all used personality functions
+  for (const GlobalValue *Personality : Personalities) {
     MCSymbol *Sym = Asm->getSymbol(Personality);
     TLOF.emitPersonalityValue(*Asm->OutStreamer, Asm->getDataLayout(), Sym);
   }
+  Personalities.clear();
 }
 
 void DwarfCFIException::beginFunction(const MachineFunction *MF) {
@@ -74,9 +67,9 @@ void DwarfCFIException::beginFunction(const MachineFunction *MF) {
 
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   unsigned PerEncoding = TLOF.getPersonalityEncoding();
-  const Function *Per = nullptr;
+  const GlobalValue *Per = nullptr;
   if (F.hasPersonalityFn())
-    Per = dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
+    Per = dyn_cast<GlobalValue>(F.getPersonalityFn()->stripPointerCasts());
 
   // Emit a personality function even when there are no landing pads
   forceEmitPersonality =
@@ -127,13 +120,10 @@ void DwarfCFIException::beginBasicBlockSection(const MachineBasicBlock &MBB) {
     return;
 
   auto &F = MBB.getParent()->getFunction();
-  auto *P = dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
+  auto *P = dyn_cast<GlobalValue>(F.getPersonalityFn()->stripPointerCasts());
   assert(P && "Expected personality function");
-
-  // If we are forced to emit this personality, make sure to record
-  // it because it might not appear in any landingpad
-  if (forceEmitPersonality)
-    MMI->addPersonality(P);
+  // Record the personality function.
+  addPersonality(P);
 
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   unsigned PerEncoding = TLOF.getPersonalityEncoding();

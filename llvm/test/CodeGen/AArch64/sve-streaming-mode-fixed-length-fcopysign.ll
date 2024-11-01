@@ -212,21 +212,14 @@ define void @test_copysign_v4f32_v4f64(ptr %ap, ptr %bp) #0 {
 define void @test_copysign_v2f64_v2f32(ptr %ap, ptr %bp) #0 {
 ; CHECK-LABEL: test_copysign_v2f64_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldr s0, [x1, #4]
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    and z1.d, z1.d, #0x7fffffffffffffff
-; CHECK-NEXT:    str d0, [sp, #8]
-; CHECK-NEXT:    ldr s0, [x1]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    str d0, [sp]
-; CHECK-NEXT:    ldr q0, [sp]
-; CHECK-NEXT:    and z0.d, z0.d, #0x8000000000000000
-; CHECK-NEXT:    orr z0.d, z1.d, z0.d
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ld1w { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    and z0.d, z0.d, #0x7fffffffffffffff
+; CHECK-NEXT:    fcvt z1.d, p0/m, z1.s
+; CHECK-NEXT:    and z1.d, z1.d, #0x8000000000000000
+; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    str q0, [x0]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, ptr %ap
   %b = load < 2 x float>, ptr %bp
@@ -242,30 +235,20 @@ define void @test_copysign_v2f64_v2f32(ptr %ap, ptr %bp) #0 {
 define void @test_copysign_v4f64_v4f32(ptr %ap, ptr %bp) #0 {
 ; CHECK-LABEL: test_copysign_v4f64_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    ldr s0, [x1, #12]
-; CHECK-NEXT:    ldp q2, q1, [x0]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    and z2.d, z2.d, #0x7fffffffffffffff
-; CHECK-NEXT:    str d0, [sp, #24]
+; CHECK-NEXT:    mov x8, #2
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ld1w { z2.d }, p0/z, [x1, x8, lsl #2]
+; CHECK-NEXT:    ld1w { z3.d }, p0/z, [x1]
+; CHECK-NEXT:    and z0.d, z0.d, #0x7fffffffffffffff
+; CHECK-NEXT:    fcvt z3.d, p0/m, z3.s
+; CHECK-NEXT:    fcvt z2.d, p0/m, z2.s
 ; CHECK-NEXT:    and z1.d, z1.d, #0x7fffffffffffffff
-; CHECK-NEXT:    ldr s0, [x1, #8]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    str d0, [sp, #16]
-; CHECK-NEXT:    ldr s0, [x1, #4]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    str d0, [sp, #8]
-; CHECK-NEXT:    ldr s0, [x1]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    str d0, [sp]
-; CHECK-NEXT:    ldp q3, q0, [sp]
 ; CHECK-NEXT:    and z3.d, z3.d, #0x8000000000000000
-; CHECK-NEXT:    and z0.d, z0.d, #0x8000000000000000
-; CHECK-NEXT:    orr z0.d, z1.d, z0.d
-; CHECK-NEXT:    orr z1.d, z2.d, z3.d
-; CHECK-NEXT:    stp q1, q0, [x0]
-; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    and z2.d, z2.d, #0x8000000000000000
+; CHECK-NEXT:    orr z0.d, z0.d, z3.d
+; CHECK-NEXT:    orr z1.d, z1.d, z2.d
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %a = load <4 x double>, ptr %ap
   %b = load <4 x float>, ptr %bp

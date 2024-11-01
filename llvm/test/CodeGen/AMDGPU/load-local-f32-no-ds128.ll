@@ -11,9 +11,9 @@
 ;
 ; CIVI: ds_read2_b64
 ; CIVI: ds_write2_b64
-define amdgpu_kernel void @local_v4f32_to_2b64(<4 x float> addrspace(3)* %out, <4 x float> addrspace(3)* %in) {
-  %ld = load <4 x float>, <4 x float> addrspace(3)* %in, align 16
-  store <4 x float> %ld, <4 x float> addrspace(3)* %out, align 16
+define amdgpu_kernel void @local_v4f32_to_2b64(ptr addrspace(3) %out, ptr addrspace(3) %in) {
+  %ld = load <4 x float>, ptr addrspace(3) %in, align 16
+  store <4 x float> %ld, ptr addrspace(3) %out, align 16
   ret void
 }
 

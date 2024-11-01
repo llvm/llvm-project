@@ -9,15 +9,15 @@ define void @kernel() {
 ; LABEL: @lower_alloca
 ; PTX-LABEL: .visible .entry kernel(
   %A = alloca i32
-; CHECK: addrspacecast i32* %A to i32 addrspace(5)*
-; CHECK: store i32 0, i32 addrspace(5)* {{%.+}}
+; CHECK: addrspacecast ptr %A to ptr addrspace(5)
+; CHECK: store i32 0, ptr addrspace(5) {{%.+}}
 ; PTX: st.local.u32 [{{%rd[0-9]+}}], {{%r[0-9]+}}
-  store i32 0, i32* %A
-  call void @callee(i32* %A)
+  store i32 0, ptr %A
+  call void @callee(ptr %A)
   ret void
 }
 
-declare void @callee(i32*)
+declare void @callee(ptr)
 
 !nvvm.annotations = !{!0}
-!0 = !{void ()* @kernel, !"kernel", i32 1}
+!0 = !{ptr @kernel, !"kernel", i32 1}

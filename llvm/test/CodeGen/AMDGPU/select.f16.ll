@@ -5,19 +5,14 @@
 define amdgpu_kernel void @select_f16(
 ; SI-LABEL: select_f16:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_mov_b32 s24, SCRATCH_RSRC_DWORD0
 ; SI-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x9
-; SI-NEXT:    s_mov_b32 s25, SCRATCH_RSRC_DWORD1
-; SI-NEXT:    s_mov_b32 s26, -1
-; SI-NEXT:    s_mov_b32 s27, 0xe8f000
-; SI-NEXT:    s_add_u32 s24, s24, s3
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_load_dwordx2 s[12:13], s[0:1], 0x11
+; SI-NEXT:    s_mov_b32 s18, s2
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s16, s6
 ; SI-NEXT:    s_mov_b32 s17, s7
-; SI-NEXT:    s_mov_b32 s18, s2
 ; SI-NEXT:    s_mov_b32 s19, s3
 ; SI-NEXT:    s_mov_b32 s20, s8
 ; SI-NEXT:    s_mov_b32 s21, s9
@@ -39,7 +34,6 @@ define amdgpu_kernel void @select_f16(
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_mov_b32 s0, s4
 ; SI-NEXT:    s_mov_b32 s1, s5
-; SI-NEXT:    s_addc_u32 s25, s25, 0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SI-NEXT:    v_cvt_f32_f16_e32 v2, v2
@@ -52,19 +46,14 @@ define amdgpu_kernel void @select_f16(
 ;
 ; VI-LABEL: select_f16:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_mov_b32 s24, SCRATCH_RSRC_DWORD0
 ; VI-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x24
-; VI-NEXT:    s_mov_b32 s25, SCRATCH_RSRC_DWORD1
-; VI-NEXT:    s_mov_b32 s26, -1
-; VI-NEXT:    s_mov_b32 s27, 0xe80000
-; VI-NEXT:    s_add_u32 s24, s24, s3
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_load_dwordx2 s[12:13], s[0:1], 0x44
+; VI-NEXT:    s_mov_b32 s18, s2
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s16, s6
 ; VI-NEXT:    s_mov_b32 s17, s7
-; VI-NEXT:    s_mov_b32 s18, s2
 ; VI-NEXT:    s_mov_b32 s19, s3
 ; VI-NEXT:    s_mov_b32 s20, s8
 ; VI-NEXT:    s_mov_b32 s21, s9
@@ -86,24 +75,23 @@ define amdgpu_kernel void @select_f16(
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_mov_b32 s0, s4
 ; VI-NEXT:    s_mov_b32 s1, s5
-; VI-NEXT:    s_addc_u32 s25, s25, 0
 ; VI-NEXT:    v_cmp_lt_f16_e32 vcc, v0, v1
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
 ; VI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %b,
-    half addrspace(1)* %c,
-    half addrspace(1)* %d) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b,
+    ptr addrspace(1) %c,
+    ptr addrspace(1) %d) {
 entry:
-  %a.val = load volatile half, half addrspace(1)* %a
-  %b.val = load volatile half, half addrspace(1)* %b
-  %c.val = load volatile half, half addrspace(1)* %c
-  %d.val = load volatile half, half addrspace(1)* %d
+  %a.val = load volatile half, ptr addrspace(1) %a
+  %b.val = load volatile half, ptr addrspace(1) %b
+  %c.val = load volatile half, ptr addrspace(1) %c
+  %d.val = load volatile half, ptr addrspace(1) %d
   %fcmp = fcmp olt half %a.val, %b.val
   %r.val = select i1 %fcmp, half %c.val, half %d.val
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -173,17 +161,17 @@ define amdgpu_kernel void @select_f16_imm_a(
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
 ; VI-NEXT:    buffer_store_short v0, off, s[8:11], 0
 ; VI-NEXT:    s_endpgm
-    half addrspace(1)* %r,
-    half addrspace(1)* %b,
-    half addrspace(1)* %c,
-    half addrspace(1)* %d) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %b,
+    ptr addrspace(1) %c,
+    ptr addrspace(1) %d) {
 entry:
-  %b.val = load volatile half, half addrspace(1)* %b
-  %c.val = load volatile half, half addrspace(1)* %c
-  %d.val = load volatile half, half addrspace(1)* %d
+  %b.val = load volatile half, ptr addrspace(1) %b
+  %c.val = load volatile half, ptr addrspace(1) %c
+  %d.val = load volatile half, ptr addrspace(1) %d
   %fcmp = fcmp olt half 0xH3800, %b.val
   %r.val = select i1 %fcmp, half %c.val, half %d.val
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -253,17 +241,17 @@ define amdgpu_kernel void @select_f16_imm_b(
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
 ; VI-NEXT:    buffer_store_short v0, off, s[8:11], 0
 ; VI-NEXT:    s_endpgm
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %c,
-    half addrspace(1)* %d) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %c,
+    ptr addrspace(1) %d) {
 entry:
-  %a.val = load volatile half, half addrspace(1)* %a
-  %c.val = load volatile half, half addrspace(1)* %c
-  %d.val = load volatile half, half addrspace(1)* %d
+  %a.val = load volatile half, ptr addrspace(1) %a
+  %c.val = load volatile half, ptr addrspace(1) %c
+  %d.val = load volatile half, ptr addrspace(1) %d
   %fcmp = fcmp olt half %a.val, 0xH3800
   %r.val = select i1 %fcmp, half %c.val, half %d.val
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -334,17 +322,17 @@ define amdgpu_kernel void @select_f16_imm_c(
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
 ; VI-NEXT:    buffer_store_short v0, off, s[8:11], 0
 ; VI-NEXT:    s_endpgm
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %b,
-    half addrspace(1)* %d) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b,
+    ptr addrspace(1) %d) {
 entry:
-  %a.val = load volatile half, half addrspace(1)* %a
-  %b.val = load volatile half, half addrspace(1)* %b
-  %d.val = load volatile half, half addrspace(1)* %d
+  %a.val = load volatile half, ptr addrspace(1) %a
+  %b.val = load volatile half, ptr addrspace(1) %b
+  %d.val = load volatile half, ptr addrspace(1) %d
   %fcmp = fcmp olt half %a.val, %b.val
   %r.val = select i1 %fcmp, half 0xH3800, half %d.val
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -415,36 +403,31 @@ define amdgpu_kernel void @select_f16_imm_d(
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
 ; VI-NEXT:    buffer_store_short v0, off, s[8:11], 0
 ; VI-NEXT:    s_endpgm
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %b,
-    half addrspace(1)* %c) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b,
+    ptr addrspace(1) %c) {
 entry:
-  %a.val = load volatile half, half addrspace(1)* %a
-  %b.val = load volatile half, half addrspace(1)* %b
-  %c.val = load volatile half, half addrspace(1)* %c
+  %a.val = load volatile half, ptr addrspace(1) %a
+  %b.val = load volatile half, ptr addrspace(1) %b
+  %c.val = load volatile half, ptr addrspace(1) %c
   %fcmp = fcmp olt half %a.val, %b.val
   %r.val = select i1 %fcmp, half %c.val, half 0xH3800
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
 define amdgpu_kernel void @select_v2f16(
 ; SI-LABEL: select_v2f16:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_mov_b32 s24, SCRATCH_RSRC_DWORD0
 ; SI-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x9
-; SI-NEXT:    s_mov_b32 s25, SCRATCH_RSRC_DWORD1
-; SI-NEXT:    s_mov_b32 s26, -1
 ; SI-NEXT:    s_load_dwordx2 s[12:13], s[0:1], 0x11
-; SI-NEXT:    s_mov_b32 s27, 0xe8f000
-; SI-NEXT:    s_add_u32 s24, s24, s3
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_mov_b32 s18, s2
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s16, s6
 ; SI-NEXT:    s_mov_b32 s17, s7
-; SI-NEXT:    s_mov_b32 s18, s2
 ; SI-NEXT:    s_mov_b32 s19, s3
 ; SI-NEXT:    s_mov_b32 s20, s8
 ; SI-NEXT:    s_mov_b32 s21, s9
@@ -462,7 +445,6 @@ define amdgpu_kernel void @select_v2f16(
 ; SI-NEXT:    buffer_load_dword v3, off, s[8:11], 0
 ; SI-NEXT:    s_mov_b32 s0, s4
 ; SI-NEXT:    s_mov_b32 s1, s5
-; SI-NEXT:    s_addc_u32 s25, s25, 0
 ; SI-NEXT:    s_waitcnt vmcnt(3)
 ; SI-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
 ; SI-NEXT:    v_cvt_f32_f16_e32 v5, v5
@@ -492,13 +474,8 @@ define amdgpu_kernel void @select_v2f16(
 ;
 ; VI-LABEL: select_v2f16:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_mov_b32 s24, SCRATCH_RSRC_DWORD0
-; VI-NEXT:    s_mov_b32 s25, SCRATCH_RSRC_DWORD1
 ; VI-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x24
 ; VI-NEXT:    s_load_dwordx2 s[12:13], s[0:1], 0x44
-; VI-NEXT:    s_mov_b32 s26, -1
-; VI-NEXT:    s_mov_b32 s27, 0xe80000
-; VI-NEXT:    s_add_u32 s24, s24, s3
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_mov_b32 s14, s2
@@ -522,7 +499,6 @@ define amdgpu_kernel void @select_v2f16(
 ; VI-NEXT:    buffer_load_dword v3, off, s[8:11], 0
 ; VI-NEXT:    s_mov_b32 s0, s4
 ; VI-NEXT:    s_mov_b32 s1, s5
-; VI-NEXT:    s_addc_u32 s25, s25, 0
 ; VI-NEXT:    s_waitcnt vmcnt(3)
 ; VI-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
 ; VI-NEXT:    s_waitcnt vmcnt(2)
@@ -539,19 +515,19 @@ define amdgpu_kernel void @select_v2f16(
 ; VI-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
-    <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a,
-    <2 x half> addrspace(1)* %b,
-    <2 x half> addrspace(1)* %c,
-    <2 x half> addrspace(1)* %d) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b,
+    ptr addrspace(1) %c,
+    ptr addrspace(1) %d) {
 entry:
-  %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
-  %b.val = load <2 x half>, <2 x half> addrspace(1)* %b
-  %c.val = load <2 x half>, <2 x half> addrspace(1)* %c
-  %d.val = load <2 x half>, <2 x half> addrspace(1)* %d
+  %a.val = load <2 x half>, ptr addrspace(1) %a
+  %b.val = load <2 x half>, ptr addrspace(1) %b
+  %c.val = load <2 x half>, ptr addrspace(1) %c
+  %d.val = load <2 x half>, ptr addrspace(1) %d
   %fcmp = fcmp olt <2 x half> %a.val, %b.val
   %r.val = select <2 x i1> %fcmp, <2 x half> %c.val, <2 x half> %d.val
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -640,17 +616,17 @@ define amdgpu_kernel void @select_v2f16_imm_a(
 ; VI-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    buffer_store_dword v0, off, s[8:11], 0
 ; VI-NEXT:    s_endpgm
-    <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %b,
-    <2 x half> addrspace(1)* %c,
-    <2 x half> addrspace(1)* %d) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %b,
+    ptr addrspace(1) %c,
+    ptr addrspace(1) %d) {
 entry:
-  %b.val = load <2 x half>, <2 x half> addrspace(1)* %b
-  %c.val = load <2 x half>, <2 x half> addrspace(1)* %c
-  %d.val = load <2 x half>, <2 x half> addrspace(1)* %d
+  %b.val = load <2 x half>, ptr addrspace(1) %b
+  %c.val = load <2 x half>, ptr addrspace(1) %c
+  %d.val = load <2 x half>, ptr addrspace(1) %d
   %fcmp = fcmp olt <2 x half> <half 0xH3800, half 0xH3900>, %b.val
   %r.val = select <2 x i1> %fcmp, <2 x half> %c.val, <2 x half> %d.val
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -739,17 +715,17 @@ define amdgpu_kernel void @select_v2f16_imm_b(
 ; VI-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    buffer_store_dword v0, off, s[8:11], 0
 ; VI-NEXT:    s_endpgm
-    <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a,
-    <2 x half> addrspace(1)* %c,
-    <2 x half> addrspace(1)* %d) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %c,
+    ptr addrspace(1) %d) {
 entry:
-  %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
-  %c.val = load <2 x half>, <2 x half> addrspace(1)* %c
-  %d.val = load <2 x half>, <2 x half> addrspace(1)* %d
+  %a.val = load <2 x half>, ptr addrspace(1) %a
+  %c.val = load <2 x half>, ptr addrspace(1) %c
+  %d.val = load <2 x half>, ptr addrspace(1) %d
   %fcmp = fcmp olt <2 x half> %a.val, <half 0xH3800, half 0xH3900>
   %r.val = select <2 x i1> %fcmp, <2 x half> %c.val, <2 x half> %d.val
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -840,17 +816,17 @@ define amdgpu_kernel void @select_v2f16_imm_c(
 ; VI-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    buffer_store_dword v0, off, s[8:11], 0
 ; VI-NEXT:    s_endpgm
-    <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a,
-    <2 x half> addrspace(1)* %b,
-    <2 x half> addrspace(1)* %d) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b,
+    ptr addrspace(1) %d) {
 entry:
-  %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
-  %b.val = load <2 x half>, <2 x half> addrspace(1)* %b
-  %d.val = load <2 x half>, <2 x half> addrspace(1)* %d
+  %a.val = load <2 x half>, ptr addrspace(1) %a
+  %b.val = load <2 x half>, ptr addrspace(1) %b
+  %d.val = load <2 x half>, ptr addrspace(1) %d
   %fcmp = fcmp olt <2 x half> %a.val, %b.val
   %r.val = select <2 x i1> %fcmp, <2 x half> <half 0xH3800, half 0xH3900>, <2 x half> %d.val
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -941,16 +917,16 @@ define amdgpu_kernel void @select_v2f16_imm_d(
 ; VI-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    buffer_store_dword v0, off, s[8:11], 0
 ; VI-NEXT:    s_endpgm
-    <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a,
-    <2 x half> addrspace(1)* %b,
-    <2 x half> addrspace(1)* %c) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b,
+    ptr addrspace(1) %c) {
 entry:
-  %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
-  %b.val = load <2 x half>, <2 x half> addrspace(1)* %b
-  %c.val = load <2 x half>, <2 x half> addrspace(1)* %c
+  %a.val = load <2 x half>, ptr addrspace(1) %a
+  %b.val = load <2 x half>, ptr addrspace(1) %b
+  %c.val = load <2 x half>, ptr addrspace(1) %c
   %fcmp = fcmp olt <2 x half> %a.val, %b.val
   %r.val = select <2 x i1> %fcmp, <2 x half> %c.val, <2 x half> <half 0xH3800, half 0xH3900>
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }

@@ -8,18 +8,18 @@ entry:
   %val.addr = alloca i64, align 8
   %large = alloca [268435456 x i64], align 8
   %i = alloca i32, align 4
-  store i64 %val, i64* %val.addr, align 8
-  %0 = load i64, i64* %val.addr, align 8
-  %arrayidx = getelementptr inbounds [268435456 x i64], [268435456 x i64]* %large, i64 0, i64 %0
-  store i64 1, i64* %arrayidx, align 8
-  %1 = load i64, i64* %val.addr, align 8
-  %arrayidx1 = getelementptr inbounds [268435456 x i64], [268435456 x i64]* %large, i64 0, i64 %1
-  %2 = load i64, i64* %arrayidx1, align 8
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i64 0, i64 0), i64 %2)
+  store i64 %val, ptr %val.addr, align 8
+  %0 = load i64, ptr %val.addr, align 8
+  %arrayidx = getelementptr inbounds [268435456 x i64], ptr %large, i64 0, i64 %0
+  store i64 1, ptr %arrayidx, align 8
+  %1 = load i64, ptr %val.addr, align 8
+  %arrayidx1 = getelementptr inbounds [268435456 x i64], ptr %large, i64 0, i64 %1
+  %2 = load i64, ptr %arrayidx1, align 8
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i64 %2)
   ret void
 }
 
-declare dso_local i32 @printf(i8*, ...)
+declare dso_local i32 @printf(ptr, ...)
 
 attributes #0 = { noinline optnone "frame-pointer"="all" uwtable }
 

@@ -1140,7 +1140,7 @@ for.end:
   ret void
 }
 
-define void @test17() personality i8* undef{
+define void @test17() personality ptr undef{
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:  body:
 ; CHECK-NEXT:    br label [[LOOP_PEEL_BEGIN:%.*]]
@@ -1159,12 +1159,12 @@ define void @test17() personality i8* undef{
 ; CHECK-NEXT:    invoke void @f1()
 ; CHECK-NEXT:    to label [[LOOP]] unwind label [[EH_UNW_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       eh.Unw.loopexit.loopexit:
-; CHECK-NEXT:    [[LPAD_LOOPEXIT2:%.*]] = landingpad { i8*, i32 }
-; CHECK-NEXT:    catch i8* null
+; CHECK-NEXT:    [[LPAD_LOOPEXIT2:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    catch ptr null
 ; CHECK-NEXT:    br label [[EH_UNW_LOOPEXIT:%.*]]
 ; CHECK:       eh.Unw.loopexit.loopexit.split-lp:
-; CHECK-NEXT:    [[LPAD_LOOPEXIT_SPLIT_LP:%.*]] = landingpad { i8*, i32 }
-; CHECK-NEXT:    catch i8* null
+; CHECK-NEXT:    [[LPAD_LOOPEXIT_SPLIT_LP:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    catch ptr null
 ; CHECK-NEXT:    br label [[EH_UNW_LOOPEXIT]]
 ; CHECK:       eh.Unw.loopexit:
 ; CHECK-NEXT:    ret void
@@ -1178,13 +1178,13 @@ loop:
   to label %loop unwind label %eh.Unw.loopexit
 
 eh.Unw.loopexit:
-  %lpad.loopexit = landingpad { i8*, i32 }
-  catch i8* null
+  %lpad.loopexit = landingpad { ptr, i32 }
+  catch ptr null
   ret void
 }
 
 ; Testcase reduced from PR48812.
-define void @test18(i32* %p) {
+define void @test18(ptr %p) {
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT:  init:
 ; CHECK-NEXT:    br label [[LOOP_PEEL_BEGIN:%.*]]
@@ -1193,7 +1193,7 @@ define void @test18(i32* %p) {
 ; CHECK:       loop.peel:
 ; CHECK-NEXT:    br label [[LATCH_PEEL:%.*]]
 ; CHECK:       latch.peel:
-; CHECK-NEXT:    [[CONTROL_PEEL:%.*]] = load volatile i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[CONTROL_PEEL:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    switch i32 [[CONTROL_PEEL]], label [[EXIT:%.*]] [
 ; CHECK-NEXT:    i32 2, label [[LOOP_PEEL_NEXT:%.*]]
 ; CHECK-NEXT:    ]
@@ -1206,7 +1206,7 @@ define void @test18(i32* %p) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    br label [[LATCH:%.*]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[CONTROL:%.*]] = load volatile i32, i32* [[P]], align 4
+; CHECK-NEXT:    [[CONTROL:%.*]] = load volatile i32, ptr [[P]], align 4
 ; CHECK-NEXT:    switch i32 [[CONTROL]], label [[EXIT_LOOPEXIT:%.*]] [
 ; CHECK-NEXT:    i32 2, label [[LOOP]]
 ; CHECK-NEXT:    ], !llvm.loop [[LOOP14:![0-9]+]]
@@ -1223,7 +1223,7 @@ loop:
   br label %latch
 
 latch:
-  %control = load volatile i32, i32* %p
+  %control = load volatile i32, ptr %p
   switch i32 %control, label %exit [
   i32 2, label %loop
   ]

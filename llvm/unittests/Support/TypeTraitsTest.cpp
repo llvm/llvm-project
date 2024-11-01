@@ -8,13 +8,13 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/type_traits.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace {
 
@@ -118,7 +118,10 @@ TEST(Triviality, ADT) {
   TrivialityTester<llvm::StringRef, true, true>();
   TrivialityTester<llvm::ArrayRef<int>, true, true>();
   TrivialityTester<llvm::PointerIntPair<int *, 2>, true, true>();
-  TrivialityTester<llvm::Optional<int>, true, true>();
+#if defined(_LIBCPP_VERSION) ||                                                \
+    (defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE >= 8)
+  TrivialityTester<std::optional<int>, true, true>();
+#endif
 }
 
 } // namespace triviality

@@ -46,6 +46,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include <map>
+#include <optional>
 #include <set>
 
 using namespace clang;
@@ -88,7 +89,11 @@ bool CheckDefaultArgumentVisitor::VisitExpr(const Expr *Node) {
 /// determine whether this declaration can be used in the default
 /// argument expression.
 bool CheckDefaultArgumentVisitor::VisitDeclRefExpr(const DeclRefExpr *DRE) {
-  const NamedDecl *Decl = DRE->getDecl();
+  const ValueDecl *Decl = dyn_cast<ValueDecl>(DRE->getDecl());
+
+  if (!isa<VarDecl, BindingDecl>(Decl))
+    return false;
+
   if (const auto *Param = dyn_cast<ParmVarDecl>(Decl)) {
     // C++ [dcl.fct.default]p9:
     //   [...] parameters of a function shall not be used in default
@@ -102,30 +107,23 @@ bool CheckDefaultArgumentVisitor::VisitDeclRefExpr(const DeclRefExpr *DRE) {
       return S.Diag(DRE->getBeginLoc(),
                     diag::err_param_default_argument_references_param)
              << Param->getDeclName() << DefaultArg->getSourceRange();
-  } else {
-    const VarDecl *VD = nullptr;
-    if (const auto *BD = dyn_cast<BindingDecl>(Decl))
-      VD = dyn_cast_if_present<VarDecl>(BD->getDecomposedDecl());
-    else
-      VD = dyn_cast<VarDecl>(Decl);
-    if (VD) {
-      // C++ [dcl.fct.default]p7:
-      //   Local variables shall not be used in default argument
-      //   expressions.
-      //
-      // C++17 [dcl.fct.default]p7 (by CWG 2082):
-      //   A local variable shall not appear as a potentially-evaluated
-      //   expression in a default argument.
-      //
-      // C++20 [dcl.fct.default]p7 (DR as part of P0588R1, see also CWG 2346):
-      //   Note: A local variable cannot be odr-used (6.3) in a default
-      //   argument.
-      //
-      if (VD->isLocalVarDecl() && !DRE->isNonOdrUse())
-        return S.Diag(DRE->getBeginLoc(),
-                      diag::err_param_default_argument_references_local)
-               << Decl->getDeclName() << DefaultArg->getSourceRange();
-    }
+  } else if (auto *VD = Decl->getPotentiallyDecomposedVarDecl()) {
+    // C++ [dcl.fct.default]p7:
+    //   Local variables shall not be used in default argument
+    //   expressions.
+    //
+    // C++17 [dcl.fct.default]p7 (by CWG 2082):
+    //   A local variable shall not appear as a potentially-evaluated
+    //   expression in a default argument.
+    //
+    // C++20 [dcl.fct.default]p7 (DR as part of P0588R1, see also CWG 2346):
+    //   Note: A local variable cannot be odr-used (6.3) in a default
+    //   argument.
+    //
+    if (VD->isLocalVarDecl() && !DRE->isNonOdrUse())
+      return S.Diag(DRE->getBeginLoc(),
+                    diag::err_param_default_argument_references_local)
+             << Decl << DefaultArg->getSourceRange();
   }
   return false;
 }
@@ -4059,6 +4057,21 @@ ExprResult Sema::ActOnRequiresClause(ExprResult ConstraintExpr) {
   return ConstraintExpr;
 }
 
+ExprResult Sema::ConvertMemberDefaultInitExpression(FieldDecl *FD,
+                                                    Expr *InitExpr,
+                                                    SourceLocation InitLoc) {
+  InitializedEntity Entity =
+      InitializedEntity::InitializeMemberFromDefaultMemberInitializer(FD);
+  InitializationKind Kind =
+      FD->getInClassInitStyle() == ICIS_ListInit
+          ? InitializationKind::CreateDirectList(InitExpr->getBeginLoc(),
+                                                 InitExpr->getBeginLoc(),
+                                                 InitExpr->getEndLoc())
+          : InitializationKind::CreateCopy(InitExpr->getBeginLoc(), InitLoc);
+  InitializationSequence Seq(*this, Entity, Kind, InitExpr);
+  return Seq.Perform(*this, Entity, Kind, InitExpr);
+}
+
 /// This is invoked after parsing an in-class initializer for a
 /// non-static C++ class member, and after instantiating an in-class initializer
 /// in a class template. Such actions are deferred until the class is complete.
@@ -4085,36 +4098,23 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
     return;
   }
 
-  ExprResult Init = InitExpr;
-  if (!FD->getType()->isDependentType() && !InitExpr->isTypeDependent()) {
-    InitializedEntity Entity =
-        InitializedEntity::InitializeMemberFromDefaultMemberInitializer(FD);
-    InitializationKind Kind =
-        FD->getInClassInitStyle() == ICIS_ListInit
-            ? InitializationKind::CreateDirectList(InitExpr->getBeginLoc(),
-                                                   InitExpr->getBeginLoc(),
-                                                   InitExpr->getEndLoc())
-            : InitializationKind::CreateCopy(InitExpr->getBeginLoc(), InitLoc);
-    InitializationSequence Seq(*this, Entity, Kind, InitExpr);
-    Init = Seq.Perform(*this, Entity, Kind, InitExpr);
+  ExprResult Init = CorrectDelayedTyposInExpr(InitExpr, /*InitDecl=*/nullptr,
+                                              /*RecoverUncorrectedTypos=*/true);
+  assert(Init.isUsable() && "Init should at least have a RecoveryExpr");
+  if (!FD->getType()->isDependentType() && !Init.get()->isTypeDependent()) {
+    Init = ConvertMemberDefaultInitExpression(FD, Init.get(), InitLoc);
+    // C++11 [class.base.init]p7:
+    //   The initialization of each base and member constitutes a
+    //   full-expression.
+    if (!Init.isInvalid())
+      Init = ActOnFinishFullExpr(Init.get(), /*DiscarededValue=*/false);
     if (Init.isInvalid()) {
       FD->setInvalidDecl();
       return;
     }
   }
 
-  // C++11 [class.base.init]p7:
-  //   The initialization of each base and member constitutes a
-  //   full-expression.
-  Init = ActOnFinishFullExpr(Init.get(), InitLoc, /*DiscardedValue*/ false);
-  if (Init.isInvalid()) {
-    FD->setInvalidDecl();
-    return;
-  }
-
-  InitExpr = Init.get();
-
-  FD->setInClassInitializer(InitExpr);
+  FD->setInClassInitializer(Init.get());
 }
 
 /// Find the direct and/or virtual base specifiers that
@@ -7526,6 +7526,7 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
     ReturnType = Type->getReturnType();
 
     QualType DeclType = Context.getTypeDeclType(RD);
+    DeclType = Context.getElaboratedType(ETK_None, nullptr, DeclType, nullptr);
     DeclType = Context.getAddrSpaceQualType(DeclType, MD->getMethodQualifiers().getAddressSpace());
     QualType ExpectedReturnType = Context.getLValueReferenceType(DeclType);
 
@@ -7642,10 +7643,8 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
       FunctionProtoType::ExtProtoInfo EPI = Type->getExtProtoInfo();
       EPI.ExceptionSpec.Type = EST_Unevaluated;
       EPI.ExceptionSpec.SourceDecl = MD;
-      MD->setType(Context.getFunctionType(ReturnType,
-                                          llvm::makeArrayRef(&ArgType,
-                                                             ExpectedParams),
-                                          EPI));
+      MD->setType(Context.getFunctionType(
+          ReturnType, llvm::ArrayRef(&ArgType, ExpectedParams), EPI));
     }
   }
 
@@ -8058,7 +8057,7 @@ private:
                "invalid builtin comparison");
 
         if (NeedsDeducing) {
-          Optional<ComparisonCategoryType> Cat =
+          std::optional<ComparisonCategoryType> Cat =
               getComparisonCategoryForBuiltinCmp(T);
           assert(Cat && "no category for builtin comparison?");
           R.Category = *Cat;
@@ -8736,10 +8735,8 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
 
   bool First = FD == FD->getCanonicalDecl();
 
-  // If we want to delete the function, then do so; there's nothing else to
-  // check in that case.
-  if (Info.Deleted) {
-    if (!First) {
+  if (!First) {
+    if (Info.Deleted) {
       // C++11 [dcl.fct.def.default]p4:
       //   [For a] user-provided explicitly-defaulted function [...] if such a
       //   function is implicitly defined as deleted, the program is ill-formed.
@@ -8753,7 +8750,21 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
           .visit();
       return true;
     }
+    if (isa<CXXRecordDecl>(FD->getLexicalDeclContext())) {
+      // C++20 [class.compare.default]p1:
+      //   [...] A definition of a comparison operator as defaulted that appears
+      //   in a class shall be the first declaration of that function.
+      Diag(FD->getLocation(), diag::err_non_first_default_compare_in_class)
+          << (int)DCK;
+      Diag(FD->getCanonicalDecl()->getLocation(),
+           diag::note_previous_declaration);
+      return true;
+    }
+  }
 
+  // If we want to delete the function, then do so; there's nothing else to
+  // check in that case.
+  if (Info.Deleted) {
     SetDeclDeleted(FD, FD->getLocation());
     if (!inTemplateInstantiation() && !FD->isImplicit()) {
       Diag(FD->getLocation(), diag::warn_defaulted_comparison_deleted)
@@ -10205,10 +10216,12 @@ void Sema::ActOnFinishCXXMemberSpecification(
     Diag(AL.getLoc(), diag::warn_attribute_after_definition_ignored) << AL;
   }
 
-  ActOnFields(S, RLoc, TagDecl, llvm::makeArrayRef(
-              // strict aliasing violation!
-              reinterpret_cast<Decl**>(FieldCollector->getCurFields()),
-              FieldCollector->getCurNumFields()), LBrac, RBrac, AttrList);
+  ActOnFields(S, RLoc, TagDecl,
+              llvm::ArrayRef(
+                  // strict aliasing violation!
+                  reinterpret_cast<Decl **>(FieldCollector->getCurFields()),
+                  FieldCollector->getCurNumFields()),
+              LBrac, RBrac, AttrList);
 
   CheckCompletedCXXClass(S, cast<CXXRecordDecl>(TagDecl));
 }
@@ -14429,6 +14442,7 @@ CXXMethodDecl *Sema::DeclareImplicitCopyAssignment(CXXRecordDecl *ClassDecl) {
     return nullptr;
 
   QualType ArgType = Context.getTypeDeclType(ClassDecl);
+  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
   LangAS AS = getDefaultCXXMethodAddrSpace();
   if (AS != LangAS::Default)
     ArgType = Context.getAddrSpaceQualType(ArgType, AS);
@@ -14771,6 +14785,7 @@ CXXMethodDecl *Sema::DeclareImplicitMoveAssignment(CXXRecordDecl *ClassDecl) {
   // constructor rules.
 
   QualType ArgType = Context.getTypeDeclType(ClassDecl);
+  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
   LangAS AS = getDefaultCXXMethodAddrSpace();
   if (AS != LangAS::Default)
     ArgType = Context.getAddrSpaceQualType(ArgType, AS);
@@ -15143,6 +15158,7 @@ CXXConstructorDecl *Sema::DeclareImplicitCopyConstructor(
 
   QualType ClassType = Context.getTypeDeclType(ClassDecl);
   QualType ArgType = ClassType;
+  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
   bool Const = ClassDecl->implicitCopyConstructorHasConstParam();
   if (Const)
     ArgType = ArgType.withConst();
@@ -15287,6 +15303,7 @@ CXXConstructorDecl *Sema::DeclareImplicitMoveConstructor(
   QualType ClassType = Context.getTypeDeclType(ClassDecl);
 
   QualType ArgType = ClassType;
+  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
   LangAS AS = getDefaultCXXMethodAddrSpace();
   if (AS != LangAS::Default)
     ArgType = Context.getAddrSpaceQualType(ClassType, AS);
@@ -15651,70 +15668,6 @@ Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
       Constructor);
 }
 
-ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
-  assert(Field->hasInClassInitializer());
-
-  // If we already have the in-class initializer nothing needs to be done.
-  if (Field->getInClassInitializer())
-    return CXXDefaultInitExpr::Create(Context, Loc, Field, CurContext);
-
-  // If we might have already tried and failed to instantiate, don't try again.
-  if (Field->isInvalidDecl())
-    return ExprError();
-
-  // Maybe we haven't instantiated the in-class initializer. Go check the
-  // pattern FieldDecl to see if it has one.
-  CXXRecordDecl *ParentRD = cast<CXXRecordDecl>(Field->getParent());
-
-  if (isTemplateInstantiation(ParentRD->getTemplateSpecializationKind())) {
-    CXXRecordDecl *ClassPattern = ParentRD->getTemplateInstantiationPattern();
-    DeclContext::lookup_result Lookup =
-        ClassPattern->lookup(Field->getDeclName());
-
-    FieldDecl *Pattern = nullptr;
-    for (auto *L : Lookup) {
-      if (isa<FieldDecl>(L)) {
-        Pattern = cast<FieldDecl>(L);
-        break;
-      }
-    }
-    assert(Pattern && "We must have set the Pattern!");
-
-    if (!Pattern->hasInClassInitializer() ||
-        InstantiateInClassInitializer(Loc, Field, Pattern,
-                                      getTemplateInstantiationArgs(Field))) {
-      // Don't diagnose this again.
-      Field->setInvalidDecl();
-      return ExprError();
-    }
-    return CXXDefaultInitExpr::Create(Context, Loc, Field, CurContext);
-  }
-
-  // DR1351:
-  //   If the brace-or-equal-initializer of a non-static data member
-  //   invokes a defaulted default constructor of its class or of an
-  //   enclosing class in a potentially evaluated subexpression, the
-  //   program is ill-formed.
-  //
-  // This resolution is unworkable: the exception specification of the
-  // default constructor can be needed in an unevaluated context, in
-  // particular, in the operand of a noexcept-expression, and we can be
-  // unable to compute an exception specification for an enclosed class.
-  //
-  // Any attempt to resolve the exception specification of a defaulted default
-  // constructor before the initializer is lexically complete will ultimately
-  // come here at which point we can diagnose it.
-  RecordDecl *OutermostClass = ParentRD->getOuterLexicalRecordContext();
-  Diag(Loc, diag::err_default_member_initializer_not_yet_parsed)
-      << OutermostClass << Field;
-  Diag(Field->getEndLoc(),
-       diag::note_default_member_initializer_not_yet_parsed);
-  // Recover by marking the field invalid, unless we're in a SFINAE context.
-  if (!isSFINAEContext())
-    Field->setInvalidDecl();
-  return ExprError();
-}
-
 void Sema::FinalizeVarWithDestructor(VarDecl *VD, const RecordType *Record) {
   if (VD->isInvalidDecl()) return;
   // If initializing the variable failed, don't also diagnose problems with
@@ -15799,19 +15752,16 @@ bool Sema::CompleteConstructorCall(CXXConstructorDecl *Constructor,
   VariadicCallType CallType =
     Proto->isVariadic() ? VariadicConstructor : VariadicDoesNotApply;
   SmallVector<Expr *, 8> AllArgs;
-  bool Invalid = GatherArgumentsForCall(Loc, Constructor,
-                                        Proto, 0,
-                                        llvm::makeArrayRef(Args, NumArgs),
-                                        AllArgs,
-                                        CallType, AllowExplicit,
-                                        IsListInitialization);
+  bool Invalid = GatherArgumentsForCall(
+      Loc, Constructor, Proto, 0, llvm::ArrayRef(Args, NumArgs), AllArgs,
+      CallType, AllowExplicit, IsListInitialization);
   ConvertedArgs.append(AllArgs.begin(), AllArgs.end());
 
   DiagnoseSentinelCalls(Constructor, Loc, AllArgs);
 
   CheckConstructorCall(Constructor, DeclInitType,
-                       llvm::makeArrayRef(AllArgs.data(), AllArgs.size()),
-                       Proto, Loc);
+                       llvm::ArrayRef(AllArgs.data(), AllArgs.size()), Proto,
+                       Loc);
 
   return Invalid;
 }
@@ -16977,12 +16927,10 @@ FriendDecl *Sema::CheckFriendTypeDecl(SourceLocation LocStart,
 
 /// Handle a friend tag declaration where the scope specifier was
 /// templated.
-Decl *Sema::ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
-                                    unsigned TagSpec, SourceLocation TagLoc,
-                                    CXXScopeSpec &SS, IdentifierInfo *Name,
-                                    SourceLocation NameLoc,
-                                    const ParsedAttributesView &Attr,
-                                    MultiTemplateParamsArg TempParamLists) {
+DeclResult Sema::ActOnTemplatedFriendTag(
+    Scope *S, SourceLocation FriendLoc, unsigned TagSpec, SourceLocation TagLoc,
+    CXXScopeSpec &SS, IdentifierInfo *Name, SourceLocation NameLoc,
+    const ParsedAttributesView &Attr, MultiTemplateParamsArg TempParamLists) {
   TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
 
   bool IsMemberSpecialization = false;
@@ -16995,7 +16943,7 @@ Decl *Sema::ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
     if (TemplateParams->size() > 0) {
       // This is a declaration of a class template.
       if (Invalid)
-        return nullptr;
+        return true;
 
       return CheckClassTemplate(S, TagSpec, TUK_Friend, TagLoc, SS, Name,
                                 NameLoc, Attr, TemplateParams, AS_public,
@@ -17010,7 +16958,7 @@ Decl *Sema::ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
     }
   }
 
-  if (Invalid) return nullptr;
+  if (Invalid) return true;
 
   bool isAllExplicitSpecializations = true;
   for (unsigned I = TempParamLists.size(); I-- > 0; ) {
@@ -17029,15 +16977,16 @@ Decl *Sema::ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
     if (SS.isEmpty()) {
       bool Owned = false;
       bool IsDependent = false;
-      return ActOnTag(S, TagSpec, TUK_Friend, TagLoc, SS, Name, NameLoc,
-                      Attr, AS_public,
+      UsingShadowDecl* FoundUsing = nullptr;
+      return ActOnTag(S, TagSpec, TUK_Friend, TagLoc, SS, Name, NameLoc, Attr,
+                      AS_public,
                       /*ModulePrivateLoc=*/SourceLocation(),
                       MultiTemplateParamsArg(), Owned, IsDependent,
                       /*ScopedEnumKWLoc=*/SourceLocation(),
                       /*ScopedEnumUsesClassTag=*/false,
                       /*UnderlyingType=*/TypeResult(),
                       /*IsTypeSpecifier=*/false,
-                      /*IsTemplateParamOrArg=*/false);
+                      /*IsTemplateParamOrArg=*/false, /*OOK=*/OOK_Outside, FoundUsing);
     }
 
     NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
@@ -17046,7 +16995,7 @@ Decl *Sema::ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
     QualType T = CheckTypenameType(Keyword, TagLoc, QualifierLoc,
                                    *Name, NameLoc);
     if (T.isNull())
-      return nullptr;
+      return true;
 
     TypeSourceInfo *TSI = Context.CreateTypeSourceInfo(T);
     if (isa<DependentNameType>(T)) {
@@ -18412,27 +18361,27 @@ bool Sema::checkThisInStaticMemberFunctionAttributes(CXXMethodDecl *Method) {
     else if (const auto *G = dyn_cast<PtGuardedByAttr>(A))
       Arg = G->getArg();
     else if (const auto *AA = dyn_cast<AcquiredAfterAttr>(A))
-      Args = llvm::makeArrayRef(AA->args_begin(), AA->args_size());
+      Args = llvm::ArrayRef(AA->args_begin(), AA->args_size());
     else if (const auto *AB = dyn_cast<AcquiredBeforeAttr>(A))
-      Args = llvm::makeArrayRef(AB->args_begin(), AB->args_size());
+      Args = llvm::ArrayRef(AB->args_begin(), AB->args_size());
     else if (const auto *ETLF = dyn_cast<ExclusiveTrylockFunctionAttr>(A)) {
       Arg = ETLF->getSuccessValue();
-      Args = llvm::makeArrayRef(ETLF->args_begin(), ETLF->args_size());
+      Args = llvm::ArrayRef(ETLF->args_begin(), ETLF->args_size());
     } else if (const auto *STLF = dyn_cast<SharedTrylockFunctionAttr>(A)) {
       Arg = STLF->getSuccessValue();
-      Args = llvm::makeArrayRef(STLF->args_begin(), STLF->args_size());
+      Args = llvm::ArrayRef(STLF->args_begin(), STLF->args_size());
     } else if (const auto *LR = dyn_cast<LockReturnedAttr>(A))
       Arg = LR->getArg();
     else if (const auto *LE = dyn_cast<LocksExcludedAttr>(A))
-      Args = llvm::makeArrayRef(LE->args_begin(), LE->args_size());
+      Args = llvm::ArrayRef(LE->args_begin(), LE->args_size());
     else if (const auto *RC = dyn_cast<RequiresCapabilityAttr>(A))
-      Args = llvm::makeArrayRef(RC->args_begin(), RC->args_size());
+      Args = llvm::ArrayRef(RC->args_begin(), RC->args_size());
     else if (const auto *AC = dyn_cast<AcquireCapabilityAttr>(A))
-      Args = llvm::makeArrayRef(AC->args_begin(), AC->args_size());
+      Args = llvm::ArrayRef(AC->args_begin(), AC->args_size());
     else if (const auto *AC = dyn_cast<TryAcquireCapabilityAttr>(A))
-      Args = llvm::makeArrayRef(AC->args_begin(), AC->args_size());
+      Args = llvm::ArrayRef(AC->args_begin(), AC->args_size());
     else if (const auto *RC = dyn_cast<ReleaseCapabilityAttr>(A))
-      Args = llvm::makeArrayRef(RC->args_begin(), RC->args_size());
+      Args = llvm::ArrayRef(RC->args_begin(), RC->args_size());
 
     if (Arg && !Finder.TraverseStmt(Arg))
       return true;

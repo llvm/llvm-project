@@ -4,6 +4,7 @@ static_library("Lex") {
   deps = [
     "//clang/lib/Basic",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "DependencyDirectivesScanner.cpp",

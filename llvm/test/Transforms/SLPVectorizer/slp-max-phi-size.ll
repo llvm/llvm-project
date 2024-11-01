@@ -125,7 +125,7 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX32-NEXT:    [[PHI30:%.*]] = phi float [ [[I63]], [[BB3]] ], [ [[FVAL]], [[BB4]] ], [ [[FVAL]], [[BB5]] ], [ [[FVAL]], [[BB1]] ]
 ; MAX32-NEXT:    [[PHI31:%.*]] = phi float [ [[I65]], [[BB3]] ], [ [[FVAL]], [[BB4]] ], [ [[I65]], [[BB5]] ], [ [[I65]], [[BB1]] ]
 ; MAX32-NEXT:    [[PHI32:%.*]] = phi float [ [[I67]], [[BB3]] ], [ [[I67]], [[BB4]] ], [ [[FVAL]], [[BB5]] ], [ [[I67]], [[BB1]] ]
-; MAX32-NEXT:    store float [[PHI31]], float* undef, align 4
+; MAX32-NEXT:    store float [[PHI31]], ptr undef, align 4
 ; MAX32-NEXT:    ret void
 ;
 ; MAX256-LABEL: @phi_float32(
@@ -171,7 +171,7 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX256-NEXT:    [[TMP15:%.*]] = phi <8 x float> [ [[TMP12]], [[BB3]] ], [ [[TMP12]], [[BB4]] ], [ [[SHUFFLE12]], [[BB5]] ], [ [[TMP12]], [[BB1]] ]
 ; MAX256-NEXT:    [[TMP16:%.*]] = phi <8 x float> [ [[TMP3]], [[BB3]] ], [ [[TMP3]], [[BB4]] ], [ [[TMP3]], [[BB5]] ], [ [[SHUFFLE12]], [[BB1]] ]
 ; MAX256-NEXT:    [[TMP17:%.*]] = extractelement <8 x float> [[TMP14]], i32 7
-; MAX256-NEXT:    store float [[TMP17]], float* undef, align 4
+; MAX256-NEXT:    store float [[TMP17]], ptr undef, align 4
 ; MAX256-NEXT:    ret void
 ;
 ; MAX1024-LABEL: @phi_float32(
@@ -217,7 +217,7 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX1024-NEXT:    [[TMP15:%.*]] = phi <8 x float> [ [[TMP12]], [[BB3]] ], [ [[TMP12]], [[BB4]] ], [ [[SHUFFLE12]], [[BB5]] ], [ [[TMP12]], [[BB1]] ]
 ; MAX1024-NEXT:    [[TMP16:%.*]] = phi <8 x float> [ [[TMP3]], [[BB3]] ], [ [[TMP3]], [[BB4]] ], [ [[TMP3]], [[BB5]] ], [ [[SHUFFLE12]], [[BB1]] ]
 ; MAX1024-NEXT:    [[TMP17:%.*]] = extractelement <8 x float> [[TMP14]], i32 7
-; MAX1024-NEXT:    store float [[TMP17]], float* undef, align 4
+; MAX1024-NEXT:    store float [[TMP17]], ptr undef, align 4
 ; MAX1024-NEXT:    ret void
 ;
 bb:
@@ -340,6 +340,6 @@ bb2:
   %phi30 = phi float [ %i63, %bb3 ], [ %fval, %bb4 ], [ %fval, %bb5 ], [ %fval, %bb1 ]
   %phi31 = phi float [ %i65, %bb3 ], [ %fval, %bb4 ], [ %i65, %bb5 ], [ %i65, %bb1 ]
   %phi32 = phi float [ %i67, %bb3 ], [ %i67, %bb4 ], [ %fval, %bb5 ], [ %i67, %bb1 ]
-  store float %phi31, float* undef
+  store float %phi31, ptr undef
   ret void
 }

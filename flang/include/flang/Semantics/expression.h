@@ -352,8 +352,8 @@ private:
   using AdjustActuals =
       std::optional<std::function<bool(const Symbol &, ActualArguments &)>>;
   bool ResolveForward(const Symbol &);
-  std::pair<const Symbol *, bool /* failure due to NULL() actuals */>
-  ResolveGeneric(const Symbol &, const ActualArguments &, const AdjustActuals &,
+  std::pair<const Symbol *, bool /* failure due ambiguity */> ResolveGeneric(
+      const Symbol &, const ActualArguments &, const AdjustActuals &,
       bool isSubroutine, bool mightBeStructureConstructor = false);
   void EmitGenericResolutionError(
       const Symbol &, bool dueToNullActuals, bool isSubroutine);

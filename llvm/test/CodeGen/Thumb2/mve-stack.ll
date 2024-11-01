@@ -16,11 +16,9 @@ define arm_aapcs_vfpcc void @vstrw32() {
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %d = alloca [4 x i32], align 2
-  %g = getelementptr inbounds [4 x i32], [4 x i32]* %d, i32 0, i32 2
-  %b = bitcast i32* %g to <4 x i32>*
-  store <4 x i32> zeroinitializer, <4 x i32>* %b, align 2
-  %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %d, i32 0, i32 0
-  call arm_aapcs_vfpcc void bitcast (void (...)* @func to void (i32*)*)(i32* %arraydecay)
+  %g = getelementptr inbounds [4 x i32], ptr %d, i32 0, i32 2
+  store <4 x i32> zeroinitializer, ptr %g, align 2
+  call arm_aapcs_vfpcc void @func(ptr %d)
   ret void
 }
 
@@ -39,11 +37,9 @@ define arm_aapcs_vfpcc void @vstrh16() {
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %d = alloca [8 x i16], align 2
-  %g = getelementptr inbounds [8 x i16], [8 x i16]* %d, i32 0, i32 2
-  %b = bitcast i16* %g to <8 x i16>*
-  store <8 x i16> zeroinitializer, <8 x i16>* %b, align 2
-  %arraydecay = getelementptr inbounds [8 x i16], [8 x i16]* %d, i32 0, i32 0
-  call arm_aapcs_vfpcc void bitcast (void (...)* @func to void (i16*)*)(i16* %arraydecay)
+  %g = getelementptr inbounds [8 x i16], ptr %d, i32 0, i32 2
+  store <8 x i16> zeroinitializer, ptr %g, align 2
+  call arm_aapcs_vfpcc void @func(ptr %d)
   ret void
 }
 
@@ -62,11 +58,9 @@ define arm_aapcs_vfpcc void @vstrb8() {
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %d = alloca [16 x i8], align 2
-  %g = getelementptr inbounds [16 x i8], [16 x i8]* %d, i32 0, i32 2
-  %b = bitcast i8* %g to <16 x i8>*
-  store <16 x i8> zeroinitializer, <16 x i8>* %b, align 2
-  %arraydecay = getelementptr inbounds [16 x i8], [16 x i8]* %d, i32 0, i32 0
-  call arm_aapcs_vfpcc void bitcast (void (...)* @func to void (i8*)*)(i8* %arraydecay)
+  %g = getelementptr inbounds [16 x i8], ptr %d, i32 0, i32 2
+  store <16 x i8> zeroinitializer, ptr %g, align 2
+  call arm_aapcs_vfpcc void @func(ptr %d)
   ret void
 }
 
@@ -85,11 +79,9 @@ define arm_aapcs_vfpcc void @vstrh32() {
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %d = alloca [4 x i16], align 2
-  %g = getelementptr inbounds [4 x i16], [4 x i16]* %d, i32 0, i32 2
-  %b = bitcast i16* %g to <4 x i16>*
-  store <4 x i16> <i16 6, i16 6, i16 6, i16 6>, <4 x i16>* %b, align 2
-  %arraydecay = getelementptr inbounds [4 x i16], [4 x i16]* %d, i32 0, i32 0
-  call arm_aapcs_vfpcc void bitcast (void (...)* @func to void (i16*)*)(i16* %arraydecay)
+  %g = getelementptr inbounds [4 x i16], ptr %d, i32 0, i32 2
+  store <4 x i16> <i16 6, i16 6, i16 6, i16 6>, ptr %g, align 2
+  call arm_aapcs_vfpcc void @func(ptr %d)
   ret void
 }
 
@@ -108,11 +100,9 @@ define arm_aapcs_vfpcc void @vstrb32() {
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %d = alloca [4 x i8], align 2
-  %g = getelementptr inbounds [4 x i8], [4 x i8]* %d, i32 0, i32 2
-  %b = bitcast i8* %g to <4 x i8>*
-  store <4 x i8> <i8 6, i8 6, i8 6, i8 6>, <4 x i8>* %b, align 2
-  %arraydecay = getelementptr inbounds [4 x i8], [4 x i8]* %d, i32 0, i32 0
-  call arm_aapcs_vfpcc void bitcast (void (...)* @func to void (i8*)*)(i8* %arraydecay)
+  %g = getelementptr inbounds [4 x i8], ptr %d, i32 0, i32 2
+  store <4 x i8> <i8 6, i8 6, i8 6, i8 6>, ptr %g, align 2
+  call arm_aapcs_vfpcc void @func(ptr %d)
   ret void
 }
 
@@ -131,11 +121,9 @@ define arm_aapcs_vfpcc void @vstrb16() {
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %d = alloca [8 x i8], align 2
-  %g = getelementptr inbounds [8 x i8], [8 x i8]* %d, i32 0, i32 2
-  %b = bitcast i8* %g to <8 x i8>*
-  store <8 x i8> zeroinitializer, <8 x i8>* %b, align 2
-  %arraydecay = getelementptr inbounds [8 x i8], [8 x i8]* %d, i32 0, i32 0
-  call arm_aapcs_vfpcc void bitcast (void (...)* @func to void (i8*)*)(i8* %arraydecay)
+  %g = getelementptr inbounds [8 x i8], ptr %d, i32 0, i32 2
+  store <8 x i8> zeroinitializer, ptr %g, align 2
+  call arm_aapcs_vfpcc void @func(ptr %d)
   ret void
 }
 
@@ -154,11 +142,9 @@ define arm_aapcs_vfpcc <4 x i32> @vldrw32() {
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %d = alloca [4 x i32], align 2
-  %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %d, i32 0, i32 0
-  call arm_aapcs_vfpcc void bitcast (void (...)* @func to void (i32*)*)(i32* %arraydecay)
-  %g = getelementptr inbounds [4 x i32], [4 x i32]* %d, i32 0, i32 2
-  %b = bitcast i32* %g to <4 x i32>*
-  %l = load <4 x i32>, <4 x i32>* %b, align 2
+  call arm_aapcs_vfpcc void @func(ptr %d)
+  %g = getelementptr inbounds [4 x i32], ptr %d, i32 0, i32 2
+  %l = load <4 x i32>, ptr %g, align 2
   ret <4 x i32> %l
 }
 
@@ -176,11 +162,9 @@ define arm_aapcs_vfpcc <8 x i16> @vldrh16() {
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %d = alloca [8 x i16], align 2
-  %arraydecay = getelementptr inbounds [8 x i16], [8 x i16]* %d, i32 0, i32 0
-  call arm_aapcs_vfpcc void bitcast (void (...)* @func to void (i16*)*)(i16* %arraydecay)
-  %g = getelementptr inbounds [8 x i16], [8 x i16]* %d, i32 0, i32 2
-  %b = bitcast i16* %g to <8 x i16>*
-  %l = load <8 x i16>, <8 x i16>* %b, align 2
+  call arm_aapcs_vfpcc void @func(ptr %d)
+  %g = getelementptr inbounds [8 x i16], ptr %d, i32 0, i32 2
+  %l = load <8 x i16>, ptr %g, align 2
   ret <8 x i16> %l
 }
 
@@ -198,11 +182,9 @@ define arm_aapcs_vfpcc <16 x i8> @vldrb8() {
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %d = alloca [16 x i8], align 2
-  %arraydecay = getelementptr inbounds [16 x i8], [16 x i8]* %d, i32 0, i32 0
-  call arm_aapcs_vfpcc void bitcast (void (...)* @func to void (i8*)*)(i8* %arraydecay)
-  %g = getelementptr inbounds [16 x i8], [16 x i8]* %d, i32 0, i32 2
-  %b = bitcast i8* %g to <16 x i8>*
-  %l = load <16 x i8>, <16 x i8>* %b, align 2
+  call arm_aapcs_vfpcc void @func(ptr %d)
+  %g = getelementptr inbounds [16 x i8], ptr %d, i32 0, i32 2
+  %l = load <16 x i8>, ptr %g, align 2
   ret <16 x i8> %l
 }
 
@@ -221,11 +203,9 @@ define arm_aapcs_vfpcc <4 x i16> @vldrh32() {
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %d = alloca [4 x i16], align 2
-  %arraydecay = getelementptr inbounds [4 x i16], [4 x i16]* %d, i32 0, i32 0
-  call arm_aapcs_vfpcc void bitcast (void (...)* @func to void (i16*)*)(i16* %arraydecay)
-  %g = getelementptr inbounds [4 x i16], [4 x i16]* %d, i32 0, i32 2
-  %b = bitcast i16* %g to <4 x i16>*
-  %l = load <4 x i16>, <4 x i16>* %b, align 2
+  call arm_aapcs_vfpcc void @func(ptr %d)
+  %g = getelementptr inbounds [4 x i16], ptr %d, i32 0, i32 2
+  %l = load <4 x i16>, ptr %g, align 2
   ret <4 x i16> %l
 }
 
@@ -244,11 +224,9 @@ define arm_aapcs_vfpcc <4 x i8> @vldrb32() {
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %d = alloca [4 x i8], align 2
-  %arraydecay = getelementptr inbounds [4 x i8], [4 x i8]* %d, i32 0, i32 0
-  call arm_aapcs_vfpcc void bitcast (void (...)* @func to void (i8*)*)(i8* %arraydecay)
-  %g = getelementptr inbounds [4 x i8], [4 x i8]* %d, i32 0, i32 2
-  %b = bitcast i8* %g to <4 x i8>*
-  %l = load <4 x i8>, <4 x i8>* %b, align 2
+  call arm_aapcs_vfpcc void @func(ptr %d)
+  %g = getelementptr inbounds [4 x i8], ptr %d, i32 0, i32 2
+  %l = load <4 x i8>, ptr %g, align 2
   ret <4 x i8> %l
 }
 
@@ -267,11 +245,9 @@ define arm_aapcs_vfpcc <8 x i8> @vldrb16() {
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %d = alloca [8 x i8], align 2
-  %arraydecay = getelementptr inbounds [8 x i8], [8 x i8]* %d, i32 0, i32 0
-  call arm_aapcs_vfpcc void bitcast (void (...)* @func to void (i8*)*)(i8* %arraydecay)
-  %g = getelementptr inbounds [8 x i8], [8 x i8]* %d, i32 0, i32 2
-  %b = bitcast i8* %g to <8 x i8>*
-  %l = load <8 x i8>, <8 x i8>* %b, align 2
+  call arm_aapcs_vfpcc void @func(ptr %d)
+  %g = getelementptr inbounds [8 x i8], ptr %d, i32 0, i32 2
+  %l = load <8 x i8>, ptr %g, align 2
   ret <8 x i8> %l
 }
 

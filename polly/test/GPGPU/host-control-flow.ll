@@ -1,10 +1,10 @@
-; RUN: opt %loadPolly -polly-codegen-ppcg -disable-output \
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen-ppcg -disable-output \
 ; RUN: -polly-acc-dump-code < %s | FileCheck %s -check-prefix=CODE
 
-; RUN: opt %loadPolly -polly-codegen-ppcg -disable-output \
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen-ppcg -disable-output \
 ; RUN: -polly-acc-dump-kernel-ir < %s | FileCheck %s -check-prefix=KERNEL-IR
 
-; RUN: opt %loadPolly -polly-codegen-ppcg \
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen-ppcg \
 ; RUN: -S < %s | FileCheck %s -check-prefix=IR
 ;    void foo(float A[2][100]) {
 ;      for (long t = 0; t < 100; t++)

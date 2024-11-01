@@ -17,7 +17,7 @@ BB:
 
 BB1:                                              ; preds = %BB
   %A = alloca <1 x i16>, align 2
-  %L1 = load <1 x i16>, <1 x i16>* %A, align 2
+  %L1 = load <1 x i16>, ptr %A, align 2
   %I = insertelement <1 x i16> %L1, i16 -1, i16 0
   %B6 = add <1 x i16> %I, %I
   %B3 = srem <1 x i16> %B6, %I
@@ -26,6 +26,6 @@ BB1:                                              ; preds = %BB
   %B4 = udiv <1 x i16> %B3, <i16 -32768>
   %B2 = or <1 x i16> %B4, %B5
   %B = lshr <1 x i16> <i16 -32768>, %B2
-  store <1 x i16> %B, <1 x i16>* %A, align 2
+  store <1 x i16> %B, ptr %A, align 2
   ret void
 }

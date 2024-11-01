@@ -17,6 +17,7 @@
 #include <bit>
 #include <cassert>
 #include <cstdint>
+#include <limits>
 #include <type_traits>
 
 #include "test_macros.h"

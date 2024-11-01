@@ -12,6 +12,7 @@
 #include <list>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -138,7 +139,7 @@ public:
   ParseVariablesForContext(const lldb_private::SymbolContext &sc) override;
 
   lldb_private::Type *ResolveTypeUID(lldb::user_id_t type_uid) override;
-  llvm::Optional<ArrayInfo> GetDynamicArrayInfoForUID(
+  std::optional<ArrayInfo> GetDynamicArrayInfoForUID(
       lldb::user_id_t type_uid,
       const lldb_private::ExecutionContext *exe_ctx) override;
 
@@ -268,7 +269,7 @@ public:
     return GetUID(die.GetDIERef());
   }
 
-  lldb::user_id_t GetUID(const llvm::Optional<DIERef> &ref) {
+  lldb::user_id_t GetUID(const std::optional<DIERef> &ref) {
     return ref ? GetUID(*ref) : LLDB_INVALID_UID;
   }
 
@@ -278,10 +279,10 @@ public:
   GetDwoSymbolFileForCompileUnit(DWARFUnit &dwarf_cu,
                                  const DWARFDebugInfoEntry &cu_die);
 
-  virtual llvm::Optional<uint32_t> GetDwoNum() { return std::nullopt; }
+  virtual std::optional<uint32_t> GetDwoNum() { return std::nullopt; }
 
   /// If this is a DWARF object with a single CU, return its DW_AT_dwo_id.
-  llvm::Optional<uint64_t> GetDWOId();
+  std::optional<uint64_t> GetDWOId();
 
   static bool
   DIEInDeclContext(const lldb_private::CompilerDeclContext &parent_decl_ctx,
@@ -518,13 +519,13 @@ protected:
   }
 
   void BuildCuTranslationTable();
-  llvm::Optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
+  std::optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
 
   struct DecodedUID {
     SymbolFileDWARF &dwarf;
     DIERef ref;
   };
-  llvm::Optional<DecodedUID> DecodeUID(lldb::user_id_t uid);
+  std::optional<DecodedUID> DecodeUID(lldb::user_id_t uid);
 
   void FindDwpSymbolFile();
 

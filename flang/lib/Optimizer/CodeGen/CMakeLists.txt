@@ -3,6 +3,7 @@ add_flang_library(FIRCodeGen
   CGOps.cpp
   CodeGen.cpp
   PreCGRewrite.cpp
+  TBAABuilder.cpp
   Target.cpp
   TargetRewrite.cpp
 
@@ -30,4 +31,5 @@ add_flang_library(FIRCodeGen
   AsmParser
   AsmPrinter
   Remarks
+  TargetParser
 )

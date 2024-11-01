@@ -1001,10 +1001,10 @@ arith::WideIntEmulationConverter::WideIntEmulationConverter(
   assert(widestIntSupportedByTarget >= 2 && "Integer type too narrow");
 
   // Allow unknown types.
-  addConversion([](Type ty) -> Optional<Type> { return ty; });
+  addConversion([](Type ty) -> std::optional<Type> { return ty; });
 
   // Scalar case.
-  addConversion([this](IntegerType ty) -> Optional<Type> {
+  addConversion([this](IntegerType ty) -> std::optional<Type> {
     unsigned width = ty.getWidth();
     if (width <= maxIntWidth)
       return ty;
@@ -1017,7 +1017,7 @@ arith::WideIntEmulationConverter::WideIntEmulationConverter(
   });
 
   // Vector case.
-  addConversion([this](VectorType ty) -> Optional<Type> {
+  addConversion([this](VectorType ty) -> std::optional<Type> {
     auto intTy = ty.getElementType().dyn_cast<IntegerType>();
     if (!intTy)
       return ty;
@@ -1038,7 +1038,7 @@ arith::WideIntEmulationConverter::WideIntEmulationConverter(
   });
 
   // Function case.
-  addConversion([this](FunctionType ty) -> Optional<Type> {
+  addConversion([this](FunctionType ty) -> std::optional<Type> {
     // Convert inputs and results, e.g.:
     //   (i2N, i2N) -> i2N --> (vector<2xiN>, vector<2xiN>) -> vector<2xiN>
     SmallVector<Type> inputs;

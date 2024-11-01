@@ -38,7 +38,7 @@ entry:
   ret i32 %cx
 }
 
-define hidden i32 @c(i32 (i32, i32, i32, i32)* %fptr) {
+define hidden i32 @c(ptr %fptr) {
 ; CHECK-LABEL: c:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
@@ -54,7 +54,7 @@ entry:
   ret i32 %add
 }
 
-define hidden i32 @d(i32 (i32, i32, i32, i32)* %fptr) {
+define hidden i32 @d(ptr %fptr) {
 ; CHECK-LABEL: d:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill

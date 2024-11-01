@@ -13,7 +13,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define internal void @kernel_tc(i32 %ni, i32 %nj, i32 %nl, i32 %nq, i32 %nw, double %alpha, double %beta, [1024 x double]* %C, [64 x [64 x double]]* %A, [1024 x [64 x double]]* %B) {
+define internal void @kernel_tc(i32 %ni, i32 %nj, i32 %nl, i32 %nq, i32 %nw, double %alpha, double %beta, ptr %C, ptr %A, ptr %B) {
 entry:
   br label %for.cond1.preheader
 
@@ -31,15 +31,15 @@ for.cond7.preheader:                              ; preds = %for.inc24, %for.con
 
 for.body9:                                        ; preds = %for.body9, %for.cond7.preheader
   %indvars.iv = phi i64 [ 0, %for.cond7.preheader ], [ %indvars.iv.next, %for.body9 ]
-  %arrayidx13 = getelementptr inbounds [64 x [64 x double]], [64 x [64 x double]]* %A, i64 %indvars.iv43, i64 %indvars.iv37, i64 %indvars.iv
-  %i = load double, double* %arrayidx13, align 8
-  %arrayidx19 = getelementptr inbounds [1024 x [64 x double]], [1024 x [64 x double]]* %B, i64 %indvars.iv, i64 %indvars.iv40, i64 %indvars.iv37
-  %i1 = load double, double* %arrayidx19, align 8
+  %arrayidx13 = getelementptr inbounds [64 x [64 x double]], ptr %A, i64 %indvars.iv43, i64 %indvars.iv37, i64 %indvars.iv
+  %i = load double, ptr %arrayidx13, align 8
+  %arrayidx19 = getelementptr inbounds [1024 x [64 x double]], ptr %B, i64 %indvars.iv, i64 %indvars.iv40, i64 %indvars.iv37
+  %i1 = load double, ptr %arrayidx19, align 8
   %mul = fmul fast double %i1, %i
-  %arrayidx23 = getelementptr inbounds [1024 x double], [1024 x double]* %C, i64 %indvars.iv43, i64 %indvars.iv40
-  %i2 = load double, double* %arrayidx23, align 8
+  %arrayidx23 = getelementptr inbounds [1024 x double], ptr %C, i64 %indvars.iv43, i64 %indvars.iv40
+  %i2 = load double, ptr %arrayidx23, align 8
   %add = fadd fast double %i2, %mul
-  store double %add, double* %arrayidx23, align 8
+  store double %add, ptr %arrayidx23, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, 64
   br i1 %exitcond, label %for.body9, label %for.inc24

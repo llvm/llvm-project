@@ -1,5 +1,5 @@
 ; Check that we can spills coro.begin from an inlined inner coroutine.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 %g.Frame = type { void (%g.Frame*)*, void (%g.Frame*)*, i32, i1, i32 }
 

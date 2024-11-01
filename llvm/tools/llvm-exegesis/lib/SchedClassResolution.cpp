@@ -69,8 +69,8 @@ getNonRedundantWriteProcRes(const MCSchedClassDesc &SCDesc,
   }
   sort(ResourceMaskAndEntries,
        [](const ResourceMaskAndEntry &A, const ResourceMaskAndEntry &B) {
-         unsigned popcntA = countPopulation(A.first);
-         unsigned popcntB = countPopulation(B.first);
+         unsigned popcntA = llvm::popcount(A.first);
+         unsigned popcntB = llvm::popcount(B.first);
          if (popcntA < popcntB)
            return true;
          if (popcntA > popcntB)

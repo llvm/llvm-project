@@ -20,6 +20,14 @@ define void @bar3() {
   ret void
 }
 
+declare void @foo4(i32) addrspace(1) "dontcall-warn"="cast"
+
+define void @bar4() {
+  call void addrspacecast (ptr addrspace(1) @foo4 to ptr)(i32 0)
+  ret void
+}
+
 ; CHECK: error: call to foo marked "dontcall-error": e
 ; CHECK: warning: call to foo2 marked "dontcall-warn": w
 ; CHECK: warning: call to foo3 marked "dontcall-warn"{{$}}
+; CHECK: warning: call to foo4 marked "dontcall-warn": cast

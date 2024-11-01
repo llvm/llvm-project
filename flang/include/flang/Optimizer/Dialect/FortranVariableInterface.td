@@ -36,7 +36,7 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
     >,
     InterfaceMethod<
       /*desc=*/"Get Fortran attributes",
-      /*retTy=*/"llvm::Optional<fir::FortranVariableFlagsEnum>",
+      /*retTy=*/"std::optional<fir::FortranVariableFlagsEnum>",
       /*methodName=*/"getFortranAttrs",
       /*args=*/(ins),
       /*methodBody=*/[{}],
@@ -91,7 +91,7 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
     }
 
     /// Return the rank of the entity if it is known at compile time.
-    llvm::Optional<unsigned> getRank() {
+    std::optional<unsigned> getRank() {
       if (auto sequenceType =
             getElementOrSequenceType().dyn_cast<fir::SequenceType>()) {
         if (sequenceType.hasUnknownShape())
@@ -120,6 +120,15 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
       auto attrs = getFortranAttrs();
       return attrs && bitEnumContainsAny(*attrs,
                         fir::FortranVariableFlagsEnum::optional);
+    }
+
+    /// Does this variable have the Fortran CONTIGUOUS attribute?
+    /// Note that not having this attribute does not imply the
+    /// variable is not contiguous.
+    bool hasContiguousAttr() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::contiguous);
     }
 
     /// Is this a Fortran character variable?

@@ -45,6 +45,7 @@ def Tosa_Dialect : Dialect {
   let cppNamespace = "mlir::tosa";
   let hasConstantMaterializer = 1;
   let useDefaultAttributePrinterParser = 1;
+  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 //===----------------------------------------------------------------------===//
@@ -123,8 +124,10 @@ def Tosa_PadOpQuantizationAttr : Tosa_Attr<"PadOpQuantization", "pad_quant"> {
 // which has specialized output shape semantics. The builder also defines the
 // bitwidth of the output given the bit width of the input & weight content.
 def Tosa_ConvOpQuantInfoBuilder : OpBuilder<
-  (ins "Type":$outputType, "Value":$input, "Value":$weight, "Value":$bias,
-       "ArrayAttr":$pad, "ArrayAttr":$stride, "ArrayAttr":$dilation),
+  (ins "::mlir::Type":$outputType, "::mlir::Value":$input,
+       "::mlir::Value":$weight, "::mlir::Value":$bias,
+       "::mlir::DenseI64ArrayAttr":$pad, "::mlir::DenseI64ArrayAttr":$stride,
+       "::mlir::DenseI64ArrayAttr":$dilation),
   [{
     buildConvOpWithQuantInfo($_builder, $_state, outputType,
                              input, weight, bias,
@@ -133,8 +136,11 @@ def Tosa_ConvOpQuantInfoBuilder : OpBuilder<
 
 // Handles tosa.transpose_conv2d which has an outpad and output shape attribute.
 def Tosa_TransConvOpQuantInfoBuilder : OpBuilder<
-  (ins "Type":$outputType, "Value":$input, "Value":$weight, "Value":$bias,
-       "ArrayAttr":$outpad, "ArrayAttr":$stride, "ArrayAttr":$outputShape),
+  (ins "::mlir::Type":$outputType, "::mlir::Value":$input,
+       "::mlir::Value":$weight, "mlir::Value":$bias,
+       "::mlir::DenseI64ArrayAttr":$outpad,
+       "::mlir::DenseI64ArrayAttr":$stride,
+       "::mlir::DenseI64ArrayAttr":$outputShape),
   [{
     buildTransConvOpWithQuantInfo($_builder, $_state, outputType,
                                   input, weight, bias,
@@ -166,8 +172,9 @@ def Tosa_MatMulOpQuantInfoBuilder : OpBuilder<
 // UnaruOpQuantizationAttr but the avg_pool operator has its own builder as it
 // has additional parameters not part of the unary ops.
 def Tosa_AvgPool2dOpQuantInfoBuilder : OpBuilder<
-  (ins "Type":$outputType, "Value":$input, "ArrayAttr":$kernel,
-       "ArrayAttr":$stride, "ArrayAttr":$pad),
+  (ins "::mlir::Type":$outputType, "::mlir::Value":$input,
+       "::mlir::DenseI64ArrayAttr":$kernel, "::mlir::DenseI64ArrayAttr":$stride,
+       "::mlir::DenseI64ArrayAttr":$pad),
   [{
     buildAvgPool2dOpWithQuantInfo($_builder, $_state, outputType,
                                   input, kernel, stride, pad);

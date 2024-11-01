@@ -196,8 +196,10 @@ define half @test_fdiv(half %a, half %b) #0 {
 ; CHECK-F16-FTZ-NEXT: cvt.rzi.ftz.f32.f32 [[DI:%f[0-9]+]], [[D]];
 ; CHECK-F16-FTZ-NEXT: mul.ftz.f32         [[RI:%f[0-9]+]], [[DI]], [[FB]];
 ; CHECK-F16-FTZ-NEXT: sub.ftz.f32         [[RF:%f[0-9]+]], [[FA]], [[RI]];
-; CHECK-NEXT: cvt.rn.f16.f32  [[R:%h[0-9]+]], [[RF]];
-; CHECK-NEXT: st.param.b16    [func_retval0+0], [[R]];
+; CHECK-NEXT: testp.infinite.f32 [[ISBINF:%p[0-9]+]], [[FB]];
+; CHECK-NEXT: selp.f32           [[RESULT:%f[0-9]+]], [[FA]], [[RF]], [[ISBINF]];
+; CHECK-NEXT: cvt.rn.f16.f32     [[R:%h[0-9]+]], [[RESULT]];
+; CHECK-NEXT: st.param.b16       [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
 define half @test_frem(half %a, half %b) #0 {
   %r = frem half %a, %b
@@ -209,8 +211,8 @@ define half @test_frem(half %a, half %b) #0 {
 ; CHECK-DAG:  ld.param.u64    %[[PTR:rd[0-9]+]], [test_store_param_1];
 ; CHECK-NEXT: st.b16          [%[[PTR]]], [[A]];
 ; CHECK-NEXT: ret;
-define void @test_store(half %a, half* %b) #0 {
-  store half %a, half* %b
+define void @test_store(half %a, ptr %b) #0 {
+  store half %a, ptr %b
   ret void
 }
 
@@ -219,8 +221,8 @@ define void @test_store(half %a, half* %b) #0 {
 ; CHECK-NEXT: ld.b16          [[R:%h[0-9]+]], [%[[PTR]]];
 ; CHECK-NEXT: st.param.b16    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
-define half @test_load(half* %a) #0 {
-  %r = load half, half* %a
+define half @test_load(ptr %a) #0 {
+  %r = load half, ptr %a
   ret half %r
 }
 
@@ -232,9 +234,9 @@ define half @test_load(half* %a) #0 {
 ; CHECK-DAG: ld.u8        [[B1:%r[sd]?[0-9]+]], [%[[FROM]]+1]
 ; CHECK-DAG: st.u8        [%[[TO]]+1], [[B1]]
 ; CHECK: ret
-define void @test_halfp0a1(half * noalias readonly %from, half * %to) {
-  %1 = load half, half * %from , align 1
-  store half %1, half * %to , align 1
+define void @test_halfp0a1(ptr noalias readonly %from, ptr %to) {
+  %1 = load half, ptr %from , align 1
+  store half %1, ptr %to , align 1
   ret void
 }
 
@@ -608,14 +610,14 @@ define i1 @test_fcmp_ord(half %a, half %b) #0 {
 ; CHECK:      [[LABEL]]:
 ; CHECK:      st.u32  [%[[D]]],
 ; CHECK:      ret;
-define void @test_br_cc(half %a, half %b, i32* %p1, i32* %p2) #0 {
+define void @test_br_cc(half %a, half %b, ptr %p1, ptr %p2) #0 {
   %c = fcmp uge half %a, %b
   br i1 %c, label %then, label %else
 then:
-  store i32 0, i32* %p1
+  store i32 0, ptr %p1
   ret void
 else:
-  store i32 0, i32* %p2
+  store i32 0, ptr %p2
   ret void
 }
 
@@ -634,19 +636,19 @@ else:
 ; CHECK:      @[[PRED]] bra   [[LOOP]];
 ; CHECK:      st.param.b16    [func_retval0+0], [[R]];
 ; CHECK:      ret;
-define half @test_phi(half* %p1) #0 {
+define half @test_phi(ptr %p1) #0 {
 entry:
-  %a = load half, half* %p1
+  %a = load half, ptr %p1
   br label %loop
 loop:
   %r = phi half [%a, %entry], [%b, %loop]
-  %b = load half, half* %p1
-  %c = call i1 @test_dummy(half* %p1)
+  %b = load half, ptr %p1
+  %c = call i1 @test_dummy(ptr %p1)
   br i1 %c, label %loop, label %return
 return:
   ret half %r
 }
-declare i1 @test_dummy(half* %p1) #0
+declare i1 @test_dummy(ptr %p1) #0
 
 ; CHECK-LABEL: test_fptosi_i32(
 ; CHECK:      ld.param.b16    [[A:%h[0-9]+]], [test_fptosi_i32_param_0];

@@ -56,8 +56,8 @@
 ; GFX1100-OBJ-NEXT: s_waitcnt_vscnt null, 0x0
 ; GFX1100-OBJ-NEXT: global_atomic_add_f32 v[0:1], v2, off
 
-define fastcc void @fadd_test(float addrspace(1)* nocapture noundef %0, float noundef %1) unnamed_addr {
-  %3 = tail call float @llvm.amdgcn.global.atomic.fadd.f32.p1f32.f32(float addrspace(1)* noundef %0, float noundef %1)
+define fastcc void @fadd_test(ptr addrspace(1) nocapture noundef %0, float noundef %1) unnamed_addr {
+  %3 = tail call float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) noundef %0, float noundef %1)
   ret void
 }
-declare float @llvm.amdgcn.global.atomic.fadd.f32.p1f32.f32(float addrspace(1)* nocapture, float)
+declare float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) nocapture, float)

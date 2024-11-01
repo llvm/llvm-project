@@ -88,6 +88,7 @@ R600TargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(R600TTIImpl(this, F));
 }
 
+namespace {
 class R600PassConfig final : public AMDGPUPassConfig {
 public:
   R600PassConfig(LLVMTargetMachine &TM, PassManagerBase &PM)
@@ -104,6 +105,7 @@ public:
   void addPreSched2() override;
   void addPreEmitPass() override;
 };
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // R600 Pass Setup
@@ -118,7 +120,7 @@ bool R600PassConfig::addPreISel() {
 }
 
 bool R600PassConfig::addInstSelector() {
-  addPass(createR600ISelDag(&getAMDGPUTargetMachine(), getOptLevel()));
+  addPass(createR600ISelDag(getAMDGPUTargetMachine(), getOptLevel()));
   return false;
 }
 

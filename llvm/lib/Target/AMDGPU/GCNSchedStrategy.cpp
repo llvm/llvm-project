@@ -38,6 +38,14 @@ static cl::opt<bool>
                            cl::desc("Disable unclustred high register pressure "
                                     "reduction scheduling stage."),
                            cl::init(false));
+static cl::opt<unsigned> ScheduleMetricBias(
+    "amdgpu-schedule-metric-bias", cl::Hidden,
+    cl::desc(
+        "Sets the bias which adds weight to occupancy vs latency. Set it to "
+        "100 to chase the occupancy only."),
+    cl::init(10));
+
+const unsigned ScheduleMetrics::ScaleFactor = 100;
 
 GCNSchedStrategy::GCNSchedStrategy(const MachineSchedContext *C)
     : GenericScheduler(C), TargetOccupancy(0), MF(nullptr),
@@ -62,16 +70,34 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   TargetOccupancy = MFI.getOccupancy();
   SGPRCriticalLimit =
       std::min(ST.getMaxNumSGPRs(TargetOccupancy, true), SGPRExcessLimit);
-  VGPRCriticalLimit =
-      std::min(ST.getMaxNumVGPRs(TargetOccupancy), VGPRExcessLimit);
 
-  // Subtract error margin from register limits and avoid overflow.
-  SGPRCriticalLimit =
-      std::min(SGPRCriticalLimit - ErrorMargin, SGPRCriticalLimit);
-  VGPRCriticalLimit =
-      std::min(VGPRCriticalLimit - ErrorMargin, VGPRCriticalLimit);
-  SGPRExcessLimit = std::min(SGPRExcessLimit - ErrorMargin, SGPRExcessLimit);
-  VGPRExcessLimit = std::min(VGPRExcessLimit - ErrorMargin, VGPRExcessLimit);
+  if (!KnownExcessRP) {
+    VGPRCriticalLimit =
+        std::min(ST.getMaxNumVGPRs(TargetOccupancy), VGPRExcessLimit);
+  } else {
+    // This is similar to ST.getMaxNumVGPRs(TargetOccupancy) result except
+    // returns a reasonably small number for targets with lots of VGPRs, such
+    // as GFX10 and GFX11.
+    LLVM_DEBUG(dbgs() << "Region is known to spill, use alternative "
+                         "VGPRCriticalLimit calculation method.\n");
+
+    unsigned Granule = AMDGPU::IsaInfo::getVGPRAllocGranule(&ST);
+    unsigned Addressable = AMDGPU::IsaInfo::getAddressableNumVGPRs(&ST);
+    unsigned VGPRBudget = alignDown(Addressable / TargetOccupancy, Granule);
+    VGPRBudget = std::max(VGPRBudget, Granule);
+    VGPRCriticalLimit = std::min(VGPRBudget, VGPRExcessLimit);
+  }
+
+  // Subtract error margin and bias from register limits and avoid overflow.
+  SGPRCriticalLimit -= std::min(SGPRLimitBias + ErrorMargin, SGPRCriticalLimit);
+  VGPRCriticalLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRCriticalLimit);
+  SGPRExcessLimit -= std::min(SGPRLimitBias + ErrorMargin, SGPRExcessLimit);
+  VGPRExcessLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRExcessLimit);
+
+  LLVM_DEBUG(dbgs() << "VGPRCriticalLimit = " << VGPRCriticalLimit
+                    << ", VGPRExcessLimit = " << VGPRExcessLimit
+                    << ", SGPRCriticalLimit = " << SGPRCriticalLimit
+                    << ", SGPRExcessLimit = " << SGPRExcessLimit << "\n\n");
 }
 
 void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
@@ -662,7 +688,8 @@ bool UnclusteredHighRPStage::initGCNSchedStage() {
   InitialOccupancy = DAG.MinOccupancy;
   // Aggressivly try to reduce register pressure in the unclustered high RP
   // stage. Temporarily increase occupancy target in the region.
-  S.ErrorMargin = S.HighRPErrorMargin;
+  S.SGPRLimitBias = S.HighRPSGPRBias;
+  S.VGPRLimitBias = S.HighRPVGPRBias;
   if (MFI.getMaxWavesPerEU() > DAG.MinOccupancy)
     MFI.increaseOccupancy(MF, ++DAG.MinOccupancy);
 
@@ -727,7 +754,7 @@ void GCNSchedStage::finalizeGCNSchedStage() {
 
 void UnclusteredHighRPStage::finalizeGCNSchedStage() {
   SavedMutations.swap(DAG.Mutations);
-  S.ErrorMargin = S.DefaultErrorMargin;
+  S.SGPRLimitBias = S.VGPRLimitBias = 0;
   if (DAG.MinOccupancy > InitialOccupancy) {
     for (unsigned IDX = 0; IDX < DAG.Pressure.size(); ++IDX)
       DAG.RegionsWithMinOcc[IDX] =
@@ -787,6 +814,7 @@ bool GCNSchedStage::initGCNRegion() {
              << "Region register pressure: " << print(PressureBefore));
 
   S.HasHighPressure = false;
+  S.KnownExcessRP = isRegionWithExcessRP();
 
   if (DAG.RegionsWithIGLPInstrs[RegionIdx] &&
       StageID != GCNSchedStageID::UnclusteredHighRPReschedule) {
@@ -862,6 +890,7 @@ void GCNSchedStage::checkScheduling() {
   // Check the results of scheduling.
   PressureAfter = DAG.getRealRegPressure(RegionIdx);
   LLVM_DEBUG(dbgs() << "Pressure after scheduling: " << print(PressureAfter));
+  LLVM_DEBUG(dbgs() << "Region: " << RegionIdx << ".\n");
 
   if (PressureAfter.getSGPRNum() <= S.SGPRCriticalLimit &&
       PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) <= S.VGPRCriticalLimit) {
@@ -874,10 +903,12 @@ void GCNSchedStage::checkScheduling() {
     return;
   }
 
+  unsigned TargetOccupancy =
+      std::min(S.getTargetOccupancy(), ST.getOccupancyWithLocalMemSize(MF));
   unsigned WavesAfter =
-      std::min(S.getTargetOccupancy(), PressureAfter.getOccupancy(ST));
+      std::min(TargetOccupancy, PressureAfter.getOccupancy(ST));
   unsigned WavesBefore =
-      std::min(S.getTargetOccupancy(), PressureBefore.getOccupancy(ST));
+      std::min(TargetOccupancy, PressureBefore.getOccupancy(ST));
   LLVM_DEBUG(dbgs() << "Occupancy before scheduling: " << WavesBefore
                     << ", after " << WavesAfter << ".\n");
 
@@ -925,6 +956,120 @@ void GCNSchedStage::checkScheduling() {
   }
 }
 
+unsigned
+GCNSchedStage::computeSUnitReadyCycle(const SUnit &SU, unsigned CurrCycle,
+                                      DenseMap<unsigned, unsigned> &ReadyCycles,
+                                      const TargetSchedModel &SM) {
+  unsigned ReadyCycle = CurrCycle;
+  for (auto &D : SU.Preds) {
+    if (D.isAssignedRegDep()) {
+      MachineInstr *DefMI = D.getSUnit()->getInstr();
+      unsigned Latency = SM.computeInstrLatency(DefMI);
+      unsigned DefReady = ReadyCycles[DAG.getSUnit(DefMI)->NodeNum];
+      ReadyCycle = std::max(ReadyCycle, DefReady + Latency);
+    }
+  }
+  ReadyCycles[SU.NodeNum] = ReadyCycle;
+  return ReadyCycle;
+}
+
+#ifndef NDEBUG
+struct EarlierIssuingCycle {
+  bool operator()(std::pair<MachineInstr *, unsigned> A,
+                  std::pair<MachineInstr *, unsigned> B) const {
+    return A.second < B.second;
+  }
+};
+
+static void printScheduleModel(std::set<std::pair<MachineInstr *, unsigned>,
+                                        EarlierIssuingCycle> &ReadyCycles) {
+  if (ReadyCycles.empty())
+    return;
+  unsigned BBNum = ReadyCycles.begin()->first->getParent()->getNumber();
+  dbgs() << "\n################## Schedule time ReadyCycles for MBB : " << BBNum
+         << " ##################\n# Cycle #\t\t\tInstruction          "
+            "             "
+            "                            \n";
+  unsigned IPrev = 1;
+  for (auto &I : ReadyCycles) {
+    if (I.second > IPrev + 1)
+      dbgs() << "****************************** BUBBLE OF " << I.second - IPrev
+             << " CYCLES DETECTED ******************************\n\n";
+    dbgs() << "[ " << I.second << " ]  :  " << *I.first << "\n";
+    IPrev = I.second;
+  }
+}
+#endif
+
+ScheduleMetrics
+GCNSchedStage::getScheduleMetrics(const std::vector<SUnit> &InputSchedule) {
+#ifndef NDEBUG
+  std::set<std::pair<MachineInstr *, unsigned>, EarlierIssuingCycle>
+      ReadyCyclesSorted;
+#endif
+  const TargetSchedModel &SM = ST.getInstrInfo()->getSchedModel();
+  unsigned SumBubbles = 0;
+  DenseMap<unsigned, unsigned> ReadyCycles;
+  unsigned CurrCycle = 0;
+  for (auto &SU : InputSchedule) {
+    unsigned ReadyCycle =
+        computeSUnitReadyCycle(SU, CurrCycle, ReadyCycles, SM);
+    SumBubbles += ReadyCycle - CurrCycle;
+#ifndef NDEBUG
+    ReadyCyclesSorted.insert(std::make_pair(SU.getInstr(), ReadyCycle));
+#endif
+    CurrCycle = ++ReadyCycle;
+  }
+#ifndef NDEBUG
+  LLVM_DEBUG(
+      printScheduleModel(ReadyCyclesSorted);
+      dbgs() << "\n\t"
+             << "Metric: "
+             << (SumBubbles
+                     ? (SumBubbles * ScheduleMetrics::ScaleFactor) / CurrCycle
+                     : 1)
+             << "\n\n");
+#endif
+
+  return ScheduleMetrics(CurrCycle, SumBubbles);
+}
+
+ScheduleMetrics
+GCNSchedStage::getScheduleMetrics(const GCNScheduleDAGMILive &DAG) {
+#ifndef NDEBUG
+  std::set<std::pair<MachineInstr *, unsigned>, EarlierIssuingCycle>
+      ReadyCyclesSorted;
+#endif
+  const TargetSchedModel &SM = ST.getInstrInfo()->getSchedModel();
+  unsigned SumBubbles = 0;
+  DenseMap<unsigned, unsigned> ReadyCycles;
+  unsigned CurrCycle = 0;
+  for (auto &MI : DAG) {
+    SUnit *SU = DAG.getSUnit(&MI);
+    if (!SU)
+      continue;
+    unsigned ReadyCycle =
+        computeSUnitReadyCycle(*SU, CurrCycle, ReadyCycles, SM);
+    SumBubbles += ReadyCycle - CurrCycle;
+#ifndef NDEBUG
+    ReadyCyclesSorted.insert(std::make_pair(SU->getInstr(), ReadyCycle));
+#endif
+    CurrCycle = ++ReadyCycle;
+  }
+#ifndef NDEBUG
+  LLVM_DEBUG(
+      printScheduleModel(ReadyCyclesSorted);
+      dbgs() << "\n\t"
+             << "Metric: "
+             << (SumBubbles
+                     ? (SumBubbles * ScheduleMetrics::ScaleFactor) / CurrCycle
+                     : 1)
+             << "\n\n");
+#endif
+
+  return ScheduleMetrics(CurrCycle, SumBubbles);
+}
+
 bool GCNSchedStage::shouldRevertScheduling(unsigned WavesAfter) {
   if (WavesAfter < DAG.MinOccupancy)
     return true;
@@ -955,7 +1100,28 @@ bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
     return true;
   }
 
-  return false;
+  LLVM_DEBUG(
+      dbgs()
+      << "\n\t      *** In shouldRevertScheduling ***\n"
+      << "      *********** BEFORE UnclusteredHighRPStage ***********\n");
+  ScheduleMetrics MBefore =
+      getScheduleMetrics(DAG.SUnits);
+  LLVM_DEBUG(
+      dbgs()
+      << "\n      *********** AFTER UnclusteredHighRPStage ***********\n");
+  ScheduleMetrics MAfter = getScheduleMetrics(DAG);
+  unsigned OldMetric = MBefore.getMetric();
+  unsigned NewMetric = MAfter.getMetric();
+  unsigned WavesBefore =
+      std::min(S.getTargetOccupancy(), PressureBefore.getOccupancy(ST));
+  unsigned Profit =
+      ((WavesAfter * ScheduleMetrics::ScaleFactor) / WavesBefore *
+       ((OldMetric + ScheduleMetricBias) * ScheduleMetrics::ScaleFactor) /
+       NewMetric) /
+      ScheduleMetrics::ScaleFactor;
+  LLVM_DEBUG(dbgs() << "\tMetric before " << MBefore << "\tMetric after "
+                    << MAfter << "Profit: " << Profit << "\n");
+  return Profit < ScheduleMetrics::ScaleFactor;
 }
 
 bool ClusteredLowOccStage::shouldRevertScheduling(unsigned WavesAfter) {
@@ -991,7 +1157,7 @@ bool ILPInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
 bool GCNSchedStage::mayCauseSpilling(unsigned WavesAfter) {
   if (WavesAfter <= MFI.getMinWavesPerEU() &&
       !PressureAfter.less(ST, PressureBefore) &&
-      DAG.RegionsWithExcessRP[RegionIdx]) {
+      isRegionWithExcessRP()) {
     LLVM_DEBUG(dbgs() << "New pressure will result in more spilling.\n");
     return true;
   }

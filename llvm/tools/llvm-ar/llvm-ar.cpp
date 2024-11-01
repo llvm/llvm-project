@@ -1330,7 +1330,7 @@ static int ar_main(int argc, char **argv) {
   SmallVector<const char *, 0> Argv(argv + 1, argv + argc);
   StringSaver Saver(Alloc);
 
-  cl::ExpandResponseFiles(Saver, getRspQuoting(makeArrayRef(argv, argc)), Argv);
+  cl::ExpandResponseFiles(Saver, getRspQuoting(ArrayRef(argv, argc)), Argv);
 
   // Get BitMode from enviorment variable "OBJECT_MODE" for AIX OS, if
   // specified.
@@ -1473,11 +1473,11 @@ int llvm_ar_main(int argc, char **argv) {
   };
 
   if (Is("dlltool"))
-    return dlltoolDriverMain(makeArrayRef(argv, argc));
+    return dlltoolDriverMain(ArrayRef(argv, argc));
   if (Is("ranlib"))
     return ranlib_main(argc, argv);
   if (Is("lib"))
-    return libDriverMain(makeArrayRef(argv, argc));
+    return libDriverMain(ArrayRef(argv, argc));
   if (Is("ar"))
     return ar_main(argc, argv);
 

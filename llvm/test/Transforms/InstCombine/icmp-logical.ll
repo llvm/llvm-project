@@ -446,8 +446,8 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_0_logical(i32 %x) {
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_1(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 9
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp eq i32 [[TMP1]], 9
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = and i32 %x, 12
   %t2 = icmp ne i32 %t1, 0
@@ -460,8 +460,8 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_1(i32 %x) {
 define <2 x i1> @masked_icmps_mask_notallzeros_bmask_mixed_1_vector(<2 x i32> %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_1_vector(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 15, i32 15>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 9, i32 9>
-; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 9, i32 9>
+; CHECK-NEXT:    ret <2 x i1> [[T5]]
 ;
   %t1 = and <2 x i32> %x, <i32 12, i32 12>
   %t2 = icmp ne <2 x i32> %t1, zeroinitializer
@@ -474,8 +474,8 @@ define <2 x i1> @masked_icmps_mask_notallzeros_bmask_mixed_1_vector(<2 x i32> %x
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_1_logical(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_1_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 9
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp eq i32 [[TMP1]], 9
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = and i32 %x, 12
   %t2 = icmp ne i32 %t1, 0
@@ -549,8 +549,8 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_2_logical(i32 %x) {
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_3(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 8
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp eq i32 [[TMP1]], 8
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = and i32 %x, 15
   %t2 = icmp ne i32 %t1, 0
@@ -563,8 +563,8 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_3(i32 %x) {
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_3_logical(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_3_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 8
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp eq i32 [[TMP1]], 8
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = and i32 %x, 15
   %t2 = icmp ne i32 %t1, 0
@@ -787,8 +787,8 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_0_logical(i32 %x) {
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_1(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 9
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i32 [[TMP1]], 9
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = and i32 %x, 12
   %t2 = icmp eq i32 %t1, 0
@@ -801,8 +801,8 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_1(i32 %x) {
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_1_logical(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_1_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 9
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i32 [[TMP1]], 9
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = and i32 %x, 12
   %t2 = icmp eq i32 %t1, 0
@@ -879,8 +879,8 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_2_logical(i32 %x) {
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_3(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 8
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i32 [[TMP1]], 8
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = and i32 %x, 15
   %t2 = icmp eq i32 %t1, 0
@@ -893,8 +893,8 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_3(i32 %x) {
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_3_logical(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_3_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 8
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i32 [[TMP1]], 8
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = and i32 %x, 15
   %t2 = icmp eq i32 %t1, 0
@@ -1122,8 +1122,8 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_swapped_0_logical(i32 %x) {
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_swapped_1(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_swapped_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 9
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp eq i32 [[TMP1]], 9
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = and i32 %x, 12
   %t2 = icmp ne i32 %t1, 0
@@ -1136,8 +1136,8 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_swapped_1(i32 %x) {
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_swapped_1_logical(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_swapped_1_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 9
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp eq i32 [[TMP1]], 9
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = and i32 %x, 12
   %t2 = icmp ne i32 %t1, 0
@@ -1211,8 +1211,8 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_swapped_2_logical(i32 %x) {
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_swapped_3(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_swapped_3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 8
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp eq i32 [[TMP1]], 8
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = and i32 %x, 15
   %t2 = icmp ne i32 %t1, 0
@@ -1225,8 +1225,8 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_swapped_3(i32 %x) {
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_swapped_3_logical(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_swapped_3_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 8
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp eq i32 [[TMP1]], 8
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = and i32 %x, 15
   %t2 = icmp ne i32 %t1, 0
@@ -1449,8 +1449,8 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_0_logical(i
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_1(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 9
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i32 [[TMP1]], 9
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = and i32 %x, 12
   %t2 = icmp eq i32 %t1, 0
@@ -1463,8 +1463,8 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_1(i32 %x) {
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_1_logical(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_1_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 9
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i32 [[TMP1]], 9
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = and i32 %x, 12
   %t2 = icmp eq i32 %t1, 0
@@ -1541,8 +1541,8 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_2_logical(i
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_3(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 8
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i32 [[TMP1]], 8
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = and i32 %x, 15
   %t2 = icmp eq i32 %t1, 0
@@ -1555,8 +1555,8 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_3(i32 %x) {
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_3_logical(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_3_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 8
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i32 [[TMP1]], 8
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = and i32 %x, 15
   %t2 = icmp eq i32 %t1, 0

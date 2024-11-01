@@ -19,7 +19,7 @@
 #include "mlir/Dialect/SCF/Utils/AffineCanonicalizationUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/FoldUtils.h"
@@ -61,7 +61,7 @@ static void inlineRegionAndEmitStore(OpBuilder &b, Location loc, OpType op,
                                      ArrayRef<SmallVector<Value>> indexing,
                                      ArrayRef<Value> outputBuffers) {
   auto &block = op->getRegion(0).front();
-  BlockAndValueMapping map;
+  IRMapping map;
   map.map(block.getArguments(), indexedValues);
   for (auto &op : block.without_terminator()) {
     auto *newOp = b.clone(op, map);

@@ -173,7 +173,9 @@ static void substituteOperandWithArgument(Function *OldF,
   NewF->setName(FName);
 }
 
-static void reduceOperandsToArgs(Oracle &O, Module &Program) {
+static void reduceOperandsToArgs(Oracle &O, ReducerWorkItem &WorkItem) {
+  Module &Program = WorkItem.getModule();
+
   SmallVector<Use *> OperandsToReduce;
   for (Function &F : make_early_inc_range(Program.functions())) {
     if (!canReplaceFunction(&F))

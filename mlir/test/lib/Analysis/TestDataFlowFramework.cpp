@@ -9,6 +9,7 @@
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"
+#include <optional>
 
 using namespace mlir;
 
@@ -61,7 +62,7 @@ public:
 
 private:
   /// An optional integer value.
-  Optional<uint64_t> state;
+  std::optional<uint64_t> state;
 };
 
 /// This analysis computes `FooState` across operations and control-flow edges.

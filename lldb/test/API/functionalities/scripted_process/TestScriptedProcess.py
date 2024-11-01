@@ -14,6 +14,7 @@ class ScriptedProcesTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipUnlessDarwin
     def test_python_plugin_package(self):
         """Test that the lldb python module has a `plugins.scripted_process`
         package."""

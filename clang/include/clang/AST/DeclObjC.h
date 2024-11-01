@@ -373,8 +373,7 @@ public:
   // ArrayRef access to formal parameters.  This should eventually
   // replace the iterator interface above.
   ArrayRef<ParmVarDecl*> parameters() const {
-    return llvm::makeArrayRef(const_cast<ParmVarDecl**>(getParams()),
-                              NumParams);
+    return llvm::ArrayRef(const_cast<ParmVarDecl **>(getParams()), NumParams);
   }
 
   ParmVarDecl *getParamDecl(unsigned Idx) {
@@ -1147,6 +1146,7 @@ public:
 class ObjCInterfaceDecl : public ObjCContainerDecl
                         , public Redeclarable<ObjCInterfaceDecl> {
   friend class ASTContext;
+  friend class ODRDiagsEmitter;
 
   /// TypeForDecl - This indicates the Type object that represents this
   /// TypeDecl.  It is a cache maintained by ASTContext::getObjCInterfaceType
@@ -1204,6 +1204,12 @@ class ObjCInterfaceDecl : public ObjCContainerDecl
     /// One of the \c InheritedDesignatedInitializersState enumeratos.
     mutable unsigned InheritedDesignatedInitializers : 2;
 
+    /// Tracks whether a ODR hash has been computed for this interface.
+    unsigned HasODRHash : 1;
+
+    /// A hash of parts of the class to help in ODR checking.
+    unsigned ODRHash = 0;
+
     /// The location of the last location in this declaration, before
     /// the properties/methods. For example, this will be the '>', '}', or
     /// identifier,
@@ -1212,7 +1218,7 @@ class ObjCInterfaceDecl : public ObjCContainerDecl
     DefinitionData()
         : ExternallyCompleted(false), IvarListMissingImplementation(true),
           HasDesignatedInitializers(false),
-          InheritedDesignatedInitializers(IDI_Unknown) {}
+          InheritedDesignatedInitializers(IDI_Unknown), HasODRHash(false) {}
   };
 
   /// The type parameters associated with this class, if any.
@@ -1535,6 +1541,13 @@ public:
   /// Starts the definition of this Objective-C class, taking it from
   /// a forward declaration (\@class) to a definition (\@interface).
   void startDefinition();
+
+  /// Starts the definition without sharing it with other redeclarations.
+  /// Such definition shouldn't be used for anything but only to compare if
+  /// a duplicate is compatible with previous definition or if it is
+  /// a distinct duplicate.
+  void startDuplicateDefinitionForComparison();
+  void mergeDuplicateDefinitionWithCommon(const ObjCInterfaceDecl *Definition);
 
   /// Retrieve the superclass type.
   const ObjCObjectType *getSuperClassType() const {
@@ -1893,10 +1906,17 @@ public:
   const Type *getTypeForDecl() const { return TypeForDecl; }
   void setTypeForDecl(const Type *TD) const { TypeForDecl = TD; }
 
+  /// Get precomputed ODRHash or add a new one.
+  unsigned getODRHash();
+
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == ObjCInterface; }
 
 private:
+  /// True if a valid hash is stored in ODRHash.
+  bool hasODRHash() const;
+  void setHasODRHash(bool HasHash);
+
   const ObjCInterfaceDecl *findInterfaceWithDesignatedInitializers() const;
   bool inheritsDesignatedInitializers() const;
 };

@@ -175,6 +175,8 @@ enum TypeCodes {
   TYPE_CODE_X86_AMX = 24, // X86 AMX
 
   TYPE_CODE_OPAQUE_POINTER = 25, // OPAQUE_POINTER: [addrspace]
+
+  TYPE_CODE_TARGET_TYPE = 26, // TARGET_TYPE
 };
 
 enum OperandBundleTagCode {
@@ -477,7 +479,9 @@ enum RMWOperations {
   RMW_FADD = 11,
   RMW_FSUB = 12,
   RMW_FMAX = 13,
-  RMW_FMIN = 14
+  RMW_FMIN = 14,
+  RMW_UINC_WRAP = 15,
+  RMW_UDEC_WRAP = 16
 };
 
 /// OverflowingBinaryOperatorOptionalFlags - Flags for serializing

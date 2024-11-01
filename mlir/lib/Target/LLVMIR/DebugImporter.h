@@ -29,7 +29,8 @@ namespace detail {
 
 class DebugImporter {
 public:
-  DebugImporter(MLIRContext *context) : context(context) {}
+  DebugImporter(ModuleOp mlirModule)
+      : context(mlirModule.getContext()), mlirModule(mlirModule) {}
 
   /// Translates the given LLVM debug location to an MLIR location.
   Location translateLoc(llvm::DILocation *loc);
@@ -68,7 +69,12 @@ private:
   /// A mapping between LLVM debug metadata and the corresponding attribute.
   DenseMap<llvm::DINode *, DINodeAttr> nodeToAttr;
 
+  /// A stack that stores the metadata nodes that are being traversed. The stack
+  /// is used to detect cyclic dependencies during the metadata translation.
+  SetVector<llvm::DINode *> translationStack;
+
   MLIRContext *context;
+  ModuleOp mlirModule;
 };
 
 } // namespace detail

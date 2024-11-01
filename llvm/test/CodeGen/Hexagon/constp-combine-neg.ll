@@ -7,15 +7,11 @@
 define i32 @main() #0 {
 entry:
   %l = alloca [7 x i32], align 8
-  %p_arrayidx45 = bitcast [7 x i32]* %l to i32*
-  %vector_ptr = bitcast [7 x i32]* %l to <2 x i32>*
-  store <2 x i32> <i32 3, i32 -2>, <2 x i32>* %vector_ptr, align 8
-  %p_arrayidx.1 = getelementptr [7 x i32], [7 x i32]* %l, i32 0, i32 2
-  %vector_ptr.1 = bitcast i32* %p_arrayidx.1 to <2 x i32>*
-  store <2 x i32> <i32 -4, i32 6>, <2 x i32>* %vector_ptr.1, align 8
-  %p_arrayidx.2 = getelementptr [7 x i32], [7 x i32]* %l, i32 0, i32 4
-  %vector_ptr.2 = bitcast i32* %p_arrayidx.2 to <2 x i32>*
-  store <2 x i32> <i32 -8, i32 -10>, <2 x i32>* %vector_ptr.2, align 8
+  store <2 x i32> <i32 3, i32 -2>, ptr %l, align 8
+  %p_arrayidx.1 = getelementptr [7 x i32], ptr %l, i32 0, i32 2
+  store <2 x i32> <i32 -4, i32 6>, ptr %p_arrayidx.1, align 8
+  %p_arrayidx.2 = getelementptr [7 x i32], ptr %l, i32 0, i32 4
+  store <2 x i32> <i32 -8, i32 -10>, ptr %p_arrayidx.2, align 8
   ret i32 0
 }
 

@@ -22,6 +22,7 @@ add_llvm_component_library(LLVMJITLink
   ELFLinkGraphBuilder.cpp
   ELF_aarch64.cpp
   ELF_i386.cpp
+  ELF_loongarch.cpp
   ELF_riscv.cpp
   ELF_x86_64.cpp
 
@@ -34,6 +35,7 @@ add_llvm_component_library(LLVMJITLink
   # Architectures:
   aarch64.cpp
   i386.cpp
+  loongarch.cpp
   riscv.cpp
   x86_64.cpp
 
@@ -50,6 +52,7 @@ add_llvm_component_library(LLVMJITLink
   Option
   OrcTargetProcess
   Support
+  TargetParser
   )
 
 target_link_libraries(LLVMJITLink
@@ -58,4 +61,5 @@ target_link_libraries(LLVMJITLink
   LLVMOrcShared
   LLVMOrcTargetProcess
   LLVMSupport
+  LLVMTargetParser
 )

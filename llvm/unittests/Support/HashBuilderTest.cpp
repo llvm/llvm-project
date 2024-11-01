@@ -102,7 +102,7 @@ TYPED_TEST(HashBuilderTest, AddHashableData) {
     constexpr auto E = HE::Endianness;
     H Hasher;
     auto SwappedData = llvm::support::endian::byte_swap(Data, E);
-    Hasher.update(llvm::makeArrayRef(
+    Hasher.update(llvm::ArrayRef(
         reinterpret_cast<const uint8_t *>(&SwappedData), sizeof(Data)));
     return Hasher.final();
   };
@@ -157,8 +157,8 @@ struct /* __attribute__((packed)) */ StructWithFastHash {
   friend void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
                       const StructWithFastHash &Value) {
     if (Endianness == llvm::support::endian::system_endianness()) {
-      HBuilder.update(llvm::makeArrayRef(
-          reinterpret_cast<const uint8_t *>(&Value), sizeof(Value)));
+      HBuilder.update(llvm::ArrayRef(reinterpret_cast<const uint8_t *>(&Value),
+                                     sizeof(Value)));
     } else {
       // Rely on existing `add` methods to handle endianness.
       HBuilder.add(Value.I);
@@ -181,7 +181,7 @@ public:
   friend void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
                       const CustomContainer &Value) {
     if (Endianness == llvm::support::endian::system_endianness()) {
-      HBuilder.update(llvm::makeArrayRef(
+      HBuilder.update(llvm::ArrayRef(
           reinterpret_cast<const uint8_t *>(&Value.Size),
           sizeof(Value.Size) + Value.Size * sizeof(Value.Elements[0])));
     } else {

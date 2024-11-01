@@ -8,6 +8,7 @@
 
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <string>
 
 using namespace fir;
@@ -16,7 +17,7 @@ using llvm::StringRef;
 
 struct DeconstructedName {
   DeconstructedName(llvm::ArrayRef<std::string> modules,
-      llvm::Optional<std::string> host, llvm::StringRef name,
+      std::optional<std::string> host, llvm::StringRef name,
       llvm::ArrayRef<std::int64_t> kinds)
       : modules{modules.begin(), modules.end()}, host{host}, name{name},
         kinds{kinds.begin(), kinds.end()} {}
@@ -31,7 +32,7 @@ struct DeconstructedName {
 
 private:
   llvm::SmallVector<std::string> modules;
-  llvm::Optional<std::string> host;
+  std::optional<std::string> host;
   std::string name;
   llvm::SmallVector<std::int64_t> kinds;
 };

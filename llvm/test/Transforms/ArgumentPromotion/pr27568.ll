@@ -3,7 +3,7 @@
 ; RUN: opt -S -passes=debugify -o /dev/null < %s
 target triple = "x86_64-pc-windows-msvc"
 
-define internal void @callee(i8*) {
+define internal void @callee(ptr) {
 ; CHECK-LABEL: define {{[^@]+}}@callee() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @thunk()
@@ -14,8 +14,8 @@ entry:
   ret void
 }
 
-define void @test1() personality i32 (...)* @__CxxFrameHandler3 {
-; CHECK-LABEL: define {{[^@]+}}@test1() personality i32 (...)* @__CxxFrameHandler3 {
+define void @test1() personality ptr @__CxxFrameHandler3 {
+; CHECK-LABEL: define {{[^@]+}}@test1() personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @thunk()
 ; CHECK-NEXT:    to label [[OUT:%.*]] unwind label [[CPAD:%.*]]
@@ -35,7 +35,7 @@ out:
 
 cpad:
   %pad = cleanuppad within none []
-  call void @callee(i8* null) [ "funclet"(token %pad) ]
+  call void @callee(ptr null) [ "funclet"(token %pad) ]
   cleanupret from %pad unwind to caller
 }
 

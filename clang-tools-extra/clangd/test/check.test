@@ -7,7 +7,7 @@
 // CHECK: Built preamble
 // CHECK: Building AST...
 // CHECK: Testing features at each token
-// CHECK-DAG: tweak: ExpandAuto
+// CHECK-DAG: tweak: ExpandDeducedType
 // CHECK-DAG: hover: true
 // CHECK-DAG: tweak: AddUsing
 // CHECK: All checks completed, 0 errors

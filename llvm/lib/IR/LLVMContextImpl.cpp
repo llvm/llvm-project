@@ -113,6 +113,7 @@ LLVMContextImpl::~LLVMContextImpl() {
 
   CAZConstants.clear();
   CPNConstants.clear();
+  CTNConstants.clear();
   UVConstants.clear();
   PVConstants.clear();
   IntConstants.clear();
@@ -246,10 +247,6 @@ OptPassGate &LLVMContextImpl::getOptPassGate() const {
 
 void LLVMContextImpl::setOptPassGate(OptPassGate& OPG) {
   this->OPG = &OPG;
-}
-
-bool LLVMContextImpl::hasOpaquePointersValue() {
-  return OpaquePointers.has_value();
 }
 
 bool LLVMContextImpl::getOpaquePointers() {

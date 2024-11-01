@@ -23,10 +23,10 @@ define i32 @return_i32_twice(i32 %a) {
   br i1 %b, label %true, label %false
 
 true:
-  store i32 0, i32* null
+  store i32 0, ptr null
   ret i32 1
 
 false:
-  store i32 2, i32* null
+  store i32 2, ptr null
   ret i32 3
 }

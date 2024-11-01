@@ -101,7 +101,7 @@ BinarySizeContextTracker::getFuncSizeForContext(const ContextTrieNode *Node) {
     PrevNode = CurrNode;
     CurrNode = CurrNode->getChildContext(CallSiteLoc, Node->getFuncName());
     if (CurrNode && CurrNode->getFunctionSize())
-      Size = CurrNode->getFunctionSize().value();
+      Size = *CurrNode->getFunctionSize();
     CallSiteLoc = Node->getCallSiteLoc();
     Node = Node->getParentContext();
   }
@@ -115,12 +115,12 @@ BinarySizeContextTracker::getFuncSizeForContext(const ContextTrieNode *Node) {
     while (!Size && CurrNode && !CurrNode->getAllChildContext().empty()) {
       CurrNode = &CurrNode->getAllChildContext().begin()->second;
       if (CurrNode->getFunctionSize())
-        Size = CurrNode->getFunctionSize().value();
+        Size = *CurrNode->getFunctionSize();
     }
   }
 
   assert(Size && "We should at least find one context size.");
-  return Size.value();
+  return *Size;
 }
 
 void BinarySizeContextTracker::trackInlineesOptimizedAway(
@@ -611,9 +611,11 @@ void ProfiledBinary::setUpDisassembler(const ELFObjectFileBase *Obj) {
   if (!AsmInfo)
     exitWithError("no assembly info for target " + TripleName, FileName);
 
-  SubtargetFeatures Features = Obj->getFeatures();
+  Expected<SubtargetFeatures> Features = Obj->getFeatures();
+  if (!Features)
+    exitWithError(Features.takeError(), FileName);
   STI.reset(
-      TheTarget->createMCSubtargetInfo(TripleName, "", Features.getString()));
+      TheTarget->createMCSubtargetInfo(TripleName, "", Features->getString()));
   if (!STI)
     exitWithError("no subtarget info for target " + TripleName, FileName);
 

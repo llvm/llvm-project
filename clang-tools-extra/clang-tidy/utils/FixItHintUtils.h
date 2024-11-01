@@ -12,11 +12,9 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/Sema/DeclSpec.h"
+#include <optional>
 
-namespace clang {
-namespace tidy {
-namespace utils {
-namespace fixit {
+namespace clang::tidy::utils::fixit {
 
 /// Creates fix to make ``VarDecl`` a reference by adding ``&``.
 FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context);
@@ -41,14 +39,11 @@ enum class QualifierTarget {
 
 /// \brief Creates fix to qualify ``VarDecl`` with the specified \c Qualifier.
 /// Requires that `Var` is isolated in written code like in `int foo = 42;`.
-Optional<FixItHint>
+std::optional<FixItHint>
 addQualifierToVarDecl(const VarDecl &Var, const ASTContext &Context,
                       DeclSpec::TQ Qualifier,
                       QualifierTarget CT = QualifierTarget::Pointee,
                       QualifierPolicy CP = QualifierPolicy::Left);
-} // namespace fixit
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils::fixit
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_FIXITHINTUTILS_H

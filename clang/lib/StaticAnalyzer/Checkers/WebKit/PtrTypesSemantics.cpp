@@ -12,9 +12,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
-#include "llvm/ADT/Optional.h"
+#include <optional>
 
-using llvm::Optional;
 using namespace clang;
 
 namespace {
@@ -45,8 +44,9 @@ bool hasPublicRefAndDeref(const CXXRecordDecl *R) {
 
 namespace clang {
 
-llvm::Optional<const clang::CXXRecordDecl *>
-isRefCountable(const CXXBaseSpecifier *Base) {
+std::optional<const clang::CXXRecordDecl*>
+isRefCountable(const CXXBaseSpecifier* Base)
+{
   assert(Base);
 
   const Type *T = Base->getType().getTypePtrOrNull();
@@ -62,7 +62,8 @@ isRefCountable(const CXXBaseSpecifier *Base) {
   return hasPublicRefAndDeref(R) ? R : nullptr;
 }
 
-llvm::Optional<bool> isRefCountable(const CXXRecordDecl *R) {
+std::optional<bool> isRefCountable(const CXXRecordDecl* R)
+{
   assert(R);
 
   R = R->getDefinition();
@@ -77,14 +78,13 @@ llvm::Optional<bool> isRefCountable(const CXXRecordDecl *R) {
 
   bool AnyInconclusiveBase = false;
   const auto isRefCountableBase =
-      [&AnyInconclusiveBase](const CXXBaseSpecifier *Base, CXXBasePath &) {
-        Optional<const clang::CXXRecordDecl *> IsRefCountable =
-            clang::isRefCountable(Base);
-        if (!IsRefCountable) {
-          AnyInconclusiveBase = true;
-          return false;
-        }
-        return (*IsRefCountable) != nullptr;
+      [&AnyInconclusiveBase](const CXXBaseSpecifier* Base, CXXBasePath&) {
+          std::optional<const clang::CXXRecordDecl*> IsRefCountable = clang::isRefCountable(Base);
+          if (!IsRefCountable) {
+              AnyInconclusiveBase = true;
+              return false;
+          }
+          return (*IsRefCountable) != nullptr;
       };
 
   bool BasesResult = R->lookupInBases(isRefCountableBase, Paths,
@@ -112,19 +112,21 @@ bool isCtorOfRefCounted(const clang::FunctionDecl *F) {
          || FunctionName == "Identifier";
 }
 
-llvm::Optional<bool> isUncounted(const CXXRecordDecl *Class) {
+std::optional<bool> isUncounted(const CXXRecordDecl* Class)
+{
   // Keep isRefCounted first as it's cheaper.
   if (isRefCounted(Class))
     return false;
 
-  llvm::Optional<bool> IsRefCountable = isRefCountable(Class);
+  std::optional<bool> IsRefCountable = isRefCountable(Class);
   if (!IsRefCountable)
     return std::nullopt;
 
   return (*IsRefCountable);
 }
 
-llvm::Optional<bool> isUncountedPtr(const Type *T) {
+std::optional<bool> isUncountedPtr(const Type* T)
+{
   assert(T);
 
   if (T->isPointerType() || T->isReferenceType()) {
@@ -135,7 +137,8 @@ llvm::Optional<bool> isUncountedPtr(const Type *T) {
   return false;
 }
 
-Optional<bool> isGetterOfRefCounted(const CXXMethodDecl *M) {
+std::optional<bool> isGetterOfRefCounted(const CXXMethodDecl* M)
+{
   assert(M);
 
   if (isa<CXXMethodDecl>(M)) {

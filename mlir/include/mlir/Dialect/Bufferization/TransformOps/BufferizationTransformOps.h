@@ -12,7 +12,14 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/IR/OpImplementation.h"
+
+namespace mlir {
+namespace tensor {
+class EmptyOp;
+} // namespace tensor
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // Bufferization Transform Operations

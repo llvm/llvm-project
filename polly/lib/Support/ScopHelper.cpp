@@ -21,6 +21,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
+#include <optional>
 
 using namespace llvm;
 using namespace polly;
@@ -699,8 +700,8 @@ static MDNode *findNamedMetadataNode(MDNode *LoopMD, StringRef Name) {
   return nullptr;
 }
 
-static Optional<const MDOperand *> findNamedMetadataArg(MDNode *LoopID,
-                                                        StringRef Name) {
+static std::optional<const MDOperand *> findNamedMetadataArg(MDNode *LoopID,
+                                                             StringRef Name) {
   MDNode *MD = findNamedMetadataNode(LoopID, Name);
   if (!MD)
     return std::nullopt;
@@ -714,8 +715,8 @@ static Optional<const MDOperand *> findNamedMetadataArg(MDNode *LoopID,
   }
 }
 
-Optional<Metadata *> polly::findMetadataOperand(MDNode *LoopMD,
-                                                StringRef Name) {
+std::optional<Metadata *> polly::findMetadataOperand(MDNode *LoopMD,
+                                                     StringRef Name) {
   MDNode *MD = findNamedMetadataNode(LoopMD, Name);
   if (!MD)
     return std::nullopt;
@@ -729,8 +730,8 @@ Optional<Metadata *> polly::findMetadataOperand(MDNode *LoopMD,
   }
 }
 
-static Optional<bool> getOptionalBoolLoopAttribute(MDNode *LoopID,
-                                                   StringRef Name) {
+static std::optional<bool> getOptionalBoolLoopAttribute(MDNode *LoopID,
+                                                        StringRef Name) {
   MDNode *MD = findNamedMetadataNode(LoopID, Name);
   if (!MD)
     return std::nullopt;
@@ -750,8 +751,8 @@ bool polly::getBooleanLoopAttribute(MDNode *LoopID, StringRef Name) {
   return getOptionalBoolLoopAttribute(LoopID, Name).value_or(false);
 }
 
-llvm::Optional<int> polly::getOptionalIntLoopAttribute(MDNode *LoopID,
-                                                       StringRef Name) {
+std::optional<int> polly::getOptionalIntLoopAttribute(MDNode *LoopID,
+                                                      StringRef Name) {
   const MDOperand *AttrMD =
       findNamedMetadataArg(LoopID, Name).value_or(nullptr);
   if (!AttrMD)

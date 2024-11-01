@@ -19,8 +19,8 @@ subroutine trans_test(store, word)
     ! CHECK:         %[[VAL_14:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<i32>>>
     ! CHECK:         %[[VAL_15:.*]] = fir.box_addr %[[VAL_14]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
     ! CHECK:         %[[VAL_16:.*]] = fir.load %[[VAL_15]] : !fir.heap<i32>
-    ! CHECK:         fir.store %[[VAL_16]] to %[[VAL_0]] : !fir.ref<i32>
     ! CHECK:         fir.freemem %[[VAL_15]]
+    ! CHECK:         fir.store %[[VAL_16]] to %[[VAL_0]] : !fir.ref<i32>
     ! CHECK:         return
     ! CHECK:       }
     integer :: store

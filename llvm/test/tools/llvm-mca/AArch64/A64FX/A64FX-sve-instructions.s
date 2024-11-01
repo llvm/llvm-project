@@ -3928,7 +3928,7 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      4     1.00                        mov	z21.s, p15/m, #-32768
 # CHECK-NEXT:  1      4     0.50                        mov	z31.b, p15/m, z31.b
 # CHECK-NEXT:  1      6     1.00                  U     mov	z31.b, p7/m, b31
-# CHECK-NEXT:  1      1     0.17                  U     movprfx	z31, z6
+# CHECK-NEXT:  1      1     0.17                        movprfx	z31, z6
 # CHECK-NEXT:  1      8     1.00                        mov	z31.b, p7/m, wsp
 # CHECK-NEXT:  1      6     1.00                        mov	z31.b, wsp
 # CHECK-NEXT:  1      4     1.00                        mov	z31.b, z31.b[63]

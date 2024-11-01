@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 const unsigned DefaultMinimumVariableNameLength = 3;
 const unsigned DefaultMinimumLoopCounterNameLength = 2;
@@ -151,6 +149,4 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

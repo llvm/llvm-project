@@ -299,6 +299,17 @@ define i1 @nnan_unary_fneg() {
   ret i1 %tmp
 }
 
+define i1 @isNotKnownNeverNaN_fneg(double %x) {
+; CHECK-LABEL: @isNotKnownNeverNaN_fneg(
+; CHECK-NEXT:    [[NEG:%.*]] = fneg double [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord double [[NEG]], [[NEG]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %neg = fneg double %x
+  %cmp = fcmp ord double %neg, %neg
+  ret i1 %cmp
+}
+
 define i1 @sitofp(i32 %arg0) {
 ; CHECK-LABEL: @sitofp(
 ; CHECK-NEXT:    ret i1 false

@@ -3,7 +3,7 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @foo() personality i32* ()* @bar {
+define void @foo() personality ptr @bar {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  bb1:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
@@ -14,7 +14,7 @@ define void @foo() personality i32* ()* @bar {
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ [[TMP5:%.*]], [[BB6:%.*]] ], [ poison, [[BB1:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = invoke i32 poison(i8 addrspace(1)* nonnull poison, i32 0, i32 0, i32 poison) [ "deopt"() ]
+; CHECK-NEXT:    [[TMP2:%.*]] = invoke i32 poison(ptr addrspace(1) nonnull poison, i32 0, i32 0, i32 poison) [ "deopt"() ]
 ; CHECK-NEXT:    to label [[BB4:%.*]] unwind label [[BB10:%.*]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    br i1 poison, label [[BB11:%.*]], label [[BB5:%.*]]
@@ -28,7 +28,7 @@ define void @foo() personality i32* ()* @bar {
 ; CHECK:       bb7:
 ; CHECK-NEXT:    [[LOCAL_5_84111:%.*]] = phi i32 [ poison, [[BB8]] ], [ poison, [[BB5]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[LOCAL_5_84111]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = invoke i32 poison(i8 addrspace(1)* nonnull poison, i32 poison, i32 poison, i32 poison) [ "deopt"() ]
+; CHECK-NEXT:    [[TMP7:%.*]] = invoke i32 poison(ptr addrspace(1) nonnull poison, i32 poison, i32 poison, i32 poison) [ "deopt"() ]
 ; CHECK-NEXT:    to label [[BB8]] unwind label [[BB12:%.*]]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    br i1 poison, label [[BB7]], label [[BB6]]
@@ -40,7 +40,7 @@ define void @foo() personality i32* ()* @bar {
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i32> [ [[TMP1]], [[BB3]] ]
-; CHECK-NEXT:    [[LANDING_PAD68:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[LANDING_PAD68:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    [[SHUFFLE1]] = shufflevector <2 x i32> [[TMP10]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    br label [[BB9]]
@@ -48,7 +48,7 @@ define void @foo() personality i32* ()* @bar {
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb12:
 ; CHECK-NEXT:    [[TMP11]] = phi <2 x i32> [ [[TMP6]], [[BB7]] ]
-; CHECK-NEXT:    [[LANDING_PAD149:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[LANDING_PAD149:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    br label [[BB9]]
 ;
@@ -68,7 +68,7 @@ bb2:
 bb3:
   %local_10_38123 = phi i32 [ %.lcssa773, %bb6 ], [ poison, %bb1 ]
   %local_5_33118 = phi i32 [ poison, %bb6 ], [ poison, %bb1 ]
-  %0 = invoke i32 poison(i8 addrspace(1)* nonnull poison, i32 0, i32 0, i32 poison) [ "deopt"() ]
+  %0 = invoke i32 poison(ptr addrspace(1) nonnull poison, i32 0, i32 0, i32 poison) [ "deopt"() ]
   to label %bb4 unwind label %bb10
 
 bb4:
@@ -84,7 +84,7 @@ bb6:
 
 bb7:
   %local_5_84111 = phi i32 [ poison, %bb8 ], [ poison, %bb5 ]
-  %1 = invoke i32 poison(i8 addrspace(1)* nonnull poison, i32 poison, i32 poison, i32 poison) [ "deopt"() ]
+  %1 = invoke i32 poison(ptr addrspace(1) nonnull poison, i32 poison, i32 poison, i32 poison) [ "deopt"() ]
   to label %bb8 unwind label %bb12
 
 bb8:
@@ -99,7 +99,7 @@ bb9:
 bb10:
   %local_10_38123.lcssa = phi i32 [ %local_10_38123, %bb3 ]
   %local_5_33118.lcssa = phi i32 [ %local_5_33118, %bb3 ]
-  %landing_pad68 = landingpad { i8*, i32 }
+  %landing_pad68 = landingpad { ptr, i32 }
   cleanup
   br label %bb9
 
@@ -109,11 +109,11 @@ bb11:
 bb12:
   %local_10_89113.lcssa = phi i32 [ poison, %bb7 ]
   %local_5_84111.lcssa = phi i32 [ %local_5_84111, %bb7 ]
-  %landing_pad149 = landingpad { i8*, i32 }
+  %landing_pad149 = landingpad { ptr, i32 }
   cleanup
   br label %bb9
 }
 
-declare i32* @bar()
+declare ptr @bar()
 
 

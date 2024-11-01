@@ -8,9 +8,9 @@
 
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/IRMapping.h"
 
 #include "mlir/Dialect/Utils/DialectUtilsEnums.cpp.inc"
 
@@ -97,7 +97,7 @@ bool mlir::isRowMajorBatchMatmul(ArrayAttr indexingMaps) {
 
 Operation *mlir::clone(OpBuilder &b, Operation *op, TypeRange newResultTypes,
                        ValueRange newOperands) {
-  BlockAndValueMapping bvm;
+  IRMapping bvm;
   OperationState state(op->getLoc(), op->getName(), newOperands, newResultTypes,
                        op->getAttrs());
   for (Region &r : op->getRegions())

@@ -23,11 +23,12 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 namespace mlir {
 #define GEN_PASS_DEF_AFFINEVECTORIZE
@@ -581,7 +582,7 @@ isVectorizableLoopPtrFactory(const DenseSet<Operation *> &parallelLoops,
 /// Up to 3-D patterns are supported.
 /// If the command line argument requests a pattern of higher order, returns an
 /// empty pattern list which will conservatively result in no vectorization.
-static Optional<NestedPattern>
+static std::optional<NestedPattern>
 makePattern(const DenseSet<Operation *> &parallelLoops, int vectorRank,
             ArrayRef<int64_t> fastestVaryingPattern) {
   using matcher::For;
@@ -747,10 +748,10 @@ struct VectorizationState {
   // Maps input scalar operations to their vector counterparts.
   DenseMap<Operation *, Operation *> opVectorReplacement;
   // Maps input scalar values to their vector counterparts.
-  BlockAndValueMapping valueVectorReplacement;
+  IRMapping valueVectorReplacement;
   // Maps input scalar values to their new scalar counterparts in the vector
   // loop nest.
-  BlockAndValueMapping valueScalarReplacement;
+  IRMapping valueScalarReplacement;
   // Maps results of reduction loops to their new scalar counterparts.
   DenseMap<Value, Value> loopResultScalarReplacement;
 
@@ -1665,7 +1666,7 @@ static void vectorizeLoops(Operation *parentOp, DenseSet<Operation *> &loops,
          "Vectorizing reductions is supported only for 1-D vectors");
 
   // Compute 1-D, 2-D or 3-D loop pattern to be matched on the target loops.
-  Optional<NestedPattern> pattern =
+  std::optional<NestedPattern> pattern =
       makePattern(loops, vectorSizes.size(), fastestVaryingPattern);
   if (!pattern) {
     LLVM_DEBUG(dbgs() << "\n[early-vect] pattern couldn't be computed\n");

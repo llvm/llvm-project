@@ -677,9 +677,7 @@ void AArch64MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     return;
   }
 
-  if (MI.getOpcode() == AArch64::CompilerBarrier ||
-      MI.getOpcode() == AArch64::SPACE) {
-    // CompilerBarrier just prevents the compiler from reordering accesses, and
+  if (MI.getOpcode() == AArch64::SPACE) {
     // SPACE just increases basic block size, in both cases no actual code.
     return;
   }

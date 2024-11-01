@@ -248,6 +248,11 @@ public:
     Indirect = MI.isDebugOffsetImm();
   }
 
+  bool isJoinable(const DbgValueProperties &Other) const {
+    return DIExpression::isEqualExpression(DIExpr, Indirect, Other.DIExpr,
+                                           Other.Indirect);
+  }
+
   bool operator==(const DbgValueProperties &Other) const {
     return std::tie(DIExpr, Indirect, IsVariadic) ==
            std::tie(Other.DIExpr, Other.Indirect, Other.IsVariadic);
@@ -979,7 +984,7 @@ public:
 
   void defVar(const MachineInstr &MI, const DbgValueProperties &Properties,
               const SmallVectorImpl<DbgOpID> &DebugOps) {
-    assert(MI.isDebugValue() || MI.isDebugRef());
+    assert(MI.isDebugValueLike());
     DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
                       MI.getDebugLoc()->getInlinedAt());
     DbgValue Rec = (DebugOps.size() > 0)
@@ -1151,7 +1156,8 @@ private:
   /// DBG_INSTR_REFs that call resolveDbgPHIs. These variable references solve
   /// a mini SSA problem caused by DBG_PHIs being cloned, this collection caches
   /// the result.
-  DenseMap<MachineInstr *, std::optional<ValueIDNum>> SeenDbgPHIs;
+  DenseMap<std::pair<MachineInstr *, unsigned>, std::optional<ValueIDNum>>
+      SeenDbgPHIs;
 
   DbgOpIDMap DbgOpStore;
 
@@ -1188,6 +1194,14 @@ private:
   /// tracked, and return the spill number.
   std::optional<SpillLocationNo>
   extractSpillBaseRegAndOffset(const MachineInstr &MI);
+
+  /// For an instruction reference given by \p InstNo and \p OpNo in instruction
+  /// \p MI returns the Value pointed to by that instruction reference if any
+  /// exists, otherwise returns None.
+  std::optional<ValueIDNum> getValueForInstrRef(unsigned InstNo, unsigned OpNo,
+                                                MachineInstr &MI,
+                                                const ValueTable *MLiveOuts,
+                                                const ValueTable *MLiveIns);
 
   /// Observe a single instruction while stepping through a block.
   void process(MachineInstr &MI, const ValueTable *MLiveOuts,

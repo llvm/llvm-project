@@ -12,8 +12,8 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AsmState.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
@@ -40,6 +40,39 @@ MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::bufferization::AnalysisState)
 
 using namespace mlir;
 using namespace bufferization;
+
+Region *bufferization::getEnclosingRepetitiveRegion(
+    Operation *op, const BufferizationOptions &options) {
+  if (!op->getBlock())
+    return nullptr;
+  return getEnclosingRepetitiveRegion(op->getBlock(), options);
+}
+
+Region *bufferization::getEnclosingRepetitiveRegion(
+    Value value, const BufferizationOptions &options) {
+  Region *region = value.getParentRegion();
+  while (region) {
+    Operation *op = region->getParentOp();
+    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
+      if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
+        return region;
+    region = op->getParentRegion();
+  }
+  return nullptr;
+}
+
+Region *bufferization::getEnclosingRepetitiveRegion(
+    Block *block, const BufferizationOptions &options) {
+  Region *region = block->getParent();
+  Operation *op = nullptr;
+  do {
+    op = region->getParentOp();
+    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
+      if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
+        return region;
+  } while ((region = op->getParentRegion()));
+  return nullptr;
+}
 
 Operation *bufferization::getOwnerOfValue(Value value) {
   if (auto opResult = value.dyn_cast<OpResult>())
@@ -201,8 +234,13 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
         opResult.getUses(), [](OpOperand &use) { return &use; }));
     for (OpOperand *use : uses) {
       // Do not update the alloc_tensor op that we just created.
-      if (use->getOwner() != copy->getDefiningOp())
-        rewriter.updateRootInPlace(use->getOwner(), [&]() { use->set(*copy); });
+      if (use->getOwner() == copy->getDefiningOp())
+        continue;
+      // tensor.dim ops may have been created to be used as alloc_tensor op
+      // dynamic extents. Do not update these either.
+      if (isa<tensor::DimOp>(use->getOwner()))
+        continue;
+      rewriter.updateRootInPlace(use->getOwner(), [&]() { use->set(*copy); });
     }
   }
 
@@ -718,7 +756,7 @@ LogicalResult BufferizationOptions::createMemCpy(OpBuilder &b, Location loc,
 }
 
 //===----------------------------------------------------------------------===//
-// Bufferization-specific BlockAndValueMapping support with debugging.
+// Bufferization-specific IRMapping support with debugging.
 //===----------------------------------------------------------------------===//
 
 bool bufferization::isFunctionArgument(Value value) {

@@ -23,22 +23,22 @@
 ; GCN-COUNT-32: v_cndmask_b32
 
 ; GCN-COUNT-4: buffer_store_dwordx4
-define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(<16 x i32> addrspace(1)* %out0, <16 x i32> addrspace(1)* %out1, i32 addrspace(1)* %in, <16 x i32> %vec0) #0 {
+define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %in, <16 x i32> %vec0) #0 {
 entry:
   %id = call i32 @llvm.amdgcn.workitem.id.x() #1
   %id.ext = zext i32 %id to i64
-  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %id.ext
-  %idx0 = load volatile i32, i32 addrspace(1)* %gep
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %id.ext
+  %idx0 = load volatile i32, ptr addrspace(1) %gep
   %idx1 = add i32 %idx0, 1
   %live.out.val = call i32 asm sideeffect "v_mov_b32 $0, 62", "=v"()
   %vec1 = insertelement <16 x i32> %vec0, i32 %live.out.val, i32 %idx0
   %vec2 = insertelement <16 x i32> %vec1, i32 63, i32 %idx1
-  store volatile <16 x i32> %vec2, <16 x i32> addrspace(1)* %out0
+  store volatile <16 x i32> %vec2, ptr addrspace(1) %out0
   %cmp = icmp eq i32 %id, 0
   br i1 %cmp, label %bb1, label %bb2
 
 bb1:
-  store volatile i32 %live.out.val, i32 addrspace(1)* undef
+  store volatile i32 %live.out.val, ptr addrspace(1) undef
   br label %bb2
 
 bb2:

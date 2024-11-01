@@ -93,6 +93,10 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1034 < %s | FileCheck --check-prefixes=V3-GFX1034 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1035 < %s | FileCheck --check-prefixes=V3-GFX1035 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1036 < %s | FileCheck --check-prefixes=V3-GFX1036 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1100 < %s | FileCheck --check-prefixes=V3-GFX1100 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1101 < %s | FileCheck --check-prefixes=V3-GFX1101 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1102 < %s | FileCheck --check-prefixes=V3-GFX1102 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1103 < %s | FileCheck --check-prefixes=V3-GFX1103 %s
 
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx600 < %s | FileCheck --check-prefixes=GFX600 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tahiti < %s | FileCheck --check-prefixes=GFX600 %s
@@ -189,6 +193,10 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1034 < %s | FileCheck --check-prefixes=GFX1034 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1035 < %s | FileCheck --check-prefixes=GFX1035 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1036 < %s | FileCheck --check-prefixes=GFX1036 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GFX1100 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1101 < %s | FileCheck --check-prefixes=GFX1101 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1102 < %s | FileCheck --check-prefixes=GFX1102 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1103 < %s | FileCheck --check-prefixes=GFX1103 %s
 
 ; V3-GFX600: .amdgcn_target "amdgcn-amd-amdhsa--gfx600"
 ; V3-GFX601: .amdgcn_target "amdgcn-amd-amdhsa--gfx601"
@@ -241,6 +249,10 @@
 ; V3-GFX1034: .amdgcn_target "amdgcn-amd-amdhsa--gfx1034"
 ; V3-GFX1035: .amdgcn_target "amdgcn-amd-amdhsa--gfx1035"
 ; V3-GFX1036: .amdgcn_target "amdgcn-amd-amdhsa--gfx1036"
+; V3-GFX1100: .amdgcn_target "amdgcn-amd-amdhsa--gfx1100"
+; V3-GFX1101: .amdgcn_target "amdgcn-amd-amdhsa--gfx1101"
+; V3-GFX1102: .amdgcn_target "amdgcn-amd-amdhsa--gfx1102"
+; V3-GFX1103: .amdgcn_target "amdgcn-amd-amdhsa--gfx1103"
 
 ; GFX600: .amdgcn_target "amdgcn-amd-amdhsa--gfx600"
 ; GFX601: .amdgcn_target "amdgcn-amd-amdhsa--gfx601"
@@ -315,6 +327,10 @@
 ; GFX1034: .amdgcn_target "amdgcn-amd-amdhsa--gfx1034"
 ; GFX1035: .amdgcn_target "amdgcn-amd-amdhsa--gfx1035"
 ; GFX1036: .amdgcn_target "amdgcn-amd-amdhsa--gfx1036"
+; GFX1100: .amdgcn_target "amdgcn-amd-amdhsa--gfx1100"
+; GFX1101: .amdgcn_target "amdgcn-amd-amdhsa--gfx1101"
+; GFX1102: .amdgcn_target "amdgcn-amd-amdhsa--gfx1102"
+; GFX1103: .amdgcn_target "amdgcn-amd-amdhsa--gfx1103"
 
 define amdgpu_kernel void @directive_amdgcn_target() {
   ret void

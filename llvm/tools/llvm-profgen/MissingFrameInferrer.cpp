@@ -269,7 +269,7 @@ bool MissingFrameInferrer::inferMissingFrames(
     assert(UniquePath.back() == From && "broken path");
   }
 
-#ifndef NDEBUG
+#if LLVM_ENABLE_STATS
   if (NumPaths == 1) {
     if (ReachableViaUniquePaths.insert({From, ToFRange->StartAddress}).second)
       TailCallUniReachable++;

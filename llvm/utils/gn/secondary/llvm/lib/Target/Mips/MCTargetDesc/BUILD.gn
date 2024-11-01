@@ -54,6 +54,7 @@ static_library("MCTargetDesc") {
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target/Mips/TargetInfo",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [ ".." ]
   sources = [

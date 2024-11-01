@@ -12,15 +12,15 @@ target triple = "hexagon"
 define i32 @f0() #0 {
 b0:
   %v0 = alloca i32, align 4
-  store i32 0, i32* %v0
+  store i32 0, ptr %v0
   %v1 = call i32 @f1(i8 zeroext 0)
-  call void bitcast (void (...)* @f2 to void ()*)()
+  call void @f2()
   %v2 = call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1)
   %v3 = call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 2)
   %v4 = call <64 x i32> @llvm.hexagon.V6.vaddubh.128B(<32 x i32> %v2, <32 x i32> %v3)
   %v5 = call <64 x i32> @llvm.hexagon.V6.vtmpyhb.128B(<64 x i32> %v4, i32 12)
-  store <64 x i32> %v5, <64 x i32>* @g0, align 256
-  call void @f3(i32 2048, i8* bitcast (<64 x i32>* @g0 to i8*))
+  store <64 x i32> %v5, ptr @g0, align 256
+  call void @f3(i32 2048, ptr @g0)
   ret i32 0
 }
 
@@ -37,7 +37,7 @@ declare <64 x i32> @llvm.hexagon.V6.vaddubh.128B(<32 x i32>, <32 x i32>) #1
 ; Function Attrs: nounwind readnone
 declare <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32) #1
 
-declare void @f3(i32, i8*) #0
+declare void @f3(i32, ptr) #0
 
 attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length128b" }
 attributes #1 = { nounwind readnone }

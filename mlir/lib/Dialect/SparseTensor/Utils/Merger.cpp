@@ -14,6 +14,7 @@
 
 #include "mlir/IR/Operation.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 namespace mlir {
 namespace sparse_tensor {
@@ -204,6 +205,16 @@ LatPoint::LatPoint(unsigned n, unsigned e, unsigned b)
 }
 
 LatPoint::LatPoint(const BitVector &b, unsigned e) : bits(b), exp(e) {}
+
+Merger::Merger(unsigned t, unsigned l, unsigned fl)
+    : outTensor(t - 1), syntheticTensor(t), numTensors(t + 1),
+      numNativeLoops(l), numLoops(l + fl), hasSparseOut(false),
+      dimTypes(numTensors,
+               std::vector<DimLevelType>(numLoops, DimLevelType::Undef)),
+      loopIdxToDim(numTensors, std::vector<std::optional<unsigned>>(
+                                   numLoops, std::nullopt)),
+      dimToLoopIdx(numTensors, std::vector<std::optional<unsigned>>(
+                                   numLoops, std::nullopt)) {}
 
 //===----------------------------------------------------------------------===//
 // Lattice methods.
@@ -740,17 +751,7 @@ void Merger::dumpBits(const BitVector &bits) const {
       unsigned t = tensor(b);
       unsigned i = index(b);
       DimLevelType dlt = dimTypes[t][i];
-      llvm::dbgs() << " i_" << t << "_" << i << "_";
-      if (isDenseDLT(dlt))
-        llvm::dbgs() << "D";
-      else if (isCompressedDLT(dlt))
-        llvm::dbgs() << "C";
-      else if (isSingletonDLT(dlt))
-        llvm::dbgs() << "S";
-      else if (isUndefDLT(dlt))
-        llvm::dbgs() << "U";
-      llvm::dbgs() << "[O=" << isOrderedDLT(dlt) << ",U=" << isUniqueDLT(dlt)
-                   << "]";
+      llvm::dbgs() << " i_" << t << "_" << i << "_" << toMLIRString(dlt);
     }
   }
 }
@@ -957,7 +958,7 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
   llvm_unreachable("unexpected expression kind");
 }
 
-Optional<unsigned> Merger::buildTensorExpFromLinalg(linalg::GenericOp op) {
+std::optional<unsigned> Merger::buildTensorExpFromLinalg(linalg::GenericOp op) {
   // Build the linalg semantics backward from yield.
   Operation *yield = op.getRegion().front().getTerminator();
   assert(isa<linalg::YieldOp>(yield));
@@ -1024,7 +1025,7 @@ static bool isAdmissibleBranch(Operation *op, Region &region) {
   return isAdmissibleBranchExp(op, &region.front(), yield->getOperand(0));
 }
 
-Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
+std::optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
   if (auto arg = v.dyn_cast<BlockArgument>()) {
     unsigned argN = arg.getArgNumber();
     // Any argument of the generic op that is not marked as a scalar
@@ -1053,7 +1054,7 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
   if (def->getNumOperands() == 1) {
     auto x = buildTensorExp(op, def->getOperand(0));
     if (x.has_value()) {
-      unsigned e = x.value();
+      unsigned e = *x;
       if (isa<math::AbsFOp>(def))
         return addExp(kAbsF, e);
       if (isa<complex::AbsOp>(def))
@@ -1132,8 +1133,8 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
     auto x = buildTensorExp(op, def->getOperand(0));
     auto y = buildTensorExp(op, def->getOperand(1));
     if (x.has_value() && y.has_value()) {
-      unsigned e0 = x.value();
-      unsigned e1 = y.value();
+      unsigned e0 = *x;
+      unsigned e1 = *y;
       if (isa<arith::MulFOp>(def))
         return addExp(kMulF, e0, e1);
       if (isa<complex::MulOp>(def))
@@ -1188,8 +1189,8 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
     auto y = buildTensorExp(op, def->getOperand(1));
     auto z = buildTensorExp(op, def->getOperand(2));
     if (x.has_value() && y.has_value() && z.has_value()) {
-      unsigned e0 = x.value();
-      unsigned e1 = y.value();
+      unsigned e0 = *x;
+      unsigned e1 = *y;
       if (auto redop = dyn_cast<sparse_tensor::ReduceOp>(def)) {
         if (isAdmissibleBranch(redop, redop.getRegion()))
           return addExp(kReduce, e0, e1, Value(), def);
@@ -1204,7 +1205,7 @@ static Value insertYieldOp(RewriterBase &rewriter, Location loc, Region &region,
                            ValueRange vals) {
   // Make a clone of overlap region.
   Region tmpRegion;
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   region.cloneInto(&tmpRegion, tmpRegion.begin(), mapper);
   Block &clonedBlock = tmpRegion.front();
   YieldOp clonedYield = cast<YieldOp>(clonedBlock.getTerminator());

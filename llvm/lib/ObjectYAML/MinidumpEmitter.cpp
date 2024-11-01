@@ -60,7 +60,7 @@ public:
   allocateNewArray(const iterator_range<RangeType> &Range);
 
   template <typename T> size_t allocateObject(const T &Data) {
-    return allocateArray(makeArrayRef(Data));
+    return allocateArray(ArrayRef(Data));
   }
 
   template <typename T, typename... Types>
@@ -184,7 +184,7 @@ static Directory layout(BlobAllocator &File, Stream &S) {
     File.allocateNewObject<minidump::MemoryInfoListHeader>(
         sizeof(minidump::MemoryInfoListHeader), sizeof(minidump::MemoryInfo),
         InfoList.Infos.size());
-    File.allocateArray(makeArrayRef(InfoList.Infos));
+    File.allocateArray(ArrayRef(InfoList.Infos));
     break;
   }
   case Stream::StreamKind::MemoryList:
@@ -233,8 +233,7 @@ bool yaml2minidump(MinidumpYAML::Object &Obj, raw_ostream &Out,
   File.allocateObject(Obj.Header);
 
   std::vector<Directory> StreamDirectory(Obj.Streams.size());
-  Obj.Header.StreamDirectoryRVA =
-      File.allocateArray(makeArrayRef(StreamDirectory));
+  Obj.Header.StreamDirectoryRVA = File.allocateArray(ArrayRef(StreamDirectory));
   Obj.Header.NumberOfStreams = StreamDirectory.size();
 
   for (auto &Stream : enumerate(Obj.Streams))

@@ -25,6 +25,10 @@
 #define LLVM_LIBC_FUNCTION_ATTR
 #endif
 
+#ifndef LIBC_INLINE
+#define LIBC_INLINE inline
+#endif
+
 // We use OpenMP to declare these functions on the device.
 #define STR(X) #X
 #define LLVM_LIBC_DECLARE_DEVICE(name)                                         \

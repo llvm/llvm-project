@@ -61,7 +61,7 @@ Register VirtRegAuxInfo::copyHint(const MachineInstr *MI, unsigned Reg,
   if (!HReg)
     return 0;
 
-  if (Register::isVirtualRegister(HReg))
+  if (HReg.isVirtual())
     return Sub == HSub ? HReg : Register();
 
   const TargetRegisterClass *RC = MRI.getRegClass(Reg);
@@ -107,7 +107,7 @@ bool VirtRegAuxInfo::isRematerializable(const LiveInterval &LI,
 
       // If the original (pre-splitting) registers match this
       // copy came from a split.
-      if (!Register::isVirtualRegister(Reg) || VRM.getOriginal(Reg) != Original)
+      if (!Reg.isVirtual() || VRM.getOriginal(Reg) != Original)
         return false;
 
       // Follow the copy live-in value.

@@ -18,24 +18,24 @@
 
 namespace __llvm_libc {
 
-[[maybe_unused]] static inline void
+[[maybe_unused]] LIBC_INLINE void
 inline_memmove_embedded_tiny(Ptr dst, CPtr src, size_t count) {
   if ((count == 0) || (dst == src))
     return;
   if (dst < src) {
-#pragma nounroll
+    LLVM_LIBC_LOOP_NOUNROLL
     for (size_t offset = 0; offset < count; ++offset)
       builtin::Memcpy<1>::block(dst + offset, src + offset);
   } else {
-#pragma nounroll
+    LLVM_LIBC_LOOP_NOUNROLL
     for (ptrdiff_t offset = count - 1; offset >= 0; --offset)
       builtin::Memcpy<1>::block(dst + offset, src + offset);
   }
 }
 
 template <size_t MaxSize>
-[[maybe_unused]] static inline void inline_memmove_generic(Ptr dst, CPtr src,
-                                                           size_t count) {
+[[maybe_unused]] LIBC_INLINE void inline_memmove_generic(Ptr dst, CPtr src,
+                                                         size_t count) {
   if (count == 0)
     return;
   if (count == 1)
@@ -65,7 +65,7 @@ template <size_t MaxSize>
   }
 }
 
-static inline void inline_memmove(Ptr dst, CPtr src, size_t count) {
+LIBC_INLINE void inline_memmove(Ptr dst, CPtr src, size_t count) {
 #if defined(LLVM_LIBC_ARCH_X86) || defined(LLVM_LIBC_ARCH_AARCH64)
 #if defined(LLVM_LIBC_ARCH_X86)
   static constexpr size_t kMaxSize = x86::kAvx512F ? 64
@@ -110,7 +110,7 @@ static inline void inline_memmove(Ptr dst, CPtr src, size_t count) {
 #endif
 }
 
-static inline void inline_memmove(void *dst, const void *src, size_t count) {
+LIBC_INLINE void inline_memmove(void *dst, const void *src, size_t count) {
   inline_memmove(reinterpret_cast<Ptr>(dst), reinterpret_cast<CPtr>(src),
                  count);
 }

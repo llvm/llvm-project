@@ -19,7 +19,6 @@
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -27,6 +26,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-isel"
+#define PASS_NAME "RISCV DAG->DAG Pattern Instruction Selection"
 
 namespace llvm::RISCV {
 #define GET_RISCVVSSEGTable_IMPL
@@ -727,7 +727,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // 32 leading zeros and C3 trailing zeros.
     if (ShAmt <= 32 && isShiftedMask_64(Mask)) {
       unsigned XLen = Subtarget->getXLen();
-      unsigned LeadingZeros = XLen - (64 - countLeadingZeros(Mask));
+      unsigned LeadingZeros = XLen - llvm::bit_width(Mask);
       unsigned TrailingZeros = countTrailingZeros(Mask);
       if (TrailingZeros > 0 && LeadingZeros == 32) {
         SDNode *SRLIW = CurDAG->getMachineNode(
@@ -756,7 +756,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // 32 leading zeros and C3 trailing zeros.
     if (isShiftedMask_64(Mask) && N0.hasOneUse()) {
       unsigned XLen = Subtarget->getXLen();
-      unsigned LeadingZeros = XLen - (64 - countLeadingZeros(Mask));
+      unsigned LeadingZeros = XLen - llvm::bit_width(Mask);
       unsigned TrailingZeros = countTrailingZeros(Mask);
       if (LeadingZeros == 32 && TrailingZeros > ShAmt) {
         SDNode *SRLIW = CurDAG->getMachineNode(
@@ -892,7 +892,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       // Turn (and (srl x, c2) c1) -> (srli (slli x, c3-c2), c3) if c1 is a mask
       // with c3 leading zeros.
       if (!LeftShift && isMask_64(C1)) {
-        unsigned Leading = XLen - (64 - countLeadingZeros(C1));
+        unsigned Leading = XLen - llvm::bit_width(C1);
         if (C2 < Leading) {
           // If the number of leading zeros is C2+32 this can be SRLIW.
           if (C2 + 32 == Leading) {
@@ -943,7 +943,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       // Turn (and (shl x, c2), c1) -> (srli (slli c2+c3), c3) if c1 is a mask
       // shifted by c2 bits with c3 leading zeros.
       if (LeftShift && isShiftedMask_64(C1)) {
-        unsigned Leading = XLen - (64 - countLeadingZeros(C1));
+        unsigned Leading = XLen - llvm::bit_width(C1);
 
         if (C2 + Leading < XLen &&
             C1 == (maskTrailingOnes<uint64_t>(XLen - (C2 + Leading)) << C2)) {
@@ -973,7 +973,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       // Turn (and (shr x, c2), c1) -> (slli (srli x, c2+c3), c3) if c1 is a
       // shifted mask with c2 leading zeros and c3 trailing zeros.
       if (!LeftShift && isShiftedMask_64(C1)) {
-        unsigned Leading = XLen - (64 - countLeadingZeros(C1));
+        unsigned Leading = XLen - llvm::bit_width(C1);
         unsigned Trailing = countTrailingZeros(C1);
         if (Leading == C2 && C2 + Trailing < XLen && OneUseOrZExtW &&
             !IsCANDI) {
@@ -1011,7 +1011,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       // Turn (and (shl x, c2), c1) -> (slli (srli x, c3-c2), c3) if c1 is a
       // shifted mask with no leading zeros and c3 trailing zeros.
       if (LeftShift && isShiftedMask_64(C1)) {
-        unsigned Leading = XLen - (64 - countLeadingZeros(C1));
+        unsigned Leading = XLen - llvm::bit_width(C1);
         unsigned Trailing = countTrailingZeros(C1);
         if (Leading == 0 && C2 < Trailing && OneUseOrZExtW && !IsCANDI) {
           SDNode *SRLI = CurDAG->getMachineNode(
@@ -1081,13 +1081,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     // How far left do we need to shift the AND input?
     unsigned XLen = Subtarget->getXLen();
-    unsigned LeadingZeros = XLen - (64 - countLeadingZeros(C2));
+    unsigned LeadingZeros = XLen - llvm::bit_width(C2);
 
     // The constant gets shifted by the remaining amount unless that would
     // shift bits out.
     uint64_t C1 = N1C->getZExtValue();
     unsigned ConstantShift = XLen - LeadingZeros;
-    if (ConstantShift > (XLen - (64 - countLeadingZeros(C1))))
+    if (ConstantShift > (XLen - llvm::bit_width(C1)))
       break;
 
     uint64_t ShiftedC1 = C1 << ConstantShift;
@@ -2089,8 +2089,17 @@ bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
     }
   }
 
-  if (ShAmt.getOpcode() == ISD::SUB &&
-      isa<ConstantSDNode>(ShAmt.getOperand(0))) {
+  if (ShAmt.getOpcode() == ISD::ADD &&
+      isa<ConstantSDNode>(ShAmt.getOperand(1))) {
+    uint64_t Imm = ShAmt.getConstantOperandVal(1);
+    // If we are shifting by X+N where N == 0 mod Size, then just shift by X
+    // to avoid the ADD.
+    if (Imm != 0 && Imm % ShiftWidth == 0) {
+      ShAmt = ShAmt.getOperand(0);
+      return true;
+    }
+  } else if (ShAmt.getOpcode() == ISD::SUB &&
+             isa<ConstantSDNode>(ShAmt.getOperand(0))) {
     uint64_t Imm = ShAmt.getConstantOperandVal(0);
     // If we are shifting by N-X where N == 0 mod Size, then just shift by -X to
     // generate a NEG instead of a SUB of a constant.
@@ -2102,6 +2111,17 @@ bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
       MachineSDNode *Neg = CurDAG->getMachineNode(NegOpc, DL, VT, Zero,
                                                   ShAmt.getOperand(1));
       ShAmt = SDValue(Neg, 0);
+      return true;
+    }
+    // If we are shifting by N-X where N == -1 mod Size, then just shift by ~X
+    // to generate a NOT instead of a SUB of a constant.
+    if (Imm % ShiftWidth == ShiftWidth - 1) {
+      SDLoc DL(ShAmt);
+      EVT VT = ShAmt.getValueType();
+      MachineSDNode *Not =
+          CurDAG->getMachineNode(RISCV::XORI, DL, VT, ShAmt.getOperand(1),
+                                 CurDAG->getTargetConstant(-1, DL, VT));
+      ShAmt = SDValue(Not, 0);
       return true;
     }
   }
@@ -2166,7 +2186,7 @@ bool RISCVDAGToDAGISel::selectSHXADDOp(SDValue N, unsigned ShAmt,
       // leading zeros and c3 trailing zeros. We can use an SRLI by c2+c3
       // followed by a SHXADD with c3 for the X amount.
       if (isShiftedMask_64(Mask)) {
-        unsigned Leading = XLen - (64 - countLeadingZeros(Mask));
+        unsigned Leading = XLen - llvm::bit_width(Mask);
         unsigned Trailing = countTrailingZeros(Mask);
         if (LeftShift && Leading == 0 && C2 < Trailing && Trailing == ShAmt) {
           SDLoc DL(N);
@@ -2204,7 +2224,7 @@ bool RISCVDAGToDAGISel::selectSHXADDOp(SDValue N, unsigned ShAmt,
       if (isShiftedMask_64(Mask)) {
         unsigned C1 = N.getConstantOperandVal(1);
         unsigned XLen = Subtarget->getXLen();
-        unsigned Leading = XLen - (64 - countLeadingZeros(Mask));
+        unsigned Leading = XLen - llvm::bit_width(Mask);
         unsigned Trailing = countTrailingZeros(Mask);
         // Look for (shl (and X, Mask), C1) where Mask has 32 leading zeros and
         // C3 trailing zeros. If C1+C3==ShAmt we can use SRLIW+SHXADD.
@@ -2355,25 +2375,38 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
         return false;
       break;
     case RISCV::ANDI:
-      if (Bits >= (64 - countLeadingZeros(User->getConstantOperandVal(1))))
+      if (Bits >= (unsigned)llvm::bit_width(User->getConstantOperandVal(1)))
         break;
       goto RecCheck;
     case RISCV::ORI: {
       uint64_t Imm = cast<ConstantSDNode>(User->getOperand(1))->getSExtValue();
-      if (Bits >= (64 - countLeadingOnes(Imm)))
+      if (Bits >= (unsigned)llvm::bit_width<uint64_t>(~Imm))
         break;
       [[fallthrough]];
     }
     case RISCV::AND:
     case RISCV::OR:
     case RISCV::XOR:
+    case RISCV::XORI:
     case RISCV::ANDN:
     case RISCV::ORN:
     case RISCV::XNOR:
+    case RISCV::SH1ADD:
+    case RISCV::SH2ADD:
+    case RISCV::SH3ADD:
     RecCheck:
-      if (!hasAllNBitUsers(User, Bits, Depth + 1))
-        return false;
-      break;
+      if (hasAllNBitUsers(User, Bits, Depth + 1))
+        break;
+      return false;
+    case RISCV::SRLI: {
+      unsigned ShAmt = User->getConstantOperandVal(1);
+      // If we are shifting right by less than Bits, and users don't demand any
+      // bits that were shifted into [Bits-1:0], then we can consider this as an
+      // N-Bit user.
+      if (Bits > ShAmt && hasAllNBitUsers(User, Bits - ShAmt, Depth + 1))
+        break;
+      return false;
+    }
     case RISCV::SEXT_B:
     case RISCV::PACKH:
       if (Bits < 8)
@@ -2909,3 +2942,5 @@ FunctionPass *llvm::createRISCVISelDag(RISCVTargetMachine &TM,
 }
 
 char RISCVDAGToDAGISel::ID = 0;
+
+INITIALIZE_PASS(RISCVDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)

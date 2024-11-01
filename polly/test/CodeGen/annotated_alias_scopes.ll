@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s --check-prefix=SCOPES
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen -S < %s | FileCheck %s --check-prefix=SCOPES
 ;
 ; Check that we create alias scopes that indicate the accesses to A, B and C cannot alias in any way.
 ;

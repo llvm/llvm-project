@@ -21,9 +21,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 NarrowingConversionsCheck::NarrowingConversionsCheck(StringRef Name,
                                                      ClangTidyContext *Context)
@@ -594,6 +592,4 @@ void NarrowingConversionsCheck::check(const MatchFinder::MatchResult &Result) {
     return handleImplicitCast(*Result.Context, *Cast);
   llvm_unreachable("must be binary operator or cast expression");
 }
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

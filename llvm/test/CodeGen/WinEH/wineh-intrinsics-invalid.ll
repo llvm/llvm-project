@@ -1,5 +1,5 @@
-; RUN: sed -e s/.T1:// %s | not opt -passes=lint -disable-output 2>&1 | FileCheck --check-prefix=CHECK1 %s
-; RUN: sed -e s/.T2:// %s | not opt -passes=lint -disable-output 2>&1 | FileCheck --check-prefix=CHECK2 %s
+; RUN: sed -e s/.T1:// %s | not opt -opaque-pointers=0 -passes=lint -disable-output 2>&1 | FileCheck --check-prefix=CHECK1 %s
+; RUN: sed -e s/.T2:// %s | not opt -opaque-pointers=0 -passes=lint -disable-output 2>&1 | FileCheck --check-prefix=CHECK2 %s
 
 target triple = "x86_64-pc-windows-msvc"
 

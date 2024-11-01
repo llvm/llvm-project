@@ -27,6 +27,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -71,7 +72,7 @@ struct Inclusion {
   unsigned HashOffset = 0; // Byte offset from start of file to #.
   int HashLine = 0;        // Line number containing the directive, 0-indexed.
   SrcMgr::CharacteristicKind FileKind = SrcMgr::C_User;
-  llvm::Optional<unsigned> HeaderID;
+  std::optional<unsigned> HeaderID;
   bool BehindPragmaKeep = false; // Has IWYU pragma: keep right after.
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Inclusion &);
@@ -142,7 +143,7 @@ public:
   // file builds.
   enum class HeaderID : unsigned {};
 
-  llvm::Optional<HeaderID> getID(const FileEntry *Entry) const;
+  std::optional<HeaderID> getID(const FileEntry *Entry) const;
   HeaderID getOrCreateID(FileEntryRef Entry);
 
   StringRef getRealPath(HeaderID ID) const {
@@ -242,14 +243,14 @@ public:
   ///
   /// \return A quoted "path" or <path> to be included, or std::nullopt if it
   /// couldn't be shortened.
-  llvm::Optional<std::string>
+  std::optional<std::string>
   calculateIncludePath(const HeaderFile &InsertedHeader,
                        llvm::StringRef IncludingFile) const;
 
   /// Calculates an edit that inserts \p VerbatimHeader into code. If the header
   /// is already included, this returns std::nullopt.
-  llvm::Optional<TextEdit> insert(llvm::StringRef VerbatimHeader,
-                                  tooling::IncludeDirective Directive) const;
+  std::optional<TextEdit> insert(llvm::StringRef VerbatimHeader,
+                                 tooling::IncludeDirective Directive) const;
 
 private:
   StringRef FileName;

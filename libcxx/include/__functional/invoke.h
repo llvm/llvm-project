@@ -398,7 +398,7 @@ template <class _Ret, class _Fp, class ..._Args>
 struct __invokable_r
 {
   template <class _XFp, class ..._XArgs>
-  static decltype(std::__invoke(declval<_XFp>(), declval<_XArgs>()...)) __try_call(int);
+  static decltype(std::__invoke(std::declval<_XFp>(), std::declval<_XArgs>()...)) __try_call(int);
   template <class _XFp, class ..._XArgs>
   static __nat __try_call(...);
 
@@ -428,15 +428,23 @@ struct __nothrow_invokable_r_imp<true, false, _Ret, _Fp, _Args...>
     template <class _Tp>
     static void __test_noexcept(_Tp) _NOEXCEPT;
 
+#ifdef _LIBCPP_CXX03_LANG
+    static const bool value = false;
+#else
     static const bool value = noexcept(_ThisT::__test_noexcept<_Ret>(
-        _VSTD::__invoke(declval<_Fp>(), declval<_Args>()...)));
+        _VSTD::__invoke(std::declval<_Fp>(), std::declval<_Args>()...)));
+#endif
 };
 
 template <class _Ret, class _Fp, class ..._Args>
 struct __nothrow_invokable_r_imp<true, true, _Ret, _Fp, _Args...>
 {
+#ifdef _LIBCPP_CXX03_LANG
+    static const bool value = false;
+#else
     static const bool value = noexcept(
-        _VSTD::__invoke(declval<_Fp>(), declval<_Args>()...));
+        _VSTD::__invoke(std::declval<_Fp>(), std::declval<_Args>()...));
+#endif
 };
 
 template <class _Ret, class _Fp, class ..._Args>

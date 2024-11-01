@@ -260,7 +260,7 @@ namespace __sanitizer {
   unsigned struct_itimerspec_sz = sizeof(struct itimerspec);
 #endif // SANITIZER_LINUX
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
+#if SANITIZER_GLIBC
   // Use pre-computed size of struct ustat to avoid <sys/ustat.h> which
   // has been removed from glibc 2.28.
 #if defined(__aarch64__) || defined(__s390x__) || defined(__mips64) ||     \
@@ -281,7 +281,7 @@ namespace __sanitizer {
   unsigned struct_ustat_sz = SIZEOF_STRUCT_USTAT;
   unsigned struct_rlimit64_sz = sizeof(struct rlimit64);
   unsigned struct_statvfs64_sz = sizeof(struct statvfs64);
-#endif // SANITIZER_LINUX && !SANITIZER_ANDROID
+#endif // SANITIZER_GLIBC
 
 #if SANITIZER_INTERCEPT_CRYPT_R
   unsigned struct_crypt_data_sz = sizeof(struct crypt_data);
@@ -1092,7 +1092,7 @@ CHECK_SIZE_AND_OFFSET(dirent, d_off);
 #endif
 CHECK_SIZE_AND_OFFSET(dirent, d_reclen);
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
+#if SANITIZER_GLIBC
 COMPILER_CHECK(sizeof(__sanitizer_dirent64) <= sizeof(dirent64));
 CHECK_SIZE_AND_OFFSET(dirent64, d_ino);
 CHECK_SIZE_AND_OFFSET(dirent64, d_off);
@@ -1123,6 +1123,15 @@ CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_flags);
 #endif
 #if SANITIZER_LINUX && (!SANITIZER_ANDROID || !SANITIZER_MIPS32)
 CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_restorer);
+#endif
+
+#if SANITIZER_HAS_SIGINFO
+COMPILER_CHECK(alignof(siginfo_t) == alignof(__sanitizer_siginfo));
+using __sanitizer_siginfo_t = __sanitizer_siginfo;
+CHECK_TYPE_SIZE(siginfo_t);
+CHECK_SIZE_AND_OFFSET(siginfo_t, si_signo);
+CHECK_SIZE_AND_OFFSET(siginfo_t, si_errno);
+CHECK_SIZE_AND_OFFSET(siginfo_t, si_code);
 #endif
 
 #if SANITIZER_LINUX

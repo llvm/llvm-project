@@ -7,7 +7,7 @@ target triple = "thumbv8.1m-arm-none-eabi"
 ; Tests that LSR will not interfere with the VCTP intrinsic,
 ; and that this loop will correctly become tail-predicated.
 
-define arm_aapcs_vfpcc float @vctpi32(float* %0, i32 %1) {
+define arm_aapcs_vfpcc float @vctpi32(ptr %0, i32 %1) {
 ; CHECK-LABEL: vctpi32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    push {r4, lr}
@@ -34,7 +34,7 @@ define arm_aapcs_vfpcc float @vctpi32(float* %0, i32 %1) {
   %3 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vidup.v4i32(i32 0, i32 8)
   %4 = extractvalue { <4 x i32>, i32 } %3, 0
   %5 = add nsw i32 %1, -1
-  %6 = ptrtoint float* %0 to i32
+  %6 = ptrtoint ptr %0 to i32
   %7 = insertelement <4 x i32> undef, i32 %6, i32 0
   %8 = add <4 x i32> %7, <i32 -32, i32 undef, i32 undef, i32 undef>
   %9 = shufflevector <4 x i32> %8, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -55,7 +55,7 @@ define arm_aapcs_vfpcc float @vctpi32(float* %0, i32 %1) {
   br i1 %21, label %11, label %22
 
 22:
-  %23 = tail call arm_aapcs_vfpcc i32 bitcast (i32 (...)* @vecAddAcrossF32Mve to i32 (<4 x float>)*)(<4 x float> %19)
+  %23 = tail call arm_aapcs_vfpcc i32 @vecAddAcrossF32Mve(<4 x float> %19)
   %24 = sitofp i32 %23 to float
   %25 = tail call float @llvm.fabs.f32(float %24)
   ret float %25

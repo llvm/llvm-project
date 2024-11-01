@@ -561,8 +561,8 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
         !LoadTy->isVectorTy())
       return nullptr;
 
-    Type *MapTy = Type::getIntNTy(
-          C->getContext(), DL.getTypeSizeInBits(LoadTy).getFixedSize());
+    Type *MapTy = Type::getIntNTy(C->getContext(),
+                                  DL.getTypeSizeInBits(LoadTy).getFixedValue());
     if (Constant *Res = FoldReinterpretLoadFromConst(C, MapTy, Offset, DL)) {
       if (Res->isNullValue() && !LoadTy->isX86_MMXTy() &&
           !LoadTy->isX86_AMXTy())
@@ -705,7 +705,7 @@ Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
   // Explicitly check for out-of-bounds access, so we return poison even if the
   // constant is a uniform value.
   TypeSize Size = DL.getTypeAllocSize(C->getType());
-  if (!Size.isScalable() && Offset.sge(Size.getFixedSize()))
+  if (!Size.isScalable() && Offset.sge(Size.getFixedValue()))
     return PoisonValue::get(Ty);
 
   // Try an offset-independent fold of a uniform value.
@@ -903,11 +903,10 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
       return nullptr;
 
   unsigned BitWidth = DL.getTypeSizeInBits(IntIdxTy);
-  APInt Offset =
-      APInt(BitWidth,
-            DL.getIndexedOffsetInType(
-                SrcElemTy,
-                makeArrayRef((Value * const *)Ops.data() + 1, Ops.size() - 1)));
+  APInt Offset = APInt(
+      BitWidth,
+      DL.getIndexedOffsetInType(
+          SrcElemTy, ArrayRef((Value *const *)Ops.data() + 1, Ops.size() - 1)));
   Ptr = StripPtrCastKeepAS(Ptr);
 
   // If this is a GEP of a GEP, fold it all into a single GEP.
@@ -1868,7 +1867,7 @@ Constant *ConstantFoldSSEConvertToInt(const APFloat &Val, bool roundTowardZero,
   APFloat::roundingMode mode = roundTowardZero? APFloat::rmTowardZero
                                               : APFloat::rmNearestTiesToEven;
   APFloat::opStatus status =
-      Val.convertToInteger(makeMutableArrayRef(UIntVal), ResultWidth,
+      Val.convertToInteger(MutableArrayRef(UIntVal), ResultWidth,
                            IsSigned, mode, &isExact);
   if (status != APFloat::opOK &&
       (!roundTowardZero || status != APFloat::opInexact))

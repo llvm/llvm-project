@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes="loop-vectorize" -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes="loop-vectorize" -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -188,10 +188,10 @@ for.end:
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP4]], align 4, !alias.scope !11
-; CHECK-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP5]], align 4, !alias.scope !11
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP6]], align 4, !alias.scope !11
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP7]], align 4, !alias.scope !11
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP4]], align 4, !alias.scope !12
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP5]], align 4, !alias.scope !12
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP6]], align 4, !alias.scope !12
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP7]], align 4, !alias.scope !12
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> poison, i32 [[TMP8]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP9]], i32 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i32> [[TMP13]], i32 [[TMP10]], i32 2
@@ -206,10 +206,10 @@ for.end:
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i64> [[TMP17]], i32 3
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 [[TMP24]]
-; CHECK-NEXT:    [[TMP26:%.*]] = load i32, i32* [[TMP19]], align 4, !alias.scope !11
-; CHECK-NEXT:    [[TMP27:%.*]] = load i32, i32* [[TMP21]], align 4, !alias.scope !11
-; CHECK-NEXT:    [[TMP28:%.*]] = load i32, i32* [[TMP23]], align 4, !alias.scope !11
-; CHECK-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP25]], align 4, !alias.scope !11
+; CHECK-NEXT:    [[TMP26:%.*]] = load i32, i32* [[TMP19]], align 4, !alias.scope !12
+; CHECK-NEXT:    [[TMP27:%.*]] = load i32, i32* [[TMP21]], align 4, !alias.scope !12
+; CHECK-NEXT:    [[TMP28:%.*]] = load i32, i32* [[TMP23]], align 4, !alias.scope !12
+; CHECK-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP25]], align 4, !alias.scope !12
 ; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i32> poison, i32 [[TMP26]], i32 0
 ; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x i32> [[TMP30]], i32 [[TMP27]], i32 1
 ; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x i32> [[TMP31]], i32 [[TMP28]], i32 2

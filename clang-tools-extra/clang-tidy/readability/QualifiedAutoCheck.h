@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 /// Finds variables declared as auto that could be declared as:
 /// 'auto*' or 'const auto *' and reference variables declared as:
@@ -37,8 +35,6 @@ private:
   const bool AddConstToQualified;
 };
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_QUALIFIEDAUTOCHECK_H

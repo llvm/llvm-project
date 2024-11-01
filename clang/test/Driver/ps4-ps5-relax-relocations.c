@@ -24,6 +24,6 @@
 // RUN: %clang -### -x assembler -target x86_64-sie-ps5 -Wa,-mrelax-relocations=no %s -o - 2>&1 | \
 // RUN:   FileCheck -check-prefix=UNSET %s
 
-// CHECK: "--mrelax-relocations"
+// CHECK-NOT: "-mrelax-relocations
 
-// UNSET-NOT: "--mrelax-relocations"
+// UNSET: "-mrelax-relocations=no"

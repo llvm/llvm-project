@@ -11,11 +11,12 @@
 
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace mlir {
 
 class AffineExpr;
-class BlockAndValueMapping;
+class IRMapping;
 class UnknownLoc;
 class FileLineColLoc;
 class Type;
@@ -439,7 +440,7 @@ private:
   /// Helper for sanity checking preconditions for create* methods below.
   template <typename OpT>
   RegisteredOperationName getCheckRegisteredInfo(MLIRContext *ctx) {
-    Optional<RegisteredOperationName> opName =
+    std::optional<RegisteredOperationName> opName =
         RegisteredOperationName::lookup(OpT::getOperationName(), ctx);
     if (LLVM_UNLIKELY(!opName)) {
       llvm::report_fatal_error(
@@ -517,13 +518,13 @@ public:
   /// ( leaving them alone if no entry is present).  Replaces references to
   /// cloned sub-operations to the corresponding operation that is copied,
   /// and adds those mappings to the map.
-  Operation *clone(Operation &op, BlockAndValueMapping &mapper);
+  Operation *clone(Operation &op, IRMapping &mapper);
   Operation *clone(Operation &op);
 
   /// Creates a deep copy of this operation but keep the operation regions
   /// empty. Operands are remapped using `mapper` (if present), and `mapper` is
   /// updated to contain the results.
-  Operation *cloneWithoutRegions(Operation &op, BlockAndValueMapping &mapper) {
+  Operation *cloneWithoutRegions(Operation &op, IRMapping &mapper) {
     return insert(op.cloneWithoutRegions(mapper));
   }
   Operation *cloneWithoutRegions(Operation &op) {

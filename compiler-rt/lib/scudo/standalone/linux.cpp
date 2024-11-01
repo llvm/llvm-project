@@ -181,7 +181,7 @@ bool getRandom(void *Buffer, uptr Length, UNUSED bool Blocking) {
 extern "C" WEAK int async_safe_write_log(int pri, const char *tag,
                                          const char *msg);
 
-static u64 GetRSSFromBuffer(const char *Buf) {
+static uptr GetRSSFromBuffer(const char *Buf) {
   // The format of the file is:
   // 1084 89 69 11 0 79 0
   // We need the second number which is RSS in pages.
@@ -196,10 +196,13 @@ static u64 GetRSSFromBuffer(const char *Buf) {
   u64 Rss = 0;
   for (; *Pos >= '0' && *Pos <= '9'; Pos++)
     Rss = Rss * 10 + static_cast<u64>(*Pos) - '0';
-  return Rss * getPageSizeCached();
+  return static_cast<uptr>(Rss * getPageSizeCached());
 }
 
-u64 GetRSS() {
+uptr GetRSS() {
+  // TODO: We currently use sanitizer_common's GetRSS which reads the
+  // RSS from /proc/self/statm by default. We might want to
+  // call getrusage directly, even if it's less accurate.
   auto Fd = open("/proc/self/statm", O_RDONLY);
   char Buf[64];
   s64 Len = read(Fd, Buf, sizeof(Buf) - 1);

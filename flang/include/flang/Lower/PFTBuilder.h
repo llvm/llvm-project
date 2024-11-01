@@ -169,9 +169,9 @@ static constexpr bool isIntermediateConstructStmt{common::HasMember<
 
 template <typename A>
 static constexpr bool isNopConstructStmt{common::HasMember<
-    A, std::tuple<parser::CaseStmt, parser::EndSelectStmt, parser::ElseIfStmt,
-                  parser::ElseStmt, parser::EndIfStmt,
-                  parser::SelectRankCaseStmt, parser::TypeGuardStmt>>};
+    A, std::tuple<parser::CaseStmt, parser::ElseIfStmt, parser::ElseStmt,
+                  parser::EndIfStmt, parser::SelectRankCaseStmt,
+                  parser::TypeGuardStmt>>};
 
 template <typename A>
 static constexpr bool isExecutableDirective{common::HasMember<
@@ -276,9 +276,8 @@ struct Evaluation : EvaluationVariant {
   /// from one or more enclosing constructs.
   Evaluation &nonNopSuccessor() const {
     Evaluation *successor = lexicalSuccessor;
-    if (successor && successor->isNopConstructStmt()) {
+    if (successor && successor->isNopConstructStmt())
       successor = successor->parentConstruct->constructExit;
-    }
     assert(successor && "missing successor");
     return *successor;
   }
@@ -651,7 +650,7 @@ struct FunctionLikeUnit : public ProgramUnit {
 
   void setHostAssociatedSymbols(
       const llvm::SetVector<const semantics::Symbol *> &symbols) {
-    hostAssociations.addSymbolsToBind(symbols);
+    hostAssociations.addSymbolsToBind(symbols, getScope());
   }
 
   /// Return the host associations, if any, from the parent (host) procedure.
@@ -659,7 +658,12 @@ struct FunctionLikeUnit : public ProgramUnit {
   HostAssociations &parentHostAssoc();
 
   /// Return true iff the parent is a procedure and the parent has a non-empty
-  /// set of host associations.
+  /// set of host associations that are conveyed through an extra tuple
+  /// argument.
+  bool parentHasTupleHostAssoc();
+
+  /// Return true iff the parent is a procedure and the parent has a non-empty
+  /// set of host associations for variables.
   bool parentHasHostAssoc();
 
   /// Return the host associations for this function like unit. The list of host

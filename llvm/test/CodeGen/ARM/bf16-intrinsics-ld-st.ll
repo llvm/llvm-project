@@ -3,69 +3,67 @@
 ; FIXME: Remove fullfp16 once bfloat arguments and returns lowering stops
 ; depending on it.
 
-define arm_aapcs_vfpcc <4 x bfloat> @test_vld1_bf16(bfloat* nocapture readonly %ptr) {
+define arm_aapcs_vfpcc <4 x bfloat> @test_vld1_bf16(ptr nocapture readonly %ptr) {
 ; CHECK-LABEL: test_vld1_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.16 {d0}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast bfloat* %ptr to <4 x bfloat>*
-  %1 = load <4 x bfloat>, <4 x bfloat>* %0, align 2
-  ret <4 x bfloat> %1
+  %0 = load <4 x bfloat>, ptr %ptr, align 2
+  ret <4 x bfloat> %0
 }
 
-define arm_aapcs_vfpcc <8 x bfloat> @test_vld1q_bf16(bfloat* nocapture readonly %ptr) {
+define arm_aapcs_vfpcc <8 x bfloat> @test_vld1q_bf16(ptr nocapture readonly %ptr) {
 ; CHECK-LABEL: test_vld1q_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.16 {d0, d1}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast bfloat* %ptr to <8 x bfloat>*
-  %1 = load <8 x bfloat>, <8 x bfloat>* %0, align 2
-  ret <8 x bfloat> %1
+  %0 = load <8 x bfloat>, ptr %ptr, align 2
+  ret <8 x bfloat> %0
 }
 
-define arm_aapcs_vfpcc <4 x bfloat> @test_vld1_lane_bf16(bfloat* nocapture readonly %ptr, <4 x bfloat> %src) {
+define arm_aapcs_vfpcc <4 x bfloat> @test_vld1_lane_bf16(ptr nocapture readonly %ptr, <4 x bfloat> %src) {
 ; CHECK-LABEL: test_vld1_lane_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.16 {d0[0]}, [r0:16]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load bfloat, bfloat* %ptr, align 2
+  %0 = load bfloat, ptr %ptr, align 2
   %vld1_lane = insertelement <4 x bfloat> %src, bfloat %0, i32 0
   ret <4 x bfloat> %vld1_lane
 }
 
-define arm_aapcs_vfpcc <8 x bfloat> @test_vld1q_lane_bf16(bfloat* nocapture readonly %ptr, <8 x bfloat> %src) {
+define arm_aapcs_vfpcc <8 x bfloat> @test_vld1q_lane_bf16(ptr nocapture readonly %ptr, <8 x bfloat> %src) {
 ; CHECK-LABEL: test_vld1q_lane_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.16 {d1[3]}, [r0:16]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load bfloat, bfloat* %ptr, align 2
+  %0 = load bfloat, ptr %ptr, align 2
   %vld1_lane = insertelement <8 x bfloat> %src, bfloat %0, i32 7
   ret <8 x bfloat> %vld1_lane
 }
 
-define arm_aapcs_vfpcc <4 x bfloat> @test_vld1_dup_bf16(bfloat* nocapture readonly %ptr) {
+define arm_aapcs_vfpcc <4 x bfloat> @test_vld1_dup_bf16(ptr nocapture readonly %ptr) {
 ; CHECK-LABEL: test_vld1_dup_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.16 {d0[]}, [r0:16]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load bfloat, bfloat* %ptr, align 2
+  %0 = load bfloat, ptr %ptr, align 2
   %1 = insertelement <4 x bfloat> undef, bfloat %0, i32 0
   %lane = shufflevector <4 x bfloat> %1, <4 x bfloat> undef, <4 x i32> zeroinitializer
   ret <4 x bfloat> %lane
 }
 
-define arm_aapcs_vfpcc [2 x <2 x i32>] @test_vld1_bf16_x2(bfloat* %ptr) {
+define arm_aapcs_vfpcc [2 x <2 x i32>] @test_vld1_bf16_x2(ptr %ptr) {
 ; CHECK-LABEL: test_vld1_bf16_x2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.16 {d0, d1}, [r0:64]
 ; CHECK-NEXT:    bx lr
 entry:
-  %vld1xN = tail call { <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld1x2.v4bf16.p0bf16(bfloat* %ptr)
+  %vld1xN = tail call { <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld1x2.v4bf16.p0(ptr %ptr)
   %vld1xN.fca.0.extract = extractvalue { <4 x bfloat>, <4 x bfloat> } %vld1xN, 0
   %vld1xN.fca.1.extract = extractvalue { <4 x bfloat>, <4 x bfloat> } %vld1xN, 1
   %0 = bitcast <4 x bfloat> %vld1xN.fca.0.extract to <2 x i32>
@@ -75,13 +73,13 @@ entry:
   ret [2 x <2 x i32>] %.fca.1.insert
 }
 
-define arm_aapcs_vfpcc [2 x <4 x i32>] @test_vld1q_bf16_x2(bfloat* %ptr) {
+define arm_aapcs_vfpcc [2 x <4 x i32>] @test_vld1q_bf16_x2(ptr %ptr) {
 ; CHECK-LABEL: test_vld1q_bf16_x2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.16 {d0, d1, d2, d3}, [r0:256]
 ; CHECK-NEXT:    bx lr
 entry:
-  %vld1xN = tail call { <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld1x2.v8bf16.p0bf16(bfloat* %ptr)
+  %vld1xN = tail call { <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld1x2.v8bf16.p0(ptr %ptr)
   %vld1xN.fca.0.extract = extractvalue { <8 x bfloat>, <8 x bfloat> } %vld1xN, 0
   %vld1xN.fca.1.extract = extractvalue { <8 x bfloat>, <8 x bfloat> } %vld1xN, 1
   %0 = bitcast <8 x bfloat> %vld1xN.fca.0.extract to <4 x i32>
@@ -91,13 +89,13 @@ entry:
   ret [2 x <4 x i32>] %.fca.1.insert
 }
 
-define arm_aapcs_vfpcc [3 x <2 x i32>] @test_vld1_bf16_x3(bfloat* %ptr) {
+define arm_aapcs_vfpcc [3 x <2 x i32>] @test_vld1_bf16_x3(ptr %ptr) {
 ; CHECK-LABEL: test_vld1_bf16_x3:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.16 {d0, d1, d2}, [r0:64]
 ; CHECK-NEXT:    bx lr
 entry:
-  %vld1xN = tail call { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld1x3.v4bf16.p0bf16(bfloat* %ptr)
+  %vld1xN = tail call { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld1x3.v4bf16.p0(ptr %ptr)
   %vld1xN.fca.0.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld1xN, 0
   %vld1xN.fca.1.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld1xN, 1
   %vld1xN.fca.2.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld1xN, 2
@@ -110,14 +108,14 @@ entry:
   ret [3 x <2 x i32>] %.fca.2.insert
 }
 
-define arm_aapcs_vfpcc [3 x <4 x i32>] @test_vld1q_bf16_x3(bfloat* %ptr) {
+define arm_aapcs_vfpcc [3 x <4 x i32>] @test_vld1q_bf16_x3(ptr %ptr) {
 ; CHECK-LABEL: test_vld1q_bf16_x3:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.16 {d0, d1, d2}, [r0:64]!
 ; CHECK-NEXT:    vld1.16 {d3, d4, d5}, [r0:64]
 ; CHECK-NEXT:    bx lr
 entry:
-  %vld1xN = tail call { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld1x3.v8bf16.p0bf16(bfloat* %ptr)
+  %vld1xN = tail call { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld1x3.v8bf16.p0(ptr %ptr)
   %vld1xN.fca.0.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld1xN, 0
   %vld1xN.fca.1.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld1xN, 1
   %vld1xN.fca.2.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld1xN, 2
@@ -130,13 +128,13 @@ entry:
   ret [3 x <4 x i32>] %.fca.2.insert
 }
 
-define arm_aapcs_vfpcc [4 x <2 x i32>] @test_vld1_bf16_x4(bfloat* %ptr) {
+define arm_aapcs_vfpcc [4 x <2 x i32>] @test_vld1_bf16_x4(ptr %ptr) {
 ; CHECK-LABEL: test_vld1_bf16_x4:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.16 {d0, d1, d2, d3}, [r0:256]
 ; CHECK-NEXT:    bx lr
 entry:
-  %vld1xN = tail call { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld1x4.v4bf16.p0bf16(bfloat* %ptr)
+  %vld1xN = tail call { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld1x4.v4bf16.p0(ptr %ptr)
   %vld1xN.fca.0.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld1xN, 0
   %vld1xN.fca.1.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld1xN, 1
   %vld1xN.fca.2.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld1xN, 2
@@ -152,14 +150,14 @@ entry:
   ret [4 x <2 x i32>] %.fca.3.insert
 }
 
-define arm_aapcs_vfpcc [4 x <4 x i32>] @test_vld1q_bf16_x4(bfloat* %ptr) {
+define arm_aapcs_vfpcc [4 x <4 x i32>] @test_vld1q_bf16_x4(ptr %ptr) {
 ; CHECK-LABEL: test_vld1q_bf16_x4:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.16 {d0, d1, d2, d3}, [r0:256]!
 ; CHECK-NEXT:    vld1.16 {d4, d5, d6, d7}, [r0:256]
 ; CHECK-NEXT:    bx lr
 entry:
-  %vld1xN = tail call { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld1x4.v8bf16.p0bf16(bfloat* %ptr)
+  %vld1xN = tail call { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld1x4.v8bf16.p0(ptr %ptr)
   %vld1xN.fca.0.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld1xN, 0
   %vld1xN.fca.1.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld1xN, 1
   %vld1xN.fca.2.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld1xN, 2
@@ -175,53 +173,51 @@ entry:
   ret [4 x <4 x i32>] %.fca.3.insert
 }
 
-define arm_aapcs_vfpcc <8 x bfloat> @test_vld1q_dup_bf16(bfloat* nocapture readonly %ptr) {
+define arm_aapcs_vfpcc <8 x bfloat> @test_vld1q_dup_bf16(ptr nocapture readonly %ptr) {
 ; CHECK-LABEL: test_vld1q_dup_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.16 {d0[], d1[]}, [r0:16]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load bfloat, bfloat* %ptr, align 2
+  %0 = load bfloat, ptr %ptr, align 2
   %1 = insertelement <8 x bfloat> undef, bfloat %0, i32 0
   %lane = shufflevector <8 x bfloat> %1, <8 x bfloat> undef, <8 x i32> zeroinitializer
   ret <8 x bfloat> %lane
 }
 
-define arm_aapcs_vfpcc [2 x <2 x i32>] @test_vld2_bf16(bfloat* %ptr) {
+define arm_aapcs_vfpcc [2 x <2 x i32>] @test_vld2_bf16(ptr %ptr) {
 ; CHECK-LABEL: test_vld2_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld2.16 {d0, d1}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast bfloat* %ptr to i8*
-  %vld2_v = tail call { <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld2.v4bf16.p0i8(i8* %0, i32 2)
+  %vld2_v = tail call { <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld2.v4bf16.p0(ptr %ptr, i32 2)
   %vld2_v.fca.0.extract = extractvalue { <4 x bfloat>, <4 x bfloat> } %vld2_v, 0
   %vld2_v.fca.1.extract = extractvalue { <4 x bfloat>, <4 x bfloat> } %vld2_v, 1
-  %1 = bitcast <4 x bfloat> %vld2_v.fca.0.extract to <2 x i32>
-  %2 = bitcast <4 x bfloat> %vld2_v.fca.1.extract to <2 x i32>
-  %.fca.0.insert = insertvalue [2 x <2 x i32>] undef, <2 x i32> %1, 0
-  %.fca.1.insert = insertvalue [2 x <2 x i32>] %.fca.0.insert, <2 x i32> %2, 1
+  %0 = bitcast <4 x bfloat> %vld2_v.fca.0.extract to <2 x i32>
+  %1 = bitcast <4 x bfloat> %vld2_v.fca.1.extract to <2 x i32>
+  %.fca.0.insert = insertvalue [2 x <2 x i32>] undef, <2 x i32> %0, 0
+  %.fca.1.insert = insertvalue [2 x <2 x i32>] %.fca.0.insert, <2 x i32> %1, 1
   ret [2 x <2 x i32>] %.fca.1.insert
 }
 
-define arm_aapcs_vfpcc [2 x <4 x i32>] @test_vld2q_bf16(bfloat* %ptr) {
+define arm_aapcs_vfpcc [2 x <4 x i32>] @test_vld2q_bf16(ptr %ptr) {
 ; CHECK-LABEL: test_vld2q_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld2.16 {d0, d1, d2, d3}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast bfloat* %ptr to i8*
-  %vld2q_v = tail call { <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld2.v8bf16.p0i8(i8* %0, i32 2)
+  %vld2q_v = tail call { <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld2.v8bf16.p0(ptr %ptr, i32 2)
   %vld2q_v.fca.0.extract = extractvalue { <8 x bfloat>, <8 x bfloat> } %vld2q_v, 0
   %vld2q_v.fca.1.extract = extractvalue { <8 x bfloat>, <8 x bfloat> } %vld2q_v, 1
-  %1 = bitcast <8 x bfloat> %vld2q_v.fca.0.extract to <4 x i32>
-  %2 = bitcast <8 x bfloat> %vld2q_v.fca.1.extract to <4 x i32>
-  %.fca.0.insert = insertvalue [2 x <4 x i32>] undef, <4 x i32> %1, 0
-  %.fca.1.insert = insertvalue [2 x <4 x i32>] %.fca.0.insert, <4 x i32> %2, 1
+  %0 = bitcast <8 x bfloat> %vld2q_v.fca.0.extract to <4 x i32>
+  %1 = bitcast <8 x bfloat> %vld2q_v.fca.1.extract to <4 x i32>
+  %.fca.0.insert = insertvalue [2 x <4 x i32>] undef, <4 x i32> %0, 0
+  %.fca.1.insert = insertvalue [2 x <4 x i32>] %.fca.0.insert, <4 x i32> %1, 1
   ret [2 x <4 x i32>] %.fca.1.insert
 }
 
-define arm_aapcs_vfpcc [2 x <2 x i32>] @test_vld2_lane_bf16(bfloat* %ptr, [2 x <2 x i32>] %src.coerce) {
+define arm_aapcs_vfpcc [2 x <2 x i32>] @test_vld2_lane_bf16(ptr %ptr, [2 x <2 x i32>] %src.coerce) {
 ; CHECK-LABEL: test_vld2_lane_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d1 killed $d1 killed $q0 def $q0
@@ -233,18 +229,17 @@ entry:
   %src.coerce.fca.1.extract = extractvalue [2 x <2 x i32>] %src.coerce, 1
   %0 = bitcast <2 x i32> %src.coerce.fca.0.extract to <4 x bfloat>
   %1 = bitcast <2 x i32> %src.coerce.fca.1.extract to <4 x bfloat>
-  %2 = bitcast bfloat* %ptr to i8*
-  %vld2_lane_v = tail call { <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld2lane.v4bf16.p0i8(i8* %2, <4 x bfloat> %0, <4 x bfloat> %1, i32 1, i32 2)
+  %vld2_lane_v = tail call { <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld2lane.v4bf16.p0(ptr %ptr, <4 x bfloat> %0, <4 x bfloat> %1, i32 1, i32 2)
   %vld2_lane_v.fca.0.extract = extractvalue { <4 x bfloat>, <4 x bfloat> } %vld2_lane_v, 0
   %vld2_lane_v.fca.1.extract = extractvalue { <4 x bfloat>, <4 x bfloat> } %vld2_lane_v, 1
-  %3 = bitcast <4 x bfloat> %vld2_lane_v.fca.0.extract to <2 x i32>
-  %4 = bitcast <4 x bfloat> %vld2_lane_v.fca.1.extract to <2 x i32>
-  %.fca.0.insert = insertvalue [2 x <2 x i32>] undef, <2 x i32> %3, 0
-  %.fca.1.insert = insertvalue [2 x <2 x i32>] %.fca.0.insert, <2 x i32> %4, 1
+  %2 = bitcast <4 x bfloat> %vld2_lane_v.fca.0.extract to <2 x i32>
+  %3 = bitcast <4 x bfloat> %vld2_lane_v.fca.1.extract to <2 x i32>
+  %.fca.0.insert = insertvalue [2 x <2 x i32>] undef, <2 x i32> %2, 0
+  %.fca.1.insert = insertvalue [2 x <2 x i32>] %.fca.0.insert, <2 x i32> %3, 1
   ret [2 x <2 x i32>] %.fca.1.insert
 }
 
-define arm_aapcs_vfpcc [2 x <4 x i32>] @test_vld2q_lane_bf16(bfloat* %ptr, [2 x <4 x i32>] %src.coerce) {
+define arm_aapcs_vfpcc [2 x <4 x i32>] @test_vld2q_lane_bf16(ptr %ptr, [2 x <4 x i32>] %src.coerce) {
 ; CHECK-LABEL: test_vld2q_lane_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
@@ -256,59 +251,56 @@ entry:
   %src.coerce.fca.1.extract = extractvalue [2 x <4 x i32>] %src.coerce, 1
   %0 = bitcast <4 x i32> %src.coerce.fca.0.extract to <8 x bfloat>
   %1 = bitcast <4 x i32> %src.coerce.fca.1.extract to <8 x bfloat>
-  %2 = bitcast bfloat* %ptr to i8*
-  %vld2q_lane_v = tail call { <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld2lane.v8bf16.p0i8(i8* %2, <8 x bfloat> %0, <8 x bfloat> %1, i32 7, i32 2)
+  %vld2q_lane_v = tail call { <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld2lane.v8bf16.p0(ptr %ptr, <8 x bfloat> %0, <8 x bfloat> %1, i32 7, i32 2)
   %vld2q_lane_v.fca.0.extract = extractvalue { <8 x bfloat>, <8 x bfloat> } %vld2q_lane_v, 0
   %vld2q_lane_v.fca.1.extract = extractvalue { <8 x bfloat>, <8 x bfloat> } %vld2q_lane_v, 1
-  %3 = bitcast <8 x bfloat> %vld2q_lane_v.fca.0.extract to <4 x i32>
-  %4 = bitcast <8 x bfloat> %vld2q_lane_v.fca.1.extract to <4 x i32>
-  %.fca.0.insert = insertvalue [2 x <4 x i32>] undef, <4 x i32> %3, 0
-  %.fca.1.insert = insertvalue [2 x <4 x i32>] %.fca.0.insert, <4 x i32> %4, 1
+  %2 = bitcast <8 x bfloat> %vld2q_lane_v.fca.0.extract to <4 x i32>
+  %3 = bitcast <8 x bfloat> %vld2q_lane_v.fca.1.extract to <4 x i32>
+  %.fca.0.insert = insertvalue [2 x <4 x i32>] undef, <4 x i32> %2, 0
+  %.fca.1.insert = insertvalue [2 x <4 x i32>] %.fca.0.insert, <4 x i32> %3, 1
   ret [2 x <4 x i32>] %.fca.1.insert
 }
 
-define arm_aapcs_vfpcc [3 x <2 x i32>] @test_vld3_bf16(bfloat* %ptr) {
+define arm_aapcs_vfpcc [3 x <2 x i32>] @test_vld3_bf16(ptr %ptr) {
 ; CHECK-LABEL: test_vld3_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld3.16 {d0, d1, d2}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast bfloat* %ptr to i8*
-  %vld3_v = tail call { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld3.v4bf16.p0i8(i8* %0, i32 2)
+  %vld3_v = tail call { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld3.v4bf16.p0(ptr %ptr, i32 2)
   %vld3_v.fca.0.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld3_v, 0
   %vld3_v.fca.1.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld3_v, 1
   %vld3_v.fca.2.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld3_v, 2
-  %1 = bitcast <4 x bfloat> %vld3_v.fca.0.extract to <2 x i32>
-  %2 = bitcast <4 x bfloat> %vld3_v.fca.1.extract to <2 x i32>
-  %3 = bitcast <4 x bfloat> %vld3_v.fca.2.extract to <2 x i32>
-  %.fca.0.insert = insertvalue [3 x <2 x i32>] undef, <2 x i32> %1, 0
-  %.fca.1.insert = insertvalue [3 x <2 x i32>] %.fca.0.insert, <2 x i32> %2, 1
-  %.fca.2.insert = insertvalue [3 x <2 x i32>] %.fca.1.insert, <2 x i32> %3, 2
+  %0 = bitcast <4 x bfloat> %vld3_v.fca.0.extract to <2 x i32>
+  %1 = bitcast <4 x bfloat> %vld3_v.fca.1.extract to <2 x i32>
+  %2 = bitcast <4 x bfloat> %vld3_v.fca.2.extract to <2 x i32>
+  %.fca.0.insert = insertvalue [3 x <2 x i32>] undef, <2 x i32> %0, 0
+  %.fca.1.insert = insertvalue [3 x <2 x i32>] %.fca.0.insert, <2 x i32> %1, 1
+  %.fca.2.insert = insertvalue [3 x <2 x i32>] %.fca.1.insert, <2 x i32> %2, 2
   ret [3 x <2 x i32>] %.fca.2.insert
 }
 
-define arm_aapcs_vfpcc [3 x <4 x i32>] @test_vld3q_bf16(bfloat* %ptr) {
+define arm_aapcs_vfpcc [3 x <4 x i32>] @test_vld3q_bf16(ptr %ptr) {
 ; CHECK-LABEL: test_vld3q_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld3.16 {d0, d2, d4}, [r0]!
 ; CHECK-NEXT:    vld3.16 {d1, d3, d5}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast bfloat* %ptr to i8*
-  %vld3q_v = tail call { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld3.v8bf16.p0i8(i8* %0, i32 2)
+  %vld3q_v = tail call { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld3.v8bf16.p0(ptr %ptr, i32 2)
   %vld3q_v.fca.0.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld3q_v, 0
   %vld3q_v.fca.1.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld3q_v, 1
   %vld3q_v.fca.2.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld3q_v, 2
-  %1 = bitcast <8 x bfloat> %vld3q_v.fca.0.extract to <4 x i32>
-  %2 = bitcast <8 x bfloat> %vld3q_v.fca.1.extract to <4 x i32>
-  %3 = bitcast <8 x bfloat> %vld3q_v.fca.2.extract to <4 x i32>
-  %.fca.0.insert = insertvalue [3 x <4 x i32>] undef, <4 x i32> %1, 0
-  %.fca.1.insert = insertvalue [3 x <4 x i32>] %.fca.0.insert, <4 x i32> %2, 1
-  %.fca.2.insert = insertvalue [3 x <4 x i32>] %.fca.1.insert, <4 x i32> %3, 2
+  %0 = bitcast <8 x bfloat> %vld3q_v.fca.0.extract to <4 x i32>
+  %1 = bitcast <8 x bfloat> %vld3q_v.fca.1.extract to <4 x i32>
+  %2 = bitcast <8 x bfloat> %vld3q_v.fca.2.extract to <4 x i32>
+  %.fca.0.insert = insertvalue [3 x <4 x i32>] undef, <4 x i32> %0, 0
+  %.fca.1.insert = insertvalue [3 x <4 x i32>] %.fca.0.insert, <4 x i32> %1, 1
+  %.fca.2.insert = insertvalue [3 x <4 x i32>] %.fca.1.insert, <4 x i32> %2, 2
   ret [3 x <4 x i32>] %.fca.2.insert
 }
 
-define arm_aapcs_vfpcc [3 x <2 x i32>] @test_vld3_lane_bf16(bfloat* %ptr, [3 x <2 x i32>] %src.coerce) {
+define arm_aapcs_vfpcc [3 x <2 x i32>] @test_vld3_lane_bf16(ptr %ptr, [3 x <2 x i32>] %src.coerce) {
 ; CHECK-LABEL: test_vld3_lane_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d2 killed $d2 killed $q0_q1 def $q0_q1
@@ -323,21 +315,20 @@ entry:
   %0 = bitcast <2 x i32> %src.coerce.fca.0.extract to <4 x bfloat>
   %1 = bitcast <2 x i32> %src.coerce.fca.1.extract to <4 x bfloat>
   %2 = bitcast <2 x i32> %src.coerce.fca.2.extract to <4 x bfloat>
-  %3 = bitcast bfloat* %ptr to i8*
-  %vld3_lane_v = tail call { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld3lane.v4bf16.p0i8(i8* %3, <4 x bfloat> %0, <4 x bfloat> %1, <4 x bfloat> %2, i32 1, i32 2)
+  %vld3_lane_v = tail call { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld3lane.v4bf16.p0(ptr %ptr, <4 x bfloat> %0, <4 x bfloat> %1, <4 x bfloat> %2, i32 1, i32 2)
   %vld3_lane_v.fca.0.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld3_lane_v, 0
   %vld3_lane_v.fca.1.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld3_lane_v, 1
   %vld3_lane_v.fca.2.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld3_lane_v, 2
-  %4 = bitcast <4 x bfloat> %vld3_lane_v.fca.0.extract to <2 x i32>
-  %5 = bitcast <4 x bfloat> %vld3_lane_v.fca.1.extract to <2 x i32>
-  %6 = bitcast <4 x bfloat> %vld3_lane_v.fca.2.extract to <2 x i32>
-  %.fca.0.insert = insertvalue [3 x <2 x i32>] undef, <2 x i32> %4, 0
-  %.fca.1.insert = insertvalue [3 x <2 x i32>] %.fca.0.insert, <2 x i32> %5, 1
-  %.fca.2.insert = insertvalue [3 x <2 x i32>] %.fca.1.insert, <2 x i32> %6, 2
+  %3 = bitcast <4 x bfloat> %vld3_lane_v.fca.0.extract to <2 x i32>
+  %4 = bitcast <4 x bfloat> %vld3_lane_v.fca.1.extract to <2 x i32>
+  %5 = bitcast <4 x bfloat> %vld3_lane_v.fca.2.extract to <2 x i32>
+  %.fca.0.insert = insertvalue [3 x <2 x i32>] undef, <2 x i32> %3, 0
+  %.fca.1.insert = insertvalue [3 x <2 x i32>] %.fca.0.insert, <2 x i32> %4, 1
+  %.fca.2.insert = insertvalue [3 x <2 x i32>] %.fca.1.insert, <2 x i32> %5, 2
   ret [3 x <2 x i32>] %.fca.2.insert
 }
 
-define arm_aapcs_vfpcc [3 x <4 x i32>] @test_vld3q_lane_bf16(bfloat* %ptr, [3 x <4 x i32>] %src.coerce) {
+define arm_aapcs_vfpcc [3 x <4 x i32>] @test_vld3q_lane_bf16(ptr %ptr, [3 x <4 x i32>] %src.coerce) {
 ; CHECK-LABEL: test_vld3q_lane_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
@@ -352,68 +343,65 @@ entry:
   %0 = bitcast <4 x i32> %src.coerce.fca.0.extract to <8 x bfloat>
   %1 = bitcast <4 x i32> %src.coerce.fca.1.extract to <8 x bfloat>
   %2 = bitcast <4 x i32> %src.coerce.fca.2.extract to <8 x bfloat>
-  %3 = bitcast bfloat* %ptr to i8*
-  %vld3q_lane_v = tail call { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld3lane.v8bf16.p0i8(i8* %3, <8 x bfloat> %0, <8 x bfloat> %1, <8 x bfloat> %2, i32 7, i32 2)
+  %vld3q_lane_v = tail call { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld3lane.v8bf16.p0(ptr %ptr, <8 x bfloat> %0, <8 x bfloat> %1, <8 x bfloat> %2, i32 7, i32 2)
   %vld3q_lane_v.fca.0.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld3q_lane_v, 0
   %vld3q_lane_v.fca.1.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld3q_lane_v, 1
   %vld3q_lane_v.fca.2.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld3q_lane_v, 2
-  %4 = bitcast <8 x bfloat> %vld3q_lane_v.fca.0.extract to <4 x i32>
-  %5 = bitcast <8 x bfloat> %vld3q_lane_v.fca.1.extract to <4 x i32>
-  %6 = bitcast <8 x bfloat> %vld3q_lane_v.fca.2.extract to <4 x i32>
-  %.fca.0.insert = insertvalue [3 x <4 x i32>] undef, <4 x i32> %4, 0
-  %.fca.1.insert = insertvalue [3 x <4 x i32>] %.fca.0.insert, <4 x i32> %5, 1
-  %.fca.2.insert = insertvalue [3 x <4 x i32>] %.fca.1.insert, <4 x i32> %6, 2
+  %3 = bitcast <8 x bfloat> %vld3q_lane_v.fca.0.extract to <4 x i32>
+  %4 = bitcast <8 x bfloat> %vld3q_lane_v.fca.1.extract to <4 x i32>
+  %5 = bitcast <8 x bfloat> %vld3q_lane_v.fca.2.extract to <4 x i32>
+  %.fca.0.insert = insertvalue [3 x <4 x i32>] undef, <4 x i32> %3, 0
+  %.fca.1.insert = insertvalue [3 x <4 x i32>] %.fca.0.insert, <4 x i32> %4, 1
+  %.fca.2.insert = insertvalue [3 x <4 x i32>] %.fca.1.insert, <4 x i32> %5, 2
   ret [3 x <4 x i32>] %.fca.2.insert
 }
 
-define arm_aapcs_vfpcc [4 x <2 x i32>] @test_vld4_bf16(bfloat* %ptr) {
+define arm_aapcs_vfpcc [4 x <2 x i32>] @test_vld4_bf16(ptr %ptr) {
 ; CHECK-LABEL: test_vld4_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld4.16 {d0, d1, d2, d3}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast bfloat* %ptr to i8*
-  %vld4_v = tail call { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld4.v4bf16.p0i8(i8* %0, i32 2)
+  %vld4_v = tail call { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld4.v4bf16.p0(ptr %ptr, i32 2)
   %vld4_v.fca.0.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld4_v, 0
   %vld4_v.fca.1.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld4_v, 1
   %vld4_v.fca.2.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld4_v, 2
   %vld4_v.fca.3.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld4_v, 3
-  %1 = bitcast <4 x bfloat> %vld4_v.fca.0.extract to <2 x i32>
-  %2 = bitcast <4 x bfloat> %vld4_v.fca.1.extract to <2 x i32>
-  %3 = bitcast <4 x bfloat> %vld4_v.fca.2.extract to <2 x i32>
-  %4 = bitcast <4 x bfloat> %vld4_v.fca.3.extract to <2 x i32>
-  %.fca.0.insert = insertvalue [4 x <2 x i32>] undef, <2 x i32> %1, 0
-  %.fca.1.insert = insertvalue [4 x <2 x i32>] %.fca.0.insert, <2 x i32> %2, 1
-  %.fca.2.insert = insertvalue [4 x <2 x i32>] %.fca.1.insert, <2 x i32> %3, 2
-  %.fca.3.insert = insertvalue [4 x <2 x i32>] %.fca.2.insert, <2 x i32> %4, 3
+  %0 = bitcast <4 x bfloat> %vld4_v.fca.0.extract to <2 x i32>
+  %1 = bitcast <4 x bfloat> %vld4_v.fca.1.extract to <2 x i32>
+  %2 = bitcast <4 x bfloat> %vld4_v.fca.2.extract to <2 x i32>
+  %3 = bitcast <4 x bfloat> %vld4_v.fca.3.extract to <2 x i32>
+  %.fca.0.insert = insertvalue [4 x <2 x i32>] undef, <2 x i32> %0, 0
+  %.fca.1.insert = insertvalue [4 x <2 x i32>] %.fca.0.insert, <2 x i32> %1, 1
+  %.fca.2.insert = insertvalue [4 x <2 x i32>] %.fca.1.insert, <2 x i32> %2, 2
+  %.fca.3.insert = insertvalue [4 x <2 x i32>] %.fca.2.insert, <2 x i32> %3, 3
   ret [4 x <2 x i32>] %.fca.3.insert
 }
 
-define arm_aapcs_vfpcc [4 x <4 x i32>] @test_vld4q_bf16(bfloat* %ptr) {
+define arm_aapcs_vfpcc [4 x <4 x i32>] @test_vld4q_bf16(ptr %ptr) {
 ; CHECK-LABEL: test_vld4q_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld4.16 {d0, d2, d4, d6}, [r0]!
 ; CHECK-NEXT:    vld4.16 {d1, d3, d5, d7}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast bfloat* %ptr to i8*
-  %vld4q_v = tail call { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld4.v8bf16.p0i8(i8* %0, i32 2)
+  %vld4q_v = tail call { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld4.v8bf16.p0(ptr %ptr, i32 2)
   %vld4q_v.fca.0.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld4q_v, 0
   %vld4q_v.fca.1.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld4q_v, 1
   %vld4q_v.fca.2.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld4q_v, 2
   %vld4q_v.fca.3.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld4q_v, 3
-  %1 = bitcast <8 x bfloat> %vld4q_v.fca.0.extract to <4 x i32>
-  %2 = bitcast <8 x bfloat> %vld4q_v.fca.1.extract to <4 x i32>
-  %3 = bitcast <8 x bfloat> %vld4q_v.fca.2.extract to <4 x i32>
-  %4 = bitcast <8 x bfloat> %vld4q_v.fca.3.extract to <4 x i32>
-  %.fca.0.insert = insertvalue [4 x <4 x i32>] undef, <4 x i32> %1, 0
-  %.fca.1.insert = insertvalue [4 x <4 x i32>] %.fca.0.insert, <4 x i32> %2, 1
-  %.fca.2.insert = insertvalue [4 x <4 x i32>] %.fca.1.insert, <4 x i32> %3, 2
-  %.fca.3.insert = insertvalue [4 x <4 x i32>] %.fca.2.insert, <4 x i32> %4, 3
+  %0 = bitcast <8 x bfloat> %vld4q_v.fca.0.extract to <4 x i32>
+  %1 = bitcast <8 x bfloat> %vld4q_v.fca.1.extract to <4 x i32>
+  %2 = bitcast <8 x bfloat> %vld4q_v.fca.2.extract to <4 x i32>
+  %3 = bitcast <8 x bfloat> %vld4q_v.fca.3.extract to <4 x i32>
+  %.fca.0.insert = insertvalue [4 x <4 x i32>] undef, <4 x i32> %0, 0
+  %.fca.1.insert = insertvalue [4 x <4 x i32>] %.fca.0.insert, <4 x i32> %1, 1
+  %.fca.2.insert = insertvalue [4 x <4 x i32>] %.fca.1.insert, <4 x i32> %2, 2
+  %.fca.3.insert = insertvalue [4 x <4 x i32>] %.fca.2.insert, <4 x i32> %3, 3
   ret [4 x <4 x i32>] %.fca.3.insert
 }
 
-define arm_aapcs_vfpcc [4 x <2 x i32>] @test_vld4_lane_bf16(bfloat* %ptr, [4 x <2 x i32>] %src.coerce) {
+define arm_aapcs_vfpcc [4 x <2 x i32>] @test_vld4_lane_bf16(ptr %ptr, [4 x <2 x i32>] %src.coerce) {
 ; CHECK-LABEL: test_vld4_lane_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d3 killed $d3 killed $q0_q1 def $q0_q1
@@ -431,24 +419,23 @@ entry:
   %1 = bitcast <2 x i32> %src.coerce.fca.1.extract to <4 x bfloat>
   %2 = bitcast <2 x i32> %src.coerce.fca.2.extract to <4 x bfloat>
   %3 = bitcast <2 x i32> %src.coerce.fca.3.extract to <4 x bfloat>
-  %4 = bitcast bfloat* %ptr to i8*
-  %vld4_lane_v = tail call { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld4lane.v4bf16.p0i8(i8* %4, <4 x bfloat> %0, <4 x bfloat> %1, <4 x bfloat> %2, <4 x bfloat> %3, i32 1, i32 2)
+  %vld4_lane_v = tail call { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld4lane.v4bf16.p0(ptr %ptr, <4 x bfloat> %0, <4 x bfloat> %1, <4 x bfloat> %2, <4 x bfloat> %3, i32 1, i32 2)
   %vld4_lane_v.fca.0.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld4_lane_v, 0
   %vld4_lane_v.fca.1.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld4_lane_v, 1
   %vld4_lane_v.fca.2.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld4_lane_v, 2
   %vld4_lane_v.fca.3.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld4_lane_v, 3
-  %5 = bitcast <4 x bfloat> %vld4_lane_v.fca.0.extract to <2 x i32>
-  %6 = bitcast <4 x bfloat> %vld4_lane_v.fca.1.extract to <2 x i32>
-  %7 = bitcast <4 x bfloat> %vld4_lane_v.fca.2.extract to <2 x i32>
-  %8 = bitcast <4 x bfloat> %vld4_lane_v.fca.3.extract to <2 x i32>
-  %.fca.0.insert = insertvalue [4 x <2 x i32>] undef, <2 x i32> %5, 0
-  %.fca.1.insert = insertvalue [4 x <2 x i32>] %.fca.0.insert, <2 x i32> %6, 1
-  %.fca.2.insert = insertvalue [4 x <2 x i32>] %.fca.1.insert, <2 x i32> %7, 2
-  %.fca.3.insert = insertvalue [4 x <2 x i32>] %.fca.2.insert, <2 x i32> %8, 3
+  %4 = bitcast <4 x bfloat> %vld4_lane_v.fca.0.extract to <2 x i32>
+  %5 = bitcast <4 x bfloat> %vld4_lane_v.fca.1.extract to <2 x i32>
+  %6 = bitcast <4 x bfloat> %vld4_lane_v.fca.2.extract to <2 x i32>
+  %7 = bitcast <4 x bfloat> %vld4_lane_v.fca.3.extract to <2 x i32>
+  %.fca.0.insert = insertvalue [4 x <2 x i32>] undef, <2 x i32> %4, 0
+  %.fca.1.insert = insertvalue [4 x <2 x i32>] %.fca.0.insert, <2 x i32> %5, 1
+  %.fca.2.insert = insertvalue [4 x <2 x i32>] %.fca.1.insert, <2 x i32> %6, 2
+  %.fca.3.insert = insertvalue [4 x <2 x i32>] %.fca.2.insert, <2 x i32> %7, 3
   ret [4 x <2 x i32>] %.fca.3.insert
 }
 
-define arm_aapcs_vfpcc [4 x <4 x i32>] @test_vld4q_lane_bf16(bfloat* %ptr, [4 x <4 x i32>] %src.coerce) {
+define arm_aapcs_vfpcc [4 x <4 x i32>] @test_vld4q_lane_bf16(ptr %ptr, [4 x <4 x i32>] %src.coerce) {
 ; CHECK-LABEL: test_vld4q_lane_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
@@ -466,169 +453,160 @@ entry:
   %1 = bitcast <4 x i32> %src.coerce.fca.1.extract to <8 x bfloat>
   %2 = bitcast <4 x i32> %src.coerce.fca.2.extract to <8 x bfloat>
   %3 = bitcast <4 x i32> %src.coerce.fca.3.extract to <8 x bfloat>
-  %4 = bitcast bfloat* %ptr to i8*
-  %vld4q_lane_v = tail call { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld4lane.v8bf16.p0i8(i8* %4, <8 x bfloat> %0, <8 x bfloat> %1, <8 x bfloat> %2, <8 x bfloat> %3, i32 7, i32 2)
+  %vld4q_lane_v = tail call { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld4lane.v8bf16.p0(ptr %ptr, <8 x bfloat> %0, <8 x bfloat> %1, <8 x bfloat> %2, <8 x bfloat> %3, i32 7, i32 2)
   %vld4q_lane_v.fca.0.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld4q_lane_v, 0
   %vld4q_lane_v.fca.1.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld4q_lane_v, 1
   %vld4q_lane_v.fca.2.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld4q_lane_v, 2
   %vld4q_lane_v.fca.3.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld4q_lane_v, 3
-  %5 = bitcast <8 x bfloat> %vld4q_lane_v.fca.0.extract to <4 x i32>
-  %6 = bitcast <8 x bfloat> %vld4q_lane_v.fca.1.extract to <4 x i32>
-  %7 = bitcast <8 x bfloat> %vld4q_lane_v.fca.2.extract to <4 x i32>
-  %8 = bitcast <8 x bfloat> %vld4q_lane_v.fca.3.extract to <4 x i32>
-  %.fca.0.insert = insertvalue [4 x <4 x i32>] undef, <4 x i32> %5, 0
-  %.fca.1.insert = insertvalue [4 x <4 x i32>] %.fca.0.insert, <4 x i32> %6, 1
-  %.fca.2.insert = insertvalue [4 x <4 x i32>] %.fca.1.insert, <4 x i32> %7, 2
-  %.fca.3.insert = insertvalue [4 x <4 x i32>] %.fca.2.insert, <4 x i32> %8, 3
+  %4 = bitcast <8 x bfloat> %vld4q_lane_v.fca.0.extract to <4 x i32>
+  %5 = bitcast <8 x bfloat> %vld4q_lane_v.fca.1.extract to <4 x i32>
+  %6 = bitcast <8 x bfloat> %vld4q_lane_v.fca.2.extract to <4 x i32>
+  %7 = bitcast <8 x bfloat> %vld4q_lane_v.fca.3.extract to <4 x i32>
+  %.fca.0.insert = insertvalue [4 x <4 x i32>] undef, <4 x i32> %4, 0
+  %.fca.1.insert = insertvalue [4 x <4 x i32>] %.fca.0.insert, <4 x i32> %5, 1
+  %.fca.2.insert = insertvalue [4 x <4 x i32>] %.fca.1.insert, <4 x i32> %6, 2
+  %.fca.3.insert = insertvalue [4 x <4 x i32>] %.fca.2.insert, <4 x i32> %7, 3
   ret [4 x <4 x i32>] %.fca.3.insert
 }
 
-define arm_aapcs_vfpcc [2 x <2 x i32>] @test_vld2_dup_bf16(bfloat* %ptr) {
+define arm_aapcs_vfpcc [2 x <2 x i32>] @test_vld2_dup_bf16(ptr %ptr) {
 ; CHECK-LABEL: test_vld2_dup_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld2.16 {d0[], d1[]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast bfloat* %ptr to i8*
-  %vld2_dup_v = tail call { <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld2dup.v4bf16.p0i8(i8* %0, i32 2)
+  %vld2_dup_v = tail call { <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld2dup.v4bf16.p0(ptr %ptr, i32 2)
   %vld2_dup_v.fca.0.extract = extractvalue { <4 x bfloat>, <4 x bfloat> } %vld2_dup_v, 0
   %vld2_dup_v.fca.1.extract = extractvalue { <4 x bfloat>, <4 x bfloat> } %vld2_dup_v, 1
-  %1 = bitcast <4 x bfloat> %vld2_dup_v.fca.0.extract to <2 x i32>
-  %2 = bitcast <4 x bfloat> %vld2_dup_v.fca.1.extract to <2 x i32>
-  %.fca.0.insert = insertvalue [2 x <2 x i32>] undef, <2 x i32> %1, 0
-  %.fca.1.insert = insertvalue [2 x <2 x i32>] %.fca.0.insert, <2 x i32> %2, 1
+  %0 = bitcast <4 x bfloat> %vld2_dup_v.fca.0.extract to <2 x i32>
+  %1 = bitcast <4 x bfloat> %vld2_dup_v.fca.1.extract to <2 x i32>
+  %.fca.0.insert = insertvalue [2 x <2 x i32>] undef, <2 x i32> %0, 0
+  %.fca.1.insert = insertvalue [2 x <2 x i32>] %.fca.0.insert, <2 x i32> %1, 1
   ret [2 x <2 x i32>] %.fca.1.insert
 }
 
-define arm_aapcs_vfpcc [2 x <4 x i32>] @test_vld2q_dup_bf16(bfloat* %ptr) {
+define arm_aapcs_vfpcc [2 x <4 x i32>] @test_vld2q_dup_bf16(ptr %ptr) {
 ; CHECK-LABEL: test_vld2q_dup_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld2.16 {d16[], d18[]}, [r0]
 ; CHECK-NEXT:    vld2.16 {d1[], d3[]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast bfloat* %ptr to i8*
-  %vld2q_dup_v = tail call { <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld2dup.v8bf16.p0i8(i8* %0, i32 2)
+  %vld2q_dup_v = tail call { <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld2dup.v8bf16.p0(ptr %ptr, i32 2)
   %vld2q_dup_v.fca.0.extract = extractvalue { <8 x bfloat>, <8 x bfloat> } %vld2q_dup_v, 0
   %vld2q_dup_v.fca.1.extract = extractvalue { <8 x bfloat>, <8 x bfloat> } %vld2q_dup_v, 1
-  %1 = bitcast <8 x bfloat> %vld2q_dup_v.fca.0.extract to <4 x i32>
-  %2 = bitcast <8 x bfloat> %vld2q_dup_v.fca.1.extract to <4 x i32>
-  %.fca.0.insert = insertvalue [2 x <4 x i32>] undef, <4 x i32> %1, 0
-  %.fca.1.insert = insertvalue [2 x <4 x i32>] %.fca.0.insert, <4 x i32> %2, 1
+  %0 = bitcast <8 x bfloat> %vld2q_dup_v.fca.0.extract to <4 x i32>
+  %1 = bitcast <8 x bfloat> %vld2q_dup_v.fca.1.extract to <4 x i32>
+  %.fca.0.insert = insertvalue [2 x <4 x i32>] undef, <4 x i32> %0, 0
+  %.fca.1.insert = insertvalue [2 x <4 x i32>] %.fca.0.insert, <4 x i32> %1, 1
   ret [2 x <4 x i32>] %.fca.1.insert
 }
 
-define arm_aapcs_vfpcc [3 x <2 x i32>] @test_vld3_dup_bf16(bfloat* %ptr) {
+define arm_aapcs_vfpcc [3 x <2 x i32>] @test_vld3_dup_bf16(ptr %ptr) {
 ; CHECK-LABEL: test_vld3_dup_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld3.16 {d0[], d1[], d2[]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast bfloat* %ptr to i8*
-  %vld3_dup_v = tail call { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld3dup.v4bf16.p0i8(i8* %0, i32 2)
+  %vld3_dup_v = tail call { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld3dup.v4bf16.p0(ptr %ptr, i32 2)
   %vld3_dup_v.fca.0.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld3_dup_v, 0
   %vld3_dup_v.fca.1.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld3_dup_v, 1
   %vld3_dup_v.fca.2.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld3_dup_v, 2
-  %1 = bitcast <4 x bfloat> %vld3_dup_v.fca.0.extract to <2 x i32>
-  %2 = bitcast <4 x bfloat> %vld3_dup_v.fca.1.extract to <2 x i32>
-  %3 = bitcast <4 x bfloat> %vld3_dup_v.fca.2.extract to <2 x i32>
-  %.fca.0.insert = insertvalue [3 x <2 x i32>] undef, <2 x i32> %1, 0
-  %.fca.1.insert = insertvalue [3 x <2 x i32>] %.fca.0.insert, <2 x i32> %2, 1
-  %.fca.2.insert = insertvalue [3 x <2 x i32>] %.fca.1.insert, <2 x i32> %3, 2
+  %0 = bitcast <4 x bfloat> %vld3_dup_v.fca.0.extract to <2 x i32>
+  %1 = bitcast <4 x bfloat> %vld3_dup_v.fca.1.extract to <2 x i32>
+  %2 = bitcast <4 x bfloat> %vld3_dup_v.fca.2.extract to <2 x i32>
+  %.fca.0.insert = insertvalue [3 x <2 x i32>] undef, <2 x i32> %0, 0
+  %.fca.1.insert = insertvalue [3 x <2 x i32>] %.fca.0.insert, <2 x i32> %1, 1
+  %.fca.2.insert = insertvalue [3 x <2 x i32>] %.fca.1.insert, <2 x i32> %2, 2
   ret [3 x <2 x i32>] %.fca.2.insert
 }
 
-define arm_aapcs_vfpcc [3 x <4 x i32>] @test_vld3q_dup_bf16(bfloat* %ptr) {
+define arm_aapcs_vfpcc [3 x <4 x i32>] @test_vld3q_dup_bf16(ptr %ptr) {
 ; CHECK-LABEL: test_vld3q_dup_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld3.16 {d0[], d2[], d4[]}, [r0]
 ; CHECK-NEXT:    vld3.16 {d1[], d3[], d5[]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast bfloat* %ptr to i8*
-  %vld3q_dup_v = tail call { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld3dup.v8bf16.p0i8(i8* %0, i32 2)
+  %vld3q_dup_v = tail call { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld3dup.v8bf16.p0(ptr %ptr, i32 2)
   %vld3q_dup_v.fca.0.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld3q_dup_v, 0
   %vld3q_dup_v.fca.1.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld3q_dup_v, 1
   %vld3q_dup_v.fca.2.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld3q_dup_v, 2
-  %1 = bitcast <8 x bfloat> %vld3q_dup_v.fca.0.extract to <4 x i32>
-  %2 = bitcast <8 x bfloat> %vld3q_dup_v.fca.1.extract to <4 x i32>
-  %3 = bitcast <8 x bfloat> %vld3q_dup_v.fca.2.extract to <4 x i32>
-  %.fca.0.insert = insertvalue [3 x <4 x i32>] undef, <4 x i32> %1, 0
-  %.fca.1.insert = insertvalue [3 x <4 x i32>] %.fca.0.insert, <4 x i32> %2, 1
-  %.fca.2.insert = insertvalue [3 x <4 x i32>] %.fca.1.insert, <4 x i32> %3, 2
+  %0 = bitcast <8 x bfloat> %vld3q_dup_v.fca.0.extract to <4 x i32>
+  %1 = bitcast <8 x bfloat> %vld3q_dup_v.fca.1.extract to <4 x i32>
+  %2 = bitcast <8 x bfloat> %vld3q_dup_v.fca.2.extract to <4 x i32>
+  %.fca.0.insert = insertvalue [3 x <4 x i32>] undef, <4 x i32> %0, 0
+  %.fca.1.insert = insertvalue [3 x <4 x i32>] %.fca.0.insert, <4 x i32> %1, 1
+  %.fca.2.insert = insertvalue [3 x <4 x i32>] %.fca.1.insert, <4 x i32> %2, 2
   ret [3 x <4 x i32>] %.fca.2.insert
 }
 
-define arm_aapcs_vfpcc [4 x <2 x i32>] @test_vld4_dup_bf16(bfloat* %ptr) {
+define arm_aapcs_vfpcc [4 x <2 x i32>] @test_vld4_dup_bf16(ptr %ptr) {
 ; CHECK-LABEL: test_vld4_dup_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld4.16 {d0[], d1[], d2[], d3[]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast bfloat* %ptr to i8*
-  %vld4_dup_v = tail call { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld4dup.v4bf16.p0i8(i8* %0, i32 2)
+  %vld4_dup_v = tail call { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld4dup.v4bf16.p0(ptr %ptr, i32 2)
   %vld4_dup_v.fca.0.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld4_dup_v, 0
   %vld4_dup_v.fca.1.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld4_dup_v, 1
   %vld4_dup_v.fca.2.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld4_dup_v, 2
   %vld4_dup_v.fca.3.extract = extractvalue { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } %vld4_dup_v, 3
-  %1 = bitcast <4 x bfloat> %vld4_dup_v.fca.0.extract to <2 x i32>
-  %2 = bitcast <4 x bfloat> %vld4_dup_v.fca.1.extract to <2 x i32>
-  %3 = bitcast <4 x bfloat> %vld4_dup_v.fca.2.extract to <2 x i32>
-  %4 = bitcast <4 x bfloat> %vld4_dup_v.fca.3.extract to <2 x i32>
-  %.fca.0.insert = insertvalue [4 x <2 x i32>] undef, <2 x i32> %1, 0
-  %.fca.1.insert = insertvalue [4 x <2 x i32>] %.fca.0.insert, <2 x i32> %2, 1
-  %.fca.2.insert = insertvalue [4 x <2 x i32>] %.fca.1.insert, <2 x i32> %3, 2
-  %.fca.3.insert = insertvalue [4 x <2 x i32>] %.fca.2.insert, <2 x i32> %4, 3
+  %0 = bitcast <4 x bfloat> %vld4_dup_v.fca.0.extract to <2 x i32>
+  %1 = bitcast <4 x bfloat> %vld4_dup_v.fca.1.extract to <2 x i32>
+  %2 = bitcast <4 x bfloat> %vld4_dup_v.fca.2.extract to <2 x i32>
+  %3 = bitcast <4 x bfloat> %vld4_dup_v.fca.3.extract to <2 x i32>
+  %.fca.0.insert = insertvalue [4 x <2 x i32>] undef, <2 x i32> %0, 0
+  %.fca.1.insert = insertvalue [4 x <2 x i32>] %.fca.0.insert, <2 x i32> %1, 1
+  %.fca.2.insert = insertvalue [4 x <2 x i32>] %.fca.1.insert, <2 x i32> %2, 2
+  %.fca.3.insert = insertvalue [4 x <2 x i32>] %.fca.2.insert, <2 x i32> %3, 3
   ret [4 x <2 x i32>] %.fca.3.insert
 }
 
-define arm_aapcs_vfpcc [4 x <4 x i32>] @test_vld4q_dup_bf16(bfloat* %ptr) {
+define arm_aapcs_vfpcc [4 x <4 x i32>] @test_vld4q_dup_bf16(ptr %ptr) {
 ; CHECK-LABEL: test_vld4q_dup_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld4.16 {d0[], d2[], d4[], d6[]}, [r0]
 ; CHECK-NEXT:    vld4.16 {d1[], d3[], d5[], d7[]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast bfloat* %ptr to i8*
-  %vld4q_dup_v = tail call { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld4dup.v8bf16.p0i8(i8* %0, i32 2)
+  %vld4q_dup_v = tail call { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld4dup.v8bf16.p0(ptr %ptr, i32 2)
   %vld4q_dup_v.fca.0.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld4q_dup_v, 0
   %vld4q_dup_v.fca.1.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld4q_dup_v, 1
   %vld4q_dup_v.fca.2.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld4q_dup_v, 2
   %vld4q_dup_v.fca.3.extract = extractvalue { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } %vld4q_dup_v, 3
-  %1 = bitcast <8 x bfloat> %vld4q_dup_v.fca.0.extract to <4 x i32>
-  %2 = bitcast <8 x bfloat> %vld4q_dup_v.fca.1.extract to <4 x i32>
-  %3 = bitcast <8 x bfloat> %vld4q_dup_v.fca.2.extract to <4 x i32>
-  %4 = bitcast <8 x bfloat> %vld4q_dup_v.fca.3.extract to <4 x i32>
-  %.fca.0.insert = insertvalue [4 x <4 x i32>] undef, <4 x i32> %1, 0
-  %.fca.1.insert = insertvalue [4 x <4 x i32>] %.fca.0.insert, <4 x i32> %2, 1
-  %.fca.2.insert = insertvalue [4 x <4 x i32>] %.fca.1.insert, <4 x i32> %3, 2
-  %.fca.3.insert = insertvalue [4 x <4 x i32>] %.fca.2.insert, <4 x i32> %4, 3
+  %0 = bitcast <8 x bfloat> %vld4q_dup_v.fca.0.extract to <4 x i32>
+  %1 = bitcast <8 x bfloat> %vld4q_dup_v.fca.1.extract to <4 x i32>
+  %2 = bitcast <8 x bfloat> %vld4q_dup_v.fca.2.extract to <4 x i32>
+  %3 = bitcast <8 x bfloat> %vld4q_dup_v.fca.3.extract to <4 x i32>
+  %.fca.0.insert = insertvalue [4 x <4 x i32>] undef, <4 x i32> %0, 0
+  %.fca.1.insert = insertvalue [4 x <4 x i32>] %.fca.0.insert, <4 x i32> %1, 1
+  %.fca.2.insert = insertvalue [4 x <4 x i32>] %.fca.1.insert, <4 x i32> %2, 2
+  %.fca.3.insert = insertvalue [4 x <4 x i32>] %.fca.2.insert, <4 x i32> %3, 3
   ret [4 x <4 x i32>] %.fca.3.insert
 }
 
-define arm_aapcs_vfpcc void @test_vst1_bf16(bfloat* %ptr, <4 x bfloat> %val) {
+define arm_aapcs_vfpcc void @test_vst1_bf16(ptr %ptr, <4 x bfloat> %val) {
 ; CHECK-LABEL: test_vst1_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vst1.16 {d0}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast bfloat* %ptr to i8*
-  tail call void @llvm.arm.neon.vst1.p0i8.v4bf16(i8* %0, <4 x bfloat> %val, i32 2)
+  tail call void @llvm.arm.neon.vst1.p0.v4bf16(ptr %ptr, <4 x bfloat> %val, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst1q_bf16(bfloat* %ptr, <8 x bfloat> %val) {
+define arm_aapcs_vfpcc void @test_vst1q_bf16(ptr %ptr, <8 x bfloat> %val) {
 ; CHECK-LABEL: test_vst1q_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vst1.16 {d0, d1}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = bitcast bfloat* %ptr to i8*
-  tail call void @llvm.arm.neon.vst1.p0i8.v8bf16(i8* %0, <8 x bfloat> %val, i32 2)
+  tail call void @llvm.arm.neon.vst1.p0.v8bf16(ptr %ptr, <8 x bfloat> %val, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst1_lane_bf16(bfloat* nocapture %ptr, <4 x bfloat> %val) {
+define arm_aapcs_vfpcc void @test_vst1_lane_bf16(ptr nocapture %ptr, <4 x bfloat> %val) {
 ; CHECK-LABEL: test_vst1_lane_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovx.f16 s0, s0
@@ -636,11 +614,11 @@ define arm_aapcs_vfpcc void @test_vst1_lane_bf16(bfloat* nocapture %ptr, <4 x bf
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = extractelement <4 x bfloat> %val, i32 1
-  store bfloat %0, bfloat* %ptr, align 2
+  store bfloat %0, ptr %ptr, align 2
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst1q_lane_bf16(bfloat* nocapture %ptr, <8 x bfloat> %val) {
+define arm_aapcs_vfpcc void @test_vst1q_lane_bf16(ptr nocapture %ptr, <8 x bfloat> %val) {
 ; CHECK-LABEL: test_vst1q_lane_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovx.f16 s0, s3
@@ -648,11 +626,11 @@ define arm_aapcs_vfpcc void @test_vst1q_lane_bf16(bfloat* nocapture %ptr, <8 x b
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = extractelement <8 x bfloat> %val, i32 7
-  store bfloat %0, bfloat* %ptr, align 2
+  store bfloat %0, ptr %ptr, align 2
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst1_bf16_x2(bfloat* nocapture %ptr, [2 x <2 x i32>] %val.coerce) {
+define arm_aapcs_vfpcc void @test_vst1_bf16_x2(ptr nocapture %ptr, [2 x <2 x i32>] %val.coerce) {
 ; CHECK-LABEL: test_vst1_bf16_x2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d1 killed $d1 killed $q0 def $q0
@@ -664,11 +642,11 @@ entry:
   %val.coerce.fca.1.extract = extractvalue [2 x <2 x i32>] %val.coerce, 1
   %0 = bitcast <2 x i32> %val.coerce.fca.0.extract to <4 x bfloat>
   %1 = bitcast <2 x i32> %val.coerce.fca.1.extract to <4 x bfloat>
-  tail call void @llvm.arm.neon.vst1x2.p0bf16.v4bf16(bfloat* %ptr, <4 x bfloat> %0, <4 x bfloat> %1)
+  tail call void @llvm.arm.neon.vst1x2.p0.v4bf16(ptr %ptr, <4 x bfloat> %0, <4 x bfloat> %1)
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst1q_bf16_x2(bfloat* nocapture %ptr, [2 x <4 x i32>] %val.coerce) {
+define arm_aapcs_vfpcc void @test_vst1q_bf16_x2(ptr nocapture %ptr, [2 x <4 x i32>] %val.coerce) {
 ; CHECK-LABEL: test_vst1q_bf16_x2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
@@ -680,11 +658,11 @@ entry:
   %val.coerce.fca.1.extract = extractvalue [2 x <4 x i32>] %val.coerce, 1
   %0 = bitcast <4 x i32> %val.coerce.fca.0.extract to <8 x bfloat>
   %1 = bitcast <4 x i32> %val.coerce.fca.1.extract to <8 x bfloat>
-  tail call void @llvm.arm.neon.vst1x2.p0bf16.v8bf16(bfloat* %ptr, <8 x bfloat> %0, <8 x bfloat> %1)
+  tail call void @llvm.arm.neon.vst1x2.p0.v8bf16(ptr %ptr, <8 x bfloat> %0, <8 x bfloat> %1)
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst1_bf16_x3(bfloat* nocapture %ptr, [3 x <2 x i32>] %val.coerce) {
+define arm_aapcs_vfpcc void @test_vst1_bf16_x3(ptr nocapture %ptr, [3 x <2 x i32>] %val.coerce) {
 ; CHECK-LABEL: test_vst1_bf16_x3:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d2 killed $d2 killed $q0_q1 def $q0_q1
@@ -699,11 +677,11 @@ entry:
   %0 = bitcast <2 x i32> %val.coerce.fca.0.extract to <4 x bfloat>
   %1 = bitcast <2 x i32> %val.coerce.fca.1.extract to <4 x bfloat>
   %2 = bitcast <2 x i32> %val.coerce.fca.2.extract to <4 x bfloat>
-  tail call void @llvm.arm.neon.vst1x3.p0bf16.v4bf16(bfloat* %ptr, <4 x bfloat> %0, <4 x bfloat> %1, <4 x bfloat> %2)
+  tail call void @llvm.arm.neon.vst1x3.p0.v4bf16(ptr %ptr, <4 x bfloat> %0, <4 x bfloat> %1, <4 x bfloat> %2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst1q_bf16_x3(bfloat* nocapture %ptr, [3 x <4 x i32>] %val.coerce) {
+define arm_aapcs_vfpcc void @test_vst1q_bf16_x3(ptr nocapture %ptr, [3 x <4 x i32>] %val.coerce) {
 ; CHECK-LABEL: test_vst1q_bf16_x3:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
@@ -719,11 +697,11 @@ entry:
   %0 = bitcast <4 x i32> %val.coerce.fca.0.extract to <8 x bfloat>
   %1 = bitcast <4 x i32> %val.coerce.fca.1.extract to <8 x bfloat>
   %2 = bitcast <4 x i32> %val.coerce.fca.2.extract to <8 x bfloat>
-  tail call void @llvm.arm.neon.vst1x3.p0bf16.v8bf16(bfloat* %ptr, <8 x bfloat> %0, <8 x bfloat> %1, <8 x bfloat> %2)
+  tail call void @llvm.arm.neon.vst1x3.p0.v8bf16(ptr %ptr, <8 x bfloat> %0, <8 x bfloat> %1, <8 x bfloat> %2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst1_bf16_x4(bfloat* nocapture %ptr, [4 x <2 x i32>] %val.coerce) {
+define arm_aapcs_vfpcc void @test_vst1_bf16_x4(ptr nocapture %ptr, [4 x <2 x i32>] %val.coerce) {
 ; CHECK-LABEL: test_vst1_bf16_x4:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d3 killed $d3 killed $q0_q1 def $q0_q1
@@ -741,11 +719,11 @@ entry:
   %1 = bitcast <2 x i32> %val.coerce.fca.1.extract to <4 x bfloat>
   %2 = bitcast <2 x i32> %val.coerce.fca.2.extract to <4 x bfloat>
   %3 = bitcast <2 x i32> %val.coerce.fca.3.extract to <4 x bfloat>
-  tail call void @llvm.arm.neon.vst1x4.p0bf16.v4bf16(bfloat* %ptr, <4 x bfloat> %0, <4 x bfloat> %1, <4 x bfloat> %2, <4 x bfloat> %3)
+  tail call void @llvm.arm.neon.vst1x4.p0.v4bf16(ptr %ptr, <4 x bfloat> %0, <4 x bfloat> %1, <4 x bfloat> %2, <4 x bfloat> %3)
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst1q_bf16_x4(bfloat* nocapture %ptr, [4 x <4 x i32>] %val.coerce) {
+define arm_aapcs_vfpcc void @test_vst1q_bf16_x4(ptr nocapture %ptr, [4 x <4 x i32>] %val.coerce) {
 ; CHECK-LABEL: test_vst1q_bf16_x4:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
@@ -764,11 +742,11 @@ entry:
   %1 = bitcast <4 x i32> %val.coerce.fca.1.extract to <8 x bfloat>
   %2 = bitcast <4 x i32> %val.coerce.fca.2.extract to <8 x bfloat>
   %3 = bitcast <4 x i32> %val.coerce.fca.3.extract to <8 x bfloat>
-  tail call void @llvm.arm.neon.vst1x4.p0bf16.v8bf16(bfloat* %ptr, <8 x bfloat> %0, <8 x bfloat> %1, <8 x bfloat> %2, <8 x bfloat> %3)
+  tail call void @llvm.arm.neon.vst1x4.p0.v8bf16(ptr %ptr, <8 x bfloat> %0, <8 x bfloat> %1, <8 x bfloat> %2, <8 x bfloat> %3)
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst2_bf16(bfloat* %ptr, [2 x <2 x i32>] %val.coerce) {
+define arm_aapcs_vfpcc void @test_vst2_bf16(ptr %ptr, [2 x <2 x i32>] %val.coerce) {
 ; CHECK-LABEL: test_vst2_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d1 killed $d1 killed $q0 def $q0
@@ -780,12 +758,11 @@ entry:
   %val.coerce.fca.1.extract = extractvalue [2 x <2 x i32>] %val.coerce, 1
   %0 = bitcast <2 x i32> %val.coerce.fca.0.extract to <4 x bfloat>
   %1 = bitcast <2 x i32> %val.coerce.fca.1.extract to <4 x bfloat>
-  %2 = bitcast bfloat* %ptr to i8*
-  tail call void @llvm.arm.neon.vst2.p0i8.v4bf16(i8* %2, <4 x bfloat> %0, <4 x bfloat> %1, i32 2)
+  tail call void @llvm.arm.neon.vst2.p0.v4bf16(ptr %ptr, <4 x bfloat> %0, <4 x bfloat> %1, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst2q_bf16(bfloat* %ptr, [2 x <4 x i32>] %val.coerce) {
+define arm_aapcs_vfpcc void @test_vst2q_bf16(ptr %ptr, [2 x <4 x i32>] %val.coerce) {
 ; CHECK-LABEL: test_vst2q_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
@@ -797,12 +774,11 @@ entry:
   %val.coerce.fca.1.extract = extractvalue [2 x <4 x i32>] %val.coerce, 1
   %0 = bitcast <4 x i32> %val.coerce.fca.0.extract to <8 x bfloat>
   %1 = bitcast <4 x i32> %val.coerce.fca.1.extract to <8 x bfloat>
-  %2 = bitcast bfloat* %ptr to i8*
-  tail call void @llvm.arm.neon.vst2.p0i8.v8bf16(i8* %2, <8 x bfloat> %0, <8 x bfloat> %1, i32 2)
+  tail call void @llvm.arm.neon.vst2.p0.v8bf16(ptr %ptr, <8 x bfloat> %0, <8 x bfloat> %1, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst2_lane_bf16(bfloat* %ptr, [2 x <2 x i32>] %val.coerce) {
+define arm_aapcs_vfpcc void @test_vst2_lane_bf16(ptr %ptr, [2 x <2 x i32>] %val.coerce) {
 ; CHECK-LABEL: test_vst2_lane_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d1 killed $d1 killed $q0 def $q0
@@ -814,12 +790,11 @@ entry:
   %val.coerce.fca.1.extract = extractvalue [2 x <2 x i32>] %val.coerce, 1
   %0 = bitcast <2 x i32> %val.coerce.fca.0.extract to <4 x bfloat>
   %1 = bitcast <2 x i32> %val.coerce.fca.1.extract to <4 x bfloat>
-  %2 = bitcast bfloat* %ptr to i8*
-  tail call void @llvm.arm.neon.vst2lane.p0i8.v4bf16(i8* %2, <4 x bfloat> %0, <4 x bfloat> %1, i32 1, i32 2)
+  tail call void @llvm.arm.neon.vst2lane.p0.v4bf16(ptr %ptr, <4 x bfloat> %0, <4 x bfloat> %1, i32 1, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst2q_lane_bf16(bfloat* %ptr, [2 x <4 x i32>] %val.coerce) {
+define arm_aapcs_vfpcc void @test_vst2q_lane_bf16(ptr %ptr, [2 x <4 x i32>] %val.coerce) {
 ; CHECK-LABEL: test_vst2q_lane_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
@@ -831,12 +806,11 @@ entry:
   %val.coerce.fca.1.extract = extractvalue [2 x <4 x i32>] %val.coerce, 1
   %0 = bitcast <4 x i32> %val.coerce.fca.0.extract to <8 x bfloat>
   %1 = bitcast <4 x i32> %val.coerce.fca.1.extract to <8 x bfloat>
-  %2 = bitcast bfloat* %ptr to i8*
-  tail call void @llvm.arm.neon.vst2lane.p0i8.v8bf16(i8* %2, <8 x bfloat> %0, <8 x bfloat> %1, i32 7, i32 2)
+  tail call void @llvm.arm.neon.vst2lane.p0.v8bf16(ptr %ptr, <8 x bfloat> %0, <8 x bfloat> %1, i32 7, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst3_bf16(bfloat* %ptr, [3 x <2 x i32>] %val.coerce) {
+define arm_aapcs_vfpcc void @test_vst3_bf16(ptr %ptr, [3 x <2 x i32>] %val.coerce) {
 ; CHECK-LABEL: test_vst3_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d2 killed $d2 killed $q0_q1 def $q0_q1
@@ -851,12 +825,11 @@ entry:
   %0 = bitcast <2 x i32> %val.coerce.fca.0.extract to <4 x bfloat>
   %1 = bitcast <2 x i32> %val.coerce.fca.1.extract to <4 x bfloat>
   %2 = bitcast <2 x i32> %val.coerce.fca.2.extract to <4 x bfloat>
-  %3 = bitcast bfloat* %ptr to i8*
-  tail call void @llvm.arm.neon.vst3.p0i8.v4bf16(i8* %3, <4 x bfloat> %0, <4 x bfloat> %1, <4 x bfloat> %2, i32 2)
+  tail call void @llvm.arm.neon.vst3.p0.v4bf16(ptr %ptr, <4 x bfloat> %0, <4 x bfloat> %1, <4 x bfloat> %2, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst3q_bf16(bfloat* %ptr, [3 x <4 x i32>] %val.coerce) {
+define arm_aapcs_vfpcc void @test_vst3q_bf16(ptr %ptr, [3 x <4 x i32>] %val.coerce) {
 ; CHECK-LABEL: test_vst3q_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
@@ -872,12 +845,11 @@ entry:
   %0 = bitcast <4 x i32> %val.coerce.fca.0.extract to <8 x bfloat>
   %1 = bitcast <4 x i32> %val.coerce.fca.1.extract to <8 x bfloat>
   %2 = bitcast <4 x i32> %val.coerce.fca.2.extract to <8 x bfloat>
-  %3 = bitcast bfloat* %ptr to i8*
-  tail call void @llvm.arm.neon.vst3.p0i8.v8bf16(i8* %3, <8 x bfloat> %0, <8 x bfloat> %1, <8 x bfloat> %2, i32 2)
+  tail call void @llvm.arm.neon.vst3.p0.v8bf16(ptr %ptr, <8 x bfloat> %0, <8 x bfloat> %1, <8 x bfloat> %2, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst3_lane_bf16(bfloat* %ptr, [3 x <2 x i32>] %val.coerce) {
+define arm_aapcs_vfpcc void @test_vst3_lane_bf16(ptr %ptr, [3 x <2 x i32>] %val.coerce) {
 ; CHECK-LABEL: test_vst3_lane_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d2 killed $d2 killed $q0_q1 def $q0_q1
@@ -892,12 +864,11 @@ entry:
   %0 = bitcast <2 x i32> %val.coerce.fca.0.extract to <4 x bfloat>
   %1 = bitcast <2 x i32> %val.coerce.fca.1.extract to <4 x bfloat>
   %2 = bitcast <2 x i32> %val.coerce.fca.2.extract to <4 x bfloat>
-  %3 = bitcast bfloat* %ptr to i8*
-  tail call void @llvm.arm.neon.vst3lane.p0i8.v4bf16(i8* %3, <4 x bfloat> %0, <4 x bfloat> %1, <4 x bfloat> %2, i32 1, i32 2)
+  tail call void @llvm.arm.neon.vst3lane.p0.v4bf16(ptr %ptr, <4 x bfloat> %0, <4 x bfloat> %1, <4 x bfloat> %2, i32 1, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst3q_lane_bf16(bfloat* %ptr, [3 x <4 x i32>] %val.coerce) {
+define arm_aapcs_vfpcc void @test_vst3q_lane_bf16(ptr %ptr, [3 x <4 x i32>] %val.coerce) {
 ; CHECK-LABEL: test_vst3q_lane_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
@@ -912,12 +883,11 @@ entry:
   %0 = bitcast <4 x i32> %val.coerce.fca.0.extract to <8 x bfloat>
   %1 = bitcast <4 x i32> %val.coerce.fca.1.extract to <8 x bfloat>
   %2 = bitcast <4 x i32> %val.coerce.fca.2.extract to <8 x bfloat>
-  %3 = bitcast bfloat* %ptr to i8*
-  tail call void @llvm.arm.neon.vst3lane.p0i8.v8bf16(i8* %3, <8 x bfloat> %0, <8 x bfloat> %1, <8 x bfloat> %2, i32 7, i32 2)
+  tail call void @llvm.arm.neon.vst3lane.p0.v8bf16(ptr %ptr, <8 x bfloat> %0, <8 x bfloat> %1, <8 x bfloat> %2, i32 7, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst4_bf16(bfloat* %ptr, [4 x <2 x i32>] %val.coerce) {
+define arm_aapcs_vfpcc void @test_vst4_bf16(ptr %ptr, [4 x <2 x i32>] %val.coerce) {
 ; CHECK-LABEL: test_vst4_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d3 killed $d3 killed $q0_q1 def $q0_q1
@@ -935,12 +905,11 @@ entry:
   %1 = bitcast <2 x i32> %val.coerce.fca.1.extract to <4 x bfloat>
   %2 = bitcast <2 x i32> %val.coerce.fca.2.extract to <4 x bfloat>
   %3 = bitcast <2 x i32> %val.coerce.fca.3.extract to <4 x bfloat>
-  %4 = bitcast bfloat* %ptr to i8*
-  tail call void @llvm.arm.neon.vst4.p0i8.v4bf16(i8* %4, <4 x bfloat> %0, <4 x bfloat> %1, <4 x bfloat> %2, <4 x bfloat> %3, i32 2)
+  tail call void @llvm.arm.neon.vst4.p0.v4bf16(ptr %ptr, <4 x bfloat> %0, <4 x bfloat> %1, <4 x bfloat> %2, <4 x bfloat> %3, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst4q_bf16(bfloat* %ptr, [4 x <4 x i32>] %val.coerce) {
+define arm_aapcs_vfpcc void @test_vst4q_bf16(ptr %ptr, [4 x <4 x i32>] %val.coerce) {
 ; CHECK-LABEL: test_vst4q_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
@@ -959,12 +928,11 @@ entry:
   %1 = bitcast <4 x i32> %val.coerce.fca.1.extract to <8 x bfloat>
   %2 = bitcast <4 x i32> %val.coerce.fca.2.extract to <8 x bfloat>
   %3 = bitcast <4 x i32> %val.coerce.fca.3.extract to <8 x bfloat>
-  %4 = bitcast bfloat* %ptr to i8*
-  tail call void @llvm.arm.neon.vst4.p0i8.v8bf16(i8* %4, <8 x bfloat> %0, <8 x bfloat> %1, <8 x bfloat> %2, <8 x bfloat> %3, i32 2)
+  tail call void @llvm.arm.neon.vst4.p0.v8bf16(ptr %ptr, <8 x bfloat> %0, <8 x bfloat> %1, <8 x bfloat> %2, <8 x bfloat> %3, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst4_lane_bf16(bfloat* %ptr, [4 x <2 x i32>] %val.coerce) {
+define arm_aapcs_vfpcc void @test_vst4_lane_bf16(ptr %ptr, [4 x <2 x i32>] %val.coerce) {
 ; CHECK-LABEL: test_vst4_lane_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d3 killed $d3 killed $q0_q1 def $q0_q1
@@ -982,12 +950,11 @@ entry:
   %1 = bitcast <2 x i32> %val.coerce.fca.1.extract to <4 x bfloat>
   %2 = bitcast <2 x i32> %val.coerce.fca.2.extract to <4 x bfloat>
   %3 = bitcast <2 x i32> %val.coerce.fca.3.extract to <4 x bfloat>
-  %4 = bitcast bfloat* %ptr to i8*
-  tail call void @llvm.arm.neon.vst4lane.p0i8.v4bf16(i8* %4, <4 x bfloat> %0, <4 x bfloat> %1, <4 x bfloat> %2, <4 x bfloat> %3, i32 1, i32 2)
+  tail call void @llvm.arm.neon.vst4lane.p0.v4bf16(ptr %ptr, <4 x bfloat> %0, <4 x bfloat> %1, <4 x bfloat> %2, <4 x bfloat> %3, i32 1, i32 2)
   ret void
 }
 
-define arm_aapcs_vfpcc void @test_vst4q_lane_bf16(bfloat* %ptr, [4 x <4 x i32>] %val.coerce) {
+define arm_aapcs_vfpcc void @test_vst4q_lane_bf16(ptr %ptr, [4 x <4 x i32>] %val.coerce) {
 ; CHECK-LABEL: test_vst4q_lane_bf16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
@@ -1005,58 +972,57 @@ entry:
   %1 = bitcast <4 x i32> %val.coerce.fca.1.extract to <8 x bfloat>
   %2 = bitcast <4 x i32> %val.coerce.fca.2.extract to <8 x bfloat>
   %3 = bitcast <4 x i32> %val.coerce.fca.3.extract to <8 x bfloat>
-  %4 = bitcast bfloat* %ptr to i8*
-  tail call void @llvm.arm.neon.vst4lane.p0i8.v8bf16(i8* %4, <8 x bfloat> %0, <8 x bfloat> %1, <8 x bfloat> %2, <8 x bfloat> %3, i32 7, i32 2)
+  tail call void @llvm.arm.neon.vst4lane.p0.v8bf16(ptr %ptr, <8 x bfloat> %0, <8 x bfloat> %1, <8 x bfloat> %2, <8 x bfloat> %3, i32 7, i32 2)
   ret void
 }
 
-declare { <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld2.v4bf16.p0i8(i8*, i32)
-declare { <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld2.v8bf16.p0i8(i8*, i32)
-declare { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld3.v4bf16.p0i8(i8*, i32)
-declare { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld3.v8bf16.p0i8(i8*, i32)
-declare { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld4.v4bf16.p0i8(i8*, i32)
-declare { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld4.v8bf16.p0i8(i8*, i32)
+declare { <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld2.v4bf16.p0(ptr, i32)
+declare { <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld2.v8bf16.p0(ptr, i32)
+declare { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld3.v4bf16.p0(ptr, i32)
+declare { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld3.v8bf16.p0(ptr, i32)
+declare { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld4.v4bf16.p0(ptr, i32)
+declare { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld4.v8bf16.p0(ptr, i32)
 
-declare { <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld2dup.v4bf16.p0i8(i8*, i32)
-declare { <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld2dup.v8bf16.p0i8(i8*, i32)
-declare { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld3dup.v4bf16.p0i8(i8*, i32)
-declare { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld3dup.v8bf16.p0i8(i8*, i32)
-declare { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld4dup.v4bf16.p0i8(i8*, i32)
-declare { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld4dup.v8bf16.p0i8(i8*, i32)
+declare { <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld2dup.v4bf16.p0(ptr, i32)
+declare { <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld2dup.v8bf16.p0(ptr, i32)
+declare { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld3dup.v4bf16.p0(ptr, i32)
+declare { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld3dup.v8bf16.p0(ptr, i32)
+declare { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld4dup.v4bf16.p0(ptr, i32)
+declare { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld4dup.v8bf16.p0(ptr, i32)
 
-declare { <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld1x2.v4bf16.p0bf16(bfloat*)
-declare { <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld1x2.v8bf16.p0bf16(bfloat*)
-declare { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld1x3.v4bf16.p0bf16(bfloat*)
-declare { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld1x3.v8bf16.p0bf16(bfloat*)
-declare { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld1x4.v4bf16.p0bf16(bfloat*)
-declare { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld1x4.v8bf16.p0bf16(bfloat*)
+declare { <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld1x2.v4bf16.p0(ptr)
+declare { <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld1x2.v8bf16.p0(ptr)
+declare { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld1x3.v4bf16.p0(ptr)
+declare { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld1x3.v8bf16.p0(ptr)
+declare { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld1x4.v4bf16.p0(ptr)
+declare { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld1x4.v8bf16.p0(ptr)
 
-declare { <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld2lane.v4bf16.p0i8(i8*, <4 x bfloat>, <4 x bfloat>, i32, i32)
-declare { <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld2lane.v8bf16.p0i8(i8*, <8 x bfloat>, <8 x bfloat>, i32, i32)
-declare { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld3lane.v4bf16.p0i8(i8*, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, i32, i32)
-declare { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld3lane.v8bf16.p0i8(i8*, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, i32, i32)
-declare { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld4lane.v4bf16.p0i8(i8*, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, i32, i32)
-declare { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld4lane.v8bf16.p0i8(i8*, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, i32, i32)
+declare { <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld2lane.v4bf16.p0(ptr, <4 x bfloat>, <4 x bfloat>, i32, i32)
+declare { <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld2lane.v8bf16.p0(ptr, <8 x bfloat>, <8 x bfloat>, i32, i32)
+declare { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld3lane.v4bf16.p0(ptr, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, i32, i32)
+declare { <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld3lane.v8bf16.p0(ptr, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, i32, i32)
+declare { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.arm.neon.vld4lane.v4bf16.p0(ptr, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, i32, i32)
+declare { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.arm.neon.vld4lane.v8bf16.p0(ptr, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, i32, i32)
 
-declare void @llvm.arm.neon.vst1.p0i8.v4bf16(i8*, <4 x bfloat>, i32)
-declare void @llvm.arm.neon.vst1.p0i8.v8bf16(i8*, <8 x bfloat>, i32)
-declare void @llvm.arm.neon.vst2.p0i8.v4bf16(i8*, <4 x bfloat>, <4 x bfloat>, i32)
-declare void @llvm.arm.neon.vst2.p0i8.v8bf16(i8*, <8 x bfloat>, <8 x bfloat>, i32)
-declare void @llvm.arm.neon.vst3.p0i8.v4bf16(i8*, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, i32)
-declare void @llvm.arm.neon.vst3.p0i8.v8bf16(i8*, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, i32)
-declare void @llvm.arm.neon.vst4.p0i8.v4bf16(i8*, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, i32)
-declare void @llvm.arm.neon.vst4.p0i8.v8bf16(i8*, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, i32)
+declare void @llvm.arm.neon.vst1.p0.v4bf16(ptr, <4 x bfloat>, i32)
+declare void @llvm.arm.neon.vst1.p0.v8bf16(ptr, <8 x bfloat>, i32)
+declare void @llvm.arm.neon.vst2.p0.v4bf16(ptr, <4 x bfloat>, <4 x bfloat>, i32)
+declare void @llvm.arm.neon.vst2.p0.v8bf16(ptr, <8 x bfloat>, <8 x bfloat>, i32)
+declare void @llvm.arm.neon.vst3.p0.v4bf16(ptr, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, i32)
+declare void @llvm.arm.neon.vst3.p0.v8bf16(ptr, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, i32)
+declare void @llvm.arm.neon.vst4.p0.v4bf16(ptr, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, i32)
+declare void @llvm.arm.neon.vst4.p0.v8bf16(ptr, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, i32)
 
-declare void @llvm.arm.neon.vst1x2.p0bf16.v4bf16(bfloat* nocapture, <4 x bfloat>, <4 x bfloat>)
-declare void @llvm.arm.neon.vst1x2.p0bf16.v8bf16(bfloat* nocapture, <8 x bfloat>, <8 x bfloat>)
-declare void @llvm.arm.neon.vst1x3.p0bf16.v4bf16(bfloat* nocapture, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>)
-declare void @llvm.arm.neon.vst1x3.p0bf16.v8bf16(bfloat* nocapture, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>)
-declare void @llvm.arm.neon.vst1x4.p0bf16.v4bf16(bfloat* nocapture, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>)
-declare void @llvm.arm.neon.vst1x4.p0bf16.v8bf16(bfloat* nocapture, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>)
+declare void @llvm.arm.neon.vst1x2.p0.v4bf16(ptr nocapture, <4 x bfloat>, <4 x bfloat>)
+declare void @llvm.arm.neon.vst1x2.p0.v8bf16(ptr nocapture, <8 x bfloat>, <8 x bfloat>)
+declare void @llvm.arm.neon.vst1x3.p0.v4bf16(ptr nocapture, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>)
+declare void @llvm.arm.neon.vst1x3.p0.v8bf16(ptr nocapture, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>)
+declare void @llvm.arm.neon.vst1x4.p0.v4bf16(ptr nocapture, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>)
+declare void @llvm.arm.neon.vst1x4.p0.v8bf16(ptr nocapture, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>)
 
-declare void @llvm.arm.neon.vst2lane.p0i8.v4bf16(i8*, <4 x bfloat>, <4 x bfloat>, i32, i32)
-declare void @llvm.arm.neon.vst2lane.p0i8.v8bf16(i8*, <8 x bfloat>, <8 x bfloat>, i32, i32)
-declare void @llvm.arm.neon.vst3lane.p0i8.v4bf16(i8*, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, i32, i32)
-declare void @llvm.arm.neon.vst3lane.p0i8.v8bf16(i8*, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, i32, i32)
-declare void @llvm.arm.neon.vst4lane.p0i8.v4bf16(i8*, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, i32, i32)
-declare void @llvm.arm.neon.vst4lane.p0i8.v8bf16(i8*, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, i32, i32)
+declare void @llvm.arm.neon.vst2lane.p0.v4bf16(ptr, <4 x bfloat>, <4 x bfloat>, i32, i32)
+declare void @llvm.arm.neon.vst2lane.p0.v8bf16(ptr, <8 x bfloat>, <8 x bfloat>, i32, i32)
+declare void @llvm.arm.neon.vst3lane.p0.v4bf16(ptr, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, i32, i32)
+declare void @llvm.arm.neon.vst3lane.p0.v8bf16(ptr, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, i32, i32)
+declare void @llvm.arm.neon.vst4lane.p0.v4bf16(ptr, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, i32, i32)
+declare void @llvm.arm.neon.vst4lane.p0.v8bf16(ptr, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, i32, i32)

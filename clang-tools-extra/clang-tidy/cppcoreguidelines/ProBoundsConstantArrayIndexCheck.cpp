@@ -11,12 +11,11 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 ProBoundsConstantArrayIndexCheck::ProBoundsConstantArrayIndexCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -70,7 +69,7 @@ void ProBoundsConstantArrayIndexCheck::check(
   if (IndexExpr->isValueDependent())
     return; // We check in the specialization.
 
-  Optional<llvm::APSInt> Index =
+  std::optional<llvm::APSInt> Index =
       IndexExpr->getIntegerConstantExpr(*Result.Context);
   if (!Index) {
     SourceRange BaseRange;
@@ -128,6 +127,4 @@ void ProBoundsConstantArrayIndexCheck::check(
   }
 }
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

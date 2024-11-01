@@ -19,7 +19,7 @@ namespace mlir {
 class TypeRange;
 template <typename ValueRangeT>
 class ValueTypeRange;
-class BlockAndValueMapping;
+class IRMapping;
 
 /// This class contains a list of basic blocks and a link to the parent
 /// operation it is attached to.
@@ -232,10 +232,9 @@ public:
   /// process of cloning, no new uses of 'Value's from outside the region are
   /// created. Using the mapper, it is possible to avoid adding uses to outside
   /// operands by remapping them to 'Value's owned by the caller thread.
-  void cloneInto(Region *dest, BlockAndValueMapping &mapper);
+  void cloneInto(Region *dest, IRMapping &mapper);
   /// Clone this region into 'dest' before the given position in 'dest'.
-  void cloneInto(Region *dest, Region::iterator destPos,
-                 BlockAndValueMapping &mapper);
+  void cloneInto(Region *dest, Region::iterator destPos, IRMapping &mapper);
 
   /// Takes body of another region (that region will have no body after this
   /// operation completes).  The current body of this region is cleared.

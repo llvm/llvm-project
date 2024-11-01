@@ -12,6 +12,7 @@ set(LLVM_LINK_COMPONENTS
   SelectionDAG
   Support
   Target
+  TargetParser
   )
 
 add_llvm_unittest(CodeGenTests

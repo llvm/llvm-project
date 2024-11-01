@@ -613,6 +613,15 @@
 # CHECK-LE: xxpermx 6, 63, 21, 34, 2              # encoding: [0x02,0x00,0x00,0x05,
 # CHECK-LE-SAME:                                               0x8c,0xa8,0xdf,0x88]
             xxpermx 6, 63, 21, 34, 2
+# CHECK-BE: brh 1, 2                              # encoding: [0x7c,0x41,0x01,0xb6]
+# CHECK-LE: brh 1, 2                              # encoding: [0xb6,0x01,0x41,0x7c]
+            brh 1, 2
+# CHECK-BE: brw 1, 2                              # encoding: [0x7c,0x41,0x01,0x36]
+# CHECK-LE: brw 1, 2                              # encoding: [0x36,0x01,0x41,0x7c]
+            brw 1, 2
+# CHECK-BE: brd 1, 2                              # encoding: [0x7c,0x41,0x01,0x76]
+# CHECK-LE: brd 1, 2                              # encoding: [0x76,0x01,0x41,0x7c]
+            brd 1, 2
 # CHECK-BE: xxblendvb 6, 63, 21, 34               # encoding: [0x05,0x00,0x00,0x00,
 # CHECK-BE-SAME:                                               0x84,0xdf,0xa8,0x8c]
 # CHECK-LE: xxblendvb 6, 63, 21, 34               # encoding: [0x00,0x00,0x00,0x05,
@@ -666,6 +675,9 @@
 # CHECK-BE: vmulhud 1, 2, 3                       # encoding: [0x10,0x22,0x1a,0xc9]
 # CHECK-LE: vmulhud 1, 2, 3                       # encoding: [0xc9,0x1a,0x22,0x10]
             vmulhud 1, 2, 3
+# CHECK-BE: vmodsq 3, 4, 5                        # encoding: [0x10,0x64,0x2f,0x0b]
+# CHECK-LE: vmodsq 3, 4, 5                        # encoding: [0x0b,0x2f,0x64,0x10]
+            vmodsq 3, 4, 5
 # CHECK-BE: vmodsw 21, 11, 10                     # encoding: [0x12,0xab,0x57,0x8b]
 # CHECK-LE: vmodsw 21, 11, 10                     # encoding: [0x8b,0x57,0xab,0x12]
             vmodsw 21, 11, 10
@@ -903,6 +915,15 @@
 # CHECK-BE: vcmpgtuq. 4, 5, 6                     # encoding: [0x10,0x85,0x36,0x87]
 # CHECK-LE: vcmpgtuq. 4, 5, 6                     # encoding: [0x87,0x36,0x85,0x10]
             vcmpgtuq. 4, 5, 6
+# CHECK-BE: vcmpsq 7, 1, 2                        # encoding: [0x13,0x81,0x11,0x41]
+# CHECK-LE: vcmpsq 7, 1, 2                        # encoding: [0x41,0x11,0x81,0x13]
+            vcmpsq 7, 1, 2
+# CHECK-BE: vcmpuq 7, 1, 2                        # encoding: [0x13,0x81,0x11,0x01]
+# CHECK-LE: vcmpuq 7, 1, 2                        # encoding: [0x01,0x11,0x81,0x13]
+            vcmpuq 7, 1, 2
+# CHECK-BE: vmodsq 3, 4, 5                        # encoding: [0x10,0x64,0x2f,0x0b]
+# CHECK-LE: vmodsq 3, 4, 5                        # encoding: [0x0b,0x2f,0x64,0x10]
+            vmodsq 3, 4, 5
 # CHECK-BE: vmoduq 3, 4, 5                        # encoding: [0x10,0x64,0x2e,0x0b]
 # CHECK-LE: vmoduq 3, 4, 5                        # encoding: [0x0b,0x2e,0x64,0x10]
             vmoduq 3, 4, 5
@@ -972,6 +993,9 @@
 # CHECK-BE: vstrihr. 2, 2                         # encoding: [0x10,0x43,0x14,0x0d]
 # CHECK-LE: vstrihr. 2, 2                         # encoding: [0x0d,0x14,0x43,0x10]
             vstrihr. 2, 2
+# CHECK-BE: vstrihl 2, 4                          # encoding: [0x10,0x42,0x20,0x0d]
+# CHECK-LE: vstrihl 2, 4                          # encoding: [0x0d,0x20,0x42,0x10]
+            vstrihl 2, 4
 # CHECK-BE: vstrihl. 2, 2                         # encoding: [0x10,0x42,0x14,0x0d]
 # CHECK-LE: vstrihl. 2, 2                         # encoding: [0x0d,0x14,0x42,0x10]
             vstrihl. 2, 2
@@ -981,6 +1005,9 @@
 # CHECK-BE: xvcvbf16spn 33, 34                    # encoding: [0xf0,0x30,0x17,0x6f]
 # CHECK-LE: xvcvbf16spn 33, 34                    # encoding: [0x6f,0x17,0x30,0xf0]
             xvcvbf16spn 33, 34
+# CHECK-BE: xvtlsbb 1, 7                          # encoding: [0xf0,0x82,0x3f,0x6c]
+# CHECK-LE: xvtlsbb 1, 7                          # encoding: [0x6c,0x3f,0x82,0xf0]
+            xvtlsbb 1, 7
 # CHECK-BE: hashst 5, -8(1)                       # encoding: [0x7f,0xe1,0x2d,0xa5]
 # CHECK-LE: hashst 5, -8(1)                       # encoding: [0xa5,0x2d,0xe1,0x7f]
             hashst 5, -8(1)

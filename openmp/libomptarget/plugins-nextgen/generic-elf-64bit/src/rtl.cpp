@@ -20,6 +20,7 @@
 #include "DeviceEnvironment.h"
 #include "GlobalHandler.h"
 #include "PluginInterface.h"
+#include "omptarget.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -63,29 +64,28 @@ struct GenELF64KernelTy : public GenericKernelTy {
 
   /// Launch the kernel using the libffi.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                   uint64_t NumBlocks, uint32_t DynamicMemorySize,
-                   int32_t NumKernelArgs, void *KernelArgs,
+                   uint64_t NumBlocks, KernelArgsTy &KernelArgs, void *Args,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
     // Create a vector of ffi_types, one per argument.
-    SmallVector<ffi_type *, 16> ArgTypes(NumKernelArgs, &ffi_type_pointer);
+    SmallVector<ffi_type *, 16> ArgTypes(KernelArgs.NumArgs, &ffi_type_pointer);
     ffi_type **ArgTypesPtr = (ArgTypes.size()) ? &ArgTypes[0] : nullptr;
 
     // Prepare the cif structure before running the kernel function.
     ffi_cif Cif;
-    ffi_status Status = ffi_prep_cif(&Cif, FFI_DEFAULT_ABI, NumKernelArgs,
+    ffi_status Status = ffi_prep_cif(&Cif, FFI_DEFAULT_ABI, KernelArgs.NumArgs,
                                      &ffi_type_void, ArgTypesPtr);
     if (Status != FFI_OK)
       return Plugin::error("Error in ffi_prep_cif: %d", Status);
 
     // Call the kernel function through libffi.
     long Return;
-    ffi_call(&Cif, Func, &Return, (void **)KernelArgs);
+    ffi_call(&Cif, Func, &Return, (void **)Args);
 
     return Plugin::success();
   }
 
   /// Get the default number of blocks and threads for the kernel.
-  uint64_t getDefaultNumBlocks(GenericDeviceTy &) const override { return 1; }
+  uint32_t getDefaultNumBlocks(GenericDeviceTy &) const override { return 1; }
   uint32_t getDefaultNumThreads(GenericDeviceTy &) const override { return 1; }
 
 private:
@@ -215,6 +215,15 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return OFFLOAD_SUCCESS;
   }
 
+  /// This plugin does nothing to lock buffers. Do not return an error, just
+  /// return the same pointer as the device pointer.
+  Expected<void *> dataLockImpl(void *HstPtr, int64_t Size) override {
+    return HstPtr;
+  }
+
+  /// Nothing to do when unlocking the buffer.
+  Error dataUnlockImpl(void *HstPtr) override { return Plugin::success(); }
+
   /// Submit data to the device (host to device transfer).
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
@@ -340,7 +349,7 @@ public:
 /// Class implementing the plugin functionalities for GenELF64.
 struct GenELF64PluginTy final : public GenericPluginTy {
   /// Create the GenELF64 plugin.
-  GenELF64PluginTy() : GenericPluginTy() {}
+  GenELF64PluginTy() : GenericPluginTy(getTripleArch()) {}
 
   /// This class should not be copied.
   GenELF64PluginTy(const GenELF64PluginTy &) = delete;
@@ -363,6 +372,10 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   /// All images (ELF-compatible) should be compatible with this plugin.
   Expected<bool> isImageCompatible(__tgt_image_info *Info) const override {
     return true;
+  }
+
+  Triple::ArchType getTripleArch() const override {
+    return Triple::LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE;
   }
 };
 

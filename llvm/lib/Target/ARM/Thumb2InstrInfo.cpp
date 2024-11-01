@@ -160,11 +160,12 @@ void Thumb2InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       .add(predOps(ARMCC::AL));
 }
 
-void Thumb2InstrInfo::
-storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                    Register SrcReg, bool isKill, int FI,
-                    const TargetRegisterClass *RC,
-                    const TargetRegisterInfo *TRI) const {
+void Thumb2InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
+                                          MachineBasicBlock::iterator I,
+                                          Register SrcReg, bool isKill, int FI,
+                                          const TargetRegisterClass *RC,
+                                          const TargetRegisterInfo *TRI,
+                                          Register VReg) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
 
@@ -188,7 +189,7 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     // Thumb2 STRD expects its dest-registers to be in rGPR. Not a problem for
     // gsub_0, but needs an extra constraint for gsub_1 (which could be sp
     // otherwise).
-    if (Register::isVirtualRegister(SrcReg)) {
+    if (SrcReg.isVirtual()) {
       MachineRegisterInfo *MRI = &MF.getRegInfo();
       MRI->constrainRegClass(SrcReg, &ARM::GPRPairnospRegClass);
     }
@@ -200,14 +201,16 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     return;
   }
 
-  ARMBaseInstrInfo::storeRegToStackSlot(MBB, I, SrcReg, isKill, FI, RC, TRI);
+  ARMBaseInstrInfo::storeRegToStackSlot(MBB, I, SrcReg, isKill, FI, RC, TRI,
+                                        Register());
 }
 
-void Thumb2InstrInfo::
-loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                     Register DestReg, int FI,
-                     const TargetRegisterClass *RC,
-                     const TargetRegisterInfo *TRI) const {
+void Thumb2InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator I,
+                                           Register DestReg, int FI,
+                                           const TargetRegisterClass *RC,
+                                           const TargetRegisterInfo *TRI,
+                                           Register VReg) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
@@ -229,7 +232,7 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     // Thumb2 LDRD expects its dest-registers to be in rGPR. Not a problem for
     // gsub_0, but needs an extra constraint for gsub_1 (which could be sp
     // otherwise).
-    if (Register::isVirtualRegister(DestReg)) {
+    if (DestReg.isVirtual()) {
       MachineRegisterInfo *MRI = &MF.getRegInfo();
       MRI->constrainRegClass(DestReg, &ARM::GPRPairnospRegClass);
     }
@@ -239,12 +242,13 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     AddDReg(MIB, DestReg, ARM::gsub_1, RegState::DefineNoRead, TRI);
     MIB.addFrameIndex(FI).addImm(0).addMemOperand(MMO).add(predOps(ARMCC::AL));
 
-    if (Register::isPhysicalRegister(DestReg))
+    if (DestReg.isPhysical())
       MIB.addReg(DestReg, RegState::ImplicitDefine);
     return;
   }
 
-  ARMBaseInstrInfo::loadRegFromStackSlot(MBB, I, DestReg, FI, RC, TRI);
+  ARMBaseInstrInfo::loadRegFromStackSlot(MBB, I, DestReg, FI, RC, TRI,
+                                         Register());
 }
 
 void Thumb2InstrInfo::expandLoadStackGuard(
@@ -718,9 +722,8 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
     int ImmedOffset = Offset / Scale;
     unsigned Mask = (1 << NumBits) - 1;
     if ((unsigned)Offset <= Mask * Scale &&
-        (Register::isVirtualRegister(FrameReg) ||
-         RegClass->contains(FrameReg))) {
-      if (Register::isVirtualRegister(FrameReg)) {
+        (FrameReg.isVirtual() || RegClass->contains(FrameReg))) {
+      if (FrameReg.isVirtual()) {
         // Make sure the register class for the virtual register is correct
         MachineRegisterInfo *MRI = &MF.getRegInfo();
         if (!MRI->constrainRegClass(FrameReg, RegClass))
@@ -759,8 +762,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   }
 
   Offset = (isSub) ? -Offset : Offset;
-  return Offset == 0 && (Register::isVirtualRegister(FrameReg) ||
-                         RegClass->contains(FrameReg));
+  return Offset == 0 && (FrameReg.isVirtual() || RegClass->contains(FrameReg));
 }
 
 ARMCC::CondCodes llvm::getITInstrPredicate(const MachineInstr &MI,
@@ -774,11 +776,8 @@ ARMCC::CondCodes llvm::getITInstrPredicate(const MachineInstr &MI,
 int llvm::findFirstVPTPredOperandIdx(const MachineInstr &MI) {
   const MCInstrDesc &MCID = MI.getDesc();
 
-  if (!MCID.OpInfo)
-    return -1;
-
   for (unsigned i = 0, e = MCID.getNumOperands(); i != e; ++i)
-    if (ARM::isVpred(MCID.OpInfo[i].OperandType))
+    if (ARM::isVpred(MCID.operands()[i].OperandType))
       return i;
 
   return -1;

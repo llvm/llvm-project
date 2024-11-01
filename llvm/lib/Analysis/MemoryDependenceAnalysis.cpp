@@ -76,9 +76,9 @@ static cl::opt<unsigned> BlockScanLimit(
              "dependency analysis (default = 100)"));
 
 static cl::opt<unsigned>
-    BlockNumberLimit("memdep-block-number-limit", cl::Hidden, cl::init(1000),
+    BlockNumberLimit("memdep-block-number-limit", cl::Hidden, cl::init(200),
                      cl::desc("The number of blocks to scan during memory "
-                              "dependency analysis (default = 1000)"));
+                              "dependency analysis (default = 200)"));
 
 // Limit on the number of memdep results to process.
 static const unsigned int NumResultsLimit = 100;
@@ -592,6 +592,11 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
         return MemDepResult::getDef(Inst);
     }
 
+    // If we found a select instruction for MemLoc pointer, return it as Def
+    // dependency.
+    if (isa<SelectInst>(Inst) && MemLoc.Ptr == Inst)
+      return MemDepResult::getDef(Inst);
+
     if (isInvariantLoad)
       continue;
 
@@ -962,7 +967,7 @@ MemDepResult MemoryDependenceResults::getNonLocalInfoForBlock(
   // If the block has a dependency (i.e. it isn't completely transparent to
   // the value), remember the reverse association because we just added it
   // to Cache!
-  if (!Dep.isDef() && !Dep.isClobber())
+  if (!Dep.isLocal())
     return Dep;
 
   // Keep the ReverseNonLocalPtrDeps map up to date so we can efficiently

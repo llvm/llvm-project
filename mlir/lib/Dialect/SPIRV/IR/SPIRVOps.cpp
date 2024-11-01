@@ -313,8 +313,8 @@ template <typename MemoryOpTy>
 static void printMemoryAccessAttribute(
     MemoryOpTy memoryOp, OpAsmPrinter &printer,
     SmallVectorImpl<StringRef> &elidedAttrs,
-    Optional<spirv::MemoryAccess> memoryAccessAtrrValue = std::nullopt,
-    Optional<uint32_t> alignmentAttrValue = std::nullopt) {
+    std::optional<spirv::MemoryAccess> memoryAccessAtrrValue = std::nullopt,
+    std::optional<uint32_t> alignmentAttrValue = std::nullopt) {
   // Print optional memory access attribute.
   if (auto memAccess = (memoryAccessAtrrValue ? memoryAccessAtrrValue
                                               : memoryOp.getMemoryAccess())) {
@@ -343,8 +343,8 @@ template <typename MemoryOpTy>
 static void printSourceMemoryAccessAttribute(
     MemoryOpTy memoryOp, OpAsmPrinter &printer,
     SmallVectorImpl<StringRef> &elidedAttrs,
-    Optional<spirv::MemoryAccess> memoryAccessAtrrValue = std::nullopt,
-    Optional<uint32_t> alignmentAttrValue = std::nullopt) {
+    std::optional<spirv::MemoryAccess> memoryAccessAtrrValue = std::nullopt,
+    std::optional<uint32_t> alignmentAttrValue = std::nullopt) {
 
   printer << ", ";
 
@@ -569,8 +569,8 @@ verifyMemorySemantics(Operation *op, spirv::MemorySemantics memorySemantics) {
                         spirv::MemorySemantics::AcquireRelease |
                         spirv::MemorySemantics::SequentiallyConsistent;
 
-  auto bitCount = llvm::countPopulation(
-      static_cast<uint32_t>(memorySemantics & atMostOneInSet));
+  auto bitCount =
+      llvm::popcount(static_cast<uint32_t>(memorySemantics & atMostOneInSet));
   if (bitCount > 1) {
     return op->emitError(
         "expected at most one of these four memory constraints "
@@ -912,7 +912,7 @@ static ParseResult parseGroupNonUniformArithmeticOp(OpAsmParser &parser,
       parser.parseOperand(valueInfo))
     return failure();
 
-  Optional<OpAsmParser::UnresolvedOperand> clusterSizeInfo;
+  std::optional<OpAsmParser::UnresolvedOperand> clusterSizeInfo;
   if (succeeded(parser.parseOptionalKeyword(kClusterSize))) {
     clusterSizeInfo = OpAsmParser::UnresolvedOperand();
     if (parser.parseLParen() || parser.parseOperand(*clusterSizeInfo) ||
@@ -1003,28 +1003,6 @@ static LogicalResult verifyShiftOp(Operation *op) {
            << op->getResult(0).getType();
   }
   return success();
-}
-
-static void buildLogicalBinaryOp(OpBuilder &builder, OperationState &state,
-                                 Value lhs, Value rhs) {
-  assert(lhs.getType() == rhs.getType());
-
-  Type boolType = builder.getI1Type();
-  if (auto vecType = lhs.getType().dyn_cast<VectorType>())
-    boolType = VectorType::get(vecType.getShape(), boolType);
-  state.addTypes(boolType);
-
-  state.addOperands({lhs, rhs});
-}
-
-static void buildLogicalUnaryOp(OpBuilder &builder, OperationState &state,
-                                Value value) {
-  Type boolType = builder.getI1Type();
-  if (auto vecType = value.getType().dyn_cast<VectorType>())
-    boolType = VectorType::get(vecType.getShape(), boolType);
-  state.addTypes(boolType);
-
-  state.addOperands(value);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1129,7 +1107,7 @@ ParseResult spirv::AccessChainOp::parse(OpAsmParser &parser,
     return failure();
 
   auto resultType = getElementPtrType(
-      type, llvm::makeArrayRef(result.operands).drop_front(), result.location);
+      type, llvm::ArrayRef(result.operands).drop_front(), result.location);
   if (!resultType) {
     return failure();
   }
@@ -2146,6 +2124,8 @@ void mlir::spirv::ConstantOp::getAsmResultNames(
 
     if (intTy.isSignless()) {
       specialName << intCst.getInt();
+    } else if (intTy.isUnsigned()) {
+      specialName << intCst.getUInt();
     } else {
       specialName << intCst.getSInt();
     }
@@ -3348,7 +3328,7 @@ LogicalResult spirv::MergeOp::verify() {
 //===----------------------------------------------------------------------===//
 
 void spirv::ModuleOp::build(OpBuilder &builder, OperationState &state,
-                            Optional<StringRef> name) {
+                            std::optional<StringRef> name) {
   OpBuilder::InsertionGuard guard(builder);
   builder.createBlock(state.addRegion());
   if (name) {
@@ -3360,8 +3340,8 @@ void spirv::ModuleOp::build(OpBuilder &builder, OperationState &state,
 void spirv::ModuleOp::build(OpBuilder &builder, OperationState &state,
                             spirv::AddressingModel addressingModel,
                             spirv::MemoryModel memoryModel,
-                            Optional<VerCapExtAttr> vceTriple,
-                            Optional<StringRef> name) {
+                            std::optional<VerCapExtAttr> vceTriple,
+                            std::optional<StringRef> name) {
   state.addAttribute(
       "addressing_model",
       builder.getAttr<spirv::AddressingModelAttr>(addressingModel));
@@ -3414,7 +3394,7 @@ ParseResult spirv::ModuleOp::parse(OpAsmParser &parser,
 }
 
 void spirv::ModuleOp::print(OpAsmPrinter &printer) {
-  if (Optional<StringRef> name = getName()) {
+  if (std::optional<StringRef> name = getName()) {
     printer << ' ';
     printer.printSymbolName(*name);
   }
@@ -3428,7 +3408,7 @@ void spirv::ModuleOp::print(OpAsmPrinter &printer) {
   elidedAttrs.assign({addressingModelAttrName, memoryModelAttrName,
                       mlir::SymbolTable::getSymbolAttrName()});
 
-  if (Optional<spirv::VerCapExtAttr> triple = getVceTriple()) {
+  if (std::optional<spirv::VerCapExtAttr> triple = getVceTriple()) {
     printer << " requires " << *triple;
     elidedAttrs.push_back(spirv::ModuleOp::getVCETripleAttrName());
   }
@@ -3806,7 +3786,7 @@ LogicalResult spirv::UnreachableOp::verify() {
 ParseResult spirv::VariableOp::parse(OpAsmParser &parser,
                                      OperationState &result) {
   // Parse optional initializer
-  Optional<OpAsmParser::UnresolvedOperand> initInfo;
+  std::optional<OpAsmParser::UnresolvedOperand> initInfo;
   if (succeeded(parser.parseOptionalKeyword("init"))) {
     initInfo = OpAsmParser::UnresolvedOperand();
     if (parser.parseLParen() || parser.parseOperand(*initInfo) ||
@@ -4677,7 +4657,7 @@ static ParseResult parsePtrAccessChainOpImpl(StringRef opName,
     return failure();
 
   auto resultType = getElementPtrType(
-      type, llvm::makeArrayRef(state.operands).drop_front(2), state.location);
+      type, llvm::ArrayRef(state.operands).drop_front(2), state.location);
   if (!resultType)
     return failure();
 
@@ -4851,11 +4831,11 @@ static LogicalResult verifyIntegerDotProduct(Operation *op) {
   return success();
 }
 
-static Optional<spirv::Version> getIntegerDotProductMinVersion() {
+static std::optional<spirv::Version> getIntegerDotProductMinVersion() {
   return spirv::Version::V_1_0; // Available in SPIR-V >= 1.0.
 }
 
-static Optional<spirv::Version> getIntegerDotProductMaxVersion() {
+static std::optional<spirv::Version> getIntegerDotProductMaxVersion() {
   return spirv::Version::V_1_6; // Available in SPIR-V <= 1.6.
 }
 
@@ -4910,10 +4890,10 @@ getIntegerDotProductCapabilities(Operation *op) {
   SmallVector<ArrayRef<spirv::Capability>, 1> OpName::getCapabilities() {      \
     return getIntegerDotProductCapabilities(*this);                            \
   }                                                                            \
-  Optional<spirv::Version> OpName::getMinVersion() {                           \
+  std::optional<spirv::Version> OpName::getMinVersion() {                      \
     return getIntegerDotProductMinVersion();                                   \
   }                                                                            \
-  Optional<spirv::Version> OpName::getMaxVersion() {                           \
+  std::optional<spirv::Version> OpName::getMaxVersion() {                      \
     return getIntegerDotProductMaxVersion();                                   \
   }
 

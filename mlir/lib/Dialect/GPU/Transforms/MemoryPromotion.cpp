@@ -70,14 +70,14 @@ static void insertCopyLoops(ImplicitLocOpBuilder &b, Value from, Value to) {
       b, b.getLoc(), lbs, ubs, steps,
       [&](OpBuilder &b, Location loc, ValueRange loopIvs) {
         ivs.assign(loopIvs.begin(), loopIvs.end());
-        auto activeIvs = llvm::makeArrayRef(ivs).take_back(rank);
+        auto activeIvs = llvm::ArrayRef(ivs).take_back(rank);
         Value loaded = b.create<memref::LoadOp>(loc, from, activeIvs);
         b.create<memref::StoreOp>(loc, loaded, to, activeIvs);
       });
 
   // Map the innermost loops to threads in reverse order.
   for (const auto &en :
-       llvm::enumerate(llvm::reverse(llvm::makeArrayRef(ivs).take_back(
+       llvm::enumerate(llvm::reverse(llvm::ArrayRef(ivs).take_back(
            GPUDialect::getNumWorkgroupDimensions())))) {
     Value v = en.value();
     auto loop = cast<scf::ForOp>(v.getParentRegion()->getParentOp());
@@ -147,9 +147,11 @@ void mlir::promoteToWorkgroupMemory(GPUFuncOp op, unsigned arg) {
   assert(type && type.hasStaticShape() && "can only promote memrefs");
 
   // Get the type of the buffer in the workgroup memory.
-  int workgroupMemoryAddressSpace = gpu::GPUDialect::getWorkgroupAddressSpace();
-  auto bufferType = MemRefType::get(type.getShape(), type.getElementType(), {},
-                                    workgroupMemoryAddressSpace);
+  auto workgroupMemoryAddressSpace = gpu::AddressSpaceAttr::get(
+      op->getContext(), gpu::AddressSpace::Workgroup);
+  auto bufferType = MemRefType::get(type.getShape(), type.getElementType(),
+                                    MemRefLayoutAttrInterface{},
+                                    Attribute(workgroupMemoryAddressSpace));
   Value attribution = op.addWorkgroupAttribution(bufferType, value.getLoc());
 
   // Replace the uses first since only the original uses are currently present.

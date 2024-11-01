@@ -8,21 +8,21 @@ target triple = "x86_64-unknown-linux-gnu"
 ; The GEP has scalar and vector parameters and returns vector of pointers.
 
 ; Function Attrs: noreturn readonly uwtable
-define void @_Z3fn1v(i32 %x, <16 x i32*>%y) local_unnamed_addr #0 {
+define void @_Z3fn1v(i32 %x, <16 x ptr>%y) local_unnamed_addr #0 {
 ; CHECK-LABEL: @_Z3fn1v(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV42_LE:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[CONV36109_LE:%.*]] = zext i32 2 to i64
-; CHECK-NEXT:    [[VECTORGEP:%.*]] = getelementptr i32, <16 x i32*> [[Y:%.*]], i64 [[CONV36109_LE]]
-; CHECK-NEXT:    [[VECTORGEP208:%.*]] = getelementptr i32, <16 x i32*> [[Y]], i64 [[CONV42_LE]]
+; CHECK-NEXT:    [[VECTORGEP:%.*]] = getelementptr i32, <16 x ptr> [[Y:%.*]], i64 [[CONV36109_LE]]
+; CHECK-NEXT:    [[VECTORGEP208:%.*]] = getelementptr i32, <16 x ptr> [[Y]], i64 [[CONV42_LE]]
 ; CHECK-NEXT:    unreachable
 ;
 
 entry:
   %conv42.le = sext i32 %x to i64
   %conv36109.le = zext i32 2 to i64
-  %VectorGep = getelementptr i32, <16 x i32*> %y, i64 %conv36109.le
-  %VectorGep208 = getelementptr i32, <16 x i32*> %y, i64 %conv42.le
+  %VectorGep = getelementptr i32, <16 x ptr> %y, i64 %conv36109.le
+  %VectorGep208 = getelementptr i32, <16 x ptr> %y, i64 %conv42.le
   unreachable
 }
 

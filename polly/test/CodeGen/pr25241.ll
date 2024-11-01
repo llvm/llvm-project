@@ -13,11 +13,11 @@
 ; CHECK:         br label %polly.stmt.polly.merge_new_and_old.exit
 
 ; CHECK-LABEL: polly.stmt.polly.merge_new_and_old.exit:
-; CHECK:         store i32 %polly.curr.3, i32* %curr.3.s2a
+; CHECK:         store i32 %polly.curr.3, ptr %curr.3.s2a
 ; CHECK:         br label %polly.exiting
 
 ; CHECK-LABEL: polly.exiting:
-; CHECK:         %curr.3.ph.final_reload = load i32, i32* %curr.3.s2a
+; CHECK:         %curr.3.ph.final_reload = load i32, ptr %curr.3.s2a
 ; CHECK:         br label
 
 
@@ -27,7 +27,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind uwtable
 define void @BZ2_decompress() #0 {
 entry:
-  %tmp = load i32, i32* undef, align 4, !tbaa !1
+  %tmp = load i32, ptr undef, align 4, !tbaa !1
   switch i32 undef, label %save_state_and_return [
     i32 34, label %sw.bb.748
     i32 35, label %if.then.813

@@ -4,7 +4,7 @@
 define i16 @test(i16 %call37) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = load i16, i16* undef, align 2
+; CHECK-NEXT:    [[CALL:%.*]] = load i16, ptr undef, align 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> <i16 poison, i16 0, i16 0, i16 poison, i16 poison, i16 0, i16 poison, i16 0>, i16 [[CALL37:%.*]], i32 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[CALL]], i32 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 3, i32 5, i32 3, i32 7>
@@ -17,7 +17,7 @@ define i16 @test(i16 %call37) {
 ; CHECK-NEXT:    ret i16 [[OP_RDX]]
 ;
 entry:
-  %call = load i16, i16* undef, align 2
+  %call = load i16, ptr undef, align 2
   %0 = icmp slt i16 %call, 0
   %cond = zext i1 %0 to i16
   %1 = add i16 %cond, 0

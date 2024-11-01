@@ -7,14 +7,14 @@ target triple = "xcore"
 ;CHECK: entry:
 ;CHECK-NOT: vector.body
 ;CHECK-NEXT: br label %do.body
-define void @f(i8* nocapture %ptr, i32 %len) {
+define void @f(ptr nocapture %ptr, i32 %len) {
 entry:
   br label %do.body
 do.body:
-  %ptr.addr.0 = phi i8* [ %ptr, %entry ], [ %incdec.ptr, %do.body ]
+  %ptr.addr.0 = phi ptr [ %ptr, %entry ], [ %incdec.ptr, %do.body ]
   %len.addr.0 = phi i32 [ %len, %entry ], [ %dec, %do.body ]
-  %incdec.ptr = getelementptr inbounds i8, i8* %ptr.addr.0, i32 1
-  store i8 0, i8* %ptr.addr.0, align 1
+  %incdec.ptr = getelementptr inbounds i8, ptr %ptr.addr.0, i32 1
+  store i8 0, ptr %ptr.addr.0, align 1
   %dec = add nsw i32 %len.addr.0, -1
   %tobool = icmp eq i32 %len.addr.0, 0
   br i1 %tobool, label %do.end, label %do.body

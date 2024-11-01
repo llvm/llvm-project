@@ -1544,7 +1544,7 @@ bool Instruction::extractProfTotalWeight(uint64_t &TotalVal) const {
        getOpcode() == Instruction::Switch) &&
       "Looking for branch weights on something besides branch");
 
-  return ::extractProfTotalWeight(getMetadata(LLVMContext::MD_prof), TotalVal);
+  return ::extractProfTotalWeight(*this, TotalVal);
 }
 
 void GlobalObject::copyMetadata(const GlobalObject *Other, unsigned Offset) {
@@ -1626,7 +1626,7 @@ DISubprogram *Function::getSubprogram() const {
   return cast_or_null<DISubprogram>(getMetadata(LLVMContext::MD_dbg));
 }
 
-bool Function::isDebugInfoForProfiling() const {
+bool Function::shouldEmitDebugInfoForProfiling() const {
   if (DISubprogram *SP = getSubprogram()) {
     if (DICompileUnit *CU = SP->getUnit()) {
       return CU->getDebugInfoForProfiling();

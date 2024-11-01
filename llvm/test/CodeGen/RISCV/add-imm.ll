@@ -184,7 +184,7 @@ define signext i32 @add32_sext_reject_on_rv64(i32 signext %a) nounwind {
 ; RV64I-NEXT:    sw a0, %lo(gv0)(a1)
 ; RV64I-NEXT:    ret
   %b = add nsw i32 %a, 3000
-  store i32 %b, i32* @gv0, align 4
+  store i32 %b, ptr @gv0, align 4
   ret i32 %b
 }
 
@@ -232,16 +232,16 @@ define void @add32_reject() nounwind {
 ; RV64I-NEXT:    lw a3, %lo(gb)(a2)
 ; RV64I-NEXT:    lui a4, 1
 ; RV64I-NEXT:    addiw a4, a4, -1096
-; RV64I-NEXT:    addw a1, a1, a4
-; RV64I-NEXT:    addw a3, a3, a4
+; RV64I-NEXT:    add a1, a1, a4
+; RV64I-NEXT:    add a3, a3, a4
 ; RV64I-NEXT:    sw a1, %lo(ga)(a0)
 ; RV64I-NEXT:    sw a3, %lo(gb)(a2)
 ; RV64I-NEXT:    ret
-  %1 = load i32, i32* @ga, align 4
-  %2 = load i32, i32* @gb, align 4
+  %1 = load i32, ptr @ga, align 4
+  %2 = load i32, ptr @gb, align 4
   %3 = add i32 %1, 3000
   %4 = add i32 %2, 3000
-  store i32 %3, i32* @ga, align 4
-  store i32 %4, i32* @gb, align 4
+  store i32 %3, ptr @ga, align 4
+  store i32 %4, ptr @gb, align 4
   ret void
 }

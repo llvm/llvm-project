@@ -52,8 +52,7 @@
 #include "UppercaseLiteralSuffixCheck.h"
 #include "UseAnyOfAllOfCheck.h"
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace readability {
 
 class ReadabilityModule : public ClangTidyModule {
@@ -156,5 +155,4 @@ static ClangTidyModuleRegistry::Add<ReadabilityModule>
 // and thus register the ReadabilityModule.
 volatile int ReadabilityModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

@@ -6,7 +6,7 @@
 target triple = "hexagon"
 
 ; Function Attrs: norecurse nounwind
-define dso_local i32 @f0(i32* nocapture %a0, i32* nocapture readonly %a1, i32* nocapture readonly %a2, i32 %a3) local_unnamed_addr #0 {
+define dso_local i32 @f0(ptr nocapture %a0, ptr nocapture readonly %a1, ptr nocapture readonly %a2, i32 %a3) local_unnamed_addr #0 {
 b0:
   %v0 = insertelement <16 x i32> undef, i32 %a3, i32 0
   %v1 = shufflevector <16 x i32> %v0, <16 x i32> undef, <16 x i32> zeroinitializer

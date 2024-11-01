@@ -3,45 +3,44 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-define void @bitcast_v4i8(<4 x i8> *%a, <4 x i8>* %b) #0 {
+define void @bitcast_v4i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: bitcast_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %load = load volatile <4 x i8>, <4 x i8>* %a
+  %load = load volatile <4 x i8>, ptr %a
   %cast = bitcast <4 x i8> %load to <4 x i8>
-  store volatile <4 x i8> %cast, <4 x i8>* %b
+  store volatile <4 x i8> %cast, ptr %b
   ret void
 }
 
-define void @bitcast_v8i8(<8 x i8> *%a, <8 x i8>* %b) #0 {
+define void @bitcast_v8i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: bitcast_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    str d0, [x1]
 ; CHECK-NEXT:    ret
-  %load = load volatile <8 x i8>, <8 x i8>* %a
+  %load = load volatile <8 x i8>, ptr %a
   %cast = bitcast <8 x i8> %load to <8 x i8>
-  store volatile <8 x i8> %cast, <8 x i8>* %b
+  store volatile <8 x i8> %cast, ptr %b
   ret void
 }
 
-define void @bitcast_v16i8(<16 x i8> *%a, <16 x i8>* %b) #0 {
+define void @bitcast_v16i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: bitcast_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %load = load volatile <16 x i8>, <16 x i8>* %a
+  %load = load volatile <16 x i8>, ptr %a
   %cast = bitcast <16 x i8> %load to <16 x i8>
-  store volatile <16 x i8> %cast, <16 x i8>* %b
+  store volatile <16 x i8> %cast, ptr %b
   ret void
 }
 
-define void @bitcast_v32i8(<32 x i8> *%a, <32 x i8>* %b) #0 {
+define void @bitcast_v32i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: bitcast_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -49,13 +48,13 @@ define void @bitcast_v32i8(<32 x i8> *%a, <32 x i8>* %b) #0 {
 ; CHECK-NEXT:    str q1, [x1, #16]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %load = load volatile <32 x i8>, <32 x i8>* %a
+  %load = load volatile <32 x i8>, ptr %a
   %cast = bitcast <32 x i8> %load to <32 x i8>
-  store volatile <32 x i8> %cast, <32 x i8>* %b
+  store volatile <32 x i8> %cast, ptr %b
   ret void
 }
 
-define void @bitcast_v2i16(<2 x i16> *%a, <2 x half>* %b) #0 {
+define void @bitcast_v2i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: bitcast_v2i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
@@ -75,37 +74,37 @@ define void @bitcast_v2i16(<2 x i16> *%a, <2 x half>* %b) #0 {
 ; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
-  %load = load volatile <2 x i16>, <2 x i16>* %a
+  %load = load volatile <2 x i16>, ptr %a
   %cast = bitcast <2 x i16> %load to <2 x half>
-  store volatile <2 x half> %cast, <2 x half>* %b
+  store volatile <2 x half> %cast, ptr %b
   ret void
 }
 
-define void @bitcast_v4i16(<4 x i16> *%a, <4 x half>* %b) #0 {
+define void @bitcast_v4i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: bitcast_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    str d0, [x1]
 ; CHECK-NEXT:    ret
-  %load = load volatile <4 x i16>, <4 x i16>* %a
+  %load = load volatile <4 x i16>, ptr %a
   %cast = bitcast <4 x i16> %load to <4 x half>
-  store volatile <4 x half> %cast, <4 x half>* %b
+  store volatile <4 x half> %cast, ptr %b
   ret void
 }
 
-define void @bitcast_v8i16(<8 x i16> *%a, <8 x half>* %b) #0 {
+define void @bitcast_v8i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: bitcast_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %load = load volatile <8 x i16>, <8 x i16>* %a
+  %load = load volatile <8 x i16>, ptr %a
   %cast = bitcast <8 x i16> %load to <8 x half>
-  store volatile <8 x half> %cast, <8 x half>* %b
+  store volatile <8 x half> %cast, ptr %b
   ret void
 }
 
-define void @bitcast_v16i16(<16 x i16> *%a, <16 x half>* %b) #0 {
+define void @bitcast_v16i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: bitcast_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -113,37 +112,37 @@ define void @bitcast_v16i16(<16 x i16> *%a, <16 x half>* %b) #0 {
 ; CHECK-NEXT:    str q1, [x1, #16]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %load = load volatile <16 x i16>, <16 x i16>* %a
+  %load = load volatile <16 x i16>, ptr %a
   %cast = bitcast <16 x i16> %load to <16 x half>
-  store volatile <16 x half> %cast, <16 x half>* %b
+  store volatile <16 x half> %cast, ptr %b
   ret void
 }
 
-define void @bitcast_v2i32(<2 x i32> *%a, <2 x float>* %b) #0 {
+define void @bitcast_v2i32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: bitcast_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    str d0, [x1]
 ; CHECK-NEXT:    ret
-  %load = load volatile <2 x i32>, <2 x i32>* %a
+  %load = load volatile <2 x i32>, ptr %a
   %cast = bitcast <2 x i32> %load to <2 x float>
-  store volatile <2 x float> %cast, <2 x float>* %b
+  store volatile <2 x float> %cast, ptr %b
   ret void
 }
 
-define void @bitcast_v4i32(<4 x i32> *%a, <4 x float>* %b) #0 {
+define void @bitcast_v4i32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: bitcast_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %load = load volatile <4 x i32>, <4 x i32>* %a
+  %load = load volatile <4 x i32>, ptr %a
   %cast = bitcast <4 x i32> %load to <4 x float>
-  store volatile <4 x float> %cast, <4 x float>* %b
+  store volatile <4 x float> %cast, ptr %b
   ret void
 }
 
-define void @bitcast_v8i32(<8 x i32> *%a, <8 x float>* %b) #0 {
+define void @bitcast_v8i32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: bitcast_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -151,37 +150,37 @@ define void @bitcast_v8i32(<8 x i32> *%a, <8 x float>* %b) #0 {
 ; CHECK-NEXT:    str q1, [x1, #16]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %load = load volatile <8 x i32>, <8 x i32>* %a
+  %load = load volatile <8 x i32>, ptr %a
   %cast = bitcast <8 x i32> %load to <8 x float>
-  store volatile <8 x float> %cast, <8 x float>* %b
+  store volatile <8 x float> %cast, ptr %b
   ret void
 }
 
-define void @bitcast_v1i64(<1 x i64> *%a, <1 x double>* %b) #0 {
+define void @bitcast_v1i64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: bitcast_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    str d0, [x1]
 ; CHECK-NEXT:    ret
-  %load = load volatile <1 x i64>, <1 x i64>* %a
+  %load = load volatile <1 x i64>, ptr %a
   %cast = bitcast <1 x i64> %load to <1 x double>
-  store volatile <1 x double> %cast, <1 x double>* %b
+  store volatile <1 x double> %cast, ptr %b
   ret void
 }
 
-define void @bitcast_v2i64(<2 x i64> *%a, <2 x double>* %b) #0 {
+define void @bitcast_v2i64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: bitcast_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %load = load volatile <2 x i64>, <2 x i64>* %a
+  %load = load volatile <2 x i64>, ptr %a
   %cast = bitcast <2 x i64> %load to <2 x double>
-  store volatile <2 x double> %cast, <2 x double>* %b
+  store volatile <2 x double> %cast, ptr %b
   ret void
 }
 
-define void @bitcast_v4i64(<4 x i64> *%a, <4 x double>* %b) #0 {
+define void @bitcast_v4i64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: bitcast_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -189,9 +188,9 @@ define void @bitcast_v4i64(<4 x i64> *%a, <4 x double>* %b) #0 {
 ; CHECK-NEXT:    str q1, [x1, #16]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
-  %load = load volatile <4 x i64>, <4 x i64>* %a
+  %load = load volatile <4 x i64>, ptr %a
   %cast = bitcast <4 x i64> %load to <4 x double>
-  store volatile <4 x double> %cast, <4 x double>* %b
+  store volatile <4 x double> %cast, ptr %b
   ret void
 }
 

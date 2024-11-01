@@ -6,75 +6,75 @@
 
 ; Test that we can remove trivially-undef VP operations of various kinds.
 
-declare <4 x i32> @llvm.vp.load.v4i32.p0v4i32(<4 x i32>*, <4 x i1>, i32)
+declare <4 x i32> @llvm.vp.load.v4i32.p0(ptr, <4 x i1>, i32)
 
-define <4 x i32> @vload_v4i32_zero_evl(<4 x i32>* %ptr, <4 x i1> %m) {
+define <4 x i32> @vload_v4i32_zero_evl(ptr %ptr, <4 x i1> %m) {
 ; CHECK-LABEL: vload_v4i32_zero_evl:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  %v = call <4 x i32> @llvm.vp.load.v4i32.p0v4i32(<4 x i32>* %ptr, <4 x i1> %m, i32 0)
+  %v = call <4 x i32> @llvm.vp.load.v4i32.p0(ptr %ptr, <4 x i1> %m, i32 0)
   ret <4 x i32> %v
 }
 
-define <4 x i32> @vload_v4i32_false_mask(<4 x i32>* %ptr, i32 %evl) {
+define <4 x i32> @vload_v4i32_false_mask(ptr %ptr, i32 %evl) {
 ; CHECK-LABEL: vload_v4i32_false_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  %v = call <4 x i32> @llvm.vp.load.v4i32.p0v4i32(<4 x i32>* %ptr, <4 x i1> zeroinitializer, i32 %evl)
+  %v = call <4 x i32> @llvm.vp.load.v4i32.p0(ptr %ptr, <4 x i1> zeroinitializer, i32 %evl)
   ret <4 x i32> %v
 }
 
-declare <4 x i32> @llvm.vp.gather.v4i32.v4p0i32(<4 x i32*>, <4 x i1>, i32)
+declare <4 x i32> @llvm.vp.gather.v4i32.v4p0(<4 x ptr>, <4 x i1>, i32)
 
-define <4 x i32> @vgather_v4i32_v4i32_zero_evl(<4 x i32*> %ptrs, <4 x i1> %m) {
+define <4 x i32> @vgather_v4i32_v4i32_zero_evl(<4 x ptr> %ptrs, <4 x i1> %m) {
 ; CHECK-LABEL: vgather_v4i32_v4i32_zero_evl:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  %v = call <4 x i32> @llvm.vp.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, <4 x i1> %m, i32 0)
+  %v = call <4 x i32> @llvm.vp.gather.v4i32.v4p0(<4 x ptr> %ptrs, <4 x i1> %m, i32 0)
   ret <4 x i32> %v
 }
 
-define <4 x i32> @vgather_v4i32_v4i32_false_mask(<4 x i32*> %ptrs, i32 %evl) {
+define <4 x i32> @vgather_v4i32_v4i32_false_mask(<4 x ptr> %ptrs, i32 %evl) {
 ; CHECK-LABEL: vgather_v4i32_v4i32_false_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  %v = call <4 x i32> @llvm.vp.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, <4 x i1> zeroinitializer, i32 %evl)
+  %v = call <4 x i32> @llvm.vp.gather.v4i32.v4p0(<4 x ptr> %ptrs, <4 x i1> zeroinitializer, i32 %evl)
   ret <4 x i32> %v
 }
 
-declare void @llvm.vp.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, <4 x i1>, i32)
+declare void @llvm.vp.store.v4i32.p0(<4 x i32>, ptr, <4 x i1>, i32)
 
-define void @vstore_v4i32_zero_evl(<4 x i32> %val, <4 x i32>* %ptr, <4 x i1> %m) {
+define void @vstore_v4i32_zero_evl(<4 x i32> %val, ptr %ptr, <4 x i1> %m) {
 ; CHECK-LABEL: vstore_v4i32_zero_evl:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  call void @llvm.vp.store.v4i32.p0v4i32(<4 x i32> %val, <4 x i32>* %ptr, <4 x i1> %m, i32 0)
+  call void @llvm.vp.store.v4i32.p0(<4 x i32> %val, ptr %ptr, <4 x i1> %m, i32 0)
   ret void
 }
 
-define void @vstore_v4i32_false_mask(<4 x i32> %val, <4 x i32>* %ptr, i32 %evl) {
+define void @vstore_v4i32_false_mask(<4 x i32> %val, ptr %ptr, i32 %evl) {
 ; CHECK-LABEL: vstore_v4i32_false_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  call void @llvm.vp.store.v4i32.p0v4i32(<4 x i32> %val, <4 x i32>* %ptr, <4 x i1> zeroinitializer, i32 %evl)
+  call void @llvm.vp.store.v4i32.p0(<4 x i32> %val, ptr %ptr, <4 x i1> zeroinitializer, i32 %evl)
   ret void
 }
 
-declare void @llvm.vp.scatter.v4i32.v4p0i32(<4 x i32>, <4 x i32*>, <4 x i1>, i32)
+declare void @llvm.vp.scatter.v4i32.v4p0(<4 x i32>, <4 x ptr>, <4 x i1>, i32)
 
-define void @vscatter_v4i32_zero_evl(<4 x i32> %val, <4 x i32*> %ptrs, <4 x i1> %m) {
+define void @vscatter_v4i32_zero_evl(<4 x i32> %val, <4 x ptr> %ptrs, <4 x i1> %m) {
 ; CHECK-LABEL: vscatter_v4i32_zero_evl:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  call void @llvm.vp.scatter.v4i32.v4p0i32(<4 x i32> %val, <4 x i32*> %ptrs, <4 x i1> %m, i32 0)
+  call void @llvm.vp.scatter.v4i32.v4p0(<4 x i32> %val, <4 x ptr> %ptrs, <4 x i1> %m, i32 0)
   ret void
 }
 
-define void @vscatter_v4i32_false_mask(<4 x i32> %val, <4 x i32*> %ptrs, i32 %evl) {
+define void @vscatter_v4i32_false_mask(<4 x i32> %val, <4 x ptr> %ptrs, i32 %evl) {
 ; CHECK-LABEL: vscatter_v4i32_false_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  call void @llvm.vp.scatter.v4i32.v4p0i32(<4 x i32> %val, <4 x i32*> %ptrs, <4 x i1> zeroinitializer, i32 %evl)
+  call void @llvm.vp.scatter.v4i32.v4p0(<4 x i32> %val, <4 x ptr> %ptrs, <4 x i1> zeroinitializer, i32 %evl)
   ret void
 }
 

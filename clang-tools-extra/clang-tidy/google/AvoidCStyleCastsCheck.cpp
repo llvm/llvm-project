@@ -14,10 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace google {
-namespace readability {
+namespace clang::tidy::google::readability {
 
 void AvoidCStyleCastsCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
@@ -258,7 +255,4 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   Diag << "static_cast/const_cast/reinterpret_cast";
 }
 
-} // namespace readability
-} // namespace google
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::google::readability

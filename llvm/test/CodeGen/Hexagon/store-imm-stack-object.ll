@@ -13,23 +13,19 @@ b0:
   %v2 = alloca i16, align 2
   %v3 = alloca i32, align 4
   %v4 = alloca i32, align 4
-  %v5 = getelementptr inbounds [1 x i8], [1 x i8]* %v1, i32 0, i32 0
-  call void @llvm.lifetime.start(i64 1, i8* %v5)
-  store i8 49, i8* %v5, align 1
-  %v6 = bitcast i16* %v2 to i8*
-  call void @llvm.lifetime.start(i64 2, i8* %v6)
-  store i16 50, i16* %v2, align 2
-  %v7 = bitcast i32* %v3 to i8*
-  call void @llvm.lifetime.start(i64 4, i8* %v7)
-  store i32 51, i32* %v3, align 4
-  %v8 = bitcast i32* %v4 to i8*
-  call void @llvm.lifetime.start(i64 4, i8* %v8)
-  store i32 875770417, i32* %v4, align 4
-  call void @test4(i8* %v5, i8* %v6, i8* %v7, i8* %v8)
-  call void @llvm.lifetime.end(i64 4, i8* %v8)
-  call void @llvm.lifetime.end(i64 4, i8* %v7)
-  call void @llvm.lifetime.end(i64 2, i8* %v6)
-  call void @llvm.lifetime.end(i64 1, i8* %v5)
+  call void @llvm.lifetime.start(i64 1, ptr %v1)
+  store i8 49, ptr %v1, align 1
+  call void @llvm.lifetime.start(i64 2, ptr %v2)
+  store i16 50, ptr %v2, align 2
+  call void @llvm.lifetime.start(i64 4, ptr %v3)
+  store i32 51, ptr %v3, align 4
+  call void @llvm.lifetime.start(i64 4, ptr %v4)
+  store i32 875770417, ptr %v4, align 4
+  call void @test4(ptr %v1, ptr %v2, ptr %v3, ptr %v4)
+  call void @llvm.lifetime.end(i64 4, ptr %v4)
+  call void @llvm.lifetime.end(i64 4, ptr %v3)
+  call void @llvm.lifetime.end(i64 2, ptr %v2)
+  call void @llvm.lifetime.end(i64 1, ptr %v1)
   ret void
 }
 
@@ -45,41 +41,35 @@ b0:
   %v4 = alloca i32, align 4
   %v5 = alloca [100 x i8], align 8
   %v6 = alloca [101 x i8], align 8
-  %v7 = getelementptr inbounds [1 x i8], [1 x i8]* %v1, i32 0, i32 0
-  call void @llvm.lifetime.start(i64 1, i8* %v7)
-  store i8 49, i8* %v7, align 1
-  %v8 = bitcast i16* %v2 to i8*
-  call void @llvm.lifetime.start(i64 2, i8* %v8)
-  store i16 50, i16* %v2, align 2
-  %v9 = bitcast i32* %v3 to i8*
-  call void @llvm.lifetime.start(i64 4, i8* %v9)
-  store i32 51, i32* %v3, align 4
-  %v10 = bitcast i32* %v4 to i8*
-  call void @llvm.lifetime.start(i64 4, i8* %v10)
-  store i32 875770417, i32* %v4, align 4
-  %v11 = getelementptr inbounds [100 x i8], [100 x i8]* %v5, i32 0, i32 0
-  call void @llvm.lifetime.start(i64 100, i8* %v11)
-  call void @llvm.memset.p0i8.i32(i8* align 8 %v11, i8 0, i32 100, i1 false)
-  store i8 50, i8* %v11, align 8
-  %v12 = getelementptr inbounds [101 x i8], [101 x i8]* %v6, i32 0, i32 0
-  call void @llvm.lifetime.start(i64 101, i8* %v12)
-  call void @llvm.memset.p0i8.i32(i8* align 8 %v12, i8 0, i32 101, i1 false)
-  store i8 49, i8* %v12, align 8
-  call void @test3(i8* %v7, i8* %v8, i8* %v9, i8* %v10, i8* %v11, i8* %v12)
-  call void @llvm.lifetime.end(i64 101, i8* %v12)
-  call void @llvm.lifetime.end(i64 100, i8* %v11)
-  call void @llvm.lifetime.end(i64 4, i8* %v10)
-  call void @llvm.lifetime.end(i64 4, i8* %v9)
-  call void @llvm.lifetime.end(i64 2, i8* %v8)
-  call void @llvm.lifetime.end(i64 1, i8* %v7)
+  call void @llvm.lifetime.start(i64 1, ptr %v1)
+  store i8 49, ptr %v1, align 1
+  call void @llvm.lifetime.start(i64 2, ptr %v2)
+  store i16 50, ptr %v2, align 2
+  call void @llvm.lifetime.start(i64 4, ptr %v3)
+  store i32 51, ptr %v3, align 4
+  call void @llvm.lifetime.start(i64 4, ptr %v4)
+  store i32 875770417, ptr %v4, align 4
+  call void @llvm.lifetime.start(i64 100, ptr %v5)
+  call void @llvm.memset.p0.i32(ptr align 8 %v5, i8 0, i32 100, i1 false)
+  store i8 50, ptr %v5, align 8
+  call void @llvm.lifetime.start(i64 101, ptr %v6)
+  call void @llvm.memset.p0.i32(ptr align 8 %v6, i8 0, i32 101, i1 false)
+  store i8 49, ptr %v6, align 8
+  call void @test3(ptr %v1, ptr %v2, ptr %v3, ptr %v4, ptr %v5, ptr %v6)
+  call void @llvm.lifetime.end(i64 101, ptr %v6)
+  call void @llvm.lifetime.end(i64 100, ptr %v5)
+  call void @llvm.lifetime.end(i64 4, ptr %v4)
+  call void @llvm.lifetime.end(i64 4, ptr %v3)
+  call void @llvm.lifetime.end(i64 2, ptr %v2)
+  call void @llvm.lifetime.end(i64 1, ptr %v1)
   ret void
 }
 
-declare void @llvm.lifetime.start(i64, i8* nocapture) #0
-declare void @llvm.lifetime.end(i64, i8* nocapture) #0
-declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1) #0
+declare void @llvm.lifetime.start(i64, ptr nocapture) #0
+declare void @llvm.lifetime.end(i64, ptr nocapture) #0
+declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1) #0
 
-declare void @test3(i8*, i8*, i8*, i8*, i8*, i8*)
-declare void @test4(i8*, i8*, i8*, i8*)
+declare void @test3(ptr, ptr, ptr, ptr, ptr, ptr)
+declare void @test4(ptr, ptr, ptr, ptr)
 
 attributes #0 = { argmemonly nounwind "target-cpu"="hexagonv60" }

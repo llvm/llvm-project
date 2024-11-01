@@ -9,6 +9,7 @@
 #include "ImplicitWideningOfMultiplicationResultCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
@@ -20,9 +21,7 @@ AST_MATCHER(ImplicitCastExpr, isPartOfExplicitCast) {
 } // namespace
 } // namespace clang
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 static const Expr *getLHSOfMulBinOp(const Expr *E) {
   assert(E == E->IgnoreParens() && "Already skipped all parens!");
@@ -59,7 +58,7 @@ void ImplicitWideningOfMultiplicationResultCheck::storeOptions(
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
 }
 
-llvm::Optional<FixItHint>
+std::optional<FixItHint>
 ImplicitWideningOfMultiplicationResultCheck::includeStddefHeader(
     SourceLocation File) {
   return IncludeInserter.createIncludeInsertion(
@@ -272,6 +271,4 @@ void ImplicitWideningOfMultiplicationResultCheck::check(
     handlePointerOffsetting(MatchedDecl);
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

@@ -14,14 +14,12 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/StringSet.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Checker for signal handler functions.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/signal-handler-check.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/signal-handler.html
 class SignalHandlerCheck : public ClangTidyCheck {
 public:
   enum class AsyncSafeFunctionSetKind { Minimal, POSIX };
@@ -76,8 +74,6 @@ private:
   llvm::StringSet<> ConformingFunctions;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SIGNALHANDLERCHECK_H

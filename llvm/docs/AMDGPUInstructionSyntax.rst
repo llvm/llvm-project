@@ -13,22 +13,42 @@ Instructions
 Syntax
 ~~~~~~
 
+Syntax of Regular Instructions
+------------------------------
+
 An instruction has the following syntax:
 
-    ``<``\ *opcode mnemonic*\ ``>    <``\ *operand0*\ ``>, <``\ *operand1*\ ``>,...    <``\ *modifier0*\ ``> <``\ *modifier1*\ ``>...``
+  | ``<``\ *opcode mnemonic*\ ``>    <``\ *operand0*\ ``>,
+      <``\ *operand1*\ ``>,...    <``\ *modifier0*\ ``> <``\ *modifier1*\ ``>...``
 
-:doc:`Operands<AMDGPUOperandSyntax>` are normally comma-separated while
+:doc:`Operands<AMDGPUOperandSyntax>` are normally comma-separated, while
 :doc:`modifiers<AMDGPUModifierSyntax>` are space-separated.
 
 The order of *operands* and *modifiers* is fixed.
 Most *modifiers* are optional and may be omitted.
+
+Syntax of VOPD Instructions
+---------------------------
+
+*VOPDX* and *VOPDY* instructions must be concatenated with the :: operator to form a single *VOPD* instruction:
+
+    ``<``\ *VOPDX instruction*\ ``>  ::  <``\ *VOPDY instruction*\ ``>``
+
+An example:
+
+.. parsed-literal::
+
+    v_dual_add_f32 v255, v255, v2 :: v_dual_fmaak_f32 v6, v2, v3, 1.0
+
+Note that *VOPDX* and *VOPDY* instructions cannot be used as separate opcodes.
 
 .. _amdgpu_syn_instruction_mnemo:
 
 Opcode Mnemonic
 ~~~~~~~~~~~~~~~
 
-Opcode mnemonic describes opcode semantics and may include one or more suffices in this order:
+Opcode mnemonic describes opcode semantics
+and may include one or more suffices in this order:
 
 * :ref:`Packing suffix<amdgpu_syn_instruction_pk>`.
 * :ref:`Destination operand type suffix<amdgpu_syn_instruction_type>`.
@@ -81,7 +101,7 @@ The following table enumerates the most frequently used type suffices.
     ============================================ ======================= ============================
 
 Instructions which have no type suffices are assumed to operate with typeless data.
-The size of data is specified by size suffices:
+The size of typeless data is specified by size suffices:
 
     ================= =================== =====================================
     Size Suffix       Implied data type   Required register size in dwords
@@ -100,11 +120,15 @@ The size of data is specified by size suffices:
     d16_xy            b16x2               2 for GFX8.0, 1 for GFX8.1 and GFX9+
     d16_xyz           b16x3               3 for GFX8.0, 2 for GFX8.1 and GFX9+
     d16_xyzw          b16x4               4 for GFX8.0, 2 for GFX8.1 and GFX9+
+    d16_format_x      b16                 1
+    d16_format_xy     b16x2               1
+    d16_format_xyz    b16x3               2
+    d16_format_xyzw   b16x4               2
     ================= =================== =====================================
 
 .. WARNING::
-    There are exceptions from rules described above.
-    Operands which have type different from type specified by the opcode are
+    There are exceptions to the rules described above.
+    Operands which have a type different from the type specified by the opcode are
     :ref:`tagged<amdgpu_syn_instruction_operand_tags>` in the description.
 
 Examples of instructions with different types of source and destination operands:
@@ -144,7 +168,9 @@ Encoding Suffices
 Most *VOP1*, *VOP2* and *VOPC* instructions have several variants:
 they may also be encoded in *VOP3*, *DPP* and *SDWA* formats.
 
-The assembler will automatically use optimal encoding based on instruction operands.
+The assembler selects an optimal encoding automatically
+based on instruction operands and modifiers,
+unless a specific encoding is explicitly requested.
 To force specific encoding, one can add a suffix to the opcode of the instruction:
 
     =================================================== =================
@@ -154,10 +180,11 @@ To force specific encoding, one can add a suffix to the opcode of the instructio
     *VOP3* (64-bit) encoding                            _e64
     *DPP* encoding                                      _dpp
     *SDWA* encoding                                     _sdwa
+    *VOP3 DPP* encoding                                 _e64_dpp
     =================================================== =================
 
-These suffices are used in this reference to indicate the assumed encoding.
-When no suffix is specified, native instruction encoding is implied.
+This reference uses encoding suffices to specify which encoding is implied.
+When no suffix is specified, native instruction encoding is assumed.
 
 Operands
 ========
@@ -165,9 +192,9 @@ Operands
 Syntax
 ~~~~~~
 
-Syntax of generic operands is described :doc:`in this document<AMDGPUOperandSyntax>`.
+The syntax of generic operands is described :doc:`in this document<AMDGPUOperandSyntax>`.
 
-For detailed information about operands follow *operand links* in GPU-specific documents.
+For detailed information about operands, follow *operand links* in GPU-specific documents.
 
 Modifiers
 =========
@@ -175,6 +202,7 @@ Modifiers
 Syntax
 ~~~~~~
 
-Syntax of modifiers is described :doc:`in this document<AMDGPUModifierSyntax>`.
+The syntax of modifiers is described :doc:`in this document<AMDGPUModifierSyntax>`.
 
-Information about modifiers supported for individual instructions may be found in GPU-specific documents.
+Information about modifiers supported for individual instructions
+may be found in GPU-specific documents.

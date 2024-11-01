@@ -10,7 +10,7 @@
 #define _LIBCPP___COROUTINE_COROUTINE_TRAITS_H
 
 #include <__config>
-#include <type_traits>
+#include <__type_traits/void_t.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

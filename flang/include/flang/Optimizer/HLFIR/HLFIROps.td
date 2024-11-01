@@ -202,7 +202,7 @@ def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,
       "llvm::StringRef":$component, "mlir::Value":$component_shape,
       "llvm::ArrayRef<std::variant<mlir::Value, std::tuple<mlir::Value, mlir::Value, mlir::Value>>>":$subscripts,
       CArg<"mlir::ValueRange", "{}">:$substring,
-      CArg<"llvm::Optional<bool>", "{}">:$complex_part,
+      CArg<"std::optional<bool>", "{}">:$complex_part,
       CArg<"mlir::Value", "{}">:$shape, CArg<"mlir::ValueRange", "{}">:$typeparams,
       CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>,
 
@@ -234,6 +234,26 @@ def hlfir_ConcatOp : hlfir_Op<"concat", []> {
   let builders = [OpBuilder<(ins "mlir::ValueRange":$strings,"mlir::Value":$len)>];
 
   let hasVerifier = 1;
+}
+
+def hlfir_SetLengthOp : hlfir_Op<"set_length", []> {
+  let summary = "change the length of a character entity";
+  let description = [{
+    Change the length of character entity. This trims or pads the
+    character argument according to the new length.
+  }];
+
+  let arguments = (ins AnyScalarCharacterEntity:$string,
+                   AnyIntegerType:$length);
+
+  let results = (outs AnyScalarCharacterExpr);
+
+  let assemblyFormat = [{
+    $string `len` $length
+     attr-dict `:` functional-type(operands, results)
+  }];
+
+  let builders = [OpBuilder<(ins "mlir::Value":$string,"mlir::Value":$len)>];
 }
 
 def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
@@ -308,21 +328,37 @@ def hlfir_EndAssociateOp : hlfir_Op<"end_associate", []> {
 }
 
 def hlfir_AsExprOp : hlfir_Op<"as_expr", []> {
-  let summary = "Take the value of an array, character or derived expression";
+  let summary = "Take the value of an array, character or derived variable";
 
   let description = [{
-    Take the value of an array, character or derived expression.
+    Take the value of an array, character or derived variable.
+    In general, this operation will lead to a copy of the variable
+    in the bufferization pass if it was not transformed.
+
+    However, if it is known that the variable storage will not be used anymore
+    afterwards, the variable storage ownership can be passed to the hlfir.expr
+    by providing the $must_free argument that is a boolean that indicates if
+    the storage must be freed (when it was allocated on the heap).
+    This allows Fortran lowering to build some expression value in memory when
+    there is no adequate hlfir operation, and to promote the result to an
+    hlfir.expr value without paying the price of introducing a copy.
   }];
 
-  let arguments = (ins AnyFortranVariable:$var);
+  let arguments = (ins AnyFortranVariable:$var,
+                       Optional<I1>:$must_free);
   let results = (outs hlfir_ExprType);
 
+  let extraClassDeclaration = [{
+      // Is this a "move" ?
+      bool isMove() { return getMustFree() != mlir::Value{}; }
+  }];
+
   let assemblyFormat = [{
-    $var attr-dict `:` functional-type(operands, results)
+    $var (`move` $must_free^)? attr-dict `:` functional-type(operands, results)
   }];
 
 
-  let builders = [OpBuilder<(ins "mlir::Value":$var)>];
+  let builders = [OpBuilder<(ins "mlir::Value":$var, CArg<"mlir::Value", "{}">:$must_free)>];
 }
 
 def hlfir_NoReassocOp : hlfir_Op<"no_reassoc", [NoMemoryEffect, SameOperandsAndResultType]> {
@@ -435,6 +471,56 @@ def hlfir_ApplyOp : hlfir_Op<"apply", [NoMemoryEffect, AttrSizedOperandSegments]
     OpBuilder<(ins "mlir::Value":$expr, "mlir::ValueRange":$indices,
       "mlir::ValueRange":$typeparams)>
   ];
+}
+
+def hlfir_NullOp : hlfir_Op<"null", [NoMemoryEffect, fir_FortranVariableOpInterface]> {
+  let summary = "create a NULL() address";
+
+  let description = [{
+    Create a NULL() address.
+    So far is not intended to represent NULL(MOLD).
+  }];
+
+  let results = (outs AnyFortranVariable);
+  let builders = [OpBuilder<(ins)>];
+
+  let assemblyFormat = "type(results) attr-dict";
+  let extraClassDeclaration = [{
+    // Implement FortranVariableInterface interface.
+    std::optional<fir::FortranVariableFlagsEnum> getFortranAttrs() const {
+      return std::nullopt;
+    }
+    mlir::Value getShape() const {return mlir::Value{};}
+    mlir::OperandRange getExplicitTypeParams() const {
+      // Return an empty range.
+      return {(*this)->getOperands().begin(), (*this)->getOperands().begin()};
+    }
+  }];
+}
+
+def hlfir_DestroyOp : hlfir_Op<"destroy", []> {
+  let summary = "Mark the last use of an hlfir.expr";
+  let description = [{
+    Mark the last use of an hlfir.expr. This will be the point at which the
+    buffer of an hlfir.expr, if any, will be deallocated if it was heap
+    allocated.
+    It is not required to create an hlfir.destroy operation for and hlfir.expr
+    created inside an hlfir.elemental an returned in the hlfir.yield_element.
+    The last use of such expression is implicit and an hlfir.destroy could
+    not be emitted after the hlfir.yield_element since it is a terminator.
+
+    Note that hlfir.destroy are currently generated by Fortran lowering that
+    has a good view of the expression use contexts, but this will need to be
+    revisited if any motion of hlfir.expr is done (like CSE) since
+    transformations should not introduce any hlfir.expr usages after an
+    hlfir.destroy.
+    The future will probably be to identify the last use points automatically
+    in bufferization instead.
+  }];
+
+  let arguments = (ins hlfir_ExprType:$expr);
+
+  let assemblyFormat = "$expr attr-dict `:` qualified(type($expr))";
 }
 
 #endif // FORTRAN_DIALECT_HLFIR_OPS

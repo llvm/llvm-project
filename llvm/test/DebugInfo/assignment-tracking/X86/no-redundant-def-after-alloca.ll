@@ -1,5 +1,4 @@
 ; RUN: llc %s -o - -stop-after=finalize-isel \
-; RUN:    -experimental-assignment-tracking  \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
 
 ;; Hand written. Check that no unnecessary undef is inserted after an alloca
@@ -25,7 +24,7 @@ declare dso_local void @a(...)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5}
+!llvm.module.flags = !{!3, !4, !5, !1000}
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 12.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
@@ -46,3 +45,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !15 = distinct !DIAssignID()
 !16 = !DILocation(line: 4, column: 3, scope: !7)
 !17 = !DILocation(line: 5, column: 1, scope: !7)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

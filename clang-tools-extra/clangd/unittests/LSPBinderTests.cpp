@@ -10,6 +10,7 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -30,10 +31,11 @@ bool fromJSON(const llvm::json::Value &V, Foo &F, llvm::json::Path P) {
 }
 llvm::json::Value toJSON(const Foo &F) { return F.X; }
 
-// Creates a Callback that writes its received value into an Optional<Expected>.
+// Creates a Callback that writes its received value into an
+// std::optional<Expected>.
 template <typename T>
 llvm::unique_function<void(llvm::Expected<T>)>
-capture(llvm::Optional<llvm::Expected<T>> &Out) {
+capture(std::optional<llvm::Expected<T>> &Out) {
   Out.reset();
   return [&Out](llvm::Expected<T> V) { Out.emplace(std::move(V)); };
 }
@@ -89,23 +91,22 @@ TEST(LSPBinderTest, IncomingCalls) {
               UnorderedElementsAre("notify"));
   ASSERT_THAT(RawHandlers.CommandHandlers.keys(),
               UnorderedElementsAre("cmdPlusOne"));
-  llvm::Optional<llvm::Expected<llvm::json::Value>> Reply;
+  std::optional<llvm::Expected<llvm::json::Value>> Reply;
 
   auto &RawPlusOne = RawHandlers.MethodHandlers["plusOne"];
   RawPlusOne(1, capture(Reply));
   ASSERT_TRUE(Reply.has_value());
-  EXPECT_THAT_EXPECTED(Reply.value(), llvm::HasValue(2));
+  EXPECT_THAT_EXPECTED(*Reply, llvm::HasValue(2));
   RawPlusOne("foo", capture(Reply));
   ASSERT_TRUE(Reply.has_value());
   EXPECT_THAT_EXPECTED(
-      Reply.value(),
-      llvm::FailedWithMessage(
-          HasSubstr("failed to decode plusOne request: expected integer")));
+      *Reply, llvm::FailedWithMessage(HasSubstr(
+                  "failed to decode plusOne request: expected integer")));
 
   auto &RawFail = RawHandlers.MethodHandlers["fail"];
   RawFail(2, capture(Reply));
   ASSERT_TRUE(Reply.has_value());
-  EXPECT_THAT_EXPECTED(Reply.value(), llvm::FailedWithMessage("X=2"));
+  EXPECT_THAT_EXPECTED(*Reply, llvm::FailedWithMessage("X=2"));
 
   auto &RawNotify = RawHandlers.NotificationHandlers["notify"];
   RawNotify(42);
@@ -118,7 +119,7 @@ TEST(LSPBinderTest, IncomingCalls) {
   auto &RawCmdPlusOne = RawHandlers.CommandHandlers["cmdPlusOne"];
   RawCmdPlusOne(1, capture(Reply));
   ASSERT_TRUE(Reply.has_value());
-  EXPECT_THAT_EXPECTED(Reply.value(), llvm::HasValue(2));
+  EXPECT_THAT_EXPECTED(*Reply, llvm::HasValue(2));
 
   // None of this generated any outgoing traffic.
   EXPECT_THAT(RawOutgoing.Received, IsEmpty());
@@ -136,26 +137,26 @@ TEST(LSPBinderTest, OutgoingCalls) {
   LSPBinder::OutgoingMethod<Foo, Foo> Fail;
   Fail = Binder.outgoingMethod("fail");
 
-  llvm::Optional<llvm::Expected<Foo>> Reply;
+  std::optional<llvm::Expected<Foo>> Reply;
   Echo(Foo{2}, capture(Reply));
   EXPECT_THAT(RawOutgoing.take("echo"), ElementsAre(llvm::json::Value(2)));
   ASSERT_TRUE(Reply.has_value());
-  EXPECT_THAT_EXPECTED(Reply.value(), llvm::HasValue(Foo{2}));
+  EXPECT_THAT_EXPECTED(*Reply, llvm::HasValue(Foo{2}));
 
   // JSON response is integer, can't be parsed as string.
-  llvm::Optional<llvm::Expected<std::string>> WrongTypeReply;
+  std::optional<llvm::Expected<std::string>> WrongTypeReply;
   WrongSignature(Foo{2}, capture(WrongTypeReply));
   EXPECT_THAT(RawOutgoing.take("wrongSignature"),
               ElementsAre(llvm::json::Value(2)));
   ASSERT_TRUE(Reply.has_value());
-  EXPECT_THAT_EXPECTED(WrongTypeReply.value(),
+  EXPECT_THAT_EXPECTED(*WrongTypeReply,
                        llvm::FailedWithMessage(
                            HasSubstr("failed to decode wrongSignature reply")));
 
   Fail(Foo{2}, capture(Reply));
   EXPECT_THAT(RawOutgoing.take("fail"), ElementsAre(llvm::json::Value(2)));
   ASSERT_TRUE(Reply.has_value());
-  EXPECT_THAT_EXPECTED(Reply.value(), llvm::FailedWithMessage("Params=2"));
+  EXPECT_THAT_EXPECTED(*Reply, llvm::FailedWithMessage("Params=2"));
 }
 
 } // namespace

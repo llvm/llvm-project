@@ -53,16 +53,16 @@ if.else:                                          ; preds = %entry
 ; CHECK-NEXT: .Lfunc_end
 }
 
-@__const.indirect_branch.ptr = private unnamed_addr constant [2 x i8*] [i8* blockaddress(@indirect_branch, %return), i8* blockaddress(@indirect_branch, %l2)], align 8
+@__const.indirect_branch.ptr = private unnamed_addr constant [2 x ptr] [ptr blockaddress(@indirect_branch, %return), ptr blockaddress(@indirect_branch, %l2)], align 8
 
 ; Function Attrs: norecurse nounwind readnone
 define dso_local i32 @indirect_branch(i32 %a, i32 %b, i32 %i) {
 ; CHECK-LABEL: indirect_branch:
 entry:
   %idxprom = sext i32 %i to i64
-  %arrayidx = getelementptr inbounds [2 x i8*], [2 x i8*]* @__const.indirect_branch.ptr, i64 0, i64 %idxprom
-  %0 = load i8*, i8** %arrayidx, align 8
-  indirectbr i8* %0, [label %return, label %l2]
+  %arrayidx = getelementptr inbounds [2 x ptr], ptr @__const.indirect_branch.ptr, i64 0, i64 %idxprom
+  %0 = load ptr, ptr %arrayidx, align 8
+  indirectbr ptr %0, [label %return, label %l2]
 ; ARM:       bx r0
 ; THUMB:     mov pc, r0
 ; ISBDSB-NEXT: dsb sy
@@ -163,15 +163,13 @@ sw.epilog:                                        ; preds = %sw.bb5, %entry
 }
 
 define dso_local i32 @indirect_call(
-i32 (...)* nocapture %f1, i32 (...)* nocapture %f2) {
+ptr nocapture %f1, ptr nocapture %f2) {
 entry:
 ; CHECK-LABEL: indirect_call:
-  %callee.knr.cast = bitcast i32 (...)* %f1 to i32 ()*
-  %call = tail call i32 %callee.knr.cast()
+  %call = tail call i32 %f1()
 ; HARDENARM: bl {{__llvm_slsblr_thunk_arm_r[0-9]+$}}
 ; HARDENTHUMB: bl {{__llvm_slsblr_thunk_thumb_r[0-9]+$}}
-  %callee.knr.cast1 = bitcast i32 (...)* %f2 to i32 ()*
-  %call2 = tail call i32 %callee.knr.cast1()
+  %call2 = tail call i32 %f2()
 ; HARDENARM: bl {{__llvm_slsblr_thunk_arm_r[0-9]+$}}
 ; HARDENTHUMB: bl {{__llvm_slsblr_thunk_thumb_r[0-9]+$}}
   %add = add nsw i32 %call2, %call
@@ -180,16 +178,16 @@ entry:
 }
 
 ; verify calling through a function pointer.
-@a = dso_local local_unnamed_addr global i32 (...)* null, align 8
+@a = dso_local local_unnamed_addr global ptr null, align 8
 @b = dso_local local_unnamed_addr global i32 0, align 4
 define dso_local void @indirect_call_global() local_unnamed_addr {
 ; CHECK-LABEL: indirect_call_global:
 entry:
-  %0 = load i32 ()*, i32 ()** bitcast (i32 (...)** @a to i32 ()**), align 8
+  %0 = load ptr, ptr @a, align 8
   %call = tail call i32 %0()  nounwind
 ; HARDENARM: bl {{__llvm_slsblr_thunk_arm_r[0-9]+$}}
 ; HARDENTHUMB: bl {{__llvm_slsblr_thunk_thumb_r[0-9]+$}}
-  store i32 %call, i32* @b, align 4
+  store i32 %call, ptr @b, align 4
   ret void
 ; CHECK: .Lfunc_end
 }
@@ -199,12 +197,12 @@ entry:
 ; (a) a linker is allowed to clobber r12 on calls, and
 ; (b) the hardening transformation isn't correct if lr is the register holding
 ;     the address of the function called.
-define i32 @check_r12(i32 ()** %fp) {
+define i32 @check_r12(ptr %fp) {
 entry:
 ; CHECK-LABEL: check_r12:
-  %f = load i32 ()*, i32 ()** %fp, align 4
+  %f = load ptr, ptr %fp, align 4
   ; Force f to be moved into r12
-  %r12_f = tail call i32 ()* asm "add $0, $1, #0", "={r12},{r12}"(i32 ()* %f) nounwind
+  %r12_f = tail call ptr asm "add $0, $1, #0", "={r12},{r12}"(ptr %f) nounwind
   %call = call i32 %r12_f()
 ; NOHARDENARM:     blx r12
 ; NOHARDENTHUMB:   blx r12
@@ -213,12 +211,12 @@ entry:
 ; CHECK: .Lfunc_end
 }
 
-define i32 @check_lr(i32 ()** %fp) {
+define i32 @check_lr(ptr %fp) {
 entry:
 ; CHECK-LABEL: check_lr:
-  %f = load i32 ()*, i32 ()** %fp, align 4
+  %f = load ptr, ptr %fp, align 4
   ; Force f to be moved into lr
-  %lr_f = tail call i32 ()* asm "add $0, $1, #0", "={lr},{lr}"(i32 ()* %f) nounwind
+  %lr_f = tail call ptr asm "add $0, $1, #0", "={lr},{lr}"(ptr %f) nounwind
   %call = call i32 %lr_f()
 ; NOHARDENARM:     blx lr
 ; NOHARDENTHUMB:   blx lr
@@ -229,11 +227,10 @@ entry:
 
 ; Verify that even when sls-harden-blr is enabled, "blx r12" is still an
 ; instruction that is accepted by the inline assembler
-define void @verify_inline_asm_blx_r12(void ()* %g) {
+define void @verify_inline_asm_blx_r12(ptr %g) {
 entry:
 ; CHECK-LABEL: verify_inline_asm_blx_r12:
-  %0 = bitcast void ()* %g to i8*
-  tail call void asm sideeffect "blx $0", "{r12}"(i8* %0) nounwind
+  tail call void asm sideeffect "blx $0", "{r12}"(ptr %g) nounwind
 ; CHECK: blx r12
   ret void
 ; CHECK:       {{bx lr$}}
@@ -259,4 +256,5 @@ entry:
 ; SB-NEXT:     isb
 ; HARDEN-NEXT: .Lfunc_end
 
-
+; THUMB-NOT: __llvm_slsblr_thunk_arm
+; ARM-NOT: __llvm_slsblr_thunk_thumb

@@ -1,4 +1,4 @@
-; RUN: mlir-translate --import-llvm %s | FileCheck %s
+; RUN: mlir-translate -opaque-pointers=0 --import-llvm %s | FileCheck %s
 
 %Domain = type { %Domain**, %Domain* }
 

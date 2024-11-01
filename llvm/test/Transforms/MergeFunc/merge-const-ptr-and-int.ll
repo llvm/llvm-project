@@ -4,17 +4,17 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; Afunc and Bfunc differ only in that one returns i64, the other a pointer.
 ; These should be merged.
-define internal i64 @Afunc(i32* %P, i32* %Q) {
+define internal i64 @Afunc(ptr %P, ptr %Q) {
 ; CHECK-LABEL: define internal i64 @Afunc
-  store i32 4, i32* %P
-  store i32 6, i32* %Q
+  store i32 4, ptr %P
+  store i32 6, ptr %Q
   ret i64 0
 }
 
-define internal i64* @Bfunc(i32* %P, i32* %Q) {
+define internal ptr @Bfunc(ptr %P, ptr %Q) {
 ; MERGE-NOT: @Bfunc
-  store i32 4, i32* %P
-  store i32 6, i32* %Q
-  ret i64* null
+  store i32 4, ptr %P
+  store i32 6, ptr %Q
+  ret ptr null
 }
 

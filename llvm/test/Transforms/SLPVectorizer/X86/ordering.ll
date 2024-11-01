@@ -10,7 +10,7 @@ define void @updateModelQPFrame(i32 %m_Bits) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load double, double* undef, align 8
+  %0 = load double, ptr undef, align 8
   %mul = fmul double undef, %0
   %mul2 = fmul double undef, %mul
   %mul4 = fmul double %0, %mul2
@@ -23,33 +23,33 @@ entry:
   ret void
 }
 
-declare i8* @objc_msgSend(i8*, i8*, ...)
+declare ptr @objc_msgSend(ptr, ptr, ...)
 declare i32 @personality_v0(...)
 
-define void @invoketest() personality i8* bitcast (i32 (...)* @personality_v0 to i8*) {
+define void @invoketest() personality ptr @personality_v0 {
 ; CHECK-LABEL: @invoketest(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 undef, label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[CALL49:%.*]] = invoke double bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to double (i8*, i8*)*)(i8* undef, i8* undef)
+; CHECK-NEXT:    [[CALL49:%.*]] = invoke double @objc_msgSend(ptr undef, ptr undef)
 ; CHECK-NEXT:    to label [[COND_TRUE54:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       cond.false:
-; CHECK-NEXT:    [[CALL51:%.*]] = invoke double bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to double (i8*, i8*)*)(i8* undef, i8* undef)
+; CHECK-NEXT:    [[CALL51:%.*]] = invoke double @objc_msgSend(ptr undef, ptr undef)
 ; CHECK-NEXT:    to label [[COND_FALSE57:%.*]] unwind label [[LPAD]]
 ; CHECK:       cond.true54:
-; CHECK-NEXT:    [[CALL56:%.*]] = invoke double bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to double (i8*, i8*)*)(i8* undef, i8* undef)
+; CHECK-NEXT:    [[CALL56:%.*]] = invoke double @objc_msgSend(ptr undef, ptr undef)
 ; CHECK-NEXT:    to label [[COND_END60:%.*]] unwind label [[LPAD]]
 ; CHECK:       cond.false57:
-; CHECK-NEXT:    [[CALL59:%.*]] = invoke double bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to double (i8*, i8*)*)(i8* undef, i8* undef)
+; CHECK-NEXT:    [[CALL59:%.*]] = invoke double @objc_msgSend(ptr undef, ptr undef)
 ; CHECK-NEXT:    to label [[COND_END60]] unwind label [[LPAD]]
 ; CHECK:       cond.end60:
 ; CHECK-NEXT:    br i1 undef, label [[IF_END98:%.*]], label [[IF_THEN63:%.*]]
 ; CHECK:       if.then63:
 ; CHECK-NEXT:    br label [[IF_END98]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[L:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[L:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    resume { i8*, i32 } [[L]]
+; CHECK-NEXT:    resume { ptr, i32 } [[L]]
 ; CHECK:       if.end98:
 ; CHECK-NEXT:    br label [[IF_END99:%.*]]
 ; CHECK:       if.end99:
@@ -59,19 +59,19 @@ entry:
   br i1 undef, label %cond.true, label %cond.false
 
 cond.true:
-  %call49 = invoke double bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to double (i8*, i8*)*)(i8* undef, i8* undef)
+  %call49 = invoke double @objc_msgSend(ptr undef, ptr undef)
   to label %cond.true54 unwind label %lpad
 
 cond.false:
-  %call51 = invoke double bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to double (i8*, i8*)*)(i8* undef, i8* undef)
+  %call51 = invoke double @objc_msgSend(ptr undef, ptr undef)
   to label %cond.false57 unwind label %lpad
 
 cond.true54:
-  %call56 = invoke double bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to double (i8*, i8*)*)(i8* undef, i8* undef)
+  %call56 = invoke double @objc_msgSend(ptr undef, ptr undef)
   to label %cond.end60 unwind label %lpad
 
 cond.false57:
-  %call59 = invoke double bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to double (i8*, i8*)*)(i8* undef, i8* undef)
+  %call59 = invoke double @objc_msgSend(ptr undef, ptr undef)
   to label %cond.end60 unwind label %lpad
 
 cond.end60:
@@ -89,9 +89,9 @@ if.then63:
   br label %if.end98
 
 lpad:
-  %l = landingpad { i8*, i32 }
+  %l = landingpad { ptr, i32 }
   cleanup
-  resume { i8*, i32 } %l
+  resume { ptr, i32 } %l
 
 if.end98:
   %dimensionsResult.sroa.0.0 = phi double [ %div71, %if.then63 ], [ %cond126, %cond.end60 ]

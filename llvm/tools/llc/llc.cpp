@@ -120,7 +120,7 @@ static cl::opt<char>
     OptLevel("O",
              cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
                       "(default = '-O2')"),
-             cl::Prefix, cl::init(' '));
+             cl::Prefix, cl::init('2'));
 
 static cl::opt<std::string>
 TargetTriple("mtriple", cl::desc("Override target triple for module"));
@@ -374,6 +374,8 @@ int main(int argc, char **argv) {
   // Initialize debugging passes.
   initializeScavengerTestPass(*Registry);
 
+  // Register the Target and CPU printer for --version.
+  cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
@@ -470,16 +472,12 @@ static int compileModule(char **argv, LLVMContext &Context) {
   bool SkipModule =
       CPUStr == "help" || (!MAttrs.empty() && MAttrs.front() == "help");
 
-  CodeGenOpt::Level OLvl = CodeGenOpt::Default;
-  switch (OptLevel) {
-  default:
+  CodeGenOpt::Level OLvl;
+  if (auto Level = CodeGenOpt::parseLevel(OptLevel)) {
+    OLvl = *Level;
+  } else {
     WithColor::error(errs(), argv[0]) << "invalid optimization level.\n";
     return 1;
-  case ' ': break;
-  case '0': OLvl = CodeGenOpt::None; break;
-  case '1': OLvl = CodeGenOpt::Less; break;
-  case '2': OLvl = CodeGenOpt::Default; break;
-  case '3': OLvl = CodeGenOpt::Aggressive; break;
   }
 
   // Parse 'none' or '$major.$minor'. Disallow -binutils-version=0 because we
@@ -528,8 +526,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
   // If user just wants to list available options, skip module loading
   if (!SkipModule) {
-    auto SetDataLayout =
-        [&](StringRef DataLayoutTargetTriple) -> std::optional<std::string> {
+    auto SetDataLayout = [&](StringRef DataLayoutTargetTriple,
+                             StringRef OldDLStr) -> std::optional<std::string> {
       // If we are supposed to override the target triple, do so now.
       std::string IRTargetTriple = DataLayoutTargetTriple.str();
       if (!TargetTriple.empty())
@@ -566,7 +564,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
       if (MIR)
         M = MIR->parseIRModule(SetDataLayout);
     } else {
-      M = parseIRFile(InputFilename, Err, Context, SetDataLayout);
+      M = parseIRFile(InputFilename, Err, Context,
+                      ParserCallbacks(SetDataLayout));
     }
     if (!M) {
       Err.print(argv[0], WithColor::error(errs(), argv[0]));
@@ -577,7 +576,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
     std::optional<CodeModel::Model> CM_IR = M->getCodeModel();
     if (!CM && CM_IR)
-      Target->setCodeModel(CM_IR.value());
+      Target->setCodeModel(*CM_IR);
   } else {
     TheTriple = Triple(Triple::normalize(TargetTriple));
     if (TheTriple.getTriple().empty())

@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv32 -target-abi=ilp32d -mattr=+v,+zfh,+experimental-zvfh,+f,+d -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX1
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64d -mattr=+v,+zfh,+experimental-zvfh,+f,+d -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX1
 
-define void @fp2si_v2f32_v2i32(<2 x float>* %x, <2 x i32>* %y) {
+define void @fp2si_v2f32_v2i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: fp2si_v2f32_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -12,13 +12,13 @@ define void @fp2si_v2f32_v2i32(<2 x float>* %x, <2 x i32>* %y) {
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v8, v8
 ; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    ret
-  %a = load <2 x float>, <2 x float>* %x
+  %a = load <2 x float>, ptr %x
   %d = fptosi <2 x float> %a to <2 x i32>
-  store <2 x i32> %d, <2 x i32>* %y
+  store <2 x i32> %d, ptr %y
   ret void
 }
 
-define void @fp2ui_v2f32_v2i32(<2 x float>* %x, <2 x i32>* %y) {
+define void @fp2ui_v2f32_v2i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: fp2ui_v2f32_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -26,9 +26,9 @@ define void @fp2ui_v2f32_v2i32(<2 x float>* %x, <2 x i32>* %y) {
 ; CHECK-NEXT:    vfcvt.rtz.xu.f.v v8, v8
 ; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    ret
-  %a = load <2 x float>, <2 x float>* %x
+  %a = load <2 x float>, ptr %x
   %d = fptoui <2 x float> %a to <2 x i32>
-  store <2 x i32> %d, <2 x i32>* %y
+  store <2 x i32> %d, ptr %y
   ret void
 }
 
@@ -78,7 +78,7 @@ define <2 x i1> @fp2ui_v2f32_v2i1(<2 x float> %x) {
   ret <2 x i1> %z
 }
 
-define void @fp2si_v8f32_v8i32(<8 x float>* %x, <8 x i32>* %y) {
+define void @fp2si_v8f32_v8i32(ptr %x, ptr %y) {
 ; LMULMAX8-LABEL: fp2si_v8f32_v8i32:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -99,13 +99,13 @@ define void @fp2si_v8f32_v8i32(<8 x float>* %x, <8 x i32>* %y) {
 ; LMULMAX1-NEXT:    addi a1, a1, 16
 ; LMULMAX1-NEXT:    vse32.v v8, (a1)
 ; LMULMAX1-NEXT:    ret
-  %a = load <8 x float>, <8 x float>* %x
+  %a = load <8 x float>, ptr %x
   %d = fptosi <8 x float> %a to <8 x i32>
-  store <8 x i32> %d, <8 x i32>* %y
+  store <8 x i32> %d, ptr %y
   ret void
 }
 
-define void @fp2ui_v8f32_v8i32(<8 x float>* %x, <8 x i32>* %y) {
+define void @fp2ui_v8f32_v8i32(ptr %x, ptr %y) {
 ; LMULMAX8-LABEL: fp2ui_v8f32_v8i32:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -126,9 +126,9 @@ define void @fp2ui_v8f32_v8i32(<8 x float>* %x, <8 x i32>* %y) {
 ; LMULMAX1-NEXT:    addi a1, a1, 16
 ; LMULMAX1-NEXT:    vse32.v v8, (a1)
 ; LMULMAX1-NEXT:    ret
-  %a = load <8 x float>, <8 x float>* %x
+  %a = load <8 x float>, ptr %x
   %d = fptoui <8 x float> %a to <8 x i32>
-  store <8 x i32> %d, <8 x i32>* %y
+  store <8 x i32> %d, ptr %y
   ret void
 }
 
@@ -200,7 +200,7 @@ define <8 x i1> @fp2ui_v8f32_v8i1(<8 x float> %x) {
   ret <8 x i1> %z
 }
 
-define void @fp2si_v2f32_v2i64(<2 x float>* %x, <2 x i64>* %y) {
+define void @fp2si_v2f32_v2i64(ptr %x, ptr %y) {
 ; CHECK-LABEL: fp2si_v2f32_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -208,13 +208,13 @@ define void @fp2si_v2f32_v2i64(<2 x float>* %x, <2 x i64>* %y) {
 ; CHECK-NEXT:    vfwcvt.rtz.x.f.v v9, v8
 ; CHECK-NEXT:    vse64.v v9, (a1)
 ; CHECK-NEXT:    ret
-  %a = load <2 x float>, <2 x float>* %x
+  %a = load <2 x float>, ptr %x
   %d = fptosi <2 x float> %a to <2 x i64>
-  store <2 x i64> %d, <2 x i64>* %y
+  store <2 x i64> %d, ptr %y
   ret void
 }
 
-define void @fp2ui_v2f32_v2i64(<2 x float>* %x, <2 x i64>* %y) {
+define void @fp2ui_v2f32_v2i64(ptr %x, ptr %y) {
 ; CHECK-LABEL: fp2ui_v2f32_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -222,13 +222,13 @@ define void @fp2ui_v2f32_v2i64(<2 x float>* %x, <2 x i64>* %y) {
 ; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v9, v8
 ; CHECK-NEXT:    vse64.v v9, (a1)
 ; CHECK-NEXT:    ret
-  %a = load <2 x float>, <2 x float>* %x
+  %a = load <2 x float>, ptr %x
   %d = fptoui <2 x float> %a to <2 x i64>
-  store <2 x i64> %d, <2 x i64>* %y
+  store <2 x i64> %d, ptr %y
   ret void
 }
 
-define void @fp2si_v8f32_v8i64(<8 x float>* %x, <8 x i64>* %y) {
+define void @fp2si_v8f32_v8i64(ptr %x, ptr %y) {
 ; LMULMAX8-LABEL: fp2si_v8f32_v8i64:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -261,13 +261,13 @@ define void @fp2si_v8f32_v8i64(<8 x float>* %x, <8 x i64>* %y) {
 ; LMULMAX1-NEXT:    addi a0, a1, 32
 ; LMULMAX1-NEXT:    vse64.v v10, (a0)
 ; LMULMAX1-NEXT:    ret
-  %a = load <8 x float>, <8 x float>* %x
+  %a = load <8 x float>, ptr %x
   %d = fptosi <8 x float> %a to <8 x i64>
-  store <8 x i64> %d, <8 x i64>* %y
+  store <8 x i64> %d, ptr %y
   ret void
 }
 
-define void @fp2ui_v8f32_v8i64(<8 x float>* %x, <8 x i64>* %y) {
+define void @fp2ui_v8f32_v8i64(ptr %x, ptr %y) {
 ; LMULMAX8-LABEL: fp2ui_v8f32_v8i64:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -300,13 +300,13 @@ define void @fp2ui_v8f32_v8i64(<8 x float>* %x, <8 x i64>* %y) {
 ; LMULMAX1-NEXT:    addi a0, a1, 32
 ; LMULMAX1-NEXT:    vse64.v v10, (a0)
 ; LMULMAX1-NEXT:    ret
-  %a = load <8 x float>, <8 x float>* %x
+  %a = load <8 x float>, ptr %x
   %d = fptoui <8 x float> %a to <8 x i64>
-  store <8 x i64> %d, <8 x i64>* %y
+  store <8 x i64> %d, ptr %y
   ret void
 }
 
-define void @fp2si_v2f16_v2i64(<2 x half>* %x, <2 x i64>* %y) {
+define void @fp2si_v2f16_v2i64(ptr %x, ptr %y) {
 ; CHECK-LABEL: fp2si_v2f16_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
@@ -316,13 +316,13 @@ define void @fp2si_v2f16_v2i64(<2 x half>* %x, <2 x i64>* %y) {
 ; CHECK-NEXT:    vfwcvt.rtz.x.f.v v8, v9
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
-  %a = load <2 x half>, <2 x half>* %x
+  %a = load <2 x half>, ptr %x
   %d = fptosi <2 x half> %a to <2 x i64>
-  store <2 x i64> %d, <2 x i64>* %y
+  store <2 x i64> %d, ptr %y
   ret void
 }
 
-define void @fp2ui_v2f16_v2i64(<2 x half>* %x, <2 x i64>* %y) {
+define void @fp2ui_v2f16_v2i64(ptr %x, ptr %y) {
 ; CHECK-LABEL: fp2ui_v2f16_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
@@ -332,9 +332,9 @@ define void @fp2ui_v2f16_v2i64(<2 x half>* %x, <2 x i64>* %y) {
 ; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v9
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
-  %a = load <2 x half>, <2 x half>* %x
+  %a = load <2 x half>, ptr %x
   %d = fptoui <2 x half> %a to <2 x i64>
-  store <2 x i64> %d, <2 x i64>* %y
+  store <2 x i64> %d, ptr %y
   ret void
 }
 
@@ -362,7 +362,7 @@ define <2 x i1> @fp2ui_v2f16_v2i1(<2 x half> %x) {
   ret <2 x i1> %z
 }
 
-define void @fp2si_v2f64_v2i8(<2 x double>* %x, <2 x i8>* %y) {
+define void @fp2si_v2f64_v2i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: fp2si_v2f64_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -374,13 +374,13 @@ define void @fp2si_v2f64_v2i8(<2 x double>* %x, <2 x i8>* %y) {
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
-  %a = load <2 x double>, <2 x double>* %x
+  %a = load <2 x double>, ptr %x
   %d = fptosi <2 x double> %a to <2 x i8>
-  store <2 x i8> %d, <2 x i8>* %y
+  store <2 x i8> %d, ptr %y
   ret void
 }
 
-define void @fp2ui_v2f64_v2i8(<2 x double>* %x, <2 x i8>* %y) {
+define void @fp2ui_v2f64_v2i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: fp2ui_v2f64_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -392,9 +392,9 @@ define void @fp2ui_v2f64_v2i8(<2 x double>* %x, <2 x i8>* %y) {
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
-  %a = load <2 x double>, <2 x double>* %x
+  %a = load <2 x double>, ptr %x
   %d = fptoui <2 x double> %a to <2 x i8>
-  store <2 x i8> %d, <2 x i8>* %y
+  store <2 x i8> %d, ptr %y
   ret void
 }
 
@@ -422,7 +422,7 @@ define <2 x i1> @fp2ui_v2f64_v2i1(<2 x double> %x) {
   ret <2 x i1> %z
 }
 
-define void @fp2si_v8f64_v8i8(<8 x double>* %x, <8 x i8>* %y) {
+define void @fp2si_v8f64_v8i8(ptr %x, ptr %y) {
 ; LMULMAX8-LABEL: fp2si_v8f64_v8i8:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -476,13 +476,13 @@ define void @fp2si_v8f64_v8i8(<8 x double>* %x, <8 x i8>* %y) {
 ; LMULMAX1-NEXT:    vslideup.vi v9, v8, 6
 ; LMULMAX1-NEXT:    vse8.v v9, (a1)
 ; LMULMAX1-NEXT:    ret
-  %a = load <8 x double>, <8 x double>* %x
+  %a = load <8 x double>, ptr %x
   %d = fptosi <8 x double> %a to <8 x i8>
-  store <8 x i8> %d, <8 x i8>* %y
+  store <8 x i8> %d, ptr %y
   ret void
 }
 
-define void @fp2ui_v8f64_v8i8(<8 x double>* %x, <8 x i8>* %y) {
+define void @fp2ui_v8f64_v8i8(ptr %x, ptr %y) {
 ; LMULMAX8-LABEL: fp2ui_v8f64_v8i8:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -536,9 +536,9 @@ define void @fp2ui_v8f64_v8i8(<8 x double>* %x, <8 x i8>* %y) {
 ; LMULMAX1-NEXT:    vslideup.vi v9, v8, 6
 ; LMULMAX1-NEXT:    vse8.v v9, (a1)
 ; LMULMAX1-NEXT:    ret
-  %a = load <8 x double>, <8 x double>* %x
+  %a = load <8 x double>, ptr %x
   %d = fptoui <8 x double> %a to <8 x i8>
-  store <8 x i8> %d, <8 x i8>* %y
+  store <8 x i8> %d, ptr %y
   ret void
 }
 

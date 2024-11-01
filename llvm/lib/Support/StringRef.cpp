@@ -92,16 +92,15 @@ int StringRef::compare_numeric(StringRef RHS) const {
 unsigned StringRef::edit_distance(llvm::StringRef Other,
                                   bool AllowReplacements,
                                   unsigned MaxEditDistance) const {
-  return llvm::ComputeEditDistance(
-      makeArrayRef(data(), size()),
-      makeArrayRef(Other.data(), Other.size()),
-      AllowReplacements, MaxEditDistance);
+  return llvm::ComputeEditDistance(ArrayRef(data(), size()),
+                                   ArrayRef(Other.data(), Other.size()),
+                                   AllowReplacements, MaxEditDistance);
 }
 
 unsigned llvm::StringRef::edit_distance_insensitive(
     StringRef Other, bool AllowReplacements, unsigned MaxEditDistance) const {
   return llvm::ComputeMappedEditDistance(
-      makeArrayRef(data(), size()), makeArrayRef(Other.data(), Other.size()),
+      ArrayRef(data(), size()), ArrayRef(Other.data(), Other.size()),
       llvm::toLower, AllowReplacements, MaxEditDistance);
 }
 
@@ -216,15 +215,7 @@ size_t StringRef::rfind_insensitive(char C, size_t From) const {
 /// \return - The index of the last occurrence of \arg Str, or npos if not
 /// found.
 size_t StringRef::rfind(StringRef Str) const {
-  size_t N = Str.size();
-  if (N > Length)
-    return npos;
-  for (size_t i = Length - N + 1, e = 0; i != e;) {
-    --i;
-    if (substr(i, N).equals(Str))
-      return i;
-  }
-  return npos;
+  return std::string_view(*this).rfind(Str);
 }
 
 size_t StringRef::rfind_insensitive(StringRef Str) const {
@@ -258,10 +249,7 @@ StringRef::size_type StringRef::find_first_of(StringRef Chars,
 /// find_first_not_of - Find the first character in the string that is not
 /// \arg C or npos if not found.
 StringRef::size_type StringRef::find_first_not_of(char C, size_t From) const {
-  for (size_type i = std::min(From, Length), e = Length; i != e; ++i)
-    if (Data[i] != C)
-      return i;
-  return npos;
+  return std::string_view(*this).find_first_not_of(C, From);
 }
 
 /// find_first_not_of - Find the first character in the string that is not

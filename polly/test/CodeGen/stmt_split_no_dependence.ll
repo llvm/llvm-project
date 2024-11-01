@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen -S < %s | FileCheck %s
 ;
 ; CHECK:   store i32 %8, i32* %scevgep, align 4, !alias.scope !1, !noalias !4
 ; CHECK:   store i32 %9, i32* %scevgep4, align 4, !alias.scope !4, !noalias !1

@@ -17,13 +17,13 @@ body1:  ; preds = %pre1, %body1
   %i = phi i32 [%i_next, %body1], [0, %pre1]
   %i_next = add i32 1, %i
   %cond = icmp ne i32 %i, %N
-  store i32 3, i32* %ptr
+  store i32 3, ptr %ptr
   br i1 %cond, label %body1, label %pre2
 
 ; CHECK:pre2:
-; CHECK-NEXT: %stay = load i32, i32* %ptr
+; CHECK-NEXT: %stay = load i32, ptr %ptr
 pre2:
-  %stay = load i32, i32* %ptr
+  %stay = load i32, ptr %ptr
   br label %body2
 
 ; CHECK: body2:
@@ -32,7 +32,7 @@ body2:  ; preds = %pre2, %body2
   %i2 = phi i32 [%i_next2, %body2], [0, %pre2]
   %i_next2 = add i32 1, %i2
   %cond2 = icmp ne i32 %i2, %N
-  store i32 3, i32* %ptr
+  store i32 3, ptr %ptr
   br i1 %cond2, label %body2, label %exit
 
 ; CHECK: exit:

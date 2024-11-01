@@ -210,17 +210,22 @@ namespace sys {
        std::optional<unsigned> SecondsToWait, ///< If std::nullopt, waits until
        ///< child has terminated.
        ///< If a value, this specifies the amount of time to wait for the child
-       ///< process to exit. If the time expires, the child is killed and this
-       ///< function returns. If zero, this function will perform a non-blocking
+       ///< process. If the time expires, and \p Polling is false, the child is
+       ///< killed and this < function returns. If the time expires and \p
+       ///< Polling is true, the child is resumed.
+       ///<
+       ///< If zero, this function will perform a non-blocking
        ///< wait on the child process.
        std::string *ErrMsg = nullptr, ///< If non-zero, provides a pointer to a
        ///< string instance in which error messages will be returned. If the
        ///< string is non-empty upon return an error occurred while invoking the
        ///< program.
        std::optional<ProcessStatistics> *ProcStat =
-           nullptr ///< If non-zero, provides
+           nullptr, ///< If non-zero, provides
        /// a pointer to a structure in which process execution statistics will
        /// be stored.
+
+       bool Polling = false ///< If true, do not kill the process on timeout.
   );
 
   /// Print a command argument, and optionally quote it.

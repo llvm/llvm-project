@@ -22,7 +22,7 @@
     __cpp_lib_make_reverse_iterator         201402L [C++14]
     __cpp_lib_nonmember_container_access    201411L [C++17]
     __cpp_lib_null_iterators                201304L [C++14]
-    __cpp_lib_ranges                        201811L [C++20]
+    __cpp_lib_ranges                        202106L [C++20]
     __cpp_lib_ssize                         201902L [C++20]
 */
 
@@ -177,8 +177,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++20"
 # endif
-# if __cpp_lib_ranges != 201811L
-#   error "__cpp_lib_ranges should have the value 201811L in c++20"
+# if __cpp_lib_ranges != 202106L
+#   error "__cpp_lib_ranges should have the value 202106L in c++20"
 # endif
 
 # ifndef __cpp_lib_ssize
@@ -228,8 +228,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++2b"
 # endif
-# if __cpp_lib_ranges != 201811L
-#   error "__cpp_lib_ranges should have the value 201811L in c++2b"
+# if __cpp_lib_ranges != 202106L
+#   error "__cpp_lib_ranges should have the value 202106L in c++2b"
 # endif
 
 # ifndef __cpp_lib_ssize

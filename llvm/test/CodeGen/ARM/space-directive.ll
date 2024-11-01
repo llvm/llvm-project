@@ -10,8 +10,8 @@ define i32 @test_space() minsize {
 
 ; CHECK: [[PAST_CP]]:
 ; CHECK: .zero 10000
-  %addr = inttoptr i32 12345678 to i32*
-  %val = load i32, i32* %addr
+  %addr = inttoptr i32 12345678 to ptr
+  %val = load i32, ptr %addr
   call i32 @llvm.arm.space(i32 10000, i32 undef)
   ret i32 %val
 }

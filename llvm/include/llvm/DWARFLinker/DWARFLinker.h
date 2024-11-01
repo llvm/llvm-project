@@ -10,6 +10,7 @@
 #define LLVM_DWARFLINKER_DWARFLINKER_H
 
 #include "llvm/ADT/AddressRanges.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
@@ -79,6 +80,8 @@ public:
   virtual void clear() = 0;
 };
 
+using Offset2UnitMap = DenseMap<uint64_t, CompileUnit *>;
+
 /// DwarfEmitter presents interface to generate all debug info tables.
 class DwarfEmitter {
 public:
@@ -118,13 +121,10 @@ public:
   virtual void
   emitAppleTypes(AccelTable<AppleAccelTableStaticTypeData> &Table) = 0;
 
-  /// Emit .debug_ranges for \p FuncRange by translating the
-  /// original \p Entries.
-  virtual void emitRangesEntries(
-      int64_t UnitPcOffset, uint64_t OrigLowPc,
-      std::optional<std::pair<AddressRange, int64_t>> FuncRange,
-      const std::vector<DWARFDebugRangeList::RangeListEntry> &Entries,
-      unsigned AddressSize) = 0;
+  /// Emit piece of .debug_ranges for \p Ranges.
+  virtual void
+  emitDwarfDebugRangesTableFragment(const CompileUnit &Unit,
+                                    const AddressRanges &LinkedRanges) = 0;
 
   /// Emit .debug_aranges entries for \p Unit and if \p DoRangesSection is true,
   /// also emit the .debug_ranges entries for the DW_TAG_compile_unit's
@@ -153,7 +153,7 @@ public:
   virtual void emitCIE(StringRef CIEBytes) = 0;
 
   /// Emit an FDE with data \p Bytes.
-  virtual void emitFDE(uint32_t CIEOffset, uint32_t AddreSize, uint32_t Address,
+  virtual void emitFDE(uint32_t CIEOffset, uint32_t AddreSize, uint64_t Address,
                        StringRef Bytes) = 0;
 
   /// Emit the .debug_loc contribution for \p Unit by copying the entries from
@@ -175,6 +175,15 @@ public:
   /// Recursively emit the DIE tree rooted at \p Die.
   virtual void emitDIE(DIE &Die) = 0;
 
+  /// Emit all available macro tables(DWARFv4 and DWARFv5).
+  /// Use \p UnitMacroMap to get compilation unit by macro table offset.
+  /// Side effects: Fill \p StringPool with macro strings, update
+  /// DW_AT_macro_info, DW_AT_macros attributes for corresponding compile
+  /// units.
+  virtual void emitMacroTables(DWARFContext *Context,
+                               const Offset2UnitMap &UnitMacroMap,
+                               OffsetsStringPool &StringPool) = 0;
+
   /// Returns size of generated .debug_line section.
   virtual uint64_t getLineSectionSize() const = 0;
 
@@ -186,6 +195,12 @@ public:
 
   /// Returns size of generated .debug_info section.
   virtual uint64_t getDebugInfoSectionSize() const = 0;
+
+  /// Returns size of generated .debug_macinfo section.
+  virtual uint64_t getDebugMacInfoSectionSize() const = 0;
+
+  /// Returns size of generated .debug_macro section.
+  virtual uint64_t getDebugMacroSectionSize() const = 0;
 };
 
 using UnitListTy = std::vector<std::unique_ptr<CompileUnit>>;
@@ -566,6 +581,10 @@ private:
 
     std::vector<std::unique_ptr<CompileUnit>> &CompileUnits;
 
+    /// Keeps mapping from offset of the macro table to corresponding
+    /// compile unit.
+    Offset2UnitMap UnitMacroMap;
+
     bool Update;
 
   public:
@@ -683,7 +702,7 @@ private:
     /// it to \p Die.
     /// \returns the size of the new attribute.
     unsigned cloneAddressAttribute(DIE &Die, AttributeSpec AttrSpec,
-                                   const DWARFFormValue &Val,
+                                   unsigned AttrSize, const DWARFFormValue &Val,
                                    const CompileUnit &Unit,
                                    AttributesInfo &Info);
 
@@ -710,6 +729,8 @@ private:
     void addObjCAccelerator(CompileUnit &Unit, const DIE *Die,
                             DwarfStringPoolEntryRef Name,
                             OffsetsStringPool &StringPool, bool SkipPubSection);
+
+    void rememberUnitForMacroOffset(CompileUnit &Unit);
   };
 
   /// Assign an abbreviation number to \p Abbrev

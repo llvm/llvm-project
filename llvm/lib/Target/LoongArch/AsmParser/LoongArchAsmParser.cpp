@@ -43,8 +43,9 @@ class LoongArchAsmParser : public MCTargetAsmParser {
   using InstSeq = SmallVector<Inst>;
 
   /// Parse a register as used in CFI directives.
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+                     SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
@@ -317,7 +318,8 @@ public:
     LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
-                       VK == LoongArchMCExpr::VK_LoongArch_B16;
+                       VK == LoongArchMCExpr::VK_LoongArch_B16 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_PCALA_LO12;
     return IsConstantImm
                ? isShiftedInt<16, 2>(Imm) && IsValidKind
                : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
@@ -442,7 +444,7 @@ public:
   }
 
   void print(raw_ostream &OS) const override {
-    auto RegName = [](unsigned Reg) {
+    auto RegName = [](MCRegister Reg) {
       if (Reg)
         return LoongArchInstPrinter::getRegisterName(Reg);
       else
@@ -535,12 +537,12 @@ static bool matchRegisterNameHelper(MCRegister &RegNo, StringRef Name) {
   return RegNo == LoongArch::NoRegister;
 }
 
-bool LoongArchAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+bool LoongArchAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                        SMLoc &EndLoc) {
   return Error(getLoc(), "invalid register number");
 }
 
-OperandMatchResultTy LoongArchAsmParser::tryParseRegister(unsigned &RegNo,
+OperandMatchResultTy LoongArchAsmParser::tryParseRegister(MCRegister &RegNo,
                                                           SMLoc &StartLoc,
                                                           SMLoc &EndLoc) {
   llvm_unreachable("Unimplemented function.");
@@ -1176,9 +1178,8 @@ unsigned LoongArchAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       unsigned Rd = Inst.getOperand(0).getReg();
       unsigned Rk = Inst.getOperand(1).getReg();
       unsigned Rj = Inst.getOperand(2).getReg();
-      if (Rd == Rk || Rd == Rj)
-        return Rd == LoongArch::R0 ? Match_Success
-                                   : Match_RequiresAMORdDifferRkRj;
+      if ((Rd == Rk || Rd == Rj) && Rd != LoongArch::R0)
+        return Match_RequiresAMORdDifferRkRj;
     }
     break;
   case LoongArch::PseudoLA_PCREL_LARGE:

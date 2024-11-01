@@ -194,10 +194,10 @@ v16i8 f_vec_large_v16i8_ret(void) {
   return (v16i8){1, 2, 3, 4, 5, 6, 7, 8};
 }
 
-// Scalars passed on the stack should not have signext/zeroext attributes
-// (they are anyext).
+// Scalars passed on the stack should have signext/zeroext attributes, just as
+// if they were passed in registers
 
-// CHECK-LABEL: define{{.*}} i32 @f_scalar_stack_1(i32 %a.coerce, [2 x i32] %b.coerce, i64 %c.coerce, ptr noundef %d, i8 noundef zeroext %e, i8 noundef signext %f, i8 noundef %g, i8 noundef %h)
+// CHECK-LABEL: define{{.*}} i32 @f_scalar_stack_1(i32 %a.coerce, [2 x i32] %b.coerce, i64 %c.coerce, ptr noundef %d, i8 noundef zeroext %e, i8 noundef signext %f, i8 noundef zeroext %g, i8 noundef signext %h)
 int f_scalar_stack_1(struct tiny a, struct small b, struct small_aligned c,
                      struct large d, uint8_t e, int8_t f, uint8_t g, int8_t h) {
   return g + h;
@@ -207,13 +207,13 @@ int f_scalar_stack_1(struct tiny a, struct small b, struct small_aligned c,
 // the presence of large return values that consume a register due to the need
 // to pass a pointer.
 
-// CHECK-LABEL: define{{.*}} void @f_scalar_stack_2(ptr noalias sret(%struct.large) align 4 %agg.result, i32 noundef %a, i64 noundef %b, i64 noundef %c, fp128 noundef %d, i8 noundef zeroext %e, i8 noundef %f, i8 noundef %g)
+// CHECK-LABEL: define{{.*}} void @f_scalar_stack_2(ptr noalias sret(%struct.large) align 4 %agg.result, i32 noundef %a, i64 noundef %b, i64 noundef %c, fp128 noundef %d, i8 noundef zeroext %e, i8 noundef signext %f, i8 noundef zeroext %g)
 struct large f_scalar_stack_2(int32_t a, int64_t b, int64_t c, long double d,
                               uint8_t e, int8_t f, uint8_t g) {
   return (struct large){a, e, f, g};
 }
 
-// CHECK-LABEL: define{{.*}} fp128 @f_scalar_stack_4(i32 noundef %a, i64 noundef %b, i64 noundef %c, fp128 noundef %d, i8 noundef zeroext %e, i8 noundef %f, i8 noundef %g)
+// CHECK-LABEL: define{{.*}} fp128 @f_scalar_stack_4(i32 noundef %a, i64 noundef %b, i64 noundef %c, fp128 noundef %d, i8 noundef zeroext %e, i8 noundef signext %f, i8 noundef zeroext %g)
 long double f_scalar_stack_4(int32_t a, int64_t b, int64_t c, long double d,
                              uint8_t e, int8_t f, uint8_t g) {
   return d;

@@ -8,22 +8,22 @@ target triple = "hexagon"
 
 %struct.0 = type { [120 x i16], [80 x i16], [80 x i16], [80 x i16], [80 x i16], [80 x i16], [40 x i16], [40 x i16], [40 x i16], [40 x i16], [40 x i16], [40 x i16] }
 
-define void @fred(%struct.0* %demod_state) local_unnamed_addr #0 {
+define void @fred(ptr %demod_state) local_unnamed_addr #0 {
 entry:
   br label %for.body309
 
 for.body309:                                      ; preds = %for.body309, %entry
   %max_diff.0300 = phi i16 [ %max_diff.1, %for.body309 ], [ 0, %entry ]
-  %arrayidx322.phi = phi i16* [ undef, %entry ], [ %arrayidx322.inc, %for.body309 ]
-  %arrayidx331.phi = phi i16* [ undef, %entry ], [ %arrayidx331.inc, %for.body309 ]
+  %arrayidx322.phi = phi ptr [ undef, %entry ], [ %arrayidx322.inc, %for.body309 ]
+  %arrayidx331.phi = phi ptr [ undef, %entry ], [ %arrayidx331.inc, %for.body309 ]
   %lag.4299.apmt = phi i32 [ %inc376.apmt, %for.body309 ], [ 0, %entry ]
-  %0 = load i16, i16* %arrayidx322.phi, align 2
+  %0 = load i16, ptr %arrayidx322.phi, align 2
   %conv323 = sext i16 %0 to i32
   %sub324 = sub nsw i32 0, %conv323
   %ispos258 = icmp sgt i32 %sub324, -1
   %1 = select i1 %ispos258, i32 %sub324, i32 0
   %add326 = add nsw i32 %1, 0
-  %2 = load i16, i16* %arrayidx331.phi, align 2
+  %2 = load i16, ptr %arrayidx331.phi, align 2
   %conv332 = sext i16 %2 to i32
   %sub333 = sub nsw i32 0, %conv332
   %ispos260 = icmp sgt i32 %sub333, -1
@@ -50,8 +50,8 @@ for.body309:                                      ; preds = %for.body309, %entry
   %max_diff.1 = select i1 %cmp371, i16 %conv364, i16 %max_diff.0300
   %inc376.apmt = add nuw nsw i32 %lag.4299.apmt, 1
   %exitcond331 = icmp ne i32 %inc376.apmt, 40
-  %arrayidx322.inc = getelementptr i16, i16* %arrayidx322.phi, i32 1
-  %arrayidx331.inc = getelementptr i16, i16* %arrayidx331.phi, i32 1
+  %arrayidx322.inc = getelementptr i16, ptr %arrayidx322.phi, i32 1
+  %arrayidx331.inc = getelementptr i16, ptr %arrayidx331.phi, i32 1
   br i1 %exitcond331, label %for.body309, label %for.end377
 
 for.end377:                                       ; preds = %for.body309
@@ -60,12 +60,12 @@ for.end377:                                       ; preds = %for.body309
   br label %for.body405
 
 for.body405:                                      ; preds = %if.end437, %for.end377
-  %arrayidx412 = getelementptr inbounds %struct.0, %struct.0* %demod_state, i32 0, i32 11, i32 undef
+  %arrayidx412 = getelementptr inbounds %struct.0, ptr %demod_state, i32 0, i32 11, i32 undef
   br i1 %cmp407, label %if.then409, label %if.end437
 
 if.then409:                                       ; preds = %for.body405
-  %arrayidx416 = getelementptr inbounds [40 x i16], [40 x i16]* null, i32 0, i32 undef
-  %7 = load i16, i16* %arrayidx416, align 2
+  %arrayidx416 = getelementptr inbounds [40 x i16], ptr null, i32 0, i32 undef
+  %7 = load i16, ptr %arrayidx416, align 2
   %conv417 = sext i16 %7 to i32
   %shl = shl i32 %conv417, 4
   %mul419 = mul nsw i32 %shl, 655
@@ -76,7 +76,7 @@ if.end437:                                        ; preds = %if.then409, %for.bo
   %mul431.sink = phi i32 [ %add420, %if.then409 ], [ undef, %for.body405 ]
   %shr432257 = lshr i32 %mul431.sink, 15
   %conv433 = trunc i32 %shr432257 to i16
-  store i16 %conv433, i16* %arrayidx412, align 2
+  store i16 %conv433, ptr %arrayidx412, align 2
   br label %for.body405
 }
 

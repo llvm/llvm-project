@@ -81,12 +81,12 @@ TEST(StringRefTest, StringOps) {
   EXPECT_EQ(p, StringRef(p, 0).data());
   EXPECT_TRUE(StringRef().empty());
   EXPECT_EQ((size_t) 5, StringRef("hello").size());
-  EXPECT_EQ(-1, StringRef("aab").compare("aad"));
+  EXPECT_GT( 0, StringRef("aab").compare("aad"));
   EXPECT_EQ( 0, StringRef("aab").compare("aab"));
-  EXPECT_EQ( 1, StringRef("aab").compare("aaa"));
-  EXPECT_EQ(-1, StringRef("aab").compare("aabb"));
-  EXPECT_EQ( 1, StringRef("aab").compare("aa"));
-  EXPECT_EQ( 1, StringRef("\xFF").compare("\1"));
+  EXPECT_LT( 0, StringRef("aab").compare("aaa"));
+  EXPECT_GT( 0, StringRef("aab").compare("aabb"));
+  EXPECT_LT( 0, StringRef("aab").compare("aa"));
+  EXPECT_LT( 0, StringRef("\xFF").compare("\1"));
 
   EXPECT_EQ(-1, StringRef("AaB").compare_insensitive("aAd"));
   EXPECT_EQ( 0, StringRef("AaB").compare_insensitive("aab"));

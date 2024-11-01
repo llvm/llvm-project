@@ -29,6 +29,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
+#include <optional>
 using namespace clang;
 using namespace CodeGen;
 
@@ -373,12 +374,10 @@ static const Expr *findWeakLValue(const Expr *E) {
 /// If the runtime does support a required entrypoint, then this method will
 /// generate a call and return the resulting value.  Otherwise it will return
 /// std::nullopt and the caller can generate a msgSend instead.
-static Optional<llvm::Value *>
-tryGenerateSpecializedMessageSend(CodeGenFunction &CGF, QualType ResultType,
-                                  llvm::Value *Receiver,
-                                  const CallArgList& Args, Selector Sel,
-                                  const ObjCMethodDecl *method,
-                                  bool isClassMessage) {
+static std::optional<llvm::Value *> tryGenerateSpecializedMessageSend(
+    CodeGenFunction &CGF, QualType ResultType, llvm::Value *Receiver,
+    const CallArgList &Args, Selector Sel, const ObjCMethodDecl *method,
+    bool isClassMessage) {
   auto &CGM = CGF.CGM;
   if (!CGM.getCodeGenOpts().ObjCConvertMessagesToRuntimeCalls)
     return std::nullopt;
@@ -441,7 +440,7 @@ CodeGen::RValue CGObjCRuntime::GeneratePossiblySpecializedMessageSend(
     Selector Sel, llvm::Value *Receiver, const CallArgList &Args,
     const ObjCInterfaceDecl *OID, const ObjCMethodDecl *Method,
     bool isClassMessage) {
-  if (Optional<llvm::Value *> SpecializedResult =
+  if (std::optional<llvm::Value *> SpecializedResult =
           tryGenerateSpecializedMessageSend(CGF, ResultType, Receiver, Args,
                                             Sel, Method, isClassMessage)) {
     return RValue::get(*SpecializedResult);
@@ -522,7 +521,7 @@ CGObjCRuntime::GetRuntimeProtocolList(ObjCProtocolDecl::protocol_iterator begin,
 /// Instead of '[[MyClass alloc] init]', try to generate
 /// 'objc_alloc_init(MyClass)'. This provides a code size improvement on the
 /// caller side, as well as the optimized objc_alloc.
-static Optional<llvm::Value *>
+static std::optional<llvm::Value *>
 tryEmitSpecializedAllocInit(CodeGenFunction &CGF, const ObjCMessageExpr *OME) {
   auto &Runtime = CGF.getLangOpts().ObjCRuntime;
   if (!Runtime.shouldUseRuntimeFunctionForCombinedAllocInit())
@@ -592,7 +591,7 @@ RValue CodeGenFunction::EmitObjCMessageExpr(const ObjCMessageExpr *E,
     }
   }
 
-  if (Optional<llvm::Value *> Val = tryEmitSpecializedAllocInit(*this, E))
+  if (std::optional<llvm::Value *> Val = tryEmitSpecializedAllocInit(*this, E))
     return AdjustObjCObjectType(*this, E->getType(), RValue::get(*Val));
 
   // We don't retain the receiver in delegate init calls, and this is

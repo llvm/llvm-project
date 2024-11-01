@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Pass/Pass.h"
+#include <optional>
 
 namespace llvm {
 class TargetMachine;
@@ -23,6 +24,8 @@ class Module;
 } // namespace llvm
 
 namespace mlir {
+class TypeConverter;
+class ConversionTarget;
 namespace func {
 class FuncOp;
 } // namespace func
@@ -58,6 +61,23 @@ inline void populateGpuRewritePatterns(RewritePatternSet &patterns) {
 }
 
 namespace gpu {
+/// A function that maps a MemorySpace enum to a target-specific integer value.
+using MemorySpaceMapping =
+    std::function<unsigned(gpu::AddressSpace gpuAddressSpace)>;
+
+/// Populates type conversion rules for lowering memory space attributes to
+/// numeric values.
+void populateMemorySpaceAttributeTypeConversions(
+    TypeConverter &typeConverter, const MemorySpaceMapping &mapping);
+
+/// Populates patterns to lower memory space attributes to numeric values.
+void populateMemorySpaceLoweringPatterns(TypeConverter &typeConverter,
+                                         RewritePatternSet &patterns);
+
+/// Populates legality rules for lowering memory space attriutes to numeric
+/// values.
+void populateLowerMemorySpaceOpLegality(ConversionTarget &target);
+
 /// Returns the default annotation name for GPU binary blobs.
 std::string getDefaultGpuBinaryAnnotation();
 
@@ -87,8 +107,8 @@ private:
   std::unique_ptr<llvm::TargetMachine> createTargetMachine();
 
   /// Translates the module to ISA
-  Optional<std::string> translateToISA(llvm::Module &llvmModule,
-                                       llvm::TargetMachine &targetMachine);
+  std::optional<std::string> translateToISA(llvm::Module &llvmModule,
+                                            llvm::TargetMachine &targetMachine);
 
   /// Serializes the target ISA to binary form.
   virtual std::unique_ptr<std::vector<char>>

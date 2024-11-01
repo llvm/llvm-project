@@ -32,11 +32,11 @@ def GetParentForOp : Op<Transform_Dialect, "loop.get_parent_for",
   }];
 
   let arguments =
-    (ins TransformTypeInterface:$target,
+    (ins TransformHandleTypeInterface:$target,
          DefaultValuedAttr<ConfinedAttr<I64Attr, [IntPositive]>,
                            "1">:$num_loops,
          DefaultValuedAttr<BoolAttr, "false">:$affine);
-  let results = (outs TransformTypeInterface : $parent);
+  let results = (outs TransformHandleTypeInterface : $parent);
 
   let assemblyFormat =
     "$target attr-dict `:` functional-type(operands, results)";
@@ -62,9 +62,9 @@ def LoopOutlineOp : Op<Transform_Dialect, "loop.outline",
   // Note that despite the name of the transform operation and related utility
   // functions, the actual implementation does not require the operation to be
   // a loop.
-  let arguments = (ins TransformTypeInterface:$target,
+  let arguments = (ins TransformHandleTypeInterface:$target,
                    StrAttr:$func_name);
-  let results = (outs TransformTypeInterface:$transformed);
+  let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat =
     "$target attr-dict `:` functional-type(operands, results)";
@@ -101,7 +101,7 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
       (ins Transform_ScfForOp:$target,
            DefaultValuedAttr<BoolAttr, "false">:$fail_if_already_divisible);
   // TODO: Return both the peeled loop and the remainder loop.
-  let results = (outs TransformTypeInterface:$transformed);
+  let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat =
     "$target attr-dict `:` functional-type(operands, results)";
@@ -109,7 +109,7 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::scf::ForOp target,
-        ::llvm::SmallVector<::mlir::Operation *> &results,
+        ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
 }
@@ -143,7 +143,7 @@ def LoopPipelineOp : Op<Transform_Dialect, "loop.pipeline",
   let arguments = (ins Transform_ScfForOp:$target,
                    DefaultValuedAttr<I64Attr, "1">:$iteration_interval,
                    DefaultValuedAttr<I64Attr, "10">:$read_latency);
-  let results = (outs TransformTypeInterface:$transformed);
+  let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat =
     "$target attr-dict `:` functional-type(operands, results)";
@@ -151,7 +151,7 @@ def LoopPipelineOp : Op<Transform_Dialect, "loop.pipeline",
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::scf::ForOp target,
-        ::llvm::SmallVector<::mlir::Operation *> &results,
+        ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
 }
@@ -176,7 +176,7 @@ def LoopUnrollOp : Op<Transform_Dialect, "loop.unroll",
     removed after a full unrolling.
   }];
 
-  let arguments = (ins TransformTypeInterface:$target,
+  let arguments = (ins TransformHandleTypeInterface:$target,
                        ConfinedAttr<I64Attr, [IntPositive]>:$factor);
 
   let assemblyFormat = "$target attr-dict `:` type($target)";
@@ -184,7 +184,34 @@ def LoopUnrollOp : Op<Transform_Dialect, "loop.unroll",
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::Operation *target,
-        ::llvm::SmallVector<::mlir::Operation *> &results,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
+def LoopCoalesceOp : Op<Transform_Dialect, "loop.coalesce", [
+  FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+  TransformOpInterface, TransformEachOpTrait]> {
+  let summary = "Coalesces the perfect loop nest enclosed by a given loop";
+  let description = [{
+    Given a perfect loop nest identified by the outermost loop,
+    perform loop coalescing in a bottom-up one-by-one manner.
+
+    #### Return modes
+
+    The return handle points to the coalesced loop if coalescing happens, or
+    the given input loop if coalescing does not happen.
+  }];
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+
+  let assemblyFormat =
+      "$target attr-dict `:` functional-type($target, $transformed)";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
 }

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -canonicalize --split-input-file | FileCheck %s
+// RUN: mlir-opt %s -canonicalize="test-convergence" --split-input-file | FileCheck %s
 
 // CHECK-LABEL: @select_same_val
 //       CHECK:   return %arg1
@@ -1034,6 +1034,28 @@ func.func @xorxor(%cmp : i1) -> i1 {
   %ncmp = arith.xori %cmp, %true : i1
   %nncmp = arith.xori %ncmp, %true : i1
   return %nncmp : i1
+}
+
+// CHECK-LABEL: @xorOfExtSI
+//       CHECK:  %[[comb:.+]] = arith.xori %arg0, %arg1 : i8
+//       CHECK:  %[[ext:.+]] = arith.extsi %[[comb]] : i8 to i64
+//       CHECK:   return %[[ext]]
+func.func @xorOfExtSI(%arg0: i8, %arg1: i8) -> i64 {
+  %ext0 = arith.extsi %arg0 : i8 to i64
+  %ext1 = arith.extsi %arg1 : i8 to i64
+  %res = arith.xori %ext0, %ext1 : i64
+  return %res : i64
+}
+
+// CHECK-LABEL: @xorOfExtUI
+//       CHECK:  %[[comb:.+]] = arith.xori %arg0, %arg1 : i8
+//       CHECK:  %[[ext:.+]] = arith.extui %[[comb]] : i8 to i64
+//       CHECK:   return %[[ext]]
+func.func @xorOfExtUI(%arg0: i8, %arg1: i8) -> i64 {
+  %ext0 = arith.extui %arg0 : i8 to i64
+  %ext1 = arith.extui %arg1 : i8 to i64
+  %res = arith.xori %ext0, %ext1 : i64
+  return %res : i64
 }
 
 // -----
@@ -2084,4 +2106,31 @@ func.func @wideMulToMulSIExtendedBadShift2(%a: i32, %b: i32) -> i32 {
   %sh = arith.shrui %m, %c31 : i64
   %hi = arith.trunci %sh: i64 to i32
   return %hi : i32
+}
+
+// CHECK-LABEL: @foldShli0
+// CHECK-SAME: (%[[ARG:.*]]: i64)
+//       CHECK:   return %[[ARG]] : i64
+func.func @foldShli0(%x : i64) -> i64 {
+  %c0 = arith.constant 0 : i64
+  %r = arith.shli %x, %c0 : i64
+  return %r : i64
+}
+
+// CHECK-LABEL: @foldShrui0
+// CHECK-SAME: (%[[ARG:.*]]: i64)
+//       CHECK:   return %[[ARG]] : i64
+func.func @foldShrui0(%x : i64) -> i64 {
+  %c0 = arith.constant 0 : i64
+  %r = arith.shrui %x, %c0 : i64
+  return %r : i64
+}
+
+// CHECK-LABEL: @foldShrsi0
+// CHECK-SAME: (%[[ARG:.*]]: i64)
+//       CHECK:   return %[[ARG]] : i64
+func.func @foldShrsi0(%x : i64) -> i64 {
+  %c0 = arith.constant 0 : i64
+  %r = arith.shrsi %x, %c0 : i64
+  return %r : i64
 }

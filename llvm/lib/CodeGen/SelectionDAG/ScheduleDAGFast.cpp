@@ -426,10 +426,11 @@ static MVT getPhysicalRegisterVT(SDNode *N, unsigned Reg,
     NumRes = 1;
   } else {
     const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
-    assert(MCID.ImplicitDefs && "Physical reg def must be in implicit def list!");
+    assert(!MCID.implicit_defs().empty() &&
+           "Physical reg def must be in implicit def list!");
     NumRes = MCID.getNumDefs();
-    for (const MCPhysReg *ImpDef = MCID.getImplicitDefs(); *ImpDef; ++ImpDef) {
-      if (Reg == *ImpDef)
+    for (MCPhysReg ImpDef : MCID.implicit_defs()) {
+      if (Reg == ImpDef)
         break;
       ++NumRes;
     }
@@ -526,11 +527,8 @@ bool ScheduleDAGFast::DelayForLiveRegsBottomUp(SUnit *SU,
     if (!Node->isMachineOpcode())
       continue;
     const MCInstrDesc &MCID = TII->get(Node->getMachineOpcode());
-    if (!MCID.ImplicitDefs)
-      continue;
-    for (const MCPhysReg *Reg = MCID.getImplicitDefs(); *Reg; ++Reg) {
-      CheckForLiveRegDef(SU, *Reg, LiveRegDefs, RegAdded, LRegs, TRI);
-    }
+    for (MCPhysReg Reg : MCID.implicit_defs())
+      CheckForLiveRegDef(SU, Reg, LiveRegDefs, RegAdded, LRegs, TRI);
   }
   return !LRegs.empty();
 }
@@ -777,8 +775,7 @@ void ScheduleDAGLinearize::Schedule() {
 
 MachineBasicBlock*
 ScheduleDAGLinearize::EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
-  InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos,
-                       DAG->getUseInstrRefDebugInfo());
+  InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos);
   DenseMap<SDValue, Register> VRBaseMap;
 
   LLVM_DEBUG({ dbgs() << "\n*** Final schedule ***\n"; });

@@ -30,6 +30,7 @@
 #include "llvm/ADT/Twine.h"
 #include <ctime>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -333,7 +334,7 @@ private:
   /// \param NeedsFramework If M is not a framework but a missing header would
   ///        be found in case M was, set it to true. False otherwise.
   /// \return The resolved file, if any.
-  Optional<FileEntryRef>
+  OptionalFileEntryRef
   findHeader(Module *M, const Module::UnresolvedHeaderDirective &Header,
              SmallVectorImpl<char> &RelativePathName, bool &NeedsFramework);
 
@@ -466,7 +467,7 @@ public:
   /// provided, only headers with same size and modtime are resolved. If File
   /// is not set, all headers are resolved.
   void resolveHeaderDirectives(Module *Mod,
-                               llvm::Optional<const FileEntry *> File) const;
+                               std::optional<const FileEntry *> File) const;
 
   /// Reports errors if a module must not include a specific file.
   ///
@@ -606,7 +607,7 @@ public:
   ///
   /// \returns The file entry for the module map file containing the given
   /// module, or nullptr if the module definition was inferred.
-  Optional<FileEntryRef> getContainingModuleMapFile(const Module *Module) const;
+  OptionalFileEntryRef getContainingModuleMapFile(const Module *Module) const;
 
   /// Get the module map file that (along with the module name) uniquely
   /// identifies this module.
@@ -617,7 +618,7 @@ public:
   /// of inferred modules, returns the module map that allowed the inference
   /// (e.g. contained 'module *'). Otherwise, returns
   /// getContainingModuleMapFile().
-  Optional<FileEntryRef> getModuleMapFileForUniquing(const Module *M) const;
+  OptionalFileEntryRef getModuleMapFileForUniquing(const Module *M) const;
 
   void setInferredModuleAllowedBy(Module *M, const FileEntry *ModMap);
 
@@ -675,7 +676,7 @@ public:
 
   /// Sets the umbrella header of the given module to the given
   /// header.
-  void setUmbrellaHeader(Module *Mod, const FileEntry *UmbrellaHeader,
+  void setUmbrellaHeader(Module *Mod, FileEntryRef UmbrellaHeader,
                          const Twine &NameAsWritten,
                          const Twine &PathRelativeToRootModuleDirectory);
 
@@ -732,7 +733,7 @@ public:
   }
 
   /// Return a cached module load.
-  llvm::Optional<Module *> getCachedModuleLoad(const IdentifierInfo &II) {
+  std::optional<Module *> getCachedModuleLoad(const IdentifierInfo &II) {
     auto I = CachedModuleLoads.find(&II);
     if (I == CachedModuleLoads.end())
       return std::nullopt;

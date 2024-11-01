@@ -17,12 +17,12 @@ bb:
   %v3 = zext i32 %v1 to i64
   %v.t = and i64 %v3, 255
   %v4 = add i64 %v2, %v.t
-  store i64 %v4, i64 addrspace(1) * undef
+  store i64 %v4, ptr addrspace(1) undef
   ret void
 }
 
 
-define amdgpu_kernel void @test_add_co_sdwa(i64 addrspace(1)* %arg, i32 addrspace(1)* %arg1) #0 {
+define amdgpu_kernel void @test_add_co_sdwa(ptr addrspace(1) %arg, ptr addrspace(1) %arg1) #0 {
 ; GFX9-LABEL: test_add_co_sdwa:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -38,14 +38,14 @@ define amdgpu_kernel void @test_add_co_sdwa(i64 addrspace(1)* %arg, i32 addrspac
 ; GFX9-NEXT:    s_endpgm
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp3 = getelementptr inbounds i32, i32 addrspace(1)* %arg1, i32 %tmp
-  %tmp4 = load i32, i32 addrspace(1)* %tmp3, align 4
+  %tmp3 = getelementptr inbounds i32, ptr addrspace(1) %arg1, i32 %tmp
+  %tmp4 = load i32, ptr addrspace(1) %tmp3, align 4
   %tmp5 = and i32 %tmp4, 255
   %tmp6 = zext i32 %tmp5 to i64
-  %tmp7 = getelementptr inbounds i64, i64 addrspace(1)* %arg, i32 %tmp
-  %tmp8 = load i64, i64 addrspace(1)* %tmp7, align 8
+  %tmp7 = getelementptr inbounds i64, ptr addrspace(1) %arg, i32 %tmp
+  %tmp8 = load i64, ptr addrspace(1) %tmp7, align 8
   %tmp9 = add nsw i64 %tmp8, %tmp6
-  store i64 %tmp9, i64 addrspace(1)* %tmp7, align 8
+  store i64 %tmp9, ptr addrspace(1) %tmp7, align 8
   ret void
 }
 

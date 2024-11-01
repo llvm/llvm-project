@@ -11,6 +11,7 @@
 
 #include "ARMTargetMachine.h"
 #include "ARM.h"
+#include "ARMMachineFunctionInfo.h"
 #include "ARMMacroFusion.h"
 #include "ARMSubtarget.h"
 #include "ARMTargetObjectFile.h"
@@ -108,6 +109,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeARMSLSHardeningPass(Registry);
   initializeMVELaneInterleavingPass(Registry);
   initializeARMFixCortexA57AES1742098Pass(Registry);
+  initializeARMDAGToDAGISelPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -263,6 +265,13 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
 }
 
 ARMBaseTargetMachine::~ARMBaseTargetMachine() = default;
+
+MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return ARMFunctionInfo::create<ARMFunctionInfo>(
+      Allocator, F, static_cast<const ARMSubtarget *>(STI));
+}
 
 const ARMSubtarget *
 ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
@@ -447,7 +456,7 @@ void ARMPassConfig::addIRPasses() {
 
 void ARMPassConfig::addCodeGenPrepare() {
   if (getOptLevel() != CodeGenOpt::None)
-    addPass(createTypePromotionPass());
+    addPass(createTypePromotionLegacyPass());
   TargetPassConfig::addCodeGenPrepare();
 }
 

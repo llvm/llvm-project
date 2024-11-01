@@ -4,45 +4,45 @@
 target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
 target triple = "hexagon"
 
-%s.0 = type { double, double, double, double, double, double, i32, double, double, double, double, i8*, i8, [9 x i8], double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, [200 x i8*], [32 x i8*], [32 x i8], i32 }
+%s.0 = type { double, double, double, double, double, double, i32, double, double, double, double, ptr, i8, [9 x i8], double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, [200 x ptr], [32 x ptr], [32 x i8], i32 }
 
 define hidden fastcc void @f0() unnamed_addr #0 {
 b0:
-  %v0 = getelementptr inbounds %s.0, %s.0* null, i32 0, i32 33
-  %v1 = getelementptr inbounds %s.0, %s.0* null, i32 0, i32 34
+  %v0 = getelementptr inbounds %s.0, ptr null, i32 0, i32 33
+  %v1 = getelementptr inbounds %s.0, ptr null, i32 0, i32 34
   br label %b1
 
 b1:                                               ; preds = %b1, %b0
-  %v2 = phi i32* [ undef, %b0 ], [ %v27, %b1 ]
-  %v3 = load i32, i32* %v2, align 1, !tbaa !1
-  %v4 = getelementptr inbounds [0 x %s.0*], [0 x %s.0*]* null, i32 0, i32 %v3
-  %v5 = load %s.0*, %s.0** %v4, align 1, !tbaa !5
-  %v6 = load double, double* undef, align 1, !tbaa !7
+  %v2 = phi ptr [ undef, %b0 ], [ %v27, %b1 ]
+  %v3 = load i32, ptr %v2, align 1, !tbaa !1
+  %v4 = getelementptr inbounds [0 x ptr], ptr null, i32 0, i32 %v3
+  %v5 = load ptr, ptr %v4, align 1, !tbaa !5
+  %v6 = load double, ptr undef, align 1, !tbaa !7
   %v7 = fdiv double 1.000000e+00, %v6
   %v8 = fmul double %v7, 0.000000e+00
   %v9 = fmul double %v7, 0.000000e+00
   %v10 = fmul double %v8, -4.800000e+01
   %v11 = fmul double %v9, 1.680000e+02
   %v12 = fmul double %v7, 0.000000e+00
-  %v13 = load double, double* null, align 1, !tbaa !7
+  %v13 = load double, ptr null, align 1, !tbaa !7
   %v14 = fmul double %v7, %v13
   %v15 = fmul double %v12, 0.000000e+00
-  %v16 = getelementptr inbounds %s.0, %s.0* %v5, i32 0, i32 30
+  %v16 = getelementptr inbounds %s.0, ptr %v5, i32 0, i32 30
   %v17 = fsub double 0.000000e+00, %v15
-  store double %v17, double* %v16, align 8, !tbaa !9
+  store double %v17, ptr %v16, align 8, !tbaa !9
   %v18 = fmul double %v14, 0.000000e+00
-  %v19 = getelementptr inbounds %s.0, %s.0* %v5, i32 0, i32 32
-  %v20 = load double, double* %v19, align 8, !tbaa !11
+  %v19 = getelementptr inbounds %s.0, ptr %v5, i32 0, i32 32
+  %v20 = load double, ptr %v19, align 8, !tbaa !11
   %v21 = fsub double %v20, %v18
-  store double %v21, double* %v19, align 8, !tbaa !11
+  store double %v21, ptr %v19, align 8, !tbaa !11
   %v22 = fmul double %v10, 0.000000e+00
   %v23 = fadd double 0.000000e+00, %v22
   %v24 = fmul double 0.000000e+00, %v11
   %v25 = fadd double %v23, %v24
   %v26 = fsub double 0.000000e+00, %v25
-  store double %v26, double* %v0, align 8, !tbaa !12
-  store double 0.000000e+00, double* %v1, align 8, !tbaa !13
-  %v27 = getelementptr i32, i32* %v2, i32 1
+  store double %v26, ptr %v0, align 8, !tbaa !12
+  store double 0.000000e+00, ptr %v1, align 8, !tbaa !13
+  %v27 = getelementptr i32, ptr %v2, i32 1
   br label %b1
 }
 

@@ -8,7 +8,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10-DL-NOXNACK %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1031 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10-DL-NOXNACK %s
 
-define amdgpu_kernel void @idot8_acc32(<8 x i4> addrspace(1)* %src1,
+define amdgpu_kernel void @idot8_acc32(ptr addrspace(1) %src1,
 ; GFX7-LABEL: idot8_acc32:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
@@ -249,14 +249,14 @@ define amdgpu_kernel void @idot8_acc32(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    v_dot8_i32_i4 v0, s0, s1, v0
 ; GFX10-DL-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX10-DL-NEXT:    s_endpgm
-                                       <8 x i4> addrspace(1)* %src2,
-                                       i32 addrspace(1)* nocapture %dst) {
+                                       ptr addrspace(1) %src2,
+                                       ptr addrspace(1) nocapture %dst) {
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep1 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src1, i32 %idx
-  %vec1 = load <8 x i4>, <8 x i4> addrspace(1)* %gep1
-  %gep2 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src2, i32 %idx
-  %vec2 = load <8 x i4>, <8 x i4> addrspace(1)* %gep2
+  %gep1 = getelementptr <8 x i4>, ptr addrspace(1) %src1, i32 %idx
+  %vec1 = load <8 x i4>, ptr addrspace(1) %gep1
+  %gep2 = getelementptr <8 x i4>, ptr addrspace(1) %src2, i32 %idx
+  %vec2 = load <8 x i4>, ptr addrspace(1) %gep2
 
   %v1e0 = extractelement <8 x i4> %vec1, i64 0
   %cv1e0 = sext i4 %v1e0 to i32
@@ -306,7 +306,7 @@ entry:
   %cv2e7 = sext i4 %v2e7 to i32
   %mul7 = mul nuw nsw i32 %cv1e7, %cv2e7
 
-  %acc = load i32, i32 addrspace(1)* %dst, align 4
+  %acc = load i32, ptr addrspace(1) %dst, align 4
   %add1 = add i32 %mul0, %acc
   %add2 = add i32 %add1, %mul1
   %add3 = add i32 %add2, %mul2
@@ -316,13 +316,13 @@ entry:
   %add7 = add i32 %add6, %mul6
   %add8 = add i32 %add7, %mul7
 
-  store i32 %add8, i32 addrspace(1)* %dst, align 4
+  store i32 %add8, ptr addrspace(1) %dst, align 4
   ret void
 }
 
 ; TODO: Once the unnecessary zero extentions of the elements are removed;
 ; pattern recognizer will kick in.
-define amdgpu_kernel void @idot8_acc16(<8 x i4> addrspace(1)* %src1,
+define amdgpu_kernel void @idot8_acc16(ptr addrspace(1) %src1,
 ; GFX7-LABEL: idot8_acc16:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
@@ -822,14 +822,14 @@ define amdgpu_kernel void @idot8_acc16(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    v_mad_i32_i24 v1, s0, s1, v1
 ; GFX10-DL-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-DL-NEXT:    s_endpgm
-                                       <8 x i4> addrspace(1)* %src2,
-                                       i16 addrspace(1)* nocapture %dst) {
+                                       ptr addrspace(1) %src2,
+                                       ptr addrspace(1) nocapture %dst) {
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep1 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src1, i32 %idx
-  %vec1 = load <8 x i4>, <8 x i4> addrspace(1)* %gep1
-  %gep2 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src2, i32 %idx
-  %vec2 = load <8 x i4>, <8 x i4> addrspace(1)* %gep2
+  %gep1 = getelementptr <8 x i4>, ptr addrspace(1) %src1, i32 %idx
+  %vec1 = load <8 x i4>, ptr addrspace(1) %gep1
+  %gep2 = getelementptr <8 x i4>, ptr addrspace(1) %src2, i32 %idx
+  %vec2 = load <8 x i4>, ptr addrspace(1) %gep2
 
   %v1e0 = extractelement <8 x i4> %vec1, i64 0
   %cv1e0 = sext i4 %v1e0 to i16
@@ -879,7 +879,7 @@ entry:
   %cv2e7 = sext i4 %v2e7 to i16
   %mul7 = mul nuw nsw i16 %cv1e7, %cv2e7
 
-  %acc = load i16, i16 addrspace(1)* %dst, align 4
+  %acc = load i16, ptr addrspace(1) %dst, align 4
   %add1 = add i16 %mul0, %acc
   %add2 = add i16 %add1, %mul1
   %add3 = add i16 %add2, %mul2
@@ -889,12 +889,12 @@ entry:
   %add7 = add i16 %add6, %mul6
   %add8 = add i16 %add7, %mul7
 
-  store i16 %add8, i16 addrspace(1)* %dst, align 4
+  store i16 %add8, ptr addrspace(1) %dst, align 4
   ret void
 }
 
 ; TODO: Support this pattern.
-define amdgpu_kernel void @idot8_acc8(<8 x i4> addrspace(1)* %src1,
+define amdgpu_kernel void @idot8_acc8(ptr addrspace(1) %src1,
 ; GFX7-LABEL: idot8_acc8:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
@@ -1394,14 +1394,14 @@ define amdgpu_kernel void @idot8_acc8(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    v_mad_i32_i24 v1, s0, s1, v1
 ; GFX10-DL-NEXT:    global_store_byte v0, v1, s[4:5]
 ; GFX10-DL-NEXT:    s_endpgm
-                                       <8 x i4> addrspace(1)* %src2,
-                                       i8 addrspace(1)* nocapture %dst) {
+                                       ptr addrspace(1) %src2,
+                                       ptr addrspace(1) nocapture %dst) {
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep1 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src1, i32 %idx
-  %vec1 = load <8 x i4>, <8 x i4> addrspace(1)* %gep1
-  %gep2 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src2, i32 %idx
-  %vec2 = load <8 x i4>, <8 x i4> addrspace(1)* %gep2
+  %gep1 = getelementptr <8 x i4>, ptr addrspace(1) %src1, i32 %idx
+  %vec1 = load <8 x i4>, ptr addrspace(1) %gep1
+  %gep2 = getelementptr <8 x i4>, ptr addrspace(1) %src2, i32 %idx
+  %vec2 = load <8 x i4>, ptr addrspace(1) %gep2
 
   %v1e0 = extractelement <8 x i4> %vec1, i64 0
   %cv1e0 = sext i4 %v1e0 to i8
@@ -1451,7 +1451,7 @@ entry:
   %cv2e7 = sext i4 %v2e7 to i8
   %mul7 = mul nuw nsw i8 %cv1e7, %cv2e7
 
-  %acc = load i8, i8 addrspace(1)* %dst, align 4
+  %acc = load i8, ptr addrspace(1) %dst, align 4
   %add1 = add i8 %mul0, %acc
   %add2 = add i8 %add1, %mul1
   %add3 = add i8 %add2, %mul2
@@ -1461,13 +1461,13 @@ entry:
   %add7 = add i8 %add6, %mul6
   %add8 = add i8 %add7, %mul7
 
-  store i8 %add8, i8 addrspace(1)* %dst, align 4
+  store i8 %add8, ptr addrspace(1) %dst, align 4
   ret void
 }
 
 ; Make sure the pattern is not recognized if there are multiple uses of the
 ; intermediate multiplications.
-define amdgpu_kernel void @idot8_multiuses_mul1(<8 x i4> addrspace(1)* %src1,
+define amdgpu_kernel void @idot8_multiuses_mul1(ptr addrspace(1) %src1,
 ; GFX7-LABEL: idot8_multiuses_mul1:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
@@ -1828,14 +1828,14 @@ define amdgpu_kernel void @idot8_multiuses_mul1(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX10-DL-NEXT:    global_store_dword v2, v0, s[4:5]
 ; GFX10-DL-NEXT:    s_endpgm
-                                                <8 x i4> addrspace(1)* %src2,
-                                                i32 addrspace(1)* nocapture %dst) {
+                                                ptr addrspace(1) %src2,
+                                                ptr addrspace(1) nocapture %dst) {
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep1 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src1, i32 %idx
-  %vec1 = load <8 x i4>, <8 x i4> addrspace(1)* %gep1
-  %gep2 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src2, i32 %idx
-  %vec2 = load <8 x i4>, <8 x i4> addrspace(1)* %gep2
+  %gep1 = getelementptr <8 x i4>, ptr addrspace(1) %src1, i32 %idx
+  %vec1 = load <8 x i4>, ptr addrspace(1) %gep1
+  %gep2 = getelementptr <8 x i4>, ptr addrspace(1) %src2, i32 %idx
+  %vec2 = load <8 x i4>, ptr addrspace(1) %gep2
 
   %v1e0 = extractelement <8 x i4> %vec1, i64 0
   %cv1e0 = sext i4 %v1e0 to i32
@@ -1885,7 +1885,7 @@ entry:
   %cv2e7 = sext i4 %v2e7 to i32
   %mul7 = mul nuw nsw i32 %cv1e7, %cv2e7
 
-  %acc = load i32, i32 addrspace(1)* %dst, align 4
+  %acc = load i32, ptr addrspace(1) %dst, align 4
   %add =  add i32  %mul0, %acc
   %add1 = add i32 %mul0, %add
   %add2 = add i32 %add1, %mul1
@@ -1897,12 +1897,12 @@ entry:
   %add8 = add i32 %add7, %mul7
 
   %res = add i32 %add, %add8
-  store i32 %res, i32 addrspace(1)* %dst, align 4
+  store i32 %res, ptr addrspace(1) %dst, align 4
   ret void
 }
 
 ; TODO: Support this pattern.
-define amdgpu_kernel void @idot8_acc32_vecMul(<8 x i4> addrspace(1)* %src1,
+define amdgpu_kernel void @idot8_acc32_vecMul(ptr addrspace(1) %src1,
 ; GFX7-LABEL: idot8_acc32_vecMul:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
@@ -2143,14 +2143,14 @@ define amdgpu_kernel void @idot8_acc32_vecMul(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    v_dot8_i32_i4 v0, s0, s1, v0
 ; GFX10-DL-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX10-DL-NEXT:    s_endpgm
-                                              <8 x i4> addrspace(1)* %src2,
-                                              i32 addrspace(1)* nocapture %dst) {
+                                              ptr addrspace(1) %src2,
+                                              ptr addrspace(1) nocapture %dst) {
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep1 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src1, i32 %idx
-  %vec1 = load <8 x i4>, <8 x i4> addrspace(1)* %gep1
-  %gep2 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src2, i32 %idx
-  %vec2 = load <8 x i4>, <8 x i4> addrspace(1)* %gep2
+  %gep1 = getelementptr <8 x i4>, ptr addrspace(1) %src1, i32 %idx
+  %vec1 = load <8 x i4>, ptr addrspace(1) %gep1
+  %gep2 = getelementptr <8 x i4>, ptr addrspace(1) %src2, i32 %idx
+  %vec2 = load <8 x i4>, ptr addrspace(1) %gep2
 
   %cvec1 = sext <8 x i4> %vec1 to <8 x i32>
   %cvec2 = sext <8 x i4> %vec2 to <8 x i32>
@@ -2165,7 +2165,7 @@ entry:
   %mul6 = extractelement <8 x i32> %mul, i64 6
   %mul7 = extractelement <8 x i32> %mul, i64 7
 
-  %acc = load i32, i32 addrspace(1)* %dst, align 4
+  %acc = load i32, ptr addrspace(1) %dst, align 4
   %add1 = add i32 %mul0, %acc
   %add2 = add i32 %add1, %mul1
   %add3 = add i32 %add2, %mul2
@@ -2175,12 +2175,12 @@ entry:
   %add7 = add i32 %add6, %mul6
   %add8 = add i32 %add7, %mul7
 
-  store i32 %add8, i32 addrspace(1)* %dst, align 4
+  store i32 %add8, ptr addrspace(1) %dst, align 4
   ret void
 }
 
 ; TODO: Support this pattern.
-define amdgpu_kernel void @idot8_acc16_vecMul(<8 x i4> addrspace(1)* %src1,
+define amdgpu_kernel void @idot8_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX7-LABEL: idot8_acc16_vecMul:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
@@ -2757,14 +2757,14 @@ define amdgpu_kernel void @idot8_acc16_vecMul(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    v_add_nc_u32_sdwa v1, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX10-DL-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-DL-NEXT:    s_endpgm
-                                              <8 x i4> addrspace(1)* %src2,
-                                              i16 addrspace(1)* nocapture %dst) {
+                                              ptr addrspace(1) %src2,
+                                              ptr addrspace(1) nocapture %dst) {
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep1 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src1, i32 %idx
-  %vec1 = load <8 x i4>, <8 x i4> addrspace(1)* %gep1
-  %gep2 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src2, i32 %idx
-  %vec2 = load <8 x i4>, <8 x i4> addrspace(1)* %gep2
+  %gep1 = getelementptr <8 x i4>, ptr addrspace(1) %src1, i32 %idx
+  %vec1 = load <8 x i4>, ptr addrspace(1) %gep1
+  %gep2 = getelementptr <8 x i4>, ptr addrspace(1) %src2, i32 %idx
+  %vec2 = load <8 x i4>, ptr addrspace(1) %gep2
 
   %cvec1 = sext <8 x i4> %vec1 to <8 x i16>
   %cvec2 = sext <8 x i4> %vec2 to <8 x i16>
@@ -2779,7 +2779,7 @@ entry:
   %mul6 = extractelement <8 x i16> %mul, i64 6
   %mul7 = extractelement <8 x i16> %mul, i64 7
 
-  %acc = load i16, i16 addrspace(1)* %dst, align 4
+  %acc = load i16, ptr addrspace(1) %dst, align 4
   %add1 = add i16 %mul0, %acc
   %add2 = add i16 %add1, %mul1
   %add3 = add i16 %add2, %mul2
@@ -2789,12 +2789,12 @@ entry:
   %add7 = add i16 %add6, %mul6
   %add8 = add i16 %add7, %mul7
 
-  store i16 %add8, i16 addrspace(1)* %dst, align 4
+  store i16 %add8, ptr addrspace(1) %dst, align 4
   ret void
 }
 
 ; TODO: Support this pattern.
-define amdgpu_kernel void @idot8_acc8_vecMul(<8 x i4> addrspace(1)* %src1,
+define amdgpu_kernel void @idot8_acc8_vecMul(ptr addrspace(1) %src1,
 ; GFX7-LABEL: idot8_acc8_vecMul:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
@@ -2931,8 +2931,7 @@ define amdgpu_kernel void @idot8_acc8_vecMul(<8 x i4> addrspace(1)* %src1,
 ; GFX8-NEXT:    v_ashrrev_i16_e32 v8, 12, v8
 ; GFX8-NEXT:    v_ashrrev_i16_e32 v11, 12, v14
 ; GFX8-NEXT:    v_ashrrev_i16_e32 v13, 12, v13
-; GFX8-NEXT:    v_mul_lo_u16_e32 v10, v10, v15
-; GFX8-NEXT:    v_mul_lo_u16_e32 v15, v16, v18
+; GFX8-NEXT:    v_mul_lo_u16_e32 v20, v16, v18
 ; GFX8-NEXT:    v_mul_lo_u16_sdwa v2, v3, v2 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_mul_lo_u16_sdwa v3, v7, v12 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_ashrrev_i16_e32 v5, 12, v5
@@ -2940,7 +2939,8 @@ define amdgpu_kernel void @idot8_acc8_vecMul(<8 x i4> addrspace(1)* %src1,
 ; GFX8-NEXT:    v_mul_lo_u16_e32 v14, v17, v19
 ; GFX8-NEXT:    v_mul_lo_u16_sdwa v7, v8, v13 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_mul_lo_u16_e32 v8, v9, v11
-; GFX8-NEXT:    v_or_b32_sdwa v3, v15, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX8-NEXT:    v_or_b32_sdwa v3, v20, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX8-NEXT:    v_mul_lo_u16_e32 v10, v10, v15
 ; GFX8-NEXT:    v_mul_lo_u16_sdwa v5, v5, v6 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_or_b32_sdwa v6, v14, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX8-NEXT:    v_or_b32_sdwa v7, v8, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
@@ -3444,14 +3444,14 @@ define amdgpu_kernel void @idot8_acc8_vecMul(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    v_add_nc_u32_sdwa v1, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
 ; GFX10-DL-NEXT:    global_store_byte v0, v1, s[4:5]
 ; GFX10-DL-NEXT:    s_endpgm
-                                             <8 x i4> addrspace(1)* %src2,
-                                             i8 addrspace(1)* nocapture %dst) {
+                                             ptr addrspace(1) %src2,
+                                             ptr addrspace(1) nocapture %dst) {
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep1 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src1, i32 %idx
-  %vec1 = load <8 x i4>, <8 x i4> addrspace(1)* %gep1
-  %gep2 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src2, i32 %idx
-  %vec2 = load <8 x i4>, <8 x i4> addrspace(1)* %gep2
+  %gep1 = getelementptr <8 x i4>, ptr addrspace(1) %src1, i32 %idx
+  %vec1 = load <8 x i4>, ptr addrspace(1) %gep1
+  %gep2 = getelementptr <8 x i4>, ptr addrspace(1) %src2, i32 %idx
+  %vec2 = load <8 x i4>, ptr addrspace(1) %gep2
 
   %cvec1 = sext <8 x i4> %vec1 to <8 x i8>
   %cvec2 = sext <8 x i4> %vec2 to <8 x i8>
@@ -3466,7 +3466,7 @@ entry:
   %mul6 = extractelement <8 x i8> %mul, i64 6
   %mul7 = extractelement <8 x i8> %mul, i64 7
 
-  %acc = load i8, i8 addrspace(1)* %dst, align 4
+  %acc = load i8, ptr addrspace(1) %dst, align 4
   %add1 = add i8 %mul0, %acc
   %add2 = add i8 %add1, %mul1
   %add3 = add i8 %add2, %mul2
@@ -3476,7 +3476,7 @@ entry:
   %add7 = add i8 %add6, %mul6
   %add8 = add i8 %add7, %mul7
 
-  store i8 %add8, i8 addrspace(1)* %dst, align 4
+  store i8 %add8, ptr addrspace(1) %dst, align 4
   ret void
 }
 

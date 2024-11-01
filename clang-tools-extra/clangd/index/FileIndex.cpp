@@ -29,12 +29,12 @@
 #include "clang/Index/IndexingOptions.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -188,7 +188,7 @@ std::vector<llvm::StringRef> FileShardedIndex::getAllSources() const {
   return Result;
 }
 
-llvm::Optional<IndexFileIn>
+std::optional<IndexFileIn>
 FileShardedIndex::getShard(llvm::StringRef Uri) const {
   auto It = Shards.find(Uri);
   if (It == Shards.end())

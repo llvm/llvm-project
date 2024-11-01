@@ -247,7 +247,7 @@ public:
   }
   bool tokens_empty() const { return NumReplacementTokens == 0; }
   ArrayRef<Token> tokens() const {
-    return llvm::makeArrayRef(ReplacementTokens, NumReplacementTokens);
+    return llvm::ArrayRef(ReplacementTokens, NumReplacementTokens);
   }
 
   llvm::MutableArrayRef<Token>
@@ -257,7 +257,7 @@ public:
     NumReplacementTokens = NumTokens;
     Token *NewReplacementTokens = PPAllocator.Allocate<Token>(NumTokens);
     ReplacementTokens = NewReplacementTokens;
-    return llvm::makeMutableArrayRef(NewReplacementTokens, NumTokens);
+    return llvm::MutableArrayRef(NewReplacementTokens, NumTokens);
   }
 
   void setTokens(ArrayRef<Token> Tokens, llvm::BumpPtrAllocator &PPAllocator) {
@@ -572,7 +572,7 @@ public:
   }
 
   ArrayRef<ModuleMacro *> overrides() const {
-    return llvm::makeArrayRef(overrides_begin(), overrides_end());
+    return llvm::ArrayRef(overrides_begin(), overrides_end());
   }
   /// \}
 

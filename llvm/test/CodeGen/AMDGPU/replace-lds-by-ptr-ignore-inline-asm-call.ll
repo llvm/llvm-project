@@ -13,10 +13,10 @@
 
 define void @f0(i32 %x) {
 ; CHECK-LABEL: entry:
-; CHECK:   store i32 %x, i32* inttoptr (i64 add (i64 ptrtoint (i32* addrspacecast (i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @used_only_within_func, i32 0, i32 0) to i32*) to i64), i64 ptrtoint (i32* addrspacecast (i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @used_only_within_func, i32 0, i32 0) to i32*) to i64)) to i32*), align 4
+; CHECK:   store i32 %x, ptr inttoptr (i64 add (i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @used_only_within_func to ptr) to i64), i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @used_only_within_func to ptr) to i64)) to ptr), align 4
 ; CHECK:   ret void
 entry:
-  store i32 %x, i32* inttoptr (i64 add (i64 ptrtoint (i32* addrspacecast (i32 addrspace(3)* bitcast ([4 x i32] addrspace(3)* @used_only_within_func to i32 addrspace(3)*) to i32*) to i64), i64 ptrtoint (i32* addrspacecast (i32 addrspace(3)* bitcast ([4 x i32] addrspace(3)* @used_only_within_func to i32 addrspace(3)*) to i32*) to i64)) to i32*), align 4
+  store i32 %x, ptr inttoptr (i64 add (i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @used_only_within_func to ptr) to i64), i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @used_only_within_func to ptr) to i64)) to ptr), align 4
   ret void
 }
 

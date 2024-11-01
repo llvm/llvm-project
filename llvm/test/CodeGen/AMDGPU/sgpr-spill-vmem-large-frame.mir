@@ -23,7 +23,7 @@ body:             |
   bb.0:
     liveins: $sgpr30_sgpr31, $sgpr10, $sgpr11
     ; CHECK-LABEL: name: test
-    ; CHECK: liveins: $sgpr30_sgpr31, $sgpr10, $sgpr11
+    ; CHECK: liveins: $sgpr10, $sgpr11, $sgpr30_sgpr31
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: S_CMP_EQ_U32 0, 0, implicit-def $scc
     ; CHECK-NEXT: $sgpr6_sgpr7 = S_MOV_B64 $exec

@@ -153,8 +153,7 @@ bool RegBankSelect::repairReg(
     if (MO.isDef())
       std::swap(Src, Dst);
 
-    assert((RepairPt.getNumInsertPoints() == 1 ||
-            Register::isPhysicalRegister(Dst)) &&
+    assert((RepairPt.getNumInsertPoints() == 1 || Dst.isPhysical()) &&
            "We are about to create several defs for Dst");
 
     // Build the instruction used to repair, then clone it at the right
@@ -398,7 +397,7 @@ void RegBankSelect::tryAvoidingSplit(
 
   // Check if this is a physical or virtual register.
   Register Reg = MO.getReg();
-  if (Register::isPhysicalRegister(Reg)) {
+  if (Reg.isPhysical()) {
     // We are going to split every outgoing edges.
     // Check that this is possible.
     // FIXME: The machine representation is currently broken
@@ -675,31 +674,7 @@ bool RegBankSelect::assignInstr(MachineInstr &MI) {
   return applyMapping(MI, *BestMapping, RepairPts);
 }
 
-bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
-  // If the ISel pipeline failed, do not bother running that pass.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
-    return false;
-
-  LLVM_DEBUG(dbgs() << "Assign register banks for: " << MF.getName() << '\n');
-  const Function &F = MF.getFunction();
-  Mode SaveOptMode = OptMode;
-  if (F.hasOptNone())
-    OptMode = Mode::Fast;
-  init(MF);
-
-#ifndef NDEBUG
-  // Check that our input is fully legal: we require the function to have the
-  // Legalized property, so it should be.
-  // FIXME: This should be in the MachineVerifier.
-  if (!DisableGISelLegalityCheck)
-    if (const MachineInstr *MI = machineFunctionIsIllegal(MF)) {
-      reportGISelFailure(MF, *TPC, *MORE, "gisel-regbankselect",
-                         "instruction is not legal", *MI);
-      return false;
-    }
-#endif
-
+bool RegBankSelect::assignRegisterBanks(MachineFunction &MF) {
   // Walk the function and assign register banks to all operands.
   // Use a RPOT to make sure all registers are assigned before we choose
   // the best mapping of the current instruction.
@@ -735,6 +710,42 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
       }
     }
   }
+
+  return true;
+}
+
+bool RegBankSelect::checkFunctionIsLegal(MachineFunction &MF) const {
+#ifndef NDEBUG
+  if (!DisableGISelLegalityCheck) {
+    if (const MachineInstr *MI = machineFunctionIsIllegal(MF)) {
+      reportGISelFailure(MF, *TPC, *MORE, "gisel-regbankselect",
+                         "instruction is not legal", *MI);
+      return false;
+    }
+  }
+#endif
+  return true;
+}
+
+bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
+  // If the ISel pipeline failed, do not bother running that pass.
+  if (MF.getProperties().hasProperty(
+          MachineFunctionProperties::Property::FailedISel))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Assign register banks for: " << MF.getName() << '\n');
+  const Function &F = MF.getFunction();
+  Mode SaveOptMode = OptMode;
+  if (F.hasOptNone())
+    OptMode = Mode::Fast;
+  init(MF);
+
+#ifndef NDEBUG
+  if (!checkFunctionIsLegal(MF))
+    return false;
+#endif
+
+  assignRegisterBanks(MF);
 
   OptMode = SaveOptMode;
   return false;

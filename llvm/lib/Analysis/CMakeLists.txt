@@ -18,13 +18,8 @@ if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   endif()
 
   if (LLVM_HAVE_TFLITE)
-    build_proto(
-      tensorflow/core/protobuf/error_codes
-      tensorflow/core/example/feature
-      tensorflow/core/example/example)
     list(APPEND MLLinkDeps
-      tensorflow-lite::tensorflow-lite
-      protobuf::libprotobuf)
+      tensorflow-lite::tensorflow-lite)
   endif()
 endif()
 
@@ -91,6 +86,7 @@ add_llvm_component_library(LLVMAnalysis
   LegacyDivergenceAnalysis.cpp
   Lint.cpp
   Loads.cpp
+  Local.cpp
   LoopAccessAnalysis.cpp
   LoopAnalysisManager.cpp
   LoopCacheAnalysis.cpp
@@ -142,6 +138,7 @@ add_llvm_component_library(LLVMAnalysis
   TrainingLogger.cpp
   TypeBasedAliasAnalysis.cpp
   TypeMetadataUtils.cpp
+  UniformityAnalysis.cpp
   ScopedNoAliasAA.cpp
   ValueLattice.cpp
   ValueLatticeUtils.cpp
@@ -166,4 +163,5 @@ add_llvm_component_library(LLVMAnalysis
   Object
   ProfileData
   Support
+  TargetParser
   )

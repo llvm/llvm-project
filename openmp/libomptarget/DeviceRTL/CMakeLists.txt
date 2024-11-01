@@ -56,7 +56,7 @@ set(devicertl_base_directory ${CMAKE_CURRENT_SOURCE_DIR})
 set(include_directory ${devicertl_base_directory}/include)
 set(source_directory ${devicertl_base_directory}/src)
 
-set(all_capabilities 35 37 50 52 53 60 61 62 70 72 75 80 86)
+set(all_capabilities 35 37 50 52 53 60 61 62 70 72 75 80 86 89 90)
 
 set(LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES ${all_capabilities} CACHE STRING
   "List of CUDA Compute Capabilities to be used to compile the NVPTX DeviceRTL.")
@@ -114,7 +114,7 @@ set(src_files
 )
 
 set(clang_opt_flags -O3 -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=512)
-set(link_opt_flags  -O3        -openmp-opt-disable)
+set(link_opt_flags  -O3        -openmp-opt-disable -attributor-enable=module)
 set(link_export_flag -passes=internalize -internalize-public-api-file=${source_directory}/exports)
 set(link_extract_flag --func='__keep_alive' --delete)
 
@@ -127,6 +127,7 @@ set(bc_flags -c -emit-llvm -std=c++17 -fvisibility=hidden
               ${clang_opt_flags} --offload-device-only
              -nocudalib -nogpulib -nostdinc
              -fopenmp -fopenmp-cuda-mode
+             -Wno-unknown-cuda-version
              -I${include_directory}
              -I${devicertl_base_directory}/../include
              ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}

@@ -597,7 +597,7 @@ uint32_t WinCOFFObjectWriter::writeSectionContents(MCAssembler &Asm,
   // Calculate our CRC with an initial value of '0', this is not how
   // JamCRC is specified but it aligns with the expected output.
   JamCRC JC(/*Init=*/0);
-  JC.update(makeArrayRef(reinterpret_cast<uint8_t*>(Buf.data()), Buf.size()));
+  JC.update(ArrayRef(reinterpret_cast<uint8_t *>(Buf.data()), Buf.size()));
   return JC.getCRC();
 }
 

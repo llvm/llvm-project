@@ -4,42 +4,42 @@
 
 declare void @unknown()
 
-declare void @bar(i32*)
+declare void @bar(ptr)
 
 define void @foo() {
 ; CHECK-LABEL: define {{[^@]+}}@foo() {
 ; CHECK-NEXT:    [[X:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @unknown()
-; CHECK-NEXT:    call void @bar(i32* noundef nonnull align 4 dereferenceable(4) [[X]])
+; CHECK-NEXT:    call void @bar(ptr noundef nonnull align 4 dereferenceable(4) [[X]])
 ; CHECK-NEXT:    ret void
 ;
   %x = alloca i32
   call void @unknown()
-  call void @bar(i32* %x)
+  call void @bar(ptr %x)
   ret void
 }
 
-define internal i8* @returned_dead() {
+define internal ptr @returned_dead() {
 ; CHECK-LABEL: define {{[^@]+}}@returned_dead() {
 ; CHECK-NEXT:    call void @unknown()
-; CHECK-NEXT:    ret i8* undef
+; CHECK-NEXT:    ret ptr undef
 ;
   call void @unknown()
-  ret i8* null
+  ret ptr null
 }
 
 define void @caller1() {
 ; CHECK-LABEL: define {{[^@]+}}@caller1() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @returned_dead()
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @returned_dead()
 ; CHECK-NEXT:    ret void
 ;
-  call i8* @returned_dead()
+  call ptr @returned_dead()
   ret void
 }
 
-define internal void @argument_dead_callback_callee(i8* %c) {
+define internal void @argument_dead_callback_callee(ptr %c) {
 ; CHECK-LABEL: define {{[^@]+}}@argument_dead_callback_callee
-; CHECK-SAME: (i8* noalias nocapture nofree readnone align 4294967296 [[C:%.*]]) {
+; CHECK-SAME: (ptr noalias nocapture nofree readnone align 4294967296 [[C:%.*]]) {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret void
 ;
@@ -49,14 +49,14 @@ define internal void @argument_dead_callback_callee(i8* %c) {
 
 define void @callback_caller() {
 ; TUNIT-LABEL: define {{[^@]+}}@callback_caller() {
-; TUNIT-NEXT:    call void @callback_broker(void (i8*)* noundef @argument_dead_callback_callee, i8* noalias nocapture nofree readnone align 4294967296 undef)
+; TUNIT-NEXT:    call void @callback_broker(ptr noundef @argument_dead_callback_callee, ptr noalias nocapture nofree readnone align 4294967296 undef)
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@callback_caller() {
-; CGSCC-NEXT:    call void @callback_broker(void (i8*)* noundef @argument_dead_callback_callee, i8* noalias nocapture nofree noundef readnone align 4294967296 null)
+; CGSCC-NEXT:    call void @callback_broker(ptr noundef @argument_dead_callback_callee, ptr noalias nocapture nofree noundef readnone align 4294967296 null)
 ; CGSCC-NEXT:    ret void
 ;
-  call void @callback_broker(void (i8*)* @argument_dead_callback_callee, i8* null)
+  call void @callback_broker(ptr @argument_dead_callback_callee, ptr null)
   ret void
 }
 
@@ -135,7 +135,7 @@ define void @caller_with_noundef_arg() {
   ret void
 }
 
-declare !callback !0 void @callback_broker(void (i8*)*, i8*)
+declare !callback !0 void @callback_broker(ptr, ptr)
 !1 = !{i64 0, i64 1, i1 false}
 !0 = !{!1}
 ;.

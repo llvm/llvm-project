@@ -31,6 +31,7 @@
 #include <cstddef>
 #include <string_view>
 #include <type_traits>
+#include <vector>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -493,6 +494,74 @@ public:
     return {_VSTD::move(this->__writer_).__out_it(), this->__size_};
   }
 };
+
+// A dynamically growing buffer intended to be used for retargeting a context.
+//
+// P2286 Formatting ranges adds range formatting support. It allows the user to
+// specify the minimum width for the entire formatted range.  The width of the
+// range is not known until the range is formatted. Formatting is done to an
+// output_iterator so there's no guarantee it would be possible to add the fill
+// to the front of the output. Instead the range is formatted to a temporary
+// buffer and that buffer is formatted as a string.
+//
+// There is an issue with that approach, the format context used in
+// std::formatter<T>::format contains the output iterator used as part of its
+// type. So using this output iterator means there needs to be a new format
+// context and the format arguments need to be retargeted to the new context.
+// This retargeting is done by a basic_format_context specialized for the
+// __iterator of this container.
+template <__fmt_char_type _CharT>
+class _LIBCPP_TEMPLATE_VIS __retarget_buffer {
+public:
+  using value_type = _CharT;
+
+  struct __iterator {
+    using difference_type = ptrdiff_t;
+
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(__retarget_buffer& __buffer)
+        : __buffer_(std::addressof(__buffer)) {}
+    _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator=(const _CharT& __c) {
+      __buffer_->push_back(__c);
+      return *this;
+    }
+    _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator=(_CharT&& __c) {
+      __buffer_->push_back(__c);
+      return *this;
+    }
+
+    _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator*() { return *this; }
+    _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() { return *this; }
+    _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int) { return *this; }
+    __retarget_buffer* __buffer_;
+  };
+
+  _LIBCPP_HIDE_FROM_ABI explicit __retarget_buffer(size_t __size_hint) { __buffer_.reserve(__size_hint); }
+
+  _LIBCPP_HIDE_FROM_ABI __iterator __make_output_iterator() { return __iterator{*this}; }
+
+  _LIBCPP_HIDE_FROM_ABI void push_back(_CharT __c) { __buffer_.push_back(__c); }
+
+  template <__fmt_char_type _InCharT>
+  _LIBCPP_HIDE_FROM_ABI void __copy(basic_string_view<_InCharT> __str) {
+    __buffer_.insert(__buffer_.end(), __str.begin(), __str.end());
+  }
+
+  template <__fmt_char_type _InCharT, class _UnaryOperation>
+  _LIBCPP_HIDE_FROM_ABI void __transform(const _InCharT* __first, const _InCharT* __last, _UnaryOperation __operation) {
+    _LIBCPP_ASSERT(__first <= __last, "not a valid range");
+    std::transform(__first, __last, std::back_inserter(__buffer_), std::move(__operation));
+  }
+
+  _LIBCPP_HIDE_FROM_ABI void __fill(size_t __n, _CharT __value) { __buffer_.insert(__buffer_.end(), __n, __value); }
+
+  _LIBCPP_HIDE_FROM_ABI basic_string_view<_CharT> __view() { return {__buffer_.data(), __buffer_.size()}; }
+
+private:
+  // Use vector instead of string to avoid adding zeros after every append
+  // operation. The buffer is exposed as a string_view and not as a c-string.
+  vector<_CharT> __buffer_;
+};
+
 } // namespace __format
 
 #endif //_LIBCPP_STD_VER > 17

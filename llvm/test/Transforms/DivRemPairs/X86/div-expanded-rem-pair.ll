@@ -174,14 +174,14 @@ end:
 define i32 @can_have_divrem_in_mutually_nondominating_bbs(i1 %cmp, i32 %a, i32 %b) {
 ; CHECK-LABEL: @can_have_divrem_in_mutually_nondominating_bbs(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[T3:%.*]] = udiv i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[T2_RECOMPOSED:%.*]] = urem i32 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[T0:%.*]] = udiv i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = udiv i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[T1:%.*]] = mul nuw i32 [[T0]], [[B]]
-; CHECK-NEXT:    [[T2_RECOMPOSED:%.*]] = urem i32 [[A]], [[B]]
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[T3:%.*]] = udiv i32 [[A]], [[B]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ [[T2_RECOMPOSED]], [[IF_THEN]] ], [ [[T3]], [[IF_ELSE]] ]

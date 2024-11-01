@@ -68,7 +68,7 @@ static constexpr uint16_t MXCSR_EXCEPTION_CONTOL_BIT_POISTION = 7;
 
 // Exception flags are individual bits in the corresponding registers.
 // So, we just OR the bit values to get the full set of exceptions.
-static inline uint16_t get_status_value_for_except(int excepts) {
+LIBC_INLINE uint16_t get_status_value_for_except(int excepts) {
   // We will make use of the fact that exception control bits are single
   // bit flags in the control registers.
   return (excepts & FE_INVALID ? ExceptionFlags::INVALID_F : 0) |
@@ -81,7 +81,7 @@ static inline uint16_t get_status_value_for_except(int excepts) {
          (excepts & FE_INEXACT ? ExceptionFlags::INEXACT_F : 0);
 }
 
-static inline int exception_status_to_macro(uint16_t status) {
+LIBC_INLINE int exception_status_to_macro(uint16_t status) {
   return (status & ExceptionFlags::INVALID_F ? FE_INVALID : 0) |
 #ifdef __FE_DENORM
          (status & ExceptionFlags::DENORMAL_F ? __FE_DENORM : 0) |
@@ -101,53 +101,53 @@ struct X87StateDescriptor {
   uint32_t _[5];
 };
 
-static inline uint16_t get_x87_control_word() {
+LIBC_INLINE uint16_t get_x87_control_word() {
   uint16_t w;
   __asm__ __volatile__("fnstcw %0" : "=m"(w)::);
   SANITIZER_MEMORY_INITIALIZED(&w, sizeof(w));
   return w;
 }
 
-static inline void write_x87_control_word(uint16_t w) {
+LIBC_INLINE void write_x87_control_word(uint16_t w) {
   __asm__ __volatile__("fldcw %0" : : "m"(w) :);
 }
 
-static inline uint16_t get_x87_status_word() {
+LIBC_INLINE uint16_t get_x87_status_word() {
   uint16_t w;
   __asm__ __volatile__("fnstsw %0" : "=m"(w)::);
   SANITIZER_MEMORY_INITIALIZED(&w, sizeof(w));
   return w;
 }
 
-static inline void clear_x87_exceptions() {
+LIBC_INLINE void clear_x87_exceptions() {
   __asm__ __volatile__("fnclex" : : :);
 }
 
-static inline uint32_t get_mxcsr() {
+LIBC_INLINE uint32_t get_mxcsr() {
   uint32_t w;
   __asm__ __volatile__("stmxcsr %0" : "=m"(w)::);
   SANITIZER_MEMORY_INITIALIZED(&w, sizeof(w));
   return w;
 }
 
-static inline void write_mxcsr(uint32_t w) {
+LIBC_INLINE void write_mxcsr(uint32_t w) {
   __asm__ __volatile__("ldmxcsr %0" : : "m"(w) :);
 }
 
-static inline void get_x87_state_descriptor(X87StateDescriptor &s) {
+LIBC_INLINE void get_x87_state_descriptor(X87StateDescriptor &s) {
   __asm__ __volatile__("fnstenv %0" : "=m"(s));
   SANITIZER_MEMORY_INITIALIZED(&s, sizeof(s));
 }
 
-static inline void write_x87_state_descriptor(const X87StateDescriptor &s) {
+LIBC_INLINE void write_x87_state_descriptor(const X87StateDescriptor &s) {
   __asm__ __volatile__("fldenv %0" : : "m"(s) :);
 }
 
-static inline void fwait() { __asm__ __volatile__("fwait"); }
+LIBC_INLINE void fwait() { __asm__ __volatile__("fwait"); }
 
 } // namespace internal
 
-static inline int enable_except(int excepts) {
+LIBC_INLINE int enable_except(int excepts) {
   // In the x87 control word and in MXCSR, an exception is blocked
   // if the corresponding bit is set. That is the reason for all the
   // bit-flip operations below as we need to turn the bits to zero
@@ -174,7 +174,7 @@ static inline int enable_except(int excepts) {
   return internal::exception_status_to_macro(old_excepts);
 }
 
-static inline int disable_except(int excepts) {
+LIBC_INLINE int disable_except(int excepts) {
   // In the x87 control word and in MXCSR, an exception is blocked
   // if the corresponding bit is set.
 
@@ -194,13 +194,13 @@ static inline int disable_except(int excepts) {
   return internal::exception_status_to_macro(old_excepts);
 }
 
-static inline int get_except() {
+LIBC_INLINE int get_except() {
   uint16_t mxcsr = static_cast<uint16_t>(internal::get_mxcsr());
   uint16_t enabled_excepts = ~(mxcsr >> 7) & 0x3F;
   return internal::exception_status_to_macro(enabled_excepts);
 }
 
-static inline int clear_except(int excepts) {
+LIBC_INLINE int clear_except(int excepts) {
   internal::X87StateDescriptor state;
   internal::get_x87_state_descriptor(state);
   state.status_word &=
@@ -213,7 +213,7 @@ static inline int clear_except(int excepts) {
   return 0;
 }
 
-static inline int test_except(int excepts) {
+LIBC_INLINE int test_except(int excepts) {
   uint16_t status_value = internal::get_status_value_for_except(excepts);
   // Check both x87 status word and MXCSR.
   return internal::exception_status_to_macro(
@@ -221,7 +221,7 @@ static inline int test_except(int excepts) {
 }
 
 // Sets the exception flags but does not trigger the exception handler.
-static inline int set_except(int excepts) {
+LIBC_INLINE int set_except(int excepts) {
   uint16_t status_value = internal::get_status_value_for_except(excepts);
   internal::X87StateDescriptor state;
   internal::get_x87_state_descriptor(state);
@@ -235,7 +235,7 @@ static inline int set_except(int excepts) {
   return 0;
 }
 
-static inline int raise_except(int excepts) {
+LIBC_INLINE int raise_except(int excepts) {
   uint16_t status_value = internal::get_status_value_for_except(excepts);
 
   // We set the status flag for exception one at a time and call the
@@ -287,7 +287,7 @@ static inline int raise_except(int excepts) {
   return 0;
 }
 
-static inline int get_round() {
+LIBC_INLINE int get_round() {
   uint16_t bit_value =
       (internal::get_mxcsr() >> internal::MXCSR_ROUNDING_CONTROL_BIT_POSITION) &
       0x3;
@@ -305,7 +305,7 @@ static inline int get_round() {
   }
 }
 
-static inline int set_round(int mode) {
+LIBC_INLINE int set_round(int mode) {
   uint16_t bit_value;
   switch (mode) {
   case FE_TONEAREST:
@@ -461,7 +461,7 @@ struct WinExceptionFlags {
     same order in both.
   */
 
-static inline int get_env(fenv_t *envp) {
+LIBC_INLINE int get_env(fenv_t *envp) {
   internal::FPState *state = reinterpret_cast<internal::FPState *>(envp);
 
   uint32_t status_word = 0;
@@ -505,7 +505,7 @@ static inline int get_env(fenv_t *envp) {
   return 0;
 }
 
-static inline int set_env(const fenv_t *envp) {
+LIBC_INLINE int set_env(const fenv_t *envp) {
   const internal::FPState *state =
       reinterpret_cast<const internal::FPState *>(envp);
 
@@ -554,14 +554,14 @@ static inline int set_env(const fenv_t *envp) {
   return 0;
 }
 #else
-static inline int get_env(fenv_t *envp) {
+LIBC_INLINE int get_env(fenv_t *envp) {
   internal::FPState *state = reinterpret_cast<internal::FPState *>(envp);
   internal::get_x87_state_descriptor(state->x87_status);
   state->mxcsr = internal::get_mxcsr();
   return 0;
 }
 
-static inline int set_env(const fenv_t *envp) {
+LIBC_INLINE int set_env(const fenv_t *envp) {
   // envp contains everything including pieces like the current
   // top of FPU stack. We cannot arbitrarily change them. So, we first
   // read the current status and update only those pieces which are

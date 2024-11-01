@@ -240,7 +240,7 @@ int llvm_objcopy_main(int argc, char **argv) {
                               : cl::TokenizeGNUCommandLine,
                           NewArgv);
 
-  auto Args = makeArrayRef(NewArgv).drop_front();
+  auto Args = ArrayRef(NewArgv).drop_front();
   Expected<DriverConfig> DriverConfig = getDriverConfig(Args);
 
   if (!DriverConfig) {

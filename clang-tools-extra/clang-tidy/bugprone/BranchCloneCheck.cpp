@@ -64,9 +64,7 @@ static bool areSwitchBranchesIdentical(const SwitchBranch LHS,
   return true;
 }
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 void BranchCloneCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -238,6 +236,4 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
   llvm_unreachable("No if statement and no switch statement.");
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

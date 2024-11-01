@@ -898,9 +898,41 @@ class Foo final {})cpp";
          HI.CalleeArgInfo.emplace();
          HI.CalleeArgInfo->Name = "arg_b";
          HI.CalleeArgInfo->Type = "int &";
-         HI.CallPassType.emplace();
-         HI.CallPassType->PassBy = PassMode::Ref;
-         HI.CallPassType->Converted = false;
+         HI.CallPassType = HoverInfo::PassType{PassMode::Ref, false};
+       }},
+      {// Literal passed to function call
+       R"cpp(
+          void fun(int arg_a, const int &arg_b) {};
+          void code() {
+            int a = 1;
+            fun(a, [[^2]]);
+          }
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "literal";
+         HI.Kind = index::SymbolKind::Unknown;
+         HI.CalleeArgInfo.emplace();
+         HI.CalleeArgInfo->Name = "arg_b";
+         HI.CalleeArgInfo->Type = "const int &";
+         HI.CallPassType = HoverInfo::PassType{PassMode::ConstRef, false};
+       }},
+      {// Expression passed to function call
+       R"cpp(
+          void fun(int arg_a, const int &arg_b) {};
+          void code() {
+            int a = 1;
+            fun(a, 1 [[^+]] 2);
+          }
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "expression";
+         HI.Kind = index::SymbolKind::Unknown;
+         HI.Type = "int";
+         HI.Value = "3";
+         HI.CalleeArgInfo.emplace();
+         HI.CalleeArgInfo->Name = "arg_b";
+         HI.CalleeArgInfo->Type = "const int &";
+         HI.CallPassType = HoverInfo::PassType{PassMode::ConstRef, false};
        }},
       {// Extra info for method call.
        R"cpp(
@@ -926,9 +958,7 @@ class Foo final {})cpp";
          HI.CalleeArgInfo->Name = "arg_a";
          HI.CalleeArgInfo->Type = "int";
          HI.CalleeArgInfo->Default = "3";
-         HI.CallPassType.emplace();
-         HI.CallPassType->PassBy = PassMode::Value;
-         HI.CallPassType->Converted = false;
+         HI.CallPassType = HoverInfo::PassType{PassMode::Value, false};
        }},
       {// Dont crash on invalid decl
        R"cpp(
@@ -1230,8 +1260,10 @@ void fun() {
   } Tests[] = {
       // Integer tests
       {"int_by_value([[^int_x]]);", PassMode::Value, false},
+      {"int_by_value([[^123]]);", PassMode::Value, false},
       {"int_by_ref([[^int_x]]);", PassMode::Ref, false},
       {"int_by_const_ref([[^int_x]]);", PassMode::ConstRef, false},
+      {"int_by_const_ref([[^123]]);", PassMode::ConstRef, false},
       {"int_by_value([[^int_ref]]);", PassMode::Value, false},
       {"int_by_const_ref([[^int_ref]]);", PassMode::ConstRef, false},
       {"int_by_const_ref([[^int_ref]]);", PassMode::ConstRef, false},
@@ -1249,6 +1281,8 @@ void fun() {
       {"float_by_value([[^int_x]]);", PassMode::Value, true},
       {"float_by_value([[^int_ref]]);", PassMode::Value, true},
       {"float_by_value([[^int_const_ref]]);", PassMode::Value, true},
+      {"float_by_value([[^123.0f]]);", PassMode::Value, false},
+      {"float_by_value([[^123]]);", PassMode::Value, true},
       {"custom_by_value([[^int_x]]);", PassMode::Ref, true},
       {"custom_by_value([[^float_x]]);", PassMode::Value, true},
       {"custom_by_value([[^base]]);", PassMode::ConstRef, true},
@@ -3037,9 +3071,7 @@ private: union foo {})",
             HI.CalleeArgInfo->Name = "arg_a";
             HI.CalleeArgInfo->Type = "int";
             HI.CalleeArgInfo->Default = "7";
-            HI.CallPassType.emplace();
-            HI.CallPassType->PassBy = PassMode::Value;
-            HI.CallPassType->Converted = false;
+            HI.CallPassType = HoverInfo::PassType{PassMode::Value, false};
           },
           R"(variable foo
 
@@ -3054,6 +3086,18 @@ int foo = 3)",
           [](HoverInfo &HI) {
             HI.Kind = index::SymbolKind::Variable;
             HI.Name = "foo";
+            HI.CalleeArgInfo.emplace();
+            HI.CalleeArgInfo->Type = "int";
+            HI.CallPassType = HoverInfo::PassType{PassMode::Value, false};
+          },
+          R"(variable foo
+
+Passed by value)",
+      },
+      {
+          [](HoverInfo &HI) {
+            HI.Kind = index::SymbolKind::Variable;
+            HI.Name = "foo";
             HI.Definition = "int foo = 3";
             HI.LocalScope = "test::Bar::";
             HI.Value = "3";
@@ -3062,9 +3106,7 @@ int foo = 3)",
             HI.CalleeArgInfo->Name = "arg_a";
             HI.CalleeArgInfo->Type = "int";
             HI.CalleeArgInfo->Default = "7";
-            HI.CallPassType.emplace();
-            HI.CallPassType->PassBy = PassMode::Ref;
-            HI.CallPassType->Converted = false;
+            HI.CallPassType = HoverInfo::PassType{PassMode::Ref, false};
           },
           R"(variable foo
 
@@ -3087,9 +3129,7 @@ int foo = 3)",
             HI.CalleeArgInfo->Name = "arg_a";
             HI.CalleeArgInfo->Type = {"alias_int", "int"};
             HI.CalleeArgInfo->Default = "7";
-            HI.CallPassType.emplace();
-            HI.CallPassType->PassBy = PassMode::Value;
-            HI.CallPassType->Converted = true;
+            HI.CallPassType = HoverInfo::PassType{PassMode::Value, true};
           },
           R"(variable foo
 
@@ -3127,9 +3167,7 @@ int foo = 3)",
             HI.CalleeArgInfo->Name = "arg_a";
             HI.CalleeArgInfo->Type = "int";
             HI.CalleeArgInfo->Default = "7";
-            HI.CallPassType.emplace();
-            HI.CallPassType->PassBy = PassMode::ConstRef;
-            HI.CallPassType->Converted = true;
+            HI.CallPassType = HoverInfo::PassType{PassMode::ConstRef, true};
           },
           R"(variable foo
 

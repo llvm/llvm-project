@@ -697,6 +697,33 @@ cpp20_output_iterator(It) -> cpp20_output_iterator<It>;
 
 static_assert(std::output_iterator<cpp20_output_iterator<int*>, int>);
 
+#  if TEST_STD_VER >= 20
+
+// An `input_iterator` that can be used in a `std::ranges::common_range`
+template <class Base>
+struct common_input_iterator {
+  Base it_;
+
+  using value_type       = std::iter_value_t<Base>;
+  using difference_type  = std::intptr_t;
+  using iterator_concept = std::input_iterator_tag;
+
+  constexpr common_input_iterator() = default;
+  constexpr explicit common_input_iterator(Base it) : it_(it) {}
+
+  constexpr common_input_iterator& operator++() {
+    ++it_;
+    return *this;
+  }
+  constexpr void operator++(int) { ++it_; }
+
+  constexpr decltype(auto) operator*() const { return *it_; }
+
+  friend constexpr bool operator==(common_input_iterator const&, common_input_iterator const&) = default;
+};
+
+#  endif // TEST_STD_VER >= 20
+
 // Iterator adaptor that counts the number of times the iterator has had a successor/predecessor
 // operation called. Has two recorders:
 // * `stride_count`, which records the total number of calls to an op++, op--, op+=, or op-=.
@@ -978,6 +1005,84 @@ class Iterator {
 
 } // namespace adl
 
+template <class T>
+class rvalue_iterator {
+public:
+  using iterator_category = std::input_iterator_tag;
+  using iterator_concept  = std::random_access_iterator_tag;
+  using difference_type   = std::ptrdiff_t;
+  using reference         = T&&;
+  using value_type        = T;
+
+  rvalue_iterator() = default;
+  constexpr rvalue_iterator(T* it) : it_(it) {}
+
+  constexpr reference operator*() const { return std::move(*it_); }
+
+  constexpr rvalue_iterator& operator++() {
+    ++it_;
+    return *this;
+  }
+
+  constexpr rvalue_iterator operator++(int) {
+    auto tmp = *this;
+    ++it_;
+    return tmp;
+  }
+
+  constexpr rvalue_iterator& operator--() {
+    --it_;
+    return *this;
+  }
+
+  constexpr rvalue_iterator operator--(int) {
+    auto tmp = *this;
+    --it_;
+    return tmp;
+  }
+
+  constexpr rvalue_iterator operator+(difference_type n) const {
+    auto tmp = *this;
+    tmp.it += n;
+    return tmp;
+  }
+
+  constexpr friend rvalue_iterator operator+(difference_type n, rvalue_iterator iter) {
+    iter += n;
+    return iter;
+  }
+
+  constexpr rvalue_iterator operator-(difference_type n) const {
+    auto tmp = *this;
+    tmp.it -= n;
+    return tmp;
+  }
+
+  constexpr difference_type operator-(const rvalue_iterator& other) const { return it_ - other.it_; }
+
+  constexpr rvalue_iterator& operator+=(difference_type n) {
+    it_ += n;
+    return *this;
+  }
+
+  constexpr rvalue_iterator& operator-=(difference_type n) {
+    it_ -= n;
+    return *this;
+  }
+
+  constexpr reference operator[](difference_type n) const { return std::move(it_[n]); }
+
+  auto operator<=>(const rvalue_iterator&) const noexcept = default;
+
+private:
+  T* it_;
+};
+
+template <class T>
+rvalue_iterator(T*) -> rvalue_iterator<T>;
+
+static_assert(std::random_access_iterator<rvalue_iterator<int*>>);
+
 // Proxy
 // ======================================================================
 // Proxy that can wrap a value or a reference. It simulates C++23's tuple
@@ -1257,6 +1362,21 @@ ProxyIterator(Base) -> ProxyIterator<Base>;
 static_assert(std::indirectly_readable<ProxyIterator<int*>>);
 static_assert(std::indirectly_writable<ProxyIterator<int*>, Proxy<int>>);
 static_assert(std::indirectly_writable<ProxyIterator<int*>, Proxy<int&>>);
+
+template <class Iter>
+using Cpp20InputProxyIterator = ProxyIterator<cpp20_input_iterator<Iter>>;
+
+template <class Iter>
+using ForwardProxyIterator = ProxyIterator<forward_iterator<Iter>>;
+
+template <class Iter>
+using BidirectionalProxyIterator = ProxyIterator<bidirectional_iterator<Iter>>;
+
+template <class Iter>
+using RandomAccessProxyIterator = ProxyIterator<random_access_iterator<Iter>>;
+
+template <class Iter>
+using ContiguousProxyIterator = ProxyIterator<contiguous_iterator<Iter>>;
 
 template <class BaseSent>
 struct ProxySentinel {

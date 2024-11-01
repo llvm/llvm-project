@@ -103,6 +103,7 @@ add_header_library(
   HDRS
     pthread_mutexattr.h
   DEPENDS
+    libc.src.__support.common
     libc.include.pthread
 )
 

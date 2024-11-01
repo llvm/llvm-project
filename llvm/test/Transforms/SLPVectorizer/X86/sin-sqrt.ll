@@ -9,14 +9,14 @@ declare double @llvm.sin.f64(double)
 
 define void @test() {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[A0:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 0), align 8
-; CHECK-NEXT:    [[A1:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 1), align 8
-; CHECK-NEXT:    [[A2:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 2), align 8
-; CHECK-NEXT:    [[A3:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 3), align 8
-; CHECK-NEXT:    [[A4:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 4), align 8
-; CHECK-NEXT:    [[A5:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 5), align 8
-; CHECK-NEXT:    [[A6:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 6), align 8
-; CHECK-NEXT:    [[A7:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 7), align 8
+; CHECK-NEXT:    [[A0:%.*]] = load double, ptr @src, align 8
+; CHECK-NEXT:    [[A1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 1), align 8
+; CHECK-NEXT:    [[A2:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 2), align 8
+; CHECK-NEXT:    [[A3:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 3), align 8
+; CHECK-NEXT:    [[A4:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 4), align 8
+; CHECK-NEXT:    [[A5:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 5), align 8
+; CHECK-NEXT:    [[A6:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 6), align 8
+; CHECK-NEXT:    [[A7:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 7), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[A2]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[A6]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = call fast <2 x double> @llvm.sin.v2f64(<2 x double> [[TMP2]])
@@ -32,17 +32,17 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP13:%.*]] = fadd fast <2 x double> [[TMP9]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = fadd fast <2 x double> [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    store <2 x double> [[TMP15]], <2 x double>* bitcast ([8 x double]* @dst to <2 x double>*), align 8
+; CHECK-NEXT:    store <2 x double> [[TMP15]], ptr @dst, align 8
 ; CHECK-NEXT:    ret void
 ;
-  %a0 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 0), align 8
-  %a1 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 1), align 8
-  %a2 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 2), align 8
-  %a3 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 3), align 8
-  %a4 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 4), align 8
-  %a5 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 5), align 8
-  %a6 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 6), align 8
-  %a7 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src, i32 0, i64 7), align 8
+  %a0 = load double, ptr @src, align 8
+  %a1 = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 1), align 8
+  %a2 = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 2), align 8
+  %a3 = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 3), align 8
+  %a4 = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 4), align 8
+  %a5 = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 5), align 8
+  %a6 = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 6), align 8
+  %a7 = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 7), align 8
   %sin0 = call fast double @llvm.sin.f64(double %a2)
   %sin1 = call fast double @llvm.sin.f64(double %a3)
   %sqrt0 = call fast double @llvm.sqrt.f64(double %a0)
@@ -57,7 +57,7 @@ define void @test() {
   %res3 = fadd fast double %sqrt2, %sin3
   %res4 = fadd fast double %sin2, %sqrt3
   %res01 = fadd fast double %res3, %res4
-  store double %res00, double* getelementptr inbounds ([8 x double], [8 x double]* @dst, i32 0, i64 0), align 8
-  store double %res01, double* getelementptr inbounds ([8 x double], [8 x double]* @dst, i32 0, i64 1), align 8
+  store double %res00, ptr @dst, align 8
+  store double %res01, ptr getelementptr inbounds ([8 x double], ptr @dst, i32 0, i64 1), align 8
   ret void
 }

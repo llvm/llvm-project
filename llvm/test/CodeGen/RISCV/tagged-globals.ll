@@ -6,14 +6,14 @@
 @global_int = internal global i32 0
 declare void @func()
 
-define i32* @global_addr() #0 {
+define ptr @global_addr() #0 {
 ; CHECK-LABEL: global_addr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:  .Lpcrel_hi0:
 ; CHECK-NEXT:    auipc a0, %got_pcrel_hi(global_ext)
 ; CHECK-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi0)(a0)
 ; CHECK-NEXT:    ret
-  ret i32* @global_ext
+  ret ptr @global_ext
 }
 
 define i32 @global_load() #0 {
@@ -24,7 +24,7 @@ define i32 @global_load() #0 {
 ; CHECK-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi1)(a0)
 ; CHECK-NEXT:    lw a0, 0(a0)
 ; CHECK-NEXT:    ret
-  %load = load i32, i32* @global_ext
+  %load = load i32, ptr @global_ext
   ret i32 %load
 }
 
@@ -36,18 +36,18 @@ define void @global_store() #0 {
 ; CHECK-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi2)(a0)
 ; CHECK-NEXT:    sw zero, 0(a0)
 ; CHECK-NEXT:    ret
-  store i32 0, i32* @global_ext
+  store i32 0, ptr @global_ext
   ret void
 }
 
-define i32* @global_int_addr() #0 {
+define ptr @global_int_addr() #0 {
 ; CHECK-LABEL: global_int_addr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:  .Lpcrel_hi3:
 ; CHECK-NEXT:    auipc a0, %got_pcrel_hi(global_int)
 ; CHECK-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi3)(a0)
 ; CHECK-NEXT:    ret
-  ret i32* @global_int
+  ret ptr @global_int
 }
 
 define i32 @global_int_load() #0 {
@@ -58,7 +58,7 @@ define i32 @global_int_load() #0 {
 ; CHECK-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi4)(a0)
 ; CHECK-NEXT:    lw a0, 0(a0)
 ; CHECK-NEXT:    ret
-  %load = load i32, i32* @global_int
+  %load = load i32, ptr @global_int
   ret i32 %load
 }
 
@@ -70,18 +70,18 @@ define void @global_int_store() #0 {
 ; CHECK-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi5)(a0)
 ; CHECK-NEXT:    sw zero, 0(a0)
 ; CHECK-NEXT:    ret
-  store i32 0, i32* @global_int
+  store i32 0, ptr @global_int
   ret void
 }
 
-define void ()* @func_addr() #0 {
+define ptr @func_addr() #0 {
 ; CHECK-LABEL: func_addr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:  .Lpcrel_hi6:
 ; CHECK-NEXT:    auipc a0, %got_pcrel_hi(func)
 ; CHECK-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi6)(a0)
 ; CHECK-NEXT:    ret
-  ret void ()* @func
+  ret ptr @func
 }
 
 attributes #0 = { "target-features"="+tagged-globals" }

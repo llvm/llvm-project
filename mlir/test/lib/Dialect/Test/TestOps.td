@@ -421,7 +421,7 @@ def VariadicRegionInferredTypesOp : TEST_Op<"variadic_region_inferred",
 
   let extraClassDeclaration = [{
     static mlir::LogicalResult inferReturnTypes(mlir::MLIRContext *context,
-          llvm::Optional<::mlir::Location> location, mlir::ValueRange operands,
+          std::optional<::mlir::Location> location, mlir::ValueRange operands,
           mlir::DictionaryAttr attributes, mlir::RegionRange regions,
           llvm::SmallVectorImpl<mlir::Type> &inferredReturnTypes) {
       inferredReturnTypes.assign({mlir::IntegerType::get(context, 16)});
@@ -1290,11 +1290,32 @@ def TestOpInPlaceFoldSuccess : TEST_Op<"op_in_place_fold_success"> {
   let results = (outs Variadic<I1>);
   let hasFolder = 1;
   let extraClassDefinition = [{
-    ::mlir::LogicalResult $cppClass::fold(ArrayRef<Attribute> operands,
+    ::mlir::LogicalResult $cppClass::fold(FoldAdaptor adaptor,
         SmallVectorImpl<OpFoldResult> &results) {
       return success();
     }
   }];
+}
+
+def TestOpFoldWithFoldAdaptor
+  : TEST_Op<"fold_with_fold_adaptor",
+      [AttrSizedOperandSegments, NoTerminator]> {
+  let arguments = (ins
+    I32:$op,
+    DenseI32ArrayAttr:$attr,
+    Variadic<I32>:$variadic,
+    VariadicOfVariadic<I32, "attr">:$var_of_var
+  );
+
+  let results = (outs I32:$res);
+
+  let regions = (region AnyRegion:$body);
+
+  let assemblyFormat = [{
+    $op `,` `[` $variadic `]` `,` `{` $var_of_var `}` $body attr-dict-with-keyword
+  }];
+
+  let hasFolder = 1;
 }
 
 // An op that always fold itself.
@@ -1967,6 +1988,12 @@ def FormatOptSymbolNameAttrOp : TEST_Op<"format_opt_symbol_name_attr_op"> {
   let assemblyFormat = "($opt_attr^)? attr-dict";
 }
 
+// Test that we format optional symbol reference attributes properly.
+def FormatOptSymbolRefAttrOp : TEST_Op<"format_opt_symbol_ref_attr_op"> {
+  let arguments = (ins OptionalAttr<SymbolRefAttr>:$opt_attr);
+  let assemblyFormat = "($opt_attr^)? attr-dict";
+}
+
 // Test that we elide attributes that are within the syntax.
 def FormatAttrDictWithKeywordOp : TEST_Op<"format_attr_dict_w_keyword"> {
   let arguments = (ins I64Attr:$attr, OptionalAttr<I64Attr>:$opt_attr);
@@ -2404,7 +2431,7 @@ def FormatInferTypeOp : TEST_Op<"format_infer_type", [InferTypeOpInterface]> {
 
   let extraClassDeclaration = [{
     static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
-          ::llvm::Optional<::mlir::Location> location, ::mlir::ValueRange operands,
+          ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
           ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       inferredReturnTypes.assign({::mlir::IntegerType::get(context, 16)});
@@ -2427,7 +2454,7 @@ class FormatInferAllTypesBaseOp<string mnemonic, list<Trait> traits = []>
   let results = (outs Variadic<AnyType>:$outs);
   let extraClassDeclaration = [{
     static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
-          ::llvm::Optional<::mlir::Location> location, ::mlir::ValueRange operands,
+          ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
           ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       ::mlir::TypeRange operandTypes = operands.getTypes();
@@ -2474,7 +2501,7 @@ def FormatInferTypeRegionsOp
   let assemblyFormat = "$region attr-dict";
   let extraClassDeclaration = [{
     static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
-          ::llvm::Optional<::mlir::Location> location, ::mlir::ValueRange operands,
+          ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
           ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       if (regions.empty())
@@ -2495,7 +2522,7 @@ def FormatInferTypeVariadicOperandsOp
   let assemblyFormat = "`(` $a `:` type($a) `)` `(` $b `:` type($b) `)` attr-dict";
   let extraClassDeclaration = [{
     static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *context,
-          ::llvm::Optional<::mlir::Location> location, ::mlir::ValueRange operands,
+          ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
           ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       FormatInferTypeVariadicOperandsOpAdaptor adaptor(operands, attributes);
@@ -2640,7 +2667,7 @@ def RegionIfOp : TEST_Op<"region_if",
       return getBody(2)->getArguments();
     }
     ::mlir::OperandRange getSuccessorEntryOperands(
-        ::llvm::Optional<unsigned> index);
+        ::std::optional<unsigned> index);
   }];
   let hasCustomAssemblyFormat = 1;
 }
@@ -2703,7 +2730,7 @@ class TableGenBuildInferReturnTypeBaseOp<string mnemonic,
 
   let extraClassDeclaration = [{
     static ::mlir::LogicalResult inferReturnTypes(::mlir::MLIRContext *,
-          ::llvm::Optional<::mlir::Location> location, ::mlir::ValueRange operands,
+          ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
           ::mlir::DictionaryAttr attributes, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       inferredReturnTypes.assign({operands[0].getType()});

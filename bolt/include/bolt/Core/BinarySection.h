@@ -232,8 +232,8 @@ public:
       return isText() > Other.isText();
 
     // Read-only before writable.
-    if (isReadOnly() != Other.isReadOnly())
-      return isReadOnly() > Other.isReadOnly();
+    if (isWritable() != Other.isWritable())
+      return isWritable() < Other.isWritable();
 
     // BSS at the end.
     if (isBSS() != Other.isBSS())
@@ -275,10 +275,7 @@ public:
   bool isTBSS() const { return isBSS() && isTLS(); }
   bool isVirtual() const { return ELFType == ELF::SHT_NOBITS; }
   bool isRela() const { return ELFType == ELF::SHT_RELA; }
-  bool isReadOnly() const {
-    return ((ELFFlags & ELF::SHF_ALLOC) && !(ELFFlags & ELF::SHF_WRITE) &&
-            ELFType == ELF::SHT_PROGBITS);
-  }
+  bool isWritable() const { return (ELFFlags & ELF::SHF_WRITE); }
   bool isAllocatable() const {
     if (isELF()) {
       return (ELFFlags & ELF::SHF_ALLOC) && !isTBSS();

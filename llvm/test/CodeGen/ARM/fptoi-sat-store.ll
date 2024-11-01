@@ -8,7 +8,7 @@ declare i32 @llvm.fptosi.sat.i32.f32(float)
 declare i32 @llvm.fptoui.sat.i32.f64(double)
 declare i32 @llvm.fptoui.sat.i32.f32(float)
 
-define void @test_signed_i32_f32(i32* %d, float %f) nounwind {
+define void @test_signed_i32_f32(ptr %d, float %f) nounwind {
 ; SOFT-LABEL: test_signed_i32_f32:
 ; SOFT:       @ %bb.0:
 ; SOFT-NEXT:    .save {r4, r5, r6, r7, lr}
@@ -66,11 +66,11 @@ define void @test_signed_i32_f32(i32* %d, float %f) nounwind {
 ; VFP-NEXT:    vstr s0, [r0]
 ; VFP-NEXT:    bx lr
     %r = call i32 @llvm.fptosi.sat.i32.f32(float %f)
-    store i32 %r, i32* %d, align 4
+    store i32 %r, ptr %d, align 4
     ret void
 }
 
-define void @test_signed_i32_f64(i32* %d, double %f) nounwind {
+define void @test_signed_i32_f64(ptr %d, double %f) nounwind {
 ; SOFT-LABEL: test_signed_i32_f64:
 ; SOFT:       @ %bb.0:
 ; SOFT-NEXT:    .save {r4, r5, r6, r7, lr}
@@ -150,11 +150,11 @@ define void @test_signed_i32_f64(i32* %d, double %f) nounwind {
 ; FP16-NEXT:    vstr s0, [r0]
 ; FP16-NEXT:    bx lr
     %r = call i32 @llvm.fptosi.sat.i32.f64(double %f)
-    store i32 %r, i32* %d, align 4
+    store i32 %r, ptr %d, align 4
     ret void
 }
 
-define void @test_unsigned_i32_f32(i32* %d, float %f) nounwind {
+define void @test_unsigned_i32_f32(ptr %d, float %f) nounwind {
 ; SOFT-LABEL: test_unsigned_i32_f32:
 ; SOFT:       @ %bb.0:
 ; SOFT-NEXT:    .save {r4, r5, r6, r7, lr}
@@ -200,11 +200,11 @@ define void @test_unsigned_i32_f32(i32* %d, float %f) nounwind {
 ; VFP-NEXT:    vstr s0, [r0]
 ; VFP-NEXT:    bx lr
     %r = call i32 @llvm.fptoui.sat.i32.f32(float %f)
-    store i32 %r, i32* %d, align 4
+    store i32 %r, ptr %d, align 4
     ret void
 }
 
-define void @test_unsigned_i32_f64(i32* %d, double %f) nounwind {
+define void @test_unsigned_i32_f64(ptr %d, double %f) nounwind {
 ; SOFT-LABEL: test_unsigned_i32_f64:
 ; SOFT:       @ %bb.0:
 ; SOFT-NEXT:    .save {r4, r5, r6, r7, lr}
@@ -266,6 +266,6 @@ define void @test_unsigned_i32_f64(i32* %d, double %f) nounwind {
 ; FP16-NEXT:    vstr s0, [r0]
 ; FP16-NEXT:    bx lr
     %r = call i32 @llvm.fptoui.sat.i32.f64(double %f)
-    store i32 %r, i32* %d, align 4
+    store i32 %r, ptr %d, align 4
     ret void
 }

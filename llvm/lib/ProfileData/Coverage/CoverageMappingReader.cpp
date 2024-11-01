@@ -1161,7 +1161,7 @@ Error BinaryCoverageReader::readNextRecord(CoverageMappingRecord &Record) {
   Expressions.clear();
   MappingRegions.clear();
   auto &R = MappingRecords[CurrentRecord];
-  auto F = makeArrayRef(Filenames).slice(R.FilenamesBegin, R.FilenamesSize);
+  auto F = ArrayRef(Filenames).slice(R.FilenamesBegin, R.FilenamesSize);
   RawCoverageMappingReader Reader(R.CoverageMapping, F, FunctionsFilenames,
                                   Expressions, MappingRegions);
   if (auto Err = Reader.read())

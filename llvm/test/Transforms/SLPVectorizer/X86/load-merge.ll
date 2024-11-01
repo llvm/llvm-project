@@ -6,67 +6,64 @@
 ;    return le32;
 ;}
 
-define i32 @_Z9load_le32Ph(i8* nocapture readonly %data) {
+define i32 @_Z9load_le32Ph(ptr nocapture readonly %data) {
 ; CHECK-LABEL: @_Z9load_le32Ph(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[DATA:%.*]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[DATA:%.*]], align 1
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP0]] to i32
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8* [[DATA]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
 ; CHECK-NEXT:    [[CONV2:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[SHL3:%.*]] = shl nuw nsw i32 [[CONV2]], 8
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL3]], [[CONV]]
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, i8* [[DATA]], i64 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, i8* [[ARRAYIDX4]], align 1
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[ARRAYIDX4]], align 1
 ; CHECK-NEXT:    [[CONV5:%.*]] = zext i8 [[TMP2]] to i32
 ; CHECK-NEXT:    [[SHL6:%.*]] = shl nuw nsw i32 [[CONV5]], 16
 ; CHECK-NEXT:    [[OR7:%.*]] = or i32 [[OR]], [[SHL6]]
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i8, i8* [[DATA]], i64 3
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, i8* [[ARRAYIDX8]], align 1
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 3
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX8]], align 1
 ; CHECK-NEXT:    [[CONV9:%.*]] = zext i8 [[TMP3]] to i32
 ; CHECK-NEXT:    [[SHL10:%.*]] = shl nuw i32 [[CONV9]], 24
 ; CHECK-NEXT:    [[OR11:%.*]] = or i32 [[OR7]], [[SHL10]]
 ; CHECK-NEXT:    ret i32 [[OR11]]
 ;
 entry:
-  %0 = load i8, i8* %data, align 1
+  %0 = load i8, ptr %data, align 1
   %conv = zext i8 %0 to i32
-  %arrayidx1 = getelementptr inbounds i8, i8* %data, i64 1
-  %1 = load i8, i8* %arrayidx1, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %data, i64 1
+  %1 = load i8, ptr %arrayidx1, align 1
   %conv2 = zext i8 %1 to i32
   %shl3 = shl nuw nsw i32 %conv2, 8
   %or = or i32 %shl3, %conv
-  %arrayidx4 = getelementptr inbounds i8, i8* %data, i64 2
-  %2 = load i8, i8* %arrayidx4, align 1
+  %arrayidx4 = getelementptr inbounds i8, ptr %data, i64 2
+  %2 = load i8, ptr %arrayidx4, align 1
   %conv5 = zext i8 %2 to i32
   %shl6 = shl nuw nsw i32 %conv5, 16
   %or7 = or i32 %or, %shl6
-  %arrayidx8 = getelementptr inbounds i8, i8* %data, i64 3
-  %3 = load i8, i8* %arrayidx8, align 1
+  %arrayidx8 = getelementptr inbounds i8, ptr %data, i64 3
+  %3 = load i8, ptr %arrayidx8, align 1
   %conv9 = zext i8 %3 to i32
   %shl10 = shl nuw i32 %conv9, 24
   %or11 = or i32 %or7, %shl10
   ret i32 %or11
 }
 
-define <4 x float> @PR16739_byref(<4 x float>* nocapture readonly dereferenceable(16) %x) {
+define <4 x float> @PR16739_byref(ptr nocapture readonly dereferenceable(16) %x) {
 ; CHECK-LABEL: @PR16739_byref(
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[X:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[X]], i64 0, i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[GEP0]] to <2 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    [[X2:%.*]] = load float, float* [[GEP2]], align 4
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds <4 x float>, ptr [[X:%.*]], i64 0, i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[X]], align 4
+; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[TMP3]], float [[X2]], i32 2
 ; CHECK-NEXT:    [[I3:%.*]] = insertelement <4 x float> [[I2]], float [[X2]], i32 3
 ; CHECK-NEXT:    ret <4 x float> [[I3]]
 ;
-  %gep0 = getelementptr inbounds <4 x float>, <4 x float>* %x, i64 0, i64 0
-  %gep1 = getelementptr inbounds <4 x float>, <4 x float>* %x, i64 0, i64 1
-  %gep2 = getelementptr inbounds <4 x float>, <4 x float>* %x, i64 0, i64 2
-  %x0 = load float, float* %gep0
-  %x1 = load float, float* %gep1
-  %x2 = load float, float* %gep2
+  %gep1 = getelementptr inbounds <4 x float>, ptr %x, i64 0, i64 1
+  %gep2 = getelementptr inbounds <4 x float>, ptr %x, i64 0, i64 2
+  %x0 = load float, ptr %x
+  %x1 = load float, ptr %gep1
+  %x2 = load float, ptr %gep2
   %i0 = insertelement <4 x float> undef, float %x0, i32 0
   %i1 = insertelement <4 x float> %i0, float %x1, i32 1
   %i2 = insertelement <4 x float> %i1, float %x2, i32 2
@@ -74,18 +71,15 @@ define <4 x float> @PR16739_byref(<4 x float>* nocapture readonly dereferenceabl
   ret <4 x float> %i3
 }
 
-define <4 x float> @PR16739_byref_alt(<4 x float>* nocapture readonly dereferenceable(16) %x) {
+define <4 x float> @PR16739_byref_alt(ptr nocapture readonly dereferenceable(16) %x) {
 ; CHECK-LABEL: @PR16739_byref_alt(
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[X:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[GEP0]] to <2 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[X:%.*]], align 4
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; CHECK-NEXT:    ret <4 x float> [[SHUFFLE]]
 ;
-  %gep0 = getelementptr inbounds <4 x float>, <4 x float>* %x, i64 0, i64 0
-  %gep1 = getelementptr inbounds <4 x float>, <4 x float>* %x, i64 0, i64 1
-  %x0 = load float, float* %gep0
-  %x1 = load float, float* %gep1
+  %gep1 = getelementptr inbounds <4 x float>, ptr %x, i64 0, i64 1
+  %x0 = load float, ptr %x
+  %x1 = load float, ptr %gep1
   %i0 = insertelement <4 x float> undef, float %x0, i32 0
   %i1 = insertelement <4 x float> %i0, float %x0, i32 1
   %i2 = insertelement <4 x float> %i1, float %x1, i32 2
@@ -93,13 +87,11 @@ define <4 x float> @PR16739_byref_alt(<4 x float>* nocapture readonly dereferenc
   ret <4 x float> %i3
 }
 
-define <4 x float> @PR16739_byval(<4 x float>* nocapture readonly dereferenceable(16) %x) {
+define <4 x float> @PR16739_byval(ptr nocapture readonly dereferenceable(16) %x) {
 ; CHECK-LABEL: @PR16739_byval(
-; CHECK-NEXT:    [[T0:%.*]] = bitcast <4 x float>* [[X:%.*]] to i64*
-; CHECK-NEXT:    [[T1:%.*]] = load i64, i64* [[T0]], align 16
-; CHECK-NEXT:    [[T2:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[X]], i64 0, i64 2
-; CHECK-NEXT:    [[T3:%.*]] = bitcast float* [[T2]] to i64*
-; CHECK-NEXT:    [[T4:%.*]] = load i64, i64* [[T3]], align 8
+; CHECK-NEXT:    [[T1:%.*]] = load i64, ptr [[X:%.*]], align 16
+; CHECK-NEXT:    [[T2:%.*]] = getelementptr inbounds <4 x float>, ptr [[X]], i64 0, i64 2
+; CHECK-NEXT:    [[T4:%.*]] = load i64, ptr [[T2]], align 8
 ; CHECK-NEXT:    [[T5:%.*]] = trunc i64 [[T1]] to i32
 ; CHECK-NEXT:    [[T6:%.*]] = bitcast i32 [[T5]] to float
 ; CHECK-NEXT:    [[T7:%.*]] = insertelement <4 x float> undef, float [[T6]], i32 0
@@ -113,11 +105,9 @@ define <4 x float> @PR16739_byval(<4 x float>* nocapture readonly dereferenceabl
 ; CHECK-NEXT:    [[T15:%.*]] = insertelement <4 x float> [[T14]], float [[T13]], i32 3
 ; CHECK-NEXT:    ret <4 x float> [[T15]]
 ;
-  %t0 = bitcast <4 x float>* %x to i64*
-  %t1 = load i64, i64* %t0, align 16
-  %t2 = getelementptr inbounds <4 x float>, <4 x float>* %x, i64 0, i64 2
-  %t3 = bitcast float* %t2 to i64*
-  %t4 = load i64, i64* %t3, align 8
+  %t1 = load i64, ptr %x, align 16
+  %t2 = getelementptr inbounds <4 x float>, ptr %x, i64 0, i64 2
+  %t4 = load i64, ptr %t2, align 8
   %t5 = trunc i64 %t1 to i32
   %t6 = bitcast i32 %t5 to float
   %t7 = insertelement <4 x float> undef, float %t6, i32 0
@@ -132,61 +122,53 @@ define <4 x float> @PR16739_byval(<4 x float>* nocapture readonly dereferenceabl
   ret <4 x float> %t15
 }
 
-define void @PR43578_prefer128(i32* %r, i64* %p, i64* %q) #0 {
+define void @PR43578_prefer128(ptr %r, ptr %p, ptr %q) #0 {
 ; CHECK-LABEL: @PR43578_prefer128(
-; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i64, i64* [[P:%.*]], i64 0
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i64, i64* [[P]], i64 2
-; CHECK-NEXT:    [[Q0:%.*]] = getelementptr inbounds i64, i64* [[Q:%.*]], i64 0
-; CHECK-NEXT:    [[Q2:%.*]] = getelementptr inbounds i64, i64* [[Q]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64* [[P0]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* [[TMP1]], align 2
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64* [[Q0]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* [[TMP3]], align 2
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 2
+; CHECK-NEXT:    [[Q2:%.*]] = getelementptr inbounds i64, ptr [[Q:%.*]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr [[P]], align 2
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr [[Q]], align 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw <2 x i64> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64* [[P2]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i64>, <2 x i64>* [[TMP6]], align 2
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64* [[Q2]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x i64>, <2 x i64>* [[TMP8]], align 2
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i64>, ptr [[P2]], align 2
+; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x i64>, ptr [[Q2]], align 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub nsw <2 x i64> [[TMP7]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[TMP5]], i32 0
-; CHECK-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, i32* [[R:%.*]], i64 [[TMP11]]
+; CHECK-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, ptr [[R:%.*]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i64> [[TMP5]], i32 1
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, i32* [[R]], i64 [[TMP12]]
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i64> [[TMP10]], i32 0
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, i32* [[R]], i64 [[TMP13]]
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i64> [[TMP10]], i32 1
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, i32* [[R]], i64 [[TMP14]]
+; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[TMP14]]
 ; CHECK-NEXT:    ret void
 ;
-  %p0 = getelementptr inbounds i64, i64* %p, i64 0
-  %p1 = getelementptr inbounds i64, i64* %p, i64 1
-  %p2 = getelementptr inbounds i64, i64* %p, i64 2
-  %p3 = getelementptr inbounds i64, i64* %p, i64 3
+  %p1 = getelementptr inbounds i64, ptr %p, i64 1
+  %p2 = getelementptr inbounds i64, ptr %p, i64 2
+  %p3 = getelementptr inbounds i64, ptr %p, i64 3
 
-  %q0 = getelementptr inbounds i64, i64* %q, i64 0
-  %q1 = getelementptr inbounds i64, i64* %q, i64 1
-  %q2 = getelementptr inbounds i64, i64* %q, i64 2
-  %q3 = getelementptr inbounds i64, i64* %q, i64 3
+  %q1 = getelementptr inbounds i64, ptr %q, i64 1
+  %q2 = getelementptr inbounds i64, ptr %q, i64 2
+  %q3 = getelementptr inbounds i64, ptr %q, i64 3
 
-  %x0 = load i64, i64* %p0, align 2
-  %x1 = load i64, i64* %p1, align 2
-  %x2 = load i64, i64* %p2, align 2
-  %x3 = load i64, i64* %p3, align 2
+  %x0 = load i64, ptr %p, align 2
+  %x1 = load i64, ptr %p1, align 2
+  %x2 = load i64, ptr %p2, align 2
+  %x3 = load i64, ptr %p3, align 2
 
-  %y0 = load i64, i64* %q0, align 2
-  %y1 = load i64, i64* %q1, align 2
-  %y2 = load i64, i64* %q2, align 2
-  %y3 = load i64, i64* %q3, align 2
+  %y0 = load i64, ptr %q, align 2
+  %y1 = load i64, ptr %q1, align 2
+  %y2 = load i64, ptr %q2, align 2
+  %y3 = load i64, ptr %q3, align 2
 
   %sub0 = sub nsw i64 %x0, %y0
   %sub1 = sub nsw i64 %x1, %y1
   %sub2 = sub nsw i64 %x2, %y2
   %sub3 = sub nsw i64 %x3, %y3
 
-  %g0 = getelementptr inbounds i32, i32* %r, i64 %sub0
-  %g1 = getelementptr inbounds i32, i32* %r, i64 %sub1
-  %g2 = getelementptr inbounds i32, i32* %r, i64 %sub2
-  %g3 = getelementptr inbounds i32, i32* %r, i64 %sub3
+  %g0 = getelementptr inbounds i32, ptr %r, i64 %sub0
+  %g1 = getelementptr inbounds i32, ptr %r, i64 %sub1
+  %g2 = getelementptr inbounds i32, ptr %r, i64 %sub2
+  %g3 = getelementptr inbounds i32, ptr %r, i64 %sub3
   ret void
 }
 

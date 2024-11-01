@@ -15,7 +15,7 @@ define dso_local i32 @hoge() local_unnamed_addr #0 {
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ [[TMP3:%.*]], [[BB2]] ], [ undef, [[BB2_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP3]] = tail call i32 bitcast (i32 (...)* @widget to i32 (i32)*)(i32 [[TMP]])
+; CHECK-NEXT:    [[TMP3]] = tail call i32 @widget(i32 [[TMP]])
 ; CHECK-NEXT:    br label [[BB2]]
 ;
 bb:
@@ -27,7 +27,7 @@ bb1:                                              ; preds = %bb
 
 bb2:                                              ; preds = %bb2, %bb1, %bb
   %tmp = phi i32 [ undef, %bb1 ], [ %tmp3, %bb2 ], [ undef, %bb ]
-  %tmp3 = tail call i32 bitcast (i32 (...)* @widget to i32 (i32)*)(i32 %tmp) #1
+  %tmp3 = tail call i32 @widget(i32 %tmp) #1
   br label %bb2
 }
 

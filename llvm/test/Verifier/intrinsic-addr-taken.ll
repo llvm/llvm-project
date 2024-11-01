@@ -4,6 +4,6 @@ declare i32 @llvm.umax.i32(i32, i32)
 declare i32 @llvm.my.custom.intrinsic()
 
 ; CHECK: Invalid user of intrinsic instruction!
-@g1 = global i32(i32, i32)* @llvm.umax.i32
+@g1 = global ptr @llvm.umax.i32
 ; CHECK: Invalid user of intrinsic instruction!
-@g2 = global i32()* @llvm.my.custom.intrinsic
+@g2 = global ptr @llvm.my.custom.intrinsic

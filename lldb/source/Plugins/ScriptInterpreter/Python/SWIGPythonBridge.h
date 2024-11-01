@@ -9,6 +9,7 @@
 #ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H
 
+#include <optional>
 #include <string>
 
 #include "lldb/Host/Config.h"
@@ -95,14 +96,10 @@ void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyObject *data);
 // Although these are scripting-language specific, their definition depends on
 // the public API.
 
-python::PythonObject LLDBSwigPythonCreateScriptedProcess(
+python::PythonObject LLDBSwigPythonCreateScriptedObject(
     const char *python_class_name, const char *session_dictionary_name,
-    const lldb::TargetSP &target_sp, const StructuredDataImpl &args_impl,
-    std::string &error_string);
-
-python::PythonObject LLDBSwigPythonCreateScriptedThread(
-    const char *python_class_name, const char *session_dictionary_name,
-    const lldb::ProcessSP &process_sp, const StructuredDataImpl &args_impl,
+    lldb::ExecutionContextRefSP exe_ctx_sp,
+    const lldb_private::StructuredDataImpl &args_impl,
     std::string &error_string);
 
 llvm::Expected<bool> LLDBSwigPythonBreakpointCallbackFunction(
@@ -211,7 +208,7 @@ bool LLDBSWIGPythonRunScriptKeywordProcess(const char *python_function_name,
                                            const lldb::ProcessSP &process,
                                            std::string &output);
 
-llvm::Optional<std::string>
+std::optional<std::string>
 LLDBSWIGPythonRunScriptKeywordThread(const char *python_function_name,
                                      const char *session_dictionary_name,
                                      lldb::ThreadSP thread);
@@ -221,7 +218,7 @@ bool LLDBSWIGPythonRunScriptKeywordTarget(const char *python_function_name,
                                           const lldb::TargetSP &target,
                                           std::string &output);
 
-llvm::Optional<std::string>
+std::optional<std::string>
 LLDBSWIGPythonRunScriptKeywordFrame(const char *python_function_name,
                                     const char *session_dictionary_name,
                                     lldb::StackFrameSP frame);

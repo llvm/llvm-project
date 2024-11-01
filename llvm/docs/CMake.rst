@@ -466,7 +466,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   is *Debug*.
 
 **LLVM_ENABLE_BINDINGS**:BOOL
-  If disabled, do not try to build the OCaml and go bindings.
+  If disabled, do not try to build the OCaml bindings.
 
 **LLVM_ENABLE_DIA_SDK**:BOOL
   Enable building with MSVC DIA SDK for PDB debugging support. Available
@@ -697,6 +697,13 @@ enabled sub-projects. Nearly all of these variable names begin with
   (e.g. ``grep``, ``sort``, etc.) in your %PATH%. If GnuWin32 is not in your
   %PATH%, then you can set this variable to the GnuWin32 directory so that
   lit can find tools needed for tests in that directory.
+
+**LLVM_NATIVE_TOOL_DIR**:STRING
+  Full path to a directory containing executables for the build host
+  (containing binaries such as ``llvm-tblgen`` and ``clang-tblgen``). This is
+  intended for cross-compiling: if the user sets this variable and the
+  directory contains executables with the expected names, no separate
+  native versions of those executables will be built.
 
 **LLVM_OPTIMIZED_TABLEGEN**:BOOL
   If enabled and building a debug or asserts build the CMake build system will

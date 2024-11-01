@@ -11,19 +11,18 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Tooling/FixIt.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace abseil {
+namespace clang::tidy::abseil {
 
 // Given the name of a duration factory function, return the appropriate
 // `DurationScale` for that factory.  If no factory can be found for
 // `FactoryName`, return `std::nullopt`.
-static llvm::Optional<DurationScale>
+static std::optional<DurationScale>
 getScaleForFactory(llvm::StringRef FactoryName) {
-  return llvm::StringSwitch<llvm::Optional<DurationScale>>(FactoryName)
+  return llvm::StringSwitch<std::optional<DurationScale>>(FactoryName)
       .Case("Nanoseconds", DurationScale::Nanoseconds)
       .Case("Microseconds", DurationScale::Microseconds)
       .Case("Milliseconds", DurationScale::Milliseconds)
@@ -47,7 +46,7 @@ static double getValue(const IntegerLiteral *IntLit,
 // Given the scale of a duration and a `Multiplier`, determine if `Multiplier`
 // would produce a new scale.  If so, return a tuple containing the new scale
 // and a suitable Multiplier for that scale, otherwise `std::nullopt`.
-static llvm::Optional<std::tuple<DurationScale, double>>
+static std::optional<std::tuple<DurationScale, double>>
 getNewScaleSingleStep(DurationScale OldScale, double Multiplier) {
   switch (OldScale) {
   case DurationScale::Hours:
@@ -94,10 +93,10 @@ getNewScaleSingleStep(DurationScale OldScale, double Multiplier) {
 
 // Given the scale of a duration and a `Multiplier`, determine if `Multiplier`
 // would produce a new scale.  If so, return it, otherwise `std::nullopt`.
-static llvm::Optional<DurationScale> getNewScale(DurationScale OldScale,
-                                                 double Multiplier) {
+static std::optional<DurationScale> getNewScale(DurationScale OldScale,
+                                                double Multiplier) {
   while (Multiplier != 1.0) {
-    llvm::Optional<std::tuple<DurationScale, double>> Result =
+    std::optional<std::tuple<DurationScale, double>> Result =
         getNewScaleSingleStep(OldScale, Multiplier);
     if (!Result)
       break;
@@ -154,14 +153,14 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   const auto *CallDecl = Result.Nodes.getNodeAs<FunctionDecl>("call_decl");
-  llvm::Optional<DurationScale> MaybeScale =
+  std::optional<DurationScale> MaybeScale =
       getScaleForFactory(CallDecl->getName());
   if (!MaybeScale)
     return;
 
   DurationScale Scale = *MaybeScale;
   const Expr *Remainder;
-  llvm::Optional<DurationScale> NewScale;
+  std::optional<DurationScale> NewScale;
 
   // We next handle the cases of multiplication and division.
   if (const auto *MultBinOp =
@@ -194,7 +193,7 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
     // For division, we only check the RHS.
     const auto *FloatLit = llvm::cast<FloatingLiteral>(DivBinOp->getRHS());
 
-    llvm::Optional<DurationScale> NewScale =
+    std::optional<DurationScale> NewScale =
         getNewScale(Scale, 1.0 / FloatLit->getValueAsApproximateDouble());
     if (NewScale) {
       const Expr *Remainder = DivBinOp->getLHS();
@@ -223,6 +222,4 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace abseil
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::abseil

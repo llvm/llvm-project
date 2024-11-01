@@ -82,7 +82,7 @@ static bool isLoopDead(Loop *L, ScalarEvolution &SE,
       // blocks, then it is impossible to statically determine which value
       // should be used.
       AllOutgoingValuesSame =
-          all_of(makeArrayRef(ExitingBlocks).slice(1), [&](BasicBlock *BB) {
+          all_of(ArrayRef(ExitingBlocks).slice(1), [&](BasicBlock *BB) {
             return incoming == P.getIncomingValueForBlock(BB);
           });
 

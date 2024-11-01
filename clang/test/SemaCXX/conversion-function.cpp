@@ -452,9 +452,9 @@ namespace PR18234 {
   struct A {
     operator enum E { e } (); // expected-error {{'PR18234::A::E' cannot be defined in a type specifier}}
     operator struct S { int n; } (); // expected-error {{'PR18234::A::S' cannot be defined in a type specifier}}
-    // expected-note@-1 {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'struct A' to 'const PR18234::A::S &' for 1st argument}}
+    // expected-note@-1 {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'struct A' to 'const S &' for 1st argument}}
 #if __cplusplus >= 201103L
-  // expected-note@-3 {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'struct A' to 'PR18234::A::S &&' for 1st argument}}
+  // expected-note@-3 {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'struct A' to 'S &&' for 1st argument}}
 #endif
   } a;
   A::S s = a; // expected-error {{no viable conversion from 'struct A' to 'A::S'}}

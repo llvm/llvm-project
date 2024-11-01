@@ -16,11 +16,9 @@ declare <16 x i32> @llvm.hexagon.V6.vand(<16 x i32>, <16 x i32>) #0
 declare <64 x i1> @llvm.hexagon.V6.vgtuw.and(<64 x i1>, <16 x i32>, <16 x i32>) #0
 declare <64 x i1> @llvm.hexagon.V6.pred.or(<64 x i1>, <64 x i1>) #0
 
-define <16 x i32> @f0(i8* %a0, i32 %a1) local_unnamed_addr #1 {
+define <16 x i32> @f0(ptr %a0, i32 %a1) local_unnamed_addr #1 {
 b0:
-  %v0 = getelementptr inbounds i8, i8* %a0, i32 576
-  %v1 = bitcast i8* %a0 to <16 x i32>*
-  %v2 = bitcast i8* %v0 to <16 x i32>*
+  %v0 = getelementptr inbounds i8, ptr %a0, i32 576
   br label %b1
 
 b1:                                               ; preds = %b4, %b0
@@ -29,10 +27,10 @@ b1:                                               ; preds = %b4, %b0
   br i1 poison, label %b2, label %b3
 
 b2:                                               ; preds = %b1
-  %v5 = getelementptr inbounds <16 x i32>, <16 x i32>* %v1, i32 %v3
-  %v6 = load <16 x i32>, <16 x i32>* %v5, align 64
-  %v7 = getelementptr inbounds <16 x i32>, <16 x i32>* %v2, i32 %v3
-  %v8 = load <16 x i32>, <16 x i32>* %v7, align 64
+  %v5 = getelementptr inbounds <16 x i32>, ptr %a0, i32 %v3
+  %v6 = load <16 x i32>, ptr %v5, align 64
+  %v7 = getelementptr inbounds <16 x i32>, ptr %v0, i32 %v3
+  %v8 = load <16 x i32>, ptr %v7, align 64
   %v9 = tail call <16 x i32> @llvm.hexagon.V6.vmpyiewuh.acc(<16 x i32> poison, <16 x i32> %v6, <16 x i32> %v6)
   br label %b4
 
@@ -45,8 +43,8 @@ b4:                                               ; preds = %b3, %b2
   %v12 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<64 x i1> poison, <16 x i32> %v10, <16 x i32> %v4)
   %v13 = tail call <16 x i32> @llvm.hexagon.V6.vmux(<64 x i1> poison, <16 x i32> %v11, <16 x i32> poison)
   %v14 = or i32 %v3, 1
-  %v15 = getelementptr inbounds <16 x i32>, <16 x i32>* %v2, i32 %v14
-  %v16 = load <16 x i32>, <16 x i32>* %v15, align 64
+  %v15 = getelementptr inbounds <16 x i32>, ptr %v0, i32 %v14
+  %v16 = load <16 x i32>, ptr %v15, align 64
   %v17 = tail call <16 x i32> @llvm.hexagon.V6.vmpyiewuh.acc(<16 x i32> poison, <16 x i32> %v13, <16 x i32> poison)
   %v18 = tail call <16 x i32> @llvm.hexagon.V6.vand(<16 x i32> %v12, <16 x i32> poison)
   %v19 = tail call <64 x i1> @llvm.hexagon.V6.vgtuw.and(<64 x i1> poison, <16 x i32> %v17, <16 x i32> poison)

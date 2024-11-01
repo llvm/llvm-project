@@ -79,6 +79,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::DELETED_NODE:               return "<<Deleted Node!>>";
 #endif
   case ISD::PREFETCH:                   return "Prefetch";
+  case ISD::MEMBARRIER:                 return "MemBarrier";
   case ISD::ATOMIC_FENCE:               return "AtomicFence";
   case ISD::ATOMIC_CMP_SWAP:            return "AtomicCmpSwap";
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS: return "AtomicCmpSwapWithSuccess";
@@ -95,6 +96,10 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ATOMIC_LOAD_UMIN:           return "AtomicLoadUMin";
   case ISD::ATOMIC_LOAD_UMAX:           return "AtomicLoadUMax";
   case ISD::ATOMIC_LOAD_FADD:           return "AtomicLoadFAdd";
+  case ISD::ATOMIC_LOAD_UINC_WRAP:
+    return "AtomicLoadUIncWrap";
+  case ISD::ATOMIC_LOAD_UDEC_WRAP:
+    return "AtomicLoadUDecWrap";
   case ISD::ATOMIC_LOAD:                return "AtomicLoad";
   case ISD::ATOMIC_STORE:               return "AtomicStore";
   case ISD::PCMARKER:                   return "PCMarker";
@@ -422,7 +427,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "call_alloc";
 
   // Floating point environment manipulation
-  case ISD::FLT_ROUNDS_:                return "flt_rounds";
+  case ISD::GET_ROUNDING:               return "get_rounding";
   case ISD::SET_ROUNDING:               return "set_rounding";
 
   // Bit manipulation

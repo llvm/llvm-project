@@ -26,7 +26,7 @@ polly.loop_body:                                  ; preds = %polly.loop_header
   %p_25 = call i32 @llvm.hexagon.A2.asrh(i32 undef)
   %1 = insertelement <4 x i32> undef, i32 %p_25, i32 3
   %2 = trunc <4 x i32> %1 to <4 x i16>
-  store <4 x i16> %2, <4 x i16>* undef, align 8
+  store <4 x i16> %2, ptr undef, align 8
   br label %polly.loop_header
 
 polly.loop_after45:                               ; preds = %polly.loop_header43

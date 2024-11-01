@@ -13,7 +13,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/Optional.h"
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -125,13 +125,13 @@ protected:
   /// Overridden by derived classes, returns information about if and how a Decl
   /// failed the check. A 'std::nullopt' result means the Decl did not fail the
   /// check.
-  virtual llvm::Optional<FailureInfo>
+  virtual std::optional<FailureInfo>
   getDeclFailureInfo(const NamedDecl *Decl, const SourceManager &SM) const = 0;
 
   /// Overridden by derived classes, returns information about if and how a
   /// macro failed the check. A 'std::nullopt' result means the macro did not
   /// fail the check.
-  virtual llvm::Optional<FailureInfo>
+  virtual std::optional<FailureInfo>
   getMacroFailureInfo(const Token &MacroNameTok,
                       const SourceManager &SM) const = 0;
 

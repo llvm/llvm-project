@@ -42,7 +42,7 @@ define dso_local void @l() local_unnamed_addr {
 ; CHECK-NEXT:    [[I35:%.*]] = phi i32 [ [[I33]], [[BB25]] ]
 ; CHECK-NEXT:    br label [[BB36:%.*]]
 ; CHECK:       bb36:
-; CHECK-NEXT:    store i32 [[I35]], i32* @d, align 4
+; CHECK-NEXT:    store i32 [[I35]], ptr @d, align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -95,6 +95,6 @@ bb34:                                             ; preds = %bb25
   br label %bb36
 
 bb36:                                             ; preds = %bb34
-  store i32 %i35, i32* @d, align 4
+  store i32 %i35, ptr @d, align 4
   ret void
 }

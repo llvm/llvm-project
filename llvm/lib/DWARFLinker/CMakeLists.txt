@@ -18,4 +18,5 @@ add_llvm_component_library(LLVMDWARFLinker
   MC
   Object
   Support
+  TargetParser
   )

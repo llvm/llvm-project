@@ -16,6 +16,7 @@
 #include <cassert>
 #include <concepts>
 #include <expected>
+#include <type_traits>
 #include <utility>
 
 // test noexcept

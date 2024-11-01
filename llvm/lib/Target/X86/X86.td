@@ -615,6 +615,10 @@ def TuningPrefer256Bit
     : SubtargetFeature<"prefer-256-bit", "Prefer256Bit", "true",
                        "Prefer 256-bit AVX instructions">;
 
+def TuningAllowLight256Bit
+    : SubtargetFeature<"allow-light-256-bit", "AllowLight256Bit", "true",
+                       "Enable generation of 256-bit load/stores even if we prefer 128-bit">;
+
 def TuningPreferMaskRegisters
     : SubtargetFeature<"prefer-mask-registers", "PreferMaskRegisters", "true",
                        "Prefer AVX512 mask registers over PTEST/MOVMSK">;
@@ -777,7 +781,8 @@ def ProcessorFeatures {
                                       TuningFastVariablePerLaneShuffle,
                                       TuningPOPCNTFalseDeps,
                                       TuningLZCNTFalseDeps,
-                                      TuningInsertVZEROUPPER];
+                                      TuningInsertVZEROUPPER,
+                                      TuningAllowLight256Bit];
   list<SubtargetFeature> HSWFeatures =
     !listconcat(IVBFeatures, HSWAdditionalFeatures);
 
@@ -805,7 +810,8 @@ def ProcessorFeatures {
                                       TuningFastVariableCrossLaneShuffle,
                                       TuningFastVariablePerLaneShuffle,
                                       TuningPOPCNTFalseDeps,
-                                      TuningInsertVZEROUPPER];
+                                      TuningInsertVZEROUPPER,
+                                      TuningAllowLight256Bit];
   list<SubtargetFeature> SKLFeatures =
     !listconcat(BDWFeatures, SKLAdditionalFeatures);
 
@@ -833,7 +839,8 @@ def ProcessorFeatures {
                                       TuningFastVariablePerLaneShuffle,
                                       TuningPrefer256Bit,
                                       TuningPOPCNTFalseDeps,
-                                      TuningInsertVZEROUPPER];
+                                      TuningInsertVZEROUPPER,
+                                      TuningAllowLight256Bit];
   list<SubtargetFeature> SKXFeatures =
     !listconcat(BDWFeatures, SKXAdditionalFeatures);
 
@@ -870,7 +877,8 @@ def ProcessorFeatures {
                                       TuningFastVariableCrossLaneShuffle,
                                       TuningFastVariablePerLaneShuffle,
                                       TuningPrefer256Bit,
-                                      TuningInsertVZEROUPPER];
+                                      TuningInsertVZEROUPPER,
+                                      TuningAllowLight256Bit];
   list<SubtargetFeature> CNLFeatures =
     !listconcat(SKLFeatures, CNLAdditionalFeatures);
 
@@ -886,7 +894,6 @@ def ProcessorFeatures {
                                                   FeatureFSRM];
   list<SubtargetFeature> ICLTuning = [TuningFastGather,
                                       TuningMacroFusion,
-                                      TuningSlow3OpsLEA,
                                       TuningSlowDivide64,
                                       TuningFastScalarFSQRT,
                                       TuningFastVectorFSQRT,
@@ -895,7 +902,8 @@ def ProcessorFeatures {
                                       TuningFastVariableCrossLaneShuffle,
                                       TuningFastVariablePerLaneShuffle,
                                       TuningPrefer256Bit,
-                                      TuningInsertVZEROUPPER];
+                                      TuningInsertVZEROUPPER,
+                                      TuningAllowLight256Bit];
   list<SubtargetFeature> ICLFeatures =
     !listconcat(CNLFeatures, ICLAdditionalFeatures);
 
@@ -1277,7 +1285,8 @@ def ProcessorFeatures {
                                      TuningFastMOVBE,
                                      TuningSlowSHLD,
                                      TuningSBBDepBreaking,
-                                     TuningInsertVZEROUPPER];
+                                     TuningInsertVZEROUPPER,
+                                     TuningAllowLight256Bit];
   list<SubtargetFeature> ZN2AdditionalFeatures = [FeatureCLWB,
                                                   FeatureRDPID,
                                                   FeatureRDPRU,
@@ -1295,6 +1304,23 @@ def ProcessorFeatures {
     !listconcat(ZN2Tuning, ZN3AdditionalTuning);
   list<SubtargetFeature> ZN3Features =
     !listconcat(ZN2Features, ZN3AdditionalFeatures);
+  list<SubtargetFeature> ZN4Tuning = ZN3Tuning;
+  list<SubtargetFeature> ZN4AdditionalFeatures = [FeatureAVX512,
+                                                  FeatureCDI,
+                                                  FeatureDQI,
+                                                  FeatureBWI,
+                                                  FeatureVLX,
+                                                  FeatureVBMI,
+                                                  FeatureVBMI2,
+                                                  FeatureIFMA,
+                                                  FeatureVNNI,
+                                                  FeatureBITALG,
+                                                  FeatureGFNI,
+                                                  FeatureBF16,
+                                                  FeatureSHSTK,
+                                                  FeatureVPOPCNTDQ];
+  list<SubtargetFeature> ZN4Features =
+    !listconcat(ZN3Features, ZN4AdditionalFeatures);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1531,6 +1557,8 @@ def : ProcModel<"meteorlake", AlderlakePModel,
                 ProcessorFeatures.ADLFeatures, ProcessorFeatures.ADLTuning>;
 def : ProcModel<"graniterapids", SkylakeServerModel,
                 ProcessorFeatures.GNRFeatures, ProcessorFeatures.SPRTuning>;
+def : ProcModel<"emeraldrapids", SkylakeServerModel,
+                ProcessorFeatures.SPRFeatures, ProcessorFeatures.SPRTuning>;
 
 // AMD CPUs.
 
@@ -1599,6 +1627,8 @@ def : ProcModel<"znver2", Znver2Model, ProcessorFeatures.ZN2Features,
                 ProcessorFeatures.ZN2Tuning>;
 def : ProcModel<"znver3", Znver3Model, ProcessorFeatures.ZN3Features,
                 ProcessorFeatures.ZN3Tuning>;
+def : Proc<"znver4",ProcessorFeatures.ZN4Features,
+           ProcessorFeatures.ZN4Tuning>;
 
 def : Proc<"geode",           [FeatureX87, FeatureCX8, Feature3DNowA],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;

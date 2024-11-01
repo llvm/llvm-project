@@ -128,7 +128,7 @@ protected:
           continue;
 
         Register AddendSrcReg = AddendMI->getOperand(1).getReg();
-        if (Register::isVirtualRegister(AddendSrcReg)) {
+        if (AddendSrcReg.isVirtual()) {
           if (MRI.getRegClass(AddendMI->getOperand(0).getReg()) !=
               MRI.getRegClass(AddendSrcReg))
             continue;
@@ -209,7 +209,7 @@ protected:
         // legality checks above, the live range for the addend source register
         // could be extended), but it seems likely that such a trivial copy can
         // be coalesced away later, and thus is not worth the effort.
-        if (Register::isVirtualRegister(AddendSrcReg) &&
+        if (AddendSrcReg.isVirtual() &&
             !LIS->getInterval(AddendSrcReg).liveAt(FMAIdx))
           continue;
 

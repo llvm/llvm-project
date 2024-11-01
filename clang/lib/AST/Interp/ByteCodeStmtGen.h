@@ -63,10 +63,6 @@ private:
   bool visitBreakStmt(const BreakStmt *S);
   bool visitContinueStmt(const ContinueStmt *S);
 
-  /// Compiles a variable declaration.
-  bool visitVarDecl(const VarDecl *VD);
-
-private:
   /// Type of the expression returned by the function.
   std::optional<PrimType> ReturnType;
 

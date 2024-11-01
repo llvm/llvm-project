@@ -750,7 +750,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
   TypeSize ElemSize = DL.getTypeAllocSize(I.getAllocatedType());
   if (ElemSize.isScalable() && Options.EvalMode != ObjectSizeOpts::Mode::Min)
     return unknown();
-  APInt Size(IntTyBits, ElemSize.getKnownMinSize());
+  APInt Size(IntTyBits, ElemSize.getKnownMinValue());
   if (!I.isArrayAllocation())
     return std::make_pair(align(Size, I.getAlign()), Zero);
 
@@ -1150,7 +1150,7 @@ ObjectSizeOffsetEvaluator::visitGEPOperator(GEPOperator &GEP) {
   if (!bothKnown(PtrData))
     return unknown();
 
-  Value *Offset = EmitGEPOffset(&Builder, DL, &GEP, /*NoAssumptions=*/true);
+  Value *Offset = emitGEPOffset(&Builder, DL, &GEP, /*NoAssumptions=*/true);
   Offset = Builder.CreateAdd(PtrData.second, Offset);
   return std::make_pair(PtrData.first, Offset);
 }

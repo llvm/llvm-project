@@ -6,8 +6,6 @@
 // RUN: %clang_dfsan -gmlt -fsanitize-ignorelist=%S/Inputs/flags_abilist.txt -O2 -mllvm -dfsan-reaches-function-callbacks=1 -mllvm -dfsan-track-origins=2 %s %t-callbacks.o -o %t
 // RUN: %run %t 2>&1 | FileCheck --check-prefix=CHECK-ORIGIN-TRACKING %s
 
-// REQUIRES: x86_64-target-arch
-
 // Tests that callbacks are inserted for reached functions when
 // -dfsan-reaches-function-callbacks is specified.
 

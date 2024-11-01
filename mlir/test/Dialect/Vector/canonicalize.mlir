@@ -1,6 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(canonicalize))' -split-input-file -allow-unregistered-dialect | FileCheck %s
-
-// -----
+// RUN: mlir-opt %s -canonicalize="test-convergence" -split-input-file -allow-unregistered-dialect | FileCheck %s
 
 // CHECK-LABEL: create_vector_mask_to_constant_mask
 func.func @create_vector_mask_to_constant_mask() -> (vector<4x3xi1>) {
@@ -515,6 +513,18 @@ func.func @fold_extract_transpose(
 //       CHECK:   return %[[A]] : f32
 func.func @fold_extract_broadcast(%a : f32) -> f32 {
   %b = vector.broadcast %a : f32 to vector<1x2x4xf32>
+  %r = vector.extract %b[0, 1, 2] : vector<1x2x4xf32>
+  return %r : f32
+}
+
+// -----
+
+// CHECK-LABEL: fold_extract_broadcast_0dvec
+//  CHECK-SAME:   %[[A:.*]]: vector<f32>
+//       CHECK:   %[[B:.+]] = vector.extractelement %[[A]][] : vector<f32>
+//       CHECK:   return %[[B]] : f32
+func.func @fold_extract_broadcast_0dvec(%a : vector<f32>) -> f32 {
+  %b = vector.broadcast %a : vector<f32> to vector<1x2x4xf32>
   %r = vector.extract %b[0, 1, 2] : vector<1x2x4xf32>
   return %r : f32
 }
@@ -1361,6 +1371,20 @@ func.func @vector_multi_reduction_unit_dimensions(%source: vector<5x1x4x1x20xf32
 
 // -----
 
+// Masked reduction can't be folded.
+
+// CHECK-LABEL: func @masked_vector_multi_reduction_unit_dimensions
+func.func @masked_vector_multi_reduction_unit_dimensions(%source: vector<5x1x4x1x20xf32>,
+                                                         %acc: vector<5x4x20xf32>,
+                                                         %mask: vector<5x1x4x1x20xi1>) -> vector<5x4x20xf32> {
+//       CHECK:   vector.mask %{{.*}} { vector.multi_reduction <mul>
+    %0 = vector.mask %mask { vector.multi_reduction <mul>, %source, %acc [1, 3] : vector<5x1x4x1x20xf32> to vector<5x4x20xf32> } :
+           vector<5x1x4x1x20xi1> -> vector<5x4x20xf32>
+    return %0 : vector<5x4x20xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @vector_multi_reduction_unit_dimensions_fail(
 //  CHECK-SAME: %[[SRC:.+]]: vector<5x1x4x1x20xf32>, %[[ACCUM:.+]]: vector<5x1x20xf32>
 func.func @vector_multi_reduction_unit_dimensions_fail(%source: vector<5x1x4x1x20xf32>, %acc: vector<5x1x20xf32>) -> vector<5x1x20xf32> {
@@ -1911,6 +1935,18 @@ func.func @reduce_one_element_vector_addf(%a : vector<1xf32>, %b: f32) -> f32 {
 
 // -----
 
+// CHECK-LABEL: func @masked_reduce_one_element_vector_addf
+//       CHECK:   vector.mask %{{.*}} { vector.reduction <add>
+func.func @masked_reduce_one_element_vector_addf(%a: vector<1xf32>,
+                                                 %b: f32,
+                                                 %mask: vector<1xi1>) -> f32 {
+  %s = vector.mask %mask { vector.reduction <add>, %a, %b : vector<1xf32> into f32 }
+         : vector<1xi1> -> f32
+  return %s : f32
+}
+
+// -----
+
 // CHECK-LABEL: func @reduce_one_element_vector_mulf
 //  CHECK-SAME: (%[[V:.+]]: vector<1xf32>, %[[B:.+]]: f32)
 //       CHECK:   %[[A:.+]] = vector.extract %[[V]][0] : vector<1xf32>
@@ -2094,4 +2130,16 @@ func.func @extract_strided_slice_of_constant_mask() -> vector<5x7xi1>{
   %mask = vector.create_mask %c10, %c4 : vector<12x7xi1>
   %res = vector.extract_strided_slice %mask {offsets = [3], sizes = [5], strides = [1]} : vector<12x7xi1> to vector<5x7xi1>
   return %res : vector<5x7xi1>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @fold_extractelement_of_broadcast(
+//  CHECK-SAME:     %[[f:.*]]: f32
+//       CHECK:   return %[[f]]
+func.func @fold_extractelement_of_broadcast(%f: f32) -> f32 {
+  %0 = vector.broadcast %f : f32 to vector<15xf32>
+  %c5 = arith.constant 5 : index
+  %1 = vector.extractelement %0 [%c5 : index] : vector<15xf32>
+  return %1 : f32
 }

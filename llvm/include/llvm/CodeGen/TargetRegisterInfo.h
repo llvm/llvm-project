@@ -200,7 +200,7 @@ public:
   ///
   /// By default, this method returns all registers in the class.
   ArrayRef<MCPhysReg> getRawAllocationOrder(const MachineFunction &MF) const {
-    return OrderFunc ? OrderFunc(MF) : makeArrayRef(begin(), getNumRegs());
+    return OrderFunc ? OrderFunc(MF) : ArrayRef(begin(), getNumRegs());
   }
 
   /// Returns the combination of all lane masks of register in this class.
@@ -357,7 +357,7 @@ public:
     unsigned NumRegs = getNumRegs();
     assert(Idx < InfoDesc->NumCosts && "CostPerUse index out of bounds");
 
-    return makeArrayRef(&InfoDesc->CostPerUse[Idx * NumRegs], NumRegs);
+    return ArrayRef(&InfoDesc->CostPerUse[Idx * NumRegs], NumRegs);
   }
 
   /// Return true if the register is in the allocation of any register class.
@@ -692,6 +692,14 @@ public:
   /// Debugging helper: dump register in human readable form to dbgs() stream.
   static void dumpReg(Register Reg, unsigned SubRegIndex = 0,
                       const TargetRegisterInfo *TRI = nullptr);
+
+  /// Return target defined base register class for a physical register.
+  /// This is the register class with the lowest BaseClassOrder containing the
+  /// register.
+  /// Will be nullptr if the register is not in any base register class.
+  virtual const TargetRegisterClass *getPhysRegBaseClass(MCRegister Reg) const {
+    return nullptr;
+  }
 
 protected:
   /// Overridden by TableGen in targets that have sub-registers.

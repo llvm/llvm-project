@@ -12,12 +12,11 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 static const char SpecialFunction[] = "SpecialFunction";
 
@@ -344,7 +343,7 @@ void UseEqualsDefaultCheck::check(const MatchFinder::MatchResult &Result) {
         *Body, Result.Context->getSourceManager(),
         Result.Context->getLangOpts());
     // Skipping comments, check for a semicolon after Body->getSourceRange()
-    Optional<Token> Token = utils::lexer::findNextTokenSkippingComments(
+    std::optional<Token> Token = utils::lexer::findNextTokenSkippingComments(
         UnifiedEnd, Result.Context->getSourceManager(),
         Result.Context->getLangOpts());
     StringRef Replacement =
@@ -354,6 +353,4 @@ void UseEqualsDefaultCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

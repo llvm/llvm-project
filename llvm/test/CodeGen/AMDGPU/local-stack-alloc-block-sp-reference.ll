@@ -16,7 +16,7 @@
 ; so eliminateFrameIndex would not adjust the access to use the
 ; correct FP offset.
 
-define amdgpu_kernel void @local_stack_offset_uses_sp(i64 addrspace(1)* %out) {
+define amdgpu_kernel void @local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; MUBUF-LABEL: local_stack_offset_uses_sp:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_add_u32 s0, s0, s9
@@ -92,19 +92,18 @@ define amdgpu_kernel void @local_stack_offset_uses_sp(i64 addrspace(1)* %out) {
 entry:
   %pin.low = alloca i32, align 8192, addrspace(5)
   %local.area = alloca [1060 x i64], align 4096, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %pin.low
-  %local.area.cast = bitcast [1060 x i64] addrspace(5)* %local.area to i8 addrspace(5)*
-  call void @llvm.memset.p5i8.i32(i8 addrspace(5)* align 4 %local.area.cast, i8 0, i32 8480, i1 true)
-  %gep.large.offset = getelementptr inbounds [1060 x i64], [1060 x i64] addrspace(5)* %local.area, i64 0, i64 1050
-  %gep.small.offset = getelementptr inbounds [1060 x i64], [1060 x i64] addrspace(5)* %local.area, i64 0, i64 8
-  %load0 = load volatile i64, i64 addrspace(5)* %gep.large.offset
-  %load1 = load volatile i64, i64 addrspace(5)* %gep.small.offset
+  store volatile i32 0, ptr addrspace(5) %pin.low
+  call void @llvm.memset.p5.i32(ptr addrspace(5) align 4 %local.area, i8 0, i32 8480, i1 true)
+  %gep.large.offset = getelementptr inbounds [1060 x i64], ptr addrspace(5) %local.area, i64 0, i64 1050
+  %gep.small.offset = getelementptr inbounds [1060 x i64], ptr addrspace(5) %local.area, i64 0, i64 8
+  %load0 = load volatile i64, ptr addrspace(5) %gep.large.offset
+  %load1 = load volatile i64, ptr addrspace(5) %gep.small.offset
   %add0 = add i64 %load0, %load1
-  store volatile i64 %add0, i64 addrspace(1)* %out
+  store volatile i64 %add0, ptr addrspace(1) %out
   ret void
 }
 
-define void @func_local_stack_offset_uses_sp(i64 addrspace(1)* %out) {
+define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; MUBUF-LABEL: func_local_stack_offset_uses_sp:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -188,19 +187,18 @@ define void @func_local_stack_offset_uses_sp(i64 addrspace(1)* %out) {
 entry:
   %pin.low = alloca i32, align 8192, addrspace(5)
   %local.area = alloca [1060 x i64], align 4096, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %pin.low
-  %local.area.cast = bitcast [1060 x i64] addrspace(5)* %local.area to i8 addrspace(5)*
-  call void @llvm.memset.p5i8.i32(i8 addrspace(5)* align 4 %local.area.cast, i8 0, i32 8480, i1 true)
-  %gep.large.offset = getelementptr inbounds [1060 x i64], [1060 x i64] addrspace(5)* %local.area, i64 0, i64 1050
-  %gep.small.offset = getelementptr inbounds [1060 x i64], [1060 x i64] addrspace(5)* %local.area, i64 0, i64 8
-  %load0 = load volatile i64, i64 addrspace(5)* %gep.large.offset
-  %load1 = load volatile i64, i64 addrspace(5)* %gep.small.offset
+  store volatile i32 0, ptr addrspace(5) %pin.low
+  call void @llvm.memset.p5.i32(ptr addrspace(5) align 4 %local.area, i8 0, i32 8480, i1 true)
+  %gep.large.offset = getelementptr inbounds [1060 x i64], ptr addrspace(5) %local.area, i64 0, i64 1050
+  %gep.small.offset = getelementptr inbounds [1060 x i64], ptr addrspace(5) %local.area, i64 0, i64 8
+  %load0 = load volatile i64, ptr addrspace(5) %gep.large.offset
+  %load1 = load volatile i64, ptr addrspace(5) %gep.small.offset
   %add0 = add i64 %load0, %load1
-  store volatile i64 %add0, i64 addrspace(1)* %out
+  store volatile i64 %add0, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @local_stack_offset_uses_sp_flat(<3 x i64> addrspace(1)* %out) {
+define amdgpu_kernel void @local_stack_offset_uses_sp_flat(ptr addrspace(1) %out) {
 ; MUBUF-LABEL: local_stack_offset_uses_sp_flat:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_add_u32 s0, s0, s9
@@ -319,18 +317,16 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(<3 x i64> addrspace(1
 entry:
   %pin.low = alloca i32, align 1024, addrspace(5)
   %local.area = alloca [160 x <3 x i64>], align 8192, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %pin.low
-  %local.area.cast = bitcast [160 x <3 x i64>] addrspace(5)* %local.area to i8 addrspace(5)*
-  call void @llvm.memset.p5i8.i32(i8 addrspace(5)* align 4 %local.area.cast, i8 0, i32 8480, i1 true)
-  %gep.large.offset = getelementptr inbounds [160 x <3 x i64>], [160 x <3 x i64>] addrspace(5)* %local.area, i64 0, i64 150
-  %gep.small.offset = getelementptr inbounds [160 x <3 x i64>], [160 x <3 x i64>] addrspace(5)* %local.area, i64 0, i64 0
-  %load0 = load volatile <3 x i64>, <3 x i64> addrspace(5)* %gep.large.offset
-  %load1 = load volatile <3 x i64>, <3 x i64> addrspace(5)* %gep.small.offset
+  store volatile i32 0, ptr addrspace(5) %pin.low
+  call void @llvm.memset.p5.i32(ptr addrspace(5) align 4 %local.area, i8 0, i32 8480, i1 true)
+  %gep.large.offset = getelementptr inbounds [160 x <3 x i64>], ptr addrspace(5) %local.area, i64 0, i64 150
+  %load0 = load volatile <3 x i64>, ptr addrspace(5) %gep.large.offset
+  %load1 = load volatile <3 x i64>, ptr addrspace(5) %local.area
   %add0 = add <3 x i64> %load0, %load1
-  store volatile <3 x i64> %add0, <3 x i64> addrspace(1)* %out
+  store volatile <3 x i64> %add0, ptr addrspace(1) %out
   ret void
 }
 
-declare void @llvm.memset.p5i8.i32(i8 addrspace(5)* nocapture writeonly, i8, i32, i1 immarg) #0
+declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture writeonly, i8, i32, i1 immarg) #0
 
 attributes #0 = { argmemonly nounwind willreturn writeonly }

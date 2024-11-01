@@ -1,4 +1,4 @@
-; RUN: opt -S -scalable-vectorization=on -force-target-supports-scalable-vectors=true -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=1 < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -S -scalable-vectorization=on -force-target-supports-scalable-vectors=true -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=1 < %s | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -41,7 +41,7 @@ for.end:
 ; CHECK:      entry:
 ; CHECK:        [[ALLOCA:%.*]] = alloca [1024 x i32], align 16
 ; CHECK:      vector.ph:
-; CHECK:        [[TMP1:%.*]] = insertelement <vscale x 2 x [1024 x i32]*> poison, [1024 x i32]* %arr, i32 0
+; CHECK:        [[TMP1:%.*]] = insertelement <vscale x 2 x [1024 x i32]*> poison, [1024 x i32]* %arr, i64 0
 ; CHECK-NEXT:   [[SPLAT_ALLOCA:%.*]] = shufflevector <vscale x 2 x [1024 x i32]*> [[TMP1]], <vscale x 2 x [1024 x i32]*> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK:      vector.body:
 ; CHECK:        [[BC_ALLOCA:%.*]] = bitcast <vscale x 2 x [1024 x i32]*> [[SPLAT_ALLOCA]] to <vscale x 2 x i8*>

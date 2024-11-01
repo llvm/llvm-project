@@ -72,6 +72,7 @@ add_llvm_target(WebAssemblyCodeGen
   SelectionDAG
   Support
   Target
+  TargetParser
   TransformUtils
   WebAssemblyDesc
   WebAssemblyInfo

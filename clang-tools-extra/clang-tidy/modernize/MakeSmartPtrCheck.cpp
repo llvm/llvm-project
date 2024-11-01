@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 namespace {
 
@@ -439,6 +437,4 @@ void MakeSmartPtrCheck::insertHeader(DiagnosticBuilder &Diag, FileID FD) {
   Diag << Inserter.createIncludeInsertion(FD, MakeSmartPtrFunctionHeader);
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

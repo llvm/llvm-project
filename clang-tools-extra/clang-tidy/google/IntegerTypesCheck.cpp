@@ -36,9 +36,7 @@ static Token getTokenAtLoc(SourceLocation Loc,
   return Tok;
 }
 
-namespace tidy {
-namespace google {
-namespace runtime {
+namespace tidy::google::runtime {
 
 IntegerTypesCheck::IntegerTypesCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -144,7 +142,5 @@ void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
                                                << Replacement;
 }
 
-} // namespace runtime
-} // namespace google
-} // namespace tidy
+} // namespace tidy::google::runtime
 } // namespace clang

@@ -16,6 +16,7 @@ add_mlir_dialect_library(MLIRArithDialect
 
   LINK_LIBS PUBLIC
   MLIRDialect
+  MLIRInferIntRangeCommon
   MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
   MLIRIR

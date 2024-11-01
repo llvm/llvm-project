@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace hicpp {
+namespace clang::tidy::hicpp {
 
 void MultiwayPathsCoveredCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -174,6 +172,4 @@ void MultiwayPathsCoveredCheck::handleSwitchWithoutDefault(
          CaseCount == 1 ? "switch with only one case; use an if statement"
                         : "potential uncovered code path; add a default label");
 }
-} // namespace hicpp
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::hicpp

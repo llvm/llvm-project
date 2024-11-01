@@ -33,7 +33,7 @@ out:
 ; CHECK-LABEL: {{^}}test2:
 ; CHECK: s_and_saveexec_b64
 ; CHECK-NEXT: s_cbranch_execz
-define amdgpu_kernel void @test2(i32 addrspace(1)* %out, i32 %a, i32 %b) {
+define amdgpu_kernel void @test2(ptr addrspace(1) %out, i32 %a, i32 %b) {
 main_body:
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %cc = icmp eq i32 %tid, 0

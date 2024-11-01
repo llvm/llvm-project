@@ -10,7 +10,7 @@ define i64 @test1(i32 %xx, i32 %test) nounwind {
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    shrl %edx
-; CHECK-NEXT:    xorb $31, %cl
+; CHECK-NEXT:    notb %cl
 ; CHECK-NEXT:    shrl %cl, %edx
 ; CHECK-NEXT:    retl
   %conv = zext i32 %xx to i64

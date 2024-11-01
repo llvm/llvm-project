@@ -198,7 +198,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
           DeadDefSet.erase(Reg);
       }
 
-      if (!MO.isDead() && Register::isPhysicalRegister(Reg)) {
+      if (!MO.isDead() && Reg.isPhysical()) {
         for (MCSubRegIterator SubRegs(Reg, TRI); SubRegs.isValid(); ++SubRegs) {
           unsigned SubReg = *SubRegs;
           if (LocalDefSet.insert(SubReg).second)
@@ -328,7 +328,7 @@ PhysRegInfo llvm::AnalyzePhysRegInBundle(const MachineInstr &MI, Register Reg,
       continue;
 
     Register MOReg = MO.getReg();
-    if (!MOReg || !Register::isPhysicalRegister(MOReg))
+    if (!MOReg || !MOReg.isPhysical())
       continue;
 
     if (!TRI->regsOverlap(MOReg, Reg))

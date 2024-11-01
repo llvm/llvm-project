@@ -24,6 +24,7 @@
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include <optional>
 
 using namespace llvm::codeview;
 using namespace llvm::pdb;
@@ -66,7 +67,7 @@ UdtRecordCompleter::UdtRecordCompleter(
 
 clang::QualType UdtRecordCompleter::AddBaseClassForTypeIndex(
     llvm::codeview::TypeIndex ti, llvm::codeview::MemberAccess access,
-    llvm::Optional<uint64_t> vtable_idx) {
+    std::optional<uint64_t> vtable_idx) {
   PdbTypeSymId type_id(ti);
   clang::QualType qt = m_ast_builder.GetOrCreateType(type_id);
 

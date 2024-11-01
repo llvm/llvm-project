@@ -33,7 +33,7 @@ define i8 @uaddv_v16i8(<16 x i8> %a) #0 {
   ret i8 %res
 }
 
-define i8 @uaddv_v32i8(<32 x i8>* %a) #0 {
+define i8 @uaddv_v32i8(ptr %a) #0 {
 ; CHECK-LABEL: uaddv_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -43,7 +43,7 @@ define i8 @uaddv_v32i8(<32 x i8>* %a) #0 {
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i8>, <32 x i8>* %a
+  %op = load <32 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.add.v32i8(<32 x i8> %op)
   ret i8 %res
 }
@@ -74,7 +74,7 @@ define i16 @uaddv_v8i16(<8 x i16> %a) #0 {
   ret i16 %res
 }
 
-define i16 @uaddv_v16i16(<16 x i16>* %a) #0 {
+define i16 @uaddv_v16i16(ptr %a) #0 {
 ; CHECK-LABEL: uaddv_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -84,7 +84,7 @@ define i16 @uaddv_v16i16(<16 x i16>* %a) #0 {
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
-  %op = load <16 x i16>, <16 x i16>* %a
+  %op = load <16 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %op)
   ret i16 %res
 }
@@ -115,7 +115,7 @@ define i32 @uaddv_v4i32(<4 x i32> %a) #0 {
   ret i32 %res
 }
 
-define i32 @uaddv_v8i32(<8 x i32>* %a) #0 {
+define i32 @uaddv_v8i32(ptr %a) #0 {
 ; CHECK-LABEL: uaddv_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -125,7 +125,7 @@ define i32 @uaddv_v8i32(<8 x i32>* %a) #0 {
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
-  %op = load <8 x i32>, <8 x i32>* %a
+  %op = load <8 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %op)
   ret i32 %res
 }
@@ -142,7 +142,7 @@ define i64 @uaddv_v2i64(<2 x i64> %a) #0 {
   ret i64 %res
 }
 
-define i64 @uaddv_v4i64(<4 x i64>* %a) #0 {
+define i64 @uaddv_v4i64(ptr %a) #0 {
 ; CHECK-LABEL: uaddv_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -151,7 +151,7 @@ define i64 @uaddv_v4i64(<4 x i64>* %a) #0 {
 ; CHECK-NEXT:    uaddv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <4 x i64>, <4 x i64>* %a
+  %op = load <4 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %op)
   ret i64 %res
 }
@@ -184,7 +184,7 @@ define i8 @smaxv_v16i8(<16 x i8> %a) #0 {
   ret i8 %res
 }
 
-define i8 @smaxv_v32i8(<32 x i8>* %a) #0 {
+define i8 @smaxv_v32i8(ptr %a) #0 {
 ; CHECK-LABEL: smaxv_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -193,7 +193,7 @@ define i8 @smaxv_v32i8(<32 x i8>* %a) #0 {
 ; CHECK-NEXT:    smaxv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i8>, <32 x i8>* %a
+  %op = load <32 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.smax.v32i8(<32 x i8> %op)
   ret i8 %res
 }
@@ -222,7 +222,7 @@ define i16 @smaxv_v8i16(<8 x i16> %a) #0 {
   ret i16 %res
 }
 
-define i16 @smaxv_v16i16(<16 x i16>* %a) #0 {
+define i16 @smaxv_v16i16(ptr %a) #0 {
 ; CHECK-LABEL: smaxv_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -231,7 +231,7 @@ define i16 @smaxv_v16i16(<16 x i16>* %a) #0 {
 ; CHECK-NEXT:    smaxv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <16 x i16>, <16 x i16>* %a
+  %op = load <16 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.smax.v16i16(<16 x i16> %op)
   ret i16 %res
 }
@@ -260,7 +260,7 @@ define i32 @smaxv_v4i32(<4 x i32> %a) #0 {
   ret i32 %res
 }
 
-define i32 @smaxv_v8i32(<8 x i32>* %a) #0 {
+define i32 @smaxv_v8i32(ptr %a) #0 {
 ; CHECK-LABEL: smaxv_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -269,7 +269,7 @@ define i32 @smaxv_v8i32(<8 x i32>* %a) #0 {
 ; CHECK-NEXT:    smaxv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <8 x i32>, <8 x i32>* %a
+  %op = load <8 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> %op)
   ret i32 %res
 }
@@ -287,7 +287,7 @@ define i64 @smaxv_v2i64(<2 x i64> %a) #0 {
   ret i64 %res
 }
 
-define i64 @smaxv_v4i64(<4 x i64>* %a) #0 {
+define i64 @smaxv_v4i64(ptr %a) #0 {
 ; CHECK-LABEL: smaxv_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -296,7 +296,7 @@ define i64 @smaxv_v4i64(<4 x i64>* %a) #0 {
 ; CHECK-NEXT:    smaxv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <4 x i64>, <4 x i64>* %a
+  %op = load <4 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.smax.v4i64(<4 x i64> %op)
   ret i64 %res
 }
@@ -329,7 +329,7 @@ define i8 @sminv_v16i8(<16 x i8> %a) #0 {
   ret i8 %res
 }
 
-define i8 @sminv_v32i8(<32 x i8>* %a) #0 {
+define i8 @sminv_v32i8(ptr %a) #0 {
 ; CHECK-LABEL: sminv_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -338,7 +338,7 @@ define i8 @sminv_v32i8(<32 x i8>* %a) #0 {
 ; CHECK-NEXT:    sminv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i8>, <32 x i8>* %a
+  %op = load <32 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.smin.v32i8(<32 x i8> %op)
   ret i8 %res
 }
@@ -367,7 +367,7 @@ define i16 @sminv_v8i16(<8 x i16> %a) #0 {
   ret i16 %res
 }
 
-define i16 @sminv_v16i16(<16 x i16>* %a) #0 {
+define i16 @sminv_v16i16(ptr %a) #0 {
 ; CHECK-LABEL: sminv_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -376,7 +376,7 @@ define i16 @sminv_v16i16(<16 x i16>* %a) #0 {
 ; CHECK-NEXT:    sminv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <16 x i16>, <16 x i16>* %a
+  %op = load <16 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.smin.v16i16(<16 x i16> %op)
   ret i16 %res
 }
@@ -405,7 +405,7 @@ define i32 @sminv_v4i32(<4 x i32> %a) #0 {
   ret i32 %res
 }
 
-define i32 @sminv_v8i32(<8 x i32>* %a) #0 {
+define i32 @sminv_v8i32(ptr %a) #0 {
 ; CHECK-LABEL: sminv_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -414,7 +414,7 @@ define i32 @sminv_v8i32(<8 x i32>* %a) #0 {
 ; CHECK-NEXT:    sminv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <8 x i32>, <8 x i32>* %a
+  %op = load <8 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.smin.v8i32(<8 x i32> %op)
   ret i32 %res
 }
@@ -432,7 +432,7 @@ define i64 @sminv_v2i64(<2 x i64> %a) #0 {
   ret i64 %res
 }
 
-define i64 @sminv_v4i64(<4 x i64>* %a) #0 {
+define i64 @sminv_v4i64(ptr %a) #0 {
 ; CHECK-LABEL: sminv_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -441,7 +441,7 @@ define i64 @sminv_v4i64(<4 x i64>* %a) #0 {
 ; CHECK-NEXT:    sminv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <4 x i64>, <4 x i64>* %a
+  %op = load <4 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.smin.v4i64(<4 x i64> %op)
   ret i64 %res
 }
@@ -474,7 +474,7 @@ define i8 @umaxv_v16i8(<16 x i8> %a) #0 {
   ret i8 %res
 }
 
-define i8 @umaxv_v32i8(<32 x i8>* %a) #0 {
+define i8 @umaxv_v32i8(ptr %a) #0 {
 ; CHECK-LABEL: umaxv_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -483,7 +483,7 @@ define i8 @umaxv_v32i8(<32 x i8>* %a) #0 {
 ; CHECK-NEXT:    umaxv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i8>, <32 x i8>* %a
+  %op = load <32 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.umax.v32i8(<32 x i8> %op)
   ret i8 %res
 }
@@ -512,7 +512,7 @@ define i16 @umaxv_v8i16(<8 x i16> %a) #0 {
   ret i16 %res
 }
 
-define i16 @umaxv_v16i16(<16 x i16>* %a) #0 {
+define i16 @umaxv_v16i16(ptr %a) #0 {
 ; CHECK-LABEL: umaxv_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -521,7 +521,7 @@ define i16 @umaxv_v16i16(<16 x i16>* %a) #0 {
 ; CHECK-NEXT:    umaxv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <16 x i16>, <16 x i16>* %a
+  %op = load <16 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.umax.v16i16(<16 x i16> %op)
   ret i16 %res
 }
@@ -550,7 +550,7 @@ define i32 @umaxv_v4i32(<4 x i32> %a) #0 {
   ret i32 %res
 }
 
-define i32 @umaxv_v8i32(<8 x i32>* %a) #0 {
+define i32 @umaxv_v8i32(ptr %a) #0 {
 ; CHECK-LABEL: umaxv_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -559,7 +559,7 @@ define i32 @umaxv_v8i32(<8 x i32>* %a) #0 {
 ; CHECK-NEXT:    umaxv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <8 x i32>, <8 x i32>* %a
+  %op = load <8 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.umax.v8i32(<8 x i32> %op)
   ret i32 %res
 }
@@ -577,7 +577,7 @@ define i64 @umaxv_v2i64(<2 x i64> %a) #0 {
   ret i64 %res
 }
 
-define i64 @umaxv_v4i64(<4 x i64>* %a) #0 {
+define i64 @umaxv_v4i64(ptr %a) #0 {
 ; CHECK-LABEL: umaxv_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -586,7 +586,7 @@ define i64 @umaxv_v4i64(<4 x i64>* %a) #0 {
 ; CHECK-NEXT:    umaxv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <4 x i64>, <4 x i64>* %a
+  %op = load <4 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.umax.v4i64(<4 x i64> %op)
   ret i64 %res
 }
@@ -619,7 +619,7 @@ define i8 @uminv_v16i8(<16 x i8> %a) #0 {
   ret i8 %res
 }
 
-define i8 @uminv_v32i8(<32 x i8>* %a) #0 {
+define i8 @uminv_v32i8(ptr %a) #0 {
 ; CHECK-LABEL: uminv_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -628,7 +628,7 @@ define i8 @uminv_v32i8(<32 x i8>* %a) #0 {
 ; CHECK-NEXT:    uminv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <32 x i8>, <32 x i8>* %a
+  %op = load <32 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.umin.v32i8(<32 x i8> %op)
   ret i8 %res
 }
@@ -657,7 +657,7 @@ define i16 @uminv_v8i16(<8 x i16> %a) #0 {
   ret i16 %res
 }
 
-define i16 @uminv_v16i16(<16 x i16>* %a) #0 {
+define i16 @uminv_v16i16(ptr %a) #0 {
 ; CHECK-LABEL: uminv_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -666,7 +666,7 @@ define i16 @uminv_v16i16(<16 x i16>* %a) #0 {
 ; CHECK-NEXT:    uminv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <16 x i16>, <16 x i16>* %a
+  %op = load <16 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.umin.v16i16(<16 x i16> %op)
   ret i16 %res
 }
@@ -695,7 +695,7 @@ define i32 @uminv_v4i32(<4 x i32> %a) #0 {
   ret i32 %res
 }
 
-define i32 @uminv_v8i32(<8 x i32>* %a) #0 {
+define i32 @uminv_v8i32(ptr %a) #0 {
 ; CHECK-LABEL: uminv_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -704,7 +704,7 @@ define i32 @uminv_v8i32(<8 x i32>* %a) #0 {
 ; CHECK-NEXT:    uminv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %op = load <8 x i32>, <8 x i32>* %a
+  %op = load <8 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.umin.v8i32(<8 x i32> %op)
   ret i32 %res
 }
@@ -722,7 +722,7 @@ define i64 @uminv_v2i64(<2 x i64> %a) #0 {
   ret i64 %res
 }
 
-define i64 @uminv_v4i64(<4 x i64>* %a) #0 {
+define i64 @uminv_v4i64(ptr %a) #0 {
 ; CHECK-LABEL: uminv_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -731,7 +731,7 @@ define i64 @uminv_v4i64(<4 x i64>* %a) #0 {
 ; CHECK-NEXT:    uminv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %op = load <4 x i64>, <4 x i64>* %a
+  %op = load <4 x i64>, ptr %a
   %res = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> %op)
   ret i64 %res
 }

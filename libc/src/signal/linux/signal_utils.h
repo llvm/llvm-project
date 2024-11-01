@@ -11,6 +11,7 @@
 
 #include "include/sys/syscall.h"          // For syscall numbers.
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/common.h"
 
 #include <signal.h>
 #include <stddef.h>
@@ -29,7 +30,7 @@ struct KernelSigaction {
   using HandlerType = void(int);
   using SiginfoHandlerType = void(int, siginfo_t *, void *);
 
-  KernelSigaction &operator=(const struct sigaction &sa) {
+  LIBC_INLINE KernelSigaction &operator=(const struct sigaction &sa) {
     sa_flags = sa.sa_flags;
     sa_restorer = sa.sa_restorer;
     sa_mask = sa.sa_mask;
@@ -41,7 +42,7 @@ struct KernelSigaction {
     return *this;
   }
 
-  operator struct sigaction() const {
+  LIBC_INLINE operator struct sigaction() const {
     struct sigaction sa;
     sa.sa_flags = sa_flags;
     sa.sa_mask = sa_mask;
@@ -63,14 +64,14 @@ struct KernelSigaction {
 
 static constexpr size_t BITS_PER_SIGWORD = sizeof(unsigned long) * 8;
 
-constexpr sigset_t full_set() { return sigset_t{{-1UL}}; }
+LIBC_INLINE constexpr sigset_t full_set() { return sigset_t{{-1UL}}; }
 
-constexpr sigset_t empty_set() { return sigset_t{{0}}; }
+LIBC_INLINE constexpr sigset_t empty_set() { return sigset_t{{0}}; }
 
 // Set the bit corresponding to |signal| in |set|. Return true on success
 // and false on failure. The function will fail if |signal| is greater than
 // NSIG or negative.
-constexpr inline bool add_signal(sigset_t &set, int signal) {
+LIBC_INLINE constexpr bool add_signal(sigset_t &set, int signal) {
   if (signal > NSIG || signal <= 0)
     return false;
   size_t n = size_t(signal) - 1;
@@ -83,7 +84,7 @@ constexpr inline bool add_signal(sigset_t &set, int signal) {
 // Reset the bit corresponding to |signal| in |set|. Return true on success
 // and false on failure. The function will fail if |signal| is greater than
 // NSIG or negative.
-constexpr inline bool delete_signal(sigset_t &set, int signal) {
+LIBC_INLINE constexpr bool delete_signal(sigset_t &set, int signal) {
   if (signal > NSIG || signal <= 0)
     return false;
   size_t n = size_t(signal) - 1;
@@ -93,13 +94,13 @@ constexpr inline bool delete_signal(sigset_t &set, int signal) {
   return true;
 }
 
-static inline int block_all_signals(sigset_t &set) {
+LIBC_INLINE int block_all_signals(sigset_t &set) {
   sigset_t full = full_set();
   return __llvm_libc::syscall_impl(SYS_rt_sigprocmask, SIG_BLOCK, &full, &set,
                                    sizeof(sigset_t));
 }
 
-static inline int restore_signals(const sigset_t &set) {
+LIBC_INLINE int restore_signals(const sigset_t &set) {
   return __llvm_libc::syscall_impl(SYS_rt_sigprocmask, SIG_SETMASK, &set,
                                    nullptr, sizeof(sigset_t));
 }

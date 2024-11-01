@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-nvidia-cuda | %ptxas-verify %}
 
-; CHECK: .target sm_20, debug
+; CHECK: .target sm_30, debug
 
 ; CHECK: .visible .func use_dbg_declare()
 ; CHECK: .local .align 8 .b8 __local_depot0[8];

@@ -9,7 +9,7 @@ target triple = "x86_64-apple-darwin13.3.0"
 define i32 @fn1() {
 ; CHECK-LABEL: @fn1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INIT:%.*]] = load double, double* @a, align 8
+; CHECK-NEXT:    [[INIT:%.*]] = load double, ptr @a, align 8
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi double [ [[ADD2:%.*]], [[LOOP]] ], [ [[INIT]], [[ENTRY:%.*]] ]
@@ -30,7 +30,7 @@ define i32 @fn1() {
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
-  %init = load double, double* @a, align 8
+  %init = load double, ptr @a, align 8
   br label %loop
 
 loop:

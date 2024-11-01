@@ -12,7 +12,7 @@
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
-#include <type_traits>
+#include <__type_traits/remove_cvref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

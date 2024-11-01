@@ -78,14 +78,14 @@ ClangASTSource::~ClangASTSource() {
   // query the deleted ASTContext for additional type information.
   // We unregister from *all* scratch ASTContexts in case a type got exported
   // to a scratch AST that isn't the best fitting scratch ASTContext.
-  TypeSystemClang *scratch_ast = ScratchTypeSystemClang::GetForTarget(
+  lldb::TypeSystemClangSP scratch_ts_sp = ScratchTypeSystemClang::GetForTarget(
       *m_target, ScratchTypeSystemClang::DefaultAST, false);
 
-  if (!scratch_ast)
+  if (!scratch_ts_sp)
     return;
 
   ScratchTypeSystemClang *default_scratch_ast =
-      llvm::cast<ScratchTypeSystemClang>(scratch_ast);
+      llvm::cast<ScratchTypeSystemClang>(scratch_ts_sp.get());
   // Unregister from the default scratch AST (and all sub-ASTs).
   default_scratch_ast->ForgetSource(m_ast_context, *m_ast_importer_sp);
 }

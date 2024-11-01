@@ -15,7 +15,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "gtest/gtest.h"
 #include <cstddef>
 #include <unordered_map>
@@ -150,6 +150,9 @@ TEST(WalkAST, Using) {
     }
     using ns::$explicit^Y;)cpp",
            "^Y<int> x;");
+  testWalk(R"cpp(
+    namespace ns { class Foo {}; }
+  )cpp", "using ns::$explicit^Foo; class ^Foo foo;");
 }
 
 TEST(WalkAST, Namespaces) {
@@ -180,43 +183,80 @@ TEST(WalkAST, TemplateNames) {
 }
 
 TEST(WalkAST, MemberExprs) {
-  testWalk("struct $explicit^S { void foo(); };", "void foo() { S{}.^foo(); }");
+  testWalk("struct $implicit^S { void foo(); };", "void foo() { S{}.^foo(); }");
   testWalk(
-      "struct S { void foo(); }; struct $explicit^X : S { using S::foo; };",
+      "struct S { void foo(); }; struct $implicit^X : S { using S::foo; };",
       "void foo() { X{}.^foo(); }");
-  testWalk("struct Base { int a; }; struct $explicit^Derived : public Base {};",
+  testWalk("struct Base { int a; }; struct $implicit^Derived : public Base {};",
            "void fun(Derived d) { d.^a; }");
-  testWalk("struct Base { int a; }; struct $explicit^Derived : public Base {};",
+  testWalk("struct Base { int a; }; struct $implicit^Derived : public Base {};",
            "void fun(Derived* d) { d->^a; }");
-  testWalk("struct Base { int a; }; struct $explicit^Derived : public Base {};",
+  testWalk("struct Base { int a; }; struct $implicit^Derived : public Base {};",
            "void fun(Derived& d) { d.^a; }");
-  testWalk("struct Base { int a; }; struct $explicit^Derived : public Base {};",
+  testWalk("struct Base { int a; }; struct $implicit^Derived : public Base {};",
            "void fun() { Derived().^a; }");
-  testWalk("struct Base { int a; }; struct $explicit^Derived : public Base {};",
+  testWalk("struct Base { int a; }; struct $implicit^Derived : public Base {};",
            "Derived foo(); void fun() { foo().^a; }");
-  testWalk("struct Base { int a; }; struct $explicit^Derived : public Base {};",
+  testWalk("struct Base { int a; }; struct $implicit^Derived : public Base {};",
            "Derived& foo(); void fun() { foo().^a; }");
   testWalk(R"cpp(
       template <typename T>
       struct unique_ptr {
         T *operator->();
       };
-      struct $explicit^Foo { int a; };)cpp",
+      struct $implicit^Foo { int a; };)cpp",
            "void test(unique_ptr<Foo> &V) { V->^a; }");
   testWalk(R"cpp(
       template <typename T>
-      struct $explicit^unique_ptr {
+      struct $implicit^unique_ptr {
         void release();
       };
       struct Foo {};)cpp",
            "void test(unique_ptr<Foo> &V) { V.^release(); }");
+  // Respect the sugar type (typedef, using-type).
+  testWalk(R"cpp(
+      namespace ns { struct Foo { int a; }; }
+      using $implicit^Bar = ns::Foo;)cpp",
+           "void test(Bar b) { b.^a; }");
+  testWalk(R"cpp(
+      namespace ns { struct Foo { int a; }; }
+      using ns::$implicit^Foo;)cpp",
+           "void test(Foo b) { b.^a; }");
+  testWalk(R"cpp(
+      namespace ns { struct Foo { int a; }; }
+      namespace ns2 { using Bar = ns::Foo; }
+      using ns2::$implicit^Bar;
+      )cpp",
+           "void test(Bar b) { b.^a; }");
+  testWalk(R"cpp(
+      namespace ns { template<typename> struct Foo { int a; }; }
+      using ns::$implicit^Foo;)cpp",
+           "void k(Foo<int> b) { b.^a; }");
+  // Test the dependent-type case (CXXDependentScopeMemberExpr)
+  testWalk("template<typename T> struct $implicit^Base { void method(); };",
+           "template<typename T> void k(Base<T> t) { t.^method(); }");
+  testWalk("template<typename T> struct $implicit^Base { void method(); };",
+           "template<typename T> void k(Base<T>& t) { t.^method(); }");
+  testWalk("template<typename T> struct $implicit^Base { void method(); };",
+           "template<typename T> void k(Base<T>* t) { t->^method(); }");
 }
 
 TEST(WalkAST, ConstructExprs) {
   testWalk("struct $implicit^S {};", "S ^t;");
-  testWalk("struct S { $implicit^S(); };", "S ^t;");
-  testWalk("struct S { $explicit^S(int); };", "S ^t(42);");
-  testWalk("struct S { $implicit^S(int); };", "S t = ^42;");
+  testWalk("struct $implicit^S { S(); };", "S ^t;");
+  testWalk("struct $explicit^S { S(int); };", "S ^t(42);");
+  testWalk("struct $implicit^S { S(int); };", "S t = ^42;");
+  testWalk("namespace ns { struct S{}; } using ns::$implicit^S;", "S ^t;");
+}
+
+TEST(WalkAST, Operator) {
+  // References to operators are not counted as uses.
+  testWalk("struct string {}; int operator+(string, string);",
+           "int k = string() ^+ string();");
+  testWalk("struct string {int operator+(string); }; ",
+           "int k = string() ^+ string();");
+  testWalk("struct string { friend int operator+(string, string); }; ",
+           "int k = string() ^+ string();");
 }
 
 TEST(WalkAST, Functions) {

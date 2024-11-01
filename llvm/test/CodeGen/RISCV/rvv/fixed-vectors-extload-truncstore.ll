@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+experimental-zvfh,+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX1
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+experimental-zvfh,+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=4 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX4
 
-define <2 x i16> @sextload_v2i1_v2i16(<2 x i1>* %x) {
+define <2 x i16> @sextload_v2i1_v2i16(ptr %x) {
 ; CHECK-LABEL: sextload_v2i1_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
@@ -12,132 +12,132 @@ define <2 x i16> @sextload_v2i1_v2i16(<2 x i1>* %x) {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
 ; CHECK-NEXT:    ret
-  %y = load <2 x i1>, <2 x i1>* %x
+  %y = load <2 x i1>, ptr %x
   %z = sext <2 x i1> %y to <2 x i16>
   ret <2 x i16> %z
 }
 
-define <2 x i16> @sextload_v2i8_v2i16(<2 x i8>* %x) {
+define <2 x i16> @sextload_v2i8_v2i16(ptr %x) {
 ; CHECK-LABEL: sextload_v2i8_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v9, (a0)
 ; CHECK-NEXT:    vsext.vf2 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <2 x i8>, <2 x i8>* %x
+  %y = load <2 x i8>, ptr %x
   %z = sext <2 x i8> %y to <2 x i16>
   ret <2 x i16> %z
 }
 
-define <2 x i16> @zextload_v2i8_v2i16(<2 x i8>* %x) {
+define <2 x i16> @zextload_v2i8_v2i16(ptr %x) {
 ; CHECK-LABEL: zextload_v2i8_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v9, (a0)
 ; CHECK-NEXT:    vzext.vf2 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <2 x i8>, <2 x i8>* %x
+  %y = load <2 x i8>, ptr %x
   %z = zext <2 x i8> %y to <2 x i16>
   ret <2 x i16> %z
 }
 
-define <2 x i32> @sextload_v2i8_v2i32(<2 x i8>* %x) {
+define <2 x i32> @sextload_v2i8_v2i32(ptr %x) {
 ; CHECK-LABEL: sextload_v2i8_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v9, (a0)
 ; CHECK-NEXT:    vsext.vf4 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <2 x i8>, <2 x i8>* %x
+  %y = load <2 x i8>, ptr %x
   %z = sext <2 x i8> %y to <2 x i32>
   ret <2 x i32> %z
 }
 
-define <2 x i32> @zextload_v2i8_v2i32(<2 x i8>* %x) {
+define <2 x i32> @zextload_v2i8_v2i32(ptr %x) {
 ; CHECK-LABEL: zextload_v2i8_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v9, (a0)
 ; CHECK-NEXT:    vzext.vf4 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <2 x i8>, <2 x i8>* %x
+  %y = load <2 x i8>, ptr %x
   %z = zext <2 x i8> %y to <2 x i32>
   ret <2 x i32> %z
 }
 
-define <2 x i64> @sextload_v2i8_v2i64(<2 x i8>* %x) {
+define <2 x i64> @sextload_v2i8_v2i64(ptr %x) {
 ; CHECK-LABEL: sextload_v2i8_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v9, (a0)
 ; CHECK-NEXT:    vsext.vf8 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <2 x i8>, <2 x i8>* %x
+  %y = load <2 x i8>, ptr %x
   %z = sext <2 x i8> %y to <2 x i64>
   ret <2 x i64> %z
 }
 
-define <2 x i64> @zextload_v2i8_v2i64(<2 x i8>* %x) {
+define <2 x i64> @zextload_v2i8_v2i64(ptr %x) {
 ; CHECK-LABEL: zextload_v2i8_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v9, (a0)
 ; CHECK-NEXT:    vzext.vf8 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <2 x i8>, <2 x i8>* %x
+  %y = load <2 x i8>, ptr %x
   %z = zext <2 x i8> %y to <2 x i64>
   ret <2 x i64> %z
 }
 
-define <4 x i16> @sextload_v4i8_v4i16(<4 x i8>* %x) {
+define <4 x i16> @sextload_v4i8_v4i16(ptr %x) {
 ; CHECK-LABEL: sextload_v4i8_v4i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v9, (a0)
 ; CHECK-NEXT:    vsext.vf2 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <4 x i8>, <4 x i8>* %x
+  %y = load <4 x i8>, ptr %x
   %z = sext <4 x i8> %y to <4 x i16>
   ret <4 x i16> %z
 }
 
-define <4 x i16> @zextload_v4i8_v4i16(<4 x i8>* %x) {
+define <4 x i16> @zextload_v4i8_v4i16(ptr %x) {
 ; CHECK-LABEL: zextload_v4i8_v4i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v9, (a0)
 ; CHECK-NEXT:    vzext.vf2 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <4 x i8>, <4 x i8>* %x
+  %y = load <4 x i8>, ptr %x
   %z = zext <4 x i8> %y to <4 x i16>
   ret <4 x i16> %z
 }
 
-define <4 x i32> @sextload_v4i8_v4i32(<4 x i8>* %x) {
+define <4 x i32> @sextload_v4i8_v4i32(ptr %x) {
 ; CHECK-LABEL: sextload_v4i8_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v9, (a0)
 ; CHECK-NEXT:    vsext.vf4 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <4 x i8>, <4 x i8>* %x
+  %y = load <4 x i8>, ptr %x
   %z = sext <4 x i8> %y to <4 x i32>
   ret <4 x i32> %z
 }
 
-define <4 x i32> @zextload_v4i8_v4i32(<4 x i8>* %x) {
+define <4 x i32> @zextload_v4i8_v4i32(ptr %x) {
 ; CHECK-LABEL: zextload_v4i8_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v9, (a0)
 ; CHECK-NEXT:    vzext.vf4 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <4 x i8>, <4 x i8>* %x
+  %y = load <4 x i8>, ptr %x
   %z = zext <4 x i8> %y to <4 x i32>
   ret <4 x i32> %z
 }
 
-define <4 x i64> @sextload_v4i8_v4i64(<4 x i8>* %x) {
+define <4 x i64> @sextload_v4i8_v4i64(ptr %x) {
 ; LMULMAX1-LABEL: sextload_v4i8_v4i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
@@ -155,12 +155,12 @@ define <4 x i64> @sextload_v4i8_v4i64(<4 x i8>* %x) {
 ; LMULMAX4-NEXT:    vle8.v v10, (a0)
 ; LMULMAX4-NEXT:    vsext.vf8 v8, v10
 ; LMULMAX4-NEXT:    ret
-  %y = load <4 x i8>, <4 x i8>* %x
+  %y = load <4 x i8>, ptr %x
   %z = sext <4 x i8> %y to <4 x i64>
   ret <4 x i64> %z
 }
 
-define <4 x i64> @zextload_v4i8_v4i64(<4 x i8>* %x) {
+define <4 x i64> @zextload_v4i8_v4i64(ptr %x) {
 ; LMULMAX1-LABEL: zextload_v4i8_v4i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
@@ -178,36 +178,36 @@ define <4 x i64> @zextload_v4i8_v4i64(<4 x i8>* %x) {
 ; LMULMAX4-NEXT:    vle8.v v10, (a0)
 ; LMULMAX4-NEXT:    vzext.vf8 v8, v10
 ; LMULMAX4-NEXT:    ret
-  %y = load <4 x i8>, <4 x i8>* %x
+  %y = load <4 x i8>, ptr %x
   %z = zext <4 x i8> %y to <4 x i64>
   ret <4 x i64> %z
 }
 
-define <8 x i16> @sextload_v8i8_v8i16(<8 x i8>* %x) {
+define <8 x i16> @sextload_v8i8_v8i16(ptr %x) {
 ; CHECK-LABEL: sextload_v8i8_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v9, (a0)
 ; CHECK-NEXT:    vsext.vf2 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <8 x i8>, <8 x i8>* %x
+  %y = load <8 x i8>, ptr %x
   %z = sext <8 x i8> %y to <8 x i16>
   ret <8 x i16> %z
 }
 
-define <8 x i16> @zextload_v8i8_v8i16(<8 x i8>* %x) {
+define <8 x i16> @zextload_v8i8_v8i16(ptr %x) {
 ; CHECK-LABEL: zextload_v8i8_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v9, (a0)
 ; CHECK-NEXT:    vzext.vf2 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <8 x i8>, <8 x i8>* %x
+  %y = load <8 x i8>, ptr %x
   %z = zext <8 x i8> %y to <8 x i16>
   ret <8 x i16> %z
 }
 
-define <8 x i32> @sextload_v8i8_v8i32(<8 x i8>* %x) {
+define <8 x i32> @sextload_v8i8_v8i32(ptr %x) {
 ; LMULMAX1-LABEL: sextload_v8i8_v8i32:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
@@ -225,12 +225,12 @@ define <8 x i32> @sextload_v8i8_v8i32(<8 x i8>* %x) {
 ; LMULMAX4-NEXT:    vle8.v v10, (a0)
 ; LMULMAX4-NEXT:    vsext.vf4 v8, v10
 ; LMULMAX4-NEXT:    ret
-  %y = load <8 x i8>, <8 x i8>* %x
+  %y = load <8 x i8>, ptr %x
   %z = sext <8 x i8> %y to <8 x i32>
   ret <8 x i32> %z
 }
 
-define <8 x i32> @zextload_v8i8_v8i32(<8 x i8>* %x) {
+define <8 x i32> @zextload_v8i8_v8i32(ptr %x) {
 ; LMULMAX1-LABEL: zextload_v8i8_v8i32:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
@@ -248,12 +248,12 @@ define <8 x i32> @zextload_v8i8_v8i32(<8 x i8>* %x) {
 ; LMULMAX4-NEXT:    vle8.v v10, (a0)
 ; LMULMAX4-NEXT:    vzext.vf4 v8, v10
 ; LMULMAX4-NEXT:    ret
-  %y = load <8 x i8>, <8 x i8>* %x
+  %y = load <8 x i8>, ptr %x
   %z = zext <8 x i8> %y to <8 x i32>
   ret <8 x i32> %z
 }
 
-define <8 x i64> @sextload_v8i8_v8i64(<8 x i8>* %x) {
+define <8 x i64> @sextload_v8i8_v8i64(ptr %x) {
 ; LMULMAX1-LABEL: sextload_v8i8_v8i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
@@ -279,12 +279,12 @@ define <8 x i64> @sextload_v8i8_v8i64(<8 x i8>* %x) {
 ; LMULMAX4-NEXT:    vle8.v v12, (a0)
 ; LMULMAX4-NEXT:    vsext.vf8 v8, v12
 ; LMULMAX4-NEXT:    ret
-  %y = load <8 x i8>, <8 x i8>* %x
+  %y = load <8 x i8>, ptr %x
   %z = sext <8 x i8> %y to <8 x i64>
   ret <8 x i64> %z
 }
 
-define <8 x i64> @zextload_v8i8_v8i64(<8 x i8>* %x) {
+define <8 x i64> @zextload_v8i8_v8i64(ptr %x) {
 ; LMULMAX1-LABEL: zextload_v8i8_v8i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
@@ -310,12 +310,12 @@ define <8 x i64> @zextload_v8i8_v8i64(<8 x i8>* %x) {
 ; LMULMAX4-NEXT:    vle8.v v12, (a0)
 ; LMULMAX4-NEXT:    vzext.vf8 v8, v12
 ; LMULMAX4-NEXT:    ret
-  %y = load <8 x i8>, <8 x i8>* %x
+  %y = load <8 x i8>, ptr %x
   %z = zext <8 x i8> %y to <8 x i64>
   ret <8 x i64> %z
 }
 
-define <16 x i16> @sextload_v16i8_v16i16(<16 x i8>* %x) {
+define <16 x i16> @sextload_v16i8_v16i16(ptr %x) {
 ; LMULMAX1-LABEL: sextload_v16i8_v16i16:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
@@ -333,12 +333,12 @@ define <16 x i16> @sextload_v16i8_v16i16(<16 x i8>* %x) {
 ; LMULMAX4-NEXT:    vle8.v v10, (a0)
 ; LMULMAX4-NEXT:    vsext.vf2 v8, v10
 ; LMULMAX4-NEXT:    ret
-  %y = load <16 x i8>, <16 x i8>* %x
+  %y = load <16 x i8>, ptr %x
   %z = sext <16 x i8> %y to <16 x i16>
   ret <16 x i16> %z
 }
 
-define <16 x i16> @zextload_v16i8_v16i16(<16 x i8>* %x) {
+define <16 x i16> @zextload_v16i8_v16i16(ptr %x) {
 ; LMULMAX1-LABEL: zextload_v16i8_v16i16:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
@@ -356,12 +356,12 @@ define <16 x i16> @zextload_v16i8_v16i16(<16 x i8>* %x) {
 ; LMULMAX4-NEXT:    vle8.v v10, (a0)
 ; LMULMAX4-NEXT:    vzext.vf2 v8, v10
 ; LMULMAX4-NEXT:    ret
-  %y = load <16 x i8>, <16 x i8>* %x
+  %y = load <16 x i8>, ptr %x
   %z = zext <16 x i8> %y to <16 x i16>
   ret <16 x i16> %z
 }
 
-define <16 x i32> @sextload_v16i8_v16i32(<16 x i8>* %x) {
+define <16 x i32> @sextload_v16i8_v16i32(ptr %x) {
 ; LMULMAX1-LABEL: sextload_v16i8_v16i32:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
@@ -387,12 +387,12 @@ define <16 x i32> @sextload_v16i8_v16i32(<16 x i8>* %x) {
 ; LMULMAX4-NEXT:    vle8.v v12, (a0)
 ; LMULMAX4-NEXT:    vsext.vf4 v8, v12
 ; LMULMAX4-NEXT:    ret
-  %y = load <16 x i8>, <16 x i8>* %x
+  %y = load <16 x i8>, ptr %x
   %z = sext <16 x i8> %y to <16 x i32>
   ret <16 x i32> %z
 }
 
-define <16 x i32> @zextload_v16i8_v16i32(<16 x i8>* %x) {
+define <16 x i32> @zextload_v16i8_v16i32(ptr %x) {
 ; LMULMAX1-LABEL: zextload_v16i8_v16i32:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
@@ -418,12 +418,12 @@ define <16 x i32> @zextload_v16i8_v16i32(<16 x i8>* %x) {
 ; LMULMAX4-NEXT:    vle8.v v12, (a0)
 ; LMULMAX4-NEXT:    vzext.vf4 v8, v12
 ; LMULMAX4-NEXT:    ret
-  %y = load <16 x i8>, <16 x i8>* %x
+  %y = load <16 x i8>, ptr %x
   %z = zext <16 x i8> %y to <16 x i32>
   ret <16 x i32> %z
 }
 
-define <16 x i64> @sextload_v16i8_v16i64(<16 x i8>* %x) {
+define <16 x i64> @sextload_v16i8_v16i64(ptr %x) {
 ; LMULMAX1-LABEL: sextload_v16i8_v16i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
@@ -469,12 +469,12 @@ define <16 x i64> @sextload_v16i8_v16i64(<16 x i8>* %x) {
 ; LMULMAX4-NEXT:    vsext.vf8 v12, v8
 ; LMULMAX4-NEXT:    vsext.vf8 v8, v16
 ; LMULMAX4-NEXT:    ret
-  %y = load <16 x i8>, <16 x i8>* %x
+  %y = load <16 x i8>, ptr %x
   %z = sext <16 x i8> %y to <16 x i64>
   ret <16 x i64> %z
 }
 
-define <16 x i64> @zextload_v16i8_v16i64(<16 x i8>* %x) {
+define <16 x i64> @zextload_v16i8_v16i64(ptr %x) {
 ; LMULMAX1-LABEL: zextload_v16i8_v16i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
@@ -520,12 +520,12 @@ define <16 x i64> @zextload_v16i8_v16i64(<16 x i8>* %x) {
 ; LMULMAX4-NEXT:    vzext.vf8 v12, v8
 ; LMULMAX4-NEXT:    vzext.vf8 v8, v16
 ; LMULMAX4-NEXT:    ret
-  %y = load <16 x i8>, <16 x i8>* %x
+  %y = load <16 x i8>, ptr %x
   %z = zext <16 x i8> %y to <16 x i64>
   ret <16 x i64> %z
 }
 
-define void @truncstore_v2i8_v2i1(<2 x i8> %x, <2 x i1>* %z) {
+define void @truncstore_v2i8_v2i1(<2 x i8> %x, ptr %z) {
 ; CHECK-LABEL: truncstore_v2i8_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
@@ -542,11 +542,11 @@ define void @truncstore_v2i8_v2i1(<2 x i8> %x, <2 x i1>* %z) {
 ; CHECK-NEXT:    vsm.v v8, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <2 x i8> %x to <2 x i1>
-  store <2 x i1> %y, <2 x i1>* %z
+  store <2 x i1> %y, ptr %z
   ret void
 }
 
-define void @truncstore_v2i16_v2i8(<2 x i16> %x, <2 x i8>* %z) {
+define void @truncstore_v2i16_v2i8(<2 x i16> %x, ptr %z) {
 ; CHECK-LABEL: truncstore_v2i16_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
@@ -554,59 +554,59 @@ define void @truncstore_v2i16_v2i8(<2 x i16> %x, <2 x i8>* %z) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <2 x i16> %x to <2 x i8>
-  store <2 x i8> %y, <2 x i8>* %z
+  store <2 x i8> %y, ptr %z
   ret void
 }
 
-define <2 x i32> @sextload_v2i16_v2i32(<2 x i16>* %x) {
+define <2 x i32> @sextload_v2i16_v2i32(ptr %x) {
 ; CHECK-LABEL: sextload_v2i16_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a0)
 ; CHECK-NEXT:    vsext.vf2 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <2 x i16>, <2 x i16>* %x
+  %y = load <2 x i16>, ptr %x
   %z = sext <2 x i16> %y to <2 x i32>
   ret <2 x i32> %z
 }
 
-define <2 x i32> @zextload_v2i16_v2i32(<2 x i16>* %x) {
+define <2 x i32> @zextload_v2i16_v2i32(ptr %x) {
 ; CHECK-LABEL: zextload_v2i16_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a0)
 ; CHECK-NEXT:    vzext.vf2 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <2 x i16>, <2 x i16>* %x
+  %y = load <2 x i16>, ptr %x
   %z = zext <2 x i16> %y to <2 x i32>
   ret <2 x i32> %z
 }
 
-define <2 x i64> @sextload_v2i16_v2i64(<2 x i16>* %x) {
+define <2 x i64> @sextload_v2i16_v2i64(ptr %x) {
 ; CHECK-LABEL: sextload_v2i16_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a0)
 ; CHECK-NEXT:    vsext.vf4 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <2 x i16>, <2 x i16>* %x
+  %y = load <2 x i16>, ptr %x
   %z = sext <2 x i16> %y to <2 x i64>
   ret <2 x i64> %z
 }
 
-define <2 x i64> @zextload_v2i16_v2i64(<2 x i16>* %x) {
+define <2 x i64> @zextload_v2i16_v2i64(ptr %x) {
 ; CHECK-LABEL: zextload_v2i16_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a0)
 ; CHECK-NEXT:    vzext.vf4 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <2 x i16>, <2 x i16>* %x
+  %y = load <2 x i16>, ptr %x
   %z = zext <2 x i16> %y to <2 x i64>
   ret <2 x i64> %z
 }
 
-define void @truncstore_v4i16_v4i8(<4 x i16> %x, <4 x i8>* %z) {
+define void @truncstore_v4i16_v4i8(<4 x i16> %x, ptr %z) {
 ; CHECK-LABEL: truncstore_v4i16_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
@@ -614,35 +614,35 @@ define void @truncstore_v4i16_v4i8(<4 x i16> %x, <4 x i8>* %z) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <4 x i16> %x to <4 x i8>
-  store <4 x i8> %y, <4 x i8>* %z
+  store <4 x i8> %y, ptr %z
   ret void
 }
 
-define <4 x i32> @sextload_v4i16_v4i32(<4 x i16>* %x) {
+define <4 x i32> @sextload_v4i16_v4i32(ptr %x) {
 ; CHECK-LABEL: sextload_v4i16_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a0)
 ; CHECK-NEXT:    vsext.vf2 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <4 x i16>, <4 x i16>* %x
+  %y = load <4 x i16>, ptr %x
   %z = sext <4 x i16> %y to <4 x i32>
   ret <4 x i32> %z
 }
 
-define <4 x i32> @zextload_v4i16_v4i32(<4 x i16>* %x) {
+define <4 x i32> @zextload_v4i16_v4i32(ptr %x) {
 ; CHECK-LABEL: zextload_v4i16_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a0)
 ; CHECK-NEXT:    vzext.vf2 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <4 x i16>, <4 x i16>* %x
+  %y = load <4 x i16>, ptr %x
   %z = zext <4 x i16> %y to <4 x i32>
   ret <4 x i32> %z
 }
 
-define <4 x i64> @sextload_v4i16_v4i64(<4 x i16>* %x) {
+define <4 x i64> @sextload_v4i16_v4i64(ptr %x) {
 ; LMULMAX1-LABEL: sextload_v4i16_v4i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
@@ -660,12 +660,12 @@ define <4 x i64> @sextload_v4i16_v4i64(<4 x i16>* %x) {
 ; LMULMAX4-NEXT:    vle16.v v10, (a0)
 ; LMULMAX4-NEXT:    vsext.vf4 v8, v10
 ; LMULMAX4-NEXT:    ret
-  %y = load <4 x i16>, <4 x i16>* %x
+  %y = load <4 x i16>, ptr %x
   %z = sext <4 x i16> %y to <4 x i64>
   ret <4 x i64> %z
 }
 
-define <4 x i64> @zextload_v4i16_v4i64(<4 x i16>* %x) {
+define <4 x i64> @zextload_v4i16_v4i64(ptr %x) {
 ; LMULMAX1-LABEL: zextload_v4i16_v4i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
@@ -683,12 +683,12 @@ define <4 x i64> @zextload_v4i16_v4i64(<4 x i16>* %x) {
 ; LMULMAX4-NEXT:    vle16.v v10, (a0)
 ; LMULMAX4-NEXT:    vzext.vf4 v8, v10
 ; LMULMAX4-NEXT:    ret
-  %y = load <4 x i16>, <4 x i16>* %x
+  %y = load <4 x i16>, ptr %x
   %z = zext <4 x i16> %y to <4 x i64>
   ret <4 x i64> %z
 }
 
-define void @truncstore_v8i16_v8i8(<8 x i16> %x, <8 x i8>* %z) {
+define void @truncstore_v8i16_v8i8(<8 x i16> %x, ptr %z) {
 ; CHECK-LABEL: truncstore_v8i16_v8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
@@ -696,11 +696,11 @@ define void @truncstore_v8i16_v8i8(<8 x i16> %x, <8 x i8>* %z) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <8 x i16> %x to <8 x i8>
-  store <8 x i8> %y, <8 x i8>* %z
+  store <8 x i8> %y, ptr %z
   ret void
 }
 
-define <8 x i32> @sextload_v8i16_v8i32(<8 x i16>* %x) {
+define <8 x i32> @sextload_v8i16_v8i32(ptr %x) {
 ; LMULMAX1-LABEL: sextload_v8i16_v8i32:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -718,12 +718,12 @@ define <8 x i32> @sextload_v8i16_v8i32(<8 x i16>* %x) {
 ; LMULMAX4-NEXT:    vle16.v v10, (a0)
 ; LMULMAX4-NEXT:    vsext.vf2 v8, v10
 ; LMULMAX4-NEXT:    ret
-  %y = load <8 x i16>, <8 x i16>* %x
+  %y = load <8 x i16>, ptr %x
   %z = sext <8 x i16> %y to <8 x i32>
   ret <8 x i32> %z
 }
 
-define <8 x i32> @zextload_v8i16_v8i32(<8 x i16>* %x) {
+define <8 x i32> @zextload_v8i16_v8i32(ptr %x) {
 ; LMULMAX1-LABEL: zextload_v8i16_v8i32:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -741,12 +741,12 @@ define <8 x i32> @zextload_v8i16_v8i32(<8 x i16>* %x) {
 ; LMULMAX4-NEXT:    vle16.v v10, (a0)
 ; LMULMAX4-NEXT:    vzext.vf2 v8, v10
 ; LMULMAX4-NEXT:    ret
-  %y = load <8 x i16>, <8 x i16>* %x
+  %y = load <8 x i16>, ptr %x
   %z = zext <8 x i16> %y to <8 x i32>
   ret <8 x i32> %z
 }
 
-define <8 x i64> @sextload_v8i16_v8i64(<8 x i16>* %x) {
+define <8 x i64> @sextload_v8i16_v8i64(ptr %x) {
 ; LMULMAX1-LABEL: sextload_v8i16_v8i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -772,12 +772,12 @@ define <8 x i64> @sextload_v8i16_v8i64(<8 x i16>* %x) {
 ; LMULMAX4-NEXT:    vle16.v v12, (a0)
 ; LMULMAX4-NEXT:    vsext.vf4 v8, v12
 ; LMULMAX4-NEXT:    ret
-  %y = load <8 x i16>, <8 x i16>* %x
+  %y = load <8 x i16>, ptr %x
   %z = sext <8 x i16> %y to <8 x i64>
   ret <8 x i64> %z
 }
 
-define <8 x i64> @zextload_v8i16_v8i64(<8 x i16>* %x) {
+define <8 x i64> @zextload_v8i16_v8i64(ptr %x) {
 ; LMULMAX1-LABEL: zextload_v8i16_v8i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -803,12 +803,12 @@ define <8 x i64> @zextload_v8i16_v8i64(<8 x i16>* %x) {
 ; LMULMAX4-NEXT:    vle16.v v12, (a0)
 ; LMULMAX4-NEXT:    vzext.vf4 v8, v12
 ; LMULMAX4-NEXT:    ret
-  %y = load <8 x i16>, <8 x i16>* %x
+  %y = load <8 x i16>, ptr %x
   %z = zext <8 x i16> %y to <8 x i64>
   ret <8 x i64> %z
 }
 
-define void @truncstore_v16i16_v16i8(<16 x i16> %x, <16 x i8>* %z) {
+define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %z) {
 ; LMULMAX1-LABEL: truncstore_v16i16_v16i8:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
@@ -826,11 +826,11 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, <16 x i8>* %z) {
 ; LMULMAX4-NEXT:    vse8.v v10, (a0)
 ; LMULMAX4-NEXT:    ret
   %y = trunc <16 x i16> %x to <16 x i8>
-  store <16 x i8> %y, <16 x i8>* %z
+  store <16 x i8> %y, ptr %z
   ret void
 }
 
-define <16 x i32> @sextload_v16i16_v16i32(<16 x i16>* %x) {
+define <16 x i32> @sextload_v16i16_v16i32(ptr %x) {
 ; LMULMAX1-LABEL: sextload_v16i16_v16i32:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -855,12 +855,12 @@ define <16 x i32> @sextload_v16i16_v16i32(<16 x i16>* %x) {
 ; LMULMAX4-NEXT:    vle16.v v12, (a0)
 ; LMULMAX4-NEXT:    vsext.vf2 v8, v12
 ; LMULMAX4-NEXT:    ret
-  %y = load <16 x i16>, <16 x i16>* %x
+  %y = load <16 x i16>, ptr %x
   %z = sext <16 x i16> %y to <16 x i32>
   ret <16 x i32> %z
 }
 
-define <16 x i32> @zextload_v16i16_v16i32(<16 x i16>* %x) {
+define <16 x i32> @zextload_v16i16_v16i32(ptr %x) {
 ; LMULMAX1-LABEL: zextload_v16i16_v16i32:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -885,12 +885,12 @@ define <16 x i32> @zextload_v16i16_v16i32(<16 x i16>* %x) {
 ; LMULMAX4-NEXT:    vle16.v v12, (a0)
 ; LMULMAX4-NEXT:    vzext.vf2 v8, v12
 ; LMULMAX4-NEXT:    ret
-  %y = load <16 x i16>, <16 x i16>* %x
+  %y = load <16 x i16>, ptr %x
   %z = zext <16 x i16> %y to <16 x i32>
   ret <16 x i32> %z
 }
 
-define <16 x i64> @sextload_v16i16_v16i64(<16 x i16>* %x) {
+define <16 x i64> @sextload_v16i16_v16i64(ptr %x) {
 ; LMULMAX1-LABEL: sextload_v16i16_v16i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -935,12 +935,12 @@ define <16 x i64> @sextload_v16i16_v16i64(<16 x i16>* %x) {
 ; LMULMAX4-NEXT:    vsext.vf4 v12, v8
 ; LMULMAX4-NEXT:    vsext.vf4 v8, v16
 ; LMULMAX4-NEXT:    ret
-  %y = load <16 x i16>, <16 x i16>* %x
+  %y = load <16 x i16>, ptr %x
   %z = sext <16 x i16> %y to <16 x i64>
   ret <16 x i64> %z
 }
 
-define <16 x i64> @zextload_v16i16_v16i64(<16 x i16>* %x) {
+define <16 x i64> @zextload_v16i16_v16i64(ptr %x) {
 ; LMULMAX1-LABEL: zextload_v16i16_v16i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -985,12 +985,12 @@ define <16 x i64> @zextload_v16i16_v16i64(<16 x i16>* %x) {
 ; LMULMAX4-NEXT:    vzext.vf4 v12, v8
 ; LMULMAX4-NEXT:    vzext.vf4 v8, v16
 ; LMULMAX4-NEXT:    ret
-  %y = load <16 x i16>, <16 x i16>* %x
+  %y = load <16 x i16>, ptr %x
   %z = zext <16 x i16> %y to <16 x i64>
   ret <16 x i64> %z
 }
 
-define void @truncstore_v2i32_v2i8(<2 x i32> %x, <2 x i8>* %z) {
+define void @truncstore_v2i32_v2i8(<2 x i32> %x, ptr %z) {
 ; CHECK-LABEL: truncstore_v2i32_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
@@ -1000,11 +1000,11 @@ define void @truncstore_v2i32_v2i8(<2 x i32> %x, <2 x i8>* %z) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <2 x i32> %x to <2 x i8>
-  store <2 x i8> %y, <2 x i8>* %z
+  store <2 x i8> %y, ptr %z
   ret void
 }
 
-define void @truncstore_v2i32_v2i16(<2 x i32> %x, <2 x i16>* %z) {
+define void @truncstore_v2i32_v2i16(<2 x i32> %x, ptr %z) {
 ; CHECK-LABEL: truncstore_v2i32_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
@@ -1012,35 +1012,35 @@ define void @truncstore_v2i32_v2i16(<2 x i32> %x, <2 x i16>* %z) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <2 x i32> %x to <2 x i16>
-  store <2 x i16> %y, <2 x i16>* %z
+  store <2 x i16> %y, ptr %z
   ret void
 }
 
-define <2 x i64> @sextload_v2i32_v2i64(<2 x i32>* %x) {
+define <2 x i64> @sextload_v2i32_v2i64(ptr %x) {
 ; CHECK-LABEL: sextload_v2i32_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v9, (a0)
 ; CHECK-NEXT:    vsext.vf2 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <2 x i32>, <2 x i32>* %x
+  %y = load <2 x i32>, ptr %x
   %z = sext <2 x i32> %y to <2 x i64>
   ret <2 x i64> %z
 }
 
-define <2 x i64> @zextload_v2i32_v2i64(<2 x i32>* %x) {
+define <2 x i64> @zextload_v2i32_v2i64(ptr %x) {
 ; CHECK-LABEL: zextload_v2i32_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v9, (a0)
 ; CHECK-NEXT:    vzext.vf2 v8, v9
 ; CHECK-NEXT:    ret
-  %y = load <2 x i32>, <2 x i32>* %x
+  %y = load <2 x i32>, ptr %x
   %z = zext <2 x i32> %y to <2 x i64>
   ret <2 x i64> %z
 }
 
-define void @truncstore_v4i32_v4i8(<4 x i32> %x, <4 x i8>* %z) {
+define void @truncstore_v4i32_v4i8(<4 x i32> %x, ptr %z) {
 ; CHECK-LABEL: truncstore_v4i32_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
@@ -1050,11 +1050,11 @@ define void @truncstore_v4i32_v4i8(<4 x i32> %x, <4 x i8>* %z) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <4 x i32> %x to <4 x i8>
-  store <4 x i8> %y, <4 x i8>* %z
+  store <4 x i8> %y, ptr %z
   ret void
 }
 
-define void @truncstore_v4i32_v4i16(<4 x i32> %x, <4 x i16>* %z) {
+define void @truncstore_v4i32_v4i16(<4 x i32> %x, ptr %z) {
 ; CHECK-LABEL: truncstore_v4i32_v4i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
@@ -1062,11 +1062,11 @@ define void @truncstore_v4i32_v4i16(<4 x i32> %x, <4 x i16>* %z) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <4 x i32> %x to <4 x i16>
-  store <4 x i16> %y, <4 x i16>* %z
+  store <4 x i16> %y, ptr %z
   ret void
 }
 
-define <4 x i64> @sextload_v4i32_v4i64(<4 x i32>* %x) {
+define <4 x i64> @sextload_v4i32_v4i64(ptr %x) {
 ; LMULMAX1-LABEL: sextload_v4i32_v4i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -1084,12 +1084,12 @@ define <4 x i64> @sextload_v4i32_v4i64(<4 x i32>* %x) {
 ; LMULMAX4-NEXT:    vle32.v v10, (a0)
 ; LMULMAX4-NEXT:    vsext.vf2 v8, v10
 ; LMULMAX4-NEXT:    ret
-  %y = load <4 x i32>, <4 x i32>* %x
+  %y = load <4 x i32>, ptr %x
   %z = sext <4 x i32> %y to <4 x i64>
   ret <4 x i64> %z
 }
 
-define <4 x i64> @zextload_v4i32_v4i64(<4 x i32>* %x) {
+define <4 x i64> @zextload_v4i32_v4i64(ptr %x) {
 ; LMULMAX1-LABEL: zextload_v4i32_v4i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -1107,12 +1107,12 @@ define <4 x i64> @zextload_v4i32_v4i64(<4 x i32>* %x) {
 ; LMULMAX4-NEXT:    vle32.v v10, (a0)
 ; LMULMAX4-NEXT:    vzext.vf2 v8, v10
 ; LMULMAX4-NEXT:    ret
-  %y = load <4 x i32>, <4 x i32>* %x
+  %y = load <4 x i32>, ptr %x
   %z = zext <4 x i32> %y to <4 x i64>
   ret <4 x i64> %z
 }
 
-define void @truncstore_v8i32_v8i8(<8 x i32> %x, <8 x i8>* %z) {
+define void @truncstore_v8i32_v8i8(<8 x i32> %x, ptr %z) {
 ; LMULMAX1-LABEL: truncstore_v8i32_v8i8:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
@@ -1137,11 +1137,11 @@ define void @truncstore_v8i32_v8i8(<8 x i32> %x, <8 x i8>* %z) {
 ; LMULMAX4-NEXT:    vse8.v v8, (a0)
 ; LMULMAX4-NEXT:    ret
   %y = trunc <8 x i32> %x to <8 x i8>
-  store <8 x i8> %y, <8 x i8>* %z
+  store <8 x i8> %y, ptr %z
   ret void
 }
 
-define void @truncstore_v8i32_v8i16(<8 x i32> %x, <8 x i16>* %z) {
+define void @truncstore_v8i32_v8i16(<8 x i32> %x, ptr %z) {
 ; LMULMAX1-LABEL: truncstore_v8i32_v8i16:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
@@ -1159,11 +1159,11 @@ define void @truncstore_v8i32_v8i16(<8 x i32> %x, <8 x i16>* %z) {
 ; LMULMAX4-NEXT:    vse16.v v10, (a0)
 ; LMULMAX4-NEXT:    ret
   %y = trunc <8 x i32> %x to <8 x i16>
-  store <8 x i16> %y, <8 x i16>* %z
+  store <8 x i16> %y, ptr %z
   ret void
 }
 
-define <8 x i64> @sextload_v8i32_v8i64(<8 x i32>* %x) {
+define <8 x i64> @sextload_v8i32_v8i64(ptr %x) {
 ; LMULMAX1-LABEL: sextload_v8i32_v8i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -1188,12 +1188,12 @@ define <8 x i64> @sextload_v8i32_v8i64(<8 x i32>* %x) {
 ; LMULMAX4-NEXT:    vle32.v v12, (a0)
 ; LMULMAX4-NEXT:    vsext.vf2 v8, v12
 ; LMULMAX4-NEXT:    ret
-  %y = load <8 x i32>, <8 x i32>* %x
+  %y = load <8 x i32>, ptr %x
   %z = sext <8 x i32> %y to <8 x i64>
   ret <8 x i64> %z
 }
 
-define <8 x i64> @zextload_v8i32_v8i64(<8 x i32>* %x) {
+define <8 x i64> @zextload_v8i32_v8i64(ptr %x) {
 ; LMULMAX1-LABEL: zextload_v8i32_v8i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -1218,12 +1218,12 @@ define <8 x i64> @zextload_v8i32_v8i64(<8 x i32>* %x) {
 ; LMULMAX4-NEXT:    vle32.v v12, (a0)
 ; LMULMAX4-NEXT:    vzext.vf2 v8, v12
 ; LMULMAX4-NEXT:    ret
-  %y = load <8 x i32>, <8 x i32>* %x
+  %y = load <8 x i32>, ptr %x
   %z = zext <8 x i32> %y to <8 x i64>
   ret <8 x i64> %z
 }
 
-define void @truncstore_v16i32_v16i8(<16 x i32> %x, <16 x i8>* %z) {
+define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %z) {
 ; LMULMAX1-LABEL: truncstore_v16i32_v16i8:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
@@ -1260,11 +1260,11 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, <16 x i8>* %z) {
 ; LMULMAX4-NEXT:    vse8.v v8, (a0)
 ; LMULMAX4-NEXT:    ret
   %y = trunc <16 x i32> %x to <16 x i8>
-  store <16 x i8> %y, <16 x i8>* %z
+  store <16 x i8> %y, ptr %z
   ret void
 }
 
-define void @truncstore_v16i32_v16i16(<16 x i32> %x, <16 x i16>* %z) {
+define void @truncstore_v16i32_v16i16(<16 x i32> %x, ptr %z) {
 ; LMULMAX1-LABEL: truncstore_v16i32_v16i16:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
@@ -1289,11 +1289,11 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, <16 x i16>* %z) {
 ; LMULMAX4-NEXT:    vse16.v v12, (a0)
 ; LMULMAX4-NEXT:    ret
   %y = trunc <16 x i32> %x to <16 x i16>
-  store <16 x i16> %y, <16 x i16>* %z
+  store <16 x i16> %y, ptr %z
   ret void
 }
 
-define <16 x i64> @sextload_v16i32_v16i64(<16 x i32>* %x) {
+define <16 x i64> @sextload_v16i32_v16i64(ptr %x) {
 ; LMULMAX1-LABEL: sextload_v16i32_v16i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    addi a1, a0, 48
@@ -1336,12 +1336,12 @@ define <16 x i64> @sextload_v16i32_v16i64(<16 x i32>* %x) {
 ; LMULMAX4-NEXT:    vsext.vf2 v12, v8
 ; LMULMAX4-NEXT:    vsext.vf2 v8, v16
 ; LMULMAX4-NEXT:    ret
-  %y = load <16 x i32>, <16 x i32>* %x
+  %y = load <16 x i32>, ptr %x
   %z = sext <16 x i32> %y to <16 x i64>
   ret <16 x i64> %z
 }
 
-define <16 x i64> @zextload_v16i32_v16i64(<16 x i32>* %x) {
+define <16 x i64> @zextload_v16i32_v16i64(ptr %x) {
 ; LMULMAX1-LABEL: zextload_v16i32_v16i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    addi a1, a0, 48
@@ -1384,12 +1384,12 @@ define <16 x i64> @zextload_v16i32_v16i64(<16 x i32>* %x) {
 ; LMULMAX4-NEXT:    vzext.vf2 v12, v8
 ; LMULMAX4-NEXT:    vzext.vf2 v8, v16
 ; LMULMAX4-NEXT:    ret
-  %y = load <16 x i32>, <16 x i32>* %x
+  %y = load <16 x i32>, ptr %x
   %z = zext <16 x i32> %y to <16 x i64>
   ret <16 x i64> %z
 }
 
-define void @truncstore_v2i64_v2i8(<2 x i64> %x, <2 x i8>* %z) {
+define void @truncstore_v2i64_v2i8(<2 x i64> %x, ptr %z) {
 ; CHECK-LABEL: truncstore_v2i64_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -1401,11 +1401,11 @@ define void @truncstore_v2i64_v2i8(<2 x i64> %x, <2 x i8>* %z) {
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <2 x i64> %x to <2 x i8>
-  store <2 x i8> %y, <2 x i8>* %z
+  store <2 x i8> %y, ptr %z
   ret void
 }
 
-define void @truncstore_v2i64_v2i16(<2 x i64> %x, <2 x i16>* %z) {
+define void @truncstore_v2i64_v2i16(<2 x i64> %x, ptr %z) {
 ; CHECK-LABEL: truncstore_v2i64_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -1415,11 +1415,11 @@ define void @truncstore_v2i64_v2i16(<2 x i64> %x, <2 x i16>* %z) {
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <2 x i64> %x to <2 x i16>
-  store <2 x i16> %y, <2 x i16>* %z
+  store <2 x i16> %y, ptr %z
   ret void
 }
 
-define void @truncstore_v2i64_v2i32(<2 x i64> %x, <2 x i32>* %z) {
+define void @truncstore_v2i64_v2i32(<2 x i64> %x, ptr %z) {
 ; CHECK-LABEL: truncstore_v2i64_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -1427,11 +1427,11 @@ define void @truncstore_v2i64_v2i32(<2 x i64> %x, <2 x i32>* %z) {
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <2 x i64> %x to <2 x i32>
-  store <2 x i32> %y, <2 x i32>* %z
+  store <2 x i32> %y, ptr %z
   ret void
 }
 
-define void @truncstore_v4i64_v4i8(<4 x i64> %x, <4 x i8>* %z) {
+define void @truncstore_v4i64_v4i8(<4 x i64> %x, ptr %z) {
 ; LMULMAX1-LABEL: truncstore_v4i64_v4i8:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -1462,11 +1462,11 @@ define void @truncstore_v4i64_v4i8(<4 x i64> %x, <4 x i8>* %z) {
 ; LMULMAX4-NEXT:    vse8.v v8, (a0)
 ; LMULMAX4-NEXT:    ret
   %y = trunc <4 x i64> %x to <4 x i8>
-  store <4 x i8> %y, <4 x i8>* %z
+  store <4 x i8> %y, ptr %z
   ret void
 }
 
-define void @truncstore_v4i64_v4i16(<4 x i64> %x, <4 x i16>* %z) {
+define void @truncstore_v4i64_v4i16(<4 x i64> %x, ptr %z) {
 ; LMULMAX1-LABEL: truncstore_v4i64_v4i16:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -1491,11 +1491,11 @@ define void @truncstore_v4i64_v4i16(<4 x i64> %x, <4 x i16>* %z) {
 ; LMULMAX4-NEXT:    vse16.v v8, (a0)
 ; LMULMAX4-NEXT:    ret
   %y = trunc <4 x i64> %x to <4 x i16>
-  store <4 x i16> %y, <4 x i16>* %z
+  store <4 x i16> %y, ptr %z
   ret void
 }
 
-define void @truncstore_v4i64_v4i32(<4 x i64> %x, <4 x i32>* %z) {
+define void @truncstore_v4i64_v4i32(<4 x i64> %x, ptr %z) {
 ; LMULMAX1-LABEL: truncstore_v4i64_v4i32:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -1513,11 +1513,11 @@ define void @truncstore_v4i64_v4i32(<4 x i64> %x, <4 x i32>* %z) {
 ; LMULMAX4-NEXT:    vse32.v v10, (a0)
 ; LMULMAX4-NEXT:    ret
   %y = trunc <4 x i64> %x to <4 x i32>
-  store <4 x i32> %y, <4 x i32>* %z
+  store <4 x i32> %y, ptr %z
   ret void
 }
 
-define void @truncstore_v8i64_v8i8(<8 x i64> %x, <8 x i8>* %z) {
+define void @truncstore_v8i64_v8i8(<8 x i64> %x, ptr %z) {
 ; LMULMAX1-LABEL: truncstore_v8i64_v8i8:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -1564,11 +1564,11 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, <8 x i8>* %z) {
 ; LMULMAX4-NEXT:    vse8.v v8, (a0)
 ; LMULMAX4-NEXT:    ret
   %y = trunc <8 x i64> %x to <8 x i8>
-  store <8 x i8> %y, <8 x i8>* %z
+  store <8 x i8> %y, ptr %z
   ret void
 }
 
-define void @truncstore_v8i64_v8i16(<8 x i64> %x, <8 x i16>* %z) {
+define void @truncstore_v8i64_v8i16(<8 x i64> %x, ptr %z) {
 ; LMULMAX1-LABEL: truncstore_v8i64_v8i16:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -1605,11 +1605,11 @@ define void @truncstore_v8i64_v8i16(<8 x i64> %x, <8 x i16>* %z) {
 ; LMULMAX4-NEXT:    vse16.v v8, (a0)
 ; LMULMAX4-NEXT:    ret
   %y = trunc <8 x i64> %x to <8 x i16>
-  store <8 x i16> %y, <8 x i16>* %z
+  store <8 x i16> %y, ptr %z
   ret void
 }
 
-define void @truncstore_v8i64_v8i32(<8 x i64> %x, <8 x i32>* %z) {
+define void @truncstore_v8i64_v8i32(<8 x i64> %x, ptr %z) {
 ; LMULMAX1-LABEL: truncstore_v8i64_v8i32:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -1634,11 +1634,11 @@ define void @truncstore_v8i64_v8i32(<8 x i64> %x, <8 x i32>* %z) {
 ; LMULMAX4-NEXT:    vse32.v v12, (a0)
 ; LMULMAX4-NEXT:    ret
   %y = trunc <8 x i64> %x to <8 x i32>
-  store <8 x i32> %y, <8 x i32>* %z
+  store <8 x i32> %y, ptr %z
   ret void
 }
 
-define void @truncstore_v16i64_v16i8(<16 x i64> %x, <16 x i8>* %z) {
+define void @truncstore_v16i64_v16i8(<16 x i64> %x, ptr %z) {
 ; LMULMAX1-LABEL: truncstore_v16i64_v16i8:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -1725,11 +1725,11 @@ define void @truncstore_v16i64_v16i8(<16 x i64> %x, <16 x i8>* %z) {
 ; LMULMAX4-NEXT:    vse8.v v8, (a0)
 ; LMULMAX4-NEXT:    ret
   %y = trunc <16 x i64> %x to <16 x i8>
-  store <16 x i8> %y, <16 x i8>* %z
+  store <16 x i8> %y, ptr %z
   ret void
 }
 
-define void @truncstore_v16i64_v16i16(<16 x i64> %x, <16 x i16>* %z) {
+define void @truncstore_v16i64_v16i16(<16 x i64> %x, ptr %z) {
 ; LMULMAX1-LABEL: truncstore_v16i64_v16i16:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -1796,11 +1796,11 @@ define void @truncstore_v16i64_v16i16(<16 x i64> %x, <16 x i16>* %z) {
 ; LMULMAX4-NEXT:    vse16.v v8, (a0)
 ; LMULMAX4-NEXT:    ret
   %y = trunc <16 x i64> %x to <16 x i16>
-  store <16 x i16> %y, <16 x i16>* %z
+  store <16 x i16> %y, ptr %z
   ret void
 }
 
-define void @truncstore_v16i64_v16i32(<16 x i64> %x, <16 x i32>* %z) {
+define void @truncstore_v16i64_v16i32(<16 x i64> %x, ptr %z) {
 ; LMULMAX1-LABEL: truncstore_v16i64_v16i32:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -1842,6 +1842,6 @@ define void @truncstore_v16i64_v16i32(<16 x i64> %x, <16 x i32>* %z) {
 ; LMULMAX4-NEXT:    vse32.v v12, (a0)
 ; LMULMAX4-NEXT:    ret
   %y = trunc <16 x i64> %x to <16 x i32>
-  store <16 x i32> %y, <16 x i32>* %z
+  store <16 x i32> %y, ptr %z
   ret void
 }

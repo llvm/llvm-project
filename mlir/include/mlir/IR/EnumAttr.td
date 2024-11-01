@@ -130,7 +130,7 @@ class EnumAttrInfo<
   // type to the corresponding symbol. It will have the following signature:
   //
   // ```c++
-  // llvm::Optional<<qualified-enum-class-name>> <fn-name>(<underlying-type>);
+  // std::optional<<qualified-enum-class-name>> <fn-name>(<underlying-type>);
   // ```
   string underlyingToSymbolFnName = "symbolize" # name;
 
@@ -138,7 +138,7 @@ class EnumAttrInfo<
   // corresponding symbol. It will have the following signature:
   //
   // ```c++
-  // llvm::Optional<<qualified-enum-class-name>> <fn-name>(llvm::StringRef);
+  // std::optional<<qualified-enum-class-name>> <fn-name>(llvm::StringRef);
   // ```
   string stringToSymbolFnName = "symbolize" # name;
 

@@ -12,10 +12,9 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
+#include <optional>
 
-namespace clang {
-namespace tidy {
-namespace utils {
+namespace clang::tidy::utils {
 
 using namespace ast_matchers;
 
@@ -29,7 +28,7 @@ static StringRef getUnqualifiedName(StringRef QualifiedName) {
 UsingInserter::UsingInserter(const SourceManager &SourceMgr)
     : SourceMgr(SourceMgr) {}
 
-Optional<FixItHint> UsingInserter::createUsingDeclaration(
+std::optional<FixItHint> UsingInserter::createUsingDeclaration(
     ASTContext &Context, const Stmt &Statement, StringRef QualifiedName) {
   StringRef UnqualifiedName = getUnqualifiedName(QualifiedName);
   const FunctionDecl *Function = getSurroundingFunction(Context, Statement);
@@ -83,6 +82,4 @@ StringRef UsingInserter::getShortName(ASTContext &Context,
   return QualifiedName;
 }
 
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils

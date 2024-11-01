@@ -12,6 +12,7 @@
 include "mlir/Dialect/Index/IR/IndexDialect.td"
 include "mlir/Dialect/Index/IR/IndexEnums.td"
 include "mlir/Interfaces/CastInterfaces.td"
+include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
@@ -23,7 +24,8 @@ include "mlir/IR/OpBase.td"
 
 /// Base class for Index dialect operations.
 class IndexOp<string mnemonic, list<Trait> traits = []>
-    : Op<IndexDialect, mnemonic, [Pure] # traits>;
+    : Op<IndexDialect, mnemonic,
+      [Pure, DeclareOpInterfaceMethods<InferIntRangeInterface>] # traits>;
 
 //===----------------------------------------------------------------------===//
 // IndexBinaryOp
@@ -277,6 +279,45 @@ def Index_MaxUOp : IndexBinaryOp<"maxu"> {
     ```mlir
     // c = max(a, b)
     %c = index.maxu %a, %b
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MinSOp
+//===----------------------------------------------------------------------===//
+
+def Index_MinSOp : IndexBinaryOp<"mins"> {
+  let summary = "index signed minimum";
+  let description = [{
+    The `index.mins` operation takes two index values and computes their signed
+    minimum value. Treats the leading bit as the sign, i.e. `min(-2, 6) = -2`.
+
+    Example:
+
+    ```mlir
+    // c = min(a, b)
+    %c = index.mins %a, %b
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MinUOp
+//===----------------------------------------------------------------------===//
+
+def Index_MinUOp : IndexBinaryOp<"minu"> {
+  let summary = "index unsigned minimum";
+  let description = [{
+    The `index.minu` operation takes two index values and computes their
+    unsigned minimum value. Treats the leading bit as the most significant, i.e.
+    `min(15, 6) = 6` or `min(-2, 6) = 6`.
+
+    Example:
+
+    ```mlir
+    // c = min(a, b)
+    %c = index.minu %a, %b
     ```
   }];
 }

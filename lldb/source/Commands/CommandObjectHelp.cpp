@@ -71,7 +71,7 @@ CommandObjectHelp::~CommandObjectHelp() = default;
 
 llvm::ArrayRef<OptionDefinition>
 CommandObjectHelp::CommandOptions::GetDefinitions() {
-  return llvm::makeArrayRef(g_help_options);
+  return llvm::ArrayRef(g_help_options);
 }
 
 bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {

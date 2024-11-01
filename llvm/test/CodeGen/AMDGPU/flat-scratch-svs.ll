@@ -77,16 +77,16 @@ define amdgpu_kernel void @soff1_voff1(i32 %soff) {
 bb:
   %soff1 = mul i32 %soff, 1
   %a = alloca i8, i32 64, align 4, addrspace(5)
-  %as = getelementptr i8, i8 addrspace(5)* %a, i32 %soff1
+  %as = getelementptr i8, ptr addrspace(5) %a, i32 %soff1
   %voff = call i32 @llvm.amdgcn.workitem.id.x()
   %voff1 = mul i32 %voff, 1
-  %asv = getelementptr i8, i8 addrspace(5)* %as, i32 %voff1
-  %p1 = getelementptr i8, i8 addrspace(5)* %asv, i32 1
-  store volatile i8 1, i8 addrspace(5)* %p1
-  %p2 = getelementptr i8, i8 addrspace(5)* %asv, i32 2
-  store volatile i8 2, i8 addrspace(5)* %p2
-  %p4 = getelementptr i8, i8 addrspace(5)* %asv, i32 4
-  store volatile i8 4, i8 addrspace(5)* %p4
+  %asv = getelementptr i8, ptr addrspace(5) %as, i32 %voff1
+  %p1 = getelementptr i8, ptr addrspace(5) %asv, i32 1
+  store volatile i8 1, ptr addrspace(5) %p1
+  %p2 = getelementptr i8, ptr addrspace(5) %asv, i32 2
+  store volatile i8 2, ptr addrspace(5) %p2
+  %p4 = getelementptr i8, ptr addrspace(5) %asv, i32 4
+  store volatile i8 4, ptr addrspace(5) %p4
   ret void
 }
 
@@ -162,16 +162,16 @@ define amdgpu_kernel void @soff1_voff2(i32 %soff) {
 bb:
   %soff1 = mul i32 %soff, 1
   %a = alloca i8, i32 64, align 4, addrspace(5)
-  %as = getelementptr i8, i8 addrspace(5)* %a, i32 %soff1
+  %as = getelementptr i8, ptr addrspace(5) %a, i32 %soff1
   %voff = call i32 @llvm.amdgcn.workitem.id.x()
   %voff2 = mul i32 %voff, 2
-  %asv = getelementptr i8, i8 addrspace(5)* %as, i32 %voff2
-  %p1 = getelementptr i8, i8 addrspace(5)* %asv, i32 1
-  store volatile i8 1, i8 addrspace(5)* %p1
-  %p2 = getelementptr i8, i8 addrspace(5)* %asv, i32 2
-  store volatile i8 2, i8 addrspace(5)* %p2
-  %p4 = getelementptr i8, i8 addrspace(5)* %asv, i32 4
-  store volatile i8 4, i8 addrspace(5)* %p4
+  %asv = getelementptr i8, ptr addrspace(5) %as, i32 %voff2
+  %p1 = getelementptr i8, ptr addrspace(5) %asv, i32 1
+  store volatile i8 1, ptr addrspace(5) %p1
+  %p2 = getelementptr i8, ptr addrspace(5) %asv, i32 2
+  store volatile i8 2, ptr addrspace(5) %p2
+  %p4 = getelementptr i8, ptr addrspace(5) %asv, i32 4
+  store volatile i8 4, ptr addrspace(5) %p4
   ret void
 }
 
@@ -246,16 +246,16 @@ define amdgpu_kernel void @soff1_voff4(i32 %soff) {
 bb:
   %soff1 = mul i32 %soff, 1
   %a = alloca i8, i32 64, align 4, addrspace(5)
-  %as = getelementptr i8, i8 addrspace(5)* %a, i32 %soff1
+  %as = getelementptr i8, ptr addrspace(5) %a, i32 %soff1
   %voff = call i32 @llvm.amdgcn.workitem.id.x()
   %voff4 = mul i32 %voff, 4
-  %asv = getelementptr i8, i8 addrspace(5)* %as, i32 %voff4
-  %p1 = getelementptr i8, i8 addrspace(5)* %asv, i32 1
-  store volatile i8 1, i8 addrspace(5)* %p1
-  %p2 = getelementptr i8, i8 addrspace(5)* %asv, i32 2
-  store volatile i8 2, i8 addrspace(5)* %p2
-  %p4 = getelementptr i8, i8 addrspace(5)* %asv, i32 4
-  store volatile i8 4, i8 addrspace(5)* %p4
+  %asv = getelementptr i8, ptr addrspace(5) %as, i32 %voff4
+  %p1 = getelementptr i8, ptr addrspace(5) %asv, i32 1
+  store volatile i8 1, ptr addrspace(5) %p1
+  %p2 = getelementptr i8, ptr addrspace(5) %asv, i32 2
+  store volatile i8 2, ptr addrspace(5) %p2
+  %p4 = getelementptr i8, ptr addrspace(5) %asv, i32 4
+  store volatile i8 4, ptr addrspace(5) %p4
   ret void
 }
 
@@ -333,16 +333,16 @@ define amdgpu_kernel void @soff2_voff1(i32 %soff) {
 bb:
   %soff2 = mul i32 %soff, 2
   %a = alloca i8, i32 64, align 4, addrspace(5)
-  %as = getelementptr i8, i8 addrspace(5)* %a, i32 %soff2
+  %as = getelementptr i8, ptr addrspace(5) %a, i32 %soff2
   %voff = call i32 @llvm.amdgcn.workitem.id.x()
   %voff1 = mul i32 %voff, 1
-  %asv = getelementptr i8, i8 addrspace(5)* %as, i32 %voff1
-  %p1 = getelementptr i8, i8 addrspace(5)* %asv, i32 1
-  store volatile i8 1, i8 addrspace(5)* %p1
-  %p2 = getelementptr i8, i8 addrspace(5)* %asv, i32 2
-  store volatile i8 2, i8 addrspace(5)* %p2
-  %p4 = getelementptr i8, i8 addrspace(5)* %asv, i32 4
-  store volatile i8 4, i8 addrspace(5)* %p4
+  %asv = getelementptr i8, ptr addrspace(5) %as, i32 %voff1
+  %p1 = getelementptr i8, ptr addrspace(5) %asv, i32 1
+  store volatile i8 1, ptr addrspace(5) %p1
+  %p2 = getelementptr i8, ptr addrspace(5) %asv, i32 2
+  store volatile i8 2, ptr addrspace(5) %p2
+  %p4 = getelementptr i8, ptr addrspace(5) %asv, i32 4
+  store volatile i8 4, ptr addrspace(5) %p4
   ret void
 }
 
@@ -422,16 +422,16 @@ define amdgpu_kernel void @soff2_voff2(i32 %soff) {
 bb:
   %soff2 = mul i32 %soff, 2
   %a = alloca i8, i32 64, align 4, addrspace(5)
-  %as = getelementptr i8, i8 addrspace(5)* %a, i32 %soff2
+  %as = getelementptr i8, ptr addrspace(5) %a, i32 %soff2
   %voff = call i32 @llvm.amdgcn.workitem.id.x()
   %voff2 = mul i32 %voff, 2
-  %asv = getelementptr i8, i8 addrspace(5)* %as, i32 %voff2
-  %p1 = getelementptr i8, i8 addrspace(5)* %asv, i32 1
-  store volatile i8 1, i8 addrspace(5)* %p1
-  %p2 = getelementptr i8, i8 addrspace(5)* %asv, i32 2
-  store volatile i8 2, i8 addrspace(5)* %p2
-  %p4 = getelementptr i8, i8 addrspace(5)* %asv, i32 4
-  store volatile i8 4, i8 addrspace(5)* %p4
+  %asv = getelementptr i8, ptr addrspace(5) %as, i32 %voff2
+  %p1 = getelementptr i8, ptr addrspace(5) %asv, i32 1
+  store volatile i8 1, ptr addrspace(5) %p1
+  %p2 = getelementptr i8, ptr addrspace(5) %asv, i32 2
+  store volatile i8 2, ptr addrspace(5) %p2
+  %p4 = getelementptr i8, ptr addrspace(5) %asv, i32 4
+  store volatile i8 4, ptr addrspace(5) %p4
   ret void
 }
 
@@ -511,16 +511,16 @@ define amdgpu_kernel void @soff2_voff4(i32 %soff) {
 bb:
   %soff2 = mul i32 %soff, 2
   %a = alloca i8, i32 64, align 4, addrspace(5)
-  %as = getelementptr i8, i8 addrspace(5)* %a, i32 %soff2
+  %as = getelementptr i8, ptr addrspace(5) %a, i32 %soff2
   %voff = call i32 @llvm.amdgcn.workitem.id.x()
   %voff4 = mul i32 %voff, 4
-  %asv = getelementptr i8, i8 addrspace(5)* %as, i32 %voff4
-  %p1 = getelementptr i8, i8 addrspace(5)* %asv, i32 1
-  store volatile i8 1, i8 addrspace(5)* %p1
-  %p2 = getelementptr i8, i8 addrspace(5)* %asv, i32 2
-  store volatile i8 2, i8 addrspace(5)* %p2
-  %p4 = getelementptr i8, i8 addrspace(5)* %asv, i32 4
-  store volatile i8 4, i8 addrspace(5)* %p4
+  %asv = getelementptr i8, ptr addrspace(5) %as, i32 %voff4
+  %p1 = getelementptr i8, ptr addrspace(5) %asv, i32 1
+  store volatile i8 1, ptr addrspace(5) %p1
+  %p2 = getelementptr i8, ptr addrspace(5) %asv, i32 2
+  store volatile i8 2, ptr addrspace(5) %p2
+  %p4 = getelementptr i8, ptr addrspace(5) %asv, i32 4
+  store volatile i8 4, ptr addrspace(5) %p4
   ret void
 }
 
@@ -599,16 +599,16 @@ define amdgpu_kernel void @soff4_voff1(i32 %soff) {
 bb:
   %soff4 = mul i32 %soff, 4
   %a = alloca i8, i32 64, align 4, addrspace(5)
-  %as = getelementptr i8, i8 addrspace(5)* %a, i32 %soff4
+  %as = getelementptr i8, ptr addrspace(5) %a, i32 %soff4
   %voff = call i32 @llvm.amdgcn.workitem.id.x()
   %voff1 = mul i32 %voff, 1
-  %asv = getelementptr i8, i8 addrspace(5)* %as, i32 %voff1
-  %p1 = getelementptr i8, i8 addrspace(5)* %asv, i32 1
-  store volatile i8 1, i8 addrspace(5)* %p1
-  %p2 = getelementptr i8, i8 addrspace(5)* %asv, i32 2
-  store volatile i8 2, i8 addrspace(5)* %p2
-  %p4 = getelementptr i8, i8 addrspace(5)* %asv, i32 4
-  store volatile i8 4, i8 addrspace(5)* %p4
+  %asv = getelementptr i8, ptr addrspace(5) %as, i32 %voff1
+  %p1 = getelementptr i8, ptr addrspace(5) %asv, i32 1
+  store volatile i8 1, ptr addrspace(5) %p1
+  %p2 = getelementptr i8, ptr addrspace(5) %asv, i32 2
+  store volatile i8 2, ptr addrspace(5) %p2
+  %p4 = getelementptr i8, ptr addrspace(5) %asv, i32 4
+  store volatile i8 4, ptr addrspace(5) %p4
   ret void
 }
 
@@ -690,16 +690,16 @@ define amdgpu_kernel void @soff4_voff2(i32 %soff) {
 bb:
   %soff4 = mul i32 %soff, 4
   %a = alloca i8, i32 64, align 4, addrspace(5)
-  %as = getelementptr i8, i8 addrspace(5)* %a, i32 %soff4
+  %as = getelementptr i8, ptr addrspace(5) %a, i32 %soff4
   %voff = call i32 @llvm.amdgcn.workitem.id.x()
   %voff2 = mul i32 %voff, 2
-  %asv = getelementptr i8, i8 addrspace(5)* %as, i32 %voff2
-  %p1 = getelementptr i8, i8 addrspace(5)* %asv, i32 1
-  store volatile i8 1, i8 addrspace(5)* %p1
-  %p2 = getelementptr i8, i8 addrspace(5)* %asv, i32 2
-  store volatile i8 2, i8 addrspace(5)* %p2
-  %p4 = getelementptr i8, i8 addrspace(5)* %asv, i32 4
-  store volatile i8 4, i8 addrspace(5)* %p4
+  %asv = getelementptr i8, ptr addrspace(5) %as, i32 %voff2
+  %p1 = getelementptr i8, ptr addrspace(5) %asv, i32 1
+  store volatile i8 1, ptr addrspace(5) %p1
+  %p2 = getelementptr i8, ptr addrspace(5) %asv, i32 2
+  store volatile i8 2, ptr addrspace(5) %p2
+  %p4 = getelementptr i8, ptr addrspace(5) %asv, i32 4
+  store volatile i8 4, ptr addrspace(5) %p4
   ret void
 }
 
@@ -779,15 +779,15 @@ define amdgpu_kernel void @soff4_voff4(i32 %soff) {
 bb:
   %soff4 = mul i32 %soff, 4
   %a = alloca i8, i32 64, align 4, addrspace(5)
-  %as = getelementptr i8, i8 addrspace(5)* %a, i32 %soff4
+  %as = getelementptr i8, ptr addrspace(5) %a, i32 %soff4
   %voff = call i32 @llvm.amdgcn.workitem.id.x()
   %voff4 = mul i32 %voff, 4
-  %asv = getelementptr i8, i8 addrspace(5)* %as, i32 %voff4
-  %p1 = getelementptr i8, i8 addrspace(5)* %asv, i32 1
-  store volatile i8 1, i8 addrspace(5)* %p1
-  %p2 = getelementptr i8, i8 addrspace(5)* %asv, i32 2
-  store volatile i8 2, i8 addrspace(5)* %p2
-  %p4 = getelementptr i8, i8 addrspace(5)* %asv, i32 4
-  store volatile i8 4, i8 addrspace(5)* %p4
+  %asv = getelementptr i8, ptr addrspace(5) %as, i32 %voff4
+  %p1 = getelementptr i8, ptr addrspace(5) %asv, i32 1
+  store volatile i8 1, ptr addrspace(5) %p1
+  %p2 = getelementptr i8, ptr addrspace(5) %asv, i32 2
+  store volatile i8 2, ptr addrspace(5) %p2
+  %p4 = getelementptr i8, ptr addrspace(5) %asv, i32 4
+  store volatile i8 4, ptr addrspace(5) %p4
   ret void
 }

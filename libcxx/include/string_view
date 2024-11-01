@@ -493,14 +493,14 @@ public:
     size_type find(basic_string_view __s, size_type __pos = 0) const _NOEXCEPT
     {
         _LIBCPP_ASSERT(__s.size() == 0 || __s.data() != nullptr, "string_view::find(): received nullptr");
-        return __str_find<value_type, size_type, traits_type, npos>
+        return std::__str_find<value_type, size_type, traits_type, npos>
             (data(), size(), __s.data(), __pos, __s.size());
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type find(_CharT __c, size_type __pos = 0) const _NOEXCEPT
     {
-        return __str_find<value_type, size_type, traits_type, npos>
+        return std::__str_find<value_type, size_type, traits_type, npos>
             (data(), size(), __c, __pos);
     }
 
@@ -508,7 +508,7 @@ public:
     size_type find(const _CharT* __s, size_type __pos, size_type __n) const _NOEXCEPT
     {
         _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string_view::find(): received nullptr");
-        return __str_find<value_type, size_type, traits_type, npos>
+        return std::__str_find<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, __n);
     }
 
@@ -516,7 +516,7 @@ public:
     size_type find(const _CharT* __s, size_type __pos = 0) const _NOEXCEPT
     {
         _LIBCPP_ASSERT(__s != nullptr, "string_view::find(): received nullptr");
-        return __str_find<value_type, size_type, traits_type, npos>
+        return std::__str_find<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, traits_type::length(__s));
     }
 
@@ -525,14 +525,14 @@ public:
     size_type rfind(basic_string_view __s, size_type __pos = npos) const _NOEXCEPT
     {
         _LIBCPP_ASSERT(__s.size() == 0 || __s.data() != nullptr, "string_view::find(): received nullptr");
-        return __str_rfind<value_type, size_type, traits_type, npos>
+        return std::__str_rfind<value_type, size_type, traits_type, npos>
             (data(), size(), __s.data(), __pos, __s.size());
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type rfind(_CharT __c, size_type __pos = npos) const _NOEXCEPT
     {
-        return __str_rfind<value_type, size_type, traits_type, npos>
+        return std::__str_rfind<value_type, size_type, traits_type, npos>
             (data(), size(), __c, __pos);
     }
 
@@ -540,7 +540,7 @@ public:
     size_type rfind(const _CharT* __s, size_type __pos, size_type __n) const _NOEXCEPT
     {
         _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string_view::rfind(): received nullptr");
-        return __str_rfind<value_type, size_type, traits_type, npos>
+        return std::__str_rfind<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, __n);
     }
 
@@ -548,7 +548,7 @@ public:
     size_type rfind(const _CharT* __s, size_type __pos=npos) const _NOEXCEPT
     {
         _LIBCPP_ASSERT(__s != nullptr, "string_view::rfind(): received nullptr");
-        return __str_rfind<value_type, size_type, traits_type, npos>
+        return std::__str_rfind<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, traits_type::length(__s));
     }
 
@@ -557,7 +557,7 @@ public:
     size_type find_first_of(basic_string_view __s, size_type __pos = 0) const _NOEXCEPT
     {
         _LIBCPP_ASSERT(__s.size() == 0 || __s.data() != nullptr, "string_view::find_first_of(): received nullptr");
-        return __str_find_first_of<value_type, size_type, traits_type, npos>
+        return std::__str_find_first_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s.data(), __pos, __s.size());
     }
 
@@ -569,7 +569,7 @@ public:
     size_type find_first_of(const _CharT* __s, size_type __pos, size_type __n) const _NOEXCEPT
     {
         _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string_view::find_first_of(): received nullptr");
-        return __str_find_first_of<value_type, size_type, traits_type, npos>
+        return std::__str_find_first_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, __n);
     }
 
@@ -577,7 +577,7 @@ public:
     size_type find_first_of(const _CharT* __s, size_type __pos=0) const _NOEXCEPT
     {
         _LIBCPP_ASSERT(__s != nullptr, "string_view::find_first_of(): received nullptr");
-        return __str_find_first_of<value_type, size_type, traits_type, npos>
+        return std::__str_find_first_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, traits_type::length(__s));
     }
 
@@ -586,7 +586,7 @@ public:
     size_type find_last_of(basic_string_view __s, size_type __pos=npos) const _NOEXCEPT
     {
         _LIBCPP_ASSERT(__s.size() == 0 || __s.data() != nullptr, "string_view::find_last_of(): received nullptr");
-        return __str_find_last_of<value_type, size_type, traits_type, npos>
+        return std::__str_find_last_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s.data(), __pos, __s.size());
     }
 
@@ -598,7 +598,7 @@ public:
     size_type find_last_of(const _CharT* __s, size_type __pos, size_type __n) const _NOEXCEPT
     {
         _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string_view::find_last_of(): received nullptr");
-        return __str_find_last_of<value_type, size_type, traits_type, npos>
+        return std::__str_find_last_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, __n);
     }
 
@@ -606,7 +606,7 @@ public:
     size_type find_last_of(const _CharT* __s, size_type __pos=npos) const _NOEXCEPT
     {
         _LIBCPP_ASSERT(__s != nullptr, "string_view::find_last_of(): received nullptr");
-        return __str_find_last_of<value_type, size_type, traits_type, npos>
+        return std::__str_find_last_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, traits_type::length(__s));
     }
 
@@ -615,14 +615,14 @@ public:
     size_type find_first_not_of(basic_string_view __s, size_type __pos=0) const _NOEXCEPT
     {
         _LIBCPP_ASSERT(__s.size() == 0 || __s.data() != nullptr, "string_view::find_first_not_of(): received nullptr");
-        return __str_find_first_not_of<value_type, size_type, traits_type, npos>
+        return std::__str_find_first_not_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s.data(), __pos, __s.size());
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type find_first_not_of(_CharT __c, size_type __pos=0) const _NOEXCEPT
     {
-        return __str_find_first_not_of<value_type, size_type, traits_type, npos>
+        return std::__str_find_first_not_of<value_type, size_type, traits_type, npos>
             (data(), size(), __c, __pos);
     }
 
@@ -630,7 +630,7 @@ public:
     size_type find_first_not_of(const _CharT* __s, size_type __pos, size_type __n) const _NOEXCEPT
     {
         _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string_view::find_first_not_of(): received nullptr");
-        return __str_find_first_not_of<value_type, size_type, traits_type, npos>
+        return std::__str_find_first_not_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, __n);
     }
 
@@ -638,7 +638,7 @@ public:
     size_type find_first_not_of(const _CharT* __s, size_type __pos=0) const _NOEXCEPT
     {
         _LIBCPP_ASSERT(__s != nullptr, "string_view::find_first_not_of(): received nullptr");
-        return __str_find_first_not_of<value_type, size_type, traits_type, npos>
+        return std::__str_find_first_not_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, traits_type::length(__s));
     }
 
@@ -647,14 +647,14 @@ public:
     size_type find_last_not_of(basic_string_view __s, size_type __pos=npos) const _NOEXCEPT
     {
         _LIBCPP_ASSERT(__s.size() == 0 || __s.data() != nullptr, "string_view::find_last_not_of(): received nullptr");
-        return __str_find_last_not_of<value_type, size_type, traits_type, npos>
+        return std::__str_find_last_not_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s.data(), __pos, __s.size());
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type find_last_not_of(_CharT __c, size_type __pos=npos) const _NOEXCEPT
     {
-        return __str_find_last_not_of<value_type, size_type, traits_type, npos>
+        return std::__str_find_last_not_of<value_type, size_type, traits_type, npos>
             (data(), size(), __c, __pos);
     }
 
@@ -662,7 +662,7 @@ public:
     size_type find_last_not_of(const _CharT* __s, size_type __pos, size_type __n) const _NOEXCEPT
     {
         _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string_view::find_last_not_of(): received nullptr");
-        return __str_find_last_not_of<value_type, size_type, traits_type, npos>
+        return std::__str_find_last_not_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, __n);
     }
 
@@ -670,7 +670,7 @@ public:
     size_type find_last_not_of(const _CharT* __s, size_type __pos=npos) const _NOEXCEPT
     {
         _LIBCPP_ASSERT(__s != nullptr, "string_view::find_last_not_of(): received nullptr");
-        return __str_find_last_not_of<value_type, size_type, traits_type, npos>
+        return std::__str_find_last_not_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, traits_type::length(__s));
     }
 
@@ -953,7 +953,7 @@ struct __string_view_hash : public __unary_function<basic_string_view<_CharT, ch
 {
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(const basic_string_view<_CharT, char_traits<_CharT> > __val) const _NOEXCEPT {
-        return __do_string_hash(__val.data(), __val.data() + __val.size());
+        return std::__do_string_hash(__val.data(), __val.data() + __val.size());
     }
 };
 

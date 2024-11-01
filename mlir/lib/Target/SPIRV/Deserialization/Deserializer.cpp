@@ -16,8 +16,8 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
@@ -29,6 +29,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace mlir;
 
@@ -500,7 +501,7 @@ spirv::Deserializer::processFunctionEnd(ArrayRef<uint32_t> operands) {
   return success();
 }
 
-Optional<std::pair<Attribute, Type>>
+std::optional<std::pair<Attribute, Type>>
 spirv::Deserializer::getConstant(uint32_t id) {
   auto constIt = constantMap.find(id);
   if (constIt == constantMap.end())
@@ -508,7 +509,7 @@ spirv::Deserializer::getConstant(uint32_t id) {
   return constIt->getSecond();
 }
 
-Optional<spirv::SpecConstOperationMaterializationInfo>
+std::optional<spirv::SpecConstOperationMaterializationInfo>
 spirv::Deserializer::getSpecConstantOperation(uint32_t id) {
   auto constIt = specConstOperationMap.find(id);
   if (constIt == specConstOperationMap.end())
@@ -856,7 +857,7 @@ spirv::Deserializer::processFunctionType(ArrayRef<uint32_t> operands) {
   }
   ArrayRef<Type> returnTypes;
   if (!isVoidType(returnType)) {
-    returnTypes = llvm::makeArrayRef(returnType);
+    returnTypes = llvm::ArrayRef(returnType);
   }
   typeMap[operands[0]] = FunctionType::get(context, argTypes, returnTypes);
   return success();
@@ -1512,7 +1513,7 @@ spirv::Deserializer::processBranchConditional(ArrayRef<uint32_t> operands) {
   auto *trueBlock = getOrCreateBlock(operands[1]);
   auto *falseBlock = getOrCreateBlock(operands[2]);
 
-  Optional<std::pair<uint32_t, uint32_t>> weights;
+  std::optional<std::pair<uint32_t, uint32_t>> weights;
   if (operands.size() == 5) {
     weights = std::make_pair(operands[3], operands[4]);
   }
@@ -1750,7 +1751,7 @@ LogicalResult ControlFlowStructurizer::structurize() {
     return failure();
   Region &body = op->getRegion(0);
 
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   // All references to the old merge block should be directed to the
   // selection/loop merge block in the SelectionOp/LoopOp's region.
   mapper.map(mergeBlock, &body.back());

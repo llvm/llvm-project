@@ -49,10 +49,10 @@ private:
     const Decl *D;
   };
   llvm::SmallVector<KernelInfo, 16> EmittedKernels;
-  // Map a device stub function to a symbol for identifying kernel in host code.
+  // Map a kernel mangled name to a symbol for identifying kernel in host code
   // For CUDA, the symbol for identifying the kernel is the same as the device
   // stub function. For HIP, they are different.
-  llvm::DenseMap<llvm::Function *, llvm::GlobalValue *> KernelHandles;
+  llvm::DenseMap<StringRef, llvm::GlobalValue *> KernelHandles;
   // Map a kernel handle to the kernel stub.
   llvm::DenseMap<llvm::GlobalValue *, llvm::Function *> KernelStubs;
   struct VarInfo {
@@ -310,7 +310,8 @@ std::string CGNVCUDARuntime::getDeviceSideName(const NamedDecl *ND) {
 void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
                                      FunctionArgList &Args) {
   EmittedKernels.push_back({CGF.CurFn, CGF.CurFuncDecl});
-  if (auto *GV = dyn_cast<llvm::GlobalVariable>(KernelHandles[CGF.CurFn])) {
+  if (auto *GV =
+          dyn_cast<llvm::GlobalVariable>(KernelHandles[CGF.CurFn->getName()])) {
     GV->setLinkage(CGF.CurFn->getLinkage());
     GV->setInitializer(CGF.CurFn);
   }
@@ -400,8 +401,8 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
                                ShmemSize.getPointer(), Stream.getPointer()});
 
   // Emit the call to cudaLaunch
-  llvm::Value *Kernel =
-      CGF.Builder.CreatePointerCast(KernelHandles[CGF.CurFn], VoidPtrTy);
+  llvm::Value *Kernel = CGF.Builder.CreatePointerCast(
+      KernelHandles[CGF.CurFn->getName()], VoidPtrTy);
   CallArgList LaunchKernelArgs;
   LaunchKernelArgs.add(RValue::get(Kernel),
                        cudaLaunchKernelFD->getParamDecl(0)->getType());
@@ -456,8 +457,8 @@ void CGNVCUDARuntime::emitDeviceStubBodyLegacy(CodeGenFunction &CGF,
 
   // Emit the call to cudaLaunch
   llvm::FunctionCallee cudaLaunchFn = getLaunchFn();
-  llvm::Value *Arg =
-      CGF.Builder.CreatePointerCast(KernelHandles[CGF.CurFn], CharPtrTy);
+  llvm::Value *Arg = CGF.Builder.CreatePointerCast(
+      KernelHandles[CGF.CurFn->getName()], CharPtrTy);
   CGF.EmitRuntimeCallOrInvoke(cudaLaunchFn, Arg);
   CGF.EmitBranch(EndBlock);
 
@@ -551,7 +552,7 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
     llvm::Constant *NullPtr = llvm::ConstantPointerNull::get(VoidPtrTy);
     llvm::Value *Args[] = {
         &GpuBinaryHandlePtr,
-        Builder.CreateBitCast(KernelHandles[I.Kernel], VoidPtrTy),
+        Builder.CreateBitCast(KernelHandles[I.Kernel->getName()], VoidPtrTy),
         KernelName,
         KernelName,
         llvm::ConstantInt::get(IntTy, -1),
@@ -1130,7 +1131,7 @@ void CGNVCUDARuntime::createOffloadingEntries() {
   StringRef Section = CGM.getLangOpts().HIP ? "hip_offloading_entries"
                                             : "cuda_offloading_entries";
   for (KernelInfo &I : EmittedKernels)
-    OMPBuilder.emitOffloadingEntry(KernelHandles[I.Kernel],
+    OMPBuilder.emitOffloadingEntry(KernelHandles[I.Kernel->getName()],
                                    getDeviceSideName(cast<NamedDecl>(I.D)), 0,
                                    DeviceVarFlags::OffloadGlobalEntry, Section);
 
@@ -1193,12 +1194,12 @@ llvm::Function *CGNVCUDARuntime::finalizeModule() {
 
 llvm::GlobalValue *CGNVCUDARuntime::getKernelHandle(llvm::Function *F,
                                                     GlobalDecl GD) {
-  auto Loc = KernelHandles.find(F);
+  auto Loc = KernelHandles.find(F->getName());
   if (Loc != KernelHandles.end())
     return Loc->second;
 
   if (!CGM.getLangOpts().HIP) {
-    KernelHandles[F] = F;
+    KernelHandles[F->getName()] = F;
     KernelStubs[F] = F;
     return F;
   }
@@ -1212,7 +1213,7 @@ llvm::GlobalValue *CGNVCUDARuntime::getKernelHandle(llvm::Function *F,
   Var->setDSOLocal(F->isDSOLocal());
   Var->setVisibility(F->getVisibility());
   CGM.maybeSetTrivialComdat(*GD.getDecl(), *Var);
-  KernelHandles[F] = Var;
+  KernelHandles[F->getName()] = Var;
   KernelStubs[Var] = F;
   return Var;
 }

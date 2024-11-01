@@ -16,9 +16,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 namespace {
 AST_MATCHER(Decl, isFromStdNamespaceOrSystemHeader) {
   if (const auto *D = Node.getDeclContext()->getEnclosingNamespaceContext())
@@ -353,7 +351,7 @@ void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     checkCallArgs(Result.Context, Callee, Call->getCallee()->getEndLoc(),
-                  llvm::makeArrayRef(Call->getArgs(), Call->getNumArgs()));
+                  llvm::ArrayRef(Call->getArgs(), Call->getNumArgs()));
   } else {
     const auto *Construct = cast<CXXConstructExpr>(E);
     if (Construct->getNumArgs() > 0 &&
@@ -364,10 +362,8 @@ void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
     checkCallArgs(
         Result.Context, Construct->getConstructor(),
         Construct->getParenOrBraceRange().getBegin(),
-        llvm::makeArrayRef(Construct->getArgs(), Construct->getNumArgs()));
+        llvm::ArrayRef(Construct->getArgs(), Construct->getNumArgs()));
   }
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

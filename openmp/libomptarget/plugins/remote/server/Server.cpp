@@ -90,8 +90,6 @@ Status RemoteOffloadImpl::IsValidBinary(ServerContext *Context,
 Status RemoteOffloadImpl::GetNumberOfDevices(ServerContext *Context,
                                              const Null *Null,
                                              I32 *NumberOfDevices) {
-  std::call_once(PM->RTLs.initFlag, &RTLsTy::LoadRTLs, &PM->RTLs);
-
   int32_t Devices = 0;
   PM->RTLsMtx.lock();
   for (auto &RTL : PM->RTLs.AllRTLs)

@@ -32,6 +32,7 @@ driver_executable("lld") {
     "//lld/MinGW",
     "//lld/wasm",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
     "//llvm/utils/gn/build/libs/xar",
   ]
   assert_no_deps = [ "//llvm/lib/Debuginfod" ]

@@ -12,9 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include <bitset>
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 using CharsBitSet = std::bitset<1 << CHAR_BIT>;
 
@@ -44,8 +42,6 @@ private:
   const bool ReplaceShorterLiterals;
 };
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_RAW_STRING_LITERAL_H

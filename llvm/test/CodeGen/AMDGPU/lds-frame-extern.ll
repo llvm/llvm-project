@@ -22,7 +22,7 @@ define void @use_module() #0 {
 ; CHECK-NEXT:    ds_write_b16 v0, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  store i16 0, i16 addrspace(3)* @module_variable
+  store i16 0, ptr addrspace(3) @module_variable
   ret void
 }
 
@@ -49,10 +49,10 @@ define amdgpu_kernel void @module_0_kernel_normal_extern_normal(i32 %idx) #1 {
 ; CHECK-NEXT:    ds_write_b16 v0, v1
 ; CHECK-NEXT:    ds_write_b32 v2, v0
 ; CHECK-NEXT:    s_endpgm
-  store i16 2, i16 addrspace(3)* @kernel_normal
+  store i16 2, ptr addrspace(3) @kernel_normal
 
-  %arrayidx1 = getelementptr inbounds [0 x float], [0 x float] addrspace(3)* @extern_normal, i32 0, i32 %idx
-  store float 0.0, float addrspace(3)* %arrayidx1
+  %arrayidx1 = getelementptr inbounds [0 x float], ptr addrspace(3) @extern_normal, i32 0, i32 %idx
+  store float 0.0, ptr addrspace(3) %arrayidx1
   ret void
 }
 
@@ -85,12 +85,12 @@ define amdgpu_kernel void @module_1_kernel_normal_extern_normal(i32 %idx) {
 ; CHECK-NEXT:    ds_write_b32 v3, v0
 ; CHECK-NEXT:    s_endpgm
   call void @use_module()
-  store i16 1, i16 addrspace(3)* @module_variable
+  store i16 1, ptr addrspace(3) @module_variable
 
-  store i16 2, i16 addrspace(3)* @kernel_normal
+  store i16 2, ptr addrspace(3) @kernel_normal
 
-  %arrayidx1 = getelementptr inbounds [0 x float], [0 x float] addrspace(3)* @extern_normal, i32 0, i32 %idx
-  store float 0.0, float addrspace(3)* %arrayidx1
+  %arrayidx1 = getelementptr inbounds [0 x float], ptr addrspace(3) @extern_normal, i32 0, i32 %idx
+  store float 0.0, ptr addrspace(3) %arrayidx1
   ret void
 }
 
@@ -107,10 +107,10 @@ define amdgpu_kernel void @module_0_kernel_overalign_extern_normal(i32 %idx) #1 
 ; CHECK-NEXT:    ds_write_b16 v0, v1
 ; CHECK-NEXT:    ds_write_b32 v2, v0
 ; CHECK-NEXT:    s_endpgm
-  store i16 2, i16 addrspace(3)* @kernel_overalign
+  store i16 2, ptr addrspace(3) @kernel_overalign
 
-  %arrayidx1 = getelementptr inbounds [0 x float], [0 x float] addrspace(3)* @extern_normal, i32 0, i32 %idx
-  store float 0.0, float addrspace(3)* %arrayidx1
+  %arrayidx1 = getelementptr inbounds [0 x float], ptr addrspace(3) @extern_normal, i32 0, i32 %idx
+  store float 0.0, ptr addrspace(3) %arrayidx1
   ret void
 }
 
@@ -143,12 +143,12 @@ define amdgpu_kernel void @module_1_kernel_overalign_extern_normal(i32 %idx) {
 ; CHECK-NEXT:    ds_write_b32 v3, v0
 ; CHECK-NEXT:    s_endpgm
   call void @use_module()
-  store i16 1, i16 addrspace(3)* @module_variable
+  store i16 1, ptr addrspace(3) @module_variable
 
-  store i16 2, i16 addrspace(3)* @kernel_overalign
+  store i16 2, ptr addrspace(3) @kernel_overalign
 
-  %arrayidx1 = getelementptr inbounds [0 x float], [0 x float] addrspace(3)* @extern_normal, i32 0, i32 %idx
-  store float 0.0, float addrspace(3)* %arrayidx1
+  %arrayidx1 = getelementptr inbounds [0 x float], ptr addrspace(3) @extern_normal, i32 0, i32 %idx
+  store float 0.0, ptr addrspace(3) %arrayidx1
   ret void
 }
 
@@ -165,10 +165,10 @@ define amdgpu_kernel void @module_0_kernel_normal_extern_overalign(i32 %idx) #1 
 ; CHECK-NEXT:    ds_write_b16 v0, v1
 ; CHECK-NEXT:    ds_write_b32 v2, v0
 ; CHECK-NEXT:    s_endpgm
-  store i16 2, i16 addrspace(3)* @kernel_normal
+  store i16 2, ptr addrspace(3) @kernel_normal
 
-  %arrayidx1 = getelementptr inbounds [0 x float], [0 x float] addrspace(3)* @extern_overalign, i32 0, i32 %idx
-  store float 0.0, float addrspace(3)* %arrayidx1
+  %arrayidx1 = getelementptr inbounds [0 x float], ptr addrspace(3) @extern_overalign, i32 0, i32 %idx
+  store float 0.0, ptr addrspace(3) %arrayidx1
   ret void
 }
 
@@ -201,12 +201,12 @@ define amdgpu_kernel void @module_1_kernel_normal_extern_overalign(i32 %idx) {
 ; CHECK-NEXT:    ds_write_b32 v3, v0
 ; CHECK-NEXT:    s_endpgm
   call void @use_module()
-  store i16 1, i16 addrspace(3)* @module_variable
+  store i16 1, ptr addrspace(3) @module_variable
 
-  store i16 2, i16 addrspace(3)* @kernel_normal
+  store i16 2, ptr addrspace(3) @kernel_normal
 
-  %arrayidx1 = getelementptr inbounds [0 x float], [0 x float] addrspace(3)* @extern_overalign, i32 0, i32 %idx
-  store float 0.0, float addrspace(3)* %arrayidx1
+  %arrayidx1 = getelementptr inbounds [0 x float], ptr addrspace(3) @extern_overalign, i32 0, i32 %idx
+  store float 0.0, ptr addrspace(3) %arrayidx1
   ret void
 }
 
@@ -223,10 +223,10 @@ define amdgpu_kernel void @module_0_kernel_overalign_extern_overalign(i32 %idx) 
 ; CHECK-NEXT:    ds_write_b16 v0, v1
 ; CHECK-NEXT:    ds_write_b32 v2, v0
 ; CHECK-NEXT:    s_endpgm
-  store i16 2, i16 addrspace(3)* @kernel_overalign
+  store i16 2, ptr addrspace(3) @kernel_overalign
 
-  %arrayidx1 = getelementptr inbounds [0 x float], [0 x float] addrspace(3)* @extern_overalign, i32 0, i32 %idx
-  store float 0.0, float addrspace(3)* %arrayidx1
+  %arrayidx1 = getelementptr inbounds [0 x float], ptr addrspace(3) @extern_overalign, i32 0, i32 %idx
+  store float 0.0, ptr addrspace(3) %arrayidx1
   ret void
 }
 
@@ -259,12 +259,12 @@ define amdgpu_kernel void @module_1_kernel_overalign_extern_overalign(i32 %idx) 
 ; CHECK-NEXT:    ds_write_b32 v3, v0
 ; CHECK-NEXT:    s_endpgm
   call void @use_module()
-  store i16 1, i16 addrspace(3)* @module_variable
+  store i16 1, ptr addrspace(3) @module_variable
 
-  store i16 2, i16 addrspace(3)* @kernel_overalign
+  store i16 2, ptr addrspace(3) @kernel_overalign
 
-  %arrayidx1 = getelementptr inbounds [0 x float], [0 x float] addrspace(3)* @extern_overalign, i32 0, i32 %idx
-  store float 0.0, float addrspace(3)* %arrayidx1
+  %arrayidx1 = getelementptr inbounds [0 x float], ptr addrspace(3) @extern_overalign, i32 0, i32 %idx
+  store float 0.0, ptr addrspace(3) %arrayidx1
   ret void
 }
 

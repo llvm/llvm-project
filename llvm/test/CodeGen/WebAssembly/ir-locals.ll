@@ -1,9 +1,9 @@
 ; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false | FileCheck %s
 
-%i32_cell = type i32 addrspace(1)*
-%i64_cell = type i64 addrspace(1)*
-%f32_cell = type float addrspace(1)*
-%f64_cell = type double addrspace(1)*
+%i32_cell = type ptr addrspace(1)
+%i64_cell = type ptr addrspace(1)
+%f32_cell = type ptr addrspace(1)
+%f64_cell = type ptr addrspace(1)
 
 ; We have a set of tests in which we set a local and then reload the
 ; local.  If the load immediately follows the set, the DAG combiner will

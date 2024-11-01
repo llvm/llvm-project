@@ -6,7 +6,7 @@
 ; to return true for i64->i32. Otherwise we emit a
 ; lw and a shift pair for the zext.
 
-define void @foo(i32* %p, i64* %q, i32* %r) {
+define void @foo(ptr %p, ptr %q, ptr %r) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lwu a0, 0(a0)
@@ -16,14 +16,14 @@ define void @foo(i32* %p, i64* %q, i32* %r) {
 ; CHECK-NEXT:    sw a0, 0(a2)
 ; CHECK-NEXT:  .LBB0_2: # %end
 ; CHECK-NEXT:    ret
-  %a = load i32, i32* %p
+  %a = load i32, ptr %p
   %b = zext i32 %a to i64
-  store i64 %b, i64* %q
+  store i64 %b, ptr %q
   %c = icmp ne i32 %a, 0
   br i1 %c, label %if, label %end
 
 if:
-  store i32 %a, i32* %r
+  store i32 %a, ptr %r
   br label %end
 
 end:

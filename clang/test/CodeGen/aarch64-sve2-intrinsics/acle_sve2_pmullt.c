@@ -48,16 +48,16 @@ svuint32_t test_svpmullt_pair_u32(svuint32_t op1, svuint32_t op2)
 // CHECK-LABEL: @test_svpmullt_pair_n_u8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[OP2:%.*]], i64 0
-// CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.pmullt.pair.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[TMP0]])
-// CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
+// CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.pmullt.pair.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[DOTSPLAT]])
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z23test_svpmullt_pair_n_u8u11__SVUint8_th(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[OP2:%.*]], i64 0
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.pmullt.pair.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[TMP0]])
-// CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
+// CPP-CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.pmullt.pair.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[DOTSPLAT]])
+// CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
 svuint8_t test_svpmullt_pair_n_u8(svuint8_t op1, uint8_t op2)
 {
@@ -67,16 +67,16 @@ svuint8_t test_svpmullt_pair_n_u8(svuint8_t op1, uint8_t op2)
 // CHECK-LABEL: @test_svpmullt_pair_n_u32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[OP2:%.*]], i64 0
-// CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.pmullt.pair.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[TMP0]])
-// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
+// CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.pmullt.pair.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[DOTSPLAT]])
+// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svpmullt_pair_n_u32u12__SVUint32_tj(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[OP2:%.*]], i64 0
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.pmullt.pair.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[TMP0]])
-// CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
+// CPP-CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.pmullt.pair.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[DOTSPLAT]])
+// CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 svuint32_t test_svpmullt_pair_n_u32(svuint32_t op1, uint32_t op2)
 {
@@ -120,18 +120,18 @@ svuint64_t test_svpmullt_u64(svuint32_t op1, svuint32_t op2)
 // CHECK-LABEL: @test_svpmullt_n_u16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[OP2:%.*]], i64 0
-// CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.pmullt.pair.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 16 x i8> [[TMP1]] to <vscale x 8 x i16>
-// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
+// CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.pmullt.pair.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[DOTSPLAT]])
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 16 x i8> [[TMP0]] to <vscale x 8 x i16>
+// CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svpmullt_n_u16u11__SVUint8_th(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[OP2:%.*]], i64 0
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.pmullt.pair.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[TMP0]])
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 16 x i8> [[TMP1]] to <vscale x 8 x i16>
-// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
+// CPP-CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.pmullt.pair.nxv16i8(<vscale x 16 x i8> [[OP1:%.*]], <vscale x 16 x i8> [[DOTSPLAT]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 16 x i8> [[TMP0]] to <vscale x 8 x i16>
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
 svuint16_t test_svpmullt_n_u16(svuint8_t op1, uint8_t op2)
 {
@@ -141,18 +141,18 @@ svuint16_t test_svpmullt_n_u16(svuint8_t op1, uint8_t op2)
 // CHECK-LABEL: @test_svpmullt_n_u64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[OP2:%.*]], i64 0
-// CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.pmullt.pair.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 4 x i32> [[TMP1]] to <vscale x 2 x i64>
-// CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
+// CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.pmullt.pair.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[DOTSPLAT]])
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 4 x i32> [[TMP0]] to <vscale x 2 x i64>
+// CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CPP-CHECK-LABEL: @_Z19test_svpmullt_n_u64u12__SVUint32_tj(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[OP2:%.*]], i64 0
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.pmullt.pair.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[TMP0]])
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 4 x i32> [[TMP1]] to <vscale x 2 x i64>
-// CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
+// CPP-CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.pmullt.pair.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 4 x i32> [[DOTSPLAT]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 4 x i32> [[TMP0]] to <vscale x 2 x i64>
+// CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 svuint64_t test_svpmullt_n_u64(svuint32_t op1, uint32_t op2)
 {

@@ -36,7 +36,7 @@ set(LLDB_PROCESS_WINDOWS_PLUGIN "")
 set(LLDB_PROCESS_GDB_PLUGIN "")
 
 foreach(p ${LLDB_ALL_PLUGINS})
-  # Strip lldbPlugin form the plugin name.
+  # Strip lldbPlugin from the plugin name.
   string(SUBSTRING ${p} 10 -1 pStripped)
   if(${pStripped} MATCHES "^ScriptInterpreter*")
     set(LLDB_ENUM_PLUGINS "${LLDB_ENUM_PLUGINS}LLDB_SCRIPT_PLUGIN(${pStripped})\n")

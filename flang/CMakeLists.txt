@@ -55,6 +55,10 @@ if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES Clang)
   endif()
 endif()
 
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+  message(FATAL_ERROR "flang isn't supported on 32 bit CPUs")
+endif()
+
 if (FLANG_STANDALONE_BUILD)
   set(FLANG_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
   if (NOT MSVC_IDE)

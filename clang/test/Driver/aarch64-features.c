@@ -6,6 +6,22 @@
 // The AArch64 PCS states that chars should be unsigned.
 // CHECK: fno-signed-char
 
+// Check Function Multi Versioning option and rtlib dependency.
+// RUN: %clang -target aarch64-linux-android -rtlib=compiler-rt \
+// RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-FMV %s
+
+// RUN: %clang -target aarch64-linux-android -rtlib=compiler-rt -mno-fmv \
+// RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-FMV-OFF %s
+
+// RUN: %clang -target aarch64-linux-gnu -rtlib=libgcc \
+// RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-FMV-OFF %s
+
+// RUN: %clang -target arm64-unknown-linux -rtlib=libgcc \
+// RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-FMV-OFF %s
+
+// CHECK-FMV-OFF: "-target-feature" "-fmv"
+// CHECK-FMV-NOT: "-target-feature" "-fmv"
+
 // Check for AArch64 out-of-line atomics default settings.
 // RUN: %clang -target aarch64-linux-android -rtlib=compiler-rt \
 // RUN: -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-OUTLINE-ATOMICS-ON %s

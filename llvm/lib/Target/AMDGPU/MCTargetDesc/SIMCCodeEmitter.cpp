@@ -384,7 +384,7 @@ void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
 
     // Is this operand a literal immediate?
     const MCOperand &Op = MI.getOperand(i);
-    auto Enc = getLitEncoding(Op, Desc.OpInfo[i], STI);
+    auto Enc = getLitEncoding(Op, Desc.operands()[i], STI);
     if (!Enc || *Enc != 255)
       continue;
 
@@ -456,7 +456,7 @@ void SIMCCodeEmitter::getSDWASrcEncoding(const MCInst &MI, unsigned OpNo,
     return;
   } else {
     const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
-    auto Enc = getLitEncoding(MO, Desc.OpInfo[OpNo], STI);
+    auto Enc = getLitEncoding(MO, Desc.operands()[OpNo], STI);
     if (Enc && *Enc != 255) {
       Op = *Enc | SDWA9EncValues::SRC_SGPR_MASK;
       return;
@@ -579,7 +579,7 @@ void SIMCCodeEmitter::getMachineOpValueCommon(
 
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   if (AMDGPU::isSISrcOperand(Desc, OpNo)) {
-    if (auto Enc = getLitEncoding(MO, Desc.OpInfo[OpNo], STI)) {
+    if (auto Enc = getLitEncoding(MO, Desc.operands()[OpNo], STI)) {
       Op = *Enc;
       return;
     }

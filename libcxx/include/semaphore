@@ -113,7 +113,7 @@ public:
         if (__rel_time == chrono::duration<Rep, Period>::zero())
             return try_acquire();
         auto const __test_fn = [this]() { return try_acquire(); };
-        return __libcpp_thread_poll_with_backoff(__test_fn, __libcpp_timed_backoff_policy(), __rel_time);
+        return std::__libcpp_thread_poll_with_backoff(__test_fn, __libcpp_timed_backoff_policy(), __rel_time);
     }
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     bool try_acquire()

@@ -26,6 +26,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 #define DEBUG_TYPE "affine-analysis"
 
@@ -50,8 +51,8 @@ static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
     return nullptr;
 
   Operation *combinerOp = combinerOps.back();
-  Optional<arith::AtomicRMWKind> maybeKind =
-      TypeSwitch<Operation *, Optional<arith::AtomicRMWKind>>(combinerOp)
+  std::optional<arith::AtomicRMWKind> maybeKind =
+      TypeSwitch<Operation *, std::optional<arith::AtomicRMWKind>>(combinerOp)
           .Case([](arith::AddFOp) { return arith::AtomicRMWKind::addf; })
           .Case([](arith::MulFOp) { return arith::AtomicRMWKind::mulf; })
           .Case([](arith::AddIOp) { return arith::AtomicRMWKind::addi; })
@@ -64,7 +65,7 @@ static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
           .Case([](arith::MaxSIOp) { return arith::AtomicRMWKind::maxs; })
           .Case([](arith::MinUIOp) { return arith::AtomicRMWKind::minu; })
           .Case([](arith::MaxUIOp) { return arith::AtomicRMWKind::maxu; })
-          .Default([](Operation *) -> Optional<arith::AtomicRMWKind> {
+          .Default([](Operation *) -> std::optional<arith::AtomicRMWKind> {
             // TODO: AtomicRMW supports other kinds of reductions this is
             // currently not detecting, add those when the need arises.
             return std::nullopt;
@@ -286,6 +287,14 @@ static LogicalResult getOpIndexSet(Operation *op,
   return getIndexSet(ops, indexSet);
 }
 
+/// Returns true if `val` is an induction of an affine.parallel op.
+static bool isAffineParallelInductionVar(Value val) {
+  auto ivArg = val.dyn_cast<BlockArgument>();
+  if (!ivArg)
+    return false;
+  return isa<AffineParallelOp>(ivArg.getOwner()->getParentOp());
+}
+
 // Returns the number of outer loop common to 'src/dstDomain'.
 // Loops common to 'src/dst' domains are added to 'commonLoops' if non-null.
 static unsigned
@@ -297,8 +306,10 @@ getNumCommonLoops(const FlatAffineValueConstraints &srcDomain,
       std::min(srcDomain.getNumDimVars(), dstDomain.getNumDimVars());
   unsigned numCommonLoops = 0;
   for (unsigned i = 0; i < minNumLoops; ++i) {
-    if (!isForInductionVar(srcDomain.getValue(i)) ||
-        !isForInductionVar(dstDomain.getValue(i)) ||
+    if ((!isAffineForInductionVar(srcDomain.getValue(i)) &&
+         !isAffineParallelInductionVar(srcDomain.getValue(i))) ||
+        (!isAffineForInductionVar(dstDomain.getValue(i)) &&
+         !isAffineParallelInductionVar(dstDomain.getValue(i))) ||
         srcDomain.getValue(i) != dstDomain.getValue(i))
       break;
     if (commonLoops != nullptr)
@@ -602,12 +613,6 @@ DependenceResult mlir::checkMemrefAccessDependence(
   // Return 'NoDependence' if these accesses do not access the same memref.
   if (srcAccess.memref != dstAccess.memref)
     return DependenceResult::NoDependence;
-
-  // TODO: Support affine.parallel which does not specify the ordering.
-  auto srcParent = srcAccess.opInst->getParentOfType<AffineParallelOp>();
-  auto dstParent = dstAccess.opInst->getParentOfType<AffineParallelOp>();
-  if (srcParent || dstParent)
-    return DependenceResult::Failure;
 
   // Return 'NoDependence' if one of these accesses is not an
   // AffineWriteOpInterface.

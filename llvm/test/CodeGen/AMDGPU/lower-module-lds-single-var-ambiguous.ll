@@ -9,71 +9,71 @@
 @kernel.lds = addrspace(3) global i8 undef
 define amdgpu_kernel void @k0() {
 ; CHECK-LABEL: @k0(
-; CHECK-NEXT:    [[LD:%.*]] = load i8, i8 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K0_LDS_T:%.*]], [[LLVM_AMDGCN_KERNEL_K0_LDS_T]] addrspace(3)* @llvm.amdgcn.kernel.k0.lds, i32 0, i32 0), align 1
+; CHECK-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) @llvm.amdgcn.kernel.k0.lds, align 1
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[LD]], 2
-; CHECK-NEXT:    store i8 [[MUL]], i8 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K0_LDS_T]], [[LLVM_AMDGCN_KERNEL_K0_LDS_T]] addrspace(3)* @llvm.amdgcn.kernel.k0.lds, i32 0, i32 0), align 1
+; CHECK-NEXT:    store i8 [[MUL]], ptr addrspace(3) @llvm.amdgcn.kernel.k0.lds, align 1
 ; CHECK-NEXT:    ret void
 ;
-  %ld = load i8, i8 addrspace(3)* @kernel.lds
+  %ld = load i8, ptr addrspace(3) @kernel.lds
   %mul = mul i8 %ld, 2
-  store i8 %mul, i8  addrspace(3)* @kernel.lds
+  store i8 %mul, ptr  addrspace(3) @kernel.lds
   ret void
 }
 
 define amdgpu_kernel void @k1() {
 ; CHECK-LABEL: @k1(
-; CHECK-NEXT:    [[LD:%.*]] = load i8, i8 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K1_LDS_T:%.*]], [[LLVM_AMDGCN_KERNEL_K1_LDS_T]] addrspace(3)* @llvm.amdgcn.kernel.k1.lds, i32 0, i32 0), align 1
+; CHECK-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) @llvm.amdgcn.kernel.k1.lds, align 1
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[LD]], 3
-; CHECK-NEXT:    store i8 [[MUL]], i8 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K1_LDS_T]], [[LLVM_AMDGCN_KERNEL_K1_LDS_T]] addrspace(3)* @llvm.amdgcn.kernel.k1.lds, i32 0, i32 0), align 1
+; CHECK-NEXT:    store i8 [[MUL]], ptr addrspace(3) @llvm.amdgcn.kernel.k1.lds, align 1
 ; CHECK-NEXT:    ret void
 ;
-  %ld = load i8, i8 addrspace(3)* @kernel.lds
+  %ld = load i8, ptr addrspace(3) @kernel.lds
   %mul = mul i8 %ld, 3
-  store i8 %mul, i8  addrspace(3)* @kernel.lds
+  store i8 %mul, ptr  addrspace(3) @kernel.lds
   ret void
 }
 
 ;; Function accesses variable, reachable from two kernels, can't use kernel lowering for either
 ;; Hybrid can put it in module lds without cost as the first variable is free
 
-; KERNEL: LLVM ERROR: Cannot lower LDS to kernel access as it is reachable from multiple kernels
+; KERNEL: LLVM ERROR: cannot lower LDS 'function.lds' to kernel access as it is reachable from multiple kernels
 
 @function.lds = addrspace(3) global i16 undef
 define void @f0() {
 ; M_OR_HY-LABEL: @f0(
-; M_OR_HY-NEXT:    [[LD:%.*]] = load i16, i16 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T:%.*]], [[LLVM_AMDGCN_MODULE_LDS_T]] addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 0), align 2
+; M_OR_HY-NEXT:    [[LD:%.*]] = load i16, ptr addrspace(3) @llvm.amdgcn.module.lds, align 2
 ; M_OR_HY-NEXT:    [[MUL:%.*]] = mul i16 [[LD]], 4
-; M_OR_HY-NEXT:    store i16 [[MUL]], i16 addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T]], [[LLVM_AMDGCN_MODULE_LDS_T]] addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 0), align 2
+; M_OR_HY-NEXT:    store i16 [[MUL]], ptr addrspace(3) @llvm.amdgcn.module.lds, align 2
 ; M_OR_HY-NEXT:    ret void
 ;
 ; TABLE-LABEL: @f0(
 ; TABLE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; TABLE-NEXT:    [[FUNCTION_LDS2:%.*]] = getelementptr inbounds [2 x [1 x i32]], [2 x [1 x i32]] addrspace(4)* @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
-; TABLE-NEXT:    [[TMP2:%.*]] = load i32, i32 addrspace(4)* [[FUNCTION_LDS2]], align 4
-; TABLE-NEXT:    [[FUNCTION_LDS3:%.*]] = inttoptr i32 [[TMP2]] to i16 addrspace(3)*
-; TABLE-NEXT:    [[LD:%.*]] = load i16, i16 addrspace(3)* [[FUNCTION_LDS3]], align 2
+; TABLE-NEXT:    [[FUNCTION_LDS2:%.*]] = getelementptr inbounds [2 x [1 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
+; TABLE-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[FUNCTION_LDS2]], align 4
+; TABLE-NEXT:    [[FUNCTION_LDS3:%.*]] = inttoptr i32 [[TMP2]] to ptr addrspace(3)
+; TABLE-NEXT:    [[LD:%.*]] = load i16, ptr addrspace(3) [[FUNCTION_LDS3]], align 2
 ; TABLE-NEXT:    [[MUL:%.*]] = mul i16 [[LD]], 4
-; TABLE-NEXT:    [[FUNCTION_LDS:%.*]] = getelementptr inbounds [2 x [1 x i32]], [2 x [1 x i32]] addrspace(4)* @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
-; TABLE-NEXT:    [[TMP3:%.*]] = load i32, i32 addrspace(4)* [[FUNCTION_LDS]], align 4
-; TABLE-NEXT:    [[FUNCTION_LDS1:%.*]] = inttoptr i32 [[TMP3]] to i16 addrspace(3)*
-; TABLE-NEXT:    store i16 [[MUL]], i16 addrspace(3)* [[FUNCTION_LDS1]], align 2
+; TABLE-NEXT:    [[FUNCTION_LDS:%.*]] = getelementptr inbounds [2 x [1 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
+; TABLE-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[FUNCTION_LDS]], align 4
+; TABLE-NEXT:    [[FUNCTION_LDS1:%.*]] = inttoptr i32 [[TMP3]] to ptr addrspace(3)
+; TABLE-NEXT:    store i16 [[MUL]], ptr addrspace(3) [[FUNCTION_LDS1]], align 2
 ; TABLE-NEXT:    ret void
 ;
-  %ld = load i16, i16 addrspace(3)* @function.lds
+  %ld = load i16, ptr addrspace(3) @function.lds
   %mul = mul i16 %ld, 4
-  store i16 %mul, i16  addrspace(3)* @function.lds
+  store i16 %mul, ptr  addrspace(3) @function.lds
   ret void
 }
 
 
 define amdgpu_kernel void @k0_f0() {
 ; M_OR_HY-LABEL: @k0_f0(
-; M_OR_HY-NEXT:    call void @llvm.donothing() [ "ExplicitUse"([[LLVM_AMDGCN_MODULE_LDS_T:%.*]] addrspace(3)* @llvm.amdgcn.module.lds) ]
+; M_OR_HY-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
 ; M_OR_HY-NEXT:    call void @f0()
 ; M_OR_HY-NEXT:    ret void
 ;
 ; TABLE-LABEL: @k0_f0(
-; TABLE-NEXT:    call void @llvm.donothing() [ "ExplicitUse"([[LLVM_AMDGCN_KERNEL_K0_F0_LDS_T:%.*]] addrspace(3)* @llvm.amdgcn.kernel.k0_f0.lds) ]
+; TABLE-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k0_f0.lds) ]
 ; TABLE-NEXT:    call void @f0()
 ; TABLE-NEXT:    ret void
 ;
@@ -83,12 +83,12 @@ define amdgpu_kernel void @k0_f0() {
 
 define amdgpu_kernel void @k1_f0() {
 ; M_OR_HY-LABEL: @k1_f0(
-; M_OR_HY-NEXT:    call void @llvm.donothing() [ "ExplicitUse"([[LLVM_AMDGCN_MODULE_LDS_T:%.*]] addrspace(3)* @llvm.amdgcn.module.lds) ]
+; M_OR_HY-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
 ; M_OR_HY-NEXT:    call void @f0()
 ; M_OR_HY-NEXT:    ret void
 ;
 ; TABLE-LABEL: @k1_f0(
-; TABLE-NEXT:    call void @llvm.donothing() [ "ExplicitUse"([[LLVM_AMDGCN_KERNEL_K1_F0_LDS_T:%.*]] addrspace(3)* @llvm.amdgcn.kernel.k1_f0.lds) ]
+; TABLE-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k1_f0.lds) ]
 ; TABLE-NEXT:    call void @f0()
 ; TABLE-NEXT:    ret void
 ;

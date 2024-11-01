@@ -67,7 +67,7 @@ SmallVector<OpFoldResult> getAsOpFoldResult(ValueRange values);
 SmallVector<OpFoldResult> getAsOpFoldResult(ArrayAttr arrayAttr);
 
 /// If ofr is a constant integer or an IntegerAttr, return the integer.
-Optional<int64_t> getConstantIntValue(OpFoldResult ofr);
+std::optional<int64_t> getConstantIntValue(OpFoldResult ofr);
 
 /// Return true if `ofr` is constant integer equal to `value`.
 bool isConstantIntValue(OpFoldResult ofr, int64_t value);

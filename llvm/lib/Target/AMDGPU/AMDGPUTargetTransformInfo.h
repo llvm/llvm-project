@@ -162,7 +162,8 @@ public:
 
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *ValTy,
-                                     unsigned Index);
+                                     TTI::TargetCostKind CostKind,
+                                     unsigned Index, Value *Op0, Value *Op1);
 
   bool isReadRegisterSourceOfDivergence(const IntrinsicInst *ReadReg) const;
   bool isSourceOfDivergence(const Value *V) const;

@@ -10,7 +10,7 @@
 
 ; The test checks if the mask is being correctly created, reverted and used
 
-; RUN: opt -passes=loop-vectorize,dce,instcombine -mtriple aarch64-linux-gnu -S \
+; RUN: opt -passes=loop-vectorize,dce -mtriple aarch64-linux-gnu -S \
 ; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue < %s | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
@@ -20,9 +20,11 @@ define void @vector_reverse_mask_nxv4i1(ptr %a, ptr %cond, i64 %N) #0 {
 ; CHECK-LABEL: vector.body:
 ; CHECK: %[[REVERSE6:.*]] = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %{{.*}})
 ; CHECK: %[[WIDEMSKLOAD:.*]] = call <vscale x 4 x double> @llvm.masked.load.nxv4f64.p0(ptr %{{.*}}, i32 8, <vscale x 4 x i1> %[[REVERSE6]], <vscale x 4 x double> poison)
-; CHECK-NEXT: %[[FADD:.*]] = fadd <vscale x 4 x double> %[[WIDEMSKLOAD]]
+; CHECK: %[[REVERSE7:.*]] = call <vscale x 4 x double> @llvm.experimental.vector.reverse.nxv4f64(<vscale x 4 x double> %[[WIDEMSKLOAD]])
+; CHECK: %[[FADD:.*]] = fadd <vscale x 4 x double> %[[REVERSE7]]
+; CHECK: %[[REVERSE8:.*]] = call <vscale x 4 x double> @llvm.experimental.vector.reverse.nxv4f64(<vscale x 4 x double> %[[FADD]])
 ; CHECK:  %[[REVERSE9:.*]] = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %{{.*}})
-; CHECK: call void @llvm.masked.store.nxv4f64.p0(<vscale x 4 x double> %[[FADD]], ptr %{{.*}}, i32 8, <vscale x 4 x i1> %[[REVERSE9]]
+; CHECK: call void @llvm.masked.store.nxv4f64.p0(<vscale x 4 x double> %[[REVERSE8]], ptr %{{.*}}, i32 8, <vscale x 4 x i1> %[[REVERSE9]]
 
 entry:
   %cmp7 = icmp sgt i64 %N, 0

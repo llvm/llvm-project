@@ -18,6 +18,7 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <optional>
 
 using namespace lldb_private;
 
@@ -131,7 +132,7 @@ determineClangStyle(const ClangHighlighter &highlighter,
 
 void ClangHighlighter::Highlight(const HighlightStyle &options,
                                  llvm::StringRef line,
-                                 llvm::Optional<size_t> cursor_pos,
+                                 std::optional<size_t> cursor_pos,
                                  llvm::StringRef previous_lines,
                                  Stream &result) const {
   using namespace clang;

@@ -30,6 +30,7 @@
 #include <sys/uio.h>
 // NT_PRSTATUS and NT_FPREGSET definition
 #include <elf.h>
+#include <optional>
 
 #ifndef NT_ARM_SVE
 #define NT_ARM_SVE 0x405 /* ARM Scalable Vector Extension */
@@ -75,12 +76,12 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
 
     NativeProcessLinux &process = native_thread.GetProcess();
 
-    llvm::Optional<uint64_t> auxv_at_hwcap =
+    std::optional<uint64_t> auxv_at_hwcap =
         process.GetAuxValue(AuxVector::AUXV_AT_HWCAP);
     if (auxv_at_hwcap && (*auxv_at_hwcap & HWCAP_PACA))
       opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskPAuth);
 
-    llvm::Optional<uint64_t> auxv_at_hwcap2 =
+    std::optional<uint64_t> auxv_at_hwcap2 =
         process.GetAuxValue(AuxVector::AUXV_AT_HWCAP2);
     if (auxv_at_hwcap2 && (*auxv_at_hwcap2 & HWCAP2_MTE))
       opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskMTE);

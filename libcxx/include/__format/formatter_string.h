@@ -65,6 +65,12 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<const _CharT*,
     _LIBCPP_ASSERT(__str, "The basic_format_arg constructor should have "
                           "prevented an invalid pointer.");
 
+    __format_spec::__parsed_specifications<_CharT> __specs = _Base::__parser_.__get_parsed_std_specifications(__ctx);
+#  if _LIBCPP_STD_VER > 20
+    if (_Base::__parser_.__type_ == __format_spec::__type::__debug)
+      return __formatter::__format_escaped_string(basic_string_view<_CharT>{__str}, __ctx.out(), __specs);
+#  endif
+
     // When using a center or right alignment and the width option the length
     // of __str must be known to add the padding upfront. This case is handled
     // by the base class by converting the argument to a basic_string_view.
@@ -76,7 +82,6 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<const _CharT*,
     // now these optimizations aren't implemented. Instead the base class
     // handles these options.
     // TODO FMT Implement these improvements.
-    __format_spec::__parsed_specifications<_CharT> __specs = _Base::__parser_.__get_parsed_std_specifications(__ctx);
     if (__specs.__has_width() || __specs.__has_precision())
       return __formatter::__write_string(basic_string_view<_CharT>{__str}, __ctx.out(), __specs);
 

@@ -61,9 +61,7 @@ void use_f() { f<int>({}); } // expected-error {{ambiguous}}
 // Same.
 template<int N> void g(const char (*)[([]{ return N; })()]) {} // expected-note {{candidate}}
 template<int N> void g(const char (*)[([]{ return N; })()]) {} // expected-note {{candidate}}
-// FIXME: We instantiate the lambdas into the context of the function template,
-//  so we think they're dependent and can't evaluate a call to them.
-void use_g() { g<6>(&"hello"); } // expected-error {{no matching function}}
+void use_g() { g<6>(&"hello"); } // expected-error {{ambiguous}}
 }
 
 namespace GH51416 {
@@ -143,4 +141,8 @@ using b = decltype([] static { return 0; }());
 using c = decltype([]() static noexcept(noexcept([] { return 0; }())) { return 0; });
 using d = decltype(sizeof([] static { return 0; }));
 
+}
+
+namespace lambda_in_trailing_decltype {
+auto x = ([](auto) -> decltype([] {}()) {}(0), 2);
 }

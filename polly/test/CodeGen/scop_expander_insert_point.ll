@@ -21,15 +21,15 @@ for.cond10.preheader.lr.ph:                       ; preds = %entry
 
 for.body17.lr.ph:                                 ; preds = %for.end22, %for.cond10.preheader.lr.ph
   %outcol_h.048 = phi i32 [ 0, %for.cond10.preheader.lr.ph ], [ %add31, %for.end22 ]
-  %0 = load i8*, i8** undef
+  %0 = load ptr, ptr undef
   %idx.ext = zext i32 %outcol_h.048 to i64
-  %add.ptr = getelementptr inbounds i8, i8* %0, i64 %idx.ext
+  %add.ptr = getelementptr inbounds i8, ptr %0, i64 %idx.ext
   br label %for.body17
 
 for.body17:                                       ; preds = %for.body17, %for.body17.lr.ph
   %outvalue.141 = phi i64 [ undef, %for.body17.lr.ph ], [ %add19, %for.body17 ]
-  %inptr.040 = phi i8* [ %add.ptr, %for.body17.lr.ph ], [ undef, %for.body17 ]
-  %1 = load i8, i8* %inptr.040
+  %inptr.040 = phi ptr [ %add.ptr, %for.body17.lr.ph ], [ undef, %for.body17 ]
+  %1 = load i8, ptr %inptr.040
   %add19 = mul nsw i64 0, %outvalue.141
   br i1 false, label %for.body17, label %for.end22
 

@@ -43,7 +43,7 @@ namespace gpu {
 DiagnosedSilenceableFailure mapNestedForeachToThreadsImpl(
     RewriterBase &rewriter, Operation *target,
     const SmallVectorImpl<int64_t> &blockDim, bool syncAfterDistribute,
-    llvm::Optional<TransformOpInterface> transformOp,
+    std::optional<TransformOpInterface> transformOp,
     const ArrayRef<DeviceMappingAttrInterface> &threadMappingAttributes);
 
 /// Maps the top level `scf.foreach_thread` op to GPU Thread Blocks. Mapping is

@@ -12,28 +12,27 @@
 
 target datalayout = "e-m:e-p200:128:128:128:64-p:64:64-A200-P200-G200"
 
-define i8 addrspace(200)* @test_zerogep_in_different_as(i8 addrspace(200)* %arg) addrspace(200) nounwind {
+define ptr addrspace(200) @test_zerogep_in_different_as(ptr addrspace(200) %arg) addrspace(200) nounwind {
 ; CHECK-AS200-LABEL: define {{[^@]+}}@test_zerogep_in_different_as
-; CHECK-AS200-SAME: (i8 addrspace(200)* [[ARG:%.*]]) addrspace(200) #[[ATTR0:[0-9]+]] {
+; CHECK-AS200-SAME: (ptr addrspace(200) [[ARG:%.*]]) addrspace(200) #[[ATTR0:[0-9]+]] {
 ; CHECK-AS200-NEXT:  entry:
-; CHECK-AS200-NEXT:    ret i8 addrspace(200)* [[ARG]]
+; CHECK-AS200-NEXT:    ret ptr addrspace(200) [[ARG]]
 ;
 ; CHECK-AS0-LABEL: define {{[^@]+}}@test_zerogep_in_different_as
-; CHECK-AS0-SAME: (i8* [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-AS0-SAME: (ptr [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-AS0-NEXT:  entry:
-; CHECK-AS0-NEXT:    ret i8* [[ARG]]
+; CHECK-AS0-NEXT:    ret ptr [[ARG]]
 ;
 ; CHECK-AS1-LABEL: define {{[^@]+}}@test_zerogep_in_different_as
-; CHECK-AS1-SAME: (i8 addrspace(1)* [[ARG:%.*]]) addrspace(1) #[[ATTR0:[0-9]+]] {
+; CHECK-AS1-SAME: (ptr addrspace(1) [[ARG:%.*]]) addrspace(1) #[[ATTR0:[0-9]+]] {
 ; CHECK-AS1-NEXT:  entry:
-; CHECK-AS1-NEXT:    ret i8 addrspace(1)* [[ARG]]
+; CHECK-AS1-NEXT:    ret ptr addrspace(1) [[ARG]]
 ;
 ; CHECK-AS200-NOOP-PRE-PROCESS-LABEL: define {{[^@]+}}@test_zerogep_in_different_as
-; CHECK-AS200-NOOP-PRE-PROCESS-SAME: (i8 addrspace(200)* [[ARG:%.*]]) addrspace(200) #[[ATTR0:[0-9]+]] {
+; CHECK-AS200-NOOP-PRE-PROCESS-SAME: (ptr addrspace(200) [[ARG:%.*]]) addrspace(200) #[[ATTR0:[0-9]+]] {
 ; CHECK-AS200-NOOP-PRE-PROCESS-NEXT:  entry:
-; CHECK-AS200-NOOP-PRE-PROCESS-NEXT:    ret i8 addrspace(200)* [[ARG]]
+; CHECK-AS200-NOOP-PRE-PROCESS-NEXT:    ret ptr addrspace(200) [[ARG]]
 ;
 entry:
-  %ret = getelementptr inbounds i8, i8 addrspace(200)* %arg, i64 0
-  ret i8 addrspace(200)* %ret
+  ret ptr addrspace(200) %arg
 }

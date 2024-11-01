@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Find casts of calculation results to bigger type. Typically from int to
 /// long. If the intention of the cast is to avoid loss of precision then
@@ -38,8 +36,6 @@ private:
   const bool CheckImplicitCasts;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif

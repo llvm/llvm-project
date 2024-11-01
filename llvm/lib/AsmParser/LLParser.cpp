@@ -61,31 +61,9 @@ static std::string getTypeString(Type *T) {
   return Tmp.str();
 }
 
-static void setContextOpaquePointers(LLLexer &L, LLVMContext &C) {
-  while (true) {
-    lltok::Kind K = L.Lex();
-    // LLLexer will set the opaque pointers option in LLVMContext if it sees an
-    // explicit "ptr".
-    if (K == lltok::star || K == lltok::Error || K == lltok::Eof ||
-        isa_and_nonnull<PointerType>(L.getTyVal())) {
-      if (K == lltok::star)
-        C.setOpaquePointers(false);
-      return;
-    }
-  }
-}
-
 /// Run: module ::= toplevelentity*
 bool LLParser::Run(bool UpgradeDebugInfo,
                    DataLayoutCallbackTy DataLayoutCallback) {
-  // If we haven't decided on whether or not we're using opaque pointers, do a
-  // quick lex over the tokens to see if we explicitly construct any typed or
-  // opaque pointer types.
-  // Don't bail out on an error so we do the same work in the parsing below
-  // regardless of if --opaque-pointers is set.
-  if (!Context.hasSetOpaquePointersValue())
-    setContextOpaquePointers(OPLex, Context);
-
   // Prime the lexer.
   Lex.Lex();
 
@@ -95,11 +73,8 @@ bool LLParser::Run(bool UpgradeDebugInfo,
         "Can't read textual IR with a Context that discards named Values");
 
   if (M) {
-    if (parseTargetDefinitions())
+    if (parseTargetDefinitions(DataLayoutCallback))
       return true;
-
-    if (auto LayoutOverride = DataLayoutCallback(M->getTargetTriple()))
-      M->setDataLayout(*LayoutOverride);
   }
 
   return parseTopLevelEntities() || validateEndOfModule(UpgradeDebugInfo) ||
@@ -353,11 +328,19 @@ bool LLParser::validateEndOfIndex() {
 // Top-Level Entities
 //===----------------------------------------------------------------------===//
 
-bool LLParser::parseTargetDefinitions() {
-  while (true) {
+bool LLParser::parseTargetDefinitions(DataLayoutCallbackTy DataLayoutCallback) {
+  // Delay parsing of the data layout string until the target triple is known.
+  // Then, pass both the the target triple and the tentative data layout string
+  // to DataLayoutCallback, allowing to override the DL string.
+  // This enables importing modules with invalid DL strings.
+  std::string TentativeDLStr = M->getDataLayoutStr();
+  LocTy DLStrLoc;
+
+  bool Done = false;
+  while (!Done) {
     switch (Lex.getKind()) {
     case lltok::kw_target:
-      if (parseTargetDefinition())
+      if (parseTargetDefinition(TentativeDLStr, DLStrLoc))
         return true;
       break;
     case lltok::kw_source_filename:
@@ -365,9 +348,21 @@ bool LLParser::parseTargetDefinitions() {
         return true;
       break;
     default:
-      return false;
+      Done = true;
     }
   }
+  // Run the override callback to potentially change the data layout string, and
+  // parse the data layout string.
+  if (auto LayoutOverride =
+          DataLayoutCallback(M->getTargetTriple(), TentativeDLStr)) {
+    TentativeDLStr = *LayoutOverride;
+    DLStrLoc = {};
+  }
+  Expected<DataLayout> MaybeDL = DataLayout::parse(TentativeDLStr);
+  if (!MaybeDL)
+    return error(DLStrLoc, toString(MaybeDL.takeError()));
+  M->setDataLayout(MaybeDL.get());
+  return false;
 }
 
 bool LLParser::parseTopLevelEntities() {
@@ -471,7 +466,8 @@ bool LLParser::parseModuleAsm() {
 /// toplevelentity
 ///   ::= 'target' 'triple' '=' STRINGCONSTANT
 ///   ::= 'target' 'datalayout' '=' STRINGCONSTANT
-bool LLParser::parseTargetDefinition() {
+bool LLParser::parseTargetDefinition(std::string &TentativeDLStr,
+                                     LocTy &DLStrLoc) {
   assert(Lex.getKind() == lltok::kw_target);
   std::string Str;
   switch (Lex.Lex()) {
@@ -488,13 +484,9 @@ bool LLParser::parseTargetDefinition() {
     Lex.Lex();
     if (parseToken(lltok::equal, "expected '=' after target datalayout"))
       return true;
-    LocTy Loc = Lex.getLoc();
-    if (parseStringConstant(Str))
+    DLStrLoc = Lex.getLoc();
+    if (parseStringConstant(TentativeDLStr))
       return true;
-    Expected<DataLayout> MaybeDL = DataLayout::parse(Str);
-    if (!MaybeDL)
-      return error(Loc, toString(MaybeDL.takeError()));
-    M->setDataLayout(MaybeDL.get());
     return false;
   }
 }
@@ -2598,6 +2590,12 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
         return false;
     }
     break;
+  case lltok::kw_target: {
+    // Type ::= TargetExtType
+    if (parseTargetExtType(Result))
+      return true;
+    break;
+  }
   case lltok::lbrace:
     // Type ::= StructType
     if (parseAnonStructType(Result, false))
@@ -3102,6 +3100,60 @@ bool LLParser::parseArrayVectorType(Type *&Result, bool IsVector) {
       return error(TypeLoc, "invalid array element type");
     Result = ArrayType::get(EltTy, Size);
   }
+  return false;
+}
+
+/// parseTargetExtType - handle target extension type syntax
+///   TargetExtType
+///     ::= 'target' '(' STRINGCONSTANT TargetExtTypeParams TargetExtIntParams ')'
+///
+///   TargetExtTypeParams
+///     ::= /*empty*/
+///     ::= ',' Type TargetExtTypeParams
+///
+///   TargetExtIntParams
+///     ::= /*empty*/
+///     ::= ',' uint32 TargetExtIntParams
+bool LLParser::parseTargetExtType(Type *&Result) {
+  Lex.Lex(); // Eat the 'target' keyword.
+
+  // Get the mandatory type name.
+  std::string TypeName;
+  if (parseToken(lltok::lparen, "expected '(' in target extension type") ||
+      parseStringConstant(TypeName))
+    return true;
+
+  // Parse all of the integer and type parameters at the same time; the use of
+  // SeenInt will allow us to catch cases where type parameters follow integer
+  // parameters.
+  SmallVector<Type *> TypeParams;
+  SmallVector<unsigned> IntParams;
+  bool SeenInt = false;
+  while (Lex.getKind() == lltok::comma) {
+    Lex.Lex(); // Eat the comma.
+
+    if (Lex.getKind() == lltok::APSInt) {
+      SeenInt = true;
+      unsigned IntVal;
+      if (parseUInt32(IntVal))
+        return true;
+      IntParams.push_back(IntVal);
+    } else if (SeenInt) {
+      // The only other kind of parameter we support is type parameters, which
+      // must precede the integer parameters. This is therefore an error.
+      return tokError("expected uint32 param");
+    } else {
+      Type *TypeParam;
+      if (parseType(TypeParam, /*AllowVoid=*/true))
+        return true;
+      TypeParams.push_back(TypeParam);
+    }
+  }
+
+  if (parseToken(lltok::rparen, "expected ')' in target extension type"))
+    return true;
+
+  Result = TargetExtType::get(Context, TypeName, TypeParams, IntParams);
   return false;
 }
 
@@ -5694,6 +5746,9 @@ bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
     // FIXME: LabelTy should not be a first-class type.
     if (!Ty->isFirstClassType() || Ty->isLabelTy())
       return error(ID.Loc, "invalid type for null constant");
+    if (auto *TETy = dyn_cast<TargetExtType>(Ty))
+      if (!TETy->hasProperty(TargetExtType::HasZeroInit))
+        return error(ID.Loc, "invalid type for null constant");
     V = Constant::getNullValue(Ty);
     return false;
   case ValID::t_None:
@@ -5732,7 +5787,7 @@ bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
                   " of struct initializer doesn't match struct element type");
 
       V = ConstantStruct::get(
-          ST, makeArrayRef(ID.ConstantStructElts.get(), ID.UIntVal));
+          ST, ArrayRef(ID.ConstantStructElts.get(), ID.UIntVal));
     } else
       return error(ID.Loc, "constant expression type mismatch");
     return false;
@@ -7681,6 +7736,12 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   case lltok::kw_min: Operation = AtomicRMWInst::Min; break;
   case lltok::kw_umax: Operation = AtomicRMWInst::UMax; break;
   case lltok::kw_umin: Operation = AtomicRMWInst::UMin; break;
+  case lltok::kw_uinc_wrap:
+    Operation = AtomicRMWInst::UIncWrap;
+    break;
+  case lltok::kw_udec_wrap:
+    Operation = AtomicRMWInst::UDecWrap;
+    break;
   case lltok::kw_fadd:
     Operation = AtomicRMWInst::FAdd;
     IsFP = true;

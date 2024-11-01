@@ -299,7 +299,7 @@ def AffinePipelineDataTransfer
 }
 
 def AffineScalarReplacement : Pass<"affine-scalrep", "func::FuncOp"> {
-  let summary = "Replace affine memref acceses by scalars by forwarding stores "
+  let summary = "Replace affine memref accesses by scalars by forwarding stores "
                 "to loads and eliminating redundant loads";
   let description = [{
     This pass performs store to load forwarding and redundant load elimination

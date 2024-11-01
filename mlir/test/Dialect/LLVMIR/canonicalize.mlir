@@ -1,4 +1,4 @@
-// RUN: mlir-opt -canonicalize %s -split-input-file | FileCheck %s
+// RUN: mlir-opt --pass-pipeline='builtin.module(llvm.func(canonicalize{test-convergence}))' %s -split-input-file | FileCheck %s
 
 // CHECK-LABEL: fold_extractvalue
 llvm.func @fold_extractvalue() -> i32 {
@@ -127,7 +127,7 @@ llvm.func @fold_gep_canon(%x : !llvm.ptr<i8>) -> !llvm.ptr<i8> {
 // resulting constant is created in the arith dialect because the last folded
 // operation belongs to it.
 // CHECK-LABEL: llvm_constant
-func.func @llvm_constant() -> i32 {
+llvm.func @llvm_constant() -> i32 {
   // CHECK-NOT: llvm.mlir.constant
   %0 = llvm.mlir.constant(40 : i32) : i32
   %1 = llvm.mlir.constant(42 : i32) : i32
@@ -135,7 +135,7 @@ func.func @llvm_constant() -> i32 {
   // CHECK-NOT: arith.addi
   %2 = arith.addi %0, %1 : i32
   // CHECK: return %[[RES]]
-  return %2 : i32
+  llvm.return %2 : i32
 }
 
 // -----

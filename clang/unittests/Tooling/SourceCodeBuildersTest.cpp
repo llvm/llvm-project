@@ -14,6 +14,7 @@
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace clang;
 using namespace tooling;
@@ -65,8 +66,8 @@ struct TestMatch {
 // matcher correspondingly. `Matcher` should match one of the statements in
 // `StatementCode` exactly -- that is, produce exactly one match. However,
 // `StatementCode` may contain other statements not described by `Matcher`.
-static llvm::Optional<TestMatch> matchStmt(StringRef StatementCode,
-                                           StatementMatcher Matcher) {
+static std::optional<TestMatch> matchStmt(StringRef StatementCode,
+                                          StatementMatcher Matcher) {
   auto AstUnit = buildASTFromCodeWithArgs(wrapSnippet(StatementCode),
                                           {"-Wno-unused-value"});
   if (AstUnit == nullptr) {

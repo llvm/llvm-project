@@ -38,6 +38,7 @@ add_lld_library(lldMachO
   ${LLVM_TARGETS_TO_BUILD}
   BinaryFormat
   BitReader
+  BitWriter
   Core
   DebugInfoDWARF
   Demangle
@@ -48,6 +49,7 @@ add_lld_library(lldMachO
   Option
   Passes
   Support
+  TargetParser
   TextAPI
 
   LINK_LIBS

@@ -2740,6 +2740,31 @@ def Target : InheritableAttr {
   }];
 }
 
+def TargetVersion : InheritableAttr {
+  let Spellings = [GCC<"target_version">];
+  let Args = [StringArgument<"NamesStr">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [TargetVersionDocs];
+  let AdditionalMembers = [{
+    StringRef getName() const { return getNamesStr().trim(); }
+    bool isDefaultVersion() const {
+      return getName() == "default";
+    }
+    void getFeatures(llvm::SmallVectorImpl<StringRef> &Out) const {
+      if (isDefaultVersion()) return;
+      StringRef Features = getName();
+
+      SmallVector<StringRef, 8> AttrFeatures;
+      Features.split(AttrFeatures, "+");
+
+      for (auto &Feature : AttrFeatures) {
+        Feature = Feature.trim();
+        Out.push_back(Feature);
+      }
+    }
+  }];
+}
+
 def TargetClones : InheritableAttr {
   let Spellings = [GCC<"target_clones">];
   let Args = [VariadicStringArgument<"featuresStrs">];
@@ -2773,11 +2798,12 @@ def TargetClones : InheritableAttr {
       return 0 == std::count_if(
                       featuresStrs_begin(), featuresStrs_begin() + Index,
                       [FeatureStr](StringRef S) { return S == FeatureStr; });
+
     }
   }];
 }
 
-def : MutualExclusions<[TargetClones, Target, CPUDispatch, CPUSpecific]>;
+def : MutualExclusions<[TargetClones, TargetVersion, Target, CPUDispatch, CPUSpecific]>;
 
 def MinVectorWidth : InheritableAttr {
   let Spellings = [Clang<"min_vector_width">];
@@ -3760,11 +3786,11 @@ def OMPDeclareTargetDecl : InheritableAttr {
   ];
   let AdditionalMembers = [{
     void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const;
-    static llvm::Optional<MapTypeTy>
+    static std::optional<MapTypeTy>
     isDeclareTargetDeclaration(const ValueDecl *VD);
-    static llvm::Optional<OMPDeclareTargetDeclAttr*> getActiveAttr(const ValueDecl *VD);
-    static llvm::Optional<DevTypeTy> getDeviceType(const ValueDecl *VD);
-    static llvm::Optional<SourceLocation> getLocation(const ValueDecl *VD);
+    static std::optional<OMPDeclareTargetDeclAttr*> getActiveAttr(const ValueDecl *VD);
+    static std::optional<DevTypeTy> getDeviceType(const ValueDecl *VD);
+    static std::optional<SourceLocation> getLocation(const ValueDecl *VD);
   }];
 }
 

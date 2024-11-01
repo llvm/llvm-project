@@ -10,6 +10,7 @@ group("unittests") {
     "Bitstream:BitstreamTests",
     "CodeGen:CodeGenTests",
     "CodeGen/GlobalISel:GlobalISelTests",
+    "DWARFLinkerParallel:DWARFLinkerParallelTests",
     "DebugInfo/CodeView:DebugInfoCodeViewTests",
     "DebugInfo/DWARF:DebugInfoDWARFTests",
     "DebugInfo/GSYM:DebugInfoGSYMTests",
@@ -44,6 +45,7 @@ group("unittests") {
     "Support:SupportTests",
     "Support/DynamicLibrary:DynamicLibraryTests",
     "TableGen:TableGenTests",
+    "TargetParser:TargetParserTests",
     "Testing/ADT:TestingADTTests",
     "Testing/Support:TestingSupportTests",
     "TextAPI:TextAPITests",
@@ -56,6 +58,7 @@ group("unittests") {
     "tools/llvm-exegesis:LLVMExegesisTests",
     "tools/llvm-mca:LLVMMCATests",
     "tools/llvm-profgen:LLVMProfgenTests",
+    "//llvm/lib/TargetParser",
   ]
 
   # Target-dependent unit tests.

@@ -117,10 +117,10 @@ declare i64 @llvm.x86.avx512.cvttss2usi64(<4 x float>, i32) nounwind readnone
 define i64 @test_x86_avx512_cvtsd2usi64(<2 x double> %a0) {
 ; CHECK-LABEL: test_x86_avx512_cvtsd2usi64:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vcvtsd2usi %xmm0, %rcx
-; CHECK-NEXT:    vcvtsd2usi {rz-sae}, %xmm0, %rdx
+; CHECK-NEXT:    vcvtsd2usi %xmm0, %rax
+; CHECK-NEXT:    vcvtsd2usi {rz-sae}, %xmm0, %rcx
+; CHECK-NEXT:    addq %rax, %rcx
 ; CHECK-NEXT:    vcvtsd2usi {rd-sae}, %xmm0, %rax
-; CHECK-NEXT:    addq %rdx, %rax
 ; CHECK-NEXT:    addq %rcx, %rax
 ; CHECK-NEXT:    retq
 
@@ -136,10 +136,10 @@ declare i64 @llvm.x86.avx512.vcvtsd2usi64(<2 x double>, i32) nounwind readnone
 define i64 @test_x86_avx512_cvtsd2si64(<2 x double> %a0) {
 ; CHECK-LABEL: test_x86_avx512_cvtsd2si64:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vcvtsd2si %xmm0, %rcx
-; CHECK-NEXT:    vcvtsd2si {rz-sae}, %xmm0, %rdx
+; CHECK-NEXT:    vcvtsd2si %xmm0, %rax
+; CHECK-NEXT:    vcvtsd2si {rz-sae}, %xmm0, %rcx
+; CHECK-NEXT:    addq %rax, %rcx
 ; CHECK-NEXT:    vcvtsd2si {rd-sae}, %xmm0, %rax
-; CHECK-NEXT:    addq %rdx, %rax
 ; CHECK-NEXT:    addq %rcx, %rax
 ; CHECK-NEXT:    retq
 
@@ -155,10 +155,10 @@ declare i64 @llvm.x86.avx512.vcvtsd2si64(<2 x double>, i32) nounwind readnone
 define i64 @test_x86_avx512_cvtss2usi64(<4 x float> %a0) {
 ; CHECK-LABEL: test_x86_avx512_cvtss2usi64:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vcvtss2usi %xmm0, %rcx
-; CHECK-NEXT:    vcvtss2usi {rz-sae}, %xmm0, %rdx
+; CHECK-NEXT:    vcvtss2usi %xmm0, %rax
+; CHECK-NEXT:    vcvtss2usi {rz-sae}, %xmm0, %rcx
+; CHECK-NEXT:    addq %rax, %rcx
 ; CHECK-NEXT:    vcvtss2usi {rd-sae}, %xmm0, %rax
-; CHECK-NEXT:    addq %rdx, %rax
 ; CHECK-NEXT:    addq %rcx, %rax
 ; CHECK-NEXT:    retq
 
@@ -174,10 +174,10 @@ declare i64 @llvm.x86.avx512.vcvtss2usi64(<4 x float>, i32) nounwind readnone
 define i64 @test_x86_avx512_cvtss2si64(<4 x float> %a0) {
 ; CHECK-LABEL: test_x86_avx512_cvtss2si64:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vcvtss2si %xmm0, %rcx
-; CHECK-NEXT:    vcvtss2si {rz-sae}, %xmm0, %rdx
+; CHECK-NEXT:    vcvtss2si %xmm0, %rax
+; CHECK-NEXT:    vcvtss2si {rz-sae}, %xmm0, %rcx
+; CHECK-NEXT:    addq %rax, %rcx
 ; CHECK-NEXT:    vcvtss2si {rd-sae}, %xmm0, %rax
-; CHECK-NEXT:    addq %rdx, %rax
 ; CHECK-NEXT:    addq %rcx, %rax
 ; CHECK-NEXT:    retq
 

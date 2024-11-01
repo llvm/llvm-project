@@ -492,9 +492,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
         SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
   }
 
-  if (EnableConstraintElimination)
-    FPM.addPass(ConstraintEliminationPass());
-
   // Speculative execution if the target has divergent branches; otherwise nop.
   FPM.addPass(SpeculativeExecutionPass(/* OnlyIfDivergentTarget =*/true));
 
@@ -507,6 +504,9 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(InstCombinePass());
   if (Level == OptimizationLevel::O3)
     FPM.addPass(AggressiveInstCombinePass());
+
+  if (EnableConstraintElimination)
+    FPM.addPass(ConstraintEliminationPass());
 
   if (!Level.isOptimizingForSize())
     FPM.addPass(LibCallsShrinkWrapPass());
@@ -1016,7 +1016,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // and prior to optimizing globals.
   // FIXME: This position in the pipeline hasn't been carefully considered in
   // years, it should be re-analyzed.
-  MPM.addPass(IPSCCPPass());
+  MPM.addPass(IPSCCPPass(IPSCCPOptions(/*AllowFuncSpec=*/
+                                       Level != OptimizationLevel::Os &&
+                                       Level != OptimizationLevel::Oz)));
 
   // Attach metadata to indirect call sites indicating the set of functions
   // they may target at run-time. This should follow IPSCCP.
@@ -1629,7 +1631,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // Propagate constants at call sites into the functions they call.  This
     // opens opportunities for globalopt (and inlining) by substituting function
     // pointers passed as arguments to direct uses of functions.
-    MPM.addPass(IPSCCPPass());
+    MPM.addPass(IPSCCPPass(IPSCCPOptions(/*AllowFuncSpec=*/
+                                         Level != OptimizationLevel::Os &&
+                                         Level != OptimizationLevel::Oz)));
 
     // Attach metadata to indirect call sites indicating the set of functions
     // they may target at run-time. This should follow IPSCCP.
@@ -1723,6 +1727,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   FPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(FPM, Level);
 
+  if (EnableConstraintElimination)
+    FPM.addPass(ConstraintEliminationPass());
+
   FPM.addPass(JumpThreadingPass());
 
   // Do a post inline PGO instrumentation and use pass. This is a context
@@ -1779,9 +1786,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Nuke dead stores.
   MainFPM.addPass(DSEPass());
   MainFPM.addPass(MergedLoadStoreMotionPass());
-
-  if (EnableConstraintElimination)
-    MainFPM.addPass(ConstraintEliminationPass());
 
   LoopPassManager LPM;
   if (EnableLoopFlatten && Level.getSpeedupLevel() > 1)

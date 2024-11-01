@@ -7,6 +7,8 @@ LLVM Cycle Terminology
 .. contents::
    :local:
 
+.. _cycle-definition:
+
 Cycles
 ======
 
@@ -52,6 +54,11 @@ A cycle is *irreducible* if it has multiple entries and it is
 A cycle C is said to be the *parent* of a basic block B if B occurs in
 C but not in any child cycle of C. Then B is also said to be a *child*
 of cycle C.
+
+.. _cycle-toplevel-block:
+
+A block B is said to be a *top-level block* if it is not the child of
+any cycle.
 
 .. _cycle-sibling:
 
@@ -194,6 +201,9 @@ A *closed path* in a CFG is a connected sequence of nodes and edges in
 the CFG whose start and end nodes are the same, and whose remaining
 (inner) nodes are distinct.
 
+An *entry* to a closed path ``P`` is a node on ``P`` that is reachable
+from the function entry without passing through any other node on ``P``.
+
 1. If a node D dominates one or more nodes in a closed path P and P
    does not contain D, then D dominates every node in P.
 
@@ -225,3 +235,31 @@ the CFG whose start and end nodes are the same, and whose remaining
    are the same cycle, or one of them is nested inside the other.
    Hence there is always a cycle that contains U1 and U2 but neither
    of D1 and D2.
+
+.. _cycle-closed-path-header:
+
+4. In any cycle hierarchy, the header ``H`` of the smallest cycle
+   ``C`` containing a closed path ``P`` itself lies on ``P``.
+
+   **Proof:** If ``H`` is not in ``P``, then there is a smaller cycle
+   ``C'`` in the set ``C - H`` containing ``P``, thus contradicting
+   the claim that ``C`` is the smallest such cycle.
+
+.. _cycle-reducible-headers:
+
+Reducible Cycle Headers
+=======================
+
+Although the cycle hierarchy depends on the DFS chosen, reducible
+cycles satisfy the following invariant:
+
+  If a reducible cycle ``C`` with header ``H`` is discovered in any
+  DFS, then there exists a cycle ``C'`` in every DFS with header
+  ``H``, that contains ``C``.
+
+**Proof:** For a closed path ``P`` in ``C`` that passes through ``H``,
+every cycle hierarchy has a smallest cycle ``C'`` containing ``P`` and
+whose header is in ``P``. Since ``H`` is the only entry to ``P``,
+``H`` must be the header of ``C'``. Since headers uniquely define
+cycles, ``C'`` contains every such closed path ``P``, and hence ``C'``
+contains ``C``.

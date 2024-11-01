@@ -6,8 +6,7 @@
 define i32 @cnt32_advsimd(i32 %x) nounwind readnone {
 ; CHECK-LABEL: cnt32_advsimd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    fmov s0, w0
 ; CHECK-NEXT:    cnt.8b v0, v0
 ; CHECK-NEXT:    uaddlv.8b h0, v0
 ; CHECK-NEXT:    fmov w0, s0
@@ -42,7 +41,7 @@ define i32 @cnt32_advsimd_2(<2 x i32> %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    cnt.8b v0, v0
 ; CHECK-NEXT:    uaddlv.8b h0, v0
 ; CHECK-NEXT:    fmov w0, s0
@@ -267,6 +266,13 @@ define i1 @ctpop32_ne_one(i32 %x) nounwind readnone {
 ; CHECK-NONEON-NEXT:    ccmp w0, #0, #4, eq
 ; CHECK-NONEON-NEXT:    cset w0, eq
 ; CHECK-NONEON-NEXT:    ret
+;
+; CHECK-CSSC-LABEL: ctpop32_ne_one:
+; CHECK-CSSC:       // %bb.0:
+; CHECK-CSSC-NEXT:    cnt w8, w0
+; CHECK-CSSC-NEXT:    cmp w8, #1
+; CHECK-CSSC-NEXT:    cset w0, ne
+; CHECK-CSSC-NEXT:    ret
   %count = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ne i32 %count, 1
   ret i1 %cmp

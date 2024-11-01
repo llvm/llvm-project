@@ -196,7 +196,7 @@ X86TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
 
 unsigned X86TTIImpl::getLoadStoreVecRegBitWidth(unsigned) const {
   return getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
-      .getFixedSize();
+      .getFixedValue();
 }
 
 unsigned X86TTIImpl::getMaxInterleaveFactor(unsigned VF) {
@@ -359,7 +359,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     if (const auto *Entry =
             CostTableLookup(AVX512BWUniformConstCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX512UniformConstCostTable[] = {
     { ISD::SHL,  MVT::v64i8,  {  2, 12,  5,  6 } }, // psllw + pand.
@@ -395,7 +395,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     if (const auto *Entry =
             CostTableLookup(AVX512UniformConstCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX2UniformConstCostTable[] = {
     { ISD::SHL,  MVT::v16i8, {  1,  8,  2,  3 } }, // psllw + pand.
@@ -436,7 +436,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     if (const auto *Entry =
             CostTableLookup(AVX2UniformConstCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry AVXUniformConstCostTable[] = {
     { ISD::SHL,  MVT::v16i8, {  2,  7,  2,  3 } }, // psllw + pand.
@@ -479,7 +479,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     if (const auto *Entry =
             CostTableLookup(AVXUniformConstCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry SSE2UniformConstCostTable[] = {
     { ISD::SHL,  MVT::v16i8, {  1,  7,  2,  3 } }, // psllw + pand.
@@ -510,7 +510,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     if (const auto *Entry =
             CostTableLookup(SSE2UniformConstCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX512BWConstCostTable[] = {
     { ISD::SDIV, MVT::v64i8,  { 14 } }, // 2*ext+2*pmulhw sequence
@@ -528,7 +528,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     if (const auto *Entry =
             CostTableLookup(AVX512BWConstCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX512ConstCostTable[] = {
     { ISD::SDIV, MVT::v64i8,  { 28 } }, // 4*ext+4*pmulhw sequence
@@ -551,7 +551,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     if (const auto *Entry =
             CostTableLookup(AVX512ConstCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX2ConstCostTable[] = {
     { ISD::SDIV, MVT::v32i8,  { 14 } }, // 2*ext+2*pmulhw sequence
@@ -573,7 +573,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   if (Op2Info.isConstant() && ST->hasAVX2())
     if (const auto *Entry = CostTableLookup(AVX2ConstCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry AVXConstCostTable[] = {
     { ISD::SDIV, MVT::v32i8,  { 30 } }, // 4*ext+4*pmulhw sequence + split.
@@ -595,7 +595,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   if (Op2Info.isConstant() && ST->hasAVX())
     if (const auto *Entry = CostTableLookup(AVXConstCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry SSE41ConstCostTable[] = {
     { ISD::SDIV, MVT::v4i32,  { 15 } }, // vpmuludq sequence
@@ -606,7 +606,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     if (const auto *Entry =
             CostTableLookup(SSE41ConstCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry SSE2ConstCostTable[] = {
     { ISD::SDIV, MVT::v16i8,  { 14 } }, // 2*ext+2*pmulhw sequence
@@ -628,7 +628,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   if (Op2Info.isConstant() && ST->hasSSE2())
     if (const auto *Entry = CostTableLookup(SSE2ConstCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX512BWUniformCostTable[] = {
     { ISD::SHL,  MVT::v16i8,  { 3, 5, 5, 7 } }, // psllw + pand.
@@ -650,7 +650,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     if (const auto *Entry =
             CostTableLookup(AVX512BWUniformCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX512UniformCostTable[] = {
     { ISD::SHL,  MVT::v32i16, { 5,10, 5, 7 } }, // psllw + split.
@@ -674,7 +674,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     if (const auto *Entry =
             CostTableLookup(AVX512UniformCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX2UniformCostTable[] = {
     // Uniform splats are cheaper for the following instructions.
@@ -711,7 +711,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     if (const auto *Entry =
             CostTableLookup(AVX2UniformCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry AVXUniformCostTable[] = {
     { ISD::SHL,  MVT::v16i8,  {  4, 4, 6, 8 } }, // psllw + pand.
@@ -749,7 +749,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     if (const auto *Entry =
             CostTableLookup(AVXUniformCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry SSE2UniformCostTable[] = {
     // Uniform splats are cheaper for the following instructions.
@@ -775,7 +775,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     if (const auto *Entry =
             CostTableLookup(SSE2UniformCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX512DQCostTable[] = {
     { ISD::MUL,  MVT::v2i64, { 2, 15, 1, 3 } }, // pmullq
@@ -787,7 +787,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   if (ST->hasDQI())
     if (const auto *Entry = CostTableLookup(AVX512DQCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX512BWCostTable[] = {
     { ISD::SHL,   MVT::v16i8,   {  4,  8, 4, 5 } }, // extend/vpsllvw/pack sequence.
@@ -833,7 +833,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   if (ST->hasBWI())
     if (const auto *Entry = CostTableLookup(AVX512BWCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX512CostTable[] = {
     { ISD::SHL,     MVT::v64i8,   { 15, 19,27,33 } }, // vpblendv+split sequence.
@@ -925,7 +925,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   if (ST->hasAVX512())
     if (const auto *Entry = CostTableLookup(AVX512CostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX2ShiftCostTable[] = {
     // Shifts on vXi64/vXi32 on AVX2 is legal even though we declare to
@@ -961,7 +961,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
 
     if (const auto *Entry = CostTableLookup(AVX2ShiftCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
   }
 
   static const CostKindTblEntry XOPShiftCostTable[] = {
@@ -1003,7 +1003,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     if (const auto *Entry =
             CostTableLookup(XOPShiftCostTable, ShiftISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
   }
 
   if (ISD == ISD::SHL && !Op2Info.isUniform() && Op2Info.isConstant()) {
@@ -1025,7 +1025,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   if (ST->useGLMDivSqrtCosts())
     if (const auto *Entry = CostTableLookup(GLMCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry SLMCostTable[] = {
     { ISD::MUL,   MVT::v4i32, { 11, 11, 1, 7 } }, // pmulld
@@ -1054,7 +1054,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   if (ST->useSLMArithCosts())
     if (const auto *Entry = CostTableLookup(SLMCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX2CostTable[] = {
     { ISD::SHL,  MVT::v16i8,   {  6, 21,11,16 } }, // vpblendvb sequence.
@@ -1125,7 +1125,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   if (ST->hasAVX2())
     if (const auto *Entry = CostTableLookup(AVX2CostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX1CostTable[] = {
     // We don't have to scalarize unsupported ops. We can issue two half-sized
@@ -1224,7 +1224,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   if (ST->hasAVX())
     if (const auto *Entry = CostTableLookup(AVX1CostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry SSE42CostTable[] = {
     { ISD::FADD, MVT::f64,    {  1,  3, 1, 1 } }, // Nehalem from http://www.agner.org/
@@ -1253,8 +1253,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   if (ST->hasSSE42())
     if (const auto *Entry = CostTableLookup(SSE42CostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
-
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry SSE41CostTable[] = {
     { ISD::SHL,  MVT::v16i8,  { 15, 24,17,22 } }, // pblendvb sequence.
@@ -1277,7 +1276,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   if (ST->hasSSE41())
     if (const auto *Entry = CostTableLookup(SSE41CostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry SSE2CostTable[] = {
     // We don't correctly identify costs of casts because they are marked as
@@ -1344,7 +1343,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   if (ST->hasSSE2())
     if (const auto *Entry = CostTableLookup(SSE2CostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry SSE1CostTable[] = {
     { ISD::FDIV, MVT::f32,   { 17, 18, 1, 1 } }, // Pentium III from http://www.agner.org/
@@ -1366,7 +1365,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   if (ST->hasSSE1())
     if (const auto *Entry = CostTableLookup(SSE1CostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry X64CostTbl[] = { // 64-bit targets
     { ISD::ADD,  MVT::i64,  {  1 } }, // Core (Merom) from http://www.agner.org/
@@ -1377,7 +1376,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   if (ST->is64Bit())
     if (const auto *Entry = CostTableLookup(X64CostTbl, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostKindTblEntry X86CostTbl[] = { // 32 or 64-bit targets
     { ISD::ADD,  MVT::i8,  {  1 } }, // Pentium III from http://www.agner.org/
@@ -1397,7 +1396,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
 
   if (const auto *Entry = CostTableLookup(X86CostTbl, ISD, LT.second))
     if (auto KindCost = Entry->Cost[CostKind])
-      return LT.first * KindCost.value();
+      return LT.first * *KindCost;
 
   // It is not a good idea to vectorize division. We have to scalarize it and
   // in the process we will often end up having to spilling regular
@@ -1785,7 +1784,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   if (ST->hasAVX512())
     if (const auto *Entry = CostTableLookup(AVX512ShuffleTbl, Kind, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
+        return LT.first * *KindCost;
 
   static const CostTblEntry AVX2ShuffleTbl[] = {
       {TTI::SK_Broadcast, MVT::v4f64, 1},  // vbroadcastpd
@@ -3263,52 +3262,52 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   if (ST->useSLMArithCosts())
     if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + KindCost.value());
+        return LT.first * (ExtraCost + *KindCost);
 
   if (ST->hasBWI())
     if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + KindCost.value());
+        return LT.first * (ExtraCost + *KindCost);
 
   if (ST->hasAVX512())
     if (const auto *Entry = CostTableLookup(AVX512CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + KindCost.value());
+        return LT.first * (ExtraCost + *KindCost);
 
   if (ST->hasAVX2())
     if (const auto *Entry = CostTableLookup(AVX2CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + KindCost.value());
+        return LT.first * (ExtraCost + *KindCost);
 
   if (ST->hasXOP())
     if (const auto *Entry = CostTableLookup(XOPCostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + KindCost.value());
+        return LT.first * (ExtraCost + *KindCost);
 
   if (ST->hasAVX())
     if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + KindCost.value());
+        return LT.first * (ExtraCost + *KindCost);
 
   if (ST->hasSSE42())
     if (const auto *Entry = CostTableLookup(SSE42CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + KindCost.value());
+        return LT.first * (ExtraCost + *KindCost);
 
   if (ST->hasSSE41())
     if (const auto *Entry = CostTableLookup(SSE41CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + KindCost.value());
+        return LT.first * (ExtraCost + *KindCost);
 
   if (ST->hasSSE2())
     if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + KindCost.value());
+        return LT.first * (ExtraCost + *KindCost);
 
   if (ST->hasSSE1())
     if (const auto *Entry = CostTableLookup(SSE1CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + KindCost.value());
+        return LT.first * (ExtraCost + *KindCost);
 
   // Assume a 3cy latency for fp select ops.
   if (CostKind == TTI::TCK_Latency && Opcode == Instruction::Select)
@@ -4100,109 +4099,109 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (ST->useGLMDivSqrtCosts())
       if (const auto *Entry = CostTableLookup(GLMCostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
 
     if (ST->useSLMArithCosts())
       if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
 
     if (ST->hasVBMI2())
       if (const auto *Entry = CostTableLookup(AVX512VBMI2CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
 
     if (ST->hasBITALG())
       if (const auto *Entry = CostTableLookup(AVX512BITALGCostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
 
     if (ST->hasVPOPCNTDQ())
       if (const auto *Entry = CostTableLookup(AVX512VPOPCNTDQCostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
 
     if (ST->hasCDI())
       if (const auto *Entry = CostTableLookup(AVX512CDCostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
 
     if (ST->hasBWI())
       if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
 
     if (ST->hasAVX512())
       if (const auto *Entry = CostTableLookup(AVX512CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
 
     if (ST->hasXOP())
       if (const auto *Entry = CostTableLookup(XOPCostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
 
     if (ST->hasAVX2())
       if (const auto *Entry = CostTableLookup(AVX2CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
 
     if (ST->hasAVX())
       if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
 
     if (ST->hasSSE42())
       if (const auto *Entry = CostTableLookup(SSE42CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
 
     if (ST->hasSSE41())
       if (const auto *Entry = CostTableLookup(SSE41CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
 
     if (ST->hasSSSE3())
       if (const auto *Entry = CostTableLookup(SSSE3CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
 
     if (ST->hasSSE2())
       if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
 
     if (ST->hasSSE1())
       if (const auto *Entry = CostTableLookup(SSE1CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
 
     if (ST->hasBMI()) {
       if (ST->is64Bit())
         if (const auto *Entry = CostTableLookup(BMI64CostTbl, ISD, MTy))
           if (auto KindCost = Entry->Cost[CostKind])
-            return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+            return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                    ICA.getFlags());
 
       if (const auto *Entry = CostTableLookup(BMI32CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
     }
 
@@ -4210,12 +4209,12 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       if (ST->is64Bit())
         if (const auto *Entry = CostTableLookup(LZCNT64CostTbl, ISD, MTy))
           if (auto KindCost = Entry->Cost[CostKind])
-            return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+            return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                    ICA.getFlags());
 
       if (const auto *Entry = CostTableLookup(LZCNT32CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
     }
 
@@ -4223,12 +4222,12 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       if (ST->is64Bit())
         if (const auto *Entry = CostTableLookup(POPCNT64CostTbl, ISD, MTy))
           if (auto KindCost = Entry->Cost[CostKind])
-            return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+            return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                    ICA.getFlags());
 
       if (const auto *Entry = CostTableLookup(POPCNT32CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
     }
 
@@ -4246,20 +4245,21 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (ST->is64Bit())
       if (const auto *Entry = CostTableLookup(X64CostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
-          return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());
 
     if (const auto *Entry = CostTableLookup(X86CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return adjustTableCost(Entry->ISD, KindCost.value(), LT.first,
-                               ICA.getFlags());
+        return adjustTableCost(Entry->ISD, *KindCost, LT.first, ICA.getFlags());
   }
 
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
 InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                               unsigned Index) {
+                                               TTI::TargetCostKind CostKind,
+                                               unsigned Index, Value *Op0,
+                                               Value *Op1) {
   static const CostTblEntry SLMCostTbl[] = {
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i8,      4 },
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i16,     4 },
@@ -4270,7 +4270,6 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   assert(Val->isVectorTy() && "This must be a vector type");
   Type *ScalarType = Val->getScalarType();
   InstructionCost RegisterFileMoveCost = 0;
-  TTI::TargetCostKind CostKind = TTI::TargetCostKind::TCK_RecipThroughput;
 
   // Non-immediate extraction/insertion can be handled as a sequence of
   // aliased loads+stores via the stack.
@@ -4332,12 +4331,36 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       }
     }
 
+    MVT MScalarTy = LT.second.getScalarType();
+    auto IsCheapPInsrPExtrInsertPS = [&]() {
+      // Assume pinsr/pextr XMM <-> GPR is relatively cheap on all targets.
+      // Also, assume insertps is relatively cheap on all >= SSE41 targets.
+      return (MScalarTy == MVT::i16 && ST->hasSSE2()) ||
+             (MScalarTy.isInteger() && ST->hasSSE41()) ||
+             (MScalarTy == MVT::f32 && ST->hasSSE41() &&
+              Opcode == Instruction::InsertElement);
+    };
+
     if (Index == 0) {
       // Floating point scalars are already located in index #0.
       // Many insertions to #0 can fold away for scalar fp-ops, so let's assume
       // true for all.
       if (ScalarType->isFloatingPointTy())
         return RegisterFileMoveCost;
+
+      if (Opcode == Instruction::InsertElement &&
+          isa_and_nonnull<UndefValue>(Op0)) {
+        // Consider the gather cost to be cheap.
+        if (isa_and_nonnull<LoadInst>(Op1))
+          return RegisterFileMoveCost;
+        if (!IsCheapPInsrPExtrInsertPS()) {
+          // mov constant-to-GPR + movd/movq GPR -> XMM.
+          if (isa_and_nonnull<Constant>(Op1) && Op1->getType()->isIntegerTy())
+            return 2 + RegisterFileMoveCost;
+          // Assume movd/movq GPR -> XMM is relatively cheap on all targets.
+          return 1 + RegisterFileMoveCost;
+        }
+      }
 
       // Assume movd/movq XMM -> GPR is relatively cheap on all targets.
       if (ScalarType->isIntegerTy() && Opcode == Instruction::ExtractElement)
@@ -4346,19 +4369,12 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     assert(ISD && "Unexpected vector opcode");
-    MVT MScalarTy = LT.second.getScalarType();
     if (ST->useSLMArithCosts())
       if (auto *Entry = CostTableLookup(SLMCostTbl, ISD, MScalarTy))
         return Entry->Cost + RegisterFileMoveCost;
 
-    // Assume pinsr/pextr XMM <-> GPR is relatively cheap on all targets.
-    if ((MScalarTy == MVT::i16 && ST->hasSSE2()) ||
-        (MScalarTy.isInteger() && ST->hasSSE41()))
-      return 1 + RegisterFileMoveCost;
-
-    // Assume insertps is relatively cheap on all targets.
-    if (MScalarTy == MVT::f32 && ST->hasSSE41() &&
-        Opcode == Instruction::InsertElement)
+    // Consider cheap cases.
+    if (IsCheapPInsrPExtrInsertPS())
       return 1 + RegisterFileMoveCost;
 
     // For extractions we just need to shuffle the element to index 0, which
@@ -4385,13 +4401,14 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   if (Opcode == Instruction::ExtractElement && ScalarType->isPointerTy())
     RegisterFileMoveCost += 1;
 
-  return BaseT::getVectorInstrCost(Opcode, Val, Index) + RegisterFileMoveCost;
+  return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1) +
+         RegisterFileMoveCost;
 }
 
-InstructionCost X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
-                                                     const APInt &DemandedElts,
-                                                     bool Insert,
-                                                     bool Extract) {
+InstructionCost
+X86TTIImpl::getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
+                                     bool Insert, bool Extract,
+                                     TTI::TargetCostKind CostKind) {
   assert(DemandedElts.getBitWidth() ==
              cast<FixedVectorType>(Ty)->getNumElements() &&
          "Vector size mismatch");
@@ -4399,7 +4416,6 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   MVT MScalarTy = LT.second.getScalarType();
   unsigned LegalVectorBitWidth = LT.second.getSizeInBits();
-  TTI::TargetCostKind CostKind = TTI::TargetCostKind::TCK_RecipThroughput;
   InstructionCost Cost = 0;
 
   constexpr unsigned LaneBitWidth = 128;
@@ -4419,8 +4435,8 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
       // For types we can insert directly, insertion into 128-bit sub vectors is
       // cheap, followed by a cheap chain of concatenations.
       if (LegalVectorBitWidth <= LaneBitWidth) {
-        Cost +=
-            BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, false);
+        Cost += BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert,
+                                                /*Extract*/ false, CostKind);
       } else {
         // In each 128-lane, if at least one index is demanded but not all
         // indices are demanded and this 128-lane is not the first 128-lane of
@@ -4460,7 +4476,7 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
             Cost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, std::nullopt,
                                    CostKind, I * NumEltsPerLane, LaneTy);
           Cost += BaseT::getScalarizationOverhead(LaneTy, LaneEltMask, Insert,
-                                                  false);
+                                                  /*Extract*/ false, CostKind);
         }
 
         APInt AffectedLanes =
@@ -4537,8 +4553,8 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
             continue;
           Cost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, std::nullopt,
                                  CostKind, I * NumEltsPerLane, LaneTy);
-          Cost += BaseT::getScalarizationOverhead(LaneTy, LaneEltMask, false,
-                                                  Extract);
+          Cost += BaseT::getScalarizationOverhead(
+              LaneTy, LaneEltMask, /*Insert*/ false, Extract, CostKind);
         }
 
         return Cost;
@@ -4546,7 +4562,8 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
     }
 
     // Fallback to default extraction.
-    Cost += BaseT::getScalarizationOverhead(Ty, DemandedElts, false, Extract);
+    Cost += BaseT::getScalarizationOverhead(Ty, DemandedElts, /*Insert*/ false,
+                                            Extract, CostKind);
   }
 
   return Cost;
@@ -4798,7 +4815,7 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                               CoalescedVecEltIdx, CoalescedVecEltIdx + 1);
         assert(DemandedElts.countPopulation() == 1 && "Inserting single value");
         Cost += getScalarizationOverhead(CoalescedVecTy, DemandedElts, IsLoad,
-                                         !IsLoad);
+                                         !IsLoad, CostKind);
       }
 
       // This isn't exactly right. We're using slow unaligned 32-byte accesses
@@ -4839,15 +4856,15 @@ X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
       (IsStore && !isLegalMaskedStore(SrcVTy, Alignment))) {
     // Scalarization
     APInt DemandedElts = APInt::getAllOnes(NumElem);
-    InstructionCost MaskSplitCost =
-        getScalarizationOverhead(MaskTy, DemandedElts, false, true);
+    InstructionCost MaskSplitCost = getScalarizationOverhead(
+        MaskTy, DemandedElts, /*Insert*/ false, /*Extract*/ true, CostKind);
     InstructionCost ScalarCompareCost = getCmpSelInstrCost(
         Instruction::ICmp, Type::getInt8Ty(SrcVTy->getContext()), nullptr,
         CmpInst::BAD_ICMP_PREDICATE, CostKind);
     InstructionCost BranchCost = getCFInstrCost(Instruction::Br, CostKind);
     InstructionCost MaskCmpCost = NumElem * (BranchCost + ScalarCompareCost);
-    InstructionCost ValueSplitCost =
-        getScalarizationOverhead(SrcVTy, DemandedElts, IsLoad, IsStore);
+    InstructionCost ValueSplitCost = getScalarizationOverhead(
+        SrcVTy, DemandedElts, IsLoad, IsStore, CostKind);
     InstructionCost MemopCost =
         NumElem * BaseT::getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
                                          Alignment, AddressSpace, CostKind);
@@ -5157,7 +5174,8 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   }
 
   // Add the final extract element to the cost.
-  return ReductionCost + getVectorInstrCost(Instruction::ExtractElement, Ty, 0);
+  return ReductionCost + getVectorInstrCost(Instruction::ExtractElement, Ty,
+                                            CostKind, 0, nullptr, nullptr);
 }
 
 InstructionCost X86TTIImpl::getMinMaxCost(Type *Ty, Type *CondTy,
@@ -5457,7 +5475,8 @@ X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
   }
 
   // Add the final extract element to the cost.
-  return MinMaxCost + getVectorInstrCost(Instruction::ExtractElement, Ty, 0);
+  return MinMaxCost + getVectorInstrCost(Instruction::ExtractElement, Ty,
+                                         CostKind, 0, nullptr, nullptr);
 }
 
 /// Calculate the cost of materializing a 64-bit value. This helper
@@ -5762,7 +5781,7 @@ InstructionCost X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
     auto *MaskTy =
         FixedVectorType::get(Type::getInt1Ty(SrcVTy->getContext()), VF);
     MaskUnpackCost = getScalarizationOverhead(
-        MaskTy, DemandedElts, /*Insert=*/false, /*Extract=*/true);
+        MaskTy, DemandedElts, /*Insert=*/false, /*Extract=*/true, CostKind);
     InstructionCost ScalarCompareCost = getCmpSelInstrCost(
         Instruction::ICmp, Type::getInt1Ty(SrcVTy->getContext()), nullptr,
         CmpInst::BAD_ICMP_PREDICATE, CostKind);
@@ -5772,7 +5791,7 @@ InstructionCost X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
 
   InstructionCost AddressUnpackCost = getScalarizationOverhead(
       FixedVectorType::get(ScalarTy->getPointerTo(), VF), DemandedElts,
-      /*Insert=*/false, /*Extract=*/true);
+      /*Insert=*/false, /*Extract=*/true, CostKind);
 
   // The cost of the scalar loads/stores.
   InstructionCost MemoryOpCost =
@@ -5781,10 +5800,10 @@ InstructionCost X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
 
   // The cost of forming the vector from loaded scalars/
   // scalarizing the vector to perform scalar stores.
-  InstructionCost InsertExtractCost =
-      getScalarizationOverhead(cast<FixedVectorType>(SrcVTy), DemandedElts,
-                               /*Insert=*/Opcode == Instruction::Load,
-                               /*Extract=*/Opcode == Instruction::Store);
+  InstructionCost InsertExtractCost = getScalarizationOverhead(
+      cast<FixedVectorType>(SrcVTy), DemandedElts,
+      /*Insert=*/Opcode == Instruction::Load,
+      /*Extract=*/Opcode == Instruction::Store, CostKind);
 
   return AddressUnpackCost + MemoryOpCost + MaskUnpackCost + InsertExtractCost;
 }

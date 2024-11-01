@@ -12,7 +12,7 @@
 ; Check that %fphi is not mapped to A[j] because it is double-sized,
 ; but A[j] stores only floats.
 ;
-define void @func(float* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %outer.preheader
 
@@ -47,9 +47,9 @@ outer.for:
       br label %reduction.for
 
     reduction.exit:
-      %A_idx = getelementptr inbounds float, float* %A, i32 %j
+      %A_idx = getelementptr inbounds float, ptr %A, i32 %j
       %fphi = fptrunc double %phi to float
-      store float %fphi, float* %A_idx
+      store float %fphi, ptr %A_idx
       br label %outer.inc
 
 

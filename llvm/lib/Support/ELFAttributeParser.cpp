@@ -140,7 +140,7 @@ Error ELFAttributeParser::parseSubsection(uint32_t length) {
       return cursor.takeError();
 
     if (sw) {
-      sw->printEnum("Tag", tag, makeArrayRef(tagNames));
+      sw->printEnum("Tag", tag, ArrayRef(tagNames));
       sw->printNumber("Size", size);
     }
     if (size < 5)

@@ -187,7 +187,7 @@ protected:
 
   SCEVNAryExpr(const FoldingSetNodeIDRef ID, enum SCEVTypes T,
                const SCEV *const *O, size_t N)
-      : SCEV(ID, T, computeExpressionSize(makeArrayRef(O, N))), Operands(O),
+      : SCEV(ID, T, computeExpressionSize(ArrayRef(O, N))), Operands(O),
         NumOperands(N) {}
 
 public:
@@ -199,7 +199,7 @@ public:
   }
 
   ArrayRef<const SCEV *> operands() const {
-    return makeArrayRef(Operands, NumOperands);
+    return ArrayRef(Operands, NumOperands);
   }
 
   NoWrapFlags getNoWrapFlags(NoWrapFlags Mask = NoWrapMask) const {
@@ -677,28 +677,21 @@ public:
       case scTruncate:
       case scZeroExtend:
       case scSignExtend:
-        push(cast<SCEVCastExpr>(S)->getOperand());
-        continue;
       case scAddExpr:
       case scMulExpr:
+      case scUDivExpr:
       case scSMaxExpr:
       case scUMaxExpr:
       case scSMinExpr:
       case scUMinExpr:
       case scSequentialUMinExpr:
       case scAddRecExpr:
-        for (const auto *Op : cast<SCEVNAryExpr>(S)->operands()) {
+        for (const auto *Op : S->operands()) {
           push(Op);
           if (Visitor.isDone())
             break;
         }
         continue;
-      case scUDivExpr: {
-        const SCEVUDivExpr *UDiv = cast<SCEVUDivExpr>(S);
-        push(UDiv->getLHS());
-        push(UDiv->getRHS());
-        continue;
-      }
       case scCouldNotCompute:
         llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
       }

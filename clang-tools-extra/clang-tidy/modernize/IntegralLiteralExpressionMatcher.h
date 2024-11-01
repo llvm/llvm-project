@@ -12,9 +12,7 @@
 #include <clang/Lex/Token.h>
 #include <llvm/ADT/ArrayRef.h>
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 enum class LiteralSize {
   Unknown = 0,
@@ -80,8 +78,6 @@ private:
   bool CommaAllowed;
 };
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize
 
 #endif

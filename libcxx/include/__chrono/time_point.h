@@ -12,8 +12,10 @@
 
 #include <__chrono/duration.h>
 #include <__config>
+#include <__type_traits/common_type.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_convertible.h>
 #include <limits>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -98,7 +100,7 @@ typename enable_if
 >::type
 floor(const time_point<_Clock, _Duration>& __t)
 {
-    return time_point<_Clock, _ToDuration>{floor<_ToDuration>(__t.time_since_epoch())};
+    return time_point<_Clock, _ToDuration>{chrono::floor<_ToDuration>(__t.time_since_epoch())};
 }
 
 template <class _ToDuration, class _Clock, class _Duration>
@@ -110,7 +112,7 @@ typename enable_if
 >::type
 ceil(const time_point<_Clock, _Duration>& __t)
 {
-    return time_point<_Clock, _ToDuration>{ceil<_ToDuration>(__t.time_since_epoch())};
+    return time_point<_Clock, _ToDuration>{chrono::ceil<_ToDuration>(__t.time_since_epoch())};
 }
 
 template <class _ToDuration, class _Clock, class _Duration>
@@ -122,7 +124,7 @@ typename enable_if
 >::type
 round(const time_point<_Clock, _Duration>& __t)
 {
-    return time_point<_Clock, _ToDuration>{round<_ToDuration>(__t.time_since_epoch())};
+    return time_point<_Clock, _ToDuration>{chrono::round<_ToDuration>(__t.time_since_epoch())};
 }
 
 template <class _Rep, class _Period>

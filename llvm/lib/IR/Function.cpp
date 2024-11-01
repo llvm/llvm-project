@@ -188,11 +188,6 @@ Type *Argument::getPointeeInMemoryValueType() const {
   return getMemoryParamAllocType(ParamAttrs);
 }
 
-uint64_t Argument::getParamAlignment() const {
-  assert(getType()->isPointerTy() && "Only pointers have alignments");
-  return getParent()->getParamAlignment(getArgNo());
-}
-
 MaybeAlign Argument::getParamAlign() const {
   assert(getType()->isPointerTy() && "Only pointers have alignments");
   return getParent()->getParamAlign(getArgNo());
@@ -853,7 +848,7 @@ static ArrayRef<const char *> findTargetSubtable(StringRef Name) {
   // We've either found the target or just fall back to the generic set, which
   // is always first.
   const auto &TI = It != Targets.end() && It->Name == Target ? *It : Targets[0];
-  return makeArrayRef(&IntrinsicNameTable[1] + TI.Offset, TI.Count);
+  return ArrayRef(&IntrinsicNameTable[1] + TI.Offset, TI.Count);
 }
 
 /// This does the actual lookup of an intrinsic ID which
@@ -941,6 +936,15 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
       Result += "nx";
     Result += "v" + utostr(EC.getKnownMinValue()) +
               getMangledTypeStr(VTy->getElementType(), HasUnnamedType);
+  } else if (TargetExtType *TETy = dyn_cast<TargetExtType>(Ty)) {
+    Result += "t";
+    Result += TETy->getName();
+    for (Type *ParamTy : TETy->type_params())
+      Result += "_" + getMangledTypeStr(ParamTy, HasUnnamedType);
+    for (unsigned IntParam : TETy->int_params())
+      Result += "_" + utostr(IntParam);
+    // Ensure nested target extension types are distinguishable.
+    Result += "t";
   } else if (Ty) {
     switch (Ty->getTypeID()) {
     default: llvm_unreachable("Unhandled type");
@@ -1488,18 +1492,6 @@ bool Intrinsic::isOverloaded(ID id) {
 #define GET_INTRINSIC_OVERLOAD_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_OVERLOAD_TABLE
-}
-
-bool Intrinsic::isLeaf(ID id) {
-  switch (id) {
-  default:
-    return true;
-
-  case Intrinsic::experimental_gc_statepoint:
-  case Intrinsic::experimental_patchpoint_void:
-  case Intrinsic::experimental_patchpoint_i64:
-    return false;
-  }
 }
 
 /// This defines the "Intrinsic::getAttributes(ID id)" method.

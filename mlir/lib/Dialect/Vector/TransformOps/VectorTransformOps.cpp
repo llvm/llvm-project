@@ -53,32 +53,12 @@ DiagnosedSilenceableFailure transform::LowerVectorsOp::apply(
     MLIRContext *ctx = getContext();
     RewritePatternSet patterns(ctx);
     vector::VectorTransposeLowering vectorTransposeLowering =
-        llvm::StringSwitch<vector::VectorTransposeLowering>(
-            getTransposeLowering())
-            .Case("eltwise", vector::VectorTransposeLowering::EltWise)
-            .Case("flat_transpose", vector::VectorTransposeLowering::Flat)
-            .Case("shuffle", vector::VectorTransposeLowering::Shuffle)
-            .Default(vector::VectorTransposeLowering::EltWise);
+        getTransposeLowering();
     vector::VectorMultiReductionLowering vectorMultiReductionLowering =
-        llvm::StringSwitch<vector::VectorMultiReductionLowering>(
-            getMultireductionLowering())
-            .Case("innerreduction",
-                  vector::VectorMultiReductionLowering::InnerReduction)
-            .Default(vector::VectorMultiReductionLowering::InnerParallel);
+        getMultireductionLowering();
     vector::VectorContractLowering vectorContractLowering =
-        llvm::StringSwitch<vector::VectorContractLowering>(
-            getContractionLowering())
-            .Case("matrixintrinsics", vector::VectorContractLowering::Matmul)
-            .Case("dot", vector::VectorContractLowering::Dot)
-            .Case("outerproduct", vector::VectorContractLowering::OuterProduct)
-            .Default(vector::VectorContractLowering::OuterProduct);
-    vector::VectorTransferSplit vectorTransferSplit =
-        llvm::StringSwitch<vector::VectorTransferSplit>(getSplitTransfers())
-            .Case("none", vector::VectorTransferSplit::None)
-            .Case("linalg-copy", vector::VectorTransferSplit::LinalgCopy)
-            .Case("vector-transfers",
-                  vector::VectorTransferSplit::VectorTransfer)
-            .Default(vector::VectorTransferSplit::None);
+        getContractionLowering();
+    vector::VectorTransferSplit vectorTransferSplit = getSplitTransfers();
 
     vector::VectorTransformsOptions vectorTransformOptions;
     vectorTransformOptions.setVectorTransformsOptions(vectorContractLowering)

@@ -26,7 +26,9 @@ def FIRToLLVMLowering : Pass<"fir-to-llvm-ir", "mlir::ModuleOp"> {
   let dependentDialects = ["mlir::LLVM::LLVMDialect"];
   let options = [
     Option<"forcedTargetTriple", "target", "std::string", /*default=*/"",
-           "Override module's target triple.">
+           "Override module's target triple.">,
+    Option<"applyTBAA", "apply-tbaa", "bool", /*default=*/"false",
+           "Attach TBAA tags to memory accessing operations.">
   ];
 }
 

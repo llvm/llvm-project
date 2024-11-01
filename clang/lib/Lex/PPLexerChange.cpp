@@ -22,6 +22,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 using namespace clang;
 
@@ -75,7 +76,7 @@ bool Preprocessor::EnterSourceFile(FileID FID, ConstSearchDirIterator CurDir,
     MaxIncludeStackDepth = IncludeMacroStack.size();
 
   // Get the MemoryBuffer for this FID, if it fails, we fail.
-  llvm::Optional<llvm::MemoryBufferRef> InputFile =
+  std::optional<llvm::MemoryBufferRef> InputFile =
       getSourceManager().getBufferOrNone(FID, Loc);
   if (!InputFile) {
     SourceLocation FileStart = SourceMgr.getLocForStartOfFile(FID);
@@ -94,8 +95,8 @@ bool Preprocessor::EnterSourceFile(FileID FID, ConstSearchDirIterator CurDir,
   Lexer *TheLexer = new Lexer(FID, *InputFile, *this, IsFirstIncludeOfFile);
   if (getPreprocessorOpts().DependencyDirectivesForFile &&
       FID != PredefinesFileID) {
-    if (Optional<FileEntryRef> File = SourceMgr.getFileEntryRefForID(FID)) {
-      if (Optional<ArrayRef<dependency_directives_scan::Directive>>
+    if (OptionalFileEntryRef File = SourceMgr.getFileEntryRefForID(FID)) {
+      if (std::optional<ArrayRef<dependency_directives_scan::Directive>>
               DepDirectives =
                   getPreprocessorOpts().DependencyDirectivesForFile(*File)) {
         TheLexer->DepDirectives = *DepDirectives;

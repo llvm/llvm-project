@@ -136,6 +136,26 @@ typedef enum {
   HSA_AMD_MEMORY_FAULT_HANG = 1 << 31
 } hsa_amd_memory_fault_reason_t;
 
+typedef enum {
+  HSA_EXT_POINTER_TYPE_UNKNOWN = 0,
+  HSA_EXT_POINTER_TYPE_HSA = 1,
+  HSA_EXT_POINTER_TYPE_LOCKED = 2
+} hsa_amd_pointer_type_t;
+
+typedef struct hsa_amd_pointer_info_s {
+  uint32_t size;
+  hsa_amd_pointer_type_t type;
+  void* agentBaseAddress;
+  void* hostBaseAddress;
+  size_t sizeInBytes;
+} hsa_amd_pointer_info_t;
+
+hsa_status_t hsa_amd_pointer_info(const void* ptr,
+                                          hsa_amd_pointer_info_t* info,
+                                          void* (*alloc)(size_t),
+                                          uint32_t* num_agents_accessible,
+                                          hsa_agent_t** accessible);
+
 #ifdef __cplusplus
 }
 #endif

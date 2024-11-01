@@ -48,6 +48,7 @@ def SPIRV_Dialect : Dialect {
 
   let cppNamespace = "::mlir::spirv";
   let useDefaultTypePrinterParser = 1;
+  let useFoldAPI = kEmitFoldAdaptorFolder;
   let hasConstantMaterializer = 1;
   let hasOperationAttrVerify = 1;
   let hasRegionArgAttrVerify = 1;
@@ -238,11 +239,11 @@ class SPIRVOpInterface<string name> : OpInterface<name> {
 // Remove them once we are able to support dialect-specific contents in ODS.
 def QueryMinVersionInterface : SPIRVOpInterface<"QueryMinVersionInterface"> {
   let methods = [InterfaceMethod<
-    "", "::llvm::Optional<::mlir::spirv::Version>", "getMinVersion">];
+    "", "::std::optional<::mlir::spirv::Version>", "getMinVersion">];
 }
 def QueryMaxVersionInterface : SPIRVOpInterface<"QueryMaxVersionInterface"> {
   let methods = [InterfaceMethod<
-    "", "::llvm::Optional<::mlir::spirv::Version>", "getMaxVersion">];
+    "", "::std::optional<::mlir::spirv::Version>", "getMaxVersion">];
 }
 def QueryExtensionInterface : SPIRVOpInterface<"QueryExtensionInterface"> {
   let methods = [InterfaceMethod<
@@ -3098,6 +3099,11 @@ def SPIRV_EM_SchedulerTargetFmaxMhzINTEL      : I32EnumAttrCase<"SchedulerTarget
     Capability<[SPIRV_C_FPGAKernelAttributesINTEL]>
   ];
 }
+def SPIRV_EM_StreamingInterfaceINTEL          : I32EnumAttrCase<"StreamingInterfaceINTEL", 6154> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_FPGAKernelAttributesINTEL]>
+  ];
+}
 def SPIRV_EM_NamedBarrierCountINTEL           : I32EnumAttrCase<"NamedBarrierCountINTEL", 6417> {
   list<Availability> availability = [
     Capability<[SPIRV_C_VectorComputeINTEL]>
@@ -3135,7 +3141,8 @@ def SPIRV_ExecutionModeAttr :
       SPIRV_EM_FloatingPointModeALTINTEL, SPIRV_EM_FloatingPointModeIEEEINTEL,
       SPIRV_EM_MaxWorkgroupSizeINTEL, SPIRV_EM_MaxWorkDimINTEL,
       SPIRV_EM_NoGlobalOffsetINTEL, SPIRV_EM_NumSIMDWorkitemsINTEL,
-      SPIRV_EM_SchedulerTargetFmaxMhzINTEL, SPIRV_EM_NamedBarrierCountINTEL
+      SPIRV_EM_SchedulerTargetFmaxMhzINTEL, SPIRV_EM_StreamingInterfaceINTEL,
+      SPIRV_EM_NamedBarrierCountINTEL
     ]>;
 
 def SPIRV_EM_Vertex                 : I32EnumAttrCase<"Vertex", 0> {

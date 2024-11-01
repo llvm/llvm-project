@@ -18,6 +18,7 @@
 #include "gmock/gmock.h"
 #include <future>
 #include <limits>
+#include <optional>
 
 using namespace lldb_private::process_gdb_remote;
 using namespace lldb_private;
@@ -178,7 +179,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo) {
       // the FileSpecs they create.
       FileSpec("/foo/baw.so", FileSpec::Style::windows),
   };
-  std::future<llvm::Optional<std::vector<ModuleSpec>>> async_result =
+  std::future<std::optional<std::vector<ModuleSpec>>> async_result =
       std::async(std::launch::async,
                  [&] { return client.GetModulesInfo(file_specs, triple); });
   HandlePacket(
@@ -192,19 +193,18 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo) {
   auto result = async_result.get();
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(1u, result->size());
-  EXPECT_EQ("/foo/bar.so", result.value()[0].GetFileSpec().GetPath());
-  EXPECT_EQ(triple, result.value()[0].GetArchitecture().GetTriple());
-  EXPECT_EQ(UUID("@ABCDEFGHIJKLMNO", 16),
-            result.value()[0].GetUUID());
-  EXPECT_EQ(0u, result.value()[0].GetObjectOffset());
-  EXPECT_EQ(1234u, result.value()[0].GetObjectSize());
+  EXPECT_EQ("/foo/bar.so", (*result)[0].GetFileSpec().GetPath());
+  EXPECT_EQ(triple, (*result)[0].GetArchitecture().GetTriple());
+  EXPECT_EQ(UUID("@ABCDEFGHIJKLMNO", 16), (*result)[0].GetUUID());
+  EXPECT_EQ(0u, (*result)[0].GetObjectOffset());
+  EXPECT_EQ(1234u, (*result)[0].GetObjectSize());
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo_UUID20) {
   llvm::Triple triple("i386-pc-linux");
 
   FileSpec file_spec("/foo/bar.so", FileSpec::Style::posix);
-  std::future<llvm::Optional<std::vector<ModuleSpec>>> async_result =
+  std::future<std::optional<std::vector<ModuleSpec>>> async_result =
       std::async(std::launch::async,
                  [&] { return client.GetModulesInfo(file_spec, triple); });
   HandlePacket(
@@ -217,12 +217,11 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo_UUID20) {
   auto result = async_result.get();
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(1u, result->size());
-  EXPECT_EQ("/foo/bar.so", result.value()[0].GetFileSpec().GetPath());
-  EXPECT_EQ(triple, result.value()[0].GetArchitecture().GetTriple());
-  EXPECT_EQ(UUID("@ABCDEFGHIJKLMNOPQRS", 20),
-            result.value()[0].GetUUID());
-  EXPECT_EQ(0u, result.value()[0].GetObjectOffset());
-  EXPECT_EQ(1234u, result.value()[0].GetObjectSize());
+  EXPECT_EQ("/foo/bar.so", (*result)[0].GetFileSpec().GetPath());
+  EXPECT_EQ(triple, (*result)[0].GetArchitecture().GetTriple());
+  EXPECT_EQ(UUID("@ABCDEFGHIJKLMNOPQRS", 20), (*result)[0].GetUUID());
+  EXPECT_EQ(0u, (*result)[0].GetObjectOffset());
+  EXPECT_EQ(1234u, (*result)[0].GetObjectSize());
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfoInvalidResponse) {
@@ -251,7 +250,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfoInvalidResponse) {
   };
 
   for (const char *response : invalid_responses) {
-    std::future<llvm::Optional<std::vector<ModuleSpec>>> async_result =
+    std::future<std::optional<std::vector<ModuleSpec>>> async_result =
         std::async(std::launch::async,
                    [&] { return client.GetModulesInfo(file_spec, triple); });
     HandlePacket(
@@ -444,8 +443,8 @@ TEST_F(GDBRemoteCommunicationClientTest, SendTraceSupportedPacket) {
 
 TEST_F(GDBRemoteCommunicationClientTest, GetQOffsets) {
   const auto &GetQOffsets = [&](llvm::StringRef response) {
-    std::future<Optional<QOffsets>> result = std::async(
-        std::launch::async, [&] { return client.GetQOffsets(); });
+    std::future<std::optional<QOffsets>> result =
+        std::async(std::launch::async, [&] { return client.GetQOffsets(); });
 
     HandlePacket(server, "qOffsets", response);
     return result.get();
@@ -471,7 +470,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetQOffsets) {
 static void
 check_qmemtags(TestClient &client, MockServer &server, size_t read_len,
                int32_t type, const char *packet, llvm::StringRef response,
-               llvm::Optional<std::vector<uint8_t>> expected_tag_data) {
+               std::optional<std::vector<uint8_t>> expected_tag_data) {
   const auto &ReadMemoryTags = [&]() {
     std::future<DataBufferSP> result = std::async(std::launch::async, [&] {
       return client.ReadMemoryTags(0xDEF0, read_len, type);

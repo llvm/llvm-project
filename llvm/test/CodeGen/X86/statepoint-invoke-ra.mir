@@ -1,4 +1,4 @@
-# RUN: llc -x mir -o - %s -run-pass=twoaddressinstruction,simple-register-coalescing,greedy -verify-regalloc 2>&1 | FileCheck %s
+# RUN: llc -opaque-pointers=0 -x mir -o - %s -run-pass=twoaddressinstruction,simple-register-coalescing,greedy -verify-regalloc 2>&1 | FileCheck %s
 
 # The test checks no verification errors happen in the case of
 # statepoint invoke instruction with tied-defs.

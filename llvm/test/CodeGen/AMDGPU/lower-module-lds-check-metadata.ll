@@ -10,7 +10,7 @@ target triple = "amdgcn-amd-amdhsa"
 
 define i32 @rw() #0 {
 entry:
-  %0 = atomicrmw add i32 addrspace(3)* @global_barrier_state, i32 1 acq_rel, align 4
+  %0 = atomicrmw add ptr addrspace(3) @global_barrier_state, i32 1 acq_rel, align 4
   ret i32 %0
 }
 

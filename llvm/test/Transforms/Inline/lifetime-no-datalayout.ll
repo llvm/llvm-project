@@ -1,5 +1,5 @@
-; RUN: opt -passes=inline -S < %s | FileCheck %s
-; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -passes=inline -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -passes='cgscc(inline)' -S < %s | FileCheck %s
 
 declare void @use(i8* %a)
 

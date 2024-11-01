@@ -13,11 +13,11 @@ target triple = "wasm32-unknown-emscripten"
 ; CHECK-NEXT: i32.store16
 define void @foo() {
 entry:
-  %0 = load i32*, i32** undef, align 4
-  %1 = load i32, i32* %0, align 4
-  %2 = load i32, i32* undef, align 4
+  %0 = load ptr, ptr undef, align 4
+  %1 = load i32, ptr %0, align 4
+  %2 = load i32, ptr undef, align 4
   %conv67 = trunc i32 %2 to i8
   %conv68 = sext i8 %conv67 to i16
-  store i16 %conv68, i16* null, align 2
+  store i16 %conv68, ptr null, align 2
   ret void
 }

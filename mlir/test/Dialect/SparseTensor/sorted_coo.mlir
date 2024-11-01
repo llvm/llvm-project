@@ -71,17 +71,17 @@ func.func @sparse_scale(%argx: tensor<?x?xf32, #SortedCOO>) -> tensor<?x?xf32, #
 // CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[VAL_4:.*]] = arith.constant 1 : index
 // CHECK-DAG:     %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 0 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ] }>> to memref<?xindex>
-// CHECK-DAG:     %[[VAL_6:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 0 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ] }>> to memref<?xindex>
-// CHECK-DAG:     %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 1 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ] }>> to memref<?xindex>
+// CHECK-DAG:     %[[VAL_6:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 0 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ] }>> to memref<?xindex, strided<[?], offset: ?>>
+// CHECK-DAG:     %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 1 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ] }>> to memref<?xindex, strided<[?], offset: ?>>
 // CHECK-DAG:     %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ] }>> to memref<?xf64>
 // CHECK-DAG:     %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<64xf64>
 // CHECK-DAG:     %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf64>
 // CHECK-DAG:     %[[VAL_11:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_3]]] : memref<?xindex>
 // CHECK-DAG:     %[[VAL_12:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_4]]] : memref<?xindex>
 // CHECK:         scf.for %[[VAL_13:.*]] = %[[VAL_11]] to %[[VAL_12]] step %[[VAL_4]] {
-// CHECK:           %[[VAL_14:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_13]]] : memref<?xindex>
+// CHECK:           %[[VAL_14:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_13]]] : memref<?xindex, strided<[?], offset: ?>>
 // CHECK:           %[[VAL_15:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_14]]] : memref<32xf64>
-// CHECK:           %[[VAL_16:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_13]]] : memref<?xindex>
+// CHECK:           %[[VAL_16:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_13]]] : memref<?xindex, strided<[?], offset: ?>>
 // CHECK:           %[[VAL_17:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_13]]] : memref<?xf64>
 // CHECK:           %[[VAL_18:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_16]]] : memref<64xf64>
 // CHECK:           %[[VAL_19:.*]] = arith.mulf %[[VAL_17]], %[[VAL_18]] : f64
@@ -113,12 +113,12 @@ func.func @matvec(%arga: tensor<32x64xf64, #SortedCOO>,
 // CHECK-DAG:     %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[VAL_5:.*]] = arith.constant 1 : index
 // CHECK-DAG:     %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 0 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ] }>> to memref<?xindex>
-// CHECK-DAG:     %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 0 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ] }>> to memref<?xindex>
-// CHECK-DAG:     %[[VAL_8:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 1 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ] }>> to memref<?xindex>
+// CHECK-DAG:     %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 0 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ] }>> to memref<?xindex, strided<[?], offset: ?>>
+// CHECK-DAG:     %[[VAL_8:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 1 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ] }>> to memref<?xindex, strided<[?], offset: ?>>
 // CHECK-DAG:     %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ] }>> to memref<?xf64>
 // CHECK-DAG:     %[[VAL_10:.*]] = sparse_tensor.pointers %[[VAL_1]] {dimension = 0 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ] }>> to memref<?xindex>
-// CHECK-DAG:     %[[VAL_11:.*]] = sparse_tensor.indices %[[VAL_1]] {dimension = 0 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ] }>> to memref<?xindex>
-// CHECK-DAG:     %[[VAL_12:.*]] = sparse_tensor.indices %[[VAL_1]] {dimension = 1 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ] }>> to memref<?xindex>
+// CHECK-DAG:     %[[VAL_11:.*]] = sparse_tensor.indices %[[VAL_1]] {dimension = 0 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ] }>> to memref<?xindex, strided<[?], offset: ?>>
+// CHECK-DAG:     %[[VAL_12:.*]] = sparse_tensor.indices %[[VAL_1]] {dimension = 1 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ] }>> to memref<?xindex, strided<[?], offset: ?>>
 // CHECK-DAG:     %[[VAL_13:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<32x64xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ] }>> to memref<?xf64>
 // CHECK-DAG:     %[[VAL_14:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32x64xf64>
 // CHECK-DAG:     linalg.fill ins(%[[VAL_3]] : f64) outs(%[[VAL_14]] : memref<32x64xf64>)
@@ -133,8 +133,8 @@ func.func @matvec(%arga: tensor<32x64xf64, #SortedCOO>,
 // CHECK:           scf.condition(%[[VAL_24]]) %[[VAL_20]], %[[VAL_21]] : index, index
 // CHECK:         } do {
 // CHECK:         ^bb0(%[[VAL_25:.*]]: index, %[[VAL_26:.*]]: index):
-// CHECK:           %[[VAL_27:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_25]]] : memref<?xindex>
-// CHECK:           %[[VAL_28:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_26]]] : memref<?xindex>
+// CHECK:           %[[VAL_27:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_25]]] : memref<?xindex, strided<[?], offset: ?>>
+// CHECK:           %[[VAL_28:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_26]]] : memref<?xindex, strided<[?], offset: ?>>
 // CHECK:           %[[VAL_29:.*]] = arith.cmpi ult, %[[VAL_28]], %[[VAL_27]] : index
 // CHECK:           %[[VAL_30:.*]] = arith.select %[[VAL_29]], %[[VAL_28]], %[[VAL_27]] : index
 // CHECK:           %[[VAL_31:.*]] = arith.cmpi eq, %[[VAL_27]], %[[VAL_30]] : index
@@ -150,8 +150,8 @@ func.func @matvec(%arga: tensor<32x64xf64, #SortedCOO>,
 // CHECK:               scf.condition(%[[VAL_41]]) %[[VAL_37]], %[[VAL_38]] : index, index
 // CHECK:             } do {
 // CHECK:             ^bb0(%[[VAL_42:.*]]: index, %[[VAL_43:.*]]: index):
-// CHECK:               %[[VAL_44:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_42]]] : memref<?xindex>
-// CHECK:               %[[VAL_45:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_43]]] : memref<?xindex>
+// CHECK:               %[[VAL_44:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_42]]] : memref<?xindex, strided<[?], offset: ?>>
+// CHECK:               %[[VAL_45:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_43]]] : memref<?xindex, strided<[?], offset: ?>>
 // CHECK:               %[[VAL_46:.*]] = arith.cmpi ult, %[[VAL_45]], %[[VAL_44]] : index
 // CHECK:               %[[VAL_47:.*]] = arith.select %[[VAL_46]], %[[VAL_45]], %[[VAL_44]] : index
 // CHECK:               %[[VAL_48:.*]] = arith.cmpi eq, %[[VAL_44]], %[[VAL_47]] : index

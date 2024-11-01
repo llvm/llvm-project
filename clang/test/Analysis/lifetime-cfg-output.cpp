@@ -189,7 +189,7 @@ void test_return() {
 // CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A a;
 // CHECK-NEXT:    3: a
-// CHECK-NEXT:    4: [B4.3] (ImplicitCastExpr, NoOp, const class A)
+// CHECK-NEXT:    4: [B4.3] (ImplicitCastExpr, NoOp, const A)
 // CHECK-NEXT:    5: [B4.4] (CXXConstructExpr, A)
 // CHECK-NEXT:    6: A b = a;
 // CHECK-NEXT:    7: b
@@ -269,7 +269,7 @@ void test_if_implicit_scope() {
 // CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A a;
 // CHECK-NEXT:    3: a
-// CHECK-NEXT:    4: [B8.3] (ImplicitCastExpr, NoOp, const class A)
+// CHECK-NEXT:    4: [B8.3] (ImplicitCastExpr, NoOp, const A)
 // CHECK-NEXT:    5: [B8.4] (CXXConstructExpr, A)
 // CHECK-NEXT:    6: A b = a;
 // CHECK-NEXT:    7: b
@@ -318,7 +318,7 @@ void test_if_jumps() {
 // CHECK-NEXT:    Succs (1): B2
 // CHECK:       [B4]
 // CHECK-NEXT:    1: a
-// CHECK-NEXT:    2: [B4.1] (ImplicitCastExpr, NoOp, const class A)
+// CHECK-NEXT:    2: [B4.1] (ImplicitCastExpr, NoOp, const A)
 // CHECK-NEXT:    3: [B4.2] (CXXConstructExpr, A)
 // CHECK-NEXT:    4: A b = a;
 // CHECK-NEXT:    5: b
@@ -404,7 +404,7 @@ void test_while_implicit_scope() {
 // CHECK-NEXT:    Succs (2): B8 B7
 // CHECK:       [B10]
 // CHECK-NEXT:    1: a
-// CHECK-NEXT:    2: [B10.1] (ImplicitCastExpr, NoOp, const class A)
+// CHECK-NEXT:    2: [B10.1] (ImplicitCastExpr, NoOp, const A)
 // CHECK-NEXT:    3: [B10.2] (CXXConstructExpr, A)
 // CHECK-NEXT:    4: A b = a;
 // CHECK-NEXT:    5: b
@@ -540,7 +540,7 @@ void test_do_jumps() {
 // CHECK-NEXT:    Succs (1): B2
 // CHECK:       [B4]
 // CHECK-NEXT:    1: a
-// CHECK-NEXT:    2: [B4.1] (ImplicitCastExpr, NoOp, const class A)
+// CHECK-NEXT:    2: [B4.1] (ImplicitCastExpr, NoOp, const A)
 // CHECK-NEXT:    3: [B4.2] (CXXConstructExpr, A)
 // CHECK-NEXT:    4: A b = a;
 // CHECK-NEXT:    5: b
@@ -626,7 +626,7 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:    Succs (2): B8 B7
 // CHECK:       [B10]
 // CHECK-NEXT:    1: b
-// CHECK-NEXT:    2: [B10.1] (ImplicitCastExpr, NoOp, const class A)
+// CHECK-NEXT:    2: [B10.1] (ImplicitCastExpr, NoOp, const A)
 // CHECK-NEXT:    3: [B10.2] (CXXConstructExpr, A)
 // CHECK-NEXT:    4: A c = b;
 // CHECK-NEXT:    5: c

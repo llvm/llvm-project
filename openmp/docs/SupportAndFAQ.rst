@@ -79,7 +79,6 @@ The Cuda SDK is required on the machine that will execute the openmp application
 If your build machine is not the target machine or automatic detection of the
 available GPUs failed, you should also set:
 
-- `CLANG_OPENMP_NVPTX_DEFAULT_ARCH=sm_XX` where `XX` is the architecture of your GPU, e.g, 80.
 - `LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES=YY` where `YY` is the numeric compute capacity of your GPU, e.g., 75.
 
 

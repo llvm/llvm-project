@@ -203,7 +203,7 @@ public:
   uint8_t getBytesInAddress() const override;
   StringRef getFileFormatName() const override;
   Triple::ArchType getArch() const override;
-  SubtargetFeatures getFeatures() const override;
+  Expected<SubtargetFeatures> getFeatures() const override;
   bool isRelocatableObject() const override;
   bool isSharedObject() const;
 

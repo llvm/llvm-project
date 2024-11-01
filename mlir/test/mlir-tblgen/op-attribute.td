@@ -44,7 +44,7 @@ def AOp : NS_Op<"a_op", []> {
 // DECL:      static ::llvm::ArrayRef<::llvm::StringRef> getAttributeNames()
 // DECL-NEXT:   static ::llvm::StringRef attrNames[] =
 // DECL-SAME:     {::llvm::StringRef("aAttr"), ::llvm::StringRef("bAttr"), ::llvm::StringRef("cAttr"), ::llvm::StringRef("dAttr")};
-// DECL-NEXT:   return ::llvm::makeArrayRef(attrNames);
+// DECL-NEXT:   return ::llvm::ArrayRef(attrNames);
 
 // DECL:      ::mlir::StringAttr getAAttrAttrName()
 // DECL-NEXT:      return getAttributeNameForIndex(0);
@@ -110,9 +110,9 @@ def AOp : NS_Op<"a_op", []> {
 
 // DEF:      some-attr-kind AOp::getCAttrAttr()
 // DEF-NEXT:   ::mlir::impl::getAttrFromSortedRange((*this)->getAttrs().begin() + 1, (*this)->getAttrs().end() - 0, getCAttrAttrName()).dyn_cast_or_null<some-attr-kind>()
-// DEF:      ::llvm::Optional<some-return-type> AOp::getCAttr() {
+// DEF:      ::std::optional<some-return-type> AOp::getCAttr() {
 // DEF-NEXT:   auto attr = getCAttrAttr()
-// DEF-NEXT:   return attr ? ::llvm::Optional<some-return-type>(attr.some-convert-from-storage()) : (::std::nullopt);
+// DEF-NEXT:   return attr ? ::std::optional<some-return-type>(attr.some-convert-from-storage()) : (::std::nullopt);
 
 // DEF:      some-attr-kind AOp::getDAttrAttr()
 // DEF-NEXT:   ::mlir::impl::getAttrFromSortedRange((*this)->getAttrs().begin() + 1, (*this)->getAttrs().end() - 0, getDAttrAttrName()).dyn_cast_or_null<some-attr-kind>()
@@ -135,7 +135,7 @@ def AOp : NS_Op<"a_op", []> {
 // DEF-NEXT:   (*this)->setAttr(getBAttrAttrName(), some-const-builder-call(::mlir::Builder((*this)->getContext()), attrValue));
 // DEF:      void AOp::setCAttrAttr(some-attr-kind attr) {
 // DEF-NEXT:   (*this)->setAttr(getCAttrAttrName(), attr);
-// DEF:      void AOp::setCAttr(::llvm::Optional<some-return-type> attrValue) {
+// DEF:      void AOp::setCAttr(::std::optional<some-return-type> attrValue) {
 // DEF-NEXT:   if (attrValue)
 // DEF-NEXT:     return (*this)->setAttr(getCAttrAttrName(), some-const-builder-call(::mlir::Builder((*this)->getContext()), *attrValue));
 // DEF-NEXT:   (*this)->removeAttr(getCAttrAttrName());
@@ -193,7 +193,7 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 // DECL:      static ::llvm::ArrayRef<::llvm::StringRef> getAttributeNames()
 // DECL-NEXT:   static ::llvm::StringRef attrNames[] =
 // DECL-SAME:     {::llvm::StringRef("aAttr"), ::llvm::StringRef("bAttr"), ::llvm::StringRef("cAttr")};
-// DECL-NEXT:   return ::llvm::makeArrayRef(attrNames);
+// DECL-NEXT:   return ::llvm::ArrayRef(attrNames);
 
 // DECL:      ::mlir::StringAttr getAAttrAttrName()
 // DECL-NEXT:      return getAttributeNameForIndex(0);
@@ -247,9 +247,9 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 
 // DEF:      some-attr-kind AgetOp::getCAttrAttr()
 // DEF-NEXT:   return ::mlir::impl::getAttrFromSortedRange({{.*}}).dyn_cast_or_null<some-attr-kind>()
-// DEF:      ::llvm::Optional<some-return-type> AgetOp::getCAttr() {
+// DEF:      ::std::optional<some-return-type> AgetOp::getCAttr() {
 // DEF-NEXT:   auto attr = getCAttrAttr()
-// DEF-NEXT:   return attr ? ::llvm::Optional<some-return-type>(attr.some-convert-from-storage()) : (::std::nullopt);
+// DEF-NEXT:   return attr ? ::std::optional<some-return-type>(attr.some-convert-from-storage()) : (::std::nullopt);
 
 // Test setter methods
 // ---
@@ -391,6 +391,27 @@ def DOp : NS_Op<"d_op", []> {
 // DEF-LABEL: DOp definitions
 // DEF: odsState.addAttribute(getStrAttrAttrName(odsState.name), odsBuilder.getStringAttr(str_attr));
 // DEF: odsState.addAttribute(getDvStrAttrAttrName(odsState.name), odsBuilder.getStringAttr(dv_str_attr));
+
+
+// Test default dictionary attribute.
+// ---
+
+def DefaultDictAttrOp : NS_Op<"default_dict_attr_op", []> {
+  let arguments = (ins
+    DefaultValuedAttr<DictionaryAttr, "{}">:$empty,
+    DefaultValuedAttr<DictionaryAttr, "getDefaultDictAttrs($_builder)">:$non_empty
+  );
+}
+
+// DEF-LABEL: DefaultDictAttrOp definitions
+// DEF: if (!attributes.get(attrNames[0]))
+// DEF:   attributes.append(attrNames[0], odsBuilder.getDictionaryAttr({}));
+// DEF: if (!attributes.get(attrNames[1]))
+// DEF:   attributes.append(attrNames[1], odsBuilder.getDictionaryAttr(getDefaultDictAttrs(odsBuilder)));
+
+// DECL-LABEL: DefaultDictAttrOp declarations
+// DECL: build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::DictionaryAttr empty, ::mlir::DictionaryAttr non_empty)
+
 
 // Test derived type attr.
 // ---

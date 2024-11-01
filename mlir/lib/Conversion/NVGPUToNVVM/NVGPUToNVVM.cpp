@@ -298,14 +298,15 @@ struct MmaSyncOptoNVVM : public ConvertOpToLLVMPattern<nvgpu::MmaSyncOp> {
     FailureOr<NVVM::MMATypes> ptxTypeB = getNvvmMmaType(bType);
     if (failed(ptxTypeB))
       return op->emitOpError("failed to deduce operand PTX types");
-    Optional<NVVM::MMATypes> ptxTypeC = NVVM::MmaOp::inferOperandMMAType(
-        cType.getElementType(), /*isAccumulator=*/true);
+    std::optional<NVVM::MMATypes> ptxTypeC =
+        NVVM::MmaOp::inferOperandMMAType(cType.getElementType(),
+                                         /*isAccumulator=*/true);
     if (!ptxTypeC)
       return op->emitError(
           "could not infer the PTX type for the accumulator/result");
 
     // TODO: add an attribute to the op to customize this behavior.
-    Optional<NVVM::MMAIntOverflow> overflow(std::nullopt);
+    std::optional<NVVM::MMAIntOverflow> overflow(std::nullopt);
     if (aType.getElementType().isa<IntegerType>())
       overflow = NVVM::MMAIntOverflow::satfinite;
 
@@ -413,7 +414,7 @@ buildMmaSparseAsmString(const std::array<int64_t, 3> &shape, unsigned matASize,
                         unsigned matBSize, unsigned matCSize,
                         NVVM::MMATypes ptxTypeA, NVVM::MMATypes ptxTypeB,
                         NVVM::MMATypes ptxTypeC, NVVM::MMATypes ptxTypeD,
-                        Optional<NVVM::MMAIntOverflow> overflow) {
+                        std::optional<NVVM::MMAIntOverflow> overflow) {
   auto ptxTypeStr = [](NVVM::MMATypes ptxType) {
     return NVVM::stringifyMMATypes(ptxType);
   };
@@ -449,7 +450,7 @@ buildMmaSparseAsmString(const std::array<int64_t, 3> &shape, unsigned matASize,
 static FailureOr<LLVM::InlineAsmOp> emitMmaSparseSyncOpAsm(
     Location loc, NVVM::MMATypes ptxTypeA, NVVM::MMATypes ptxTypeB,
     NVVM::MMATypes ptxTypeC, NVVM::MMATypes ptxTypeD,
-    Optional<NVVM::MMAIntOverflow> overflow, ArrayRef<Value> unpackedAData,
+    std::optional<NVVM::MMAIntOverflow> overflow, ArrayRef<Value> unpackedAData,
     ArrayRef<Value> unpackedB, ArrayRef<Value> unpackedC, Value indexData,
     int64_t metadataSelector, const std::array<int64_t, 3> &shape,
     Type intrinsicResultType, ConversionPatternRewriter &rewriter) {
@@ -505,8 +506,9 @@ struct NVGPUMmaSparseSyncLowering
     FailureOr<NVVM::MMATypes> ptxTypeB = getNvvmMmaType(bType);
     if (failed(ptxTypeB))
       return op->emitOpError("failed to deduce operand PTX types");
-    Optional<NVVM::MMATypes> ptxTypeC = NVVM::MmaOp::inferOperandMMAType(
-        cType.getElementType(), /*isAccumulator=*/true);
+    std::optional<NVVM::MMATypes> ptxTypeC =
+        NVVM::MmaOp::inferOperandMMAType(cType.getElementType(),
+                                         /*isAccumulator=*/true);
     if (!ptxTypeC)
       return op->emitError(
           "could not infer the PTX type for the accumulator/result");
@@ -517,7 +519,7 @@ struct NVGPUMmaSparseSyncLowering
       return failure();
 
     // TODO: add an attribute to the op to customize this behavior.
-    Optional<NVVM::MMAIntOverflow> overflow(std::nullopt);
+    std::optional<NVVM::MMAIntOverflow> overflow(std::nullopt);
     if (aType.getElementType().isa<IntegerType>())
       overflow = NVVM::MMAIntOverflow::satfinite;
 

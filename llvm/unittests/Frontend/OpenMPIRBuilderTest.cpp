@@ -5090,10 +5090,12 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskDepend) {
   OpenMPIRBuilder::LocationDescription Loc(
       InsertPointTy(BodyBB, BodyBB->getFirstInsertionPt()), DL);
   AllocaInst *InDep = Builder.CreateAlloca(Type::getInt32Ty(M->getContext()));
-  OpenMPIRBuilder::DependData DDIn(RTLDependenceKindTy::DepIn,
-                                   Type::getInt32Ty(M->getContext()), InDep);
-  SmallVector<OpenMPIRBuilder::DependData *, 4> DDS;
-  DDS.push_back(&DDIn);
+  SmallVector<OpenMPIRBuilder::DependData> DDS;
+  {
+    OpenMPIRBuilder::DependData DDIn(RTLDependenceKindTy::DepIn,
+                                     Type::getInt32Ty(M->getContext()), InDep);
+    DDS.push_back(DDIn);
+  }
   Builder.restoreIP(OMPBuilder.createTask(
       Loc, InsertPointTy(AllocaBB, AllocaBB->getFirstInsertionPt()), BodyGenCB,
       /*Tied=*/false, /*Final*/ nullptr, /*IfCondition*/ nullptr, DDS));

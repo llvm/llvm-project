@@ -45,20 +45,16 @@
 // instructions, plus some helper functions:
 //
 // bool compressInst(MCInst &OutInst, const MCInst &MI,
-//                   const MCSubtargetInfo &STI,
-//                   MCContext &Context);
+//                   const MCSubtargetInfo &STI);
 //
 // bool uncompressInst(MCInst &OutInst, const MCInst &MI,
-//                     const MCRegisterInfo &MRI,
 //                     const MCSubtargetInfo &STI);
 //
 // In addition, it exports a function for checking whether
 // an instruction is compressable:
 //
 // bool isCompressibleInst(const MachineInstr& MI,
-//                         const <TargetName>Subtarget *Subtarget,
-//                         const MCRegisterInfo &MRI,
-//                         const MCSubtargetInfo &STI);
+//                         const <TargetName>Subtarget &STI);
 //
 // The clients that include this auto-generated header file and
 // invoke these functions can compress an instruction before emitting
@@ -595,7 +591,6 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
   std::string FH;
   raw_string_ostream Func(F);
   raw_string_ostream FuncH(FH);
-  bool NeedMRI = false;
 
   if (EType == EmitterType::Compress)
     o << "\n#ifdef GEN_COMPRESS_INSTR\n"
@@ -610,18 +605,14 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
   if (EType == EmitterType::Compress) {
     FuncH << "static bool compressInst(MCInst &OutInst,\n";
     FuncH.indent(25) << "const MCInst &MI,\n";
-    FuncH.indent(25) << "const MCSubtargetInfo &STI,\n";
-    FuncH.indent(25) << "MCContext &Context) {\n";
+    FuncH.indent(25) << "const MCSubtargetInfo &STI) {\n";
   } else if (EType == EmitterType::Uncompress) {
     FuncH << "static bool uncompressInst(MCInst &OutInst,\n";
     FuncH.indent(27) << "const MCInst &MI,\n";
-    FuncH.indent(27) << "const MCRegisterInfo &MRI,\n";
     FuncH.indent(27) << "const MCSubtargetInfo &STI) {\n";
   } else if (EType == EmitterType::CheckCompress) {
     FuncH << "static bool isCompressibleInst(const MachineInstr &MI,\n";
-    FuncH.indent(27) << "const " << TargetName << "Subtarget *Subtarget,\n";
-    FuncH.indent(27) << "const MCRegisterInfo &MRI,\n";
-    FuncH.indent(27) << "const MCSubtargetInfo &STI) {\n";
+    FuncH.indent(31) << "const " << TargetName << "Subtarget &STI) {\n";
   }
 
   if (CompressPatterns.empty()) {
@@ -647,6 +638,12 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
       EType == EmitterType::Compress || EType == EmitterType::CheckCompress;
   bool CompressOrUncompress =
       EType == EmitterType::Compress || EType == EmitterType::Uncompress;
+  std::string ValidatorName =
+      CompressOrUncompress
+          ? (TargetName + "ValidateMCOperandFor" +
+             (EType == EmitterType::Compress ? "Compress" : "Uncompress"))
+                .str()
+          : "";
 
   for (auto &CompressPat : CompressPatterns) {
     if (EType == EmitterType::Uncompress && CompressPat.IsCompressOnly)
@@ -762,16 +759,15 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
           auto *ClassRec = DestOperand.Rec->isSubClassOf("RegisterClass")
                                ? DestOperand.Rec
                                : DestOperand.Rec->getValueAsDef("RegClass");
-          NeedMRI = true;
           // This is a register operand. Check the register class.
           // Don't check register class if this is a tied operand, it was done
           // for the operand its tied to.
           if (DestOperand.getTiedRegister() == -1)
             CondStream.indent(6)
                 << "(MI.getOperand(" << OpIdx << ").isReg()) &&\n"
-                << "      (MRI.getRegClass(" << TargetName
-                << "::" << ClassRec->getName()
-                << "RegClassID).contains(MI.getOperand(" << OpIdx
+                << "      (" << TargetName << "MCRegisterClasses["
+                << TargetName << "::" << ClassRec->getName()
+                << "RegClassID].contains(MI.getOperand(" << OpIdx
                 << ").getReg())) &&\n";
 
           if (CompressOrUncompress)
@@ -784,7 +780,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
                 getPredicates(MCOpPredicateMap, MCOpPredicates, DestOperand.Rec,
                               "MCOperandPredicate");
             CondStream.indent(6)
-                << TargetName << "ValidateMCOperand("
+                << ValidatorName << "("
                 << "MI.getOperand(" << OpIdx << "), STI, " << Entry << ") &&\n";
           } else {
             unsigned Entry =
@@ -794,7 +790,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
                 << "MI.getOperand(" << OpIdx << ").isImm() &&\n";
             CondStream.indent(6) << TargetName << "ValidateMachineOperand("
                                  << "MI.getOperand(" << OpIdx
-                                 << "), Subtarget, " << Entry << ") &&\n";
+                                 << "), &STI, " << Entry << ") &&\n";
           }
           if (CompressOrUncompress)
             CodeStream.indent(6)
@@ -807,7 +803,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
           unsigned Entry = getPredicates(MCOpPredicateMap, MCOpPredicates,
                                          DestOperand.Rec, "MCOperandPredicate");
           CondStream.indent(6)
-              << TargetName << "ValidateMCOperand("
+              << ValidatorName << "("
               << "MCOperand::createImm(" << DestOperandMap[OpNo].Data.Imm
               << "), STI, " << Entry << ") &&\n";
         } else {
@@ -816,7 +812,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
           CondStream.indent(6)
               << TargetName
               << "ValidateMachineOperand(MachineOperand::CreateImm("
-              << DestOperandMap[OpNo].Data.Imm << "), SubTarget, " << Entry
+              << DestOperandMap[OpNo].Data.Imm << "), &STI, " << Entry
               << ") &&\n";
         }
         if (CompressOrUncompress)
@@ -847,8 +843,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
   Func.indent(2) << "return false;\n}\n";
 
   if (!MCOpPredicates.empty()) {
-    o << "static bool " << TargetName
-      << "ValidateMCOperand(const MCOperand &MCOp,\n"
+    o << "static bool " << ValidatorName << "(const MCOperand &MCOp,\n"
       << "                  const MCSubtargetInfo &STI,\n"
       << "                  unsigned PredicateIndex) {\n"
       << "  switch (PredicateIndex) {\n"
@@ -880,8 +875,6 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
   }
 
   o << FuncH.str();
-  if (NeedMRI && EType == EmitterType::Compress)
-    o.indent(2) << "const MCRegisterInfo &MRI = *Context.getRegisterInfo();\n";
   o << Func.str();
 
   if (EType == EmitterType::Compress)

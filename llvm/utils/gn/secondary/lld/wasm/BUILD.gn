@@ -16,6 +16,7 @@ static_library("wasm") {
     "//llvm/lib/IR",
     "//llvm/lib/Object",
     "//llvm/lib/Option",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "Driver.cpp",

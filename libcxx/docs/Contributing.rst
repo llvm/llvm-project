@@ -70,6 +70,8 @@ After branching for an LLVM release:
 2. Update the version number in ``libcxx/docs/conf.py``
 3. Update ``_LIBCPPABI_VERSION`` in ``libcxxabi/include/cxxabi.h``
 4. Update ``_LIBUNWIND_VERSION`` in ``libunwind/include/__libunwind_config.h``
+5. Update the list of supported clang versions in ``libcxx/docs/index.rst``
+6. Remove the in-progress warning from ``libcxx/docs/ReleaseNotes.rst``
 
 Exporting new symbols from the library
 ======================================

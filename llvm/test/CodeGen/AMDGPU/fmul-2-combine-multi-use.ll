@@ -156,7 +156,7 @@ define amdgpu_kernel void @multiple_fadd_use_test_f16(ptr addrspace(1) %out, i16
 ; VI-DENORM-DAG:    v_fma_f16 [[MAD:v[0-9]+]], [[X]], 2.0, v{{[0-9]+}}
 ; GFX10-FLUSH-DAG:  v_add_f16_e32 [[MAD:v[0-9]+]], s{{[0-9]+}}, [[MUL2]]
 ; GFX10-DENORM-DAG: v_fma_f16 [[MAD:v[0-9]+]], [[X]], 2.0, s{{[0-9]+}}
-; GFX11-DENORM-DAG: v_fmac_f16_e64 [[MAD:v[0-9]+]], [[X]], 2.0
+; GFX11-DENORM-DAG: v_fma_f16 [[MAD:v[0-9]+]], [[X]], 2.0, s{{[0-9]+}}
 
 ; GCN-DAG: buffer_store_{{short|b16}} [[MUL2]]
 ; GCN-DAG: buffer_store_{{short|b16}} [[MAD]]

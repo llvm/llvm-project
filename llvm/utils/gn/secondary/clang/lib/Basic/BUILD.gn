@@ -50,6 +50,7 @@ static_library("Basic") {
     "//clang/include/clang/Sema:AttrSpellingListIndex",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [ "." ]
   sources = [

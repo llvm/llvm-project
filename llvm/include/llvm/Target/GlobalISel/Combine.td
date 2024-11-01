@@ -343,6 +343,24 @@ def select_to_logical : GICombineRule<
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])
 >;
 
+// Fold (C op x) -> (x op C)
+// TODO: handle more isCommutable opcodes
+// TODO: handle compares (currently not marked as isCommutable)
+def commute_constant_to_rhs : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_ADD, G_MUL, G_AND, G_OR, G_XOR):$root, [{
+    return getIConstantVRegVal(${root}->getOperand(1).getReg(), MRI).has_value();
+  }]),
+  (apply [{
+    Observer.changingInstr(*${root});
+    Register LHSReg = ${root}->getOperand(1).getReg();
+    Register RHSReg = ${root}->getOperand(2).getReg();
+    ${root}->getOperand(1).setReg(RHSReg);
+    ${root}->getOperand(2).setReg(LHSReg);
+    Observer.changedInstr(*${root});
+  }])
+>;
+
 // Fold x op 0 -> x
 def right_identity_zero: GICombineRule<
   (defs root:$root),
@@ -1086,7 +1104,7 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     intdiv_combines, mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
     sub_add_reg, select_to_minmax, redundant_binop_in_equality,
-    fsub_to_fneg]>;
+    fsub_to_fneg, commute_constant_to_rhs]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

@@ -268,7 +268,7 @@ HexagonBlockRanges::RegisterSet HexagonBlockRanges::expandToSubRegs(
     return SRs;
   }
 
-  if (Register::isPhysicalRegister(R.Reg)) {
+  if (R.Reg.isPhysical()) {
     MCSubRegIterator I(R.Reg, &TRI);
     if (!I.isValid())
       SRs.insert({R.Reg, 0});
@@ -321,7 +321,7 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
       if (!Op.isReg() || !Op.isUse() || Op.isUndef())
         continue;
       RegisterRef R = { Op.getReg(), Op.getSubReg() };
-      if (Register::isPhysicalRegister(R.Reg) && Reserved[R.Reg])
+      if (R.Reg.isPhysical() && Reserved[R.Reg])
         continue;
       bool IsKill = Op.isKill();
       for (auto S : expandToSubRegs(R, MRI, TRI)) {
@@ -338,7 +338,7 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
         continue;
       RegisterRef R = { Op.getReg(), Op.getSubReg() };
       for (auto S : expandToSubRegs(R, MRI, TRI)) {
-        if (Register::isPhysicalRegister(S.Reg) && Reserved[S.Reg])
+        if (S.Reg.isPhysical() && Reserved[S.Reg])
           continue;
         if (Op.isDead())
           Clobbers.insert(S);
@@ -374,7 +374,7 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
     // Update maps for defs.
     for (RegisterRef S : Defs) {
       // Defs should already be expanded into subregs.
-      assert(!Register::isPhysicalRegister(S.Reg) ||
+      assert(!S.Reg.isPhysical() ||
              !MCSubRegIterator(S.Reg, &TRI, false).isValid());
       if (LastDef[S] != IndexType::None || LastUse[S] != IndexType::None)
         closeRange(S);
@@ -383,7 +383,7 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
     // Update maps for clobbers.
     for (RegisterRef S : Clobbers) {
       // Clobbers should already be expanded into subregs.
-      assert(!Register::isPhysicalRegister(S.Reg) ||
+      assert(!S.Reg.isPhysical() ||
              !MCSubRegIterator(S.Reg, &TRI, false).isValid());
       if (LastDef[S] != IndexType::None || LastUse[S] != IndexType::None)
         closeRange(S);

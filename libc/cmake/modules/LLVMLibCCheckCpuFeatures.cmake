@@ -61,7 +61,7 @@ _generate_check_code()
 
 set(LIBC_CPU_FEATURES "" CACHE PATH "Host supported CPU features")
 
-if(CMAKE_CROSSCOMPILING)
+if(LIBC_CROSSBUILD)
   _intersection(cpu_features "${ALL_CPU_FEATURES}" "${LIBC_CPU_FEATURES}")
   if(NOT "${cpu_features}" STREQUAL "${LIBC_CPU_FEATURES}")
     message(FATAL_ERROR "Unsupported CPU features: ${cpu_features}")

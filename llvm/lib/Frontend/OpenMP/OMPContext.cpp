@@ -163,7 +163,7 @@ static int isVariantApplicableInContextHelper(
   // context based on the match kind selected by the user via
   // `implementation={extensions(match_[all,any,none])}'
   auto HandleTrait = [MK](TraitProperty Property,
-                          bool WasFound) -> Optional<bool> /* Result */ {
+                          bool WasFound) -> std::optional<bool> /* Result */ {
     // For kind "any" a single match is enough but we ignore non-matched
     // properties.
     if (MK == MK_ANY) {
@@ -212,9 +212,8 @@ static int isVariantApplicableInContextHelper(
         return Ctx.matchesISATrait(RawString);
       });
 
-    Optional<bool> Result = HandleTrait(Property, IsActiveTrait);
-    if (Result)
-      return Result.value();
+    if (std::optional<bool> Result = HandleTrait(Property, IsActiveTrait))
+      return *Result;
   }
 
   if (!DeviceSetOnly) {
@@ -233,9 +232,8 @@ static int isVariantApplicableInContextHelper(
       if (ConstructMatches)
         ConstructMatches->push_back(ConstructIdx - 1);
 
-      Optional<bool> Result = HandleTrait(Property, FoundInOrder);
-      if (Result)
-        return Result.value();
+      if (std::optional<bool> Result = HandleTrait(Property, FoundInOrder))
+        return *Result;
 
       if (!FoundInOrder) {
         LLVM_DEBUG(dbgs() << "[" << DEBUG_TYPE << "] Construct property "

@@ -13,6 +13,7 @@
 #include "Protocol.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include <optional>
 
 #define DEBUG_TYPE "mlir-lsp-server"
 
@@ -171,7 +172,8 @@ void LSPServer::onDocumentDidOpen(const DidOpenTextDocumentParams &params) {
   publishDiagnostics(diagParams);
 }
 void LSPServer::onDocumentDidClose(const DidCloseTextDocumentParams &params) {
-  Optional<int64_t> version = server.removeDocument(params.textDocument.uri);
+  std::optional<int64_t> version =
+      server.removeDocument(params.textDocument.uri);
   if (!version)
     return;
 

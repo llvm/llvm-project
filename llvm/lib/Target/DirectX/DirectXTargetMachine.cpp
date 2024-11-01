@@ -41,6 +41,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   auto *PR = PassRegistry::getPassRegistry();
   initializeDXILPrepareModulePass(*PR);
   initializeEmbedDXILPassPass(*PR);
+  initializeWriteDXILPassPass(*PR);
   initializeDXILOpLoweringLegacyPass(*PR);
   initializeDXILTranslateMetadataPass(*PR);
   initializeDXILResourceWrapperPass(*PR);

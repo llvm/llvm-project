@@ -7,7 +7,7 @@
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
-define void @foo(i32 %x, float* %output) {
+define void @foo(i32 %x, ptr %output) {
 ; CHECK-LABEL: .visible .func foo(
 ; CHECK-NOT: bra.uni
 ; CHECK-NOT: LBB0_
@@ -21,7 +21,7 @@ else:
   br label %merge
 
 merge:
-  store float 2.0, float* %output
+  store float 2.0, ptr %output
   ret void
 }
 

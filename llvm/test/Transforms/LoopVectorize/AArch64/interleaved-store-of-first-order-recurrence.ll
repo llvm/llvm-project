@@ -9,7 +9,7 @@ define void @interleaved_store_first_order_recurrence(ptr noalias %src, ptr %dst
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 99>, %vector.ph ], [ [[BROADCAST_SPLAT:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC:%.*]], align 4
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[BROADCAST_SPLAT]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw i64 [[TMP0]], 3

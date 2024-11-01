@@ -1,11 +1,11 @@
 ; RUN: llc -march=hexagon -mcpu=hexagonv5 -simplifycfg-require-and-preserve-domtree=1 < %s
 ; REQUIRES: asserts
 
-define void @test(i8* noalias nocapture readonly %src, i32 %srcStride) local_unnamed_addr #0 {
+define void @test(ptr noalias nocapture readonly %src, i32 %srcStride) local_unnamed_addr #0 {
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %src, i32 %srcStride
-  %add.ptr2 = getelementptr inbounds i8, i8* %add.ptr, i32 %srcStride
-  %add.ptr3 = getelementptr inbounds i8, i8* %add.ptr2, i32 %srcStride
+  %add.ptr = getelementptr inbounds i8, ptr %src, i32 %srcStride
+  %add.ptr2 = getelementptr inbounds i8, ptr %add.ptr, i32 %srcStride
+  %add.ptr3 = getelementptr inbounds i8, ptr %add.ptr2, i32 %srcStride
   br label %for.body9.epil
 
 for.body9.epil:
@@ -18,33 +18,33 @@ for.body9.epil:
   %add17.epil = add nuw i32 %inc.sink385.epil, 1
   %conv19.epil = zext i8 %sr.epil to i32
   %add21.epil = add i32 %inc.sink385.epil, 2
-  %arrayidx22.epil = getelementptr inbounds i8, i8* %src, i32 %add21.epil
-  %0 = load i8, i8* %arrayidx22.epil, align 1
+  %arrayidx22.epil = getelementptr inbounds i8, ptr %src, i32 %add21.epil
+  %0 = load i8, ptr %arrayidx22.epil, align 1
   %conv23.epil = zext i8 %0 to i32
-  %1 = load i8, i8* undef, align 1
+  %1 = load i8, ptr undef, align 1
   %conv42.epil = zext i8 %1 to i32
   %conv53.epil = zext i8 %sr432.epil to i32
-  %2 = load i8, i8* undef, align 1
+  %2 = load i8, ptr undef, align 1
   %conv61.epil = zext i8 %2 to i32
-  %3 = load i8, i8* undef, align 1
+  %3 = load i8, ptr undef, align 1
   %conv65.epil = zext i8 %3 to i32
-  %4 = load i8, i8* null, align 1
+  %4 = load i8, ptr null, align 1
   %conv69.epil = zext i8 %4 to i32
-  %5 = load i8, i8* undef, align 1
+  %5 = load i8, ptr undef, align 1
   %conv72.epil = zext i8 %5 to i32
-  %6 = load i8, i8* undef, align 1
+  %6 = load i8, ptr undef, align 1
   %conv76.epil = zext i8 %6 to i32
-  %7 = load i8, i8* undef, align 1
+  %7 = load i8, ptr undef, align 1
   %conv80.epil = zext i8 %7 to i32
-  %8 = load i8, i8* undef, align 1
+  %8 = load i8, ptr undef, align 1
   %conv84.epil = zext i8 %8 to i32
-  %9 = load i8, i8* undef, align 1
+  %9 = load i8, ptr undef, align 1
   %conv88.epil = zext i8 %9 to i32
-  %10 = load i8, i8* undef, align 1
+  %10 = load i8, ptr undef, align 1
   %conv91.epil = zext i8 %10 to i32
-  %11 = load i8, i8* undef, align 1
+  %11 = load i8, ptr undef, align 1
   %conv95.epil = zext i8 %11 to i32
-  %12 = load i8, i8* undef, align 1
+  %12 = load i8, ptr undef, align 1
   %conv99.epil = zext i8 %12 to i32
   %add.epil = add nuw nsw i32 0, %conv19.epil
   %add16.epil = add nuw nsw i32 %add.epil, 0
@@ -74,8 +74,8 @@ for.body9.epil:
   %add101.epil = add nsw i32 %mul.epil, 32768
   %shr369.epil = lshr i32 %add101.epil, 16
   %conv102.epil = trunc i32 %shr369.epil to i8
-  %arrayidx103.epil = getelementptr inbounds i8, i8* undef, i32 %inc.sink385.epil
-  store i8 %conv102.epil, i8* %arrayidx103.epil, align 1
+  %arrayidx103.epil = getelementptr inbounds i8, ptr undef, i32 %inc.sink385.epil
+  store i8 %conv102.epil, ptr %arrayidx103.epil, align 1
   %epil.iter.sub = add i32 %epil.iter, -1
   %epil.iter.cmp = icmp eq i32 %epil.iter.sub, 0
   br i1 %epil.iter.cmp, label %for.end, label %for.body9.epil

@@ -865,9 +865,10 @@ def S_CMPK_LE_U32 : SOPK_SCC <"s_cmpk_le_u32", "s_cmp_le_u32", 0>;
 } // End SOPKZext = 1
 } // End isCompare = 1
 
-let Defs = [SCC], isCommutable = 1, DisableEncoding = "$src0",
+let isCommutable = 1, DisableEncoding = "$src0",
     Constraints = "$sdst = $src0" in {
-  def S_ADDK_I32 : SOPK_32TIE <"s_addk_i32">;
+  let Defs = [SCC] in
+    def S_ADDK_I32 : SOPK_32TIE <"s_addk_i32">;
   def S_MULK_I32 : SOPK_32TIE <"s_mulk_i32">;
 }
 

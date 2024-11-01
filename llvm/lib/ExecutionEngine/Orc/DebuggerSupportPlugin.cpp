@@ -390,12 +390,12 @@ Error GDBJITDebugInfoRegistrationPlugin::notifyFailed(
 }
 
 Error GDBJITDebugInfoRegistrationPlugin::notifyRemovingResources(
-    ResourceKey K) {
+    JITDylib &JD, ResourceKey K) {
   return Error::success();
 }
 
 void GDBJITDebugInfoRegistrationPlugin::notifyTransferringResources(
-    ResourceKey DstKey, ResourceKey SrcKey) {}
+    JITDylib &JD, ResourceKey DstKey, ResourceKey SrcKey) {}
 
 void GDBJITDebugInfoRegistrationPlugin::modifyPassConfig(
     MaterializationResponsibility &MR, LinkGraph &LG,

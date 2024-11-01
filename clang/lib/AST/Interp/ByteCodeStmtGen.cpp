@@ -207,7 +207,7 @@ bool ByteCodeStmtGen<Emitter>::visitDeclStmt(const DeclStmt *DS) {
   for (auto *D : DS->decls()) {
     // Variable declarator.
     if (auto *VD = dyn_cast<VarDecl>(D)) {
-      if (!visitVarDecl(VD))
+      if (!this->visitVarDecl(VD))
         return false;
       continue;
     }
@@ -389,39 +389,6 @@ bool ByteCodeStmtGen<Emitter>::visitContinueStmt(const ContinueStmt *S) {
     return false;
 
   return this->jump(*ContinueLabel);
-}
-
-template <class Emitter>
-bool ByteCodeStmtGen<Emitter>::visitVarDecl(const VarDecl *VD) {
-  if (!VD->hasLocalStorage()) {
-    // No code generation required.
-    return true;
-  }
-
-  // Integers, pointers, primitives.
-  if (std::optional<PrimType> T = this->classify(VD->getType())) {
-    const Expr *Init = VD->getInit();
-
-    if (!Init)
-      return false;
-
-    unsigned Offset =
-        this->allocateLocalPrimitive(VD, *T, VD->getType().isConstQualified());
-    // Compile the initializer in its own scope.
-    {
-      ExprScope<Emitter> Scope(this);
-      if (!this->visit(Init))
-        return false;
-    }
-    // Set the value.
-    return this->emitSetLocal(*T, Offset, VD);
-  }
-
-  // Composite types - allocate storage and initialize it.
-  if (std::optional<unsigned> Offset = this->allocateLocal(VD))
-    return this->visitLocalInitializer(VD->getInit(), *Offset);
-
-  return this->bail(VD);
 }
 
 namespace clang {

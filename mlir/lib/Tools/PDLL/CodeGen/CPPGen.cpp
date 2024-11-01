@@ -24,6 +24,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::pdll;
@@ -79,7 +80,7 @@ void CodeGen::generate(const ast::Module &astModule, ModuleOp module) {
   int patternIndex = 0;
   for (pdl::PatternOp pattern : module.getOps<pdl::PatternOp>()) {
     // If the pattern has a name, use that. Otherwise, generate a unique name.
-    if (Optional<StringRef> patternName = pattern.getSymName()) {
+    if (std::optional<StringRef> patternName = pattern.getSymName()) {
       patternNames.insert(patternName->str());
     } else {
       std::string name;
@@ -190,7 +191,7 @@ StringRef CodeGen::getNativeTypeName(ast::VariableDecl *decl) {
   // Try to extract a type name from the variable's constraints.
   for (ast::ConstraintRef &cst : decl->getConstraints()) {
     if (auto *userCst = dyn_cast<ast::UserConstraintDecl>(cst.constraint)) {
-      if (Optional<StringRef> name = userCst->getNativeInputType(0))
+      if (std::optional<StringRef> name = userCst->getNativeInputType(0))
         return *name;
       return getNativeTypeName(userCst->getInputs()[0]);
     }

@@ -1,9 +1,7 @@
 ; RUN: llc %s -stop-before finalize-isel -o - \
-; RUN:    -experimental-assignment-tracking   \
 ; RUN:    -experimental-debug-variable-locations=false \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE --implicit-check-not=DBG_VALUE
 ; RUN: llc %s -stop-before finalize-isel -o - \
-; RUN:    -experimental-assignment-tracking   \
 ; RUN:    -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF --implicit-check-not=DBG_VALUE \
 ; RUN:    --implicit-check-not=DBG_INSTR_REF
@@ -49,7 +47,7 @@
 ; DBGVALUE: %2:gr64 = nsw ADD64ri8 %1, 2, implicit-def dead $eflags, debug-location
 ; DBGVALUE-NEXT: DBG_VALUE %2, $noreg, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 64, 64), debug-location
 ; INSTRREF: %2:gr64 = nsw ADD64ri8 %1, 2, implicit-def dead $eflags, debug-instr-number 1
-; INSTRREF-NEXT: DBG_INSTR_REF 1, 0, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 64, 64), debug-location
+; INSTRREF-NEXT: DBG_INSTR_REF ![[VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), dbg-instr-ref(1, 0), debug-location
 
 source_filename = "test.cpp"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -77,7 +75,7 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5}
+!llvm.module.flags = !{!3, !4, !5, !1000}
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 12.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
@@ -112,3 +110,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !34 = !DISubroutineType(types: !35)
 !35 = !{null, !36}
 !36 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !10, size: 64)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

@@ -27,18 +27,17 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @jd(i32* noalias %A, i32* noalias %B) {
+define void @jd(ptr noalias %A, ptr noalias %B) {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %entry, %for.inc
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %i
-  %arrayidx1 = getelementptr inbounds i32, i32* %B, i64 %i
-  %bc = bitcast i32* %arrayidx to i8*
-  call void @f(i8* %bc, i32 1, i32 1, i32 1)
-  %tmp = load i32, i32* %arrayidx1
-  store i32 %tmp, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %i
+  %arrayidx1 = getelementptr inbounds i32, ptr %B, i64 %i
+  call void @f(ptr %arrayidx, i32 1, i32 1, i32 1)
+  %tmp = load i32, ptr %arrayidx1
+  store i32 %tmp, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
@@ -50,6 +49,6 @@ for.end:                                          ; preds = %for.inc
   ret void
 }
 
-declare void @f(i8*, i32, i32, i32) #0
+declare void @f(ptr, i32, i32, i32) #0
 
 attributes #0 = { argmemonly nounwind }

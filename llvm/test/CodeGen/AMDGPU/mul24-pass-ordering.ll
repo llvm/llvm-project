@@ -44,13 +44,13 @@ bb23:                                             ; preds = %bb23, %bb
   %tmp30 = sub i32 %tmp24, %tmp29
   %tmp31 = add i32 %tmp30, %arg16
   %tmp37 = icmp ult i32 %tmp31, %arg13
-  %tmp44 = load float, float addrspace(1)* undef, align 4
-  store float %tmp44, float addrspace(3)* undef, align 4
+  %tmp44 = load float, ptr addrspace(1) undef, align 4
+  store float %tmp44, ptr addrspace(3) undef, align 4
   %tmp47 = add i32 %tmp24, %arg2
   br i1 %tmp37, label %bb23, label %.loopexit
 }
 
-define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, float addrspace(3)* nocapture %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7, i32 %arg8, i32 %arg9, float addrspace(1)* nocapture readonly %arg10, i32 %arg11, i32 %arg12, i32 %arg13, i32 %arg14, i32 %arg15, i32 %arg16, i1 zeroext %arg17, i1 zeroext %arg18) #0 {
+define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, ptr addrspace(3) nocapture %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7, i32 %arg8, i32 %arg9, ptr addrspace(1) nocapture readonly %arg10, i32 %arg11, i32 %arg12, i32 %arg13, i32 %arg14, i32 %arg15, i32 %arg16, i1 zeroext %arg17, i1 zeroext %arg18) #0 {
 ; GFX9-LABEL: lsr_order_mul24_1:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -73,22 +73,22 @@ define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, float addrspace(3
 ; GFX9-NEXT:  .LBB1_2: ; %bb23
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v3, v0
+; GFX9-NEXT:    v_add_u32_e32 v18, v9, v0
 ; GFX9-NEXT:    v_add_u32_e32 v12, v17, v0
+; GFX9-NEXT:    v_add_u32_e32 v0, v0, v2
 ; GFX9-NEXT:    v_madak_f32 v3, v3, v7, 0x3727c5ac
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v3, v3
-; GFX9-NEXT:    v_mul_u32_u24_e32 v18, v3, v5
-; GFX9-NEXT:    v_add_u32_e32 v19, v3, v16
-; GFX9-NEXT:    v_add_u32_e32 v3, v9, v0
-; GFX9-NEXT:    v_sub_u32_e32 v3, v3, v18
-; GFX9-NEXT:    v_sub_u32_e32 v12, v12, v18
-; GFX9-NEXT:    v_cmp_lt_u32_e64 s[4:5], v19, v13
-; GFX9-NEXT:    v_mad_u64_u32 v[18:19], s[6:7], v19, v15, v[3:4]
+; GFX9-NEXT:    v_mul_u32_u24_e32 v19, v3, v5
+; GFX9-NEXT:    v_add_u32_e32 v20, v3, v16
+; GFX9-NEXT:    v_sub_u32_e32 v3, v18, v19
+; GFX9-NEXT:    v_sub_u32_e32 v12, v12, v19
+; GFX9-NEXT:    v_mad_u64_u32 v[18:19], s[6:7], v20, v15, v[3:4]
+; GFX9-NEXT:    v_cmp_lt_u32_e64 s[4:5], v20, v13
 ; GFX9-NEXT:    v_cmp_lt_u32_e64 s[6:7], v12, v14
 ; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], s[6:7]
 ; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v3, 0, v18, s[4:5]
 ; GFX9-NEXT:    v_lshlrev_b64 v[18:19], 2, v[3:4]
-; GFX9-NEXT:    v_add_u32_e32 v0, v0, v2
 ; GFX9-NEXT:    v_add_co_u32_e64 v18, s[6:7], v10, v18
 ; GFX9-NEXT:    v_addc_co_u32_e64 v19, s[6:7], v11, v19, s[6:7]
 ; GFX9-NEXT:    global_load_dword v3, v[18:19], off
@@ -100,7 +100,7 @@ define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, float addrspace(3
 ; GFX9-NEXT:    v_add_u32_e32 v6, v6, v8
 ; GFX9-NEXT:    s_andn2_b64 exec, exec, s[10:11]
 ; GFX9-NEXT:    s_cbranch_execnz .LBB1_2
-; GFX9-NEXT:  .LBB1_3: ; %Flow3
+; GFX9-NEXT:  .LBB1_3: ; %Flow2
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -137,11 +137,11 @@ bb23:                                             ; preds = %bb19, %bb23
   %tmp40 = and i1 %tmp39, %arg17
   %tmp41 = zext i32 %tmp35 to i64
   %tmp42 = select i1 %tmp40, i64 %tmp41, i64 0
-  %tmp43 = getelementptr inbounds float, float addrspace(1)* %arg10, i64 %tmp42
-  %tmp44 = load float, float addrspace(1)* %tmp43, align 4
+  %tmp43 = getelementptr inbounds float, ptr addrspace(1) %arg10, i64 %tmp42
+  %tmp44 = load float, ptr addrspace(1) %tmp43, align 4
   %tmp45 = select i1 %tmp40, float %tmp44, float 0.000000e+00
-  %tmp46 = getelementptr inbounds float, float addrspace(3)* %arg3, i32 %tmp36
-  store float %tmp45, float addrspace(3)* %tmp46, align 4
+  %tmp46 = getelementptr inbounds float, ptr addrspace(3) %arg3, i32 %tmp36
+  store float %tmp45, ptr addrspace(3) %tmp46, align 4
   %tmp47 = add i32 %tmp24, %arg2
   %tmp48 = icmp ult i32 %tmp47, %arg1
   br i1 %tmp48, label %bb23, label %.loopexit
@@ -170,17 +170,17 @@ define void @slsr1_0(i32 %b.arg, i32 %s.arg) #0 {
   %mul0 = mul i32 %b, %s
 ; CHECK: mul i32
 ; CHECK-NOT: mul i32
-  store volatile i32 %mul0, i32 addrspace(1)* undef
+  store volatile i32 %mul0, ptr addrspace(1) undef
 
   ; foo((b + 1) * s);
   %b1 = add i32 %b, 1
   %mul1 = mul i32 %b1, %s
-  store volatile i32 %mul1, i32 addrspace(1)* undef
+  store volatile i32 %mul1, ptr addrspace(1) undef
 
   ; foo((b + 2) * s);
   %b2 = add i32 %b, 2
   %mul2 = mul i32 %b2, %s
-  store volatile i32 %mul2, i32 addrspace(1)* undef
+  store volatile i32 %mul2, ptr addrspace(1) undef
   ret void
 }
 
@@ -188,15 +188,17 @@ define void @slsr1_1(i32 %b.arg, i32 %s.arg) #0 {
 ; GFX9-LABEL: slsr1_1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX9-NEXT:    v_writelane_b32 v40, s33, 5
+; GFX9-NEXT:    s_mov_b32 s4, s33
+; GFX9-NEXT:    s_mov_b32 s33, s32
+; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
+; GFX9-NEXT:    buffer_store_dword v44, off, s[0:3], s33 offset:16 ; 4-byte Folded Spill
+; GFX9-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX9-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
-; GFX9-NEXT:    s_mov_b32 s33, s32
 ; GFX9-NEXT:    s_addk_i32 s32, 0x800
 ; GFX9-NEXT:    v_writelane_b32 v40, s34, 2
+; GFX9-NEXT:    v_writelane_b32 v44, s4, 0
 ; GFX9-NEXT:    v_writelane_b32 v40, s36, 3
 ; GFX9-NEXT:    s_getpc_b64 s[4:5]
 ; GFX9-NEXT:    s_add_u32 s4, s4, foo@gotpcrel32@lo+4
@@ -228,11 +230,13 @@ define void @slsr1_1(i32 %b.arg, i32 %s.arg) #0 {
 ; GFX9-NEXT:    v_readlane_b32 s34, v40, 2
 ; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX9-NEXT:    v_readlane_b32 s4, v44, 0
+; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
+; GFX9-NEXT:    buffer_load_dword v44, off, s[0:3], s33 offset:16 ; 4-byte Folded Reload
+; GFX9-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX9-NEXT:    s_addk_i32 s32, 0xf800
-; GFX9-NEXT:    v_readlane_b32 s33, v40, 5
-; GFX9-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX9-NEXT:    s_mov_b32 s33, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %b = and i32 %b.arg, 16777215

@@ -83,6 +83,7 @@ def IndexDialect : Dialect {
 
   let hasConstantMaterializer = 1;
   let useDefaultAttributePrinterParser = 1;
+  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 #endif // INDEX_DIALECT

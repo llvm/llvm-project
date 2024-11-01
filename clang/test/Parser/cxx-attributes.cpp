@@ -3,6 +3,8 @@
 // GH#58229 - rejects-valid
 __attribute__((__visibility__("default"))) [[nodiscard]] int f();
 [[nodiscard]] __attribute__((__visibility__("default"))) int f();
+extern "C" __attribute__((__visibility__("default"))) [[nodiscard]]
+int g() { return 32; }
 
 class c {
   virtual void f1(const char* a, ...)

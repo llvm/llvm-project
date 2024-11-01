@@ -260,7 +260,7 @@ svuint64_t xor_u64(svuint64_t a, svuint64_t b) {
 
 // CHECK-LABEL: @neg_bool(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[NEG:%.*]] = xor <vscale x 16 x i1> [[A:%.*]], shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> poison, i1 true, i32 0), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer)
+// CHECK-NEXT:    [[NEG:%.*]] = xor <vscale x 16 x i1> [[A:%.*]], shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> poison, i1 true, i64 0), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer)
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[NEG]]
 //
 svbool_t neg_bool(svbool_t a) {
@@ -269,7 +269,7 @@ svbool_t neg_bool(svbool_t a) {
 
 // CHECK-LABEL: @neg_i8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[NEG:%.*]] = xor <vscale x 16 x i8> [[A:%.*]], shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 -1, i32 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+// CHECK-NEXT:    [[NEG:%.*]] = xor <vscale x 16 x i8> [[A:%.*]], shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 -1, i64 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[NEG]]
 //
 svint8_t neg_i8(svint8_t a) {
@@ -278,7 +278,7 @@ svint8_t neg_i8(svint8_t a) {
 
 // CHECK-LABEL: @neg_i16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[NEG:%.*]] = xor <vscale x 8 x i16> [[A:%.*]], shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 -1, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+// CHECK-NEXT:    [[NEG:%.*]] = xor <vscale x 8 x i16> [[A:%.*]], shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 -1, i64 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[NEG]]
 //
 svint16_t neg_i16(svint16_t a) {
@@ -287,7 +287,7 @@ svint16_t neg_i16(svint16_t a) {
 
 // CHECK-LABEL: @neg_i32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[NEG:%.*]] = xor <vscale x 4 x i32> [[A:%.*]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+// CHECK-NEXT:    [[NEG:%.*]] = xor <vscale x 4 x i32> [[A:%.*]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[NEG]]
 //
 svint32_t neg_i32(svint32_t a) {
@@ -296,7 +296,7 @@ svint32_t neg_i32(svint32_t a) {
 
 // CHECK-LABEL: @neg_i64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[NEG:%.*]] = xor <vscale x 2 x i64> [[A:%.*]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+// CHECK-NEXT:    [[NEG:%.*]] = xor <vscale x 2 x i64> [[A:%.*]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[NEG]]
 //
 svint64_t neg_i64(svint64_t a) {
@@ -305,7 +305,7 @@ svint64_t neg_i64(svint64_t a) {
 
 // CHECK-LABEL: @neg_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[NEG:%.*]] = xor <vscale x 16 x i8> [[A:%.*]], shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 -1, i32 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+// CHECK-NEXT:    [[NEG:%.*]] = xor <vscale x 16 x i8> [[A:%.*]], shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 -1, i64 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[NEG]]
 //
 svuint8_t neg_u8(svuint8_t a) {
@@ -314,7 +314,7 @@ svuint8_t neg_u8(svuint8_t a) {
 
 // CHECK-LABEL: @neg_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[NEG:%.*]] = xor <vscale x 8 x i16> [[A:%.*]], shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 -1, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+// CHECK-NEXT:    [[NEG:%.*]] = xor <vscale x 8 x i16> [[A:%.*]], shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 -1, i64 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[NEG]]
 //
 svuint16_t neg_u16(svuint16_t a) {
@@ -323,7 +323,7 @@ svuint16_t neg_u16(svuint16_t a) {
 
 // CHECK-LABEL: @neg_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[NEG:%.*]] = xor <vscale x 4 x i32> [[A:%.*]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+// CHECK-NEXT:    [[NEG:%.*]] = xor <vscale x 4 x i32> [[A:%.*]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[NEG]]
 //
 svuint32_t neg_u32(svuint32_t a) {
@@ -332,7 +332,7 @@ svuint32_t neg_u32(svuint32_t a) {
 
 // CHECK-LABEL: @neg_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[NEG:%.*]] = xor <vscale x 2 x i64> [[A:%.*]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+// CHECK-NEXT:    [[NEG:%.*]] = xor <vscale x 2 x i64> [[A:%.*]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[NEG]]
 //
 svuint64_t neg_u64(svuint64_t a) {

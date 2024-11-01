@@ -12,6 +12,7 @@
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Utility/ConstString.h"
 #include "llvm/ADT/APSInt.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -102,7 +103,7 @@ bool lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::Update() {
   m_element_type = data_type_finder_sp->GetCompilerType().GetPointeeType();
 
   // Get element size.
-  if (llvm::Optional<uint64_t> size = m_element_type.GetByteSize(nullptr)) {
+  if (std::optional<uint64_t> size = m_element_type.GetByteSize(nullptr)) {
     m_element_size = *size;
 
     // Get data.

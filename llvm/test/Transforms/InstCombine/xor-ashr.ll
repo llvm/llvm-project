@@ -94,8 +94,8 @@ define i8 @wrongimm(i16 %add) {
 define <4 x i32> @vectorpoison(<6 x i32> %0) {
 ; CHECK-LABEL: @vectorpoison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[NEG:%.*]] = ashr <6 x i32> [[TMP0:%.*]], <i32 31, i32 31, i32 31, i32 31, i32 31, i32 31>
-; CHECK-NEXT:    [[SHR:%.*]] = xor <6 x i32> [[NEG]], <i32 -1, i32 -1, i32 -1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt <6 x i32> [[TMP0:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[SHR:%.*]] = sext <6 x i1> [[ISNOTNEG]] to <6 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <6 x i32> [[SHR]], <6 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 2>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;

@@ -42,6 +42,8 @@ include(CMakeDependentOption)
 
 option(COMPILER_RT_BUILD_BUILTINS "Build builtins" ON)
 mark_as_advanced(COMPILER_RT_BUILD_BUILTINS)
+option(COMPILER_RT_DISABLE_AARCH64_FMV "Disable AArch64 Function Multi Versioning support" OFF)
+mark_as_advanced(COMPILER_RT_DISABLE_AARCH64_FMV)
 option(COMPILER_RT_BUILD_CRT "Build crtbegin.o/crtend.o" ON)
 mark_as_advanced(COMPILER_RT_BUILD_CRT)
 option(COMPILER_RT_CRT_USE_EH_FRAME_REGISTRY "Use eh_frame in crtbegin.o/crtend.o" ON)
@@ -419,16 +421,12 @@ endif()
 
 append_list_if(COMPILER_RT_DEBUG -DSANITIZER_DEBUG=1 SANITIZER_COMMON_CFLAGS)
 
-if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
-  list(APPEND THREAD_SAFETY_FLAGS
-      "-Wthread-safety"
-      "-Wthread-safety-reference"
-      "-Wthread-safety-beta"
-  )
-  list(APPEND SANITIZER_COMMON_CFLAGS ${THREAD_SAFETY_FLAGS})
-  string(REPLACE ";" " " thread_safety_flags_space_sep "${THREAD_SAFETY_FLAGS}")
-  string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " ${thread_safety_flags_space_sep}")
-endif()
+append_list_if(COMPILER_RT_HAS_WTHREAD_SAFETY_FLAG -Wthread-safety THREAD_SAFETY_FLAGS)
+append_list_if(COMPILER_RT_HAS_WTHREAD_SAFETY_REFERENCE_FLAG -Wthread-safety-reference THREAD_SAFETY_FLAGS)
+append_list_if(COMPILER_RT_HAS_WTHREAD_SAFETY_BETA_FLAG -Wthread-safety-beta THREAD_SAFETY_FLAGS)
+list(APPEND SANITIZER_COMMON_CFLAGS ${THREAD_SAFETY_FLAGS})
+string(REPLACE ";" " " thread_safety_flags_space_sep "${THREAD_SAFETY_FLAGS}")
+string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " ${thread_safety_flags_space_sep}")
 
 # If we're using MSVC,
 # always respect the optimization flags set by CMAKE_BUILD_TYPE instead.

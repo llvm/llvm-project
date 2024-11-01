@@ -70,7 +70,7 @@ public:
 
   unsynchronized_pool_resource(const unsynchronized_pool_resource&) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI ~unsynchronized_pool_resource() override { release(); }
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~unsynchronized_pool_resource() override { release(); }
 
   unsynchronized_pool_resource& operator=(const unsynchronized_pool_resource&) = delete;
 
@@ -85,7 +85,7 @@ protected:
 
   void do_deallocate(void* __p, size_t __bytes, size_t __align) override;
 
-  _LIBCPP_HIDE_FROM_ABI bool do_is_equal(const memory_resource& __other) const _NOEXCEPT override {
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL bool do_is_equal(const memory_resource& __other) const _NOEXCEPT override {
     return &__other == this;
   }
 

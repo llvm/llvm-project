@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <utility>
+#include <optional>
 
 #include "IRModule.h"
 
@@ -19,7 +20,6 @@ namespace py = pybind11;
 using namespace mlir;
 using namespace mlir::python;
 
-using llvm::Optional;
 using llvm::SmallVector;
 using llvm::Twine;
 
@@ -545,8 +545,9 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
 
   static PyDenseElementsAttribute
-  getFromBuffer(py::buffer array, bool signless, Optional<PyType> explicitType,
-                Optional<std::vector<int64_t>> explicitShape,
+  getFromBuffer(py::buffer array, bool signless,
+                std::optional<PyType> explicitType,
+                std::optional<std::vector<int64_t>> explicitShape,
                 DefaultingPyMlirContext contextWrapper) {
     // Request a contiguous view. In exotic cases, this will cause a copy.
     int flags = PyBUF_C_CONTIGUOUS | PyBUF_FORMAT;
@@ -572,7 +573,7 @@ public:
     // Notably, this excludes, bool (which needs to be bit-packed) and
     // other exotics which do not have a direct representation in the buffer
     // protocol (i.e. complex, etc).
-    Optional<MlirType> bulkLoadElementType;
+    std::optional<MlirType> bulkLoadElementType;
     if (explicitType) {
       bulkLoadElementType = *explicitType;
     } else if (arrayInfo.format == "f") {

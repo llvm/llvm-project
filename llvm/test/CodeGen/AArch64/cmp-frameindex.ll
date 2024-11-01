@@ -15,7 +15,7 @@ define void @test_frameindex_cmp() {
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %stack = alloca i8
-  %stack.int = ptrtoint i8* %stack to i64
+  %stack.int = ptrtoint ptr %stack to i64
   %cmp = icmp ne i64 %stack.int, 0
   br i1 %cmp, label %bb1, label %bb2
 

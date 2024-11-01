@@ -99,3 +99,17 @@ module {
     transform.test_consume_operand %1, %2
   }
 }
+
+// -----
+
+// Deduplication attribute allows "merge_handles" to take repeated operands.
+
+module {
+
+  transform.sequence failures(propagate) {
+  ^bb0(%0: !pdl.operation):
+    %1 = transform.test_copy_payload %0
+    %2 = transform.test_copy_payload %0
+    transform.merge_handles %1, %2 { deduplicate } : !pdl.operation
+  }
+}

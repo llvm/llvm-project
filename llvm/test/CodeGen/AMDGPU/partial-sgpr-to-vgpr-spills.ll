@@ -8,7 +8,7 @@
 
 ; Ideally we only need 2 VGPRs for all spilling. The VGPRs are
 ; allocated per-frame index, so it's possible to get up with more.
-define amdgpu_kernel void @spill_sgprs_to_multiple_vgprs(i32 addrspace(1)* %out, i32 %in) #0 {
+define amdgpu_kernel void @spill_sgprs_to_multiple_vgprs(ptr addrspace(1) %out, i32 %in) #0 {
 ; GCN-LABEL: spill_sgprs_to_multiple_vgprs:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0xb
@@ -439,7 +439,7 @@ ret:
 
 ; Some of the lanes of an SGPR spill are in one VGPR and some forced
 ; into the next available VGPR.
-define amdgpu_kernel void @split_sgpr_spill_2_vgprs(i32 addrspace(1)* %out, i32 %in) #1 {
+define amdgpu_kernel void @split_sgpr_spill_2_vgprs(ptr addrspace(1) %out, i32 %in) #1 {
 ; GCN-LABEL: split_sgpr_spill_2_vgprs:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0xb
@@ -660,7 +660,7 @@ ret:
 ; The first 64 SGPR spills can go to a VGPR, but there isn't a second
 ; so some spills must be to memory. The last 16 element spill runs out
 ; of lanes at the 15th element.
-define amdgpu_kernel void @no_vgprs_last_sgpr_spill(i32 addrspace(1)* %out, i32 %in) #1 {
+define amdgpu_kernel void @no_vgprs_last_sgpr_spill(ptr addrspace(1) %out, i32 %in) #1 {
 ; GCN-LABEL: no_vgprs_last_sgpr_spill:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s52, SCRATCH_RSRC_DWORD0

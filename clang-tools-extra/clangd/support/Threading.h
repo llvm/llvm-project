@@ -18,6 +18,7 @@
 #include <future>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <thread>
 #include <vector>
 
@@ -70,7 +71,7 @@ private:
 };
 
 /// Makes a deadline from a timeout in seconds. None means wait forever.
-Deadline timeoutSeconds(llvm::Optional<double> Seconds);
+Deadline timeoutSeconds(std::optional<double> Seconds);
 /// Wait once on CV for the specified duration.
 void wait(std::unique_lock<std::mutex> &Lock, std::condition_variable &CV,
           Deadline D);

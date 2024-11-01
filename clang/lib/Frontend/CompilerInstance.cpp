@@ -119,9 +119,9 @@ bool CompilerInstance::createTarget() {
     auto TO = std::make_shared<TargetOptions>();
     TO->Triple = llvm::Triple::normalize(getFrontendOpts().AuxTriple);
     if (getFrontendOpts().AuxTargetCPU)
-      TO->CPU = getFrontendOpts().AuxTargetCPU.value();
+      TO->CPU = *getFrontendOpts().AuxTargetCPU;
     if (getFrontendOpts().AuxTargetFeatures)
-      TO->FeaturesAsWritten = getFrontendOpts().AuxTargetFeatures.value();
+      TO->FeaturesAsWritten = *getFrontendOpts().AuxTargetFeatures;
     TO->HostTriple = getTarget().getTriple().str();
     setAuxTarget(TargetInfo::CreateTargetInfo(getDiagnostics(), TO));
   }
@@ -426,7 +426,7 @@ static void InitializeFileRemapping(DiagnosticsEngine &Diags,
   // Remap files in the source manager (with other files).
   for (const auto &RF : InitOpts.RemappedFiles) {
     // Find the file that we're mapping to.
-    Optional<FileEntryRef> ToFile = FileMgr.getOptionalFileRef(RF.second);
+    OptionalFileEntryRef ToFile = FileMgr.getOptionalFileRef(RF.second);
     if (!ToFile) {
       Diags.Report(diag::err_fe_remap_missing_to_file) << RF.first << RF.second;
       continue;
@@ -879,7 +879,7 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
     }
   }
 
-  Optional<llvm::sys::fs::TempFile> Temp;
+  std::optional<llvm::sys::fs::TempFile> Temp;
   if (UseTemporary) {
     // Create a temporary file.
     // Insert -%%%%%%%% before the extension (if any), and because some tools
@@ -1281,8 +1281,8 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
          Instance.getFrontendOpts().AllowPCMWithCompilerErrors;
 }
 
-static Optional<FileEntryRef> getPublicModuleMap(FileEntryRef File,
-                                                 FileManager &FileMgr) {
+static OptionalFileEntryRef getPublicModuleMap(FileEntryRef File,
+                                               FileManager &FileMgr) {
   StringRef Filename = llvm::sys::path::filename(File.getName());
   SmallString<128> PublicFilename(File.getDir().getName());
   if (Filename == "module_private.map")
@@ -1307,12 +1307,12 @@ static bool compileModule(CompilerInstance &ImportingInstance,
   ModuleMap &ModMap
     = ImportingInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
   bool Result;
-  if (Optional<FileEntryRef> ModuleMapFile =
+  if (OptionalFileEntryRef ModuleMapFile =
           ModMap.getContainingModuleMapFile(Module)) {
     // Canonicalize compilation to start with the public module map. This is
     // vital for submodules declarations in the private module maps to be
     // correctly parsed when depending on a top level module in the public one.
-    if (Optional<FileEntryRef> PublicMMFile = getPublicModuleMap(
+    if (OptionalFileEntryRef PublicMMFile = getPublicModuleMap(
             *ModuleMapFile, ImportingInstance.getFileManager()))
       ModuleMapFile = PublicMMFile;
 

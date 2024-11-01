@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 namespace {
 
@@ -147,6 +145,4 @@ void RawStringLiteralCheck::replaceWithRawStringLiteral(
       << FixItHint::CreateReplacement(CharRange, Replacement);
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

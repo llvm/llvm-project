@@ -71,8 +71,8 @@ define i128 @bswap_i128(i128 %a0) nounwind {
 ; X86-MOVBE-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-MOVBE-NEXT:    movbel %esi, 12(%eax)
 ; X86-MOVBE-NEXT:    movbel %edi, 8(%eax)
-; X86-MOVBE-NEXT:    movbel %edx, 4(%eax)
-; X86-MOVBE-NEXT:    movbel %ecx, (%eax)
+; X86-MOVBE-NEXT:    movbel %ecx, 4(%eax)
+; X86-MOVBE-NEXT:    movbel %edx, (%eax)
 ; X86-MOVBE-NEXT:    popl %esi
 ; X86-MOVBE-NEXT:    popl %edi
 ; X86-MOVBE-NEXT:    retl $4

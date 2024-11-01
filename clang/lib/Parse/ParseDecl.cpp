@@ -25,10 +25,10 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaDiagnostic.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
+#include <optional>
 
 using namespace clang;
 
@@ -534,7 +534,7 @@ void Parser::ParseGNUAttributeArgs(
 
   // These may refer to the function arguments, but need to be parsed early to
   // participate in determining whether it's a redeclaration.
-  llvm::Optional<ParseScope> PrototypeScope;
+  std::optional<ParseScope> PrototypeScope;
   if (normalizeAttrName(AttrName->getName()) == "enable_if" &&
       D && D->isFunctionDeclarator()) {
     DeclaratorChunk::FunctionTypeInfo FTI = D->getFunctionTypeInfo();
@@ -1689,7 +1689,7 @@ void Parser::ProhibitCXX11Attributes(ParsedAttributes &Attrs, unsigned DiagID,
     Lexer::getRawToken(Attrs.Range.getBegin(), FirstLSquare, SM, LangOpts);
 
     if (FirstLSquare.is(tok::l_square)) {
-      llvm::Optional<Token> SecondLSquare =
+      std::optional<Token> SecondLSquare =
           Lexer::findNextToken(FirstLSquare.getLocation(), SM, LangOpts);
 
       if (SecondLSquare && SecondLSquare->is(tok::l_square)) {
@@ -4965,14 +4965,16 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   bool IsDependent = false;
   const char *PrevSpec = nullptr;
   unsigned DiagID;
-  Decl *TagDecl = Actions.ActOnTag(
-      getCurScope(), DeclSpec::TST_enum, TUK, StartLoc, SS, Name, NameLoc,
-      attrs, AS, DS.getModulePrivateSpecLoc(), TParams, Owned, IsDependent,
-      ScopedEnumKWLoc, IsScopedUsingClassTag, BaseType,
-      DSC == DeclSpecContext::DSC_type_specifier,
-      DSC == DeclSpecContext::DSC_template_param ||
-          DSC == DeclSpecContext::DSC_template_type_arg,
-      &SkipBody);
+  UsingShadowDecl* FoundUsing = nullptr;
+  Decl *TagDecl =
+      Actions.ActOnTag(getCurScope(), DeclSpec::TST_enum, TUK, StartLoc, SS,
+                    Name, NameLoc, attrs, AS, DS.getModulePrivateSpecLoc(),
+                    TParams, Owned, IsDependent, ScopedEnumKWLoc,
+                    IsScopedUsingClassTag,
+                    BaseType, DSC == DeclSpecContext::DSC_type_specifier,
+                    DSC == DeclSpecContext::DSC_template_param ||
+                        DSC == DeclSpecContext::DSC_template_type_arg,
+                    OffsetOfState, FoundUsing, &SkipBody).get();
 
   if (SkipBody.ShouldSkip) {
     assert(TUK == Sema::TUK_Definition && "can only skip a definition");
@@ -4982,8 +4984,8 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     T.skipToEnd();
 
     if (DS.SetTypeSpecType(DeclSpec::TST_enum, StartLoc,
-                           NameLoc.isValid() ? NameLoc : StartLoc,
-                           PrevSpec, DiagID, TagDecl, Owned,
+                           NameLoc.isValid() ? NameLoc : StartLoc, PrevSpec,
+                           DiagID, FoundUsing ? FoundUsing : TagDecl, Owned,
                            Actions.getASTContext().getPrintingPolicy()))
       Diag(StartLoc, DiagID) << PrevSpec;
     return;
@@ -5037,8 +5039,8 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   }
 
   if (DS.SetTypeSpecType(DeclSpec::TST_enum, StartLoc,
-                         NameLoc.isValid() ? NameLoc : StartLoc,
-                         PrevSpec, DiagID, TagDecl, Owned,
+                         NameLoc.isValid() ? NameLoc : StartLoc, PrevSpec,
+                         DiagID, FoundUsing ? FoundUsing : TagDecl, Owned,
                          Actions.getASTContext().getPrintingPolicy()))
     Diag(StartLoc, DiagID) << PrevSpec;
 }
@@ -5797,7 +5799,7 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
 void Parser::ParseTypeQualifierListOpt(
     DeclSpec &DS, unsigned AttrReqs, bool AtomicAllowed,
     bool IdentifierRequired,
-    Optional<llvm::function_ref<void()>> CodeCompletionHandler) {
+    std::optional<llvm::function_ref<void()>> CodeCompletionHandler) {
   if (standardAttributesAllowed() && (AttrReqs & AR_CXX11AttributesParsed) &&
       isCXX11AttributeSpecifier()) {
     ParsedAttributes Attrs(AttrFactory);
@@ -6764,7 +6766,7 @@ void Parser::ParseParenDeclarator(Declarator &D) {
 
 void Parser::InitCXXThisScopeForDeclaratorIfRelevant(
     const Declarator &D, const DeclSpec &DS,
-    llvm::Optional<Sema::CXXThisScopeRAII> &ThisScope) {
+    std::optional<Sema::CXXThisScopeRAII> &ThisScope) {
   // C++11 [expr.prim.general]p3:
   //   If a declaration declares a member function or member function
   //   template of a class X, the expression this is a prvalue of type
@@ -6916,7 +6918,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       if (ParseRefQualifier(RefQualifierIsLValueRef, RefQualifierLoc))
         EndLoc = RefQualifierLoc;
 
-      llvm::Optional<Sema::CXXThisScopeRAII> ThisScope;
+      std::optional<Sema::CXXThisScopeRAII> ThisScope;
       InitCXXThisScopeForDeclaratorIfRelevant(D, DS, ThisScope);
 
       // Parse exception-specification[opt].

@@ -21,7 +21,7 @@
 
 ; Check that the kernel launch is generated in the host IR.
 ; This declaration would not have been generated unless a kernel launch exists.
-; HOST-IR: declare void @polly_launchKernel(i8*, i32, i32, i32, i32, i32, i8*)
+; HOST-IR: declare void @polly_launchKernel(ptr, i32, i32, i32, i32, i32, ptr)
 
 ;    void f(int *begin, int *end, int *arr) {
 ;      for (int i = *begin; i < *end; i++) {
@@ -32,13 +32,13 @@
 
 target datalayout = "e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128"
 
-define void @f(i32* %begin, i32* %end, i32* %arr) {
+define void @f(ptr %begin, ptr %end, ptr %arr) {
 entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  %tmp1 = load i32, i32* %begin, align 4
-  %tmp41 = load i32, i32* %end, align 4
+  %tmp1 = load i32, ptr %begin, align 4
+  %tmp41 = load i32, ptr %end, align 4
   %cmp2 = icmp slt i32 %tmp1, %tmp41
   br i1 %cmp2, label %for.body.lr.ph, label %for.end
 
@@ -47,10 +47,10 @@ for.body.lr.ph:                                   ; preds = %entry.split
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
   %i.03 = phi i32 [ %tmp1, %for.body.lr.ph ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %arr, i32 %i.03
-  store i32 0, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %arr, i32 %i.03
+  store i32 0, ptr %arrayidx, align 4
   %inc = add nsw i32 %i.03, 1
-  %tmp4 = load i32, i32* %end, align 4
+  %tmp4 = load i32, ptr %end, align 4
   %cmp = icmp slt i32 %inc, %tmp4
   br i1 %cmp, label %for.body, label %for.cond.for.end_crit_edge
 

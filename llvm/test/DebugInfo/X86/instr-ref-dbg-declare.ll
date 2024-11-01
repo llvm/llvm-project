@@ -11,7 +11,7 @@
 ;; NB: the original test has an additional spurious DW_OP_deref in the
 ;; dbg.declare's arguments, which is preserved here, translating to two derefs.
 
-; CHECK: DBG_INSTR_REF 1, 2, !{{[0-9]+}}, !DIExpression(DW_OP_deref, DW_OP_deref)
+; CHECK: DBG_INSTR_REF !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref, DW_OP_deref), dbg-instr-ref(1, 2)
 
 source_filename = "test/DebugInfo/COFF/types-array-advanced.ll"
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"

@@ -9,7 +9,7 @@ entry:
 ; CHECK: adrp [[REG:x[0-9]+]], _seed@GOTPAGE
 ; CHECK: ldr  [[REG2:x[0-9]+]], [[[REG]], _seed@GOTPAGEOFF]
 ; CHECK: str  {{x[0-9]+}}, [[[REG2]]]
-  store i64 74755, i64* @seed, align 8
+  store i64 74755, ptr @seed, align 8
   ret void
 }
 
@@ -30,12 +30,12 @@ entry:
 ; CHECK: adrp [[REG1:x[0-9]+]], _seed@GOTPAGE
 ; CHECK: ldr  [[REG1]], [[[REG1]], _seed@GOTPAGEOFF]
 ; CHECK: ldr  {{x[0-9]+}}, [[[REG1]]]
-  %0 = load i64, i64* @seed, align 8
+  %0 = load i64, ptr @seed, align 8
   %mul = mul nsw i64 %0, 1309
   %add = add nsw i64 %mul, 13849
   %and = and i64 %add, 65535
-  store i64 %and, i64* @seed, align 8
-  %1 = load i64, i64* @seed, align 8
+  store i64 %and, ptr @seed, align 8
+  %1 = load i64, ptr @seed, align 8
   %conv = trunc i64 %1 to i32
   ret i32 %conv
 }

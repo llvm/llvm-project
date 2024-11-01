@@ -16,6 +16,7 @@ static_library("Frontend") {
     "//llvm/lib/Option",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "ASTConsumers.cpp",

@@ -4,14 +4,14 @@
   declare i32 @llvm.amdgcn.workitem.id.x() #0
 
   define amdgpu_kernel void @atomic_max_i32_noret(
-      i32 addrspace(1)* %out,
-      i32 addrspace(1)* addrspace(1)* %in,
-      i32 addrspace(1)* %x,
+      ptr addrspace(1) %out,
+      ptr addrspace(1) %in,
+      ptr addrspace(1) %x,
       i32 %y) #1 {
     %tid = call i32 @llvm.amdgcn.workitem.id.x()
     %idxprom = sext i32 %tid to i64
-    %tid.gep = getelementptr i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* %in, i64 %idxprom
-    %ptr = load volatile i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* %tid.gep
+    %tid.gep = getelementptr ptr addrspace(1), ptr addrspace(1) %in, i64 %idxprom
+    %ptr = load volatile ptr addrspace(1), ptr addrspace(1) %tid.gep
     %xor = xor i32 %tid, 1
     %cmp = icmp ne i32 %xor, 0
     %1 = call { i1, i64 } @llvm.amdgcn.if(i1 %cmp)
@@ -20,8 +20,8 @@
     br i1 %2, label %atomic, label %exit
 
   atomic:                                           ; preds = %0
-    %gep = getelementptr i32, i32 addrspace(1)* %ptr, i32 100
-    %ret = atomicrmw max i32 addrspace(1)* %gep, i32 %y seq_cst
+    %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 100
+    %ret = atomicrmw max ptr addrspace(1) %gep, i32 %y seq_cst
     br label %exit
 
   exit:                                             ; preds = %atomic, %0
@@ -75,7 +75,7 @@ body:             |
     successors: %bb.1.atomic(0x40000000), %bb.2.exit(0x40000000)
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `i64 addrspace(4)* undef`)
+    $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
     $vgpr1 = V_ASHRREV_I32_e32 31, $vgpr0, implicit $exec
     $vgpr1_vgpr2 = V_LSHL_B64_e64 $vgpr0_vgpr1, 3, implicit $exec
     $sgpr7 = S_MOV_B32 61440
@@ -92,7 +92,7 @@ body:             |
     successors: %bb.2.exit(0x80000000)
     liveins: $sgpr4_sgpr5_sgpr6_sgpr7:0x0000000C, $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr1_vgpr2_vgpr3_vgpr4:0x00000003
 
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 15, 0 :: (non-temporal dereferenceable invariant load (s32) from `i32 addrspace(4)* undef`)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 15, 0 :: (non-temporal dereferenceable invariant load (s32) from `ptr addrspace(4) undef`)
     dead $vgpr0 = V_MOV_B32_e32 -1, implicit $exec
     dead $vgpr0 = V_MOV_B32_e32 61440, implicit $exec
     $sgpr4_sgpr5 = S_MOV_B64 0

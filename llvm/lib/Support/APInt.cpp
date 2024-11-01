@@ -108,7 +108,7 @@ APInt::APInt(unsigned numBits, ArrayRef<uint64_t> bigVal) : BitWidth(numBits) {
 
 APInt::APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[])
     : BitWidth(numBits) {
-  initFromArray(makeArrayRef(bigVal, numWords));
+  initFromArray(ArrayRef(bigVal, numWords));
 }
 
 APInt::APInt(unsigned numbits, StringRef Str, uint8_t radix)
@@ -459,7 +459,7 @@ APInt APInt::extractBits(unsigned numBits, unsigned bitPosition) const {
   // Extracting bits that start on a source word boundary can be done
   // as a fast memory copy.
   if (loBit == 0)
-    return APInt(numBits, makeArrayRef(U.pVal + loWord, 1 + hiWord - loWord));
+    return APInt(numBits, ArrayRef(U.pVal + loWord, 1 + hiWord - loWord));
 
   // General case - shift + copy source words directly into place.
   APInt Result(numBits, 0);
@@ -684,7 +684,7 @@ unsigned APInt::countTrailingOnesSlowCase() const {
 unsigned APInt::countPopulationSlowCase() const {
   unsigned Count = 0;
   for (unsigned i = 0; i < getNumWords(); ++i)
-    Count += llvm::countPopulation(U.pVal[i]);
+    Count += llvm::popcount(U.pVal[i]);
   return Count;
 }
 
@@ -2292,15 +2292,11 @@ static inline APInt::WordType highHalf(APInt::WordType part) {
 
 /// Returns the bit number of the most significant set bit of a part.
 /// If the input number has no bits set -1U is returned.
-static unsigned partMSB(APInt::WordType value) {
-  return findLastSet(value, ZB_Max);
-}
+static unsigned partMSB(APInt::WordType value) { return findLastSet(value); }
 
 /// Returns the bit number of the least significant set bit of a part.  If the
 /// input number has no bits set -1U is returned.
-static unsigned partLSB(APInt::WordType value) {
-  return findFirstSet(value, ZB_Max);
-}
+static unsigned partLSB(APInt::WordType value) { return findFirstSet(value); }
 
 /// Sets the least significant part of a bignum to the input value, and zeroes
 /// out higher parts.

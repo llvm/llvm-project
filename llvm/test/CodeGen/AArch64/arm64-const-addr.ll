@@ -9,14 +9,14 @@ define i32 @test1() nounwind {
 ; CHECK-NEXT:   movk  w8, #1039, lsl #16
 ; CHECK-NEXT:   ldp w9, w10, [x8, #4]
 ; CHECK:        ldr w8, [x8, #12]
-  %at = inttoptr i64 68141056 to %T*
-  %o1 = getelementptr %T, %T* %at, i32 0, i32 1
-  %t1 = load i32, i32* %o1
-  %o2 = getelementptr %T, %T* %at, i32 0, i32 2
-  %t2 = load i32, i32* %o2
+  %at = inttoptr i64 68141056 to ptr
+  %o1 = getelementptr %T, ptr %at, i32 0, i32 1
+  %t1 = load i32, ptr %o1
+  %o2 = getelementptr %T, ptr %at, i32 0, i32 2
+  %t2 = load i32, ptr %o2
   %a1 = add i32 %t1, %t2
-  %o3 = getelementptr %T, %T* %at, i32 0, i32 3
-  %t3 = load i32, i32* %o3
+  %o3 = getelementptr %T, ptr %at, i32 0, i32 3
+  %t3 = load i32, ptr %o3
   %a2 = add i32 %a1, %t3
   ret i32 %a2
 }

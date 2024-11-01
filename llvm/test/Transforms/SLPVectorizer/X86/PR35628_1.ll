@@ -2,15 +2,14 @@
 ; RUN: opt -passes=slp-vectorizer -slp-vectorize-hor -slp-vectorize-hor-store -S < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:1"
 
-define void @mainTest(i32* %ptr) #0  {
+define void @mainTest(ptr %ptr) #0  {
 ; CHECK-LABEL: @mainTest(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32* [[PTR:%.*]], null
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[PTR:%.*]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP:%.*]], label [[BAIL_OUT:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[DUMMY_PHI:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[OP_RDX3:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[PTR]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
@@ -26,27 +25,27 @@ define void @mainTest(i32* %ptr) #0  {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %cmp = icmp eq i32* %ptr, null
+  %cmp = icmp eq ptr %ptr, null
   br i1 %cmp, label %loop, label %bail_out
 
 loop:
   %dummy_phi = phi i32 [ 1, %entry ], [ %18, %loop ]
-  %0 = load i32, i32 * %ptr , align 4
+  %0 = load i32, ptr %ptr , align 4
   %1 = mul i32 %0, %0
   %2 = add i32 1, %1
-  %3 = getelementptr inbounds i32, i32 * %ptr, i64 1
-  %4 = load i32, i32 * %3 , align 4
+  %3 = getelementptr inbounds i32, ptr %ptr, i64 1
+  %4 = load i32, ptr %3 , align 4
   %5 = mul i32 %4, %4
   %6 = add i32 %2, %4
   %7 = add i32 %6, %5
-  %8 = getelementptr inbounds i32, i32 *%ptr, i64 2
-  %9 = load i32, i32 * %8 , align 4
+  %8 = getelementptr inbounds i32, ptr %ptr, i64 2
+  %9 = load i32, ptr %8 , align 4
   %10 = mul i32 %9, %9
   %11 = add i32 %7, %9
   %12 = add i32 %11, %10
   %13 = sext i32 %9 to i64
-  %14 = getelementptr inbounds i32, i32 *%ptr, i64 3
-  %15 = load i32, i32 * %14 , align 4
+  %14 = getelementptr inbounds i32, ptr %ptr, i64 3
+  %15 = load i32, ptr %14 , align 4
   %16 = mul i32 %15, %15
   %17 = add i32 %12, %15
   %18 = add i32 %17, %16

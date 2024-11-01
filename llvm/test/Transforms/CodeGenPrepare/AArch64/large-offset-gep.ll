@@ -258,29 +258,32 @@ while_end:
 
 declare ptr @llvm.strip.invariant.group.p0(ptr)
 
-define void @test_invariant_group(i32 %arg) {
+define void @test_invariant_group(i32 %arg, i1 %c) {
 ; CHECK-LABEL: test_invariant_group:
 ; CHECK:       // %bb.0: // %bb
-; CHECK-NEXT:    cbz wzr, .LBB5_2
+; CHECK-NEXT:    tbz w1, #0, .LBB5_3
 ; CHECK-NEXT:  // %bb.1: // %bb6
-; CHECK-NEXT:    cbz w0, .LBB5_3
-; CHECK-NEXT:  .LBB5_2: // %bb5
+; CHECK-NEXT:    cbz w0, .LBB5_4
+; CHECK-NEXT:  .LBB5_2: // %bb1
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    tbnz w1, #0, .LBB5_2
+; CHECK-NEXT:  .LBB5_3: // %bb5
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB5_3: // %bb2
-; CHECK-NEXT:    cbnz wzr, .LBB5_2
-; CHECK-NEXT:  // %bb.4: // %bb4
+; CHECK-NEXT:  .LBB5_4: // %bb2
+; CHECK-NEXT:    tbnz w1, #0, .LBB5_3
+; CHECK-NEXT:  // %bb.5: // %bb4
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    str x8, [x8]
 ; CHECK-NEXT:    ret
 bb:
-  br i1 undef, label %bb6, label %bb5
+  br i1 %c, label %bb6, label %bb5
 
 bb1:                                              ; preds = %bb6, %bb1
-  br i1 undef, label %bb1, label %bb5
+  br i1 %c, label %bb1, label %bb5
 
 bb2:                                              ; preds = %bb6
   %i = getelementptr inbounds i8, ptr %i7, i32 40000
-  br i1 undef, label %bb5, label %bb4
+  br i1 %c, label %bb5, label %bb4
 
 bb4:                                              ; preds = %bb2
   store i64 1, ptr %i, align 8

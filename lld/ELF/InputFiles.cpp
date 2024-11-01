@@ -149,7 +149,7 @@ static void updateSupportedARMFeatures(const ARMAttributeParser &attributes) {
       attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
   if (!attr)
     return;
-  auto arch = attr.value();
+  auto arch = *attr;
   switch (arch) {
   case ARMBuildAttrs::Pre_v4:
   case ARMBuildAttrs::v4:
@@ -1773,9 +1773,7 @@ bool InputFile::shouldExtractForCommon(StringRef name) {
 }
 
 std::string elf::replaceThinLTOSuffix(StringRef path) {
-  StringRef suffix = config->thinLTOObjectSuffixReplace.first;
-  StringRef repl = config->thinLTOObjectSuffixReplace.second;
-
+  auto [suffix, repl] = config->thinLTOObjectSuffixReplace;
   if (path.consume_back(suffix))
     return (path + repl).str();
   return std::string(path);

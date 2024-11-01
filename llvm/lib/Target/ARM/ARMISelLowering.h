@@ -697,7 +697,9 @@ class VectorType;
       return HasStandaloneRem;
     }
 
-    bool shouldExpandShift(SelectionDAG &DAG, SDNode *N) const override;
+    ShiftLegalizationStrategy
+    preferredShiftLegalizationStrategy(SelectionDAG &DAG, SDNode *N,
+                                       unsigned ExpansionFactor) const override;
 
     CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool isVarArg) const;
     CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool isVarArg) const;
@@ -829,7 +831,7 @@ class VectorType;
     SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerFLT_ROUNDS_(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerConstantFP(SDValue Op, SelectionDAG &DAG,
                             const ARMSubtarget *ST) const;

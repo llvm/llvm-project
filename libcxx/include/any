@@ -138,7 +138,9 @@ add_pointer_t<_ValueType> any_cast(any *) _NOEXCEPT;
 
 namespace __any_imp
 {
+  _LIBCPP_SUPPRESS_DEPRECATED_PUSH
   using _Buffer = aligned_storage_t<3*sizeof(void*), alignment_of<void*>::value>;
+  _LIBCPP_SUPPRESS_DEPRECATED_POP
 
   template <class _Tp>
   using _IsSmallObject = integral_constant<bool

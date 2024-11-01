@@ -1,5 +1,5 @@
 ; Tests that coro-split pass splits the coroutine into f, f.resume and f.destroy
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 define i8* @f() presplitcoroutine !func_sanitize !0 {
 entry:

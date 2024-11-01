@@ -3,17 +3,17 @@
 ; RUN: llc -mtriple=aarch64 -relocation-model=pic < %s | FileCheck %s --check-prefixes=CHECK,PIC
 
 @preemptable_var = dso_preemptable global i32 42
-define i32* @get_preemptable_var() nounwind {
+define ptr @get_preemptable_var() nounwind {
 ; CHECK-LABEL: get_preemptable_var:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x0, :got:preemptable_var
 ; CHECK-NEXT:    ldr x0, [x0, :got_lo12:preemptable_var]
 ; CHECK-NEXT:    ret
-  ret i32* @preemptable_var
+  ret ptr @preemptable_var
 }
 
 @dsolocal_var = dso_local global i32 42
-define i32* @get_dsolocal_var() nounwind {
+define ptr @get_dsolocal_var() nounwind {
 ; STATIC-LABEL: get_dsolocal_var:
 ; STATIC:       // %bb.0:
 ; STATIC-NEXT:    adrp x0, dsolocal_var
@@ -25,49 +25,49 @@ define i32* @get_dsolocal_var() nounwind {
 ; PIC-NEXT:    adrp x0, .Ldsolocal_var$local
 ; PIC-NEXT:    add x0, x0, :lo12:.Ldsolocal_var$local
 ; PIC-NEXT:    ret
-  ret i32* @dsolocal_var
+  ret ptr @dsolocal_var
 }
 
 @weak_dsolocal_var = weak dso_local global i32 42
-define i32* @get_weak_dsolocal_var() nounwind {
+define ptr @get_weak_dsolocal_var() nounwind {
 ; CHECK-LABEL: get_weak_dsolocal_var:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x0, weak_dsolocal_var
 ; CHECK-NEXT:    add x0, x0, :lo12:weak_dsolocal_var
 ; CHECK-NEXT:    ret
-  ret i32* @weak_dsolocal_var
+  ret ptr @weak_dsolocal_var
 }
 
 @hidden_var = hidden global i32 42
-define i32* @get_hidden_var() nounwind {
+define ptr @get_hidden_var() nounwind {
 ; CHECK-LABEL: get_hidden_var:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x0, hidden_var
 ; CHECK-NEXT:    add x0, x0, :lo12:hidden_var
 ; CHECK-NEXT:    ret
-  ret i32* @hidden_var
+  ret ptr @hidden_var
 }
 
 @protected_var = protected global i32 42
-define i32* @get_protected_var() nounwind {
+define ptr @get_protected_var() nounwind {
 ; CHECK-LABEL: get_protected_var:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x0, protected_var
 ; CHECK-NEXT:    add x0, x0, :lo12:protected_var
 ; CHECK-NEXT:    ret
-  ret i32* @protected_var
+  ret ptr @protected_var
 }
 
-define dso_preemptable void()* @preemptable_func() nounwind {
+define dso_preemptable ptr @preemptable_func() nounwind {
 ; CHECK-LABEL: preemptable_func:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x0, :got:preemptable_func
 ; CHECK-NEXT:    ldr x0, [x0, :got_lo12:preemptable_func]
 ; CHECK-NEXT:    ret
-  ret void()* bitcast(void()*()* @preemptable_func to void()*)
+  ret ptr @preemptable_func
 }
 
-define dso_local void()* @dsolocal_func() nounwind {
+define dso_local ptr @dsolocal_func() nounwind {
 ; STATIC-LABEL: dsolocal_func:
 ; STATIC:       // %bb.0:
 ; STATIC-NEXT:    adrp x0, dsolocal_func
@@ -81,7 +81,7 @@ define dso_local void()* @dsolocal_func() nounwind {
 ; PIC-NEXT:    adrp x0, .Ldsolocal_func$local
 ; PIC-NEXT:    add x0, x0, :lo12:.Ldsolocal_func$local
 ; PIC-NEXT:    ret
-  ret void()* bitcast(void()*()* @dsolocal_func to void()*)
+  ret ptr @dsolocal_func
 }
 ; UTC-ARGS: --disable
 ; PIC: [[END_LABEL:.Lfunc_end.+]]:
@@ -89,13 +89,13 @@ define dso_local void()* @dsolocal_func() nounwind {
 ; PIC-NEXT: .size	.Ldsolocal_func$local, [[END_LABEL]]-dsolocal_func
 ; UTC-ARGS: --enable
 
-define weak dso_local void()* @weak_dsolocal_func() nounwind {
+define weak dso_local ptr @weak_dsolocal_func() nounwind {
 ; CHECK-LABEL: weak_dsolocal_func:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x0, weak_dsolocal_func
 ; CHECK-NEXT:    add x0, x0, :lo12:weak_dsolocal_func
 ; CHECK-NEXT:    ret
-  ret void()* bitcast(void()*()* @weak_dsolocal_func to void()*)
+  ret ptr @weak_dsolocal_func
 }
 
 ;; bl .Ldsolocal_func$local either resolves to a constant at assembly time
@@ -116,7 +116,7 @@ define dso_local void @call_dsolocal_func() nounwind {
 ; PIC-NEXT:    bl .Ldsolocal_func$local
 ; PIC-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; PIC-NEXT:    ret
-  call void()* @dsolocal_func()
+  call ptr @dsolocal_func()
   ret void
 }
 ; UTC-ARGS: --disable

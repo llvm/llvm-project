@@ -48,6 +48,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -527,7 +528,7 @@ void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
     return;
 
   // Search include directories for this file.
-  Optional<FileEntryRef> File =
+  OptionalFileEntryRef File =
       LookupFile(FilenameTok.getLocation(), Filename, isAngled, nullptr,
                  nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
   if (!File) {
@@ -1184,7 +1185,7 @@ struct PragmaDebugHandler : public PragmaHandler {
     } else if (II->isStr("sloc_usage")) {
       // An optional integer literal argument specifies the number of files to
       // specifically report information about.
-      Optional<unsigned> MaxNotes;
+      std::optional<unsigned> MaxNotes;
       Token ArgToken;
       PP.Lex(ArgToken);
       uint64_t Value;

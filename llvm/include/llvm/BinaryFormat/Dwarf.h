@@ -30,10 +30,8 @@
 
 namespace llvm {
 class StringRef;
-template<typename T> class Optional;
 
 namespace dwarf {
-
 
 //===----------------------------------------------------------------------===//
 // DWARF constants as gleaned from the DWARF Debugging Information Format V.5

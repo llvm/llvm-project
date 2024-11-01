@@ -93,12 +93,9 @@ def deleteMatchingLines(fileName, pattern):
 
 
 def getListOfFiles(clang_tidy_path):
-  files = glob.glob(os.path.join(clang_tidy_path, '*'))
-  for dirname in files:
-    if os.path.isdir(dirname):
-      files += glob.glob(os.path.join(dirname, '*'))
+  files = glob.glob(os.path.join(clang_tidy_path, '**'), recursive=True)
   files += glob.glob(os.path.join(clang_tidy_path, '..', 'test',
-                                  'clang-tidy', '*'))
+                                  'clang-tidy', 'checkers', '**'), recursive=True)
   files += glob.glob(os.path.join(clang_tidy_path, '..', 'docs',
                                   'clang-tidy', 'checks', '*'))
   return [filename for filename in files if os.path.isfile(filename)]
@@ -273,10 +270,12 @@ def main():
     deleteMatchingLines(os.path.join(old_module_path, modulecpp),
                       '\\b' + check_name_camel + '|\\b' + args.old_check_name)
 
+  old_check_filename = '-'.join(args.old_check_name.split('-')[1:])
+  new_check_filename = '-'.join(args.new_check_name.split('-')[1:])
+
   for filename in getListOfFiles(clang_tidy_path):
     originalName = filename
-    filename = fileRename(filename, args.old_check_name,
-                          args.new_check_name)
+    filename = fileRename(filename, old_check_filename, new_check_filename)
     filename = fileRename(filename, check_name_camel, new_check_name_camel)
     replaceInFile(filename, generateCommentLineHeader(originalName),
                   generateCommentLineHeader(filename))
@@ -308,8 +307,9 @@ def main():
     for filename in check_implementation_files:
       # Move check implementation to the directory of the new module.
       filename = fileRename(filename, old_module_path, new_module_path)
-      replaceInFileRegex(filename, 'namespace ' + old_module + '[^ \n]*',
-                         'namespace ' + new_namespace)
+      replaceInFileRegex(filename,
+                         'namespace clang::tidy::' + old_module + '[^ \n]*',
+                         'namespace clang::tidy::' + new_namespace)
 
   if (args.old_check_name == args.new_check_name):
     return

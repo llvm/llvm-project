@@ -10,14 +10,13 @@
 ; CHECK-LABEL: if.end.47:
 ; CHECK-NEXT:        %eps1.addr.0 = phi double [ %eps1.addr.0.ph.merge, %polly.merge_new_and_old ]
 ;
-define void @dbisect(double* %c, double* %b, double %eps1, double* %eps2) {
+define void @dbisect(ptr %c, ptr %b, double %eps1, ptr %eps2) {
 entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  store double 0.000000e+00, double* %b, align 8
-  %arrayidx9 = getelementptr inbounds double, double* %c, i64 0
-  %0 = load double, double* %arrayidx9, align 8
+  store double 0.000000e+00, ptr %b, align 8
+  %0 = load double, ptr %c, align 8
   br i1 false, label %for.body.lr.ph, label %for.end
 
 for.body.lr.ph:                                   ; preds = %entry.split
@@ -42,7 +41,7 @@ for.cond.for.end_crit_edge:                       ; preds = %for.inc
   br label %for.end
 
 for.end:                                          ; preds = %for.cond.for.end_crit_edge, %entry.split
-  store double undef, double* %eps2, align 8
+  store double undef, ptr %eps2, align 8
   %cmp45 = fcmp ugt double %eps1, 0.000000e+00
   br i1 %cmp45, label %if.end.47, label %if.then.46
 

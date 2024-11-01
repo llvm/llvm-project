@@ -8,7 +8,7 @@ declare i32 @b()
 ; Check loops will be applied non-trivial loop unswitch in a non-cold function,
 ; even loop headers are cold
 
-define void @f1(i32 %i, i1 %cond, i1 %hot_cond, i1 %cold_cond, i1* %ptr) !prof !14 {
+define void @f1(i32 %i, i1 %cond, i1 %hot_cond, i1 %cold_cond, ptr %ptr) !prof !14 {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[ENTRY_COLD_LOOP:%.*]]
@@ -24,7 +24,7 @@ define void @f1(i32 %i, i1 %cond, i1 %hot_cond, i1 %cold_cond, i1* %ptr) !prof !
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @a()
 ; CHECK-NEXT:    br label [[COLD_LOOP_LATCH_US:%.*]]
 ; CHECK:       cold_loop_latch.us:
-; CHECK-NEXT:    [[V2_US:%.*]] = load i1, i1* [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[V2_US:%.*]] = load i1, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[V2_US]], label [[COLD_LOOP_BEGIN_US]], label [[COLD_LOOP_EXIT_LOOPEXIT_SPLIT_US:%.*]]
 ; CHECK:       cold_loop_exit.loopexit.split.us:
 ; CHECK-NEXT:    br label [[COLD_LOOP_EXIT_LOOPEXIT:%.*]]
@@ -36,7 +36,7 @@ define void @f1(i32 %i, i1 %cond, i1 %hot_cond, i1 %cold_cond, i1* %ptr) !prof !
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @b()
 ; CHECK-NEXT:    br label [[COLD_LOOP_LATCH:%.*]]
 ; CHECK:       cold_loop_latch:
-; CHECK-NEXT:    [[V2:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2]], label [[COLD_LOOP_BEGIN]], label [[COLD_LOOP_EXIT_LOOPEXIT_SPLIT:%.*]]
 ; CHECK:       cold_loop_exit.loopexit.split:
 ; CHECK-NEXT:    br label [[COLD_LOOP_EXIT_LOOPEXIT]]
@@ -63,7 +63,7 @@ cold_loop_b:
   br label %cold_loop_latch
 
 cold_loop_latch:
-  %v2 = load i1, i1* %ptr
+  %v2 = load i1, ptr %ptr
   br i1 %v2, label %cold_loop_begin, label %cold_loop_exit
 
 cold_loop_exit:

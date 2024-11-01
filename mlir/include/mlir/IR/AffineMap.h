@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include <optional>
 
 namespace llvm {
 class SmallBitVector;
@@ -104,6 +105,10 @@ public:
   /// dimensional identifiers.
   bool isIdentity() const;
 
+  /// Returns true if this affine map is an identity affine map on the symbol
+  /// identifiers.
+  bool isSymbolIdentity() const;
+
   /// Returns true if this affine map is a minor identity, i.e. an identity
   /// affine map (d0, ..., dn) -> (dp, ..., dn) on the most minor dimensions.
   bool isMinorIdentity() const;
@@ -169,7 +174,7 @@ public:
   /// Extracts the first result position where `input` dimension resides.
   /// Returns `std::nullopt` if `input` is not a dimension expression or cannot
   /// be found in results.
-  Optional<unsigned> getResultPosition(AffineExpr input) const;
+  std::optional<unsigned> getResultPosition(AffineExpr input) const;
 
   /// Return true if any affine expression involves AffineDimExpr `position`.
   bool isFunctionOfDim(unsigned position) const {

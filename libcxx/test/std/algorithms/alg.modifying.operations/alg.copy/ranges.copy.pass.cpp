@@ -20,7 +20,9 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <deque>
 #include <ranges>
+#include <vector>
 
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
@@ -53,20 +55,21 @@ static_assert(!HasCopyR<InputRangeNotSentinelEqualityComparableWith, int*>);
 
 static_assert(std::is_same_v<std::ranges::copy_result<int, long>, std::ranges::in_out_result<int, long>>);
 
+// clang-format off
 template <class In, class Out, class Sent = In>
 constexpr void test_iterators() {
   { // simple test
     {
-      std::array in {1, 2, 3, 4};
+      std::array in{1, 2, 3, 4};
       std::array<int, 4> out;
       std::same_as<std::ranges::in_out_result<In, Out>> auto ret =
-        std::ranges::copy(In(in.data()), Sent(In(in.data() + in.size())), Out(out.data()));
+          std::ranges::copy(In(in.data()), Sent(In(in.data() + in.size())), Out(out.data()));
       assert(in == out);
       assert(base(ret.in) == in.data() + in.size());
       assert(base(ret.out) == out.data() + out.size());
     }
     {
-      std::array in {1, 2, 3, 4};
+      std::array in{1, 2, 3, 4};
       std::array<int, 4> out;
       auto range = std::ranges::subrange(In(in.data()), Sent(In(in.data() + in.size())));
       std::same_as<std::ranges::in_out_result<In, Out>> auto ret = std::ranges::copy(range, Out(out.data()));
@@ -88,12 +91,13 @@ constexpr void test_iterators() {
       std::array<int, 0> in;
       std::array<int, 0> out;
       auto range = std::ranges::subrange(In(in.data()), Sent(In(in.data() + in.size())));
-      auto ret = std::ranges::copy(range, Out(out.data()));
+      auto ret   = std::ranges::copy(range, Out(out.data()));
       assert(base(ret.in) == in.data());
       assert(base(ret.out) == out.data());
     }
   }
 }
+// clang-format on
 
 constexpr bool test() {
   meta::for_each(meta::forward_iterator_list<int*>{}, []<class Out>() {
@@ -122,7 +126,7 @@ constexpr bool test() {
   }
 
   { // check that an iterator is returned with a borrowing range
-    std::array in {1, 2, 3, 4};
+    std::array in{1, 2, 3, 4};
     std::array<int, 4> out;
     std::same_as<std::ranges::in_out_result<int*, int*>> auto ret = std::ranges::copy(std::views::all(in), out.data());
     assert(ret.in == in.data() + 4);
@@ -132,8 +136,8 @@ constexpr bool test() {
 
   { // check that every element is copied exactly once
     struct CopyOnce {
-      bool copied = false;
-      constexpr CopyOnce() = default;
+      bool copied                               = false;
+      constexpr CopyOnce()                      = default;
       constexpr CopyOnce(const CopyOnce& other) = delete;
       constexpr CopyOnce& operator=(const CopyOnce& other) {
         assert(!other.copied);
@@ -142,16 +146,16 @@ constexpr bool test() {
       }
     };
     {
-      std::array<CopyOnce, 4> in {};
-      std::array<CopyOnce, 4> out {};
+      std::array<CopyOnce, 4> in{};
+      std::array<CopyOnce, 4> out{};
       auto ret = std::ranges::copy(in.begin(), in.end(), out.begin());
       assert(ret.in == in.end());
       assert(ret.out == out.end());
       assert(std::all_of(out.begin(), out.end(), [](const auto& e) { return e.copied; }));
     }
     {
-      std::array<CopyOnce, 4> in {};
-      std::array<CopyOnce, 4> out {};
+      std::array<CopyOnce, 4> in{};
+      std::array<CopyOnce, 4> out{};
       auto ret = std::ranges::copy(in, out.begin());
       assert(ret.in == in.end());
       assert(ret.out == out.end());
@@ -162,8 +166,8 @@ constexpr bool test() {
   { // check that the range is copied forwards
     struct OnlyForwardsCopyable {
       OnlyForwardsCopyable* next = nullptr;
-      bool canCopy = false;
-      OnlyForwardsCopyable() = default;
+      bool canCopy               = false;
+      OnlyForwardsCopyable()     = default;
       constexpr OnlyForwardsCopyable& operator=(const OnlyForwardsCopyable&) {
         assert(canCopy);
         if (next != nullptr)
@@ -172,12 +176,12 @@ constexpr bool test() {
       }
     };
     {
-      std::array<OnlyForwardsCopyable, 3> in {};
-      std::array<OnlyForwardsCopyable, 3> out {};
-      out[0].next = &out[1];
-      out[1].next = &out[2];
+      std::array<OnlyForwardsCopyable, 3> in{};
+      std::array<OnlyForwardsCopyable, 3> out{};
+      out[0].next    = &out[1];
+      out[1].next    = &out[2];
       out[0].canCopy = true;
-      auto ret = std::ranges::copy(in.begin(), in.end(), out.begin());
+      auto ret       = std::ranges::copy(in.begin(), in.end(), out.begin());
       assert(ret.in == in.end());
       assert(ret.out == out.end());
       assert(out[0].canCopy);
@@ -185,12 +189,12 @@ constexpr bool test() {
       assert(out[2].canCopy);
     }
     {
-      std::array<OnlyForwardsCopyable, 3> in {};
-      std::array<OnlyForwardsCopyable, 3> out {};
-      out[0].next = &out[1];
-      out[1].next = &out[2];
+      std::array<OnlyForwardsCopyable, 3> in{};
+      std::array<OnlyForwardsCopyable, 3> out{};
+      out[0].next    = &out[1];
+      out[1].next    = &out[2];
       out[0].canCopy = true;
-      auto ret = std::ranges::copy(in, out.begin());
+      auto ret       = std::ranges::copy(in, out.begin());
       assert(ret.in == in.end());
       assert(ret.out == out.end());
       assert(out[0].canCopy);

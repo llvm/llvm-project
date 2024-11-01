@@ -103,8 +103,8 @@ static bool MIIsInTerminatorSequence(const MachineInstr &MI) {
 
   // Make sure that the copy dest is not a vreg when the copy source is a
   // physical register.
-  if (!OPI2->isReg() || (!Register::isPhysicalRegister(OPI->getReg()) &&
-                         Register::isPhysicalRegister(OPI2->getReg())))
+  if (!OPI2->isReg() ||
+      (!OPI->getReg().isPhysical() && OPI2->getReg().isPhysical()))
     return false;
 
   return true;

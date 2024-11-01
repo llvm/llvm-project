@@ -38,22 +38,22 @@ define signext i32 @wobble() nounwind {
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 bb:
-  %tmp = load i8, i8* @global, align 1
+  %tmp = load i8, ptr @global, align 1
   %tmp1 = zext i8 %tmp to i32
   %tmp2 = add nuw nsw i32 %tmp1, 1
-  store i32 %tmp2, i32* @global.1, align 4
-  %tmp3 = load i8, i8* @global.2, align 1
+  store i32 %tmp2, ptr @global.1, align 4
+  %tmp3 = load i8, ptr @global.2, align 1
   %tmp4 = zext i8 %tmp3 to i32
   %tmp5 = mul nuw nsw i32 %tmp2, %tmp4
   %tmp6 = trunc i32 %tmp5 to i16
   %tmp7 = udiv i16 %tmp6, 5
   %tmp8 = zext i16 %tmp7 to i32
-  store i32 %tmp8, i32* @global.3, align 4
+  store i32 %tmp8, ptr @global.3, align 4
   %tmp9 = icmp ult i32 %tmp5, 5
   br i1 %tmp9, label %bb12, label %bb10
 
 bb10:                                             ; preds = %bb
-  %tmp11 = tail call signext i32 bitcast (i32 (...)* @quux to i32 ()*)()
+  %tmp11 = tail call signext i32 @quux()
   br label %bb12
 
 bb12:                                             ; preds = %bb10, %bb

@@ -447,6 +447,15 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       Inst.addOperand(MCOperand::createImm(TypeCode));
       outputMCInst(Inst);
     }
+    if (!M.getNamedMetadata("spirv.ExecutionMode") &&
+        !M.getNamedMetadata("opencl.enable.FP_CONTRACT")) {
+      MCInst Inst;
+      Inst.setOpcode(SPIRV::OpExecutionMode);
+      Inst.addOperand(MCOperand::createReg(FReg));
+      unsigned EM = static_cast<unsigned>(SPIRV::ExecutionMode::ContractionOff);
+      Inst.addOperand(MCOperand::createImm(EM));
+      outputMCInst(Inst);
+    }
   }
 }
 

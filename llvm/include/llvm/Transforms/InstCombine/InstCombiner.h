@@ -273,9 +273,10 @@ public:
 
   /// Given i1 V, can every user of V be freely adapted if V is changed to !V ?
   /// InstCombine's freelyInvertAllUsersOf() must be kept in sync with this fn.
+  /// NOTE: for Instructions only!
   ///
   /// See also: isFreeToInvert()
-  static bool canFreelyInvertAllUsersOf(Value *V, Value *IgnoredUser) {
+  static bool canFreelyInvertAllUsersOf(Instruction *V, Value *IgnoredUser) {
     // Look at every user of V.
     for (Use &U : V->uses()) {
       if (U.getUser() == IgnoredUser)

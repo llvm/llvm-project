@@ -60,7 +60,7 @@ define dso_local void @handler() nounwind {
 ; CHECK-RV32-FD-NEXT:    tail write@plt
 entry:
   %call = tail call i32 @read(i32 8196)
-  tail call void bitcast (void (...)* @callee to void ()*)()
+  tail call void @callee()
   tail call void @write(i32 %call)
   ret void
 }

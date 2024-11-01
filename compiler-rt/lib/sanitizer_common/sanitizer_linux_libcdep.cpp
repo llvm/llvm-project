@@ -507,8 +507,13 @@ static void GetTls(uptr *addr, uptr *size) {
           ThreadDescriptorSize();
   *size = g_tls_size + ThreadDescriptorSize();
 #elif SANITIZER_GLIBC && defined(__loongarch__)
+#  ifdef __clang__
   *addr = reinterpret_cast<uptr>(__builtin_thread_pointer()) -
           ThreadDescriptorSize();
+#  else
+  asm("or %0,$tp,$zero" : "=r"(*addr));
+  *addr -= ThreadDescriptorSize();
+#  endif
   *size = g_tls_size + ThreadDescriptorSize();
 #elif SANITIZER_GLIBC && defined(__powerpc64__)
   // Workaround for glibc<2.25(?). 2.27 is known to not need this.

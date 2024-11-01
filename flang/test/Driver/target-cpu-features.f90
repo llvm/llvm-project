@@ -36,7 +36,7 @@
 ! CHECK-A57-SAME: "-target-cpu" "cortex-a57" "-target-feature" "+v8a" "-target-feature" "+crc" "-target-feature" "+crypto" "-target-feature" "+fp-armv8" "-target-feature" "+neon" "-target-feature" "+sha2" "-target-feature" "+aes"
 
 ! CHECK-A76: "-fc1" "-triple" "aarch64-unknown-linux-gnu"
-! CHECK-A76-SAME: "-target-cpu" "cortex-a76" "-target-feature" "+v8.2a" "-target-feature" "+crc" "-target-feature" "+lse" "-target-feature" "+rdm" "-target-feature" "+crypto" "-target-feature" "+dotprod" "-target-feature" "+fp-armv8" "-target-feature" "+neon" "-target-feature" "+fullfp16" "-target-feature" "+ras" "-target-feature" "+rcpc" "-target-feature" "+ssbs" "-target-feature" "+sha2" "-target-feature" "+aes"
+! CHECK-A76-SAME: "-target-cpu" "cortex-a76" "-target-feature" "+v8.2a" "-target-feature" "+crc" "-target-feature" "+crypto" "-target-feature" "+dotprod" "-target-feature" "+fp-armv8" "-target-feature" "+fullfp16" "-target-feature" "+lse" "-target-feature" "+ras" "-target-feature" "+rcpc" "-target-feature" "+rdm" "-target-feature" "+neon" "-target-feature" "+ssbs" "-target-feature" "+sha2" "-target-feature" "+aes"
 
 ! CHECK-ARMV9: "-fc1" "-triple" "aarch64-unknown-linux-gnu"
 ! CHECK-ARMV9-SAME: "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v9a" "-target-feature" "+sve" "-target-feature" "+sve2"

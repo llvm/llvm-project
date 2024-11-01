@@ -1907,7 +1907,7 @@ define <16 x float> @test_gather_16f32_ra_var_mask(<16 x ptr> %ptrs, <16 x i32> 
 
 define <16 x float> @test_gather_16f32_const_mask2(ptr %base, <16 x i32> %ind) {
 ; SSE2-LABEL: 'test_gather_16f32_const_mask2'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %broadcast.splatinsert = insertelement <16 x ptr> poison, ptr %base, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %broadcast.splatinsert = insertelement <16 x ptr> poison, ptr %base, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> poison, <16 x i32> zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %sext_ind = sext <16 x i32> %ind to <16 x i64>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.random = getelementptr float, <16 x ptr> %broadcast.splat, <16 x i64> %sext_ind
@@ -1966,7 +1966,7 @@ define <16 x float> @test_gather_16f32_const_mask2(ptr %base, <16 x i32> %ind) {
 
 define void @test_scatter_16i32(ptr %base, <16 x i32> %ind, i16 %mask, <16 x i32>%val) {
 ; SSE2-LABEL: 'test_scatter_16i32'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %broadcast.splatinsert = insertelement <16 x ptr> poison, ptr %base, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %broadcast.splatinsert = insertelement <16 x ptr> poison, ptr %base, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> poison, <16 x i32> zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep.random = getelementptr i32, <16 x ptr> %broadcast.splat, <16 x i32> %ind
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %imask = bitcast i16 %mask to <16 x i1>

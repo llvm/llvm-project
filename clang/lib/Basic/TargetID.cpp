@@ -101,7 +101,7 @@ parseTargetIDWithFormatCheckingOnly(llvm::StringRef TargetID,
   return Processor;
 }
 
-llvm::Optional<llvm::StringRef>
+std::optional<llvm::StringRef>
 parseTargetID(const llvm::Triple &T, llvm::StringRef TargetID,
               llvm::StringMap<bool> *FeatureMap) {
   auto OptionalProcessor =

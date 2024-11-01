@@ -72,15 +72,9 @@ int DeclarationName::compare(DeclarationName LHS, DeclarationName RHS) {
     }
     unsigned LN = LHSSelector.getNumArgs(), RN = RHSSelector.getNumArgs();
     for (unsigned I = 0, N = std::min(LN, RN); I != N; ++I) {
-      switch (LHSSelector.getNameForSlot(I).compare(
-          RHSSelector.getNameForSlot(I))) {
-      case -1:
-        return -1;
-      case 1:
-        return 1;
-      default:
-        break;
-      }
+      if (int Compare = LHSSelector.getNameForSlot(I).compare(
+              RHSSelector.getNameForSlot(I)))
+        return Compare;
     }
 
     return compareInt(LN, RN);

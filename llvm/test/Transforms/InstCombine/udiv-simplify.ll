@@ -83,25 +83,73 @@ define i177 @ossfuzz_4857(i177 %X, i177 %Y) {
   ret i177 %B1
 }
 
-define i32 @udiv_demanded(i32 %a) {
-; CHECK-LABEL: @udiv_demanded(
-; CHECK-NEXT:    [[U:%.*]] = udiv i32 [[A:%.*]], 12
-; CHECK-NEXT:    ret i32 [[U]]
+; 2 low bits are not needed because 12 has 2 trailing zeros
+
+define i8 @udiv_demanded_low_bits_set(i8 %a) {
+; CHECK-LABEL: @udiv_demanded_low_bits_set(
+; CHECK-NEXT:    [[U:%.*]] = udiv i8 [[A:%.*]], 12
+; CHECK-NEXT:    ret i8 [[U]]
 ;
-  %o = or i32 %a, 3
-  %u = udiv i32 %o, 12
-  ret i32 %u
+  %o = or i8 %a, 3
+  %u = udiv i8 %o, 12
+  ret i8 %u
 }
 
-define i32 @udiv_exact_demanded(i32 %a) {
-; CHECK-LABEL: @udiv_exact_demanded(
-; CHECK-NEXT:    [[O:%.*]] = and i32 [[A:%.*]], -3
-; CHECK-NEXT:    [[U:%.*]] = udiv exact i32 [[O]], 12
-; CHECK-NEXT:    ret i32 [[U]]
+; This can't divide evenly, so it is poison.
+
+define i8 @udiv_exact_demanded_low_bits_set(i8 %a) {
+; CHECK-LABEL: @udiv_exact_demanded_low_bits_set(
+; CHECK-NEXT:    ret i8 poison
 ;
-  %o = and i32 %a, -3
-  %u = udiv exact i32 %o, 12
-  ret i32 %u
+  %o = or i8 %a, 3
+  %u = udiv exact i8 %o, 12
+  ret i8 %u
+}
+
+; All high bits are set, so this simplifies.
+
+define i8 @udiv_demanded_high_bits_set(i8 %x, i8 %y) {
+; CHECK-LABEL: @udiv_demanded_high_bits_set(
+; CHECK-NEXT:    ret i8 21
+;
+  %o = or i8 %x, -4
+  %r = udiv i8 %o, 12
+  ret i8 %r
+}
+
+; This should fold the same as above.
+
+define i8 @udiv_exact_demanded_high_bits_set(i8 %x, i8 %y) {
+; CHECK-LABEL: @udiv_exact_demanded_high_bits_set(
+; CHECK-NEXT:    ret i8 21
+;
+  %o = or i8 %x, -4
+  %r = udiv exact i8 %o, 12
+  ret i8 %r
+}
+
+; 2 low bits are not needed because 12 has 2 trailing zeros
+
+define i8 @udiv_demanded_low_bits_clear(i8 %a) {
+; CHECK-LABEL: @udiv_demanded_low_bits_clear(
+; CHECK-NEXT:    [[U:%.*]] = udiv i8 [[A:%.*]], 12
+; CHECK-NEXT:    ret i8 [[U]]
+;
+  %o = and i8 %a, -4
+  %u = udiv i8 %o, 12
+  ret i8 %u
+}
+
+; This should fold the same as above.
+
+define i8 @udiv_exact_demanded_low_bits_clear(i8 %a) {
+; CHECK-LABEL: @udiv_exact_demanded_low_bits_clear(
+; CHECK-NEXT:    [[U:%.*]] = udiv i8 [[A:%.*]], 12
+; CHECK-NEXT:    ret i8 [[U]]
+;
+  %o = and i8 %a, -4
+  %u = udiv exact i8 %o, 12
+  ret i8 %u
 }
 
 define <vscale x 1 x i32> @udiv_demanded3(<vscale x 1 x i32> %a) {

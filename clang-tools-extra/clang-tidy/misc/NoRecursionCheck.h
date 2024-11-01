@@ -15,8 +15,7 @@ namespace clang {
 
 class CallGraphNode;
 
-namespace tidy {
-namespace misc {
+namespace tidy::misc {
 
 /// Finds strongly connected functions (by analyzing call graph for SCC's
 /// that are loops), diagnoses each function in the cycle,
@@ -35,8 +34,7 @@ private:
   void handleSCC(ArrayRef<CallGraphNode *> SCC);
 };
 
-} // namespace misc
-} // namespace tidy
+} // namespace tidy::misc
 } // namespace clang
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_NORECURSIONCHECK_H

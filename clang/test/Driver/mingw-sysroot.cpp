@@ -22,7 +22,12 @@
 // If we find a gcc in the path with the right triplet prefix, pick that as
 // sysroot:
 
-// RUN: env "PATH=%T/testroot-gcc/bin:%PATH%" %clang -target x86_64-w64-mingw32 -rtlib=platform -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_GCC %s
+// This test is only executed on non-Windows systems, i.e. only when
+// cross compiling. Check that we don't add the tool root's plain include
+// directory to the path - this would end up including /usr/include for
+// cross toolchains installed in /usr.
+
+// RUN: env "PATH=%T/testroot-gcc/bin:%PATH%" %clang -target x86_64-w64-mingw32 -rtlib=platform -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_GCC %s --implicit-check-not="\"{{.*}}/testroot-gcc{{/|\\\\}}include\""
 // CHECK_TESTROOT_GCC: "-internal-isystem" "[[BASE:[^"]+]]/testroot-gcc{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}c++"
 // CHECK_TESTROOT_GCC-SAME: {{^}} "-internal-isystem" "[[BASE]]/testroot-gcc{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}x86_64-w64-mingw32"
 // CHECK_TESTROOT_GCC-SAME: {{^}} "-internal-isystem" "[[BASE]]/testroot-gcc{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}backward"
@@ -30,6 +35,13 @@
 // CHECK_TESTROOT_GCC: "-internal-isystem" "[[BASE]]/testroot-gcc{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}g++-v10.2"
 // CHECK_TESTROOT_GCC: "-internal-isystem" "[[BASE]]/testroot-gcc{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}g++-v10"
 // CHECK_TESTROOT_GCC: "-internal-isystem" "[[BASE]]/testroot-gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}include"
+
+
+// If we pass --sysroot explicitly, then we do include <sysroot>/include
+// even when cross compiling.
+// RUN: %clang -target x86_64-w64-mingw32 -rtlib=platform -stdlib=libstdc++ --sysroot="%T/testroot-gcc" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_GCC_EXPLICIT %s
+
+// CHECK_TESTROOT_GCC_EXPLICIT: "-internal-isystem" "{{[^"]+}}/testroot-gcc{{/|\\\\}}include"
 
 
 // If there's a matching sysroot next to the clang binary itself, prefer that

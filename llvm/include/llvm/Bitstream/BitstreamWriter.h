@@ -474,7 +474,7 @@ public:
       Out.push_back(0);
   }
   void emitBlob(StringRef Bytes, bool ShouldEmitSize = true) {
-    emitBlob(makeArrayRef((const uint8_t *)Bytes.data(), Bytes.size()),
+    emitBlob(ArrayRef((const uint8_t *)Bytes.data(), Bytes.size()),
              ShouldEmitSize);
   }
 
@@ -485,7 +485,7 @@ public:
     if (!Abbrev) {
       // If we don't have an abbrev to use, emit this in its fully unabbreviated
       // form.
-      auto Count = static_cast<uint32_t>(makeArrayRef(Vals).size());
+      auto Count = static_cast<uint32_t>(std::size(Vals));
       EmitCode(bitc::UNABBREV_RECORD);
       EmitVBR(Code, 6);
       EmitVBR(Count, 6);
@@ -494,7 +494,7 @@ public:
       return;
     }
 
-    EmitRecordWithAbbrevImpl(Abbrev, makeArrayRef(Vals), StringRef(), Code);
+    EmitRecordWithAbbrevImpl(Abbrev, ArrayRef(Vals), StringRef(), Code);
   }
 
   /// EmitRecordWithAbbrev - Emit a record with the specified abbreviation.
@@ -502,8 +502,7 @@ public:
   /// the first entry.
   template <typename Container>
   void EmitRecordWithAbbrev(unsigned Abbrev, const Container &Vals) {
-    EmitRecordWithAbbrevImpl(Abbrev, makeArrayRef(Vals), StringRef(),
-                             std::nullopt);
+    EmitRecordWithAbbrevImpl(Abbrev, ArrayRef(Vals), StringRef(), std::nullopt);
   }
 
   /// EmitRecordWithBlob - Emit the specified record to the stream, using an
@@ -514,12 +513,12 @@ public:
   template <typename Container>
   void EmitRecordWithBlob(unsigned Abbrev, const Container &Vals,
                           StringRef Blob) {
-    EmitRecordWithAbbrevImpl(Abbrev, makeArrayRef(Vals), Blob, std::nullopt);
+    EmitRecordWithAbbrevImpl(Abbrev, ArrayRef(Vals), Blob, std::nullopt);
   }
   template <typename Container>
   void EmitRecordWithBlob(unsigned Abbrev, const Container &Vals,
                           const char *BlobData, unsigned BlobLen) {
-    return EmitRecordWithAbbrevImpl(Abbrev, makeArrayRef(Vals),
+    return EmitRecordWithAbbrevImpl(Abbrev, ArrayRef(Vals),
                                     StringRef(BlobData, BlobLen), std::nullopt);
   }
 
@@ -528,14 +527,13 @@ public:
   template <typename Container>
   void EmitRecordWithArray(unsigned Abbrev, const Container &Vals,
                            StringRef Array) {
-    EmitRecordWithAbbrevImpl(Abbrev, makeArrayRef(Vals), Array, std::nullopt);
+    EmitRecordWithAbbrevImpl(Abbrev, ArrayRef(Vals), Array, std::nullopt);
   }
   template <typename Container>
   void EmitRecordWithArray(unsigned Abbrev, const Container &Vals,
                            const char *ArrayData, unsigned ArrayLen) {
-    return EmitRecordWithAbbrevImpl(Abbrev, makeArrayRef(Vals),
-                                    StringRef(ArrayData, ArrayLen),
-                                    std::nullopt);
+    return EmitRecordWithAbbrevImpl(
+        Abbrev, ArrayRef(Vals), StringRef(ArrayData, ArrayLen), std::nullopt);
   }
 
   //===--------------------------------------------------------------------===//

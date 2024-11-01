@@ -118,7 +118,7 @@ bool InstructionSelector::executeMatchTable(
           return false;
         break;
       }
-      if (Register::isPhysicalRegister(MO.getReg())) {
+      if (MO.getReg().isPhysical()) {
         DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
                         dbgs() << CurrentIdx << ": Is a physical register\n");
         if (handleReject() == RejectAndGiveUp)
@@ -694,7 +694,7 @@ bool InstructionSelector::executeMatchTable(
           (ISel.*ISelInfo.ComplexPredicates[ComplexPredicateID])(
               State.MIs[InsnID]->getOperand(OpIdx));
       if (Renderer)
-        State.Renderers[RendererID] = Renderer.value();
+        State.Renderers[RendererID] = *Renderer;
       else
         if (handleReject() == RejectAndGiveUp)
           return false;

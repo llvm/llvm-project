@@ -27,19 +27,19 @@
     ]
   
   sw.bb:                                            ; preds = %do.body
-    tail call void @_Z3gooPKc(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0))
+    tail call void @_Z3gooPKc(ptr @.str)
     br label %sw.bb1
   
   sw.bb1:                                           ; preds = %sw.bb, %do.body
-    tail call void @_Z3gooPKc(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i64 0, i64 0))
+    tail call void @_Z3gooPKc(ptr @.str.1)
     br label %sw.bb2
   
   sw.bb2:                                           ; preds = %sw.bb1, %do.body
-    tail call void @_Z3gooPKc(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.2, i64 0, i64 0))
+    tail call void @_Z3gooPKc(ptr @.str.2)
     br label %do.cond
   
   do.cond:                                          ; preds = %sw.bb2, %do.body
-    %0 = load i32, i32* @m, align 4, !tbaa !4
+    %0 = load i32, ptr @m, align 4, !tbaa !4
     %cmp = icmp eq i32 %0, 5
     br i1 %cmp, label %do.end, label %do.body
   
@@ -47,10 +47,10 @@
     ret void
   }
   
-  declare void @_Z3gooPKc(i8*) local_unnamed_addr #1
+  declare void @_Z3gooPKc(ptr) local_unnamed_addr #1
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #2
+  declare void @llvm.stackprotector(ptr, ptr) #2
   
   attributes #0 = { uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
   attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }

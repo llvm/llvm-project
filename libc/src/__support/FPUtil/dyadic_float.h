@@ -54,7 +54,7 @@ template <size_t Bits> struct DyadicFloat {
   DyadicFloat(bool s, int e, MantissaType m)
       : sign(s), exponent(e), mantissa(m) {
     normalize();
-  };
+  }
 
   // Normalizing the mantissa, bringing the leading 1 bit to the most
   // significant bit.

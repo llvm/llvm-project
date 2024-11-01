@@ -20,11 +20,11 @@ define i32 @bar() {
 ;
 
 entry:
-  %call = call i32 @foo(i32* @g)
+  %call = call i32 @foo(ptr @g)
   ret i32 %call
 }
 
-define internal i32 @foo(i32*) {
+define internal i32 @foo(ptr) {
 ; CHECK: Function Attrs: noreturn
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: () addrspace(1) #[[ATTR0]] {

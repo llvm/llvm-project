@@ -76,7 +76,7 @@ bool DbgValueHistoryMap::startDbgValue(InlinedEntity Var,
   auto &Entries = VarEntries[Var];
   if (!Entries.empty() && Entries.back().isDbgValue() &&
       !Entries.back().isClosed() &&
-      Entries.back().getInstr()->isIdenticalTo(MI)) {
+      Entries.back().getInstr()->isEquivalentDbgInstr(MI)) {
     LLVM_DEBUG(dbgs() << "Coalescing identical DBG_VALUE entries:\n"
                       << "\t" << Entries.back().getInstr() << "\t" << MI
                       << "\n");
@@ -264,7 +264,7 @@ bool DbgValueHistoryMap::hasNonEmptyLocation(const Entries &Entries) const {
     const MachineInstr *MI = Entry.getInstr();
     assert(MI->isDebugValue());
     // A DBG_VALUE $noreg is an empty variable location
-    if (MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == 0)
+    if (MI->isUndefDebugValue())
       continue;
 
     return true;
@@ -495,7 +495,7 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
             continue;
           // If this is a virtual register, only clobber it since it doesn't
           // have aliases.
-          if (Register::isVirtualRegister(MO.getReg()))
+          if (MO.getReg().isVirtual())
             clobberRegisterUses(RegVars, MO.getReg(), DbgValues, LiveEntries,
                                 MI);
           // If this is a register def operand, it may end a debug value

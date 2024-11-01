@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <type_traits>
+#include <optional>
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -72,7 +73,7 @@ struct TestVectorToVectorLowering
 
 private:
   // Return the target shape based on op type.
-  static Optional<SmallVector<int64_t>> getShape(Operation *op) {
+  static std::optional<SmallVector<int64_t>> getShape(Operation *op) {
     if (isa<arith::AddFOp, arith::SelectOp, arith::CmpFOp>(op))
       return SmallVector<int64_t>(2, 2);
     if (isa<vector::ContractionOp>(op))
@@ -314,7 +315,7 @@ struct TestVectorUnrollingPatterns
 
     if (unrollBasedOnType) {
       UnrollVectorOptions::NativeShapeFnType nativeShapeFn =
-          [](Operation *op) -> Optional<SmallVector<int64_t>> {
+          [](Operation *op) -> std::optional<SmallVector<int64_t>> {
         vector::ContractionOp contractOp = cast<vector::ContractionOp>(op);
         SmallVector<int64_t> nativeShape(contractOp.getIteratorTypes().size(),
                                          4);
@@ -329,17 +330,20 @@ struct TestVectorUnrollingPatterns
               [](Operation *op) { return success(isa<ContractionOp>(op)); });
 
       if (!unrollOrder.empty()) {
-        opts.setUnrollTraversalOrderFn([this](Operation *op)
-                                           -> Optional<SmallVector<int64_t>> {
-          vector::ContractionOp contractOp = cast<vector::ContractionOp>(op);
-          if (contractOp.getIteratorTypes().size() == unrollOrder.size())
-            return SmallVector<int64_t>(unrollOrder.begin(), unrollOrder.end());
-          return std::nullopt;
-        });
+        opts.setUnrollTraversalOrderFn(
+            [this](Operation *op) -> std::optional<SmallVector<int64_t>> {
+              vector::ContractionOp contractOp =
+                  cast<vector::ContractionOp>(op);
+              if (contractOp.getIteratorTypes().size() == unrollOrder.size())
+                return SmallVector<int64_t>(unrollOrder.begin(),
+                                            unrollOrder.end());
+              return std::nullopt;
+            });
       }
       populateVectorUnrollPatterns(patterns, opts);
     } else {
-      auto nativeShapeFn = [](Operation *op) -> Optional<SmallVector<int64_t>> {
+      auto nativeShapeFn =
+          [](Operation *op) -> std::optional<SmallVector<int64_t>> {
         auto contractOp = dyn_cast<ContractionOp>(op);
         if (!contractOp)
           return std::nullopt;
@@ -397,7 +401,7 @@ struct TestVectorTransferUnrollingPatterns
         });
     if (reverseUnrollOrder.getValue()) {
       opts.setUnrollTraversalOrderFn(
-          [](Operation *op) -> Optional<SmallVector<int64_t>> {
+          [](Operation *op) -> std::optional<SmallVector<int64_t>> {
             int64_t numLoops = 0;
             if (auto readOp = dyn_cast<vector::TransferReadOp>(op))
               numLoops = readOp.getVectorType().getRank();
@@ -458,6 +462,33 @@ struct TestVectorTransferFullPartialSplitPatterns
     else
       options.setVectorTransferSplit(VectorTransferSplit::VectorTransfer);
     patterns.add<VectorTransferFullPartialRewriter>(ctx, options);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
+struct TestScalarVectorTransferLoweringPatterns
+    : public PassWrapper<TestScalarVectorTransferLoweringPatterns,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestScalarVectorTransferLoweringPatterns)
+
+  StringRef getArgument() const final {
+    return "test-scalar-vector-transfer-lowering";
+  }
+  StringRef getDescription() const final {
+    return "Test lowering of scalar vector transfers to memref loads/stores.";
+  }
+  TestScalarVectorTransferLoweringPatterns() = default;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<AffineDialect, memref::MemRefDialect, tensor::TensorDialect,
+                    vector::VectorDialect>();
+  }
+
+  void runOnOperation() override {
+    MLIRContext *ctx = &getContext();
+    RewritePatternSet patterns(ctx);
+    vector::populateScalarVectorTransferLoweringPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -868,6 +899,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorTransferUnrollingPatterns>();
 
   PassRegistration<TestVectorTransferFullPartialSplitPatterns>();
+
+  PassRegistration<TestScalarVectorTransferLoweringPatterns>();
 
   PassRegistration<TestVectorTransferOpt>();
 

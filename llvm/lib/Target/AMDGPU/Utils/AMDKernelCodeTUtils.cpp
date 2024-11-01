@@ -29,7 +29,7 @@ static ArrayRef<StringRef> get_amd_kernel_code_t_FldNames() {
 #include "AMDKernelCodeTInfo.h"
 #undef RECORD
   };
-  return makeArrayRef(Table);
+  return ArrayRef(Table);
 }
 
 static ArrayRef<StringRef> get_amd_kernel_code_t_FldAltNames() {
@@ -39,7 +39,7 @@ static ArrayRef<StringRef> get_amd_kernel_code_t_FldAltNames() {
 #include "AMDKernelCodeTInfo.h"
 #undef RECORD
   };
-  return makeArrayRef(Table);
+  return ArrayRef(Table);
 }
 
 static StringMap<int> createIndexMap(const ArrayRef<StringRef> &names,
@@ -90,7 +90,7 @@ static ArrayRef<PrintFx> getPrinterTable() {
 #include "AMDKernelCodeTInfo.h"
 #undef RECORD
   };
-  return makeArrayRef(Table);
+  return ArrayRef(Table);
 }
 
 void llvm::printAmdKernelCodeField(const amd_kernel_code_t &C,
@@ -160,7 +160,7 @@ static ArrayRef<ParseFx> getParserTable() {
 #include "AMDKernelCodeTInfo.h"
 #undef RECORD
   };
-  return makeArrayRef(Table);
+  return ArrayRef(Table);
 }
 
 bool llvm::parseAmdKernelCodeField(StringRef ID,

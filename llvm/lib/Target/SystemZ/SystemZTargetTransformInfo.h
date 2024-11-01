@@ -108,7 +108,8 @@ public:
                                      const Instruction *I = nullptr);
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     unsigned Index);
+                                     TTI::TargetCostKind CostKind,
+                                     unsigned Index, Value *Op0, Value *Op1);
   bool isFoldableLoad(const LoadInst *Ld, const Instruction *&FoldedValue);
   InstructionCost
   getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,

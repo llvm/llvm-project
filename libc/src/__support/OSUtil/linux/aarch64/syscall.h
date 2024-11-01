@@ -44,52 +44,46 @@
 
 namespace __llvm_libc {
 
-__attribute__((always_inline)) inline long syscall_impl(long number) {
+LIBC_INLINE long syscall_impl(long number) {
   REGISTER_DECL_0;
   SYSCALL_INSTR(REGISTER_CONSTRAINT_0);
   return x0;
 }
 
-__attribute__((always_inline)) inline long syscall_impl(long number,
-                                                        long arg1) {
+LIBC_INLINE long syscall_impl(long number, long arg1) {
   REGISTER_DECL_1;
   SYSCALL_INSTR(REGISTER_CONSTRAINT_1);
   return x0;
 }
 
-__attribute__((always_inline)) inline long syscall_impl(long number, long arg1,
-                                                        long arg2) {
+LIBC_INLINE long syscall_impl(long number, long arg1, long arg2) {
   REGISTER_DECL_2;
   SYSCALL_INSTR(REGISTER_CONSTRAINT_2);
   return x0;
 }
 
-__attribute__((always_inline)) inline long syscall_impl(long number, long arg1,
-                                                        long arg2, long arg3) {
+LIBC_INLINE long syscall_impl(long number, long arg1, long arg2, long arg3) {
   REGISTER_DECL_3;
   SYSCALL_INSTR(REGISTER_CONSTRAINT_3);
   return x0;
 }
 
-__attribute__((always_inline)) inline long
-syscall_impl(long number, long arg1, long arg2, long arg3, long arg4) {
+LIBC_INLINE long syscall_impl(long number, long arg1, long arg2, long arg3,
+                              long arg4) {
   REGISTER_DECL_4;
   SYSCALL_INSTR(REGISTER_CONSTRAINT_4);
   return x0;
 }
 
-__attribute__((always_inline)) inline long syscall_impl(long number, long arg1,
-                                                        long arg2, long arg3,
-                                                        long arg4, long arg5) {
+LIBC_INLINE long syscall_impl(long number, long arg1, long arg2, long arg3,
+                              long arg4, long arg5) {
   REGISTER_DECL_5;
   SYSCALL_INSTR(REGISTER_CONSTRAINT_5);
   return x0;
 }
 
-__attribute__((always_inline)) inline long syscall_impl(long number, long arg1,
-                                                        long arg2, long arg3,
-                                                        long arg4, long arg5,
-                                                        long arg6) {
+LIBC_INLINE long syscall_impl(long number, long arg1, long arg2, long arg3,
+                              long arg4, long arg5, long arg6) {
   REGISTER_DECL_6;
   SYSCALL_INSTR(REGISTER_CONSTRAINT_6);
   return x0;

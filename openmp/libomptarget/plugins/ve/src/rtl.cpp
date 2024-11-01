@@ -402,16 +402,22 @@ int32_t __tgt_rtl_data_delete(int32_t ID, void *TargetPtr, int32_t) {
   return OFFLOAD_SUCCESS;
 }
 
-// Similar to __tgt_rtl_run_target_region, but additionally specify the
-// number of teams to be created and a number of threads in each team.
-int32_t __tgt_rtl_run_target_team_region(int32_t ID, void *Entry, void **Args,
-                                         ptrdiff_t *Offsets, int32_t NumArgs,
-                                         int32_t NumTeams, int32_t ThreadLimit,
-                                         uint64_t loop_tripcount) {
+// Transfer control to the offloaded entry Entry on the target device.
+// Args and Offsets are arrays of NumArgs size of target addresses and
+// offsets. An offset should be added to the target address before passing it
+// to the outlined function on device side. In case of success, return zero.
+// Otherwise, return an error code.
+int32_t __tgt_rtl_launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
+                                void **TgtArgs, ptrdiff_t *TgtOffsets,
+                                KernelArgsTy *KernelArgs,
+                                __tgt_async_info *AsyncInfoPtr) {
+  assert(!KernelArgs->NumTeams[1] && !KernelArgs->NumTeams[2] &&
+         !KernelArgs->ThreadLimit[1] && !KernelArgs->ThreadLimit[2] &&
+         "Only one dimensional kernels supported.");
   int ret;
 
   // ignore team num and thread limit.
-  std::vector<void *> ptrs(NumArgs);
+  std::vector<void *> ptrs(KernelArgs->NumArgs);
 
   struct veo_args *TargetArgs;
   TargetArgs = veo_args_alloc();
@@ -421,7 +427,7 @@ int32_t __tgt_rtl_run_target_team_region(int32_t ID, void *Entry, void **Args,
     return OFFLOAD_FAIL;
   }
 
-  for (int i = 0; i < NumArgs; ++i) {
+  for (int i = 0; i < KernelArgs->NumArgs; ++i) {
     ret = veo_args_set_u64(TargetArgs, i, (intptr_t)Args[i]);
 
     if (ret != 0) {
@@ -439,17 +445,6 @@ int32_t __tgt_rtl_run_target_team_region(int32_t ID, void *Entry, void **Args,
   }
   veo_args_free(TargetArgs);
   return OFFLOAD_SUCCESS;
-}
-
-// Transfer control to the offloaded entry Entry on the target device.
-// Args and Offsets are arrays of NumArgs size of target addresses and
-// offsets. An offset should be added to the target address before passing it
-// to the outlined function on device side. In case of success, return zero.
-// Otherwise, return an error code.
-int32_t __tgt_rtl_run_target_region(int32_t ID, void *Entry, void **Args,
-                                    ptrdiff_t *Offsets, int32_t NumArgs) {
-  return __tgt_rtl_run_target_team_region(ID, Entry, Args, Offsets, NumArgs, 1,
-                                          1, 0);
 }
 
 int32_t __tgt_rtl_supports_empty_images() { return 1; }

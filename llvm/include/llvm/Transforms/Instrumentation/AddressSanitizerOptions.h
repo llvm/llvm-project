@@ -19,6 +19,12 @@ enum class AsanDtorKind {
   Invalid, ///< Not a valid destructor Kind.
 };
 
+/// Types of ASan module constructors supported
+enum class AsanCtorKind {
+  None,
+  Global
+};
+
 /// Mode of ASan detect stack use after return
 enum class AsanDetectStackUseAfterReturnMode {
   Never,   ///< Never detect stack use after return.

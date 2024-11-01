@@ -34,7 +34,7 @@ std::optional<VersionTuple> DarwinSDKInfo::RelatedTargetVersionMapping::map(
   return std::nullopt;
 }
 
-Optional<DarwinSDKInfo::RelatedTargetVersionMapping>
+std::optional<DarwinSDKInfo::RelatedTargetVersionMapping>
 DarwinSDKInfo::RelatedTargetVersionMapping::parseJSON(
     const llvm::json::Object &Obj, VersionTuple MaximumDeploymentTarget) {
   VersionTuple Min = VersionTuple(std::numeric_limits<unsigned>::max());
@@ -82,7 +82,8 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(const llvm::json::Object *Obj) {
       getVersionKey(*Obj, "MaximumDeploymentTarget");
   if (!MaximumDeploymentVersion)
     return std::nullopt;
-  llvm::DenseMap<OSEnvPair::StorageType, Optional<RelatedTargetVersionMapping>>
+  llvm::DenseMap<OSEnvPair::StorageType,
+                 std::optional<RelatedTargetVersionMapping>>
       VersionMappings;
   if (const auto *VM = Obj->getObject("VersionMap")) {
     // FIXME: Generalize this out beyond iOS-deriving targets.

@@ -5344,3 +5344,32 @@ define <32 x i8> @unpckh_v32i8(<32 x i8> %x, <32 x i8> %y) {
   ret <32 x i8> %unpckh
 }
 
+define <32 x i8> @shuffle_v16i16_zextinreg_to_v8i32(<32 x i8> %a)  {
+; AVX1-LABEL: shuffle_v16i16_zextinreg_to_v8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2OR512VL-LABEL: shuffle_v16i16_zextinreg_to_v8i32:
+; AVX2OR512VL:       # %bb.0:
+; AVX2OR512VL-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2OR512VL-NEXT:    retq
+;
+; XOPAVX1-LABEL: shuffle_v16i16_zextinreg_to_v8i32:
+; XOPAVX1:       # %bb.0:
+; XOPAVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; XOPAVX1-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; XOPAVX1-NEXT:    retq
+;
+; XOPAVX2-LABEL: shuffle_v16i16_zextinreg_to_v8i32:
+; XOPAVX2:       # %bb.0:
+; XOPAVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; XOPAVX2-NEXT:    retq
+  %b = shufflevector <32 x i8> %a, <32 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, <32 x i32> <i32 0, i32 1, i32 42, i32 42, i32 2, i32 3, i32 42, i32 42, i32 4, i32 5, i32 42, i32 42, i32 6, i32 7, i32 42, i32 42, i32 8, i32 9, i32 42, i32 42, i32 10, i32 11, i32 42, i32 42, i32 12, i32 13, i32 42, i32 42, i32 14, i32 15, i32 42, i32 42>
+  ret <32 x i8> %b
+}

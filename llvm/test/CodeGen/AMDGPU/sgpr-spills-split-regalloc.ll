@@ -16,11 +16,11 @@ define void @spill_sgpr_with_no_lower_vgpr_available() #0 {
 ; GCN-LABEL: spill_sgpr_with_no_lower_vgpr_available:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN-NEXT:    buffer_store_dword v255, off, s[0:3], s32 offset:448 ; 4-byte Folded Spill
-; GCN-NEXT:    s_mov_b64 exec, s[4:5]
-; GCN-NEXT:    v_writelane_b32 v255, s33, 2
+; GCN-NEXT:    s_mov_b32 s6, s33
 ; GCN-NEXT:    s_mov_b32 s33, s32
+; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; GCN-NEXT:    buffer_store_dword v255, off, s[0:3], s33 offset:448 ; 4-byte Folded Spill
+; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    s_add_i32 s32, s32, 0x7400
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:440 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:436 ; 4-byte Folded Spill
@@ -263,15 +263,15 @@ define void @spill_sgpr_with_no_lower_vgpr_available() #0 {
 ; GCN-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:432 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:436 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:440 ; 4-byte Folded Reload
-; GCN-NEXT:    s_add_i32 s32, s32, 0xffff8c00
-; GCN-NEXT:    v_readlane_b32 s33, v255, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN-NEXT:    buffer_load_dword v255, off, s[0:3], s32 offset:448 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v255, off, s[0:3], s33 offset:448 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
+; GCN-NEXT:    s_add_i32 s32, s32, 0xffff8c00
+; GCN-NEXT:    s_mov_b32 s33, s6
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
 
   call void asm sideeffect "",
   "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9}
@@ -308,11 +308,11 @@ define void @spill_to_lowest_available_vgpr() #0 {
 ; GCN-LABEL: spill_to_lowest_available_vgpr:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN-NEXT:    buffer_store_dword v254, off, s[0:3], s32 offset:444 ; 4-byte Folded Spill
-; GCN-NEXT:    s_mov_b64 exec, s[4:5]
-; GCN-NEXT:    v_writelane_b32 v254, s33, 2
+; GCN-NEXT:    s_mov_b32 s6, s33
 ; GCN-NEXT:    s_mov_b32 s33, s32
+; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; GCN-NEXT:    buffer_store_dword v254, off, s[0:3], s33 offset:444 ; 4-byte Folded Spill
+; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    s_add_i32 s32, s32, 0x7400
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:436 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:432 ; 4-byte Folded Spill
@@ -553,15 +553,15 @@ define void @spill_to_lowest_available_vgpr() #0 {
 ; GCN-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:428 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:432 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:436 ; 4-byte Folded Reload
-; GCN-NEXT:    s_add_i32 s32, s32, 0xffff8c00
-; GCN-NEXT:    v_readlane_b32 s33, v254, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN-NEXT:    buffer_load_dword v254, off, s[0:3], s32 offset:444 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v254, off, s[0:3], s33 offset:444 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
+; GCN-NEXT:    s_add_i32 s32, s32, 0xffff8c00
+; GCN-NEXT:    s_mov_b32 s33, s6
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
 
   call void asm sideeffect "",
   "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9}
@@ -843,7 +843,7 @@ define void @spill_sgpr_with_sgpr_uses() #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
 
   call void asm sideeffect "",
   "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9}
@@ -1123,7 +1123,7 @@ define void @spill_sgpr_with_tail_call() #0 {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[4:5]
   %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
 
   call void asm sideeffect "",
   "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9}
@@ -1156,12 +1156,12 @@ define void @spill_sgpr_with_tail_call() #0 {
   ret void
 }
 
-define void @spill_sgpr_no_free_vgpr(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) #0 {
+define void @spill_sgpr_no_free_vgpr(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; GCN-LABEL: spill_sgpr_no_free_vgpr:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:448 ; 4-byte Folded Spill
+; GCN-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GCN-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:464 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:444 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:440 ; 4-byte Folded Spill
@@ -1295,17 +1295,17 @@ define void @spill_sgpr_no_free_vgpr(<4 x i32> addrspace(1)* %out, <4 x i32> add
 ; GCN-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GCN-NEXT:    flat_load_dwordx4 v[5:8], v[2:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:452 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:448 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:456 ; 4-byte Folded Spill
-; GCN-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:460 ; 4-byte Folded Spill
-; GCN-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:464 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:452 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:456 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:460 ; 4-byte Folded Spill
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:452 ; 4-byte Folded Reload
-; GCN-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:456 ; 4-byte Folded Reload
-; GCN-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:460 ; 4-byte Folded Reload
-; GCN-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:464 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:448 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:452 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:456 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:460 ; 4-byte Folded Reload
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -1426,12 +1426,12 @@ define void @spill_sgpr_no_free_vgpr(<4 x i32> addrspace(1)* %out, <4 x i32> add
 ; GCN-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:436 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:440 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:444 ; 4-byte Folded Reload
-; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:448 ; 4-byte Folded Reload
+; GCN-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GCN-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:464 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %a = load <4 x i32>, <4 x i32> addrspace(1)* %in
+  %a = load <4 x i32>, ptr addrspace(1) %in
   call void asm sideeffect "",
   "~{v6},~{v7},~{v8},~{v9}
   ,~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19}
@@ -1463,7 +1463,7 @@ define void @spill_sgpr_no_free_vgpr(<4 x i32> addrspace(1)* %out, <4 x i32> add
   call void asm sideeffect "",
   "~{s34},~{s35},~{s36},~{s37}" () #0
 
-  store <4 x i32> %a, <4 x i32> addrspace(1)* %out
+  store <4 x i32> %a, ptr addrspace(1) %out
   ret void
 }
 

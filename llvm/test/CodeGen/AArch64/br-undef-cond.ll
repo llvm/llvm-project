@@ -5,9 +5,9 @@
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-ios"
 
-declare void @bar(i8*)
+declare void @bar(ptr)
 
-define void @foo(i8* %m, i32 %off0) {
+define void @foo(ptr %m, i32 %off0) {
 .thread1653:
   br i1 undef, label %0, label %.thread1880
 
@@ -20,7 +20,7 @@ define void @foo(i8* %m, i32 %off0) {
   ret void
 
 .thread1880:
-  %m1652.ph = phi i8* [ %m, %0 ], [ null, %.thread1653 ]
-  call void @bar(i8* %m1652.ph)
+  %m1652.ph = phi ptr [ %m, %0 ], [ null, %.thread1653 ]
+  call void @bar(ptr %m1652.ph)
   ret void
 }

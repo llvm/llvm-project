@@ -3,46 +3,43 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-define <8 x i16> @load_zext_v8i8i16(<8 x i8>* %ap)  #0 {
+define <8 x i16> @load_zext_v8i8i16(ptr %ap)  #0 {
 ; CHECK-LABEL: load_zext_v8i8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp s1, s0, [x0]
-; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    uunpklo z2.h, z0.b
-; CHECK-NEXT:    uunpklo z0.h, z1.b
-; CHECK-NEXT:    splice z0.h, p0, z0.h, z2.h
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
-  %a = load <8 x i8>, <8 x i8>* %ap
+  %a = load <8 x i8>, ptr %ap
   %val = zext <8 x i8> %a to <8 x i16>
   ret <8 x i16> %val
 }
 
-define <4 x i32> @load_zext_v4i16i32(<4 x i16>* %ap)  #0 {
+define <4 x i32> @load_zext_v4i16i32(ptr %ap)  #0 {
 ; CHECK-LABEL: load_zext_v4i16i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
-  %a = load <4 x i16>, <4 x i16>* %ap
+  %a = load <4 x i16>, ptr %ap
   %val = zext <4 x i16> %a to <4 x i32>
   ret <4 x i32> %val
 }
 
-define <2 x i64> @load_zext_v2i32i64(<2 x i32>* %ap) #0 {
+define <2 x i64> @load_zext_v2i32i64(ptr %ap) #0 {
 ; CHECK-LABEL: load_zext_v2i32i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
-  %a = load <2 x i32>, <2 x i32>* %ap
+  %a = load <2 x i32>, ptr %ap
   %val = zext <2 x i32> %a to <2 x i64>
   ret <2 x i64> %val
 }
 
-define <2 x i256> @load_zext_v2i64i256(<2 x i64>* %ap) #0 {
+define <2 x i256> @load_zext_v2i64i256(ptr %ap) #0 {
 ; CHECK-LABEL: load_zext_v2i64i256:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, #0 // =0x0
@@ -58,12 +55,12 @@ define <2 x i256> @load_zext_v2i64i256(<2 x i64>* %ap) #0 {
 ; CHECK-NEXT:    mov x6, x2
 ; CHECK-NEXT:    mov x7, x3
 ; CHECK-NEXT:    ret
-  %a = load <2 x i64>, <2 x i64>* %ap
+  %a = load <2 x i64>, ptr %ap
   %val = zext <2 x i64> %a to <2 x i256>
   ret <2 x i256> %val
 }
 
-define <16 x i32> @load_sext_v16i8i32(<16 x i8>* %ap)  #0 {
+define <16 x i32> @load_sext_v16i8i32(ptr %ap)  #0 {
 ; CHECK-LABEL: load_sext_v16i8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q1, [x0]
@@ -81,12 +78,12 @@ define <16 x i32> @load_sext_v16i8i32(<16 x i8>* %ap)  #0 {
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2
 ; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $z3
 ; CHECK-NEXT:    ret
-  %a = load <16 x i8>, <16 x i8>* %ap
+  %a = load <16 x i8>, ptr %ap
   %val = sext <16 x i8> %a to <16 x i32>
   ret <16 x i32> %val
 }
 
-define <8 x i32> @load_sext_v8i16i32(<8 x i16>* %ap)  #0 {
+define <8 x i32> @load_sext_v8i16i32(ptr %ap)  #0 {
 ; CHECK-LABEL: load_sext_v8i16i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q1, [x0]
@@ -96,12 +93,12 @@ define <8 x i32> @load_sext_v8i16i32(<8 x i16>* %ap)  #0 {
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret
-  %a = load <8 x i16>, <8 x i16>* %ap
+  %a = load <8 x i16>, ptr %ap
   %val = sext <8 x i16> %a to <8 x i32>
   ret <8 x i32> %val
 }
 
-define <4 x i256> @load_sext_v4i32i256(<4 x i32>* %ap) #0 {
+define <4 x i256> @load_sext_v4i32i256(ptr %ap) #0 {
 ; CHECK-LABEL: load_sext_v4i32i256:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -127,12 +124,12 @@ define <4 x i256> @load_sext_v4i32i256(<4 x i32>* %ap) #0 {
 ; CHECK-NEXT:    stp x12, x12, [x8, #48]
 ; CHECK-NEXT:    stp x11, x12, [x8, #32]
 ; CHECK-NEXT:    ret
-  %a = load <4 x i32>, <4 x i32>* %ap
+  %a = load <4 x i32>, ptr %ap
   %val = sext <4 x i32> %a to <4 x i256>
   ret <4 x i256> %val
 }
 
-define <2 x i256> @load_sext_v2i64i256(<2 x i64>* %ap) #0 {
+define <2 x i256> @load_sext_v2i64i256(ptr %ap) #0 {
 ; CHECK-LABEL: load_sext_v2i64i256:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -160,12 +157,12 @@ define <2 x i256> @load_sext_v2i64i256(<2 x i64>* %ap) #0 {
 ; CHECK-NEXT:    fmov x1, d0
 ; CHECK-NEXT:    fmov x5, d1
 ; CHECK-NEXT:    ret
-  %a = load <2 x i64>, <2 x i64>* %ap
+  %a = load <2 x i64>, ptr %ap
   %val = sext <2 x i64> %a to <2 x i256>
   ret <2 x i256> %val
 }
 
-define <16 x i64> @load_zext_v16i16i64(<16 x i16>* %ap)  #0 {
+define <16 x i64> @load_zext_v16i16i64(ptr %ap)  #0 {
 ; CHECK-LABEL: load_zext_v16i16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q2, [x0]
@@ -196,7 +193,7 @@ define <16 x i64> @load_zext_v16i16i64(<16 x i16>* %ap)  #0 {
 ; CHECK-NEXT:    // kill: def $q6 killed $q6 killed $z6
 ; CHECK-NEXT:    // kill: def $q7 killed $q7 killed $z7
 ; CHECK-NEXT:    ret
-  %a = load <16 x i16>, <16 x i16>* %ap
+  %a = load <16 x i16>, ptr %ap
   %val = zext <16 x i16> %a to <16 x i64>
   ret <16 x i64> %val
 }

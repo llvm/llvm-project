@@ -17,15 +17,15 @@
 ;      }
 ;    }
 
-declare void @llvm.memset.p0f64.i64(double* nocapture, i8, i64, i32, i1)
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i32, i1)
 
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %outer.for
 
 outer.for:
   %j = phi i32 [0, %entry], [%j.inc, %outer.inc]
-  call void @llvm.memset.p0f64.i64(double* %A, i8 0, i64 4, i32 1, i1 false)
+  call void @llvm.memset.p0.i64(ptr %A, i8 0, i64 4, i32 1, i1 false)
   %j.cmp = icmp slt i32 %j, 2
   br i1 %j.cmp, label %reduction.for, label %outer.exit
 
@@ -49,8 +49,8 @@ outer.for:
       br label %reduction.for
 
     reduction.exit:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      store double %phi, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      store double %phi, ptr %A_idx
       br label %outer.inc
 
 

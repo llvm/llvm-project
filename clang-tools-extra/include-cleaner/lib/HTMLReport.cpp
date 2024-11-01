@@ -187,8 +187,7 @@ class Reporter {
     // Duplicates logic from walkUsed(), which doesn't expose SymbolLocations.
     for (auto &Loc : locateSymbol(R.Sym))
       R.Locations.push_back(Loc);
-    for (const auto &Loc : R.Locations)
-      R.Headers.append(findHeaders(Loc, SM, PI));
+    R.Headers = headersForSymbol(R.Sym, SM, PI);
 
     for (const auto &H : R.Headers) {
       R.Includes.append(Includes.match(H));
@@ -205,7 +204,6 @@ class Reporter {
                      R.Includes.end());
 
     if (!R.Headers.empty())
-      // FIXME: library should tell us which header to use.
       R.Insert = spellHeader(R.Headers.front());
   }
 
@@ -460,7 +458,7 @@ private:
       return std::make_pair(Refs[A].Offset, Refs[A].Type != RefType::Implicit) <
              std::make_pair(Refs[B].Offset, Refs[B].Type != RefType::Implicit);
     });
-    auto Rest = llvm::makeArrayRef(RefOrder);
+    auto Rest = llvm::ArrayRef(RefOrder);
     unsigned End = 0;
     StartLine();
     for (unsigned I = 0; I < Code.size(); ++I) {

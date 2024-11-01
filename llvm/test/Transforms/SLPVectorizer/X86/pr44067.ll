@@ -3,19 +3,17 @@
 
 ; See https://reviews.llvm.org/D83779
 
-define <2 x float> @foo({{float, float}}* %A) {
+define <2 x float> @foo(ptr %A) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast { { float, float } }* [[A:%.*]] to <2 x float>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, <2 x float>* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[TMP1]], <float 2.000000e+00, float 2.000000e+00>
 ; CHECK-NEXT:    ret <2 x float> [[TMP2]]
 ;
 entry:
-  %0 = bitcast {{float, float}}* %A to <2 x float>*
-  %1 = load <2 x float>, <2 x float>* %0
-  %L0 = extractelement <2 x float> %1, i32 0
-  %L1 = extractelement <2 x float> %1, i32 1
+  %0 = load <2 x float>, ptr %A
+  %L0 = extractelement <2 x float> %0, i32 0
+  %L1 = extractelement <2 x float> %0, i32 1
   %Mul0 = fmul float %L0, 2.000000e+00
   %Mul1 = fmul float %L1, 2.000000e+00
   %Ins1 = insertelement <2 x float> undef, float %Mul1, i32 1
@@ -27,11 +25,9 @@ entry:
 %Struct1Ty = type { i16, i16 }
 %Struct2Ty = type { %Struct1Ty, %Struct1Ty}
 
-define {%Struct2Ty, %Struct2Ty} @StructOfStructOfStruct(i16 *%Ptr) {
+define {%Struct2Ty, %Struct2Ty} @StructOfStructOfStruct(ptr %Ptr) {
 ; CHECK-LABEL: @StructOfStructOfStruct(
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i16, i16* [[PTR:%.*]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[GEP0]] to <8 x i16>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, <8 x i16>* [[TMP1]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr [[PTR:%.*]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i16> [[TMP2]], <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i16> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[STRUCTIN0:%.*]] = insertvalue [[STRUCT1TY:%.*]] undef, i16 [[TMP4]], 1
@@ -57,22 +53,21 @@ define {%Struct2Ty, %Struct2Ty} @StructOfStructOfStruct(i16 *%Ptr) {
 ; CHECK-NEXT:    [[RET1:%.*]] = insertvalue { [[STRUCT2TY]], [[STRUCT2TY]] } [[RET0]], [[STRUCT2TY]] [[STRUCT2IN1]], 0
 ; CHECK-NEXT:    ret { [[STRUCT2TY]], [[STRUCT2TY]] } [[RET1]]
 ;
-  %GEP0 = getelementptr inbounds i16, i16* %Ptr, i64 0
-  %L0 = load i16, i16 * %GEP0
-  %GEP1 = getelementptr inbounds i16, i16* %Ptr, i64 1
-  %L1 = load i16, i16 * %GEP1
-  %GEP2 = getelementptr inbounds i16, i16* %Ptr, i64 2
-  %L2 = load i16, i16 * %GEP2
-  %GEP3 = getelementptr inbounds i16, i16* %Ptr, i64 3
-  %L3 = load i16, i16 * %GEP3
-  %GEP4 = getelementptr inbounds i16, i16* %Ptr, i64 4
-  %L4 = load i16, i16 * %GEP4
-  %GEP5 = getelementptr inbounds i16, i16* %Ptr, i64 5
-  %L5 = load i16, i16 * %GEP5
-  %GEP6 = getelementptr inbounds i16, i16* %Ptr, i64 6
-  %L6 = load i16, i16 * %GEP6
-  %GEP7 = getelementptr inbounds i16, i16* %Ptr, i64 7
-  %L7 = load i16, i16 * %GEP7
+  %L0 = load i16, ptr %Ptr
+  %GEP1 = getelementptr inbounds i16, ptr %Ptr, i64 1
+  %L1 = load i16, ptr %GEP1
+  %GEP2 = getelementptr inbounds i16, ptr %Ptr, i64 2
+  %L2 = load i16, ptr %GEP2
+  %GEP3 = getelementptr inbounds i16, ptr %Ptr, i64 3
+  %L3 = load i16, ptr %GEP3
+  %GEP4 = getelementptr inbounds i16, ptr %Ptr, i64 4
+  %L4 = load i16, ptr %GEP4
+  %GEP5 = getelementptr inbounds i16, ptr %Ptr, i64 5
+  %L5 = load i16, ptr %GEP5
+  %GEP6 = getelementptr inbounds i16, ptr %Ptr, i64 6
+  %L6 = load i16, ptr %GEP6
+  %GEP7 = getelementptr inbounds i16, ptr %Ptr, i64 7
+  %L7 = load i16, ptr %GEP7
 
   %Fadd0 = add i16 %L0, 1
   %Fadd1 = add i16 %L1, 2

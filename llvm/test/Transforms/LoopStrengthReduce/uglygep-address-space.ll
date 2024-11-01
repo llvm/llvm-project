@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-reduce -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -loop-reduce -S | FileCheck %s
 
 ; LSR shouldn't consider %t8 to be an interesting user of %t6, and it
 ; should be able to form pretty GEPs.

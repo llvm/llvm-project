@@ -14,10 +14,9 @@
 #include "IncludeSorter.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Tooling/Transformer/Transformer.h"
+#include <optional>
 
-namespace clang {
-namespace tidy {
-namespace utils {
+namespace clang::tidy::utils {
 
 /// A base class for defining a ClangTidy check based on a `RewriteRule`.
 //
@@ -49,7 +48,7 @@ public:
   ///
   /// See \c setRule for constraints on the rule.
   TransformerClangTidyCheck(
-      std::function<Optional<transformer::RewriteRuleWith<std::string>>(
+      std::function<std::optional<transformer::RewriteRuleWith<std::string>>(
           const LangOptions &, const OptionsView &)>
           MakeRule,
       StringRef Name, ClangTidyContext *Context);
@@ -82,8 +81,6 @@ private:
   IncludeInserter Inserter;
 };
 
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_TRANSFORMER_CLANG_TIDY_CHECK_H

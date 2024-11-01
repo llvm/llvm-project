@@ -26,4 +26,4 @@ define void @call() {
   ret void
 }
 
-; CHECK-LABEL: @__dfsan_reaches_function_callback(i8, ptr, i32, ptr)
+; CHECK-LABEL: @__dfsan_reaches_function_callback(i8 zeroext, ptr, i32, ptr)

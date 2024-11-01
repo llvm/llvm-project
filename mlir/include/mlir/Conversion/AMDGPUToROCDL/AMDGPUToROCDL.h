@@ -10,6 +10,7 @@
 
 #include "mlir/Conversion/AMDGPUToROCDL/Chipset.h"
 #include <memory>
+#include <string>
 
 namespace mlir {
 

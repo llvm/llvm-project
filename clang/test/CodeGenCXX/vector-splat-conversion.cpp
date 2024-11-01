@@ -56,7 +56,7 @@ gcc_int_2 FloatToIntConversion(gcc_int_2 Int2, float f) {
   // CHECK: %[[LOAD_INT:.+]] = load <2 x i32>
   // CHECK: %[[LOAD:.+]] = load float, ptr
   // CHECK: %[[CONV:.+]] = fptosi float %[[LOAD]] to i32
-  // CHECK: %[[INSERT:.+]] = insertelement <2 x i32> poison, i32 %[[CONV]], i32 0
+  // CHECK: %[[INSERT:.+]] = insertelement <2 x i32> poison, i32 %[[CONV]], i64 0
   // CHECK: %[[SPLAT:.+]] = shufflevector <2 x i32> %[[INSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
   // CHECK: add <2 x i32> %[[LOAD_INT]], %[[SPLAT]]
 }

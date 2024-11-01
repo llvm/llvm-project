@@ -15,6 +15,7 @@
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
 #include "clang/Basic/TargetInfo.h"
+#include <optional>
 
 using namespace clang;
 using namespace CodeGen;
@@ -439,7 +440,7 @@ static bool isMergeableEntryType(llvm::Type *type) {
   // merge pointers, but (1) it doesn't currently matter in practice because
   // the chunk size is never greater than the size of a pointer and (2)
   // Swift IRGen uses integer types for a lot of things that are "really"
-  // just storing pointers (like Optional<SomePointer>).  If we ever have a
+  // just storing pointers (like std::optional<SomePointer>).  If we ever have a
   // target that would otherwise combine pointers, we should put some effort
   // into fixing those cases in Swift IRGen and then call out pointer types
   // here.
@@ -590,9 +591,8 @@ SwiftAggLowering::getCoerceAndExpandTypes() const {
       hasPadding = true;
     }
 
-    if (!packed && !entry.Begin.isMultipleOf(
-          CharUnits::fromQuantity(
-            CGM.getDataLayout().getABITypeAlignment(entry.Type))))
+    if (!packed && !entry.Begin.isMultipleOf(CharUnits::fromQuantity(
+                       CGM.getDataLayout().getABITypeAlign(entry.Type))))
       packed = true;
 
     elts.push_back(entry.Type);
@@ -662,7 +662,7 @@ CharUnits swiftcall::getNaturalAlignment(CodeGenModule &CGM, llvm::Type *type) {
   if (!isPowerOf2(size)) {
     size = 1ULL << (llvm::findLastSet(size, llvm::ZB_Undefined) + 1);
   }
-  assert(size >= CGM.getDataLayout().getABITypeAlignment(type));
+  assert(CGM.getDataLayout().getABITypeAlign(type) <= size);
   return CharUnits::fromQuantity(size);
 }
 

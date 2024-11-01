@@ -60,6 +60,8 @@ STATISTIC(NumAddrTaken, "Number of local variables that have their address"
 
 static cl::opt<bool> EnableSelectionDAGSP("enable-selectiondag-sp",
                                           cl::init(true), cl::Hidden);
+static cl::opt<bool> DisableCheckNoReturn("disable-check-noreturn-call",
+                                          cl::init(false), cl::Hidden);
 
 char StackProtector::ID = 0;
 
@@ -453,7 +455,7 @@ bool StackProtector::InsertStackProtectors() {
     if (&BB == FailBB)
       continue;
     Instruction *CheckLoc = dyn_cast<ReturnInst>(BB.getTerminator());
-    if (!CheckLoc) {
+    if (!CheckLoc && !DisableCheckNoReturn) {
       for (auto &Inst : BB) {
         auto *CB = dyn_cast<CallBase>(&Inst);
         if (!CB)

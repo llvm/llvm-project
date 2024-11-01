@@ -188,9 +188,8 @@ public:
 
   bool isIgnorableUse(const MachineOperand &MO) const override;
 
-  bool areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
-                               int64_t &Offset1,
-                               int64_t &Offset2) const override;
+  bool areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1, int64_t &Offset0,
+                               int64_t &Offset1) const override;
 
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
@@ -228,12 +227,14 @@ public:
                            MachineBasicBlock::iterator MI, Register SrcReg,
                            bool isKill, int FrameIndex,
                            const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI) const override;
+                           const TargetRegisterInfo *TRI,
+                           Register VReg) const override;
 
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI, Register DestReg,
                             int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI) const override;
+                            const TargetRegisterInfo *TRI,
+                            Register VReg) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
@@ -264,11 +265,11 @@ public:
     return commuteOpcode(MI.getOpcode());
   }
 
-  bool findCommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx1,
-                             unsigned &SrcOpIdx2) const override;
+  bool findCommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx0,
+                             unsigned &SrcOpIdx1) const override;
 
-  bool findCommutedOpIndices(MCInstrDesc Desc, unsigned & SrcOpIdx0,
-   unsigned & SrcOpIdx1) const;
+  bool findCommutedOpIndices(const MCInstrDesc &Desc, unsigned &SrcOpIdx0,
+                             unsigned &SrcOpIdx1) const;
 
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
@@ -682,6 +683,10 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::IsWMMA;
   }
 
+  static bool isMFMAorWMMA(const MachineInstr &MI) {
+    return isMFMA(MI) || isWMMA(MI);
+  }
+
   bool isDOT(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
   }
@@ -776,6 +781,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FPAtomic;
   }
 
+  static bool doesNotReadTiedSource(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::TiedSourceNotRead;
+  }
+
+  bool doesNotReadTiedSource(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::TiedSourceNotRead;
+  }
+
   bool isVGPRCopy(const MachineInstr &MI) const {
     assert(MI.isCopy());
     Register Dest = MI.getOperand(0).getReg();
@@ -829,23 +842,22 @@ public:
                         const MachineOperand &DefMO) const {
     assert(UseMO.getParent() == &MI);
     int OpIdx = MI.getOperandNo(&UseMO);
-    if (!MI.getDesc().OpInfo || OpIdx >= MI.getDesc().NumOperands) {
+    if (OpIdx >= MI.getDesc().NumOperands)
       return false;
-    }
 
-    return isInlineConstant(DefMO, MI.getDesc().OpInfo[OpIdx]);
+    return isInlineConstant(DefMO, MI.getDesc().operands()[OpIdx]);
   }
 
   /// \p returns true if the operand \p OpIdx in \p MI is a valid inline
   /// immediate.
   bool isInlineConstant(const MachineInstr &MI, unsigned OpIdx) const {
     const MachineOperand &MO = MI.getOperand(OpIdx);
-    return isInlineConstant(MO, MI.getDesc().OpInfo[OpIdx].OperandType);
+    return isInlineConstant(MO, MI.getDesc().operands()[OpIdx].OperandType);
   }
 
   bool isInlineConstant(const MachineInstr &MI, unsigned OpIdx,
                         const MachineOperand &MO) const {
-    if (!MI.getDesc().OpInfo || OpIdx >= MI.getDesc().NumOperands)
+    if (OpIdx >= MI.getDesc().NumOperands)
       return false;
 
     if (MI.isCopy()) {
@@ -857,7 +869,7 @@ public:
       return isInlineConstant(MO, OpType);
     }
 
-    return isInlineConstant(MO, MI.getDesc().OpInfo[OpIdx].OperandType);
+    return isInlineConstant(MO, MI.getDesc().operands()[OpIdx].OperandType);
   }
 
   bool isInlineConstant(const MachineOperand &MO) const {
@@ -907,7 +919,7 @@ public:
   /// Return the size in bytes of the operand OpNo on the given
   // instruction opcode.
   unsigned getOpSize(uint16_t Opcode, unsigned OpNo) const {
-    const MCOperandInfo &OpInfo = get(Opcode).OpInfo[OpNo];
+    const MCOperandInfo &OpInfo = get(Opcode).operands()[OpNo];
 
     if (OpInfo.RegClass == -1) {
       // If this is an immediate operand, this must be a 32-bit literal.
@@ -1158,6 +1170,12 @@ public:
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
+
+  InstructionUniformity
+  getInstructionUniformity(const MachineInstr &MI) const override final;
+
+  InstructionUniformity
+  getGenericInstructionUniformity(const MachineInstr &MI) const;
 
   const MIRFormatter *getMIRFormatter() const override {
     if (!Formatter.get())

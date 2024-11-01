@@ -12,6 +12,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 
+using namespace llvm;
+
 static void removeVolatileInFunction(Oracle &O, Function &F) {
   LLVMContext &Ctx = F.getContext();
   for (Instruction &I : instructions(F)) {
@@ -34,8 +36,8 @@ static void removeVolatileInFunction(Oracle &O, Function &F) {
   }
 }
 
-static void removeVolatileInModule(Oracle &O, Module &Mod) {
-  for (Function &F : Mod)
+static void removeVolatileInModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  for (Function &F : WorkItem.getModule())
     removeVolatileInFunction(O, F);
 }
 
@@ -64,8 +66,9 @@ static void reduceAtomicSyncScopesInFunction(Oracle &O, Function &F) {
   }
 }
 
-static void reduceAtomicSyncScopesInModule(Oracle &O, Module &Mod) {
-  for (Function &F : Mod)
+static void reduceAtomicSyncScopesInModule(Oracle &O,
+                                           ReducerWorkItem &WorkItem) {
+  for (Function &F : WorkItem.getModule())
     reduceAtomicSyncScopesInFunction(O, F);
 }
 
@@ -97,8 +100,8 @@ static void reduceAtomicOrderingInFunction(Oracle &O, Function &F) {
   }
 }
 
-static void reduceAtomicOrderingInModule(Oracle &O, Module &Mod) {
-  for (Function &F : Mod)
+static void reduceAtomicOrderingInModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  for (Function &F : WorkItem.getModule())
     reduceAtomicOrderingInFunction(O, F);
 }
 

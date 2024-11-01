@@ -117,8 +117,3 @@ LogicalResult RewriteInsertsPass::collectInsertionChain(
   }
   return failure();
 }
-
-std::unique_ptr<mlir::OperationPass<spirv::ModuleOp>>
-mlir::spirv::createRewriteInsertsPass() {
-  return std::make_unique<RewriteInsertsPass>();
-}

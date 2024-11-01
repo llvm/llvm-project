@@ -721,8 +721,9 @@ public:
           if (K.second.size() == 1) {
             KernelAccessVariables.insert(GV);
           } else {
-            report_fatal_error("Cannot lower LDS to kernel access as it is "
-                               "reachable from multiple kernels");
+            report_fatal_error(
+                "cannot lower LDS '" + GV->getName() +
+                "' to kernel access as it is reachable from multiple kernels");
           }
           break;
 

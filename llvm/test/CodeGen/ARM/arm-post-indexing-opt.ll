@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv8-unknown-linux-gnueabihf"
 
-define <4 x float> @test(float* %A) {
+define <4 x float> @test(ptr %A) {
 ; CHECK-LABEL: test:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.32 {d16, d17}, [r0]!
@@ -13,20 +13,17 @@ define <4 x float> @test(float* %A) {
 ; CHECK-NEXT:    vld1.32 {d18, d19}, [r0]
 ; CHECK-NEXT:    vadd.f32 q0, q8, q9
 ; CHECK-NEXT:    bx lr
-  %X.ptr = bitcast float* %A to <4 x float>*
-  %X = load <4 x float>, <4 x float>* %X.ptr, align 4
-  %Y.ptr.elt = getelementptr inbounds float, float* %A, i32 4
-  %Y.ptr = bitcast float* %Y.ptr.elt to <4 x float>*
-  %Y = load <4 x float>, <4 x float>* %Y.ptr, align 4
-  %Z.ptr.elt = getelementptr inbounds float, float* %A, i32 8
-  %Z.ptr = bitcast float* %Z.ptr.elt to <4 x float>*
-  %Z = load <4 x float>, <4 x float>* %Z.ptr, align 4
+  %X = load <4 x float>, ptr %A, align 4
+  %Y.ptr.elt = getelementptr inbounds float, ptr %A, i32 4
+  %Y = load <4 x float>, ptr %Y.ptr.elt, align 4
+  %Z.ptr.elt = getelementptr inbounds float, ptr %A, i32 8
+  %Z = load <4 x float>, ptr %Z.ptr.elt, align 4
   %tmp.sum = fadd <4 x float> %X, %Y
   %sum = fadd <4 x float> %tmp.sum, %Z
   ret <4 x float> %sum
 }
 
-define <4 x float> @test_stride(float* %A) {
+define <4 x float> @test_stride(ptr %A) {
 ; CHECK-LABEL: test_stride:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov r1, #24
@@ -36,20 +33,17 @@ define <4 x float> @test_stride(float* %A) {
 ; CHECK-NEXT:    vld1.32 {d18, d19}, [r0]
 ; CHECK-NEXT:    vadd.f32 q0, q8, q9
 ; CHECK-NEXT:    bx lr
-  %X.ptr = bitcast float* %A to <4 x float>*
-  %X = load <4 x float>, <4 x float>* %X.ptr, align 4
-  %Y.ptr.elt = getelementptr inbounds float, float* %A, i32 6
-  %Y.ptr = bitcast float* %Y.ptr.elt to <4 x float>*
-  %Y = load <4 x float>, <4 x float>* %Y.ptr, align 4
-  %Z.ptr.elt = getelementptr inbounds float, float* %A, i32 12
-  %Z.ptr = bitcast float* %Z.ptr.elt to <4 x float>*
-  %Z = load <4 x float>, <4 x float>* %Z.ptr, align 4
+  %X = load <4 x float>, ptr %A, align 4
+  %Y.ptr.elt = getelementptr inbounds float, ptr %A, i32 6
+  %Y = load <4 x float>, ptr %Y.ptr.elt, align 4
+  %Z.ptr.elt = getelementptr inbounds float, ptr %A, i32 12
+  %Z = load <4 x float>, ptr %Z.ptr.elt, align 4
   %tmp.sum = fadd <4 x float> %X, %Y
   %sum = fadd <4 x float> %tmp.sum, %Z
   ret <4 x float> %sum
 }
 
-define <4 x float> @test_stride_mixed(float* %A) {
+define <4 x float> @test_stride_mixed(ptr %A) {
 ; CHECK-LABEL: test_stride_mixed:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov r1, #24
@@ -59,21 +53,18 @@ define <4 x float> @test_stride_mixed(float* %A) {
 ; CHECK-NEXT:    vld1.32 {d18, d19}, [r0]
 ; CHECK-NEXT:    vadd.f32 q0, q8, q9
 ; CHECK-NEXT:    bx lr
-  %X.ptr = bitcast float* %A to <4 x float>*
-  %X = load <4 x float>, <4 x float>* %X.ptr, align 4
-  %Y.ptr.elt = getelementptr inbounds float, float* %A, i32 6
-  %Y.ptr = bitcast float* %Y.ptr.elt to <4 x float>*
-  %Y = load <4 x float>, <4 x float>* %Y.ptr, align 4
-  %Z.ptr.elt = getelementptr inbounds float, float* %A, i32 10
-  %Z.ptr = bitcast float* %Z.ptr.elt to <4 x float>*
-  %Z = load <4 x float>, <4 x float>* %Z.ptr, align 4
+  %X = load <4 x float>, ptr %A, align 4
+  %Y.ptr.elt = getelementptr inbounds float, ptr %A, i32 6
+  %Y = load <4 x float>, ptr %Y.ptr.elt, align 4
+  %Z.ptr.elt = getelementptr inbounds float, ptr %A, i32 10
+  %Z = load <4 x float>, ptr %Z.ptr.elt, align 4
   %tmp.sum = fadd <4 x float> %X, %Y
   %sum = fadd <4 x float> %tmp.sum, %Z
   ret <4 x float> %sum
 }
 
 ; Refrain from using multiple stride registers
-define <4 x float> @test_stride_noop(float* %A) {
+define <4 x float> @test_stride_noop(ptr %A) {
 ; CHECK-LABEL: test_stride_noop:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov r1, #24
@@ -84,20 +75,17 @@ define <4 x float> @test_stride_noop(float* %A) {
 ; CHECK-NEXT:    vld1.32 {d18, d19}, [r0]
 ; CHECK-NEXT:    vadd.f32 q0, q8, q9
 ; CHECK-NEXT:    bx lr
-  %X.ptr = bitcast float* %A to <4 x float>*
-  %X = load <4 x float>, <4 x float>* %X.ptr, align 4
-  %Y.ptr.elt = getelementptr inbounds float, float* %A, i32 6
-  %Y.ptr = bitcast float* %Y.ptr.elt to <4 x float>*
-  %Y = load <4 x float>, <4 x float>* %Y.ptr, align 4
-  %Z.ptr.elt = getelementptr inbounds float, float* %A, i32 14
-  %Z.ptr = bitcast float* %Z.ptr.elt to <4 x float>*
-  %Z = load <4 x float>, <4 x float>* %Z.ptr, align 4
+  %X = load <4 x float>, ptr %A, align 4
+  %Y.ptr.elt = getelementptr inbounds float, ptr %A, i32 6
+  %Y = load <4 x float>, ptr %Y.ptr.elt, align 4
+  %Z.ptr.elt = getelementptr inbounds float, ptr %A, i32 14
+  %Z = load <4 x float>, ptr %Z.ptr.elt, align 4
   %tmp.sum = fadd <4 x float> %X, %Y
   %sum = fadd <4 x float> %tmp.sum, %Z
   ret <4 x float> %sum
 }
 
-define <4 x float> @test_positive_initial_offset(float* %A) {
+define <4 x float> @test_positive_initial_offset(ptr %A) {
 ; CHECK-LABEL: test_positive_initial_offset:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    add r0, r0, #32
@@ -107,21 +95,18 @@ define <4 x float> @test_positive_initial_offset(float* %A) {
 ; CHECK-NEXT:    vld1.32 {d18, d19}, [r0]
 ; CHECK-NEXT:    vadd.f32 q0, q8, q9
 ; CHECK-NEXT:    bx lr
-  %X.ptr.elt = getelementptr inbounds float, float* %A, i32 8
-  %X.ptr = bitcast float* %X.ptr.elt to <4 x float>*
-  %X = load <4 x float>, <4 x float>* %X.ptr, align 4
-  %Y.ptr.elt = getelementptr inbounds float, float* %A, i32 12
-  %Y.ptr = bitcast float* %Y.ptr.elt to <4 x float>*
-  %Y = load <4 x float>, <4 x float>* %Y.ptr, align 4
-  %Z.ptr.elt = getelementptr inbounds float, float* %A, i32 16
-  %Z.ptr = bitcast float* %Z.ptr.elt to <4 x float>*
-  %Z = load <4 x float>, <4 x float>* %Z.ptr, align 4
+  %X.ptr.elt = getelementptr inbounds float, ptr %A, i32 8
+  %X = load <4 x float>, ptr %X.ptr.elt, align 4
+  %Y.ptr.elt = getelementptr inbounds float, ptr %A, i32 12
+  %Y = load <4 x float>, ptr %Y.ptr.elt, align 4
+  %Z.ptr.elt = getelementptr inbounds float, ptr %A, i32 16
+  %Z = load <4 x float>, ptr %Z.ptr.elt, align 4
   %tmp.sum = fadd <4 x float> %X, %Y
   %sum = fadd <4 x float> %tmp.sum, %Z
   ret <4 x float> %sum
 }
 
-define <4 x float> @test_negative_initial_offset(float* %A) {
+define <4 x float> @test_negative_initial_offset(ptr %A) {
 ; CHECK-LABEL: test_negative_initial_offset:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    sub r0, r0, #64
@@ -131,15 +116,12 @@ define <4 x float> @test_negative_initial_offset(float* %A) {
 ; CHECK-NEXT:    vld1.32 {d18, d19}, [r0]
 ; CHECK-NEXT:    vadd.f32 q0, q8, q9
 ; CHECK-NEXT:    bx lr
-  %X.ptr.elt = getelementptr inbounds float, float* %A, i32 -16
-  %X.ptr = bitcast float* %X.ptr.elt to <4 x float>*
-  %X = load <4 x float>, <4 x float>* %X.ptr, align 4
-  %Y.ptr.elt = getelementptr inbounds float, float* %A, i32 -12
-  %Y.ptr = bitcast float* %Y.ptr.elt to <4 x float>*
-  %Y = load <4 x float>, <4 x float>* %Y.ptr, align 4
-  %Z.ptr.elt = getelementptr inbounds float, float* %A, i32 -8
-  %Z.ptr = bitcast float* %Z.ptr.elt to <4 x float>*
-  %Z = load <4 x float>, <4 x float>* %Z.ptr, align 4
+  %X.ptr.elt = getelementptr inbounds float, ptr %A, i32 -16
+  %X = load <4 x float>, ptr %X.ptr.elt, align 4
+  %Y.ptr.elt = getelementptr inbounds float, ptr %A, i32 -12
+  %Y = load <4 x float>, ptr %Y.ptr.elt, align 4
+  %Z.ptr.elt = getelementptr inbounds float, ptr %A, i32 -8
+  %Z = load <4 x float>, ptr %Z.ptr.elt, align 4
   %tmp.sum = fadd <4 x float> %X, %Y
   %sum = fadd <4 x float> %tmp.sum, %Z
   ret <4 x float> %sum
@@ -158,9 +140,9 @@ define <4 x float> @test_global() {
 ; CHECK-NEXT:    vld1.32 {d18, d19}, [r0]
 ; CHECK-NEXT:    vadd.f32 q0, q8, q9
 ; CHECK-NEXT:    bx lr
-  %X = load <4 x float>, <4 x float>* bitcast (float* getelementptr inbounds ([128 x float], [128 x float]* @global_float_array, i32 0, i32 8) to <4 x float>*), align 4
-  %Y = load <4 x float>, <4 x float>* bitcast (float* getelementptr inbounds ([128 x float], [128 x float]* @global_float_array, i32 0, i32 12) to <4 x float>*), align 4
-  %Z = load <4 x float>, <4 x float>* bitcast (float* getelementptr inbounds ([128 x float], [128 x float]* @global_float_array, i32 0, i32 16) to <4 x float>*), align 4
+  %X = load <4 x float>, ptr getelementptr inbounds ([128 x float], ptr @global_float_array, i32 0, i32 8), align 4
+  %Y = load <4 x float>, ptr getelementptr inbounds ([128 x float], ptr @global_float_array, i32 0, i32 12), align 4
+  %Z = load <4 x float>, ptr getelementptr inbounds ([128 x float], ptr @global_float_array, i32 0, i32 16), align 4
   %tmp.sum = fadd <4 x float> %X, %Y
   %sum = fadd <4 x float> %tmp.sum, %Z
   ret <4 x float> %sum
@@ -188,22 +170,18 @@ define <4 x float> @test_stack() {
 ; CHECK-NEXT:    sub sp, r11, #8
 ; CHECK-NEXT:    pop {r4, r10, r11, pc}
   %array = alloca [32 x float], align 128
-  %arraydecay = getelementptr inbounds [32 x float], [32 x float]* %array, i32 0, i32 0
-  call void @external_function(float* %arraydecay)
-  %X.ptr = bitcast [32 x float]* %array to <4 x float>*
-  %X = load <4 x float>, <4 x float>* %X.ptr, align 4
-  %Y.ptr.elt = getelementptr inbounds [32 x float], [32 x float]* %array, i32 0, i32 4
-  %Y.ptr = bitcast float* %Y.ptr.elt to <4 x float>*
-  %Y = load <4 x float>, <4 x float>* %Y.ptr, align 4
-  %Z.ptr.elt = getelementptr inbounds [32 x float], [32 x float]* %array, i32 0, i32 8
-  %Z.ptr = bitcast float* %Z.ptr.elt to <4 x float>*
-  %Z = load <4 x float>, <4 x float>* %Z.ptr, align 4
+  call void @external_function(ptr %array)
+  %X = load <4 x float>, ptr %array, align 4
+  %Y.ptr.elt = getelementptr inbounds [32 x float], ptr %array, i32 0, i32 4
+  %Y = load <4 x float>, ptr %Y.ptr.elt, align 4
+  %Z.ptr.elt = getelementptr inbounds [32 x float], ptr %array, i32 0, i32 8
+  %Z = load <4 x float>, ptr %Z.ptr.elt, align 4
   %tmp.sum = fadd <4 x float> %X, %Y
   %sum = fadd <4 x float> %tmp.sum, %Z
   ret <4 x float> %sum
 }
 
-define <2 x double> @test_double(double* %A) {
+define <2 x double> @test_double(ptr %A) {
 ; CHECK-LABEL: test_double:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    add r0, r0, #64
@@ -215,21 +193,18 @@ define <2 x double> @test_double(double* %A) {
 ; CHECK-NEXT:    vadd.f64 d1, d20, d23
 ; CHECK-NEXT:    vadd.f64 d0, d16, d22
 ; CHECK-NEXT:    bx lr
-  %X.ptr.elt = getelementptr inbounds double, double* %A, i32 8
-  %X.ptr = bitcast double* %X.ptr.elt to <2 x double>*
-  %X = load <2 x double>, <2 x double>* %X.ptr, align 8
-  %Y.ptr.elt = getelementptr inbounds double, double* %A, i32 10
-  %Y.ptr = bitcast double* %Y.ptr.elt to <2 x double>*
-  %Y = load <2 x double>, <2 x double>* %Y.ptr, align 8
-  %Z.ptr.elt = getelementptr inbounds double, double* %A, i32 12
-  %Z.ptr = bitcast double* %Z.ptr.elt to <2 x double>*
-  %Z = load <2 x double>, <2 x double>* %Z.ptr, align 8
+  %X.ptr.elt = getelementptr inbounds double, ptr %A, i32 8
+  %X = load <2 x double>, ptr %X.ptr.elt, align 8
+  %Y.ptr.elt = getelementptr inbounds double, ptr %A, i32 10
+  %Y = load <2 x double>, ptr %Y.ptr.elt, align 8
+  %Z.ptr.elt = getelementptr inbounds double, ptr %A, i32 12
+  %Z = load <2 x double>, ptr %Z.ptr.elt, align 8
   %tmp.sum = fadd <2 x double> %X, %Y
   %sum = fadd <2 x double> %tmp.sum, %Z
   ret <2 x double> %sum
 }
 
-define void @test_various_instructions(float* %A) {
+define void @test_various_instructions(ptr %A) {
 ; CHECK-LABEL: test_various_instructions:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.32 {d16, d17}, [r0]!
@@ -237,19 +212,16 @@ define void @test_various_instructions(float* %A) {
 ; CHECK-NEXT:    vadd.f32 q8, q8, q9
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r0]
 ; CHECK-NEXT:    bx lr
-  %X.ptr = bitcast float* %A to i8*
-  %X = call <4 x float> @llvm.arm.neon.vld1.v4f32.p0i8(i8* %X.ptr, i32 1)
-  %Y.ptr.elt = getelementptr inbounds float, float* %A, i32 4
-  %Y.ptr = bitcast float* %Y.ptr.elt to <4 x float>*
-  %Y = load <4 x float>, <4 x float>* %Y.ptr, align 4
-  %Z.ptr.elt = getelementptr inbounds float, float* %A, i32 8
-  %Z.ptr = bitcast float* %Z.ptr.elt to i8*
+  %X = call <4 x float> @llvm.arm.neon.vld1.v4f32.p0(ptr %A, i32 1)
+  %Y.ptr.elt = getelementptr inbounds float, ptr %A, i32 4
+  %Y = load <4 x float>, ptr %Y.ptr.elt, align 4
+  %Z.ptr.elt = getelementptr inbounds float, ptr %A, i32 8
   %Z = fadd <4 x float> %X, %Y
-  tail call void @llvm.arm.neon.vst1.p0i8.v4f32(i8* nonnull %Z.ptr, <4 x float> %Z, i32 4)
+  tail call void @llvm.arm.neon.vst1.p0.v4f32(ptr nonnull %Z.ptr.elt, <4 x float> %Z, i32 4)
   ret void
 }
 
-define void @test_lsr_geps(float* %a, float* %b, i32 %n) {
+define void @test_lsr_geps(ptr %a, ptr %b, i32 %n) {
 ; CHECK-LABEL: test_lsr_geps:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cmp r2, #1
@@ -286,40 +258,34 @@ for.cond.cleanup:
 for.body:
   %lsr.iv1 = phi i32 [ 0, %for.body.preheader ], [ %lsr.iv.next2, %for.body ]
   %lsr.iv = phi i32 [ %n, %for.body.preheader ], [ %lsr.iv.next, %for.body ]
-  %0 = bitcast float* %a to i8*
-  %1 = bitcast float* %b to i8*
-  %uglygep19 = getelementptr i8, i8* %0, i32 %lsr.iv1
-  %uglygep1920 = bitcast i8* %uglygep19 to <4 x float>*
-  %2 = load <4 x float>, <4 x float>* %uglygep1920, align 4
-  %uglygep16 = getelementptr i8, i8* %0, i32 %lsr.iv1
-  %uglygep1617 = bitcast i8* %uglygep16 to <4 x float>*
-  %scevgep18 = getelementptr <4 x float>, <4 x float>* %uglygep1617, i32 1
-  %3 = load <4 x float>, <4 x float>* %scevgep18, align 4
-  %uglygep13 = getelementptr i8, i8* %0, i32 %lsr.iv1
-  %uglygep1314 = bitcast i8* %uglygep13 to <4 x float>*
-  %scevgep15 = getelementptr <4 x float>, <4 x float>* %uglygep1314, i32 2
-  %4 = load <4 x float>, <4 x float>* %scevgep15, align 4
-  %uglygep10 = getelementptr i8, i8* %0, i32 %lsr.iv1
-  %uglygep1011 = bitcast i8* %uglygep10 to <4 x float>*
-  %scevgep12 = getelementptr <4 x float>, <4 x float>* %uglygep1011, i32 3
-  %5 = load <4 x float>, <4 x float>* %scevgep12, align 4
-  %uglygep8 = getelementptr i8, i8* %1, i32 %lsr.iv1
-  tail call void @llvm.arm.neon.vst1.p0i8.v4f32(i8* %uglygep8, <4 x float> %2, i32 4)
-  %uglygep6 = getelementptr i8, i8* %1, i32 %lsr.iv1
-  %scevgep7 = getelementptr i8, i8* %uglygep6, i32 16
-  tail call void @llvm.arm.neon.vst1.p0i8.v4f32(i8* nonnull %scevgep7, <4 x float> %3, i32 4)
-  %uglygep4 = getelementptr i8, i8* %1, i32 %lsr.iv1
-  %scevgep5 = getelementptr i8, i8* %uglygep4, i32 32
-  tail call void @llvm.arm.neon.vst1.p0i8.v4f32(i8* nonnull %scevgep5, <4 x float> %4, i32 4)
-  %uglygep = getelementptr i8, i8* %1, i32 %lsr.iv1
-  %scevgep = getelementptr i8, i8* %uglygep, i32 48
-  tail call void @llvm.arm.neon.vst1.p0i8.v4f32(i8* nonnull %scevgep, <4 x float> %5, i32 4)
+  %uglygep19 = getelementptr i8, ptr %a, i32 %lsr.iv1
+  %0 = load <4 x float>, ptr %uglygep19, align 4
+  %uglygep16 = getelementptr i8, ptr %a, i32 %lsr.iv1
+  %scevgep18 = getelementptr <4 x float>, ptr %uglygep16, i32 1
+  %1 = load <4 x float>, ptr %scevgep18, align 4
+  %uglygep13 = getelementptr i8, ptr %a, i32 %lsr.iv1
+  %scevgep15 = getelementptr <4 x float>, ptr %uglygep13, i32 2
+  %2 = load <4 x float>, ptr %scevgep15, align 4
+  %uglygep10 = getelementptr i8, ptr %a, i32 %lsr.iv1
+  %scevgep12 = getelementptr <4 x float>, ptr %uglygep10, i32 3
+  %3 = load <4 x float>, ptr %scevgep12, align 4
+  %uglygep8 = getelementptr i8, ptr %b, i32 %lsr.iv1
+  tail call void @llvm.arm.neon.vst1.p0.v4f32(ptr %uglygep8, <4 x float> %0, i32 4)
+  %uglygep6 = getelementptr i8, ptr %b, i32 %lsr.iv1
+  %scevgep7 = getelementptr i8, ptr %uglygep6, i32 16
+  tail call void @llvm.arm.neon.vst1.p0.v4f32(ptr nonnull %scevgep7, <4 x float> %1, i32 4)
+  %uglygep4 = getelementptr i8, ptr %b, i32 %lsr.iv1
+  %scevgep5 = getelementptr i8, ptr %uglygep4, i32 32
+  tail call void @llvm.arm.neon.vst1.p0.v4f32(ptr nonnull %scevgep5, <4 x float> %2, i32 4)
+  %uglygep = getelementptr i8, ptr %b, i32 %lsr.iv1
+  %scevgep = getelementptr i8, ptr %uglygep, i32 48
+  tail call void @llvm.arm.neon.vst1.p0.v4f32(ptr nonnull %scevgep, <4 x float> %3, i32 4)
   %lsr.iv.next = add i32 %lsr.iv, -1
   %lsr.iv.next2 = add nuw i32 %lsr.iv1, 64
   %exitcond.not = icmp eq i32 %lsr.iv.next, 0
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-declare void @external_function(float*)
-declare <4 x float> @llvm.arm.neon.vld1.v4f32.p0i8(i8*, i32) nounwind readonly
-declare void @llvm.arm.neon.vst1.p0i8.v4f32(i8*, <4 x float>, i32) nounwind argmemonly
+declare void @external_function(ptr)
+declare <4 x float> @llvm.arm.neon.vld1.v4f32.p0(ptr, i32) nounwind readonly
+declare void @llvm.arm.neon.vst1.p0.v4f32(ptr, <4 x float>, i32) nounwind argmemonly

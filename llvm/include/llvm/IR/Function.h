@@ -50,7 +50,6 @@ struct DenormalMode;
 class DISubprogram;
 class LLVMContext;
 class Module;
-template <typename T> class Optional;
 class raw_ostream;
 class Type;
 class User;
@@ -437,15 +436,6 @@ public:
   /// adds the dereferenceable_or_null attribute to the list of
   /// attributes for the given arg.
   void addDereferenceableOrNullParamAttr(unsigned ArgNo, uint64_t Bytes);
-
-  /// Extract the alignment for a call or parameter (0=unknown).
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use getParamAlign() instead.
-  uint64_t getParamAlignment(unsigned ArgNo) const {
-    if (const auto MA = getParamAlign(ArgNo))
-      return MA->value();
-    return 0;
-  }
 
   MaybeAlign getParamAlign(unsigned ArgNo) const {
     return AttributeSets.getParamAlignment(ArgNo);
@@ -918,7 +908,7 @@ public:
   DISubprogram *getSubprogram() const;
 
   /// Returns true if we should emit debug info for profiling.
-  bool isDebugInfoForProfiling() const;
+  bool shouldEmitDebugInfoForProfiling() const;
 
   /// Check if null pointer dereferencing is considered undefined behavior for
   /// the function.

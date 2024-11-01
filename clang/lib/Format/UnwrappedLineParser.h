@@ -153,12 +153,11 @@ private:
   void parseCaseLabel();
   void parseSwitch();
   void parseNamespace();
-  void parseModuleImport();
+  bool parseModuleImport();
   void parseNew();
   void parseAccessSpecifier();
   bool parseEnum();
   bool parseStructLike();
-  void parseConcept();
   bool parseRequires();
   void parseRequiresClause(FormatToken *RequiresToken);
   void parseRequiresExpression(FormatToken *RequiresToken);

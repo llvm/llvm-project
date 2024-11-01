@@ -25,6 +25,7 @@
 #include "mlir/Parser/Parser.h"
 
 #include <cstddef>
+#include <optional>
 
 using namespace mlir;
 
@@ -288,7 +289,7 @@ void mlirOperationStateEnableResultTypeInference(MlirOperationState *state) {
 
 static LogicalResult inferOperationTypes(OperationState &state) {
   MLIRContext *context = state.getContext();
-  Optional<RegisteredOperationName> info = state.name.getRegisteredInfo();
+  std::optional<RegisteredOperationName> info = state.name.getRegisteredInfo();
   if (!info) {
     emitError(state.location)
         << "type inference was requested for the operation " << state.name

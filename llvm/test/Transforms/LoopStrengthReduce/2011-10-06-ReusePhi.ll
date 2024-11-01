@@ -1,4 +1,4 @@
-; RUN: opt -loop-reduce -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -loop-reduce -S < %s | FileCheck %s
 ;
 ; Test LSR's intelligence regarding phi reuse.
 ; Verify that scaled GEPs are not reused. rdar://5064068

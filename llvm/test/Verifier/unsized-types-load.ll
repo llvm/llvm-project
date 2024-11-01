@@ -2,9 +2,9 @@
 
 %X = type opaque
 
-define void @f_0(%X* %ptr) {
-  %t = load %X, %X* %ptr
+define void @f_0(ptr %ptr) {
+  %t = load %X, ptr %ptr
   ret void
 ; CHECK: loading unsized types is not allowed
-; CHECK-NEXT:  %t = load %X, %X* %ptr
+; CHECK-NEXT:  %t = load %X, ptr %ptr
 }

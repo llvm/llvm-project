@@ -431,36 +431,36 @@ void MachODumper::printFileHeaders() {
 
 template<class MachHeader>
 void MachODumper::printFileHeaders(const MachHeader &Header) {
-  W.printEnum("Magic", Header.magic, makeArrayRef(MachOMagics));
-  W.printEnum("CpuType", Header.cputype, makeArrayRef(MachOHeaderCpuTypes));
+  W.printEnum("Magic", Header.magic, ArrayRef(MachOMagics));
+  W.printEnum("CpuType", Header.cputype, ArrayRef(MachOHeaderCpuTypes));
   uint32_t subtype = Header.cpusubtype & ~MachO::CPU_SUBTYPE_MASK;
   switch (Header.cputype) {
   case MachO::CPU_TYPE_X86:
-    W.printEnum("CpuSubType", subtype, makeArrayRef(MachOHeaderCpuSubtypesX86));
+    W.printEnum("CpuSubType", subtype, ArrayRef(MachOHeaderCpuSubtypesX86));
     break;
   case MachO::CPU_TYPE_X86_64:
-    W.printEnum("CpuSubType", subtype, makeArrayRef(MachOHeaderCpuSubtypesX64));
+    W.printEnum("CpuSubType", subtype, ArrayRef(MachOHeaderCpuSubtypesX64));
     break;
   case MachO::CPU_TYPE_ARM:
-    W.printEnum("CpuSubType", subtype, makeArrayRef(MachOHeaderCpuSubtypesARM));
+    W.printEnum("CpuSubType", subtype, ArrayRef(MachOHeaderCpuSubtypesARM));
     break;
   case MachO::CPU_TYPE_POWERPC:
-    W.printEnum("CpuSubType", subtype, makeArrayRef(MachOHeaderCpuSubtypesPPC));
+    W.printEnum("CpuSubType", subtype, ArrayRef(MachOHeaderCpuSubtypesPPC));
     break;
   case MachO::CPU_TYPE_SPARC:
-    W.printEnum("CpuSubType", subtype, makeArrayRef(MachOHeaderCpuSubtypesSPARC));
+    W.printEnum("CpuSubType", subtype, ArrayRef(MachOHeaderCpuSubtypesSPARC));
     break;
   case MachO::CPU_TYPE_ARM64:
-    W.printEnum("CpuSubType", subtype, makeArrayRef(MachOHeaderCpuSubtypesARM64));
+    W.printEnum("CpuSubType", subtype, ArrayRef(MachOHeaderCpuSubtypesARM64));
     break;
   case MachO::CPU_TYPE_POWERPC64:
   default:
     W.printHex("CpuSubtype", subtype);
   }
-  W.printEnum("FileType", Header.filetype, makeArrayRef(MachOHeaderFileTypes));
+  W.printEnum("FileType", Header.filetype, ArrayRef(MachOHeaderFileTypes));
   W.printNumber("NumOfLoadCommands", Header.ncmds);
   W.printNumber("SizeOfLoadCommands", Header.sizeofcmds);
-  W.printFlags("Flags", Header.flags, makeArrayRef(MachOHeaderFlags));
+  W.printFlags("Flags", Header.flags, ArrayRef(MachOHeaderFlags));
 }
 
 void MachODumper::printSectionHeaders() { return printSectionHeaders(Obj); }
@@ -490,10 +490,9 @@ void MachODumper::printSectionHeaders(const MachOObjectFile *Obj) {
     W.printNumber("Alignment", MOSection.Alignment);
     W.printHex("RelocationOffset", MOSection.RelocationTableOffset);
     W.printNumber("RelocationCount", MOSection.NumRelocationTableEntries);
-    W.printEnum("Type", MOSection.Flags & 0xFF,
-                makeArrayRef(MachOSectionTypes));
+    W.printEnum("Type", MOSection.Flags & 0xFF, ArrayRef(MachOSectionTypes));
     W.printFlags("Attributes", MOSection.Flags >> 8,
-                 makeArrayRef(MachOSectionAttributes));
+                 ArrayRef(MachOSectionAttributes));
     W.printHex("Reserved1", MOSection.Reserved1);
     W.printHex("Reserved2", MOSection.Reserved2);
     if (Obj->is64Bit())
@@ -694,13 +693,13 @@ void MachODumper::printSymbol(const SymbolRef &Symbol, ScopedPrinter &W) {
     if (MOSymbol.Type & MachO::N_EXT)
       W.startLine() << "Extern\n";
     W.printEnum("Type", uint8_t(MOSymbol.Type & MachO::N_TYPE),
-                makeArrayRef(MachOSymbolTypes));
+                ArrayRef(MachOSymbolTypes));
   }
   W.printHex("Section", SectionName, MOSymbol.SectionIndex);
   W.printEnum("RefType", static_cast<uint16_t>(MOSymbol.Flags & 0x7),
-              makeArrayRef(MachOSymbolRefTypes));
+              ArrayRef(MachOSymbolRefTypes));
   W.printFlags("Flags", static_cast<uint16_t>(MOSymbol.Flags & ~0x7),
-               makeArrayRef(MachOSymbolFlags));
+               ArrayRef(MachOSymbolFlags));
   W.printHex("Value", MOSymbol.Value);
 }
 

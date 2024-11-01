@@ -111,7 +111,7 @@ static void generateInstSeqImpl(int64_t Val,
 
   // Val might now be valid for LUI without needing a shift.
   if (!isInt<32>(Val)) {
-    ShiftAmount = findFirstSet((uint64_t)Val, ZB_Undefined);
+    ShiftAmount = llvm::countr_zero((uint64_t)Val);
     Val >>= ShiftAmount;
 
     // If the remaining bits don't fit in 12 bits, we might be able to reduce the
@@ -180,7 +180,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
   // or ADDIW. If there are trailing zeros, try generating a sign extended
   // constant with no trailing zeros and use a final SLLI to restore them.
   if ((Val & 0xfff) != 0 && (Val & 1) == 0 && Res.size() >= 2) {
-    unsigned TrailingZeros = countTrailingZeros((uint64_t)Val, ZB_Undefined);
+    unsigned TrailingZeros = countTrailingZeros((uint64_t)Val);
     int64_t ShiftedVal = Val >> TrailingZeros;
     // If we can use C.LI+C.SLLI instead of LUI+ADDI(W) prefer that since
     // its more compressible. But only if LUI+ADDI(W) isn't fusable.
@@ -202,7 +202,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
   if (Val > 0 && Res.size() > 2) {
     assert(ActiveFeatures[RISCV::Feature64Bit] &&
            "Expected RV32 to only need 2 instructions");
-    unsigned LeadingZeros = countLeadingZeros((uint64_t)Val, ZB_Undefined);
+    unsigned LeadingZeros = countLeadingZeros((uint64_t)Val);
     uint64_t ShiftedVal = (uint64_t)Val << LeadingZeros;
     // Fill in the bits that will be shifted out with 1s. An example where this
     // helps is trailing one masks with 32 or more ones. This will generate
@@ -279,16 +279,16 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     RISCVMatInt::InstSeq TmpSeq;
     generateInstSeqImpl(Lo, ActiveFeatures, TmpSeq);
     // Check if it is profitable to use BCLRI/BSETI.
-    if (Lo > 0 && TmpSeq.size() + countPopulation(Hi) < Res.size()) {
+    if (Lo > 0 && TmpSeq.size() + llvm::popcount(Hi) < Res.size()) {
       Opc = RISCV::BSETI;
-    } else if (Lo < 0 && TmpSeq.size() + countPopulation(~Hi) < Res.size()) {
+    } else if (Lo < 0 && TmpSeq.size() + llvm::popcount(~Hi) < Res.size()) {
       Opc = RISCV::BCLRI;
       Hi = ~Hi;
     }
     // Search for each bit and build corresponding BCLRI/BSETI.
     if (Opc > 0) {
       while (Hi != 0) {
-        unsigned Bit = findFirstSet(Hi, ZB_Undefined);
+        unsigned Bit = llvm::countr_zero(Hi);
         TmpSeq.emplace_back(Opc, Bit + 32);
         Hi &= (Hi - 1); // Clear lowest set bit.
       }

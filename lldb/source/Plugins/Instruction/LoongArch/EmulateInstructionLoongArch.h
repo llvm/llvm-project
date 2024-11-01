@@ -13,6 +13,7 @@
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -54,11 +55,12 @@ public:
   bool TestEmulation(Stream *out_stream, ArchSpec &arch,
                      OptionValueDictionary *test_data) override;
 
-  llvm::Optional<RegisterInfo> GetRegisterInfo(lldb::RegisterKind reg_kind,
-                                               uint32_t reg_num) override;
+  std::optional<RegisterInfo> GetRegisterInfo(lldb::RegisterKind reg_kind,
+                                              uint32_t reg_num) override;
   lldb::addr_t ReadPC(bool *success);
   bool WritePC(lldb::addr_t pc);
   bool IsLoongArch64() { return m_arch_subtype == llvm::Triple::loongarch64; }
+  bool TestExecute(uint32_t inst);
 
 private:
   struct Opcode {
@@ -73,6 +75,8 @@ private:
 
   bool EmulateBEQZ(uint32_t inst);
   bool EmulateBNEZ(uint32_t inst);
+  bool EmulateBCEQZ(uint32_t inst);
+  bool EmulateBCNEZ(uint32_t inst);
   bool EmulateJIRL(uint32_t inst);
   bool EmulateB(uint32_t inst);
   bool EmulateBL(uint32_t inst);
@@ -86,6 +90,8 @@ private:
 
   bool EmulateBEQZ64(uint32_t inst);
   bool EmulateBNEZ64(uint32_t inst);
+  bool EmulateBCEQZ64(uint32_t inst);
+  bool EmulateBCNEZ64(uint32_t inst);
   bool EmulateJIRL64(uint32_t inst);
   bool EmulateB64(uint32_t inst);
   bool EmulateBL64(uint32_t inst);

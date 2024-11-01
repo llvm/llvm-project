@@ -31,6 +31,7 @@ namespace yaml {
 struct AArch64FunctionInfo;
 } // end namespace yaml
 
+class AArch64Subtarget;
 class MachineInstr;
 
 /// AArch64FunctionInfo - This class is derived from MachineFunctionInfo and
@@ -192,7 +193,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   mutable std::optional<bool> NeedsAsyncDwarfUnwindInfo;
 
 public:
-  explicit AArch64FunctionInfo(MachineFunction &MF);
+  AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,

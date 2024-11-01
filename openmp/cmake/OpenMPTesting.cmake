@@ -3,9 +3,9 @@ set(ENABLE_CHECK_TARGETS TRUE)
 
 # Function to find required dependencies for testing.
 function(find_standalone_test_dependencies)
-  include(FindPythonInterp)
+  find_package (Python3 COMPONENTS Interpreter)
 
-  if (NOT PYTHONINTERP_FOUND)
+  if (NOT Python3_Interpreter_FOUND)
     message(STATUS "Could not find Python.")
     message(WARNING "The check targets will not be available!")
     set(ENABLE_CHECK_TARGETS FALSE PARENT_SCOPE)
@@ -207,7 +207,7 @@ function(add_openmp_testsuite target comment)
   if (${OPENMP_STANDALONE_BUILD})
     set(LIT_ARGS ${OPENMP_LIT_ARGS} ${ARG_ARGS})
     add_custom_target(${target}
-      COMMAND ${PYTHON_EXECUTABLE} ${OPENMP_LLVM_LIT_EXECUTABLE} ${LIT_ARGS} ${ARG_UNPARSED_ARGUMENTS}
+      COMMAND ${Python3_EXECUTABLE} ${OPENMP_LLVM_LIT_EXECUTABLE} ${LIT_ARGS} ${ARG_UNPARSED_ARGUMENTS}
       COMMENT ${comment}
       DEPENDS ${ARG_DEPENDS}
       USES_TERMINAL

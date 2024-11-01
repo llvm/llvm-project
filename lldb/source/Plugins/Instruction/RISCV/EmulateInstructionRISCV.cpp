@@ -23,6 +23,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MathExtras.h"
+#include <optional>
 
 using namespace llvm;
 using namespace lldb;
@@ -35,9 +36,9 @@ namespace lldb_private {
 /// Returns all values wrapped in Optional, or std::nullopt if any of the values
 /// is std::nullopt.
 template <typename... Ts>
-static Optional<std::tuple<Ts...>> zipOpt(Optional<Ts> &&...ts) {
+static std::optional<std::tuple<Ts...>> zipOpt(std::optional<Ts> &&...ts) {
   if ((ts.has_value() && ...))
-    return Optional<std::tuple<Ts...>>(std::make_tuple(std::move(*ts)...));
+    return std::optional<std::tuple<Ts...>>(std::make_tuple(std::move(*ts)...));
   else
     return std::nullopt;
 }
@@ -129,31 +130,31 @@ bool Rd::WriteAPFloat(EmulateInstructionRISCV &emulator, APFloat value) {
                                 registerValue);
 }
 
-Optional<uint64_t> Rs::Read(EmulateInstructionRISCV &emulator) {
+std::optional<uint64_t> Rs::Read(EmulateInstructionRISCV &emulator) {
   uint32_t lldbReg = GPREncodingToLLDB(rs);
   RegisterValue value;
   return emulator.ReadRegister(eRegisterKindLLDB, lldbReg, value)
-             ? Optional<uint64_t>(value.GetAsUInt64())
+             ? std::optional<uint64_t>(value.GetAsUInt64())
              : std::nullopt;
 }
 
-Optional<int32_t> Rs::ReadI32(EmulateInstructionRISCV &emulator) {
+std::optional<int32_t> Rs::ReadI32(EmulateInstructionRISCV &emulator) {
   return transformOptional(
       Read(emulator), [](uint64_t value) { return int32_t(uint32_t(value)); });
 }
 
-Optional<int64_t> Rs::ReadI64(EmulateInstructionRISCV &emulator) {
+std::optional<int64_t> Rs::ReadI64(EmulateInstructionRISCV &emulator) {
   return transformOptional(Read(emulator),
                            [](uint64_t value) { return int64_t(value); });
 }
 
-Optional<uint32_t> Rs::ReadU32(EmulateInstructionRISCV &emulator) {
+std::optional<uint32_t> Rs::ReadU32(EmulateInstructionRISCV &emulator) {
   return transformOptional(Read(emulator),
                            [](uint64_t value) { return uint32_t(value); });
 }
 
-Optional<APFloat> Rs::ReadAPFloat(EmulateInstructionRISCV &emulator,
-                                  bool isDouble) {
+std::optional<APFloat> Rs::ReadAPFloat(EmulateInstructionRISCV &emulator,
+                                       bool isDouble) {
   uint32_t lldbReg = FPREncodingToLLDB(rs);
   RegisterValue value;
   if (!emulator.ReadRegister(eRegisterKindLLDB, lldbReg, value))
@@ -215,7 +216,7 @@ constexpr bool is_amo_cmp =
     std::is_same_v<T, AMOMAXU_W> || std::is_same_v<T, AMOMAXU_D>;
 
 template <typename I>
-static std::enable_if_t<is_load<I> || is_store<I>, Optional<uint64_t>>
+static std::enable_if_t<is_load<I> || is_store<I>, std::optional<uint64_t>>
 LoadStoreAddr(EmulateInstructionRISCV &emulator, I inst) {
   return transformOptional(inst.rs1.Read(emulator), [&](uint64_t rs1) {
     return rs1 + uint64_t(SignExt(inst.imm));
@@ -250,12 +251,13 @@ Store(EmulateInstructionRISCV &emulator, I inst) {
 template <typename I>
 static std::enable_if_t<is_amo_add<I> || is_amo_bit_op<I> || is_amo_swap<I> ||
                             is_amo_cmp<I>,
-                        Optional<uint64_t>>
+                        std::optional<uint64_t>>
 AtomicAddr(EmulateInstructionRISCV &emulator, I inst, unsigned int align) {
   return transformOptional(inst.rs1.Read(emulator),
                            [&](uint64_t rs1) {
-                             return rs1 % align == 0 ? Optional<uint64_t>(rs1)
-                                                     : std::nullopt;
+                             return rs1 % align == 0
+                                        ? std::optional<uint64_t>(rs1)
+                                        : std::nullopt;
                            })
       .value_or(std::nullopt);
 }
@@ -339,7 +341,7 @@ bool AtomicSequence(EmulateInstructionRISCV &emulator) {
   const auto pc = emulator.ReadPC();
   if (!pc)
     return false;
-  auto current_pc = pc.value();
+  auto current_pc = *pc;
   const auto entry_pc = current_pc;
 
   // The first instruction should be LR.W or LR.D
@@ -539,6 +541,11 @@ static const InstrPattern PATTERNS[] = {
     {"FSW", 0xE003, 0xE000, DecodeC_FSW, RV32},
     {"FLWSP", 0xE003, 0x6002, DecodeC_FLWSP, RV32},
     {"FSWSP", 0xE003, 0xE002, DecodeC_FSWSP, RV32},
+    // RVDC //
+    {"FLDSP", 0xE003, 0x2002, DecodeC_FLDSP, RV32 | RV64},
+    {"FSDSP", 0xE003, 0xA002, DecodeC_FSDSP, RV32 | RV64},
+    {"FLD", 0xE003, 0x2000, DecodeC_FLD, RV32 | RV64},
+    {"FSD", 0xE003, 0xA000, DecodeC_FSD, RV32 | RV64},
 
     // RV32F (Extension for Single-Precision Floating-Point) //
     {"FLW", 0x707F, 0x2007, DecodeIType<FLW>},
@@ -611,7 +618,7 @@ static const InstrPattern PATTERNS[] = {
     {"FMV_D_X", 0xFFF0707F, 0xF2000053, DecodeIType<FMV_D_X>},
 };
 
-Optional<DecodeResult> EmulateInstructionRISCV::Decode(uint32_t inst) {
+std::optional<DecodeResult> EmulateInstructionRISCV::Decode(uint32_t inst) {
   Log *log = GetLog(LLDBLog::Unwind);
 
   uint16_t try_rvc = uint16_t(inst & 0x0000ffff);
@@ -1214,8 +1221,7 @@ public:
     return transformOptional(inst.rs1.Read(m_emu),
                              [&](auto &&rs1) {
                                uint64_t addr = rs1 + uint64_t(inst.imm);
-                               uint64_t bits =
-                                   m_emu.ReadMem<uint64_t>(addr).value();
+                               uint64_t bits = *m_emu.ReadMem<uint64_t>(addr);
                                APFloat f(semantics(), APInt(numBits, bits));
                                return inst.rd.WriteAPFloat(m_emu, f);
                              })
@@ -1400,6 +1406,7 @@ public:
                    return inst.rd.Write(m_emu, rs1.compare(rs2) !=
                                                    APFloat::cmpGreaterThan);
                  }
+                 llvm_unreachable("unsupported F_CMP");
                })
         .value_or(false);
   }
@@ -1443,7 +1450,7 @@ public:
   }
   bool operator()(FCLASS_S inst) { return FCLASS(inst, false); }
   template <typename T, typename E>
-  bool FCVT_f2i(T inst, Optional<E> (Rs::*f)(EmulateInstructionRISCV &emu),
+  bool FCVT_f2i(T inst, std::optional<E> (Rs::*f)(EmulateInstructionRISCV &emu),
                 const fltSemantics &semantics) {
     return transformOptional(((&inst.rs1)->*f)(m_emu),
                              [&](auto &&rs1) {
@@ -1604,7 +1611,8 @@ bool EmulateInstructionRISCV::EvaluateInstruction(uint32_t options) {
          WritePC(*old_pc + Executor::size(m_decoded.is_rvc));
 }
 
-Optional<DecodeResult> EmulateInstructionRISCV::ReadInstructionAt(addr_t addr) {
+std::optional<DecodeResult>
+EmulateInstructionRISCV::ReadInstructionAt(addr_t addr) {
   return transformOptional(ReadMem<uint32_t>(addr),
                            [&](uint32_t inst) { return Decode(inst); })
       .value_or(std::nullopt);
@@ -1626,11 +1634,11 @@ bool EmulateInstructionRISCV::ReadInstruction() {
   return true;
 }
 
-Optional<addr_t> EmulateInstructionRISCV::ReadPC() {
+std::optional<addr_t> EmulateInstructionRISCV::ReadPC() {
   bool success = false;
   auto addr = ReadRegisterUnsigned(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC,
                                    LLDB_INVALID_ADDRESS, &success);
-  return success ? Optional<addr_t>(addr) : std::nullopt;
+  return success ? std::optional<addr_t>(addr) : std::nullopt;
 }
 
 bool EmulateInstructionRISCV::WritePC(addr_t pc) {
@@ -1697,7 +1705,7 @@ bool EmulateInstructionRISCV::SetAccruedExceptions(
   return WriteRegisterUnsigned(ctx, eRegisterKindLLDB, fpr_fcsr_riscv, fcsr);
 }
 
-Optional<RegisterInfo>
+std::optional<RegisterInfo>
 EmulateInstructionRISCV::GetRegisterInfo(RegisterKind reg_kind,
                                          uint32_t reg_index) {
   if (reg_kind == eRegisterKindGeneric) {

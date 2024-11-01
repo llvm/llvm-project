@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -74,7 +75,7 @@ void BoolAssignmentChecker::checkBind(SVal loc, SVal val, const Stmt *S,
   // Get the value of the right-hand side.  We only care about values
   // that are defined (UnknownVals and UndefinedVals are handled by other
   // checkers).
-  Optional<NonLoc> NV = val.getAs<NonLoc>();
+  std::optional<NonLoc> NV = val.getAs<NonLoc>();
   if (!NV)
     return;
 

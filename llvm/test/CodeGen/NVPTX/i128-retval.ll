@@ -9,7 +9,7 @@ define i128 @callee(i128) {
 }
 
 ; CHECK-LABEL: .visible .func caller(
-define void @caller(i128, i128*) {
+define void @caller(i128, ptr) {
 start:
   ; CHECK-DAG: ld.param.v2.u64 {%[[REG0:rd[0-9]+]], %[[REG1:rd[0-9]+]]}, [caller_param_0];
   ; CHECK-DAG: ld.param.u64 %[[OUT:rd[0-9]+]],  [caller_param_1];
@@ -23,7 +23,7 @@ start:
 
 	; CHECK-DAG: st.u64 [%[[OUT]]], %[[REG2]];
 	; CHECK-DAG: st.u64 [%[[OUT]]+8], %[[REG3]];
-  store i128 %a, i128* %1
+  store i128 %a, ptr %1
 
   ret void
 }

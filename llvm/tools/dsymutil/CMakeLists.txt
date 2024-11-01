@@ -9,6 +9,7 @@ set(LLVM_LINK_COMPONENTS
   AsmPrinter
   DebugInfoDWARF
   DWARFLinker
+  DWARFLinkerParallel
   MC
   Object
   CodeGen
@@ -16,6 +17,7 @@ set(LLVM_LINK_COMPONENTS
   Remarks
   Support
   Target
+  TargetParser
   )
 
 add_llvm_tool(dsymutil

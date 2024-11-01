@@ -4,7 +4,7 @@
 @var_36 = hidden local_unnamed_addr global i8 0, align 1
 @arr_61 = hidden local_unnamed_addr global [1 x i32] zeroinitializer, align 4
 
-define i32 @test(i8 zeroext %var_2, i16 signext %var_15, [18 x [22 x i8]]* %arr_60) {
+define i32 @test(i8 zeroext %var_2, i16 signext %var_15, ptr %arr_60) {
 ; CHECK-LABEL: test:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -151,11 +151,11 @@ entry:
   br i1 %tobool.not, label %for.cond.cleanup, label %for.cond1.preheader
 
 for.cond1.preheader:                              ; preds = %entry
-  %cmp11.not = icmp eq [18 x [22 x i8]]* %arr_60, null
+  %cmp11.not = icmp eq ptr %arr_60, null
   br i1 %cmp11.not, label %for.cond1.us.preheader, label %for.cond1
 
 for.cond1.us.preheader:                           ; preds = %for.cond1.preheader
-  store i32 0, i32* getelementptr ([1 x i32], [1 x i32]* @arr_61, i32 21, i32 0), align 4
+  store i32 0, ptr getelementptr ([1 x i32], ptr @arr_61, i32 21, i32 0), align 4
   call void @llvm.trap()
   unreachable
 
@@ -176,12 +176,12 @@ for.cond.cleanup9:                                ; preds = %cond.end22.1
 
 for.body10:                                       ; preds = %cond.end22.1, %for.cond6.preheader
   %i_15.044 = phi i32 [ 0, %for.cond6.preheader ], [ %add.1, %cond.end22.1 ]
-  %arraydecay = getelementptr inbounds [18 x [22 x i8]], [18 x [22 x i8]]* %arr_60, i32 %i_15.044, i32 0
-  %0 = ptrtoint [22 x i8]* %arraydecay to i32
-  %arrayidx13 = getelementptr inbounds [1 x i32], [1 x i32]* @arr_61, i32 0, i32 %i_15.044
-  store i32 %0, i32* %arrayidx13, align 4
-  %arrayidx16 = getelementptr inbounds [18 x [22 x i8]], [18 x [22 x i8]]* %arr_60, i32 1, i32 %conv45, i32 %i_15.044
-  %1 = load i8, i8* %arrayidx16, align 1
+  %arraydecay = getelementptr inbounds [18 x [22 x i8]], ptr %arr_60, i32 %i_15.044, i32 0
+  %0 = ptrtoint ptr %arraydecay to i32
+  %arrayidx13 = getelementptr inbounds [1 x i32], ptr @arr_61, i32 0, i32 %i_15.044
+  store i32 %0, ptr %arrayidx13, align 4
+  %arrayidx16 = getelementptr inbounds [18 x [22 x i8]], ptr %arr_60, i32 1, i32 %conv45, i32 %i_15.044
+  %1 = load i8, ptr %arrayidx16, align 1
   %tobool18.not = icmp eq i8 %1, 0
   br i1 %tobool18.not, label %cond.end22, label %cond.true19
 
@@ -194,14 +194,14 @@ cond.end22:                                       ; preds = %for.body10, %cond.t
   %cond23 = phi i32 [ %div.sext, %cond.true19 ], [ 0, %for.body10 ]
   %tobool24 = icmp ne i32 %cond23, 0
   %frombool = zext i1 %tobool24 to i8
-  store i8 %frombool, i8* @var_36, align 1
+  store i8 %frombool, ptr @var_36, align 1
   %add = or i32 %i_15.044, 1
-  %arraydecay.1 = getelementptr inbounds [18 x [22 x i8]], [18 x [22 x i8]]* %arr_60, i32 %add, i32 0
-  %2 = ptrtoint [22 x i8]* %arraydecay.1 to i32
-  %arrayidx13.1 = getelementptr inbounds [1 x i32], [1 x i32]* @arr_61, i32 0, i32 %add
-  store i32 %2, i32* %arrayidx13.1, align 4
-  %arrayidx16.1 = getelementptr inbounds [18 x [22 x i8]], [18 x [22 x i8]]* %arr_60, i32 1, i32 %conv45, i32 %add
-  %3 = load i8, i8* %arrayidx16.1, align 1
+  %arraydecay.1 = getelementptr inbounds [18 x [22 x i8]], ptr %arr_60, i32 %add, i32 0
+  %2 = ptrtoint ptr %arraydecay.1 to i32
+  %arrayidx13.1 = getelementptr inbounds [1 x i32], ptr @arr_61, i32 0, i32 %add
+  store i32 %2, ptr %arrayidx13.1, align 4
+  %arrayidx16.1 = getelementptr inbounds [18 x [22 x i8]], ptr %arr_60, i32 1, i32 %conv45, i32 %add
+  %3 = load i8, ptr %arrayidx16.1, align 1
   %tobool18.not.1 = icmp eq i8 %3, 0
   br i1 %tobool18.not.1, label %cond.end22.1, label %cond.true19.1
 
@@ -214,19 +214,19 @@ cond.end22.1:                                     ; preds = %cond.true19.1, %con
   %cond23.1 = phi i32 [ %div.sext.1, %cond.true19.1 ], [ 0, %cond.end22 ]
   %tobool24.1 = icmp ne i32 %cond23.1, 0
   %frombool.1 = zext i1 %tobool24.1 to i8
-  store i8 %frombool.1, i8* @var_36, align 1
+  store i8 %frombool.1, ptr @var_36, align 1
   %add.1 = add nuw nsw i32 %i_15.044, 2
   %exitcond105.not.1 = icmp eq i32 %add.1, 22
   br i1 %exitcond105.not.1, label %for.cond.cleanup9, label %for.body10
 
 for.body10.1:                                     ; preds = %cond.end22.1.1, %for.cond.cleanup9
   %i_15.044.1 = phi i32 [ 0, %for.cond.cleanup9 ], [ %add.1.1, %cond.end22.1.1 ]
-  %arraydecay.1108 = getelementptr inbounds [18 x [22 x i8]], [18 x [22 x i8]]* %arr_60, i32 %i_15.044.1, i32 0
-  %4 = ptrtoint [22 x i8]* %arraydecay.1108 to i32
-  %arrayidx13.1109 = getelementptr inbounds [1 x i32], [1 x i32]* @arr_61, i32 0, i32 %i_15.044.1
-  store i32 %4, i32* %arrayidx13.1109, align 4
-  %arrayidx16.1110 = getelementptr inbounds [18 x [22 x i8]], [18 x [22 x i8]]* %arr_60, i32 1, i32 %conv, i32 %i_15.044.1
-  %5 = load i8, i8* %arrayidx16.1110, align 1
+  %arraydecay.1108 = getelementptr inbounds [18 x [22 x i8]], ptr %arr_60, i32 %i_15.044.1, i32 0
+  %4 = ptrtoint ptr %arraydecay.1108 to i32
+  %arrayidx13.1109 = getelementptr inbounds [1 x i32], ptr @arr_61, i32 0, i32 %i_15.044.1
+  store i32 %4, ptr %arrayidx13.1109, align 4
+  %arrayidx16.1110 = getelementptr inbounds [18 x [22 x i8]], ptr %arr_60, i32 1, i32 %conv, i32 %i_15.044.1
+  %5 = load i8, ptr %arrayidx16.1110, align 1
   %tobool18.not.1111 = icmp eq i8 %5, 0
   br i1 %tobool18.not.1111, label %cond.end22.1119, label %cond.true19.1114
 
@@ -239,14 +239,14 @@ cond.end22.1119:                                  ; preds = %cond.true19.1114, %
   %cond23.1115 = phi i32 [ %div.sext.1113, %cond.true19.1114 ], [ 0, %for.body10.1 ]
   %tobool24.1116 = icmp ne i32 %cond23.1115, 0
   %frombool.1117 = zext i1 %tobool24.1116 to i8
-  store i8 %frombool.1117, i8* @var_36, align 1
+  store i8 %frombool.1117, ptr @var_36, align 1
   %add.1118 = or i32 %i_15.044.1, 1
-  %arraydecay.1.1 = getelementptr inbounds [18 x [22 x i8]], [18 x [22 x i8]]* %arr_60, i32 %add.1118, i32 0
-  %6 = ptrtoint [22 x i8]* %arraydecay.1.1 to i32
-  %arrayidx13.1.1 = getelementptr inbounds [1 x i32], [1 x i32]* @arr_61, i32 0, i32 %add.1118
-  store i32 %6, i32* %arrayidx13.1.1, align 4
-  %arrayidx16.1.1 = getelementptr inbounds [18 x [22 x i8]], [18 x [22 x i8]]* %arr_60, i32 1, i32 %conv, i32 %add.1118
-  %7 = load i8, i8* %arrayidx16.1.1, align 1
+  %arraydecay.1.1 = getelementptr inbounds [18 x [22 x i8]], ptr %arr_60, i32 %add.1118, i32 0
+  %6 = ptrtoint ptr %arraydecay.1.1 to i32
+  %arrayidx13.1.1 = getelementptr inbounds [1 x i32], ptr @arr_61, i32 0, i32 %add.1118
+  store i32 %6, ptr %arrayidx13.1.1, align 4
+  %arrayidx16.1.1 = getelementptr inbounds [18 x [22 x i8]], ptr %arr_60, i32 1, i32 %conv, i32 %add.1118
+  %7 = load i8, ptr %arrayidx16.1.1, align 1
   %tobool18.not.1.1 = icmp eq i8 %7, 0
   br i1 %tobool18.not.1.1, label %cond.end22.1.1, label %cond.true19.1.1
 
@@ -259,7 +259,7 @@ cond.end22.1.1:                                   ; preds = %cond.true19.1.1, %c
   %cond23.1.1 = phi i32 [ %div.sext.1.1, %cond.true19.1.1 ], [ 0, %cond.end22.1119 ]
   %tobool24.1.1 = icmp ne i32 %cond23.1.1, 0
   %frombool.1.1 = zext i1 %tobool24.1.1 to i8
-  store i8 %frombool.1.1, i8* @var_36, align 1
+  store i8 %frombool.1.1, ptr @var_36, align 1
   %add.1.1 = add nuw nsw i32 %i_15.044.1, 2
   %exitcond105.not.1.1 = icmp eq i32 %add.1.1, 22
   br i1 %exitcond105.not.1.1, label %for.cond.cleanup9.1, label %for.body10.1
@@ -271,12 +271,12 @@ for.cond.cleanup9.1:                              ; preds = %cond.end22.1.1
 
 for.body10.2:                                     ; preds = %cond.end22.1.2, %for.cond.cleanup9.1
   %i_15.044.2 = phi i32 [ 0, %for.cond.cleanup9.1 ], [ %add.1.2, %cond.end22.1.2 ]
-  %arraydecay.2 = getelementptr inbounds [18 x [22 x i8]], [18 x [22 x i8]]* %arr_60, i32 %i_15.044.2, i32 0
-  %8 = ptrtoint [22 x i8]* %arraydecay.2 to i32
-  %arrayidx13.2 = getelementptr inbounds [1 x i32], [1 x i32]* @arr_61, i32 0, i32 %i_15.044.2
-  store i32 %8, i32* %arrayidx13.2, align 4
-  %arrayidx16.2 = getelementptr inbounds [18 x [22 x i8]], [18 x [22 x i8]]* %arr_60, i32 1, i32 %conv.1, i32 %i_15.044.2
-  %9 = load i8, i8* %arrayidx16.2, align 1
+  %arraydecay.2 = getelementptr inbounds [18 x [22 x i8]], ptr %arr_60, i32 %i_15.044.2, i32 0
+  %8 = ptrtoint ptr %arraydecay.2 to i32
+  %arrayidx13.2 = getelementptr inbounds [1 x i32], ptr @arr_61, i32 0, i32 %i_15.044.2
+  store i32 %8, ptr %arrayidx13.2, align 4
+  %arrayidx16.2 = getelementptr inbounds [18 x [22 x i8]], ptr %arr_60, i32 1, i32 %conv.1, i32 %i_15.044.2
+  %9 = load i8, ptr %arrayidx16.2, align 1
   %tobool18.not.2 = icmp eq i8 %9, 0
   br i1 %tobool18.not.2, label %cond.end22.2, label %cond.true19.2
 
@@ -289,14 +289,14 @@ cond.end22.2:                                     ; preds = %cond.true19.2, %for
   %cond23.2 = phi i32 [ %div.sext.2, %cond.true19.2 ], [ 0, %for.body10.2 ]
   %tobool24.2 = icmp ne i32 %cond23.2, 0
   %frombool.2 = zext i1 %tobool24.2 to i8
-  store i8 %frombool.2, i8* @var_36, align 1
+  store i8 %frombool.2, ptr @var_36, align 1
   %add.2 = or i32 %i_15.044.2, 1
-  %arraydecay.1.2 = getelementptr inbounds [18 x [22 x i8]], [18 x [22 x i8]]* %arr_60, i32 %add.2, i32 0
-  %10 = ptrtoint [22 x i8]* %arraydecay.1.2 to i32
-  %arrayidx13.1.2 = getelementptr inbounds [1 x i32], [1 x i32]* @arr_61, i32 0, i32 %add.2
-  store i32 %10, i32* %arrayidx13.1.2, align 4
-  %arrayidx16.1.2 = getelementptr inbounds [18 x [22 x i8]], [18 x [22 x i8]]* %arr_60, i32 1, i32 %conv.1, i32 %add.2
-  %11 = load i8, i8* %arrayidx16.1.2, align 1
+  %arraydecay.1.2 = getelementptr inbounds [18 x [22 x i8]], ptr %arr_60, i32 %add.2, i32 0
+  %10 = ptrtoint ptr %arraydecay.1.2 to i32
+  %arrayidx13.1.2 = getelementptr inbounds [1 x i32], ptr @arr_61, i32 0, i32 %add.2
+  store i32 %10, ptr %arrayidx13.1.2, align 4
+  %arrayidx16.1.2 = getelementptr inbounds [18 x [22 x i8]], ptr %arr_60, i32 1, i32 %conv.1, i32 %add.2
+  %11 = load i8, ptr %arrayidx16.1.2, align 1
   %tobool18.not.1.2 = icmp eq i8 %11, 0
   br i1 %tobool18.not.1.2, label %cond.end22.1.2, label %cond.true19.1.2
 
@@ -309,7 +309,7 @@ cond.end22.1.2:                                   ; preds = %cond.true19.1.2, %c
   %cond23.1.2 = phi i32 [ %div.sext.1.2, %cond.true19.1.2 ], [ 0, %cond.end22.2 ]
   %tobool24.1.2 = icmp ne i32 %cond23.1.2, 0
   %frombool.1.2 = zext i1 %tobool24.1.2 to i8
-  store i8 %frombool.1.2, i8* @var_36, align 1
+  store i8 %frombool.1.2, ptr @var_36, align 1
   %add.1.2 = add nuw nsw i32 %i_15.044.2, 2
   %exitcond105.not.1.2 = icmp eq i32 %add.1.2, 22
   br i1 %exitcond105.not.1.2, label %for.cond.cleanup9.2, label %for.body10.2
@@ -630,24 +630,24 @@ vector.body:                                      ; preds = %for.body6.us, %vect
   %index = phi i32 [ %index.next, %vector.body ], [ 0, %for.body6.us ]
   %vec.ind = phi <4 x i32> [ %vec.ind.next, %vector.body ], [ %induction, %for.body6.us ]
   %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %4)
-  %10 = getelementptr inbounds [1 x i32], [1 x i32]* @c, i32 0, <4 x i32> %vec.ind
-  call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %broadcast.splat108, <4 x i32*> %10, i32 4, <4 x i1> %active.lane.mask)
+  %10 = getelementptr inbounds [1 x i32], ptr @c, i32 0, <4 x i32> %vec.ind
+  call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %broadcast.splat108, <4 x ptr> %10, i32 4, <4 x i1> %active.lane.mask)
   %index.next = add i32 %index, 4
   %vec.ind.next = add <4 x i32> %vec.ind, <i32 12, i32 12, i32 12, i32 12>
   %11 = icmp eq i32 %index.next, %n.vec
   br i1 %11, label %for.cond9.for.cond15.preheader_crit_edge.us, label %vector.body
 
 for.body13.us51.preheader:                        ; preds = %for.body6.us
-  store i32 0, i32* @b, align 4
-  store i32 0, i32* @a, align 4
+  store i32 0, ptr @b, align 4
+  store i32 0, ptr @a, align 4
   br label %vector.body111
 
 vector.body111:                                   ; preds = %vector.body111, %for.body13.us51.preheader
   %index117 = phi i32 [ 0, %for.body13.us51.preheader ], [ %index.next118, %vector.body111 ]
   %vec.ind124 = phi <4 x i32> [ %induction123, %for.body13.us51.preheader ], [ %vec.ind.next125, %vector.body111 ]
   %active.lane.mask130 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index117, i32 %9)
-  %12 = getelementptr inbounds [1 x i32], [1 x i32]* @c, i32 0, <4 x i32> %vec.ind124
-  call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %broadcast.splat132, <4 x i32*> %12, i32 4, <4 x i1> %active.lane.mask130)
+  %12 = getelementptr inbounds [1 x i32], ptr @c, i32 0, <4 x i32> %vec.ind124
+  call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %broadcast.splat132, <4 x ptr> %12, i32 4, <4 x i1> %active.lane.mask130)
   %index.next118 = add i32 %index117, 4
   %vec.ind.next125 = add <4 x i32> %vec.ind124, <i32 12, i32 12, i32 12, i32 12>
   %13 = icmp eq i32 %index.next118, %n.vec116
@@ -730,4 +730,4 @@ for.cond.cleanup17.us63.3:                        ; preds = %for.cond.cleanup17.
 }
 
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32) #1
-declare void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32>, <4 x i32*>, i32 immarg, <4 x i1>) #2
+declare void @llvm.masked.scatter.v4i32.v4p0(<4 x i32>, <4 x ptr>, i32 immarg, <4 x i1>) #2

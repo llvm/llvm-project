@@ -35,7 +35,10 @@ using namespace lld;
 using namespace lld::macho;
 
 // Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE) const char *NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Options.inc"
 #undef PREFIX
 
@@ -48,7 +51,7 @@ static constexpr OptTable::Info optInfo[] = {
 #undef OPTION
 };
 
-MachOOptTable::MachOOptTable() : OptTable(optInfo) {}
+MachOOptTable::MachOOptTable() : GenericOptTable(optInfo) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.

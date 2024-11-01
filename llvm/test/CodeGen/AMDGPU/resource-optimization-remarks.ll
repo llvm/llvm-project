@@ -99,7 +99,7 @@ define amdgpu_kernel void @test_kernel() !dbg !3 {
   call void asm sideeffect "; clobber v8", "~{v8}"()
   call void asm sideeffect "; clobber s23", "~{s23}"()
   call void asm sideeffect "; clobber a42", "~{a42}"()
-  call void asm sideeffect "; use $0", "v"([128 x i32] addrspace(3)* @lds)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) @lds)
   ret void
 }
 
@@ -124,7 +124,7 @@ define void @test_func() !dbg !6 {
 ; STDERR-NEXT: remark: foo.cl:8:0:     VGPRs: 0
 ; STDERR-NEXT: remark: foo.cl:8:0:     AGPRs: 0
 ; STDERR-NEXT: remark: foo.cl:8:0:     ScratchSize [bytes/lane]: 0
-; STDERR-NEXT: remark: foo.cl:8:0:     Occupancy [waves/SIMD]: 10
+; STDERR-NEXT: remark: foo.cl:8:0:     Occupancy [waves/SIMD]: 8
 ; STDERR-NEXT: remark: foo.cl:8:0:     SGPRs Spill: 0
 ; STDERR-NEXT: remark: foo.cl:8:0:     VGPRs Spill: 0
 ; STDERR-NEXT: remark: foo.cl:8:0:     LDS Size [bytes/block]: 0

@@ -46,6 +46,7 @@
 name:            _ZNSt5dequeIPN4llvm4LoopESaIS2_EE13_M_insert_auxESt15_Deque_iteratorIS2_RS2_PS2_EmRKS2_
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }

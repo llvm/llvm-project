@@ -1,4 +1,4 @@
-// RUN: mlir-opt --canonicalize %s | FileCheck %s
+// RUN: mlir-opt -canonicalize="test-convergence" %s | FileCheck %s
 
 // CHECK-LABEL: @argmax_nofold
 func.func @argmax_nofold(%arg0: tensor<?x1xf32>) -> tensor<?x1xf32> {
@@ -106,7 +106,7 @@ func.func @conv2d_stride_2(%arg0: tensor<4x10x10x2xf32>) -> tensor<4x10x10x3xf32
   // CHECK: "tosa.conv2d"
   %weight = "tosa.const"() {value = dense<[[[[1.0, 1.0]]], [[[1.0, 1.0]]], [[[1.0, 1.0]]]]> : tensor<3x1x1x2xf32>} : ()-> tensor<3x1x1x2xf32>
   %bias = "tosa.const"() {value = dense<0.0> : tensor<3xf32>} : ()-> tensor<3xf32>
-  %0 = "tosa.conv2d"(%arg0, %weight, %bias) {pad = [0, 0, 0, 0], stride = [2, 2], dilation = [1, 1]} : (tensor<4x10x10x2xf32>, tensor<3x1x1x2xf32>, tensor<3xf32>) -> tensor<4x10x10x3xf32>
+  %0 = "tosa.conv2d"(%arg0, %weight, %bias) {pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 2, 2>, dilation = array<i64: 1, 1>} : (tensor<4x10x10x2xf32>, tensor<3x1x1x2xf32>, tensor<3xf32>) -> tensor<4x10x10x3xf32>
   return %0 : tensor<4x10x10x3xf32>
 }
 
@@ -115,21 +115,21 @@ func.func @conv2d_weight_2x2(%arg0: tensor<4x10x10x1xf32>) -> tensor<4x10x10x1xf
   // CHECK: "tosa.conv2d"
   %weight = "tosa.const"() {value = dense<[[[[1.0], [1.0]], [[1.0], [1.0]]]]> : tensor<1x2x2x1xf32>} : ()-> tensor<1x2x2x1xf32>
   %bias = "tosa.const"() {value = dense<0.0> : tensor<1xf32>} : ()-> tensor<1xf32>
-  %0 = "tosa.conv2d"(%arg0, %weight, %bias) {pad = [0, 0, 0, 0], stride = [1, 1], dilation = [1, 1]} : (tensor<4x10x10x1xf32>, tensor<1x2x2x1xf32>, tensor<1xf32>) -> tensor<4x10x10x1xf32>
+  %0 = "tosa.conv2d"(%arg0, %weight, %bias) {pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, dilation = array<i64: 1, 1>} : (tensor<4x10x10x1xf32>, tensor<1x2x2x1xf32>, tensor<1xf32>) -> tensor<4x10x10x1xf32>
   return %0 : tensor<4x10x10x1xf32>
 }
 
 // CHECK-LABEL: @depthwise_conv2d_stride_2
 func.func @depthwise_conv2d_stride_2(%arg0: tensor<4x10x10x2xf32>, %arg1: tensor<1x1x2x3xf32>, %arg2: tensor<6xf32>) -> tensor<4x10x10x6xf32> {
   // CHECK: "tosa.depthwise_conv2d"
-  %0 = "tosa.depthwise_conv2d"(%arg0, %arg1, %arg2) {pad = [0, 0, 0, 0], stride = [2, 2], dilation = [1, 1]} : (tensor<4x10x10x2xf32>, tensor<1x1x2x3xf32>, tensor<6xf32>) -> tensor<4x10x10x6xf32>
+  %0 = "tosa.depthwise_conv2d"(%arg0, %arg1, %arg2) {pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 2, 2>, dilation = array<i64: 1, 1>} : (tensor<4x10x10x2xf32>, tensor<1x1x2x3xf32>, tensor<6xf32>) -> tensor<4x10x10x6xf32>
   return %0 : tensor<4x10x10x6xf32>
 }
 
 // CHECK-LABEL: @depthwise_conv2d_weight_2x2
 func.func @depthwise_conv2d_weight_2x2(%arg0: tensor<4x10x10x2xf32>, %arg1: tensor<2x2x2x3xf32>, %arg2: tensor<6xf32>) -> tensor<4x10x10x6xf32> {
   // CHECK: "tosa.depthwise_conv2d"
-  %0 = "tosa.depthwise_conv2d"(%arg0, %arg1, %arg2) {pad = [0, 0, 0, 0], stride = [1, 1], dilation = [1, 1]} : (tensor<4x10x10x2xf32>, tensor<2x2x2x3xf32>, tensor<6xf32>) -> tensor<4x10x10x6xf32>
+  %0 = "tosa.depthwise_conv2d"(%arg0, %arg1, %arg2) {pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, dilation = array<i64: 1, 1>} : (tensor<4x10x10x2xf32>, tensor<2x2x2x3xf32>, tensor<6xf32>) -> tensor<4x10x10x6xf32>
   return %0 : tensor<4x10x10x6xf32>
 }
 
@@ -137,7 +137,7 @@ func.func @depthwise_conv2d_weight_2x2(%arg0: tensor<4x10x10x2xf32>, %arg1: tens
 func.func @max_pool2d_is_noop(%arg0: tensor<10x1x1x3xf32>) -> tensor<10x1x1x3xf32> {
   // CHECK-NOT: "tosa.max_pool2d"
   // CHECK: return %arg0
-  %0 = "tosa.max_pool2d"(%arg0) {kernel = [1, 1], pad = [0, 0, 0, 0], stride = [1, 1], dilation = [1, 1]} : (tensor<10x1x1x3xf32>) -> tensor<10x1x1x3xf32>
+  %0 = "tosa.max_pool2d"(%arg0) {kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, dilation = array<i64: 1, 1>} : (tensor<10x1x1x3xf32>) -> tensor<10x1x1x3xf32>
   return %0 : tensor<10x1x1x3xf32>
 }
 
@@ -323,16 +323,16 @@ func.func @reduce_sum_nofold(%arg0: tensor<?x1xf32>) -> tensor<?x1xf32> {
 // CHECK-LABEL: @reshape_canonicalize
 func.func @reshape_canonicalize(%arg0: tensor<?x10xf32>) -> tensor<?x10xf32> {
   // CHECK: return %arg0
-  %0 = "tosa.reshape"(%arg0) {new_shape = [-1, 10]}: (tensor<?x10xf32>) -> tensor<?x10xf32>
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: -1, 10>}: (tensor<?x10xf32>) -> tensor<?x10xf32>
   return %0 : tensor<?x10xf32>
 }
 
 // CHECK-LABEL: @reshape_canonicalize_double
 func.func @reshape_canonicalize_double(%arg0: tensor<?x10xf32>) -> tensor<?x5xf32> {
-  // CHECK: %[[VAR0:.+]] = "tosa.reshape"(%arg0) {new_shape = [-1, 5]}
+  // CHECK: %[[VAR0:.+]] = "tosa.reshape"(%arg0) {new_shape = array<i64: -1, 5>}
   // CHECK: return %[[VAR0]]
-  %0 = "tosa.reshape"(%arg0) {new_shape = [5, -1]}: (tensor<?x10xf32>) -> tensor<5x?xf32>
-  %1 = "tosa.reshape"(%0) {new_shape = [-1, 5]}: (tensor<5x?xf32>) -> tensor<?x5xf32>
+  %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 5, -1>}: (tensor<?x10xf32>) -> tensor<5x?xf32>
+  %1 = "tosa.reshape"(%0) {new_shape = array<i64: -1, 5>}: (tensor<5x?xf32>) -> tensor<?x5xf32>
   return %1 : tensor<?x5xf32>
 }
 
@@ -341,7 +341,7 @@ func.func @reshape_canonicalize_const() -> tensor<1x10xi32> {
   // CHECK: %[[VAR0:.+]] = "tosa.const"() {value = dense<0> : tensor<1x10xi32>}
   // CHECK: return %[[VAR0]]
   %0 = "tosa.const"() {value = dense<0> : tensor<10xi32>} : () -> tensor<10xi32>
-  %1 = "tosa.reshape"(%0) {new_shape = [1, 10]} : (tensor<10xi32>) -> tensor<1x10xi32>
+  %1 = "tosa.reshape"(%0) {new_shape = array<i64: 1, 10>} : (tensor<10xi32>) -> tensor<1x10xi32>
   return %1 : tensor<1x10xi32>
 }
 
@@ -351,7 +351,7 @@ func.func @reshape_canonicalize_const_spat() -> (tensor<10xi32>, tensor<1x10xi32
   // CHECK-DAG: %[[VAR1:.+]] = "tosa.const"() {value = dense<0> : tensor<1x10xi32>}
   // CHECK: return %[[VAR0]], %[[VAR1]]
   %0 = "tosa.const"() {value = dense<0> : tensor<10xi32>} : () -> tensor<10xi32>
-  %1 = "tosa.reshape"(%0) {new_shape = [1, 10]} : (tensor<10xi32>) -> tensor<1x10xi32>
+  %1 = "tosa.reshape"(%0) {new_shape = array<i64: 1, 10>} : (tensor<10xi32>) -> tensor<1x10xi32>
   return %0 , %1 : tensor<10xi32>, tensor<1x10xi32>
 }
 
@@ -359,35 +359,35 @@ func.func @reshape_canonicalize_const_spat() -> (tensor<10xi32>, tensor<1x10xi32
 func.func @reshape_canonicalize_const_sparse() -> (tensor<3xi32>, tensor<1x3xi32>) {
   //CHECK: "tosa.reshape"
   %0 = "tosa.const"() {value = dense<[1, 2, 3]> : tensor<3xi32>} : ()-> tensor<3xi32>
-  %1 = "tosa.reshape"(%0) {new_shape = [1, 3]} : (tensor<3xi32>) -> tensor<1x3xi32>
+  %1 = "tosa.reshape"(%0) {new_shape = array<i64: 1, 3>} : (tensor<3xi32>) -> tensor<1x3xi32>
   return %0 , %1 : tensor<3xi32>, tensor<1x3xi32>
 }
 
 // CHECK-LABEL: @slice_fold
 func.func @slice_fold(%arg0: tensor<3x4xf32>) -> tensor<3x4xf32> {
   // CHECK: return %arg0
-  %0 = "tosa.slice"(%arg0) { size = [3, 4], start = [0, 0]}: (tensor<3x4xf32>) -> tensor<3x4xf32>
+  %0 = "tosa.slice"(%arg0) { size = array<i64: 3, 4>, start = array<i64: 0, 0>}: (tensor<3x4xf32>) -> tensor<3x4xf32>
   return %0 : tensor<3x4xf32>
 }
 
 // CHECK-LABEL: @slice_nofold
 func.func @slice_nofold(%arg0: tensor<?x4xf32>) -> tensor<?x4xf32> {
   // CHECK: "tosa.slice"
-  %0 = "tosa.slice"(%arg0) { size = [3, 4], start = [0, 0]}: (tensor<?x4xf32>) -> tensor<?x4xf32>
+  %0 = "tosa.slice"(%arg0) { size = array<i64: 3, 4>, start = array<i64: 0, 0>}: (tensor<?x4xf32>) -> tensor<?x4xf32>
   return %0 : tensor<?x4xf32>
 }
 
 // CHECK-LABEL: @tile_fold
 func.func @tile_fold(%arg0: tensor<3x4xf32>) -> tensor<3x4xf32> {
   // CHECK: return %arg0
-  %0 = "tosa.tile"(%arg0) { multiples = [1, 1] }: (tensor<3x4xf32>) -> tensor<3x4xf32>
+  %0 = "tosa.tile"(%arg0) { multiples = array<i64: 1, 1> }: (tensor<3x4xf32>) -> tensor<3x4xf32>
   return %0 : tensor<3x4xf32>
 }
 
 // CHECK-LABEL: @tile_nofold
 func.func @tile_nofold(%arg0: tensor<3x4xf32>) -> tensor<3x8xf32> {
   // CHECK: "tosa.tile"
-  %0 = "tosa.tile"(%arg0) { multiples = [1, 2] }: (tensor<3x4xf32>) -> tensor<3x8xf32>
+  %0 = "tosa.tile"(%arg0) { multiples = array<i64: 1, 2> }: (tensor<3x4xf32>) -> tensor<3x8xf32>
   return %0 : tensor<3x8xf32>
 }
 
@@ -400,12 +400,20 @@ func.func @transpose_no_op(%arg0: tensor<3x4x5x6xf32>) -> tensor<3x4x5x6xf32> {
   return %1 : tensor<3x4x5x6xf32>
 }
 
+// CHECK-LABEL: @transpose_is_reshape
+func.func @transpose_is_reshape(%arg0: tensor<1x4x5x1xf32>) -> tensor<1x4x1x5xf32> {
+  // CHECK: "tosa.reshape"(%arg0) {new_shape = array<i64: 1, 4, 1, 5>} : (tensor<1x4x5x1xf32>) -> tensor<1x4x1x5xf32>
+  %perms = "tosa.const"() {value = dense<[3, 1, 0, 2]> : tensor<4xi32>} : () -> tensor<4xi32>
+  %0 = "tosa.transpose"(%arg0, %perms) : (tensor<1x4x5x1xf32>, tensor<4xi32>) -> tensor<1x4x1x5xf32>
+  return %0 : tensor<1x4x1x5xf32>
+}
+
 // CHECK-LABEL: @single_bit_reshape
 // https://github.com/llvm/llvm-project/issues/55440
 func.func @single_bit_reshape() -> tensor<1xi1> {
   // CHECK: "tosa.const"() {value = dense<true> : tensor<1xi1>}
   %0 = arith.constant dense<true> : tensor<1x1xi1>
-  %1 = "tosa.reshape"(%0) {new_shape = [1]} : (tensor<1x1xi1>) -> tensor<1xi1>
+  %1 = "tosa.reshape"(%0) {new_shape = array<i64: 1>} : (tensor<1x1xi1>) -> tensor<1xi1>
   return %1 : tensor<1xi1>
 }
 
@@ -414,7 +422,7 @@ func.func @single_bit_reshape() -> tensor<1xi1> {
 // CHECK-LABEL: @fold_resize_nearest
 func.func @fold_resize_nearest(%arg0 : tensor<1x15x13x1xi8>) -> tensor<1x15x13x1xi8> {
   // CHECK: return %arg0
-  %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = [2, 2, 1, 1], offset = [0, 0], border = [0, 0]} : (tensor<1x15x13x1xi8>) -> tensor<1x15x13x1xi8>
+  %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = array<i64: 2, 2, 1, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<1x15x13x1xi8>) -> tensor<1x15x13x1xi8>
   return %resize : tensor<1x15x13x1xi8>
 }
 
@@ -423,6 +431,6 @@ func.func @fold_resize_nearest(%arg0 : tensor<1x15x13x1xi8>) -> tensor<1x15x13x1
 // CHECK-LABEL: @fold_resize_bilinear
 func.func @fold_resize_bilinear(%arg0 : tensor<1x15x13x1xi8>) -> tensor<1x15x13x1xi8> {
   // CHECK: return %arg0
-  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [2, 2, 1, 1], offset = [0, 0], border = [0, 0]} : (tensor<1x15x13x1xi8>) -> tensor<1x15x13x1xi8>
+  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = array<i64: 2, 2, 1, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<1x15x13x1xi8>) -> tensor<1x15x13x1xi8>
   return %resize : tensor<1x15x13x1xi8>
 }

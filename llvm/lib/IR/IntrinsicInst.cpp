@@ -212,6 +212,17 @@ void DbgAssignIntrinsic::setAddress(Value *V) {
              MetadataAsValue::get(getContext(), ValueAsMetadata::get(V)));
 }
 
+void DbgAssignIntrinsic::setKillAddress() {
+  if (isKillAddress())
+    return;
+  setAddress(UndefValue::get(getAddress()->getType()));
+}
+
+bool DbgAssignIntrinsic::isKillAddress() const {
+  Value *Addr = getAddress();
+  return !Addr || isa<UndefValue>(Addr);
+}
+
 void DbgAssignIntrinsic::setValue(Value *V) {
   setOperand(OpValue,
              MetadataAsValue::get(getContext(), ValueAsMetadata::get(V)));

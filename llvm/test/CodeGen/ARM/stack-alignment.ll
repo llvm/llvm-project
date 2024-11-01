@@ -13,7 +13,7 @@ entry:
 ; CHECK-THUMB2-NEXT: bfc	r4, #0, #8
 ; CHECK-THUMB2-NEXT: mov	sp, r4
   %x = alloca i32, align 256
-  store volatile i32 0, i32* %x, align 256
+  store volatile i32 0, ptr %x, align 256
   ret i32 0
 }
 
@@ -27,11 +27,11 @@ entry:
 ; CHECK-THUMB2-NEXT:	bfc	r4, #0, #9
 ; CHECK-THUMB2-NEXT:	mov	sp, r4
   %x = alloca i32, align 512
-  store volatile i32 0, i32* %x, align 512
+  store volatile i32 0, ptr %x, align 512
   ret i32 0
 }
 
-define i8* @f_alignedDPRCS2Spills(double* %d) #0 {
+define ptr @f_alignedDPRCS2Spills(ptr %d) #0 {
 entry:
 ; CHECK-LABEL: f_too_large_for_bic_align:
 ; CHECK-v7A32: bfc sp, #0, #12
@@ -40,65 +40,65 @@ entry:
 ; CHECK-THUMB2:      bfc	r4, #0, #12
 ; CHECK-THUMB2-NEXT: mov	sp, r4
   %a = alloca i8, align 4096
-  %0 = load double, double* %d, align 4
-  %arrayidx1 = getelementptr inbounds double, double* %d, i32 1
-  %1 = load double, double* %arrayidx1, align 4
-  %arrayidx2 = getelementptr inbounds double, double* %d, i32 2
-  %2 = load double, double* %arrayidx2, align 4
-  %arrayidx3 = getelementptr inbounds double, double* %d, i32 3
-  %3 = load double, double* %arrayidx3, align 4
-  %arrayidx4 = getelementptr inbounds double, double* %d, i32 4
-  %4 = load double, double* %arrayidx4, align 4
-  %arrayidx5 = getelementptr inbounds double, double* %d, i32 5
-  %5 = load double, double* %arrayidx5, align 4
-  %arrayidx6 = getelementptr inbounds double, double* %d, i32 6
-  %6 = load double, double* %arrayidx6, align 4
-  %arrayidx7 = getelementptr inbounds double, double* %d, i32 7
-  %7 = load double, double* %arrayidx7, align 4
-  %arrayidx8 = getelementptr inbounds double, double* %d, i32 8
-  %8 = load double, double* %arrayidx8, align 4
-  %arrayidx9 = getelementptr inbounds double, double* %d, i32 9
-  %9 = load double, double* %arrayidx9, align 4
-  %arrayidx10 = getelementptr inbounds double, double* %d, i32 10
-  %10 = load double, double* %arrayidx10, align 4
-  %arrayidx11 = getelementptr inbounds double, double* %d, i32 11
-  %11 = load double, double* %arrayidx11, align 4
-  %arrayidx12 = getelementptr inbounds double, double* %d, i32 12
-  %12 = load double, double* %arrayidx12, align 4
-  %arrayidx13 = getelementptr inbounds double, double* %d, i32 13
-  %13 = load double, double* %arrayidx13, align 4
-  %arrayidx14 = getelementptr inbounds double, double* %d, i32 14
-  %14 = load double, double* %arrayidx14, align 4
-  %arrayidx15 = getelementptr inbounds double, double* %d, i32 15
-  %15 = load double, double* %arrayidx15, align 4
-  %arrayidx16 = getelementptr inbounds double, double* %d, i32 16
-  %16 = load double, double* %arrayidx16, align 4
-  %arrayidx17 = getelementptr inbounds double, double* %d, i32 17
-  %17 = load double, double* %arrayidx17, align 4
-  %arrayidx18 = getelementptr inbounds double, double* %d, i32 18
-  %18 = load double, double* %arrayidx18, align 4
-  %arrayidx19 = getelementptr inbounds double, double* %d, i32 19
-  %19 = load double, double* %arrayidx19, align 4
-  %arrayidx20 = getelementptr inbounds double, double* %d, i32 20
-  %20 = load double, double* %arrayidx20, align 4
-  %arrayidx21 = getelementptr inbounds double, double* %d, i32 21
-  %21 = load double, double* %arrayidx21, align 4
-  %arrayidx22 = getelementptr inbounds double, double* %d, i32 22
-  %22 = load double, double* %arrayidx22, align 4
-  %arrayidx23 = getelementptr inbounds double, double* %d, i32 23
-  %23 = load double, double* %arrayidx23, align 4
-  %arrayidx24 = getelementptr inbounds double, double* %d, i32 24
-  %24 = load double, double* %arrayidx24, align 4
-  %arrayidx25 = getelementptr inbounds double, double* %d, i32 25
-  %25 = load double, double* %arrayidx25, align 4
-  %arrayidx26 = getelementptr inbounds double, double* %d, i32 26
-  %26 = load double, double* %arrayidx26, align 4
-  %arrayidx27 = getelementptr inbounds double, double* %d, i32 27
-  %27 = load double, double* %arrayidx27, align 4
-  %arrayidx28 = getelementptr inbounds double, double* %d, i32 28
-  %28 = load double, double* %arrayidx28, align 4
-  %arrayidx29 = getelementptr inbounds double, double* %d, i32 29
-  %29 = load double, double* %arrayidx29, align 4
+  %0 = load double, ptr %d, align 4
+  %arrayidx1 = getelementptr inbounds double, ptr %d, i32 1
+  %1 = load double, ptr %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds double, ptr %d, i32 2
+  %2 = load double, ptr %arrayidx2, align 4
+  %arrayidx3 = getelementptr inbounds double, ptr %d, i32 3
+  %3 = load double, ptr %arrayidx3, align 4
+  %arrayidx4 = getelementptr inbounds double, ptr %d, i32 4
+  %4 = load double, ptr %arrayidx4, align 4
+  %arrayidx5 = getelementptr inbounds double, ptr %d, i32 5
+  %5 = load double, ptr %arrayidx5, align 4
+  %arrayidx6 = getelementptr inbounds double, ptr %d, i32 6
+  %6 = load double, ptr %arrayidx6, align 4
+  %arrayidx7 = getelementptr inbounds double, ptr %d, i32 7
+  %7 = load double, ptr %arrayidx7, align 4
+  %arrayidx8 = getelementptr inbounds double, ptr %d, i32 8
+  %8 = load double, ptr %arrayidx8, align 4
+  %arrayidx9 = getelementptr inbounds double, ptr %d, i32 9
+  %9 = load double, ptr %arrayidx9, align 4
+  %arrayidx10 = getelementptr inbounds double, ptr %d, i32 10
+  %10 = load double, ptr %arrayidx10, align 4
+  %arrayidx11 = getelementptr inbounds double, ptr %d, i32 11
+  %11 = load double, ptr %arrayidx11, align 4
+  %arrayidx12 = getelementptr inbounds double, ptr %d, i32 12
+  %12 = load double, ptr %arrayidx12, align 4
+  %arrayidx13 = getelementptr inbounds double, ptr %d, i32 13
+  %13 = load double, ptr %arrayidx13, align 4
+  %arrayidx14 = getelementptr inbounds double, ptr %d, i32 14
+  %14 = load double, ptr %arrayidx14, align 4
+  %arrayidx15 = getelementptr inbounds double, ptr %d, i32 15
+  %15 = load double, ptr %arrayidx15, align 4
+  %arrayidx16 = getelementptr inbounds double, ptr %d, i32 16
+  %16 = load double, ptr %arrayidx16, align 4
+  %arrayidx17 = getelementptr inbounds double, ptr %d, i32 17
+  %17 = load double, ptr %arrayidx17, align 4
+  %arrayidx18 = getelementptr inbounds double, ptr %d, i32 18
+  %18 = load double, ptr %arrayidx18, align 4
+  %arrayidx19 = getelementptr inbounds double, ptr %d, i32 19
+  %19 = load double, ptr %arrayidx19, align 4
+  %arrayidx20 = getelementptr inbounds double, ptr %d, i32 20
+  %20 = load double, ptr %arrayidx20, align 4
+  %arrayidx21 = getelementptr inbounds double, ptr %d, i32 21
+  %21 = load double, ptr %arrayidx21, align 4
+  %arrayidx22 = getelementptr inbounds double, ptr %d, i32 22
+  %22 = load double, ptr %arrayidx22, align 4
+  %arrayidx23 = getelementptr inbounds double, ptr %d, i32 23
+  %23 = load double, ptr %arrayidx23, align 4
+  %arrayidx24 = getelementptr inbounds double, ptr %d, i32 24
+  %24 = load double, ptr %arrayidx24, align 4
+  %arrayidx25 = getelementptr inbounds double, ptr %d, i32 25
+  %25 = load double, ptr %arrayidx25, align 4
+  %arrayidx26 = getelementptr inbounds double, ptr %d, i32 26
+  %26 = load double, ptr %arrayidx26, align 4
+  %arrayidx27 = getelementptr inbounds double, ptr %d, i32 27
+  %27 = load double, ptr %arrayidx27, align 4
+  %arrayidx28 = getelementptr inbounds double, ptr %d, i32 28
+  %28 = load double, ptr %arrayidx28, align 4
+  %arrayidx29 = getelementptr inbounds double, ptr %d, i32 29
+  %29 = load double, ptr %arrayidx29, align 4
   %div = fdiv double %29, %28
   %div30 = fdiv double %div, %27
   %div31 = fdiv double %div30, %26
@@ -159,6 +159,6 @@ entry:
   %div86 = fdiv double %div85, %29
   %mul = fmul double %div57, %div86
   %conv = fptosi double %mul to i32
-  %add.ptr = getelementptr inbounds i8, i8* %a, i32 %conv
-  ret i8* %add.ptr
+  %add.ptr = getelementptr inbounds i8, ptr %a, i32 %conv
+  ret ptr %add.ptr
 }

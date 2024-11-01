@@ -14,8 +14,8 @@ bb1:
 
 bb2:
   %ind1 = phi i32 [0, %bb1], [ %inc0, %bb2]
-  %ptr = getelementptr [1536 x float], [1536 x float]* @A, i64 0, i32 %ind1
-  store float undef, float* %ptr
+  %ptr = getelementptr [1536 x float], ptr @A, i64 0, i32 %ind1
+  store float undef, ptr %ptr
   %inc0 = add i32 %ind1, 1
   %cond1 = icmp eq i32 %ind1, 32
   br i1 %cond1, label %bb4, label %bb2

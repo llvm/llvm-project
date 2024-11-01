@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+zfh,+experimental-zvfh,+f,+d -target-abi=lp64d -riscv-v-vector-bits-min=128 \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s
 
-define <2 x float> @vfwmul_v2f16(<2 x half> *%x, <2 x half> *%y) {
+define <2 x float> @vfwmul_v2f16(ptr %x, ptr %y) {
 ; CHECK-LABEL: vfwmul_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
@@ -12,15 +12,15 @@ define <2 x float> @vfwmul_v2f16(<2 x half> *%x, <2 x half> *%y) {
 ; CHECK-NEXT:    vle16.v v10, (a1)
 ; CHECK-NEXT:    vfwmul.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %a = load <2 x half>, <2 x half>* %x
-  %b = load <2 x half>, <2 x half>* %y
+  %a = load <2 x half>, ptr %x
+  %b = load <2 x half>, ptr %y
   %c = fpext <2 x half> %a to <2 x float>
   %d = fpext <2 x half> %b to <2 x float>
   %e = fmul <2 x float> %c, %d
   ret <2 x float> %e
 }
 
-define <4 x float> @vfwmul_v4f16(<4 x half> *%x, <4 x half> *%y) {
+define <4 x float> @vfwmul_v4f16(ptr %x, ptr %y) {
 ; CHECK-LABEL: vfwmul_v4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
@@ -28,15 +28,15 @@ define <4 x float> @vfwmul_v4f16(<4 x half> *%x, <4 x half> *%y) {
 ; CHECK-NEXT:    vle16.v v10, (a1)
 ; CHECK-NEXT:    vfwmul.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %a = load <4 x half>, <4 x half>* %x
-  %b = load <4 x half>, <4 x half>* %y
+  %a = load <4 x half>, ptr %x
+  %b = load <4 x half>, ptr %y
   %c = fpext <4 x half> %a to <4 x float>
   %d = fpext <4 x half> %b to <4 x float>
   %e = fmul <4 x float> %c, %d
   ret <4 x float> %e
 }
 
-define <8 x float> @vfwmul_v8f16(<8 x half> *%x, <8 x half> *%y) {
+define <8 x float> @vfwmul_v8f16(ptr %x, ptr %y) {
 ; CHECK-LABEL: vfwmul_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -44,15 +44,15 @@ define <8 x float> @vfwmul_v8f16(<8 x half> *%x, <8 x half> *%y) {
 ; CHECK-NEXT:    vle16.v v11, (a1)
 ; CHECK-NEXT:    vfwmul.vv v8, v10, v11
 ; CHECK-NEXT:    ret
-  %a = load <8 x half>, <8 x half>* %x
-  %b = load <8 x half>, <8 x half>* %y
+  %a = load <8 x half>, ptr %x
+  %b = load <8 x half>, ptr %y
   %c = fpext <8 x half> %a to <8 x float>
   %d = fpext <8 x half> %b to <8 x float>
   %e = fmul <8 x float> %c, %d
   ret <8 x float> %e
 }
 
-define <16 x float> @vfwmul_v16f16(<16 x half> *%x, <16 x half> *%y) {
+define <16 x float> @vfwmul_v16f16(ptr %x, ptr %y) {
 ; CHECK-LABEL: vfwmul_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
@@ -60,15 +60,15 @@ define <16 x float> @vfwmul_v16f16(<16 x half> *%x, <16 x half> *%y) {
 ; CHECK-NEXT:    vle16.v v14, (a1)
 ; CHECK-NEXT:    vfwmul.vv v8, v12, v14
 ; CHECK-NEXT:    ret
-  %a = load <16 x half>, <16 x half>* %x
-  %b = load <16 x half>, <16 x half>* %y
+  %a = load <16 x half>, ptr %x
+  %b = load <16 x half>, ptr %y
   %c = fpext <16 x half> %a to <16 x float>
   %d = fpext <16 x half> %b to <16 x float>
   %e = fmul <16 x float> %c, %d
   ret <16 x float> %e
 }
 
-define <32 x float> @vfwmul_v32f16(<32 x half> *%x, <32 x half> *%y) {
+define <32 x float> @vfwmul_v32f16(ptr %x, ptr %y) {
 ; CHECK-LABEL: vfwmul_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
@@ -77,15 +77,15 @@ define <32 x float> @vfwmul_v32f16(<32 x half> *%x, <32 x half> *%y) {
 ; CHECK-NEXT:    vle16.v v20, (a1)
 ; CHECK-NEXT:    vfwmul.vv v8, v16, v20
 ; CHECK-NEXT:    ret
-  %a = load <32 x half>, <32 x half>* %x
-  %b = load <32 x half>, <32 x half>* %y
+  %a = load <32 x half>, ptr %x
+  %b = load <32 x half>, ptr %y
   %c = fpext <32 x half> %a to <32 x float>
   %d = fpext <32 x half> %b to <32 x float>
   %e = fmul <32 x float> %c, %d
   ret <32 x float> %e
 }
 
-define <64 x float> @vfwmul_v64f16(<64 x half> *%x, <64 x half> *%y) {
+define <64 x float> @vfwmul_v64f16(ptr %x, ptr %y) {
 ; CHECK-LABEL: vfwmul_v64f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
@@ -114,15 +114,15 @@ define <64 x float> @vfwmul_v64f16(<64 x half> *%x, <64 x half> *%y) {
 ; CHECK-NEXT:    add sp, sp, a0
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
-  %a = load <64 x half>, <64 x half>* %x
-  %b = load <64 x half>, <64 x half>* %y
+  %a = load <64 x half>, ptr %x
+  %b = load <64 x half>, ptr %y
   %c = fpext <64 x half> %a to <64 x float>
   %d = fpext <64 x half> %b to <64 x float>
   %e = fmul <64 x float> %c, %d
   ret <64 x float> %e
 }
 
-define <2 x double> @vfwmul_v2f32(<2 x float> *%x, <2 x float> *%y) {
+define <2 x double> @vfwmul_v2f32(ptr %x, ptr %y) {
 ; CHECK-LABEL: vfwmul_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -130,15 +130,15 @@ define <2 x double> @vfwmul_v2f32(<2 x float> *%x, <2 x float> *%y) {
 ; CHECK-NEXT:    vle32.v v10, (a1)
 ; CHECK-NEXT:    vfwmul.vv v8, v9, v10
 ; CHECK-NEXT:    ret
-  %a = load <2 x float>, <2 x float>* %x
-  %b = load <2 x float>, <2 x float>* %y
+  %a = load <2 x float>, ptr %x
+  %b = load <2 x float>, ptr %y
   %c = fpext <2 x float> %a to <2 x double>
   %d = fpext <2 x float> %b to <2 x double>
   %e = fmul <2 x double> %c, %d
   ret <2 x double> %e
 }
 
-define <4 x double> @vfwmul_v4f32(<4 x float> *%x, <4 x float> *%y) {
+define <4 x double> @vfwmul_v4f32(ptr %x, ptr %y) {
 ; CHECK-LABEL: vfwmul_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -146,15 +146,15 @@ define <4 x double> @vfwmul_v4f32(<4 x float> *%x, <4 x float> *%y) {
 ; CHECK-NEXT:    vle32.v v11, (a1)
 ; CHECK-NEXT:    vfwmul.vv v8, v10, v11
 ; CHECK-NEXT:    ret
-  %a = load <4 x float>, <4 x float>* %x
-  %b = load <4 x float>, <4 x float>* %y
+  %a = load <4 x float>, ptr %x
+  %b = load <4 x float>, ptr %y
   %c = fpext <4 x float> %a to <4 x double>
   %d = fpext <4 x float> %b to <4 x double>
   %e = fmul <4 x double> %c, %d
   ret <4 x double> %e
 }
 
-define <8 x double> @vfwmul_v8f32(<8 x float> *%x, <8 x float> *%y) {
+define <8 x double> @vfwmul_v8f32(ptr %x, ptr %y) {
 ; CHECK-LABEL: vfwmul_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -162,15 +162,15 @@ define <8 x double> @vfwmul_v8f32(<8 x float> *%x, <8 x float> *%y) {
 ; CHECK-NEXT:    vle32.v v14, (a1)
 ; CHECK-NEXT:    vfwmul.vv v8, v12, v14
 ; CHECK-NEXT:    ret
-  %a = load <8 x float>, <8 x float>* %x
-  %b = load <8 x float>, <8 x float>* %y
+  %a = load <8 x float>, ptr %x
+  %b = load <8 x float>, ptr %y
   %c = fpext <8 x float> %a to <8 x double>
   %d = fpext <8 x float> %b to <8 x double>
   %e = fmul <8 x double> %c, %d
   ret <8 x double> %e
 }
 
-define <16 x double> @vfwmul_v16f32(<16 x float> *%x, <16 x float> *%y) {
+define <16 x double> @vfwmul_v16f32(ptr %x, ptr %y) {
 ; CHECK-LABEL: vfwmul_v16f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
@@ -178,15 +178,15 @@ define <16 x double> @vfwmul_v16f32(<16 x float> *%x, <16 x float> *%y) {
 ; CHECK-NEXT:    vle32.v v20, (a1)
 ; CHECK-NEXT:    vfwmul.vv v8, v16, v20
 ; CHECK-NEXT:    ret
-  %a = load <16 x float>, <16 x float>* %x
-  %b = load <16 x float>, <16 x float>* %y
+  %a = load <16 x float>, ptr %x
+  %b = load <16 x float>, ptr %y
   %c = fpext <16 x float> %a to <16 x double>
   %d = fpext <16 x float> %b to <16 x double>
   %e = fmul <16 x double> %c, %d
   ret <16 x double> %e
 }
 
-define <32 x double> @vfwmul_v32f32(<32 x float> *%x, <32 x float> *%y) {
+define <32 x double> @vfwmul_v32f32(ptr %x, ptr %y) {
 ; CHECK-LABEL: vfwmul_v32f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
@@ -213,22 +213,22 @@ define <32 x double> @vfwmul_v32f32(<32 x float> *%x, <32 x float> *%y) {
 ; CHECK-NEXT:    add sp, sp, a0
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
-  %a = load <32 x float>, <32 x float>* %x
-  %b = load <32 x float>, <32 x float>* %y
+  %a = load <32 x float>, ptr %x
+  %b = load <32 x float>, ptr %y
   %c = fpext <32 x float> %a to <32 x double>
   %d = fpext <32 x float> %b to <32 x double>
   %e = fmul <32 x double> %c, %d
   ret <32 x double> %e
 }
 
-define <2 x float> @vfwmul_vf_v2f16(<2 x half>* %x, half %y) {
+define <2 x float> @vfwmul_vf_v2f16(ptr %x, half %y) {
 ; CHECK-LABEL: vfwmul_vf_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a0)
 ; CHECK-NEXT:    vfwmul.vf v8, v9, fa0
 ; CHECK-NEXT:    ret
-  %a = load <2 x half>, <2 x half>* %x
+  %a = load <2 x half>, ptr %x
   %b = insertelement <2 x half> poison, half %y, i32 0
   %c = shufflevector <2 x half> %b, <2 x half> poison, <2 x i32> zeroinitializer
   %d = fpext <2 x half> %a to <2 x float>
@@ -237,14 +237,14 @@ define <2 x float> @vfwmul_vf_v2f16(<2 x half>* %x, half %y) {
   ret <2 x float> %f
 }
 
-define <4 x float> @vfwmul_vf_v4f16(<4 x half>* %x, half %y) {
+define <4 x float> @vfwmul_vf_v4f16(ptr %x, half %y) {
 ; CHECK-LABEL: vfwmul_vf_v4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a0)
 ; CHECK-NEXT:    vfwmul.vf v8, v9, fa0
 ; CHECK-NEXT:    ret
-  %a = load <4 x half>, <4 x half>* %x
+  %a = load <4 x half>, ptr %x
   %b = insertelement <4 x half> poison, half %y, i32 0
   %c = shufflevector <4 x half> %b, <4 x half> poison, <4 x i32> zeroinitializer
   %d = fpext <4 x half> %a to <4 x float>
@@ -253,14 +253,14 @@ define <4 x float> @vfwmul_vf_v4f16(<4 x half>* %x, half %y) {
   ret <4 x float> %f
 }
 
-define <8 x float> @vfwmul_vf_v8f16(<8 x half>* %x, half %y) {
+define <8 x float> @vfwmul_vf_v8f16(ptr %x, half %y) {
 ; CHECK-LABEL: vfwmul_vf_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v10, (a0)
 ; CHECK-NEXT:    vfwmul.vf v8, v10, fa0
 ; CHECK-NEXT:    ret
-  %a = load <8 x half>, <8 x half>* %x
+  %a = load <8 x half>, ptr %x
   %b = insertelement <8 x half> poison, half %y, i32 0
   %c = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> zeroinitializer
   %d = fpext <8 x half> %a to <8 x float>
@@ -269,14 +269,14 @@ define <8 x float> @vfwmul_vf_v8f16(<8 x half>* %x, half %y) {
   ret <8 x float> %f
 }
 
-define <16 x float> @vfwmul_vf_v16f16(<16 x half>* %x, half %y) {
+define <16 x float> @vfwmul_vf_v16f16(ptr %x, half %y) {
 ; CHECK-LABEL: vfwmul_vf_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vle16.v v12, (a0)
 ; CHECK-NEXT:    vfwmul.vf v8, v12, fa0
 ; CHECK-NEXT:    ret
-  %a = load <16 x half>, <16 x half>* %x
+  %a = load <16 x half>, ptr %x
   %b = insertelement <16 x half> poison, half %y, i32 0
   %c = shufflevector <16 x half> %b, <16 x half> poison, <16 x i32> zeroinitializer
   %d = fpext <16 x half> %a to <16 x float>
@@ -285,7 +285,7 @@ define <16 x float> @vfwmul_vf_v16f16(<16 x half>* %x, half %y) {
   ret <16 x float> %f
 }
 
-define <32 x float> @vfwmul_vf_v32f16(<32 x half>* %x, half %y) {
+define <32 x float> @vfwmul_vf_v32f16(ptr %x, half %y) {
 ; CHECK-LABEL: vfwmul_vf_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
@@ -293,7 +293,7 @@ define <32 x float> @vfwmul_vf_v32f16(<32 x half>* %x, half %y) {
 ; CHECK-NEXT:    vle16.v v16, (a0)
 ; CHECK-NEXT:    vfwmul.vf v8, v16, fa0
 ; CHECK-NEXT:    ret
-  %a = load <32 x half>, <32 x half>* %x
+  %a = load <32 x half>, ptr %x
   %b = insertelement <32 x half> poison, half %y, i32 0
   %c = shufflevector <32 x half> %b, <32 x half> poison, <32 x i32> zeroinitializer
   %d = fpext <32 x half> %a to <32 x float>
@@ -302,14 +302,14 @@ define <32 x float> @vfwmul_vf_v32f16(<32 x half>* %x, half %y) {
   ret <32 x float> %f
 }
 
-define <2 x double> @vfwmul_vf_v2f32(<2 x float>* %x, float %y) {
+define <2 x double> @vfwmul_vf_v2f32(ptr %x, float %y) {
 ; CHECK-LABEL: vfwmul_vf_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v9, (a0)
 ; CHECK-NEXT:    vfwmul.vf v8, v9, fa0
 ; CHECK-NEXT:    ret
-  %a = load <2 x float>, <2 x float>* %x
+  %a = load <2 x float>, ptr %x
   %b = insertelement <2 x float> poison, float %y, i32 0
   %c = shufflevector <2 x float> %b, <2 x float> poison, <2 x i32> zeroinitializer
   %d = fpext <2 x float> %a to <2 x double>
@@ -318,14 +318,14 @@ define <2 x double> @vfwmul_vf_v2f32(<2 x float>* %x, float %y) {
   ret <2 x double> %f
 }
 
-define <4 x double> @vfwmul_vf_v4f32(<4 x float>* %x, float %y) {
+define <4 x double> @vfwmul_vf_v4f32(ptr %x, float %y) {
 ; CHECK-LABEL: vfwmul_vf_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v10, (a0)
 ; CHECK-NEXT:    vfwmul.vf v8, v10, fa0
 ; CHECK-NEXT:    ret
-  %a = load <4 x float>, <4 x float>* %x
+  %a = load <4 x float>, ptr %x
   %b = insertelement <4 x float> poison, float %y, i32 0
   %c = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> zeroinitializer
   %d = fpext <4 x float> %a to <4 x double>
@@ -334,14 +334,14 @@ define <4 x double> @vfwmul_vf_v4f32(<4 x float>* %x, float %y) {
   ret <4 x double> %f
 }
 
-define <8 x double> @vfwmul_vf_v8f32(<8 x float>* %x, float %y) {
+define <8 x double> @vfwmul_vf_v8f32(ptr %x, float %y) {
 ; CHECK-LABEL: vfwmul_vf_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v12, (a0)
 ; CHECK-NEXT:    vfwmul.vf v8, v12, fa0
 ; CHECK-NEXT:    ret
-  %a = load <8 x float>, <8 x float>* %x
+  %a = load <8 x float>, ptr %x
   %b = insertelement <8 x float> poison, float %y, i32 0
   %c = shufflevector <8 x float> %b, <8 x float> poison, <8 x i32> zeroinitializer
   %d = fpext <8 x float> %a to <8 x double>
@@ -350,14 +350,14 @@ define <8 x double> @vfwmul_vf_v8f32(<8 x float>* %x, float %y) {
   ret <8 x double> %f
 }
 
-define <16 x double> @vfwmul_vf_v16f32(<16 x float>* %x, float %y) {
+define <16 x double> @vfwmul_vf_v16f32(ptr %x, float %y) {
 ; CHECK-LABEL: vfwmul_vf_v16f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vle32.v v16, (a0)
 ; CHECK-NEXT:    vfwmul.vf v8, v16, fa0
 ; CHECK-NEXT:    ret
-  %a = load <16 x float>, <16 x float>* %x
+  %a = load <16 x float>, ptr %x
   %b = insertelement <16 x float> poison, float %y, i32 0
   %c = shufflevector <16 x float> %b, <16 x float> poison, <16 x i32> zeroinitializer
   %d = fpext <16 x float> %a to <16 x double>
@@ -366,7 +366,7 @@ define <16 x double> @vfwmul_vf_v16f32(<16 x float>* %x, float %y) {
   ret <16 x double> %f
 }
 
-define <32 x double> @vfwmul_vf_v32f32(<32 x float>* %x, float %y) {
+define <32 x double> @vfwmul_vf_v32f32(ptr %x, float %y) {
 ; CHECK-LABEL: vfwmul_vf_v32f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
@@ -383,7 +383,7 @@ define <32 x double> @vfwmul_vf_v32f32(<32 x float>* %x, float %y) {
 ; CHECK-NEXT:    vfmul.vv v8, v16, v0
 ; CHECK-NEXT:    vfmul.vv v16, v24, v0
 ; CHECK-NEXT:    ret
-  %a = load <32 x float>, <32 x float>* %x
+  %a = load <32 x float>, ptr %x
   %b = insertelement <32 x float> poison, float %y, i32 0
   %c = shufflevector <32 x float> %b, <32 x float> poison, <32 x i32> zeroinitializer
   %d = fpext <32 x float> %a to <32 x double>

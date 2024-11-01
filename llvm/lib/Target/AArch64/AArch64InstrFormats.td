@@ -45,6 +45,17 @@ def FalseLanesNone  : FalseLanesEnum<0>;
 def FalseLanesZero  : FalseLanesEnum<1>;
 def FalseLanesUndef : FalseLanesEnum<2>;
 
+class SMEMatrixTypeEnum<bits<3> val> {
+  bits<3> Value = val;
+}
+def SMEMatrixNone  : SMEMatrixTypeEnum<0>;
+def SMEMatrixTileB : SMEMatrixTypeEnum<1>;
+def SMEMatrixTileH : SMEMatrixTypeEnum<2>;
+def SMEMatrixTileS : SMEMatrixTypeEnum<3>;
+def SMEMatrixTileD : SMEMatrixTypeEnum<4>;
+def SMEMatrixTileQ : SMEMatrixTypeEnum<5>;
+def SMEMatrixArray : SMEMatrixTypeEnum<6>;
+
 // AArch64 Instruction Format
 class AArch64Inst<Format f, string cstr> : Instruction {
   field bits<32> Inst; // Instruction encoding.
@@ -65,16 +76,18 @@ class AArch64Inst<Format f, string cstr> : Instruction {
   bit isPTestLike = 0;
   FalseLanesEnum FalseLanes = FalseLanesNone;
   DestructiveInstTypeEnum DestructiveInstType = NotDestructive;
+  SMEMatrixTypeEnum SMEMatrixType = SMEMatrixNone;
   ElementSizeEnum ElementSize = ElementSizeNone;
 
-  let TSFlags{10}  = isPTestLike;
-  let TSFlags{9}   = isWhile;
-  let TSFlags{8-7} = FalseLanes.Value;
-  let TSFlags{6-3} = DestructiveInstType.Value;
-  let TSFlags{2-0} = ElementSize.Value;
+  let TSFlags{13-11} = SMEMatrixType.Value;
+  let TSFlags{10}    = isPTestLike;
+  let TSFlags{9}     = isWhile;
+  let TSFlags{8-7}   = FalseLanes.Value;
+  let TSFlags{6-3}   = DestructiveInstType.Value;
+  let TSFlags{2-0}   = ElementSize.Value;
 
-  let Pattern     = [];
-  let Constraints = cstr;
+  let Pattern       = [];
+  let Constraints   = cstr;
 }
 
 class InstSubst<string Asm, dag Result, bit EmitPriority = 0>
@@ -1730,6 +1743,11 @@ def SystemPStateFieldWithImm0_15Operand : AsmOperandClass {
 def pstatefield4_op : Operand<i32> {
   let ParserMatchClass = SystemPStateFieldWithImm0_15Operand;
   let PrintMethod = "printSystemPStateField";
+  let MCOperandPredicate = [{
+    if (!MCOp.isImm())
+      return false;
+    return AArch64SVCR::lookupPStateImm0_15ByEncoding(MCOp.getImm()) != nullptr;
+  }];
 }
 
 // Instructions to modify PSTATE, no input reg
@@ -1752,10 +1770,10 @@ class MSRpstateImm0_15
   let Inst{11-8} = imm;
   let Inst{7-5} = pstatefield{2-0};
 
-  let DecoderMethod = "DecodeSystemPStateInstruction";
+  let DecoderMethod = "DecodeSystemPStateImm0_15Instruction";
   // MSRpstateI aliases with MSRI. When the MSRpstateI decoder method returns
   // Fail the decoder should attempt to decode the instruction as MSRI.
-  let hasCompleteDecoder = 0;
+  let hasCompleteDecoder = false;
 }
 
 def SystemPStateFieldWithImm0_1Operand : AsmOperandClass {
@@ -1765,6 +1783,11 @@ def SystemPStateFieldWithImm0_1Operand : AsmOperandClass {
 def pstatefield1_op : Operand<i32> {
   let ParserMatchClass = SystemPStateFieldWithImm0_1Operand;
   let PrintMethod = "printSystemPStateField";
+  let MCOperandPredicate = [{
+    if (!MCOp.isImm())
+      return false;
+    return AArch64SVCR::lookupPStateImm0_1ByEncoding(MCOp.getImm()) != nullptr;
+  }];
 }
 
 class MSRpstateImm0_1
@@ -1772,17 +1795,18 @@ class MSRpstateImm0_1
                  "\t$pstatefield, $imm">,
     Sched<[WriteSys]> {
 
-  bits<6> pstatefield;
+  bits<9> pstatefield;
   bit imm;
   let Inst{18-16} = pstatefield{5-3};
-  let Inst{11-9} = 0b000;
+  let Inst{11-9} = pstatefield{8-6};
   let Inst{8} = imm;
   let Inst{7-5} = pstatefield{2-0};
 
-  let DecoderMethod = "DecodeSystemPStateInstruction";
+  let DecoderMethod = "DecodeSystemPStateImm0_1Instruction";
   // MSRpstateI aliases with MSRI. When the MSRpstateI decoder method returns
   // Fail the decoder should attempt to decode the instruction as MSRI.
-  let hasCompleteDecoder = 0;
+  let hasCompleteDecoder = false;
+  let DecoderNamespace = "Fallback";
 }
 
 // SYS and SYSL generic system instructions.
@@ -11697,6 +11721,10 @@ multiclass MOPSMemorySetTaggingInsns<bits<2> opcode, string asm> {
   def TN : MOPSMemorySetTagging<opcode, 1, 1, asm # "tn">;
 }
 
+//----------------------------------------------------------------------------
+// 2022 Armv8.9/Armv9.4 Extensions
+//----------------------------------------------------------------------------
+
 //---
 // 2022 Architecture Extensions: General Data Processing (FEAT_CSSC)
 //---
@@ -11760,10 +11788,6 @@ multiclass ComparisonOp<bit isUnsigned, bit isMin, string asm,
                                 !cond(isUnsigned : uimm8_64b,
                                       !not(isUnsigned) : simm8_64b), asm, OpNode>;
 }
-
-//----------------------------------------------------------------------------
-// 2022 Armv8.9/Armv9.4 Extensions
-//----------------------------------------------------------------------------
 
 //---
 // RCPC instructions (FEAT_LRCPC3)

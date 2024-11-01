@@ -10,13 +10,11 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_RESERVEDIDENTIFIERCHECK_H
 
 #include "../utils/RenamerClangTidyCheck.h"
-#include "llvm/ADT/Optional.h"
+#include <optional>
 #include <string>
 #include <vector>
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Checks for usages of identifiers reserved for use by the implementation.
 ///
@@ -40,18 +38,16 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
-  llvm::Optional<FailureInfo>
+  std::optional<FailureInfo>
   getDeclFailureInfo(const NamedDecl *Decl,
                      const SourceManager &SM) const override;
-  llvm::Optional<FailureInfo>
+  std::optional<FailureInfo>
   getMacroFailureInfo(const Token &MacroNameTok,
                       const SourceManager &SM) const override;
   DiagInfo getDiagInfo(const NamingCheckId &ID,
                        const NamingCheckFailure &Failure) const override;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_RESERVEDIDENTIFIERCHECK_H

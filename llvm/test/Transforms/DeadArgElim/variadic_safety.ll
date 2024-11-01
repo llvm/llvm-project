@@ -1,10 +1,10 @@
 ; RUN: opt < %s -passes=deadargelim -S | FileCheck %s
 
-declare void @llvm.va_start(i8*)
+declare void @llvm.va_start(ptr)
 
 define internal i32 @va_func(i32 %a, i32 %b, ...) {
   %valist = alloca i8
-  call void @llvm.va_start(i8* %valist)
+  call void @llvm.va_start(ptr %valist)
 
   ret i32 %b
 }
@@ -16,23 +16,23 @@ define internal i32 @va_func(i32 %a, i32 %b, ...) {
 ; it.
 define i32 @call_va(i32 %in) {
   %stacked = alloca i32
-  store i32 42, i32* %stacked
-  %res = call i32(i32, i32, ...) @va_func(i32 %in, i32 %in, [6 x i32] poison, i32* byval(i32) %stacked)
+  store i32 42, ptr %stacked
+  %res = call i32(i32, i32, ...) @va_func(i32 %in, i32 %in, [6 x i32] poison, ptr byval(i32) %stacked)
   ret i32 %res
-; CHECK: call i32 (i32, i32, ...) @va_func(i32 poison, i32 %in, [6 x i32] poison, i32* byval(i32) %stacked)
+; CHECK: call i32 (i32, i32, ...) @va_func(i32 poison, i32 %in, [6 x i32] poison, ptr byval(i32) %stacked)
 }
 
 define internal i32 @va_deadret_func(i32 %a, i32 %b, ...) {
   %valist = alloca i8
-  call void @llvm.va_start(i8* %valist)
+  call void @llvm.va_start(ptr %valist)
 
   ret i32 %a
 }
 
 define void @call_deadret(i32 %in) {
   %stacked = alloca i32
-  store i32 42, i32* %stacked
-  call i32 (i32, i32, ...) @va_deadret_func(i32 poison, i32 %in, [6 x i32] poison, i32* byval(i32) %stacked)
+  store i32 42, ptr %stacked
+  call i32 (i32, i32, ...) @va_deadret_func(i32 poison, i32 %in, [6 x i32] poison, ptr byval(i32) %stacked)
   ret void
-; CHECK: call void (i32, i32, ...) @va_deadret_func(i32 poison, i32 poison, [6 x i32] poison, i32* byval(i32) %stacked)
+; CHECK: call void (i32, i32, ...) @va_deadret_func(i32 poison, i32 poison, [6 x i32] poison, ptr byval(i32) %stacked)
 }

@@ -11,6 +11,7 @@
 #include "Annotations.h"
 #include "ParsedAST.h"
 #include "TestTU.h"
+#include "index/Symbol.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
@@ -616,6 +617,45 @@ TEST(ClangdAST, HasReservedName) {
   EXPECT_FALSE(hasReservedName(findUnqualifiedDecl(AST, "secret")));
   EXPECT_TRUE(
       hasReservedScope(*findUnqualifiedDecl(AST, "secret").getDeclContext()));
+}
+
+TEST(ClangdAST, PreferredIncludeDirective) {
+  auto ComputePreferredDirective = [](TestTU &TU) {
+    auto AST = TU.build();
+    return preferredIncludeDirective(AST.tuPath(), AST.getLangOpts(),
+                                     AST.getIncludeStructure().MainFileIncludes,
+                                     AST.getLocalTopLevelDecls());
+  };
+  TestTU ObjCTU = TestTU::withCode(R"cpp(
+  int main() {}
+  )cpp");
+  ObjCTU.Filename = "TestTU.m";
+  EXPECT_EQ(ComputePreferredDirective(ObjCTU),
+            Symbol::IncludeDirective::Import);
+
+  TestTU HeaderTU = TestTU::withCode(R"cpp(
+  #import "TestTU.h"
+  )cpp");
+  HeaderTU.Filename = "TestTUHeader.h";
+  HeaderTU.ExtraArgs = {"-xobjective-c++-header"};
+  EXPECT_EQ(ComputePreferredDirective(HeaderTU),
+            Symbol::IncludeDirective::Import);
+
+  // ObjC language option is not enough for headers.
+  HeaderTU.Code = R"cpp(
+  #include "TestTU.h"
+  )cpp";
+  EXPECT_EQ(ComputePreferredDirective(HeaderTU),
+            Symbol::IncludeDirective::Include);
+
+  HeaderTU.Code = R"cpp(
+  @interface Foo
+  @end
+
+  Foo * getFoo();
+  )cpp";
+  EXPECT_EQ(ComputePreferredDirective(HeaderTU),
+            Symbol::IncludeDirective::Import);
 }
 
 } // namespace

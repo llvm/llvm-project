@@ -371,7 +371,7 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
       OrigOuterLoopID, {LLVMLoopUnrollAndJamFollowupAll,
                         LLVMLoopUnrollAndJamFollowupRemainderInner});
   if (NewInnerEpilogueLoopID)
-    SubLoop->setLoopID(NewInnerEpilogueLoopID.value());
+    SubLoop->setLoopID(*NewInnerEpilogueLoopID);
 
   // Find trip count and trip multiple
   BasicBlock *Latch = L->getLoopLatch();
@@ -401,14 +401,14 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
         OrigOuterLoopID, {LLVMLoopUnrollAndJamFollowupAll,
                           LLVMLoopUnrollAndJamFollowupRemainderOuter});
     if (NewOuterEpilogueLoopID)
-      EpilogueOuterLoop->setLoopID(NewOuterEpilogueLoopID.value());
+      EpilogueOuterLoop->setLoopID(*NewOuterEpilogueLoopID);
   }
 
   std::optional<MDNode *> NewInnerLoopID =
       makeFollowupLoopID(OrigOuterLoopID, {LLVMLoopUnrollAndJamFollowupAll,
                                            LLVMLoopUnrollAndJamFollowupInner});
   if (NewInnerLoopID)
-    SubLoop->setLoopID(NewInnerLoopID.value());
+    SubLoop->setLoopID(*NewInnerLoopID);
   else
     SubLoop->setLoopID(OrigSubLoopID);
 
@@ -417,7 +417,7 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
         OrigOuterLoopID,
         {LLVMLoopUnrollAndJamFollowupAll, LLVMLoopUnrollAndJamFollowupOuter});
     if (NewOuterLoopID) {
-      L->setLoopID(NewOuterLoopID.value());
+      L->setLoopID(*NewOuterLoopID);
 
       // Do not setLoopAlreadyUnrolled if a followup was given.
       return UnrollResult;

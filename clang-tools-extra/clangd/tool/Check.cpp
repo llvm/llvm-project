@@ -51,9 +51,9 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -125,7 +125,7 @@ class Checker {
   format::FormatStyle Style;
   // from buildAST
   std::shared_ptr<const PreambleData> Preamble;
-  llvm::Optional<ParsedAST> AST;
+  std::optional<ParsedAST> AST;
   FileIndex Index;
 
 public:
@@ -145,7 +145,7 @@ public:
         std::make_unique<DirectoryBasedGlobalCompilationDatabase>(CDBOpts);
     auto Mangler = CommandMangler::detect();
     Mangler.SystemIncludeExtractor =
-        getSystemIncludeExtractor(llvm::makeArrayRef(Opts.QueryDriverGlobs));
+        getSystemIncludeExtractor(llvm::ArrayRef(Opts.QueryDriverGlobs));
     if (Opts.ResourceDir)
       Mangler.ResourceDir = *Opts.ResourceDir;
     auto CDB = std::make_unique<OverlayCDB>(
@@ -166,7 +166,7 @@ public:
 
   // Prepare inputs and build CompilerInvocation (parsed compile command).
   bool buildInvocation(const ThreadsafeFS &TFS,
-                       llvm::Optional<std::string> Contents) {
+                       std::optional<std::string> Contents) {
     StoreDiags CaptureInvocationDiags;
     std::vector<std::string> CC1Args;
     Inputs.CompileCommand = Cmd;
@@ -228,7 +228,7 @@ public:
       elog("Failed to build AST");
       return false;
     }
-    ErrCount += showErrors(llvm::makeArrayRef(*AST->getDiagnostics())
+    ErrCount += showErrors(llvm::ArrayRef(*AST->getDiagnostics())
                                .drop_front(Preamble->Diags.size()));
 
     if (Opts.BuildDynamicSymbolIndex) {
@@ -437,7 +437,7 @@ bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
   }
 
   llvm::SmallString<0> FakeFile;
-  llvm::Optional<std::string> Contents;
+  std::optional<std::string> Contents;
   if (File.empty()) {
     llvm::sys::path::system_temp_directory(false, FakeFile);
     llvm::sys::path::append(FakeFile, "test.cc");

@@ -701,8 +701,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(
       if ((PsInputBits & 0x7F) == 0 ||
           ((PsInputBits & 0xF) == 0 &&
            (PsInputBits >> 11 & 1)))
-        Info->markPSInputEnabled(
-          countTrailingZeros(Info->getPSInputAddr(), ZB_Undefined));
+        Info->markPSInputEnabled(countTrailingZeros(Info->getPSInputAddr()));
     }
   }
 
@@ -827,8 +826,8 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     } else if (InputID == AMDGPUFunctionArgInfo::LDS_KERNEL_ID) {
       std::optional<uint32_t> Id =
           AMDGPUMachineFunction::getLDSKernelIdMetadata(MF.getFunction());
-      if (Id.has_value()) {
-        MIRBuilder.buildConstant(InputReg, Id.value());
+      if (Id) {
+        MIRBuilder.buildConstant(InputReg, *Id);
       } else {
         MIRBuilder.buildUndef(InputReg);
       }

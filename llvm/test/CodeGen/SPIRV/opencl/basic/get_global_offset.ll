@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 
 ; CHECK: OpEntryPoint Kernel %[[#test_func:]] "test"
 ; CHECK: OpName %[[#outOffsets:]] "outOffsets"

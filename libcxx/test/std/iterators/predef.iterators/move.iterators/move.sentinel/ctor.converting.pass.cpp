@@ -16,9 +16,10 @@
 //    requires convertible_to<const S2&, S>
 //      constexpr move_sentinel(const move_sentinel<S2>& s);
 
-#include <iterator>
 #include <cassert>
 #include <concepts>
+#include <iterator>
+#include <type_traits>
 
 struct NonConvertible {
     explicit NonConvertible();

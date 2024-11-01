@@ -125,20 +125,20 @@ public:
     Node(unsigned id, Operation *op) : id(id), op(op) {}
 
     // Returns the load op count for 'memref'.
-    unsigned getLoadOpCount(Value memref) {
+    unsigned getLoadOpCount(Value memref) const {
       unsigned loadOpCount = 0;
-      for (auto *loadOpInst : loads) {
-        if (memref == cast<AffineReadOpInterface>(loadOpInst).getMemRef())
+      for (Operation *loadOp : loads) {
+        if (memref == cast<AffineReadOpInterface>(loadOp).getMemRef())
           ++loadOpCount;
       }
       return loadOpCount;
     }
 
     // Returns the store op count for 'memref'.
-    unsigned getStoreOpCount(Value memref) {
+    unsigned getStoreOpCount(Value memref) const {
       unsigned storeOpCount = 0;
-      for (auto *storeOpInst : stores) {
-        if (memref == cast<AffineWriteOpInterface>(storeOpInst).getMemRef())
+      for (Operation *storeOp : stores) {
+        if (memref == cast<AffineWriteOpInterface>(storeOp).getMemRef())
           ++storeOpCount;
       }
       return storeOpCount;
@@ -146,31 +146,32 @@ public:
 
     // Returns all store ops in 'storeOps' which access 'memref'.
     void getStoreOpsForMemref(Value memref,
-                              SmallVectorImpl<Operation *> *storeOps) {
-      for (auto *storeOpInst : stores) {
-        if (memref == cast<AffineWriteOpInterface>(storeOpInst).getMemRef())
-          storeOps->push_back(storeOpInst);
+                              SmallVectorImpl<Operation *> *storeOps) const {
+      for (Operation *storeOp : stores) {
+        if (memref == cast<AffineWriteOpInterface>(storeOp).getMemRef())
+          storeOps->push_back(storeOp);
       }
     }
 
     // Returns all load ops in 'loadOps' which access 'memref'.
     void getLoadOpsForMemref(Value memref,
-                             SmallVectorImpl<Operation *> *loadOps) {
-      for (auto *loadOpInst : loads) {
-        if (memref == cast<AffineReadOpInterface>(loadOpInst).getMemRef())
-          loadOps->push_back(loadOpInst);
+                             SmallVectorImpl<Operation *> *loadOps) const {
+      for (Operation *loadOp : loads) {
+        if (memref == cast<AffineReadOpInterface>(loadOp).getMemRef())
+          loadOps->push_back(loadOp);
       }
     }
 
     // Returns all memrefs in 'loadAndStoreMemrefSet' for which this node
     // has at least one load and store operation.
-    void getLoadAndStoreMemrefSet(DenseSet<Value> *loadAndStoreMemrefSet) {
+    void
+    getLoadAndStoreMemrefSet(DenseSet<Value> *loadAndStoreMemrefSet) const {
       llvm::SmallDenseSet<Value, 2> loadMemrefs;
-      for (auto *loadOpInst : loads) {
-        loadMemrefs.insert(cast<AffineReadOpInterface>(loadOpInst).getMemRef());
+      for (Operation *loadOp : loads) {
+        loadMemrefs.insert(cast<AffineReadOpInterface>(loadOp).getMemRef());
       }
-      for (auto *storeOpInst : stores) {
-        auto memref = cast<AffineWriteOpInterface>(storeOpInst).getMemRef();
+      for (Operation *storeOp : stores) {
+        auto memref = cast<AffineWriteOpInterface>(storeOp).getMemRef();
         if (loadMemrefs.count(memref) > 0)
           loadAndStoreMemrefSet->insert(memref);
       }
@@ -328,11 +329,13 @@ public:
   }
 
   // Returns true if there is a path in the dependence graph from node 'srcId'
-  // to node 'dstId'. Returns false otherwise.
+  // to node 'dstId'. Returns false otherwise. `srcId`, `dstId`, and the
+  // operations that the edges connected are expected to be from the same block.
   bool hasDependencePath(unsigned srcId, unsigned dstId) {
     // Worklist state is: <node-id, next-output-edge-index-to-visit>
     SmallVector<std::pair<unsigned, unsigned>, 4> worklist;
     worklist.push_back({srcId, 0});
+    Operation *dstOp = getNode(dstId)->op;
     // Run DFS traversal to see if 'dstId' is reachable from 'srcId'.
     while (!worklist.empty()) {
       auto &idAndIndex = worklist.back();
@@ -350,8 +353,12 @@ public:
       Edge edge = outEdges[idAndIndex.first][idAndIndex.second];
       // Increment next output edge index for 'idAndIndex'.
       ++idAndIndex.second;
-      // Add node at 'edge.id' to worklist.
-      worklist.push_back({edge.id, 0});
+      // Add node at 'edge.id' to the worklist. We don't need to consider
+      // nodes that are "after" dstId in the containing block; one can't have a
+      // path to `dstId` from any of those nodes.
+      bool afterDst = dstOp->isBeforeInBlock(getNode(edge.id)->op);
+      if (!afterDst && edge.id != idAndIndex.first)
+        worklist.push_back({edge.id, 0});
     }
     return false;
   }
@@ -453,13 +460,13 @@ public:
 
     if (firstSrcDepPos.has_value()) {
       if (lastDstDepPos.has_value()) {
-        if (firstSrcDepPos.value() <= lastDstDepPos.value()) {
+        if (*firstSrcDepPos <= *lastDstDepPos) {
           // No valid insertion point exists which preserves dependences.
           return nullptr;
         }
       }
       // Return the insertion point at 'firstSrcDepPos'.
-      return depInsts[firstSrcDepPos.value()];
+      return depInsts[*firstSrcDepPos];
     }
     // No dependence targets in range (or only dst deps in range), return
     // 'dstNodInst' insertion point.
@@ -645,7 +652,7 @@ static bool canRemoveSrcNodeAfterFusion(
   // escaping memref, we can only remove it if the fusion slice is maximal so
   // that all the dependences are preserved.
   if (hasOutDepsAfterFusion || !escapingMemRefs.empty()) {
-    Optional<bool> isMaximal = fusionSlice.isMaximal();
+    std::optional<bool> isMaximal = fusionSlice.isMaximal();
     if (!isMaximal) {
       LLVM_DEBUG(llvm::dbgs() << "Src loop can't be removed: can't determine "
                                  "if fusion is maximal\n");
@@ -738,14 +745,12 @@ static bool isEscapingMemref(Value memref, Block *block) {
 
   // Check if 'memref' is used by a non-deferencing op (including unknown ones)
   // (e.g., call ops, alias creating ops, etc.).
-  for (Operation *user : memref.getUsers()) {
+  return llvm::any_of(memref.getUsers(), [&](Operation *user) {
     // Ignore users outside of `block`.
     if (block->getParent()->findAncestorOpInRegion(*user)->getBlock() != block)
-      continue;
-    if (!isa<AffineMapAccessInterface>(*user))
-      return true;
-  }
-  return false;
+      return false;
+    return !isa<AffineMapAccessInterface>(*user);
+  });
 }
 
 /// Returns in 'escapingMemRefs' the memrefs from affine store ops in node 'id'
@@ -858,7 +863,7 @@ bool MemRefDependenceGraph::init(Block *block) {
             block)
           continue;
         SmallVector<AffineForOp, 4> loops;
-        getLoopIVs(*user, &loops);
+        getAffineForIVs(*user, &loops);
         if (loops.empty())
           continue;
         assert(forToNodeMap.count(loops[0]) > 0 && "missing mapping");
@@ -920,7 +925,7 @@ static unsigned getMemRefEltSizeInBytes(MemRefType memRefType) {
 // this one.
 static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
                                  unsigned dstLoopDepth,
-                                 Optional<unsigned> fastMemorySpace,
+                                 std::optional<unsigned> fastMemorySpace,
                                  uint64_t localBufSizeThreshold) {
   Operation *forInst = forOp.getOperation();
 
@@ -944,7 +949,7 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
   lbs.reserve(rank);
   // Query 'region' for 'newShape' and lower bounds of MemRefRegion accessed
   // by 'srcStoreOpInst' at depth 'dstLoopDepth'.
-  Optional<int64_t> numElements =
+  std::optional<int64_t> numElements =
       region.getConstantBoundingSizeAndShape(&newShape, &lbs, &lbDivisors);
   assert(numElements && "non-constant number of elts in local buffer");
 
@@ -973,11 +978,10 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
 
   // Create 'newMemRefType' using 'newShape' from MemRefRegion accessed
   // by 'srcStoreOpInst'.
-  uint64_t bufSize =
-      getMemRefEltSizeInBytes(oldMemRefType) * numElements.value();
+  uint64_t bufSize = getMemRefEltSizeInBytes(oldMemRefType) * *numElements;
   unsigned newMemSpace;
   if (bufSize <= localBufSizeThreshold && fastMemorySpace.has_value()) {
-    newMemSpace = fastMemorySpace.value();
+    newMemSpace = *fastMemorySpace;
   } else {
     newMemSpace = oldMemRefType.getMemorySpaceAsInt();
   }
@@ -1071,10 +1075,9 @@ static bool hasNonAffineUsersOnThePath(unsigned srcId, unsigned dstId,
     return WalkResult::advance();
   });
   // Looking for users between node 'srcId' and node 'dstId'.
-  for (Value memref : memRefValues)
-    if (hasNonAffineUsersOnThePath(srcId, dstId, memref, mdg))
-      return true;
-  return false;
+  return llvm::any_of(memRefValues, [&](Value memref) {
+    return hasNonAffineUsersOnThePath(srcId, dstId, memref, mdg);
+  });
 }
 
 // Checks the profitability of fusing a backwards slice of the loop nest
@@ -1135,7 +1138,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
 
   // Compute cost of sliced and unsliced src loop nest.
   SmallVector<AffineForOp, 4> srcLoopIVs;
-  getLoopIVs(*srcOpInst, &srcLoopIVs);
+  getAffineForIVs(*srcOpInst, &srcLoopIVs);
 
   // Walk src loop nest and collect stats.
   LoopNestStats srcLoopNestStats;
@@ -1171,11 +1174,11 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
     return false;
   }
 
-  Optional<int64_t> maybeSrcWriteRegionSizeBytes =
+  std::optional<int64_t> maybeSrcWriteRegionSizeBytes =
       srcWriteRegion.getRegionSize();
   if (!maybeSrcWriteRegionSizeBytes.has_value())
     return false;
-  int64_t srcWriteRegionSizeBytes = maybeSrcWriteRegionSizeBytes.value();
+  int64_t srcWriteRegionSizeBytes = *maybeSrcWriteRegionSizeBytes;
 
   // Compute op instance count for the src loop nest.
   uint64_t dstLoopNestCost = getComputeCost(dstForOp, dstLoopNestStats);
@@ -1213,16 +1216,16 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
       continue;
     }
 
-    Optional<int64_t> maybeSliceWriteRegionSizeBytes =
+    std::optional<int64_t> maybeSliceWriteRegionSizeBytes =
         sliceWriteRegion.getRegionSize();
     if (!maybeSliceWriteRegionSizeBytes.has_value() ||
-        maybeSliceWriteRegionSizeBytes.value() == 0) {
+        *maybeSliceWriteRegionSizeBytes == 0) {
       LLVM_DEBUG(llvm::dbgs()
                  << "Failed to get slice write region size at loopDepth: " << i
                  << "\n");
       continue;
     }
-    int64_t sliceWriteRegionSizeBytes = maybeSliceWriteRegionSizeBytes.value();
+    int64_t sliceWriteRegionSizeBytes = *maybeSliceWriteRegionSizeBytes;
 
     // If we are fusing for reuse, check that write regions remain the same.
     // TODO: Write region check should check sizes and offsets in
@@ -1299,11 +1302,11 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
     return false;
   }
 
-  auto srcMemSizeVal = srcMemSize.value();
-  auto dstMemSizeVal = dstMemSize.value();
+  auto srcMemSizeVal = *srcMemSize;
+  auto dstMemSizeVal = *dstMemSize;
 
   assert(sliceMemEstimate && "expected value");
-  auto fusedMem = dstMemSizeVal + sliceMemEstimate.value();
+  auto fusedMem = dstMemSizeVal + *sliceMemEstimate;
 
   LLVM_DEBUG(llvm::dbgs() << "   src mem: " << srcMemSizeVal << "\n"
                           << "   dst mem: " << dstMemSizeVal << "\n"
@@ -1393,7 +1396,7 @@ public:
   // Parameter for local buffer size threshold.
   unsigned localBufSizeThreshold;
   // Parameter for fast memory space.
-  Optional<unsigned> fastMemorySpace;
+  std::optional<unsigned> fastMemorySpace;
   // If true, ignore any additional (redundant) computation tolerance threshold
   // that would have prevented fusion.
   bool maximalFusion;
@@ -1404,7 +1407,7 @@ public:
   using Node = MemRefDependenceGraph::Node;
 
   GreedyFusion(MemRefDependenceGraph *mdg, unsigned localBufSizeThreshold,
-               Optional<unsigned> fastMemorySpace, bool maximalFusion,
+               std::optional<unsigned> fastMemorySpace, bool maximalFusion,
                double computeToleranceThreshold)
       : mdg(mdg), localBufSizeThreshold(localBufSizeThreshold),
         fastMemorySpace(fastMemorySpace), maximalFusion(maximalFusion),
@@ -1447,6 +1450,290 @@ public:
     eraseUnusedMemRefAllocations();
   }
 
+  /// Returns true if a private memref can be created for `memref` given
+  /// the fusion scenario reflected by the other arguments.
+  bool canCreatePrivateMemRef(Value memref,
+                              const DenseSet<Value> &srcEscapingMemRefs,
+                              unsigned producerId, unsigned consumerId,
+                              bool removeSrcNode) {
+    const Node *consumerNode = mdg->getNode(consumerId);
+    // If `memref` is an escaping one, do not create a private memref
+    // for the below scenarios, since doing so will leave the escaping
+    // memref unmodified as all the writes originally meant for the
+    // escaping memref would be performed on the private memref:
+    // 1. The source is to be removed after fusion,
+    // OR
+    // 2. The destination writes to `memref`.
+    if (srcEscapingMemRefs.count(memref) > 0 &&
+        (removeSrcNode || consumerNode->getStoreOpCount(memref) > 0))
+      return false;
+
+    // Don't create a private memref if 'srcNode' has in edges on
+    // 'memref' or 'dstNode' has out edges on 'memref'.
+    if (mdg->getIncomingMemRefAccesses(producerId, memref) > 0 ||
+        mdg->getOutEdgeCount(consumerId, memref) > 0)
+      return false;
+
+    // If 'srcNode' will be removed but it has out edges on 'memref' to
+    // nodes other than 'dstNode', we have to preserve dependences and
+    // cannot create a private memref.
+    if (removeSrcNode &&
+        any_of(mdg->outEdges[producerId], [&](const auto &edge) {
+          return edge.value == memref && edge.id != consumerId;
+        }))
+      return false;
+
+    return true;
+  }
+
+  /// Perform fusions with node `dstId` as the destination of fusion, with
+  /// No fusion is performed when producers with a user count greater than
+  /// `maxSrcUserCount` for any of the memrefs involved.
+  void performFusionsIntoDest(unsigned dstId, unsigned maxSrcUserCount) {
+    LLVM_DEBUG(llvm::dbgs() << "Evaluating dst loop " << dstId << "\n");
+    // Skip if this node was removed (fused into another node).
+    if (mdg->nodes.count(dstId) == 0)
+      return;
+    // Get 'dstNode' into which to attempt fusion.
+    auto *dstNode = mdg->getNode(dstId);
+    // Skip if 'dstNode' is not a loop nest.
+    if (!isa<AffineForOp>(dstNode->op))
+      return;
+    // Skip if 'dstNode' is a loop nest returning values.
+    // TODO: support loop nests that return values.
+    if (dstNode->op->getNumResults() > 0)
+      return;
+
+    LLVM_DEBUG(llvm::dbgs() << "Evaluating dst loop " << dstId << "\n");
+
+    // Sink sequential loops in 'dstNode' (and thus raise parallel loops)
+    // while preserving relative order. This can increase the maximum loop
+    // depth at which we can fuse a slice of a producer loop nest into a
+    // consumer loop nest.
+    sinkSequentialLoops(dstNode);
+    auto dstAffineForOp = cast<AffineForOp>(dstNode->op);
+
+    // Try to fuse 'dstNode' with candidate producer loops until a fixed point
+    // is reached. Fusing two loops may expose new fusion opportunities.
+    bool dstNodeChanged;
+    do {
+      // Gather src loop candidates for 'dstNode' and visit them in "quasi"
+      // reverse program order to minimize the number of iterations needed to
+      // reach the fixed point. Note that this is a best effort approach since
+      // 'getProducerCandidates' does not always guarantee that program order
+      // in 'srcIdCandidates'.
+      dstNodeChanged = false;
+      SmallVector<unsigned, 16> srcIdCandidates;
+      getProducerCandidates(dstId, mdg, srcIdCandidates);
+
+      for (unsigned srcId : llvm::reverse(srcIdCandidates)) {
+        // Get 'srcNode' from which to attempt fusion into 'dstNode'.
+        auto *srcNode = mdg->getNode(srcId);
+        auto srcAffineForOp = cast<AffineForOp>(srcNode->op);
+        LLVM_DEBUG(llvm::dbgs() << "Evaluating src loop " << srcId
+                                << " for dst loop " << dstId << "\n");
+
+        // Skip if 'srcNode' is a loop nest returning values.
+        // TODO: support loop nests that return values.
+        if (isa<AffineForOp>(srcNode->op) && srcNode->op->getNumResults() > 0)
+          continue;
+
+        DenseSet<Value> producerConsumerMemrefs;
+        gatherProducerConsumerMemrefs(srcId, dstId, mdg,
+                                      producerConsumerMemrefs);
+
+        // Skip if 'srcNode' out edge count on any memref is greater than
+        // 'maxSrcUserCount'.
+        if (any_of(producerConsumerMemrefs, [&](Value memref) {
+              return mdg->getOutEdgeCount(srcNode->id, memref) >
+                     maxSrcUserCount;
+            }))
+          continue;
+
+        // Gather memrefs in 'srcNode' that are written and escape out of the
+        // block (e.g., memref block arguments, returned memrefs,
+        // memrefs passed to function calls, etc.).
+        DenseSet<Value> srcEscapingMemRefs;
+        gatherEscapingMemrefs(srcNode->id, mdg, srcEscapingMemRefs);
+
+        // Skip if there are non-affine operations in between the 'srcNode'
+        // and 'dstNode' using their memrefs. If so, we wouldn't be able to
+        // compute a legal insertion point for now. 'srcNode' and 'dstNode'
+        // memrefs with non-affine operation users would be considered
+        // escaping memrefs so we can limit this check to only scenarios with
+        // escaping memrefs.
+        if (!srcEscapingMemRefs.empty() &&
+            hasNonAffineUsersOnThePath(srcId, dstId, mdg)) {
+          LLVM_DEBUG(llvm::dbgs()
+                     << "Can't fuse: non-affine users in between the loops\n.");
+          continue;
+        }
+
+        // Compute an operation list insertion point for the fused loop
+        // nest which preserves dependences.
+        Operation *fusedLoopInsPoint =
+            mdg->getFusedLoopNestInsertionPoint(srcNode->id, dstNode->id);
+        if (fusedLoopInsPoint == nullptr)
+          continue;
+
+        // Compute the innermost common loop depth for dstNode
+        // producer-consumer loads/stores.
+        SmallVector<Operation *, 2> dstMemrefOps;
+        for (Operation *op : dstNode->loads)
+          if (producerConsumerMemrefs.count(
+                  cast<AffineReadOpInterface>(op).getMemRef()) > 0)
+            dstMemrefOps.push_back(op);
+        for (Operation *op : dstNode->stores)
+          if (producerConsumerMemrefs.count(
+                  cast<AffineWriteOpInterface>(op).getMemRef()))
+            dstMemrefOps.push_back(op);
+        unsigned dstLoopDepthTest = getInnermostCommonLoopDepth(dstMemrefOps);
+
+        // Check the feasibility of fusing src loop nest into dst loop nest
+        // at loop depths in range [1, dstLoopDepthTest].
+        unsigned maxLegalFusionDepth = 0;
+        SmallVector<ComputationSliceState, 8> depthSliceUnions;
+        depthSliceUnions.resize(dstLoopDepthTest);
+        FusionStrategy strategy(FusionStrategy::ProducerConsumer);
+        for (unsigned i = 1; i <= dstLoopDepthTest; ++i) {
+          FusionResult result = mlir::canFuseLoops(
+              srcAffineForOp, dstAffineForOp,
+              /*dstLoopDepth=*/i, &depthSliceUnions[i - 1], strategy);
+
+          if (result.value == FusionResult::Success)
+            maxLegalFusionDepth = i;
+        }
+
+        if (maxLegalFusionDepth == 0) {
+          LLVM_DEBUG(llvm::dbgs()
+                     << "Can't fuse: fusion is not legal at any depth\n");
+          continue;
+        }
+
+        // Check if fusion would be profitable. We skip profitability analysis
+        // for maximal fusion since we already know the maximal legal depth to
+        // fuse.
+        unsigned bestDstLoopDepth = maxLegalFusionDepth;
+        if (!maximalFusion) {
+          // Retrieve producer stores from the src loop.
+          SmallVector<Operation *, 2> producerStores;
+          for (Operation *op : srcNode->stores)
+            if (producerConsumerMemrefs.count(
+                    cast<AffineWriteOpInterface>(op).getMemRef()))
+              producerStores.push_back(op);
+
+          // TODO: Suppport multiple producer stores in profitability
+          // analysis. We limit profitability analysis to only scenarios with
+          // a single producer store for now. Note that some multi-store
+          // producer scenarios will still go through profitability analysis
+          // if only one of the stores is involved the producer-consumer
+          // relationship of the candidate loops.
+          assert(!producerStores.empty() && "Expected producer store");
+          if (producerStores.size() > 1)
+            LLVM_DEBUG(llvm::dbgs() << "Skipping profitability analysis. Not "
+                                       "supported for this case\n");
+          else if (!isFusionProfitable(producerStores[0], producerStores[0],
+                                       dstAffineForOp, depthSliceUnions,
+                                       maxLegalFusionDepth, &bestDstLoopDepth,
+                                       computeToleranceThreshold))
+            continue;
+        }
+
+        assert(bestDstLoopDepth > 0 && "Unexpected loop fusion depth");
+        ComputationSliceState &bestSlice =
+            depthSliceUnions[bestDstLoopDepth - 1];
+        assert(!bestSlice.isEmpty() && "Missing slice union for depth");
+
+        // Determine if 'srcId' can be removed after fusion, taking into
+        // account remaining dependences, escaping memrefs and the fusion
+        // insertion point.
+        bool removeSrcNode = canRemoveSrcNodeAfterFusion(
+            srcId, dstId, bestSlice, fusedLoopInsPoint, srcEscapingMemRefs,
+            mdg);
+
+        DenseSet<Value> privateMemrefs;
+        for (Value memref : producerConsumerMemrefs) {
+          if (canCreatePrivateMemRef(memref, srcEscapingMemRefs, srcId, dstId,
+                                     removeSrcNode)) {
+            // Create a private version of this memref.
+            LLVM_DEBUG(llvm::dbgs()
+                       << "Creating private memref for " << memref << '\n');
+            // Create a private version of this memref.
+            privateMemrefs.insert(memref);
+          }
+        }
+
+        // Fuse computation slice of 'srcLoopNest' into 'dstLoopNest'.
+        fuseLoops(srcAffineForOp, dstAffineForOp, bestSlice);
+        dstNodeChanged = true;
+
+        LLVM_DEBUG(llvm::dbgs()
+                   << "Fused src loop " << srcId << " into dst loop " << dstId
+                   << " at depth " << bestDstLoopDepth << ":\n"
+                   << dstAffineForOp << "\n");
+
+        // Move 'dstAffineForOp' before 'insertPointInst' if needed.
+        if (fusedLoopInsPoint != dstAffineForOp)
+          dstAffineForOp->moveBefore(fusedLoopInsPoint);
+
+        // Update edges between 'srcNode' and 'dstNode'.
+        mdg->updateEdges(srcNode->id, dstNode->id, privateMemrefs,
+                         removeSrcNode);
+
+        // Create private memrefs.
+        if (!privateMemrefs.empty()) {
+          // Gather stores for all the private-to-be memrefs.
+          DenseMap<Value, SmallVector<Operation *, 4>> privateMemRefToStores;
+          dstAffineForOp.walk([&](AffineWriteOpInterface storeOp) {
+            Value storeMemRef = storeOp.getMemRef();
+            if (privateMemrefs.count(storeMemRef) > 0)
+              privateMemRefToStores[storeMemRef].push_back(storeOp);
+          });
+
+          // Replace original memrefs with private memrefs. Note that all the
+          // loads and stores on these memrefs will be replaced with a new
+          // loads and stores. Any reference to the original ones becomes
+          // invalid after this point.
+          for (auto &memrefToStoresPair : privateMemRefToStores) {
+            // TODO: Use union of memref write regions to compute
+            // private memref footprint.
+            SmallVector<Operation *, 4> &storesForMemref =
+                memrefToStoresPair.second;
+            Value newMemRef = createPrivateMemRef(
+                dstAffineForOp, storesForMemref[0], bestDstLoopDepth,
+                fastMemorySpace, localBufSizeThreshold);
+            // Create new node in dependence graph for 'newMemRef' alloc op.
+            unsigned newMemRefNodeId = mdg->addNode(newMemRef.getDefiningOp());
+            // Add edge from 'newMemRef' node to dstNode.
+            mdg->addEdge(newMemRefNodeId, dstId, newMemRef);
+          }
+          // One or more entries for 'newMemRef' alloc op are inserted into
+          // the DenseMap mdg->nodes. Since an insertion may cause DenseMap to
+          // reallocate, update dstNode.
+          dstNode = mdg->getNode(dstId);
+        }
+
+        // Collect dst loop stats after memref privatization transformation.
+        LoopNestStateCollector dstLoopCollector;
+        dstLoopCollector.collect(dstAffineForOp);
+
+        // Clear and add back loads and stores.
+        mdg->clearNodeLoadAndStores(dstNode->id);
+        mdg->addToNode(dstId, dstLoopCollector.loadOpInsts,
+                       dstLoopCollector.storeOpInsts);
+
+        if (removeSrcNode) {
+          LLVM_DEBUG(llvm::dbgs()
+                     << "Removing src loop " << srcId << " after fusion\n");
+          // srcNode is no longer valid after it is removed from mdg.
+          srcAffineForOp.erase();
+          mdg->removeNode(srcId);
+          srcNode = nullptr;
+        }
+      }
+    } while (dstNodeChanged);
+  }
+
   /// Visit each node in the graph, and for each node, attempt to fuse it with
   /// producer-consumer candidates. No fusion is performed when producers with a
   /// user count greater than `maxSrcUserCount` for any of the memrefs involved
@@ -1457,270 +1744,7 @@ public:
     while (!worklist.empty()) {
       unsigned dstId = worklist.back();
       worklist.pop_back();
-
-      // Skip if this node was removed (fused into another node).
-      if (mdg->nodes.count(dstId) == 0)
-        continue;
-      // Get 'dstNode' into which to attempt fusion.
-      auto *dstNode = mdg->getNode(dstId);
-      // Skip if 'dstNode' is not a loop nest.
-      if (!isa<AffineForOp>(dstNode->op))
-        continue;
-      // Skip if 'dstNode' is a loop nest returning values.
-      // TODO: support loop nests that return values.
-      if (dstNode->op->getNumResults() > 0)
-        continue;
-
-      LLVM_DEBUG(llvm::dbgs() << "Evaluating dst loop " << dstId << "\n");
-
-      // Sink sequential loops in 'dstNode' (and thus raise parallel loops)
-      // while preserving relative order. This can increase the maximum loop
-      // depth at which we can fuse a slice of a producer loop nest into a
-      // consumer loop nest.
-      sinkSequentialLoops(dstNode);
-      auto dstAffineForOp = cast<AffineForOp>(dstNode->op);
-
-      // Try to fuse 'dstNode' with candidate producer loops until a fixed point
-      // is reached. Fusing two loops may expose new fusion opportunities.
-      bool dstNodeChanged;
-      do {
-        // Gather src loop candidates for 'dstNode' and visit them in "quasi"
-        // reverse program order to minimize the number of iterations needed to
-        // reach the fixed point. Note that this is a best effort approach since
-        // 'getProducerCandidates' does not always guarantee that program order
-        // in 'srcIdCandidates'.
-        dstNodeChanged = false;
-        SmallVector<unsigned, 16> srcIdCandidates;
-        getProducerCandidates(dstId, mdg, srcIdCandidates);
-
-        for (unsigned srcId : llvm::reverse(srcIdCandidates)) {
-          // Get 'srcNode' from which to attempt fusion into 'dstNode'.
-          auto *srcNode = mdg->getNode(srcId);
-          auto srcAffineForOp = cast<AffineForOp>(srcNode->op);
-          LLVM_DEBUG(llvm::dbgs() << "Evaluating src loop " << srcId
-                                  << " for dst loop " << dstId << "\n");
-
-          // Skip if 'srcNode' is a loop nest returning values.
-          // TODO: support loop nests that return values.
-          if (isa<AffineForOp>(srcNode->op) && srcNode->op->getNumResults() > 0)
-            continue;
-
-          DenseSet<Value> producerConsumerMemrefs;
-          gatherProducerConsumerMemrefs(srcId, dstId, mdg,
-                                        producerConsumerMemrefs);
-
-          // Skip if 'srcNode' out edge count on any memref is greater than
-          // 'maxSrcUserCount'.
-          if (any_of(producerConsumerMemrefs, [&](Value memref) {
-                return mdg->getOutEdgeCount(srcNode->id, memref) >
-                       maxSrcUserCount;
-              }))
-            continue;
-
-          // Gather memrefs in 'srcNode' that are written and escape out of the
-          // block (e.g., memref block arguments, returned memrefs,
-          // memrefs passed to function calls, etc.).
-          DenseSet<Value> srcEscapingMemRefs;
-          gatherEscapingMemrefs(srcNode->id, mdg, srcEscapingMemRefs);
-
-          // Skip if there are non-affine operations in between the 'srcNode'
-          // and 'dstNode' using their memrefs. If so, we wouldn't be able to
-          // compute a legal insertion point for now. 'srcNode' and 'dstNode'
-          // memrefs with non-affine operation users would be considered
-          // escaping memrefs so we can limit this check to only scenarios with
-          // escaping memrefs.
-          if (!srcEscapingMemRefs.empty() &&
-              hasNonAffineUsersOnThePath(srcId, dstId, mdg)) {
-            LLVM_DEBUG(
-                llvm::dbgs()
-                << "Can't fuse: non-affine users in between the loops\n.");
-            continue;
-          }
-
-          // Compute an operation list insertion point for the fused loop
-          // nest which preserves dependences.
-          Operation *fusedLoopInsPoint =
-              mdg->getFusedLoopNestInsertionPoint(srcNode->id, dstNode->id);
-          if (fusedLoopInsPoint == nullptr)
-            continue;
-
-          // Compute the innermost common loop depth for dstNode
-          // producer-consumer loads/stores.
-          SmallVector<Operation *, 2> dstMemrefOps;
-          for (Operation *op : dstNode->loads)
-            if (producerConsumerMemrefs.count(
-                    cast<AffineReadOpInterface>(op).getMemRef()) > 0)
-              dstMemrefOps.push_back(op);
-          for (Operation *op : dstNode->stores)
-            if (producerConsumerMemrefs.count(
-                    cast<AffineWriteOpInterface>(op).getMemRef()))
-              dstMemrefOps.push_back(op);
-          unsigned dstLoopDepthTest = getInnermostCommonLoopDepth(dstMemrefOps);
-
-          // Check the feasibility of fusing src loop nest into dst loop nest
-          // at loop depths in range [1, dstLoopDepthTest].
-          unsigned maxLegalFusionDepth = 0;
-          SmallVector<ComputationSliceState, 8> depthSliceUnions;
-          depthSliceUnions.resize(dstLoopDepthTest);
-          FusionStrategy strategy(FusionStrategy::ProducerConsumer);
-          for (unsigned i = 1; i <= dstLoopDepthTest; ++i) {
-            FusionResult result = mlir::canFuseLoops(
-                srcAffineForOp, dstAffineForOp,
-                /*dstLoopDepth=*/i, &depthSliceUnions[i - 1], strategy);
-
-            if (result.value == FusionResult::Success)
-              maxLegalFusionDepth = i;
-          }
-
-          if (maxLegalFusionDepth == 0) {
-            LLVM_DEBUG(llvm::dbgs()
-                       << "Can't fuse: fusion is not legal at any depth\n");
-            continue;
-          }
-
-          // Check if fusion would be profitable. We skip profitability analysis
-          // for maximal fusion since we already know the maximal legal depth to
-          // fuse.
-          unsigned bestDstLoopDepth = maxLegalFusionDepth;
-          if (!maximalFusion) {
-            // Retrieve producer stores from the src loop.
-            SmallVector<Operation *, 2> producerStores;
-            for (Operation *op : srcNode->stores)
-              if (producerConsumerMemrefs.count(
-                      cast<AffineWriteOpInterface>(op).getMemRef()))
-                producerStores.push_back(op);
-
-            // TODO: Suppport multiple producer stores in profitability
-            // analysis. We limit profitability analysis to only scenarios with
-            // a single producer store for now. Note that some multi-store
-            // producer scenarios will still go through profitability analysis
-            // if only one of the stores is involved the producer-consumer
-            // relationship of the candidate loops.
-            assert(!producerStores.empty() && "Expected producer store");
-            if (producerStores.size() > 1)
-              LLVM_DEBUG(llvm::dbgs() << "Skipping profitability analysis. Not "
-                                         "supported for this case\n");
-            else if (!isFusionProfitable(producerStores[0], producerStores[0],
-                                         dstAffineForOp, depthSliceUnions,
-                                         maxLegalFusionDepth, &bestDstLoopDepth,
-                                         computeToleranceThreshold))
-              continue;
-          }
-
-          assert(bestDstLoopDepth > 0 && "Unexpected loop fusion depth");
-          ComputationSliceState &bestSlice =
-              depthSliceUnions[bestDstLoopDepth - 1];
-          assert(!bestSlice.isEmpty() && "Missing slice union for depth");
-
-          // Determine if 'srcId' can be removed after fusion, taking into
-          // account remaining dependences, escaping memrefs and the fusion
-          // insertion point.
-          bool removeSrcNode = canRemoveSrcNodeAfterFusion(
-              srcId, dstId, bestSlice, fusedLoopInsPoint, srcEscapingMemRefs,
-              mdg);
-
-          DenseSet<Value> privateMemrefs;
-          for (Value memref : producerConsumerMemrefs) {
-            // If `memref` is an escaping one, do not create a private memref
-            // for the below scenarios, since doing so will leave the escaping
-            // memref unmodified as all the writes originally meant for the
-            // escaping memref would be performed on the private memref:
-            // 1. The source is to be removed after fusion,
-            // OR
-            // 2. The destination writes to `memref`.
-            if (srcEscapingMemRefs.count(memref) > 0 &&
-                (removeSrcNode || dstNode->getStoreOpCount(memref) > 0))
-              continue;
-
-            // Don't create a private memref if 'srcNode' has in edges on
-            // 'memref' or 'dstNode' has out edges on 'memref'.
-            if (mdg->getIncomingMemRefAccesses(srcId, memref) > 0 ||
-                mdg->getOutEdgeCount(dstId, memref) > 0)
-              continue;
-
-            // If 'srcNode' will be removed but it has out edges on 'memref' to
-            // nodes other than 'dstNode', we have to preserve dependences and
-            // cannot create a private memref.
-            if (removeSrcNode &&
-                any_of(mdg->outEdges[srcId], [&](const auto &edge) {
-                  return edge.value == memref && edge.id != dstId;
-                }))
-              continue;
-
-            // Create a private version of this memref.
-            privateMemrefs.insert(memref);
-          }
-
-          // Fuse computation slice of 'srcLoopNest' into 'dstLoopNest'.
-          fuseLoops(srcAffineForOp, dstAffineForOp, bestSlice);
-          dstNodeChanged = true;
-
-          LLVM_DEBUG(llvm::dbgs()
-                     << "Fused src loop " << srcId << " into dst loop " << dstId
-                     << " at depth " << bestDstLoopDepth << ":\n"
-                     << dstAffineForOp << "\n");
-
-          // Move 'dstAffineForOp' before 'insertPointInst' if needed.
-          if (fusedLoopInsPoint != dstAffineForOp)
-            dstAffineForOp->moveBefore(fusedLoopInsPoint);
-
-          // Update edges between 'srcNode' and 'dstNode'.
-          mdg->updateEdges(srcNode->id, dstNode->id, privateMemrefs,
-                           removeSrcNode);
-
-          // Create private memrefs.
-          if (!privateMemrefs.empty()) {
-            // Gather stores for all the private-to-be memrefs.
-            DenseMap<Value, SmallVector<Operation *, 4>> privateMemRefToStores;
-            dstAffineForOp.walk([&](AffineWriteOpInterface storeOp) {
-              Value storeMemRef = storeOp.getMemRef();
-              if (privateMemrefs.count(storeMemRef) > 0)
-                privateMemRefToStores[storeMemRef].push_back(storeOp);
-            });
-
-            // Replace original memrefs with private memrefs. Note that all the
-            // loads and stores on these memrefs will be replaced with a new
-            // loads and stores. Any reference to the original ones becomes
-            // invalid after this point.
-            for (auto &memrefToStoresPair : privateMemRefToStores) {
-              // TODO: Use union of memref write regions to compute
-              // private memref footprint.
-              SmallVector<Operation *, 4> &storesForMemref =
-                  memrefToStoresPair.second;
-              Value newMemRef = createPrivateMemRef(
-                  dstAffineForOp, storesForMemref[0], bestDstLoopDepth,
-                  fastMemorySpace, localBufSizeThreshold);
-              // Create new node in dependence graph for 'newMemRef' alloc op.
-              unsigned newMemRefNodeId =
-                  mdg->addNode(newMemRef.getDefiningOp());
-              // Add edge from 'newMemRef' node to dstNode.
-              mdg->addEdge(newMemRefNodeId, dstId, newMemRef);
-            }
-            // One or more entries for 'newMemRef' alloc op are inserted into
-            // the DenseMap mdg->nodes. Since an insertion may cause DenseMap to
-            // reallocate, update dstNode.
-            dstNode = mdg->getNode(dstId);
-          }
-
-          // Collect dst loop stats after memref privatization transformation.
-          LoopNestStateCollector dstLoopCollector;
-          dstLoopCollector.collect(dstAffineForOp);
-
-          // Clear and add back loads and stores.
-          mdg->clearNodeLoadAndStores(dstNode->id);
-          mdg->addToNode(dstId, dstLoopCollector.loadOpInsts,
-                         dstLoopCollector.storeOpInsts);
-
-          if (removeSrcNode) {
-            LLVM_DEBUG(llvm::dbgs()
-                       << "Removing src loop " << srcId << " after fusion\n");
-            // srcNode is no longer valid after it is removed from mdg.
-            srcAffineForOp.erase();
-            mdg->removeNode(srcId);
-            srcNode = nullptr;
-          }
-        }
-      } while (dstNodeChanged);
+      performFusionsIntoDest(dstId, maxSrcUserCount);
     }
   }
 
@@ -1785,7 +1809,7 @@ public:
       dstNode->getLoadOpsForMemref(memref, &dstLoadOpInsts);
 
       SmallVector<AffineForOp, 4> dstLoopIVs;
-      getLoopIVs(*dstLoadOpInsts[0], &dstLoopIVs);
+      getAffineForIVs(*dstLoadOpInsts[0], &dstLoopIVs);
       unsigned dstLoopDepthTest = dstLoopIVs.size();
       auto sibAffineForOp = cast<AffineForOp>(sibNode->op);
 
@@ -1892,7 +1916,7 @@ public:
           continue;
         // Gather loops surrounding 'use'.
         SmallVector<AffineForOp, 4> loops;
-        getLoopIVs(*user, &loops);
+        getAffineForIVs(*user, &loops);
         // Skip 'use' if it is not within a loop nest.
         if (loops.empty())
           continue;
@@ -2011,7 +2035,7 @@ void LoopFusion::runOnBlock(Block *block) {
   if (!g.init(block))
     return;
 
-  Optional<unsigned> fastMemorySpaceOpt;
+  std::optional<unsigned> fastMemorySpaceOpt;
   if (fastMemorySpace.hasValue())
     fastMemorySpaceOpt = fastMemorySpace;
   unsigned localBufSizeThresholdBytes = localBufSizeThreshold * 1024;

@@ -178,14 +178,14 @@ class LLVM_LifetimeBaseOp<string opName> : LLVM_ZeroResultIntrOp<opName> {
 def LLVM_LifetimeStartOp : LLVM_LifetimeBaseOp<"lifetime.start"> {
   // Custom builder to convert the size argument to an attribute.
   string mlirBuilder = [{
-    $_builder.create<LLVM::LifetimeStartOp>(
+    $_op = $_builder.create<LLVM::LifetimeStartOp>(
       $_location, $_int_attr($size), $ptr);
   }];
 }
 def LLVM_LifetimeEndOp : LLVM_LifetimeBaseOp<"lifetime.end"> {
   // Custom builder to convert the size argument to an attribute.
   string mlirBuilder = [{
-    $_builder.create<LLVM::LifetimeEndOp>(
+    $_op = $_builder.create<LLVM::LifetimeEndOp>(
       $_location, $_int_attr($size), $ptr);
   }];
 }
@@ -281,13 +281,21 @@ class LLVM_DbgIntrOp<string name, string argName> : LLVM_IntrOp<name, [], [], []
       });
   }];
   let mlirBuilder = [{
-    // Drop all debug intrinsics with a non-empty debug expression.
-    // TODO: Stop dropping debug intrinsics once debug expressions are
-    // convertible to MLIR.
+    // Drop debug intrinsics with a non-empty debug expression.
+    // TODO: Support debug intrinsics that evaluate a debug expression.
     auto *dbgIntr = cast<llvm::DbgVariableIntrinsic>(inst);
-    if (dbgIntr->getExpression()->getNumElements() == 0)
-      $_builder.create<$_qualCppClassName>($_location,
-        $}] # argName # [{, $_var_attr($varInfo));
+    if (dbgIntr->hasArgList() || dbgIntr->getExpression()->getNumElements() != 0)
+      return success();
+    // Convert the value/address operand late since it cannot be a debug
+    // metadata argument list at this stage. Generating the conversion using an
+    // argument variable would not work here, since the builder variables are
+    // converted before entering the builder, which would result in an error
+    // when attempting to convert an argument list.
+    FailureOr<Value> argOperand = moduleImport.convertValue(llvmOperands[0]);
+    if (failed(argOperand))
+      return failure();
+    $_op = $_builder.create<$_qualCppClassName>($_location,
+        *argOperand, $_var_attr($varInfo));
   }];
   let assemblyFormat = [{
     qualified($varInfo) `=` $}] # argName #
@@ -484,7 +492,7 @@ def LLVM_MatrixColumnMajorStoreOp : LLVM_ZeroResultIntrOp<"matrix.column.major.s
       $rows, $columns);
   }];
   string mlirBuilder = [{
-    $_builder.create<LLVM::MatrixColumnMajorStoreOp>(
+    $_op = $_builder.create<LLVM::MatrixColumnMajorStoreOp>(
       $_location, $matrix, $data, $stride,
       $_int_attr($isVolatile), $_int_attr($rows), $_int_attr($columns));
   }];
@@ -579,7 +587,7 @@ def LLVM_MaskedStoreOp : LLVM_ZeroResultIntrOp<"masked.store"> {
       $value, $data, llvm::Align($alignment), $mask);
   }];
   string mlirBuilder = [{
-    $_builder.create<LLVM::MaskedStoreOp>($_location,
+    $_op = $_builder.create<LLVM::MaskedStoreOp>($_location,
       $value, $data, $mask, $_int_attr($alignment));
   }];
   list<int> llvmArgIndices = [0, 1, 3, 2];
@@ -621,7 +629,7 @@ def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
       $value, $ptrs, llvm::Align($alignment), $mask);
   }];
   string mlirBuilder = [{
-    $_builder.create<LLVM::masked_scatter>($_location,
+    $_op = $_builder.create<LLVM::masked_scatter>($_location,
       $value, $ptrs, $mask, $_int_attr($alignment));
   }];
   list<int> llvmArgIndices = [0, 1, 3, 2];
@@ -721,7 +729,8 @@ def LLVM_vector_extract
 //===--------------------------------------------------------------------===//
 // CallIntrinsicOp
 //===--------------------------------------------------------------------===//
-def LLVM_CallIntrinsicOp : LLVM_Op<"call_intrinsic", [Pure]> {
+
+def LLVM_CallIntrinsicOp : LLVM_Op<"call_intrinsic"> {
   let summary = "Call to an LLVM intrinsic function.";
   let description = [{
     Call the specified llvm intrinsic. If the intrinsic is overloaded, use

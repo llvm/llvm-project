@@ -313,7 +313,7 @@ ARMBaseInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
   // Transfer LiveVariables states, kill / dead info.
   if (LV) {
     for (const MachineOperand &MO : MI.operands()) {
-      if (MO.isReg() && Register::isVirtualRegister(MO.getReg())) {
+      if (MO.isReg() && MO.getReg().isVirtual()) {
         Register Reg = MO.getReg();
 
         LiveVariables::VarInfo &VI = LV->getVarInfo(Reg);
@@ -619,7 +619,8 @@ bool ARMBaseInstrInfo::PredicateInstruction(
     // IT block. This affects how they are printed.
     const MCInstrDesc &MCID = MI.getDesc();
     if (MCID.TSFlags & ARMII::ThumbArithFlagSetting) {
-      assert(MCID.OpInfo[1].isOptionalDef() && "CPSR def isn't expected operand");
+      assert(MCID.operands()[1].isOptionalDef() &&
+             "CPSR def isn't expected operand");
       assert((MI.getOperand(1).isDead() ||
               MI.getOperand(1).getReg() != ARM::CPSR) &&
              "if conversion tried to stop defining used CPSR");
@@ -1111,11 +1112,12 @@ ARMBaseInstrInfo::AddDReg(MachineInstrBuilder &MIB, unsigned Reg,
   return MIB.addReg(Reg, State, SubIdx);
 }
 
-void ARMBaseInstrInfo::
-storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                    Register SrcReg, bool isKill, int FI,
-                    const TargetRegisterClass *RC,
-                    const TargetRegisterInfo *TRI) const {
+void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator I,
+                                           Register SrcReg, bool isKill, int FI,
+                                           const TargetRegisterClass *RC,
+                                           const TargetRegisterInfo *TRI,
+                                           Register VReg) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   Align Alignment = MFI.getObjectAlign(FI);
@@ -1367,11 +1369,12 @@ unsigned ARMBaseInstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
   return false;
 }
 
-void ARMBaseInstrInfo::
-loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                     Register DestReg, int FI,
-                     const TargetRegisterClass *RC,
-                     const TargetRegisterInfo *TRI) const {
+void ARMBaseInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator I,
+                                            Register DestReg, int FI,
+                                            const TargetRegisterClass *RC,
+                                            const TargetRegisterInfo *TRI,
+                                            Register VReg) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
   MachineFunction &MF = *MBB.getParent();
@@ -1441,7 +1444,7 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
         MIB = AddDReg(MIB, DestReg, ARM::gsub_1, RegState::DefineNoRead, TRI);
       }
 
-      if (Register::isPhysicalRegister(DestReg))
+      if (DestReg.isPhysical())
         MIB.addReg(DestReg, RegState::ImplicitDefine);
     } else
       llvm_unreachable("Unknown reg class!");
@@ -1487,7 +1490,7 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
         MIB = AddDReg(MIB, DestReg, ARM::dsub_0, RegState::DefineNoRead, TRI);
         MIB = AddDReg(MIB, DestReg, ARM::dsub_1, RegState::DefineNoRead, TRI);
         MIB = AddDReg(MIB, DestReg, ARM::dsub_2, RegState::DefineNoRead, TRI);
-        if (Register::isPhysicalRegister(DestReg))
+        if (DestReg.isPhysical())
           MIB.addReg(DestReg, RegState::ImplicitDefine);
       }
     } else
@@ -1517,7 +1520,7 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
          MIB = AddDReg(MIB, DestReg, ARM::dsub_1, RegState::DefineNoRead, TRI);
          MIB = AddDReg(MIB, DestReg, ARM::dsub_2, RegState::DefineNoRead, TRI);
          MIB = AddDReg(MIB, DestReg, ARM::dsub_3, RegState::DefineNoRead, TRI);
-         if (Register::isPhysicalRegister(DestReg))
+         if (DestReg.isPhysical())
            MIB.addReg(DestReg, RegState::ImplicitDefine);
        }
      } else
@@ -1542,7 +1545,7 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
       MIB = AddDReg(MIB, DestReg, ARM::dsub_5, RegState::DefineNoRead, TRI);
       MIB = AddDReg(MIB, DestReg, ARM::dsub_6, RegState::DefineNoRead, TRI);
       MIB = AddDReg(MIB, DestReg, ARM::dsub_7, RegState::DefineNoRead, TRI);
-      if (Register::isPhysicalRegister(DestReg))
+      if (DestReg.isPhysical())
         MIB.addReg(DestReg, RegState::ImplicitDefine);
     } else
       llvm_unreachable("Unknown reg class!");
@@ -1908,8 +1911,7 @@ bool ARMBaseInstrInfo::produceSameValue(const MachineInstr &MI0,
     Register Addr0 = MI0.getOperand(1).getReg();
     Register Addr1 = MI1.getOperand(1).getReg();
     if (Addr0 != Addr1) {
-      if (!MRI || !Register::isVirtualRegister(Addr0) ||
-          !Register::isVirtualRegister(Addr1))
+      if (!MRI || !Addr0.isVirtual() || !Addr1.isVirtual())
         return false;
 
       // This assumes SSA form.
@@ -2316,7 +2318,7 @@ ARMBaseInstrInfo::canFoldIntoMOVCC(Register Reg, const MachineRegisterInfo &MRI,
     // MI can't have any tied operands, that would conflict with predication.
     if (MO.isTied())
       return nullptr;
-    if (Register::isPhysicalRegister(MO.getReg()))
+    if (MO.getReg().isPhysical())
       return nullptr;
     if (MO.isDef() && !MO.isDead())
       return nullptr;
@@ -2381,7 +2383,7 @@ ARMBaseInstrInfo::optimizeSelect(MachineInstr &MI,
   // Copy all the DefMI operands, excluding its (null) predicate.
   const MCInstrDesc &DefDesc = DefMI->getDesc();
   for (unsigned i = 1, e = DefDesc.getNumOperands();
-       i != e && !DefDesc.OpInfo[i].isPredicate(); ++i)
+       i != e && !DefDesc.operands()[i].isPredicate(); ++i)
     NewMI.add(DefMI->getOperand(i));
 
   unsigned CondCode = MI.getOperand(3).getImm();
@@ -5378,7 +5380,7 @@ unsigned ARMBaseInstrInfo::getPartialRegUpdateClearance(
     return 0;
 
   // We must be able to clobber the whole D-reg.
-  if (Register::isVirtualRegister(Reg)) {
+  if (Reg.isVirtual()) {
     // Virtual register must be a def undef foo:ssub_0 operand.
     if (!MO.getSubReg() || MI.readsVirtualRegister(Reg))
       return 0;
@@ -5404,8 +5406,7 @@ void ARMBaseInstrInfo::breakPartialRegDependency(
 
   const MachineOperand &MO = MI.getOperand(OpNum);
   Register Reg = MO.getReg();
-  assert(Register::isPhysicalRegister(Reg) &&
-         "Can't break virtual register dependencies.");
+  assert(Reg.isPhysical() && "Can't break virtual register dependencies.");
   unsigned DReg = Reg;
 
   // If MI defines an S-reg, find the corresponding D super-register.
@@ -5538,7 +5539,7 @@ ARMBaseInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
 
   static const std::pair<unsigned, const char *> TargetFlags[] = {
       {MO_LO16, "arm-lo16"}, {MO_HI16, "arm-hi16"}};
-  return makeArrayRef(TargetFlags);
+  return ArrayRef(TargetFlags);
 }
 
 ArrayRef<std::pair<unsigned, const char *>>
@@ -5552,7 +5553,7 @@ ARMBaseInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
       {MO_DLLIMPORT, "arm-dllimport"},
       {MO_SECREL, "arm-secrel"},
       {MO_NONLAZY, "arm-nonlazy"}};
-  return makeArrayRef(TargetFlags);
+  return ArrayRef(TargetFlags);
 }
 
 std::optional<RegImmPair>
@@ -6885,14 +6886,14 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
     for (auto &S : SU.Succs)
       if (MI->isPHI() && S.getKind() == SDep::Anti) {
         Register Reg = S.getReg();
-        if (Register::isVirtualRegister(Reg))
+        if (Reg.isVirtual())
           CrossIterationNeeds.insert(std::make_pair(Reg.id(), IterNeed()))
               .first->second.set(0);
       } else if (S.isAssignedRegDep()) {
         int OStg = SMS.stageScheduled(S.getSUnit());
         if (OStg >= 0 && OStg != Stg) {
           Register Reg = S.getReg();
-          if (Register::isVirtualRegister(Reg))
+          if (Reg.isVirtual())
             CrossIterationNeeds.insert(std::make_pair(Reg.id(), IterNeed()))
                 .first->second |= ((1 << (OStg - Stg)) - 1);
         }

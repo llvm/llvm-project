@@ -55,26 +55,26 @@ bb3:
 
 ; PR4855
 @gv = internal constant i8 7
-define i8 @test3(i8* %a) nounwind {
+define i8 @test3(ptr %a) nounwind {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8* [[A:%.*]], @gv
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[A:%.*]], @gv
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    ret i8 0
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[SHOULD_BE_CONST:%.*]] = load i8, i8* @gv, align 1
+; CHECK-NEXT:    [[SHOULD_BE_CONST:%.*]] = load i8, ptr @gv, align 1
 ; CHECK-NEXT:    ret i8 [[SHOULD_BE_CONST]]
 ;
 entry:
-  %cond = icmp eq i8* %a, @gv
+  %cond = icmp eq ptr %a, @gv
   br i1 %cond, label %bb2, label %bb
 
 bb:
   ret i8 0
 
 bb2:
-  %should_be_const = load i8, i8* %a
+  %should_be_const = load i8, ptr %a
   ret i8 %should_be_const
 }
 
@@ -111,32 +111,32 @@ LessThanOrEqualToTwo:
   ret i32 0
 }
 
-declare i32* @f(i32*)
-define void @test5(i32* %x, i32* %y) {
+declare ptr @f(ptr)
+define void @test5(ptr %x, ptr %y) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PRE:%.*]] = icmp eq i32* [[X:%.*]], null
+; CHECK-NEXT:    [[PRE:%.*]] = icmp eq ptr [[X:%.*]], null
 ; CHECK-NEXT:    br i1 [[PRE]], label [[RETURN:%.*]], label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32* [ [[F:%.*]], [[LOOP]] ], [ [[X]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[F]] = tail call i32* @f(i32* [[PHI]])
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32* [[F]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i32* [[F]], i32* null
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32* [[SEL]], null
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[F:%.*]], [[LOOP]] ], [ [[X]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[F]] = tail call ptr @f(ptr [[PHI]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne ptr [[F]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], ptr [[F]], ptr null
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[SEL]], null
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[RETURN]], label [[LOOP]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %pre = icmp eq i32* %x, null
+  %pre = icmp eq ptr %x, null
   br i1 %pre, label %return, label %loop
 
 loop:
-  %phi = phi i32* [ %sel, %loop ], [ %x, %entry ]
-  %f = tail call i32* @f(i32* %phi)
-  %cmp1 = icmp ne i32* %f, %y
-  %sel = select i1 %cmp1, i32* %f, i32* null
-  %cmp2 = icmp eq i32* %sel, null
+  %phi = phi ptr [ %sel, %loop ], [ %x, %entry ]
+  %f = tail call ptr @f(ptr %phi)
+  %cmp1 = icmp ne ptr %f, %y
+  %sel = select i1 %cmp1, ptr %f, ptr null
+  %cmp2 = icmp eq ptr %sel, null
   br i1 %cmp2, label %return, label %loop
 
 return:
@@ -144,16 +144,16 @@ return:
 }
 
 ; "false" case for CorrelatedValuePropagation
-define void @loop1(i32* %x, i32* %y) {
+define void @loop1(ptr %x, ptr %y) {
 ; CHECK-LABEL: @loop1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32* [ [[F:%.*]], [[LOOP]] ], [ [[X:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[F]] = tail call i32* @f(i32* [[PHI]])
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32* [[F]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i32* [[F]], i32* null
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32* [[SEL]], null
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[F:%.*]], [[LOOP]] ], [ [[X:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[F]] = tail call ptr @f(ptr [[PHI]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne ptr [[F]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], ptr [[F]], ptr null
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[SEL]], null
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[RETURN:%.*]], label [[LOOP]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
@@ -162,11 +162,11 @@ entry:
   br label %loop
 
 loop:
-  %phi = phi i32* [ %sel, %loop ], [ %x, %entry ]
-  %f = tail call i32* @f(i32* %phi)
-  %cmp1 = icmp ne i32* %f, %y
-  %sel = select i1 %cmp1, i32* %f, i32* null
-  %cmp2 = icmp eq i32* %sel, null
+  %phi = phi ptr [ %sel, %loop ], [ %x, %entry ]
+  %f = tail call ptr @f(ptr %phi)
+  %cmp1 = icmp ne ptr %f, %y
+  %sel = select i1 %cmp1, ptr %f, ptr null
+  %cmp2 = icmp eq ptr %sel, null
   br i1 %cmp2, label %return, label %loop
 
 return:
@@ -174,16 +174,16 @@ return:
 }
 
 ; "true" case for CorrelatedValuePropagation
-define void @loop2(i32* %x, i32* %y) {
+define void @loop2(ptr %x, ptr %y) {
 ; CHECK-LABEL: @loop2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32* [ [[F:%.*]], [[LOOP]] ], [ [[X:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[F]] = tail call i32* @f(i32* [[PHI]])
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32* [[F]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i32* null, i32* [[F]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32* [[SEL]], null
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[F:%.*]], [[LOOP]] ], [ [[X:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[F]] = tail call ptr @f(ptr [[PHI]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[F]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], ptr null, ptr [[F]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[SEL]], null
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[RETURN:%.*]], label [[LOOP]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
@@ -192,11 +192,11 @@ entry:
   br label %loop
 
 loop:
-  %phi = phi i32* [ %sel, %loop ], [ %x, %entry ]
-  %f = tail call i32* @f(i32* %phi)
-  %cmp1 = icmp eq i32* %f, %y
-  %sel = select i1 %cmp1, i32* null, i32* %f
-  %cmp2 = icmp eq i32* %sel, null
+  %phi = phi ptr [ %sel, %loop ], [ %x, %entry ]
+  %f = tail call ptr @f(ptr %phi)
+  %cmp1 = icmp eq ptr %f, %y
+  %sel = select i1 %cmp1, ptr null, ptr %f
+  %cmp2 = icmp eq ptr %sel, null
   br i1 %cmp2, label %return, label %loop
 
 return:
@@ -532,7 +532,7 @@ exit:
   ret i8 0
 }
 
-define i1 @arg_attribute(i8* nonnull %a) {
+define i1 @arg_attribute(ptr nonnull %a) {
 ; CHECK-LABEL: @arg_attribute(
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -540,14 +540,14 @@ define i1 @arg_attribute(i8* nonnull %a) {
   ret i1 %cmp
 }
 
-declare nonnull i8* @return_nonnull()
+declare nonnull ptr @return_nonnull()
 define i1 @call_attribute() {
 ; CHECK-LABEL: @call_attribute(
-; CHECK-NEXT:    [[A:%.*]] = call i8* @return_nonnull()
+; CHECK-NEXT:    [[A:%.*]] = call ptr @return_nonnull()
 ; CHECK-NEXT:    ret i1 false
 ;
   %a = call i8* @return_nonnull()
-  %cmp = icmp eq i8* %a, null
+  %cmp = icmp eq ptr %a, null
   ret i1 %cmp
 }
 
@@ -979,7 +979,7 @@ out:
   ret i1 false
 }
 
-define void @abs1(i32 %a, i1* %p) {
+define void @abs1(i32 %a, ptr %p) {
 ; CHECK-LABEL: @abs1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A:%.*]], 10
@@ -990,12 +990,12 @@ define void @abs1(i32 %a, i1* %p) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[A]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], 0
 ; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[A]]
-; CHECK-NEXT:    store i1 true, i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 true, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[ABS]], 19
-; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
-; CHECK-NEXT:    store i1 true, i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C2]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 true, ptr [[P]], align 1
 ; CHECK-NEXT:    [[C4:%.*]] = icmp uge i32 [[ABS]], 1
-; CHECK-NEXT:    store i1 [[C4]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C4]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -1011,20 +1011,20 @@ guard:
   %cmp = icmp slt i32 %a, 0
   %abs = select i1 %cmp, i32 %sub, i32 %a
   %c1 = icmp slt i32 %abs, 20
-  store i1 %c1, i1* %p
+  store i1 %c1, ptr %p
   %c2 = icmp slt i32 %abs, 19
-  store i1 %c2, i1* %p
+  store i1 %c2, ptr %p
   %c3 = icmp sge i32 %abs, 0
-  store i1 %c3, i1* %p
+  store i1 %c3, ptr %p
   %c4 = icmp sge i32 %abs, 1
-  store i1 %c4, i1* %p
+  store i1 %c4, ptr %p
   br label %exit
 
 exit:
   ret void
 }
 
-define void @abs2(i32 %a, i1* %p) {
+define void @abs2(i32 %a, ptr %p) {
 ; CHECK-LABEL: @abs2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A:%.*]], 10
@@ -1035,12 +1035,12 @@ define void @abs2(i32 %a, i1* %p) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[A]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[A]], 0
 ; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i32 [[A]], i32 [[SUB]]
-; CHECK-NEXT:    store i1 true, i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 true, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[ABS]], 19
-; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
-; CHECK-NEXT:    store i1 true, i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C2]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 true, ptr [[P]], align 1
 ; CHECK-NEXT:    [[C4:%.*]] = icmp uge i32 [[ABS]], 1
-; CHECK-NEXT:    store i1 [[C4]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C4]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -1056,20 +1056,20 @@ guard:
   %cmp = icmp sge i32 %a, 0
   %abs = select i1 %cmp, i32 %a, i32 %sub
   %c1 = icmp slt i32 %abs, 20
-  store i1 %c1, i1* %p
+  store i1 %c1, ptr %p
   %c2 = icmp slt i32 %abs, 19
-  store i1 %c2, i1* %p
+  store i1 %c2, ptr %p
   %c3 = icmp sge i32 %abs, 0
-  store i1 %c3, i1* %p
+  store i1 %c3, ptr %p
   %c4 = icmp sge i32 %abs, 1
-  store i1 %c4, i1* %p
+  store i1 %c4, ptr %p
   br label %exit
 
 exit:
   ret void
 }
 
-define void @nabs1(i32 %a, i1* %p) {
+define void @nabs1(i32 %a, ptr %p) {
 ; CHECK-LABEL: @nabs1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A:%.*]], 10
@@ -1080,12 +1080,12 @@ define void @nabs1(i32 %a, i1* %p) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[A]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], 0
 ; CHECK-NEXT:    [[NABS:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[A]]
-; CHECK-NEXT:    store i1 true, i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 true, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[NABS]], -19
-; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
-; CHECK-NEXT:    store i1 true, i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C2]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 true, ptr [[P]], align 1
 ; CHECK-NEXT:    [[C4:%.*]] = icmp sle i32 [[NABS]], -1
-; CHECK-NEXT:    store i1 [[C4]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C4]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -1101,20 +1101,20 @@ guard:
   %cmp = icmp sgt i32 %a, 0
   %nabs = select i1 %cmp, i32 %sub, i32 %a
   %c1 = icmp sgt i32 %nabs, -20
-  store i1 %c1, i1* %p
+  store i1 %c1, ptr %p
   %c2 = icmp sgt i32 %nabs, -19
-  store i1 %c2, i1* %p
+  store i1 %c2, ptr %p
   %c3 = icmp sle i32 %nabs, 0
-  store i1 %c3, i1* %p
+  store i1 %c3, ptr %p
   %c4 = icmp sle i32 %nabs, -1
-  store i1 %c4, i1* %p
+  store i1 %c4, ptr %p
   br label %exit
 
 exit:
   ret void
 }
 
-define void @nabs2(i32 %a, i1* %p) {
+define void @nabs2(i32 %a, ptr %p) {
 ; CHECK-LABEL: @nabs2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A:%.*]], 10
@@ -1125,12 +1125,12 @@ define void @nabs2(i32 %a, i1* %p) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[A]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], 0
 ; CHECK-NEXT:    [[NABS:%.*]] = select i1 [[CMP]], i32 [[A]], i32 [[SUB]]
-; CHECK-NEXT:    store i1 true, i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 true, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[NABS]], -19
-; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
-; CHECK-NEXT:    store i1 true, i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C2]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 true, ptr [[P]], align 1
 ; CHECK-NEXT:    [[C4:%.*]] = icmp sle i32 [[NABS]], -1
-; CHECK-NEXT:    store i1 [[C4]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C4]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -1146,13 +1146,13 @@ guard:
   %cmp = icmp slt i32 %a, 0
   %nabs = select i1 %cmp, i32 %a, i32 %sub
   %c1 = icmp sgt i32 %nabs, -20
-  store i1 %c1, i1* %p
+  store i1 %c1, ptr %p
   %c2 = icmp sgt i32 %nabs, -19
-  store i1 %c2, i1* %p
+  store i1 %c2, ptr %p
   %c3 = icmp sle i32 %nabs, 0
-  store i1 %c3, i1* %p
+  store i1 %c3, ptr %p
   %c4 = icmp sle i32 %nabs, -1
-  store i1 %c4, i1* %p
+  store i1 %c4, ptr %p
   br label %exit
 
 exit:
@@ -1185,28 +1185,28 @@ entry:
   ret i1 %cmp
 }
 
-define void @trunc_icmp_ule(i32 %x, i1* %p) {
+define void @trunc_icmp_ule(i32 %x, ptr %p) {
 ; CHECK-LABEL: @trunc_icmp_ule(
 ; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i8 [[T]], 5
 ; CHECK-NEXT:    br i1 [[C]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    store i1 true, i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 true, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[X]], 5
-; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C2]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[C3:%.*]] = icmp ule i32 [[X]], 5
-; CHECK-NEXT:    store i1 [[C3]], i1* [[P]], align 1
-; CHECK-NEXT:    store i1 false, i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C3]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ; CHECK:       false:
 ; CHECK-NEXT:    [[C1_2:%.*]] = icmp uge i32 [[X]], 5
-; CHECK-NEXT:    store i1 [[C1_2]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C1_2]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[C2_2:%.*]] = icmp ugt i32 [[X]], 5
-; CHECK-NEXT:    store i1 [[C2_2]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C2_2]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[C3_2:%.*]] = icmp ule i32 [[X]], 5
-; CHECK-NEXT:    store i1 [[C3_2]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C3_2]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[C4_2:%.*]] = icmp ult i32 [[X]], 5
-; CHECK-NEXT:    store i1 [[C4_2]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C4_2]], ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %t = trunc i32 %x to i8
@@ -1215,49 +1215,49 @@ define void @trunc_icmp_ule(i32 %x, i1* %p) {
 
 true:
   %c1 = icmp uge i32 %x, 5
-  store i1 %c1, i1* %p
+  store i1 %c1, ptr %p
   %c2 = icmp ugt i32 %x, 5
-  store i1 %c2, i1* %p
+  store i1 %c2, ptr %p
   %c3 = icmp ule i32 %x, 5
-  store i1 %c3, i1* %p
+  store i1 %c3, ptr %p
   %c4 = icmp ult i32 %x, 5
-  store i1 %c4, i1* %p
+  store i1 %c4, ptr %p
   ret void
 
 false:
   %c1.2 = icmp uge i32 %x, 5
-  store i1 %c1.2, i1* %p
+  store i1 %c1.2, ptr %p
   %c2.2 = icmp ugt i32 %x, 5
-  store i1 %c2.2, i1* %p
+  store i1 %c2.2, ptr %p
   %c3.2 = icmp ule i32 %x, 5
-  store i1 %c3.2, i1* %p
+  store i1 %c3.2, ptr %p
   %c4.2 = icmp ult i32 %x, 5
-  store i1 %c4.2, i1* %p
+  store i1 %c4.2, ptr %p
   ret void
 }
 
-define void @trunc_icmp_eq(i32 %x, i1* %p) {
+define void @trunc_icmp_eq(i32 %x, ptr %p) {
 ; CHECK-LABEL: @trunc_icmp_eq(
 ; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[T]], 5
 ; CHECK-NEXT:    br i1 [[C]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    store i1 true, i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 true, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[X]], 5
-; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C2]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[C3:%.*]] = icmp ule i32 [[X]], 5
-; CHECK-NEXT:    store i1 [[C3]], i1* [[P]], align 1
-; CHECK-NEXT:    store i1 false, i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C3]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ; CHECK:       false:
 ; CHECK-NEXT:    [[C1_2:%.*]] = icmp uge i32 [[X]], 5
-; CHECK-NEXT:    store i1 [[C1_2]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C1_2]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[C2_2:%.*]] = icmp ugt i32 [[X]], 5
-; CHECK-NEXT:    store i1 [[C2_2]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C2_2]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[C3_2:%.*]] = icmp ule i32 [[X]], 5
-; CHECK-NEXT:    store i1 [[C3_2]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C3_2]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[C4_2:%.*]] = icmp ult i32 [[X]], 5
-; CHECK-NEXT:    store i1 [[C4_2]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C4_2]], ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %t = trunc i32 %x to i8
@@ -1266,24 +1266,24 @@ define void @trunc_icmp_eq(i32 %x, i1* %p) {
 
 true:
   %c1 = icmp uge i32 %x, 5
-  store i1 %c1, i1* %p
+  store i1 %c1, ptr %p
   %c2 = icmp ugt i32 %x, 5
-  store i1 %c2, i1* %p
+  store i1 %c2, ptr %p
   %c3 = icmp ule i32 %x, 5
-  store i1 %c3, i1* %p
+  store i1 %c3, ptr %p
   %c4 = icmp ult i32 %x, 5
-  store i1 %c4, i1* %p
+  store i1 %c4, ptr %p
   ret void
 
 false:
   %c1.2 = icmp uge i32 %x, 5
-  store i1 %c1.2, i1* %p
+  store i1 %c1.2, ptr %p
   %c2.2 = icmp ugt i32 %x, 5
-  store i1 %c2.2, i1* %p
+  store i1 %c2.2, ptr %p
   %c3.2 = icmp ule i32 %x, 5
-  store i1 %c3.2, i1* %p
+  store i1 %c3.2, ptr %p
   %c4.2 = icmp ult i32 %x, 5
-  store i1 %c4.2, i1* %p
+  store i1 %c4.2, ptr %p
   ret void
 }
 
@@ -1302,15 +1302,15 @@ entry:
   ret i1 %cmp
 }
 
-define i1 @bitcast_unknown2(i8* %p) {
+define i1 @bitcast_unknown2(ptr %p) {
 ; CHECK-LABEL: @bitcast_unknown2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P64:%.*]] = ptrtoint i8* [[P:%.*]] to i64
+; CHECK-NEXT:    [[P64:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[P64]], 128
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
-  %p64 = ptrtoint i8* %p to i64
+  %p64 = ptrtoint ptr %p to i64
   %cmp = icmp sle i64 %p64, 128
   ret i1 %cmp
 }
@@ -1482,7 +1482,7 @@ exit2:
   ret i1 %cmp2
 }
 
-define void @select_and(i32 %a, i1* %p) {
+define void @select_and(i32 %a, ptr %p) {
 ; CHECK-LABEL: @select_and(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A:%.*]], -10
@@ -1490,8 +1490,8 @@ define void @select_and(i32 %a, i1* %p) {
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
 ; CHECK-NEXT:    br i1 [[AND]], label [[GUARD:%.*]], label [[EXIT:%.*]]
 ; CHECK:       guard:
-; CHECK-NEXT:    store i1 false, i1* [[P:%.*]], align 1
-; CHECK-NEXT:    store i1 false, i1* [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -1504,16 +1504,16 @@ entry:
 
 guard:
   %c1 = icmp sgt i32 %a, 20
-  store i1 %c1, i1* %p
+  store i1 %c1, ptr %p
   %c2 = icmp slt i32 %a, -20
-  store i1 %c2, i1* %p
+  store i1 %c2, ptr %p
   br label %exit
 
 exit:
   ret void
 }
 
-define void @select_and_wrong_const(i32 %a, i1* %p) {
+define void @select_and_wrong_const(i32 %a, ptr %p) {
 ; CHECK-LABEL: @select_and_wrong_const(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A:%.*]], -10
@@ -1522,9 +1522,9 @@ define void @select_and_wrong_const(i32 %a, i1* %p) {
 ; CHECK-NEXT:    br i1 [[AND]], label [[GUARD:%.*]], label [[EXIT:%.*]]
 ; CHECK:       guard:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i32 [[A]], 20
-; CHECK-NEXT:    store i1 [[C1]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 [[C1]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[A]], -20
-; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C2]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -1537,16 +1537,16 @@ entry:
 
 guard:
   %c1 = icmp sgt i32 %a, 20
-  store i1 %c1, i1* %p
+  store i1 %c1, ptr %p
   %c2 = icmp slt i32 %a, -20
-  store i1 %c2, i1* %p
+  store i1 %c2, ptr %p
   br label %exit
 
 exit:
   ret void
 }
 
-define void @select_and_wrong_operand(i32 %a, i1* %p) {
+define void @select_and_wrong_operand(i32 %a, ptr %p) {
 ; CHECK-LABEL: @select_and_wrong_operand(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A:%.*]], -10
@@ -1555,9 +1555,9 @@ define void @select_and_wrong_operand(i32 %a, i1* %p) {
 ; CHECK-NEXT:    br i1 [[AND]], label [[GUARD:%.*]], label [[EXIT:%.*]]
 ; CHECK:       guard:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i32 [[A]], 20
-; CHECK-NEXT:    store i1 [[C1]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 [[C1]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[A]], -20
-; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C2]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -1570,16 +1570,16 @@ entry:
 
 guard:
   %c1 = icmp sgt i32 %a, 20
-  store i1 %c1, i1* %p
+  store i1 %c1, ptr %p
   %c2 = icmp slt i32 %a, -20
-  store i1 %c2, i1* %p
+  store i1 %c2, ptr %p
   br label %exit
 
 exit:
   ret void
 }
 
-define void @select_or(i32 %a, i1* %p) {
+define void @select_or(i32 %a, ptr %p) {
 ; CHECK-LABEL: @select_or(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A:%.*]], -10
@@ -1587,8 +1587,8 @@ define void @select_or(i32 %a, i1* %p) {
 ; CHECK-NEXT:    [[OR:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[EXIT:%.*]], label [[GUARD:%.*]]
 ; CHECK:       guard:
-; CHECK-NEXT:    store i1 false, i1* [[P:%.*]], align 1
-; CHECK-NEXT:    store i1 false, i1* [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -1601,16 +1601,16 @@ entry:
 
 guard:
   %c1 = icmp sgt i32 %a, 20
-  store i1 %c1, i1* %p
+  store i1 %c1, ptr %p
   %c2 = icmp slt i32 %a, -20
-  store i1 %c2, i1* %p
+  store i1 %c2, ptr %p
   br label %exit
 
 exit:
   ret void
 }
 
-define void @select_or_wrong_const(i32 %a, i1* %p) {
+define void @select_or_wrong_const(i32 %a, ptr %p) {
 ; CHECK-LABEL: @select_or_wrong_const(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A:%.*]], -10
@@ -1619,9 +1619,9 @@ define void @select_or_wrong_const(i32 %a, i1* %p) {
 ; CHECK-NEXT:    br i1 [[OR]], label [[EXIT:%.*]], label [[GUARD:%.*]]
 ; CHECK:       guard:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i32 [[A]], 20
-; CHECK-NEXT:    store i1 [[C1]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 [[C1]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[A]], -20
-; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C2]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -1634,16 +1634,16 @@ entry:
 
 guard:
   %c1 = icmp sgt i32 %a, 20
-  store i1 %c1, i1* %p
+  store i1 %c1, ptr %p
   %c2 = icmp slt i32 %a, -20
-  store i1 %c2, i1* %p
+  store i1 %c2, ptr %p
   br label %exit
 
 exit:
   ret void
 }
 
-define void @select_or_wrong_operand(i32 %a, i1* %p) {
+define void @select_or_wrong_operand(i32 %a, ptr %p) {
 ; CHECK-LABEL: @select_or_wrong_operand(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A:%.*]], -10
@@ -1652,9 +1652,9 @@ define void @select_or_wrong_operand(i32 %a, i1* %p) {
 ; CHECK-NEXT:    br i1 [[OR]], label [[EXIT:%.*]], label [[GUARD:%.*]]
 ; CHECK:       guard:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i32 [[A]], 20
-; CHECK-NEXT:    store i1 [[C1]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 [[C1]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[A]], -20
-; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C2]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -1667,30 +1667,30 @@ entry:
 
 guard:
   %c1 = icmp sgt i32 %a, 20
-  store i1 %c1, i1* %p
+  store i1 %c1, ptr %p
   %c2 = icmp slt i32 %a, -20
-  store i1 %c2, i1* %p
+  store i1 %c2, ptr %p
   br label %exit
 
 exit:
   ret void
 }
 
-define void @or_union(i32 %a, i1* %p) {
+define void @or_union(i32 %a, ptr %p) {
 ; CHECK-LABEL: @or_union(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[A:%.*]], 10
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[A]], 12
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[GUARD:%.*]], label [[EXIT:%.*]]
 ; CHECK:       guard:
-; CHECK-NEXT:    store i1 false, i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[A]], 10
-; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C2]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[C3:%.*]] = icmp eq i32 [[A]], 11
-; CHECK-NEXT:    store i1 [[C3]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C3]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[C4:%.*]] = icmp eq i32 [[A]], 12
-; CHECK-NEXT:    store i1 [[C4]], i1* [[P]], align 1
-; CHECK-NEXT:    store i1 false, i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C4]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -1702,15 +1702,15 @@ define void @or_union(i32 %a, i1* %p) {
 
 guard:
   %c1 = icmp eq i32 %a, 9
-  store i1 %c1, i1* %p
+  store i1 %c1, ptr %p
   %c2 = icmp eq i32 %a, 10
-  store i1 %c2, i1* %p
+  store i1 %c2, ptr %p
   %c3 = icmp eq i32 %a, 11
-  store i1 %c3, i1* %p
+  store i1 %c3, ptr %p
   %c4 = icmp eq i32 %a, 12
-  store i1 %c4, i1* %p
+  store i1 %c4, ptr %p
   %c5 = icmp eq i32 %a, 13
-  store i1 %c5, i1* %p
+  store i1 %c5, ptr %p
   br label %exit
 
 exit:
@@ -1740,21 +1740,21 @@ exit:
   ret i1 false
 }
 
-define void @and_union(i32 %a, i1* %p) {
+define void @and_union(i32 %a, ptr %p) {
 ; CHECK-LABEL: @and_union(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[A:%.*]], 10
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[A]], 12
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[EXIT:%.*]], label [[GUARD:%.*]]
 ; CHECK:       guard:
-; CHECK-NEXT:    store i1 false, i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[A]], 10
-; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C2]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[C3:%.*]] = icmp eq i32 [[A]], 11
-; CHECK-NEXT:    store i1 [[C3]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C3]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[C4:%.*]] = icmp eq i32 [[A]], 12
-; CHECK-NEXT:    store i1 [[C4]], i1* [[P]], align 1
-; CHECK-NEXT:    store i1 false, i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C4]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -1766,15 +1766,15 @@ define void @and_union(i32 %a, i1* %p) {
 
 guard:
   %c1 = icmp eq i32 %a, 9
-  store i1 %c1, i1* %p
+  store i1 %c1, ptr %p
   %c2 = icmp eq i32 %a, 10
-  store i1 %c2, i1* %p
+  store i1 %c2, ptr %p
   %c3 = icmp eq i32 %a, 11
-  store i1 %c3, i1* %p
+  store i1 %c3, ptr %p
   %c4 = icmp eq i32 %a, 12
-  store i1 %c4, i1* %p
+  store i1 %c4, ptr %p
   %c5 = icmp eq i32 %a, 13
-  store i1 %c5, i1* %p
+  store i1 %c5, ptr %p
   br label %exit
 
 exit:
@@ -1804,7 +1804,7 @@ exit:
   ret i1 false
 }
 
-define void @select_assume(i32 %a, i32 %b, i1 %c, i1* %p) {
+define void @select_assume(i32 %a, i32 %b, i1 %c, ptr %p) {
 ; CHECK-LABEL: @select_assume(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[A:%.*]], 10
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C1]])
@@ -1812,8 +1812,8 @@ define void @select_assume(i32 %a, i32 %b, i1 %c, i1* %p) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i32 [[A]], i32 [[B]]
 ; CHECK-NEXT:    [[C3:%.*]] = icmp ult i32 [[S]], 19
-; CHECK-NEXT:    store i1 [[C3]], i1* [[P:%.*]], align 1
-; CHECK-NEXT:    store i1 true, i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C3]], ptr [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 true, ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %c1 = icmp ult i32 %a, 10
@@ -1822,35 +1822,92 @@ define void @select_assume(i32 %a, i32 %b, i1 %c, i1* %p) {
   call void @llvm.assume(i1 %c2)
   %s = select i1 %c, i32 %a, i32 %b
   %c3 = icmp ult i32 %s, 19
-  store i1 %c3, i1* %p
+  store i1 %c3, ptr %p
   %c4 = icmp ult i32 %s, 20
-  store i1 %c4, i1* %p
+  store i1 %c4, ptr %p
   ret void
 }
 
-define void @xor(i8 %a, i1* %p) {
+define void @xor(i8 %a, ptr %p) {
 ; CHECK-LABEL: @xor(
 ; CHECK-NEXT:    [[A_MASK:%.*]] = and i8 [[A:%.*]], 15
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[A_MASK]], -86
-; CHECK-NEXT:    store i1 true, i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 true, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i8 [[XOR]], -96
-; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
-; CHECK-NEXT:    store i1 true, i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C2]], ptr [[P]], align 1
+; CHECK-NEXT:    store i1 true, ptr [[P]], align 1
 ; CHECK-NEXT:    [[C4:%.*]] = icmp ult i8 [[XOR]], -81
-; CHECK-NEXT:    store i1 [[C4]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 [[C4]], ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %a.mask = and i8 %a, 15 ; 0b0000????
   %xor = xor i8 %a.mask, 170 ; ^ 0b10101010 == 0b1010????
   %c1 = icmp uge i8 %xor, 160
-  store i1 %c1, i1* %p
+  store i1 %c1, ptr %p
   %c2 = icmp ugt i8 %xor, 160
-  store i1 %c2, i1* %p
+  store i1 %c2, ptr %p
   %c3 = icmp ule i8 %xor, 175
-  store i1 %c3, i1* %p
+  store i1 %c3, ptr %p
   %c4 = icmp ult i8 %xor, 175
-  store i1 %c4, i1* %p
+  store i1 %c4, ptr %p
   ret void
+}
+
+define i1 @xor_neg_cond(i32 %a) {
+; CHECK-LABEL: @xor_neg_cond(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[A:%.*]], 10
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[CMP1]], true
+; CHECK-NEXT:    br i1 [[XOR]], label [[EXIT:%.*]], label [[GUARD:%.*]]
+; CHECK:       guard:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp1 = icmp eq i32 %a, 10
+  %xor = xor i1 %cmp1, true
+  br i1 %xor, label %exit, label %guard
+
+guard:
+  %cmp2 = icmp eq i32 %a, 10
+  ret i1 %cmp2
+
+exit:
+  ret i1 false
+}
+
+define i1 @xor_approx(i32 %a) {
+; CHECK-LABEL: @xor_approx(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[A:%.*]], 2
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[A]], 5
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ugt i32 [[A]], 7
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp ult i32 [[A]], 9
+; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[CMP3]], [[CMP4]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[AND1]], [[AND2]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[OR]], true
+; CHECK-NEXT:    br i1 [[XOR]], label [[EXIT:%.*]], label [[GUARD:%.*]]
+; CHECK:       guard:
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp eq i32 [[A]], 6
+; CHECK-NEXT:    ret i1 [[CMP5]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp1 = icmp ugt i32 %a, 2
+  %cmp2 = icmp ult i32 %a, 5
+  %cmp3 = icmp ugt i32 %a, 7
+  %cmp4 = icmp ult i32 %a, 9
+  %and1 = and i1 %cmp1, %cmp2
+  %and2 = and i1 %cmp3, %cmp4
+  %or = or i1 %and1, %and2
+  %xor = xor i1 %or, true
+  br i1 %xor, label %exit, label %guard
+
+guard:
+  %cmp5 = icmp eq i32 %a, 6
+  ret i1 %cmp5
+
+exit:
+  ret i1 false
 }
 
 declare i32 @llvm.uadd.sat.i32(i32, i32)

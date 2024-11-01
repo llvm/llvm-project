@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 
 #include <initializer_list>
+#include <optional>
 #include <tuple>
 
 #include "Plugins/Platform/FreeBSD/PlatformFreeBSD.h"
@@ -67,7 +68,7 @@ public:
     }
 
     EXPECT_EQ(total_offset, offset * 8);
-    EXPECT_EQ(field_type.GetByteSize(nullptr), llvm::Optional<uint64_t>(size));
+    EXPECT_EQ(field_type.GetByteSize(nullptr), std::optional<uint64_t>(size));
   }
 
   void ExpectFields(const CompilerType &container,

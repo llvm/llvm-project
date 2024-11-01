@@ -427,13 +427,12 @@ define i16 @red_mla_dup_ext_u8_s8_s16(i8* noalias nocapture noundef readonly %A,
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB5_4: // %vector.ph
-; CHECK-NEXT:    dup v2.8b, w9
 ; CHECK-NEXT:    and x11, x10, #0xfffffff0
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    add x8, x0, #8
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov x12, x11
-; CHECK-NEXT:    sshll v2.8h, v2.8b, #0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    dup v2.8h, w9
 ; CHECK-NEXT:  .LBB5_5: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldp d3, d4, [x8, #-8]
@@ -696,6 +695,276 @@ loop:
   br i1 %c, label %exit, label %loop
 
 exit:
+  ret void
+}
+
+define void @matrix_mul_unsigned_and(i32 %N, i32* nocapture %C, i16* nocapture readonly %A, i32 %val) {
+; CHECK-LABEL: matrix_mul_unsigned_and:
+; CHECK:       // %bb.0: // %vector.header
+; CHECK-NEXT:    and w8, w3, #0xffff
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    dup v0.4h, w8
+; CHECK-NEXT:    and x8, x0, #0xfffffff8
+; CHECK-NEXT:  .LBB10_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    add x9, x2, w0, uxtw #1
+; CHECK-NEXT:    subs x8, x8, #8
+; CHECK-NEXT:    ldp d1, d2, [x9]
+; CHECK-NEXT:    add x9, x1, w0, uxtw #2
+; CHECK-NEXT:    add w0, w0, #8
+; CHECK-NEXT:    umull v1.4s, v0.4h, v1.4h
+; CHECK-NEXT:    umull v2.4s, v0.4h, v2.4h
+; CHECK-NEXT:    stp q1, q2, [x9]
+; CHECK-NEXT:    b.ne .LBB10_1
+; CHECK-NEXT:  // %bb.2: // %for.end12
+; CHECK-NEXT:    ret
+vector.header:
+  %conv4 = and i32 %val, 65535
+  %wide.trip.count = zext i32 %N to i64
+  %0 = add nsw i64 %wide.trip.count, -1
+  %min.iters.check = icmp ult i32 %N, 8
+  %1 = trunc i64 %0 to i32
+  %2 = icmp ugt i64 %0, 4294967295
+  %n.vec = and i64 %wide.trip.count, 4294967288
+  %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %conv4, i32 0
+  %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
+  %broadcast.splatinsert31 = insertelement <4 x i32> undef, i32 %conv4, i32 0
+  %broadcast.splat32 = shufflevector <4 x i32> %broadcast.splatinsert31, <4 x i32> undef, <4 x i32> zeroinitializer
+  %cmp.n = icmp eq i64 %n.vec, %wide.trip.count
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.header, %vector.body
+  %index = phi i64 [ %index.next, %vector.body ], [ 0, %vector.header ]
+  %3 = trunc i64 %index to i32
+  %4 = add i32 %N, %3
+  %5 = zext i32 %4 to i64
+  %6 = getelementptr inbounds i16, i16* %A, i64 %5
+  %7 = bitcast i16* %6 to <4 x i16>*
+  %wide.load = load <4 x i16>, <4 x i16>* %7, align 2
+  %8 = getelementptr inbounds i16, i16* %6, i64 4
+  %9 = bitcast i16* %8 to <4 x i16>*
+  %wide.load30 = load <4 x i16>, <4 x i16>* %9, align 2
+  %10 = zext <4 x i16> %wide.load to <4 x i32>
+  %11 = zext <4 x i16> %wide.load30 to <4 x i32>
+  %12 = mul nuw nsw <4 x i32> %broadcast.splat, %10
+  %13 = mul nuw nsw <4 x i32> %broadcast.splat32, %11
+  %14 = getelementptr inbounds i32, i32* %C, i64 %5
+  %15 = bitcast i32* %14 to <4 x i32>*
+  store <4 x i32> %12, <4 x i32>* %15, align 4
+  %16 = getelementptr inbounds i32, i32* %14, i64 4
+  %17 = bitcast i32* %16 to <4 x i32>*
+  store <4 x i32> %13, <4 x i32>* %17, align 4
+  %index.next = add i64 %index, 8
+  %18 = icmp eq i64 %index.next, %n.vec
+  br i1 %18, label %for.end12, label %vector.body
+
+for.end12:                                        ; preds = %vector.body
+  ret void
+}
+
+define void @matrix_mul_unsigned_and_double(i32 %N, i32* nocapture %C, i16* nocapture readonly %A, i32 %val) {
+; CHECK-LABEL: matrix_mul_unsigned_and_double:
+; CHECK:       // %bb.0: // %vector.header
+; CHECK-NEXT:    and w9, w3, #0xffff
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    and x8, x0, #0xfffffff0
+; CHECK-NEXT:    dup v0.8h, w9
+; CHECK-NEXT:  .LBB11_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    add x9, x2, w0, uxtw #1
+; CHECK-NEXT:    add x10, x1, w0, uxtw #2
+; CHECK-NEXT:    subs x8, x8, #16
+; CHECK-NEXT:    add w0, w0, #16
+; CHECK-NEXT:    ldr q1, [x9]
+; CHECK-NEXT:    ldur q2, [x9, #8]
+; CHECK-NEXT:    umull2 v3.4s, v0.8h, v1.8h
+; CHECK-NEXT:    umull v1.4s, v0.4h, v1.4h
+; CHECK-NEXT:    umull2 v4.4s, v0.8h, v2.8h
+; CHECK-NEXT:    umull v2.4s, v0.4h, v2.4h
+; CHECK-NEXT:    stp q1, q3, [x10]
+; CHECK-NEXT:    stp q2, q4, [x10, #32]
+; CHECK-NEXT:    b.ne .LBB11_1
+; CHECK-NEXT:  // %bb.2: // %for.end12
+; CHECK-NEXT:    ret
+vector.header:
+  %conv4 = and i32 %val, 65535
+  %wide.trip.count = zext i32 %N to i64
+  %0 = add nsw i64 %wide.trip.count, -1
+  %min.iters.check = icmp ult i32 %N, 16
+  %1 = trunc i64 %0 to i32
+  %2 = icmp ugt i64 %0, 4294967295
+  %n.vec = and i64 %wide.trip.count, 4294967280
+  %broadcast.splatinsert = insertelement <8 x i32> undef, i32 %conv4, i32 0
+  %broadcast.splat = shufflevector <8 x i32> %broadcast.splatinsert, <8 x i32> undef, <8 x i32> zeroinitializer
+  %broadcast.splatinsert31 = insertelement <8 x i32> undef, i32 %conv4, i32 0
+  %broadcast.splat32 = shufflevector <8 x i32> %broadcast.splatinsert31, <8 x i32> undef, <8 x i32> zeroinitializer
+  %cmp.n = icmp eq i64 %n.vec, %wide.trip.count
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.header, %vector.body
+  %index = phi i64 [ %index.next, %vector.body ], [ 0, %vector.header ]
+  %3 = trunc i64 %index to i32
+  %4 = add i32 %N, %3
+  %5 = zext i32 %4 to i64
+  %6 = getelementptr inbounds i16, i16* %A, i64 %5
+  %7 = bitcast i16* %6 to <8 x i16>*
+  %wide.load = load <8 x i16>, <8 x i16>* %7, align 2
+  %8 = getelementptr inbounds i16, i16* %6, i64 4
+  %9 = bitcast i16* %8 to <8 x i16>*
+  %wide.load30 = load <8 x i16>, <8 x i16>* %9, align 2
+  %10 = zext <8 x i16> %wide.load to <8 x i32>
+  %11 = zext <8 x i16> %wide.load30 to <8 x i32>
+  %12 = mul nuw nsw <8 x i32> %broadcast.splat, %10
+  %13 = mul nuw nsw <8 x i32> %broadcast.splat32, %11
+  %14 = getelementptr inbounds i32, i32* %C, i64 %5
+  %15 = bitcast i32* %14 to <8 x i32>*
+  store <8 x i32> %12, <8 x i32>* %15, align 4
+  %16 = getelementptr inbounds i32, i32* %14, i64 8
+  %17 = bitcast i32* %16 to <8 x i32>*
+  store <8 x i32> %13, <8 x i32>* %17, align 4
+  %index.next = add i64 %index, 16
+  %18 = icmp eq i64 %index.next, %n.vec
+  br i1 %18, label %for.end12, label %vector.body
+
+for.end12:                                        ; preds = %vector.body
+  ret void
+}
+
+define void @matrix_mul_signed_and(i32 %N, i32* nocapture %C, i16* nocapture readonly %A, i32 %val) {
+; CHECK-LABEL: matrix_mul_signed_and:
+; CHECK:       // %bb.0: // %vector.header
+; CHECK-NEXT:    and w9, w3, #0xffff
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    and x8, x0, #0xfffffff8
+; CHECK-NEXT:    dup v0.4s, w9
+; CHECK-NEXT:  .LBB12_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    add x9, x2, w0, uxtw #1
+; CHECK-NEXT:    subs x8, x8, #8
+; CHECK-NEXT:    ldp d1, d2, [x9]
+; CHECK-NEXT:    add x9, x1, w0, uxtw #2
+; CHECK-NEXT:    add w0, w0, #8
+; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
+; CHECK-NEXT:    sshll v2.4s, v2.4h, #0
+; CHECK-NEXT:    mul v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    mul v2.4s, v0.4s, v2.4s
+; CHECK-NEXT:    stp q1, q2, [x9]
+; CHECK-NEXT:    b.ne .LBB12_1
+; CHECK-NEXT:  // %bb.2: // %for.end12
+; CHECK-NEXT:    ret
+vector.header:
+  %conv4 = and i32 %val, 65535
+  %wide.trip.count = zext i32 %N to i64
+  %0 = add nsw i64 %wide.trip.count, -1
+  %min.iters.check = icmp ult i32 %N, 8
+  %1 = trunc i64 %0 to i32
+  %2 = icmp ugt i64 %0, 4294967295
+  %n.vec = and i64 %wide.trip.count, 4294967288
+  %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %conv4, i32 0
+  %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
+  %broadcast.splatinsert31 = insertelement <4 x i32> undef, i32 %conv4, i32 0
+  %broadcast.splat32 = shufflevector <4 x i32> %broadcast.splatinsert31, <4 x i32> undef, <4 x i32> zeroinitializer
+  %cmp.n = icmp eq i64 %n.vec, %wide.trip.count
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.header, %vector.body
+  %index = phi i64 [ %index.next, %vector.body ], [ 0, %vector.header ]
+  %3 = trunc i64 %index to i32
+  %4 = add i32 %N, %3
+  %5 = zext i32 %4 to i64
+  %6 = getelementptr inbounds i16, i16* %A, i64 %5
+  %7 = bitcast i16* %6 to <4 x i16>*
+  %wide.load = load <4 x i16>, <4 x i16>* %7, align 2
+  %8 = getelementptr inbounds i16, i16* %6, i64 4
+  %9 = bitcast i16* %8 to <4 x i16>*
+  %wide.load30 = load <4 x i16>, <4 x i16>* %9, align 2
+  %10 = sext <4 x i16> %wide.load to <4 x i32>
+  %11 = sext <4 x i16> %wide.load30 to <4 x i32>
+  %12 = mul nuw nsw <4 x i32> %broadcast.splat, %10
+  %13 = mul nuw nsw <4 x i32> %broadcast.splat32, %11
+  %14 = getelementptr inbounds i32, i32* %C, i64 %5
+  %15 = bitcast i32* %14 to <4 x i32>*
+  store <4 x i32> %12, <4 x i32>* %15, align 4
+  %16 = getelementptr inbounds i32, i32* %14, i64 4
+  %17 = bitcast i32* %16 to <4 x i32>*
+  store <4 x i32> %13, <4 x i32>* %17, align 4
+  %index.next = add i64 %index, 8
+  %18 = icmp eq i64 %index.next, %n.vec
+  br i1 %18, label %for.end12, label %vector.body
+
+for.end12:                                        ; preds = %vector.body
+  ret void
+}
+
+define void @matrix_mul_signed_and_double(i32 %N, i32* nocapture %C, i16* nocapture readonly %A, i32 %val) {
+; CHECK-LABEL: matrix_mul_signed_and_double:
+; CHECK:       // %bb.0: // %vector.header
+; CHECK-NEXT:    and w9, w3, #0xffff
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    and x8, x0, #0xfffffff0
+; CHECK-NEXT:    dup v0.4s, w9
+; CHECK-NEXT:  .LBB13_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    add x9, x2, w0, uxtw #1
+; CHECK-NEXT:    subs x8, x8, #16
+; CHECK-NEXT:    ldr q1, [x9]
+; CHECK-NEXT:    ldur q2, [x9, #8]
+; CHECK-NEXT:    add x9, x1, w0, uxtw #2
+; CHECK-NEXT:    add w0, w0, #16
+; CHECK-NEXT:    sshll2 v3.4s, v1.8h, #0
+; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
+; CHECK-NEXT:    sshll2 v4.4s, v2.8h, #0
+; CHECK-NEXT:    sshll v2.4s, v2.4h, #0
+; CHECK-NEXT:    mul v3.4s, v0.4s, v3.4s
+; CHECK-NEXT:    mul v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    mul v4.4s, v0.4s, v4.4s
+; CHECK-NEXT:    mul v2.4s, v0.4s, v2.4s
+; CHECK-NEXT:    stp q1, q3, [x9]
+; CHECK-NEXT:    stp q2, q4, [x9, #32]
+; CHECK-NEXT:    b.ne .LBB13_1
+; CHECK-NEXT:  // %bb.2: // %for.end12
+; CHECK-NEXT:    ret
+vector.header:
+  %conv4 = and i32 %val, 65535
+  %wide.trip.count = zext i32 %N to i64
+  %0 = add nsw i64 %wide.trip.count, -1
+  %min.iters.check = icmp ult i32 %N, 16
+  %1 = trunc i64 %0 to i32
+  %2 = icmp ugt i64 %0, 4294967295
+  %n.vec = and i64 %wide.trip.count, 4294967280
+  %broadcast.splatinsert = insertelement <8 x i32> undef, i32 %conv4, i32 0
+  %broadcast.splat = shufflevector <8 x i32> %broadcast.splatinsert, <8 x i32> undef, <8 x i32> zeroinitializer
+  %broadcast.splatinsert31 = insertelement <8 x i32> undef, i32 %conv4, i32 0
+  %broadcast.splat32 = shufflevector <8 x i32> %broadcast.splatinsert31, <8 x i32> undef, <8 x i32> zeroinitializer
+  %cmp.n = icmp eq i64 %n.vec, %wide.trip.count
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.header, %vector.body
+  %index = phi i64 [ %index.next, %vector.body ], [ 0, %vector.header ]
+  %3 = trunc i64 %index to i32
+  %4 = add i32 %N, %3
+  %5 = zext i32 %4 to i64
+  %6 = getelementptr inbounds i16, i16* %A, i64 %5
+  %7 = bitcast i16* %6 to <8 x i16>*
+  %wide.load = load <8 x i16>, <8 x i16>* %7, align 2
+  %8 = getelementptr inbounds i16, i16* %6, i64 4
+  %9 = bitcast i16* %8 to <8 x i16>*
+  %wide.load30 = load <8 x i16>, <8 x i16>* %9, align 2
+  %10 = sext <8 x i16> %wide.load to <8 x i32>
+  %11 = sext <8 x i16> %wide.load30 to <8 x i32>
+  %12 = mul nuw nsw <8 x i32> %broadcast.splat, %10
+  %13 = mul nuw nsw <8 x i32> %broadcast.splat32, %11
+  %14 = getelementptr inbounds i32, i32* %C, i64 %5
+  %15 = bitcast i32* %14 to <8 x i32>*
+  store <8 x i32> %12, <8 x i32>* %15, align 4
+  %16 = getelementptr inbounds i32, i32* %14, i64 8
+  %17 = bitcast i32* %16 to <8 x i32>*
+  store <8 x i32> %13, <8 x i32>* %17, align 4
+  %index.next = add i64 %index, 16
+  %18 = icmp eq i64 %index.next, %n.vec
+  br i1 %18, label %for.end12, label %vector.body
+
+for.end12:                                        ; preds = %vector.body
   ret void
 }
 

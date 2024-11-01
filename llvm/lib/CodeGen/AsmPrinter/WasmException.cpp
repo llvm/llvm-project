@@ -42,16 +42,6 @@ void WasmException::endModule() {
   }
 }
 
-void WasmException::markFunctionEnd() {
-  // Get rid of any dead landing pads.
-  if (!Asm->MF->getLandingPads().empty()) {
-    auto *NonConstMF = const_cast<MachineFunction *>(Asm->MF);
-    // Wasm does not set BeginLabel and EndLabel information for landing pads,
-    // so we should set the second argument false.
-    NonConstMF->tidyLandingPads(nullptr, /* TidyIfNoBeginLabels */ false);
-  }
-}
-
 void WasmException::endFunction(const MachineFunction *MF) {
   bool ShouldEmitExceptionTable = false;
   for (const LandingPadInfo &Info : MF->getLandingPads()) {

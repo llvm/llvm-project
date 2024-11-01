@@ -10,6 +10,7 @@
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::dataflow;
@@ -146,7 +147,7 @@ void DeadCodeAnalysis::initializeSymbolCallables(Operation *top) {
       return;
 
     // Walk the symbol table to check for non-call uses of symbols.
-    Optional<SymbolTable::UseRange> uses =
+    std::optional<SymbolTable::UseRange> uses =
         SymbolTable::getSymbolUses(&symbolTableRegion);
     if (!uses) {
       // If we couldn't gather the symbol uses, conservatively assume that
@@ -310,7 +311,7 @@ void DeadCodeAnalysis::visitCallOperation(CallOpInterface call) {
 /// Get the constant values of the operands of an operation. If any of the
 /// constant value lattices are uninitialized, return none to indicate the
 /// analysis should bail out.
-static Optional<SmallVector<Attribute>> getOperandValuesImpl(
+static std::optional<SmallVector<Attribute>> getOperandValuesImpl(
     Operation *op,
     function_ref<const Lattice<ConstantValue> *(Value)> getLattice) {
   SmallVector<Attribute> operands;
@@ -325,7 +326,7 @@ static Optional<SmallVector<Attribute>> getOperandValuesImpl(
   return operands;
 }
 
-Optional<SmallVector<Attribute>>
+std::optional<SmallVector<Attribute>>
 DeadCodeAnalysis::getOperandValues(Operation *op) {
   return getOperandValuesImpl(op, [&](Value value) {
     auto *lattice = getOrCreate<Lattice<ConstantValue>>(value);
@@ -336,7 +337,7 @@ DeadCodeAnalysis::getOperandValues(Operation *op) {
 
 void DeadCodeAnalysis::visitBranchOperation(BranchOpInterface branch) {
   // Try to deduce a single successor for the branch.
-  Optional<SmallVector<Attribute>> operands = getOperandValues(branch);
+  std::optional<SmallVector<Attribute>> operands = getOperandValues(branch);
   if (!operands)
     return;
 
@@ -352,7 +353,7 @@ void DeadCodeAnalysis::visitBranchOperation(BranchOpInterface branch) {
 void DeadCodeAnalysis::visitRegionBranchOperation(
     RegionBranchOpInterface branch) {
   // Try to deduce which regions are executable.
-  Optional<SmallVector<Attribute>> operands = getOperandValues(branch);
+  std::optional<SmallVector<Attribute>> operands = getOperandValues(branch);
   if (!operands)
     return;
 
@@ -376,7 +377,7 @@ void DeadCodeAnalysis::visitRegionBranchOperation(
 
 void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
                                              RegionBranchOpInterface branch) {
-  Optional<SmallVector<Attribute>> operands = getOperandValues(op);
+  std::optional<SmallVector<Attribute>> operands = getOperandValues(op);
   if (!operands)
     return;
 

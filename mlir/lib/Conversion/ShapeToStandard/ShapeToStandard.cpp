@@ -13,7 +13,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -92,7 +92,7 @@ Value getBroadcastedDim(ImplicitLocOpBuilder lb, ValueRange extentTensors,
     Type indexTy = lb.getIndexType();
     broadcastedDim =
         lb.create<IfOp>(
-              TypeRange{indexTy}, outOfBounds,
+              outOfBounds,
               [&](OpBuilder &b, Location loc) {
                 b.create<scf::YieldOp>(loc, broadcastedDim);
               },
@@ -293,7 +293,7 @@ LogicalResult IsBroadcastableOpConverter::matchAndRewrite(
               loc, arith::CmpIPredicate::ult, iv, rankDiff);
           broadcastable =
               b.create<IfOp>(
-                   loc, TypeRange{i1Ty}, outOfBounds,
+                   loc, outOfBounds,
                    [&](OpBuilder &b, Location loc) {
                      // Non existent dimensions are always broadcastable
                      b.create<scf::YieldOp>(loc, broadcastable);
@@ -439,7 +439,7 @@ ReduceOpConverter::matchAndRewrite(shape::ReduceOp op, OpAdaptor adaptor,
         SmallVector<Value, 2> mappedValues{iv, extent};
         mappedValues.append(args.begin(), args.end());
 
-        BlockAndValueMapping mapping;
+        IRMapping mapping;
         Block *reduceBody = op.getBody();
         mapping.map(reduceBody->getArguments(), mappedValues);
         for (auto &nested : reduceBody->without_terminator())
@@ -522,7 +522,7 @@ ShapeEqOpConverter::matchAndRewrite(ShapeEqOp op, OpAdaptor adaptor,
     Value eqRank = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
                                                   firstRank, rank);
     auto same = rewriter.create<IfOp>(
-        loc, i1Ty, eqRank,
+        loc, eqRank,
         [&](OpBuilder &b, Location loc) {
           Value one = b.create<arith::ConstantIndexOp>(loc, 1);
           Value init =

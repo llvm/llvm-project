@@ -51,6 +51,7 @@ public:
 
     // Not every TOSA op can be legalized to linalg.
     target.addIllegalOp<tosa::Conv2DOp>();
+    target.addIllegalOp<tosa::Conv3DOp>();
     target.addIllegalOp<tosa::DepthwiseConv2DOp>();
     target.addIllegalOp<tosa::MaxPool2dOp>();
     target.addIllegalOp<tosa::AvgPool2dOp>();

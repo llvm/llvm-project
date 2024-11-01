@@ -31,6 +31,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <optional>
 #include <set>
 #include <string>
 
@@ -261,7 +262,7 @@ public:
         SelFirst, AllSpelledTokens.end(), [&](const syntax::Token &Tok) {
           return SM.getFileOffset(Tok.location()) < SelEnd;
         });
-    auto Sel = llvm::makeArrayRef(SelFirst, SelLimit);
+    auto Sel = llvm::ArrayRef(SelFirst, SelLimit);
     // Find which of these are preprocessed to nothing and should be ignored.
     llvm::BitVector PPIgnored(Sel.size(), false);
     for (const syntax::TokenBuffer::Expansion &X :
@@ -418,7 +419,7 @@ private:
     if (EndInvalid)
       End = Toks.expandedTokens().end();
 
-    return llvm::makeArrayRef(Start, End);
+    return llvm::ArrayRef(Start, End);
   }
 
   // Hit-test a consecutive range of tokens from a single file ID.
@@ -512,7 +513,7 @@ private:
   }
 
   // Decomposes Loc and returns the offset if the file ID is SelFile.
-  llvm::Optional<unsigned> offsetInSelFile(SourceLocation Loc) const {
+  std::optional<unsigned> offsetInSelFile(SourceLocation Loc) const {
     // Decoding Loc with SM.getDecomposedLoc is relatively expensive.
     // But SourceLocations for a file are numerically contiguous, so we
     // can use cheap integer operations instead.
@@ -1059,7 +1060,7 @@ bool SelectionTree::createEach(ASTContext &AST,
 SelectionTree SelectionTree::createRight(ASTContext &AST,
                                          const syntax::TokenBuffer &Tokens,
                                          unsigned int Begin, unsigned int End) {
-  llvm::Optional<SelectionTree> Result;
+  std::optional<SelectionTree> Result;
   createEach(AST, Tokens, Begin, End, [&](SelectionTree T) {
     Result = std::move(T);
     return true;

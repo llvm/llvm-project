@@ -35,6 +35,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang;
 
@@ -1553,7 +1554,7 @@ void CXXNameMangler::mangleUnqualifiedName(
     // <lambda-sig> ::= <template-param-decl>* <parameter-type>+
     //     # Parameter types or 'v' for 'void'.
     if (const CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(TD)) {
-      llvm::Optional<unsigned> DeviceNumber =
+      std::optional<unsigned> DeviceNumber =
           Context.getDiscriminatorOverride()(Context.getASTContext(), Record);
 
       // If we have a device-number via the discriminator, use that to mangle
@@ -2002,7 +2003,7 @@ void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
   // if the host-side CXX ABI has different numbering for lambda. In such case,
   // if the mangle context is that device-side one, use the device-side lambda
   // mangling number for this lambda.
-  llvm::Optional<unsigned> DeviceNumber =
+  std::optional<unsigned> DeviceNumber =
       Context.getDiscriminatorOverride()(Context.getASTContext(), Lambda);
   unsigned Number =
       DeviceNumber ? *DeviceNumber : Lambda->getLambdaManglingNumber();
@@ -6560,7 +6561,7 @@ ItaniumMangleContext *ItaniumMangleContext::create(ASTContext &Context,
                                                    bool IsAux) {
   return new ItaniumMangleContextImpl(
       Context, Diags,
-      [](ASTContext &, const NamedDecl *) -> llvm::Optional<unsigned> {
+      [](ASTContext &, const NamedDecl *) -> std::optional<unsigned> {
         return std::nullopt;
       },
       IsAux);

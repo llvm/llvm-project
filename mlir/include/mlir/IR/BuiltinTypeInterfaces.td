@@ -63,7 +63,7 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
       type. If a shape is not provided, the current shape of the type is used.
     }],
     "::mlir::ShapedType", "cloneWith", (ins
-      "::llvm::Optional<::llvm::ArrayRef<int64_t>>":$shape,
+      "::std::optional<::llvm::ArrayRef<int64_t>>":$shape,
       "::mlir::Type":$elementType
     )>,
 

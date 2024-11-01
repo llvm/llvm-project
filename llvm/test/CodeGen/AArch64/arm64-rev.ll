@@ -56,7 +56,7 @@ entry:
   ret i32 %2
 }
 
-define i32 @test_rev_w_srl16_load(i16 *%a) {
+define i32 @test_rev_w_srl16_load(ptr %a) {
 ; CHECK-LABEL: test_rev_w_srl16_load:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrh w8, [x0]
@@ -71,7 +71,7 @@ define i32 @test_rev_w_srl16_load(i16 *%a) {
 ; GISEL-NEXT:    lsr w0, w8, #16
 ; GISEL-NEXT:    ret
 entry:
-  %0 = load i16, i16 *%a
+  %0 = load i16, ptr %a
   %1 = zext i16 %0 to i32
   %2 = tail call i32 @llvm.bswap.i32(i32 %1)
   %3 = lshr i32 %2, 16
@@ -125,7 +125,7 @@ entry:
   ret i64 %2
 }
 
-define i64 @test_rev_x_srl32_load(i32 *%a) {
+define i64 @test_rev_x_srl32_load(ptr %a) {
 ; CHECK-LABEL: test_rev_x_srl32_load:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr w8, [x0]
@@ -140,7 +140,7 @@ define i64 @test_rev_x_srl32_load(i32 *%a) {
 ; GISEL-NEXT:    lsr x0, x8, #32
 ; GISEL-NEXT:    ret
 entry:
-  %0 = load i32, i32 *%a
+  %0 = load i32, ptr %a
   %1 = zext i32 %0 to i64
   %2 = tail call i64 @llvm.bswap.i64(i64 %1)
   %3 = lshr i64 %2, 32
@@ -244,7 +244,7 @@ entry:
   ret i64 %3
 }
 
-define <8 x i8> @test_vrev64D8(<8 x i8>* %A) nounwind {
+define <8 x i8> @test_vrev64D8(ptr %A) nounwind {
 ; CHECK-LABEL: test_vrev64D8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -256,12 +256,12 @@ define <8 x i8> @test_vrev64D8(<8 x i8>* %A) nounwind {
 ; GISEL-NEXT:    ldr d0, [x0]
 ; GISEL-NEXT:    rev64.8b v0, v0
 ; GISEL-NEXT:    ret
-	%tmp1 = load <8 x i8>, <8 x i8>* %A
+	%tmp1 = load <8 x i8>, ptr %A
 	%tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 	ret <8 x i8> %tmp2
 }
 
-define <4 x i16> @test_vrev64D16(<4 x i16>* %A) nounwind {
+define <4 x i16> @test_vrev64D16(ptr %A) nounwind {
 ; CHECK-LABEL: test_vrev64D16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -273,12 +273,12 @@ define <4 x i16> @test_vrev64D16(<4 x i16>* %A) nounwind {
 ; GISEL-NEXT:    ldr d0, [x0]
 ; GISEL-NEXT:    rev64.4h v0, v0
 ; GISEL-NEXT:    ret
-	%tmp1 = load <4 x i16>, <4 x i16>* %A
+	%tmp1 = load <4 x i16>, ptr %A
 	%tmp2 = shufflevector <4 x i16> %tmp1, <4 x i16> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 	ret <4 x i16> %tmp2
 }
 
-define <2 x i32> @test_vrev64D32(<2 x i32>* %A) nounwind {
+define <2 x i32> @test_vrev64D32(ptr %A) nounwind {
 ; CHECK-LABEL: test_vrev64D32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -290,12 +290,12 @@ define <2 x i32> @test_vrev64D32(<2 x i32>* %A) nounwind {
 ; GISEL-NEXT:    ldr d0, [x0]
 ; GISEL-NEXT:    rev64.2s v0, v0
 ; GISEL-NEXT:    ret
-	%tmp1 = load <2 x i32>, <2 x i32>* %A
+	%tmp1 = load <2 x i32>, ptr %A
 	%tmp2 = shufflevector <2 x i32> %tmp1, <2 x i32> undef, <2 x i32> <i32 1, i32 0>
 	ret <2 x i32> %tmp2
 }
 
-define <2 x float> @test_vrev64Df(<2 x float>* %A) nounwind {
+define <2 x float> @test_vrev64Df(ptr %A) nounwind {
 ; CHECK-LABEL: test_vrev64Df:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -307,12 +307,12 @@ define <2 x float> @test_vrev64Df(<2 x float>* %A) nounwind {
 ; GISEL-NEXT:    ldr d0, [x0]
 ; GISEL-NEXT:    rev64.2s v0, v0
 ; GISEL-NEXT:    ret
-	%tmp1 = load <2 x float>, <2 x float>* %A
+	%tmp1 = load <2 x float>, ptr %A
 	%tmp2 = shufflevector <2 x float> %tmp1, <2 x float> undef, <2 x i32> <i32 1, i32 0>
 	ret <2 x float> %tmp2
 }
 
-define <16 x i8> @test_vrev64Q8(<16 x i8>* %A) nounwind {
+define <16 x i8> @test_vrev64Q8(ptr %A) nounwind {
 ; CHECK-LABEL: test_vrev64Q8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -324,12 +324,12 @@ define <16 x i8> @test_vrev64Q8(<16 x i8>* %A) nounwind {
 ; GISEL-NEXT:    ldr q0, [x0]
 ; GISEL-NEXT:    rev64.16b v0, v0
 ; GISEL-NEXT:    ret
-	%tmp1 = load <16 x i8>, <16 x i8>* %A
+	%tmp1 = load <16 x i8>, ptr %A
 	%tmp2 = shufflevector <16 x i8> %tmp1, <16 x i8> undef, <16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8>
 	ret <16 x i8> %tmp2
 }
 
-define <8 x i16> @test_vrev64Q16(<8 x i16>* %A) nounwind {
+define <8 x i16> @test_vrev64Q16(ptr %A) nounwind {
 ; CHECK-LABEL: test_vrev64Q16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -341,12 +341,12 @@ define <8 x i16> @test_vrev64Q16(<8 x i16>* %A) nounwind {
 ; GISEL-NEXT:    ldr q0, [x0]
 ; GISEL-NEXT:    rev64.8h v0, v0
 ; GISEL-NEXT:    ret
-	%tmp1 = load <8 x i16>, <8 x i16>* %A
+	%tmp1 = load <8 x i16>, ptr %A
 	%tmp2 = shufflevector <8 x i16> %tmp1, <8 x i16> undef, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
 	ret <8 x i16> %tmp2
 }
 
-define <4 x i32> @test_vrev64Q32(<4 x i32>* %A) nounwind {
+define <4 x i32> @test_vrev64Q32(ptr %A) nounwind {
 ; CHECK-LABEL: test_vrev64Q32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -358,12 +358,12 @@ define <4 x i32> @test_vrev64Q32(<4 x i32>* %A) nounwind {
 ; GISEL-NEXT:    ldr q0, [x0]
 ; GISEL-NEXT:    rev64.4s v0, v0
 ; GISEL-NEXT:    ret
-	%tmp1 = load <4 x i32>, <4 x i32>* %A
+	%tmp1 = load <4 x i32>, ptr %A
 	%tmp2 = shufflevector <4 x i32> %tmp1, <4 x i32> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
 	ret <4 x i32> %tmp2
 }
 
-define <4 x float> @test_vrev64Qf(<4 x float>* %A) nounwind {
+define <4 x float> @test_vrev64Qf(ptr %A) nounwind {
 ; CHECK-LABEL: test_vrev64Qf:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -375,12 +375,12 @@ define <4 x float> @test_vrev64Qf(<4 x float>* %A) nounwind {
 ; GISEL-NEXT:    ldr q0, [x0]
 ; GISEL-NEXT:    rev64.4s v0, v0
 ; GISEL-NEXT:    ret
-	%tmp1 = load <4 x float>, <4 x float>* %A
+	%tmp1 = load <4 x float>, ptr %A
 	%tmp2 = shufflevector <4 x float> %tmp1, <4 x float> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
 	ret <4 x float> %tmp2
 }
 
-define <8 x i8> @test_vrev32D8(<8 x i8>* %A) nounwind {
+define <8 x i8> @test_vrev32D8(ptr %A) nounwind {
 ; CHECK-LABEL: test_vrev32D8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -392,12 +392,12 @@ define <8 x i8> @test_vrev32D8(<8 x i8>* %A) nounwind {
 ; GISEL-NEXT:    ldr d0, [x0]
 ; GISEL-NEXT:    rev32.8b v0, v0
 ; GISEL-NEXT:    ret
-	%tmp1 = load <8 x i8>, <8 x i8>* %A
+	%tmp1 = load <8 x i8>, ptr %A
 	%tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
 	ret <8 x i8> %tmp2
 }
 
-define <4 x i16> @test_vrev32D16(<4 x i16>* %A) nounwind {
+define <4 x i16> @test_vrev32D16(ptr %A) nounwind {
 ; CHECK-LABEL: test_vrev32D16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -409,12 +409,12 @@ define <4 x i16> @test_vrev32D16(<4 x i16>* %A) nounwind {
 ; GISEL-NEXT:    ldr d0, [x0]
 ; GISEL-NEXT:    rev32.4h v0, v0
 ; GISEL-NEXT:    ret
-	%tmp1 = load <4 x i16>, <4 x i16>* %A
+	%tmp1 = load <4 x i16>, ptr %A
 	%tmp2 = shufflevector <4 x i16> %tmp1, <4 x i16> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
 	ret <4 x i16> %tmp2
 }
 
-define <16 x i8> @test_vrev32Q8(<16 x i8>* %A) nounwind {
+define <16 x i8> @test_vrev32Q8(ptr %A) nounwind {
 ; CHECK-LABEL: test_vrev32Q8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -428,12 +428,12 @@ define <16 x i8> @test_vrev32Q8(<16 x i8>* %A) nounwind {
 ; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI21_0]
 ; GISEL-NEXT:    tbl.16b v0, { v0, v1 }, v2
 ; GISEL-NEXT:    ret
-	%tmp1 = load <16 x i8>, <16 x i8>* %A
+	%tmp1 = load <16 x i8>, ptr %A
 	%tmp2 = shufflevector <16 x i8> %tmp1, <16 x i8> undef, <16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
 	ret <16 x i8> %tmp2
 }
 
-define <8 x i16> @test_vrev32Q16(<8 x i16>* %A) nounwind {
+define <8 x i16> @test_vrev32Q16(ptr %A) nounwind {
 ; CHECK-LABEL: test_vrev32Q16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -447,12 +447,12 @@ define <8 x i16> @test_vrev32Q16(<8 x i16>* %A) nounwind {
 ; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI22_0]
 ; GISEL-NEXT:    tbl.16b v0, { v0, v1 }, v2
 ; GISEL-NEXT:    ret
-	%tmp1 = load <8 x i16>, <8 x i16>* %A
+	%tmp1 = load <8 x i16>, ptr %A
 	%tmp2 = shufflevector <8 x i16> %tmp1, <8 x i16> undef, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
 	ret <8 x i16> %tmp2
 }
 
-define <8 x i8> @test_vrev16D8(<8 x i8>* %A) nounwind {
+define <8 x i8> @test_vrev16D8(ptr %A) nounwind {
 ; CHECK-LABEL: test_vrev16D8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -464,12 +464,12 @@ define <8 x i8> @test_vrev16D8(<8 x i8>* %A) nounwind {
 ; GISEL-NEXT:    ldr d0, [x0]
 ; GISEL-NEXT:    rev16.8b v0, v0
 ; GISEL-NEXT:    ret
-	%tmp1 = load <8 x i8>, <8 x i8>* %A
+	%tmp1 = load <8 x i8>, ptr %A
 	%tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
 	ret <8 x i8> %tmp2
 }
 
-define <16 x i8> @test_vrev16Q8(<16 x i8>* %A) nounwind {
+define <16 x i8> @test_vrev16Q8(ptr %A) nounwind {
 ; CHECK-LABEL: test_vrev16Q8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -483,14 +483,14 @@ define <16 x i8> @test_vrev16Q8(<16 x i8>* %A) nounwind {
 ; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI24_0]
 ; GISEL-NEXT:    tbl.16b v0, { v0, v1 }, v2
 ; GISEL-NEXT:    ret
-	%tmp1 = load <16 x i8>, <16 x i8>* %A
+	%tmp1 = load <16 x i8>, ptr %A
 	%tmp2 = shufflevector <16 x i8> %tmp1, <16 x i8> undef, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
 	ret <16 x i8> %tmp2
 }
 
 ; Undef shuffle indices should not prevent matching to VREV:
 
-define <8 x i8> @test_vrev64D8_undef(<8 x i8>* %A) nounwind {
+define <8 x i8> @test_vrev64D8_undef(ptr %A) nounwind {
 ; CHECK-LABEL: test_vrev64D8_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -502,12 +502,12 @@ define <8 x i8> @test_vrev64D8_undef(<8 x i8>* %A) nounwind {
 ; GISEL-NEXT:    ldr d0, [x0]
 ; GISEL-NEXT:    rev64.8b v0, v0
 ; GISEL-NEXT:    ret
-	%tmp1 = load <8 x i8>, <8 x i8>* %A
+	%tmp1 = load <8 x i8>, ptr %A
 	%tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> <i32 7, i32 undef, i32 undef, i32 4, i32 3, i32 2, i32 1, i32 0>
 	ret <8 x i8> %tmp2
 }
 
-define <8 x i16> @test_vrev32Q16_undef(<8 x i16>* %A) nounwind {
+define <8 x i16> @test_vrev32Q16_undef(ptr %A) nounwind {
 ; CHECK-LABEL: test_vrev32Q16_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -521,13 +521,13 @@ define <8 x i16> @test_vrev32Q16_undef(<8 x i16>* %A) nounwind {
 ; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI26_0]
 ; GISEL-NEXT:    tbl.16b v0, { v0, v1 }, v2
 ; GISEL-NEXT:    ret
-	%tmp1 = load <8 x i16>, <8 x i16>* %A
+	%tmp1 = load <8 x i16>, ptr %A
 	%tmp2 = shufflevector <8 x i16> %tmp1, <8 x i16> undef, <8 x i32> <i32 undef, i32 0, i32 undef, i32 2, i32 5, i32 4, i32 7, i32 undef>
 	ret <8 x i16> %tmp2
 }
 
 ; vrev <4 x i16> should use REV32 and not REV64
-define void @test_vrev64(<4 x i16>* nocapture %source, <2 x i16>* nocapture %dst) nounwind ssp {
+define void @test_vrev64(ptr nocapture %source, ptr nocapture %dst) nounwind ssp {
 ; CHECK-LABEL: test_vrev64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    add x8, x1, #2
@@ -544,18 +544,17 @@ define void @test_vrev64(<4 x i16>* nocapture %source, <2 x i16>* nocapture %dst
 ; GISEL-NEXT:    st1.h { v0 }[5], [x8]
 ; GISEL-NEXT:    ret
 entry:
-  %0 = bitcast <4 x i16>* %source to <8 x i16>*
-  %tmp2 = load <8 x i16>, <8 x i16>* %0, align 4
+  %tmp2 = load <8 x i16>, ptr %source, align 4
   %tmp3 = extractelement <8 x i16> %tmp2, i32 6
   %tmp5 = insertelement <2 x i16> undef, i16 %tmp3, i32 0
   %tmp9 = extractelement <8 x i16> %tmp2, i32 5
   %tmp11 = insertelement <2 x i16> %tmp5, i16 %tmp9, i32 1
-  store <2 x i16> %tmp11, <2 x i16>* %dst, align 4
+  store <2 x i16> %tmp11, ptr %dst, align 4
   ret void
 }
 
 ; Test vrev of float4
-define void @float_vrev64(float* nocapture %source, <4 x float>* nocapture %dest) nounwind noinline ssp {
+define void @float_vrev64(ptr nocapture %source, ptr nocapture %dest) nounwind noinline ssp {
 ; CHECK-LABEL: float_vrev64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi.2d v0, #0000000000000000
@@ -575,11 +574,10 @@ define void @float_vrev64(float* nocapture %source, <4 x float>* nocapture %dest
 ; GISEL-NEXT:    str q0, [x1, #176]
 ; GISEL-NEXT:    ret
 entry:
-  %0 = bitcast float* %source to <4 x float>*
-  %tmp2 = load <4 x float>, <4 x float>* %0, align 4
+  %tmp2 = load <4 x float>, ptr %source, align 4
   %tmp5 = shufflevector <4 x float> <float 0.000000e+00, float undef, float undef, float undef>, <4 x float> %tmp2, <4 x i32> <i32 0, i32 7, i32 0, i32 0>
-  %arrayidx8 = getelementptr inbounds <4 x float>, <4 x float>* %dest, i32 11
-  store <4 x float> %tmp5, <4 x float>* %arrayidx8, align 4
+  %arrayidx8 = getelementptr inbounds <4 x float>, ptr %dest, i32 11
+  store <4 x float> %tmp5, ptr %arrayidx8, align 4
   ret void
 }
 
@@ -630,14 +628,14 @@ entry:
   br label %body
 
 body:
-  %out.6269.i = phi i16* [ undef, %cleanup ], [ undef, %entry ]
-  %0 = load i16, i16* undef, align 2
+  %out.6269.i = phi ptr [ undef, %cleanup ], [ undef, %entry ]
+  %0 = load i16, ptr undef, align 2
   %1 = icmp eq i16 undef, -10240
   br i1 %1, label %fail, label %cleanup
 
 cleanup:
   %or130.i = call i16 @llvm.bswap.i16(i16 %0)
-  store i16 %or130.i, i16* %out.6269.i, align 2
+  store i16 %or130.i, ptr %out.6269.i, align 2
   br label %body
 
 fail:
@@ -646,7 +644,7 @@ fail:
 declare i16 @llvm.bswap.i16(i16)
 
 ; Reduced regression from D120192
-define void @test_bswap32_narrow(i32* %p0, i16* %p1) nounwind {
+define void @test_bswap32_narrow(ptr %p0, ptr %p1) nounwind {
 ; CHECK-LABEL: test_bswap32_narrow:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
@@ -669,12 +667,12 @@ define void @test_bswap32_narrow(i32* %p0, i16* %p1) nounwind {
 ; GISEL-NEXT:    strh wzr, [x19]
 ; GISEL-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; GISEL-NEXT:    ret
-  %ld = load i32, i32* %p0, align 4
+  %ld = load i32, ptr %p0, align 4
   %and = and i32 %ld, -65536
   %bswap = tail call i32 @llvm.bswap.i32(i32 %and)
   %and16 = zext i32 %bswap to i64
-  %call17 = tail call i32 bitcast (i32 (...)* @gid_tbl_len to i32 (i64)*)(i64 %and16)
-  store i16 0, i16* %p1, align 4
+  %call17 = tail call i32 @gid_tbl_len(i64 %and16)
+  store i16 0, ptr %p1, align 4
   ret void
 }
 declare i32 @gid_tbl_len(...)

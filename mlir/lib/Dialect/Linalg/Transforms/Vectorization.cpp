@@ -31,6 +31,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <type_traits>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -38,7 +39,7 @@ using namespace mlir::linalg;
 #define DEBUG_TYPE "linalg-vectorization"
 
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X)
+#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 /// Try to vectorize `convOp` as a convolution.
 static FailureOr<Operation *> vectorizeConvolution(RewriterBase &rewriter,
@@ -77,9 +78,9 @@ struct VectorizationState {
   /// masking. Returns the masked operation or the original operation if masking
   /// is not needed. If provided, the canonical mask for this operation is
   /// permuted using `maybeMaskingMap`.
-  Operation *maskOperation(RewriterBase &rewriter, Operation *opToMask,
-                           LinalgOp linalgOp,
-                           Optional<AffineMap> maybeMaskingMap = std::nullopt);
+  Operation *
+  maskOperation(RewriterBase &rewriter, Operation *opToMask, LinalgOp linalgOp,
+                std::optional<AffineMap> maybeMaskingMap = std::nullopt);
 
 private:
   /// Initializes the iteration space static sizes using the Linalg op
@@ -100,7 +101,7 @@ private:
   /// cached for future users.
   Value getOrCreateMaskFor(RewriterBase &rewriter, Operation *opToMask,
                            LinalgOp linalgOp,
-                           Optional<AffineMap> maybeMaskingMap);
+                           std::optional<AffineMap> maybeMaskingMap);
 
   // Holds the compile-time static sizes of the iteration space to vectorize.
   // Dynamic dimensions are represented using ShapedType::kDynamicSize.
@@ -179,6 +180,9 @@ VectorizationState::initState(RewriterBase &rewriter, LinalgOp linalgOp,
   LLVM_DEBUG(llvm::interleaveComma(canonicalVecShape, llvm::dbgs()));
   LLVM_DEBUG(llvm::dbgs() << "\n");
 
+  if (ShapedType::isDynamicShape(canonicalVecShape))
+    return failure();
+
   // Initialize iteration space static sizes.
   initIterSpaceStaticSizes(linalgOp);
 
@@ -187,8 +191,6 @@ VectorizationState::initState(RewriterBase &rewriter, LinalgOp linalgOp,
   if (failed(precomputeIterSpaceDynamicSizes(rewriter, linalgOp)))
     return failure();
 
-  if (ShapedType::isDynamicShape(canonicalVecShape))
-    return failure();
   return success();
 }
 
@@ -198,7 +200,7 @@ VectorizationState::initState(RewriterBase &rewriter, LinalgOp linalgOp,
 /// future users.
 Value VectorizationState::getOrCreateMaskFor(
     RewriterBase &rewriter, Operation *opToMask, LinalgOp linalgOp,
-    Optional<AffineMap> maybeMaskingMap) {
+    std::optional<AffineMap> maybeMaskingMap) {
   // No mask is needed if the operation is not maskable.
   auto maskableOp = dyn_cast<vector::MaskableOpInterface>(opToMask);
   if (!maskableOp)
@@ -277,7 +279,7 @@ Value VectorizationState::getOrCreateMaskFor(
 Operation *
 VectorizationState::maskOperation(RewriterBase &rewriter, Operation *opToMask,
                                   LinalgOp linalgOp,
-                                  Optional<AffineMap> maybeMaskingMap) {
+                                  std::optional<AffineMap> maybeMaskingMap) {
   LDBG("Trying to mask: " << *opToMask << "\n");
 
   // Create or retrieve mask for this operation.
@@ -291,25 +293,8 @@ VectorizationState::maskOperation(RewriterBase &rewriter, Operation *opToMask,
 
   // Wrap the operation with a new `vector.mask` and update D-U chain.
   assert(opToMask && "Expected a valid operation to mask");
-  auto opResults = opToMask->getResultTypes();
-  auto createRegionMask = [opToMask](OpBuilder &builder, Location loc) {
-    Block *insBlock = builder.getInsertionBlock();
-    // Create a block, put an op in that block. Look for a utility.
-    // Maybe in conversion pattern rewriter. Way to avoid splice.
-    // Set insertion point.
-    insBlock->getOperations().splice(
-        insBlock->begin(), opToMask->getBlock()->getOperations(), opToMask);
-    builder.create<vector::YieldOp>(loc, opToMask->getResults());
-  };
-  // TODO: Allow multiple results in vector.mask.
-  auto maskOp =
-      opResults.empty()
-          ? rewriter.create<vector::MaskOp>(opToMask->getLoc(), mask,
-                                            createRegionMask)
-          : rewriter.create<vector::MaskOp>(opToMask->getLoc(),
-                                            opToMask->getResultTypes().front(),
-                                            mask, createRegionMask);
-
+  auto maskOp = cast<vector::MaskOp>(
+      mlir::vector::maskOperation(rewriter, opToMask, mask));
   Operation *maskOpTerminator = &maskOp.getMaskRegion().front().back();
 
   for (auto [resIdx, resVal] : llvm::enumerate(opToMask->getResults()))
@@ -373,20 +358,21 @@ struct VectorizationResult {
   Operation *newOp;
 };
 
-llvm::Optional<vector::CombiningKind>
+std::optional<vector::CombiningKind>
 mlir::linalg::getCombinerOpKind(Operation *combinerOp) {
   using ::mlir::vector::CombiningKind;
 
   if (!combinerOp)
     return std::nullopt;
-  return llvm::TypeSwitch<Operation *, llvm::Optional<CombiningKind>>(
-             combinerOp)
+  return llvm::TypeSwitch<Operation *, std::optional<CombiningKind>>(combinerOp)
       .Case<arith::AddIOp, arith::AddFOp>(
           [&](auto op) { return CombiningKind::ADD; })
       .Case<arith::AndIOp>([&](auto op) { return CombiningKind::AND; })
       .Case<arith::MaxSIOp>([&](auto op) { return CombiningKind::MAXSI; })
+      .Case<arith::MaxUIOp>([&](auto op) { return CombiningKind::MAXUI; })
       .Case<arith::MaxFOp>([&](auto op) { return CombiningKind::MAXF; })
       .Case<arith::MinSIOp>([&](auto op) { return CombiningKind::MINSI; })
+      .Case<arith::MinUIOp>([&](auto op) { return CombiningKind::MINUI; })
       .Case<arith::MinFOp>([&](auto op) { return CombiningKind::MINF; })
       .Case<arith::MulIOp, arith::MulFOp>(
           [&](auto op) { return CombiningKind::MUL; })
@@ -438,17 +424,16 @@ static Value broadcastIfNeeded(OpBuilder &b, Value value,
 /// initial value.buildMultiDimReduce
 // Note: this is a true builder that notifies the OpBuilder listener.
 // TODO: Consider moving as a static helper on the ReduceOp.
-static Operation *buildMultiDimReduce(OpBuilder &b,
-                                      Operation *reduceOp, Value valueToReduce,
-                                      Value acc,
-                                      const SmallVector<bool> &reductionMask) {
+static Operation *buildMultiDimReduce(OpBuilder &b, Operation *reduceOp,
+                                      Value valueToReduce, Value acc,
+                                      ArrayRef<bool> dimsToMask) {
   auto maybeKind = getCombinerOpKind(reduceOp);
   assert(maybeKind && "Failed precondition: could not get reduction kind");
   return b.create<vector::MultiDimReductionOp>(
-      reduceOp->getLoc(), valueToReduce, acc, reductionMask, *maybeKind);
+      reduceOp->getLoc(), valueToReduce, acc, dimsToMask, *maybeKind);
 }
 
-static SmallVector<bool> getReductionMask(LinalgOp linalgOp) {
+static SmallVector<bool> getDimsToReduce(LinalgOp linalgOp) {
   return llvm::to_vector(
       llvm::map_range(linalgOp.getIteratorTypesArray(), isReductionIterator));
 }
@@ -471,7 +456,7 @@ static Value buildVectorWrite(RewriterBase &rewriter, Value value,
 
   Operation *write;
   if (vectorType.getRank() > 0) {
-    AffineMap writeMap = reindexIndexingMap(opOperandMap);
+    AffineMap writeMap = inversePermutation(reindexIndexingMap(opOperandMap));
     SmallVector<Value> indices(linalgOp.getRank(outputOperand),
                                rewriter.create<arith::ConstantIndexOp>(loc, 0));
     value = broadcastIfNeeded(rewriter, value, vectorType.getShape());
@@ -509,10 +494,10 @@ using CustomVectorizationPrecondition =
     std::function<LogicalResult(Operation *, bool)>;
 
 // Custom vectorization function type. Produce a vector form of Operation*
-// assuming all its vectorized operands are already in the BlockAndValueMapping.
+// assuming all its vectorized operands are already in the IRMapping.
 // Return nullptr if the Operation cannot be vectorized.
-using CustomVectorizationHook = std::function<VectorizationResult(
-    Operation *, const BlockAndValueMapping &)>;
+using CustomVectorizationHook =
+    std::function<VectorizationResult(Operation *, const IRMapping &)>;
 
 /// Helper function to vectorize the terminator of a `linalgOp`. New result
 /// vector values are appended to `newResults`. Return
@@ -523,7 +508,7 @@ using CustomVectorizationHook = std::function<VectorizationResult(
 /// CustomVectorizationHook.
 static VectorizationResult
 vectorizeLinalgYield(RewriterBase &rewriter, Operation *op,
-                     const BlockAndValueMapping &bvm, VectorizationState &state,
+                     const IRMapping &bvm, VectorizationState &state,
                      LinalgOp linalgOp, SmallVectorImpl<Value> &newResults) {
   auto yieldOp = dyn_cast<linalg::YieldOp>(op);
   if (!yieldOp)
@@ -613,7 +598,7 @@ tensorExtractVectorizationPrecondition(Operation *op, bool vectorizeNDExtract) {
 ///  offset = ( ( 1 ) * 80 +  2 ) * 15  + 3
 static Value
 calculateGatherOffset(OpBuilder &b, tensor::ExtractOp extractOp,
-                      const BlockAndValueMapping &bvm,
+                      const IRMapping &bvm,
                       const SmallVectorImpl<int64_t> &targetShape) {
   // The vector of indices for GatherOp should be shaped as the output vector
   auto indexVecType = VectorType::get(targetShape, b.getIndexType());
@@ -624,23 +609,19 @@ calculateGatherOffset(OpBuilder &b, tensor::ExtractOp extractOp,
 
   const size_t numIndices = extractOp.getIndices().size();
   for (size_t i = 1; i < numIndices; i++) {
-    auto dimSizeBcast = b.create<vector::BroadcastOp>(
-        loc, indexVecType,
+    auto dimSize = broadcastIfNeeded(
+        b,
         b.create<arith::ConstantIndexOp>(
             loc,
-            extractOp.getTensor().getType().cast<ShapedType>().getDimSize(i)));
-    offset = b.create<arith::MulIOp>(loc, offset, dimSizeBcast);
+            extractOp.getTensor().getType().cast<ShapedType>().getDimSize(i)),
+        indexVecType.getShape());
 
-    auto originalIndexBcast = bvm.lookup(extractOp.getIndices()[i]);
-    if (i == numIndices - 1) {
-      // We only need an additional broadcast for the trailing index. All other
-      // indices have already been broadcast by `vectorizeLinalgIndex` to match
-      // the output size.
-      originalIndexBcast = b.create<vector::BroadcastOp>(
-          loc, indexVecType, bvm.lookup(extractOp.getIndices()[i]));
-    }
+    offset = b.create<arith::MulIOp>(loc, offset, dimSize);
 
-    offset = b.create<arith::AddIOp>(loc, originalIndexBcast, offset);
+    auto extractOpIndex = broadcastIfNeeded(
+        b, bvm.lookup(extractOp.getIndices()[i]), indexVecType.getShape());
+
+    offset = b.create<arith::AddIOp>(loc, extractOpIndex, offset);
   }
 
   return offset;
@@ -650,9 +631,10 @@ calculateGatherOffset(OpBuilder &b, tensor::ExtractOp extractOp,
 /// VectorizationStatus::NewOp to signal the vectorization algorithm that it
 /// should map the produced operations. This function is meant to be used as a
 /// CustomVectorizationHook.
-static VectorizationResult
-vectorizeTensorExtract(RewriterBase &rewriter, Operation *op, LinalgOp linalgOp,
-                       const BlockAndValueMapping &bvm) {
+static VectorizationResult vectorizeTensorExtract(RewriterBase &rewriter,
+                                                  Operation *op,
+                                                  LinalgOp linalgOp,
+                                                  const IRMapping &bvm) {
   tensor::ExtractOp extractOp = dyn_cast<tensor::ExtractOp>(op);
   if (!extractOp)
     return VectorizationResult{VectorizationStatus::Failure, nullptr};
@@ -690,10 +672,9 @@ vectorizeTensorExtract(RewriterBase &rewriter, Operation *op, LinalgOp linalgOp,
 /// that the result shape.
 // Note: this is a true builder that notifies the OpBuilder listener.
 // TODO: Consider moving as a static helper on the ReduceOp.
-static Operation *reduceIfNeeded(OpBuilder &b, LinalgOp linalgOp,
-                                 Operation *op, Value reduceValue,
-                                 Value initialValue,
-                                 const BlockAndValueMapping &bvm) {
+static Operation *reduceIfNeeded(OpBuilder &b, LinalgOp linalgOp, Operation *op,
+                                 Value reduceValue, Value initialValue,
+                                 const IRMapping &bvm) {
   Value reduceVec = bvm.lookup(reduceValue);
   Value outputVec = bvm.lookup(initialValue);
   auto reduceType = reduceVec.getType().dyn_cast<VectorType>();
@@ -703,8 +684,8 @@ static Operation *reduceIfNeeded(OpBuilder &b, LinalgOp linalgOp,
   if (!reduceType ||
       (outputType && reduceType.getShape() == outputType.getShape()))
     return nullptr;
-  SmallVector<bool> reductionMask = getReductionMask(linalgOp);
-  return buildMultiDimReduce(b, op, reduceVec, outputVec, reductionMask);
+  SmallVector<bool> dimsToMask = getDimsToReduce(linalgOp);
+  return buildMultiDimReduce(b, op, reduceVec, outputVec, dimsToMask);
 }
 
 /// Generic vectorization for a single operation `op`, given already vectorized
@@ -728,7 +709,7 @@ static Operation *reduceIfNeeded(OpBuilder &b, LinalgOp linalgOp,
 /// instructs the caller what `bvm` update needs to occur.
 static VectorizationResult
 vectorizeOneOp(RewriterBase &rewriter, LinalgOp linalgOp, Operation *op,
-               const BlockAndValueMapping &bvm,
+               const IRMapping &bvm,
                ArrayRef<CustomVectorizationHook> customVectorizationHooks) {
   LDBG("vectorize op " << *op << "\n");
 
@@ -754,13 +735,14 @@ vectorizeOneOp(RewriterBase &rewriter, LinalgOp linalgOp, Operation *op,
   // 4 . Check if the operation is a reduction.
   SmallVector<std::pair<Value, Value>> reductionOperands;
   for (Value operand : op->getOperands()) {
-    auto arg = operand.dyn_cast<BlockArgument>();
-    if (!arg || arg.getArgNumber() < linalgOp.getNumDpsInputs())
+    auto blockArg = operand.dyn_cast<BlockArgument>();
+    if (!blockArg || blockArg.getOwner() != linalgOp.getBlock() ||
+        blockArg.getArgNumber() < linalgOp.getNumDpsInputs())
       continue;
     SmallVector<Operation *> reductionOps;
     Value reduceValue = matchReduction(
         linalgOp.getRegionOutputArgs(),
-        arg.getArgNumber() - linalgOp.getNumDpsInputs(), reductionOps);
+        blockArg.getArgNumber() - linalgOp.getNumDpsInputs(), reductionOps);
     if (!reduceValue)
       continue;
     reductionOperands.push_back(std::make_pair(reduceValue, operand));
@@ -835,7 +817,7 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
 
   // 2. Values defined above the region can only be broadcast for now. Make them
   // map to themselves.
-  BlockAndValueMapping bvm;
+  IRMapping bvm;
   SetVector<Value> valuesSet;
   mlir::getUsedValuesDefinedAbove(linalgOp->getRegion(0), valuesSet);
   bvm.map(valuesSet.getArrayRef(), valuesSet.getArrayRef());
@@ -860,7 +842,7 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
     // Remove zeros from indexing map to use it as masking map.
     SmallVector<int64_t> zeroPos;
     auto results = indexingMap.getResults();
-    for (auto result : llvm::enumerate(results)) {
+    for (const auto &result : llvm::enumerate(results)) {
       if (result.value().isa<AffineConstantExpr>()) {
         zeroPos.push_back(result.index());
       }
@@ -913,24 +895,21 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
   SmallVector<CustomVectorizationHook> hooks;
   // 4a. Register CustomVectorizationHook for yieldOp.
   CustomVectorizationHook vectorizeYield =
-      [&](Operation *op,
-          const BlockAndValueMapping &bvm) -> VectorizationResult {
+      [&](Operation *op, const IRMapping &bvm) -> VectorizationResult {
     return vectorizeLinalgYield(rewriter, op, bvm, state, linalgOp, newResults);
   };
   hooks.push_back(vectorizeYield);
 
   // 4b. Register CustomVectorizationHook for indexOp.
   CustomVectorizationHook vectorizeIndex =
-      [&](Operation *op,
-          const BlockAndValueMapping &bvm) -> VectorizationResult {
+      [&](Operation *op, const IRMapping &bvm) -> VectorizationResult {
     return vectorizeLinalgIndex(rewriter, op, linalgOp);
   };
   hooks.push_back(vectorizeIndex);
 
   // 4c. Register CustomVectorizationHook for extractOp.
   CustomVectorizationHook vectorizeExtract =
-      [&](Operation *op,
-          const BlockAndValueMapping &bvm) -> VectorizationResult {
+      [&](Operation *op, const IRMapping &bvm) -> VectorizationResult {
     return vectorizeTensorExtract(rewriter, op, linalgOp, bvm);
   };
   hooks.push_back(vectorizeExtract);
@@ -976,11 +955,8 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
 }
 
 static LogicalResult vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op) {
-  // TODO: Masking only supports dynamic generic ops without reductions for now.
-  if (!isElementwise(op) &&
-      llvm::any_of(op.getIteratorTypesArray(), [](utils::IteratorType itType) {
-        return itType != utils::IteratorType::parallel;
-      }))
+  // TODO: Masking only supports dynamic generic ops for now.
+  if (!isa<linalg::GenericOp>(op))
     return failure();
 
   // TODO: 0-d vectors are not supported yet.
@@ -1133,10 +1109,14 @@ LogicalResult mlir::linalg::vectorizeCopy(RewriterBase &rewriter,
   if (!srcType.hasStaticShape() || !dstType.hasStaticShape())
     return failure();
 
-  auto readType =
-      VectorType::get(srcType.getShape(), getElementTypeOrSelf(srcType));
-  auto writeType =
-      VectorType::get(dstType.getShape(), getElementTypeOrSelf(dstType));
+  auto srcElementType = getElementTypeOrSelf(srcType);
+  auto dstElementType = getElementTypeOrSelf(dstType);
+  if (!VectorType::isValidElementType(srcElementType) ||
+      !VectorType::isValidElementType(dstElementType))
+    return failure();
+
+  auto readType = VectorType::get(srcType.getShape(), srcElementType);
+  auto writeType = VectorType::get(dstType.getShape(), dstElementType);
 
   Location loc = copyOp->getLoc();
   Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
@@ -1197,6 +1177,8 @@ struct GenericPadOpVectorizationPattern : public GeneralizePadOpPattern {
                                         tensor::PadOp padOp, Value dest) {
     auto sourceType = padOp.getSourceType();
     auto resultType = padOp.getResultType();
+    if (!VectorType::isValidElementType(sourceType.getElementType()))
+      return failure();
 
     // Copy cannot be vectorized if pad value is non-constant and source shape
     // is dynamic. In case of a dynamic source shape, padding must be appended
@@ -1796,6 +1778,26 @@ static void bindShapeDims(ShapedType shapedType, IntTy &...vals) {
 }
 
 namespace {
+bool isCastOfBlockArgument(Operation *op) {
+  return isa<CastOpInterface>(op) && op->getNumOperands() == 1 &&
+         op->getOperand(0).isa<BlockArgument>();
+}
+
+bool isSupportedPoolKind(vector::CombiningKind kind) {
+  switch (kind) {
+  case vector::CombiningKind::ADD:
+  case vector::CombiningKind::MAXF:
+  case vector::CombiningKind::MAXSI:
+  case vector::CombiningKind::MAXUI:
+  case vector::CombiningKind::MINF:
+  case vector::CombiningKind::MINSI:
+  case vector::CombiningKind::MINUI:
+    return true;
+  default:
+    return false;
+  }
+}
+
 /// Generate a vector implementation for either:
 /// ```
 ///   Op def: (     n,     w,     c,    kw,    f  )
@@ -1838,41 +1840,33 @@ struct Conv1DGenerator
     resShapedType = resShaped.getType().dyn_cast<ShapedType>();
     if (!lhsShapedType || !rhsShapedType || !resShapedType)
       return;
-    if (lhsShapedType.getRank() != 3 ||
-        (rhsShapedType.getRank() != 2 && rhsShapedType.getRank() != 3) ||
-        resShapedType.getRank() != 3)
+    // LHS has dimension NCW/NWC and RES has dimension NFW/NCW/NWF/NWC.
+    if (lhsShapedType.getRank() != 3 || resShapedType.getRank() != 3)
       return;
 
-    // Check for reduction `add` preceded by `mul`.
     Operation *reduceOp = matchLinalgReduction(linalgOp.getDpsInitOperand(0));
     if (!reduceOp)
       return;
-    llvm::Optional<vector::CombiningKind> maybeKind;
-    maybeKind = getCombinerOpKind(reduceOp);
-    if (!maybeKind || *maybeKind != vector::CombiningKind::ADD)
+    redOp = reduceOp->getName().getIdentifier();
+
+    if (!setOperKind(reduceOp))
       return;
-    // Check for single `mul` predecessor. The `mul` operands must be block
-    // arguments or extension of block arguments.
-    Operation *mulOp = nullptr;
-    for (Value operand : reduceOp->getOperands()) {
-      if (operand.isa<BlockArgument>())
-        continue;
-      if (mulOp)
-        return;
-      mulOp = operand.getDefiningOp();
-      if (!mulOp || !isa<arith::MulIOp, arith::MulFOp>(mulOp))
-        return;
+    auto maybeKind = getCombinerOpKind(reduceOp);
+    if (!maybeKind || (*maybeKind != vector::CombiningKind::ADD &&
+                       (oper != Pool || !isSupportedPoolKind(*maybeKind)))) {
+      return;
     }
-    if (!mulOp)
-      return;
-    for (Value operand : mulOp->getOperands()) {
-      if (Operation *def = operand.getDefiningOp()) {
-        if (!isa<CastOpInterface>(def))
-          return;
-        operand = def->getOperand(0);
-      }
-      if (!operand.isa<BlockArgument>())
+
+    auto rhsRank = rhsShapedType.getRank();
+    switch (oper) {
+    case Conv:
+      if (rhsRank != 2 && rhsRank!= 3)
         return;
+      break;
+    case Pool:
+      if (rhsRank != 1)
+        return;
+      break;
     }
     // The op is now known to be valid.
     valid = true;
@@ -1889,16 +1883,25 @@ struct Conv1DGenerator
   /// > 1.
   FailureOr<Operation *> conv(Conv1DOpOrder conv1DOpOrder) {
     if (!valid)
-      return rewriter.notifyMatchFailure(op, "unvectorizable 1-D conv");
+      return rewriter.notifyMatchFailure(op, "unvectorizable 1-D conv/pool");
 
     int64_t nSize, wSize, cSize, kwSize, fSize;
     SmallVector<int64_t, 3> lhsShape, rhsShape, resShape;
     switch (conv1DOpOrder) {
     case Conv1DOpOrder::Nwc:
-      // kernel{kw, c, f}
-      bindShapeDims(rhsShapedType, kwSize, cSize, fSize);
       // out{n, w, f}
-      bindShapeDims(resShapedType, nSize, wSize);
+      bindShapeDims(resShapedType, nSize, wSize, fSize);
+      switch (oper) {
+      case Conv:
+        // kernel{kw, c, f}
+        bindShapeDims(rhsShapedType, kwSize, cSize);
+        break;
+      case Pool:
+        // kernel{kw}
+        bindShapeDims(rhsShapedType, kwSize);
+        cSize = fSize;
+        break;
+      }
       lhsShape = {nSize,
                   // iw = ow * sw + kw *  dw - 1
                   //   (i.e. 16 convolved with 3 (@stride 1 dilation 1) -> 14)
@@ -1906,21 +1909,44 @@ struct Conv1DGenerator
                   ((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) -
                       1,
                   cSize};
-      rhsShape = {kwSize, cSize, fSize};
+      switch (oper) {
+      case Conv:
+        rhsShape = {kwSize, cSize, fSize};
+        break;
+      case Pool:
+        rhsShape = {kwSize};
+        break;
+      }
       resShape = {nSize, wSize, fSize};
       break;
     case Conv1DOpOrder::Ncw:
-      // kernel{f, c, kw}
-      bindShapeDims(rhsShapedType, fSize, cSize, kwSize);
       // out{n, f, w}
       bindShapeDims(resShapedType, nSize, fSize, wSize);
+      switch (oper) {
+      case Conv:
+        // kernel{f, c, kw}
+        bindShapeDims(rhsShapedType, fSize, cSize, kwSize);
+        break;
+      case Pool:
+        // kernel{kw}
+        bindShapeDims(rhsShapedType, kwSize);
+        cSize = fSize;
+        break;
+      }
       lhsShape = {nSize, cSize,
                   // iw = ow * sw + kw *  dw - 1
                   //   (i.e. 16 convolved with 3 (@stride 1 dilation 1) -> 14)
                   // Perform the proper inclusive -> exclusive -> inclusive.
                   ((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) -
                       1};
-      rhsShape = {fSize, cSize, kwSize};
+      switch (oper) {
+      case Conv:
+        rhsShape = {fSize, cSize, kwSize};
+        break;
+      case Pool:
+        rhsShape = {kwSize};
+        break;
+      }
       resShape = {nSize, fSize, wSize};
       break;
     }
@@ -1944,8 +1970,11 @@ struct Conv1DGenerator
     Value lhs = rewriter.create<vector::TransferReadOp>(
         loc, lhsType, lhsShaped, ValueRange{zero, zero, zero});
     // Read rhs slice of size {kw, c, f} @ [0, 0, 0].
-    Value rhs = rewriter.create<vector::TransferReadOp>(
-        loc, rhsType, rhsShaped, ValueRange{zero, zero, zero});
+    // This is needed only for Conv.
+    Value rhs = nullptr;
+    if (oper == Conv)
+      rhs = rewriter.create<vector::TransferReadOp>(
+          loc, rhsType, rhsShaped, ValueRange{zero, zero, zero});
     // Read res slice of size {n, w, f} @ [0, 0, 0].
     Value res = rewriter.create<vector::TransferReadOp>(
         loc, resType, resShaped, ValueRange{zero, zero, zero});
@@ -1964,7 +1993,10 @@ struct Conv1DGenerator
       lhs = rewriter.create<vector::TransposeOp>(loc, lhs, permLhs);
       // fcw -> wcf
       static constexpr std::array<int64_t, 3> permRhs = {2, 1, 0};
-      rhs = rewriter.create<vector::TransposeOp>(loc, rhs, permRhs);
+
+      // This is needed only for Conv.
+      if (oper == Conv)
+        rhs = rewriter.create<vector::TransposeOp>(loc, rhs, permRhs);
       // nfw -> nwf
       static constexpr std::array<int64_t, 3> permRes = {0, 2, 1};
       res = rewriter.create<vector::TransposeOp>(loc, res, permRes);
@@ -1988,10 +2020,12 @@ struct Conv1DGenerator
       }
     }
     // Extract rhs slice of size {c, f} @ [kw].
-    for (int64_t kw = 0; kw < kwSize; ++kw) {
-      rhsVals.push_back(rewriter.create<vector::ExtractOp>(
-          loc, rhs, /*offsets=*/ArrayRef<int64_t>{kw}));
-    }
+    // Do not do for pooling.
+    if (oper == Conv)
+      for (int64_t kw = 0; kw < kwSize; ++kw) {
+        rhsVals.push_back(rewriter.create<vector::ExtractOp>(
+            loc, rhs, /*offsets=*/ArrayRef<int64_t>{kw}));
+      }
     // Extract res slice: {n, wSizeStep, f} @ [0, w, 0].
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
       resVals.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
@@ -2005,11 +2039,21 @@ struct Conv1DGenerator
       return kw * (wSize / wSizeStep) + w;
     };
 
-    // Compute contraction: O{n, w, f} += I{n, sw * w + dw * kw, c} * F{c, f}
+    // Compute contraction: O{n, w, f} += I{n, sw * w + dw * kw, c} * F{c, f} or
+    // perform simple arith operation for pooling
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
-        resVals[w] = conv1dSliceAsContraction(
-            rewriter, loc, lhsVals[linearIndex(kw, w)], rhsVals[kw], resVals[w]);
+        switch (oper) {
+        case Conv:
+          resVals[w] = conv1dSliceAsContraction(rewriter, loc,
+                                                lhsVals[linearIndex(kw, w)],
+                                                rhsVals[kw], resVals[w]);
+          break;
+        case Pool:
+          resVals[w] = pool1dSlice(rewriter, loc, lhsVals[linearIndex(kw, w)],
+                                   resVals[w]);
+          break;
+        }
       }
     }
 
@@ -2058,6 +2102,16 @@ struct Conv1DGenerator
         loc, lhs, rhs, res,
         /*indexingMaps=*/MapList{{n, w, c}, {c, f}, {n, w, f}},
         /*iteratorTypes=*/ArrayRef<vector::IteratorType>{par, par, par, red});
+  }
+
+  // Create a reduction: lhs{n, w, c} -> res{n, w, c}
+  Value pool1dSlice(RewriterBase &rewriter, Location loc, Value lhs,
+                    Value res) {
+    if (isPoolExt)
+      lhs = rewriter.create(loc, poolExtOp, lhs, res.getType())->getResult(0);
+    return rewriter
+        .create(loc, redOp, ArrayRef<Value>{lhs, res}, res.getType())
+        ->getResult(0);
   }
 
   /// Generate a vector implementation for:
@@ -2236,6 +2290,7 @@ struct Conv1DGenerator
                 /*rhsIndex*/ {kw, c, f},
                 /*resIndex*/ {n, w, f}}))
       return conv(Conv1DOpOrder::Nwc);
+
     return rewriter.notifyMatchFailure(op, "not a conv::Nwc layout");
   }
 
@@ -2257,6 +2312,41 @@ struct Conv1DGenerator
   }
 
   /// Entry point that transposes into the common form:
+  ///   {{n, strideW * w + dilationW * kw, c}, {kw}, {n, w, c}} for pooling
+  FailureOr<Operation *> generateNwcPooling() {
+    AffineExpr n, w, c, kw;
+    bindDims(ctx, n, w, c, kw);
+    if (!iters({Par(), Par(), Par(), Red()}))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed to match pooling 3-par 1-red");
+
+    // No transposition needed.
+    if (layout({/*lhsIndex*/ {n, strideW * w + dilationW * kw, c},
+                /*rhsIndex*/ {kw},
+                /*resIndex*/ {n, w, c}}))
+      return conv(Conv1DOpOrder::Nwc);
+
+    return rewriter.notifyMatchFailure(op, "not a pooling::Nwc layout");
+  }
+
+  /// Entry point that transposes into the common form:
+  ///   {{n, c, strideW * w + dilationW * kw}, {kw}, {n, c, w}} for pooling
+  FailureOr<Operation *> generateNcwPooling() {
+    AffineExpr n, w, c, kw;
+    bindDims(ctx, n, c, w, kw);
+    if (!iters({Par(), Par(), Par(), Red()}))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed to match pooling 3-par 1-red");
+
+    if (layout({/*lhsIndex*/ {n, c, strideW * w + dilationW * kw},
+                /*rhsIndex*/ {kw},
+                /*resIndex*/ {n, c, w}}))
+      return conv(Conv1DOpOrder::Ncw);
+
+    return rewriter.notifyMatchFailure(op, "not a pooling::Ncw layout");
+  }
+
+  /// Entry point that transposes into the common form:
   ///   {{n, strideW * w + dilationW * kw, c}, {kw, c}, {n, w, c}}
   FailureOr<Operation *> generateDilatedConv() {
     AffineExpr n, w, c, kw;
@@ -2275,10 +2365,61 @@ struct Conv1DGenerator
   }
 
 private:
+  enum OperKind { Conv, Pool };
   bool valid = false;
+  OperKind oper = Conv;
+  StringAttr redOp;
+  StringAttr poolExtOp;
+  bool isPoolExt = false;
   int strideW, dilationW;
   Value lhsShaped, rhsShaped, resShaped;
   ShapedType lhsShapedType, rhsShapedType, resShapedType;
+
+  // Sets oper, poolExtOp and isPoolExt for valid conv/pooling ops.
+  // Returns true iff it is a valid conv/pooling op.
+  // If (region has 2 ops (reduction + yield) or 3 ops (extension + reduction
+  // + yield) and rhs is not used) then it is the body of a pooling
+  // If conv, check for single `mul` predecessor. The `mul` operands must be
+  // block arguments or extension of block arguments.
+  // Otherwise, check for one or zero `ext` predecessor. The `ext` operands
+  // must be block arguments or extension of block arguments.
+  bool setOperKind(Operation *reduceOp) {
+    int numBlockArguments =
+        llvm::count_if(reduceOp->getOperands(),
+                       [](Value v) { return v.isa<BlockArgument>(); });
+    switch (numBlockArguments) {
+    case 1: {
+      // Will be convolution if feeder is a MulOp.
+      // Otherwise, if it can be pooling.
+      auto feedValIt = llvm::find_if(reduceOp->getOperands(), [](Value v) {
+        return !v.isa<BlockArgument>();
+      });
+      Operation *feedOp = (*feedValIt).getDefiningOp();
+      if (isCastOfBlockArgument(feedOp)) {
+        oper = Pool;
+        isPoolExt = true;
+        poolExtOp = feedOp->getName().getIdentifier();
+      } else if (!(isa<arith::MulIOp, arith::MulFOp>(feedOp) &&
+                   llvm::all_of(feedOp->getOperands(), [](Value v) {
+                     if (v.isa<BlockArgument>())
+                       return true;
+                     if (Operation *op = v.getDefiningOp())
+                       return isCastOfBlockArgument(op);
+                     return false;
+                   }))) {
+        return false;
+      }
+      return true;
+    }
+    case 2:
+      // Must be pooling
+      oper = Pool;
+      isPoolExt = false;
+      return true;
+    default:
+      return false;
+    }
+  }
 };
 } // namespace
 
@@ -2299,6 +2440,12 @@ static FailureOr<Operation *> vectorizeConvolution(RewriterBase &rewriter,
   if (succeeded(res))
     return res;
   res = e.generateNcwConv();
+  if (succeeded(res))
+    return res;
+  res = e.generateNwcPooling();
+  if (succeeded(res))
+    return res;
+  res = e.generateNcwPooling();
   if (succeeded(res))
     return res;
   return e.generateDilatedConv();

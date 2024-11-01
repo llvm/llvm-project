@@ -181,6 +181,30 @@ unsigned getHostcallImplicitArgPosition() {
   }
 }
 
+unsigned getDefaultQueueImplicitArgPosition() {
+  switch (AmdhsaCodeObjectVersion) {
+  case 2:
+  case 3:
+  case 4:
+    return 32;
+  case 5:
+  default:
+    return AMDGPU::ImplicitArg::DEFAULT_QUEUE_OFFSET;
+  }
+}
+
+unsigned getCompletionActionImplicitArgPosition() {
+  switch (AmdhsaCodeObjectVersion) {
+  case 2:
+  case 3:
+  case 4:
+    return 40;
+  case 5:
+  default:
+    return AMDGPU::ImplicitArg::COMPLETION_ACTION_OFFSET;
+  }
+}
+
 #define GET_MIMGBaseOpcodesTable_IMPL
 #define GET_MIMGDimInfoTable_IMPL
 #define GET_MIMGInfoTable_IMPL
@@ -515,7 +539,7 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
   auto OperandsNum = OpDesc.getNumOperands();
   unsigned CompOprIdx;
   for (CompOprIdx = Component::SRC1; CompOprIdx < OperandsNum; ++CompOprIdx) {
-    if (OpDesc.OpInfo[CompOprIdx].OperandType == AMDGPU::OPERAND_KIMM32) {
+    if (OpDesc.operands()[CompOprIdx].OperandType == AMDGPU::OPERAND_KIMM32) {
       MandatoryLiteralIdx = CompOprIdx;
       break;
     }
@@ -804,11 +828,26 @@ unsigned getWavefrontSize(const MCSubtargetInfo *STI) {
 }
 
 unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
+  unsigned BytesPerCU = 0;
+  if (STI->getFeatureBits().test(FeatureLocalMemorySize32768))
+    BytesPerCU = 32768;
+  if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
+    BytesPerCU = 65536;
+
+  // "Per CU" really means "per whatever functional block the waves of a
+  // workgroup must share". So the effective local memory size is doubled in
+  // WGP mode on gfx10.
+  if (isGFX10Plus(*STI) && !STI->getFeatureBits().test(FeatureCuMode))
+    BytesPerCU *= 2;
+
+  return BytesPerCU;
+}
+
+unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureLocalMemorySize32768))
     return 32768;
   if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
     return 65536;
-
   return 0;
 }
 
@@ -828,11 +867,18 @@ unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo *STI,
   assert(FlatWorkGroupSize != 0);
   if (STI->getTargetTriple().getArch() != Triple::amdgcn)
     return 8;
+  unsigned MaxWaves = getMaxWavesPerEU(STI) * getEUsPerCU(STI);
   unsigned N = getWavesPerWorkGroup(STI, FlatWorkGroupSize);
-  if (N == 1)
-    return 40;
-  N = 40 / N;
-  return std::min(N, 16u);
+  if (N == 1) {
+    // Single-wave workgroups don't consume barrier resources.
+    return MaxWaves;
+  }
+
+  unsigned MaxBarriers = 16;
+  if (isGFX10Plus(*STI) && !STI->getFeatureBits().test(FeatureCuMode))
+    MaxBarriers = 32;
+
+  return std::min(MaxWaves / N, MaxBarriers);
 }
 
 unsigned getMinWavesPerEU(const MCSubtargetInfo *STI) {
@@ -1878,8 +1924,8 @@ bool hasMIMG_R128(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureMIMG_R128] && !STI.getFeatureBits()[AMDGPU::FeatureR128A16];
 }
 
-bool hasGFX10A16(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX10A16];
+bool hasA16(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureA16];
 }
 
 bool hasG16(const MCSubtargetInfo &STI) {
@@ -2109,21 +2155,21 @@ bool isInlineValue(unsigned Reg) {
 
 bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_SRC_FIRST &&
          OpType <= AMDGPU::OPERAND_SRC_LAST;
 }
 
 bool isKImmOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_KIMM_FIRST &&
          OpType <= AMDGPU::OPERAND_KIMM_LAST;
 }
 
 bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   switch (OpType) {
   case AMDGPU::OPERAND_REG_IMM_FP32:
   case AMDGPU::OPERAND_REG_IMM_FP32_DEFERRED:
@@ -2152,7 +2198,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
 
 bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_REG_INLINE_C_FIRST &&
          OpType <= AMDGPU::OPERAND_REG_INLINE_C_LAST;
 }
@@ -2307,7 +2353,7 @@ unsigned getRegBitWidth(const MCRegisterClass &RC) {
 unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
                            unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned RCID = Desc.OpInfo[OpNo].RegClass;
+  unsigned RCID = Desc.operands()[OpNo].RegClass;
   return getRegBitWidth(MRI->getRegClass(RCID)) / 8;
 }
 
@@ -2502,12 +2548,12 @@ std::optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
                                    : std::nullopt;
 }
 
-unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST, bool Signed) {
+unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST) {
   // Address offset is 12-bit signed for GFX10, 13-bit for GFX9 and GFX11+.
   if (AMDGPU::isGFX10(ST))
-    return Signed ? 12 : 11;
+    return 12;
 
-  return Signed ? 13 : 12;
+  return 13;
 }
 
 // Given Imm, split it into the values to put into the SOffset and ImmOffset
@@ -2569,23 +2615,15 @@ SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F) {
     DX10Clamp = DX10ClampAttr == "true";
 
   StringRef DenormF32Attr = F.getFnAttribute("denormal-fp-math-f32").getValueAsString();
-  if (!DenormF32Attr.empty()) {
-    DenormalMode DenormMode = parseDenormalFPAttribute(DenormF32Attr);
-    FP32InputDenormals = DenormMode.Input == DenormalMode::IEEE;
-    FP32OutputDenormals = DenormMode.Output == DenormalMode::IEEE;
-  }
+  if (!DenormF32Attr.empty())
+    FP32Denormals = parseDenormalFPAttribute(DenormF32Attr);
 
   StringRef DenormAttr = F.getFnAttribute("denormal-fp-math").getValueAsString();
   if (!DenormAttr.empty()) {
     DenormalMode DenormMode = parseDenormalFPAttribute(DenormAttr);
-
-    if (DenormF32Attr.empty()) {
-      FP32InputDenormals = DenormMode.Input == DenormalMode::IEEE;
-      FP32OutputDenormals = DenormMode.Output == DenormalMode::IEEE;
-    }
-
-    FP64FP16InputDenormals = DenormMode.Input == DenormalMode::IEEE;
-    FP64FP16OutputDenormals = DenormMode.Output == DenormalMode::IEEE;
+    if (DenormF32Attr.empty())
+      FP32Denormals = DenormMode;
+    FP64FP16Denormals = DenormMode;
   }
 }
 

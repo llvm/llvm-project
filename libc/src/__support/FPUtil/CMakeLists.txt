@@ -46,6 +46,7 @@ add_header_library(
     .fp_bits
     .fenv_impl
     libc.src.__support.CPP.type_traits
+    libc.src.__support.common
     libc.include.math
     libc.include.errno
     libc.src.errno.errno
@@ -58,6 +59,7 @@ add_header_library(
   DEPENDS
     .fp_bits
     libc.src.__support.CPP.type_traits
+    libc.src.__support.common
 )
 
 add_header_library(
@@ -71,6 +73,7 @@ add_header_library(
     .platform_defs
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
+    libc.src.__support.common
     libc.include.math
     libc.include.errno
     libc.src.errno.errno
@@ -83,6 +86,7 @@ add_header_library(
   DEPENDS
     .fp_bits
     libc.src.__support.CPP.type_traits
+    libc.src.__support.common
 )
 
 add_header_library(
@@ -94,6 +98,7 @@ add_header_library(
     .manipulation_functions
     .normal_float
     libc.src.__support.CPP.type_traits
+    libc.src.__support.common
 )
 
 add_header_library(
@@ -118,6 +123,7 @@ add_header_library(
     libc.src.__support.builtin_wrappers
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
+    libc.src.__support.common
     libc.src.__support.uint128
 )
 
@@ -166,6 +172,7 @@ add_header_library(
     PolyEval.h
   DEPENDS
     .multiply_add
+    libc.src.__support.common
 )
 
 add_header_library(
@@ -176,6 +183,16 @@ add_header_library(
     libc.src.__support.common
   FLAGS
     ROUND_OPT
+)
+
+add_header_library(
+  double_double
+  HDRS
+    double_double.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.number_pair
+    .multiply_add
 )
 
 add_header_library(

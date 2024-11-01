@@ -324,7 +324,7 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
     Region &region = newOp.getRegion();
     Block *block = new Block();
     region.push_back(block);
-    BlockAndValueMapping mapper;
+    IRMapping mapper;
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(block);
     for (auto bbarg : genericOp.getRegionInputArgs())
@@ -686,6 +686,12 @@ void mlir::linalg::populateFoldUnitExtentDimsViaSlicesPatterns(
   patterns.add<ReplaceUnitExtents>(context,
                                    RankReductionStrategy::ExtractInsertSlice);
   patterns.add<FoldUnitDimLoops>(context);
+  // TODO: Patterns unrelated to unit dim folding should be factored out.
+  linalg::FillOp::getCanonicalizationPatterns(patterns, context);
+  tensor::EmptyOp::getCanonicalizationPatterns(patterns, context);
+  tensor::populateFoldTensorEmptyPatterns(patterns);
+  memref::populateResolveRankedShapeTypeResultDimsPatterns(patterns);
+  memref::populateResolveShapedTypeResultDimsPatterns(patterns);
 }
 
 void mlir::linalg::populateMoveInitOperandsToInputPattern(

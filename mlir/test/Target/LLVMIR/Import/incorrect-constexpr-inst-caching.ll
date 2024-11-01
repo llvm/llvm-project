@@ -1,4 +1,4 @@
-; RUN: mlir-translate --import-llvm %s | FileCheck %s
+; RUN: mlir-translate -opaque-pointers=0 --import-llvm %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; This test is primarily used to make sure an assertion is not triggered.

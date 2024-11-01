@@ -10,6 +10,7 @@ static_library("Analysis") {
     "//llvm/lib/IR",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "AliasAnalysis.cpp",
@@ -74,6 +75,7 @@ static_library("Analysis") {
     "LegacyDivergenceAnalysis.cpp",
     "Lint.cpp",
     "Loads.cpp",
+    "Local.cpp",
     "LoopAccessAnalysis.cpp",
     "LoopAnalysisManager.cpp",
     "LoopCacheAnalysis.cpp",
@@ -126,6 +128,7 @@ static_library("Analysis") {
     "TrainingLogger.cpp",
     "TypeBasedAliasAnalysis.cpp",
     "TypeMetadataUtils.cpp",
+    "UniformityAnalysis.cpp",
     "VFABIDemangling.cpp",
     "ValueLattice.cpp",
     "ValueLatticeUtils.cpp",

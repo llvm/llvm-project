@@ -7,35 +7,33 @@ target triple = "nvptx64"
 ; CHECK: remark: globalization_remarks.c:5:7: Could not move globalized variable to the stack. Variable is potentially captured in call. Mark parameter as `__attribute__((noescape))` to override.
 ; CHECK: remark: globalization_remarks.c:5:7: Found thread data sharing on the GPU. Expect degraded performance due to data globalization.
 
-%struct.ident_t = type { i32, i32, i32, i32, i8* }
+%struct.ident_t = type { i32, i32, i32, i32, ptr }
 
-@S = external local_unnamed_addr global i8*
+@S = external local_unnamed_addr global ptr
 
 define void @foo() {
 entry:
-  %c = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 false, i1 true)
-  %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !10
-  %x_on_stack = bitcast i8* %0 to i32*
-  %1 = bitcast i32* %x_on_stack to i8*
-  call void @share(i8* %1), !dbg !10
-  call void @__kmpc_free_shared(i8* %0)
-  call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false)
+  %c = call i32 @__kmpc_target_init(ptr null, i1 false, i1 true)
+  %0 = call ptr @__kmpc_alloc_shared(i64 4), !dbg !10
+  call void @share(ptr %0), !dbg !10
+  call void @__kmpc_free_shared(ptr %0)
+  call void @__kmpc_target_deinit(ptr null, i1 false)
   ret void
 }
 
-define internal void @share(i8* %x) {
+define internal void @share(ptr %x) {
 entry:
-  store i8* %x, i8** @S
+  store ptr %x, ptr @S
   ret void
 }
 
-declare i8* @__kmpc_alloc_shared(i64)
+declare ptr @__kmpc_alloc_shared(i64)
 
-declare void @__kmpc_free_shared(i8* nocapture)
+declare void @__kmpc_free_shared(ptr nocapture)
 
-declare i32 @__kmpc_target_init(%struct.ident_t*, i1, i1);
+declare i32 @__kmpc_target_init(ptr, i1, i1);
 
-declare void @__kmpc_target_deinit(%struct.ident_t*, i1)
+declare void @__kmpc_target_deinit(ptr, i1)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}
@@ -48,7 +46,7 @@ declare void @__kmpc_target_deinit(%struct.ident_t*, i1)
 !4 = !{i32 1, !"wchar_size", i32 4}
 !5 = !{i32 7, !"openmp", i32 50}
 !6 = !{i32 7, !"openmp-device", i32 50}
-!7 = !{void ()* @foo, !"kernel", i32 1}
+!7 = !{ptr @foo, !"kernel", i32 1}
 !8 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !9, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
 !9 = !DISubroutineType(types: !2)
 !10 = !DILocation(line: 5, column: 7, scope: !8)

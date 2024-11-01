@@ -40,7 +40,7 @@ entry:
   ret i32 %cond
 }
 
-define i32* @select_ptr(i1 %test, i32* %a, i32* %b) {
+define ptr @select_ptr(i1 %test, ptr %a, ptr %b) {
 ; MIPS32-LABEL: select_ptr:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    move $2, $6
@@ -49,8 +49,8 @@ define i32* @select_ptr(i1 %test, i32* %a, i32* %b) {
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
-  %cond = select i1 %test, i32* %a, i32* %b
-  ret i32* %cond
+  %cond = select i1 %test, ptr %a, ptr %b
+  ret ptr %cond
 }
 
 define i32 @select_with_negation(i32 %a, i32 %b, i32 %x, i32 %y) {
@@ -87,7 +87,7 @@ entry:
   ret i64 %cond
 }
 
-define void @select_ambiguous_i64_in_fpr(i1 %test, i64* %i64_ptr_a, i64* %i64_ptr_b, i64* %i64_ptr_c) {
+define void @select_ambiguous_i64_in_fpr(i1 %test, ptr %i64_ptr_a, ptr %i64_ptr_b, ptr %i64_ptr_c) {
 ; MIPS32-LABEL: select_ambiguous_i64_in_fpr:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    ldc1 $f2, 0($5)
@@ -98,10 +98,10 @@ define void @select_ambiguous_i64_in_fpr(i1 %test, i64* %i64_ptr_a, i64* %i64_pt
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
-  %0 = load i64, i64* %i64_ptr_a, align 8
-  %1 = load i64, i64* %i64_ptr_b, align 8
+  %0 = load i64, ptr %i64_ptr_a, align 8
+  %1 = load i64, ptr %i64_ptr_b, align 8
   %cond = select i1 %test, i64 %0, i64 %1
-  store i64 %cond, i64* %i64_ptr_c, align 8
+  store i64 %cond, ptr %i64_ptr_c, align 8
   ret void
 }
 
@@ -119,7 +119,7 @@ entry:
   ret float %cond
 }
 
-define void @select_ambiguous_float_in_gpr(i1 %test, float* %f32_ptr_a, float* %f32_ptr_b, float* %f32_ptr_c) {
+define void @select_ambiguous_float_in_gpr(i1 %test, ptr %f32_ptr_a, ptr %f32_ptr_b, ptr %f32_ptr_c) {
 ; MIPS32-LABEL: select_ambiguous_float_in_gpr:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lw $2, 0($5)
@@ -130,10 +130,10 @@ define void @select_ambiguous_float_in_gpr(i1 %test, float* %f32_ptr_a, float* %
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
-  %0 = load float, float* %f32_ptr_a, align 4
-  %1 = load float, float* %f32_ptr_b, align 4
+  %0 = load float, ptr %f32_ptr_a, align 4
+  %1 = load float, ptr %f32_ptr_b, align 4
   %cond = select i1 %test, float %0, float %1
-  store float %cond, float* %f32_ptr_c, align 4
+  store float %cond, ptr %f32_ptr_c, align 4
   ret void
 }
 

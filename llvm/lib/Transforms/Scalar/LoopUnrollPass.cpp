@@ -1292,7 +1292,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
              << " iterations";
     });
 
-    if (peelLoop(L, PP.PeelCount, LI, &SE, DT, &AC, PreserveLCSSA)) {
+    ValueToValueMapTy VMap;
+    if (peelLoop(L, PP.PeelCount, LI, &SE, DT, &AC, PreserveLCSSA, VMap)) {
       simplifyLoopAfterUnroll(L, true, LI, &SE, &DT, &AC, &TTI);
       // If the loop was peeled, we already "used up" the profile information
       // we had, so we don't want to unroll or peel again.
@@ -1328,7 +1329,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
         makeFollowupLoopID(OrigLoopID, {LLVMLoopUnrollFollowupAll,
                                         LLVMLoopUnrollFollowupRemainder});
     if (RemainderLoopID)
-      RemainderLoop->setLoopID(RemainderLoopID.value());
+      RemainderLoop->setLoopID(*RemainderLoopID);
   }
 
   if (UnrollResult != LoopUnrollResult::FullyUnrolled) {
@@ -1336,7 +1337,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
         makeFollowupLoopID(OrigLoopID, {LLVMLoopUnrollFollowupAll,
                                         LLVMLoopUnrollFollowupUnrolled});
     if (NewLoopID) {
-      L->setLoopID(NewLoopID.value());
+      L->setLoopID(*NewLoopID);
 
       // Do not setLoopAlreadyUnrolled if loop attributes have been specified
       // explicitly.
@@ -1652,15 +1653,15 @@ void LoopUnrollPass::printPipeline(
       OS, MapClassName2PassName);
   OS << "<";
   if (UnrollOpts.AllowPartial != std::nullopt)
-    OS << (UnrollOpts.AllowPartial.value() ? "" : "no-") << "partial;";
+    OS << (*UnrollOpts.AllowPartial ? "" : "no-") << "partial;";
   if (UnrollOpts.AllowPeeling != std::nullopt)
-    OS << (UnrollOpts.AllowPeeling.value() ? "" : "no-") << "peeling;";
+    OS << (*UnrollOpts.AllowPeeling ? "" : "no-") << "peeling;";
   if (UnrollOpts.AllowRuntime != std::nullopt)
-    OS << (UnrollOpts.AllowRuntime.value() ? "" : "no-") << "runtime;";
+    OS << (*UnrollOpts.AllowRuntime ? "" : "no-") << "runtime;";
   if (UnrollOpts.AllowUpperBound != std::nullopt)
-    OS << (UnrollOpts.AllowUpperBound.value() ? "" : "no-") << "upperbound;";
+    OS << (*UnrollOpts.AllowUpperBound ? "" : "no-") << "upperbound;";
   if (UnrollOpts.AllowProfileBasedPeeling != std::nullopt)
-    OS << (UnrollOpts.AllowProfileBasedPeeling.value() ? "" : "no-")
+    OS << (*UnrollOpts.AllowProfileBasedPeeling ? "" : "no-")
        << "profile-peeling;";
   if (UnrollOpts.FullUnrollMaxCount != std::nullopt)
     OS << "full-unroll-max=" << UnrollOpts.FullUnrollMaxCount << ";";

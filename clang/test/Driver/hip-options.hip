@@ -95,15 +95,15 @@
 // THINLTO: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-flto=thin" {{.*}} "-fwhole-program-vtables"
 // THINLTO-NOT: "-cc1"{{.*}}" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fwhole-program-vtables"
 
-// Check -fopenmp is allowed with HIP but -fopenmp-targets= is not allowed.
+// Check -fopenmp=libomp is allowed with HIP but -fopenmp-targets= is not allowed.
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
-// RUN:   --offload-arch=gfx906 -fopenmp %s 2>&1 | FileCheck -check-prefix=OMP %s
+// RUN:   --offload-arch=gfx906 -fopenmp=libomp %s 2>&1 | FileCheck -check-prefix=OMP %s
 // OMP-NOT: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fopenmp"
 // OMP: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-fopenmp"
 
 // RUN: not %clang --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
-// RUN:   --offload-arch=gfx906 -fopenmp -fopenmp-targets=amdgcn %s 2>&1 \
+// RUN:   --offload-arch=gfx906 -fopenmp=libomp -fopenmp-targets=amdgcn %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=OMPTGT %s
 // OMPTGT: unsupported option '-fopenmp-targets=' for language mode 'HIP'
 

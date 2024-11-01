@@ -19,6 +19,7 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include <array>
 #include <memory>
+#include <optional>
 
 namespace clang {
 namespace CodeGen {
@@ -59,7 +60,7 @@ public:
 
   /// Check if an execution count is known for a given statement. If so, return
   /// true and put the value in Count; else return false.
-  Optional<uint64_t> getStmtCount(const Stmt *S) const {
+  std::optional<uint64_t> getStmtCount(const Stmt *S) const {
     if (!StmtCountMap)
       return std::nullopt;
     auto I = StmtCountMap->find(S);

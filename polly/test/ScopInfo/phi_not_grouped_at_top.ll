@@ -3,18 +3,18 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 declare i32 @funa() align 2
 
-declare i32 @generic_personality_v0(i32, i64, i8*, i8*)
+declare i32 @generic_personality_v0(i32, i64, ptr, ptr)
 
-define void @funb() personality i32 (i32, i64, i8*, i8*)* @generic_personality_v0 {
+define void @funb() personality ptr @generic_personality_v0 {
 entry:
   br label %bb117
 
 bb117:                                            ; preds = %bb56
   %0 = invoke i32 @funa()
-          to label %bb121 unwind label %invcont118 ; <%struct.btHullTriangle*> [#uses=1]
+          to label %bb121 unwind label %invcont118 ; <ptr> [#uses=1]
 
 invcont118:                                       ; preds = %bb117
-  %d = landingpad { i8*, i32 } cleanup catch i32* null
+  %d = landingpad { ptr, i32 } cleanup catch ptr null
   br label %bb121
 
 bb121:                                            ; preds = %bb120, %invcont118

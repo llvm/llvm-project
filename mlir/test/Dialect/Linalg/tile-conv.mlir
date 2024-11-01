@@ -12,7 +12,7 @@ func.func @conv(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?xf32>, %arg2 : memref
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.conv_2d"]} in %arg1
-    %1, %loop:2 = transform.structured.tile %0 [2, 3]
+    %1, %loop:2 = transform.structured.tile %0 [2, 3] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation)
 }
 
 //       CHECK: func @conv

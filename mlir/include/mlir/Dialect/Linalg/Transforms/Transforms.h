@@ -21,6 +21,7 @@
 #include "mlir/Dialect/X86Vector/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/TilingInterface.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
@@ -54,6 +55,10 @@ void populatePadTensorTilingPatterns(RewritePatternSet &patterns,
 /// to false only for testing purposes.
 void populateDecomposeLinalgOpsPattern(RewritePatternSet &patterns,
                                        bool removeDeadArgsAndResults = true);
+
+/// Populate patterns that convert non-destination-style ops to destination
+/// style ops.
+void populateConvertToDestinationStylePatterns(RewritePatternSet &patterns);
 
 /// Populate patterns for vectorizing low-D convolution ops. This is a step in
 /// progressive lowering for convolution ops, it assume high-D convolution ops
@@ -162,6 +167,9 @@ FailureOr<Operation *> fuseElementwiseOps(RewriterBase &rewriter,
 
 /// Split the given `op` into two parts along the given iteration space
 /// `dimension` at the specified `splitPoint`, and return the two parts.
+/// If the second part is statically known to be empty, do not create it
+/// and return nullptr instead. Error state is signalled by returning
+/// a pair of nullptrs.
 ///
 /// For example, the following op:
 ///
@@ -212,7 +220,7 @@ struct TiledLinalgOp {
 FailureOr<TiledLinalgOp> tileLinalgOp(RewriterBase &b, LinalgOp op,
                                       const LinalgTilingOptions &options);
 
-/// Try to peel anad canonicalize loop `op` and return the new result.
+/// Try to peel and canonicalize loop `op` and return the new result.
 // TODO: Add support for scf.parallel and affine.for loops.
 SmallVector<Value> peelLoop(RewriterBase &rewriter, Operation *op);
 /// Peel and canonicalize 'loops'.
@@ -244,7 +252,7 @@ FailureOr<GenericOp> generalizeNamedOp(RewriterBase &rewriter,
 /// smallest constant value for the size of the buffer needed for each
 /// dimension. If that is not possible, contains the dynamic size of the
 /// subview. The call back should return the buffer to use.
-using AllocBufferCallbackFn = std::function<Optional<Value>(
+using AllocBufferCallbackFn = std::function<std::optional<Value>(
     OpBuilder &b, memref::SubViewOp subView,
     ArrayRef<Value> boundingSubViewSize, DataLayout &layout)>;
 
@@ -261,8 +269,9 @@ using CopyCallbackFn =
     std::function<LogicalResult(OpBuilder &b, Value src, Value dst)>;
 
 struct LinalgPromotionOptions {
-  /// Indices of subViews to promote. If `None`, try to promote all operands.
-  Optional<DenseSet<unsigned>> operandsToPromote = std::nullopt;
+  /// Indices of subViews to promote. If `std::nullopt`, try to promote all
+  /// operands.
+  std::optional<DenseSet<unsigned>> operandsToPromote;
   LinalgPromotionOptions &setOperandsToPromote(ArrayRef<int64_t> operands) {
     operandsToPromote = DenseSet<unsigned>();
     operandsToPromote->insert(operands.begin(), operands.end());
@@ -273,7 +282,7 @@ struct LinalgPromotionOptions {
   /// Otherwise the partial view will be used. The decision is defaulted to
   /// `useFullTileBuffersDefault` when `useFullTileBuffers` is None and for
   /// operands missing from `useFullTileBuffers`.
-  Optional<llvm::SmallBitVector> useFullTileBuffers = std::nullopt;
+  std::optional<llvm::SmallBitVector> useFullTileBuffers;
   LinalgPromotionOptions &setUseFullTileBuffers(ArrayRef<bool> useFullTiles) {
     unsigned size = useFullTiles.size();
     llvm::SmallBitVector tmp(size, false);
@@ -289,8 +298,8 @@ struct LinalgPromotionOptions {
     useFullTileBuffersDefault = use;
     return *this;
   }
-  /// Alignment of promoted buffer. If `None` do not specify alignment.
-  Optional<unsigned> alignment = std::nullopt;
+  /// Alignment of promoted buffer. If `std::nullopt` do not specify alignment.
+  std::optional<unsigned> alignment;
   LinalgPromotionOptions &setAlignment(unsigned align) {
     alignment = align;
     return *this;
@@ -301,11 +310,11 @@ struct LinalgPromotionOptions {
     useAlloca = use;
     return *this;
   }
-  /// Callback function to do the allocation of the promoted buffer. If None,
-  /// then the default allocation scheme of allocating a memref<?xi8> buffer
-  /// followed by a view operation is used.
-  Optional<AllocBufferCallbackFn> allocationFn = std::nullopt;
-  Optional<DeallocBufferCallbackFn> deallocationFn = std::nullopt;
+  /// Callback function to do the allocation of the promoted buffer. If
+  /// std::nullopt, then the default allocation scheme of allocating a
+  /// memref<?xi8> buffer followed by a view operation is used.
+  std::optional<AllocBufferCallbackFn> allocationFn;
+  std::optional<DeallocBufferCallbackFn> deallocationFn;
   LinalgPromotionOptions &
   setAllocationDeallocationFns(AllocBufferCallbackFn const &allocFn,
                                DeallocBufferCallbackFn const &deallocFn) {
@@ -314,9 +323,9 @@ struct LinalgPromotionOptions {
     return *this;
   }
   /// Callback function to do the copy of data to and from the promoted
-  /// subview. If None then a memref.copy is used.
-  Optional<CopyCallbackFn> copyInFn = std::nullopt;
-  Optional<CopyCallbackFn> copyOutFn = std::nullopt;
+  /// subview. If std::nullopt then a memref.copy is used.
+  std::optional<CopyCallbackFn> copyInFn;
+  std::optional<CopyCallbackFn> copyOutFn;
   LinalgPromotionOptions &setCopyInOutFns(CopyCallbackFn const &copyIn,
                                           CopyCallbackFn const &copyOut) {
     copyInFn = copyIn;
@@ -412,15 +421,23 @@ makeTiledLoopRanges(RewriterBase &b, Location loc, AffineMap map,
                     ArrayRef<OpFoldResult> allShapeSizes,
                     ArrayRef<OpFoldResult> allTileSizes);
 
+namespace detail {
+template <typename T>
+struct MultiSizeSpecificationBase {
+  /// Tile sizes.
+  T lowTileSize, highTileSize;
+  /// Number of tiles associated with each size.
+  T lowTripCount, highTripCount;
+};
+} // namespace detail
+
 /// A description of a multi-size tiling comprising tile sizes and numbers of
 /// tiles, expressed as Values which may or may not be constant. Multi-size
 /// currently means two-size.
-struct MultiSizeSpecification {
-  /// Tile sizes.
-  Value lowTileSize, highTileSize;
-  /// Number of tiles associated with each size.
-  Value lowTripCount, highTripCount;
-};
+struct MultiSizeSpecification
+    : public detail::MultiSizeSpecificationBase<Value> {};
+struct StaticMultiSizeSpecification
+    : public detail::MultiSizeSpecificationBase<int64_t> {};
 
 /// Emits the IR computing the multi-sized tiling specification with two tile
 /// sizes not exceeding `targetSize`, each divisible by `sizeDivisor`, such
@@ -453,6 +470,9 @@ FailureOr<MultiSizeSpecification>
 computeMultiTileSizes(OpBuilder &builder, LinalgOp op, unsigned dimension,
                       OpFoldResult targetSize, OpFoldResult divisor,
                       bool emitAssertions = true);
+FailureOr<StaticMultiSizeSpecification>
+computeStaticMultiTileSizes(LinalgOp op, unsigned dimension, int64_t targetSize,
+                            int64_t divisor);
 
 /// Rewrite a TilingInterface `op` to a tiled `scf.foreach_thread`, applying
 /// tiling by `numThreads`.
@@ -469,14 +489,14 @@ struct ForeachThreadTilingResult {
 FailureOr<ForeachThreadTilingResult>
 tileToForeachThreadOp(RewriterBase &builder, TilingInterface op,
                       ArrayRef<OpFoldResult> numThreads,
-                      Optional<ArrayAttr> mapping);
+                      std::optional<ArrayAttr> mapping);
 
 /// Same as `tileToForeachThreadOp`, but calculate the number of threads
 /// required using the given tileSizes.
 FailureOr<ForeachThreadTilingResult>
 tileToForeachThreadOpUsingTileSizes(RewriterBase &builder, TilingInterface op,
                                     ArrayRef<OpFoldResult> tileSizes,
-                                    Optional<ArrayAttr> mapping);
+                                    std::optional<ArrayAttr> mapping);
 
 /// Transformation information returned after reduction tiling.
 struct ForeachThreadReductionTilingResult {
@@ -514,11 +534,10 @@ struct ForeachThreadReductionTilingResult {
 /// %6 = linalg.generic %1 ["parallel", "reduction"]
 ///   : tensor<7x4xf32> -> tensor<7xf32>
 /// ```
-FailureOr<ForeachThreadReductionTilingResult>
-tileReductionUsingForeachThread(RewriterBase &b, PartialReductionOpInterface op,
-                                ArrayRef<OpFoldResult> numThreads,
-                                ArrayRef<OpFoldResult> tileSizes = {},
-                                Optional<ArrayAttr> mapping = std::nullopt);
+FailureOr<ForeachThreadReductionTilingResult> tileReductionUsingForeachThread(
+    RewriterBase &b, PartialReductionOpInterface op,
+    ArrayRef<OpFoldResult> numThreads, ArrayRef<OpFoldResult> tileSizes = {},
+    std::optional<ArrayAttr> mapping = std::nullopt);
 
 /// All indices returned by IndexOp should be invariant with respect to
 /// tiling. Therefore, if an operation is tiled, we have to transform the
@@ -623,7 +642,7 @@ struct LinalgTilingAndFusionOptions {
   SmallVector<int64_t> tileInterchange;
   /// When specified, specifies distribution of generated tile loops to
   /// processors.
-  Optional<LinalgLoopDistributionOptions> tileDistribution = std::nullopt;
+  std::optional<LinalgLoopDistributionOptions> tileDistribution;
   LinalgTilingAndFusionOptions &
   setDistributionOptions(LinalgLoopDistributionOptions distributionOptions) {
     tileDistribution = std::move(distributionOptions);
@@ -676,7 +695,7 @@ struct LinalgTilingOptions {
 
   /// When specified, specifies distribution of generated tile loops to
   /// processors.
-  Optional<LinalgLoopDistributionOptions> distribution = std::nullopt;
+  std::optional<LinalgLoopDistributionOptions> distribution;
 
   LinalgTilingOptions &
   setDistributionOptions(LinalgLoopDistributionOptions distributionOptions) {
@@ -806,7 +825,7 @@ struct CopyVectorizationPattern : public OpRewritePattern<memref::CopyOp> {
 };
 
 /// Return vector::CombiningKind for the given op.
-llvm::Optional<vector::CombiningKind> getCombinerOpKind(Operation *combinerOp);
+std::optional<vector::CombiningKind> getCombinerOpKind(Operation *combinerOp);
 
 //===----------------------------------------------------------------------===//
 // Transformations exposed as rewrite patterns.
@@ -880,6 +899,16 @@ struct GeneralizeOuterUnitDimsPackOpPattern
     : public OpRewritePattern<tensor::PackOp> {
   using OpRewritePattern<tensor::PackOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(tensor::PackOp packOp,
+                                PatternRewriter &rewriter) const override;
+};
+
+/// Rewrites a tensor::UnPackOp into a sequence of rank-reduced extract_slice op
+/// + transpose op + insert_slice op, where the tensor::UnPackOp has outer dims
+/// being all 1s.
+struct GeneralizeOuterUnitDimsUnPackOpPattern
+    : public OpRewritePattern<tensor::UnPackOp> {
+  using OpRewritePattern<tensor::UnPackOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(tensor::UnPackOp unpackOp,
                                 PatternRewriter &rewriter) const override;
 };
 
@@ -966,7 +995,7 @@ struct ExtractSliceOfPadTensorSwapPattern
   ///
   /// See the documentation for tensor::bubbleUpPadSlice regarding zero slice
   /// guard.
-  using ControlFn = std::function<llvm::Optional<bool>(tensor::ExtractSliceOp)>;
+  using ControlFn = std::function<std::optional<bool>(tensor::ExtractSliceOp)>;
 
   ExtractSliceOfPadTensorSwapPattern(MLIRContext *context,
                                      ControlFn controlFn = nullptr,
@@ -1112,6 +1141,32 @@ splitReductionByScaling(PatternRewriter &b, LinalgOp op,
 FailureOr<SmallVector<Value>> collapseGenericOpIterationDims(
     GenericOp genericOp, ArrayRef<ReassociationIndices> foldedIterationDims,
     RewriterBase &rewriter);
+
+/// Implement packing of a single LinalgOp by `packedSizes`.
+/// There must be one packedSizes entry per `linalgOp` iterator.
+/// Return the packed Linalg op on success, failure otherwise.
+FailureOr<linalg::LinalgOp> pack(RewriterBase &rewriter,
+                                 linalg::LinalgOp linalgOp,
+                                 ArrayRef<OpFoldResult> packedSizes);
+
+/// Struct to hold the result of a `packTranspose` call.
+struct PackTransposeResult {
+  tensor::PackOp transposedPackOp;
+  linalg::LinalgOp transposedLinalgOp;
+  tensor::UnPackOp transposedUnPackOp;
+};
+/// Transpose a single PackOp -> LinalgOp -> UnPackOp chain and return the
+/// transposed PackOp -> LinalgOp -> UnPackOp chain after replacements.
+/// Return failure if either:
+///   1. the `packOp` does not have the `linalgOp` as its unique use.
+///   2. the `maybeUnPackOp`, if specified must be a consumer of the result tied
+///      to the unique `packOp` use.
+///   3. `outerPerm` (resp. `innerPerm`) must be valid permutations of
+///      `packOp.getOuterDimsPerm` (resp. `packOp.getInnerDimsPerm`) or empty.
+FailureOr<PackTransposeResult>
+packTranspose(RewriterBase &rewriter, tensor::PackOp packOp,
+              linalg::LinalgOp linalgOp, tensor::UnPackOp maybeUnPackOp,
+              ArrayRef<int64_t> outerPerm, ArrayRef<int64_t> innerPerm);
 
 } // namespace linalg
 } // namespace mlir

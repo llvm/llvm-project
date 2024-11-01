@@ -13,6 +13,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/Timer.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -319,10 +320,9 @@ void CompileUnit::ResolveSymbolContext(
   // subsequent line exact matches below.
   const bool inlines = false;
   const bool exact = true;
-  const llvm::Optional<uint16_t> column =
-      src_location_spec.GetColumn()
-          ? llvm::Optional<uint16_t>(line_entry.column)
-          : std::nullopt;
+  const std::optional<uint16_t> column =
+      src_location_spec.GetColumn() ? std::optional<uint16_t>(line_entry.column)
+                                    : std::nullopt;
 
   SourceLocationSpec found_entry(line_entry.file, line_entry.line, column,
                                  inlines, exact);
@@ -361,9 +361,10 @@ void CompileUnit::ResolveSymbolContext(
           // address resolving is completely failing and more deserving of an
           // error message the user can see.
           resolved_sc.module_sp->ReportError(
-              "unable to resolve a line table file address 0x%" PRIx64 " back "
+              "unable to resolve a line table file address {0:x16} back "
               "to a compile unit, please file a bug and attach the address "
-              "and file.", line_entry.range.GetBaseAddress().GetFileAddress());
+              "and file.",
+              line_entry.range.GetBaseAddress().GetFileAddress());
         }
         sc_list.Append(sc);
       }

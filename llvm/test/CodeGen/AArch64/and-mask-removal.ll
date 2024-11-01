@@ -47,16 +47,16 @@ define void @new_position(i32 %pos) {
 ; CHECK-GI-NEXT:    ret
 entry:
   %idxprom = sext i32 %pos to i64
-  %arrayidx = getelementptr inbounds [400 x i8], [400 x i8]* @board, i64 0, i64 %idxprom
-  %tmp = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds [400 x i8], ptr @board, i64 0, i64 %idxprom
+  %tmp = load i8, ptr %arrayidx, align 1
   %.off = add i8 %tmp, -1
   %switch = icmp ult i8 %.off, 2
   br i1 %switch, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %tmp1 = load i32, i32* @next_string, align 4
-  %arrayidx8 = getelementptr inbounds [400 x i32], [400 x i32]* @string_number, i64 0, i64 %idxprom
-  store i32 %tmp1, i32* %arrayidx8, align 4
+  %tmp1 = load i32, ptr @next_string, align 4
+  %arrayidx8 = getelementptr inbounds [400 x i32], ptr @string_number, i64 0, i64 %idxprom
+  store i32 %tmp1, ptr %arrayidx8, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -510,8 +510,8 @@ define i64 @pr58109b(i8 signext %0, i64 %a, i64 %b) {
 ; CHECK-SD-LABEL: pr58109b:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    add w8, w0, #1
-; CHECK-SD-NEXT:    cmp w8, #2
-; CHECK-SD-NEXT:    csel x0, x1, x2, lo
+; CHECK-SD-NEXT:    tst w8, #0xfe
+; CHECK-SD-NEXT:    csel x0, x1, x2, eq
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: pr58109b:

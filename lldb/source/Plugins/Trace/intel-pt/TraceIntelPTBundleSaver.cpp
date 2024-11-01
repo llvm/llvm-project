@@ -22,6 +22,7 @@
 #include "llvm/Support/JSON.h"
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <sstream>
 #include <string>
 
@@ -133,7 +134,7 @@ BuildThreadsSection(Process &process, FileSpec directory) {
 ///   an \a llvm::Error in case of failures, \a std::nullopt if the trace is not
 ///   written to disk because the trace is empty and the \p compact flag is
 ///   present, or the FileSpec of the trace file on disk.
-static Expected<Optional<FileSpec>>
+static Expected<std::optional<FileSpec>>
 WriteContextSwitchTrace(TraceIntelPT &trace_ipt, lldb::cpu_id_t cpu_id,
                         const FileSpec &cpus_dir, bool compact) {
   FileSpec output_context_switch_trace = cpus_dir;
@@ -189,7 +190,7 @@ static Expected<FileSpec> WriteIntelPTTrace(TraceIntelPT &trace_ipt,
   return output_trace;
 }
 
-static llvm::Expected<llvm::Optional<std::vector<JSONCpu>>>
+static llvm::Expected<std::optional<std::vector<JSONCpu>>>
 BuildCpusSection(TraceIntelPT &trace_ipt, FileSpec directory, bool compact) {
   if (trace_ipt.GetTracedCpus().empty())
     return std::nullopt;
@@ -202,7 +203,7 @@ BuildCpusSection(TraceIntelPT &trace_ipt, FileSpec directory, bool compact) {
   for (lldb::cpu_id_t cpu_id : trace_ipt.GetTracedCpus()) {
     JSONCpu json_cpu;
     json_cpu.id = cpu_id;
-    Expected<Optional<FileSpec>> context_switch_trace_path =
+    Expected<std::optional<FileSpec>> context_switch_trace_path =
         WriteContextSwitchTrace(trace_ipt, cpu_id, cpus_dir, compact);
     if (!context_switch_trace_path)
       return context_switch_trace_path.takeError();
@@ -364,23 +365,23 @@ Expected<FileSpec> TraceIntelPTBundleSaver::SaveToDisk(TraceIntelPT &trace_ipt,
 
   FileSystem::Instance().Resolve(directory);
 
-  Expected<Optional<std::vector<JSONCpu>>> json_cpus =
+  Expected<std::optional<std::vector<JSONCpu>>> json_cpus =
       BuildCpusSection(trace_ipt, directory, compact);
   if (!json_cpus)
     return json_cpus.takeError();
 
-  Optional<std::vector<JSONProcess>> json_processes;
-  Optional<JSONKernel> json_kernel;
+  std::optional<std::vector<JSONProcess>> json_processes;
+  std::optional<JSONKernel> json_kernel;
 
   if (trace_ipt.GetTraceMode() == TraceIntelPT::TraceMode::KernelMode) {
-    Expected<Optional<JSONKernel>> exp_json_kernel =
+    Expected<std::optional<JSONKernel>> exp_json_kernel =
         BuildKernelSection(trace_ipt, directory);
     if (!exp_json_kernel)
       return exp_json_kernel.takeError();
     else
       json_kernel = *exp_json_kernel;
   } else {
-    Expected<Optional<std::vector<JSONProcess>>> exp_json_processes =
+    Expected<std::optional<std::vector<JSONProcess>>> exp_json_processes =
         BuildProcessesSection(trace_ipt, directory);
     if (!exp_json_processes)
       return exp_json_processes.takeError();

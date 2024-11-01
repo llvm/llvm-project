@@ -116,7 +116,8 @@ public:
   /// This constructor initializes the data members to match that
   /// of the specified triple.
   ///
-  PPCSubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
+  PPCSubtarget(const Triple &TT, const std::string &CPU,
+               const std::string &TuneCPU, const std::string &FS,
                const PPCTargetMachine &TM);
 
   /// ParseSubtargetFeatures - Parses features string setting specified
@@ -153,13 +154,16 @@ public:
   }
   const PPCTargetMachine &getTargetMachine() const { return TM; }
 
-  /// initializeSubtargetDependencies - Initializes using a CPU and feature string
-  /// so that we can use initializer lists for subtarget initialization.
-  PPCSubtarget &initializeSubtargetDependencies(StringRef CPU, StringRef FS);
+  /// initializeSubtargetDependencies - Initializes using a CPU, a TuneCPU,  and
+  /// feature string so that we can use initializer lists for subtarget
+  /// initialization.
+  PPCSubtarget &initializeSubtargetDependencies(StringRef CPU,
+                                                StringRef TuneCPU,
+                                                StringRef FS);
 
 private:
   void initializeEnvironment();
-  void initSubtargetFeatures(StringRef CPU, StringRef FS);
+  void initSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
 public:
   /// isPPC64 - Return true if we are generating code for 64-bit pointer mode.

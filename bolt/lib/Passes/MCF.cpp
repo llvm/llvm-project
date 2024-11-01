@@ -448,10 +448,10 @@ void estimateEdgeCounts(BinaryFunction &BF) {
     computeEdgeWeights<BinaryBasicBlock *>(BF, SuccEdgeWeights);
   }
   if (opts::EqualizeBBCounts) {
-    LLVM_DEBUG(BF.print(dbgs(), "before equalize BB counts", true));
+    LLVM_DEBUG(BF.print(dbgs(), "before equalize BB counts"));
     auto Info = DataflowInfoManager(BF, nullptr, nullptr);
     equalizeBBCounts(Info, BF);
-    LLVM_DEBUG(BF.print(dbgs(), "after equalize BB counts", true));
+    LLVM_DEBUG(BF.print(dbgs(), "after equalize BB counts"));
   }
   if (opts::IterativeGuess)
     guessEdgeByIterativeApproach(BF);

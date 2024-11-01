@@ -21,13 +21,13 @@ define i32 @test_explicit_pred(i64 %len) {
 ; CHECK-NEXT:    call void @init(ptr [[ALLOCA]])
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[LEN:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[LEN:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x i64> poison, i64 [[LEN]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x i64> poison, i64 [[LEN]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT7]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT9:%.*]] = insertelement <4 x i64> poison, i64 [[LEN]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT9:%.*]] = insertelement <4 x i64> poison, i64 [[LEN]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT10:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT9]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT11:%.*]] = insertelement <4 x i64> poison, i64 [[LEN]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT11:%.*]] = insertelement <4 x i64> poison, i64 [[LEN]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT12:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT11]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:

@@ -24,7 +24,7 @@
 // Failing on bots:
 // https://lab.llvm.org/buildbot#builders/184/builds/1580
 // https://lab.llvm.org/buildbot#builders/18/builds/3167
-// UNSUPPORTED: aarch64, powerpc64, powerpc64le
+// UNSUPPORTED: target={{(aarch64|powerpc64).*}}
 
 #ifdef BUILD_SO
 

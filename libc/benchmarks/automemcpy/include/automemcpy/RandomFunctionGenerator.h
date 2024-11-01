@@ -13,8 +13,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <llvm/ADT/ArrayRef.h>
-#include <llvm/ADT/Optional.h>
 #include <llvm/ADT/StringRef.h>
+#include <optional>
 #include <vector>
 #include <z3++.h>
 
@@ -27,7 +27,7 @@ struct RandomFunctionGenerator {
   RandomFunctionGenerator();
 
   // Get the next valid FunctionDescriptor or std::nullopt.
-  Optional<FunctionDescriptor> next();
+  std::optional<FunctionDescriptor> next();
 
 private:
   // Returns an expression where `Variable` is forced to be one of the `Values`.

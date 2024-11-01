@@ -87,7 +87,7 @@ bool Constant::isNullValue() const {
   // constant zero is zero for aggregates, cpnull is null for pointers, none for
   // tokens.
   return isa<ConstantAggregateZero>(this) || isa<ConstantPointerNull>(this) ||
-         isa<ConstantTokenNone>(this);
+         isa<ConstantTokenNone>(this) || isa<ConstantTargetNone>(this);
 }
 
 bool Constant::isAllOnesValue() const {
@@ -337,6 +337,12 @@ bool Constant::containsPoisonElement() const {
       this, [&](const auto *C) { return isa<PoisonValue>(C); });
 }
 
+bool Constant::containsUndefElement() const {
+  return containsUndefinedElement(this, [&](const auto *C) {
+    return isa<UndefValue>(C) && !isa<PoisonValue>(C);
+  });
+}
+
 bool Constant::containsConstantExpression() const {
   if (auto *VTy = dyn_cast<FixedVectorType>(getType())) {
     for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i)
@@ -369,6 +375,8 @@ Constant *Constant::getNullValue(Type *Ty) {
     return ConstantAggregateZero::get(Ty);
   case Type::TokenTyID:
     return ConstantTokenNone::get(Ty->getContext());
+  case Type::TargetExtTyID:
+    return ConstantTargetNone::get(cast<TargetExtType>(Ty));
   default:
     // Function, Label, or Opaque type?
     llvm_unreachable("Cannot create a null constant of that type!");
@@ -1407,11 +1415,11 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
   else if (isa<UndefValue>(V))
     return UndefValue::get(VTy);
 
-  Type *I32Ty = Type::getInt32Ty(VTy->getContext());
+  Type *IdxTy = Type::getInt64Ty(VTy->getContext());
 
   // Move scalar into vector.
   Constant *PoisonV = PoisonValue::get(VTy);
-  V = ConstantExpr::getInsertElement(PoisonV, V, ConstantInt::get(I32Ty, 0));
+  V = ConstantExpr::getInsertElement(PoisonV, V, ConstantInt::get(IdxTy, 0));
   // Build shuffle mask to perform the splat.
   SmallVector<int, 8> Zeros(EC.getKnownMinValue(), 0);
   // Splat.
@@ -1708,6 +1716,25 @@ ConstantPointerNull *ConstantPointerNull::get(PointerType *Ty) {
 /// Remove the constant from the constant table.
 void ConstantPointerNull::destroyConstantImpl() {
   getContext().pImpl->CPNConstants.erase(getType());
+}
+
+//---- ConstantTargetNone::get() implementation.
+//
+
+ConstantTargetNone *ConstantTargetNone::get(TargetExtType *Ty) {
+  assert(Ty->hasProperty(TargetExtType::HasZeroInit) &&
+         "Target extension type not allowed to have a zeroinitializer");
+  std::unique_ptr<ConstantTargetNone> &Entry =
+      Ty->getContext().pImpl->CTNConstants[Ty];
+  if (!Entry)
+    Entry.reset(new ConstantTargetNone(Ty));
+
+  return Entry.get();
+}
+
+/// Remove the constant from the constant table.
+void ConstantTargetNone::destroyConstantImpl() {
+  getContext().pImpl->CTNConstants.erase(getType());
 }
 
 UndefValue *UndefValue::get(Type *Ty) {
@@ -2968,7 +2995,7 @@ Constant *ConstantDataArray::getString(LLVMContext &Context,
                                        StringRef Str, bool AddNull) {
   if (!AddNull) {
     const uint8_t *Data = Str.bytes_begin();
-    return get(Context, makeArrayRef(Data, Str.size()));
+    return get(Context, ArrayRef(Data, Str.size()));
   }
 
   SmallVector<uint8_t, 64> ElementVals;

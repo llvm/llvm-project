@@ -21,6 +21,7 @@
 #include <expected>
 #include <type_traits>
 #include <utility>
+#include <memory>
 
 #include "test_macros.h"
 
@@ -30,9 +31,7 @@ struct NonTrivial {
   ~NonTrivial() {}
 };
 
-#if __cpp_concepts >= 202002
 static_assert(std::is_trivially_destructible_v<std::expected<int, int>>);
-#endif
 static_assert(!std::is_trivially_destructible_v<std::expected<NonTrivial, int>>);
 static_assert(!std::is_trivially_destructible_v<std::expected<int, NonTrivial>>);
 static_assert(!std::is_trivially_destructible_v<std::expected<NonTrivial, NonTrivial>>);
@@ -62,6 +61,8 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
+  std::expected<std::unique_ptr<int>, int> a = std::make_unique<int>(42);
+
   test();
   static_assert(test());
   return 0;

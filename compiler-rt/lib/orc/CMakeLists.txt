@@ -15,7 +15,6 @@ set(ALL_ORC_SOURCES
   coff_platform.cpp
   coff_platform.per_jd.cpp
   elfnix_platform.cpp
-  macho_ehframe_registration.cpp
   macho_platform.cpp
   )
 
@@ -96,7 +95,6 @@ if (APPLE)
 
   set(ORC_SOURCES
     ${ORC_COMMON_SOURCES}
-    macho_ehframe_registration.cpp
     macho_platform.cpp
     )
 

@@ -67,19 +67,14 @@ entry:
 define amdgpu_kernel void @madak_f16_use_2(
 ; SI-LABEL: madak_f16_use_2:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_mov_b32 s20, SCRATCH_RSRC_DWORD0
 ; SI-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x9
-; SI-NEXT:    s_mov_b32 s21, SCRATCH_RSRC_DWORD1
-; SI-NEXT:    s_mov_b32 s22, -1
-; SI-NEXT:    s_mov_b32 s23, 0xe8f000
 ; SI-NEXT:    s_load_dwordx2 s[12:13], s[0:1], 0x11
-; SI-NEXT:    s_add_u32 s20, s20, s3
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_mov_b32 s18, s2
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s16, s8
 ; SI-NEXT:    s_mov_b32 s17, s9
-; SI-NEXT:    s_mov_b32 s18, s2
 ; SI-NEXT:    s_mov_b32 s19, s3
 ; SI-NEXT:    s_mov_b32 s8, s10
 ; SI-NEXT:    s_mov_b32 s9, s11
@@ -96,7 +91,6 @@ define amdgpu_kernel void @madak_f16_use_2(
 ; SI-NEXT:    v_mov_b32_e32 v3, 0x41200000
 ; SI-NEXT:    s_mov_b32 s0, s4
 ; SI-NEXT:    s_mov_b32 s1, s5
-; SI-NEXT:    s_addc_u32 s21, s21, 0
 ; SI-NEXT:    s_mov_b32 s8, s6
 ; SI-NEXT:    s_mov_b32 s9, s7
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -112,19 +106,14 @@ define amdgpu_kernel void @madak_f16_use_2(
 ;
 ; VI-LABEL: madak_f16_use_2:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_mov_b32 s20, SCRATCH_RSRC_DWORD0
 ; VI-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x24
-; VI-NEXT:    s_mov_b32 s21, SCRATCH_RSRC_DWORD1
-; VI-NEXT:    s_mov_b32 s22, -1
-; VI-NEXT:    s_mov_b32 s23, 0xe80000
 ; VI-NEXT:    s_load_dwordx2 s[12:13], s[0:1], 0x44
-; VI-NEXT:    s_add_u32 s20, s20, s3
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    s_mov_b32 s18, s2
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s16, s8
 ; VI-NEXT:    s_mov_b32 s17, s9
-; VI-NEXT:    s_mov_b32 s18, s2
 ; VI-NEXT:    s_mov_b32 s19, s3
 ; VI-NEXT:    s_mov_b32 s8, s10
 ; VI-NEXT:    s_mov_b32 s9, s11
@@ -141,7 +130,6 @@ define amdgpu_kernel void @madak_f16_use_2(
 ; VI-NEXT:    v_mov_b32_e32 v3, 0x4900
 ; VI-NEXT:    s_mov_b32 s0, s4
 ; VI-NEXT:    s_mov_b32 s1, s5
-; VI-NEXT:    s_addc_u32 s21, s21, 0
 ; VI-NEXT:    s_mov_b32 s8, s6
 ; VI-NEXT:    s_mov_b32 s9, s7
 ; VI-NEXT:    v_madak_f16 v1, v0, v1, 0x4900

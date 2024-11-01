@@ -23,6 +23,7 @@
 
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -200,8 +201,8 @@ public:
 
   virtual void IOHandlerDeactivated(IOHandler &io_handler) {}
 
-  virtual llvm::Optional<std::string> IOHandlerSuggestion(IOHandler &io_handler,
-                                                          llvm::StringRef line);
+  virtual std::optional<std::string> IOHandlerSuggestion(IOHandler &io_handler,
+                                                         llvm::StringRef line);
 
   virtual void IOHandlerComplete(IOHandler &io_handler,
                                  CompletionRequest &request);
@@ -417,7 +418,7 @@ private:
   int FixIndentationCallback(Editline *editline, const StringList &lines,
                              int cursor_position);
 
-  llvm::Optional<std::string> SuggestionCallback(llvm::StringRef line);
+  std::optional<std::string> SuggestionCallback(llvm::StringRef line);
 
   void AutoCompleteCallback(CompletionRequest &request);
 #endif

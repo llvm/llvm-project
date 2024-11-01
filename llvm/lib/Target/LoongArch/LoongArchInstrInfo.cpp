@@ -72,7 +72,7 @@ void LoongArchInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void LoongArchInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register SrcReg,
     bool IsKill, int FI, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI) const {
+    const TargetRegisterInfo *TRI, Register VReg) const {
   DebugLoc DL;
   if (I != MBB.end())
     DL = I->getDebugLoc();
@@ -104,10 +104,12 @@ void LoongArchInstrInfo::storeRegToStackSlot(
       .addMemOperand(MMO);
 }
 
-void LoongArchInstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DstReg,
-    int FI, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI) const {
+void LoongArchInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                              MachineBasicBlock::iterator I,
+                                              Register DstReg, int FI,
+                                              const TargetRegisterClass *RC,
+                                              const TargetRegisterInfo *TRI,
+                                              Register VReg) const {
   DebugLoc DL;
   if (I != MBB.end())
     DL = I->getDebugLoc();
@@ -412,13 +414,13 @@ void LoongArchInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
     if (FrameIndex == -1)
       report_fatal_error("The function size is incorrectly estimated.");
     storeRegToStackSlot(MBB, PCALAU12I, Scav, /*IsKill=*/true, FrameIndex,
-                        &LoongArch::GPRRegClass, TRI);
+                        &LoongArch::GPRRegClass, TRI, Register());
     TRI->eliminateFrameIndex(std::prev(PCALAU12I.getIterator()),
                              /*SpAdj=*/0, /*FIOperandNum=*/1);
     PCALAU12I.getOperand(1).setMBB(&RestoreBB);
     ADDI.getOperand(2).setMBB(&RestoreBB);
     loadRegFromStackSlot(RestoreBB, RestoreBB.end(), Scav, FrameIndex,
-                         &LoongArch::GPRRegClass, TRI);
+                         &LoongArch::GPRRegClass, TRI, Register());
     TRI->eliminateFrameIndex(RestoreBB.back(),
                              /*SpAdj=*/0, /*FIOperandNum=*/1);
   }
@@ -482,5 +484,5 @@ LoongArchInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_IE_PC_LO, "loongarch-ie-pc-lo"},
       {MO_LD_PC_HI, "loongarch-ld-pc-hi"},
       {MO_GD_PC_HI, "loongarch-gd-pc-hi"}};
-  return makeArrayRef(TargetFlags);
+  return ArrayRef(TargetFlags);
 }

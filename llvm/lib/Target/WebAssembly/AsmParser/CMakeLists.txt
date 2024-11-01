@@ -8,6 +8,7 @@ add_llvm_component_library(LLVMWebAssemblyAsmParser
   WebAssemblyInfo
   WebAssemblyUtils
   Support
+  TargetParser
 
   ADD_TO_COMPONENT
   WebAssembly

@@ -10,7 +10,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; REMARKS-NEXT: Name:            Interchanged
 ; REMARKS-NEXT: Function:        test1
 
-define i64 @test1([100 x [100 x i64]]* %Arr) {
+define i64 @test1(ptr %Arr) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR2_PREHEADER:%.*]]
@@ -27,8 +27,8 @@ define i64 @test1([100 x [100 x i64]]* %Arr) {
 ; CHECK-NEXT:    [[SUM_OUTER]] = phi i64 [ [[SUM_INC_LCSSA:%.*]], [[FOR2_SPLIT]] ], [ 0, [[FOR2_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR1_HEADER_PREHEADER]]
 ; CHECK:       for2.split1:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* [[ARR:%.*]], i64 0, i64 [[INDVARS_IV]], i64 [[INDVARS_IV23]]
-; CHECK-NEXT:    [[LV:%.*]] = load i64, i64* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [100 x [100 x i64]], ptr [[ARR:%.*]], i64 0, i64 [[INDVARS_IV]], i64 [[INDVARS_IV23]]
+; CHECK-NEXT:    [[LV:%.*]] = load i64, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[SUM_INC]] = add i64 [[SUM_INNER]], [[LV]]
 ; CHECK-NEXT:    [[IV_ORIGINAL:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXIT1_ORIGINAL:%.*]] = icmp eq i64 [[IV_ORIGINAL]], 100
@@ -57,8 +57,8 @@ for1.header:                                         ; preds = %for1.inc, %entry
 for2:                                        ; preds = %for2, %for1.header
   %indvars.iv = phi i64 [ 0, %for1.header ], [ %indvars.iv.next.3, %for2 ]
   %sum.inner = phi i64 [ %sum.outer, %for1.header ], [ %sum.inc, %for2 ]
-  %arrayidx = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* %Arr, i64 0, i64 %indvars.iv, i64 %indvars.iv23
-  %lv = load i64, i64* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [100 x [100 x i64]], ptr %Arr, i64 0, i64 %indvars.iv, i64 %indvars.iv23
+  %lv = load i64, ptr %arrayidx, align 4
   %sum.inc = add i64 %sum.inner, %lv
   %indvars.iv.next.3 = add nuw nsw i64 %indvars.iv, 1
   %exit1 = icmp eq i64 %indvars.iv.next.3, 100
@@ -82,7 +82,7 @@ for1.loopexit:                                 ; preds = %for1.inc
 ; REMARKS-NEXT: Name:            UnsupportedPHIOuter
 ; REMARKS-NEXT: Function:        test2
 
-define i64 @test2([100 x [100 x i64]]* %Arr) {
+define i64 @test2(ptr %Arr) {
 entry:
   br label %for1.header
 
@@ -94,8 +94,8 @@ for1.header:                                         ; preds = %for1.inc, %entry
 for2:                                        ; preds = %for2, %for1.header
   %indvars.iv = phi i64 [ 0, %for1.header ], [ %indvars.iv.next.3, %for2 ]
   %inner = phi i64 [ %indvars.iv23, %for1.header ], [ %sum.inc, %for2 ]
-  %arrayidx = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* %Arr, i64 0, i64 %indvars.iv, i64 %indvars.iv23
-  %lv = load i64, i64* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [100 x [100 x i64]], ptr %Arr, i64 0, i64 %indvars.iv, i64 %indvars.iv23
+  %lv = load i64, ptr %arrayidx, align 4
   %sum.inc = add i64 %inner, %lv
   %indvars.iv.next.3 = add nuw nsw i64 %indvars.iv, 1
   %exit1 = icmp eq i64 %indvars.iv.next.3, 100
@@ -119,7 +119,7 @@ for1.loopexit:                                 ; preds = %for1.inc
 ; REMARKS-NEXT: Name:            UnsupportedPHIOuter
 ; REMARKS-NEXT: Function:        test3
 
-define i64 @test3([100 x [100 x i64]]* %Arr) {
+define i64 @test3(ptr %Arr) {
 entry:
   br label %for1.header
 
@@ -132,8 +132,8 @@ for1.header:                                         ; preds = %for1.inc, %entry
 for2:                                        ; preds = %for2, %for1.header
   %indvars.iv = phi i64 [ 0, %for1.header ], [ %indvars.iv.next.3, %for2 ]
   %sum.inner = phi i64 [ %so, %for1.header ], [ %sum.inc, %for2 ]
-  %arrayidx = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* %Arr, i64 0, i64 %indvars.iv, i64 %indvars.iv23
-  %lv = load i64, i64* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [100 x [100 x i64]], ptr %Arr, i64 0, i64 %indvars.iv, i64 %indvars.iv23
+  %lv = load i64, ptr %arrayidx, align 4
   %sum.inc = add i64 %sum.inner, %lv
   %indvars.iv.next.3 = add nuw nsw i64 %indvars.iv, 1
   %exit1 = icmp eq i64 %indvars.iv.next.3, 100
@@ -156,9 +156,9 @@ for1.loopexit:                                 ; preds = %for1.inc
 ; REMARKS-NEXT: Name:            UnsupportedPHIOuter
 ; REMARKS-NEXT: Function:        test4
 
-define i64 @test4([100 x [100 x i64]]* %Arr, i64* %dst) {
+define i64 @test4(ptr %Arr, ptr %dst) {
 entry:
-  %gep.dst = getelementptr inbounds i64, i64* %dst, i64 42
+  %gep.dst = getelementptr inbounds i64, ptr %dst, i64 42
   br label %for1.header
 
 for1.header:                                         ; preds = %for1.inc, %entry
@@ -169,10 +169,10 @@ for1.header:                                         ; preds = %for1.inc, %entry
 for2:                                        ; preds = %for2, %for1.header
   %indvars.iv = phi i64 [ 0, %for1.header ], [ %indvars.iv.next.3, %for2 ]
   %sum.inner = phi i64 [ %sum.outer, %for1.header ], [ %sum.inc, %for2 ]
-  %arrayidx = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* %Arr, i64 0, i64 %indvars.iv, i64 %indvars.iv23
-  %lv = load i64, i64* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [100 x [100 x i64]], ptr %Arr, i64 0, i64 %indvars.iv, i64 %indvars.iv23
+  %lv = load i64, ptr %arrayidx, align 4
   %sum.inc = add i64 %sum.inner, %lv
-  store i64 %sum.inc, i64* %gep.dst, align 4
+  store i64 %sum.inc, ptr %gep.dst, align 4
   %indvars.iv.next.3 = add nuw nsw i64 %indvars.iv, 1
   %exit1 = icmp eq i64 %indvars.iv.next.3, 100
   br i1 %exit1, label %for1.inc, label %for2
@@ -195,7 +195,7 @@ for1.loopexit:                                 ; preds = %for1.inc
 ; REMARKS-NEXT: Name:            UnsupportedPHIOuter
 ; REMARKS-NEXT: Function:        test_constant_inner_loop_res
 
-define i64 @test_constant_inner_loop_res([100 x [100 x i64]]* %Arr) {
+define i64 @test_constant_inner_loop_res(ptr %Arr) {
 entry:
   br label %for1.header
 
@@ -207,8 +207,8 @@ for1.header:                                         ; preds = %for1.inc, %entry
 for2:                                        ; preds = %for2, %for1.header
   %indvars.iv = phi i64 [ 0, %for1.header ], [ %indvars.iv.next.3, %for2 ]
   %sum.inner = phi i64 [ %sum.outer, %for1.header ], [ %sum.inc, %for2 ]
-  %arrayidx = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* %Arr, i64 0, i64 %indvars.iv, i64 %indvars.iv23
-  %lv = load i64, i64* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [100 x [100 x i64]], ptr %Arr, i64 0, i64 %indvars.iv, i64 %indvars.iv23
+  %lv = load i64, ptr %arrayidx, align 4
   %sum.inc = add i64 %sum.inner, %lv
   %indvars.iv.next.3 = add nuw nsw i64 %indvars.iv, 1
   %exit1 = icmp eq i64 %indvars.iv.next.3, 100
@@ -234,7 +234,7 @@ for1.loopexit:                                 ; preds = %for1.inc
 ; REMARKS-NEXT: Name:            Interchanged
 ; REMARKS-NEXT: Function:        test5
 
-define float @test5([100 x [100 x float]]* %Arr, [100 x [100 x float]]* %Arr2) {
+define float @test5(ptr %Arr, ptr %Arr2) {
 entry:
   br label %outer.header
 
@@ -246,11 +246,11 @@ outer.header:                                     ; preds = %outer.inc, %entry
 for.body3:                                        ; preds = %for.body3, %outer.header
   %float.inner = phi float [ %float.outer , %outer.header ], [ %float.inner.inc.inc, %for.body3 ]
   %iv.inner = phi i64 [ %iv.inner.next, %for.body3 ], [ 1, %outer.header ]
-  %arrayidx5 = getelementptr inbounds [100 x [100 x float]], [100 x [100 x float]]* %Arr, i64 0, i64 %iv.inner, i64 %iv.outer
-  %vA = load float, float* %arrayidx5
+  %arrayidx5 = getelementptr inbounds [100 x [100 x float]], ptr %Arr, i64 0, i64 %iv.inner, i64 %iv.outer
+  %vA = load float, ptr %arrayidx5
   %float.inner.inc = fadd fast float %float.inner, %vA
-  %arrayidx6 = getelementptr inbounds [100 x [100 x float]], [100 x [100 x float]]* %Arr2, i64 0, i64 %iv.inner, i64 %iv.outer
-  %vB = load float, float* %arrayidx6
+  %arrayidx6 = getelementptr inbounds [100 x [100 x float]], ptr %Arr2, i64 0, i64 %iv.inner, i64 %iv.outer
+  %vB = load float, ptr %arrayidx6
   %float.inner.inc.inc = fadd fast float %float.inner.inc, %vB
   %iv.inner.next = add nuw nsw i64 %iv.inner, 1
   %exitcond = icmp eq i64 %iv.inner.next, 100
@@ -274,7 +274,7 @@ for.exit:                                         ; preds = %outer.inc
 ; REMARKS-NEXT: Name:            UnsupportedPHIOuter
 ; REMARKS-NEXT: Function:        test6
 
-define float @test6([100 x [100 x float]]* %Arr, [100 x [100 x float]]* %Arr2) {
+define float @test6(ptr %Arr, ptr %Arr2) {
 entry:
   br label %outer.header
 
@@ -286,11 +286,11 @@ outer.header:                                     ; preds = %outer.inc, %entry
 for.body3:                                        ; preds = %for.body3, %outer.header
   %float.inner = phi float [ %float.outer , %outer.header ], [ %float.inner.inc.inc, %for.body3 ]
   %iv.inner = phi i64 [ %iv.inner.next, %for.body3 ], [ 1, %outer.header ]
-  %arrayidx5 = getelementptr inbounds [100 x [100 x float]], [100 x [100 x float]]* %Arr, i64 0, i64 %iv.inner, i64 %iv.outer
-  %vA = load float, float* %arrayidx5
+  %arrayidx5 = getelementptr inbounds [100 x [100 x float]], ptr %Arr, i64 0, i64 %iv.inner, i64 %iv.outer
+  %vA = load float, ptr %arrayidx5
   %float.inner.inc = fadd float %float.inner, %vA ; do not allow reassociation
-  %arrayidx6 = getelementptr inbounds [100 x [100 x float]], [100 x [100 x float]]* %Arr2, i64 0, i64 %iv.inner, i64 %iv.outer
-  %vB = load float, float* %arrayidx6
+  %arrayidx6 = getelementptr inbounds [100 x [100 x float]], ptr %Arr2, i64 0, i64 %iv.inner, i64 %iv.outer
+  %vB = load float, ptr %arrayidx6
   %float.inner.inc.inc = fadd fast float %float.inner.inc, %vB
   %iv.inner.next = add nuw nsw i64 %iv.inner, 1
   %exitcond = icmp eq i64 %iv.inner.next, 100

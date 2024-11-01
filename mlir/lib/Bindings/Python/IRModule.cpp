@@ -11,6 +11,7 @@
 #include "PybindUtils.h"
 
 #include <vector>
+#include <optional>
 
 #include "mlir-c/Bindings/Python/Interop.h"
 
@@ -60,6 +61,17 @@ void PyGlobals::loadDialectModule(llvm::StringRef dialectNamespace) {
   loadedDialectModulesCache.insert(dialectNamespace);
 }
 
+void PyGlobals::registerAttributeBuilder(const std::string &attributeKind,
+                                         py::function pyFunc) {
+  py::object &found = attributeBuilderMap[attributeKind];
+  if (found) {
+    throw std::runtime_error((llvm::Twine("Attribute builder for '") +
+                              attributeKind + "' is already registered")
+                                 .str());
+  }
+  found = std::move(pyFunc);
+}
+
 void PyGlobals::registerDialectImpl(const std::string &dialectNamespace,
                                     py::object pyClass) {
   py::object &found = dialectClassMap[dialectNamespace];
@@ -84,7 +96,23 @@ void PyGlobals::registerOperationImpl(const std::string &operationName,
   rawOpViewClassMap[operationName] = std::move(rawOpViewClass);
 }
 
-llvm::Optional<py::object>
+std::optional<py::function>
+PyGlobals::lookupAttributeBuilder(const std::string &attributeKind) {
+  // Fast match against the class map first (common case).
+  const auto foundIt = attributeBuilderMap.find(attributeKind);
+  if (foundIt != attributeBuilderMap.end()) {
+    if (foundIt->second.is_none())
+      return std::nullopt;
+    assert(foundIt->second && "py::function is defined");
+    return foundIt->second;
+  }
+
+  // Not found and loading did not yield a registration. Negative cache.
+  attributeBuilderMap[attributeKind] = py::none();
+  return std::nullopt;
+}
+
+std::optional<py::object>
 PyGlobals::lookupDialectClass(const std::string &dialectNamespace) {
   loadDialectModule(dialectNamespace);
   // Fast match against the class map first (common case).
@@ -101,7 +129,7 @@ PyGlobals::lookupDialectClass(const std::string &dialectNamespace) {
   return std::nullopt;
 }
 
-llvm::Optional<pybind11::object>
+std::optional<pybind11::object>
 PyGlobals::lookupRawOpViewClass(llvm::StringRef operationName) {
   {
     auto foundIt = rawOpViewClassMapCache.find(operationName);

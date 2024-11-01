@@ -300,7 +300,7 @@ int main() {
 // CHECK: getelementptr inbounds [[KMP_TASK_MAIN_TY]], [[KMP_TASK_MAIN_TY]]* %{{.+}}, i32 0, i32 1
 // CHECK: getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* %{{.+}}, i32 0, i32 0
 // CHECK: getelementptr inbounds [2 x [[S_DOUBLE_TY]]], [2 x [[S_DOUBLE_TY]]]* %{{.+}}, i32 0, i32 0
-// CHECK: getelementptr [[S_DOUBLE_TY]], [[S_DOUBLE_TY]]* %{{.+}}, i64 2
+// CHECK: getelementptr inbounds [[S_DOUBLE_TY]], [[S_DOUBLE_TY]]* %{{.+}}, i64 2
 // CHECK: br i1 %
 
 // CHECK: phi [[S_DOUBLE_TY]]*
@@ -377,7 +377,7 @@ int main() {
 // CHECK: [[PRIVATE_S_ARR_REF:%.+]] = getelementptr inbounds [[PRIVATES_TMAIN_TY]], [[PRIVATES_TMAIN_TY]]* [[PRIVATES]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
 // CHECK: getelementptr inbounds [2 x [[S_INT_TY]]], [2 x [[S_INT_TY]]]* [[PRIVATE_S_ARR_REF]], i{{.+}} 0, i{{.+}} 0
 // CHECK: bitcast [2 x [[S_INT_TY]]]* %{{.+}} to [[S_INT_TY]]*
-// CHECK: getelementptr [[S_INT_TY]], [[S_INT_TY]]* %{{.+}}, i{{.+}} 2
+// CHECK: getelementptr inbounds [[S_INT_TY]], [[S_INT_TY]]* %{{.+}}, i{{.+}} 2
 // CHECK: call void [[S_INT_TY_COPY_CONSTR]]([[S_INT_TY]]* {{[^,]*}} [[S_ARR_CUR:%[^,]+]],
 // CHECK: getelementptr [[S_INT_TY]], [[S_INT_TY]]* [[S_ARR_CUR]], i{{.+}} 1
 // CHECK: icmp eq
@@ -447,7 +447,7 @@ int main() {
 // CHECK: getelementptr inbounds [[KMP_TASK_TMAIN_TY]], [[KMP_TASK_TMAIN_TY]]* %{{.+}}, i32 0, i32 2
 // CHECK: getelementptr inbounds [[PRIVATES_TMAIN_TY]], [[PRIVATES_TMAIN_TY]]* %{{.+}}, i32 0, i32 2
 // CHECK: getelementptr inbounds [2 x [[S_INT_TY]]], [2 x [[S_INT_TY]]]* %{{.+}}, i32 0, i32 0
-// CHECK: getelementptr [[S_INT_TY]], [[S_INT_TY]]* %{{.+}}, i64 2
+// CHECK: getelementptr inbounds [[S_INT_TY]], [[S_INT_TY]]* %{{.+}}, i64 2
 // CHECK: br i1 %
 
 // CHECK: phi [[S_INT_TY]]*

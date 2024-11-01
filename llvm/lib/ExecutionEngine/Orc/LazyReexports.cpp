@@ -119,6 +119,10 @@ createLocalLazyCallThroughManager(const Triple &T, ExecutionSession &ES,
   case Triple::x86:
     return LocalLazyCallThroughManager::Create<OrcI386>(ES, ErrorHandlerAddr);
 
+  case Triple::loongarch64:
+    return LocalLazyCallThroughManager::Create<OrcLoongArch64>(
+        ES, ErrorHandlerAddr);
+
   case Triple::mips:
     return LocalLazyCallThroughManager::Create<OrcMips32Be>(ES,
                                                             ErrorHandlerAddr);

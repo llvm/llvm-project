@@ -101,7 +101,7 @@ define void @cond_inv_load_f64f64f64(ptr noalias nocapture %a, ptr noalias nocap
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[COND:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x double>, ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = fcmp ogt <vscale x 4 x double> [[WIDE_LOAD]], shufflevector (<vscale x 4 x double> insertelement (<vscale x 4 x double> poison, double 4.000000e-01, i32 0), <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP6:%.*]] = fcmp ogt <vscale x 4 x double> [[WIDE_LOAD]], shufflevector (<vscale x 4 x double> insertelement (<vscale x 4 x double> poison, double 4.000000e-01, i64 0), <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x double> @llvm.masked.gather.nxv4f64.nxv4p0(<vscale x 4 x ptr> [[BROADCAST_SPLAT]], i32 8, <vscale x 4 x i1> [[TMP6]], <vscale x 4 x double> poison)
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr double, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4f64.p0(<vscale x 4 x double> [[WIDE_MASKED_GATHER]], ptr [[TMP7]], i32 8, <vscale x 4 x i1> [[TMP6]])

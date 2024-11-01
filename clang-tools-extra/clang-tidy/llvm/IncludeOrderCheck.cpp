@@ -14,9 +14,7 @@
 
 #include <map>
 
-namespace clang {
-namespace tidy {
-namespace llvm_check {
+namespace clang::tidy::llvm_check {
 
 namespace {
 class IncludeOrderPPCallbacks : public PPCallbacks {
@@ -28,7 +26,7 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          OptionalFileEntryRef File, StringRef SearchPath,
                           StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
   void EndOfMainFile() override;
@@ -82,7 +80,7 @@ static int getPriority(StringRef Filename, bool IsAngled, bool IsMainModule) {
 
 void IncludeOrderPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
-    bool IsAngled, CharSourceRange FilenameRange, Optional<FileEntryRef> File,
+    bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
     StringRef SearchPath, StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
   // We recognize the first include as a special main module header and want
@@ -183,6 +181,4 @@ void IncludeOrderPPCallbacks::EndOfMainFile() {
   IncludeDirectives.clear();
 }
 
-} // namespace llvm_check
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::llvm_check

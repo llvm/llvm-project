@@ -68,7 +68,7 @@ struct ValueKnowledge {
 
   Type getType() const {
     if (hasRank)
-      return RankedTensorType::get(llvm::makeArrayRef(sizes), dtype);
+      return RankedTensorType::get(llvm::ArrayRef(sizes), dtype);
     return UnrankedTensorType::get(dtype);
   }
 
@@ -138,7 +138,7 @@ struct ValueKnowledge {
     ValueKnowledge result = getPessimisticValueState();
     result.hasError = true;
 
-    if (!rhs || !rhs || lhs.dtype != rhs.dtype)
+    if (!lhs || !rhs || lhs.dtype != rhs.dtype)
       return result;
 
     result.hasError = false;

@@ -2225,11 +2225,10 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
 
   // FIXME: Recurse on local labels?
 
-  // See what kind of statement we have.
-  switch (Lexer.getKind()) {
-  case AsmToken::Colon: {
-    if (!getTargetParser().isLabel(ID))
-      break;
+  // Check for a label.
+  //   ::= identifier ':'
+  //   ::= number ':'
+  if (Lexer.is(AsmToken::Colon) && getTargetParser().isLabel(ID)) {
     if (checkForValidSection())
       return true;
 
@@ -2293,10 +2292,6 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     getTargetParser().onLabelParsed(Sym);
 
     return false;
-  }
-
-  default: // Normal instruction or directive.
-    break;
   }
 
   // If macros are enabled, check to see if this is a macro instantiation.
@@ -5536,10 +5531,10 @@ bool MasmParser::parseDirectiveCFIEndProc() {
 /// parse register name or number.
 bool MasmParser::parseRegisterOrRegisterNumber(int64_t &Register,
                                                SMLoc DirectiveLoc) {
-  unsigned RegNo;
+  MCRegister RegNo;
 
   if (getLexer().isNot(AsmToken::Integer)) {
-    if (getTargetParser().ParseRegister(RegNo, DirectiveLoc, DirectiveLoc))
+    if (getTargetParser().parseRegister(RegNo, DirectiveLoc, DirectiveLoc))
       return true;
     Register = getContext().getRegisterInfo()->getDwarfRegNum(RegNo, true);
   } else
@@ -6269,10 +6264,10 @@ bool MasmParser::parseDirectiveIfdef(SMLoc DirectiveLoc, bool expect_defined) {
     eatToEndOfStatement();
   } else {
     bool is_defined = false;
-    unsigned RegNo;
+    MCRegister Reg;
     SMLoc StartLoc, EndLoc;
-    is_defined = (getTargetParser().tryParseRegister(
-                      RegNo, StartLoc, EndLoc) == MatchOperand_Success);
+    is_defined = (getTargetParser().tryParseRegister(Reg, StartLoc, EndLoc) ==
+                  MatchOperand_Success);
     if (!is_defined) {
       StringRef Name;
       if (check(parseIdentifier(Name), "expected identifier after 'ifdef'") ||
@@ -6389,9 +6384,9 @@ bool MasmParser::parseDirectiveElseIfdef(SMLoc DirectiveLoc,
     eatToEndOfStatement();
   } else {
     bool is_defined = false;
-    unsigned RegNo;
+    MCRegister Reg;
     SMLoc StartLoc, EndLoc;
-    is_defined = (getTargetParser().tryParseRegister(RegNo, StartLoc, EndLoc) ==
+    is_defined = (getTargetParser().tryParseRegister(Reg, StartLoc, EndLoc) ==
                   MatchOperand_Success);
     if (!is_defined) {
       StringRef Name;
@@ -6561,9 +6556,9 @@ bool MasmParser::parseDirectiveErrorIfdef(SMLoc DirectiveLoc,
   }
 
   bool IsDefined = false;
-  unsigned RegNo;
+  MCRegister Reg;
   SMLoc StartLoc, EndLoc;
-  IsDefined = (getTargetParser().tryParseRegister(RegNo, StartLoc, EndLoc) ==
+  IsDefined = (getTargetParser().tryParseRegister(Reg, StartLoc, EndLoc) ==
                MatchOperand_Success);
   if (!IsDefined) {
     StringRef Name;
@@ -6720,6 +6715,7 @@ void MasmParser::initializeDirectiveKindMap() {
   DirectiveKindMap["even"] = DK_EVEN;
   DirectiveKindMap["org"] = DK_ORG;
   DirectiveKindMap["extern"] = DK_EXTERN;
+  DirectiveKindMap["extrn"] = DK_EXTERN;
   DirectiveKindMap["public"] = DK_PUBLIC;
   // DirectiveKindMap[".comm"] = DK_COMM;
   DirectiveKindMap["comment"] = DK_COMMENT;
@@ -7462,7 +7458,7 @@ bool MasmParser::parseMSInlineAsm(
         InputDecls.push_back(OpDecl);
         InputDeclsAddressOf.push_back(Operand.needAddressOf());
         InputConstraints.push_back(Constraint.str());
-        if (Desc.OpInfo[i - 1].isBranchTarget())
+        if (Desc.operands()[i - 1].isBranchTarget())
           AsmStrRewrites.emplace_back(AOK_CallInput, Start, SymName.size());
         else
           AsmStrRewrites.emplace_back(AOK_Input, Start, SymName.size());
@@ -7470,9 +7466,7 @@ bool MasmParser::parseMSInlineAsm(
     }
 
     // Consider implicit defs to be clobbers.  Think of cpuid and push.
-    ArrayRef<MCPhysReg> ImpDefs(Desc.getImplicitDefs(),
-                                Desc.getNumImplicitDefs());
-    llvm::append_range(ClobberRegs, ImpDefs);
+    llvm::append_range(ClobberRegs, Desc.implicit_defs());
   }
 
   // Set the number of Outputs and Inputs.

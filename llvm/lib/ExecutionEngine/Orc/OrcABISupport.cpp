@@ -1077,5 +1077,158 @@ void OrcRiscv64::writeIndirectStubsBlock(
   }
 }
 
+void OrcLoongArch64::writeResolverCode(char *ResolverWorkingMem,
+                                       JITTargetAddress ResolverTargetAddress,
+                                       JITTargetAddress ReentryFnAddr,
+                                       JITTargetAddress ReentryCtxAddr) {
+
+  LLVM_DEBUG({
+    dbgs() << "Writing resolver code to "
+           << formatv("{0:x16}", ResolverTargetAddress) << "\n";
+  });
+
+  const uint32_t ResolverCode[] = {
+      0x02fde063, // 0x0: addi.d $sp, $sp, -136(0xf78)
+      0x29c00061, // 0x4: st.d $ra, $sp, 0
+      0x29c02064, // 0x8: st.d $a0, $sp, 8(0x8)
+      0x29c04065, // 0xc: st.d $a1, $sp, 16(0x10)
+      0x29c06066, // 0x10: st.d $a2, $sp, 24(0x18)
+      0x29c08067, // 0x14: st.d $a3, $sp, 32(0x20)
+      0x29c0a068, // 0x18: st.d $a4, $sp, 40(0x28)
+      0x29c0c069, // 0x1c: st.d $a5, $sp, 48(0x30)
+      0x29c0e06a, // 0x20: st.d $a6, $sp, 56(0x38)
+      0x29c1006b, // 0x24: st.d $a7, $sp, 64(0x40)
+      0x2bc12060, // 0x28: fst.d $fa0, $sp, 72(0x48)
+      0x2bc14061, // 0x2c: fst.d $fa1, $sp, 80(0x50)
+      0x2bc16062, // 0x30: fst.d $fa2, $sp, 88(0x58)
+      0x2bc18063, // 0x34: fst.d $fa3, $sp, 96(0x60)
+      0x2bc1a064, // 0x38: fst.d $fa4, $sp, 104(0x68)
+      0x2bc1c065, // 0x3c: fst.d $fa5, $sp, 112(0x70)
+      0x2bc1e066, // 0x40: fst.d $fa6, $sp, 120(0x78)
+      0x2bc20067, // 0x44: fst.d $fa7, $sp, 128(0x80)
+      0x1c000004, // 0x48: pcaddu12i $a0, 0
+      0x28c1c084, // 0x4c: ld.d $a0, $a0, 112(0x70)
+      0x001501a5, // 0x50: move $a1, $t1
+      0x02ffd0a5, // 0x54: addi.d $a1, $a1, -12(0xff4)
+      0x1c000006, // 0x58: pcaddu12i $a2, 0
+      0x28c1a0c6, // 0x5c: ld.d $a2, $a2, 104(0x68)
+      0x4c0000c1, // 0x60: jirl $ra, $a2, 0
+      0x0015008c, // 0x64: move $t0, $a0
+      0x2b820067, // 0x68: fld.d $fa7, $sp, 128(0x80)
+      0x2b81e066, // 0x6c: fld.d $fa6, $sp, 120(0x78)
+      0x2b81c065, // 0x70: fld.d $fa5, $sp, 112(0x70)
+      0x2b81a064, // 0x74: fld.d $fa4, $sp, 104(0x68)
+      0x2b818063, // 0x78: fld.d $fa3, $sp, 96(0x60)
+      0x2b816062, // 0x7c: fld.d $fa2, $sp, 88(0x58)
+      0x2b814061, // 0x80: fld.d $fa1, $sp, 80(0x50)
+      0x2b812060, // 0x84: fld.d $fa0, $sp, 72(0x48)
+      0x28c1006b, // 0x88: ld.d $a7, $sp, 64(0x40)
+      0x28c0e06a, // 0x8c: ld.d $a6, $sp, 56(0x38)
+      0x28c0c069, // 0x90: ld.d $a5, $sp, 48(0x30)
+      0x28c0a068, // 0x94: ld.d $a4, $sp, 40(0x28)
+      0x28c08067, // 0x98: ld.d $a3, $sp, 32(0x20)
+      0x28c06066, // 0x9c: ld.d $a2, $sp, 24(0x18)
+      0x28c04065, // 0xa0: ld.d $a1, $sp, 16(0x10)
+      0x28c02064, // 0xa4: ld.d $a0, $sp, 8(0x8)
+      0x28c00061, // 0xa8: ld.d $ra, $sp, 0
+      0x02c22063, // 0xac: addi.d $sp, $sp, 136(0x88)
+      0x4c000180, // 0xb0: jr $t0
+      0x00000000, // 0xb4: padding to align at 8 bytes
+      0x01234567, // 0xb8: Lreentry_ctx_ptr:
+      0xdeedbeef, // 0xbc:      .dword 0
+      0x98765432, // 0xc0: Lreentry_fn_ptr:
+      0xcafef00d, // 0xc4:      .dword 0
+  };
+
+  const unsigned ReentryCtxAddrOffset = 0xb8;
+  const unsigned ReentryFnAddrOffset = 0xc0;
+
+  memcpy(ResolverWorkingMem, ResolverCode, sizeof(ResolverCode));
+  memcpy(ResolverWorkingMem + ReentryFnAddrOffset, &ReentryFnAddr,
+         sizeof(uint64_t));
+  memcpy(ResolverWorkingMem + ReentryCtxAddrOffset, &ReentryCtxAddr,
+         sizeof(uint64_t));
+}
+
+void OrcLoongArch64::writeTrampolines(
+    char *TrampolineBlockWorkingMem,
+    JITTargetAddress TrampolineBlockTargetAddress,
+    JITTargetAddress ResolverAddr, unsigned NumTrampolines) {
+
+  LLVM_DEBUG({
+    dbgs() << "Writing trampoline code to "
+           << formatv("{0:x16}", TrampolineBlockTargetAddress) << "\n";
+  });
+
+  unsigned OffsetToPtr = alignTo(NumTrampolines * TrampolineSize, 8);
+
+  memcpy(TrampolineBlockWorkingMem + OffsetToPtr, &ResolverAddr,
+         sizeof(uint64_t));
+
+  uint32_t *Trampolines =
+      reinterpret_cast<uint32_t *>(TrampolineBlockWorkingMem);
+  for (unsigned I = 0; I < NumTrampolines; ++I, OffsetToPtr -= TrampolineSize) {
+    uint32_t Hi20 = (OffsetToPtr + 0x800) & 0xfffff000;
+    uint32_t Lo12 = OffsetToPtr - Hi20;
+    Trampolines[4 * I + 0] =
+        0x1c00000c |
+        (((Hi20 >> 12) & 0xfffff) << 5); // pcaddu12i $t0, %pc_hi20(Lptr)
+    Trampolines[4 * I + 1] =
+        0x28c0018c | ((Lo12 & 0xfff) << 10); // ld.d $t0, $t0, %pc_lo12(Lptr)
+    Trampolines[4 * I + 2] = 0x4c00018d;     // jirl $t1, $t0, 0
+    Trampolines[4 * I + 3] = 0x0;            // padding
+  }
+}
+
+void OrcLoongArch64::writeIndirectStubsBlock(
+    char *StubsBlockWorkingMem, JITTargetAddress StubsBlockTargetAddress,
+    JITTargetAddress PointersBlockTargetAddress, unsigned NumStubs) {
+  // Stub format is:
+  //
+  // .section __orc_stubs
+  // stub1:
+  //        pcaddu12i $t0, %pc_hi20(ptr1)      ; PC-rel load of ptr1
+  //        ld.d      $t0, $t0, %pc_lo12(ptr1)
+  //        jr        $t0                      ; Jump to resolver
+  //        .dword    0                        ; Pad to 16 bytes
+  // stub2:
+  //        pcaddu12i $t0, %pc_hi20(ptr2)      ; PC-rel load of ptr2
+  //        ld.d      $t0, $t0, %pc_lo12(ptr2)
+  //        jr        $t0                      ; Jump to resolver
+  //        .dword    0                        ; Pad to 16 bytes
+  // ...
+  //
+  // .section __orc_ptrs
+  // ptr1:
+  //        .dword 0x0
+  // ptr2:
+  //        .dword 0x0
+  // ...
+  LLVM_DEBUG({
+    dbgs() << "Writing stubs code to "
+           << formatv("{0:x16}", StubsBlockTargetAddress) << "\n";
+  });
+  assert(stubAndPointerRangesOk<OrcLoongArch64>(
+             StubsBlockTargetAddress, PointersBlockTargetAddress, NumStubs) &&
+         "PointersBlock is out of range");
+
+  uint32_t *Stub = reinterpret_cast<uint32_t *>(StubsBlockWorkingMem);
+
+  for (unsigned I = 0; I < NumStubs; ++I) {
+    uint64_t PtrDisplacement =
+        PointersBlockTargetAddress - StubsBlockTargetAddress;
+    uint32_t Hi20 = (PtrDisplacement + 0x800) & 0xfffff000;
+    uint32_t Lo12 = PtrDisplacement - Hi20;
+    Stub[4 * I + 0] = 0x1c00000c | (((Hi20 >> 12) & 0xfffff)
+                                    << 5); // pcaddu12i $t0, %pc_hi20(Lptr)
+    Stub[4 * I + 1] =
+        0x28c0018c | ((Lo12 & 0xfff) << 10); // ld.d $t0, $t0, %pc_lo12(Lptr)
+    Stub[4 * I + 2] = 0x4c000180;            // jr $t0
+    Stub[4 * I + 3] = 0x0;                   // padding
+    PointersBlockTargetAddress += PointerSize;
+    StubsBlockTargetAddress += StubSize;
+  }
+}
+
 } // End namespace orc.
 } // End namespace llvm.

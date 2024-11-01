@@ -454,7 +454,7 @@ class SegmentBuilder {
 
   /// Emit segments for active regions which end before \p Loc.
   ///
-  /// \p Loc: The start location of the next region. If None, all active
+  /// \p Loc: The start location of the next region. If std::nullopt, all active
   /// regions are completed.
   /// \p FirstCompletedRegion: Index of the first completed region.
   void completeRegionsUntil(std::optional<LineColPair> Loc,

@@ -2,14 +2,14 @@
 # RUN: llc -mtriple=thumbv7m-none-eabi -run-pass=arm-cp-islands -o - %s | FileCheck %s
 
 --- |
-  define i32* @test_simple(i32* %x, i32 %y) { ret i32* %x }
-  define i32* @test_notfirst(i32* %x, i32 %y) { ret i32* %x }
-  define i32* @test_redefined(i32* %x, i32 %y) { ret i32* %x }
-  define i32* @test_notredefined(i32* %x, i32 %y) { ret i32* %x }
-  define i32* @test_notcmp(i32* %x, i32 %y) { ret i32* %x }
-  define i32* @test_killflag_1(i32* %x, i32 %y) { ret i32* %x }
-  define i32* @test_killflag_2(i32* %x, i32 %y) { ret i32* %x }
-  define i32* @test_cpsr(i32* %x, i32 %y) { ret i32* %x }
+  define ptr @test_simple(ptr %x, i32 %y) { ret ptr %x }
+  define ptr @test_notfirst(ptr %x, i32 %y) { ret ptr %x }
+  define ptr @test_redefined(ptr %x, i32 %y) { ret ptr %x }
+  define ptr @test_notredefined(ptr %x, i32 %y) { ret ptr %x }
+  define ptr @test_notcmp(ptr %x, i32 %y) { ret ptr %x }
+  define ptr @test_killflag_1(ptr %x, i32 %y) { ret ptr %x }
+  define ptr @test_killflag_2(ptr %x, i32 %y) { ret ptr %x }
+  define ptr @test_cpsr(ptr %x, i32 %y) { ret ptr %x }
 
   declare dso_local i32 @c(i32 %x)
 ...

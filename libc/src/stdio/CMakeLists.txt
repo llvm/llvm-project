@@ -355,6 +355,7 @@ add_entrypoint_object(
     fopencookie.h
   DEPENDS
     libc.include.stdio
+    libc.src.__support.CPP.new
     libc.src.__support.File.file
 )
 

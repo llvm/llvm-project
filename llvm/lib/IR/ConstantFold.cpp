@@ -2038,7 +2038,7 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
   if (Idxs.empty()) return C;
 
   Type *GEPTy = GetElementPtrInst::getGEPReturnType(
-      PointeeTy, C, makeArrayRef((Value *const *)Idxs.data(), Idxs.size()));
+      PointeeTy, C, ArrayRef((Value *const *)Idxs.data(), Idxs.size()));
 
   if (isa<PoisonValue>(C))
     return PoisonValue::get(GEPTy);
@@ -2051,6 +2051,10 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
     // For non-opaque pointers having multiple indices will change the result
     // type of the GEP.
     if (!C->getType()->getScalarType()->isOpaquePointerTy() && Idxs.size() != 1)
+      return false;
+
+    // Avoid losing inrange information.
+    if (InRangeIndex)
       return false;
 
     return all_of(Idxs, [](Value *Idx) {

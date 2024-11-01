@@ -34,6 +34,8 @@ attributes {
 // CHECK: !test.struct_capture_all<v0 = 0, v1 = 1, v2 = 2, v3 = 3>
 // CHECK: !test.optional_param<, 6>
 // CHECK: !test.optional_param<5, 6>
+// CHECK: !test.optional_param<5, 6, "foo">
+// CHECK: !test.optional_param<5, 6, {foo = "bar"}>
 // CHECK: !test.optional_params<"a">
 // CHECK: !test.optional_params<5, "a">
 // CHECK: !test.optional_struct<b = "a">
@@ -72,6 +74,8 @@ func.func private @test_roundtrip_default_parsers_struct(
   !test.struct_capture_all<v3 = 3, v1 = 1, v2 = 2, v0 = 0>,
   !test.optional_param<, 6>,
   !test.optional_param<5, 6>,
+  !test.optional_param<5, 6, "foo">,
+  !test.optional_param<5, 6, {foo = "bar"}>,
   !test.optional_params<"a">,
   !test.optional_params<5, "a">,
   !test.optional_struct<b = "a">,

@@ -53,8 +53,8 @@ define <32 x half> @test_sqrt_ph_512_fast_estimate_attribute_2(<32 x half> %a0, 
 ; CHECK-NEXT:    vmulph %zmm2, %zmm0, %zmm0
 ; CHECK-NEXT:    vfmadd213ph {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to32}, %zmm2, %zmm0
 ; CHECK-NEXT:    vmulph {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to32}, %zmm2, %zmm2
+; CHECK-NEXT:    vmulph %zmm2, %zmm1, %zmm1
 ; CHECK-NEXT:    vmulph %zmm0, %zmm1, %zmm0
-; CHECK-NEXT:    vmulph %zmm2, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %1 = call fast <32 x half> @llvm.sqrt.v32f16(<32 x half> %a0)
   %2 = fdiv fast <32 x half> %a1, %1
@@ -697,9 +697,9 @@ define i8 @test_int_x86_avx512_mask_cmp_sh_all(<8 x half> %x0, <8 x half> %x1, i
 ; CHECK-NEXT:    kmovd %k0, %esi
 ; CHECK-NEXT:    vcmpnltsh {sae}, %xmm1, %xmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    andb %cl, %dl
 ; CHECK-NEXT:    andb %sil, %al
 ; CHECK-NEXT:    andb %dl, %al
-; CHECK-NEXT:    andb %cl, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %res1 = call i8 @llvm.x86.avx512fp16.mask.cmp.sh(<8 x half> %x0, <8 x half> %x1, i32 2, i8 -1, i32 4)

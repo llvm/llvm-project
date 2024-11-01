@@ -645,6 +645,13 @@ func.func @cmpxchg_mismatched_operands(%i64_ptr : !llvm.ptr<i64>, %i32 : i32) {
 
 // -----
 
+func.func @cmpxchg_mismatched_value_operands(%ptr : !llvm.ptr, %i32 : i32, %i64 : i64) {
+  // expected-error@+1 {{expected both value operands to have the same type}}
+  %0 = "llvm.cmpxchg"(%ptr, %i32, %i64) {success_ordering=2,failure_ordering=2} : (!llvm.ptr, i32, i64) -> !llvm.struct<(i32, i1)>
+  llvm.return
+}
+// -----
+
 func.func @cmpxchg_unexpected_type(%i1_ptr : !llvm.ptr<i1>, %i1 : i1) {
   // expected-error@+1 {{unexpected LLVM IR type}}
   %0 = llvm.cmpxchg %i1_ptr, %i1, %i1 monotonic monotonic : i1
@@ -867,7 +874,6 @@ module {
       llvm.return
   }
   llvm.metadata @metadata {
-    llvm.return
   }
 }
 
@@ -936,7 +942,6 @@ module {
       llvm.return
   }
   llvm.metadata @metadata {
-    llvm.return
   }
 }
 
@@ -949,7 +954,6 @@ module {
       llvm.return
   }
   llvm.metadata @metadata {
-    llvm.return
   }
 }
 
@@ -964,7 +968,6 @@ module {
   llvm.metadata @metadata {
     llvm.alias_scope_domain @domain
     llvm.alias_scope @scope { domain = @domain }
-    llvm.return
   }
 }
 
@@ -998,7 +1001,6 @@ module {
   }
   llvm.metadata @metadata {
     llvm.access_group @group
-    llvm.return
   }
 }
 
@@ -1012,7 +1014,6 @@ module {
   }
   llvm.metadata @metadata {
     llvm.access_group @group
-    llvm.return
   }
 }
 
@@ -1392,3 +1393,9 @@ func.func @extract_scalable_from_fixed_length_vector(%arg0 : vector<16xf32>) {
   // expected-error@+1 {{op failed to verify that it is not extracting scalable from fixed-length vectors.}}
   %0 = llvm.intr.vector.extract %arg0[0] : vector<[8]xf32> from vector<16xf32>
 }
+
+// -----
+
+#void = #llvm.di_void_result_type
+// expected-error@below {{expected subroutine to have non-void argument types}}
+#void_argument_type = #llvm.di_subroutine_type<types = #void, #void>

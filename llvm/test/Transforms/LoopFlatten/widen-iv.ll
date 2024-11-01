@@ -15,7 +15,7 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 ; DONTWIDEN-NOT:   %flatten.trunciv
 
 ; Function Attrs: nounwind
-define void @foo(i32* %A, i32 %N, i32 %M) {
+define void @foo(ptr %A, i32 %N, i32 %M) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP17:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -39,8 +39,8 @@ define void @foo(i32* %A, i32 %N, i32 %M) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[INDVAR]] to i32
 ; CHECK-NEXT:    [[ADD_US:%.*]] = add nsw i32 [[TMP3]], [[MUL_US]]
 ; CHECK-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[FLATTEN_TRUNCIV]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[IDXPROM_US]]
-; CHECK-NEXT:    tail call void @f(i32* [[ARRAYIDX_US]])
+; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
+; CHECK-NEXT:    tail call void @f(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[INDVAR_NEXT:%.*]] = add i64 [[INDVAR]], 1
 ; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp slt i64 [[INDVAR_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]]
@@ -70,8 +70,8 @@ define void @foo(i32* %A, i32 %N, i32 %M) {
 ; DONTWIDEN-NEXT:    [[J_016_US:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_US]] ], [ [[INC_US:%.*]], [[FOR_BODY4_US]] ]
 ; DONTWIDEN-NEXT:    [[ADD_US:%.*]] = add nsw i32 [[J_016_US]], [[MUL_US]]
 ; DONTWIDEN-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[ADD_US]] to i64
-; DONTWIDEN-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[IDXPROM_US]]
-; DONTWIDEN-NEXT:    tail call void @f(i32* [[ARRAYIDX_US]])
+; DONTWIDEN-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
+; DONTWIDEN-NEXT:    tail call void @f(ptr [[ARRAYIDX_US]])
 ; DONTWIDEN-NEXT:    [[INC_US]] = add nuw nsw i32 [[J_016_US]], 1
 ; DONTWIDEN-NEXT:    [[CMP2_US:%.*]] = icmp slt i32 [[INC_US]], [[M]]
 ; DONTWIDEN-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY4_US]], label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]]
@@ -104,8 +104,8 @@ for.body4.us:
   %j.016.us = phi i32 [ 0, %for.cond1.preheader.us ], [ %inc.us, %for.body4.us ]
   %add.us = add nsw i32 %j.016.us, %mul.us
   %idxprom.us = sext i32 %add.us to i64
-  %arrayidx.us = getelementptr inbounds i32, i32* %A, i64 %idxprom.us
-  tail call void @f(i32* %arrayidx.us) #2
+  %arrayidx.us = getelementptr inbounds i32, ptr %A, i64 %idxprom.us
+  tail call void @f(ptr %arrayidx.us) #2
   %inc.us = add nuw nsw i32 %j.016.us, 1
   %cmp2.us = icmp slt i32 %inc.us, %M
   br i1 %cmp2.us, label %for.body4.us, label %for.cond1.for.cond.cleanup3_crit_edge.us
@@ -160,8 +160,8 @@ define void @foo2_sext(i32* nocapture readonly %A, i32 %N, i32 %M) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i64 [[TMP6]], [[TMP3]]
 ; CHECK-NEXT:    [[ADD_US:%.*]] = add nsw i32 [[J_016_US]], [[MUL_US]]
 ; CHECK-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[FLATTEN_TRUNCIV]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVAR2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, i32* [[ARRAYIDX_US]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVAR2]]
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX_US]], align 4
 ; CHECK-NEXT:    tail call void @g(i32 [[TMP8]])
 ; CHECK-NEXT:    [[INDVAR_NEXT:%.*]] = add i64 [[INDVAR]], 1
 ; CHECK-NEXT:    [[INC_US:%.*]] = add nuw nsw i32 [[J_016_US]], 1
@@ -203,8 +203,8 @@ define void @foo2_sext(i32* nocapture readonly %A, i32 %N, i32 %M) {
 ; DONTWIDEN-NEXT:    [[J_016_US:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_US]] ], [ [[INC_US:%.*]], [[FOR_BODY4_US]] ]
 ; DONTWIDEN-NEXT:    [[ADD_US:%.*]] = add nsw i32 [[J_016_US]], [[MUL_US]]
 ; DONTWIDEN-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[ADD_US]] to i64
-; DONTWIDEN-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[IDXPROM_US]]
-; DONTWIDEN-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX_US]], align 4
+; DONTWIDEN-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
+; DONTWIDEN-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX_US]], align 4
 ; DONTWIDEN-NEXT:    tail call void @g(i32 [[TMP0]])
 ; DONTWIDEN-NEXT:    [[INC_US]] = add nuw nsw i32 [[J_016_US]], 1
 ; DONTWIDEN-NEXT:    [[CMP2_US:%.*]] = icmp slt i32 [[INC_US]], [[M]]
@@ -248,8 +248,8 @@ for.body4.us:
   %j.016.us = phi i32 [ 0, %for.cond1.preheader.us ], [ %inc.us, %for.body4.us ]
   %add.us = add nsw i32 %j.016.us, %mul.us
   %idxprom.us = sext i32 %add.us to i64
-  %arrayidx.us = getelementptr inbounds i32, i32* %A, i64 %idxprom.us
-  %0 = load i32, i32* %arrayidx.us, align 4
+  %arrayidx.us = getelementptr inbounds i32, ptr %A, i64 %idxprom.us
+  %0 = load i32, ptr %arrayidx.us, align 4
   tail call void @g(i32 %0)
   %inc.us = add nuw nsw i32 %j.016.us, 1
   %cmp2.us = icmp slt i32 %inc.us, %M
@@ -309,8 +309,8 @@ define void @foo2_zext(i32* nocapture readonly %A, i32 %N, i32 %M) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[INDVAR]] to i32
 ; CHECK-NEXT:    [[ADD_US:%.*]] = add i32 [[TMP3]], [[MUL_US]]
 ; CHECK-NEXT:    [[IDXPROM_US:%.*]] = zext i32 [[FLATTEN_TRUNCIV]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[IDXPROM_US]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ARRAYIDX_US]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX_US]], align 4
 ; CHECK-NEXT:    tail call void @g(i32 [[TMP4]])
 ; CHECK-NEXT:    [[INDVAR_NEXT:%.*]] = add i64 [[INDVAR]], 1
 ; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ult i64 [[INDVAR_NEXT]], [[TMP0]]
@@ -350,8 +350,8 @@ define void @foo2_zext(i32* nocapture readonly %A, i32 %N, i32 %M) {
 ; DONTWIDEN-NEXT:    [[J_016_US:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_US]] ], [ [[INC_US:%.*]], [[FOR_BODY4_US]] ]
 ; DONTWIDEN-NEXT:    [[ADD_US:%.*]] = add i32 [[J_016_US]], [[MUL_US]]
 ; DONTWIDEN-NEXT:    [[IDXPROM_US:%.*]] = zext i32 [[ADD_US]] to i64
-; DONTWIDEN-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[IDXPROM_US]]
-; DONTWIDEN-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX_US]], align 4
+; DONTWIDEN-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
+; DONTWIDEN-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX_US]], align 4
 ; DONTWIDEN-NEXT:    tail call void @g(i32 [[TMP0]])
 ; DONTWIDEN-NEXT:    [[INC_US]] = add nuw i32 [[J_016_US]], 1
 ; DONTWIDEN-NEXT:    [[CMP2_US:%.*]] = icmp ult i32 [[INC_US]], [[M]]
@@ -395,8 +395,8 @@ for.body4.us:
   %j.016.us = phi i32 [ 0, %for.cond1.preheader.us ], [ %inc.us, %for.body4.us ]
   %add.us = add i32 %j.016.us, %mul.us
   %idxprom.us = zext i32 %add.us to i64
-  %arrayidx.us = getelementptr inbounds i32, i32* %A, i64 %idxprom.us
-  %0 = load i32, i32* %arrayidx.us, align 4
+  %arrayidx.us = getelementptr inbounds i32, ptr %A, i64 %idxprom.us
+  %0 = load i32, ptr %arrayidx.us, align 4
   tail call void @g(i32 %0)
   %inc.us = add nuw i32 %j.016.us, 1
   %cmp2.us = icmp ult i32 %inc.us, %M
@@ -423,7 +423,7 @@ for.cond.cleanup:
   ret void
 }
 
-define void @zext(i32 %N, i16* nocapture %A, i16 %val) {
+define void @zext(i32 %N, ptr nocapture %A, i16 %val) {
 ; CHECK-LABEL: @zext(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP20_NOT:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -444,10 +444,10 @@ define void @zext(i32 %N, i16* nocapture %A, i16 %val) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[INDVAR]] to i32
 ; CHECK-NEXT:    [[ADD_US:%.*]] = add i32 [[TMP3]], [[MUL_US]]
 ; CHECK-NEXT:    [[IDXPROM_US:%.*]] = zext i32 [[FLATTEN_TRUNCIV]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i16, i16* [[A:%.*]], i64 [[IDXPROM_US]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i16, i16* [[ARRAYIDX_US]], align 2
+; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i16, ptr [[A:%.*]], i64 [[IDXPROM_US]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[ARRAYIDX_US]], align 2
 ; CHECK-NEXT:    [[ADD5_US:%.*]] = add i16 [[TMP4]], [[VAL:%.*]]
-; CHECK-NEXT:    store i16 [[ADD5_US]], i16* [[ARRAYIDX_US]], align 2
+; CHECK-NEXT:    store i16 [[ADD5_US]], ptr [[ARRAYIDX_US]], align 2
 ; CHECK-NEXT:    [[INDVAR_NEXT:%.*]] = add i64 [[INDVAR]], 1
 ; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ult i64 [[INDVAR_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br label [[FOR_COND1_FOR_INC7_CRIT_EDGE_US]]
@@ -474,10 +474,10 @@ define void @zext(i32 %N, i16* nocapture %A, i16 %val) {
 ; DONTWIDEN-NEXT:    [[J_019_US:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_US]] ], [ [[INC_US:%.*]], [[FOR_BODY3_US]] ]
 ; DONTWIDEN-NEXT:    [[ADD_US:%.*]] = add i32 [[J_019_US]], [[MUL_US]]
 ; DONTWIDEN-NEXT:    [[IDXPROM_US:%.*]] = zext i32 [[ADD_US]] to i64
-; DONTWIDEN-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i16, i16* [[A:%.*]], i64 [[IDXPROM_US]]
-; DONTWIDEN-NEXT:    [[TMP0:%.*]] = load i16, i16* [[ARRAYIDX_US]], align 2
+; DONTWIDEN-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i16, ptr [[A:%.*]], i64 [[IDXPROM_US]]
+; DONTWIDEN-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX_US]], align 2
 ; DONTWIDEN-NEXT:    [[ADD5_US:%.*]] = add i16 [[TMP0]], [[VAL:%.*]]
-; DONTWIDEN-NEXT:    store i16 [[ADD5_US]], i16* [[ARRAYIDX_US]], align 2
+; DONTWIDEN-NEXT:    store i16 [[ADD5_US]], ptr [[ARRAYIDX_US]], align 2
 ; DONTWIDEN-NEXT:    [[INC_US]] = add nuw i32 [[J_019_US]], 1
 ; DONTWIDEN-NEXT:    [[CMP2_US:%.*]] = icmp ult i32 [[INC_US]], [[N]]
 ; DONTWIDEN-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY3_US]], label [[FOR_COND1_FOR_INC7_CRIT_EDGE_US]]
@@ -506,10 +506,10 @@ for.body3.us:
   %j.019.us = phi i32 [ 0, %for.cond1.preheader.us ], [ %inc.us, %for.body3.us ]
   %add.us = add i32 %j.019.us, %mul.us
   %idxprom.us = zext i32 %add.us to i64
-  %arrayidx.us = getelementptr inbounds i16, i16* %A, i64 %idxprom.us
-  %0 = load i16, i16* %arrayidx.us, align 2
+  %arrayidx.us = getelementptr inbounds i16, ptr %A, i64 %idxprom.us
+  %0 = load i16, ptr %arrayidx.us, align 2
   %add5.us = add i16 %0, %val
-  store i16 %add5.us, i16* %arrayidx.us, align 2
+  store i16 %add5.us, ptr %arrayidx.us, align 2
   %inc.us = add nuw i32 %j.019.us, 1
   %cmp2.us = icmp ult i32 %inc.us, %N
   br i1 %cmp2.us, label %for.body3.us, label %for.cond1.for.inc7_crit_edge.us
@@ -1047,7 +1047,7 @@ i.loopdone:
 
 ; Same as @foo, but M is sext from i16. This used to assert because we thought
 ; this sext was from widening and try to look through it.
-define void @foo_M_sext(i32* %A, i32 %N, i16 %M) {
+define void @foo_M_sext(ptr %A, i32 %N, i16 %M) {
 ; CHECK-LABEL: @foo_M_sext(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[M2:%.*]] = sext i16 [[M:%.*]] to i32
@@ -1072,8 +1072,8 @@ define void @foo_M_sext(i32* %A, i32 %N, i16 %M) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[INDVAR]] to i32
 ; CHECK-NEXT:    [[ADD_US:%.*]] = add nsw i32 [[TMP3]], [[MUL_US]]
 ; CHECK-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[FLATTEN_TRUNCIV]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[IDXPROM_US]]
-; CHECK-NEXT:    tail call void @f(i32* [[ARRAYIDX_US]])
+; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
+; CHECK-NEXT:    tail call void @f(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[INDVAR_NEXT:%.*]] = add i64 [[INDVAR]], 1
 ; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp slt i64 [[INDVAR_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]]
@@ -1104,8 +1104,8 @@ define void @foo_M_sext(i32* %A, i32 %N, i16 %M) {
 ; DONTWIDEN-NEXT:    [[J_016_US:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_US]] ], [ [[INC_US:%.*]], [[FOR_BODY4_US]] ]
 ; DONTWIDEN-NEXT:    [[ADD_US:%.*]] = add nsw i32 [[J_016_US]], [[MUL_US]]
 ; DONTWIDEN-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[ADD_US]] to i64
-; DONTWIDEN-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[IDXPROM_US]]
-; DONTWIDEN-NEXT:    tail call void @f(i32* [[ARRAYIDX_US]])
+; DONTWIDEN-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
+; DONTWIDEN-NEXT:    tail call void @f(ptr [[ARRAYIDX_US]])
 ; DONTWIDEN-NEXT:    [[INC_US]] = add nuw nsw i32 [[J_016_US]], 1
 ; DONTWIDEN-NEXT:    [[CMP2_US:%.*]] = icmp slt i32 [[INC_US]], [[M2]]
 ; DONTWIDEN-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY4_US]], label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]]
@@ -1139,8 +1139,8 @@ for.body4.us:
   %j.016.us = phi i32 [ 0, %for.cond1.preheader.us ], [ %inc.us, %for.body4.us ]
   %add.us = add nsw i32 %j.016.us, %mul.us
   %idxprom.us = sext i32 %add.us to i64
-  %arrayidx.us = getelementptr inbounds i32, i32* %A, i64 %idxprom.us
-  tail call void @f(i32* %arrayidx.us) #2
+  %arrayidx.us = getelementptr inbounds i32, ptr %A, i64 %idxprom.us
+  tail call void @f(ptr %arrayidx.us) #2
   %inc.us = add nuw nsw i32 %j.016.us, 1
   %cmp2.us = icmp slt i32 %inc.us, %M2
   br i1 %cmp2.us, label %for.body4.us, label %for.cond1.for.cond.cleanup3_crit_edge.us
@@ -1160,4 +1160,4 @@ declare dso_local i32 @use_16(i16)
 declare dso_local i32 @use_64(i64)
 declare dso_local void @g(i32)
 
-declare dso_local void @f(i32* %0) local_unnamed_addr #1
+declare dso_local void @f(ptr %0) local_unnamed_addr #1

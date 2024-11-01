@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -87,9 +88,6 @@ struct ModuleDeps {
   /// additionally appear in \c FileDeps as a dependency.
   std::string ClangModuleMapFile;
 
-  /// The path to where an implicit build would put the PCM for this module.
-  std::string ImplicitModulePCMPath;
-
   /// A collection of absolute paths to files that this module directly depends
   /// on, not including transitive dependencies.
   llvm::StringSet<> FileDeps;
@@ -134,7 +132,7 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          OptionalFileEntryRef File, StringRef SearchPath,
                           StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
   void moduleImport(SourceLocation ImportLoc, ModuleIdPath Path,
@@ -161,7 +159,8 @@ private:
   /// Traverses the previously collected direct modular dependencies to discover
   /// transitive modular dependencies and fills the parent \c ModuleDepCollector
   /// with both.
-  ModuleID handleTopLevelModule(const Module *M);
+  /// Returns the ID or nothing if the dependency is spurious and is ignored.
+  std::optional<ModuleID> handleTopLevelModule(const Module *M);
   void addAllSubmoduleDeps(const Module *M, ModuleDeps &MD,
                            llvm::DenseSet<const Module *> &AddedModules);
   void addModuleDep(const Module *M, ModuleDeps &MD,

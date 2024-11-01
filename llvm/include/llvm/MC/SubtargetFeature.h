@@ -17,6 +17,7 @@
 #ifndef LLVM_MC_SUBTARGETFEATURE_H
 #define LLVM_MC_SUBTARGETFEATURE_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MathExtras.h"
@@ -95,7 +96,7 @@ public:
   size_t count() const {
     size_t Count = 0;
     for (auto B : Bits)
-      Count += countPopulation(B);
+      Count += llvm::popcount(B);
     return Count;
   }
 
@@ -188,6 +189,8 @@ public:
 
   /// Adds Features.
   void AddFeature(StringRef String, bool Enable = true);
+
+  void addFeaturesVector(const ArrayRef<std::string> OtherFeatures);
 
   /// Returns the vector of individual subtarget features.
   const std::vector<std::string> &getFeatures() const { return Features; }

@@ -7,43 +7,41 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind uwtable
-define dso_local void @foo(i32* %A) #0 !dbg !7 {
+define dso_local void @foo(ptr %A) #0 !dbg !7 {
 entry:
-  %A.addr = alloca i32*, align 8, !DIAssignID !62
+  %A.addr = alloca ptr, align 8, !DIAssignID !62
   %i = alloca i32, align 4
-  call void @llvm.dbg.assign(metadata i1 undef, metadata !13, metadata !DIExpression(), metadata !62, metadata i32** %A.addr, metadata !DIExpression()), !dbg !20
-  store i32* %A, i32** %A.addr, align 8, !tbaa !16
-  call void @llvm.dbg.declare(metadata i32** %A.addr, metadata !13, metadata !DIExpression()), !dbg !20
-  %0 = bitcast i32* %i to i8*, !dbg !21
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #3, !dbg !21
-  call void @llvm.dbg.declare(metadata i32* %i, metadata !14, metadata !DIExpression()), !dbg !22
-  store i32 0, i32* %i, align 4, !dbg !22, !tbaa !23
+  call void @llvm.dbg.assign(metadata i1 undef, metadata !13, metadata !DIExpression(), metadata !62, metadata ptr %A.addr, metadata !DIExpression()), !dbg !20
+  store ptr %A, ptr %A.addr, align 8, !tbaa !16
+  call void @llvm.dbg.declare(metadata ptr %A.addr, metadata !13, metadata !DIExpression()), !dbg !20
+  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #3, !dbg !21
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !14, metadata !DIExpression()), !dbg !22
+  store i32 0, ptr %i, align 4, !dbg !22, !tbaa !23
   br label %for.cond, !dbg !21
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %1 = load i32, i32* %i, align 4, !dbg !25, !tbaa !23
-  %2 = load i32*, i32** %A.addr, align 8, !dbg !27, !tbaa !16
-  %3 = load i32, i32* %2, align 4, !dbg !28, !tbaa !23
-  %cmp = icmp slt i32 %1, %3, !dbg !29
+  %0 = load i32, ptr %i, align 4, !dbg !25, !tbaa !23
+  %1 = load ptr, ptr %A.addr, align 8, !dbg !27, !tbaa !16
+  %2 = load i32, ptr %1, align 4, !dbg !28, !tbaa !23
+  %cmp = icmp slt i32 %0, %2, !dbg !29
   br i1 %cmp, label %for.body, label %for.cond.cleanup, !dbg !30, !prof !61
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  %4 = bitcast i32* %i to i8*, !dbg !31
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %4) #3, !dbg !31
+  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #3, !dbg !31
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %5 = load i32*, i32** %A.addr, align 8, !dbg !32, !tbaa !16
-  %6 = load i32, i32* %i, align 4, !dbg !33, !tbaa !23
-  %idxprom = sext i32 %6 to i64, !dbg !32
-  %arrayidx = getelementptr inbounds i32, i32* %5, i64 %idxprom, !dbg !32
-  store i32 0, i32* %arrayidx, align 4, !dbg !34, !tbaa !23
+  %3 = load ptr, ptr %A.addr, align 8, !dbg !32, !tbaa !16
+  %4 = load i32, ptr %i, align 4, !dbg !33, !tbaa !23
+  %idxprom = sext i32 %4 to i64, !dbg !32
+  %arrayidx = getelementptr inbounds i32, ptr %3, i64 %idxprom, !dbg !32
+  store i32 0, ptr %arrayidx, align 4, !dbg !34, !tbaa !23
   br label %for.inc, !dbg !32
 
 for.inc:                                          ; preds = %for.body
-  %7 = load i32, i32* %i, align 4, !dbg !35, !tbaa !23
-  %inc = add nsw i32 %7, 1, !dbg !35
-  store i32 %inc, i32* %i, align 4, !dbg !35, !tbaa !23
+  %5 = load i32, ptr %i, align 4, !dbg !35, !tbaa !23
+  %inc = add nsw i32 %5, 1, !dbg !35
+  store i32 %inc, ptr %i, align 4, !dbg !35, !tbaa !23
   br label %for.cond, !dbg !31, !llvm.loop !36
 
 for.end:                                          ; preds = %for.cond.cleanup
@@ -54,48 +52,46 @@ for.end:                                          ; preds = %for.cond.cleanup
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #2
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
 
 ; Function Attrs: nounwind uwtable
-define dso_local void @bar(i32* %A) #0 !dbg !39 {
+define dso_local void @bar(ptr %A) #0 !dbg !39 {
 entry:
-  %A.addr = alloca i32*, align 8
+  %A.addr = alloca ptr, align 8
   %i = alloca i32, align 4
-  store i32* %A, i32** %A.addr, align 8, !tbaa !16
-  call void @llvm.dbg.declare(metadata i32** %A.addr, metadata !41, metadata !DIExpression()), !dbg !44
-  %0 = bitcast i32* %i to i8*, !dbg !45
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #3, !dbg !45
-  call void @llvm.dbg.declare(metadata i32* %i, metadata !42, metadata !DIExpression()), !dbg !46
-  store i32 0, i32* %i, align 4, !dbg !46, !tbaa !23
+  store ptr %A, ptr %A.addr, align 8, !tbaa !16
+  call void @llvm.dbg.declare(metadata ptr %A.addr, metadata !41, metadata !DIExpression()), !dbg !44
+  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #3, !dbg !45
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !42, metadata !DIExpression()), !dbg !46
+  store i32 0, ptr %i, align 4, !dbg !46, !tbaa !23
   br label %for.cond, !dbg !45
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %1 = load i32, i32* %i, align 4, !dbg !47, !tbaa !23
-  %2 = load i32*, i32** %A.addr, align 8, !dbg !49, !tbaa !16
-  %3 = load i32, i32* %2, align 4, !dbg !50, !tbaa !23
-  %cmp = icmp slt i32 %1, %3, !dbg !51
+  %0 = load i32, ptr %i, align 4, !dbg !47, !tbaa !23
+  %1 = load ptr, ptr %A.addr, align 8, !dbg !49, !tbaa !16
+  %2 = load i32, ptr %1, align 4, !dbg !50, !tbaa !23
+  %cmp = icmp slt i32 %0, %2, !dbg !51
   br i1 %cmp, label %for.body, label %for.cond.cleanup, !dbg !52
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  %4 = bitcast i32* %i to i8*, !dbg !53
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %4) #3, !dbg !53
+  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #3, !dbg !53
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %5 = load i32*, i32** %A.addr, align 8, !dbg !54, !tbaa !16
-  %6 = load i32, i32* %i, align 4, !dbg !55, !tbaa !23
-  %idxprom = sext i32 %6 to i64, !dbg !54
-  %arrayidx = getelementptr inbounds i32, i32* %5, i64 %idxprom, !dbg !54
-  store i32 0, i32* %arrayidx, align 4, !dbg !56, !tbaa !23
+  %3 = load ptr, ptr %A.addr, align 8, !dbg !54, !tbaa !16
+  %4 = load i32, ptr %i, align 4, !dbg !55, !tbaa !23
+  %idxprom = sext i32 %4 to i64, !dbg !54
+  %arrayidx = getelementptr inbounds i32, ptr %3, i64 %idxprom, !dbg !54
+  store i32 0, ptr %arrayidx, align 4, !dbg !56, !tbaa !23
   br label %for.inc, !dbg !54
 
 for.inc:                                          ; preds = %for.body
-  %7 = load i32, i32* %i, align 4, !dbg !57, !tbaa !23
-  %inc = add nsw i32 %7, 1, !dbg !57
-  store i32 %inc, i32* %i, align 4, !dbg !57, !tbaa !23
+  %5 = load i32, ptr %i, align 4, !dbg !57, !tbaa !23
+  %inc = add nsw i32 %5, 1, !dbg !57
+  store i32 %inc, ptr %i, align 4, !dbg !57, !tbaa !23
   br label %for.cond, !dbg !53, !llvm.loop !58
 
 for.end:                                          ; preds = %for.cond.cleanup

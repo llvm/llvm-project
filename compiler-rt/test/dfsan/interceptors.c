@@ -2,8 +2,6 @@
 // RUN: %clang_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false %s -o %t && %run %t
 //
 // Tests custom implementations of various glibc functions.
-//
-// REQUIRES: x86_64-target-arch
 
 #include <sanitizer/dfsan_interface.h>
 
@@ -48,12 +46,17 @@ void test_free() {
 }
 
 void test_mallinfo() {
+  // The mallinfo interceptor takes an argument instead of returning a struct.
+  // This doesn't work on AArch64 which uses different registers for the two
+  // function types.
+#if defined(__GLIBC__) && !defined(__aarch64__)
   struct mallinfo mi = mallinfo();
   for (int i = 0; i < sizeof(struct mallinfo); ++i) {
     char c = ((char *)(&mi))[i];
     assert(!c);
     ASSERT_ZERO_LABEL(c);
   }
+#endif
 }
 
 void test_malloc() {

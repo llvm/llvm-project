@@ -429,11 +429,12 @@ void SparcInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     MovMI->addRegisterKilled(SrcReg, TRI);
 }
 
-void SparcInstrInfo::
-storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                    Register SrcReg, bool isKill, int FI,
-                    const TargetRegisterClass *RC,
-                    const TargetRegisterInfo *TRI) const {
+void SparcInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator I,
+                                         Register SrcReg, bool isKill, int FI,
+                                         const TargetRegisterClass *RC,
+                                         const TargetRegisterInfo *TRI,
+                                         Register VReg) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
 
@@ -468,11 +469,12 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     llvm_unreachable("Can't store this register to stack slot");
 }
 
-void SparcInstrInfo::
-loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                     Register DestReg, int FI,
-                     const TargetRegisterClass *RC,
-                     const TargetRegisterInfo *TRI) const {
+void SparcInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                          MachineBasicBlock::iterator I,
+                                          Register DestReg, int FI,
+                                          const TargetRegisterClass *RC,
+                                          const TargetRegisterInfo *TRI,
+                                          Register VReg) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
 

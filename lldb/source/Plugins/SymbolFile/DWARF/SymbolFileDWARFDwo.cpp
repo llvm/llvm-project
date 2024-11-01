@@ -17,6 +17,7 @@
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFUnit.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -41,7 +42,7 @@ DWARFCompileUnit *SymbolFileDWARFDwo::GetDWOCompileUnitForHash(uint64_t hash) {
       if (auto *unit_contrib = entry->getContribution())
         return llvm::dyn_cast_or_null<DWARFCompileUnit>(
             DebugInfo().GetUnitAtOffset(DIERef::Section::DebugInfo,
-                                        unit_contrib->Offset));
+                                        unit_contrib->getOffset32()));
     }
     return nullptr;
   }
@@ -49,7 +50,7 @@ DWARFCompileUnit *SymbolFileDWARFDwo::GetDWOCompileUnitForHash(uint64_t hash) {
   DWARFCompileUnit *cu = FindSingleCompileUnit();
   if (!cu)
     return nullptr;
-  llvm::Optional<uint64_t> dwo_id = cu->GetDWOId();
+  std::optional<uint64_t> dwo_id = cu->GetDWOId();
   if (!dwo_id || hash != *dwo_id)
     return nullptr;
   return cu;

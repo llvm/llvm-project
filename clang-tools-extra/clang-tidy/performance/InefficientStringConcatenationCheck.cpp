@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace performance {
+namespace clang::tidy::performance {
 
 void InefficientStringConcatenationCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -79,6 +77,4 @@ void InefficientStringConcatenationCheck::check(
     diag(PlusOperator->getExprLoc(), DiagMsg);
 }
 
-} // namespace performance
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::performance

@@ -123,7 +123,7 @@ public:
   /// Create a StringMapEntry for the specified key construct the value using
   /// \p InitiVals.
   template <typename AllocatorTy, typename... InitTy>
-  static StringMapEntry *Create(StringRef key, AllocatorTy &allocator,
+  static StringMapEntry *create(StringRef key, AllocatorTy &allocator,
                                 InitTy &&...initVals) {
     return new (StringMapEntryBase::allocateWithKey(
         sizeof(StringMapEntry), alignof(StringMapEntry), key, allocator))

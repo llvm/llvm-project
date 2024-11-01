@@ -12,8 +12,8 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT: .functype ldi32_a1 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load $push[[NUM:[0-9]+]]=, 0($0):p2align=0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define i32 @ldi32_a1(i32 *%p) {
-  %v = load i32, i32* %p, align 1
+define i32 @ldi32_a1(ptr %p) {
+  %v = load i32, ptr %p, align 1
   ret i32 %v
 }
 
@@ -21,8 +21,8 @@ define i32 @ldi32_a1(i32 *%p) {
 ; CHECK-NEXT: .functype ldi32_a2 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load $push[[NUM:[0-9]+]]=, 0($0):p2align=1{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define i32 @ldi32_a2(i32 *%p) {
-  %v = load i32, i32* %p, align 2
+define i32 @ldi32_a2(ptr %p) {
+  %v = load i32, ptr %p, align 2
   ret i32 %v
 }
 
@@ -32,8 +32,8 @@ define i32 @ldi32_a2(i32 *%p) {
 ; CHECK-NEXT: .functype ldi32_a4 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define i32 @ldi32_a4(i32 *%p) {
-  %v = load i32, i32* %p, align 4
+define i32 @ldi32_a4(ptr %p) {
+  %v = load i32, ptr %p, align 4
   ret i32 %v
 }
 
@@ -43,8 +43,8 @@ define i32 @ldi32_a4(i32 *%p) {
 ; CHECK-NEXT: .functype ldi32 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define i32 @ldi32(i32 *%p) {
-  %v = load i32, i32* %p
+define i32 @ldi32(ptr %p) {
+  %v = load i32, ptr %p
   ret i32 %v
 }
 
@@ -54,8 +54,8 @@ define i32 @ldi32(i32 *%p) {
 ; CHECK-NEXT: .functype ldi32_a8 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define i32 @ldi32_a8(i32 *%p) {
-  %v = load i32, i32* %p, align 8
+define i32 @ldi32_a8(ptr %p) {
+  %v = load i32, ptr %p, align 8
   ret i32 %v
 }
 
@@ -67,8 +67,8 @@ define i32 @ldi32_a8(i32 *%p) {
 ; CHECK-NEXT: .functype ldi8_a1 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load8_u $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define i8 @ldi8_a1(i8 *%p) {
-  %v = load i8, i8* %p, align 1
+define i8 @ldi8_a1(ptr %p) {
+  %v = load i8, ptr %p, align 1
   ret i8 %v
 }
 
@@ -76,8 +76,8 @@ define i8 @ldi8_a1(i8 *%p) {
 ; CHECK-NEXT: .functype ldi8_a2 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load8_u $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define i8 @ldi8_a2(i8 *%p) {
-  %v = load i8, i8* %p, align 2
+define i8 @ldi8_a2(ptr %p) {
+  %v = load i8, ptr %p, align 2
   ret i8 %v
 }
 
@@ -85,8 +85,8 @@ define i8 @ldi8_a2(i8 *%p) {
 ; CHECK-NEXT: .functype ldi16_a1 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load16_u $push[[NUM:[0-9]+]]=, 0($0):p2align=0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define i16 @ldi16_a1(i16 *%p) {
-  %v = load i16, i16* %p, align 1
+define i16 @ldi16_a1(ptr %p) {
+  %v = load i16, ptr %p, align 1
   ret i16 %v
 }
 
@@ -94,8 +94,8 @@ define i16 @ldi16_a1(i16 *%p) {
 ; CHECK-NEXT: .functype ldi16_a2 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load16_u $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define i16 @ldi16_a2(i16 *%p) {
-  %v = load i16, i16* %p, align 2
+define i16 @ldi16_a2(ptr %p) {
+  %v = load i16, ptr %p, align 2
   ret i16 %v
 }
 
@@ -103,8 +103,8 @@ define i16 @ldi16_a2(i16 *%p) {
 ; CHECK-NEXT: .functype ldi16_a4 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load16_u $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define i16 @ldi16_a4(i16 *%p) {
-  %v = load i16, i16* %p, align 4
+define i16 @ldi16_a4(ptr %p) {
+  %v = load i16, ptr %p, align 4
   ret i16 %v
 }
 
@@ -116,8 +116,8 @@ define i16 @ldi16_a4(i16 *%p) {
 ; CHECK-NEXT: .functype sti32_a1 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store 0($0):p2align=0, $1{{$}}
 ; CHECK-NEXT: return{{$}}
-define void @sti32_a1(i32 *%p, i32 %v) {
-  store i32 %v, i32* %p, align 1
+define void @sti32_a1(ptr %p, i32 %v) {
+  store i32 %v, ptr %p, align 1
   ret void
 }
 
@@ -125,8 +125,8 @@ define void @sti32_a1(i32 *%p, i32 %v) {
 ; CHECK-NEXT: .functype sti32_a2 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store 0($0):p2align=1, $1{{$}}
 ; CHECK-NEXT: return{{$}}
-define void @sti32_a2(i32 *%p, i32 %v) {
-  store i32 %v, i32* %p, align 2
+define void @sti32_a2(ptr %p, i32 %v) {
+  store i32 %v, ptr %p, align 2
   ret void
 }
 
@@ -136,8 +136,8 @@ define void @sti32_a2(i32 *%p, i32 %v) {
 ; CHECK-NEXT: .functype sti32_a4 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
-define void @sti32_a4(i32 *%p, i32 %v) {
-  store i32 %v, i32* %p, align 4
+define void @sti32_a4(ptr %p, i32 %v) {
+  store i32 %v, ptr %p, align 4
   ret void
 }
 
@@ -147,8 +147,8 @@ define void @sti32_a4(i32 *%p, i32 %v) {
 ; CHECK-NEXT: .functype sti32 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
-define void @sti32(i32 *%p, i32 %v) {
-  store i32 %v, i32* %p
+define void @sti32(ptr %p, i32 %v) {
+  store i32 %v, ptr %p
   ret void
 }
 
@@ -156,8 +156,8 @@ define void @sti32(i32 *%p, i32 %v) {
 ; CHECK-NEXT: .functype sti32_a8 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
-define void @sti32_a8(i32 *%p, i32 %v) {
-  store i32 %v, i32* %p, align 8
+define void @sti32_a8(ptr %p, i32 %v) {
+  store i32 %v, ptr %p, align 8
   ret void
 }
 
@@ -169,8 +169,8 @@ define void @sti32_a8(i32 *%p, i32 %v) {
 ; CHECK-NEXT: .functype sti8_a1 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store8 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
-define void @sti8_a1(i8 *%p, i8 %v) {
-  store i8 %v, i8* %p, align 1
+define void @sti8_a1(ptr %p, i8 %v) {
+  store i8 %v, ptr %p, align 1
   ret void
 }
 
@@ -178,8 +178,8 @@ define void @sti8_a1(i8 *%p, i8 %v) {
 ; CHECK-NEXT: .functype sti8_a2 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store8 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
-define void @sti8_a2(i8 *%p, i8 %v) {
-  store i8 %v, i8* %p, align 2
+define void @sti8_a2(ptr %p, i8 %v) {
+  store i8 %v, ptr %p, align 2
   ret void
 }
 
@@ -187,8 +187,8 @@ define void @sti8_a2(i8 *%p, i8 %v) {
 ; CHECK-NEXT: .functype sti16_a1 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store16 0($0):p2align=0, $1{{$}}
 ; CHECK-NEXT: return{{$}}
-define void @sti16_a1(i16 *%p, i16 %v) {
-  store i16 %v, i16* %p, align 1
+define void @sti16_a1(ptr %p, i16 %v) {
+  store i16 %v, ptr %p, align 1
   ret void
 }
 
@@ -196,8 +196,8 @@ define void @sti16_a1(i16 *%p, i16 %v) {
 ; CHECK-NEXT: .functype sti16_a2 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store16 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
-define void @sti16_a2(i16 *%p, i16 %v) {
-  store i16 %v, i16* %p, align 2
+define void @sti16_a2(ptr %p, i16 %v) {
+  store i16 %v, ptr %p, align 2
   ret void
 }
 
@@ -205,8 +205,8 @@ define void @sti16_a2(i16 *%p, i16 %v) {
 ; CHECK-NEXT: .functype sti16_a4 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store16 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
-define void @sti16_a4(i16 *%p, i16 %v) {
-  store i16 %v, i16* %p, align 4
+define void @sti16_a4(ptr %p, i16 %v) {
+  store i16 %v, ptr %p, align 4
   ret void
 }
 
@@ -221,8 +221,8 @@ define void @sti16_a4(i16 *%p, i16 %v) {
 ; CHECK-NEXT: .functype ldi32_atomic_a4 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.atomic.load $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define i32 @ldi32_atomic_a4(i32 *%p) {
-  %v = load atomic i32, i32* %p seq_cst, align 4
+define i32 @ldi32_atomic_a4(ptr %p) {
+  %v = load atomic i32, ptr %p seq_cst, align 4
   ret i32 %v
 }
 
@@ -232,8 +232,8 @@ define i32 @ldi32_atomic_a4(i32 *%p) {
 ; CHECK-NEXT: .functype ldi32_atomic_a8 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.atomic.load $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define i32 @ldi32_atomic_a8(i32 *%p) {
-  %v = load atomic i32, i32* %p seq_cst, align 8
+define i32 @ldi32_atomic_a8(ptr %p) {
+  %v = load atomic i32, ptr %p seq_cst, align 8
   ret i32 %v
 }
 
@@ -245,8 +245,8 @@ define i32 @ldi32_atomic_a8(i32 *%p) {
 ; CHECK-NEXT: .functype sti32_atomic_a4 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.atomic.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
-define void @sti32_atomic_a4(i32 *%p, i32 %v) {
- store atomic i32 %v, i32* %p seq_cst, align 4
+define void @sti32_atomic_a4(ptr %p, i32 %v) {
+ store atomic i32 %v, ptr %p seq_cst, align 4
  ret void
 }
 
@@ -256,7 +256,7 @@ define void @sti32_atomic_a4(i32 *%p, i32 %v) {
 ; CHECK-NEXT: .functype sti32_atomic_a8 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.atomic.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
-define void @sti32_atomic_a8(i32 *%p, i32 %v) {
- store atomic i32 %v, i32* %p seq_cst, align 8
+define void @sti32_atomic_a8(ptr %p, i32 %v) {
+ store atomic i32 %v, ptr %p seq_cst, align 8
  ret void
 }

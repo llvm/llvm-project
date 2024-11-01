@@ -10,9 +10,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 SharedPtrArrayMismatchCheck::SharedPtrArrayMismatchCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -26,6 +24,4 @@ SharedPtrArrayMismatchCheck::getSmartPointerClassMatcher() const {
           0, templateArgument(refersToType(qualType().bind(PointerTypeN)))));
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

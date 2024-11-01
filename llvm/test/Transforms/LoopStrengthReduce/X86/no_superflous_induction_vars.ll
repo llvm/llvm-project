@@ -2,7 +2,7 @@
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @indvar_expansion(i8* nocapture readonly %rowsptr) {
+define void @indvar_expansion(ptr nocapture readonly %rowsptr) {
 entry:
   br label %for.cond
 
@@ -38,12 +38,11 @@ for.body14.lr.ph:
 
 vector.body:
   %index = phi i64 [ %index.next, %vector.body ], [ %0, %for.body14.lr.ph ]
-  %4 = getelementptr inbounds i8, i8* %rowsptr, i64 %index
-  %5 = bitcast i8* %4 to <4 x i8>*
-  %wide.load = load <4 x i8>, <4 x i8>* %5, align 1
+  %4 = getelementptr inbounds i8, ptr %rowsptr, i64 %index
+  %wide.load = load <4 x i8>, ptr %4, align 1
   %index.next = add i64 %index, 8
-  %6 = icmp eq i64 %index.next, %end.idx.rnd.down
-  br i1 %6, label %for.end24, label %vector.body
+  %5 = icmp eq i64 %index.next, %end.idx.rnd.down
+  br i1 %5, label %for.end24, label %vector.body
 
 for.end24:
   ret void

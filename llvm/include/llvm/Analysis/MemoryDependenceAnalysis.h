@@ -77,6 +77,11 @@ class MemDepResult {
     ///      calls or memory use intrinsics with identical callees and no
     ///      intervening clobbers.  No validation is done that the operands to
     ///      the calls are the same.
+    ///   4. For loads and stores, this could be a select instruction that
+    ///      defines pointer to this memory location. In this case, users can
+    ///      find non-clobbered Defs for both select values that are reaching
+    //       the desired memory location (there is still a guarantee that there
+    //       are no clobbers between analyzed memory location and select).
     Def,
 
     /// This marker indicates that the query has no known dependency in the
@@ -141,6 +146,9 @@ public:
   /// Tests if this MemDepResult represents a query that is an instruction
   /// definition dependency.
   bool isDef() const { return Value.is<Def>(); }
+
+  /// Tests if this MemDepResult represents a valid local query (Clobber/Def).
+  bool isLocal() const { return isClobber() || isDef(); }
 
   /// Tests if this MemDepResult represents a query that is transparent to the
   /// start of the block, but where a non-local hasn't been done.

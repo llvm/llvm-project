@@ -66,7 +66,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
@@ -1744,8 +1743,8 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
     bool CacheCodeCompletionResults, bool IncludeBriefCommentsInCodeCompletion,
     bool AllowPCHWithCompilerErrors, SkipFunctionBodiesScope SkipFunctionBodies,
     bool SingleFileParse, bool UserFilesAreVolatile, bool ForSerialization,
-    bool RetainExcludedConditionalBlocks,
-    llvm::Optional<StringRef> ModuleFormat, std::unique_ptr<ASTUnit> *ErrAST,
+    bool RetainExcludedConditionalBlocks, std::optional<StringRef> ModuleFormat,
+    std::unique_ptr<ASTUnit> *ErrAST,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   assert(Diags.get() && "no DiagnosticsEngine was provided");
 
@@ -1761,8 +1760,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
     CIOpts.VFS = VFS;
     CIOpts.Diags = Diags;
     CIOpts.ProbePrecompiled = true; // FIXME: historical default. Needed?
-    CI = createInvocation(llvm::makeArrayRef(ArgBegin, ArgEnd),
-                          std::move(CIOpts));
+    CI = createInvocation(llvm::ArrayRef(ArgBegin, ArgEnd), std::move(CIOpts));
     if (!CI)
       return nullptr;
   }

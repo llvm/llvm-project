@@ -599,7 +599,7 @@ static FunctionCallee getOrInsertValueProfilingCall(
 #include "llvm/ProfileData/InstrProfData.inc"
   };
   auto *ValueProfilingCallTy =
-      FunctionType::get(ReturnTy, makeArrayRef(ParamTypes), false);
+      FunctionType::get(ReturnTy, ArrayRef(ParamTypes), false);
   StringRef FuncName = CallType == ValueProfilingCallType::Default
                            ? getInstrProfValueProfFuncName()
                            : getInstrProfValueProfMemOpFuncName();
@@ -1012,7 +1012,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) LLVMType,
 #include "llvm/ProfileData/InstrProfData.inc"
   };
-  auto *DataTy = StructType::get(Ctx, makeArrayRef(DataTypes));
+  auto *DataTy = StructType::get(Ctx, ArrayRef(DataTypes));
 
   Constant *FunctionAddr = shouldRecordFunctionAddr(Fn)
                                ? ConstantExpr::getBitCast(Fn, Int8PtrTy)
@@ -1108,7 +1108,7 @@ void InstrProfiling::emitVNodes() {
 #define INSTR_PROF_VALUE_NODE(Type, LLVMType, Name, Init) LLVMType,
 #include "llvm/ProfileData/InstrProfData.inc"
   };
-  auto *VNodeTy = StructType::get(Ctx, makeArrayRef(VNodeTypes));
+  auto *VNodeTy = StructType::get(Ctx, ArrayRef(VNodeTypes));
 
   ArrayType *VNodesTy = ArrayType::get(VNodeTy, NumCounters);
   auto *VNodesVar = new GlobalVariable(
@@ -1185,7 +1185,7 @@ void InstrProfiling::emitRegistration() {
   if (NamesVar) {
     Type *ParamTypes[] = {VoidPtrTy, Int64Ty};
     auto *NamesRegisterTy =
-        FunctionType::get(VoidTy, makeArrayRef(ParamTypes), false);
+        FunctionType::get(VoidTy, ArrayRef(ParamTypes), false);
     auto *NamesRegisterF =
         Function::Create(NamesRegisterTy, GlobalVariable::ExternalLinkage,
                          getInstrProfNamesRegFuncName(), M);

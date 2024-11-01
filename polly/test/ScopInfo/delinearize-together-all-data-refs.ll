@@ -20,7 +20,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @foo(i64 %n, i64 %m, i64 %o, double* nocapture %A) {
+define void @foo(i64 %n, i64 %m, i64 %o, ptr nocapture %A) {
 entry:
   %cmp35 = icmp sgt i64 %n, 0
   br i1 %cmp35, label %for.cond1.preheader.lr.ph, label %for.end18
@@ -55,11 +55,11 @@ for.body6.lr.ph:                                  ; preds = %for.cond4.preheader
 for.body6:                                        ; preds = %for.body6, %for.body6.lr.ph
   %k.032 = phi i64 [ 0, %for.body6.lr.ph ], [ %inc, %for.body6 ]
   %arrayidx8.sum = add i64 %arrayidx.sum, %k.032
-  %arrayidx9 = getelementptr inbounds double, double* %A, i64 %arrayidx8.sum
-  store double 1.000000e+00, double* %arrayidx9, align 8
+  %arrayidx9 = getelementptr inbounds double, ptr %A, i64 %arrayidx8.sum
+  store double 1.000000e+00, ptr %arrayidx9, align 8
   %arrayidx10.sum = add i64 %k.032, %2
-  %arrayidx12 = getelementptr inbounds double, double* %A, i64 %arrayidx10.sum
-  store double 2.000000e+00, double* %arrayidx12, align 8
+  %arrayidx12 = getelementptr inbounds double, ptr %A, i64 %arrayidx10.sum
+  store double 2.000000e+00, ptr %arrayidx12, align 8
   %inc = add nsw i64 %k.032, 1
   %osub = sub nsw i64 %o, 7
   %exitcond = icmp eq i64 %inc, %osub

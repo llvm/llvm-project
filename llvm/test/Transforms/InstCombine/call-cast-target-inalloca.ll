@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=instcombine -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes=instcombine -S | FileCheck %s
 
 target datalayout = "e-p:32:32"
 target triple = "i686-pc-linux-gnu"

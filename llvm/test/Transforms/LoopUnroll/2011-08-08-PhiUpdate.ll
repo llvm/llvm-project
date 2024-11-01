@@ -57,7 +57,7 @@ if.then:                                          ; preds = %if.else, %entry
 
 ; PR7318: assertion failure after doing a simple loop unroll
 ;
-define i32 @test2(i32* nocapture %p, i32 %n) nounwind readonly {
+define i32 @test2(ptr nocapture %p, i32 %n) nounwind readonly {
 ;
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
@@ -69,8 +69,8 @@ define i32 @test2(i32* nocapture %p, i32 %n) nounwind readonly {
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH]] ], [ [[INDVAR_NEXT_3:%.*]], [[BB1_3:%.*]] ]
 ; CHECK-NEXT:    [[S_01:%.*]] = phi i32 [ 0, [[BB_NPH]] ], [ [[TMP8:%.*]], [[BB1_3]] ]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[P:%.*]], i64 [[INDVAR]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[SCEVGEP]], align 1
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[INDVAR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SCEVGEP]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], [[S_01]]
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
@@ -78,8 +78,8 @@ define i32 @test2(i32* nocapture %p, i32 %n) nounwind readonly {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVAR_NEXT]], [[TMP]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[BB_1:%.*]], label [[BB1_BB2_CRIT_EDGE:%.*]]
 ; CHECK:       bb.1:
-; CHECK-NEXT:    [[SCEVGEP_1:%.*]] = getelementptr i32, i32* [[P]], i64 [[INDVAR_NEXT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[SCEVGEP_1]], align 1
+; CHECK-NEXT:    [[SCEVGEP_1:%.*]] = getelementptr i32, ptr [[P]], i64 [[INDVAR_NEXT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[SCEVGEP_1]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    br label [[BB1_1:%.*]]
 ; CHECK:       bb1.1:
@@ -87,8 +87,8 @@ define i32 @test2(i32* nocapture %p, i32 %n) nounwind readonly {
 ; CHECK-NEXT:    [[EXITCOND_1:%.*]] = icmp ne i64 [[INDVAR_NEXT_1]], [[TMP]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_1]], label [[BB_2:%.*]], label [[BB1_BB2_CRIT_EDGE]]
 ; CHECK:       bb.2:
-; CHECK-NEXT:    [[SCEVGEP_2:%.*]] = getelementptr i32, i32* [[P]], i64 [[INDVAR_NEXT_1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[SCEVGEP_2]], align 1
+; CHECK-NEXT:    [[SCEVGEP_2:%.*]] = getelementptr i32, ptr [[P]], i64 [[INDVAR_NEXT_1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[SCEVGEP_2]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP5]], [[TMP4]]
 ; CHECK-NEXT:    br label [[BB1_2:%.*]]
 ; CHECK:       bb1.2:
@@ -96,8 +96,8 @@ define i32 @test2(i32* nocapture %p, i32 %n) nounwind readonly {
 ; CHECK-NEXT:    [[EXITCOND_2:%.*]] = icmp ne i64 [[INDVAR_NEXT_2]], [[TMP]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_2]], label [[BB_3:%.*]], label [[BB1_BB2_CRIT_EDGE]]
 ; CHECK:       bb.3:
-; CHECK-NEXT:    [[SCEVGEP_3:%.*]] = getelementptr i32, i32* [[P]], i64 [[INDVAR_NEXT_2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[SCEVGEP_3]], align 1
+; CHECK-NEXT:    [[SCEVGEP_3:%.*]] = getelementptr i32, ptr [[P]], i64 [[INDVAR_NEXT_2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[SCEVGEP_3]], align 1
 ; CHECK-NEXT:    [[TMP8]] = add nsw i32 [[TMP7]], [[TMP6]]
 ; CHECK-NEXT:    br label [[BB1_3]]
 ; CHECK:       bb1.3:
@@ -122,8 +122,8 @@ bb.nph:                                           ; preds = %entry
 bb:                                               ; preds = %bb.nph, %bb1
   %indvar = phi i64 [ 0, %bb.nph ], [ %indvar.next, %bb1 ] ; <i64> [#uses=2]
   %s.01 = phi i32 [ 0, %bb.nph ], [ %2, %bb1 ]    ; <i32> [#uses=1]
-  %scevgep = getelementptr i32, i32* %p, i64 %indvar   ; <i32*> [#uses=1]
-  %1 = load i32, i32* %scevgep, align 1                ; <i32> [#uses=1]
+  %scevgep = getelementptr i32, ptr %p, i64 %indvar   ; <ptr> [#uses=1]
+  %1 = load i32, ptr %scevgep, align 1                ; <i32> [#uses=1]
   %2 = add nsw i32 %1, %s.01                      ; <i32> [#uses=2]
   br label %bb1
 
@@ -155,7 +155,7 @@ define i32 @test3() nounwind uwtable ssp align 2 {
 ; CHECK-NEXT:    [[COND2:%.*]] = call zeroext i1 @check()
 ; CHECK-NEXT:    br i1 [[COND2]], label [[EXIT:%.*]], label [[DO_COND:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP7_I:%.*]] = load i32, i32* undef, align 8
+; CHECK-NEXT:    [[TMP7_I:%.*]] = load i32, ptr undef, align 8
 ; CHECK-NEXT:    br i1 undef, label [[DO_COND]], label [[LAND_LHS_TRUE:%.*]]
 ; CHECK:       land.lhs.true:
 ; CHECK-NEXT:    br i1 true, label [[RETURN_LOOPEXIT:%.*]], label [[DO_COND]]
@@ -166,7 +166,7 @@ define i32 @test3() nounwind uwtable ssp align 2 {
 ; CHECK-NEXT:    [[COND2_1:%.*]] = call zeroext i1 @check()
 ; CHECK-NEXT:    br i1 [[COND2_1]], label [[EXIT_1:%.*]], label [[DO_COND_1:%.*]]
 ; CHECK:       exit.1:
-; CHECK-NEXT:    [[TMP7_I_1:%.*]] = load i32, i32* undef, align 8
+; CHECK-NEXT:    [[TMP7_I_1:%.*]] = load i32, ptr undef, align 8
 ; CHECK-NEXT:    br i1 undef, label [[DO_COND_1]], label [[LAND_LHS_TRUE_1:%.*]]
 ; CHECK:       land.lhs.true.1:
 ; CHECK-NEXT:    br i1 true, label [[RETURN_LOOPEXIT]], label [[DO_COND_1]]
@@ -177,7 +177,7 @@ define i32 @test3() nounwind uwtable ssp align 2 {
 ; CHECK-NEXT:    [[COND2_2:%.*]] = call zeroext i1 @check()
 ; CHECK-NEXT:    br i1 [[COND2_2]], label [[EXIT_2:%.*]], label [[DO_COND_2:%.*]]
 ; CHECK:       exit.2:
-; CHECK-NEXT:    [[TMP7_I_2:%.*]] = load i32, i32* undef, align 8
+; CHECK-NEXT:    [[TMP7_I_2:%.*]] = load i32, ptr undef, align 8
 ; CHECK-NEXT:    br i1 undef, label [[DO_COND_2]], label [[LAND_LHS_TRUE_2:%.*]]
 ; CHECK:       land.lhs.true.2:
 ; CHECK-NEXT:    br i1 true, label [[RETURN_LOOPEXIT]], label [[DO_COND_2]]
@@ -188,7 +188,7 @@ define i32 @test3() nounwind uwtable ssp align 2 {
 ; CHECK-NEXT:    [[COND2_3:%.*]] = call zeroext i1 @check()
 ; CHECK-NEXT:    br i1 [[COND2_3]], label [[EXIT_3:%.*]], label [[DO_COND_3:%.*]]
 ; CHECK:       exit.3:
-; CHECK-NEXT:    [[TMP7_I_3:%.*]] = load i32, i32* undef, align 8
+; CHECK-NEXT:    [[TMP7_I_3:%.*]] = load i32, ptr undef, align 8
 ; CHECK-NEXT:    br i1 undef, label [[DO_COND_3]], label [[LAND_LHS_TRUE_3:%.*]]
 ; CHECK:       land.lhs.true.3:
 ; CHECK-NEXT:    br i1 true, label [[RETURN_LOOPEXIT]], label [[DO_COND_3]]
@@ -216,7 +216,7 @@ do.body:                                          ; preds = %do.cond, %if.end
   br i1 %cond2, label %exit, label %do.cond
 
 exit:                  ; preds = %do.body
-  %tmp7.i = load i32, i32* undef, align 8
+  %tmp7.i = load i32, ptr undef, align 8
   br i1 undef, label %do.cond, label %land.lhs.true
 
 land.lhs.true:                                    ; preds = %exit

@@ -4,12 +4,12 @@
 --- |
   target triple = "thumbv7---eabi"
 
-  define void @a(i32* nocapture %x, i32 %y, i32 %z) {
+  define void @a(ptr nocapture %x, i32 %y, i32 %z) {
   entry:
     ret void
   }
 
-  define void @b(i32* nocapture %x, i32 %y, i32 %z) {
+  define void @b(ptr nocapture %x, i32 %y, i32 %z) {
   entry:
     ret void
   }

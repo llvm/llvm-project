@@ -14,6 +14,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/UInt.h"
+#include "src/__support/common.h"
 #include "src/__support/ryu_constants.h"
 
 // This implementation is based on the Ryu Printf algorithm by Ulf Adams:
@@ -130,8 +131,8 @@ get_table_positive(int exponent, size_t i, const size_t constant) {
 // calculations.
 // The formula being used looks more like this:
 // floor(10^(9*(-i)) * 2^(c_0 + (-e))) % (10^9 * 2^c_0)
-constexpr inline cpp::UInt<MID_INT_SIZE>
-get_table_negative(int exponent, size_t i, const size_t constant) {
+inline cpp::UInt<MID_INT_SIZE> get_table_negative(int exponent, size_t i,
+                                                  const size_t constant) {
   constexpr size_t INT_SIZE = 1024;
   int shift_amount = constant - exponent;
   cpp::UInt<INT_SIZE> num(1);
@@ -177,7 +178,7 @@ get_table_negative(int exponent, size_t i, const size_t constant) {
   return num;
 }
 
-static inline uint32_t fast_uint_mod_1e9(const cpp::UInt<MID_INT_SIZE> &val) {
+LIBC_INLINE uint32_t fast_uint_mod_1e9(const cpp::UInt<MID_INT_SIZE> &val) {
   // The formula for mult_const is:
   //  1 + floor((2^(bits in target integer size + log_2(divider))) / divider)
   // Where divider is 10^9 and target integer size is 128.
@@ -189,9 +190,9 @@ static inline uint32_t fast_uint_mod_1e9(const cpp::UInt<MID_INT_SIZE> &val) {
   return static_cast<uint32_t>(val) - (1000000000 * shifted);
 }
 
-static inline uint32_t mul_shift_mod_1e9(const MantissaInt mantissa,
-                                         const cpp::UInt<MID_INT_SIZE> &large,
-                                         const int32_t shift_amount) {
+LIBC_INLINE uint32_t mul_shift_mod_1e9(const MantissaInt mantissa,
+                                       const cpp::UInt<MID_INT_SIZE> &large,
+                                       const int32_t shift_amount) {
   constexpr size_t MANT_INT_SIZE = sizeof(MantissaInt) * 8;
   cpp::UInt<MID_INT_SIZE + MANT_INT_SIZE> val(large);
   // TODO: Find a better way to force __uint128_t to be UInt<128>
@@ -233,7 +234,7 @@ class FloatToString {
   // constexpr void init_convert();
 
 public:
-  constexpr FloatToString<T>(T init_float) : float_bits(init_float) {
+  constexpr FloatToString(T init_float) : float_bits(init_float) {
     is_negative = float_bits.get_sign();
     exponent = float_bits.get_exponent();
     mantissa = float_bits.get_explicit_mantissa();
@@ -310,6 +311,15 @@ public:
       return 0;
     }
   }
+
+  constexpr BlockInt get_block(int block_index) {
+    if (block_index >= 0) {
+      return get_positive_block(block_index);
+    } else {
+      return get_negative_block(-1 - block_index);
+    }
+  }
+
   constexpr size_t get_positive_blocks() {
     if (exponent >= -MANT_WIDTH) {
       const uint32_t idx =
@@ -350,8 +360,8 @@ constexpr size_t FloatToString<long double>::zero_blocks_after_point() {
 }
 
 template <>
-constexpr bool FloatToString<long double>::is_lowest_block(size_t block_index) {
-  return block_index < 0;
+constexpr bool FloatToString<long double>::is_lowest_block(size_t) {
+  return false;
 }
 
 template <>

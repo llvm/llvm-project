@@ -13,6 +13,7 @@
 #include "flang/Lower/BoxAnalyzer.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/ConvertType.h"
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Character.h"
@@ -22,6 +23,7 @@
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "flang-host-assoc"
 
@@ -291,7 +293,7 @@ public:
     llvm::SmallVector<mlir::Value> nonDeferredLenParams;
     if (ba.isChar()) {
       mlir::IndexType idxTy = builder.getIndexType();
-      if (llvm::Optional<int64_t> len = ba.getCharLenConst()) {
+      if (std::optional<int64_t> len = ba.getCharLenConst()) {
         nonDeferredLenParams.push_back(
             builder.createIntegerConstant(loc, idxTy, *len));
       } else if (Fortran::semantics::IsAssumedLengthCharacter(sym) ||
@@ -480,10 +482,25 @@ static mlir::Value genTupleCoor(fir::FirOpBuilder &builder, mlir::Location loc,
   return builder.create<fir::CoordinateOp>(loc, ty, tupleArg, offset);
 }
 
+void Fortran::lower::HostAssociations::addSymbolsToBind(
+    const llvm::SetVector<const Fortran::semantics::Symbol *> &symbols,
+    const Fortran::semantics::Scope &hostScope) {
+  assert(tupleSymbols.empty() && globalSymbols.empty() &&
+         "must be initially empty");
+  this->hostScope = &hostScope;
+  for (const auto *s : symbols)
+    if (Fortran::lower::symbolIsGlobal(*s))
+      // The ultimate symbol is stored here so that global symbols from the
+      // host scope can later be searched in this set.
+      globalSymbols.insert(&s->GetUltimate());
+    else
+      tupleSymbols.insert(s);
+}
+
 void Fortran::lower::HostAssociations::hostProcedureBindings(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symMap) {
-  if (symbols.empty())
+  if (tupleSymbols.empty())
     return;
 
   // Create the tuple variable.
@@ -493,8 +510,8 @@ void Fortran::lower::HostAssociations::hostProcedureBindings(
   auto hostTuple = builder.create<fir::AllocaOp>(loc, tupTy);
   mlir::IntegerType offTy = builder.getIntegerType(32);
 
-  // Walk the list of symbols and update the pointers in the tuple.
-  for (auto s : llvm::enumerate(symbols)) {
+  // Walk the list of tupleSymbols and update the pointers in the tuple.
+  for (auto s : llvm::enumerate(tupleSymbols)) {
     auto indexInTuple = s.index();
     mlir::Value off = builder.createIntegerConstant(loc, offTy, indexInTuple);
     mlir::Type varTy = tupTy.getType(indexInTuple);
@@ -510,7 +527,20 @@ void Fortran::lower::HostAssociations::hostProcedureBindings(
 void Fortran::lower::HostAssociations::internalProcedureBindings(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symMap) {
-  if (symbols.empty())
+  if (!globalSymbols.empty()) {
+    assert(hostScope && "host scope must have been set");
+    Fortran::lower::AggregateStoreMap storeMap;
+    // The host scope variable list is required to deal with host variables
+    // that are equivalenced and requires instantiating the right global
+    // AggregateStore.
+    for (auto &hostVariable : pft::getScopeVariableList(*hostScope))
+      if ((hostVariable.isAggregateStore() && hostVariable.isGlobal()) ||
+          (hostVariable.hasSymbol() &&
+           globalSymbols.contains(&hostVariable.getSymbol().GetUltimate())))
+        Fortran::lower::instantiateVariable(converter, hostVariable, symMap,
+                                            storeMap);
+  }
+  if (tupleSymbols.empty())
     return;
 
   // Find the argument with the tuple type. The argument ought to be appended.
@@ -534,7 +564,7 @@ void Fortran::lower::HostAssociations::internalProcedureBindings(
   mlir::IntegerType offTy = builder.getIntegerType(32);
 
   // Walk the list and add the bindings to the symbol table.
-  for (auto s : llvm::enumerate(symbols)) {
+  for (auto s : llvm::enumerate(tupleSymbols)) {
     mlir::Value off = builder.createIntegerConstant(loc, offTy, s.index());
     mlir::Type varTy = tupTy.getType(s.index());
     mlir::Value eleOff = genTupleCoor(builder, loc, varTy, tupleArg, off);
@@ -546,7 +576,7 @@ void Fortran::lower::HostAssociations::internalProcedureBindings(
 
 mlir::Type Fortran::lower::HostAssociations::getArgumentType(
     Fortran::lower::AbstractConverter &converter) {
-  if (symbols.empty())
+  if (tupleSymbols.empty())
     return {};
   if (argType)
     return argType;
@@ -555,7 +585,7 @@ mlir::Type Fortran::lower::HostAssociations::getArgumentType(
   // to a tuple.
   mlir::MLIRContext *ctxt = &converter.getMLIRContext();
   llvm::SmallVector<mlir::Type> tupleTys;
-  for (const Fortran::semantics::Symbol *sym : symbols)
+  for (const Fortran::semantics::Symbol *sym : tupleSymbols)
     tupleTys.emplace_back(
         walkCaptureCategories(GetTypeInTuple{}, converter, *sym));
   argType = fir::ReferenceType::get(mlir::TupleType::get(ctxt, tupleTys));

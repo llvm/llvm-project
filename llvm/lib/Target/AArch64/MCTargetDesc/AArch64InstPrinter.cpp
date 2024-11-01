@@ -59,13 +59,17 @@ bool AArch64InstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
   return false;
 }
 
-void AArch64InstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
-  OS << markup("<reg:") << getRegisterName(RegNo) << markup(">");
+void AArch64InstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+  OS << markup("<reg:") << getRegisterName(Reg) << markup(">");
 }
 
-void AArch64InstPrinter::printRegName(raw_ostream &OS, unsigned RegNo,
+void AArch64InstPrinter::printRegName(raw_ostream &OS, MCRegister Reg,
                                       unsigned AltIdx) const {
-  OS << markup("<reg:") << getRegisterName(RegNo, AltIdx) << markup(">");
+  OS << markup("<reg:") << getRegisterName(Reg, AltIdx) << markup(">");
+}
+
+StringRef AArch64InstPrinter::getRegName(MCRegister Reg) const {
+  return getRegisterName(Reg);
 }
 
 void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
@@ -331,12 +335,6 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
         << formatImm(SignExtend64(Value, RegWidth)) << markup(">");
       return;
     }
-  }
-
-  if (Opcode == AArch64::CompilerBarrier) {
-    O << '\t' << MAI.getCommentString() << " COMPILER BARRIER";
-    printAnnotation(O, Annot);
-    return;
   }
 
   if (Opcode == AArch64::SPACE) {
@@ -818,6 +816,10 @@ void AArch64AppleInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   }
 
   AArch64InstPrinter::printInst(MI, Address, Annot, STI, O);
+}
+
+StringRef AArch64AppleInstPrinter::getRegName(MCRegister Reg) const {
+  return getRegisterName(Reg);
 }
 
 bool AArch64InstPrinter::printRangePrefetchAlias(const MCInst *MI,
@@ -1914,9 +1916,12 @@ void AArch64InstPrinter::printSystemPStateField(const MCInst *MI, unsigned OpNo,
                                                 raw_ostream &O) {
   unsigned Val = MI->getOperand(OpNo).getImm();
 
-  auto PState = AArch64PState::lookupPStateByEncoding(Val);
-  if (PState && PState->haveFeatures(STI.getFeatureBits()))
-    O << PState->Name;
+  auto PStateImm15 = AArch64PState::lookupPStateImm0_15ByEncoding(Val);
+  auto PStateImm1 = AArch64PState::lookupPStateImm0_1ByEncoding(Val);
+  if (PStateImm15 && PStateImm15->haveFeatures(STI.getFeatureBits()))
+    O << PStateImm15->Name;
+  else if (PStateImm1 && PStateImm1->haveFeatures(STI.getFeatureBits()))
+    O << PStateImm1->Name;
   else
     O << "#" << formatImm(Val);
 }

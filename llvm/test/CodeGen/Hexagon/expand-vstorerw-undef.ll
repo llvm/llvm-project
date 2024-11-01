@@ -28,7 +28,7 @@ declare <64 x i32> @llvm.hexagon.V6.vaddh.dv.128B(<64 x i32>, <64 x i32>) #1
 
 define hidden void @fred() #2 {
 b0:
-  %v1 = load i32, i32* null, align 4
+  %v1 = load i32, ptr null, align 4
   %v2 = icmp ult i64 0, 2147483648
   br i1 %v2, label %b3, label %b5
 
@@ -80,11 +80,10 @@ b22:                                              ; preds = %b22, %b18
   %v27 = tail call <32 x i32> @llvm.hexagon.V6.vshuffeb.128B(<32 x i32> zeroinitializer, <32 x i32> zeroinitializer) #0
   %v28 = tail call <32 x i32> @llvm.hexagon.V6.lo.128B(<64 x i32> %v26) #0
   %v29 = tail call <32 x i32> @llvm.hexagon.V6.vshuffeb.128B(<32 x i32> zeroinitializer, <32 x i32> %v28) #0
-  store <32 x i32> %v27, <32 x i32>* null, align 128
+  store <32 x i32> %v27, ptr null, align 128
   %v30 = add nsw i32 0, 128
-  %v31 = getelementptr inbounds i8, i8* null, i32 %v30
-  %v32 = bitcast i8* %v31 to <32 x i32>*
-  store <32 x i32> %v29, <32 x i32>* %v32, align 128
+  %v31 = getelementptr inbounds i8, ptr null, i32 %v30
+  store <32 x i32> %v29, ptr %v31, align 128
   %v33 = icmp eq i32 0, 0
   br i1 %v33, label %b21, label %b22
 }

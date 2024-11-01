@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 void InaccurateEraseCheck::registerMatchers(MatchFinder *Finder) {
   const auto EndCall =
@@ -61,6 +59,4 @@ void InaccurateEraseCheck::check(const MatchFinder::MatchResult &Result) {
       << Hint;
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

@@ -23,6 +23,7 @@ extern cl::opt<bool> Verbose;
 
 Value *getDefaultValue(Type *T);
 bool hasAliasUse(Function &F);
+bool hasAliasOrBlockAddressUse(Function &F);
 
 } // namespace llvm
 

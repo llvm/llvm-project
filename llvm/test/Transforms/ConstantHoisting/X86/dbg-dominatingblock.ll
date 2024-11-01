@@ -10,22 +10,22 @@ define i32 @_Z3foov() !dbg !7 {
 ; CHECK-NOT: !dbg !11
 ; CHECK: inttoptr
 entry:
-  %a0 = inttoptr i64 4646526064 to i32*
-  %v0 = load i32, i32* %a0, align 16, !dbg !11
+  %a0 = inttoptr i64 4646526064 to ptr
+  %v0 = load i32, ptr %a0, align 16, !dbg !11
   %c = alloca i32, align 4
-  store i32 1, i32* %c, align 4
-  %0 = load i32, i32* %c, align 4
+  store i32 1, ptr %c, align 4
+  %0 = load i32, ptr %c, align 4
   %cmp = icmp eq i32 %0, 0
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  %a1 = inttoptr i64 4646526080 to i32*
-  %v1 = load i32, i32* %a1, align 16, !dbg !11
+  %a1 = inttoptr i64 4646526080 to ptr
+  %v1 = load i32, ptr %a1, align 16, !dbg !11
   br label %return
 
 if.else:                                          ; preds = %entry
-  %a2 = inttoptr i64 4646526096 to i32*
-  %v2 = load i32, i32* %a2, align 16, !dbg !11
+  %a2 = inttoptr i64 4646526096 to ptr
+  %v2 = load i32, ptr %a2, align 16, !dbg !11
   br label %return
 
 return:                                           ; preds = %if.else, %if.then

@@ -25,7 +25,6 @@
 #include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/IR.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Twine.h"
 
 namespace py = pybind11;
@@ -34,9 +33,6 @@ namespace py = pybind11;
 // first.
 namespace pybind11 {
 namespace detail {
-
-template <typename T>
-struct type_caster<llvm::Optional<T>> : optional_caster<llvm::Optional<T>> {};
 
 /// Helper to convert a presumed MLIR API object to a capsule, accepting either
 /// an explicit Capsule (which can happen when two C APIs are communicating

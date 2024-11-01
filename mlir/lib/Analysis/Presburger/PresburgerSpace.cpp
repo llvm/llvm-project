@@ -22,6 +22,12 @@ PresburgerSpace PresburgerSpace::getRangeSpace() const {
   return PresburgerSpace::getSetSpace(numRange, numSymbols, numLocals);
 }
 
+PresburgerSpace PresburgerSpace::getSpaceWithoutLocals() const {
+  PresburgerSpace space = *this;
+  space.removeVarRange(VarKind::Local, 0, numLocals);
+  return space;
+}
+
 unsigned PresburgerSpace::getNumVarKind(VarKind kind) const {
   if (kind == VarKind::Domain)
     return getNumDomainVars();
@@ -170,10 +176,9 @@ bool PresburgerSpace::isAligned(const PresburgerSpace &other,
          "alignment.");
 
   ArrayRef<void *> kindAttachments =
-      makeArrayRef(identifiers)
-          .slice(getVarKindOffset(kind), getNumVarKind(kind));
+      ArrayRef(identifiers).slice(getVarKindOffset(kind), getNumVarKind(kind));
   ArrayRef<void *> otherKindAttachments =
-      makeArrayRef(other.identifiers)
+      ArrayRef(other.identifiers)
           .slice(other.getVarKindOffset(kind), other.getNumVarKind(kind));
   return kindAttachments == otherKindAttachments;
 }

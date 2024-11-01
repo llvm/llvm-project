@@ -49,9 +49,8 @@ LazyRandomTypeCollection::LazyRandomTypeCollection(ArrayRef<uint8_t> Data,
 
 LazyRandomTypeCollection::LazyRandomTypeCollection(StringRef Data,
                                                    uint32_t RecordCountHint)
-    : LazyRandomTypeCollection(
-          makeArrayRef(Data.bytes_begin(), Data.bytes_end()), RecordCountHint) {
-}
+    : LazyRandomTypeCollection(ArrayRef(Data.bytes_begin(), Data.bytes_end()),
+                               RecordCountHint) {}
 
 LazyRandomTypeCollection::LazyRandomTypeCollection(const CVTypeArray &Types,
                                                    uint32_t NumRecords)

@@ -174,6 +174,14 @@ func.func @failedSameOperandAndResultType_operand_result_mismatch(%t10 : tensor<
 
 // -----
 
+func.func @failedSameOperandAndResultType_encoding_mismatch(%t10 : tensor<10xf32>, %t20 : tensor<10xf32>) {
+  // expected-error@+1 {{requires the same encoding for all operands and results}}
+  "test.same_operand_and_result_type"(%t10, %t20) : (tensor<10xf32>, tensor<10xf32>) -> tensor<10xf32, "enc">
+  return
+}
+
+// -----
+
 func.func @failedElementwiseMappable_different_rankedness(%arg0: tensor<?xf32>, %arg1: tensor<*xf32>) {
   // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type}}
   %0 = "test.elementwise_mappable"(%arg0, %arg1) : (tensor<?xf32>, tensor<*xf32>) -> tensor<*xf32>

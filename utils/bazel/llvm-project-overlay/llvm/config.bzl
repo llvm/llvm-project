@@ -4,6 +4,14 @@
 
 """Defines variables that use selects to configure LLVM based on platform."""
 
+load(
+    "//:vars.bzl",
+    "LLVM_VERSION",
+    "LLVM_VERSION_MAJOR",
+    "LLVM_VERSION_MINOR",
+    "LLVM_VERSION_PATCH",
+)
+
 def native_arch_defines(arch, triple):
     return [
         r'LLVM_NATIVE_ARCH=\"{}\"'.format(arch),
@@ -89,6 +97,10 @@ llvm_config_defines = os_defines + select({
     "@bazel_tools//src/conditions:linux_s390x": native_arch_defines("SystemZ", "systemz-unknown-linux_gnu"),
     "//conditions:default": native_arch_defines("X86", "x86_64-unknown-linux-gnu"),
 }) + [
+    "LLVM_VERSION_MAJOR={}".format(LLVM_VERSION_MAJOR),
+    "LLVM_VERSION_MINOR={}".format(LLVM_VERSION_MINOR),
+    "LLVM_VERSION_PATCH={}".format(LLVM_VERSION_PATCH),
+    r'LLVM_VERSION_STRING=\"{}git\"'.format(LLVM_VERSION),
     # These shouldn't be needed by the C++11 standard, but are for some
     # platforms (e.g. glibc < 2.18. See
     # https://sourceware.org/bugzilla/show_bug.cgi?id=15366). These are also

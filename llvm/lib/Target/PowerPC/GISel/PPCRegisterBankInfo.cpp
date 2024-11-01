@@ -48,6 +48,9 @@ PPCRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case PPC::VSSRCRegClassID:
   case PPC::F4RCRegClassID:
     return getRegBank(PPC::FPRRegBankID);
+  case PPC::CRRCRegClassID:
+  case PPC::CRBITRCRegClassID:
+    return getRegBank(PPC::CRRegBankID);
   default:
     llvm_unreachable("Unexpected register class");
   }
@@ -87,6 +90,7 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // Extension ops.
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_ANYEXT:
     assert(NumOperands <= 3 &&
            "This code is for instructions with 3 or less operands");
     OperandsMapping = getValueMapping(PMI_GPR64);
@@ -100,6 +104,15 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     assert((Size == 32 || Size == 64) && "Unsupported floating point types!\n");
     OperandsMapping = getValueMapping(Size == 32 ? PMI_FPR32 : PMI_FPR64);
+    break;
+  }
+  case TargetOpcode::G_FCMP: {
+    unsigned CmpSize = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
+
+    OperandsMapping = getOperandsMapping(
+        {getValueMapping(PMI_CR), nullptr,
+         getValueMapping(CmpSize == 32 ? PMI_FPR32 : PMI_FPR64),
+         getValueMapping(CmpSize == 32 ? PMI_FPR32 : PMI_FPR64)});
     break;
   }
   case TargetOpcode::G_CONSTANT:
@@ -160,6 +173,13 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OperandsMapping = getOperandsMapping(
           {getValueMapping(Size == 64 ? PMI_GPR64 : PMI_GPR32),
            getValueMapping(PMI_GPR64)});
+    break;
+  }
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS: {
+    // FIXME: We have to check every operand in this MI and compute value
+    // mapping accordingly.
+    SmallVector<const ValueMapping *, 8> OpdsMapping(NumOperands);
+    OperandsMapping = getOperandsMapping(OpdsMapping);
     break;
   }
   default:

@@ -77,6 +77,9 @@ def FeatureLSE2 : SubtargetFeature<"lse2", "HasLSE2", "true",
 def FeatureOutlineAtomics : SubtargetFeature<"outline-atomics", "OutlineAtomics", "true",
   "Enable out of line atomics to support LSE instructions">;
 
+def FeatureFMV : SubtargetFeature<"fmv", "HasFMV", "true",
+  "Enable Function Multi Versioning support.">;
+
 def FeatureRDM : SubtargetFeature<"rdm", "HasRDM", "true",
   "Enable ARMv8.1 Rounding Double Multiply Add/Subtract instructions (FEAT_RDM)">;
 
@@ -458,6 +461,9 @@ def FeatureHBC : SubtargetFeature<"hbc", "HasHBC",
 def FeatureMOPS : SubtargetFeature<"mops", "HasMOPS",
     "true", "Enable Armv8.8-A memcpy and memset acceleration instructions (FEAT_MOPS)">;
 
+def FeatureNMI : SubtargetFeature<"nmi", "HasNMI",
+    "true", "Enable Armv8.8-A Non-maskable Interrupts (FEAT_NMI, FEAT_GICv3_NMI)">;
+
 def FeatureBRBE : SubtargetFeature<"brbe", "HasBRBE",
     "true", "Enable Branch Record Buffer Extension (FEAT_BRBE)">;
 
@@ -588,7 +594,7 @@ def HasV8_7aOps : SubtargetFeature<
 
 def HasV8_8aOps : SubtargetFeature<
   "v8.8a", "HasV8_8aOps", "true", "Support ARM v8.8a instructions",
-  [HasV8_7aOps, FeatureHBC, FeatureMOPS]>;
+  [HasV8_7aOps, FeatureHBC, FeatureMOPS, FeatureNMI]>;
 
 def HasV8_9aOps : SubtargetFeature<
   "v8.9a", "HasV8_9aOps", "true", "Support ARM v8.9a instructions",
@@ -1156,6 +1162,18 @@ def TuneAmpere1 : SubtargetFeature<"ampere1", "ARMProcFamily", "Ampere1",
                                    FeatureFuseAddress,
                                    FeatureFuseLiterals]>;
 
+def TuneAmpere1A : SubtargetFeature<"ampere1a", "ARMProcFamily", "Ampere1A",
+                                    "Ampere Computing Ampere-1A processors", [
+                                    FeaturePostRAScheduler,
+                                    FeatureFuseAES,
+                                    FeatureLSLFast,
+                                    FeatureAggressiveFMA,
+                                    FeatureArithmeticBccFusion,
+                                    FeatureCmpBccFusion,
+                                    FeatureFuseAddress,
+                                    FeatureFuseLiterals,
+                                    FeatureFuseLiterals]>;
+
 def ProcessorFeatures {
   list<SubtargetFeature> A53  = [HasV8_0aOps, FeatureCRC, FeatureCrypto,
                                  FeatureFPARMv8, FeatureNEON, FeaturePerfMon];
@@ -1288,7 +1306,12 @@ def ProcessorFeatures {
                                    FeatureNEON, FeaturePerfMon, FeatureSPE,
                                    FeatureFullFP16, FeatureFP16FML, FeatureDotProd];
   list<SubtargetFeature> Ampere1 = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
-                                    FeatureMTE, FeatureSSBS];
+                                    FeatureSSBS, FeatureRandGen, FeatureSB,
+                                    FeatureSHA2, FeatureSHA3, FeatureAES];
+  list<SubtargetFeature> Ampere1A = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
+                                     FeatureMTE, FeatureSSBS, FeatureRandGen,
+                                     FeatureSB, FeatureSM4, FeatureSHA2,
+                                     FeatureSHA3, FeatureAES];
 
   // ETE and TRBE are future architecture extensions. We temporarily enable them
   // by default for users targeting generic AArch64. The extensions do not
@@ -1443,6 +1466,9 @@ def : ProcessorModel<"carmel", NoSchedModel, ProcessorFeatures.Carmel,
 // Ampere Computing
 def : ProcessorModel<"ampere1", Ampere1Model, ProcessorFeatures.Ampere1,
                      [TuneAmpere1]>;
+
+def : ProcessorModel<"ampere1a", Ampere1Model, ProcessorFeatures.Ampere1A,
+                     [TuneAmpere1A]>;
 
 //===----------------------------------------------------------------------===//
 // Assembly parser

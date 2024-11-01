@@ -24,6 +24,7 @@ def Affine_Dialect : Dialect {
   let cppNamespace = "mlir";
   let hasConstantMaterializer = 1;
   let dependentDialects = ["arith::ArithDialect"];
+  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 // Base class for Affine dialect ops.
@@ -708,7 +709,7 @@ def AffineParallelOp : Affine_Op<"parallel",
     unsigned getNumDims();
 
     /// Get ranges as constants, may fail in dynamic case.
-    Optional<SmallVector<int64_t, 8>> getConstantRanges();
+    std::optional<SmallVector<int64_t, 8>> getConstantRanges();
 
     Block *getBody();
     OpBuilder getBodyBuilder();

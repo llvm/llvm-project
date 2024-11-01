@@ -1,6 +1,7 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | mlir-opt | FileCheck %s
 // RUN: mlir-opt -split-input-file -verify-diagnostics -mlir-print-op-generic %s | FileCheck %s --check-prefix=GENERIC
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s -mlir-print-debuginfo | mlir-opt -mlir-print-debuginfo | FileCheck %s --check-prefix=LOCINFO
+// RUN: mlir-translate -mlir-to-llvmir -split-input-file -verify-diagnostics %s | FileCheck %s --check-prefix=CHECK-LLVM
 
 module {
   // GENERIC: "llvm.func"
@@ -8,7 +9,7 @@ module {
   // GENERIC-SAME: sym_name = "foo"
   // GENERIC-SAME: () -> ()
   // CHECK: llvm.func @foo()
-  "llvm.func"() ({
+  "llvm.func" () ({
   }) {sym_name = "foo", function_type = !llvm.func<void ()>} : () -> ()
 
   // GENERIC: "llvm.func"
@@ -142,6 +143,11 @@ module {
     llvm.return
   }
 
+  // CHECK-LLVM: define ptx_kernel void @calling_conv
+  llvm.func ptx_kernelcc @calling_conv() {
+    llvm.return
+  }
+
   // Omit the `external` linkage, which is the default, in the custom format.
   // Check that it is present in the generic format using its numeric value.
   //
@@ -180,6 +186,12 @@ module {
 
   // CHECK-LABEL: llvm.func @variadic_def
   llvm.func @variadic_def(...) {
+    llvm.return
+  }
+
+  // CHECK-LABEL: llvm.func @memory_attr
+  // CHECK-SAME: attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite>} {
+  llvm.func @memory_attr() attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite>} {
     llvm.return
   }
 }
@@ -340,22 +352,4 @@ module {
   // expected-error @below {{invalid Calling Conventions specification: cc_12}}
   // expected-error @below {{failed to parse CConvAttr parameter 'CallingConv' which is to be a `CConv`}}
   }) {sym_name = "generic_unknown_calling_convention", CConv = #llvm.cconv<cc_12>, function_type = !llvm.func<i64 (i64, i64)>} : () -> ()
-}
-
-// -----
-
-module {
-  // expected-error@+3 {{'llvm.readnone' is permitted only on FunctionOpInterface operations}}
-  "llvm.func"() ({
-  ^bb0:
-    llvm.return {llvm.readnone}
-  }) {sym_name = "readnone_return", function_type = !llvm.func<void ()>} : () -> ()
-}
-
-// -----
-
-module {
-  // expected-error@+1 {{op expected 'llvm.readnone' to be a unit attribute}}
-  "llvm.func"() ({
-  }) {sym_name = "readnone_func", llvm.readnone = true, function_type = !llvm.func<void ()>} : () -> ()
 }

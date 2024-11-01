@@ -47,16 +47,9 @@ struct attr_value_binder {
   }
 };
 
-/// Check to see if the specified operation is ConstantLike.  This includes some
-/// quick filters to avoid a semi-expensive test in the common case.
-static bool isConstantLike(Operation *op) {
-  return op->getNumOperands() == 0 && op->getNumResults() == 1 &&
-         op->hasTrait<OpTrait::ConstantLike>();
-}
-
 /// The matcher that matches operations that have the `ConstantLike` trait.
 struct constant_op_matcher {
-  bool match(Operation *op) { return isConstantLike(op); }
+  bool match(Operation *op) { return op->hasTrait<OpTrait::ConstantLike>(); }
 };
 
 /// The matcher that matches operations that have the `ConstantLike` trait, and
@@ -72,7 +65,7 @@ struct constant_op_binder {
   constant_op_binder() : bind_value(nullptr) {}
 
   bool match(Operation *op) {
-    if (!isConstantLike(op))
+    if (!op->hasTrait<OpTrait::ConstantLike>())
       return false;
 
     // Fold the constant to an attribute.

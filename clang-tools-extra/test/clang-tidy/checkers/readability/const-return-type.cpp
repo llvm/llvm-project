@@ -340,3 +340,18 @@ __typeof__(n17i) n20() {
 __typeof__(const int) n21() {
   return 21;
 }
+
+template <typename T>
+struct n25 {
+  T foo() const { return 2; }
+};
+template struct n25<const int>;
+
+template <typename T>
+struct p41 {
+  const T foo() const { return 2; }
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: return type 'const
+  // CHECK-MESSAGES: [[@LINE-2]]:3: warning: return type 'const
+  // CHECK-FIXES: T foo() const { return 2; }
+};
+template struct p41<int>;

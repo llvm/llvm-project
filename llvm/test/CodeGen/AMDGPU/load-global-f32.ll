@@ -12,8 +12,8 @@
 ; R600: VTX_READ_32 T{{[0-9]+}}.X, T{{[0-9]+}}.X, 0
 define amdgpu_kernel void @global_load_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 entry:
-  %tmp0 = load float, float addrspace(1)* %in
-  store float %tmp0, float addrspace(1)* %out
+  %tmp0 = load float, ptr addrspace(1) %in
+  store float %tmp0, ptr addrspace(1) %out
   ret void
 }
 
@@ -24,8 +24,8 @@ entry:
 ; R600: VTX_READ_64
 define amdgpu_kernel void @global_load_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 entry:
-  %tmp0 = load <2 x float>, <2 x float> addrspace(1)* %in
-  store <2 x float> %tmp0, <2 x float> addrspace(1)* %out
+  %tmp0 = load <2 x float>, ptr addrspace(1) %in
+  store <2 x float> %tmp0, ptr addrspace(1) %out
   ret void
 }
 
@@ -37,8 +37,8 @@ entry:
 ; R600: VTX_READ_128
 define amdgpu_kernel void @global_load_v3f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 entry:
-  %tmp0 = load <3 x float>, <3 x float> addrspace(1)* %in
-  store <3 x float> %tmp0, <3 x float> addrspace(1)* %out
+  %tmp0 = load <3 x float>, ptr addrspace(1) %in
+  store <3 x float> %tmp0, ptr addrspace(1) %out
   ret void
 }
 
@@ -49,8 +49,8 @@ entry:
 ; R600: VTX_READ_128
 define amdgpu_kernel void @global_load_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 entry:
-  %tmp0 = load <4 x float>, <4 x float> addrspace(1)* %in
-  store <4 x float> %tmp0, <4 x float> addrspace(1)* %out
+  %tmp0 = load <4 x float>, ptr addrspace(1) %in
+  store <4 x float> %tmp0, ptr addrspace(1) %out
   ret void
 }
 
@@ -64,8 +64,8 @@ entry:
 ; R600: VTX_READ_128
 define amdgpu_kernel void @global_load_v8f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 entry:
-  %tmp0 = load <8 x float>, <8 x float> addrspace(1)* %in
-  store <8 x float> %tmp0, <8 x float> addrspace(1)* %out
+  %tmp0 = load <8 x float>, ptr addrspace(1) %in
+  store <8 x float> %tmp0, ptr addrspace(1) %out
   ret void
 }
 
@@ -162,8 +162,8 @@ entry:
 ; R600: VTX_READ_128
 define amdgpu_kernel void @global_load_v16f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 entry:
-  %tmp0 = load <16 x float>, <16 x float> addrspace(1)* %in
-  store <16 x float> %tmp0, <16 x float> addrspace(1)* %out
+  %tmp0 = load <16 x float>, ptr addrspace(1) %in
+  store <16 x float> %tmp0, ptr addrspace(1) %out
   ret void
 }
 

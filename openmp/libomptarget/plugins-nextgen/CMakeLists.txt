@@ -33,6 +33,9 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
     # Define macro with the ELF ID for this target.
     add_definitions("-DTARGET_ELF_ID=${elf_machine_id}")
 
+    # Define target regiple
+    add_definitions("-DLIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE=${tmachine}")
+
     add_llvm_library("omptarget.rtl.${tmachine_libname}.nextgen"
       SHARED
 
@@ -77,6 +80,7 @@ endif()
 endmacro()
 
 add_subdirectory(aarch64)
+add_subdirectory(amdgpu)
 add_subdirectory(cuda)
 add_subdirectory(ppc64)
 add_subdirectory(ppc64le)

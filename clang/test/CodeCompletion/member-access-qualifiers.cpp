@@ -8,6 +8,6 @@ struct deque : private deque_base {
 };
 
 auto x = deque().
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:10:18 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-1):18 %s -o - | FileCheck %s
 // CHECK: COMPLETION: size : [#int#]size()[# const#]
 // CHECK: COMPLETION: size (Hidden,InBase,Inaccessible) : [#int &#]deque_base::size()

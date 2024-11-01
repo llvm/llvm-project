@@ -437,9 +437,9 @@ void fullyComposeAffineMapAndOperands(AffineMap *map,
 #include "mlir/Dialect/Affine/IR/AffineOps.h.inc"
 
 namespace mlir {
-/// Returns true if the provided value is the induction variable of a
+/// Returns true if the provided value is the induction variable of an
 /// AffineForOp.
-bool isForInductionVar(Value val);
+bool isAffineForInductionVar(Value val);
 
 /// Returns the loop parent of an induction variable. If the provided value is
 /// not an induction variable, then return nullptr.

@@ -4,23 +4,23 @@
 
 declare void @sink(i32)
 
-define internal void @test(i32** %X) !dbg !2 {
+define internal void @test(ptr %X) !dbg !2 {
 ; CHECK-LABEL: define {{[^@]+}}@test
-; CHECK-SAME: (i32** nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[X:%.*]]) !dbg [[DBG3:![0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[X]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 8
+; CHECK-SAME: (ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[X:%.*]]) !dbg [[DBG3:![0-9]+]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[X]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    call void @sink(i32 [[TMP2]])
 ; CHECK-NEXT:    ret void
 ;
-  %1 = load i32*, i32** %X, align 8
-  %2 = load i32, i32* %1, align 8
+  %1 = load ptr, ptr %X, align 8
+  %2 = load i32, ptr %1, align 8
   call void @sink(i32 %2)
   ret void
 }
 
 %struct.pair = type { i32, i32 }
 
-define internal void @test_byval(%struct.pair* byval(%struct.pair) %P) {
+define internal void @test_byval(ptr byval(%struct.pair) %P) {
 ; CHECK-LABEL: define {{[^@]+}}@test_byval() {
 ; CHECK-NEXT:    call void @sink(i32 noundef 0)
 ; CHECK-NEXT:    ret void
@@ -29,22 +29,22 @@ define internal void @test_byval(%struct.pair* byval(%struct.pair) %P) {
   ret void
 }
 
-define void @caller(i32** %Y, %struct.pair* %P) {
+define void @caller(ptr %Y, ptr %P) {
 ; TUNIT-LABEL: define {{[^@]+}}@caller
-; TUNIT-SAME: (i32** nocapture nofree readonly [[Y:%.*]], %struct.pair* nocapture nofree readnone [[P:%.*]]) {
-; TUNIT-NEXT:    call void @test(i32** nocapture nofree readonly align 8 [[Y]]), !dbg [[DBG4:![0-9]+]]
+; TUNIT-SAME: (ptr nocapture nofree readonly [[Y:%.*]], ptr nocapture nofree readnone [[P:%.*]]) {
+; TUNIT-NEXT:    call void @test(ptr nocapture nofree readonly align 8 [[Y]]), !dbg [[DBG4:![0-9]+]]
 ; TUNIT-NEXT:    call void @test_byval(), !dbg [[DBG5:![0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@caller
-; CGSCC-SAME: (i32** nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[Y:%.*]], %struct.pair* nocapture nofree readnone [[P:%.*]]) {
-; CGSCC-NEXT:    call void @test(i32** nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[Y]]), !dbg [[DBG4:![0-9]+]]
+; CGSCC-SAME: (ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[Y:%.*]], ptr nocapture nofree readnone [[P:%.*]]) {
+; CGSCC-NEXT:    call void @test(ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[Y]]), !dbg [[DBG4:![0-9]+]]
 ; CGSCC-NEXT:    call void @test_byval(), !dbg [[DBG5:![0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
-  call void @test(i32** %Y), !dbg !1
+  call void @test(ptr %Y), !dbg !1
 
-  call void @test_byval(%struct.pair* byval(%struct.pair) %P), !dbg !6
+  call void @test_byval(ptr byval(%struct.pair) %P), !dbg !6
   ret void
 }
 

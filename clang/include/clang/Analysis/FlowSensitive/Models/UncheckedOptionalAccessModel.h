@@ -62,6 +62,9 @@ public:
              const Value &Val2, const Environment &Env2, Value &MergedVal,
              Environment &MergedEnv) override;
 
+  Value *widen(QualType Type, Value &Prev, const Environment &PrevEnv,
+               Value &Current, Environment &CurrentEnv) override;
+
 private:
   CFGMatchSwitch<TransferState<NoopLattice>> TransferMatchSwitch;
 };

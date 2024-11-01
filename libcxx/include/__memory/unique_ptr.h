@@ -19,10 +19,26 @@
 #include <__memory/allocator_traits.h> // __pointer
 #include <__memory/auto_ptr.h>
 #include <__memory/compressed_pair.h>
+#include <__type_traits/add_lvalue_reference.h>
+#include <__type_traits/common_type.h>
+#include <__type_traits/dependent_type.h>
+#include <__type_traits/integral_constant.h>
+#include <__type_traits/is_array.h>
+#include <__type_traits/is_assignable.h>
+#include <__type_traits/is_constructible.h>
+#include <__type_traits/is_convertible.h>
+#include <__type_traits/is_default_constructible.h>
+#include <__type_traits/is_function.h>
+#include <__type_traits/is_pointer.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/is_swappable.h>
+#include <__type_traits/is_void.h>
+#include <__type_traits/remove_extent.h>
+#include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <cstddef>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -682,6 +698,25 @@ template<class _Tp, class... _Args>
     make_unique(_Args&&...) = delete;
 
 #endif // _LIBCPP_STD_VER > 11
+
+#if _LIBCPP_STD_VER >= 20
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 typename __unique_if<_Tp>::__unique_single
+make_unique_for_overwrite() {
+  return unique_ptr<_Tp>(new _Tp);
+}
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 typename __unique_if<_Tp>::__unique_array_unknown_bound
+make_unique_for_overwrite(size_t __n) {
+  return unique_ptr<_Tp>(new __remove_extent_t<_Tp>[__n]);
+}
+
+template<class _Tp, class... _Args>
+typename __unique_if<_Tp>::__unique_array_known_bound make_unique_for_overwrite(_Args&&...) = delete;
+
+#endif // _LIBCPP_STD_VER >= 20
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS hash;
 

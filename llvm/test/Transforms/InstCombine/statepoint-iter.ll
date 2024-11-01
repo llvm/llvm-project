@@ -26,19 +26,19 @@ right:
   br label %merge
 
 left:
-  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr null)]
-  %pnew = call ptr @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) null)]
+  %pnew = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
   br label %merge
 
 merge:
-  %pnew_phi = phi ptr [null, %right], [%pnew, %left]
-  %safepoint_token2 = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr %pnew_phi)]
-  %pnew2 = call ptr @llvm.experimental.gc.relocate.p1(token %safepoint_token2,  i32 0, i32 0)
-  %cmp = icmp eq ptr %pnew2, null
+  %pnew_phi = phi ptr addrspace(1) [null, %right], [%pnew, %left]
+  %safepoint_token2 = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %pnew_phi)]
+  %pnew2 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token2,  i32 0, i32 0)
+  %cmp = icmp eq ptr addrspace(1) %pnew2, null
   ret i1 %cmp
 }
 
-define ptr @test_undef(i1 %cond) gc "statepoint-example" {
+define ptr addrspace(1) @test_undef(i1 %cond) gc "statepoint-example" {
 ; CHECK-LABEL: @test_undef(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
@@ -49,7 +49,7 @@ define ptr @test_undef(i1 %cond) gc "statepoint-example" {
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[SAFEPOINT_TOKEN2:%.*]] = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr nonnull elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"() ]
-; CHECK-NEXT:    ret ptr undef
+; CHECK-NEXT:    ret ptr addrspace(1) undef
 ;
 entry:
   br i1 %cond, label %left, label %right
@@ -58,16 +58,16 @@ right:
   br label %merge
 
 left:
-  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr undef)]
-  %pnew = call ptr @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) undef)]
+  %pnew = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
   br label %merge
 
 merge:
-  %pnew_phi = phi ptr [undef, %right], [%pnew, %left]
-  %safepoint_token2 = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr %pnew_phi)]
-  %pnew2 = call ptr @llvm.experimental.gc.relocate.p1(token %safepoint_token2,  i32 0, i32 0)
-  ret ptr %pnew2
+  %pnew_phi = phi ptr addrspace(1) [undef, %right], [%pnew, %left]
+  %safepoint_token2 = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %pnew_phi)]
+  %pnew2 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token2,  i32 0, i32 0)
+  ret ptr addrspace(1) %pnew2
 }
 
 declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
-declare ptr @llvm.experimental.gc.relocate.p1(token, i32, i32)
+declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32)

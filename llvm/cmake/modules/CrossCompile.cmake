@@ -84,6 +84,8 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
         -DLLVM_ENABLE_RUNTIMES="${llvm_enable_runtimes_arg}"
         ${external_project_source_dirs}
         -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN="${LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN}"
+        -DLLVM_INCLUDE_BENCHMARKS=OFF
+        -DLLVM_INCLUDE_TESTS=OFF
         ${build_type_flags} ${linker_flag} ${external_clang_dir}
         ${ARGN}
     WORKING_DIRECTORY ${${project_name}_${target_name}_BUILD}

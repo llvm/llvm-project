@@ -11,7 +11,7 @@ define void @logical_and_m_const(i32 %n) {
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,4) S: [1,4) Exits: (1 + (2 umin %n))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_i, i1 %cond_i2, i1 false
-; CHECK-NEXT:    --> (%cond_i umin_seq %cond_i2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%cond_i2 umin %cond_i) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_m_const
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (2 umin %n)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 2
@@ -140,7 +140,7 @@ define void @logical_or_m_const(i32 %n) {
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,4) S: [1,4) Exits: (1 + (2 umin %n))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_i, i1 true, i1 %cond_i2
-; CHECK-NEXT:    --> (true + ((true + %cond_i) umin_seq (true + %cond_i2))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (true + ((true + %cond_i) umin (true + %cond_i2))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_m_const
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (2 umin %n)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 2

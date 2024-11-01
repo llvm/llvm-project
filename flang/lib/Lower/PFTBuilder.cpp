@@ -824,7 +824,7 @@ private:
             lastConstructStmtEvaluation = &eval;
           },
           [&](const parser::EndSelectStmt &) {
-            eval.nonNopSuccessor().isNewBlock = true;
+            eval.isNewBlock = true;
             lastConstructStmtEvaluation = nullptr;
           },
           [&](const parser::ChangeTeamStmt &s) {
@@ -924,32 +924,31 @@ private:
           },
 
           // Constructs - set (unstructured) construct exit targets
-          [&](const parser::AssociateConstruct &) { setConstructExit(eval); },
+          [&](const parser::AssociateConstruct &) {
+            eval.constructExit = &eval.evaluationList->back();
+          },
           [&](const parser::BlockConstruct &) {
-            // EndBlockStmt may have code.
             eval.constructExit = &eval.evaluationList->back();
           },
           [&](const parser::CaseConstruct &) {
-            setConstructExit(eval);
+            eval.constructExit = &eval.evaluationList->back();
             eval.isUnstructured = true;
           },
           [&](const parser::ChangeTeamConstruct &) {
-            // EndChangeTeamStmt may have code.
             eval.constructExit = &eval.evaluationList->back();
           },
           [&](const parser::CriticalConstruct &) {
-            // EndCriticalStmt may have code.
             eval.constructExit = &eval.evaluationList->back();
           },
           [&](const parser::DoConstruct &) { setConstructExit(eval); },
           [&](const parser::ForallConstruct &) { setConstructExit(eval); },
           [&](const parser::IfConstruct &) { setConstructExit(eval); },
           [&](const parser::SelectRankConstruct &) {
-            setConstructExit(eval);
+            eval.constructExit = &eval.evaluationList->back();
             eval.isUnstructured = true;
           },
           [&](const parser::SelectTypeConstruct &) {
-            setConstructExit(eval);
+            eval.constructExit = &eval.evaluationList->back();
             eval.isUnstructured = true;
           },
           [&](const parser::WhereConstruct &) { setConstructExit(eval); },
@@ -970,13 +969,6 @@ private:
       // Analyze construct evaluations.
       if (eval.evaluationList)
         analyzeBranches(&eval, *eval.evaluationList);
-
-      // Set the successor of the last statement in an IF or SELECT block.
-      if (!eval.controlSuccessor && eval.lexicalSuccessor &&
-          eval.lexicalSuccessor->isIntermediateConstructStmt()) {
-        eval.controlSuccessor = parentConstruct->constructExit;
-        eval.lexicalSuccessor->isNewBlock = true;
-      }
 
       // Propagate isUnstructured flag to enclosing construct.
       if (parentConstruct && eval.isUnstructured)
@@ -1651,6 +1643,12 @@ Fortran::lower::pft::FunctionLikeUnit::parentHostAssoc() {
   if (auto *par = parent.getIf<FunctionLikeUnit>())
     return par->hostAssociations;
   llvm::report_fatal_error("parent is not a function");
+}
+
+bool Fortran::lower::pft::FunctionLikeUnit::parentHasTupleHostAssoc() {
+  if (auto *par = parent.getIf<FunctionLikeUnit>())
+    return par->hostAssociations.hasTupleAssociations();
+  return false;
 }
 
 bool Fortran::lower::pft::FunctionLikeUnit::parentHasHostAssoc() {

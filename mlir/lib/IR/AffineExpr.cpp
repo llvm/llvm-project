@@ -17,6 +17,7 @@
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/STLExtras.h"
 #include <numeric>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -219,12 +220,25 @@ bool AffineExpr::isPureAffine() const {
 int64_t AffineExpr::getLargestKnownDivisor() const {
   AffineBinaryOpExpr binExpr(nullptr);
   switch (getKind()) {
-  case AffineExprKind::CeilDiv:
-    [[fallthrough]];
   case AffineExprKind::DimId:
-  case AffineExprKind::FloorDiv:
+    [[fallthrough]];
   case AffineExprKind::SymbolId:
     return 1;
+  case AffineExprKind::CeilDiv:
+    [[fallthrough]];
+  case AffineExprKind::FloorDiv: {
+    // If the RHS is a constant and divides the known divisor on the LHS, the
+    // quotient is a known divisor of the expression.
+    binExpr = this->cast<AffineBinaryOpExpr>();
+    auto rhs = binExpr.getRHS().dyn_cast<AffineConstantExpr>();
+    // Leave alone undefined expressions.
+    if (rhs && rhs.getValue() != 0) {
+      int64_t lhsDiv = binExpr.getLHS().getLargestKnownDivisor();
+      if (lhsDiv % rhs.getValue() == 0)
+        return lhsDiv / rhs.getValue();
+    }
+    return 1;
+  }
   case AffineExprKind::Constant:
     return std::abs(this->cast<AffineConstantExpr>().getValue());
   case AffineExprKind::Mul: {
@@ -552,7 +566,7 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   // Detect "c1 * expr + c_2 * expr" as "(c1 + c2) * expr".
   // c1 is rRhsConst, c2 is rLhsConst; firstExpr, secondExpr are their
   // respective multiplicands.
-  Optional<int64_t> rLhsConst, rRhsConst;
+  std::optional<int64_t> rLhsConst, rRhsConst;
   AffineExpr firstExpr, secondExpr;
   AffineConstantExpr rLhsConstExpr;
   auto lBinOpExpr = lhs.dyn_cast<AffineBinaryOpExpr>();

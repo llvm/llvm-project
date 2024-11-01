@@ -56,6 +56,7 @@ add_header_library(
     libc.src.__support.FPUtil.fma
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.common
 )
 
 add_header_library(
@@ -66,6 +67,7 @@ add_header_library(
     .range_reduction
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.polyeval
+    libc.src.__support.common
 )
 
 add_entrypoint_object(
@@ -756,6 +758,22 @@ add_object_library(
     common_constants.cpp
 )
 
+# TODO(lntue): Make log10 correctly rounded for non-FMA targets.
+add_entrypoint_object(
+  log10
+  SRCS
+    log10.cpp
+  HDRS
+    ../log10.h
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+  COMPILE_OPTIONS
+    -O3
+)
+
 add_entrypoint_object(
   log10f
   SRCS
@@ -1230,6 +1248,7 @@ add_object_library(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
     libc.src.__support.FPUtil.polyeval
+    libc.src.__support.common
     libc.include.errno
     libc.src.errno.errno
     libc.include.math
@@ -1303,6 +1322,7 @@ add_object_library(
     libc.src.__support.FPUtil.nearest_integer
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.FPUtil.polyeval
+    libc.src.__support.common
     libc.include.errno
     libc.src.errno.errno
     libc.include.math

@@ -11,9 +11,12 @@
 #define _LIBCPP___CHRONO_DURATION_H
 
 #include <__config>
+#include <__type_traits/common_type.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_convertible.h>
+#include <__type_traits/is_floating_point.h>
 #include <limits>
 #include <ratio>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -151,7 +154,7 @@ typename enable_if
 >::type
 floor(const duration<_Rep, _Period>& __d)
 {
-    _ToDuration __t = duration_cast<_ToDuration>(__d);
+    _ToDuration __t = chrono::duration_cast<_ToDuration>(__d);
     if (__t > __d)
         __t = __t - _ToDuration{1};
     return __t;
@@ -166,7 +169,7 @@ typename enable_if
 >::type
 ceil(const duration<_Rep, _Period>& __d)
 {
-    _ToDuration __t = duration_cast<_ToDuration>(__d);
+    _ToDuration __t = chrono::duration_cast<_ToDuration>(__d);
     if (__t < __d)
         __t = __t + _ToDuration{1};
     return __t;
@@ -181,7 +184,7 @@ typename enable_if
 >::type
 round(const duration<_Rep, _Period>& __d)
 {
-    _ToDuration __lower = floor<_ToDuration>(__d);
+    _ToDuration __lower = chrono::floor<_ToDuration>(__d);
     _ToDuration __upper = __lower + _ToDuration{1};
     auto __lowerDiff = __d - __lower;
     auto __upperDiff = __upper - __d;
@@ -611,5 +614,9 @@ namespace chrono { // hoist the literals into namespace std::chrono
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <type_traits>
+#endif
 
 #endif // _LIBCPP___CHRONO_DURATION_H

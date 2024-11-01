@@ -69,11 +69,11 @@ div.sphinxsidebar li {
 }
 
 div.sphinxsidebar li:hover {
-  background: #eeeeee;
+  background: #ccddee;
 }
 
 div.sphinxsidebar ul {
-  background: #e9e9e9;
+  background: #bbccdd;
   margin: 0px;
   padding: 0px;
 }

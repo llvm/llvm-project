@@ -57,6 +57,8 @@ COFF Improvements
 * Improvements to the PCH.OBJ files handling. Now LLD behaves the same as MSVC
   link.exe when merging PCH.OBJ files that don't have the same signature.
   (`D136762 <https://reviews.llvm.org/D136762>`_)
+* Changed the OrdinalBase for DLLs from 0 to 1, matching the output from
+  both MS link.exe and GNU ld. (`D134140 <https://reviews.llvm.org/D134140>`_)
 
 MinGW Improvements
 ------------------
@@ -70,6 +72,14 @@ MinGW Improvements
   Note that these features require the ``_load_config_used`` symbol to contain
   the load config directory and be filled with the required symbols.
   (`D132808 <https://reviews.llvm.org/D132808>`_)
+
+* Pick up libraries named ``<name>.lib`` when linked with ``-l<name>``, even
+  if ``-static`` has been specified. This fixes conformance to what
+  GNU ld does. (`D135651 <https://reviews.llvm.org/D135651>`_)
+
+* Unwinding in Rust code on i386 in MinGW builds has been fixed, by avoiding
+  to leave out the ``rust_eh_personality`` symbol.
+  (`D136879 <https://reviews.llvm.org/D136879>`_)
 
 MachO Improvements
 ------------------

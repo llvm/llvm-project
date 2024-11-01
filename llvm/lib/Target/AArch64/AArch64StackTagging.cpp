@@ -563,7 +563,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
           End->eraseFromParent();
       }
     } else {
-      uint64_t Size = *Info.AI->getAllocationSizeInBits(*DL) / 8;
+      uint64_t Size = *Info.AI->getAllocationSize(*DL);
       Value *Ptr = IRB.CreatePointerCast(TagPCall, IRB.getInt8PtrTy());
       tagAlloca(AI, &*IRB.GetInsertPoint(), Ptr, Size);
       for (auto *RI : SInfo.RetVec) {

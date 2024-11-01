@@ -16,9 +16,10 @@
 //   requires assignable_from<S&, const S2&>
 //     constexpr move_sentinel& operator=(const move_sentinel<S2>& s);
 
-#include <iterator>
 #include <cassert>
 #include <concepts>
+#include <iterator>
+#include <type_traits>
 
 struct NonAssignable {
   NonAssignable& operator=(int i);

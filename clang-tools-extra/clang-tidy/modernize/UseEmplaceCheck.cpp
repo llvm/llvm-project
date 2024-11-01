@@ -10,9 +10,7 @@
 #include "../utils/OptionsUtils.h"
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 namespace {
 // Identical to hasAnyName, except it does not take template specifiers into
@@ -374,6 +372,4 @@ void UseEmplaceCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 utils::options::serializeStringList(EmplacyFunctions));
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

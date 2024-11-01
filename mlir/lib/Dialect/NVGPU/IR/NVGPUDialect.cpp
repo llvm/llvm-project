@@ -34,6 +34,17 @@ void nvgpu::NVGPUDialect::initialize() {
       >();
 }
 
+bool nvgpu::NVGPUDialect::hasSharedMemoryAddressSpace(MemRefType type) {
+  Attribute memorySpace = type.getMemorySpace();
+  if (!memorySpace)
+    return false;
+  if (auto intAttr = memorySpace.dyn_cast<IntegerAttr>())
+    return intAttr.getInt() == NVGPUDialect::kSharedMemoryAddressSpace;
+  if (auto gpuAttr = memorySpace.dyn_cast<gpu::AddressSpaceAttr>())
+    return gpuAttr.getValue() == gpu::AddressSpace::Workgroup;
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // NVGPU_DeviceAsyncCopyOp
 //===----------------------------------------------------------------------===//
@@ -52,14 +63,17 @@ static bool isLastMemrefDimUnitStride(MemRefType type) {
 LogicalResult DeviceAsyncCopyOp::verify() {
   auto srcMemref = getSrc().getType().cast<MemRefType>();
   auto dstMemref = getDst().getType().cast<MemRefType>();
-  unsigned workgroupAddressSpace = gpu::GPUDialect::getWorkgroupAddressSpace();
+
   if (!isLastMemrefDimUnitStride(srcMemref))
     return emitError("source memref most minor dim must have unit stride");
   if (!isLastMemrefDimUnitStride(dstMemref))
     return emitError("destination memref most minor dim must have unit stride");
-  if (dstMemref.getMemorySpaceAsInt() != workgroupAddressSpace)
-    return emitError("destination memref must have memory space ")
-           << workgroupAddressSpace;
+  if (!NVGPUDialect::hasSharedMemoryAddressSpace(dstMemref))
+    return emitError()
+           << "destination memref must have a memory space attribute of "
+              "IntegerAttr("
+           << NVGPUDialect::kSharedMemoryAddressSpace
+           << ") or gpu::AddressSpaceAttr(Workgroup)";
   if (dstMemref.getElementType() != srcMemref.getElementType())
     return emitError("source and destination must have the same element type");
   if (size_t(srcMemref.getRank()) != getSrcIndices().size())
@@ -248,17 +262,16 @@ LogicalResult LdMatrixOp::verify() {
   // transpose elements in vector registers at 16b granularity when true
   bool isTranspose = getTranspose();
 
-  // address space id for shared memory
-  unsigned smemAddressSpace = gpu::GPUDialect::getWorkgroupAddressSpace();
-
   //
   // verification
   //
 
-  if (!(srcMemref.getMemorySpaceAsInt() == smemAddressSpace))
+  if (!NVGPUDialect::hasSharedMemoryAddressSpace(srcMemref))
     return emitError()
-           << "expected nvgpu.ldmatrix srcMemref must have memory space "
-           << smemAddressSpace;
+           << "expected nvgpu.ldmatrix srcMemref must have a memory space "
+              "attribute of IntegerAttr("
+           << NVGPUDialect::kSharedMemoryAddressSpace
+           << ") or gpu::AddressSpaceAttr(Workgroup)";
   if (elementBitWidth > 32)
     return emitError() << "nvgpu.ldmatrix works for 32b or lower";
   if (isTranspose && !(elementBitWidth == 16))

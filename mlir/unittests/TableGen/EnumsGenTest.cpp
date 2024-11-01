@@ -54,8 +54,8 @@ TEST(EnumsGenTest, GeneratedSymbolToStringFn) {
 }
 
 TEST(EnumsGenTest, GeneratedStringToSymbolFn) {
-  EXPECT_EQ(llvm::Optional<FooEnum>(FooEnum::CaseA), ConvertToEnum("CaseA"));
-  EXPECT_EQ(llvm::Optional<FooEnum>(FooEnum::CaseB), ConvertToEnum("CaseB"));
+  EXPECT_EQ(std::optional<FooEnum>(FooEnum::CaseA), ConvertToEnum("CaseA"));
+  EXPECT_EQ(std::optional<FooEnum>(FooEnum::CaseB), ConvertToEnum("CaseB"));
   EXPECT_EQ(std::nullopt, ConvertToEnum("X"));
 }
 

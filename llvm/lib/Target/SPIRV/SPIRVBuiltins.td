@@ -53,6 +53,7 @@ def SpecConstant : BuiltinGroup;
 def Enqueue : BuiltinGroup;
 def AsyncCopy : BuiltinGroup;
 def VectorLoadStore : BuiltinGroup;
+def LoadStore : BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -527,6 +528,10 @@ defm : DemangledNativeBuiltin<"atomic_fetch_sub_explicit", OpenCL_std, Atomic, 4
 defm : DemangledNativeBuiltin<"atomic_fetch_or_explicit", OpenCL_std, Atomic, 4, 6, OpAtomicOr>;
 defm : DemangledNativeBuiltin<"atomic_fetch_xor_explicit", OpenCL_std, Atomic, 4, 6, OpAtomicXor>;
 defm : DemangledNativeBuiltin<"atomic_fetch_and_explicit", OpenCL_std, Atomic, 4, 6, OpAtomicAnd>;
+defm : DemangledNativeBuiltin<"atomic_flag_test_and_set", OpenCL_std, Atomic, 1, 1, OpAtomicFlagTestAndSet>;
+defm : DemangledNativeBuiltin<"atomic_flag_test_and_set_explicit", OpenCL_std, Atomic, 2, 3, OpAtomicFlagTestAndSet>;
+defm : DemangledNativeBuiltin<"atomic_flag_clear", OpenCL_std, Atomic, 1, 1, OpAtomicFlagClear>;
+defm : DemangledNativeBuiltin<"atomic_flag_clear_explicit", OpenCL_std, Atomic, 2, 3, OpAtomicFlagClear>;
 
 // Barrier builtin records:
 defm : DemangledNativeBuiltin<"barrier", OpenCL_std, Barrier, 1, 3, OpControlBarrier>;
@@ -548,13 +553,17 @@ defm : DemangledNativeBuiltin<"ndrange_1D", OpenCL_std, Enqueue, 1, 3, OpBuildND
 defm : DemangledNativeBuiltin<"ndrange_2D", OpenCL_std, Enqueue, 1, 3, OpBuildNDRange>;
 defm : DemangledNativeBuiltin<"ndrange_3D", OpenCL_std, Enqueue, 1, 3, OpBuildNDRange>;
 
-// Spec constant builtin record:
+// Spec constant builtin records:
 defm : DemangledNativeBuiltin<"__spirv_SpecConstant", OpenCL_std, SpecConstant, 2, 2, OpSpecConstant>;
 defm : DemangledNativeBuiltin<"__spirv_SpecConstantComposite", OpenCL_std, SpecConstant, 1, 0, OpSpecConstantComposite>;
 
 // Async Copy and Prefetch builtin records:
 defm : DemangledNativeBuiltin<"async_work_group_copy", OpenCL_std, AsyncCopy, 4, 4, OpGroupAsyncCopy>;
 defm : DemangledNativeBuiltin<"wait_group_events", OpenCL_std, AsyncCopy, 2, 2, OpGroupWaitEvents>;
+
+// Load and store builtin records:
+defm : DemangledNativeBuiltin<"__spirv_Load", OpenCL_std, LoadStore, 1, 3, OpLoad>;
+defm : DemangledNativeBuiltin<"__spirv_Store", OpenCL_std, LoadStore, 2, 4, OpStore>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a work/sub group builtin that should be translated into a

@@ -62,14 +62,14 @@ public:
   _LIBCPP_HIDE_FROM_ABI pool_options options() const { return __unsync_.options(); }
 
 protected:
-  _LIBCPP_HIDE_FROM_ABI void* do_allocate(size_t __bytes, size_t __align) override {
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void* do_allocate(size_t __bytes, size_t __align) override {
 #  if !defined(_LIBCPP_HAS_NO_THREADS)
     unique_lock<mutex> __lk(__mut_);
 #  endif
     return __unsync_.allocate(__bytes, __align);
   }
 
-  _LIBCPP_HIDE_FROM_ABI void do_deallocate(void* __p, size_t __bytes, size_t __align) override {
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void do_deallocate(void* __p, size_t __bytes, size_t __align) override {
 #  if !defined(_LIBCPP_HAS_NO_THREADS)
     unique_lock<mutex> __lk(__mut_);
 #  endif

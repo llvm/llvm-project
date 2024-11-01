@@ -38,7 +38,7 @@ bool isIndifferentToSP(const MCInst &Inst, const BinaryContext &BC) {
   if (BC.MIB->isCFI(Inst))
     return true;
 
-  const MCInstrDesc II = BC.MII->get(Inst.getOpcode());
+  const MCInstrDesc &II = BC.MII->get(Inst.getOpcode());
   if (BC.MIB->isTerminator(Inst) ||
       II.hasImplicitDefOfPhysReg(BC.MIB->getStackPointer(), BC.MRI.get()) ||
       II.hasImplicitUseOfPhysReg(BC.MIB->getStackPointer()))
@@ -69,8 +69,7 @@ void AllocCombinerPass::combineAdjustments(BinaryFunction &BF) {
   BinaryContext &BC = BF.getBinaryContext();
   for (BinaryBasicBlock &BB : BF) {
     MCInst *Prev = nullptr;
-    for (auto I = BB.rbegin(), E = BB.rend(); I != E; ++I) {
-      MCInst &Inst = *I;
+    for (MCInst &Inst : llvm::reverse(BB)) {
       if (isIndifferentToSP(Inst, BC))
         continue; // Skip updating Prev
 

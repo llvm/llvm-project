@@ -13,6 +13,7 @@
 #include "SourceCode.h"
 #include "clang/Basic/LangOptions.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -83,7 +84,7 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
 /// The API assumes that Indexed contains only named occurrences (each
 /// occurrence has the same length).
 /// REQUIRED: Indexed is sorted.
-llvm::Optional<std::vector<Range>>
+std::optional<std::vector<Range>>
 adjustRenameRanges(llvm::StringRef DraftCode, llvm::StringRef Identifier,
                    std::vector<Range> Indexed, const LangOptions &LangOpts);
 
@@ -93,8 +94,8 @@ adjustRenameRanges(llvm::StringRef DraftCode, llvm::StringRef Identifier,
 /// Exposed for testing only.
 ///
 /// REQUIRED: Indexed and Lexed are sorted.
-llvm::Optional<std::vector<Range>> getMappedRanges(ArrayRef<Range> Indexed,
-                                                   ArrayRef<Range> Lexed);
+std::optional<std::vector<Range>> getMappedRanges(ArrayRef<Range> Indexed,
+                                                  ArrayRef<Range> Lexed);
 /// Evaluates how good the mapped result is. 0 indicates a perfect match.
 ///
 /// Exposed for testing only.

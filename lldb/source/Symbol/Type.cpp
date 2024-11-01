@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cstdio>
+#include <optional>
 
 #include "lldb/Core/Module.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -141,7 +142,7 @@ Type *SymbolFileType::GetType() {
 }
 
 Type::Type(lldb::user_id_t uid, SymbolFile *symbol_file, ConstString name,
-           llvm::Optional<uint64_t> byte_size, SymbolContextScope *context,
+           std::optional<uint64_t> byte_size, SymbolContextScope *context,
            user_id_t encoding_uid, EncodingDataType encoding_uid_type,
            const Declaration &decl, const CompilerType &compiler_type,
            ResolveState compiler_type_resolve_state, uint32_t opaque_payload)
@@ -341,9 +342,9 @@ Type *Type::GetEncodingType() {
   return m_encoding_type;
 }
 
-llvm::Optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
+std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
   if (m_byte_size_has_value)
-    return m_byte_size;
+    return static_cast<uint64_t>(m_byte_size);
 
   switch (m_encoding_uid_type) {
   case eEncodingInvalid:
@@ -357,17 +358,18 @@ llvm::Optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
   case eEncodingIsTypedefUID: {
     Type *encoding_type = GetEncodingType();
     if (encoding_type)
-      if (llvm::Optional<uint64_t> size = encoding_type->GetByteSize(exe_scope)) {
+      if (std::optional<uint64_t> size =
+              encoding_type->GetByteSize(exe_scope)) {
         m_byte_size = *size;
         m_byte_size_has_value = true;
-        return m_byte_size;
+        return static_cast<uint64_t>(m_byte_size);
       }
 
-    if (llvm::Optional<uint64_t> size =
+    if (std::optional<uint64_t> size =
             GetLayoutCompilerType().GetByteSize(exe_scope)) {
       m_byte_size = *size;
       m_byte_size_has_value = true;
-        return m_byte_size;
+      return static_cast<uint64_t>(m_byte_size);
     }
   } break;
 
@@ -378,7 +380,7 @@ llvm::Optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
       if (ArchSpec arch = m_symbol_file->GetObjectFile()->GetArchitecture()) {
         m_byte_size = arch.GetAddressByteSize();
         m_byte_size_has_value = true;
-        return m_byte_size;
+        return static_cast<uint64_t>(m_byte_size);
       }
     } break;
   }
@@ -391,6 +393,10 @@ uint32_t Type::GetNumChildren(bool omit_empty_base_classes) {
 
 bool Type::IsAggregateType() {
   return GetForwardCompilerType().IsAggregateType();
+}
+
+bool Type::IsTemplateType() {
+  return GetForwardCompilerType().IsTemplateType();
 }
 
 lldb::TypeSP Type::GetTypedefType() {

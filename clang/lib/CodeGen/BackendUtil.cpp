@@ -271,47 +271,33 @@ static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
 
   switch (CodeGenOpts.getVecLib()) {
   case CodeGenOptions::Accelerate:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::Accelerate);
+    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::Accelerate,
+                                             TargetTriple);
     break;
   case CodeGenOptions::LIBMVEC:
-    switch(TargetTriple.getArch()) {
-      default:
-        break;
-      case llvm::Triple::x86_64:
-        TLII->addVectorizableFunctionsFromVecLib
-                (TargetLibraryInfoImpl::LIBMVEC_X86);
-        break;
-    }
+    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::LIBMVEC_X86,
+                                             TargetTriple);
     break;
   case CodeGenOptions::MASSV:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::MASSV);
+    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::MASSV,
+                                             TargetTriple);
     break;
   case CodeGenOptions::SVML:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::SVML);
+    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::SVML,
+                                             TargetTriple);
+    break;
+  case CodeGenOptions::SLEEF:
+    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::SLEEFGNUABI,
+                                             TargetTriple);
     break;
   case CodeGenOptions::Darwin_libsystem_m:
     TLII->addVectorizableFunctionsFromVecLib(
-        TargetLibraryInfoImpl::DarwinLibSystemM);
+        TargetLibraryInfoImpl::DarwinLibSystemM, TargetTriple);
     break;
   default:
     break;
   }
   return TLII;
-}
-
-static CodeGenOpt::Level getCGOptLevel(const CodeGenOptions &CodeGenOpts) {
-  switch (CodeGenOpts.OptimizationLevel) {
-  default:
-    llvm_unreachable("Invalid optimization level!");
-  case 0:
-    return CodeGenOpt::None;
-  case 1:
-    return CodeGenOpt::Less;
-  case 2:
-    return CodeGenOpt::Default; // O2/Os/Oz
-  case 3:
-    return CodeGenOpt::Aggressive;
-  }
 }
 
 static std::optional<llvm::CodeModel::Model>
@@ -510,8 +496,8 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   return true;
 }
 
-static Optional<GCOVOptions> getGCOVOptions(const CodeGenOptions &CodeGenOpts,
-                                            const LangOptions &LangOpts) {
+static std::optional<GCOVOptions>
+getGCOVOptions(const CodeGenOptions &CodeGenOpts, const LangOptions &LangOpts) {
   if (!CodeGenOpts.EmitGcovArcs && !CodeGenOpts.EmitGcovNotes)
     return std::nullopt;
   // Not using 'GCOVOptions::getDefault' allows us to avoid exiting if
@@ -527,7 +513,7 @@ static Optional<GCOVOptions> getGCOVOptions(const CodeGenOptions &CodeGenOpts,
   return Options;
 }
 
-static Optional<InstrProfOptions>
+static std::optional<InstrProfOptions>
 getInstrProfOptions(const CodeGenOptions &CodeGenOpts,
                     const LangOptions &LangOpts) {
   if (!CodeGenOpts.hasProfileClangInstr())
@@ -578,7 +564,10 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   std::string FeaturesStr =
       llvm::join(TargetOpts.Features.begin(), TargetOpts.Features.end(), ",");
   llvm::Reloc::Model RM = CodeGenOpts.RelocationModel;
-  CodeGenOpt::Level OptLevel = getCGOptLevel(CodeGenOpts);
+  std::optional<CodeGenOpt::Level> OptLevelOrNone =
+      CodeGenOpt::getLevel(CodeGenOpts.OptimizationLevel);
+  assert(OptLevelOrNone && "Invalid optimization level!");
+  CodeGenOpt::Level OptLevel = *OptLevelOrNone;
 
   llvm::TargetOptions Options;
   if (!initTargetOptions(Diags, Options, CodeGenOpts, TargetOpts, LangOpts,
@@ -980,12 +969,13 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       addKCFIPass(TargetTriple, LangOpts, PB);
     }
 
-    if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts, LangOpts))
+    if (std::optional<GCOVOptions> Options =
+            getGCOVOptions(CodeGenOpts, LangOpts))
       PB.registerPipelineStartEPCallback(
           [Options](ModulePassManager &MPM, OptimizationLevel Level) {
             MPM.addPass(GCOVProfilerPass(*Options));
           });
-    if (Optional<InstrProfOptions> Options =
+    if (std::optional<InstrProfOptions> Options =
             getInstrProfOptions(CodeGenOpts, LangOpts))
       PB.registerPipelineStartEPCallback(
           [Options](ModulePassManager &MPM, OptimizationLevel Level) {
@@ -1159,7 +1149,10 @@ static void runThinLTOBackend(
   Conf.CodeModel = getCodeModel(CGOpts);
   Conf.MAttrs = TOpts.Features;
   Conf.RelocModel = CGOpts.RelocationModel;
-  Conf.CGOptLevel = getCGOptLevel(CGOpts);
+  std::optional<CodeGenOpt::Level> OptLevelOrNone =
+      CodeGenOpt::getLevel(CGOpts.OptimizationLevel);
+  assert(OptLevelOrNone && "Invalid optimization level!");
+  Conf.CGOptLevel = *OptLevelOrNone;
   Conf.OptLevel = CGOpts.OptimizationLevel;
   initTargetOptions(Diags, Conf.Options, CGOpts, TOpts, LOpts, HeaderOpts);
   Conf.SampleProfile = std::move(SampleProfile);

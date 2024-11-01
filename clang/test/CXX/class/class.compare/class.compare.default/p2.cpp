@@ -139,13 +139,13 @@ union E2 {
 
 struct F;
 bool operator==(const F&, const F&);
-bool operator!=(const F&, const F&);
+bool operator!=(const F&, const F&); // expected-note {{previous declaration}}
 bool operator<=>(const F&, const F&);
-bool operator<(const F&, const F&);
+bool operator<(const F&, const F&); // expected-note {{previous declaration}}
 struct F {
   union { int a; };
   friend bool operator==(const F&, const F&) = default; // expected-error {{defaulting this equality comparison operator would delete it after its first declaration}} expected-note {{implicitly deleted because 'F' is a union-like class}}
-  friend bool operator!=(const F&, const F&) = default;
+  friend bool operator!=(const F&, const F&) = default; // expected-error {{because it was already declared outside}}
   friend bool operator<=>(const F&, const F&) = default; // expected-error {{defaulting this three-way comparison operator would delete it after its first declaration}} expected-note {{implicitly deleted because 'F' is a union-like class}}
-  friend bool operator<(const F&, const F&) = default;
+  friend bool operator<(const F&, const F&) = default; // expected-error {{because it was already declared outside}}
 };

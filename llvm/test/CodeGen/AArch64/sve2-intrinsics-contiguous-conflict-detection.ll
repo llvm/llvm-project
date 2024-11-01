@@ -6,75 +6,75 @@
 ; WHILERW
 ;
 
-define <vscale x 16 x i1> @whilerw_i8(i8* %a, i8* %b) {
+define <vscale x 16 x i1> @whilerw_i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilerw_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilerw p0.b, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilerw.b.nx16i1(i8* %a, i8* %b)
+  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilerw.b.nx16i1(ptr %a, ptr %b)
   ret <vscale x 16 x i1> %out
 }
 
-define <vscale x 8 x i1> @whilerw_i16(i16* %a, i16* %b) {
+define <vscale x 8 x i1> @whilerw_i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilerw_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilerw p0.h, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nx8i1(i16* %a, i16* %b)
+  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nx8i1(ptr %a, ptr %b)
   ret <vscale x 8 x i1> %out
 }
 
-define <vscale x 4 x i1> @whilerw_i32(i32* %a, i32* %b) {
+define <vscale x 4 x i1> @whilerw_i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilerw_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilerw p0.s, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nx4i1(i32* %a, i32* %b)
+  %out = call <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nx4i1(ptr %a, ptr %b)
   ret <vscale x 4 x i1> %out
 }
 
-define <vscale x 2 x i1> @whilerw_i64(i64* %a, i64* %b) {
+define <vscale x 2 x i1> @whilerw_i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilerw_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilerw p0.d, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nx2i1(i64* %a, i64* %b)
+  %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nx2i1(ptr %a, ptr %b)
   ret <vscale x 2 x i1> %out
 }
 
-define <vscale x 8 x i1> @whilerw_bfloat(bfloat* %a, bfloat* %b) {
+define <vscale x 8 x i1> @whilerw_bfloat(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilerw_bfloat:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilerw p0.h, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nx8i1.bf16.bf16(bfloat* %a, bfloat* %b)
+  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nx8i1.bf16.bf16(ptr %a, ptr %b)
   ret <vscale x 8 x i1> %out
 }
 
-define <vscale x 8 x i1> @whilerw_half(half* %a, half* %b) {
+define <vscale x 8 x i1> @whilerw_half(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilerw_half:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilerw p0.h, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nx8i1.f16.f16(half* %a, half* %b)
+  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nx8i1.f16.f16(ptr %a, ptr %b)
   ret <vscale x 8 x i1> %out
 }
 
-define <vscale x 4 x i1> @whilerw_float(float* %a, float* %b) {
+define <vscale x 4 x i1> @whilerw_float(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilerw_float:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilerw p0.s, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nx4i1.f32.f32(float* %a, float* %b)
+  %out = call <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nx4i1.f32.f32(ptr %a, ptr %b)
   ret <vscale x 4 x i1> %out
 }
 
-define <vscale x 2 x i1> @whilerw_double(double* %a, double* %b) {
+define <vscale x 2 x i1> @whilerw_double(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilerw_double:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilerw p0.d, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nx2i1.f64.f64(double* %a, double* %b)
+  %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nx2i1.f64.f64(ptr %a, ptr %b)
   ret <vscale x 2 x i1> %out
 }
 
@@ -82,94 +82,94 @@ define <vscale x 2 x i1> @whilerw_double(double* %a, double* %b) {
 ; WHILEWR
 ;
 
-define <vscale x 16 x i1> @whilewr_i8(i8* %a, i8* %b) {
+define <vscale x 16 x i1> @whilewr_i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilewr p0.b, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilewr.b.nx16i1(i8* %a, i8* %b)
+  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilewr.b.nx16i1(ptr %a, ptr %b)
   ret <vscale x 16 x i1> %out
 }
 
-define <vscale x 8 x i1> @whilewr_i16(i16* %a, i16* %b) {
+define <vscale x 8 x i1> @whilewr_i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilewr p0.h, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.h.nx8i1(i16* %a, i16* %b)
+  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.h.nx8i1(ptr %a, ptr %b)
   ret <vscale x 8 x i1> %out
 }
 
-define <vscale x 4 x i1> @whilewr_i32(i32* %a, i32* %b) {
+define <vscale x 4 x i1> @whilewr_i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilewr p0.s, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 4 x i1> @llvm.aarch64.sve.whilewr.s.nx4i1(i32* %a, i32* %b)
+  %out = call <vscale x 4 x i1> @llvm.aarch64.sve.whilewr.s.nx4i1(ptr %a, ptr %b)
   ret <vscale x 4 x i1> %out
 }
 
-define <vscale x 2 x i1> @whilewr_i64(i64* %a, i64* %b) {
+define <vscale x 2 x i1> @whilewr_i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilewr p0.d, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilewr.d.nx2i1(i64* %a, i64* %b)
+  %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilewr.d.nx2i1(ptr %a, ptr %b)
   ret <vscale x 2 x i1> %out
 }
 
-define <vscale x 8 x i1> @whilewr_bfloat(bfloat* %a, bfloat* %b) {
+define <vscale x 8 x i1> @whilewr_bfloat(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_bfloat:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilewr p0.h, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.h.nx8i1.bf16.bf16(bfloat* %a, bfloat* %b)
+  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.h.nx8i1.bf16.bf16(ptr %a, ptr %b)
   ret <vscale x 8 x i1> %out
 }
 
-define <vscale x 8 x i1> @whilewr_half(half* %a, half* %b) {
+define <vscale x 8 x i1> @whilewr_half(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_half:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilewr p0.h, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.h.nx8i1.f16.f16(half* %a, half* %b)
+  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.h.nx8i1.f16.f16(ptr %a, ptr %b)
   ret <vscale x 8 x i1> %out
 }
 
-define <vscale x 4 x i1> @whilewr_float(float* %a, float* %b) {
+define <vscale x 4 x i1> @whilewr_float(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_float:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilewr p0.s, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 4 x i1> @llvm.aarch64.sve.whilewr.s.nx4i1.f32.f32(float* %a, float* %b)
+  %out = call <vscale x 4 x i1> @llvm.aarch64.sve.whilewr.s.nx4i1.f32.f32(ptr %a, ptr %b)
   ret <vscale x 4 x i1> %out
 }
 
-define <vscale x 2 x i1> @whilewr_double(double* %a, double* %b) {
+define <vscale x 2 x i1> @whilewr_double(ptr %a, ptr %b) {
 ; CHECK-LABEL: whilewr_double:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilewr p0.d, x0, x1
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilewr.d.nx2i1.f64.f64(double* %a, double* %b)
+  %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilewr.d.nx2i1.f64.f64(ptr %a, ptr %b)
   ret <vscale x 2 x i1> %out
 }
 
-declare <vscale x 16 x i1> @llvm.aarch64.sve.whilerw.b.nx16i1(i8* %a, i8* %b)
-declare <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nx8i1(i16* %a, i16* %b)
-declare <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nx4i1(i32* %a, i32* %b)
-declare <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nx2i1(i64* %a, i64* %b)
+declare <vscale x 16 x i1> @llvm.aarch64.sve.whilerw.b.nx16i1(ptr %a, ptr %b)
+declare <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nx8i1(ptr %a, ptr %b)
+declare <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nx4i1(ptr %a, ptr %b)
+declare <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nx2i1(ptr %a, ptr %b)
 
-declare <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nx8i1.bf16.bf16(bfloat* %a, bfloat* %b)
-declare <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nx8i1.f16.f16(half* %a, half* %b)
-declare <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nx4i1.f32.f32(float* %a, float* %b)
-declare <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nx2i1.f64.f64(double* %a, double* %b)
+declare <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nx8i1.bf16.bf16(ptr %a, ptr %b)
+declare <vscale x 8 x i1> @llvm.aarch64.sve.whilerw.h.nx8i1.f16.f16(ptr %a, ptr %b)
+declare <vscale x 4 x i1> @llvm.aarch64.sve.whilerw.s.nx4i1.f32.f32(ptr %a, ptr %b)
+declare <vscale x 2 x i1> @llvm.aarch64.sve.whilerw.d.nx2i1.f64.f64(ptr %a, ptr %b)
 
-declare <vscale x 16 x i1> @llvm.aarch64.sve.whilewr.b.nx16i1(i8* %a, i8* %b)
-declare <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.h.nx8i1(i16* %a, i16* %b)
-declare <vscale x 4 x i1> @llvm.aarch64.sve.whilewr.s.nx4i1(i32* %a, i32* %b)
-declare <vscale x 2 x i1> @llvm.aarch64.sve.whilewr.d.nx2i1(i64* %a, i64* %b)
+declare <vscale x 16 x i1> @llvm.aarch64.sve.whilewr.b.nx16i1(ptr %a, ptr %b)
+declare <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.h.nx8i1(ptr %a, ptr %b)
+declare <vscale x 4 x i1> @llvm.aarch64.sve.whilewr.s.nx4i1(ptr %a, ptr %b)
+declare <vscale x 2 x i1> @llvm.aarch64.sve.whilewr.d.nx2i1(ptr %a, ptr %b)
 
-declare <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.h.nx8i1.bf16.bf16(bfloat* %a, bfloat* %b)
-declare <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.h.nx8i1.f16.f16(half* %a, half* %b)
-declare <vscale x 4 x i1> @llvm.aarch64.sve.whilewr.s.nx4i1.f32.f32(float* %a, float* %b)
-declare <vscale x 2 x i1> @llvm.aarch64.sve.whilewr.d.nx2i1.f64.f64(double* %a, double* %b)
+declare <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.h.nx8i1.bf16.bf16(ptr %a, ptr %b)
+declare <vscale x 8 x i1> @llvm.aarch64.sve.whilewr.h.nx8i1.f16.f16(ptr %a, ptr %b)
+declare <vscale x 4 x i1> @llvm.aarch64.sve.whilewr.s.nx4i1.f32.f32(ptr %a, ptr %b)
+declare <vscale x 2 x i1> @llvm.aarch64.sve.whilewr.d.nx2i1.f64.f64(ptr %a, ptr %b)

@@ -9,6 +9,7 @@
 #include "SystemZInstPrinter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -23,8 +24,8 @@ using namespace llvm;
 
 #include "SystemZGenAsmWriter.inc"
 
-void SystemZInstPrinter::printAddress(const MCAsmInfo *MAI, unsigned Base,
-                                      const MCOperand &DispMO, unsigned Index,
+void SystemZInstPrinter::printAddress(const MCAsmInfo *MAI, MCRegister Base,
+                                      const MCOperand &DispMO, MCRegister Index,
                                       raw_ostream &O) {
   printOperand(DispMO, MAI, O);
   if (Base || Index) {
@@ -57,15 +58,19 @@ void SystemZInstPrinter::printOperand(const MCOperand &MO, const MCAsmInfo *MAI,
 }
 
 void SystemZInstPrinter::printFormattedRegName(const MCAsmInfo *MAI,
-                                               unsigned RegNo,
+                                               MCRegister Reg,
                                                raw_ostream &O) const {
-  const char *RegName = getRegisterName(RegNo);
+  const char *RegName = getRegisterName(Reg);
   if (MAI->getAssemblerDialect() == AD_HLASM) {
     // Skip register prefix so that only register number is left
     assert(isalpha(RegName[0]) && isdigit(RegName[1]));
     O << markup("<reg:") << (RegName + 1) << markup(">");
   } else
     O << markup("<reg:") << '%' << RegName << markup(">");
+}
+
+void SystemZInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) const {
+  printFormattedRegName(&MAI, Reg, O);
 }
 
 void SystemZInstPrinter::printInst(const MCInst *MI, uint64_t Address,

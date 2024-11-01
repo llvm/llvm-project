@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=SCOP
-; RUN: opt %loadPolly -polly-codegen-ppcg -polly-acc-dump-kernel-ir -disable-output < %s | FileCheck %s --check-prefix=KERNEL-IR
-; RUN: opt %loadPolly -S -polly-codegen-ppcg  < %s | FileCheck %s --check-prefix=HOST-IR
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=SCOP
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen-ppcg -polly-acc-dump-kernel-ir -disable-output < %s | FileCheck %s --check-prefix=KERNEL-IR
+; RUN: opt -opaque-pointers=0 %loadPolly -S -polly-codegen-ppcg  < %s | FileCheck %s --check-prefix=HOST-IR
 
 ; Test that we do recognise and codegen a kernel that has intrinsics.
 

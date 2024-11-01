@@ -17,7 +17,7 @@ target triple = "thumbv7-apple-ios"
 ; - Register liveness is verified.
 ; - The execution domain switch to vorr works across basic blocks.
 
-define void @Mm(i32 %in, float* %addr) nounwind {
+define void @Mm(i32 %in, ptr %addr) nounwind {
 entry:
   br label %for.body4
 
@@ -31,6 +31,6 @@ for.body.i:
   br i1 %exitcond.i, label %rInnerproduct.exit, label %for.body.i
 
 rInnerproduct.exit:
-  store float %add.i, float* %addr, align 4
+  store float %add.i, ptr %addr, align 4
   br label %for.body4
 }

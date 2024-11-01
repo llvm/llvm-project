@@ -243,6 +243,14 @@ public:
   unsigned
   getGCPointerMap(SmallVectorImpl<std::pair<unsigned, unsigned>> &GCMap);
 
+  /// Return true if Reg is used only in operands which can be folded to
+  /// stack usage.
+  bool isFoldableReg(Register Reg) const;
+
+  /// Return true if Reg is used only in operands of MI which can be folded to
+  /// stack usage and MI is a statepoint instruction.
+  static bool isFoldableReg(const MachineInstr *MI, Register Reg);
+
 private:
   const MachineInstr *MI;
   unsigned NumDefs;

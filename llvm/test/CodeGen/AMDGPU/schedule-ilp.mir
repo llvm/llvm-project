@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -verify-machineinstrs  -run-pass=machine-scheduler -verify-misched -o - %s | FileCheck %s
 
 --- |
-  define amdgpu_kernel void @schedule_ilp(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) { ret void }
+  define amdgpu_kernel void @schedule_ilp(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) { ret void }
 
   !0 = distinct !{!0}
   !1 = !{!1, !0}

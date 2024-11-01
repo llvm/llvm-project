@@ -277,6 +277,9 @@ static inline bool MaybeUserPointer(uptr p) {
 #  elif defined(__aarch64__)
   // Accept up to 48 bit VMA.
   return ((p >> 48) == 0);
+#  elif defined(__loongarch_lp64)
+  // Allow 47-bit user-space VMA at current.
+  return ((p >> 47) == 0);
 #  else
   return true;
 #  endif
@@ -350,9 +353,12 @@ void ScanGlobalRange(uptr begin, uptr end, Frontier *frontier) {
   }
 }
 
-void ForEachExtraStackRangeCb(uptr begin, uptr end, void *arg) {
-  Frontier *frontier = reinterpret_cast<Frontier *>(arg);
-  ScanRangeForPointers(begin, end, frontier, "FAKE STACK", kReachable);
+void ScanExtraStackRanges(const InternalMmapVector<Range> &ranges,
+                          Frontier *frontier) {
+  for (uptr i = 0; i < ranges.size(); i++) {
+    ScanRangeForPointers(ranges[i].begin, ranges[i].end, frontier, "FAKE STACK",
+                         kReachable);
+  }
 }
 
 #  if SANITIZER_FUCHSIA
@@ -371,7 +377,7 @@ extern "C" SANITIZER_WEAK_ATTRIBUTE void __libc_iterate_dynamic_tls(
 
 static void ProcessThreadRegistry(Frontier *frontier) {
   InternalMmapVector<uptr> ptrs;
-  RunCallbackForEachThreadLocked(GetAdditionalThreadContextPtrs, &ptrs);
+  GetAdditionalThreadContextPtrsLocked(&ptrs);
 
   for (uptr i = 0; i < ptrs.size(); ++i) {
     void *ptr = reinterpret_cast<void *>(ptrs[i]);
@@ -394,6 +400,7 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
                            Frontier *frontier, tid_t caller_tid,
                            uptr caller_sp) {
   InternalMmapVector<uptr> registers;
+  InternalMmapVector<Range> extra_ranges;
   for (uptr i = 0; i < suspended_threads.ThreadCount(); i++) {
     tid_t os_id = static_cast<tid_t>(suspended_threads.GetThreadID(i));
     LOG_THREADS("Processing thread %llu.\n", os_id);
@@ -454,7 +461,9 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
       }
       ScanRangeForPointers(stack_begin, stack_end, frontier, "STACK",
                            kReachable);
-      ForEachExtraStackRange(os_id, ForEachExtraStackRangeCb, frontier);
+      extra_ranges.clear();
+      GetThreadExtraStackRangesLocked(os_id, &extra_ranges);
+      ScanExtraStackRanges(extra_ranges, frontier);
     }
 
     if (flags()->use_tls) {
@@ -668,18 +677,6 @@ void LeakSuppressionContext::PrintMatchedSuppressions() {
   Printf("%s\n\n", line);
 }
 
-static void ReportIfNotSuspended(ThreadContextBase *tctx, void *arg) {
-  const InternalMmapVector<tid_t> &suspended_threads =
-      *(const InternalMmapVector<tid_t> *)arg;
-  if (tctx->status == ThreadStatusRunning) {
-    uptr i = InternalLowerBound(suspended_threads, tctx->os_id);
-    if (i >= suspended_threads.size() || suspended_threads[i] != tctx->os_id)
-      Report(
-          "Running thread %llu was not suspended. False leaks are possible.\n",
-          tctx->os_id);
-  }
-}
-
 #  if SANITIZER_FUCHSIA
 
 // Fuchsia provides a libc interface that guarantees all threads are
@@ -696,7 +693,16 @@ static void ReportUnsuspendedThreads(
 
   Sort(threads.data(), threads.size());
 
-  RunCallbackForEachThreadLocked(&ReportIfNotSuspended, &threads);
+  InternalMmapVector<tid_t> unsuspended;
+  GetRunningThreadsLocked(&unsuspended);
+
+  for (auto os_id : unsuspended) {
+    uptr i = InternalLowerBound(threads, os_id);
+    if (i >= threads.size() || threads[i] != os_id)
+      Report(
+          "Running thread %zu was not suspended. False leaks are possible.\n",
+          os_id);
+  }
 }
 
 #  endif  // !SANITIZER_FUCHSIA

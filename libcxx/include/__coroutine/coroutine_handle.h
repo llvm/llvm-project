@@ -13,8 +13,9 @@
 #include <__config>
 #include <__functional/hash.h>
 #include <__memory/addressof.h>
+#include <__type_traits/remove_cv.h>
 #include <compare>
-#include <type_traits>
+#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

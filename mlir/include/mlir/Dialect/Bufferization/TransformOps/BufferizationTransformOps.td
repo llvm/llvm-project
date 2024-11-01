@@ -13,6 +13,7 @@ include "mlir/Dialect/Bufferization/IR/BufferizationEnums.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformEffects.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
@@ -57,6 +58,43 @@ def OneShotBufferizeOp
   let assemblyFormat = [{
     (`layout` `{` $function_boundary_type_conversion^ `}`)?
     $target attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// EmptyTensorToAllocTensorOp
+//===----------------------------------------------------------------------===//
+
+
+def Transform_EmptyOp : Transform_ConcreteOpType<"tensor.empty">;
+def Transform_AllocTensorOp : Transform_ConcreteOpType<"bufferization.alloc_tensor">;
+
+def EmptyTensorToAllocTensorOp
+    : Op<Transform_Dialect, "bufferization.empty_tensor_to_alloc_tensor",
+        [FunctionalStyleTransformOpTrait,
+         MemoryEffectsOpInterface,
+         TransformOpInterface,
+         TransformEachOpTrait]> {
+  let description = [{
+    Replace a tensor.empty with a bufferization.tensor_alloc.
+
+    #### Return modes
+
+    This operation consumes the `target` handle and produces the `transformed`
+    handle. `target` is expected to be a `tensor.empty` operation. The transform
+    always succeeds.
+  }];
+
+  let arguments = (ins Transform_EmptyOp:$target);
+  let results = (outs Transform_AllocTensorOp:$transformed);
+
+  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::tensor::EmptyOp target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
   }];
 }
 

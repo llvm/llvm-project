@@ -1240,6 +1240,13 @@ static void setArgExtAttr(Function &F, unsigned ArgNo,
     F.addParamAttr(ArgNo, ExtAttr);
 }
 
+static void setRetExtAttr(Function &F,
+                          const TargetLibraryInfo &TLI, bool Signed = true) {
+  Attribute::AttrKind ExtAttr = TLI.getExtAttrForI32Return(Signed);
+  if (ExtAttr != Attribute::None && !F.hasRetAttribute(ExtAttr))
+    F.addRetAttr(ExtAttr);
+}
+
 // Modeled after X86TargetLowering::markLibCallAttributes.
 static void markRegisterParameterAttributes(Function *F) {
   if (!F->arg_size() || F->isVarArg())
@@ -1315,6 +1322,8 @@ FunctionCallee llvm::getOrInsertLibFunc(Module *M, const TargetLibraryInfo &TLI,
     // on any target: A size_t argument (which may be an i32 on some targets)
     // should not trigger the assert below.
   case LibFunc_bcmp:
+    setRetExtAttr(*F, TLI);
+    break;
   case LibFunc_calloc:
   case LibFunc_fwrite:
   case LibFunc_malloc:

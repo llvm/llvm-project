@@ -9,13 +9,12 @@
 #include "IsolateDeclarationCheck.h"
 #include "../utils/LexerUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 using namespace clang::tidy::utils::lexer;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 namespace {
 AST_MATCHER(DeclStmt, isSingleDecl) { return Node.isSingleDecl(); }
@@ -105,7 +104,7 @@ static bool typeIsMemberPointer(const Type *T) {
 /// // [  ][              ] [         ] - The ranges here are inclusive
 /// \endcode
 /// \todo Generalize this function to take other declarations than \c VarDecl.
-static Optional<std::vector<SourceRange>>
+static std::optional<std::vector<SourceRange>>
 declRanges(const DeclStmt *DS, const SourceManager &SM,
            const LangOptions &LangOpts) {
   std::size_t DeclCount = std::distance(DS->decl_begin(), DS->decl_end());
@@ -200,7 +199,7 @@ declRanges(const DeclStmt *DS, const SourceManager &SM,
   return Slices;
 }
 
-static Optional<std::vector<StringRef>>
+static std::optional<std::vector<StringRef>>
 collectSourceRanges(llvm::ArrayRef<SourceRange> Ranges, const SourceManager &SM,
                     const LangOptions &LangOpts) {
   std::vector<StringRef> Snippets;
@@ -251,12 +250,12 @@ void IsolateDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
       diag(WholeDecl->getBeginLoc(),
            "multiple declarations in a single statement reduces readability");
 
-  Optional<std::vector<SourceRange>> PotentialRanges =
+  std::optional<std::vector<SourceRange>> PotentialRanges =
       declRanges(WholeDecl, *Result.SourceManager, getLangOpts());
   if (!PotentialRanges)
     return;
 
-  Optional<std::vector<StringRef>> PotentialSnippets = collectSourceRanges(
+  std::optional<std::vector<StringRef>> PotentialSnippets = collectSourceRanges(
       *PotentialRanges, *Result.SourceManager, getLangOpts());
 
   if (!PotentialSnippets)
@@ -272,6 +271,4 @@ void IsolateDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
   Diag << FixItHint::CreateReplacement(WholeDecl->getSourceRange(),
                                        Replacement);
 }
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

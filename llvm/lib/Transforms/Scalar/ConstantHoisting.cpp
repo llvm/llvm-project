@@ -609,9 +609,9 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
             C2->ConstInt->getValue(), ConstCand->ConstInt->getValue());
         if (Diff) {
           const InstructionCost ImmCosts =
-              TTI->getIntImmCodeSizeCost(Opcode, OpndIdx, Diff.value(), Ty);
+              TTI->getIntImmCodeSizeCost(Opcode, OpndIdx, *Diff, Ty);
           Cost -= ImmCosts;
-          LLVM_DEBUG(dbgs() << "Offset " << Diff.value() << " "
+          LLVM_DEBUG(dbgs() << "Offset " << *Diff << " "
                             << "has penalty: " << ImmCosts << "\n"
                             << "Adjusted cost: " << Cost << "\n");
         }
@@ -722,7 +722,7 @@ void ConstantHoistingPass::findBaseConstants(GlobalVariable *BaseGV) {
 
 /// Updates the operand at Idx in instruction Inst with the result of
 ///        instruction Mat. If the instruction is a PHI node then special
-///        handling for duplicate values form the same incoming basic block is
+///        handling for duplicate values from the same incoming basic block is
 ///        required.
 /// \return The update will always succeed, but the return value indicated if
 ///         Mat was used for the update or not.

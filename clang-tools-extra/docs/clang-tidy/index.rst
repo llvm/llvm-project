@@ -139,7 +139,7 @@ An overview of all the command-line options:
                                      When the value is empty, clang-tidy will
                                      attempt to find a file named .clang-tidy for
                                      each source file in its parent directories.
-    --config-file=<string>         - 
+    --config-file=<string>         -
                                     Specify the path of .clang-tidy or custom config file:
                                       e.g. --config-file=/some/path/myTidyConfigFile
                                     This option internally works exactly the same way as
@@ -237,7 +237,7 @@ An overview of all the command-line options:
                                      format to stderr. When this option is passed,
                                      these per-TU profiles are instead stored as JSON.
     --system-headers               - Display the errors from system headers.
-    --use-color                    - 
+    --use-color                    -
                                     Use colors in diagnostics. If not set, colors
                                     will be used if the terminal connected to
                                     standard output supports colors.
@@ -287,12 +287,14 @@ An overview of all the command-line options:
 
       $ clang-tidy -dump-config
       ---
-      Checks:              '-*,some-check'
-      WarningsAsErrors:    ''
-      HeaderFilterRegex:   ''
-      FormatStyle:         none
-      InheritParentConfig: true
-      User:                user
+      Checks:                       '-*,some-check'
+      WarningsAsErrors:             ''
+      HeaderFileExtensions:         ['', 'h','hh','hpp','hxx']
+      ImplementationFileExtensions: ['c','cc','cpp','cxx']
+      HeaderFilterRegex:            ''
+      FormatStyle:                  none
+      InheritParentConfig:          true
+      User:                         user
       CheckOptions:
         some-check.SomeOption: 'some value'
       ...
@@ -306,13 +308,13 @@ Suppressing Undesired Diagnostics
 adhere to a coding standard, or is otherwise problematic in some way. However,
 if the code is known to be correct, it may be useful to silence the warning.
 Some clang-tidy checks provide a check-specific way to silence the diagnostics,
-e.g. `bugprone-use-after-move <checks/bugprone-use-after-move.html>`_ can be
+e.g. `bugprone-use-after-move <checks/bugprone/use-after-move.html>`_ can be
 silenced by re-initializing the variable after it has been moved out,
 `bugprone-string-integer-assignment
-<checks/bugprone-string-integer-assignment.html>`_ can be suppressed by
+<checks/bugprone/string-integer-assignment.html>`_ can be suppressed by
 explicitly casting the integer to ``char``,
 `readability-implicit-bool-conversion
-<checks/readability-implicit-bool-conversion.html>`_ can also be suppressed by
+<checks/readability/implicit-bool-conversion.html>`_ can also be suppressed by
 using explicit casts, etc.
 
 If a specific suppression mechanism is not available for a certain warning, or

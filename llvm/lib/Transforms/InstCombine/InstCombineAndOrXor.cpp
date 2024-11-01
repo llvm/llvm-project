@@ -1205,6 +1205,47 @@ Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1,
   return Builder.CreateICmp(NewPred, NewV, ConstantInt::get(Ty, NewC));
 }
 
+/// Ignore all operations which only change the sign of a value, returning the
+/// underlying magnitude value.
+static Value *stripSignOnlyFPOps(Value *Val) {
+  match(Val, m_FNeg(m_Value(Val)));
+  match(Val, m_FAbs(m_Value(Val)));
+  match(Val, m_CopySign(m_Value(Val), m_Value()));
+  return Val;
+}
+
+/// Matches canonical form of isnan, fcmp ord x, 0
+static bool matchIsNotNaN(FCmpInst::Predicate P, Value *LHS, Value *RHS) {
+  return P == FCmpInst::FCMP_ORD && match(RHS, m_AnyZeroFP());
+}
+
+/// Matches fcmp u__ x, +/-inf
+static bool matchUnorderedInfCompare(FCmpInst::Predicate P, Value *LHS,
+                                     Value *RHS) {
+  return FCmpInst::isUnordered(P) && match(RHS, m_Inf());
+}
+
+/// and (fcmp ord x, 0), (fcmp u* x, inf) -> fcmp o* x, inf
+///
+/// Clang emits this pattern for doing an isfinite check in __builtin_isnormal.
+static Value *matchIsFiniteTest(InstCombiner::BuilderTy &Builder, FCmpInst *LHS,
+                                FCmpInst *RHS) {
+  Value *LHS0 = LHS->getOperand(0), *LHS1 = LHS->getOperand(1);
+  Value *RHS0 = RHS->getOperand(0), *RHS1 = RHS->getOperand(1);
+  FCmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
+
+  if (!matchIsNotNaN(PredL, LHS0, LHS1) ||
+      !matchUnorderedInfCompare(PredR, RHS0, RHS1))
+    return nullptr;
+
+  IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+  FastMathFlags FMF = LHS->getFastMathFlags();
+  FMF &= RHS->getFastMathFlags();
+  Builder.setFastMathFlags(FMF);
+
+  return Builder.CreateFCmp(FCmpInst::getOrderedPredicate(PredR), RHS0, RHS1);
+}
+
 Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
                                           bool IsAnd, bool IsLogicalSelect) {
   Value *LHS0 = LHS->getOperand(0), *LHS1 = LHS->getOperand(1);
@@ -1263,6 +1304,15 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
       return Builder.CreateFCmp(PredL, LHS0, RHS0);
   }
 
+  if (IsAnd && stripSignOnlyFPOps(LHS0) == stripSignOnlyFPOps(RHS0)) {
+    // and (fcmp ord x, 0), (fcmp u* x, inf) -> fcmp o* x, inf
+    // and (fcmp ord x, 0), (fcmp u* fabs(x), inf) -> fcmp o* x, inf
+    if (Value *Left = matchIsFiniteTest(Builder, LHS, RHS))
+      return Left;
+    if (Value *Right = matchIsFiniteTest(Builder, RHS, LHS))
+      return Right;
+  }
+
   return nullptr;
 }
 
@@ -1304,6 +1354,27 @@ Instruction *InstCombinerImpl::foldLogicOfIsFPClass(BinaryOperator &BO,
   }
 
   return nullptr;
+}
+
+/// Look for the pattern that conditionally negates a value via math operations:
+///   cond.splat = sext i1 cond
+///   sub = add cond.splat, x
+///   xor = xor sub, cond.splat
+/// and rewrite it to do the same, but via logical operations:
+///   value.neg = sub 0, value
+///   cond = select i1 neg, value.neg, value
+Instruction *InstCombinerImpl::canonicalizeConditionalNegationViaMathToSelect(
+    BinaryOperator &I) {
+  assert(I.getOpcode() == BinaryOperator::Xor && "Only for xor!");
+  Value *Cond, *X;
+  // As per complexity ordering, `xor` is not commutative here.
+  if (!match(&I, m_c_BinOp(m_OneUse(m_Value()), m_Value())) ||
+      !match(I.getOperand(1), m_SExt(m_Value(Cond))) ||
+      !Cond->getType()->isIntOrIntVectorTy(1) ||
+      !match(I.getOperand(0), m_c_Add(m_SExt(m_Deferred(Cond)), m_Value(X))))
+    return nullptr;
+  return SelectInst::Create(Cond, Builder.CreateNeg(X, X->getName() + ".neg"),
+                            X);
 }
 
 /// This a limited reassociation for a special case (see above) where we are
@@ -2289,6 +2360,16 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       A->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(A, Op0, Constant::getNullValue(Ty));
 
+  // Similarly, a 'not' of the bool translates to a swap of the select arms:
+  // ~sext(A) & Op1 --> A ? 0 : Op1
+  // Op0 & ~sext(A) --> A ? 0 : Op0
+  if (match(Op0, m_Not(m_SExt(m_Value(A)))) &&
+      A->getType()->isIntOrIntVectorTy(1))
+    return SelectInst::Create(A, Constant::getNullValue(Ty), Op1);
+  if (match(Op1, m_Not(m_SExt(m_Value(A)))) &&
+      A->getType()->isIntOrIntVectorTy(1))
+    return SelectInst::Create(A, Constant::getNullValue(Ty), Op0);
+
   // (iN X s>> (N-1)) & Y --> (X s< 0) ? Y : 0 -- with optional sext
   if (match(&I, m_c_And(m_OneUse(m_SExtOrSelf(
                             m_AShr(m_Value(X), m_APIntAllowUndef(C)))),
@@ -2308,7 +2389,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   }
 
   // (~x) & y  -->  ~(x | (~y))  iff that gets rid of inversions
-  if (sinkNotIntoOtherHandOfAndOrOr(I))
+  if (sinkNotIntoOtherHandOfLogicalOp(I))
     return &I;
 
   // An and recurrence w/loop invariant step is equivelent to (and start, step)
@@ -2519,7 +2600,9 @@ static bool areInverseVectorBitmasks(Constant *C1, Constant *C2) {
 /// We have an expression of the form (A & C) | (B & D). If A is a scalar or
 /// vector composed of all-zeros or all-ones values and is the bitwise 'not' of
 /// B, it can be used as the condition operand of a select instruction.
-Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B) {
+/// We will detect (A & C) | ~(B | D) when the flag ABIsTheSame enabled.
+Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B,
+                                            bool ABIsTheSame) {
   // We may have peeked through bitcasts in the caller.
   // Exit immediately if we don't have (vector) integer types.
   Type *Ty = A->getType();
@@ -2527,7 +2610,7 @@ Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B) {
     return nullptr;
 
   // If A is the 'not' operand of B and has enough signbits, we have our answer.
-  if (match(B, m_Not(m_Specific(A)))) {
+  if (ABIsTheSame ? (A == B) : match(B, m_Not(m_Specific(A)))) {
     // If these are scalars or vectors of i1, A can be used directly.
     if (Ty->isIntOrIntVectorTy(1))
       return A;
@@ -2546,6 +2629,10 @@ Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B) {
     }
     return nullptr;
   }
+
+  // TODO: add support for sext and constant case
+  if (ABIsTheSame)
+    return nullptr;
 
   // If both operands are constants, see if the constants are inverse bitmasks.
   Constant *AConst, *BConst;
@@ -2595,14 +2682,17 @@ Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B) {
 
 /// We have an expression of the form (A & C) | (B & D). Try to simplify this
 /// to "A' ? C : D", where A' is a boolean or vector of booleans.
+/// When InvertFalseVal is set to true, we try to match the pattern
+/// where we have peeked through a 'not' op and A and B are the same:
+/// (A & C) | ~(A | D) --> (A & C) | (~A & ~D) --> A' ? C : ~D
 Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *C, Value *B,
-                                              Value *D) {
+                                              Value *D, bool InvertFalseVal) {
   // The potential condition of the select may be bitcasted. In that case, look
   // through its bitcast and the corresponding bitcast of the 'not' condition.
   Type *OrigType = A->getType();
   A = peekThroughBitcast(A, true);
   B = peekThroughBitcast(B, true);
-  if (Value *Cond = getSelectCondition(A, B)) {
+  if (Value *Cond = getSelectCondition(A, B, InvertFalseVal)) {
     // ((bc Cond) & C) | ((bc ~Cond) & D) --> bc (select Cond, (bc C), (bc D))
     // If this is a vector, we may need to cast to match the condition's length.
     // The bitcasts will either all exist or all not exist. The builder will
@@ -2613,11 +2703,13 @@ Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *C, Value *B,
       unsigned Elts = VecTy->getElementCount().getKnownMinValue();
       // For a fixed or scalable vector, get the size in bits of N x iM; for a
       // scalar this is just M.
-      unsigned SelEltSize = SelTy->getPrimitiveSizeInBits().getKnownMinSize();
+      unsigned SelEltSize = SelTy->getPrimitiveSizeInBits().getKnownMinValue();
       Type *EltTy = Builder.getIntNTy(SelEltSize / Elts);
       SelTy = VectorType::get(EltTy, VecTy->getElementCount());
     }
     Value *BitcastC = Builder.CreateBitCast(C, SelTy);
+    if (InvertFalseVal)
+      D = Builder.CreateNot(D);
     Value *BitcastD = Builder.CreateBitCast(D, SelTy);
     Value *Select = Builder.CreateSelect(Cond, BitcastC, BitcastD);
     return Builder.CreateBitCast(Select, OrigType);
@@ -3006,6 +3098,20 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     }
   }
 
+  if (match(Op0, m_And(m_Value(A), m_Value(C))) &&
+      match(Op1, m_Not(m_Or(m_Value(B), m_Value(D)))) &&
+      (Op0->hasOneUse() || Op1->hasOneUse())) {
+    // (Cond & C) | ~(Cond | D) -> Cond ? C : ~D
+    if (Value *V = matchSelectFromAndOr(A, C, B, D, true))
+      return replaceInstUsesWith(I, V);
+    if (Value *V = matchSelectFromAndOr(A, C, D, B, true))
+      return replaceInstUsesWith(I, V);
+    if (Value *V = matchSelectFromAndOr(C, A, B, D, true))
+      return replaceInstUsesWith(I, V);
+    if (Value *V = matchSelectFromAndOr(C, A, D, B, true))
+      return replaceInstUsesWith(I, V);
+  }
+
   // (A ^ B) | ((B ^ C) ^ A) -> (A ^ B) | C
   if (match(Op0, m_Xor(m_Value(A), m_Value(B))))
     if (match(Op1, m_Xor(m_Xor(m_Specific(B), m_Value(C)), m_Specific(A))))
@@ -3252,7 +3358,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   }
 
   // (~x) | y  -->  ~(x & (~y))  iff that gets rid of inversions
-  if (sinkNotIntoOtherHandOfAndOrOr(I))
+  if (sinkNotIntoOtherHandOfLogicalOp(I))
     return &I;
 
   // Improve "get low bit mask up to and including bit X" pattern:
@@ -3610,39 +3716,127 @@ static Instruction *canonicalizeAbs(BinaryOperator &Xor,
 }
 
 // Transform
+//   z = ~(x &/| y)
+// into:
+//   z = ((~x) |/& (~y))
+// iff both x and y are free to invert and all uses of z can be freely updated.
+bool InstCombinerImpl::sinkNotIntoLogicalOp(Instruction &I) {
+  Value *Op0, *Op1;
+  if (!match(&I, m_LogicalOp(m_Value(Op0), m_Value(Op1))))
+    return false;
+
+  // If this logic op has not been simplified yet, just bail out and let that
+  // happen first. Otherwise, the code below may wrongly invert.
+  if (Op0 == Op1)
+    return false;
+
+  Instruction::BinaryOps NewOpc =
+      match(&I, m_LogicalAnd()) ? Instruction::Or : Instruction::And;
+  bool IsBinaryOp = isa<BinaryOperator>(I);
+
+  // Can our users be adapted?
+  if (!InstCombiner::canFreelyInvertAllUsersOf(&I, /*IgnoredUser=*/nullptr))
+    return false;
+
+  // And can the operands be adapted?
+  for (Value *Op : {Op0, Op1})
+    if (!(InstCombiner::isFreeToInvert(Op, /*WillInvertAllUses=*/true) &&
+          (match(Op, m_ImmConstant()) ||
+           (isa<Instruction>(Op) &&
+            InstCombiner::canFreelyInvertAllUsersOf(cast<Instruction>(Op),
+                                                    /*IgnoredUser=*/&I)))))
+      return false;
+
+  for (Value **Op : {&Op0, &Op1}) {
+    Value *NotOp;
+    if (auto *C = dyn_cast<Constant>(*Op)) {
+      NotOp = ConstantExpr::getNot(C);
+    } else {
+      Builder.SetInsertPoint(
+          &*cast<Instruction>(*Op)->getInsertionPointAfterDef());
+      NotOp = Builder.CreateNot(*Op, (*Op)->getName() + ".not");
+      (*Op)->replaceUsesWithIf(
+          NotOp, [NotOp](Use &U) { return U.getUser() != NotOp; });
+      freelyInvertAllUsersOf(NotOp, /*IgnoredUser=*/&I);
+    }
+    *Op = NotOp;
+  }
+
+  Builder.SetInsertPoint(I.getInsertionPointAfterDef());
+  Value *NewLogicOp;
+  if (IsBinaryOp)
+    NewLogicOp = Builder.CreateBinOp(NewOpc, Op0, Op1, I.getName() + ".not");
+  else
+    NewLogicOp =
+        Builder.CreateLogicalOp(NewOpc, Op0, Op1, I.getName() + ".not");
+
+  replaceInstUsesWith(I, NewLogicOp);
+  // We can not just create an outer `not`, it will most likely be immediately
+  // folded back, reconstructing our initial pattern, and causing an
+  // infinite combine loop, so immediately manually fold it away.
+  freelyInvertAllUsersOf(NewLogicOp);
+  return true;
+}
+
+// Transform
 //   z = (~x) &/| y
 // into:
 //   z = ~(x |/& (~y))
 // iff y is free to invert and all uses of z can be freely updated.
-bool InstCombinerImpl::sinkNotIntoOtherHandOfAndOrOr(BinaryOperator &I) {
-  Instruction::BinaryOps NewOpc;
-  switch (I.getOpcode()) {
-  case Instruction::And:
-    NewOpc = Instruction::Or;
-    break;
-  case Instruction::Or:
-    NewOpc = Instruction::And;
-    break;
-  default:
+bool InstCombinerImpl::sinkNotIntoOtherHandOfLogicalOp(Instruction &I) {
+  Value *Op0, *Op1;
+  if (!match(&I, m_LogicalOp(m_Value(Op0), m_Value(Op1))))
     return false;
-  };
+  Instruction::BinaryOps NewOpc =
+      match(&I, m_LogicalAnd()) ? Instruction::Or : Instruction::And;
+  bool IsBinaryOp = isa<BinaryOperator>(I);
 
-  Value *X, *Y;
-  if (!match(&I, m_c_BinOp(m_Not(m_Value(X)), m_Value(Y))))
-    return false;
-
-  // Will we be able to fold the `not` into Y eventually?
-  if (!InstCombiner::isFreeToInvert(Y, Y->hasOneUse()))
+  Value *NotOp0 = nullptr;
+  Value *NotOp1 = nullptr;
+  Value **OpToInvert = nullptr;
+  if (match(Op0, m_Not(m_Value(NotOp0))) &&
+      InstCombiner::isFreeToInvert(Op1, /*WillInvertAllUses=*/true) &&
+      (match(Op1, m_ImmConstant()) ||
+       (isa<Instruction>(Op1) &&
+        InstCombiner::canFreelyInvertAllUsersOf(cast<Instruction>(Op1),
+                                                /*IgnoredUser=*/&I)))) {
+    Op0 = NotOp0;
+    OpToInvert = &Op1;
+  } else if (match(Op1, m_Not(m_Value(NotOp1))) &&
+             InstCombiner::isFreeToInvert(Op0, /*WillInvertAllUses=*/true) &&
+             (match(Op0, m_ImmConstant()) ||
+              (isa<Instruction>(Op0) &&
+               InstCombiner::canFreelyInvertAllUsersOf(cast<Instruction>(Op0),
+                                                       /*IgnoredUser=*/&I)))) {
+    Op1 = NotOp1;
+    OpToInvert = &Op0;
+  } else
     return false;
 
   // And can our users be adapted?
   if (!InstCombiner::canFreelyInvertAllUsersOf(&I, /*IgnoredUser=*/nullptr))
     return false;
 
-  Value *NotY = Builder.CreateNot(Y, Y->getName() + ".not");
-  Value *NewBinOp =
-      BinaryOperator::Create(NewOpc, X, NotY, I.getName() + ".not");
-  Builder.Insert(NewBinOp);
+  if (auto *C = dyn_cast<Constant>(*OpToInvert)) {
+    *OpToInvert = ConstantExpr::getNot(C);
+  } else {
+    Builder.SetInsertPoint(
+        &*cast<Instruction>(*OpToInvert)->getInsertionPointAfterDef());
+    Value *NotOpToInvert =
+        Builder.CreateNot(*OpToInvert, (*OpToInvert)->getName() + ".not");
+    (*OpToInvert)->replaceUsesWithIf(NotOpToInvert, [NotOpToInvert](Use &U) {
+      return U.getUser() != NotOpToInvert;
+    });
+    freelyInvertAllUsersOf(NotOpToInvert, /*IgnoredUser=*/&I);
+    *OpToInvert = NotOpToInvert;
+  }
+
+  Builder.SetInsertPoint(&*I.getInsertionPointAfterDef());
+  Value *NewBinOp;
+  if (IsBinaryOp)
+    NewBinOp = Builder.CreateBinOp(NewOpc, Op0, Op1, I.getName() + ".not");
+  else
+    NewBinOp = Builder.CreateLogicalOp(NewOpc, Op0, Op1, I.getName() + ".not");
   replaceInstUsesWith(I, NewBinOp);
   // We can not just create an outer `not`, it will most likely be immediately
   // folded back, reconstructing our initial pattern, and causing an
@@ -3690,23 +3884,6 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
   // Is this a 'not' (~) fed by a binary operator?
   BinaryOperator *NotVal;
   if (match(NotOp, m_BinOp(NotVal))) {
-    if (NotVal->getOpcode() == Instruction::And ||
-        NotVal->getOpcode() == Instruction::Or) {
-      // Apply DeMorgan's Law when inverts are free:
-      // ~(X & Y) --> (~X | ~Y)
-      // ~(X | Y) --> (~X & ~Y)
-      if (isFreeToInvert(NotVal->getOperand(0),
-                         NotVal->getOperand(0)->hasOneUse()) &&
-          isFreeToInvert(NotVal->getOperand(1),
-                         NotVal->getOperand(1)->hasOneUse())) {
-        Value *NotX = Builder.CreateNot(NotVal->getOperand(0), "notlhs");
-        Value *NotY = Builder.CreateNot(NotVal->getOperand(1), "notrhs");
-        if (NotVal->getOpcode() == Instruction::And)
-          return BinaryOperator::CreateOr(NotX, NotY);
-        return BinaryOperator::CreateAnd(NotX, NotY);
-      }
-    }
-
     // ~((-X) | Y) --> (X - 1) & (~Y)
     if (match(NotVal,
               m_OneUse(m_c_Or(m_OneUse(m_Neg(m_Value(X))), m_Value(Y))))) {
@@ -3718,6 +3895,14 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
     // ~(~X >>s Y) --> (X >>s Y)
     if (match(NotVal, m_AShr(m_Not(m_Value(X)), m_Value(Y))))
       return BinaryOperator::CreateAShr(X, Y);
+
+    // Bit-hack form of a signbit test:
+    // iN ~X >>s (N-1) --> sext i1 (X > -1) to iN
+    unsigned FullShift = Ty->getScalarSizeInBits() - 1;
+    if (match(NotVal, m_OneUse(m_AShr(m_Value(X), m_SpecificInt(FullShift))))) {
+      Value *IsNotNeg = Builder.CreateIsNotNeg(X, "isnotneg");
+      return new SExtInst(IsNotNeg, Ty);
+    }
 
     // If we are inverting a right-shifted constant, we may be able to eliminate
     // the 'not' by inverting the constant and using the opposite shift type.
@@ -3763,10 +3948,27 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
 
   // not (cmp A, B) = !cmp A, B
   CmpInst::Predicate Pred;
-  if (match(NotOp, m_OneUse(m_Cmp(Pred, m_Value(), m_Value())))) {
+  if (match(NotOp, m_Cmp(Pred, m_Value(), m_Value())) &&
+      (NotOp->hasOneUse() ||
+       InstCombiner::canFreelyInvertAllUsersOf(cast<Instruction>(NotOp),
+                                               /*IgnoredUser=*/nullptr))) {
     cast<CmpInst>(NotOp)->setPredicate(CmpInst::getInversePredicate(Pred));
-    return replaceInstUsesWith(I, NotOp);
+    freelyInvertAllUsersOf(NotOp);
+    return &I;
   }
+
+  // Move a 'not' ahead of casts of a bool to enable logic reduction:
+  // not (bitcast (sext i1 X)) --> bitcast (sext (not i1 X))
+  if (match(NotOp, m_OneUse(m_BitCast(m_OneUse(m_SExt(m_Value(X)))))) && X->getType()->isIntOrIntVectorTy(1)) {
+    Type *SextTy = cast<BitCastOperator>(NotOp)->getSrcTy();
+    Value *NotX = Builder.CreateNot(X);
+    Value *Sext = Builder.CreateSExt(NotX, SextTy);
+    return CastInst::CreateBitOrPointerCast(Sext, Ty);
+  }
+
+  if (auto *NotOpI = dyn_cast<Instruction>(NotOp))
+    if (sinkNotIntoLogicalOp(*NotOpI))
+      return &I;
 
   // Eliminate a bitwise 'not' op of 'not' min/max by inverting the min/max:
   // ~min(~X, ~Y) --> max(X, Y)
@@ -4106,6 +4308,9 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     return Canonicalized;
 
   if (Instruction *Folded = foldLogicOfIsFPClass(I, Op0, Op1))
+    return Folded;
+
+  if (Instruction *Folded = canonicalizeConditionalNegationViaMathToSelect(I))
     return Folded;
 
   return nullptr;

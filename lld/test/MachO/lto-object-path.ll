@@ -3,6 +3,7 @@
 
 ; RUN: rm -rf %t; mkdir %t
 ; RUN: opt -thinlto-bc %s -o %t/test.o
+; RUN: opt %s -o %t/test-nonthin.o
 
 ; RUN: %lld %t/test.o -o %t/test
 ; RUN: llvm-nm -pa %t/test | FileCheck %s --check-prefixes CHECK,NOOBJPATH
@@ -28,7 +29,7 @@
 
 ;; check that the object path can be an existing file
 ; RUN: touch %t/lto-tmp.o
-; RUN: ZERO_AR_DATE=0 %lld %t/test.o -o %t/test -object_path_lto %t/lto-tmp.o
+; RUN: ZERO_AR_DATE=0 %lld %t/test-nonthin.o -o %t/test -object_path_lto %t/lto-tmp.o
 ; RUN: llvm-nm -pa %t/test | FileCheck %s --check-prefixes CHECK,OBJPATH-FILE -DFILE=%t/lto-tmp.o
 
 

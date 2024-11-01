@@ -1,17 +1,17 @@
 ; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
 
 ; CHECK-LABEL: polly.merge_new_and_old:
-; CHECK-NEXT: %tmp7.ph.merge = phi %struct.wibble* [ %tmp7.ph.final_reload, %polly.exiting ], [ %tmp7.ph, %bb6.region_exiting ]
+; CHECK-NEXT: %tmp7.ph.merge = phi ptr [ %tmp7.ph.final_reload, %polly.exiting ], [ %tmp7.ph, %bb6.region_exiting ]
 
 ; CHECK-LABEL: polly.stmt.bb3:
-; CHECK-NEXT: store %struct.wibble* %tmp2, %struct.wibble** %tmp7.s2a
+; CHECK-NEXT: store ptr %tmp2, ptr %tmp7.s2a
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 %struct.blam = type { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32 }
-%struct.wibble = type { i32, %struct.wibble*, %struct.wibble* }
+%struct.wibble = type { i32, ptr, ptr }
 
-@global = external global %struct.blam*, align 8
+@global = external global ptr, align 8
 
 ; Function Attrs: nounwind uwtable
 define void @wobble() #0 {
@@ -19,19 +19,19 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb6, %bb
-  %tmp2 = phi %struct.wibble* [ %tmp7, %bb6 ], [ undef, %bb ]
-  %tmp = load %struct.blam*, %struct.blam** @global, align 8, !tbaa !1
+  %tmp2 = phi ptr [ %tmp7, %bb6 ], [ undef, %bb ]
+  %tmp = load ptr, ptr @global, align 8, !tbaa !1
   br label %bb3
 
 bb3:                                              ; preds = %bb1
-  %tmp4 = getelementptr inbounds %struct.blam, %struct.blam* %tmp, i64 0, i32 1
+  %tmp4 = getelementptr inbounds %struct.blam, ptr %tmp, i64 0, i32 1
   br i1 false, label %bb6, label %bb5
 
 bb5:                                              ; preds = %bb3
   br label %bb6
 
 bb6:                                              ; preds = %bb5, %bb3
-  %tmp7 = phi %struct.wibble* [ %tmp2, %bb3 ], [ undef, %bb5 ]
+  %tmp7 = phi ptr [ %tmp2, %bb3 ], [ undef, %bb5 ]
   br i1 undef, label %bb8, label %bb1
 
 bb8:                                              ; preds = %bb6

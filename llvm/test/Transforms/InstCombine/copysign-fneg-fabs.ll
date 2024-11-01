@@ -68,9 +68,9 @@ define half @copysign_fneg_fabs_y(half %x, half %y) {
 
 define half @fneg_copysign(half %x, half %y) {
 ; CHECK-LABEL: @fneg_copysign(
-; CHECK-NEXT:    [[COPYSIGN:%.*]] = call half @llvm.copysign.f16(half [[X:%.*]], half [[Y:%.*]])
-; CHECK-NEXT:    [[FNEG_COPYSIGN:%.*]] = fneg half [[COPYSIGN]]
-; CHECK-NEXT:    ret half [[FNEG_COPYSIGN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg half [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call half @llvm.copysign.f16(half [[X:%.*]], half [[TMP1]])
+; CHECK-NEXT:    ret half [[TMP2]]
 ;
   %copysign = call half @llvm.copysign.f16(half %x, half %y)
   %fneg.copysign = fneg half %copysign
@@ -102,9 +102,9 @@ define half @fabs_copysign(half %x, half %y) {
 
 define <2 x half> @fneg_copysign_vector(<2 x half> %x, <2 x half> %y) {
 ; CHECK-LABEL: @fneg_copysign_vector(
-; CHECK-NEXT:    [[COPYSIGN:%.*]] = call <2 x half> @llvm.copysign.v2f16(<2 x half> [[X:%.*]], <2 x half> [[Y:%.*]])
-; CHECK-NEXT:    [[FNEG_COPYSIGN:%.*]] = fneg <2 x half> [[COPYSIGN]]
-; CHECK-NEXT:    ret <2 x half> [[FNEG_COPYSIGN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <2 x half> [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x half> @llvm.copysign.v2f16(<2 x half> [[X:%.*]], <2 x half> [[TMP1]])
+; CHECK-NEXT:    ret <2 x half> [[TMP2]]
 ;
   %copysign = call <2 x half> @llvm.copysign.v2f16(<2 x half> %x, <2 x half> %y)
   %fneg.copysign = fneg <2 x half> %copysign
@@ -135,9 +135,9 @@ define <2 x half> @fabs_copysign_vector(<2 x half> %x, <2 x half> %y) {
 
 define half @fneg_copysign_flags(half %x, half %y) {
 ; CHECK-LABEL: @fneg_copysign_flags(
-; CHECK-NEXT:    [[COPYSIGN:%.*]] = call nnan nsz half @llvm.copysign.f16(half [[X:%.*]], half [[Y:%.*]])
-; CHECK-NEXT:    [[FNEG_COPYSIGN:%.*]] = fneg ninf nsz half [[COPYSIGN]]
-; CHECK-NEXT:    ret half [[FNEG_COPYSIGN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg nsz half [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call nsz half @llvm.copysign.f16(half [[X:%.*]], half [[TMP1]])
+; CHECK-NEXT:    ret half [[TMP2]]
 ;
   %copysign = call nnan nsz half @llvm.copysign.f16(half %x, half %y)
   %fneg.copysign = fneg ninf nsz half %copysign
@@ -159,9 +159,9 @@ define half @fneg_fabs_copysign_flags(half %x, half %y) {
 ; Make sure we don't break things by polluting copysign with nsz
 define half @fneg_nsz_copysign(half %x, half %y) {
 ; CHECK-LABEL: @fneg_nsz_copysign(
-; CHECK-NEXT:    [[COPYSIGN:%.*]] = call half @llvm.copysign.f16(half [[X:%.*]], half [[Y:%.*]])
-; CHECK-NEXT:    [[FNEG_COPYSIGN:%.*]] = fneg nsz half [[COPYSIGN]]
-; CHECK-NEXT:    ret half [[FNEG_COPYSIGN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg half [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call half @llvm.copysign.f16(half [[X:%.*]], half [[TMP1]])
+; CHECK-NEXT:    ret half [[TMP2]]
 ;
   %copysign = call half @llvm.copysign.f16(half %x, half %y)
   %fneg.copysign = fneg nsz half %copysign

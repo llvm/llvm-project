@@ -2,21 +2,21 @@
 # RUN: llc -march=amdgcn -mcpu=gfx908 -misched-cluster=false -run-pass=machine-scheduler -verify-misched -o - %s | FileCheck %s
 
 --- |
-  define amdgpu_kernel void @no_sched_barrier(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) { ret void }
-  define amdgpu_kernel void @sched_barrier_mask_0(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) { ret void }
-  define amdgpu_kernel void @sched_barrier_mask_1(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) { ret void }
-  define amdgpu_kernel void @sched_barrier_mask_2(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) { ret void }
-  define amdgpu_kernel void @sched_barrier_mask_4(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) { ret void }
-  define amdgpu_kernel void @sched_barrier_mask_8(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) { ret void }
-  define amdgpu_kernel void @sched_barrier_mask_16(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) { ret void }
-  define amdgpu_kernel void @sched_barrier_mask_32(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) { ret void }
-  define amdgpu_kernel void @sched_barrier_mask_64(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) { ret void }
-  define amdgpu_kernel void @sched_barrier_mask_128(i32 addrspace(3)* noalias %out, i32 addrspace(3)* noalias %in) { ret void }
-  define amdgpu_kernel void @sched_barrier_mask_256(i32 addrspace(3)* noalias %out, i32 addrspace(3)* noalias %in) { ret void }
-  define amdgpu_kernel void @sched_barrier_mask_512(i32 addrspace(3)* noalias %out, i32 addrspace(3)* noalias %in) { ret void }
-  define amdgpu_kernel void @sched_barrier_masks_8_12(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) { ret void }
-  define amdgpu_kernel void @sched_barrier_mask_4_bundle(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) { ret void }
-  define amdgpu_kernel void @sched_barrier_mask_0_bundle(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) { ret void }
+  define amdgpu_kernel void @no_sched_barrier(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) { ret void }
+  define amdgpu_kernel void @sched_barrier_mask_0(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) { ret void }
+  define amdgpu_kernel void @sched_barrier_mask_1(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) { ret void }
+  define amdgpu_kernel void @sched_barrier_mask_2(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) { ret void }
+  define amdgpu_kernel void @sched_barrier_mask_4(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) { ret void }
+  define amdgpu_kernel void @sched_barrier_mask_8(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) { ret void }
+  define amdgpu_kernel void @sched_barrier_mask_16(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) { ret void }
+  define amdgpu_kernel void @sched_barrier_mask_32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) { ret void }
+  define amdgpu_kernel void @sched_barrier_mask_64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) { ret void }
+  define amdgpu_kernel void @sched_barrier_mask_128(ptr addrspace(3) noalias %out, ptr addrspace(3) noalias %in) { ret void }
+  define amdgpu_kernel void @sched_barrier_mask_256(ptr addrspace(3) noalias %out, ptr addrspace(3) noalias %in) { ret void }
+  define amdgpu_kernel void @sched_barrier_mask_512(ptr addrspace(3) noalias %out, ptr addrspace(3) noalias %in) { ret void }
+  define amdgpu_kernel void @sched_barrier_masks_8_12(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) { ret void }
+  define amdgpu_kernel void @sched_barrier_mask_4_bundle(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) { ret void }
+  define amdgpu_kernel void @sched_barrier_mask_0_bundle(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) { ret void }
 
   !0 = distinct !{!0}
   !1 = !{!1, !0}

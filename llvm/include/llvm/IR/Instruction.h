@@ -327,7 +327,7 @@ public:
     return dropUnknownNonDebugMetadata(std::nullopt);
   }
   void dropUnknownNonDebugMetadata(unsigned ID1) {
-    return dropUnknownNonDebugMetadata(makeArrayRef(ID1));
+    return dropUnknownNonDebugMetadata(ArrayRef(ID1));
   }
   void dropUnknownNonDebugMetadata(unsigned ID1, unsigned ID2) {
     unsigned IDs[] = {ID1, ID2};
@@ -382,6 +382,23 @@ public:
   /// Drops flags that may cause this instruction to evaluate to poison despite
   /// having non-poison inputs.
   void dropPoisonGeneratingFlags();
+
+  /// Return true if this instruction has poison-generating metadata.
+  bool hasPoisonGeneratingMetadata() const LLVM_READONLY;
+
+  /// Drops metadata that may generate poison.
+  void dropPoisonGeneratingMetadata();
+
+  /// Return true if this instruction has poison-generating flags or metadata.
+  bool hasPoisonGeneratingFlagsOrMetadata() const {
+    return hasPoisonGeneratingFlags() || hasPoisonGeneratingMetadata();
+  }
+
+  /// Drops flags and metadata that may generate poison.
+  void dropPoisonGeneratingFlagsAndMetadata() {
+    dropPoisonGeneratingFlags();
+    dropPoisonGeneratingMetadata();
+  }
 
   /// This function drops non-debug unknown metadata (through
   /// dropUnknownNonDebugMetadata). For calls, it also drops parameter and 

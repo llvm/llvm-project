@@ -40,12 +40,6 @@ class StrFunc<string r> {
   string result = r;
 }
 
-// Helper for marking deprecated classes or defs. To mark a def as deprecated,
-// mix in the `Deprecate` class with a reason.
-class Deprecated<string reason> {
-  string odsDeprecated = reason;
-}
-
 //===----------------------------------------------------------------------===//
 // Predicate definitions
 //===----------------------------------------------------------------------===//
@@ -1033,7 +1027,7 @@ class OptionalAttr<Attr attr> : Attr<attr.predicate, attr.summary> {
   // Rewrite the attribute to be optional.
   // Note: this has to be kept up to date with Attr above.
   let storageType = attr.storageType;
-  let returnType = "::llvm::Optional<" # attr.returnType #">";
+  let returnType = "::std::optional<" # attr.returnType #">";
   let convertFromStorage = "$_self ? " # returnType # "(" #
                            attr.convertFromStorage # ") : (::std::nullopt)";
   let valueType = attr.valueType;
@@ -1083,6 +1077,9 @@ class AnyAttrOf<list<Attr> allowedAttrs, string summary = "",
     let returnType = cppClassName;
     let convertFromStorage = fromStorage;
 }
+
+def LocationAttr : Attr<CPred<"$_self.isa<::mlir::LocationAttr>()">,
+                        "location attribute">;
 
 def BoolAttr : Attr<CPred<"$_self.isa<::mlir::BoolAttr>()">, "bool attribute"> {
   let storageType = [{ ::mlir::BoolAttr }];
@@ -1292,6 +1289,7 @@ def UnitAttr : Attr<CPred<"$_self.isa<::mlir::UnitAttr>()">, "unit attribute"> {
 class DictionaryAttrBase<Pred condition, string summary> :
     Attr<condition, summary> {
   let storageType = [{ ::mlir::DictionaryAttr }];
+  let constBuilderCall = "$_builder.getDictionaryAttr($0)";
   let returnType = [{ ::mlir::DictionaryAttr }];
   let valueType = NoneType;
   let convertFromStorage = "$_self";
@@ -1362,7 +1360,7 @@ class SignlessIntElementsAttr<int width> : IntElementsAttrBase<
   let constBuilderCall = "::mlir::DenseElementsAttr::get("
     "::mlir::RankedTensorType::get({}, "
                                   "$_builder.getIntegerType(" # width # ")), "
-    "::llvm::makeArrayRef($0)).cast<::mlir::DenseIntElementsAttr>()";
+    "::llvm::ArrayRef($0)).cast<::mlir::DenseIntElementsAttr>()";
 }
 
 def I32ElementsAttr : SignlessIntElementsAttr<32>;
@@ -1383,7 +1381,7 @@ class RankedSignlessIntElementsAttr<int width, list<int> dims> :
 
   let constBuilderCall = "::mlir::DenseIntElementsAttr::get("
     "::mlir::RankedTensorType::get({" # !interleave(dims, ", ") #
-    "}, $_builder.getIntegerType(" # width # ")), ::llvm::makeArrayRef($0))";
+    "}, $_builder.getIntegerType(" # width # ")), ::llvm::ArrayRef($0))";
 }
 
 class RankedI32ElementsAttr<list<int> dims> :
@@ -1403,7 +1401,7 @@ class FloatElementsAttr<int width> : ElementsAttrBase<
   // Note that this is only constructing scalar elements attribute.
   let constBuilderCall = "::mlir::DenseElementsAttr::get("
     "::mlir::RankedTensorType::get({}, $_builder.getF" # width # "Type()),"
-    "::llvm::makeArrayRef($0))";
+    "::llvm::ArrayRef($0))";
   let convertFromStorage = "$_self";
 }
 
@@ -1428,7 +1426,7 @@ class RankedFloatElementsAttr<int width, list<int> dims> : ElementsAttrBase<
   let constBuilderCall = "::mlir::DenseElementsAttr::get("
     "::mlir::RankedTensorType::get({" # !interleave(dims, ", ") #
     "}, $_builder.getF" # width # "Type()), "
-    "::llvm::makeArrayRef($0)).cast<::mlir::DenseFPElementsAttr>()";
+    "::llvm::ArrayRef($0)).cast<::mlir::DenseFPElementsAttr>()";
   let convertFromStorage = "$_self";
 }
 
@@ -1481,6 +1479,9 @@ class TypedArrayAttrBase<Attr element, string summary>: ArrayAttrBase<
 
   Attr elementAttr = element;
 }
+
+def LocationArrayAttr : TypedArrayAttrBase<LocationAttr,
+                                           "location array attribute">;
 
 def AffineMapArrayAttr : TypedArrayAttrBase<AffineMapAttr,
                                       "AffineMap array attribute"> {
@@ -1669,6 +1670,10 @@ class ArrayMinCount<int n> : AttrConstraint<
 
 class ArrayCount<int n> : AttrConstraint<
     CPred<"$_self.cast<::mlir::ArrayAttr>().size() == " #n>,
+    "with exactly " # n # " elements">;
+
+class DenseArrayCount<int n> : AttrConstraint<
+    CPred<"$_self.cast<::mlir::DenseArrayAttr>().size() == " #n>,
     "with exactly " # n # " elements">;
 
 class DenseArrayStrictlyPositive<DenseArrayAttrBase arrayType> : AttrConstraint<
@@ -1948,7 +1953,7 @@ def AttrSizedResultSegments  :
 def NoRegionArguments : NativeOpTrait<"NoRegionArguments">, StructuralOpTrait;
 
 //===----------------------------------------------------------------------===//
-// OpInterface definitions
+// Interface definitions
 //===----------------------------------------------------------------------===//
 
 // Marker used to identify the argument list for an op or interface method.
@@ -2026,7 +2031,7 @@ class StaticInterfaceMethod<string desc, string retTy, string methodName,
                       defaultImplementation>;
 
 // Interface represents a base interface.
-class Interface<string name> {
+class Interface<string name, list<Interface> baseInterfacesArg = []> {
   // A human-readable description of what this interface does.
   string description = "";
 
@@ -2049,28 +2054,43 @@ class Interface<string name> {
   // An optional code block containing extra declarations to place in both
   // the interface and trait declaration.
   code extraSharedClassDeclaration = "";
+
+  // An optional code block for adding additional "classof" logic. This can
+  // be used to better enable "optional" interfaces, where an entity only
+  // implements the interface if some dynamic characteristic holds.
+  // `$_attr`/`$_op`/`$_type` may be used to refer to an instance of the
+  // entity being checked.
+  code extraClassOf = "";
+
+  // An optional set of base interfaces that this interface
+  // "derives" from.
+  list<Interface> baseInterfaces = baseInterfacesArg;
 }
 
 // AttrInterface represents an interface registered to an attribute.
-class AttrInterface<string name> : Interface<name>, InterfaceTrait<name>,
-	Attr<CPred<"$_self.isa<"
-		# !if(!empty(cppNamespace),"", cppNamespace # "::") # name # ">()">,
-			name # " instance">
-{
+class AttrInterface<string name, list<Interface> baseInterfaces = []>
+  : Interface<name, baseInterfaces>, InterfaceTrait<name>,
+	  Attr<CPred<"$_self.isa<"
+		  # !if(!empty(cppNamespace),"", cppNamespace # "::") # name # ">()">,
+			name # " instance"
+    > {
 	let storageType = !if(!empty(cppNamespace), "", cppNamespace # "::") # name;
 	let returnType = storageType;
 	let convertFromStorage = "$_self";
 }
 
 // OpInterface represents an interface registered to an operation.
-class OpInterface<string name> : Interface<name>, OpInterfaceTrait<name>;
+class OpInterface<string name, list<Interface> baseInterfaces = []>
+  : Interface<name, baseInterfaces>, OpInterfaceTrait<name>;
 
 // TypeInterface represents an interface registered to a type.
-class TypeInterface<string name> : Interface<name>, InterfaceTrait<name>,
-	Type<CPred<"$_self.isa<"
-		# !if(!empty(cppNamespace),"", cppNamespace # "::") # name # ">()">,
+class TypeInterface<string name, list<Interface> baseInterfaces = []>
+  : Interface<name, baseInterfaces>, InterfaceTrait<name>,
+	  Type<CPred<"$_self.isa<"
+		  # !if(!empty(cppNamespace),"", cppNamespace # "::") # name # ">()">,
 			name # " instance",
-				!if(!empty(cppNamespace),"", cppNamespace # "::") # name>;
+			!if(!empty(cppNamespace),"", cppNamespace # "::") # name
+    >;
 
 // Whether to declare the interface methods in the user entity's header. This
 // class simply wraps an Interface but is used to indicate that the method
@@ -2086,29 +2106,32 @@ class DeclareInterfaceMethods<list<string> overridenMethods = []> {
 class DeclareAttrInterfaceMethods<AttrInterface interface,
                                   list<string> overridenMethods = []>
       : DeclareInterfaceMethods<overridenMethods>,
-        AttrInterface<interface.cppInterfaceName> {
+        AttrInterface<interface.cppInterfaceName, interface.baseInterfaces> {
     let description = interface.description;
     let cppInterfaceName = interface.cppInterfaceName;
     let cppNamespace = interface.cppNamespace;
     let methods = interface.methods;
+    let baseInterfaces = interface.baseInterfaces;
 }
 class DeclareOpInterfaceMethods<OpInterface interface,
                                 list<string> overridenMethods = []>
       : DeclareInterfaceMethods<overridenMethods>,
-        OpInterface<interface.cppInterfaceName> {
+        OpInterface<interface.cppInterfaceName, interface.baseInterfaces> {
     let description = interface.description;
     let cppInterfaceName = interface.cppInterfaceName;
     let cppNamespace = interface.cppNamespace;
     let methods = interface.methods;
+    let baseInterfaces = interface.baseInterfaces;
 }
 class DeclareTypeInterfaceMethods<TypeInterface interface,
                                   list<string> overridenMethods = []>
       : DeclareInterfaceMethods<overridenMethods>,
-        TypeInterface<interface.cppInterfaceName> {
+        TypeInterface<interface.cppInterfaceName, interface.baseInterfaces> {
     let description = interface.description;
     let cppInterfaceName = interface.cppInterfaceName;
     let cppNamespace = interface.cppNamespace;
     let methods = interface.methods;
+    let baseInterfaces = interface.baseInterfaces;
 }
 
 //===----------------------------------------------------------------------===//

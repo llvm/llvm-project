@@ -132,7 +132,7 @@ void ContextTrieNode::addFunctionSize(uint32_t FSize) {
   if (!FuncSize)
     FuncSize = 0;
 
-  FuncSize = FuncSize.value() + FSize;
+  FuncSize = *FuncSize + FSize;
 }
 
 LineLocation ContextTrieNode::getCallSiteLoc() const { return CallSiteLoc; }

@@ -14,6 +14,7 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/StringSaver.h"
+#include <optional>
 
 using namespace clang;
 using namespace tooling;
@@ -54,11 +55,6 @@ static std::vector<std::string> splitString(std::string S, char Separator) {
 
 void ModuleDepCollector::addOutputPaths(CompilerInvocation &CI,
                                         ModuleDeps &Deps) {
-  // These are technically *inputs* to the compilation, but we populate them
-  // here in order to make \c getModuleContextHash() independent of
-  // \c lookupModuleOutput().
-  addModuleFiles(CI, Deps.ClangModuleDeps);
-
   CI.getFrontendOpts().OutputFile =
       Consumer.lookupModuleOutput(Deps.ID, ModuleOutputKind::ModuleFile);
   if (!CI.getDiagnosticOpts().DiagnosticSerializationFile.empty())
@@ -155,6 +151,9 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
   for (const auto &PrebuiltModule : Deps.PrebuiltModuleDeps)
     CI.getFrontendOpts().ModuleFiles.push_back(PrebuiltModule.PCMFile);
 
+  // Add module file inputs from dependencies.
+  addModuleFiles(CI, Deps.ClangModuleDeps);
+
   // Remove any macro definitions that are explicitly ignored.
   if (!CI.getHeaderSearchOpts().ModulesIgnoreMacros.empty()) {
     llvm::erase_if(
@@ -169,14 +168,6 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
   }
 
   Optimize(CI);
-
-  // The original invocation probably didn't have strict context hash enabled.
-  // We will use the context hash of this invocation to distinguish between
-  // multiple incompatible versions of the same module and will use it when
-  // reporting dependencies to the clients. Let's make sure we're using
-  // **strict** context hash in order to prevent accidental sharing of
-  // incompatible modules (e.g. with differences in search paths).
-  CI.getHeaderSearchOpts().ModulesStrictContextHash = true;
 
   return CI;
 }
@@ -237,7 +228,7 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
   if (llvm::any_of(CI.getFrontendOpts().Inputs, needsModules)) {
     Preprocessor &PP = ScanInstance.getPreprocessor();
     if (Module *CurrentModule = PP.getCurrentModuleImplementation())
-      if (Optional<FileEntryRef> CurrentModuleMap =
+      if (OptionalFileEntryRef CurrentModuleMap =
               PP.getHeaderSearchInfo()
                   .getModuleMap()
                   .getModuleMapFileForUniquing(CurrentModule))
@@ -327,14 +318,14 @@ void ModuleDepCollectorPP::FileChanged(SourceLocation Loc,
   // Dependency generation really does want to go all the way to the
   // file entry for a source location to find out what is depended on.
   // We do not want #line markers to affect dependency generation!
-  if (Optional<StringRef> Filename =
+  if (std::optional<StringRef> Filename =
           SM.getNonBuiltinFilenameForID(SM.getFileID(SM.getExpansionLoc(Loc))))
     MDC.addFileDep(llvm::sys::path::remove_leading_dotslash(*Filename));
 }
 
 void ModuleDepCollectorPP::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
-    bool IsAngled, CharSourceRange FilenameRange, Optional<FileEntryRef> File,
+    bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
     StringRef SearchPath, StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
   if (!File && !Imported) {
@@ -378,15 +369,8 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     if (!MDC.isPrebuiltModule(M))
       DirectModularDeps.insert(M);
 
-  for (const Module *M : DirectModularDeps) {
-    // A top-level module might not be actually imported as a module when
-    // -fmodule-name is used to compile a translation unit that imports this
-    // module. In that case it can be skipped. The appropriate header
-    // dependencies will still be reported as expected.
-    if (!M->getASTFile())
-      continue;
+  for (const Module *M : DirectModularDeps)
     handleTopLevelModule(M);
-  }
 
   MDC.Consumer.handleDependencyOutputOpts(*MDC.Opts);
 
@@ -400,8 +384,16 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     MDC.Consumer.handlePrebuiltModuleDependency(I.second);
 }
 
-ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
+std::optional<ModuleID>
+ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   assert(M == M->getTopLevelModule() && "Expected top level module!");
+
+  // A top-level module might not be actually imported as a module when
+  // -fmodule-name is used to compile a translation unit that imports this
+  // module. In that case it can be skipped. The appropriate header
+  // dependencies will still be reported as expected.
+  if (!M->getASTFile())
+    return {};
 
   // If this module has been handled already, just return its ID.
   auto ModI = MDC.ModularDeps.insert({M, nullptr});
@@ -413,13 +405,12 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
 
   MD.ID.ModuleName = M->getFullModuleName();
   MD.ImportedByMainFile = DirectModularDeps.contains(M);
-  MD.ImplicitModulePCMPath = std::string(M->getASTFile()->getName());
   MD.IsSystem = M->IsSystem;
 
   ModuleMap &ModMapInfo =
       MDC.ScanInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
 
-  Optional<FileEntryRef> ModuleMap = ModMapInfo.getModuleMapFileForUniquing(M);
+  OptionalFileEntryRef ModuleMap = ModMapInfo.getModuleMapFileForUniquing(M);
 
   if (ModuleMap) {
     SmallString<128> Path = ModuleMap->getNameAsRequested();
@@ -523,9 +514,9 @@ void ModuleDepCollectorPP::addModuleDep(
   for (const Module *Import : M->Imports) {
     if (Import->getTopLevelModule() != M->getTopLevelModule() &&
         !MDC.isPrebuiltModule(Import)) {
-      ModuleID ImportID = handleTopLevelModule(Import->getTopLevelModule());
-      if (AddedModules.insert(Import->getTopLevelModule()).second)
-        MD.ClangModuleDeps.push_back(ImportID);
+      if (auto ImportID = handleTopLevelModule(Import->getTopLevelModule()))
+        if (AddedModules.insert(Import->getTopLevelModule()).second)
+          MD.ClangModuleDeps.push_back(*ImportID);
     }
   }
 }
@@ -547,9 +538,9 @@ void ModuleDepCollectorPP::addAffectingClangModule(
            "Not quite import not top-level module");
     if (Affecting != M->getTopLevelModule() &&
         !MDC.isPrebuiltModule(Affecting)) {
-      ModuleID ImportID = handleTopLevelModule(Affecting);
-      if (AddedModules.insert(Affecting).second)
-        MD.ClangModuleDeps.push_back(ImportID);
+      if (auto ImportID = handleTopLevelModule(Affecting))
+        if (AddedModules.insert(Affecting).second)
+          MD.ClangModuleDeps.push_back(*ImportID);
     }
   }
 }

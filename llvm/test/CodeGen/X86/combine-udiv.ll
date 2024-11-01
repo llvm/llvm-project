@@ -688,7 +688,7 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 define <8 x i16> @pr38477(<8 x i16> %a0) {
 ; SSE2-LABEL: pr38477:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [0,4957,57457,4103,16385,35545,2048,2115]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = <u,4957,57457,4103,16385,35545,2048,2115>
 ; SSE2-NEXT:    pmulhuw %xmm0, %xmm1
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    psubw %xmm1, %xmm2
@@ -707,7 +707,7 @@ define <8 x i16> @pr38477(<8 x i16> %a0) {
 ;
 ; SSE41-LABEL: pr38477:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [0,4957,57457,4103,16385,35545,2048,2115]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = <u,4957,57457,4103,16385,35545,2048,2115>
 ; SSE41-NEXT:    pmulhuw %xmm0, %xmm1
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    psubw %xmm1, %xmm2

@@ -604,6 +604,10 @@ static unsigned getEncodedRMWOperation(AtomicRMWInst::BinOp Op) {
   case AtomicRMWInst::FSub: return bitc::RMW_FSUB;
   case AtomicRMWInst::FMax: return bitc::RMW_FMAX;
   case AtomicRMWInst::FMin: return bitc::RMW_FMIN;
+  case AtomicRMWInst::UIncWrap:
+    return bitc::RMW_UINC_WRAP;
+  case AtomicRMWInst::UDecWrap:
+    return bitc::RMW_UDEC_WRAP;
   }
 }
 
@@ -1050,6 +1054,18 @@ void ModuleBitcodeWriter::writeTypeTable() {
       TypeVals.push_back(VE.getTypeID(VT->getElementType()));
       if (isa<ScalableVectorType>(VT))
         TypeVals.push_back(true);
+      break;
+    }
+    case Type::TargetExtTyID: {
+      TargetExtType *TET = cast<TargetExtType>(T);
+      Code = bitc::TYPE_CODE_TARGET_TYPE;
+      writeStringRecord(Stream, bitc::TYPE_CODE_STRUCT_NAME, TET->getName(),
+                        StructNameAbbrev);
+      TypeVals.push_back(TET->getNumTypeParameters());
+      for (Type *InnerTy : TET->type_params())
+        TypeVals.push_back(VE.getTypeID(InnerTy));
+      for (unsigned IntParam : TET->int_params())
+        TypeVals.push_back(IntParam);
       break;
     }
     case Type::TypedPointerTyID:

@@ -1656,15 +1656,15 @@ ConstantRange ConstantRange::abs(bool IntMinIsPoison) const {
 
   // All non-negative.
   if (SMin.isNonNegative())
-    return *this;
+    return ConstantRange(SMin, SMax + 1);
 
   // All negative.
   if (SMax.isNegative())
     return ConstantRange(-SMax, -SMin + 1);
 
   // Range crosses zero.
-  return ConstantRange(APInt::getZero(getBitWidth()),
-                       APIntOps::umax(-SMin, SMax) + 1);
+  return ConstantRange::getNonEmpty(APInt::getZero(getBitWidth()),
+                                    APIntOps::umax(-SMin, SMax) + 1);
 }
 
 ConstantRange::OverflowResult ConstantRange::unsignedAddMayOverflow(

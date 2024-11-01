@@ -56,7 +56,8 @@ static bool shouldRemoveArguments(const Function &F) {
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
-static void extractArgumentsFromModule(Oracle &O, Module &Program) {
+static void extractArgumentsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  Module &Program = WorkItem.getModule();
   std::vector<Argument *> InitArgsToKeep;
   std::vector<Function *> Funcs;
   // Get inside-chunk arguments, as well as their parent function

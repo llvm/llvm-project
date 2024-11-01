@@ -40,6 +40,7 @@ class AnyMemTransferInst;
 class BasicBlock;
 class BatchAAResults;
 class LoadInst;
+enum class ModRefInfo : uint8_t;
 class raw_ostream;
 class StoreInst;
 class VAArgInst;
@@ -293,7 +294,8 @@ public:
   /// set return the appropriate AliasResult. Otherwise return NoAlias.
   AliasResult aliasesPointer(const Value *Ptr, LocationSize Size,
                              const AAMDNodes &AAInfo, BatchAAResults &AA) const;
-  bool aliasesUnknownInst(const Instruction *Inst, BatchAAResults &AA) const;
+  ModRefInfo aliasesUnknownInst(const Instruction *Inst,
+                                BatchAAResults &AA) const;
 };
 
 inline raw_ostream& operator<<(raw_ostream &OS, const AliasSet &AS) {

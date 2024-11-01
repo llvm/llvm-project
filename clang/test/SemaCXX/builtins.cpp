@@ -40,7 +40,7 @@ namespace addressof {
   struct U { int n : 5; } u;
   int *pbf = __builtin_addressof(u.n); // expected-error {{address of bit-field requested}}
 
-  S *ptmp = __builtin_addressof(S{}); // expected-error {{taking the address of a temporary}}
+  S *ptmp = __builtin_addressof(S{}); // expected-error {{taking the address of a temporary}} expected-warning {{temporary whose address is used as value of local variable 'ptmp' will be destroyed at the end of the full-expression}}
 }
 
 namespace function_start {

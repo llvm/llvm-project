@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <cstddef>
 
 #include "mlir/Dialect/OpenMP/OpenMPOpsDialect.cpp.inc"
@@ -117,7 +118,7 @@ static ParseResult parseClauseAttr(AsmParser &parser, ClauseAttr &attr) {
   SMLoc loc = parser.getCurrentLocation();
   if (parser.parseKeyword(&enumStr))
     return failure();
-  if (Optional<ClauseT> enumValue = symbolizeEnum<ClauseT>(enumStr)) {
+  if (std::optional<ClauseT> enumValue = symbolizeEnum<ClauseT>(enumStr)) {
     attr = ClauseAttr::get(parser.getContext(), *enumValue);
     return success();
   }
@@ -171,11 +172,27 @@ static void printLinearClause(OpAsmPrinter &p, Operation *op,
 }
 
 //===----------------------------------------------------------------------===//
+// Verifier for Nontemporal Clause
+//===----------------------------------------------------------------------===//
+
+static LogicalResult
+verifyNontemporalClause(Operation *op, OperandRange nontemporalVariables) {
+
+  // Check if each var is unique - OpenMP 5.0 -> 2.9.3.1 section
+  DenseSet<Value> nontemporalItems;
+  for (const auto &it : nontemporalVariables)
+    if (!nontemporalItems.insert(it).second)
+      return op->emitOpError() << "nontemporal variable used more than once";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Parser, verifier and printer for Aligned Clause
 //===----------------------------------------------------------------------===//
-static LogicalResult verifyAlignedClause(Operation *op,
-                                         Optional<ArrayAttr> alignmentValues,
-                                         OperandRange alignedVariables) {
+static LogicalResult
+verifyAlignedClause(Operation *op, std::optional<ArrayAttr> alignmentValues,
+                    OperandRange alignedVariables) {
   // Check if number of alignment values equals to number of aligned variables
   if (!alignedVariables.empty()) {
     if (!alignmentValues || alignmentValues->size() != alignedVariables.size())
@@ -236,7 +253,7 @@ static ParseResult parseAlignedClause(
 static void printAlignedClause(OpAsmPrinter &p, Operation *op,
                                ValueRange alignedVars,
                                TypeRange alignedVarTypes,
-                               Optional<ArrayAttr> alignmentValues) {
+                               std::optional<ArrayAttr> alignmentValues) {
   for (unsigned i = 0; i < alignedVars.size(); ++i) {
     if (i != 0)
       p << ", ";
@@ -293,11 +310,11 @@ verifyScheduleModifiers(OpAsmParser &parser,
 static ParseResult parseScheduleClause(
     OpAsmParser &parser, ClauseScheduleKindAttr &scheduleAttr,
     ScheduleModifierAttr &scheduleModifier, UnitAttr &simdModifier,
-    Optional<OpAsmParser::UnresolvedOperand> &chunkSize, Type &chunkType) {
+    std::optional<OpAsmParser::UnresolvedOperand> &chunkSize, Type &chunkType) {
   StringRef keyword;
   if (parser.parseKeyword(&keyword))
     return failure();
-  llvm::Optional<mlir::omp::ClauseScheduleKind> schedule =
+  std::optional<mlir::omp::ClauseScheduleKind> schedule =
       symbolizeClauseScheduleKind(keyword);
   if (!schedule)
     return parser.emitError(parser.getNameLoc()) << " expected schedule kind";
@@ -334,7 +351,7 @@ static ParseResult parseScheduleClause(
 
   if (!modifiers.empty()) {
     SMLoc loc = parser.getCurrentLocation();
-    if (Optional<ScheduleModifier> mod =
+    if (std::optional<ScheduleModifier> mod =
             symbolizeScheduleModifier(modifiers[0])) {
       scheduleModifier = ScheduleModifierAttr::get(parser.getContext(), *mod);
     } else {
@@ -396,7 +413,7 @@ parseReductionVarList(OpAsmParser &parser,
 static void printReductionVarList(OpAsmPrinter &p, Operation *op,
                                   OperandRange reductionVars,
                                   TypeRange reductionTypes,
-                                  Optional<ArrayAttr> reductions) {
+                                  std::optional<ArrayAttr> reductions) {
   for (unsigned i = 0, e = reductions->size(); i < e; ++i) {
     if (i != 0)
       p << ", ";
@@ -407,7 +424,7 @@ static void printReductionVarList(OpAsmPrinter &p, Operation *op,
 
 /// Verifies Reduction Clause
 static LogicalResult verifyReductionVarList(Operation *op,
-                                            Optional<ArrayAttr> reductions,
+                                            std::optional<ArrayAttr> reductions,
                                             OperandRange reductionVars) {
   if (!reductionVars.empty()) {
     if (!reductions || reductions->size() != reductionVars.size())
@@ -537,6 +554,191 @@ static LogicalResult verifySynchronizationHint(Operation *op, uint64_t hint) {
 }
 
 //===----------------------------------------------------------------------===//
+// Parser, printer and verifier for Target Data
+//===----------------------------------------------------------------------===//
+/// Parses a Map Clause.
+///
+/// map-clause = `map (` ( `(` `always, `? `close, `? `present, `? ( `to` |
+/// `from` | `delete` ) ` -> ` symbol-ref ` : ` type(symbol-ref) `)` )+ `)`
+/// Eg: map((release -> %1 : !llvm.ptr<array<1024 x i32>>), (always, close, from
+/// -> %2 : !llvm.ptr<array<1024 x i32>>))
+static ParseResult
+parseMapClause(OpAsmParser &parser,
+               SmallVectorImpl<OpAsmParser::UnresolvedOperand> &map_operands,
+               SmallVectorImpl<Type> &map_operand_types, ArrayAttr &map_types) {
+  StringRef mapTypeMod;
+  OpAsmParser::UnresolvedOperand arg1;
+  Type arg1Type;
+  IntegerAttr arg2;
+  SmallVector<IntegerAttr> mapTypesVec;
+  llvm::omp::OpenMPOffloadMappingFlags mapTypeBits;
+
+  auto parseTypeAndMod = [&]() -> ParseResult {
+    if (parser.parseKeyword(&mapTypeMod))
+      return failure();
+
+    if (mapTypeMod == "always")
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
+    if (mapTypeMod == "close")
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE;
+    if (mapTypeMod == "present")
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT;
+
+    if (mapTypeMod == "to")
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+    if (mapTypeMod == "from")
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+    if (mapTypeMod == "tofrom")
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
+                     llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+    if (mapTypeMod == "delete")
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
+    return success();
+  };
+
+  auto parseMap = [&]() -> ParseResult {
+    mapTypeBits = llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+
+    if (parser.parseLParen() ||
+        parser.parseCommaSeparatedList(parseTypeAndMod) ||
+        parser.parseArrow() || parser.parseOperand(arg1) ||
+        parser.parseColon() || parser.parseType(arg1Type) ||
+        parser.parseRParen())
+      return failure();
+    map_operands.push_back(arg1);
+    map_operand_types.push_back(arg1Type);
+    arg2 = parser.getBuilder().getIntegerAttr(
+        parser.getBuilder().getI64Type(),
+        static_cast<
+            std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+            mapTypeBits));
+    mapTypesVec.push_back(arg2);
+    return success();
+  };
+
+  if (parser.parseCommaSeparatedList(parseMap))
+    return failure();
+
+  SmallVector<Attribute> mapTypesAttr(mapTypesVec.begin(), mapTypesVec.end());
+  map_types = ArrayAttr::get(parser.getContext(), mapTypesAttr);
+  return success();
+}
+
+static void printMapClause(OpAsmPrinter &p, Operation *op,
+                           OperandRange map_operands,
+                           TypeRange map_operand_types, ArrayAttr map_types) {
+
+  // Helper function to get bitwise AND of `value` and 'flag'
+  auto bitAnd = [](int64_t value,
+                   llvm::omp::OpenMPOffloadMappingFlags flag) -> bool {
+    return value &
+           static_cast<
+               std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+               flag);
+  };
+
+  assert(map_operands.size() == map_types.size());
+
+  for (unsigned i = 0, e = map_operands.size(); i < e; i++) {
+    int64_t mapTypeBits = 0x00;
+    Value mapOp = map_operands[i];
+    Attribute mapTypeOp = map_types[i];
+
+    assert(mapTypeOp.isa<mlir::IntegerAttr>());
+    mapTypeBits = mapTypeOp.cast<mlir::IntegerAttr>().getInt();
+
+    bool always = bitAnd(mapTypeBits,
+                         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS);
+    bool close = bitAnd(mapTypeBits,
+                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE);
+    bool present = bitAnd(
+        mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT);
+
+    bool to =
+        bitAnd(mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
+    bool from =
+        bitAnd(mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM);
+    bool del = bitAnd(mapTypeBits,
+                      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE);
+
+    std::string typeModStr, typeStr;
+    llvm::raw_string_ostream typeMod(typeModStr), type(typeStr);
+
+    if (always)
+      typeMod << "always, ";
+    if (close)
+      typeMod << "close, ";
+    if (present)
+      typeMod << "present, ";
+
+    if (to)
+      type << "to";
+    if (from)
+      type << "from";
+    if (del)
+      type << "delete";
+    if (type.str().empty())
+      type << (isa<ExitDataOp>(op) ? "release" : "alloc");
+
+    p << '(' << typeMod.str() << type.str() << " -> " << mapOp << " : "
+      << mapOp.getType() << ')';
+    if (i + 1 < e)
+      p << ", ";
+  }
+}
+
+static LogicalResult verifyMapClause(Operation *op, OperandRange map_operands,
+                                     ArrayAttr map_types) {
+  // Helper function to get bitwise AND of `value` and 'flag'
+  auto bitAnd = [](int64_t value,
+                   llvm::omp::OpenMPOffloadMappingFlags flag) -> bool {
+    return value &
+           static_cast<
+               std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+               flag);
+  };
+  if (map_operands.size() != map_types.size())
+    return failure();
+
+  for (const auto &mapTypeOp : map_types) {
+    int64_t mapTypeBits = 0x00;
+
+    if (!mapTypeOp.isa<mlir::IntegerAttr>())
+      return failure();
+
+    mapTypeBits = mapTypeOp.cast<mlir::IntegerAttr>().getInt();
+
+    bool to =
+        bitAnd(mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
+    bool from =
+        bitAnd(mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM);
+    bool del = bitAnd(mapTypeBits,
+                      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE);
+
+    if (isa<DataOp>(op) && del)
+      return failure();
+    if (isa<EnterDataOp>(op) && (from || del))
+      return failure();
+    if (isa<ExitDataOp>(op) && to)
+      return failure();
+  }
+
+  return success();
+}
+
+LogicalResult DataOp::verify() {
+  return verifyMapClause(*this, getMapOperands(), getMapTypes());
+}
+
+LogicalResult EnterDataOp::verify() {
+  return verifyMapClause(*this, getMapOperands(), getMapTypes());
+}
+
+LogicalResult ExitDataOp::verify() {
+  return verifyMapClause(*this, getMapOperands(), getMapTypes());
+}
+
+//===----------------------------------------------------------------------===//
 // ParallelOp
 //===----------------------------------------------------------------------===//
 
@@ -658,8 +860,13 @@ LogicalResult SimdLoopOp::verify() {
            << "simdlen clause and safelen clause are both present, but the "
               "simdlen value is not less than or equal to safelen value";
   }
-  return verifyAlignedClause(*this, this->getAlignmentValues(),
-                             this->getAlignedVars());
+  if (verifyAlignedClause(*this, this->getAlignmentValues(),
+                          this->getAlignedVars())
+          .failed())
+    return failure();
+  if (verifyNontemporalClause(*this, this->getNontemporalVars()).failed())
+    return failure();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

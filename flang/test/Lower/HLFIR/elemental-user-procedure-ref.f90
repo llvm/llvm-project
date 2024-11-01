@@ -21,6 +21,8 @@ end subroutine
 ! CHECK:    %[[VAL_9:.*]] = fir.call @_QPelem(%[[VAL_2]]#1, %[[VAL_8]]) fastmath<contract> : (!fir.ref<i32>, !fir.ref<f32>) -> f32
 ! CHECK:    hlfir.yield_element %[[VAL_9]] : f32
 ! CHECK:  }
+! CHECK: fir.call
+! CHECK: hlfir.destroy %[[VAL_6]]
 
 subroutine by_value(x, y)
   integer :: x
@@ -44,6 +46,8 @@ end subroutine
 ! CHECK:    %[[VAL_13:.*]] = fir.call @_QPelem_val(%[[VAL_7]], %[[VAL_12]]) fastmath<contract> : (i32, f32) -> f32
 ! CHECK:    hlfir.yield_element %[[VAL_13]] : f32
 ! CHECK:  }
+! CHECK: fir.call
+! CHECK: hlfir.destroy %[[VAL_8]]
 
 subroutine by_boxaddr(x, y)
   character(*) :: x
@@ -66,6 +70,8 @@ end subroutine
 ! CHECK:    %[[VAL_12:.*]] = fir.call @_QPchar_elem(%[[VAL_3]]#0, %[[VAL_11]]) fastmath<contract> : (!fir.boxchar<1>, !fir.boxchar<1>) -> f32
 ! CHECK:    hlfir.yield_element %[[VAL_12]] : f32
 ! CHECK:  }
+! CHECK: fir.call
+! CHECK: hlfir.destroy %[[VAL_9]]
 
 subroutine sub(x, y)
   integer :: x

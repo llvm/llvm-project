@@ -408,8 +408,8 @@ define iXLen2 @test_udiv_65535(iXLen2 %x) nounwind {
 ; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    sub a1, a4, a0
 ; RV32-NEXT:    slli a0, a3, 16
-; RV32-NEXT:    add a0, a0, a3
-; RV32-NEXT:    neg a0, a0
+; RV32-NEXT:    neg a2, a3
+; RV32-NEXT:    sub a0, a2, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_udiv_65535:

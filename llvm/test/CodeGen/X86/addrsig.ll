@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux | FileCheck --check-prefix=NO-ADDRSIG %s
-; RUN: llc < %s -mtriple=x86_64-unknown-linux -addrsig | FileCheck %s
-; RUN: llc %s -filetype=obj -mtriple=x86_64-unknown-linux -addrsig -o %t
+; RUN: llc -opaque-pointers=0 < %s -mtriple=x86_64-unknown-linux | FileCheck --check-prefix=NO-ADDRSIG %s
+; RUN: llc -opaque-pointers=0 < %s -mtriple=x86_64-unknown-linux -addrsig | FileCheck %s
+; RUN: llc -opaque-pointers=0 %s -filetype=obj -mtriple=x86_64-unknown-linux -addrsig -o %t
 ; RUN: llvm-readobj --addrsig %t | FileCheck %s --check-prefix=SYM
 
 ; NO-ADDRSIG-NOT: .addrsig

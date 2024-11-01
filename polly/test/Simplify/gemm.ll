@@ -27,7 +27,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-define void @gemm([1024 x float]* %A, [1024 x float]* %B, [1024 x float]* %C) {
+define void @gemm(ptr %A, ptr %B, ptr %C) {
 bb:
   br label %bb3
 
@@ -51,8 +51,8 @@ bb7:                                              ; preds = %bb6
   br label %bb25
 
 bb8:                                              ; preds = %bb6
-  %tmp = getelementptr inbounds [1024 x float], [1024 x float]* %C, i64 %i.0, i64 %j.0
-  %tmp9 = load float, float* %tmp, align 4, !tbaa !1
+  %tmp = getelementptr inbounds [1024 x float], ptr %C, i64 %i.0, i64 %j.0
+  %tmp9 = load float, ptr %tmp, align 4, !tbaa !1
   br label %bb10
 
 bb10:                                             ; preds = %bb13, %bb8
@@ -69,18 +69,18 @@ bb12:                                             ; preds = %bb10
   br label %bb13
 
 bb13:                                             ; preds = %bb12
-  %tmp14 = getelementptr inbounds [1024 x float], [1024 x float]* %A, i64 %i.0, i64 %k.0
-  %tmp15 = load float, float* %tmp14, align 4, !tbaa !1
-  %tmp16 = getelementptr inbounds [1024 x float], [1024 x float]* %B, i64 %k.0, i64 %j.0
-  %tmp17 = load float, float* %tmp16, align 4, !tbaa !1
+  %tmp14 = getelementptr inbounds [1024 x float], ptr %A, i64 %i.0, i64 %k.0
+  %tmp15 = load float, ptr %tmp14, align 4, !tbaa !1
+  %tmp16 = getelementptr inbounds [1024 x float], ptr %B, i64 %k.0, i64 %j.0
+  %tmp17 = load float, ptr %tmp16, align 4, !tbaa !1
   %tmp18 = fmul float %tmp15, %tmp17
   %tmp19 = fadd float %tmp.0, %tmp18
   %tmp20 = add nuw nsw i64 %k.0, 1
   br label %bb10
 
 bb21:                                             ; preds = %bb11
-  %tmp22 = getelementptr inbounds [1024 x float], [1024 x float]* %C, i64 %i.0, i64 %j.0
-  store float %tmp.0.lcssa, float* %tmp22, align 4, !tbaa !1
+  %tmp22 = getelementptr inbounds [1024 x float], ptr %C, i64 %i.0, i64 %j.0
+  store float %tmp.0.lcssa, ptr %tmp22, align 4, !tbaa !1
   br label %bb23
 
 bb23:                                             ; preds = %bb21
@@ -98,9 +98,9 @@ bb28:                                             ; preds = %bb4
   ret void
 }
 
-declare void @llvm.lifetime.start(i64, i8* nocapture)
+declare void @llvm.lifetime.start(i64, ptr nocapture)
 
-declare void @llvm.lifetime.end(i64, i8* nocapture)
+declare void @llvm.lifetime.end(i64, ptr nocapture)
 
 
 !llvm.ident = !{!0}

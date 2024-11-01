@@ -38,6 +38,7 @@ add_llvm_target(LoongArchCodeGen
   SelectionDAG
   Support
   Target
+  TargetParser
 
   ADD_TO_COMPONENT
   LoongArch

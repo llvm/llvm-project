@@ -1,4 +1,4 @@
-; RUN: opt %s -passes=loop-deletion -S -o - -experimental-assignment-tracking \
+; RUN: opt %s -passes=loop-deletion -S -o - \
 ; RUN: | FileCheck %s
 
 ;; $ cat test.cpp:
@@ -18,7 +18,7 @@
 ;; mistake.
 
 ; CHECK: for.end:
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 undef,{{.+}}, metadata !DIExpression({{.+}}), metadata ![[ID:[0-9]+]], metadata ptr %Counter, metadata !DIExpression())
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 poison,{{.+}}, metadata !DIExpression({{.+}}), metadata ![[ID:[0-9]+]], metadata ptr %Counter, metadata !DIExpression())
 ; CHECK-NEXT: store i32 2, ptr %Counter, align 4,{{.*}}!DIAssignID ![[ID]]
 
 define dso_local void @_Z3funv() local_unnamed_addr #0 !dbg !7 {
@@ -44,7 +44,7 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!2, !3, !4, !5}
+!llvm.module.flags = !{!2, !3, !4, !5, !1000}
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 14.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
@@ -77,3 +77,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !31 = !{null, !32}
 !32 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !12, size: 64)
 !33 = !{}
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

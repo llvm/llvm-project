@@ -629,6 +629,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI) {
   return Modified;
 }
 
+namespace {
 class ExpandLargeFpConvertLegacyPass : public FunctionPass {
 public:
   static char ID;
@@ -650,6 +651,7 @@ public:
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
 };
+} // namespace
 
 char ExpandLargeFpConvertLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ExpandLargeFpConvertLegacyPass, "expand-large-fp-convert",

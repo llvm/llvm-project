@@ -17,7 +17,6 @@
 #ifndef LLVM_SUPPORT_ALLOCATOR_H
 #define LLVM_SUPPORT_ALLOCATOR_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/AllocatorBase.h"
@@ -28,6 +27,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <optional>
 #include <utility>
 
 namespace llvm {

@@ -38,4 +38,12 @@
 #define LLVM_LIBC_HAS_FEATURE(FEATURE) 0
 #endif
 
+#if defined(LLVM_LIBC_COMPILER_CLANG)
+#define LLVM_LIBC_LOOP_NOUNROLL _Pragma("nounroll")
+#elif defined(LLVM_LIBC_COMPILER_GCC)
+#define LLVM_LIBC_LOOP_NOUNROLL _Pragma("GCC unroll 0")
+#else
+#define LLVM_LIBC_LOOP_NOUNROLL
+#endif
+
 #endif // LLVM_LIBC_SUPPORT_COMPILER_FEATURES_H

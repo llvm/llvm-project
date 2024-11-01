@@ -880,10 +880,13 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M,
   // iterating over each Function in M.
   for (Function &F : M) {
 
-    // If there's nothing in F, then there's no reason to try and outline from
-    // it.
-    if (F.empty())
+    if (F.hasFnAttribute("nooutline")) {
+      LLVM_DEBUG({
+        dbgs() << "... Skipping function with nooutline attribute: "
+               << F.getName() << "\n";
+      });
       continue;
+    }
 
     // There's something in F. Check if it has a MachineFunction associated with
     // it.

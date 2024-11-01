@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 using namespace mlir;
 
@@ -73,10 +74,9 @@ Value spirv::Deserializer::getValue(uint32_t id) {
   return valueMap.lookup(id);
 }
 
-LogicalResult
-spirv::Deserializer::sliceInstruction(spirv::Opcode &opcode,
-                                      ArrayRef<uint32_t> &operands,
-                                      Optional<spirv::Opcode> expectedOpcode) {
+LogicalResult spirv::Deserializer::sliceInstruction(
+    spirv::Opcode &opcode, ArrayRef<uint32_t> &operands,
+    std::optional<spirv::Opcode> expectedOpcode) {
   auto binarySize = binary.size();
   if (curOffset >= binarySize) {
     return emitError(unknownLoc, "expected ")

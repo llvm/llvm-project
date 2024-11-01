@@ -23,6 +23,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
+#include <optional>
 #include <utility>
 
 namespace clang {
@@ -600,7 +601,7 @@ enum class TemplateSubstitutionKind : char {
     // A few supplemental visitor functions.
     Decl *VisitCXXMethodDecl(CXXMethodDecl *D,
                              TemplateParameterList *TemplateParams,
-                             Optional<const ASTTemplateArgumentListInfo *>
+                             std::optional<const ASTTemplateArgumentListInfo *>
                                  ClassScopeSpecializationArgs = std::nullopt,
                              RewriteKind RK = RewriteKind::None);
     Decl *VisitFunctionDecl(FunctionDecl *D,

@@ -166,9 +166,8 @@ define <4 x i1> @buildvec_mask_nonconst_v4i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: buildvec_mask_nonconst_v4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 3
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a2
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a2
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    vand.vi v8, v8, 1
@@ -178,9 +177,8 @@ define <4 x i1> @buildvec_mask_nonconst_v4i1(i1 %x, i1 %y) {
 ; ZVE32F-LABEL: buildvec_mask_nonconst_v4i1:
 ; ZVE32F:       # %bb.0:
 ; ZVE32F-NEXT:    li a2, 3
-; ZVE32F-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
-; ZVE32F-NEXT:    vmv.s.x v0, a2
 ; ZVE32F-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; ZVE32F-NEXT:    vmv.s.x v0, a2
 ; ZVE32F-NEXT:    vmv.v.x v8, a1
 ; ZVE32F-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; ZVE32F-NEXT:    vand.vi v8, v8, 1
@@ -295,9 +293,8 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: buildvec_mask_nonconst_v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 19
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a2
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a2
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    vand.vi v8, v8, 1
@@ -307,9 +304,8 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1(i1 %x, i1 %y) {
 ; ZVE32F-LABEL: buildvec_mask_nonconst_v8i1:
 ; ZVE32F:       # %bb.0:
 ; ZVE32F-NEXT:    li a2, 19
-; ZVE32F-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
-; ZVE32F-NEXT:    vmv.s.x v0, a2
 ; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; ZVE32F-NEXT:    vmv.s.x v0, a2
 ; ZVE32F-NEXT:    vmv.v.x v8, a1
 ; ZVE32F-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; ZVE32F-NEXT:    vand.vi v8, v8, 1
@@ -667,7 +663,6 @@ define <64 x i1> @buildvec_mask_v64i1() {
 ; RV32-LMULMAX4-NEXT:    lui a0, 748384
 ; RV32-LMULMAX4-NEXT:    addi a0, a0, 1776
 ; RV32-LMULMAX4-NEXT:    vmv.s.x v0, a0
-; RV32-LMULMAX4-NEXT:    vsetvli zero, zero, e32, mf2, tu, ma
 ; RV32-LMULMAX4-NEXT:    vslideup.vi v0, v8, 1
 ; RV32-LMULMAX4-NEXT:    ret
 ;
@@ -688,7 +683,6 @@ define <64 x i1> @buildvec_mask_v64i1() {
 ; RV32-LMULMAX8-NEXT:    lui a0, 748384
 ; RV32-LMULMAX8-NEXT:    addi a0, a0, 1776
 ; RV32-LMULMAX8-NEXT:    vmv.s.x v0, a0
-; RV32-LMULMAX8-NEXT:    vsetvli zero, zero, e32, mf2, tu, ma
 ; RV32-LMULMAX8-NEXT:    vslideup.vi v0, v8, 1
 ; RV32-LMULMAX8-NEXT:    ret
 ;
@@ -790,7 +784,6 @@ define <128 x i1> @buildvec_mask_v128i1() {
 ; RV32-LMULMAX4-NEXT:    lui a0, 748384
 ; RV32-LMULMAX4-NEXT:    addi a0, a0, 1776
 ; RV32-LMULMAX4-NEXT:    vmv.s.x v0, a0
-; RV32-LMULMAX4-NEXT:    vsetvli zero, zero, e32, mf2, tu, ma
 ; RV32-LMULMAX4-NEXT:    vslideup.vi v0, v8, 1
 ; RV32-LMULMAX4-NEXT:    lui a0, 945060
 ; RV32-LMULMAX4-NEXT:    addi a0, a0, -1793
@@ -831,7 +824,7 @@ define <128 x i1> @buildvec_mask_v128i1() {
 ; RV32-LMULMAX8-NEXT:    lui a0, 945060
 ; RV32-LMULMAX8-NEXT:    addi a0, a0, -1793
 ; RV32-LMULMAX8-NEXT:    vmv.s.x v8, a0
-; RV32-LMULMAX8-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
+; RV32-LMULMAX8-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-LMULMAX8-NEXT:    vslideup.vi v0, v8, 3
 ; RV32-LMULMAX8-NEXT:    ret
 ;
@@ -844,7 +837,6 @@ define <128 x i1> @buildvec_mask_v128i1() {
 ; RV64-LMULMAX8-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-LMULMAX8-NEXT:    vmv.s.x v8, a0
 ; RV64-LMULMAX8-NEXT:    vmv.s.x v0, a1
-; RV64-LMULMAX8-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
 ; RV64-LMULMAX8-NEXT:    vslideup.vi v0, v8, 1
 ; RV64-LMULMAX8-NEXT:    ret
   ret <128 x i1> <i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1>

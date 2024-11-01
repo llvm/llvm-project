@@ -25,16 +25,16 @@ define void @get_block(i32 %y_pos) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <4 x i64> [[TMP7]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP8]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = sext i32 [[TMP9]] to i64
-; CHECK-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds i16*, i16** undef, i64 [[TMP10]]
+; CHECK-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds ptr, ptr undef, i64 [[TMP10]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP8]], i32 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = sext i32 [[TMP11]] to i64
-; CHECK-NEXT:    [[ARRAYIDX31_1:%.*]] = getelementptr inbounds i16*, i16** undef, i64 [[TMP12]]
+; CHECK-NEXT:    [[ARRAYIDX31_1:%.*]] = getelementptr inbounds ptr, ptr undef, i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP8]], i32 2
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext i32 [[TMP13]] to i64
-; CHECK-NEXT:    [[ARRAYIDX31_2:%.*]] = getelementptr inbounds i16*, i16** undef, i64 [[TMP14]]
+; CHECK-NEXT:    [[ARRAYIDX31_2:%.*]] = getelementptr inbounds ptr, ptr undef, i64 [[TMP14]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP8]], i32 3
 ; CHECK-NEXT:    [[TMP16:%.*]] = sext i32 [[TMP15]] to i64
-; CHECK-NEXT:    [[ARRAYIDX31_3:%.*]] = getelementptr inbounds i16*, i16** undef, i64 [[TMP16]]
+; CHECK-NEXT:    [[ARRAYIDX31_3:%.*]] = getelementptr inbounds ptr, ptr undef, i64 [[TMP16]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -54,24 +54,24 @@ if.end:                                           ; preds = %land.lhs.true
   %cmp.i4.i = icmp slt i32 %cond.i.i, undef
   %cond.i5.i = select i1 %cmp.i4.i, i32 %cond.i.i, i32 undef
   %idxprom30 = sext i32 %cond.i5.i to i64
-  %arrayidx31 = getelementptr inbounds i16*, i16** undef, i64 %idxprom30
+  %arrayidx31 = getelementptr inbounds ptr, ptr undef, i64 %idxprom30
   %cmp.i.i.1 = icmp sgt i32 %sub14, -1
   %cond.i.i.1 = select i1 %cmp.i.i.1, i32 undef, i32 0
   %cmp.i4.i.1 = icmp slt i32 %cond.i.i.1, undef
   %cond.i5.i.1 = select i1 %cmp.i4.i.1, i32 %cond.i.i.1, i32 undef
   %idxprom30.1 = sext i32 %cond.i5.i.1 to i64
-  %arrayidx31.1 = getelementptr inbounds i16*, i16** undef, i64 %idxprom30.1
+  %arrayidx31.1 = getelementptr inbounds ptr, ptr undef, i64 %idxprom30.1
   %cmp.i.i.2 = icmp sgt i32 %sub14, -5
   %cond.i.i.2 = select i1 %cmp.i.i.2, i32 undef, i32 0
   %cmp.i4.i.2 = icmp slt i32 %cond.i.i.2, undef
   %cond.i5.i.2 = select i1 %cmp.i4.i.2, i32 %cond.i.i.2, i32 undef
   %idxprom30.2 = sext i32 %cond.i5.i.2 to i64
-  %arrayidx31.2 = getelementptr inbounds i16*, i16** undef, i64 %idxprom30.2
+  %arrayidx31.2 = getelementptr inbounds ptr, ptr undef, i64 %idxprom30.2
   %cmp.i.i.3 = icmp sgt i32 %sub14, -9
   %cond.i.i.3 = select i1 %cmp.i.i.3, i32 undef, i32 0
   %cmp.i4.i.3 = icmp slt i32 %cond.i.i.3, undef
   %cond.i5.i.3 = select i1 %cmp.i4.i.3, i32 %cond.i.i.3, i32 undef
   %idxprom30.3 = sext i32 %cond.i5.i.3 to i64
-  %arrayidx31.3 = getelementptr inbounds i16*, i16** undef, i64 %idxprom30.3
+  %arrayidx31.3 = getelementptr inbounds ptr, ptr undef, i64 %idxprom30.3
   unreachable
 }

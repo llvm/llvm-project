@@ -5,252 +5,226 @@
 ; FIXME: Should still like to vectorize the memory operations for VI
 
 ; Simple 3-pair chain with loads and stores
-define amdgpu_kernel void @test1_as_3_3_3_v2f16(half addrspace(3)* %a, half addrspace(3)* %b, half addrspace(3)* %c) {
+define amdgpu_kernel void @test1_as_3_3_3_v2f16(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c) {
 ; GCN-LABEL: @test1_as_3_3_3_v2f16(
-; GCN-NEXT:    [[TMP1:%.*]] = bitcast half addrspace(3)* [[A:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, <2 x half> addrspace(3)* [[TMP1]], align 2
-; GCN-NEXT:    [[TMP3:%.*]] = bitcast half addrspace(3)* [[B:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, <2 x half> addrspace(3)* [[TMP3]], align 2
+; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
+; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, ptr addrspace(3) [[B:%.*]], align 2
 ; GCN-NEXT:    [[TMP5:%.*]] = fmul <2 x half> [[TMP2]], [[TMP4]]
-; GCN-NEXT:    [[TMP6:%.*]] = bitcast half addrspace(3)* [[C:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    store <2 x half> [[TMP5]], <2 x half> addrspace(3)* [[TMP6]], align 2
+; GCN-NEXT:    store <2 x half> [[TMP5]], ptr addrspace(3) [[C:%.*]], align 2
 ; GCN-NEXT:    ret void
 ;
-  %i0 = load half, half addrspace(3)* %a, align 2
-  %i1 = load half, half addrspace(3)* %b, align 2
+  %i0 = load half, ptr addrspace(3) %a, align 2
+  %i1 = load half, ptr addrspace(3) %b, align 2
   %mul = fmul half %i0, %i1
-  %arrayidx3 = getelementptr inbounds half, half addrspace(3)* %a, i64 1
-  %i3 = load half, half addrspace(3)* %arrayidx3, align 2
-  %arrayidx4 = getelementptr inbounds half, half addrspace(3)* %b, i64 1
-  %i4 = load half, half addrspace(3)* %arrayidx4, align 2
+  %arrayidx3 = getelementptr inbounds half, ptr addrspace(3) %a, i64 1
+  %i3 = load half, ptr addrspace(3) %arrayidx3, align 2
+  %arrayidx4 = getelementptr inbounds half, ptr addrspace(3) %b, i64 1
+  %i4 = load half, ptr addrspace(3) %arrayidx4, align 2
   %mul5 = fmul half %i3, %i4
-  store half %mul, half addrspace(3)* %c, align 2
-  %arrayidx5 = getelementptr inbounds half, half addrspace(3)* %c, i64 1
-  store half %mul5, half addrspace(3)* %arrayidx5, align 2
+  store half %mul, ptr addrspace(3) %c, align 2
+  %arrayidx5 = getelementptr inbounds half, ptr addrspace(3) %c, i64 1
+  store half %mul5, ptr addrspace(3) %arrayidx5, align 2
   ret void
 }
 
-define amdgpu_kernel void @test1_as_3_0_0(half addrspace(3)* %a, half* %b, half* %c) {
+define amdgpu_kernel void @test1_as_3_0_0(ptr addrspace(3) %a, ptr %b, ptr %c) {
 ; GCN-LABEL: @test1_as_3_0_0(
-; GCN-NEXT:    [[TMP1:%.*]] = bitcast half addrspace(3)* [[A:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, <2 x half> addrspace(3)* [[TMP1]], align 2
-; GCN-NEXT:    [[TMP3:%.*]] = bitcast half* [[B:%.*]] to <2 x half>*
-; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, <2 x half>* [[TMP3]], align 2
+; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
+; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, ptr [[B:%.*]], align 2
 ; GCN-NEXT:    [[TMP5:%.*]] = fmul <2 x half> [[TMP2]], [[TMP4]]
-; GCN-NEXT:    [[TMP6:%.*]] = bitcast half* [[C:%.*]] to <2 x half>*
-; GCN-NEXT:    store <2 x half> [[TMP5]], <2 x half>* [[TMP6]], align 2
+; GCN-NEXT:    store <2 x half> [[TMP5]], ptr [[C:%.*]], align 2
 ; GCN-NEXT:    ret void
 ;
-  %i0 = load half, half addrspace(3)* %a, align 2
-  %i1 = load half, half* %b, align 2
+  %i0 = load half, ptr addrspace(3) %a, align 2
+  %i1 = load half, ptr %b, align 2
   %mul = fmul half %i0, %i1
-  %arrayidx3 = getelementptr inbounds half, half addrspace(3)* %a, i64 1
-  %i3 = load half, half addrspace(3)* %arrayidx3, align 2
-  %arrayidx4 = getelementptr inbounds half, half* %b, i64 1
-  %i4 = load half, half* %arrayidx4, align 2
+  %arrayidx3 = getelementptr inbounds half, ptr addrspace(3) %a, i64 1
+  %i3 = load half, ptr addrspace(3) %arrayidx3, align 2
+  %arrayidx4 = getelementptr inbounds half, ptr %b, i64 1
+  %i4 = load half, ptr %arrayidx4, align 2
   %mul5 = fmul half %i3, %i4
-  store half %mul, half* %c, align 2
-  %arrayidx5 = getelementptr inbounds half, half* %c, i64 1
-  store half %mul5, half* %arrayidx5, align 2
+  store half %mul, ptr %c, align 2
+  %arrayidx5 = getelementptr inbounds half, ptr %c, i64 1
+  store half %mul5, ptr %arrayidx5, align 2
   ret void
 }
 
-define amdgpu_kernel void @test1_as_0_0_3_v2f16(half* %a, half* %b, half addrspace(3)* %c) {
+define amdgpu_kernel void @test1_as_0_0_3_v2f16(ptr %a, ptr %b, ptr addrspace(3) %c) {
 ; GCN-LABEL: @test1_as_0_0_3_v2f16(
-; GCN-NEXT:    [[TMP1:%.*]] = bitcast half* [[A:%.*]] to <2 x half>*
-; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, <2 x half>* [[TMP1]], align 2
-; GCN-NEXT:    [[TMP3:%.*]] = bitcast half* [[B:%.*]] to <2 x half>*
-; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, <2 x half>* [[TMP3]], align 2
+; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr [[A:%.*]], align 2
+; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, ptr [[B:%.*]], align 2
 ; GCN-NEXT:    [[TMP5:%.*]] = fmul <2 x half> [[TMP2]], [[TMP4]]
-; GCN-NEXT:    [[TMP6:%.*]] = bitcast half addrspace(3)* [[C:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    store <2 x half> [[TMP5]], <2 x half> addrspace(3)* [[TMP6]], align 2
+; GCN-NEXT:    store <2 x half> [[TMP5]], ptr addrspace(3) [[C:%.*]], align 2
 ; GCN-NEXT:    ret void
 ;
-  %i0 = load half, half* %a, align 2
-  %i1 = load half, half* %b, align 2
+  %i0 = load half, ptr %a, align 2
+  %i1 = load half, ptr %b, align 2
   %mul = fmul half %i0, %i1
-  %arrayidx3 = getelementptr inbounds half, half* %a, i64 1
-  %i3 = load half, half* %arrayidx3, align 2
-  %arrayidx4 = getelementptr inbounds half, half* %b, i64 1
-  %i4 = load half, half* %arrayidx4, align 2
+  %arrayidx3 = getelementptr inbounds half, ptr %a, i64 1
+  %i3 = load half, ptr %arrayidx3, align 2
+  %arrayidx4 = getelementptr inbounds half, ptr %b, i64 1
+  %i4 = load half, ptr %arrayidx4, align 2
   %mul5 = fmul half %i3, %i4
-  store half %mul, half addrspace(3)* %c, align 2
-  %arrayidx5 = getelementptr inbounds half, half addrspace(3)* %c, i64 1
-  store half %mul5, half addrspace(3)* %arrayidx5, align 2
+  store half %mul, ptr addrspace(3) %c, align 2
+  %arrayidx5 = getelementptr inbounds half, ptr addrspace(3) %c, i64 1
+  store half %mul5, ptr addrspace(3) %arrayidx5, align 2
   ret void
 }
 
-define amdgpu_kernel void @test1_fma_v2f16(half addrspace(3)* %a, half addrspace(3)* %b, half addrspace(3)* %c, half addrspace(3)* %d) {
+define amdgpu_kernel void @test1_fma_v2f16(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d) {
 ; GCN-LABEL: @test1_fma_v2f16(
-; GCN-NEXT:    [[TMP1:%.*]] = bitcast half addrspace(3)* [[A:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, <2 x half> addrspace(3)* [[TMP1]], align 2
-; GCN-NEXT:    [[TMP3:%.*]] = bitcast half addrspace(3)* [[B:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, <2 x half> addrspace(3)* [[TMP3]], align 2
-; GCN-NEXT:    [[TMP5:%.*]] = bitcast half addrspace(3)* [[C:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    [[TMP6:%.*]] = load <2 x half>, <2 x half> addrspace(3)* [[TMP5]], align 2
+; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
+; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, ptr addrspace(3) [[B:%.*]], align 2
+; GCN-NEXT:    [[TMP6:%.*]] = load <2 x half>, ptr addrspace(3) [[C:%.*]], align 2
 ; GCN-NEXT:    [[TMP7:%.*]] = call <2 x half> @llvm.fma.v2f16(<2 x half> [[TMP2]], <2 x half> [[TMP4]], <2 x half> [[TMP6]])
-; GCN-NEXT:    [[TMP8:%.*]] = bitcast half addrspace(3)* [[D:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    store <2 x half> [[TMP7]], <2 x half> addrspace(3)* [[TMP8]], align 2
+; GCN-NEXT:    store <2 x half> [[TMP7]], ptr addrspace(3) [[D:%.*]], align 2
 ; GCN-NEXT:    ret void
 ;
-  %i0 = load half, half addrspace(3)* %a, align 2
-  %i1 = load half, half addrspace(3)* %b, align 2
-  %i2 = load half, half addrspace(3)* %c, align 2
+  %i0 = load half, ptr addrspace(3) %a, align 2
+  %i1 = load half, ptr addrspace(3) %b, align 2
+  %i2 = load half, ptr addrspace(3) %c, align 2
   %fma0 = call half @llvm.fma.f16(half %i0, half %i1, half %i2)
-  %arrayidx3 = getelementptr inbounds half, half addrspace(3)* %a, i64 1
-  %i3 = load half, half addrspace(3)* %arrayidx3, align 2
-  %arrayidx4 = getelementptr inbounds half, half addrspace(3)* %b, i64 1
-  %i4 = load half, half addrspace(3)* %arrayidx4, align 2
-  %arrayidx5 = getelementptr inbounds half, half addrspace(3)* %c, i64 1
-  %i5 = load half, half addrspace(3)* %arrayidx5, align 2
+  %arrayidx3 = getelementptr inbounds half, ptr addrspace(3) %a, i64 1
+  %i3 = load half, ptr addrspace(3) %arrayidx3, align 2
+  %arrayidx4 = getelementptr inbounds half, ptr addrspace(3) %b, i64 1
+  %i4 = load half, ptr addrspace(3) %arrayidx4, align 2
+  %arrayidx5 = getelementptr inbounds half, ptr addrspace(3) %c, i64 1
+  %i5 = load half, ptr addrspace(3) %arrayidx5, align 2
   %fma1 = call half @llvm.fma.f16(half %i3, half %i4, half %i5)
-  store half %fma0, half addrspace(3)* %d, align 2
-  %arrayidx6 = getelementptr inbounds half, half addrspace(3)* %d, i64 1
-  store half %fma1, half addrspace(3)* %arrayidx6, align 2
+  store half %fma0, ptr addrspace(3) %d, align 2
+  %arrayidx6 = getelementptr inbounds half, ptr addrspace(3) %d, i64 1
+  store half %fma1, ptr addrspace(3) %arrayidx6, align 2
   ret void
 }
 
-define amdgpu_kernel void @mul_scalar_v2f16(half addrspace(3)* %a, half %scalar, half addrspace(3)* %c) {
+define amdgpu_kernel void @mul_scalar_v2f16(ptr addrspace(3) %a, half %scalar, ptr addrspace(3) %c) {
 ; GCN-LABEL: @mul_scalar_v2f16(
-; GCN-NEXT:    [[TMP1:%.*]] = bitcast half addrspace(3)* [[A:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, <2 x half> addrspace(3)* [[TMP1]], align 2
+; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
 ; GCN-NEXT:    [[TMP3:%.*]] = insertelement <2 x half> poison, half [[SCALAR:%.*]], i32 0
 ; GCN-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x half> [[TMP3]], <2 x half> poison, <2 x i32> zeroinitializer
 ; GCN-NEXT:    [[TMP4:%.*]] = fmul <2 x half> [[TMP2]], [[SHUFFLE]]
-; GCN-NEXT:    [[TMP5:%.*]] = bitcast half addrspace(3)* [[C:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    store <2 x half> [[TMP4]], <2 x half> addrspace(3)* [[TMP5]], align 2
+; GCN-NEXT:    store <2 x half> [[TMP4]], ptr addrspace(3) [[C:%.*]], align 2
 ; GCN-NEXT:    ret void
 ;
-  %i0 = load half, half addrspace(3)* %a, align 2
+  %i0 = load half, ptr addrspace(3) %a, align 2
   %mul = fmul half %i0, %scalar
-  %arrayidx3 = getelementptr inbounds half, half addrspace(3)* %a, i64 1
-  %i3 = load half, half addrspace(3)* %arrayidx3, align 2
+  %arrayidx3 = getelementptr inbounds half, ptr addrspace(3) %a, i64 1
+  %i3 = load half, ptr addrspace(3) %arrayidx3, align 2
   %mul5 = fmul half %i3, %scalar
-  store half %mul, half addrspace(3)* %c, align 2
-  %arrayidx5 = getelementptr inbounds half, half addrspace(3)* %c, i64 1
-  store half %mul5, half addrspace(3)* %arrayidx5, align 2
+  store half %mul, ptr addrspace(3) %c, align 2
+  %arrayidx5 = getelementptr inbounds half, ptr addrspace(3) %c, i64 1
+  store half %mul5, ptr addrspace(3) %arrayidx5, align 2
   ret void
 }
 
-define amdgpu_kernel void @fabs_v2f16(half addrspace(3)* %a, half addrspace(3)* %c) {
+define amdgpu_kernel void @fabs_v2f16(ptr addrspace(3) %a, ptr addrspace(3) %c) {
 ; GCN-LABEL: @fabs_v2f16(
-; GCN-NEXT:    [[TMP1:%.*]] = bitcast half addrspace(3)* [[A:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, <2 x half> addrspace(3)* [[TMP1]], align 2
+; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
 ; GCN-NEXT:    [[TMP3:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[TMP2]])
-; GCN-NEXT:    [[TMP4:%.*]] = bitcast half addrspace(3)* [[C:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    store <2 x half> [[TMP3]], <2 x half> addrspace(3)* [[TMP4]], align 2
+; GCN-NEXT:    store <2 x half> [[TMP3]], ptr addrspace(3) [[C:%.*]], align 2
 ; GCN-NEXT:    ret void
 ;
-  %i0 = load half, half addrspace(3)* %a, align 2
+  %i0 = load half, ptr addrspace(3) %a, align 2
   %fabs0 = call half @llvm.fabs.f16(half %i0)
-  %arrayidx3 = getelementptr inbounds half, half addrspace(3)* %a, i64 1
-  %i3 = load half, half addrspace(3)* %arrayidx3, align 2
+  %arrayidx3 = getelementptr inbounds half, ptr addrspace(3) %a, i64 1
+  %i3 = load half, ptr addrspace(3) %arrayidx3, align 2
   %fabs1 = call half @llvm.fabs.f16(half %i3)
-  store half %fabs0, half addrspace(3)* %c, align 2
-  %arrayidx5 = getelementptr inbounds half, half addrspace(3)* %c, i64 1
-  store half %fabs1, half addrspace(3)* %arrayidx5, align 2
+  store half %fabs0, ptr addrspace(3) %c, align 2
+  %arrayidx5 = getelementptr inbounds half, ptr addrspace(3) %c, i64 1
+  store half %fabs1, ptr addrspace(3) %arrayidx5, align 2
   ret void
 }
 
-define amdgpu_kernel void @test1_fabs_fma_v2f16(half addrspace(3)* %a, half addrspace(3)* %b, half addrspace(3)* %c, half addrspace(3)* %d) {
+define amdgpu_kernel void @test1_fabs_fma_v2f16(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d) {
 ; GCN-LABEL: @test1_fabs_fma_v2f16(
-; GCN-NEXT:    [[TMP1:%.*]] = bitcast half addrspace(3)* [[A:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, <2 x half> addrspace(3)* [[TMP1]], align 2
-; GCN-NEXT:    [[TMP3:%.*]] = bitcast half addrspace(3)* [[B:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, <2 x half> addrspace(3)* [[TMP3]], align 2
-; GCN-NEXT:    [[TMP5:%.*]] = bitcast half addrspace(3)* [[C:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    [[TMP6:%.*]] = load <2 x half>, <2 x half> addrspace(3)* [[TMP5]], align 2
+; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
+; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, ptr addrspace(3) [[B:%.*]], align 2
+; GCN-NEXT:    [[TMP6:%.*]] = load <2 x half>, ptr addrspace(3) [[C:%.*]], align 2
 ; GCN-NEXT:    [[TMP7:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[TMP2]])
 ; GCN-NEXT:    [[TMP8:%.*]] = call <2 x half> @llvm.fma.v2f16(<2 x half> [[TMP7]], <2 x half> [[TMP4]], <2 x half> [[TMP6]])
-; GCN-NEXT:    [[TMP9:%.*]] = bitcast half addrspace(3)* [[D:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    store <2 x half> [[TMP8]], <2 x half> addrspace(3)* [[TMP9]], align 2
+; GCN-NEXT:    store <2 x half> [[TMP8]], ptr addrspace(3) [[D:%.*]], align 2
 ; GCN-NEXT:    ret void
 ;
-  %i0 = load half, half addrspace(3)* %a, align 2
-  %i1 = load half, half addrspace(3)* %b, align 2
-  %i2 = load half, half addrspace(3)* %c, align 2
+  %i0 = load half, ptr addrspace(3) %a, align 2
+  %i1 = load half, ptr addrspace(3) %b, align 2
+  %i2 = load half, ptr addrspace(3) %c, align 2
   %i0.fabs = call half @llvm.fabs.f16(half %i0)
 
   %fma0 = call half @llvm.fma.f16(half %i0.fabs, half %i1, half %i2)
-  %arrayidx3 = getelementptr inbounds half, half addrspace(3)* %a, i64 1
-  %i3 = load half, half addrspace(3)* %arrayidx3, align 2
-  %arrayidx4 = getelementptr inbounds half, half addrspace(3)* %b, i64 1
-  %i4 = load half, half addrspace(3)* %arrayidx4, align 2
-  %arrayidx5 = getelementptr inbounds half, half addrspace(3)* %c, i64 1
-  %i5 = load half, half addrspace(3)* %arrayidx5, align 2
+  %arrayidx3 = getelementptr inbounds half, ptr addrspace(3) %a, i64 1
+  %i3 = load half, ptr addrspace(3) %arrayidx3, align 2
+  %arrayidx4 = getelementptr inbounds half, ptr addrspace(3) %b, i64 1
+  %i4 = load half, ptr addrspace(3) %arrayidx4, align 2
+  %arrayidx5 = getelementptr inbounds half, ptr addrspace(3) %c, i64 1
+  %i5 = load half, ptr addrspace(3) %arrayidx5, align 2
   %i3.fabs = call half @llvm.fabs.f16(half %i3)
 
   %fma1 = call half @llvm.fma.f16(half %i3.fabs, half %i4, half %i5)
-  store half %fma0, half addrspace(3)* %d, align 2
-  %arrayidx6 = getelementptr inbounds half, half addrspace(3)* %d, i64 1
-  store half %fma1, half addrspace(3)* %arrayidx6, align 2
+  store half %fma0, ptr addrspace(3) %d, align 2
+  %arrayidx6 = getelementptr inbounds half, ptr addrspace(3) %d, i64 1
+  store half %fma1, ptr addrspace(3) %arrayidx6, align 2
   ret void
 }
 
-define amdgpu_kernel void @test1_fabs_scalar_fma_v2f16(half addrspace(3)* %a, half addrspace(3)* %b, half addrspace(3)* %c, half addrspace(3)* %d) {
+define amdgpu_kernel void @test1_fabs_scalar_fma_v2f16(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d) {
 ; GCN-LABEL: @test1_fabs_scalar_fma_v2f16(
-; GCN-NEXT:    [[I1:%.*]] = load half, half addrspace(3)* [[B:%.*]], align 2
+; GCN-NEXT:    [[I1:%.*]] = load half, ptr addrspace(3) [[B:%.*]], align 2
 ; GCN-NEXT:    [[I1_FABS:%.*]] = call half @llvm.fabs.f16(half [[I1]])
-; GCN-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds half, half addrspace(3)* [[B]], i64 1
-; GCN-NEXT:    [[I4:%.*]] = load half, half addrspace(3)* [[ARRAYIDX4]], align 2
-; GCN-NEXT:    [[TMP1:%.*]] = bitcast half addrspace(3)* [[A:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, <2 x half> addrspace(3)* [[TMP1]], align 2
-; GCN-NEXT:    [[TMP3:%.*]] = bitcast half addrspace(3)* [[C:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, <2 x half> addrspace(3)* [[TMP3]], align 2
+; GCN-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds half, ptr addrspace(3) [[B]], i64 1
+; GCN-NEXT:    [[I4:%.*]] = load half, ptr addrspace(3) [[ARRAYIDX4]], align 2
+; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
+; GCN-NEXT:    [[TMP4:%.*]] = load <2 x half>, ptr addrspace(3) [[C:%.*]], align 2
 ; GCN-NEXT:    [[TMP5:%.*]] = insertelement <2 x half> poison, half [[I1_FABS]], i32 0
 ; GCN-NEXT:    [[TMP6:%.*]] = insertelement <2 x half> [[TMP5]], half [[I4]], i32 1
 ; GCN-NEXT:    [[TMP7:%.*]] = call <2 x half> @llvm.fma.v2f16(<2 x half> [[TMP2]], <2 x half> [[TMP6]], <2 x half> [[TMP4]])
-; GCN-NEXT:    [[TMP8:%.*]] = bitcast half addrspace(3)* [[D:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    store <2 x half> [[TMP7]], <2 x half> addrspace(3)* [[TMP8]], align 2
+; GCN-NEXT:    store <2 x half> [[TMP7]], ptr addrspace(3) [[D:%.*]], align 2
 ; GCN-NEXT:    ret void
 ;
-  %i0 = load half, half addrspace(3)* %a, align 2
-  %i1 = load half, half addrspace(3)* %b, align 2
-  %i2 = load half, half addrspace(3)* %c, align 2
+  %i0 = load half, ptr addrspace(3) %a, align 2
+  %i1 = load half, ptr addrspace(3) %b, align 2
+  %i2 = load half, ptr addrspace(3) %c, align 2
   %i1.fabs = call half @llvm.fabs.f16(half %i1)
 
   %fma0 = call half @llvm.fma.f16(half %i0, half %i1.fabs, half %i2)
-  %arrayidx3 = getelementptr inbounds half, half addrspace(3)* %a, i64 1
-  %i3 = load half, half addrspace(3)* %arrayidx3, align 2
-  %arrayidx4 = getelementptr inbounds half, half addrspace(3)* %b, i64 1
-  %i4 = load half, half addrspace(3)* %arrayidx4, align 2
-  %arrayidx5 = getelementptr inbounds half, half addrspace(3)* %c, i64 1
-  %i5 = load half, half addrspace(3)* %arrayidx5, align 2
+  %arrayidx3 = getelementptr inbounds half, ptr addrspace(3) %a, i64 1
+  %i3 = load half, ptr addrspace(3) %arrayidx3, align 2
+  %arrayidx4 = getelementptr inbounds half, ptr addrspace(3) %b, i64 1
+  %i4 = load half, ptr addrspace(3) %arrayidx4, align 2
+  %arrayidx5 = getelementptr inbounds half, ptr addrspace(3) %c, i64 1
+  %i5 = load half, ptr addrspace(3) %arrayidx5, align 2
   %fma1 = call half @llvm.fma.f16(half %i3, half %i4, half %i5)
-  store half %fma0, half addrspace(3)* %d, align 2
-  %arrayidx6 = getelementptr inbounds half, half addrspace(3)* %d, i64 1
-  store half %fma1, half addrspace(3)* %arrayidx6, align 2
+  store half %fma0, ptr addrspace(3) %d, align 2
+  %arrayidx6 = getelementptr inbounds half, ptr addrspace(3) %d, i64 1
+  store half %fma1, ptr addrspace(3) %arrayidx6, align 2
   ret void
 }
 
-define amdgpu_kernel void @canonicalize_v2f16(half addrspace(3)* %a, half addrspace(3)* %c) {
+define amdgpu_kernel void @canonicalize_v2f16(ptr addrspace(3) %a, ptr addrspace(3) %c) {
 ; GFX9-LABEL: @canonicalize_v2f16(
-; GFX9-NEXT:    [[TMP1:%.*]] = bitcast half addrspace(3)* [[A:%.*]] to <2 x half> addrspace(3)*
-; GFX9-NEXT:    [[TMP2:%.*]] = load <2 x half>, <2 x half> addrspace(3)* [[TMP1]], align 2
+; GFX9-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
 ; GFX9-NEXT:    [[TMP3:%.*]] = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> [[TMP2]])
-; GFX9-NEXT:    [[TMP4:%.*]] = bitcast half addrspace(3)* [[C:%.*]] to <2 x half> addrspace(3)*
-; GFX9-NEXT:    store <2 x half> [[TMP3]], <2 x half> addrspace(3)* [[TMP4]], align 2
+; GFX9-NEXT:    store <2 x half> [[TMP3]], ptr addrspace(3) [[C:%.*]], align 2
 ; GFX9-NEXT:    ret void
 ;
 ; VI-LABEL: @canonicalize_v2f16(
-; VI-NEXT:    [[I0:%.*]] = load half, half addrspace(3)* [[A:%.*]], align 2
+; VI-NEXT:    [[I0:%.*]] = load half, ptr addrspace(3) [[A:%.*]], align 2
 ; VI-NEXT:    [[CANONICALIZE0:%.*]] = call half @llvm.canonicalize.f16(half [[I0]])
-; VI-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds half, half addrspace(3)* [[A]], i64 1
-; VI-NEXT:    [[I3:%.*]] = load half, half addrspace(3)* [[ARRAYIDX3]], align 2
+; VI-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds half, ptr addrspace(3) [[A]], i64 1
+; VI-NEXT:    [[I3:%.*]] = load half, ptr addrspace(3) [[ARRAYIDX3]], align 2
 ; VI-NEXT:    [[CANONICALIZE1:%.*]] = call half @llvm.canonicalize.f16(half [[I3]])
-; VI-NEXT:    store half [[CANONICALIZE0]], half addrspace(3)* [[C:%.*]], align 2
-; VI-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds half, half addrspace(3)* [[C]], i64 1
-; VI-NEXT:    store half [[CANONICALIZE1]], half addrspace(3)* [[ARRAYIDX5]], align 2
+; VI-NEXT:    store half [[CANONICALIZE0]], ptr addrspace(3) [[C:%.*]], align 2
+; VI-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds half, ptr addrspace(3) [[C]], i64 1
+; VI-NEXT:    store half [[CANONICALIZE1]], ptr addrspace(3) [[ARRAYIDX5]], align 2
 ; VI-NEXT:    ret void
 ;
-  %i0 = load half, half addrspace(3)* %a, align 2
+  %i0 = load half, ptr addrspace(3) %a, align 2
   %canonicalize0 = call half @llvm.canonicalize.f16(half %i0)
-  %arrayidx3 = getelementptr inbounds half, half addrspace(3)* %a, i64 1
-  %i3 = load half, half addrspace(3)* %arrayidx3, align 2
+  %arrayidx3 = getelementptr inbounds half, ptr addrspace(3) %a, i64 1
+  %i3 = load half, ptr addrspace(3) %arrayidx3, align 2
   %canonicalize1 = call half @llvm.canonicalize.f16(half %i3)
-  store half %canonicalize0, half addrspace(3)* %c, align 2
-  %arrayidx5 = getelementptr inbounds half, half addrspace(3)* %c, i64 1
-  store half %canonicalize1, half addrspace(3)* %arrayidx5, align 2
+  store half %canonicalize0, ptr addrspace(3) %c, align 2
+  %arrayidx5 = getelementptr inbounds half, ptr addrspace(3) %c, i64 1
+  store half %canonicalize1, ptr addrspace(3) %arrayidx5, align 2
   ret void
 }
 

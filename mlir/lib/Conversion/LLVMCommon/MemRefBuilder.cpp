@@ -139,7 +139,7 @@ Value MemRefDescriptor::size(OpBuilder &builder, Location loc, Value pos,
   // Copy size values to stack-allocated memory.
   auto one = createIndexAttrConstant(builder, loc, indexType, 1);
   auto sizes = builder.create<LLVM::ExtractValueOp>(
-      loc, value, llvm::makeArrayRef<int64_t>({kSizePosInMemRefDescriptor}));
+      loc, value, llvm::ArrayRef<int64_t>({kSizePosInMemRefDescriptor}));
   auto sizesPtr =
       builder.create<LLVM::AllocaOp>(loc, arrayPtrTy, one, /*alignment=*/0);
   builder.create<LLVM::StoreOp>(loc, sizes, sizesPtr);

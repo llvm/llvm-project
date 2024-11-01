@@ -18,6 +18,7 @@ add_llvm_component_library(LLVMAArch64Desc
   MC
   BinaryFormat
   Support
+  TargetParser
 
   ADD_TO_COMPONENT
   AArch64

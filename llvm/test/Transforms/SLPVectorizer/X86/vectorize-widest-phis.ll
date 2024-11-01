@@ -13,7 +13,7 @@ define void @foo() {
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x float> [ [[TMP1]], [[BB1]] ], [ [[TMP14:%.*]], [[BB3:%.*]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = load double, double* undef, align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr undef, align 8
 ; CHECK-NEXT:    br i1 undef, label [[BB3]], label [[BB4:%.*]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[TMP4:%.*]] = fpext <4 x float> [[TMP2]] to <4 x double>
@@ -45,7 +45,7 @@ bb2:
   %1 = phi float [ %conv, %bb1 ], [ %10, %bb3 ]
   %2 = phi float [ undef, %bb1 ], [ %11, %bb3 ]
   %3 = phi float [ undef, %bb1 ], [ %12, %bb3 ]
-  %4 = load double, double* undef, align 8
+  %4 = load double, ptr undef, align 8
   br i1 undef, label %bb3, label %bb4
 
 bb4:

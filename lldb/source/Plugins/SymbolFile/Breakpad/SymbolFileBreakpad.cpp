@@ -21,6 +21,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/StringExtras.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -469,7 +470,7 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
   const SectionList &list = *module.GetSectionList();
   llvm::DenseSet<addr_t> found_symbol_addresses;
   std::vector<Symbol> symbols;
-  auto add_symbol = [&](addr_t address, llvm::Optional<addr_t> size,
+  auto add_symbol = [&](addr_t address, std::optional<addr_t> size,
                         llvm::StringRef name) {
     address += base;
     SectionSP section_sp = list.FindSectionContainingFileAddress(address);
@@ -519,7 +520,7 @@ SymbolFileBreakpad::GetParameterStackSize(Symbol &symbol) {
                                  "Parameter size unknown.");
 }
 
-static llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>
+static std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
 GetRule(llvm::StringRef &unwind_rules) {
   // Unwind rules are of the form
   //   register1: expression1 register2: expression2 ...
@@ -655,7 +656,7 @@ SymbolFileBreakpad::ParseCFIUnwindPlan(const Bookmark &bookmark,
 
   LineIterator It(*m_objfile_sp, Record::StackCFI, bookmark),
       End(*m_objfile_sp);
-  llvm::Optional<StackCFIRecord> init_record = StackCFIRecord::parse(*It);
+  std::optional<StackCFIRecord> init_record = StackCFIRecord::parse(*It);
   assert(init_record && init_record->Size &&
          "Record already parsed successfully in ParseUnwindData!");
 
@@ -674,7 +675,7 @@ SymbolFileBreakpad::ParseCFIUnwindPlan(const Bookmark &bookmark,
     return nullptr;
   plan_sp->AppendRow(row_sp);
   for (++It; It != End; ++It) {
-    llvm::Optional<StackCFIRecord> record = StackCFIRecord::parse(*It);
+    std::optional<StackCFIRecord> record = StackCFIRecord::parse(*It);
     if (!record)
       return nullptr;
     if (record->Size)
@@ -698,7 +699,7 @@ SymbolFileBreakpad::ParseWinUnwindPlan(const Bookmark &bookmark,
     return nullptr;
 
   LineIterator It(*m_objfile_sp, Record::StackWin, bookmark);
-  llvm::Optional<StackWinRecord> record = StackWinRecord::parse(*It);
+  std::optional<StackWinRecord> record = StackWinRecord::parse(*It);
   assert(record && "Record already parsed successfully in ParseUnwindData!");
 
   auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindLLDB);
@@ -848,7 +849,7 @@ void SymbolFileBreakpad::ParseLineTableAndSupportFiles(CompileUnit &cu,
   std::vector<std::unique_ptr<LineSequence>> sequences;
   std::unique_ptr<LineSequence> line_seq_up =
       LineTable::CreateLineSequenceContainer();
-  llvm::Optional<addr_t> next_addr;
+  std::optional<addr_t> next_addr;
   auto finish_sequence = [&]() {
     LineTable::AppendLineEntryToSequence(
         line_seq_up.get(), *next_addr, /*line=*/0, /*column=*/0,

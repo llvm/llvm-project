@@ -161,7 +161,7 @@ public:
             using _Dp = remove_cvref_t<_Tp>;
             using _Formatter = typename _Context::template formatter_type<_Dp>;
             constexpr bool __const_formattable =
-                requires { _Formatter().format(declval<const _Dp&>(), declval<_Context&>()); };
+                requires { _Formatter().format(std::declval<const _Dp&>(), std::declval<_Context&>()); };
             using _Qp = conditional_t<__const_formattable, const _Dp, _Dp>;
 
             static_assert(__const_formattable || !is_const_v<remove_reference_t<_Tp>>, "Mandated by [format.arg]/18");

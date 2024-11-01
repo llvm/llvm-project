@@ -155,7 +155,7 @@ public:
   size_type count() const {
     unsigned NumBits = 0;
     for (auto Bit : Bits)
-      NumBits += countPopulation(Bit);
+      NumBits += llvm::popcount(Bit);
     return NumBits;
   }
 

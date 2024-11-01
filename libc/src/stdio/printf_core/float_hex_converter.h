@@ -12,6 +12,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/common.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/float_inf_nan_converter.h"
@@ -25,7 +26,8 @@ namespace printf_core {
 
 using MantissaInt = fputil::FPBits<long double>::UIntType;
 
-int inline convert_float_hex_exp(Writer *writer, const FormatSection &to_conv) {
+LIBC_INLINE int convert_float_hex_exp(Writer *writer,
+                                      const FormatSection &to_conv) {
   // All of the letters will be defined relative to variable a, which will be
   // the appropriate case based on the name of the conversion.
   // Since the name of the conversion is also 'a', we can just use it directly.

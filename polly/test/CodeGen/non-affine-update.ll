@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop \
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-import-jscop \
 ; RUN:     -polly-codegen -S < %s | FileCheck %s
 ;
 ;    void non-affine-update(double A[], double C[], double B[]) {

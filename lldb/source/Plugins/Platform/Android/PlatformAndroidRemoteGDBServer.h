@@ -10,11 +10,11 @@
 #define LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_PLATFORMANDROIDREMOTEGDBSERVER_H
 
 #include <map>
+#include <optional>
 #include <utility>
 
 #include "Plugins/Platform/gdb-server/PlatformRemoteGDBServer.h"
 
-#include "llvm/ADT/Optional.h"
 
 #include "AdbClient.h"
 
@@ -41,7 +41,7 @@ public:
 protected:
   std::string m_device_id;
   std::map<lldb::pid_t, uint16_t> m_port_forwards;
-  llvm::Optional<AdbClient::UnixSocketNamespace> m_socket_namespace;
+  std::optional<AdbClient::UnixSocketNamespace> m_socket_namespace;
 
   bool LaunchGDBServer(lldb::pid_t &pid, std::string &connect_url) override;
 

@@ -26,11 +26,11 @@
 #include "support/Path.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/CodeCompleteOptions.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
 #include <future>
+#include <optional>
 #include <utility>
 
 namespace clang {
@@ -56,7 +56,7 @@ struct CodeCompleteOptions {
   /// If none, the implementation may choose an appropriate behavior.
   /// (In practice, ClangdLSPServer enables bundling if the client claims
   /// to supports signature help).
-  llvm::Optional<bool> BundleOverloads;
+  std::optional<bool> BundleOverloads;
 
   /// Limit the number of results returned (0 means no limit).
   /// If more results are available, we set CompletionList.isIncomplete.
@@ -69,6 +69,10 @@ struct CodeCompleteOptions {
     IWYU,
     NeverInsert,
   } InsertIncludes = IncludeInsertion::IWYU;
+
+  /// Whether include insertions for Objective-C code should use #import instead
+  /// of #include.
+  bool ImportInsertions = false;
 
   /// A visual indicator to prepend to the completion label to indicate whether
   /// completion result would trigger an #include insertion or not.
@@ -174,7 +178,7 @@ struct CodeCompletion {
   // Type to be displayed for this completion.
   std::string ReturnType;
   // The parsed documentation comment.
-  llvm::Optional<markup::Document> Documentation;
+  std::optional<markup::Document> Documentation;
   CompletionItemKind Kind = CompletionItemKind::Missing;
   // This completion item may represent several symbols that can be inserted in
   // the same way, such as function overloads. In this case BundleSize > 1, and
@@ -193,7 +197,7 @@ struct CodeCompletion {
     // Empty for non-symbol completions, or when not known.
     std::string Header;
     // Present if Header should be inserted to use this item.
-    llvm::Optional<TextEdit> Insertion;
+    std::optional<TextEdit> Insertion;
   };
   // All possible include headers ranked by preference. By default, the first
   // include is used.
@@ -246,7 +250,7 @@ struct CodeCompleteResult {
   // Example: foo.pb^ -> foo.push_back()
   //              ~~
   // Typically matches the textEdit.range of Completions, but not guaranteed to.
-  llvm::Optional<Range> CompletionRange;
+  std::optional<Range> CompletionRange;
   // Usually the source will be parsed with a real C++ parser.
   // But heuristics may be used instead if e.g. the preamble is not ready.
   bool RanParser = true;
@@ -259,10 +263,10 @@ raw_ostream &operator<<(raw_ostream &, const CodeCompleteResult &);
 struct SpeculativeFuzzyFind {
   /// A cached request from past code completions.
   /// Set by caller of `codeComplete()`.
-  llvm::Optional<FuzzyFindRequest> CachedReq;
+  std::optional<FuzzyFindRequest> CachedReq;
   /// The actual request used by `codeComplete()`.
   /// Set by `codeComplete()`. This can be used by callers to update cache.
-  llvm::Optional<FuzzyFindRequest> NewReq;
+  std::optional<FuzzyFindRequest> NewReq;
   /// The result is consumed by `codeComplete()` if speculation succeeded.
   /// NOTE: the destructor will wait for the async call to finish.
   std::future<std::pair<bool /*Incomplete*/, SymbolSlab>> Result;

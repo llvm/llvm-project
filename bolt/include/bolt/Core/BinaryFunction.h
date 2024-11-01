@@ -1614,11 +1614,10 @@ public:
 
   /// Dump function information to debug output. If \p PrintInstructions
   /// is true - include instruction disassembly.
-  void dump(bool PrintInstructions = true) const;
+  void dump() const;
 
   /// Print function information to the \p OS stream.
-  void print(raw_ostream &OS, std::string Annotation = "",
-             bool PrintInstructions = true);
+  void print(raw_ostream &OS, std::string Annotation = "");
 
   /// Print all relocations between \p Offset and \p Offset + \p Size in
   /// this function.

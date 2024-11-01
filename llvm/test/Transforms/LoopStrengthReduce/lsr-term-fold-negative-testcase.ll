@@ -51,29 +51,6 @@ for.body4:                                        ; preds = %for.body, %for.body
   br i1 %cmp2, label %for.body4, label %for.cond.cleanup3
 }
 
-; The terminating condition folding transformation cannot find the ptr IV
-; because it checks if the value comes from the LoopPreheader. %mark is from
-; the function argument, so it is not qualified for the transformation.
-define void @no_iv_to_help(ptr %mark, i32 signext %length) {
-; CHECK: Cannot find other AddRec IV to help folding
-entry:
-  %tobool.not3 = icmp eq i32 %length, 0
-  br i1 %tobool.not3, label %for.cond.cleanup, label %for.body
-
-for.cond.cleanup:                                 ; preds = %for.body, %entry
-  ret void
-
-for.body:                                         ; preds = %entry, %for.body
-  %i.05 = phi i32 [ %dec, %for.body ], [ %length, %entry ]
-  %dst.04 = phi ptr [ %incdec.ptr, %for.body ], [ %mark, %entry ]
-  %0 = load ptr, ptr %dst.04, align 8
-  call ptr @foo(ptr %0)
-  %incdec.ptr = getelementptr inbounds ptr, ptr %dst.04, i64 1
-  %dec = add nsw i32 %i.05, -1
-  %tobool.not = icmp eq i32 %dec, 0
-  br i1 %tobool.not, label %for.cond.cleanup, label %for.body
-}
-
 declare void @foo(ptr)
 
 define void @NonAddRecIV(ptr %a) {

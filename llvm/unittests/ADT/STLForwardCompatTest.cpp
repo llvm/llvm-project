@@ -54,7 +54,7 @@ TEST(TransformTest, TransformStd) {
   A = 3;
   std::optional<int> C = llvm::transformOptional(A, [&](int N) { return N + 1; });
   EXPECT_TRUE(C.has_value());
-  EXPECT_EQ(4, C.value());
+  EXPECT_EQ(4, *C);
 }
 
 TEST(TransformTest, MoveTransformStd) {
@@ -75,31 +75,33 @@ TEST(TransformTest, MoveTransformStd) {
   std::optional<int> C = llvm::transformOptional(
       std::move(A), [&](const MoveOnly &M) { return M.val + 2; });
   EXPECT_TRUE(C.has_value());
-  EXPECT_EQ(7, C.value());
+  EXPECT_EQ(7, *C);
   EXPECT_EQ(0u, MoveOnly::MoveConstructions);
   EXPECT_EQ(0u, MoveOnly::MoveAssignments);
   EXPECT_EQ(0u, MoveOnly::Destructions);
 }
 
 TEST(TransformTest, TransformLlvm) {
-  llvm::Optional<int> A;
+  std::optional<int> A;
 
-  llvm::Optional<int> B = llvm::transformOptional(A, [&](int N) { return N + 1; });
+  std::optional<int> B =
+      llvm::transformOptional(A, [&](int N) { return N + 1; });
   EXPECT_FALSE(B.has_value());
 
   A = 3;
-  llvm::Optional<int> C = llvm::transformOptional(A, [&](int N) { return N + 1; });
+  std::optional<int> C =
+      llvm::transformOptional(A, [&](int N) { return N + 1; });
   EXPECT_TRUE(C.has_value());
-  EXPECT_EQ(4, C.value());
+  EXPECT_EQ(4, *C);
 }
 
 TEST(TransformTest, MoveTransformLlvm) {
   using llvm::MoveOnly;
 
-  llvm::Optional<MoveOnly> A;
+  std::optional<MoveOnly> A;
 
   MoveOnly::ResetCounts();
-  llvm::Optional<int> B = llvm::transformOptional(
+  std::optional<int> B = llvm::transformOptional(
       std::move(A), [&](const MoveOnly &M) { return M.val + 2; });
   EXPECT_FALSE(B.has_value());
   EXPECT_EQ(0u, MoveOnly::MoveConstructions);
@@ -108,10 +110,10 @@ TEST(TransformTest, MoveTransformLlvm) {
 
   A = MoveOnly(5);
   MoveOnly::ResetCounts();
-  llvm::Optional<int> C = llvm::transformOptional(
+  std::optional<int> C = llvm::transformOptional(
       std::move(A), [&](const MoveOnly &M) { return M.val + 2; });
   EXPECT_TRUE(C.has_value());
-  EXPECT_EQ(7, C.value());
+  EXPECT_EQ(7, *C);
   EXPECT_EQ(0u, MoveOnly::MoveConstructions);
   EXPECT_EQ(0u, MoveOnly::MoveAssignments);
   EXPECT_EQ(0u, MoveOnly::Destructions);

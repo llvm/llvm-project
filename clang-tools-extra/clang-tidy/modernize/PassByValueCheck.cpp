@@ -18,9 +18,7 @@
 using namespace clang::ast_matchers;
 using namespace llvm;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 namespace {
 /// Matches move-constructible classes.
@@ -305,6 +303,4 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
               "<utility>");
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

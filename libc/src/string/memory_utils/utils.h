@@ -12,6 +12,7 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/cstddef.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/common.h"
 #include "src/__support/compiler_features.h"
 
 #include <stddef.h> // size_t
@@ -91,8 +92,8 @@ template <size_t alignment, typename T> static T *assume_aligned(T *ptr) {
 
 // Performs a constant count copy.
 template <size_t Size>
-static inline void memcpy_inline(void *__restrict dst,
-                                 const void *__restrict src) {
+LIBC_INLINE void memcpy_inline(void *__restrict dst,
+                               const void *__restrict src) {
 #ifdef LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
   __builtin_memcpy_inline(dst, src, Size);
 #else
@@ -130,7 +131,7 @@ template <typename T> struct StrictIntegralType {
   }
 
   // Helper to get the zero value.
-  static inline constexpr StrictIntegralType ZERO() { return {T(0)}; }
+  LIBC_INLINE static constexpr StrictIntegralType ZERO() { return {T(0)}; }
 
 private:
   T value;
@@ -141,22 +142,22 @@ using BcmpReturnType = StrictIntegralType<uint32_t>;
 
 // Loads bytes from memory (possibly unaligned) and materializes them as
 // type.
-template <typename T> static inline T load(CPtr ptr) {
+template <typename T> LIBC_INLINE T load(CPtr ptr) {
   T Out;
   memcpy_inline<sizeof(T)>(&Out, ptr);
   return Out;
 }
 
 // Stores a value of type T in memory (possibly unaligned).
-template <typename T> static inline void store(Ptr ptr, T value) {
+template <typename T> LIBC_INLINE void store(Ptr ptr, T value) {
   memcpy_inline<sizeof(T)>(ptr, &value);
 }
 
 // Advances the pointers p1 and p2 by offset bytes and decrease count by the
 // same amount.
 template <typename T1, typename T2>
-static inline void adjust(ptrdiff_t offset, T1 *__restrict &p1,
-                          T2 *__restrict &p2, size_t &count) {
+LIBC_INLINE void adjust(ptrdiff_t offset, T1 *__restrict &p1,
+                        T2 *__restrict &p2, size_t &count) {
   p1 += offset;
   p2 += offset;
   count -= offset;

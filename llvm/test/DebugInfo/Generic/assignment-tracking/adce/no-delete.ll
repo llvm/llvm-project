@@ -1,4 +1,4 @@
-; RUN: opt %s -passes=adce -experimental-assignment-tracking -S -o - \
+; RUN: opt %s -passes=adce -S -o - \
 ; RUN: | FileCheck %s
 
 ;; $ cat test.c
@@ -26,7 +26,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!2, !3, !4, !5}
+!llvm.module.flags = !{!2, !3, !4, !5, !1000}
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 14.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
@@ -46,3 +46,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !14 = !DILocation(line: 0, scope: !7)
 !19 = distinct !DIAssignID()
 !20 = !DILocation(line: 1, column: 22, scope: !7)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

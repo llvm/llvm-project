@@ -17,6 +17,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/IR/RegionKindInterface.td"
 include "mlir/Dialect/SCF/IR/DeviceMappingInterface.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/ParallelCombiningOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
@@ -25,6 +26,7 @@ def SCF_Dialect : Dialect {
   let name = "scf";
   let cppNamespace = "::mlir::scf";
   let dependentDialects = ["arith::ArithDialect"];
+  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 // Base class for SCF dialect ops.
@@ -274,7 +276,7 @@ def ForOp : SCF_Op<"for",
     }
     /// Get the iter arg number for an operand. If it isnt an iter arg
     /// operand return std::nullopt.
-    Optional<unsigned> getIterArgNumberForOpOperand(OpOperand &opOperand) {
+    std::optional<unsigned> getIterArgNumberForOpOperand(OpOperand &opOperand) {
       if (opOperand.getOwner() != getOperation())
         return std::nullopt;
       unsigned operandNumber = opOperand.getOperandNumber();
@@ -331,10 +333,10 @@ def ForOp : SCF_Op<"for",
     /// correspond to the loop iterator operands, i.e., those exclusing the
     /// induction variable. LoopOp only has one region, so 0 is the only valid
     /// value for `index`.
-    OperandRange getSuccessorEntryOperands(Optional<unsigned> index);
+    OperandRange getSuccessorEntryOperands(std::optional<unsigned> index);
 
     /// Returns the step as an `APInt` if it is constant.
-    Optional<APInt> getConstantStep();
+    std::optional<APInt> getConstantStep();
 
     /// Interface method for ConditionallySpeculatable.
     Speculation::Speculatability getSpeculatability();
@@ -496,7 +498,7 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
   let builders = [
     // Bodyless builder, outputs must be specified.
     OpBuilder<(ins "ValueRange":$outputs, "ValueRange":$num_threads,
-                   "Optional<ArrayAttr>":$mapping)>,
+                   "std::optional<ArrayAttr>":$mapping)>,
     // Builder that takes a bodyBuilder lambda.
     OpBuilder<(ins "ValueRange":$outputs, "ValueRange":$num_threads,
                    "ArrayRef<Attribute>":$mapping,
@@ -609,12 +611,11 @@ def PerformConcurrentlyOp : SCF_Op<"foreach_thread.perform_concurrently", [
 // IfOp
 //===----------------------------------------------------------------------===//
 
-def IfOp : SCF_Op<"if",
-      [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                 ["getNumRegionInvocations",
-                                  "getRegionInvocationBounds"]>,
-       SingleBlockImplicitTerminator<"scf::YieldOp">, RecursiveMemoryEffects,
-       NoRegionArguments]> {
+def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
+    "getNumRegionInvocations", "getRegionInvocationBounds"]>,
+    DeclareOpInterfaceMethods<InferTypeOpInterface>,
+    SingleBlockImplicitTerminator<"scf::YieldOp">, RecursiveMemoryEffects,
+    NoRegionArguments]> {
   let summary = "if-then-else operation";
   let description = [{
     The `scf.if` operation represents an if-then-else construct for
@@ -666,19 +667,15 @@ def IfOp : SCF_Op<"if",
 
   let skipDefaultBuilders = 1;
   let builders = [
+    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$cond)>,
     OpBuilder<(ins "Value":$cond, "bool":$withElseRegion)>,
     OpBuilder<(ins "TypeRange":$resultTypes, "Value":$cond,
       "bool":$withElseRegion)>,
-    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$cond,
-      CArg<"function_ref<void(OpBuilder &, Location)>",
-           "buildTerminatedBody">:$thenBuilder,
-      CArg<"function_ref<void(OpBuilder &, Location)>",
-           "nullptr">:$elseBuilder)>,
     OpBuilder<(ins "Value":$cond,
       CArg<"function_ref<void(OpBuilder &, Location)>",
            "buildTerminatedBody">:$thenBuilder,
       CArg<"function_ref<void(OpBuilder &, Location)>",
-           "nullptr">:$elseBuilder)>
+           "nullptr">:$elseBuilder)>,
   ];
 
   let extraClassDeclaration = [{
@@ -1003,7 +1000,7 @@ def WhileOp : SCF_Op<"while",
     using BodyBuilderFn =
         function_ref<void(OpBuilder &, Location, ValueRange)>;
 
-    OperandRange getSuccessorEntryOperands(Optional<unsigned> index);
+    OperandRange getSuccessorEntryOperands(std::optional<unsigned> index);
     ConditionOp getConditionOp();
     YieldOp getYieldOp();
     Block::BlockArgListType getBeforeArguments();

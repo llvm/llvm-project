@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Interfaces/TilingInterface.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -47,7 +48,7 @@ static SmallVector<Value> getIndicesForAccess(OpBuilder &b, Location loc,
 static LogicalResult inlinePayload(OpBuilder &b, LinalgOp linalgOp,
                                    ValueRange ivs, ValueRange argValues) {
   Block *body = linalgOp.getBlock();
-  BlockAndValueMapping map;
+  IRMapping map;
   map.map(body->getArguments(), argValues);
   for (auto &op : body->without_terminator()) {
     if (auto indexOp = dyn_cast<IndexOp>(&op)) {
@@ -258,6 +259,8 @@ struct LinalgOpPartialReductionInterface
     // Insert the new parallel dimension based on the index of the reduction
     // loop. This could be controlled by user for more flexibility.
     int64_t insertSplitDimension = reductionDims[0];
+    assert(sizes.size() >= static_cast<size_t>(insertSplitDimension) &&
+           "reduction dimension must be tiled");
 
     SmallVector<Operation *, 4> combinerOps;
     if (!matchReduction(linalgOp.getRegionOutputArgs(), 0, combinerOps) ||
@@ -265,7 +268,7 @@ struct LinalgOpPartialReductionInterface
       return op->emitOpError("Failed to anaysis the reduction operation.");
 
     Operation *reductionOp = combinerOps[0];
-    Optional<Attribute> identity = getNeutralElement(reductionOp);
+    std::optional<Attribute> identity = getNeutralElement(reductionOp);
     if (!identity.has_value())
       return op->emitOpError(
           "Failed to get an identity value for the reduction operation.");
@@ -343,7 +346,7 @@ struct LinalgOpPartialReductionInterface
     auto genericOp =
         b.create<GenericOp>(loc, TypeRange({out.getType()}), tiledOperands,
                             ValueRange({out}), newMaps, newIteratorTypes);
-    BlockAndValueMapping mapping;
+    IRMapping mapping;
     op->getRegion(0).cloneInto(&genericOp.getRegion(),
                                genericOp.getRegion().begin(), mapping);
     return genericOp.getOperation();

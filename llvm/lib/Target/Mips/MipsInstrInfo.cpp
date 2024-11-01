@@ -930,7 +930,7 @@ MipsInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
     {MO_CALL_LO16,    "mips-call-lo16"},
     {MO_JALR,         "mips-jalr"}
   };
-  return makeArrayRef(Flags);
+ return ArrayRef(Flags);
 }
 
 std::optional<ParamLoadedValue>

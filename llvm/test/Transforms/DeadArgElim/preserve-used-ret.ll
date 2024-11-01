@@ -18,7 +18,7 @@ start:
 
 declare dso_local i32 @test(i64, i64)
 
-define i32 @main(i32 %argc, i8** %argv) {
+define i32 @main(i32 %argc, ptr %argv) {
 start:
   %x = call { i64, i64 } @g(i64 13, i64 42)
   %x.0 = extractvalue { i64, i64 } %x, 0

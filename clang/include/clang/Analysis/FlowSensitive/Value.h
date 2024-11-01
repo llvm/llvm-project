@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <utility>
 
@@ -309,6 +310,8 @@ public:
 private:
   llvm::DenseMap<const ValueDecl *, Value *> Children;
 };
+
+raw_ostream &operator<<(raw_ostream &OS, const Value &Val);
 
 } // namespace dataflow
 } // namespace clang

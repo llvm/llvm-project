@@ -64,7 +64,10 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Opts.inc"
 #undef PREFIX
 
@@ -80,9 +83,11 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class NmOptTable : public opt::OptTable {
+class NmOptTable : public opt::GenericOptTable {
 public:
-  NmOptTable() : OptTable(InfoTable) { setGroupedShortOptions(true); }
+  NmOptTable() : opt::GenericOptTable(InfoTable) {
+    setGroupedShortOptions(true);
+  }
 };
 
 enum OutputFormatTy { bsd, sysv, posix, darwin, just_symbols };
@@ -613,7 +618,7 @@ const struct DarwinStabName DarwinStabNames[] = {
 };
 
 static const char *getDarwinStabString(uint8_t NType) {
-  for (auto I : makeArrayRef(DarwinStabNames))
+  for (auto I : ArrayRef(DarwinStabNames))
     if (I.NType == NType)
       return I.Name;
   return nullptr;

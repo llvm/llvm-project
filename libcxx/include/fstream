@@ -313,9 +313,9 @@ basic_filebuf<_CharT, _Traits>::basic_filebuf()
       __owns_ib_(false),
       __always_noconv_(false)
 {
-    if (has_facet<codecvt<char_type, char, state_type> >(this->getloc()))
+    if (std::has_facet<codecvt<char_type, char, state_type> >(this->getloc()))
     {
-        __cv_ = &use_facet<codecvt<char_type, char, state_type> >(this->getloc());
+        __cv_ = &std::use_facet<codecvt<char_type, char, state_type> >(this->getloc());
         __always_noconv_ = __cv_->always_noconv();
     }
     setbuf(nullptr, 4096);
@@ -734,7 +734,7 @@ basic_filebuf<_CharT, _Traits>::underflow()
     char_type __1buf;
     if (this->gptr() == nullptr)
         this->setg(&__1buf, &__1buf+1, &__1buf+1);
-    const size_t __unget_sz = __initial ? 0 : min<size_t>((this->egptr() - this->eback()) / 2, 4);
+    const size_t __unget_sz = __initial ? 0 : std::min<size_t>((this->egptr() - this->eback()) / 2, 4);
     int_type __c = traits_type::eof();
     if (this->gptr() == this->egptr())
     {
@@ -742,7 +742,7 @@ basic_filebuf<_CharT, _Traits>::underflow()
         if (__always_noconv_)
         {
             size_t __nmemb = static_cast<size_t>(this->egptr() - this->eback() - __unget_sz);
-            __nmemb = fread(this->eback() + __unget_sz, 1, __nmemb, __file_);
+            __nmemb = ::fread(this->eback() + __unget_sz, 1, __nmemb, __file_);
             if (__nmemb != 0)
             {
                 this->setg(this->eback(),
@@ -840,7 +840,7 @@ basic_filebuf<_CharT, _Traits>::overflow(int_type __c)
         if (__always_noconv_)
         {
             size_t __nmemb = static_cast<size_t>(this->pptr() - this->pbase());
-            if (fwrite(this->pbase(), sizeof(char_type), __nmemb, __file_) != __nmemb)
+            if (std::fwrite(this->pbase(), sizeof(char_type), __nmemb, __file_) != __nmemb)
                 return traits_type::eof();
         }
         else
@@ -860,7 +860,7 @@ basic_filebuf<_CharT, _Traits>::overflow(int_type __c)
                 if (__r == codecvt_base::noconv)
                 {
                     size_t __nmemb = static_cast<size_t>(this->pptr() - this->pbase());
-                    if (fwrite(this->pbase(), 1, __nmemb, __file_) != __nmemb)
+                    if (std::fwrite(this->pbase(), 1, __nmemb, __file_) != __nmemb)
                         return traits_type::eof();
                 }
                 else if (__r == codecvt_base::ok || __r == codecvt_base::partial)
@@ -968,7 +968,7 @@ basic_filebuf<_CharT, _Traits>::seekoff(off_type __off, ios_base::seekdir __way,
         return pos_type(off_type(-1));
     pos_type __r = ftell(__file_);
 #else
-    if (fseeko(__file_, __width > 0 ? __width * __off : 0, __whence))
+    if (::fseeko(__file_, __width > 0 ? __width * __off : 0, __whence))
         return pos_type(off_type(-1));
     pos_type __r = ftello(__file_);
 #endif
@@ -986,7 +986,7 @@ basic_filebuf<_CharT, _Traits>::seekpos(pos_type __sp, ios_base::openmode)
     if (fseek(__file_, __sp, SEEK_SET))
         return pos_type(off_type(-1));
 #else
-    if (fseeko(__file_, __sp, SEEK_SET))
+    if (::fseeko(__file_, __sp, SEEK_SET))
         return pos_type(off_type(-1));
 #endif
     __st_ = __sp.state();
@@ -1050,7 +1050,7 @@ basic_filebuf<_CharT, _Traits>::sync()
         if (fseek(__file_, -__c, SEEK_CUR))
             return -1;
 #else
-        if (fseeko(__file_, -__c, SEEK_CUR))
+        if (::fseeko(__file_, -__c, SEEK_CUR))
             return -1;
 #endif
         if (__update_st)
@@ -1067,7 +1067,7 @@ void
 basic_filebuf<_CharT, _Traits>::imbue(const locale& __loc)
 {
     sync();
-    __cv_ = &use_facet<codecvt<char_type, char, state_type> >(__loc);
+    __cv_ = &std::use_facet<codecvt<char_type, char, state_type> >(__loc);
     bool __old_anc = __always_noconv_;
     __always_noconv_ = __cv_->always_noconv();
     if (__old_anc != __always_noconv_)
@@ -1757,6 +1757,7 @@ _LIBCPP_POP_MACROS
 #  include <limits>
 #  include <new>
 #  include <stdexcept>
+#  include <type_traits>
 #endif
 
 #endif // _LIBCPP_FSTREAM

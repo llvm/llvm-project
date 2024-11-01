@@ -4,17 +4,17 @@
 ; Testcase that checks that we don't end in a neverending recursion resulting in
 ; a segmentation fault. The checks below verify that nothing is changed.
 
-declare dso_local i16* @f2(i16* readnone returned) local_unnamed_addr
+declare dso_local ptr @f2(ptr readnone returned) local_unnamed_addr
 
 define dso_local void @f3() local_unnamed_addr {
 ; CHECK-LABEL: @f3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[CALL6:%.*]] = call i16* @f2(i16* [[CALL6]])
+; CHECK-NEXT:    [[CALL6:%.*]] = call ptr @f2(ptr [[CALL6]])
 ; CHECK-NEXT:    br i1 false, label [[FOR_COND]], label [[FOR_COND3:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[C_0:%.*]] = phi i16* [ undef, [[ENTRY:%.*]] ], [ [[CALL6]], [[FOR_END:%.*]] ]
+; CHECK-NEXT:    [[C_0:%.*]] = phi ptr [ undef, [[ENTRY:%.*]] ], [ [[CALL6]], [[FOR_END:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_COND3]]
 ; CHECK:       for.cond3:
 ; CHECK-NEXT:    ret void
@@ -23,11 +23,11 @@ entry:
   br label %for.cond
 
 for.end:
-  %call6 = call i16* @f2(i16* %call6)
+  %call6 = call ptr @f2(ptr %call6)
   br i1 false, label %for.cond, label %for.cond3
 
 for.cond:
-  %c.0 = phi i16* [ undef, %entry ], [ %call6, %for.end ]
+  %c.0 = phi ptr [ undef, %entry ], [ %call6, %for.end ]
   br label %for.cond3
 
 for.cond3:

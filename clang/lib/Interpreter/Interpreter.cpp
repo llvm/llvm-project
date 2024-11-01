@@ -77,8 +77,7 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
   bool Success = CompilerInvocation::CreateFromArgs(
-      Clang->getInvocation(), llvm::makeArrayRef(Argv.begin(), Argv.size()),
-      Diags);
+      Clang->getInvocation(), llvm::ArrayRef(Argv.begin(), Argv.size()), Diags);
 
   // Infer the builtin include path if unspecified.
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&
@@ -159,7 +158,7 @@ IncrementalCompilerBuilder::create(std::vector<const char *> &ClangArgv) {
   driver::Driver Driver(/*MainBinaryName=*/ClangArgv[0],
                         llvm::sys::getProcessTriple(), Diags);
   Driver.setCheckInputsExist(false); // the input comes from mem buffers
-  llvm::ArrayRef<const char *> RF = llvm::makeArrayRef(ClangArgv);
+  llvm::ArrayRef<const char *> RF = llvm::ArrayRef(ClangArgv);
   std::unique_ptr<driver::Compilation> Compilation(Driver.BuildCompilation(RF));
 
   if (Compilation->getArgs().hasArg(driver::options::OPT_v))

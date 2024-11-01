@@ -1883,7 +1883,7 @@ llvm::GlobalVariable *ItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
 
   VTable = CGM.CreateOrReplaceCXXRuntimeVariable(
       Name, VTableType, llvm::GlobalValue::ExternalLinkage,
-      getContext().toCharUnitsFromBits(PAlign).getQuantity());
+      getContext().toCharUnitsFromBits(PAlign).getAsAlign());
   VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   // In MS C++ if you have a class with virtual functions in which you are using
@@ -2368,8 +2368,8 @@ void ItaniumCXXABI::EmitGuardedInit(CodeGenFunction &CGF,
       guardAlignment = CGF.getSizeAlign();
     } else {
       guardTy = CGF.Int64Ty;
-      guardAlignment = CharUnits::fromQuantity(
-                             CGM.getDataLayout().getABITypeAlignment(guardTy));
+      guardAlignment =
+          CharUnits::fromQuantity(CGM.getDataLayout().getABITypeAlign(guardTy));
     }
   }
   llvm::PointerType *guardPtrTy = guardTy->getPointerTo(
@@ -3181,7 +3181,7 @@ llvm::GlobalVariable *ItaniumRTTIBuilder::GetAddrOfTypeName(
   auto Align = CGM.getContext().getTypeAlignInChars(CGM.getContext().CharTy);
 
   llvm::GlobalVariable *GV = CGM.CreateOrReplaceCXXRuntimeVariable(
-      Name, Init->getType(), Linkage, Align.getQuantity());
+      Name, Init->getType(), Linkage, Align.getAsAlign());
 
   GV->setInitializer(Init);
 

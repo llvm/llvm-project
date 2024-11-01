@@ -131,7 +131,7 @@ namespace llvm {
           GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
           EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
           LowerGlobalDtorsViaCxaAtExit(false), DisableIntegratedAS(false),
-          RelaxELFRelocations(false), FunctionSections(false),
+          RelaxELFRelocations(true), FunctionSections(false),
           DataSections(false), IgnoreXCOFFVisibility(false),
           XCOFFTracebackTable(true), UniqueSectionNames(true),
           UniqueBasicBlockSectionNames(false), TrapUnreachable(false),

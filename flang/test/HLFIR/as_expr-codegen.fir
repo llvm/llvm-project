@@ -71,3 +71,14 @@ func.func @shape_from_box(%arg0 : !fir.class<!fir.array<10x?xi32>>) {
 // CHECK:    %[[VAL_8:.*]] = fir.undefined tuple<!fir.box<!fir.array<10x?xi32>>, i1>
 // CHECK:    %[[VAL_9:.*]] = fir.insert_value %[[VAL_8]], %[[VAL_6]], [1 : index] : (tuple<!fir.box<!fir.array<10x?xi32>>, i1>, i1) -> tuple<!fir.box<!fir.array<10x?xi32>>, i1>
 // CHECK:    %[[VAL_10:.*]] = fir.insert_value %[[VAL_9]], %[[VAL_7]]#0, [0 : index] : (tuple<!fir.box<!fir.array<10x?xi32>>, i1>, !fir.box<!fir.array<10x?xi32>>) -> tuple<!fir.box<!fir.array<10x?xi32>>, i1>
+
+func.func @test_move(%arg0 : !fir.ref<!fir.array<10x20xi32>>, %must_free: i1) {
+  %expr = hlfir.as_expr %arg0 move %must_free: (!fir.ref<!fir.array<10x20xi32>>, i1) -> !hlfir.expr<10x20xi32>
+  return
+}
+// CHECK-LABEL:   func.func @test_move(
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.array<10x20xi32>>,
+// CHECK-SAME:    %[[VAL_1:.*]]: i1) {
+// CHECK:    %[[VAL_2:.*]] = fir.undefined tuple<!fir.ref<!fir.array<10x20xi32>>, i1>
+// CHECK:    %[[VAL_3:.*]] = fir.insert_value %[[VAL_2]], %[[VAL_1]], [1 : index] : (tuple<!fir.ref<!fir.array<10x20xi32>>, i1>, i1) -> tuple<!fir.ref<!fir.array<10x20xi32>>, i1>
+// CHECK:    %[[VAL_4:.*]] = fir.insert_value %[[VAL_3]], %[[VAL_0]], [0 : index] : (tuple<!fir.ref<!fir.array<10x20xi32>>, i1>, !fir.ref<!fir.array<10x20xi32>>) -> tuple<!fir.ref<!fir.array<10x20xi32>>, i1>

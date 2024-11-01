@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 namespace {
 AST_MATCHER(CXXRecordDecl, isNotTriviallyCopyable) {
@@ -65,6 +63,4 @@ void UndefinedMemoryManipulationCheck::check(
   }
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

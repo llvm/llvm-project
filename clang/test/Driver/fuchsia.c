@@ -26,7 +26,6 @@
 // CHECK-X86_64: "-triple" "x86_64-unknown-fuchsia"
 // CHECK-AARCH64: "-triple" "aarch64-unknown-fuchsia"
 // CHECK-RISCV64: "-triple" "riscv64-unknown-fuchsia"
-// CHECK: "--mrelax-relocations"
 // CHECK: "-funwind-tables=2"
 // CHECK: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -89,7 +88,7 @@
 // CHECK-RELOCATABLE-NOT "-dynamic-linker"
 // CHECK-RELOCATABLE: "-r"
 // CHECK-RELOCATABLE-NOT: "-l
-// CHECK-RELOCATABLE-NOT: crt{{[^./]+}}.o
+// CHECK-RELOCATABLE-NOT: crt{{[^./\\]+}}.o
 
 // RUN: %clang -### %s --target=x86_64-unknown-fuchsia -nodefaultlibs -fuse-ld=lld 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \

@@ -4,7 +4,7 @@
 
 ; rdar://12481395
 
-define void @foo(i32 %x, i32 %y, i32* nocapture %P) nounwind ssp {
+define void @foo(i32 %x, i32 %y, ptr nocapture %P) nounwind ssp {
 entry:
 ; A8-LABEL: foo:
 ; A8: bl ___divmodsi4
@@ -15,14 +15,14 @@ entry:
 ; SWIFT: mls
 ; SWIFT-NOT: bl __divmodsi4
   %div = sdiv i32 %x, %y
-  store i32 %div, i32* %P, align 4
+  store i32 %div, ptr %P, align 4
   %rem = srem i32 %x, %y
-  %arrayidx6 = getelementptr inbounds i32, i32* %P, i32 1
-  store i32 %rem, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %P, i32 1
+  store i32 %rem, ptr %arrayidx6, align 4
   ret void
 }
 
-define void @bar(i32 %x, i32 %y, i32* nocapture %P) nounwind ssp {
+define void @bar(i32 %x, i32 %y, ptr nocapture %P) nounwind ssp {
 entry:
 ; A8-LABEL: bar:
 ; A8: bl ___udivmodsi4
@@ -33,10 +33,10 @@ entry:
 ; SWIFT: mls
 ; SWIFT-NOT: bl __udivmodsi4
   %div = udiv i32 %x, %y
-  store i32 %div, i32* %P, align 4
+  store i32 %div, ptr %P, align 4
   %rem = urem i32 %x, %y
-  %arrayidx6 = getelementptr inbounds i32, i32* %P, i32 1
-  store i32 %rem, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %P, i32 1
+  store i32 %rem, ptr %arrayidx6, align 4
   ret void
 }
 
@@ -48,7 +48,7 @@ define void @do_indent(i32 %cols) nounwind {
 entry:
 ; A8-LABEL: do_indent:
 ; SWIFT-LABEL: do_indent:
-  %0 = load i32, i32* @flags, align 4
+  %0 = load i32, ptr @flags, align 4
   %1 = and i32 %0, 67108864
   %2 = icmp eq i32 %1, 0
   br i1 %2, label %bb1, label %bb
@@ -58,22 +58,22 @@ bb:
 ; SWIFT: sdiv
 ; SWIFT: mls
 ; SWIFT-NOT: bl __divmodsi4
-  %3 = load i32, i32* @tabsize, align 4
+  %3 = load i32, ptr @tabsize, align 4
   %4 = srem i32 %cols, %3
   %5 = sdiv i32 %cols, %3
-  %6 = tail call i32 @llvm.objectsize.i32.p0i8(i8* null, i1 false)
-  %7 = tail call i8* @__memset_chk(i8* null, i32 9, i32 %5, i32 %6) nounwind
+  %6 = tail call i32 @llvm.objectsize.i32.p0(ptr null, i1 false)
+  %7 = tail call ptr @__memset_chk(ptr null, i32 9, i32 %5, i32 %6) nounwind
   br label %bb1
 
 bb1:
   %line_indent_len.0 = phi i32 [ %4, %bb ], [ 0, %entry ]
-  %8 = getelementptr inbounds i8, i8* null, i32 %line_indent_len.0
-  store i8 0, i8* %8, align 1
+  %8 = getelementptr inbounds i8, ptr null, i32 %line_indent_len.0
+  store i8 0, ptr %8, align 1
   ret void
 }
 
-declare i32 @llvm.objectsize.i32.p0i8(i8*, i1) nounwind readnone
-declare i8* @__memset_chk(i8*, i32, i32, i32) nounwind
+declare i32 @llvm.objectsize.i32.p0(ptr, i1) nounwind readnone
+declare ptr @__memset_chk(ptr, i32, i32, i32) nounwind
 
 ; rdar://11714607
 define i32 @howmany(i32 %x, i32 %y) nounwind {

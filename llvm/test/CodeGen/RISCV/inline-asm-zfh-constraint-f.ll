@@ -46,7 +46,7 @@ define half @constraint_f_half(half %a) nounwind {
 ; RV64DZFH-NEXT:    fadd.h fa0, fa0, ft0
 ; RV64DZFH-NEXT:    #NO_APP
 ; RV64DZFH-NEXT:    ret
-  %1 = load half, half* @gh
+  %1 = load half, ptr @gh
   %2 = tail call half asm "fadd.h $0, $1, $2", "=f,f,f"(half %a, half %1)
   ret half %2
 }
@@ -107,7 +107,7 @@ define half @constraint_f_half_abi_name(half %a) nounwind {
 ; RV64DZFH-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
 ; RV64DZFH-NEXT:    addi sp, sp, 16
 ; RV64DZFH-NEXT:    ret
-  %1 = load half, half* @gh
+  %1 = load half, ptr @gh
   %2 = tail call half asm "fadd.s $0, $1, $2", "={ft0},{fa0},{fs0}"(half %a, half %1)
   ret half %2
 }

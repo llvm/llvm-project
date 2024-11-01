@@ -297,6 +297,18 @@ func.func @integer_extension_and_truncation(%arg0 : i3) {
   return
 }
 
+// CHECK-LABEL: @integer_cast_0d_vector
+func.func @integer_cast_0d_vector(%arg0 : vector<i3>) {
+// CHECK: %[[ARG0:.*]] = builtin.unrealized_conversion_cast
+// CHECK-NEXT: = llvm.sext %[[ARG0]] : vector<1xi3> to vector<1xi6>
+  %0 = arith.extsi %arg0 : vector<i3> to vector<i6>
+// CHECK-NEXT: = llvm.zext %[[ARG0]] : vector<1xi3> to vector<1xi6>
+  %1 = arith.extui %arg0 : vector<i3> to vector<i6>
+// CHECK-NEXT: = llvm.trunc %[[ARG0]] : vector<1xi3> to vector<1xi2>
+  %2 = arith.trunci %arg0 : vector<i3> to vector<i2>
+  return
+}
+
 // CHECK-LABEL: func @fcmp(%arg0: f32, %arg1: f32) {
 func.func @fcmp(f32, f32) -> () {
 ^bb0(%arg0: f32, %arg1: f32):

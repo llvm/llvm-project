@@ -351,13 +351,13 @@ std::optional<int64_t> MVEGatherScatterLowering::getIfConst(const Value *V) {
     if (!Op0 || !Op1)
       return std::optional<int64_t>{};
     if (I->getOpcode() == Instruction::Add)
-      return std::optional<int64_t>{Op0.value() + Op1.value()};
+      return std::optional<int64_t>{*Op0 + *Op1};
     if (I->getOpcode() == Instruction::Mul)
-      return std::optional<int64_t>{Op0.value() * Op1.value()};
+      return std::optional<int64_t>{*Op0 * *Op1};
     if (I->getOpcode() == Instruction::Shl)
-      return std::optional<int64_t>{Op0.value() << Op1.value()};
+      return std::optional<int64_t>{*Op0 << *Op1};
     if (I->getOpcode() == Instruction::Or)
-      return std::optional<int64_t>{Op0.value() | Op1.value()};
+      return std::optional<int64_t>{*Op0 | *Op1};
   }
   return std::optional<int64_t>{};
 }

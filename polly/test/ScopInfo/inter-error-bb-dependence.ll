@@ -6,7 +6,7 @@
 
 target datalayout = "e-p:64:64:64-S128-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f16:16:16-f32:32:32-f64:64:64-f128:128:128-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
-declare noalias i8* @widget()
+declare noalias ptr @widget()
 
 declare void @quux()
 
@@ -33,12 +33,12 @@ bb25:                                             ; preds = %bb25, %bb16
   br i1 %tmp27, label %bb31, label %bb25
 
 bb31:                                             ; preds = %bb25, %bb16
-  %tmp32 = call noalias i8* @widget()
+  %tmp32 = call noalias ptr @widget()
   br label %bb33
 
 bb33:                                             ; preds = %bb31
   call void @quux()
-  %tmp34 = icmp eq i8* %tmp32, null
+  %tmp34 = icmp eq ptr %tmp32, null
   br label %bb36
 
 bb36:                                             ; preds = %bb33, %bb5

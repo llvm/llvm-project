@@ -19,8 +19,11 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "loongarch-isel"
+#define PASS_NAME "LoongArch DAG->DAG Pattern Instruction Selection"
 
 char LoongArchDAGToDAGISel::ID;
+
+INITIALIZE_PASS(LoongArchDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 void LoongArchDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.

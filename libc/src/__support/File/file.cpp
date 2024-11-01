@@ -8,6 +8,7 @@
 
 #include "file.h"
 
+#include "src/__support/CPP/new.h"
 #include "src/__support/CPP/span.h"
 
 #include <errno.h> // For error macros
@@ -337,26 +338,6 @@ int File::flush_unlocked() {
   return 0;
 }
 
-int File::close() {
-  {
-    FileLock lock(this);
-    if (prev_op == FileOp::WRITE && pos > 0) {
-      auto buf_result = platform_write(this, buf, pos);
-      if (buf_result.has_error() || buf_result.value < pos) {
-        err = true;
-        return buf_result.error;
-      }
-    }
-    int result = platform_close(this);
-    if (result != 0)
-      return result;
-    if (own_buf)
-      free(buf);
-  }
-  free(this);
-  return 0;
-}
-
 int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
   // We do not need to lock the file as this method should be called before
   // other operations are performed on the file.
@@ -377,16 +358,23 @@ int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
     // We exclude the case of buffer_mode == _IONBF in this branch
     // because we don't need to allocate buffer in such a case.
     if (own_buf) {
-      buf = realloc(buf, size);
+      // This is one of the places where use a C allocation functon
+      // as C++ does not have an equivalent of realloc.
+      buf = reinterpret_cast<uint8_t *>(realloc(buf, size));
+      if (buf == nullptr)
+        return ENOMEM;
     } else {
-      buf = malloc(size);
+      AllocChecker ac;
+      buf = new (ac) uint8_t[size];
+      if (!ac)
+        return ENOMEM;
       own_buf = true;
     }
     bufsize = size;
     // TODO: Handle allocation failures.
   } else {
     if (own_buf)
-      free(buf);
+      delete buf;
     if (buffer_mode != _IONBF) {
       buf = static_cast<uint8_t *>(buffer);
       bufsize = size;

@@ -196,11 +196,18 @@ void InlineAdvice::recordInliningWithCalleeDeleted() {
 }
 
 AnalysisKey InlineAdvisorAnalysis::Key;
+AnalysisKey PluginInlineAdvisorAnalysis::Key;
+bool PluginInlineAdvisorAnalysis::HasBeenRegistered = false;
 
 bool InlineAdvisorAnalysis::Result::tryCreate(
     InlineParams Params, InliningAdvisorMode Mode,
     const ReplayInlinerSettings &ReplaySettings, InlineContext IC) {
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  if (PluginInlineAdvisorAnalysis::HasBeenRegistered) {
+    auto &DA = MAM.getResult<PluginInlineAdvisorAnalysis>(M);
+    Advisor.reset(DA.Factory(M, FAM, Params, IC));
+    return !!Advisor;
+  }
   switch (Mode) {
   case InliningAdvisorMode::Default:
     LLVM_DEBUG(dbgs() << "Using default inliner heuristic.\n");

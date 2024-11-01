@@ -225,29 +225,34 @@ AliasResult AliasSet::aliasesPointer(const Value *Ptr, LocationSize Size,
   return AliasResult::NoAlias;
 }
 
-bool AliasSet::aliasesUnknownInst(const Instruction *Inst,
-                                  BatchAAResults &AA) const {
+ModRefInfo AliasSet::aliasesUnknownInst(const Instruction *Inst,
+                                        BatchAAResults &AA) const {
 
   if (AliasAny)
-    return true;
+    return ModRefInfo::ModRef;
 
   if (!Inst->mayReadOrWriteMemory())
-    return false;
+    return ModRefInfo::NoModRef;
 
   for (Instruction *UnknownInst : UnknownInsts) {
     const auto *C1 = dyn_cast<CallBase>(UnknownInst);
     const auto *C2 = dyn_cast<CallBase>(Inst);
     if (!C1 || !C2 || isModOrRefSet(AA.getModRefInfo(C1, C2)) ||
-        isModOrRefSet(AA.getModRefInfo(C2, C1)))
-      return true;
+        isModOrRefSet(AA.getModRefInfo(C2, C1))) {
+      // TODO: Could be more precise, but not really useful right now.
+      return ModRefInfo::ModRef;
+    }
   }
 
-  for (iterator I = begin(), E = end(); I != E; ++I)
-    if (isModOrRefSet(AA.getModRefInfo(
-            Inst, MemoryLocation(I.getPointer(), I.getSize(), I.getAAInfo()))))
-      return true;
+  ModRefInfo MR = ModRefInfo::NoModRef;
+  for (iterator I = begin(), E = end(); I != E; ++I) {
+    MR |= AA.getModRefInfo(
+        Inst, MemoryLocation(I.getPointer(), I.getSize(), I.getAAInfo()));
+    if (isModAndRefSet(MR))
+      return MR;
+  }
 
-  return false;
+  return MR;
 }
 
 void AliasSetTracker::clear() {
@@ -297,7 +302,7 @@ AliasSet *AliasSetTracker::mergeAliasSetsForPointer(const Value *Ptr,
 AliasSet *AliasSetTracker::findAliasSetForUnknownInst(Instruction *Inst) {
   AliasSet *FoundSet = nullptr;
   for (AliasSet &AS : llvm::make_early_inc_range(*this)) {
-    if (AS.Forward || !AS.aliasesUnknownInst(Inst, AA))
+    if (AS.Forward || !isModOrRefSet(AS.aliasesUnknownInst(Inst, AA)))
       continue;
     if (!FoundSet) {
       // If this is the first alias set ptr can go into, remember it.

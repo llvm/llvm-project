@@ -55,6 +55,8 @@ def AMX_Dialect : Dialect {
     For details, see the Intel documentation:
     https://software.intel.com/content/www/us/en/develop/articles/intel-sdm.html
   }];
+
+  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 //===----------------------------------------------------------------------===//

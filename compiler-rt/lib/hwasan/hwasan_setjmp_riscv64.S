@@ -36,7 +36,7 @@ ASM_TYPE_FUNCTION(__interceptor_setjmp)
 __interceptor_setjmp:
   CFI_STARTPROC
   addi x11, x0, 0
-  j    __interceptor_sigsetjmp
+  tail __interceptor_sigsetjmp
   CFI_ENDPROC
 ASM_SIZE(__interceptor_setjmp)
 

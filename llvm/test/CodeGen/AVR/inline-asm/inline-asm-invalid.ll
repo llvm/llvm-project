@@ -8,3 +8,8 @@ define void @foo(i16 %a) {
   ret void
 }
 
+define void @foo1() {
+  ; CHECK: error: invalid operand in inline asm: ';; ${0:C}'
+  call i16 asm sideeffect ";; ${0:C}", "=d"()
+  ret void
+}

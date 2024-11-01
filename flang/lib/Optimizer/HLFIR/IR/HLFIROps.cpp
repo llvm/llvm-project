@@ -11,12 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <optional>
 #include <tuple>
 
 //===----------------------------------------------------------------------===//
@@ -87,7 +89,7 @@ void hlfir::DesignateOp::build(
     mlir::OpBuilder &builder, mlir::OperationState &result,
     mlir::Type result_type, mlir::Value memref, llvm::StringRef component,
     mlir::Value component_shape, llvm::ArrayRef<Subscript> subscripts,
-    mlir::ValueRange substring, llvm::Optional<bool> complex_part,
+    mlir::ValueRange substring, std::optional<bool> complex_part,
     mlir::Value shape, mlir::ValueRange typeparams,
     fir::FortranVariableFlagsAttr fortran_attrs) {
   auto componentAttr =
@@ -361,7 +363,7 @@ static unsigned getCharacterKind(mlir::Type t) {
   return hlfir::getFortranElementType(t).cast<fir::CharacterType>().getFKind();
 }
 
-static llvm::Optional<fir::CharacterType::LenType>
+static std::optional<fir::CharacterType::LenType>
 getCharacterLengthIfStatic(mlir::Type t) {
   if (auto charType =
           hlfir::getFortranElementType(t).dyn_cast<fir::CharacterType>())
@@ -401,6 +403,24 @@ void hlfir::ConcatOp::build(mlir::OpBuilder &builder,
 }
 
 //===----------------------------------------------------------------------===//
+// SetLengthOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::SetLengthOp::build(mlir::OpBuilder &builder,
+                               mlir::OperationState &result, mlir::Value string,
+                               mlir::Value len) {
+  fir::CharacterType::LenType resultTypeLen = fir::CharacterType::unknownLen();
+  if (auto cstLen = fir::getIntIfConstant(len))
+    resultTypeLen = *cstLen;
+  unsigned kind = getCharacterKind(string.getType());
+  auto resultType = hlfir::ExprType::get(
+      builder.getContext(), hlfir::ExprType::Shape{},
+      fir::CharacterType::get(builder.getContext(), kind, resultTypeLen),
+      false);
+  build(builder, result, resultType, string, len);
+}
+
+//===----------------------------------------------------------------------===//
 // AssociateOp
 //===----------------------------------------------------------------------===//
 
@@ -436,7 +456,8 @@ void hlfir::EndAssociateOp::build(mlir::OpBuilder &builder,
 //===----------------------------------------------------------------------===//
 
 void hlfir::AsExprOp::build(mlir::OpBuilder &builder,
-                            mlir::OperationState &result, mlir::Value var) {
+                            mlir::OperationState &result, mlir::Value var,
+                            mlir::Value mustFree) {
   hlfir::ExprType::Shape typeShape;
   mlir::Type type = getFortranElementOrSequenceType(var.getType());
   if (auto seqType = type.dyn_cast<fir::SequenceType>()) {
@@ -446,7 +467,7 @@ void hlfir::AsExprOp::build(mlir::OpBuilder &builder,
 
   auto resultType = hlfir::ExprType::get(builder.getContext(), typeShape, type,
                                          /*isPolymorphic: TODO*/ false);
-  return build(builder, result, resultType, var);
+  return build(builder, result, resultType, var, mustFree);
 }
 
 //===----------------------------------------------------------------------===//
@@ -482,6 +503,16 @@ void hlfir::ApplyOp::build(mlir::OpBuilder &builder,
   if (auto exprType = resultType.dyn_cast<hlfir::ExprType>())
     resultType = exprType.getElementExprType();
   build(builder, odsState, resultType, expr, indices, typeparams);
+}
+
+//===----------------------------------------------------------------------===//
+// NullOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::NullOp::build(mlir::OpBuilder &builder,
+                          mlir::OperationState &odsState) {
+  return build(builder, odsState,
+               fir::ReferenceType::get(builder.getNoneType()));
 }
 
 #define GET_OP_CLASSES

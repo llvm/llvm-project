@@ -1,4 +1,4 @@
-; RUN: mlir-translate --import-llvm %s | FileCheck %s
+; RUN: mlir-translate -opaque-pointers=0 --import-llvm %s | FileCheck %s
 
 ; CHECK: llvm.func @shufflevector_crash
 define void @shufflevector_crash(<2 x i32*> %arg0) {

@@ -410,23 +410,39 @@ bool synchronized_pool_resource::do_is_equal(const memory_resource& other) const
 
 // 23.12.6, mem.res.monotonic.buffer
 
+static void* align_down(size_t align, size_t size, void*& ptr, size_t& space) {
+  if (size > space)
+    return nullptr;
+
+  char* p1      = static_cast<char*>(ptr);
+  char* new_ptr = reinterpret_cast<char*>(reinterpret_cast<uintptr_t>(p1 - size) & ~(align - 1));
+
+  if (new_ptr < (p1 - space))
+    return nullptr;
+
+  ptr = new_ptr;
+  space -= p1 - new_ptr;
+
+  return ptr;
+}
+
 void* monotonic_buffer_resource::__initial_descriptor::__try_allocate_from_chunk(size_t bytes, size_t align) {
   if (!__cur_)
     return nullptr;
   void* new_ptr       = static_cast<void*>(__cur_);
-  size_t new_capacity = (__end_ - __cur_);
-  void* aligned_ptr   = std::align(align, bytes, new_ptr, new_capacity);
+  size_t new_capacity = (__cur_ - __start_);
+  void* aligned_ptr   = align_down(align, bytes, new_ptr, new_capacity);
   if (aligned_ptr != nullptr)
-    __cur_ = static_cast<char*>(new_ptr) + bytes;
+    __cur_ = static_cast<char*>(new_ptr);
   return aligned_ptr;
 }
 
 void* monotonic_buffer_resource::__chunk_footer::__try_allocate_from_chunk(size_t bytes, size_t align) {
   void* new_ptr       = static_cast<void*>(__cur_);
-  size_t new_capacity = (reinterpret_cast<char*>(this) - __cur_);
-  void* aligned_ptr   = std::align(align, bytes, new_ptr, new_capacity);
+  size_t new_capacity = (__cur_ - __start_);
+  void* aligned_ptr   = align_down(align, bytes, new_ptr, new_capacity);
   if (aligned_ptr != nullptr)
-    __cur_ = static_cast<char*>(new_ptr) + bytes;
+    __cur_ = static_cast<char*>(new_ptr);
   return aligned_ptr;
 }
 
@@ -464,10 +480,11 @@ void* monotonic_buffer_resource::do_allocate(size_t bytes, size_t align) {
   }
 
   char* start            = (char*)__res_->allocate(aligned_capacity, align);
-  __chunk_footer* footer = (__chunk_footer*)(start + aligned_capacity - footer_size);
+  auto end               = start + aligned_capacity - footer_size;
+  __chunk_footer* footer = (__chunk_footer*)(end);
   footer->__next_        = __chunks_;
   footer->__start_       = start;
-  footer->__cur_         = start;
+  footer->__cur_         = end;
   footer->__align_       = align;
   __chunks_              = footer;
 

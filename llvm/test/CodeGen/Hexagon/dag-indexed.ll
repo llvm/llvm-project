@@ -6,7 +6,7 @@
 ; in DAGCombiner is unable to convert indexed stores.
 
 ; Function Attrs: nounwind
-define void @f0(i32 %a0, i8* %a1, i8* %a2) #0 {
+define void @f0(i32 %a0, ptr %a1, ptr %a2) #0 {
 b0:
   switch i32 %a0, label %b5 [
     i32 67830273, label %b1
@@ -23,14 +23,11 @@ b3:                                               ; preds = %b0
   br i1 undef, label %b4, label %b5
 
 b4:                                               ; preds = %b3
-  %v0 = bitcast i8* %a2 to i32*
-  store i32 0, i32* %v0, align 1, !tbaa !0
-  %v1 = getelementptr inbounds i8, i8* %a1, i32 4
-  %v2 = bitcast i8* %v1 to i32*
-  %v3 = load i32, i32* %v2, align 4, !tbaa !5
-  %v4 = getelementptr inbounds i8, i8* %a2, i32 4
-  %v5 = bitcast i8* %v4 to i32*
-  store i32 %v3, i32* %v5, align 1, !tbaa !5
+  store i32 0, ptr %a2, align 1, !tbaa !0
+  %v1 = getelementptr inbounds i8, ptr %a1, i32 4
+  %v3 = load i32, ptr %v1, align 4, !tbaa !5
+  %v4 = getelementptr inbounds i8, ptr %a2, i32 4
+  store i32 %v3, ptr %v4, align 1, !tbaa !5
   br label %b5
 
 b5:                                               ; preds = %b4, %b3, %b2, %b1, %b0

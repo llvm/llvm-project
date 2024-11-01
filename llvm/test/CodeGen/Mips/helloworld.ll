@@ -12,7 +12,7 @@
 
 define i32 @main() nounwind {
 entry:
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str, i32 0, i32 0))
+  %call = call i32 (ptr, ...) @printf(ptr @.str)
   ret i32 0
 
 ; SR: 	.set	mips16
@@ -55,4 +55,4 @@ entry:
 ;  SR32:  .set reorder
 ; SR:   .end main
 ; SR32:   .end main
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)

@@ -83,15 +83,6 @@ using namespace llvm::PatternMatch;
 static cl::opt<unsigned> DomConditionsMaxUses("dom-conditions-max-uses",
                                               cl::Hidden, cl::init(20));
 
-// According to the LangRef, branching on a poison condition is absolutely
-// immediate full UB.  However, historically we haven't implemented that
-// consistently as we had an important transformation (non-trivial unswitch)
-// which introduced instances of branch on poison/undef to otherwise well
-// defined programs.  This issue has since been fixed, but the flag is
-// temporarily retained to easily diagnose potential regressions.
-static cl::opt<bool> BranchOnPoisonAsUB("branch-on-poison-as-ub",
-                                        cl::Hidden, cl::init(true));
-
 
 /// Returns the bitwidth of the given scalar or pointer type. For vector types,
 /// returns the element type's bitwidth.
@@ -949,6 +940,14 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
           Known.Zero.setHighBits(RHSKnown.countMinLeadingZeros());
       }
       break;
+    case ICmpInst::ICMP_NE: {
+      // assume (v & b != 0) where b is a power of 2
+      const APInt *BPow2;
+      if (match(Cmp, m_ICmp(Pred, m_c_And(m_V, m_Power2(BPow2)), m_Zero())) &&
+          isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+        Known.One |= BPow2->zextOrTrunc(BitWidth);
+      }
+    } break;
     }
   }
 
@@ -1376,7 +1375,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       KnownBits IndexBits(IndexBitWidth);
       computeKnownBits(Index, IndexBits, Depth + 1, Q);
       TypeSize IndexTypeSize = Q.DL.getTypeAllocSize(IndexedTy);
-      uint64_t TypeSizeInBytes = IndexTypeSize.getKnownMinSize();
+      uint64_t TypeSizeInBytes = IndexTypeSize.getKnownMinValue();
       KnownBits ScalingFactor(IndexBitWidth);
       // Multiply by current sizeof type.
       // &A[i] == A + i * sizeof(*A[i]).
@@ -1640,7 +1639,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // If this call is poison for 0 input, the result will be less than 2^n.
         if (II->getArgOperand(1) == ConstantInt::getTrue(II->getContext()))
           PossibleLZ = std::min(PossibleLZ, BitWidth - 1);
-        unsigned LowBits = Log2_32(PossibleLZ)+1;
+        unsigned LowBits = llvm::bit_width(PossibleLZ);
         Known.Zero.setBitsFrom(LowBits);
         break;
       }
@@ -1651,7 +1650,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // If this call is poison for 0 input, the result will be less than 2^n.
         if (II->getArgOperand(1) == ConstantInt::getTrue(II->getContext()))
           PossibleTZ = std::min(PossibleTZ, BitWidth - 1);
-        unsigned LowBits = Log2_32(PossibleTZ)+1;
+        unsigned LowBits = llvm::bit_width(PossibleTZ);
         Known.Zero.setBitsFrom(LowBits);
         break;
       }
@@ -1660,7 +1659,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // We can bound the space the count needs.  Also, bits known to be zero
         // can't contribute to the population.
         unsigned BitsPossiblySet = Known2.countMaxPopulation();
-        unsigned LowBits = Log2_32(BitsPossiblySet)+1;
+        unsigned LowBits = llvm::bit_width(BitsPossiblySet);
         Known.Zero.setBitsFrom(LowBits);
         // TODO: we could bound KnownOne using the lower bound on the number
         // of bits which might be set provided by popcnt KnownOne2.
@@ -1770,7 +1769,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
           break;
         }
 
-        unsigned FirstZeroHighBit = 32 - countLeadingZeros(*VScaleMax);
+        unsigned FirstZeroHighBit = llvm::bit_width(*VScaleMax);
         if (FirstZeroHighBit < BitWidth)
           Known.Zero.setBitsFrom(FirstZeroHighBit);
 
@@ -2574,16 +2573,16 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     // truncating casts, e.g., int2ptr/ptr2int with appropriate sizes, as well
     // as casts that can alter the value, e.g., AddrSpaceCasts.
     if (!isa<ScalableVectorType>(I->getType()) &&
-        Q.DL.getTypeSizeInBits(I->getOperand(0)->getType()).getFixedSize() <=
-        Q.DL.getTypeSizeInBits(I->getType()).getFixedSize())
+        Q.DL.getTypeSizeInBits(I->getOperand(0)->getType()).getFixedValue() <=
+            Q.DL.getTypeSizeInBits(I->getType()).getFixedValue())
       return isKnownNonZero(I->getOperand(0), Depth, Q);
     break;
   case Instruction::PtrToInt:
     // Similar to int2ptr above, we can look through ptr2int here if the cast
     // is a no-op or an extend and not a truncate.
     if (!isa<ScalableVectorType>(I->getType()) &&
-        Q.DL.getTypeSizeInBits(I->getOperand(0)->getType()).getFixedSize() <=
-        Q.DL.getTypeSizeInBits(I->getType()).getFixedSize())
+        Q.DL.getTypeSizeInBits(I->getOperand(0)->getType()).getFixedValue() <=
+            Q.DL.getTypeSizeInBits(I->getType()).getFixedValue())
       return isKnownNonZero(I->getOperand(0), Depth, Q);
     break;
   case Instruction::Or:
@@ -3321,10 +3320,17 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       return Tmp;
     }
 
-    case Instruction::Trunc:
-      // FIXME: it's tricky to do anything useful for this, but it is an
-      // important case for targets like X86.
-      break;
+    case Instruction::Trunc: {
+      // If the input contained enough sign bits that some remain after the
+      // truncation, then we can make use of that. Otherwise we don't know
+      // anything.
+      Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+      unsigned OperandTyBits = U->getOperand(0)->getType()->getScalarSizeInBits();
+      if (Tmp > (OperandTyBits - TyBits))
+        return Tmp - (OperandTyBits - TyBits);
+
+      return 1;
+    }
 
     case Instruction::ExtractElement:
       // Look through extract element. At the moment we keep this simple and
@@ -3662,6 +3668,14 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
       break;
     case Intrinsic::canonicalize:
     case Intrinsic::arithmetic_fence:
+    case Intrinsic::floor:
+    case Intrinsic::ceil:
+    case Intrinsic::trunc:
+    case Intrinsic::rint:
+    case Intrinsic::nearbyint:
+    case Intrinsic::round:
+    case Intrinsic::roundeven:
+    case Intrinsic::fptrunc_round:
       return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly, Depth + 1);
     case Intrinsic::maxnum: {
       Value *V0 = I->getOperand(0), *V1 = I->getOperand(1);
@@ -3797,17 +3811,64 @@ bool llvm::isKnownNeverInfinity(const Value *V, const TargetLibraryInfo *TLI,
       // Peek through to source op. If it is not infinity, this is not infinity.
       return isKnownNeverInfinity(Inst->getOperand(0), TLI, Depth + 1);
     }
+    case Instruction::FPTrunc: {
+      // Need a range check.
+      return false;
+    }
     default:
       break;
     }
 
     if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
       switch (II->getIntrinsicID()) {
+      case Intrinsic::sin:
+      case Intrinsic::cos:
+        // Return NaN on infinite inputs.
+        return true;
       case Intrinsic::fabs:
+      case Intrinsic::sqrt:
       case Intrinsic::canonicalize:
       case Intrinsic::copysign:
       case Intrinsic::arithmetic_fence:
+      case Intrinsic::trunc:
         return isKnownNeverInfinity(Inst->getOperand(0), TLI, Depth + 1);
+      case Intrinsic::floor:
+      case Intrinsic::ceil:
+      case Intrinsic::rint:
+      case Intrinsic::nearbyint:
+      case Intrinsic::round:
+      case Intrinsic::roundeven:
+        // PPC_FP128 is a special case.
+        if (V->getType()->isMultiUnitFPType())
+          return false;
+        return isKnownNeverInfinity(Inst->getOperand(0), TLI, Depth + 1);
+      case Intrinsic::fptrunc_round:
+        // Requires knowing the value range.
+        return false;
+      case Intrinsic::minnum:
+      case Intrinsic::maxnum:
+      case Intrinsic::minimum:
+      case Intrinsic::maximum:
+        return isKnownNeverInfinity(Inst->getOperand(0), TLI, Depth + 1) &&
+               isKnownNeverInfinity(Inst->getOperand(1), TLI, Depth + 1);
+      case Intrinsic::log:
+      case Intrinsic::log10:
+      case Intrinsic::log2:
+        // log(+inf) -> +inf
+        // log([+-]0.0) -> -inf
+        // log(-inf) -> nan
+        // log(-x) -> nan
+        // TODO: We lack API to check the == 0 case.
+        return false;
+      case Intrinsic::exp:
+      case Intrinsic::exp2:
+      case Intrinsic::pow:
+      case Intrinsic::powi:
+      case Intrinsic::fma:
+      case Intrinsic::fmuladd:
+        // These can return infinities on overflow cases, so it's hard to prove
+        // anything about it.
+        return false;
       default:
         break;
       }
@@ -4094,8 +4155,8 @@ static Value *BuildSubAggregate(Value *From, Value* To, Type *IndexedType,
     return nullptr;
 
   // Insert the value in the new (sub) aggregate
-  return InsertValueInst::Create(To, V, makeArrayRef(Idxs).slice(IdxSkip),
-                                 "tmp", InsertBefore);
+  return InsertValueInst::Create(To, V, ArrayRef(Idxs).slice(IdxSkip), "tmp",
+                                 InsertBefore);
 }
 
 // This helper takes a nested struct and extracts a part of it (which is again a
@@ -4167,7 +4228,7 @@ Value *llvm::FindInsertedValue(Value *V, ArrayRef<unsigned> idx_range,
         // %C = insertvalue {i32, i32 } %A, i32 11, 1
         // which allows the unused 0,0 element from the nested struct to be
         // removed.
-        return BuildSubAggregate(V, makeArrayRef(idx_range.begin(), req_idx),
+        return BuildSubAggregate(V, ArrayRef(idx_range.begin(), req_idx),
                                  InsertBefore);
       }
 
@@ -4182,8 +4243,7 @@ Value *llvm::FindInsertedValue(Value *V, ArrayRef<unsigned> idx_range,
     // requested (though possibly only partially). Now we recursively look at
     // the inserted value, passing any remaining indices.
     return FindInsertedValue(I->getInsertedValueOperand(),
-                             makeArrayRef(req_idx, idx_range.end()),
-                             InsertBefore);
+                             ArrayRef(req_idx, idx_range.end()), InsertBefore);
   }
 
   if (ExtractValueInst *I = dyn_cast<ExtractValueInst>(V)) {
@@ -4279,7 +4339,7 @@ bool llvm::getConstantDataArrayInfo(const Value *V,
 
   if (GV->getInitializer()->isNullValue()) {
     Type *GVTy = GV->getValueType();
-    uint64_t SizeInBytes = DL.getTypeStoreSize(GVTy).getFixedSize();
+    uint64_t SizeInBytes = DL.getTypeStoreSize(GVTy).getFixedValue();
     uint64_t Length = SizeInBytes / ElementSizeInBytes;
 
     Slice.Array = nullptr;
@@ -5150,10 +5210,35 @@ bool llvm::isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
   return llvm::any_of(GuardingBranches, AllUsesGuardedByBranch);
 }
 
-static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly,
-                                   bool ConsiderFlags) {
+/// Shifts return poison if shiftwidth is larger than the bitwidth.
+static bool shiftAmountKnownInRange(const Value *ShiftAmount) {
+  auto *C = dyn_cast<Constant>(ShiftAmount);
+  if (!C)
+    return false;
 
-  if (ConsiderFlags && Op->hasPoisonGeneratingFlags())
+  // Shifts return poison if shiftwidth is larger than the bitwidth.
+  SmallVector<const Constant *, 4> ShiftAmounts;
+  if (auto *FVTy = dyn_cast<FixedVectorType>(C->getType())) {
+    unsigned NumElts = FVTy->getNumElements();
+    for (unsigned i = 0; i < NumElts; ++i)
+      ShiftAmounts.push_back(C->getAggregateElement(i));
+  } else if (isa<ScalableVectorType>(C->getType()))
+    return false; // Can't tell, just return false to be safe
+  else
+    ShiftAmounts.push_back(C);
+
+  bool Safe = llvm::all_of(ShiftAmounts, [](const Constant *C) {
+    auto *CI = dyn_cast_or_null<ConstantInt>(C);
+    return CI && CI->getValue().ult(C->getType()->getIntegerBitWidth());
+  });
+
+  return Safe;
+}
+
+static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly,
+                                   bool ConsiderFlagsAndMetadata) {
+
+  if (ConsiderFlagsAndMetadata && Op->hasPoisonGeneratingFlagsOrMetadata())
     return true;
 
   unsigned Opcode = Op->getOpcode();
@@ -5162,27 +5247,8 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly,
   switch (Opcode) {
   case Instruction::Shl:
   case Instruction::AShr:
-  case Instruction::LShr: {
-    // Shifts return poison if shiftwidth is larger than the bitwidth.
-    if (auto *C = dyn_cast<Constant>(Op->getOperand(1))) {
-      SmallVector<Constant *, 4> ShiftAmounts;
-      if (auto *FVTy = dyn_cast<FixedVectorType>(C->getType())) {
-        unsigned NumElts = FVTy->getNumElements();
-        for (unsigned i = 0; i < NumElts; ++i)
-          ShiftAmounts.push_back(C->getAggregateElement(i));
-      } else if (isa<ScalableVectorType>(C->getType()))
-        return true; // Can't tell, just return true to be safe
-      else
-        ShiftAmounts.push_back(C);
-
-      bool Safe = llvm::all_of(ShiftAmounts, [](Constant *C) {
-        auto *CI = dyn_cast_or_null<ConstantInt>(C);
-        return CI && CI->getValue().ult(C->getType()->getIntegerBitWidth());
-      });
-      return !Safe;
-    }
-    return true;
-  }
+  case Instruction::LShr:
+    return !shiftAmountKnownInRange(Op->getOperand(1));
   case Instruction::FPToSI:
   case Instruction::FPToUI:
     // fptosi/ui yields poison if the resulting value does not fit in the
@@ -5216,6 +5282,14 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly,
       case Intrinsic::uadd_with_overflow:
       case Intrinsic::usub_with_overflow:
       case Intrinsic::umul_with_overflow:
+      case Intrinsic::sadd_sat:
+      case Intrinsic::uadd_sat:
+      case Intrinsic::ssub_sat:
+      case Intrinsic::usub_sat:
+        return false;
+      case Intrinsic::sshl_sat:
+      case Intrinsic::ushl_sat:
+        return !shiftAmountKnownInRange(II->getArgOperand(1));
       case Intrinsic::fma:
       case Intrinsic::fmuladd:
       case Intrinsic::sqrt:
@@ -5312,12 +5386,15 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly,
   }
 }
 
-bool llvm::canCreateUndefOrPoison(const Operator *Op, bool ConsiderFlags) {
-  return ::canCreateUndefOrPoison(Op, /*PoisonOnly=*/false, ConsiderFlags);
+bool llvm::canCreateUndefOrPoison(const Operator *Op,
+                                  bool ConsiderFlagsAndMetadata) {
+  return ::canCreateUndefOrPoison(Op, /*PoisonOnly=*/false,
+                                  ConsiderFlagsAndMetadata);
 }
 
-bool llvm::canCreatePoison(const Operator *Op, bool ConsiderFlags) {
-  return ::canCreateUndefOrPoison(Op, /*PoisonOnly=*/true, ConsiderFlags);
+bool llvm::canCreatePoison(const Operator *Op, bool ConsiderFlagsAndMetadata) {
+  return ::canCreateUndefOrPoison(Op, /*PoisonOnly=*/true,
+                                  ConsiderFlagsAndMetadata);
 }
 
 static bool directlyImpliesPoison(const Value *ValAssumedPoison,
@@ -5330,15 +5407,12 @@ static bool directlyImpliesPoison(const Value *ValAssumedPoison,
     return false;
 
   if (const auto *I = dyn_cast<Instruction>(V)) {
-    if (propagatesPoison(cast<Operator>(I)))
-      return any_of(I->operands(), [=](const Value *Op) {
-        return directlyImpliesPoison(ValAssumedPoison, Op, Depth + 1);
-      });
+    if (any_of(I->operands(), [=](const Use &Op) {
+          return propagatesPoison(Op) &&
+                 directlyImpliesPoison(ValAssumedPoison, Op, Depth + 1);
+        }))
+      return true;
 
-    // 'select ValAssumedPoison, _, _' is poison.
-    if (const auto *SI = dyn_cast<SelectInst>(I))
-      return directlyImpliesPoison(ValAssumedPoison, SI->getCondition(),
-                                   Depth + 1);
     // V  = extractvalue V0, idx
     // V2 = extractvalue V0, idx2
     // V0's elements are all poison or not. (e.g., add_with_overflow)
@@ -5496,7 +5570,8 @@ static bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
       else if (PoisonOnly && isa<Operator>(Cond)) {
         // For poison, we can analyze further
         auto *Opr = cast<Operator>(Cond);
-        if (propagatesPoison(Opr) && is_contained(Opr->operand_values(), V))
+        if (any_of(Opr->operands(),
+                   [V](const Use &U) { return V == U && propagatesPoison(U); }))
           return true;
       }
     }
@@ -5618,13 +5693,15 @@ bool llvm::isGuaranteedToExecuteForEveryIteration(const Instruction *I,
   llvm_unreachable("Instruction not contained in its own parent basic block.");
 }
 
-bool llvm::propagatesPoison(const Operator *I) {
+bool llvm::propagatesPoison(const Use &PoisonOp) {
+  const Operator *I = cast<Operator>(PoisonOp.getUser());
   switch (I->getOpcode()) {
   case Instruction::Freeze:
-  case Instruction::Select:
   case Instruction::PHI:
   case Instruction::Invoke:
     return false;
+  case Instruction::Select:
+    return PoisonOp.getOperandNo() == 0;
   case Instruction::Call:
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
       switch (II->getIntrinsicID()) {
@@ -5658,49 +5735,58 @@ bool llvm::propagatesPoison(const Operator *I) {
 }
 
 void llvm::getGuaranteedWellDefinedOps(
-    const Instruction *I, SmallPtrSetImpl<const Value *> &Operands) {
+    const Instruction *I, SmallVectorImpl<const Value *> &Operands) {
   switch (I->getOpcode()) {
     case Instruction::Store:
-      Operands.insert(cast<StoreInst>(I)->getPointerOperand());
+      Operands.push_back(cast<StoreInst>(I)->getPointerOperand());
       break;
 
     case Instruction::Load:
-      Operands.insert(cast<LoadInst>(I)->getPointerOperand());
+      Operands.push_back(cast<LoadInst>(I)->getPointerOperand());
       break;
 
     // Since dereferenceable attribute imply noundef, atomic operations
     // also implicitly have noundef pointers too
     case Instruction::AtomicCmpXchg:
-      Operands.insert(cast<AtomicCmpXchgInst>(I)->getPointerOperand());
+      Operands.push_back(cast<AtomicCmpXchgInst>(I)->getPointerOperand());
       break;
 
     case Instruction::AtomicRMW:
-      Operands.insert(cast<AtomicRMWInst>(I)->getPointerOperand());
+      Operands.push_back(cast<AtomicRMWInst>(I)->getPointerOperand());
       break;
 
     case Instruction::Call:
     case Instruction::Invoke: {
       const CallBase *CB = cast<CallBase>(I);
       if (CB->isIndirectCall())
-        Operands.insert(CB->getCalledOperand());
+        Operands.push_back(CB->getCalledOperand());
       for (unsigned i = 0; i < CB->arg_size(); ++i) {
         if (CB->paramHasAttr(i, Attribute::NoUndef) ||
             CB->paramHasAttr(i, Attribute::Dereferenceable))
-          Operands.insert(CB->getArgOperand(i));
+          Operands.push_back(CB->getArgOperand(i));
       }
       break;
     }
     case Instruction::Ret:
       if (I->getFunction()->hasRetAttribute(Attribute::NoUndef))
-        Operands.insert(I->getOperand(0));
+        Operands.push_back(I->getOperand(0));
       break;
+    case Instruction::Switch:
+      Operands.push_back(cast<SwitchInst>(I)->getCondition());
+      break;
+    case Instruction::Br: {
+      auto *BR = cast<BranchInst>(I);
+      if (BR->isConditional())
+        Operands.push_back(BR->getCondition());
+      break;
+    }
     default:
       break;
   }
 }
 
 void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
-                                     SmallPtrSetImpl<const Value *> &Operands) {
+                                     SmallVectorImpl<const Value *> &Operands) {
   getGuaranteedWellDefinedOps(I, Operands);
   switch (I->getOpcode()) {
   // Divisors of these operations are allowed to be partially undef.
@@ -5708,18 +5794,8 @@ void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
   case Instruction::SDiv:
   case Instruction::URem:
   case Instruction::SRem:
-    Operands.insert(I->getOperand(1));
+    Operands.push_back(I->getOperand(1));
     break;
-  case Instruction::Switch:
-    if (BranchOnPoisonAsUB)
-      Operands.insert(cast<SwitchInst>(I)->getCondition());
-    break;
-  case Instruction::Br: {
-    auto *BR = cast<BranchInst>(I);
-    if (BranchOnPoisonAsUB && BR->isConditional())
-      Operands.insert(BR->getCondition());
-    break;
-  }
   default:
     break;
   }
@@ -5727,7 +5803,7 @@ void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
 
 bool llvm::mustTriggerUB(const Instruction *I,
                          const SmallSet<const Value *, 16>& KnownPoison) {
-  SmallPtrSet<const Value *, 4> NonPoisonOps;
+  SmallVector<const Value *, 4> NonPoisonOps;
   getGuaranteedNonPoisonOps(I, NonPoisonOps);
 
   for (const auto *V : NonPoisonOps)
@@ -5775,9 +5851,9 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
       if (--ScanLimit == 0)
         break;
 
-      SmallPtrSet<const Value *, 4> WellDefinedOps;
+      SmallVector<const Value *, 4> WellDefinedOps;
       getGuaranteedWellDefinedOps(&I, WellDefinedOps);
-      if (WellDefinedOps.contains(V))
+      if (is_contained(WellDefinedOps, V))
         return true;
 
       if (!isGuaranteedToTransferExecutionToSuccessor(&I))
@@ -5805,14 +5881,11 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
       if (!isGuaranteedToTransferExecutionToSuccessor(&I))
         return false;
 
-      // If this instruction propagates poison, mark it as poison if any of
-      // its operands are poison
-      if (propagatesPoison(cast<Operator>(&I))) {
-        for (const Value *Op : I.operands()) {
-          if (YieldsPoison.count(Op)) {
-            YieldsPoison.insert(&I);
-            break;
-          }
+      // If an operand is poison and propagates it, mark I as yielding poison.
+      for (const Use &Op : I.operands()) {
+        if (YieldsPoison.count(Op) && propagatesPoison(Op)) {
+          YieldsPoison.insert(&I);
+          break;
         }
       }
     }
@@ -7425,7 +7498,7 @@ getOffsetFromIndex(const GEPOperator *GEP, unsigned Idx, const DataLayout &DL) {
     TypeSize Size = DL.getTypeAllocSize(GTI.getIndexedType());
     if (Size.isScalable())
       return std::nullopt;
-    Offset += Size.getFixedSize() * OpC->getSExtValue();
+    Offset += Size.getFixedValue() * OpC->getSExtValue();
   }
 
   return Offset;

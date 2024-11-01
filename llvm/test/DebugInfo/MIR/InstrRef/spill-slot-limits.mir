@@ -19,17 +19,17 @@
 # CHECK: ![[VARNUM:[0-9]+]] = !DILocalVariable
 #
 ## There should be no variable location, just a single DBG_VALUE $noreg.
-# CHECK:     DBG_VALUE $noreg
+# CHECK:     DBG_VALUE_LIST {{.+}} $noreg
 #
 ## And then another.
-# CHECK:     DBG_VALUE $noreg
+# CHECK:     DBG_VALUE_LIST {{.+}} $noreg
 #
 ## Test that if there's no limit, we _do_ get some locations.
-# NOLIMIT:      DBG_INSTR_REF 1, 0
-# NOLIMIT-NEXT: DBG_VALUE $esi
+# NOLIMIT:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
+# NOLIMIT-NEXT: DBG_VALUE_LIST {{.+}} $esi
 #
-# NOLIMIT:      DBG_INSTR_REF 5,
-# NOLIMIT-NEXT: DBG_VALUE $rsp
+# NOLIMIT:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(5,
+# NOLIMIT-NEXT: DBG_VALUE_LIST {{.+}} $rsp
 --- |
   define i8 @test(i32 %bar) local_unnamed_addr !dbg !7 {
   entry:
@@ -57,6 +57,7 @@
 ---
 name: test
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$rdi', virtual-reg: '' }
 stack:
@@ -75,7 +76,7 @@ body:  |
     $rax = MOV64ri 0
     $rdi = MOV64ri 0
 
-    DBG_INSTR_REF 1, 0, !11, !DIExpression(), debug-location !12
+    DBG_INSTR_REF !11, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !12
     ; This shouldn't find anything -- we have disabled tracking of spills.
 
     ; In addition to plain spills, spills that are folded into instructions
@@ -83,7 +84,7 @@ body:  |
     INC32m $rsp, 1, $noreg, 4, $noreg, implicit-def dead $eflags, debug-instr-number 5, debug-location !12 :: (store (s32) into %stack.0)
 
 
-    DBG_INSTR_REF 5, 1000000, !11, !DIExpression(), debug-location !12
+    DBG_INSTR_REF !11, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(5, 1000000), debug-location !12
     ; Shouldn't be able to find the reference to instr 5's memory operand.
 
     RET64 $rsi, debug-location !12
