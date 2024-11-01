@@ -130,6 +130,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasCLFLUSHOPT = false;
   bool HasCLWB = false;
   bool HasMOVBE = false;
+  bool HasMOVRS = false;
   bool HasPREFETCHI = false;
   bool HasRDPID = false;
   bool HasRDPRU = false;
@@ -156,6 +157,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasAMXINT8 = false;
   bool HasAMXBF16 = false;
   bool HasAMXCOMPLEX = false;
+  bool HasAMXFP8 = false;
   bool HasSERIALIZE = false;
   bool HasTSXLDTRK = false;
   bool HasUSERMSR = false;

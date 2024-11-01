@@ -19,6 +19,7 @@
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -734,18 +735,19 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Promote);
   }
 
-  for (auto Op : {ISD::FREM,         ISD::FPOW,          ISD::FPOWI,
-                  ISD::FCOS,         ISD::FSIN,          ISD::FSINCOS,
-                  ISD::FACOS,        ISD::FASIN,         ISD::FATAN,
-                  ISD::FCOSH,        ISD::FSINH,         ISD::FTANH,
-                  ISD::FTAN,         ISD::FEXP,          ISD::FEXP2,
-                  ISD::FEXP10,       ISD::FLOG,          ISD::FLOG2,
-                  ISD::FLOG10,       ISD::STRICT_FREM,   ISD::STRICT_FPOW,
-                  ISD::STRICT_FPOWI, ISD::STRICT_FCOS,   ISD::STRICT_FSIN,
-                  ISD::STRICT_FACOS, ISD::STRICT_FASIN,  ISD::STRICT_FATAN,
-                  ISD::STRICT_FCOSH, ISD::STRICT_FSINH,  ISD::STRICT_FTANH,
-                  ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,  ISD::STRICT_FLOG,
-                  ISD::STRICT_FLOG2, ISD::STRICT_FLOG10, ISD::STRICT_FTAN}) {
+  for (auto Op : {ISD::FREM,          ISD::FPOW,          ISD::FPOWI,
+                  ISD::FCOS,          ISD::FSIN,          ISD::FSINCOS,
+                  ISD::FACOS,         ISD::FASIN,         ISD::FATAN,
+                  ISD::FATAN2,        ISD::FCOSH,         ISD::FSINH,
+                  ISD::FTANH,         ISD::FTAN,          ISD::FEXP,
+                  ISD::FEXP2,         ISD::FEXP10,        ISD::FLOG,
+                  ISD::FLOG2,         ISD::FLOG10,        ISD::STRICT_FREM,
+                  ISD::STRICT_FPOW,   ISD::STRICT_FPOWI,  ISD::STRICT_FCOS,
+                  ISD::STRICT_FSIN,   ISD::STRICT_FACOS,  ISD::STRICT_FASIN,
+                  ISD::STRICT_FATAN,  ISD::STRICT_FATAN2, ISD::STRICT_FCOSH,
+                  ISD::STRICT_FSINH,  ISD::STRICT_FTANH,  ISD::STRICT_FEXP,
+                  ISD::STRICT_FEXP2,  ISD::STRICT_FLOG,   ISD::STRICT_FLOG2,
+                  ISD::STRICT_FLOG10, ISD::STRICT_FTAN}) {
     setOperationAction(Op, MVT::f16, Promote);
     setOperationAction(Op, MVT::v4f16, Expand);
     setOperationAction(Op, MVT::v8f16, Expand);
@@ -1190,7 +1192,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // silliness like this:
     // clang-format off
     for (auto Op :
-         {ISD::SELECT,            ISD::SELECT_CC,
+         {ISD::SELECT,            ISD::SELECT_CC,      ISD::FATAN2,
           ISD::BR_CC,             ISD::FADD,           ISD::FSUB,
           ISD::FMUL,              ISD::FDIV,           ISD::FMA,
           ISD::FNEG,              ISD::FABS,           ISD::FCEIL,
@@ -1649,6 +1651,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FACOS, VT, Expand);
       setOperationAction(ISD::FASIN, VT, Expand);
       setOperationAction(ISD::FATAN, VT, Expand);
+      setOperationAction(ISD::FATAN2, VT, Expand);
       setOperationAction(ISD::FCOSH, VT, Expand);
       setOperationAction(ISD::FSINH, VT, Expand);
       setOperationAction(ISD::FTANH, VT, Expand);
@@ -1904,6 +1907,7 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
     setOperationAction(ISD::FASIN, VT, Expand);
     setOperationAction(ISD::FACOS, VT, Expand);
     setOperationAction(ISD::FATAN, VT, Expand);
+    setOperationAction(ISD::FATAN2, VT, Expand);
     setOperationAction(ISD::FSINH, VT, Expand);
     setOperationAction(ISD::FCOSH, VT, Expand);
     setOperationAction(ISD::FTANH, VT, Expand);
@@ -2532,6 +2536,11 @@ unsigned AArch64TargetLowering::ComputeNumSignBitsForTargetNode(
     case AArch64ISD::FCMLTz:
       // Compares return either 0 or all-ones
       return VTBits;
+    case AArch64ISD::VASHR: {
+      unsigned Tmp =
+          DAG.ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
+      return std::min<uint64_t>(Tmp + Op.getConstantOperandVal(1), VTBits);
+    }
   }
 
   return 1;
@@ -7918,10 +7927,8 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
                 APInt(Ptr.getValueSizeInBits().getFixedValue(), PartSize), DL,
                 Ptr.getValueType());
           }
-          SDNodeFlags Flags;
-          Flags.setNoUnsignedWrap(true);
           Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr,
-                            BytesIncrement, Flags);
+                            BytesIncrement, SDNodeFlags::NoUnsignedWrap);
           ExtraArgLocs++;
           i++;
         }
@@ -8977,12 +8984,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
                 APInt(Ptr.getValueSizeInBits().getFixedValue(), PartSize), DL,
                 Ptr.getValueType());
           }
-          SDNodeFlags Flags;
-          Flags.setNoUnsignedWrap(true);
-
           MPI = MachinePointerInfo(MPI.getAddrSpace());
           Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr,
-                            BytesIncrement, Flags);
+                            BytesIncrement, SDNodeFlags::NoUnsignedWrap);
           ExtraArgLocs++;
           i++;
         }
@@ -10079,9 +10083,9 @@ SDValue AArch64TargetLowering::LowerGlobalTLSAddress(SDValue Op,
 // Thus, it's only used for ptrauth references to extern_weak to avoid null
 // checks.
 
-SDValue AArch64TargetLowering::LowerPtrAuthGlobalAddressStatically(
+static SDValue LowerPtrAuthGlobalAddressStatically(
     SDValue TGA, SDLoc DL, EVT VT, AArch64PACKey::ID KeyC,
-    SDValue Discriminator, SDValue AddrDiscriminator, SelectionDAG &DAG) const {
+    SDValue Discriminator, SDValue AddrDiscriminator, SelectionDAG &DAG) {
   const auto *TGN = cast<GlobalAddressSDNode>(TGA.getNode());
   assert(TGN->getGlobal()->hasExternalWeakLinkage());
 
@@ -11768,8 +11772,7 @@ SDValue AArch64TargetLowering::getSqrtEstimate(SDValue Operand,
       SDLoc DL(Operand);
       EVT VT = Operand.getValueType();
 
-      SDNodeFlags Flags;
-      Flags.setAllowReassociation(true);
+      SDNodeFlags Flags = SDNodeFlags::AllowReassociation;
 
       // Newton reciprocal square root iteration: E * 0.5 * (3 - X * E^2)
       // AArch64 reciprocal square root iteration instruction: 0.5 * (3 - M * N)
@@ -11798,8 +11801,7 @@ SDValue AArch64TargetLowering::getRecipEstimate(SDValue Operand,
       SDLoc DL(Operand);
       EVT VT = Operand.getValueType();
 
-      SDNodeFlags Flags;
-      Flags.setAllowReassociation(true);
+      SDNodeFlags Flags = SDNodeFlags::AllowReassociation;
 
       // Newton reciprocal iteration: E * (2 - X * E)
       // AArch64 reciprocal iteration instruction: (2 - M * N)
@@ -27569,6 +27571,22 @@ AArch64TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
     return UseTlsOffset(IRB, -0x8);
 
   return TargetLowering::getSafeStackPointerLocation(IRB);
+}
+
+/// If a physical register, this returns the register that receives the
+/// exception address on entry to an EH pad.
+Register AArch64TargetLowering::getExceptionPointerRegister(
+    const Constant *PersonalityFn) const {
+  // FIXME: This is a guess. Has this been defined yet?
+  return AArch64::X0;
+}
+
+/// If a physical register, this returns the register that receives the
+/// exception typeid on entry to a landing pad.
+Register AArch64TargetLowering::getExceptionSelectorRegister(
+    const Constant *PersonalityFn) const {
+  // FIXME: This is a guess. Has this been defined yet?
+  return AArch64::X1;
 }
 
 bool AArch64TargetLowering::isMaskAndCmp0FoldingBeneficial(

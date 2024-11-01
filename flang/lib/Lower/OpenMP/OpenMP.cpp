@@ -76,6 +76,18 @@ struct EntryBlockArgs {
            reduction.isValid() && taskReduction.isValid() &&
            useDeviceAddr.isValid() && useDevicePtr.isValid();
   }
+
+  auto getSyms() const {
+    return llvm::concat<const semantics::Symbol *const>(
+        inReduction.syms, map.syms, priv.syms, reduction.syms,
+        taskReduction.syms, useDeviceAddr.syms, useDevicePtr.syms);
+  }
+
+  auto getVars() const {
+    return llvm::concat<const mlir::Value>(
+        inReduction.vars, map.vars, priv.vars, reduction.vars,
+        taskReduction.vars, useDeviceAddr.vars, useDevicePtr.vars);
+  }
 };
 } // namespace
 
@@ -577,10 +589,27 @@ static void genLoopVars(
   llvm::SmallVector<mlir::Location> locs(args.size(), loc);
   firOpBuilder.createBlock(&region, {}, tiv, locs);
 
+  // Update nested wrapper operands if parent wrappers have mapped these values
+  // to block arguments.
+  //
+  // Binding these values earlier would take care of this, but we cannot rely on
+  // that approach because binding in between the creation of a wrapper and the
+  // next one would result in 'hlfir.declare' operations being introduced inside
+  // of a wrapper, which is illegal.
+  mlir::IRMapping mapper;
+  for (auto [argGeneratingOp, blockArgs] : wrapperArgs) {
+    for (mlir::OpOperand &operand : argGeneratingOp->getOpOperands())
+      operand.set(mapper.lookupOrDefault(operand.get()));
+
+    for (const auto [arg, var] : llvm::zip_equal(
+             argGeneratingOp->getRegion(0).getArguments(), blockArgs.getVars()))
+      mapper.map(var, arg);
+  }
+
   // Bind the entry block arguments of parent wrappers to the corresponding
   // symbols.
-  for (auto [argGeneratingOp, args] : wrapperArgs)
-    bindEntryBlockArgs(converter, argGeneratingOp, args);
+  for (auto [argGeneratingOp, blockArgs] : wrapperArgs)
+    bindEntryBlockArgs(converter, argGeneratingOp, blockArgs);
 
   // The argument is not currently in memory, so make a temporary for the
   // argument, and store it there, then bind that location to the argument.
@@ -1506,8 +1535,7 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     genEntryBlock(converter, args, op->getRegion(0));
     bindEntryBlockArgs(
         converter, llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(op), args);
-    return llvm::to_vector(llvm::concat<const semantics::Symbol *const>(
-        args.priv.syms, args.reduction.syms));
+    return llvm::to_vector(args.getSyms());
   };
 
   assert((!enableDelayedPrivatization || dsp) &&
@@ -1581,11 +1609,11 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::Operation *terminator =
       lower::genOpenMPTerminator(builder, sectionsOp, loc);
 
-  auto reductionCallback = [&](mlir::Operation *op) {
+  auto genRegionEntryCB = [&](mlir::Operation *op) {
     genEntryBlock(converter, args, op->getRegion(0));
     bindEntryBlockArgs(
         converter, llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(op), args);
-    return reductionSyms;
+    return llvm::to_vector(args.getSyms());
   };
 
   // Generate nested SECTION constructs.
@@ -1611,7 +1639,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         OpWithBodyGenInfo(converter, symTable, semaCtx, loc, nestedEval,
                           llvm::omp::Directive::OMPD_section)
             .setClauses(&sectionQueue.begin()->clauses)
-            .setGenRegionEntryCb(reductionCallback),
+            .setGenRegionEntryCb(genRegionEntryCB),
         sectionQueue, sectionQueue.begin());
   }
 
@@ -1648,6 +1676,15 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     builder.create<mlir::omp::BarrierOp>(loc);
 
   return sectionsOp;
+}
+
+static void genScopeOp(lower::AbstractConverter &converter,
+                       lower::SymMap &symTable,
+                       semantics::SemanticsContext &semaCtx,
+                       lower::pft::Evaluation &eval, mlir::Location loc,
+                       const ConstructQueue &queue,
+                       ConstructQueue::const_iterator item) {
+  TODO(loc, "Scope construct");
 }
 
 static mlir::omp::SingleOp
@@ -2478,6 +2515,9 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
   case llvm::omp::Directive::OMPD_simd:
     genStandaloneSimd(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
+  case llvm::omp::Directive::OMPD_scope:
+    genScopeOp(converter, symTable, semaCtx, eval, loc, queue, item);
+    break;
   case llvm::omp::Directive::OMPD_single:
     genSingleOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
@@ -2685,6 +2725,21 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    const parser::OpenMPCancellationPointConstruct
                        &cancellationPointConstruct) {
   TODO(converter.getCurrentLocation(), "OpenMPCancelConstruct");
+}
+
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OpenMPDepobjConstruct &construct) {
+  // These values will be ignored until the construct itself is implemented,
+  // but run them anyway for the sake of testing (via a Todo test).
+  auto &ompObj = std::get<parser::OmpObject>(construct.t);
+  const Object &depObj = makeObject(ompObj, semaCtx);
+  Clause clause = makeClause(std::get<parser::OmpClause>(construct.t), semaCtx);
+  (void)depObj;
+  (void)clause;
+
+  TODO(converter.getCurrentLocation(), "OpenMPDepobjConstruct");
 }
 
 static void

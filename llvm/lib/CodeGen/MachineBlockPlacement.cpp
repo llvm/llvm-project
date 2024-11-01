@@ -2189,9 +2189,7 @@ MachineBlockPlacement::findBestLoopTop(const MachineLoop &L,
   // i.e. when the layout predecessor does not fallthrough to the loop header.
   // In practice this never happens though: there always seems to be a preheader
   // that can fallthrough and that is also placed before the header.
-  bool OptForSize = F->getFunction().hasOptSize() ||
-                    llvm::shouldOptimizeForSize(L.getHeader(), PSI, MBFI.get());
-  if (OptForSize)
+  if (llvm::shouldOptimizeForSize(L.getHeader(), PSI, MBFI.get()))
     return L.getHeader();
 
   MachineBasicBlock *OldTop = nullptr;
@@ -3511,7 +3509,6 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   initTailDupThreshold();
 
   const bool OptForSize =
-      MF.getFunction().hasOptSize() ||
       llvm::shouldOptimizeForSize(&MF, PSI, &MBFI->getMBFI());
   // Determine whether to use ext-tsp for perf/size optimization. The method
   // is beneficial only for instances with at least 3 basic blocks and it can be

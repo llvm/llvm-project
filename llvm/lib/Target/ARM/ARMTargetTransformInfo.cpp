@@ -2063,6 +2063,7 @@ bool ARMTTIImpl::isLoweredToCall(const Function *F) {
   case Intrinsic::powi:
   case Intrinsic::sin:
   case Intrinsic::cos:
+  case Intrinsic::sincos:
   case Intrinsic::pow:
   case Intrinsic::log:
   case Intrinsic::log10:

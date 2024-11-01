@@ -115,7 +115,7 @@ using std::atomic_signal_fence                         // see below
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -123,8 +123,8 @@ using std::atomic_signal_fence                         // see below
 
 #if defined(__cplusplus) && _LIBCPP_STD_VER >= 23
 
-#  include <atomic>
-#  include <version>
+#  include <__cxx03/atomic>
+#  include <__cxx03/version>
 
 #  ifdef _Atomic
 #    undef _Atomic

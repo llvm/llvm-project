@@ -38,6 +38,14 @@ static constexpr Builtin::Info BuiltinInfoX86[] = {
   {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
   {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
+#include "clang/Basic/BuiltinsX86.inc"
+
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
 #include "clang/Basic/BuiltinsX86_64.def"
 };
 
@@ -348,6 +356,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSM4 = true;
     } else if (Feature == "+movbe") {
       HasMOVBE = true;
+    } else if (Feature == "+movrs") {
+      HasMOVRS = true;
     } else if (Feature == "+sgx") {
       HasSGX = true;
     } else if (Feature == "+cx8") {
@@ -418,6 +428,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAMXTILE = true;
     } else if (Feature == "+amx-complex") {
       HasAMXCOMPLEX = true;
+    } else if (Feature == "+amx-fp8") {
+      HasAMXFP8 = true;
     } else if (Feature == "+cmpccxadd") {
       HasCMPCCXADD = true;
     } else if (Feature == "+raoint") {
@@ -915,6 +927,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__MOVDIRI__");
   if (HasMOVDIR64B)
     Builder.defineMacro("__MOVDIR64B__");
+  if (HasMOVRS)
+    Builder.defineMacro("__MOVRS__");
   if (HasPCONFIG)
     Builder.defineMacro("__PCONFIG__");
   if (HasPTWRITE)
@@ -935,6 +949,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AMX_FP16__");
   if (HasAMXCOMPLEX)
     Builder.defineMacro("__AMX_COMPLEX__");
+  if (HasAMXFP8)
+    Builder.defineMacro("__AMX_FP8__");
   if (HasCMPCCXADD)
     Builder.defineMacro("__CMPCCXADD__");
   if (HasRAOINT)
@@ -1065,6 +1081,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("amx-fp16", true)
       .Case("amx-int8", true)
       .Case("amx-tile", true)
+      .Case("amx-fp8", true)
       .Case("avx", true)
       .Case("avx10.1-256", true)
       .Case("avx10.1-512", true)
@@ -1116,6 +1133,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("lzcnt", true)
       .Case("mmx", true)
       .Case("movbe", true)
+      .Case("movrs", true)
       .Case("movdiri", true)
       .Case("movdir64b", true)
       .Case("mwaitx", true)
@@ -1182,6 +1200,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("amx-fp16", HasAMXFP16)
       .Case("amx-int8", HasAMXINT8)
       .Case("amx-tile", HasAMXTILE)
+      .Case("amx-fp8", HasAMXFP8)
       .Case("avx", SSELevel >= AVX)
       .Case("avx10.1-256", HasAVX10_1)
       .Case("avx10.1-512", HasAVX10_1_512)
@@ -1233,6 +1252,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("lzcnt", HasLZCNT)
       .Case("mmx", HasMMX)
       .Case("movbe", HasMOVBE)
+      .Case("movrs", HasMOVRS)
       .Case("movdiri", HasMOVDIRI)
       .Case("movdir64b", HasMOVDIR64B)
       .Case("mwaitx", HasMWAITX)
@@ -1459,7 +1479,7 @@ bool X86TargetInfo::validateAsmConstraint(
     }
   case 'f': // Any x87 floating point stack register.
     // Constraint 'f' cannot be used for output operands.
-    if (Info.ConstraintStr[0] == '=')
+    if (Info.ConstraintStr[0] == '=' || Info.ConstraintStr[0] == '+')
       return false;
     Info.setAllowsRegister();
     return true;

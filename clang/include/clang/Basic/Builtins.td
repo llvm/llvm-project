@@ -4876,6 +4876,12 @@ def HLSLBufferUpdateCounter : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "uint32_t(...)";
 }
 
+def HLSLSplitDouble: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_splitdouble"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 // Builtins for XRay.
 def XRayCustomEvent : Builtin {
   let Spellings = ["__xray_customevent"];

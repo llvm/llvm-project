@@ -795,6 +795,10 @@ def warn_cstruct_memaccess : Warning<
   "%1 call is a pointer to record %2 that is not trivial to "
   "%select{primitive-default-initialize|primitive-copy}3">,
   InGroup<NonTrivialMemaccess>;
+def warn_cxxstruct_memaccess : Warning<
+  "first argument in call to "
+  "%0 is a pointer to non-trivially copyable type %1">,
+  InGroup<NonTrivialMemaccess>;
 def note_nontrivial_field : Note<
   "field is non-trivial to %select{copy|default-initialize}0">;
 def err_non_trivial_c_union_in_invalid_context : Error<
@@ -10099,6 +10103,9 @@ def err_lifetimebound_no_object_param : Error<
 def err_lifetimebound_ctor_dtor : Error<
   "'lifetimebound' attribute cannot be applied to a "
   "%select{constructor|destructor}0">;
+def err_lifetimebound_void_return_type : Error<
+  "'lifetimebound' attribute cannot be applied to a parameter of a function "
+  "that returns void">;
 
 // CHECK: returning address/reference of stack memory
 def warn_ret_stack_addr_ref : Warning<

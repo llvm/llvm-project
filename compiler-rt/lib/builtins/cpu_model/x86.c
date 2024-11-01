@@ -229,6 +229,7 @@ enum ProcessorFeatures {
   FEATURE_AVX10_1_512,
   FEATURE_AVX10_2_256,
   FEATURE_AVX10_2_512,
+  FEATURE_MOVRS,
   CPU_FEATURE_MAX
 };
 
@@ -972,6 +973,8 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_HRESET);
   if (HasLeaf7Subleaf1 && ((EAX >> 23) & 1) && HasAVXSave)
     setFeature(FEATURE_AVXIFMA);
+  if (HasLeaf7Subleaf1 && ((EAX >> 31) & 1))
+    setFeature(FEATURE_MOVRS);
 
   if (HasLeaf7Subleaf1 && ((EDX >> 4) & 1) && HasAVXSave)
     setFeature(FEATURE_AVXVNNIINT8);

@@ -271,6 +271,19 @@ static bool canCacheThisType(mlir::LLVM::DICompositeTypeAttr comTy) {
   return true;
 }
 
+std::pair<std::uint64_t, unsigned short>
+DebugTypeGenerator::getFieldSizeAndAlign(mlir::Type fieldTy) {
+  mlir::Type llvmTy;
+  if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(fieldTy))
+    llvmTy = llvmTypeConverter.convertBoxTypeAsStruct(boxTy, getBoxRank(boxTy));
+  else
+    llvmTy = llvmTypeConverter.convertType(fieldTy);
+
+  uint64_t byteSize = dataLayout->getTypeSize(llvmTy);
+  unsigned short byteAlign = dataLayout->getTypeABIAlignment(llvmTy);
+  return std::pair{byteSize, byteAlign};
+}
+
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
     fir::RecordType Ty, mlir::LLVM::DIFileAttr fileAttr,
     mlir::LLVM::DIScopeAttr scope, fir::cg::XDeclareOp declOp) {
@@ -303,15 +316,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   mlir::IntegerType intTy = mlir::IntegerType::get(context, 64);
   std::uint64_t offset = 0;
   for (auto [fieldName, fieldTy] : Ty.getTypeList()) {
-    mlir::Type llvmTy;
-    if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(fieldTy))
-      llvmTy =
-          llvmTypeConverter.convertBoxTypeAsStruct(boxTy, getBoxRank(boxTy));
-    else
-      llvmTy = llvmTypeConverter.convertType(fieldTy);
-
-    uint64_t byteSize = dataLayout->getTypeSize(llvmTy);
-    unsigned short byteAlign = dataLayout->getTypeABIAlignment(llvmTy);
+    auto [byteSize, byteAlign] = getFieldSizeAndAlign(fieldTy);
     std::optional<llvm::ArrayRef<int64_t>> lowerBounds =
         fir::getComponentLowerBoundsIfNonDefault(Ty, fieldName, module,
                                                  symbolTable);
@@ -366,6 +371,42 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
       typeCache.erase(iter);
   }
   return finalAttr;
+}
+
+mlir::LLVM::DITypeAttr DebugTypeGenerator::convertTupleType(
+    mlir::TupleType Ty, mlir::LLVM::DIFileAttr fileAttr,
+    mlir::LLVM::DIScopeAttr scope, fir::cg::XDeclareOp declOp) {
+  // Check if this type has already been converted.
+  auto iter = typeCache.find(Ty);
+  if (iter != typeCache.end())
+    return iter->second;
+
+  llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
+  mlir::MLIRContext *context = module.getContext();
+
+  std::uint64_t offset = 0;
+  for (auto fieldTy : Ty.getTypes()) {
+    auto [byteSize, byteAlign] = getFieldSizeAndAlign(fieldTy);
+    mlir::LLVM::DITypeAttr elemTy =
+        convertType(fieldTy, fileAttr, scope, /*declOp=*/nullptr);
+    offset = llvm::alignTo(offset, byteAlign);
+    mlir::LLVM::DIDerivedTypeAttr tyAttr = mlir::LLVM::DIDerivedTypeAttr::get(
+        context, llvm::dwarf::DW_TAG_member, mlir::StringAttr::get(context, ""),
+        elemTy, byteSize * 8, byteAlign * 8, offset * 8,
+        /*optional<address space>=*/std::nullopt,
+        /*extra data=*/nullptr);
+    elements.push_back(tyAttr);
+    offset += llvm::alignTo(byteSize, byteAlign);
+  }
+
+  auto typeAttr = mlir::LLVM::DICompositeTypeAttr::get(
+      context, llvm::dwarf::DW_TAG_structure_type,
+      mlir::StringAttr::get(context, ""), fileAttr, /*line=*/0, scope,
+      /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, offset * 8,
+      /*alignInBits=*/0, elements, /*dataLocation=*/nullptr, /*rank=*/nullptr,
+      /*allocated=*/nullptr, /*associated=*/nullptr);
+  typeCache[Ty] = typeAttr;
+  return typeAttr;
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
@@ -574,6 +615,8 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
                                 /*hasDescriptor=*/false);
   } else if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(Ty)) {
     return convertRecordType(recTy, fileAttr, scope, declOp);
+  } else if (auto tupleTy = mlir::dyn_cast_if_present<mlir::TupleType>(Ty)) {
+    return convertTupleType(tupleTy, fileAttr, scope, declOp);
   } else if (auto refTy = mlir::dyn_cast_if_present<fir::ReferenceType>(Ty)) {
     auto elTy = refTy.getEleTy();
     return convertPointerLikeType(elTy, fileAttr, scope, declOp,
@@ -581,6 +624,10 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
                                   /*genAssociated=*/false);
   } else if (auto vecTy = mlir::dyn_cast_or_null<fir::VectorType>(Ty)) {
     return convertVectorType(vecTy, fileAttr, scope, declOp);
+  } else if (mlir::isa<mlir::IndexType>(Ty)) {
+    return genBasicType(context, mlir::StringAttr::get(context, "integer"),
+                        llvmTypeConverter.getIndexTypeBitwidth(),
+                        llvm::dwarf::DW_ATE_signed);
   } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(Ty)) {
     auto elTy = boxTy.getElementType();
     if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))

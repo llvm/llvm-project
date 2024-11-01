@@ -1185,8 +1185,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
 
   Args.addAllArgs(CmdArgs,
                   {options::OPT_D, options::OPT_U, options::OPT_I_Group,
-                   options::OPT_F, options::OPT_index_header_map,
-                   options::OPT_embed_dir_EQ});
+                   options::OPT_F, options::OPT_embed_dir_EQ});
 
   // Add -Wp, and -Xpreprocessor if using the preprocessor.
 
@@ -2838,7 +2837,7 @@ static std::string ComplexArithmeticStr(LangOptions::ComplexRangeKind Range) {
 
 static void EmitComplexRangeDiag(const Driver &D, std::string str1,
                                  std::string str2) {
-  if ((str1.compare(str2) != 0) && !str2.empty() && !str1.empty()) {
+  if (str1 != str2 && !str2.empty() && !str1.empty()) {
     D.Diag(clang::diag::warn_drv_overriding_option) << str1 << str2;
   }
 }
@@ -2996,8 +2995,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         EmitComplexRangeDiag(D, RenderComplexRangeOption(Range),
                              "-fno-cx-limited-range");
       } else {
-        if (GccRangeComplexOption.compare("-fcx-limited-range") != 0 &&
-            GccRangeComplexOption.compare("-fno-cx-fortran-rules") != 0)
+        if (GccRangeComplexOption != "-fcx-limited-range" &&
+            GccRangeComplexOption != "-fno-cx-fortran-rules")
           EmitComplexRangeDiag(D, GccRangeComplexOption,
                                "-fno-cx-limited-range");
       }
@@ -3042,8 +3041,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         break;
       }
       if (!GccRangeComplexOption.empty()) {
-        if (GccRangeComplexOption.compare("-fcx-limited-range") != 0) {
-          if (GccRangeComplexOption.compare("-fcx-fortran-rules") != 0) {
+        if (GccRangeComplexOption != "-fcx-limited-range") {
+          if (GccRangeComplexOption != "-fcx-fortran-rules") {
             if (RangeVal != LangOptions::ComplexRangeKind::CX_Improved)
               EmitComplexRangeDiag(D, GccRangeComplexOption,
                                    ComplexArithmeticStr(RangeVal));

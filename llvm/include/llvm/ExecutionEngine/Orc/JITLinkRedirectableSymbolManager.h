@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_JITLINKREDIRECABLEMANAGER_H
-#define LLVM_EXECUTIONENGINE_ORC_JITLINKREDIRECABLEMANAGER_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_JITLINKREDIRECABLESYMBOLMANAGER_H
+#define LLVM_EXECUTIONENGINE_ORC_JITLINKREDIRECABLESYMBOLMANAGER_H
 
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
@@ -26,12 +26,16 @@ public:
   /// Create redirection manager that uses JITLink based implementaion.
   static Expected<std::unique_ptr<RedirectableSymbolManager>>
   Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &JD) {
-    Error Err = Error::success();
-    auto RM = std::unique_ptr<RedirectableSymbolManager>(
-        new JITLinkRedirectableSymbolManager(ObjLinkingLayer, JD, Err));
-    if (Err)
-      return Err;
-    return std::move(RM);
+    auto AnonymousPtrCreator(jitlink::getAnonymousPointerCreator(
+        ObjLinkingLayer.getExecutionSession().getTargetTriple()));
+    auto PtrJumpStubCreator(jitlink::getPointerJumpStubCreator(
+        ObjLinkingLayer.getExecutionSession().getTargetTriple()));
+    if (!AnonymousPtrCreator || !PtrJumpStubCreator)
+      return make_error<StringError>("Architecture not supported",
+                                     inconvertibleErrorCode());
+    return std::unique_ptr<RedirectableSymbolManager>(
+        new JITLinkRedirectableSymbolManager(
+            ObjLinkingLayer, JD, AnonymousPtrCreator, PtrJumpStubCreator));
   }
 
   void emitRedirectableSymbols(std::unique_ptr<MaterializationResponsibility> R,
@@ -52,18 +56,13 @@ private:
   constexpr static StringRef JumpStubTableName = "$IND_JUMP_";
   constexpr static StringRef StubPtrTableName = "$__IND_JUMP_PTRS";
 
-  JITLinkRedirectableSymbolManager(ObjectLinkingLayer &ObjLinkingLayer,
-                                   JITDylib &JD, Error &Err)
+  JITLinkRedirectableSymbolManager(
+      ObjectLinkingLayer &ObjLinkingLayer, JITDylib &JD,
+      jitlink::AnonymousPointerCreator &AnonymousPtrCreator,
+      jitlink::PointerJumpStubCreator &PtrJumpStubCreator)
       : ObjLinkingLayer(ObjLinkingLayer), JD(JD),
-        AnonymousPtrCreator(jitlink::getAnonymousPointerCreator(
-            ObjLinkingLayer.getExecutionSession().getTargetTriple())),
-        PtrJumpStubCreator(jitlink::getPointerJumpStubCreator(
-            ObjLinkingLayer.getExecutionSession().getTargetTriple())) {
-    if (!AnonymousPtrCreator || !PtrJumpStubCreator)
-      Err = make_error<StringError>("Architecture not supported",
-                                    inconvertibleErrorCode());
-    if (Err)
-      return;
+        AnonymousPtrCreator(std::move(AnonymousPtrCreator)),
+        PtrJumpStubCreator(std::move(PtrJumpStubCreator)) {
     ObjLinkingLayer.getExecutionSession().registerResourceManager(*this);
   }
 
@@ -104,4 +103,4 @@ private:
 } // namespace orc
 } // namespace llvm
 
-#endif
+#endif // LLVM_EXECUTIONENGINE_ORC_JITLINKREDIRECABLESYMBOLMANAGER_H

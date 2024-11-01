@@ -9,19 +9,19 @@
 #ifndef _LIBCPP___RANDOM_WEIBULL_DISTRIBUTION_H
 #define _LIBCPP___RANDOM_WEIBULL_DISTRIBUTION_H
 
-#include <__config>
-#include <__random/exponential_distribution.h>
-#include <__random/is_valid.h>
-#include <cmath>
-#include <iosfwd>
-#include <limits>
+#include <__cxx03/__config>
+#include <__cxx03/__random/exponential_distribution.h>
+#include <__cxx03/__random/is_valid.h>
+#include <__cxx03/cmath>
+#include <__cxx03/iosfwd>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
