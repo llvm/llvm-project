@@ -589,6 +589,7 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure in range calculations for conditional throw expressions. (#GH111854)
 - Clang now correctly ignores previous partial specializations of member templates explicitly specialized for
   an implicitly instantiated class template specialization. (#GH51051)
+- Fixed an assertion failure caused by invalid enum forward declarations. (#GH112208)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
