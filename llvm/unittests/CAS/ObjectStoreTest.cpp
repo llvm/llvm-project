@@ -183,11 +183,10 @@ multiline text multiline text multiline text multiline text multiline text)",
 
     // Check basic printing of IDs.
     IDs.push_back(CAS1->getID(*Node));
-    EXPECT_EQ(IDs.back().toString(), IDs.back().toString());
-    EXPECT_EQ(Nodes.front(), Nodes.front());
-    EXPECT_EQ(Nodes.back(), Nodes.back());
-    EXPECT_EQ(IDs.front(), IDs.front());
-    EXPECT_EQ(IDs.back(), IDs.back());
+    auto ID = CAS1->getID(Nodes.back());
+    EXPECT_EQ(ID.toString(), IDs.back().toString());
+    EXPECT_EQ(*Node, Nodes.back());
+    EXPECT_EQ(ID, IDs.back());
     if (Nodes.size() <= 1)
       continue;
     EXPECT_NE(Nodes.front(), Nodes.back());

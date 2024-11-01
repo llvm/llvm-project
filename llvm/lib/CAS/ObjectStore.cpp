@@ -21,7 +21,6 @@ void CASContext::anchor() {}
 void ObjectStore::anchor() {}
 
 LLVM_DUMP_METHOD void CASID::dump() const { print(dbgs()); }
-LLVM_DUMP_METHOD void ObjectStore::dump() const { print(dbgs()); }
 LLVM_DUMP_METHOD void ObjectRef::dump() const { print(dbgs()); }
 LLVM_DUMP_METHOD void ObjectHandle::dump() const { print(dbgs()); }
 

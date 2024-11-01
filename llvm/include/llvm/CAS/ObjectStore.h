@@ -217,10 +217,6 @@ public:
   /// Validate the whole node tree.
   Error validateTree(ObjectRef Ref);
 
-  /// Print the ObjectStore internals for debugging purpose.
-  virtual void print(raw_ostream &) const {}
-  void dump() const;
-
   /// Get CASContext
   const CASContext &getContext() const { return Context; }
 
