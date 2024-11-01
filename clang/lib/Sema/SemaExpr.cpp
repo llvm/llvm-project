@@ -28,6 +28,7 @@
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -9191,16 +9192,15 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
   auto FindBuiltinCountedByRefExpr = [](Expr *E) {
     struct BuiltinCountedByRefVisitor
         : public RecursiveASTVisitor<BuiltinCountedByRefVisitor> {
-      MemberExpr *ME = nullptr;
-      bool VisitMemberExpr(MemberExpr *E) {
-        if (auto *FD = dyn_cast<FieldDecl>(E->getMemberDecl());
-            FD && FD->isBoundsSafetyCounter())
-          ME = E;
-        return true;
+      CallExpr *CE = nullptr;
+      bool VisitCallExpr(CallExpr *E) {
+        if (E->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref)
+          CE = E;
+        return false;
       }
     } V;
     V.TraverseStmt(E);
-    return V.ME;
+    return V.CE;
   };
   if (auto *CE = FindBuiltinCountedByRefExpr(RHS.get()))
     Diag(CE->getExprLoc(),
@@ -13761,15 +13761,14 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
   auto FindInvalidUseOfBoundsSafetyCounter = [&](Expr *E) {
     struct BuiltinCountedByRefVisitor
         : public RecursiveASTVisitor<BuiltinCountedByRefVisitor> {
-      MemberExpr *ME = nullptr;
+      CallExpr *CE = nullptr;
       bool InvalidUse = false;
       int Option = -1;
 
-      bool VisitMemberExpr(MemberExpr *E) {
-        if (auto *FD = dyn_cast<FieldDecl>(E->getMemberDecl());
-            FD && FD->isBoundsSafetyCounter())
-          ME = E;
-        return true;
+      bool VisitCallExpr(CallExpr *E) {
+        if (E->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref)
+          CE = E;
+        return false;
       }
 
       bool VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
@@ -13785,11 +13784,11 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
     } V;
     V.TraverseStmt(E);
     DiagOption = V.Option;
-    return V.InvalidUse ? V.ME : nullptr;
+    return V.InvalidUse ? V.CE : nullptr;
   };
-  if (auto *E = FindInvalidUseOfBoundsSafetyCounter(LHSExpr))
-    Diag(E->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_lhs_use)
-        << DiagOption << E->getSourceRange();
+  if (auto *CE = FindInvalidUseOfBoundsSafetyCounter(LHSExpr))
+    Diag(CE->getExprLoc(), diag::err_builtin_counted_by_ref_invalid_lhs_use)
+        << DiagOption << CE->getSourceRange();
 
   if (DiagnoseAssignmentResult(ConvTy, Loc, LHSType, RHSType, RHS.get(),
                                AssignmentAction::Assigning))

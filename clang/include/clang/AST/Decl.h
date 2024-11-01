@@ -3059,14 +3059,9 @@ class FieldDecl : public DeclaratorDecl, public Mergeable<FieldDecl> {
   unsigned BitField : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned Mutable : 1;
-  // FIXME: IsBoundsSafetyCounter can be made into an attribute, once some
-  // downstream work is in mainline.
-  // See https://github.com/llvm/llvm-project/issues/112586
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsBoundsSafetyCounter : 1;
   LLVM_PREFERRED_TYPE(InitStorageKind)
   unsigned StorageKind : 2;
-  mutable unsigned CachedFieldIndex : 27;
+  mutable unsigned CachedFieldIndex : 28;
 
   /// If this is a bitfield with a default member initializer, this
   /// structure is used to represent the two expressions.
@@ -3101,8 +3096,8 @@ protected:
             TypeSourceInfo *TInfo, Expr *BW, bool Mutable,
             InClassInitStyle InitStyle)
       : DeclaratorDecl(DK, DC, IdLoc, Id, T, TInfo, StartLoc), BitField(false),
-        Mutable(Mutable), IsBoundsSafetyCounter(false),
-        StorageKind((InitStorageKind)InitStyle), CachedFieldIndex(0), Init() {
+        Mutable(Mutable), StorageKind((InitStorageKind)InitStyle),
+        CachedFieldIndex(0), Init() {
     if (BW)
       setBitWidth(BW);
   }
@@ -3131,11 +3126,6 @@ public:
 
   /// Determines whether this is an unnamed bitfield.
   bool isUnnamedBitField() const { return isBitField() && !getDeclName(); }
-
-  /// Returns true if this field decl is referenced by one of the bounds
-  /// safety counter attributes.
-  bool isBoundsSafetyCounter() const { return IsBoundsSafetyCounter; }
-  void setBoundsSafetyCounter(bool V) { IsBoundsSafetyCounter = V; }
 
   /// Determines whether this field is a
   /// representative for an anonymous struct or union. Such fields are
