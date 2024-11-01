@@ -47,6 +47,13 @@ static cl::opt<unsigned> UnrollThresholdIf(
   cl::desc("Unroll threshold increment for AMDGPU for each if statement inside loop"),
   cl::init(200), cl::Hidden);
 
+static cl::opt<unsigned> UnrollThresholdNestedStatic(
+    "amdgpu-unroll-threshold-nested-static",
+    cl::desc("Unroll threshold increment for AMDGPU for each nested loop whose "
+             "trip count will be made runtime-independent when fully-unrolling "
+             "the outer loop"),
+    cl::init(200), cl::Hidden);
+
 static cl::opt<bool> UnrollRuntimeLocal(
   "amdgpu-unroll-runtime-local",
   cl::desc("Allow runtime unroll for AMDGPU if local memory used in a loop"),
@@ -148,8 +155,67 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
       }
     }
   }
-
   unsigned MaxBoost = std::max(ThresholdPrivate, ThresholdLocal);
+
+  if (llvm::PHINode *IV = L->getInductionVariable(SE)) {
+    // Look for subloops whose trip count would go from runtime-dependent to
+    // runtime-independent if we were to unroll the loop. Give a bonus to the
+    // current loop's unrolling threshold for each of these, as fully unrolling
+    // it would likely expose additional optimization opportunities.
+    for (const Loop *SubLoop : L->getSubLoops()) {
+      std::optional<Loop::LoopBounds> Bounds = SubLoop->getBounds(SE);
+      if (!Bounds)
+        continue;
+      Value *InitIV = &Bounds->getInitialIVValue();
+      Value *FinalIV = &Bounds->getFinalIVValue();
+      Value *StepVal = Bounds->getStepValue();
+      if (!StepVal)
+        continue;
+
+      // Determines whether SubIV's derivation depends exclusively on constants
+      // and/or IV; if it does, SubIVDependsOnIV is set to true if IV is
+      // involved in the derivation.
+      bool SubIVDependsOnIV = false;
+      std::function<bool(const Value *, unsigned)> FromConstsOrLoopIV =
+          [&](const Value *SubIV, unsigned Depth) -> bool {
+        if (SubIV == IV) {
+          SubIVDependsOnIV = true;
+          return true;
+        }
+        if (isa<Constant>(SubIV))
+          return true;
+        if (Depth >= 10)
+          return false;
+
+        const Instruction *I = dyn_cast<Instruction>(SubIV);
+        // No point in checking outside the loop since IV is necessarily inside
+        // it; also stop searching when encountering an instruction that will
+        // likely not allow SubIV's value to be statically computed.
+        if (!I || !L->contains(I) || !isa<BinaryOperator, CastInst, PHINode>(I))
+          return false;
+
+        // SubIV depends on constants or IV if all of the instruction's
+        // operands involved in its derivation also depend on constants or IV.
+        return llvm::all_of(I->operand_values(), [&](const Value *V) {
+          return FromConstsOrLoopIV(V, Depth + 1);
+        });
+      };
+
+      if (FromConstsOrLoopIV(InitIV, 0) && FromConstsOrLoopIV(FinalIV, 0) &&
+          FromConstsOrLoopIV(StepVal, 0) && SubIVDependsOnIV) {
+        UP.Threshold += UnrollThresholdNestedStatic;
+        LLVM_DEBUG(dbgs() << "Set unroll threshold " << UP.Threshold
+                          << " for loop:\n"
+                          << *L
+                          << " due to subloop's trip count becoming "
+                             "runtime-independent after unrolling:\n  "
+                          << *SubLoop);
+        if (UP.Threshold >= MaxBoost)
+          return;
+      }
+    }
+  }
+
   for (const BasicBlock *BB : L->getBlocks()) {
     const DataLayout &DL = BB->getDataLayout();
     unsigned LocalGEPsSeen = 0;
