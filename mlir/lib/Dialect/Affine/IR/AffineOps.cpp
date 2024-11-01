@@ -3895,8 +3895,9 @@ static bool isResultTypeMatchAtomicRMWKind(Type resultType,
   case arith::AtomicRMWKind::muli:
     return isa<IntegerType>(resultType);
   case arith::AtomicRMWKind::maximumf:
-    return isa<FloatType>(resultType);
   case arith::AtomicRMWKind::minimumf:
+  case arith::AtomicRMWKind::maxnumf:
+  case arith::AtomicRMWKind::minnumf:
     return isa<FloatType>(resultType);
   case arith::AtomicRMWKind::maxs: {
     auto intType = llvm::dyn_cast<IntegerType>(resultType);
