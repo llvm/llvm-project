@@ -20,7 +20,7 @@
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za8_s8(uint32_t slice_base, svbool_t pg, svint8_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za8, _s8, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za8, _s8, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za8_s8_1(
@@ -31,7 +31,8 @@ void test_svwrite_hor_za8_s8(uint32_t slice_base, svbool_t pg, svint8_t zn) {
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za8_s8_1(uint32_t slice_base, svbool_t pg, svint8_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za8, _s8, _m)(0, slice_base, 15, pg, zn);
+   uint32_t slice = slice_base + 15;
+  SME_ACLE_FUNC(svwrite_hor_za8, _s8, _m)(0, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za16_s16(
@@ -42,7 +43,7 @@ void test_svwrite_hor_za8_s8_1(uint32_t slice_base, svbool_t pg, svint8_t zn) {
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za16_s16(uint32_t slice_base, svbool_t pg, svint16_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za16, _s16, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za16, _s16, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za16_s16_1(
@@ -54,7 +55,8 @@ void test_svwrite_hor_za16_s16(uint32_t slice_base, svbool_t pg, svint16_t zn) {
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za16_s16_1(uint32_t slice_base, svbool_t pg, svint16_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za16, _s16, _m)(1, slice_base, 7, pg, zn);
+  uint32_t slice = slice_base + 7;
+  SME_ACLE_FUNC(svwrite_hor_za16, _s16, _m)(1, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za32_s32(
@@ -65,7 +67,7 @@ void test_svwrite_hor_za16_s16_1(uint32_t slice_base, svbool_t pg, svint16_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za32_s32(uint32_t slice_base, svbool_t pg, svint32_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za32, _s32, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za32, _s32, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za32_s32_1(
@@ -77,7 +79,8 @@ void test_svwrite_hor_za32_s32(uint32_t slice_base, svbool_t pg, svint32_t zn) {
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za32_s32_1(uint32_t slice_base, svbool_t pg, svint32_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za32, _s32, _m)(3, slice_base, 3, pg, zn);
+  uint32_t slice = slice_base + 3;
+  SME_ACLE_FUNC(svwrite_hor_za32, _s32, _m)(3, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za64_s64(
@@ -88,7 +91,7 @@ void test_svwrite_hor_za32_s32_1(uint32_t slice_base, svbool_t pg, svint32_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za64_s64(uint32_t slice_base, svbool_t pg, svint64_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za64, _s64, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za64, _s64, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za64_s64_1(
@@ -100,7 +103,8 @@ void test_svwrite_hor_za64_s64(uint32_t slice_base, svbool_t pg, svint64_t zn) {
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za64_s64_1(uint32_t slice_base, svbool_t pg, svint64_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za64, _s64, _m)(7, slice_base, 1, pg, zn);
+  uint32_t slice = slice_base + 1;
+  SME_ACLE_FUNC(svwrite_hor_za64, _s64, _m)(7, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za8_u8(
@@ -110,7 +114,7 @@ void test_svwrite_hor_za64_s64_1(uint32_t slice_base, svbool_t pg, svint64_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za8_u8(uint32_t slice_base, svbool_t pg, svuint8_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za8, _u8, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za8, _u8, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za8_u8_1(
@@ -121,7 +125,8 @@ void test_svwrite_hor_za8_u8(uint32_t slice_base, svbool_t pg, svuint8_t zn) {
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za8_u8_1(uint32_t slice_base, svbool_t pg, svuint8_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za8, _u8, _m)(0, slice_base, 15, pg, zn);
+  uint32_t slice = slice_base + 15;
+  SME_ACLE_FUNC(svwrite_hor_za8, _u8, _m)(0, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za16_u16(
@@ -132,7 +137,7 @@ void test_svwrite_hor_za8_u8_1(uint32_t slice_base, svbool_t pg, svuint8_t zn) {
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za16_u16(uint32_t slice_base, svbool_t pg, svuint16_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za16, _u16, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za16, _u16, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za16_u16_1(
@@ -144,7 +149,8 @@ void test_svwrite_hor_za16_u16(uint32_t slice_base, svbool_t pg, svuint16_t zn) 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za16_u16_1(uint32_t slice_base, svbool_t pg, svuint16_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za16, _u16, _m)(1, slice_base, 7, pg, zn);
+  uint32_t slice = slice_base + 7;
+  SME_ACLE_FUNC(svwrite_hor_za16, _u16, _m)(1, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za32_u32(
@@ -155,7 +161,7 @@ void test_svwrite_hor_za16_u16_1(uint32_t slice_base, svbool_t pg, svuint16_t zn
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za32_u32(uint32_t slice_base, svbool_t pg, svuint32_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za32, _u32, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za32, _u32, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za32_u32_1(
@@ -167,7 +173,8 @@ void test_svwrite_hor_za32_u32(uint32_t slice_base, svbool_t pg, svuint32_t zn) 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za32_u32_1(uint32_t slice_base, svbool_t pg, svuint32_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za32, _u32, _m)(3, slice_base, 3, pg, zn);
+  uint32_t slice = slice_base + 3;
+  SME_ACLE_FUNC(svwrite_hor_za32, _u32, _m)(3, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za64_u64(
@@ -178,7 +185,7 @@ void test_svwrite_hor_za32_u32_1(uint32_t slice_base, svbool_t pg, svuint32_t zn
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za64_u64(uint32_t slice_base, svbool_t pg, svuint64_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za64, _u64, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za64, _u64, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za64_u64_1(
@@ -190,7 +197,8 @@ void test_svwrite_hor_za64_u64(uint32_t slice_base, svbool_t pg, svuint64_t zn) 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za64_u64_1(uint32_t slice_base, svbool_t pg, svuint64_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za64, _u64, _m)(7, slice_base, 1, pg, zn);
+  uint32_t slice = slice_base + 1;
+  SME_ACLE_FUNC(svwrite_hor_za64, _u64, _m)(7, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za16_f16(
@@ -201,7 +209,7 @@ void test_svwrite_hor_za64_u64_1(uint32_t slice_base, svbool_t pg, svuint64_t zn
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za16_f16(uint32_t slice_base, svbool_t pg, svfloat16_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za16, _f16, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za16, _f16, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za16_f16_1(
@@ -213,7 +221,8 @@ void test_svwrite_hor_za16_f16(uint32_t slice_base, svbool_t pg, svfloat16_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za16_f16_1(uint32_t slice_base, svbool_t pg, svfloat16_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za16, _f16, _m)(1, slice_base, 7, pg, zn);
+  uint32_t slice = slice_base + 7;
+  SME_ACLE_FUNC(svwrite_hor_za16, _f16, _m)(1, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za16_bf16(
@@ -224,7 +233,7 @@ void test_svwrite_hor_za16_f16_1(uint32_t slice_base, svbool_t pg, svfloat16_t z
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za16_bf16(uint32_t slice_base, svbool_t pg, svbfloat16_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za16, _bf16, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za16, _bf16, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za16_bf16_1(
@@ -236,7 +245,8 @@ void test_svwrite_hor_za16_bf16(uint32_t slice_base, svbool_t pg, svbfloat16_t z
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za16_bf16_1(uint32_t slice_base, svbool_t pg, svbfloat16_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za16, _bf16, _m)(1, slice_base, 7, pg, zn);
+   uint32_t slice = slice_base + 7;
+  SME_ACLE_FUNC(svwrite_hor_za16, _bf16, _m)(1, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za32_f32(
@@ -247,7 +257,7 @@ void test_svwrite_hor_za16_bf16_1(uint32_t slice_base, svbool_t pg, svbfloat16_t
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za32_f32(uint32_t slice_base, svbool_t pg, svfloat32_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za32, _f32, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za32, _f32, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za32_f32_1(
@@ -259,7 +269,8 @@ void test_svwrite_hor_za32_f32(uint32_t slice_base, svbool_t pg, svfloat32_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za32_f32_1(uint32_t slice_base, svbool_t pg, svfloat32_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za32, _f32, _m)(3, slice_base, 3, pg, zn);
+  uint32_t slice = slice_base + 3;
+  SME_ACLE_FUNC(svwrite_hor_za32, _f32, _m)(3, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za64_f64(
@@ -270,7 +281,7 @@ void test_svwrite_hor_za32_f32_1(uint32_t slice_base, svbool_t pg, svfloat32_t z
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za64_f64(uint32_t slice_base, svbool_t pg, svfloat64_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za64, _f64, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za64, _f64, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za64_f64_1(
@@ -282,7 +293,8 @@ void test_svwrite_hor_za64_f64(uint32_t slice_base, svbool_t pg, svfloat64_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za64_f64_1(uint32_t slice_base, svbool_t pg, svfloat64_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za64, _f64, _m)(7, slice_base, 1, pg, zn);
+  uint32_t slice = slice_base + 1;
+  SME_ACLE_FUNC(svwrite_hor_za64, _f64, _m)(7, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_s8(
@@ -292,7 +304,7 @@ void test_svwrite_hor_za64_f64_1(uint32_t slice_base, svbool_t pg, svfloat64_t z
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_s8(uint32_t slice_base, svbool_t pg, svint8_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _s8, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _s8, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_s8_1(
@@ -302,7 +314,7 @@ void test_svwrite_hor_za128_s8(uint32_t slice_base, svbool_t pg, svint8_t zn) {
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_s8_1(uint32_t slice_base, svbool_t pg, svint8_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _s8, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _s8, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_s16(
@@ -313,7 +325,7 @@ void test_svwrite_hor_za128_s8_1(uint32_t slice_base, svbool_t pg, svint8_t zn) 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_s16(uint32_t slice_base, svbool_t pg, svint16_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _s16, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _s16, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_s16_1(
@@ -324,7 +336,7 @@ void test_svwrite_hor_za128_s16(uint32_t slice_base, svbool_t pg, svint16_t zn) 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_s16_1(uint32_t slice_base, svbool_t pg, svint16_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _s16, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _s16, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_s32(
@@ -335,7 +347,7 @@ void test_svwrite_hor_za128_s16_1(uint32_t slice_base, svbool_t pg, svint16_t zn
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_s32(uint32_t slice_base, svbool_t pg, svint32_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _s32, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _s32, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_s32_1(
@@ -346,7 +358,7 @@ void test_svwrite_hor_za128_s32(uint32_t slice_base, svbool_t pg, svint32_t zn) 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_s32_1(uint32_t slice_base, svbool_t pg, svint32_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _s32, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _s32, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_s64(
@@ -357,7 +369,7 @@ void test_svwrite_hor_za128_s32_1(uint32_t slice_base, svbool_t pg, svint32_t zn
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_s64(uint32_t slice_base, svbool_t pg, svint64_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _s64, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _s64, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_s64_1(
@@ -368,7 +380,7 @@ void test_svwrite_hor_za128_s64(uint32_t slice_base, svbool_t pg, svint64_t zn) 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_s64_1(uint32_t slice_base, svbool_t pg, svint64_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _s64, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _s64, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_u8(
@@ -378,7 +390,7 @@ void test_svwrite_hor_za128_s64_1(uint32_t slice_base, svbool_t pg, svint64_t zn
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_u8(uint32_t slice_base, svbool_t pg, svuint8_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _u8, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _u8, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_u8_1(
@@ -388,7 +400,7 @@ void test_svwrite_hor_za128_u8(uint32_t slice_base, svbool_t pg, svuint8_t zn) {
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_u8_1(uint32_t slice_base, svbool_t pg, svuint8_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _u8, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _u8, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_u16(
@@ -399,7 +411,7 @@ void test_svwrite_hor_za128_u8_1(uint32_t slice_base, svbool_t pg, svuint8_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_u16(uint32_t slice_base, svbool_t pg, svuint16_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _u16, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _u16, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_u16_1(
@@ -410,7 +422,7 @@ void test_svwrite_hor_za128_u16(uint32_t slice_base, svbool_t pg, svuint16_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_u16_1(uint32_t slice_base, svbool_t pg, svuint16_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _u16, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _u16, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_u32(
@@ -421,7 +433,7 @@ void test_svwrite_hor_za128_u16_1(uint32_t slice_base, svbool_t pg, svuint16_t z
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_u32(uint32_t slice_base, svbool_t pg, svuint32_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _u32, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _u32, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_u32_1(
@@ -432,7 +444,7 @@ void test_svwrite_hor_za128_u32(uint32_t slice_base, svbool_t pg, svuint32_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_u32_1(uint32_t slice_base, svbool_t pg, svuint32_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _u32, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _u32, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_u64(
@@ -443,7 +455,7 @@ void test_svwrite_hor_za128_u32_1(uint32_t slice_base, svbool_t pg, svuint32_t z
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_u64(uint32_t slice_base, svbool_t pg, svuint64_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _u64, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _u64, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_u64_1(
@@ -454,7 +466,7 @@ void test_svwrite_hor_za128_u64(uint32_t slice_base, svbool_t pg, svuint64_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_u64_1(uint32_t slice_base, svbool_t pg, svuint64_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _u64, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _u64, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_f16(
@@ -465,7 +477,7 @@ void test_svwrite_hor_za128_u64_1(uint32_t slice_base, svbool_t pg, svuint64_t z
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_f16(uint32_t slice_base, svbool_t pg, svfloat16_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _f16, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _f16, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_f16_1(
@@ -476,7 +488,7 @@ void test_svwrite_hor_za128_f16(uint32_t slice_base, svbool_t pg, svfloat16_t zn
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_f16_1(uint32_t slice_base, svbool_t pg, svfloat16_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _f16, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _f16, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_bf16(
@@ -487,7 +499,7 @@ void test_svwrite_hor_za128_f16_1(uint32_t slice_base, svbool_t pg, svfloat16_t 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_bf16(uint32_t slice_base, svbool_t pg, svbfloat16_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _bf16, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _bf16, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_bf16_1(
@@ -498,7 +510,7 @@ void test_svwrite_hor_za128_bf16(uint32_t slice_base, svbool_t pg, svbfloat16_t 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_bf16_1(uint32_t slice_base, svbool_t pg, svbfloat16_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _bf16, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _bf16, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_f32(
@@ -509,7 +521,7 @@ void test_svwrite_hor_za128_bf16_1(uint32_t slice_base, svbool_t pg, svbfloat16_
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_f32(uint32_t slice_base, svbool_t pg, svfloat32_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _f32, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _f32, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_f32_1(
@@ -520,7 +532,7 @@ void test_svwrite_hor_za128_f32(uint32_t slice_base, svbool_t pg, svfloat32_t zn
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_f32_1(uint32_t slice_base, svbool_t pg, svfloat32_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _f32, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _f32, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_f64(
@@ -531,7 +543,7 @@ void test_svwrite_hor_za128_f32_1(uint32_t slice_base, svbool_t pg, svfloat32_t 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_f64(uint32_t slice_base, svbool_t pg, svfloat64_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _f64, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _f64, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_hor_za128_f64_1(
@@ -542,7 +554,7 @@ void test_svwrite_hor_za128_f64(uint32_t slice_base, svbool_t pg, svfloat64_t zn
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_hor_za128_f64_1(uint32_t slice_base, svbool_t pg, svfloat64_t zn) {
-  SME_ACLE_FUNC(svwrite_hor_za128, _f64, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_hor_za128, _f64, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za8_s8(
@@ -552,7 +564,7 @@ void test_svwrite_hor_za128_f64_1(uint32_t slice_base, svbool_t pg, svfloat64_t 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za8_s8(uint32_t slice_base, svbool_t pg, svint8_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za8, _s8, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za8, _s8, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za8_s8_1(
@@ -563,7 +575,8 @@ void test_svwrite_ver_za8_s8(uint32_t slice_base, svbool_t pg, svint8_t zn) {
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za8_s8_1(uint32_t slice_base, svbool_t pg, svint8_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za8, _s8, _m)(0, slice_base, 15, pg, zn);
+  uint32_t slice = slice_base + 15;
+  SME_ACLE_FUNC(svwrite_ver_za8, _s8, _m)(0, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za16_s16(
@@ -574,7 +587,7 @@ void test_svwrite_ver_za8_s8_1(uint32_t slice_base, svbool_t pg, svint8_t zn) {
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za16_s16(uint32_t slice_base, svbool_t pg, svint16_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za16, _s16, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za16, _s16, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za16_s16_1(
@@ -586,7 +599,8 @@ void test_svwrite_ver_za16_s16(uint32_t slice_base, svbool_t pg, svint16_t zn) {
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za16_s16_1(uint32_t slice_base, svbool_t pg, svint16_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za16, _s16, _m)(1, slice_base, 7, pg, zn);
+  uint32_t slice = slice_base + 7;
+  SME_ACLE_FUNC(svwrite_ver_za16, _s16, _m)(1, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za32_s32(
@@ -597,7 +611,7 @@ void test_svwrite_ver_za16_s16_1(uint32_t slice_base, svbool_t pg, svint16_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za32_s32(uint32_t slice_base, svbool_t pg, svint32_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za32, _s32, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za32, _s32, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za32_s32_1(
@@ -609,7 +623,8 @@ void test_svwrite_ver_za32_s32(uint32_t slice_base, svbool_t pg, svint32_t zn) {
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za32_s32_1(uint32_t slice_base, svbool_t pg, svint32_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za32, _s32, _m)(3, slice_base, 3, pg, zn);
+  uint32_t slice = slice_base + 3;
+  SME_ACLE_FUNC(svwrite_ver_za32, _s32, _m)(3, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za64_s64(
@@ -620,7 +635,7 @@ void test_svwrite_ver_za32_s32_1(uint32_t slice_base, svbool_t pg, svint32_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za64_s64(uint32_t slice_base, svbool_t pg, svint64_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za64, _s64, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za64, _s64, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za64_s64_1(
@@ -632,7 +647,8 @@ void test_svwrite_ver_za64_s64(uint32_t slice_base, svbool_t pg, svint64_t zn) {
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za64_s64_1(uint32_t slice_base, svbool_t pg, svint64_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za64, _s64, _m)(7, slice_base, 1, pg, zn);
+  uint32_t slice = slice_base + 1;
+  SME_ACLE_FUNC(svwrite_ver_za64, _s64, _m)(7, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za8_u8(
@@ -642,7 +658,7 @@ void test_svwrite_ver_za64_s64_1(uint32_t slice_base, svbool_t pg, svint64_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za8_u8(uint32_t slice_base, svbool_t pg, svuint8_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za8, _u8, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za8, _u8, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za8_u8_1(
@@ -653,7 +669,8 @@ void test_svwrite_ver_za8_u8(uint32_t slice_base, svbool_t pg, svuint8_t zn) {
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za8_u8_1(uint32_t slice_base, svbool_t pg, svuint8_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za8, _u8, _m)(0, slice_base, 15, pg, zn);
+  uint32_t slice = slice_base + 15;
+  SME_ACLE_FUNC(svwrite_ver_za8, _u8, _m)(0, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za16_u16(
@@ -664,7 +681,7 @@ void test_svwrite_ver_za8_u8_1(uint32_t slice_base, svbool_t pg, svuint8_t zn) {
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za16_u16(uint32_t slice_base, svbool_t pg, svuint16_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za16, _u16, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za16, _u16, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za16_u16_1(
@@ -676,7 +693,8 @@ void test_svwrite_ver_za16_u16(uint32_t slice_base, svbool_t pg, svuint16_t zn) 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za16_u16_1(uint32_t slice_base, svbool_t pg, svuint16_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za16, _u16, _m)(1, slice_base, 7, pg, zn);
+  uint32_t slice = slice_base + 7;
+  SME_ACLE_FUNC(svwrite_ver_za16, _u16, _m)(1, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za32_u32(
@@ -687,7 +705,7 @@ void test_svwrite_ver_za16_u16_1(uint32_t slice_base, svbool_t pg, svuint16_t zn
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za32_u32(uint32_t slice_base, svbool_t pg, svuint32_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za32, _u32, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za32, _u32, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za32_u32_1(
@@ -699,7 +717,8 @@ void test_svwrite_ver_za32_u32(uint32_t slice_base, svbool_t pg, svuint32_t zn) 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za32_u32_1(uint32_t slice_base, svbool_t pg, svuint32_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za32, _u32, _m)(3, slice_base, 3, pg, zn);
+  uint32_t slice = slice_base + 3;
+  SME_ACLE_FUNC(svwrite_ver_za32, _u32, _m)(3, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za64_u64(
@@ -710,7 +729,7 @@ void test_svwrite_ver_za32_u32_1(uint32_t slice_base, svbool_t pg, svuint32_t zn
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za64_u64(uint32_t slice_base, svbool_t pg, svuint64_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za64, _u64, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za64, _u64, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za64_u64_1(
@@ -722,7 +741,8 @@ void test_svwrite_ver_za64_u64(uint32_t slice_base, svbool_t pg, svuint64_t zn) 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za64_u64_1(uint32_t slice_base, svbool_t pg, svuint64_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za64, _u64, _m)(7, slice_base, 1, pg, zn);
+  uint32_t slice = slice_base + 1;
+  SME_ACLE_FUNC(svwrite_ver_za64, _u64, _m)(7, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za16_f16(
@@ -733,7 +753,7 @@ void test_svwrite_ver_za64_u64_1(uint32_t slice_base, svbool_t pg, svuint64_t zn
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za16_f16(uint32_t slice_base, svbool_t pg, svfloat16_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za16, _f16, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za16, _f16, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za16_f16_1(
@@ -745,7 +765,8 @@ void test_svwrite_ver_za16_f16(uint32_t slice_base, svbool_t pg, svfloat16_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za16_f16_1(uint32_t slice_base, svbool_t pg, svfloat16_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za16, _f16, _m)(1, slice_base, 7, pg, zn);
+  uint32_t slice = slice_base + 7;
+  SME_ACLE_FUNC(svwrite_ver_za16, _f16, _m)(1, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za16_bf16(
@@ -756,7 +777,7 @@ void test_svwrite_ver_za16_f16_1(uint32_t slice_base, svbool_t pg, svfloat16_t z
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za16_bf16(uint32_t slice_base, svbool_t pg, svbfloat16_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za16, _bf16, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za16, _bf16, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za16_bf16_1(
@@ -768,7 +789,8 @@ void test_svwrite_ver_za16_bf16(uint32_t slice_base, svbool_t pg, svbfloat16_t z
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za16_bf16_1(uint32_t slice_base, svbool_t pg, svbfloat16_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za16, _bf16, _m)(1, slice_base, 7, pg, zn);
+  uint32_t slice = slice_base + 7;
+  SME_ACLE_FUNC(svwrite_ver_za16, _bf16, _m)(1, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za32_f32(
@@ -779,7 +801,7 @@ void test_svwrite_ver_za16_bf16_1(uint32_t slice_base, svbool_t pg, svbfloat16_t
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za32_f32(uint32_t slice_base, svbool_t pg, svfloat32_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za32, _f32, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za32, _f32, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za32_f32_1(
@@ -791,7 +813,8 @@ void test_svwrite_ver_za32_f32(uint32_t slice_base, svbool_t pg, svfloat32_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za32_f32_1(uint32_t slice_base, svbool_t pg, svfloat32_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za32, _f32, _m)(3, slice_base, 3, pg, zn);
+  uint32_t slice = slice_base + 3;
+  SME_ACLE_FUNC(svwrite_ver_za32, _f32, _m)(3, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za64_f64(
@@ -802,7 +825,7 @@ void test_svwrite_ver_za32_f32_1(uint32_t slice_base, svbool_t pg, svfloat32_t z
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za64_f64(uint32_t slice_base, svbool_t pg, svfloat64_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za64, _f64, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za64, _f64, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za64_f64_1(
@@ -814,7 +837,8 @@ void test_svwrite_ver_za64_f64(uint32_t slice_base, svbool_t pg, svfloat64_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za64_f64_1(uint32_t slice_base, svbool_t pg, svfloat64_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za64, _f64, _m)(7, slice_base, 1, pg, zn);
+  uint32_t slice = slice_base + 1;
+  SME_ACLE_FUNC(svwrite_ver_za64, _f64, _m)(7, slice, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_s8(
@@ -824,7 +848,7 @@ void test_svwrite_ver_za64_f64_1(uint32_t slice_base, svbool_t pg, svfloat64_t z
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_s8(uint32_t slice_base, svbool_t pg, svint8_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _s8, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _s8, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_s8_1(
@@ -834,7 +858,7 @@ void test_svwrite_ver_za128_s8(uint32_t slice_base, svbool_t pg, svint8_t zn) {
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_s8_1(uint32_t slice_base, svbool_t pg, svint8_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _s8, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _s8, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_s16(
@@ -845,7 +869,7 @@ void test_svwrite_ver_za128_s8_1(uint32_t slice_base, svbool_t pg, svint8_t zn) 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_s16(uint32_t slice_base, svbool_t pg, svint16_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _s16, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _s16, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_s16_1(
@@ -856,7 +880,7 @@ void test_svwrite_ver_za128_s16(uint32_t slice_base, svbool_t pg, svint16_t zn) 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_s16_1(uint32_t slice_base, svbool_t pg, svint16_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _s16, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _s16, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_s32(
@@ -867,7 +891,7 @@ void test_svwrite_ver_za128_s16_1(uint32_t slice_base, svbool_t pg, svint16_t zn
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_s32(uint32_t slice_base, svbool_t pg, svint32_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _s32, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _s32, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_s32_1(
@@ -878,7 +902,7 @@ void test_svwrite_ver_za128_s32(uint32_t slice_base, svbool_t pg, svint32_t zn) 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_s32_1(uint32_t slice_base, svbool_t pg, svint32_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _s32, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _s32, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_s64(
@@ -889,7 +913,7 @@ void test_svwrite_ver_za128_s32_1(uint32_t slice_base, svbool_t pg, svint32_t zn
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_s64(uint32_t slice_base, svbool_t pg, svint64_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _s64, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _s64, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_s64_1(
@@ -900,7 +924,7 @@ void test_svwrite_ver_za128_s64(uint32_t slice_base, svbool_t pg, svint64_t zn) 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_s64_1(uint32_t slice_base, svbool_t pg, svint64_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _s64, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _s64, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_u8(
@@ -910,7 +934,7 @@ void test_svwrite_ver_za128_s64_1(uint32_t slice_base, svbool_t pg, svint64_t zn
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_u8(uint32_t slice_base, svbool_t pg, svuint8_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _u8, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _u8, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_u8_1(
@@ -920,7 +944,7 @@ void test_svwrite_ver_za128_u8(uint32_t slice_base, svbool_t pg, svuint8_t zn) {
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_u8_1(uint32_t slice_base, svbool_t pg, svuint8_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _u8, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _u8, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_u16(
@@ -931,7 +955,7 @@ void test_svwrite_ver_za128_u8_1(uint32_t slice_base, svbool_t pg, svuint8_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_u16(uint32_t slice_base, svbool_t pg, svuint16_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _u16, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _u16, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_u16_1(
@@ -942,7 +966,7 @@ void test_svwrite_ver_za128_u16(uint32_t slice_base, svbool_t pg, svuint16_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_u16_1(uint32_t slice_base, svbool_t pg, svuint16_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _u16, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _u16, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_u32(
@@ -953,7 +977,7 @@ void test_svwrite_ver_za128_u16_1(uint32_t slice_base, svbool_t pg, svuint16_t z
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_u32(uint32_t slice_base, svbool_t pg, svuint32_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _u32, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _u32, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_u32_1(
@@ -964,7 +988,7 @@ void test_svwrite_ver_za128_u32(uint32_t slice_base, svbool_t pg, svuint32_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_u32_1(uint32_t slice_base, svbool_t pg, svuint32_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _u32, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _u32, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_u64(
@@ -975,7 +999,7 @@ void test_svwrite_ver_za128_u32_1(uint32_t slice_base, svbool_t pg, svuint32_t z
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_u64(uint32_t slice_base, svbool_t pg, svuint64_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _u64, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _u64, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_u64_1(
@@ -986,7 +1010,7 @@ void test_svwrite_ver_za128_u64(uint32_t slice_base, svbool_t pg, svuint64_t zn)
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_u64_1(uint32_t slice_base, svbool_t pg, svuint64_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _u64, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _u64, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_f16(
@@ -997,7 +1021,7 @@ void test_svwrite_ver_za128_u64_1(uint32_t slice_base, svbool_t pg, svuint64_t z
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_f16(uint32_t slice_base, svbool_t pg, svfloat16_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _f16, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _f16, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_f16_1(
@@ -1008,7 +1032,7 @@ void test_svwrite_ver_za128_f16(uint32_t slice_base, svbool_t pg, svfloat16_t zn
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_f16_1(uint32_t slice_base, svbool_t pg, svfloat16_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _f16, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _f16, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_bf16(
@@ -1019,7 +1043,7 @@ void test_svwrite_ver_za128_f16_1(uint32_t slice_base, svbool_t pg, svfloat16_t 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_bf16(uint32_t slice_base, svbool_t pg, svbfloat16_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _bf16, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _bf16, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_bf16_1(
@@ -1030,7 +1054,7 @@ void test_svwrite_ver_za128_bf16(uint32_t slice_base, svbool_t pg, svbfloat16_t 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_bf16_1(uint32_t slice_base, svbool_t pg, svbfloat16_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _bf16, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _bf16, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_f32(
@@ -1041,7 +1065,7 @@ void test_svwrite_ver_za128_bf16_1(uint32_t slice_base, svbool_t pg, svbfloat16_
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_f32(uint32_t slice_base, svbool_t pg, svfloat32_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _f32, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _f32, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_f32_1(
@@ -1052,7 +1076,7 @@ void test_svwrite_ver_za128_f32(uint32_t slice_base, svbool_t pg, svfloat32_t zn
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_f32_1(uint32_t slice_base, svbool_t pg, svfloat32_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _f32, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _f32, _m)(15, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_f64(
@@ -1063,7 +1087,7 @@ void test_svwrite_ver_za128_f32_1(uint32_t slice_base, svbool_t pg, svfloat32_t 
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_f64(uint32_t slice_base, svbool_t pg, svfloat64_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _f64, _m)(0, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _f64, _m)(0, slice_base, pg, zn);
 }
 
 // CHECK-C-LABEL: @test_svwrite_ver_za128_f64_1(
@@ -1074,5 +1098,5 @@ void test_svwrite_ver_za128_f64(uint32_t slice_base, svbool_t pg, svfloat64_t zn
 // CHECK-NEXT:    ret void
 //
 void test_svwrite_ver_za128_f64_1(uint32_t slice_base, svbool_t pg, svfloat64_t zn) {
-  SME_ACLE_FUNC(svwrite_ver_za128, _f64, _m)(15, slice_base, 0, pg, zn);
+  SME_ACLE_FUNC(svwrite_ver_za128, _f64, _m)(15, slice_base, pg, zn);
 }

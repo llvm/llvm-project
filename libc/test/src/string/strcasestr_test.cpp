@@ -10,15 +10,15 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStrCaseStrTest, NeedleNotInHaystack) {
-  EXPECT_STREQ(__llvm_libc::strcasestr("abcd", "e"), nullptr);
-  EXPECT_STREQ(__llvm_libc::strcasestr("ABCD", "e"), nullptr);
-  EXPECT_STREQ(__llvm_libc::strcasestr("abcd", "E"), nullptr);
-  EXPECT_STREQ(__llvm_libc::strcasestr("ABCD", "E"), nullptr);
+  EXPECT_STREQ(LIBC_NAMESPACE::strcasestr("abcd", "e"), nullptr);
+  EXPECT_STREQ(LIBC_NAMESPACE::strcasestr("ABCD", "e"), nullptr);
+  EXPECT_STREQ(LIBC_NAMESPACE::strcasestr("abcd", "E"), nullptr);
+  EXPECT_STREQ(LIBC_NAMESPACE::strcasestr("ABCD", "E"), nullptr);
 }
 
 TEST(LlvmLibcStrCaseStrTest, NeedleInMiddle) {
-  EXPECT_STREQ(__llvm_libc::strcasestr("abcdefghi", "def"), "defghi");
-  EXPECT_STREQ(__llvm_libc::strcasestr("ABCDEFGHI", "def"), "DEFGHI");
-  EXPECT_STREQ(__llvm_libc::strcasestr("abcdefghi", "DEF"), "defghi");
-  EXPECT_STREQ(__llvm_libc::strcasestr("ABCDEFGHI", "DEF"), "DEFGHI");
+  EXPECT_STREQ(LIBC_NAMESPACE::strcasestr("abcdefghi", "def"), "defghi");
+  EXPECT_STREQ(LIBC_NAMESPACE::strcasestr("ABCDEFGHI", "def"), "DEFGHI");
+  EXPECT_STREQ(LIBC_NAMESPACE::strcasestr("abcdefghi", "DEF"), "defghi");
+  EXPECT_STREQ(LIBC_NAMESPACE::strcasestr("ABCDEFGHI", "DEF"), "DEFGHI");
 }

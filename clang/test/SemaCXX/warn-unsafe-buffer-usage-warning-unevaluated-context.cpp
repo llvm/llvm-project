@@ -1,19 +1,12 @@
 // RUN: %clang_cc1 -std=c++20  -Wno-all -Wunsafe-buffer-usage \
 // RUN:            -fsafe-buffer-usage-suggestions \
-// RUN:            -fblocks -include %s -verify %s
+// RUN:            -fblocks -verify %s
 
-// RUN: %clang -x c++ -frtti -fsyntax-only -fblocks -include %s %s 2>&1 | FileCheck --allow-empty %s
-// RUN: %clang_cc1 -std=c++11 -fblocks -include %s %s 2>&1 | FileCheck --allow-empty %s
-// RUN: %clang_cc1 -std=c++20 -fblocks -include %s %s 2>&1 | FileCheck --allow-empty %s
+// RUN: %clang -x c++ -frtti -fsyntax-only -fblocks %s 2>&1 | FileCheck --allow-empty %s
+// RUN: %clang_cc1 -std=c++11 -fblocks %s 2>&1 | FileCheck --allow-empty %s
+// RUN: %clang_cc1 -std=c++20 -fblocks %s 2>&1 | FileCheck --allow-empty %s
 // CHECK-NOT: [-Wunsafe-buffer-usage]
 
-#ifndef INCLUDED
-#define INCLUDED
-#pragma clang system_header
-
-// no spanification warnings for system headers
-void foo(...);  // let arguments of `foo` to hold testing expressions
-#else
 
 namespace std {
   class type_info;
@@ -27,6 +20,8 @@ void foo(int v) {
 }
 
 void foo(int *p){}
+
+void foo(int, int);
 
 void uneval_context_fix() {
   auto p = new int[10]; // expected-warning{{'p' is an unsafe pointer used for buffer access}}
@@ -49,4 +44,3 @@ void uneval_context_fix() {
   noexcept(q[2]); // no-note
   typeid(q[3]); // no-note
 }
-#endif

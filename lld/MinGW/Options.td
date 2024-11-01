@@ -223,6 +223,7 @@ def: F<"no-undefined">;
 def: F<"pic-executable">;
 defm: EqNoHelp<"plugin">;
 defm: EqNoHelp<"sysroot">;
+def: F<"sort-common">;
 def: F<"start-group">;
 
 // Ignore GCC collect2 LTO plugin related options. Note that we don't support

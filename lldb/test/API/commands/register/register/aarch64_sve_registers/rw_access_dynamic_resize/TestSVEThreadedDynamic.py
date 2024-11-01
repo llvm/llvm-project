@@ -98,6 +98,12 @@ class RegisterCommandsTestCase(TestBase):
 
         self.expect("register read ffr", substrs=[p_regs_value])
 
+    def build_for_mode(self, mode):
+        cflags = "-march=armv8-a+sve -lpthread"
+        if mode == Mode.SSVE:
+            cflags += " -DUSE_SSVE"
+        self.build(dictionary={"CFLAGS_EXTRAS": cflags})
+
     def run_sve_test(self, mode):
         if (mode == Mode.SVE) and not self.isAArch64SVE():
             self.skipTest("SVE registers must be supported.")
@@ -105,12 +111,8 @@ class RegisterCommandsTestCase(TestBase):
         if (mode == Mode.SSVE) and not self.isAArch64SME():
             self.skipTest("Streaming SVE registers must be supported.")
 
-        cflags = "-march=armv8-a+sve -lpthread"
-        if mode == Mode.SSVE:
-            cflags += " -DUSE_SSVE"
-        self.build(dictionary={"CFLAGS_EXTRAS": cflags})
+        self.build_for_mode(mode)
 
-        self.build()
         supported_vg = self.get_supported_vg()
 
         if not (2 in supported_vg and 4 in supported_vg):
@@ -196,3 +198,94 @@ class RegisterCommandsTestCase(TestBase):
     def test_ssve_registers_dynamic_config(self):
         """Test AArch64 SSVE registers multi-threaded dynamic resize."""
         self.run_sve_test(Mode.SSVE)
+
+    def setup_svg_test(self, mode):
+        # Even when running in SVE mode, we need access to SVG for these tests.
+        if not self.isAArch64SME():
+            self.skipTest("Streaming SVE registers must be present.")
+
+        self.build_for_mode(mode)
+
+        supported_vg = self.get_supported_vg()
+
+        main_thread_stop_line = line_number("main.c", "// Break in main thread")
+        lldbutil.run_break_set_by_file_and_line(self, "main.c", main_thread_stop_line)
+
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        self.expect(
+            "thread info 1",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stop reason = breakpoint"],
+        )
+
+        target = self.dbg.GetSelectedTarget()
+        process = target.GetProcess()
+
+        return process, supported_vg
+
+    def read_reg(self, process, regset, reg):
+        registerSets = process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetRegisters()
+        sve_registers = registerSets.GetFirstValueByName(regset)
+        return sve_registers.GetChildMemberWithName(reg).GetValueAsUnsigned()
+
+    def read_vg(self, process):
+        return self.read_reg(process, "Scalable Vector Extension Registers", "vg")
+
+    def read_svg(self, process):
+        return self.read_reg(process, "Scalable Matrix Extension Registers", "svg")
+
+    def do_svg_test(self, process, vgs, expected_svgs):
+        for vg, svg in zip(vgs, expected_svgs):
+            self.runCmd("register write vg {}".format(vg))
+            self.assertEqual(svg, self.read_svg(process))
+
+    @no_debug_info_test
+    @skipIf(archs=no_match(["aarch64"]))
+    @skipIf(oslist=no_match(["linux"]))
+    def test_svg_sve_mode(self):
+        """When in SVE mode, svg should remain constant as we change vg."""
+        process, supported_vg = self.setup_svg_test(Mode.SVE)
+        svg = self.read_svg(process)
+        self.do_svg_test(process, supported_vg, [svg] * len(supported_vg))
+
+    @no_debug_info_test
+    @skipIf(archs=no_match(["aarch64"]))
+    @skipIf(oslist=no_match(["linux"]))
+    def test_svg_ssve_mode(self):
+        """When in SSVE mode, changing vg should change svg to the same value."""
+        process, supported_vg = self.setup_svg_test(Mode.SSVE)
+        self.do_svg_test(process, supported_vg, supported_vg)
+
+    @no_debug_info_test
+    @skipIf(archs=no_match(["aarch64"]))
+    @skipIf(oslist=no_match(["linux"]))
+    def test_sme_not_present(self):
+        """When there is no SME, we should not show the SME register sets."""
+        if self.isAArch64SME():
+            self.skipTest("Streaming SVE registers must not be present.")
+
+        self.build_for_mode(Mode.SVE)
+
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+
+        # This test may run on a non-sve system, but we'll stop before any
+        # SVE instruction would be run.
+        self.runCmd("b main")
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        self.expect(
+            "thread info 1",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stop reason = breakpoint"],
+        )
+
+        target = self.dbg.GetSelectedTarget()
+        process = target.GetProcess()
+
+        registerSets = process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetRegisters()
+        sme_registers = registerSets.GetFirstValueByName(
+            "Scalable Matrix Extension Registers"
+        )
+        self.assertFalse(sme_registers.IsValid())

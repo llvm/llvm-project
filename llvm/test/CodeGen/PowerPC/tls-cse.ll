@@ -44,6 +44,6 @@ _ZN4llvm21PrettyStackTraceEntryD2Ev.exit:         ; preds = %entry
 ; CHECK: addis [[REG1:[0-9]+]], 2, _ZL20PrettyStackTraceHead@got@tlsld@ha
 ; CHECK: addi 3, [[REG1]], _ZL20PrettyStackTraceHead@got@tlsld@l
 ; CHECK: bl __tls_get_addr(_ZL20PrettyStackTraceHead@tlsld)
-; CHECK: addis 3, 3, _ZL20PrettyStackTraceHead@dtprel@ha
-; CHECK: ld {{[0-9]+}}, _ZL20PrettyStackTraceHead@dtprel@l(3)
-; CHECK: std {{[0-9]+}}, _ZL20PrettyStackTraceHead@dtprel@l(3)
+; CHECK: addis [[REG2:[0-9]+]], 3, _ZL20PrettyStackTraceHead@dtprel@ha
+; CHECK: ld {{[0-9]+}}, _ZL20PrettyStackTraceHead@dtprel@l([[REG2]])
+; CHECK: std {{[0-9]+}}, _ZL20PrettyStackTraceHead@dtprel@l([[REG2]])

@@ -19,7 +19,7 @@ define void @caller1(i1 %c, ptr align 1 %ptr) {
 ; ASSUMPTIONS-OFF-NEXT:    br i1 [[C:%.*]], label [[COMMON_RET:%.*]], label [[FALSE2:%.*]]
 ; ASSUMPTIONS-OFF:       common.ret:
 ; ASSUMPTIONS-OFF-NEXT:    [[DOTSINK:%.*]] = phi i64 [ 3, [[FALSE2]] ], [ 2, [[TMP0:%.*]] ]
-; ASSUMPTIONS-OFF-NEXT:    store volatile i64 0, ptr [[PTR:%.*]], align 8
+; ASSUMPTIONS-OFF-NEXT:    store volatile i64 0, ptr [[PTR:%.*]], align 4
 ; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, ptr [[PTR]], align 4
 ; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, ptr [[PTR]], align 4
 ; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, ptr [[PTR]], align 4

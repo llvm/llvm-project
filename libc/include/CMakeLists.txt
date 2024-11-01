@@ -78,7 +78,7 @@ add_gen_header(
 )
 
 # TODO: This should be conditional on POSIX networking being included.
-file(MAKE_DIRECTORY "arpa")
+file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/arpa)
 
 add_gen_header(
   arpa_inet
@@ -280,7 +280,7 @@ add_gen_header(
 # TODO: Not all platforms will have a include/sys directory. Add the sys
 # directory and the targets for sys/*.h files conditional to the OS requiring
 # them.
-file(MAKE_DIRECTORY "sys")
+file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/sys)
 
 add_gen_header(
   sys_auxv
@@ -497,7 +497,7 @@ add_gen_header(
 )
 
 if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
-  file(MAKE_DIRECTORY "gpu")
+  file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/gpu)
 
   add_gen_header(
     gpu_rpc

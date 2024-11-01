@@ -91,6 +91,12 @@ StringRef getExtendedText(const T &Node, tok::TokenKind Next,
 llvm::Error validateEditRange(const CharSourceRange &Range,
                               const SourceManager &SM);
 
+/// Determines whether \p Range is one that can be read from. If
+/// `AllowSystemHeaders` is false, a range that falls within a system header
+/// fails validation.
+llvm::Error validateRange(const CharSourceRange &Range, const SourceManager &SM,
+                          bool AllowSystemHeaders);
+
 /// Attempts to resolve the given range to one that can be edited by a rewrite;
 /// generally, one that starts and ends within a particular file. If a value is
 /// returned, it satisfies \c validateEditRange.

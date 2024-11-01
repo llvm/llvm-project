@@ -1,5 +1,5 @@
-;RUN: llc -march=hexagon -mcpu=hexagonv66 -mhvx -filetype=obj < %s -o - | llvm-objdump --mcpu=hexagonv66 --mattr=+hvx -d - | FileCheck --check-prefix=CHECK-V66 %s
-;RUN: llc -march=hexagon -mcpu=hexagonv67 -mhvx -filetype=obj < %s -o - | llvm-objdump --mcpu=hexagonv67 --mattr=+hvx -d - | FileCheck --check-prefix=CHECK-V67 %s
+;RUN: llc -mtriple=hexagon -mcpu=hexagonv66 -mhvx -filetype=obj < %s -o - | llvm-objdump --mcpu=hexagonv66 --mattr=+hvx -d - | FileCheck --check-prefix=CHECK-V66 %s
+;RUN: llc -mtriple=hexagon -mcpu=hexagonv67 -mhvx -filetype=obj < %s -o - | llvm-objdump --mcpu=hexagonv67 --mattr=+hvx -d - | FileCheck --check-prefix=CHECK-V67 %s
 
 ; Should not attempt to use v<even>:<odd> 'reverse' vector regpairs
 ; on old or new arches (should not crash).

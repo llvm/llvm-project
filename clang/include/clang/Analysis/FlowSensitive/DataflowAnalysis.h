@@ -31,6 +31,7 @@
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 
@@ -246,9 +247,9 @@ runDataflowAnalysis(
 /// - This limit is still low enough to keep runtimes acceptable (on typical
 ///   machines) in cases where we hit the limit.
 template <typename AnalysisT, typename Diagnostic>
-llvm::Expected<std::vector<Diagnostic>> diagnoseFunction(
+llvm::Expected<llvm::SmallVector<Diagnostic>> diagnoseFunction(
     const FunctionDecl &FuncDecl, ASTContext &ASTCtx,
-    llvm::function_ref<std::vector<Diagnostic>(
+    llvm::function_ref<llvm::SmallVector<Diagnostic>(
         const CFGElement &, ASTContext &,
         const TransferStateForDiagnostics<typename AnalysisT::Lattice> &)>
         Diagnoser,
@@ -263,7 +264,7 @@ llvm::Expected<std::vector<Diagnostic>> diagnoseFunction(
   DataflowAnalysisContext AnalysisContext(std::move(OwnedSolver));
   Environment Env(AnalysisContext, FuncDecl);
   AnalysisT Analysis(ASTCtx);
-  std::vector<Diagnostic> Diagnostics;
+  llvm::SmallVector<Diagnostic> Diagnostics;
   if (llvm::Error Err =
           runTypeErasedDataflowAnalysis(
               *Context, Analysis, Env,

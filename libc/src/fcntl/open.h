@@ -11,10 +11,10 @@
 
 #include <fcntl.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int open(const char *path, int flags, ...);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_FCNTL_OPEN_H

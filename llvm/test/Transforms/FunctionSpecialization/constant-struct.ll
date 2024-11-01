@@ -8,7 +8,7 @@ define i32 @foo(i32 %y0, i32 %y1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Y:%.*]] = insertvalue { i32, i32 } undef, i32 [[Y0:%.*]], 0
 ; CHECK-NEXT:    [[YY:%.*]] = insertvalue { i32, i32 } [[Y]], i32 [[Y1:%.*]], 1
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @add.1({ i32, i32 } { i32 2, i32 3 }, { i32, i32 } [[YY]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @add.specialized.1({ i32, i32 } { i32 2, i32 3 }, { i32, i32 } [[YY]])
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
 entry:
@@ -23,7 +23,7 @@ define i32 @bar(i32 %x0, i32 %x1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = insertvalue { i32, i32 } undef, i32 [[X0:%.*]], 0
 ; CHECK-NEXT:    [[XX:%.*]] = insertvalue { i32, i32 } [[X]], i32 [[X1:%.*]], 1
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @add.2({ i32, i32 } [[XX]], { i32, i32 } { i32 3, i32 2 })
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @add.specialized.2({ i32, i32 } [[XX]], { i32, i32 } { i32 3, i32 2 })
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
 entry:

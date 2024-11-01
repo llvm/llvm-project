@@ -65,8 +65,8 @@ declare float @acosf(float) #0
 declare double @atan(double) #0
 declare float @atanf(float) #0
 
-declare double @atan2(double) #0
-declare float @atan2f(float) #0
+declare double @atan2(double, double) #0
+declare float @atan2f(float, float) #0
 
 declare double @sinh(double) #0
 declare float @sinhf(float) #0
@@ -1210,7 +1210,7 @@ for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %tmp = trunc i64 %iv to i32
   %conv = sitofp i32 %tmp to double
-  %call = tail call double @atan2(double %conv)
+  %call = tail call double @atan2(double %conv, double %conv)
   %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
   store double %call, ptr %arrayidx, align 4
   %iv.next = add nuw nsw i64 %iv, 1
@@ -1233,7 +1233,7 @@ for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %tmp = trunc i64 %iv to i32
   %conv = sitofp i32 %tmp to float
-  %call = tail call float @atan2f(float %conv)
+  %call = tail call float @atan2f(float %conv, float %conv)
   %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
   store float %call, ptr %arrayidx, align 4
   %iv.next = add nuw nsw i64 %iv, 1

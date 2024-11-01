@@ -1,5 +1,5 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -show-encoding | FileCheck %s
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 2>&1 | \
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32 -show-encoding | FileCheck %s
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=WARNING
 
   .text

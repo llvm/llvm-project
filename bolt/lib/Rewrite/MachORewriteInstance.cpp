@@ -564,8 +564,10 @@ void MachORewriteInstance::rewriteFile() {
   writeInstrumentationSection("I__literal16", OS);
 
   Out->keep();
-  EC = sys::fs::setPermissions(opts::OutputFilename,
-                               sys::fs::perms::all_all);
+  EC = sys::fs::setPermissions(
+      opts::OutputFilename,
+      static_cast<sys::fs::perms>(sys::fs::perms::all_all &
+                                  ~sys::fs::getUmask()));
   check_error(EC, "cannot set permissions of output file");
 }
 

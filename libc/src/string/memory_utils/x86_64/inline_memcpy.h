@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMCPY_H
-#define LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMCPY_H
+#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMCPY_H
+#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMCPY_H
 
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE_VAR
 #include "src/__support/macros/config.h"       // LIBC_INLINE
@@ -26,7 +26,7 @@
 #error LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE is deprecated use LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE=0 instead.
 #endif // LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 namespace x86 {
 
@@ -77,7 +77,7 @@ inline_memcpy_x86_avx_ge64(Ptr __restrict dst, CPtr __restrict src,
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_x86_sse2_ge64_sw_prefetching(Ptr __restrict dst,
                                            CPtr __restrict src, size_t count) {
-  using namespace __llvm_libc::x86;
+  using namespace LIBC_NAMESPACE::x86;
   prefetch_to_local_cache(src + kOneCacheline);
   if (count < 128)
     return builtin::Memcpy<64>::head_tail(dst, src, count);
@@ -118,7 +118,7 @@ inline_memcpy_x86_sse2_ge64_sw_prefetching(Ptr __restrict dst,
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_x86_avx_ge64_sw_prefetching(Ptr __restrict dst,
                                           CPtr __restrict src, size_t count) {
-  using namespace __llvm_libc::x86;
+  using namespace LIBC_NAMESPACE::x86;
   prefetch_to_local_cache(src + kOneCacheline);
   if (count < 128)
     return builtin::Memcpy<64>::head_tail(dst, src, count);
@@ -197,6 +197,6 @@ inline_memcpy_x86_maybe_interpose_repmovsb(Ptr __restrict dst,
   }
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMCPY_H
+#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMCPY_H

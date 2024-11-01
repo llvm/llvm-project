@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_DARWIN_IO_H
-#define LLVM_LIBC_SRC_SUPPORT_OSUTIL_DARWIN_IO_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_DARWIN_IO_H
+#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_DARWIN_IO_H
 
 #include "src/__support/CPP/string_view.h"
 #include "syscall.h" // For internal syscall function.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE void write_to_stderr(cpp::string_view msg) {
-  __llvm_libc::syscall_impl(4 /*SYS_write*/, 2 /* stderr */,
-                            reinterpret_cast<long>(msg.data()), msg.size());
+  LIBC_NAMESPACE::syscall_impl(4 /*SYS_write*/, 2 /* stderr */,
+                               reinterpret_cast<long>(msg.data()), msg.size());
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_DARWIN_IO_H
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_DARWIN_IO_H

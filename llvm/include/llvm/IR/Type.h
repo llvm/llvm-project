@@ -209,8 +209,7 @@ public:
   /// Return true if this is a target extension type with a scalable layout.
   bool isScalableTargetExtTy() const;
 
-  /// Return true if this is a scalable vector type or a target extension type
-  /// with a scalable layout.
+  /// Return true if this is a type whose size is a known multiple of vscale.
   bool isScalableTy() const;
 
   /// Return true if this is a FP type or a vector of FP.

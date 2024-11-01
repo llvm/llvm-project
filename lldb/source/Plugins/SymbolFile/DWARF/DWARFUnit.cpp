@@ -13,6 +13,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/Object/Error.h"
 
@@ -32,7 +33,7 @@ extern int g_verbose;
 
 DWARFUnit::DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                      const DWARFUnitHeader &header,
-                     const DWARFAbbreviationDeclarationSet &abbrevs,
+                     const llvm::DWARFAbbreviationDeclarationSet &abbrevs,
                      DIERef::Section section, bool is_dwo)
     : UserID(uid), m_dwarf(dwarf), m_header(header), m_abbrevs(&abbrevs),
       m_cancel_scopes(false), m_section(section), m_is_dwo(is_dwo),
@@ -435,7 +436,8 @@ size_t DWARFUnit::GetDebugInfoSize() const {
   return GetLengthByteSize() + GetLength() - GetHeaderByteSize();
 }
 
-const DWARFAbbreviationDeclarationSet *DWARFUnit::GetAbbreviations() const {
+const llvm::DWARFAbbreviationDeclarationSet *
+DWARFUnit::GetAbbreviations() const {
   return m_abbrevs;
 }
 
@@ -973,7 +975,7 @@ DWARFUnit::extract(SymbolFileDWARF &dwarf, user_id_t uid,
   if (!expected_header)
     return expected_header.takeError();
 
-  const DWARFDebugAbbrev *abbr = dwarf.DebugAbbrev();
+  const llvm::DWARFDebugAbbrev *abbr = dwarf.DebugAbbrev();
   if (!abbr)
     return llvm::make_error<llvm::object::GenericBinaryError>(
         "No debug_abbrev data");
@@ -985,8 +987,12 @@ DWARFUnit::extract(SymbolFileDWARF &dwarf, user_id_t uid,
     return llvm::make_error<llvm::object::GenericBinaryError>(
         "Abbreviation offset for unit is not valid");
 
-  const DWARFAbbreviationDeclarationSet *abbrevs =
-      abbr->GetAbbreviationDeclarationSet(expected_header->GetAbbrOffset());
+  llvm::Expected<const llvm::DWARFAbbreviationDeclarationSet *> abbrevs_or_err =
+      abbr->getAbbreviationDeclarationSet(expected_header->GetAbbrOffset());
+  if (!abbrevs_or_err)
+    return abbrevs_or_err.takeError();
+
+  const llvm::DWARFAbbreviationDeclarationSet *abbrevs = *abbrevs_or_err;
   if (!abbrevs)
     return llvm::make_error<llvm::object::GenericBinaryError>(
         "No abbrev exists at the specified offset.");

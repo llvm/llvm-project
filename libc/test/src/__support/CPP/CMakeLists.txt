@@ -106,3 +106,13 @@ add_libc_test(
   libc.src.__support.CPP.string
   libc.src.__support.CPP.string_view
 )
+
+add_libc_test(
+  type_traits_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+  type_traits_test.cpp
+  DEPENDS
+  libc.src.__support.CPP.type_traits
+)

@@ -1907,10 +1907,10 @@ unsigned HeaderFileInfoTrait::ComputeHash(internal_key_ref ikey) {
 }
 
 HeaderFileInfoTrait::internal_key_type
-HeaderFileInfoTrait::GetInternalKey(const FileEntry *FE) {
-  internal_key_type ikey = {FE->getSize(),
-                            M.HasTimestamps ? FE->getModificationTime() : 0,
-                            FE->getName(), /*Imported*/ false};
+HeaderFileInfoTrait::GetInternalKey(external_key_type FE) {
+  internal_key_type ikey = {FE.getSize(),
+                            M.HasTimestamps ? FE.getModificationTime() : 0,
+                            FE.getName(), /*Imported*/ false};
   return ikey;
 }
 
@@ -2489,6 +2489,32 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
     std::optional<int64_t> Old = std::nullopt;
     std::optional<int64_t> New = std::nullopt;
   };
+  auto HasInputContentChanged = [&](Change OriginalChange) {
+    assert(ValidateASTInputFilesContent &&
+           "We should only check the content of the inputs with "
+           "ValidateASTInputFilesContent enabled.");
+
+    if (StoredContentHash == static_cast<uint64_t>(llvm::hash_code(-1)))
+      return OriginalChange;
+
+    auto MemBuffOrError = FileMgr.getBufferForFile(*File);
+    if (!MemBuffOrError) {
+      if (!Complain)
+        return OriginalChange;
+      std::string ErrorStr = "could not get buffer for file '";
+      ErrorStr += File->getName();
+      ErrorStr += "'";
+      Error(ErrorStr);
+      return OriginalChange;
+    }
+
+    // FIXME: hash_value is not guaranteed to be stable!
+    auto ContentHash = hash_value(MemBuffOrError.get()->getBuffer());
+    if (StoredContentHash == static_cast<uint64_t>(ContentHash))
+      return Change{Change::None};
+
+    return Change{Change::Content};
+  };
   auto HasInputFileChanged = [&]() {
     if (StoredSize != File->getSize())
       return Change{Change::Size, StoredSize, File->getSize()};
@@ -2499,26 +2525,9 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
 
       // In case the modification time changes but not the content,
       // accept the cached file as legit.
-      if (ValidateASTInputFilesContent &&
-          StoredContentHash != static_cast<uint64_t>(llvm::hash_code(-1))) {
-        auto MemBuffOrError = FileMgr.getBufferForFile(File);
-        if (!MemBuffOrError) {
-          if (!Complain)
-            return MTimeChange;
-          std::string ErrorStr = "could not get buffer for file '";
-          ErrorStr += File->getName();
-          ErrorStr += "'";
-          Error(ErrorStr);
-          return MTimeChange;
-        }
+      if (ValidateASTInputFilesContent)
+        return HasInputContentChanged(MTimeChange);
 
-        // FIXME: hash_value is not guaranteed to be stable!
-        auto ContentHash = hash_value(MemBuffOrError.get()->getBuffer());
-        if (StoredContentHash == static_cast<uint64_t>(ContentHash))
-          return Change{Change::None};
-
-        return Change{Change::Content};
-      }
       return MTimeChange;
     }
     return Change{Change::None};
@@ -2526,6 +2535,13 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
 
   bool IsOutOfDate = false;
   auto FileChange = SkipChecks ? Change{Change::None} : HasInputFileChanged();
+  // When ForceCheckCXX20ModulesInputFiles and ValidateASTInputFilesContent
+  // enabled, it is better to check the contents of the inputs. Since we can't
+  // get correct modified time information for inputs from overriden inputs.
+  if (HSOpts.ForceCheckCXX20ModulesInputFiles && ValidateASTInputFilesContent &&
+      F.StandardCXXModule && FileChange.Kind == Change::None)
+    FileChange = HasInputContentChanged(FileChange);
+
   // For an overridden file, there is nothing to validate.
   if (!Overridden && FileChange.Kind != Change::None) {
     if (Complain && !Diags.isDiagnosticInFlight()) {
@@ -4080,11 +4096,11 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
       return OutOfDate;
     }
 
-    llvm::SmallPtrSet<const FileEntry *, 1> AdditionalStoredMaps;
+    llvm::SmallPtrSet<FileEntryRef, 1> AdditionalStoredMaps;
     for (unsigned I = 0, N = Record[Idx++]; I < N; ++I) {
       // FIXME: we should use input files rather than storing names.
       std::string Filename = ReadPath(F, Record, Idx);
-      auto SF = FileMgr.getFile(Filename, false, false);
+      auto SF = FileMgr.getOptionalFileRef(Filename, false, false);
       if (!SF) {
         if (!canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities))
           Error("could not find file '" + Filename +"' referenced by AST file");
@@ -4110,10 +4126,10 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
 
     // Check any additional module map files that are in the pcm, but not
     // found in header search. Cases that match are already removed.
-    for (const FileEntry *ModMap : AdditionalStoredMaps) {
+    for (FileEntryRef ModMap : AdditionalStoredMaps) {
       if (!canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities))
         Diag(diag::err_module_different_modmap)
-          << F.ModuleName << /*not new*/1 << ModMap->getName();
+          << F.ModuleName << /*not new*/1 << ModMap.getName();
       return OutOfDate;
     }
   }
@@ -5669,6 +5685,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       bool InferExportWildcard = Record[Idx++];
       bool ConfigMacrosExhaustive = Record[Idx++];
       bool ModuleMapIsPrivate = Record[Idx++];
+      bool NamedModuleHasInit = Record[Idx++];
 
       Module *ParentModule = nullptr;
       if (Parent)
@@ -5719,6 +5736,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       CurrentModule->InferExportWildcard = InferExportWildcard;
       CurrentModule->ConfigMacrosExhaustive = ConfigMacrosExhaustive;
       CurrentModule->ModuleMapIsPrivate = ModuleMapIsPrivate;
+      CurrentModule->NamedModuleHasInit = NamedModuleHasInit;
       if (DeserializationListener)
         DeserializationListener->ModuleRead(GlobalID, CurrentModule);
 
@@ -6381,11 +6399,11 @@ namespace {
 
   /// Visitor used to search for information about a header file.
   class HeaderFileInfoVisitor {
-    const FileEntry *FE;
+  FileEntryRef FE;
     std::optional<HeaderFileInfo> HFI;
 
   public:
-    explicit HeaderFileInfoVisitor(const FileEntry *FE) : FE(FE) {}
+    explicit HeaderFileInfoVisitor(FileEntryRef FE) : FE(FE) {}
 
     bool operator()(ModuleFile &M) {
       HeaderFileInfoLookupTable *Table
@@ -6407,7 +6425,7 @@ namespace {
 
 } // namespace
 
-HeaderFileInfo ASTReader::GetHeaderFileInfo(const FileEntry *FE) {
+HeaderFileInfo ASTReader::GetHeaderFileInfo(FileEntryRef FE) {
   HeaderFileInfoVisitor Visitor(FE);
   ModuleMgr.visit(Visitor);
   if (std::optional<HeaderFileInfo> HFI = Visitor.getHeaderFileInfo())
@@ -7928,9 +7946,10 @@ void ASTReader::PrintStats() {
   std::fprintf(stderr, "*** AST File Statistics:\n");
 
   unsigned NumTypesLoaded =
-      TypesLoaded.size() - llvm::count(TypesLoaded, QualType());
+      TypesLoaded.size() - llvm::count(TypesLoaded.materialized(), QualType());
   unsigned NumDeclsLoaded =
-      DeclsLoaded.size() - llvm::count(DeclsLoaded, (Decl *)nullptr);
+      DeclsLoaded.size() -
+      llvm::count(DeclsLoaded.materialized(), (Decl *)nullptr);
   unsigned NumIdentifiersLoaded =
       IdentifiersLoaded.size() -
       llvm::count(IdentifiersLoaded, (IdentifierInfo *)nullptr);

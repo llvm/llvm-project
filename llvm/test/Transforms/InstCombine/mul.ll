@@ -1545,8 +1545,8 @@ define <2 x i32> @mulsub2_vec_nonuniform_undef(<2 x i32> %a0) {
 
 define i8 @mulsub_nsw(i8 %a1, i8 %a2) {
 ; CHECK-LABEL: @mulsub_nsw(
-; CHECK-NEXT:    [[A_NEG:%.*]] = sub i8 [[A2:%.*]], [[A1:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[A_NEG]], 1
+; CHECK-NEXT:    [[A_NEG:%.*]] = sub nsw i8 [[A2:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i8 [[A_NEG]], 1
 ; CHECK-NEXT:    ret i8 [[MUL]]
 ;
   %a = sub nsw i8 %a1, %a2
@@ -1554,9 +1554,11 @@ define i8 @mulsub_nsw(i8 %a1, i8 %a2) {
   ret i8 %mul
 }
 
+; It would be safe to keep the nsw on the shl here, but only because the mul
+; to shl transform happens to replace undef with 0.
 define <2 x i8> @mulsub_nsw_undef(<2 x i8> %a1, <2 x i8> %a2) {
 ; CHECK-LABEL: @mulsub_nsw_undef(
-; CHECK-NEXT:    [[A_NEG:%.*]] = sub <2 x i8> [[A2:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[A_NEG:%.*]] = sub nsw <2 x i8> [[A2:%.*]], [[A1:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i8> [[A_NEG]], <i8 1, i8 0>
 ; CHECK-NEXT:    ret <2 x i8> [[MUL]]
 ;

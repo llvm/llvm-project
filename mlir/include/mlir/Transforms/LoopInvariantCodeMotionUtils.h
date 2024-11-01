@@ -11,12 +11,13 @@
 
 #include "mlir/Support/LLVM.h"
 
+#include "llvm/ADT/SmallVector.h"
+
 namespace mlir {
 
 class LoopLikeOpInterface;
 class Operation;
 class Region;
-class RegionRange;
 class Value;
 
 /// Given a list of regions, perform loop-invariant code motion. An operation is
@@ -61,7 +62,7 @@ class Value;
 ///
 /// Returns the number of operations moved.
 size_t moveLoopInvariantCode(
-    RegionRange regions,
+    ArrayRef<Region *> regions,
     function_ref<bool(Value, Region *)> isDefinedOutsideRegion,
     function_ref<bool(Operation *, Region *)> shouldMoveOutOfRegion,
     function_ref<void(Operation *, Region *)> moveOutOfRegion);

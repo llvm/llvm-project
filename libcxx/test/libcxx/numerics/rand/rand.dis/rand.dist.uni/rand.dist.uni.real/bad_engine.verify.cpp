@@ -25,6 +25,6 @@ void test(std::uniform_real_distribution<double> dist)
   G<int> badg;
   G<unsigned> okg;
 
-  dist(badg); //expected-error-re@*:* {{{{(static_assert|static assertion)}} failed}} //expected-note {{in instantiation}}
+  dist(badg); //expected-error@*:* {{static assertion failed}} //expected-note {{in instantiation}}
   dist(okg);
 }

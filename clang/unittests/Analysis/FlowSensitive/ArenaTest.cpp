@@ -8,11 +8,14 @@
 
 #include "clang/Analysis/FlowSensitive/Arena.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace clang::dataflow {
 namespace {
+using llvm::HasValue;
+using testing::Ref;
 
 class ArenaTest : public ::testing::Test {
 protected:
@@ -135,6 +138,47 @@ TEST_F(ArenaTest, Interning) {
   BoolValue &B2 = A.makeBoolValue(F2);
   EXPECT_EQ(&B1, &B2);
   EXPECT_EQ(&B1.formula(), &F1);
+}
+
+TEST_F(ArenaTest, ParseFormula) {
+  Atom V5{5};
+  Atom V6{6};
+  EXPECT_THAT_EXPECTED(A.parseFormula("V5"), HasValue(Ref(A.makeAtomRef(V5))));
+  EXPECT_THAT_EXPECTED(A.parseFormula("true"),
+                       HasValue(Ref(A.makeLiteral(true))));
+  EXPECT_THAT_EXPECTED(A.parseFormula("!V5"),
+                       HasValue(Ref(A.makeNot(A.makeAtomRef(V5)))));
+
+  EXPECT_THAT_EXPECTED(
+      A.parseFormula("(V5 = V6)"),
+      HasValue(Ref(A.makeEquals(A.makeAtomRef(V5), A.makeAtomRef(V6)))));
+  EXPECT_THAT_EXPECTED(
+      A.parseFormula("(V5 => V6)"),
+      HasValue(Ref(A.makeImplies(A.makeAtomRef(V5), A.makeAtomRef(V6)))));
+  EXPECT_THAT_EXPECTED(
+      A.parseFormula("(V5 & V6)"),
+      HasValue(Ref(A.makeAnd(A.makeAtomRef(V5), A.makeAtomRef(V6)))));
+  EXPECT_THAT_EXPECTED(
+      A.parseFormula("(V5 | V6)"),
+      HasValue(Ref(A.makeOr(A.makeAtomRef(V5), A.makeAtomRef(V6)))));
+
+  EXPECT_THAT_EXPECTED(
+      A.parseFormula("((V5 & (V6 & !false)) => ((V5 | V6) | false))"),
+      HasValue(Ref(
+          A.makeImplies(A.makeAnd(A.makeAtomRef(V5),
+                                  A.makeAnd(A.makeAtomRef(V6),
+                                            A.makeNot(A.makeLiteral(false)))),
+                        A.makeOr(A.makeOr(A.makeAtomRef(V5), A.makeAtomRef(V6)),
+                                 A.makeLiteral(false))))));
+
+  EXPECT_THAT_EXPECTED(
+      A.parseFormula("(V0 => error)"), llvm::FailedWithMessage(R"(bad formula at offset 7
+(V0 => error)
+       ^)"));
+  EXPECT_THAT_EXPECTED(
+      A.parseFormula("V1 V2"), llvm::FailedWithMessage(R"(bad formula at offset 3
+V1 V2
+   ^)"));
 }
 
 } // namespace

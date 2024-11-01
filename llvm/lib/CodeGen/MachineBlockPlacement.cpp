@@ -3376,7 +3376,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   TargetPassConfig *PassConfig = &getAnalysis<TargetPassConfig>();
   // For aggressive optimization, we can adjust some thresholds to be less
   // conservative.
-  if (PassConfig->getOptLevel() >= CodeGenOpt::Aggressive) {
+  if (PassConfig->getOptLevel() >= CodeGenOptLevel::Aggressive) {
     // At O3 we should be more willing to copy blocks for tail duplication. This
     // increases size pressure, so we only do it at O3
     // Do this unless only the regular threshold is explicitly set.
@@ -3388,7 +3388,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   // If there's no threshold provided through options, query the target
   // information for a threshold instead.
   if (TailDupPlacementThreshold.getNumOccurrences() == 0 &&
-      (PassConfig->getOptLevel() < CodeGenOpt::Aggressive ||
+      (PassConfig->getOptLevel() < CodeGenOptLevel::Aggressive ||
        TailDupPlacementAggressiveThreshold.getNumOccurrences() == 0))
     TailDupSize = TII->getTailDuplicateSize(PassConfig->getOptLevel());
 
@@ -3501,7 +3501,7 @@ void MachineBlockPlacement::applyExtTsp() {
 
   auto BlockSizes = std::vector<uint64_t>(F->size());
   auto BlockCounts = std::vector<uint64_t>(F->size());
-  std::vector<EdgeCountT> JumpCounts;
+  std::vector<codelayout::EdgeCount> JumpCounts;
   for (MachineBasicBlock &MBB : *F) {
     // Getting the block frequency.
     BlockFrequency BlockFreq = MBFI->getBlockFreq(&MBB);
@@ -3520,8 +3520,8 @@ void MachineBlockPlacement::applyExtTsp() {
     for (MachineBasicBlock *Succ : MBB.successors()) {
       auto EP = MBPI->getEdgeProbability(&MBB, Succ);
       BlockFrequency JumpFreq = BlockFreq * EP;
-      auto Jump = std::make_pair(BlockIndex[&MBB], BlockIndex[Succ]);
-      JumpCounts.push_back(std::make_pair(Jump, JumpFreq.getFrequency()));
+      JumpCounts.push_back(
+          {BlockIndex[&MBB], BlockIndex[Succ], JumpFreq.getFrequency()});
     }
   }
 
@@ -3534,7 +3534,7 @@ void MachineBlockPlacement::applyExtTsp() {
                        calcExtTspScore(BlockSizes, BlockCounts, JumpCounts)));
 
   // Run the layout algorithm.
-  auto NewOrder = applyExtTspLayout(BlockSizes, BlockCounts, JumpCounts);
+  auto NewOrder = computeExtTspLayout(BlockSizes, BlockCounts, JumpCounts);
   std::vector<const MachineBasicBlock *> NewBlockOrder;
   NewBlockOrder.reserve(F->size());
   for (uint64_t Node : NewOrder) {

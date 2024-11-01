@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_ENVIRON_H
 #define LLVM_LIBC_SRC_UNISTD_ENVIRON_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 extern "C" char **environ;
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_UNISTD_ENVIRON_H

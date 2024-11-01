@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=verde -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=verde -mattr=+promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=tonga -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=tonga -mattr=+promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=verde -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=verde -mattr=+promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=+promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mtriple=r600-- -mcpu=redwood < %s | FileCheck --check-prefixes=EG,FUNC %s
 ; RUN: opt -S -mtriple=amdgcn-- -passes='amdgpu-promote-alloca,sroa,instcombine' < %s | FileCheck -check-prefix=OPT %s
 target datalayout = "A5"

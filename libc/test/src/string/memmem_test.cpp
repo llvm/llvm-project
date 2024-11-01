@@ -11,40 +11,40 @@
 
 #include "src/string/string_utils.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 TEST(LlvmLibcMemmemTest, EmptyHaystackEmptyNeedleReturnsHaystck) {
   char *h = nullptr;
   char *n = nullptr;
-  void *result = __llvm_libc::memmem(h, 0, n, 0);
+  void *result = LIBC_NAMESPACE::memmem(h, 0, n, 0);
   ASSERT_EQ(static_cast<char *>(result), h);
 }
 
 TEST(LlvmLibcMemmemTest, EmptyHaystackNonEmptyNeedleReturnsNull) {
   char *h = nullptr;
   char n[] = {'a', 'b', 'c'};
-  void *result = __llvm_libc::memmem(h, 0, n, sizeof(n));
+  void *result = LIBC_NAMESPACE::memmem(h, 0, n, sizeof(n));
   ASSERT_EQ(result, static_cast<void *>(nullptr));
 }
 
 TEST(LlvmLibcMemmemTest, EmptyNeedleReturnsHaystack) {
   char h[] = {'a', 'b', 'c'};
   char *n = nullptr;
-  void *result = __llvm_libc::memmem(h, sizeof(h), n, 0);
+  void *result = LIBC_NAMESPACE::memmem(h, sizeof(h), n, 0);
   ASSERT_EQ(static_cast<char *>(result), h + 0);
 }
 
 TEST(LlvmLibcMemmemTest, ExactMatchReturnsHaystack) {
   char h[] = {'a', 'b', 'c'};
   char n[] = {'a', 'b', 'c'};
-  void *result = __llvm_libc::memmem(h, sizeof(h), n, sizeof(n));
+  void *result = LIBC_NAMESPACE::memmem(h, sizeof(h), n, sizeof(n));
   ASSERT_EQ(static_cast<char *>(result), h + 0);
 }
 
 TEST(LlvmLibcMemmemTest, ReturnFirstMatchOfNeedle) {
   char h[] = {'a', 'a', 'b', 'c'};
   char n[] = {'a'};
-  void *result = __llvm_libc::memmem(h, sizeof(h), n, sizeof(n));
+  void *result = LIBC_NAMESPACE::memmem(h, sizeof(h), n, sizeof(n));
   ASSERT_EQ(static_cast<char *>(result), h + 0);
 }
 
@@ -52,13 +52,13 @@ TEST(LlvmLibcMemmemTest, ReturnFirstExactMatchOfNeedle) {
   {
     char h[] = {'a', 'b', 'a', 'c', 'a', 'a'};
     char n[] = {'a', 'a'};
-    void *result = __llvm_libc::memmem(h, sizeof(h), n, sizeof(n));
+    void *result = LIBC_NAMESPACE::memmem(h, sizeof(h), n, sizeof(n));
     ASSERT_EQ(static_cast<char *>(result), h + 4);
   }
   {
     char h[] = {'a', 'a', 'b', 'a', 'b', 'a'};
     char n[] = {'a', 'b', 'a'};
-    void *result = __llvm_libc::memmem(h, sizeof(h), n, sizeof(n));
+    void *result = LIBC_NAMESPACE::memmem(h, sizeof(h), n, sizeof(n));
     ASSERT_EQ(static_cast<char *>(result), h + 1);
   }
 }
@@ -66,7 +66,7 @@ TEST(LlvmLibcMemmemTest, ReturnFirstExactMatchOfNeedle) {
 TEST(LlvmLibcMemmemTest, NullTerminatorDoesNotInterruptMatch) {
   char h[] = {'\0', 'a', 'b'};
   char n[] = {'a', 'b'};
-  void *result = __llvm_libc::memmem(h, sizeof(h), n, sizeof(n));
+  void *result = LIBC_NAMESPACE::memmem(h, sizeof(h), n, sizeof(n));
   ASSERT_EQ(static_cast<char *>(result), h + 1);
 }
 
@@ -74,25 +74,25 @@ TEST(LlvmLibcMemmemTest, ReturnNullIfNoExactMatch) {
   {
     char h[] = {'a'};
     char n[] = {'a', 'a'};
-    void *result = __llvm_libc::memmem(h, sizeof(h), n, sizeof(n));
+    void *result = LIBC_NAMESPACE::memmem(h, sizeof(h), n, sizeof(n));
     ASSERT_EQ(result, static_cast<void *>(nullptr));
   }
   {
     char h[] = {'a', 'A'};
     char n[] = {'a', 'a'};
-    void *result = __llvm_libc::memmem(h, sizeof(h), n, sizeof(n));
+    void *result = LIBC_NAMESPACE::memmem(h, sizeof(h), n, sizeof(n));
     ASSERT_EQ(result, static_cast<void *>(nullptr));
   }
   {
     char h[] = {'a'};
     char n[] = {'a', '\0'};
-    void *result = __llvm_libc::memmem(h, sizeof(h), n, sizeof(n));
+    void *result = LIBC_NAMESPACE::memmem(h, sizeof(h), n, sizeof(n));
     ASSERT_EQ(result, static_cast<void *>(nullptr));
   }
   {
     char h[] = {'\0'};
     char n[] = {'\0', '\0'};
-    void *result = __llvm_libc::memmem(h, sizeof(h), n, sizeof(n));
+    void *result = LIBC_NAMESPACE::memmem(h, sizeof(h), n, sizeof(n));
     ASSERT_EQ(result, static_cast<void *>(nullptr));
   }
 }
@@ -101,13 +101,13 @@ TEST(LlvmLibcMemmemTest, ReturnMatchOfSpecifiedNeedleLength) {
   {
     char h[] = {'a', 'b', 'c'};
     char n[] = {'x', 'y', 'z'};
-    void *result = __llvm_libc::memmem(h, sizeof(h), n, 0);
+    void *result = LIBC_NAMESPACE::memmem(h, sizeof(h), n, 0);
     ASSERT_EQ(static_cast<char *>(result), h + 0);
   }
   {
     char h[] = {'a', 'b', 'c'};
     char n[] = {'b', 'c', 'a'};
-    void *result = __llvm_libc::memmem(h, sizeof(h), n, 2);
+    void *result = LIBC_NAMESPACE::memmem(h, sizeof(h), n, 2);
     ASSERT_EQ(static_cast<char *>(result), h + 1);
   }
 }
@@ -116,14 +116,14 @@ TEST(LlvmLibcMemmemTest, ReturnNullIfInadequateHaystackLength) {
   {
     char h[] = {'a', 'b', 'c'};
     char n[] = {'c'};
-    void *result = __llvm_libc::memmem(h, 2, n, sizeof(n));
+    void *result = LIBC_NAMESPACE::memmem(h, 2, n, sizeof(n));
     ASSERT_EQ(result, static_cast<void *>(nullptr));
   }
   {
     char h[] = {'a', 'b', 'c'};
     char n[] = {'a', 'b', 'c'};
-    void *result = __llvm_libc::memmem(h, 2, n, sizeof(n));
+    void *result = LIBC_NAMESPACE::memmem(h, 2, n, sizeof(n));
     ASSERT_EQ(result, static_cast<void *>(nullptr));
   }
 }
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -1,8 +1,6 @@
 ; RUN: llc < %s -mtriple=riscv64 | FileCheck %s
 ; RUN: llc < %s -mtriple=riscv64 -align-loops=16 | FileCheck %s -check-prefix=ALIGN_16
 ; RUN: llc < %s -mtriple=riscv64 -align-loops=32 | FileCheck %s -check-prefix=ALIGN_32
-; RUN: llc < %s -mtriple=riscv64 -mattr=+pref-loop-align-16 | FileCheck %s -check-prefix=ALIGN_16
-; RUN: llc < %s -mtriple=riscv64 -mattr=+pref-loop-align-32 | FileCheck %s -check-prefix=ALIGN_32
 
 declare void @foo()
 

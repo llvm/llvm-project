@@ -1,0 +1,13 @@
+# Ensure that the permissions of the optimized binary file comply with the
+# system's umask.
+
+# This test performs a logical AND operation on the results of the `stat -c %a
+# %t.bolt` and `umask` commands (both results are displayed in octal), and
+# checks whether the result is equal to 0.
+REQUIRES: system-linux
+
+RUN: %clang %cflags %p/Inputs/hello.c -o %t -Wl,-q
+RUN: llvm-bolt %t -o %t.bolt
+RUN: echo $(( 8#$(stat -c %a %t.bolt) & 8#$(umask) )) | FileCheck %s
+
+CHECK: 0

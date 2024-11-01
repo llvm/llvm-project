@@ -331,6 +331,10 @@ bool AArch64FrameLowering::homogeneousPrologEpilog(
   if (Exit && getArgumentStackToRestore(MF, *Exit))
     return false;
 
+  auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  if (AFI->hasSwiftAsyncContext())
+    return false;
+
   return true;
 }
 
@@ -786,16 +790,11 @@ void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
 
   // Zero out GPRs.
   for (MCRegister Reg : GPRsToZero.set_bits())
-    BuildMI(MBB, MBBI, DL, TII.get(AArch64::MOVi64imm), Reg).addImm(0);
+    TII.buildClearRegister(Reg, MBB, MBBI, DL);
 
   // Zero out FP/vector registers.
   for (MCRegister Reg : FPRsToZero.set_bits())
-    if (HasSVE)
-      BuildMI(MBB, MBBI, DL, TII.get(AArch64::DUP_ZI_D), Reg)
-        .addImm(0)
-        .addImm(0);
-    else
-      BuildMI(MBB, MBBI, DL, TII.get(AArch64::MOVIv2d_ns), Reg).addImm(0);
+    TII.buildClearRegister(Reg, MBB, MBBI, DL);
 
   if (HasSVE) {
     for (MCRegister PReg :
@@ -1386,42 +1385,6 @@ static void emitDefineCFAWithFP(MachineFunction &MF, MachineBasicBlock &MBB,
       .setMIFlags(MachineInstr::FrameSetup);
 }
 
-void AArch64FrameLowering::signLR(MachineFunction &MF, MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator MBBI,
-                                  bool NeedsWinCFI, bool *HasWinCFI) {
-  const auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
-  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  bool EmitCFI = MFnI.needsDwarfUnwindInfo(MF);
-
-  // Debug location must be unknown, see emitPrologue().
-  DebugLoc DL;
-
-  if (MFnI.shouldSignWithBKey()) {
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::EMITBKEY))
-        .setMIFlag(MachineInstr::FrameSetup);
-  }
-
-  // No SEH opcode for this one; it doesn't materialize into an
-  // instruction on Windows.
-  BuildMI(
-      MBB, MBBI, DL,
-      TII->get(MFnI.shouldSignWithBKey() ? AArch64::PACIBSP : AArch64::PACIASP))
-      .setMIFlag(MachineInstr::FrameSetup);
-
-  if (EmitCFI) {
-    unsigned CFIIndex =
-        MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
-    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex)
-        .setMIFlags(MachineInstr::FrameSetup);
-  } else if (NeedsWinCFI) {
-    *HasWinCFI = true;
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PACSignLR))
-        .setMIFlag(MachineInstr::FrameSetup);
-  }
-}
-
 void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                                         MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.begin();
@@ -1455,8 +1418,12 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     emitShadowCallStackPrologue(*TII, MF, MBB, MBBI, DL, NeedsWinCFI,
                                 MFnI.needsDwarfUnwindInfo(MF));
 
-  if (MFnI.shouldSignReturnAddress(MF))
-    signLR(MF, MBB, MBBI, NeedsWinCFI, &HasWinCFI);
+  if (MFnI.shouldSignReturnAddress(MF)) {
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::PAUTH_PROLOGUE))
+        .setMIFlag(MachineInstr::FrameSetup);
+    if (NeedsWinCFI)
+      HasWinCFI = true; // AArch64PointerAuth pass will insert SEH_PACSignLR
+  }
 
   if (EmitCFI && MFnI.isMTETagged()) {
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::EMITMTETAGGED))
@@ -1476,10 +1443,20 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::LOADgot), AArch64::X16)
             .addExternalSymbol("swift_async_extendedFramePointerFlags",
                                AArch64II::MO_GOT);
+        if (NeedsWinCFI) {
+          BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_Nop))
+              .setMIFlags(MachineInstr::FrameSetup);
+          HasWinCFI = true;
+        }
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::FP)
             .addUse(AArch64::FP)
             .addUse(AArch64::X16)
             .addImm(Subtarget.isTargetILP32() ? 32 : 0);
+        if (NeedsWinCFI) {
+          BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_Nop))
+              .setMIFlags(MachineInstr::FrameSetup);
+          HasWinCFI = true;
+        }
         break;
       }
       [[fallthrough]];
@@ -1490,6 +1467,11 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
           .addUse(AArch64::FP)
           .addImm(0x1100)
           .setMIFlag(MachineInstr::FrameSetup);
+      if (NeedsWinCFI) {
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_Nop))
+            .setMIFlags(MachineInstr::FrameSetup);
+        HasWinCFI = true;
+      }
       break;
 
     case SwiftAsyncFramePointerMode::Never:
@@ -1613,11 +1595,20 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
       bool HaveInitialContext = Attrs.hasAttrSomewhere(Attribute::SwiftAsync);
       if (HaveInitialContext)
         MBB.addLiveIn(AArch64::X22);
+      Register Reg = HaveInitialContext ? AArch64::X22 : AArch64::XZR;
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::StoreSwiftAsyncContext))
-          .addUse(HaveInitialContext ? AArch64::X22 : AArch64::XZR)
+          .addUse(Reg)
           .addUse(AArch64::SP)
           .addImm(FPOffset - 8)
           .setMIFlags(MachineInstr::FrameSetup);
+      if (NeedsWinCFI) {
+        // WinCFI and arm64e, where StoreSwiftAsyncContext is expanded
+        // to multiple instructions, should be mutually-exclusive.
+        assert(Subtarget.getTargetTriple().getArchName() != "arm64e");
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_Nop))
+            .setMIFlags(MachineInstr::FrameSetup);
+        HasWinCFI = true;
+      }
     }
 
     if (HomPrologEpilog) {
@@ -1916,54 +1907,6 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   }
 }
 
-void AArch64FrameLowering::authenticateLR(MachineFunction &MF,
-                                          MachineBasicBlock &MBB,
-                                          bool NeedsWinCFI, bool *HasWinCFI) {
-  const auto &MFI = *MF.getInfo<AArch64FunctionInfo>();
-  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  bool EmitAsyncCFI = MFI.needsAsyncDwarfUnwindInfo(MF);
-
-  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
-  DebugLoc DL;
-  if (MBBI != MBB.end())
-    DL = MBBI->getDebugLoc();
-
-  // The AUTIASP instruction assembles to a hint instruction before v8.3a so
-  // this instruction can safely used for any v8a architecture.
-  // From v8.3a onwards there are optimised authenticate LR and return
-  // instructions, namely RETA{A,B}, that can be used instead. In this case the
-  // DW_CFA_AARCH64_negate_ra_state can't be emitted.
-  bool TerminatorIsCombinable =
-      MBBI != MBB.end() && (MBBI->getOpcode() == AArch64::RET_ReallyLR ||
-                            MBBI->getOpcode() == AArch64::RET);
-  if (Subtarget.hasPAuth() && TerminatorIsCombinable && !NeedsWinCFI &&
-      !MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack)) {
-    BuildMI(MBB, MBBI, DL,
-            TII->get(MFI.shouldSignWithBKey() ? AArch64::RETAB : AArch64::RETAA))
-        .copyImplicitOps(*MBBI);
-    MBB.erase(MBBI);
-  } else {
-    BuildMI(
-        MBB, MBBI, DL,
-        TII->get(MFI.shouldSignWithBKey() ? AArch64::AUTIBSP : AArch64::AUTIASP))
-        .setMIFlag(MachineInstr::FrameDestroy);
-
-    if (EmitAsyncCFI) {
-      unsigned CFIIndex =
-          MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
-      BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndex)
-          .setMIFlags(MachineInstr::FrameDestroy);
-    }
-    if (NeedsWinCFI) {
-      *HasWinCFI = true;
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PACSignLR))
-          .setMIFlag(MachineInstr::FrameDestroy);
-    }
-  }
-}
-
 static bool isFuncletReturnInstr(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
@@ -1995,8 +1938,13 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   MachineBasicBlock::iterator EpilogStartI = MBB.end();
 
   auto FinishingTouches = make_scope_exit([&]() {
-    if (AFI->shouldSignReturnAddress(MF))
-      authenticateLR(MF, MBB, NeedsWinCFI, &HasWinCFI);
+    if (AFI->shouldSignReturnAddress(MF)) {
+      BuildMI(MBB, MBB.getFirstTerminator(), DL,
+              TII->get(AArch64::PAUTH_EPILOGUE))
+          .setMIFlag(MachineInstr::FrameDestroy);
+      if (NeedsWinCFI)
+        HasWinCFI = true; // AArch64PointerAuth pass will insert SEH_PACSignLR
+    }
     if (needsShadowCallStackPrologueEpilogue(MF))
       emitShadowCallStackEpilogue(*TII, MF, MBB, MBB.getFirstTerminator(), DL);
     if (EmitCFI)
@@ -2132,6 +2080,11 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
           .addUse(AArch64::FP)
           .addImm(0x10fe)
           .setMIFlag(MachineInstr::FrameDestroy);
+      if (NeedsWinCFI) {
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_Nop))
+            .setMIFlags(MachineInstr::FrameDestroy);
+        HasWinCFI = true;
+      }
       break;
 
     case SwiftAsyncFramePointerMode::Never:

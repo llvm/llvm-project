@@ -242,7 +242,20 @@ static void generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
          !ReachedBegin;) {
       MachineInstr &MI = *MII;
 
-      if (isSpvIntrinsic(MI, Intrinsic::spv_assign_type)) {
+      if (isSpvIntrinsic(MI, Intrinsic::spv_assign_ptr_type)) {
+        Register Reg = MI.getOperand(1).getReg();
+        MIB.setInsertPt(*MI.getParent(), MI.getIterator());
+        SPIRVType *BaseTy = GR->getOrCreateSPIRVType(
+            getMDOperandAsType(MI.getOperand(2).getMetadata(), 0), MIB);
+        SPIRVType *AssignedPtrType = GR->getOrCreateSPIRVPointerType(
+            BaseTy, MI, *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo(),
+            addressSpaceToStorageClass(MI.getOperand(3).getImm()));
+        MachineInstr *Def = MRI.getVRegDef(Reg);
+        assert(Def && "Expecting an instruction that defines the register");
+        insertAssignInstr(Reg, nullptr, AssignedPtrType, GR, MIB,
+                          MF.getRegInfo());
+        ToErase.push_back(&MI);
+      } else if (isSpvIntrinsic(MI, Intrinsic::spv_assign_type)) {
         Register Reg = MI.getOperand(1).getReg();
         Type *Ty = getMDOperandAsType(MI.getOperand(2).getMetadata(), 0);
         MachineInstr *Def = MRI.getVRegDef(Reg);

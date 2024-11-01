@@ -70,7 +70,6 @@ class BSDArchivesTestCase(TestBase):
         )
         self.expect_var_path("__b_global", type="int", value="2")
 
-
     def check_frame_variable_errors(self, thread, error_strings):
         command_result = lldb.SBCommandReturnObject()
         interp = self.dbg.GetCommandInterpreter()
@@ -124,6 +123,7 @@ class BSDArchivesTestCase(TestBase):
         self.check_frame_variable_errors(thread, error_strings)
 
     @skipIfRemote
+    @skipIf(compiler="clang", compiler_version=["<", "12.0"])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24527.  Makefile.rules doesn't know how to build static libs on Windows",
@@ -172,7 +172,6 @@ class BSDArchivesTestCase(TestBase):
         spec = module_specs.GetSpecAtIndex(1)
         self.assertEqual(spec.GetObjectName(), "b.o")
         self.assertEqual(spec.GetObjectSize(), size_b, libfoothin_path)
-
 
     @skipIfRemote
     @skipUnlessDarwin

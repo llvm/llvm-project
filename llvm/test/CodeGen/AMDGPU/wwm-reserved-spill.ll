@@ -145,7 +145,7 @@ define amdgpu_gfx void @strict_wwm_cfg(ptr addrspace(8) inreg %tmp14, i32 %arg) 
 ; GFX9-O0-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
 ; GFX9-O0-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
 ; GFX9-O0-NEXT:    s_mov_b64 exec, s[34:35]
-; GFX9-O0-NEXT:    ; implicit-def: $vgpr3
+; GFX9-O0-NEXT:    ; implicit-def: $vgpr3 : SGPR spill to VGPR lane
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX9-O0-NEXT:    s_or_saveexec_b64 s[46:47], -1
 ; GFX9-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
@@ -580,7 +580,7 @@ define amdgpu_gfx void @strict_wwm_call_i64(ptr addrspace(8) inreg %tmp14, i64 i
 ; GFX9-O0-NEXT:    buffer_store_dword v5, off, s[0:3], s33 offset:52 ; 4-byte Folded Spill
 ; GFX9-O0-NEXT:    s_mov_b64 exec, s[34:35]
 ; GFX9-O0-NEXT:    s_add_i32 s32, s32, 0x1000
-; GFX9-O0-NEXT:    ; implicit-def: $vgpr0
+; GFX9-O0-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GFX9-O0-NEXT:    v_writelane_b32 v10, s30, 0
 ; GFX9-O0-NEXT:    v_writelane_b32 v10, s31, 1
 ; GFX9-O0-NEXT:    s_mov_b32 s34, s8

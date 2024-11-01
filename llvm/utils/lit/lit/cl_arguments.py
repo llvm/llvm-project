@@ -72,22 +72,23 @@ def parse_args():
         "-v",
         "--verbose",
         dest="showOutput",
-        help="Show test output for failures",
+        help="For failed tests, show all output. For example, each command is"
+        " printed before it is executed, so the last printed command is the one"
+        " that failed.",
         action="store_true",
     )
     format_group.add_argument(
         "-vv",
         "--echo-all-commands",
-        dest="echoAllCommands",
+        dest="showOutput",
+        help="Deprecated alias for -v.",
         action="store_true",
-        help="Echo all commands as they are executed to stdout. In case of "
-        "failure, last command shown will be the failing one.",
     )
     format_group.add_argument(
         "-a",
         "--show-all",
         dest="showAllOutput",
-        help="Display all commandlines and output",
+        help="Enable -v, but for all tests not just failed tests.",
         action="store_true",
     )
     format_group.add_argument(
@@ -299,9 +300,6 @@ def parse_args():
     opts = parser.parse_args(args)
 
     # Validate command line options
-    if opts.echoAllCommands:
-        opts.showOutput = True
-
     if opts.incremental:
         print(
             "WARNING: --incremental is deprecated. Failing tests now always run first."

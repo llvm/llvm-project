@@ -85,11 +85,21 @@ struct RegImmPair {
 
 /// Used to describe addressing mode similar to ExtAddrMode in CodeGenPrepare.
 /// It holds the register values, the scale value and the displacement.
+/// It also holds a descriptor for the expression used to calculate the address
+/// from the operands.
 struct ExtAddrMode {
+  enum class Formula {
+    Basic = 0,         // BaseReg + ScaledReg * Scale + Displacement
+    SExtScaledReg = 1, // BaseReg + sext(ScaledReg) * Scale + Displacement
+    ZExtScaledReg = 2  // BaseReg + zext(ScaledReg) * Scale + Displacement
+  };
+
   Register BaseReg;
   Register ScaledReg;
-  int64_t Scale;
-  int64_t Displacement;
+  int64_t Scale = 0;
+  int64_t Displacement = 0;
+  Formula Form = Formula::Basic;
+  ExtAddrMode() = default;
 };
 
 //---------------------------------------------------------------------------
@@ -1436,6 +1446,26 @@ public:
     return std::nullopt;
   }
 
+  /// Check if it's possible and beneficial to fold the addressing computation
+  /// `AddrI` into the addressing mode of the load/store instruction `MemI`. The
+  /// memory instruction is a user of the virtual register `Reg`, which in turn
+  /// is the ultimate destination of zero or more COPY instructions from the
+  /// output register of `AddrI`.
+  /// Return the adddressing mode after folding in `AM`.
+  virtual bool canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
+                                   const MachineInstr &AddrI,
+                                   ExtAddrMode &AM) const {
+    return false;
+  }
+
+  /// Emit a load/store instruction with the same value register as `MemI`, but
+  /// using the address from `AM`. The addressing mode must have been obtained
+  /// from `canFoldIntoAddr` for the same memory instruction.
+  virtual MachineInstr *emitLdStWithAddr(MachineInstr &MemI,
+                                         const ExtAddrMode &AM) const {
+    llvm_unreachable("target did not implement emitLdStWithAddr()");
+  }
+
   /// Returns true if MI's Def is NullValueReg, and the MI
   /// does not change the Zero value. i.e. cases such as rax = shr rax, X where
   /// NullValueReg = rax. Note that if the NullValueReg is non-zero, this
@@ -2057,6 +2087,14 @@ public:
         "Target didn't implement TargetInstrInfo::insertOutlinedCall!");
   }
 
+  /// Insert an architecture-specific instruction to clear a register.
+  virtual void buildClearRegister(Register Reg, MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator Iter,
+                                  DebugLoc &DL) const {
+    llvm_unreachable(
+        "Target didn't implement TargetInstrInfo::buildClearRegister!");
+  }
+
   /// Return true if the function can safely be outlined from.
   /// A function \p MF is considered safe for outlining if an outlined function
   /// produced from instructions in F will produce a program which produces the
@@ -2108,8 +2146,8 @@ public:
   /// Returns the target-specific default value for tail duplication.
   /// This value will be used if the tail-dup-placement-threshold argument is
   /// not provided.
-  virtual unsigned getTailDuplicateSize(CodeGenOpt::Level OptLevel) const {
-    return OptLevel >= CodeGenOpt::Aggressive ? 4 : 2;
+  virtual unsigned getTailDuplicateSize(CodeGenOptLevel OptLevel) const {
+    return OptLevel >= CodeGenOptLevel::Aggressive ? 4 : 2;
   }
 
   /// Returns the callee operand from the given \p MI.

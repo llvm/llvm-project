@@ -14,7 +14,7 @@ gpu.module @test_module {
   gpu.func @test_printf(%arg0: i32) {
     // OCL: %[[IMM0:.*]] = llvm.mlir.addressof @[[$PRINT_GLOBAL]] : !llvm.ptr<array<11 x i8>, 4>
     // OCL-NEXT: %[[IMM2:.*]] = llvm.getelementptr %[[IMM0]][0, 0] : (!llvm.ptr<array<11 x i8>, 4>) -> !llvm.ptr<i8, 4>
-    // OCL-NEXT: %{{.*}} = llvm.call @printf(%[[IMM2]], %[[ARG0]]) : (!llvm.ptr<i8, 4>, i32) -> i32
+    // OCL-NEXT: %{{.*}} = llvm.call @printf(%[[IMM2]], %[[ARG0]]) vararg(!llvm.func<i32 (ptr<i8, 4>, ...)>) : (!llvm.ptr<i8, 4>, i32) -> i32
 
     // HIP: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
     // HIP-NEXT: %[[DESC0:.*]] = llvm.call @__ockl_printf_begin(%0) : (i64) -> i64

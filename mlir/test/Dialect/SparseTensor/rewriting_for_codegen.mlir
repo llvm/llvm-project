@@ -2,21 +2,20 @@
 // RUN: FileCheck %s
 
 #CSR = #sparse_tensor.encoding<{
-  lvlTypes = ["dense", "compressed"]
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
 }>
 
 #CSC = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimToLvl = affine_map<(i, j) -> (j, i)>
+  map = (d0, d1) -> (d1 : dense, d0 : compressed)
 }>
 
 #COO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ]
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 // CHECK-LABEL:   func.func @sparse_new(
-// CHECK-SAME:    %[[A:.*]]: !llvm.ptr<i8>) -> tensor<?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>> {
-// CHECK:         %[[COO:.*]] = sparse_tensor.new %[[A]] : !llvm.ptr<i8> to tensor<?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed_nu", "singleton" ] }>>
+// CHECK-SAME:    %[[A:.*]]: !llvm.ptr<i8>) -> tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> {
+// CHECK:         %[[COO:.*]] = sparse_tensor.new %[[A]] : !llvm.ptr<i8> to tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:         %[[R:.*]] = sparse_tensor.convert %[[COO]]
 // CHECK:         bufferization.dealloc_tensor %[[COO]]
 // CHECK:         return %[[R]]
@@ -26,8 +25,8 @@ func.func @sparse_new(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #CSR> {
 }
 
 // CHECK-LABEL:   func.func @sparse_new_csc(
-// CHECK-SAME:    %[[A:.*]]: !llvm.ptr<i8>) -> tensor<?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], dimToLvl = affine_map<(d0, d1) -> (d1, d0)> }>> {
-// CHECK:         %[[COO:.*]] = sparse_tensor.new %[[A]] : !llvm.ptr<i8> to tensor<?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed_nu", "singleton" ], dimToLvl = affine_map<(d0, d1) -> (d1, d0)> }>>
+// CHECK-SAME:    %[[A:.*]]: !llvm.ptr<i8>) -> tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> {
+// CHECK:         %[[COO:.*]] = sparse_tensor.new %[[A]] : !llvm.ptr<i8> to tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:         %[[R:.*]] = sparse_tensor.convert %[[COO]]
 // CHECK:         bufferization.dealloc_tensor %[[COO]]
 // CHECK:         return %[[R]]
@@ -37,8 +36,8 @@ func.func @sparse_new_csc(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #CSC> {
 }
 
 // CHECK-LABEL:   func.func @sparse_new_coo(
-// CHECK-SAME:    %[[A:.*]]: !llvm.ptr<i8>) -> tensor<?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed_nu", "singleton" ] }>> {
-// CHECK:         %[[COO:.*]] = sparse_tensor.new %[[A]] : !llvm.ptr<i8> to tensor<?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed_nu", "singleton" ] }>>
+// CHECK-SAME:    %[[A:.*]]: !llvm.ptr<i8>) -> tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> {
+// CHECK:         %[[COO:.*]] = sparse_tensor.new %[[A]] : !llvm.ptr<i8> to tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:         return %[[COO]]
 func.func @sparse_new_coo(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #COO> {
   %0 = sparse_tensor.new %arg0 : !llvm.ptr<i8> to tensor<?x?xf32, #COO>
@@ -46,7 +45,7 @@ func.func @sparse_new_coo(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #COO> {
 }
 
 // CHECK-LABEL:   func.func @sparse_out(
-// CHECK-SAME:    %[[A:.*]]: tensor<10x20xf32, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>>,
+// CHECK-SAME:    %[[A:.*]]: tensor<10x20xf32, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:    %[[B:.*]]: !llvm.ptr<i8>) {
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index

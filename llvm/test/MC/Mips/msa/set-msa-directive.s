@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 | FileCheck %s
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32r2 | FileCheck %s
 
 # CHECK:    .set msa
 # CHECK:    addvi.b     $w14, $w12, 14

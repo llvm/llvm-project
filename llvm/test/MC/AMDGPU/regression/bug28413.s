@@ -1,7 +1,7 @@
-// RUN: llvm-mc -arch=amdgcn -show-encoding %s | FileCheck %s --check-prefixes=GCN,SICI
-// RUN: llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck %s --check-prefixes=GCN,SICI
-// RUN: llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefixes=GCN,SICI
-// RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefixes=GCN,VI
+// RUN: llvm-mc -triple=amdgcn -show-encoding %s | FileCheck %s --check-prefixes=GCN,SICI
+// RUN: llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck %s --check-prefixes=GCN,SICI
+// RUN: llvm-mc -triple=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefixes=GCN,SICI
+// RUN: llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefixes=GCN,VI
 
 v_cmp_eq_i32 vcc, 0.5, v0
 // SICI: v_cmp_eq_i32_e32 vcc, 0.5, v0 ; encoding: [0xf0,0x00,0x04,0x7d]

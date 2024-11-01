@@ -217,7 +217,7 @@ def div_unsigned(
     a `linalg.broadcast` + `linalg.div` sequence can be lowered to a
     `linalg.generic` with different affine maps for the two operands.
     """
-    O[None] = lhs[None] / rhs[None]
+    O[None] = BinaryFn.div_unsigned(lhs[None], rhs[None])
 
 
 @linalg_structured_op

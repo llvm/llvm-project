@@ -15,25 +15,25 @@
 #include "test/src/math/RandUtils.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 template <typename T>
-class FmaTestTemplate : public __llvm_libc::testing::Test {
+class FmaTestTemplate : public LIBC_NAMESPACE::testing::Test {
 private:
   using Func = T (*)(T, T, T);
-  using FPBits = __llvm_libc::fputil::FPBits<T>;
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using UIntType = typename FPBits::UIntType;
-  const T nan = T(__llvm_libc::fputil::FPBits<T>::build_quiet_nan(1));
-  const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
-  const T neg_inf = T(__llvm_libc::fputil::FPBits<T>::neg_inf());
-  const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
-  const T neg_zero = T(__llvm_libc::fputil::FPBits<T>::neg_zero());
+  const T nan = T(LIBC_NAMESPACE::fputil::FPBits<T>::build_quiet_nan(1));
+  const T inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::inf());
+  const T neg_inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_inf());
+  const T zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::zero());
+  const T neg_zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_zero());
 
   UIntType get_random_bit_pattern() {
     UIntType bits{0};
     for (UIntType i = 0; i < sizeof(UIntType) / 2; ++i) {
-      bits =
-          (bits << 2) + static_cast<uint16_t>(__llvm_libc::testutils::rand());
+      bits = (bits << 2) +
+             static_cast<uint16_t>(LIBC_NAMESPACE::testutils::rand());
     }
     return bits;
   }

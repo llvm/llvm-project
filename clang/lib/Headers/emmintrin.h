@@ -3945,7 +3945,7 @@ static __inline__ void __DEFAULT_FN_ATTRS _mm_storel_epi64(__m128i_u *__p,
 ///    A pointer to the 128-bit aligned memory location used to store the value.
 /// \param __a
 ///    A vector of [2 x double] containing the 64-bit values to be stored.
-static __inline__ void __DEFAULT_FN_ATTRS _mm_stream_pd(double *__p,
+static __inline__ void __DEFAULT_FN_ATTRS _mm_stream_pd(void *__p,
                                                         __m128d __a) {
   __builtin_nontemporal_store((__v2df)__a, (__v2df *)__p);
 }
@@ -3963,7 +3963,7 @@ static __inline__ void __DEFAULT_FN_ATTRS _mm_stream_pd(double *__p,
 ///    A pointer to the 128-bit aligned memory location used to store the value.
 /// \param __a
 ///    A 128-bit integer vector containing the values to be stored.
-static __inline__ void __DEFAULT_FN_ATTRS _mm_stream_si128(__m128i *__p,
+static __inline__ void __DEFAULT_FN_ATTRS _mm_stream_si128(void *__p,
                                                            __m128i __a) {
   __builtin_nontemporal_store((__v2di)__a, (__v2di *)__p);
 }
@@ -3983,8 +3983,8 @@ static __inline__ void __DEFAULT_FN_ATTRS _mm_stream_si128(__m128i *__p,
 ///    A 32-bit integer containing the value to be stored.
 static __inline__ void
     __attribute__((__always_inline__, __nodebug__, __target__("sse2")))
-    _mm_stream_si32(int *__p, int __a) {
-  __builtin_ia32_movnti(__p, __a);
+    _mm_stream_si32(void *__p, int __a) {
+  __builtin_ia32_movnti((int *)__p, __a);
 }
 
 #ifdef __x86_64__
@@ -4003,8 +4003,8 @@ static __inline__ void
 ///    A 64-bit integer containing the value to be stored.
 static __inline__ void
     __attribute__((__always_inline__, __nodebug__, __target__("sse2")))
-    _mm_stream_si64(long long *__p, long long __a) {
-  __builtin_ia32_movnti64(__p, __a);
+    _mm_stream_si64(void *__p, long long __a) {
+  __builtin_ia32_movnti64((long long *)__p, __a);
 }
 #endif
 
@@ -4741,6 +4741,127 @@ static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_castsi128_ps(__m128i __a) {
 static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_castsi128_pd(__m128i __a) {
   return (__m128d)__a;
 }
+
+/// Compares each of the corresponding double-precision values of two
+///    128-bit vectors of [2 x double], using the operation specified by the
+///    immediate integer operand.
+///
+///    Returns a [2 x double] vector consisting of two doubles corresponding to
+///    the two comparison results: zero if the comparison is false, and all 1's
+///    if the comparison is true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// __m128d _mm_cmp_pd(__m128d a, __m128d b, const int c);
+/// \endcode
+///
+/// This intrinsic corresponds to the <c> (V)CMPPD </c> instruction.
+///
+/// \param a
+///    A 128-bit vector of [2 x double].
+/// \param b
+///    A 128-bit vector of [2 x double].
+/// \param c
+///    An immediate integer operand, with bits [4:0] specifying which comparison
+///    operation to use: \n
+///    (Note that without avx enabled, only bits [2:0] are supported) \n
+///    0x00: Equal (ordered, non-signaling) \n
+///    0x01: Less-than (ordered, signaling) \n
+///    0x02: Less-than-or-equal (ordered, signaling) \n
+///    0x03: Unordered (non-signaling) \n
+///    0x04: Not-equal (unordered, non-signaling) \n
+///    0x05: Not-less-than (unordered, signaling) \n
+///    0x06: Not-less-than-or-equal (unordered, signaling) \n
+///    0x07: Ordered (non-signaling) \n
+///    0x08: Equal (unordered, non-signaling) \n
+///    0x09: Not-greater-than-or-equal (unordered, signaling) \n
+///    0x0A: Not-greater-than (unordered, signaling) \n
+///    0x0B: False (ordered, non-signaling) \n
+///    0x0C: Not-equal (ordered, non-signaling) \n
+///    0x0D: Greater-than-or-equal (ordered, signaling) \n
+///    0x0E: Greater-than (ordered, signaling) \n
+///    0x0F: True (unordered, non-signaling) \n
+///    0x10: Equal (ordered, signaling) \n
+///    0x11: Less-than (ordered, non-signaling) \n
+///    0x12: Less-than-or-equal (ordered, non-signaling) \n
+///    0x13: Unordered (signaling) \n
+///    0x14: Not-equal (unordered, signaling) \n
+///    0x15: Not-less-than (unordered, non-signaling) \n
+///    0x16: Not-less-than-or-equal (unordered, non-signaling) \n
+///    0x17: Ordered (signaling) \n
+///    0x18: Equal (unordered, signaling) \n
+///    0x19: Not-greater-than-or-equal (unordered, non-signaling) \n
+///    0x1A: Not-greater-than (unordered, non-signaling) \n
+///    0x1B: False (ordered, signaling) \n
+///    0x1C: Not-equal (ordered, signaling) \n
+///    0x1D: Greater-than-or-equal (ordered, non-signaling) \n
+///    0x1E: Greater-than (ordered, non-signaling) \n
+///    0x1F: True (unordered, signaling)
+/// \returns A 128-bit vector of [2 x double] containing the comparison results.
+#define _mm_cmp_pd(a, b, c)                                                    \
+  ((__m128d)__builtin_ia32_cmppd((__v2df)(__m128d)(a), (__v2df)(__m128d)(b),   \
+                                 (c)))
+
+/// Compares each of the corresponding scalar double-precision values of
+///    two 128-bit vectors of [2 x double], using the operation specified by the
+///    immediate integer operand.
+///
+///    If the result is true, all 64 bits of the destination vector are set;
+///    otherwise they are cleared.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// __m128d _mm_cmp_sd(__m128d a, __m128d b, const int c);
+/// \endcode
+///
+/// This intrinsic corresponds to the <c> (V)CMPSD </c> instruction.
+///
+/// \param a
+///    A 128-bit vector of [2 x double].
+/// \param b
+///    A 128-bit vector of [2 x double].
+/// \param c
+///    An immediate integer operand, with bits [4:0] specifying which comparison
+///    operation to use: \n
+///    (Note that without avx enabled, only bits [2:0] are supported) \n
+///    0x00: Equal (ordered, non-signaling) \n
+///    0x01: Less-than (ordered, signaling) \n
+///    0x02: Less-than-or-equal (ordered, signaling) \n
+///    0x03: Unordered (non-signaling) \n
+///    0x04: Not-equal (unordered, non-signaling) \n
+///    0x05: Not-less-than (unordered, signaling) \n
+///    0x06: Not-less-than-or-equal (unordered, signaling) \n
+///    0x07: Ordered (non-signaling) \n
+///    0x08: Equal (unordered, non-signaling) \n
+///    0x09: Not-greater-than-or-equal (unordered, signaling) \n
+///    0x0A: Not-greater-than (unordered, signaling) \n
+///    0x0B: False (ordered, non-signaling) \n
+///    0x0C: Not-equal (ordered, non-signaling) \n
+///    0x0D: Greater-than-or-equal (ordered, signaling) \n
+///    0x0E: Greater-than (ordered, signaling) \n
+///    0x0F: True (unordered, non-signaling) \n
+///    0x10: Equal (ordered, signaling) \n
+///    0x11: Less-than (ordered, non-signaling) \n
+///    0x12: Less-than-or-equal (ordered, non-signaling) \n
+///    0x13: Unordered (signaling) \n
+///    0x14: Not-equal (unordered, signaling) \n
+///    0x15: Not-less-than (unordered, non-signaling) \n
+///    0x16: Not-less-than-or-equal (unordered, non-signaling) \n
+///    0x17: Ordered (signaling) \n
+///    0x18: Equal (unordered, signaling) \n
+///    0x19: Not-greater-than-or-equal (unordered, non-signaling) \n
+///    0x1A: Not-greater-than (unordered, non-signaling) \n
+///    0x1B: False (ordered, signaling) \n
+///    0x1C: Not-equal (ordered, signaling) \n
+///    0x1D: Greater-than-or-equal (ordered, non-signaling) \n
+///    0x1E: Greater-than (ordered, non-signaling) \n
+///    0x1F: True (unordered, signaling)
+/// \returns A 128-bit vector of [2 x double] containing the comparison results.
+#define _mm_cmp_sd(a, b, c)                                                    \
+  ((__m128d)__builtin_ia32_cmpsd((__v2df)(__m128d)(a), (__v2df)(__m128d)(b),   \
+                                 (c)))
 
 #if defined(__cplusplus)
 extern "C" {

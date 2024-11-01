@@ -513,15 +513,15 @@ define dso_local <8 x i16> @testmrglb3(ptr nocapture readonly %a) local_unnamed_
 ; CHECK-P7-LABEL: testmrglb3:
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    ld r3, 0(r3)
-; CHECK-P7-NEXT:    addi r4, r1, -16
 ; CHECK-P7-NEXT:    xxlxor v4, v4, v4
 ; CHECK-P7-NEXT:    std r3, -16(r1)
+; CHECK-P7-NEXT:    addi r3, r1, -16
+; CHECK-P7-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P7-NEXT:    addis r3, r2, .LCPI12_0@toc@ha
 ; CHECK-P7-NEXT:    addi r3, r3, .LCPI12_0@toc@l
-; CHECK-P7-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-P7-NEXT:    lxvd2x vs1, 0, r3
 ; CHECK-P7-NEXT:    xxswapd v2, vs0
-; CHECK-P7-NEXT:    xxswapd v3, vs1
+; CHECK-P7-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P7-NEXT:    xxswapd v3, vs0
 ; CHECK-P7-NEXT:    vperm v2, v2, v4, v3
 ; CHECK-P7-NEXT:    blr
 ;
@@ -694,14 +694,14 @@ define dso_local <16 x i8> @no_crash_bitcast(i32 %a) {
 ;
 ; CHECK-P7-LABEL: no_crash_bitcast:
 ; CHECK-P7:       # %bb.0: # %entry
-; CHECK-P7-NEXT:    addis r4, r2, .LCPI14_0@toc@ha
 ; CHECK-P7-NEXT:    stw r3, -16(r1)
+; CHECK-P7-NEXT:    addis r3, r2, .LCPI14_0@toc@ha
+; CHECK-P7-NEXT:    addi r3, r3, .LCPI14_0@toc@l
+; CHECK-P7-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P7-NEXT:    addi r3, r1, -16
-; CHECK-P7-NEXT:    addi r4, r4, .LCPI14_0@toc@l
-; CHECK-P7-NEXT:    lxvd2x vs1, 0, r3
-; CHECK-P7-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-P7-NEXT:    xxswapd v3, vs1
 ; CHECK-P7-NEXT:    xxswapd v2, vs0
+; CHECK-P7-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P7-NEXT:    xxswapd v3, vs0
 ; CHECK-P7-NEXT:    vperm v2, v3, v3, v2
 ; CHECK-P7-NEXT:    blr
 ;
@@ -769,13 +769,13 @@ define dso_local <4 x i32> @replace_undefs_in_splat(<4 x i32> %a) local_unnamed_
 ; CHECK-P7-LABEL: replace_undefs_in_splat:
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    addis r3, r2, .LCPI15_0@toc@ha
-; CHECK-P7-NEXT:    addis r4, r2, .LCPI15_1@toc@ha
 ; CHECK-P7-NEXT:    addi r3, r3, .LCPI15_0@toc@l
 ; CHECK-P7-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P7-NEXT:    addi r3, r4, .LCPI15_1@toc@l
-; CHECK-P7-NEXT:    lxvd2x vs1, 0, r3
+; CHECK-P7-NEXT:    addis r3, r2, .LCPI15_1@toc@ha
+; CHECK-P7-NEXT:    addi r3, r3, .LCPI15_1@toc@l
 ; CHECK-P7-NEXT:    xxswapd v3, vs0
-; CHECK-P7-NEXT:    xxswapd v4, vs1
+; CHECK-P7-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P7-NEXT:    xxswapd v4, vs0
 ; CHECK-P7-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-P7-NEXT:    blr
 ;
@@ -913,9 +913,9 @@ define dso_local <4 x i32> @testSplat4Low(ptr nocapture readonly %ptr) local_unn
 ; CHECK-P7-LABEL: testSplat4Low:
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    ld r3, 0(r3)
-; CHECK-P7-NEXT:    addi r4, r1, -16
 ; CHECK-P7-NEXT:    std r3, -16(r1)
-; CHECK-P7-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-P7-NEXT:    addi r3, r1, -16
+; CHECK-P7-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P7-NEXT:    xxswapd v2, vs0
 ; CHECK-P7-NEXT:    xxspltw v2, v2, 2
 ; CHECK-P7-NEXT:    blr
@@ -969,9 +969,9 @@ define dso_local <4 x i32> @testSplat4hi(ptr nocapture readonly %ptr) local_unna
 ; CHECK-P7-LABEL: testSplat4hi:
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    ld r3, 0(r3)
-; CHECK-P7-NEXT:    addi r4, r1, -16
 ; CHECK-P7-NEXT:    std r3, -16(r1)
-; CHECK-P7-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-P7-NEXT:    addi r3, r1, -16
+; CHECK-P7-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P7-NEXT:    xxswapd v2, vs0
 ; CHECK-P7-NEXT:    xxspltw v2, v2, 3
 ; CHECK-P7-NEXT:    blr

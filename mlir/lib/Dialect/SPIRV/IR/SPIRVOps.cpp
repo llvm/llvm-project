@@ -29,11 +29,13 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include <cassert>
 #include <numeric>
 #include <optional>
@@ -362,31 +364,35 @@ LogicalResult spirv::AddressOfOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult spirv::CompositeConstructOp::verify() {
-  auto cType = llvm::cast<spirv::CompositeType>(getType());
   operand_range constituents = this->getConstituents();
 
-  if (auto coopType = llvm::dyn_cast<spirv::CooperativeMatrixNVType>(cType)) {
+  // There are 4 cases with varying verification rules:
+  // 1. Cooperative Matrices (1 constituent)
+  // 2. Structs (1 constituent for each member)
+  // 3. Arrays (1 constituent for each array element)
+  // 4. Vectors (1 constituent (sub-)element for each vector element)
+
+  auto coopElementType =
+      llvm::TypeSwitch<Type, Type>(getType())
+          .Case<spirv::CooperativeMatrixType, spirv::CooperativeMatrixNVType,
+                spirv::JointMatrixINTELType>(
+              [](auto coopType) { return coopType.getElementType(); })
+          .Default([](Type) { return nullptr; });
+
+  // Case 1. -- matrices.
+  if (coopElementType) {
     if (constituents.size() != 1)
       return emitOpError("has incorrect number of operands: expected ")
              << "1, but provided " << constituents.size();
-    if (coopType.getElementType() != constituents.front().getType())
+    if (coopElementType != constituents.front().getType())
       return emitOpError("operand type mismatch: expected operand type ")
-             << coopType.getElementType() << ", but provided "
+             << coopElementType << ", but provided "
              << constituents.front().getType();
     return success();
   }
 
-  if (auto jointType = llvm::dyn_cast<spirv::JointMatrixINTELType>(cType)) {
-    if (constituents.size() != 1)
-      return emitOpError("has incorrect number of operands: expected ")
-             << "1, but provided " << constituents.size();
-    if (jointType.getElementType() != constituents.front().getType())
-      return emitOpError("operand type mismatch: expected operand type ")
-             << jointType.getElementType() << ", but provided "
-             << constituents.front().getType();
-    return success();
-  }
-
+  // Case 2./3./4. -- number of constituents matches the number of elements.
+  auto cType = llvm::cast<spirv::CompositeType>(getType());
   if (constituents.size() == cType.getNumElements()) {
     for (auto index : llvm::seq<uint32_t>(0, constituents.size())) {
       if (constituents[index].getType() != cType.getElementType(index)) {
@@ -398,8 +404,7 @@ LogicalResult spirv::CompositeConstructOp::verify() {
     return success();
   }
 
-  // If not constructing a cooperative matrix type, then we must be constructing
-  // a vector type.
+  // Case 4. -- check that all constituents add up tp the expected vector type.
   auto resultType = llvm::dyn_cast<VectorType>(cType);
   if (!resultType)
     return emitOpError(
@@ -1604,19 +1609,19 @@ LogicalResult spirv::VectorShuffleOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult spirv::MatrixTimesScalarOp::verify() {
-  if (auto inputCoopmat = llvm::dyn_cast<spirv::CooperativeMatrixNVType>(
-          getMatrix().getType())) {
-    if (inputCoopmat.getElementType() != getScalar().getType())
-      return emitError("input matrix components' type and scaling value must "
-                       "have the same type");
-    return success();
-  }
+  Type elementType =
+      llvm::TypeSwitch<Type, Type>(getMatrix().getType())
+          .Case<spirv::CooperativeMatrixType, spirv::CooperativeMatrixNVType,
+                spirv::MatrixType>(
+              [](auto matrixType) { return matrixType.getElementType(); })
+          .Default([](Type) { return nullptr; });
+
+  assert(elementType && "Unhandled type");
 
   // Check that the scalar type is the same as the matrix element type.
-  auto inputMatrix = llvm::cast<spirv::MatrixType>(getMatrix().getType());
-  if (getScalar().getType() != inputMatrix.getElementType())
-    return emitError("input matrix components' type and scaling value must "
-                     "have the same type");
+  if (getScalar().getType() != elementType)
+    return emitOpError("input matrix components' type and scaling value must "
+                       "have the same type");
 
   return success();
 }

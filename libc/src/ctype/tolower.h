@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_CTYPE_TOLOWER_H
 #define LLVM_LIBC_SRC_CTYPE_TOLOWER_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int tolower(int c);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif //  LLVM_LIBC_SRC_CTYPE_TOLOWER_H

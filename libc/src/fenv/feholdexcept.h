@@ -11,10 +11,10 @@
 
 #include <fenv.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int feholdexcept(fenv_t *);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_FENV_FEHOLDEXCEPT_H

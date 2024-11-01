@@ -155,9 +155,9 @@ static void packFunctionArguments(Module *module) {
 
     // Given a function `foo(<...>)`, define the interface function
     // `mlir_foo(i8**)`.
-    auto *newType = llvm::FunctionType::get(
-        builder.getVoidTy(), builder.getInt8PtrTy()->getPointerTo(),
-        /*isVarArg=*/false);
+    auto *newType =
+        llvm::FunctionType::get(builder.getVoidTy(), builder.getPtrTy(),
+                                /*isVarArg=*/false);
     auto newName = makePackedFunctionName(func.getName());
     auto funcCst = module->getOrInsertFunction(newName, newType);
     llvm::Function *interfaceFunc = cast<llvm::Function>(funcCst.getCallee());
@@ -179,7 +179,6 @@ static void packFunctionArguments(Module *module) {
       llvm::Value *argPtr =
           builder.CreateLoad(builder.getInt8PtrTy(), argPtrPtr);
       llvm::Type *argTy = arg.getType();
-      argPtr = builder.CreateBitCast(argPtr, argTy->getPointerTo());
       llvm::Value *load = builder.CreateLoad(argTy, argPtr);
       args.push_back(load);
     }

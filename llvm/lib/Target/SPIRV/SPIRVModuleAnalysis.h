@@ -113,6 +113,10 @@ public:
   bool isCapabilityAvailable(Capability::Capability Cap) const {
     return AvailableCaps.contains(Cap);
   }
+
+  // Remove capability ToRemove, but only if IfPresent is present.
+  void removeCapabilityIf(const Capability::Capability ToRemove,
+                          const Capability::Capability IfPresent);
 };
 
 using InstrList = SmallVector<MachineInstr *>;

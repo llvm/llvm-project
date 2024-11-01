@@ -13,16 +13,16 @@ define <4 x double> @complex_mul_const(<4 x double> %a, <4 x double> %b) {
 ; CHECK-NEXT:    movi v5.2d, #0000000000000000
 ; CHECK-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v6.2d, v3.2d, v1.2d, #0
-; CHECK-NEXT:    fcmla v5.2d, v2.2d, v0.2d, #0
-; CHECK-NEXT:    fcmla v6.2d, v3.2d, v1.2d, #90
+; CHECK-NEXT:    fcmla v6.2d, v1.2d, v3.2d, #0
+; CHECK-NEXT:    fcmla v5.2d, v0.2d, v2.2d, #0
+; CHECK-NEXT:    fcmla v6.2d, v1.2d, v3.2d, #90
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
-; CHECK-NEXT:    fcmla v5.2d, v2.2d, v0.2d, #90
+; CHECK-NEXT:    fcmla v5.2d, v0.2d, v2.2d, #90
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v4.2d, v1.2d, v6.2d, #0
-; CHECK-NEXT:    fcmla v0.2d, v1.2d, v5.2d, #0
-; CHECK-NEXT:    fcmla v4.2d, v1.2d, v6.2d, #90
-; CHECK-NEXT:    fcmla v0.2d, v1.2d, v5.2d, #90
+; CHECK-NEXT:    fcmla v4.2d, v6.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v0.2d, v5.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v4.2d, v6.2d, v1.2d, #90
+; CHECK-NEXT:    fcmla v0.2d, v5.2d, v1.2d, #90
 ; CHECK-NEXT:    mov v1.16b, v4.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -58,15 +58,15 @@ define <4 x double> @complex_mul_non_const(<4 x double> %a, <4 x double> %b, [2 
 ; CHECK-NEXT:    // kill: def $d4 killed $d4 def $q4
 ; CHECK-NEXT:    mov v4.d[1], v5.d[0]
 ; CHECK-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v7.2d, v3.2d, v1.2d, #0
-; CHECK-NEXT:    fcmla v6.2d, v2.2d, v0.2d, #0
-; CHECK-NEXT:    fcmla v7.2d, v3.2d, v1.2d, #90
-; CHECK-NEXT:    fcmla v6.2d, v2.2d, v0.2d, #90
+; CHECK-NEXT:    fcmla v7.2d, v1.2d, v3.2d, #0
+; CHECK-NEXT:    fcmla v6.2d, v0.2d, v2.2d, #0
+; CHECK-NEXT:    fcmla v7.2d, v1.2d, v3.2d, #90
+; CHECK-NEXT:    fcmla v6.2d, v0.2d, v2.2d, #90
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v5.2d, v4.2d, v7.2d, #0
-; CHECK-NEXT:    fcmla v0.2d, v4.2d, v6.2d, #0
-; CHECK-NEXT:    fcmla v5.2d, v4.2d, v7.2d, #90
-; CHECK-NEXT:    fcmla v0.2d, v4.2d, v6.2d, #90
+; CHECK-NEXT:    fcmla v5.2d, v7.2d, v4.2d, #0
+; CHECK-NEXT:    fcmla v0.2d, v6.2d, v4.2d, #0
+; CHECK-NEXT:    fcmla v5.2d, v7.2d, v4.2d, #90
+; CHECK-NEXT:    fcmla v0.2d, v6.2d, v4.2d, #90
 ; CHECK-NEXT:    mov v1.16b, v5.16b
 ; CHECK-NEXT:    ret
 entry:

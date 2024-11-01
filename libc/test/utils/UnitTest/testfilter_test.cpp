@@ -17,22 +17,22 @@ TEST(LlvmLibcTestFilterTest, IncorrectFilter) {}
 TEST(LlvmLibcTestFilterTest, NoFilter) {}
 
 TEST(LlvmLibcTestFilterTest, CheckCorrectFilter) {
-  ASSERT_EQ(
-      __llvm_libc::testing::Test::runTests("LlvmLibcTestFilterTest.NoFilter"),
-      0);
-  ASSERT_EQ(__llvm_libc::testing::Test::runTests(
+  ASSERT_EQ(LIBC_NAMESPACE::testing::Test::runTests(
+                "LlvmLibcTestFilterTest.NoFilter"),
+            0);
+  ASSERT_EQ(LIBC_NAMESPACE::testing::Test::runTests(
                 "LlvmLibcTestFilterTest.IncorrFilter"),
             1);
-  ASSERT_EQ(__llvm_libc::testing::Test::runTests(
+  ASSERT_EQ(LIBC_NAMESPACE::testing::Test::runTests(
                 "LlvmLibcTestFilterTest.CorrectFilter"),
             0);
-  ASSERT_EQ(__llvm_libc::testing::Test::runTests(
+  ASSERT_EQ(LIBC_NAMESPACE::testing::Test::runTests(
                 "LlvmLibcTestFilterTest.CorrectFilter2"),
             0);
 }
 
 int main() {
-  __llvm_libc::testing::Test::runTests(
+  LIBC_NAMESPACE::testing::Test::runTests(
       "LlvmLibcTestFilterTest.CheckCorrectFilter");
   return 0;
 }

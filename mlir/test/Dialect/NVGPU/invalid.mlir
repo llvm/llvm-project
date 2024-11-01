@@ -221,3 +221,47 @@ func.func @async_cp_size_invalid_f64(
   %0 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i, %i], 3: memref<128x128xf64> to memref<3x16x128xf64, 3>
   return
 }
+
+// -----
+
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>
+!tDescA  = !nvgpu.wgmma.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.wgmma.descriptor<tensor = memref<64x121xf16, 3>>
+
+func.func @warpgroup_mma_wrong_input(%descA: !tDescA, %descB: !tDescB, %acc1: !tResult, %acc2: !tResult) {
+  // expected-error @+1 {{'nvgpu.warpgroup.mma' op 2nd dim matrix-B ( 121 ) != 2nd dim matrix-C ( 128 )}}  
+  %0:2 = nvgpu.warpgroup.mma %descA, %descB, %acc1, %acc1: !tDescA, !tDescB, !tResult, !tResult -> !tResult, !tResult
+  return
+}
+
+// -----
+
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<128xf32>>
+!tDescA  = !nvgpu.wgmma.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.wgmma.descriptor<tensor = memref<64x128xf16, 3>>
+func.func @warpgroup_mma_wrong_input(%descA: !tDescA, %descB: !tDescB, %acc1: !tResult, %acc2: !tResult) {
+  // expected-error @+1 {{'nvgpu.warpgroup.mma' op has matrices A, B, C and D, they must be 2 dimensional}}  
+  %0:2 = nvgpu.warpgroup.mma %descA, %descB, %acc1, %acc1: !tDescA, !tDescB, !tResult, !tResult -> !tResult, !tResult
+  return
+}
+
+// -----
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>
+!tDescA  = !nvgpu.wgmma.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.wgmma.descriptor<tensor = memref<64x128xf32, 3>>
+func.func @warpgroup_mma_wrong_input(%descA: !tDescA, %descB: !tDescB, %acc1: !tResult, %acc2: !tResult) {
+  // expected-error @+1 {{'nvgpu.warpgroup.mma' op 'f32' += 'f16' * 'f32', it is not supported.}}  
+  %0:2 = nvgpu.warpgroup.mma %descA, %descB, %acc1, %acc1: !tDescA, !tDescB, !tResult, !tResult -> !tResult, !tResult
+  return
+}
+
+// -----
+
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>
+!tDescA  = !nvgpu.wgmma.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.wgmma.descriptor<tensor = memref<64x512xf16, 3>>
+func.func @warpgroup_mma_wrong_input(%descA: !tDescA, %descB: !tDescB, %acc1: !tResult, %acc2: !tResult) {
+  // expected-error @+1 {{'nvgpu.warpgroup.mma' op 2nd dim matrix-B ( 512 ) != 2nd dim matrix-C ( 128 )}}
+  %0:2 = nvgpu.warpgroup.mma %descA, %descB, %acc1, %acc1: !tDescA, !tDescB, !tResult, !tResult -> !tResult, !tResult
+  return
+}

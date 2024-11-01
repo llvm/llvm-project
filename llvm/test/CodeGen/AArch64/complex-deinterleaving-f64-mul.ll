@@ -8,8 +8,8 @@ define <2 x double> @complex_mul_v2f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: complex_mul_v2f64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v2.2d, v0.2d, v1.2d, #0
-; CHECK-NEXT:    fcmla v2.2d, v0.2d, v1.2d, #90
+; CHECK-NEXT:    fcmla v2.2d, v1.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla v2.2d, v1.2d, v0.2d, #90
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -33,10 +33,10 @@ define <4 x double> @complex_mul_v4f64(<4 x double> %a, <4 x double> %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v5.2d, v0.2d, v2.2d, #0
-; CHECK-NEXT:    fcmla v4.2d, v1.2d, v3.2d, #0
-; CHECK-NEXT:    fcmla v5.2d, v0.2d, v2.2d, #90
-; CHECK-NEXT:    fcmla v4.2d, v1.2d, v3.2d, #90
+; CHECK-NEXT:    fcmla v5.2d, v2.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla v4.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v5.2d, v2.2d, v0.2d, #90
+; CHECK-NEXT:    fcmla v4.2d, v3.2d, v1.2d, #90
 ; CHECK-NEXT:    mov v0.16b, v5.16b
 ; CHECK-NEXT:    mov v1.16b, v4.16b
 ; CHECK-NEXT:    ret
@@ -63,14 +63,14 @@ define <8 x double> @complex_mul_v8f64(<8 x double> %a, <8 x double> %b) {
 ; CHECK-NEXT:    movi v17.2d, #0000000000000000
 ; CHECK-NEXT:    movi v18.2d, #0000000000000000
 ; CHECK-NEXT:    movi v19.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v16.2d, v0.2d, v4.2d, #0
-; CHECK-NEXT:    fcmla v18.2d, v1.2d, v5.2d, #0
-; CHECK-NEXT:    fcmla v17.2d, v3.2d, v7.2d, #0
-; CHECK-NEXT:    fcmla v19.2d, v2.2d, v6.2d, #0
-; CHECK-NEXT:    fcmla v16.2d, v0.2d, v4.2d, #90
-; CHECK-NEXT:    fcmla v18.2d, v1.2d, v5.2d, #90
-; CHECK-NEXT:    fcmla v17.2d, v3.2d, v7.2d, #90
-; CHECK-NEXT:    fcmla v19.2d, v2.2d, v6.2d, #90
+; CHECK-NEXT:    fcmla v16.2d, v4.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla v18.2d, v5.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v17.2d, v7.2d, v3.2d, #0
+; CHECK-NEXT:    fcmla v19.2d, v6.2d, v2.2d, #0
+; CHECK-NEXT:    fcmla v16.2d, v4.2d, v0.2d, #90
+; CHECK-NEXT:    fcmla v18.2d, v5.2d, v1.2d, #90
+; CHECK-NEXT:    fcmla v17.2d, v7.2d, v3.2d, #90
+; CHECK-NEXT:    fcmla v19.2d, v6.2d, v2.2d, #90
 ; CHECK-NEXT:    mov v0.16b, v16.16b
 ; CHECK-NEXT:    mov v1.16b, v18.16b
 ; CHECK-NEXT:    mov v3.16b, v17.16b

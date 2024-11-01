@@ -53,7 +53,15 @@ def SPIRV_CompositeConstructOp : SPIRV_Op<"CompositeConstruct", [Pure]> {
     #### Example:
 
     ```mlir
-    %0 = spirv.CompositeConstruct %1, %2, %3 : vector<3xf32>
+    %a = spirv.CompositeConstruct %1, %2, %3 : vector<3xf32>
+    %b = spirv.CompositeConstruct %a, %1 : (vector<3xf32>, f32) -> vector<4xf32>
+
+    %c = spirv.CompositeConstruct %1 :
+      (f32) -> !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA>
+
+    %d = spirv.CompositeConstruct %a, %4, %5 :
+      (vector<3xf32>, !spirv.array<4xf32>, !spirv.struct<(f32)>) ->
+        !spirv.struct<(vector<3xf32>, !spirv.array<4xf32>, !spirv.struct<(f32)>)>
     ```
   }];
 

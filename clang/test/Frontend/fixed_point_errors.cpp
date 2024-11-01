@@ -1,14 +1,18 @@
-// RUN: %clang_cc1 -x c++ %s -verify
-// RUN: %clang_cc1 -x c++ -ffixed-point %s -verify
+// RUN: %clang_cc1 -x c++ %s -verify -DWITHOUT_FIXED_POINT
+// RUN: %clang_cc1 -x c++ %s -verify -ffixed-point
 
-// Name namgling is not provided for fixed point types in c++
-
-_Accum accum;                           // expected-error{{unknown type name '_Accum'}}
-_Fract fract;                           // expected-error{{unknown type name '_Fract'}}
-_Sat _Accum sat_accum;                  // expected-error{{unknown type name '_Sat'}}
-                                        // expected-error@-1{{expected ';' after top level declarator}}
+#ifdef WITHOUT_FIXED_POINT
+_Accum accum;                           // expected-error{{compile with '-ffixed-point' to enable fixed point types}}
+                                        // expected-error@-1{{a type specifier is required for all declarations}}
+_Fract fract;                           // expected-error{{compile with '-ffixed-point' to enable fixed point types}}
+                                        // expected-error@-1{{a type specifier is required for all declarations}}
+_Sat _Accum sat_accum;                  // expected-error 2{{compile with '-ffixed-point' to enable fixed point types}}
+                                        // expected-error@-1{{a type specifier is required for all declarations}}
+#endif
 
 int accum_int = 10k;     // expected-error{{invalid suffix 'k' on integer constant}}
 int fract_int = 10r;     // expected-error{{invalid suffix 'r' on integer constant}}
-float accum_flt = 10.0k; // expected-error{{invalid suffix 'k' on floating constant}}
-float fract_flt = 10.0r; // expected-error{{invalid suffix 'r' on floating constant}}
+#ifdef WITHOUT_FIXED_POINT
+float accum_flt = 0.0k;  // expected-error{{invalid suffix 'k' on floating constant}}
+float fract_flt = 0.0r;  // expected-error{{invalid suffix 'r' on floating constant}}
+#endif

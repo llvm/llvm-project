@@ -299,12 +299,12 @@ struct LinalgPaddingOptions {
   }
   enum class CopyBackOp : int8_t {
     None = 0,
-    BufferizationCopyTensor = 1,
+    BufferizationMaterializeInDestination = 1,
     LinalgCopy = 2
   };
   /// The op to be used for copying the padded result to the original
   /// destination tensor.
-  CopyBackOp copyBackOp = CopyBackOp::BufferizationCopyTensor;
+  CopyBackOp copyBackOp = CopyBackOp::BufferizationMaterializeInDestination;
   LinalgPaddingOptions &setCopyBackOp(CopyBackOp op) {
     copyBackOp = op;
     return *this;

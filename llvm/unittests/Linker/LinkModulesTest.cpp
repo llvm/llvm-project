@@ -51,8 +51,7 @@ protected:
     Init.push_back(SwitchCase2BA);
 
     ConstantInt *One = ConstantInt::get(Type::getInt32Ty(Ctx), 1);
-    Constant *OnePtr = ConstantExpr::getCast(Instruction::IntToPtr, One,
-                                             Type::getInt8PtrTy(Ctx));
+    Constant *OnePtr = ConstantExpr::getIntToPtr(One, Type::getInt8PtrTy(Ctx));
     Init.push_back(OnePtr);
 
     GV->setInitializer(ConstantArray::get(AT, Init));

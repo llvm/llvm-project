@@ -73,9 +73,6 @@
 //
 // Check that RISC-V passes the correct linker emulation.
 //
-// RUN: %clang --target=riscv32-freebsd -### %s %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-RV32I-LD %s
-// CHECK-RV32I-LD: ld{{.*}}" {{.*}} "-m" "elf32lriscv"
 // RUN: %clang --target=riscv64-freebsd -### %s %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-RV64I-LD %s
 // CHECK-RV64I-LD: ld{{.*}}" {{.*}} "-m" "elf64lriscv"

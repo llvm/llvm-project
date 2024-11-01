@@ -125,7 +125,7 @@ func.func @generalize_pooling_nhwc_max_f32(%input : tensor<1x4x16x1xf32>, %shape
 
 // CHECK-LABEL: @generalize_pooling_nhwc_max_f32
 // CHECK:      ^{{.*}}(%[[IN_ARG:.+]]: f32, %[[SHAPE_ARG:.+]]: f32, %[[OUT_ARG:.+]]: f32)
-// CHECK-NEXT:   %[[MAX:.+]] = arith.maxf %[[OUT_ARG]], %[[IN_ARG]] : f32
+// CHECK-NEXT:   %[[MAX:.+]] = arith.maximumf %[[OUT_ARG]], %[[IN_ARG]] : f32
 // CHECK-NEXT:   linalg.yield %[[MAX]] : f32
 // CHECK-NEXT: -> tensor<1x2x4x1xf32>
 
@@ -139,7 +139,7 @@ func.func @generalize_pooling_nwc_max_f32(%input : tensor<1x16x1xf32>, %shape: t
 
 // CHECK-LABEL: @generalize_pooling_nwc_max_f32
 // CHECK:      ^{{.*}}(%[[IN_ARG:.+]]: f32, %[[SHAPE_ARG:.+]]: f32, %[[OUT_ARG:.+]]: f32)
-// CHECK-NEXT:   %[[MAX:.+]] = arith.maxf %[[OUT_ARG]], %[[IN_ARG]] : f32
+// CHECK-NEXT:   %[[MAX:.+]] = arith.maximumf %[[OUT_ARG]], %[[IN_ARG]] : f32
 // CHECK-NEXT:   linalg.yield %[[MAX]] : f32
 // CHECK-NEXT: -> tensor<1x4x1xf32>
 
@@ -201,7 +201,7 @@ func.func @generalize_pooling_nhwc_min_f32(%input : tensor<1x4x16x1xf32>, %shape
 
 // CHECK-LABEL: @generalize_pooling_nhwc_min_f32
 // CHECK:      ^{{.*}}(%[[IN_ARG:.+]]: f32, %[[SHAPE_ARG:.+]]: f32, %[[OUT_ARG:.+]]: f32)
-// CHECK-NEXT:   %[[MIN:.+]] = arith.minf %[[OUT_ARG]], %[[IN_ARG]] : f32
+// CHECK-NEXT:   %[[MIN:.+]] = arith.minimumf %[[OUT_ARG]], %[[IN_ARG]] : f32
 // CHECK-NEXT:   linalg.yield %[[MIN]] : f32
 // CHECK-NEXT: -> tensor<1x2x4x1xf32>
 
@@ -215,7 +215,7 @@ func.func @generalize_pooling_nwc_min_f32(%input : tensor<1x16x1xf32>, %shape: t
 
 // CHECK-LABEL: @generalize_pooling_nwc_min_f32
 // CHECK:      ^{{.*}}(%[[IN_ARG:.+]]: f32, %[[SHAPE_ARG:.+]]: f32, %[[OUT_ARG:.+]]: f32)
-// CHECK-NEXT:   %[[MIN:.+]] = arith.minf %[[OUT_ARG]], %[[IN_ARG]] : f32
+// CHECK-NEXT:   %[[MIN:.+]] = arith.minimumf %[[OUT_ARG]], %[[IN_ARG]] : f32
 // CHECK-NEXT:   linalg.yield %[[MIN]] : f32
 // CHECK-NEXT: -> tensor<1x4x1xf32>
 

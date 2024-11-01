@@ -52,6 +52,7 @@ struct TosaLayerwiseConstantFoldPass
 
     mlir::tosa::populateTosaFoldConstantReciprocalPatterns(ctx, patterns);
     mlir::tosa::populateTosaFoldConstantTransposePatterns(ctx, patterns);
+    mlir::tosa::populateTosaConstantReduction(ctx, patterns);
     populateTosaOpsCanonicalizationPatterns(ctx, patterns);
 
     if (applyPatternsAndFoldGreedily(func, std::move(patterns)).failed())

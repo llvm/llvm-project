@@ -2,17 +2,6 @@
 
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" --verify-diagnostics %s
 
-// Test `fir.zero` conversion failure with aggregate type.
-// Not implemented yet.
-
-func.func @zero_aggregate() {
-  // expected-error@+1{{failed to legalize operation 'fir.zero_bits'}}
-  %a = fir.zero_bits !fir.array<10xf32>
-  return
-}
-
-// -----
-
 // Verify that `fir.dt_entry` requires a parent op
 
 // expected-error@+1{{'fir.dt_entry' op expects parent op 'fir.dispatch_table'}}

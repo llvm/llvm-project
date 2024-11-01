@@ -11,7 +11,7 @@
 
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // TODO: Currently restricted to default locale.
 // These should be extended using locale information.
@@ -20,4 +20,4 @@ LLVM_LIBC_FUNCTION(int, isxdigit, (int c)) {
   return static_cast<int>(internal::isdigit(ch) || (ch | 32) - 'a' < 6);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

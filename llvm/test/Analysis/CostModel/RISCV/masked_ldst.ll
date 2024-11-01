@@ -21,7 +21,7 @@ define void @fixed() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f64 = call <2 x double> @llvm.masked.load.v2f64.p0(ptr undef, i32 8, <2 x i1> undef, <2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i64 = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr undef, i32 8, <4 x i1> undef, <4 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v32f16 = call <32 x half> @llvm.masked.load.v32f16.p0(ptr undef, i32 8, <32 x i1> undef, <32 x half> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 entry:
   ; fixed-width integer types
@@ -72,7 +72,7 @@ define void @scalable() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i64 = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr undef, i32 8, <vscale x 1 x i1> undef, <vscale x 1 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %nxv4i64 = call <vscale x 4 x i64> @llvm.masked.load.nxv4i64.p0(ptr undef, i32 8, <vscale x 4 x i1> undef, <vscale x 4 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %nxv32f16 = call <vscale x 32 x half> @llvm.masked.load.nxv32f16.p0(ptr undef, i32 8, <vscale x 32 x i1> undef, <vscale x 32 x half> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 entry:
   ; scalable integer types

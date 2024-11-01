@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=tonga -disassemble -show-encoding < %s | FileCheck %s -check-prefix=VI
+# RUN: llvm-mc -triple=amdgcn -mcpu=tonga -disassemble -show-encoding < %s | FileCheck %s -check-prefix=VI
 
 #===----------------------------------------------------------------------===#
 # Trap Handler related - 32 bit registers

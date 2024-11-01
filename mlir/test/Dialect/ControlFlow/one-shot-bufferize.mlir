@@ -1,5 +1,5 @@
-// RUN: mlir-opt -one-shot-bufferize="allow-return-allocs bufferize-function-boundaries" -split-input-file %s | FileCheck %s
-// RUN: mlir-opt -one-shot-bufferize="allow-return-allocs" -split-input-file %s | FileCheck %s --check-prefix=CHECK-NO-FUNC
+// RUN: mlir-opt -one-shot-bufferize="bufferize-function-boundaries" -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -one-shot-bufferize -split-input-file %s | FileCheck %s --check-prefix=CHECK-NO-FUNC
 
 // CHECK-NO-FUNC-LABEL: func @br(
 //  CHECK-NO-FUNC-SAME:     %[[t:.*]]: tensor<5xf32>)

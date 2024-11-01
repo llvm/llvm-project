@@ -170,14 +170,6 @@ const char *MCInstPrinter::matchAliasPatterns(const MCInst *MI,
   return M.AsmStrings.data() + AsmStrOffset;
 }
 
-/// Utility functions to make adding mark ups simpler.
-StringRef MCInstPrinter::markup(StringRef s) const {
-  if (getUseMarkup())
-    return s;
-  else
-    return "";
-}
-
 // For asm-style hex (e.g. 0ffh) the first digit always has to be a number.
 static bool needsLeadingZero(uint64_t Value)
 {

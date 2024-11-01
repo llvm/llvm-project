@@ -36,7 +36,7 @@ void testIncrement(char *p) { // expected-warning{{'p' is an unsafe pointer used
 void * voidPtrCall(void);
 char * charPtrCall(void);
 
-void testArraySubscripts(int *p, int **pp) { // expected-note{{change type of 'pp' to 'std::span' to preserve bounds information}}
+void testArraySubscripts(int *p, int **pp) {
 // expected-warning@-1{{'p' is an unsafe pointer used for buffer access}}
 // expected-warning@-2{{'pp' is an unsafe pointer used for buffer access}}
   foo(p[1],             // expected-note{{used in buffer access here}}
@@ -97,7 +97,6 @@ void testUnevaluatedContext(int * p) {// no-warning
       sizeof(decltype(p[1])));  // no-warning
 }
 
-// expected-note@+1{{change type of 'a' to 'std::span' to preserve bounds information}}
 void testQualifiedParameters(const int * p, const int * const q, const int a[10], const int b[10][10]) {
   // expected-warning@-1{{'p' is an unsafe pointer used for buffer access}}
   // expected-warning@-2{{'q' is an unsafe pointer used for buffer access}}

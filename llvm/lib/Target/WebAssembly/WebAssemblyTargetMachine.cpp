@@ -107,7 +107,7 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM,
 WebAssemblyTargetMachine::WebAssemblyTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
-    std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT)
+    std::optional<CodeModel::Model> CM, CodeGenOptLevel OL, bool JIT)
     : LLVMTargetMachine(
           T,
           TT.isArch64Bit()
@@ -426,7 +426,7 @@ void WebAssemblyPassConfig::addIRPasses() {
   addPass(createWebAssemblyFixFunctionBitcasts());
 
   // Optimize "returned" function attributes.
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createWebAssemblyOptimizeReturned());
 
   basicCheckForEHAndSjLj(TM);
@@ -503,7 +503,7 @@ void WebAssemblyPassConfig::addOptimizedRegAlloc() {
   // usually not used for production builds.
   // TODO Investigate why RegisterCoalesce degrades debug info quality and fix
   // it properly
-  if (getOptLevel() == CodeGenOpt::Less)
+  if (getOptLevel() == CodeGenOptLevel::Less)
     disablePass(&RegisterCoalescerID);
   TargetPassConfig::addOptimizedRegAlloc();
 }
@@ -550,7 +550,7 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   addPass(createWebAssemblyReplacePhysRegs());
 
   // Preparations and optimizations related to register stackification.
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     // Depend on LiveIntervals and perform some optimizations on it.
     addPass(createWebAssemblyOptimizeLiveIntervals());
 
@@ -585,7 +585,7 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   addPass(createWebAssemblyLowerBrUnless());
 
   // Perform the very last peephole optimizations on the code.
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createWebAssemblyPeephole());
 
   // Create a mapping from LLVM CodeGen virtual registers to wasm registers.

@@ -947,11 +947,11 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
   default:
     llvm_unreachable("Unexpected form in emitVEXOpcodePrefix!");
   case X86II::MRMDestMem4VOp3CC: {
-    //  MemAddr, src1(ModR/M), src2(VEX_4V)
+    //  src1(ModR/M), MemAddr, src2(VEX_4V)
+    Prefix.setR(MI, CurOp++);
     Prefix.setB(MI, MemOperand + X86::AddrBaseReg);
     Prefix.setX(MI, MemOperand + X86::AddrIndexReg);
     CurOp += X86::AddrNumOperands;
-    Prefix.setR(MI, ++CurOp);
     Prefix.set4V(MI, CurOp++);
     break;
   }

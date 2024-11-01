@@ -158,7 +158,7 @@ this:
 
    ...
 
-     __llvm_libc::AllocChecker ac;
+     LIBC_NAMESPACE::AllocChecker ac;
      auto *obj = new (ac) Type(...);
      if (!ac) {
        // handle allocator failure.

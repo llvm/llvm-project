@@ -13,11 +13,36 @@
 #ifndef FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
 #define FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
 
+#include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/LangOptions.h"
 #include <cstdint>
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "llvm/Frontend/Debug/Options.h"
+#include "llvm/Passes/OptimizationLevel.h"
+
+/// Configuriation for the MLIR to LLVM pass pipeline.
+struct MLIRToLLVMPassPipelineConfig {
+  explicit MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel level) {
+    OptLevel = level;
+  }
+  explicit MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel level,
+      const Fortran::frontend::CodeGenOptions &opts) {
+    OptLevel = level;
+    StackArrays = opts.StackArrays;
+    Underscoring = opts.Underscoring;
+    LoopVersioning = opts.LoopVersioning;
+    DebugInfo = opts.getDebugInfo();
+  }
+
+  llvm::OptimizationLevel OptLevel; ///< optimisation level
+  bool StackArrays = false; ///< convert memory allocations to alloca.
+  bool Underscoring = true; ///< add underscores to function names.
+  bool LoopVersioning = false; ///< Run the version loop pass.
+  llvm::codegenoptions::DebugInfoKind DebugInfo =
+      llvm::codegenoptions::NoDebugInfo; ///< Debug info generation.
+};
 
 struct OffloadModuleOpts {
   OffloadModuleOpts() {}

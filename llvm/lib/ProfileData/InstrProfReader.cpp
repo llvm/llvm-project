@@ -38,7 +38,7 @@
 
 using namespace llvm;
 
-// Extracts the variant information from the top 8 bits in the version and
+// Extracts the variant information from the top 32 bits in the version and
 // returns an enum specifying the variants present.
 static InstrProfKind getProfileKindFromVersion(uint64_t Version) {
   InstrProfKind ProfileKind = InstrProfKind::Unknown;
@@ -471,7 +471,7 @@ bool RawInstrProfReader<IntPtrT>::hasFormat(const MemoryBuffer &DataBuffer) {
   uint64_t Magic =
     *reinterpret_cast<const uint64_t *>(DataBuffer.getBufferStart());
   return RawInstrProf::getMagic<IntPtrT>() == Magic ||
-         sys::getSwappedBytes(RawInstrProf::getMagic<IntPtrT>()) == Magic;
+         llvm::byteswap(RawInstrProf::getMagic<IntPtrT>()) == Magic;
 }
 
 template <class IntPtrT>

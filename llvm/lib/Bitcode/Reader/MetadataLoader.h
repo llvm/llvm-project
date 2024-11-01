@@ -19,6 +19,7 @@
 #include <memory>
 
 namespace llvm {
+class BasicBlock;
 class BitcodeReaderValueList;
 class BitstreamCursor;
 class DISubprogram;
@@ -47,7 +48,8 @@ struct MetadataLoaderCallbacks {
 class MetadataLoader {
   class MetadataLoaderImpl;
   std::unique_ptr<MetadataLoaderImpl> Pimpl;
-  Error parseMetadata(bool ModuleLevel);
+  Error parseMetadata(bool ModuleLevel,
+                      BasicBlock *ConstExprInsertBB = nullptr);
 
 public:
   ~MetadataLoader();
@@ -61,7 +63,9 @@ public:
   Error parseModuleMetadata() { return parseMetadata(true); }
 
   // Parse a function metadata block
-  Error parseFunctionMetadata() { return parseMetadata(false); }
+  Error parseFunctionMetadata(BasicBlock *ConstExprInsertBB) {
+    return parseMetadata(false, ConstExprInsertBB);
+  }
 
   /// Set the mode to strip TBAA metadata on load.
   void setStripTBAA(bool StripTBAA = true);

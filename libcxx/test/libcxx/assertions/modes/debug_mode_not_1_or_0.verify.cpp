@@ -8,8 +8,8 @@
 
 // This test verifies that setting the debug mode to a value other than `0` or `1` triggers a compile-time error.
 
-// Hardened mode would additionally trigger the error that hardened and debug modes are mutually exclusive.
-// UNSUPPORTED: libcpp-hardening-mode=hardened
+// Other hardening modes would additionally trigger the error that they are mutually exclusive.
+// REQUIRES: libcpp-hardening-mode=unchecked
 // Modules build produces a different error ("Could not build module 'std'").
 // UNSUPPORTED: clang-modules-build
 // ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ENABLE_DEBUG_MODE=2

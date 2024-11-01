@@ -132,6 +132,26 @@ def frmarg : Operand<XLenVT> {
   let DecoderMethod = "decodeFRMArg";
 }
 
+// Variants of the rounding mode operand that default to 'rne'. This is used
+// for historical/legacy reasons. fcvt functions where the rounding mode
+// doesn't affect the output originally always set it to 0b000 ('rne'). As old
+// versions of LLVM and GCC will fail to decode versions of these instructions
+// with the rounding mode set to something other than 'rne', we retain this
+// default.
+def FRMArgLegacy : AsmOperandClass {
+  let Name = "FRMArgLegacy";
+  let RenderMethod = "addFRMArgOperands";
+  let ParserMethod = "parseFRMArg";
+  let IsOptional = 1;
+  let DefaultMethod = "defaultFRMArgLegacyOp";
+}
+
+def frmarglegacy : Operand<XLenVT> {
+  let ParserMatchClass = FRMArgLegacy;
+  let PrintMethod = "printFRMArgLegacy";
+  let DecoderMethod = "decodeFRMArg";
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
@@ -224,6 +244,24 @@ multiclass FPUnaryOp_r_frm_m<bits<7> funct7, bits<5> rs2val,
       DecoderNamespace = Ext.Space in
   def Ext.Suffix : FPUnaryOp_r_frm<funct7, rs2val, rdty, rs1ty,
                                    opcodestr>;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1,
+    UseNamedOperandTable = 1, hasPostISelHook = 1 in
+class FPUnaryOp_r_frmlegacy<bits<7> funct7, bits<5> rs2val, DAGOperand rdty,
+                            DAGOperand rs1ty, string opcodestr>
+    : RVInstRFrm<funct7, OPC_OP_FP, (outs rdty:$rd),
+                 (ins rs1ty:$rs1, frmarglegacy:$frm), opcodestr,
+                  "$rd, $rs1$frm"> {
+  let rs2 = rs2val;
+}
+multiclass FPUnaryOp_r_frmlegacy_m<bits<7> funct7, bits<5> rs2val,
+                                   ExtInfo Ext, DAGOperand rdty, DAGOperand rs1ty,
+                                   string opcodestr, list<Predicate> ExtraPreds = []> {
+  let Predicates = !listconcat(Ext.Predicates, ExtraPreds),
+      DecoderNamespace = Ext.Space in
+  def Ext.Suffix : FPUnaryOp_r_frmlegacy<funct7, rs2val, rdty, rs1ty,
+                                         opcodestr>;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1,

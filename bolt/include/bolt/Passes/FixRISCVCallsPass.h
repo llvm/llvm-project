@@ -6,9 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the FixRISCVCallsPass class, which sets the JALR immediate
-// to 0 for AUIPC/JALR pairs with a R_RISCV_CALL(_PLT) relocation. This is
-// necessary since MC expects it to be zero in order to or-in fixups.
+// This file declares the FixRISCVCallsPass class, which replaces all types of
+// calls with PseudoCALL pseudo instructions. This ensures that relaxed calls
+// get expanded to auipc/jalr pairs so that BOLT can freely reassign function
+// addresses without having to worry about the limited range of relaxed calls.
+// Using PseudoCALL also ensures that the RISC-V backend inserts the necessary
+// relaxation-related relocations to allow JITLink to relax instruction back to
+// shorter versions where possible.
 //===----------------------------------------------------------------------===//
 
 #ifndef BOLT_PASSES_FIXRISCVCALLSPASS_H

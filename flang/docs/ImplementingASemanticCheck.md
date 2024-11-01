@@ -7,9 +7,10 @@
 -->
 # How to implement a Sematic Check in Flang
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 I recently added a semantic check to the Flang compiler front end.  This document

@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -filetype=obj %s | llvm-objdump -d -r - | FileCheck %s
+# RUN: llvm-mc -triple=hexagon -filetype=obj %s | llvm-objdump -d -r - | FileCheck %s
 
 call foo@GDPLT
 # CHECK: R_HEX_GD_PLT_B22_PCREL

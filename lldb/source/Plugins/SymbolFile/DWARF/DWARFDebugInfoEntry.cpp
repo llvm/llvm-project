@@ -22,7 +22,6 @@
 #include "lldb/Utility/StreamString.h"
 
 #include "DWARFCompileUnit.h"
-#include "DWARFDebugAbbrev.h"
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFDebugRanges.h"
@@ -31,6 +30,8 @@
 #include "DWARFUnit.h"
 #include "SymbolFileDWARF.h"
 #include "SymbolFileDWARFDwo.h"
+
+#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
@@ -810,12 +811,13 @@ lldb::offset_t DWARFDebugInfoEntry::GetFirstAttributeOffset() const {
   return GetOffset() + llvm::getULEB128Size(m_abbr_idx);
 }
 
-const DWARFAbbreviationDeclaration *
+const llvm::DWARFAbbreviationDeclaration *
 DWARFDebugInfoEntry::GetAbbreviationDeclarationPtr(const DWARFUnit *cu) const {
   if (!cu)
     return nullptr;
 
-  const DWARFAbbreviationDeclarationSet *abbrev_set = cu->GetAbbreviations();
+  const llvm::DWARFAbbreviationDeclarationSet *abbrev_set =
+      cu->GetAbbreviations();
   if (!abbrev_set)
     return nullptr;
 

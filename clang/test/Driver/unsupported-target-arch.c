@@ -62,4 +62,4 @@
 
 // RUN: not %clang --target=powerpc-apple-darwin -o /dev/null %s 2> %t.err
 // RUN: FileCheck --input-file=%t.err --check-prefix=CHECK-PPCMAC %s
-// CHECK-PPCMAC: error: unknown target triple 'unknown-apple-macosx10.4.0'{{$}}
+// CHECK-PPCMAC: error: unknown target triple 'unknown-apple-macosx{{.*}}'

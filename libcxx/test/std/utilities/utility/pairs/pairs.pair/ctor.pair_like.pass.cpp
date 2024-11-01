@@ -23,6 +23,37 @@
 #include <type_traits>
 #include <utility>
 
+namespace my_ns{
+
+struct MyPairLike {
+
+template <std::size_t N>
+friend int get(MyPairLike const&)
+{
+  return 0;
+}
+
+};
+
+} // namespace my_ns
+
+namespace std {
+
+template <>
+struct tuple_size<my_ns::MyPairLike> : std::integral_constant<std::size_t, 2> {};
+
+template <std::size_t N>
+struct tuple_element<N, my_ns::MyPairLike> {
+  using type = int;
+};
+
+} // namespace std
+
+// https://github.com/llvm/llvm-project/issues/65620
+// This used to be a hard error
+static_assert(!std::is_constructible_v<std::pair<int,int>, my_ns::MyPairLike const&>);
+
+
 constexpr bool test() {
   // Make sure construction works from array, tuple, and ranges::subrange
   {

@@ -43,6 +43,15 @@ the Standard but whose implementation is not complete or stable yet in libc++. T
 are disabled by default because they are neither API nor ABI stable. However, the
 ``-fexperimental-library`` compiler flag can be defined to turn those features on.
 
+The following features are currently considered experimental and are only provided
+when ``-fexperimental-library`` is passed:
+
+* The parallel algorithms library (``<execution>`` and the associated algorithms)
+* ``std::stop_token``, ``std::stop_source`` and ``std::stop_callback``
+* ``std::jthread``
+* ``std::chrono::tzdb`` and related time zone functionality
+* ``std::ranges::join_view``
+
 .. warning::
   Experimental libraries are experimental.
     * The contents of the ``<experimental/...>`` headers and the associated static
@@ -178,7 +187,7 @@ and ``operator delete``. For example:
   #include <version> // must include any libc++ header before defining the function (C compatibility headers excluded)
 
   void std::__libcpp_verbose_abort(char const* format, ...) {
-    va_list list;
+    std::va_list list;
     va_start(list, format);
     std::vfprintf(stderr, format, list);
     va_end(list);
@@ -215,10 +224,13 @@ safety annotations.
   disabled and must be manually enabled by the user.
 
 **_LIBCPP_ENABLE_HARDENED_MODE**:
-  This macro is used to enable the :ref:`hardened mode <using-hardened-mode>`.
+  This macro is used to enable the :ref:`hardened mode <using-hardening-modes>`.
+
+**_LIBCPP_ENABLE_SAFE_MODE**:
+  This macro is used to enable the :ref:`safe mode <using-hardening-modes>`.
 
 **_LIBCPP_ENABLE_DEBUG_MODE**:
-  This macro is used to enable the :ref:`debug mode <using-hardened-mode>`.
+  This macro is used to enable the :ref:`debug mode <using-hardening-modes>`.
 
 **_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS**:
   This macro is used to disable all visibility annotations inside libc++.

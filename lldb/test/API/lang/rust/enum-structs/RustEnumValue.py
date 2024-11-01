@@ -4,8 +4,8 @@ from lldbsuite.test.lldbtest import *
 DISCRIMINANT_MEMBER_NAME = "$discr$"
 VALUE_MEMBER_NAME = "value"
 
-class RustEnumValue:
 
+class RustEnumValue:
     def __init__(self, value: lldb.SBValue):
         self.value = value
 
@@ -19,7 +19,11 @@ class RustEnumValue:
         return self.value.GetChildAtIndex(0)
 
     def getVariantByIndex(self, index):
-        return self._inner().GetChildAtIndex(index).GetChildMemberWithName(VALUE_MEMBER_NAME)
+        return (
+            self._inner()
+            .GetChildAtIndex(index)
+            .GetChildMemberWithName(VALUE_MEMBER_NAME)
+        )
 
     @staticmethod
     def _getDiscriminantValueAsUnsigned(discr_sbvalue: lldb.SBValue):
@@ -42,10 +46,12 @@ class RustEnumValue:
     def getCurrentVariantIndex(self):
         default_index = 0
         for i in range(self._inner().GetNumChildren()):
-            variant: lldb.SBValue = self._inner().GetChildAtIndex(i);
+            variant: lldb.SBValue = self._inner().GetChildAtIndex(i)
             discr = variant.GetChildMemberWithName(DISCRIMINANT_MEMBER_NAME)
             if discr.IsValid():
-                discr_unsigned_value = RustEnumValue._getDiscriminantValueAsUnsigned(discr)
+                discr_unsigned_value = RustEnumValue._getDiscriminantValueAsUnsigned(
+                    discr
+                )
                 if variant.GetName() == f"$variant${discr_unsigned_value}":
                     return discr_unsigned_value
             else:

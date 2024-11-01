@@ -126,5 +126,83 @@ Error DwarfUnit::emitDebugLine(Triple &TargetTriple,
   return DebugLineEmitter.emit(OutLineTable);
 }
 
+/// Emit the pubnames or pubtypes section contribution for \p
+/// Unit into \p Sec. The data is provided in \p Info.
+std::optional<uint64_t>
+DwarfUnit::emitPubAcceleratorEntry(SectionDescriptor &OutSection,
+                                   DwarfUnit::AccelInfo &Info,
+                                   std::optional<uint64_t> LengthOffset) {
+  if (!LengthOffset) {
+    // Emit the header.
+    OutSection.emitIntVal(0xBADDEF,
+                          getFormParams().getDwarfOffsetByteSize()); // Length
+    LengthOffset = OutSection.OS.tell();
+
+    OutSection.emitIntVal(dwarf::DW_PUBNAMES_VERSION, 2); // Version
+
+    OutSection.notePatch(DebugOffsetPatch{
+        OutSection.OS.tell(),
+        &getOrCreateSectionDescriptor(DebugSectionKind::DebugInfo)});
+    OutSection.emitOffset(0xBADDEF); // Unit offset
+
+    OutSection.emitIntVal(getUnitSize(), 4); // Size
+  }
+  OutSection.emitOffset(Info.OutOffset);
+
+  // Emit the string itself.
+  OutSection.emitInplaceString(Info.String->first());
+
+  return LengthOffset;
+}
+
+/// Emit .debug_pubnames and .debug_pubtypes for \p Unit.
+void DwarfUnit::emitPubAccelerators() {
+  std::optional<uint64_t> NamesLengthOffset;
+  std::optional<uint64_t> TypesLengthOffset;
+
+  AcceleratorRecords.forEach([&](DwarfUnit::AccelInfo &Info) {
+    if (Info.AvoidForPubSections)
+      return;
+
+    switch (Info.Type) {
+    case DwarfUnit::AccelType::Name: {
+      NamesLengthOffset = emitPubAcceleratorEntry(
+          getOrCreateSectionDescriptor(DebugSectionKind::DebugPubNames), Info,
+          NamesLengthOffset);
+    } break;
+    case DwarfUnit::AccelType::Type: {
+      TypesLengthOffset = emitPubAcceleratorEntry(
+          getOrCreateSectionDescriptor(DebugSectionKind::DebugPubTypes), Info,
+          TypesLengthOffset);
+    } break;
+    default: {
+      // Nothing to do.
+    } break;
+    }
+  });
+
+  if (NamesLengthOffset) {
+    SectionDescriptor &OutSection =
+        getOrCreateSectionDescriptor(DebugSectionKind::DebugPubNames);
+    OutSection.emitIntVal(0, 4); // End marker.
+
+    OutSection.apply(*NamesLengthOffset -
+                         OutSection.getFormParams().getDwarfOffsetByteSize(),
+                     dwarf::DW_FORM_sec_offset,
+                     OutSection.OS.tell() - *NamesLengthOffset);
+  }
+
+  if (TypesLengthOffset) {
+    SectionDescriptor &OutSection =
+        getOrCreateSectionDescriptor(DebugSectionKind::DebugPubTypes);
+    OutSection.emitIntVal(0, 4); // End marker.
+
+    OutSection.apply(*TypesLengthOffset -
+                         OutSection.getFormParams().getDwarfOffsetByteSize(),
+                     dwarf::DW_FORM_sec_offset,
+                     OutSection.OS.tell() - *TypesLengthOffset);
+  }
+}
+
 } // end of namespace dwarflinker_parallel
 } // end of namespace llvm

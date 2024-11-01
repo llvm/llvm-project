@@ -343,7 +343,13 @@ extractSystemIncludesAndTarget(const DriverArgs &InputArgs,
   SPAN_ATTACH(Tracer, "driver", Driver);
   SPAN_ATTACH(Tracer, "lang", InputArgs.Lang);
 
-  if (!QueryDriverRegex.match(Driver)) {
+  // If driver was "../foo" then having to allowlist "/path/a/../foo" rather
+  // than "/path/foo" is absurd.
+  // Allow either to match the allowlist, then proceed with "/path/a/../foo".
+  // This was our historical behavior, and it *could* resolve to something else.
+  llvm::SmallString<256> NoDots(Driver);
+  llvm::sys::path::remove_dots(NoDots, /*remove_dot_dot=*/true);
+  if (!QueryDriverRegex.match(Driver) && !QueryDriverRegex.match(NoDots)) {
     vlog("System include extraction: not allowed driver {0}", Driver);
     return std::nullopt;
   }

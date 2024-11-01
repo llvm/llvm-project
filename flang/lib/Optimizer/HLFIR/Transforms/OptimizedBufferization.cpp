@@ -302,6 +302,13 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
     return std::nullopt;
   }
 
+  // If the ElementalOp must produce a temporary (e.g. for
+  // finalization purposes), then we cannot inline it.
+  if (hlfir::elementalOpMustProduceTemp(elemental)) {
+    LLVM_DEBUG(llvm::dbgs() << "ElementalOp must produce a temp\n");
+    return std::nullopt;
+  }
+
   MatchInfo match;
   for (mlir::Operation *user : users)
     mlir::TypeSwitch<mlir::Operation *, void>(user)

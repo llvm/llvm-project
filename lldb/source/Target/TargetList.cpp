@@ -370,7 +370,7 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
 
 bool TargetList::DeleteTarget(TargetSP &target_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  auto it = std::find(m_target_list.begin(), m_target_list.end(), target_sp);
+  auto it = llvm::find(m_target_list, target_sp);
   if (it == m_target_list.end())
     return false;
 
@@ -506,7 +506,7 @@ lldb::TargetSP TargetList::GetTargetAtIndex(uint32_t idx) const {
 
 uint32_t TargetList::GetIndexOfTarget(lldb::TargetSP target_sp) const {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  auto it = std::find(m_target_list.begin(), m_target_list.end(), target_sp);
+  auto it = llvm::find(m_target_list, target_sp);
   if (it != m_target_list.end())
     return std::distance(m_target_list.begin(), it);
   return UINT32_MAX;
@@ -533,7 +533,7 @@ void TargetList::SetSelectedTarget(uint32_t index) {
 
 void TargetList::SetSelectedTarget(const TargetSP &target_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  auto it = std::find(m_target_list.begin(), m_target_list.end(), target_sp);
+  auto it = llvm::find(m_target_list, target_sp);
   SetSelectedTargetInternal(std::distance(m_target_list.begin(), it));
 }
 

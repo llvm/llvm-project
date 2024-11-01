@@ -29,11 +29,16 @@
 
 ; clang -g -c -O1 b.cpp -gdwarf-4 -o 2.o
 
-
 RUN: rm -rf %t.dir && mkdir -p %t.dir
 RUN: dsymutil -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWARF5-DWARF4-combination -o %t.dir/dwarf5-dwarf4-combination-macho.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-dwarf4-combination-macho.dSYM -a --verbose | FileCheck %s
 
+RUN: rm -rf %t.dir && mkdir -p %t.dir
+RUN: dsymutil --linker llvm -y %p/dummy-debug-map-amr64.map \
+RUN:   -oso-prepend-path=%p/../Inputs/DWARF5-DWARF4-combination \
+RUN:   -o %t.dir/dwarf5-dwarf4-combination-macho.dSYM
+RUN: llvm-dwarfdump %t.dir/dwarf5-dwarf4-combination-macho.dSYM \
+RUN:   -a --verbose | FileCheck %s
 
 CHECK:.debug_abbrev contents:
 CHECK-NEXT: Abbrev table for offset: 0x00000000
@@ -59,7 +64,7 @@ CHECK-NEXT:                      [0x[[#%.16x,LOCLIST_PAIR_START:]], 0x[[#%.16x,L
 CHECK-NEXT:                      [0x[[#%.16x,LOCLIST_PAIR_START2:]], 0x[[#%.16x,LOCLIST_PAIR_END2:]]): [[LOCLIST_EXPR2:.*]])
 CHECK: DW_AT_name [DW_FORM_strx]     (indexed (00000007) string = "a")
 
-CHECK: 0x0000004e: Compile Unit: length = 0x00000072, format = DWARF32, version = 0x0004, abbr_offset = 0x0000, addr_size = 0x08 
+CHECK: 0x0000004e: Compile Unit: length = 0x00000072, format = DWARF32, version = 0x0004, abbr_offset = 0x00{{00|5a}}, addr_size = 0x08 
 CHECK: DW_AT_producer [DW_FORM_strp]     ( .debug_str[0x00000001] = "Apple clang version 14.0.3 (clang-1403.0.22.14.1)")
 CHECK: DW_AT_name [DW_FORM_strp] ( .debug_str[0x000000e0] = "b.cpp")
 CHECK: DW_AT_LLVM_sysroot [DW_FORM_strp] ( .debug_str[0x00000039] = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk")
@@ -69,11 +74,11 @@ CHECK: DW_AT_comp_dir [DW_FORM_strp]     ( .debug_str[0x000000a3] = "/Users/shub
 CHECK:              DW_AT_low_pc [DW_FORM_addr]       (0x[[#%.16x,RANGE_LOWPC:]])
 CHECK-NEXT:              DW_AT_ranges [DW_FORM_sec_offset] (0x00000000
 CHECK-NEXT:                 [0x[[#%.16x,RANGE_START:]], 0x[[#%.16x,RANGE_END:]]))
-CHECK: 0x00000080:   DW_TAG_subprogram [6] * (0x00000059)
+CHECK: 0x00000080:   DW_TAG_subprogram {{.*}} * (0x00000059)
 CHECK-NEXT:                DW_AT_low_pc [DW_FORM_addr]     (0x[[#%.16x,LOC_LOWPC:]])
 CHECK: DW_AT_linkage_name [DW_FORM_strp]       ( .debug_str[0x000000e6] = "_Z3bari")
 CHECK: DW_AT_name [DW_FORM_strp]       ( .debug_str[0x000000ee] = "bar")
-CHECK: 0x0000009d:     DW_TAG_formal_parameter [7]   (0x00000080)
+CHECK: 0x0000009d:     DW_TAG_formal_parameter {{.*}}   (0x00000080)
 CHECK-NEXT:                  DW_AT_location [DW_FORM_sec_offset]   (0x[[LOC_OFFSET:[0-9a-f]+]]: 
 CHECK-NEXT:                     [0x[[#%.16x,LOC_PAIR_START:]], 0x[[#%.16x,LOC_PAIR_END:]]): [[LOC_EXPR:.*]]
 CHECK-NEXT:                     [0x[[#%.16x,LOC_PAIR_START2:]], 0x[[#%.16x,LOC_PAIR_END2:]]): [[LOC_EXPR2:.*]])

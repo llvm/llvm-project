@@ -1468,5 +1468,23 @@ define <2 x half> @test_insertelement(<2 x half> %a, half %x) #0 {
   ret <2 x half> %i
 }
 
+; CHECK-LABEL: test_sitofp_2xi16_to_2xhalf(
+; CHECK:      cvt.rn.f16.s16
+; CHECK:      cvt.rn.f16.s16
+; CHECK:      ret;
+define <2 x half> @test_sitofp_2xi16_to_2xhalf(<2 x i16> %a) #0 {
+  %r = sitofp <2 x i16> %a to <2 x half>
+  ret <2 x half> %r
+}
+
+; CHECK-LABEL: test_uitofp_2xi16_to_2xhalf(
+; CHECK:      cvt.rn.f16.u16
+; CHECK:      cvt.rn.f16.u16
+; CHECK:      ret;
+define <2 x half> @test_uitofp_2xi16_to_2xhalf(<2 x i16> %a) #0 {
+  %r = uitofp <2 x i16> %a to <2 x half>
+  ret <2 x half> %r
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { "unsafe-fp-math" = "true" }

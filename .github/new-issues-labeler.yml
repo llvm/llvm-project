@@ -1,6 +1,3 @@
-'new issue':
-  - '/.*/'
-
 'clang':
   - '/\bclang(?!\-)\b/i'
 
@@ -13,8 +10,8 @@
 'libc++':
   - '/libc[+x]{2}(?!\-)/i'
 
-'libc++-abi':
-  - '/libc[+x]{2}-abi/i'
+'libc++abi':
+  - '/libc[+x]{2}-?abi/i'
 
 'libc':
   - '/\blibc(?![-+])\b/i'

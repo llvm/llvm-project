@@ -11,7 +11,7 @@
 
 #include <gtest/gtest.h>
 
-namespace __llvm_libc::testing {
+namespace LIBC_NAMESPACE::testing {
 using Test = ::testing::Test;
 }
 

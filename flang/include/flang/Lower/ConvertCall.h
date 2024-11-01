@@ -28,11 +28,13 @@ namespace Fortran::lower {
 /// the call and return the result. This function deals with explicit result
 /// allocation and lowering if needed. It also deals with passing the host
 /// link to internal procedures.
+/// \p isElemental must be set to true if elemental call is being produced.
+/// It is only used for HLFIR.
 fir::ExtendedValue genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
     Fortran::lower::CallerInterface &caller, mlir::FunctionType callSiteType,
-    std::optional<mlir::Type> resultType);
+    std::optional<mlir::Type> resultType, bool isElemental = false);
 
 /// If \p arg is the address of a function with a denoted host-association tuple
 /// argument, then return the host-associations tuple value of the current

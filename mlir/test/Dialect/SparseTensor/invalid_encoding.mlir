@@ -1,41 +1,194 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
-// expected-error@+1 {{expected a non-empty array for lvlTypes}}
-#a = #sparse_tensor.encoding<{lvlTypes = []}>
+// expected-error@+1 {{expected '(' in dimension-specifier list}}
+#a = #sparse_tensor.encoding<{map = []}>
+func.func private @scalar(%arg0: tensor<f64, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{expected '->'}}
+#a = #sparse_tensor.encoding<{map = ()}>
+func.func private @scalar(%arg0: tensor<f64, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{expected ')' in dimension-specifier list}}
+#a = #sparse_tensor.encoding<{map = (d0 -> d0)}>
+func.func private @scalar(%arg0: tensor<f64, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{expected '(' in dimension-specifier list}}
+#a = #sparse_tensor.encoding<{map = d0 -> d0}>
+func.func private @scalar(%arg0: tensor<f64, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{expected '(' in level-specifier list}}
+#a = #sparse_tensor.encoding<{map = (d0) -> d0}>
+func.func private @scalar(%arg0: tensor<f64, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{expected ':'}}
+#a = #sparse_tensor.encoding<{map = (d0) -> (d0)}>
+func.func private @scalar(%arg0: tensor<f64, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{expected valid level format (e.g. dense, compressed or singleton)}}
+#a = #sparse_tensor.encoding<{map = (d0) -> (d0:)}>
+func.func private @scalar(%arg0: tensor<f64, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{expected valid level format (e.g. dense, compressed or singleton)}}
+#a = #sparse_tensor.encoding<{map = (d0) -> (d0 : (compressed))}>
 func.func private @scalar(%arg0: tensor<f64, #a>) -> ()
 
 // -----
 
 // expected-error@+2 {{dimension-rank mismatch between encoding and tensor shape: 2 != 1}}
-#a = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#a = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 func.func private @tensor_dimlevel_size_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
 // -----
 
-// expected-error@+1 {{level-rank mismatch between dimToLvl and lvlTypes: 1 != 2}}
-#a = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"], dimToLvl = affine_map<(i) -> (i)>}>
+// expected-error@+1 {{use of undeclared identifier}}
+#a = #sparse_tensor.encoding<{map = (d0) -> (d0 : dense, d1 : compressed)}>
 func.func private @tensor_sizes_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
 // -----
 
-#a = #sparse_tensor.encoding<{lvlTypes = [1]}> // expected-error {{expected a string value in lvlTypes}}
+// expected-error@+1 {{unexpected dimToLvl mapping from 2 to 1}}
+#a = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense)}>
+func.func private @tensor_sizes_mismatch(%arg0: tensor<8xi32, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{expected bare identifier}}
+#a = #sparse_tensor.encoding<{map = (1)}>
 func.func private @tensor_type_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
 // -----
 
-#a = #sparse_tensor.encoding<{lvlTypes = ["strange"]}> // expected-error {{unexpected level-type: strange}}
+// expected-error@+1 {{unexpected key: nap}}
+#a = #sparse_tensor.encoding<{nap = (d0) -> (d0 : dense)}>
+func.func private @tensor_type_mismatch(%arg0: tensor<8xi32, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{expected '(' in dimension-specifier list}}
+#a = #sparse_tensor.encoding<{map =  -> (d0 : dense)}>
+func.func private @tensor_type_mismatch(%arg0: tensor<8xi32, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{unknown level format: strange}}
+#a = #sparse_tensor.encoding<{map = (d0) -> (d0 : strange)}>
 func.func private @tensor_value_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
 // -----
 
-#a = #sparse_tensor.encoding<{dimToLvl = "wrong"}> // expected-error {{expected an affine map for dimToLvl}}
+// expected-error@+1 {{expected valid level format (e.g. dense, compressed or singleton)}}
+#a = #sparse_tensor.encoding<{map = (d0) -> (d0 : "wrong")}>
+func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<8xi32, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{expected valid level property (e.g. nonordered, nonunique or high)}}
+#a = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed("wrong"))}>
+func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<8xi32, #a>) -> ()
+
+// -----
+// expected-error@+1 {{expected ')' in level-specifier list}}
+#a = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed[high])}>
+func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<8xi32, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{unknown level property: wrong}}
+#a = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed(wrong))}>
+func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<8xi32, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{use of undeclared identifier}}
+#a = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed, dense)}>
 func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
 // -----
 
 // expected-error@+1 {{expected a permutation affine map for dimToLvl}}
-#a = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"], dimToLvl = affine_map<(i,j) -> (i,i)>}>
+#a = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d0 : compressed)}>
 func.func private @tensor_no_permutation(%arg0: tensor<16x32xf32, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{unexpected character}}
+#a = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed; d1 : dense)}>
+func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<16x32xi32, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{expected attribute value}}
+#a = #sparse_tensor.encoding<{map = (d0: d1) -> (d0 : compressed, d1 : dense)}>
+func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<16x32xi32, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{expected ':'}}
+#a = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 = compressed, d1 = dense)}>
+func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<16x32xi32, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{expected attribute value}}
+#a = #sparse_tensor.encoding<{map = (d0 : compressed, d1 : compressed)}>
+func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<16x32xi32, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{use of undeclared identifier}}
+#a = #sparse_tensor.encoding<{map = (d0 = compressed, d1 = compressed)}>
+func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<16x32xi32, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{use of undeclared identifier}}
+#a = #sparse_tensor.encoding<{map = (d0 = l0, d1 = l1) {l0, l1} -> (l0 = d0 : dense, l1 = d1 : compressed)}>
+func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<16x32xi32, #a>) -> ()
+
+// -----
+
+// expected-error@+1 {{expected '='}}
+#a = #sparse_tensor.encoding<{map = {l0, l1} (d0 = l0, d1 = l1) -> (l0 : d0 = dense, l1 : d1 = compressed)}>
+func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<16x32xi32, #a>) -> ()
+
+// -----
+// expected-error@+1 {{use of undeclared identifier 'd0'}}
+#a = #sparse_tensor.encoding<{map = {l0, l1} (d0 = l0, d1 = l1) -> (d0 : l0 = dense, d1 : l1 = compressed)}>
+func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<16x32xi32, #a>) -> ()
+
+// -----
+// expected-error@+1 {{use of undeclared identifier 'd0'}}
+#a = #sparse_tensor.encoding<{map = {l0, l1} (d0 = l0, d1 = l1) -> (d0 : dense, d1 : compressed)}>
+func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<16x32xi32, #a>) -> ()
+
+// -----
+// expected-error@+1 {{expected '='}}
+#a = #sparse_tensor.encoding<{map = {l0, l1} (d0 = l0, d1 = l1) -> (l0 : dense, l1 : compressed)}>
+func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<16x32xi32, #a>) -> ()
+
+// -----
+// expected-error@+1 {{use of undeclared identifier}}
+#a = #sparse_tensor.encoding<{map = {l0, l1} (d0 = l0, d1 = l1) -> (l0 = dense, l1 = compressed)}>
+func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<16x32xi32, #a>) -> ()
+
+// -----
+// expected-error@+1 {{use of undeclared identifier 'd0'}}
+#a = #sparse_tensor.encoding<{map = {l0, l1} (d0 = l0, d1 = l1) -> (d0 = l0 : dense, d1 = l1 : compressed)}>
+func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<16x32xi32, #a>) -> ()
 
 // -----
 
@@ -65,8 +218,7 @@ func.func private @tensor_invalid_key(%arg0: tensor<16x32xf32, #a>) -> ()
 // -----
 
 #CSR_SLICE = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimSlices = [ (-1, ?, 1), (?, 4, 2) ] // expected-error{{expect positive value or ? for slice offset/size/stride}}
+  map = (d0 : #sparse_tensor<slice(-1, ?, 1)>, d1 : #sparse_tensor<slice(?, 4, 2)>) -> (d0 : dense, d1 : compressed)// expected-error{{expect positive value or ? for slice offset/size/stride}}
 }>
 func.func private @sparse_slice(tensor<?x?xf64, #CSR_SLICE>)
 

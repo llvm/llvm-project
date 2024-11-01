@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=tonga -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=tonga -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
 
 # CHECK: v_mov_b32_sdwa v5, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD ; encoding: [0xf9,0x02,0x0a,0x7e,0x01,0x06,0x06,0x00]
 0xf9,0x02,0x0a,0x7e,0x01,0x06,0x06,0x00

@@ -15,7 +15,7 @@
 #include <sys/select.h>
 #include <unistd.h>
 
-using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 
 TEST(LlvmLibcSelectTest, SelectInvalidFD) {
   fd_set set;
@@ -23,6 +23,6 @@ TEST(LlvmLibcSelectTest, SelectInvalidFD) {
   struct timeval timeout {
     0, 0
   };
-  ASSERT_THAT(__llvm_libc::select(-1, &set, nullptr, nullptr, &timeout),
+  ASSERT_THAT(LIBC_NAMESPACE::select(-1, &set, nullptr, nullptr, &timeout),
               Fails(EINVAL));
 }

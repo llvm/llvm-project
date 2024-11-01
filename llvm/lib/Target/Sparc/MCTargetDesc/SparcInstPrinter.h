@@ -47,7 +47,7 @@ public:
   void printOperand(const MCInst *MI, int opNum, const MCSubtargetInfo &STI,
                     raw_ostream &OS);
   void printMemOperand(const MCInst *MI, int opNum, const MCSubtargetInfo &STI,
-                       raw_ostream &OS, const char *Modifier = nullptr);
+                       raw_ostream &OS);
   void printCCOperand(const MCInst *MI, int opNum, const MCSubtargetInfo &STI,
                       raw_ostream &OS);
   bool printGetPCX(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,

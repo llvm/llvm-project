@@ -308,16 +308,16 @@ void MipsDAGToDAGISel::Select(SDNode *Node) {
   SelectCode(Node);
 }
 
-bool MipsDAGToDAGISel::
-SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
-                             std::vector<SDValue> &OutOps) {
+bool MipsDAGToDAGISel::SelectInlineAsmMemoryOperand(
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
+    std::vector<SDValue> &OutOps) {
   // All memory constraints can at least accept raw pointers.
   switch(ConstraintID) {
   default:
     llvm_unreachable("Unexpected asm memory constraint");
-  case InlineAsm::Constraint_m:
-  case InlineAsm::Constraint_R:
-  case InlineAsm::Constraint_ZC:
+  case InlineAsm::ConstraintCode::m:
+  case InlineAsm::ConstraintCode::R:
+  case InlineAsm::ConstraintCode::ZC:
     OutOps.push_back(Op);
     return false;
   }

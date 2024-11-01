@@ -51,7 +51,7 @@
 // Dept. of Comp. Sci., Rutgets U., Technical Report DCS-TR-758, Nov. 2021.
 // https://arxiv.org/pdf/2111.12852.pdf.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // Lookup table for log2(f) = log2(1 + n*2^(-7)) where n = 0..127.
 static constexpr double LOG2_R[128] = {
@@ -164,4 +164,4 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   return static_cast<float>(r);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

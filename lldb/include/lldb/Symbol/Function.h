@@ -267,7 +267,7 @@ using CallSiteParameterArray = llvm::SmallVector<CallSiteParameter, 0>;
 class CallEdge {
 public:
   enum class AddrType : uint8_t { Call, AfterCall };
-  virtual ~CallEdge() = default;
+  virtual ~CallEdge();
 
   /// Get the callee's definition.
   ///
@@ -305,10 +305,7 @@ public:
 
 protected:
   CallEdge(AddrType caller_address_type, lldb::addr_t caller_address,
-           bool is_tail_call, CallSiteParameterArray &&parameters)
-      : caller_address(caller_address),
-        caller_address_type(caller_address_type), is_tail_call(is_tail_call),
-        parameters(std::move(parameters)) {}
+           bool is_tail_call, CallSiteParameterArray &&parameters);
 
   /// Helper that finds the load address of \p unresolved_pc, a file address
   /// which refers to an instruction within \p caller.
@@ -339,11 +336,7 @@ public:
   /// return PC within the calling function to identify a specific call site.
   DirectCallEdge(const char *symbol_name, AddrType caller_address_type,
                  lldb::addr_t caller_address, bool is_tail_call,
-                 CallSiteParameterArray &&parameters)
-      : CallEdge(caller_address_type, caller_address, is_tail_call,
-                 std::move(parameters)) {
-    lazy_callee.symbol_name = symbol_name;
-  }
+                 CallSiteParameterArray &&parameters);
 
   Function *GetCallee(ModuleList &images, ExecutionContext &exe_ctx) override;
 
@@ -370,12 +363,9 @@ class IndirectCallEdge : public CallEdge {
 public:
   /// Construct a call edge using a DWARFExpression to identify the callee, and
   /// a return PC within the calling function to identify a specific call site.
-  IndirectCallEdge(DWARFExpressionList call_target, AddrType caller_address_type,
-                   lldb::addr_t caller_address, bool is_tail_call,
-                   CallSiteParameterArray &&parameters)
-      : CallEdge(caller_address_type, caller_address, is_tail_call,
-                 std::move(parameters)),
-        call_target(std::move(call_target)) {}
+  IndirectCallEdge(DWARFExpressionList call_target,
+                   AddrType caller_address_type, lldb::addr_t caller_address,
+                   bool is_tail_call, CallSiteParameterArray &&parameters);
 
   Function *GetCallee(ModuleList &images, ExecutionContext &exe_ctx) override;
 

@@ -4,6 +4,27 @@
 // Verify the generic form can be parsed.
 // RUN: mlir-opt -allow-unregistered-dialect -mlir-print-op-generic %s | mlir-opt -allow-unregistered-dialect | FileCheck %s
 
+// CHECK-LABEL: func @ext_packed_fp8
+// CHECK: amdgpu.ext_packed_fp8
+func.func @ext_packed_fp8(%v: vector<4xf8E4M3FNUZ>) -> f32 {
+  %ret = amdgpu.ext_packed_fp8 %v[0] : vector<4xf8E4M3FNUZ> to f32
+  func.return %ret : f32
+}
+
+// CHECK-LABEL: func @packed_trunc_2xfp8
+// CHECK: amdgpu.packed_trunc_2xfp8
+func.func @packed_trunc_2xfp8(%v1: f32, %v2: f32, %others: vector<4xf8E5M2FNUZ>, %stoch: i32) -> vector<4xf8E5M2FNUZ> {
+  %ret = amdgpu.packed_trunc_2xfp8 %v1, %v2 into %others[word 1] : f32 to vector<4xf8E5M2FNUZ> into vector<4xf8E5M2FNUZ>
+  func.return %ret : vector<4xf8E5M2FNUZ>
+}
+
+// CHECK-LABEL: func @packed_stoch_round_fp8
+// CHECK: amdgpu.packed_stoch_round_fp8
+func.func @packed_stoch_round_fp8(%v1: f32, %stoch: i32, %others: vector<4xf8E5M2FNUZ>) -> vector<4xf8E5M2FNUZ> {
+  %ret = amdgpu.packed_stoch_round_fp8 %v1 + %stoch into %others[2] : f32 to vector<4xf8E5M2FNUZ> into vector<4xf8E5M2FNUZ>
+  func.return %ret : vector<4xf8E5M2FNUZ>
+}
+
 // CHECK-LABEL: func @raw_buffer_load_f32_from_rank_1
 func.func @raw_buffer_load_f32_from_rank_1(%src : memref<128xf32>, %offset : i32, %idx0 : i32) -> f32 {
   // CHECK: amdgpu.raw_buffer_load {indexOffset = 1 : i32} %{{.*}}[{{.*}}] sgprOffset %{{.*}} : memref<128xf32>, i32 -> f32

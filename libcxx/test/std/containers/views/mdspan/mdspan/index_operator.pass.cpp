@@ -38,7 +38,7 @@
 #include "../ConvertibleToIntegral.h"
 #include "CustomTestLayouts.h"
 
-// Clang 15 and 16 do not support argument packs as input to operator []
+// Clang 16 does not support argument packs as input to operator []
 #if defined(__clang_major__) && __clang_major__ < 17
 template <class MDS>
 constexpr auto& access(MDS mds) {

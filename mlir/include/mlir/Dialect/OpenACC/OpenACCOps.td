@@ -98,6 +98,8 @@ def OpenACC_UseDevice             : I64EnumAttrCase<"acc_use_device", 20>;
 def OpenACC_Reduction             : I64EnumAttrCase<"acc_reduction", 21>;
 def OpenACC_DeclareDeviceResident : I64EnumAttrCase<"acc_declare_device_resident", 22>;
 def OpenACC_DeclareLink           : I64EnumAttrCase<"acc_declare_link", 23>;
+def OpenACC_Cache                 : I64EnumAttrCase<"acc_cache", 24>;
+def OpenACC_CacheReadonly         : I64EnumAttrCase<"acc_cache_readonly", 25>;
 
 def OpenACC_DataClauseEnum : I64EnumAttr<"DataClause",
     "data clauses supported by OpenACC",
@@ -109,6 +111,7 @@ def OpenACC_DataClauseEnum : I64EnumAttr<"DataClause",
      OpenACC_IsDevicePtrClause, OpenACC_GetDevicePtrClause, OpenACC_UpdateHost,
      OpenACC_UpdateSelf, OpenACC_UpdateDevice, OpenACC_UseDevice,
      OpenACC_Reduction, OpenACC_DeclareDeviceResident, OpenACC_DeclareLink,
+     OpenACC_Cache, OpenACC_CacheReadonly,
     ]> {
   let cppNamespace = "::mlir::acc";
   let genSpecializedAttr = 0;
@@ -404,6 +407,22 @@ def OpenACC_DeclareDeviceResidentOp : OpenACC_DataEntryOp<"declare_device_reside
 def OpenACC_DeclareLinkOp : OpenACC_DataEntryOp<"declare_link",
     "mlir::acc::DataClause::acc_declare_link", ""> {
   let summary = "Represents acc declare link semantics.";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.10 cache directive
+//===----------------------------------------------------------------------===//
+def OpenACC_CacheOp : OpenACC_DataEntryOp<"cache",
+    "mlir::acc::DataClause::acc_cache", ""> {
+  let summary = "Represents the cache directive that is associated with a "
+                "loop.";
+
+  let extraClassDeclaration = [{
+    /// Check if this is a cache with readonly modifier.
+    bool isCacheReadonly() {
+      return getDataClause() == acc::DataClause::acc_cache_readonly;
+    }
+  }];
 }
 
 // Data exit operation does not refer to OpenACC spec terminology, but to
@@ -1140,22 +1159,23 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
   }];
 
   let arguments = (ins OptionalAttr<I64Attr>:$collapse,
-                       Optional<IntOrIndex>:$gangNum,
-                       Optional<IntOrIndex>:$gangDim,
-                       Optional<IntOrIndex>:$gangStatic,
-                       Optional<IntOrIndex>:$workerNum,
-                       Optional<IntOrIndex>:$vectorLength,
-                       UnitAttr:$seq,
-                       UnitAttr:$independent,
-                       UnitAttr:$auto_,
-                       UnitAttr:$hasGang,
-                       UnitAttr:$hasWorker,
-                       UnitAttr:$hasVector,
-                       Variadic<IntOrIndex>:$tileOperands,
-                       Variadic<OpenACC_PointerLikeTypeInterface>:$privateOperands,
-                       OptionalAttr<SymbolRefArrayAttr>:$privatizations,
-                       Variadic<AnyType>:$reductionOperands,
-                       OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes);
+      Optional<IntOrIndex>:$gangNum,
+      Optional<IntOrIndex>:$gangDim,
+      Optional<IntOrIndex>:$gangStatic,
+      Optional<IntOrIndex>:$workerNum,
+      Optional<IntOrIndex>:$vectorLength,
+      UnitAttr:$seq,
+      UnitAttr:$independent,
+      UnitAttr:$auto_,
+      UnitAttr:$hasGang,
+      UnitAttr:$hasWorker,
+      UnitAttr:$hasVector,
+      Variadic<IntOrIndex>:$tileOperands,
+      Variadic<OpenACC_PointerLikeTypeInterface>:$privateOperands,
+      OptionalAttr<SymbolRefArrayAttr>:$privatizations,
+      Variadic<AnyType>:$reductionOperands,
+      OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
+      Variadic<OpenACC_PointerLikeTypeInterface>:$cacheOperands);
 
   let results = (outs Variadic<AnyType>:$results);
 
@@ -1181,6 +1201,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
       | `reduction` `(` custom<SymOperandList>(
             $reductionOperands, type($reductionOperands), $reductionRecipes)
         `)`
+      | `cache` `(` $cacheOperands `:` type($cacheOperands) `)`
     )
     $region
     ( `(` type($results)^ `)` )?

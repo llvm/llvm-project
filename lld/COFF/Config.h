@@ -48,6 +48,8 @@ enum class ExportSource {
   ModuleDefinition,
 };
 
+enum class EmitKind { Obj, LLVM };
+
 // Represents an /export option.
 struct Export {
   StringRef name;       // N in /export:N or /export:E=N
@@ -311,6 +313,7 @@ struct Configuration {
   bool pseudoRelocs = false;
   bool stdcallFixup = false;
   bool writeCheckSum = false;
+  EmitKind emit = EmitKind::Obj;
 };
 
 } // namespace lld::coff

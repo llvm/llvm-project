@@ -17,10 +17,9 @@ character(10) function char_return()
 end function
 ! CHECK-LABEL: func.func @_QPchar_return(
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.char<1,10>>
-! CHECK:  %[[VAL_2:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:  %[[VAL_3:.*]] = arith.constant 10 : index
-! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_2]] typeparams %[[VAL_3]] {uniq_name = "_QFchar_returnEchar_return"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-! CHECK:  %[[VAL_8:.*]] = fir.emboxchar %[[VAL_4]]#1, %[[VAL_3]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_3]] {uniq_name = "_QFchar_returnEchar_return"} : (!fir.ref<!fir.char<1,10>>, index) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>)
+! CHECK:  %[[VAL_8:.*]] = fir.emboxchar %[[VAL_4]]#1, %[[VAL_3]] : (!fir.ref<!fir.char<1,10>>, index) -> !fir.boxchar<1>
 ! CHECK:  return %[[VAL_8]] : !fir.boxchar<1>
 
 integer function array_return()

@@ -17,7 +17,7 @@
 
 #include "src/string/memory_utils/utils.h"
 
-namespace __llvm_libc::builtin {
+namespace LIBC_NAMESPACE::builtin {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Memcpy
@@ -153,6 +153,6 @@ template <size_t Size> struct Memcmp {
   }
 };
 
-} // namespace __llvm_libc::builtin
+} // namespace LIBC_NAMESPACE::builtin
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_BUILTIN_H

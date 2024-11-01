@@ -402,3 +402,47 @@ subroutine cray_arraySection()
 ! CHECK: fir.result %[[arrayupdate]] : !fir.array<3xi32>
 ! CHECK: fir.array_merge_store %[[arrayld]], %[[doloop]] to %[[ld]][%[[slice]]] : !fir.array<3xi32>, !fir.array<3xi32>, !fir.ptr<!fir.array<3xi32>>, !fir.slice<1>
 end
+
+! Test Cray pointer declared in a module
+module mod_cray_ptr
+  integer :: pte
+  pointer(ptr, pte)
+end module
+
+! CHECK-LABEL: @_QPtest_ptr
+subroutine test_ptr()
+  use mod_cray_ptr
+  implicit none
+  integer :: x
+  ptr = loc(x)
+! CHECK: %[[ptr:.*]] = fir.address_of(@_QMmod_cray_ptrEptr) : !fir.ref<i64>
+! CHECK: %[[x:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFtest_ptrEx"}
+! CHECK: %[[box:.*]] = fir.embox %[[x]] : (!fir.ref<i32>) -> !fir.box<i32>
+! CHECK: %[[boxAddr:.*]] = fir.box_addr %[[box]] : (!fir.box<i32>) -> !fir.ref<i32>
+! CHECK: %[[addr_x:.*]] = fir.convert %[[boxAddr]] : (!fir.ref<i32>) -> i64
+! CHECK: fir.store %[[addr_x]] to %[[ptr]] : !fir.ref<i64>
+end
+
+subroutine test_pte()
+  use mod_cray_ptr
+  implicit none
+  integer :: x
+  pte = x
+! CHECK: %[[ptr:.*]] = fir.address_of(@_QMmod_cray_ptrEptr) : !fir.ref<i64>
+! CHECK: %[[x:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFtest_pteEx"}
+! CHECK: %[[xval:.*]] = fir.load %[[x]] : !fir.ref<i32>
+! CHECK: %[[box:.*]] = fir.embox %[[ptr]] : (!fir.ref<i64>) -> !fir.box<i64>
+! CHECK: %[[boxAddr:.*]] = fir.box_addr %[[box]] : (!fir.box<i64>) -> !fir.ref<i64>
+! CHECK: %[[ptr2:.*]] = fir.convert %[[boxAddr]] : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i32>>
+! CHECK: %[[ptr2val:.*]] = fir.load %[[ptr2]] : !fir.ref<!fir.ptr<i32>>
+! CHECK: fir.store %[[xval]] to %[[ptr2val]] : !fir.ptr<i32>
+
+  x = pte
+! CHECK: %[[box2:.*]] = fir.embox %[[ptr]] : (!fir.ref<i64>) -> !fir.box<i64>
+! CHECK: %[[box2Addr:.*]] = fir.box_addr %[[box2]] : (!fir.box<i64>) -> !fir.ref<i64>
+! CHECK: %[[refptr:.*]] = fir.convert %[[box2Addr]] : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i32>>
+! CHECK: %[[ptr4:.*]] = fir.load %[[refptr]] : !fir.ref<!fir.ptr<i32>>
+! CHECK: %[[val:.*]] = fir.load %[[ptr4]] : !fir.ptr<i32>
+! CHECK: fir.store %[[val]] to %[[x]] : !fir.ref<i32>
+end
+

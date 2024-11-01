@@ -132,7 +132,7 @@ class Preprocessor {
   llvm::unique_function<void(const clang::Token &)> OnToken;
   std::shared_ptr<PreprocessorOptions> PPOpts;
   DiagnosticsEngine        *Diags;
-  LangOptions       &LangOpts;
+  const LangOptions &LangOpts;
   const TargetInfo *Target = nullptr;
   const TargetInfo *AuxTarget = nullptr;
   FileManager       &FileMgr;
@@ -276,6 +276,9 @@ class Preprocessor {
 
   /// Empty line handler.
   EmptylineHandler *Emptyline = nullptr;
+
+  /// True to avoid tearing down the lexer etc on EOF
+  bool IncrementalProcessing = false;
 
 public:
   /// The kind of translation unit we are processing.
@@ -1158,8 +1161,9 @@ private:
 
 public:
   Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
-               DiagnosticsEngine &diags, LangOptions &opts, SourceManager &SM,
-               HeaderSearch &Headers, ModuleLoader &TheModuleLoader,
+               DiagnosticsEngine &diags, const LangOptions &LangOpts,
+               SourceManager &SM, HeaderSearch &Headers,
+               ModuleLoader &TheModuleLoader,
                IdentifierInfoLookup *IILookup = nullptr,
                bool OwnsHeaderSearch = false,
                TranslationUnitKind TUKind = TU_Complete);
@@ -1479,13 +1483,13 @@ public:
 
   /// Mark the file as included.
   /// Returns true if this is the first time the file was included.
-  bool markIncluded(const FileEntry *File) {
+  bool markIncluded(FileEntryRef File) {
     HeaderInfo.getFileInfo(File);
     return IncludedFiles.insert(File).second;
   }
 
   /// Return true if this header has already been included.
-  bool alreadyIncluded(const FileEntry *File) const {
+  bool alreadyIncluded(FileEntryRef File) const {
     HeaderInfo.getFileInfo(File);
     return IncludedFiles.count(File);
   }
@@ -1910,14 +1914,11 @@ public:
   void recomputeCurLexerKind();
 
   /// Returns true if incremental processing is enabled
-  bool isIncrementalProcessingEnabled() const {
-    return getLangOpts().IncrementalExtensions;
-  }
+  bool isIncrementalProcessingEnabled() const { return IncrementalProcessing; }
 
   /// Enables the incremental processing
   void enableIncrementalProcessing(bool value = true) {
-    // FIXME: Drop this interface.
-    const_cast<LangOptions &>(getLangOpts()).IncrementalExtensions = value;
+    IncrementalProcessing = value;
   }
 
   /// Specify the point at which code-completion will be performed.
@@ -1934,8 +1935,8 @@ public:
   /// (1-based).
   ///
   /// \returns true if an error occurred, false otherwise.
-  bool SetCodeCompletionPoint(const FileEntry *File,
-                              unsigned Line, unsigned Column);
+  bool SetCodeCompletionPoint(FileEntryRef File, unsigned Line,
+                              unsigned Column);
 
   /// Determine if we are performing code completion.
   bool isCodeCompletionEnabled() const { return CodeCompletionFile != nullptr; }

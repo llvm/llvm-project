@@ -27,7 +27,46 @@ def ApplyForLoopCanonicalizationPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplySCFStructuralConversionPatternsOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.scf.structural_conversions",
+    [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface,
+      ["populateConversionTargetRules"]>]> {
+  let description = [{
+    Collects patterns for performing structural conversions of SCF operations.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def Transform_ScfForOp : Transform_ConcreteOpType<"scf.for">;
+
+def ForallToForOp : Op<Transform_Dialect, "loop.forall_to_for",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let summary = "Converts scf.forall into a nest of scf.for operations";
+  let description = [{
+    Converts the `scf.forall` operation pointed to by the given handle into a
+    set of nested `scf.for` operations. Each new operation corresponds to one
+    induction variable of the original "multifor" loop.
+
+    The operand handle must be associated with exactly one payload operation.
+
+    Loops with shared outputs are currently not supported.
+
+    #### Return Modes
+
+    Consumes the operand handle. Produces a silenceable failure if the operand
+    is not associated with a single `scf.forall` payload operation.
+    Returns as many handles as the given `forall` op has induction variables
+    that are associated with the generated `scf.for` loops.
+    Produces a silenceable failure if another number of resulting handles is
+    requested.
+  }];
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs Variadic<TransformHandleTypeInterface>:$transformed);
+
+  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
+}
 
 def GetParentForOp : Op<Transform_Dialect, "loop.get_parent_for",
     [NavigationTransformOpTrait, MemoryEffectsOpInterface,
@@ -103,23 +142,22 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
 
      This operation ignores non-scf::ForOp ops and drops them in the return.
 
-     This operation always succeeds and returns the scf::ForOp with the
-     postcondition: "the loop trip count is divisible by the step".
-     This operation may return the same unmodified loop handle when peeling did
-     not modify the IR (i.e. the loop trip count was already divisible).
+     This operation returns two scf::ForOp Ops, with the first Op satisfying
+     the postcondition: "the loop trip count is divisible by the step". The
+     second loop Op contains the remaining iteration. Note that even though the
+     Payload IR modification may be performed in-place, this operation consumes
+     the operand handle and produces a new one.
 
-     Note that even though the Payload IR modification may be performed
-     in-place, this operation consumes the operand handle and produces a new
-     one.
+     #### Return Modes
 
-     TODO: Return both the peeled loop and the remainder loop.
+     Produces a definite failure if peeling fails.
   }];
 
   let arguments =
       (ins Transform_ScfForOp:$target,
            DefaultValuedAttr<BoolAttr, "false">:$fail_if_already_divisible);
-  // TODO: Return both the peeled loop and the remainder loop.
-  let results = (outs TransformHandleTypeInterface:$transformed);
+  let results = (outs TransformHandleTypeInterface:$peeled_loop,
+                      TransformHandleTypeInterface:$remainder_loop);
 
   let assemblyFormat =
     "$target attr-dict `:` functional-type(operands, results)";
@@ -273,8 +311,8 @@ def TakeAssumedBranchOp : Op<Transform_Dialect, "scf.take_assumed_branch", [
   TransformOpInterface, TransformEachOpTrait]> {
   let description = [{
     Given an scf.if conditional, inject user-defined information that it is
-    always safe to execute only the if or else branch. 
-    
+    always safe to execute only the if or else branch.
+
     This is achieved by just replacing the scf.if by the content of one of its
     branches.
 

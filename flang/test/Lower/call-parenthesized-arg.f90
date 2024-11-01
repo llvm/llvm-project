@@ -23,10 +23,9 @@ end subroutine
 subroutine foo_char_scalar(x)
   character(5) :: x
 ! CHECK:           %[[VAL_1:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK:           %[[VAL_2:.*]] = arith.constant 5 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,5>>
-! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<!fir.char<1,?>>
-! CHECK:           %[[VAL_5:.*]] = fir.emboxchar %[[VAL_4]], %[[VAL_2]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK:           %[[VAL_2:.*]] = arith.constant 5 : index
+! CHECK:           %[[VAL_5:.*]] = fir.emboxchar %[[VAL_3]], %[[VAL_2]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 ! CHECK:           fir.call @_QPbar_char_scalar(%[[VAL_5]]) fastmath<contract> : (!fir.boxchar<1>) -> ()
   call bar_char_scalar(x)
 ! CHECK:           %[[VAL_6:.*]] = fir.no_reassoc %[[VAL_3]] : !fir.ref<!fir.char<1,5>>
@@ -38,8 +37,7 @@ subroutine foo_char_scalar(x)
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
 ! CHECK:           fir.call @llvm.memmove.p0.p0.i64(%[[VAL_12]], %[[VAL_13]], %[[VAL_10]], %[[VAL_11]]) fastmath<contract> : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
-! CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<!fir.char<1,?>>
-! CHECK:           %[[VAL_15:.*]] = fir.emboxchar %[[VAL_14]], %[[VAL_2]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK:           %[[VAL_15:.*]] = fir.emboxchar %[[VAL_7]], %[[VAL_2]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 ! CHECK:           fir.call @_QPbar_char_scalar(%[[VAL_15]]) fastmath<contract> : (!fir.boxchar<1>) -> ()
 ! CHECK:           return
 ! CHECK:         }
@@ -81,8 +79,8 @@ end subroutine
 ! CHECK-SAME:                          %[[VAL_0:.*]]: !fir.boxchar<1>{{.*}}) {
 subroutine foo_char_array(x)
   ! CHECK: %[[VAL_1:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  ! CHECK: %[[VAL_2:.*]] = arith.constant 10 : index
   ! CHECK: %[[VAL_3:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<100x!fir.char<1,10>>>
+  ! CHECK: %[[VAL_2:.*]] = arith.constant 10 : index
   ! CHECK: %[[VAL_4:.*]] = arith.constant 100 : index
   ! CHECK: %[[VAL_5:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.array<100x!fir.char<1,10>>>) -> !fir.ref<!fir.char<1,?>>
   ! CHECK: %[[VAL_6:.*]] = fir.emboxchar %[[VAL_5]], %[[VAL_2]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
