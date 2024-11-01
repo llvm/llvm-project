@@ -888,9 +888,9 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
 
   CompUnitSP comp_unit;
   std::optional<uint16_t> modi = m_index->GetModuleIndexForVa(addr);
-  if (!modi) {
+  // Some globals has modi points to the linker module, ignore them.
+  if (!modi || modi >= GetNumCompileUnits())
     return nullptr;
-  }
 
   CompilandIndexItem &cci = m_index->compilands().GetOrCreateCompiland(*modi);
   comp_unit = GetOrCreateCompileUnit(cci);
@@ -1813,7 +1813,27 @@ SymbolFileNativePDB::ParseVariablesForCompileUnit(CompileUnit &comp_unit,
                                                   VariableList &variables) {
   PdbSymUid sym_uid(comp_unit.GetID());
   lldbassert(sym_uid.kind() == PdbSymUidKind::Compiland);
-  return 0;
+  for (const uint32_t gid : m_index->globals().getGlobalsTable()) {
+    PdbGlobalSymId global{gid, false};
+    CVSymbol sym = m_index->ReadSymbolRecord(global);
+    // TODO: S_CONSTANT is not handled here to prevent a possible crash in
+    // lldb_private::npdb::MakeConstantLocationExpression when it's a record
+    // type (e.g. std::strong_ordering::equal). That function needs to be
+    // updated to handle this case when we add S_CONSTANT case here.
+    switch (sym.kind()) {
+    case SymbolKind::S_GDATA32:
+    case SymbolKind::S_LDATA32:
+    case SymbolKind::S_GTHREAD32:
+    case SymbolKind::S_LTHREAD32: {
+      if (VariableSP var = GetOrCreateGlobalVariable(global))
+        variables.AddVariable(var);
+      break;
+    }
+    default:
+      break;
+    }
+  }
+  return variables.GetSize();
 }
 
 VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
