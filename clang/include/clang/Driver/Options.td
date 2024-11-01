@@ -4669,9 +4669,6 @@ def ibuiltininc : Flag<["-"], "ibuiltininc">, Group<clang_i_Group>,
   HelpText<"Enable builtin #include directories even when -nostdinc is used "
            "before or after -ibuiltininc. "
            "Using -nobuiltininc after the option disables it">;
-def index_header_map : Flag<["-"], "index-header-map">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Make the next included directory (-I or -F) an indexer header map">;
 def iapinotes_modules : JoinedOrSeparate<["-"], "iapinotes-modules">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Add directory to the API notes search path referenced by module name">, MetaVarName<"<directory>">;
