@@ -278,10 +278,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("start-stop-visibility=hidden");
 
     CmdArgs.push_back("-z");
-    CmdArgs.push_back("common-page-size=16384");
+    CmdArgs.push_back("common-page-size=0x4000");
 
     CmdArgs.push_back("-z");
-    CmdArgs.push_back("max-page-size=16384");
+    CmdArgs.push_back("max-page-size=0x4000");
 
     // Patch relocated regions of DWARF whose targets are eliminated at link
     // time with specific tombstones, such that they're recognisable by the
