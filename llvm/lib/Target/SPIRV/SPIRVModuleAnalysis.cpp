@@ -636,6 +636,13 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
                       Capability::DotProductInput4x8BitKHR,
                       Capability::DotProductInput4x8BitPackedKHR});
 
+  // Add capabilities enabled by extensions.
+  for (auto Extension : ST.getAllAvailableExtensions()) {
+    CapabilityList EnabledCapabilities =
+        getCapabilitiesEnabledByExtension(Extension);
+    addAvailableCaps(EnabledCapabilities);
+  }
+
   if (ST.isOpenCLEnv()) {
     initAvailableCapabilitiesForOpenCL(ST);
     return;
@@ -682,13 +689,6 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
                       Capability::RoundingModeRTZ});
   // TODO: verify if this needs some checks.
   addAvailableCaps({Capability::Float16, Capability::Float64});
-
-  // Add capabilities enabled by extensions.
-  for (auto Extension : ST.getAllAvailableExtensions()) {
-    CapabilityList EnabledCapabilities =
-        getCapabilitiesEnabledByExtension(Extension);
-    addAvailableCaps(EnabledCapabilities);
-  }
 
   // TODO: add OpenCL extensions.
 }
