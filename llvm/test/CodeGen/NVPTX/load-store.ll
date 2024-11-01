@@ -25,14 +25,14 @@
 
 ; generic_weak
 
-define void @generic_weak_i8(ptr %a) local_unnamed_addr {
-; CHECK-LABEL: generic_weak_i8(
+define void @generic_i8(ptr %a) {
+; CHECK-LABEL: generic_i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_i8_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_i8_param_0];
 ; CHECK-NEXT:    ld.u8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    st.u8 [%rd1], %rs2;
@@ -43,14 +43,14 @@ define void @generic_weak_i8(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_weak_i16(ptr %a) local_unnamed_addr {
-; CHECK-LABEL: generic_weak_i16(
+define void @generic_i16(ptr %a) {
+; CHECK-LABEL: generic_i16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_i16_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_i16_param_0];
 ; CHECK-NEXT:    ld.u16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    st.u16 [%rd1], %rs2;
@@ -61,14 +61,14 @@ define void @generic_weak_i16(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_weak_i32(ptr %a) local_unnamed_addr {
-; CHECK-LABEL: generic_weak_i32(
+define void @generic_i32(ptr %a) {
+; CHECK-LABEL: generic_i32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_i32_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_i32_param_0];
 ; CHECK-NEXT:    ld.u32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
 ; CHECK-NEXT:    st.u32 [%rd1], %r2;
@@ -79,13 +79,13 @@ define void @generic_weak_i32(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_weak_i64(ptr %a) local_unnamed_addr {
-; CHECK-LABEL: generic_weak_i64(
+define void @generic_i64(ptr %a) {
+; CHECK-LABEL: generic_i64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_i64_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_i64_param_0];
 ; CHECK-NEXT:    ld.u64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
 ; CHECK-NEXT:    st.u64 [%rd1], %rd3;
@@ -96,14 +96,14 @@ define void @generic_weak_i64(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_weak_float(ptr %a) local_unnamed_addr {
-; CHECK-LABEL: generic_weak_float(
+define void @generic_float(ptr %a) {
+; CHECK-LABEL: generic_float(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_float_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_float_param_0];
 ; CHECK-NEXT:    ld.f32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
 ; CHECK-NEXT:    st.f32 [%rd1], %f2;
@@ -114,14 +114,14 @@ define void @generic_weak_float(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_weak_double(ptr %a) local_unnamed_addr {
-; CHECK-LABEL: generic_weak_double(
+define void @generic_double(ptr %a) {
+; CHECK-LABEL: generic_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-NEXT:    .reg .f64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_double_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_double_param_0];
 ; CHECK-NEXT:    ld.f64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
 ; CHECK-NEXT:    st.f64 [%rd1], %fd2;
@@ -135,14 +135,14 @@ define void @generic_weak_double(ptr %a) local_unnamed_addr {
 ; TODO: make the lowering of this weak vector ops consistent with
 ;       the ones of the next tests. This test lowers to a weak PTX
 ;       vector op, but next test lowers to a vector PTX op.
-define void @generic_weak_2xi8(ptr %a) local_unnamed_addr {
-; CHECK-LABEL: generic_weak_2xi8(
+define void @generic_2xi8(ptr %a) {
+; CHECK-LABEL: generic_2xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_2xi8_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_2xi8_param_0];
 ; CHECK-NEXT:    ld.v2.u8 {%rs1, %rs2}, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
 ; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
@@ -157,15 +157,15 @@ define void @generic_weak_2xi8(ptr %a) local_unnamed_addr {
 ; TODO: make the lowering of this weak vector ops consistent with
 ;       the ones of the previous test. This test lowers to a weak
 ;       PTX scalar op, but prior test lowers to a vector PTX op.
-define void @generic_weak_4xi8(ptr %a) local_unnamed_addr {
-; CHECK-LABEL: generic_weak_4xi8(
+define void @generic_4xi8(ptr %a) {
+; CHECK-LABEL: generic_4xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<9>;
 ; CHECK-NEXT:    .reg .b32 %r<13>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_4xi8_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_4xi8_param_0];
 ; CHECK-NEXT:    ld.u32 %r1, [%rd1];
 ; CHECK-NEXT:    bfe.u32 %r2, %r1, 0, 8;
 ; CHECK-NEXT:    cvt.u16.u32 %rs1, %r2;
@@ -194,15 +194,15 @@ define void @generic_weak_4xi8(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_weak_2xi16(ptr %a) local_unnamed_addr {
-; CHECK-LABEL: generic_weak_2xi16(
+define void @generic_2xi16(ptr %a) {
+; CHECK-LABEL: generic_2xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_2xi16_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_2xi16_param_0];
 ; CHECK-NEXT:    ld.u32 %r1, [%rd1];
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
@@ -216,14 +216,14 @@ define void @generic_weak_2xi16(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_weak_4xi16(ptr %a) local_unnamed_addr {
-; CHECK-LABEL: generic_weak_4xi16(
+define void @generic_4xi16(ptr %a) {
+; CHECK-LABEL: generic_4xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_4xi16_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_4xi16_param_0];
 ; CHECK-NEXT:    ld.v4.u16 {%rs1, %rs2, %rs3, %rs4}, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs5, %rs4, 1;
 ; CHECK-NEXT:    add.s16 %rs6, %rs3, 1;
@@ -237,14 +237,14 @@ define void @generic_weak_4xi16(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_weak_2xi32(ptr %a) local_unnamed_addr {
-; CHECK-LABEL: generic_weak_2xi32(
+define void @generic_2xi32(ptr %a) {
+; CHECK-LABEL: generic_2xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_2xi32_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_2xi32_param_0];
 ; CHECK-NEXT:    ld.v2.u32 {%r1, %r2}, [%rd1];
 ; CHECK-NEXT:    add.s32 %r3, %r2, 1;
 ; CHECK-NEXT:    add.s32 %r4, %r1, 1;
@@ -256,14 +256,14 @@ define void @generic_weak_2xi32(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_weak_4xi32(ptr %a) local_unnamed_addr {
-; CHECK-LABEL: generic_weak_4xi32(
+define void @generic_4xi32(ptr %a) {
+; CHECK-LABEL: generic_4xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_4xi32_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_4xi32_param_0];
 ; CHECK-NEXT:    ld.v4.u32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    add.s32 %r5, %r4, 1;
 ; CHECK-NEXT:    add.s32 %r6, %r3, 1;
@@ -277,13 +277,13 @@ define void @generic_weak_4xi32(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_weak_2xi64(ptr %a) local_unnamed_addr {
-; CHECK-LABEL: generic_weak_2xi64(
+define void @generic_2xi64(ptr %a) {
+; CHECK-LABEL: generic_2xi64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_2xi64_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_2xi64_param_0];
 ; CHECK-NEXT:    ld.v2.u64 {%rd2, %rd3}, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd4, %rd3, 1;
 ; CHECK-NEXT:    add.s64 %rd5, %rd2, 1;
@@ -295,14 +295,14 @@ define void @generic_weak_2xi64(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_weak_2xfloat(ptr %a) local_unnamed_addr {
-; CHECK-LABEL: generic_weak_2xfloat(
+define void @generic_2xfloat(ptr %a) {
+; CHECK-LABEL: generic_2xfloat(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_2xfloat_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_2xfloat_param_0];
 ; CHECK-NEXT:    ld.v2.f32 {%f1, %f2}, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
 ; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
@@ -314,14 +314,14 @@ define void @generic_weak_2xfloat(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_weak_4xfloat(ptr %a) local_unnamed_addr {
-; CHECK-LABEL: generic_weak_4xfloat(
+define void @generic_4xfloat(ptr %a) {
+; CHECK-LABEL: generic_4xfloat(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_4xfloat_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_4xfloat_param_0];
 ; CHECK-NEXT:    ld.v4.f32 {%f1, %f2, %f3, %f4}, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
 ; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
@@ -335,14 +335,14 @@ define void @generic_weak_4xfloat(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_weak_2xdouble(ptr %a) local_unnamed_addr {
-; CHECK-LABEL: generic_weak_2xdouble(
+define void @generic_2xdouble(ptr %a) {
+; CHECK-LABEL: generic_2xdouble(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-NEXT:    .reg .f64 %fd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_2xdouble_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_2xdouble_param_0];
 ; CHECK-NEXT:    ld.v2.f64 {%fd1, %fd2}, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
 ; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
@@ -356,7 +356,7 @@ define void @generic_weak_2xdouble(ptr %a) local_unnamed_addr {
 
 ; generic_volatile
 
-define void @generic_volatile_i8(ptr %a) local_unnamed_addr {
+define void @generic_volatile_i8(ptr %a) {
 ; CHECK-LABEL: generic_volatile_i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -374,7 +374,7 @@ define void @generic_volatile_i8(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_volatile_i16(ptr %a) local_unnamed_addr {
+define void @generic_volatile_i16(ptr %a) {
 ; CHECK-LABEL: generic_volatile_i16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -392,7 +392,7 @@ define void @generic_volatile_i16(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_volatile_i32(ptr %a) local_unnamed_addr {
+define void @generic_volatile_i32(ptr %a) {
 ; CHECK-LABEL: generic_volatile_i32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -410,7 +410,7 @@ define void @generic_volatile_i32(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_volatile_i64(ptr %a) local_unnamed_addr {
+define void @generic_volatile_i64(ptr %a) {
 ; CHECK-LABEL: generic_volatile_i64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
@@ -427,7 +427,7 @@ define void @generic_volatile_i64(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_volatile_float(ptr %a) local_unnamed_addr {
+define void @generic_volatile_float(ptr %a) {
 ; CHECK-LABEL: generic_volatile_float(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
@@ -445,7 +445,7 @@ define void @generic_volatile_float(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_volatile_double(ptr %a) local_unnamed_addr {
+define void @generic_volatile_double(ptr %a) {
 ; CHECK-LABEL: generic_volatile_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
@@ -480,7 +480,7 @@ define void @generic_volatile_double(ptr %a) local_unnamed_addr {
 
 ; TODO: make this operation consistent with the one for <4 x i8>
 ; This operation lowers to a "element wise volatile PTX operation".
-define void @generic_volatile_2xi8(ptr %a) local_unnamed_addr {
+define void @generic_volatile_2xi8(ptr %a) {
 ; CHECK-LABEL: generic_volatile_2xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
@@ -501,7 +501,7 @@ define void @generic_volatile_2xi8(ptr %a) local_unnamed_addr {
 
 ; TODO: make this operation consistent with the one for <2 x i8>
 ; This operation lowers to a "full vector volatile PTX operation".
-define void @generic_volatile_4xi8(ptr %a) local_unnamed_addr {
+define void @generic_volatile_4xi8(ptr %a) {
 ; CHECK-LABEL: generic_volatile_4xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<9>;
@@ -538,7 +538,7 @@ define void @generic_volatile_4xi8(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_volatile_2xi16(ptr %a) local_unnamed_addr {
+define void @generic_volatile_2xi16(ptr %a) {
 ; CHECK-LABEL: generic_volatile_2xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
@@ -560,7 +560,7 @@ define void @generic_volatile_2xi16(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_volatile_4xi16(ptr %a) local_unnamed_addr {
+define void @generic_volatile_4xi16(ptr %a) {
 ; CHECK-LABEL: generic_volatile_4xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<9>;
@@ -581,7 +581,7 @@ define void @generic_volatile_4xi16(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_volatile_2xi32(ptr %a) local_unnamed_addr {
+define void @generic_volatile_2xi32(ptr %a) {
 ; CHECK-LABEL: generic_volatile_2xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
@@ -600,7 +600,7 @@ define void @generic_volatile_2xi32(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_volatile_4xi32(ptr %a) local_unnamed_addr {
+define void @generic_volatile_4xi32(ptr %a) {
 ; CHECK-LABEL: generic_volatile_4xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<9>;
@@ -621,7 +621,7 @@ define void @generic_volatile_4xi32(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_volatile_2xi64(ptr %a) local_unnamed_addr {
+define void @generic_volatile_2xi64(ptr %a) {
 ; CHECK-LABEL: generic_volatile_2xi64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
@@ -639,7 +639,7 @@ define void @generic_volatile_2xi64(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_volatile_2xfloat(ptr %a) local_unnamed_addr {
+define void @generic_volatile_2xfloat(ptr %a) {
 ; CHECK-LABEL: generic_volatile_2xfloat(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<5>;
@@ -658,7 +658,7 @@ define void @generic_volatile_2xfloat(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_volatile_4xfloat(ptr %a) local_unnamed_addr {
+define void @generic_volatile_4xfloat(ptr %a) {
 ; CHECK-LABEL: generic_volatile_4xfloat(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<9>;
@@ -679,7 +679,7 @@ define void @generic_volatile_4xfloat(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_volatile_2xdouble(ptr %a) local_unnamed_addr {
+define void @generic_volatile_2xdouble(ptr %a) {
 ; CHECK-LABEL: generic_volatile_2xdouble(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
@@ -700,7 +700,7 @@ define void @generic_volatile_2xdouble(ptr %a) local_unnamed_addr {
 
 ; generic_unordered_sys
 
-define void @generic_unordered_sys_i8(ptr %a) local_unnamed_addr {
+define void @generic_unordered_sys_i8(ptr %a) {
 ; SM60-LABEL: generic_unordered_sys_i8(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b16 %rs<3>;
@@ -730,7 +730,7 @@ define void @generic_unordered_sys_i8(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_unordered_sys_i16(ptr %a) local_unnamed_addr {
+define void @generic_unordered_sys_i16(ptr %a) {
 ; SM60-LABEL: generic_unordered_sys_i16(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b16 %rs<3>;
@@ -760,7 +760,7 @@ define void @generic_unordered_sys_i16(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_unordered_sys_i32(ptr %a) local_unnamed_addr {
+define void @generic_unordered_sys_i32(ptr %a) {
 ; SM60-LABEL: generic_unordered_sys_i32(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b32 %r<3>;
@@ -790,7 +790,7 @@ define void @generic_unordered_sys_i32(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_unordered_sys_i64(ptr %a) local_unnamed_addr {
+define void @generic_unordered_sys_i64(ptr %a) {
 ; SM60-LABEL: generic_unordered_sys_i64(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<4>;
@@ -818,7 +818,7 @@ define void @generic_unordered_sys_i64(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_unordered_sys_float(ptr %a) local_unnamed_addr {
+define void @generic_unordered_sys_float(ptr %a) {
 ; SM60-LABEL: generic_unordered_sys_float(
 ; SM60:       {
 ; SM60-NEXT:    .reg .f32 %f<3>;
@@ -848,7 +848,7 @@ define void @generic_unordered_sys_float(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_unordered_sys_double(ptr %a) local_unnamed_addr {
+define void @generic_unordered_sys_double(ptr %a) {
 ; SM60-LABEL: generic_unordered_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
@@ -880,7 +880,7 @@ define void @generic_unordered_sys_double(ptr %a) local_unnamed_addr {
 
 ; generic_unordered_volatile_sys
 
-define void @generic_unordered_volatile_sys_i8(ptr %a) local_unnamed_addr {
+define void @generic_unordered_volatile_sys_i8(ptr %a) {
 ; CHECK-LABEL: generic_unordered_volatile_sys_i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -898,7 +898,7 @@ define void @generic_unordered_volatile_sys_i8(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_unordered_volatile_sys_i16(ptr %a) local_unnamed_addr {
+define void @generic_unordered_volatile_sys_i16(ptr %a) {
 ; CHECK-LABEL: generic_unordered_volatile_sys_i16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -916,7 +916,7 @@ define void @generic_unordered_volatile_sys_i16(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_unordered_volatile_sys_i32(ptr %a) local_unnamed_addr {
+define void @generic_unordered_volatile_sys_i32(ptr %a) {
 ; CHECK-LABEL: generic_unordered_volatile_sys_i32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -934,7 +934,7 @@ define void @generic_unordered_volatile_sys_i32(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_unordered_volatile_sys_i64(ptr %a) local_unnamed_addr {
+define void @generic_unordered_volatile_sys_i64(ptr %a) {
 ; CHECK-LABEL: generic_unordered_volatile_sys_i64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
@@ -951,7 +951,7 @@ define void @generic_unordered_volatile_sys_i64(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_unordered_volatile_sys_float(ptr %a) local_unnamed_addr {
+define void @generic_unordered_volatile_sys_float(ptr %a) {
 ; CHECK-LABEL: generic_unordered_volatile_sys_float(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
@@ -969,7 +969,7 @@ define void @generic_unordered_volatile_sys_float(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_unordered_volatile_sys_double(ptr %a) local_unnamed_addr {
+define void @generic_unordered_volatile_sys_double(ptr %a) {
 ; CHECK-LABEL: generic_unordered_volatile_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
@@ -989,7 +989,7 @@ define void @generic_unordered_volatile_sys_double(ptr %a) local_unnamed_addr {
 
 ; generic_monotonic_sys
 
-define void @generic_monotonic_sys_i8(ptr %a) local_unnamed_addr {
+define void @generic_monotonic_sys_i8(ptr %a) {
 ; SM60-LABEL: generic_monotonic_sys_i8(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b16 %rs<3>;
@@ -1019,7 +1019,7 @@ define void @generic_monotonic_sys_i8(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_monotonic_sys_i16(ptr %a) local_unnamed_addr {
+define void @generic_monotonic_sys_i16(ptr %a) {
 ; SM60-LABEL: generic_monotonic_sys_i16(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b16 %rs<3>;
@@ -1049,7 +1049,7 @@ define void @generic_monotonic_sys_i16(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_monotonic_sys_i32(ptr %a) local_unnamed_addr {
+define void @generic_monotonic_sys_i32(ptr %a) {
 ; SM60-LABEL: generic_monotonic_sys_i32(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b32 %r<3>;
@@ -1079,7 +1079,7 @@ define void @generic_monotonic_sys_i32(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_monotonic_sys_i64(ptr %a) local_unnamed_addr {
+define void @generic_monotonic_sys_i64(ptr %a) {
 ; SM60-LABEL: generic_monotonic_sys_i64(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<4>;
@@ -1107,7 +1107,7 @@ define void @generic_monotonic_sys_i64(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_monotonic_sys_float(ptr %a) local_unnamed_addr {
+define void @generic_monotonic_sys_float(ptr %a) {
 ; SM60-LABEL: generic_monotonic_sys_float(
 ; SM60:       {
 ; SM60-NEXT:    .reg .f32 %f<3>;
@@ -1137,7 +1137,7 @@ define void @generic_monotonic_sys_float(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_monotonic_sys_double(ptr %a) local_unnamed_addr {
+define void @generic_monotonic_sys_double(ptr %a) {
 ; SM60-LABEL: generic_monotonic_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
@@ -1169,7 +1169,7 @@ define void @generic_monotonic_sys_double(ptr %a) local_unnamed_addr {
 
 ; generic_monotonic_volatile_sys
 
-define void @generic_monotonic_volatile_sys_i8(ptr %a) local_unnamed_addr {
+define void @generic_monotonic_volatile_sys_i8(ptr %a) {
 ; CHECK-LABEL: generic_monotonic_volatile_sys_i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -1187,7 +1187,7 @@ define void @generic_monotonic_volatile_sys_i8(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_monotonic_volatile_sys_i16(ptr %a) local_unnamed_addr {
+define void @generic_monotonic_volatile_sys_i16(ptr %a) {
 ; CHECK-LABEL: generic_monotonic_volatile_sys_i16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -1205,7 +1205,7 @@ define void @generic_monotonic_volatile_sys_i16(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_monotonic_volatile_sys_i32(ptr %a) local_unnamed_addr {
+define void @generic_monotonic_volatile_sys_i32(ptr %a) {
 ; CHECK-LABEL: generic_monotonic_volatile_sys_i32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -1223,7 +1223,7 @@ define void @generic_monotonic_volatile_sys_i32(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_monotonic_volatile_sys_i64(ptr %a) local_unnamed_addr {
+define void @generic_monotonic_volatile_sys_i64(ptr %a) {
 ; CHECK-LABEL: generic_monotonic_volatile_sys_i64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
@@ -1240,7 +1240,7 @@ define void @generic_monotonic_volatile_sys_i64(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_monotonic_volatile_sys_float(ptr %a) local_unnamed_addr {
+define void @generic_monotonic_volatile_sys_float(ptr %a) {
 ; CHECK-LABEL: generic_monotonic_volatile_sys_float(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
@@ -1258,7 +1258,7 @@ define void @generic_monotonic_volatile_sys_float(ptr %a) local_unnamed_addr {
   ret void
 }
 
-define void @generic_monotonic_volatile_sys_double(ptr %a) local_unnamed_addr {
+define void @generic_monotonic_volatile_sys_double(ptr %a) {
 ; CHECK-LABEL: generic_monotonic_volatile_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
@@ -1280,14 +1280,14 @@ define void @generic_monotonic_volatile_sys_double(ptr %a) local_unnamed_addr {
 
 ; global_weak
 
-define void @global_weak_i8(ptr addrspace(1) %a) local_unnamed_addr {
-; CHECK-LABEL: global_weak_i8(
+define void @global_i8(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_i8_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_i8_param_0];
 ; CHECK-NEXT:    ld.global.u8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    st.global.u8 [%rd1], %rs2;
@@ -1298,14 +1298,14 @@ define void @global_weak_i8(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_weak_i16(ptr addrspace(1) %a) local_unnamed_addr {
-; CHECK-LABEL: global_weak_i16(
+define void @global_i16(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_i16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_i16_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_i16_param_0];
 ; CHECK-NEXT:    ld.global.u16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    st.global.u16 [%rd1], %rs2;
@@ -1316,14 +1316,14 @@ define void @global_weak_i16(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_weak_i32(ptr addrspace(1) %a) local_unnamed_addr {
-; CHECK-LABEL: global_weak_i32(
+define void @global_i32(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_i32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_i32_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_i32_param_0];
 ; CHECK-NEXT:    ld.global.u32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
 ; CHECK-NEXT:    st.global.u32 [%rd1], %r2;
@@ -1334,13 +1334,13 @@ define void @global_weak_i32(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_weak_i64(ptr addrspace(1) %a) local_unnamed_addr {
-; CHECK-LABEL: global_weak_i64(
+define void @global_i64(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_i64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_i64_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_i64_param_0];
 ; CHECK-NEXT:    ld.global.u64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
 ; CHECK-NEXT:    st.global.u64 [%rd1], %rd3;
@@ -1351,14 +1351,14 @@ define void @global_weak_i64(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_weak_float(ptr addrspace(1) %a) local_unnamed_addr {
-; CHECK-LABEL: global_weak_float(
+define void @global_float(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_float(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_float_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_float_param_0];
 ; CHECK-NEXT:    ld.global.f32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
 ; CHECK-NEXT:    st.global.f32 [%rd1], %f2;
@@ -1369,14 +1369,14 @@ define void @global_weak_float(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_weak_double(ptr addrspace(1) %a) local_unnamed_addr {
-; CHECK-LABEL: global_weak_double(
+define void @global_double(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-NEXT:    .reg .f64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_double_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_double_param_0];
 ; CHECK-NEXT:    ld.global.f64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
 ; CHECK-NEXT:    st.global.f64 [%rd1], %fd2;
@@ -1387,14 +1387,14 @@ define void @global_weak_double(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_weak_2xi8(ptr addrspace(1) %a) local_unnamed_addr {
-; CHECK-LABEL: global_weak_2xi8(
+define void @global_2xi8(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_2xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_2xi8_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_2xi8_param_0];
 ; CHECK-NEXT:    ld.global.v2.u8 {%rs1, %rs2}, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
 ; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
@@ -1406,15 +1406,15 @@ define void @global_weak_2xi8(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_weak_4xi8(ptr addrspace(1) %a) local_unnamed_addr {
-; CHECK-LABEL: global_weak_4xi8(
+define void @global_4xi8(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_4xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<9>;
 ; CHECK-NEXT:    .reg .b32 %r<13>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_4xi8_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_4xi8_param_0];
 ; CHECK-NEXT:    ld.global.u32 %r1, [%rd1];
 ; CHECK-NEXT:    bfe.u32 %r2, %r1, 0, 8;
 ; CHECK-NEXT:    cvt.u16.u32 %rs1, %r2;
@@ -1443,15 +1443,15 @@ define void @global_weak_4xi8(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_weak_2xi16(ptr addrspace(1) %a) local_unnamed_addr {
-; CHECK-LABEL: global_weak_2xi16(
+define void @global_2xi16(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_2xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_2xi16_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_2xi16_param_0];
 ; CHECK-NEXT:    ld.global.u32 %r1, [%rd1];
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
@@ -1465,14 +1465,14 @@ define void @global_weak_2xi16(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_weak_4xi16(ptr addrspace(1) %a) local_unnamed_addr {
-; CHECK-LABEL: global_weak_4xi16(
+define void @global_4xi16(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_4xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_4xi16_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_4xi16_param_0];
 ; CHECK-NEXT:    ld.global.v4.u16 {%rs1, %rs2, %rs3, %rs4}, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs5, %rs4, 1;
 ; CHECK-NEXT:    add.s16 %rs6, %rs3, 1;
@@ -1486,14 +1486,14 @@ define void @global_weak_4xi16(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_weak_2xi32(ptr addrspace(1) %a) local_unnamed_addr {
-; CHECK-LABEL: global_weak_2xi32(
+define void @global_2xi32(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_2xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_2xi32_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_2xi32_param_0];
 ; CHECK-NEXT:    ld.global.v2.u32 {%r1, %r2}, [%rd1];
 ; CHECK-NEXT:    add.s32 %r3, %r2, 1;
 ; CHECK-NEXT:    add.s32 %r4, %r1, 1;
@@ -1505,14 +1505,14 @@ define void @global_weak_2xi32(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_weak_4xi32(ptr addrspace(1) %a) local_unnamed_addr {
-; CHECK-LABEL: global_weak_4xi32(
+define void @global_4xi32(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_4xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_4xi32_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_4xi32_param_0];
 ; CHECK-NEXT:    ld.global.v4.u32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    add.s32 %r5, %r4, 1;
 ; CHECK-NEXT:    add.s32 %r6, %r3, 1;
@@ -1526,13 +1526,13 @@ define void @global_weak_4xi32(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_weak_2xi64(ptr addrspace(1) %a) local_unnamed_addr {
-; CHECK-LABEL: global_weak_2xi64(
+define void @global_2xi64(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_2xi64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_2xi64_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_2xi64_param_0];
 ; CHECK-NEXT:    ld.global.v2.u64 {%rd2, %rd3}, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd4, %rd3, 1;
 ; CHECK-NEXT:    add.s64 %rd5, %rd2, 1;
@@ -1544,14 +1544,14 @@ define void @global_weak_2xi64(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_weak_2xfloat(ptr addrspace(1) %a) local_unnamed_addr {
-; CHECK-LABEL: global_weak_2xfloat(
+define void @global_2xfloat(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_2xfloat(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_2xfloat_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_2xfloat_param_0];
 ; CHECK-NEXT:    ld.global.v2.f32 {%f1, %f2}, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
 ; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
@@ -1563,14 +1563,14 @@ define void @global_weak_2xfloat(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_weak_4xfloat(ptr addrspace(1) %a) local_unnamed_addr {
-; CHECK-LABEL: global_weak_4xfloat(
+define void @global_4xfloat(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_4xfloat(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_4xfloat_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_4xfloat_param_0];
 ; CHECK-NEXT:    ld.global.v4.f32 {%f1, %f2, %f3, %f4}, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
 ; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
@@ -1584,14 +1584,14 @@ define void @global_weak_4xfloat(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_weak_2xdouble(ptr addrspace(1) %a) local_unnamed_addr {
-; CHECK-LABEL: global_weak_2xdouble(
+define void @global_2xdouble(ptr addrspace(1) %a) {
+; CHECK-LABEL: global_2xdouble(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-NEXT:    .reg .f64 %fd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_2xdouble_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_2xdouble_param_0];
 ; CHECK-NEXT:    ld.global.v2.f64 {%fd1, %fd2}, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
 ; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
@@ -1605,7 +1605,7 @@ define void @global_weak_2xdouble(ptr addrspace(1) %a) local_unnamed_addr {
 
 ; global_volatile
 
-define void @global_volatile_i8(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_volatile_i8(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -1623,7 +1623,7 @@ define void @global_volatile_i8(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_volatile_i16(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_volatile_i16(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_i16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -1641,7 +1641,7 @@ define void @global_volatile_i16(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_volatile_i32(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_volatile_i32(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_i32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -1659,7 +1659,7 @@ define void @global_volatile_i32(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_volatile_i64(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_volatile_i64(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_i64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
@@ -1676,7 +1676,7 @@ define void @global_volatile_i64(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_volatile_float(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_volatile_float(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_float(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
@@ -1694,7 +1694,7 @@ define void @global_volatile_float(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_volatile_double(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_volatile_double(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
@@ -1712,7 +1712,7 @@ define void @global_volatile_double(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_volatile_2xi8(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_volatile_2xi8(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_2xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
@@ -1731,7 +1731,7 @@ define void @global_volatile_2xi8(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_volatile_4xi8(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_volatile_4xi8(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_4xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<9>;
@@ -1768,7 +1768,7 @@ define void @global_volatile_4xi8(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_volatile_2xi16(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_volatile_2xi16(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_2xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
@@ -1790,7 +1790,7 @@ define void @global_volatile_2xi16(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_volatile_4xi16(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_volatile_4xi16(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_4xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<9>;
@@ -1811,7 +1811,7 @@ define void @global_volatile_4xi16(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_volatile_2xi32(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_volatile_2xi32(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_2xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
@@ -1830,7 +1830,7 @@ define void @global_volatile_2xi32(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_volatile_4xi32(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_volatile_4xi32(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_4xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<9>;
@@ -1851,7 +1851,7 @@ define void @global_volatile_4xi32(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_volatile_2xi64(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_volatile_2xi64(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_2xi64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
@@ -1869,7 +1869,7 @@ define void @global_volatile_2xi64(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_volatile_2xfloat(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_volatile_2xfloat(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_2xfloat(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<5>;
@@ -1888,7 +1888,7 @@ define void @global_volatile_2xfloat(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_volatile_4xfloat(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_volatile_4xfloat(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_4xfloat(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<9>;
@@ -1909,7 +1909,7 @@ define void @global_volatile_4xfloat(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_volatile_2xdouble(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_volatile_2xdouble(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_2xdouble(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
@@ -1930,7 +1930,7 @@ define void @global_volatile_2xdouble(ptr addrspace(1) %a) local_unnamed_addr {
 
 ; global_unordered_sys
 
-define void @global_unordered_sys_i8(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_unordered_sys_i8(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_sys_i8(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b16 %rs<3>;
@@ -1960,7 +1960,7 @@ define void @global_unordered_sys_i8(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_unordered_sys_i16(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_unordered_sys_i16(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_sys_i16(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b16 %rs<3>;
@@ -1990,7 +1990,7 @@ define void @global_unordered_sys_i16(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_unordered_sys_i32(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_unordered_sys_i32(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_sys_i32(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b32 %r<3>;
@@ -2020,7 +2020,7 @@ define void @global_unordered_sys_i32(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_unordered_sys_i64(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_unordered_sys_i64(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_sys_i64(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<4>;
@@ -2048,7 +2048,7 @@ define void @global_unordered_sys_i64(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_unordered_sys_float(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_unordered_sys_float(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_sys_float(
 ; SM60:       {
 ; SM60-NEXT:    .reg .f32 %f<3>;
@@ -2078,7 +2078,7 @@ define void @global_unordered_sys_float(ptr addrspace(1) %a) local_unnamed_addr 
   ret void
 }
 
-define void @global_unordered_sys_double(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_unordered_sys_double(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
@@ -2110,7 +2110,7 @@ define void @global_unordered_sys_double(ptr addrspace(1) %a) local_unnamed_addr
 
 ; global_unordered_volatile_sys
 
-define void @global_unordered_volatile_sys_i8(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_unordered_volatile_sys_i8(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_volatile_sys_i8(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b16 %rs<3>;
@@ -2140,7 +2140,7 @@ define void @global_unordered_volatile_sys_i8(ptr addrspace(1) %a) local_unnamed
   ret void
 }
 
-define void @global_unordered_volatile_sys_i16(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_unordered_volatile_sys_i16(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_volatile_sys_i16(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b16 %rs<3>;
@@ -2170,7 +2170,7 @@ define void @global_unordered_volatile_sys_i16(ptr addrspace(1) %a) local_unname
   ret void
 }
 
-define void @global_unordered_volatile_sys_i32(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_unordered_volatile_sys_i32(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_volatile_sys_i32(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b32 %r<3>;
@@ -2200,7 +2200,7 @@ define void @global_unordered_volatile_sys_i32(ptr addrspace(1) %a) local_unname
   ret void
 }
 
-define void @global_unordered_volatile_sys_i64(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_unordered_volatile_sys_i64(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_volatile_sys_i64(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<4>;
@@ -2228,7 +2228,7 @@ define void @global_unordered_volatile_sys_i64(ptr addrspace(1) %a) local_unname
   ret void
 }
 
-define void @global_unordered_volatile_sys_float(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_unordered_volatile_sys_float(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_volatile_sys_float(
 ; SM60:       {
 ; SM60-NEXT:    .reg .f32 %f<3>;
@@ -2258,7 +2258,7 @@ define void @global_unordered_volatile_sys_float(ptr addrspace(1) %a) local_unna
   ret void
 }
 
-define void @global_unordered_volatile_sys_double(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_unordered_volatile_sys_double(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_volatile_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
@@ -2290,7 +2290,7 @@ define void @global_unordered_volatile_sys_double(ptr addrspace(1) %a) local_unn
 
 ; global_monotonic_sys
 
-define void @global_monotonic_sys_i8(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_monotonic_sys_i8(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_sys_i8(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b16 %rs<3>;
@@ -2320,7 +2320,7 @@ define void @global_monotonic_sys_i8(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_monotonic_sys_i16(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_monotonic_sys_i16(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_sys_i16(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b16 %rs<3>;
@@ -2350,7 +2350,7 @@ define void @global_monotonic_sys_i16(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_monotonic_sys_i32(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_monotonic_sys_i32(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_sys_i32(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b32 %r<3>;
@@ -2380,7 +2380,7 @@ define void @global_monotonic_sys_i32(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_monotonic_sys_i64(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_monotonic_sys_i64(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_sys_i64(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<4>;
@@ -2408,7 +2408,7 @@ define void @global_monotonic_sys_i64(ptr addrspace(1) %a) local_unnamed_addr {
   ret void
 }
 
-define void @global_monotonic_sys_float(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_monotonic_sys_float(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_sys_float(
 ; SM60:       {
 ; SM60-NEXT:    .reg .f32 %f<3>;
@@ -2438,7 +2438,7 @@ define void @global_monotonic_sys_float(ptr addrspace(1) %a) local_unnamed_addr 
   ret void
 }
 
-define void @global_monotonic_sys_double(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_monotonic_sys_double(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
@@ -2470,7 +2470,7 @@ define void @global_monotonic_sys_double(ptr addrspace(1) %a) local_unnamed_addr
 
 ; global_monotonic_volatile_sys
 
-define void @global_monotonic_volatile_sys_i8(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_monotonic_volatile_sys_i8(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_volatile_sys_i8(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b16 %rs<3>;
@@ -2500,7 +2500,7 @@ define void @global_monotonic_volatile_sys_i8(ptr addrspace(1) %a) local_unnamed
   ret void
 }
 
-define void @global_monotonic_volatile_sys_i16(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_monotonic_volatile_sys_i16(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_volatile_sys_i16(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b16 %rs<3>;
@@ -2530,7 +2530,7 @@ define void @global_monotonic_volatile_sys_i16(ptr addrspace(1) %a) local_unname
   ret void
 }
 
-define void @global_monotonic_volatile_sys_i32(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_monotonic_volatile_sys_i32(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_volatile_sys_i32(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b32 %r<3>;
@@ -2560,7 +2560,7 @@ define void @global_monotonic_volatile_sys_i32(ptr addrspace(1) %a) local_unname
   ret void
 }
 
-define void @global_monotonic_volatile_sys_i64(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_monotonic_volatile_sys_i64(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_volatile_sys_i64(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<4>;
@@ -2588,7 +2588,7 @@ define void @global_monotonic_volatile_sys_i64(ptr addrspace(1) %a) local_unname
   ret void
 }
 
-define void @global_monotonic_volatile_sys_float(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_monotonic_volatile_sys_float(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_volatile_sys_float(
 ; SM60:       {
 ; SM60-NEXT:    .reg .f32 %f<3>;
@@ -2618,7 +2618,7 @@ define void @global_monotonic_volatile_sys_float(ptr addrspace(1) %a) local_unna
   ret void
 }
 
-define void @global_monotonic_volatile_sys_double(ptr addrspace(1) %a) local_unnamed_addr {
+define void @global_monotonic_volatile_sys_double(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_volatile_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
@@ -2652,14 +2652,14 @@ define void @global_monotonic_volatile_sys_double(ptr addrspace(1) %a) local_unn
 
 ; shared_weak
 
-define void @shared_weak_i8(ptr addrspace(3) %a) local_unnamed_addr {
-; CHECK-LABEL: shared_weak_i8(
+define void @shared_i8(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_i8_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_i8_param_0];
 ; CHECK-NEXT:    ld.shared.u8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    st.shared.u8 [%rd1], %rs2;
@@ -2670,14 +2670,14 @@ define void @shared_weak_i8(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_weak_i16(ptr addrspace(3) %a) local_unnamed_addr {
-; CHECK-LABEL: shared_weak_i16(
+define void @shared_i16(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_i16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_i16_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_i16_param_0];
 ; CHECK-NEXT:    ld.shared.u16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    st.shared.u16 [%rd1], %rs2;
@@ -2688,14 +2688,14 @@ define void @shared_weak_i16(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_weak_i32(ptr addrspace(3) %a) local_unnamed_addr {
-; CHECK-LABEL: shared_weak_i32(
+define void @shared_i32(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_i32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_i32_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_i32_param_0];
 ; CHECK-NEXT:    ld.shared.u32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
 ; CHECK-NEXT:    st.shared.u32 [%rd1], %r2;
@@ -2706,13 +2706,13 @@ define void @shared_weak_i32(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_weak_i64(ptr addrspace(3) %a) local_unnamed_addr {
-; CHECK-LABEL: shared_weak_i64(
+define void @shared_i64(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_i64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_i64_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_i64_param_0];
 ; CHECK-NEXT:    ld.shared.u64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
 ; CHECK-NEXT:    st.shared.u64 [%rd1], %rd3;
@@ -2723,14 +2723,14 @@ define void @shared_weak_i64(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_weak_float(ptr addrspace(3) %a) local_unnamed_addr {
-; CHECK-LABEL: shared_weak_float(
+define void @shared_float(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_float(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_float_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_float_param_0];
 ; CHECK-NEXT:    ld.shared.f32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
 ; CHECK-NEXT:    st.shared.f32 [%rd1], %f2;
@@ -2741,14 +2741,14 @@ define void @shared_weak_float(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_weak_double(ptr addrspace(3) %a) local_unnamed_addr {
-; CHECK-LABEL: shared_weak_double(
+define void @shared_double(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-NEXT:    .reg .f64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_double_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_double_param_0];
 ; CHECK-NEXT:    ld.shared.f64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
 ; CHECK-NEXT:    st.shared.f64 [%rd1], %fd2;
@@ -2759,14 +2759,14 @@ define void @shared_weak_double(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_weak_2xi8(ptr addrspace(3) %a) local_unnamed_addr {
-; CHECK-LABEL: shared_weak_2xi8(
+define void @shared_2xi8(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_2xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_2xi8_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_2xi8_param_0];
 ; CHECK-NEXT:    ld.shared.v2.u8 {%rs1, %rs2}, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
 ; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
@@ -2778,15 +2778,15 @@ define void @shared_weak_2xi8(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_weak_4xi8(ptr addrspace(3) %a) local_unnamed_addr {
-; CHECK-LABEL: shared_weak_4xi8(
+define void @shared_4xi8(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_4xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<9>;
 ; CHECK-NEXT:    .reg .b32 %r<13>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_4xi8_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_4xi8_param_0];
 ; CHECK-NEXT:    ld.shared.u32 %r1, [%rd1];
 ; CHECK-NEXT:    bfe.u32 %r2, %r1, 0, 8;
 ; CHECK-NEXT:    cvt.u16.u32 %rs1, %r2;
@@ -2815,15 +2815,15 @@ define void @shared_weak_4xi8(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_weak_2xi16(ptr addrspace(3) %a) local_unnamed_addr {
-; CHECK-LABEL: shared_weak_2xi16(
+define void @shared_2xi16(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_2xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_2xi16_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_2xi16_param_0];
 ; CHECK-NEXT:    ld.shared.u32 %r1, [%rd1];
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
@@ -2837,14 +2837,14 @@ define void @shared_weak_2xi16(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_weak_4xi16(ptr addrspace(3) %a) local_unnamed_addr {
-; CHECK-LABEL: shared_weak_4xi16(
+define void @shared_4xi16(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_4xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_4xi16_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_4xi16_param_0];
 ; CHECK-NEXT:    ld.shared.v4.u16 {%rs1, %rs2, %rs3, %rs4}, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs5, %rs4, 1;
 ; CHECK-NEXT:    add.s16 %rs6, %rs3, 1;
@@ -2858,14 +2858,14 @@ define void @shared_weak_4xi16(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_weak_2xi32(ptr addrspace(3) %a) local_unnamed_addr {
-; CHECK-LABEL: shared_weak_2xi32(
+define void @shared_2xi32(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_2xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_2xi32_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_2xi32_param_0];
 ; CHECK-NEXT:    ld.shared.v2.u32 {%r1, %r2}, [%rd1];
 ; CHECK-NEXT:    add.s32 %r3, %r2, 1;
 ; CHECK-NEXT:    add.s32 %r4, %r1, 1;
@@ -2877,14 +2877,14 @@ define void @shared_weak_2xi32(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_weak_4xi32(ptr addrspace(3) %a) local_unnamed_addr {
-; CHECK-LABEL: shared_weak_4xi32(
+define void @shared_4xi32(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_4xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_4xi32_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_4xi32_param_0];
 ; CHECK-NEXT:    ld.shared.v4.u32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    add.s32 %r5, %r4, 1;
 ; CHECK-NEXT:    add.s32 %r6, %r3, 1;
@@ -2898,13 +2898,13 @@ define void @shared_weak_4xi32(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_weak_2xi64(ptr addrspace(3) %a) local_unnamed_addr {
-; CHECK-LABEL: shared_weak_2xi64(
+define void @shared_2xi64(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_2xi64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_2xi64_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_2xi64_param_0];
 ; CHECK-NEXT:    ld.shared.v2.u64 {%rd2, %rd3}, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd4, %rd3, 1;
 ; CHECK-NEXT:    add.s64 %rd5, %rd2, 1;
@@ -2916,14 +2916,14 @@ define void @shared_weak_2xi64(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_weak_2xfloat(ptr addrspace(3) %a) local_unnamed_addr {
-; CHECK-LABEL: shared_weak_2xfloat(
+define void @shared_2xfloat(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_2xfloat(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_2xfloat_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_2xfloat_param_0];
 ; CHECK-NEXT:    ld.shared.v2.f32 {%f1, %f2}, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
 ; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
@@ -2935,14 +2935,14 @@ define void @shared_weak_2xfloat(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_weak_4xfloat(ptr addrspace(3) %a) local_unnamed_addr {
-; CHECK-LABEL: shared_weak_4xfloat(
+define void @shared_4xfloat(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_4xfloat(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_4xfloat_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_4xfloat_param_0];
 ; CHECK-NEXT:    ld.shared.v4.f32 {%f1, %f2, %f3, %f4}, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
 ; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
@@ -2956,14 +2956,14 @@ define void @shared_weak_4xfloat(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_weak_2xdouble(ptr addrspace(3) %a) local_unnamed_addr {
-; CHECK-LABEL: shared_weak_2xdouble(
+define void @shared_2xdouble(ptr addrspace(3) %a) {
+; CHECK-LABEL: shared_2xdouble(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-NEXT:    .reg .f64 %fd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_2xdouble_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_2xdouble_param_0];
 ; CHECK-NEXT:    ld.shared.v2.f64 {%fd1, %fd2}, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
 ; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
@@ -2977,7 +2977,7 @@ define void @shared_weak_2xdouble(ptr addrspace(3) %a) local_unnamed_addr {
 
 ; shared_volatile
 
-define void @shared_volatile_i8(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_volatile_i8(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -2995,7 +2995,7 @@ define void @shared_volatile_i8(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_volatile_i16(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_volatile_i16(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_i16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -3013,7 +3013,7 @@ define void @shared_volatile_i16(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_volatile_i32(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_volatile_i32(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_i32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -3031,7 +3031,7 @@ define void @shared_volatile_i32(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_volatile_i64(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_volatile_i64(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_i64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
@@ -3048,7 +3048,7 @@ define void @shared_volatile_i64(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_volatile_float(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_volatile_float(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_float(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
@@ -3066,7 +3066,7 @@ define void @shared_volatile_float(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_volatile_double(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_volatile_double(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
@@ -3084,7 +3084,7 @@ define void @shared_volatile_double(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_volatile_2xi8(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_volatile_2xi8(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_2xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
@@ -3103,7 +3103,7 @@ define void @shared_volatile_2xi8(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_volatile_4xi8(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_volatile_4xi8(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_4xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<9>;
@@ -3140,7 +3140,7 @@ define void @shared_volatile_4xi8(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_volatile_2xi16(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_volatile_2xi16(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_2xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
@@ -3162,7 +3162,7 @@ define void @shared_volatile_2xi16(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_volatile_4xi16(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_volatile_4xi16(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_4xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<9>;
@@ -3183,7 +3183,7 @@ define void @shared_volatile_4xi16(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_volatile_2xi32(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_volatile_2xi32(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_2xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
@@ -3202,7 +3202,7 @@ define void @shared_volatile_2xi32(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_volatile_4xi32(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_volatile_4xi32(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_4xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<9>;
@@ -3223,7 +3223,7 @@ define void @shared_volatile_4xi32(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_volatile_2xi64(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_volatile_2xi64(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_2xi64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
@@ -3241,7 +3241,7 @@ define void @shared_volatile_2xi64(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_volatile_2xfloat(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_volatile_2xfloat(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_2xfloat(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<5>;
@@ -3260,7 +3260,7 @@ define void @shared_volatile_2xfloat(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_volatile_4xfloat(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_volatile_4xfloat(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_4xfloat(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<9>;
@@ -3281,7 +3281,7 @@ define void @shared_volatile_4xfloat(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_volatile_2xdouble(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_volatile_2xdouble(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_2xdouble(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
@@ -3302,7 +3302,7 @@ define void @shared_volatile_2xdouble(ptr addrspace(3) %a) local_unnamed_addr {
 
 ; shared_unordered_sys
 
-define void @shared_unordered_sys_i8(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_unordered_sys_i8(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_unordered_sys_i8(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b16 %rs<3>;
@@ -3332,7 +3332,7 @@ define void @shared_unordered_sys_i8(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_unordered_sys_i16(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_unordered_sys_i16(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_unordered_sys_i16(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b16 %rs<3>;
@@ -3362,7 +3362,7 @@ define void @shared_unordered_sys_i16(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_unordered_sys_i32(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_unordered_sys_i32(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_unordered_sys_i32(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b32 %r<3>;
@@ -3392,7 +3392,7 @@ define void @shared_unordered_sys_i32(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_unordered_sys_i64(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_unordered_sys_i64(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_unordered_sys_i64(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<4>;
@@ -3420,7 +3420,7 @@ define void @shared_unordered_sys_i64(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_unordered_sys_float(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_unordered_sys_float(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_unordered_sys_float(
 ; SM60:       {
 ; SM60-NEXT:    .reg .f32 %f<3>;
@@ -3450,7 +3450,7 @@ define void @shared_unordered_sys_float(ptr addrspace(3) %a) local_unnamed_addr 
   ret void
 }
 
-define void @shared_unordered_sys_double(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_unordered_sys_double(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_unordered_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
@@ -3482,7 +3482,7 @@ define void @shared_unordered_sys_double(ptr addrspace(3) %a) local_unnamed_addr
 
 ; shared_unordered_volatile_sys
 
-define void @shared_unordered_volatile_sys_i8(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_unordered_volatile_sys_i8(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_unordered_volatile_sys_i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -3500,7 +3500,7 @@ define void @shared_unordered_volatile_sys_i8(ptr addrspace(3) %a) local_unnamed
   ret void
 }
 
-define void @shared_unordered_volatile_sys_i16(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_unordered_volatile_sys_i16(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_unordered_volatile_sys_i16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -3518,7 +3518,7 @@ define void @shared_unordered_volatile_sys_i16(ptr addrspace(3) %a) local_unname
   ret void
 }
 
-define void @shared_unordered_volatile_sys_i32(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_unordered_volatile_sys_i32(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_unordered_volatile_sys_i32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -3536,7 +3536,7 @@ define void @shared_unordered_volatile_sys_i32(ptr addrspace(3) %a) local_unname
   ret void
 }
 
-define void @shared_unordered_volatile_sys_i64(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_unordered_volatile_sys_i64(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_unordered_volatile_sys_i64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
@@ -3553,7 +3553,7 @@ define void @shared_unordered_volatile_sys_i64(ptr addrspace(3) %a) local_unname
   ret void
 }
 
-define void @shared_unordered_volatile_sys_float(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_unordered_volatile_sys_float(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_unordered_volatile_sys_float(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
@@ -3571,7 +3571,7 @@ define void @shared_unordered_volatile_sys_float(ptr addrspace(3) %a) local_unna
   ret void
 }
 
-define void @shared_unordered_volatile_sys_double(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_unordered_volatile_sys_double(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_unordered_volatile_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
@@ -3591,7 +3591,7 @@ define void @shared_unordered_volatile_sys_double(ptr addrspace(3) %a) local_unn
 
 ; shared_monotonic_sys
 
-define void @shared_monotonic_sys_i8(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_monotonic_sys_i8(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_monotonic_sys_i8(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b16 %rs<3>;
@@ -3621,7 +3621,7 @@ define void @shared_monotonic_sys_i8(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_monotonic_sys_i16(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_monotonic_sys_i16(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_monotonic_sys_i16(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b16 %rs<3>;
@@ -3651,7 +3651,7 @@ define void @shared_monotonic_sys_i16(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_monotonic_sys_i32(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_monotonic_sys_i32(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_monotonic_sys_i32(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b32 %r<3>;
@@ -3681,7 +3681,7 @@ define void @shared_monotonic_sys_i32(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_monotonic_sys_i64(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_monotonic_sys_i64(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_monotonic_sys_i64(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<4>;
@@ -3709,7 +3709,7 @@ define void @shared_monotonic_sys_i64(ptr addrspace(3) %a) local_unnamed_addr {
   ret void
 }
 
-define void @shared_monotonic_sys_float(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_monotonic_sys_float(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_monotonic_sys_float(
 ; SM60:       {
 ; SM60-NEXT:    .reg .f32 %f<3>;
@@ -3739,7 +3739,7 @@ define void @shared_monotonic_sys_float(ptr addrspace(3) %a) local_unnamed_addr 
   ret void
 }
 
-define void @shared_monotonic_sys_double(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_monotonic_sys_double(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_monotonic_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
@@ -3771,7 +3771,7 @@ define void @shared_monotonic_sys_double(ptr addrspace(3) %a) local_unnamed_addr
 
 ; shared_monotonic_volatile_sys
 
-define void @shared_monotonic_volatile_sys_i8(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_monotonic_volatile_sys_i8(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_monotonic_volatile_sys_i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -3789,7 +3789,7 @@ define void @shared_monotonic_volatile_sys_i8(ptr addrspace(3) %a) local_unnamed
   ret void
 }
 
-define void @shared_monotonic_volatile_sys_i16(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_monotonic_volatile_sys_i16(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_monotonic_volatile_sys_i16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -3807,7 +3807,7 @@ define void @shared_monotonic_volatile_sys_i16(ptr addrspace(3) %a) local_unname
   ret void
 }
 
-define void @shared_monotonic_volatile_sys_i32(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_monotonic_volatile_sys_i32(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_monotonic_volatile_sys_i32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -3825,7 +3825,7 @@ define void @shared_monotonic_volatile_sys_i32(ptr addrspace(3) %a) local_unname
   ret void
 }
 
-define void @shared_monotonic_volatile_sys_i64(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_monotonic_volatile_sys_i64(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_monotonic_volatile_sys_i64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
@@ -3842,7 +3842,7 @@ define void @shared_monotonic_volatile_sys_i64(ptr addrspace(3) %a) local_unname
   ret void
 }
 
-define void @shared_monotonic_volatile_sys_float(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_monotonic_volatile_sys_float(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_monotonic_volatile_sys_float(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
@@ -3860,7 +3860,7 @@ define void @shared_monotonic_volatile_sys_float(ptr addrspace(3) %a) local_unna
   ret void
 }
 
-define void @shared_monotonic_volatile_sys_double(ptr addrspace(3) %a) local_unnamed_addr {
+define void @shared_monotonic_volatile_sys_double(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_monotonic_volatile_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
@@ -3882,14 +3882,14 @@ define void @shared_monotonic_volatile_sys_double(ptr addrspace(3) %a) local_unn
 
 ; local_weak
 
-define void @local_weak_i8(ptr addrspace(5) %a) local_unnamed_addr {
-; CHECK-LABEL: local_weak_i8(
+define void @local_i8(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_i8_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_i8_param_0];
 ; CHECK-NEXT:    ld.local.u8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    st.local.u8 [%rd1], %rs2;
@@ -3900,14 +3900,14 @@ define void @local_weak_i8(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_weak_i16(ptr addrspace(5) %a) local_unnamed_addr {
-; CHECK-LABEL: local_weak_i16(
+define void @local_i16(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_i16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_i16_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_i16_param_0];
 ; CHECK-NEXT:    ld.local.u16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    st.local.u16 [%rd1], %rs2;
@@ -3918,14 +3918,14 @@ define void @local_weak_i16(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_weak_i32(ptr addrspace(5) %a) local_unnamed_addr {
-; CHECK-LABEL: local_weak_i32(
+define void @local_i32(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_i32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_i32_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_i32_param_0];
 ; CHECK-NEXT:    ld.local.u32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
 ; CHECK-NEXT:    st.local.u32 [%rd1], %r2;
@@ -3936,13 +3936,13 @@ define void @local_weak_i32(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_weak_i64(ptr addrspace(5) %a) local_unnamed_addr {
-; CHECK-LABEL: local_weak_i64(
+define void @local_i64(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_i64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_i64_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_i64_param_0];
 ; CHECK-NEXT:    ld.local.u64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
 ; CHECK-NEXT:    st.local.u64 [%rd1], %rd3;
@@ -3953,14 +3953,14 @@ define void @local_weak_i64(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_weak_float(ptr addrspace(5) %a) local_unnamed_addr {
-; CHECK-LABEL: local_weak_float(
+define void @local_float(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_float(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_float_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_float_param_0];
 ; CHECK-NEXT:    ld.local.f32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
 ; CHECK-NEXT:    st.local.f32 [%rd1], %f2;
@@ -3971,14 +3971,14 @@ define void @local_weak_float(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_weak_double(ptr addrspace(5) %a) local_unnamed_addr {
-; CHECK-LABEL: local_weak_double(
+define void @local_double(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-NEXT:    .reg .f64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_double_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_double_param_0];
 ; CHECK-NEXT:    ld.local.f64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
 ; CHECK-NEXT:    st.local.f64 [%rd1], %fd2;
@@ -3989,14 +3989,14 @@ define void @local_weak_double(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_weak_2xi8(ptr addrspace(5) %a) local_unnamed_addr {
-; CHECK-LABEL: local_weak_2xi8(
+define void @local_2xi8(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_2xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_2xi8_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_2xi8_param_0];
 ; CHECK-NEXT:    ld.local.v2.u8 {%rs1, %rs2}, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
 ; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
@@ -4008,15 +4008,15 @@ define void @local_weak_2xi8(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_weak_4xi8(ptr addrspace(5) %a) local_unnamed_addr {
-; CHECK-LABEL: local_weak_4xi8(
+define void @local_4xi8(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_4xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<9>;
 ; CHECK-NEXT:    .reg .b32 %r<13>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_4xi8_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_4xi8_param_0];
 ; CHECK-NEXT:    ld.local.u32 %r1, [%rd1];
 ; CHECK-NEXT:    bfe.u32 %r2, %r1, 0, 8;
 ; CHECK-NEXT:    cvt.u16.u32 %rs1, %r2;
@@ -4045,15 +4045,15 @@ define void @local_weak_4xi8(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_weak_2xi16(ptr addrspace(5) %a) local_unnamed_addr {
-; CHECK-LABEL: local_weak_2xi16(
+define void @local_2xi16(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_2xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_2xi16_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_2xi16_param_0];
 ; CHECK-NEXT:    ld.local.u32 %r1, [%rd1];
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
@@ -4067,14 +4067,14 @@ define void @local_weak_2xi16(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_weak_4xi16(ptr addrspace(5) %a) local_unnamed_addr {
-; CHECK-LABEL: local_weak_4xi16(
+define void @local_4xi16(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_4xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_4xi16_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_4xi16_param_0];
 ; CHECK-NEXT:    ld.local.v4.u16 {%rs1, %rs2, %rs3, %rs4}, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs5, %rs4, 1;
 ; CHECK-NEXT:    add.s16 %rs6, %rs3, 1;
@@ -4088,14 +4088,14 @@ define void @local_weak_4xi16(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_weak_2xi32(ptr addrspace(5) %a) local_unnamed_addr {
-; CHECK-LABEL: local_weak_2xi32(
+define void @local_2xi32(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_2xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_2xi32_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_2xi32_param_0];
 ; CHECK-NEXT:    ld.local.v2.u32 {%r1, %r2}, [%rd1];
 ; CHECK-NEXT:    add.s32 %r3, %r2, 1;
 ; CHECK-NEXT:    add.s32 %r4, %r1, 1;
@@ -4107,14 +4107,14 @@ define void @local_weak_2xi32(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_weak_4xi32(ptr addrspace(5) %a) local_unnamed_addr {
-; CHECK-LABEL: local_weak_4xi32(
+define void @local_4xi32(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_4xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_4xi32_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_4xi32_param_0];
 ; CHECK-NEXT:    ld.local.v4.u32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    add.s32 %r5, %r4, 1;
 ; CHECK-NEXT:    add.s32 %r6, %r3, 1;
@@ -4128,13 +4128,13 @@ define void @local_weak_4xi32(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_weak_2xi64(ptr addrspace(5) %a) local_unnamed_addr {
-; CHECK-LABEL: local_weak_2xi64(
+define void @local_2xi64(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_2xi64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_2xi64_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_2xi64_param_0];
 ; CHECK-NEXT:    ld.local.v2.u64 {%rd2, %rd3}, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd4, %rd3, 1;
 ; CHECK-NEXT:    add.s64 %rd5, %rd2, 1;
@@ -4146,14 +4146,14 @@ define void @local_weak_2xi64(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_weak_2xfloat(ptr addrspace(5) %a) local_unnamed_addr {
-; CHECK-LABEL: local_weak_2xfloat(
+define void @local_2xfloat(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_2xfloat(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_2xfloat_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_2xfloat_param_0];
 ; CHECK-NEXT:    ld.local.v2.f32 {%f1, %f2}, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
 ; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
@@ -4165,14 +4165,14 @@ define void @local_weak_2xfloat(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_weak_4xfloat(ptr addrspace(5) %a) local_unnamed_addr {
-; CHECK-LABEL: local_weak_4xfloat(
+define void @local_4xfloat(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_4xfloat(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_4xfloat_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_4xfloat_param_0];
 ; CHECK-NEXT:    ld.local.v4.f32 {%f1, %f2, %f3, %f4}, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
 ; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
@@ -4186,14 +4186,14 @@ define void @local_weak_4xfloat(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_weak_2xdouble(ptr addrspace(5) %a) local_unnamed_addr {
-; CHECK-LABEL: local_weak_2xdouble(
+define void @local_2xdouble(ptr addrspace(5) %a) {
+; CHECK-LABEL: local_2xdouble(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-NEXT:    .reg .f64 %fd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_2xdouble_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_2xdouble_param_0];
 ; CHECK-NEXT:    ld.local.v2.f64 {%fd1, %fd2}, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
 ; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
@@ -4207,7 +4207,7 @@ define void @local_weak_2xdouble(ptr addrspace(5) %a) local_unnamed_addr {
 
 ; local_volatile
 
-define void @local_volatile_i8(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_volatile_i8(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -4225,7 +4225,7 @@ define void @local_volatile_i8(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_volatile_i16(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_volatile_i16(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_i16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -4243,7 +4243,7 @@ define void @local_volatile_i16(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_volatile_i32(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_volatile_i32(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_i32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -4261,7 +4261,7 @@ define void @local_volatile_i32(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_volatile_i64(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_volatile_i64(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_i64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
@@ -4278,7 +4278,7 @@ define void @local_volatile_i64(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_volatile_float(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_volatile_float(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_float(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
@@ -4296,7 +4296,7 @@ define void @local_volatile_float(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_volatile_double(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_volatile_double(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
@@ -4314,7 +4314,7 @@ define void @local_volatile_double(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_volatile_2xi8(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_volatile_2xi8(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_2xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
@@ -4333,7 +4333,7 @@ define void @local_volatile_2xi8(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_volatile_4xi8(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_volatile_4xi8(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_4xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<9>;
@@ -4370,7 +4370,7 @@ define void @local_volatile_4xi8(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_volatile_2xi16(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_volatile_2xi16(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_2xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
@@ -4392,7 +4392,7 @@ define void @local_volatile_2xi16(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_volatile_4xi16(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_volatile_4xi16(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_4xi16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<9>;
@@ -4413,7 +4413,7 @@ define void @local_volatile_4xi16(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_volatile_2xi32(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_volatile_2xi32(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_2xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
@@ -4432,7 +4432,7 @@ define void @local_volatile_2xi32(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_volatile_4xi32(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_volatile_4xi32(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_4xi32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<9>;
@@ -4453,7 +4453,7 @@ define void @local_volatile_4xi32(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_volatile_2xi64(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_volatile_2xi64(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_2xi64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
@@ -4471,7 +4471,7 @@ define void @local_volatile_2xi64(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_volatile_2xfloat(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_volatile_2xfloat(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_2xfloat(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<5>;
@@ -4490,7 +4490,7 @@ define void @local_volatile_2xfloat(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_volatile_4xfloat(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_volatile_4xfloat(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_4xfloat(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<9>;
@@ -4511,7 +4511,7 @@ define void @local_volatile_4xfloat(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_volatile_2xdouble(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_volatile_2xdouble(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_2xdouble(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
@@ -4532,7 +4532,7 @@ define void @local_volatile_2xdouble(ptr addrspace(5) %a) local_unnamed_addr {
 
 ; local_unordered_sys
 
-define void @local_unordered_sys_i8(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_unordered_sys_i8(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_sys_i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -4550,7 +4550,7 @@ define void @local_unordered_sys_i8(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_unordered_sys_i16(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_unordered_sys_i16(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_sys_i16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -4568,7 +4568,7 @@ define void @local_unordered_sys_i16(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_unordered_sys_i32(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_unordered_sys_i32(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_sys_i32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -4586,7 +4586,7 @@ define void @local_unordered_sys_i32(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_unordered_sys_i64(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_unordered_sys_i64(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_sys_i64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
@@ -4603,7 +4603,7 @@ define void @local_unordered_sys_i64(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_unordered_sys_float(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_unordered_sys_float(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_sys_float(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
@@ -4621,7 +4621,7 @@ define void @local_unordered_sys_float(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_unordered_sys_double(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_unordered_sys_double(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
@@ -4641,7 +4641,7 @@ define void @local_unordered_sys_double(ptr addrspace(5) %a) local_unnamed_addr 
 
 ; local_unordered_volatile_sys
 
-define void @local_unordered_volatile_sys_i8(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_unordered_volatile_sys_i8(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_volatile_sys_i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -4659,7 +4659,7 @@ define void @local_unordered_volatile_sys_i8(ptr addrspace(5) %a) local_unnamed_
   ret void
 }
 
-define void @local_unordered_volatile_sys_i16(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_unordered_volatile_sys_i16(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_volatile_sys_i16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -4677,7 +4677,7 @@ define void @local_unordered_volatile_sys_i16(ptr addrspace(5) %a) local_unnamed
   ret void
 }
 
-define void @local_unordered_volatile_sys_i32(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_unordered_volatile_sys_i32(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_volatile_sys_i32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -4695,7 +4695,7 @@ define void @local_unordered_volatile_sys_i32(ptr addrspace(5) %a) local_unnamed
   ret void
 }
 
-define void @local_unordered_volatile_sys_i64(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_unordered_volatile_sys_i64(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_volatile_sys_i64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
@@ -4712,7 +4712,7 @@ define void @local_unordered_volatile_sys_i64(ptr addrspace(5) %a) local_unnamed
   ret void
 }
 
-define void @local_unordered_volatile_sys_float(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_unordered_volatile_sys_float(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_volatile_sys_float(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
@@ -4730,7 +4730,7 @@ define void @local_unordered_volatile_sys_float(ptr addrspace(5) %a) local_unnam
   ret void
 }
 
-define void @local_unordered_volatile_sys_double(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_unordered_volatile_sys_double(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_volatile_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
@@ -4750,7 +4750,7 @@ define void @local_unordered_volatile_sys_double(ptr addrspace(5) %a) local_unna
 
 ; local_monotonic_sys
 
-define void @local_monotonic_sys_i8(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_monotonic_sys_i8(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_sys_i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -4768,7 +4768,7 @@ define void @local_monotonic_sys_i8(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_monotonic_sys_i16(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_monotonic_sys_i16(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_sys_i16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -4786,7 +4786,7 @@ define void @local_monotonic_sys_i16(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_monotonic_sys_i32(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_monotonic_sys_i32(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_sys_i32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -4804,7 +4804,7 @@ define void @local_monotonic_sys_i32(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_monotonic_sys_i64(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_monotonic_sys_i64(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_sys_i64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
@@ -4821,7 +4821,7 @@ define void @local_monotonic_sys_i64(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_monotonic_sys_float(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_monotonic_sys_float(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_sys_float(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
@@ -4839,7 +4839,7 @@ define void @local_monotonic_sys_float(ptr addrspace(5) %a) local_unnamed_addr {
   ret void
 }
 
-define void @local_monotonic_sys_double(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_monotonic_sys_double(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
@@ -4859,7 +4859,7 @@ define void @local_monotonic_sys_double(ptr addrspace(5) %a) local_unnamed_addr 
 
 ; local_monotonic_volatile_sys
 
-define void @local_monotonic_volatile_sys_i8(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_monotonic_volatile_sys_i8(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_volatile_sys_i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -4877,7 +4877,7 @@ define void @local_monotonic_volatile_sys_i8(ptr addrspace(5) %a) local_unnamed_
   ret void
 }
 
-define void @local_monotonic_volatile_sys_i16(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_monotonic_volatile_sys_i16(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_volatile_sys_i16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -4895,7 +4895,7 @@ define void @local_monotonic_volatile_sys_i16(ptr addrspace(5) %a) local_unnamed
   ret void
 }
 
-define void @local_monotonic_volatile_sys_i32(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_monotonic_volatile_sys_i32(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_volatile_sys_i32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -4913,7 +4913,7 @@ define void @local_monotonic_volatile_sys_i32(ptr addrspace(5) %a) local_unnamed
   ret void
 }
 
-define void @local_monotonic_volatile_sys_i64(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_monotonic_volatile_sys_i64(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_volatile_sys_i64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
@@ -4930,7 +4930,7 @@ define void @local_monotonic_volatile_sys_i64(ptr addrspace(5) %a) local_unnamed
   ret void
 }
 
-define void @local_monotonic_volatile_sys_float(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_monotonic_volatile_sys_float(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_volatile_sys_float(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
@@ -4948,7 +4948,7 @@ define void @local_monotonic_volatile_sys_float(ptr addrspace(5) %a) local_unnam
   ret void
 }
 
-define void @local_monotonic_volatile_sys_double(ptr addrspace(5) %a) local_unnamed_addr {
+define void @local_monotonic_volatile_sys_double(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_volatile_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
