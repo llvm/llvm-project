@@ -426,6 +426,9 @@ void applyNonConstInsert(MachineInstr &MI, MachineRegisterInfo &MRI,
   LLT EltTy = MRI.getType(Insert.getElementReg());
   LLT IdxTy = MRI.getType(Insert.getIndexReg());
 
+  if (VecTy.isScalableVector())
+    return;
+
   // Create a stack slot and store the vector into it
   MachineFunction &MF = Builder.getMF();
   Align Alignment(
