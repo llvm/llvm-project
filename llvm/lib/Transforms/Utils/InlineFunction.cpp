@@ -181,8 +181,20 @@ namespace {
       }
     }
   };
-
 } // end anonymous namespace
+
+static IntrinsicInst *getConvergenceEntry(BasicBlock &BB) {
+  auto *I = BB.getFirstNonPHI();
+  while (I) {
+    if (auto *IntrinsicCall = dyn_cast<ConvergenceControlInst>(I)) {
+      if (IntrinsicCall->isEntry()) {
+        return IntrinsicCall;
+      }
+    }
+    I = I->getNextNode();
+  }
+  return nullptr;
+}
 
 /// Get or create a target for the branch from ResumeInsts.
 BasicBlock *LandingPadInliningInfo::getInnerResumeDest() {
@@ -2496,15 +2508,10 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   // fully implements convergence control tokens, there is no mixing of
   // controlled and uncontrolled convergent operations in the whole program.
   if (CB.isConvergent()) {
-    auto *I = CalledFunc->getEntryBlock().getFirstNonPHI();
-    if (auto *IntrinsicCall = dyn_cast<IntrinsicInst>(I)) {
-      if (IntrinsicCall->getIntrinsicID() ==
-          Intrinsic::experimental_convergence_entry) {
-        if (!ConvergenceControlToken) {
-          return InlineResult::failure(
-              "convergent call needs convergencectrl operand");
-        }
-      }
+    if (!ConvergenceControlToken &&
+        getConvergenceEntry(CalledFunc->getEntryBlock())) {
+      return InlineResult::failure(
+          "convergent call needs convergencectrl operand");
     }
   }
 
@@ -2795,13 +2802,10 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   }
 
   if (ConvergenceControlToken) {
-    auto *I = FirstNewBlock->getFirstNonPHI();
-    if (auto *IntrinsicCall = dyn_cast<IntrinsicInst>(I)) {
-      if (IntrinsicCall->getIntrinsicID() ==
-          Intrinsic::experimental_convergence_entry) {
-        IntrinsicCall->replaceAllUsesWith(ConvergenceControlToken);
-        IntrinsicCall->eraseFromParent();
-      }
+    IntrinsicInst *IntrinsicCall = getConvergenceEntry(*FirstNewBlock);
+    if (IntrinsicCall) {
+      IntrinsicCall->replaceAllUsesWith(ConvergenceControlToken);
+      IntrinsicCall->eraseFromParent();
     }
   }
 

@@ -84,10 +84,14 @@ public:
   /// \param[in] declaration
   ///     The const Declaration object to compare with.
   ///
+  /// \param[in] full
+  ///     Same meaning as Full in FileSpec::Equal.  True means an empty
+  ///     directory is not equal to a specified one, false means it is equal.
+  ///
   /// \return
   ///     Returns \b true if \b declaration is at the same file and
   ///     line, \b false otherwise.
-  bool FileAndLineEqual(const Declaration &declaration) const;
+  bool FileAndLineEqual(const Declaration &declaration, bool full) const;
 
   /// Dump a description of this object to a Stream.
   ///

@@ -645,11 +645,8 @@ ProfitableToMerge(MachineBasicBlock *MBB1, MachineBasicBlock *MBB2,
   // we don't have to split a block.  At worst we will be introducing 1 new
   // branch instruction, which is likely to be smaller than the 2
   // instructions that would be deleted in the merge.
-  MachineFunction *MF = MBB1->getParent();
-  bool OptForSize =
-      MF->getFunction().hasOptSize() ||
-      (llvm::shouldOptimizeForSize(MBB1, PSI, &MBBFreqInfo) &&
-       llvm::shouldOptimizeForSize(MBB2, PSI, &MBBFreqInfo));
+  bool OptForSize = llvm::shouldOptimizeForSize(MBB1, PSI, &MBBFreqInfo) &&
+                    llvm::shouldOptimizeForSize(MBB2, PSI, &MBBFreqInfo);
   return EffectiveTailLen >= 2 && OptForSize &&
          (FullBlockTail1 || FullBlockTail2);
 }

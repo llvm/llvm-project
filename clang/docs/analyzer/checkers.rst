@@ -3447,37 +3447,6 @@ Limitations:
 
      More details at the corresponding `GitHub issue <https://github.com/llvm/llvm-project/issues/43459>`_.
 
-.. _alpha-nondeterminism-PointerIteration:
-
-alpha.nondeterminism.PointerIteration (C++)
-"""""""""""""""""""""""""""""""""""""""""""
-Check for non-determinism caused by iterating unordered containers of pointers.
-
-.. code-block:: c
-
- void test() {
-  int a = 1, b = 2;
-  std::unordered_set<int *> UnorderedPtrSet = {&a, &b};
-
-  for (auto i : UnorderedPtrSet) // warn
-    f(i);
- }
-
-.. _alpha-nondeterminism-PointerSorting:
-
-alpha.nondeterminism.PointerSorting (C++)
-"""""""""""""""""""""""""""""""""""""""""
-Check for non-determinism caused by sorting of pointers.
-
-.. code-block:: c
-
- void test() {
-  int a = 1, b = 2;
-  std::vector<int *> V = {&a, &b};
-  std::sort(V.begin(), V.end()); // warn
- }
-
-
 alpha.WebKit
 ^^^^^^^^^^^^
 

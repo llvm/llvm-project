@@ -183,6 +183,7 @@ def HasAMXTILE   : Predicate<"Subtarget->hasAMXTILE()">;
 def HasAMXBF16   : Predicate<"Subtarget->hasAMXBF16()">;
 def HasAMXINT8   : Predicate<"Subtarget->hasAMXINT8()">;
 def HasAMXCOMPLEX : Predicate<"Subtarget->hasAMXCOMPLEX()">;
+def HasAMXFP8    : Predicate<"Subtarget->hasAMXFP8()">;
 def HasUINTR     : Predicate<"Subtarget->hasUINTR()">;
 def HasUSERMSR   : Predicate<"Subtarget->hasUSERMSR()">;
 def HasCRC32     : Predicate<"Subtarget->hasCRC32()">;

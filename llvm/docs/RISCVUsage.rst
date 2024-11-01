@@ -82,6 +82,10 @@ ISA naming string. Currently supported profiles:
 * ``rva20s64``
 * ``rva22u64``
 * ``rva22s64``
+* ``rva23u64``
+* ``rva23s64``
+* ``rvb23u64``
+* ``rvb23s64``
 
 Note that you can also append additional extension names to be enabled, e.g.
 ``rva20u64_zicond`` will enable the ``zicond`` extension in addition to those
@@ -91,10 +95,6 @@ Profiles that are not yet ratified cannot be used unless
 ``-menable-experimental-extensions`` (or equivalent for other tools) is
 specified. This applies to the following profiles:
 
-* ``rva23u64``
-* ``rva23s64``
-* ``rvb23u64``
-* ``rvb23s64``
 * ``rvm23u32``
 
 .. _riscv-extensions:
@@ -119,6 +119,7 @@ on support follow.
      ``E``             Supported (`See note <#riscv-rve-note>`__)
      ``H``             Assembly Support
      ``M``             Supported
+     ``Sha``           Supported
      ``Shcounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Shgatpa``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Shtvala``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
@@ -155,6 +156,7 @@ on support follow.
      ``Svinval``       Assembly Support
      ``Svnapot``       Assembly Support
      ``Svpbmt``        Supported
+     ``Svvptc``        Supported
      ``V``             Supported
      ``Za128rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Za64rs``        Supported (`See note <#riscv-profiles-extensions-note>`__)

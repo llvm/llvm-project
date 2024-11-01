@@ -84,14 +84,11 @@ static cl::opt<bool> SpecializeOnAddress(
     "funcspec-on-address", cl::init(false), cl::Hidden, cl::desc(
     "Enable function specialization on the address of global values"));
 
-// Disabled by default as it can significantly increase compilation times.
-//
-// https://llvm-compile-time-tracker.com
-// https://github.com/nikic/llvm-compile-time-tracker
 static cl::opt<bool> SpecializeLiteralConstant(
-    "funcspec-for-literal-constant", cl::init(false), cl::Hidden, cl::desc(
-    "Enable specialization of functions that take a literal constant as an "
-    "argument"));
+    "funcspec-for-literal-constant", cl::init(true), cl::Hidden,
+    cl::desc(
+        "Enable specialization of functions that take a literal constant as an "
+        "argument"));
 
 bool InstCostVisitor::canEliminateSuccessor(BasicBlock *BB, BasicBlock *Succ,
                                          DenseSet<BasicBlock *> &DeadBlocks) {
@@ -646,6 +643,18 @@ FunctionSpecializer::~FunctionSpecializer() {
   cleanUpSSA();
 }
 
+/// Get the unsigned Value of given Cost object. Assumes the Cost is always
+/// non-negative, which is true for both TCK_CodeSize and TCK_Latency, and
+/// always Valid.
+static unsigned getCostValue(const Cost &C) {
+  int64_t Value = *C.getValue();
+
+  assert(Value >= 0 && "CodeSize and Latency cannot be negative");
+  // It is safe to down cast since we know the arguments cannot be negative and
+  // Cost is of type int64_t.
+  return static_cast<unsigned>(Value);
+}
+
 /// Attempt to specialize functions in the module to enable constant
 /// propagation across function boundaries.
 ///
@@ -682,10 +691,11 @@ bool FunctionSpecializer::run() {
         (RequireMinSize && Metrics.NumInsts < MinFunctionSize))
       continue;
 
-    // TODO: For now only consider recursive functions when running multiple
-    // times. This should change if specialization on literal constants gets
-    // enabled.
-    if (!Inserted && !Metrics.isRecursive && !SpecializeLiteralConstant)
+    // When specialization on literal constants is disabled, only consider
+    // recursive functions when running multiple times to save wasted analysis,
+    // as we will not be able to specialize on any newly found literal constant
+    // return values.
+    if (!SpecializeLiteralConstant && !Inserted && !Metrics.isRecursive)
       continue;
 
     int64_t Sz = *Metrics.NumInsts.getValue();
@@ -759,6 +769,11 @@ bool FunctionSpecializer::run() {
   SmallVector<Function *> Clones;
   for (unsigned I = 0; I < NSpecs; ++I) {
     Spec &S = AllSpecs[BestSpecs[I]];
+
+    // Accumulate the codesize growth for the function, now we are creating the
+    // specialization.
+    FunctionGrowth[S.F] += S.CodeSize;
+
     S.Clone = createSpecialization(S.F, S.Sig);
 
     // Update the known call sites to call the clone.
@@ -837,18 +852,6 @@ static Function *cloneCandidateFunction(Function *F, unsigned NSpecs) {
   return Clone;
 }
 
-/// Get the unsigned Value of given Cost object. Assumes the Cost is always
-/// non-negative, which is true for both TCK_CodeSize and TCK_Latency, and
-/// always Valid.
-static unsigned getCostValue(const Cost &C) {
-  int64_t Value = *C.getValue();
-
-  assert(Value >= 0 && "CodeSize and Latency cannot be negative");
-  // It is safe to down cast since we know the arguments cannot be negative and
-  // Cost is of type int64_t.
-  return static_cast<unsigned>(Value);
-}
-
 bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
                                               SmallVectorImpl<Spec> &AllSpecs,
                                               SpecMap &SM) {
@@ -924,15 +927,13 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
       }
       CodeSize += Visitor.getCodeSizeSavingsFromPendingPHIs();
 
+      unsigned CodeSizeSavings = getCostValue(CodeSize);
+      unsigned SpecSize = FuncSize - CodeSizeSavings;
+
       auto IsProfitable = [&]() -> bool {
         // No check required.
         if (ForceSpecialization)
           return true;
-
-        unsigned CodeSizeSavings = getCostValue(CodeSize);
-        // TODO: We should only accumulate codesize increase of specializations
-        // that are actually created.
-        FunctionGrowth[F] += FuncSize - CodeSizeSavings;
 
         LLVM_DEBUG(
             dbgs() << "FnSpecialization: Specialization bonus {Inlining = "
@@ -964,7 +965,7 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
         if (LatencySavings < MinLatencySavings * FuncSize / 100)
           return false;
         // Maximum codesize growth.
-        if (FunctionGrowth[F] / FuncSize > MaxCodeSizeGrowth)
+        if ((FunctionGrowth[F] + SpecSize) / FuncSize > MaxCodeSizeGrowth)
           return false;
 
         Score += std::max(CodeSizeSavings, LatencySavings);
@@ -976,7 +977,7 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
         continue;
 
       // Create a new specialisation entry.
-      auto &Spec = AllSpecs.emplace_back(F, S, Score);
+      auto &Spec = AllSpecs.emplace_back(F, S, Score, SpecSize);
       if (CS.getFunction() != F)
         Spec.CallSites.push_back(&CS);
       const unsigned Index = AllSpecs.size() - 1;
@@ -1001,8 +1002,7 @@ bool FunctionSpecializer::isCandidateFunction(Function *F) {
     return false;
 
   // If we're optimizing the function for size, we shouldn't specialize it.
-  if (F->hasOptSize() ||
-      shouldOptimizeForSize(F, nullptr, nullptr, PGSOQueryType::IRPass))
+  if (shouldOptimizeForSize(F, nullptr, nullptr, PGSOQueryType::IRPass))
     return false;
 
   // Exit if the function is not executable. There's no point in specializing

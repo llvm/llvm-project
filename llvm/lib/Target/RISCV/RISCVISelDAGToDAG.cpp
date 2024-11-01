@@ -693,7 +693,7 @@ bool RISCVDAGToDAGISel::tryIndexedLoad(SDNode *Node) {
 
   // The constants that can be encoded in the THeadMemIdx instructions
   // are of the form (sign_extend(imm5) << imm2).
-  int64_t Shift;
+  unsigned Shift;
   for (Shift = 0; Shift < 4; Shift++)
     if (isInt<5>(Offset >> Shift) && ((Offset % (1LL << Shift)) == 0))
       break;
@@ -3366,7 +3366,7 @@ bool RISCVDAGToDAGISel::selectSimm5Shl2(SDValue N, SDValue &Simm5,
                                         SDValue &Shl2) {
   if (auto *C = dyn_cast<ConstantSDNode>(N)) {
     int64_t Offset = C->getSExtValue();
-    int64_t Shift;
+    unsigned Shift;
     for (Shift = 0; Shift < 4; Shift++)
       if (isInt<5>(Offset >> Shift) && ((Offset % (1LL << Shift)) == 0))
         break;

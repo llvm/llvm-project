@@ -410,7 +410,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   const bool IsSTDIN = FileName == "-";
   if (!OutputXML && Inplace && IsSTDIN) {
     errs() << "error: cannot use -i when reading from stdin.\n";
-    return false;
+    return true;
   }
   // On Windows, overwriting a file with an open file mapping doesn't work,
   // so read the whole file into memory when formatting in-place.
@@ -419,7 +419,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
           ? MemoryBuffer::getFileAsStream(FileName)
           : MemoryBuffer::getFileOrSTDIN(FileName, /*IsText=*/true);
   if (std::error_code EC = CodeOrErr.getError()) {
-    errs() << EC.message() << "\n";
+    errs() << FileName << ": " << EC.message() << "\n";
     return true;
   }
   std::unique_ptr<llvm::MemoryBuffer> Code = std::move(CodeOrErr.get());
@@ -510,7 +510,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
       reformat(*FormatStyle, *ChangedCode, Ranges, AssumedFileName, &Status);
   Replaces = Replaces.merge(FormatChanges);
   if (DryRun) {
-    return Replaces.size() > (IsJson ? 1 : 0) &&
+    return Replaces.size() > (IsJson ? 1u : 0u) &&
            emitReplacementWarnings(Replaces, AssumedFileName, Code);
   }
   if (OutputXML) {

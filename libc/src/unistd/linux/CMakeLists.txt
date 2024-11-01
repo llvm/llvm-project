@@ -5,6 +5,7 @@ add_entrypoint_object(
   HDRS
     ../access.h
   DEPENDS
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -57,7 +58,7 @@ add_entrypoint_object(
   HDRS
     ../dup2.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -254,7 +255,7 @@ add_entrypoint_object(
   HDRS
     ../link.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -268,7 +269,7 @@ add_entrypoint_object(
   HDRS
     ../linkat.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -377,7 +378,7 @@ add_entrypoint_object(
   HDRS
     ../rmdir.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -391,7 +392,7 @@ add_entrypoint_object(
   HDRS
     ../readlink.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -405,7 +406,7 @@ add_entrypoint_object(
   HDRS
     ../readlinkat.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -419,7 +420,7 @@ add_entrypoint_object(
   HDRS
     ../symlink.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -433,7 +434,7 @@ add_entrypoint_object(
   HDRS
     ../symlinkat.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -485,7 +486,7 @@ add_entrypoint_object(
   HDRS
     ../unlink.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -499,7 +500,7 @@ add_entrypoint_object(
   HDRS
     ../unlinkat.h
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil

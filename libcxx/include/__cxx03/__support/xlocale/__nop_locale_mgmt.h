@@ -10,7 +10,7 @@
 #ifndef _LIBCPP___SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H
 #define _LIBCPP___SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 // Patch over lack of extended locale support
 typedef void* locale_t;

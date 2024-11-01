@@ -40,7 +40,7 @@ static SmallVector<Value *, 4> getOperand(ArrayRef<Value *> Bndl,
 }
 
 void BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl) {
-  auto LegalityRes = Legality.canVectorize(Bndl);
+  const auto &LegalityRes = Legality.canVectorize(Bndl);
   switch (LegalityRes.getSubclassID()) {
   case LegalityResultID::Widen: {
     auto *I = cast<Instruction>(Bndl[0]);
@@ -59,7 +59,7 @@ void BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl) {
 
 void BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) { vectorizeRec(Bndl); }
 
-bool BottomUpVec::runOnFunction(Function &F) {
+bool BottomUpVec::runOnFunction(Function &F, const Analyses &A) {
   Change = false;
   // TODO: Start from innermost BBs first
   for (auto &BB : F) {

@@ -25,9 +25,32 @@ void RTDEF(CUFLaunchKernel)(const void *kernel, intptr_t gridX, intptr_t gridY,
   blockDim.x = blockX;
   blockDim.y = blockY;
   blockDim.z = blockZ;
-  cudaStream_t stream = 0;
+  cudaStream_t stream = 0; // TODO stream managment
   CUDA_REPORT_IF_ERROR(
       cudaLaunchKernel(kernel, gridDim, blockDim, params, smem, stream));
+}
+
+void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
+    intptr_t clusterY, intptr_t clusterZ, intptr_t gridX, intptr_t gridY,
+    intptr_t gridZ, intptr_t blockX, intptr_t blockY, intptr_t blockZ,
+    int32_t smem, void **params, void **extra) {
+  cudaLaunchConfig_t config;
+  config.gridDim.x = gridX;
+  config.gridDim.y = gridY;
+  config.gridDim.z = gridZ;
+  config.blockDim.x = blockX;
+  config.blockDim.y = blockY;
+  config.blockDim.z = blockZ;
+  config.dynamicSmemBytes = smem;
+  config.stream = 0; // TODO stream managment
+  cudaLaunchAttribute launchAttr[1];
+  launchAttr[0].id = cudaLaunchAttributeClusterDimension;
+  launchAttr[0].val.clusterDim.x = clusterX;
+  launchAttr[0].val.clusterDim.y = clusterY;
+  launchAttr[0].val.clusterDim.z = clusterZ;
+  config.numAttrs = 1;
+  config.attrs = launchAttr;
+  CUDA_REPORT_IF_ERROR(cudaLaunchKernelExC(&config, kernel, params));
 }
 
 } // extern "C"

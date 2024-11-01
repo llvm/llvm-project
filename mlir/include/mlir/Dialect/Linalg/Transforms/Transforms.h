@@ -1503,18 +1503,13 @@ using OptimizeCopyFn =
 
 /// Rewrite a tensor::PadOp into a sequence of EmptyOp, FillOp and
 /// InsertSliceOp. For now, only constant padding values are supported.
-/// `OptimizeCopyFn` can be used to customize copying step optimization.
 struct GeneralizePadOpPattern : public OpRewritePattern<tensor::PadOp> {
-  GeneralizePadOpPattern(MLIRContext *context,
-                         OptimizeCopyFn optimizeCopyFn = nullptr,
-                         PatternBenefit benefit = 1)
-      : OpRewritePattern<tensor::PadOp>(context, benefit),
-        optimizeCopyFn(std::move(optimizeCopyFn)) {}
+  GeneralizePadOpPattern(MLIRContext *context, PatternBenefit benefit = 1)
+      : OpRewritePattern<tensor::PadOp>(context, benefit) {}
   LogicalResult matchAndRewrite(tensor::PadOp padOp,
                                 PatternRewriter &rewriter) const override;
 
 protected:
-  OptimizeCopyFn optimizeCopyFn;
   Value createFillOrGenerateOp(RewriterBase &rewriter, tensor::PadOp padOp,
                                Value dest,
                                const SmallVector<Value> &dynSizes) const;
@@ -1662,6 +1657,11 @@ void populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
 /// linalg.generic (for img2col packing) and linalg.matmul.
 /// \see rewriteInIm2Col for more details.
 void populateConvertConv2DToImg2ColPatterns(RewritePatternSet &patterns);
+
+/// Populates `patterns` with vectorisation patterns for tensor.insert_slice.
+/// TODO: Avoid having a dedicated `populate{}` for one pattern. Instead, either
+/// expand or merge with other `populate{}`.
+void populateInsertSliceVectorizationPatterns(RewritePatternSet &patterns);
 
 /// Populates `patterns` with patterns that vectorize tensor.pad.
 /// These patterns are meant to apply in a complementary fashion. Benefits

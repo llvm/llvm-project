@@ -10,23 +10,23 @@
 #ifndef _LIBCPP___OUT_PTR_H
 #define _LIBCPP___OUT_PTR_H
 
-#include <__config>
-#include <__memory/addressof.h>
-#include <__memory/pointer_traits.h>
-#include <__memory/shared_ptr.h>
-#include <__memory/unique_ptr.h>
-#include <__type_traits/is_specialization.h>
-#include <__type_traits/is_void.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
-#include <tuple>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__memory/pointer_traits.h>
+#include <__cxx03/__memory/shared_ptr.h>
+#include <__cxx03/__memory/unique_ptr.h>
+#include <__cxx03/__type_traits/is_specialization.h>
+#include <__cxx03/__type_traits/is_void.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/tuple>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
