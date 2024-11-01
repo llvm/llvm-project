@@ -12,7 +12,7 @@
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/macros/attributes.h"   // LIBC_INLINE
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/math_extras.h"
@@ -163,12 +163,23 @@ template <typename T> LIBC_INLINE constexpr T round(T x, int n) {
   return bit_and((x + round_bit), rounding_mask);
 }
 
-// u?int_fx_t --> Fixed point
+// (u)?int_fx_t --> Fixed point
 template <typename T, typename XType> LIBC_INLINE constexpr T fxbits(XType x) {
-  // Example: rbits(0x2000) where fract has 15 fractional bits, 
-  // 0x2000 --> 0010 0000 0000 0000 --> 0.010 0000 0000 0000 = 0.25  
+  using FXRep = FXRep<T>;
 
-  return cpp::bit_cast<T, XType>(x); 
+  // Shift number by FX_IBITS so the bits are in the right spot.
+  // If the number is negative we need to make it positive, shift it and then
+  // renegate it to get the correct value.
+  if (cpp::is_signed_v<XType> && 
+      ((1 << (FXRep::TOTAL_LEN - 1)) & x)) {
+    x = -x;
+    x >>= FXRep::INTEGRAL_LEN;
+    x = -x;
+  } else {
+    x >>= FXRep::INTEGRAL_LEN;
+  }
+
+  return cpp::bit_cast<T, XType>(x);
 }
 } // namespace fixed_point
 } // namespace LIBC_NAMESPACE_DECL
