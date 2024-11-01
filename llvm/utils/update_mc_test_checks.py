@@ -16,7 +16,6 @@ import re
 
 mc_LIKE_TOOLS = [
     "llvm-mc",
-    "not llvm-mc",
 ]
 ERROR_RE = re.compile(r":\d+: (warning|error): .*")
 ERROR_CHECK_RE = re.compile(r"# COM: .*")
@@ -24,7 +23,7 @@ OUTPUT_SKIPPED_RE = re.compile(r"(.text)")
 COMMENT = {"asm": "//", "dasm": "#"}
 
 
-def invoke_tool(exe, cmd_args, testline, verbose=False):
+def invoke_tool(exe, check_rc, cmd_args, testline, verbose=False):
     if isinstance(cmd_args, list):
         args = [applySubstitutions(a, substitutions) for a in cmd_args]
     else:
@@ -33,7 +32,15 @@ def invoke_tool(exe, cmd_args, testline, verbose=False):
     cmd = 'echo "' + testline + '" | ' + exe + " " + args
     if verbose:
         print("Command: ", cmd)
-    out = subprocess.check_output(cmd, shell=True)
+
+    out = subprocess.run(
+        cmd,
+        shell=True,
+        check=check_rc,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    ).stdout
+
     # Fix line endings to unix CR style.
     return out.decode().replace("\r\n", "\n")
 
@@ -102,8 +109,16 @@ def getStdCheckLine(prefix, output, mc_mode):
     return o
 
 
-def getErrCheckLine(prefix, output, mc_mode):
-    return COMMENT[mc_mode] + " " + prefix + ": " + ":[[@LINE-1]]" + output + "\n"
+def getErrCheckLine(prefix, output, mc_mode, line_offset=1):
+    return (
+        COMMENT[mc_mode]
+        + " "
+        + prefix
+        + ": "
+        + ":[[@LINE-{}]]".format(line_offset)
+        + output
+        + "\n"
+    )
 
 
 def main():
@@ -174,11 +189,19 @@ def main():
             assert len(commands) >= 2
             mc_cmd = " | ".join(commands[:-1])
             filecheck_cmd = commands[-1]
-            mc_tool = mc_cmd.split(" ")[0]
 
             # special handling for negating exit status
-            if mc_tool == "not":
-                mc_tool = mc_tool + " " + mc_cmd.split(" ")[1]
+            # if not is used in runline, disable rc check, since
+            # the command might or might not
+            # return non-zero code on a single line run
+            check_rc = True
+            mc_cmd_args = mc_cmd.strip().split()
+            if mc_cmd_args[0] == "not":
+                check_rc = False
+                mc_tool = mc_cmd_args[1]
+                mc_cmd = mc_cmd[len(mc_cmd_args[0]) :].strip()
+            else:
+                mc_tool = mc_cmd_args[0]
 
             triple_in_cmd = None
             m = common.TRIPLE_ARG_RE.search(mc_cmd)
@@ -211,6 +234,7 @@ def main():
                 (
                     check_prefixes,
                     mc_tool,
+                    check_rc,
                     mc_cmd_args,
                     triple_in_cmd,
                     march_in_cmd,
@@ -231,6 +255,7 @@ def main():
         for (
             prefixes,
             mc_tool,
+            check_rc,
             mc_args,
             triple_in_cmd,
             march_in_cmd,
@@ -249,6 +274,7 @@ def main():
                 # get output for each testline
                 out = invoke_tool(
                     ti.args.llvm_mc_binary or mc_tool,
+                    check_rc,
                     mc_args,
                     line,
                     verbose=ti.args.verbose,
@@ -305,6 +331,9 @@ def main():
             # each run_id can only be used once
             gen_prefix = ""
             used_runid = set()
+
+            # line number diff between generated prefix and testline
+            line_offset = 1
             for prefix, tup in p_dict_sorted.items():
                 o, run_ids = tup
 
@@ -321,9 +350,13 @@ def main():
                     used_prefixes.add(prefix)
 
                     if hasErr(o):
-                        gen_prefix += getErrCheckLine(prefix, o, mc_mode)
+                        newline = getErrCheckLine(prefix, o, mc_mode, line_offset)
                     else:
-                        gen_prefix += getStdCheckLine(prefix, o, mc_mode)
+                        newline = getStdCheckLine(prefix, o, mc_mode)
+
+                    if newline:
+                        gen_prefix += newline
+                        line_offset += 1
 
             generated_prefixes[input_line] = gen_prefix.rstrip("\n")
 

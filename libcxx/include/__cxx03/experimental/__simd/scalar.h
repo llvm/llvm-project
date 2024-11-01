@@ -10,11 +10,11 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_SCALAR_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_SCALAR_H
 
-#include <__assert>
-#include <cstddef>
-#include <experimental/__config>
-#include <experimental/__simd/declaration.h>
-#include <experimental/__simd/traits.h>
+#include <__cxx03/__assert>
+#include <__cxx03/cstddef>
+#include <__cxx03/experimental/__config>
+#include <__cxx03/experimental/__simd/declaration.h>
+#include <__cxx03/experimental/__simd/traits.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 
