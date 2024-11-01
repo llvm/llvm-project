@@ -259,6 +259,7 @@ Error DatabaseFile::validate(MappedFileRegion &Region) {
 namespace {
 
 class SubtrieHandle;
+class TrieVisitor;
 class SubtrieSlotValue {
 public:
   explicit operator bool() const { return !isEmpty(); }
@@ -348,6 +349,7 @@ public:
   }
 
   int64_t getSize() const { return getSize(H->NumBits); }
+  size_t getNumSlots() const { return Slots.size(); }
 
   SubtrieSlotValue load(size_t I) const {
     return SubtrieSlotValue(Slots[I].load());
@@ -357,9 +359,6 @@ public:
   }
 
   void printHash(raw_ostream &OS, ArrayRef<uint8_t> Bytes) const;
-  void print(raw_ostream &OS, HashMappedTrieHandle Trie,
-             SmallVectorImpl<int64_t> &Records,
-             std::optional<std::string> Prefix = std::nullopt) const;
 
   /// Return None on success, or the existing offset on failure.
   bool compare_exchange_strong(size_t I, SubtrieSlotValue &Expected,
@@ -859,39 +858,6 @@ static void printHexDigits(raw_ostream &OS, ArrayRef<uint8_t> Bytes,
   }
 }
 
-void HashMappedTrieHandle::print(
-    raw_ostream &OS, function_ref<void(ArrayRef<char>)> PrintRecordData) const {
-  OS << "hash-num-bits=" << getNumHashBits()
-     << " hash-size=" << getNumHashBytes()
-     << " record-data-size=" << getRecordDataSize() << "\n";
-  SubtrieHandle Root = getRoot();
-
-  SmallVector<int64_t> Records;
-  if (Root)
-    Root.print(OS, *this, Records);
-
-  if (Records.empty())
-    return;
-  llvm::sort(Records);
-  OS << "records\n";
-  for (int64_t Offset : Records) {
-    OS << "- addr=" << (void *)Offset << " ";
-    HashMappedTrieHandle Trie = *this;
-    HashMappedTrieHandle::RecordData Record =
-        Trie.getRecord(SubtrieSlotValue::getDataOffset(Offset));
-    if (PrintRecordData) {
-      PrintRecordData(Record.Proxy.Data);
-    } else {
-      OS << "bytes=";
-      ArrayRef<uint8_t> Data(
-          reinterpret_cast<const uint8_t *>(Record.Proxy.Data.data()),
-          Record.Proxy.Data.size());
-      printHexDigits(OS, Data, 0, Data.size() * 8);
-    }
-    OS << "\n";
-  }
-}
-
 static void printBits(raw_ostream &OS, ArrayRef<uint8_t> Bytes, size_t StartBit,
                       size_t NumBits) {
   assert(StartBit + NumBits <= Bytes.size() * 8u);
@@ -942,56 +908,6 @@ static void printPrefix(raw_ostream &OS, StringRef Prefix) {
   }
   if (!Prefix.empty())
     OS << "[" << Prefix << "]";
-}
-
-void SubtrieHandle::print(raw_ostream &OS, HashMappedTrieHandle Trie,
-                          SmallVectorImpl<int64_t> &Records,
-                          std::optional<std::string> Prefix) const {
-  if (!Prefix) {
-    OS << "root";
-    Prefix.emplace();
-  } else {
-    OS << "subtrie=";
-    printPrefix(OS, *Prefix);
-  }
-
-  OS << " addr="
-     << (void *)(reinterpret_cast<const char *>(H) - Region->data());
-
-  const size_t NumSlots = Slots.size();
-  OS << " num-slots=" << NumSlots << "\n";
-  SmallVector<SubtrieHandle> Subs;
-  SmallVector<std::string> Prefixes;
-  for (size_t I = 0, E = NumSlots; I != E; ++I) {
-    SubtrieSlotValue Slot = load(I);
-    if (!Slot)
-      continue;
-    OS << "- index=";
-    for (size_t Pad : {10, 100, 1000})
-      if (I < Pad && NumSlots >= Pad)
-        OS << "0";
-    OS << I << " ";
-    if (Slot.isSubtrie()) {
-      SubtrieHandle S(*Region, Slot);
-      std::string SubtriePrefix = *Prefix;
-      appendIndexBits(SubtriePrefix, I, NumSlots);
-      OS << "addr=" << (void *)Slot.asSubtrie();
-      OS << " subtrie=";
-      printPrefix(OS, SubtriePrefix);
-      OS << "\n";
-      Subs.push_back(S);
-      Prefixes.push_back(SubtriePrefix);
-      continue;
-    }
-    Records.push_back(Slot.asData());
-    HashMappedTrieHandle::RecordData Record = Trie.getRecord(Slot);
-    OS << "addr=" << (void *)Record.getFileOffset().get();
-    OS << " content=";
-    printHash(OS, Record.Proxy.Hash);
-    OS << "\n";
-  }
-  for (size_t I = 0, E = Subs.size(); I != E; ++I)
-    Subs[I].print(OS, Trie, Records, Prefixes[I]);
 }
 
 LLVM_DUMP_METHOD void OnDiskHashMappedTrie::dump() const { print(dbgs()); }
@@ -1118,6 +1034,170 @@ OnDiskHashMappedTrie::create(const Twine &PathTwine, const Twine &TrieNameTwine,
   // Success.
   OnDiskHashMappedTrie::ImplType Impl{DatabaseFile(std::move(*File)), Trie};
   return OnDiskHashMappedTrie(std::make_unique<ImplType>(std::move(Impl)));
+}
+
+//===----------------------------------------------------------------------===//
+// TrieVisitor data structures.
+//===----------------------------------------------------------------------===//
+
+namespace {
+// A vistior to traverse the Trie.
+class TrieVisitor {
+public:
+  TrieVisitor(HashMappedTrieHandle Trie) : Trie(Trie) {}
+  virtual ~TrieVisitor() = default;
+  Error visit(HashMappedTrieHandle Root);
+
+private:
+  virtual Error visitSubTrie(StringRef Prefix, SubtrieHandle SubTrie) {
+    return Error::success();
+  }
+
+  virtual Error visitSlot(unsigned I, SubtrieHandle Subtrie, StringRef Prefix,
+                          SubtrieSlotValue Slot) {
+    return Error::success();
+  }
+
+protected:
+  HashMappedTrieHandle Trie;
+
+private:
+  Error traverseTrieNode(SubtrieHandle Node, StringRef Prefix);
+};
+
+class TriePrinter : public TrieVisitor {
+public:
+  TriePrinter(HashMappedTrieHandle Trie, raw_ostream &OS,
+              function_ref<void(ArrayRef<char>)> PrintRecordData)
+      : TrieVisitor(Trie), OS(OS), PrintRecordData(PrintRecordData) {}
+
+  Error printRecords() {
+    if (Records.empty())
+      return Error::success();
+
+    OS << "records\n";
+    llvm::sort(Records);
+    for (int64_t Offset : Records) {
+      HashMappedTrieHandle::RecordData Record =
+          Trie.getRecord(SubtrieSlotValue::getDataOffset(Offset));
+      if (auto Err = printRecord(Record))
+        return Err;
+    }
+    return Error::success();
+  }
+
+  Error printRecord(HashMappedTrieHandle::RecordData &Record) {
+    OS << "- addr=" << (void*)Record.getFileOffset().get() << " ";
+    if (PrintRecordData) {
+      PrintRecordData(Record.Proxy.Data);
+    } else {
+      OS << "bytes=";
+      ArrayRef<uint8_t> Data(
+          reinterpret_cast<const uint8_t *>(Record.Proxy.Data.data()),
+          Record.Proxy.Data.size());
+      printHexDigits(OS, Data, 0, Data.size() * 8);
+    }
+    OS << "\n";
+    return Error::success();
+  }
+
+  Error visitSubTrie(StringRef Prefix, SubtrieHandle SubTrie) override {
+    if (Prefix.empty()) {
+      OS << "root";
+    } else {
+      OS << "subtrie=";
+      printPrefix(OS, Prefix);
+    }
+
+    OS << " addr="
+       << (void *)(reinterpret_cast<const char *>(&SubTrie.getHeader()) -
+                   Trie.getRegion().data());
+    OS << " num-slots=" << SubTrie.getNumSlots() << "\n";
+    return Error::success();
+  }
+
+  Error visitSlot(unsigned I, SubtrieHandle Subtrie, StringRef Prefix,
+                  SubtrieSlotValue Slot) override {
+    OS << "- index=";
+    for (size_t Pad : {10, 100, 1000})
+      if (I < Pad && Subtrie.getNumSlots() >= Pad)
+        OS << "0";
+    OS << I << " ";
+    if (Slot.isSubtrie()) {
+      OS << "addr=" << (void *)Slot.asSubtrie();
+      OS << " subtrie=";
+      printPrefix(OS, Prefix);
+      OS << "\n";
+      return Error::success();
+    }
+    HashMappedTrieHandle::RecordData Record = Trie.getRecord(Slot);
+    OS << "addr=" << (void *)Record.getFileOffset().get();
+    OS << " content=";
+    Subtrie.printHash(OS, Record.Proxy.Hash);
+    OS << "\n";
+    Records.push_back(Slot.asData());
+    return Error::success();
+  }
+
+private:
+  raw_ostream &OS;
+  function_ref<void(ArrayRef<char>)> PrintRecordData;
+  SmallVector<int64_t> Records;
+};
+} // namespace
+
+Error TrieVisitor::visit(HashMappedTrieHandle Trie) {
+  auto Root = Trie.getRoot();
+  if (!Root)
+    return Error::success();
+
+  if (auto Err = traverseTrieNode(Root, ""))
+    return Err;
+  return Error::success();
+}
+
+Error TrieVisitor::traverseTrieNode(SubtrieHandle Node, StringRef Prefix) {
+  if (auto Err = visitSubTrie(Prefix, Node))
+    return Err;
+
+  SmallVector<SubtrieHandle> Subs;
+  SmallVector<std::string> Prefixes;
+  const size_t NumSlots = Node.getNumSlots();
+  for (size_t I = 0, E = NumSlots; I != E; ++I) {
+    SubtrieSlotValue Slot = Node.load(I);
+    if (!Slot)
+      continue;
+    std::string SubtriePrefix = Prefix.str();
+    appendIndexBits(SubtriePrefix, I, NumSlots);
+    if (Slot.isSubtrie()) {
+      SubtrieHandle S(Trie.getRegion(), Slot);
+      Subs.push_back(S);
+      Prefixes.push_back(SubtriePrefix);
+    }
+    if (auto Err = visitSlot(I, Node, SubtriePrefix, Slot))
+      return Err;
+  }
+  for (size_t I = 0, E = Subs.size(); I != E; ++I)
+    if (auto Err = traverseTrieNode(Subs[I], Prefixes[I]))
+      return Err;
+
+  return Error::success();
+}
+
+void HashMappedTrieHandle::print(
+    raw_ostream &OS, function_ref<void(ArrayRef<char>)> PrintRecordData) const {
+  OS << "hash-num-bits=" << getNumHashBits()
+     << " hash-size=" << getNumHashBytes()
+     << " record-data-size=" << getRecordDataSize() << "\n";
+
+  TriePrinter Printer(*this, OS, PrintRecordData);
+  if (auto Err = Printer.visit(*this))
+    OS << "error: " << toString(std::move(Err)) << "\n";
+
+  if (auto Err = Printer.printRecords())
+    OS << "error: " << toString(std::move(Err)) << "\n";
+
+  return;
 }
 
 //===----------------------------------------------------------------------===//
