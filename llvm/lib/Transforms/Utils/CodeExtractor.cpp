@@ -1307,10 +1307,9 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
           DebugLoc::replaceInlinedAtSubprogram(DL, *NewSP, Ctx, Cache));
 
     // Loop info metadata may contain line locations. Fix them up.
-    auto updateLoopInfoLoc = [&Ctx, NewSP](Metadata *MD) -> Metadata * {
+    auto updateLoopInfoLoc = [&Ctx, &Cache, NewSP](Metadata *MD) -> Metadata * {
       if (auto *Loc = dyn_cast_or_null<DILocation>(MD))
-        return DILocation::get(Ctx, Loc->getLine(), Loc->getColumn(), NewSP,
-                               nullptr);
+        return DebugLoc::replaceInlinedAtSubprogram(Loc, *NewSP, Ctx, Cache);
       return MD;
     };
     updateLoopMetadataDebugLocations(I, updateLoopInfoLoc);
