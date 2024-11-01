@@ -12,26 +12,79 @@ define nofpclass(nan inf) double @monte_simple(i32 noundef %nblocks, i32 noundef
 ; CHECK-NEXT:    br i1 [[CMP8]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[RAND_BLOCK_LENGTH]] to i64
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[RAND_BLOCK_LENGTH]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[FOR_BODY_PREHEADER23:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 2147483644
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[Y]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT19:%.*]] = insertelement <2 x double> poison, double [[Z]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT20:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT19]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ <double 0.000000e+00, double -0.000000e+00>, %[[VECTOR_PH]] ], [ [[TMP18:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI15:%.*]] = phi <2 x double> [ <double -0.000000e+00, double -0.000000e+00>, %[[VECTOR_PH]] ], [ [[TMP19:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI16:%.*]] = phi <2 x double> [ <double 0.000000e+00, double -0.000000e+00>, %[[VECTOR_PH]] ], [ [[TMP14:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI17:%.*]] = phi <2 x double> [ <double -0.000000e+00, double -0.000000e+00>, %[[VECTOR_PH]] ], [ [[TMP15:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[SAMPLES]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr [[ARRAYIDX]], i64 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD18:%.*]] = load <2 x float>, ptr [[TMP23]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fpext <2 x float> [[WIDE_LOAD]] to <2 x double>
+; CHECK-NEXT:    [[TMP3:%.*]] = fpext <2 x float> [[WIDE_LOAD18]] to <2 x double>
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <2 x double> [[BROADCAST_SPLAT]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <2 x double> [[BROADCAST_SPLAT]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fsub fast <2 x double> [[TMP4]], [[BROADCAST_SPLAT20]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fsub fast <2 x double> [[TMP5]], [[BROADCAST_SPLAT20]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fcmp fast ogt <2 x double> [[TMP6]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = fcmp fast ogt <2 x double> [[TMP7]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul fast <2 x double> [[TMP6]], [[TMP6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast <2 x double> [[TMP7]], [[TMP7]]
+; CHECK-NEXT:    [[TMP12:%.*]] = tail call fast <2 x double> @llvm.maxnum.v2f64(<2 x double> [[TMP6]], <2 x double> <double -0.000000e+00, double -0.000000e+00>)
+; CHECK-NEXT:    [[TMP13:%.*]] = tail call fast <2 x double> @llvm.maxnum.v2f64(<2 x double> [[TMP7]], <2 x double> <double -0.000000e+00, double -0.000000e+00>)
+; CHECK-NEXT:    [[TMP14]] = fadd reassoc arcp contract afn <2 x double> [[VEC_PHI16]], [[TMP12]]
+; CHECK-NEXT:    [[TMP15]] = fadd reassoc arcp contract afn <2 x double> [[VEC_PHI17]], [[TMP13]]
+; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP8]], <2 x double> [[TMP10]], <2 x double> <double -0.000000e+00, double -0.000000e+00>
+; CHECK-NEXT:    [[TMP17:%.*]] = select <2 x i1> [[TMP9]], <2 x double> [[TMP11]], <2 x double> <double -0.000000e+00, double -0.000000e+00>
+; CHECK-NEXT:    [[TMP18]] = fadd reassoc arcp contract afn <2 x double> [[VEC_PHI]], [[TMP16]]
+; CHECK-NEXT:    [[TMP19]] = fadd reassoc arcp contract afn <2 x double> [[VEC_PHI15]], [[TMP17]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDVARS_IV]], 4
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc arcp contract afn <2 x double> [[TMP19]], [[TMP18]]
+; CHECK-NEXT:    [[TMP21:%.*]] = tail call reassoc arcp contract afn double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[BIN_RDX]])
+; CHECK-NEXT:    [[BIN_RDX21:%.*]] = fadd reassoc arcp contract afn <2 x double> [[TMP15]], [[TMP14]]
+; CHECK-NEXT:    [[TMP22:%.*]] = tail call reassoc arcp contract afn double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[BIN_RDX21]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END_LOOPEXIT:.*]], label %[[FOR_BODY_PREHEADER23]]
+; CHECK:       [[FOR_BODY_PREHEADER23]]:
+; CHECK-NEXT:    [[INDVARS_IV_PH:%.*]] = phi i64 [ 0, %[[FOR_BODY_PREHEADER]] ], [ [[N_VEC]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[V1_012_PH:%.*]] = phi double [ 0.000000e+00, %[[FOR_BODY_PREHEADER]] ], [ [[TMP21]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[V0_011_PH:%.*]] = phi double [ 0.000000e+00, %[[FOR_BODY_PREHEADER]] ], [ [[TMP22]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[V1_011:%.*]] = phi double [ 0.000000e+00, %[[FOR_BODY_PREHEADER]] ], [ [[V1_1:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[V0_010:%.*]] = phi double [ 0.000000e+00, %[[FOR_BODY_PREHEADER]] ], [ [[V0_1:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[SAMPLES]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[INDVARS_IV_PH]], %[[FOR_BODY_PREHEADER23]] ]
+; CHECK-NEXT:    [[V1_012:%.*]] = phi double [ [[V1_2:%.*]], %[[FOR_BODY]] ], [ [[V1_012_PH]], %[[FOR_BODY_PREHEADER23]] ]
+; CHECK-NEXT:    [[V0_011:%.*]] = phi double [ [[V0_2:%.*]], %[[FOR_BODY]] ], [ [[V0_011_PH]], %[[FOR_BODY_PREHEADER23]] ]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds float, ptr [[SAMPLES]], i64 [[INDVARS_IV1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to double
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[Y]], [[CONV]]
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub fast double [[MUL]], [[Z]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp fast ogt double [[SUB]], 0.000000e+00
-; CHECK-NEXT:    [[ADD:%.*]] = fadd fast double [[SUB]], [[V0_010]]
 ; CHECK-NEXT:    [[MUL3:%.*]] = fmul fast double [[SUB]], [[SUB]]
-; CHECK-NEXT:    [[ADD4:%.*]] = fadd fast double [[MUL3]], [[V1_011]]
-; CHECK-NEXT:    [[V0_1]] = select i1 [[CMP1]], double [[ADD]], double [[V0_010]]
-; CHECK-NEXT:    [[V1_1]] = select i1 [[CMP1]], double [[ADD4]], double [[V1_011]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[ADD8:%.*]] = tail call fast double @llvm.maxnum.f64(double [[SUB]], double -0.000000e+00)
+; CHECK-NEXT:    [[V0_2]] = fadd reassoc arcp contract afn double [[V0_011]], [[ADD8]]
+; CHECK-NEXT:    [[ADD4:%.*]] = select i1 [[CMP1]], double [[MUL3]], double -0.000000e+00
+; CHECK-NEXT:    [[V1_2]] = fadd reassoc arcp contract afn double [[V1_012]], [[ADD4]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV1]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END_LOOPEXIT:.*]], label %[[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[FOR_END_LOOPEXIT]]:
+; CHECK-NEXT:    [[V0_1:%.*]] = phi double [ [[TMP22]], %[[MIDDLE_BLOCK]] ], [ [[V0_2]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[V1_1:%.*]] = phi double [ [[TMP21]], %[[MIDDLE_BLOCK]] ], [ [[V1_2]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast double [[V1_1]], [[V0_1]]
 ; CHECK-NEXT:    br label %[[FOR_END]]
 ; CHECK:       [[FOR_END]]:
@@ -292,3 +345,9 @@ declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare void @resample(i32 noundef, ptr noundef)
 declare double @llvm.exp2.f64(double)
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+;.

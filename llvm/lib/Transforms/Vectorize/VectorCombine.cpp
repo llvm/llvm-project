@@ -112,6 +112,7 @@ private:
   bool foldExtractedCmps(Instruction &I);
   bool foldSingleElementStore(Instruction &I);
   bool scalarizeLoadExtract(Instruction &I);
+  bool foldPermuteOfBinops(Instruction &I);
   bool foldShuffleOfBinops(Instruction &I);
   bool foldShuffleOfCastops(Instruction &I);
   bool foldShuffleOfShuffles(Instruction &I);
@@ -1397,6 +1398,100 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   }
 
   FailureGuard.release();
+  return true;
+}
+
+/// Try to convert "shuffle (binop (shuffle, shuffle)), undef"
+///           -->  "binop (shuffle), (shuffle)".
+bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
+  BinaryOperator *BinOp;
+  ArrayRef<int> OuterMask;
+  if (!match(&I,
+             m_Shuffle(m_OneUse(m_BinOp(BinOp)), m_Undef(), m_Mask(OuterMask))))
+    return false;
+
+  // Don't introduce poison into div/rem.
+  if (BinOp->isIntDivRem() && llvm::is_contained(OuterMask, PoisonMaskElem))
+    return false;
+
+  Value *Op00, *Op01;
+  ArrayRef<int> Mask0;
+  if (!match(BinOp->getOperand(0),
+             m_OneUse(m_Shuffle(m_Value(Op00), m_Value(Op01), m_Mask(Mask0)))))
+    return false;
+
+  Value *Op10, *Op11;
+  ArrayRef<int> Mask1;
+  if (!match(BinOp->getOperand(1),
+             m_OneUse(m_Shuffle(m_Value(Op10), m_Value(Op11), m_Mask(Mask1)))))
+    return false;
+
+  Instruction::BinaryOps Opcode = BinOp->getOpcode();
+  auto *ShuffleDstTy = dyn_cast<FixedVectorType>(I.getType());
+  auto *BinOpTy = dyn_cast<FixedVectorType>(BinOp->getType());
+  auto *Op0Ty = dyn_cast<FixedVectorType>(Op00->getType());
+  auto *Op1Ty = dyn_cast<FixedVectorType>(Op10->getType());
+  if (!ShuffleDstTy || !BinOpTy || !Op0Ty || !Op1Ty)
+    return false;
+
+  unsigned NumSrcElts = BinOpTy->getNumElements();
+
+  // Don't accept shuffles that reference the second operand in
+  // div/rem or if its an undef arg.
+  if ((BinOp->isIntDivRem() || !isa<PoisonValue>(I.getOperand(1))) &&
+      any_of(OuterMask, [NumSrcElts](int M) { return M >= (int)NumSrcElts; }))
+    return false;
+
+  // Merge outer / inner shuffles.
+  SmallVector<int> NewMask0, NewMask1;
+  for (int M : OuterMask) {
+    if (M < 0 || M >= (int)NumSrcElts) {
+      NewMask0.push_back(PoisonMaskElem);
+      NewMask1.push_back(PoisonMaskElem);
+    } else {
+      NewMask0.push_back(Mask0[M]);
+      NewMask1.push_back(Mask1[M]);
+    }
+  }
+
+  // Try to merge shuffles across the binop if the new shuffles are not costly.
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+
+  InstructionCost OldCost =
+      TTI.getArithmeticInstrCost(Opcode, BinOpTy, CostKind) +
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, BinOpTy,
+                         OuterMask, CostKind, 0, nullptr, {BinOp}, &I) +
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, Op0Ty, Mask0,
+                         CostKind, 0, nullptr, {Op00, Op01},
+                         cast<Instruction>(BinOp->getOperand(0))) +
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, Op1Ty, Mask1,
+                         CostKind, 0, nullptr, {Op10, Op11},
+                         cast<Instruction>(BinOp->getOperand(1)));
+
+  InstructionCost NewCost =
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, Op0Ty, NewMask0,
+                         CostKind, 0, nullptr, {Op00, Op01}) +
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, Op1Ty, NewMask1,
+                         CostKind, 0, nullptr, {Op10, Op11}) +
+      TTI.getArithmeticInstrCost(Opcode, ShuffleDstTy, CostKind);
+
+  LLVM_DEBUG(dbgs() << "Found a shuffle feeding a shuffled binop: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+  if (NewCost >= OldCost)
+    return false;
+
+  Value *Shuf0 = Builder.CreateShuffleVector(Op00, Op01, NewMask0);
+  Value *Shuf1 = Builder.CreateShuffleVector(Op10, Op11, NewMask1);
+  Value *NewBO = Builder.CreateBinOp(Opcode, Shuf0, Shuf1);
+
+  // Intersect flags from the old binops.
+  if (auto *NewInst = dyn_cast<Instruction>(NewBO))
+    NewInst->copyIRFlags(BinOp);
+
+  Worklist.pushValue(Shuf0);
+  Worklist.pushValue(Shuf1);
+  replaceValue(I, *NewBO);
   return true;
 }
 
@@ -2736,6 +2831,7 @@ bool VectorCombine::run() {
         MadeChange |= foldInsExtFNeg(I);
         break;
       case Instruction::ShuffleVector:
+        MadeChange |= foldPermuteOfBinops(I);
         MadeChange |= foldShuffleOfBinops(I);
         MadeChange |= foldShuffleOfCastops(I);
         MadeChange |= foldShuffleOfShuffles(I);
