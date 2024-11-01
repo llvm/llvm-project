@@ -1271,17 +1271,20 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
       DebugIntrinsicsToDelete.push_back(DVI);
       continue;
     }
-
-    // Point the intrinsic to a fresh variable within the new function.
-    DILocalVariable *OldVar = DVI->getVariable();
-    DINode *&NewVar = RemappedMetadata[OldVar];
-    if (!NewVar)
-      NewVar = DIB.createAutoVariable(
-          NewSP, OldVar->getName(), OldVar->getFile(), OldVar->getLine(),
-          OldVar->getType(), /*AlwaysPreserve=*/false, DINode::FlagZero,
-          OldVar->getAlignInBits());
-    DVI->setVariable(cast<DILocalVariable>(NewVar));
+    // If the variable was in the scope of the old function, i.e. it was not
+    // inlined, point the intrinsic to a fresh variable within the new function.
+    if (!DVI->getDebugLoc().getInlinedAt()) {
+      DILocalVariable *OldVar = DVI->getVariable();
+      DINode *&NewVar = RemappedMetadata[OldVar];
+      if (!NewVar)
+        NewVar = DIB.createAutoVariable(
+            NewSP, OldVar->getName(), OldVar->getFile(), OldVar->getLine(),
+            OldVar->getType(), /*AlwaysPreserve=*/false, DINode::FlagZero,
+            OldVar->getAlignInBits());
+      DVI->setVariable(cast<DILocalVariable>(NewVar));
+    }
   }
+
   for (auto *DII : DebugIntrinsicsToDelete)
     DII->eraseFromParent();
   DIB.finalizeSubprogram(NewSP);
