@@ -1,6 +1,20 @@
 # This file handles building LLVM runtime sub-projects.
 cmake_minimum_required(VERSION 3.20.0)
 
+# This file can be used in two ways: the bootstrapping build calls it from
+# llvm/runtimes/CMakeLists.txt where we reuse the build tree of the top-level
+# build or it can be directly invoked in this directory. In the latter case we
+# might be building against a LLVM install tree and might not have a valid build
+# tree set up yet. We can detect whether we are using the bootstrapping build
+# by checking for the HAVE_LLVM_LIT flag that is passed explicitly to
+# llvm_ExternalProject_Add().
+if (HAVE_LLVM_LIT)
+    message(STATUS "Performing bootstrapping runtimes build.")
+  set(RUNTIMES_STANDALONE_BUILD OFF)
+else()
+  message(STATUS "Performing standalone runtimes build.")
+  set(RUNTIMES_STANDALONE_BUILD ON)
+endif()
 # Add path for custom and the LLVM build's modules to the CMake module path.
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
@@ -48,16 +62,6 @@ endforeach()
 function(runtime_register_component name)
   set_property(GLOBAL APPEND PROPERTY SUB_COMPONENTS ${name})
 endfunction()
-
-# This file can be used in two ways: it is either called from llvm/CMakeLists.txt
-# where case we reuse the build tree of the top-level build or directly invoked
-# in this directory. In that case we might be building against a LLVM install
-# tree and might not have a valid build tree set up yet.
-set(RUNTIMES_STANDALONE_BUILD OFF)
-if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_LIST_DIR}")
-  message(STATUS "Performing standalone runtimes build.")
-  set(RUNTIMES_STANDALONE_BUILD ON)
-endif()
 
 find_package(LLVM PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 find_package(Clang PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
@@ -258,7 +262,7 @@ if(LLVM_INCLUDE_TESTS)
   # won't have llvm-lit. If built with the bootstrapping build (rooted at
   # llvm/CMakeLists.txt), the top-level llvm CMake invocation already generated
   # the llvm-lit script.
-  if (RUNTIMES_STANDALONE_BUILD)
+  if (NOT HAVE_LLVM_LIT)
     # Ensure that the appropriate variables for lit are set before adding any
     # runtimes since their CMake tests configuration might depend on lit being
     # present. This ensures that the testsuites use a local lit from the build

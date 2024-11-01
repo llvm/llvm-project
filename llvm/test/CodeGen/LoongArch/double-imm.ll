@@ -59,9 +59,7 @@ define double @f64_add_fimm1(double %a) nounwind {
 ;
 ; LA64-LABEL: f64_add_fimm1:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.d $a0, $zero, 1
-; LA64-NEXT:    movgr2fr.d $fa1, $a0
-; LA64-NEXT:    ffint.d.l $fa1, $fa1
+; LA64-NEXT:    vldi $vr1, -912
 ; LA64-NEXT:    fadd.d $fa0, $fa0, $fa1
 ; LA64-NEXT:    ret
   %1 = fadd double %a, 1.0
@@ -79,9 +77,7 @@ define double @f64_positive_fimm1() nounwind {
 ;
 ; LA64-LABEL: f64_positive_fimm1:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.d $a0, $zero, 1
-; LA64-NEXT:    movgr2fr.d $fa0, $a0
-; LA64-NEXT:    ffint.d.l $fa0, $fa0
+; LA64-NEXT:    vldi $vr0, -912
 ; LA64-NEXT:    ret
   ret double 1.0
 }

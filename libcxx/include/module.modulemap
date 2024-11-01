@@ -13,7 +13,10 @@ module std_config [system] {
 module std_core [system] {
   module cstddef {
     module byte         { header "__cstddef/byte.h" }
-    module max_align_t  { header "__cstddef/max_align_t.h" }
+    module max_align_t  {
+      header "__cstddef/max_align_t.h"
+      export *
+    }
     module nullptr_t    { header "__cstddef/nullptr_t.h" }
     module ptrdiff_t    { header "__cstddef/ptrdiff_t.h" }
     module size_t       { header "__cstddef/size_t.h" }
@@ -1109,6 +1112,11 @@ module std [system] {
     export *
   }
 
+  module cstdalign {
+    header "cstdalign"
+    export *
+  }
+
   module cstdarg {
     header "cstdarg"
     export *
@@ -1403,7 +1411,10 @@ module std [system] {
     module indirectly_comparable      { header "__iterator/indirectly_comparable.h" }
     module insert_iterator            { header "__iterator/insert_iterator.h" }
     module istream_iterator           { header "__iterator/istream_iterator.h" }
-    module istreambuf_iterator        { header "__iterator/istreambuf_iterator.h" }
+    module istreambuf_iterator        {
+      header "__iterator/istreambuf_iterator.h"
+      export std.string.char_traits
+    }
     module iter_move                  { header "__iterator/iter_move.h" }
     module iter_swap                  { header "__iterator/iter_swap.h" }
     module iterator_traits {
