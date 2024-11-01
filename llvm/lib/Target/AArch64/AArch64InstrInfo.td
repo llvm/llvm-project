@@ -686,15 +686,9 @@ def topbitsallzero64: PatLeaf<(i64 GPR64:$src), [{
 def VectorIndexStoH : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() * 2, SDLoc(N), MVT::i64);
 }]>;
-
-def VectorIndexDtoH : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() * 4, SDLoc(N), MVT::i64);
-}]>;
-
 def VectorIndexStoB : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() * 4, SDLoc(N), MVT::i64);
 }]>;
-
 def VectorIndexHtoB : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() * 2, SDLoc(N), MVT::i64);
 }]>;
