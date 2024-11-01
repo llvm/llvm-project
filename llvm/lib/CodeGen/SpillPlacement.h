@@ -162,7 +162,7 @@ private:
   void releaseMemory() override;
 
   void activate(unsigned n);
-  void setThreshold(const BlockFrequency &Entry);
+  void setThreshold(BlockFrequency Entry);
 
   bool update(unsigned n);
 };

@@ -73,19 +73,19 @@ public:
   /// Returns the estimated profile count of \p Freq.
   /// This uses the frequency \p Freq and multiplies it by
   /// the enclosing function's count (if available) and returns the value.
-  std::optional<uint64_t> getProfileCountFromFreq(uint64_t Freq) const;
+  std::optional<uint64_t> getProfileCountFromFreq(BlockFrequency Freq) const;
 
   /// Returns true if \p BB is an irreducible loop header
   /// block. Otherwise false.
   bool isIrrLoopHeader(const BasicBlock *BB);
 
   // Set the frequency of the given basic block.
-  void setBlockFreq(const BasicBlock *BB, uint64_t Freq);
+  void setBlockFreq(const BasicBlock *BB, BlockFrequency Freq);
 
   /// Set the frequency of \p ReferenceBB to \p Freq and scale the frequencies
   /// of the blocks in \p BlocksToScale such that their frequencies relative
   /// to \p ReferenceBB remain unchanged.
-  void setBlockFreqAndScale(const BasicBlock *ReferenceBB, uint64_t Freq,
+  void setBlockFreqAndScale(const BasicBlock *ReferenceBB, BlockFrequency Freq,
                             SmallPtrSetImpl<BasicBlock *> &BlocksToScale);
 
   /// calculate - compute block frequency info for the given function.
@@ -94,13 +94,13 @@ public:
 
   // Print the block frequency Freq to OS using the current functions entry
   // frequency to convert freq into a relative decimal form.
-  raw_ostream &printBlockFreq(raw_ostream &OS, const BlockFrequency Freq) const;
+  raw_ostream &printBlockFreq(raw_ostream &OS, BlockFrequency Freq) const;
 
   // Convenience method that attempts to look up the frequency associated with
   // BB and print it to OS.
   raw_ostream &printBlockFreq(raw_ostream &OS, const BasicBlock *BB) const;
 
-  uint64_t getEntryFreq() const;
+  BlockFrequency getEntryFreq() const;
   void releaseMemory();
   void print(raw_ostream &OS) const;
 

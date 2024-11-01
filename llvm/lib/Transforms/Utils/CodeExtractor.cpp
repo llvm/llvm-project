@@ -1014,7 +1014,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
 
   // Update the entry count of the function.
   if (BFI) {
-    auto Count = BFI->getProfileCountFromFreq(EntryFreq.getFrequency());
+    auto Count = BFI->getProfileCountFromFreq(EntryFreq);
     if (Count.has_value())
       newFunction->setEntryCount(
           ProfileCount(*Count, Function::PCT_Real)); // FIXME
@@ -1692,7 +1692,7 @@ CallInst *CodeExtractor::emitReplacerCall(
 
   // Update the entry count of the function.
   if (BFI)
-    BFI->setBlockFreq(codeReplacer, EntryFreq.getFrequency());
+    BFI->setBlockFreq(codeReplacer, EntryFreq);
 
   std::vector<Value *> params;
 

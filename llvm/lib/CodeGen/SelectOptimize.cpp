@@ -425,7 +425,7 @@ void SelectOptimize::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     BasicBlock *StartBlock = SI->getParent();
     BasicBlock::iterator SplitPt = ++(BasicBlock::iterator(LastSI));
     BasicBlock *EndBlock = StartBlock->splitBasicBlock(SplitPt, "select.end");
-    BFI->setBlockFreq(EndBlock, BFI->getBlockFreq(StartBlock).getFrequency());
+    BFI->setBlockFreq(EndBlock, BFI->getBlockFreq(StartBlock));
     // Delete the unconditional branch that was just created by the split.
     StartBlock->getTerminator()->eraseFromParent();
 
