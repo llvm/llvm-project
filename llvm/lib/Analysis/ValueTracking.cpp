@@ -6003,12 +6003,24 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if (IncValue == P)
           continue;
 
+        Instruction *CxtI = P->getIncomingBlock(U)->getTerminator();
+
         // If the Use is a select of this phi, use the fp class of the other
-        // operand to break the recursion.
+        // operand to break the recursion. Same around 2-operand phi nodes
         Value *V;
         if (match(IncValue, m_Select(m_Value(), m_Specific(P), m_Value(V))) ||
-            match(IncValue, m_Select(m_Value(), m_Value(V), m_Specific(P))))
+            match(IncValue, m_Select(m_Value(), m_Value(V), m_Specific(P)))) {
           IncValue = V;
+        } else if (auto *IncPhi = dyn_cast<PHINode>(IncValue);
+                   IncPhi && IncPhi->getNumIncomingValues() == 2) {
+          for (int Idx = 0; Idx < 2; ++Idx) {
+            if (IncPhi->getIncomingValue(Idx) == P) {
+              IncValue = IncPhi->getIncomingValue(1 - Idx);
+              CxtI = IncPhi->getIncomingBlock(1 - Idx)->getTerminator();
+              break;
+            }
+          }
+        }
 
         KnownFPClass KnownSrc;
         // Recurse, but cap the recursion to two levels, because we don't want
@@ -6016,8 +6028,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         // detect known sign bits.
         computeKnownFPClass(IncValue, DemandedElts, InterestedClasses, KnownSrc,
                             PhiRecursionLimit,
-                            Q.getWithoutCondContext().getWithInstruction(
-                                P->getIncomingBlock(U)->getTerminator()));
+                            Q.getWithoutCondContext().getWithInstruction(CxtI));
 
         if (First) {
           Known = KnownSrc;

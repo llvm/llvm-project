@@ -204,7 +204,7 @@ define double @test_atomicrmw_fmin_f64_flat(ptr %ptr, double %value) {
 ; GCN-NEXT:    [[TMP4:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; GCN-NEXT:    [[TMP5:%.*]] = bitcast double [[TMP4]] to i64
 ; GCN-NEXT:    [[TMP6:%.*]] = bitcast double [[LOADED]] to i64
-; GCN-NEXT:    [[TMP7:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP6]], i64 [[TMP5]] seq_cst seq_cst, align 8
+; GCN-NEXT:    [[TMP7:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP6]], i64 [[TMP5]] seq_cst seq_cst, align 8, !noalias.addrspace [[META0:![0-9]+]]
 ; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP7]], 1
 ; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP7]], 0
 ; GCN-NEXT:    [[TMP8]] = bitcast i64 [[NEWLOADED]] to double
@@ -230,7 +230,7 @@ define double @test_atomicrmw_fmin_f64_flat__noprivate(ptr %ptr, double %value) 
 ; GCN-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE:%.*]])
 ; GCN-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GCN-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !noalias.addrspace [[META0]]
 ; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GCN-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
