@@ -157,6 +157,7 @@ set(BENCHMARK_TESTS
     formatter_float.bench.cpp
     formatter_int.bench.cpp
     function.bench.cpp
+    hash.bench.cpp
     join_view.bench.cpp
     lexicographical_compare_three_way.bench.cpp
     map.bench.cpp
