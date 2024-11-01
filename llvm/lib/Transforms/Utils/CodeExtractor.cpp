@@ -1108,14 +1108,6 @@ static void insertLifetimeMarkersSurroundingCall(
   }
 }
 
-    if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
-      auto *StructSpaceCast = new AddrSpaceCastInst(
-          Struct, PointerType ::get(Context, 0), "structArg.ascast");
-      StructSpaceCast->insertAfter(Struct);
-      params.push_back(StructSpaceCast);
-    } else {
-      params.push_back(Struct);
-    }
 void CodeExtractor::moveCodeToFunction(Function *newFunction) {
   Function *oldFunc = Blocks.front()->getParent();
   auto newFuncIt = newFunction->begin();
@@ -1732,7 +1724,14 @@ CallInst *CodeExtractor::emitReplacerCall(
   if (!StructValues.empty()) {
     Struct = new AllocaInst(StructArgTy, DL.getAllocaAddrSpace(), nullptr,
                             "structArg", &*AllocaBlock->getFirstInsertionPt());
-    params.push_back(Struct);
+    if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
+      auto *StructSpaceCast = new AddrSpaceCastInst(
+          Struct, PointerType ::get(Context, 0), "structArg.ascast");
+      StructSpaceCast->insertAfter(Struct);
+      params.push_back(StructSpaceCast);
+    } else {
+      params.push_back(Struct);
+    }
 
     unsigned AggIdx = 0;
     for (Value *input : inputs) {
