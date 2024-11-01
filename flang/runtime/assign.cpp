@@ -17,6 +17,17 @@
 
 namespace Fortran::runtime {
 
+enum AssignFlags {
+  NoAssignFlags = 0,
+  MaybeReallocate = 1 << 0,
+  NeedFinalization = 1 << 1,
+  CanBeDefinedAssignment = 1 << 2,
+  ComponentCanBeDefinedAssignment = 1 << 3,
+  ExplicitLengthCharacterLHS = 1 << 4,
+  PolymorphicLHS = 1 << 5,
+  DeallocateLHS = 1 << 6
+};
+
 // Predicate: is the left-hand side of an assignment an allocated allocatable
 // that must be deallocated?
 static inline RT_API_ATTRS bool MustDeallocateLHS(
@@ -239,8 +250,8 @@ static RT_API_ATTRS void BlankPadCharacterAssignment(Descriptor &to,
 // of elements, but their shape need not to conform (the assignment is done in
 // element sequence order). This facilitates some internal usages, like when
 // dealing with array constructors.
-RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
-    Terminator &terminator, int flags, MemmoveFct memmoveFct) {
+RT_API_ATTRS static void Assign(
+    Descriptor &to, const Descriptor &from, Terminator &terminator, int flags) {
   bool mustDeallocateLHS{(flags & DeallocateLHS) ||
       MustDeallocateLHS(to, from, terminator, flags)};
   DescriptorAddendum *toAddendum{to.Addendum()};
@@ -412,14 +423,14 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
             Assign(toCompDesc, fromCompDesc, terminator, nestedFlags);
           } else { // Component has intrinsic type; simply copy raw bytes
             std::size_t componentByteSize{comp.SizeInBytes(to)};
-            memmoveFct(to.Element<char>(toAt) + comp.offset(),
+            Fortran::runtime::memmove(to.Element<char>(toAt) + comp.offset(),
                 from.Element<const char>(fromAt) + comp.offset(),
                 componentByteSize);
           }
           break;
         case typeInfo::Component::Genre::Pointer: {
           std::size_t componentByteSize{comp.SizeInBytes(to)};
-          memmoveFct(to.Element<char>(toAt) + comp.offset(),
+          Fortran::runtime::memmove(to.Element<char>(toAt) + comp.offset(),
               from.Element<const char>(fromAt) + comp.offset(),
               componentByteSize);
         } break;
@@ -465,14 +476,14 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
         const auto &procPtr{
             *procPtrDesc.ZeroBasedIndexedElement<typeInfo::ProcPtrComponent>(
                 k)};
-        memmoveFct(to.Element<char>(toAt) + procPtr.offset,
+        Fortran::runtime::memmove(to.Element<char>(toAt) + procPtr.offset,
             from.Element<const char>(fromAt) + procPtr.offset,
             sizeof(typeInfo::ProcedurePointer));
       }
     }
   } else { // intrinsic type, intrinsic assignment
     if (isSimpleMemmove()) {
-      memmoveFct(to.raw().base_addr, from.raw().base_addr,
+      Fortran::runtime::memmove(to.raw().base_addr, from.raw().base_addr,
           toElements * toElementBytes);
     } else if (toElementBytes > fromElementBytes) { // blank padding
       switch (to.type().raw()) {
@@ -496,8 +507,8 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
     } else { // elemental copies, possibly with character truncation
       for (std::size_t n{toElements}; n-- > 0;
            to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
-        memmoveFct(to.Element<char>(toAt), from.Element<const char>(fromAt),
-            toElementBytes);
+        Fortran::runtime::memmove(to.Element<char>(toAt),
+            from.Element<const char>(fromAt), toElementBytes);
       }
     }
   }
