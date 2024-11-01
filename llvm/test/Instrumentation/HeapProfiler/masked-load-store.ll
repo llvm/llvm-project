@@ -1,11 +1,7 @@
-; RUN: opt < %s -passes=memprof -memprof-use-callbacks -S \
-; RUN:     | FileCheck %s -check-prefix=LOAD -check-prefix=STORE -check-prefix=ALL
-; RUN: opt < %s -passes=memprof -memprof-use-callbacks -memprof-instrument-reads=0 -S \
-; RUN:     | FileCheck %s -check-prefix=NOLOAD -check-prefix=STORE -check-prefix=ALL
-; RUN: opt < %s -passes=memprof -memprof-use-callbacks -memprof-instrument-writes=0 -S \
-; RUN:     | FileCheck %s -check-prefix=LOAD -check-prefix=NOSTORE -check-prefix=ALL
-; RUN: opt < %s -passes=memprof -memprof-use-callbacks -memprof-instrument-reads=0 -memprof-instrument-writes=0 -S \
-; RUN:     | FileCheck %s -check-prefix=NOLOAD -check-prefix=NOSTORE -check-prefix=ALL
+; RUN: opt < %s -passes=memprof -memprof-use-callbacks -S | FileCheck %s -check-prefix=LOAD -check-prefix=STORE -check-prefix=ALL
+; RUN: opt < %s -passes=memprof -memprof-use-callbacks -memprof-instrument-reads=0 -S | FileCheck %s -check-prefix=NOLOAD -check-prefix=STORE -check-prefix=ALL
+; RUN: opt < %s -passes=memprof -memprof-use-callbacks -memprof-instrument-writes=0 -S | FileCheck %s -check-prefix=LOAD -check-prefix=NOSTORE -check-prefix=ALL
+; RUN: opt < %s -passes=memprof -memprof-use-callbacks -memprof-instrument-reads=0 -memprof-instrument-writes=0 -S | FileCheck %s -check-prefix=NOLOAD -check-prefix=NOSTORE -check-prefix=ALL
 ; Support memory profiling instrumentation for constant-mask llvm.masked.{load,store}
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

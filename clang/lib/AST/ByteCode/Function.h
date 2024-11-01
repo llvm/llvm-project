@@ -103,10 +103,10 @@ public:
   /// Returns the name of the function decl this code
   /// was generated for.
   const std::string getName() const {
-    if (!Source)
+    if (!Source || !getDecl())
       return "<<expr>>";
 
-    return Source.get<const FunctionDecl *>()->getQualifiedNameAsString();
+    return getDecl()->getQualifiedNameAsString();
   }
 
   /// Returns a parameter descriptor.
@@ -193,15 +193,11 @@ public:
 
   bool isVariadic() const { return Variadic; }
 
-  unsigned getBuiltinID() const {
-    return Source.get<const FunctionDecl *>()->getBuiltinID();
-  }
+  unsigned getBuiltinID() const { return BuiltinID; }
 
-  bool isBuiltin() const {
-    return Source.get<const FunctionDecl *>()->getBuiltinID() != 0;
-  }
+  bool isBuiltin() const { return getBuiltinID() != 0; }
 
-  bool isUnevaluatedBuiltin() const { return IsUnevaluatedBuiltin; }
+  bool isUnevaluatedBuiltin() const;
 
   unsigned getNumParams() const { return ParamTypes.size(); }
 
@@ -226,13 +222,17 @@ public:
     return ParamOffsets[ParamIndex];
   }
 
+  PrimType getParamType(unsigned ParamIndex) const {
+    return ParamTypes[ParamIndex];
+  }
+
 private:
   /// Construct a function representing an actual function.
   Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
            llvm::SmallVectorImpl<PrimType> &&ParamTypes,
            llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
            llvm::SmallVectorImpl<unsigned> &&ParamOffsets, bool HasThisPointer,
-           bool HasRVO, bool UnevaluatedBuiltin);
+           bool HasRVO, unsigned BuiltinID);
 
   /// Sets the code of a function.
   void setCode(unsigned NewFrameSize, std::vector<std::byte> &&NewCode,
@@ -289,7 +289,7 @@ private:
   bool HasBody = false;
   bool Defined = false;
   bool Variadic = false;
-  bool IsUnevaluatedBuiltin = false;
+  unsigned BuiltinID = 0;
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().

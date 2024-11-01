@@ -108,7 +108,7 @@ static Expr<T> FoldDotProduct(
     if (overflow &&
         context.languageFeatures().ShouldWarn(
             common::UsageWarning::FoldingException)) {
-      context.messages().Say(
+      context.messages().Say(common::UsageWarning::FoldingException,
           "DOT_PRODUCT of %s data overflowed during computation"_warn_en_US,
           T::AsFortran());
     }
@@ -326,7 +326,7 @@ static Expr<T> FoldProduct(
     if (accumulator.overflow() &&
         context.languageFeatures().ShouldWarn(
             common::UsageWarning::FoldingException)) {
-      context.messages().Say(
+      context.messages().Say(common::UsageWarning::FoldingException,
           "PRODUCT() of %s data overflowed"_warn_en_US, T::AsFortran());
     }
     return result;
@@ -394,7 +394,7 @@ static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
     if (accumulator.overflow() &&
         context.languageFeatures().ShouldWarn(
             common::UsageWarning::FoldingException)) {
-      context.messages().Say(
+      context.messages().Say(common::UsageWarning::FoldingException,
           "SUM() of %s data overflowed"_warn_en_US, T::AsFortran());
     }
     return result;

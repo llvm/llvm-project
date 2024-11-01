@@ -58,3 +58,40 @@ TEST_F(LlvmLibcAtan2fTest, SpecialNumbers) {
   // EXPECT_FP_EXCEPTION(0);
   EXPECT_MATH_ERRNO(0);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcAtan2fTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(0x1.921fb6p-1f,
+               LIBC_NAMESPACE::atan2f(min_denormal, min_denormal));
+  EXPECT_FP_EQ(0x1.000002p-23f,
+               LIBC_NAMESPACE::atan2f(min_denormal, max_denormal));
+  EXPECT_FP_EQ(0x1.921fb4p0f,
+               LIBC_NAMESPACE::atan2f(max_denormal, min_denormal));
+  EXPECT_FP_EQ(0x1.921fb6p-1f,
+               LIBC_NAMESPACE::atan2f(max_denormal, max_denormal));
+}
+
+TEST_F(LlvmLibcAtan2fTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::atan2f(min_denormal, min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::atan2f(min_denormal, max_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::atan2f(max_denormal, min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::atan2f(max_denormal, max_denormal));
+}
+
+TEST_F(LlvmLibcAtan2fTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::atan2f(min_denormal, min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::atan2f(min_denormal, max_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::atan2f(max_denormal, min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::atan2f(max_denormal, max_denormal));
+}
+
+#endif

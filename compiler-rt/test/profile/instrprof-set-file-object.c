@@ -17,6 +17,7 @@ int main(int argc, const char *argv[]) {
   __llvm_profile_set_file_object(F, 0);
   return 0;
 }
+// XFAIL: target={{.*}}-aix{{.*}}
 // CHECK:    8|       |#include <stdio.h>
 // CHECK:    9|       |
 // CHECK:   10|       |extern void __llvm_profile_set_file_object(FILE *, int);

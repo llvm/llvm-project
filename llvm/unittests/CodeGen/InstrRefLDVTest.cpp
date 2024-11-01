@@ -102,8 +102,7 @@ public:
     OurFile = DIB.createFile("xyzzy.c", "/cave");
     OurCU =
         DIB.createCompileUnit(dwarf::DW_LANG_C99, OurFile, "nou", false, "", 0);
-    auto OurSubT =
-        DIB.createSubroutineType(DIB.getOrCreateTypeArray(std::nullopt));
+    auto OurSubT = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
     OurFunc =
         DIB.createFunction(OurCU, "bees", "", OurFile, 1, OurSubT, 1,
                            DINode::FlagZero, DISubprogram::SPFlagDefinition);
@@ -1114,7 +1113,7 @@ TEST_F(InstrRefLDVTest, MLocDiamondSpills) {
   // Create a stack location and ensure it's tracked.
   SpillLoc SL = {getRegByName("RSP"), StackOffset::getFixed(-8)};
   SpillLocationNo SpillNo = *MTracker->getOrTrackSpillLoc(SL);
-  ASSERT_EQ(MTracker->getNumLocs(), 11u); // Tracks all possible stack locs.
+  ASSERT_EQ(MTracker->getNumLocs(), 13u); // Tracks all possible stack locs.
   // Locations are: RSP, stack slots from 2^3 bits wide up to 2^9 for zmm regs,
   // then slots for sub_8bit_hi and sub_16bit_hi ({8, 8} and {16, 16}).
   // Finally, one for spilt fp80 registers.
@@ -1136,7 +1135,7 @@ TEST_F(InstrRefLDVTest, MLocDiamondSpills) {
   // There are other locations, for things like xmm0, which we're going to
   // ignore here.
 
-  auto [MInLocs, MOutLocs] = allocValueTables(4, 11);
+  auto [MInLocs, MOutLocs] = allocValueTables(4, 13);
 
   // Transfer function: start with nothing.
   SmallVector<MLocTransferMap, 1> TransferFunc;
@@ -1171,7 +1170,7 @@ TEST_F(InstrRefLDVTest, MLocDiamondSpills) {
   // function.
   TransferFunc[1].insert({ALStackLoc, ALDefInBlk1});
   TransferFunc[1].insert({HAXStackLoc, HAXDefInBlk1});
-  initValueArray(MInLocs, 4, 11);
+  initValueArray(MInLocs, 4, 13);
   placeMLocPHIs(*MF, AllBlocks, MInLocs, TransferFunc);
   EXPECT_EQ(MInLocs[3][ALStackLoc.asU64()], ALPHI);
   EXPECT_EQ(MInLocs[3][AXStackLoc.asU64()], AXPHI);

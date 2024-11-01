@@ -125,7 +125,8 @@ std::string sparc::getSparcTargetCPU(const Driver &D, const ArgList &Args,
     return std::string(CPUName);
   }
 
-  if (Triple.getArch() == llvm::Triple::sparc && Triple.isOSSolaris())
+  if (Triple.getArch() == llvm::Triple::sparc &&
+      (Triple.isOSSolaris() || Triple.isOSLinux()))
     return "v9";
   return "";
 }

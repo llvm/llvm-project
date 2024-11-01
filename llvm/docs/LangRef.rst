@@ -354,7 +354,7 @@ added in the future:
     not be used lightly but only for specific situations such as an
     alternative to the *register pinning* performance technique often
     used when implementing functional programming languages. At the
-    moment only X86, AArch64, and RISCV support this convention. The 
+    moment only X86, AArch64, and RISCV support this convention. The
     following limitations exist:
 
     -  On *X86-32* only up to 4 bit type parameters are supported. No
@@ -685,10 +685,10 @@ implementation defined, the optimizer can't do the latter.  The former is
 challenging as many commonly expected properties, such as
 ``ptrtoint(v)-ptrtoint(v) == 0``, don't hold for non-integral types.
 Similar restrictions apply to intrinsics that might examine the pointer bits,
-such as :ref:`llvm.ptrmask<int_ptrmask>`. 
+such as :ref:`llvm.ptrmask<int_ptrmask>`.
 
 The alignment information provided by the frontend for a non-integral pointer
-(typically using attributes or metadata) must be valid for every possible 
+(typically using attributes or metadata) must be valid for every possible
 representation of the pointer.
 
 .. _globalvars:
@@ -1174,6 +1174,10 @@ For example:
 Note that any attributes for the function result (``nonnull``,
 ``signext``) come before the result type.
 
+If an integer argument to a function is not marked signext/zeroext/noext, the
+kind of extension used is target-specific. Some targets depend for
+correctness on the kind of extension to be explicitly specified.
+
 Currently, only the following parameter attributes are defined:
 
 ``zeroext``
@@ -1185,6 +1189,12 @@ Currently, only the following parameter attributes are defined:
     value should be sign-extended to the extent required by the target's
     ABI (which is usually 32-bits) by the caller (for a parameter) or
     the callee (for a return value).
+``noext``
+    This indicates to the code generator that the parameter or return
+    value has the high bits undefined, as for a struct in register, and
+    therefore does not need to be sign or zero extended. This is the same
+    as default behavior and is only actually used (by some targets) to
+    validate that one of the attributes is always present.
 ``inreg``
     This indicates that this parameter or return value should be treated
     in a special target-dependent fashion while emitting code for
@@ -1299,11 +1309,13 @@ Currently, only the following parameter attributes are defined:
     structure that is the return value of the function in the source
     program. This pointer must be guaranteed by the caller to be valid:
     loads and stores to the structure may be assumed by the callee not
-    to trap and to be properly aligned. This is not a valid attribute
-    for return values.
+    to trap and to be properly aligned.
 
     The sret type argument specifies the in memory type, which must be
     the same as the pointee type of the argument.
+
+    A function that accepts an ``sret`` argument must return ``void``.
+    A return value may not be ``sret``.
 
 .. _attr_elementtype:
 
@@ -1489,11 +1501,12 @@ Currently, only the following parameter attributes are defined:
 ``nofpclass(<test mask>)``
     This attribute applies to parameters and return values with
     floating-point and vector of floating-point types, as well as
-    arrays of such types. The test mask has the same format as the
-    second argument to the :ref:`llvm.is.fpclass <llvm.is.fpclass>`,
-    and indicates which classes of floating-point values are not
-    permitted for the value. For example a bitmask of 3 indicates
-    the parameter may not be a NaN.
+    :ref:`supported aggregates <fastmath_return_types>` of such types
+    (matching the supported types for :ref:`fast-math flags <fastmath>`).
+    The test mask has the same format as the second argument to the
+    :ref:`llvm.is.fpclass <llvm.is.fpclass>`, and indicates which classes
+    of floating-point values are not permitted for the value. For example
+    a bitmask of 3 indicates the parameter may not be a NaN.
 
     If the value is a floating-point class indicated by the
     ``nofpclass`` test mask, a :ref:`poison value <poisonvalues>` is
@@ -1677,10 +1690,10 @@ Currently, only the following parameter attributes are defined:
     -  The range is allowed to wrap.
     -  The empty range is represented using ``0,0``.
     -  Otherwise, ``a`` and ``b`` are not allowed to be equal.
-    
-    This attribute may only be applied to parameters or return values with integer 
+
+    This attribute may only be applied to parameters or return values with integer
     or vector of integer types.
-    
+
     For vector-typed parameters, the range is applied element-wise.
 
 .. _gc:
@@ -2071,6 +2084,12 @@ example:
     function call, use of ``longjmp``, or other means. It is a compiler hint that
     is used at module level to improve dataflow analysis, dropped during linking,
     and has no effect on functions defined in the current module.
+``nodivergencesource``
+    A call to this function is not a source of divergence. In uniformity
+    analysis, a *source of divergence* is an instruction that generates
+    divergence even if its inputs are uniform. A call with no further information
+    would normally be considered a source of divergence; setting this attribute
+    on a function means that a call to it is not a source of divergence.
 ``noduplicate``
     This attribute indicates that calls to the function cannot be
     duplicated. A call to a ``noduplicate`` function may be moved
@@ -2189,10 +2208,6 @@ example:
 ``nosanitize_coverage``
     This attribute indicates that SanitizerCoverage instrumentation is disabled
     for this function.
-``nosanitize_realtime``
-    This attribute indicates that the Realtime Sanitizer instrumentation is
-    disabled for this function.
-    This attribute is incompatible with the ``sanitize_realtime`` attribute.
 ``null_pointer_is_valid``
    If ``null_pointer_is_valid`` is set, then the ``null`` address
    in address-space 0 is considered to be a valid address for memory loads and
@@ -2319,7 +2334,11 @@ example:
     This attribute indicates that RealtimeSanitizer checks
     (realtime safety analysis - no allocations, syscalls or exceptions) are enabled
     for this function.
-    This attribute is incompatible with the ``nosanitize_realtime`` attribute.
+``sanitize_realtime_blocking``
+    This attribute indicates that RealtimeSanitizer should error immediately
+    if the attributed function is called during invocation of a function
+    attributed with ``sanitize_realtime``.
+    This attribute is incompatible with the ``sanitize_realtime`` attribute.
 ``speculative_load_hardening``
     This attribute indicates that
     `Speculative Load Hardening <https://llvm.org/docs/SpeculativeLoadHardening.html>`_
@@ -2415,6 +2434,8 @@ example:
     If a function with an ``sspreq`` attribute is inlined into a calling
     function which has an ``ssp`` or ``sspstrong`` attribute, the calling
     function's attribute will be upgraded to ``sspreq``.
+
+.. _strictfp:
 
 ``strictfp``
     This attribute indicates that the function was called from a scope that
@@ -2655,8 +2676,8 @@ are grouped into a single :ref:`attribute group <attrgrp>`.
 Operand Bundles
 ---------------
 
-Operand bundles are tagged sets of SSA values that can be associated
-with certain LLVM instructions (currently only ``call`` s and
+Operand bundles are tagged sets of SSA values or metadata strings that can be
+associated with certain LLVM instructions (currently only ``call`` s and
 ``invoke`` s).  In a way they are like metadata, but dropping them is
 incorrect and will change program semantics.
 
@@ -2664,7 +2685,7 @@ Syntax::
 
     operand bundle set ::= '[' operand bundle (, operand bundle )* ']'
     operand bundle ::= tag '(' [ bundle operand ] (, bundle operand )* ')'
-    bundle operand ::= SSA value
+    bundle operand ::= SSA value | metadata string
     tag ::= string constant
 
 Operand bundles are **not** part of a function's signature, and a
@@ -3593,11 +3614,12 @@ status flags are not observable. Therefore, floating-point math operations do
 not have side effects and may be speculated freely. Results assume the
 round-to-nearest rounding mode, and subnormals are assumed to be preserved.
 
-Running LLVM code in an environment where these assumptions are not met can lead
-to undefined behavior. The ``strictfp`` and ``denormal-fp-math`` attributes as
-well as :ref:`Constrained Floating-Point Intrinsics <constrainedfp>` can be used
-to weaken LLVM's assumptions and ensure defined behavior in non-default
-floating-point environments; see their respective documentation for details.
+Running LLVM code in an environment where these assumptions are not met
+typically leads to undefined behavior. The ``strictfp`` and ``denormal-fp-math``
+attributes as well as :ref:`Constrained Floating-Point Intrinsics
+<constrainedfp>` can be used to weaken LLVM's assumptions and ensure defined
+behavior in non-default floating-point environments; see their respective
+documentation for details.
 
 .. _floatnan:
 
@@ -3619,10 +3641,11 @@ are not "floating-point math operations": ``fneg``, ``llvm.fabs``, and
 ``llvm.copysign``. These operations act directly on the underlying bit
 representation and never change anything except possibly for the sign bit.
 
-For floating-point math operations, unless specified otherwise, the following
-rules apply when a NaN value is returned: the result has a non-deterministic
-sign; the quiet bit and payload are non-deterministically chosen from the
-following set of options:
+Floating-point math operations that return a NaN are an exception from the
+general principle that LLVM implements IEEE-754 semantics. Unless specified
+otherwise, the following rules apply whenever the IEEE-754 semantics say that a
+NaN value is returned: the result has a non-deterministic sign; the quiet bit
+and payload are non-deterministically chosen from the following set of options:
 
 - The quiet bit is set and the payload is all-zero. ("Preferred NaN" case)
 - The quiet bit is set and the payload is copied from any input operand that is
@@ -3668,6 +3691,40 @@ specification on some architectures:
   LLVM does not correctly represent this. See `issue #60796
   <https://github.com/llvm/llvm-project/issues/60796>`_.
 
+.. _floatsem:
+
+Floating-Point Semantics
+------------------------
+
+This section defines the semantics for core floating-point operations on types
+that use a format specified by IEEE-745. These types are: ``half``, ``float``,
+``double``, and ``fp128``, which correspond to the binary16, binary32, binary64,
+and binary128 formats, respectively. The "core" operations are those defined in
+section 5 of IEEE-745, which all have corresponding LLVM operations.
+
+The value returned by those operations matches that of the corresponding
+IEEE-754 operation executed in the :ref:`default LLVM floating-point environment
+<floatenv>`, except that the behavior of NaN results is instead :ref:`as
+specified here <floatnan>`. In particular, such a floating-point instruction
+returning a non-NaN value is guaranteed to always return the same bit-identical
+result on all machines and optimization levels.
+
+This means that optimizations and backends may not change the observed bitwise
+result of these operations in any way (unless NaNs are returned), and frontends
+can rely on these operations providing correctly rounded results as described in
+the standard.
+
+(Note that this is only about the value returned by these operations; see the
+:ref:`floating-point environment section <floatenv>` regarding flags and
+exceptions.)
+
+Various flags, attributes, and metadata can alter the behavior of these
+operations and thus make them not bit-identical across machines and optimization
+levels any more: most notably, the :ref:`fast-math flags <fastmath>` as well as
+the :ref:`strictfp <strictfp>` and :ref:`denormal-fp-math <denormal_fp_math>`
+attributes and :ref:`!fpmath metadata <fpmath-metadata>`. See their
+corresponding documentation for details.
+
 .. _fastmath:
 
 Fast-Math Flags
@@ -3675,9 +3732,9 @@ Fast-Math Flags
 
 LLVM IR floating-point operations (:ref:`fneg <i_fneg>`, :ref:`fadd <i_fadd>`,
 :ref:`fsub <i_fsub>`, :ref:`fmul <i_fmul>`, :ref:`fdiv <i_fdiv>`,
-:ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`), :ref:`phi <i_phi>`,
-:ref:`select <i_select>` and :ref:`call <i_call>`
-may use the following flags to enable otherwise unsafe
+:ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`), and :ref:`phi <i_phi>`,
+:ref:`select <i_select>`, or :ref:`call <i_call>` instructions that return
+floating-point types may use the following flags to enable otherwise unsafe
 floating-point transformations.
 
 ``fast``
@@ -3698,6 +3755,16 @@ floating-point transformations.
    No Signed Zeros - Allow optimizations to treat the sign of a zero
    argument or zero result as insignificant. This does not imply that -0.0
    is poison and/or guaranteed to not exist in the operation.
+
+Note: For :ref:`phi <i_phi>`, :ref:`select <i_select>`, and :ref:`call <i_call>`
+instructions, the following return types are considered to be floating-point
+types:
+
+.. _fastmath_return_types:
+
+- Floating-point scalar or vector types
+- Array types (nested to any depth) of floating-point scalar or vector types
+- Homogeneous literal struct types of floating-point scalar or vector types
 
 Rewrite-based flags
 ^^^^^^^^^^^^^^^^^^^
@@ -3954,7 +4021,7 @@ Floating-Point Types
      - Description
 
    * - ``half``
-     - 16-bit floating-point value
+     - 16-bit floating-point value (IEEE-754 binary16)
 
    * - ``bfloat``
      - 16-bit "brain" floating-point value (7-bit significand).  Provides the
@@ -3963,23 +4030,19 @@ Floating-Point Types
        extensions and Arm's ARMv8.6-A extensions, among others.
 
    * - ``float``
-     - 32-bit floating-point value
+     - 32-bit floating-point value (IEEE-754 binary32)
 
    * - ``double``
-     - 64-bit floating-point value
+     - 64-bit floating-point value (IEEE-754 binary64)
 
    * - ``fp128``
-     - 128-bit floating-point value (113-bit significand)
+     - 128-bit floating-point value (IEEE-754 binary128)
 
    * - ``x86_fp80``
      -  80-bit floating-point value (X87)
 
    * - ``ppc_fp128``
      - 128-bit floating-point value (two 64-bits)
-
-The binary format of half, float, double, and fp128 correspond to the
-IEEE-754-2008 specifications for binary16, binary32, binary64, and binary128
-respectively.
 
 X86_amx Type
 """"""""""""
@@ -4333,7 +4396,7 @@ recursive, can be opaqued, and are never uniqued.
 :Examples:
 
 +------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| ``{ i32, i32, i32 }``        | A triple of three ``i32`` values                                                                                                                                                      |
+| ``{ i32, i32, i32 }``        | A triple of three ``i32`` values (this is a "homogeneous" struct as all element types are the same)                                                                                   |
 +------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | ``{ float, ptr }``           | A pair, where the first element is a ``float`` and the second element is a :ref:`pointer <t_pointer>`.                                                                                |
 +------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -6936,6 +6999,8 @@ For example,
     %2 = load float, ptr %c, align 4, !alias.scope !6
     store float %0, ptr %arrayidx.i, align 4, !noalias !7
 
+.. _fpmath-metadata:
+
 '``fpmath``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -8025,6 +8090,43 @@ into any callers it will contain a single operand (id). If it was inlined
 it will contain a list of ids, including the ids of the callsites in the
 full inline sequence, in order from the leaf-most call's id to the outermost
 inlined call.
+
+
+'``noalias.addrspace``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``noalias.addrspace`` metadata is used to identify memory
+operations which cannot access objects allocated in a range of address
+spaces. It is attached to memory instructions, including
+:ref:`atomicrmw <i_atomicrmw>`, :ref:`cmpxchg <i_cmpxchg>`, and
+:ref:`call <i_call>` instructions.
+
+This follows the same form as :ref:`range metadata <range-metadata>`,
+except the field entries must be of type `i32`. The interpretation is
+the same numeric address spaces as applied to IR values.
+
+Example:
+
+.. code-block:: llvm
+
+    ; %ptr cannot point to an object allocated in addrspace(5)
+    %rmw.valid = atomicrmw and ptr %ptr, i64 %value seq_cst, !noalias.addrspace !0
+
+    ; Undefined behavior. The underlying object is allocated in one of the listed
+    ; address spaces.
+    %alloca = alloca i64, addrspace(5)
+    %alloca.cast = addrspacecast ptr addrspace(5) %alloca to ptr
+    %rmw.ub = atomicrmw and ptr %alloca.cast, i64 %value seq_cst, !noalias.addrspace !0
+
+    !0 = !{i32 5, i32 6} ; Exclude addrspace(5) only
+
+
+This is intended for use on targets with a notion of generic address
+spaces, which at runtime resolve to different physical memory
+spaces. The interpretation of the address space values is target
+specific. The behavior is undefined if the runtime memory address does
+resolve to an object defined in one of the indicated address spaces.
+
 
 Module Flags Metadata
 =====================
@@ -9118,8 +9220,8 @@ This instruction requires several arguments:
    convention <callingconv>` the call should use. If none is
    specified, the call defaults to using C calling conventions.
 #. The optional :ref:`Parameter Attributes <paramattrs>` list for return
-   values. Only '``zeroext``', '``signext``', and '``inreg``' attributes
-   are valid here.
+   values. Only '``zeroext``', '``signext``', '``noext``', and '``inreg``'
+   attributes are valid here.
 #. The optional addrspace attribute can be used to indicate the address space
    of the called function. If it is not specified, the program address space
    from the :ref:`datalayout string<langref_datalayout>` will be used.
@@ -9214,8 +9316,8 @@ This instruction requires several arguments:
    convention <callingconv>` the call should use. If none is
    specified, the call defaults to using C calling conventions.
 #. The optional :ref:`Parameter Attributes <paramattrs>` list for return
-   values. Only '``zeroext``', '``signext``', and '``inreg``' attributes
-   are valid here.
+   values. Only '``zeroext``', '``signext``', '``noext``', and '``inreg``'
+   attributes are valid here.
 #. The optional addrspace attribute can be used to indicate the address space
    of the called function. If it is not specified, the program address space
    from the :ref:`datalayout string<langref_datalayout>` will be used.
@@ -11246,6 +11348,8 @@ operation. The operation must be one of the following keywords:
 -  fmin
 -  uinc_wrap
 -  udec_wrap
+-  usub_cond
+-  usub_sat
 
 For most of these operations, the type of '<value>' must be an integer
 type whose bit width is a power of two greater than or equal to eight
@@ -11296,6 +11400,8 @@ operation argument:
 -  fmin: ``*ptr = minnum(*ptr, val)`` (match the `llvm.minnum.*`` intrinsic)
 -  uinc_wrap: ``*ptr = (*ptr u>= val) ? 0 : (*ptr + 1)`` (increment value with wraparound to zero when incremented above input value)
 -  udec_wrap: ``*ptr = ((*ptr == 0) || (*ptr u> val)) ? val : (*ptr - 1)`` (decrement with wraparound to input value when decremented below zero).
+-  usub_cond: ``*ptr = (*ptr u>= val) ? *ptr - val : *ptr`` (subtract only if no unsigned overflow).
+-  usub_sat: ``*ptr = (*ptr u>= val) ? *ptr - val : 0`` (subtract with unsigned clamping to zero).
 
 
 Example:
@@ -12225,6 +12331,7 @@ Syntax:
 ::
 
       <result> = icmp <cond> <ty> <op1>, <op2>   ; yields i1 or <N x i1>:result
+      <result> = icmp samesign <cond> <ty> <op1>, <op2>   ; yields i1 or <N x i1>:result
 
 Overview:
 """""""""
@@ -12293,6 +12400,9 @@ are compared as if they were integers.
 If the operands are integer vectors, then they are compared element by
 element. The result is an ``i1`` vector with the same number of elements
 as the values being compared. Otherwise, the result is an ``i1``.
+
+If the ``samesign`` keyword is present and the operands are not of the
+same sign then the result is a :ref:`poison value <poisonvalues>`.
 
 Example:
 """"""""
@@ -12458,9 +12568,8 @@ instruction's return value on the same edge).
 The optional ``fast-math-flags`` marker indicates that the phi has one
 or more :ref:`fast-math-flags <fastmath>`. These are optimization hints
 to enable otherwise unsafe floating-point optimizations. Fast-math-flags
-are only valid for phis that return a floating-point scalar or vector
-type, or an array (nested to any depth) of floating-point scalar or vector
-types.
+are only valid for phis that return :ref:`supported floating-point types
+<fastmath_return_types>`.
 
 Semantics:
 """"""""""
@@ -12509,8 +12618,8 @@ class <t_firstclass>` type.
 #. The optional ``fast-math flags`` marker indicates that the select has one or more
    :ref:`fast-math flags <fastmath>`. These are optimization hints to enable
    otherwise unsafe floating-point optimizations. Fast-math flags are only valid
-   for selects that return a floating-point scalar or vector type, or an array
-   (nested to any depth) of floating-point scalar or vector types.
+   for selects that return :ref:`supported floating-point types
+   <fastmath_return_types>`.
 
 Semantics:
 """"""""""
@@ -12644,10 +12753,67 @@ This instruction requires several arguments:
       the return value of the callee is returned to the caller's caller, even
       if a void return type is in use.
 
-   Both markers imply that the callee does not access allocas from the caller.
-   The ``tail`` marker additionally implies that the callee does not access
-   varargs from the caller. Calls marked ``musttail`` must obey the following
-   additional  rules:
+   Both markers imply that the callee does not access allocas, va_args, or
+   byval arguments from the caller. As an exception to that, an alloca or byval
+   argument may be passed to the callee as a byval argument, which can be
+   dereferenced inside the callee. For example:
+
+.. code-block:: llvm
+
+      declare void @take_byval(ptr byval(i64))
+      declare void @take_ptr(ptr)
+
+      ; Invalid (assuming @take_ptr dereferences the pointer), because %local
+      ; may be de-allocated before the call to @take_ptr.
+      define void @invalid_alloca() {
+      entry:
+        %local = alloca i64
+        tail call void @take_ptr(ptr %local)
+        ret void
+      }
+
+      ; Valid, the byval attribute causes the memory allocated by %local to be
+      ; copied into @take_byval's stack frame.
+      define void @byval_alloca() {
+      entry:
+        %local = alloca i64
+        tail call void @take_byval(ptr byval(i64) %local)
+        ret void
+      }
+
+      ; Invalid, because @use_global_va_list uses the variadic arguments from
+      ; @invalid_va_list.
+      %struct.va_list = type { ptr }
+      @va_list = external global %struct.va_list
+      define void @use_global_va_list() {
+      entry:
+        %arg = va_arg ptr @va_list, i64
+        ret void
+      }
+      define void @invalid_va_list(i32 %a, ...) {
+      entry:
+        call void @llvm.va_start.p0(ptr @va_list)
+        tail call void @use_global_va_list()
+        ret void
+      }
+
+      ; Valid, byval argument forwarded to tail call as another byval argument.
+      define void @forward_byval(ptr byval(i64) %x) {
+      entry:
+        tail call void @take_byval(ptr byval(i64) %x)
+        ret void
+      }
+
+      ; Invalid (assuming @take_ptr dereferences the pointer), byval argument
+      ; passed to tail callee as non-byval ptr.
+      define void @invalid_byval(ptr byval(i64) %x) {
+      entry:
+        tail call void @take_ptr(ptr %x)
+        ret void
+      }
+
+
+   Calls marked ``musttail`` must obey the following additional rules:
 
    - The call must immediately precede a :ref:`ret <i_ret>` instruction,
      or a pointer bitcast followed by a ret instruction.
@@ -12691,8 +12857,7 @@ This instruction requires several arguments:
 #. The optional ``fast-math flags`` marker indicates that the call has one or more
    :ref:`fast-math flags <fastmath>`, which are optimization hints to enable
    otherwise unsafe floating-point optimizations. Fast-math flags are only valid
-   for calls that return a floating-point scalar or vector type, or an array
-   (nested to any depth) of floating-point scalar or vector types.
+   for calls that return :ref:`supported floating-point types <fastmath_return_types>`.
 
 #. The optional "cconv" marker indicates which :ref:`calling
    convention <callingconv>` the call should use. If none is
@@ -12700,8 +12865,8 @@ This instruction requires several arguments:
    calling convention of the call must match the calling convention of
    the target function, or else the behavior is undefined.
 #. The optional :ref:`Parameter Attributes <paramattrs>` list for return
-   values. Only '``zeroext``', '``signext``', and '``inreg``' attributes
-   are valid here.
+   values. Only '``zeroext``', '``signext``', '``noext``', and '``inreg``'
+   attributes are valid here.
 #. The optional addrspace attribute can be used to indicate the address space
    of the called function. If it is not specified, the program address space
    from the :ref:`datalayout string<langref_datalayout>` will be used.
@@ -14347,7 +14512,7 @@ Arguments:
 """"""""""
 The first 4 arguments are similar to ``llvm.instrprof.increment``. The indexing
 is specific to callsites, meaning callsites are indexed from 0, independent from
-the indexes used by the other intrinsics (such as 
+the indexes used by the other intrinsics (such as
 ``llvm.instrprof.increment[.step]``).
 
 The last argument is the called value of the callsite this intrinsic precedes.
@@ -14361,7 +14526,7 @@ a buffer LLVM can use to perform counter increments (i.e. the lowering of
 ``llvm.instrprof.increment[.step]``. The address range following the counter
 buffer, ``<num-counters>`` x ``sizeof(ptr)`` - sized, is expected to contain
 pointers to contexts of functions called from this function ("subcontexts").
-LLVM does not dereference into that memory region, just calculates GEPs. 
+LLVM does not dereference into that memory region, just calculates GEPs.
 
 The lowering of ``llvm.instrprof.callsite`` consists of:
 
@@ -14930,8 +15095,8 @@ integer bit width or any vector of integer elements.
 Overview:
 """""""""
 
-Return ``-1`` if ``%a`` is signed less than ``%b``, ``0`` if they are equal, and 
-``1`` if ``%a`` is signed greater than ``%b``. Vector intrinsics operate on a per-element basis. 
+Return ``-1`` if ``%a`` is signed less than ``%b``, ``0`` if they are equal, and
+``1`` if ``%a`` is signed greater than ``%b``. Vector intrinsics operate on a per-element basis.
 
 Arguments:
 """"""""""
@@ -14959,8 +15124,8 @@ integer bit width or any vector of integer elements.
 Overview:
 """""""""
 
-Return ``-1`` if ``%a`` is unsigned less than ``%b``, ``0`` if they are equal, and 
-``1`` if ``%a`` is unsigned greater than ``%b``. Vector intrinsics operate on a per-element basis. 
+Return ``-1`` if ``%a`` is unsigned less than ``%b``, ``0`` if they are equal, and
+``1`` if ``%a`` is unsigned greater than ``%b``. Vector intrinsics operate on a per-element basis.
 
 Arguments:
 """"""""""
@@ -15347,6 +15512,8 @@ Semantics:
 This function returns the first value raised to the second power with an
 unspecified sequence of rounding operations.
 
+.. _t_llvm_sin:
+
 '``llvm.sin.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -15383,6 +15550,8 @@ trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+.. _t_llvm_cos:
 
 '``llvm.cos.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -15569,6 +15738,43 @@ trapping or setting ``errno``.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+'``llvm.atan2.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.atan2`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.atan2.f32(float  %X, float %Y)
+      declare double    @llvm.atan2.f64(double %X, double %Y)
+      declare x86_fp80  @llvm.atan2.f80(x86_fp80  %X, x86_fp80 %Y)
+      declare fp128     @llvm.atan2.f128(fp128 %X, fp128 %Y)
+      declare ppc_fp128 @llvm.atan2.ppcf128(ppc_fp128  %X, ppc_fp128 %Y)
+
+Overview:
+"""""""""
+
+The '``llvm.atan2.*``' intrinsics return the arctangent of the operand.
+
+Arguments:
+""""""""""
+
+The arguments and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Return the same value as a corresponding libm '``atan2``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
 '``llvm.sinh.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -15676,6 +15882,50 @@ Semantics:
 
 Return the same value as a corresponding libm '``tanh``' function but without
 trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+
+'``llvm.sincos.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.sincos`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare { float, float }          @llvm.sincos.f32(float  %Val)
+      declare { double, double }        @llvm.sincos.f64(double %Val)
+      declare { x86_fp80, x86_fp80 }    @llvm.sincos.f80(x86_fp80  %Val)
+      declare { fp128, fp128 }          @llvm.sincos.f128(fp128 %Val)
+      declare { ppc_fp128, ppc_fp128 }  @llvm.sincos.ppcf128(ppc_fp128  %Val)
+      declare { <4 x float>, <4 x float> } @llvm.sincos.v4f32(<4 x float>  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.sincos.*``' intrinsics returns the sine and cosine of the operand.
+
+Arguments:
+""""""""""
+
+The argument is a :ref:`floating-point <t_floating>` value or
+:ref:`vector <t_vector>` of floating-point values. Returns two values matching
+the argument type in a struct.
+
+Semantics:
+""""""""""
+
+This intrinsic is equivalent to a calling both :ref:`llvm.sin <t_llvm_sin>`
+and :ref:`llvm.cos <t_llvm_cos>` on the argument.
+
+The first result is the sine of the argument and the second result is the cosine
+of the argument.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
@@ -16873,11 +17123,11 @@ floating-point type. Not all targets support all types however.
 
 ::
 
-      declare i64 @llvm.lround.i64.f32(float %Val)
-      declare i64 @llvm.lround.i64.f64(double %Val)
-      declare i64 @llvm.lround.i64.f80(float %Val)
-      declare i64 @llvm.lround.i64.f128(double %Val)
-      declare i64 @llvm.lround.i64.ppcf128(double %Val)
+      declare i64 @llvm.llround.i64.f32(float %Val)
+      declare i64 @llvm.llround.i64.f64(double %Val)
+      declare i64 @llvm.llround.i64.f80(float %Val)
+      declare i64 @llvm.llround.i64.f128(double %Val)
+      declare i64 @llvm.llround.i64.ppcf128(double %Val)
 
 Overview:
 """""""""
@@ -19723,8 +19973,8 @@ More update operation types may be added in the future.
 
 ::
 
-    declare <8 x i32> @llvm.experimental.vector.histogram.add.v8p0.i32(<8 x ptr> %ptrs, i32 %inc, <8 x i1> %mask)
-    declare <vscale x 2 x i64> @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> %ptrs, i64 %inc, <vscale x 2 x i1> %mask)
+    declare void @llvm.experimental.vector.histogram.add.v8p0.i32(<8 x ptr> %ptrs, i32 %inc, <8 x i1> %mask)
+    declare void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> %ptrs, i64 %inc, <vscale x 2 x i1> %mask)
 
 Arguments:
 """"""""""
@@ -20419,8 +20669,8 @@ the explicit vector length.
 #. The optional ``fast-math flags`` marker indicates that the select has one or
    more :ref:`fast-math flags <fastmath>`. These are optimization hints to
    enable otherwise unsafe floating-point optimizations. Fast-math flags are
-   only valid for selects that return a floating-point scalar or vector type,
-   or an array (nested to any depth) of floating-point scalar or vector types.
+   only valid for selects that return :ref:`supported floating-point types
+   <fastmath_return_types>`.
 
 Semantics:
 """"""""""
@@ -20477,8 +20727,8 @@ is the pivot.
 #. The optional ``fast-math flags`` marker indicates that the merge has one or
    more :ref:`fast-math flags <fastmath>`. These are optimization hints to
    enable otherwise unsafe floating-point optimizations. Fast-math flags are
-   only valid for merges that return a floating-point scalar or vector type,
-   or an array (nested to any depth) of floating-point scalar or vector types.
+   only valid for merges that return :ref:`supported floating-point types
+   <fastmath_return_types>`.
 
 Semantics:
 """"""""""
@@ -21557,9 +21807,9 @@ Semantics:
 """"""""""
 
 The '``llvm.vp.minimum``' intrinsic performs floating-point minimum (:ref:`minimum <i_minimum>`)
-of the first and second vector arguments on each enabled lane, the result being 
+of the first and second vector arguments on each enabled lane, the result being
 NaN if either argument is a NaN. -0.0 is considered to be less than +0.0 for this
-intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`. 
+intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 The operation is performed in the default floating-point environment.
 
 Examples:
@@ -29192,7 +29442,7 @@ Semantics:
 """"""""""
 
 The intrinsic ``@llvm.allow.ubsan.check()`` returns either ``true`` or
-``false``, depending on compiler options. 
+``false``, depending on compiler options.
 
 For each evaluation of a call to this intrinsic, the program must be valid and
 correct both if it returns ``true`` and if it returns ``false``.
@@ -29251,13 +29501,13 @@ Semantics:
 """"""""""
 
 The intrinsic ``@llvm.allow.runtime.check()`` returns either ``true`` or
-``false``, depending on compiler options. 
+``false``, depending on compiler options.
 
 For each evaluation of a call to this intrinsic, the program must be valid and
 correct both if it returns ``true`` and if it returns ``false``.
 
 When used in a branch condition, it allows us to choose between
-two alternative correct solutions for the same problem. 
+two alternative correct solutions for the same problem.
 
 If the intrinsic is evaluated as ``true``, program should execute a guarded
 check. If the intrinsic is evaluated as ``false``, the program should avoid any

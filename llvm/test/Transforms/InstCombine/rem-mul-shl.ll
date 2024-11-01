@@ -8,7 +8,7 @@ define i8 @srem_non_matching(i8 %X, i8 %Y) {
 ; CHECK-LABEL: @srem_non_matching(
 ; CHECK-NEXT:    [[BO0:%.*]] = mul nuw nsw i8 [[X:%.*]], 15
 ; CHECK-NEXT:    [[BO1:%.*]] = mul nuw nsw i8 [[Y:%.*]], 5
-; CHECK-NEXT:    [[R:%.*]] = srem i8 [[BO0]], [[BO1]]
+; CHECK-NEXT:    [[R:%.*]] = urem i8 [[BO0]], [[BO1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %BO0 = mul nsw nuw i8 %X, 15

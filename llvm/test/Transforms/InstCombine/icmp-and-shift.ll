@@ -619,6 +619,19 @@ define i1 @test_shr_and_1_ne_0(i32 %a, i32 %b) {
   ret i1 %cmp
 }
 
+define i1 @test_shr_and_1_ne_0_samesign(i32 %a, i32 %b) {
+; CHECK-LABEL: @test_shr_and_1_ne_0_samesign(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shr = lshr i32 %a, %b
+  %and = and i32 %shr, 1
+  %cmp = icmp samesign ne i32 %and, 0
+  ret i1 %cmp
+}
+
 define i1 @test_const_shr_and_1_ne_0(i32 %b) {
 ; CHECK-LABEL: @test_const_shr_and_1_ne_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]

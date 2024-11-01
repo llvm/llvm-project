@@ -138,8 +138,8 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
   case X86::VSHUFI32X4Z256rri:
   case X86::VSHUFI64X2Z256rmi:
   case X86::VSHUFI64X2Z256rri: {
-    assert((NewOpc == X86::VPERM2F128rr || NewOpc == X86::VPERM2I128rr ||
-            NewOpc == X86::VPERM2F128rm || NewOpc == X86::VPERM2I128rm) &&
+    assert((NewOpc == X86::VPERM2F128rri || NewOpc == X86::VPERM2I128rri ||
+            NewOpc == X86::VPERM2F128rmi || NewOpc == X86::VPERM2I128rmi) &&
            "Unexpected new opcode!");
     MachineOperand &Imm = MI.getOperand(MI.getNumExplicitOperands() - 1);
     int64_t ImmVal = Imm.getImm();

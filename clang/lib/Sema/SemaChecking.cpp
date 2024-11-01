@@ -1844,6 +1844,44 @@ static ExprResult BuiltinLaunder(Sema &S, CallExpr *TheCall) {
   return TheCall;
 }
 
+static ExprResult BuiltinIsWithinLifetime(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 1))
+    return ExprError();
+
+  ExprResult Arg = S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
+  if (Arg.isInvalid())
+    return ExprError();
+  QualType ParamTy = Arg.get()->getType();
+  TheCall->setArg(0, Arg.get());
+  TheCall->setType(S.Context.BoolTy);
+
+  // Only accept pointers to objects as arguments, which should have object
+  // pointer or void pointer types.
+  if (const auto *PT = ParamTy->getAs<PointerType>()) {
+    // LWG4138: Function pointer types not allowed
+    if (PT->getPointeeType()->isFunctionType()) {
+      S.Diag(TheCall->getArg(0)->getExprLoc(),
+             diag::err_builtin_is_within_lifetime_invalid_arg)
+          << 1;
+      return ExprError();
+    }
+    // Disallow VLAs too since those shouldn't be able to
+    // be a template parameter for `std::is_within_lifetime`
+    if (PT->getPointeeType()->isVariableArrayType()) {
+      S.Diag(TheCall->getArg(0)->getExprLoc(), diag::err_vla_unsupported)
+          << 1 << "__builtin_is_within_lifetime";
+      return ExprError();
+    }
+  } else {
+    S.Diag(TheCall->getArg(0)->getExprLoc(),
+           diag::err_builtin_is_within_lifetime_invalid_arg)
+        << 0;
+    return ExprError();
+  }
+
+  return TheCall;
+}
+
 // Emit an error and return true if the current object format type is in the
 // list of unsupported types.
 static bool CheckBuiltinTargetNotInUnsupported(
@@ -2276,6 +2314,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_launder:
     return BuiltinLaunder(*this, TheCall);
+  case Builtin::BI__builtin_is_within_lifetime:
+    return BuiltinIsWithinLifetime(*this, TheCall);
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_add_1:
   case Builtin::BI__sync_fetch_and_add_2:
@@ -2715,15 +2755,12 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   // These builtins restrict the element type to floating point
   // types only, and take in two arguments.
+  case Builtin::BI__builtin_elementwise_minimum:
+  case Builtin::BI__builtin_elementwise_maximum:
+  case Builtin::BI__builtin_elementwise_atan2:
+  case Builtin::BI__builtin_elementwise_fmod:
   case Builtin::BI__builtin_elementwise_pow: {
-    if (BuiltinElementwiseMath(TheCall))
-      return ExprError();
-
-    QualType ArgTy = TheCall->getArg(0)->getType();
-    if (checkFPMathBuiltinElementType(*this, TheCall->getArg(0)->getBeginLoc(),
-                                      ArgTy, 1) ||
-        checkFPMathBuiltinElementType(*this, TheCall->getArg(1)->getBeginLoc(),
-                                      ArgTy, 2))
+    if (BuiltinElementwiseMath(TheCall, /*FPOnly=*/true))
       return ExprError();
     break;
   }
@@ -2755,7 +2792,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (BuiltinElementwiseMath(TheCall))
       return ExprError();
     break;
-
+  case Builtin::BI__builtin_elementwise_popcount:
   case Builtin::BI__builtin_elementwise_bitreverse: {
     if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return ExprError();
@@ -2821,6 +2858,29 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (ElTy.isNull()) {
       Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
           << 1 << /* vector ty*/ 4 << Arg->getType();
+      return ExprError();
+    }
+
+    TheCall->setType(ElTy);
+    break;
+  }
+  case Builtin::BI__builtin_reduce_maximum:
+  case Builtin::BI__builtin_reduce_minimum: {
+    if (PrepareBuiltinReduceMathOneArgCall(TheCall))
+      return ExprError();
+
+    const Expr *Arg = TheCall->getArg(0);
+    const auto *TyA = Arg->getType()->getAs<VectorType>();
+
+    QualType ElTy;
+    if (TyA)
+      ElTy = TyA->getElementType();
+    else if (Arg->getType()->isSizelessVectorType())
+      ElTy = Arg->getType()->getSizelessVectorEltType(Context);
+
+    if (ElTy.isNull() || !ElTy->isFloatingType()) {
+      Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << 1 << /* vector of floating points */ 9 << Arg->getType();
       return ExprError();
     }
 
@@ -4896,10 +4956,19 @@ bool Sema::BuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
   // Usual Unary Conversions will convert half to float, which we want for
   // machines that use fp16 conversion intrinsics. Else, we wnat to leave the
   // type how it is, but do normal L->Rvalue conversions.
-  if (Context.getTargetInfo().useFP16ConversionIntrinsics())
-    OrigArg = UsualUnaryConversions(OrigArg).get();
-  else
-    OrigArg = DefaultFunctionArrayLvalueConversion(OrigArg).get();
+  if (Context.getTargetInfo().useFP16ConversionIntrinsics()) {
+    ExprResult Res = UsualUnaryConversions(OrigArg);
+
+    if (!Res.isUsable())
+      return true;
+    OrigArg = Res.get();
+  } else {
+    ExprResult Res = DefaultFunctionArrayLvalueConversion(OrigArg);
+
+    if (!Res.isUsable())
+      return true;
+    OrigArg = Res.get();
+  }
   TheCall->setArg(FPArgNo, OrigArg);
 
   QualType VectorResultTy;
@@ -6231,7 +6300,7 @@ public:
   EmitFormatDiagnostic(Sema &S, bool inFunctionCall, const Expr *ArgumentExpr,
                        const PartialDiagnostic &PDiag, SourceLocation StringLoc,
                        bool IsStringLocation, Range StringRange,
-                       ArrayRef<FixItHint> Fixit = std::nullopt);
+                       ArrayRef<FixItHint> Fixit = {});
 
 protected:
   bool HandleInvalidConversionSpecifier(unsigned argIndex, SourceLocation Loc,
@@ -6258,7 +6327,7 @@ protected:
   template <typename Range>
   void EmitFormatDiagnostic(PartialDiagnostic PDiag, SourceLocation StringLoc,
                             bool IsStringLocation, Range StringRange,
-                            ArrayRef<FixItHint> Fixit = std::nullopt);
+                            ArrayRef<FixItHint> Fixit = {});
 };
 
 } // namespace
@@ -6510,7 +6579,6 @@ CheckFormatHandler::HandleInvalidConversionSpecifier(unsigned argIndex,
       OS << "\\u" << llvm::format("%04x", CodePoint);
     else
       OS << "\\U" << llvm::format("%08x", CodePoint);
-    OS.flush();
     Specifier = CodePointStr;
   }
 
@@ -8831,18 +8899,41 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
           << ArgIdx << FnName << PointeeTy
           << Call->getCallee()->getSourceRange());
     else if (const auto *RT = PointeeTy->getAs<RecordType>()) {
+
+      // FIXME: Do not consider incomplete types even though they may be
+      // completed later. GCC does not diagnose such code, but we may want to
+      // consider diagnosing it in the future, perhaps under a different, but
+      // related, diagnostic group.
+      bool MayBeTriviallyCopyableCXXRecord =
+          RT->isIncompleteType() ||
+          RT->desugar().isTriviallyCopyableType(Context);
+
       if ((BId == Builtin::BImemset || BId == Builtin::BIbzero) &&
           RT->getDecl()->isNonTrivialToPrimitiveDefaultInitialize()) {
         DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
                             PDiag(diag::warn_cstruct_memaccess)
                                 << ArgIdx << FnName << PointeeTy << 0);
         SearchNonTrivialToInitializeField::diag(PointeeTy, Dest, *this);
+      } else if ((BId == Builtin::BImemset || BId == Builtin::BIbzero) &&
+                 !MayBeTriviallyCopyableCXXRecord && ArgIdx == 0) {
+        // FIXME: Limiting this warning to dest argument until we decide
+        // whether it's valid for source argument too.
+        DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
+                            PDiag(diag::warn_cxxstruct_memaccess)
+                                << FnName << PointeeTy);
       } else if ((BId == Builtin::BImemcpy || BId == Builtin::BImemmove) &&
                  RT->getDecl()->isNonTrivialToPrimitiveCopy()) {
         DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
                             PDiag(diag::warn_cstruct_memaccess)
                                 << ArgIdx << FnName << PointeeTy << 1);
         SearchNonTrivialToCopyField::diag(PointeeTy, Dest, *this);
+      } else if ((BId == Builtin::BImemcpy || BId == Builtin::BImemmove) &&
+                 !MayBeTriviallyCopyableCXXRecord && ArgIdx == 0) {
+        // FIXME: Limiting this warning to dest argument until we decide
+        // whether it's valid for source argument too.
+        DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
+                            PDiag(diag::warn_cxxstruct_memaccess)
+                                << FnName << PointeeTy);
       } else {
         continue;
       }
@@ -9506,16 +9597,23 @@ static QualType GetExprType(const Expr *E) {
   return Ty;
 }
 
-/// Pseudo-evaluate the given integer expression, estimating the
-/// range of values it might take.
+/// Attempts to estimate an approximate range for the given integer expression.
+/// Returns a range if successful, otherwise it returns \c std::nullopt if a
+/// reliable estimation cannot be determined.
 ///
 /// \param MaxWidth The width to which the value will be truncated.
-/// \param Approximate If \c true, return a likely range for the result: in
-///        particular, assume that arithmetic on narrower types doesn't leave
-///        those types. If \c false, return a range including all possible
-///        result values.
-static IntRange GetExprRange(ASTContext &C, const Expr *E, unsigned MaxWidth,
-                             bool InConstantContext, bool Approximate) {
+/// \param InConstantContext If \c true, interpret the expression within a
+///        constant context.
+/// \param Approximate If \c true, provide a likely range of values by assuming
+///        that arithmetic on narrower types remains within those types.
+///        If \c false, return a range that includes all possible values
+///        resulting from the expression.
+/// \returns A range of values that the expression might take, or
+///          std::nullopt if a reliable estimation cannot be determined.
+static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
+                                               unsigned MaxWidth,
+                                               bool InConstantContext,
+                                               bool Approximate) {
   E = E->IgnoreParens();
 
   // Try a full evaluation first.
@@ -9528,8 +9626,8 @@ static IntRange GetExprRange(ASTContext &C, const Expr *E, unsigned MaxWidth,
   // being of the new, wider type.
   if (const auto *CE = dyn_cast<ImplicitCastExpr>(E)) {
     if (CE->getCastKind() == CK_NoOp || CE->getCastKind() == CK_LValueToRValue)
-      return GetExprRange(C, CE->getSubExpr(), MaxWidth, InConstantContext,
-                          Approximate);
+      return TryGetExprRange(C, CE->getSubExpr(), MaxWidth, InConstantContext,
+                             Approximate);
 
     IntRange OutputTypeRange = IntRange::forValueOfType(C, GetExprType(CE));
 
@@ -9540,40 +9638,52 @@ static IntRange GetExprRange(ASTContext &C, const Expr *E, unsigned MaxWidth,
     if (!isIntegerCast)
       return OutputTypeRange;
 
-    IntRange SubRange = GetExprRange(C, CE->getSubExpr(),
-                                     std::min(MaxWidth, OutputTypeRange.Width),
-                                     InConstantContext, Approximate);
+    std::optional<IntRange> SubRange = TryGetExprRange(
+        C, CE->getSubExpr(), std::min(MaxWidth, OutputTypeRange.Width),
+        InConstantContext, Approximate);
+    if (!SubRange)
+      return std::nullopt;
 
     // Bail out if the subexpr's range is as wide as the cast type.
-    if (SubRange.Width >= OutputTypeRange.Width)
+    if (SubRange->Width >= OutputTypeRange.Width)
       return OutputTypeRange;
 
     // Otherwise, we take the smaller width, and we're non-negative if
     // either the output type or the subexpr is.
-    return IntRange(SubRange.Width,
-                    SubRange.NonNegative || OutputTypeRange.NonNegative);
+    return IntRange(SubRange->Width,
+                    SubRange->NonNegative || OutputTypeRange.NonNegative);
   }
 
   if (const auto *CO = dyn_cast<ConditionalOperator>(E)) {
     // If we can fold the condition, just take that operand.
     bool CondResult;
     if (CO->getCond()->EvaluateAsBooleanCondition(CondResult, C))
-      return GetExprRange(C,
-                          CondResult ? CO->getTrueExpr() : CO->getFalseExpr(),
-                          MaxWidth, InConstantContext, Approximate);
+      return TryGetExprRange(
+          C, CondResult ? CO->getTrueExpr() : CO->getFalseExpr(), MaxWidth,
+          InConstantContext, Approximate);
 
     // Otherwise, conservatively merge.
-    // GetExprRange requires an integer expression, but a throw expression
+    // TryGetExprRange requires an integer expression, but a throw expression
     // results in a void type.
-    Expr *E = CO->getTrueExpr();
-    IntRange L = E->getType()->isVoidType()
-                     ? IntRange{0, true}
-                     : GetExprRange(C, E, MaxWidth, InConstantContext, Approximate);
-    E = CO->getFalseExpr();
-    IntRange R = E->getType()->isVoidType()
-                     ? IntRange{0, true}
-                     : GetExprRange(C, E, MaxWidth, InConstantContext, Approximate);
-    return IntRange::join(L, R);
+    Expr *TrueExpr = CO->getTrueExpr();
+    if (TrueExpr->getType()->isVoidType())
+      return std::nullopt;
+
+    std::optional<IntRange> L =
+        TryGetExprRange(C, TrueExpr, MaxWidth, InConstantContext, Approximate);
+    if (!L)
+      return std::nullopt;
+
+    Expr *FalseExpr = CO->getFalseExpr();
+    if (FalseExpr->getType()->isVoidType())
+      return std::nullopt;
+
+    std::optional<IntRange> R =
+        TryGetExprRange(C, FalseExpr, MaxWidth, InConstantContext, Approximate);
+    if (!R)
+      return std::nullopt;
+
+    return IntRange::join(*L, *R);
   }
 
   if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
@@ -9610,8 +9720,8 @@ static IntRange GetExprRange(ASTContext &C, const Expr *E, unsigned MaxWidth,
     // been coerced to the LHS type.
     case BO_Assign:
       // TODO: bitfields?
-      return GetExprRange(C, BO->getRHS(), MaxWidth, InConstantContext,
-                          Approximate);
+      return TryGetExprRange(C, BO->getRHS(), MaxWidth, InConstantContext,
+                             Approximate);
 
     // Operations with opaque sources are black-listed.
     case BO_PtrMemD:
@@ -9643,18 +9753,20 @@ static IntRange GetExprRange(ASTContext &C, const Expr *E, unsigned MaxWidth,
     // Right shift by a constant can narrow its left argument.
     case BO_Shr:
     case BO_ShrAssign: {
-      IntRange L = GetExprRange(C, BO->getLHS(), MaxWidth, InConstantContext,
-                                Approximate);
+      std::optional<IntRange> L = TryGetExprRange(
+          C, BO->getLHS(), MaxWidth, InConstantContext, Approximate);
+      if (!L)
+        return std::nullopt;
 
       // If the shift amount is a positive constant, drop the width by
       // that much.
       if (std::optional<llvm::APSInt> shift =
               BO->getRHS()->getIntegerConstantExpr(C)) {
         if (shift->isNonNegative()) {
-          if (shift->uge(L.Width))
-            L.Width = (L.NonNegative ? 0 : 1);
+          if (shift->uge(L->Width))
+            L->Width = (L->NonNegative ? 0 : 1);
           else
-            L.Width -= shift->getZExtValue();
+            L->Width -= shift->getZExtValue();
         }
       }
 
@@ -9663,8 +9775,8 @@ static IntRange GetExprRange(ASTContext &C, const Expr *E, unsigned MaxWidth,
 
     // Comma acts as its right operand.
     case BO_Comma:
-      return GetExprRange(C, BO->getRHS(), MaxWidth, InConstantContext,
-                          Approximate);
+      return TryGetExprRange(C, BO->getRHS(), MaxWidth, InConstantContext,
+                             Approximate);
 
     case BO_Add:
       if (!Approximate)
@@ -9688,26 +9800,31 @@ static IntRange GetExprRange(ASTContext &C, const Expr *E, unsigned MaxWidth,
     case BO_Div: {
       // Don't 'pre-truncate' the operands.
       unsigned opWidth = C.getIntWidth(GetExprType(E));
-      IntRange L = GetExprRange(C, BO->getLHS(), opWidth, InConstantContext,
-                                Approximate);
+      std::optional<IntRange> L = TryGetExprRange(
+          C, BO->getLHS(), opWidth, InConstantContext, Approximate);
+      if (!L)
+        return std::nullopt;
 
       // If the divisor is constant, use that.
       if (std::optional<llvm::APSInt> divisor =
               BO->getRHS()->getIntegerConstantExpr(C)) {
         unsigned log2 = divisor->logBase2(); // floor(log_2(divisor))
-        if (log2 >= L.Width)
-          L.Width = (L.NonNegative ? 0 : 1);
+        if (log2 >= L->Width)
+          L->Width = (L->NonNegative ? 0 : 1);
         else
-          L.Width = std::min(L.Width - log2, MaxWidth);
+          L->Width = std::min(L->Width - log2, MaxWidth);
         return L;
       }
 
       // Otherwise, just use the LHS's width.
       // FIXME: This is wrong if the LHS could be its minimal value and the RHS
       // could be -1.
-      IntRange R = GetExprRange(C, BO->getRHS(), opWidth, InConstantContext,
-                                Approximate);
-      return IntRange(L.Width, L.NonNegative && R.NonNegative);
+      std::optional<IntRange> R = TryGetExprRange(
+          C, BO->getRHS(), opWidth, InConstantContext, Approximate);
+      if (!R)
+        return std::nullopt;
+
+      return IntRange(L->Width, L->NonNegative && R->NonNegative);
     }
 
     case BO_Rem:
@@ -9724,11 +9841,17 @@ static IntRange GetExprRange(ASTContext &C, const Expr *E, unsigned MaxWidth,
     // performed the computation.
     QualType T = GetExprType(E);
     unsigned opWidth = C.getIntWidth(T);
-    IntRange L =
-        GetExprRange(C, BO->getLHS(), opWidth, InConstantContext, Approximate);
-    IntRange R =
-        GetExprRange(C, BO->getRHS(), opWidth, InConstantContext, Approximate);
-    IntRange C = Combine(L, R);
+    std::optional<IntRange> L = TryGetExprRange(C, BO->getLHS(), opWidth,
+                                                InConstantContext, Approximate);
+    if (!L)
+      return std::nullopt;
+
+    std::optional<IntRange> R = TryGetExprRange(C, BO->getRHS(), opWidth,
+                                                InConstantContext, Approximate);
+    if (!R)
+      return std::nullopt;
+
+    IntRange C = Combine(*L, *R);
     C.NonNegative |= T->isUnsignedIntegerOrEnumerationType();
     C.Width = std::min(C.Width, MaxWidth);
     return C;
@@ -9746,26 +9869,30 @@ static IntRange GetExprRange(ASTContext &C, const Expr *E, unsigned MaxWidth,
       return IntRange::forValueOfType(C, GetExprType(E));
 
     default:
-      return GetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,
-                          Approximate);
+      return TryGetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,
+                             Approximate);
     }
   }
 
   if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E))
-    return GetExprRange(C, OVE->getSourceExpr(), MaxWidth, InConstantContext,
-                        Approximate);
+    return TryGetExprRange(C, OVE->getSourceExpr(), MaxWidth, InConstantContext,
+                           Approximate);
 
   if (const auto *BitField = E->getSourceBitField())
     return IntRange(BitField->getBitWidthValue(C),
                     BitField->getType()->isUnsignedIntegerOrEnumerationType());
 
+  if (GetExprType(E)->isVoidType())
+    return std::nullopt;
+
   return IntRange::forValueOfType(C, GetExprType(E));
 }
 
-static IntRange GetExprRange(ASTContext &C, const Expr *E,
-                             bool InConstantContext, bool Approximate) {
-  return GetExprRange(C, E, C.getIntWidth(GetExprType(E)), InConstantContext,
-                      Approximate);
+static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
+                                               bool InConstantContext,
+                                               bool Approximate) {
+  return TryGetExprRange(C, E, C.getIntWidth(GetExprType(E)), InConstantContext,
+                         Approximate);
 }
 
 /// Checks whether the given value, which currently has the given
@@ -10010,8 +10137,10 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
       S.Context.hasSameUnqualifiedType(Constant->getType(), Other->getType()))
     return false;
 
-  IntRange OtherValueRange = GetExprRange(
+  std::optional<IntRange> OtherValueRange = TryGetExprRange(
       S.Context, Other, S.isConstantEvaluatedContext(), /*Approximate=*/false);
+  if (!OtherValueRange)
+    return false;
 
   QualType OtherT = Other->getType();
   if (const auto *AT = OtherT->getAs<AtomicType>())
@@ -10029,11 +10158,11 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
   bool OtherIsBooleanDespiteType =
       !OtherT->isBooleanType() && Other->isKnownToHaveBooleanValue();
   if (OtherIsBooleanDespiteType || IsObjCSignedCharBool)
-    OtherTypeRange = OtherValueRange = IntRange::forBoolType();
+    OtherTypeRange = *OtherValueRange = IntRange::forBoolType();
 
   // Check if all values in the range of possible values of this expression
   // lead to the same comparison outcome.
-  PromotedRange OtherPromotedValueRange(OtherValueRange, Value.getBitWidth(),
+  PromotedRange OtherPromotedValueRange(*OtherValueRange, Value.getBitWidth(),
                                         Value.isUnsigned());
   auto Cmp = OtherPromotedValueRange.compare(Value);
   auto Result = PromotedRange::constantValue(E->getOpcode(), Cmp, RhsConstant);
@@ -10057,7 +10186,7 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
 
   // Don't warn if the non-constant operand actually always evaluates to the
   // same value.
-  if (!TautologicalTypeCompare && OtherValueRange.Width == 0)
+  if (!TautologicalTypeCompare && OtherValueRange->Width == 0)
     return false;
 
   // Suppress the diagnostic for an in-range comparison if the constant comes
@@ -10096,7 +10225,7 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
 
   if (!TautologicalTypeCompare) {
     S.Diag(E->getOperatorLoc(), diag::warn_tautological_compare_value_range)
-        << RhsConstant << OtherValueRange.Width << OtherValueRange.NonNegative
+        << RhsConstant << OtherValueRange->Width << OtherValueRange->NonNegative
         << E->getOpcodeStr() << OS.str() << *Result
         << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
     return true;
@@ -10226,9 +10355,11 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
   }
 
   // Otherwise, calculate the effective range of the signed operand.
-  IntRange signedRange =
-      GetExprRange(S.Context, signedOperand, S.isConstantEvaluatedContext(),
-                   /*Approximate=*/true);
+  std::optional<IntRange> signedRange =
+      TryGetExprRange(S.Context, signedOperand, S.isConstantEvaluatedContext(),
+                      /*Approximate=*/true);
+  if (!signedRange)
+    return;
 
   // Go ahead and analyze implicit conversions in the operands.  Note
   // that we skip the implicit conversions on both sides.
@@ -10236,7 +10367,7 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
   AnalyzeImplicitConversions(S, RHS, E->getOperatorLoc());
 
   // If the signed range is non-negative, -Wsign-compare won't fire.
-  if (signedRange.NonNegative)
+  if (signedRange->NonNegative)
     return;
 
   // For (in)equality comparisons, if the unsigned operand is a
@@ -10245,15 +10376,17 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
   // change the result of the comparison.
   if (E->isEqualityOp()) {
     unsigned comparisonWidth = S.Context.getIntWidth(T);
-    IntRange unsignedRange =
-        GetExprRange(S.Context, unsignedOperand, S.isConstantEvaluatedContext(),
-                     /*Approximate=*/true);
+    std::optional<IntRange> unsignedRange = TryGetExprRange(
+        S.Context, unsignedOperand, S.isConstantEvaluatedContext(),
+        /*Approximate=*/true);
+    if (!unsignedRange)
+      return;
 
     // We should never be unable to prove that the unsigned operand is
     // non-negative.
-    assert(unsignedRange.NonNegative && "unsigned range includes negative?");
+    assert(unsignedRange->NonNegative && "unsigned range includes negative?");
 
-    if (unsignedRange.Width < comparisonWidth)
+    if (unsignedRange->Width < comparisonWidth)
       return;
   }
 
@@ -11060,10 +11193,12 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
   if (SourceBT && TargetBT && SourceBT->isIntegerType() &&
       TargetBT->isFloatingType() && !IsListInit) {
     // Determine the number of precision bits in the source integer type.
-    IntRange SourceRange =
-        GetExprRange(Context, E, isConstantEvaluatedContext(),
-                     /*Approximate=*/true);
-    unsigned int SourcePrecision = SourceRange.Width;
+    std::optional<IntRange> SourceRange =
+        TryGetExprRange(Context, E, isConstantEvaluatedContext(),
+                        /*Approximate=*/true);
+    if (!SourceRange)
+      return;
+    unsigned int SourcePrecision = SourceRange->Width;
 
     // Determine the number of precision bits in the
     // target floating point type.
@@ -11126,14 +11261,16 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
         E, Diag(CC, diag::warn_impcast_int_to_objc_signed_char_bool)
                << E->getType());
   }
+  std::optional<IntRange> LikelySourceRange = TryGetExprRange(
+      Context, E, isConstantEvaluatedContext(), /*Approximate=*/true);
+  if (!LikelySourceRange)
+    return;
 
   IntRange SourceTypeRange =
       IntRange::forTargetOfCanonicalType(Context, Source);
-  IntRange LikelySourceRange = GetExprRange(
-      Context, E, isConstantEvaluatedContext(), /*Approximate=*/true);
   IntRange TargetRange = IntRange::forTargetOfCanonicalType(Context, Target);
 
-  if (LikelySourceRange.Width > TargetRange.Width) {
+  if (LikelySourceRange->Width > TargetRange.Width) {
     // If the source is a constant, use a default-on diagnostic.
     // TODO: this should happen for bitfield stores, too.
     Expr::EvalResult Result;
@@ -11180,8 +11317,8 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
         }
   }
 
-  if (TargetRange.Width == LikelySourceRange.Width &&
-      !TargetRange.NonNegative && LikelySourceRange.NonNegative &&
+  if (TargetRange.Width == LikelySourceRange->Width &&
+      !TargetRange.NonNegative && LikelySourceRange->NonNegative &&
       Source->isSignedIntegerType()) {
     // Warn when doing a signed to signed conversion, warn if the positive
     // source value is exactly the width of the target type, which will
@@ -11207,9 +11344,9 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
   }
 
   if ((!isa<EnumType>(Target) || !isa<EnumType>(Source)) &&
-      ((TargetRange.NonNegative && !LikelySourceRange.NonNegative) ||
-       (!TargetRange.NonNegative && LikelySourceRange.NonNegative &&
-        LikelySourceRange.Width == TargetRange.Width))) {
+      ((TargetRange.NonNegative && !LikelySourceRange->NonNegative) ||
+       (!TargetRange.NonNegative && LikelySourceRange->NonNegative &&
+        LikelySourceRange->Width == TargetRange.Width))) {
     if (SourceMgr.isInSystemMacro(CC))
       return;
 
@@ -11425,6 +11562,18 @@ static void AnalyzeImplicitConversions(
     if (!CE->getType()->isVoidType() && E->getType()->isAtomicType())
       S.Diag(E->getBeginLoc(), diag::warn_atomic_implicit_seq_cst);
     WorkList.push_back({E, CC, IsListInit});
+    return;
+  }
+
+  if (auto *OutArgE = dyn_cast<HLSLOutArgExpr>(E)) {
+    WorkList.push_back({OutArgE->getArgLValue(), CC, IsListInit});
+    // The base expression is only used to initialize the parameter for
+    // arguments to `inout` parameters, so we only traverse down the base
+    // expression for `inout` cases.
+    if (OutArgE->isInOut())
+      WorkList.push_back(
+          {OutArgE->getCastedTemporary()->getSourceExpr(), CC, IsListInit});
+    WorkList.push_back({OutArgE->getWritebackCast(), CC, IsListInit});
     return;
   }
 
@@ -14317,9 +14466,9 @@ bool Sema::PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall) {
   return false;
 }
 
-bool Sema::BuiltinElementwiseMath(CallExpr *TheCall) {
+bool Sema::BuiltinElementwiseMath(CallExpr *TheCall, bool FPOnly) {
   QualType Res;
-  if (BuiltinVectorMath(TheCall, Res))
+  if (BuiltinVectorMath(TheCall, Res, FPOnly))
     return true;
   TheCall->setType(Res);
   return false;
@@ -14338,7 +14487,7 @@ bool Sema::BuiltinVectorToScalarMath(CallExpr *TheCall) {
   return false;
 }
 
-bool Sema::BuiltinVectorMath(CallExpr *TheCall, QualType &Res) {
+bool Sema::BuiltinVectorMath(CallExpr *TheCall, QualType &Res, bool FPOnly) {
   if (checkArgCount(TheCall, 2))
     return true;
 
@@ -14358,8 +14507,13 @@ bool Sema::BuiltinVectorMath(CallExpr *TheCall, QualType &Res) {
                 diag::err_typecheck_call_different_arg_types)
            << TyA << TyB;
 
-  if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA, 1))
-    return true;
+  if (FPOnly) {
+    if (checkFPMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA, 1))
+      return true;
+  } else {
+    if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA, 1))
+      return true;
+  }
 
   TheCall->setArg(0, A.get());
   TheCall->setArg(1, B.get());

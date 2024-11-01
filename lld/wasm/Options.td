@@ -42,6 +42,10 @@ def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries">;
 
 def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries (default)">;
 
+defm allow_multiple_definition: B<"allow-multiple-definition",
+    "Allow multiple definitions",
+    "Do not allow multiple definitions (default)">;
+
 def build_id: F<"build-id">, HelpText<"Alias for --build-id=fast">;
 
 def build_id_eq: J<"build-id=">, HelpText<"Generate build ID note">,
@@ -104,6 +108,9 @@ def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target emulation">;
 defm mllvm: Eq<"mllvm", "Additional arguments to forward to LLVM's option processing">;
 
 defm Map: Eq<"Map", "Print a link map to the specified file">;
+
+def noinhibit_exec: F<"noinhibit-exec">,
+  HelpText<"Retain the executable output file whenever it is still usable">;
 
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
@@ -281,6 +288,7 @@ def: Flag<["-"], "S">, Alias<strip_debug>, HelpText<"Alias for --strip-debug">;
 def: Flag<["-"], "t">, Alias<trace>, HelpText<"Alias for --trace">;
 def: JoinedOrSeparate<["-"], "y">, Alias<trace_symbol>, HelpText<"Alias for --trace-symbol">;
 def: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
+def: Flag<["-"], "V">, Alias<v>, HelpText<"Alias for -v">;
 
 // LTO-related options.
 def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,

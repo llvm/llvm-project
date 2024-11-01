@@ -39,7 +39,7 @@ define void @f() {
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 1
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr @f.e, [[SCEVGEP]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TMP1]], getelementptr inbounds (i8, ptr @f.e, i64 4)
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TMP1]], getelementptr inbounds nuw (i8, ptr @f.e, i64 4)
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:

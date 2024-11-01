@@ -48,7 +48,8 @@ fgt.s x4, f5, f6
 fge.s x7, f8, f9
 
 # The following instructions actually alias instructions from the base ISA.
-# However, it only makes sense to support them when the F extension is enabled.
+# However, it only makes sense to support them when the F or Zfinx extension is
+# enabled.
 # CHECK-INST: csrrs t0, fcsr, zero
 # CHECK-ALIAS: frcsr t0
 frcsr x5

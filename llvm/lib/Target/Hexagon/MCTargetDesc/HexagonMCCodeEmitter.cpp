@@ -388,8 +388,8 @@ void HexagonMCCodeEmitter::encodeInstruction(const MCInst &MI,
   }
 }
 
-static bool RegisterMatches(unsigned Consumer, unsigned Producer,
-                            unsigned Producer2) {
+static bool RegisterMatches(MCRegister Consumer, MCRegister Producer,
+                            MCRegister Producer2) {
   return (Consumer == Producer) || (Consumer == Producer2) ||
          HexagonMCInstrInfo::IsSingleConsumerRefPairProducer(Producer,
                                                              Consumer);
@@ -721,9 +721,9 @@ HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
     // Calculate the new value distance to the associated producer
     unsigned SOffset = 0;
     unsigned VOffset = 0;
-    unsigned UseReg = MO.getReg();
-    unsigned DefReg1 = Hexagon::NoRegister;
-    unsigned DefReg2 = Hexagon::NoRegister;
+    MCRegister UseReg = MO.getReg();
+    MCRegister DefReg1;
+    MCRegister DefReg2;
 
     auto Instrs = HexagonMCInstrInfo::bundleInstructions(*State.Bundle);
     const MCOperand *I = Instrs.begin() + State.Index - 1;
@@ -734,8 +734,8 @@ HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
       if (HexagonMCInstrInfo::isImmext(Inst))
         continue;
 
-      DefReg1 = Hexagon::NoRegister;
-      DefReg2 = Hexagon::NoRegister;
+      DefReg1 = MCRegister();
+      DefReg2 = MCRegister();
       ++SOffset;
       if (HexagonMCInstrInfo::isVector(MCII, Inst)) {
         // Vector instructions don't count scalars.
@@ -770,7 +770,7 @@ HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
 
   assert(!MO.isImm());
   if (MO.isReg()) {
-    unsigned Reg = MO.getReg();
+    MCRegister Reg = MO.getReg();
     switch (HexagonMCInstrInfo::getDesc(MCII, MI)
                 .operands()[OperandNumber]
                 .RegClass) {

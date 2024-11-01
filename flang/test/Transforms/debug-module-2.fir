@@ -31,5 +31,5 @@ module {
 // CHECK-DAG: #[[GLR:.*]] = #llvm.di_global_variable<{{.*}}name = "glr", linkageName = "_QMhelperEglr"{{.*}}>
 // CHECK-DAG: #[[GLIE:.*]] = #llvm.di_global_variable_expression<var = #[[GLI]]>
 // CHECK-DAG: #[[GLRE:.*]] = #llvm.di_global_variable_expression<var = #[[GLR]]>
-// CHECK-DAG: llvm.mlir.global{{.*}}@_QMhelperEgli() {{{.*}}dbg_expr = #[[GLIE]]}
-// CHECK-DAG: llvm.mlir.global{{.*}}@_QMhelperEglr() {{{.*}}dbg_expr = #[[GLRE]]}
+// CHECK-DAG: llvm.mlir.global{{.*}}@_QMhelperEgli() {{{.*}}dbg_exprs = [#[[GLIE]]]}
+// CHECK-DAG: llvm.mlir.global{{.*}}@_QMhelperEglr() {{{.*}}dbg_exprs = [#[[GLRE]]]}

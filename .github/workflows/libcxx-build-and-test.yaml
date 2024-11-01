@@ -79,6 +79,7 @@ jobs:
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
@@ -123,6 +124,7 @@ jobs:
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
@@ -188,22 +190,30 @@ jobs:
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
 
   macos:
-    runs-on: macos-14
     needs: [ stage1 ]
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        config: [
-          generic-cxx03,
-          generic-cxx23,
-          generic-modules,
-          apple-configuration
-        ]
+        include:
+        - config: generic-cxx03
+          os: macos-latest
+        - config: generic-cxx23
+          os: macos-latest
+        - config: generic-modules
+          os: macos-latest
+        - config: apple-configuration
+          os: macos-latest
+        - config: apple-system
+          os: macos-13
+        - config: apple-system-hardened
+          os: macos-13
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
@@ -223,6 +233,7 @@ jobs:
           path: |
             **/test-results.xml
             **/*.abilist
+            **/CMakeConfigureLog.yaml
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
@@ -242,6 +253,7 @@ jobs:
         - { config: mingw-dll, mingw: true }
         - { config: mingw-static, mingw: true }
         - { config: mingw-dll-i686, mingw: true }
+        - { config: mingw-incomplete-sysroot, mingw: true }
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
@@ -260,6 +272,12 @@ jobs:
           del llvm-mingw*.zip
           mv llvm-mingw* c:\llvm-mingw
           echo "c:\llvm-mingw\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Simulate a from-scratch build of llvm-mingw
+        if: ${{ matrix.config == 'mingw-incomplete-sysroot' }}
+        run: |
+          rm -r c:\llvm-mingw\include\c++
+          rm -r c:\llvm-mingw\*-w64-mingw32\lib\libc++*
+          rm -r c:\llvm-mingw\*-w64-mingw32\lib\libunwind*
       - name: Add Git Bash to the path
         run: |
           echo "c:\Program Files\Git\usr\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append

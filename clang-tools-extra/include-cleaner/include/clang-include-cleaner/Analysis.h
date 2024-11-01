@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <string>
+#include <utility>
 
 namespace clang {
 class SourceLocation;
@@ -62,7 +63,8 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
 
 struct AnalysisResults {
   std::vector<const Include *> Unused;
-  std::vector<std::string> Missing; // Spellings, like "<vector>"
+  // Spellings, like "<vector>" paired with the Header that generated it.
+  std::vector<std::pair<std::string, Header>> Missing;
 };
 
 /// Determine which headers should be inserted or removed from the main file.

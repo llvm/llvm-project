@@ -1653,3 +1653,26 @@ namespace ExprWithCleanups {
   constexpr auto F = true ? 1i : 2i;
   static_assert(F == 1i, "");
 }
+
+namespace NullptrUpcast {
+  struct A {};
+  struct B : A { int n; };
+  constexpr B *nb = nullptr;
+  constexpr A &ra = *nb; // both-error {{constant expression}} \
+                         // both-note {{cannot access base class of null pointer}}
+}
+
+namespace NonConst {
+  template <int I>
+  struct S {
+    static constexpr int Size = I;
+    constexpr int getSize() const { return I; }
+    explicit S(int a) {}
+  };
+
+  void func() {
+    int a,b ;
+    const S<10> s{a};
+    static_assert(s.getSize() == 10, "");
+  }
+}

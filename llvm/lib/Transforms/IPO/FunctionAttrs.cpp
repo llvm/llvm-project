@@ -1762,52 +1762,50 @@ static void addNoReturnAttrs(const SCCNodeSet &SCCNodes,
   }
 }
 
-static bool
-allBBPathsGoThroughCold(BasicBlock *BB,
-                        SmallDenseMap<BasicBlock *, bool, 16> &Visited) {
-  // If BB contains a cold callsite this path through the CG is cold.
-  // Ignore whether the instructions actually are guranteed to transfer
-  // execution. Divergent behavior is considered unlikely.
-  if (any_of(*BB, [](Instruction &I) {
-        if (auto *CB = dyn_cast<CallBase>(&I))
-          return CB->hasFnAttr(Attribute::Cold);
-        return false;
-      })) {
-    Visited[BB] = true;
-    return true;
-  }
-
-  auto Succs = successors(BB);
-  // We found a path that doesn't go through any cold callsite.
-  if (Succs.empty())
-    return false;
-
-  // We didn't find a cold callsite in this BB, so check that all successors
-  // contain a cold callsite (or that their successors do).
-  // Potential TODO: We could use static branch hints to assume certain
-  // successor paths are inherently cold, irrespective of if they contain a cold
-  // callsite.
-  for (auto *Succ : Succs) {
-    // Start with false, this is necessary to ensure we don't turn loops into
-    // cold.
-    auto R = Visited.try_emplace(Succ, false);
-    if (!R.second) {
-      if (R.first->second)
-        continue;
-      return false;
-    }
-    if (!allBBPathsGoThroughCold(Succ, Visited))
-      return false;
-    Visited[Succ] = true;
-  }
-
-  return true;
-}
-
 static bool allPathsGoThroughCold(Function &F) {
-  SmallDenseMap<BasicBlock *, bool, 16> Visited;
-  Visited[&F.front()] = false;
-  return allBBPathsGoThroughCold(&F.front(), Visited);
+  SmallDenseMap<BasicBlock *, bool, 16> ColdPaths;
+  ColdPaths[&F.front()] = false;
+  SmallVector<BasicBlock *> Jobs;
+  Jobs.push_back(&F.front());
+
+  while (!Jobs.empty()) {
+    BasicBlock *BB = Jobs.pop_back_val();
+
+    // If block contains a cold callsite this path through the CG is cold.
+    // Ignore whether the instructions actually are guaranteed to transfer
+    // execution. Divergent behavior is considered unlikely.
+    if (any_of(*BB, [](Instruction &I) {
+          if (auto *CB = dyn_cast<CallBase>(&I))
+            return CB->hasFnAttr(Attribute::Cold);
+          return false;
+        })) {
+      ColdPaths[BB] = true;
+      continue;
+    }
+
+    auto Succs = successors(BB);
+    // We found a path that doesn't go through any cold callsite.
+    if (Succs.empty())
+      return false;
+
+    // We didn't find a cold callsite in this BB, so check that all successors
+    // contain a cold callsite (or that their successors do).
+    // Potential TODO: We could use static branch hints to assume certain
+    // successor paths are inherently cold, irrespective of if they contain a
+    // cold callsite.
+    for (BasicBlock *Succ : Succs) {
+      // Start with false, this is necessary to ensure we don't turn loops into
+      // cold.
+      auto [Iter, Inserted] = ColdPaths.try_emplace(Succ, false);
+      if (!Inserted) {
+        if (Iter->second)
+          continue;
+        return false;
+      }
+      Jobs.push_back(Succ);
+    }
+  }
+  return true;
 }
 
 // Set the cold function attribute if possible.

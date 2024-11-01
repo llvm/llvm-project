@@ -797,7 +797,7 @@ void CommandInterpreter::LoadCommandDictionary() {
       new CommandObjectRegexCommand(
           *this, "gdb-remote",
           "Connect to a process via remote GDB server.\n"
-          "If no host is specifed, localhost is assumed.\n"
+          "If no host is specified, localhost is assumed.\n"
           "gdb-remote is an abbreviation for 'process connect --plugin "
           "gdb-remote connect://<hostname>:<port>'\n",
           "gdb-remote [<hostname>:]<portnum>", 0, false));
@@ -839,7 +839,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "argument displays at most that many frames. The argument 'all' "
           "displays all threads. Use 'settings set frame-format' to customize "
           "the printing of individual frames and 'settings set thread-format' "
-          "to customize the thread header. Frame recognizers may filter the"
+          "to customize the thread header. Frame recognizers may filter the "
           "list. Use 'thread backtrace -u (--unfiltered)' to see them all.",
           "bt [<digit> | all]", 0, false));
   if (bt_regex_cmd_up) {
@@ -1861,7 +1861,7 @@ CommandInterpreter::PreprocessToken(std::string &expr_str) {
   // But if for some reason we didn't get a value object at all, then we will
   // make up some helpful errors from the expression result.
   if (expr_result_valobj_sp)
-    error = expr_result_valobj_sp->GetError();
+    error = expr_result_valobj_sp->GetError().Clone();
 
   if (error.Success()) {
     std::string result = lldb_private::toString(expr_result) +
@@ -1887,7 +1887,8 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
                                        CommandReturnObject &result,
                                        bool force_repeat_command) {
   std::string command_string(command_line);
-  std::string original_command_string(command_line);
+  std::string original_command_string(command_string);
+  std::string real_original_command_string(command_string);
 
   Log *log = GetLog(LLDBLog::Commands);
   llvm::PrettyStackTraceFormat stack_trace("HandleCommand(command = \"%s\")",
@@ -2068,7 +2069,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
         remainder.c_str());
 
     // To test whether or not transcript should be saved, `transcript_item` is
-    // used instead of `GetSaveTrasncript()`. This is because the latter will
+    // used instead of `GetSaveTranscript()`. This is because the latter will
     // fail when the command is "settings set interpreter.save-transcript true".
     if (transcript_item) {
       transcript_item->AddStringItem("commandName", cmd_obj->GetCommandName());
@@ -2076,6 +2077,13 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     }
 
     ElapsedTime elapsed(execute_time);
+    cmd_obj->SetOriginalCommandString(real_original_command_string);
+    // Set the indent to the position of the command in the command line.
+    pos = real_original_command_string.rfind(remainder);
+    std::optional<uint16_t> indent;
+    if (pos != std::string::npos)
+      indent = pos;
+    result.SetDiagnosticIndent(indent);
     cmd_obj->Execute(remainder.c_str(), result);
   }
 
@@ -2086,11 +2094,11 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   // used instead of `GetSaveTrasncript()`. This is because the latter will
   // fail when the command is "settings set interpreter.save-transcript true".
   if (transcript_item) {
-    m_transcript_stream << result.GetOutputData();
-    m_transcript_stream << result.GetErrorData();
+    m_transcript_stream << result.GetOutputString();
+    m_transcript_stream << result.GetErrorString();
 
-    transcript_item->AddStringItem("output", result.GetOutputData());
-    transcript_item->AddStringItem("error", result.GetErrorData());
+    transcript_item->AddStringItem("output", result.GetOutputString());
+    transcript_item->AddStringItem("error", result.GetErrorString());
     transcript_item->AddFloatItem("durationInSeconds",
                                   execute_time.get().count());
   }
@@ -2624,24 +2632,22 @@ void CommandInterpreter::HandleCommands(const StringList &commands,
 
     if (options.GetPrintResults()) {
       if (tmp_result.Succeeded())
-        result.AppendMessage(tmp_result.GetOutputData());
+        result.AppendMessage(tmp_result.GetOutputString());
     }
 
     if (!success || !tmp_result.Succeeded()) {
-      llvm::StringRef error_msg = tmp_result.GetErrorData();
+      std::string error_msg = tmp_result.GetErrorString();
       if (error_msg.empty())
         error_msg = "<unknown error>.\n";
       if (options.GetStopOnError()) {
-        result.AppendErrorWithFormat(
-            "Aborting reading of commands after command #%" PRIu64
-            ": '%s' failed with %s",
-            (uint64_t)idx, cmd, error_msg.str().c_str());
+        result.AppendErrorWithFormatv("Aborting reading of commands after "
+                                      "command #{0}: '{1}' failed with {2}",
+                                      (uint64_t)idx, cmd, error_msg);
         m_debugger.SetAsyncExecution(old_async_execution);
         return;
       } else if (options.GetPrintResults()) {
-        result.AppendMessageWithFormat(
-            "Command #%" PRIu64 " '%s' failed with %s", (uint64_t)idx + 1, cmd,
-            error_msg.str().c_str());
+        result.AppendMessageWithFormatv("Command #{0} '{1}' failed with {2}",
+                                        (uint64_t)idx + 1, cmd, error_msg);
       }
     }
 
@@ -3178,17 +3184,29 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
   if ((result.Succeeded() &&
        io_handler.GetFlags().Test(eHandleCommandFlagPrintResult)) ||
       io_handler.GetFlags().Test(eHandleCommandFlagPrintErrors)) {
-    // Display any STDOUT/STDERR _prior_ to emitting the command result text
+    // Display any inline diagnostics first.
+    const bool inline_diagnostics = !result.GetImmediateErrorStream() &&
+                                    GetDebugger().GetShowInlineDiagnostics();
+    if (inline_diagnostics) {
+      unsigned prompt_len = m_debugger.GetPrompt().size();
+      if (auto indent = result.GetDiagnosticIndent()) {
+        std::string diags =
+            result.GetInlineDiagnosticString(prompt_len + *indent);
+        PrintCommandOutput(io_handler, diags, true);
+      }
+    }
+
+    // Display any STDOUT/STDERR _prior_ to emitting the command result text.
     GetProcessOutput();
 
     if (!result.GetImmediateOutputStream()) {
-      llvm::StringRef output = result.GetOutputData();
+      llvm::StringRef output = result.GetOutputString();
       PrintCommandOutput(io_handler, output, true);
     }
 
-    // Now emit the command error text from the command we just executed
+    // Now emit the command error text from the command we just executed.
     if (!result.GetImmediateErrorStream()) {
-      llvm::StringRef error = result.GetErrorData();
+      std::string error = result.GetErrorString(!inline_diagnostics);
       PrintCommandOutput(io_handler, error, false);
     }
   }
@@ -3306,6 +3324,10 @@ bool CommandInterpreter::SaveTranscript(
   result.SetStatus(eReturnStatusSuccessFinishNoResult);
   result.AppendMessageWithFormat("Session's transcripts saved to %s\n",
                                  output_file->c_str());
+  if (!GetSaveTranscript())
+    result.AppendError(
+        "Note: the setting interpreter.save-transcript is set to false, so the "
+        "transcript might not have been recorded.");
 
   if (GetOpenTranscriptInEditor() && Host::IsInteractiveGraphicSession()) {
     const FileSpec file_spec;

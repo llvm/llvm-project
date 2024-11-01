@@ -280,7 +280,7 @@ feature_test_macros = [
                 "string_view",
             ],
             "test_suite_guard": "defined(__cpp_char8_t)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_CHAR8_T)",
+            "libcxx_guard": "_LIBCPP_HAS_CHAR8_T",
         },
         {
             "name": "__cpp_lib_chrono",
@@ -743,6 +743,13 @@ feature_test_macros = [
             "headers": ["type_traits"],
         },
         {
+            "name": "__cpp_lib_is_implicit_lifetime",
+            "values": {"c++23": 202302},
+            "headers": ["type_traits"],
+            "test_suite_guard": "__has_builtin(__builtin_is_implicit_lifetime)",
+            "libcxx_guard": "__has_builtin(__builtin_is_implicit_lifetime)",
+        },
+        {
             "name": "__cpp_lib_is_invocable",
             "values": {"c++17": 201703},
             "headers": ["type_traits"],
@@ -802,8 +809,8 @@ feature_test_macros = [
             "name": "__cpp_lib_jthread",
             "values": {"c++20": 201911},
             "headers": ["stop_token", "thread"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)",
+            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
         },
         {
             "name": "__cpp_lib_latch",
@@ -935,7 +942,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_optional",
-            "values": {"c++17": 201606, "c++23": 202110},
+            "values": {
+                "c++17": 201606,
+                "c++20": 202106,  # P2231R1 Missing constexpr in std::optional and std::variant
+                "c++23": 202110,  # P0798R8 Monadic operations for std::optional + LWG3621 Remove feature-test macro __cpp_lib_monadic_optional
+            },
             "headers": ["optional"],
         },
         {
@@ -1399,8 +1410,8 @@ feature_test_macros = [
             "name": "__cpp_lib_variant",
             "values": {
                 "c++17": 202102,  # std::visit for classes derived from std::variant
-                # "c++20": 202106,  # Fully constexpr std::variant
-                # "c++26": 202306,  # Member visit (implemented)
+                "c++20": 202106,  # P2231R1 Missing constexpr in std::optional and std::variant
+                "c++26": 202306,  # P2637R3 Member visit
             },
             "headers": ["variant"],
         },
@@ -2102,7 +2113,8 @@ class FeatureTestMacros:
 
     def __init__(self, filename: str):
         """Initializes the class with the JSON data in the file 'filename'."""
-        self.__data = json.load(open(filename))
+        with open(filename) as f:
+            self.__data = json.load(f)
 
     @functools.cached_property
     def std_dialects(self) -> List[str]:
@@ -2187,8 +2199,8 @@ class FeatureTestMacros:
             result[get_std_number(std)] = list()
 
         for ftm, values in self.standard_ftms.items():
-            need_undef = False
             last_value = None
+            last_entry = None
             for std, value in values.items():
                 # When a newer Standard does not change the value of the macro
                 # there is no need to redefine it with the same value.
@@ -2198,12 +2210,11 @@ class FeatureTestMacros:
 
                 entry = dict()
                 entry["value"] = value
-                entry["implemented"] = self.implemented_ftms[ftm][std] != None
-                entry["need_undef"] = need_undef
+                entry["implemented"] = self.implemented_ftms[ftm][std] == self.standard_ftms[ftm][std]
+                entry["need_undef"] = last_entry is not None and last_entry["implemented"] and entry["implemented"]
                 entry["condition"] = self.ftm_metadata[ftm]["libcxx_guard"]
 
-                need_undef = entry["implemented"]
-
+                last_entry = entry
                 result[get_std_number(std)].append(dict({ftm: entry}))
 
         return result

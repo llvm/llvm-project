@@ -213,11 +213,13 @@ General purpose options
 
   Output name for the shared libc++ runtime library.
 
-.. option:: LIBCXX_ADDITIONAL_COMPILE_FLAGS:STRING
+.. option:: {LIBCXX,LIBCXXABI,LIBUNWIND}_ADDITIONAL_COMPILE_FLAGS:STRING
 
   **Default**: ``""``
 
-  Additional Compile only flags which can be provided in cache.
+  Additional compile flags to use when building the runtimes. This should be a CMake ``;``-delimited list of individual
+  compiler options to use. For options that must be passed as-is to the compiler without deduplication (e.g.
+  ``-Xclang -foo`` option groups), consider using ``SHELL:`` as `documented here <https://cmake.org/cmake/help/latest/command/add_compile_options.html#option-de-duplication>`_.
 
 .. option:: LIBCXX_ADDITIONAL_LIBRARIES:STRING
 
@@ -345,12 +347,6 @@ The following options allow building libc++ for a different ABI version.
 
   Build and use the LLVM unwinder. Note: This option can only be used when
   libc++abi is the C++ ABI library used.
-
-.. option:: LIBCXXABI_ADDITIONAL_COMPILE_FLAGS:STRING
-
-  **Default**: ``""``
-
-  Additional Compile only flags which can be provided in cache.
 
 .. option:: LIBCXXABI_ADDITIONAL_LIBRARIES:STRING
 

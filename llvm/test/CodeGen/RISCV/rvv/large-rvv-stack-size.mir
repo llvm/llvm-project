@@ -33,9 +33,7 @@
   ; CHECK-NEXT:    vs1r.v v25, (a0) # Unknown-size Folded Spill
   ; CHECK-NEXT:    ld a0, 8(sp)
   ; CHECK-NEXT:    call spillslot
-  ; CHECK-NEXT:    addi sp, s0, -2048
-  ; CHECK-NEXT:    addi sp, sp, -256
-  ; CHECK-NEXT:    addi sp, sp, 272
+  ; CHECK-NEXT:    addi sp, s0, -2032
   ; CHECK-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
   ; CHECK-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
   ; CHECK-NEXT:    addi sp, sp, 2032

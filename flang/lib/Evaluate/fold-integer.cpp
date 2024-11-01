@@ -300,7 +300,7 @@ static Expr<T> FoldCount(FoldingContext &context, FunctionRef<T> &&ref) {
     if (accumulator.overflow() &&
         context.languageFeatures().ShouldWarn(
             common::UsageWarning::FoldingException)) {
-      context.messages().Say(
+      context.messages().Say(common::UsageWarning::FoldingException,
           "Result of intrinsic function COUNT overflows its result type"_warn_en_US);
     }
     return Expr<T>{std::move(result)};
@@ -562,7 +562,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     if (result.ToInt64() != n &&
         context.languageFeatures().ShouldWarn(
             common::UsageWarning::FoldingException)) {
-      context.messages().Say(
+      context.messages().Say(common::UsageWarning::FoldingException,
           "Result of intrinsic function '%s' (%jd) overflows its result type"_warn_en_US,
           name, std::intmax_t{n});
     }
@@ -575,7 +575,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           if (j.overflow &&
               context.languageFeatures().ShouldWarn(
                   common::UsageWarning::FoldingException)) {
-            context.messages().Say(
+            context.messages().Say(common::UsageWarning::FoldingException,
                 "abs(integer(kind=%d)) folding overflowed"_warn_en_US, KIND);
           }
           return j.value;
@@ -598,6 +598,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                       context.languageFeatures().ShouldWarn(
                           common::UsageWarning::FoldingException)) {
                     context.messages().Say(
+                        common::UsageWarning::FoldingException,
                         "%s intrinsic folding overflow"_warn_en_US, name);
                   }
                   return y.value;
@@ -646,7 +647,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           if (result.overflow &&
               context.languageFeatures().ShouldWarn(
                   common::UsageWarning::FoldingException)) {
-            context.messages().Say("DIM intrinsic folding overflow"_warn_en_US);
+            context.messages().Say(common::UsageWarning::FoldingException,
+                "DIM intrinsic folding overflow"_warn_en_US);
           }
           return result.value;
         }));
@@ -708,7 +710,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           context.languageFeatures().ShouldWarn(
               common::UsageWarning::Portability)) {
         // Do not die, this was not checked before
-        context.messages().Say(
+        context.messages().Say(common::UsageWarning::Portability,
             "Character in intrinsic function %s should have length one"_port_en_US,
             name);
       } else {
@@ -1127,7 +1129,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           pConst->IsZero() &&
           context.languageFeatures().ShouldWarn(
               common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
-        context.messages().Say("MOD: P argument is zero"_warn_en_US);
+        context.messages().Say(common::UsageWarning::FoldingAvoidsRuntimeCrash,
+            "MOD: P argument is zero"_warn_en_US);
         badPConst = true;
       }
     }
@@ -1139,9 +1142,13 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
               if (context.languageFeatures().ShouldWarn(
                       common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
                 if (!badPConst && quotRem.divisionByZero) {
-                  context.messages().Say("mod() by zero"_warn_en_US);
+                  context.messages().Say(
+                      common::UsageWarning::FoldingAvoidsRuntimeCrash,
+                      "mod() by zero"_warn_en_US);
                 } else if (quotRem.overflow) {
-                  context.messages().Say("mod() folding overflowed"_warn_en_US);
+                  context.messages().Say(
+                      common::UsageWarning::FoldingAvoidsRuntimeCrash,
+                      "mod() folding overflowed"_warn_en_US);
                 }
               }
               return quotRem.remainder;
@@ -1154,7 +1161,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           pConst->IsZero() &&
           context.languageFeatures().ShouldWarn(
               common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
-        context.messages().Say("MODULO: P argument is zero"_warn_en_US);
+        context.messages().Say(common::UsageWarning::FoldingAvoidsRuntimeCrash,
+            "MODULO: P argument is zero"_warn_en_US);
         badPConst = true;
       }
     }
@@ -1166,7 +1174,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           if (!badPConst && result.overflow &&
               context.languageFeatures().ShouldWarn(
                   common::UsageWarning::FoldingException)) {
-            context.messages().Say("modulo() folding overflowed"_warn_en_US);
+            context.messages().Say(common::UsageWarning::FoldingException,
+                "modulo() folding overflowed"_warn_en_US);
           }
           return result.value;
         }));
@@ -1303,7 +1312,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           if (result.overflow &&
               context.languageFeatures().ShouldWarn(
                   common::UsageWarning::FoldingException)) {
-            context.messages().Say(
+            context.messages().Say(common::UsageWarning::FoldingException,
                 "sign(integer(kind=%d)) folding overflowed"_warn_en_US, KIND);
           }
           return result.value;
@@ -1363,7 +1372,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       if (intBytes != realBytes &&
           context.languageFeatures().ShouldWarn(
               common::UsageWarning::FoldingValueChecks)) {
-        context.messages().Say(*context.moduleFileName(),
+        context.messages().Say(common::UsageWarning::FoldingValueChecks,
+            *context.moduleFileName(),
             "NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined when default INTEGER and REAL are not consistent due to compiler options"_warn_en_US);
       }
       return Expr<T>{8 * std::min(intBytes, realBytes)};

@@ -73,12 +73,12 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
           continue;
 
         const MCSymbol *TargetSymbol = BC.MIB->getTargetSymbol(Instr, 0);
-        if (VeneerDestinations.find(TargetSymbol) == VeneerDestinations.end())
+        auto It = VeneerDestinations.find(TargetSymbol);
+        if (It == VeneerDestinations.end())
           continue;
 
         VeneerCallers++;
-        BC.MIB->replaceBranchTarget(Instr, VeneerDestinations[TargetSymbol],
-                                    BC.Ctx.get());
+        BC.MIB->replaceBranchTarget(Instr, It->second, BC.Ctx.get());
       }
     }
   }

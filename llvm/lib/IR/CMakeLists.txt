@@ -8,6 +8,7 @@ add_llvm_component_library(LLVMCore
   BuiltinGCs.cpp
   Comdat.cpp
   ConstantFold.cpp
+  ConstantFPRange.cpp
   ConstantRange.cpp
   ConstantRangeList.cpp
   Constants.cpp
@@ -31,6 +32,7 @@ add_llvm_component_library(LLVMCore
   GCStrategy.cpp
   GVMaterializer.cpp
   Globals.cpp
+  Intrinsics.cpp
   IRBuilder.cpp
   IRPrintingPasses.cpp
   SSAContext.cpp

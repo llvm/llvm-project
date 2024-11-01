@@ -198,12 +198,8 @@ void ArgumentCounter::collect(const Remark &Remark) {
 }
 
 void RemarkCounter::collect(const Remark &Remark) {
-  std::optional<std::string> Key = getGroupByKey(Remark);
-  if (!Key.has_value())
-    return;
-  auto Iter = CountedByRemarksMap.insert({*Key, 1});
-  if (!Iter.second)
-    Iter.first->second += 1;
+  if (std::optional<std::string> Key = getGroupByKey(Remark))
+    ++CountedByRemarksMap[*Key];
 }
 
 Error ArgumentCounter::print(StringRef OutputFileName) {

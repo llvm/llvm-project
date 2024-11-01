@@ -1076,7 +1076,7 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
     }
 
     bool ParseAsExpression = false;
-    if (getLangOpts().CPlusPlus26) {
+    if (getLangOpts().CPlusPlus11) {
       for (unsigned I = 0;; ++I) {
         const Token &T = GetLookAheadToken(I);
         if (T.is(tok::r_paren))
@@ -1088,9 +1088,13 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
       }
     }
 
-    if (ParseAsExpression)
+    if (ParseAsExpression) {
+      Diag(Tok,
+           getLangOpts().CPlusPlus26
+               ? diag::warn_cxx20_compat_static_assert_user_generated_message
+               : diag::ext_cxx_static_assert_user_generated_message);
       AssertMessage = ParseConstantExpressionInExprEvalContext();
-    else if (tokenIsLikeStringLiteral(Tok, getLangOpts()))
+    } else if (tokenIsLikeStringLiteral(Tok, getLangOpts()))
       AssertMessage = ParseUnevaluatedStringLiteralExpression();
     else {
       Diag(Tok, diag::err_expected_string_literal)
@@ -1105,7 +1109,8 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
     }
   }
 
-  T.consumeClose();
+  if (T.consumeClose())
+    return nullptr;
 
   DeclEnd = Tok.getLocation();
   ExpectAndConsumeSemi(diag::err_expected_semi_after_static_assert, TokName);
@@ -2215,8 +2220,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           // "template<>", so that we treat this construct as a class
           // template specialization.
           FakedParamLists.push_back(Actions.ActOnTemplateParameterList(
-              0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc,
-              std::nullopt, LAngleLoc, nullptr));
+              0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc, {},
+              LAngleLoc, nullptr));
           TemplateParams = &FakedParamLists;
         }
       }
@@ -3143,11 +3148,13 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
   // we did nothing here, but this allows us to issue a more
   // helpful diagnostic.
   if (Tok.is(tok::kw_concept)) {
-    Diag(Tok.getLocation(),
-         DS.isFriendSpecified() || NextToken().is(tok::kw_friend)
-             ? diag::err_friend_concept
-             : diag::
-                   err_concept_decls_may_only_appear_in_global_namespace_scope);
+    Diag(
+        Tok.getLocation(),
+        DS.isFriendSpecified() || NextToken().is(tok::kw_friend)
+            ? llvm::to_underlying(diag::err_friend_concept)
+            : llvm::to_underlying(
+                  diag::
+                      err_concept_decls_may_only_appear_in_global_namespace_scope));
     SkipUntil(tok::semi, tok::r_brace, StopBeforeMatch);
     return nullptr;
   }

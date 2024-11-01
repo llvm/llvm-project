@@ -1,10 +1,10 @@
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 
 # Test that we can include each header in a TU while using modules.
 # This is important notably because the LLDB data formatters use
@@ -17,10 +17,15 @@
 
 import sys
 sys.path.append(sys.argv[1])
-from libcxx.header_information import lit_header_restrictions, public_headers
+from libcxx.header_information import (
+    lit_header_restrictions,
+    lit_header_undeprecations,
+    public_headers,
+)
 
 for header in public_headers:
-  print(f"""\
+    print(
+        f"""\
 //--- {header}.compile.pass.cpp
 // RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
 
@@ -37,13 +42,19 @@ for header in public_headers:
 // TODO: Investigate this failure
 // UNSUPPORTED: LIBCXX-FREEBSD-FIXME
 
+// TODO: Investigate why this doesn't work on Picolibc once the locale base API is refactored
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+
 {lit_header_restrictions.get(header, '')}
+{lit_header_undeprecations.get(header, '')}
 
 #include <{header}>
-""")
+"""
+    )
 
-print(f"""\
-//--- __std_clang_module.compile.pass.mm
+print(
+    f"""\
+//--- import_std.compile.pass.mm
 // RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
 
 // REQUIRES: clang-modules-build
@@ -61,6 +72,10 @@ print(f"""\
 // TODO: Investigate this failure
 // UNSUPPORTED: LIBCXX-FREEBSD-FIXME
 
+// TODO: Investigate why this doesn't work on Picolibc once the locale base API is refactored
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+
 @import std;
 
-""")
+"""
+)

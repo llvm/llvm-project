@@ -1012,14 +1012,14 @@ test_shuffle() {
 // CHECK: %[[SHR:[0-9a-zA-Z_.]+]] = ashr i32 %{{[0-9a-zA-Z_.]+}}, 6
 // CHECK: %[[AND4:[0-9a-zA-Z_.]+]] = and i32 %[[SHR]], 3
 // CHECK: sext i32 %[[AND4]] to i64
-// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds nuw [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %{{[0-9a-zA-Z_.]+}}, i32 0
-// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds nuw [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %{{[0-9a-zA-Z_.]+}}, i32 1
-// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds nuw [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: %[[ADD:[0-9a-zA-Z_.]+]] = add i32 %{{[0-9a-zA-Z_.]+}}, 269488144
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %[[ADD]], i32 2
-// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds nuw [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: add i32 %{{[0-9a-zA-Z_.]+}}, 269488144
 // CHECK: call <4 x i32> @vec_perm(int vector[4], int vector[4], unsigned char vector[16])
 
@@ -1050,7 +1050,7 @@ test_shuffle() {
 // CHECK: sext i32 %[[AND4]] to i64
 // CHECK-LE: store <2 x i64> <i64 1663540288323457296, i64 0>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK-BE: store <2 x i64> <i64 1157726452361532951, i64 0>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
-// CHECK-COUNT-4: getelementptr inbounds [4 x i16], ptr @_mm_shufflehi_epi16.__permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
+// CHECK-COUNT-4: getelementptr inbounds nuw [4 x i16], ptr @_mm_shufflehi_epi16.__permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
 // CHECK: call <2 x i64> @vec_perm(unsigned long long vector[2], unsigned long long vector[2], unsigned char vector[16])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_shufflelo_epi16
@@ -1067,7 +1067,7 @@ test_shuffle() {
 // CHECK: sext i32 %[[AND4]] to i64
 // CHECK-LE: store <2 x i64> <i64 0, i64 2242261671028070680>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK-BE: store <2 x i64> <i64 0, i64 1736447835066146335>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
-// CHECK-COUNT-4: getelementptr inbounds [4 x i16], ptr @_mm_shufflelo_epi16.__permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
+// CHECK-COUNT-4: getelementptr inbounds nuw [4 x i16], ptr @_mm_shufflelo_epi16.__permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
 // CHECK: call <2 x i64> @vec_perm(unsigned long long vector[2], unsigned long long vector[2], unsigned char vector[16])
 
 void __attribute__((noinline))

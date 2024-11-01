@@ -32,9 +32,8 @@ using namespace llvm;
 
 cl::OptionCategory AsCat("llvm-as Options");
 
-static cl::opt<std::string> InputFilename(cl::Positional,
-                                          cl::desc("<input .llvm file>"),
-                                          cl::init("-"));
+static cl::opt<std::string>
+    InputFilename(cl::Positional, cl::desc("<input .ll file>"), cl::init("-"));
 
 static cl::opt<std::string> OutputFilename("o",
                                            cl::desc("Override output filename"),

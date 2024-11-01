@@ -1207,9 +1207,14 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
           Init = ASE->getBase()->IgnoreImplicit();
 
         SVal LValue = State->getSVal(Init, stackFrame);
-        if (!Field->getType()->isReferenceType())
-          if (std::optional<Loc> LValueLoc = LValue.getAs<Loc>())
+        if (!Field->getType()->isReferenceType()) {
+          if (std::optional<Loc> LValueLoc = LValue.getAs<Loc>()) {
             InitVal = State->getSVal(*LValueLoc);
+          } else if (auto CV = LValue.getAs<nonloc::CompoundVal>()) {
+            // Initializer list for an array.
+            InitVal = *CV;
+          }
+        }
 
         // If we fail to get the value for some reason, use a symbolic value.
         if (InitVal.isUnknownOrUndef()) {
@@ -1830,7 +1835,8 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OpenACCComputeConstructClass:
     case Stmt::OpenACCLoopConstructClass:
     case Stmt::OMPUnrollDirectiveClass:
-    case Stmt::OMPMetaDirectiveClass: {
+    case Stmt::OMPMetaDirectiveClass:
+    case Stmt::HLSLOutArgExprClass: {
       const ExplodedNode *node = Bldr.generateSink(S, Pred, Pred->getState());
       Engine.addAbortedBlock(node, currBldrCtx->getBlock());
       break;
@@ -1932,6 +1938,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::CXXRewrittenBinaryOperatorClass:
     case Stmt::RequiresExprClass:
     case Expr::CXXParenListInitExprClass:
+    case Stmt::EmbedExprClass:
       // Fall through.
 
     // Cases we intentionally don't evaluate, since they don't need
@@ -1959,6 +1966,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPArrayShapingExprClass:
     case Stmt::OMPIteratorExprClass:
     case Stmt::SYCLUniqueStableNameExprClass:
+    case Stmt::OpenACCAsteriskSizeExprClass:
     case Stmt::TypeTraitExprClass: {
       Bldr.takeNodes(Pred);
       ExplodedNodeSet preVisit;
@@ -2121,7 +2129,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
           (B->isRelationalOp() || B->isEqualityOp())) {
         ExplodedNodeSet Tmp;
         VisitBinaryOperator(cast<BinaryOperator>(S), Pred, Tmp);
-        evalEagerlyAssumeBinOpBifurcation(Dst, Tmp, cast<Expr>(S));
+        evalEagerlyAssumeBifurcation(Dst, Tmp, cast<Expr>(S));
       }
       else
         VisitBinaryOperator(cast<BinaryOperator>(S), Pred, Dst);
@@ -2394,7 +2402,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       if (AMgr.options.ShouldEagerlyAssume && (U->getOpcode() == UO_LNot)) {
         ExplodedNodeSet Tmp;
         VisitUnaryOperator(U, Pred, Tmp);
-        evalEagerlyAssumeBinOpBifurcation(Dst, Tmp, U);
+        evalEagerlyAssumeBifurcation(Dst, Tmp, U);
       }
       else
         VisitUnaryOperator(U, Pred, Dst);
@@ -2434,10 +2442,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       Bldr.addNodes(Dst);
       break;
     }
-
-    case Stmt::EmbedExprClass:
-      llvm::report_fatal_error("Support for EmbedExpr is not implemented.");
-      break;
   }
 }
 
@@ -3738,23 +3742,20 @@ void ExprEngine::evalLocation(ExplodedNodeSet &Dst,
   BldrTop.addNodes(Tmp);
 }
 
-std::pair<const ProgramPointTag *, const ProgramPointTag*>
-ExprEngine::geteagerlyAssumeBinOpBifurcationTags() {
-  static SimpleProgramPointTag
-         eagerlyAssumeBinOpBifurcationTrue(TagProviderName,
-                                           "Eagerly Assume True"),
-         eagerlyAssumeBinOpBifurcationFalse(TagProviderName,
-                                            "Eagerly Assume False");
-  return std::make_pair(&eagerlyAssumeBinOpBifurcationTrue,
-                        &eagerlyAssumeBinOpBifurcationFalse);
+std::pair<const ProgramPointTag *, const ProgramPointTag *>
+ExprEngine::getEagerlyAssumeBifurcationTags() {
+  static SimpleProgramPointTag TrueTag(TagProviderName, "Eagerly Assume True"),
+      FalseTag(TagProviderName, "Eagerly Assume False");
+
+  return std::make_pair(&TrueTag, &FalseTag);
 }
 
-void ExprEngine::evalEagerlyAssumeBinOpBifurcation(ExplodedNodeSet &Dst,
-                                                   ExplodedNodeSet &Src,
-                                                   const Expr *Ex) {
+void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
+                                              ExplodedNodeSet &Src,
+                                              const Expr *Ex) {
   StmtNodeBuilder Bldr(Src, Dst, *currBldrCtx);
 
-  for (const auto Pred : Src) {
+  for (ExplodedNode *Pred : Src) {
     // Test if the previous node was as the same expression.  This can happen
     // when the expression fails to evaluate to anything meaningful and
     // (as an optimization) we don't generate a node.
@@ -3763,28 +3764,26 @@ void ExprEngine::evalEagerlyAssumeBinOpBifurcation(ExplodedNodeSet &Dst,
       continue;
     }
 
-    ProgramStateRef state = Pred->getState();
-    SVal V = state->getSVal(Ex, Pred->getLocationContext());
+    ProgramStateRef State = Pred->getState();
+    SVal V = State->getSVal(Ex, Pred->getLocationContext());
     std::optional<nonloc::SymbolVal> SEV = V.getAs<nonloc::SymbolVal>();
     if (SEV && SEV->isExpression()) {
-      const std::pair<const ProgramPointTag *, const ProgramPointTag*> &tags =
-        geteagerlyAssumeBinOpBifurcationTags();
+      const auto &[TrueTag, FalseTag] = getEagerlyAssumeBifurcationTags();
 
-      ProgramStateRef StateTrue, StateFalse;
-      std::tie(StateTrue, StateFalse) = state->assume(*SEV);
+      auto [StateTrue, StateFalse] = State->assume(*SEV);
 
       // First assume that the condition is true.
       if (StateTrue) {
         SVal Val = svalBuilder.makeIntVal(1U, Ex->getType());
         StateTrue = StateTrue->BindExpr(Ex, Pred->getLocationContext(), Val);
-        Bldr.generateNode(Ex, Pred, StateTrue, tags.first);
+        Bldr.generateNode(Ex, Pred, StateTrue, TrueTag);
       }
 
       // Next, assume that the condition is false.
       if (StateFalse) {
         SVal Val = svalBuilder.makeIntVal(0U, Ex->getType());
         StateFalse = StateFalse->BindExpr(Ex, Pred->getLocationContext(), Val);
-        Bldr.generateNode(Ex, Pred, StateFalse, tags.second);
+        Bldr.generateNode(Ex, Pred, StateFalse, FalseTag);
       }
     }
   }
@@ -3807,7 +3806,9 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
     assert(!isa<NonLoc>(X)); // Should be an Lval, or unknown, undef.
 
     if (std::optional<Loc> LV = X.getAs<Loc>())
-      state = state->bindLoc(*LV, UnknownVal(), Pred->getLocationContext());
+      state = state->invalidateRegions(*LV, A, currBldrCtx->blockCount(),
+                                       Pred->getLocationContext(),
+                                       /*CausedByPointerEscape=*/true);
   }
 
   // Do not reason about locations passed inside inline assembly.
@@ -3815,7 +3816,9 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
     SVal X = state->getSVal(I, Pred->getLocationContext());
 
     if (std::optional<Loc> LV = X.getAs<Loc>())
-      state = state->bindLoc(*LV, UnknownVal(), Pred->getLocationContext());
+      state = state->invalidateRegions(*LV, A, currBldrCtx->blockCount(),
+                                       Pred->getLocationContext(),
+                                       /*CausedByPointerEscape=*/true);
   }
 
   Bldr.generateNode(A, Pred, state);

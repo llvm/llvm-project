@@ -52,7 +52,7 @@ define float @sqrt_f32(float %a) nounwind strictfp {
   ret float %1
 }
 
-declare float @llvm.experimental.constrained.powi.f32.i32(float, i32, metadata, metadata)
+declare float @llvm.experimental.constrained.powi.f32(float, i32, metadata, metadata)
 
 define float @powi_f32(float %a, i32 %b) nounwind strictfp {
 ; RV32IF-LABEL: powi_f32:
@@ -111,7 +111,7 @@ define float @powi_f32(float %a, i32 %b) nounwind strictfp {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call float @llvm.experimental.constrained.powi.f32.i32(float %a, i32 %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %1 = call float @llvm.experimental.constrained.powi.f32(float %a, i32 %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret float %1
 }
 
@@ -1473,7 +1473,7 @@ define iXLen @lround_f32(float %a) nounwind strictfp {
 ;
 ; RV64IZFINX-LABEL: lround_f32:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    fcvt.l.s a0, a0
+; RV64IZFINX-NEXT:    fcvt.l.s a0, a0, rmm
 ; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: lround_f32:
@@ -1577,7 +1577,7 @@ define i64 @llround_f32(float %a) nounwind strictfp {
 ;
 ; RV64IZFINX-LABEL: llround_f32:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    fcvt.l.s a0, a0
+; RV64IZFINX-NEXT:    fcvt.l.s a0, a0, rmm
 ; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: llround_f32:

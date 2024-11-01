@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
 
+#ifdef __SIZEOF_INT128__
+// CHECK: @PR11705 = global i128 0
+__int128_t PR11705 = (__int128_t)&PR11705;
+#endif
 
 int arr[2];
 // CHECK: @pastEnd = constant ptr getelementptr (i8, ptr @arr, i64 8)
@@ -72,4 +76,22 @@ namespace Null {
   struct S {};
   // CHECK: call {{.*}} @_ZN4Null4nullEv(
   int S::*q = null();
+}
+
+struct A {
+  A();
+  ~A();
+  enum E { Foo };
+};
+
+A *g();
+
+void f(A *a) {
+  A::E e1 = a->Foo;
+
+  // CHECK: call noundef ptr @_Z1gv()
+  A::E e2 = g()->Foo;
+  // CHECK: call void @_ZN1AC1Ev(
+  // CHECK: call void @_ZN1AD1Ev(
+  A::E e3 = A().Foo;
 }

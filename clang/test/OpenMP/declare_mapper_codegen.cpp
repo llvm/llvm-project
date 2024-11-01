@@ -129,7 +129,7 @@ public:
 // CK0-DAG: [[BBEGIN:%.+]] = getelementptr inbounds nuw %class.C, ptr [[PTR]], i32 0, i32 1
 // CK0-DAG: [[BBEGIN2:%.+]] = getelementptr inbounds nuw %class.C, ptr [[PTR]], i32 0, i32 1
 // CK0-DAG: [[BARRBEGIN:%.+]] = load ptr, ptr [[BBEGIN2]]
-// CK0-DAG: [[BARRBEGINGEP:%.+]] = getelementptr inbounds double, ptr [[BARRBEGIN]], i[[sz:64|32]] 0
+// CK0-DAG: [[BARRBEGINGEP:%.+]] = getelementptr inbounds nuw double, ptr [[BARRBEGIN]], i[[sz:64|32]] 0
 // CK0-DAG: [[BEND:%.+]] = getelementptr ptr, ptr [[BBEGIN]], i32 1
 // CK0-DAG: [[ABEGINI:%.+]] = ptrtoint ptr [[ABEGIN]] to i64
 // CK0-DAG: [[BENDI:%.+]] = ptrtoint ptr [[BEND]] to i64
@@ -965,7 +965,7 @@ public:
 // CK4-DAG: [[BBEGIN:%.+]] = getelementptr inbounds nuw %class.C, ptr [[PTR]], i32 0, i32 1
 // CK4-DAG: [[BBEGIN2:%.+]] = getelementptr inbounds nuw %class.C, ptr [[PTR]], i32 0, i32 1
 // CK4-DAG: [[BARRBEGIN:%.+]] = load ptr, ptr [[BBEGIN2]]
-// CK4-DAG: [[BARRBEGINGEP:%.+]] = getelementptr inbounds double, ptr [[BARRBEGIN]], i[[sz:64|32]] 0
+// CK4-DAG: [[BARRBEGINGEP:%.+]] = getelementptr inbounds nuw double, ptr [[BARRBEGIN]], i[[sz:64|32]] 0
 // CK4-DAG: [[BEND:%.+]] = getelementptr ptr, ptr [[BBEGIN]], i32 1
 // CK4-DAG: [[ABEGINI:%.+]] = ptrtoint ptr [[ABEGIN]] to i64
 // CK4-DAG: [[BENDI:%.+]] = ptrtoint ptr [[BEND]] to i64

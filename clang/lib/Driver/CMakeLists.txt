@@ -79,6 +79,7 @@ add_clang_library(clangDriver
   ToolChains/SPIRV.cpp
   ToolChains/SYCL.cpp
   ToolChains/TCE.cpp
+  ToolChains/UEFI.cpp
   ToolChains/VEToolchain.cpp
   ToolChains/WebAssembly.cpp
   ToolChains/XCore.cpp

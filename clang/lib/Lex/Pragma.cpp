@@ -1752,6 +1752,7 @@ struct PragmaModuleBeginHandler : public PragmaHandler {
     // Find the module we're entering. We require that a module map for it
     // be loaded or implicitly loadable.
     auto &HSI = PP.getHeaderSearchInfo();
+    auto &MM = HSI.getModuleMap();
     Module *M = HSI.lookupModule(Current, ModuleName.front().second);
     if (!M) {
       PP.Diag(ModuleName.front().second,
@@ -1759,7 +1760,7 @@ struct PragmaModuleBeginHandler : public PragmaHandler {
       return;
     }
     for (unsigned I = 1; I != ModuleName.size(); ++I) {
-      auto *NewM = M->findOrInferSubmodule(ModuleName[I].first->getName());
+      auto *NewM = MM.findOrInferSubmodule(M, ModuleName[I].first->getName());
       if (!NewM) {
         PP.Diag(ModuleName[I].second, diag::err_pp_module_begin_no_submodule)
           << M->getFullModuleName() << ModuleName[I].first;

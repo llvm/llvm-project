@@ -476,7 +476,8 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   // it may make the operand poison.
   BinaryOperator *BO;
   if (match(SrcVec, m_BinOp(BO)) && cheapToScalarize(SrcVec, Index) &&
-      (HasKnownValidIndex || isSafeToSpeculativelyExecute(BO))) {
+      (HasKnownValidIndex ||
+       isSafeToSpeculativelyExecuteWithVariableReplaced(BO))) {
     // extelt (binop X, Y), Index --> binop (extelt X, Index), (extelt Y, Index)
     Value *X = BO->getOperand(0), *Y = BO->getOperand(1);
     Value *E0 = Builder.CreateExtractElement(X, Index);
@@ -2473,8 +2474,8 @@ static Instruction *foldShuffleOfUnaryOps(ShuffleVectorInst &Shuf,
     if (IsFNeg)
       return UnaryOperator::CreateFNegFMF(NewShuf, S0);
 
-    Function *FAbs = Intrinsic::getDeclaration(Shuf.getModule(),
-                                               Intrinsic::fabs, Shuf.getType());
+    Function *FAbs = Intrinsic::getOrInsertDeclaration(
+        Shuf.getModule(), Intrinsic::fabs, Shuf.getType());
     CallInst *NewF = CallInst::Create(FAbs, {NewShuf});
     NewF->setFastMathFlags(S0->getFastMathFlags());
     return NewF;
@@ -2494,8 +2495,8 @@ static Instruction *foldShuffleOfUnaryOps(ShuffleVectorInst &Shuf,
   if (IsFNeg) {
     NewF = UnaryOperator::CreateFNeg(NewShuf);
   } else {
-    Function *FAbs = Intrinsic::getDeclaration(Shuf.getModule(),
-                                               Intrinsic::fabs, Shuf.getType());
+    Function *FAbs = Intrinsic::getOrInsertDeclaration(
+        Shuf.getModule(), Intrinsic::fabs, Shuf.getType());
     NewF = CallInst::Create(FAbs, {NewShuf});
   }
   NewF->copyIRFlags(S0);
@@ -2777,7 +2778,7 @@ Instruction *InstCombinerImpl::simplifyBinOpSplats(ShuffleVectorInst &SVI) {
     return nullptr;
 
   auto *BinOp = cast<BinaryOperator>(Op0);
-  if (!isSafeToSpeculativelyExecute(BinOp))
+  if (!isSafeToSpeculativelyExecuteWithVariableReplaced(BinOp))
     return nullptr;
 
   Value *NewBO = Builder.CreateBinOp(BinOp->getOpcode(), X, Y);
@@ -2898,6 +2899,21 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     return I;
   if (Instruction *I = foldIdentityPaddedShuffles(SVI))
     return I;
+
+  if (match(RHS, m_Constant())) {
+    if (auto *SI = dyn_cast<SelectInst>(LHS)) {
+      // We cannot do this fold for elementwise select since ShuffleVector is
+      // not elementwise.
+      if (SI->getCondition()->getType()->isIntegerTy()) {
+        if (Instruction *I = FoldOpIntoSelect(SVI, SI))
+          return I;
+      }
+    }
+    if (auto *PN = dyn_cast<PHINode>(LHS)) {
+      if (Instruction *I = foldOpIntoPhi(SVI, PN))
+        return I;
+    }
+  }
 
   if (match(RHS, m_Poison()) && canEvaluateShuffled(LHS, Mask)) {
     Value *V = evaluateInDifferentElementOrder(LHS, Mask, Builder);

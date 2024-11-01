@@ -280,13 +280,13 @@ public:
     std::tie(Iter, Inserted) = BBInfos.insert(std::make_pair(Src, nullptr));
     if (Inserted) {
       // Newly inserted, update the real info.
-      Iter->second = std::move(std::make_unique<BBInfo>(Index));
+      Iter->second = std::make_unique<BBInfo>(Index);
       Index++;
     }
     std::tie(Iter, Inserted) = BBInfos.insert(std::make_pair(Dest, nullptr));
     if (Inserted)
       // Newly inserted, update the real info.
-      Iter->second = std::move(std::make_unique<BBInfo>(Index));
+      Iter->second = std::make_unique<BBInfo>(Index);
     AllEdges.emplace_back(new Edge(Src, Dest, W));
     return *AllEdges.back();
   }

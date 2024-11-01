@@ -284,9 +284,8 @@ static bool isReachable(Block *from, Block *to, ArrayRef<Block *> except) {
       continue;
     if (next == to)
       return true;
-    if (visited.contains(next))
+    if (!visited.insert(next).second)
       continue;
-    visited.insert(next);
     for (Block *succ : next->getSuccessors())
       worklist.push_back(succ);
   }
@@ -1299,7 +1298,7 @@ static void annotateOpsWithAliasSets(Operation *op,
       std::string buffer;
       llvm::raw_string_ostream stream(buffer);
       alias.printAsOperand(stream, asmState);
-      aliases.push_back(b.getStringAttr(stream.str()));
+      aliases.push_back(b.getStringAttr(buffer));
     });
     return b.getArrayAttr(aliases);
   };

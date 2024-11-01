@@ -30,7 +30,7 @@ export namespace std {
 #endif
 #if _LIBCPP_STD_VER >= 26
   using std::runtime_format;
-#endif //_LIBCPP_STD_VER >= 26
+#endif // _LIBCPP_STD_VER >= 26
 
   // [format.functions], formatting functions
   using std::format;

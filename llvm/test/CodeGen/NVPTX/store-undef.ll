@@ -38,7 +38,7 @@ define void @test_store_param_def(i64 %param0, i32 %param1) {
 ; CHECK-NEXT:    ld.param.u32 %r1, [test_store_param_def_param_1];
 ; CHECK-NEXT:    { // callseq 1, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[32];
-; CHECK-NEXT:    st.param.b64 [param0+0], %rd1;
+; CHECK-NEXT:    st.param.b64 [param0], %rd1;
 ; CHECK-NEXT:    st.param.v2.b32 [param0+8], {%r2, %r1};
 ; CHECK-NEXT:    st.param.v4.b32 [param0+16], {%r3, %r1, %r4, %r5};
 ; CHECK-NEXT:    call.uni

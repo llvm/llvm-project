@@ -19,6 +19,9 @@ namespace LIBC_NAMESPACE_DECL {
 
 DataEnvironment app;
 
+// FIXME: Factor this out into common logic so we don't need to stub it here.
+void teardown_main_tls() {}
+
 extern "C" {
 // Nvidia's 'nvlink' linker does not provide these symbols. We instead need
 // to manually create them and update the globals in the loader implememtation.

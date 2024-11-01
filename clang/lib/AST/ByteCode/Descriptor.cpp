@@ -8,6 +8,7 @@
 
 #include "Descriptor.h"
 #include "Boolean.h"
+#include "FixedPoint.h"
 #include "Floating.h"
 #include "FunctionPointer.h"
 #include "IntegralAP.h"
@@ -15,6 +16,7 @@
 #include "Pointer.h"
 #include "PrimType.h"
 #include "Record.h"
+#include "Source.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -101,6 +103,7 @@ static void ctorArrayDesc(Block *B, std::byte *Ptr, bool IsConst,
     Desc->IsConst = IsConst || D->IsConst;
     Desc->IsFieldMutable = IsMutable || D->IsMutable;
     Desc->InUnion = InUnion;
+    Desc->IsArrayElement = true;
 
     if (auto Fn = D->ElemDesc->CtorFn)
       Fn(B, ElemLoc, Desc->IsConst, Desc->IsFieldMutable, IsActive,
@@ -389,20 +392,35 @@ Descriptor::Descriptor(const DeclTy &D)
 }
 
 QualType Descriptor::getType() const {
-  if (const auto *E = asExpr())
-    return E->getType();
   if (const auto *D = asValueDecl())
     return D->getType();
-  if (const auto *T = dyn_cast<TypeDecl>(asDecl()))
+  if (const auto *T = dyn_cast_if_present<TypeDecl>(asDecl()))
     return QualType(T->getTypeForDecl(), 0);
+
+  // The Source sometimes has a different type than the once
+  // we really save. Try to consult the Record first.
+  if (isRecord())
+    return QualType(ElemRecord->getDecl()->getTypeForDecl(), 0);
+  if (const auto *E = asExpr())
+    return E->getType();
   llvm_unreachable("Invalid descriptor type");
 }
 
 QualType Descriptor::getElemQualType() const {
   assert(isArray());
   QualType T = getType();
-  if (const auto *AT = T->getAsArrayTypeUnsafe())
+  if (T->isPointerOrReferenceType())
+    return T->getPointeeType();
+  if (const auto *AT = T->getAsArrayTypeUnsafe()) {
+    // For primitive arrays, we don't save a QualType at all,
+    // just a PrimType. Try to figure out the QualType here.
+    if (isPrimitiveArray()) {
+      while (T->isArrayType())
+        T = T->getAsArrayTypeUnsafe()->getElementType();
+      return T;
+    }
     return AT->getElementType();
+  }
   if (const auto *CT = T->getAs<ComplexType>())
     return CT->getElementType();
   if (const auto *CT = T->getAs<VectorType>())
@@ -415,6 +433,14 @@ SourceLocation Descriptor::getLocation() const {
     return D->getLocation();
   if (auto *E = Source.dyn_cast<const Expr *>())
     return E->getExprLoc();
+  llvm_unreachable("Invalid descriptor type");
+}
+
+SourceInfo Descriptor::getLoc() const {
+  if (const auto *D = Source.dyn_cast<const Decl *>())
+    return SourceInfo(D);
+  if (const auto *E = Source.dyn_cast<const Expr *>())
+    return SourceInfo(E);
   llvm_unreachable("Invalid descriptor type");
 }
 

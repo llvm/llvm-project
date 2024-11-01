@@ -16,6 +16,8 @@
 #include <__bit/countl.h>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
+#include <__cstddef/size_t.h>
 #include <__format/buffer.h>
 #include <__format/concepts.h>
 #include <__format/formatter.h>
@@ -28,7 +30,6 @@
 #include <__memory/pointer_traits.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
-#include <cstddef>
 #include <string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -326,7 +327,7 @@ _LIBCPP_HIDE_FROM_ABI int __truncate(basic_string_view<_CharT>& __str, int __pre
 
 } // namespace __formatter
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

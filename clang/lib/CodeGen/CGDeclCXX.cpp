@@ -586,31 +586,50 @@ CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
                                           PrioritizedCXXGlobalInits.size());
     PrioritizedCXXGlobalInits.push_back(std::make_pair(Key, Fn));
   } else if (isTemplateInstantiation(D->getTemplateSpecializationKind()) ||
-             getContext().GetGVALinkageForVariable(D) == GVA_DiscardableODR ||
+             !isUniqueGVALinkage(getContext().GetGVALinkageForVariable(D)) ||
              D->hasAttr<SelectAnyAttr>()) {
+    // For vague linkage globals, put the initializer into its own global_ctors
+    // entry with the global as a comdat key. This ensures at most one
+    // initializer per DSO runs during DSO dynamic initialization.
+    //
+    // For ELF platforms, this is an important code size and startup time
+    // optimization. For dynamic, non-hidden symbols, the weak guard variable
+    // remains to ensure that other DSOs do not re-initialize the global.
+    //
+    // For PE-COFF platforms, there is no guard variable, and COMDAT
+    // associativity is the only way to ensure vauge linkage globals are
+    // initialized exactly once.
+    //
+    // MachO is the only remaining platform with no comdats that doesn't
+    // benefit from this optimization. The rest are mainly modeled on ELF
+    // behavior.
+    //
+    // C++ requires that inline global variables are initialized in source
+    // order, but this requirement does not exist for templated entities.
+    // llvm.global_ctors does not guarantee initialization order, so in
+    // general, Clang does not fully conform to the ordering requirement.
+    // However, in practice, LLVM emits global_ctors in the provided order, and
+    // users typically don't rely on ordering between inline globals in
+    // different headers which are then transitively included in varying order.
+    // Clang's current behavior is a practical tradeoff, since dropping the
+    // comdat would lead to unacceptable impact on code size and startup time.
+    //
+    // FIXME: Find a solution to guarantee source-order initialization of
+    // inline variables.
+    //
     // C++ [basic.start.init]p2:
     //   Definitions of explicitly specialized class template static data
     //   members have ordered initialization. Other class template static data
     //   members (i.e., implicitly or explicitly instantiated specializations)
     //   have unordered initialization.
     //
-    // As a consequence, we can put them into their own llvm.global_ctors entry.
-    //
-    // If the global is externally visible, put the initializer into a COMDAT
-    // group with the global being initialized.  On most platforms, this is a
-    // minor startup time optimization.  In the MS C++ ABI, there are no guard
-    // variables, so this COMDAT key is required for correctness.
-    //
-    // SelectAny globals will be comdat-folded. Put the initializer into a
-    // COMDAT group associated with the global, so the initializers get folded
-    // too.
-    I = DelayedCXXInitPosition.find(D);
     // CXXGlobalInits.size() is the lex order number for the next deferred
     // VarDecl. Use it when the current VarDecl is non-deferred. Although this
     // lex order number is shared between current VarDecl and some following
     // VarDecls, their order of insertion into `llvm.global_ctors` is the same
     // as the lexing order and the following stable sort would preserve such
     // order.
+    I = DelayedCXXInitPosition.find(D);
     unsigned LexOrder =
         I == DelayedCXXInitPosition.end() ? CXXGlobalInits.size() : I->second;
     AddGlobalCtor(Fn, 65535, LexOrder, COMDATKey);
@@ -796,7 +815,10 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   assert(!getLangOpts().CUDA || !getLangOpts().CUDAIsDevice ||
          getLangOpts().GPUAllowDeviceInit);
   if (getLangOpts().HIP && getLangOpts().CUDAIsDevice) {
-    Fn->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
+    if (getTriple().isSPIRV())
+      Fn->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
+    else
+      Fn->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
     Fn->addFnAttr("device-init");
   }
 
@@ -954,7 +976,10 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
   assert(!getLangOpts().CUDA || !getLangOpts().CUDAIsDevice ||
          getLangOpts().GPUAllowDeviceInit);
   if (getLangOpts().HIP && getLangOpts().CUDAIsDevice) {
-    Fn->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
+    if (getTriple().isSPIRV())
+      Fn->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
+    else
+      Fn->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
     Fn->addFnAttr("device-init");
   }
 
@@ -1101,6 +1126,14 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
     for (unsigned i = 0, e = Decls.size(); i != e; ++i)
       if (Decls[i])
         EmitRuntimeCall(Decls[i]);
+
+    if (getLangOpts().HLSL) {
+      CGHLSLRuntime &CGHLSL = CGM.getHLSLRuntime();
+      if (CGHLSL.needsResourceBindingInitFn()) {
+        llvm::Function *ResInitFn = CGHLSL.createResourceBindingInitFn();
+        Builder.CreateCall(llvm::FunctionCallee(ResInitFn), {});
+      }
+    }
 
     Scope.ForceCleanup();
 

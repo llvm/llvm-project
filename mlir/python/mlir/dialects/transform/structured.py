@@ -377,7 +377,7 @@ class PadOp(PadOp):
         pad_to_multiple_of: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
         padding_values: Optional[Union[ArrayAttr, Sequence[Attribute]]] = None,
         padding_dimensions: OptionalIntList = None,
-        pack_paddings: OptionalIntList = None,
+        nofold_flags: OptionalIntList = None,
         transpose_paddings: Optional[
             Union[ArrayAttr, Sequence[Union[ArrayAttr, IntOrAttrList]]]
         ] = None,
@@ -407,7 +407,7 @@ class PadOp(PadOp):
             padding_values=padding_values,
             padding_dimensions=padding_dimensions,
             static_pad_to_multiple_of=static_pad_to_multiple_of,
-            pack_paddings=pack_paddings,
+            nofold_flags=nofold_flags,
             transpose_paddings=transpose_paddings,
             copy_back_op=copy_back_op,
             loc=loc,

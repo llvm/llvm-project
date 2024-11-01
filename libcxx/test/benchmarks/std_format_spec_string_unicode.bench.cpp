@@ -276,25 +276,20 @@ void BM_emoji_text(benchmark::State& state) {
   BM_text(state, emoji_text<CharT>());
 }
 
-BENCHMARK_TEMPLATE(BM_ascii_text, char);
-BENCHMARK_TEMPLATE(BM_unicode_text, char);
-BENCHMARK_TEMPLATE(BM_cyrillic_text, char);
-BENCHMARK_TEMPLATE(BM_japanese_text, char);
-BENCHMARK_TEMPLATE(BM_emoji_text, char);
+BENCHMARK(BM_ascii_text<char>);
+BENCHMARK(BM_unicode_text<char>);
+BENCHMARK(BM_cyrillic_text<char>);
+BENCHMARK(BM_japanese_text<char>);
+BENCHMARK(BM_emoji_text<char>);
 
-BENCHMARK_TEMPLATE(BM_ascii_text, wchar_t);
-BENCHMARK_TEMPLATE(BM_unicode_text, wchar_t);
-BENCHMARK_TEMPLATE(BM_cyrillic_text, wchar_t);
-BENCHMARK_TEMPLATE(BM_japanese_text, wchar_t);
-BENCHMARK_TEMPLATE(BM_emoji_text, wchar_t);
+BENCHMARK(BM_ascii_text<wchar_t>);
+BENCHMARK(BM_unicode_text<wchar_t>);
+BENCHMARK(BM_cyrillic_text<wchar_t>);
+BENCHMARK(BM_japanese_text<wchar_t>);
+BENCHMARK(BM_emoji_text<wchar_t>);
 
-int main(int argc, char** argv) {
-  benchmark::Initialize(&argc, argv);
-  if (benchmark::ReportUnrecognizedArguments(argc, argv))
-    return 1;
+BENCHMARK_MAIN();
 
-  benchmark::RunSpecifiedBenchmarks();
-}
 #else
 int main(int, char**) { return 0; }
 #endif

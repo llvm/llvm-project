@@ -1,10 +1,10 @@
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 
 #
 # This file describes the various pre-commit CI bots used to test libc++.
@@ -37,48 +37,6 @@ definitions:
       - "**/crash_diagnostics/*"
 
 steps:
-- group: ':mac: Apple'
-  steps:
-  - label: Apple back-deployment macosx10.13
-    command: libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.13
-    agents:
-      queue: libcxx-builders
-      os: macos
-      arch: x86_64 # We need to use x86_64 for back-deployment CI on this target since macOS didn't support arm64 back then
-    <<: *common
-
-  - label: Apple back-deployment macosx10.15
-    command: libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.15
-    agents:
-      queue: libcxx-builders
-      os: macos
-      arch: x86_64 # We need to use x86_64 for back-deployment CI on this target since macOS didn't support arm64 back then
-    <<: *common
-
-  - label: Apple back-deployment with hardening enabled
-    command: libcxx/utils/ci/run-buildbot apple-system-backdeployment-hardened-11.0
-    agents:
-      queue: libcxx-builders
-      os: macos
-      arch: x86_64 # TODO: Remove this once we are able to run back-deployment on arm64 again, since this isn't x86_64 specific
-    <<: *common
-
-    # TODO: Re-enable this once we've figured out how to run back-deployment testing on arm64 on recent OSes
-    # - label: "Apple back-deployment macosx11.0 arm64"
-    #   command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-11.0"
-    #   artifact_paths:
-    #     - "**/test-results.xml"
-    #     - "**/*.abilist"
-    #   agents:
-    #     queue: "libcxx-builders"
-    #     os: "macos"
-    #     arch: "arm64"
-    #   retry:
-    #     automatic:
-    #       - exit_status: -1  # Agent was lost
-    #         limit: 2
-    #   timeout_in_minutes: 120
-
 - group: ARM
   steps:
   - label: AArch64

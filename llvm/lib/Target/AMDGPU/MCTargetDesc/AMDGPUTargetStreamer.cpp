@@ -115,6 +115,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1150: AK = GK_GFX1150; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151: AK = GK_GFX1151; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152: AK = GK_GFX1152; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1153: AK = GK_GFX1153; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200: AK = GK_GFX1200; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201: AK = GK_GFX1201; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:     AK = GK_GFX9_GENERIC; break;
@@ -199,6 +200,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1150: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1150;
   case GK_GFX1151: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151;
   case GK_GFX1152: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152;
+  case GK_GFX1153: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1153;
   case GK_GFX1200: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200;
   case GK_GFX1201: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201;
   case GK_GFX9_GENERIC:     return ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC;
@@ -269,6 +271,47 @@ void AMDGPUTargetAsmStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
                                             Align Alignment) {
   OS << "\t.amdgpu_lds " << Symbol->getName() << ", " << Size << ", "
      << Alignment.value() << '\n';
+}
+
+void AMDGPUTargetAsmStreamer::EmitMCResourceInfo(
+    const MCSymbol *NumVGPR, const MCSymbol *NumAGPR,
+    const MCSymbol *NumExplicitSGPR, const MCSymbol *PrivateSegmentSize,
+    const MCSymbol *UsesVCC, const MCSymbol *UsesFlatScratch,
+    const MCSymbol *HasDynamicallySizedStack, const MCSymbol *HasRecursion,
+    const MCSymbol *HasIndirectCall) {
+#define PRINT_RES_INFO(ARG)                                                    \
+  OS << "\t.set ";                                                             \
+  ARG->print(OS, getContext().getAsmInfo());                                   \
+  OS << ", ";                                                                  \
+  ARG->getVariableValue()->print(OS, getContext().getAsmInfo());               \
+  Streamer.addBlankLine();
+
+  PRINT_RES_INFO(NumVGPR);
+  PRINT_RES_INFO(NumAGPR);
+  PRINT_RES_INFO(NumExplicitSGPR);
+  PRINT_RES_INFO(PrivateSegmentSize);
+  PRINT_RES_INFO(UsesVCC);
+  PRINT_RES_INFO(UsesFlatScratch);
+  PRINT_RES_INFO(HasDynamicallySizedStack);
+  PRINT_RES_INFO(HasRecursion);
+  PRINT_RES_INFO(HasIndirectCall);
+#undef PRINT_RES_INFO
+}
+
+void AMDGPUTargetAsmStreamer::EmitMCResourceMaximums(const MCSymbol *MaxVGPR,
+                                                     const MCSymbol *MaxAGPR,
+                                                     const MCSymbol *MaxSGPR) {
+#define PRINT_RES_INFO(ARG)                                                    \
+  OS << "\t.set ";                                                             \
+  ARG->print(OS, getContext().getAsmInfo());                                   \
+  OS << ", ";                                                                  \
+  ARG->getVariableValue()->print(OS, getContext().getAsmInfo());               \
+  Streamer.addBlankLine();
+
+  PRINT_RES_INFO(MaxVGPR);
+  PRINT_RES_INFO(MaxAGPR);
+  PRINT_RES_INFO(MaxSGPR);
+#undef PRINT_RES_INFO
 }
 
 bool AMDGPUTargetAsmStreamer::EmitISAVersion() {
