@@ -617,14 +617,13 @@ static MachineBasicBlock *findFalseBlock(MachineBasicBlock *BB,
 /// Reverse the condition of the end of the block branch. Swap block's 'true'
 /// and 'false' successors.
 bool IfConverter::reverseBranchCondition(BBInfo &BBI) const {
-  DebugLoc dl;  // FIXME: this is nowhere
-  if (!TII->reverseBranchCondition(BBI.BrCond)) {
-    TII->removeBranch(*BBI.BB);
-    TII->insertBranch(*BBI.BB, BBI.FalseBB, BBI.TrueBB, BBI.BrCond, dl);
-    std::swap(BBI.TrueBB, BBI.FalseBB);
-    return true;
-  }
-  return false;
+  if (TII->reverseBranchCondition(BBI.BrCond))
+    return false;
+  auto Dl = BBI.BB->findBranchDebugLoc();
+  TII->removeBranch(*BBI.BB);
+  TII->insertBranch(*BBI.BB, BBI.FalseBB, BBI.TrueBB, BBI.BrCond, Dl);
+  std::swap(BBI.TrueBB, BBI.FalseBB);
+  return true;
 }
 
 /// Returns the next block in the function blocks ordering. If it is the end,
