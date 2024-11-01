@@ -3062,7 +3062,8 @@ inline bool BitCast(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
     return false;
 
   if constexpr (std::is_same_v<T, Floating>) {
-    assert(false && "Implement bitcasting to a floating type");
+    assert(Sem);
+    S.Stk.push<Floating>(T::bitcastFromMemory(Buff.data(), *Sem));
   } else {
     assert(!Sem);
     S.Stk.push<T>(T::bitcastFromMemory(Buff.data(), ResultBitWidth));

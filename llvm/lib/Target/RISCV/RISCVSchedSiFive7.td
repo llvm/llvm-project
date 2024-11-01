@@ -223,7 +223,7 @@ def SiFive7VS          : ProcResource<1>; // Store sequencer
 // The VCQ accepts instructions from the the A Pipe and holds them until the
 // vector unit is ready to dequeue them. The unit dequeues up to one instruction
 // per cycle, in order, as soon as the sequencer for that type of instruction is
-// avaliable. This resource is meant to be used for 1 cycle by all vector
+// available. This resource is meant to be used for 1 cycle by all vector
 // instructions, to model that only one vector instruction may be dequed at a
 // time. The actual dequeueing into the sequencer is modeled by the VA, VL, and
 // VS sequencer resources below. Each of them will only accept a single
