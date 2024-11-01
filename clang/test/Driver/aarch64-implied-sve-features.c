@@ -68,8 +68,8 @@
 // SVE-SUBFEATURE-CONFLICT-NOT: "-target-feature" "+sve2"
 // SVE-SUBFEATURE-CONFLICT-NOT: "-target-feature" "+sve"
 
-// RUN: %clang --target=aarch64-linux-gnu -march=armv8-a+nosve+sve2-bitperm %s -### 2>&1 | FileCheck %s --check-prefix=SVE-SUBFEATURE-CONFLICT-REV
-// SVE-SUBFEATURE-CONFLICT-REV: "-target-feature" "+sve" "-target-feature" "+sve2" "-target-feature" "+sve2-bitperm"
+// RUN: %clang --target=aarch64-linux-gnu -march=armv8-a+nosve+sve2-aes %s -### 2>&1 | FileCheck %s --check-prefix=SVE-SUBFEATURE-CONFLICT-REV
+// SVE-SUBFEATURE-CONFLICT-REV: "-target-feature" "+sve" "-target-feature" "+sve-aes" "-target-feature" "+sve2" "-target-feature" "+sve2-aes"
 
 // RUN: %clang --target=aarch64-linux-gnu -mcpu=neoverse-n2+nosve2 %s -### 2>&1 | FileCheck %s --check-prefix=SVE-MCPU-FEATURES
 // SVE-MCPU-FEATURES-NOT: "-target-feature" "+sve2-bitperm"
