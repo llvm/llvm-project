@@ -2204,7 +2204,7 @@ public:
         continue;
 
       if (!Section.relocations().empty() && Name.ends_with(".dwo") &&
-          RelSecName.startswith(".debug")) {
+          RelSecName.starts_with(".debug")) {
         HandleWarning(createError("unexpected relocations for dwo section '" +
                                   RelSecName + "'"));
       }

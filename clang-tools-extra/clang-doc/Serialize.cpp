@@ -257,8 +257,8 @@ static bool isPublic(const clang::AccessSpecifier AS,
                      const clang::Linkage Link) {
   if (AS == clang::AccessSpecifier::AS_private)
     return false;
-  else if ((Link == clang::Linkage::ModuleLinkage) ||
-           (Link == clang::Linkage::ExternalLinkage))
+  else if ((Link == clang::Linkage::Module) ||
+           (Link == clang::Linkage::External))
     return true;
   return false; // otherwise, linkage is some form of internal linkage
 }

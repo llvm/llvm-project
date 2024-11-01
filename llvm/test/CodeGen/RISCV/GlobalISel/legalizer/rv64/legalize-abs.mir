@@ -16,8 +16,8 @@ body:             |
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[ASSERT_ZEXT]](s64)
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[TRUNC1]], [[ASHR1]]
     ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[ADD]], [[ASHR1]]
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[XOR]](s32)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C2]]
     ; CHECK-NEXT: $x10 = COPY [[AND]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10

@@ -107,7 +107,7 @@ public:
   void setDialectVersion(std::unique_ptr<DialectVersion> dialectVersion) const {
     return setDialectVersion(T::getDialectNamespace(),
                              std::move(dialectVersion));
-  };
+  }
   void setDialectVersion(StringRef dialectName,
                          std::unique_ptr<DialectVersion> dialectVersion) const;
 

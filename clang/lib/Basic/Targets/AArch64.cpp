@@ -1306,6 +1306,12 @@ bool AArch64TargetInfo::validateAsmConstraint(
       Name += 2;
       return true;
     }
+    if (Name[1] == 'c' && (Name[2] == 'i' || Name[2] == 'j')) {
+      // Gpr registers ("Uci"=w8-11, "Ucj"=w12-15)
+      Info.setAllowsRegister();
+      Name += 2;
+      return true;
+    }
     // Ump: A memory address suitable for ldp/stp in SI, DI, SF and DF modes.
     // Utf: A memory address suitable for ldp/stp in TF mode.
     // Usa: An absolute symbolic address.

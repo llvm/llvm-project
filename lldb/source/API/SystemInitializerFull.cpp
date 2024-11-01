@@ -68,9 +68,6 @@ llvm::Error SystemInitializerFull::Initialize() {
 #define LLDB_PLUGIN(p) LLDB_PLUGIN_INITIALIZE(p);
 #include "Plugins/Plugins.def"
 
-  // Initialize plug-ins in core LLDB
-  ProcessTrace::Initialize();
-
   // Scan for any system or user LLDB plug-ins
   PluginManager::Initialize();
 

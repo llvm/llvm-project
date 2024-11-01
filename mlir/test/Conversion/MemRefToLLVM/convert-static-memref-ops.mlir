@@ -1,4 +1,4 @@
-// RUN: mlir-opt -finalize-memref-to-llvm='use-opaque-pointers=1' -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -finalize-memref-to-llvm -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func @zero_d_alloc()
 func.func @zero_d_alloc() -> memref<f32> {

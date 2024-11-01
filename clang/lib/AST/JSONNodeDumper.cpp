@@ -1027,8 +1027,12 @@ void JSONNodeDumper::VisitTemplateTemplateParmDecl(
 void JSONNodeDumper::VisitLinkageSpecDecl(const LinkageSpecDecl *LSD) {
   StringRef Lang;
   switch (LSD->getLanguage()) {
-  case LinkageSpecDecl::lang_c: Lang = "C"; break;
-  case LinkageSpecDecl::lang_cxx: Lang = "C++"; break;
+  case LinkageSpecLanguageIDs::C:
+    Lang = "C";
+    break;
+  case LinkageSpecLanguageIDs::CXX:
+    Lang = "C++";
+    break;
   }
   JOS.attribute("language", Lang);
   attributeOnlyIfTrue("hasBraces", LSD->hasBraces());
@@ -1347,9 +1351,15 @@ void JSONNodeDumper::VisitCXXNewExpr(const CXXNewExpr *NE) {
   attributeOnlyIfTrue("isArray", NE->isArray());
   attributeOnlyIfTrue("isPlacement", NE->getNumPlacementArgs() != 0);
   switch (NE->getInitializationStyle()) {
-  case CXXNewExpr::NoInit: break;
-  case CXXNewExpr::CallInit: JOS.attribute("initStyle", "call"); break;
-  case CXXNewExpr::ListInit: JOS.attribute("initStyle", "list"); break;
+  case CXXNewInitializationStyle::None:
+  case CXXNewInitializationStyle::Implicit:
+    break;
+  case CXXNewInitializationStyle::Call:
+    JOS.attribute("initStyle", "call");
+    break;
+  case CXXNewInitializationStyle::List:
+    JOS.attribute("initStyle", "list");
+    break;
   }
   if (const FunctionDecl *FD = NE->getOperatorNew())
     JOS.attribute("operatorNewDecl", createBareDeclRef(FD));
@@ -1458,16 +1468,16 @@ void JSONNodeDumper::VisitCXXConstructExpr(const CXXConstructExpr *CE) {
   attributeOnlyIfTrue("isImmediateEscalating", CE->isImmediateEscalating());
 
   switch (CE->getConstructionKind()) {
-  case CXXConstructExpr::CK_Complete:
+  case CXXConstructionKind::Complete:
     JOS.attribute("constructionKind", "complete");
     break;
-  case CXXConstructExpr::CK_Delegating:
+  case CXXConstructionKind::Delegating:
     JOS.attribute("constructionKind", "delegating");
     break;
-  case CXXConstructExpr::CK_NonVirtualBase:
+  case CXXConstructionKind::NonVirtualBase:
     JOS.attribute("constructionKind", "non-virtual base");
     break;
-  case CXXConstructExpr::CK_VirtualBase:
+  case CXXConstructionKind::VirtualBase:
     JOS.attribute("constructionKind", "virtual base");
     break;
   }
@@ -1670,19 +1680,19 @@ void JSONNodeDumper::visitInlineCommandComment(
   JOS.attribute("name", getCommentCommandName(C->getCommandID()));
 
   switch (C->getRenderKind()) {
-  case comments::InlineCommandComment::RenderNormal:
+  case comments::InlineCommandRenderKind::Normal:
     JOS.attribute("renderKind", "normal");
     break;
-  case comments::InlineCommandComment::RenderBold:
+  case comments::InlineCommandRenderKind::Bold:
     JOS.attribute("renderKind", "bold");
     break;
-  case comments::InlineCommandComment::RenderEmphasized:
+  case comments::InlineCommandRenderKind::Emphasized:
     JOS.attribute("renderKind", "emphasized");
     break;
-  case comments::InlineCommandComment::RenderMonospaced:
+  case comments::InlineCommandRenderKind::Monospaced:
     JOS.attribute("renderKind", "monospaced");
     break;
-  case comments::InlineCommandComment::RenderAnchor:
+  case comments::InlineCommandRenderKind::Anchor:
     JOS.attribute("renderKind", "anchor");
     break;
   }
@@ -1730,13 +1740,13 @@ void JSONNodeDumper::visitBlockCommandComment(
 void JSONNodeDumper::visitParamCommandComment(
     const comments::ParamCommandComment *C, const comments::FullComment *FC) {
   switch (C->getDirection()) {
-  case comments::ParamCommandComment::In:
+  case comments::ParamCommandPassDirection::In:
     JOS.attribute("direction", "in");
     break;
-  case comments::ParamCommandComment::Out:
+  case comments::ParamCommandPassDirection::Out:
     JOS.attribute("direction", "out");
     break;
-  case comments::ParamCommandComment::InOut:
+  case comments::ParamCommandPassDirection::InOut:
     JOS.attribute("direction", "in,out");
     break;
   }

@@ -9,10 +9,6 @@
 // test libc++'s implementation of align_val_t, and the relevant new/delete
 // overloads in all dialects when -faligned-allocation is present.
 
-// Some dylibs do not contain the aligned allocation functions, so trying to force
-// using those with -faligned-allocation results in a link error.
-// XFAIL: availability-aligned_allocation-missing
-
 // Libc++ when built for z/OS doesn't contain the aligned allocation functions,
 // nor does the dynamic library shipped with z/OS.
 // UNSUPPORTED: target={{.+}}-zos{{.*}}

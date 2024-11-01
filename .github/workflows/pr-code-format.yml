@@ -6,18 +6,19 @@ permissions:
 jobs:
   code_formatter:
     runs-on: ubuntu-latest
+    if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 2 # Fetches only the last 2 commits
 
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v39
         with:
           separator: ","
-          fetch_depth: 100 # Fetches only the last 10 commits
+          fetch_depth: 2000 # Fetches only the last 2000 commits
 
       - name: "Listed files"
         run: |

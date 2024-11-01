@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple loongarch64 -target-feature +f -target-feature +d -target-abi lp64d -emit-llvm %s -o - -x c++ | \
 // RUN:   FileCheck --check-prefix=CHECK-CXX %s
 
-// Fields containing empty structs or unions are ignored when flattening
+// Fields containing empty structs are ignored when flattening
 // structs to examine whether the structs can be passed via FARs, even in C++.
 // But there is an exception that non-zero-length array of empty structures are
 // not ignored in C++. These rules are not documented in psABI <https://www.github.com/loongson/la-abi-specs>

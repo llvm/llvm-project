@@ -45,7 +45,9 @@ InlineFunctionDeclCheck::InlineFunctionDeclCheck(StringRef Name,
       HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
 
 void InlineFunctionDeclCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(decl(functionDecl()).bind("func_decl"), this);
+  // Ignore functions that have been deleted.
+  Finder->addMatcher(decl(functionDecl(unless(isDeleted()))).bind("func_decl"),
+                     this);
 }
 
 void InlineFunctionDeclCheck::check(const MatchFinder::MatchResult &Result) {

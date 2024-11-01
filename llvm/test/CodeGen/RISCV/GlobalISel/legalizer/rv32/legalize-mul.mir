@@ -8,9 +8,11 @@ body:             |
     ; CHECK-LABEL: name: mul_i7
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: $x10 = COPY [[COPY]](s32)
     ; CHECK-NEXT: $x11 = COPY [[COPY1]](s32)
-    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__mulsi3, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__mulsi3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: $x10 = COPY [[COPY2]](s32)
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -31,9 +33,11 @@ body:             |
     ; CHECK-LABEL: name: mul_i8
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: $x10 = COPY [[COPY]](s32)
     ; CHECK-NEXT: $x11 = COPY [[COPY1]](s32)
-    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__mulsi3, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__mulsi3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: $x10 = COPY [[COPY2]](s32)
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -54,9 +58,11 @@ body:             |
     ; CHECK-LABEL: name: mul_i16
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: $x10 = COPY [[COPY]](s32)
     ; CHECK-NEXT: $x11 = COPY [[COPY1]](s32)
-    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__mulsi3, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__mulsi3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: $x10 = COPY [[COPY2]](s32)
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -77,9 +83,11 @@ body:             |
     ; CHECK-LABEL: name: mul_i32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: $x10 = COPY [[COPY]](s32)
     ; CHECK-NEXT: $x11 = COPY [[COPY1]](s32)
-    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__mulsi3, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__mulsi3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: $x10 = COPY [[COPY2]](s32)
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -99,11 +107,13 @@ body:             |
     ; CHECK-NEXT: %hi1:_(s32) = COPY $x11
     ; CHECK-NEXT: %lo2:_(s32) = COPY $x12
     ; CHECK-NEXT: %hi2:_(s32) = COPY $x13
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: $x10 = COPY %lo1(s32)
     ; CHECK-NEXT: $x11 = COPY %hi1(s32)
     ; CHECK-NEXT: $x12 = COPY %lo2(s32)
     ; CHECK-NEXT: $x13 = COPY %hi2(s32)
-    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
+    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; CHECK-NEXT: $x10 = COPY [[COPY]](s32)
@@ -133,11 +143,13 @@ body:             |
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], [[C]](s32)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; CHECK-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[COPY1]], [[C1]](s32)
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: $x10 = COPY [[COPY]](s32)
     ; CHECK-NEXT: $x11 = COPY [[ASHR]](s32)
     ; CHECK-NEXT: $x12 = COPY [[COPY1]](s32)
     ; CHECK-NEXT: $x13 = COPY [[ASHR1]](s32)
-    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
+    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x11
     ; CHECK-NEXT: $x10 = COPY [[COPY2]](s32)
     ; CHECK-NEXT: PseudoRET implicit $x10

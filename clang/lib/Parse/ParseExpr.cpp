@@ -2820,22 +2820,22 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
       SkipUntil(tok::r_paren, StopAtSemi);
       return ExprError();
     }
-    SourceLocExpr::IdentKind Kind = [&] {
+    SourceLocIdentKind Kind = [&] {
       switch (T) {
       case tok::kw___builtin_FILE:
-        return SourceLocExpr::File;
+        return SourceLocIdentKind::File;
       case tok::kw___builtin_FILE_NAME:
-        return SourceLocExpr::FileName;
+        return SourceLocIdentKind::FileName;
       case tok::kw___builtin_FUNCTION:
-        return SourceLocExpr::Function;
+        return SourceLocIdentKind::Function;
       case tok::kw___builtin_FUNCSIG:
-        return SourceLocExpr::FuncSig;
+        return SourceLocIdentKind::FuncSig;
       case tok::kw___builtin_LINE:
-        return SourceLocExpr::Line;
+        return SourceLocIdentKind::Line;
       case tok::kw___builtin_COLUMN:
-        return SourceLocExpr::Column;
+        return SourceLocIdentKind::Column;
       case tok::kw___builtin_source_location:
-        return SourceLocExpr::SourceLocStruct;
+        return SourceLocIdentKind::SourceLocStruct;
       default:
         llvm_unreachable("invalid keyword");
       }

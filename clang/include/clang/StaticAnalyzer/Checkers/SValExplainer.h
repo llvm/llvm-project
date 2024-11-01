@@ -65,7 +65,7 @@ public:
     return "undefined value";
   }
 
-  std::string VisitLocMemRegionVal(loc::MemRegionVal V) {
+  std::string VisitMemRegionVal(loc::MemRegionVal V) {
     const MemRegion *R = V.getRegion();
     // Avoid the weird "pointer to pointee of ...".
     if (auto SR = dyn_cast<SymbolicRegion>(R)) {
@@ -76,7 +76,7 @@ public:
     return "pointer to " + Visit(R);
   }
 
-  std::string VisitLocConcreteInt(loc::ConcreteInt V) {
+  std::string VisitConcreteInt(loc::ConcreteInt V) {
     const llvm::APSInt &I = V.getValue();
     std::string Str;
     llvm::raw_string_ostream OS(Str);
@@ -84,11 +84,11 @@ public:
     return Str;
   }
 
-  std::string VisitNonLocSymbolVal(nonloc::SymbolVal V) {
+  std::string VisitSymbolVal(nonloc::SymbolVal V) {
     return Visit(V.getSymbol());
   }
 
-  std::string VisitNonLocConcreteInt(nonloc::ConcreteInt V) {
+  std::string VisitConcreteInt(nonloc::ConcreteInt V) {
     const llvm::APSInt &I = V.getValue();
     std::string Str;
     llvm::raw_string_ostream OS(Str);
@@ -97,7 +97,7 @@ public:
     return Str;
   }
 
-  std::string VisitNonLocLazyCompoundVal(nonloc::LazyCompoundVal V) {
+  std::string VisitLazyCompoundVal(nonloc::LazyCompoundVal V) {
     return "lazily frozen compound value of " + Visit(V.getRegion());
   }
 

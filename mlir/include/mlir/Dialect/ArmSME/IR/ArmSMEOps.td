@@ -43,7 +43,47 @@ def nxnxv4f32  : SMETileType<F32,  [4,  4 ], "vector<[4]x[4]xf32>">;
 def nxnxv2f64  : SMETileType<F64,  [2,  2 ], "vector<[2]x[2]xf64>">;
 
 def SMETile : AnyTypeOf<[nxnxv16i8, nxnxv8i16, nxnxv4i32, nxnxv2i64, nxnxv1i128,
-                         nxnxv8f16, nxnxv8bf16, nxnxv4f32, nxnxv2f64]>;
+                         nxnxv8f16, nxnxv8bf16, nxnxv4f32, nxnxv2f64],
+                        "a vector type that fits into a SME tile">
+{
+  let description = [{
+    Possible vector types:
+
+    Integer elements:
+
+    * `vector<[16]x[16]xi8>`
+    * `vector<[8]x[8]xi16>`
+    * `vector<[4]x[4]xi32>`
+    * `vector<[2]x[2]xi64>`
+    * `vector<[1]x[1]xi128>`
+
+    Floating point elements:
+
+    * `vector<[8]x[8]xf16>`
+    * `vector<[8]x[8]xbf16>`
+    * `vector<[4]x[4]xf32>`
+    * `vector<[2]x[2]xf64>`
+  }];
+}
+
+def TileID : AnyTypeOf<[I8, I16, I32, I64, I128],
+                       "an identifier of a virtual tile (of a size) within the ZA storage">
+{
+  let description = [{
+    The tile ID is an 8, 16, 32, 64, or 128-bit signless integer. The value of
+    the integer indicates the tile to use, and the bit size indicates the size
+    of tile. The number of tiles available and the element types of those depend
+    on the size. This is summarised below:
+
+    | Tile ID Type | Possible Tile IDs   | Tile Vector Types                                                       |
+    |--------------|---------------------|-------------------------------------------------------------------------|
+    | `i8`         | 0                   | `vector<[16]x[16]xi8>`                                                  |
+    | `i16`        | 0 and 1             | `vector<[8]x[8]xi16>`, `vector<[8]x[8]xf16>`, or `vector<[8]x[8]xbf16>` |
+    | `i32`        | 0 to 3 (inclusive)  | `vector<[4]x[4]xi32>` or `vector<[4]x[4]xf32>`                          |
+    | `i64`        | 0 to 7 (inclusive)  | `vector<[2]x[2]xi64>` or `vector<[2]x[2]xf64>`                          |
+    | `i128`       | 0 to 15 (inclusive) | `vector<[1]x[1]xi128>`                                                  |
+  }];
+}
 
 // A type constraint that verifies the bitwidth of the scalar integer returned
 // from 'arm_sme.get_tile_id' matches the element bitwidth of a "virtual tile".
@@ -65,6 +105,15 @@ class HasMatchingMaskTypeConstraint<string vector, string mask> :
     mask # " has i1 element type and same shape as " # vector,
     vector, mask,
     "::llvm::cast<mlir::VectorType>($_self).cloneWith({}, IntegerType::get($_ctxt, 1))">;
+
+class TileSliceMaskConstraint<string tile, string mask> :
+  TypesMatchWith<
+    "`" # mask # "` has i1 element type and the shape is a slice of `" # tile # "`",
+    tile, mask,
+    "VectorType("
+      "VectorType::Builder("
+        "::llvm::cast<mlir::VectorType>($_self)"
+      ").dropDim(0).setElementType(IntegerType::get($_self.getContext(), 1)))">;
 
 //===----------------------------------------------------------------------===//
 // ArmSME attr definitions
@@ -151,7 +200,7 @@ def CastTileToVector : ArmSME_Op<"cast_tile_to_vector", [Pure, TileElementWidthM
     Canonicalization will look through `arm_sme.cast_tile_to_vector` and fold
     the cast away if it comes from a `arm_sme.cast_vector_to_tile`.
   }];
-  let arguments = (ins AnyTypeOf<[I8, I16, I32, I64, I128]>:$tile_id);
+  let arguments = (ins TileID:$tile_id);
   let results = (outs SMETile:$vector);
   let assemblyFormat =
     "$tile_id attr-dict `:` type($tile_id) `to` type($vector)";
@@ -187,7 +236,7 @@ def CastVectorToTile : ArmSME_Op<"cast_vector_to_tile", [Pure, TileElementWidthM
     the cast away if it comes from a `arm_sme.cast_tile_to_vector`.
   }];
   let arguments = (ins SMETile:$vector);
-  let results = (outs AnyTypeOf<[I8, I16, I32, I64, I128]>:$tile_id);
+  let results = (outs TileID:$tile_id);
   let assemblyFormat =
     "$vector attr-dict `:` type($vector) `to` type($tile_id)";
   let hasCanonicalizeMethod = 1;
@@ -223,7 +272,7 @@ def GetTileID : ArmSME_Op<"get_tile_id"> {
     ```
   }];
 
-  let results = (outs AnyTypeOf<[I8, I16, I32, I64, I128]>:$tile_id);
+  let results = (outs TileID:$tile_id);
   let assemblyFormat = "attr-dict `:` type($tile_id)";
 }
 
@@ -408,15 +457,7 @@ def TileStoreOp : ArmSME_Op<"tile_store", [
 }
 
 def LoadTileSliceOp : ArmSME_Op<"load_tile_slice", [
-    AllTypesMatch<["tile", "result"]>,
-    TypesMatchWith<
-      "mask has i1 element type and is a slice of the result",
-      "result", "mask",
-      "VectorType("
-        "VectorType::Builder("
-          "::llvm::cast<mlir::VectorType>($_self)"
-        ").dropDim(0).setElementType(IntegerType::get($_self.getContext(), 1))"
-      ")">,
+  AllTypesMatch<["tile", "result"]>, TileSliceMaskConstraint<"result", "mask">
 ]> {
   let summary = "Tile slice load and update operation";
   let description = [{
@@ -432,9 +473,8 @@ def LoadTileSliceOp : ArmSME_Op<"load_tile_slice", [
     dimensions since the operation is scalable, and the element type must be a
     scalar that matches the element type of the result.
 
-    An SSA value `mask` specifies to mask out elements read from the MemRef.
-    The `mask` type is an `i1` vector with a shape that matches how elements
-    are read from the MemRef.
+    The provided `mask` is used to specify which elements of the tile slice
+    will be loaded.
 
     Example 1: Load a vector<[16]xi8> tile slice from memory into tile horizontally (default) at given index.
     ```mlir
@@ -474,7 +514,9 @@ def LoadTileSliceOp : ArmSME_Op<"load_tile_slice", [
   }];
 }
 
-def StoreTileSliceOp : ArmSME_Op<"store_tile_slice"> {
+def StoreTileSliceOp : ArmSME_Op<"store_tile_slice", [
+  TileSliceMaskConstraint<"tile", "mask">
+]> {
   let summary = "Tile slice store operation";
   let description = [{
     Stores a 1D tile slice from a 2D SME "virtual tile" into memory. The tile
@@ -489,22 +531,26 @@ def StoreTileSliceOp : ArmSME_Op<"store_tile_slice"> {
     dimensions since the operation is scalable, and the element type must be a
     scalar that matches the element type of the input tile.
 
+    The provided `mask` is used to specify which elements of the tile slice
+    will be stored.
+
     Example 1: Store vector<[16]xi8> horizontal (default) tile slice from tile at given index to memory.
     ```mlir
-    arm_sme.store_tile_slice %tile, %tile_slice_index, %base[%c0] : vector<[16]x[16]xi8>, memref<?x?xi8>
+    arm_sme.store_tile_slice %tile, %tile_slice_index, %mask, %base[%c0] : vector<[16]x[16]xi8>, vector<[16]xi1>, memref<?x?xi8>
     ```
 
     Example 2: Store vector<[4]xf32> vertical tile slice from tile at given index to memory.
     ```mlir
-    arm_sme.store_tile_slice %tile, %tile_slice_index, %base[%c0] layout<vertical> : vector<[4]x[4]xf32>, memref<?x?xf32>
+    arm_sme.store_tile_slice %tile, %tile_slice_index, %mask, %base[%c0] layout<vertical> : vector<[4]x[4]xf32>, vector<[4]xi1>, memref<?x?xf32>
     ```
 
     Example 3: Store a vector<[1]xi128> vertical tile slice from tile at given index to memory.
     ```mlir
-    arm_sme.store_tile_slice %tile, %tile_slice_index, %base[%c0] layout<vertical> : vector<[1]x[1]xi128>, memref<?x?xi128>
+    arm_sme.store_tile_slice %tile, %tile_slice_index, %mask, %base[%c0] layout<vertical> : vector<[1]x[1]xi128>, vector<[1]xi1>, memref<?x?xi128>
     ```
   }];
-  let arguments = (ins SMETile:$tile, Index:$tile_slice_index,
+  let arguments = (ins
+    SMETile:$tile, Index:$tile_slice_index, SVEPredicate:$mask,
     Arg<AnyMemRef, "the reference to store to", [MemWrite]>:$base,
     Variadic<Index>:$indices, ArmSME_TileSliceLayoutAttr:$layout
   );
@@ -518,8 +564,8 @@ def StoreTileSliceOp : ArmSME_Op<"store_tile_slice"> {
   }];
 
   let assemblyFormat = [{
-    $tile `,` $tile_slice_index `,` $base `[` $indices `]` (`layout` `` $layout^)?
-      attr-dict `:` type($base) `,` type($tile)
+    $tile `,` $tile_slice_index `,` $mask `,` $base `[` $indices `]` (`layout` `` $layout^)?
+      attr-dict `:` type($base) `,` type($mask) `,` type($tile)
   }];
 }
 

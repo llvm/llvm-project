@@ -659,8 +659,8 @@ body: |
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s16) = G_ASHR [[SHL]], [[C3]](s16)
     ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s16) = G_CONSTANT i16 7
     ; CHECK-NEXT: [[ASHR1:%[0-9]+]]:_(s16) = G_ASHR [[ASHR]], [[C4]](s16)
-    ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C5]]
     ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC2]], [[C5]]

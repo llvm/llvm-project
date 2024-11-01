@@ -237,7 +237,8 @@ define i1 @pr21445(i8 %a) {
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ext = zext i8 %a to i32
-  %mul = mul i32 %ext, zext (i8 ptrtoint (ptr @pr21445_data to i8) to i32)
+  %ext2 = zext i8 ptrtoint (ptr @pr21445_data to i8) to i32
+  %mul = mul i32 %ext, %ext2
   %and = and i32 %mul, 255
   %cmp = icmp ne i32 %mul, %and
   ret i1 %cmp

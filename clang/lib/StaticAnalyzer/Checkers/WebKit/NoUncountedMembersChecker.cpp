@@ -104,7 +104,7 @@ public:
 
     const auto Kind = RD->getTagKind();
     // FIMXE: Should we check union members too?
-    if (Kind != TTK_Struct && Kind != TTK_Class)
+    if (Kind != TagTypeKind::Struct && Kind != TagTypeKind::Class)
       return true;
 
     // Ignore CXXRecords that come from system headers.

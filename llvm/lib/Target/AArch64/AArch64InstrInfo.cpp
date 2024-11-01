@@ -3550,6 +3550,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDURWi:
   case AArch64::LDURSi:
   case AArch64::LDURSWi:
+  case AArch64::LDAPURi:
   case AArch64::LDAPURSWi:
   case AArch64::STURWi:
   case AArch64::STURSi:
@@ -4773,7 +4774,14 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     } else if (AArch64::PNRRegClass.hasSubClassEq(RC)) {
       assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
              "Unexpected register store without SVE2p1 or SME2");
-      SrcReg = (SrcReg - AArch64::PN0) + AArch64::P0;
+      if (SrcReg.isVirtual()) {
+        auto NewSrcReg =
+            MF.getRegInfo().createVirtualRegister(&AArch64::PPRRegClass);
+        BuildMI(MBB, MBBI, DebugLoc(), get(TargetOpcode::COPY), NewSrcReg)
+            .addReg(SrcReg);
+        SrcReg = NewSrcReg;
+      } else
+        SrcReg = (SrcReg - AArch64::PN0) + AArch64::P0;
       Opc = AArch64::STR_PXI;
       StackID = TargetStackID::ScalableVector;
     }
@@ -4928,7 +4936,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   unsigned Opc = 0;
   bool Offset = true;
   unsigned StackID = TargetStackID::Default;
-  MCRegister PNRReg = MCRegister::NoRegister;
+  Register PNRReg = MCRegister::NoRegister;
   switch (TRI->getSpillSize(*RC)) {
   case 1:
     if (AArch64::FPR8RegClass.hasSubClassEq(RC))
@@ -4946,7 +4954,10 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
              "Unexpected register load without SVE2p1 or SME2");
       PNRReg = DestReg;
-      DestReg = (DestReg - AArch64::PN0) + AArch64::P0;
+      if (DestReg.isVirtual())
+        DestReg = MF.getRegInfo().createVirtualRegister(&AArch64::PPRRegClass);
+      else
+        DestReg = (DestReg - AArch64::PN0) + AArch64::P0;
       Opc = AArch64::LDR_PXI;
       StackID = TargetStackID::ScalableVector;
     }
@@ -5055,9 +5066,13 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                      .addFrameIndex(FI);
   if (Offset)
     MI.addImm(0);
-  if (PNRReg.isValid())
+  if (PNRReg.isValid() && !PNRReg.isVirtual())
     MI.addDef(PNRReg, RegState::Implicit);
   MI.addMemOperand(MMO);
+
+  if (PNRReg.isValid() && PNRReg.isVirtual())
+    BuildMI(MBB, MBBI, DebugLoc(), get(TargetOpcode::COPY), PNRReg)
+        .addReg(DestReg);
 }
 
 bool llvm::isNZCVTouchedInInstructionRange(const MachineInstr &DefMI,

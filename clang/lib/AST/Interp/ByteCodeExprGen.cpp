@@ -200,16 +200,13 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->visit(SubExpr))
       return false;
 
-    if (FromT == ToT) {
-      assert(ToT != PT_IntAP && ToT != PT_IntAPS);
-      return true;
-    }
-
     if (ToT == PT_IntAP)
       return this->emitCastAP(*FromT, Ctx.getBitWidth(CE->getType()), CE);
     if (ToT == PT_IntAPS)
       return this->emitCastAPS(*FromT, Ctx.getBitWidth(CE->getType()), CE);
 
+    if (FromT == ToT)
+      return true;
     return this->emitCast(*FromT, *ToT, CE);
   }
 

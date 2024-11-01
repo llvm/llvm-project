@@ -12,7 +12,7 @@ from lldbsuite.test.decorators import *
 class TestDumpDWO(lldbtest.TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    def get_dwos_from_json(self):
+    def get_dwos_from_json_output(self):
         """Returns a dictionary of `symfile` -> {`dwo_name` -> dwo_info object}."""
         result = {}
         output = json.loads(self.res.GetOutput())
@@ -42,7 +42,7 @@ class TestDumpDWO(lldbtest.TestBase):
         self.runCmd("target modules dump separate-debug-info --json")
 
         # Check the output
-        output = self.get_dwos_from_json()
+        output = self.get_dwos_from_json_output()
         self.assertTrue(output[exe]["main.dwo"]["loaded"])
         self.assertTrue(output[exe]["foo.dwo"]["loaded"])
 
@@ -55,9 +55,8 @@ class TestDumpDWO(lldbtest.TestBase):
         main_dwo = self.getBuildArtifact("main.dwo")
         foo_dwo = self.getBuildArtifact("foo.dwo")
 
-        # REMOVE the dwo files
+        # REMOVE one of the dwo files
         os.unlink(main_dwo)
-        os.unlink(foo_dwo)
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, lldbtest.VALID_TARGET)
@@ -65,11 +64,18 @@ class TestDumpDWO(lldbtest.TestBase):
         self.runCmd("target modules dump separate-debug-info --json")
 
         # Check the output
-        output = self.get_dwos_from_json()
+        output = self.get_dwos_from_json_output()
         self.assertFalse(output[exe]["main.dwo"]["loaded"])
-        self.assertFalse(output[exe]["foo.dwo"]["loaded"])
         self.assertIn("error", output[exe]["main.dwo"])
-        self.assertIn("error", output[exe]["foo.dwo"])
+        self.assertTrue(output[exe]["foo.dwo"]["loaded"])
+        self.assertNotIn("error", output[exe]["foo.dwo"])
+
+        # Check with --errors-only
+        self.runCmd("target modules dump separate-debug-info --json --errors-only")
+        output = self.get_dwos_from_json_output()
+        self.assertFalse(output[exe]["main.dwo"]["loaded"])
+        self.assertIn("error", output[exe]["main.dwo"])
+        self.assertNotIn("foo.dwo", output[exe])
 
     @skipIfRemote
     @skipIfDarwin

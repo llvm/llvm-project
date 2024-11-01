@@ -425,12 +425,13 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::CallOp callOp) {
       // Index attributes are treated specially as operand index.
       if (t.getType().isIndex()) {
         int64_t idx = t.getInt();
-        if ((idx < 0) || (idx >= op.getNumOperands()))
-          return op.emitOpError("invalid operand index");
-        if (!emitter.hasValueInScope(op.getOperand(idx)))
+        Value operand = op.getOperand(idx);
+        auto literalDef =
+            dyn_cast_if_present<LiteralOp>(operand.getDefiningOp());
+        if (!literalDef && !emitter.hasValueInScope(operand))
           return op.emitOpError("operand ")
                  << idx << "'s value not defined in scope";
-        os << emitter.getOrCreateName(op.getOperand(idx));
+        os << emitter.getOrCreateName(operand);
         return success();
       }
     }
@@ -637,6 +638,8 @@ static LogicalResult printOperation(CppEmitter &emitter,
     // regions.
     WalkResult result =
         functionOp.walk<WalkOrder::PreOrder>([&](Operation *op) -> WalkResult {
+          if (isa<emitc::LiteralOp>(op))
+            return WalkResult::skip();
           for (OpResult result : op->getResults()) {
             if (failed(emitter.emitVariableDeclaration(
                     result, /*trailingSemicolon=*/true))) {
@@ -839,7 +842,8 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
 
 LogicalResult CppEmitter::emitOperands(Operation &op) {
   auto emitOperandName = [&](Value result) -> LogicalResult {
-    if (!hasValueInScope(result))
+    auto literalDef = dyn_cast_if_present<LiteralOp>(result.getDefiningOp());
+    if (!literalDef && !hasValueInScope(result))
       return op.emitOpError() << "operand value not in scope";
     os << getOrCreateName(result);
     return success();

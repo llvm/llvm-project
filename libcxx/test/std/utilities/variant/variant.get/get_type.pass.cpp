@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// XFAIL: availability-bad_variant_access-missing && !no-exceptions
-
 // <variant>
 
 // template <class T, class... Types> constexpr T& get(variant<Types...>& v);

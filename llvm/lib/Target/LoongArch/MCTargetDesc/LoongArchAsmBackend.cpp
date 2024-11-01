@@ -17,7 +17,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 
 #define DEBUG_TYPE "loongarch-asmbackend"

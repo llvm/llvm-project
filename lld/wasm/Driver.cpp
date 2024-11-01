@@ -478,6 +478,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->relocatable = args.hasArg(OPT_relocatable);
   config->gcSections =
       args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, !config->relocatable);
+  for (auto *arg : args.filtered(OPT_keep_section))
+    config->keepSections.insert(arg->getValue());
   config->mergeDataSegments =
       args.hasFlag(OPT_merge_data_segments, OPT_no_merge_data_segments,
                    !config->relocatable);

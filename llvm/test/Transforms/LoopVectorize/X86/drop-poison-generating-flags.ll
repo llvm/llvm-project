@@ -405,6 +405,89 @@ loop.exit:
   ret void
 }
 
+@c = external global [5 x i8]
+
+; Test case for https://github.com/llvm/llvm-project/issues/70590.
+; Note that the then block has UB, but I could not find any other way to
+; construct a suitable test case.
+define void @pr70590_recipe_without_underlying_instr(i64 %n, ptr noalias %dst) {
+; CHECK-LABEL: @pr70590_recipe_without_underlying_instr(
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.+]] ], [ [[INDEX_NEXT:%.*]], [[PRED_SREM_CONTINUE6:%.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_SREM_CONTINUE6]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i64> [[VEC_IND]],
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[TMP1]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP2]], i32 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_SREM_IF:%.*]], label [[PRED_SREM_CONTINUE:%.*]]
+; CHECK:       pred.srem.if:
+; CHECK-NEXT:    [[TMP4:%.*]] = srem i64 3, 0
+; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE]]
+; CHECK:       pred.srem.continue:
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i64 [ poison, %vector.body ], [ [[TMP4]], [[PRED_SREM_IF]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP2]], i32 1
+; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_SREM_IF1:%.*]], label [[PRED_SREM_CONTINUE2:%.*]]
+; CHECK:       pred.srem.if1:
+; CHECK-NEXT:    [[TMP7:%.*]] = srem i64 3, 0
+; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE2]]
+; CHECK:       pred.srem.continue2:
+; CHECK-NEXT:    [[TMP8:%.*]] = phi i64 [ poison, [[PRED_SREM_CONTINUE]] ], [ [[TMP7]], [[PRED_SREM_IF1]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP2]], i32 2
+; CHECK-NEXT:    br i1 [[TMP9]], label [[PRED_SREM_IF3:%.*]], label [[PRED_SREM_CONTINUE4:%.*]]
+; CHECK:       pred.srem.if3:
+; CHECK-NEXT:    [[TMP10:%.*]] = srem i64 3, 0
+; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE4]]
+; CHECK:       pred.srem.continue4:
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i64 [ poison, [[PRED_SREM_CONTINUE2]] ], [ [[TMP10]], [[PRED_SREM_IF3]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP2]], i32 3
+; CHECK-NEXT:    br i1 [[TMP12]], label [[PRED_SREM_IF5:%.*]], label [[PRED_SREM_CONTINUE6]]
+; CHECK:       pred.srem.if5:
+; CHECK-NEXT:    [[TMP13:%.*]] = srem i64 3, 0
+; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE6]]
+; CHECK:       pred.srem.continue6:
+; CHECK-NEXT:    [[TMP14:%.*]] = phi i64 [ poison, [[PRED_SREM_CONTINUE4]] ], [ [[TMP13]], [[PRED_SREM_IF5]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP5]], -3
+; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP0]], [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr [5 x i8], ptr @c, i64 0, i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[TMP17]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP18]], align 1
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP2]], <4 x i8> [[WIDE_LOAD]], <4 x i8> zeroinitializer
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr %dst, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[TMP19]], i32 0
+; CHECK-NEXT:    store <4 x i8> [[PREDPHI]], ptr [[TMP20]], align 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    br i1 true, label %middle.block, label %vector.body
+; CHECK:       middle.block:
+
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %inc, %loop.latch ]
+  %cmp = icmp eq i64 %iv, %n
+  br i1 %cmp, label %loop.latch, label %then
+
+then:
+  %rem = srem i64 3, 0
+  %add3 = add i64 %rem, -3
+  %add5 = add i64 %iv, %add3
+  %gep = getelementptr [5 x i8], ptr @c, i64 0, i64 %add5
+  %l = load i8, ptr %gep, align 1
+  br label %loop.latch
+
+loop.latch:
+  %sr = phi i8 [ 0, %loop.header ], [ %l , %then ]
+  %gep.dst = getelementptr i8, ptr %dst, i64 %iv
+  store i8 %sr, ptr %gep.dst, align 4
+  %inc = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %inc, 4
+  br i1 %exitcond.not, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
 attributes #0 = { noinline nounwind uwtable "target-features"="+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl" }
 
 !0 = !{}

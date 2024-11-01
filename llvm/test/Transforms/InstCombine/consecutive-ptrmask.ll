@@ -4,7 +4,8 @@
 target datalayout = "p1:64:64:64:32"
 
 declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
-declare ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1), i32)
+declare ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) , i32)
+declare <2 x ptr addrspace(1) > @llvm.ptrmask.v2p1.v2i32(<2 x ptr addrspace(1) >, <2 x i32>)
 declare <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr>, <2 x i64>)
 declare void @use.ptr(ptr)
 
@@ -56,4 +57,28 @@ define ptr addrspace(1) @fold_2x_smaller_index_type(ptr addrspace(1) %p, i32 %m0
   %p0 = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) %p, i32 %m0)
   %p1 = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) %p0, i32 %m1)
   ret ptr addrspace(1) %p1
+}
+
+define <2 x ptr> @fold_2x_vec_i64(<2 x ptr> %p, <2 x i64> %m0) {
+; CHECK-LABEL: define <2 x ptr> @fold_2x_vec_i64
+; CHECK-SAME: (<2 x ptr> [[P:%.*]], <2 x i64> [[M0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i64> [[M0]], <i64 -2, i64 -2>
+; CHECK-NEXT:    [[P1:%.*]] = call align 2 <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> [[TMP1]])
+; CHECK-NEXT:    ret <2 x ptr> [[P1]]
+;
+  %p0 = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> %p, <2 x i64> %m0)
+  %p1 = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> %p0, <2 x i64> <i64 -2, i64 -2>)
+  ret <2 x ptr> %p1
+}
+
+define <2 x ptr addrspace(1) > @fold_2x_vec_i32_undef(<2 x ptr addrspace(1) > %p, <2 x i32> %m0) {
+; CHECK-LABEL: define <2 x ptr addrspace(1)> @fold_2x_vec_i32_undef
+; CHECK-SAME: (<2 x ptr addrspace(1)> [[P:%.*]], <2 x i32> [[M0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[M0]], <i32 -2, i32 undef>
+; CHECK-NEXT:    [[P1:%.*]] = call <2 x ptr addrspace(1)> @llvm.ptrmask.v2p1.v2i32(<2 x ptr addrspace(1)> [[P]], <2 x i32> [[TMP1]])
+; CHECK-NEXT:    ret <2 x ptr addrspace(1)> [[P1]]
+;
+  %p0 = call <2 x ptr addrspace(1) > @llvm.ptrmask.v2p1.v2i32(<2 x ptr addrspace(1) > %p, <2 x i32> %m0)
+  %p1 = call <2 x ptr addrspace(1) > @llvm.ptrmask.v2p1.v2i32(<2 x ptr addrspace(1) > %p0, <2 x i32> <i32 -2, i32 undef>)
+  ret <2 x ptr addrspace(1) > %p1
 }

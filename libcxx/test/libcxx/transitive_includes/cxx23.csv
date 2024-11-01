@@ -170,6 +170,10 @@ experimental/list experimental/memory_resource
 experimental/list list
 experimental/map experimental/memory_resource
 experimental/map map
+experimental/memory cstddef
+experimental/memory cstdint
+experimental/memory cstring
+experimental/memory limits
 experimental/memory_resource cstddef
 experimental/memory_resource experimental/utility
 experimental/memory_resource limits

@@ -70,69 +70,84 @@ jumpTable:
 body:             |
   ; MIPS32-LABEL: name: mod4_0_to_11
   ; MIPS32: bb.0.entry:
-  ; MIPS32:   successors: %bb.6(0x40000000), %bb.1(0x40000000)
-  ; MIPS32:   liveins: $a0
-  ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
-  ; MIPS32:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-  ; MIPS32:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-  ; MIPS32:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; MIPS32:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; MIPS32:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-  ; MIPS32:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; MIPS32:   [[SUB:%[0-9]+]]:_(s32) = G_SUB [[COPY]], [[C6]]
-  ; MIPS32:   [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
-  ; MIPS32:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-  ; MIPS32:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[COPY1]](s32), [[COPY2]]
-  ; MIPS32:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ICMP]], [[C3]]
-  ; MIPS32:   G_BRCOND [[AND]](s32), %bb.6
-  ; MIPS32: bb.1.entry:
-  ; MIPS32:   successors: %bb.2(0x20000000), %bb.3(0x20000000), %bb.4(0x20000000), %bb.5(0x20000000)
-  ; MIPS32:   [[JUMP_TABLE:%[0-9]+]]:_(p0) = G_JUMP_TABLE %jump-table.0
-  ; MIPS32:   G_BRJT [[JUMP_TABLE]](p0), %jump-table.0, [[COPY1]](s32)
-  ; MIPS32: bb.2.sw.bb:
-  ; MIPS32:   $v0 = COPY [[C4]](s32)
-  ; MIPS32:   RetRA implicit $v0
-  ; MIPS32: bb.3.sw.bb1:
-  ; MIPS32:   $v0 = COPY [[C3]](s32)
-  ; MIPS32:   RetRA implicit $v0
-  ; MIPS32: bb.4.sw.bb2:
-  ; MIPS32:   $v0 = COPY [[C2]](s32)
-  ; MIPS32:   RetRA implicit $v0
-  ; MIPS32: bb.5.sw.bb3:
-  ; MIPS32:   $v0 = COPY [[C1]](s32)
-  ; MIPS32:   RetRA implicit $v0
-  ; MIPS32: bb.6.sw.default:
-  ; MIPS32:   successors: %bb.7(0x80000000)
-  ; MIPS32: bb.7.sw.epilog:
-  ; MIPS32:   successors: %bb.13(0x40000000), %bb.8(0x40000000)
-  ; MIPS32:   [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; MIPS32:   [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[COPY]], [[C7]]
-  ; MIPS32:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[SUB1]](s32)
-  ; MIPS32:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[C1]](s32)
-  ; MIPS32:   [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[COPY3]](s32), [[COPY4]]
-  ; MIPS32:   [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; MIPS32:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[ICMP1]], [[C8]]
-  ; MIPS32:   G_BRCOND [[AND1]](s32), %bb.13
-  ; MIPS32: bb.8.sw.epilog:
-  ; MIPS32:   successors: %bb.9(0x20000000), %bb.10(0x20000000), %bb.11(0x20000000), %bb.12(0x20000000)
-  ; MIPS32:   [[JUMP_TABLE1:%[0-9]+]]:_(p0) = G_JUMP_TABLE %jump-table.1
-  ; MIPS32:   G_BRJT [[JUMP_TABLE1]](p0), %jump-table.1, [[COPY3]](s32)
-  ; MIPS32: bb.9.sw.bb4:
-  ; MIPS32:   $v0 = COPY [[C4]](s32)
-  ; MIPS32:   RetRA implicit $v0
-  ; MIPS32: bb.10.sw.bb5:
-  ; MIPS32:   $v0 = COPY [[C3]](s32)
-  ; MIPS32:   RetRA implicit $v0
-  ; MIPS32: bb.11.sw.bb6:
-  ; MIPS32:   $v0 = COPY [[C2]](s32)
-  ; MIPS32:   RetRA implicit $v0
-  ; MIPS32: bb.12.sw.bb7:
-  ; MIPS32:   $v0 = COPY [[C1]](s32)
-  ; MIPS32:   RetRA implicit $v0
-  ; MIPS32: bb.13.sw.default8:
-  ; MIPS32:   $v0 = COPY [[C5]](s32)
-  ; MIPS32:   RetRA implicit $v0
+  ; MIPS32-NEXT:   successors: %bb.6(0x40000000), %bb.1(0x40000000)
+  ; MIPS32-NEXT:   liveins: $a0
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+  ; MIPS32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
+  ; MIPS32-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
+  ; MIPS32-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+  ; MIPS32-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; MIPS32-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; MIPS32-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+  ; MIPS32-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; MIPS32-NEXT:   [[SUB:%[0-9]+]]:_(s32) = G_SUB [[COPY]], [[C6]]
+  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
+  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[C]](s32)
+  ; MIPS32-NEXT:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[COPY1]](s32), [[COPY2]]
+  ; MIPS32-NEXT:   G_BRCOND [[ICMP]](s32), %bb.6
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT: bb.1.entry:
+  ; MIPS32-NEXT:   successors: %bb.2(0x20000000), %bb.3(0x20000000), %bb.4(0x20000000), %bb.5(0x20000000)
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT:   [[JUMP_TABLE:%[0-9]+]]:_(p0) = G_JUMP_TABLE %jump-table.0
+  ; MIPS32-NEXT:   G_BRJT [[JUMP_TABLE]](p0), %jump-table.0, [[COPY1]](s32)
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT: bb.2.sw.bb:
+  ; MIPS32-NEXT:   $v0 = COPY [[C4]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT: bb.3.sw.bb1:
+  ; MIPS32-NEXT:   $v0 = COPY [[C3]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT: bb.4.sw.bb2:
+  ; MIPS32-NEXT:   $v0 = COPY [[C2]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT: bb.5.sw.bb3:
+  ; MIPS32-NEXT:   $v0 = COPY [[C1]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT: bb.6.sw.default:
+  ; MIPS32-NEXT:   successors: %bb.7(0x80000000)
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT: bb.7.sw.epilog:
+  ; MIPS32-NEXT:   successors: %bb.13(0x40000000), %bb.8(0x40000000)
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT:   [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; MIPS32-NEXT:   [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[COPY]], [[C7]]
+  ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[SUB1]](s32)
+  ; MIPS32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[C1]](s32)
+  ; MIPS32-NEXT:   [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[COPY3]](s32), [[COPY4]]
+  ; MIPS32-NEXT:   G_BRCOND [[ICMP1]](s32), %bb.13
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT: bb.8.sw.epilog:
+  ; MIPS32-NEXT:   successors: %bb.9(0x20000000), %bb.10(0x20000000), %bb.11(0x20000000), %bb.12(0x20000000)
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT:   [[JUMP_TABLE1:%[0-9]+]]:_(p0) = G_JUMP_TABLE %jump-table.1
+  ; MIPS32-NEXT:   G_BRJT [[JUMP_TABLE1]](p0), %jump-table.1, [[COPY3]](s32)
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT: bb.9.sw.bb4:
+  ; MIPS32-NEXT:   $v0 = COPY [[C4]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT: bb.10.sw.bb5:
+  ; MIPS32-NEXT:   $v0 = COPY [[C3]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT: bb.11.sw.bb6:
+  ; MIPS32-NEXT:   $v0 = COPY [[C2]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT: bb.12.sw.bb7:
+  ; MIPS32-NEXT:   $v0 = COPY [[C1]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT: {{  $}}
+  ; MIPS32-NEXT: bb.13.sw.default8:
+  ; MIPS32-NEXT:   $v0 = COPY [[C5]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $v0
   bb.1.entry:
     liveins: $a0
 

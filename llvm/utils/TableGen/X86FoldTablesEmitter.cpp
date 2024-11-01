@@ -439,7 +439,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   // Check no-kz version's isMoveReg
   StringRef RegInstName = RegRec->getName();
   unsigned DropLen =
-      RegInstName.endswith("rkz") ? 2 : (RegInstName.endswith("rk") ? 1 : 0);
+      RegInstName.ends_with("rkz") ? 2 : (RegInstName.ends_with("rk") ? 1 : 0);
   Record *BaseDef =
       DropLen ? Records.getDef(RegInstName.drop_back(DropLen)) : nullptr;
   bool IsMoveReg =
@@ -598,7 +598,7 @@ void X86FoldTablesEmitter::run(raw_ostream &o) {
     if (Match != OpcRegInsts.end()) {
       const CodeGenInstruction *RegInst = *Match;
       StringRef RegInstName = RegInst->TheDef->getName();
-      if (RegInstName.endswith("_REV") || RegInstName.endswith("_alt")) {
+      if (RegInstName.ends_with("_REV") || RegInstName.ends_with("_alt")) {
         if (auto *RegAltRec = Records.getDef(RegInstName.drop_back(4))) {
           RegInst = &Target.getInstruction(RegAltRec);
         }

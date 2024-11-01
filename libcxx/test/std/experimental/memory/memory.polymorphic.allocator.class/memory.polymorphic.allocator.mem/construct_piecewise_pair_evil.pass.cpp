@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: availability-aligned_allocation-missing
-
 // <memory_resource>
 
 // template <class T> class polymorphic_allocator

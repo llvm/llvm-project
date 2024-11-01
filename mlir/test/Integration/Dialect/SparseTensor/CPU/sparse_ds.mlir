@@ -25,7 +25,7 @@
 // REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false
 // R_UN: %{compile} | env %{env} %{run} | FileCheck %s
 
-!Filename = !llvm.ptr<i8>
+!Filename = !llvm.ptr
 
 #CSR = #sparse_tensor.encoding<{
   map = (i, j) -> ( i : dense, j : compressed)

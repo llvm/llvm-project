@@ -1,8 +1,8 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
-func.func @invalid_new_dense(%arg0: !llvm.ptr<i8>) -> tensor<32xf32> {
+func.func @invalid_new_dense(%arg0: !llvm.ptr) -> tensor<32xf32> {
   // expected-error@+1 {{'sparse_tensor.new' op result #0 must be sparse tensor of any type values, but got 'tensor<32xf32>'}}
-  %0 = sparse_tensor.new %arg0 : !llvm.ptr<i8> to tensor<32xf32>
+  %0 = sparse_tensor.new %arg0 : !llvm.ptr to tensor<32xf32>
   return %0 : tensor<32xf32>
 }
 
@@ -389,9 +389,9 @@ func.func @sparse_convert_dim_mismatch(%arg0: tensor<10x?xf32>) -> tensor<10x10x
 
 // -----
 
-func.func @invalid_out_dense(%arg0: tensor<10xf64>, %arg1: !llvm.ptr<i8>) {
+func.func @invalid_out_dense(%arg0: tensor<10xf64>, %arg1: !llvm.ptr) {
   // expected-error@+1 {{'sparse_tensor.out' op operand #0 must be sparse tensor of any type values, but got 'tensor<10xf64>'}}
-  sparse_tensor.out %arg0, %arg1 : tensor<10xf64>, !llvm.ptr<i8>
+  sparse_tensor.out %arg0, %arg1 : tensor<10xf64>, !llvm.ptr
   return
 }
 

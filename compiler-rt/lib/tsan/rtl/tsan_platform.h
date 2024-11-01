@@ -46,17 +46,16 @@ enum {
 
 /*
 C/C++ on linux/x86_64 and freebsd/x86_64
-0000 0000 1000 - 0080 0000 0000: main binary and/or MAP_32BIT mappings (512GB)
-0040 0000 0000 - 0100 0000 0000: -
-0100 0000 0000 - 1000 0000 0000: shadow
-1000 0000 0000 - 3000 0000 0000: -
-3000 0000 0000 - 3400 0000 0000: metainfo (memory blocks and sync objects)
-3400 0000 0000 - 5500 0000 0000: -
-5500 0000 0000 - 5680 0000 0000: pie binaries without ASLR or on 4.1+ kernels
-5680 0000 0000 - 7d00 0000 0000: -
-7b00 0000 0000 - 7c00 0000 0000: heap
-7c00 0000 0000 - 7e80 0000 0000: -
-7e80 0000 0000 - 8000 0000 0000: modules and main thread stack
+0000 0000 1000 - 0200 0000 0000: main binary and/or MAP_32BIT mappings (2TB)
+0200 0000 0000 - 1000 0000 0000: -
+1000 0000 0000 - 3000 0000 0000: shadow (32TB)
+3000 0000 0000 - 3800 0000 0000: metainfo (memory blocks and sync objects; 8TB)
+3800 0000 0000 - 5500 0000 0000: -
+5500 0000 0000 - 5a00 0000 0000: pie binaries without ASLR or on 4.1+ kernels
+5a00 0000 0000 - 7200 0000 0000: -
+7200 0000 0000 - 7300 0000 0000: heap (1TB)
+7300 0000 0000 - 7a00 0000 0000: -
+7a00 0000 0000 - 8000 0000 0000: modules and main thread stack (6TB)
 
 C/C++ on netbsd/amd64 can reuse the same mapping:
  * The address space starts from 0x1000 (option with 0x0) and ends with
@@ -72,20 +71,20 @@ C/C++ on netbsd/amd64 can reuse the same mapping:
 */
 struct Mapping48AddressSpace {
   static const uptr kMetaShadowBeg = 0x300000000000ull;
-  static const uptr kMetaShadowEnd = 0x340000000000ull;
-  static const uptr kShadowBeg     = 0x010000000000ull;
-  static const uptr kShadowEnd = 0x100000000000ull;
-  static const uptr kHeapMemBeg    = 0x7b0000000000ull;
-  static const uptr kHeapMemEnd    = 0x7c0000000000ull;
+  static const uptr kMetaShadowEnd = 0x380000000000ull;
+  static const uptr kShadowBeg = 0x100000000000ull;
+  static const uptr kShadowEnd = 0x300000000000ull;
+  static const uptr kHeapMemBeg = 0x720000000000ull;
+  static const uptr kHeapMemEnd = 0x730000000000ull;
   static const uptr kLoAppMemBeg   = 0x000000001000ull;
-  static const uptr kLoAppMemEnd   = 0x008000000000ull;
+  static const uptr kLoAppMemEnd = 0x020000000000ull;
   static const uptr kMidAppMemBeg  = 0x550000000000ull;
-  static const uptr kMidAppMemEnd  = 0x568000000000ull;
-  static const uptr kHiAppMemBeg   = 0x7e8000000000ull;
+  static const uptr kMidAppMemEnd = 0x5a0000000000ull;
+  static const uptr kHiAppMemBeg = 0x7a0000000000ull;
   static const uptr kHiAppMemEnd   = 0x800000000000ull;
-  static const uptr kShadowMsk = 0x780000000000ull;
-  static const uptr kShadowXor = 0x040000000000ull;
-  static const uptr kShadowAdd = 0x000000000000ull;
+  static const uptr kShadowMsk = 0x700000000000ull;
+  static const uptr kShadowXor = 0x000000000000ull;
+  static const uptr kShadowAdd = 0x100000000000ull;
   static const uptr kVdsoBeg       = 0xf000000000000000ull;
 };
 

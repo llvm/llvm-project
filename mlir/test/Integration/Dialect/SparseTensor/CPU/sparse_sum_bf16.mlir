@@ -31,7 +31,7 @@
 
 // UNSUPPORTED: target=aarch64{{.*}}
 
-!Filename = !llvm.ptr<i8>
+!Filename = !llvm.ptr
 
 #SparseMatrix = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : compressed, d1 : compressed)

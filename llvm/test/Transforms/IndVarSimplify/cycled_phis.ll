@@ -480,8 +480,8 @@ define i32 @start.from.sibling.iv.wide.cycled.phis.complex.phis(ptr %len.ptr, pt
 ; CHECK-NEXT:    [[IV_LCSSA2:%.*]] = phi i32 [ [[IV]], [[BACKEDGE]] ]
 ; CHECK-NEXT:    [[SWITCH_COND:%.*]] = call i32 @switch.cond()
 ; CHECK-NEXT:    switch i32 [[SWITCH_COND]], label [[TAKE_SAME:%.*]] [
-; CHECK-NEXT:    i32 1, label [[TAKE_INCREMENT:%.*]]
-; CHECK-NEXT:    i32 2, label [[TAKE_SMAX:%.*]]
+; CHECK-NEXT:      i32 1, label [[TAKE_INCREMENT:%.*]]
+; CHECK-NEXT:      i32 2, label [[TAKE_SMAX:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       take.same:
 ; CHECK-NEXT:    br label [[OUTER_LOOP_BACKEDGE]]

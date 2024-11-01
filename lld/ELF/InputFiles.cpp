@@ -1769,15 +1769,15 @@ void BinaryFile::parse() {
 
   llvm::StringSaver &saver = lld::saver();
 
-  symtab.addAndCheckDuplicate(Defined{nullptr, saver.save(s + "_start"),
+  symtab.addAndCheckDuplicate(Defined{this, saver.save(s + "_start"),
                                       STB_GLOBAL, STV_DEFAULT, STT_OBJECT, 0, 0,
                                       section});
-  symtab.addAndCheckDuplicate(Defined{nullptr, saver.save(s + "_end"),
-                                      STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
-                                      data.size(), 0, section});
-  symtab.addAndCheckDuplicate(Defined{nullptr, saver.save(s + "_size"),
-                                      STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
-                                      data.size(), 0, nullptr});
+  symtab.addAndCheckDuplicate(Defined{this, saver.save(s + "_end"), STB_GLOBAL,
+                                      STV_DEFAULT, STT_OBJECT, data.size(), 0,
+                                      section});
+  symtab.addAndCheckDuplicate(Defined{this, saver.save(s + "_size"), STB_GLOBAL,
+                                      STV_DEFAULT, STT_OBJECT, data.size(), 0,
+                                      nullptr});
 }
 
 ELFFileBase *elf::createObjFile(MemoryBufferRef mb, StringRef archiveName,

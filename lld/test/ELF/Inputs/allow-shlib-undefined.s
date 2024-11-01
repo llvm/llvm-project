@@ -1,3 +1,6 @@
 .globl _shared
+.weak x2
 _shared:
-  callq _unresolved@PLT
+  callq x1@PLT
+
+       callq x2@PLT

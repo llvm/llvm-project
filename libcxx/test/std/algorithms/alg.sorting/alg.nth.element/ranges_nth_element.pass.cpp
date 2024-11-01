@@ -30,7 +30,6 @@
 #include <ranges>
 
 #include "almost_satisfies_types.h"
-#include "boolean_testable.h"
 #include "test_iterators.h"
 
 // SFINAE tests.
@@ -253,25 +252,6 @@ constexpr bool test() {
       auto in = input;
       auto last = std::ranges::nth_element(in, in.begin() + 1, &S::comparator, &S::projection);
       assert(in[1] == S{2});
-      assert(last == in.end());
-    }
-  }
-
-  { // The comparator can return any type that's convertible to `bool`.
-    const std::array input = {2, 1, 3};
-    auto pred = [](int i, int j) { return BooleanTestable{i < j}; };
-
-    {
-      std::array in = input;
-      auto last = std::ranges::nth_element(in.begin(), in.begin() + 1, in.end(), pred);
-      assert(in[1] == 2);
-      assert(last == in.end());
-    }
-
-    {
-      std::array in = input;
-      auto last = std::ranges::nth_element(in, in.begin() + 1, pred);
-      assert(in[1] == 2);
       assert(last == in.end());
     }
   }

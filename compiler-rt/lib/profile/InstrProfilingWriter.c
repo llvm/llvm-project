@@ -262,21 +262,19 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
                    const char *BitmapBegin, const char *BitmapEnd,
                    VPDataReaderType *VPDataReader, const char *NamesBegin,
                    const char *NamesEnd, int SkipNameDataWrite) {
-  int DebugInfoCorrelate =
-      (__llvm_profile_get_version() & VARIANT_MASK_DBG_CORRELATE) != 0ULL;
+  int ProfileCorrelation = __llvm_profile_has_correlation();
 
   /* Calculate size of sections. */
   const uint64_t DataSectionSize =
-      DebugInfoCorrelate ? 0 : __llvm_profile_get_data_size(DataBegin, DataEnd);
-  const uint64_t NumData =
-      DebugInfoCorrelate ? 0 : __llvm_profile_get_num_data(DataBegin, DataEnd);
+      __llvm_profile_get_data_size(DataBegin, DataEnd);
+  const uint64_t NumData = __llvm_profile_get_num_data(DataBegin, DataEnd);
   const uint64_t CountersSectionSize =
       __llvm_profile_get_counters_size(CountersBegin, CountersEnd);
   const uint64_t NumCounters =
       __llvm_profile_get_num_counters(CountersBegin, CountersEnd);
   const uint64_t NumBitmapBytes =
       __llvm_profile_get_num_bitmap_bytes(BitmapBegin, BitmapEnd);
-  const uint64_t NamesSize = DebugInfoCorrelate ? 0 : NamesEnd - NamesBegin;
+  const uint64_t NamesSize = __llvm_profile_get_name_size(NamesBegin, NamesEnd);
 
   /* Create the header. */
   __llvm_profile_header Header;
@@ -304,7 +302,7 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
 #endif
 
   /* The data and names sections are omitted in lightweight mode. */
-  if (DebugInfoCorrelate) {
+  if (ProfileCorrelation) {
     Header.CountersDelta = 0;
     Header.NamesDelta = 0;
   }
@@ -320,21 +318,22 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
 
   /* Write the profile data. */
   ProfDataIOVec IOVecData[] = {
-      {DebugInfoCorrelate ? NULL : DataBegin, sizeof(uint8_t), DataSectionSize,
+      {ProfileCorrelation ? NULL : DataBegin, sizeof(uint8_t), DataSectionSize,
        0},
       {NULL, sizeof(uint8_t), PaddingBytesBeforeCounters, 1},
       {CountersBegin, sizeof(uint8_t), CountersSectionSize, 0},
       {NULL, sizeof(uint8_t), PaddingBytesAfterCounters, 1},
       {BitmapBegin, sizeof(uint8_t), NumBitmapBytes, 0},
       {NULL, sizeof(uint8_t), PaddingBytesAfterBitmapBytes, 1},
-      {(SkipNameDataWrite || DebugInfoCorrelate) ? NULL : NamesBegin,
+      {(SkipNameDataWrite || ProfileCorrelation) ? NULL : NamesBegin,
        sizeof(uint8_t), NamesSize, 0},
       {NULL, sizeof(uint8_t), PaddingBytesAfterNames, 1}};
   if (Writer->Write(Writer, IOVecData, sizeof(IOVecData) / sizeof(*IOVecData)))
     return -1;
 
-  /* Value profiling is not yet supported in continuous mode. */
-  if (__llvm_profile_is_continuous_mode_enabled())
+  /* Value profiling is not yet supported in continuous mode and profile
+   * correlation mode. */
+  if (__llvm_profile_is_continuous_mode_enabled() || ProfileCorrelation)
     return 0;
 
   return writeValueProfData(Writer, VPDataReader, DataBegin, DataEnd);

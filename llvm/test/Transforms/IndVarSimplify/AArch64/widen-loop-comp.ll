@@ -754,14 +754,14 @@ define i32 @test14a(i32 %start, ptr %p, ptr %q, i1 %c) personality i1 1 {
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i32 [[STOP]], 0
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    invoke void @test14a-callee(i1 [[LOOP_COND]])
-; CHECK-NEXT:    to label [[LOOP]] unwind label [[EXCEPTION:%.*]]
+; CHECK-NEXT:            to label [[LOOP]] unwind label [[EXCEPTION:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 -1 to i32
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ; CHECK:       exception:
 ; CHECK-NEXT:    [[FOO_LCSSA1_WIDE:%.*]] = phi i64 [ [[TMP1]], [[BACKEDGE]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = landingpad i1
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[FOO_LCSSA1_WIDE]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP4]]
 ;

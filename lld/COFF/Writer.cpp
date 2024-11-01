@@ -1389,7 +1389,9 @@ void Writer::sortECChunks() {
   for (OutputSection *sec : ctx.outputSections) {
     if (sec->isCodeSection())
       llvm::stable_sort(sec->chunks, [=](const Chunk *a, const Chunk *b) {
-        return a->getArm64ECRangeType() < b->getArm64ECRangeType();
+        std::optional<chpe_range_type> aType = a->getArm64ECRangeType(),
+                                       bType = b->getArm64ECRangeType();
+        return !aType || (bType && *aType < *bType);
       });
   }
 }
@@ -1421,8 +1423,17 @@ void Writer::assignAddresses() {
     // If /FUNCTIONPADMIN is used, functions are padded in order to create a
     // hotpatchable image.
     uint32_t padding = sec->isCodeSection() ? config->functionPadMin : 0;
+    std::optional<chpe_range_type> prevECRange;
 
     for (Chunk *c : sec->chunks) {
+      // Alignment EC code range baudaries.
+      if (isArm64EC(ctx.config.machine) && sec->isCodeSection()) {
+        std::optional<chpe_range_type> rangeType = c->getArm64ECRangeType();
+        if (rangeType != prevECRange) {
+          virtualSize = alignTo(virtualSize, 4096);
+          prevECRange = rangeType;
+        }
+      }
       if (padding && c->isHotPatchable())
         virtualSize += padding;
       virtualSize = alignTo(virtualSize, c->getAlignment());

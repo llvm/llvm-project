@@ -28,7 +28,6 @@
 #include <ranges>
 
 #include "almost_satisfies_types.h"
-#include "boolean_testable.h"
 #include "test_iterators.h"
 
 // SFINAE tests.
@@ -187,22 +186,6 @@ constexpr bool test() {
     {
       auto in = input;
       auto last = std::ranges::make_heap(in, &A::comparator, &A::projection);
-      verify_heap(in, last, expected);
-    }
-  }
-
-  { // The comparator can return any type that's convertible to `bool`.
-    const std::array input = {2, 1, 3};
-    std::array expected = {3, 1, 2};
-    {
-      auto in = input;
-      auto last = std::ranges::make_heap(in.begin(), in.end(), [](int i, int j) { return BooleanTestable{i < j}; });
-      verify_heap(in, last, expected);
-    }
-
-    {
-      auto in = input;
-      auto last = std::ranges::make_heap(in, [](int i, int j) { return BooleanTestable{i < j}; });
       verify_heap(in, last, expected);
     }
   }

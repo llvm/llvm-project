@@ -797,8 +797,10 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVX512BITALG__");
   if (HasAVX512BW)
     Builder.defineMacro("__AVX512BW__");
-  if (HasAVX512VL)
+  if (HasAVX512VL) {
     Builder.defineMacro("__AVX512VL__");
+    Builder.defineMacro("__EVEX256__");
+  }
   if (HasAVX512VBMI)
     Builder.defineMacro("__AVX512VBMI__");
   if (HasAVX512VBMI2)

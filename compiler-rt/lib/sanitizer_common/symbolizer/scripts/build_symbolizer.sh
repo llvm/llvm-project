@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
 # Run as: CLANG=bin/clang build_symbolizer.sh out.o
+# If you want to use a local copy of zlib, set ZLIB_SRC.
 # zlib can be downloaded from http://www.zlib.net.
 #
 # Script compiles self-contained object file with symbolization code.
@@ -20,6 +21,12 @@ set -u
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 SRC_DIR=$(readlink -f $SCRIPT_DIR/..)
+
+if [[ $# -ne 1 ]]; then
+  echo "Missing output file"
+  exit 1
+fi
+
 OUTPUT=$(readlink -f $1)
 COMPILER_RT_SRC=$(readlink -f ${SCRIPT_DIR}/../../../..)
 LLVM_SRC=${LLVM_SRC:-${COMPILER_RT_SRC}/../llvm}
@@ -52,6 +59,7 @@ LLVM_BUILD=${BUILD_DIR}/llvm
 SYMBOLIZER_BUILD=${BUILD_DIR}/symbolizer
 
 FLAGS=${FLAGS:-}
+ZLIB_SRC=${ZLIB_SRC:-}
 TARGET_TRIPLE=$($CC -print-target-triple $FLAGS)
 if [[ "$FLAGS" =~ "-m32" ]] ; then
   # Avoid new wrappers.
@@ -63,7 +71,15 @@ FLAGS+=" -include ${SRC_DIR}/../sanitizer_redefine_builtins.h -DSANITIZER_COMMON
 LINKFLAGS="-fuse-ld=lld -target $TARGET_TRIPLE"
 
 # Build zlib.
-[[ -d ${ZLIB_BUILD} ]] || git clone https://github.com/madler/zlib ${ZLIB_BUILD}
+if [[ ! -d ${ZLIB_BUILD} ]]; then
+  if [[ -z "${ZLIB_SRC}" ]]; then
+    git clone https://github.com/madler/zlib ${ZLIB_BUILD}
+  else
+    ZLIB_SRC=$(readlink -f $ZLIB_SRC)
+    cp -r ${ZLIB_SRC}/* ${ZLIB_BUILD}/
+  fi
+fi
+
 cd ${ZLIB_BUILD}
 AR="${AR}" CC="${CC}" CFLAGS="$FLAGS -Wno-deprecated-non-prototype" RANLIB=/bin/true ./configure --static
 make -j libz.a

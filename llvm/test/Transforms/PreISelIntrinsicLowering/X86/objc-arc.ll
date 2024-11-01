@@ -9,7 +9,7 @@ declare i32 @__gxx_personality_v0(...)
 define ptr @test_objc_autorelease(ptr %arg0) {
 ; CHECK-LABEL: test_objc_autorelease
 ; CHECK-NEXT: entry
-; CHECK-NEXT: %0 = notail call ptr @objc_autorelease(ptr %arg0)
+; CHECK-NEXT: %0 = notail call ptr @objc_autorelease(ptr returned %arg0)
 ; CHECK-NEXT: ret ptr %0
 entry:
   %0 = call ptr @llvm.objc.autorelease(ptr %arg0)
@@ -39,7 +39,7 @@ entry:
 define ptr @test_objc_autoreleaseReturnValue(ptr %arg0) {
 ; CHECK-LABEL: test_objc_autoreleaseReturnValue
 ; CHECK-NEXT: entry
-; CHECK-NEXT: %0 = tail call ptr @objc_autoreleaseReturnValue(ptr %arg0)
+; CHECK-NEXT: %0 = tail call ptr @objc_autoreleaseReturnValue(ptr returned %arg0)
 ; CHECK-NEXT: ret ptr %0
 entry:
   %0 = call ptr @llvm.objc.autoreleaseReturnValue(ptr %arg0)
@@ -119,7 +119,7 @@ entry:
 define ptr @test_objc_retain(ptr %arg0) {
 ; CHECK-LABEL: test_objc_retain
 ; CHECK-NEXT: entry
-; CHECK-NEXT: %0 = tail call ptr @objc_retain(ptr %arg0)
+; CHECK-NEXT: %0 = tail call ptr @objc_retain(ptr returned %arg0)
 ; CHECK-NEXT: ret ptr %0
 entry:
   %0 = call ptr @llvm.objc.retain(ptr %arg0)
@@ -129,7 +129,7 @@ entry:
 define ptr @test_objc_retainAutorelease(ptr %arg0) {
 ; CHECK-LABEL: test_objc_retainAutorelease
 ; CHECK-NEXT: entry
-; CHECK-NEXT: %0 = call ptr @objc_retainAutorelease(ptr %arg0)
+; CHECK-NEXT: %0 = call ptr @objc_retainAutorelease(ptr returned %arg0)
 ; CHECK-NEXT: ret ptr %0
 entry:
   %0 = call ptr @llvm.objc.retainAutorelease(ptr %arg0)
@@ -139,13 +139,17 @@ entry:
 define ptr @test_objc_retainAutoreleaseReturnValue(ptr %arg0) {
 ; CHECK-LABEL: test_objc_retainAutoreleaseReturnValue
 ; CHECK-NEXT: entry
-; CHECK-NEXT: %0 = tail call ptr @objc_retainAutoreleaseReturnValue(ptr %arg0)
+; CHECK-NEXT: %0 = tail call ptr @objc_retainAutoreleaseReturnValue(ptr returned %arg0)
 ; CHECK-NEXT: ret ptr %0
 entry:
   %0 = tail call ptr @llvm.objc.retainAutoreleaseReturnValue(ptr %arg0)
 	ret ptr %0
 }
 
+; Note: we don't want this intrinsic to have its argument marked 'returned',
+; since that breaks the autorelease elision marker optimization when
+; save/restores of the reciever are introduced between the msg send and the
+; retain. See issue#69658.
 define ptr @test_objc_retainAutoreleasedReturnValue(ptr %arg0) {
 ; CHECK-LABEL: test_objc_retainAutoreleasedReturnValue
 ; CHECK-NEXT: entry
@@ -210,6 +214,10 @@ entry:
 	ret ptr %0
 }
 
+; Note: we don't want this intrinsic to have its argument marked 'returned',
+; since that breaks the autorelease elision marker optimization when
+; save/restores of the reciever are introduced between the msg send and the
+; claim. See issue#69658.
 define ptr @test_objc_unsafeClaimAutoreleasedReturnValue(ptr %arg0) {
 ; CHECK-LABEL: test_objc_unsafeClaimAutoreleasedReturnValue
 ; CHECK-NEXT: entry
@@ -260,7 +268,7 @@ entry:
 define ptr @test_objc_retain_autorelease(ptr %arg0) {
 ; CHECK-LABEL: test_objc_retain_autorelease
 ; CHECK-NEXT: entry
-; CHECK-NEXT: %0 = call ptr @objc_retain_autorelease(ptr %arg0)
+; CHECK-NEXT: %0 = call ptr @objc_retain_autorelease(ptr returned %arg0)
 ; CHECK-NEXT: ret ptr %0
 entry:
   %0 = call ptr @llvm.objc.retain.autorelease(ptr %arg0)

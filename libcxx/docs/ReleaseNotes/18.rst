@@ -72,6 +72,11 @@ Improvements and New Features
 Deprecations and Removals
 -------------------------
 
+- Availability macros which will never trigger an error have been removed. This includes anything that has been
+  introduced before macOS 10.13, iOS 12, tvOS 12 and watchOS 4. This shouldn't affect anybody, since AppleClang 15
+  doesn't support any older OSes. If you are a vendor and make use of these macros, please inform the libc++ team so we
+  can re-introduce them and consider upstreaming support for your platform.
+
 - The non-conforming constructor ``std::future_error(std::error_code)`` has been removed. Please use the
   ``std::future_error(std::future_errc)`` constructor provided in C++17 instead.
 

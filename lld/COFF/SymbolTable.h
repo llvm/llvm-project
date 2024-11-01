@@ -133,6 +133,7 @@ private:
 
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> symMap;
   std::unique_ptr<BitcodeCompiler> lto;
+  bool ltoCompilationDone = false;
 
   COFFLinkerContext &ctx;
 };

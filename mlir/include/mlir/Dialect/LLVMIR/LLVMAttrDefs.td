@@ -643,14 +643,14 @@ def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
     #domain = #llvm.alias_scope_domain<id = distinct[1]<>, description = "Optional domain description">
     #scope1 = #llvm.alias_scope<id = distinct[2]<>, domain = #domain>
     #scope2 = #llvm.alias_scope<id = distinct[3]<>, domain = #domain, description = "Optional scope description">
-    llvm.func @foo(%ptr1 : !llvm.ptr<i32>) {
+    llvm.func @foo(%ptr1 : !llvm.ptr) {
         %c0 = llvm.mlir.constant(0 : i32) : i32
         %c4 = llvm.mlir.constant(4 : i32) : i32
-        %1 = llvm.ptrtoint %ptr1 : !llvm.ptr<i32> to i32
+        %1 = llvm.ptrtoint %ptr1 : !llvm.ptr to i32
         %2 = llvm.add %1, %c1 : i32
-        %ptr2 = llvm.inttoptr %2 : i32 to !llvm.ptr<i32>
-        llvm.store %c0, %ptr1 { alias_scopes = [#scope1], llvm.noalias = [#scope2] } : !llvm.ptr<i32>
-        llvm.store %c4, %ptr2 { alias_scopes = [#scope2], llvm.noalias = [#scope1] } : !llvm.ptr<i32>
+        %ptr2 = llvm.inttoptr %2 : i32 to !llvm.ptr
+        llvm.store %c0, %ptr1 { alias_scopes = [#scope1], llvm.noalias = [#scope2] } : i32, !llvm.ptr
+        llvm.store %c4, %ptr2 { alias_scopes = [#scope2], llvm.noalias = [#scope1] } : i32, !llvm.ptr
         llvm.return
     }
     ```

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03, c++11, c++14
-// REQUIRES: has-unix-headers
+// UNSUPPORTED: c++03, c++11, c++14
+// REQUIRES: has-unix-headers, libcpp-hardening-mode=debug
 
 // <memory_resource>
 

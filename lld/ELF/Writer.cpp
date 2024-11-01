@@ -2023,10 +2023,16 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
             });
         if (!allNeededIsKnown)
           continue;
-        for (Symbol *sym : file->requiredSymbols)
-          if (sym->isUndefined() && !sym->isWeak())
+        for (Symbol *sym : file->requiredSymbols) {
+          if (sym->isUndefined() && !sym->isWeak()) {
             diagnose("undefined reference due to --no-allow-shlib-undefined: " +
                      toString(*sym) + "\n>>> referenced by " + toString(file));
+          } else if (sym->isDefined() && sym->computeBinding() == STB_LOCAL) {
+            diagnose("non-exported symbol '" + toString(*sym) + "' in '" +
+                     toString(sym->file) + "' is referenced by DSO '" +
+                     toString(file) + "'");
+          }
+        }
       }
     }
   }

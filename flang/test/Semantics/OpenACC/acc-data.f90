@@ -188,3 +188,26 @@ program openacc_data_validity
   !$acc end data
 
 end program openacc_data_validity
+
+module mod1
+  type :: t1
+    integer :: a
+  contains
+    procedure :: t1_proc
+  end type
+
+contains
+
+
+  subroutine t1_proc(this)
+    class(t1) :: this
+  end subroutine
+
+  subroutine sub4(t)
+    type(t1) :: t
+
+    !ERROR: Only variables are allowed in data clauses on the DATA directive
+    !$acc data copy(t%t1_proc)
+    !$acc end data
+  end subroutine
+end module

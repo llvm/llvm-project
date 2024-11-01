@@ -57,7 +57,7 @@ public:
   bool shouldVisitLambdaBody() const { return false; }
 
   bool VisitLinkageSpecDecl(LinkageSpecDecl *LinkSpecDecl) const {
-    if (LinkSpecDecl->getLanguage() != LinkageSpecDecl::lang_c ||
+    if (LinkSpecDecl->getLanguage() != LinkageSpecLanguageIDs::C ||
         !LinkSpecDecl->hasBraces())
       return true;
 

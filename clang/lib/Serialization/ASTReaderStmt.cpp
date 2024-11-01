@@ -534,8 +534,8 @@ void ASTStmtReader::VisitExpr(Expr *E) {
 void ASTStmtReader::VisitConstantExpr(ConstantExpr *E) {
   VisitExpr(E);
 
-  auto StorageKind = Record.readInt();
-  assert(E->ConstantExprBits.ResultKind == StorageKind && "Wrong ResultKind!");
+  auto StorageKind = static_cast<ConstantResultStorageKind>(Record.readInt());
+  assert(E->getResultStorageKind() == StorageKind && "Wrong ResultKind!");
 
   E->ConstantExprBits.APValueKind = Record.readInt();
   E->ConstantExprBits.IsUnsigned = Record.readInt();
@@ -544,22 +544,20 @@ void ASTStmtReader::VisitConstantExpr(ConstantExpr *E) {
   E->ConstantExprBits.IsImmediateInvocation = Record.readInt();
 
   switch (StorageKind) {
-  case ConstantExpr::RSK_None:
+  case ConstantResultStorageKind::None:
     break;
 
-  case ConstantExpr::RSK_Int64:
+  case ConstantResultStorageKind::Int64:
     E->Int64Result() = Record.readInt();
     break;
 
-  case ConstantExpr::RSK_APValue:
+  case ConstantResultStorageKind::APValue:
     E->APValueResult() = Record.readAPValue();
     if (E->APValueResult().needsCleanup()) {
       E->ConstantExprBits.HasCleanup = true;
       Record.getContext().addDestruction(&E->APValueResult());
     }
     break;
-  default:
-    llvm_unreachable("unexpected ResultKind!");
   }
 
   E->setSubExpr(Record.readSubExpr());
@@ -682,7 +680,7 @@ void ASTStmtReader::VisitCharacterLiteral(CharacterLiteral *E) {
   VisitExpr(E);
   E->setValue(Record.readInt());
   E->setLocation(readSourceLocation());
-  E->setKind(static_cast<CharacterLiteral::CharacterKind>(Record.readInt()));
+  E->setKind(static_cast<CharacterLiteralKind>(Record.readInt()));
 }
 
 void ASTStmtReader::VisitParenExpr(ParenExpr *E) {
@@ -1293,8 +1291,7 @@ void ASTStmtReader::VisitSourceLocExpr(SourceLocExpr *E) {
   E->ParentContext = readDeclAs<DeclContext>();
   E->BuiltinLoc = readSourceLocation();
   E->RParenLoc = readSourceLocation();
-  E->SourceLocExprBits.Kind =
-      static_cast<SourceLocExpr::IdentKind>(Record.readInt());
+  E->SourceLocExprBits.Kind = Record.readInt();
 }
 
 void ASTStmtReader::VisitAddrLabelExpr(AddrLabelExpr *E) {
@@ -2924,7 +2921,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case EXPR_CONSTANT:
       S = ConstantExpr::CreateEmpty(
-          Context, static_cast<ConstantExpr::ResultStorageKind>(
+          Context, static_cast<ConstantResultStorageKind>(
                        /*StorageKind=*/Record[ASTStmtReader::NumExprFields]));
       break;
 

@@ -402,7 +402,7 @@ SVal StoreManager::getLValueFieldOrIvar(const Decl *D, SVal Base) {
   Loc BaseL = Base.castAs<Loc>();
   const SubRegion* BaseR = nullptr;
 
-  switch (BaseL.getSubKind()) {
+  switch (BaseL.getKind()) {
   case loc::MemRegionValKind:
     BaseR = cast<SubRegion>(BaseL.castAs<loc::MemRegionVal>().getRegion());
     break;

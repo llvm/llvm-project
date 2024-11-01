@@ -306,11 +306,11 @@ bool isUARSafeCall(CallInst *CI) {
   // It's safe to both pass pointers to local variables to them
   // and to tail-call them.
   return F && (F->isIntrinsic() || F->doesNotReturn() ||
-               F->getName().startswith("__asan_") ||
-               F->getName().startswith("__hwsan_") ||
-               F->getName().startswith("__ubsan_") ||
-               F->getName().startswith("__msan_") ||
-               F->getName().startswith("__tsan_"));
+               F->getName().starts_with("__asan_") ||
+               F->getName().starts_with("__hwsan_") ||
+               F->getName().starts_with("__ubsan_") ||
+               F->getName().starts_with("__msan_") ||
+               F->getName().starts_with("__tsan_"));
 }
 
 bool hasUseAfterReturnUnsafeUses(Value &V) {
@@ -368,11 +368,11 @@ bool SanitizerBinaryMetadata::pretendAtomicAccess(const Value *Addr) {
     const auto OF = Triple(Mod.getTargetTriple()).getObjectFormat();
     const auto ProfSec =
         getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false);
-    if (GV->getSection().endswith(ProfSec))
+    if (GV->getSection().ends_with(ProfSec))
       return true;
   }
-  if (GV->getName().startswith("__llvm_gcov") ||
-      GV->getName().startswith("__llvm_gcda"))
+  if (GV->getName().starts_with("__llvm_gcov") ||
+      GV->getName().starts_with("__llvm_gcda"))
     return true;
 
   return false;

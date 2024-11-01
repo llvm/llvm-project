@@ -34,14 +34,9 @@ end function host_fn
 
 ! MLIR-HOST: func.func @{{.*}}target_subr(
 ! MLIR-HOST: return
-! MLIR-HOST-NOT: func.func @{{.*}}target_subr_omp_outline_0(
-! MLIR-DEVICE-NOT: func.func @{{.*}}target_subr(
-! MLIR-DEVICE: func.func @{{.*}}target_subr_omp_outline_0(
 ! MLIR-DEVICE: return
 
-! LLVM-ALL-NOT: define {{.*}} @{{.*}}target_subr_omp_outline_0{{.*}}(
 ! LLVM-HOST: define {{.*}} @{{.*}}target_subr{{.*}}(
-! LLVM-DEVICE-NOT: {{.*}} @{{.*}}target_subr{{.*}}(
 ! LLVM-ALL: define {{.*}} @__omp_offloading_{{.*}}_{{.*}}_target_subr__{{.*}}(
 subroutine target_subr(x)
   integer, intent(out) :: x

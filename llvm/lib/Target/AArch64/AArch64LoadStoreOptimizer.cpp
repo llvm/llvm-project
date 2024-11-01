@@ -1017,15 +1017,23 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
   MachineBasicBlock *MBB = I->getParent();
   MachineOperand RegOp0 = getLdStRegOp(*RtMI);
   MachineOperand RegOp1 = getLdStRegOp(*Rt2MI);
+  MachineOperand &PairedRegOp = RtMI == &*Paired ? RegOp0 : RegOp1;
   // Kill flags may become invalid when moving stores for pairing.
   if (RegOp0.isUse()) {
     if (!MergeForward) {
       // Clear kill flags on store if moving upwards. Example:
-      //   STRWui %w0, ...
+      //   STRWui kill %w0, ...
       //   USE %w1
       //   STRWui kill %w1  ; need to clear kill flag when moving STRWui upwards
-      RegOp0.setIsKill(false);
-      RegOp1.setIsKill(false);
+      // We are about to move the store of w1, so its kill flag may become
+      // invalid; not the case for w0.
+      // Since w1 is used between the stores, the kill flag on w1 is cleared
+      // after merging.
+      //   STPWi kill %w0, %w1, ...
+      //   USE %w1
+      for (auto It = std::next(I); It != Paired && PairedRegOp.isKill(); ++It)
+        if (It->readsRegister(PairedRegOp.getReg(), TRI))
+          PairedRegOp.setIsKill(false);
     } else {
       // Clear kill flags of the first stores register. Example:
       //   STRWui %w1, ...
