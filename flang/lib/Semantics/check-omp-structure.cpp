@@ -317,7 +317,7 @@ std::optional<bool> OmpStructureChecker::IsContiguous(
                              return std::optional<bool>{};
                            },
                        },
-                       object.u);
+      object.u);
 }
 
 void OmpStructureChecker::CheckMultipleOccurrence(
