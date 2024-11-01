@@ -1385,13 +1385,28 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   case SPIRV::OpSDot:
   case SPIRV::OpUDot: {
-    if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_integer_dot_product)) {
+    if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_integer_dot_product))
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_integer_dot_product);
-    }
     Reqs.addCapability(SPIRV::Capability::DotProductKHR);
-    Reqs.addCapability(SPIRV::Capability::DotProductInputAllKHR);
-    Reqs.addCapability(SPIRV::Capability::DotProductInput4x8BitKHR);
-    Reqs.addCapability(SPIRV::Capability::DotProductInput4x8BitPackedKHR);
+
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    const MachineInstr *InstrPtr = &MI;
+    assert(MI.getOperand(1).isReg() && "Unexpected operand in dot");
+
+    Register TypeReg = InstrPtr->getOperand(1).getReg();
+    SPIRVType *TypeDef = MRI.getVRegDef(TypeReg);
+    if (TypeDef->getOpcode() == SPIRV::OpTypeInt) {
+      assert(TypeDef->getOperand(1).getImm() == 32);
+      Reqs.addCapability(SPIRV::Capability::DotProductInput4x8BitPackedKHR);
+    } else if (TypeDef->getOpcode() == SPIRV::OpTypeVector) {
+      SPIRVType *ScalarTypeDef =
+          MRI.getVRegDef(TypeDef->getOperand(1).getReg());
+      assert(ScalarTypeDef->getOpcode() == SPIRV::OpTypeInt);
+      auto Capability = ScalarTypeDef->getOperand(1).getImm() == 8
+                            ? SPIRV::Capability::DotProductInput4x8BitKHR
+                            : SPIRV::Capability::DotProductInputAllKHR;
+      Reqs.addCapability(Capability);
+    }
     break;
   }
   default:
