@@ -83,6 +83,22 @@ define <2 x i32> @test_s_trunc_dsve_lane1(<2 x i32> %a, <vscale x 2 x i64> %b) {
     ret <2 x i32> %e
 }
 
+; (negative test) Extracted element is not within V-register.
+define <2 x i32> @test_s_trunc_dsve_lane2(<2 x i32> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: test_s_trunc_dsve_lane2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.d, z1.d[2]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    mov v0.s[1], w8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+    %c = extractelement <vscale x 2 x i64> %b, i32 2
+    %d = trunc i64 %c to i32
+    %e = insertelement <2 x i32> %a, i32 %d, i64 1
+    ret <2 x i32> %e
+}
+
 define <4 x i32> @test_qs_trunc_dsve_lane0(<4 x i32> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: test_qs_trunc_dsve_lane0:
 ; CHECK:       // %bb.0:
@@ -100,6 +116,20 @@ define <4 x i32> @test_qs_trunc_dsve_lane1(<4 x i32> %a, <vscale x 2 x i64> %b) 
 ; CHECK-NEXT:    mov v0.s[3], v1.s[2]
 ; CHECK-NEXT:    ret
     %c = extractelement <vscale x 2 x i64> %b, i32 1
+    %d = trunc i64 %c to i32
+    %e = insertelement <4 x i32> %a, i32 %d, i64 3
+    ret <4 x i32> %e
+}
+
+; (negative test) Extracted element is not within V-register.
+define <4 x i32> @test_qs_trunc_dsve_lane2(<4 x i32> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: test_qs_trunc_dsve_lane2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.d, z1.d[2]
+; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    mov v0.s[3], w8
+; CHECK-NEXT:    ret
+    %c = extractelement <vscale x 2 x i64> %b, i32 2
     %d = trunc i64 %c to i32
     %e = insertelement <4 x i32> %a, i32 %d, i64 3
     ret <4 x i32> %e
