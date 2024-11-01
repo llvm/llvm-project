@@ -16151,6 +16151,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
                              SVN->getMask());
   } else {
     // NOTE: this strips poison generating flags.
+    N0->dropFlags(SDNodeFlags::PoisonGeneratingFlags);
     R = DAG.getNode(N0.getOpcode(), SDLoc(N0), N0->getVTList(), Ops);
   }
   assert(DAG.isGuaranteedNotToBeUndefOrPoison(R, /*PoisonOnly*/ false) &&
