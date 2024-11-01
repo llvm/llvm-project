@@ -196,6 +196,8 @@ LegalityPredicate LegalityPredicates::sameSize(unsigned TypeIdx0,
 
 LegalityPredicate LegalityPredicates::memSizeInBytesNotPow2(unsigned MMOIdx) {
   return [=](const LegalityQuery &Query) {
+    if (Query.MMODescrs[MMOIdx].MemoryTy.isScalableVector())
+      return true;
     return !llvm::has_single_bit<uint32_t>(
         Query.MMODescrs[MMOIdx].MemoryTy.getSizeInBytes());
   };
