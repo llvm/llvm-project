@@ -9,8 +9,9 @@
 ; when the profile uses md5.
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.md5.prof -sample-profile-merge-inlinee=true -use-profiled-call-graph=0 -S | FileCheck -check-prefix=MERGE  %s
 
-; Test we properly merge not inlined profile with '--sample-profile-merge-inlinee' even if '--disable-sample-loader-inlining' is true
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.md5.prof -sample-profile-merge-inlinee=true --disable-sample-loader-inlining -use-profiled-call-graph=0 -S | FileCheck -check-prefix=MERGE  %s
+; Test we properly use flattened profile when using '--disable-sample-loader-inlining'.
+
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=true --disable-sample-loader-inlining -use-profiled-call-graph=0 -S | FileCheck -check-prefix=FLATTEN  %s
 
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 
@@ -103,3 +104,10 @@ declare i32 @printf(ptr, ...)
 ; MERGE: !{!"branch_weights", i32 10}
 ; MERGE: name: "sub"
 ; MERGE-NEXT: {!"function_entry_count", i64 3}
+
+; FLATTEN: name: "sum"
+; FLATTEN-NEXT: {!"function_entry_count", i64 35}
+; FLATTEN: !{!"branch_weights", i32 13, i32 23}
+; FLATTEN: !{!"branch_weights", i32 12}
+; FLATTEN: name: "sub"
+; FLATTEN-NEXT: {!"function_entry_count", i64 3}

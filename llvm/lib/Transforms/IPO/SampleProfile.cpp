@@ -195,8 +195,7 @@ static cl::opt<bool> ProfileSizeInline(
 static cl::opt<bool> DisableSampleLoaderInlining(
     "disable-sample-loader-inlining", cl::Hidden, cl::init(false),
     cl::desc("If true, artifically skip inline transformation in sample-loader "
-             "pass, and merge (or scale) profiles (as configured by "
-             "--sample-profile-merge-inlinee)."));
+             "pass, and use flattened profiles to emit annotation."));
 
 namespace llvm {
 cl::opt<bool>
@@ -1978,6 +1977,13 @@ bool SampleProfileLoader::doInitialization(Module &M,
 
   PSL = Reader->getProfileSymbolList();
 
+  if (DisableSampleLoaderInlining.getNumOccurrences())
+    DisableSampleProfileInlining = DisableSampleLoaderInlining;
+
+  // Use flattened profile if inlining is disabled.
+  if (DisableSampleProfileInlining && !Reader->profileIsCS())
+    ProfileConverter::flattenProfile(Reader->getProfiles());
+
   // While profile-sample-accurate is on, ignore symbol list.
   ProfAccForSymsInList =
       ProfileAccurateForSymsInList && PSL && !ProfileSampleAccurate;
@@ -2005,9 +2011,6 @@ bool SampleProfileLoader::doInitialization(Module &M,
                               {ProfileInlineReplayFormat}},
         /*EmitRemarks=*/false, InlineContext{LTOPhase, InlinePass::ReplaySampleProfileInliner});
   }
-
-  if (DisableSampleLoaderInlining.getNumOccurrences())
-    DisableSampleProfileInlining = DisableSampleLoaderInlining;
 
   // Apply tweaks if context-sensitive or probe-based profile is available.
   if (Reader->profileIsCS() || Reader->profileIsPreInlined() ||
