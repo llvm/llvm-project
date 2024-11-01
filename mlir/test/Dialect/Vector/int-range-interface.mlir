@@ -93,3 +93,14 @@ func.func @vector_insertelement() -> vector<4xindex> {
   %3 = test.reflect_bounds %2 : vector<4xindex>
   func.return %3 : vector<4xindex>
 }
+
+// CHECK-LABEL: func @test_loaded_vector_extract
+// No bounds
+// CHECK: test.reflect_bounds %{{.*}} : i32
+func.func @test_loaded_vector_extract(%memref : memref<16xi32>) -> i32 {
+  %c0 = arith.constant 0 : index
+  %v = vector.load %memref[%c0] : memref<16xi32>, vector<4xi32>
+  %e = vector.extract %v[0] : i32 from vector<4xi32>
+  %bounds = test.reflect_bounds %e : i32
+  func.return %bounds : i32
+}
