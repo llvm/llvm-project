@@ -57,6 +57,9 @@ sanitizers ``implicit-signed-integer-truncation`` and
 ``implicit-unsigned-integer-truncation`` support the ability to adjust
 instrumentation based on type.
 
+By default, supported sanitizers will have their instrumentation disabled for
+types specified within an ignorelist.
+
 .. code-block:: bash
 
   $ cat foo.c
@@ -74,27 +77,21 @@ For example, supplying the above ``ignorelist.txt`` to
 ``-fsanitize-ignorelist=ignorelist.txt`` disables overflow sanitizer
 instrumentation for arithmetic operations containing values of type ``int``.
 
-The following SCL categories are supported: ``=no_sanitize`` and ``=sanitize``.
-The ``no_sanitize`` category is the default for any entry within an ignorelist
-and specifies that the query, if matched, will have its sanitizer
-instrumentation ignored. Conversely, ``sanitize`` causes its queries, if
-matched, to be left out of the ignorelist -- essentially ensuring sanitizer
-instrumentation remains for those types. This is useful for whitelisting
-specific types. If multiple entries for the same type exist, those with the
-``sanitize`` category take precedence.
+The ``=sanitize`` category is also supported. Any types assigned to the
+``sanitize`` category will have their sanitizer instrumentation remain. If the
+same type appears within or across ignorelists with different categories the
+``sanitize`` category takes precedence -- regardless of order.
 
 With this, one may disable instrumentation for some or all types and
 specifically allow instrumentation for one or many types -- including types
-created via ``typedef``.
-
-The example below shows how one may control the signed truncation sanitizer for
-various types.
+created via ``typedef``. This is a way to achieve a sort of "allowlist" for
+supported sanitizers.
 
 .. code-block:: bash
 
   $ cat ignorelist.txt
   [implicit-signed-integer-truncation]
-  type:*=no_sanitize
+  type:*
   type:T=sanitize
 
   $ cat foo.c

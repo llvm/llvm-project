@@ -7,6 +7,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/nosan-same-as-no-category.ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=INT
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/myty.ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=MYTY
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=implicit-signed-integer-truncation,implicit-unsigned-integer-truncation -fsanitize-ignorelist=%t/trunc.ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=TRUNC
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=implicit-signed-integer-truncation,implicit-unsigned-integer-truncation -fsanitize-ignorelist=%t/docs.ignorelist -emit-llvm %t/test.cpp -o - | FileCheck %s --check-prefix=TRUNC2
 
 //--- int.ignorelist
 [{unsigned-integer-overflow,signed-integer-overflow}]
@@ -16,7 +17,7 @@ type:int
 type:int
 
 //--- nosan-same-as-no-category.ignorelist
-type:int=no_sanitize
+type:int
 
 //--- myty.ignorelist
 [{unsigned-integer-overflow,signed-integer-overflow}]
@@ -27,6 +28,11 @@ type:myty=sanitize
 [{implicit-signed-integer-truncation,implicit-unsigned-integer-truncation}]
 type:char
 type:unsigned char
+
+//--- docs.ignorelist
+[implicit-signed-integer-truncation]
+type:*
+type:T=sanitize
 
 //--- test.cpp
 // INT-LABEL: ignore_int
@@ -75,3 +81,18 @@ void truncation(char A, int B, unsigned char C, short D) {
   (void)A;
   (void)D;
 }
+
+
+// Matches the example from clang/docs/SanitizerSpecialCaseList.rst
+typedef char T;
+typedef char U;
+// TRUNC2-LABEL: docs_example
+void docs_example(int toobig) {
+// TRUNC2: %handler.implicit_conversion
+  T a = toobig;
+// TRUNC2-NOT: %handler.implicit_conversion
+  U b = toobig;
+// TRUNC2-NOT: %handler.implicit_conversion
+  char c = toobig;
+}
+

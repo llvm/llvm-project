@@ -16,28 +16,28 @@
 // much rather eagerly sanitize than silently forgo sanitization.
 
 //--- order-0.ignorelist
-type:int=no_sanitize
+type:int
 type:int=sanitize
 
 //--- order-1.ignorelist
 type:int=sanitize
-type:int=no_sanitize
+type:int
 
 //--- order-2.ignorelist
-type:in*=no_sanitize
+type:in*
 type:int=sanitize
 
 //--- order-3.ignorelist
 type:in*=sanitize
-type:int=no_sanitize
+type:int
 
 //--- order-4.ignorelist
-type:int=no_sanitize
+type:int
 type:in*=sanitize
 
 //--- order-5.ignorelist
 type:int=sanitize
-type:in*=no_sanitize
+type:in*
 
 //--- order-6.ignorelist
 type:int=sanitize
