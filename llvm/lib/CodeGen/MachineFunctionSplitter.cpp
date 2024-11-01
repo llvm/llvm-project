@@ -35,6 +35,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -157,7 +158,7 @@ setDescendantEHBlocksCold(SmallVectorImpl<MachineBasicBlock *> &EHBlocks,
 static bool isColdBlock(const MachineBasicBlock &MBB,
                         const MachineBlockFrequencyInfo *MBFI,
                         ProfileSummaryInfo *PSI) {
-  Optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
+  std::optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
   if (!Count)
     return true;
 

@@ -17,6 +17,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -83,12 +84,12 @@ protected:
 
   struct Probe {
     std::string FunctionName;
-    Optional<std::string> LinkageName;
+    std::optional<std::string> LinkageName;
     yaml::Hex64 CFGHash;
     yaml::Hex64 CounterOffset;
     uint32_t NumCounters;
-    Optional<std::string> FilePath;
-    Optional<int> LineNumber;
+    std::optional<std::string> FilePath;
+    std::optional<int> LineNumber;
   };
 
   struct CorrelationData {

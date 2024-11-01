@@ -18,6 +18,7 @@
 #include "llvm/Remarks/RemarkStreamer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -45,7 +46,7 @@ static remarks::Type toRemarkType(enum DiagnosticKind Kind) {
 }
 
 /// DiagnosticLocation -> remarks::RemarkLocation.
-static Optional<remarks::RemarkLocation>
+static std::optional<remarks::RemarkLocation>
 toRemarkLocation(const DiagnosticLocation &DL) {
   if (!DL.isValid())
     return std::nullopt;

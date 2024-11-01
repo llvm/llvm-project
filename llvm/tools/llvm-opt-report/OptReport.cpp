@@ -32,6 +32,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
 #include <map>
+#include <optional>
 #include <set>
 
 using namespace llvm;
@@ -208,7 +209,7 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
         Arg.Val.getAsInteger(10, UnrollCount);
     }
 
-    const Optional<remarks::RemarkLocation> &Loc = Remark.Loc;
+    const std::optional<remarks::RemarkLocation> &Loc = Remark.Loc;
     if (!Loc)
       continue;
 

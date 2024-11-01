@@ -1,6 +1,6 @@
 ; RUN: %lli -jit-kind=mcjit -relocation-model=pic -code-model=small %s > /dev/null
 ; RUN: %lli -lljit-platform=Inactive -relocation-model=pic -code-model=small %s > /dev/null
-; XFAIL: mips-, mipsel-, aarch64, arm, i686, i386
+; XFAIL: target={{(mips|mipsel)-.*}}, target={{(aarch64|arm).*}}, target={{(i686|i386).*}}
 
 @count = global i32 1, align 4
 

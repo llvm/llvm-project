@@ -602,6 +602,17 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::ctpop, MVT::nxv8i64, 21},
 };
 
+static unsigned getISDForVPIntrinsicID(Intrinsic::ID ID) {
+  switch (ID) {
+#define HELPER_MAP_VPID_TO_VPSD(VPID, VPSD)                                    \
+  case Intrinsic::VPID:                                                        \
+    return ISD::VPSD;
+#include "llvm/IR/VPIntrinsics.def"
+#undef HELPER_MAP_VPID_TO_VPSD
+  }
+  return ISD::DELETED_NODE;
+}
+
 InstructionCost
 RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                     TTI::TargetCostKind CostKind) {
@@ -657,6 +668,20 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     unsigned Cost = 7;
     auto LT = getTypeLegalizationCost(RetTy);
     if (TLI->isOperationCustom(ISD::VP_FRINT, LT.second))
+      return Cost * LT.first;
+    break;
+  }
+  case Intrinsic::vp_ceil:
+  case Intrinsic::vp_floor:
+  case Intrinsic::vp_round:
+  case Intrinsic::vp_roundeven:
+  case Intrinsic::vp_roundtozero: {
+    // Rounding with static rounding mode needs two more instructions to
+    // swap/write FRM than vp_rint.
+    unsigned Cost = 7;
+    auto LT = getTypeLegalizationCost(RetTy);
+    unsigned VPISD = getISDForVPIntrinsicID(ICA.getID());
+    if (TLI->isOperationCustom(VPISD, LT.second))
       return Cost * LT.first;
     break;
   }

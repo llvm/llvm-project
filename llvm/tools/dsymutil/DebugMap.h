@@ -22,7 +22,6 @@
 #define LLVM_TOOLS_DSYMUTIL_DEBUGMAP_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
@@ -35,6 +34,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -135,11 +135,11 @@ public:
 class DebugMapObject {
 public:
   struct SymbolMapping {
-    Optional<yaml::Hex64> ObjectAddress;
+    std::optional<yaml::Hex64> ObjectAddress;
     yaml::Hex64 BinaryAddress;
     yaml::Hex32 Size;
 
-    SymbolMapping(Optional<uint64_t> ObjectAddr, uint64_t BinaryAddress,
+    SymbolMapping(std::optional<uint64_t> ObjectAddr, uint64_t BinaryAddress,
                   uint32_t Size)
         : BinaryAddress(BinaryAddress), Size(Size) {
       if (ObjectAddr)
@@ -156,7 +156,7 @@ public:
   /// Adds a symbol mapping to this DebugMapObject.
   /// \returns false if the symbol was already registered. The request
   /// is discarded in this case.
-  bool addSymbol(StringRef SymName, Optional<uint64_t> ObjectAddress,
+  bool addSymbol(StringRef SymName, std::optional<uint64_t> ObjectAddress,
                  uint64_t LinkedAddress, uint32_t Size);
 
   /// Lookup a symbol mapping.

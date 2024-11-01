@@ -393,7 +393,7 @@ void BinaryFunction::updateEHRanges() {
         // Extract exception handling information from the instruction.
         const MCSymbol *LP = nullptr;
         uint64_t Action = 0;
-        if (const Optional<MCPlus::MCLandingPad> EHInfo =
+        if (const std::optional<MCPlus::MCLandingPad> EHInfo =
                 BC.MIB->getEHInfo(*II))
           std::tie(LP, Action) = *EHInfo;
 

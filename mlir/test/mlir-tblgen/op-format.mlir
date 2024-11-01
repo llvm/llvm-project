@@ -398,6 +398,9 @@ func.func @foo() {
   return
 }
 
+// CHECK: test.format_custom_directive_spacing "a" "b"
+test.format_custom_directive_spacing "a" "b"
+
 // CHECK: test.format_literal_following_optional_group(5 : i32) : i32 {a}
 test.format_literal_following_optional_group(5 : i32) : i32 {a}
 

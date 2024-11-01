@@ -5,6 +5,12 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zfh -verify-machineinstrs \
 ; RUN:   -target-abi lp64f < %s \
 ; RUN:   | FileCheck -check-prefix=RV64IZFH %s
+; RUN: llc -mtriple=riscv32 -mattr=+zfhmin -verify-machineinstrs \
+; RUN:   -target-abi ilp32f < %s \
+; RUN:   | FileCheck -check-prefix=RV32IZFHMIN %s
+; RUN: llc -mtriple=riscv64 -mattr=+zfhmin -verify-machineinstrs \
+; RUN:   -target-abi lp64f < %s \
+; RUN:   | FileCheck -check-prefix=RV64IZFHMIN %s
 
 define half @frem_f16(half %a, half %b) nounwind {
 ; RV32IZFH-LABEL: frem_f16:
@@ -30,6 +36,30 @@ define half @frem_f16(half %a, half %b) nounwind {
 ; RV64IZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZFH-NEXT:    addi sp, sp, 16
 ; RV64IZFH-NEXT:    ret
+;
+; RV32IZFHMIN-LABEL: frem_f16:
+; RV32IZFHMIN:       # %bb.0:
+; RV32IZFHMIN-NEXT:    addi sp, sp, -16
+; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
+; RV32IZFHMIN-NEXT:    fcvt.s.h fa1, fa1
+; RV32IZFHMIN-NEXT:    call fmodf@plt
+; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
+; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFHMIN-NEXT:    addi sp, sp, 16
+; RV32IZFHMIN-NEXT:    ret
+;
+; RV64IZFHMIN-LABEL: frem_f16:
+; RV64IZFHMIN:       # %bb.0:
+; RV64IZFHMIN-NEXT:    addi sp, sp, -16
+; RV64IZFHMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa1, fa1
+; RV64IZFHMIN-NEXT:    call fmodf@plt
+; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
+; RV64IZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFHMIN-NEXT:    addi sp, sp, 16
+; RV64IZFHMIN-NEXT:    ret
   %1 = frem half %a, %b
   ret half %1
 }

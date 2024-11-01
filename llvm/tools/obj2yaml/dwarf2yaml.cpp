@@ -18,6 +18,7 @@
 #include "llvm/ObjectYAML/DWARFYAML.h"
 
 #include <algorithm>
+#include <optional>
 
 using namespace llvm;
 
@@ -165,7 +166,7 @@ Error dumpDebugRanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   return ErrorSuccess();
 }
 
-static Optional<DWARFYAML::PubSection>
+static std::optional<DWARFYAML::PubSection>
 dumpPubSection(const DWARFContext &DCtx, const DWARFSection &Section,
                bool IsGNUStyle) {
   DWARFYAML::PubSection Y;

@@ -1,7 +1,7 @@
 ; REQUIRES: cxx-shared-library
 ; RUN: %lli -jit-kind=mcjit -extra-module=%p/Inputs/multi-module-eh-b.ll %s
 
-; XFAIL: arm, cygwin, windows-msvc, windows-gnu
+; XFAIL: target=arm{{.*}}, target={{.*-(cygwin|windows-msvc|windows-gnu)}}
 declare ptr @__cxa_allocate_exception(i64)
 declare void @__cxa_throw(ptr, ptr, ptr)
 declare i32 @__gxx_personality_v0(...)

@@ -9,12 +9,12 @@
 #include "BinaryHolder.h"
 #include "DebugMap.h"
 #include "MachOUtils.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <vector>
 
 namespace {
@@ -59,10 +59,10 @@ private:
   std::vector<std::string> CommonSymbols;
 
   /// Map of the currently processed object file symbol addresses.
-  StringMap<Optional<uint64_t>> CurrentObjectAddresses;
+  StringMap<std::optional<uint64_t>> CurrentObjectAddresses;
 
   /// Lazily computed map of symbols aliased to the processed object file.
-  StringMap<Optional<uint64_t>> CurrentObjectAliasMap;
+  StringMap<std::optional<uint64_t>> CurrentObjectAliasMap;
 
   /// If CurrentObjectAliasMap has been computed for a given address.
   SmallSet<uint64_t, 4> SeenAliasValues;

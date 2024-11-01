@@ -2739,6 +2739,14 @@ bool UnwrappedLineParser::handleCppAttributes() {
   return false;
 }
 
+/// Returns whether \c Tok begins a block.
+bool UnwrappedLineParser::isBlockBegin(const FormatToken &Tok) const {
+  // FIXME: rename the function or make
+  // Tok.isOneOf(tok::l_brace, TT_MacroBlockBegin) work.
+  return Style.isVerilog() ? Keywords.isVerilogBegin(Tok)
+                           : Tok.is(tok::l_brace);
+}
+
 FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
                                                   bool KeepBraces) {
   assert(FormatTok->is(tok::kw_if) && "'if' expected");
@@ -2764,7 +2772,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
   FormatToken *IfLeftBrace = nullptr;
   IfStmtKind IfBlockKind = IfStmtKind::NotIf;
 
-  if (Keywords.isBlockBegin(*FormatTok, Style)) {
+  if (isBlockBegin(*FormatTok)) {
     FormatTok->setFinalizedType(TT_ControlStatementLBrace);
     IfLeftBrace = FormatTok;
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
@@ -2796,7 +2804,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
     }
     nextToken();
     handleAttributes();
-    if (Keywords.isBlockBegin(*FormatTok, Style)) {
+    if (isBlockBegin(*FormatTok)) {
       const bool FollowedByIf = Tokens->peekNextToken()->is(tok::kw_if);
       FormatTok->setFinalizedType(TT_ElseLBrace);
       ElseLeftBrace = FormatTok;
@@ -3063,7 +3071,7 @@ void UnwrappedLineParser::parseNew() {
 void UnwrappedLineParser::parseLoopBody(bool KeepBraces, bool WrapRightBrace) {
   keepAncestorBraces();
 
-  if (Keywords.isBlockBegin(*FormatTok, Style)) {
+  if (isBlockBegin(*FormatTok)) {
     if (!KeepBraces)
       FormatTok->setFinalizedType(TT_ControlStatementLBrace);
     FormatToken *LeftBrace = FormatTok;

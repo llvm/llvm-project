@@ -2315,6 +2315,16 @@ def FormatCustomDirectiveAttributes
   }];
 }
 
+def FormatCustomDirectiveSpacing
+    : TEST_Op<"format_custom_directive_spacing"> {
+  let arguments = (ins StrAttr:$attr1, StrAttr:$attr2);
+  let assemblyFormat = [{
+    custom<CustomDirectiveSpacing>($attr1)
+    custom<CustomDirectiveSpacing>($attr2)
+    attr-dict
+  }];
+}
+
 def FormatCustomDirectiveAttrDict
     : TEST_Op<"format_custom_directive_attrdict"> {
   let arguments = (ins I64Attr:$attr, OptionalAttr<I64Attr>:$optAttr);

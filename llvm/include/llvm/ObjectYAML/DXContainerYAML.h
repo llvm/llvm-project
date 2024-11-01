@@ -20,6 +20,7 @@
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -37,21 +38,21 @@ struct VersionTuple {
 struct FileHeader {
   std::vector<llvm::yaml::Hex8> Hash;
   VersionTuple Version;
-  Optional<uint32_t> FileSize;
+  std::optional<uint32_t> FileSize;
   uint32_t PartCount;
-  Optional<std::vector<uint32_t>> PartOffsets;
+  std::optional<std::vector<uint32_t>> PartOffsets;
 };
 
 struct DXILProgram {
   uint8_t MajorVersion;
   uint8_t MinorVersion;
   uint16_t ShaderKind;
-  Optional<uint32_t> Size;
+  std::optional<uint32_t> Size;
   uint16_t DXILMajorVersion;
   uint16_t DXILMinorVersion;
-  Optional<uint32_t> DXILOffset;
-  Optional<uint32_t> DXILSize;
-  Optional<std::vector<llvm::yaml::Hex8>> DXIL;
+  std::optional<uint32_t> DXILOffset;
+  std::optional<uint32_t> DXILSize;
+  std::optional<std::vector<llvm::yaml::Hex8>> DXIL;
 };
 
 #define SHADER_FLAG(Num, Val, Str) bool Val = false;
@@ -75,9 +76,9 @@ struct Part {
   Part(std::string N, uint32_t S) : Name(N), Size(S) {}
   std::string Name;
   uint32_t Size;
-  Optional<DXILProgram> Program;
-  Optional<ShaderFlags> Flags;
-  Optional<ShaderHash> Hash;
+  std::optional<DXILProgram> Program;
+  std::optional<ShaderFlags> Flags;
+  std::optional<ShaderHash> Hash;
 };
 
 struct Object {

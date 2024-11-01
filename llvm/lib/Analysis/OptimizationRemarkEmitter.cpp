@@ -20,6 +20,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/InitializePasses.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -60,7 +61,8 @@ bool OptimizationRemarkEmitter::invalidate(
   return false;
 }
 
-Optional<uint64_t> OptimizationRemarkEmitter::computeHotness(const Value *V) {
+std::optional<uint64_t>
+OptimizationRemarkEmitter::computeHotness(const Value *V) {
   if (!BFI)
     return std::nullopt;
 

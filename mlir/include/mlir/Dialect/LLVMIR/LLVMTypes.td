@@ -42,7 +42,7 @@ def LLVMArrayType : LLVMType<"LLVMArray", "array", [
 
   let parameters = (ins "Type":$elementType, "unsigned":$numElements);
   let assemblyFormat = [{
-    `<` $numElements `x` ` ` custom<PrettyLLVMType>($elementType) `>`
+    `<` $numElements `x` custom<PrettyLLVMType>($elementType) `>`
   }];
 
   let genVerifyDecl = 1;
@@ -182,7 +182,7 @@ def LLVMFixedVectorType : LLVMType<"LLVMFixedVector", "vec", [
 
   let parameters = (ins "Type":$elementType, "unsigned":$numElements);
   let assemblyFormat = [{
-    `<` $numElements `x` ` ` custom<PrettyLLVMType>($elementType) `>`
+    `<` $numElements `x` custom<PrettyLLVMType>($elementType) `>`
   }];
 
   let genVerifyDecl = 1;

@@ -319,6 +319,8 @@ Bug Fixes
   `Issue 58302 <https://github.com/llvm/llvm-project/issues/58302>`_
   `Issue 58753 <https://github.com/llvm/llvm-project/issues/58753>`_
   `Issue 59100 <https://github.com/llvm/llvm-project/issues/59100>`_
+- Fix issue using __attribute__((format)) on non-variadic functions that expect
+  more than one formatted argument.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
