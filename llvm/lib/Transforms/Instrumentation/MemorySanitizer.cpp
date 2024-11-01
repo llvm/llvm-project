@@ -3978,6 +3978,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(), ShadowArgs);
     setShadow(&I, CI);
 
+    // The trailing verbatim args are guaranteed to be initialized (because of
+    // insertShadowCheck above), hence they won't "contaminate" the origin.
     setOriginForNaryOp(I);
   }
 
