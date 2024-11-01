@@ -293,8 +293,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+rva22s64 %s -o - | FileCheck --check-prefix=RVA22S64 %s
 ; RUN: llc -mtriple=riscv64 -mattr=+rva23u64 %s -o - | FileCheck --check-prefix=RVA23U64 %s
 ; RUN: llc -mtriple=riscv64 -mattr=+rva23s64 %s -o - | FileCheck --check-prefix=RVA23S64 %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-rvb23u64 %s -o - | FileCheck --check-prefix=RVB23U64 %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-rvb23s64 %s -o - | FileCheck --check-prefix=RVB23S64 %s
+; RUN: llc -mtriple=riscv64 -mattr=+rvb23u64 %s -o - | FileCheck --check-prefix=RVB23U64 %s
+; RUN: llc -mtriple=riscv64 -mattr=+rvb23s64 %s -o - | FileCheck --check-prefix=RVB23S64 %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-rvm23u32 %s -o - | FileCheck --check-prefix=RVM23U32 %s
 
 ; CHECK: .attribute 4, 16

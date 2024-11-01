@@ -2946,7 +2946,6 @@ def Vector_StepOp : Vector_Op<"step", [Pure]> {
     %1 = vector.step : vector<[4]xindex> ; [0, 1, .., <vscale * 4 - 1>]
     ```
   }];
-  let hasFolder = 1;
   let results = (outs VectorOfRankAndType<[1], [Index]>:$result);
   let assemblyFormat = "attr-dict `:` type($result)";
 }
@@ -3090,7 +3089,6 @@ def Vector_WarpExecuteOnLane0Op : Vector_Op<"warp_execute_on_lane_0",
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<(ins "Value":$laneid, "int64_t":$warpSize)>,
     OpBuilder<(ins "TypeRange":$resultTypes, "Value":$laneid,
                    "int64_t":$warpSize)>,
     // `blockArgTypes` are different than `args` types as they are they

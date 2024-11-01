@@ -1211,3 +1211,59 @@ define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i
     %out = call <3 x i3> @llvm.experimental.vector.compress(<3 x i3> %vec, <3 x i1> %mask, <3 x i3> undef)
     ret <3 x i3> %out
 }
+
+define <4 x i32> @test_compress_v4i32_zero_passthru(<4 x i32> %vec, <4 x i1> %mask) {
+; AVX2-LABEL: test_compress_v4i32_zero_passthru:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm1
+; AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vmovaps %xmm2, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    vmovss %xmm0, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    vmovd %xmm1, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    vextractps $1, %xmm0, -24(%rsp,%rax,4)
+; AVX2-NEXT:    vpextrd $1, %xmm1, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    addq %rax, %rcx
+; AVX2-NEXT:    vextractps $2, %xmm0, -24(%rsp,%rcx,4)
+; AVX2-NEXT:    vpextrd $2, %xmm1, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addq %rcx, %rax
+; AVX2-NEXT:    vpextrd $3, %xmm1, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    addq %rax, %rcx
+; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
+; AVX2-NEXT:    andl $3, %eax
+; AVX2-NEXT:    vextractps $3, %xmm0, -24(%rsp,%rax,4)
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    cmpq $3, %rcx
+; AVX2-NEXT:    movl $3, %edx
+; AVX2-NEXT:    cmovbq %rcx, %rdx
+; AVX2-NEXT:    vextractps $3, %xmm0, %ecx
+; AVX2-NEXT:    cmovbel %eax, %ecx
+; AVX2-NEXT:    movl %ecx, -24(%rsp,%rdx,4)
+; AVX2-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: test_compress_v4i32_zero_passthru:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512F-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512F-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: test_compress_v4i32_zero_passthru:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX512VL-NEXT:    vptestmd %xmm1, %xmm1, %k1
+; AVX512VL-NEXT:    vpcompressd %xmm0, %xmm0 {%k1} {z}
+; AVX512VL-NEXT:    retq
+    %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> %mask, <4 x i32> zeroinitializer)
+    ret <4 x i32> %out
+}

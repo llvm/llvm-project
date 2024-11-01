@@ -15,6 +15,8 @@
 #include <__compare/compare_three_way_result.h>
 #include <__compare/three_way_comparable.h>
 #include <__config>
+#include <__cstddef/nullptr_t.h>
+#include <__cstddef/size_t.h>
 #include <__functional/hash.h>
 #include <__functional/operations.h>
 #include <__memory/allocator_traits.h> // __pointer
@@ -46,7 +48,6 @@
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/private_constructor_tag.h>
-#include <cstddef>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

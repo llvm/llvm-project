@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
@@ -854,7 +853,7 @@ private:
 
 class LinkGraph {
 private:
-  using SectionMap = MapVector<StringRef, std::unique_ptr<Section>>;
+  using SectionMap = DenseMap<StringRef, std::unique_ptr<Section>>;
   using ExternalSymbolMap = StringMap<Symbol *>;
   using AbsoluteSymbolSet = DenseSet<Symbol *>;
   using BlockSet = DenseSet<Block *>;
@@ -1596,7 +1595,7 @@ private:
   unsigned PointerSize;
   llvm::endianness Endianness;
   GetEdgeKindNameFunction GetEdgeKindName = nullptr;
-  MapVector<StringRef, std::unique_ptr<Section>> Sections;
+  DenseMap<StringRef, std::unique_ptr<Section>> Sections;
   ExternalSymbolMap ExternalSymbols;
   AbsoluteSymbolSet AbsoluteSymbols;
   orc::shared::AllocActions AAs;

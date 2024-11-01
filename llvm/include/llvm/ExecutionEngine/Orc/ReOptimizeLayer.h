@@ -178,4 +178,4 @@ private:
 } // namespace orc
 } // namespace llvm
 
-#endif
+#endif // LLVM_EXECUTIONENGINE_ORC_REOPTIMIZELAYER_H

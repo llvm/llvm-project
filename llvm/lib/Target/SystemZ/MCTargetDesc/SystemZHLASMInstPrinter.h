@@ -37,7 +37,7 @@ public:
 
 private:
   void printFormattedRegName(const MCAsmInfo *MAI, MCRegister Reg,
-                             raw_ostream &O) const override;
+                             raw_ostream &O) override;
 };
 
 } // end namespace llvm

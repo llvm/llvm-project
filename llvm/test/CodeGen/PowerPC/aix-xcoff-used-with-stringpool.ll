@@ -1,10 +1,12 @@
 ;; Test that the string pooling pass does not pool globals that are
 ;; in llvm.used or in llvm.compiler.used.
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc-ibm-aix-xcoff -data-sections=false < %s | \
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc-ibm-aix-xcoff \
+; RUN:   -ppc-merge-string-pool=true -global-merge-all-const=false -data-sections=false < %s | \
 ; RUN:   FileCheck %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc64-ibm-aix-xcoff -data-sections=false < %s | \
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc64-ibm-aix-xcoff \
+; RUN:   -ppc-merge-string-pool=true -global-merge-all-const=false -data-sections=false < %s | \
 ; RUN:   FileCheck %s
 
 @keep_this = internal constant [5 x i8] c"keep1", align 1

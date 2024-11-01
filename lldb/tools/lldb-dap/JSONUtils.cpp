@@ -21,6 +21,7 @@
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBValue.h"
+#include "lldb/Host/PosixApi.h"
 
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"

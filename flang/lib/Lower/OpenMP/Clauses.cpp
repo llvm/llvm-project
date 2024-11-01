@@ -338,6 +338,27 @@ ReductionOperator makeReductionOperator(const parser::OmpReductionOperator &inp,
       inp.u);
 }
 
+clause::TaskDependenceType
+makeDepType(const parser::OmpTaskDependenceType &inp) {
+  switch (inp.v) {
+  case parser::OmpTaskDependenceType::Type::Depobj:
+    return clause::TaskDependenceType::Depobj;
+  case parser::OmpTaskDependenceType::Type::In:
+    return clause::TaskDependenceType::In;
+  case parser::OmpTaskDependenceType::Type::Inout:
+    return clause::TaskDependenceType::Inout;
+  // Inoutset        // missing-in-parser
+  // Mutexinoutset   // missing-in-parser
+  case parser::OmpTaskDependenceType::Type::Out:
+    return clause::TaskDependenceType::Out;
+  case parser::OmpTaskDependenceType::Type::Sink:
+    return clause::TaskDependenceType::Sink;
+  case parser::OmpTaskDependenceType::Type::Source:
+    return clause::TaskDependenceType::Source;
+  }
+  llvm_unreachable("Unexpected dependence type");
+}
+
 // --------------------------------------------------------------------
 // Actual clauses. Each T (where tomp::T exists in ClauseT) has its "make".
 
@@ -554,18 +575,6 @@ Depend make(const parser::OmpClause::Depend &inp,
   // Iteration is the equivalent of parser::OmpDependSinkVec
   using Iteration = Doacross::Vector::value_type; // LoopIterationT
 
-  CLAUSET_ENUM_CONVERT( //
-      convert1, parser::OmpDependenceType::Type, Depend::TaskDependenceType,
-      // clang-format off
-      MS(In,     In)
-      MS(Out,    Out)
-      MS(Inout,  Inout)
-      // MS(, Mutexinoutset)   // missing-in-parser
-      // MS(, Inputset)        // missing-in-parser
-      // MS(, Depobj)          // missing-in-parser
-      // clang-format on
-  );
-
   return Depend{Fortran::common::visit( //
       common::visitors{
           // Doacross
@@ -593,17 +602,18 @@ Depend make(const parser::OmpClause::Depend &inp,
             return Doacross{{/*DependenceType=*/Doacross::DependenceType::Sink,
                              /*Vector=*/makeList(s.v, convert2)}};
           },
-          // Depend::WithLocators
+          // Depend::DepType
           [&](const wrapped::InOut &s) -> Variant {
-            auto &t0 = std::get<parser::OmpDependenceType>(s.t);
-            auto &t1 = std::get<std::list<parser::Designator>>(s.t);
-            auto convert4 = [&](const parser::Designator &t) {
-              return makeObject(t, semaCtx);
-            };
-            return Depend::WithLocators{
-                {/*TaskDependenceType=*/convert1(t0.v),
-                 /*Iterator=*/std::nullopt,
-                 /*LocatorList=*/makeList(t1, convert4)}};
+            auto &t0 =
+                std::get<std::optional<parser::OmpIteratorModifier>>(s.t);
+            auto &t1 = std::get<parser::OmpTaskDependenceType>(s.t);
+            auto &t2 = std::get<parser::OmpObjectList>(s.t);
+
+            auto &&maybeIter = maybeApply(
+                [&](auto &&s) { return makeIterator(s, semaCtx); }, t0);
+            return Depend::DepType{{/*TaskDependenceType=*/makeDepType(t1),
+                                    /*Iterator=*/std::move(maybeIter),
+                                    /*LocatorList=*/makeObjects(t2, semaCtx)}};
           },
       },
       inp.v.u)};
@@ -613,8 +623,14 @@ Depend make(const parser::OmpClause::Depend &inp,
 
 Destroy make(const parser::OmpClause::Destroy &inp,
              semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: destroy");
+  // inp.v -> std::optional<OmpDestroyClause>
+  auto &&maybeObject = maybeApply(
+      [&](const parser::OmpDestroyClause &c) {
+        return makeObject(c.v, semaCtx);
+      },
+      inp.v);
+
+  return Destroy{/*DestroyVar=*/std::move(maybeObject)};
 }
 
 Detach make(const parser::OmpClause::Detach &inp,
@@ -1278,8 +1294,8 @@ Uniform make(const parser::OmpClause::Uniform &inp,
 
 Update make(const parser::OmpClause::Update &inp,
             semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  return Update{/*TaskDependenceType=*/std::nullopt};
+  // inp.v -> parser::OmpUpdateClause
+  return Update{/*TaskDependenceType=*/makeDepType(inp.v.v)};
 }
 
 Use make(const parser::OmpClause::Use &inp,
