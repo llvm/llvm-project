@@ -1033,9 +1033,8 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
             ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
             : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
 
-    processMapObjects(stmtCtx, clauseLocation, std::get<ObjectList>(clause.t),
-                      mapTypeBits, parentMemberIndices, result.mapVars,
-                      mapSymbols);
+    processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
+                      parentMemberIndices, result.mapVars, mapSymbols);
   };
 
   bool clauseFound = findRepeatableClause<omp::clause::To>(callbackFn);
