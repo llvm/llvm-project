@@ -3142,7 +3142,7 @@ def VecShuffleDynamicOp : CIR_Op<"vec.shuffle.dynamic",
 }
 
 //===----------------------------------------------------------------------===//
-// BaseClassAddr
+// BaseClassAddr & BaseClassAddr
 //===----------------------------------------------------------------------===//
 
 def BaseClassAddrOp : CIR_Op<"base_class_addr"> {
@@ -3182,8 +3182,63 @@ def BaseClassAddrOp : CIR_Op<"base_class_addr"> {
     `)` `[` $offset `]` `->` qualified(type($base_addr)) attr-dict
   }];
 
-  // FIXME: add verifier.
-  // Check whether both src/dst pointee's are compatible.
+  // The validity of the relationship of derived and base cannot
+  // yet be verified, currently not worth adding such a feature
+  // just for this.
+  let hasVerifier = 0;
+}
+
+def DerivedClassAddrOp : CIR_Op<"derived_class_addr"> {
+  let summary = "Get the derived class address for a class/struct";
+  let description = [{
+    The `cir.derived_class_addr` operaration gets the address of a particular
+    derived class given a non-virtual base class pointer. The offset in bytes
+    of the base class must be passed in, similar to `cir.base_class_addr`, but
+    going into the other direction (In the itanium ABI this means lowering to
+    a negative offset).
+
+    The operation contains a flag for whether or not the operand may be nullptr.
+    That depends on the context and cannot be known by the operation, and that
+    information affects how the operation is lowered.
+
+    Example:
+    ```c++
+    class A { int a; };
+    class B { int b;
+    public:
+        A *getAsA();
+    };
+    class X : public A, public B { int x; };
+
+    A *B::getAsA() {
+      return static_cast<X*>(this);
+    ```
+
+    leads to
+    ```mlir
+      %2 = cir.load %0 : !cir.ptr<!cir.ptr<!ty_B>>, !cir.ptr<!ty_B>
+      %3 = cir.derived_class_addr(%2 : !cir.ptr<!ty_B> nonnull) [4] -> !cir.ptr<!ty_X>
+      %4 = cir.base_class_addr(%3 : !cir.ptr<!ty_X>) [0] -> !cir.ptr<!ty_A>
+      cir.return %4
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "derived class pointer", [MemRead]>:$base_addr,
+    IndexAttr:$offset, UnitAttr:$assume_not_null);
+
+  let results = (outs Res<CIR_PointerType, "">:$derived_addr);
+
+  let assemblyFormat = [{
+    `(`
+      $base_addr `:` qualified(type($base_addr))
+      (`nonnull` $assume_not_null^)?
+    `)` `[` $offset `]` `->` qualified(type($derived_addr)) attr-dict
+  }];
+
+  // The validity of the relationship of derived and base cannot
+  // yet be verified, currently not worth adding such a feature
+  // just for this.
   let hasVerifier = 0;
 }
 

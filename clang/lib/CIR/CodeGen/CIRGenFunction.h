@@ -1631,6 +1631,12 @@ public:
                                 CastExpr::path_const_iterator PathEnd,
                                 bool NullCheckValue, SourceLocation Loc);
 
+  Address getAddressOfDerivedClass(Address baseAddr,
+                                   const CXXRecordDecl *derived,
+                                   CastExpr::path_const_iterator pathBegin,
+                                   CastExpr::path_const_iterator pathEnd,
+                                   bool nullCheckValue);
+
   /// Emit code for the start of a function.
   /// \param Loc       The location to be associated with the function.
   /// \param StartLoc  The location of the function body.

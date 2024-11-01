@@ -1503,6 +1503,37 @@ mlir::Value CIRGenFunction::GetVTTParameter(GlobalDecl GD, bool ForVirtualBase,
   }
 }
 
+CharUnits CIRGenModule::getNonVirtualBaseClassOffset(
+    const CXXRecordDecl *classDecl, CastExpr::path_const_iterator pathBegin,
+    CastExpr::path_const_iterator pathEnd) {
+  assert(pathBegin != pathEnd && "Base path should not be empty!");
+
+  CharUnits Offset =
+      computeNonVirtualBaseClassOffset(classDecl, pathBegin, pathEnd);
+  return Offset;
+}
+
+Address CIRGenFunction::getAddressOfDerivedClass(
+    Address baseAddr, const CXXRecordDecl *derived,
+    CastExpr::path_const_iterator pathBegin,
+    CastExpr::path_const_iterator pathEnd, bool nullCheckValue) {
+  assert(pathBegin != pathEnd && "Base path should not be empty!");
+
+  QualType derivedTy =
+      getContext().getCanonicalType(getContext().getTagDeclType(derived));
+  mlir::Type derivedValueTy = ConvertType(derivedTy);
+  CharUnits nonVirtualOffset =
+      CGM.getNonVirtualBaseClassOffset(derived, pathBegin, pathEnd);
+
+  // Note that in OG, no offset (nonVirtualOffset.getQuantity() == 0) means it
+  // just gives the address back. In CIR a `cir.derived_class` is created and
+  // made into a nop later on during lowering.
+  return builder.createDerivedClassAddr(getLoc(derived->getSourceRange()),
+                                        baseAddr, derivedValueTy,
+                                        nonVirtualOffset.getQuantity(),
+                                        /*assumeNotNull=*/not nullCheckValue);
+}
+
 Address
 CIRGenFunction::getAddressOfBaseClass(Address Value,
                                       const CXXRecordDecl *Derived,
@@ -1553,7 +1584,11 @@ CIRGenFunction::getAddressOfBaseClass(Address Value,
                                        /*assumeNotNull=*/not NullCheckValue);
   }
 
-  // Conversion to a virtual base.  cir.base_class_addr can't handle this.
+  if (sanitizePerformTypeCheck()) {
+    assert(!MissingFeatures::sanitizeOther());
+  }
+
+  // Conversion to a virtual base. cir.base_class_addr can't handle this.
   // Generate the code to look up the address in the virtual table.
 
   llvm_unreachable("NYI: Cast to virtual base class");

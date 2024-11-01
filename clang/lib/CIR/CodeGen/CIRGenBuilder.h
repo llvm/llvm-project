@@ -707,6 +707,18 @@ public:
     return Address(baseAddr, ptrTy, addr.getAlignment());
   }
 
+  cir::Address createDerivedClassAddr(mlir::Location loc, cir::Address addr,
+                                      mlir::Type destType, unsigned offset,
+                                      bool assumeNotNull) {
+    if (destType == addr.getElementType())
+      return addr;
+
+    auto ptrTy = getPointerTo(destType);
+    auto derivedAddr = create<mlir::cir::DerivedClassAddrOp>(
+        loc, ptrTy, addr.getPointer(), mlir::APInt(64, offset), assumeNotNull);
+    return Address(derivedAddr, ptrTy, addr.getAlignment());
+  }
+
   mlir::Value createVTTAddrPoint(mlir::Location loc, mlir::Type retTy,
                                  mlir::Value addr, uint64_t offset) {
     return create<mlir::cir::VTTAddrPointOp>(

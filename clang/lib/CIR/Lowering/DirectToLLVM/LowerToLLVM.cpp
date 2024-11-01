@@ -854,6 +854,40 @@ public:
   }
 };
 
+class CIRDerivedClassAddrOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::DerivedClassAddrOp> {
+public:
+  using mlir::OpConversionPattern<
+      mlir::cir::DerivedClassAddrOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::DerivedClassAddrOp derivedClassOp,
+                  OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    const auto resultType =
+        getTypeConverter()->convertType(derivedClassOp.getType());
+    mlir::Value baseAddr = adaptor.getBaseAddr();
+    int64_t offsetVal = adaptor.getOffset().getZExtValue() * -1;
+    llvm::SmallVector<mlir::LLVM::GEPArg, 1> offset = {offsetVal};
+    mlir::Type byteType = mlir::IntegerType::get(resultType.getContext(), 8,
+                                                 mlir::IntegerType::Signless);
+    if (derivedClassOp.getAssumeNotNull()) {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+          derivedClassOp, resultType, byteType, baseAddr, offset);
+    } else {
+      auto loc = derivedClassOp.getLoc();
+      mlir::Value isNull = rewriter.create<mlir::LLVM::ICmpOp>(
+          loc, mlir::LLVM::ICmpPredicate::eq, baseAddr,
+          rewriter.create<mlir::LLVM::ZeroOp>(loc, baseAddr.getType()));
+      mlir::Value adjusted = rewriter.create<mlir::LLVM::GEPOp>(
+          loc, resultType, byteType, baseAddr, offset);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(derivedClassOp, isNull,
+                                                        baseAddr, adjusted);
+    }
+    return mlir::success();
+  }
+};
+
 static mlir::Value
 getValueForVTableSymbol(mlir::Operation *op,
                         mlir::ConversionPatternRewriter &rewriter,
@@ -4218,8 +4252,9 @@ void populateCIRToLLVMConversionPatterns(
       CIRCmpThreeWayOpLowering, CIRClearCacheOpLowering, CIREhTypeIdOpLowering,
       CIRCatchParamOpLowering, CIRResumeOpLowering, CIRAllocExceptionOpLowering,
       CIRFreeExceptionOpLowering, CIRThrowOpLowering, CIRIntrinsicCallLowering,
-      CIRBaseClassAddrOpLowering, CIRVTTAddrPointOpLowering,
-      CIRIsFPClassOpLowering, CIRAbsOpLowering, CIRMemMoveOpLowering
+      CIRBaseClassAddrOpLowering, CIRDerivedClassAddrOpLowering,
+      CIRVTTAddrPointOpLowering, CIRIsFPClassOpLowering, CIRAbsOpLowering,
+      CIRMemMoveOpLowering
 #define GET_BUILTIN_LOWERING_LIST
 #include "clang/CIR/Dialect/IR/CIRBuiltinsLowering.inc"
 #undef GET_BUILTIN_LOWERING_LIST
