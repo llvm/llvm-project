@@ -31,7 +31,7 @@ void test2(struct fam_struct *ptr, int idx) {
   __builtin_counted_by_ref(global_array);                   // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
   __builtin_counted_by_ref(global_int);                     // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
   __builtin_counted_by_ref(&global_int);                    // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
-  __builtin_counted_by_ref(&ptr->array[idx++]);             // expected-warning {{'__builtin_counted_by_ref' argument has side-effects that will be discarded}} expected-warning {{expression result unused}}
+  __builtin_counted_by_ref(&ptr->array[idx++]);             // expected-warning {{'__builtin_counted_by_ref' argument has side-effects that will be discarded}}
 }
 
 void foo(char *);
