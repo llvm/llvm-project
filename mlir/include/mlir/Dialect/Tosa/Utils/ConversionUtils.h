@@ -30,13 +30,13 @@ SmallVector<Value> condenseValues(const SmallVector<Value> &values);
 
 // Takes the parameters for a clamp and turns it into a series of ops for float
 // inputs.
-Value clampFloatHelper(Location loc, Value arg, arith::ConstantOp min,
-                       arith::ConstantOp max, OpBuilder &rewriter);
+Value clampFloatHelper(Location loc, Value arg, Value min, Value max,
+                       OpBuilder &rewriter);
 
 // Takes the parameters for a clamp and turns it into a series of ops for
 // integer inputs.
-Value clampIntHelper(Location loc, Value arg, arith::ConstantOp min,
-                     arith::ConstantOp max, OpBuilder &rewriter);
+Value clampIntHelper(Location loc, Value arg, Value min, Value max,
+                     OpBuilder &rewriter);
 
 // Returns the values in an attribute as an array of values.
 template <typename T>

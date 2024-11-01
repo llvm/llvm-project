@@ -338,6 +338,68 @@ inline bool isFortran(SourceLanguage S) {
   return result;
 }
 
+inline bool isC(SourceLanguage S) {
+  // Deliberately enumerate all the language options so we get a warning when
+  // new language options are added (-Wswitch) that'll hopefully help keep this
+  // switch up-to-date when new C++ versions are added.
+  switch (S) {
+  case DW_LANG_C11:
+  case DW_LANG_C17:
+  case DW_LANG_C89:
+  case DW_LANG_C99:
+  case DW_LANG_C:
+  case DW_LANG_ObjC:
+    return true;
+  case DW_LANG_C_plus_plus:
+  case DW_LANG_C_plus_plus_03:
+  case DW_LANG_C_plus_plus_11:
+  case DW_LANG_C_plus_plus_14:
+  case DW_LANG_C_plus_plus_17:
+  case DW_LANG_C_plus_plus_20:
+  case DW_LANG_Ada83:
+  case DW_LANG_Cobol74:
+  case DW_LANG_Cobol85:
+  case DW_LANG_Fortran77:
+  case DW_LANG_Fortran90:
+  case DW_LANG_Pascal83:
+  case DW_LANG_Modula2:
+  case DW_LANG_Java:
+  case DW_LANG_Ada95:
+  case DW_LANG_Fortran95:
+  case DW_LANG_PLI:
+  case DW_LANG_ObjC_plus_plus:
+  case DW_LANG_UPC:
+  case DW_LANG_D:
+  case DW_LANG_Python:
+  case DW_LANG_OpenCL:
+  case DW_LANG_Go:
+  case DW_LANG_Modula3:
+  case DW_LANG_Haskell:
+  case DW_LANG_OCaml:
+  case DW_LANG_Rust:
+  case DW_LANG_Swift:
+  case DW_LANG_Julia:
+  case DW_LANG_Dylan:
+  case DW_LANG_Fortran03:
+  case DW_LANG_Fortran08:
+  case DW_LANG_RenderScript:
+  case DW_LANG_BLISS:
+  case DW_LANG_Mips_Assembler:
+  case DW_LANG_GOOGLE_RenderScript:
+  case DW_LANG_BORLAND_Delphi:
+  case DW_LANG_lo_user:
+  case DW_LANG_hi_user:
+  case DW_LANG_Kotlin:
+  case DW_LANG_Zig:
+  case DW_LANG_Crystal:
+  case DW_LANG_Fortran18:
+  case DW_LANG_Ada2005:
+  case DW_LANG_Ada2012:
+    return false;
+  }
+  llvm_unreachable("Unknown language kind.");
+}
+
 inline TypeKind getArrayIndexTypeEncoding(SourceLanguage S) {
   return isFortran(S) ? DW_ATE_signed : DW_ATE_unsigned;
 }

@@ -1115,4 +1115,45 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
   }];
 }
 
+def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     TransformOpInterface]> {
+  let description = [{
+    Vectorize the target ops, which must be Linalg ops, with masked vectors
+    of the specified size.
+
+    The vector sizes can be either static or dynamic (SSA values). In case of
+    SSA values, the handle must be mapped to exactly one payload op with
+    exactly one index-typed result.
+
+    #### Return modes:
+
+    This operation produces a definite failure if the dynamic vector sizes (SSA
+    values) do not satify the constraints mentioned above. It produces a
+    silenceable failure if at least one target op is not a Linalg op or fails to
+    vectorize.
+  }];
+
+  let arguments = (ins PDL_Operation:$target,
+                       Variadic<PDL_Operation>:$vector_sizes,
+                       DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:
+                          $static_vector_sizes);
+  let results = (outs);
+  let assemblyFormat = [{
+      $target
+      `vector_sizes` custom<DynamicIndexList>($vector_sizes,
+                                              $static_vector_sizes)
+      attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    // TODO: applyToOne.
+    ::mlir::DiagnosedSilenceableFailure apply(
+        ::mlir::transform::TransformResults &transformResults,
+        ::mlir::transform::TransformState &state);
+
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedVectorSizes();
+  }];
+}
+
 #endif // LINALG_TRANSFORM_OPS

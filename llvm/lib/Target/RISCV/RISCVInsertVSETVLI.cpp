@@ -134,7 +134,7 @@ struct DemandedFields {
   bool MaskPolicy = false;
 
   // Return true if any part of VTYPE was used
-  bool usedVTYPE() {
+  bool usedVTYPE() const {
     return SEW || LMUL || SEWLMULRatio || TailPolicy || MaskPolicy;
   }
 
@@ -771,11 +771,11 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
                                      const VSETVLIInfo &CurInfo) const {
   assert(Require == computeInfoForInstr(MI, MI.getDesc().TSFlags, MRI));
 
-  if (CurInfo.isCompatible(MI, Require))
-    return false;
-
   if (!CurInfo.isValid() || CurInfo.isUnknown() || CurInfo.hasSEWLMULRatioOnly())
     return true;
+
+  if (CurInfo.isCompatible(MI, Require))
+    return false;
 
   // For vmv.s.x and vfmv.s.f, there is only two behaviors, VL = 0 and VL > 0.
   // Additionally, if writing to an implicit_def operand, we don't need to

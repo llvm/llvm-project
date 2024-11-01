@@ -118,6 +118,26 @@ public:
   void mutate(Instruction &Inst, RandomIRBuilder &IB) override;
 };
 
+/// Strategy to split a random block and insert a random CFG in between.
+class InsertCFGStrategy : public IRMutationStrategy {
+private:
+  uint64_t MaxNumCases;
+  enum CFGToSink { Return, DirectSink, SinkOrSelfLoop, EndOfCFGToLink };
+
+public:
+  InsertCFGStrategy(uint64_t MNC = 8) : MaxNumCases(MNC){};
+  uint64_t getWeight(size_t CurrentSize, size_t MaxSize,
+                     uint64_t CurrentWeight) override {
+    return 5;
+  }
+
+  void mutate(BasicBlock &BB, RandomIRBuilder &IB) override;
+
+private:
+  void connectBlocksToSink(ArrayRef<BasicBlock *> Blocks, BasicBlock *Sink,
+                           RandomIRBuilder &IB);
+};
+
 /// Strategy to insert PHI Nodes at the head of each basic block.
 class InsertPHIStrategy : public IRMutationStrategy {
 public:

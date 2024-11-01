@@ -359,7 +359,8 @@ struct Str {
 extern char externalvar[];
 constexpr bool constaddress = (void *)externalvar == (void *)0x4000UL; // expected-error {{must be initialized by a constant expression}} expected-note {{reinterpret_cast}}
 constexpr bool litaddress = "foo" == "foo"; // expected-error {{must be initialized by a constant expression}}
-// cxx20_2b-warning@-1 {{comparison between two arrays is deprecated}}
+// expected-note@-1 {{comparison of addresses of literals has unspecified value}}
+// cxx20_2b-warning@-2 {{comparison between two arrays is deprecated}}
 static_assert(0 != "foo", "");
 
 }
@@ -2181,6 +2182,7 @@ namespace PR19010 {
 
 void PR21327(int a, int b) {
   static_assert(&a + 1 != &b, ""); // expected-error {{constant expression}}
+  // expected-note@-1 {{comparison against pointer '&a + 1' that points past the end of a complete object has unspecified value}}
 }
 
 namespace EmptyClass {
@@ -2200,6 +2202,7 @@ namespace PR21786 {
   extern void (*start[])();
   extern void (*end[])();
   static_assert(&start != &end, ""); // expected-error {{constant expression}}
+  // expected-note@-1 {{comparison of pointers '&start' and '&end' to unrelated zero-sized objects}}
   static_assert(&start != nullptr, "");
 
   struct Foo;

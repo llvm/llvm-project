@@ -9,29 +9,29 @@
 
 declare void @g(i8)
 
-define void @f(i8* %a, i8** %b, i8** %c) {
-  %y1 = load i8, i8* %a
+define void @f(ptr %a, ptr %b, ptr %c) {
+  %y1 = load i8, ptr %a
   call void @g(i8 %y1)
 
-  %y2 = load i8*, i8** %b
-  %y3 = load i8*, i8** %c
+  %y2 = load ptr, ptr %b
+  %y3 = load ptr, ptr %c
 
-  %x0 = load i8, i8* @"\01l_objc_msgSend_fixup_"
+  %x0 = load i8, ptr @"\01l_objc_msgSend_fixup_"
   call void @g(i8 %x0)
 
-  %x1 = load i8, i8* @g1
+  %x1 = load i8, ptr @g1
   call void @g(i8 %x1)
 
-  %x2 = load i8, i8* @g2
+  %x2 = load i8, ptr @g2
   call void @g(i8 %x2)
 
-  %x3 = load i8, i8* @g3
+  %x3 = load i8, ptr @g3
   call void @g(i8 %x3)
 
-  %x4 = load i8, i8* @g4
+  %x4 = load i8, ptr @g4
   call void @g(i8 %x4)
 
-  %x5 = load i8, i8* @g5
+  %x5 = load i8, ptr @g5
   call void @g(i8 %x5)
   ret void
 }

@@ -59,6 +59,9 @@
 #ifndef OPENMP_ORDER_KIND
 #define OPENMP_ORDER_KIND(Name)
 #endif
+#ifndef OPENMP_ORDER_MODIFIER
+#define OPENMP_ORDER_MODIFIER(Name)
+#endif
 #ifndef OPENMP_DEVICE_MODIFIER
 #define OPENMP_DEVICE_MODIFIER(Name)
 #endif
@@ -173,6 +176,10 @@ OPENMP_LASTPRIVATE_KIND(conditional)
 // Type of the 'order' clause.
 OPENMP_ORDER_KIND(concurrent)
 
+// Modifiers for the 'order' clause.
+OPENMP_ORDER_MODIFIER(reproducible)
+OPENMP_ORDER_MODIFIER(unconstrained)
+
 // Modifiers for 'reduction' clause.
 OPENMP_REDUCTION_MODIFIER(default)
 OPENMP_REDUCTION_MODIFIER(inscan)
@@ -200,6 +207,7 @@ OPENMP_NUMTASKS_MODIFIER(strict)
 #undef OPENMP_REDUCTION_MODIFIER
 #undef OPENMP_DEVICE_MODIFIER
 #undef OPENMP_ORDER_KIND
+#undef OPENMP_ORDER_MODIFIER
 #undef OPENMP_LASTPRIVATE_KIND
 #undef OPENMP_DEVICE_TYPE_KIND
 #undef OPENMP_LINEAR_KIND

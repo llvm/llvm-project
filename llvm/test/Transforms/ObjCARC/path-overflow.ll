@@ -12,24 +12,24 @@
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:32:64-v128:32:128-a0:0:32-n32-S32"
 target triple = "thumbv7-apple-ios5.0.0"
 
-%struct.NSConstantString = type { i32*, i32, i8*, i32 }
+%struct.NSConstantString = type { ptr, i32, ptr, i32 }
 %struct.CGPoint = type { float, float }
 
 @_unnamed_cfstring = external constant %struct.NSConstantString, section "__DATA,__cfstring"
 @_unnamed_cfstring_2 = external constant %struct.NSConstantString, section "__DATA,__cfstring"
 
-declare i8* @llvm.objc.retain(i8*) nonlazybind
-declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8*) nonlazybind
-declare void @llvm.objc.release(i8*) nonlazybind
-declare i8* @returner()
-declare i8* @objc_msgSend(i8*, i8*, ...) nonlazybind
-declare void @NSLog(i8*, ...)
-declare void @objc_msgSend_stret(i8*, i8*, ...)
+declare ptr @llvm.objc.retain(ptr) nonlazybind
+declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr) nonlazybind
+declare void @llvm.objc.release(ptr) nonlazybind
+declare ptr @returner()
+declare ptr @objc_msgSend(ptr, ptr, ...) nonlazybind
+declare void @NSLog(ptr, ...)
+declare void @objc_msgSend_stret(ptr, ptr, ...)
 declare i32 @__gxx_personality_sj0(...)
 declare i32 @__objc_personality_v0(...)
 
 
-define hidden void @test1() personality i8* bitcast (i32 (...)* @__gxx_personality_sj0 to i8*) {
+define hidden void @test1() personality ptr @__gxx_personality_sj0 {
 entry:
   br i1 undef, label %msgSend.nullinit, label %msgSend.call
 
@@ -40,8 +40,7 @@ msgSend.nullinit:                                 ; preds = %entry
   br label %msgSend.cont
 
 msgSend.cont:                                     ; preds = %msgSend.nullinit, %msgSend.call
-  %0 = bitcast %struct.NSConstantString* @_unnamed_cfstring to i8*
-  %1 = call i8* @llvm.objc.retain(i8* %0) nounwind
+  %0 = call ptr @llvm.objc.retain(ptr @_unnamed_cfstring) nounwind
   br i1 undef, label %msgSend.nullinit33, label %msgSend.call32
 
 msgSend.call32:                                   ; preds = %if.end10
@@ -336,12 +335,12 @@ msgSend.nullinit506:                              ; preds = %msgSend.cont501
   br label %msgSend.cont507
 
 msgSend.cont507:                                  ; preds = %msgSend.nullinit506, %msgSend.call505
-  call void @llvm.objc.release(i8* %0) nounwind, !clang.imprecise_release !0
+  call void @llvm.objc.release(ptr @_unnamed_cfstring) nounwind, !clang.imprecise_release !0
   ret void
 }
 
 ; Function Attrs: optsize ssp uwtable
-define void @test2() unnamed_addr align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_sj0 to i8*) {
+define void @test2() unnamed_addr align 2 personality ptr @__gxx_personality_sj0 {
 bb:
   br i1 undef, label %bb3, label %bb2
 
@@ -775,13 +774,13 @@ bb182:                                            ; preds = %bb181, %bb180
   br i1 undef, label %bb184, label %bb30
 
 bb184:                                            ; preds = %bb182
-  %tmp185 = call i8* @returner()
+  %tmp185 = call ptr @returner()
   br i1 undef, label %bb186, label %bb195
 
 bb186:                                            ; preds = %bb184
-  %tmp188 = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %tmp185)
-  %tmp189 = call i8* @llvm.objc.retain(i8* %tmp188)
-  call void @llvm.objc.release(i8* %tmp189), !clang.imprecise_release !0
+  %tmp188 = call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %tmp185)
+  %tmp189 = call ptr @llvm.objc.retain(ptr %tmp188)
+  call void @llvm.objc.release(ptr %tmp189), !clang.imprecise_release !0
   br i1 undef, label %bb197, label %bb190
 
 bb190:                                            ; preds = %bb186
@@ -833,7 +832,7 @@ bb212:                                            ; preds = %bb210
   unreachable
 
 bb213:                                            ; preds = %bb193, %bb30
-  resume { i8*, i32 } undef
+  resume { ptr, i32 } undef
 
 bb214:                                            ; preds = %bb42
   br label %bb219
@@ -864,24 +863,24 @@ bb222:                                            ; preds = %bb20, %bb19
 }
 
 ; Function Attrs: ssp
-define void @test3() #1 personality i8* bitcast (i32 (...)* @__gxx_personality_sj0 to i8*) {
+define void @test3() #1 personality ptr @__gxx_personality_sj0 {
 entry:
-  %call2 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call2 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:                                      ; preds = %entry
-  %call5 = invoke signext i8 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8 (i8*, i8*)*)(i8* undef, i8* undef)
+  %call5 = invoke signext i8 @objc_msgSend(ptr undef, ptr undef)
           to label %invoke.cont4 unwind label %lpad3
 
 invoke.cont4:                                     ; preds = %invoke.cont
   br i1 undef, label %land.end, label %land.rhs
 
 land.rhs:                                         ; preds = %invoke.cont4
-  %call7 = invoke i32 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 (i8*, i8*)*)(i8* undef, i8* undef)
+  %call7 = invoke i32 @objc_msgSend(ptr undef, ptr undef)
           to label %land.end unwind label %lpad3
 
 land.end:                                         ; preds = %land.rhs, %invoke.cont4
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i unwind label %lpad.i
 
 invoke.cont.i:                                    ; preds = %land.end
@@ -891,20 +890,20 @@ if.then.i:                                        ; preds = %invoke.cont.i
   br label %invoke.cont8
 
 lpad.i:                                           ; preds = %land.end
-  %tmp13 = landingpad { i8*, i32 }
+  %tmp13 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 invoke.cont8:                                     ; preds = %if.then.i, %invoke.cont.i
-  %call18 = invoke i8* (i8*, i8*, i8*, ...) bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*, ...)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef)
+  %call18 = invoke ptr (ptr, ptr, ptr, ...) @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring, ptr undef)
           to label %invoke.cont17 unwind label %lpad16
 
 invoke.cont17:                                    ; preds = %invoke.cont8
-  %call22 = invoke signext i8 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8 (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call22 = invoke signext i8 @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont21 unwind label %lpad20
 
 invoke.cont21:                                    ; preds = %invoke.cont17
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i1980 unwind label %lpad.i1982
 
 invoke.cont.i1980:                                ; preds = %invoke.cont21
@@ -914,23 +913,23 @@ if.then.i1981:                                    ; preds = %invoke.cont.i1980
   br label %invoke.cont24
 
 lpad.i1982:                                       ; preds = %invoke.cont21
-  %tmp28 = landingpad { i8*, i32 }
+  %tmp28 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 invoke.cont24:                                    ; preds = %if.then.i1981, %invoke.cont.i1980
-  %call37 = invoke signext i8 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8 (i8*, i8*)*)(i8* undef, i8* undef)
+  %call37 = invoke signext i8 @objc_msgSend(ptr undef, ptr undef)
           to label %invoke.cont36 unwind label %lpad35
 
 invoke.cont36:                                    ; preds = %invoke.cont24
   br i1 undef, label %land.end43, label %land.rhs39
 
 land.rhs39:                                       ; preds = %invoke.cont36
-  %call41 = invoke signext i8 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8 (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call41 = invoke signext i8 @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %land.end43 unwind label %lpad35
 
 land.end43:                                       ; preds = %land.rhs39, %invoke.cont36
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i1986 unwind label %lpad.i1988
 
 invoke.cont.i1986:                                ; preds = %land.end43
@@ -940,27 +939,27 @@ if.then.i1987:                                    ; preds = %invoke.cont.i1986
   br label %invoke.cont44
 
 lpad.i1988:                                       ; preds = %land.end43
-  %tmp42 = landingpad { i8*, i32 }
+  %tmp42 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 invoke.cont44:                                    ; preds = %if.then.i1987, %invoke.cont.i1986
-  %call53 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call53 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont52 unwind label %lpad51
 
 invoke.cont52:                                    ; preds = %invoke.cont44
   br i1 undef, label %land.end70, label %land.rhs58
 
 land.rhs58:                                       ; preds = %invoke.cont52
-  %call63 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i32)*)(i8* undef, i8* undef, i32 42)
+  %call63 = invoke ptr @objc_msgSend(ptr undef, ptr undef, i32 42)
           to label %invoke.cont62 unwind label %lpad61
 
 invoke.cont62:                                    ; preds = %land.rhs58
-  %call68 = invoke signext i8 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8 (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* undef)
+  %call68 = invoke signext i8 @objc_msgSend(ptr undef, ptr undef, ptr undef)
           to label %land.end70 unwind label %lpad66.body.thread
 
 land.end70:                                       ; preds = %invoke.cont62, %invoke.cont52
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i1992 unwind label %lpad66.body
 
 invoke.cont.i1992:                                ; preds = %land.end70
@@ -970,7 +969,7 @@ if.then.i1993:                                    ; preds = %invoke.cont.i1992
   br label %invoke.cont71
 
 invoke.cont71:                                    ; preds = %if.then.i1993, %invoke.cont.i1992
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i1998 unwind label %lpad.i2000
 
 invoke.cont.i1998:                                ; preds = %invoke.cont71
@@ -980,20 +979,20 @@ if.then.i1999:                                    ; preds = %invoke.cont.i1998
   br label %invoke.cont91
 
 lpad.i2000:                                       ; preds = %invoke.cont71
-  %tmp74 = landingpad { i8*, i32 }
+  %tmp74 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup102
 
 invoke.cont91:                                    ; preds = %if.then.i1999, %invoke.cont.i1998
-  %call96 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* undef, i8* undef)
+  %call96 = invoke ptr @objc_msgSend(ptr undef, ptr undef)
           to label %invoke.cont95 unwind label %lpad94
 
 invoke.cont95:                                    ; preds = %invoke.cont91
-  %call98 = invoke signext i8 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8 (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* %call96)
+  %call98 = invoke signext i8 @objc_msgSend(ptr undef, ptr undef, ptr %call96)
           to label %invoke.cont97 unwind label %lpad94
 
 invoke.cont97:                                    ; preds = %invoke.cont95
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2004 unwind label %lpad.i2006
 
 invoke.cont.i2004:                                ; preds = %invoke.cont97
@@ -1003,16 +1002,16 @@ if.then.i2005:                                    ; preds = %invoke.cont.i2004
   br label %invoke.cont100
 
 lpad.i2006:                                       ; preds = %invoke.cont97
-  %tmp82 = landingpad { i8*, i32 }
+  %tmp82 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 invoke.cont100:                                   ; preds = %if.then.i2005, %invoke.cont.i2004
-  invoke void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void @objc_msgSend(ptr undef, ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont110 unwind label %lpad109
 
 invoke.cont110:                                   ; preds = %invoke.cont100
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2010 unwind label %lpad.i2012
 
 invoke.cont.i2010:                                ; preds = %invoke.cont110
@@ -1022,21 +1021,21 @@ if.then.i2011:                                    ; preds = %invoke.cont.i2010
   br label %invoke.cont117
 
 lpad.i2012:                                       ; preds = %invoke.cont110
-  %tmp98 = landingpad { i8*, i32 }
+  %tmp98 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 invoke.cont117:                                   ; preds = %if.then.i2011, %invoke.cont.i2010
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2022 unwind label %lpad156.body
 
 lpad:                                             ; preds = %entry
-  %tmp118 = landingpad { i8*, i32 }
+  %tmp118 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup
 
 lpad3:                                            ; preds = %land.rhs, %invoke.cont
-  %tmp119 = landingpad { i8*, i32 }
+  %tmp119 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup
 
@@ -1044,12 +1043,12 @@ ehcleanup:                                        ; preds = %lpad3, %lpad
   unreachable
 
 lpad16:                                           ; preds = %invoke.cont8
-  %tmp121 = landingpad { i8*, i32 }
+  %tmp121 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup26
 
 lpad20:                                           ; preds = %invoke.cont17
-  %tmp122 = landingpad { i8*, i32 }
+  %tmp122 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup26
 
@@ -1057,32 +1056,32 @@ ehcleanup26:                                      ; preds = %lpad20, %lpad16
   unreachable
 
 lpad35:                                           ; preds = %land.rhs39, %invoke.cont24
-  %tmp124 = landingpad { i8*, i32 }
+  %tmp124 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad51:                                           ; preds = %invoke.cont44
-  %tmp125 = landingpad { i8*, i32 }
+  %tmp125 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad61:                                           ; preds = %land.rhs58
-  %tmp127 = landingpad { i8*, i32 }
+  %tmp127 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad66.body.thread:                               ; preds = %invoke.cont62
-  %tmp128 = landingpad { i8*, i32 }
+  %tmp128 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad66.body:                                      ; preds = %land.end70
-  %tmp129 = landingpad { i8*, i32 }
+  %tmp129 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad94:                                           ; preds = %invoke.cont95, %invoke.cont91
-  %tmp133 = landingpad { i8*, i32 }
+  %tmp133 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup102
 
@@ -1090,7 +1089,7 @@ ehcleanup102:                                     ; preds = %lpad94, %lpad.i2000
   unreachable
 
 lpad109:                                          ; preds = %invoke.cont100
-  %tmp134 = landingpad { i8*, i32 }
+  %tmp134 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
@@ -1101,7 +1100,7 @@ if.then.i2023:                                    ; preds = %invoke.cont.i2022
   br label %invoke.cont157
 
 invoke.cont157:                                   ; preds = %if.then.i2023, %invoke.cont.i2022
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2028 unwind label %lpad164.body
 
 invoke.cont.i2028:                                ; preds = %invoke.cont157
@@ -1111,15 +1110,15 @@ if.then.i2029:                                    ; preds = %invoke.cont.i2028
   br label %invoke.cont165
 
 invoke.cont165:                                   ; preds = %if.then.i2029, %invoke.cont.i2028
-  invoke void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, void (i8*, i8*)*)*)(i8* undef, i8* undef, void (i8*, i8*)* undef)
+  invoke void @objc_msgSend(ptr undef, ptr undef, ptr undef)
           to label %invoke.cont184 unwind label %lpad183
 
 invoke.cont184:                                   ; preds = %invoke.cont165
-  %call186 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call186 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont185 unwind label %lpad183
 
 invoke.cont185:                                   ; preds = %invoke.cont184
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2034 unwind label %lpad.i2036
 
 invoke.cont.i2034:                                ; preds = %invoke.cont185
@@ -1129,24 +1128,24 @@ if.then.i2035:                                    ; preds = %invoke.cont.i2034
   br label %invoke.cont190
 
 lpad.i2036:                                       ; preds = %invoke.cont185
-  %tmp168 = landingpad { i8*, i32 }
+  %tmp168 = landingpad { ptr, i32 }
           cleanup
   br label %lpad183.body
 
 invoke.cont190:                                   ; preds = %if.then.i2035, %invoke.cont.i2034
-  invoke void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void @objc_msgSend(ptr undef, ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont197 unwind label %lpad196
 
 invoke.cont197:                                   ; preds = %invoke.cont190
-  %call202 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call202 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont201 unwind label %lpad200
 
 invoke.cont201:                                   ; preds = %invoke.cont197
-  %call205 = invoke signext i8 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8 (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call205 = invoke signext i8 @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont204 unwind label %lpad203
 
 invoke.cont204:                                   ; preds = %invoke.cont201
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2040 unwind label %lpad.i2042
 
 invoke.cont.i2040:                                ; preds = %invoke.cont204
@@ -1156,16 +1155,16 @@ if.then.i2041:                                    ; preds = %invoke.cont.i2040
   br label %invoke.cont207
 
 lpad.i2042:                                       ; preds = %invoke.cont204
-  %tmp181 = landingpad { i8*, i32 }
+  %tmp181 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 invoke.cont207:                                   ; preds = %if.then.i2041, %invoke.cont.i2040
-  %call209 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* undef, i8* undef)
+  %call209 = invoke ptr @objc_msgSend(ptr undef, ptr undef)
           to label %invoke.cont208 unwind label %lpad203
 
 invoke.cont208:                                   ; preds = %invoke.cont207
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2046 unwind label %lpad212.body
 
 invoke.cont.i2046:                                ; preds = %invoke.cont208
@@ -1175,15 +1174,15 @@ if.then.i2047:                                    ; preds = %invoke.cont.i2046
   br label %invoke.cont213
 
 invoke.cont213:                                   ; preds = %if.then.i2047, %invoke.cont.i2046
-  invoke void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void @objc_msgSend(ptr undef, ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont221 unwind label %lpad220
 
 invoke.cont221:                                   ; preds = %invoke.cont213
-  %call229 = invoke signext i8 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8 (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call229 = invoke signext i8 @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont228 unwind label %lpad227
 
 invoke.cont228:                                   ; preds = %invoke.cont221
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2052 unwind label %lpad.i2054
 
 invoke.cont.i2052:                                ; preds = %invoke.cont228
@@ -1193,16 +1192,16 @@ if.then.i2053:                                    ; preds = %invoke.cont.i2052
   br label %invoke.cont231
 
 lpad.i2054:                                       ; preds = %invoke.cont228
-  %tmp198 = landingpad { i8*, i32 }
+  %tmp198 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 invoke.cont231:                                   ; preds = %if.then.i2053, %invoke.cont.i2052
-  %call233 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* undef, i8* undef)
+  %call233 = invoke ptr @objc_msgSend(ptr undef, ptr undef)
           to label %invoke.cont232 unwind label %lpad227
 
 invoke.cont232:                                   ; preds = %invoke.cont231
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2058 unwind label %lpad236.body
 
 invoke.cont.i2058:                                ; preds = %invoke.cont232
@@ -1212,43 +1211,43 @@ if.then.i2059:                                    ; preds = %invoke.cont.i2058
   br label %invoke.cont237
 
 invoke.cont237:                                   ; preds = %if.then.i2059, %invoke.cont.i2058
-  %call246 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call246 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont245 unwind label %lpad244
 
 invoke.cont245:                                   ; preds = %invoke.cont237
-  %call248 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i32)*)(i8* undef, i8* undef, i32 13)
+  %call248 = invoke ptr @objc_msgSend(ptr undef, ptr undef, i32 13)
           to label %invoke.cont247 unwind label %lpad244
 
 invoke.cont247:                                   ; preds = %invoke.cont245
-  %call251 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i32)*)(i8* undef, i8* undef, i32 2)
+  %call251 = invoke ptr @objc_msgSend(ptr undef, ptr undef, i32 2)
           to label %invoke.cont250 unwind label %lpad249
 
 invoke.cont250:                                   ; preds = %invoke.cont247
-  %call254 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i32)*)(i8* undef, i8* undef, i32 7)
+  %call254 = invoke ptr @objc_msgSend(ptr undef, ptr undef, i32 7)
           to label %invoke.cont253 unwind label %lpad252
 
 invoke.cont253:                                   ; preds = %invoke.cont250
-  %call257 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8**, i32)*)(i8* undef, i8* undef, i8** undef, i32 3)
+  %call257 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr undef, i32 3)
           to label %invoke.cont256 unwind label %lpad255
 
 invoke.cont256:                                   ; preds = %invoke.cont253
-  %call260 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* undef, i8* undef)
+  %call260 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr undef, ptr undef)
           to label %invoke.cont259 unwind label %lpad258
 
 invoke.cont259:                                   ; preds = %invoke.cont256
-  %call267 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call267 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont266 unwind label %lpad265
 
 invoke.cont266:                                   ; preds = %invoke.cont259
-  %call275 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* undef)
+  %call275 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr undef)
           to label %invoke.cont274 unwind label %lpad273
 
 invoke.cont274:                                   ; preds = %invoke.cont266
-  %call279 = invoke i32 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 (i8*, i8*)*)(i8* undef, i8* undef)
+  %call279 = invoke i32 @objc_msgSend(ptr undef, ptr undef)
           to label %invoke.cont278 unwind label %lpad277
 
 invoke.cont278:                                   ; preds = %invoke.cont274
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2064 unwind label %lpad.i2066
 
 invoke.cont.i2064:                                ; preds = %invoke.cont278
@@ -1258,43 +1257,43 @@ if.then.i2065:                                    ; preds = %invoke.cont.i2064
   br label %invoke.cont281
 
 lpad.i2066:                                       ; preds = %invoke.cont278
-  %tmp253 = landingpad { i8*, i32 }
+  %tmp253 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 invoke.cont281:                                   ; preds = %if.then.i2065, %invoke.cont.i2064
-  %call291 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call291 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont290 unwind label %lpad289
 
 invoke.cont290:                                   ; preds = %invoke.cont281
-  %call303 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i32)*)(i8* undef, i8* undef, i32 8)
+  %call303 = invoke ptr @objc_msgSend(ptr undef, ptr undef, i32 8)
           to label %invoke.cont302 unwind label %lpad301
 
 invoke.cont302:                                   ; preds = %invoke.cont290
-  %call310 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, double)*)(i8* undef, i8* undef, double 5.000000e-01)
+  %call310 = invoke ptr @objc_msgSend(ptr undef, ptr undef, double 5.000000e-01)
           to label %invoke.cont309 unwind label %lpad308
 
 invoke.cont309:                                   ; preds = %invoke.cont302
-  %call313 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i32)*)(i8* undef, i8* undef, i32 42)
+  %call313 = invoke ptr @objc_msgSend(ptr undef, ptr undef, i32 42)
           to label %invoke.cont312 unwind label %lpad311
 
 invoke.cont312:                                   ; preds = %invoke.cont309
-  %call316 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8**, i8**, i32)*)(i8* undef, i8* undef, i8** undef, i8** undef, i32 2)
+  %call316 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr undef, ptr undef, i32 2)
           to label %invoke.cont315 unwind label %lpad314
 
 invoke.cont315:                                   ; preds = %invoke.cont312
-  %call322 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* undef)
+  %call322 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr undef)
           to label %invoke.cont321 unwind label %lpad320
 
 invoke.cont321:                                   ; preds = %invoke.cont315
   br i1 undef, label %land.end344, label %land.rhs335
 
 land.rhs335:                                      ; preds = %invoke.cont321
-  %call342 = invoke signext i8 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8 (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call342 = invoke signext i8 @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %land.end344 unwind label %lpad340.body.thread
 
 land.end344:                                      ; preds = %land.rhs335, %invoke.cont321
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2070 unwind label %lpad340.body
 
 invoke.cont.i2070:                                ; preds = %land.end344
@@ -1304,19 +1303,19 @@ if.then.i2071:                                    ; preds = %invoke.cont.i2070
   br label %invoke.cont345
 
 invoke.cont345:                                   ; preds = %if.then.i2071, %invoke.cont.i2070
-  %call362 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* undef)
+  %call362 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr undef)
           to label %invoke.cont361 unwind label %lpad360
 
 invoke.cont361:                                   ; preds = %invoke.cont345
-  %call365 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call365 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont364 unwind label %lpad363
 
 invoke.cont364:                                   ; preds = %invoke.cont361
-  %call371 = invoke i32 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 (i8*, i8*)*)(i8* undef, i8* undef)
+  %call371 = invoke i32 @objc_msgSend(ptr undef, ptr undef)
           to label %invoke.cont370 unwind label %lpad369
 
 invoke.cont370:                                   ; preds = %invoke.cont364
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2076 unwind label %lpad.i2078
 
 invoke.cont.i2076:                                ; preds = %invoke.cont370
@@ -1326,24 +1325,24 @@ if.then.i2077:                                    ; preds = %invoke.cont.i2076
   br label %invoke.cont373
 
 lpad.i2078:                                       ; preds = %invoke.cont370
-  %tmp340 = landingpad { i8*, i32 }
+  %tmp340 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 invoke.cont373:                                   ; preds = %if.then.i2077, %invoke.cont.i2076
-  %call377 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i32, i8*)*)(i8* undef, i8* undef, i32 42, i8* undef)
+  %call377 = invoke ptr @objc_msgSend(ptr undef, ptr undef, i32 42, ptr undef)
           to label %invoke.cont376 unwind label %lpad363
 
 invoke.cont376:                                   ; preds = %invoke.cont373
-  invoke void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8*, i32)*)(i8* undef, i8* undef, i8* undef, i32 5)
+  invoke void @objc_msgSend(ptr undef, ptr undef, ptr undef, i32 5)
           to label %invoke.cont382 unwind label %lpad381
 
 invoke.cont382:                                   ; preds = %invoke.cont376
-  %call384 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call384 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont383 unwind label %lpad381
 
 invoke.cont383:                                   ; preds = %invoke.cont382
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2082 unwind label %lpad.i2084
 
 invoke.cont.i2082:                                ; preds = %invoke.cont383
@@ -1353,28 +1352,28 @@ if.then.i2083:                                    ; preds = %invoke.cont.i2082
   br label %invoke.cont392
 
 lpad.i2084:                                       ; preds = %invoke.cont383
-  %tmp360 = landingpad { i8*, i32 }
+  %tmp360 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 invoke.cont392:                                   ; preds = %if.then.i2083, %invoke.cont.i2082
-  invoke void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8*, i32)*)(i8* undef, i8* undef, i8* undef, i32 -2)
+  invoke void @objc_msgSend(ptr undef, ptr undef, ptr undef, i32 -2)
           to label %invoke.cont395 unwind label %lpad381
 
 invoke.cont395:                                   ; preds = %invoke.cont392
-  %call397 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call397 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont396 unwind label %lpad381
 
 invoke.cont396:                                   ; preds = %invoke.cont395
-  %call400 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* undef, i8* undef)
+  %call400 = invoke ptr @objc_msgSend(ptr undef, ptr undef)
           to label %invoke.cont399 unwind label %lpad398
 
 invoke.cont399:                                   ; preds = %invoke.cont396
-  %call403 = invoke i32 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 (i8*, i8*)*)(i8* undef, i8* undef)
+  %call403 = invoke i32 @objc_msgSend(ptr undef, ptr undef)
           to label %invoke.cont402 unwind label %lpad401
 
 invoke.cont402:                                   ; preds = %invoke.cont399
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2088 unwind label %lpad.i2090
 
 invoke.cont.i2088:                                ; preds = %invoke.cont402
@@ -1384,24 +1383,24 @@ if.then.i2089:                                    ; preds = %invoke.cont.i2088
   br label %invoke.cont405
 
 lpad.i2090:                                       ; preds = %invoke.cont402
-  %tmp370 = landingpad { i8*, i32 }
+  %tmp370 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 invoke.cont405:                                   ; preds = %if.then.i2089, %invoke.cont.i2088
-  invoke void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8*, i32)*)(i8* undef, i8* undef, i8* undef, i32 -1)
+  invoke void @objc_msgSend(ptr undef, ptr undef, ptr undef, i32 -1)
           to label %invoke.cont408 unwind label %lpad381
 
 invoke.cont408:                                   ; preds = %invoke.cont405
-  %call410 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call410 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont409 unwind label %lpad381
 
 invoke.cont409:                                   ; preds = %invoke.cont408
-  %call413 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* undef, i8* undef)
+  %call413 = invoke ptr @objc_msgSend(ptr undef, ptr undef)
           to label %invoke.cont412 unwind label %lpad411
 
 invoke.cont412:                                   ; preds = %invoke.cont409
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2094 unwind label %lpad.i2096
 
 invoke.cont.i2094:                                ; preds = %invoke.cont412
@@ -1411,28 +1410,28 @@ if.then.i2095:                                    ; preds = %invoke.cont.i2094
   br label %invoke.cont418
 
 lpad.i2096:                                       ; preds = %invoke.cont412
-  %tmp380 = landingpad { i8*, i32 }
+  %tmp380 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 invoke.cont418:                                   ; preds = %if.then.i2095, %invoke.cont.i2094
-  invoke void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8*, i32)*)(i8* undef, i8* undef, i8* undef, i32 0)
+  invoke void @objc_msgSend(ptr undef, ptr undef, ptr undef, i32 0)
           to label %invoke.cont422 unwind label %lpad381
 
 invoke.cont422:                                   ; preds = %invoke.cont418
-  %call424 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call424 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont423 unwind label %lpad381
 
 invoke.cont423:                                   ; preds = %invoke.cont422
-  %call427 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* undef, i8* undef)
+  %call427 = invoke ptr @objc_msgSend(ptr undef, ptr undef)
           to label %invoke.cont426 unwind label %lpad425
 
 invoke.cont426:                                   ; preds = %invoke.cont423
-  %call430 = invoke i32 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 (i8*, i8*)*)(i8* undef, i8* undef)
+  %call430 = invoke i32 @objc_msgSend(ptr undef, ptr undef)
           to label %invoke.cont429 unwind label %lpad428
 
 invoke.cont429:                                   ; preds = %invoke.cont426
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2100 unwind label %lpad.i2102
 
 invoke.cont.i2100:                                ; preds = %invoke.cont429
@@ -1442,29 +1441,29 @@ if.then.i2101:                                    ; preds = %invoke.cont.i2100
   br label %invoke.cont432
 
 lpad.i2102:                                       ; preds = %invoke.cont429
-  %tmp390 = landingpad { i8*, i32 }
+  %tmp390 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 invoke.cont432:                                   ; preds = %if.then.i2101, %invoke.cont.i2100
-  %call436 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i32)*)(i8* undef, i8* undef, i32 0)
+  %call436 = invoke ptr @objc_msgSend(ptr undef, ptr undef, i32 0)
           to label %invoke.cont435 unwind label %lpad381
 
 invoke.cont435:                                   ; preds = %invoke.cont432
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2106 unwind label %lpad.i2108
 
 invoke.cont.i2106:                                ; preds = %invoke.cont435
-  %call444 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i32)*)(i8* undef, i8* undef, i32 5)
+  %call444 = invoke ptr @objc_msgSend(ptr undef, ptr undef, i32 5)
           to label %invoke.cont443 unwind label %lpad381
 
 lpad.i2108:                                       ; preds = %invoke.cont435
-  %tmp396 = landingpad { i8*, i32 }
+  %tmp396 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 invoke.cont443:                                   ; preds = %invoke.cont.i2106
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2112 unwind label %lpad.i2114
 
 invoke.cont.i2112:                                ; preds = %invoke.cont443
@@ -1474,20 +1473,20 @@ if.then.i2113:                                    ; preds = %invoke.cont.i2112
   br label %invoke.cont449
 
 lpad.i2114:                                       ; preds = %invoke.cont443
-  %tmp402 = landingpad { i8*, i32 }
+  %tmp402 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 invoke.cont449:                                   ; preds = %if.then.i2113, %invoke.cont.i2112
-  %call453 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i32)*)(i8* undef, i8* undef, i32 -2)
+  %call453 = invoke ptr @objc_msgSend(ptr undef, ptr undef, i32 -2)
           to label %invoke.cont452 unwind label %lpad381
 
 invoke.cont452:                                   ; preds = %invoke.cont449
-  %call456 = invoke i32 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 (i8*, i8*)*)(i8* undef, i8* undef)
+  %call456 = invoke i32 @objc_msgSend(ptr undef, ptr undef)
           to label %invoke.cont455 unwind label %lpad454
 
 invoke.cont455:                                   ; preds = %invoke.cont452
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2118 unwind label %lpad.i2120
 
 invoke.cont.i2118:                                ; preds = %invoke.cont455
@@ -1497,16 +1496,16 @@ if.then.i2119:                                    ; preds = %invoke.cont.i2118
   br label %invoke.cont458
 
 lpad.i2120:                                       ; preds = %invoke.cont455
-  %tmp408 = landingpad { i8*, i32 }
+  %tmp408 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 invoke.cont458:                                   ; preds = %if.then.i2119, %invoke.cont.i2118
-  %call461 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i32)*)(i8* undef, i8* undef, i32 -1)
+  %call461 = invoke ptr @objc_msgSend(ptr undef, ptr undef, i32 -1)
           to label %invoke.cont460 unwind label %lpad381
 
 invoke.cont460:                                   ; preds = %invoke.cont458
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2124 unwind label %lpad.i2126
 
 invoke.cont.i2124:                                ; preds = %invoke.cont460
@@ -1516,16 +1515,16 @@ if.then.i2125:                                    ; preds = %invoke.cont.i2124
   br label %invoke.cont466
 
 lpad.i2126:                                       ; preds = %invoke.cont460
-  %tmp414 = landingpad { i8*, i32 }
+  %tmp414 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup477
 
 invoke.cont466:                                   ; preds = %if.then.i2125, %invoke.cont.i2124
-  %call470 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i32)*)(i8* undef, i8* undef, i32 0)
+  %call470 = invoke ptr @objc_msgSend(ptr undef, ptr undef, i32 0)
           to label %invoke.cont469 unwind label %lpad381
 
 invoke.cont469:                                   ; preds = %invoke.cont466
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2130 unwind label %lpad.i2132
 
 invoke.cont.i2130:                                ; preds = %invoke.cont469
@@ -1535,46 +1534,46 @@ if.then.i2131:                                    ; preds = %invoke.cont.i2130
   br label %invoke.cont475
 
 lpad.i2132:                                       ; preds = %invoke.cont469
-  %tmp420 = landingpad { i8*, i32 }
+  %tmp420 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup477
 
 invoke.cont475:                                   ; preds = %if.then.i2131, %invoke.cont.i2130
-  %call491 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i32)*)(i8* undef, i8* undef, i32 1)
+  %call491 = invoke ptr @objc_msgSend(ptr undef, ptr undef, i32 1)
           to label %invoke.cont490 unwind label %lpad489
 
 invoke.cont490:                                   ; preds = %invoke.cont475
-  invoke void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void @objc_msgSend(ptr undef, ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont499 unwind label %lpad498
 
 invoke.cont499:                                   ; preds = %invoke.cont490
-  %call504 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call504 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont503 unwind label %lpad489
 
 invoke.cont503:                                   ; preds = %invoke.cont499
-  %call507 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i32)*)(i8* undef, i8* undef, i32 3)
+  %call507 = invoke ptr @objc_msgSend(ptr undef, ptr undef, i32 3)
           to label %invoke.cont506 unwind label %lpad505
 
 invoke.cont506:                                   ; preds = %invoke.cont503
-  invoke void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void @objc_msgSend(ptr undef, ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont509 unwind label %lpad508
 
 invoke.cont509:                                   ; preds = %invoke.cont506
-  %call513 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call513 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont512 unwind label %lpad489
 
 invoke.cont512:                                   ; preds = %invoke.cont509
   br i1 undef, label %msgSend.null-receiver, label %msgSend.call
 
 msgSend.call:                                     ; preds = %invoke.cont512
-  invoke void bitcast (void (i8*, i8*, ...)* @objc_msgSend_stret to void (%struct.CGPoint*, i8*, i8*)*)(%struct.CGPoint* sret(%struct.CGPoint) undef, i8* undef, i8* undef)
+  invoke void @objc_msgSend_stret(ptr sret(%struct.CGPoint) undef, ptr undef, ptr undef)
           to label %msgSend.cont unwind label %lpad514
 
 msgSend.null-receiver:                            ; preds = %invoke.cont512
   br label %msgSend.cont
 
 msgSend.cont:                                     ; preds = %msgSend.null-receiver, %msgSend.call
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2136 unwind label %lpad.i2138
 
 invoke.cont.i2136:                                ; preds = %msgSend.cont
@@ -1584,24 +1583,24 @@ if.then.i2137:                                    ; preds = %invoke.cont.i2136
   br label %invoke.cont521
 
 lpad.i2138:                                       ; preds = %msgSend.cont
-  %tmp468 = landingpad { i8*, i32 }
+  %tmp468 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 invoke.cont521:                                   ; preds = %if.then.i2137, %invoke.cont.i2136
-  invoke void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef)
+  invoke void @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring, ptr undef)
           to label %invoke.cont528 unwind label %lpad527
 
 invoke.cont528:                                   ; preds = %invoke.cont521
-  %call532 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call532 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont531 unwind label %lpad489
 
 invoke.cont531:                                   ; preds = %invoke.cont528
-  %call535 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* undef, i8* undef)
+  %call535 = invoke ptr @objc_msgSend(ptr undef, ptr undef)
           to label %invoke.cont534 unwind label %lpad533
 
 invoke.cont534:                                   ; preds = %invoke.cont531
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2142 unwind label %lpad.i2144
 
 invoke.cont.i2142:                                ; preds = %invoke.cont534
@@ -1611,65 +1610,65 @@ if.then.i2143:                                    ; preds = %invoke.cont.i2142
   br label %invoke.cont540
 
 lpad.i2144:                                       ; preds = %invoke.cont534
-  %tmp486 = landingpad { i8*, i32 }
+  %tmp486 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 invoke.cont540:                                   ; preds = %if.then.i2143, %invoke.cont.i2142
-  %call544 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i32)*)(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef, i32 3)
+  %call544 = invoke ptr @objc_msgSend(ptr @_unnamed_cfstring, ptr undef, i32 3)
           to label %invoke.cont543 unwind label %lpad489
 
 invoke.cont543:                                   ; preds = %invoke.cont540
-  invoke void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* undef)
+  invoke void @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring, ptr undef)
           to label %invoke.cont546 unwind label %lpad545
 
 invoke.cont546:                                   ; preds = %invoke.cont543
-  %call549 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call549 = invoke ptr @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont548 unwind label %lpad489
 
 invoke.cont548:                                   ; preds = %invoke.cont546
-  %call555 = invoke signext i8 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8 (i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %call555 = invoke signext i8 @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont554 unwind label %lpad553
 
 invoke.cont554:                                   ; preds = %invoke.cont548
-  %tmp499 = call i8* @llvm.objc.retain(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*)) #3
-  invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i8* %tmp499, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  %tmp499 = call ptr @llvm.objc.retain(ptr @_unnamed_cfstring) #3
+  invoke void (ptr, ...) @NSLog(ptr @_unnamed_cfstring, ptr %tmp499, ptr @_unnamed_cfstring)
           to label %invoke.cont.i2148 unwind label %lpad.i2150
 
 invoke.cont.i2148:                                ; preds = %invoke.cont554
-  call void @llvm.objc.release(i8* %tmp499) #3, !clang.imprecise_release !0
-  invoke void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  call void @llvm.objc.release(ptr %tmp499) #3, !clang.imprecise_release !0
+  invoke void @objc_msgSend(ptr undef, ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont566 unwind label %lpad565
 
 lpad.i2150:                                       ; preds = %invoke.cont554
-  %tmp500 = landingpad { i8*, i32 }
+  %tmp500 = landingpad { ptr, i32 }
           cleanup
-  call void @llvm.objc.release(i8* %tmp499) #3, !clang.imprecise_release !0
+  call void @llvm.objc.release(ptr %tmp499) #3, !clang.imprecise_release !0
   unreachable
 
 invoke.cont566:                                   ; preds = %invoke.cont.i2148
-  invoke void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8*, i8*)*)(i8* undef, i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*))
+  invoke void @objc_msgSend(ptr undef, ptr undef, ptr undef, ptr @_unnamed_cfstring)
           to label %invoke.cont572 unwind label %lpad571
 
 invoke.cont572:                                   ; preds = %invoke.cont566
-  %call582 = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* undef, i8* undef)
+  %call582 = invoke ptr @objc_msgSend(ptr undef, ptr undef)
           to label %invoke.cont581 unwind label %lpad580
 
 invoke.cont581:                                   ; preds = %invoke.cont572
   unreachable
 
 lpad156.body:                                     ; preds = %invoke.cont117
-  %tmp1157 = landingpad { i8*, i32 }
+  %tmp1157 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad164.body:                                     ; preds = %invoke.cont157
-  %tmp1158 = landingpad { i8*, i32 }
+  %tmp1158 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad183:                                          ; preds = %invoke.cont184, %invoke.cont165
-  %tmp1159 = landingpad { i8*, i32 }
+  %tmp1159 = landingpad { ptr, i32 }
           cleanup
   br label %lpad183.body
 
@@ -1677,37 +1676,37 @@ lpad183.body:                                     ; preds = %lpad183, %lpad.i203
   unreachable
 
 lpad196:                                          ; preds = %invoke.cont190
-  %tmp1160 = landingpad { i8*, i32 }
+  %tmp1160 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad200:                                          ; preds = %invoke.cont197
-  %tmp1161 = landingpad { i8*, i32 }
+  %tmp1161 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad203:                                          ; preds = %invoke.cont207, %invoke.cont201
-  %tmp1162 = landingpad { i8*, i32 }
+  %tmp1162 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad212.body:                                     ; preds = %invoke.cont208
-  %tmp1163 = landingpad { i8*, i32 }
+  %tmp1163 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad220:                                          ; preds = %invoke.cont213
-  %tmp1164 = landingpad { i8*, i32 }
+  %tmp1164 = landingpad { ptr, i32 }
           cleanup
   br label %eh.resume
 
 lpad227:                                          ; preds = %invoke.cont231, %invoke.cont221
-  %tmp1166 = landingpad { i8*, i32 }
+  %tmp1166 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup239
 
 lpad236.body:                                     ; preds = %invoke.cont232
-  %tmp1167 = landingpad { i8*, i32 }
+  %tmp1167 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup239
 
@@ -1715,27 +1714,27 @@ ehcleanup239:                                     ; preds = %lpad236.body, %lpad
   unreachable
 
 lpad244:                                          ; preds = %invoke.cont245, %invoke.cont237
-  %tmp1168 = landingpad { i8*, i32 }
+  %tmp1168 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad249:                                          ; preds = %invoke.cont247
-  %tmp1169 = landingpad { i8*, i32 }
+  %tmp1169 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad252:                                          ; preds = %invoke.cont250
-  %tmp1170 = landingpad { i8*, i32 }
+  %tmp1170 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup263
 
 lpad255:                                          ; preds = %invoke.cont253
-  %tmp1171 = landingpad { i8*, i32 }
+  %tmp1171 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup263
 
 lpad258:                                          ; preds = %invoke.cont256
-  %tmp1172 = landingpad { i8*, i32 }
+  %tmp1172 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
@@ -1743,107 +1742,107 @@ ehcleanup263:                                     ; preds = %lpad255, %lpad252
   unreachable
 
 lpad265:                                          ; preds = %invoke.cont259
-  %tmp1173 = landingpad { i8*, i32 }
+  %tmp1173 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad273:                                          ; preds = %invoke.cont266
-  %tmp1175 = landingpad { i8*, i32 }
+  %tmp1175 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad277:                                          ; preds = %invoke.cont274
-  %tmp1176 = landingpad { i8*, i32 }
+  %tmp1176 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad289:                                          ; preds = %invoke.cont281
-  %tmp1177 = landingpad { i8*, i32 }
+  %tmp1177 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad301:                                          ; preds = %invoke.cont290
-  %tmp1180 = landingpad { i8*, i32 }
+  %tmp1180 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad308:                                          ; preds = %invoke.cont302
-  %tmp1182 = landingpad { i8*, i32 }
+  %tmp1182 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad311:                                          ; preds = %invoke.cont309
-  %tmp1183 = landingpad { i8*, i32 }
+  %tmp1183 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad314:                                          ; preds = %invoke.cont312
-  %tmp1184 = landingpad { i8*, i32 }
+  %tmp1184 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad320:                                          ; preds = %invoke.cont315
-  %tmp1186 = landingpad { i8*, i32 }
+  %tmp1186 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad340.body.thread:                              ; preds = %land.rhs335
-  %tmp1188 = landingpad { i8*, i32 }
+  %tmp1188 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad340.body:                                     ; preds = %land.end344
-  %tmp1189 = landingpad { i8*, i32 }
+  %tmp1189 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad360:                                          ; preds = %invoke.cont345
-  %tmp1191 = landingpad { i8*, i32 }
+  %tmp1191 = landingpad { ptr, i32 }
           cleanup
   br label %eh.resume
 
 lpad363:                                          ; preds = %invoke.cont373, %invoke.cont361
-  %tmp1192 = landingpad { i8*, i32 }
+  %tmp1192 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad369:                                          ; preds = %invoke.cont364
-  %tmp1194 = landingpad { i8*, i32 }
+  %tmp1194 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad381:                                          ; preds = %invoke.cont466, %invoke.cont458, %invoke.cont449, %invoke.cont.i2106, %invoke.cont432, %invoke.cont422, %invoke.cont418, %invoke.cont408, %invoke.cont405, %invoke.cont395, %invoke.cont392, %invoke.cont382, %invoke.cont376
-  %tmp1196 = landingpad { i8*, i32 }
+  %tmp1196 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup477
 
 lpad398:                                          ; preds = %invoke.cont396
-  %tmp1199 = landingpad { i8*, i32 }
+  %tmp1199 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad401:                                          ; preds = %invoke.cont399
-  %tmp1200 = landingpad { i8*, i32 }
+  %tmp1200 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad411:                                          ; preds = %invoke.cont409
-  %tmp1201 = landingpad { i8*, i32 }
+  %tmp1201 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad425:                                          ; preds = %invoke.cont423
-  %tmp1203 = landingpad { i8*, i32 }
+  %tmp1203 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup477
 
 lpad428:                                          ; preds = %invoke.cont426
-  %tmp1204 = landingpad { i8*, i32 }
+  %tmp1204 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad454:                                          ; preds = %invoke.cont452
-  %tmp1207 = landingpad { i8*, i32 }
+  %tmp1207 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
@@ -1851,47 +1850,47 @@ ehcleanup477:                                     ; preds = %lpad425, %lpad381, 
   unreachable
 
 lpad489:                                          ; preds = %invoke.cont546, %invoke.cont540, %invoke.cont528, %invoke.cont509, %invoke.cont499, %invoke.cont475
-  %tmp1211 = landingpad { i8*, i32 }
+  %tmp1211 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup560
 
 lpad498:                                          ; preds = %invoke.cont490
-  %tmp1214 = landingpad { i8*, i32 }
+  %tmp1214 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad505:                                          ; preds = %invoke.cont503
-  %tmp1215 = landingpad { i8*, i32 }
+  %tmp1215 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad508:                                          ; preds = %invoke.cont506
-  %tmp1216 = landingpad { i8*, i32 }
+  %tmp1216 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad514:                                          ; preds = %msgSend.call
-  %tmp1217 = landingpad { i8*, i32 }
+  %tmp1217 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad527:                                          ; preds = %invoke.cont521
-  %tmp1219 = landingpad { i8*, i32 }
+  %tmp1219 = landingpad { ptr, i32 }
           cleanup
   br label %ehcleanup560
 
 lpad533:                                          ; preds = %invoke.cont531
-  %tmp1220 = landingpad { i8*, i32 }
+  %tmp1220 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad545:                                          ; preds = %invoke.cont543
-  %tmp1222 = landingpad { i8*, i32 }
+  %tmp1222 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad553:                                          ; preds = %invoke.cont548
-  %tmp1224 = landingpad { i8*, i32 }
+  %tmp1224 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
@@ -1899,27 +1898,27 @@ ehcleanup560:                                     ; preds = %lpad527, %lpad489
   br label %eh.resume
 
 lpad565:                                          ; preds = %invoke.cont.i2148
-  %tmp1225 = landingpad { i8*, i32 }
+  %tmp1225 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad571:                                          ; preds = %invoke.cont566
-  %tmp1227 = landingpad { i8*, i32 }
+  %tmp1227 = landingpad { ptr, i32 }
           cleanup
   unreachable
 
 lpad580:                                          ; preds = %invoke.cont572
-  %tmp1228 = landingpad { i8*, i32 }
+  %tmp1228 = landingpad { ptr, i32 }
           cleanup
   br label %eh.resume
 
 eh.resume:                                        ; preds = %lpad580, %ehcleanup560, %lpad360, %lpad220
-  resume { i8*, i32 } undef
+  resume { ptr, i32 } undef
 }
 
 @"OBJC_EHTYPE_$_NSException" = external global i8
 
-define void @test4() personality i8* bitcast (i32 (...)* @__objc_personality_v0 to i8*) {
+define void @test4() personality ptr @__objc_personality_v0 {
 entry:
   br i1 undef, label %if.end13, label %if.then10
 
@@ -1927,7 +1926,7 @@ if.then10:                                        ; preds = %entry
   br label %if.end13
 
 if.end13:                                         ; preds = %if.then10, %entry
-  %0 = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, i8*, i64, i8*, i8)*)(i8* undef, i8* undef, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring to i8*), i64 2, i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring_2 to i8*), i8 signext 0), !clang.arc.no_objc_arc_exceptions !0
+  %0 = call ptr @objc_msgSend(ptr undef, ptr undef, ptr @_unnamed_cfstring, i64 2, ptr @_unnamed_cfstring_2, i8 signext 0), !clang.arc.no_objc_arc_exceptions !0
   br i1 undef, label %if.then17, label %if.end18
 
 if.then17:                                        ; preds = %if.end13
@@ -2162,27 +2161,27 @@ if.then398:                                       ; preds = %if.end392
   br label %if.end399
 
 if.end399:                                        ; preds = %if.then398, %if.end392
-  invoke void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*)*)(i8* undef, i8* undef)
+  invoke void @objc_msgSend(ptr undef, ptr undef)
           to label %eh.cont unwind label %lpad, !clang.arc.no_objc_arc_exceptions !0
 
 eh.cont:                                          ; preds = %if.end399
   br i1 undef, label %if.then430, label %if.end439.critedge
 
 if.then430:                                       ; preds = %eh.cont
-  %1 = call i8* @llvm.objc.retain(i8* %0)
+  %1 = call ptr @llvm.objc.retain(ptr %0)
   br label %if.end439
 
 lpad:                                             ; preds = %if.end399
-  %2 = landingpad { i8*, i32 }
-          catch i8* @"OBJC_EHTYPE_$_NSException"
+  %2 = landingpad { ptr, i32 }
+          catch ptr @"OBJC_EHTYPE_$_NSException"
   unreachable
 
 if.end439.critedge:                               ; preds = %eh.cont
-  %3 = call i8* @llvm.objc.retain(i8* %0)
+  %3 = call ptr @llvm.objc.retain(ptr %0)
   br label %if.end439
 
 if.end439:                                        ; preds = %if.end439.critedge, %if.then430
-  call void @llvm.objc.release(i8* %0), !clang.imprecise_release !0
+  call void @llvm.objc.release(ptr %0), !clang.imprecise_release !0
   unreachable
 
 return:                                           ; No predecessors!

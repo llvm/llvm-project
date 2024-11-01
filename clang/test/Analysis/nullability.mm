@@ -34,6 +34,13 @@
 
 #include "Inputs/system-header-simulator-for-nullability.h"
 
+extern void __assert_fail(__const char *__assertion, __const char *__file,
+                          unsigned int __line, __const char *__function)
+    __attribute__((__noreturn__));
+
+#define assert(expr) \
+  ((expr) ? (void)(0) : __assert_fail(#expr, __FILE__, __LINE__, __func__))
+
 @interface TestObject : NSObject
 - (int *_Nonnull)returnsNonnull;
 - (int *_Nullable)returnsNullable;
@@ -42,6 +49,9 @@
 - (void)takesNullable:(int *_Nullable)p;
 - (void)takesUnspecified:(int *)p;
 @property(readonly, strong) NSString *stuff;
+@property(readonly, nonnull) int *propReturnsNonnull;
+@property(readonly, nullable) int *propReturnsNullable;
+@property(readonly) int *propReturnsUnspecified;
 @end
 
 TestObject * getUnspecifiedTestObject();
@@ -179,6 +189,53 @@ void testObjCMessageResultNullability() {
     int *shouldBeNonnull = [eraseNullab(getNonnullTestObject()) returnsNonnull];
     [o takesNonnull:shouldBeNonnull];
   } break;
+  }
+}
+
+void testObjCPropertyReadNullability() {
+  TestObject *o = getNonnullTestObject();
+  switch (getRandom()) {
+  case 0:
+    [o takesNonnull:o.propReturnsNonnull]; // no-warning
+    break;
+  case 1:
+    [o takesNonnull:o.propReturnsUnspecified]; // no-warning
+    break;
+  case 2:
+    [o takesNonnull:o.propReturnsNullable]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+    break;
+  case 3:
+    // If a property is constrained nonnull, assume it remains nonnull
+    if (o.propReturnsNullable) {
+      [o takesNonnull:o.propReturnsNullable]; // no-warning
+      [o takesNonnull:o.propReturnsNullable]; // no-warning
+    }
+    break;
+  case 4:
+    if (!o.propReturnsNullable) {
+      [o takesNonnull:o.propReturnsNullable]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+    }
+    break;
+  case 5:
+    if (!o.propReturnsNullable) {
+      if (o.propReturnsNullable) {
+        // Nonnull constraint from the more recent call wins
+        [o takesNonnull:o.propReturnsNullable]; // no-warning
+      }
+    }
+    break;
+  case 6:
+    // Constraints on property return values are receiver-qualified
+    if (o.propReturnsNullable) {
+      [o takesNonnull:o.propReturnsNullable];                      // no-warning
+      [o takesNonnull:getNonnullTestObject().propReturnsNullable]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+    }
+    break;
+  case 7:
+    // Assertions must be effective at suppressing warnings
+    assert(o.propReturnsNullable);
+    [o takesNonnull:o.propReturnsNullable]; // no-warning
+    break;
   }
 }
 

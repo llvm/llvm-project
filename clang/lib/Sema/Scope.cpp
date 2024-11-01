@@ -43,6 +43,9 @@ void Scope::setFlags(Scope *parent, unsigned flags) {
                   FunctionPrototypeScope | AtCatchScope | ObjCMethodScope)) ==
         0)
       Flags |= parent->getFlags() & OpenMPSimdDirectiveScope;
+    // transmit the parent's 'order' flag, if exists
+    if (parent->getFlags() & OpenMPOrderClauseScope)
+      Flags |= OpenMPOrderClauseScope;
   } else {
     Depth = 0;
     PrototypeDepth = 0;

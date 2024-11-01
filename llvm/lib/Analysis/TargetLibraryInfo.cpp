@@ -177,9 +177,9 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     ShouldExtI32Param = true;
     ShouldExtI32Return = true;
   }
-  // Mips, on the other hand, needs signext on i32 parameters corresponding
-  // to both signed and unsigned ints.
-  if (T.isMIPS()) {
+  // Mips and riscv64, on the other hand, needs signext on i32 parameters
+  // corresponding to both signed and unsigned ints.
+  if (T.isMIPS() || T.isRISCV64()) {
     ShouldSignExtI32Param = true;
   }
   TLI.setShouldExtI32Param(ShouldExtI32Param);

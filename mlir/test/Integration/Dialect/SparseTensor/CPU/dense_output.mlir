@@ -3,7 +3,7 @@
 // DEFINE: TENSOR0="%mlir_src_dir/test/Integration/data/test.mtx" \
 // DEFINE: mlir-cpu-runner \
 // DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext | \
 // DEFINE: FileCheck %s
 //
 // RUN: %{command}
@@ -66,6 +66,7 @@ module {
   }
 
   func.func private @getTensorFilename(index) -> (!Filename)
+  func.func private @printMemref1dF64(%ptr : memref<?xf64>) attributes { llvm.emit_c_interface }
 
   //
   // Main driver that reads matrix from file and calls the kernel.
@@ -86,13 +87,14 @@ module {
 
     //
     // Print the linearized 5x5 result for verification.
+    // CHECK: 25
+    // CHECK: [2,  0,  0,  2.8,  0,  0,  4,  0,  0,  5,  0,  0,  6,  0,  0,  8.2,  0,  0,  8,  0,  0,  10.4,  0,  0,  10
     //
-    // CHECK: ( 2, 0, 0, 2.8, 0, 0, 4, 0, 0, 5, 0, 0, 6, 0, 0, 8.2, 0, 0, 8, 0, 0, 10.4, 0, 0, 10 )
-    //
+    %n = sparse_tensor.number_of_entries %0 : tensor<?x?xf64, #DenseMatrix>
+    vector.print %n : index
     %m = sparse_tensor.values %0
       : tensor<?x?xf64, #DenseMatrix> to memref<?xf64>
-    %v = vector.load %m[%c0] : memref<?xf64>, vector<25xf64>
-    vector.print %v : vector<25xf64>
+    call @printMemref1dF64(%m) : (memref<?xf64>) -> ()
 
     // Release the resources.
     bufferization.dealloc_tensor %a : tensor<?x?xf64, #SparseMatrix>

@@ -31,6 +31,18 @@ sc.w $t7, $t2, 56
 
 # CHECK64-ASM-AND-OBJ: amswap.w $a2, $t0, $s1
 # CHECK64-ASM: encoding: [0x06,0x33,0x60,0x38]
+amswap.w $a2, $t0, $s1, 0
+
+# CHECK64-ASM-AND-OBJ: amswap.w $zero, $t0, $zero
+# CHECK64-ASM: encoding: [0x00,0x30,0x60,0x38]
+amswap.w $zero, $t0, $zero
+
+# CHECK64-ASM-AND-OBJ: amadd_db.w $zero, $zero, $a1
+# CHECK64-ASM: encoding: [0xa0,0x00,0x6a,0x38]
+amadd_db.w $zero, $zero, $a1
+
+# CHECK64-ASM-AND-OBJ: amswap.w $a2, $t0, $s1
+# CHECK64-ASM: encoding: [0x06,0x33,0x60,0x38]
 amswap.w $a2, $t0, $s1
 
 # CHECK64-ASM-AND-OBJ: amswap.d $tp, $t2, $fp
