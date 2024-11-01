@@ -270,7 +270,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     if (valobj_sp->GetError().GetError() != UserExpression::kNoResult)
       dump_val_object(*valobj_sp);
     else
-      result.SetStatus(eReturnStatusSuccessFinishResult);
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
 
     if (suppress_result)
       if (auto result_var_sp =
