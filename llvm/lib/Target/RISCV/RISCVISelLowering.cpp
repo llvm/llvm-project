@@ -4477,8 +4477,7 @@ static bool isDeinterleaveShuffle(MVT VT, MVT ContainerVT, SDValue V1,
 
   // The others must increase by 2 each time (or be undef).
   for (unsigned i = 1; i != Mask.size(); ++i)
-    if (Mask[i] != Mask[i - 1] + 2 &&
-        Mask[i] != -1)
+    if (Mask[i] != Mask[i - 1] + 2 && Mask[i] != -1)
       return false;
 
   return true;
