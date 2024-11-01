@@ -3438,6 +3438,31 @@ alpha.WebKit
 
 .. _alpha-webkit-NoUncheckedPtrMemberChecker:
 
+alpha.webkit.MemoryUnsafeCastChecker
+""""""""""""""""""""""""""""""""""""""
+Check for all casts from a base type to its derived type as these might be memory-unsafe.
+
+Example:
+
+.. code-block:: cpp
+
+    class Base { };
+    class Derived : public Base { };
+
+    void f(Base* base) {
+        Derived* derived = static_cast<Derived*>(base); // ERROR
+    }
+
+For all cast operations (C-style casts, static_cast, reinterpret_cast, dynamic_cast), if the source type a `Base*` and the destination type is `Derived*`, where `Derived` inherits from `Base`, the static analyzer should signal an error.
+
+This applies to:
+
+- C structs, C++ structs and classes, and Objective-C classes and protocols.
+- Pointers and references.
+- Inside template instantiations and macro expansions that are visible to the compiler.
+
+For types like this, instead of using built in casts, the programmer will use helper functions that internally perform the appropriate type check and disable static analysis.
+
 alpha.webkit.NoUncheckedPtrMemberChecker
 """"""""""""""""""""""""""""""""""""""""
 Raw pointers and references to an object which supports CheckedPtr or CheckedRef can't be used as class members. Only CheckedPtr, CheckedRef, RefPtr, or Ref are allowed.
