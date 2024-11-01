@@ -21,2603 +21,4947 @@
 
 ; TODO: optimize .sys.shared into .cta.shared or .cluster.shared .
 
-; generic statespace
+;; generic statespace
 
-define void @generic_weak(ptr %a, ptr %b, ptr %c, ptr %d) local_unnamed_addr {
-; CHECK-LABEL: generic_weak(
+; generic_weak
+
+define void @generic_weak_i8(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_weak_i8(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<29>;
-; CHECK-NEXT:    .reg .b32 %r<29>;
-; CHECK-NEXT:    .reg .f32 %f<15>;
-; CHECK-NEXT:    .reg .b64 %rd<11>;
-; CHECK-NEXT:    .reg .f64 %fd<7>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_i8_param_0];
 ; CHECK-NEXT:    ld.u8 %rs1, [%rd1];
-; CHECK-NEXT:    ld.param.u64 %rd2, [generic_weak_param_1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    ld.param.u64 %rd3, [generic_weak_param_2];
 ; CHECK-NEXT:    st.u8 [%rd1], %rs2;
-; CHECK-NEXT:    ld.param.u64 %rd4, [generic_weak_param_3];
-; CHECK-NEXT:    ld.u16 %rs3, [%rd2];
-; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
-; CHECK-NEXT:    st.u16 [%rd2], %rs4;
-; CHECK-NEXT:    ld.u32 %r1, [%rd3];
-; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.u32 [%rd3], %r2;
-; CHECK-NEXT:    ld.u64 %rd5, [%rd4];
-; CHECK-NEXT:    add.s64 %rd6, %rd5, 1;
-; CHECK-NEXT:    st.u64 [%rd4], %rd6;
-; CHECK-NEXT:    ld.f32 %f1, [%rd3];
-; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.f32 [%rd3], %f2;
-; CHECK-NEXT:    ld.f64 %fd1, [%rd4];
-; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.f64 [%rd4], %fd2;
-; CHECK-NEXT:    ld.v2.u8 {%rs5, %rs6}, [%rd2];
-; CHECK-NEXT:    add.s16 %rs7, %rs6, 1;
-; CHECK-NEXT:    add.s16 %rs8, %rs5, 1;
-; CHECK-NEXT:    st.v2.u8 [%rd2], {%rs8, %rs7};
-; CHECK-NEXT:    ld.u32 %r3, [%rd3];
-; CHECK-NEXT:    bfe.u32 %r4, %r3, 0, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs9, %r4;
-; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r5, %rs10;
-; CHECK-NEXT:    bfe.u32 %r6, %r3, 8, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs11, %r6;
-; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r7, %rs12;
-; CHECK-NEXT:    bfi.b32 %r8, %r7, %r5, 8, 8;
-; CHECK-NEXT:    bfe.u32 %r9, %r3, 16, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs13, %r9;
-; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r10, %rs14;
-; CHECK-NEXT:    bfi.b32 %r11, %r10, %r8, 16, 8;
-; CHECK-NEXT:    bfe.u32 %r12, %r3, 24, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs15, %r12;
-; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r13, %rs16;
-; CHECK-NEXT:    bfi.b32 %r14, %r13, %r11, 24, 8;
-; CHECK-NEXT:    st.u32 [%rd3], %r14;
-; CHECK-NEXT:    ld.u32 %r15, [%rd3];
-; CHECK-NEXT:    mov.b32 {%rs17, %rs18}, %r15;
-; CHECK-NEXT:    add.s16 %rs19, %rs18, 1;
-; CHECK-NEXT:    add.s16 %rs20, %rs17, 1;
-; CHECK-NEXT:    mov.b32 %r16, {%rs20, %rs19};
-; CHECK-NEXT:    st.u32 [%rd3], %r16;
-; CHECK-NEXT:    ld.v4.u16 {%rs21, %rs22, %rs23, %rs24}, [%rd4];
-; CHECK-NEXT:    add.s16 %rs25, %rs24, 1;
-; CHECK-NEXT:    add.s16 %rs26, %rs23, 1;
-; CHECK-NEXT:    add.s16 %rs27, %rs22, 1;
-; CHECK-NEXT:    add.s16 %rs28, %rs21, 1;
-; CHECK-NEXT:    st.v4.u16 [%rd4], {%rs28, %rs27, %rs26, %rs25};
-; CHECK-NEXT:    ld.v2.u32 {%r17, %r18}, [%rd4];
-; CHECK-NEXT:    add.s32 %r19, %r18, 1;
-; CHECK-NEXT:    add.s32 %r20, %r17, 1;
-; CHECK-NEXT:    st.v2.u32 [%rd4], {%r20, %r19};
-; CHECK-NEXT:    ld.v4.u32 {%r21, %r22, %r23, %r24}, [%rd4];
-; CHECK-NEXT:    add.s32 %r25, %r24, 1;
-; CHECK-NEXT:    add.s32 %r26, %r23, 1;
-; CHECK-NEXT:    add.s32 %r27, %r22, 1;
-; CHECK-NEXT:    add.s32 %r28, %r21, 1;
-; CHECK-NEXT:    st.v4.u32 [%rd4], {%r28, %r27, %r26, %r25};
-; CHECK-NEXT:    ld.v2.u64 {%rd7, %rd8}, [%rd4];
-; CHECK-NEXT:    add.s64 %rd9, %rd8, 1;
-; CHECK-NEXT:    add.s64 %rd10, %rd7, 1;
-; CHECK-NEXT:    st.v2.u64 [%rd4], {%rd10, %rd9};
-; CHECK-NEXT:    ld.v2.f32 {%f3, %f4}, [%rd4];
-; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
-; CHECK-NEXT:    st.v2.f32 [%rd4], {%f6, %f5};
-; CHECK-NEXT:    ld.v4.f32 {%f7, %f8, %f9, %f10}, [%rd4];
-; CHECK-NEXT:    add.rn.f32 %f11, %f10, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f12, %f9, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f13, %f8, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f14, %f7, 0f3F800000;
-; CHECK-NEXT:    st.v4.f32 [%rd4], {%f14, %f13, %f12, %f11};
-; CHECK-NEXT:    ld.v2.f64 {%fd3, %fd4}, [%rd4];
-; CHECK-NEXT:    add.rn.f64 %fd5, %fd4, 0d3FF0000000000000;
-; CHECK-NEXT:    add.rn.f64 %fd6, %fd3, 0d3FF0000000000000;
-; CHECK-NEXT:    st.v2.f64 [%rd4], {%fd6, %fd5};
 ; CHECK-NEXT:    ret;
   %a.load = load i8, ptr %a
   %a.add = add i8 %a.load, 1
   store i8 %a.add, ptr %a
-
-  %b.load = load i16, ptr %b
-  %b.add = add i16 %b.load, 1
-  store i16 %b.add, ptr %b
-
-  %c.load = load i32, ptr %c
-  %c.add = add i32 %c.load, 1
-  store i32 %c.add, ptr %c
-
-  %d.load = load i64, ptr %d
-  %d.add = add i64 %d.load, 1
-  store i64 %d.add, ptr %d
-
-  %e.load = load float, ptr %c
-  %e.add = fadd float %e.load, 1.
-  store float %e.add, ptr %c
-
-  %f.load = load double, ptr %d
-  %f.add = fadd double %f.load, 1.
-  store double %f.add, ptr %d
-
-  ; TODO: make the lowering of this weak vector ops consistent with
-  ;       the ones of the next tests. This test lowers to a weak PTX
-  ;       vector op, but next test lowers to a vector PTX op.
-  %h.load = load <2 x i8>, ptr %b
-  %h.add = add <2 x i8> %h.load, <i8 1, i8 1>
-  store <2 x i8> %h.add, ptr %b
-
-  ; TODO: make the lowering of this weak vector ops consistent with
-  ;       the ones of the previous test. This test lowers to a weak
-  ;       PTX scalar op, but prior test lowers to a vector PTX op.
-  %i.load = load <4 x i8>, ptr %c
-  %i.add = add <4 x i8> %i.load, <i8 1, i8 1, i8 1, i8 1>
-  store <4 x i8> %i.add, ptr %c
-
-  %j.load = load <2 x i16>, ptr %c
-  %j.add = add <2 x i16> %j.load, <i16 1, i16 1>
-  store <2 x i16> %j.add, ptr %c
-
-  %k.load = load <4 x i16>, ptr %d
-  %k.add = add <4 x i16> %k.load, <i16 1, i16 1, i16 1, i16 1>
-  store <4 x i16> %k.add, ptr %d
-
-  %l.load = load <2 x i32>, ptr %d
-  %l.add = add <2 x i32> %l.load, <i32 1, i32 1>
-  store <2 x i32> %l.add, ptr %d
-
-  %m.load = load <4 x i32>, ptr %d
-  %m.add = add <4 x i32> %m.load, <i32 1, i32 1, i32 1, i32 1>
-  store <4 x i32> %m.add, ptr %d
-
-  %n.load = load <2 x i64>, ptr %d
-  %n.add = add <2 x i64> %n.load, <i64 1, i64 1>
-  store <2 x i64> %n.add, ptr %d
-
-  %o.load = load <2 x float>, ptr %d
-  %o.add = fadd <2 x float> %o.load, <float 1., float 1.>
-  store <2 x float> %o.add, ptr %d
-
-  %p.load = load <4 x float>, ptr %d
-  %p.add = fadd <4 x float> %p.load, <float 1., float 1., float 1., float 1.>
-  store <4 x float> %p.add, ptr %d
-
-  %q.load = load <2 x double>, ptr %d
-  %q.add = fadd <2 x double> %q.load, <double 1., double 1.>
-  store <2 x double> %q.add, ptr %d
-
   ret void
 }
 
-define void @generic_volatile(ptr %a, ptr %b, ptr %c, ptr %d) local_unnamed_addr {
-; CHECK-LABEL: generic_volatile(
+define void @generic_weak_i16(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_weak_i16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<29>;
-; CHECK-NEXT:    .reg .b32 %r<29>;
-; CHECK-NEXT:    .reg .f32 %f<15>;
-; CHECK-NEXT:    .reg .b64 %rd<11>;
-; CHECK-NEXT:    .reg .f64 %fd<7>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_param_0];
-; CHECK-NEXT:    ld.volatile.u8 %rs1, [%rd1];
-; CHECK-NEXT:    ld.param.u64 %rd2, [generic_volatile_param_1];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_i16_param_0];
+; CHECK-NEXT:    ld.u16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    ld.param.u64 %rd3, [generic_volatile_param_2];
-; CHECK-NEXT:    st.volatile.u8 [%rd1], %rs2;
-; CHECK-NEXT:    ld.param.u64 %rd4, [generic_volatile_param_3];
-; CHECK-NEXT:    ld.volatile.u16 %rs3, [%rd2];
-; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
-; CHECK-NEXT:    st.volatile.u16 [%rd2], %rs4;
-; CHECK-NEXT:    ld.volatile.u32 %r1, [%rd3];
+; CHECK-NEXT:    st.u16 [%rd1], %rs2;
+; CHECK-NEXT:    ret;
+  %a.load = load i16, ptr %a
+  %a.add = add i16 %a.load, 1
+  store i16 %a.add, ptr %a
+  ret void
+}
+
+define void @generic_weak_i32(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_weak_i32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_i32_param_0];
+; CHECK-NEXT:    ld.u32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.volatile.u32 [%rd3], %r2;
-; CHECK-NEXT:    ld.volatile.u64 %rd5, [%rd4];
-; CHECK-NEXT:    add.s64 %rd6, %rd5, 1;
-; CHECK-NEXT:    st.volatile.u64 [%rd4], %rd6;
-; CHECK-NEXT:    ld.volatile.f32 %f1, [%rd3];
+; CHECK-NEXT:    st.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load i32, ptr %a
+  %a.add = add i32 %a.load, 1
+  store i32 %a.add, ptr %a
+  ret void
+}
+
+define void @generic_weak_i64(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_weak_i64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_i64_param_0];
+; CHECK-NEXT:    ld.u64 %rd2, [%rd1];
+; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
+; CHECK-NEXT:    st.u64 [%rd1], %rd3;
+; CHECK-NEXT:    ret;
+  %a.load = load i64, ptr %a
+  %a.add = add i64 %a.load, 1
+  store i64 %a.add, ptr %a
+  ret void
+}
+
+define void @generic_weak_float(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_weak_float(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_float_param_0];
+; CHECK-NEXT:    ld.f32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.f32 [%rd3], %f2;
-; CHECK-NEXT:    ld.volatile.f64 %fd1, [%rd3];
+; CHECK-NEXT:    st.f32 [%rd1], %f2;
+; CHECK-NEXT:    ret;
+  %a.load = load float, ptr %a
+  %a.add = fadd float %a.load, 1.
+  store float %a.add, ptr %a
+  ret void
+}
+
+define void @generic_weak_double(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_weak_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_double_param_0];
+; CHECK-NEXT:    ld.f64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.f64 [%rd3], %fd2;
-; CHECK-NEXT:    ld.volatile.v2.u8 {%rs5, %rs6}, [%rd2];
-; CHECK-NEXT:    add.s16 %rs7, %rs6, 1;
-; CHECK-NEXT:    add.s16 %rs8, %rs5, 1;
-; CHECK-NEXT:    st.volatile.v2.u8 [%rd2], {%rs8, %rs7};
-; CHECK-NEXT:    ld.volatile.u32 %r3, [%rd3];
-; CHECK-NEXT:    bfe.u32 %r4, %r3, 0, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs9, %r4;
-; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r5, %rs10;
-; CHECK-NEXT:    bfe.u32 %r6, %r3, 8, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs11, %r6;
-; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r7, %rs12;
-; CHECK-NEXT:    bfi.b32 %r8, %r7, %r5, 8, 8;
-; CHECK-NEXT:    bfe.u32 %r9, %r3, 16, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs13, %r9;
-; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r10, %rs14;
-; CHECK-NEXT:    bfi.b32 %r11, %r10, %r8, 16, 8;
-; CHECK-NEXT:    bfe.u32 %r12, %r3, 24, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs15, %r12;
-; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r13, %rs16;
-; CHECK-NEXT:    bfi.b32 %r14, %r13, %r11, 24, 8;
-; CHECK-NEXT:    st.volatile.u32 [%rd3], %r14;
-; CHECK-NEXT:    ld.volatile.u32 %r15, [%rd3];
-; CHECK-NEXT:    mov.b32 {%rs17, %rs18}, %r15;
-; CHECK-NEXT:    add.s16 %rs19, %rs18, 1;
-; CHECK-NEXT:    add.s16 %rs20, %rs17, 1;
-; CHECK-NEXT:    mov.b32 %r16, {%rs20, %rs19};
-; CHECK-NEXT:    st.volatile.u32 [%rd3], %r16;
-; CHECK-NEXT:    ld.volatile.v4.u16 {%rs21, %rs22, %rs23, %rs24}, [%rd4];
-; CHECK-NEXT:    add.s16 %rs25, %rs24, 1;
-; CHECK-NEXT:    add.s16 %rs26, %rs23, 1;
-; CHECK-NEXT:    add.s16 %rs27, %rs22, 1;
-; CHECK-NEXT:    add.s16 %rs28, %rs21, 1;
-; CHECK-NEXT:    st.volatile.v4.u16 [%rd4], {%rs28, %rs27, %rs26, %rs25};
-; CHECK-NEXT:    ld.volatile.v2.u32 {%r17, %r18}, [%rd4];
-; CHECK-NEXT:    add.s32 %r19, %r18, 1;
-; CHECK-NEXT:    add.s32 %r20, %r17, 1;
-; CHECK-NEXT:    st.volatile.v2.u32 [%rd4], {%r20, %r19};
-; CHECK-NEXT:    ld.volatile.v4.u32 {%r21, %r22, %r23, %r24}, [%rd4];
-; CHECK-NEXT:    add.s32 %r25, %r24, 1;
-; CHECK-NEXT:    add.s32 %r26, %r23, 1;
-; CHECK-NEXT:    add.s32 %r27, %r22, 1;
-; CHECK-NEXT:    add.s32 %r28, %r21, 1;
-; CHECK-NEXT:    st.volatile.v4.u32 [%rd4], {%r28, %r27, %r26, %r25};
-; CHECK-NEXT:    ld.volatile.v2.u64 {%rd7, %rd8}, [%rd4];
-; CHECK-NEXT:    add.s64 %rd9, %rd8, 1;
-; CHECK-NEXT:    add.s64 %rd10, %rd7, 1;
-; CHECK-NEXT:    st.volatile.v2.u64 [%rd4], {%rd10, %rd9};
-; CHECK-NEXT:    ld.volatile.v2.f32 {%f3, %f4}, [%rd4];
+; CHECK-NEXT:    st.f64 [%rd1], %fd2;
+; CHECK-NEXT:    ret;
+  %a.load = load double, ptr %a
+  %a.add = fadd double %a.load, 1.
+  store double %a.add, ptr %a
+  ret void
+}
+
+; TODO: make the lowering of this weak vector ops consistent with
+;       the ones of the next tests. This test lowers to a weak PTX
+;       vector op, but next test lowers to a vector PTX op.
+define void @generic_weak_2xi8(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_weak_2xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_2xi8_param_0];
+; CHECK-NEXT:    ld.v2.u8 {%rs1, %rs2}, [%rd1];
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    st.v2.u8 [%rd1], {%rs4, %rs3};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x i8>, ptr %a
+  %a.add = add <2 x i8> %a.load, <i8 1, i8 1>
+  store <2 x i8> %a.add, ptr %a
+  ret void
+}
+
+; TODO: make the lowering of this weak vector ops consistent with
+;       the ones of the previous test. This test lowers to a weak
+;       PTX scalar op, but prior test lowers to a vector PTX op.
+define void @generic_weak_4xi8(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_weak_4xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<9>;
+; CHECK-NEXT:    .reg .b32 %r<13>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_4xi8_param_0];
+; CHECK-NEXT:    ld.u32 %r1, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r2, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r2;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r3, %rs2;
+; CHECK-NEXT:    bfe.u32 %r4, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r4;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs4;
+; CHECK-NEXT:    bfi.b32 %r6, %r5, %r3, 8, 8;
+; CHECK-NEXT:    bfe.u32 %r7, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs6;
+; CHECK-NEXT:    bfi.b32 %r9, %r8, %r6, 16, 8;
+; CHECK-NEXT:    bfe.u32 %r10, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs8;
+; CHECK-NEXT:    bfi.b32 %r12, %r11, %r9, 24, 8;
+; CHECK-NEXT:    st.u32 [%rd1], %r12;
+; CHECK-NEXT:    ret;
+  %a.load = load <4 x i8>, ptr %a
+  %a.add = add <4 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1>
+  store <4 x i8> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_weak_2xi16(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_weak_2xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_2xi16_param_0];
+; CHECK-NEXT:    ld.u32 %r1, [%rd1];
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    mov.b32 %r2, {%rs4, %rs3};
+; CHECK-NEXT:    st.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x i16>, ptr %a
+  %a.add = add <2 x i16> %a.load, <i16 1, i16 1>
+  store <2 x i16> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_weak_4xi16(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_weak_4xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_4xi16_param_0];
+; CHECK-NEXT:    ld.v4.u16 {%rs1, %rs2, %rs3, %rs4}, [%rd1];
+; CHECK-NEXT:    add.s16 %rs5, %rs4, 1;
+; CHECK-NEXT:    add.s16 %rs6, %rs3, 1;
+; CHECK-NEXT:    add.s16 %rs7, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs8, %rs1, 1;
+; CHECK-NEXT:    st.v4.u16 [%rd1], {%rs8, %rs7, %rs6, %rs5};
+; CHECK-NEXT:    ret;
+  %a.load = load <4 x i16>, ptr %a
+  %a.add = add <4 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1>
+  store <4 x i16> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_weak_2xi32(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_weak_2xi32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_2xi32_param_0];
+; CHECK-NEXT:    ld.v2.u32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    add.s32 %r3, %r2, 1;
+; CHECK-NEXT:    add.s32 %r4, %r1, 1;
+; CHECK-NEXT:    st.v2.u32 [%rd1], {%r4, %r3};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x i32>, ptr %a
+  %a.add = add <2 x i32> %a.load, <i32 1, i32 1>
+  store <2 x i32> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_weak_4xi32(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_weak_4xi32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_4xi32_param_0];
+; CHECK-NEXT:    ld.v4.u32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    add.s32 %r5, %r4, 1;
+; CHECK-NEXT:    add.s32 %r6, %r3, 1;
+; CHECK-NEXT:    add.s32 %r7, %r2, 1;
+; CHECK-NEXT:    add.s32 %r8, %r1, 1;
+; CHECK-NEXT:    st.v4.u32 [%rd1], {%r8, %r7, %r6, %r5};
+; CHECK-NEXT:    ret;
+  %a.load = load <4 x i32>, ptr %a
+  %a.add = add <4 x i32> %a.load, <i32 1, i32 1, i32 1, i32 1>
+  store <4 x i32> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_weak_2xi64(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_weak_2xi64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_2xi64_param_0];
+; CHECK-NEXT:    ld.v2.u64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    add.s64 %rd4, %rd3, 1;
+; CHECK-NEXT:    add.s64 %rd5, %rd2, 1;
+; CHECK-NEXT:    st.v2.u64 [%rd1], {%rd5, %rd4};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x i64>, ptr %a
+  %a.add = add <2 x i64> %a.load, <i64 1, i64 1>
+  store <2 x i64> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_weak_2xfloat(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_weak_2xfloat(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_2xfloat_param_0];
+; CHECK-NEXT:    ld.v2.f32 {%f1, %f2}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
+; CHECK-NEXT:    st.v2.f32 [%rd1], {%f4, %f3};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x float>, ptr %a
+  %a.add = fadd <2 x float> %a.load, <float 1., float 1.>
+  store <2 x float> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_weak_4xfloat(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_weak_4xfloat(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_4xfloat_param_0];
+; CHECK-NEXT:    ld.v4.f32 {%f1, %f2, %f3, %f4}, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
 ; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
-; CHECK-NEXT:    st.volatile.v2.f32 [%rd4], {%f6, %f5};
-; CHECK-NEXT:    ld.volatile.v4.f32 {%f7, %f8, %f9, %f10}, [%rd4];
-; CHECK-NEXT:    add.rn.f32 %f11, %f10, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f12, %f9, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f13, %f8, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f14, %f7, 0f3F800000;
-; CHECK-NEXT:    st.volatile.v4.f32 [%rd4], {%f14, %f13, %f12, %f11};
-; CHECK-NEXT:    ld.volatile.v2.f64 {%fd3, %fd4}, [%rd4];
-; CHECK-NEXT:    add.rn.f64 %fd5, %fd4, 0d3FF0000000000000;
-; CHECK-NEXT:    add.rn.f64 %fd6, %fd3, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.v2.f64 [%rd4], {%fd6, %fd5};
+; CHECK-NEXT:    add.rn.f32 %f7, %f2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f8, %f1, 0f3F800000;
+; CHECK-NEXT:    st.v4.f32 [%rd1], {%f8, %f7, %f6, %f5};
+; CHECK-NEXT:    ret;
+  %a.load = load <4 x float>, ptr %a
+  %a.add = fadd <4 x float> %a.load, <float 1., float 1., float 1., float 1.>
+  store <4 x float> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_weak_2xdouble(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_weak_2xdouble(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_weak_2xdouble_param_0];
+; CHECK-NEXT:    ld.v2.f64 {%fd1, %fd2}, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
+; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
+; CHECK-NEXT:    st.v2.f64 [%rd1], {%fd4, %fd3};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x double>, ptr %a
+  %a.add = fadd <2 x double> %a.load, <double 1., double 1.>
+  store <2 x double> %a.add, ptr %a
+  ret void
+}
+
+; generic_volatile
+
+define void @generic_volatile_i8(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_volatile_i8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_i8_param_0];
+; CHECK-NEXT:    ld.volatile.u8 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.volatile.u8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i8, ptr %a
   %a.add = add i8 %a.load, 1
   store volatile i8 %a.add, ptr %a
-
-  %b.load = load volatile i16, ptr %b
-  %b.add = add i16 %b.load, 1
-  store volatile i16 %b.add, ptr %b
-
-  %c.load = load volatile i32, ptr %c
-  %c.add = add i32 %c.load, 1
-  store volatile i32 %c.add, ptr %c
-
-  %d.load = load volatile i64, ptr %d
-  %d.add = add i64 %d.load, 1
-  store volatile i64 %d.add, ptr %d
-
-  %e.load = load volatile float, ptr %c
-  %e.add = fadd float %e.load, 1.
-  store volatile float %e.add, ptr %c
-
-  %f.load = load volatile double, ptr %c
-  %f.add = fadd double %f.load, 1.
-  store volatile double %f.add, ptr %c
-
-  ; TODO: volatile, atomic, and volatile atomic memory operations on vector types.
-  ; Currently, LLVM:
-  ; - does not allow atomic operations on vectors.
-  ; - it allows volatile operations but not clear what that means.
-  ; Following both semantics make sense in general and PTX supports both:
-  ; - volatile/atomic/volatile atomic applies to the whole vector
-  ; - volatile/atomic/volatile atomic applies elementwise
-  ; Actions required:
-  ; - clarify LLVM semantics for volatile on vectors and align the NVPTX backend with those
-  ;   Below tests show that the current implementation picks the semantics in an inconsistent way
-  ;   * volatile <2 x i8> lowers to "elementwise volatile"
-  ;   * <4 x i8> lowers to "full vector volatile"
-  ; - provide support for vector atomics, e.g., by extending LLVM IR or via intrinsics
-  ; - update tests in load-store-sm70.ll as well.
-
-  ; TODO: make this operation consistent with the one for <4 x i8>
-  ; This operation lowers to a "element wise volatile PTX operation".
-  %h.load = load volatile <2 x i8>, ptr %b
-  %h.add = add <2 x i8> %h.load, <i8 1, i8 1>
-  store volatile <2 x i8> %h.add, ptr %b
-
-  ; TODO: make this operation consistent with the one for <2 x i8>
-  ; This operation lowers to a "full vector volatile PTX operation".
-  %i.load = load volatile <4 x i8>, ptr %c
-  %i.add = add <4 x i8> %i.load, <i8 1, i8 1, i8 1, i8 1>
-  store volatile <4 x i8> %i.add, ptr %c
-
-  %j.load = load volatile <2 x i16>, ptr %c
-  %j.add = add <2 x i16> %j.load, <i16 1, i16 1>
-  store volatile <2 x i16> %j.add, ptr %c
-
-  %k.load = load volatile <4 x i16>, ptr %d
-  %k.add = add <4 x i16> %k.load, <i16 1, i16 1, i16 1, i16 1>
-  store volatile <4 x i16> %k.add, ptr %d
-
-  %l.load = load volatile <2 x i32>, ptr %d
-  %l.add = add <2 x i32> %l.load, <i32 1, i32 1>
-  store volatile <2 x i32> %l.add, ptr %d
-
-  %m.load = load volatile <4 x i32>, ptr %d
-  %m.add = add <4 x i32> %m.load, <i32 1, i32 1, i32 1, i32 1>
-  store volatile <4 x i32> %m.add, ptr %d
-
-  %n.load = load volatile <2 x i64>, ptr %d
-  %n.add = add <2 x i64> %n.load, <i64 1, i64 1>
-  store volatile <2 x i64> %n.add, ptr %d
-
-  %o.load = load volatile <2 x float>, ptr %d
-  %o.add = fadd <2 x float> %o.load, <float 1., float 1.>
-  store volatile <2 x float> %o.add, ptr %d
-
-  %p.load = load volatile <4 x float>, ptr %d
-  %p.add = fadd <4 x float> %p.load, <float 1., float 1., float 1., float 1.>
-  store volatile <4 x float> %p.add, ptr %d
-
-  %q.load = load volatile <2 x double>, ptr %d
-  %q.add = fadd <2 x double> %q.load, <double 1., double 1.>
-  store volatile <2 x double> %q.add, ptr %d
-
   ret void
 }
 
-define void @generic_unordered_sys(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) local_unnamed_addr {
-; SM60-LABEL: generic_unordered_sys(
+define void @generic_volatile_i16(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_volatile_i16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_i16_param_0];
+; CHECK-NEXT:    ld.volatile.u16 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.volatile.u16 [%rd1], %rs2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile i16, ptr %a
+  %a.add = add i16 %a.load, 1
+  store volatile i16 %a.add, ptr %a
+  ret void
+}
+
+define void @generic_volatile_i32(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_volatile_i32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_i32_param_0];
+; CHECK-NEXT:    ld.volatile.u32 %r1, [%rd1];
+; CHECK-NEXT:    add.s32 %r2, %r1, 1;
+; CHECK-NEXT:    st.volatile.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile i32, ptr %a
+  %a.add = add i32 %a.load, 1
+  store volatile i32 %a.add, ptr %a
+  ret void
+}
+
+define void @generic_volatile_i64(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_volatile_i64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_i64_param_0];
+; CHECK-NEXT:    ld.volatile.u64 %rd2, [%rd1];
+; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
+; CHECK-NEXT:    st.volatile.u64 [%rd1], %rd3;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile i64, ptr %a
+  %a.add = add i64 %a.load, 1
+  store volatile i64 %a.add, ptr %a
+  ret void
+}
+
+define void @generic_volatile_float(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_volatile_float(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_float_param_0];
+; CHECK-NEXT:    ld.volatile.f32 %f1, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; CHECK-NEXT:    st.volatile.f32 [%rd1], %f2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile float, ptr %a
+  %a.add = fadd float %a.load, 1.
+  store volatile float %a.add, ptr %a
+  ret void
+}
+
+define void @generic_volatile_double(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_volatile_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_double_param_0];
+; CHECK-NEXT:    ld.volatile.f64 %fd1, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
+; CHECK-NEXT:    st.volatile.f64 [%rd1], %fd2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile double, ptr %a
+  %a.add = fadd double %a.load, 1.
+  store volatile double %a.add, ptr %a
+  ret void
+}
+
+; TODO: volatile, atomic, and volatile atomic memory operations on vector types.
+; Currently, LLVM:
+; - does not allow atomic operations on vectors.
+; - it allows volatile operations but not clear what that means.
+; Following both semantics make sense in general and PTX supports both:
+; - volatile/atomic/volatile atomic applies to the whole vector
+; - volatile/atomic/volatile atomic applies elementwise
+; Actions required:
+; - clarify LLVM semantics for volatile on vectors and align the NVPTX backend with those
+;   Below tests show that the current implementation picks the semantics in an inconsistent way
+;   * volatile <2 x i8> lowers to "elementwise volatile"
+;   * <4 x i8> lowers to "full vector volatile"
+; - provide support for vector atomics, e.g., by extending LLVM IR or via intrinsics
+; - update tests in load-store-sm70.ll as well.
+
+; TODO: make this operation consistent with the one for <4 x i8>
+; This operation lowers to a "element wise volatile PTX operation".
+define void @generic_volatile_2xi8(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_volatile_2xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_2xi8_param_0];
+; CHECK-NEXT:    ld.volatile.v2.u8 {%rs1, %rs2}, [%rd1];
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    st.volatile.v2.u8 [%rd1], {%rs4, %rs3};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x i8>, ptr %a
+  %a.add = add <2 x i8> %a.load, <i8 1, i8 1>
+  store volatile <2 x i8> %a.add, ptr %a
+  ret void
+}
+
+; TODO: make this operation consistent with the one for <2 x i8>
+; This operation lowers to a "full vector volatile PTX operation".
+define void @generic_volatile_4xi8(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_volatile_4xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<9>;
+; CHECK-NEXT:    .reg .b32 %r<13>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_4xi8_param_0];
+; CHECK-NEXT:    ld.volatile.u32 %r1, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r2, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r2;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r3, %rs2;
+; CHECK-NEXT:    bfe.u32 %r4, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r4;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs4;
+; CHECK-NEXT:    bfi.b32 %r6, %r5, %r3, 8, 8;
+; CHECK-NEXT:    bfe.u32 %r7, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs6;
+; CHECK-NEXT:    bfi.b32 %r9, %r8, %r6, 16, 8;
+; CHECK-NEXT:    bfe.u32 %r10, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs8;
+; CHECK-NEXT:    bfi.b32 %r12, %r11, %r9, 24, 8;
+; CHECK-NEXT:    st.volatile.u32 [%rd1], %r12;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <4 x i8>, ptr %a
+  %a.add = add <4 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1>
+  store volatile <4 x i8> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_volatile_2xi16(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_volatile_2xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_2xi16_param_0];
+; CHECK-NEXT:    ld.volatile.u32 %r1, [%rd1];
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    mov.b32 %r2, {%rs4, %rs3};
+; CHECK-NEXT:    st.volatile.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x i16>, ptr %a
+  %a.add = add <2 x i16> %a.load, <i16 1, i16 1>
+  store volatile <2 x i16> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_volatile_4xi16(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_volatile_4xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_4xi16_param_0];
+; CHECK-NEXT:    ld.volatile.v4.u16 {%rs1, %rs2, %rs3, %rs4}, [%rd1];
+; CHECK-NEXT:    add.s16 %rs5, %rs4, 1;
+; CHECK-NEXT:    add.s16 %rs6, %rs3, 1;
+; CHECK-NEXT:    add.s16 %rs7, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs8, %rs1, 1;
+; CHECK-NEXT:    st.volatile.v4.u16 [%rd1], {%rs8, %rs7, %rs6, %rs5};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <4 x i16>, ptr %a
+  %a.add = add <4 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1>
+  store volatile <4 x i16> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_volatile_2xi32(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_volatile_2xi32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_2xi32_param_0];
+; CHECK-NEXT:    ld.volatile.v2.u32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    add.s32 %r3, %r2, 1;
+; CHECK-NEXT:    add.s32 %r4, %r1, 1;
+; CHECK-NEXT:    st.volatile.v2.u32 [%rd1], {%r4, %r3};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x i32>, ptr %a
+  %a.add = add <2 x i32> %a.load, <i32 1, i32 1>
+  store volatile <2 x i32> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_volatile_4xi32(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_volatile_4xi32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_4xi32_param_0];
+; CHECK-NEXT:    ld.volatile.v4.u32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    add.s32 %r5, %r4, 1;
+; CHECK-NEXT:    add.s32 %r6, %r3, 1;
+; CHECK-NEXT:    add.s32 %r7, %r2, 1;
+; CHECK-NEXT:    add.s32 %r8, %r1, 1;
+; CHECK-NEXT:    st.volatile.v4.u32 [%rd1], {%r8, %r7, %r6, %r5};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <4 x i32>, ptr %a
+  %a.add = add <4 x i32> %a.load, <i32 1, i32 1, i32 1, i32 1>
+  store volatile <4 x i32> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_volatile_2xi64(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_volatile_2xi64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_2xi64_param_0];
+; CHECK-NEXT:    ld.volatile.v2.u64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    add.s64 %rd4, %rd3, 1;
+; CHECK-NEXT:    add.s64 %rd5, %rd2, 1;
+; CHECK-NEXT:    st.volatile.v2.u64 [%rd1], {%rd5, %rd4};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x i64>, ptr %a
+  %a.add = add <2 x i64> %a.load, <i64 1, i64 1>
+  store volatile <2 x i64> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_volatile_2xfloat(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_volatile_2xfloat(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_2xfloat_param_0];
+; CHECK-NEXT:    ld.volatile.v2.f32 {%f1, %f2}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
+; CHECK-NEXT:    st.volatile.v2.f32 [%rd1], {%f4, %f3};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x float>, ptr %a
+  %a.add = fadd <2 x float> %a.load, <float 1., float 1.>
+  store volatile <2 x float> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_volatile_4xfloat(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_volatile_4xfloat(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_4xfloat_param_0];
+; CHECK-NEXT:    ld.volatile.v4.f32 {%f1, %f2, %f3, %f4}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f7, %f2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f8, %f1, 0f3F800000;
+; CHECK-NEXT:    st.volatile.v4.f32 [%rd1], {%f8, %f7, %f6, %f5};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <4 x float>, ptr %a
+  %a.add = fadd <4 x float> %a.load, <float 1., float 1., float 1., float 1.>
+  store volatile <4 x float> %a.add, ptr %a
+  ret void
+}
+
+define void @generic_volatile_2xdouble(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_volatile_2xdouble(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_2xdouble_param_0];
+; CHECK-NEXT:    ld.volatile.v2.f64 {%fd1, %fd2}, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
+; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
+; CHECK-NEXT:    st.volatile.v2.f64 [%rd1], {%fd4, %fd3};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x double>, ptr %a
+  %a.add = fadd <2 x double> %a.load, <double 1., double 1.>
+  store volatile <2 x double> %a.add, ptr %a
+  ret void
+}
+
+; generic_unordered_sys
+
+define void @generic_unordered_sys_i8(ptr %a) local_unnamed_addr {
+; SM60-LABEL: generic_unordered_sys_i8(
 ; SM60:       {
-; SM60-NEXT:    .reg .b16 %rs<5>;
-; SM60-NEXT:    .reg .b32 %r<3>;
-; SM60-NEXT:    .reg .f32 %f<3>;
-; SM60-NEXT:    .reg .b64 %rd<8>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b16 %rs<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_param_0];
+; SM60-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_i8_param_0];
 ; SM60-NEXT:    ld.volatile.u8 %rs1, [%rd1];
-; SM60-NEXT:    ld.param.u64 %rd2, [generic_unordered_sys_param_1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    ld.param.u64 %rd3, [generic_unordered_sys_param_2];
 ; SM60-NEXT:    st.volatile.u8 [%rd1], %rs2;
-; SM60-NEXT:    ld.param.u64 %rd4, [generic_unordered_sys_param_3];
-; SM60-NEXT:    ld.volatile.u16 %rs3, [%rd2];
-; SM60-NEXT:    ld.param.u64 %rd5, [generic_unordered_sys_param_4];
-; SM60-NEXT:    add.s16 %rs4, %rs3, 1;
-; SM60-NEXT:    st.volatile.u16 [%rd2], %rs4;
-; SM60-NEXT:    ld.volatile.u32 %r1, [%rd3];
-; SM60-NEXT:    add.s32 %r2, %r1, 1;
-; SM60-NEXT:    st.volatile.u32 [%rd3], %r2;
-; SM60-NEXT:    ld.volatile.u64 %rd6, [%rd4];
-; SM60-NEXT:    add.s64 %rd7, %rd6, 1;
-; SM60-NEXT:    st.volatile.u64 [%rd4], %rd7;
-; SM60-NEXT:    ld.volatile.f32 %f1, [%rd5];
-; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM60-NEXT:    st.volatile.f32 [%rd5], %f2;
-; SM60-NEXT:    ld.volatile.f64 %fd1, [%rd5];
-; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM60-NEXT:    st.volatile.f64 [%rd5], %fd2;
 ; SM60-NEXT:    ret;
 ;
-; SM70-LABEL: generic_unordered_sys(
+; SM70-LABEL: generic_unordered_sys_i8(
 ; SM70:       {
-; SM70-NEXT:    .reg .b16 %rs<5>;
-; SM70-NEXT:    .reg .b32 %r<3>;
-; SM70-NEXT:    .reg .f32 %f<3>;
-; SM70-NEXT:    .reg .b64 %rd<8>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b16 %rs<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_param_0];
+; SM70-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_i8_param_0];
 ; SM70-NEXT:    ld.relaxed.sys.u8 %rs1, [%rd1];
-; SM70-NEXT:    ld.param.u64 %rd2, [generic_unordered_sys_param_1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    ld.param.u64 %rd3, [generic_unordered_sys_param_2];
 ; SM70-NEXT:    st.relaxed.sys.u8 [%rd1], %rs2;
-; SM70-NEXT:    ld.param.u64 %rd4, [generic_unordered_sys_param_3];
-; SM70-NEXT:    ld.relaxed.sys.u16 %rs3, [%rd2];
-; SM70-NEXT:    ld.param.u64 %rd5, [generic_unordered_sys_param_4];
-; SM70-NEXT:    add.s16 %rs4, %rs3, 1;
-; SM70-NEXT:    st.relaxed.sys.u16 [%rd2], %rs4;
-; SM70-NEXT:    ld.relaxed.sys.u32 %r1, [%rd3];
-; SM70-NEXT:    add.s32 %r2, %r1, 1;
-; SM70-NEXT:    st.relaxed.sys.u32 [%rd3], %r2;
-; SM70-NEXT:    ld.relaxed.sys.u64 %rd6, [%rd4];
-; SM70-NEXT:    add.s64 %rd7, %rd6, 1;
-; SM70-NEXT:    st.relaxed.sys.u64 [%rd4], %rd7;
-; SM70-NEXT:    ld.relaxed.sys.f32 %f1, [%rd5];
-; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM70-NEXT:    st.relaxed.sys.f32 [%rd5], %f2;
-; SM70-NEXT:    ld.relaxed.sys.f64 %fd1, [%rd5];
-; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM70-NEXT:    st.relaxed.sys.f64 [%rd5], %fd2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i8, ptr %a unordered, align 1
   %a.add = add i8 %a.load, 1
   store atomic i8 %a.add, ptr %a unordered, align 1
-
-  %b.load = load atomic i16, ptr %b unordered, align 2
-  %b.add = add i16 %b.load, 1
-  store atomic i16 %b.add, ptr %b unordered, align 2
-
-  %c.load = load atomic i32, ptr %c unordered, align 4
-  %c.add = add i32 %c.load, 1
-  store atomic i32 %c.add, ptr %c unordered, align 4
-
-  %d.load = load atomic i64, ptr %d unordered, align 8
-  %d.add = add i64 %d.load, 1
-  store atomic i64 %d.add, ptr %d unordered, align 8
-
-  %e.load = load atomic float, ptr %e unordered, align 4
-  %e.add = fadd float %e.load, 1.0
-  store atomic float %e.add, ptr %e unordered, align 4
-
-  %f.load = load atomic double, ptr %e unordered, align 8
-  %f.add = fadd double %f.load, 1.
-  store atomic double %f.add, ptr %e unordered, align 8
-
   ret void
 }
 
-define void @generic_unordered_volatile_sys(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) local_unnamed_addr {
-; CHECK-LABEL: generic_unordered_volatile_sys(
+define void @generic_unordered_sys_i16(ptr %a) local_unnamed_addr {
+; SM60-LABEL: generic_unordered_sys_i16(
+; SM60:       {
+; SM60-NEXT:    .reg .b16 %rs<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_i16_param_0];
+; SM60-NEXT:    ld.volatile.u16 %rs1, [%rd1];
+; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM60-NEXT:    st.volatile.u16 [%rd1], %rs2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: generic_unordered_sys_i16(
+; SM70:       {
+; SM70-NEXT:    .reg .b16 %rs<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_i16_param_0];
+; SM70-NEXT:    ld.relaxed.sys.u16 %rs1, [%rd1];
+; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM70-NEXT:    st.relaxed.sys.u16 [%rd1], %rs2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic i16, ptr %a unordered, align 2
+  %a.add = add i16 %a.load, 1
+  store atomic i16 %a.add, ptr %a unordered, align 2
+  ret void
+}
+
+define void @generic_unordered_sys_i32(ptr %a) local_unnamed_addr {
+; SM60-LABEL: generic_unordered_sys_i32(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_i32_param_0];
+; SM60-NEXT:    ld.volatile.u32 %r1, [%rd1];
+; SM60-NEXT:    add.s32 %r2, %r1, 1;
+; SM60-NEXT:    st.volatile.u32 [%rd1], %r2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: generic_unordered_sys_i32(
+; SM70:       {
+; SM70-NEXT:    .reg .b32 %r<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_i32_param_0];
+; SM70-NEXT:    ld.relaxed.sys.u32 %r1, [%rd1];
+; SM70-NEXT:    add.s32 %r2, %r1, 1;
+; SM70-NEXT:    st.relaxed.sys.u32 [%rd1], %r2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic i32, ptr %a unordered, align 4
+  %a.add = add i32 %a.load, 1
+  store atomic i32 %a.add, ptr %a unordered, align 4
+  ret void
+}
+
+define void @generic_unordered_sys_i64(ptr %a) local_unnamed_addr {
+; SM60-LABEL: generic_unordered_sys_i64(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<4>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_i64_param_0];
+; SM60-NEXT:    ld.volatile.u64 %rd2, [%rd1];
+; SM60-NEXT:    add.s64 %rd3, %rd2, 1;
+; SM60-NEXT:    st.volatile.u64 [%rd1], %rd3;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: generic_unordered_sys_i64(
+; SM70:       {
+; SM70-NEXT:    .reg .b64 %rd<4>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_i64_param_0];
+; SM70-NEXT:    ld.relaxed.sys.u64 %rd2, [%rd1];
+; SM70-NEXT:    add.s64 %rd3, %rd2, 1;
+; SM70-NEXT:    st.relaxed.sys.u64 [%rd1], %rd3;
+; SM70-NEXT:    ret;
+  %a.load = load atomic i64, ptr %a unordered, align 8
+  %a.add = add i64 %a.load, 1
+  store atomic i64 %a.add, ptr %a unordered, align 8
+  ret void
+}
+
+define void @generic_unordered_sys_float(ptr %a) local_unnamed_addr {
+; SM60-LABEL: generic_unordered_sys_float(
+; SM60:       {
+; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_float_param_0];
+; SM60-NEXT:    ld.volatile.f32 %f1, [%rd1];
+; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; SM60-NEXT:    st.volatile.f32 [%rd1], %f2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: generic_unordered_sys_float(
+; SM70:       {
+; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_float_param_0];
+; SM70-NEXT:    ld.relaxed.sys.f32 %f1, [%rd1];
+; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; SM70-NEXT:    st.relaxed.sys.f32 [%rd1], %f2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic float, ptr %a unordered, align 4
+  %a.add = fadd float %a.load, 1.
+  store atomic float %a.add, ptr %a unordered, align 4
+  ret void
+}
+
+define void @generic_unordered_sys_double(ptr %a) local_unnamed_addr {
+; SM60-LABEL: generic_unordered_sys_double(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_double_param_0];
+; SM60-NEXT:    ld.volatile.f64 %fd1, [%rd1];
+; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
+; SM60-NEXT:    st.volatile.f64 [%rd1], %fd2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: generic_unordered_sys_double(
+; SM70:       {
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_double_param_0];
+; SM70-NEXT:    ld.relaxed.sys.f64 %fd1, [%rd1];
+; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
+; SM70-NEXT:    st.relaxed.sys.f64 [%rd1], %fd2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic double, ptr %a unordered, align 8
+  %a.add = fadd double %a.load, 1.
+  store atomic double %a.add, ptr %a unordered, align 8
+  ret void
+}
+
+; generic_unordered_volatile_sys
+
+define void @generic_unordered_volatile_sys_i8(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_unordered_volatile_sys_i8(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
-; CHECK-NEXT:    .reg .b64 %rd<8>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_unordered_volatile_sys_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_unordered_volatile_sys_i8_param_0];
 ; CHECK-NEXT:    ld.volatile.u8 %rs1, [%rd1];
-; CHECK-NEXT:    ld.param.u64 %rd2, [generic_unordered_volatile_sys_param_1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    ld.param.u64 %rd3, [generic_unordered_volatile_sys_param_2];
 ; CHECK-NEXT:    st.volatile.u8 [%rd1], %rs2;
-; CHECK-NEXT:    ld.param.u64 %rd4, [generic_unordered_volatile_sys_param_3];
-; CHECK-NEXT:    ld.volatile.u16 %rs3, [%rd2];
-; CHECK-NEXT:    ld.param.u64 %rd5, [generic_unordered_volatile_sys_param_4];
-; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
-; CHECK-NEXT:    st.volatile.u16 [%rd2], %rs4;
-; CHECK-NEXT:    ld.volatile.u32 %r1, [%rd3];
-; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.volatile.u32 [%rd3], %r2;
-; CHECK-NEXT:    ld.volatile.u64 %rd6, [%rd4];
-; CHECK-NEXT:    add.s64 %rd7, %rd6, 1;
-; CHECK-NEXT:    st.volatile.u64 [%rd4], %rd7;
-; CHECK-NEXT:    ld.volatile.f32 %f1, [%rd5];
-; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.f32 [%rd5], %f2;
-; CHECK-NEXT:    ld.volatile.f64 %fd1, [%rd5];
-; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.f64 [%rd5], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i8, ptr %a unordered, align 1
   %a.add = add i8 %a.load, 1
   store atomic volatile i8 %a.add, ptr %a unordered, align 1
-
-  %b.load = load atomic volatile i16, ptr %b unordered, align 2
-  %b.add = add i16 %b.load, 1
-  store atomic volatile i16 %b.add, ptr %b unordered, align 2
-
-  %c.load = load atomic volatile i32, ptr %c unordered, align 4
-  %c.add = add i32 %c.load, 1
-  store atomic volatile i32 %c.add, ptr %c unordered, align 4
-
-  %d.load = load atomic volatile i64, ptr %d unordered, align 8
-  %d.add = add i64 %d.load, 1
-  store atomic volatile i64 %d.add, ptr %d unordered, align 8
-
-  %e.load = load atomic volatile float, ptr %e unordered, align 4
-  %e.add = fadd float %e.load, 1.0
-  store atomic volatile float %e.add, ptr %e unordered, align 4
-
-  %f.load = load atomic volatile double, ptr %e unordered, align 8
-  %f.add = fadd double %f.load, 1.
-  store atomic volatile double %f.add, ptr %e unordered, align 8
-
   ret void
 }
 
-define void @generic_monotonic_sys(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) local_unnamed_addr {
-; SM60-LABEL: generic_monotonic_sys(
+define void @generic_unordered_volatile_sys_i16(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_unordered_volatile_sys_i16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_unordered_volatile_sys_i16_param_0];
+; CHECK-NEXT:    ld.volatile.u16 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.volatile.u16 [%rd1], %rs2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile i16, ptr %a unordered, align 2
+  %a.add = add i16 %a.load, 1
+  store atomic volatile i16 %a.add, ptr %a unordered, align 2
+  ret void
+}
+
+define void @generic_unordered_volatile_sys_i32(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_unordered_volatile_sys_i32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_unordered_volatile_sys_i32_param_0];
+; CHECK-NEXT:    ld.volatile.u32 %r1, [%rd1];
+; CHECK-NEXT:    add.s32 %r2, %r1, 1;
+; CHECK-NEXT:    st.volatile.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile i32, ptr %a unordered, align 4
+  %a.add = add i32 %a.load, 1
+  store atomic volatile i32 %a.add, ptr %a unordered, align 4
+  ret void
+}
+
+define void @generic_unordered_volatile_sys_i64(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_unordered_volatile_sys_i64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_unordered_volatile_sys_i64_param_0];
+; CHECK-NEXT:    ld.volatile.u64 %rd2, [%rd1];
+; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
+; CHECK-NEXT:    st.volatile.u64 [%rd1], %rd3;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile i64, ptr %a unordered, align 8
+  %a.add = add i64 %a.load, 1
+  store atomic volatile i64 %a.add, ptr %a unordered, align 8
+  ret void
+}
+
+define void @generic_unordered_volatile_sys_float(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_unordered_volatile_sys_float(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_unordered_volatile_sys_float_param_0];
+; CHECK-NEXT:    ld.volatile.f32 %f1, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; CHECK-NEXT:    st.volatile.f32 [%rd1], %f2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile float, ptr %a unordered, align 4
+  %a.add = fadd float %a.load, 1.
+  store atomic volatile float %a.add, ptr %a unordered, align 4
+  ret void
+}
+
+define void @generic_unordered_volatile_sys_double(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_unordered_volatile_sys_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_unordered_volatile_sys_double_param_0];
+; CHECK-NEXT:    ld.volatile.f64 %fd1, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
+; CHECK-NEXT:    st.volatile.f64 [%rd1], %fd2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile double, ptr %a unordered, align 8
+  %a.add = fadd double %a.load, 1.
+  store atomic volatile double %a.add, ptr %a unordered, align 8
+  ret void
+}
+
+; generic_monotonic_sys
+
+define void @generic_monotonic_sys_i8(ptr %a) local_unnamed_addr {
+; SM60-LABEL: generic_monotonic_sys_i8(
 ; SM60:       {
-; SM60-NEXT:    .reg .b16 %rs<5>;
-; SM60-NEXT:    .reg .b32 %r<3>;
-; SM60-NEXT:    .reg .f32 %f<3>;
-; SM60-NEXT:    .reg .b64 %rd<8>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b16 %rs<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_param_0];
+; SM60-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_i8_param_0];
 ; SM60-NEXT:    ld.volatile.u8 %rs1, [%rd1];
-; SM60-NEXT:    ld.param.u64 %rd2, [generic_monotonic_sys_param_1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    ld.param.u64 %rd3, [generic_monotonic_sys_param_2];
 ; SM60-NEXT:    st.volatile.u8 [%rd1], %rs2;
-; SM60-NEXT:    ld.param.u64 %rd4, [generic_monotonic_sys_param_3];
-; SM60-NEXT:    ld.volatile.u16 %rs3, [%rd2];
-; SM60-NEXT:    ld.param.u64 %rd5, [generic_monotonic_sys_param_4];
-; SM60-NEXT:    add.s16 %rs4, %rs3, 1;
-; SM60-NEXT:    st.volatile.u16 [%rd2], %rs4;
-; SM60-NEXT:    ld.volatile.u32 %r1, [%rd3];
-; SM60-NEXT:    add.s32 %r2, %r1, 1;
-; SM60-NEXT:    st.volatile.u32 [%rd3], %r2;
-; SM60-NEXT:    ld.volatile.u64 %rd6, [%rd4];
-; SM60-NEXT:    add.s64 %rd7, %rd6, 1;
-; SM60-NEXT:    st.volatile.u64 [%rd4], %rd7;
-; SM60-NEXT:    ld.volatile.f32 %f1, [%rd5];
-; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM60-NEXT:    st.volatile.f32 [%rd5], %f2;
-; SM60-NEXT:    ld.volatile.f64 %fd1, [%rd5];
-; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM60-NEXT:    st.volatile.f64 [%rd5], %fd2;
 ; SM60-NEXT:    ret;
 ;
-; SM70-LABEL: generic_monotonic_sys(
+; SM70-LABEL: generic_monotonic_sys_i8(
 ; SM70:       {
-; SM70-NEXT:    .reg .b16 %rs<5>;
-; SM70-NEXT:    .reg .b32 %r<3>;
-; SM70-NEXT:    .reg .f32 %f<3>;
-; SM70-NEXT:    .reg .b64 %rd<8>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b16 %rs<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_param_0];
+; SM70-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_i8_param_0];
 ; SM70-NEXT:    ld.relaxed.sys.u8 %rs1, [%rd1];
-; SM70-NEXT:    ld.param.u64 %rd2, [generic_monotonic_sys_param_1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    ld.param.u64 %rd3, [generic_monotonic_sys_param_2];
 ; SM70-NEXT:    st.relaxed.sys.u8 [%rd1], %rs2;
-; SM70-NEXT:    ld.param.u64 %rd4, [generic_monotonic_sys_param_3];
-; SM70-NEXT:    ld.relaxed.sys.u16 %rs3, [%rd2];
-; SM70-NEXT:    ld.param.u64 %rd5, [generic_monotonic_sys_param_4];
-; SM70-NEXT:    add.s16 %rs4, %rs3, 1;
-; SM70-NEXT:    st.relaxed.sys.u16 [%rd2], %rs4;
-; SM70-NEXT:    ld.relaxed.sys.u32 %r1, [%rd3];
-; SM70-NEXT:    add.s32 %r2, %r1, 1;
-; SM70-NEXT:    st.relaxed.sys.u32 [%rd3], %r2;
-; SM70-NEXT:    ld.relaxed.sys.u64 %rd6, [%rd4];
-; SM70-NEXT:    add.s64 %rd7, %rd6, 1;
-; SM70-NEXT:    st.relaxed.sys.u64 [%rd4], %rd7;
-; SM70-NEXT:    ld.relaxed.sys.f32 %f1, [%rd5];
-; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM70-NEXT:    st.relaxed.sys.f32 [%rd5], %f2;
-; SM70-NEXT:    ld.relaxed.sys.f64 %fd1, [%rd5];
-; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM70-NEXT:    st.relaxed.sys.f64 [%rd5], %fd2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i8, ptr %a monotonic, align 1
   %a.add = add i8 %a.load, 1
   store atomic i8 %a.add, ptr %a monotonic, align 1
-
-  %b.load = load atomic i16, ptr %b monotonic, align 2
-  %b.add = add i16 %b.load, 1
-  store atomic i16 %b.add, ptr %b monotonic, align 2
-
-  %c.load = load atomic i32, ptr %c monotonic, align 4
-  %c.add = add i32 %c.load, 1
-  store atomic i32 %c.add, ptr %c monotonic, align 4
-
-  %d.load = load atomic i64, ptr %d monotonic, align 8
-  %d.add = add i64 %d.load, 1
-  store atomic i64 %d.add, ptr %d monotonic, align 8
-
-  %e.load = load atomic float, ptr %e monotonic, align 4
-  %e.add = fadd float %e.load, 1.
-  store atomic float %e.add, ptr %e monotonic, align 4
-
-  %f.load = load atomic double, ptr %e monotonic, align 8
-  %f.add = fadd double %f.load, 1.
-  store atomic double %f.add, ptr %e monotonic, align 8
-
   ret void
 }
 
-define void @generic_monotonic_volatile_sys(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) local_unnamed_addr {
-; CHECK-LABEL: generic_monotonic_volatile_sys(
+define void @generic_monotonic_sys_i16(ptr %a) local_unnamed_addr {
+; SM60-LABEL: generic_monotonic_sys_i16(
+; SM60:       {
+; SM60-NEXT:    .reg .b16 %rs<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_i16_param_0];
+; SM60-NEXT:    ld.volatile.u16 %rs1, [%rd1];
+; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM60-NEXT:    st.volatile.u16 [%rd1], %rs2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: generic_monotonic_sys_i16(
+; SM70:       {
+; SM70-NEXT:    .reg .b16 %rs<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_i16_param_0];
+; SM70-NEXT:    ld.relaxed.sys.u16 %rs1, [%rd1];
+; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM70-NEXT:    st.relaxed.sys.u16 [%rd1], %rs2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic i16, ptr %a monotonic, align 2
+  %a.add = add i16 %a.load, 1
+  store atomic i16 %a.add, ptr %a monotonic, align 2
+  ret void
+}
+
+define void @generic_monotonic_sys_i32(ptr %a) local_unnamed_addr {
+; SM60-LABEL: generic_monotonic_sys_i32(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_i32_param_0];
+; SM60-NEXT:    ld.volatile.u32 %r1, [%rd1];
+; SM60-NEXT:    add.s32 %r2, %r1, 1;
+; SM60-NEXT:    st.volatile.u32 [%rd1], %r2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: generic_monotonic_sys_i32(
+; SM70:       {
+; SM70-NEXT:    .reg .b32 %r<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_i32_param_0];
+; SM70-NEXT:    ld.relaxed.sys.u32 %r1, [%rd1];
+; SM70-NEXT:    add.s32 %r2, %r1, 1;
+; SM70-NEXT:    st.relaxed.sys.u32 [%rd1], %r2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic i32, ptr %a monotonic, align 4
+  %a.add = add i32 %a.load, 1
+  store atomic i32 %a.add, ptr %a monotonic, align 4
+  ret void
+}
+
+define void @generic_monotonic_sys_i64(ptr %a) local_unnamed_addr {
+; SM60-LABEL: generic_monotonic_sys_i64(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<4>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_i64_param_0];
+; SM60-NEXT:    ld.volatile.u64 %rd2, [%rd1];
+; SM60-NEXT:    add.s64 %rd3, %rd2, 1;
+; SM60-NEXT:    st.volatile.u64 [%rd1], %rd3;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: generic_monotonic_sys_i64(
+; SM70:       {
+; SM70-NEXT:    .reg .b64 %rd<4>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_i64_param_0];
+; SM70-NEXT:    ld.relaxed.sys.u64 %rd2, [%rd1];
+; SM70-NEXT:    add.s64 %rd3, %rd2, 1;
+; SM70-NEXT:    st.relaxed.sys.u64 [%rd1], %rd3;
+; SM70-NEXT:    ret;
+  %a.load = load atomic i64, ptr %a monotonic, align 8
+  %a.add = add i64 %a.load, 1
+  store atomic i64 %a.add, ptr %a monotonic, align 8
+  ret void
+}
+
+define void @generic_monotonic_sys_float(ptr %a) local_unnamed_addr {
+; SM60-LABEL: generic_monotonic_sys_float(
+; SM60:       {
+; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_float_param_0];
+; SM60-NEXT:    ld.volatile.f32 %f1, [%rd1];
+; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; SM60-NEXT:    st.volatile.f32 [%rd1], %f2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: generic_monotonic_sys_float(
+; SM70:       {
+; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_float_param_0];
+; SM70-NEXT:    ld.relaxed.sys.f32 %f1, [%rd1];
+; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; SM70-NEXT:    st.relaxed.sys.f32 [%rd1], %f2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic float, ptr %a monotonic, align 4
+  %a.add = fadd float %a.load, 1.
+  store atomic float %a.add, ptr %a monotonic, align 4
+  ret void
+}
+
+define void @generic_monotonic_sys_double(ptr %a) local_unnamed_addr {
+; SM60-LABEL: generic_monotonic_sys_double(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_double_param_0];
+; SM60-NEXT:    ld.volatile.f64 %fd1, [%rd1];
+; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
+; SM60-NEXT:    st.volatile.f64 [%rd1], %fd2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: generic_monotonic_sys_double(
+; SM70:       {
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_double_param_0];
+; SM70-NEXT:    ld.relaxed.sys.f64 %fd1, [%rd1];
+; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
+; SM70-NEXT:    st.relaxed.sys.f64 [%rd1], %fd2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic double, ptr %a monotonic, align 8
+  %a.add = fadd double %a.load, 1.
+  store atomic double %a.add, ptr %a monotonic, align 8
+  ret void
+}
+
+; generic_monotonic_volatile_sys
+
+define void @generic_monotonic_volatile_sys_i8(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_monotonic_volatile_sys_i8(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
-; CHECK-NEXT:    .reg .b64 %rd<8>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_monotonic_volatile_sys_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_monotonic_volatile_sys_i8_param_0];
 ; CHECK-NEXT:    ld.volatile.u8 %rs1, [%rd1];
-; CHECK-NEXT:    ld.param.u64 %rd2, [generic_monotonic_volatile_sys_param_1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    ld.param.u64 %rd3, [generic_monotonic_volatile_sys_param_2];
 ; CHECK-NEXT:    st.volatile.u8 [%rd1], %rs2;
-; CHECK-NEXT:    ld.param.u64 %rd4, [generic_monotonic_volatile_sys_param_3];
-; CHECK-NEXT:    ld.volatile.u16 %rs3, [%rd2];
-; CHECK-NEXT:    ld.param.u64 %rd5, [generic_monotonic_volatile_sys_param_4];
-; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
-; CHECK-NEXT:    st.volatile.u16 [%rd2], %rs4;
-; CHECK-NEXT:    ld.volatile.u32 %r1, [%rd3];
-; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.volatile.u32 [%rd3], %r2;
-; CHECK-NEXT:    ld.volatile.u64 %rd6, [%rd4];
-; CHECK-NEXT:    add.s64 %rd7, %rd6, 1;
-; CHECK-NEXT:    st.volatile.u64 [%rd4], %rd7;
-; CHECK-NEXT:    ld.volatile.f32 %f1, [%rd5];
-; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.f32 [%rd5], %f2;
-; CHECK-NEXT:    ld.volatile.f64 %fd1, [%rd5];
-; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.f64 [%rd5], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i8, ptr %a monotonic, align 1
   %a.add = add i8 %a.load, 1
   store atomic volatile i8 %a.add, ptr %a monotonic, align 1
+  ret void
+}
 
-  %b.load = load atomic volatile i16, ptr %b monotonic, align 2
-  %b.add = add i16 %b.load, 1
-  store atomic volatile i16 %b.add, ptr %b monotonic, align 2
+define void @generic_monotonic_volatile_sys_i16(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_monotonic_volatile_sys_i16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_monotonic_volatile_sys_i16_param_0];
+; CHECK-NEXT:    ld.volatile.u16 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.volatile.u16 [%rd1], %rs2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile i16, ptr %a monotonic, align 2
+  %a.add = add i16 %a.load, 1
+  store atomic volatile i16 %a.add, ptr %a monotonic, align 2
+  ret void
+}
 
-  %c.load = load atomic volatile i32, ptr %c monotonic, align 4
-  %c.add = add i32 %c.load, 1
-  store atomic volatile i32 %c.add, ptr %c monotonic, align 4
+define void @generic_monotonic_volatile_sys_i32(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_monotonic_volatile_sys_i32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_monotonic_volatile_sys_i32_param_0];
+; CHECK-NEXT:    ld.volatile.u32 %r1, [%rd1];
+; CHECK-NEXT:    add.s32 %r2, %r1, 1;
+; CHECK-NEXT:    st.volatile.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile i32, ptr %a monotonic, align 4
+  %a.add = add i32 %a.load, 1
+  store atomic volatile i32 %a.add, ptr %a monotonic, align 4
+  ret void
+}
 
-  %d.load = load atomic volatile i64, ptr %d monotonic, align 8
-  %d.add = add i64 %d.load, 1
-  store atomic volatile i64 %d.add, ptr %d monotonic, align 8
+define void @generic_monotonic_volatile_sys_i64(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_monotonic_volatile_sys_i64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_monotonic_volatile_sys_i64_param_0];
+; CHECK-NEXT:    ld.volatile.u64 %rd2, [%rd1];
+; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
+; CHECK-NEXT:    st.volatile.u64 [%rd1], %rd3;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile i64, ptr %a monotonic, align 8
+  %a.add = add i64 %a.load, 1
+  store atomic volatile i64 %a.add, ptr %a monotonic, align 8
+  ret void
+}
 
-  %e.load = load atomic volatile float, ptr %e monotonic, align 4
-  %e.add = fadd float %e.load, 1.
-  store atomic volatile float %e.add, ptr %e monotonic, align 4
+define void @generic_monotonic_volatile_sys_float(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_monotonic_volatile_sys_float(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_monotonic_volatile_sys_float_param_0];
+; CHECK-NEXT:    ld.volatile.f32 %f1, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; CHECK-NEXT:    st.volatile.f32 [%rd1], %f2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile float, ptr %a monotonic, align 4
+  %a.add = fadd float %a.load, 1.
+  store atomic volatile float %a.add, ptr %a monotonic, align 4
+  ret void
+}
 
-  %f.load = load atomic volatile double, ptr %e monotonic, align 8
-  %f.add = fadd double %f.load, 1.
-  store atomic volatile double %f.add, ptr %e monotonic, align 8
-
+define void @generic_monotonic_volatile_sys_double(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: generic_monotonic_volatile_sys_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [generic_monotonic_volatile_sys_double_param_0];
+; CHECK-NEXT:    ld.volatile.f64 %fd1, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
+; CHECK-NEXT:    st.volatile.f64 [%rd1], %fd2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile double, ptr %a monotonic, align 8
+  %a.add = fadd double %a.load, 1.
+  store atomic volatile double %a.add, ptr %a monotonic, align 8
   ret void
 }
 
 ;; global statespace
 
-define void @global_weak(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d) local_unnamed_addr {
-; CHECK-LABEL: global_weak(
+; global_weak
+
+define void @global_weak_i8(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_weak_i8(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<29>;
-; CHECK-NEXT:    .reg .b32 %r<29>;
-; CHECK-NEXT:    .reg .f32 %f<15>;
-; CHECK-NEXT:    .reg .b64 %rd<11>;
-; CHECK-NEXT:    .reg .f64 %fd<7>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_i8_param_0];
 ; CHECK-NEXT:    ld.global.u8 %rs1, [%rd1];
-; CHECK-NEXT:    ld.param.u64 %rd2, [global_weak_param_1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    ld.param.u64 %rd3, [global_weak_param_2];
 ; CHECK-NEXT:    st.global.u8 [%rd1], %rs2;
-; CHECK-NEXT:    ld.param.u64 %rd4, [global_weak_param_3];
-; CHECK-NEXT:    ld.global.u16 %rs3, [%rd2];
-; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
-; CHECK-NEXT:    st.global.u16 [%rd2], %rs4;
-; CHECK-NEXT:    ld.global.u32 %r1, [%rd3];
-; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.global.u32 [%rd3], %r2;
-; CHECK-NEXT:    ld.global.u64 %rd5, [%rd4];
-; CHECK-NEXT:    add.s64 %rd6, %rd5, 1;
-; CHECK-NEXT:    st.global.u64 [%rd4], %rd6;
-; CHECK-NEXT:    ld.global.f32 %f1, [%rd3];
-; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.global.f32 [%rd3], %f2;
-; CHECK-NEXT:    ld.global.f64 %fd1, [%rd3];
-; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.global.f64 [%rd3], %fd2;
-; CHECK-NEXT:    ld.global.v2.u8 {%rs5, %rs6}, [%rd2];
-; CHECK-NEXT:    add.s16 %rs7, %rs6, 1;
-; CHECK-NEXT:    add.s16 %rs8, %rs5, 1;
-; CHECK-NEXT:    st.global.v2.u8 [%rd2], {%rs8, %rs7};
-; CHECK-NEXT:    ld.global.u32 %r3, [%rd3];
-; CHECK-NEXT:    bfe.u32 %r4, %r3, 0, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs9, %r4;
-; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r5, %rs10;
-; CHECK-NEXT:    bfe.u32 %r6, %r3, 8, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs11, %r6;
-; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r7, %rs12;
-; CHECK-NEXT:    bfi.b32 %r8, %r7, %r5, 8, 8;
-; CHECK-NEXT:    bfe.u32 %r9, %r3, 16, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs13, %r9;
-; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r10, %rs14;
-; CHECK-NEXT:    bfi.b32 %r11, %r10, %r8, 16, 8;
-; CHECK-NEXT:    bfe.u32 %r12, %r3, 24, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs15, %r12;
-; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r13, %rs16;
-; CHECK-NEXT:    bfi.b32 %r14, %r13, %r11, 24, 8;
-; CHECK-NEXT:    st.global.u32 [%rd3], %r14;
-; CHECK-NEXT:    ld.global.u32 %r15, [%rd3];
-; CHECK-NEXT:    mov.b32 {%rs17, %rs18}, %r15;
-; CHECK-NEXT:    add.s16 %rs19, %rs18, 1;
-; CHECK-NEXT:    add.s16 %rs20, %rs17, 1;
-; CHECK-NEXT:    mov.b32 %r16, {%rs20, %rs19};
-; CHECK-NEXT:    st.global.u32 [%rd3], %r16;
-; CHECK-NEXT:    ld.global.v4.u16 {%rs21, %rs22, %rs23, %rs24}, [%rd4];
-; CHECK-NEXT:    add.s16 %rs25, %rs24, 1;
-; CHECK-NEXT:    add.s16 %rs26, %rs23, 1;
-; CHECK-NEXT:    add.s16 %rs27, %rs22, 1;
-; CHECK-NEXT:    add.s16 %rs28, %rs21, 1;
-; CHECK-NEXT:    st.global.v4.u16 [%rd4], {%rs28, %rs27, %rs26, %rs25};
-; CHECK-NEXT:    ld.global.v2.u32 {%r17, %r18}, [%rd4];
-; CHECK-NEXT:    add.s32 %r19, %r18, 1;
-; CHECK-NEXT:    add.s32 %r20, %r17, 1;
-; CHECK-NEXT:    st.global.v2.u32 [%rd4], {%r20, %r19};
-; CHECK-NEXT:    ld.global.v4.u32 {%r21, %r22, %r23, %r24}, [%rd4];
-; CHECK-NEXT:    add.s32 %r25, %r24, 1;
-; CHECK-NEXT:    add.s32 %r26, %r23, 1;
-; CHECK-NEXT:    add.s32 %r27, %r22, 1;
-; CHECK-NEXT:    add.s32 %r28, %r21, 1;
-; CHECK-NEXT:    st.global.v4.u32 [%rd4], {%r28, %r27, %r26, %r25};
-; CHECK-NEXT:    ld.global.v2.u64 {%rd7, %rd8}, [%rd4];
-; CHECK-NEXT:    add.s64 %rd9, %rd8, 1;
-; CHECK-NEXT:    add.s64 %rd10, %rd7, 1;
-; CHECK-NEXT:    st.global.v2.u64 [%rd4], {%rd10, %rd9};
-; CHECK-NEXT:    ld.global.v2.f32 {%f3, %f4}, [%rd4];
-; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
-; CHECK-NEXT:    st.global.v2.f32 [%rd4], {%f6, %f5};
-; CHECK-NEXT:    ld.global.v4.f32 {%f7, %f8, %f9, %f10}, [%rd4];
-; CHECK-NEXT:    add.rn.f32 %f11, %f10, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f12, %f9, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f13, %f8, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f14, %f7, 0f3F800000;
-; CHECK-NEXT:    st.global.v4.f32 [%rd4], {%f14, %f13, %f12, %f11};
-; CHECK-NEXT:    ld.global.v2.f64 {%fd3, %fd4}, [%rd4];
-; CHECK-NEXT:    add.rn.f64 %fd5, %fd4, 0d3FF0000000000000;
-; CHECK-NEXT:    add.rn.f64 %fd6, %fd3, 0d3FF0000000000000;
-; CHECK-NEXT:    st.global.v2.f64 [%rd4], {%fd6, %fd5};
 ; CHECK-NEXT:    ret;
   %a.load = load i8, ptr addrspace(1) %a
   %a.add = add i8 %a.load, 1
   store i8 %a.add, ptr addrspace(1) %a
-
-  %b.load = load i16, ptr addrspace(1) %b
-  %b.add = add i16 %b.load, 1
-  store i16 %b.add, ptr addrspace(1) %b
-
-  %c.load = load i32, ptr addrspace(1) %c
-  %c.add = add i32 %c.load, 1
-  store i32 %c.add, ptr addrspace(1) %c
-
-  %d.load = load i64, ptr addrspace(1) %d
-  %d.add = add i64 %d.load, 1
-  store i64 %d.add, ptr addrspace(1) %d
-
-  %e.load = load float, ptr addrspace(1) %c
-  %e.add = fadd float %e.load, 1.
-  store float %e.add, ptr addrspace(1) %c
-
-  %f.load = load double, ptr addrspace(1) %c
-  %f.add = fadd double %f.load, 1.
-  store double %f.add, ptr addrspace(1) %c
-
-  %h.load = load <2 x i8>, ptr addrspace(1) %b
-  %h.add = add <2 x i8> %h.load, <i8 1, i8 1>
-  store <2 x i8> %h.add, ptr addrspace(1) %b
-
-  %i.load = load <4 x i8>, ptr addrspace(1) %c
-  %i.add = add <4 x i8> %i.load, <i8 1, i8 1, i8 1, i8 1>
-  store <4 x i8> %i.add, ptr addrspace(1) %c
-
-  %j.load = load <2 x i16>, ptr addrspace(1) %c
-  %j.add = add <2 x i16> %j.load, <i16 1, i16 1>
-  store <2 x i16> %j.add, ptr addrspace(1) %c
-
-  %k.load = load <4 x i16>, ptr addrspace(1) %d
-  %k.add = add <4 x i16> %k.load, <i16 1, i16 1, i16 1, i16 1>
-  store <4 x i16> %k.add, ptr addrspace(1) %d
-
-  %l.load = load <2 x i32>, ptr addrspace(1) %d
-  %l.add = add <2 x i32> %l.load, <i32 1, i32 1>
-  store <2 x i32> %l.add, ptr addrspace(1) %d
-
-  %m.load = load <4 x i32>, ptr addrspace(1) %d
-  %m.add = add <4 x i32> %m.load, <i32 1, i32 1, i32 1, i32 1>
-  store <4 x i32> %m.add, ptr addrspace(1) %d
-
-  %n.load = load <2 x i64>, ptr addrspace(1) %d
-  %n.add = add <2 x i64> %n.load, <i64 1, i64 1>
-  store <2 x i64> %n.add, ptr addrspace(1) %d
-
-  %o.load = load <2 x float>, ptr addrspace(1) %d
-  %o.add = fadd <2 x float> %o.load, <float 1., float 1.>
-  store <2 x float> %o.add, ptr addrspace(1) %d
-
-  %p.load = load <4 x float>, ptr addrspace(1) %d
-  %p.add = fadd <4 x float> %p.load, <float 1., float 1., float 1., float 1.>
-  store <4 x float> %p.add, ptr addrspace(1) %d
-
-  %q.load = load <2 x double>, ptr addrspace(1) %d
-  %q.add = fadd <2 x double> %q.load, <double 1., double 1.>
-  store <2 x double> %q.add, ptr addrspace(1) %d
-
   ret void
 }
 
-define void @global_volatile(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d) local_unnamed_addr {
-; CHECK-LABEL: global_volatile(
+define void @global_weak_i16(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_weak_i16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<29>;
-; CHECK-NEXT:    .reg .b32 %r<29>;
-; CHECK-NEXT:    .reg .f32 %f<15>;
-; CHECK-NEXT:    .reg .b64 %rd<11>;
-; CHECK-NEXT:    .reg .f64 %fd<7>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_param_0];
-; CHECK-NEXT:    ld.volatile.global.u8 %rs1, [%rd1];
-; CHECK-NEXT:    ld.param.u64 %rd2, [global_volatile_param_1];
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_i16_param_0];
+; CHECK-NEXT:    ld.global.u16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    ld.param.u64 %rd3, [global_volatile_param_2];
-; CHECK-NEXT:    st.volatile.global.u8 [%rd1], %rs2;
-; CHECK-NEXT:    ld.param.u64 %rd4, [global_volatile_param_3];
-; CHECK-NEXT:    ld.volatile.global.u16 %rs3, [%rd2];
-; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
-; CHECK-NEXT:    st.volatile.global.u16 [%rd2], %rs4;
-; CHECK-NEXT:    ld.volatile.global.u32 %r1, [%rd3];
+; CHECK-NEXT:    st.global.u16 [%rd1], %rs2;
+; CHECK-NEXT:    ret;
+  %a.load = load i16, ptr addrspace(1) %a
+  %a.add = add i16 %a.load, 1
+  store i16 %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_weak_i32(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_weak_i32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_i32_param_0];
+; CHECK-NEXT:    ld.global.u32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.volatile.global.u32 [%rd3], %r2;
-; CHECK-NEXT:    ld.volatile.global.u64 %rd5, [%rd4];
-; CHECK-NEXT:    add.s64 %rd6, %rd5, 1;
-; CHECK-NEXT:    st.volatile.global.u64 [%rd4], %rd6;
-; CHECK-NEXT:    ld.volatile.global.f32 %f1, [%rd3];
+; CHECK-NEXT:    st.global.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load i32, ptr addrspace(1) %a
+  %a.add = add i32 %a.load, 1
+  store i32 %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_weak_i64(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_weak_i64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_i64_param_0];
+; CHECK-NEXT:    ld.global.u64 %rd2, [%rd1];
+; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
+; CHECK-NEXT:    st.global.u64 [%rd1], %rd3;
+; CHECK-NEXT:    ret;
+  %a.load = load i64, ptr addrspace(1) %a
+  %a.add = add i64 %a.load, 1
+  store i64 %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_weak_float(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_weak_float(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_float_param_0];
+; CHECK-NEXT:    ld.global.f32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.global.f32 [%rd3], %f2;
-; CHECK-NEXT:    ld.volatile.global.f64 %fd1, [%rd3];
+; CHECK-NEXT:    st.global.f32 [%rd1], %f2;
+; CHECK-NEXT:    ret;
+  %a.load = load float, ptr addrspace(1) %a
+  %a.add = fadd float %a.load, 1.
+  store float %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_weak_double(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_weak_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_double_param_0];
+; CHECK-NEXT:    ld.global.f64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.global.f64 [%rd3], %fd2;
-; CHECK-NEXT:    ld.volatile.global.v2.u8 {%rs5, %rs6}, [%rd2];
-; CHECK-NEXT:    add.s16 %rs7, %rs6, 1;
-; CHECK-NEXT:    add.s16 %rs8, %rs5, 1;
-; CHECK-NEXT:    st.volatile.global.v2.u8 [%rd2], {%rs8, %rs7};
-; CHECK-NEXT:    ld.volatile.global.u32 %r3, [%rd3];
-; CHECK-NEXT:    bfe.u32 %r4, %r3, 0, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs9, %r4;
-; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r5, %rs10;
-; CHECK-NEXT:    bfe.u32 %r6, %r3, 8, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs11, %r6;
-; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r7, %rs12;
-; CHECK-NEXT:    bfi.b32 %r8, %r7, %r5, 8, 8;
-; CHECK-NEXT:    bfe.u32 %r9, %r3, 16, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs13, %r9;
-; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r10, %rs14;
-; CHECK-NEXT:    bfi.b32 %r11, %r10, %r8, 16, 8;
-; CHECK-NEXT:    bfe.u32 %r12, %r3, 24, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs15, %r12;
-; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r13, %rs16;
-; CHECK-NEXT:    bfi.b32 %r14, %r13, %r11, 24, 8;
-; CHECK-NEXT:    st.volatile.global.u32 [%rd3], %r14;
-; CHECK-NEXT:    ld.volatile.global.u32 %r15, [%rd3];
-; CHECK-NEXT:    mov.b32 {%rs17, %rs18}, %r15;
-; CHECK-NEXT:    add.s16 %rs19, %rs18, 1;
-; CHECK-NEXT:    add.s16 %rs20, %rs17, 1;
-; CHECK-NEXT:    mov.b32 %r16, {%rs20, %rs19};
-; CHECK-NEXT:    st.volatile.global.u32 [%rd3], %r16;
-; CHECK-NEXT:    ld.volatile.global.v4.u16 {%rs21, %rs22, %rs23, %rs24}, [%rd4];
-; CHECK-NEXT:    add.s16 %rs25, %rs24, 1;
-; CHECK-NEXT:    add.s16 %rs26, %rs23, 1;
-; CHECK-NEXT:    add.s16 %rs27, %rs22, 1;
-; CHECK-NEXT:    add.s16 %rs28, %rs21, 1;
-; CHECK-NEXT:    st.volatile.global.v4.u16 [%rd4], {%rs28, %rs27, %rs26, %rs25};
-; CHECK-NEXT:    ld.volatile.global.v2.u32 {%r17, %r18}, [%rd4];
-; CHECK-NEXT:    add.s32 %r19, %r18, 1;
-; CHECK-NEXT:    add.s32 %r20, %r17, 1;
-; CHECK-NEXT:    st.volatile.global.v2.u32 [%rd4], {%r20, %r19};
-; CHECK-NEXT:    ld.volatile.global.v4.u32 {%r21, %r22, %r23, %r24}, [%rd4];
-; CHECK-NEXT:    add.s32 %r25, %r24, 1;
-; CHECK-NEXT:    add.s32 %r26, %r23, 1;
-; CHECK-NEXT:    add.s32 %r27, %r22, 1;
-; CHECK-NEXT:    add.s32 %r28, %r21, 1;
-; CHECK-NEXT:    st.volatile.global.v4.u32 [%rd4], {%r28, %r27, %r26, %r25};
-; CHECK-NEXT:    ld.volatile.global.v2.u64 {%rd7, %rd8}, [%rd4];
-; CHECK-NEXT:    add.s64 %rd9, %rd8, 1;
-; CHECK-NEXT:    add.s64 %rd10, %rd7, 1;
-; CHECK-NEXT:    st.volatile.global.v2.u64 [%rd4], {%rd10, %rd9};
-; CHECK-NEXT:    ld.volatile.global.v2.f32 {%f3, %f4}, [%rd4];
+; CHECK-NEXT:    st.global.f64 [%rd1], %fd2;
+; CHECK-NEXT:    ret;
+  %a.load = load double, ptr addrspace(1) %a
+  %a.add = fadd double %a.load, 1.
+  store double %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_weak_2xi8(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_weak_2xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_2xi8_param_0];
+; CHECK-NEXT:    ld.global.v2.u8 {%rs1, %rs2}, [%rd1];
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    st.global.v2.u8 [%rd1], {%rs4, %rs3};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x i8>, ptr addrspace(1) %a
+  %a.add = add <2 x i8> %a.load, <i8 1, i8 1>
+  store <2 x i8> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_weak_4xi8(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_weak_4xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<9>;
+; CHECK-NEXT:    .reg .b32 %r<13>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_4xi8_param_0];
+; CHECK-NEXT:    ld.global.u32 %r1, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r2, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r2;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r3, %rs2;
+; CHECK-NEXT:    bfe.u32 %r4, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r4;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs4;
+; CHECK-NEXT:    bfi.b32 %r6, %r5, %r3, 8, 8;
+; CHECK-NEXT:    bfe.u32 %r7, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs6;
+; CHECK-NEXT:    bfi.b32 %r9, %r8, %r6, 16, 8;
+; CHECK-NEXT:    bfe.u32 %r10, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs8;
+; CHECK-NEXT:    bfi.b32 %r12, %r11, %r9, 24, 8;
+; CHECK-NEXT:    st.global.u32 [%rd1], %r12;
+; CHECK-NEXT:    ret;
+  %a.load = load <4 x i8>, ptr addrspace(1) %a
+  %a.add = add <4 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1>
+  store <4 x i8> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_weak_2xi16(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_weak_2xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_2xi16_param_0];
+; CHECK-NEXT:    ld.global.u32 %r1, [%rd1];
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    mov.b32 %r2, {%rs4, %rs3};
+; CHECK-NEXT:    st.global.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x i16>, ptr addrspace(1) %a
+  %a.add = add <2 x i16> %a.load, <i16 1, i16 1>
+  store <2 x i16> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_weak_4xi16(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_weak_4xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_4xi16_param_0];
+; CHECK-NEXT:    ld.global.v4.u16 {%rs1, %rs2, %rs3, %rs4}, [%rd1];
+; CHECK-NEXT:    add.s16 %rs5, %rs4, 1;
+; CHECK-NEXT:    add.s16 %rs6, %rs3, 1;
+; CHECK-NEXT:    add.s16 %rs7, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs8, %rs1, 1;
+; CHECK-NEXT:    st.global.v4.u16 [%rd1], {%rs8, %rs7, %rs6, %rs5};
+; CHECK-NEXT:    ret;
+  %a.load = load <4 x i16>, ptr addrspace(1) %a
+  %a.add = add <4 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1>
+  store <4 x i16> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_weak_2xi32(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_weak_2xi32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_2xi32_param_0];
+; CHECK-NEXT:    ld.global.v2.u32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    add.s32 %r3, %r2, 1;
+; CHECK-NEXT:    add.s32 %r4, %r1, 1;
+; CHECK-NEXT:    st.global.v2.u32 [%rd1], {%r4, %r3};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x i32>, ptr addrspace(1) %a
+  %a.add = add <2 x i32> %a.load, <i32 1, i32 1>
+  store <2 x i32> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_weak_4xi32(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_weak_4xi32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_4xi32_param_0];
+; CHECK-NEXT:    ld.global.v4.u32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    add.s32 %r5, %r4, 1;
+; CHECK-NEXT:    add.s32 %r6, %r3, 1;
+; CHECK-NEXT:    add.s32 %r7, %r2, 1;
+; CHECK-NEXT:    add.s32 %r8, %r1, 1;
+; CHECK-NEXT:    st.global.v4.u32 [%rd1], {%r8, %r7, %r6, %r5};
+; CHECK-NEXT:    ret;
+  %a.load = load <4 x i32>, ptr addrspace(1) %a
+  %a.add = add <4 x i32> %a.load, <i32 1, i32 1, i32 1, i32 1>
+  store <4 x i32> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_weak_2xi64(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_weak_2xi64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_2xi64_param_0];
+; CHECK-NEXT:    ld.global.v2.u64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    add.s64 %rd4, %rd3, 1;
+; CHECK-NEXT:    add.s64 %rd5, %rd2, 1;
+; CHECK-NEXT:    st.global.v2.u64 [%rd1], {%rd5, %rd4};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x i64>, ptr addrspace(1) %a
+  %a.add = add <2 x i64> %a.load, <i64 1, i64 1>
+  store <2 x i64> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_weak_2xfloat(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_weak_2xfloat(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_2xfloat_param_0];
+; CHECK-NEXT:    ld.global.v2.f32 {%f1, %f2}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
+; CHECK-NEXT:    st.global.v2.f32 [%rd1], {%f4, %f3};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x float>, ptr addrspace(1) %a
+  %a.add = fadd <2 x float> %a.load, <float 1., float 1.>
+  store <2 x float> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_weak_4xfloat(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_weak_4xfloat(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_4xfloat_param_0];
+; CHECK-NEXT:    ld.global.v4.f32 {%f1, %f2, %f3, %f4}, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
 ; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
-; CHECK-NEXT:    st.volatile.global.v2.f32 [%rd4], {%f6, %f5};
-; CHECK-NEXT:    ld.volatile.global.v4.f32 {%f7, %f8, %f9, %f10}, [%rd4];
-; CHECK-NEXT:    add.rn.f32 %f11, %f10, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f12, %f9, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f13, %f8, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f14, %f7, 0f3F800000;
-; CHECK-NEXT:    st.volatile.global.v4.f32 [%rd4], {%f14, %f13, %f12, %f11};
-; CHECK-NEXT:    ld.volatile.global.v2.f64 {%fd3, %fd4}, [%rd4];
-; CHECK-NEXT:    add.rn.f64 %fd5, %fd4, 0d3FF0000000000000;
-; CHECK-NEXT:    add.rn.f64 %fd6, %fd3, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.global.v2.f64 [%rd4], {%fd6, %fd5};
+; CHECK-NEXT:    add.rn.f32 %f7, %f2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f8, %f1, 0f3F800000;
+; CHECK-NEXT:    st.global.v4.f32 [%rd1], {%f8, %f7, %f6, %f5};
+; CHECK-NEXT:    ret;
+  %a.load = load <4 x float>, ptr addrspace(1) %a
+  %a.add = fadd <4 x float> %a.load, <float 1., float 1., float 1., float 1.>
+  store <4 x float> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_weak_2xdouble(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_weak_2xdouble(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_weak_2xdouble_param_0];
+; CHECK-NEXT:    ld.global.v2.f64 {%fd1, %fd2}, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
+; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
+; CHECK-NEXT:    st.global.v2.f64 [%rd1], {%fd4, %fd3};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x double>, ptr addrspace(1) %a
+  %a.add = fadd <2 x double> %a.load, <double 1., double 1.>
+  store <2 x double> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+; global_volatile
+
+define void @global_volatile_i8(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_volatile_i8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_i8_param_0];
+; CHECK-NEXT:    ld.volatile.global.u8 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.volatile.global.u8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i8, ptr addrspace(1) %a
   %a.add = add i8 %a.load, 1
   store volatile i8 %a.add, ptr addrspace(1) %a
-
-  %b.load = load volatile i16, ptr addrspace(1) %b
-  %b.add = add i16 %b.load, 1
-  store volatile i16 %b.add, ptr addrspace(1) %b
-
-  %c.load = load volatile i32, ptr addrspace(1) %c
-  %c.add = add i32 %c.load, 1
-  store volatile i32 %c.add, ptr addrspace(1) %c
-
-  %d.load = load volatile i64, ptr addrspace(1) %d
-  %d.add = add i64 %d.load, 1
-  store volatile i64 %d.add, ptr addrspace(1) %d
-
-  %e.load = load volatile float, ptr addrspace(1) %c
-  %e.add = fadd float %e.load, 1.
-  store volatile float %e.add, ptr addrspace(1) %c
-
-  %f.load = load volatile double, ptr addrspace(1) %c
-  %f.add = fadd double %f.load, 1.
-  store volatile double %f.add, ptr addrspace(1) %c
-
-  %h.load = load volatile <2 x i8>, ptr addrspace(1) %b
-  %h.add = add <2 x i8> %h.load, <i8 1, i8 1>
-  store volatile<2 x i8> %h.add, ptr addrspace(1) %b
-
-  %i.load = load volatile <4 x i8>, ptr addrspace(1) %c
-  %i.add = add <4 x i8> %i.load, <i8 1, i8 1, i8 1, i8 1>
-  store volatile<4 x i8> %i.add, ptr addrspace(1) %c
-
-  %j.load = load volatile <2 x i16>, ptr addrspace(1) %c
-  %j.add = add <2 x i16> %j.load, <i16 1, i16 1>
-  store volatile<2 x i16> %j.add, ptr addrspace(1) %c
-
-  %k.load = load volatile <4 x i16>, ptr addrspace(1) %d
-  %k.add = add <4 x i16> %k.load, <i16 1, i16 1, i16 1, i16 1>
-  store volatile<4 x i16> %k.add, ptr addrspace(1) %d
-
-  %l.load = load volatile <2 x i32>, ptr addrspace(1) %d
-  %l.add = add <2 x i32> %l.load, <i32 1, i32 1>
-  store volatile<2 x i32> %l.add, ptr addrspace(1) %d
-
-  %m.load = load volatile <4 x i32>, ptr addrspace(1) %d
-  %m.add = add <4 x i32> %m.load, <i32 1, i32 1, i32 1, i32 1>
-  store volatile<4 x i32> %m.add, ptr addrspace(1) %d
-
-  %n.load = load volatile <2 x i64>, ptr addrspace(1) %d
-  %n.add = add <2 x i64> %n.load, <i64 1, i64 1>
-  store volatile<2 x i64> %n.add, ptr addrspace(1) %d
-
-  %o.load = load volatile <2 x float>, ptr addrspace(1) %d
-  %o.add = fadd <2 x float> %o.load, <float 1., float 1.>
-  store volatile<2 x float> %o.add, ptr addrspace(1) %d
-
-  %p.load = load volatile <4 x float>, ptr addrspace(1) %d
-  %p.add = fadd <4 x float> %p.load, <float 1., float 1., float 1., float 1.>
-  store volatile<4 x float> %p.add, ptr addrspace(1) %d
-
-  %q.load = load volatile <2 x double>, ptr addrspace(1) %d
-  %q.add = fadd <2 x double> %q.load, <double 1., double 1.>
-  store volatile<2 x double> %q.add, ptr addrspace(1) %d
-
   ret void
 }
 
-define void @global_unordered_sys(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e) local_unnamed_addr {
-; SM60-LABEL: global_unordered_sys(
+define void @global_volatile_i16(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_volatile_i16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_i16_param_0];
+; CHECK-NEXT:    ld.volatile.global.u16 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.volatile.global.u16 [%rd1], %rs2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile i16, ptr addrspace(1) %a
+  %a.add = add i16 %a.load, 1
+  store volatile i16 %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_volatile_i32(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_volatile_i32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_i32_param_0];
+; CHECK-NEXT:    ld.volatile.global.u32 %r1, [%rd1];
+; CHECK-NEXT:    add.s32 %r2, %r1, 1;
+; CHECK-NEXT:    st.volatile.global.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile i32, ptr addrspace(1) %a
+  %a.add = add i32 %a.load, 1
+  store volatile i32 %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_volatile_i64(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_volatile_i64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_i64_param_0];
+; CHECK-NEXT:    ld.volatile.global.u64 %rd2, [%rd1];
+; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
+; CHECK-NEXT:    st.volatile.global.u64 [%rd1], %rd3;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile i64, ptr addrspace(1) %a
+  %a.add = add i64 %a.load, 1
+  store volatile i64 %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_volatile_float(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_volatile_float(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_float_param_0];
+; CHECK-NEXT:    ld.volatile.global.f32 %f1, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; CHECK-NEXT:    st.volatile.global.f32 [%rd1], %f2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile float, ptr addrspace(1) %a
+  %a.add = fadd float %a.load, 1.
+  store volatile float %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_volatile_double(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_volatile_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_double_param_0];
+; CHECK-NEXT:    ld.volatile.global.f64 %fd1, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
+; CHECK-NEXT:    st.volatile.global.f64 [%rd1], %fd2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile double, ptr addrspace(1) %a
+  %a.add = fadd double %a.load, 1.
+  store volatile double %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_volatile_2xi8(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_volatile_2xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_2xi8_param_0];
+; CHECK-NEXT:    ld.volatile.global.v2.u8 {%rs1, %rs2}, [%rd1];
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    st.volatile.global.v2.u8 [%rd1], {%rs4, %rs3};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x i8>, ptr addrspace(1) %a
+  %a.add = add <2 x i8> %a.load, <i8 1, i8 1>
+  store volatile <2 x i8> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_volatile_4xi8(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_volatile_4xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<9>;
+; CHECK-NEXT:    .reg .b32 %r<13>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_4xi8_param_0];
+; CHECK-NEXT:    ld.volatile.global.u32 %r1, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r2, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r2;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r3, %rs2;
+; CHECK-NEXT:    bfe.u32 %r4, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r4;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs4;
+; CHECK-NEXT:    bfi.b32 %r6, %r5, %r3, 8, 8;
+; CHECK-NEXT:    bfe.u32 %r7, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs6;
+; CHECK-NEXT:    bfi.b32 %r9, %r8, %r6, 16, 8;
+; CHECK-NEXT:    bfe.u32 %r10, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs8;
+; CHECK-NEXT:    bfi.b32 %r12, %r11, %r9, 24, 8;
+; CHECK-NEXT:    st.volatile.global.u32 [%rd1], %r12;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <4 x i8>, ptr addrspace(1) %a
+  %a.add = add <4 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1>
+  store volatile <4 x i8> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_volatile_2xi16(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_volatile_2xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_2xi16_param_0];
+; CHECK-NEXT:    ld.volatile.global.u32 %r1, [%rd1];
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    mov.b32 %r2, {%rs4, %rs3};
+; CHECK-NEXT:    st.volatile.global.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x i16>, ptr addrspace(1) %a
+  %a.add = add <2 x i16> %a.load, <i16 1, i16 1>
+  store volatile <2 x i16> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_volatile_4xi16(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_volatile_4xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_4xi16_param_0];
+; CHECK-NEXT:    ld.volatile.global.v4.u16 {%rs1, %rs2, %rs3, %rs4}, [%rd1];
+; CHECK-NEXT:    add.s16 %rs5, %rs4, 1;
+; CHECK-NEXT:    add.s16 %rs6, %rs3, 1;
+; CHECK-NEXT:    add.s16 %rs7, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs8, %rs1, 1;
+; CHECK-NEXT:    st.volatile.global.v4.u16 [%rd1], {%rs8, %rs7, %rs6, %rs5};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <4 x i16>, ptr addrspace(1) %a
+  %a.add = add <4 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1>
+  store volatile <4 x i16> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_volatile_2xi32(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_volatile_2xi32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_2xi32_param_0];
+; CHECK-NEXT:    ld.volatile.global.v2.u32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    add.s32 %r3, %r2, 1;
+; CHECK-NEXT:    add.s32 %r4, %r1, 1;
+; CHECK-NEXT:    st.volatile.global.v2.u32 [%rd1], {%r4, %r3};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x i32>, ptr addrspace(1) %a
+  %a.add = add <2 x i32> %a.load, <i32 1, i32 1>
+  store volatile <2 x i32> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_volatile_4xi32(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_volatile_4xi32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_4xi32_param_0];
+; CHECK-NEXT:    ld.volatile.global.v4.u32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    add.s32 %r5, %r4, 1;
+; CHECK-NEXT:    add.s32 %r6, %r3, 1;
+; CHECK-NEXT:    add.s32 %r7, %r2, 1;
+; CHECK-NEXT:    add.s32 %r8, %r1, 1;
+; CHECK-NEXT:    st.volatile.global.v4.u32 [%rd1], {%r8, %r7, %r6, %r5};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <4 x i32>, ptr addrspace(1) %a
+  %a.add = add <4 x i32> %a.load, <i32 1, i32 1, i32 1, i32 1>
+  store volatile <4 x i32> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_volatile_2xi64(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_volatile_2xi64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_2xi64_param_0];
+; CHECK-NEXT:    ld.volatile.global.v2.u64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    add.s64 %rd4, %rd3, 1;
+; CHECK-NEXT:    add.s64 %rd5, %rd2, 1;
+; CHECK-NEXT:    st.volatile.global.v2.u64 [%rd1], {%rd5, %rd4};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x i64>, ptr addrspace(1) %a
+  %a.add = add <2 x i64> %a.load, <i64 1, i64 1>
+  store volatile <2 x i64> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_volatile_2xfloat(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_volatile_2xfloat(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_2xfloat_param_0];
+; CHECK-NEXT:    ld.volatile.global.v2.f32 {%f1, %f2}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
+; CHECK-NEXT:    st.volatile.global.v2.f32 [%rd1], {%f4, %f3};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x float>, ptr addrspace(1) %a
+  %a.add = fadd <2 x float> %a.load, <float 1., float 1.>
+  store volatile <2 x float> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_volatile_4xfloat(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_volatile_4xfloat(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_4xfloat_param_0];
+; CHECK-NEXT:    ld.volatile.global.v4.f32 {%f1, %f2, %f3, %f4}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f7, %f2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f8, %f1, 0f3F800000;
+; CHECK-NEXT:    st.volatile.global.v4.f32 [%rd1], {%f8, %f7, %f6, %f5};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <4 x float>, ptr addrspace(1) %a
+  %a.add = fadd <4 x float> %a.load, <float 1., float 1., float 1., float 1.>
+  store volatile <4 x float> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+define void @global_volatile_2xdouble(ptr addrspace(1) %a) local_unnamed_addr {
+; CHECK-LABEL: global_volatile_2xdouble(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_2xdouble_param_0];
+; CHECK-NEXT:    ld.volatile.global.v2.f64 {%fd1, %fd2}, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
+; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
+; CHECK-NEXT:    st.volatile.global.v2.f64 [%rd1], {%fd4, %fd3};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x double>, ptr addrspace(1) %a
+  %a.add = fadd <2 x double> %a.load, <double 1., double 1.>
+  store volatile <2 x double> %a.add, ptr addrspace(1) %a
+  ret void
+}
+
+; global_unordered_sys
+
+define void @global_unordered_sys_i8(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_unordered_sys_i8(
 ; SM60:       {
-; SM60-NEXT:    .reg .b16 %rs<5>;
-; SM60-NEXT:    .reg .b32 %r<3>;
-; SM60-NEXT:    .reg .f32 %f<3>;
-; SM60-NEXT:    .reg .b64 %rd<8>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b16 %rs<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_param_0];
+; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_i8_param_0];
 ; SM60-NEXT:    ld.volatile.global.u8 %rs1, [%rd1];
-; SM60-NEXT:    ld.param.u64 %rd2, [global_unordered_sys_param_1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    ld.param.u64 %rd3, [global_unordered_sys_param_2];
 ; SM60-NEXT:    st.volatile.global.u8 [%rd1], %rs2;
-; SM60-NEXT:    ld.param.u64 %rd4, [global_unordered_sys_param_3];
-; SM60-NEXT:    ld.volatile.global.u16 %rs3, [%rd2];
-; SM60-NEXT:    ld.param.u64 %rd5, [global_unordered_sys_param_4];
-; SM60-NEXT:    add.s16 %rs4, %rs3, 1;
-; SM60-NEXT:    st.volatile.global.u16 [%rd2], %rs4;
-; SM60-NEXT:    ld.volatile.global.u32 %r1, [%rd3];
-; SM60-NEXT:    add.s32 %r2, %r1, 1;
-; SM60-NEXT:    st.volatile.global.u32 [%rd3], %r2;
-; SM60-NEXT:    ld.volatile.global.u64 %rd6, [%rd4];
-; SM60-NEXT:    add.s64 %rd7, %rd6, 1;
-; SM60-NEXT:    st.volatile.global.u64 [%rd4], %rd7;
-; SM60-NEXT:    ld.volatile.global.f32 %f1, [%rd5];
-; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM60-NEXT:    st.volatile.global.f32 [%rd5], %f2;
-; SM60-NEXT:    ld.volatile.global.f64 %fd1, [%rd5];
-; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM60-NEXT:    st.volatile.global.f64 [%rd5], %fd2;
 ; SM60-NEXT:    ret;
 ;
-; SM70-LABEL: global_unordered_sys(
+; SM70-LABEL: global_unordered_sys_i8(
 ; SM70:       {
-; SM70-NEXT:    .reg .b16 %rs<5>;
-; SM70-NEXT:    .reg .b32 %r<3>;
-; SM70-NEXT:    .reg .f32 %f<3>;
-; SM70-NEXT:    .reg .b64 %rd<8>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b16 %rs<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_param_0];
+; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_i8_param_0];
 ; SM70-NEXT:    ld.relaxed.sys.global.u8 %rs1, [%rd1];
-; SM70-NEXT:    ld.param.u64 %rd2, [global_unordered_sys_param_1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    ld.param.u64 %rd3, [global_unordered_sys_param_2];
 ; SM70-NEXT:    st.relaxed.sys.global.u8 [%rd1], %rs2;
-; SM70-NEXT:    ld.param.u64 %rd4, [global_unordered_sys_param_3];
-; SM70-NEXT:    ld.relaxed.sys.global.u16 %rs3, [%rd2];
-; SM70-NEXT:    ld.param.u64 %rd5, [global_unordered_sys_param_4];
-; SM70-NEXT:    add.s16 %rs4, %rs3, 1;
-; SM70-NEXT:    st.relaxed.sys.global.u16 [%rd2], %rs4;
-; SM70-NEXT:    ld.relaxed.sys.global.u32 %r1, [%rd3];
-; SM70-NEXT:    add.s32 %r2, %r1, 1;
-; SM70-NEXT:    st.relaxed.sys.global.u32 [%rd3], %r2;
-; SM70-NEXT:    ld.relaxed.sys.global.u64 %rd6, [%rd4];
-; SM70-NEXT:    add.s64 %rd7, %rd6, 1;
-; SM70-NEXT:    st.relaxed.sys.global.u64 [%rd4], %rd7;
-; SM70-NEXT:    ld.relaxed.sys.global.f32 %f1, [%rd5];
-; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM70-NEXT:    st.relaxed.sys.global.f32 [%rd5], %f2;
-; SM70-NEXT:    ld.relaxed.sys.global.f64 %fd1, [%rd5];
-; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM70-NEXT:    st.relaxed.sys.global.f64 [%rd5], %fd2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i8, ptr addrspace(1) %a unordered, align 1
   %a.add = add i8 %a.load, 1
   store atomic i8 %a.add, ptr addrspace(1) %a unordered, align 1
-
-  %b.load = load atomic i16, ptr addrspace(1) %b unordered, align 2
-  %b.add = add i16 %b.load, 1
-  store atomic i16 %b.add, ptr addrspace(1) %b unordered, align 2
-
-  %c.load = load atomic i32, ptr addrspace(1) %c unordered, align 4
-  %c.add = add i32 %c.load, 1
-  store atomic i32 %c.add, ptr addrspace(1) %c unordered, align 4
-
-  %d.load = load atomic i64, ptr addrspace(1) %d unordered, align 8
-  %d.add = add i64 %d.load, 1
-  store atomic i64 %d.add, ptr addrspace(1) %d unordered, align 8
-
-  %e.load = load atomic float, ptr addrspace(1) %e unordered, align 4
-  %e.add = fadd float %e.load, 1.0
-  store atomic float %e.add, ptr addrspace(1) %e unordered, align 4
-
-  %f.load = load atomic double, ptr addrspace(1) %e unordered, align 8
-  %f.add = fadd double %f.load, 1.
-  store atomic double %f.add, ptr addrspace(1) %e unordered, align 8
-
   ret void
 }
 
-define void @global_unordered_volatile_sys(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e) local_unnamed_addr {
-; SM60-LABEL: global_unordered_volatile_sys(
+define void @global_unordered_sys_i16(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_unordered_sys_i16(
 ; SM60:       {
-; SM60-NEXT:    .reg .b16 %rs<5>;
+; SM60-NEXT:    .reg .b16 %rs<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_i16_param_0];
+; SM60-NEXT:    ld.volatile.global.u16 %rs1, [%rd1];
+; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM60-NEXT:    st.volatile.global.u16 [%rd1], %rs2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_unordered_sys_i16(
+; SM70:       {
+; SM70-NEXT:    .reg .b16 %rs<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_i16_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.u16 %rs1, [%rd1];
+; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM70-NEXT:    st.relaxed.sys.global.u16 [%rd1], %rs2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic i16, ptr addrspace(1) %a unordered, align 2
+  %a.add = add i16 %a.load, 1
+  store atomic i16 %a.add, ptr addrspace(1) %a unordered, align 2
+  ret void
+}
+
+define void @global_unordered_sys_i32(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_unordered_sys_i32(
+; SM60:       {
 ; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_i32_param_0];
+; SM60-NEXT:    ld.volatile.global.u32 %r1, [%rd1];
+; SM60-NEXT:    add.s32 %r2, %r1, 1;
+; SM60-NEXT:    st.volatile.global.u32 [%rd1], %r2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_unordered_sys_i32(
+; SM70:       {
+; SM70-NEXT:    .reg .b32 %r<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_i32_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.u32 %r1, [%rd1];
+; SM70-NEXT:    add.s32 %r2, %r1, 1;
+; SM70-NEXT:    st.relaxed.sys.global.u32 [%rd1], %r2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic i32, ptr addrspace(1) %a unordered, align 4
+  %a.add = add i32 %a.load, 1
+  store atomic i32 %a.add, ptr addrspace(1) %a unordered, align 4
+  ret void
+}
+
+define void @global_unordered_sys_i64(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_unordered_sys_i64(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<4>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_i64_param_0];
+; SM60-NEXT:    ld.volatile.global.u64 %rd2, [%rd1];
+; SM60-NEXT:    add.s64 %rd3, %rd2, 1;
+; SM60-NEXT:    st.volatile.global.u64 [%rd1], %rd3;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_unordered_sys_i64(
+; SM70:       {
+; SM70-NEXT:    .reg .b64 %rd<4>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_i64_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.u64 %rd2, [%rd1];
+; SM70-NEXT:    add.s64 %rd3, %rd2, 1;
+; SM70-NEXT:    st.relaxed.sys.global.u64 [%rd1], %rd3;
+; SM70-NEXT:    ret;
+  %a.load = load atomic i64, ptr addrspace(1) %a unordered, align 8
+  %a.add = add i64 %a.load, 1
+  store atomic i64 %a.add, ptr addrspace(1) %a unordered, align 8
+  ret void
+}
+
+define void @global_unordered_sys_float(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_unordered_sys_float(
+; SM60:       {
 ; SM60-NEXT:    .reg .f32 %f<3>;
-; SM60-NEXT:    .reg .b64 %rd<8>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_float_param_0];
+; SM60-NEXT:    ld.volatile.global.f32 %f1, [%rd1];
+; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; SM60-NEXT:    st.volatile.global.f32 [%rd1], %f2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_unordered_sys_float(
+; SM70:       {
+; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_float_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.f32 %f1, [%rd1];
+; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; SM70-NEXT:    st.relaxed.sys.global.f32 [%rd1], %f2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic float, ptr addrspace(1) %a unordered, align 4
+  %a.add = fadd float %a.load, 1.
+  store atomic float %a.add, ptr addrspace(1) %a unordered, align 4
+  ret void
+}
+
+define void @global_unordered_sys_double(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_unordered_sys_double(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-NEXT:    .reg .f64 %fd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_param_0];
-; SM60-NEXT:    ld.volatile.global.u8 %rs1, [%rd1];
-; SM60-NEXT:    ld.param.u64 %rd2, [global_unordered_volatile_sys_param_1];
-; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    ld.param.u64 %rd3, [global_unordered_volatile_sys_param_2];
-; SM60-NEXT:    st.volatile.global.u8 [%rd1], %rs2;
-; SM60-NEXT:    ld.param.u64 %rd4, [global_unordered_volatile_sys_param_3];
-; SM60-NEXT:    ld.volatile.global.u16 %rs3, [%rd2];
-; SM60-NEXT:    ld.param.u64 %rd5, [global_unordered_volatile_sys_param_4];
-; SM60-NEXT:    add.s16 %rs4, %rs3, 1;
-; SM60-NEXT:    st.volatile.global.u16 [%rd2], %rs4;
-; SM60-NEXT:    ld.volatile.global.u32 %r1, [%rd3];
-; SM60-NEXT:    add.s32 %r2, %r1, 1;
-; SM60-NEXT:    st.volatile.global.u32 [%rd3], %r2;
-; SM60-NEXT:    ld.volatile.global.u64 %rd6, [%rd4];
-; SM60-NEXT:    add.s64 %rd7, %rd6, 1;
-; SM60-NEXT:    st.volatile.global.u64 [%rd4], %rd7;
-; SM60-NEXT:    ld.volatile.global.f32 %f1, [%rd5];
-; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM60-NEXT:    st.volatile.global.f32 [%rd5], %f2;
-; SM60-NEXT:    ld.volatile.global.f64 %fd1, [%rd5];
+; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_double_param_0];
+; SM60-NEXT:    ld.volatile.global.f64 %fd1, [%rd1];
 ; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM60-NEXT:    st.volatile.global.f64 [%rd5], %fd2;
+; SM60-NEXT:    st.volatile.global.f64 [%rd1], %fd2;
 ; SM60-NEXT:    ret;
 ;
-; SM70-LABEL: global_unordered_volatile_sys(
+; SM70-LABEL: global_unordered_sys_double(
 ; SM70:       {
-; SM70-NEXT:    .reg .b16 %rs<5>;
-; SM70-NEXT:    .reg .b32 %r<3>;
-; SM70-NEXT:    .reg .f32 %f<3>;
-; SM70-NEXT:    .reg .b64 %rd<8>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-NEXT:    .reg .f64 %fd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_param_0];
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.u8 %rs1, [%rd1];
-; SM70-NEXT:    ld.param.u64 %rd2, [global_unordered_volatile_sys_param_1];
-; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    ld.param.u64 %rd3, [global_unordered_volatile_sys_param_2];
-; SM70-NEXT:    st.mmio.relaxed.sys.global.u8 [%rd1], %rs2;
-; SM70-NEXT:    ld.param.u64 %rd4, [global_unordered_volatile_sys_param_3];
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.u16 %rs3, [%rd2];
-; SM70-NEXT:    ld.param.u64 %rd5, [global_unordered_volatile_sys_param_4];
-; SM70-NEXT:    add.s16 %rs4, %rs3, 1;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.u16 [%rd2], %rs4;
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.u32 %r1, [%rd3];
-; SM70-NEXT:    add.s32 %r2, %r1, 1;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.u32 [%rd3], %r2;
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.u64 %rd6, [%rd4];
-; SM70-NEXT:    add.s64 %rd7, %rd6, 1;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.u64 [%rd4], %rd7;
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.f32 %f1, [%rd5];
-; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.f32 [%rd5], %f2;
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.f64 %fd1, [%rd5];
+; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_double_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.f64 %fd1, [%rd1];
 ; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.f64 [%rd5], %fd2;
+; SM70-NEXT:    st.relaxed.sys.global.f64 [%rd1], %fd2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic double, ptr addrspace(1) %a unordered, align 8
+  %a.add = fadd double %a.load, 1.
+  store atomic double %a.add, ptr addrspace(1) %a unordered, align 8
+  ret void
+}
+
+; global_unordered_volatile_sys
+
+define void @global_unordered_volatile_sys_i8(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_unordered_volatile_sys_i8(
+; SM60:       {
+; SM60-NEXT:    .reg .b16 %rs<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_i8_param_0];
+; SM60-NEXT:    ld.volatile.global.u8 %rs1, [%rd1];
+; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM60-NEXT:    st.volatile.global.u8 [%rd1], %rs2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_unordered_volatile_sys_i8(
+; SM70:       {
+; SM70-NEXT:    .reg .b16 %rs<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_i8_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.u8 %rs1, [%rd1];
+; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.u8 [%rd1], %rs2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic volatile i8, ptr addrspace(1) %a unordered, align 1
   %a.add = add i8 %a.load, 1
   store atomic volatile i8 %a.add, ptr addrspace(1) %a unordered, align 1
-
-  %b.load = load atomic volatile i16, ptr addrspace(1) %b unordered, align 2
-  %b.add = add i16 %b.load, 1
-  store atomic volatile i16 %b.add, ptr addrspace(1) %b unordered, align 2
-
-  %c.load = load atomic volatile i32, ptr addrspace(1) %c unordered, align 4
-  %c.add = add i32 %c.load, 1
-  store atomic volatile i32 %c.add, ptr addrspace(1) %c unordered, align 4
-
-  %d.load = load atomic volatile i64, ptr addrspace(1) %d unordered, align 8
-  %d.add = add i64 %d.load, 1
-  store atomic volatile i64 %d.add, ptr addrspace(1) %d unordered, align 8
-
-  %e.load = load atomic volatile float, ptr addrspace(1) %e unordered, align 4
-  %e.add = fadd float %e.load, 1.0
-  store atomic volatile float %e.add, ptr addrspace(1) %e unordered, align 4
-
-  %f.load = load atomic volatile double, ptr addrspace(1) %e unordered, align 8
-  %f.add = fadd double %f.load, 1.
-  store atomic volatile double %f.add, ptr addrspace(1) %e unordered, align 8
-
   ret void
 }
 
-define void @global_monotonic_sys(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e) local_unnamed_addr {
-; SM60-LABEL: global_monotonic_sys(
+define void @global_unordered_volatile_sys_i16(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_unordered_volatile_sys_i16(
 ; SM60:       {
-; SM60-NEXT:    .reg .b16 %rs<5>;
+; SM60-NEXT:    .reg .b16 %rs<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_i16_param_0];
+; SM60-NEXT:    ld.volatile.global.u16 %rs1, [%rd1];
+; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM60-NEXT:    st.volatile.global.u16 [%rd1], %rs2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_unordered_volatile_sys_i16(
+; SM70:       {
+; SM70-NEXT:    .reg .b16 %rs<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_i16_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.u16 %rs1, [%rd1];
+; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.u16 [%rd1], %rs2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic volatile i16, ptr addrspace(1) %a unordered, align 2
+  %a.add = add i16 %a.load, 1
+  store atomic volatile i16 %a.add, ptr addrspace(1) %a unordered, align 2
+  ret void
+}
+
+define void @global_unordered_volatile_sys_i32(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_unordered_volatile_sys_i32(
+; SM60:       {
 ; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_i32_param_0];
+; SM60-NEXT:    ld.volatile.global.u32 %r1, [%rd1];
+; SM60-NEXT:    add.s32 %r2, %r1, 1;
+; SM60-NEXT:    st.volatile.global.u32 [%rd1], %r2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_unordered_volatile_sys_i32(
+; SM70:       {
+; SM70-NEXT:    .reg .b32 %r<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_i32_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.u32 %r1, [%rd1];
+; SM70-NEXT:    add.s32 %r2, %r1, 1;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.u32 [%rd1], %r2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic volatile i32, ptr addrspace(1) %a unordered, align 4
+  %a.add = add i32 %a.load, 1
+  store atomic volatile i32 %a.add, ptr addrspace(1) %a unordered, align 4
+  ret void
+}
+
+define void @global_unordered_volatile_sys_i64(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_unordered_volatile_sys_i64(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<4>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_i64_param_0];
+; SM60-NEXT:    ld.volatile.global.u64 %rd2, [%rd1];
+; SM60-NEXT:    add.s64 %rd3, %rd2, 1;
+; SM60-NEXT:    st.volatile.global.u64 [%rd1], %rd3;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_unordered_volatile_sys_i64(
+; SM70:       {
+; SM70-NEXT:    .reg .b64 %rd<4>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_i64_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.u64 %rd2, [%rd1];
+; SM70-NEXT:    add.s64 %rd3, %rd2, 1;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.u64 [%rd1], %rd3;
+; SM70-NEXT:    ret;
+  %a.load = load atomic volatile i64, ptr addrspace(1) %a unordered, align 8
+  %a.add = add i64 %a.load, 1
+  store atomic volatile i64 %a.add, ptr addrspace(1) %a unordered, align 8
+  ret void
+}
+
+define void @global_unordered_volatile_sys_float(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_unordered_volatile_sys_float(
+; SM60:       {
 ; SM60-NEXT:    .reg .f32 %f<3>;
-; SM60-NEXT:    .reg .b64 %rd<8>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_float_param_0];
+; SM60-NEXT:    ld.volatile.global.f32 %f1, [%rd1];
+; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; SM60-NEXT:    st.volatile.global.f32 [%rd1], %f2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_unordered_volatile_sys_float(
+; SM70:       {
+; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_float_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.f32 %f1, [%rd1];
+; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.f32 [%rd1], %f2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic volatile float, ptr addrspace(1) %a unordered, align 4
+  %a.add = fadd float %a.load, 1.
+  store atomic volatile float %a.add, ptr addrspace(1) %a unordered, align 4
+  ret void
+}
+
+define void @global_unordered_volatile_sys_double(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_unordered_volatile_sys_double(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-NEXT:    .reg .f64 %fd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_param_0];
-; SM60-NEXT:    ld.volatile.global.u8 %rs1, [%rd1];
-; SM60-NEXT:    ld.param.u64 %rd2, [global_monotonic_sys_param_1];
-; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    ld.param.u64 %rd3, [global_monotonic_sys_param_2];
-; SM60-NEXT:    st.volatile.global.u8 [%rd1], %rs2;
-; SM60-NEXT:    ld.param.u64 %rd4, [global_monotonic_sys_param_3];
-; SM60-NEXT:    ld.volatile.global.u16 %rs3, [%rd2];
-; SM60-NEXT:    ld.param.u64 %rd5, [global_monotonic_sys_param_4];
-; SM60-NEXT:    add.s16 %rs4, %rs3, 1;
-; SM60-NEXT:    st.volatile.global.u16 [%rd2], %rs4;
-; SM60-NEXT:    ld.volatile.global.u32 %r1, [%rd3];
-; SM60-NEXT:    add.s32 %r2, %r1, 1;
-; SM60-NEXT:    st.volatile.global.u32 [%rd3], %r2;
-; SM60-NEXT:    ld.volatile.global.u64 %rd6, [%rd4];
-; SM60-NEXT:    add.s64 %rd7, %rd6, 1;
-; SM60-NEXT:    st.volatile.global.u64 [%rd4], %rd7;
-; SM60-NEXT:    ld.volatile.global.f32 %f1, [%rd5];
-; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM60-NEXT:    st.volatile.global.f32 [%rd5], %f2;
-; SM60-NEXT:    ld.volatile.global.f64 %fd1, [%rd5];
+; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_double_param_0];
+; SM60-NEXT:    ld.volatile.global.f64 %fd1, [%rd1];
 ; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM60-NEXT:    st.volatile.global.f64 [%rd5], %fd2;
+; SM60-NEXT:    st.volatile.global.f64 [%rd1], %fd2;
 ; SM60-NEXT:    ret;
 ;
-; SM70-LABEL: global_monotonic_sys(
+; SM70-LABEL: global_unordered_volatile_sys_double(
 ; SM70:       {
-; SM70-NEXT:    .reg .b16 %rs<5>;
-; SM70-NEXT:    .reg .b32 %r<3>;
-; SM70-NEXT:    .reg .f32 %f<3>;
-; SM70-NEXT:    .reg .b64 %rd<8>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-NEXT:    .reg .f64 %fd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_param_0];
-; SM70-NEXT:    ld.relaxed.sys.global.u8 %rs1, [%rd1];
-; SM70-NEXT:    ld.param.u64 %rd2, [global_monotonic_sys_param_1];
-; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    ld.param.u64 %rd3, [global_monotonic_sys_param_2];
-; SM70-NEXT:    st.relaxed.sys.global.u8 [%rd1], %rs2;
-; SM70-NEXT:    ld.param.u64 %rd4, [global_monotonic_sys_param_3];
-; SM70-NEXT:    ld.relaxed.sys.global.u16 %rs3, [%rd2];
-; SM70-NEXT:    ld.param.u64 %rd5, [global_monotonic_sys_param_4];
-; SM70-NEXT:    add.s16 %rs4, %rs3, 1;
-; SM70-NEXT:    st.relaxed.sys.global.u16 [%rd2], %rs4;
-; SM70-NEXT:    ld.relaxed.sys.global.u32 %r1, [%rd3];
-; SM70-NEXT:    add.s32 %r2, %r1, 1;
-; SM70-NEXT:    st.relaxed.sys.global.u32 [%rd3], %r2;
-; SM70-NEXT:    ld.relaxed.sys.global.u64 %rd6, [%rd4];
-; SM70-NEXT:    add.s64 %rd7, %rd6, 1;
-; SM70-NEXT:    st.relaxed.sys.global.u64 [%rd4], %rd7;
-; SM70-NEXT:    ld.relaxed.sys.global.f32 %f1, [%rd5];
-; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM70-NEXT:    st.relaxed.sys.global.f32 [%rd5], %f2;
-; SM70-NEXT:    ld.relaxed.sys.global.f64 %fd1, [%rd5];
+; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_double_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.f64 %fd1, [%rd1];
 ; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM70-NEXT:    st.relaxed.sys.global.f64 [%rd5], %fd2;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.f64 [%rd1], %fd2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic volatile double, ptr addrspace(1) %a unordered, align 8
+  %a.add = fadd double %a.load, 1.
+  store atomic volatile double %a.add, ptr addrspace(1) %a unordered, align 8
+  ret void
+}
+
+; global_monotonic_sys
+
+define void @global_monotonic_sys_i8(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_monotonic_sys_i8(
+; SM60:       {
+; SM60-NEXT:    .reg .b16 %rs<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_i8_param_0];
+; SM60-NEXT:    ld.volatile.global.u8 %rs1, [%rd1];
+; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM60-NEXT:    st.volatile.global.u8 [%rd1], %rs2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_monotonic_sys_i8(
+; SM70:       {
+; SM70-NEXT:    .reg .b16 %rs<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_i8_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.u8 %rs1, [%rd1];
+; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM70-NEXT:    st.relaxed.sys.global.u8 [%rd1], %rs2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i8, ptr addrspace(1) %a monotonic, align 1
   %a.add = add i8 %a.load, 1
   store atomic i8 %a.add, ptr addrspace(1) %a monotonic, align 1
-
-  %b.load = load atomic i16, ptr addrspace(1) %b monotonic, align 2
-  %b.add = add i16 %b.load, 1
-  store atomic i16 %b.add, ptr addrspace(1) %b monotonic, align 2
-
-  %c.load = load atomic i32, ptr addrspace(1) %c monotonic, align 4
-  %c.add = add i32 %c.load, 1
-  store atomic i32 %c.add, ptr addrspace(1) %c monotonic, align 4
-
-  %d.load = load atomic i64, ptr addrspace(1) %d monotonic, align 8
-  %d.add = add i64 %d.load, 1
-  store atomic i64 %d.add, ptr addrspace(1) %d monotonic, align 8
-
-  %e.load = load atomic float, ptr addrspace(1) %e monotonic, align 4
-  %e.add = fadd float %e.load, 1.
-  store atomic float %e.add, ptr addrspace(1) %e monotonic, align 4
-
-  %f.load = load atomic double, ptr addrspace(1) %e monotonic, align 8
-  %f.add = fadd double %f.load, 1.
-  store atomic double %f.add, ptr addrspace(1) %e monotonic, align 8
-
   ret void
 }
 
-define void @global_monotonic_volatile_sys(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e) local_unnamed_addr {
-; SM60-LABEL: global_monotonic_volatile_sys(
+define void @global_monotonic_sys_i16(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_monotonic_sys_i16(
 ; SM60:       {
-; SM60-NEXT:    .reg .b16 %rs<5>;
+; SM60-NEXT:    .reg .b16 %rs<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_i16_param_0];
+; SM60-NEXT:    ld.volatile.global.u16 %rs1, [%rd1];
+; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM60-NEXT:    st.volatile.global.u16 [%rd1], %rs2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_monotonic_sys_i16(
+; SM70:       {
+; SM70-NEXT:    .reg .b16 %rs<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_i16_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.u16 %rs1, [%rd1];
+; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM70-NEXT:    st.relaxed.sys.global.u16 [%rd1], %rs2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic i16, ptr addrspace(1) %a monotonic, align 2
+  %a.add = add i16 %a.load, 1
+  store atomic i16 %a.add, ptr addrspace(1) %a monotonic, align 2
+  ret void
+}
+
+define void @global_monotonic_sys_i32(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_monotonic_sys_i32(
+; SM60:       {
 ; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_i32_param_0];
+; SM60-NEXT:    ld.volatile.global.u32 %r1, [%rd1];
+; SM60-NEXT:    add.s32 %r2, %r1, 1;
+; SM60-NEXT:    st.volatile.global.u32 [%rd1], %r2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_monotonic_sys_i32(
+; SM70:       {
+; SM70-NEXT:    .reg .b32 %r<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_i32_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.u32 %r1, [%rd1];
+; SM70-NEXT:    add.s32 %r2, %r1, 1;
+; SM70-NEXT:    st.relaxed.sys.global.u32 [%rd1], %r2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic i32, ptr addrspace(1) %a monotonic, align 4
+  %a.add = add i32 %a.load, 1
+  store atomic i32 %a.add, ptr addrspace(1) %a monotonic, align 4
+  ret void
+}
+
+define void @global_monotonic_sys_i64(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_monotonic_sys_i64(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<4>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_i64_param_0];
+; SM60-NEXT:    ld.volatile.global.u64 %rd2, [%rd1];
+; SM60-NEXT:    add.s64 %rd3, %rd2, 1;
+; SM60-NEXT:    st.volatile.global.u64 [%rd1], %rd3;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_monotonic_sys_i64(
+; SM70:       {
+; SM70-NEXT:    .reg .b64 %rd<4>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_i64_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.u64 %rd2, [%rd1];
+; SM70-NEXT:    add.s64 %rd3, %rd2, 1;
+; SM70-NEXT:    st.relaxed.sys.global.u64 [%rd1], %rd3;
+; SM70-NEXT:    ret;
+  %a.load = load atomic i64, ptr addrspace(1) %a monotonic, align 8
+  %a.add = add i64 %a.load, 1
+  store atomic i64 %a.add, ptr addrspace(1) %a monotonic, align 8
+  ret void
+}
+
+define void @global_monotonic_sys_float(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_monotonic_sys_float(
+; SM60:       {
 ; SM60-NEXT:    .reg .f32 %f<3>;
-; SM60-NEXT:    .reg .b64 %rd<8>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_float_param_0];
+; SM60-NEXT:    ld.volatile.global.f32 %f1, [%rd1];
+; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; SM60-NEXT:    st.volatile.global.f32 [%rd1], %f2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_monotonic_sys_float(
+; SM70:       {
+; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_float_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.f32 %f1, [%rd1];
+; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; SM70-NEXT:    st.relaxed.sys.global.f32 [%rd1], %f2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic float, ptr addrspace(1) %a monotonic, align 4
+  %a.add = fadd float %a.load, 1.
+  store atomic float %a.add, ptr addrspace(1) %a monotonic, align 4
+  ret void
+}
+
+define void @global_monotonic_sys_double(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_monotonic_sys_double(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-NEXT:    .reg .f64 %fd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_param_0];
-; SM60-NEXT:    ld.volatile.global.u8 %rs1, [%rd1];
-; SM60-NEXT:    ld.param.u64 %rd2, [global_monotonic_volatile_sys_param_1];
-; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    ld.param.u64 %rd3, [global_monotonic_volatile_sys_param_2];
-; SM60-NEXT:    st.volatile.global.u8 [%rd1], %rs2;
-; SM60-NEXT:    ld.param.u64 %rd4, [global_monotonic_volatile_sys_param_3];
-; SM60-NEXT:    ld.volatile.global.u16 %rs3, [%rd2];
-; SM60-NEXT:    ld.param.u64 %rd5, [global_monotonic_volatile_sys_param_4];
-; SM60-NEXT:    add.s16 %rs4, %rs3, 1;
-; SM60-NEXT:    st.volatile.global.u16 [%rd2], %rs4;
-; SM60-NEXT:    ld.volatile.global.u32 %r1, [%rd3];
-; SM60-NEXT:    add.s32 %r2, %r1, 1;
-; SM60-NEXT:    st.volatile.global.u32 [%rd3], %r2;
-; SM60-NEXT:    ld.volatile.global.u64 %rd6, [%rd4];
-; SM60-NEXT:    add.s64 %rd7, %rd6, 1;
-; SM60-NEXT:    st.volatile.global.u64 [%rd4], %rd7;
-; SM60-NEXT:    ld.volatile.global.f32 %f1, [%rd5];
-; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM60-NEXT:    st.volatile.global.f32 [%rd5], %f2;
-; SM60-NEXT:    ld.volatile.global.f64 %fd1, [%rd5];
+; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_double_param_0];
+; SM60-NEXT:    ld.volatile.global.f64 %fd1, [%rd1];
 ; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM60-NEXT:    st.volatile.global.f64 [%rd5], %fd2;
+; SM60-NEXT:    st.volatile.global.f64 [%rd1], %fd2;
 ; SM60-NEXT:    ret;
 ;
-; SM70-LABEL: global_monotonic_volatile_sys(
+; SM70-LABEL: global_monotonic_sys_double(
 ; SM70:       {
-; SM70-NEXT:    .reg .b16 %rs<5>;
-; SM70-NEXT:    .reg .b32 %r<3>;
-; SM70-NEXT:    .reg .f32 %f<3>;
-; SM70-NEXT:    .reg .b64 %rd<8>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-NEXT:    .reg .f64 %fd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_param_0];
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.u8 %rs1, [%rd1];
-; SM70-NEXT:    ld.param.u64 %rd2, [global_monotonic_volatile_sys_param_1];
-; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    ld.param.u64 %rd3, [global_monotonic_volatile_sys_param_2];
-; SM70-NEXT:    st.mmio.relaxed.sys.global.u8 [%rd1], %rs2;
-; SM70-NEXT:    ld.param.u64 %rd4, [global_monotonic_volatile_sys_param_3];
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.u16 %rs3, [%rd2];
-; SM70-NEXT:    ld.param.u64 %rd5, [global_monotonic_volatile_sys_param_4];
-; SM70-NEXT:    add.s16 %rs4, %rs3, 1;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.u16 [%rd2], %rs4;
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.u32 %r1, [%rd3];
-; SM70-NEXT:    add.s32 %r2, %r1, 1;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.u32 [%rd3], %r2;
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.u64 %rd6, [%rd4];
-; SM70-NEXT:    add.s64 %rd7, %rd6, 1;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.u64 [%rd4], %rd7;
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.f32 %f1, [%rd5];
-; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.f32 [%rd5], %f2;
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.f64 %fd1, [%rd5];
+; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_double_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.f64 %fd1, [%rd1];
 ; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.f64 [%rd5], %fd2;
+; SM70-NEXT:    st.relaxed.sys.global.f64 [%rd1], %fd2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic double, ptr addrspace(1) %a monotonic, align 8
+  %a.add = fadd double %a.load, 1.
+  store atomic double %a.add, ptr addrspace(1) %a monotonic, align 8
+  ret void
+}
+
+; global_monotonic_volatile_sys
+
+define void @global_monotonic_volatile_sys_i8(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_monotonic_volatile_sys_i8(
+; SM60:       {
+; SM60-NEXT:    .reg .b16 %rs<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_i8_param_0];
+; SM60-NEXT:    ld.volatile.global.u8 %rs1, [%rd1];
+; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM60-NEXT:    st.volatile.global.u8 [%rd1], %rs2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_monotonic_volatile_sys_i8(
+; SM70:       {
+; SM70-NEXT:    .reg .b16 %rs<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_i8_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.u8 %rs1, [%rd1];
+; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.u8 [%rd1], %rs2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic volatile i8, ptr addrspace(1) %a monotonic, align 1
   %a.add = add i8 %a.load, 1
   store atomic volatile i8 %a.add, ptr addrspace(1) %a monotonic, align 1
+  ret void
+}
 
-  %b.load = load atomic volatile i16, ptr addrspace(1) %b monotonic, align 2
-  %b.add = add i16 %b.load, 1
-  store atomic volatile i16 %b.add, ptr addrspace(1) %b monotonic, align 2
+define void @global_monotonic_volatile_sys_i16(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_monotonic_volatile_sys_i16(
+; SM60:       {
+; SM60-NEXT:    .reg .b16 %rs<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_i16_param_0];
+; SM60-NEXT:    ld.volatile.global.u16 %rs1, [%rd1];
+; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM60-NEXT:    st.volatile.global.u16 [%rd1], %rs2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_monotonic_volatile_sys_i16(
+; SM70:       {
+; SM70-NEXT:    .reg .b16 %rs<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_i16_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.u16 %rs1, [%rd1];
+; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.u16 [%rd1], %rs2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic volatile i16, ptr addrspace(1) %a monotonic, align 2
+  %a.add = add i16 %a.load, 1
+  store atomic volatile i16 %a.add, ptr addrspace(1) %a monotonic, align 2
+  ret void
+}
 
-  %c.load = load atomic volatile i32, ptr addrspace(1) %c monotonic, align 4
-  %c.add = add i32 %c.load, 1
-  store atomic volatile i32 %c.add, ptr addrspace(1) %c monotonic, align 4
+define void @global_monotonic_volatile_sys_i32(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_monotonic_volatile_sys_i32(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_i32_param_0];
+; SM60-NEXT:    ld.volatile.global.u32 %r1, [%rd1];
+; SM60-NEXT:    add.s32 %r2, %r1, 1;
+; SM60-NEXT:    st.volatile.global.u32 [%rd1], %r2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_monotonic_volatile_sys_i32(
+; SM70:       {
+; SM70-NEXT:    .reg .b32 %r<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_i32_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.u32 %r1, [%rd1];
+; SM70-NEXT:    add.s32 %r2, %r1, 1;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.u32 [%rd1], %r2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic volatile i32, ptr addrspace(1) %a monotonic, align 4
+  %a.add = add i32 %a.load, 1
+  store atomic volatile i32 %a.add, ptr addrspace(1) %a monotonic, align 4
+  ret void
+}
 
-  %d.load = load atomic volatile i64, ptr addrspace(1) %d monotonic, align 8
-  %d.add = add i64 %d.load, 1
-  store atomic volatile i64 %d.add, ptr addrspace(1) %d monotonic, align 8
+define void @global_monotonic_volatile_sys_i64(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_monotonic_volatile_sys_i64(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<4>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_i64_param_0];
+; SM60-NEXT:    ld.volatile.global.u64 %rd2, [%rd1];
+; SM60-NEXT:    add.s64 %rd3, %rd2, 1;
+; SM60-NEXT:    st.volatile.global.u64 [%rd1], %rd3;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_monotonic_volatile_sys_i64(
+; SM70:       {
+; SM70-NEXT:    .reg .b64 %rd<4>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_i64_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.u64 %rd2, [%rd1];
+; SM70-NEXT:    add.s64 %rd3, %rd2, 1;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.u64 [%rd1], %rd3;
+; SM70-NEXT:    ret;
+  %a.load = load atomic volatile i64, ptr addrspace(1) %a monotonic, align 8
+  %a.add = add i64 %a.load, 1
+  store atomic volatile i64 %a.add, ptr addrspace(1) %a monotonic, align 8
+  ret void
+}
 
-  %e.load = load atomic volatile float, ptr addrspace(1) %e monotonic, align 4
-  %e.add = fadd float %e.load, 1.
-  store atomic volatile float %e.add, ptr addrspace(1) %e monotonic, align 4
+define void @global_monotonic_volatile_sys_float(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_monotonic_volatile_sys_float(
+; SM60:       {
+; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_float_param_0];
+; SM60-NEXT:    ld.volatile.global.f32 %f1, [%rd1];
+; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; SM60-NEXT:    st.volatile.global.f32 [%rd1], %f2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_monotonic_volatile_sys_float(
+; SM70:       {
+; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_float_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.f32 %f1, [%rd1];
+; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.f32 [%rd1], %f2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic volatile float, ptr addrspace(1) %a monotonic, align 4
+  %a.add = fadd float %a.load, 1.
+  store atomic volatile float %a.add, ptr addrspace(1) %a monotonic, align 4
+  ret void
+}
 
-  %f.load = load atomic volatile double, ptr addrspace(1) %e monotonic, align 8
-  %f.add = fadd double %f.load, 1.
-  store atomic volatile double %f.add, ptr addrspace(1) %e monotonic, align 8
-
+define void @global_monotonic_volatile_sys_double(ptr addrspace(1) %a) local_unnamed_addr {
+; SM60-LABEL: global_monotonic_volatile_sys_double(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_double_param_0];
+; SM60-NEXT:    ld.volatile.global.f64 %fd1, [%rd1];
+; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
+; SM60-NEXT:    st.volatile.global.f64 [%rd1], %fd2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: global_monotonic_volatile_sys_double(
+; SM70:       {
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_double_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.f64 %fd1, [%rd1];
+; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.f64 [%rd1], %fd2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic volatile double, ptr addrspace(1) %a monotonic, align 8
+  %a.add = fadd double %a.load, 1.
+  store atomic volatile double %a.add, ptr addrspace(1) %a monotonic, align 8
   ret void
 }
 
 ;; shared statespace
 
-define void @shared_weak(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d) local_unnamed_addr {
-; CHECK-LABEL: shared_weak(
+; shared_weak
+
+define void @shared_weak_i8(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_weak_i8(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<29>;
-; CHECK-NEXT:    .reg .b32 %r<29>;
-; CHECK-NEXT:    .reg .f32 %f<15>;
-; CHECK-NEXT:    .reg .b64 %rd<11>;
-; CHECK-NEXT:    .reg .f64 %fd<7>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_i8_param_0];
 ; CHECK-NEXT:    ld.shared.u8 %rs1, [%rd1];
-; CHECK-NEXT:    ld.param.u64 %rd2, [shared_weak_param_1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    ld.param.u64 %rd3, [shared_weak_param_2];
 ; CHECK-NEXT:    st.shared.u8 [%rd1], %rs2;
-; CHECK-NEXT:    ld.param.u64 %rd4, [shared_weak_param_3];
-; CHECK-NEXT:    ld.shared.u16 %rs3, [%rd2];
-; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
-; CHECK-NEXT:    st.shared.u16 [%rd2], %rs4;
-; CHECK-NEXT:    ld.shared.u32 %r1, [%rd3];
-; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.shared.u32 [%rd3], %r2;
-; CHECK-NEXT:    ld.shared.u64 %rd5, [%rd4];
-; CHECK-NEXT:    add.s64 %rd6, %rd5, 1;
-; CHECK-NEXT:    st.shared.u64 [%rd4], %rd6;
-; CHECK-NEXT:    ld.shared.f32 %f1, [%rd3];
-; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.shared.f32 [%rd3], %f2;
-; CHECK-NEXT:    ld.shared.f64 %fd1, [%rd3];
-; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.shared.f64 [%rd3], %fd2;
-; CHECK-NEXT:    ld.shared.v2.u8 {%rs5, %rs6}, [%rd2];
-; CHECK-NEXT:    add.s16 %rs7, %rs6, 1;
-; CHECK-NEXT:    add.s16 %rs8, %rs5, 1;
-; CHECK-NEXT:    st.shared.v2.u8 [%rd2], {%rs8, %rs7};
-; CHECK-NEXT:    ld.shared.u32 %r3, [%rd3];
-; CHECK-NEXT:    bfe.u32 %r4, %r3, 0, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs9, %r4;
-; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r5, %rs10;
-; CHECK-NEXT:    bfe.u32 %r6, %r3, 8, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs11, %r6;
-; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r7, %rs12;
-; CHECK-NEXT:    bfi.b32 %r8, %r7, %r5, 8, 8;
-; CHECK-NEXT:    bfe.u32 %r9, %r3, 16, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs13, %r9;
-; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r10, %rs14;
-; CHECK-NEXT:    bfi.b32 %r11, %r10, %r8, 16, 8;
-; CHECK-NEXT:    bfe.u32 %r12, %r3, 24, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs15, %r12;
-; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r13, %rs16;
-; CHECK-NEXT:    bfi.b32 %r14, %r13, %r11, 24, 8;
-; CHECK-NEXT:    st.shared.u32 [%rd3], %r14;
-; CHECK-NEXT:    ld.shared.u32 %r15, [%rd3];
-; CHECK-NEXT:    mov.b32 {%rs17, %rs18}, %r15;
-; CHECK-NEXT:    add.s16 %rs19, %rs18, 1;
-; CHECK-NEXT:    add.s16 %rs20, %rs17, 1;
-; CHECK-NEXT:    mov.b32 %r16, {%rs20, %rs19};
-; CHECK-NEXT:    st.shared.u32 [%rd3], %r16;
-; CHECK-NEXT:    ld.shared.v4.u16 {%rs21, %rs22, %rs23, %rs24}, [%rd4];
-; CHECK-NEXT:    add.s16 %rs25, %rs24, 1;
-; CHECK-NEXT:    add.s16 %rs26, %rs23, 1;
-; CHECK-NEXT:    add.s16 %rs27, %rs22, 1;
-; CHECK-NEXT:    add.s16 %rs28, %rs21, 1;
-; CHECK-NEXT:    st.shared.v4.u16 [%rd4], {%rs28, %rs27, %rs26, %rs25};
-; CHECK-NEXT:    ld.shared.v2.u32 {%r17, %r18}, [%rd4];
-; CHECK-NEXT:    add.s32 %r19, %r18, 1;
-; CHECK-NEXT:    add.s32 %r20, %r17, 1;
-; CHECK-NEXT:    st.shared.v2.u32 [%rd4], {%r20, %r19};
-; CHECK-NEXT:    ld.shared.v4.u32 {%r21, %r22, %r23, %r24}, [%rd4];
-; CHECK-NEXT:    add.s32 %r25, %r24, 1;
-; CHECK-NEXT:    add.s32 %r26, %r23, 1;
-; CHECK-NEXT:    add.s32 %r27, %r22, 1;
-; CHECK-NEXT:    add.s32 %r28, %r21, 1;
-; CHECK-NEXT:    st.shared.v4.u32 [%rd4], {%r28, %r27, %r26, %r25};
-; CHECK-NEXT:    ld.shared.v2.u64 {%rd7, %rd8}, [%rd4];
-; CHECK-NEXT:    add.s64 %rd9, %rd8, 1;
-; CHECK-NEXT:    add.s64 %rd10, %rd7, 1;
-; CHECK-NEXT:    st.shared.v2.u64 [%rd4], {%rd10, %rd9};
-; CHECK-NEXT:    ld.shared.v2.f32 {%f3, %f4}, [%rd4];
-; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
-; CHECK-NEXT:    st.shared.v2.f32 [%rd4], {%f6, %f5};
-; CHECK-NEXT:    ld.shared.v4.f32 {%f7, %f8, %f9, %f10}, [%rd4];
-; CHECK-NEXT:    add.rn.f32 %f11, %f10, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f12, %f9, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f13, %f8, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f14, %f7, 0f3F800000;
-; CHECK-NEXT:    st.shared.v4.f32 [%rd4], {%f14, %f13, %f12, %f11};
-; CHECK-NEXT:    ld.shared.v2.f64 {%fd3, %fd4}, [%rd4];
-; CHECK-NEXT:    add.rn.f64 %fd5, %fd4, 0d3FF0000000000000;
-; CHECK-NEXT:    add.rn.f64 %fd6, %fd3, 0d3FF0000000000000;
-; CHECK-NEXT:    st.shared.v2.f64 [%rd4], {%fd6, %fd5};
 ; CHECK-NEXT:    ret;
   %a.load = load i8, ptr addrspace(3) %a
   %a.add = add i8 %a.load, 1
   store i8 %a.add, ptr addrspace(3) %a
-
-  %b.load = load i16, ptr addrspace(3) %b
-  %b.add = add i16 %b.load, 1
-  store i16 %b.add, ptr addrspace(3) %b
-
-  %c.load = load i32, ptr addrspace(3) %c
-  %c.add = add i32 %c.load, 1
-  store i32 %c.add, ptr addrspace(3) %c
-
-  %d.load = load i64, ptr addrspace(3) %d
-  %d.add = add i64 %d.load, 1
-  store i64 %d.add, ptr addrspace(3) %d
-
-  %e.load = load float, ptr addrspace(3) %c
-  %e.add = fadd float %e.load, 1.
-  store float %e.add, ptr addrspace(3) %c
-
-  %f.load = load double, ptr addrspace(3) %c
-  %f.add = fadd double %f.load, 1.
-  store double %f.add, ptr addrspace(3) %c
-
-  %h.load = load <2 x i8>, ptr addrspace(3) %b
-  %h.add = add <2 x i8> %h.load, <i8 1, i8 1>
-  store <2 x i8> %h.add, ptr addrspace(3) %b
-
-  %i.load = load <4 x i8>, ptr addrspace(3) %c
-  %i.add = add <4 x i8> %i.load, <i8 1, i8 1, i8 1, i8 1>
-  store <4 x i8> %i.add, ptr addrspace(3) %c
-
-  %j.load = load <2 x i16>, ptr addrspace(3) %c
-  %j.add = add <2 x i16> %j.load, <i16 1, i16 1>
-  store <2 x i16> %j.add, ptr addrspace(3) %c
-
-  %k.load = load <4 x i16>, ptr addrspace(3) %d
-  %k.add = add <4 x i16> %k.load, <i16 1, i16 1, i16 1, i16 1>
-  store <4 x i16> %k.add, ptr addrspace(3) %d
-
-  %l.load = load <2 x i32>, ptr addrspace(3) %d
-  %l.add = add <2 x i32> %l.load, <i32 1, i32 1>
-  store <2 x i32> %l.add, ptr addrspace(3) %d
-
-  %m.load = load <4 x i32>, ptr addrspace(3) %d
-  %m.add = add <4 x i32> %m.load, <i32 1, i32 1, i32 1, i32 1>
-  store <4 x i32> %m.add, ptr addrspace(3) %d
-
-  %n.load = load <2 x i64>, ptr addrspace(3) %d
-  %n.add = add <2 x i64> %n.load, <i64 1, i64 1>
-  store <2 x i64> %n.add, ptr addrspace(3) %d
-
-  %o.load = load <2 x float>, ptr addrspace(3) %d
-  %o.add = fadd <2 x float> %o.load, <float 1., float 1.>
-  store <2 x float> %o.add, ptr addrspace(3) %d
-
-  %p.load = load <4 x float>, ptr addrspace(3) %d
-  %p.add = fadd <4 x float> %p.load, <float 1., float 1., float 1., float 1.>
-  store <4 x float> %p.add, ptr addrspace(3) %d
-
-  %q.load = load <2 x double>, ptr addrspace(3) %d
-  %q.add = fadd <2 x double> %q.load, <double 1., double 1.>
-  store <2 x double> %q.add, ptr addrspace(3) %d
-
   ret void
 }
 
-define void @shared_volatile(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d) local_unnamed_addr {
-; CHECK-LABEL: shared_volatile(
+define void @shared_weak_i16(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_weak_i16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<29>;
-; CHECK-NEXT:    .reg .b32 %r<29>;
-; CHECK-NEXT:    .reg .f32 %f<15>;
-; CHECK-NEXT:    .reg .b64 %rd<11>;
-; CHECK-NEXT:    .reg .f64 %fd<7>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_param_0];
-; CHECK-NEXT:    ld.volatile.shared.u8 %rs1, [%rd1];
-; CHECK-NEXT:    ld.param.u64 %rd2, [shared_volatile_param_1];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_i16_param_0];
+; CHECK-NEXT:    ld.shared.u16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    ld.param.u64 %rd3, [shared_volatile_param_2];
-; CHECK-NEXT:    st.volatile.shared.u8 [%rd1], %rs2;
-; CHECK-NEXT:    ld.param.u64 %rd4, [shared_volatile_param_3];
-; CHECK-NEXT:    ld.volatile.shared.u16 %rs3, [%rd2];
-; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
-; CHECK-NEXT:    st.volatile.shared.u16 [%rd2], %rs4;
-; CHECK-NEXT:    ld.volatile.shared.u32 %r1, [%rd3];
+; CHECK-NEXT:    st.shared.u16 [%rd1], %rs2;
+; CHECK-NEXT:    ret;
+  %a.load = load i16, ptr addrspace(3) %a
+  %a.add = add i16 %a.load, 1
+  store i16 %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_weak_i32(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_weak_i32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_i32_param_0];
+; CHECK-NEXT:    ld.shared.u32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.volatile.shared.u32 [%rd3], %r2;
-; CHECK-NEXT:    ld.volatile.shared.u64 %rd5, [%rd4];
-; CHECK-NEXT:    add.s64 %rd6, %rd5, 1;
-; CHECK-NEXT:    st.volatile.shared.u64 [%rd4], %rd6;
-; CHECK-NEXT:    ld.volatile.shared.f32 %f1, [%rd3];
+; CHECK-NEXT:    st.shared.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load i32, ptr addrspace(3) %a
+  %a.add = add i32 %a.load, 1
+  store i32 %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_weak_i64(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_weak_i64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_i64_param_0];
+; CHECK-NEXT:    ld.shared.u64 %rd2, [%rd1];
+; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
+; CHECK-NEXT:    st.shared.u64 [%rd1], %rd3;
+; CHECK-NEXT:    ret;
+  %a.load = load i64, ptr addrspace(3) %a
+  %a.add = add i64 %a.load, 1
+  store i64 %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_weak_float(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_weak_float(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_float_param_0];
+; CHECK-NEXT:    ld.shared.f32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.shared.f32 [%rd3], %f2;
-; CHECK-NEXT:    ld.volatile.shared.f64 %fd1, [%rd3];
+; CHECK-NEXT:    st.shared.f32 [%rd1], %f2;
+; CHECK-NEXT:    ret;
+  %a.load = load float, ptr addrspace(3) %a
+  %a.add = fadd float %a.load, 1.
+  store float %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_weak_double(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_weak_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_double_param_0];
+; CHECK-NEXT:    ld.shared.f64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.shared.f64 [%rd3], %fd2;
-; CHECK-NEXT:    ld.volatile.shared.v2.u8 {%rs5, %rs6}, [%rd2];
-; CHECK-NEXT:    add.s16 %rs7, %rs6, 1;
-; CHECK-NEXT:    add.s16 %rs8, %rs5, 1;
-; CHECK-NEXT:    st.volatile.shared.v2.u8 [%rd2], {%rs8, %rs7};
-; CHECK-NEXT:    ld.volatile.shared.u32 %r3, [%rd3];
-; CHECK-NEXT:    bfe.u32 %r4, %r3, 0, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs9, %r4;
-; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r5, %rs10;
-; CHECK-NEXT:    bfe.u32 %r6, %r3, 8, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs11, %r6;
-; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r7, %rs12;
-; CHECK-NEXT:    bfi.b32 %r8, %r7, %r5, 8, 8;
-; CHECK-NEXT:    bfe.u32 %r9, %r3, 16, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs13, %r9;
-; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r10, %rs14;
-; CHECK-NEXT:    bfi.b32 %r11, %r10, %r8, 16, 8;
-; CHECK-NEXT:    bfe.u32 %r12, %r3, 24, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs15, %r12;
-; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r13, %rs16;
-; CHECK-NEXT:    bfi.b32 %r14, %r13, %r11, 24, 8;
-; CHECK-NEXT:    st.volatile.shared.u32 [%rd3], %r14;
-; CHECK-NEXT:    ld.volatile.shared.u32 %r15, [%rd3];
-; CHECK-NEXT:    mov.b32 {%rs17, %rs18}, %r15;
-; CHECK-NEXT:    add.s16 %rs19, %rs18, 1;
-; CHECK-NEXT:    add.s16 %rs20, %rs17, 1;
-; CHECK-NEXT:    mov.b32 %r16, {%rs20, %rs19};
-; CHECK-NEXT:    st.volatile.shared.u32 [%rd3], %r16;
-; CHECK-NEXT:    ld.volatile.shared.v4.u16 {%rs21, %rs22, %rs23, %rs24}, [%rd4];
-; CHECK-NEXT:    add.s16 %rs25, %rs24, 1;
-; CHECK-NEXT:    add.s16 %rs26, %rs23, 1;
-; CHECK-NEXT:    add.s16 %rs27, %rs22, 1;
-; CHECK-NEXT:    add.s16 %rs28, %rs21, 1;
-; CHECK-NEXT:    st.volatile.shared.v4.u16 [%rd4], {%rs28, %rs27, %rs26, %rs25};
-; CHECK-NEXT:    ld.volatile.shared.v2.u32 {%r17, %r18}, [%rd4];
-; CHECK-NEXT:    add.s32 %r19, %r18, 1;
-; CHECK-NEXT:    add.s32 %r20, %r17, 1;
-; CHECK-NEXT:    st.volatile.shared.v2.u32 [%rd4], {%r20, %r19};
-; CHECK-NEXT:    ld.volatile.shared.v4.u32 {%r21, %r22, %r23, %r24}, [%rd4];
-; CHECK-NEXT:    add.s32 %r25, %r24, 1;
-; CHECK-NEXT:    add.s32 %r26, %r23, 1;
-; CHECK-NEXT:    add.s32 %r27, %r22, 1;
-; CHECK-NEXT:    add.s32 %r28, %r21, 1;
-; CHECK-NEXT:    st.volatile.shared.v4.u32 [%rd4], {%r28, %r27, %r26, %r25};
-; CHECK-NEXT:    ld.volatile.shared.v2.u64 {%rd7, %rd8}, [%rd4];
-; CHECK-NEXT:    add.s64 %rd9, %rd8, 1;
-; CHECK-NEXT:    add.s64 %rd10, %rd7, 1;
-; CHECK-NEXT:    st.volatile.shared.v2.u64 [%rd4], {%rd10, %rd9};
-; CHECK-NEXT:    ld.volatile.shared.v2.f32 {%f3, %f4}, [%rd4];
+; CHECK-NEXT:    st.shared.f64 [%rd1], %fd2;
+; CHECK-NEXT:    ret;
+  %a.load = load double, ptr addrspace(3) %a
+  %a.add = fadd double %a.load, 1.
+  store double %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_weak_2xi8(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_weak_2xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_2xi8_param_0];
+; CHECK-NEXT:    ld.shared.v2.u8 {%rs1, %rs2}, [%rd1];
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    st.shared.v2.u8 [%rd1], {%rs4, %rs3};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x i8>, ptr addrspace(3) %a
+  %a.add = add <2 x i8> %a.load, <i8 1, i8 1>
+  store <2 x i8> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_weak_4xi8(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_weak_4xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<9>;
+; CHECK-NEXT:    .reg .b32 %r<13>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_4xi8_param_0];
+; CHECK-NEXT:    ld.shared.u32 %r1, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r2, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r2;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r3, %rs2;
+; CHECK-NEXT:    bfe.u32 %r4, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r4;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs4;
+; CHECK-NEXT:    bfi.b32 %r6, %r5, %r3, 8, 8;
+; CHECK-NEXT:    bfe.u32 %r7, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs6;
+; CHECK-NEXT:    bfi.b32 %r9, %r8, %r6, 16, 8;
+; CHECK-NEXT:    bfe.u32 %r10, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs8;
+; CHECK-NEXT:    bfi.b32 %r12, %r11, %r9, 24, 8;
+; CHECK-NEXT:    st.shared.u32 [%rd1], %r12;
+; CHECK-NEXT:    ret;
+  %a.load = load <4 x i8>, ptr addrspace(3) %a
+  %a.add = add <4 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1>
+  store <4 x i8> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_weak_2xi16(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_weak_2xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_2xi16_param_0];
+; CHECK-NEXT:    ld.shared.u32 %r1, [%rd1];
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    mov.b32 %r2, {%rs4, %rs3};
+; CHECK-NEXT:    st.shared.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x i16>, ptr addrspace(3) %a
+  %a.add = add <2 x i16> %a.load, <i16 1, i16 1>
+  store <2 x i16> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_weak_4xi16(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_weak_4xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_4xi16_param_0];
+; CHECK-NEXT:    ld.shared.v4.u16 {%rs1, %rs2, %rs3, %rs4}, [%rd1];
+; CHECK-NEXT:    add.s16 %rs5, %rs4, 1;
+; CHECK-NEXT:    add.s16 %rs6, %rs3, 1;
+; CHECK-NEXT:    add.s16 %rs7, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs8, %rs1, 1;
+; CHECK-NEXT:    st.shared.v4.u16 [%rd1], {%rs8, %rs7, %rs6, %rs5};
+; CHECK-NEXT:    ret;
+  %a.load = load <4 x i16>, ptr addrspace(3) %a
+  %a.add = add <4 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1>
+  store <4 x i16> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_weak_2xi32(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_weak_2xi32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_2xi32_param_0];
+; CHECK-NEXT:    ld.shared.v2.u32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    add.s32 %r3, %r2, 1;
+; CHECK-NEXT:    add.s32 %r4, %r1, 1;
+; CHECK-NEXT:    st.shared.v2.u32 [%rd1], {%r4, %r3};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x i32>, ptr addrspace(3) %a
+  %a.add = add <2 x i32> %a.load, <i32 1, i32 1>
+  store <2 x i32> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_weak_4xi32(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_weak_4xi32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_4xi32_param_0];
+; CHECK-NEXT:    ld.shared.v4.u32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    add.s32 %r5, %r4, 1;
+; CHECK-NEXT:    add.s32 %r6, %r3, 1;
+; CHECK-NEXT:    add.s32 %r7, %r2, 1;
+; CHECK-NEXT:    add.s32 %r8, %r1, 1;
+; CHECK-NEXT:    st.shared.v4.u32 [%rd1], {%r8, %r7, %r6, %r5};
+; CHECK-NEXT:    ret;
+  %a.load = load <4 x i32>, ptr addrspace(3) %a
+  %a.add = add <4 x i32> %a.load, <i32 1, i32 1, i32 1, i32 1>
+  store <4 x i32> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_weak_2xi64(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_weak_2xi64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_2xi64_param_0];
+; CHECK-NEXT:    ld.shared.v2.u64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    add.s64 %rd4, %rd3, 1;
+; CHECK-NEXT:    add.s64 %rd5, %rd2, 1;
+; CHECK-NEXT:    st.shared.v2.u64 [%rd1], {%rd5, %rd4};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x i64>, ptr addrspace(3) %a
+  %a.add = add <2 x i64> %a.load, <i64 1, i64 1>
+  store <2 x i64> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_weak_2xfloat(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_weak_2xfloat(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_2xfloat_param_0];
+; CHECK-NEXT:    ld.shared.v2.f32 {%f1, %f2}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
+; CHECK-NEXT:    st.shared.v2.f32 [%rd1], {%f4, %f3};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x float>, ptr addrspace(3) %a
+  %a.add = fadd <2 x float> %a.load, <float 1., float 1.>
+  store <2 x float> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_weak_4xfloat(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_weak_4xfloat(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_4xfloat_param_0];
+; CHECK-NEXT:    ld.shared.v4.f32 {%f1, %f2, %f3, %f4}, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
 ; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
-; CHECK-NEXT:    st.volatile.shared.v2.f32 [%rd4], {%f6, %f5};
-; CHECK-NEXT:    ld.volatile.shared.v4.f32 {%f7, %f8, %f9, %f10}, [%rd4];
-; CHECK-NEXT:    add.rn.f32 %f11, %f10, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f12, %f9, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f13, %f8, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f14, %f7, 0f3F800000;
-; CHECK-NEXT:    st.volatile.shared.v4.f32 [%rd4], {%f14, %f13, %f12, %f11};
-; CHECK-NEXT:    ld.volatile.shared.v2.f64 {%fd3, %fd4}, [%rd4];
-; CHECK-NEXT:    add.rn.f64 %fd5, %fd4, 0d3FF0000000000000;
-; CHECK-NEXT:    add.rn.f64 %fd6, %fd3, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.shared.v2.f64 [%rd4], {%fd6, %fd5};
+; CHECK-NEXT:    add.rn.f32 %f7, %f2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f8, %f1, 0f3F800000;
+; CHECK-NEXT:    st.shared.v4.f32 [%rd1], {%f8, %f7, %f6, %f5};
+; CHECK-NEXT:    ret;
+  %a.load = load <4 x float>, ptr addrspace(3) %a
+  %a.add = fadd <4 x float> %a.load, <float 1., float 1., float 1., float 1.>
+  store <4 x float> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_weak_2xdouble(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_weak_2xdouble(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_weak_2xdouble_param_0];
+; CHECK-NEXT:    ld.shared.v2.f64 {%fd1, %fd2}, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
+; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
+; CHECK-NEXT:    st.shared.v2.f64 [%rd1], {%fd4, %fd3};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x double>, ptr addrspace(3) %a
+  %a.add = fadd <2 x double> %a.load, <double 1., double 1.>
+  store <2 x double> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+; shared_volatile
+
+define void @shared_volatile_i8(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_volatile_i8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_i8_param_0];
+; CHECK-NEXT:    ld.volatile.shared.u8 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.volatile.shared.u8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i8, ptr addrspace(3) %a
   %a.add = add i8 %a.load, 1
   store volatile i8 %a.add, ptr addrspace(3) %a
-
-  %b.load = load volatile i16, ptr addrspace(3) %b
-  %b.add = add i16 %b.load, 1
-  store volatile i16 %b.add, ptr addrspace(3) %b
-
-  %c.load = load volatile i32, ptr addrspace(3) %c
-  %c.add = add i32 %c.load, 1
-  store volatile i32 %c.add, ptr addrspace(3) %c
-
-  %d.load = load volatile i64, ptr addrspace(3) %d
-  %d.add = add i64 %d.load, 1
-  store volatile i64 %d.add, ptr addrspace(3) %d
-
-  %e.load = load volatile float, ptr addrspace(3) %c
-  %e.add = fadd float %e.load, 1.
-  store volatile float %e.add, ptr addrspace(3) %c
-
-  %f.load = load volatile double, ptr addrspace(3) %c
-  %f.add = fadd double %f.load, 1.
-  store volatile double %f.add, ptr addrspace(3) %c
-
-  %h.load = load volatile <2 x i8>, ptr addrspace(3) %b
-  %h.add = add <2 x i8> %h.load, <i8 1, i8 1>
-  store volatile <2 x i8> %h.add, ptr addrspace(3) %b
-
-  %i.load = load volatile <4 x i8>, ptr addrspace(3) %c
-  %i.add = add <4 x i8> %i.load, <i8 1, i8 1, i8 1, i8 1>
-  store volatile <4 x i8> %i.add, ptr addrspace(3) %c
-
-  %j.load = load volatile <2 x i16>, ptr addrspace(3) %c
-  %j.add = add <2 x i16> %j.load, <i16 1, i16 1>
-  store volatile <2 x i16> %j.add, ptr addrspace(3) %c
-
-  %k.load = load volatile <4 x i16>, ptr addrspace(3) %d
-  %k.add = add <4 x i16> %k.load, <i16 1, i16 1, i16 1, i16 1>
-  store volatile <4 x i16> %k.add, ptr addrspace(3) %d
-
-  %l.load = load volatile <2 x i32>, ptr addrspace(3) %d
-  %l.add = add <2 x i32> %l.load, <i32 1, i32 1>
-  store volatile <2 x i32> %l.add, ptr addrspace(3) %d
-
-  %m.load = load volatile <4 x i32>, ptr addrspace(3) %d
-  %m.add = add <4 x i32> %m.load, <i32 1, i32 1, i32 1, i32 1>
-  store volatile <4 x i32> %m.add, ptr addrspace(3) %d
-
-  %n.load = load volatile <2 x i64>, ptr addrspace(3) %d
-  %n.add = add <2 x i64> %n.load, <i64 1, i64 1>
-  store volatile <2 x i64> %n.add, ptr addrspace(3) %d
-
-  %o.load = load volatile <2 x float>, ptr addrspace(3) %d
-  %o.add = fadd <2 x float> %o.load, <float 1., float 1.>
-  store volatile <2 x float> %o.add, ptr addrspace(3) %d
-
-  %p.load = load volatile <4 x float>, ptr addrspace(3) %d
-  %p.add = fadd <4 x float> %p.load, <float 1., float 1., float 1., float 1.>
-  store volatile <4 x float> %p.add, ptr addrspace(3) %d
-
-  %q.load = load volatile <2 x double>, ptr addrspace(3) %d
-  %q.add = fadd <2 x double> %q.load, <double 1., double 1.>
-  store volatile <2 x double> %q.add, ptr addrspace(3) %d
-
   ret void
 }
 
-define void @shared_unordered_sys(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d, ptr addrspace(3) %e) local_unnamed_addr {
-; SM60-LABEL: shared_unordered_sys(
+define void @shared_volatile_i16(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_volatile_i16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_i16_param_0];
+; CHECK-NEXT:    ld.volatile.shared.u16 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.volatile.shared.u16 [%rd1], %rs2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile i16, ptr addrspace(3) %a
+  %a.add = add i16 %a.load, 1
+  store volatile i16 %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_volatile_i32(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_volatile_i32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_i32_param_0];
+; CHECK-NEXT:    ld.volatile.shared.u32 %r1, [%rd1];
+; CHECK-NEXT:    add.s32 %r2, %r1, 1;
+; CHECK-NEXT:    st.volatile.shared.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile i32, ptr addrspace(3) %a
+  %a.add = add i32 %a.load, 1
+  store volatile i32 %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_volatile_i64(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_volatile_i64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_i64_param_0];
+; CHECK-NEXT:    ld.volatile.shared.u64 %rd2, [%rd1];
+; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
+; CHECK-NEXT:    st.volatile.shared.u64 [%rd1], %rd3;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile i64, ptr addrspace(3) %a
+  %a.add = add i64 %a.load, 1
+  store volatile i64 %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_volatile_float(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_volatile_float(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_float_param_0];
+; CHECK-NEXT:    ld.volatile.shared.f32 %f1, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; CHECK-NEXT:    st.volatile.shared.f32 [%rd1], %f2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile float, ptr addrspace(3) %a
+  %a.add = fadd float %a.load, 1.
+  store volatile float %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_volatile_double(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_volatile_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_double_param_0];
+; CHECK-NEXT:    ld.volatile.shared.f64 %fd1, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
+; CHECK-NEXT:    st.volatile.shared.f64 [%rd1], %fd2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile double, ptr addrspace(3) %a
+  %a.add = fadd double %a.load, 1.
+  store volatile double %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_volatile_2xi8(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_volatile_2xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_2xi8_param_0];
+; CHECK-NEXT:    ld.volatile.shared.v2.u8 {%rs1, %rs2}, [%rd1];
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    st.volatile.shared.v2.u8 [%rd1], {%rs4, %rs3};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x i8>, ptr addrspace(3) %a
+  %a.add = add <2 x i8> %a.load, <i8 1, i8 1>
+  store volatile <2 x i8> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_volatile_4xi8(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_volatile_4xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<9>;
+; CHECK-NEXT:    .reg .b32 %r<13>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_4xi8_param_0];
+; CHECK-NEXT:    ld.volatile.shared.u32 %r1, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r2, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r2;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r3, %rs2;
+; CHECK-NEXT:    bfe.u32 %r4, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r4;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs4;
+; CHECK-NEXT:    bfi.b32 %r6, %r5, %r3, 8, 8;
+; CHECK-NEXT:    bfe.u32 %r7, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs6;
+; CHECK-NEXT:    bfi.b32 %r9, %r8, %r6, 16, 8;
+; CHECK-NEXT:    bfe.u32 %r10, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs8;
+; CHECK-NEXT:    bfi.b32 %r12, %r11, %r9, 24, 8;
+; CHECK-NEXT:    st.volatile.shared.u32 [%rd1], %r12;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <4 x i8>, ptr addrspace(3) %a
+  %a.add = add <4 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1>
+  store volatile <4 x i8> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_volatile_2xi16(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_volatile_2xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_2xi16_param_0];
+; CHECK-NEXT:    ld.volatile.shared.u32 %r1, [%rd1];
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    mov.b32 %r2, {%rs4, %rs3};
+; CHECK-NEXT:    st.volatile.shared.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x i16>, ptr addrspace(3) %a
+  %a.add = add <2 x i16> %a.load, <i16 1, i16 1>
+  store volatile <2 x i16> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_volatile_4xi16(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_volatile_4xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_4xi16_param_0];
+; CHECK-NEXT:    ld.volatile.shared.v4.u16 {%rs1, %rs2, %rs3, %rs4}, [%rd1];
+; CHECK-NEXT:    add.s16 %rs5, %rs4, 1;
+; CHECK-NEXT:    add.s16 %rs6, %rs3, 1;
+; CHECK-NEXT:    add.s16 %rs7, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs8, %rs1, 1;
+; CHECK-NEXT:    st.volatile.shared.v4.u16 [%rd1], {%rs8, %rs7, %rs6, %rs5};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <4 x i16>, ptr addrspace(3) %a
+  %a.add = add <4 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1>
+  store volatile <4 x i16> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_volatile_2xi32(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_volatile_2xi32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_2xi32_param_0];
+; CHECK-NEXT:    ld.volatile.shared.v2.u32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    add.s32 %r3, %r2, 1;
+; CHECK-NEXT:    add.s32 %r4, %r1, 1;
+; CHECK-NEXT:    st.volatile.shared.v2.u32 [%rd1], {%r4, %r3};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x i32>, ptr addrspace(3) %a
+  %a.add = add <2 x i32> %a.load, <i32 1, i32 1>
+  store volatile <2 x i32> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_volatile_4xi32(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_volatile_4xi32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_4xi32_param_0];
+; CHECK-NEXT:    ld.volatile.shared.v4.u32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    add.s32 %r5, %r4, 1;
+; CHECK-NEXT:    add.s32 %r6, %r3, 1;
+; CHECK-NEXT:    add.s32 %r7, %r2, 1;
+; CHECK-NEXT:    add.s32 %r8, %r1, 1;
+; CHECK-NEXT:    st.volatile.shared.v4.u32 [%rd1], {%r8, %r7, %r6, %r5};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <4 x i32>, ptr addrspace(3) %a
+  %a.add = add <4 x i32> %a.load, <i32 1, i32 1, i32 1, i32 1>
+  store volatile <4 x i32> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_volatile_2xi64(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_volatile_2xi64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_2xi64_param_0];
+; CHECK-NEXT:    ld.volatile.shared.v2.u64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    add.s64 %rd4, %rd3, 1;
+; CHECK-NEXT:    add.s64 %rd5, %rd2, 1;
+; CHECK-NEXT:    st.volatile.shared.v2.u64 [%rd1], {%rd5, %rd4};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x i64>, ptr addrspace(3) %a
+  %a.add = add <2 x i64> %a.load, <i64 1, i64 1>
+  store volatile <2 x i64> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_volatile_2xfloat(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_volatile_2xfloat(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_2xfloat_param_0];
+; CHECK-NEXT:    ld.volatile.shared.v2.f32 {%f1, %f2}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
+; CHECK-NEXT:    st.volatile.shared.v2.f32 [%rd1], {%f4, %f3};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x float>, ptr addrspace(3) %a
+  %a.add = fadd <2 x float> %a.load, <float 1., float 1.>
+  store volatile <2 x float> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_volatile_4xfloat(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_volatile_4xfloat(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_4xfloat_param_0];
+; CHECK-NEXT:    ld.volatile.shared.v4.f32 {%f1, %f2, %f3, %f4}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f7, %f2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f8, %f1, 0f3F800000;
+; CHECK-NEXT:    st.volatile.shared.v4.f32 [%rd1], {%f8, %f7, %f6, %f5};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <4 x float>, ptr addrspace(3) %a
+  %a.add = fadd <4 x float> %a.load, <float 1., float 1., float 1., float 1.>
+  store volatile <4 x float> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+define void @shared_volatile_2xdouble(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_volatile_2xdouble(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_2xdouble_param_0];
+; CHECK-NEXT:    ld.volatile.shared.v2.f64 {%fd1, %fd2}, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
+; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
+; CHECK-NEXT:    st.volatile.shared.v2.f64 [%rd1], {%fd4, %fd3};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x double>, ptr addrspace(3) %a
+  %a.add = fadd <2 x double> %a.load, <double 1., double 1.>
+  store volatile <2 x double> %a.add, ptr addrspace(3) %a
+  ret void
+}
+
+; shared_unordered_sys
+
+define void @shared_unordered_sys_i8(ptr addrspace(3) %a) local_unnamed_addr {
+; SM60-LABEL: shared_unordered_sys_i8(
 ; SM60:       {
-; SM60-NEXT:    .reg .b16 %rs<5>;
-; SM60-NEXT:    .reg .b32 %r<3>;
-; SM60-NEXT:    .reg .f32 %f<3>;
-; SM60-NEXT:    .reg .b64 %rd<8>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b16 %rs<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_param_0];
+; SM60-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_i8_param_0];
 ; SM60-NEXT:    ld.volatile.shared.u8 %rs1, [%rd1];
-; SM60-NEXT:    ld.param.u64 %rd2, [shared_unordered_sys_param_1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    ld.param.u64 %rd3, [shared_unordered_sys_param_2];
 ; SM60-NEXT:    st.volatile.shared.u8 [%rd1], %rs2;
-; SM60-NEXT:    ld.param.u64 %rd4, [shared_unordered_sys_param_3];
-; SM60-NEXT:    ld.volatile.shared.u16 %rs3, [%rd2];
-; SM60-NEXT:    ld.param.u64 %rd5, [shared_unordered_sys_param_4];
-; SM60-NEXT:    add.s16 %rs4, %rs3, 1;
-; SM60-NEXT:    st.volatile.shared.u16 [%rd2], %rs4;
-; SM60-NEXT:    ld.volatile.shared.u32 %r1, [%rd3];
-; SM60-NEXT:    add.s32 %r2, %r1, 1;
-; SM60-NEXT:    st.volatile.shared.u32 [%rd3], %r2;
-; SM60-NEXT:    ld.volatile.shared.u64 %rd6, [%rd4];
-; SM60-NEXT:    add.s64 %rd7, %rd6, 1;
-; SM60-NEXT:    st.volatile.shared.u64 [%rd4], %rd7;
-; SM60-NEXT:    ld.volatile.shared.f32 %f1, [%rd5];
-; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM60-NEXT:    st.volatile.shared.f32 [%rd5], %f2;
-; SM60-NEXT:    ld.volatile.shared.f64 %fd1, [%rd5];
-; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM60-NEXT:    st.volatile.shared.f64 [%rd5], %fd2;
 ; SM60-NEXT:    ret;
 ;
-; SM70-LABEL: shared_unordered_sys(
+; SM70-LABEL: shared_unordered_sys_i8(
 ; SM70:       {
-; SM70-NEXT:    .reg .b16 %rs<5>;
-; SM70-NEXT:    .reg .b32 %r<3>;
-; SM70-NEXT:    .reg .f32 %f<3>;
-; SM70-NEXT:    .reg .b64 %rd<8>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b16 %rs<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_param_0];
+; SM70-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_i8_param_0];
 ; SM70-NEXT:    ld.relaxed.sys.shared.u8 %rs1, [%rd1];
-; SM70-NEXT:    ld.param.u64 %rd2, [shared_unordered_sys_param_1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    ld.param.u64 %rd3, [shared_unordered_sys_param_2];
 ; SM70-NEXT:    st.relaxed.sys.shared.u8 [%rd1], %rs2;
-; SM70-NEXT:    ld.param.u64 %rd4, [shared_unordered_sys_param_3];
-; SM70-NEXT:    ld.relaxed.sys.shared.u16 %rs3, [%rd2];
-; SM70-NEXT:    ld.param.u64 %rd5, [shared_unordered_sys_param_4];
-; SM70-NEXT:    add.s16 %rs4, %rs3, 1;
-; SM70-NEXT:    st.relaxed.sys.shared.u16 [%rd2], %rs4;
-; SM70-NEXT:    ld.relaxed.sys.shared.u32 %r1, [%rd3];
-; SM70-NEXT:    add.s32 %r2, %r1, 1;
-; SM70-NEXT:    st.relaxed.sys.shared.u32 [%rd3], %r2;
-; SM70-NEXT:    ld.relaxed.sys.shared.u64 %rd6, [%rd4];
-; SM70-NEXT:    add.s64 %rd7, %rd6, 1;
-; SM70-NEXT:    st.relaxed.sys.shared.u64 [%rd4], %rd7;
-; SM70-NEXT:    ld.relaxed.sys.shared.f32 %f1, [%rd5];
-; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM70-NEXT:    st.relaxed.sys.shared.f32 [%rd5], %f2;
-; SM70-NEXT:    ld.relaxed.sys.shared.f64 %fd1, [%rd5];
-; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM70-NEXT:    st.relaxed.sys.shared.f64 [%rd5], %fd2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i8, ptr addrspace(3) %a unordered, align 1
   %a.add = add i8 %a.load, 1
   store atomic i8 %a.add, ptr addrspace(3) %a unordered, align 1
-
-  %b.load = load atomic i16, ptr addrspace(3) %b unordered, align 2
-  %b.add = add i16 %b.load, 1
-  store atomic i16 %b.add, ptr addrspace(3) %b unordered, align 2
-
-  %c.load = load atomic i32, ptr addrspace(3) %c unordered, align 4
-  %c.add = add i32 %c.load, 1
-  store atomic i32 %c.add, ptr addrspace(3) %c unordered, align 4
-
-  %d.load = load atomic i64, ptr addrspace(3) %d unordered, align 8
-  %d.add = add i64 %d.load, 1
-  store atomic i64 %d.add, ptr addrspace(3) %d unordered, align 8
-
-  %e.load = load atomic float, ptr addrspace(3) %e unordered, align 4
-  %e.add = fadd float %e.load, 1.0
-  store atomic float %e.add, ptr addrspace(3) %e unordered, align 4
-
-  %f.load = load atomic double, ptr addrspace(3) %e unordered, align 8
-  %f.add = fadd double %f.load, 1.
-  store atomic double %f.add, ptr addrspace(3) %e unordered, align 8
-
   ret void
 }
 
-define void @shared_unordered_volatile_sys(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d, ptr addrspace(3) %e) local_unnamed_addr {
-; CHECK-LABEL: shared_unordered_volatile_sys(
+define void @shared_unordered_sys_i16(ptr addrspace(3) %a) local_unnamed_addr {
+; SM60-LABEL: shared_unordered_sys_i16(
+; SM60:       {
+; SM60-NEXT:    .reg .b16 %rs<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_i16_param_0];
+; SM60-NEXT:    ld.volatile.shared.u16 %rs1, [%rd1];
+; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM60-NEXT:    st.volatile.shared.u16 [%rd1], %rs2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: shared_unordered_sys_i16(
+; SM70:       {
+; SM70-NEXT:    .reg .b16 %rs<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_i16_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.u16 %rs1, [%rd1];
+; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM70-NEXT:    st.relaxed.sys.shared.u16 [%rd1], %rs2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic i16, ptr addrspace(3) %a unordered, align 2
+  %a.add = add i16 %a.load, 1
+  store atomic i16 %a.add, ptr addrspace(3) %a unordered, align 2
+  ret void
+}
+
+define void @shared_unordered_sys_i32(ptr addrspace(3) %a) local_unnamed_addr {
+; SM60-LABEL: shared_unordered_sys_i32(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_i32_param_0];
+; SM60-NEXT:    ld.volatile.shared.u32 %r1, [%rd1];
+; SM60-NEXT:    add.s32 %r2, %r1, 1;
+; SM60-NEXT:    st.volatile.shared.u32 [%rd1], %r2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: shared_unordered_sys_i32(
+; SM70:       {
+; SM70-NEXT:    .reg .b32 %r<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_i32_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.u32 %r1, [%rd1];
+; SM70-NEXT:    add.s32 %r2, %r1, 1;
+; SM70-NEXT:    st.relaxed.sys.shared.u32 [%rd1], %r2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic i32, ptr addrspace(3) %a unordered, align 4
+  %a.add = add i32 %a.load, 1
+  store atomic i32 %a.add, ptr addrspace(3) %a unordered, align 4
+  ret void
+}
+
+define void @shared_unordered_sys_i64(ptr addrspace(3) %a) local_unnamed_addr {
+; SM60-LABEL: shared_unordered_sys_i64(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<4>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_i64_param_0];
+; SM60-NEXT:    ld.volatile.shared.u64 %rd2, [%rd1];
+; SM60-NEXT:    add.s64 %rd3, %rd2, 1;
+; SM60-NEXT:    st.volatile.shared.u64 [%rd1], %rd3;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: shared_unordered_sys_i64(
+; SM70:       {
+; SM70-NEXT:    .reg .b64 %rd<4>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_i64_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.u64 %rd2, [%rd1];
+; SM70-NEXT:    add.s64 %rd3, %rd2, 1;
+; SM70-NEXT:    st.relaxed.sys.shared.u64 [%rd1], %rd3;
+; SM70-NEXT:    ret;
+  %a.load = load atomic i64, ptr addrspace(3) %a unordered, align 8
+  %a.add = add i64 %a.load, 1
+  store atomic i64 %a.add, ptr addrspace(3) %a unordered, align 8
+  ret void
+}
+
+define void @shared_unordered_sys_float(ptr addrspace(3) %a) local_unnamed_addr {
+; SM60-LABEL: shared_unordered_sys_float(
+; SM60:       {
+; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_float_param_0];
+; SM60-NEXT:    ld.volatile.shared.f32 %f1, [%rd1];
+; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; SM60-NEXT:    st.volatile.shared.f32 [%rd1], %f2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: shared_unordered_sys_float(
+; SM70:       {
+; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_float_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.f32 %f1, [%rd1];
+; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; SM70-NEXT:    st.relaxed.sys.shared.f32 [%rd1], %f2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic float, ptr addrspace(3) %a unordered, align 4
+  %a.add = fadd float %a.load, 1.
+  store atomic float %a.add, ptr addrspace(3) %a unordered, align 4
+  ret void
+}
+
+define void @shared_unordered_sys_double(ptr addrspace(3) %a) local_unnamed_addr {
+; SM60-LABEL: shared_unordered_sys_double(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_double_param_0];
+; SM60-NEXT:    ld.volatile.shared.f64 %fd1, [%rd1];
+; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
+; SM60-NEXT:    st.volatile.shared.f64 [%rd1], %fd2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: shared_unordered_sys_double(
+; SM70:       {
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_double_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.f64 %fd1, [%rd1];
+; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
+; SM70-NEXT:    st.relaxed.sys.shared.f64 [%rd1], %fd2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic double, ptr addrspace(3) %a unordered, align 8
+  %a.add = fadd double %a.load, 1.
+  store atomic double %a.add, ptr addrspace(3) %a unordered, align 8
+  ret void
+}
+
+; shared_unordered_volatile_sys
+
+define void @shared_unordered_volatile_sys_i8(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_unordered_volatile_sys_i8(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
-; CHECK-NEXT:    .reg .b64 %rd<8>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_unordered_volatile_sys_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_unordered_volatile_sys_i8_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.u8 %rs1, [%rd1];
-; CHECK-NEXT:    ld.param.u64 %rd2, [shared_unordered_volatile_sys_param_1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    ld.param.u64 %rd3, [shared_unordered_volatile_sys_param_2];
 ; CHECK-NEXT:    st.volatile.shared.u8 [%rd1], %rs2;
-; CHECK-NEXT:    ld.param.u64 %rd4, [shared_unordered_volatile_sys_param_3];
-; CHECK-NEXT:    ld.volatile.shared.u16 %rs3, [%rd2];
-; CHECK-NEXT:    ld.param.u64 %rd5, [shared_unordered_volatile_sys_param_4];
-; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
-; CHECK-NEXT:    st.volatile.shared.u16 [%rd2], %rs4;
-; CHECK-NEXT:    ld.volatile.shared.u32 %r1, [%rd3];
-; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.volatile.shared.u32 [%rd3], %r2;
-; CHECK-NEXT:    ld.volatile.shared.u64 %rd6, [%rd4];
-; CHECK-NEXT:    add.s64 %rd7, %rd6, 1;
-; CHECK-NEXT:    st.volatile.shared.u64 [%rd4], %rd7;
-; CHECK-NEXT:    ld.volatile.shared.f32 %f1, [%rd5];
-; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.shared.f32 [%rd5], %f2;
-; CHECK-NEXT:    ld.volatile.shared.f64 %fd1, [%rd5];
-; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.shared.f64 [%rd5], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i8, ptr addrspace(3) %a unordered, align 1
   %a.add = add i8 %a.load, 1
   store atomic volatile i8 %a.add, ptr addrspace(3) %a unordered, align 1
-
-  %b.load = load atomic volatile i16, ptr addrspace(3) %b unordered, align 2
-  %b.add = add i16 %b.load, 1
-  store atomic volatile i16 %b.add, ptr addrspace(3) %b unordered, align 2
-
-  %c.load = load atomic volatile i32, ptr addrspace(3) %c unordered, align 4
-  %c.add = add i32 %c.load, 1
-  store atomic volatile i32 %c.add, ptr addrspace(3) %c unordered, align 4
-
-  %d.load = load atomic volatile i64, ptr addrspace(3) %d unordered, align 8
-  %d.add = add i64 %d.load, 1
-  store atomic volatile i64 %d.add, ptr addrspace(3) %d unordered, align 8
-
-  %e.load = load atomic volatile float, ptr addrspace(3) %e unordered, align 4
-  %e.add = fadd float %e.load, 1.0
-  store atomic volatile float %e.add, ptr addrspace(3) %e unordered, align 4
-
-  %f.load = load atomic volatile double, ptr addrspace(3) %e unordered, align 8
-  %f.add = fadd double %f.load, 1.
-  store atomic volatile double %f.add, ptr addrspace(3) %e unordered, align 8
-
   ret void
 }
 
-define void @shared_monotonic_sys(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d, ptr addrspace(3) %e) local_unnamed_addr {
-; SM60-LABEL: shared_monotonic_sys(
+define void @shared_unordered_volatile_sys_i16(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_unordered_volatile_sys_i16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_unordered_volatile_sys_i16_param_0];
+; CHECK-NEXT:    ld.volatile.shared.u16 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.volatile.shared.u16 [%rd1], %rs2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile i16, ptr addrspace(3) %a unordered, align 2
+  %a.add = add i16 %a.load, 1
+  store atomic volatile i16 %a.add, ptr addrspace(3) %a unordered, align 2
+  ret void
+}
+
+define void @shared_unordered_volatile_sys_i32(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_unordered_volatile_sys_i32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_unordered_volatile_sys_i32_param_0];
+; CHECK-NEXT:    ld.volatile.shared.u32 %r1, [%rd1];
+; CHECK-NEXT:    add.s32 %r2, %r1, 1;
+; CHECK-NEXT:    st.volatile.shared.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile i32, ptr addrspace(3) %a unordered, align 4
+  %a.add = add i32 %a.load, 1
+  store atomic volatile i32 %a.add, ptr addrspace(3) %a unordered, align 4
+  ret void
+}
+
+define void @shared_unordered_volatile_sys_i64(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_unordered_volatile_sys_i64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_unordered_volatile_sys_i64_param_0];
+; CHECK-NEXT:    ld.volatile.shared.u64 %rd2, [%rd1];
+; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
+; CHECK-NEXT:    st.volatile.shared.u64 [%rd1], %rd3;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile i64, ptr addrspace(3) %a unordered, align 8
+  %a.add = add i64 %a.load, 1
+  store atomic volatile i64 %a.add, ptr addrspace(3) %a unordered, align 8
+  ret void
+}
+
+define void @shared_unordered_volatile_sys_float(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_unordered_volatile_sys_float(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_unordered_volatile_sys_float_param_0];
+; CHECK-NEXT:    ld.volatile.shared.f32 %f1, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; CHECK-NEXT:    st.volatile.shared.f32 [%rd1], %f2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile float, ptr addrspace(3) %a unordered, align 4
+  %a.add = fadd float %a.load, 1.
+  store atomic volatile float %a.add, ptr addrspace(3) %a unordered, align 4
+  ret void
+}
+
+define void @shared_unordered_volatile_sys_double(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_unordered_volatile_sys_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_unordered_volatile_sys_double_param_0];
+; CHECK-NEXT:    ld.volatile.shared.f64 %fd1, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
+; CHECK-NEXT:    st.volatile.shared.f64 [%rd1], %fd2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile double, ptr addrspace(3) %a unordered, align 8
+  %a.add = fadd double %a.load, 1.
+  store atomic volatile double %a.add, ptr addrspace(3) %a unordered, align 8
+  ret void
+}
+
+; shared_monotonic_sys
+
+define void @shared_monotonic_sys_i8(ptr addrspace(3) %a) local_unnamed_addr {
+; SM60-LABEL: shared_monotonic_sys_i8(
 ; SM60:       {
-; SM60-NEXT:    .reg .b16 %rs<5>;
-; SM60-NEXT:    .reg .b32 %r<3>;
-; SM60-NEXT:    .reg .f32 %f<3>;
-; SM60-NEXT:    .reg .b64 %rd<8>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b16 %rs<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_param_0];
+; SM60-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_i8_param_0];
 ; SM60-NEXT:    ld.volatile.shared.u8 %rs1, [%rd1];
-; SM60-NEXT:    ld.param.u64 %rd2, [shared_monotonic_sys_param_1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    ld.param.u64 %rd3, [shared_monotonic_sys_param_2];
 ; SM60-NEXT:    st.volatile.shared.u8 [%rd1], %rs2;
-; SM60-NEXT:    ld.param.u64 %rd4, [shared_monotonic_sys_param_3];
-; SM60-NEXT:    ld.volatile.shared.u16 %rs3, [%rd2];
-; SM60-NEXT:    ld.param.u64 %rd5, [shared_monotonic_sys_param_4];
-; SM60-NEXT:    add.s16 %rs4, %rs3, 1;
-; SM60-NEXT:    st.volatile.shared.u16 [%rd2], %rs4;
-; SM60-NEXT:    ld.volatile.shared.u32 %r1, [%rd3];
-; SM60-NEXT:    add.s32 %r2, %r1, 1;
-; SM60-NEXT:    st.volatile.shared.u32 [%rd3], %r2;
-; SM60-NEXT:    ld.volatile.shared.u64 %rd6, [%rd4];
-; SM60-NEXT:    add.s64 %rd7, %rd6, 1;
-; SM60-NEXT:    st.volatile.shared.u64 [%rd4], %rd7;
-; SM60-NEXT:    ld.volatile.shared.f32 %f1, [%rd5];
-; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM60-NEXT:    st.volatile.shared.f32 [%rd5], %f2;
-; SM60-NEXT:    ld.volatile.shared.f64 %fd1, [%rd5];
-; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM60-NEXT:    st.volatile.shared.f64 [%rd5], %fd2;
 ; SM60-NEXT:    ret;
 ;
-; SM70-LABEL: shared_monotonic_sys(
+; SM70-LABEL: shared_monotonic_sys_i8(
 ; SM70:       {
-; SM70-NEXT:    .reg .b16 %rs<5>;
-; SM70-NEXT:    .reg .b32 %r<3>;
-; SM70-NEXT:    .reg .f32 %f<3>;
-; SM70-NEXT:    .reg .b64 %rd<8>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b16 %rs<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_param_0];
+; SM70-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_i8_param_0];
 ; SM70-NEXT:    ld.relaxed.sys.shared.u8 %rs1, [%rd1];
-; SM70-NEXT:    ld.param.u64 %rd2, [shared_monotonic_sys_param_1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    ld.param.u64 %rd3, [shared_monotonic_sys_param_2];
 ; SM70-NEXT:    st.relaxed.sys.shared.u8 [%rd1], %rs2;
-; SM70-NEXT:    ld.param.u64 %rd4, [shared_monotonic_sys_param_3];
-; SM70-NEXT:    ld.relaxed.sys.shared.u16 %rs3, [%rd2];
-; SM70-NEXT:    ld.param.u64 %rd5, [shared_monotonic_sys_param_4];
-; SM70-NEXT:    add.s16 %rs4, %rs3, 1;
-; SM70-NEXT:    st.relaxed.sys.shared.u16 [%rd2], %rs4;
-; SM70-NEXT:    ld.relaxed.sys.shared.u32 %r1, [%rd3];
-; SM70-NEXT:    add.s32 %r2, %r1, 1;
-; SM70-NEXT:    st.relaxed.sys.shared.u32 [%rd3], %r2;
-; SM70-NEXT:    ld.relaxed.sys.shared.u64 %rd6, [%rd4];
-; SM70-NEXT:    add.s64 %rd7, %rd6, 1;
-; SM70-NEXT:    st.relaxed.sys.shared.u64 [%rd4], %rd7;
-; SM70-NEXT:    ld.relaxed.sys.shared.f32 %f1, [%rd5];
-; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM70-NEXT:    st.relaxed.sys.shared.f32 [%rd5], %f2;
-; SM70-NEXT:    ld.relaxed.sys.shared.f64 %fd1, [%rd5];
-; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM70-NEXT:    st.relaxed.sys.shared.f64 [%rd5], %fd2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i8, ptr addrspace(3) %a monotonic, align 1
   %a.add = add i8 %a.load, 1
   store atomic i8 %a.add, ptr addrspace(3) %a monotonic, align 1
-
-  %b.load = load atomic i16, ptr addrspace(3) %b monotonic, align 2
-  %b.add = add i16 %b.load, 1
-  store atomic i16 %b.add, ptr addrspace(3) %b monotonic, align 2
-
-  %c.load = load atomic i32, ptr addrspace(3) %c monotonic, align 4
-  %c.add = add i32 %c.load, 1
-  store atomic i32 %c.add, ptr addrspace(3) %c monotonic, align 4
-
-  %d.load = load atomic i64, ptr addrspace(3) %d monotonic, align 8
-  %d.add = add i64 %d.load, 1
-  store atomic i64 %d.add, ptr addrspace(3) %d monotonic, align 8
-
-  %e.load = load atomic float, ptr addrspace(3) %e monotonic, align 4
-  %e.add = fadd float %e.load, 1.
-  store atomic float %e.add, ptr addrspace(3) %e monotonic, align 4
-
-  %f.load = load atomic double, ptr addrspace(3) %e monotonic, align 8
-  %f.add = fadd double %f.load, 1.
-  store atomic double %f.add, ptr addrspace(3) %e monotonic, align 8
-
   ret void
 }
 
-define void @shared_monotonic_volatile_sys(ptr addrspace(3) %a, ptr addrspace(3) %b, ptr addrspace(3) %c, ptr addrspace(3) %d, ptr addrspace(3) %e) local_unnamed_addr {
-; CHECK-LABEL: shared_monotonic_volatile_sys(
+define void @shared_monotonic_sys_i16(ptr addrspace(3) %a) local_unnamed_addr {
+; SM60-LABEL: shared_monotonic_sys_i16(
+; SM60:       {
+; SM60-NEXT:    .reg .b16 %rs<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_i16_param_0];
+; SM60-NEXT:    ld.volatile.shared.u16 %rs1, [%rd1];
+; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM60-NEXT:    st.volatile.shared.u16 [%rd1], %rs2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: shared_monotonic_sys_i16(
+; SM70:       {
+; SM70-NEXT:    .reg .b16 %rs<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_i16_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.u16 %rs1, [%rd1];
+; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
+; SM70-NEXT:    st.relaxed.sys.shared.u16 [%rd1], %rs2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic i16, ptr addrspace(3) %a monotonic, align 2
+  %a.add = add i16 %a.load, 1
+  store atomic i16 %a.add, ptr addrspace(3) %a monotonic, align 2
+  ret void
+}
+
+define void @shared_monotonic_sys_i32(ptr addrspace(3) %a) local_unnamed_addr {
+; SM60-LABEL: shared_monotonic_sys_i32(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_i32_param_0];
+; SM60-NEXT:    ld.volatile.shared.u32 %r1, [%rd1];
+; SM60-NEXT:    add.s32 %r2, %r1, 1;
+; SM60-NEXT:    st.volatile.shared.u32 [%rd1], %r2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: shared_monotonic_sys_i32(
+; SM70:       {
+; SM70-NEXT:    .reg .b32 %r<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_i32_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.u32 %r1, [%rd1];
+; SM70-NEXT:    add.s32 %r2, %r1, 1;
+; SM70-NEXT:    st.relaxed.sys.shared.u32 [%rd1], %r2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic i32, ptr addrspace(3) %a monotonic, align 4
+  %a.add = add i32 %a.load, 1
+  store atomic i32 %a.add, ptr addrspace(3) %a monotonic, align 4
+  ret void
+}
+
+define void @shared_monotonic_sys_i64(ptr addrspace(3) %a) local_unnamed_addr {
+; SM60-LABEL: shared_monotonic_sys_i64(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<4>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_i64_param_0];
+; SM60-NEXT:    ld.volatile.shared.u64 %rd2, [%rd1];
+; SM60-NEXT:    add.s64 %rd3, %rd2, 1;
+; SM60-NEXT:    st.volatile.shared.u64 [%rd1], %rd3;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: shared_monotonic_sys_i64(
+; SM70:       {
+; SM70-NEXT:    .reg .b64 %rd<4>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_i64_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.u64 %rd2, [%rd1];
+; SM70-NEXT:    add.s64 %rd3, %rd2, 1;
+; SM70-NEXT:    st.relaxed.sys.shared.u64 [%rd1], %rd3;
+; SM70-NEXT:    ret;
+  %a.load = load atomic i64, ptr addrspace(3) %a monotonic, align 8
+  %a.add = add i64 %a.load, 1
+  store atomic i64 %a.add, ptr addrspace(3) %a monotonic, align 8
+  ret void
+}
+
+define void @shared_monotonic_sys_float(ptr addrspace(3) %a) local_unnamed_addr {
+; SM60-LABEL: shared_monotonic_sys_float(
+; SM60:       {
+; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_float_param_0];
+; SM60-NEXT:    ld.volatile.shared.f32 %f1, [%rd1];
+; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; SM60-NEXT:    st.volatile.shared.f32 [%rd1], %f2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: shared_monotonic_sys_float(
+; SM70:       {
+; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_float_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.f32 %f1, [%rd1];
+; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; SM70-NEXT:    st.relaxed.sys.shared.f32 [%rd1], %f2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic float, ptr addrspace(3) %a monotonic, align 4
+  %a.add = fadd float %a.load, 1.
+  store atomic float %a.add, ptr addrspace(3) %a monotonic, align 4
+  ret void
+}
+
+define void @shared_monotonic_sys_double(ptr addrspace(3) %a) local_unnamed_addr {
+; SM60-LABEL: shared_monotonic_sys_double(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_double_param_0];
+; SM60-NEXT:    ld.volatile.shared.f64 %fd1, [%rd1];
+; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
+; SM60-NEXT:    st.volatile.shared.f64 [%rd1], %fd2;
+; SM60-NEXT:    ret;
+;
+; SM70-LABEL: shared_monotonic_sys_double(
+; SM70:       {
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_double_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.f64 %fd1, [%rd1];
+; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
+; SM70-NEXT:    st.relaxed.sys.shared.f64 [%rd1], %fd2;
+; SM70-NEXT:    ret;
+  %a.load = load atomic double, ptr addrspace(3) %a monotonic, align 8
+  %a.add = fadd double %a.load, 1.
+  store atomic double %a.add, ptr addrspace(3) %a monotonic, align 8
+  ret void
+}
+
+; shared_monotonic_volatile_sys
+
+define void @shared_monotonic_volatile_sys_i8(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_monotonic_volatile_sys_i8(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
-; CHECK-NEXT:    .reg .b64 %rd<8>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_monotonic_volatile_sys_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_monotonic_volatile_sys_i8_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.u8 %rs1, [%rd1];
-; CHECK-NEXT:    ld.param.u64 %rd2, [shared_monotonic_volatile_sys_param_1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    ld.param.u64 %rd3, [shared_monotonic_volatile_sys_param_2];
 ; CHECK-NEXT:    st.volatile.shared.u8 [%rd1], %rs2;
-; CHECK-NEXT:    ld.param.u64 %rd4, [shared_monotonic_volatile_sys_param_3];
-; CHECK-NEXT:    ld.volatile.shared.u16 %rs3, [%rd2];
-; CHECK-NEXT:    ld.param.u64 %rd5, [shared_monotonic_volatile_sys_param_4];
-; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
-; CHECK-NEXT:    st.volatile.shared.u16 [%rd2], %rs4;
-; CHECK-NEXT:    ld.volatile.shared.u32 %r1, [%rd3];
-; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.volatile.shared.u32 [%rd3], %r2;
-; CHECK-NEXT:    ld.volatile.shared.u64 %rd6, [%rd4];
-; CHECK-NEXT:    add.s64 %rd7, %rd6, 1;
-; CHECK-NEXT:    st.volatile.shared.u64 [%rd4], %rd7;
-; CHECK-NEXT:    ld.volatile.shared.f32 %f1, [%rd5];
-; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.shared.f32 [%rd5], %f2;
-; CHECK-NEXT:    ld.volatile.shared.f64 %fd1, [%rd5];
-; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.shared.f64 [%rd5], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i8, ptr addrspace(3) %a monotonic, align 1
   %a.add = add i8 %a.load, 1
   store atomic volatile i8 %a.add, ptr addrspace(3) %a monotonic, align 1
+  ret void
+}
 
-  %b.load = load atomic volatile i16, ptr addrspace(3) %b monotonic, align 2
-  %b.add = add i16 %b.load, 1
-  store atomic volatile i16 %b.add, ptr addrspace(3) %b monotonic, align 2
+define void @shared_monotonic_volatile_sys_i16(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_monotonic_volatile_sys_i16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_monotonic_volatile_sys_i16_param_0];
+; CHECK-NEXT:    ld.volatile.shared.u16 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.volatile.shared.u16 [%rd1], %rs2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile i16, ptr addrspace(3) %a monotonic, align 2
+  %a.add = add i16 %a.load, 1
+  store atomic volatile i16 %a.add, ptr addrspace(3) %a monotonic, align 2
+  ret void
+}
 
-  %c.load = load atomic volatile i32, ptr addrspace(3) %c monotonic, align 4
-  %c.add = add i32 %c.load, 1
-  store atomic volatile i32 %c.add, ptr addrspace(3) %c monotonic, align 4
+define void @shared_monotonic_volatile_sys_i32(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_monotonic_volatile_sys_i32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_monotonic_volatile_sys_i32_param_0];
+; CHECK-NEXT:    ld.volatile.shared.u32 %r1, [%rd1];
+; CHECK-NEXT:    add.s32 %r2, %r1, 1;
+; CHECK-NEXT:    st.volatile.shared.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile i32, ptr addrspace(3) %a monotonic, align 4
+  %a.add = add i32 %a.load, 1
+  store atomic volatile i32 %a.add, ptr addrspace(3) %a monotonic, align 4
+  ret void
+}
 
-  %d.load = load atomic volatile i64, ptr addrspace(3) %d monotonic, align 8
-  %d.add = add i64 %d.load, 1
-  store atomic volatile i64 %d.add, ptr addrspace(3) %d monotonic, align 8
+define void @shared_monotonic_volatile_sys_i64(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_monotonic_volatile_sys_i64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_monotonic_volatile_sys_i64_param_0];
+; CHECK-NEXT:    ld.volatile.shared.u64 %rd2, [%rd1];
+; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
+; CHECK-NEXT:    st.volatile.shared.u64 [%rd1], %rd3;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile i64, ptr addrspace(3) %a monotonic, align 8
+  %a.add = add i64 %a.load, 1
+  store atomic volatile i64 %a.add, ptr addrspace(3) %a monotonic, align 8
+  ret void
+}
 
-  %e.load = load atomic volatile float, ptr addrspace(3) %e monotonic, align 4
-  %e.add = fadd float %e.load, 1.
-  store atomic volatile float %e.add, ptr addrspace(3) %e monotonic, align 4
+define void @shared_monotonic_volatile_sys_float(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_monotonic_volatile_sys_float(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_monotonic_volatile_sys_float_param_0];
+; CHECK-NEXT:    ld.volatile.shared.f32 %f1, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; CHECK-NEXT:    st.volatile.shared.f32 [%rd1], %f2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile float, ptr addrspace(3) %a monotonic, align 4
+  %a.add = fadd float %a.load, 1.
+  store atomic volatile float %a.add, ptr addrspace(3) %a monotonic, align 4
+  ret void
+}
 
-  %f.load = load atomic volatile double, ptr addrspace(3) %e monotonic, align 8
-  %f.add = fadd double %f.load, 1.
-  store atomic volatile double %f.add, ptr addrspace(3) %e monotonic, align 8
-
+define void @shared_monotonic_volatile_sys_double(ptr addrspace(3) %a) local_unnamed_addr {
+; CHECK-LABEL: shared_monotonic_volatile_sys_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [shared_monotonic_volatile_sys_double_param_0];
+; CHECK-NEXT:    ld.volatile.shared.f64 %fd1, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
+; CHECK-NEXT:    st.volatile.shared.f64 [%rd1], %fd2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile double, ptr addrspace(3) %a monotonic, align 8
+  %a.add = fadd double %a.load, 1.
+  store atomic volatile double %a.add, ptr addrspace(3) %a monotonic, align 8
   ret void
 }
 
 ;; local statespace
 
-define void @local_weak(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d) local_unnamed_addr {
-; CHECK-LABEL: local_weak(
+; local_weak
+
+define void @local_weak_i8(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_weak_i8(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<29>;
-; CHECK-NEXT:    .reg .b32 %r<29>;
-; CHECK-NEXT:    .reg .f32 %f<15>;
-; CHECK-NEXT:    .reg .b64 %rd<11>;
-; CHECK-NEXT:    .reg .f64 %fd<7>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_param_0];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_i8_param_0];
 ; CHECK-NEXT:    ld.local.u8 %rs1, [%rd1];
-; CHECK-NEXT:    ld.param.u64 %rd2, [local_weak_param_1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    ld.param.u64 %rd3, [local_weak_param_2];
 ; CHECK-NEXT:    st.local.u8 [%rd1], %rs2;
-; CHECK-NEXT:    ld.param.u64 %rd4, [local_weak_param_3];
-; CHECK-NEXT:    ld.local.u16 %rs3, [%rd2];
-; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
-; CHECK-NEXT:    st.local.u16 [%rd2], %rs4;
-; CHECK-NEXT:    ld.local.u32 %r1, [%rd3];
-; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.local.u32 [%rd3], %r2;
-; CHECK-NEXT:    ld.local.u64 %rd5, [%rd4];
-; CHECK-NEXT:    add.s64 %rd6, %rd5, 1;
-; CHECK-NEXT:    st.local.u64 [%rd4], %rd6;
-; CHECK-NEXT:    ld.local.f32 %f1, [%rd3];
-; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.local.f32 [%rd3], %f2;
-; CHECK-NEXT:    ld.local.f64 %fd1, [%rd3];
-; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.local.f64 [%rd3], %fd2;
-; CHECK-NEXT:    ld.local.v2.u8 {%rs5, %rs6}, [%rd2];
-; CHECK-NEXT:    add.s16 %rs7, %rs6, 1;
-; CHECK-NEXT:    add.s16 %rs8, %rs5, 1;
-; CHECK-NEXT:    st.local.v2.u8 [%rd2], {%rs8, %rs7};
-; CHECK-NEXT:    ld.local.u32 %r3, [%rd3];
-; CHECK-NEXT:    bfe.u32 %r4, %r3, 0, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs9, %r4;
-; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r5, %rs10;
-; CHECK-NEXT:    bfe.u32 %r6, %r3, 8, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs11, %r6;
-; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r7, %rs12;
-; CHECK-NEXT:    bfi.b32 %r8, %r7, %r5, 8, 8;
-; CHECK-NEXT:    bfe.u32 %r9, %r3, 16, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs13, %r9;
-; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r10, %rs14;
-; CHECK-NEXT:    bfi.b32 %r11, %r10, %r8, 16, 8;
-; CHECK-NEXT:    bfe.u32 %r12, %r3, 24, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs15, %r12;
-; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r13, %rs16;
-; CHECK-NEXT:    bfi.b32 %r14, %r13, %r11, 24, 8;
-; CHECK-NEXT:    st.local.u32 [%rd3], %r14;
-; CHECK-NEXT:    ld.local.u32 %r15, [%rd3];
-; CHECK-NEXT:    mov.b32 {%rs17, %rs18}, %r15;
-; CHECK-NEXT:    add.s16 %rs19, %rs18, 1;
-; CHECK-NEXT:    add.s16 %rs20, %rs17, 1;
-; CHECK-NEXT:    mov.b32 %r16, {%rs20, %rs19};
-; CHECK-NEXT:    st.local.u32 [%rd3], %r16;
-; CHECK-NEXT:    ld.local.v4.u16 {%rs21, %rs22, %rs23, %rs24}, [%rd4];
-; CHECK-NEXT:    add.s16 %rs25, %rs24, 1;
-; CHECK-NEXT:    add.s16 %rs26, %rs23, 1;
-; CHECK-NEXT:    add.s16 %rs27, %rs22, 1;
-; CHECK-NEXT:    add.s16 %rs28, %rs21, 1;
-; CHECK-NEXT:    st.local.v4.u16 [%rd4], {%rs28, %rs27, %rs26, %rs25};
-; CHECK-NEXT:    ld.local.v2.u32 {%r17, %r18}, [%rd4];
-; CHECK-NEXT:    add.s32 %r19, %r18, 1;
-; CHECK-NEXT:    add.s32 %r20, %r17, 1;
-; CHECK-NEXT:    st.local.v2.u32 [%rd4], {%r20, %r19};
-; CHECK-NEXT:    ld.local.v4.u32 {%r21, %r22, %r23, %r24}, [%rd4];
-; CHECK-NEXT:    add.s32 %r25, %r24, 1;
-; CHECK-NEXT:    add.s32 %r26, %r23, 1;
-; CHECK-NEXT:    add.s32 %r27, %r22, 1;
-; CHECK-NEXT:    add.s32 %r28, %r21, 1;
-; CHECK-NEXT:    st.local.v4.u32 [%rd4], {%r28, %r27, %r26, %r25};
-; CHECK-NEXT:    ld.local.v2.u64 {%rd7, %rd8}, [%rd4];
-; CHECK-NEXT:    add.s64 %rd9, %rd8, 1;
-; CHECK-NEXT:    add.s64 %rd10, %rd7, 1;
-; CHECK-NEXT:    st.local.v2.u64 [%rd4], {%rd10, %rd9};
-; CHECK-NEXT:    ld.local.v2.f32 {%f3, %f4}, [%rd4];
-; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
-; CHECK-NEXT:    st.local.v2.f32 [%rd4], {%f6, %f5};
-; CHECK-NEXT:    ld.local.v4.f32 {%f7, %f8, %f9, %f10}, [%rd4];
-; CHECK-NEXT:    add.rn.f32 %f11, %f10, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f12, %f9, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f13, %f8, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f14, %f7, 0f3F800000;
-; CHECK-NEXT:    st.local.v4.f32 [%rd4], {%f14, %f13, %f12, %f11};
-; CHECK-NEXT:    ld.local.v2.f64 {%fd3, %fd4}, [%rd4];
-; CHECK-NEXT:    add.rn.f64 %fd5, %fd4, 0d3FF0000000000000;
-; CHECK-NEXT:    add.rn.f64 %fd6, %fd3, 0d3FF0000000000000;
-; CHECK-NEXT:    st.local.v2.f64 [%rd4], {%fd6, %fd5};
 ; CHECK-NEXT:    ret;
   %a.load = load i8, ptr addrspace(5) %a
   %a.add = add i8 %a.load, 1
   store i8 %a.add, ptr addrspace(5) %a
-
-  %b.load = load i16, ptr addrspace(5) %b
-  %b.add = add i16 %b.load, 1
-  store i16 %b.add, ptr addrspace(5) %b
-
-  %c.load = load i32, ptr addrspace(5) %c
-  %c.add = add i32 %c.load, 1
-  store i32 %c.add, ptr addrspace(5) %c
-
-  %d.load = load i64, ptr addrspace(5) %d
-  %d.add = add i64 %d.load, 1
-  store i64 %d.add, ptr addrspace(5) %d
-
-  %e.load = load float, ptr addrspace(5) %c
-  %e.add = fadd float %e.load, 1.
-  store float %e.add, ptr addrspace(5) %c
-
-  %f.load = load double, ptr addrspace(5) %c
-  %f.add = fadd double %f.load, 1.
-  store double %f.add, ptr addrspace(5) %c
-
-  %h.load = load <2 x i8>, ptr addrspace(5) %b
-  %h.add = add <2 x i8> %h.load, <i8 1, i8 1>
-  store <2 x i8> %h.add, ptr addrspace(5) %b
-
-  %i.load = load <4 x i8>, ptr addrspace(5) %c
-  %i.add = add <4 x i8> %i.load, <i8 1, i8 1, i8 1, i8 1>
-  store <4 x i8> %i.add, ptr addrspace(5) %c
-
-  %j.load = load <2 x i16>, ptr addrspace(5) %c
-  %j.add = add <2 x i16> %j.load, <i16 1, i16 1>
-  store <2 x i16> %j.add, ptr addrspace(5) %c
-
-  %k.load = load <4 x i16>, ptr addrspace(5) %d
-  %k.add = add <4 x i16> %k.load, <i16 1, i16 1, i16 1, i16 1>
-  store <4 x i16> %k.add, ptr addrspace(5) %d
-
-  %l.load = load <2 x i32>, ptr addrspace(5) %d
-  %l.add = add <2 x i32> %l.load, <i32 1, i32 1>
-  store <2 x i32> %l.add, ptr addrspace(5) %d
-
-  %m.load = load <4 x i32>, ptr addrspace(5) %d
-  %m.add = add <4 x i32> %m.load, <i32 1, i32 1, i32 1, i32 1>
-  store <4 x i32> %m.add, ptr addrspace(5) %d
-
-  %n.load = load <2 x i64>, ptr addrspace(5) %d
-  %n.add = add <2 x i64> %n.load, <i64 1, i64 1>
-  store <2 x i64> %n.add, ptr addrspace(5) %d
-
-  %o.load = load <2 x float>, ptr addrspace(5) %d
-  %o.add = fadd <2 x float> %o.load, <float 1., float 1.>
-  store <2 x float> %o.add, ptr addrspace(5) %d
-
-  %p.load = load <4 x float>, ptr addrspace(5) %d
-  %p.add = fadd <4 x float> %p.load, <float 1., float 1., float 1., float 1.>
-  store <4 x float> %p.add, ptr addrspace(5) %d
-
-  %q.load = load <2 x double>, ptr addrspace(5) %d
-  %q.add = fadd <2 x double> %q.load, <double 1., double 1.>
-  store <2 x double> %q.add, ptr addrspace(5) %d
-
   ret void
 }
 
-define void @local_volatile(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d) local_unnamed_addr {
-; CHECK-LABEL: local_volatile(
+define void @local_weak_i16(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_weak_i16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<29>;
-; CHECK-NEXT:    .reg .b32 %r<29>;
-; CHECK-NEXT:    .reg .f32 %f<15>;
-; CHECK-NEXT:    .reg .b64 %rd<11>;
-; CHECK-NEXT:    .reg .f64 %fd<7>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_param_0];
-; CHECK-NEXT:    ld.local.u8 %rs1, [%rd1];
-; CHECK-NEXT:    ld.param.u64 %rd2, [local_volatile_param_1];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_i16_param_0];
+; CHECK-NEXT:    ld.local.u16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    ld.param.u64 %rd3, [local_volatile_param_2];
-; CHECK-NEXT:    st.local.u8 [%rd1], %rs2;
-; CHECK-NEXT:    ld.param.u64 %rd4, [local_volatile_param_3];
-; CHECK-NEXT:    ld.local.u16 %rs3, [%rd2];
-; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
-; CHECK-NEXT:    st.local.u16 [%rd2], %rs4;
-; CHECK-NEXT:    ld.local.u32 %r1, [%rd3];
+; CHECK-NEXT:    st.local.u16 [%rd1], %rs2;
+; CHECK-NEXT:    ret;
+  %a.load = load i16, ptr addrspace(5) %a
+  %a.add = add i16 %a.load, 1
+  store i16 %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_weak_i32(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_weak_i32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_i32_param_0];
+; CHECK-NEXT:    ld.local.u32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.local.u32 [%rd3], %r2;
-; CHECK-NEXT:    ld.local.u64 %rd5, [%rd4];
-; CHECK-NEXT:    add.s64 %rd6, %rd5, 1;
-; CHECK-NEXT:    st.local.u64 [%rd4], %rd6;
-; CHECK-NEXT:    ld.local.f32 %f1, [%rd3];
+; CHECK-NEXT:    st.local.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load i32, ptr addrspace(5) %a
+  %a.add = add i32 %a.load, 1
+  store i32 %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_weak_i64(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_weak_i64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_i64_param_0];
+; CHECK-NEXT:    ld.local.u64 %rd2, [%rd1];
+; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
+; CHECK-NEXT:    st.local.u64 [%rd1], %rd3;
+; CHECK-NEXT:    ret;
+  %a.load = load i64, ptr addrspace(5) %a
+  %a.add = add i64 %a.load, 1
+  store i64 %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_weak_float(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_weak_float(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_float_param_0];
+; CHECK-NEXT:    ld.local.f32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.local.f32 [%rd3], %f2;
-; CHECK-NEXT:    ld.local.f64 %fd1, [%rd3];
+; CHECK-NEXT:    st.local.f32 [%rd1], %f2;
+; CHECK-NEXT:    ret;
+  %a.load = load float, ptr addrspace(5) %a
+  %a.add = fadd float %a.load, 1.
+  store float %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_weak_double(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_weak_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_double_param_0];
+; CHECK-NEXT:    ld.local.f64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.local.f64 [%rd3], %fd2;
-; CHECK-NEXT:    ld.local.v2.u8 {%rs5, %rs6}, [%rd2];
-; CHECK-NEXT:    add.s16 %rs7, %rs6, 1;
-; CHECK-NEXT:    add.s16 %rs8, %rs5, 1;
-; CHECK-NEXT:    st.local.v2.u8 [%rd2], {%rs8, %rs7};
-; CHECK-NEXT:    ld.local.u32 %r3, [%rd3];
-; CHECK-NEXT:    bfe.u32 %r4, %r3, 0, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs9, %r4;
-; CHECK-NEXT:    add.s16 %rs10, %rs9, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r5, %rs10;
-; CHECK-NEXT:    bfe.u32 %r6, %r3, 8, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs11, %r6;
-; CHECK-NEXT:    add.s16 %rs12, %rs11, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r7, %rs12;
-; CHECK-NEXT:    bfi.b32 %r8, %r7, %r5, 8, 8;
-; CHECK-NEXT:    bfe.u32 %r9, %r3, 16, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs13, %r9;
-; CHECK-NEXT:    add.s16 %rs14, %rs13, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r10, %rs14;
-; CHECK-NEXT:    bfi.b32 %r11, %r10, %r8, 16, 8;
-; CHECK-NEXT:    bfe.u32 %r12, %r3, 24, 8;
-; CHECK-NEXT:    cvt.u16.u32 %rs15, %r12;
-; CHECK-NEXT:    add.s16 %rs16, %rs15, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r13, %rs16;
-; CHECK-NEXT:    bfi.b32 %r14, %r13, %r11, 24, 8;
-; CHECK-NEXT:    st.local.u32 [%rd3], %r14;
-; CHECK-NEXT:    ld.local.u32 %r15, [%rd3];
-; CHECK-NEXT:    mov.b32 {%rs17, %rs18}, %r15;
-; CHECK-NEXT:    add.s16 %rs19, %rs18, 1;
-; CHECK-NEXT:    add.s16 %rs20, %rs17, 1;
-; CHECK-NEXT:    mov.b32 %r16, {%rs20, %rs19};
-; CHECK-NEXT:    st.local.u32 [%rd3], %r16;
-; CHECK-NEXT:    ld.local.v4.u16 {%rs21, %rs22, %rs23, %rs24}, [%rd4];
-; CHECK-NEXT:    add.s16 %rs25, %rs24, 1;
-; CHECK-NEXT:    add.s16 %rs26, %rs23, 1;
-; CHECK-NEXT:    add.s16 %rs27, %rs22, 1;
-; CHECK-NEXT:    add.s16 %rs28, %rs21, 1;
-; CHECK-NEXT:    st.local.v4.u16 [%rd4], {%rs28, %rs27, %rs26, %rs25};
-; CHECK-NEXT:    ld.local.v2.u32 {%r17, %r18}, [%rd4];
-; CHECK-NEXT:    add.s32 %r19, %r18, 1;
-; CHECK-NEXT:    add.s32 %r20, %r17, 1;
-; CHECK-NEXT:    st.local.v2.u32 [%rd4], {%r20, %r19};
-; CHECK-NEXT:    ld.local.v4.u32 {%r21, %r22, %r23, %r24}, [%rd4];
-; CHECK-NEXT:    add.s32 %r25, %r24, 1;
-; CHECK-NEXT:    add.s32 %r26, %r23, 1;
-; CHECK-NEXT:    add.s32 %r27, %r22, 1;
-; CHECK-NEXT:    add.s32 %r28, %r21, 1;
-; CHECK-NEXT:    st.local.v4.u32 [%rd4], {%r28, %r27, %r26, %r25};
-; CHECK-NEXT:    ld.local.v2.u64 {%rd7, %rd8}, [%rd4];
-; CHECK-NEXT:    add.s64 %rd9, %rd8, 1;
-; CHECK-NEXT:    add.s64 %rd10, %rd7, 1;
-; CHECK-NEXT:    st.local.v2.u64 [%rd4], {%rd10, %rd9};
-; CHECK-NEXT:    ld.local.v2.f32 {%f3, %f4}, [%rd4];
+; CHECK-NEXT:    st.local.f64 [%rd1], %fd2;
+; CHECK-NEXT:    ret;
+  %a.load = load double, ptr addrspace(5) %a
+  %a.add = fadd double %a.load, 1.
+  store double %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_weak_2xi8(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_weak_2xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_2xi8_param_0];
+; CHECK-NEXT:    ld.local.v2.u8 {%rs1, %rs2}, [%rd1];
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    st.local.v2.u8 [%rd1], {%rs4, %rs3};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x i8>, ptr addrspace(5) %a
+  %a.add = add <2 x i8> %a.load, <i8 1, i8 1>
+  store <2 x i8> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_weak_4xi8(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_weak_4xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<9>;
+; CHECK-NEXT:    .reg .b32 %r<13>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_4xi8_param_0];
+; CHECK-NEXT:    ld.local.u32 %r1, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r2, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r2;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r3, %rs2;
+; CHECK-NEXT:    bfe.u32 %r4, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r4;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs4;
+; CHECK-NEXT:    bfi.b32 %r6, %r5, %r3, 8, 8;
+; CHECK-NEXT:    bfe.u32 %r7, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs6;
+; CHECK-NEXT:    bfi.b32 %r9, %r8, %r6, 16, 8;
+; CHECK-NEXT:    bfe.u32 %r10, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs8;
+; CHECK-NEXT:    bfi.b32 %r12, %r11, %r9, 24, 8;
+; CHECK-NEXT:    st.local.u32 [%rd1], %r12;
+; CHECK-NEXT:    ret;
+  %a.load = load <4 x i8>, ptr addrspace(5) %a
+  %a.add = add <4 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1>
+  store <4 x i8> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_weak_2xi16(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_weak_2xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_2xi16_param_0];
+; CHECK-NEXT:    ld.local.u32 %r1, [%rd1];
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    mov.b32 %r2, {%rs4, %rs3};
+; CHECK-NEXT:    st.local.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x i16>, ptr addrspace(5) %a
+  %a.add = add <2 x i16> %a.load, <i16 1, i16 1>
+  store <2 x i16> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_weak_4xi16(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_weak_4xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_4xi16_param_0];
+; CHECK-NEXT:    ld.local.v4.u16 {%rs1, %rs2, %rs3, %rs4}, [%rd1];
+; CHECK-NEXT:    add.s16 %rs5, %rs4, 1;
+; CHECK-NEXT:    add.s16 %rs6, %rs3, 1;
+; CHECK-NEXT:    add.s16 %rs7, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs8, %rs1, 1;
+; CHECK-NEXT:    st.local.v4.u16 [%rd1], {%rs8, %rs7, %rs6, %rs5};
+; CHECK-NEXT:    ret;
+  %a.load = load <4 x i16>, ptr addrspace(5) %a
+  %a.add = add <4 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1>
+  store <4 x i16> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_weak_2xi32(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_weak_2xi32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_2xi32_param_0];
+; CHECK-NEXT:    ld.local.v2.u32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    add.s32 %r3, %r2, 1;
+; CHECK-NEXT:    add.s32 %r4, %r1, 1;
+; CHECK-NEXT:    st.local.v2.u32 [%rd1], {%r4, %r3};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x i32>, ptr addrspace(5) %a
+  %a.add = add <2 x i32> %a.load, <i32 1, i32 1>
+  store <2 x i32> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_weak_4xi32(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_weak_4xi32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_4xi32_param_0];
+; CHECK-NEXT:    ld.local.v4.u32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    add.s32 %r5, %r4, 1;
+; CHECK-NEXT:    add.s32 %r6, %r3, 1;
+; CHECK-NEXT:    add.s32 %r7, %r2, 1;
+; CHECK-NEXT:    add.s32 %r8, %r1, 1;
+; CHECK-NEXT:    st.local.v4.u32 [%rd1], {%r8, %r7, %r6, %r5};
+; CHECK-NEXT:    ret;
+  %a.load = load <4 x i32>, ptr addrspace(5) %a
+  %a.add = add <4 x i32> %a.load, <i32 1, i32 1, i32 1, i32 1>
+  store <4 x i32> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_weak_2xi64(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_weak_2xi64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_2xi64_param_0];
+; CHECK-NEXT:    ld.local.v2.u64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    add.s64 %rd4, %rd3, 1;
+; CHECK-NEXT:    add.s64 %rd5, %rd2, 1;
+; CHECK-NEXT:    st.local.v2.u64 [%rd1], {%rd5, %rd4};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x i64>, ptr addrspace(5) %a
+  %a.add = add <2 x i64> %a.load, <i64 1, i64 1>
+  store <2 x i64> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_weak_2xfloat(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_weak_2xfloat(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_2xfloat_param_0];
+; CHECK-NEXT:    ld.local.v2.f32 {%f1, %f2}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
+; CHECK-NEXT:    st.local.v2.f32 [%rd1], {%f4, %f3};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x float>, ptr addrspace(5) %a
+  %a.add = fadd <2 x float> %a.load, <float 1., float 1.>
+  store <2 x float> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_weak_4xfloat(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_weak_4xfloat(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_4xfloat_param_0];
+; CHECK-NEXT:    ld.local.v4.f32 {%f1, %f2, %f3, %f4}, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
 ; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
-; CHECK-NEXT:    st.local.v2.f32 [%rd4], {%f6, %f5};
-; CHECK-NEXT:    ld.local.v4.f32 {%f7, %f8, %f9, %f10}, [%rd4];
-; CHECK-NEXT:    add.rn.f32 %f11, %f10, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f12, %f9, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f13, %f8, 0f3F800000;
-; CHECK-NEXT:    add.rn.f32 %f14, %f7, 0f3F800000;
-; CHECK-NEXT:    st.local.v4.f32 [%rd4], {%f14, %f13, %f12, %f11};
-; CHECK-NEXT:    ld.local.v2.f64 {%fd3, %fd4}, [%rd4];
-; CHECK-NEXT:    add.rn.f64 %fd5, %fd4, 0d3FF0000000000000;
-; CHECK-NEXT:    add.rn.f64 %fd6, %fd3, 0d3FF0000000000000;
-; CHECK-NEXT:    st.local.v2.f64 [%rd4], {%fd6, %fd5};
+; CHECK-NEXT:    add.rn.f32 %f7, %f2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f8, %f1, 0f3F800000;
+; CHECK-NEXT:    st.local.v4.f32 [%rd1], {%f8, %f7, %f6, %f5};
+; CHECK-NEXT:    ret;
+  %a.load = load <4 x float>, ptr addrspace(5) %a
+  %a.add = fadd <4 x float> %a.load, <float 1., float 1., float 1., float 1.>
+  store <4 x float> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_weak_2xdouble(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_weak_2xdouble(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_weak_2xdouble_param_0];
+; CHECK-NEXT:    ld.local.v2.f64 {%fd1, %fd2}, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
+; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
+; CHECK-NEXT:    st.local.v2.f64 [%rd1], {%fd4, %fd3};
+; CHECK-NEXT:    ret;
+  %a.load = load <2 x double>, ptr addrspace(5) %a
+  %a.add = fadd <2 x double> %a.load, <double 1., double 1.>
+  store <2 x double> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+; local_volatile
+
+define void @local_volatile_i8(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_volatile_i8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_i8_param_0];
+; CHECK-NEXT:    ld.local.u8 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.local.u8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i8, ptr addrspace(5) %a
   %a.add = add i8 %a.load, 1
   store volatile i8 %a.add, ptr addrspace(5) %a
-
-  %b.load = load volatile i16, ptr addrspace(5) %b
-  %b.add = add i16 %b.load, 1
-  store volatile i16 %b.add, ptr addrspace(5) %b
-
-  %c.load = load volatile i32, ptr addrspace(5) %c
-  %c.add = add i32 %c.load, 1
-  store volatile i32 %c.add, ptr addrspace(5) %c
-
-  %d.load = load volatile i64, ptr addrspace(5) %d
-  %d.add = add i64 %d.load, 1
-  store volatile i64 %d.add, ptr addrspace(5) %d
-
-  %e.load = load volatile float, ptr addrspace(5) %c
-  %e.add = fadd float %e.load, 1.
-  store volatile float %e.add, ptr addrspace(5) %c
-
-  %f.load = load volatile double, ptr addrspace(5) %c
-  %f.add = fadd double %f.load, 1.
-  store volatile double %f.add, ptr addrspace(5) %c
-
-  %h.load = load volatile <2 x i8>, ptr addrspace(5) %b
-  %h.add = add <2 x i8> %h.load, <i8 1, i8 1>
-  store volatile <2 x i8> %h.add, ptr addrspace(5) %b
-
-  %i.load = load volatile <4 x i8>, ptr addrspace(5) %c
-  %i.add = add <4 x i8> %i.load, <i8 1, i8 1, i8 1, i8 1>
-  store volatile <4 x i8> %i.add, ptr addrspace(5) %c
-
-  %j.load = load volatile <2 x i16>, ptr addrspace(5) %c
-  %j.add = add <2 x i16> %j.load, <i16 1, i16 1>
-  store volatile <2 x i16> %j.add, ptr addrspace(5) %c
-
-  %k.load = load volatile <4 x i16>, ptr addrspace(5) %d
-  %k.add = add <4 x i16> %k.load, <i16 1, i16 1, i16 1, i16 1>
-  store volatile <4 x i16> %k.add, ptr addrspace(5) %d
-
-  %l.load = load volatile <2 x i32>, ptr addrspace(5) %d
-  %l.add = add <2 x i32> %l.load, <i32 1, i32 1>
-  store volatile <2 x i32> %l.add, ptr addrspace(5) %d
-
-  %m.load = load volatile <4 x i32>, ptr addrspace(5) %d
-  %m.add = add <4 x i32> %m.load, <i32 1, i32 1, i32 1, i32 1>
-  store volatile <4 x i32> %m.add, ptr addrspace(5) %d
-
-  %n.load = load volatile <2 x i64>, ptr addrspace(5) %d
-  %n.add = add <2 x i64> %n.load, <i64 1, i64 1>
-  store volatile <2 x i64> %n.add, ptr addrspace(5) %d
-
-  %o.load = load volatile <2 x float>, ptr addrspace(5) %d
-  %o.add = fadd <2 x float> %o.load, <float 1., float 1.>
-  store volatile <2 x float> %o.add, ptr addrspace(5) %d
-
-  %p.load = load volatile <4 x float>, ptr addrspace(5) %d
-  %p.add = fadd <4 x float> %p.load, <float 1., float 1., float 1., float 1.>
-  store volatile <4 x float> %p.add, ptr addrspace(5) %d
-
-  %q.load = load volatile <2 x double>, ptr addrspace(5) %d
-  %q.add = fadd <2 x double> %q.load, <double 1., double 1.>
-  store volatile <2 x double> %q.add, ptr addrspace(5) %d
-
   ret void
 }
 
-define void @local_unordered_sys(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d, ptr addrspace(5) %e) local_unnamed_addr {
-; CHECK-LABEL: local_unordered_sys(
+define void @local_volatile_i16(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_volatile_i16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_i16_param_0];
+; CHECK-NEXT:    ld.local.u16 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.local.u16 [%rd1], %rs2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile i16, ptr addrspace(5) %a
+  %a.add = add i16 %a.load, 1
+  store volatile i16 %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_volatile_i32(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_volatile_i32(
+; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_i32_param_0];
+; CHECK-NEXT:    ld.local.u32 %r1, [%rd1];
+; CHECK-NEXT:    add.s32 %r2, %r1, 1;
+; CHECK-NEXT:    st.local.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile i32, ptr addrspace(5) %a
+  %a.add = add i32 %a.load, 1
+  store volatile i32 %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_volatile_i64(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_volatile_i64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_i64_param_0];
+; CHECK-NEXT:    ld.local.u64 %rd2, [%rd1];
+; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
+; CHECK-NEXT:    st.local.u64 [%rd1], %rd3;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile i64, ptr addrspace(5) %a
+  %a.add = add i64 %a.load, 1
+  store volatile i64 %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_volatile_float(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_volatile_float(
+; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
-; CHECK-NEXT:    .reg .b64 %rd<8>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_float_param_0];
+; CHECK-NEXT:    ld.local.f32 %f1, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; CHECK-NEXT:    st.local.f32 [%rd1], %f2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile float, ptr addrspace(5) %a
+  %a.add = fadd float %a.load, 1.
+  store volatile float %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_volatile_double(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_volatile_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-NEXT:    .reg .f64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_sys_param_0];
-; CHECK-NEXT:    ld.local.u8 %rs1, [%rd1];
-; CHECK-NEXT:    ld.param.u64 %rd2, [local_unordered_sys_param_1];
-; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    ld.param.u64 %rd3, [local_unordered_sys_param_2];
-; CHECK-NEXT:    st.local.u8 [%rd1], %rs2;
-; CHECK-NEXT:    ld.param.u64 %rd4, [local_unordered_sys_param_3];
-; CHECK-NEXT:    ld.local.u16 %rs3, [%rd2];
-; CHECK-NEXT:    ld.param.u64 %rd5, [local_unordered_sys_param_4];
-; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
-; CHECK-NEXT:    st.local.u16 [%rd2], %rs4;
-; CHECK-NEXT:    ld.local.u32 %r1, [%rd3];
-; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.local.u32 [%rd3], %r2;
-; CHECK-NEXT:    ld.local.u64 %rd6, [%rd4];
-; CHECK-NEXT:    add.s64 %rd7, %rd6, 1;
-; CHECK-NEXT:    st.local.u64 [%rd4], %rd7;
-; CHECK-NEXT:    ld.local.f32 %f1, [%rd5];
-; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.local.f32 [%rd5], %f2;
-; CHECK-NEXT:    ld.local.f64 %fd1, [%rd5];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_double_param_0];
+; CHECK-NEXT:    ld.local.f64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.local.f64 [%rd5], %fd2;
+; CHECK-NEXT:    st.local.f64 [%rd1], %fd2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile double, ptr addrspace(5) %a
+  %a.add = fadd double %a.load, 1.
+  store volatile double %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_volatile_2xi8(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_volatile_2xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_2xi8_param_0];
+; CHECK-NEXT:    ld.local.v2.u8 {%rs1, %rs2}, [%rd1];
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    st.local.v2.u8 [%rd1], {%rs4, %rs3};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x i8>, ptr addrspace(5) %a
+  %a.add = add <2 x i8> %a.load, <i8 1, i8 1>
+  store volatile <2 x i8> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_volatile_4xi8(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_volatile_4xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<9>;
+; CHECK-NEXT:    .reg .b32 %r<13>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_4xi8_param_0];
+; CHECK-NEXT:    ld.local.u32 %r1, [%rd1];
+; CHECK-NEXT:    bfe.u32 %r2, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r2;
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r3, %rs2;
+; CHECK-NEXT:    bfe.u32 %r4, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r4;
+; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs4;
+; CHECK-NEXT:    bfi.b32 %r6, %r5, %r3, 8, 8;
+; CHECK-NEXT:    bfe.u32 %r7, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r7;
+; CHECK-NEXT:    add.s16 %rs6, %rs5, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs6;
+; CHECK-NEXT:    bfi.b32 %r9, %r8, %r6, 16, 8;
+; CHECK-NEXT:    bfe.u32 %r10, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32 %rs7, %r10;
+; CHECK-NEXT:    add.s16 %rs8, %rs7, 1;
+; CHECK-NEXT:    cvt.u32.u16 %r11, %rs8;
+; CHECK-NEXT:    bfi.b32 %r12, %r11, %r9, 24, 8;
+; CHECK-NEXT:    st.local.u32 [%rd1], %r12;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <4 x i8>, ptr addrspace(5) %a
+  %a.add = add <4 x i8> %a.load, <i8 1, i8 1, i8 1, i8 1>
+  store volatile <4 x i8> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_volatile_2xi16(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_volatile_2xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_2xi16_param_0];
+; CHECK-NEXT:    ld.local.u32 %r1, [%rd1];
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    add.s16 %rs3, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs4, %rs1, 1;
+; CHECK-NEXT:    mov.b32 %r2, {%rs4, %rs3};
+; CHECK-NEXT:    st.local.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x i16>, ptr addrspace(5) %a
+  %a.add = add <2 x i16> %a.load, <i16 1, i16 1>
+  store volatile <2 x i16> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_volatile_4xi16(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_volatile_4xi16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_4xi16_param_0];
+; CHECK-NEXT:    ld.local.v4.u16 {%rs1, %rs2, %rs3, %rs4}, [%rd1];
+; CHECK-NEXT:    add.s16 %rs5, %rs4, 1;
+; CHECK-NEXT:    add.s16 %rs6, %rs3, 1;
+; CHECK-NEXT:    add.s16 %rs7, %rs2, 1;
+; CHECK-NEXT:    add.s16 %rs8, %rs1, 1;
+; CHECK-NEXT:    st.local.v4.u16 [%rd1], {%rs8, %rs7, %rs6, %rs5};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <4 x i16>, ptr addrspace(5) %a
+  %a.add = add <4 x i16> %a.load, <i16 1, i16 1, i16 1, i16 1>
+  store volatile <4 x i16> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_volatile_2xi32(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_volatile_2xi32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_2xi32_param_0];
+; CHECK-NEXT:    ld.local.v2.u32 {%r1, %r2}, [%rd1];
+; CHECK-NEXT:    add.s32 %r3, %r2, 1;
+; CHECK-NEXT:    add.s32 %r4, %r1, 1;
+; CHECK-NEXT:    st.local.v2.u32 [%rd1], {%r4, %r3};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x i32>, ptr addrspace(5) %a
+  %a.add = add <2 x i32> %a.load, <i32 1, i32 1>
+  store volatile <2 x i32> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_volatile_4xi32(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_volatile_4xi32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_4xi32_param_0];
+; CHECK-NEXT:    ld.local.v4.u32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    add.s32 %r5, %r4, 1;
+; CHECK-NEXT:    add.s32 %r6, %r3, 1;
+; CHECK-NEXT:    add.s32 %r7, %r2, 1;
+; CHECK-NEXT:    add.s32 %r8, %r1, 1;
+; CHECK-NEXT:    st.local.v4.u32 [%rd1], {%r8, %r7, %r6, %r5};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <4 x i32>, ptr addrspace(5) %a
+  %a.add = add <4 x i32> %a.load, <i32 1, i32 1, i32 1, i32 1>
+  store volatile <4 x i32> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_volatile_2xi64(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_volatile_2xi64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_2xi64_param_0];
+; CHECK-NEXT:    ld.local.v2.u64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    add.s64 %rd4, %rd3, 1;
+; CHECK-NEXT:    add.s64 %rd5, %rd2, 1;
+; CHECK-NEXT:    st.local.v2.u64 [%rd1], {%rd5, %rd4};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x i64>, ptr addrspace(5) %a
+  %a.add = add <2 x i64> %a.load, <i64 1, i64 1>
+  store volatile <2 x i64> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_volatile_2xfloat(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_volatile_2xfloat(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_2xfloat_param_0];
+; CHECK-NEXT:    ld.local.v2.f32 {%f1, %f2}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f3, %f2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f4, %f1, 0f3F800000;
+; CHECK-NEXT:    st.local.v2.f32 [%rd1], {%f4, %f3};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x float>, ptr addrspace(5) %a
+  %a.add = fadd <2 x float> %a.load, <float 1., float 1.>
+  store volatile <2 x float> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_volatile_4xfloat(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_volatile_4xfloat(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_4xfloat_param_0];
+; CHECK-NEXT:    ld.local.v4.f32 {%f1, %f2, %f3, %f4}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f5, %f4, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f6, %f3, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f7, %f2, 0f3F800000;
+; CHECK-NEXT:    add.rn.f32 %f8, %f1, 0f3F800000;
+; CHECK-NEXT:    st.local.v4.f32 [%rd1], {%f8, %f7, %f6, %f5};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <4 x float>, ptr addrspace(5) %a
+  %a.add = fadd <4 x float> %a.load, <float 1., float 1., float 1., float 1.>
+  store volatile <4 x float> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+define void @local_volatile_2xdouble(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_volatile_2xdouble(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_2xdouble_param_0];
+; CHECK-NEXT:    ld.local.v2.f64 {%fd1, %fd2}, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %fd3, %fd2, 0d3FF0000000000000;
+; CHECK-NEXT:    add.rn.f64 %fd4, %fd1, 0d3FF0000000000000;
+; CHECK-NEXT:    st.local.v2.f64 [%rd1], {%fd4, %fd3};
+; CHECK-NEXT:    ret;
+  %a.load = load volatile <2 x double>, ptr addrspace(5) %a
+  %a.add = fadd <2 x double> %a.load, <double 1., double 1.>
+  store volatile <2 x double> %a.add, ptr addrspace(5) %a
+  ret void
+}
+
+; local_unordered_sys
+
+define void @local_unordered_sys_i8(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_unordered_sys_i8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_sys_i8_param_0];
+; CHECK-NEXT:    ld.local.u8 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.local.u8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic i8, ptr addrspace(5) %a unordered, align 1
   %a.add = add i8 %a.load, 1
   store atomic i8 %a.add, ptr addrspace(5) %a unordered, align 1
-
-  %b.load = load atomic i16, ptr addrspace(5) %b unordered, align 2
-  %b.add = add i16 %b.load, 1
-  store atomic i16 %b.add, ptr addrspace(5) %b unordered, align 2
-
-  %c.load = load atomic i32, ptr addrspace(5) %c unordered, align 4
-  %c.add = add i32 %c.load, 1
-  store atomic i32 %c.add, ptr addrspace(5) %c unordered, align 4
-
-  %d.load = load atomic i64, ptr addrspace(5) %d unordered, align 8
-  %d.add = add i64 %d.load, 1
-  store atomic i64 %d.add, ptr addrspace(5) %d unordered, align 8
-
-  %e.load = load atomic float, ptr addrspace(5) %e unordered, align 4
-  %e.add = fadd float %e.load, 1.0
-  store atomic float %e.add, ptr addrspace(5) %e unordered, align 4
-
-  %f.load = load atomic double, ptr addrspace(5) %e unordered, align 8
-  %f.add = fadd double %f.load, 1.
-  store atomic double %f.add, ptr addrspace(5) %e unordered, align 8
-
   ret void
 }
 
-define void @local_unordered_volatile_sys(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d, ptr addrspace(5) %e) local_unnamed_addr {
-; CHECK-LABEL: local_unordered_volatile_sys(
+define void @local_unordered_sys_i16(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_unordered_sys_i16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_sys_i16_param_0];
+; CHECK-NEXT:    ld.local.u16 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.local.u16 [%rd1], %rs2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic i16, ptr addrspace(5) %a unordered, align 2
+  %a.add = add i16 %a.load, 1
+  store atomic i16 %a.add, ptr addrspace(5) %a unordered, align 2
+  ret void
+}
+
+define void @local_unordered_sys_i32(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_unordered_sys_i32(
+; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_sys_i32_param_0];
+; CHECK-NEXT:    ld.local.u32 %r1, [%rd1];
+; CHECK-NEXT:    add.s32 %r2, %r1, 1;
+; CHECK-NEXT:    st.local.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic i32, ptr addrspace(5) %a unordered, align 4
+  %a.add = add i32 %a.load, 1
+  store atomic i32 %a.add, ptr addrspace(5) %a unordered, align 4
+  ret void
+}
+
+define void @local_unordered_sys_i64(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_unordered_sys_i64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_sys_i64_param_0];
+; CHECK-NEXT:    ld.local.u64 %rd2, [%rd1];
+; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
+; CHECK-NEXT:    st.local.u64 [%rd1], %rd3;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic i64, ptr addrspace(5) %a unordered, align 8
+  %a.add = add i64 %a.load, 1
+  store atomic i64 %a.add, ptr addrspace(5) %a unordered, align 8
+  ret void
+}
+
+define void @local_unordered_sys_float(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_unordered_sys_float(
+; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
-; CHECK-NEXT:    .reg .b64 %rd<8>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_sys_float_param_0];
+; CHECK-NEXT:    ld.local.f32 %f1, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; CHECK-NEXT:    st.local.f32 [%rd1], %f2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic float, ptr addrspace(5) %a unordered, align 4
+  %a.add = fadd float %a.load, 1.
+  store atomic float %a.add, ptr addrspace(5) %a unordered, align 4
+  ret void
+}
+
+define void @local_unordered_sys_double(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_unordered_sys_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-NEXT:    .reg .f64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_volatile_sys_param_0];
-; CHECK-NEXT:    ld.local.u8 %rs1, [%rd1];
-; CHECK-NEXT:    ld.param.u64 %rd2, [local_unordered_volatile_sys_param_1];
-; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    ld.param.u64 %rd3, [local_unordered_volatile_sys_param_2];
-; CHECK-NEXT:    st.local.u8 [%rd1], %rs2;
-; CHECK-NEXT:    ld.param.u64 %rd4, [local_unordered_volatile_sys_param_3];
-; CHECK-NEXT:    ld.local.u16 %rs3, [%rd2];
-; CHECK-NEXT:    ld.param.u64 %rd5, [local_unordered_volatile_sys_param_4];
-; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
-; CHECK-NEXT:    st.local.u16 [%rd2], %rs4;
-; CHECK-NEXT:    ld.local.u32 %r1, [%rd3];
-; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.local.u32 [%rd3], %r2;
-; CHECK-NEXT:    ld.local.u64 %rd6, [%rd4];
-; CHECK-NEXT:    add.s64 %rd7, %rd6, 1;
-; CHECK-NEXT:    st.local.u64 [%rd4], %rd7;
-; CHECK-NEXT:    ld.local.f32 %f1, [%rd5];
-; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.local.f32 [%rd5], %f2;
-; CHECK-NEXT:    ld.local.f64 %fd1, [%rd5];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_sys_double_param_0];
+; CHECK-NEXT:    ld.local.f64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.local.f64 [%rd5], %fd2;
+; CHECK-NEXT:    st.local.f64 [%rd1], %fd2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic double, ptr addrspace(5) %a unordered, align 8
+  %a.add = fadd double %a.load, 1.
+  store atomic double %a.add, ptr addrspace(5) %a unordered, align 8
+  ret void
+}
+
+; local_unordered_volatile_sys
+
+define void @local_unordered_volatile_sys_i8(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_unordered_volatile_sys_i8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_volatile_sys_i8_param_0];
+; CHECK-NEXT:    ld.local.u8 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.local.u8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i8, ptr addrspace(5) %a unordered, align 1
   %a.add = add i8 %a.load, 1
   store atomic volatile i8 %a.add, ptr addrspace(5) %a unordered, align 1
-
-  %b.load = load atomic volatile i16, ptr addrspace(5) %b unordered, align 2
-  %b.add = add i16 %b.load, 1
-  store atomic volatile i16 %b.add, ptr addrspace(5) %b unordered, align 2
-
-  %c.load = load atomic volatile i32, ptr addrspace(5) %c unordered, align 4
-  %c.add = add i32 %c.load, 1
-  store atomic volatile i32 %c.add, ptr addrspace(5) %c unordered, align 4
-
-  %d.load = load atomic volatile i64, ptr addrspace(5) %d unordered, align 8
-  %d.add = add i64 %d.load, 1
-  store atomic volatile i64 %d.add, ptr addrspace(5) %d unordered, align 8
-
-  %e.load = load atomic volatile float, ptr addrspace(5) %e unordered, align 4
-  %e.add = fadd float %e.load, 1.0
-  store atomic volatile float %e.add, ptr addrspace(5) %e unordered, align 4
-
-  %f.load = load atomic volatile double, ptr addrspace(5) %e unordered, align 8
-  %f.add = fadd double %f.load, 1.
-  store atomic volatile double %f.add, ptr addrspace(5) %e unordered, align 8
-
   ret void
 }
 
-define void @local_monotonic_sys(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d, ptr addrspace(5) %e) local_unnamed_addr {
-; CHECK-LABEL: local_monotonic_sys(
+define void @local_unordered_volatile_sys_i16(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_unordered_volatile_sys_i16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_volatile_sys_i16_param_0];
+; CHECK-NEXT:    ld.local.u16 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.local.u16 [%rd1], %rs2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile i16, ptr addrspace(5) %a unordered, align 2
+  %a.add = add i16 %a.load, 1
+  store atomic volatile i16 %a.add, ptr addrspace(5) %a unordered, align 2
+  ret void
+}
+
+define void @local_unordered_volatile_sys_i32(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_unordered_volatile_sys_i32(
+; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_volatile_sys_i32_param_0];
+; CHECK-NEXT:    ld.local.u32 %r1, [%rd1];
+; CHECK-NEXT:    add.s32 %r2, %r1, 1;
+; CHECK-NEXT:    st.local.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile i32, ptr addrspace(5) %a unordered, align 4
+  %a.add = add i32 %a.load, 1
+  store atomic volatile i32 %a.add, ptr addrspace(5) %a unordered, align 4
+  ret void
+}
+
+define void @local_unordered_volatile_sys_i64(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_unordered_volatile_sys_i64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_volatile_sys_i64_param_0];
+; CHECK-NEXT:    ld.local.u64 %rd2, [%rd1];
+; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
+; CHECK-NEXT:    st.local.u64 [%rd1], %rd3;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile i64, ptr addrspace(5) %a unordered, align 8
+  %a.add = add i64 %a.load, 1
+  store atomic volatile i64 %a.add, ptr addrspace(5) %a unordered, align 8
+  ret void
+}
+
+define void @local_unordered_volatile_sys_float(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_unordered_volatile_sys_float(
+; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
-; CHECK-NEXT:    .reg .b64 %rd<8>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_volatile_sys_float_param_0];
+; CHECK-NEXT:    ld.local.f32 %f1, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; CHECK-NEXT:    st.local.f32 [%rd1], %f2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile float, ptr addrspace(5) %a unordered, align 4
+  %a.add = fadd float %a.load, 1.
+  store atomic volatile float %a.add, ptr addrspace(5) %a unordered, align 4
+  ret void
+}
+
+define void @local_unordered_volatile_sys_double(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_unordered_volatile_sys_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-NEXT:    .reg .f64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_sys_param_0];
-; CHECK-NEXT:    ld.local.u8 %rs1, [%rd1];
-; CHECK-NEXT:    ld.param.u64 %rd2, [local_monotonic_sys_param_1];
-; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    ld.param.u64 %rd3, [local_monotonic_sys_param_2];
-; CHECK-NEXT:    st.local.u8 [%rd1], %rs2;
-; CHECK-NEXT:    ld.param.u64 %rd4, [local_monotonic_sys_param_3];
-; CHECK-NEXT:    ld.local.u16 %rs3, [%rd2];
-; CHECK-NEXT:    ld.param.u64 %rd5, [local_monotonic_sys_param_4];
-; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
-; CHECK-NEXT:    st.local.u16 [%rd2], %rs4;
-; CHECK-NEXT:    ld.local.u32 %r1, [%rd3];
-; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.local.u32 [%rd3], %r2;
-; CHECK-NEXT:    ld.local.u64 %rd6, [%rd4];
-; CHECK-NEXT:    add.s64 %rd7, %rd6, 1;
-; CHECK-NEXT:    st.local.u64 [%rd4], %rd7;
-; CHECK-NEXT:    ld.local.f32 %f1, [%rd5];
-; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.local.f32 [%rd5], %f2;
-; CHECK-NEXT:    ld.local.f64 %fd1, [%rd5];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_volatile_sys_double_param_0];
+; CHECK-NEXT:    ld.local.f64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.local.f64 [%rd5], %fd2;
+; CHECK-NEXT:    st.local.f64 [%rd1], %fd2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile double, ptr addrspace(5) %a unordered, align 8
+  %a.add = fadd double %a.load, 1.
+  store atomic volatile double %a.add, ptr addrspace(5) %a unordered, align 8
+  ret void
+}
+
+; local_monotonic_sys
+
+define void @local_monotonic_sys_i8(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_monotonic_sys_i8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_sys_i8_param_0];
+; CHECK-NEXT:    ld.local.u8 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.local.u8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic i8, ptr addrspace(5) %a monotonic, align 1
   %a.add = add i8 %a.load, 1
   store atomic i8 %a.add, ptr addrspace(5) %a monotonic, align 1
-
-  %b.load = load atomic i16, ptr addrspace(5) %b monotonic, align 2
-  %b.add = add i16 %b.load, 1
-  store atomic i16 %b.add, ptr addrspace(5) %b monotonic, align 2
-
-  %c.load = load atomic i32, ptr addrspace(5) %c monotonic, align 4
-  %c.add = add i32 %c.load, 1
-  store atomic i32 %c.add, ptr addrspace(5) %c monotonic, align 4
-
-  %d.load = load atomic i64, ptr addrspace(5) %d monotonic, align 8
-  %d.add = add i64 %d.load, 1
-  store atomic i64 %d.add, ptr addrspace(5) %d monotonic, align 8
-
-  %e.load = load atomic float, ptr addrspace(5) %e monotonic, align 4
-  %e.add = fadd float %e.load, 1.
-  store atomic float %e.add, ptr addrspace(5) %e monotonic, align 4
-
-  %f.load = load atomic double, ptr addrspace(5) %e monotonic, align 8
-  %f.add = fadd double %f.load, 1.
-  store atomic double %f.add, ptr addrspace(5) %e monotonic, align 8
-
   ret void
 }
 
-define void @local_monotonic_volatile(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d, ptr addrspace(5) %e) local_unnamed_addr {
-; CHECK-LABEL: local_monotonic_volatile(
+define void @local_monotonic_sys_i16(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_monotonic_sys_i16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_sys_i16_param_0];
+; CHECK-NEXT:    ld.local.u16 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.local.u16 [%rd1], %rs2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic i16, ptr addrspace(5) %a monotonic, align 2
+  %a.add = add i16 %a.load, 1
+  store atomic i16 %a.add, ptr addrspace(5) %a monotonic, align 2
+  ret void
+}
+
+define void @local_monotonic_sys_i32(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_monotonic_sys_i32(
+; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_sys_i32_param_0];
+; CHECK-NEXT:    ld.local.u32 %r1, [%rd1];
+; CHECK-NEXT:    add.s32 %r2, %r1, 1;
+; CHECK-NEXT:    st.local.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic i32, ptr addrspace(5) %a monotonic, align 4
+  %a.add = add i32 %a.load, 1
+  store atomic i32 %a.add, ptr addrspace(5) %a monotonic, align 4
+  ret void
+}
+
+define void @local_monotonic_sys_i64(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_monotonic_sys_i64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_sys_i64_param_0];
+; CHECK-NEXT:    ld.local.u64 %rd2, [%rd1];
+; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
+; CHECK-NEXT:    st.local.u64 [%rd1], %rd3;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic i64, ptr addrspace(5) %a monotonic, align 8
+  %a.add = add i64 %a.load, 1
+  store atomic i64 %a.add, ptr addrspace(5) %a monotonic, align 8
+  ret void
+}
+
+define void @local_monotonic_sys_float(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_monotonic_sys_float(
+; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
-; CHECK-NEXT:    .reg .b64 %rd<8>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_sys_float_param_0];
+; CHECK-NEXT:    ld.local.f32 %f1, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; CHECK-NEXT:    st.local.f32 [%rd1], %f2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic float, ptr addrspace(5) %a monotonic, align 4
+  %a.add = fadd float %a.load, 1.
+  store atomic float %a.add, ptr addrspace(5) %a monotonic, align 4
+  ret void
+}
+
+define void @local_monotonic_sys_double(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_monotonic_sys_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-NEXT:    .reg .f64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_volatile_param_0];
-; CHECK-NEXT:    ld.local.u8 %rs1, [%rd1];
-; CHECK-NEXT:    ld.param.u64 %rd2, [local_monotonic_volatile_param_1];
-; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    ld.param.u64 %rd3, [local_monotonic_volatile_param_2];
-; CHECK-NEXT:    st.local.u8 [%rd1], %rs2;
-; CHECK-NEXT:    ld.param.u64 %rd4, [local_monotonic_volatile_param_3];
-; CHECK-NEXT:    ld.local.u16 %rs3, [%rd2];
-; CHECK-NEXT:    ld.param.u64 %rd5, [local_monotonic_volatile_param_4];
-; CHECK-NEXT:    add.s16 %rs4, %rs3, 1;
-; CHECK-NEXT:    st.local.u16 [%rd2], %rs4;
-; CHECK-NEXT:    ld.local.u32 %r1, [%rd3];
-; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.local.u32 [%rd3], %r2;
-; CHECK-NEXT:    ld.local.u64 %rd6, [%rd4];
-; CHECK-NEXT:    add.s64 %rd7, %rd6, 1;
-; CHECK-NEXT:    st.local.u64 [%rd4], %rd7;
-; CHECK-NEXT:    ld.local.f32 %f1, [%rd5];
-; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.local.f32 [%rd5], %f2;
-; CHECK-NEXT:    ld.local.f64 %fd1, [%rd5];
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_sys_double_param_0];
+; CHECK-NEXT:    ld.local.f64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.local.f64 [%rd5], %fd2;
+; CHECK-NEXT:    st.local.f64 [%rd1], %fd2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic double, ptr addrspace(5) %a monotonic, align 8
+  %a.add = fadd double %a.load, 1.
+  store atomic double %a.add, ptr addrspace(5) %a monotonic, align 8
+  ret void
+}
+
+; local_monotonic_volatile_sys
+
+define void @local_monotonic_volatile_sys_i8(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_monotonic_volatile_sys_i8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_volatile_sys_i8_param_0];
+; CHECK-NEXT:    ld.local.u8 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.local.u8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i8, ptr addrspace(5) %a monotonic, align 1
   %a.add = add i8 %a.load, 1
   store atomic volatile i8 %a.add, ptr addrspace(5) %a monotonic, align 1
+  ret void
+}
 
-  %b.load = load atomic volatile i16, ptr addrspace(5) %b monotonic, align 2
-  %b.add = add i16 %b.load, 1
-  store atomic volatile i16 %b.add, ptr addrspace(5) %b monotonic, align 2
+define void @local_monotonic_volatile_sys_i16(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_monotonic_volatile_sys_i16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_volatile_sys_i16_param_0];
+; CHECK-NEXT:    ld.local.u16 %rs1, [%rd1];
+; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
+; CHECK-NEXT:    st.local.u16 [%rd1], %rs2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile i16, ptr addrspace(5) %a monotonic, align 2
+  %a.add = add i16 %a.load, 1
+  store atomic volatile i16 %a.add, ptr addrspace(5) %a monotonic, align 2
+  ret void
+}
 
-  %c.load = load atomic volatile i32, ptr addrspace(5) %c monotonic, align 4
-  %c.add = add i32 %c.load, 1
-  store atomic volatile i32 %c.add, ptr addrspace(5) %c monotonic, align 4
+define void @local_monotonic_volatile_sys_i32(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_monotonic_volatile_sys_i32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_volatile_sys_i32_param_0];
+; CHECK-NEXT:    ld.local.u32 %r1, [%rd1];
+; CHECK-NEXT:    add.s32 %r2, %r1, 1;
+; CHECK-NEXT:    st.local.u32 [%rd1], %r2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile i32, ptr addrspace(5) %a monotonic, align 4
+  %a.add = add i32 %a.load, 1
+  store atomic volatile i32 %a.add, ptr addrspace(5) %a monotonic, align 4
+  ret void
+}
 
-  %d.load = load atomic volatile i64, ptr addrspace(5) %d monotonic, align 8
-  %d.add = add i64 %d.load, 1
-  store atomic volatile i64 %d.add, ptr addrspace(5) %d monotonic, align 8
+define void @local_monotonic_volatile_sys_i64(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_monotonic_volatile_sys_i64(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_volatile_sys_i64_param_0];
+; CHECK-NEXT:    ld.local.u64 %rd2, [%rd1];
+; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
+; CHECK-NEXT:    st.local.u64 [%rd1], %rd3;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile i64, ptr addrspace(5) %a monotonic, align 8
+  %a.add = add i64 %a.load, 1
+  store atomic volatile i64 %a.add, ptr addrspace(5) %a monotonic, align 8
+  ret void
+}
 
-  %e.load = load atomic volatile float, ptr addrspace(5) %e monotonic, align 4
-  %e.add = fadd float %e.load, 1.
-  store atomic volatile float %e.add, ptr addrspace(5) %e monotonic, align 4
+define void @local_monotonic_volatile_sys_float(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_monotonic_volatile_sys_float(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_volatile_sys_float_param_0];
+; CHECK-NEXT:    ld.local.f32 %f1, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
+; CHECK-NEXT:    st.local.f32 [%rd1], %f2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile float, ptr addrspace(5) %a monotonic, align 4
+  %a.add = fadd float %a.load, 1.
+  store atomic volatile float %a.add, ptr addrspace(5) %a monotonic, align 4
+  ret void
+}
 
-  %f.load = load atomic volatile double, ptr addrspace(5) %e monotonic, align 8
-  %f.add = fadd double %f.load, 1.
-  store atomic volatile double %f.add, ptr addrspace(5) %e monotonic, align 8
-
+define void @local_monotonic_volatile_sys_double(ptr addrspace(5) %a) local_unnamed_addr {
+; CHECK-LABEL: local_monotonic_volatile_sys_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_volatile_sys_double_param_0];
+; CHECK-NEXT:    ld.local.f64 %fd1, [%rd1];
+; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
+; CHECK-NEXT:    st.local.f64 [%rd1], %fd2;
+; CHECK-NEXT:    ret;
+  %a.load = load atomic volatile double, ptr addrspace(5) %a monotonic, align 8
+  %a.add = fadd double %a.load, 1.
+  store atomic volatile double %a.add, ptr addrspace(5) %a monotonic, align 8
   ret void
 }
