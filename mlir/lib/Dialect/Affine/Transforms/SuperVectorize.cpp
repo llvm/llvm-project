@@ -1763,6 +1763,12 @@ void Vectorize::runOnOperation() {
     return signalPassFailure();
   }
 
+  if (vectorSizes.empty()) {
+    f.emitError("Vector rank cannot be zero, specify pass option ")
+        << vectorSizes.getArgStr();
+    return signalPassFailure();
+  }
+
   if (vectorizeReductions && vectorSizes.size() != 1) {
     f.emitError("Vectorizing reductions is supported only for 1-D vectors.");
     return signalPassFailure();
