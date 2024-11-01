@@ -6,10 +6,10 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,W64 %s
 
 ; RUN: opt -O3 -S < %s | FileCheck -check-prefix=OPT %s
-; RUN: opt -mtriple=amdgcn-- -O3 -S < %s | FileCheck -check-prefix=OPT-W64 %s
-; RUN: opt -mtriple=amdgcn-- -O3 -mattr=+wavefrontsize32 -S < %s | FileCheck -check-prefix=OPT-W32 %s
-; RUN: opt -mtriple=amdgcn-- -passes='default<O3>' -mattr=+wavefrontsize32 -S < %s | FileCheck -check-prefix=OPT-W32 %s
-; RUN: opt -mtriple=amdgcn-- -O3 -mattr=+wavefrontsize64 -S < %s | FileCheck -check-prefix=OPT-W64 %s
+; RUN: opt -mtriple=amdgcn-- -O3 -S < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -mtriple=amdgcn-- -O3 -mattr=+wavefrontsize32 -S < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -mtriple=amdgcn-- -passes='default<O3>' -mattr=+wavefrontsize32 -S < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -mtriple=amdgcn-- -O3 -mattr=+wavefrontsize64 -S < %s | FileCheck -check-prefix=OPT %s
 ; RUN: opt -mtriple=amdgcn-- -mcpu=tonga -O3 -S < %s | FileCheck -check-prefix=OPT-W64 %s
 ; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1010 -O3 -mattr=+wavefrontsize32 -S < %s | FileCheck -check-prefix=OPT-W32 %s
 ; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1010 -O3 -mattr=+wavefrontsize64 -S < %s | FileCheck -check-prefix=OPT-W64 %s

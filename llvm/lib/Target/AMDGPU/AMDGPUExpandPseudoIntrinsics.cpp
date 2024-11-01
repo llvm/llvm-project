@@ -47,6 +47,10 @@ AMDGPUExpandPseudoIntrinsicsPass::run(Module &M, ModuleAnalysisManager &) {
 
   const auto &ST = TM.getSubtarget<GCNSubtarget>(*M.begin());
 
+  // This is not a concrete target, we should not fold early.
+  if (ST.getCPU().empty() || ST.getCPU() == "generic")
+    return PreservedAnalyses::all();
+
   if (auto WS =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::amdgcn_wavefrontsize))
     return expandWaveSizeIntrinsic(ST, WS);
