@@ -7510,17 +7510,21 @@ template <> struct DenseMapInfo<const CaseHandleWrapper *> {
           // simplifyDuplicateSwitchArms to make the Case list smaller to
           // improve performance. If we decide to support BasicBlocks with more
           // than just a single instruction, we need to check that A.size() ==
-          // B.size() here.
+          // B.size() here, and we need to check more than just the BranchInsts
+          // for equality.
 
-          if (!IsBranchEq(cast<BranchInst>(A->getTerminator()),
-                          cast<BranchInst>(B->getTerminator())))
+          BranchInst *ABI = cast<BranchInst>(A->getTerminator());
+          if (!IsBranchEq(ABI, cast<BranchInst>(B->getTerminator())))
             return false;
 
-          // Need to check that PHIs in sucessors have matching values
-          for (auto *Succ : cast<BranchInst>(A->getTerminator())->successors())
-            for (PHINode &Phi : Succ->phis())
-              if (PhiPredIVs[&Phi][A] != PhiPredIVs[&Phi][B])
+          // Need to check that PHIs in successors have matching values
+          for (auto *Succ : ABI->successors()) {
+            for (PHINode &Phi : Succ->phis()) {
+              auto PredIVs = PhiPredIVs[&Phi];
+              if (PredIVs[A] != PredIVs[B])
                 return false;
+            }
+          }
 
           return true;
         };
@@ -7532,24 +7536,26 @@ template <> struct DenseMapInfo<const CaseHandleWrapper *> {
 } // namespace llvm
 
 bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
+
+  // Build PhiPredIVs and Cases. Skip BBs that are not candidates for
+  // simplification.
   DenseMap<PHINode *, DenseMap<BasicBlock *, Value *>> PhiPredIVs;
   SmallVector<CaseHandleWrapper> Cases;
   for (auto Case : SI->cases()) {
     BasicBlock *BB = Case.getCaseSuccessor();
-    // Skip BBs that are not candidates for simplification.
 
     // FIXME: Support more than just a single BranchInst. One way we could do
     // this is by taking a hashing approach of all insts in BB.
     if (BB->size() != 1)
       continue;
 
+    Instruction *T = BB->getTerminator();
+    if (!T)
+      continue;
+
     // FIXME: This case needs some extra care because the terminators other than
     // SI need to be updated.
     if (BB->hasNPredecessorsOrMore(2))
-      continue;
-
-    Instruction *T = BB->getTerminator();
-    if (!T)
       continue;
 
     // FIXME: Relax that the terminator is a BranchInst by checking for equality
