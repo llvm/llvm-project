@@ -32,40 +32,40 @@ populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
 
 static void populateMemberTypeInfo(MemberTypeInfo &I, const FieldDecl *D);
 
-void printTemplateParameters(const TemplateParameterList *TemplateParams, llvm::raw_ostream &stream) {
-  stream << "template <";
+void getTemplateParameters(const TemplateParameterList *TemplateParams, 
+                           llvm::raw_ostream &Stream) {
+  Stream << "template <";
   
   for (unsigned i = 0; i < TemplateParams->size(); ++i) {
     if (i > 0) {
-      stream << ", ";
+      Stream << ", ";
     }
 
     const NamedDecl *Param = TemplateParams->getParam(i);
     if (const auto *TTP = llvm::dyn_cast<TemplateTypeParmDecl>(Param)) {
       if (TTP->wasDeclaredWithTypename()) {
-        stream << "typename";
+        Stream << "typename";
       } else {
-        stream << "class";
+        Stream << "class";
       }
-
       if (TTP->isParameterPack()) {
-        stream << "...";
+        Stream << "...";
       }
-      stream << " " << TTP->getNameAsString();
+      Stream << " " << TTP->getNameAsString();
     } else if (const auto *NTTP = llvm::dyn_cast<NonTypeTemplateParmDecl>(Param)) {
-      NTTP->getType().print(stream, NTTP->getASTContext().getPrintingPolicy());
+      NTTP->getType().print(Stream, NTTP->getASTContext().getPrintingPolicy());
       if (NTTP->isParameterPack()) {
-        stream << "...";
+        Stream << "...";
       }
-      stream << " " << NTTP->getNameAsString();
+      Stream << " " << NTTP->getNameAsString();
     } else if (const auto *TTPD = llvm::dyn_cast<TemplateTemplateParmDecl>(Param)) {
-      stream << "template <";
-      printTemplateParameters(TTPD->getTemplateParameters(), stream);
-      stream << "> class " << TTPD->getNameAsString();
+      Stream << "template <";
+      getTemplateParameters(TTPD->getTemplateParameters(), Stream);
+      Stream << "> class " << TTPD->getNameAsString();
     }
   }
 
-  stream << "> ";
+  Stream << "> ";
 }
 
 // Extract the full function prototype from a FunctionDecl including 
@@ -76,9 +76,14 @@ llvm::SmallString<256> getFunctionPrototype(const FunctionDecl *FuncDecl) {
   const ASTContext& Ctx = FuncDecl->getASTContext();
   // If it's a templated function, handle the template parameters
   if (const auto *TmplDecl = FuncDecl->getDescribedTemplate()) {
-    printTemplateParameters(TmplDecl->getTemplateParameters(), Stream);
+    getTemplateParameters(TmplDecl->getTemplateParameters(), Stream);
   }
-  
+  // If it's a const method, add 'const' qualifier
+  if (const auto *Method = llvm::dyn_cast<CXXMethodDecl>(FuncDecl)) {
+    if (Method->isVirtual()) {
+      Stream << "virtual ";
+    }
+  }
   // Print return type
   FuncDecl->getReturnType().print(Stream, Ctx.getPrintingPolicy());
 
@@ -121,22 +126,50 @@ llvm::SmallString<256> getFunctionPrototype(const FunctionDecl *FuncDecl) {
 
   // If it's a const method, add 'const' qualifier
   if (const auto *Method = llvm::dyn_cast<CXXMethodDecl>(FuncDecl)) {
-    if (Method->isConst()) {
+    if (Method->isConst())
       Stream << " const";
-    }
+    if (Method->isPureVirtual()) 
+      Stream << " = 0";
   }
   return Result; // Convert SmallString to std::string for return
 }
 
-// extract full cl for record declaration
+llvm::SmallString<16> getTypeDefDecl(const TypedefDecl *TypeDef) {
+  llvm::SmallString<16> Result;
+  llvm::raw_svector_ostream Stream(Result);
+  const ASTContext& Ctx = TypeDef->getASTContext();
+  Stream << "typedef ";
+  QualType Q = TypeDef->getUnderlyingType();
+  Q.print(Stream, Ctx.getPrintingPolicy());
+  Stream << " " << TypeDef->getNameAsString();
+  return Result;
+}
+
+llvm::SmallString<16> getTypeAlias(const TypeAliasDecl *Alias) {
+  llvm::SmallString<16> Result;
+  llvm::raw_svector_ostream Stream(Result);
+  const ASTContext& Ctx = Alias->getASTContext();
+  if (const auto *TmplDecl = Alias->getDescribedTemplate()) {
+    getTemplateParameters(TmplDecl->getTemplateParameters(), Stream);
+  }
+  Stream << "using " 
+         << Alias->getNameAsString() 
+         << " = ";
+  QualType Q = Alias->getUnderlyingType();
+  Q.print(Stream, Ctx.getPrintingPolicy());
+  
+  return Result;
+}
+
+// extract full syntax for record declaration
 llvm::SmallString<16> getRecordPrototype(const CXXRecordDecl *CXXRD) {
-  llvm::SmallString<16> ReturnVal;
+  llvm::SmallString<16> Result;
   LangOptions LangOpts;
   PrintingPolicy Policy(LangOpts);
   Policy.SuppressTagKeyword = false;
   Policy.FullyQualifiedName = true;
   Policy.IncludeNewlines = false;
-  llvm::raw_svector_ostream OS(ReturnVal);
+  llvm::raw_svector_ostream OS(Result);
   if (const auto *TD = CXXRD->getDescribedClassTemplate()) {
     OS << "template <";
     bool FirstParam = true;
@@ -166,7 +199,7 @@ llvm::SmallString<16> getRecordPrototype(const CXXRecordDecl *CXXRD) {
       FirstBase = false;
     }
   }
-  return ReturnVal;
+  return Result;
 }
 
 
@@ -574,7 +607,6 @@ static void parseEnumerators(EnumInfo &I, const EnumDecl *D) {
     ASTContext &Context = E->getASTContext();
     if (RawComment *Comment =
             E->getASTContext().getRawCommentForDeclNoCache(E)) {
-      CommentInfo CInfo;
       Comment->setAttached();
       if (comments::FullComment *Fc = Comment->parse(Context, nullptr, E)) {
         EnumValueInfo &Member = I.Members.back();
@@ -719,7 +751,6 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
   I.ReturnType = getTypeInfoForType(D->getReturnType());
   I.ProtoType = getFunctionPrototype(D);
   parseParameters(I, D);
-
   populateTemplateParameters(I.Template, D);
 
   // Handle function template specializations.
@@ -743,7 +774,8 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
 
 static void populateMemberTypeInfo(MemberTypeInfo &I, const FieldDecl *D) {
   assert(D && "Expect non-null FieldDecl in populateMemberTypeInfo");
-
+  if (!D)
+    return;
   ASTContext& Context = D->getASTContext();
   // TODO investigate whether we can use ASTContext::getCommentForDecl instead
   // of this logic. See also similar code in Mapper.cpp.
@@ -752,9 +784,9 @@ static void populateMemberTypeInfo(MemberTypeInfo &I, const FieldDecl *D) {
     return;
 
   Comment->setAttached();
-  if (comments::FullComment *fc = Comment->parse(Context, nullptr, D)) {
+  if (comments::FullComment *Fc = Comment->parse(Context, nullptr, D)) {
     I.Description.emplace_back();
-    parseFullComment(fc, I.Description.back());
+    parseFullComment(Fc, I.Description.back());
   }
 }
 
@@ -952,7 +984,7 @@ std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const TypedefDecl *D, const FullComment *FC, int LineNumber,
          StringRef File, bool IsFileInRootDir, bool PublicOnly) {
   TypedefInfo Info;
-
+  ASTContext& Context = D->getASTContext();
   bool IsInAnonymousNamespace = false;
   populateInfo(Info, D, FC, IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
@@ -960,6 +992,8 @@ emitInfo(const TypedefDecl *D, const FullComment *FC, int LineNumber,
 
   Info.DefLoc.emplace(LineNumber, File, IsFileInRootDir);
   Info.Underlying = getTypeInfoForType(D->getUnderlyingType());
+  Info.TypeDeclaration = getTypeDefDecl(D);
+  
   if (Info.Underlying.Type.Name.empty()) {
     // Typedef for an unnamed type. This is like "typedef struct { } Foo;"
     // The record serializer explicitly checks for this syntax and constructs
@@ -967,7 +1001,13 @@ emitInfo(const TypedefDecl *D, const FullComment *FC, int LineNumber,
     return {};
   }
   Info.IsUsing = false;
-
+  if (RawComment *Comment = D->getASTContext().getRawCommentForDeclNoCache(D)) {
+    Comment->setAttached();
+    if (comments::FullComment *Fc = Comment->parse(Context, nullptr, D)) {
+      Info.Description.emplace_back();
+      parseFullComment(Fc, Info.Description.back());
+    }
+  }
   // Info is wrapped in its parent scope so is returned in the second position.
   return {nullptr, MakeAndInsertIntoParent<TypedefInfo &&>(std::move(Info))};
 }
@@ -978,7 +1018,7 @@ std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const TypeAliasDecl *D, const FullComment *FC, int LineNumber,
          StringRef File, bool IsFileInRootDir, bool PublicOnly) {
   TypedefInfo Info;
-
+  ASTContext& Context = D->getASTContext();
   bool IsInAnonymousNamespace = false;
   populateInfo(Info, D, FC, IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
@@ -986,8 +1026,16 @@ emitInfo(const TypeAliasDecl *D, const FullComment *FC, int LineNumber,
 
   Info.DefLoc.emplace(LineNumber, File, IsFileInRootDir);
   Info.Underlying = getTypeInfoForType(D->getUnderlyingType());
+  Info.TypeDeclaration = getTypeAlias(D);
   Info.IsUsing = true;
-
+  
+  if (RawComment *Comment = D->getASTContext().getRawCommentForDeclNoCache(D)) {
+    Comment->setAttached();
+    if (comments::FullComment *Fc = Comment->parse(Context, nullptr, D)) {
+      Info.Description.emplace_back();
+      parseFullComment(Fc, Info.Description.back());
+    }
+  }
   // Info is wrapped in its parent scope so is returned in the second position.
   return {nullptr, MakeAndInsertIntoParent<TypedefInfo &&>(std::move(Info))};
 }

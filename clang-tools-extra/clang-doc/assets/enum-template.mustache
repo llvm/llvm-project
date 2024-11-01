@@ -40,8 +40,8 @@
     </div>
     {{/EnumComments}}
     {{#Location}}
-    <div>
-        Defined at line {{LineNumber}} of file {{Filename}}
+    <div class="definition">
+        Defined on line {{LineNumber}} at <a href="{{FileURL}}">{{Filename}}</a>
     </div>
     {{/Location}}
 </div>

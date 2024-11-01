@@ -3,25 +3,26 @@
     See https://llvm.org/LICENSE.txt for license information.
     SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
     
-    This file defines the template for functions/methods
+    This file defines the template for type definition
 }}
 <div class="delimiter-container">
     <div id="{{ID}}">
         {{! Function Prototype }}
         <pre>
             <code class="language-cpp code-clang-doc">
-{{&FunctionPrototype}}
+{{TypeDeclaration}};
             </code>
         </pre>
-        {{! Function Comments }}
-        {{#FunctionComments}}
+        {{#TypeDefComments}}
         <div>
             {{>Comments}}
         </div>
-        {{/FunctionComments}}
+        {{/TypeDefComments}}
         {{#Location}}
         <div class="definition">
-            Defined on line {{LineNumber}} at <a href="{{FileURL}}">{{Filename}}</a>
+            <div>
+                Defined on line {{LineNumber}} at <a href="{{FileURL}}">{{Filename}}</a>
+            </div>
         </div>
         {{/Location}}
     </div>

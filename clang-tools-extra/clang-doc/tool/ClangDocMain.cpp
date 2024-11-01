@@ -230,7 +230,6 @@ llvm::Error getMustacheHtmlFiles(const char *Argv0,
   std::string ClangDocPath = getExecutablePath(Argv0, MainAddr);
   llvm::SmallString<128> NativeClangDocPath;
   llvm::sys::path::native(ClangDocPath, NativeClangDocPath);
-  
   llvm::SmallString<128> AssetsPath;
   AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
   llvm::sys::path::append(AssetsPath, "..", "share", "clang-doc");
@@ -247,12 +246,11 @@ llvm::Error getMustacheHtmlFiles(const char *Argv0,
       = appendPathNative(AssetsPath, "function-template.mustache");
   llvm::SmallString<128> CommentTemplate
       = appendPathNative(AssetsPath, "comments-template.mustache");
+  llvm::SmallString<128> TypedefTemplate
+      = appendPathNative(AssetsPath, "typedef-template.mustache");
   llvm::SmallString<128> IndexJS
       = appendPathNative(AssetsPath, "mustache-index.js");
   
-  CDCtx.JsScripts.insert(CDCtx.JsScripts.begin(), IndexJS.c_str());
-  CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
-                               std::string(DefaultStylesheet));
   CDCtx.MustacheTemplates.insert({"namespace-template", 
                                   NamespaceTemplate.c_str()});
   CDCtx.MustacheTemplates.insert({"class-template",
@@ -263,6 +261,11 @@ llvm::Error getMustacheHtmlFiles(const char *Argv0,
                                   FunctionTemplate.c_str()});
   CDCtx.MustacheTemplates.insert({"comments-template", 
                                   CommentTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"typedef-template",
+                                  TypedefTemplate.c_str()});
+  CDCtx.JsScripts.insert(CDCtx.JsScripts.begin(), IndexJS.c_str());
+  CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
+                               std::string(DefaultStylesheet));
   
   return llvm::Error::success();
 }
@@ -428,16 +431,6 @@ Example usage for a project using a compile commands database:
 
   sortUsrToInfo(USRToInfo);
   
-  for (const auto &G : USRToInfo) {
-    const clang::doc::Info& I = *G.getValue();
-    
-    if (I.IT == clang::doc::InfoType::IT_record) {
-      const clang::doc::RecordInfo& R = *static_cast<const clang::doc::RecordInfo *>(&I);
-      llvm::outs() << "Full Name from record " << R.Name << " Full Name: " << R.FullName << "\n";
-    }
-    
-  }
-
   // Ensure the root output directory exists.
   if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory);
       Err != std::error_code()) {

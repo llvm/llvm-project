@@ -19,91 +19,121 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
 </head>
 <body>
-<nav class="navbar">
-    <div class="navbar__container">
-        {{#ProjectName}}
-        <div class="navbar__logo">
-            {{ProjectName}}
-        </div>
-        {{/ProjectName}}
-    </div>
-</nav>
 <main>
     <!-- Sidebar -->
     <div class="container">
         <div class="sidebar">
-            <h2>{{RecordType}} {{Name}}</h2>
             <ul>
-                {{#PublicMembers}}
-                <li class="sidebar-section sidebar-item-container">
-                    <a href="#PublicMethods">Public Members</a>
+
+                <li class="sidebar-section">
+                    <h1>
+                        {{ProjectName}}
+                    </h1>
                 </li>
-                <ul>
-                    {{#Obj}}
-                    <li class="sidebar-item-container">
-                        <a class="sidebar-item" href="#{{Name}}">{{Name}}</a>
-                    </li>
-                    {{/Obj}}
-                </ul>
-                {{/PublicMembers}}
-                {{#ProtectedMembers}}
-                    <li class="sidebar-section">
-                        <a class="sidebar-item" href="#PublicMethods">Protected Members</a>
-                    </li>
+                <li class="sidebar-section">
+                    <h2>
+                        {{RecordType}} {{Name}}
+                    </h2>
+                </li>
+                <!-- Members -->
+                <li class="sidebar-section">
+                    <input type="checkbox" id="members-toggle">
+                    <label for="members-toggle">Members</label>
+                    <ul>
+                        {{#PublicMembers}}
+                        <li class="sidebar-subsection">
+                            <input type="checkbox" id="public-members-toggle">
+                            <label for="public-members-toggle">Public</label>
+                            <ul>
+                                {{#Obj}}
+                                    <li class="sidebar-item-container">
+                                        <a class="sidebar-item" href="#{{Name}}">{{Name}}</a>
+                                    </li>
+                                {{/Obj}}
+                            </ul>
+                        </li>
+                        {{/PublicMembers}}
+                        {{#ProtectedMembers}}
+                        <li class="sidebar-subsection">
+                            <input type="checkbox" id="protected-members-toggle">
+                            <label for="protected-members-toggle">Protected</label>
+                            <ul>
+                                {{#Obj}}
+                                    <li class="sidebar-item-container">
+                                        <a class="sidebar-item" href="#{{Name}}">{{Name}}</a>
+                                    </li>
+                                {{/Obj}}
+                            </ul>
+                        </li>
+                        {{/ProtectedMembers}}
+                    </ul>
+                </li>
+                <!-- Methods -->
+                <li class="sidebar-section">
+                    <input type="checkbox" id="methods-toggle">
+                    <label for="methods-toggle">Methods</label>
+                    <ul>
+                        {{#PublicFunction}}
+                            <li class="sidebar-subsection">
+                                <input type="checkbox" id="public-methods-toggle">
+                                <label for="public-methods-toggle">Public</label>
+                                <ul>
+                                    {{#Obj}}
+                                        <li class="sidebar-item-container">
+                                            <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
+                                        </li>
+                                    {{/Obj}}
+                                </ul>
+                            </li>
+                        {{/PublicFunction}}
+                        {{#ProtectedFunction}}
+                            <li class="sidebar-subsection">
+                                <input type="checkbox" id="protected-methods-toggle">
+                                <label for="protected-methods-toggle">Protected</label>
+                                <ul>
+                                    {{#Obj}}
+                                        <li class="sidebar-item-container">
+                                            <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
+                                        </li>
+                                    {{/Obj}}
+                                </ul>
+                            </li>
+                        {{/ProtectedFunction}}
+                    </ul>
+                </li>
+                <!-- Enums -->
+                {{#Enums}}
+                <li class="sidebar-section">
+                    <input type="checkbox" id="enums-toggle">
+                    <label for="enums-toggle">Enums</label>
                     <ul>
                         {{#Obj}}
                             <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{Name}}">{{Name}}</a>
+                                <a class="sidebar-item" href="#{{ID}}">{{EnumName}}</a>
                             </li>
                         {{/Obj}}
                     </ul>
-                {{/ProtectedMembers}}
-                {{#PublicFunction}}
-                <li class="sidebar-section sidebar-item-container">
-                    <a class="sidebar-item" href="#PublicMethods">Public Method</a>
                 </li>
-                <ul>
-                    {{#Obj}}
-                    <li class="sidebar-item-container">
-                        <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
-                    </li>
-                    {{/Obj}}
-                </ul>
-                {{/PublicFunction}}
-                {{#ProtectedFunction}}
-                <li class="sidebar-section">
-                    <a href="#ProtectedFunction">Protected Method</a>
-                </li>
-                <ul>
-                    {{#Obj}}
-                    <li class="sidebar-item-container">
-                        <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
-                    </li>
-                    {{/Obj}}
-                </ul>
-                {{/ProtectedFunction}}
-                {{#Enums}}
-                <li class="sidebar-section">
-                    <a href="#Enums">Enums</a>
-                </li>
-                <ul>
-                    {{#Obj}}
-                    <li class="sidebar-item-container">
-                        <a class="sidebar-item" href="#{{ID}}">{{EnumName}}</a>
-                    </li>
-                    {{/Obj}}
-                </ul>
                 {{/Enums}}
-                {{#Typedef}}
+                <!-- Typedefs -->
+                {{#Typedefs}}
                 <li class="sidebar-section">
-                    <a href="#ProtectedFunction">Typedef</a>
-                </li>
-                {{/Typedef}}
+                    <input type="checkbox" id="enums-toggle">
+                    <label for="enums-toggle">Typedefs</label>
+                    <ul>
+                        {{#Obj}}
+                        <li class="sidebar-item-container">
+                            <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
+                        </li>
+                        {{/Obj}}
+                    </ul>
+                </li>    
+                {{/Typedefs}}
             </ul>
         </div>
         <div class="resizer" id="resizer"></div>
         <div class="content">
-            <section class="hero section-container">
+            <section id="class" class="hero section-container">
                 <pre>
                     <code class="language-cpp hero__title-large">
 {{&FullName}}
@@ -115,6 +145,11 @@
                     {{>Comments}}
                 </div>
                 {{/RecordComments}}
+                {{#Location}}
+                <div class="definition">
+                    Defined on line {{LineNumber}} at <a href="{{FileURL}}">{{Filename}}</a>
+                </div>    
+                {{/Location}}
             </section>
             {{#PublicMembers}}
             <section id="PublicMembers" class="section-container">
@@ -196,11 +231,16 @@
                 </ul>
             </section>
             {{/Record}}
-            {{#Typedef}}
-            <section class="section-container">
-                <h2 id="Enums">Enums</h2>
+            {{#Typedefs}}
+            <section id="Typedefs" class="section-container">
+                <h2>Typedefs</h2>
+                <div>
+                    {{#Obj}}
+{{>TypedefPartial}}
+                    {{/Obj}}
+                </div>
             </section>
-            {{/Typedef}}
+            {{/Typedefs}}
         </div>
     </div>
 </main>

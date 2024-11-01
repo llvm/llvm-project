@@ -200,6 +200,7 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {TEMPLATE_PARAM_CONTENTS, {"Contents", &StringAbbrev}},
           {TEMPLATE_SPECIALIZATION_OF, {"SpecializationOf", &SymbolIDAbbrev}},
           {TYPEDEF_USR, {"USR", &SymbolIDAbbrev}},
+          {TYPEDEF_DECLARATION, {"Declaration", &StringAbbrev}},
           {TYPEDEF_NAME, {"Name", &StringAbbrev}},
           {TYPEDEF_DEFLOCATION, {"DefLocation", &LocationAbbrev}},
           {TYPEDEF_IS_USING, {"IsUsing", &BoolAbbrev}}};
@@ -235,7 +236,8 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
          {ENUM_VALUE_NAME, ENUM_VALUE_VALUE, ENUM_VALUE_EXPR}},
         // Typedef Block
         {BI_TYPEDEF_BLOCK_ID,
-         {TYPEDEF_USR, TYPEDEF_NAME, TYPEDEF_DEFLOCATION, TYPEDEF_IS_USING}},
+         {TYPEDEF_USR, TYPEDEF_NAME, TYPEDEF_DECLARATION, TYPEDEF_DEFLOCATION, 
+          TYPEDEF_IS_USING}},
         // Namespace Block
         {BI_NAMESPACE_BLOCK_ID,
          {NAMESPACE_USR, NAMESPACE_NAME, NAMESPACE_PATH}},
@@ -430,10 +432,6 @@ void ClangDocBitcodeWriter::emitBlock(const Reference &R, FieldId Field) {
   if (R.USR == EmptySID && R.Name.empty())
     return;
   
-  if (R.Name == "const Shape &") {
-    llvm::outs() << "const Shape & USR: " << 
-                    llvm::toHex(llvm::toStringRef(R.USR)) << "\n";
-  }
   StreamSubBlockGuard Block(Stream, BI_REFERENCE_BLOCK_ID);
   emitRecord(R.USR, REFERENCE_USR);
   emitRecord(R.Name, REFERENCE_NAME);
@@ -454,6 +452,7 @@ void ClangDocBitcodeWriter::emitBlock(const TypedefInfo &T) {
   StreamSubBlockGuard Block(Stream, BI_TYPEDEF_BLOCK_ID);
   emitRecord(T.USR, TYPEDEF_USR);
   emitRecord(T.Name, TYPEDEF_NAME);
+  emitRecord(T.TypeDeclaration, TYPEDEF_DECLARATION);
   for (const auto &N : T.Namespace)
     emitBlock(N, FieldId::F_namespace);
   for (const auto &CI : T.Description)

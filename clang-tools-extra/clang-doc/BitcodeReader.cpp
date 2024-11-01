@@ -234,6 +234,8 @@ llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
   switch (ID) {
   case TYPEDEF_USR:
     return decodeRecord(R, I->USR, Blob);
+  case TYPEDEF_DECLARATION:
+    return decodeRecord(R, I->TypeDeclaration, Blob);
   case TYPEDEF_NAME:
     return decodeRecord(R, I->Name, Blob);
   case TYPEDEF_DEFLOCATION:

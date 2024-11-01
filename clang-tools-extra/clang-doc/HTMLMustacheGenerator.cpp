@@ -25,7 +25,6 @@ void generateIndex(Info *I) {
   switch (I->IT) {
   case InfoType::IT_namespace: {
     const NamespaceInfo& N = *static_cast<clang::doc::NamespaceInfo *>(I);
-    SmallString<16> Name = N.getFileBaseName();
     std::string HexId = llvm::toHex(llvm::toStringRef(N.USR));
     Index[HexId] = HexId;
     for (const EnumInfo& E : N.Children.Enums)
@@ -36,15 +35,12 @@ void generateIndex(Info *I) {
   }
   case InfoType::IT_record: {
     const RecordInfo& R = *static_cast<clang::doc::RecordInfo *>(I);
-    SmallString<16> Name = R.getFileBaseName();
     std::string HexId = llvm::toHex(llvm::toStringRef(R.USR));
     Index[HexId] = HexId;
-    for (const EnumInfo& E : R.Children.Enums) {
+    for (const EnumInfo& E : R.Children.Enums)
       Index[llvm::toHex(llvm::toStringRef(E.USR))] = HexId;
-    }
-    for (const TypedefInfo& T : R.Children.Typedefs) {
+    for (const TypedefInfo& T : R.Children.Typedefs)
       Index[llvm::toHex(llvm::toStringRef(T.USR))] = HexId;
-    }
     break;
   }  
   case InfoType::IT_enum:
@@ -127,10 +123,12 @@ setupTemplateFiles(const clang::doc::ClangDocContext &CDCtx) {
   auto CommentFilePath = CDCtx.MustacheTemplates.lookup("comments-template");
   auto FunctionFilePath = CDCtx.MustacheTemplates.lookup("function-template");
   auto EnumFilePath = CDCtx.MustacheTemplates.lookup("enum-template");
+  auto TypeDefFilePath = CDCtx.MustacheTemplates.lookup("typedef-template");
   std::vector<std::pair<StringRef, StringRef>> Partials = {
       {"Comments", CommentFilePath},
       {"FunctionPartial", FunctionFilePath},
-      {"EnumPartial", EnumFilePath}
+      {"EnumPartial", EnumFilePath},
+      {"TypedefPartial", TypeDefFilePath}
   };
   
   auto Err = setupTemplate(NamespaceTemplate, NamespaceFilePath, Partials);
@@ -152,8 +150,6 @@ MustacheHTMLGenerator::generateDocs(llvm::StringRef RootDir,
                                     const clang::doc::ClangDocContext &CDCtx) {
   if (auto Err = setupTemplateFiles(CDCtx))
     return Err;
-  // Track which directories we already tried to create.
-  llvm::StringSet<> CreatedDirs;
   // Collect all output by file name and create the necessary directories.
   llvm::StringMap<std::vector<doc::Info *>> FileToInfos;
   for (const auto &Group : Infos) {
@@ -182,41 +178,6 @@ MustacheHTMLGenerator::generateDocs(llvm::StringRef RootDir,
   return llvm::Error::success();
 }
 
-Value extractValue(const Location &L, 
-                   std::optional<StringRef> RepositoryUrl = std::nullopt) {
-  Object Obj = Object();
-  Obj.insert({"LineNumber", L.LineNumber});
-  Obj.insert({"Filename", L.Filename});
-  
-  if (!L.IsFileInRootDir || !RepositoryUrl)
-    return Obj;
-  
-  SmallString<128> FileURL(*RepositoryUrl);
-  llvm::sys::path::append(FileURL, llvm::sys::path::Style::posix, L.Filename);
-  FileURL += "#" + std::to_string(L.LineNumber);
-  Obj.insert({"FileURL", FileURL});
-  
-  return Obj;
-}
-
-Value extractValue(const Reference &I, StringRef CurrentDirectory) {
-  llvm::SmallString<64> Path = I.getRelativeFilePath(CurrentDirectory);
-  llvm::sys::path::append(Path, I.getFileBaseName() + ".html");
-  llvm::sys::path::native(Path, llvm::sys::path::Style::posix);
-  Object Obj = Object();
-  Obj.insert({"Link", Path});
-  Obj.insert({"Name", I.Name});
-  Obj.insert({"QualName", I.QualName});
-  Obj.insert({"ID", llvm::toHex(llvm::toStringRef(I.USR))});
-  return Obj;
-}
-
-
-Value extractValue(const TypedefInfo &I) {
-  // Not Supported
-  return nullptr;
-}
-
 Value extractValue(const CommentInfo &I) {
   Object Obj = Object();
   Value Child = Object();
@@ -238,6 +199,7 @@ Value extractValue(const CommentInfo &I) {
   if (I.Kind == "BlockCommandComment") {
     Child.getAsObject()->insert({"Command", I.Name});
     Value ChildArr = Array();
+    
     for (const auto& C: I.Children)
       ChildArr.getAsArray()->emplace_back(extractValue(*C));
     Child.getAsObject()->insert({"Children", ChildArr});
@@ -249,6 +211,56 @@ Value extractValue(const CommentInfo &I) {
   return Obj;
 }
 
+
+Value extractValue(const std::optional<Location> &Loc, 
+                   std::optional<StringRef> RepositoryUrl = std::nullopt) {
+  
+  Object Obj = Object();
+  if (Loc.has_value()) {
+    Location L = *Loc;
+    SmallString<128> Filename(llvm::sys::path::filename(L.Filename));
+    Obj.insert({"LineNumber", L.LineNumber});
+    Obj.insert({"Filename", Filename});
+    if (!RepositoryUrl)
+      return Obj;
+    // This link only works specifically for github
+    SmallString<128> FileURL(*RepositoryUrl);
+    llvm::sys::path::append(FileURL, llvm::sys::path::Style::posix, "blob/main");
+    llvm::sys::path::append(FileURL, llvm::sys::path::Style::posix, L.Filename);
+    FileURL += "#L" + std::to_string(L.LineNumber);
+    Obj.insert({"FileURL", FileURL});
+  }
+  return Obj;
+}
+
+Value extractValue(const Reference &I, StringRef CurrentDirectory) {
+  llvm::SmallString<64> Path = I.getRelativeFilePath(CurrentDirectory);
+  llvm::sys::path::append(Path, I.getFileBaseName() + ".html");
+  llvm::sys::path::native(Path, llvm::sys::path::Style::posix);
+  Object Obj = Object();
+  Obj.insert({"Link", Path});
+  Obj.insert({"Name", I.Name});
+  Obj.insert({"QualName", I.QualName});
+  Obj.insert({"ID", llvm::toHex(llvm::toStringRef(I.USR))});
+  return Obj;
+}
+
+
+Value extractValue(const TypedefInfo &I, const ClangDocContext& CDCtx) {
+  Object Obj = Object();
+  Obj.insert({"ID", llvm::toHex(llvm::toStringRef(I.USR))});
+  Obj.insert({"TypeDeclaration", I.TypeDeclaration});
+  Obj.insert({"Name", I.Name});
+  Obj.insert({"IsAlias", I.IsUsing});
+  Obj.insert({"Location", extractValue(I.DefLoc, CDCtx.RepositoryUrl)});
+  if (!I.Description.empty()) {
+    Value ArrDesc = Array();
+    for (const CommentInfo& Child : I.Description) 
+      ArrDesc.getAsArray()->emplace_back(extractValue(Child));
+    Obj.insert({"TypeDefComments", ArrDesc});
+  }
+  return Obj;
+}
 
 // Function to replace a substring within a SmallString with another SmallString
 void replaceSubstring(llvm::SmallString<256> &Input, 
@@ -383,14 +395,7 @@ Value extractValue(const FunctionInfo &I, StringRef ParentInfoDir,
       ArrDesc.getAsArray()->emplace_back(extractValue(Child));
     Obj.insert({"FunctionComments", ArrDesc});
   }
-  if (I.DefLoc.has_value()) {
-    Location L = *I.DefLoc;
-    if (CDCtx.RepositoryUrl.has_value())
-      Obj.insert({"Location", extractValue(L,
-                                           StringRef{*CDCtx.RepositoryUrl})});
-    else
-      Obj.insert({"Location", extractValue(L)});  
-  }
+  Obj.insert({"Location", extractValue(I.DefLoc, CDCtx.RepositoryUrl)});
   return Obj;
 }
 
@@ -429,16 +434,7 @@ Value extractValue(const EnumInfo &I, const ClangDocContext &CDCtx) {
       ArrDesc.getAsArray()->emplace_back(extractValue(Child));
     Obj.insert({"EnumComments", ArrDesc});
   }
-  
-  if (I.DefLoc.has_value()) {
-    Location L = *I.DefLoc;
-    if (CDCtx.RepositoryUrl.has_value())
-      Obj.insert({"Location", extractValue(L,
-                                           StringRef{*CDCtx.RepositoryUrl})});
-    else
-      Obj.insert({"Location", extractValue(L)});  
-  }
-  
+  Obj.insert({"Location", extractValue(I.DefLoc, CDCtx.RepositoryUrl)});
   return Obj;
 }
 
@@ -493,10 +489,15 @@ void extractScopeChildren(const ScopeChildren &S, Object &Obj,
   
   Value ArrTypedefs = Array();
   for (const TypedefInfo& Child : S.Typedefs) 
-    ArrTypedefs.getAsArray()->emplace_back(extractValue(Child));
+    ArrTypedefs.getAsArray()->emplace_back(extractValue(Child, CDCtx));
   
   if (!ArrTypedefs.getAsArray()->empty())
     Obj.insert({"Typedefs", Object{{"Obj", ArrTypedefs }}});
+  
+  
+  llvm::raw_fd_ostream os(1, false);
+  llvm::json::OStream jStream(os, /*Indent=*/2);
+  jStream.value(ArrTypedefs);
 }
 
 Value extractValue(const NamespaceInfo &I, const ClangDocContext &CDCtx) {
@@ -536,16 +537,7 @@ Value extractValue(const RecordInfo &I, const ClangDocContext &CDCtx) {
                                                          I.VirtualParents)});
   
   RecordValue.insert({"RecordType", getTagType(I.TagType)});
-  
-  if (I.DefLoc.has_value()) {
-    Location L = *I.DefLoc;
-    if (CDCtx.RepositoryUrl.has_value())
-      RecordValue.insert({"Location", extractValue(L,
-                          StringRef{*CDCtx.RepositoryUrl})});
-    else
-      RecordValue.insert({"Location", extractValue(L)});  
-  }
-  
+  RecordValue.insert({"Location", extractValue(I.DefLoc, CDCtx.RepositoryUrl)});
   StringRef BasePath = I.getRelativeFilePath("");
   extractScopeChildren(I.Children, RecordValue, BasePath, CDCtx);
   Value PublicMembers = Array();

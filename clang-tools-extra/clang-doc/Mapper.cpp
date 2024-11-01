@@ -22,9 +22,8 @@ static llvm::StringSet<> USRVisited;
 static llvm::sys::Mutex USRVisitedGuard;
 
 template <typename T> bool isTypedefAnonRecord(const T *D) {
-  if (const auto *C = dyn_cast<CXXRecordDecl>(D)) {
+  if (const auto *C = dyn_cast<CXXRecordDecl>(D))
     return C->getTypedefNameForAnonDecl();
-  }
   return false;
 }
 
@@ -121,6 +120,7 @@ int MapASTVisitor::getLine(const NamedDecl *D,
   return Context.getSourceManager().getPresumedLoc(D->getBeginLoc()).getLine();
 }
 
+
 llvm::SmallString<128> MapASTVisitor::getFile(const NamedDecl *D,
                                               const ASTContext &Context,
                                               llvm::StringRef RootDir,
@@ -128,9 +128,12 @@ llvm::SmallString<128> MapASTVisitor::getFile(const NamedDecl *D,
   llvm::SmallString<128> File(Context.getSourceManager()
                                   .getPresumedLoc(D->getBeginLoc())
                                   .getFilename());
+  llvm::SmallString<128> Result;
   IsFileInRootDir = false;
+  Result = llvm::sys::path::remove_leading_dotslash(File);
+  Result = llvm::SmallString<128>(llvm::sys::path::convert_to_slash(Result));
   if (RootDir.empty() || !File.starts_with(RootDir))
-    return File;
+    return Result;
   IsFileInRootDir = true;
   llvm::SmallString<128> Prefix(RootDir);
   // replace_path_prefix removes the exact prefix provided. The result of
@@ -139,8 +142,9 @@ llvm::SmallString<128> MapASTVisitor::getFile(const NamedDecl *D,
   // ends with a / and the result has the desired format.
   if (!llvm::sys::path::is_separator(Prefix.back()))
     Prefix += llvm::sys::path::get_separator();
-  llvm::sys::path::replace_path_prefix(File, Prefix, "");
-  return File;
+  
+  llvm::sys::path::replace_path_prefix(Result, Prefix, "");
+  return Result;
 }
 
 } // namespace doc

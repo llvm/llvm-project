@@ -422,12 +422,15 @@ struct TypedefInfo : public SymbolInfo {
   void merge(TypedefInfo &&I);
 
   TypeInfo Underlying;
-
-  // Inidicates if this is a new C++ "using"-style typedef:
+  // Underlying type declaration
+  SmallString<16> TypeDeclaration;
+  // Indicates if this is a new C++ "using"-style typedef:
   //   using MyVector = std::vector<int>
   // False means it's a C-style typedef:
   //   typedef std::vector<int> MyVector;
   bool IsUsing = false;
+  
+  std::vector<CommentInfo> Description; 
 };
 
 struct BaseRecordInfo : public RecordInfo {
@@ -465,8 +468,9 @@ struct EnumValueInfo {
   // Stores the user-supplied initialization expression for this enumeration
   // constant. This will be empty for implicit enumeration values.
   SmallString<16> ValueExpr;
-
-  std::vector<CommentInfo> Description; /// Comment description of this field.
+  
+  /// Comment description of this field.
+  std::vector<CommentInfo> Description; 
 };
 
 // TODO: Expand to allow for documenting templating.
