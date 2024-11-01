@@ -270,6 +270,9 @@ def FeatureAMXFP16     : SubtargetFeature<"amx-fp16", "HasAMXFP16", "true",
 def FeatureAMXCOMPLEX : SubtargetFeature<"amx-complex", "HasAMXCOMPLEX", "true",
                                          "Support AMX-COMPLEX instructions",
                                          [FeatureAMXTILE]>;
+def FeatureAMXFP8 : SubtargetFeature<"amx-fp8", "HasAMXFP8", "true",
+                                     "Support AMX-FP8 instructions",
+                                     [FeatureAMXTILE]>;
 def FeatureAMXTRANSPOSE : SubtargetFeature<"amx-transpose", "HasAMXTRANSPOSE", "true",
                                            "Support AMX amx-transpose instructions",
                                            [FeatureAMXTILE]>;
@@ -354,6 +357,8 @@ def FeatureZU : SubtargetFeature<"zu", "HasZU", "true",
 def FeatureUseGPR32InInlineAsm
     : SubtargetFeature<"inline-asm-use-gpr32", "UseInlineAsmGPR32", "true",
                        "Enable use of GPR32 in inline assembly for APX">;
+def FeatureMOVRS   : SubtargetFeature<"movrs", "HasMOVRS", "true",
+                           "Enable MOVRS", []>;
 
 // Ivy Bridge and newer processors have enhanced REP MOVSB and STOSB (aka
 // "string operations"). See "REP String Enhancement" in the Intel Software

@@ -9,11 +9,11 @@
 #ifndef _LIBCPP___LIBCXX_DEBUG_RANDOMIZE_RANGE_H
 #define _LIBCPP___LIBCXX_DEBUG_RANDOMIZE_RANGE_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #ifdef _LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY
-#  include <__algorithm/shuffle.h>
-#  include <__type_traits/is_constant_evaluated.h>
+#  include <__cxx03/__algorithm/shuffle.h>
+#  include <__cxx03/__type_traits/is_constant_evaluated.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

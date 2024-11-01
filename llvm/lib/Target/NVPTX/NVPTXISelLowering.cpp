@@ -949,8 +949,6 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::ProxyReg)
     MAKE_CASE(NVPTXISD::LoadV2)
     MAKE_CASE(NVPTXISD::LoadV4)
-    MAKE_CASE(NVPTXISD::LDGV2)
-    MAKE_CASE(NVPTXISD::LDGV4)
     MAKE_CASE(NVPTXISD::LDUV2)
     MAKE_CASE(NVPTXISD::LDUV4)
     MAKE_CASE(NVPTXISD::StoreV2)
@@ -1337,8 +1335,6 @@ NVPTXTargetLowering::getPreferredVectorAction(MVT VT) const {
   if (!VT.isScalableVector() && VT.getVectorNumElements() != 1 &&
       VT.getScalarType() == MVT::i1)
     return TypeSplitVector;
-  if (Isv2x16VT(VT))
-    return TypeLegal;
   return TargetLoweringBase::getPreferredVectorAction(VT);
 }
 
@@ -2322,32 +2318,33 @@ SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   EVT VT = Op->getValueType(0);
   if (!(Isv2x16VT(VT) || VT == MVT::v4i8))
     return Op;
-
   SDLoc DL(Op);
 
   if (!llvm::all_of(Op->ops(), [](SDValue Operand) {
         return Operand->isUndef() || isa<ConstantSDNode>(Operand) ||
                isa<ConstantFPSDNode>(Operand);
       })) {
+    if (VT != MVT::v4i8)
+      return Op;
     // Lower non-const v4i8 vector as byte-wise constructed i32, which allows us
     // to optimize calculation of constant parts.
-    if (VT == MVT::v4i8) {
-      SDValue C8 = DAG.getConstant(8, DL, MVT::i32);
-      SDValue E01 = DAG.getNode(
-          NVPTXISD::BFI, DL, MVT::i32,
-          DAG.getAnyExtOrTrunc(Op->getOperand(1), DL, MVT::i32),
-          DAG.getAnyExtOrTrunc(Op->getOperand(0), DL, MVT::i32), C8, C8);
-      SDValue E012 =
-          DAG.getNode(NVPTXISD::BFI, DL, MVT::i32,
-                      DAG.getAnyExtOrTrunc(Op->getOperand(2), DL, MVT::i32),
-                      E01, DAG.getConstant(16, DL, MVT::i32), C8);
-      SDValue E0123 =
-          DAG.getNode(NVPTXISD::BFI, DL, MVT::i32,
-                      DAG.getAnyExtOrTrunc(Op->getOperand(3), DL, MVT::i32),
-                      E012, DAG.getConstant(24, DL, MVT::i32), C8);
-      return DAG.getNode(ISD::BITCAST, DL, VT, E0123);
-    }
-    return Op;
+    auto GetPRMT = [&](const SDValue Left, const SDValue Right, bool Cast,
+                       uint64_t SelectionValue) -> SDValue {
+      SDValue L = Left;
+      SDValue R = Right;
+      if (Cast) {
+        L = DAG.getAnyExtOrTrunc(L, DL, MVT::i32);
+        R = DAG.getAnyExtOrTrunc(R, DL, MVT::i32);
+      }
+      return DAG.getNode(
+          NVPTXISD::PRMT, DL, MVT::v4i8,
+          {L, R, DAG.getConstant(SelectionValue, DL, MVT::i32),
+           DAG.getConstant(NVPTX::PTXPrmtMode::NONE, DL, MVT::i32)});
+    };
+    auto PRMT__10 = GetPRMT(Op->getOperand(0), Op->getOperand(1), true, 0x3340);
+    auto PRMT__32 = GetPRMT(Op->getOperand(2), Op->getOperand(3), true, 0x3340);
+    auto PRMT3210 = GetPRMT(PRMT__10, PRMT__32, false, 0x5410);
+    return DAG.getNode(ISD::BITCAST, DL, VT, PRMT3210);
   }
 
   // Get value or the Nth operand as an APInt(32). Undef values treated as 0.
@@ -2378,8 +2375,8 @@ SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   } else {
     llvm_unreachable("Unsupported type");
   }
-  SDValue Const = DAG.getConstant(Value, SDLoc(Op), MVT::i32);
-  return DAG.getNode(ISD::BITCAST, SDLoc(Op), Op->getValueType(0), Const);
+  SDValue Const = DAG.getConstant(Value, DL, MVT::i32);
+  return DAG.getNode(ISD::BITCAST, DL, Op->getValueType(0), Const);
 }
 
 SDValue NVPTXTargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
@@ -4774,26 +4771,6 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
 
     return true;
   }
-  case Intrinsic::nvvm_ldg_global_i:
-  case Intrinsic::nvvm_ldg_global_f:
-  case Intrinsic::nvvm_ldg_global_p: {
-    auto &DL = I.getDataLayout();
-
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    if (Intrinsic == Intrinsic::nvvm_ldg_global_i)
-      Info.memVT = getValueType(DL, I.getType());
-    else if(Intrinsic == Intrinsic::nvvm_ldg_global_p)
-      Info.memVT = getPointerTy(DL);
-    else
-      Info.memVT = getValueType(DL, I.getType());
-    Info.ptrVal = I.getArgOperand(0);
-    Info.offset = 0;
-    Info.flags = MachineMemOperand::MOLoad;
-    Info.align = cast<ConstantInt>(I.getArgOperand(1))->getMaybeAlignValue();
-
-    return true;
-  }
-
   case Intrinsic::nvvm_tex_1d_v4f32_s32:
   case Intrinsic::nvvm_tex_1d_v4f32_f32:
   case Intrinsic::nvvm_tex_1d_level_v4f32_f32:
@@ -6308,9 +6285,6 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
   switch (IntrinNo) {
   default:
     return;
-  case Intrinsic::nvvm_ldg_global_i:
-  case Intrinsic::nvvm_ldg_global_f:
-  case Intrinsic::nvvm_ldg_global_p:
   case Intrinsic::nvvm_ldu_global_i:
   case Intrinsic::nvvm_ldu_global_f:
   case Intrinsic::nvvm_ldu_global_p: {
@@ -6339,37 +6313,11 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
       default:
         return;
       case 2:
-        switch (IntrinNo) {
-        default:
-          return;
-        case Intrinsic::nvvm_ldg_global_i:
-        case Intrinsic::nvvm_ldg_global_f:
-        case Intrinsic::nvvm_ldg_global_p:
-          Opcode = NVPTXISD::LDGV2;
-          break;
-        case Intrinsic::nvvm_ldu_global_i:
-        case Intrinsic::nvvm_ldu_global_f:
-        case Intrinsic::nvvm_ldu_global_p:
-          Opcode = NVPTXISD::LDUV2;
-          break;
-        }
+        Opcode = NVPTXISD::LDUV2;
         LdResVTs = DAG.getVTList(EltVT, EltVT, MVT::Other);
         break;
       case 4: {
-        switch (IntrinNo) {
-        default:
-          return;
-        case Intrinsic::nvvm_ldg_global_i:
-        case Intrinsic::nvvm_ldg_global_f:
-        case Intrinsic::nvvm_ldg_global_p:
-          Opcode = NVPTXISD::LDGV4;
-          break;
-        case Intrinsic::nvvm_ldu_global_i:
-        case Intrinsic::nvvm_ldu_global_f:
-        case Intrinsic::nvvm_ldu_global_p:
-          Opcode = NVPTXISD::LDUV4;
-          break;
-        }
+        Opcode = NVPTXISD::LDUV4;
         EVT ListVTs[] = { EltVT, EltVT, EltVT, EltVT, MVT::Other };
         LdResVTs = DAG.getVTList(ListVTs);
         break;

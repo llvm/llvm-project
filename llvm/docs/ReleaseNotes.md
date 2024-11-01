@@ -88,7 +88,14 @@ Changes to the LLVM IR
   * `llvm.nvvm.ptr.shared.to.gen`
   * `llvm.nvvm.ptr.constant.to.gen`
   * `llvm.nvvm.ptr.local.to.gen`
-  
+
+* Remove the following intrinsics which can be relaced with a load from
+  addrspace(1) with an !invariant.load metadata
+
+  * `llvm.nvvm.ldg.global.i`
+  * `llvm.nvvm.ldg.global.f`
+  * `llvm.nvvm.ldg.global.p`
+
 * Operand bundle values can now be metadata strings.
 
 Changes to LLVM infrastructure
@@ -109,6 +116,9 @@ Changes to the AArch64 Backend
 * `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
   the required alignment space with a sequence of `0x0` bytes (the requested
   fill value) rather than NOPs.
+
+* Assembler/disassembler support has been added for Armv9.6-A (2024)
+  architecture extensions.
 
 Changes to the AMDGPU Backend
 -----------------------------
@@ -168,12 +178,26 @@ Changes to the RISC-V Backend
   means Zve32x and Zve32f will also require Zvl64b. The prior support was
   largely untested.
 * The `Zvbc32e` and `Zvkgs` extensions are now supported experimentally.
-* Added `Smctr` and `Ssctr` extensions.
+* Added `Smctr`, `Ssctr` and `Svvptc` extensions.
 * `-mcpu=syntacore-scr7` was added.
 * The `Zacas` extension is no longer marked as experimental.
+* The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
+  are no longer marked as experimental.
+* The `Sha` extension is now supported.
+* The RVA23U64, RVA23S64, RVB23U64, and RVB23S64 profiles are no longer marked
+  as experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
+
+The default target CPU, "generic", now enables the `-mnontrapping-fptoint`
+and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
+and [Non-trapping float-to-int Conversions] language features, which are
+[widely implemented in engines].
+
+[Bulk Memory Operations]: https://github.com/WebAssembly/bulk-memory-operations/blob/master/proposals/bulk-memory-operations/Overview.md
+[Non-trapping float-to-int Conversions]: https://github.com/WebAssembly/spec/blob/master/proposals/nontrapping-float-to-int-conversion/Overview.md
+[widely implemented in engines]: https://webassembly.org/features/
 
 Changes to the Windows Target
 -----------------------------
@@ -195,6 +219,12 @@ Changes to the X86 Backend
   not expected to result in real-world compatibility problems.
 
 * Support ISA of `AVX10.2-256` and `AVX10.2-512`.
+
+* Supported instructions of `MOVRS AND AVX10.2`
+
+* Supported ISA of `SM4(EVEX)`.
+
+* Supported ISA of `MSR_IMM`.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -267,6 +297,12 @@ Changes to the LLVM tools
 
 Changes to LLDB
 ---------------------------------
+
+* LLDB can now read the `fpmr` register from AArch64 Linux processes and core
+  files.
+
+* Program stdout/stderr redirection will now open the file with O_TRUNC flag, make sure to truncate the file if path already exists.
+  * eg. `settings set target.output-path/target.error-path <path/to/file>`
 
 Changes to BOLT
 ---------------------------------

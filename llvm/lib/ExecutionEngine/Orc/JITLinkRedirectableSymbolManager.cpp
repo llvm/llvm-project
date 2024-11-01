@@ -52,17 +52,18 @@ void JITLinkRedirectableSymbolManager::emitRedirectableSymbols(
     return;
   }
 
+  // FIXME: return stubs to the pool here too.
   if (auto Err = R->replace(absoluteSymbols(NewSymbolDefs))) {
     ES.reportError(std::move(Err));
     R->failMaterialization();
     return;
   }
 
-  auto Err = R->withResourceKeyDo([&](ResourceKey Key) {
-    TrackedResources[Key].insert(TrackedResources[Key].end(), Symbols.begin(),
-                                 Symbols.end());
-  });
-  if (Err) {
+  // FIXME: return stubs to the pool here too.
+  if (auto Err = R->withResourceKeyDo([&](ResourceKey Key) {
+        TrackedResources[Key].insert(TrackedResources[Key].end(),
+                                     Symbols.begin(), Symbols.end());
+      })) {
     ES.reportError(std::move(Err));
     R->failMaterialization();
     return;

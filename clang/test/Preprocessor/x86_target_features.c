@@ -752,6 +752,12 @@
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mno-usermsr -x c -E -dM -o - %s | FileCheck  -check-prefix=NO-USERMSR %s
 // NO-USERMSR-NOT: #define __USERMSR__ 1
 
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mmovrs -x c -E -dM -o - %s | FileCheck  -check-prefix=MOVRS %s
+// MOVRS: #define __MOVRS__ 1
+
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mno-movrs -x c -E -dM -o - %s | FileCheck  -check-prefix=NO-MOVRS %s
+// NO-MOVRS-NOT: #define __MOVRS__ 1
+
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mcrc32 -x c -E -dM -o - %s | FileCheck -check-prefix=CRC32 %s
 
 // CRC32: #define __CRC32__ 1

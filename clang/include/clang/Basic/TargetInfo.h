@@ -263,9 +263,6 @@ protected:
   unsigned HasBuiltinMSVaList : 1;
 
   LLVM_PREFERRED_TYPE(bool)
-  unsigned IsRenderScriptTarget : 1;
-
-  LLVM_PREFERRED_TYPE(bool)
   unsigned HasAArch64SVETypes : 1;
 
   LLVM_PREFERRED_TYPE(bool)
@@ -1030,9 +1027,6 @@ public:
   /// Returns whether or not type \c __builtin_ms_va_list type is
   /// available on this target.
   bool hasBuiltinMSVaList() const { return HasBuiltinMSVaList; }
-
-  /// Returns true for RenderScript.
-  bool isRenderScriptTarget() const { return IsRenderScriptTarget; }
 
   /// Returns whether or not the AArch64 SVE built-in types are
   /// available on this target.
@@ -1858,11 +1852,9 @@ protected:
   }
   virtual ArrayRef<const char *> getGCCRegNames() const = 0;
   virtual ArrayRef<GCCRegAlias> getGCCRegAliases() const = 0;
-  virtual ArrayRef<AddlRegName> getGCCAddlRegNames() const {
-    return std::nullopt;
-  }
+  virtual ArrayRef<AddlRegName> getGCCAddlRegNames() const { return {}; }
 
- private:
+private:
   // Assert the values for the fractional and integral bits for each fixed point
   // type follow the restrictions given in clause 6.2.6.3 of N1169.
   void CheckFixedPointBits() const;

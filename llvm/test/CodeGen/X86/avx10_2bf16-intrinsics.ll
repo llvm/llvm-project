@@ -298,6 +298,7 @@ define i8 @test_int_x86_avx512_fpclass_nepbf16_128(<8 x bfloat> %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_fpclass_nepbf16_128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfpclasspbf16 $2, %xmm0, %k1 # encoding: [0x62,0xf3,0x7f,0x08,0x66,0xc8,0x02]
+; CHECK-NEXT:    # k1 = isPositiveZero(xmm0)
 ; CHECK-NEXT:    vfpclasspbf16 $4, %xmm0, %k0 {%k1} # encoding: [0x62,0xf3,0x7f,0x09,0x66,0xc0,0x04]
 ; CHECK-NEXT:    kmovd %k0, %eax # encoding: [0xc5,0xfb,0x93,0xc0]
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
@@ -313,6 +314,7 @@ define i16 @test_int_x86_avx512_fpclass_nepbf16_256(<16 x bfloat> %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_fpclass_nepbf16_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfpclasspbf16 $2, %ymm0, %k1 # encoding: [0x62,0xf3,0x7f,0x28,0x66,0xc8,0x02]
+; CHECK-NEXT:    # k1 = isPositiveZero(ymm0)
 ; CHECK-NEXT:    vfpclasspbf16 $4, %ymm0, %k0 {%k1} # encoding: [0x62,0xf3,0x7f,0x29,0x66,0xc0,0x04]
 ; CHECK-NEXT:    kmovd %k0, %eax # encoding: [0xc5,0xfb,0x93,0xc0]
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
