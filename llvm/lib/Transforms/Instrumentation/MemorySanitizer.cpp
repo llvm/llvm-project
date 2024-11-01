@@ -3944,19 +3944,33 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  /// Handle intrinsics by applying the intrinsic to the shadows.
-  /// The origin is approximated using setOriginForNaryOp.
+  /// Handle intrinsics by applying the intrinsic to the shadows. The trailing
+  /// arguments are passed verbatim e.g., for an intrinsic with one trailing
+  /// verbatim argument:
+  ///     out = intrinsic(var1, var2, opType)
+  /// we compute:
+  ///     shadow[out] = intrinsic(shadow[var1], shadow[var2], opType)
   ///
   /// For example, this can be applied to the Arm NEON vector table intrinsics
   /// (tbl{1,2,3,4}).
-  void handleIntrinsicByApplyingToShadow(IntrinsicInst &I) {
+  ///
+  /// The origin is approximated using setOriginForNaryOp.
+  void handleIntrinsicByApplyingToShadow(IntrinsicInst &I, unsigned int trailingVerbatimArgs) {
     IRBuilder<> IRB(&I);
+
+    assert (trailingVerbatimArgs < I.arg_size());
 
     SmallVector<Value *, 8> ShadowArgs;
     // Don't use getNumOperands() because it includes the callee
     for (unsigned int i = 0; i < I.arg_size(); i++) {
-      Value *Shadow = getShadow(&I, i);
-      ShadowArgs.append(1, Shadow);
+      if (i < I.arg_size() - trailingVerbatimArgs) {
+        Value *Shadow = getShadow(&I, i);
+        ShadowArgs.append(1, Shadow);
+      } else {
+        Value *Arg = I.getArgOperand(i);
+        insertShadowCheck(Arg, &I);
+        ShadowArgs.append(1, Arg);
+      }
     }
 
     CallInst *CI =
@@ -4358,7 +4372,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_tbx2:
     case Intrinsic::aarch64_neon_tbx3:
     case Intrinsic::aarch64_neon_tbx4: {
-      handleIntrinsicByApplyingToShadow(I);
+      // The last trailing argument (index register) should be handled verbatim
+      handleIntrinsicByApplyingToShadow(I, 1);
       break;
     }
 
