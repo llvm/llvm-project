@@ -632,6 +632,10 @@ static KnownBits computeForSatAddSub(bool Add, bool Signed,
       // we can rule out a direction at least.
       KnownBits UnsignedLHS = LHS;
       KnownBits UnsignedRHS = RHS;
+      // Get version of LHS/RHS with clearer signbit. This allows us to detect
+      // how the addition/subtraction might overflow into the signbit. Then
+      // using the actual known signbits of LHS/RHS, we can figure out which
+      // overflows are/aren't possible.
       UnsignedLHS.One.clearSignBit();
       UnsignedLHS.Zero.setSignBit();
       UnsignedRHS.One.clearSignBit();
