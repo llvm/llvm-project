@@ -8954,7 +8954,7 @@ cc_library(
             "include/mlir/Analysis/*.h",
             "include/mlir/Analysis/*/*.h",
         ],
-    ) + ["include/mlir/Transforms/RegionUtils.h"],
+    ),
     copts = [
         "$(STACK_FRAME_UNLIMITED)",
     ],
