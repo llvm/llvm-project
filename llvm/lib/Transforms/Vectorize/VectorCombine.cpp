@@ -1478,7 +1478,9 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding a shuffled binop: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
                     << "\n");
-  if (NewCost >= OldCost)
+
+  // If costs are equal, still fold as we reduce instruction count.
+  if (NewCost > OldCost)
     return false;
 
   Value *Shuf0 = Builder.CreateShuffleVector(Op00, Op01, NewMask0);
