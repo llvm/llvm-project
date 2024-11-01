@@ -27,11 +27,8 @@ declare i32 @callee_tail(i32 %i)
 
 define i32 @caller_call_tail(i32 %i) nounwind {
 ; MEDIUM-LABEL: caller_call_tail:
-; MEDIUM:         pcaddu18i $a1, %call36(callee_tail)
-; MEDIUM-NEXT:    ld.d {{.*}}
-; MEDIUM-NEXT:    ld.d {{.*}}
-; MEDIUM-NEXT:    addi.d {{.*}}
-; MEDIUM-NEXT:    jr $a1
+; MEDIUM:         pcaddu18i $t8, %call36(callee_tail)
+; MEDIUM-NEXT:    jr $t8
 ;
 ; LARGE-LABEL: caller_call_tail:
 ; LARGE:         pcalau12i [[REG1:\$[a-z0-9]+]], %got_pc_hi20(callee_tail)

@@ -1,5 +1,5 @@
-//These 2 defines only change when switching between data sizes or base types to
-//keep this file manageable.
+// These 2 defines only change when switching between data sizes or base types
+// to keep this file manageable.
 #define __CLC_GENSIZE 8
 #define __CLC_SCALAR_GENTYPE char
 

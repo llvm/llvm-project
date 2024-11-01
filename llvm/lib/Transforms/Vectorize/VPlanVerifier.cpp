@@ -244,14 +244,6 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
     return false;
   }
 
-  VPBlockBase *MiddleBB =
-      IRBB->getPlan()->getVectorLoopRegion()->getSingleSuccessor();
-  if (IRBB != IRBB->getPlan()->getPreheader() &&
-      IRBB->getSinglePredecessor() != MiddleBB) {
-    errs() << "VPIRBasicBlock can only be used as pre-header or a successor of "
-              "middle-block at the moment!\n";
-    return false;
-  }
   return true;
 }
 
@@ -415,12 +407,6 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
               "BranchOnCond VPInstruction\n";
     return false;
   }
-
-  for (const auto &KV : Plan.getLiveOuts())
-    if (KV.second->getNumOperands() != 1) {
-      errs() << "live outs must have a single operand\n";
-      return false;
-    }
 
   return true;
 }
