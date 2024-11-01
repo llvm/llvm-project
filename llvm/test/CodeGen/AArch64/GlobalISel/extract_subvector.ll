@@ -2,10 +2,8 @@
 ; RUN: llc < %s -mtriple aarch64 -mattr=+sve  | FileCheck %s
 ; RUN: llc < %s -mtriple aarch64 -mattr=+sve -global-isel -aarch64-enable-gisel-sve=1 | FileCheck %s
 
-;; RUN: llc -global-isel -mtriple=aarch64-linux-gnu  -mattr=+sve -O0  -aarch64-enable-gisel-sve=1 -stop-after=irtranslator < %s | FileCheck %s
-
-define void @extract_nxv2i32_nxv4i32_1(<vscale x 4 x i32> %arg, ptr %p) {
-; CHECK-LABEL: extract_nxv2i32_nxv4i32_1:
+define void @extract_nxv2i32_nxv4i32(<vscale x 4 x i32> %arg, ptr %p) {
+; CHECK-LABEL: extract_nxv2i32_nxv4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    ptrue p0.d
@@ -16,8 +14,8 @@ define void @extract_nxv2i32_nxv4i32_1(<vscale x 4 x i32> %arg, ptr %p) {
   ret void
 }
 
-define void @extract_nxv4i16_nxv8i16_1(<vscale x 8 x i16> %arg, ptr %p) {
-; CHECK-LABEL: extract_nxv4i16_nxv8i16_1:
+define void @extract_nxv4i16_nxv8i16(<vscale x 8 x i16> %arg, ptr %p) {
+; CHECK-LABEL: extract_nxv4i16_nxv8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    ptrue p0.s
@@ -28,8 +26,8 @@ define void @extract_nxv4i16_nxv8i16_1(<vscale x 8 x i16> %arg, ptr %p) {
   ret void
 }
 
-define void @extract_nxv2i16_nxv8i16_1(<vscale x 8 x i16> %arg, ptr %p) {
-; CHECK-LABEL: extract_nxv2i16_nxv8i16_1:
+define void @extract_nxv2i16_nxv8i16_2(<vscale x 8 x i16> %arg, ptr %p) {
+; CHECK-LABEL: extract_nxv2i16_nxv8i16_2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    ptrue p0.d
