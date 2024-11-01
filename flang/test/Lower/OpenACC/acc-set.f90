@@ -14,7 +14,7 @@ program test_acc_set
 
 !$acc set device_type(*)
 
-!$acc set device_type(0)
+!$acc set device_type(multicore)
 
 end
 
@@ -34,10 +34,8 @@ end
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
 ! CHECK: acc.set device_num(%[[C0]] : i32)
 
-! CHECK: %[[C_1:.*]] = arith.constant -1 : index
-! CHECK: acc.set device_type(%[[C_1]] : index)
+! CHECK: acc.set attributes {device_type = #acc.device_type<*>}
 
-! CHECK: %[[C0:.*]] = arith.constant 0 : i32
-! CHECK: acc.set device_type(%[[C0]] : i32)
+! CHECK: acc.set attributes {device_type = #acc.device_type<multicore>}
 
 

@@ -1400,7 +1400,7 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
     addExportedSymbol(CmdArgs, "_reset_fn_list");
   }
 
-  // Align __llvm_prf_{cnts,data} sections to the maximum expected page
+  // Align __llvm_prf_{cnts,bits,data} sections to the maximum expected page
   // alignment. This allows profile counters to be mmap()'d to disk. Note that
   // it's not enough to just page-align __llvm_prf_cnts: the following section
   // must also be page-aligned so that its data is not clobbered by mmap().
@@ -1410,7 +1410,7 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
   // extra alignment also allows the same binary to be used with/without sync
   // enabled.
   if (!ForGCOV) {
-    for (auto IPSK : {llvm::IPSK_cnts, llvm::IPSK_data}) {
+    for (auto IPSK : {llvm::IPSK_cnts, llvm::IPSK_bitmap, llvm::IPSK_data}) {
       addSectalignToPage(
           Args, CmdArgs, "__DATA",
           llvm::getInstrProfSectionName(IPSK, llvm::Triple::MachO,

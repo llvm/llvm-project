@@ -14,9 +14,11 @@
 #include <__compare/compare_three_way.h>
 #include <__compare/ordering.h>
 #include <__config>
+#include <__exception/exception.h>
 #include <__functional/binary_function.h>
 #include <__functional/operations.h>
 #include <__functional/reference_wrapper.h>
+#include <__fwd/ostream.h>
 #include <__iterator/access.h>
 #include <__memory/addressof.h>
 #include <__memory/allocation_guard.h>
@@ -49,9 +51,7 @@
 #include <__utility/swap.h>
 #include <__verbose_abort>
 #include <cstddef>
-#include <iosfwd>
 #include <new>
-#include <stdexcept>
 #include <typeinfo>
 #if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
 #  include <__atomic/memory_order.h>

@@ -500,7 +500,7 @@ public:
   bool parseAlignment(uint64_t &Alignment);
   bool parseAddrspace(unsigned &Addrspace);
   bool parseSectionID(std::optional<MBBSectionID> &SID);
-  bool parseBBID(std::optional<unsigned> &BBID);
+  bool parseBBID(std::optional<UniqueBBID> &BBID);
   bool parseCallFrameSize(unsigned &CallFrameSize);
   bool parseOperandsOffset(MachineOperand &Op);
   bool parseIRValue(const Value *&V);
@@ -666,14 +666,20 @@ bool MIParser::parseSectionID(std::optional<MBBSectionID> &SID) {
 }
 
 // Parse Machine Basic Block ID.
-bool MIParser::parseBBID(std::optional<unsigned> &BBID) {
+bool MIParser::parseBBID(std::optional<UniqueBBID> &BBID) {
   assert(Token.is(MIToken::kw_bb_id));
   lex();
-  unsigned Value = 0;
-  if (getUnsigned(Value))
+  unsigned BaseID = 0;
+  unsigned CloneID = 0;
+  if (getUnsigned(BaseID))
     return error("Unknown BB ID");
-  BBID = Value;
   lex();
+  if (Token.is(MIToken::IntegerLiteral)) {
+    if (getUnsigned(CloneID))
+      return error("Unknown Clone ID");
+    lex();
+  }
+  BBID = {BaseID, CloneID};
   return false;
 }
 
@@ -705,7 +711,7 @@ bool MIParser::parseBasicBlockDefinition(
   bool IsEHFuncletEntry = false;
   std::optional<MBBSectionID> SectionID;
   uint64_t Alignment = 0;
-  std::optional<unsigned> BBID;
+  std::optional<UniqueBBID> BBID;
   unsigned CallFrameSize = 0;
   BasicBlock *BB = nullptr;
   if (consumeIfPresent(MIToken::lparen)) {

@@ -23,6 +23,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -143,6 +144,19 @@ static bool isValidWorkshareLoopScheduleType(OMPScheduleType SchedType) {
   return true;
 }
 #endif
+
+static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
+  if (T.isAMDGPU()) {
+    StringRef Features =
+        Kernel->getFnAttribute("target-features").getValueAsString();
+    if (Features.count("+wavefrontsize64"))
+      return omp::getAMDGPUGridValues<64>();
+    return omp::getAMDGPUGridValues<32>();
+  }
+  if (T.isNVPTX())
+    return omp::NVPTXGridValues;
+  llvm_unreachable("No grid value available for this architecture!");
+}
 
 /// Determine which scheduling algorithm to use, determined from schedule clause
 /// arguments.
@@ -505,7 +519,6 @@ void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
 
 void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
   LLVMContext &Ctx = Fn.getContext();
-  Triple T(M.getTargetTriple());
 
   // Get the function's current attributes.
   auto Attrs = Fn.getAttributes();
@@ -956,44 +969,6 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
   UI->eraseFromParent();
 
   return Builder.saveIP();
-}
-
-void OpenMPIRBuilder::emitOffloadingEntry(Constant *Addr, StringRef Name,
-                                          uint64_t Size, int32_t Flags,
-                                          StringRef SectionName) {
-  Type *Int8PtrTy = Type::getInt8PtrTy(M.getContext());
-  Type *Int32Ty = Type::getInt32Ty(M.getContext());
-  Type *SizeTy = M.getDataLayout().getIntPtrType(M.getContext());
-
-  Constant *AddrName = ConstantDataArray::getString(M.getContext(), Name);
-
-  // Create the constant string used to look up the symbol in the device.
-  auto *Str =
-      new llvm::GlobalVariable(M, AddrName->getType(), /*isConstant=*/true,
-                               llvm::GlobalValue::InternalLinkage, AddrName,
-                               ".omp_offloading.entry_name");
-  Str->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-
-  // Construct the offloading entry.
-  Constant *EntryData[] = {
-      ConstantExpr::getPointerBitCastOrAddrSpaceCast(Addr, Int8PtrTy),
-      ConstantExpr::getPointerBitCastOrAddrSpaceCast(Str, Int8PtrTy),
-      ConstantInt::get(SizeTy, Size),
-      ConstantInt::get(Int32Ty, Flags),
-      ConstantInt::get(Int32Ty, 0),
-  };
-  Constant *EntryInitializer =
-      ConstantStruct::get(OpenMPIRBuilder::OffloadEntry, EntryData);
-
-  auto *Entry = new GlobalVariable(
-      M, OpenMPIRBuilder::OffloadEntry,
-      /* isConstant = */ true, GlobalValue::WeakAnyLinkage, EntryInitializer,
-      ".omp_offloading.entry." + Name, nullptr, GlobalValue::NotThreadLocal,
-      M.getDataLayout().getDefaultGlobalsAddressSpace());
-
-  // The entry has to be created in the section the linker expects it to be.
-  Entry->setSection(SectionName);
-  Entry->setAlignment(Align(1));
 }
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetKernel(
@@ -4101,25 +4076,43 @@ CallInst *OpenMPIRBuilder::createCachedThreadPrivate(
 }
 
 OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD) {
+OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
+                                  int32_t MinThreadsVal, int32_t MaxThreadsVal,
+                                  int32_t MinTeamsVal, int32_t MaxTeamsVal) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
   Constant *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
-  ConstantInt *IsSPMDVal = ConstantInt::getSigned(
-      IntegerType::getInt8Ty(Int8->getContext()),
-      IsSPMD ? OMP_TGT_EXEC_MODE_SPMD : OMP_TGT_EXEC_MODE_GENERIC);
-  ConstantInt *UseGenericStateMachineVal = ConstantInt::getSigned(
-      IntegerType::getInt8Ty(Int8->getContext()), !IsSPMD);
-  ConstantInt *MayUseNestedParallelismVal =
-      ConstantInt::getSigned(IntegerType::getInt8Ty(Int8->getContext()), true);
-  ConstantInt *DebugIndentionLevelVal =
-      ConstantInt::getSigned(IntegerType::getInt16Ty(Int8->getContext()), 0);
+  Constant *IsSPMDVal = ConstantInt::getSigned(
+      Int8, IsSPMD ? OMP_TGT_EXEC_MODE_SPMD : OMP_TGT_EXEC_MODE_GENERIC);
+  Constant *UseGenericStateMachineVal = ConstantInt::getSigned(Int8, !IsSPMD);
+  Constant *MayUseNestedParallelismVal = ConstantInt::getSigned(Int8, true);
+  Constant *DebugIndentionLevelVal = ConstantInt::getSigned(Int16, 0);
+
+  Function *Kernel = Builder.GetInsertBlock()->getParent();
+
+  // Manifest the launch configuration in the metadata matching the kernel
+  // environment.
+  if (MinTeamsVal > 1 || MaxTeamsVal > 0)
+    writeTeamsForKernel(T, *Kernel, MinTeamsVal, MaxTeamsVal);
+
+  // For max values, < 0 means unset, == 0 means set but unknown.
+  if (MaxThreadsVal < 0)
+    MaxThreadsVal = std::max(
+        int32_t(getGridValue(T, Kernel).GV_Default_WG_Size), MinThreadsVal);
+
+  if (MaxThreadsVal > 0)
+    writeThreadBoundsForKernel(T, *Kernel, MinThreadsVal, MaxThreadsVal);
+
+  Constant *MinThreads = ConstantInt::getSigned(Int32, MinThreadsVal);
+  Constant *MaxThreads = ConstantInt::getSigned(Int32, MaxThreadsVal);
+  Constant *MinTeams = ConstantInt::getSigned(Int32, MinTeamsVal);
+  Constant *MaxTeams = ConstantInt::getSigned(Int32, MaxTeamsVal);
+  Constant *ReductionBufferSize = ConstantInt::getSigned(Int32, 0);
 
   // We need to strip the debug prefix to get the correct kernel name.
-  Function *Kernel = Builder.GetInsertBlock()->getParent();
   StringRef KernelName = Kernel->getName();
   const std::string DebugPrefix = "_debug__";
   if (KernelName.ends_with(DebugPrefix))
@@ -4150,6 +4143,11 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD) {
                                     UseGenericStateMachineVal,
                                     MayUseNestedParallelismVal,
                                     IsSPMDVal,
+                                    MinThreads,
+                                    MaxThreads,
+                                    MinTeams,
+                                    MaxTeams,
+                                    ReductionBufferSize,
                                 });
   Constant *KernelEnvironmentInitializer = ConstantStruct::get(
       KernelEnvironment, {
@@ -4170,7 +4168,9 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD) {
           ? KernelEnvironmentGV
           : ConstantExpr::getAddrSpaceCast(KernelEnvironmentGV,
                                            KernelEnvironmentPtr);
-  CallInst *ThreadKind = Builder.CreateCall(Fn, {KernelEnvironment});
+  Value *KernelLaunchEnvironment = Kernel->getArg(0);
+  CallInst *ThreadKind =
+      Builder.CreateCall(Fn, {KernelEnvironment, KernelLaunchEnvironment});
 
   Value *ExecUserCode = Builder.CreateICmpEQ(
       ThreadKind, ConstantInt::get(ThreadKind->getType(), -1),
@@ -4203,7 +4203,8 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD) {
   return InsertPointTy(UserCodeEntryBB, UserCodeEntryBB->getFirstInsertionPt());
 }
 
-void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc) {
+void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc,
+                                         int32_t TeamsReductionBufferSize) {
   if (!updateToLocation(Loc))
     return;
 
@@ -4211,79 +4212,133 @@ void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc) {
       omp::RuntimeFunction::OMPRTL___kmpc_target_deinit);
 
   Builder.CreateCall(Fn, {});
+
+  if (!TeamsReductionBufferSize)
+    return;
+
+  Function *Kernel = Builder.GetInsertBlock()->getParent();
+  // We need to strip the debug prefix to get the correct kernel name.
+  StringRef KernelName = Kernel->getName();
+  const std::string DebugPrefix = "_debug__";
+  if (KernelName.ends_with(DebugPrefix))
+    KernelName = KernelName.drop_back(DebugPrefix.length());
+  auto *KernelEnvironmentGV =
+      M.getNamedGlobal((KernelName + "_kernel_environment").str());
+  assert(KernelEnvironmentGV && "Expected kernel environment global\n");
+  auto *KernelEnvironmentInitializer = KernelEnvironmentGV->getInitializer();
+  auto *NewInitializer = ConstantFoldInsertValueInstruction(
+      KernelEnvironmentInitializer,
+      ConstantInt::get(Int32, TeamsReductionBufferSize), {0, 7});
+  KernelEnvironmentGV->setInitializer(NewInitializer);
 }
 
-static const omp::GV &getGridValue(Function *Kernel) {
-  if (Kernel->getCallingConv() == CallingConv::AMDGPU_KERNEL) {
-    StringRef Features =
-        Kernel->getFnAttribute("target-features").getValueAsString();
-    if (Features.count("+wavefrontsize64"))
-      return omp::getAMDGPUGridValues<64>();
-    return omp::getAMDGPUGridValues<32>();
+static MDNode *getNVPTXMDNode(Function &Kernel, StringRef Name) {
+  Module &M = *Kernel.getParent();
+  NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
+  for (auto *Op : MD->operands()) {
+    if (Op->getNumOperands() != 3)
+      continue;
+    auto *KernelOp = dyn_cast<ConstantAsMetadata>(Op->getOperand(0));
+    if (!KernelOp || KernelOp->getValue() != &Kernel)
+      continue;
+    auto *Prop = dyn_cast<MDString>(Op->getOperand(1));
+    if (!Prop || Prop->getString() != Name)
+      continue;
+    return Op;
   }
-  if (Triple(Kernel->getParent()->getTargetTriple()).isNVPTX())
+  return nullptr;
+}
 
-    return omp::NVPTXGridValues;
-  llvm_unreachable("No grid value available for this architecture!");
+static void updateNVPTXMetadata(Function &Kernel, StringRef Name, int32_t Value,
+                                bool Min) {
+  // Update the "maxntidx" metadata for NVIDIA, or add it.
+  MDNode *ExistingOp = getNVPTXMDNode(Kernel, Name);
+  if (ExistingOp) {
+    auto *OldVal = dyn_cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
+    int32_t OldLimit = cast<ConstantInt>(OldVal->getValue())->getZExtValue();
+    ExistingOp->replaceOperandWith(
+        2, ConstantAsMetadata::get(ConstantInt::get(
+               OldVal->getValue()->getType(),
+               Min ? std::min(OldLimit, Value) : std::max(OldLimit, Value))));
+  } else {
+    LLVMContext &Ctx = Kernel.getContext();
+    Metadata *MDVals[] = {ConstantAsMetadata::get(&Kernel),
+                          MDString::get(Ctx, Name),
+                          ConstantAsMetadata::get(
+                              ConstantInt::get(Type::getInt32Ty(Ctx), Value))};
+    // Append metadata to nvvm.annotations
+    Module &M = *Kernel.getParent();
+    NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
+    MD->addOperand(MDNode::get(Ctx, MDVals));
+  }
+}
+
+std::pair<int32_t, int32_t>
+OpenMPIRBuilder::readThreadBoundsForKernel(const Triple &T, Function &Kernel) {
+  int32_t ThreadLimit =
+      Kernel.getFnAttributeAsParsedInteger("omp_target_thread_limit");
+
+  if (T.isAMDGPU()) {
+    const auto &Attr = Kernel.getFnAttribute("amdgpu-flat-work-group-size");
+    if (!Attr.isValid() || !Attr.isStringAttribute())
+      return {0, ThreadLimit};
+    auto [LBStr, UBStr] = Attr.getValueAsString().split(',');
+    int32_t LB, UB;
+    if (!llvm::to_integer(UBStr, UB, 10))
+      return {0, ThreadLimit};
+    UB = ThreadLimit ? std::min(ThreadLimit, UB) : UB;
+    if (!llvm::to_integer(LBStr, LB, 10))
+      return {0, UB};
+    return {LB, UB};
+  }
+
+  if (MDNode *ExistingOp = getNVPTXMDNode(Kernel, "maxntidx")) {
+    auto *OldVal = dyn_cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
+    int32_t UB = cast<ConstantInt>(OldVal->getValue())->getZExtValue();
+    return {0, ThreadLimit ? std::min(ThreadLimit, UB) : UB};
+  }
+  return {0, ThreadLimit};
+}
+
+void OpenMPIRBuilder::writeThreadBoundsForKernel(const Triple &T,
+                                                 Function &Kernel, int32_t LB,
+                                                 int32_t UB) {
+  Kernel.addFnAttr("omp_target_thread_limit", std::to_string(UB));
+
+  if (T.isAMDGPU()) {
+    Kernel.addFnAttr("amdgpu-flat-work-group-size",
+                     llvm::utostr(LB) + "," + llvm::utostr(UB));
+    return;
+  }
+
+  updateNVPTXMetadata(Kernel, "maxntidx", UB, true);
+}
+
+std::pair<int32_t, int32_t>
+OpenMPIRBuilder::readTeamBoundsForKernel(const Triple &, Function &Kernel) {
+  // TODO: Read from backend annotations if available.
+  return {0, Kernel.getFnAttributeAsParsedInteger("omp_target_num_teams")};
+}
+
+void OpenMPIRBuilder::writeTeamsForKernel(const Triple &T, Function &Kernel,
+                                          int32_t LB, int32_t UB) {
+  if (T.isNVPTX()) {
+    if (UB > 0)
+      updateNVPTXMetadata(Kernel, "maxclusterrank", UB, true);
+    updateNVPTXMetadata(Kernel, "minctasm", LB, false);
+  }
+  Kernel.addFnAttr("omp_target_num_teams", std::to_string(LB));
 }
 
 void OpenMPIRBuilder::setOutlinedTargetRegionFunctionAttributes(
-    Function *OutlinedFn, int32_t NumTeams, int32_t NumThreads) {
+    Function *OutlinedFn) {
   if (Config.isTargetDevice()) {
     OutlinedFn->setLinkage(GlobalValue::WeakODRLinkage);
     // TODO: Determine if DSO local can be set to true.
     OutlinedFn->setDSOLocal(false);
     OutlinedFn->setVisibility(GlobalValue::ProtectedVisibility);
-    if (Triple(M.getTargetTriple()).isAMDGCN())
+    if (T.isAMDGCN())
       OutlinedFn->setCallingConv(CallingConv::AMDGPU_KERNEL);
-  }
-
-  if (NumTeams > 0)
-    OutlinedFn->addFnAttr("omp_target_num_teams", std::to_string(NumTeams));
-
-  if (NumThreads == -1 && Config.isGPU())
-    NumThreads = getGridValue(OutlinedFn).GV_Default_WG_Size;
-
-  if (NumThreads > 0) {
-    if (OutlinedFn->getCallingConv() == CallingConv::AMDGPU_KERNEL) {
-      OutlinedFn->addFnAttr("amdgpu-flat-work-group-size",
-                            "1," + llvm::utostr(NumThreads));
-    } else {
-      // Update the "maxntidx" metadata for NVIDIA, or add it.
-      NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
-      MDNode *ExistingOp = nullptr;
-      for (auto *Op : MD->operands()) {
-        if (Op->getNumOperands() != 3)
-          continue;
-        auto *Kernel = dyn_cast<ConstantAsMetadata>(Op->getOperand(0));
-        if (!Kernel || Kernel->getValue() != OutlinedFn)
-          continue;
-        auto *Prop = dyn_cast<MDString>(Op->getOperand(1));
-        if (!Prop || Prop->getString() != "maxntidx")
-          continue;
-        ExistingOp = Op;
-        break;
-      }
-      if (ExistingOp) {
-        auto *OldVal = dyn_cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
-        int32_t OldLimit =
-            cast<ConstantInt>(OldVal->getValue())->getZExtValue();
-        ExistingOp->replaceOperandWith(
-            2, ConstantAsMetadata::get(
-                   ConstantInt::get(OldVal->getValue()->getType(),
-                                    std::min(OldLimit, NumThreads))));
-      } else {
-        LLVMContext &Ctx = M.getContext();
-        Metadata *MDVals[] = {ConstantAsMetadata::get(OutlinedFn),
-                              MDString::get(Ctx, "maxntidx"),
-                              ConstantAsMetadata::get(ConstantInt::get(
-                                  Type::getInt32Ty(Ctx), NumThreads))};
-        // Append metadata to nvvm.annotations
-        MD->addOperand(MDNode::get(Ctx, MDVals));
-      }
-    }
-    OutlinedFn->addFnAttr("omp_target_thread_limit",
-                          std::to_string(NumThreads));
   }
 }
 
@@ -4313,9 +4368,8 @@ Constant *OpenMPIRBuilder::createTargetRegionEntryAddr(Function *OutlinedFn,
 
 void OpenMPIRBuilder::emitTargetRegionFunction(
     TargetRegionEntryInfo &EntryInfo,
-    FunctionGenCallback &GenerateFunctionCallback, int32_t NumTeams,
-    int32_t NumThreads, bool IsOffloadEntry, Function *&OutlinedFn,
-    Constant *&OutlinedFnID) {
+    FunctionGenCallback &GenerateFunctionCallback, bool IsOffloadEntry,
+    Function *&OutlinedFn, Constant *&OutlinedFnID) {
 
   SmallString<64> EntryFnName;
   OffloadInfoManager.getTargetRegionEntryFnName(EntryFnName, EntryInfo);
@@ -4335,16 +4389,15 @@ void OpenMPIRBuilder::emitTargetRegionFunction(
           ? std::string(EntryFnName)
           : createPlatformSpecificName({EntryFnName, "region_id"});
 
-  OutlinedFnID = registerTargetRegionFunction(
-      EntryInfo, OutlinedFn, EntryFnName, EntryFnIDName, NumTeams, NumThreads);
+  OutlinedFnID = registerTargetRegionFunction(EntryInfo, OutlinedFn,
+                                              EntryFnName, EntryFnIDName);
 }
 
 Constant *OpenMPIRBuilder::registerTargetRegionFunction(
     TargetRegionEntryInfo &EntryInfo, Function *OutlinedFn,
-    StringRef EntryFnName, StringRef EntryFnIDName, int32_t NumTeams,
-    int32_t NumThreads) {
+    StringRef EntryFnName, StringRef EntryFnIDName) {
   if (OutlinedFn)
-    setOutlinedTargetRegionFunctionAttributes(OutlinedFn, NumTeams, NumThreads);
+    setOutlinedTargetRegionFunctionAttributes(OutlinedFn);
   auto OutlinedFnID = createOutlinedFunctionID(OutlinedFn, EntryFnIDName);
   auto EntryAddr = createTargetRegionEntryAddr(OutlinedFn, EntryFnName);
   OffloadInfoManager.registerTargetRegionEntryInfo(
@@ -4554,6 +4607,11 @@ static Function *createOutlinedFunction(
     OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB) {
   SmallVector<Type *> ParameterTypes;
   if (OMPBuilder.Config.isTargetDevice()) {
+    // Add the "implicit" runtime argument we use to provide launch specific
+    // information for target devices.
+    auto *Int8PtrTy = Type::getInt8PtrTy(Builder.getContext());
+    ParameterTypes.push_back(Int8PtrTy);
+
     // All parameters to target devices are passed as pointers
     // or i64. This assumes 64-bit address spaces/pointers.
     for (auto &Arg : Inputs)
@@ -4597,8 +4655,14 @@ static Function *createOutlinedFunction(
 
   Builder.SetInsertPoint(UserCodeEntryBB->getFirstNonPHIOrDbg());
 
+  // Skip the artificial dyn_ptr on the device.
+  const auto &ArgRange =
+      OMPBuilder.Config.isTargetDevice()
+          ? make_range(Func->arg_begin() + 1, Func->arg_end())
+          : Func->args();
+
   // Rewrite uses of input valus to parameters.
-  for (auto InArg : zip(Inputs, Func->args())) {
+  for (auto InArg : zip(Inputs, ArgRange)) {
     Value *Input = std::get<0>(InArg);
     Argument &Arg = std::get<1>(InArg);
     Value *InputCopy = nullptr;
@@ -4622,8 +4686,7 @@ static Function *createOutlinedFunction(
 static void emitTargetOutlinedFunction(
     OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
     TargetRegionEntryInfo &EntryInfo, Function *&OutlinedFn,
-    Constant *&OutlinedFnID, int32_t NumTeams, int32_t NumThreads,
-    SmallVectorImpl<Value *> &Inputs,
+    Constant *&OutlinedFnID, SmallVectorImpl<Value *> &Inputs,
     OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc,
     OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB) {
 
@@ -4634,9 +4697,8 @@ static void emitTargetOutlinedFunction(
                                       CBFunc, ArgAccessorFuncCB);
       };
 
-  OMPBuilder.emitTargetRegionFunction(EntryInfo, GenerateOutlinedFunction,
-                                      NumTeams, NumThreads, true, OutlinedFn,
-                                      OutlinedFnID);
+  OMPBuilder.emitTargetRegionFunction(EntryInfo, GenerateOutlinedFunction, true,
+                                      OutlinedFn, OutlinedFnID);
 }
 
 static void emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
@@ -4706,8 +4768,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTarget(
   Function *OutlinedFn;
   Constant *OutlinedFnID;
   emitTargetOutlinedFunction(*this, Builder, EntryInfo, OutlinedFn,
-                             OutlinedFnID, NumTeams, NumThreads, Args, CBFunc,
-                             ArgAccessorFuncCB);
+                             OutlinedFnID, Args, CBFunc, ArgAccessorFuncCB);
   if (!Config.isTargetDevice())
     emitTargetCall(*this, Builder, AllocaIP, OutlinedFn, OutlinedFnID, NumTeams,
                    NumThreads, Args, GenMapInfoCB);
@@ -5928,7 +5989,9 @@ void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
                                          GlobalValue::LinkageTypes,
                                          StringRef Name) {
   if (!Config.isGPU()) {
-    emitOffloadingEntry(ID, Name.empty() ? Addr->getName() : Name, Size, Flags);
+    llvm::offloading::emitOffloadingEntry(
+        M, ID, Name.empty() ? Addr->getName() : Name, Size, Flags,
+        "omp_offloading_entries");
     return;
   }
   // TODO: Add support for global variables on the device after declare target
@@ -5951,7 +6014,7 @@ void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
 
   // Add a function attribute for the kernel.
   Fn->addFnAttr(Attribute::get(Ctx, "kernel"));
-  if (Triple(M.getTargetTriple()).isAMDGCN())
+  if (T.isAMDGCN())
     Fn->addFnAttr("uniform-work-group-size", "true");
   Fn->addFnAttr(Attribute::MustProgress);
 }

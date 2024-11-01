@@ -48,7 +48,7 @@ define void @masked_store_v2f32(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
   ret void
 }
 
-define void @masked_store_v4f32(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
+define void @masked_store_v4f32(ptr %ap, ptr %bp) vscale_range(1,0) #0 {
 ; CHECK-LABEL: masked_store_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4

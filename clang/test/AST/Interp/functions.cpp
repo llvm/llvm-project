@@ -350,3 +350,24 @@ namespace PtrReturn {
   }
   static_assert(a() == nullptr, "");
 }
+
+namespace Variadic {
+  struct S { int a; bool b; };
+
+  constexpr void variadic_function(int a, ...) {}
+  constexpr int f1() {
+    variadic_function(1, S{'a', false});
+    return 1;
+  }
+  static_assert(f1() == 1, "");
+
+  constexpr int variadic_function2(...) {
+    return 12;
+  }
+  static_assert(variadic_function2() == 12, "");
+  static_assert(variadic_function2(1, 2, 3, 4, 5) == 12, "");
+  static_assert(variadic_function2(1, variadic_function2()) == 12, "");
+
+  constexpr int (*VFP)(...) = variadic_function2;
+  static_assert(VFP() == 12, "");
+}

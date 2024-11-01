@@ -184,7 +184,7 @@ program openacc_data_validity
   !$acc data copy(aa) wait
   !$acc end data
 
-  !$acc data copy(aa) device_type(1) wait
+  !$acc data copy(aa) device_type(default) wait
   !$acc end data
 
 end program openacc_data_validity

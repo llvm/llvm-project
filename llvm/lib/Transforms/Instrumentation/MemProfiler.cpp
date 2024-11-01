@@ -729,6 +729,12 @@ static void readMemprof(Module &M, Function &F,
     return;
   }
 
+  // Detect if there are non-zero column numbers in the profile. If not,
+  // treat all column numbers as 0 when matching (i.e. ignore any non-zero
+  // columns in the IR). The profiled binary might have been built with
+  // column numbers disabled, for example.
+  bool ProfileHasColumns = false;
+
   // Build maps of the location hash to all profile data with that leaf location
   // (allocation info and the callsites).
   std::map<uint64_t, std::set<const AllocationInfo *>> LocHashToAllocInfo;
@@ -742,6 +748,7 @@ static void readMemprof(Module &M, Function &F,
     // of call stack frames.
     uint64_t StackId = computeStackId(AI.CallStack[0]);
     LocHashToAllocInfo[StackId].insert(&AI);
+    ProfileHasColumns |= AI.CallStack[0].Column;
   }
   for (auto &CS : MemProfRec->CallSites) {
     // Need to record all frames from leaf up to and including this function,
@@ -750,6 +757,7 @@ static void readMemprof(Module &M, Function &F,
     for (auto &StackFrame : CS) {
       uint64_t StackId = computeStackId(StackFrame);
       LocHashToCallSites[StackId].insert(std::make_pair(&CS, Idx++));
+      ProfileHasColumns |= StackFrame.Column;
       // Once we find this function, we can stop recording.
       if (StackFrame.Function == FuncGUID)
         break;
@@ -798,8 +806,8 @@ static void readMemprof(Module &M, Function &F,
         if (Name.empty())
           Name = DIL->getScope()->getSubprogram()->getName();
         auto CalleeGUID = Function::getGUID(Name);
-        auto StackId =
-            computeStackId(CalleeGUID, GetOffset(DIL), DIL->getColumn());
+        auto StackId = computeStackId(CalleeGUID, GetOffset(DIL),
+                                      ProfileHasColumns ? DIL->getColumn() : 0);
         // LeafFound will only be false on the first iteration, since we either
         // set it true or break out of the loop below.
         if (!LeafFound) {

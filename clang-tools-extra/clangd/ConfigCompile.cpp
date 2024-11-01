@@ -324,11 +324,11 @@ struct FragmentCompiler {
 
   void compile(Fragment::IndexBlock &&F) {
     if (F.Background) {
-      if (auto Val = compileEnum<Config::BackgroundPolicy>("Background",
-                                                           **F.Background)
-                         .map("Build", Config::BackgroundPolicy::Build)
-                         .map("Skip", Config::BackgroundPolicy::Skip)
-                         .value())
+      if (auto Val =
+              compileEnum<Config::BackgroundPolicy>("Background", *F.Background)
+                  .map("Build", Config::BackgroundPolicy::Build)
+                  .map("Skip", Config::BackgroundPolicy::Skip)
+                  .value())
         Out.Apply.push_back(
             [Val](const Params &, Config &C) { C.Index.Background = *Val; });
     }
@@ -494,11 +494,31 @@ struct FragmentCompiler {
       diag(Error, "Invalid clang-tidy check name", Arg.Range);
       return;
     }
-    if (!Str.contains('*') && !isRegisteredTidyCheck(Str)) {
-      diag(Warning,
-           llvm::formatv("clang-tidy check '{0}' was not found", Str).str(),
-           Arg.Range);
-      return;
+    if (!Str.contains('*')) {
+      if (!isRegisteredTidyCheck(Str)) {
+        diag(Warning,
+             llvm::formatv("clang-tidy check '{0}' was not found", Str).str(),
+             Arg.Range);
+        return;
+      }
+      auto Fast = isFastTidyCheck(Str);
+      if (!Fast.has_value()) {
+        diag(Warning,
+             llvm::formatv(
+                 "Latency of clang-tidy check '{0}' is not known. "
+                 "It will only run if ClangTidy.FastCheckFilter is Loose or None",
+                 Str)
+                 .str(),
+             Arg.Range);
+      } else if (!*Fast) {
+        diag(Warning,
+             llvm::formatv(
+                 "clang-tidy check '{0}' is slow. "
+                 "It will only run if ClangTidy.FastCheckFilter is None",
+                 Str)
+                 .str(),
+             Arg.Range);
+      }
     }
     CurSpec += ',';
     if (!IsPositive)
@@ -534,6 +554,16 @@ struct FragmentCompiler {
                   StringPair.first, StringPair.second);
           });
     }
+    if (F.FastCheckFilter.has_value())
+      if (auto Val = compileEnum<Config::FastCheckPolicy>("FastCheckFilter",
+                                                          *F.FastCheckFilter)
+                         .map("Strict", Config::FastCheckPolicy::Strict)
+                         .map("Loose", Config::FastCheckPolicy::Loose)
+                         .map("None", Config::FastCheckPolicy::None)
+                         .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Diagnostics.ClangTidy.FastCheckFilter = *Val;
+        });
   }
 
   void compile(Fragment::DiagnosticsBlock::IncludesBlock &&F) {

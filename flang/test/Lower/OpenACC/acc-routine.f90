@@ -96,3 +96,14 @@ subroutine acc_routine12()
   end interface
 
 end subroutine
+
+subroutine acc_routine13()
+  !$acc routine bind(acc_routine14)
+end subroutine
+
+subroutine acc_routine14()
+end subroutine
+
+subroutine acc_routine15()
+  !$acc routine bind(acc_routine16)
+end subroutine

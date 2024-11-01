@@ -155,19 +155,6 @@ public:
   ///     returned.
   const FileSpec &GetFileSpecAtIndex(size_t idx) const;
 
-  /// Get file specification pointer at index.
-  ///
-  /// Gets a file from the file list. The file objects that are returned can
-  /// be tested using FileSpec::operator void*().
-  ///
-  /// \param[in] idx
-  ///     An index into the file list.
-  ///
-  /// \return
-  ///     A pointer to a contained FileSpec object at index \a idx.
-  ///     If \a idx is out of range, then an NULL is returned.
-  const FileSpec *GetFileSpecPointerAtIndex(size_t idx) const;
-
   /// Get the memory cost of this object.
   ///
   /// Return the size in bytes that this object takes in memory. This returns
@@ -212,9 +199,6 @@ public:
     }
     return false;
   }
-
-  static size_t GetFilesMatchingPartialPath(const char *path, bool dir_okay,
-                                            FileSpecList &matches);
 
   const_iterator begin() const { return m_files.begin(); }
   const_iterator end() const { return m_files.end(); }

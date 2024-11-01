@@ -172,6 +172,11 @@ public:
     return varIface ? varIface.isAllocatable() : false;
   }
 
+  bool isPointer() const {
+    auto varIface = getIfVariableInterface();
+    return varIface ? varIface.isPointer() : false;
+  }
+
   // Get the entity as an mlir SSA value containing all the shape, type
   // parameters and dynamic shape information.
   mlir::Value getBase() const { return *this; }
@@ -421,6 +426,29 @@ bool elementalOpMustProduceTemp(hlfir::ElementalOp elemental);
 std::pair<hlfir::Entity, mlir::Value>
 createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
                    hlfir::Entity mold);
+
+hlfir::EntityWithAttributes convertCharacterKind(mlir::Location loc,
+                                                 fir::FirOpBuilder &builder,
+                                                 hlfir::Entity scalarChar,
+                                                 int toKind);
+
+/// Materialize an implicit Fortran type conversion from \p source to \p toType.
+/// This is a no-op if the Fortran category and KIND of \p source are
+/// the same as the one in \p toType. This is also a no-op if \p toType is an
+/// unlimited polymorphic. For characters, this implies that a conversion is
+/// only inserted in case of KIND mismatch (and not in case of length mismatch),
+/// and that the resulting entity length is the same as the one from \p source.
+/// It is valid to call this helper if \p source is an array. If a conversion is
+/// inserted for arrays, a clean-up will be returned. If no conversion is
+/// needed, the source is returned.
+/// Beware that the resulting entity mlir type may not be toType: it will be a
+/// Fortran entity with the same Fortran category and KIND.
+/// If preserveLowerBounds is set, the returned entity will have the same lower
+/// bounds as \p source.
+std::pair<hlfir::Entity, std::optional<hlfir::CleanupFunction>>
+genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
+                      hlfir::Entity source, mlir::Type toType,
+                      bool preserveLowerBounds);
 
 } // namespace hlfir
 

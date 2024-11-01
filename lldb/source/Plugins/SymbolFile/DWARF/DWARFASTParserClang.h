@@ -199,9 +199,6 @@ protected:
                         const lldb_private::plugin::dwarf::DWARFDIE &die,
                         ParsedDWARFTypeAttributes &attrs);
 
-  lldb_private::Type *
-  GetTypeForDIE(const lldb_private::plugin::dwarf::DWARFDIE &die);
-
   clang::Decl *
   GetClangDeclForDIE(const lldb_private::plugin::dwarf::DWARFDIE &die);
 
@@ -247,6 +244,10 @@ protected:
   // module.
   lldb::ModuleSP
   GetModuleForType(const lldb_private::plugin::dwarf::DWARFDIE &die);
+
+  static bool classof(const DWARFASTParser *Parser) {
+    return Parser->GetKind() == Kind::DWARFASTParserClang;
+  }
 
 private:
   struct FieldInfo {

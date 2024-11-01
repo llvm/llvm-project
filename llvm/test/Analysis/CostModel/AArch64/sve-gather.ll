@@ -105,9 +105,27 @@ define void @masked_gathers_no_vscale_range() #2 {
   ret void
 }
 
+define <2 x i128> @masked_gather_v1i128(<2 x ptr> %ld, <2 x i1> %masks, <2 x i128> %passthru) #3 {
+; CHECK-LABEL: 'masked_gather_v1i128'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res = call <2 x i128> @llvm.masked.gather.v2i128.v2p0(<2 x ptr> %ld, i32 0, <2 x i1> %masks, <2 x i128> %passthru)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i128> %res
+;
+; CHECK-VSCALE-2-LABEL: 'masked_gather_v1i128'
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res = call <2 x i128> @llvm.masked.gather.v2i128.v2p0(<2 x ptr> %ld, i32 0, <2 x i1> %masks, <2 x i128> %passthru)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i128> %res
+;
+; CHECK-VSCALE-1-LABEL: 'masked_gather_v1i128'
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res = call <2 x i128> @llvm.masked.gather.v2i128.v2p0(<2 x ptr> %ld, i32 0, <2 x i1> %masks, <2 x i128> %passthru)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i128> %res
+;
+  %res = call <2 x i128> @llvm.masked.gather.v2i128.v2p0(<2 x ptr> %ld, i32 0, <2 x i1> %masks, <2 x i128> %passthru)
+  ret <2 x i128> %res
+}
+
 attributes #0 = { "target-features"="+sve" vscale_range(1, 8) }
 attributes #1 = { "target-features"="+sve" vscale_range(1, 16) "tune-cpu"="generic" }
 attributes #2 = { "target-features"="+sve" }
+attributes #3 = { "target-features"="+sve" vscale_range(2, 2) }
 
 declare <vscale x 4 x i32> @llvm.masked.gather.nxv4i32(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x i32>)
 declare <vscale x 8 x i32> @llvm.masked.gather.nxv8i32(<vscale x 8 x ptr>, i32, <vscale x 8 x i1>, <vscale x 8 x i32>)
@@ -120,3 +138,4 @@ declare <vscale x 2 x float> @llvm.masked.gather.nxv2f32(<vscale x 2 x ptr>, i32
 declare <vscale x 16 x i16> @llvm.masked.gather.nxv16i16(<vscale x 16 x ptr>, i32, <vscale x 16 x i1>, <vscale x 16 x i16>)
 declare <vscale x 8 x i16> @llvm.masked.gather.nxv8i16(<vscale x 8 x ptr>, i32, <vscale x 8 x i1>, <vscale x 8 x i16>)
 declare <vscale x 4 x i16> @llvm.masked.gather.nxv4i16(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x i16>)
+declare <2 x i128> @llvm.masked.gather.v2i128.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i128>)

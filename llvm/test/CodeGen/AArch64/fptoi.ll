@@ -2260,12 +2260,8 @@ define <16 x i8> @fptou_v16f32_v16i8(<16 x float> %a) {
 ; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
 ; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-NEXT:    xtn v3.4h, v3.4s
-; CHECK-NEXT:    xtn v2.4h, v2.4s
-; CHECK-NEXT:    xtn v1.4h, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    mov v2.d[1], v3.d[0]
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -2315,20 +2311,12 @@ define <32 x i8> @fptou_v32f32_v32i8(<32 x float> %a) {
 ; CHECK-NEXT:    fcvtzs v6.4s, v6.4s
 ; CHECK-NEXT:    fcvtzs v5.4s, v5.4s
 ; CHECK-NEXT:    fcvtzs v4.4s, v4.4s
-; CHECK-NEXT:    xtn v3.4h, v3.4s
-; CHECK-NEXT:    xtn v2.4h, v2.4s
-; CHECK-NEXT:    xtn v1.4h, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    xtn v7.4h, v7.4s
-; CHECK-NEXT:    xtn v6.4h, v6.4s
-; CHECK-NEXT:    xtn v5.4h, v5.4s
-; CHECK-NEXT:    xtn v4.4h, v4.4s
-; CHECK-NEXT:    mov v2.d[1], v3.d[0]
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-NEXT:    mov v6.d[1], v7.d[0]
-; CHECK-NEXT:    mov v4.d[1], v5.d[0]
+; CHECK-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    uzp1 v1.8h, v6.8h, v7.8h
+; CHECK-NEXT:    uzp1 v3.8h, v4.8h, v5.8h
 ; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    uzp1 v1.16b, v4.16b, v6.16b
+; CHECK-NEXT:    uzp1 v1.16b, v3.16b, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %c = fptoui <32 x float> %a to <32 x i8>

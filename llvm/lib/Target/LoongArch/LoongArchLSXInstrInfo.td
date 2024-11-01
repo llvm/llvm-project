@@ -1494,7 +1494,7 @@ def : Pat<(loongarch_vreplve v2i64:$vj, GRLenVT:$rk),
           (VREPLVE_D v2i64:$vj, GRLenVT:$rk)>;
 
 // Loads/Stores
-foreach vt = [v16i8, v8i16, v4i32, v2i64] in {
+foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
   defm : LdPat<load, VLD, vt>;
   def  : RegRegLdPat<load, VLDX, vt>;
   defm : StPat<store, VST, LSX128, vt>;

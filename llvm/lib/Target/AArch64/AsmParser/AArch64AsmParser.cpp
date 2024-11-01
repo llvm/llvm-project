@@ -3638,6 +3638,9 @@ static const struct Extension {
     {"sb", {AArch64::FeatureSB}},
     {"ssbs", {AArch64::FeatureSSBS}},
     {"tme", {AArch64::FeatureTME}},
+    {"fpmr", {AArch64::FeatureFPMR}},
+    {"fp8", {AArch64::FeatureFP8}},
+    {"faminmax", {AArch64::FeatureFAMINMAX}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -7488,7 +7491,7 @@ bool AArch64AsmParser::parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   // Look for '_sym@AUTH' ...
   if (Tok.is(AsmToken::Identifier) && Tok.getIdentifier().endswith("@AUTH")) {
     StringRef SymName = Tok.getIdentifier().drop_back(strlen("@AUTH"));
-    if (SymName.find('@') != StringRef::npos)
+    if (SymName.contains('@'))
       return TokError(
           "combination of @AUTH with other modifiers not supported");
     Res = MCSymbolRefExpr::create(Ctx.getOrCreateSymbol(SymName), Ctx);

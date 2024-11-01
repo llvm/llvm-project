@@ -4,7 +4,7 @@
 define void @sdiv129(ptr %ptr, ptr %out) nounwind {
 ; CHECK-LABEL: @sdiv129(
 ; CHECK-NEXT:  _udiv-special-cases:
-; CHECK-NEXT:    [[A:%.*]] = load i129, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[A:%.*]] = load i129, ptr [[PTR:%.*]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = freeze i129 [[A]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i129 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr i129 [[TMP0]], 128
@@ -66,7 +66,7 @@ define void @sdiv129(ptr %ptr, ptr %out) nounwind {
 ; CHECK-NEXT:    [[TMP48:%.*]] = phi i129 [ [[TMP25]], [[UDIV_LOOP_EXIT]] ], [ [[TMP20]], [[_UDIV_SPECIAL_CASES:%.*]] ]
 ; CHECK-NEXT:    [[TMP49:%.*]] = xor i129 [[TMP48]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP50:%.*]] = sub i129 [[TMP49]], [[TMP8]]
-; CHECK-NEXT:    store i129 [[TMP50]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    store i129 [[TMP50]], ptr [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %a = load i129, ptr %ptr

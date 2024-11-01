@@ -427,7 +427,7 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 # define __cpp_lib_forward_like                         202207L
 # define __cpp_lib_invoke_r                             202106L
 # define __cpp_lib_is_scoped_enum                       202011L
-// # define __cpp_lib_mdspan                               202207L
+# define __cpp_lib_mdspan                               202207L
 // # define __cpp_lib_move_only_function                   202110L
 # undef  __cpp_lib_optional
 # define __cpp_lib_optional                             202110L

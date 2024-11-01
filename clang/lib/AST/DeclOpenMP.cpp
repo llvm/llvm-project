@@ -104,7 +104,7 @@ OMPDeclareReductionDecl::OMPDeclareReductionDecl(
     QualType Ty, OMPDeclareReductionDecl *PrevDeclInScope)
     : ValueDecl(DK, DC, L, Name, Ty), DeclContext(DK), Combiner(nullptr),
       PrevDeclInScope(PrevDeclInScope) {
-  setInitializer(nullptr, CallInit);
+  setInitializer(nullptr, OMPDeclareReductionInitKind::Call);
 }
 
 void OMPDeclareReductionDecl::anchor() {}

@@ -1965,7 +1965,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; VI-NEXT:    v_mul_lo_u32 v2, s8, v4
 ; VI-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], s8, v5, 0
 ; VI-NEXT:    v_mul_lo_u32 v3, s9, v5
-; VI-NEXT:    v_add_u32_e32 v1, vcc, v2, v1
+; VI-NEXT:    v_add_u32_e32 v1, vcc, v1, v2
 ; VI-NEXT:    v_add_u32_e32 v3, vcc, v1, v3
 ; VI-NEXT:    v_mul_hi_u32 v6, v5, v0
 ; VI-NEXT:    v_mad_u64_u32 v[1:2], s[0:1], v5, v3, 0

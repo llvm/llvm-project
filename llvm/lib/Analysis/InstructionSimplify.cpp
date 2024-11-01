@@ -2736,13 +2736,6 @@ static Constant *computePointerICmp(CmpInst::Predicate Pred, Value *LHS,
   const TargetLibraryInfo *TLI = Q.TLI;
   const DominatorTree *DT = Q.DT;
   const Instruction *CxtI = Q.CxtI;
-  const InstrInfoQuery &IIQ = Q.IIQ;
-
-  // A non-null pointer is not equal to a null pointer.
-  if (isa<ConstantPointerNull>(RHS) && ICmpInst::isEquality(Pred) &&
-      llvm::isKnownNonZero(LHS, DL, 0, nullptr, nullptr, nullptr,
-                           IIQ.UseInstrInfo))
-    return ConstantInt::get(getCompareTy(LHS), !CmpInst::isTrueWhenEqual(Pred));
 
   // We can only fold certain predicates on pointer comparisons.
   switch (Pred) {
@@ -4443,8 +4436,15 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   // TODO: This may be unsound, because it only catches some forms of
   // refinement.
   if (!AllowRefinement) {
-    if (canCreatePoison(cast<Operator>(I), !DropFlags))
-      return nullptr;
+    if (canCreatePoison(cast<Operator>(I), !DropFlags)) {
+      // abs cannot create poison if the value is known to never be int_min.
+      if (auto *II = dyn_cast<IntrinsicInst>(I);
+          II && II->getIntrinsicID() == Intrinsic::abs) {
+        if (!ConstOps[0]->isNotMinSignedValue())
+          return nullptr;
+      } else
+        return nullptr;
+    }
     Constant *Res = ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI);
     if (DropFlags && Res && I->hasPoisonGeneratingFlagsOrMetadata())
       DropFlags->push_back(I);

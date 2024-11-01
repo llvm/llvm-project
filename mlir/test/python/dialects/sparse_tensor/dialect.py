@@ -30,9 +30,9 @@ def testEncodingAttr1D():
 
         # CHECK: lvl_types: [<DimLevelType.compressed: 8>]
         print(f"lvl_types: {casted.lvl_types}")
-        # CHECK: dim_to_lvl: None
+        # CHECK: dim_to_lvl: (d0) -> (d0)
         print(f"dim_to_lvl: {casted.dim_to_lvl}")
-        # CHECK: lvl_to_dim: None
+        # CHECK: lvl_to_dim: (d0) -> (d0)
         print(f"lvl_to_dim: {casted.lvl_to_dim}")
         # CHECK: pos_width: 16
         print(f"pos_width: {casted.pos_width}")

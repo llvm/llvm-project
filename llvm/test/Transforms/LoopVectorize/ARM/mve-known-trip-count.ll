@@ -387,10 +387,10 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; Larger example with predication that should also not be vectorized
-; CHECK-LABEL: predicated
+; CHECK-LABEL: predicated_test
 ; CHECK: LV: Selecting VF: 1
 ; CHECK: LV: Selecting VF: 1
-define dso_local i32 @predicated(i32 noundef %0, ptr %glob) #0 {
+define dso_local i32 @predicated_test(i32 noundef %0, ptr %glob) #0 {
   %2 = alloca [101 x i32], align 4
   %3 = alloca [21 x i32], align 4
   call void @llvm.lifetime.start.p0(i64 404, ptr nonnull %2)

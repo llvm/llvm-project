@@ -205,7 +205,7 @@ void PlatformLinux::CalculateTrapHandlerSymbolNames() {
   m_trap_handlers.push_back(ConstString("__restore_rt"));
 }
 
-static lldb::UnwindPlanSP GetAArch64TrapHanlderUnwindPlan(ConstString name) {
+static lldb::UnwindPlanSP GetAArch64TrapHandlerUnwindPlan(ConstString name) {
   UnwindPlanSP unwind_plan_sp;
   if (name != "__kernel_rt_sigreturn")
     return unwind_plan_sp;
@@ -290,7 +290,7 @@ lldb::UnwindPlanSP
 PlatformLinux::GetTrapHandlerUnwindPlan(const llvm::Triple &triple,
                                         ConstString name) {
   if (triple.isAArch64())
-    return GetAArch64TrapHanlderUnwindPlan(name);
+    return GetAArch64TrapHandlerUnwindPlan(name);
 
   return {};
 }

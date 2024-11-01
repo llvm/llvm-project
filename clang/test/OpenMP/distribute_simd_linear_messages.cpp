@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -DOMP52 %s -Wno-openmp-mapping -Wuninitialized
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -DOMP52 %s -Wno-openmp-mapping -Wuninitialized
 
 extern int omp_default_mem_alloc;
 
@@ -322,6 +324,33 @@ int main(int argc, char **argv) {
     #pragma omp teams
     #pragma omp distribute simd linear(k : 4)
       for (k = 0; k < argc; k+=4) { }
+
+#ifdef OMP52
+    #pragma omp target
+    #pragma omp teams
+    #pragma omp distribute simd linear(k: step() //omp52-error 2 {{expected expression}} omp52-error{{expected ')'}} omp52-note{{to match this '('}}
+      for (k = 0; k < argc; ++k) ++k;
+    #pragma omp target
+    #pragma omp teams
+    #pragma omp distribute simd linear(k: step(1), step(2)) // omp52-error {{multiple 'step size' found in linear clause}}
+      for (k = 0; k < argc; ++k) ++k;
+    #pragma omp target
+    #pragma omp teams
+    #pragma omp distribute simd linear(k: val, val) // omp52-error {{multiple 'linear modifier' found in linear clause}}
+      for (k = 0; k < argc; ++k) ++k;
+    #pragma omp target
+    #pragma omp teams
+    #pragma omp distribute simd linear(k: step()) // omp52-error 2 {{expected expression}}
+      for (k = 0; k < argc; ++k) ++k;
+    #pragma omp target
+    #pragma omp teams
+    #pragma omp distribute simd linear(k: pval) // omp52-error {{use of undeclared identifier 'pval'}}
+      for (k = 0; k < argc; ++k) ++k;
+    #pragma omp target
+    #pragma omp teams
+    #pragma omp distribute simd linear(i: val, step(2 // omp52-error {{expected ')' or ',' after 'step expression'}} omp52-error 2 {{expected ')'}}  omp52-note 2 {{to match this '('}}
+      for (i = 0; i < argc; ++i) ++i;
+#endif
   }
 
   foomain<int,char>(argc,argv); // expected-note {{in instantiation of function template specialization 'foomain<int, char>' requested here}}

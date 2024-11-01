@@ -220,3 +220,19 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
                 "sync tag check fault"
             ],
         )
+
+    @skipIfLLVMTargetMissing("AArch64")
+    def test_mte_ctrl_register(self):
+        """Test that we correctly report the mte_ctrl register"."""
+        # The register is present even if MTE is not used in the current process
+        # and also on targets without MTE, because it controls parts of the
+        # overall tagged address ABI as well.
+        self.runCmd("target create --core core.nomte")
+        self.expect("register read mte_ctrl", substrs=["mte_ctrl = 0x0000000000000000"])
+
+        self.runCmd("target create --core core.mte")
+        # The expected value is:
+        # * Allowed tags value of 0xFFFF, shifted up by 3 resulting in 0x7fff8.
+        # * Bit 1 set to enable synchronous tag faults.
+        # * Bit 0 set to enable the tagged address ABI.
+        self.expect("register read mte_ctrl", substrs=["mte_ctrl = 0x000000000007fffb"])

@@ -29,16 +29,6 @@ func.func @print_i8s(%bytes: memref<?xi8>, %len: index) {
   return
 }
 
-llvm.func @printCString(!llvm.ptr<i8>)
-
-func.func @print_str(%str: !llvm.ptr<array<17 x i8>>) {
-  %c0 = llvm.mlir.constant(0 : index) : i64
-  %str_bytes = llvm.getelementptr %str[%c0, %c0]
-    : (!llvm.ptr<array<17 x i8>>, i64, i64) -> !llvm.ptr<i8>
-  llvm.call @printCString(%str_bytes) : (!llvm.ptr<i8>) -> ()
-  return
-}
-
 func.func @vector_copy_i128(%src: memref<?x?xi128>, %dst: memref<?x?xi128>) {
   %c0 = arith.constant 0 : index
   %tile = vector.load %src[%c0, %c0] : memref<?x?xi128>, vector<[1]x[1]xi128>
@@ -80,13 +70,13 @@ func.func @test_load_store_zaq0() {
 
   // CHECK-LABEL: INITIAL TILE A:
   // CHECK: ( 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 )
-  func.call @print_str(%init_a_str) : (!llvm.ptr<array<17 x i8>>) -> ()
+  vector.print str "INITIAL TILE A:"
   func.call @print_i8s(%tile_a_bytes, %zaq_size_bytes) : (memref<?xi8>, index) -> ()
   vector.print punctuation <newline>
 
   // CHECK-LABEL: INITIAL TILE B:
   // CHECK: ( 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64 )
-  func.call @print_str(%init_b_str) : (!llvm.ptr<array<17 x i8>>) -> ()
+  vector.print str "INITIAL TILE B:"
   func.call @print_i8s(%tile_b_bytes, %zaq_size_bytes) : (memref<?xi8>, index) -> ()
   vector.print punctuation <newline>
 
@@ -95,19 +85,14 @@ func.func @test_load_store_zaq0() {
 
   // CHECK-LABEL: FINAL TILE A:
   // CHECK: ( 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 )
-  func.call @print_str(%final_a_str) : (!llvm.ptr<array<17 x i8>>) -> ()
+  vector.print str "FINAL TILE A:"
   func.call @print_i8s(%tile_a_bytes, %zaq_size_bytes) : (memref<?xi8>, index) -> ()
   vector.print punctuation <newline>
 
   // CHECK-LABEL: FINAL TILE B:
   // CHECK: ( 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 )
-  func.call @print_str(%final_b_str) : (!llvm.ptr<array<17 x i8>>) -> ()
+  vector.print str "FINAL TILE B:"
   func.call @print_i8s(%tile_b_bytes, %zaq_size_bytes) : (memref<?xi8>, index) -> ()
 
   return
 }
-
-llvm.mlir.global internal constant @init_tile_a ("INITIAL TILE A:\0A\00")
-llvm.mlir.global internal constant @init_tile_b ("INITIAL TILE B:\0A\00")
-llvm.mlir.global internal constant @final_tile_a("  FINAL TILE A:\0A\00")
-llvm.mlir.global internal constant @final_tile_b("  FINAL TILE B:\0A\00")

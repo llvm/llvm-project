@@ -2126,3 +2126,73 @@ define <2 x i8> @ashr_vec_or6_fail(<2 x i8> %x, <2 x i8> %c) {
   %y = ashr <2 x i8> %x, %amt
   ret <2 x i8> %y
 }
+
+define i16 @lshr_and_not_demanded(i8 %x) {
+; CHECK-LABEL: @lshr_and_not_demanded(
+; CHECK-NEXT:    [[Y_EXT:%.*]] = sext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i16 [[Y_EXT]], 1
+; CHECK-NEXT:    ret i16 [[SHR]]
+;
+  %y = and i8 %x, -2
+  %y.ext = sext i8 %y to i16
+  %shr = lshr i16 %y.ext, 1
+  ret i16 %shr
+}
+
+define i16 @lshr_exact_and_not_demanded(i8 %x) {
+; CHECK-LABEL: @lshr_exact_and_not_demanded(
+; CHECK-NEXT:    [[Y_EXT:%.*]] = sext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i16 [[Y_EXT]], 1
+; CHECK-NEXT:    ret i16 [[SHR]]
+;
+  %y = and i8 %x, -2
+  %y.ext = sext i8 %y to i16
+  %shr = lshr exact i16 %y.ext, 1
+  ret i16 %shr
+}
+
+define i16 @lshr_and_demanded(i8 %x) {
+; CHECK-LABEL: @lshr_and_demanded(
+; CHECK-NEXT:    [[Y:%.*]] = and i8 [[X:%.*]], -4
+; CHECK-NEXT:    [[Y_EXT:%.*]] = sext i8 [[Y]] to i16
+; CHECK-NEXT:    [[SHR:%.*]] = lshr exact i16 [[Y_EXT]], 1
+; CHECK-NEXT:    ret i16 [[SHR]]
+;
+  %y = and i8 %x, -4
+  %y.ext = sext i8 %y to i16
+  %shr = lshr i16 %y.ext, 1
+  ret i16 %shr
+}
+
+define i16 @ashr_umax_not_demanded(i16 %x) {
+; CHECK-LABEL: @ashr_umax_not_demanded(
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i16 [[X:%.*]], 1
+; CHECK-NEXT:    ret i16 [[SHR]]
+;
+  %y = call i16 @llvm.umax.i16(i16 %x, i16 1)
+  %shr = ashr i16 %y, 1
+  ret i16 %shr
+}
+
+define i16 @ashr_exact_umax_not_demanded(i16 %x) {
+; CHECK-LABEL: @ashr_exact_umax_not_demanded(
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i16 [[X:%.*]], 1
+; CHECK-NEXT:    ret i16 [[SHR]]
+;
+  %y = call i16 @llvm.umax.i16(i16 %x, i16 1)
+  %shr = ashr exact i16 %y, 1
+  ret i16 %shr
+}
+
+define i16 @ashr_umax_demanded(i16 %x) {
+; CHECK-LABEL: @ashr_umax_demanded(
+; CHECK-NEXT:    [[Y:%.*]] = call i16 @llvm.umax.i16(i16 [[X:%.*]], i16 2)
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i16 [[Y]], 1
+; CHECK-NEXT:    ret i16 [[SHR]]
+;
+  %y = call i16 @llvm.umax.i16(i16 %x, i16 2)
+  %shr = ashr i16 %y, 1
+  ret i16 %shr
+}
+
+declare i16 @llvm.umax.i16(i16, i16)

@@ -1721,14 +1721,7 @@ public:
     // Align data in code BFs minimum to CI alignment
     if (!size() && hasIslandsInfo())
       return getConstantIslandAlignment();
-
-    // Minimal code alignment on AArch64 and RISCV is 4
-    if (BC.isAArch64() || BC.isRISCV())
-      return 4;
-
-    // We have to use at least 2-byte alignment for functions because
-    // of C++ ABI.
-    return 2;
+    return BC.MIB->getMinFunctionAlignment();
   }
 
   Align getMinAlign() const { return Align(getMinAlignment()); }

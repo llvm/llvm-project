@@ -18,6 +18,7 @@ static_library("CodeGen") {
     "//llvm/lib/CodeGen",
     "//llvm/lib/Demangle",
     "//llvm/lib/Frontend/HLSL",
+    "//llvm/lib/Frontend/Offloading",
     "//llvm/lib/IR",
     "//llvm/lib/IRPrinter",
     "//llvm/lib/IRReader",

@@ -652,7 +652,7 @@ entry:
 define void @nocaptureLaunder(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: write, inaccessiblemem: readwrite)
 ; FNATTRS-LABEL: define void @nocaptureLaunder
-; FNATTRS-SAME: (ptr nocapture [[P:%.*]]) #[[ATTR13:[0-9]+]] {
+; FNATTRS-SAME: (ptr nocapture writeonly [[P:%.*]]) #[[ATTR13:[0-9]+]] {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    [[B:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[P]])
 ; FNATTRS-NEXT:    store i8 42, ptr [[B]], align 1

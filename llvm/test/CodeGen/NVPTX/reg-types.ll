@@ -43,10 +43,10 @@ entry:
 ; CHECK: mov.u16 [[R4:%rs[0-9]]], 4;
 ; CHECK-NEXT: st.u16 {{.*}}, [[R4]]
   store i32 5, ptr %s32, align 4
-; CHECK: mov.u32 [[R5:%r[0-9]]], 5;
+; CHECK: mov.b32 [[R5:%r[0-9]]], 5;
 ; CHECK-NEXT: st.u32 {{.*}}, [[R5]]
   store i32 6, ptr %u32, align 4
-; CHECK: mov.u32 [[R6:%r[0-9]]], 6;
+; CHECK: mov.b32 [[R6:%r[0-9]]], 6;
 ; CHECK-NEXT: st.u32 {{.*}}, [[R6]]
   store i64 7, ptr %s64, align 8
 ; CHECK: mov.u64 [[R7:%rd[0-9]]], 7;

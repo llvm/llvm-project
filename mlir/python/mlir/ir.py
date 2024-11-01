@@ -277,7 +277,7 @@ try:
     def _i32ElementsAttr(x, context):
         return DenseElementsAttr.get(
             np.array(x, dtype=np.int32),
-            type=IntegerType.get_signed(32, context=context),
+            type=IntegerType.get_signless(32, context=context),
             context=context,
         )
 
@@ -285,7 +285,7 @@ try:
     def _i64ElementsAttr(x, context):
         return DenseElementsAttr.get(
             np.array(x, dtype=np.int64),
-            type=IntegerType.get_signed(64, context=context),
+            type=IntegerType.get_signless(64, context=context),
             context=context,
         )
 

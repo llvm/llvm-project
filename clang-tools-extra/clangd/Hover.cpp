@@ -686,9 +686,9 @@ getPredefinedExprHoverContents(const PredefinedExpr &PE, ASTContext &Ctx,
     HI.Type = printType(Name->getType(), Ctx, PP);
   } else {
     // Inside templates, the approximate type `const char[]` is still useful.
-    QualType StringType = Ctx.getIncompleteArrayType(
-        Ctx.CharTy.withConst(), ArrayType::ArraySizeModifier::Normal,
-        /*IndexTypeQuals=*/0);
+    QualType StringType = Ctx.getIncompleteArrayType(Ctx.CharTy.withConst(),
+                                                     ArraySizeModifier::Normal,
+                                                     /*IndexTypeQuals=*/0);
     HI.Type = printType(StringType, Ctx, PP);
   }
   return HI;
@@ -1001,6 +1001,8 @@ void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
   if (auto *RD = llvm::dyn_cast<RecordDecl>(&ND)) {
     if (auto Size = Ctx.getTypeSizeInCharsIfKnown(RD->getTypeForDecl()))
       HI.Size = Size->getQuantity() * 8;
+    if (!RD->isDependentType() && RD->isCompleteDefinition())
+      HI.Align = Ctx.getTypeAlign(RD->getTypeForDecl());
     return;
   }
 
@@ -1009,6 +1011,7 @@ void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
     if (Record)
       Record = Record->getDefinition();
     if (Record && !Record->isInvalidDecl() && !Record->isDependentType()) {
+      HI.Align = Ctx.getTypeAlign(FD->getType());
       const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(Record);
       HI.Offset = Layout.getFieldOffset(FD->getFieldIndex());
       if (FD->isBitField())
@@ -1487,6 +1490,8 @@ markup::Document HoverInfo::present() const {
       P.appendText(
           llvm::formatv(" (+{0} padding)", formatSize(*Padding)).str());
     }
+    if (Align)
+      P.appendText(", alignment " + formatSize(*Align));
   }
 
   if (CalleeArgInfo) {

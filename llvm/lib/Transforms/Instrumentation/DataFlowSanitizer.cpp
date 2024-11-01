@@ -1553,7 +1553,7 @@ bool DataFlowSanitizer::runImpl(
       assert(isa<Function>(C) && "Personality routine is not a function!");
       Function *F = cast<Function>(C);
       if (!isInstrumented(F))
-        llvm::erase_value(FnsToInstrument, F);
+        llvm::erase(FnsToInstrument, F);
     }
   }
 
@@ -2436,9 +2436,9 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
 
   if (ClEventCallbacks) {
     IRBuilder<> IRB(Pos);
-    Value *Addr8 = IRB.CreateBitCast(LI.getPointerOperand(), DFSF.DFS.Int8Ptr);
+    Value *Addr = LI.getPointerOperand();
     CallInst *CI =
-        IRB.CreateCall(DFSF.DFS.DFSanLoadCallbackFn, {PrimitiveShadow, Addr8});
+        IRB.CreateCall(DFSF.DFS.DFSanLoadCallbackFn, {PrimitiveShadow, Addr});
     CI->addParamAttr(0, Attribute::ZExt);
   }
 
@@ -2554,9 +2554,7 @@ void DFSanFunction::storeZeroPrimitiveShadow(Value *Addr, uint64_t Size,
       IntegerType::get(*DFS.Ctx, Size * DFS.ShadowWidthBits);
   Value *ExtZeroShadow = ConstantInt::get(ShadowTy, 0);
   Value *ShadowAddr = DFS.getShadowAddress(Addr, Pos);
-  Value *ExtShadowAddr =
-      IRB.CreateBitCast(ShadowAddr, PointerType::getUnqual(ShadowTy));
-  IRB.CreateAlignedStore(ExtZeroShadow, ExtShadowAddr, ShadowAlign);
+  IRB.CreateAlignedStore(ExtZeroShadow, ShadowAddr, ShadowAlign);
   // Do not write origins for 0 shadows because we do not trace origins for
   // untainted sinks.
 }
@@ -2611,11 +2609,9 @@ void DFSanFunction::storePrimitiveShadowOrigin(Value *Addr, uint64_t Size,
           ShadowVec, PrimitiveShadow,
           ConstantInt::get(Type::getInt32Ty(*DFS.Ctx), I));
     }
-    Value *ShadowVecAddr =
-        IRB.CreateBitCast(ShadowAddr, PointerType::getUnqual(ShadowVecTy));
     do {
       Value *CurShadowVecAddr =
-          IRB.CreateConstGEP1_32(ShadowVecTy, ShadowVecAddr, Offset);
+          IRB.CreateConstGEP1_32(ShadowVecTy, ShadowAddr, Offset);
       IRB.CreateAlignedStore(ShadowVec, CurShadowVecAddr, ShadowAlign);
       LeftSize -= ShadowVecSize;
       ++Offset;
@@ -2699,9 +2695,9 @@ void DFSanVisitor::visitStoreInst(StoreInst &SI) {
                                   PrimitiveShadow, Origin, &SI);
   if (ClEventCallbacks) {
     IRBuilder<> IRB(&SI);
-    Value *Addr8 = IRB.CreateBitCast(SI.getPointerOperand(), DFSF.DFS.Int8Ptr);
+    Value *Addr = SI.getPointerOperand();
     CallInst *CI =
-        IRB.CreateCall(DFSF.DFS.DFSanStoreCallbackFn, {PrimitiveShadow, Addr8});
+        IRB.CreateCall(DFSF.DFS.DFSanStoreCallbackFn, {PrimitiveShadow, Addr});
     CI->addParamAttr(0, Attribute::ZExt);
   }
 }
@@ -2918,11 +2914,9 @@ void DFSanVisitor::visitMemSetInst(MemSetInst &I) {
   Value *ValOrigin = DFSF.DFS.shouldTrackOrigins()
                          ? DFSF.getOrigin(I.getValue())
                          : DFSF.DFS.ZeroOrigin;
-  IRB.CreateCall(
-      DFSF.DFS.DFSanSetLabelFn,
-      {ValShadow, ValOrigin,
-       IRB.CreateBitCast(I.getDest(), Type::getInt8PtrTy(*DFSF.DFS.Ctx)),
-       IRB.CreateZExtOrTrunc(I.getLength(), DFSF.DFS.IntptrTy)});
+  IRB.CreateCall(DFSF.DFS.DFSanSetLabelFn,
+                 {ValShadow, ValOrigin, I.getDest(),
+                  IRB.CreateZExtOrTrunc(I.getLength(), DFSF.DFS.IntptrTy)});
 }
 
 void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
@@ -2938,23 +2932,20 @@ void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
          IRB.CreateIntCast(I.getArgOperand(2), DFSF.DFS.IntptrTy, false)});
   }
 
-  Value *RawDestShadow = DFSF.DFS.getShadowAddress(I.getDest(), &I);
+  Value *DestShadow = DFSF.DFS.getShadowAddress(I.getDest(), &I);
   Value *SrcShadow = DFSF.DFS.getShadowAddress(I.getSource(), &I);
   Value *LenShadow =
       IRB.CreateMul(I.getLength(), ConstantInt::get(I.getLength()->getType(),
                                                     DFSF.DFS.ShadowWidthBytes));
-  Type *Int8Ptr = Type::getInt8PtrTy(*DFSF.DFS.Ctx);
-  Value *DestShadow = IRB.CreateBitCast(RawDestShadow, Int8Ptr);
-  SrcShadow = IRB.CreateBitCast(SrcShadow, Int8Ptr);
   auto *MTI = cast<MemTransferInst>(
       IRB.CreateCall(I.getFunctionType(), I.getCalledOperand(),
                      {DestShadow, SrcShadow, LenShadow, I.getVolatileCst()}));
   MTI->setDestAlignment(DFSF.getShadowAlign(I.getDestAlign().valueOrOne()));
   MTI->setSourceAlignment(DFSF.getShadowAlign(I.getSourceAlign().valueOrOne()));
   if (ClEventCallbacks) {
-    IRB.CreateCall(DFSF.DFS.DFSanMemTransferCallbackFn,
-                   {RawDestShadow,
-                    IRB.CreateZExtOrTrunc(I.getLength(), DFSF.DFS.IntptrTy)});
+    IRB.CreateCall(
+        DFSF.DFS.DFSanMemTransferCallbackFn,
+        {DestShadow, IRB.CreateZExtOrTrunc(I.getLength(), DFSF.DFS.IntptrTy)});
   }
 }
 

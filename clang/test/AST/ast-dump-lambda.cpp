@@ -229,7 +229,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:16, col:19> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:18, col:19>
 // CHECK-NEXT:    | | |-FieldDecl {{.*}} <col:4> col:4{{( imported)?}} implicit 'Ts...'
-// CHECK-NEXT:    | | `-FieldDecl {{.*}} <col:10> col:10{{( imported)?}} implicit 'int':'int'
+// CHECK-NEXT:    | | `-FieldDecl {{.*}} <col:10> col:10{{( imported)?}} implicit 'int'
 // CHECK-NEXT:    | |-ParenListExpr {{.*}} <col:4> 'NULL TYPE'
 // CHECK-NEXT:    | | `-DeclRefExpr {{.*}} <col:4> 'Ts' lvalue ParmVar {{.*}} 'a' 'Ts...'
 // CHECK-NEXT:    | |-IntegerLiteral {{.*}} <col:14> 'int' 12

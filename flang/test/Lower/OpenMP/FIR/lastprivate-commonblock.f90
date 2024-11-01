@@ -19,12 +19,18 @@
 !CHECK: %[[val_c1_i32_0:.*]] = arith.constant 1 : i32
 !CHECK: omp.wsloop   for (%[[arg:.*]]) : i32 = (%[[val_c1_i32]]) to (%[[val_c100_i32]]) inclusive step (%[[val_c1_i32_0]]) {
 !CHECK: fir.store %[[arg]] to %[[val_0]] : !fir.ref<i32>
-!CHECK: %[[val_11:.*]] = arith.cmpi eq, %[[arg]], %[[val_c100_i32]] : i32
-!CHECK: fir.if %[[val_11]] {
-!CHECK: %[[val_12:.*]] = fir.load %[[val_9]] : !fir.ref<f32>
-!CHECK: fir.store %[[val_12]] to %[[val_5]] : !fir.ref<f32>
-!CHECK: %[[val_13:.*]] = fir.load %[[val_10]] : !fir.ref<f32>
-!CHECK: fir.store %[[val_13]] to %[[val_8]] : !fir.ref<f32>
+!CHECK: %[[val_11:.*]] = arith.addi %[[arg]], %[[val_c1_i32_0]] : i32
+!CHECK: %[[val_c0_i32:.*]] = arith.constant 0 : i32
+!CHECK: %[[val_12:.*]] = arith.cmpi slt, %[[val_c1_i32_0]], %[[val_c0_i32]] : i32
+!CHECK: %[[val_13:.*]] = arith.cmpi slt, %[[val_11]], %[[val_c100_i32]] : i32
+!CHECK: %[[val_14:.*]] = arith.cmpi sgt, %[[val_11]], %[[val_c100_i32]] : i32
+!CHECK: %[[val_15:.*]] = arith.select %[[val_12]], %[[val_13]], %[[val_14]] : i1
+!CHECK: fir.if %[[val_15]] {
+!CHECK: fir.store %[[val_11]] to %[[val_0]] : !fir.ref<i32>
+!CHECK: %[[val_16:.*]] = fir.load %[[val_9]] : !fir.ref<f32>
+!CHECK: fir.store %[[val_16]] to %[[val_5]] : !fir.ref<f32>
+!CHECK: %[[val_17:.*]] = fir.load %[[val_10]] : !fir.ref<f32>
+!CHECK: fir.store %[[val_17]] to %[[val_8]] : !fir.ref<f32>
 !CHECK: }
 !CHECK: omp.yield
 !CHECK: }

@@ -61,21 +61,13 @@ tracksRegLiveness: true
 body: |
   bb.0:
     ; GCN-LABEL: name: fconstant_v_s64
-    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1072693248, implicit $exec
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1
-    ; GCN-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN-NEXT: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1075838976, implicit $exec
-    ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_2]], %subreg.sub0, [[V_MOV_B32_e32_3]], %subreg.sub1
-    ; GCN-NEXT: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN-NEXT: [[V_MOV_B32_e32_5:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1073741824, implicit $exec
-    ; GCN-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_4]], %subreg.sub0, [[V_MOV_B32_e32_5]], %subreg.sub1
-    ; GCN-NEXT: [[V_MOV_B32_e32_6:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN-NEXT: [[V_MOV_B32_e32_7:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1076101120, implicit $exec
-    ; GCN-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_6]], %subreg.sub0, [[V_MOV_B32_e32_7]], %subreg.sub1
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[REG_SEQUENCE]]
-    ; GCN-NEXT: $vgpr2_vgpr3 = COPY [[REG_SEQUENCE1]]
-    ; GCN-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]]
+    ; GCN: [[V_MOV_B:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
+    ; GCN-NEXT: [[V_MOV_B1:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO 4620693217682128896, implicit $exec
+    ; GCN-NEXT: [[V_MOV_B2:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO -4611686018427387904, implicit $exec
+    ; GCN-NEXT: [[V_MOV_B3:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO 4621819117588971520, implicit $exec
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[V_MOV_B]]
+    ; GCN-NEXT: $vgpr2_vgpr3 = COPY [[V_MOV_B1]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MOV_B2]], implicit [[V_MOV_B3]]
     %0:vgpr(s64) = G_FCONSTANT double 1.0
     %1:vgpr(s64) = G_FCONSTANT double 8.0
     %2:vgpr(s64) = G_FCONSTANT double -2.0
@@ -95,17 +87,13 @@ tracksRegLiveness: true
 body: |
   bb.0:
     ; GCN-LABEL: name: fconstant_s_s64
-    ; GCN: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 4607182418800017408
-    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GCN-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1075838976
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-    ; GCN-NEXT: [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 -4611686018427387904
-    ; GCN-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GCN-NEXT: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 -1071382528
-    ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_2]], %subreg.sub0, [[S_MOV_B32_3]], %subreg.sub1
-    ; GCN-NEXT: $sgpr0_sgpr1 = COPY [[S_MOV_B64_]]
-    ; GCN-NEXT: $sgpr2_sgpr3 = COPY [[REG_SEQUENCE]]
-    ; GCN-NEXT: S_ENDPGM 0, implicit [[S_MOV_B64_]], implicit [[REG_SEQUENCE]], implicit [[S_MOV_B64_1]], implicit [[REG_SEQUENCE1]]
+    ; GCN: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 4607182418800017408
+    ; GCN-NEXT: [[S_MOV_B1:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 4620693217682128896
+    ; GCN-NEXT: [[S_MOV_B2:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -4611686018427387904
+    ; GCN-NEXT: [[S_MOV_B3:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -4601552919265804288
+    ; GCN-NEXT: $sgpr0_sgpr1 = COPY [[S_MOV_B]]
+    ; GCN-NEXT: $sgpr2_sgpr3 = COPY [[S_MOV_B1]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[S_MOV_B]], implicit [[S_MOV_B1]], implicit [[S_MOV_B2]], implicit [[S_MOV_B3]]
     %0:sgpr(s64) = G_FCONSTANT double 1.0
     %1:sgpr(s64) = G_FCONSTANT double 8.0
     %2:sgpr(s64) = G_FCONSTANT double -2.0
@@ -136,7 +124,6 @@ body: |
     %2:vgpr(s32) = G_ANYEXT %0
     %3:vgpr(s32) = G_ANYEXT %1
 
-    ; Test without already assigned register class
     %4:vgpr(s16) = G_FCONSTANT half 1.0
     %5:vgpr(s16) = G_FCONSTANT half 8.0
     $vgpr0 = COPY %2
@@ -168,7 +155,6 @@ body: |
     %2:vgpr(s32) = G_ANYEXT %0
     %3:vgpr(s32) = G_ANYEXT %1
 
-    ; Test without already assigned register class
     %4:sgpr(s16) = G_FCONSTANT half 1.0
     %5:sgpr(s16) = G_FCONSTANT half 8.0
     $sgpr0 = COPY %2

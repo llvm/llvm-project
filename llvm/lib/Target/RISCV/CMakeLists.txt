@@ -33,6 +33,7 @@ add_llvm_target(RISCVCodeGen
   RISCVMakeCompressible.cpp
   RISCVExpandAtomicPseudoInsts.cpp
   RISCVExpandPseudoInsts.cpp
+  RISCVFoldMasks.cpp
   RISCVFrameLowering.cpp
   RISCVGatherScatterLowering.cpp
   RISCVInsertVSETVLI.cpp
@@ -44,6 +45,7 @@ add_llvm_target(RISCVCodeGen
   RISCVMacroFusion.cpp
   RISCVMergeBaseOffset.cpp
   RISCVOptWInstrs.cpp
+  RISCVPostRAExpandPseudoInsts.cpp
   RISCVRedundantCopyElimination.cpp
   RISCVMoveMerger.cpp
   RISCVPushPopOptimizer.cpp

@@ -2551,11 +2551,13 @@ bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
   MachineOperand &ImmOp = I.getOperand(1);
   Register DstReg = I.getOperand(0).getReg();
   unsigned Size = MRI->getType(DstReg).getSizeInBits();
+  bool IsFP = false;
 
   // The AMDGPU backend only supports Imm operands and not CImm or FPImm.
   if (ImmOp.isFPImm()) {
     const APInt &Imm = ImmOp.getFPImm()->getValueAPF().bitcastToAPInt();
     ImmOp.ChangeToImmediate(Imm.getZExtValue());
+    IsFP = true;
   } else if (ImmOp.isCImm()) {
     ImmOp.ChangeToImmediate(ImmOp.getCImm()->getSExtValue());
   } else {
@@ -2568,6 +2570,12 @@ bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
   unsigned Opcode;
   if (DstRB->getID() == AMDGPU::VCCRegBankID) {
     Opcode = STI.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+  } else if (Size == 64 &&
+             AMDGPU::isValid32BitLiteral(I.getOperand(1).getImm(), IsFP)) {
+    Opcode = IsSgpr ? AMDGPU::S_MOV_B64_IMM_PSEUDO : AMDGPU::V_MOV_B64_PSEUDO;
+    I.setDesc(TII.get(Opcode));
+    I.addImplicitDefUseOperands(*MF);
+    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   } else {
     Opcode = IsSgpr ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
 

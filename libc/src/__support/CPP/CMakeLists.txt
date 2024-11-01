@@ -15,7 +15,10 @@ add_header_library(
   HDRS
     bit.h
   DEPENDS
-    libc.src.__support.macros.properties.compiler
+    .type_traits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.sanitizer
 )
 
 add_header_library(

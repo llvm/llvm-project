@@ -141,7 +141,12 @@ public:
       OpPassManager pm("builtin.module");
       pm.addPass(createSparsificationPass(sparsificationOptions));
       pm.addNestedPass<func::FuncOp>(createStageSparseOperationsPass());
-      pm.addPass(createPostSparsificationRewritePass(enableRuntimeLibrary));
+      pm.addPass(createLowerSparseOpsToForeachPass(enableRuntimeLibrary,
+                                                   /*enableConvert=*/true));
+      // Handle dim-to-lvl maps on operations other than linalg.generic.
+      pm.addPass(
+          createSparseReinterpretMapPass(ReinterpretMapScope::kExceptGeneric));
+      pm.addNestedPass<func::FuncOp>(createLowerForeachToSCFPass());
       if (vectorLength > 0) {
         pm.addPass(mlir::createLoopInvariantCodeMotionPass());
         pm.addPass(createSparseVectorizationPass(

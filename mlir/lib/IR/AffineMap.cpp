@@ -9,6 +9,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "AffineMapDetail.h"
 #include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Support/LogicalResult.h"
@@ -656,6 +657,34 @@ AffineMap mlir::compressUnusedSymbols(AffineMap map) {
 SmallVector<AffineMap> mlir::compressUnusedSymbols(ArrayRef<AffineMap> maps) {
   return compressUnusedListImpl(
       maps, [](AffineMap m) { return compressUnusedSymbols(m); });
+}
+
+AffineMap mlir::foldAttributesIntoMap(Builder &b, AffineMap map,
+                                      ArrayRef<OpFoldResult> operands,
+                                      SmallVector<Value> &remainingValues) {
+  SmallVector<AffineExpr> dimReplacements, symReplacements;
+  int64_t numDims = 0;
+  for (int64_t i = 0; i < map.getNumDims(); ++i) {
+    if (auto attr = operands[i].dyn_cast<Attribute>()) {
+      dimReplacements.push_back(
+          b.getAffineConstantExpr(attr.cast<IntegerAttr>().getInt()));
+    } else {
+      dimReplacements.push_back(b.getAffineDimExpr(numDims++));
+      remainingValues.push_back(operands[i].get<Value>());
+    }
+  }
+  int64_t numSymbols = 0;
+  for (int64_t i = 0; i < map.getNumSymbols(); ++i) {
+    if (auto attr = operands[i + map.getNumDims()].dyn_cast<Attribute>()) {
+      symReplacements.push_back(
+          b.getAffineConstantExpr(attr.cast<IntegerAttr>().getInt()));
+    } else {
+      symReplacements.push_back(b.getAffineSymbolExpr(numSymbols++));
+      remainingValues.push_back(operands[i + map.getNumDims()].get<Value>());
+    }
+  }
+  return map.replaceDimsAndSymbols(dimReplacements, symReplacements, numDims,
+                                   numSymbols);
 }
 
 AffineMap mlir::simplifyAffineMap(AffineMap map) {

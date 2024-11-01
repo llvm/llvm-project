@@ -122,9 +122,8 @@ MultilibSet::expandFlags(const Multilib::flags_list &InFlags) const {
 
     const llvm::Regex Regex(RegexString);
     assert(Regex.isValid());
-    if (llvm::find_if(InFlags, [&Regex](StringRef F) {
-          return Regex.match(F);
-        }) != InFlags.end()) {
+    if (llvm::any_of(InFlags,
+                     [&Regex](StringRef F) { return Regex.match(F); })) {
       Result.insert(M.Flags.begin(), M.Flags.end());
     }
   }

@@ -771,7 +771,7 @@ OpFoldResult ConstOp::fold(FoldAdaptor adaptor) { return getValueAttr(); }
     ShapedType inputTy = llvm::cast<ShapedType>(getInput().getType());         \
     if (!inputTy.hasRank())                                                    \
       return {};                                                               \
-    if (inputTy.getDimSize(getAxis()) == 1)                                    \
+    if (inputTy.getRank() == 0 || inputTy.getDimSize(getAxis()) == 1)          \
       return getInput();                                                       \
     return {};                                                                 \
   }
@@ -874,7 +874,8 @@ OpFoldResult ReverseOp::fold(FoldAdaptor adaptor) {
     return operandAttr;
 
   // If the dim-length is 1, tosa.reverse is a no-op.
-  if (operandTy.hasRank() && operandTy.getDimSize(axis) == 1)
+  if (operandTy.hasRank() &&
+      (operandTy.getRank() == 0 || operandTy.getDimSize(axis) == 1))
     return operand;
 
   return {};

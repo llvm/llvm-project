@@ -149,9 +149,9 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
   llvm::APInt APNumElements(Context.getTypeSize(Context.getSizeType()),
                             NumElements);
   QualType ElementType = Context.getObjCIdType().withConst();
-  QualType ElementArrayType
-    = Context.getConstantArrayType(ElementType, APNumElements, nullptr,
-                                   ArrayType::Normal, /*IndexTypeQuals=*/0);
+  QualType ElementArrayType = Context.getConstantArrayType(
+      ElementType, APNumElements, nullptr, ArraySizeModifier::Normal,
+      /*IndexTypeQuals=*/0);
 
   // Allocate the temporary array(s).
   Address Objects = CreateMemTemp(ElementArrayType, "objects");
@@ -1801,10 +1801,9 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
   Selector FastEnumSel =
       CGM.getContext().Selectors.getSelector(std::size(II), &II[0]);
 
-  QualType ItemsTy =
-    getContext().getConstantArrayType(getContext().getObjCIdType(),
-                                      llvm::APInt(32, NumItems), nullptr,
-                                      ArrayType::Normal, 0);
+  QualType ItemsTy = getContext().getConstantArrayType(
+      getContext().getObjCIdType(), llvm::APInt(32, NumItems), nullptr,
+      ArraySizeModifier::Normal, 0);
   Address ItemsPtr = CreateMemTemp(ItemsTy, "items.ptr");
 
   // Emit the collection pointer.  In ARC, we do a retain.
@@ -3954,7 +3953,7 @@ static unsigned getBaseMachOPlatformID(const llvm::Triple &TT) {
   case llvm::Triple::DriverKit:
     return llvm::MachO::PLATFORM_DRIVERKIT;
   default:
-    return /*Unknown platform*/ 0;
+    return llvm::MachO::PLATFORM_UNKNOWN;
   }
 }
 

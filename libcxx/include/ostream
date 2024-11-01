@@ -1201,7 +1201,9 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <atomic>
 #  include <concepts>
 #  include <cstdlib>
+#  include <iosfwd>
 #  include <iterator>
+#  include <stdexcept>
 #  include <type_traits>
 #endif
 

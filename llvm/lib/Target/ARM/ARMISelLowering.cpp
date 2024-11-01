@@ -9095,13 +9095,21 @@ static SDValue LowerCONCAT_VECTORS_i1(SDValue Op, SelectionDAG &DAG,
         getVectorTyFromPredicateVector(VT).getScalarType().getSimpleVT();
     unsigned NumElts = 2 * Op1VT.getVectorNumElements();
 
+    EVT ConcatVT = MVT::getVectorVT(ElType, NumElts);
+    if (Op1VT == MVT::v4i1 || Op1VT == MVT::v8i1) {
+      // Use MVETRUNC to truncate the combined NewV1::NewV2 into the smaller
+      // ConcatVT.
+      SDValue ConVec =
+          DAG.getNode(ARMISD::MVETRUNC, dl, ConcatVT, NewV1, NewV2);
+      return DAG.getNode(ARMISD::VCMPZ, dl, VT, ConVec,
+                         DAG.getConstant(ARMCC::NE, dl, MVT::i32));
+    }
+
     // Extract the vector elements from Op1 and Op2 one by one and truncate them
     // to be the right size for the destination. For example, if Op1 is v4i1
     // then the promoted vector is v4i32. The result of concatenation gives a
     // v8i1, which when promoted is v8i16. That means each i32 element from Op1
     // needs truncating to i16 and inserting in the result.
-    EVT ConcatVT = MVT::getVectorVT(ElType, NumElts);
-    SDValue ConVec = DAG.getNode(ISD::UNDEF, dl, ConcatVT);
     auto ExtractInto = [&DAG, &dl](SDValue NewV, SDValue ConVec, unsigned &j) {
       EVT NewVT = NewV.getValueType();
       EVT ConcatVT = ConVec.getValueType();
@@ -9119,6 +9127,7 @@ static SDValue LowerCONCAT_VECTORS_i1(SDValue Op, SelectionDAG &DAG,
       return ConVec;
     };
     unsigned j = 0;
+    SDValue ConVec = DAG.getNode(ISD::UNDEF, dl, ConcatVT);
     ConVec = ExtractInto(NewV1, ConVec, j);
     ConVec = ExtractInto(NewV2, ConVec, j);
 

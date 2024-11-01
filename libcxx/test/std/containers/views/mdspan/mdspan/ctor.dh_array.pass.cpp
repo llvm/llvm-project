@@ -38,7 +38,7 @@
 
 #include "../ConvertibleToIntegral.h"
 #include "../MinimalElementType.h"
-#include "CustomTestLayouts.h"
+#include "../CustomTestLayouts.h"
 #include "CustomTestAccessors.h"
 
 template <class Extents, size_t... Idxs>

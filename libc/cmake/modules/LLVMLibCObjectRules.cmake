@@ -68,6 +68,7 @@ function(_get_common_compile_options output_var flags)
   if (LIBC_TARGET_ARCHITECTURE_IS_GPU)
     list(APPEND compile_options "-nogpulib")
     list(APPEND compile_options "-fvisibility=hidden")
+    list(APPEND compile_options "-fconvergent-functions")
 
     # Manually disable all standard include paths and include the resource
     # directory to prevent system headers from being included.

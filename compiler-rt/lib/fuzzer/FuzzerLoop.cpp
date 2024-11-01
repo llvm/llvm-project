@@ -799,7 +799,7 @@ void Fuzzer::ReadAndExecuteSeedCorpora(std::vector<SizedFile> &CorporaFiles) {
     TotalSize += File.Size;
   }
   if (Options.MaxLen == 0)
-    SetMaxInputLen(std::min(std::max(kMinDefaultLen, MaxSize), kMaxSaneLen));
+    SetMaxInputLen(std::clamp(MaxSize, kMinDefaultLen, kMaxSaneLen));
   assert(MaxInputLen > 0);
 
   // Test the callback with empty input and never try it again.

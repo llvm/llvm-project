@@ -1,8 +1,8 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s --check-prefix=CHECK-ROUND
-// RUN: mlir-opt %s --post-sparsification-rewrite="enable-runtime-library=true enable-convert=false" \
-// RUN: --cse --canonicalize  | FileCheck %s
-// RUN: mlir-opt %s --post-sparsification-rewrite="enable-runtime-library=false enable-convert=false" \
-// RUN: --cse --canonicalize  | FileCheck %s
+// RUN: mlir-opt %s --lower-sparse-ops-to-foreach="enable-runtime-library=true enable-convert=false" \
+// RUN: --lower-sparse-foreach-to-scf --cse --canonicalize  | FileCheck %s
+// RUN: mlir-opt %s --lower-sparse-ops-to-foreach="enable-runtime-library=false enable-convert=false" \
+// RUN: --lower-sparse-foreach-to-scf --cse --canonicalize  | FileCheck %s
 
 #SparseVector = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 #SparseMatrix = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
@@ -103,7 +103,7 @@ func.func @sparse_collapse(%arg0: tensor<10x10xf64, #SparseMatrix>) -> tensor<10
 // CHECK-DAG:     %[[C10:.*]] = arith.constant 10 : index
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
-// CHECK:         %[[SD:.*]] = tensor.dim %[[S]], %[[C0]]
+// CHECK:         %[[SD:.*]] = sparse_tensor.lvl %[[S]], %[[C0]]
 // CHECK:         %[[DD0:.*]] = arith.divui %[[SD]], %[[C10]] : index
 // CHECK:         %[[B:.*]] = bufferization.alloc_tensor(%[[DD0]])
 // CHECK:         %[[P0:.*]] = sparse_tensor.positions %[[S]] {level = 0 : index}
@@ -146,7 +146,7 @@ func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>) -> tensor<
 // CHECK-DAG:     %[[C10:.*]] = arith.constant 10 : index
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
-// CHECK:         %[[SD1:.*]] = tensor.dim %[[S]], %[[C1]]
+// CHECK:         %[[SD1:.*]] = sparse_tensor.lvl %[[S]], %[[C1]]
 // CHECK:         %[[DD0:.*]] = arith.muli %[[SD1]], %[[C10]] : index
 // CHECK:         %[[B:.*]] = bufferization.alloc_tensor(%[[DD0]])
 // CHECK:         %[[P0:.*]] = sparse_tensor.positions %[[S]] {level = 0 : index}

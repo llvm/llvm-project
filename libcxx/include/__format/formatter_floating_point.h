@@ -136,7 +136,7 @@ struct __traits<double> {
 
 /// Helper class to store the conversion buffer.
 ///
-/// Depending on the maxium size required for a value, the buffer is allocated
+/// Depending on the maximum size required for a value, the buffer is allocated
 /// on the stack or the heap.
 template <floating_point _Fp>
 class _LIBCPP_TEMPLATE_VIS __float_buffer {

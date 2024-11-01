@@ -16,7 +16,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ;YAML:   - String:          ' total spills cost '
 ;YAML:   - NumReloads:      '7'
 ;YAML:   - String:          ' reloads '
-;YAML:   - TotalReloadsCost: '3.109004e-15'
+;YAML:   - TotalReloadsCost: '3.108624e-15'
 ;YAML:   - String:          ' total reloads cost '
 ;YAML:   - NumZeroCostFoldedReloads: '20'
 ;YAML:   - String:          ' zero cost folded reloads '

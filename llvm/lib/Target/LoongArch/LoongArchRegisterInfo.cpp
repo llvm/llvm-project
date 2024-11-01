@@ -98,13 +98,6 @@ LoongArchRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   if (TFI->hasBP(MF))
     markSuperRegs(Reserved, LoongArchABI::getBPReg()); // bp
 
-  // FIXME: To avoid generating COPY instructions between CFRs, only use $fcc0.
-  // This is required to work around the fact that COPY instruction between CFRs
-  // is not provided in LoongArch.
-  if (MF.getSubtarget<LoongArchSubtarget>().hasBasicF())
-    for (size_t Reg = LoongArch::FCC1; Reg <= LoongArch::FCC7; ++Reg)
-      markSuperRegs(Reserved, Reg);
-
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }

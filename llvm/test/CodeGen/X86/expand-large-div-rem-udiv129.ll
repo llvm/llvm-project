@@ -4,7 +4,7 @@
 define void @test(ptr %ptr, ptr %out) nounwind {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  _udiv-special-cases:
-; CHECK-NEXT:    [[A:%.*]] = load i129, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[A:%.*]] = load i129, ptr [[PTR:%.*]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = freeze i129 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i129 [[A]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i129 [[TMP0]], 0
@@ -55,7 +55,7 @@ define void @test(ptr %ptr, ptr %out) nounwind {
 ; CHECK-NEXT:    br i1 [[TMP38]], label [[UDIV_LOOP_EXIT]], label [[UDIV_PREHEADER]]
 ; CHECK:       udiv-end:
 ; CHECK-NEXT:    [[TMP39:%.*]] = phi i129 [ [[TMP16]], [[UDIV_LOOP_EXIT]] ], [ [[TMP11]], [[_UDIV_SPECIAL_CASES:%.*]] ]
-; CHECK-NEXT:    store i129 [[TMP39]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    store i129 [[TMP39]], ptr [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %a = load i129, ptr %ptr

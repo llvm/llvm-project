@@ -99,14 +99,14 @@ SymbolFileDWARF::DIEToVariableSP &SymbolFileDWARFDwo::GetDIEToVariable() {
   return GetBaseSymbolFile().GetDIEToVariable();
 }
 
-SymbolFileDWARF::DIEToClangType &
-SymbolFileDWARFDwo::GetForwardDeclDieToClangType() {
-  return GetBaseSymbolFile().GetForwardDeclDieToClangType();
+SymbolFileDWARF::DIEToCompilerType &
+SymbolFileDWARFDwo::GetForwardDeclDIEToCompilerType() {
+  return GetBaseSymbolFile().GetForwardDeclDIEToCompilerType();
 }
 
-SymbolFileDWARF::ClangTypeToDIE &
-SymbolFileDWARFDwo::GetForwardDeclClangTypeToDie() {
-  return GetBaseSymbolFile().GetForwardDeclClangTypeToDie();
+SymbolFileDWARF::CompilerTypeToDIE &
+SymbolFileDWARFDwo::GetForwardDeclCompilerTypeToDIE() {
+  return GetBaseSymbolFile().GetForwardDeclCompilerTypeToDIE();
 }
 
 void SymbolFileDWARFDwo::GetObjCMethods(

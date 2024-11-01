@@ -80,11 +80,10 @@ define i32 @missing_ret_unreachable() {
   unreachable
 }
 
-; This is similar to the above test, but ensures wasm unreachable is emitted
-; This is similar to the above test, but the callee has a 'noreturn' attribute.    
-; There is an optimization that removes an 'unreachable' after a noreturn call,  
-; but Wasm backend doesn't use it and ignore `--no-trap-after-noreturn`, if      
-; given, to generate valid code. 
+; This is similar to the above test, but the callee has a 'noreturn' attribute.
+; There is an optimization that removes an 'unreachable' after a noreturn call,
+; but Wasm backend doesn't use it and ignore `--no-trap-after-noreturn`, if
+; given, to generate valid code.
 define i32 @missing_ret_noreturn_unreachable() {
 ; CHECK-LABEL: missing_ret_noreturn_unreachable:
 ; CHECK:         .functype missing_ret_noreturn_unreachable () -> (i32)

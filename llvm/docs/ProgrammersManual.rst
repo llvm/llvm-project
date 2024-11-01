@@ -2323,6 +2323,10 @@ construct, but cheap to compare against.  The DenseMapInfo is responsible for
 defining the appropriate comparison and hashing methods for each alternate key
 type used.
 
+DenseMap.h also contains a SmallDenseMap variant, that similar to
+:ref:`SmallVector <dss_smallvector>` performs no heap allocation until the
+number of elements in the template parameter N are exceeded.
+
 .. _dss_valuemap:
 
 llvm/IR/ValueMap.h

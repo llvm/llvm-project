@@ -105,7 +105,7 @@ func.func @test_if(%arg0: i1, %arg1: f32) {
   return
 }
 
-func.func @test_explicit_yield(%arg0: i1, %arg1: f32) {
+func.func @test_if_explicit_yield(%arg0: i1, %arg1: f32) {
   emitc.if %arg0 {
      %0 = emitc.call "func_const"(%arg1) : (f32) -> i32
      emitc.yield
@@ -125,5 +125,27 @@ func.func @test_if_else(%arg0: i1, %arg1: f32) {
 func.func @test_assign(%arg1: f32) {
   %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
   emitc.assign %arg1 : f32 to %v : f32
+  return
+}
+
+func.func @test_for(%arg0 : index, %arg1 : index, %arg2 : index) {
+  emitc.for %i0 = %arg0 to %arg1 step %arg2 {
+    %0 = emitc.call "func_const"(%i0) : (index) -> i32
+  }
+  return
+}
+
+func.func @test_for_explicit_yield(%arg0 : index, %arg1 : index, %arg2 : index) {
+  emitc.for %i0 = %arg0 to %arg1 step %arg2 {
+    %0 = emitc.call "func_const"(%i0) : (index) -> i32
+    emitc.yield
+  }
+  return
+}
+
+func.func @test_for_not_index_induction(%arg0 : i16, %arg1 : i16, %arg2 : i16) {
+  emitc.for %i0 = %arg0 to %arg1 step %arg2 : i16 {
+    %0 = emitc.call "func_const"(%i0) : (i16) -> i32
+  }
   return
 }

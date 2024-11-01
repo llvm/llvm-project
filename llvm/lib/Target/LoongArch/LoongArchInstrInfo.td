@@ -1814,7 +1814,7 @@ def PseudoMaskedAtomicLoadMin32 : PseudoMaskedAMMinMax;
 
 class PseudoCmpXchg
     : Pseudo<(outs GPR:$res, GPR:$scratch),
-             (ins GPR:$addr, GPR:$cmpval, GPR:$newval, grlenimm:$ordering)> {
+             (ins GPR:$addr, GPR:$cmpval, GPR:$newval, grlenimm:$fail_order)> {
   let Constraints = "@earlyclobber $res,@earlyclobber $scratch";
   let mayLoad = 1;
   let mayStore = 1;
@@ -1828,7 +1828,7 @@ def PseudoCmpXchg64 : PseudoCmpXchg;
 def PseudoMaskedCmpXchg32
     : Pseudo<(outs GPR:$res, GPR:$scratch),
              (ins GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask,
-              grlenimm:$ordering)> {
+              grlenimm:$fail_order)> {
   let Constraints = "@earlyclobber $res,@earlyclobber $scratch";
   let mayLoad = 1;
   let mayStore = 1;
@@ -1845,6 +1845,43 @@ class PseudoMaskedAMMinMaxPat<Intrinsic intrin, Pseudo AMInst>
 class AtomicPat<Intrinsic intrin, Pseudo AMInst>
     : Pat<(intrin GPR:$addr, GPR:$incr, GPR:$mask, timm:$ordering),
           (AMInst GPR:$addr, GPR:$incr, GPR:$mask, timm:$ordering)>;
+
+// These atomic cmpxchg PatFrags only care about the failure ordering.
+// The PatFrags defined by multiclass `ternary_atomic_op_ord` in
+// TargetSelectionDAG.td care about the merged memory ordering that is the
+// stronger one between success and failure. But for LoongArch LL-SC we only
+// need to care about the failure ordering as explained in PR #67391. So we
+// define these PatFrags that will be used to define cmpxchg pats below.
+multiclass ternary_atomic_op_failure_ord {
+  def NAME#_failure_monotonic : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val), [{
+    AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getFailureOrdering();
+    return Ordering == AtomicOrdering::Monotonic;
+  }]>;
+  def NAME#_failure_acquire : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val), [{
+    AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getFailureOrdering();
+    return Ordering == AtomicOrdering::Acquire;
+  }]>;
+  def NAME#_failure_release : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val), [{
+    AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getFailureOrdering();
+    return Ordering == AtomicOrdering::Release;
+  }]>;
+  def NAME#_failure_acq_rel : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val), [{
+    AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getFailureOrdering();
+    return Ordering == AtomicOrdering::AcquireRelease;
+  }]>;
+  def NAME#_failure_seq_cst : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val), [{
+    AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getFailureOrdering();
+    return Ordering == AtomicOrdering::SequentiallyConsistent;
+  }]>;
+}
+
+defm atomic_cmp_swap_32 : ternary_atomic_op_failure_ord;
+defm atomic_cmp_swap_64 : ternary_atomic_op_failure_ord;
 
 let Predicates = [IsLA64] in {
 def : AtomicPat<int_loongarch_masked_atomicrmw_xchg_i64,
@@ -1908,24 +1945,24 @@ def : AtomicPat<int_loongarch_masked_atomicrmw_umin_i64,
 // AtomicOrdering.h.
 multiclass PseudoCmpXchgPat<string Op, Pseudo CmpXchgInst,
                             ValueType vt = GRLenVT> {
-  def : Pat<(vt (!cast<PatFrag>(Op#"_monotonic") GPR:$addr, GPR:$cmp, GPR:$new)),
+  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_monotonic") GPR:$addr, GPR:$cmp, GPR:$new)),
             (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 2)>;
-  def : Pat<(vt (!cast<PatFrag>(Op#"_acquire") GPR:$addr, GPR:$cmp, GPR:$new)),
+  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_acquire") GPR:$addr, GPR:$cmp, GPR:$new)),
             (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 4)>;
-  def : Pat<(vt (!cast<PatFrag>(Op#"_release") GPR:$addr, GPR:$cmp, GPR:$new)),
+  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_release") GPR:$addr, GPR:$cmp, GPR:$new)),
             (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 5)>;
-  def : Pat<(vt (!cast<PatFrag>(Op#"_acq_rel") GPR:$addr, GPR:$cmp, GPR:$new)),
+  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_acq_rel") GPR:$addr, GPR:$cmp, GPR:$new)),
             (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 6)>;
-  def : Pat<(vt (!cast<PatFrag>(Op#"_seq_cst") GPR:$addr, GPR:$cmp, GPR:$new)),
+  def : Pat<(vt (!cast<PatFrag>(Op#"_failure_seq_cst") GPR:$addr, GPR:$cmp, GPR:$new)),
             (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 7)>;
 }
 
 defm : PseudoCmpXchgPat<"atomic_cmp_swap_32", PseudoCmpXchg32>;
 defm : PseudoCmpXchgPat<"atomic_cmp_swap_64", PseudoCmpXchg64, i64>;
 def : Pat<(int_loongarch_masked_cmpxchg_i64
-            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering),
+            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$fail_order),
           (PseudoMaskedCmpXchg32
-            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering)>;
+            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$fail_order)>;
 
 def : PseudoMaskedAMMinMaxPat<int_loongarch_masked_atomicrmw_max_i64,
                               PseudoMaskedAtomicLoadMax32>;
@@ -1955,9 +1992,9 @@ defm : PseudoBinPat<"atomic_load_xor_32", PseudoAtomicLoadXor32>;
 /// Intrinsics
 
 def : Pat<(int_loongarch_cacop_d timm:$op, i64:$rj, timm:$imm12),
-          (CACOP uimm5:$op, GPR:$rj, simm12:$imm12)>;
+          (CACOP timm:$op, GPR:$rj, timm:$imm12)>;
 def : Pat<(int_loongarch_cacop_w i32:$op, i32:$rj, i32:$imm12),
-          (CACOP uimm5:$op, GPR:$rj, simm12:$imm12)>;
+          (CACOP timm:$op, GPR:$rj, timm:$imm12)>;
 def : Pat<(loongarch_dbar uimm15:$imm15), (DBAR uimm15:$imm15)>;
 def : Pat<(loongarch_ibar uimm15:$imm15), (IBAR uimm15:$imm15)>;
 def : Pat<(loongarch_break uimm15:$imm15), (BREAK uimm15:$imm15)>;
@@ -2121,9 +2158,9 @@ def : Pat<(int_loongarch_asrtle_d GPR:$rj, GPR:$rk),
 def : Pat<(int_loongarch_asrtgt_d GPR:$rj, GPR:$rk),
           (ASRTGT_D GPR:$rj, GPR:$rk)>;
 def : Pat<(int_loongarch_lddir_d GPR:$rj, timm:$imm8),
-          (LDDIR GPR:$rj, uimm8:$imm8)>;
+          (LDDIR GPR:$rj, timm:$imm8)>;
 def : Pat<(int_loongarch_ldpte_d GPR:$rj, timm:$imm8),
-          (LDPTE GPR:$rj, uimm8:$imm8)>;
+          (LDPTE GPR:$rj, timm:$imm8)>;
 } // Predicates = [IsLA64]
 
 //===----------------------------------------------------------------------===//

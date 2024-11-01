@@ -1425,6 +1425,23 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "FrontendOffloading",
+    srcs = glob([
+        "lib/Frontend/Offloading/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/llvm/Frontend/Offloading/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":Core",
+        ":Object",
+        ":Support",
+        ":TransformUtils",
+    ],
+)
+
 filegroup(
     name = "omp_td_files",
     srcs = glob([
@@ -1476,6 +1493,7 @@ cc_library(
         ":Analysis",
         ":BitReader",
         ":Core",
+        ":FrontendOffloading",
         ":MC",
         ":Scalar",
         ":Support",

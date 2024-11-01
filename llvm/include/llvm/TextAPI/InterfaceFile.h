@@ -352,9 +352,8 @@ public:
   }
 
   /// Add a symbol to the symbols list or extend an existing one.
-  template <typename RangeT,
-            typename ElT = typename std::remove_reference<
-                decltype(*std::begin(std::declval<RangeT>()))>::type>
+  template <typename RangeT, typename ElT = std::remove_reference_t<
+                                 decltype(*std::begin(std::declval<RangeT>()))>>
   void addSymbol(SymbolKind Kind, StringRef Name, RangeT &&Targets,
                  SymbolFlags Flags = SymbolFlags::None) {
     SymbolsSet->addGlobal(Kind, Name, Flags, Targets);

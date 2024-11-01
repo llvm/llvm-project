@@ -16,11 +16,9 @@
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits_t = LIBC_NAMESPACE::fputil::FPBits<float>;
+using LlvmLibcAcoshfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcAcoshfTest, SpecialNumbers) {
+TEST_F(LlvmLibcAcoshfTest, SpecialNumbers) {
   libc_errno = 0;
 
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acoshf(aNaN));

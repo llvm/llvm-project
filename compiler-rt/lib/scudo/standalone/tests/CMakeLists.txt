@@ -96,6 +96,7 @@ set(SCUDO_UNIT_TEST_SOURCES
   chunk_test.cpp
   combined_test.cpp
   common_test.cpp
+  condition_variable_test.cpp
   flags_test.cpp
   list_test.cpp
   map_test.cpp

@@ -35,6 +35,8 @@ static const Expr *getLoopCondition(const Stmt *LoopStmt) {
     return cast<WhileStmt>(LoopStmt)->getCond();
   case Stmt::DoStmtClass:
     return cast<DoStmt>(LoopStmt)->getCond();
+  case Stmt::CXXForRangeStmtClass:
+    return cast<CXXForRangeStmt>(LoopStmt)->getCond();
   }
 }
 
@@ -45,7 +47,7 @@ ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
                                     const LocationContext *LCtx,
                                     unsigned BlockCount, const Stmt *LoopStmt) {
 
-  assert((isa<ForStmt, WhileStmt, DoStmt>(LoopStmt)));
+  assert((isa<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(LoopStmt)));
 
   // Invalidate values in the current state.
   // TODO Make this more conservative by only invalidating values that might

@@ -802,6 +802,10 @@ public:
   // Create related types using the current type's AST
   CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) override;
 
+  // Create a generic function prototype that can be used in ValuObject types
+  // to correctly display a function pointer with the right value and summary.
+  CompilerType CreateGenericFunctionPrototype() override;
+
   // Exploring the type
 
   const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) override;

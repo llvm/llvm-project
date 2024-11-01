@@ -629,6 +629,7 @@ TEST(getTargetFeatureForExtension, RetrieveTargetFeatureFromOneExt) {
 }
 
 TEST(RiscvExtensionsHelp, CheckExtensions) {
+  // clang-format off
   std::string ExpectedOutput =
 R"(All available -march extensions for RISC-V
 
@@ -713,6 +714,8 @@ R"(All available -march extensions for RISC-V
     xcvsimd             1.0
     xsfcie              1.0
     xsfvcp              1.0
+    xsfvqmaccdod        1.0
+    xsfvqmaccqoq        1.0
     xtheadba            1.0
     xtheadbb            1.0
     xtheadbs            1.0
@@ -755,6 +758,7 @@ Experimental extensions
 
 Use -march to specify the target's extension.
 For example, clang -march=rv32i_v1p0)";
+  // clang-format on
 
   StringMap<StringRef> DummyMap;
   DummyMap["i"] = "This is a long dummy description";

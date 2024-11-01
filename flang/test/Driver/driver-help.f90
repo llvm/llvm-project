@@ -17,6 +17,8 @@
 ! HELP-NEXT: -###                    Print (but do not run) the commands to run for this compilation
 ! HELP-NEXT: -cpp                    Enable predefined and command line preprocessor macros
 ! HELP-NEXT: -c                      Only run preprocess, compile, and assemble steps
+! HELP-NEXT: -dumpmachine            Display the compiler's target processor
+! HELP-NEXT: -dumpversion            Display the version of the compiler
 ! HELP-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
 ! HELP-NEXT: -emit-llvm              Use the LLVM representation for assembler and object files
 ! HELP-NEXT: -E                      Only run the preprocessor

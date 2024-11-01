@@ -12,6 +12,7 @@ RUN: (llvm-bolt %t.exe --data %t.fdata -o %t --relocs \
 RUN:   --reorder-blocks=cache --split-functions --split-all-cold \
 RUN:   --use-gnu-stack --dyno-stats --indirect-call-promotion=jump-tables \
 RUN:   --print-icp -v=0 \
+RUN:   --enable-bat --print-cache-metrics \
 RUN:   --icp-jt-remaining-percent-threshold=10 \
 RUN:   --icp-jt-total-percent-threshold=2 \
 RUN:   --indirect-call-promotion-topn=1 \

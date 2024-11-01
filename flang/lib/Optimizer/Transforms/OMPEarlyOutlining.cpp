@@ -1,6 +1,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -99,6 +100,20 @@ class OMPEarlyOutliningPass
       return;
     }
 
+    // Clone into the outlined function all hlfir.declare ops that define inputs
+    // to the target region and set up remapping of its inputs and outputs.
+    if (auto declareOp = mlir::dyn_cast_if_present<hlfir::DeclareOp>(
+            varPtr.getDefiningOp())) {
+      auto clone = llvm::cast<hlfir::DeclareOp>(
+          cloneArgAndChildren(builder, declareOp, inputs, newInputs));
+      mlir::Value newBase = clone.getBase();
+      mlir::Value newOrigBase = clone.getOriginalBase();
+      mapInfoMap.map(varPtr, newOrigBase);
+      valueMap.map(declareOp.getBase(), newBase);
+      valueMap.map(declareOp.getOriginalBase(), newOrigBase);
+      return;
+    }
+
     if (isAddressOfGlobalDeclareTarget(varPtr)) {
       fir::AddrOfOp addrOp =
           mlir::dyn_cast<fir::AddrOfOp>(varPtr.getDefiningOp());
@@ -127,17 +142,44 @@ class OMPEarlyOutliningPass
     llvm::SetVector<mlir::Value> inputs;
     mlir::Region &targetRegion = targetOp.getRegion();
     mlir::getUsedValuesDefinedAbove(targetRegion, inputs);
-    
-    // filter out declareTarget and map entries which are specially handled
+
+    // Collect all map info. Even non-used maps must be collected to avoid ICEs.
+    for (mlir::Value oper : targetOp->getOperands()) {
+      if (auto mapEntry =
+              mlir::dyn_cast<mlir::omp::MapInfoOp>(oper.getDefiningOp())) {
+        if (!inputs.contains(mapEntry.getVarPtr()))
+          inputs.insert(mapEntry.getVarPtr());
+      }
+    }
+
+    // Filter out declare-target and map entries which are specially handled
     // at the moment, so we do not wish these to end up as function arguments
     // which would just be more noise in the IR.
+    llvm::SmallVector<mlir::Value> blockArgs;
     for (llvm::SetVector<mlir::Value>::iterator iter = inputs.begin(); iter != inputs.end();) {
       if (mlir::isa_and_nonnull<mlir::omp::MapInfoOp>(iter->getDefiningOp()) ||
           isAddressOfGlobalDeclareTarget(*iter)) {
         iter = inputs.erase(iter);
+      } else if (auto declareOp = mlir::dyn_cast_if_present<hlfir::DeclareOp>(
+                     iter->getDefiningOp())) {
+        // Gather hlfir.declare arguments to be added later, after the
+        // hlfir.declare operation itself has been removed as an input.
+        blockArgs.push_back(declareOp.getMemref());
+        if (mlir::Value shape = declareOp.getShape())
+          blockArgs.push_back(shape);
+        for (mlir::Value typeParam : declareOp.getTypeparams())
+          blockArgs.push_back(typeParam);
+        iter = inputs.erase(iter);
       } else {
         ++iter;
       }
+    }
+
+    // Add function arguments to the list of inputs if they are used by an
+    // hlfir.declare operation.
+    for (mlir::Value arg : blockArgs) {
+      if (!arg.getDefiningOp() && !inputs.contains(arg))
+        inputs.insert(arg);
     }
 
     // Create new function and initialize
@@ -218,7 +260,7 @@ class OMPEarlyOutliningPass
     return newFunc;
   }
 
-  // Returns true if a target region was found int the function.
+  // Returns true if a target region was found in the function.
   bool outlineTargetOps(mlir::OpBuilder &builder,
                         mlir::func::FuncOp &functionOp,
                         mlir::ModuleOp &moduleOp,

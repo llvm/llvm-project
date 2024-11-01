@@ -174,7 +174,7 @@ float64x2_t test_svget_neonq_f64(svfloat64_t n) {
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.vector.extract.v8bf16.nxv8bf16(<vscale x 8 x bfloat> [[N:%.*]], i64 0)
 // CHECK-NEXT:    ret <8 x bfloat> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z21test_svget_neonq_bf16u14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z21test_svget_neonq_bf16u14__SVBfloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.vector.extract.v8bf16.nxv8bf16(<vscale x 8 x bfloat> [[N:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret <8 x bfloat> [[TMP0]]

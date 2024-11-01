@@ -380,14 +380,12 @@ CHECK_SIMPLE_CLAUSE(IfPresent, ACCC_if_present)
 CHECK_SIMPLE_CLAUSE(Independent, ACCC_independent)
 CHECK_SIMPLE_CLAUSE(NoCreate, ACCC_no_create)
 CHECK_SIMPLE_CLAUSE(Nohost, ACCC_nohost)
-CHECK_SIMPLE_CLAUSE(NumWorkers, ACCC_num_workers)
 CHECK_SIMPLE_CLAUSE(Private, ACCC_private)
 CHECK_SIMPLE_CLAUSE(Read, ACCC_read)
 CHECK_SIMPLE_CLAUSE(Seq, ACCC_seq)
 CHECK_SIMPLE_CLAUSE(Tile, ACCC_tile)
 CHECK_SIMPLE_CLAUSE(UseDevice, ACCC_use_device)
 CHECK_SIMPLE_CLAUSE(Vector, ACCC_vector)
-CHECK_SIMPLE_CLAUSE(VectorLength, ACCC_vector_length)
 CHECK_SIMPLE_CLAUSE(Wait, ACCC_wait)
 CHECK_SIMPLE_CLAUSE(Worker, ACCC_worker)
 CHECK_SIMPLE_CLAUSE(Write, ACCC_write)
@@ -403,14 +401,27 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
             [&](const Fortran::parser::Designator &designator) {
               if (const auto *name = getDesignatorNameIfDataRef(designator)) {
                 if (declareSymbols.contains(&name->symbol->GetUltimate())) {
-                  context_.Say(GetContext().clauseSource,
-                      "'%s' in the %s clause is already present in another "
-                      "clause in this module"_err_en_US,
-                      name->symbol->name(),
-                      parser::ToUpperCaseLetters(
-                          llvm::acc::getOpenACCClauseName(clause).str()));
+                  if (declareSymbols[&name->symbol->GetUltimate()] == clause) {
+                    context_.Say(GetContext().clauseSource,
+                        "'%s' in the %s clause is already present in the same "
+                        "clause in this module"_warn_en_US,
+                        name->symbol->name(),
+                        parser::ToUpperCaseLetters(
+                            llvm::acc::getOpenACCClauseName(clause).str()));
+                  } else {
+                    context_.Say(GetContext().clauseSource,
+                        "'%s' in the %s clause is already present in another "
+                        "%s clause in this module"_err_en_US,
+                        name->symbol->name(),
+                        parser::ToUpperCaseLetters(
+                            llvm::acc::getOpenACCClauseName(clause).str()),
+                        parser::ToUpperCaseLetters(
+                            llvm::acc::getOpenACCClauseName(
+                                declareSymbols[&name->symbol->GetUltimate()])
+                                .str()));
+                  }
                 }
-                declareSymbols.insert(&name->symbol->GetUltimate());
+                declareSymbols.insert({&name->symbol->GetUltimate(), clause});
               }
             },
             [&](const Fortran::parser::Name &name) {
@@ -541,11 +552,28 @@ void AccStructureChecker::Enter(const parser::AccClause::Gang &g) {
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::NumGangs &n) {
-  CheckAllowed(llvm::acc::Clause::ACCC_num_gangs);
+  CheckAllowed(llvm::acc::Clause::ACCC_num_gangs,
+      /*warnInsteadOfError=*/GetContext().directive ==
+              llvm::acc::Directive::ACCD_serial ||
+          GetContext().directive == llvm::acc::Directive::ACCD_serial_loop);
 
   if (n.v.size() > 3)
     context_.Say(GetContext().clauseSource,
         "NUM_GANGS clause accepts a maximum of 3 arguments"_err_en_US);
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::NumWorkers &n) {
+  CheckAllowed(llvm::acc::Clause::ACCC_num_workers,
+      /*warnInsteadOfError=*/GetContext().directive ==
+              llvm::acc::Directive::ACCD_serial ||
+          GetContext().directive == llvm::acc::Directive::ACCD_serial_loop);
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::VectorLength &n) {
+  CheckAllowed(llvm::acc::Clause::ACCC_vector_length,
+      /*warnInsteadOfError=*/GetContext().directive ==
+              llvm::acc::Directive::ACCD_serial ||
+          GetContext().directive == llvm::acc::Directive::ACCD_serial_loop);
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::Reduction &reduction) {
@@ -671,6 +699,10 @@ void AccStructureChecker::Enter(const parser::AccClause::If &x) {
   }
   context_.Say(
       GetContext().clauseSource, "Must have LOGICAL or INTEGER type"_err_en_US);
+}
+
+void AccStructureChecker::Enter(const parser::OpenACCEndConstruct &x) {
+  context_.Say(x.source, "Misplaced OpenACC end directive"_warn_en_US);
 }
 
 void AccStructureChecker::Enter(const parser::Module &) {

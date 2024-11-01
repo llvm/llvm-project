@@ -20,7 +20,7 @@
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sabalt.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z16test_svabalt_s16u11__SVInt16_tu10__SVInt8_tu10__SVInt8_t(
+// CPP-CHECK-LABEL: @_Z16test_svabalt_s16u11__SVInt16_tu10__SVInt8_tS0_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sabalt.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
@@ -35,7 +35,7 @@ svint16_t test_svabalt_s16(svint16_t op1, svint8_t op2, svint8_t op3)
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sabalt.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z16test_svabalt_s32u11__SVInt32_tu11__SVInt16_tu11__SVInt16_t(
+// CPP-CHECK-LABEL: @_Z16test_svabalt_s32u11__SVInt32_tu11__SVInt16_tS0_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sabalt.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
@@ -50,7 +50,7 @@ svint32_t test_svabalt_s32(svint32_t op1, svint16_t op2, svint16_t op3)
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sabalt.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z16test_svabalt_s64u11__SVInt64_tu11__SVInt32_tu11__SVInt32_t(
+// CPP-CHECK-LABEL: @_Z16test_svabalt_s64u11__SVInt64_tu11__SVInt32_tS0_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sabalt.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
@@ -65,7 +65,7 @@ svint64_t test_svabalt_s64(svint64_t op1, svint32_t op2, svint32_t op3)
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.uabalt.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z16test_svabalt_u16u12__SVUint16_tu11__SVUint8_tu11__SVUint8_t(
+// CPP-CHECK-LABEL: @_Z16test_svabalt_u16u12__SVUint16_tu11__SVUint8_tS0_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.uabalt.nxv8i16(<vscale x 8 x i16> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
@@ -80,7 +80,7 @@ svuint16_t test_svabalt_u16(svuint16_t op1, svuint8_t op2, svuint8_t op3)
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uabalt.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z16test_svabalt_u32u12__SVUint32_tu12__SVUint16_tu12__SVUint16_t(
+// CPP-CHECK-LABEL: @_Z16test_svabalt_u32u12__SVUint32_tu12__SVUint16_tS0_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uabalt.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
@@ -95,7 +95,7 @@ svuint32_t test_svabalt_u32(svuint32_t op1, svuint16_t op2, svuint16_t op3)
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uabalt.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z16test_svabalt_u64u12__SVUint64_tu12__SVUint32_tu12__SVUint32_t(
+// CPP-CHECK-LABEL: @_Z16test_svabalt_u64u12__SVUint64_tu12__SVUint32_tS0_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uabalt.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 4 x i32> [[OP2:%.*]], <vscale x 4 x i32> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]

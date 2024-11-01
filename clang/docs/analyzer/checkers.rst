@@ -2520,12 +2520,33 @@ pointer. These functions include: getenv, localeconv, asctime, setlocale, strerr
     char *p, *pp;
 
     p = getenv("VAR");
-    pp = getenv("VAR2");
-    // subsequent call to 'getenv' invalidated previous one
+    setenv("SOMEVAR", "VALUE", /*overwrite = */1);
+    // call to 'setenv' may invalidate p
 
     *p;
     // dereferencing invalid pointer
   }
+
+
+The ``InvalidatingGetEnv`` option is available for treating getenv calls as
+invalidating. When enabled, the checker issues a warning if getenv is called
+multiple times and their results are used without first creating a copy.
+This level of strictness might be considered overly pedantic for the commonly
+used getenv implementations.
+
+To enable this option, use:
+``-analyzer-config alpha.security.cert.env.InvalidPtr:InvalidatingGetEnv=true``.
+
+By default, this option is set to *false*.
+
+When this option is enabled, warnings will be generated for scenarios like the
+following:
+
+.. code-block:: c
+
+  char* p = getenv("VAR");
+  char* pp = getenv("VAR2"); // assumes this call can invalidate `env`
+  strlen(p); // warns about accessing invalid ptr
 
 alpha.security.taint
 ^^^^^^^^^^^^^^^^^^^^

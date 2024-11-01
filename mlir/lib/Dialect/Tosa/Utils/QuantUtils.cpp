@@ -107,10 +107,10 @@ void mlir::tosa::computeMultiplierAndShift(double scale, int32_t &multiplier,
   }
 }
 
-#define GET_UQTYPE(input_type)                                                 \
-  (llvm::dyn_cast<quant::UniformQuantizedType>((input_type).getElementType()))
-#define GET_QTYPE(input_type)                                                  \
-  (llvm::dyn_cast<quant::QuantizedType>((input_type).getElementType()))
+#define GET_UQTYPE(inputType)                                                  \
+  (llvm::dyn_cast<quant::UniformQuantizedType>((inputType).getElementType()))
+#define GET_QTYPE(inputType)                                                   \
+  (llvm::dyn_cast<quant::QuantizedType>((inputType).getElementType()))
 
 /// Method to build ConvOpQuantizationAttr, called from
 /// ConvOpQuantInfoBuilder/TransConvOpQuantInfoBuilder:

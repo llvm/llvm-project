@@ -59,7 +59,7 @@ void Throw() {
 void PointerToMember(S obj1, S *obj2, int S::* data, void (S::*call)(int)) {
   obj1.*data;
   // CHECK: BinaryOperator 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:9> 'int' lvalue '.*'
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S':'S' lvalue ParmVar 0x{{[^ ]*}} 'obj1' 'S':'S'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S' lvalue ParmVar 0x{{[^ ]*}} 'obj1' 'S'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:9> 'int S::*' lvalue ParmVar 0x{{[^ ]*}} 'data' 'int S::*'
 
@@ -74,7 +74,7 @@ void PointerToMember(S obj1, S *obj2, int S::* data, void (S::*call)(int)) {
   // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:18> 'void'
   // CHECK-NEXT: ParenExpr 0x{{[^ ]*}} <col:3, col:14> '<bound member function type>'
   // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:4, col:10> '<bound member function type>' '.*'
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'S':'S' lvalue ParmVar 0x{{[^ ]*}} 'obj1' 'S':'S'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'S' lvalue ParmVar 0x{{[^ ]*}} 'obj1' 'S'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:10> 'void (S::*)(int)' lvalue ParmVar 0x{{[^ ]*}} 'call' 'void (S::*)(int)'
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:16> 'int' 12
@@ -178,7 +178,7 @@ void PostfixExpressions(S a, S *p, U<int> *r) {
   a.func(0);
   // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:11> 'void'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:5> '<bound member function type>' .func 0x{{[^ ]*}}
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S':'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S':'S'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S'
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:10> 'int' 0
 
   p->func(0);
@@ -190,16 +190,16 @@ void PostfixExpressions(S a, S *p, U<int> *r) {
 
   // FIXME: there is no mention that this used the template keyword.
   p->template foo<int>();
-  // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:24> 'int':'int'
+  // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:24> 'int'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:22> '<bound member function type>' ->foo 0x{{[^ ]*}}
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S *' lvalue ParmVar 0x{{[^ ]*}} 'p' 'S *'
 
   // FIXME: there is no mention that this used the template keyword.
   a.template foo<float>();
-  // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:25> 'float':'float'
+  // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:25> 'float'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:23> '<bound member function type>' .foo 0x{{[^ ]*}}
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S':'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S':'S'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S'
 
   p->~S();
   // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:9> 'void'
@@ -210,14 +210,14 @@ void PostfixExpressions(S a, S *p, U<int> *r) {
   a.~S();
   // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:8> 'void'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:6> '<bound member function type>' .~S 0x{{[^ ]*}}
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S':'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S':'S'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S'
 
   // FIXME: there seems to be no way to distinguish the construct below from
   // the construct above.
   a.~decltype(a)();
   // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:18> 'void'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:5> '<bound member function type>' .~S 0x{{[^ ]*}}
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S':'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S':'S'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S'
 
   // FIXME: similarly, there is no way to distinguish the construct below from
   // the p->~S() case.
@@ -233,13 +233,13 @@ void PostfixExpressions(S a, S *p, U<int> *r) {
   r->template U<int>::~U();
   // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:26> 'void'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:24> '<bound member function type>' ->~U 0x{{[^ ]*}}
-  // CHECK-NEXT: NestedNameSpecifier TypeSpecWithTemplate 'U<int>':'U<int>'
+  // CHECK-NEXT: NestedNameSpecifier TypeSpecWithTemplate 'U<int>'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'U<int> *' lvalue ParmVar 0x{{[^ ]*}} 'r' 'U<int> *'
 
   typeid(a);
   // CHECK: CXXTypeidExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:11> 'const std::type_info' lvalue
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:10> 'S':'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S':'S'
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:10> 'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S'
 
   // FIXME: no type information is printed for the argument.
   typeid(S);
@@ -448,7 +448,7 @@ void PrimaryExpressions(Ts... a) {
   // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:16, col:18> col:3 operator() 'auto () const -> auto' inline
   // CHECK-NEXT: CompoundStmt
   // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:4> col:4 implicit 'Ts...'
-  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:10> col:10 implicit 'int':'int'
+  // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:10> col:10 implicit 'int'
   // CHECK-NEXT: ParenListExpr 0x{{[^ ]*}} <col:4> 'NULL TYPE'
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'Ts' lvalue ParmVar 0x{{[^ ]*}} 'a' 'Ts...'
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:14> 'int' 12

@@ -166,10 +166,10 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
   m_tls_is_valid = false;
 
   // SME adds the tpidr2 register
-  m_tls_size = GetRegisterInfo().IsSSVEEnabled() ? sizeof(m_tls_regs)
+  m_tls_size = GetRegisterInfo().IsSSVEPresent() ? sizeof(m_tls_regs)
                                                  : sizeof(m_tls_regs.tpidr_reg);
 
-  if (GetRegisterInfo().IsSVEEnabled() || GetRegisterInfo().IsSSVEEnabled())
+  if (GetRegisterInfo().IsSVEPresent() || GetRegisterInfo().IsSSVEPresent())
     m_sve_state = SVEState::Unknown;
   else
     m_sve_state = SVEState::Disabled;
@@ -609,8 +609,7 @@ NativeRegisterContextLinux_arm64::CacheAllRegisters(uint32_t &cached_size) {
   if (error.Fail())
     return error;
 
-  // Here this means, does the system have ZA, not whether it is active.
-  if (GetRegisterInfo().IsZAEnabled()) {
+  if (GetRegisterInfo().IsZAPresent()) {
     error = ReadZAHeader();
     if (error.Fail())
       return error;
@@ -628,7 +627,7 @@ NativeRegisterContextLinux_arm64::CacheAllRegisters(uint32_t &cached_size) {
   }
 
   // If SVE is enabled we need not copy FPR separately.
-  if (GetRegisterInfo().IsSVEEnabled() || GetRegisterInfo().IsSSVEEnabled()) {
+  if (GetRegisterInfo().IsSVEPresent() || GetRegisterInfo().IsSSVEPresent()) {
     // Store mode and register data.
     cached_size +=
         sizeof(RegisterSetType) + sizeof(m_sve_state) + GetSVEBufferSize();
@@ -640,7 +639,7 @@ NativeRegisterContextLinux_arm64::CacheAllRegisters(uint32_t &cached_size) {
   if (error.Fail())
     return error;
 
-  if (GetRegisterInfo().IsMTEEnabled()) {
+  if (GetRegisterInfo().IsMTEPresent()) {
     cached_size += sizeof(RegisterSetType) + GetMTEControlSize();
     error = ReadMTEControl();
     if (error.Fail())
@@ -708,7 +707,7 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
   // constants and the functions vec_set_vector_length, sve_set_common and
   // za_set in the Linux Kernel.
 
-  if ((m_sve_state != SVEState::Streaming) && GetRegisterInfo().IsZAEnabled()) {
+  if ((m_sve_state != SVEState::Streaming) && GetRegisterInfo().IsZAPresent()) {
     // Use the header size not the buffer size, as we may be using the buffer
     // for fake data, which we do not want to write out.
     assert(m_za_header.size <= GetZABufferSize());
@@ -716,7 +715,7 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
                             m_za_header.size);
   }
 
-  if (GetRegisterInfo().IsSVEEnabled() || GetRegisterInfo().IsSSVEEnabled()) {
+  if (GetRegisterInfo().IsSVEPresent() || GetRegisterInfo().IsSSVEPresent()) {
     dst = AddRegisterSetType(dst, RegisterSetType::SVE);
     *(reinterpret_cast<SVEState *>(dst)) = m_sve_state;
     dst += sizeof(m_sve_state);
@@ -726,13 +725,13 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
                             GetFPRSize());
   }
 
-  if ((m_sve_state == SVEState::Streaming) && GetRegisterInfo().IsZAEnabled()) {
+  if ((m_sve_state == SVEState::Streaming) && GetRegisterInfo().IsZAPresent()) {
     assert(m_za_header.size <= GetZABufferSize());
     dst = AddSavedRegisters(dst, RegisterSetType::SME, GetZABuffer(),
                             m_za_header.size);
   }
 
-  if (GetRegisterInfo().IsMTEEnabled()) {
+  if (GetRegisterInfo().IsMTEPresent()) {
     dst = AddSavedRegisters(dst, RegisterSetType::MTE, GetMTEControl(),
                             GetMTEControlSize());
   }
@@ -1411,7 +1410,7 @@ std::vector<uint32_t> NativeRegisterContextLinux_arm64::GetExpeditedRegisters(
     expedited_reg_nums.push_back(GetRegisterInfo().GetRegNumSVEVG());
   // SME, streaming vector length. This is used by the ZA register which is
   // present even when streaming mode is not enabled.
-  if (GetRegisterInfo().IsSSVEEnabled())
+  if (GetRegisterInfo().IsSSVEPresent())
     expedited_reg_nums.push_back(GetRegisterInfo().GetRegNumSMESVG());
 
   return expedited_reg_nums;

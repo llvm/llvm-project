@@ -1002,6 +1002,15 @@ let ParentPackage = ENV in {
 
   def InvalidPtrChecker : Checker<"InvalidPtr">,
   HelpText<"Finds usages of possibly invalidated pointers">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "InvalidatingGetEnv",
+                  "Regard getenv as an invalidating call (as per POSIX "
+                  "standard), which can lead to false positives depending on "
+                  "implementation.",
+                  "false",
+                  InAlpha>,
+  ]>,
   Documentation<HasDocumentation>;
 
 } // end "alpha.cert.env"

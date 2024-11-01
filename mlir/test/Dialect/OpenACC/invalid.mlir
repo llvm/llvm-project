@@ -475,7 +475,7 @@ acc.parallel num_gangs(%i64value, %i64value, %i64value, %i64value : i64, i64, i6
 %i64value = arith.constant 1 : i64
 acc.parallel {
 // expected-error@+1 {{'acc.set' op cannot be nested in a compute operation}}
-  acc.set device_type(%i64value : i64)
+  acc.set attributes {device_type = #acc.device_type<nvidia>}
   acc.yield
 }
 

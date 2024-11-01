@@ -37,7 +37,7 @@ def testAffineStoreOp():
                 a1 = arith.ConstantOp(f32, 2.1)
 
                 # CHECK: affine.store %[[A1]], %alloc[symbol(%[[ARG0]]) * 3, %[[ARG0]] + symbol(%[[ARG0]]) + 1] : memref<12x12xf32>
-                affine.AffineStoreOp(a1, mem, map, map_operands=[arg0, arg0])
+                affine.AffineStoreOp(a1, mem, indices=[arg0, arg0], map=map)
 
                 return mem
 

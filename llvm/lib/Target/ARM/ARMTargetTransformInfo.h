@@ -165,15 +165,15 @@ public:
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
     switch (K) {
     case TargetTransformInfo::RGK_Scalar:
-      return TypeSize::getFixed(32);
+      return TypeSize::Fixed(32);
     case TargetTransformInfo::RGK_FixedWidthVector:
       if (ST->hasNEON())
-        return TypeSize::getFixed(128);
+        return TypeSize::Fixed(128);
       if (ST->hasMVEIntegerOps())
-        return TypeSize::getFixed(128);
-      return TypeSize::getFixed(0);
+        return TypeSize::Fixed(128);
+      return TypeSize::Fixed(0);
     case TargetTransformInfo::RGK_ScalableVector:
-      return TypeSize::getScalable(0);
+      return TypeSize::Scalable(0);
     }
     llvm_unreachable("Unsupported register kind");
   }

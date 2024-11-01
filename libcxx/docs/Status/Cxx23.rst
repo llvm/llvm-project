@@ -40,7 +40,6 @@ Paper Status
 
 .. note::
 
-   .. [#note-P0009R18] P0009R18: ``extents``, ``dextents``, ``layout_left``, ``layout_right``, and ``default_accessor`` are implemented.
    .. [#note-P0533R9] P0533R9: ``isfinite``, ``isinf``, ``isnan`` and ``isnormal`` are implemented.
    .. [#note-P1413R3] P1413R3: ``std::aligned_storage_t`` and ``std::aligned_union_t`` are marked deprecated, but
       clang doesn't issue a diagnostic for deprecated using template declarations.

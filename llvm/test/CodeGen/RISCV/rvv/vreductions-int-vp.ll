@@ -1161,7 +1161,7 @@ define signext i32 @vpreduce_umax_nxv32i32(i32 signext %s, <vscale x 32 x i32> %
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    mv a1, a3
 ; RV32-NEXT:  .LBB67_2:
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.s.x v25, a0
 ; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; RV32-NEXT:    vredmaxu.vs v25, v8, v25, v0.t
@@ -1187,7 +1187,7 @@ define signext i32 @vpreduce_umax_nxv32i32(i32 signext %s, <vscale x 32 x i32> %
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    mv a1, a3
 ; RV64-NEXT:  .LBB67_2:
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vmv.s.x v25, a2
 ; RV64-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; RV64-NEXT:    vredmaxu.vs v25, v8, v25, v0.t

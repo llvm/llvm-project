@@ -100,16 +100,8 @@ public:
   Result operator()(const NullPointer &) const { return visitor_.Default(); }
   template <typename T> Result operator()(const Constant<T> &x) const {
     if constexpr (T::category == TypeCategory::Derived) {
-      std::optional<Result> result;
-      for (const StructureConstructorValues &map : x.values()) {
-        for (const auto &pair : map) {
-          auto value{visitor_(pair.second.value())};
-          result = result
-              ? visitor_.Combine(std::move(*result), std::move(value))
-              : std::move(value);
-        }
-      }
-      return result ? *result : visitor_.Default();
+      return visitor_.Combine(
+          visitor_(x.result().derivedTypeSpec()), CombineContents(x.values()));
     } else {
       return visitor_.Default();
     }
@@ -217,11 +209,18 @@ public:
       const semantics::DerivedTypeSpec::ParameterMapType::value_type &x) const {
     return visitor_(x.second);
   }
+  Result operator()(
+      const semantics::DerivedTypeSpec::ParameterMapType &x) const {
+    return CombineContents(x);
+  }
   Result operator()(const semantics::DerivedTypeSpec &x) const {
-    return CombineContents(x.parameters());
+    return Combine(x.typeSymbol(), x.parameters());
   }
   Result operator()(const StructureConstructorValues::value_type &x) const {
     return visitor_(x.second);
+  }
+  Result operator()(const StructureConstructorValues &x) const {
+    return CombineContents(x);
   }
   Result operator()(const StructureConstructor &x) const {
     return visitor_.Combine(visitor_(x.derivedTypeSpec()), CombineContents(x));

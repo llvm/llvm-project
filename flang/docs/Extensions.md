@@ -177,7 +177,7 @@ end
    or `EXTENDEDTYPE(PARENTTYPE=PARENTTYPE(1,2,3))`).
 * Some intrinsic functions are specified in the standard as requiring the
   same type and kind for their arguments (viz., ATAN with two arguments,
-  ATAN2, DIM, HYPOT, MAX, MIN, MOD, and MODULO);
+  ATAN2, DIM, HYPOT, IAND, IEOR, IOR, MAX, MIN, MOD, and MODULO);
   we allow distinct types to be used, promoting
   the arguments as if they were operands to an intrinsic `+` operator,
   and defining the result type accordingly.
@@ -222,6 +222,8 @@ end
   we also treat scalars as being trivially contiguous, so that they
   can be used in contexts like data targets in pointer assignments
   with bounds remapping.
+* The `CONTIGUOUS` attribute can be redundantly applied to simply
+  contiguous objects, including scalars, with a portability warning.
 * We support some combinations of specific procedures in generic
   interfaces that a strict reading of the standard would preclude
   when their calls must nonetheless be distinguishable.

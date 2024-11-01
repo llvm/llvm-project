@@ -246,6 +246,7 @@ def AArch64PostLegalizerLowering
 def AArch64PostLegalizerCombiner
     : GICombiner<"AArch64PostLegalizerCombinerImpl",
                        [copy_prop, combines_for_extload,
+                        combine_indexed_load_store,
                         sext_trunc_sextload, mutate_anyext_to_zext,
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,

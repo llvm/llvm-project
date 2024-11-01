@@ -1116,6 +1116,17 @@ define i32 @freeze_ctpop(i32 %x) {
   ret i32 %fr
 }
 
+define i32 @freeze_zext_nneg(i8 %x) {
+; CHECK-LABEL: @freeze_zext_nneg(
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i8 [[X:%.*]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X_FR]] to i32
+; CHECK-NEXT:    ret i32 [[ZEXT]]
+;
+  %zext = zext nneg i8 %x to i32
+  %fr = freeze i32 %zext
+  ret i32 %fr
+}
+
 !0 = !{}
 !1 = !{i64 4}
 !2 = !{i32 0, i32 100}

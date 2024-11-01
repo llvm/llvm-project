@@ -21,7 +21,7 @@
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvtnt.bf16f32(<vscale x 8 x bfloat> [[EVEN:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 4 x float> [[OP:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
-// CPP-CHECK-LABEL: @_Z23test_svcvtnt_bf16_f32_xu14__SVBFloat16_tu10__SVBool_tu13__SVFloat32_t(
+// CPP-CHECK-LABEL: @_Z23test_svcvtnt_bf16_f32_xu14__SVBfloat16_tu10__SVBool_tu13__SVFloat32_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvtnt.bf16f32(<vscale x 8 x bfloat> [[EVEN:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 4 x float> [[OP:%.*]])
@@ -37,7 +37,7 @@ svbfloat16_t test_svcvtnt_bf16_f32_x(svbfloat16_t even, svbool_t pg, svfloat32_t
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvtnt.bf16f32(<vscale x 8 x bfloat> [[EVEN:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 4 x float> [[OP:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
-// CPP-CHECK-LABEL: @_Z23test_svcvtnt_bf16_f32_mu14__SVBFloat16_tu10__SVBool_tu13__SVFloat32_t(
+// CPP-CHECK-LABEL: @_Z23test_svcvtnt_bf16_f32_mu14__SVBfloat16_tu10__SVBool_tu13__SVFloat32_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvtnt.bf16f32(<vscale x 8 x bfloat> [[EVEN:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 4 x float> [[OP:%.*]])

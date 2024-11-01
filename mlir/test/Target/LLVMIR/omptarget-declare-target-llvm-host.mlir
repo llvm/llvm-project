@@ -102,30 +102,30 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_targe
   // CHECK-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [31 x i8] c"_QMtest_0Ept1_decl_tgt_ref_ptr\00"
   // CHECK-DAG: @.omp_offloading.entry._QMtest_0Ept1_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Ept1_decl_tgt_ref_ptr, ptr @.omp_offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
   // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Ept1_decl_tgt_ref_ptr", i32 {{.*}}, i32 {{.*}}}
-  llvm.mlir.global external @_QMtest_0Ept1() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : !llvm.struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)> {
-    %0 = llvm.mlir.zero : !llvm.ptr<i32>
+  llvm.mlir.global external @_QMtest_0Ept1() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {
+    %0 = llvm.mlir.zero : !llvm.ptr
     %1 = llvm.mlir.constant(9 : i32) : i32
-    %2 = llvm.mlir.zero : !llvm.ptr<i32>
-    %3 = llvm.getelementptr %2[1] : (!llvm.ptr<i32>) -> !llvm.ptr<i32>
-    %4 = llvm.ptrtoint %3 : !llvm.ptr<i32> to i64
-    %5 = llvm.mlir.undef : !llvm.struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)>
-    %6 = llvm.insertvalue %4, %5[1] : !llvm.struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)>
+    %2 = llvm.mlir.zero : !llvm.ptr
+    %3 = llvm.getelementptr %2[1] : (!llvm.ptr) -> !llvm.ptr, i32
+    %4 = llvm.ptrtoint %3 : !llvm.ptr to i64
+    %5 = llvm.mlir.undef : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+    %6 = llvm.insertvalue %4, %5[1] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
     %7 = llvm.mlir.constant(20180515 : i32) : i32
-    %8 = llvm.insertvalue %7, %6[2] : !llvm.struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)>
+    %8 = llvm.insertvalue %7, %6[2] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
     %9 = llvm.mlir.constant(0 : i32) : i32
     %10 = llvm.trunc %9 : i32 to i8
-    %11 = llvm.insertvalue %10, %8[3] : !llvm.struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)>
+    %11 = llvm.insertvalue %10, %8[3] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
     %12 = llvm.trunc %1 : i32 to i8
-    %13 = llvm.insertvalue %12, %11[4] : !llvm.struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)>
+    %13 = llvm.insertvalue %12, %11[4] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
     %14 = llvm.mlir.constant(1 : i32) : i32
     %15 = llvm.trunc %14 : i32 to i8
-    %16 = llvm.insertvalue %15, %13[5] : !llvm.struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)>
+    %16 = llvm.insertvalue %15, %13[5] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
     %17 = llvm.mlir.constant(0 : i32) : i32
     %18 = llvm.trunc %17 : i32 to i8
-    %19 = llvm.insertvalue %18, %16[6] : !llvm.struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)>
-    %20 = llvm.bitcast %0 : !llvm.ptr<i32> to !llvm.ptr<i32>
-    %21 = llvm.insertvalue %20, %19[0] : !llvm.struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)>
-    llvm.return %21 : !llvm.struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)>
+    %19 = llvm.insertvalue %18, %16[6] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+    %20 = llvm.bitcast %0 : !llvm.ptr to !llvm.ptr
+    %21 = llvm.insertvalue %20, %19[0] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+    llvm.return %21 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
   }
 
   // CHECK-DAG: @_QMtest_0Ept2_tar = global i32 5

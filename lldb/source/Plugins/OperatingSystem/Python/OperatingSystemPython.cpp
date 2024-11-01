@@ -74,47 +74,71 @@ llvm::StringRef OperatingSystemPython::GetPluginDescriptionStatic() {
 OperatingSystemPython::OperatingSystemPython(lldb_private::Process *process,
                                              const FileSpec &python_module_path)
     : OperatingSystem(process), m_thread_list_valobj_sp(), m_register_info_up(),
-      m_interpreter(nullptr), m_python_object_sp() {
+      m_interpreter(nullptr), m_script_object_sp() {
   if (!process)
     return;
   TargetSP target_sp = process->CalculateTarget();
   if (!target_sp)
     return;
   m_interpreter = target_sp->GetDebugger().GetScriptInterpreter();
-  if (m_interpreter) {
+  if (!m_interpreter)
+    return;
 
-    std::string os_plugin_class_name(
-        python_module_path.GetFilename().AsCString(""));
-    if (!os_plugin_class_name.empty()) {
-      LoadScriptOptions options;
-      char python_module_path_cstr[PATH_MAX];
-      python_module_path.GetPath(python_module_path_cstr,
-                                 sizeof(python_module_path_cstr));
-      Status error;
-      if (m_interpreter->LoadScriptingModule(python_module_path_cstr, options,
-                                             error)) {
-        // Strip the ".py" extension if there is one
-        size_t py_extension_pos = os_plugin_class_name.rfind(".py");
-        if (py_extension_pos != std::string::npos)
-          os_plugin_class_name.erase(py_extension_pos);
-        // Add ".OperatingSystemPlugIn" to the module name to get a string like
-        // "modulename.OperatingSystemPlugIn"
-        os_plugin_class_name += ".OperatingSystemPlugIn";
-        StructuredData::ObjectSP object_sp =
-            m_interpreter->OSPlugin_CreatePluginObject(
-                os_plugin_class_name.c_str(), process->CalculateProcess());
-        if (object_sp && object_sp->IsValid())
-          m_python_object_sp = object_sp;
-      }
-    }
+  std::string os_plugin_class_name(
+      python_module_path.GetFilename().AsCString(""));
+  if (os_plugin_class_name.empty())
+    return;
+
+  LoadScriptOptions options;
+  char python_module_path_cstr[PATH_MAX];
+  python_module_path.GetPath(python_module_path_cstr,
+                             sizeof(python_module_path_cstr));
+  Status error;
+  if (!m_interpreter->LoadScriptingModule(python_module_path_cstr, options,
+                                          error))
+    return;
+
+  // Strip the ".py" extension if there is one
+  size_t py_extension_pos = os_plugin_class_name.rfind(".py");
+  if (py_extension_pos != std::string::npos)
+    os_plugin_class_name.erase(py_extension_pos);
+  // Add ".OperatingSystemPlugIn" to the module name to get a string like
+  // "modulename.OperatingSystemPlugIn"
+  os_plugin_class_name += ".OperatingSystemPlugIn";
+
+  auto operating_system_interface =
+      m_interpreter->CreateOperatingSystemInterface();
+  if (!operating_system_interface)
+    // FIXME: We should pass an Status& to raise the error to the user.
+    //    return llvm::createStringError(
+    //        llvm::inconvertibleErrorCode(),
+    //        "Failed to create scripted thread interface.");
+    return;
+
+  ExecutionContext exe_ctx(process);
+  auto obj_or_err = operating_system_interface->CreatePluginObject(
+      os_plugin_class_name, exe_ctx, nullptr);
+
+  if (!obj_or_err) {
+    llvm::consumeError(obj_or_err.takeError());
+    return;
   }
+
+  StructuredData::GenericSP owned_script_object_sp = *obj_or_err;
+  if (!owned_script_object_sp->IsValid())
+    //    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+    //                                   "Created script object is invalid.");
+    return;
+
+  m_script_object_sp = owned_script_object_sp;
+  m_operating_system_interface_sp = operating_system_interface;
 }
 
 OperatingSystemPython::~OperatingSystemPython() = default;
 
 DynamicRegisterInfo *OperatingSystemPython::GetDynamicRegisterInfo() {
   if (m_register_info_up == nullptr) {
-    if (!m_interpreter || !m_python_object_sp)
+    if (!m_interpreter || !m_operating_system_interface_sp)
       return nullptr;
     Log *log = GetLog(LLDBLog::OS);
 
@@ -124,7 +148,7 @@ DynamicRegisterInfo *OperatingSystemPython::GetDynamicRegisterInfo() {
               m_process->GetID());
 
     StructuredData::DictionarySP dictionary =
-        m_interpreter->OSPlugin_RegisterInfo(m_python_object_sp);
+        m_operating_system_interface_sp->GetRegisterInfo();
     if (!dictionary)
       return nullptr;
 
@@ -140,26 +164,10 @@ DynamicRegisterInfo *OperatingSystemPython::GetDynamicRegisterInfo() {
 bool OperatingSystemPython::UpdateThreadList(ThreadList &old_thread_list,
                                              ThreadList &core_thread_list,
                                              ThreadList &new_thread_list) {
-  if (!m_interpreter || !m_python_object_sp)
+  if (!m_interpreter || !m_operating_system_interface_sp)
     return false;
 
   Log *log = GetLog(LLDBLog::OS);
-
-  // First thing we have to do is to try to get the API lock, and the
-  // interpreter lock. We're going to change the thread content of the process,
-  // and we're going to use python, which requires the API lock to do it. We
-  // need the interpreter lock to make sure thread_info_dict stays alive.
-  //
-  // If someone already has the API lock, that is ok, we just want to avoid
-  // external code from making new API calls while this call is happening.
-  //
-  // This is a recursive lock so we can grant it to any Python code called on
-  // the stack below us.
-  Target &target = m_process->GetTarget();
-  std::unique_lock<std::recursive_mutex> api_lock(target.GetAPIMutex(),
-                                                  std::defer_lock);
-  (void)api_lock.try_lock(); // See above.
-  auto interpreter_lock = m_interpreter->AcquireInterpreterLock();
 
   LLDB_LOGF(log,
             "OperatingSystemPython::UpdateThreadList() fetching thread "
@@ -170,7 +178,7 @@ bool OperatingSystemPython::UpdateThreadList(ThreadList &old_thread_list,
   // the lldb_private::Process subclass, no memory threads will be in this
   // list.
   StructuredData::ArraySP threads_list =
-      m_interpreter->OSPlugin_ThreadsInfo(m_python_object_sp);
+      m_operating_system_interface_sp->GetThreadInfo();
 
   const uint32_t num_cores = core_thread_list.GetSize(false);
 
@@ -281,27 +289,11 @@ RegisterContextSP
 OperatingSystemPython::CreateRegisterContextForThread(Thread *thread,
                                                       addr_t reg_data_addr) {
   RegisterContextSP reg_ctx_sp;
-  if (!m_interpreter || !m_python_object_sp || !thread)
+  if (!m_interpreter || !m_script_object_sp || !thread)
     return reg_ctx_sp;
 
   if (!IsOperatingSystemPluginThread(thread->shared_from_this()))
     return reg_ctx_sp;
-
-  // First thing we have to do is to try to get the API lock, and the
-  // interpreter lock. We're going to change the thread content of the process,
-  // and we're going to use python, which requires the API lock to do it. We
-  // need the interpreter lock to make sure thread_info_dict stays alive.
-  //
-  // If someone already has the API lock, that is ok, we just want to avoid
-  // external code from making new API calls while this call is happening.
-  //
-  // This is a recursive lock so we can grant it to any Python code called on
-  // the stack below us.
-  Target &target = m_process->GetTarget();
-  std::unique_lock<std::recursive_mutex> api_lock(target.GetAPIMutex(),
-                                                  std::defer_lock);
-  (void)api_lock.try_lock(); // See above.
-  auto interpreter_lock = m_interpreter->AcquireInterpreterLock();
 
   Log *log = GetLog(LLDBLog::Thread);
 
@@ -324,11 +316,11 @@ OperatingSystemPython::CreateRegisterContextForThread(Thread *thread,
               ") fetching register data from python",
               thread->GetID(), thread->GetProtocolID());
 
-    StructuredData::StringSP reg_context_data =
-        m_interpreter->OSPlugin_RegisterContextData(m_python_object_sp,
-                                                    thread->GetID());
+    std::optional<std::string> reg_context_data =
+        m_operating_system_interface_sp->GetRegisterContextForTID(
+            thread->GetID());
     if (reg_context_data) {
-      std::string value = std::string(reg_context_data->GetValue());
+      std::string value = *reg_context_data;
       DataBufferSP data_sp(new DataBufferHeap(value.c_str(), value.length()));
       if (data_sp->GetByteSize()) {
         RegisterContextMemory *reg_ctx_memory = new RegisterContextMemory(
@@ -347,6 +339,7 @@ OperatingSystemPython::CreateRegisterContextForThread(Thread *thread,
               "OperatingSystemPython::CreateRegisterContextForThread (tid "
               "= 0x%" PRIx64 ") forcing a dummy register context",
               thread->GetID());
+    Target &target = m_process->GetTarget();
     reg_ctx_sp = std::make_shared<RegisterContextDummy>(
         *thread, 0, target.GetArchitecture().GetAddressByteSize());
   }
@@ -372,26 +365,11 @@ lldb::ThreadSP OperatingSystemPython::CreateThread(lldb::tid_t tid,
             ", context = 0x%" PRIx64 ") fetching register data from python",
             tid, context);
 
-  if (m_interpreter && m_python_object_sp) {
-    // First thing we have to do is to try to get the API lock, and the
-    // interpreter lock. We're going to change the thread content of the
-    // process, and we're going to use python, which requires the API lock to
-    // do it. We need the interpreter lock to make sure thread_info_dict stays
-    // alive.
-    //
-    // If someone already has the API lock, that is ok, we just want to avoid
-    // external code from making new API calls while this call is happening.
-    //
-    // This is a recursive lock so we can grant it to any Python code called on
-    // the stack below us.
-    Target &target = m_process->GetTarget();
-    std::unique_lock<std::recursive_mutex> api_lock(target.GetAPIMutex(),
-                                                    std::defer_lock);
-    (void)api_lock.try_lock(); // See above.
-    auto interpreter_lock = m_interpreter->AcquireInterpreterLock();
+  if (m_interpreter && m_script_object_sp) {
 
     StructuredData::DictionarySP thread_info_dict =
-        m_interpreter->OSPlugin_CreateThread(m_python_object_sp, tid, context);
+        m_operating_system_interface_sp->CreateThread(tid, context);
+
     std::vector<bool> core_used_map;
     if (thread_info_dict) {
       ThreadList core_threads(m_process);

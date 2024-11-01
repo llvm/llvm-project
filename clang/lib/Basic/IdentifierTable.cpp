@@ -512,63 +512,6 @@ unsigned llvm::DenseMapInfo<clang::Selector>::getHashValue(clang::Selector S) {
   return DenseMapInfo<void*>::getHashValue(S.getAsOpaquePtr());
 }
 
-namespace clang {
-
-/// One of these variable length records is kept for each
-/// selector containing more than one keyword. We use a folding set
-/// to unique aggregate names (keyword selectors in ObjC parlance). Access to
-/// this class is provided strictly through Selector.
-class alignas(IdentifierInfoAlignment) MultiKeywordSelector
-    : public detail::DeclarationNameExtra,
-      public llvm::FoldingSetNode {
-  MultiKeywordSelector(unsigned nKeys) : DeclarationNameExtra(nKeys) {}
-
-public:
-  // Constructor for keyword selectors.
-  MultiKeywordSelector(unsigned nKeys, IdentifierInfo **IIV)
-      : DeclarationNameExtra(nKeys) {
-    assert((nKeys > 1) && "not a multi-keyword selector");
-
-    // Fill in the trailing keyword array.
-    IdentifierInfo **KeyInfo = reinterpret_cast<IdentifierInfo **>(this + 1);
-    for (unsigned i = 0; i != nKeys; ++i)
-      KeyInfo[i] = IIV[i];
-  }
-
-  // getName - Derive the full selector name and return it.
-  std::string getName() const;
-
-  using DeclarationNameExtra::getNumArgs;
-
-  using keyword_iterator = IdentifierInfo *const *;
-
-  keyword_iterator keyword_begin() const {
-    return reinterpret_cast<keyword_iterator>(this + 1);
-  }
-
-  keyword_iterator keyword_end() const {
-    return keyword_begin() + getNumArgs();
-  }
-
-  IdentifierInfo *getIdentifierInfoForSlot(unsigned i) const {
-    assert(i < getNumArgs() && "getIdentifierInfoForSlot(): illegal index");
-    return keyword_begin()[i];
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, keyword_iterator ArgTys,
-                      unsigned NumArgs) {
-    ID.AddInteger(NumArgs);
-    for (unsigned i = 0; i != NumArgs; ++i)
-      ID.AddPointer(ArgTys[i]);
-  }
-
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, keyword_begin(), getNumArgs());
-  }
-};
-
-} // namespace clang.
-
 bool Selector::isKeywordSelector(ArrayRef<StringRef> Names) const {
   assert(!Names.empty() && "must have >= 1 selector slots");
   if (getNumArgs() != Names.size())
@@ -624,7 +567,7 @@ std::string MultiKeywordSelector::getName() const {
 }
 
 std::string Selector::getAsString() const {
-  if (InfoPtr == 0)
+  if (isNull())
     return "<null selector>";
 
   if (getIdentifierInfoFlag() < MultiArg) {

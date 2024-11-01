@@ -12,6 +12,7 @@
 #ifndef OMPTARGET_DEVICERTL_INTERFACE_H
 #define OMPTARGET_DEVICERTL_INTERFACE_H
 
+#include "Environment.h"
 #include "Types.h"
 
 /// External API
@@ -219,7 +220,8 @@ struct KernelEnvironmentTy;
 
 int8_t __kmpc_is_spmd_exec_mode();
 
-int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment);
+int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
+                           KernelLaunchEnvironmentTy &KernelLaunchEnvironment);
 
 void __kmpc_target_deinit();
 

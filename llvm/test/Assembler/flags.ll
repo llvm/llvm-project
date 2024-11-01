@@ -260,3 +260,9 @@ define i64 @mul_unsigned_ce() {
 	ret i64 mul nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
+define i64 @test_zext(i32 %a) {
+; CHECK: %res = zext nneg i32 %a to i64
+  %res = zext nneg i32 %a to i64
+  ret i64 %res
+}
+

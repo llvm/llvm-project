@@ -120,12 +120,12 @@ public:
     return false;
   }
 
-  bool IsSVEEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskSVE); }
-  bool IsSSVEEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskSSVE); }
-  bool IsZAEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskZA); }
-  bool IsPAuthEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskPAuth); }
-  bool IsMTEEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskMTE); }
-  bool IsTLSEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskTLS); }
+  bool IsSVEPresent() const { return m_opt_regsets.AnySet(eRegsetMaskSVE); }
+  bool IsSSVEPresent() const { return m_opt_regsets.AnySet(eRegsetMaskSSVE); }
+  bool IsZAPresent() const { return m_opt_regsets.AnySet(eRegsetMaskZA); }
+  bool IsPAuthPresent() const { return m_opt_regsets.AnySet(eRegsetMaskPAuth); }
+  bool IsMTEPresent() const { return m_opt_regsets.AnySet(eRegsetMaskMTE); }
+  bool IsTLSPresent() const { return m_opt_regsets.AnySet(eRegsetMaskTLS); }
 
   bool IsSVEReg(unsigned reg) const;
   bool IsSVEZReg(unsigned reg) const;

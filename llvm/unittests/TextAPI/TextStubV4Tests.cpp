@@ -542,6 +542,22 @@ TEST(TBDv4, Target_maccatalyst) {
             stripWhitespace(Buffer.c_str()));
 }
 
+TEST(TBDv4, Target_maccatalyst2) {
+  static const char TBDv4TargetMacCatalyst[] =
+      "--- !tapi-tbd\n"
+      "tbd-version: 4\n"
+      "targets: [  x86_64-maccatalyst ]\n"
+      "install-name: Test.dylib\n"
+      "...\n";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv4TargetMacCatalyst, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(getPlatformFromName("ios-macabi"), *File->getPlatforms().begin());
+}
+
 TEST(TBDv4, Target_x86_ios) {
   static const char TBDv4Targetx86iOS[] = "--- !tapi-tbd\n"
                                           "tbd-version: 4\n"

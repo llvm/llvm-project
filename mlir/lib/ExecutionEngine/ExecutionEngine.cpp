@@ -194,7 +194,6 @@ static void packFunctionArguments(Module *module) {
           builder.CreateGEP(builder.getInt8PtrTy(), argList, retIndex);
       llvm::Value *retPtr =
           builder.CreateLoad(builder.getInt8PtrTy(), retPtrPtr);
-      retPtr = builder.CreateBitCast(retPtr, result->getType()->getPointerTo());
       builder.CreateStore(result, retPtr);
     }
 

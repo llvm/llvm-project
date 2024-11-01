@@ -141,7 +141,7 @@ define i64 @test2(i32 %V) {
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee(), !range [[RNG0]]
 ; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @callee(), !range [[RNG0]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[CALL1]], [[CALL2]]
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[ADD]] to i64
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext nneg i32 [[ADD]] to i64
 ; CHECK-NEXT:    ret i64 [[ZEXT]]
 ;
   %call1 = call i32 @callee(), !range !0
@@ -172,7 +172,7 @@ define i64 @test4(i32 %V) {
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee(), !range [[RNG0]]
 ; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @callee(), !range [[RNG0]]
 ; CHECK-NEXT:    [[ADD:%.*]] = mul nuw nsw i32 [[CALL1]], [[CALL2]]
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[ADD]] to i64
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext nneg i32 [[ADD]] to i64
 ; CHECK-NEXT:    ret i64 [[ZEXT]]
 ;
   %call1 = call i32 @callee(), !range !0
@@ -480,7 +480,7 @@ define i64 @test12(i32 %V) {
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee(), !range [[RNG1]]
 ; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @callee(), !range [[RNG1]]
 ; CHECK-NEXT:    [[NARROW:%.*]] = mul nsw i32 [[CALL1]], [[CALL2]]
-; CHECK-NEXT:    [[ADD:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = zext nneg i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
   %call1 = call i32 @callee(), !range !1
@@ -614,7 +614,7 @@ define i64 @test18(i32 %V) {
 define i64 @test19(i32 %V) {
 ; CHECK-LABEL: @test19(
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee(), !range [[RNG0]]
-; CHECK-NEXT:    [[SEXT1:%.*]] = zext i32 [[CALL1]] to i64
+; CHECK-NEXT:    [[SEXT1:%.*]] = zext nneg i32 [[CALL1]] to i64
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i64 -2147481648, [[SEXT1]]
 ; CHECK-NEXT:    ret i64 [[SUB]]
 ;

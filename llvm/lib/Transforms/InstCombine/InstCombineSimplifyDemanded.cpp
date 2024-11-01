@@ -698,14 +698,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
       // Unsigned shift right.
       APInt DemandedMaskIn(DemandedMask.shl(ShiftAmt));
-
-      // If the shift is exact, then it does demand the low bits (and knows that
-      // they are zero).
-      if (cast<LShrOperator>(I)->isExact())
-        DemandedMaskIn.setLowBits(ShiftAmt);
-
-      if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Depth + 1))
+      if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Depth + 1)) {
+        // exact flag may not longer hold.
+        I->dropPoisonGeneratingFlags();
         return I;
+      }
       assert(!Known.hasConflict() && "Bits known to be one AND zero?");
       Known.Zero.lshrInPlace(ShiftAmt);
       Known.One.lshrInPlace(ShiftAmt);
@@ -747,13 +744,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       if (DemandedMask.countl_zero() <= ShiftAmt)
         DemandedMaskIn.setSignBit();
 
-      // If the shift is exact, then it does demand the low bits (and knows that
-      // they are zero).
-      if (cast<AShrOperator>(I)->isExact())
-        DemandedMaskIn.setLowBits(ShiftAmt);
-
-      if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Depth + 1))
+      if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Depth + 1)) {
+        // exact flag may not longer hold.
+        I->dropPoisonGeneratingFlags();
         return I;
+      }
 
       assert(!Known.hasConflict() && "Bits known to be one AND zero?");
       // Compute the new bits that are at the top now plus sign bits.

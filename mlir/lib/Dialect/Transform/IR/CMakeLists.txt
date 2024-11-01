@@ -5,6 +5,7 @@ add_mlir_dialect_library(MLIRTransformDialect
   TransformInterfaces.cpp
   TransformOps.cpp
   TransformTypes.cpp
+  Utils.cpp
 
   DEPENDS
   MLIRMatchInterfacesIncGen

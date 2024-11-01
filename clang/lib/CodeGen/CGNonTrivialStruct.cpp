@@ -367,8 +367,6 @@ template <class Derived> struct GenFuncBase {
         CGF.Builder.CreateNUWMul(BaseEltSizeVal, NumElts);
     llvm::Value *DstArrayEnd = CGF.Builder.CreateInBoundsGEP(
         CGF.Int8Ty, DstAddr.getPointer(), SizeInBytes);
-    DstArrayEnd = CGF.Builder.CreateBitCast(
-        DstArrayEnd, CGF.CGM.Int8PtrPtrTy, "dstarray.end");
     llvm::BasicBlock *PreheaderBB = CGF.Builder.GetInsertBlock();
 
     // Create the header block and insert the phi instructions.

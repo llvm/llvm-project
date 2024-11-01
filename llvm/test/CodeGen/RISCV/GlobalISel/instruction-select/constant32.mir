@@ -55,9 +55,10 @@ body:            |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[LUI:%[0-9]+]]:gpr = LUI 524288
-    ; CHECK-NEXT: $x10 = COPY [[LUI]]
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[LUI]], -1
+    ; CHECK-NEXT: $x10 = COPY [[ADDI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = G_CONSTANT i32 2147483648
+    %0:gprb(s32) = G_CONSTANT i32 2147483647
     $x10 = COPY %0(s32)
     PseudoRET implicit $x10
 

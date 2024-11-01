@@ -2,7 +2,7 @@
 // RUN: mlir-translate -mlir-to-cpp -declare-variables-at-top %s | FileCheck %s -check-prefix=CPP-DECLTOP
 
 func.func @test_for(%arg0 : index, %arg1 : index, %arg2 : index) {
-  scf.for %i0 = %arg0 to %arg1 step %arg2 {
+  emitc.for %i0 = %arg0 to %arg1 step %arg2 {
     %0 = emitc.call "f"() : () -> i32
   }
   return
@@ -28,11 +28,21 @@ func.func @test_for_yield() {
   %s0 = arith.constant 0 : i32
   %p0 = arith.constant 1.0 : f32
 
-  %result:2 = scf.for %iter = %start to %stop step %step iter_args(%si = %s0, %pi = %p0) -> (i32, f32) {
-    %sn = emitc.call "add"(%si, %iter) : (i32, index) -> i32
-    %pn = emitc.call "mul"(%pi, %iter) : (f32, index) -> f32
-    scf.yield %sn, %pn : i32, f32
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
+  %1 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
+  %2 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
+  %3 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
+  emitc.assign %s0 : i32 to %2 : i32
+  emitc.assign %p0 : f32 to %3 : f32
+  emitc.for %iter = %start to %stop step %step {
+    %sn = emitc.call "add"(%2, %iter) : (i32, index) -> i32
+    %pn = emitc.call "mul"(%3, %iter) : (f32, index) -> f32
+    emitc.assign %sn : i32 to %2 : i32
+    emitc.assign %pn : f32 to %3 : f32
+    emitc.yield
   }
+  emitc.assign %2 : i32 to %0 : i32
+  emitc.assign %3 : f32 to %1 : f32
 
   return
 }
@@ -44,8 +54,10 @@ func.func @test_for_yield() {
 // CPP-DEFAULT-NEXT: float [[P0:[^ ]*]] = (float)1.000000000e+00;
 // CPP-DEFAULT-NEXT: int32_t [[SE:[^ ]*]];
 // CPP-DEFAULT-NEXT: float [[PE:[^ ]*]];
-// CPP-DEFAULT-NEXT: int32_t [[SI:[^ ]*]] = [[S0]];
-// CPP-DEFAULT-NEXT: float [[PI:[^ ]*]] = [[P0]];
+// CPP-DEFAULT-NEXT: int32_t [[SI:[^ ]*]];
+// CPP-DEFAULT-NEXT: float [[PI:[^ ]*]];
+// CPP-DEFAULT-NEXT: [[SI:[^ ]*]] = [[S0]];
+// CPP-DEFAULT-NEXT: [[PI:[^ ]*]] = [[P0]];
 // CPP-DEFAULT-NEXT: for (size_t [[ITER:[^ ]*]] = [[START]]; [[ITER]] < [[STOP]]; [[ITER]] += [[STEP]]) {
 // CPP-DEFAULT-NEXT: int32_t [[SN:[^ ]*]] = add([[SI]], [[ITER]]);
 // CPP-DEFAULT-NEXT: float [[PN:[^ ]*]] = mul([[PI]], [[ITER]]);
@@ -64,6 +76,8 @@ func.func @test_for_yield() {
 // CPP-DECLTOP-NEXT: float [[P0:[^ ]*]];
 // CPP-DECLTOP-NEXT: int32_t [[SE:[^ ]*]];
 // CPP-DECLTOP-NEXT: float [[PE:[^ ]*]];
+// CPP-DECLTOP-NEXT: int32_t [[SI:[^ ]*]];
+// CPP-DECLTOP-NEXT: float [[PI:[^ ]*]];
 // CPP-DECLTOP-NEXT: int32_t [[SN:[^ ]*]];
 // CPP-DECLTOP-NEXT: float [[PN:[^ ]*]];
 // CPP-DECLTOP-NEXT: [[START]] = 0;
@@ -71,8 +85,12 @@ func.func @test_for_yield() {
 // CPP-DECLTOP-NEXT: [[STEP]] = 1;
 // CPP-DECLTOP-NEXT: [[S0]] = 0;
 // CPP-DECLTOP-NEXT: [[P0]] = (float)1.000000000e+00;
-// CPP-DECLTOP-NEXT: int32_t [[SI:[^ ]*]] = [[S0]];
-// CPP-DECLTOP-NEXT: float [[PI:[^ ]*]] = [[P0]];
+// CPP-DECLTOP-NEXT: ;
+// CPP-DECLTOP-NEXT: ;
+// CPP-DECLTOP-NEXT: ;
+// CPP-DECLTOP-NEXT: ;
+// CPP-DECLTOP-NEXT: [[SI:[^ ]*]] = [[S0]];
+// CPP-DECLTOP-NEXT: [[PI:[^ ]*]] = [[P0]];
 // CPP-DECLTOP-NEXT: for (size_t [[ITER:[^ ]*]] = [[START]]; [[ITER]] < [[STOP]]; [[ITER]] += [[STEP]]) {
 // CPP-DECLTOP-NEXT: [[SN]] = add([[SI]], [[ITER]]);
 // CPP-DECLTOP-NEXT: [[PN]] = mul([[PI]], [[ITER]]);
@@ -91,14 +109,24 @@ func.func @test_for_yield_2() {
   %s0 = emitc.literal "0" : i32
   %p0 = emitc.literal "M_PI" : f32
 
-  %result:2 = scf.for %iter = %start to %stop step %step iter_args(%si = %s0, %pi = %p0) -> (i32, f32) {
-    %sn = emitc.call "add"(%si, %iter) : (i32, index) -> i32
-    %pn = emitc.call "mul"(%pi, %iter) : (f32, index) -> f32
-    scf.yield %sn, %pn : i32, f32
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
+  %1 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
+  %2 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
+  %3 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
+  emitc.assign %s0 : i32 to %2 : i32
+  emitc.assign %p0 : f32 to %3 : f32
+  emitc.for %iter = %start to %stop step %step {
+    %sn = emitc.call "add"(%2, %iter) : (i32, index) -> i32
+    %pn = emitc.call "mul"(%3, %iter) : (f32, index) -> f32
+    emitc.assign %sn : i32 to %2 : i32
+    emitc.assign %pn : f32 to %3 : f32
+    emitc.yield
   }
+  emitc.assign %2 : i32 to %0 : i32
+  emitc.assign %3 : f32 to %1 : f32
 
   return
 }
 // CPP-DEFAULT: void test_for_yield_2() {
-// CPP-DEFAULT: float{{.*}}= M_PI
+// CPP-DEFAULT: {{.*}}= M_PI
 // CPP-DEFAULT: for (size_t [[IN:.*]] = 0; [[IN]] < 10; [[IN]] += 1) {

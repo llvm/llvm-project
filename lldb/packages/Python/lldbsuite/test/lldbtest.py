@@ -801,10 +801,10 @@ class Base(unittest2.TestCase):
         else:
             self.libcxxPath = None
 
-        if "LLDBVSCODE_EXEC" in os.environ:
-            self.lldbVSCodeExec = os.environ["LLDBVSCODE_EXEC"]
+        if "LLDBDAP_EXEC" in os.environ:
+            self.lldbDAPExec = os.environ["LLDBDAP_EXEC"]
         else:
-            self.lldbVSCodeExec = None
+            self.lldbDAPExec = None
 
         self.lldbOption = " ".join("-o '" + s + "'" for s in self.setUpCommands())
 
@@ -1270,6 +1270,13 @@ class Base(unittest2.TestCase):
 
     def isAArch64SME(self):
         return self.isAArch64() and "sme" in self.getCPUInfo()
+
+    def isAArch64SMEFA64(self):
+        # smefa64 allows the use of the full A64 instruction set in streaming
+        # mode. This is required by certain test programs to setup register
+        # state.
+        cpuinfo = self.getCPUInfo()
+        return self.isAArch64() and "sme" in cpuinfo and "smefa64" in cpuinfo
 
     def isAArch64MTE(self):
         return self.isAArch64() and "mte" in self.getCPUInfo()

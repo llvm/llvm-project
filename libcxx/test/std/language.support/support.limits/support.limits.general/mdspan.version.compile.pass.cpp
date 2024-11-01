@@ -65,17 +65,11 @@
 
 #elif TEST_STD_VER == 23
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_mdspan
-#     error "__cpp_lib_mdspan should be defined in c++23"
-#   endif
-#   if __cpp_lib_mdspan != 202207L
-#     error "__cpp_lib_mdspan should have the value 202207L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_mdspan
-#     error "__cpp_lib_mdspan should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_mdspan
+#   error "__cpp_lib_mdspan should be defined in c++23"
+# endif
+# if __cpp_lib_mdspan != 202207L
+#   error "__cpp_lib_mdspan should have the value 202207L in c++23"
 # endif
 
 # ifdef __cpp_lib_submdspan
@@ -84,17 +78,11 @@
 
 #elif TEST_STD_VER > 23
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_mdspan
-#     error "__cpp_lib_mdspan should be defined in c++26"
-#   endif
-#   if __cpp_lib_mdspan != 202207L
-#     error "__cpp_lib_mdspan should have the value 202207L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_mdspan
-#     error "__cpp_lib_mdspan should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_mdspan
+#   error "__cpp_lib_mdspan should be defined in c++26"
+# endif
+# if __cpp_lib_mdspan != 202207L
+#   error "__cpp_lib_mdspan should have the value 202207L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

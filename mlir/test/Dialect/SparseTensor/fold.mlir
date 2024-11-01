@@ -75,3 +75,54 @@ func.func @sparse_reorder_coo(%arg0 : tensor<?x?xf32, #COO>) -> tensor<?x?xf32, 
   %ret = sparse_tensor.reorder_coo quick_sort %arg0 : tensor<?x?xf32, #COO> to tensor<?x?xf32, #COO>
   return %ret : tensor<?x?xf32, #COO>
 }
+
+
+#BSR = #sparse_tensor.encoding<{
+  map = ( i, j ) ->
+  ( i floordiv 2 : dense,
+    j floordiv 3 : compressed,
+    i mod 2      : dense,
+    j mod 3      : dense
+  )
+}>
+
+// CHECK-LABEL: func @sparse_crd_translate(
+//   CHECK-NOT:   sparse_tensor.crd_translate
+func.func @sparse_crd_translate(%arg0: index, %arg1: index) -> (index, index) {
+  %l0, %l1, %l2, %l3 = sparse_tensor.crd_translate dim_to_lvl [%arg0, %arg1] as #BSR : index, index, index, index
+  %d0, %d1 = sparse_tensor.crd_translate lvl_to_dim [%l0, %l1, %l2, %l3] as #BSR : index, index
+  return  %d0, %d1 : index, index
+}
+
+// CHECK-LABEL:   func.func @sparse_lvl_0(
+// CHECK:           %[[C5:.*]] = arith.constant 5 : index
+// CHECK:           return %[[C5]] : index
+func.func @sparse_lvl_0(%t : tensor<10x?xi32, #BSR>) -> index {
+  %lvl = arith.constant 0 : index
+  %l0 = sparse_tensor.lvl %t, %lvl : tensor<10x?xi32, #BSR>
+  return  %l0 : index
+}
+
+// CHECK-LABEL:   func.func @sparse_lvl_3(
+// CHECK:           %[[C3:.*]] = arith.constant 3 : index
+// CHECK:           return %[[C3]] : index
+func.func @sparse_lvl_3(%t : tensor<?x?xi32, #BSR>) -> index {
+  %lvl = arith.constant 3 : index
+  %l0 = sparse_tensor.lvl %t, %lvl : tensor<?x?xi32, #BSR>
+  return  %l0 : index
+}
+
+#DSDD = #sparse_tensor.encoding<{
+  map = (i, j, k, l) -> (i: dense, j: compressed, k: dense, l: dense)
+}>
+
+
+// CHECK-LABEL:   func.func @sparse_reinterpret_map(
+// CHECK-NOT: sparse_tensor.reinterpret_map
+func.func @sparse_reinterpret_map(%t0 : tensor<6x12xi32, #BSR>) -> tensor<6x12xi32, #BSR> {
+  %t1 = sparse_tensor.reinterpret_map %t0 : tensor<6x12xi32, #BSR>
+                                         to tensor<3x4x2x3xi32, #DSDD>
+  %t2 = sparse_tensor.reinterpret_map %t1 : tensor<3x4x2x3xi32, #DSDD>
+                                         to tensor<6x12xi32, #BSR>
+  return %t2 : tensor<6x12xi32, #BSR>
+}

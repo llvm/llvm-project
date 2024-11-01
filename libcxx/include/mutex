@@ -200,7 +200,7 @@ template<class Callable, class ...Args>
 #include <__thread/id.h>
 #include <__threading_support>
 #include <__utility/forward.h>
-#include <cstdint>
+#include <cstddef>
 #include <limits>
 #ifndef _LIBCPP_CXX03_LANG
 # include <tuple>
@@ -567,6 +567,7 @@ _LIBCPP_POP_MACROS
 #  include <cstring>
 #  include <ctime>
 #  include <initializer_list>
+#  include <iosfwd>
 #  include <new>
 #  include <stdexcept>
 #  include <system_error>

@@ -912,7 +912,7 @@ basic_filebuf<_CharT, _Traits>::setbuf(char_type* __s, streamsize __n)
     if (!__always_noconv_)
     {
         __ibs_ = max<streamsize>(__n, sizeof(__extbuf_min_));
-        if (__s && __ibs_ >= sizeof(__extbuf_min_))
+        if (__s && __ibs_ > sizeof(__extbuf_min_))
         {
             __intbuf_ = __s;
             __owns_ib_ = false;

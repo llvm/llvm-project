@@ -46,6 +46,7 @@ group("unittests") {
     "Support:SupportTests",
     "Support/DynamicLibrary:DynamicLibraryTests",
     "TableGen:TableGenTests",
+    "Target:TargetMachineCTests",
     "TargetParser:TargetParserTests",
     "Testing/ADT:TestingADTTests",
     "Testing/Support:TestingSupportTests",

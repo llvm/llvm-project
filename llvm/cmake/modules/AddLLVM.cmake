@@ -1530,7 +1530,7 @@ endmacro(add_llvm_tool_subdirectory)
 
 macro(add_custom_linker_flags name)
   if (LLVM_${name}_LINKER_FLAGS)
-    message(STATUS "Applying ${LLVM_${name}_LINKER_FLAGS} to ${name}")
+    message(DEBUG "Applying ${LLVM_${name}_LINKER_FLAGS} to ${name}")
     target_link_options(${name} PRIVATE ${LLVM_${name}_LINKER_FLAGS})
   endif()
 endmacro()

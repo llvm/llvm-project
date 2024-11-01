@@ -225,14 +225,16 @@ public:
 
   virtual bool CompleteType(CompilerType &compiler_type) = 0;
   virtual void ParseDeclsForContext(CompilerDeclContext decl_ctx) {}
-  virtual CompilerDecl GetDeclForUID(lldb::user_id_t uid) {
-    return CompilerDecl();
-  }
+  virtual CompilerDecl GetDeclForUID(lldb::user_id_t uid) { return {}; }
   virtual CompilerDeclContext GetDeclContextForUID(lldb::user_id_t uid) {
-    return CompilerDeclContext();
+    return {};
   }
   virtual CompilerDeclContext GetDeclContextContainingUID(lldb::user_id_t uid) {
-    return CompilerDeclContext();
+    return {};
+  }
+  virtual std::vector<CompilerContext>
+  GetCompilerContextForUID(lldb::user_id_t uid) {
+    return {};
   }
   virtual uint32_t ResolveSymbolContext(const Address &so_addr,
                                         lldb::SymbolContextItem resolve_scope,

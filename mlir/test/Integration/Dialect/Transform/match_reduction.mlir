@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --verify-diagnostics
+// RUN: mlir-opt %s --transform-interpreter --verify-diagnostics
 
 module attributes { transform.with_named_sequence } {
   transform.named_sequence @_reduce_leading_trailing(%entry: !transform.any_op {transform.readonly})
@@ -23,14 +23,14 @@ module attributes { transform.with_named_sequence } {
     %c2 = transform.param.constant 2 : i64 -> !transform.param<i64>
     %c4 = transform.param.constant 4 : i64 -> !transform.param<i64>
 
-    %rk, %dms, %bw, %operand_o, %init_v, %trailing_o = transform.match.structured failures(propagate) %entry 
+    %rk, %dms, %bw, %operand_o, %init_v, %trailing_o = transform.match.structured failures(propagate) %entry
         : (!transform.any_op) -> (!transform.param<i64>, !transform.param<i64>, !transform.param<i64>,
                                   !transform.any_op, !transform.any_value, !transform.any_op) {
     ^bb0(%struct: !transform.any_op):
       %rank = transform.match.structured.rank %struct : (!transform.any_op) -> !transform.param<i64>
       transform.match.param.cmpi ge %rank, %c2 : !transform.param<i64>
       transform.match.param.cmpi le %rank, %c4 : !transform.param<i64>
-      
+
       transform.match.structured.dim %struct[-1] {reduction} : !transform.any_op
       transform.match.structured.dim %struct[except(-1)] {parallel} : !transform.any_op
       %dims = transform.match.structured.dim %struct[all] : (!transform.any_op) -> !transform.param<i64>
@@ -43,7 +43,7 @@ module attributes { transform.with_named_sequence } {
       transform.match.structured.input %struct[0] {projected_permutation} : !transform.any_op
       transform.match.structured.init %struct[0] {projected_permutation} : !transform.any_op
       %init = transform.match.structured.init %struct[0] : (!transform.any_op) -> !transform.any_value
-      
+
       // This danse is necessary to create an empty handle if there is no single
       // user without failing the entire match
       %trailing_optional = transform.sequence %struct : (!transform.any_op) -> !transform.any_op failures(suppress) {
@@ -89,7 +89,7 @@ module attributes { transform.with_named_sequence } {
     }
 
     %init_o = transform.get_defining_op %init_v : (!transform.any_value) -> !transform.any_op
-    transform.match.operation_name %init_o ["linalg.fill"] : !transform.any_op    
+    transform.match.operation_name %init_o ["linalg.fill"] : !transform.any_op
 
     transform.yield %operand_o, %init_o, %entry, %trailing_o, %rk, %dms, %bw
         : !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op,
@@ -114,11 +114,11 @@ module attributes { transform.with_named_sequence } {
     transform.yield
   }
 
-  transform.sequence failures(propagate) {
-  ^bb(%root: !transform.any_op):
-    foreach_match in %root
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.consumed}) {
+    transform.foreach_match in %root
       @fill_reduce_leading_trailing -> @print_reduce_leading_trailing
       : (!transform.any_op) -> !transform.any_op
+    transform.yield
   }
 }
 
@@ -187,7 +187,7 @@ func.func @reduce_eltwise(%arg : !in_tensor_t) -> (!out_tensor_t) {
     indexing_maps = [affine_map<(d0) -> (d0)>,
                      affine_map<(d0) -> (d0)>],
     iterator_types = ["parallel"]}
-    ins(%5 : !out_tensor_t) outs(%6 : !out_tensor_t) {  
+    ins(%5 : !out_tensor_t) outs(%6 : !out_tensor_t) {
     ^bb0(%arg3: f32, %arg4: f32):
       %4 = math.sqrt %arg3 : f32
       linalg.yield %4 : f32
@@ -234,7 +234,7 @@ func.func @eltwise_reduce_eltwise(%arg : !in_tensor_t) -> (!out_tensor_t) {
     indexing_maps = [affine_map<(d0) -> (d0)>,
                      affine_map<(d0) -> (d0)>],
     iterator_types = ["parallel"]}
-    ins(%6 : !out_tensor_t) outs(%7 : !out_tensor_t) {  
+    ins(%6 : !out_tensor_t) outs(%7 : !out_tensor_t) {
     ^bb0(%arg3: f32, %arg4: f32):
       %4 = math.sqrt %arg3 : f32
       linalg.yield %4 : f32
@@ -283,7 +283,7 @@ func.func @eltwise_reduce_eltwise_swapped(%arg : !in_tensor_t) -> (!out_tensor_t
     indexing_maps = [affine_map<(d0) -> (d0)>,
                      affine_map<(d0) -> (d0)>],
     iterator_types = ["parallel"]}
-    ins(%6 : !out_tensor_t) outs(%7 : !out_tensor_t) {  
+    ins(%6 : !out_tensor_t) outs(%7 : !out_tensor_t) {
     ^bb0(%arg3: f32, %arg4: f32):
       %4 = math.sqrt %arg3 : f32
       linalg.yield %4 : f32
@@ -305,7 +305,7 @@ func.func @reduction_with_extra_op_in_func(%arg0: tensor<8x479xf32>, %arg1: tens
   %result = linalg.generic {
     indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                      affine_map<(d0, d1) -> (d0)>],
-    iterator_types = ["parallel", "reduction"]} 
+    iterator_types = ["parallel", "reduction"]}
     ins(%arg0 : tensor<8x479xf32>)
     outs(%fill : tensor<8xf32>) {
   ^bb0(%in: f32, %out: f32):

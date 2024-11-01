@@ -185,13 +185,13 @@ TEST_F(FormatTestSelective, ContinueReindenting) {
             "int c;\n"
             "int d;\n"
             "int e;\n"
-            "  int f;\n",
+            "  int f;",
             format("int   i;\n"
                    "  int b;\n"
                    " int   c;\n"
                    "  int d;\n"
                    "int e;\n"
-                   "  int f;\n",
+                   "  int f;",
                    11, 0));
 }
 
@@ -201,13 +201,13 @@ TEST_F(FormatTestSelective, ReindentClosingBrace) {
             "  int a;\n"
             "  int b;\n"
             "}\n"
-            " int c;\n",
+            " int c;",
             format("int   i;\n"
                    "  int f(){\n"
                    "int a;\n"
                    "int b;\n"
                    "  }\n"
-                   " int c;\n",
+                   " int c;",
                    11, 0));
   EXPECT_EQ("void f() {\n"
             "  if (foo) {\n"
@@ -216,7 +216,7 @@ TEST_F(FormatTestSelective, ReindentClosingBrace) {
             "    c();\n"
             "  }\n"
             "int d;\n"
-            "}\n",
+            "}",
             format("void f() {\n"
                    "  if (foo) {\n"
                    "b();\n"
@@ -224,7 +224,7 @@ TEST_F(FormatTestSelective, ReindentClosingBrace) {
                    "c();\n"
                    "}\n"
                    "int d;\n"
-                   "}\n",
+                   "}",
                    13, 0));
   EXPECT_EQ("int i = []() {\n"
             "  class C {\n"
@@ -232,14 +232,14 @@ TEST_F(FormatTestSelective, ReindentClosingBrace) {
             "    int b;\n"
             "  };\n"
             "  int c;\n"
-            "};\n",
+            "};",
             format("int i = []() {\n"
                    "  class C{\n"
                    "int a;\n"
                    "int b;\n"
                    "};\n"
                    "int c;\n"
-                   "  };\n",
+                   "  };",
                    17, 0));
 }
 

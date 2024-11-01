@@ -19,7 +19,7 @@
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.pfirst.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i1> [[OP:%.*]])
 // CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z15test_svpfirst_bu10__SVBool_tu10__SVBool_t(
+// CPP-CHECK-LABEL: @_Z15test_svpfirst_bu10__SVBool_tS_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.pfirst.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i1> [[OP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]

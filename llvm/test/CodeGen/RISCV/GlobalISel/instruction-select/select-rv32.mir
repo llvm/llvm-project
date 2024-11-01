@@ -53,3 +53,123 @@ body:            |
     PseudoRET implicit $x10
 
 ...
+---
+name:            select_icmp_ult
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:            |
+  bb.0:
+    liveins: $x10, $x11, $x12, $x13, $x14
+
+    ; CHECK-LABEL: name: select_icmp_ult
+    ; CHECK: liveins: $x10, $x11, $x12, $x13, $x14
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x12
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr = COPY $x13
+    ; CHECK-NEXT: [[Select_GPR_Using_CC_GPR:%[0-9]+]]:gpr = Select_GPR_Using_CC_GPR [[COPY2]], [[COPY3]], 4, [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[Select_GPR_Using_CC_GPR]]
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:gprb(s32) = COPY $x10
+    %1:gprb(s32) = COPY $x11
+    %2:gprb(s32) = COPY $x12
+    %3:gprb(s32) = COPY $x13
+    %4:gprb(s32) = COPY $x14
+    %5:gprb(s32) = G_ICMP intpred(ult), %2, %3
+    %6:gprb(s32) = G_SELECT %5, %0, %1
+    $x10 = COPY %6(s32)
+    PseudoRET implicit $x10
+
+...
+---
+name:            select_icmp_ugt
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:            |
+  bb.0:
+    liveins: $x10, $x11, $x12, $x13, $x14
+
+    ; CHECK-LABEL: name: select_icmp_ugt
+    ; CHECK: liveins: $x10, $x11, $x12, $x13, $x14
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x12
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr = COPY $x13
+    ; CHECK-NEXT: [[Select_GPR_Using_CC_GPR:%[0-9]+]]:gpr = Select_GPR_Using_CC_GPR [[COPY3]], [[COPY2]], 4, [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[Select_GPR_Using_CC_GPR]]
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:gprb(s32) = COPY $x10
+    %1:gprb(s32) = COPY $x11
+    %2:gprb(s32) = COPY $x12
+    %3:gprb(s32) = COPY $x13
+    %4:gprb(s32) = COPY $x14
+    %5:gprb(s32) = G_ICMP intpred(ugt), %2, %3
+    %6:gprb(s32) = G_SELECT %5, %0, %1
+    $x10 = COPY %6(s32)
+    PseudoRET implicit $x10
+
+...
+---
+name:            select_icmp_sgtneg1
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:            |
+  bb.0:
+    liveins: $x10, $x11, $x12, $x13, $x14
+
+    ; CHECK-LABEL: name: select_icmp_sgtneg1
+    ; CHECK: liveins: $x10, $x11, $x12, $x13, $x14
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x12
+    ; CHECK-NEXT: [[Select_GPR_Using_CC_GPR:%[0-9]+]]:gpr = Select_GPR_Using_CC_GPR [[COPY2]], $x0, 3, [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[Select_GPR_Using_CC_GPR]]
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:gprb(s32) = COPY $x10
+    %1:gprb(s32) = COPY $x11
+    %2:gprb(s32) = COPY $x12
+    %3:gprb(s32) = COPY $x13
+    %4:gprb(s32) = COPY $x14
+    %5:gprb(s32) = G_CONSTANT i32 -1
+    %6:gprb(s32) = G_ICMP intpred(sgt), %2, %5
+    %7:gprb(s32) = G_SELECT %6, %0, %1
+    $x10 = COPY %7(s32)
+    PseudoRET implicit $x10
+
+...
+---
+name:            select_icmp_slt1
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:            |
+  bb.0:
+    liveins: $x10, $x11, $x12, $x13, $x14
+
+    ; CHECK-LABEL: name: select_icmp_slt1
+    ; CHECK: liveins: $x10, $x11, $x12, $x13, $x14
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x12
+    ; CHECK-NEXT: [[Select_GPR_Using_CC_GPR:%[0-9]+]]:gpr = Select_GPR_Using_CC_GPR $x0, [[COPY2]], 3, [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[Select_GPR_Using_CC_GPR]]
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:gprb(s32) = COPY $x10
+    %1:gprb(s32) = COPY $x11
+    %2:gprb(s32) = COPY $x12
+    %3:gprb(s32) = COPY $x13
+    %4:gprb(s32) = COPY $x14
+    %5:gprb(s32) = G_CONSTANT i32 1
+    %6:gprb(s32) = G_ICMP intpred(slt), %2, %5
+    %7:gprb(s32) = G_SELECT %6, %0, %1
+    $x10 = COPY %7(s32)
+    PseudoRET implicit $x10
+
+...

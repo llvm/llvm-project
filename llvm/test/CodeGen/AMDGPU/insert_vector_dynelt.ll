@@ -289,16 +289,15 @@ entry:
 define amdgpu_kernel void @half4_inselt(ptr addrspace(1) %out, <4 x half> %vec, i32 %sel) {
 ; GCN-LABEL: half4_inselt:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dword s7, s[0:1], 0x34
+; GCN-NEXT:    s_load_dword s6, s[0:1], 0x34
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; GCN-NEXT:    s_mov_b64 s[4:5], 0xffff
-; GCN-NEXT:    s_mov_b32 s6, 0x3c003c00
+; GCN-NEXT:    s_mov_b32 s4, 0x3c003c00
+; GCN-NEXT:    s_mov_b32 s5, s4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_lshl_b32 s7, s7, 4
-; GCN-NEXT:    s_lshl_b64 s[4:5], s[4:5], s7
-; GCN-NEXT:    s_mov_b32 s7, s6
-; GCN-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[4:5]
-; GCN-NEXT:    s_and_b64 s[4:5], s[4:5], s[6:7]
+; GCN-NEXT:    s_lshl_b32 s6, s6, 4
+; GCN-NEXT:    s_lshl_b64 s[6:7], 0xffff, s6
+; GCN-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[6:7]
+; GCN-NEXT:    s_and_b64 s[4:5], s[6:7], s[4:5]
 ; GCN-NEXT:    s_or_b64 s[2:3], s[4:5], s[2:3]
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v2, s2
@@ -419,16 +418,15 @@ entry:
 define amdgpu_kernel void @short4_inselt(ptr addrspace(1) %out, <4 x i16> %vec, i32 %sel) {
 ; GCN-LABEL: short4_inselt:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dword s7, s[0:1], 0x34
+; GCN-NEXT:    s_load_dword s6, s[0:1], 0x34
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; GCN-NEXT:    s_mov_b64 s[4:5], 0xffff
-; GCN-NEXT:    s_mov_b32 s6, 0x10001
+; GCN-NEXT:    s_mov_b32 s4, 0x10001
+; GCN-NEXT:    s_mov_b32 s5, s4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_lshl_b32 s7, s7, 4
-; GCN-NEXT:    s_lshl_b64 s[4:5], s[4:5], s7
-; GCN-NEXT:    s_mov_b32 s7, s6
-; GCN-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[4:5]
-; GCN-NEXT:    s_and_b64 s[4:5], s[4:5], s[6:7]
+; GCN-NEXT:    s_lshl_b32 s6, s6, 4
+; GCN-NEXT:    s_lshl_b64 s[6:7], 0xffff, s6
+; GCN-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[6:7]
+; GCN-NEXT:    s_and_b64 s[4:5], s[6:7], s[4:5]
 ; GCN-NEXT:    s_or_b64 s[2:3], s[4:5], s[2:3]
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v2, s2
@@ -445,12 +443,11 @@ entry:
 define amdgpu_kernel void @byte8_inselt(ptr addrspace(1) %out, <8 x i8> %vec, i32 %sel) {
 ; GCN-LABEL: byte8_inselt:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dword s6, s[0:1], 0x34
+; GCN-NEXT:    s_load_dword s4, s[0:1], 0x34
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; GCN-NEXT:    s_mov_b64 s[4:5], 0xff
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_lshl_b32 s6, s6, 3
-; GCN-NEXT:    s_lshl_b64 s[4:5], s[4:5], s6
+; GCN-NEXT:    s_lshl_b32 s4, s4, 3
+; GCN-NEXT:    s_lshl_b64 s[4:5], 0xff, s4
 ; GCN-NEXT:    s_and_b32 s7, s5, 0x1010101
 ; GCN-NEXT:    s_and_b32 s6, s4, 0x1010101
 ; GCN-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[4:5]

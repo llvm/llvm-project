@@ -65,8 +65,10 @@ class AArch64ZAThreadedTestCase(TestBase):
         self.expect("register read za", substrs=[self.gen_za_value(svg, lambda r: 0)])
 
     def za_test_impl(self, enable_za):
-        if not self.isAArch64SME():
-            self.skipTest("SME must be present.")
+        # Although the test program doesn't obviously do any operations that
+        # would need smefa64, calls to libc functions like memset may do.
+        if not self.isAArch64SMEFA64():
+            self.skipTest("SME and the sm3fa64 extension must be present")
 
         self.build()
         supported_vg = self.get_supported_vg()
@@ -125,11 +127,13 @@ class AArch64ZAThreadedTestCase(TestBase):
                 self.runCmd("thread select %d" % (idx + 1))
                 self.check_za_register(4, 2)
                 self.runCmd("register write vg 2")
+                self.check_disabled_za_register(2)
 
             elif stopped_at_line_number == thY_break_line1:
                 self.runCmd("thread select %d" % (idx + 1))
                 self.check_za_register(2, 3)
                 self.runCmd("register write vg 4")
+                self.check_disabled_za_register(4)
 
         self.runCmd("thread continue 2")
         self.runCmd("thread continue 3")
