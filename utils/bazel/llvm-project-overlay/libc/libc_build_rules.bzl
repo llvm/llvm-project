@@ -8,7 +8,7 @@ load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load(":libc_configure_options.bzl", "LIBC_CONFIGURE_OPTIONS")
 load(":libc_namespace.bzl", "LIBC_NAMESPACE")
-load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_X86_64")
+load(":platforms.bzl", "PLATFORM_CPU_X86_64")
 
 def libc_internal_target(name):
     return name + ".__internal__"
