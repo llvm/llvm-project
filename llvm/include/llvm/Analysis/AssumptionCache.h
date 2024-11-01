@@ -26,7 +26,7 @@
 
 namespace llvm {
 
-class AssumeInst;
+class CondGuardInst;
 class Function;
 class raw_ostream;
 class TargetTransformInfo;
@@ -120,15 +120,15 @@ public:
   ///
   /// The call passed in must be an instruction within this function and must
   /// not already be in the cache.
-  void registerAssumption(AssumeInst *CI);
+  void registerAssumption(CondGuardInst *CI);
 
   /// Remove an \@llvm.assume intrinsic from this function's cache if it has
   /// been added to the cache earlier.
-  void unregisterAssumption(AssumeInst *CI);
+  void unregisterAssumption(CondGuardInst *CI);
 
   /// Update the cache of values being affected by this assumption (i.e.
   /// the values about which this assumption provides information).
-  void updateAffectedValues(AssumeInst *CI);
+  void updateAffectedValues(CondGuardInst *CI);
 
   /// Clear the cache of \@llvm.assume intrinsics for a function.
   ///

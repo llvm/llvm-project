@@ -1771,8 +1771,7 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
       // these to compute max backedge taken counts, but can still use
       // these to prove lack of overflow.  Use this fact to avoid
       // doing extra work that may not pay off.
-      if (!isa<SCEVCouldNotCompute>(MaxBECount) || HasGuards ||
-          !AC.assumptions().empty()) {
+      if (!isa<SCEVCouldNotCompute>(MaxBECount) || !AC.assumptions().empty()) {
 
         auto NewFlags = proveNoUnsignedWrapViaInduction(AR);
         setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), NewFlags);
@@ -5113,8 +5112,7 @@ ScalarEvolution::proveNoSignedWrapViaInduction(const SCEVAddRecExpr *AR) {
   // these to prove lack of overflow.  Use this fact to avoid
   // doing extra work that may not pay off.
 
-  if (isa<SCEVCouldNotCompute>(MaxBECount) && !HasGuards &&
-      AC.assumptions().empty())
+  if (isa<SCEVCouldNotCompute>(MaxBECount) && AC.assumptions().empty())
     return Result;
 
   // If the backedge is guarded by a comparison with the pre-inc  value the
@@ -5167,8 +5165,7 @@ ScalarEvolution::proveNoUnsignedWrapViaInduction(const SCEVAddRecExpr *AR) {
   // these to prove lack of overflow.  Use this fact to avoid
   // doing extra work that may not pay off.
 
-  if (isa<SCEVCouldNotCompute>(MaxBECount) && !HasGuards &&
-      AC.assumptions().empty())
+  if (isa<SCEVCouldNotCompute>(MaxBECount) && AC.assumptions().empty())
     return Result;
 
   // If the backedge is guarded by a comparison with the pre-inc  value the
@@ -11356,7 +11353,7 @@ bool ScalarEvolution::isImpliedViaGuard(const BasicBlock *BB,
                                         ICmpInst::Predicate Pred,
                                         const SCEV *LHS, const SCEV *RHS) {
   // No need to even try if we know the module has no guards.
-  if (!HasGuards)
+  if (AC.assumptions().empty())
     return false;
 
   return any_of(*BB, [&](const Instruction &I) {
@@ -11566,15 +11563,6 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
       return true;
   }
 
-  // Check conditions due to any @llvm.experimental.guard intrinsics.
-  auto *GuardDecl = F.getParent()->getFunction(
-      Intrinsic::getName(Intrinsic::experimental_guard));
-  if (GuardDecl)
-    for (const auto *GU : GuardDecl->users())
-      if (const auto *Guard = dyn_cast<IntrinsicInst>(GU))
-        if (Guard->getFunction() == BB->getParent() && DT.dominates(Guard, BB))
-          if (ProveViaCond(Guard->getArgOperand(0), false))
-            return true;
   return false;
 }
 
@@ -13447,25 +13435,11 @@ ScalarEvolution::ScalarEvolution(Function &F, TargetLibraryInfo &TLI,
                                  LoopInfo &LI)
     : F(F), TLI(TLI), AC(AC), DT(DT), LI(LI),
       CouldNotCompute(new SCEVCouldNotCompute()), ValuesAtScopes(64),
-      LoopDispositions(64), BlockDispositions(64) {
-  // To use guards for proving predicates, we need to scan every instruction in
-  // relevant basic blocks, and not just terminators.  Doing this is a waste of
-  // time if the IR does not actually contain any calls to
-  // @llvm.experimental.guard, so do a quick check and remember this beforehand.
-  //
-  // This pessimizes the case where a pass that preserves ScalarEvolution wants
-  // to _add_ guards to the module when there weren't any before, and wants
-  // ScalarEvolution to optimize based on those guards.  For now we prefer to be
-  // efficient in lieu of being smart in that rather obscure case.
-
-  auto *GuardDecl = F.getParent()->getFunction(
-      Intrinsic::getName(Intrinsic::experimental_guard));
-  HasGuards = GuardDecl && !GuardDecl->use_empty();
-}
+      LoopDispositions(64), BlockDispositions(64) {}
 
 ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
-    : F(Arg.F), HasGuards(Arg.HasGuards), TLI(Arg.TLI), AC(Arg.AC), DT(Arg.DT),
-      LI(Arg.LI), CouldNotCompute(std::move(Arg.CouldNotCompute)),
+    : F(Arg.F), TLI(Arg.TLI), AC(Arg.AC), DT(Arg.DT), LI(Arg.LI),
+      CouldNotCompute(std::move(Arg.CouldNotCompute)),
       ValueExprMap(std::move(Arg.ValueExprMap)),
       PendingLoopPredicates(std::move(Arg.PendingLoopPredicates)),
       PendingPhiRanges(std::move(Arg.PendingPhiRanges)),
@@ -15138,16 +15112,7 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
     Terms.emplace_back(AssumeI->getOperand(0), true);
   }
 
-  // Second, collect information from llvm.experimental.guards dominating the loop.
-  auto *GuardDecl = F.getParent()->getFunction(
-      Intrinsic::getName(Intrinsic::experimental_guard));
-  if (GuardDecl)
-    for (const auto *GU : GuardDecl->users())
-      if (const auto *Guard = dyn_cast<IntrinsicInst>(GU))
-        if (Guard->getFunction() == Header->getParent() && DT.dominates(Guard, Header))
-          Terms.emplace_back(Guard->getArgOperand(0), true);
-
-  // Third, collect conditions from dominating branches. Starting at the loop
+  // Second, collect conditions from dominating branches. Starting at the loop
   // predecessor, climb up the predecessor chain, as long as there are
   // predecessors that can be found that have unique successors leading to the
   // original header.

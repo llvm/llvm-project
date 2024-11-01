@@ -616,16 +616,13 @@ static bool isKnownNonZeroFromAssume(const Value *V, const Query &Q) {
   for (auto &AssumeVH : Q.AC->assumptionsFor(V)) {
     if (!AssumeVH)
       continue;
-    CallInst *I = cast<CallInst>(AssumeVH);
+    CondGuardInst *I = cast<CondGuardInst>(AssumeVH);
     assert(I->getFunction() == Q.CxtI->getFunction() &&
            "Got assumption for the wrong function!");
 
     // Warning: This loop can end up being somewhat performance sensitive.
     // We're running this loop for once for each value queried resulting in a
     // runtime of ~O(#assumes * #values).
-
-    assert(I->getCalledFunction()->getIntrinsicID() == Intrinsic::assume &&
-           "must be an assume intrinsic");
 
     Value *RHS;
     CmpInst::Predicate Pred;
@@ -664,16 +661,13 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
   for (auto &AssumeVH : Q.AC->assumptionsFor(V)) {
     if (!AssumeVH)
       continue;
-    CallInst *I = cast<CallInst>(AssumeVH);
+    CondGuardInst *I = cast<CondGuardInst>(AssumeVH);
     assert(I->getParent()->getParent() == Q.CxtI->getParent()->getParent() &&
            "Got assumption for the wrong function!");
 
     // Warning: This loop can end up being somewhat performance sensitive.
     // We're running this loop for once for each value queried resulting in a
     // runtime of ~O(#assumes * #values).
-
-    assert(I->getCalledFunction()->getIntrinsicID() == Intrinsic::assume &&
-           "must be an assume intrinsic");
 
     Value *Arg = I->getArgOperand(0);
 
@@ -7446,11 +7440,9 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     for (auto &AssumeVH : AC->assumptionsFor(V)) {
       if (!AssumeVH)
         continue;
-      CallInst *I = cast<CallInst>(AssumeVH);
+      IntrinsicInst *I = cast<IntrinsicInst>(AssumeVH);
       assert(I->getParent()->getParent() == CtxI->getParent()->getParent() &&
              "Got assumption for the wrong function!");
-      assert(I->getCalledFunction()->getIntrinsicID() == Intrinsic::assume &&
-             "must be an assume intrinsic");
 
       if (!isValidAssumeForContext(I, CtxI, DT))
         continue;
