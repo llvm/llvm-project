@@ -335,25 +335,25 @@ def testGetDenseElementsI1Signless():
         attr = DenseElementsAttr.get(array)
         # CHECK: dense<true> : tensor<1xi1>
         print(attr)
-        # CHECK: {{\[}} True]
+        # CHECK{LITERAL}: [ True]
         print(np.array(attr))
 
         array = np.array([[True, False, True], [True, True, False]], dtype=np.bool_)
         attr = DenseElementsAttr.get(array)
-        # CHECK: dense<{{\[}}[true, false, true], [true, true, false]]> : tensor<2x3xi1>
+        # CHECK{LITERAL}: dense<[[true, false, true], [true, true, false]]> : tensor<2x3xi1>
         print(attr)
-        # CHECK: {{\[}}[ True False True]
-        # CHECK: {{\[}} True True False]]
+        # CHECK{LITERAL}: [[ True False True]
+        # CHECK{LITERAL}:  [ True True False]]
         print(np.array(attr))
 
         array = np.array(
             [[True, True, False, False], [True, False, True, False]], dtype=np.bool_
         )
         attr = DenseElementsAttr.get(array)
-        # CHECK: dense<{{\[}}[true, true, false, false], [true, false, true, false]]> : tensor<2x4xi1>
+        # CHECK{LITERAL}: dense<[[true, true, false, false], [true, false, true, false]]> : tensor<2x4xi1>
         print(attr)
-        # CHECK: {{\[}}[ True True False False]
-        # CHECK: {{\[}} True False True False]]
+        # CHECK{LITERAL}: [[ True True False False]
+        # CHECK{LITERAL}:  [ True False True False]]
         print(np.array(attr))
 
         array = np.array(
@@ -367,13 +367,13 @@ def testGetDenseElementsI1Signless():
             dtype=np.bool_,
         )
         attr = DenseElementsAttr.get(array)
-        # CHECK: dense<{{\[}}[true, true, false, false], [true, false, true, false], [false, false, false, false], [true, true, true, true], [true, false, false, true]]> : tensor<5x4xi1>
+        # CHECK{LITERAL}: dense<[[true, true, false, false], [true, false, true, false], [false, false, false, false], [true, true, true, true], [true, false, false, true]]> : tensor<5x4xi1>
         print(attr)
-        # CHECK: {{\[}}[ True True False False]
-        # CHECK: {{\[}} True False True False]
-        # CHECK: {{\[}}False False False False]
-        # CHECK: {{\[}} True True True True]
-        # CHECK: {{\[}} True False False True]]
+        # CHECK{LITERAL}: [[ True True False False]
+        # CHECK{LITERAL}:  [ True False True False]
+        # CHECK{LITERAL}:  [False False False False]
+        # CHECK{LITERAL}:  [ True True True True]
+        # CHECK{LITERAL}:  [ True False False True]]
         print(np.array(attr))
 
         array = np.array(
@@ -384,17 +384,17 @@ def testGetDenseElementsI1Signless():
             dtype=np.bool_,
         )
         attr = DenseElementsAttr.get(array)
-        # CHECK: dense<{{\[}}[true, true, false, false, true, true, false, false, false], [false, false, false, true, false, true, true, false, true]]> : tensor<2x9xi1>
+        # CHECK{LITERAL}: dense<[[true, true, false, false, true, true, false, false, false], [false, false, false, true, false, true, true, false, true]]> : tensor<2x9xi1>
         print(attr)
-        # CHECK: {{\[}}[ True True False False True True False False False]
-        # CHECK: {{\[}}False False False True False True True False True]]
+        # CHECK{LITERAL}: [[ True True False False True True False False False]
+        # CHECK{LITERAL}:  [False False False True False True True False True]]
         print(np.array(attr))
 
         array = np.array([], dtype=np.bool_)
         attr = DenseElementsAttr.get(array)
         # CHECK: dense<> : tensor<0xi1>
         print(attr)
-        # CHECK: {{\[}}]
+        # CHECK{LITERAL}: []
         print(np.array(attr))
 
 

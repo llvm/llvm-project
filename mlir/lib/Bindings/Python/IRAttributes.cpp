@@ -1072,7 +1072,7 @@ private:
   // `getBitpackedAttributeFromBooleanBuffer`
   py::buffer_info getBooleanBufferFromBitpackedAttribute() {
     int64_t numBooleans = mlirElementsAttrGetNumElements(*this);
-    int64_t numBitpackedBytes = (numBooleans + 7) / 8;
+    int64_t numBitpackedBytes = llvm::divideCeil(numBooleans, 8);
     uint8_t *bitpackedData = static_cast<uint8_t *>(
         const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
     py::array_t<uint8_t> packedArray(numBitpackedBytes, bitpackedData);
