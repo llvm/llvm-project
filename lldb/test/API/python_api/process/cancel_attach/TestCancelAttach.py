@@ -11,6 +11,8 @@ from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil
 
 
+# This test seems too sensitive to timing.
+@skipIfAsan
 class AttachCancelTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
