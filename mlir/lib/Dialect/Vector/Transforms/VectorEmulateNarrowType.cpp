@@ -38,16 +38,17 @@ using namespace mlir;
 
 /// Returns a compressed mask. The mask value is set only if any mask is present
 /// in the scale range. E.g., if `scale` equals to 2, and `intraDataOffset`
-/// equals to 2, the following mask:
+/// equals to 1 (intraDataOffset strictly smaller than scale), the following
+/// mask:
 ///
-///   %mask = [1, 1, 1, 0, 0, 0]
+///   %mask = [1, 1, 0, 0, 0, 0]
 ///
 /// will first be padded with number of `intraDataOffset` zeros:
-///   %mask = [0, 0, 1, 1, 1, 0, 0, 0]
+///   %mask = [0, 1, 1, 0, 0, 0, 0, 0]
 ///
 /// then it will return the following new compressed mask:
 ///
-///   %mask = [0, 1, 1, 0]
+///   %mask = [1, 1, 0, 0]
 static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
                                                   Location loc, Value mask,
                                                   int origElements, int scale,
@@ -76,9 +77,6 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
   shape.back() = numElements;
   auto newMaskType = VectorType::get(shape, rewriter.getI1Type());
   if (createMaskOp) {
-    // TODO: handle the case with non-zero intraDataOffset for CreateMaskOp.
-    if (intraDataOffset != 0)
-      return failure();
     OperandRange maskOperands = createMaskOp.getOperands();
     size_t numMaskOperands = maskOperands.size();
     AffineExpr s0;
@@ -130,10 +128,18 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
   return newMask;
 }
 
-/// A wrapper function for emitting `vector.extract_strided_slice`.
+/// A wrapper function for emitting `vector.extract_strided_slice`. The vector
+/// has to be of 1-D shape.
 static Value extractSubvectorFrom(RewriterBase &rewriter, Location loc,
                                   VectorType extractType, Value vector,
                                   int64_t frontOffset, int64_t subvecSize) {
+  // get vector's vector type:
+  auto vectorType = dyn_cast<VectorType>(vector.getType());
+  assert(vectorType && "expected vector type");
+  assert(vectorType.getShape().size() == 1 && "expected 1-D vector type");
+  assert(extractType.getShape().size() == 1 &&
+         "extractType must be 1-D vector type");
+
   auto offsets = rewriter.getI64ArrayAttr({frontOffset});
   auto sizes = rewriter.getI64ArrayAttr({subvecSize});
   auto strides = rewriter.getI64ArrayAttr({1});
@@ -143,9 +149,17 @@ static Value extractSubvectorFrom(RewriterBase &rewriter, Location loc,
       ->getResult(0);
 }
 
-/// A wrapper function for emitting `vector.insert_strided_slice`.
+/// A wrapper function for emitting `vector.insert_strided_slice`. The source
+/// and dest vectors must be of 1-D shape.
 static Value insertSubvectorInto(RewriterBase &rewriter, Location loc,
                                  Value src, Value dest, int64_t offset) {
+  auto srcType = dyn_cast<VectorType>(src.getType());
+  assert(srcType && "expected vector type");
+  assert(srcType.getShape().size() == 1 && "expected 1-D vector type");
+  auto destType = dyn_cast<VectorType>(dest.getType());
+  assert(destType && "expected vector type");
+  assert(destType.getShape().size() == 1 && "expected 1-D vector type");
+
   auto offsets = rewriter.getI64ArrayAttr({offset});
   auto strides = rewriter.getI64ArrayAttr({1});
   return rewriter.create<vector::InsertStridedSliceOp>(loc, dest.getType(), src,
@@ -157,24 +171,20 @@ static Value insertSubvectorInto(RewriterBase &rewriter, Location loc,
 /// `srcOffsetVar` is not a constant, making it impossible to use
 /// vector.extract_strided_slice, as it requires constant offsets.
 static Value dynamicallyExtractSubVector(RewriterBase &rewriter, Location loc,
-                                         TypedValue<VectorType> srcVec,
-                                         Value destVec,
-                                         OpFoldResult srcOffsetVar,
-                                         int64_t lengthSubvec) {
-  for (int i = 0; i < lengthSubvec; ++i) {
-    Value extractLoc;
-    if (i == 0) {
-      extractLoc = srcOffsetVar.dyn_cast<Value>();
-    } else {
-      extractLoc = rewriter.create<arith::AddIOp>(
-          loc, rewriter.getIndexType(), srcOffsetVar.dyn_cast<Value>(),
-          rewriter.create<arith::ConstantIndexOp>(loc, i));
-    }
+                                         TypedValue<VectorType> source,
+                                         Value dest, OpFoldResult offset,
+                                         int64_t numElementsToExtract) {
+  for (int i = 0; i < numElementsToExtract; ++i) {
+    Value extractLoc =
+        (i == 0) ? offset.dyn_cast<Value>()
+                 : rewriter.create<arith::AddIOp>(
+                       loc, rewriter.getIndexType(), offset.dyn_cast<Value>(),
+                       rewriter.create<arith::ConstantIndexOp>(loc, i));
     auto extractOp =
-        rewriter.create<vector::ExtractOp>(loc, srcVec, extractLoc);
-    destVec = rewriter.create<vector::InsertOp>(loc, extractOp, destVec, i);
+        rewriter.create<vector::ExtractOp>(loc, source, extractLoc);
+    dest = rewriter.create<vector::InsertOp>(loc, extractOp, dest, i);
   }
-  return destVec;
+  return dest;
 }
 
 /// Load `numLoadedElements` of `newElementType` from `base` at
@@ -183,15 +193,15 @@ static Value dynamicallyExtractSubVector(RewriterBase &rewriter, Location loc,
 static TypedValue<VectorType>
 emulatedVectorLoad(ConversionPatternRewriter &rewriter, Location loc,
                    Value base, OpFoldResult linearizedIndices,
-                   int64_t numLoadedElements, Type oldElememtType,
+                   int64_t numElementsToLoad, Type oldElememtType,
                    Type newElementType) {
   auto scale = newElementType.getIntOrFloatBitWidth() /
                oldElememtType.getIntOrFloatBitWidth();
   auto newLoad = rewriter.create<vector::LoadOp>(
-      loc, VectorType::get(numLoadedElements, newElementType), base,
+      loc, VectorType::get(numElementsToLoad, newElementType), base,
       getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices));
   return rewriter.create<vector::BitCastOp>(
-      loc, VectorType::get(numLoadedElements * scale, oldElememtType), newLoad);
+      loc, VectorType::get(numElementsToLoad * scale, oldElememtType), newLoad);
 };
 
 namespace {
