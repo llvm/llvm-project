@@ -296,12 +296,6 @@ if is_configured("lldb_libs_dir"):
 if is_configured("lldb_framework_dir"):
     dotest_cmd += ["--framework", config.lldb_framework_dir]
 
-if (
-    "lldb-repro-capture" in config.available_features
-    or "lldb-repro-replay" in config.available_features
-):
-    dotest_cmd += ["--skip-category=lldb-dap", "--skip-category=std-module"]
-
 # Skip the swiftmaccatalyst category if its stdlib support is missing.
 if swift_stdlibs_dir and not os.path.isdir(
     os.path.join(swift_stdlibs_dir, "maccatalyst")
