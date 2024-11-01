@@ -1627,6 +1627,8 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
 #include "clang/Basic/PPCTypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define BUILTIN_TYPE(Id, SingletonId)
 #define SIGNED_TYPE(Id, SingletonId) case BuiltinType::Id:
 #define UNSIGNED_TYPE(Id, SingletonId) case BuiltinType::Id:
@@ -2852,8 +2854,7 @@ void EnqueueVisitor::VisitDeclStmt(const DeclStmt *S) {
 }
 void EnqueueVisitor::VisitDesignatedInitExpr(const DesignatedInitExpr *E) {
   AddStmt(E->getInit());
-  for (const DesignatedInitExpr::Designator &D :
-       llvm::reverse(E->designators())) {
+  for (const Designator &D : llvm::reverse(E->designators())) {
     if (D.isFieldDesignator()) {
       if (FieldDecl *Field = D.getField())
         AddMemberRef(Field, D.getFieldLoc());
@@ -8115,7 +8116,6 @@ CXLinkageKind clang_getCursorLinkage(CXCursor cursor) {
     case NoLinkage:
     case VisibleNoLinkage:
       return CXLinkage_NoLinkage;
-    case ModuleInternalLinkage:
     case InternalLinkage:
       return CXLinkage_Internal;
     case UniqueExternalLinkage:
@@ -8945,6 +8945,25 @@ unsigned clang_CXXMethod_isMoveAssignmentOperator(CXCursor C) {
       D ? dyn_cast_or_null<CXXMethodDecl>(D->getAsFunction()) : nullptr;
 
   return (Method && Method->isMoveAssignmentOperator()) ? 1 : 0;
+}
+
+unsigned clang_CXXMethod_isExplicit(CXCursor C) {
+  if (!clang_isDeclaration(C.kind))
+    return 0;
+
+  const Decl *D = cxcursor::getCursorDecl(C);
+  const FunctionDecl *FD = D->getAsFunction();
+
+  if (!FD)
+    return 0;
+
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FD))
+    return Ctor->isExplicit();
+
+  if (const auto *Conv = dyn_cast<CXXConversionDecl>(FD))
+    return Conv->isExplicit();
+
+  return 0;
 }
 
 unsigned clang_CXXRecord_isAbstract(CXCursor C) {

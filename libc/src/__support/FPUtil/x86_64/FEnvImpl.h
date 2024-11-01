@@ -9,16 +9,17 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_FENVIMPL_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_FENVIMPL_H
 
-#include "src/__support/architectures.h"
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/properties/architectures.h"
 
-#if !defined(LLVM_LIBC_ARCH_X86)
+#if !defined(LIBC_TARGET_ARCH_IS_X86)
 #error "Invalid include"
 #endif
 
 #include <fenv.h>
 #include <stdint.h>
 
-#include "src/__support/sanitizer.h"
+#include "src/__support/macros/sanitizer.h"
 
 namespace __llvm_libc {
 namespace fputil {
@@ -104,7 +105,7 @@ struct X87StateDescriptor {
 LIBC_INLINE uint16_t get_x87_control_word() {
   uint16_t w;
   __asm__ __volatile__("fnstcw %0" : "=m"(w)::);
-  SANITIZER_MEMORY_INITIALIZED(&w, sizeof(w));
+  MSAN_UNPOISON(&w, sizeof(w));
   return w;
 }
 
@@ -115,7 +116,7 @@ LIBC_INLINE void write_x87_control_word(uint16_t w) {
 LIBC_INLINE uint16_t get_x87_status_word() {
   uint16_t w;
   __asm__ __volatile__("fnstsw %0" : "=m"(w)::);
-  SANITIZER_MEMORY_INITIALIZED(&w, sizeof(w));
+  MSAN_UNPOISON(&w, sizeof(w));
   return w;
 }
 
@@ -126,7 +127,7 @@ LIBC_INLINE void clear_x87_exceptions() {
 LIBC_INLINE uint32_t get_mxcsr() {
   uint32_t w;
   __asm__ __volatile__("stmxcsr %0" : "=m"(w)::);
-  SANITIZER_MEMORY_INITIALIZED(&w, sizeof(w));
+  MSAN_UNPOISON(&w, sizeof(w));
   return w;
 }
 
@@ -136,7 +137,7 @@ LIBC_INLINE void write_mxcsr(uint32_t w) {
 
 LIBC_INLINE void get_x87_state_descriptor(X87StateDescriptor &s) {
   __asm__ __volatile__("fnstenv %0" : "=m"(s));
-  SANITIZER_MEMORY_INITIALIZED(&s, sizeof(s));
+  MSAN_UNPOISON(&s, sizeof(s));
 }
 
 LIBC_INLINE void write_x87_state_descriptor(const X87StateDescriptor &s) {

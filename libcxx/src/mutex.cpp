@@ -211,21 +211,21 @@ void __call_once(volatile once_flag::_State_type& flag, void* arg,
 #if defined(_LIBCPP_HAS_NO_THREADS)
     if (flag == 0)
     {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             flag = 1;
             func(arg);
             flag = ~once_flag::_State_type(0);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
             flag = 0;
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     }
 #else // !_LIBCPP_HAS_NO_THREADS
     __libcpp_mutex_lock(&mut);
@@ -233,10 +233,10 @@ void __call_once(volatile once_flag::_State_type& flag, void* arg,
         __libcpp_condvar_wait(&cv, &mut);
     if (flag == 0)
     {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
             __libcpp_relaxed_store(&flag, once_flag::_State_type(1));
             __libcpp_mutex_unlock(&mut);
             func(arg);
@@ -245,7 +245,7 @@ void __call_once(volatile once_flag::_State_type& flag, void* arg,
                                   _AO_Release);
             __libcpp_mutex_unlock(&mut);
             __libcpp_condvar_broadcast(&cv);
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
@@ -255,7 +255,7 @@ void __call_once(volatile once_flag::_State_type& flag, void* arg,
             __libcpp_condvar_broadcast(&cv);
             throw;
         }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     }
     else
         __libcpp_mutex_unlock(&mut);

@@ -781,10 +781,10 @@ bool SystemZVectorConstantInfo::isVectorConstantLegal(
   // IMMEDIATE or a wraparound mask in VECTOR GENERATE MASK.
   uint64_t SplatBitsZ = SplatBits.getZExtValue();
   uint64_t SplatUndefZ = SplatUndef.getZExtValue();
-  uint64_t Lower =
-      (SplatUndefZ & ((uint64_t(1) << findFirstSet(SplatBitsZ)) - 1));
-  uint64_t Upper =
-      (SplatUndefZ & ~((uint64_t(1) << findLastSet(SplatBitsZ)) - 1));
+  unsigned LowerBits = llvm::countr_zero(SplatBitsZ);
+  unsigned UpperBits = llvm::countl_zero(SplatBitsZ);
+  uint64_t Lower = SplatUndefZ & maskTrailingOnes<uint64_t>(LowerBits);
+  uint64_t Upper = SplatUndefZ & maskLeadingOnes<uint64_t>(UpperBits);
   if (tryValue(SplatBitsZ | Upper | Lower))
     return true;
 
@@ -2535,9 +2535,8 @@ static unsigned getTestUnderMaskCond(unsigned BitSize, unsigned CCMask,
     return 0;
 
   // Work out the masks for the lowest and highest bits.
-  unsigned HighShift = 63 - countLeadingZeros(Mask);
-  uint64_t High = uint64_t(1) << HighShift;
-  uint64_t Low = uint64_t(1) << countTrailingZeros(Mask);
+  uint64_t High = llvm::bit_floor(Mask);
+  uint64_t Low = uint64_t(1) << llvm::countr_zero(Mask);
 
   // Signed ordered comparisons are effectively unsigned if the sign
   // bit is dropped.
@@ -7442,6 +7441,18 @@ SystemZTargetLowering::ComputeNumSignBitsForTargetNode(
   }
 
   return 1;
+}
+
+bool SystemZTargetLowering::
+isGuaranteedNotToBeUndefOrPoisonForTargetNode(SDValue Op,
+         const APInt &DemandedElts, const SelectionDAG &DAG,
+         bool PoisonOnly, unsigned Depth) const {
+  switch (Op->getOpcode()) {
+  case SystemZISD::PCREL_WRAPPER:
+  case SystemZISD::PCREL_OFFSET:
+    return true;
+  }
+  return false;
 }
 
 unsigned

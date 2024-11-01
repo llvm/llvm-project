@@ -5,6 +5,7 @@ unittest("LexTests") {
   deps = [
     "//clang/lib/AST",
     "//clang/lib/Basic",
+    "//clang/lib/Frontend",
     "//clang/lib/Lex",
     "//clang/lib/Parse",
     "//clang/lib/Sema",
@@ -16,6 +17,7 @@ unittest("LexTests") {
     "HeaderMapTest.cpp",
     "HeaderSearchTest.cpp",
     "LexerTest.cpp",
+    "ModuleDeclStateTest.cpp",
     "PPCallbacksTest.cpp",
     "PPConditionalDirectiveRecordTest.cpp",
     "PPDependencyDirectivesTest.cpp",

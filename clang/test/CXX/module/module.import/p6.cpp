@@ -22,6 +22,8 @@ int ok_var_decl;
 
 int bad_var_definition = 3;  // expected-error {{non-inline external definitions are not permitted in C++ header units}}
 
+/* The cases below should compile without diagnostics.  */
+
 class A {
 public:
     // This is a declaration instead of definition.
@@ -36,3 +38,32 @@ private:
   S(S&);
 };
 S::S(S&) = default;
+
+template <class _X>
+_X tmpl_var_ok_0 = static_cast<_X>(-1);
+
+template <typename _T>
+constexpr _T tmpl_var_ok_1 = static_cast<_T>(42);
+
+inline int a = tmpl_var_ok_1<int>;
+
+template <typename _Tp,
+          template <typename> class _T>
+constexpr int tmpl_var_ok_2 = _T<_Tp>::value ? 42 : 6174 ;
+
+template<class _Ep>
+int tmpl_OK (_Ep) { return 0; }
+
+template <class _T1>
+bool
+operator==(_T1& , _T1& ) { return false; }
+
+constexpr long one_k = 1000L;
+
+template <class ..._Args>
+void* tmpl_fn_ok
+(_Args ...__args) { return nullptr; }
+
+inline int foo (int a) {
+  return tmpl_OK (a);
+}

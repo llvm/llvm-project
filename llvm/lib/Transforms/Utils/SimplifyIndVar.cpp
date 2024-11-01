@@ -93,6 +93,7 @@ namespace {
     void replaceRemWithNumeratorOrZero(BinaryOperator *Rem);
     void replaceSRemWithURem(BinaryOperator *Rem);
     bool eliminateSDiv(BinaryOperator *SDiv);
+    bool strengthenBinaryOp(BinaryOperator *BO, Instruction *IVOperand);
     bool strengthenOverflowingOperation(BinaryOperator *OBO,
                                         Instruction *IVOperand);
     bool strengthenRightShift(BinaryOperator *BO, Instruction *IVOperand);
@@ -747,6 +748,13 @@ bool SimplifyIndvar::eliminateIdentitySCEV(Instruction *UseInst,
   return true;
 }
 
+bool SimplifyIndvar::strengthenBinaryOp(BinaryOperator *BO,
+                                        Instruction *IVOperand) {
+  return (isa<OverflowingBinaryOperator>(BO) &&
+          strengthenOverflowingOperation(BO, IVOperand)) ||
+         (isa<ShlOperator>(BO) && strengthenRightShift(BO, IVOperand));
+}
+
 /// Annotate BO with nsw / nuw if it provably does not signed-overflow /
 /// unsigned-overflow.  Returns true if anything changed, false otherwise.
 bool SimplifyIndvar::strengthenOverflowingOperation(BinaryOperator *BO,
@@ -917,9 +925,7 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
     }
 
     if (BinaryOperator *BO = dyn_cast<BinaryOperator>(UseInst)) {
-      if ((isa<OverflowingBinaryOperator>(BO) &&
-           strengthenOverflowingOperation(BO, IVOperand)) ||
-          (isa<ShlOperator>(BO) && strengthenRightShift(BO, IVOperand))) {
+      if (strengthenBinaryOp(BO, IVOperand)) {
         // re-queue uses of the now modified binary operator and fall
         // through to the checks that remain.
         pushIVUsers(IVOperand, L, Simplified, SimpleIVUsers);

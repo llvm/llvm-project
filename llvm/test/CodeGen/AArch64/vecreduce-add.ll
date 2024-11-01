@@ -1219,9 +1219,9 @@ entry:
 define i64 @add_pair_v4i32_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: add_pair_v4i32_v4i64_zext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    uadalp v0.2d, v1.4s
-; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    uaddlp v1.2d, v1.4s
+; CHECK-NEXT:    uadalp v1.2d, v0.4s
+; CHECK-NEXT:    addp d0, v1.2d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 entry:
@@ -1236,9 +1236,9 @@ entry:
 define i64 @add_pair_v4i32_v4i64_sext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: add_pair_v4i32_v4i64_sext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddlp v0.2d, v0.4s
-; CHECK-NEXT:    sadalp v0.2d, v1.4s
-; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    saddlp v1.2d, v1.4s
+; CHECK-NEXT:    sadalp v1.2d, v0.4s
+; CHECK-NEXT:    addp d0, v1.2d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 entry:
@@ -1285,9 +1285,9 @@ entry:
 define i32 @add_pair_v8i16_v8i32_zext(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: add_pair_v8i16_v8i32_zext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-NEXT:    uadalp v0.4s, v1.8h
-; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    uaddlp v1.4s, v1.8h
+; CHECK-NEXT:    uadalp v1.4s, v0.8h
+; CHECK-NEXT:    addv s0, v1.4s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -1302,9 +1302,9 @@ entry:
 define i32 @add_pair_v8i16_v8i32_sext(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: add_pair_v8i16_v8i32_sext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddlp v0.4s, v0.8h
-; CHECK-NEXT:    sadalp v0.4s, v1.8h
-; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    saddlp v1.4s, v1.8h
+; CHECK-NEXT:    sadalp v1.4s, v0.8h
+; CHECK-NEXT:    addv s0, v1.4s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -1351,12 +1351,9 @@ entry:
 define zeroext i16 @add_pair_v8i16_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: add_pair_v8i16_v8i16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    addv h1, v1.8h
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    and w0, w8, #0xffff
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
   %z1 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %x)
@@ -1420,11 +1417,11 @@ entry:
 define i64 @add_pair_v4i16_v4i64_zext(<4 x i16> %x, <4 x i16> %y) {
 ; CHECK-LABEL: add_pair_v4i16_v4i64_zext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    uadalp v0.2d, v1.4s
-; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    uaddlp v1.2d, v1.4s
+; CHECK-NEXT:    uadalp v1.2d, v0.4s
+; CHECK-NEXT:    addp d0, v1.2d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 entry:
@@ -1439,11 +1436,11 @@ entry:
 define i64 @add_pair_v4i16_v4i64_sext(<4 x i16> %x, <4 x i16> %y) {
 ; CHECK-LABEL: add_pair_v4i16_v4i64_sext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-NEXT:    saddlp v0.2d, v0.4s
-; CHECK-NEXT:    sadalp v0.2d, v1.4s
-; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-NEXT:    saddlp v1.2d, v1.4s
+; CHECK-NEXT:    sadalp v1.2d, v0.4s
+; CHECK-NEXT:    addp d0, v1.2d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 entry:
@@ -1570,11 +1567,11 @@ entry:
 define i32 @add_pair_v8i8_v8i32_zext(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-BASE-LABEL: add_pair_v8i8_v8i32_zext:
 ; CHECK-BASE:       // %bb.0: // %entry
-; CHECK-BASE-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-BASE-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-BASE-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-BASE-NEXT:    uadalp v0.4s, v1.8h
-; CHECK-BASE-NEXT:    addv s0, v0.4s
+; CHECK-BASE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-BASE-NEXT:    uaddlp v1.4s, v1.8h
+; CHECK-BASE-NEXT:    uadalp v1.4s, v0.8h
+; CHECK-BASE-NEXT:    addv s0, v1.4s
 ; CHECK-BASE-NEXT:    fmov w0, s0
 ; CHECK-BASE-NEXT:    ret
 ;
@@ -1599,11 +1596,11 @@ entry:
 define i32 @add_pair_v8i8_v8i32_sext(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-BASE-LABEL: add_pair_v8i8_v8i32_sext:
 ; CHECK-BASE:       // %bb.0: // %entry
-; CHECK-BASE-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-BASE-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-BASE-NEXT:    saddlp v0.4s, v0.8h
-; CHECK-BASE-NEXT:    sadalp v0.4s, v1.8h
-; CHECK-BASE-NEXT:    addv s0, v0.4s
+; CHECK-BASE-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-BASE-NEXT:    saddlp v1.4s, v1.8h
+; CHECK-BASE-NEXT:    sadalp v1.4s, v0.8h
+; CHECK-BASE-NEXT:    addv s0, v1.4s
 ; CHECK-BASE-NEXT:    fmov w0, s0
 ; CHECK-BASE-NEXT:    ret
 ;
@@ -1667,12 +1664,10 @@ entry:
 define zeroext i16 @add_pair_v16i8_v16i16_zext(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: add_pair_v16i8_v16i16_zext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uaddlv h0, v0.16b
-; CHECK-NEXT:    uaddlv h1, v1.16b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    and w0, w8, #0xffff
+; CHECK-NEXT:    uaddlp v1.8h, v1.16b
+; CHECK-NEXT:    uadalp v1.8h, v0.16b
+; CHECK-NEXT:    addv h0, v1.8h
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
   %xx = zext <16 x i8> %x to <16 x i16>
@@ -1686,12 +1681,10 @@ entry:
 define signext i16 @add_pair_v16i8_v16i16_sext(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: add_pair_v16i8_v16i16_sext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddlv h0, v0.16b
-; CHECK-NEXT:    saddlv h1, v1.16b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    sxth w0, w8
+; CHECK-NEXT:    saddlp v1.8h, v1.16b
+; CHECK-NEXT:    sadalp v1.8h, v0.16b
+; CHECK-NEXT:    addv h0, v1.8h
+; CHECK-NEXT:    smov w0, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
   %xx = sext <16 x i8> %x to <16 x i16>
@@ -1705,14 +1698,9 @@ entry:
 define zeroext i16 @add_pair_v8i8_v8i16_zext(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-LABEL: add_pair_v8i8_v8i16_zext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    uaddl v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    addv h1, v1.8h
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    and w0, w8, #0xffff
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
   %xx = zext <8 x i8> %x to <8 x i16>
@@ -1726,14 +1714,9 @@ entry:
 define signext i16 @add_pair_v8i8_v8i16_sext(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-LABEL: add_pair_v8i8_v8i16_sext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    sshll v1.8h, v1.8b, #0
+; CHECK-NEXT:    saddl v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    addv h1, v1.8h
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    sxth w0, w8
+; CHECK-NEXT:    smov w0, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
   %xx = sext <8 x i8> %x to <8 x i16>
@@ -1747,12 +1730,9 @@ entry:
 define zeroext i8 @add_pair_v16i8_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: add_pair_v16i8_v16i8:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    add v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    addv b0, v0.16b
-; CHECK-NEXT:    addv b1, v1.16b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    and w0, w8, #0xff
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
   %z1 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %x)
@@ -1904,13 +1884,13 @@ entry:
 define i64 @add_pair_v4i8_v4i64_zext(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-LABEL: add_pair_v4i8_v4i64_zext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-NEXT:    bic v1.4h, #255, lsl #8
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    uaddlp v0.2d, v0.4s
-; CHECK-NEXT:    uadalp v0.2d, v1.4s
-; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    uaddlp v1.2d, v1.4s
+; CHECK-NEXT:    uadalp v1.2d, v0.4s
+; CHECK-NEXT:    addp d0, v1.2d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 entry:
@@ -1992,6 +1972,85 @@ entry:
   ret i64 %z
 }
 
+define i32 @add_pair_v8i8_v8i32_double_sext_zext(<8 x i8> %ax, <8 x i8> %ay, <8 x i8> %bx, <8 x i8> %by) {
+; CHECK-BASE-LABEL: add_pair_v8i8_v8i32_double_sext_zext:
+; CHECK-BASE:       // %bb.0: // %entry
+; CHECK-BASE-NEXT:    sshll v3.8h, v3.8b, #0
+; CHECK-BASE-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-BASE-NEXT:    saddlp v3.4s, v3.8h
+; CHECK-BASE-NEXT:    uaddlp v1.4s, v1.8h
+; CHECK-BASE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-BASE-NEXT:    sshll v2.8h, v2.8b, #0
+; CHECK-BASE-NEXT:    uadalp v1.4s, v0.8h
+; CHECK-BASE-NEXT:    sadalp v3.4s, v2.8h
+; CHECK-BASE-NEXT:    add v0.4s, v3.4s, v1.4s
+; CHECK-BASE-NEXT:    addv s0, v0.4s
+; CHECK-BASE-NEXT:    fmov w0, s0
+; CHECK-BASE-NEXT:    ret
+;
+; CHECK-DOT-LABEL: add_pair_v8i8_v8i32_double_sext_zext:
+; CHECK-DOT:       // %bb.0: // %entry
+; CHECK-DOT-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-DOT-NEXT:    movi v5.8b, #1
+; CHECK-DOT-NEXT:    movi v6.2d, #0000000000000000
+; CHECK-DOT-NEXT:    sdot v4.2s, v3.8b, v5.8b
+; CHECK-DOT-NEXT:    udot v6.2s, v1.8b, v5.8b
+; CHECK-DOT-NEXT:    sdot v4.2s, v2.8b, v5.8b
+; CHECK-DOT-NEXT:    udot v6.2s, v0.8b, v5.8b
+; CHECK-DOT-NEXT:    add v0.2s, v6.2s, v4.2s
+; CHECK-DOT-NEXT:    addp v0.2s, v0.2s, v0.2s
+; CHECK-DOT-NEXT:    fmov w0, s0
+; CHECK-DOT-NEXT:    ret
+entry:
+  %axx = zext <8 x i8> %ax to <8 x i32>
+  %az1 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %axx)
+  %ayy = zext <8 x i8> %ay to <8 x i32>
+  %az2 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %ayy)
+  %az = add i32 %az1, %az2
+  %bxx = sext <8 x i8> %bx to <8 x i32>
+  %bz1 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %bxx)
+  %byy = sext <8 x i8> %by to <8 x i32>
+  %bz2 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %byy)
+  %bz = add i32 %bz1, %bz2
+  %z = add i32 %az, %bz
+  ret i32 %z
+}
+
+define i32 @add_pair_v8i16_v4i32_double_sext_zext_shuffle(<8 x i16> %ax, <8 x i16> %ay, <8 x i16> %bx, <8 x i16> %by) {
+; CHECK-LABEL: add_pair_v8i16_v4i32_double_sext_zext_shuffle:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uaddlp v3.4s, v3.8h
+; CHECK-NEXT:    uaddlp v1.4s, v1.8h
+; CHECK-NEXT:    uadalp v3.4s, v2.8h
+; CHECK-NEXT:    uadalp v1.4s, v0.8h
+; CHECK-NEXT:    add v0.4s, v3.4s, v1.4s
+; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %axx = zext <8 x i16> %ax to <8 x i32>
+  %s1h = shufflevector <8 x i32> %axx, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %s1l = shufflevector <8 x i32> %axx, <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %axs = add <4 x i32> %s1h, %s1l
+  %ayy = zext <8 x i16> %ay to <8 x i32>
+  %s2h = shufflevector <8 x i32> %ayy, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %s2l = shufflevector <8 x i32> %ayy, <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %ays = add <4 x i32> %s2h, %s2l
+  %az = add <4 x i32> %axs, %ays
+  %bxx = zext <8 x i16> %bx to <8 x i32>
+  %s3h = shufflevector <8 x i32> %bxx, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %s3l = shufflevector <8 x i32> %bxx, <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %bxs = add <4 x i32> %s3h, %s3l
+  %byy = zext <8 x i16> %by to <8 x i32>
+  %s4h = shufflevector <8 x i32> %byy, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %s4l = shufflevector <8 x i32> %byy, <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %bys = add <4 x i32> %s4h, %s4l
+  %bz = add <4 x i32> %bxs, %bys
+  %z = add <4 x i32> %az, %bz
+  %z2 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %z)
+  ret i32 %z2
+}
+
 define i64 @add_pair_v2i64_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: add_pair_v2i64_v2i64:
 ; CHECK:       // %bb.0: // %entry
@@ -2006,6 +2065,200 @@ entry:
   ret i64 %z
 }
 
+define i32 @full(ptr %p1, i32 noundef %s1, ptr %p2, i32 noundef %s2) {
+; CHECK-BASE-LABEL: full:
+; CHECK-BASE:       // %bb.0: // %entry
+; CHECK-BASE-NEXT:    // kill: def $w3 killed $w3 def $x3
+; CHECK-BASE-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-BASE-NEXT:    sxtw x8, w1
+; CHECK-BASE-NEXT:    sxtw x10, w3
+; CHECK-BASE-NEXT:    add x9, x0, x8
+; CHECK-BASE-NEXT:    ldr d0, [x0]
+; CHECK-BASE-NEXT:    ldr d1, [x2]
+; CHECK-BASE-NEXT:    add x11, x2, x10
+; CHECK-BASE-NEXT:    ldr d2, [x9]
+; CHECK-BASE-NEXT:    add x9, x9, x8
+; CHECK-BASE-NEXT:    uabdl v0.8h, v0.8b, v1.8b
+; CHECK-BASE-NEXT:    ldr d1, [x11]
+; CHECK-BASE-NEXT:    add x11, x11, x10
+; CHECK-BASE-NEXT:    uaddlp v0.4s, v0.8h
+; CHECK-BASE-NEXT:    uabdl v1.8h, v2.8b, v1.8b
+; CHECK-BASE-NEXT:    ldr d2, [x9]
+; CHECK-BASE-NEXT:    ldr d3, [x11]
+; CHECK-BASE-NEXT:    add x9, x9, x8
+; CHECK-BASE-NEXT:    add x11, x11, x10
+; CHECK-BASE-NEXT:    uadalp v0.4s, v1.8h
+; CHECK-BASE-NEXT:    uabdl v1.8h, v2.8b, v3.8b
+; CHECK-BASE-NEXT:    ldr d2, [x9]
+; CHECK-BASE-NEXT:    ldr d3, [x11]
+; CHECK-BASE-NEXT:    add x9, x9, x8
+; CHECK-BASE-NEXT:    add x11, x11, x10
+; CHECK-BASE-NEXT:    uadalp v0.4s, v1.8h
+; CHECK-BASE-NEXT:    uabdl v1.8h, v2.8b, v3.8b
+; CHECK-BASE-NEXT:    ldr d2, [x9]
+; CHECK-BASE-NEXT:    ldr d3, [x11]
+; CHECK-BASE-NEXT:    add x9, x9, x8
+; CHECK-BASE-NEXT:    add x11, x11, x10
+; CHECK-BASE-NEXT:    uadalp v0.4s, v1.8h
+; CHECK-BASE-NEXT:    uabdl v1.8h, v2.8b, v3.8b
+; CHECK-BASE-NEXT:    ldr d2, [x9]
+; CHECK-BASE-NEXT:    ldr d3, [x11]
+; CHECK-BASE-NEXT:    add x9, x9, x8
+; CHECK-BASE-NEXT:    add x11, x11, x10
+; CHECK-BASE-NEXT:    uadalp v0.4s, v1.8h
+; CHECK-BASE-NEXT:    uabdl v1.8h, v2.8b, v3.8b
+; CHECK-BASE-NEXT:    ldr d2, [x9]
+; CHECK-BASE-NEXT:    ldr d3, [x11]
+; CHECK-BASE-NEXT:    uadalp v0.4s, v1.8h
+; CHECK-BASE-NEXT:    ldr d1, [x9, x8]
+; CHECK-BASE-NEXT:    uabdl v2.8h, v2.8b, v3.8b
+; CHECK-BASE-NEXT:    ldr d3, [x11, x10]
+; CHECK-BASE-NEXT:    uadalp v0.4s, v2.8h
+; CHECK-BASE-NEXT:    uabdl v1.8h, v1.8b, v3.8b
+; CHECK-BASE-NEXT:    uadalp v0.4s, v1.8h
+; CHECK-BASE-NEXT:    addv s0, v0.4s
+; CHECK-BASE-NEXT:    fmov w0, s0
+; CHECK-BASE-NEXT:    ret
+;
+; CHECK-DOT-LABEL: full:
+; CHECK-DOT:       // %bb.0: // %entry
+; CHECK-DOT-NEXT:    // kill: def $w3 killed $w3 def $x3
+; CHECK-DOT-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-DOT-NEXT:    sxtw x8, w3
+; CHECK-DOT-NEXT:    sxtw x9, w1
+; CHECK-DOT-NEXT:    ldr d0, [x0]
+; CHECK-DOT-NEXT:    add x10, x0, x9
+; CHECK-DOT-NEXT:    ldr d1, [x2]
+; CHECK-DOT-NEXT:    add x11, x2, x8
+; CHECK-DOT-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-DOT-NEXT:    movi v3.8b, #1
+; CHECK-DOT-NEXT:    uabd v0.8b, v0.8b, v1.8b
+; CHECK-DOT-NEXT:    ldr d1, [x10]
+; CHECK-DOT-NEXT:    ldr d4, [x11]
+; CHECK-DOT-NEXT:    add x10, x10, x9
+; CHECK-DOT-NEXT:    add x11, x11, x8
+; CHECK-DOT-NEXT:    udot v2.2s, v0.8b, v3.8b
+; CHECK-DOT-NEXT:    uabd v0.8b, v1.8b, v4.8b
+; CHECK-DOT-NEXT:    ldr d1, [x10]
+; CHECK-DOT-NEXT:    ldr d4, [x11]
+; CHECK-DOT-NEXT:    add x10, x10, x9
+; CHECK-DOT-NEXT:    add x11, x11, x8
+; CHECK-DOT-NEXT:    udot v2.2s, v0.8b, v3.8b
+; CHECK-DOT-NEXT:    uabd v0.8b, v1.8b, v4.8b
+; CHECK-DOT-NEXT:    ldr d1, [x10]
+; CHECK-DOT-NEXT:    ldr d4, [x11]
+; CHECK-DOT-NEXT:    add x10, x10, x9
+; CHECK-DOT-NEXT:    add x11, x11, x8
+; CHECK-DOT-NEXT:    udot v2.2s, v0.8b, v3.8b
+; CHECK-DOT-NEXT:    uabd v0.8b, v1.8b, v4.8b
+; CHECK-DOT-NEXT:    ldr d1, [x10]
+; CHECK-DOT-NEXT:    ldr d4, [x11]
+; CHECK-DOT-NEXT:    add x10, x10, x9
+; CHECK-DOT-NEXT:    add x11, x11, x8
+; CHECK-DOT-NEXT:    udot v2.2s, v0.8b, v3.8b
+; CHECK-DOT-NEXT:    uabd v0.8b, v1.8b, v4.8b
+; CHECK-DOT-NEXT:    ldr d1, [x10]
+; CHECK-DOT-NEXT:    ldr d4, [x11]
+; CHECK-DOT-NEXT:    add x10, x10, x9
+; CHECK-DOT-NEXT:    add x11, x11, x8
+; CHECK-DOT-NEXT:    udot v2.2s, v0.8b, v3.8b
+; CHECK-DOT-NEXT:    uabd v0.8b, v1.8b, v4.8b
+; CHECK-DOT-NEXT:    ldr d1, [x10]
+; CHECK-DOT-NEXT:    ldr d4, [x11]
+; CHECK-DOT-NEXT:    udot v2.2s, v0.8b, v3.8b
+; CHECK-DOT-NEXT:    ldr d0, [x10, x9]
+; CHECK-DOT-NEXT:    uabd v1.8b, v1.8b, v4.8b
+; CHECK-DOT-NEXT:    ldr d4, [x11, x8]
+; CHECK-DOT-NEXT:    udot v2.2s, v1.8b, v3.8b
+; CHECK-DOT-NEXT:    uabd v0.8b, v0.8b, v4.8b
+; CHECK-DOT-NEXT:    udot v2.2s, v0.8b, v3.8b
+; CHECK-DOT-NEXT:    addp v0.2s, v2.2s, v2.2s
+; CHECK-DOT-NEXT:    fmov w0, s0
+; CHECK-DOT-NEXT:    ret
+entry:
+  %idx.ext8 = sext i32 %s2 to i64
+  %idx.ext = sext i32 %s1 to i64
+  %0 = load <8 x i8>, ptr %p1, align 1
+  %1 = zext <8 x i8> %0 to <8 x i32>
+  %2 = load <8 x i8>, ptr %p2, align 1
+  %3 = zext <8 x i8> %2 to <8 x i32>
+  %4 = sub nsw <8 x i32> %1, %3
+  %5 = tail call <8 x i32> @llvm.abs.v8i32(<8 x i32> %4, i1 true)
+  %6 = tail call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %5)
+  %add.ptr = getelementptr inbounds i8, ptr %p1, i64 %idx.ext
+  %add.ptr9 = getelementptr inbounds i8, ptr %p2, i64 %idx.ext8
+  %7 = load <8 x i8>, ptr %add.ptr, align 1
+  %8 = zext <8 x i8> %7 to <8 x i32>
+  %9 = load <8 x i8>, ptr %add.ptr9, align 1
+  %10 = zext <8 x i8> %9 to <8 x i32>
+  %11 = sub nsw <8 x i32> %8, %10
+  %12 = tail call <8 x i32> @llvm.abs.v8i32(<8 x i32> %11, i1 true)
+  %13 = tail call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %12)
+  %op.rdx.1 = add i32 %13, %6
+  %add.ptr.1 = getelementptr inbounds i8, ptr %add.ptr, i64 %idx.ext
+  %add.ptr9.1 = getelementptr inbounds i8, ptr %add.ptr9, i64 %idx.ext8
+  %14 = load <8 x i8>, ptr %add.ptr.1, align 1
+  %15 = zext <8 x i8> %14 to <8 x i32>
+  %16 = load <8 x i8>, ptr %add.ptr9.1, align 1
+  %17 = zext <8 x i8> %16 to <8 x i32>
+  %18 = sub nsw <8 x i32> %15, %17
+  %19 = tail call <8 x i32> @llvm.abs.v8i32(<8 x i32> %18, i1 true)
+  %20 = tail call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %19)
+  %op.rdx.2 = add i32 %20, %op.rdx.1
+  %add.ptr.2 = getelementptr inbounds i8, ptr %add.ptr.1, i64 %idx.ext
+  %add.ptr9.2 = getelementptr inbounds i8, ptr %add.ptr9.1, i64 %idx.ext8
+  %21 = load <8 x i8>, ptr %add.ptr.2, align 1
+  %22 = zext <8 x i8> %21 to <8 x i32>
+  %23 = load <8 x i8>, ptr %add.ptr9.2, align 1
+  %24 = zext <8 x i8> %23 to <8 x i32>
+  %25 = sub nsw <8 x i32> %22, %24
+  %26 = tail call <8 x i32> @llvm.abs.v8i32(<8 x i32> %25, i1 true)
+  %27 = tail call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %26)
+  %op.rdx.3 = add i32 %27, %op.rdx.2
+  %add.ptr.3 = getelementptr inbounds i8, ptr %add.ptr.2, i64 %idx.ext
+  %add.ptr9.3 = getelementptr inbounds i8, ptr %add.ptr9.2, i64 %idx.ext8
+  %28 = load <8 x i8>, ptr %add.ptr.3, align 1
+  %29 = zext <8 x i8> %28 to <8 x i32>
+  %30 = load <8 x i8>, ptr %add.ptr9.3, align 1
+  %31 = zext <8 x i8> %30 to <8 x i32>
+  %32 = sub nsw <8 x i32> %29, %31
+  %33 = tail call <8 x i32> @llvm.abs.v8i32(<8 x i32> %32, i1 true)
+  %34 = tail call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %33)
+  %op.rdx.4 = add i32 %34, %op.rdx.3
+  %add.ptr.4 = getelementptr inbounds i8, ptr %add.ptr.3, i64 %idx.ext
+  %add.ptr9.4 = getelementptr inbounds i8, ptr %add.ptr9.3, i64 %idx.ext8
+  %35 = load <8 x i8>, ptr %add.ptr.4, align 1
+  %36 = zext <8 x i8> %35 to <8 x i32>
+  %37 = load <8 x i8>, ptr %add.ptr9.4, align 1
+  %38 = zext <8 x i8> %37 to <8 x i32>
+  %39 = sub nsw <8 x i32> %36, %38
+  %40 = tail call <8 x i32> @llvm.abs.v8i32(<8 x i32> %39, i1 true)
+  %41 = tail call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %40)
+  %op.rdx.5 = add i32 %41, %op.rdx.4
+  %add.ptr.5 = getelementptr inbounds i8, ptr %add.ptr.4, i64 %idx.ext
+  %add.ptr9.5 = getelementptr inbounds i8, ptr %add.ptr9.4, i64 %idx.ext8
+  %42 = load <8 x i8>, ptr %add.ptr.5, align 1
+  %43 = zext <8 x i8> %42 to <8 x i32>
+  %44 = load <8 x i8>, ptr %add.ptr9.5, align 1
+  %45 = zext <8 x i8> %44 to <8 x i32>
+  %46 = sub nsw <8 x i32> %43, %45
+  %47 = tail call <8 x i32> @llvm.abs.v8i32(<8 x i32> %46, i1 true)
+  %48 = tail call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %47)
+  %op.rdx.6 = add i32 %48, %op.rdx.5
+  %add.ptr.6 = getelementptr inbounds i8, ptr %add.ptr.5, i64 %idx.ext
+  %add.ptr9.6 = getelementptr inbounds i8, ptr %add.ptr9.5, i64 %idx.ext8
+  %49 = load <8 x i8>, ptr %add.ptr.6, align 1
+  %50 = zext <8 x i8> %49 to <8 x i32>
+  %51 = load <8 x i8>, ptr %add.ptr9.6, align 1
+  %52 = zext <8 x i8> %51 to <8 x i32>
+  %53 = sub nsw <8 x i32> %50, %52
+  %54 = tail call <8 x i32> @llvm.abs.v8i32(<8 x i32> %53, i1 true)
+  %55 = tail call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %54)
+  %op.rdx.7 = add i32 %55, %op.rdx.6
+  ret i32 %op.rdx.7
+}
+
+declare <8 x i32> @llvm.abs.v8i32(<8 x i32>, i1 immarg) #1
 declare i16 @llvm.vector.reduce.add.v16i16(<16 x i16>)
 declare i16 @llvm.vector.reduce.add.v8i16(<8 x i16>)
 declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)

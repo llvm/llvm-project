@@ -15,7 +15,7 @@
 
 #include "OSTargets.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/Support/AArch64TargetParser.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 #include <optional>
 
 namespace clang {
@@ -64,8 +64,8 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasCCDP = false;
   bool HasFRInt3264 = false;
   bool HasSME = false;
-  bool HasSMEF64 = false;
-  bool HasSMEI64 = false;
+  bool HasSMEF64F64 = false;
+  bool HasSMEI16I64 = false;
   bool HasSB = false;
   bool HasPredRes = false;
   bool HasSSBS = false;
@@ -154,6 +154,8 @@ public:
                             DiagnosticsEngine &Diags) override;
   ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
   bool supportsTargetAttributeTune() const override { return true; }
+
+  bool checkArithmeticFenceSupported() const override { return true; }
 
   bool hasBFloat16Type() const override;
 

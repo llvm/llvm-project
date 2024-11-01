@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
 // CHECK: Test alloc: [[ADDR:0x[0-9,a-f]+]]
 // CHECK: LeakSanitizer: detected memory leaks
 // CHECK: [[ADDR]] (1337 bytes)
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer:
+// CHECK: SUMMARY: {{.*}}Sanitizer:
 
 #else  // BUILD_DSO
 // A loadable module with a large thread local section, which would require

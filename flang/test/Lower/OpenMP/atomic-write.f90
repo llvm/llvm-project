@@ -2,7 +2,7 @@
 
 ! This test checks the lowering of atomic write
 
-!CHECK: func @_QQmain() {
+!CHECK: func @_QQmain() attributes {fir.bindc_name = "ompatomicwrite"} {
 !CHECK: %[[VAR_X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}
 !CHECK: %[[VAR_Y:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}
 !CHECK: %[[VAR_Z:.*]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFEz"}

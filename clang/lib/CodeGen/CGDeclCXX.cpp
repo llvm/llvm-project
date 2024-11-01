@@ -880,11 +880,11 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
   // and makes sure these symbols appear lexicographically behind the symbols
   // with priority emitted above.
   llvm::Function *Fn;
-  if (CXX20ModuleInits && getContext().getModuleForCodeGen()) {
+  if (CXX20ModuleInits && getContext().getNamedModuleForCodeGen()) {
     SmallString<256> InitFnName;
     llvm::raw_svector_ostream Out(InitFnName);
     cast<ItaniumMangleContext>(getCXXABI().getMangleContext())
-        .mangleModuleInitializer(getContext().getModuleForCodeGen(), Out);
+        .mangleModuleInitializer(getContext().getNamedModuleForCodeGen(), Out);
     Fn = CreateGlobalInitOrCleanUpFunction(
         FTy, llvm::Twine(InitFnName), FI, SourceLocation(), false,
         llvm::GlobalVariable::ExternalLinkage);

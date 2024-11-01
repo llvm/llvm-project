@@ -13,6 +13,7 @@
 #include "flang/Lower/Allocatable.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/ConvertType.h"
 #include "flang/Lower/IterationSpace.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
@@ -140,7 +141,7 @@ static void genRuntimeSetBounds(fir::FirOpBuilder &builder, mlir::Location loc,
 static void genRuntimeInitCharacter(fir::FirOpBuilder &builder,
                                     mlir::Location loc,
                                     const fir::MutableBoxValue &box,
-                                    mlir::Value len) {
+                                    mlir::Value len, int64_t kind = 0) {
   mlir::func::FuncOp callee =
       box.isPointer()
           ? fir::runtime::getRuntimeFunc<mkRTKey(PointerNullifyCharacter)>(
@@ -154,7 +155,8 @@ static void genRuntimeInitCharacter(fir::FirOpBuilder &builder,
   llvm::SmallVector<mlir::Value> args;
   args.push_back(builder.createConvert(loc, inputTypes[0], box.getAddr()));
   args.push_back(builder.createConvert(loc, inputTypes[1], len));
-  int kind = box.getEleTy().cast<fir::CharacterType>().getFKind();
+  if (kind == 0)
+    kind = box.getEleTy().cast<fir::CharacterType>().getFKind();
   args.push_back(builder.createIntegerConstant(loc, inputTypes[2], kind));
   int rank = box.rank();
   args.push_back(builder.createIntegerConstant(loc, inputTypes[3], rank));
@@ -210,14 +212,17 @@ static mlir::Value genRuntimeAllocateSource(fir::FirOpBuilder &builder,
 static void genRuntimeAllocateApplyMold(fir::FirOpBuilder &builder,
                                         mlir::Location loc,
                                         const fir::MutableBoxValue &box,
-                                        fir::ExtendedValue mold) {
+                                        fir::ExtendedValue mold, int rank) {
   mlir::func::FuncOp callee =
       box.isPointer()
           ? fir::runtime::getRuntimeFunc<mkRTKey(PointerApplyMold)>(loc,
                                                                     builder)
           : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableApplyMold)>(
                 loc, builder);
-  llvm::SmallVector<mlir::Value> args{box.getAddr(), fir::getBase(mold)};
+  llvm::SmallVector<mlir::Value> args{
+      box.getAddr(), fir::getBase(mold),
+      builder.createIntegerConstant(
+          loc, callee.getFunctionType().getInputs()[2], rank)};
   llvm::SmallVector<mlir::Value> operands;
   for (auto [fst, snd] : llvm::zip(args, callee.getFunctionType().getInputs()))
     operands.emplace_back(builder.createConvert(loc, snd, fst));
@@ -424,7 +429,8 @@ private:
       }
     }
     fir::factory::genInlinedAllocation(builder, loc, box, lbounds, extents,
-                                       lenParams, mangleAlloc(alloc));
+                                       lenParams, mangleAlloc(alloc),
+                                       /*mustBeHeap=*/true);
   }
 
   void genSimpleAllocation(const Allocation &alloc,
@@ -558,15 +564,14 @@ private:
     genAllocateObjectInit(box);
     if (alloc.hasCoarraySpec())
       TODO(loc, "coarray allocation");
-    if (alloc.getShapeSpecs().size() > 0 && sourceExv.rank() == 0)
-      TODO(loc, "allocate array object with scalar SOURCE specifier");
     // Set length of the allocate object if it has. Otherwise, get the length
     // from source for the deferred length parameter.
     if (lenParams.empty() && box.isCharacter() &&
         !box.hasNonDeferredLenParams())
       lenParams.push_back(fir::factory::readCharLen(builder, loc, sourceExv));
     if (alloc.type.IsPolymorphic())
-      genRuntimeAllocateApplyMold(builder, loc, box, sourceExv);
+      genRuntimeAllocateApplyMold(builder, loc, box, sourceExv,
+                                  alloc.getSymbol().Rank());
     genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat =
@@ -577,7 +582,8 @@ private:
 
   void genMoldAllocation(const Allocation &alloc,
                          const fir::MutableBoxValue &box) {
-    genRuntimeAllocateApplyMold(builder, loc, box, moldExv);
+    genRuntimeAllocateApplyMold(builder, loc, box, moldExv,
+                                alloc.getSymbol().Rank());
     errorManager.genStatCheck(builder, loc);
     mlir::Value stat = genRuntimeAllocate(builder, loc, box, errorManager);
     fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
@@ -658,10 +664,17 @@ private:
     // unlimited polymorphic entity.
     if (typeSpec->AsIntrinsic() &&
         fir::isUnlimitedPolymorphicType(fir::getBase(box).getType())) {
-      genInitIntrinsic(
-          box, typeSpec->AsIntrinsic()->category(),
-          Fortran::evaluate::ToInt64(typeSpec->AsIntrinsic()->kind()).value(),
-          alloc.getSymbol().Rank());
+      if (typeSpec->AsIntrinsic()->category() == TypeCategory::Character) {
+        genRuntimeInitCharacter(
+            builder, loc, box, lenParams[0],
+            Fortran::evaluate::ToInt64(typeSpec->AsIntrinsic()->kind())
+                .value());
+      } else {
+        genInitIntrinsic(
+            box, typeSpec->AsIntrinsic()->category(),
+            Fortran::evaluate::ToInt64(typeSpec->AsIntrinsic()->kind()).value(),
+            alloc.getSymbol().Rank());
+      }
       return;
     }
 
@@ -670,7 +683,7 @@ private:
       return;
 
     auto typeDescAddr = Fortran::lower::getTypeDescAddr(
-        builder, loc, typeSpec->derivedTypeSpec());
+        converter, loc, typeSpec->derivedTypeSpec());
     genInitDerived(box, typeDescAddr, alloc.getSymbol().Rank());
   }
 
@@ -777,7 +790,7 @@ void Fortran::lower::genDeallocateStmt(
       if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
               symbol.GetType()->AsDerived()) {
         declaredTypeDesc =
-            Fortran::lower::getTypeDescAddr(builder, loc, *derivedTypeSpec);
+            Fortran::lower::getTypeDescAddr(converter, loc, *derivedTypeSpec);
       }
     }
     genDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
@@ -1000,15 +1013,10 @@ mlir::Value Fortran::lower::getAssumedCharAllocatableOrPointerLen(
 }
 
 mlir::Value Fortran::lower::getTypeDescAddr(
-    fir::FirOpBuilder &builder, mlir::Location loc,
+    AbstractConverter &converter, mlir::Location loc,
     const Fortran::semantics::DerivedTypeSpec &typeSpec) {
-  std::string typeName = Fortran::lower::mangle::mangleName(typeSpec);
-  std::string typeDescName = fir::NameUniquer::getTypeDescriptorName(typeName);
-  auto typeDescGlobal =
-      builder.getModule().lookupSymbol<fir::GlobalOp>(typeDescName);
-  if (!typeDescGlobal)
-    fir::emitFatalError(loc, "type descriptor not defined");
-  return builder.create<fir::AddrOfOp>(
-      loc, fir::ReferenceType::get(typeDescGlobal.getType()),
-      typeDescGlobal.getSymbol());
+  mlir::Type typeDesc =
+      Fortran::lower::translateDerivedTypeToFIRType(converter, typeSpec);
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  return builder.create<fir::TypeDescOp>(loc, mlir::TypeAttr::get(typeDesc));
 }

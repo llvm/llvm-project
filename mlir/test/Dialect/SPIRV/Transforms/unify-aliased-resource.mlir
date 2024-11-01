@@ -448,3 +448,34 @@ spirv.module Logical GLSL450 {
 // CHECK: spirv.GlobalVariable @var01_i16 bind(0, 1) {aliased}
 
 // CHECK: spirv.func @scalar_type_bitwidth_smaller_than_vector
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @var00_v4f32 bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>
+  spirv.GlobalVariable @var00_v4f16 bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf16>, stride=8> [0])>, StorageBuffer>
+
+  spirv.func @vector_type_same_size_different_element_type(%i0: i32) -> vector<4xf32> "None" {
+    %c0 = spirv.Constant 0 : i32
+
+    %addr = spirv.mlir.addressof @var00_v4f32 : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>
+    %ac = spirv.AccessChain %addr[%c0, %i0] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>, i32, i32
+    %val = spirv.Load "StorageBuffer" %ac :  vector<4xf32>
+
+    spirv.ReturnValue %val : vector<4xf32>
+  }
+}
+
+// CHECK-LABEL: spirv.module
+
+// CHECK: spirv.GlobalVariable @var00_v4f16 bind(0, 0) : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf16>, stride=8> [0])>, StorageBuffer>
+
+// CHECK: spirv.func @vector_type_same_size_different_element_type
+
+// CHECK:   %[[LD0:.+]] = spirv.Load "StorageBuffer" %{{.+}} : vector<4xf16>
+// CHECK:   %[[LD1:.+]] = spirv.Load "StorageBuffer" %{{.+}} : vector<4xf16>
+// CHECK:   %[[BC0:.+]] = spirv.Bitcast %[[LD0]] : vector<4xf16> to vector<2xf32>
+// CHECK:   %[[BC1:.+]] = spirv.Bitcast %[[LD1]] : vector<4xf16> to vector<2xf32>
+// CHECK:   %[[CC:.+]] = spirv.CompositeConstruct %[[BC0]], %[[BC1]] : (vector<2xf32>, vector<2xf32>) -> vector<4xf32>
+// CHECK:   spirv.ReturnValue %[[CC]]
+

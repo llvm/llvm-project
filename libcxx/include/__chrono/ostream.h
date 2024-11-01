@@ -12,6 +12,7 @@
 
 #include <__chrono/day.h>
 #include <__chrono/duration.h>
+#include <__chrono/hh_mm_ss.h>
 #include <__chrono/month.h>
 #include <__chrono/month_weekday.h>
 #include <__chrono/monthday.h>
@@ -33,7 +34,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
+#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
 
 namespace chrono {
 
@@ -229,9 +230,15 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const year_month_weekday_last& 
              __ymwdl.weekday_last());
 }
 
+template <class _CharT, class _Traits, class _Duration>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FORMAT basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const hh_mm_ss<_Duration> __hms) {
+  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%T}"), __hms);
+}
+
 } // namespace chrono
 
-#endif //if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
+#endif //if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
 
 _LIBCPP_END_NAMESPACE_STD
 

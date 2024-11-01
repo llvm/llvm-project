@@ -13,6 +13,23 @@ using namespace mlir;
 using namespace mlir::detail;
 
 //===----------------------------------------------------------------------===//
+// AbstractAttribute
+//===----------------------------------------------------------------------===//
+
+void AbstractAttribute::walkImmediateSubElements(
+    Attribute attr, function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  walkImmediateSubElementsFn(attr, walkAttrsFn, walkTypesFn);
+}
+
+Attribute
+AbstractAttribute::replaceImmediateSubElements(Attribute attr,
+                                               ArrayRef<Attribute> replAttrs,
+                                               ArrayRef<Type> replTypes) const {
+  return replaceImmediateSubElementsFn(attr, replAttrs, replTypes);
+}
+
+//===----------------------------------------------------------------------===//
 // Attribute
 //===----------------------------------------------------------------------===//
 

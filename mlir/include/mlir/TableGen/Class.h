@@ -152,6 +152,9 @@ public:
   /// Get the name of the method.
   StringRef getName() const { return methodName; }
 
+  /// Get the return type of the method
+  StringRef getReturnType() const { return returnType; }
+
   /// Get the number of parameters.
   unsigned getNumParameters() const { return parameters.getNumParameters(); }
 
@@ -326,6 +329,11 @@ public:
   /// Get the method body.
   MethodBody &body() { return methodBody; }
 
+  /// Sets or removes the deprecation message of the method.
+  void setDeprecated(std::optional<StringRef> message) {
+    this->deprecationMessage = message;
+  }
+
   /// Returns true if this is a static method.
   bool isStatic() const { return properties & Static; }
 
@@ -343,6 +351,9 @@ public:
 
   /// Returns the name of this method.
   StringRef getName() const { return methodSignature.getName(); }
+
+  /// Returns the return type of this method
+  StringRef getReturnType() const { return methodSignature.getReturnType(); }
 
   /// Returns if this method makes the `other` method redundant.
   bool makesRedundant(const Method &other) const {
@@ -363,6 +374,8 @@ protected:
   MethodSignature methodSignature;
   /// The body of the method, if it has one.
   MethodBody methodBody;
+  /// Deprecation message if the method is deprecated.
+  std::optional<std::string> deprecationMessage;
 };
 
 /// This enum describes C++ inheritance visibility.

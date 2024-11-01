@@ -20,12 +20,12 @@
 
 #include "llvm-c/DisassemblerTypes.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>

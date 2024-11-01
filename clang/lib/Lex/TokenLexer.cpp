@@ -500,8 +500,7 @@ void TokenLexer::ExpandFunctionArguments() {
           // the first token in a __VA_OPT__ after a ##, delete the ##.
           assert(VCtx.isInVAOpt() && "should only happen inside a __VA_OPT__");
           VCtx.hasPlaceholderAfterHashhashAtStart();
-        }
-        if (RParenAfter)
+        } else if (RParenAfter)
           VCtx.hasPlaceholderBeforeRParen();
       }
       continue;
@@ -567,7 +566,7 @@ void TokenLexer::ExpandFunctionArguments() {
       continue;
     }
 
-    if (RParenAfter)
+    if (RParenAfter && !NonEmptyPasteBefore)
       VCtx.hasPlaceholderBeforeRParen();
 
     // If this is on the RHS of a paste operator, we've already copied the

@@ -59,7 +59,7 @@ cl::opt<double> IterativeBFIPrecision(
     "iterative-bfi-precision", cl::init(1e-12), cl::Hidden,
     cl::desc("Iterative inference: delta convergence precision; smaller values "
              "typically lead to better results at the cost of worsen runtime"));
-}
+} // namespace llvm
 
 ScaledNumber<uint64_t> BlockMass::toScaled() const {
   if (isFull())
@@ -256,7 +256,7 @@ void Distribution::normalize() {
   if (DidOverflow)
     Shift = 33;
   else if (Total > UINT32_MAX)
-    Shift = 33 - countLeadingZeros(Total);
+    Shift = 33 - llvm::countl_zero(Total);
 
   // Early exit if nothing needs to be scaled.
   if (!Shift) {

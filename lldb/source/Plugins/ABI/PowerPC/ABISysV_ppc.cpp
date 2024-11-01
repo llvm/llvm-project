@@ -9,7 +9,7 @@
 #include "ABISysV_ppc.h"
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"

@@ -19,6 +19,7 @@
 #include "AMDGPUExportClustering.h"
 #include "AMDGPUIGroupLP.h"
 #include "AMDGPUMacroFusion.h"
+#include "AMDGPURegBankSelect.h"
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "GCNIterativeScheduler.h"
@@ -43,7 +44,6 @@
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
@@ -373,6 +373,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUPostLegalizerCombinerPass(*PR);
   initializeAMDGPUPreLegalizerCombinerPass(*PR);
   initializeAMDGPURegBankCombinerPass(*PR);
+  initializeAMDGPURegBankSelectPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUPromoteAllocaToVectorPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
@@ -1211,7 +1212,7 @@ void GCNPassConfig::addPreRegBankSelect() {
 }
 
 bool GCNPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new AMDGPURegBankSelect());
   return false;
 }
 

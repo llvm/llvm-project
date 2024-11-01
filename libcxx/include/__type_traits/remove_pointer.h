@@ -36,7 +36,7 @@ template <class _Tp>
 using __remove_pointer_t = typename remove_pointer<_Tp>::type;
 #endif // __has_builtin(__remove_pointer)
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _Tp> using remove_pointer_t = __remove_pointer_t<_Tp>;
 #endif
 

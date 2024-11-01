@@ -290,7 +290,7 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
   options.SetUnwindOnError(true);
   options.SetIgnoreBreakpoints(true);
   options.SetTryAllThreads(true);
-  options.SetResultIsInternal(
+  options.SetSuppressPersistentResult(
       true); // Don't generate a user variable for condition expressions.
 
   Status expr_error;

@@ -829,20 +829,18 @@ void SymbolCollector::finish() {
   llvm::DenseMap<FileID, bool> FileToContainsImportsOrObjC;
   // Fill in IncludeHeaders.
   // We delay this until end of TU so header guards are all resolved.
-  llvm::SmallString<128> QName;
   for (const auto &[SID, FID] : IncludeFiles) {
     if (const Symbol *S = Symbols.find(SID)) {
       llvm::StringRef IncludeHeader;
       // Look for an overridden include header for this symbol specifically.
       if (Opts.Includes) {
-        QName = S->Scope;
-        QName.append(S->Name);
-        IncludeHeader = Opts.Includes->mapSymbol(QName);
+        IncludeHeader =
+            Opts.Includes->mapSymbol(S->Scope, S->Name, ASTCtx->getLangOpts());
         if (!IncludeHeader.empty()) {
           if (IncludeHeader.front() != '"' && IncludeHeader.front() != '<')
             IncludeHeader = HeaderFileURIs->toURI(IncludeHeader);
-          else if (IncludeHeader == "<utility>" && QName == "std::move" &&
-                   S->Signature.contains(','))
+          else if (IncludeHeader == "<utility>" && S->Scope == "std::" &&
+                   S->Name == "move" && S->Signature.contains(','))
             IncludeHeader = "<algorithm>";
         }
       }

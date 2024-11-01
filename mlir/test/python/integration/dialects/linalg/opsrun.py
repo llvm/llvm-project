@@ -199,7 +199,7 @@ def transform(module, boilerplate):
   pm.add("func.func(arith-expand)")
   pm.add("func.func(memref-expand)")
   pm.add("convert-vector-to-llvm")
-  pm.add("convert-memref-to-llvm")
+  pm.add("finalize-memref-to-llvm")
   pm.add("convert-func-to-llvm")
   pm.add("reconcile-unrealized-casts")
   pm.run(mod)

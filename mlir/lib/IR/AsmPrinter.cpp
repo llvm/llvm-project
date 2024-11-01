@@ -25,7 +25,6 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/IR/SubElementInterfaces.h"
 #include "mlir/IR/Verifier.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/DenseMap.h"
@@ -841,13 +840,11 @@ private:
     }
 
     // For most builtin types, we can simply walk the sub elements.
-    if (auto subElementInterface = dyn_cast<SubElementTypeInterface>(type)) {
-      auto visitFn = [&](auto element) {
-        if (element)
-          (void)printAlias(element);
-      };
-      subElementInterface.walkImmediateSubElements(visitFn, visitFn);
-    }
+    auto visitFn = [&](auto element) {
+      if (element)
+        (void)printAlias(element);
+    };
+    type.walkImmediateSubElements(visitFn, visitFn);
   }
 
   /// Consider the given type to be printed for an alias.
@@ -2045,7 +2042,10 @@ static void printKeywordOrString(StringRef keyword, raw_ostream &os) {
 /// represented as a string prefixed with '@'. The reference is surrounded with
 /// ""'s and escaped if it has any special or non-printable characters in it.
 static void printSymbolReference(StringRef symbolRef, raw_ostream &os) {
-  assert(!symbolRef.empty() && "expected valid symbol reference");
+  if (symbolRef.empty()) {
+    os << "@<<INVALID EMPTY SYMBOL>>";
+    return;
+  }
   os << '@';
   printKeywordOrString(symbolRef, os);
 }
@@ -2410,6 +2410,8 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
       .Case<IndexType>([&](Type) { os << "index"; })
       .Case<Float8E5M2Type>([&](Type) { os << "f8E5M2"; })
       .Case<Float8E4M3FNType>([&](Type) { os << "f8E4M3FN"; })
+      .Case<Float8E5M2FNUZType>([&](Type) { os << "f8E5M2FNUZ"; })
+      .Case<Float8E4M3FNUZType>([&](Type) { os << "f8E4M3FNUZ"; })
       .Case<BFloat16Type>([&](Type) { os << "bf16"; })
       .Case<Float16Type>([&](Type) { os << "f16"; })
       .Case<Float32Type>([&](Type) { os << "f32"; })

@@ -117,6 +117,7 @@ s_sendmsg sendmsg(MSG_HALT_WAVES)
 s_sendmsg sendmsg(MSG_ORDERED_PS_DONE)
 // SICI: :[[@LINE-1]]:{{[0-9]+}}: error: specified message id is not supported on this GPU
 // VI: :[[@LINE-2]]:{{[0-9]+}}: error: specified message id is not supported on this GPU
+// GFX11: :[[@LINE-3]]:{{[0-9]+}}: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_EARLY_PRIM_DEALLOC)
 // SICI: :[[@LINE-1]]:{{[0-9]+}}: error: specified message id is not supported on this GPU

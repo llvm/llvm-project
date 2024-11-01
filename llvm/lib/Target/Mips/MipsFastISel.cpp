@@ -1356,7 +1356,7 @@ bool MipsFastISel::fastLowerArguments() {
 
     EVT ArgVT = TLI.getValueType(DL, ArgTy);
     LLVM_DEBUG(dbgs() << ".. " << FormalArg.getArgNo() << ": "
-                      << ArgVT.getEVTString() << "\n");
+                      << ArgVT << "\n");
     if (!ArgVT.isSimple()) {
       LLVM_DEBUG(dbgs() << ".. .. gave up (not a simple type)\n");
       return false;

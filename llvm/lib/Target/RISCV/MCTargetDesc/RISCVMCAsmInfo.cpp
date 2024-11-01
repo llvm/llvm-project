@@ -12,9 +12,9 @@
 
 #include "RISCVMCAsmInfo.h"
 #include "MCTargetDesc/RISCVMCExpr.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
 void RISCVMCAsmInfo::anchor() {}

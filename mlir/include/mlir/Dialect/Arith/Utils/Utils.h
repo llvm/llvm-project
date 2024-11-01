@@ -28,8 +28,15 @@ detail::op_matcher<arith::ConstantIndexOp> matchConstantIndex();
 
 /// Detects the `values` produced by a ConstantIndexOp and places the new
 /// constant in place of the corresponding sentinel value.
+/// TODO(pifon2a): Remove this function and use foldDynamicIndexList.
 void canonicalizeSubViewPart(SmallVectorImpl<OpFoldResult> &values,
                              function_ref<bool(int64_t)> isDynamic);
+
+/// Returns `success` when any of the elements in `ofrs` was produced by
+/// arith::ConstantIndexOp. In that case the constant attribute replaces the
+/// Value. Returns `failure` when no folding happened.
+LogicalResult foldDynamicIndexList(Builder &b,
+                                   SmallVectorImpl<OpFoldResult> &ofrs);
 
 llvm::SmallBitVector getPositionsOfShapeOne(unsigned rank,
                                             ArrayRef<int64_t> shape);

@@ -1522,7 +1522,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const complex<_Tp>& __x)
 }
 #endif // !_LIBCPP_HAS_NO_LOCALIZATION
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 // Literal suffix for complex number literals [complex.literals]
 inline namespace literals
 {

@@ -126,6 +126,13 @@ static cl::opt<bool> ShouldStartVectorizeHorAtStore(
     cl::desc(
         "Attempt to vectorize horizontal reductions feeding into a store"));
 
+// NOTE: If AllowHorRdxIdenityOptimization is true, the optimization will run
+// even if we match a reduction but do not vectorize in the end.
+static cl::opt<bool> AllowHorRdxIdenityOptimization(
+    "slp-optimize-identity-hor-reduction-ops", cl::init(true), cl::Hidden,
+    cl::desc("Allow optimization of original scalar identity operations on "
+             "matched horizontal reductions."));
+
 static cl::opt<int>
 MaxVectorRegSizeOption("slp-max-reg-size", cl::init(128), cl::Hidden,
     cl::desc("Attempt to vectorize for this register size in bits"));
@@ -374,9 +381,9 @@ static SmallBitVector isUndefVector(const Value *V,
     if (!UseMask.empty()) {
       const Value *Base = V;
       while (auto *II = dyn_cast<InsertElementInst>(Base)) {
+        Base = II->getOperand(0);
         if (isa<T>(II->getOperand(1)))
           continue;
-        Base = II->getOperand(0);
         std::optional<unsigned> Idx = getInsertIndex(II);
         if (!Idx)
           continue;
@@ -4384,7 +4391,7 @@ bool BoUpSLP::canReorderOperands(
                    }
                    return false;
                  }) > 1 &&
-        !all_of(UserTE->getOperand(I), isConstant))
+        !allConstant(UserTE->getOperand(I)))
       return false;
     if (Gather)
       GatherOps.push_back(Gather);
@@ -5010,7 +5017,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                                                    return isa<UndefValue>(V) ||
                                                           !isConstant(V);
                                                  })) ||
-          !llvm::isPowerOf2_32(NumUniqueScalarValues)) {
+          !llvm::has_single_bit<uint32_t>(NumUniqueScalarValues)) {
         LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
         newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
         return false;
@@ -11163,8 +11170,8 @@ void BoUpSLP::computeMinimumValueSizes() {
   // we can truncate the roots to this narrower type.
   for (auto *Root : TreeRoot) {
     auto Mask = DB->getDemandedBits(cast<Instruction>(Root));
-    MaxBitWidth = std::max<unsigned>(
-        Mask.getBitWidth() - Mask.countLeadingZeros(), MaxBitWidth);
+    MaxBitWidth = std::max<unsigned>(Mask.getBitWidth() - Mask.countl_zero(),
+                                     MaxBitWidth);
   }
 
   // True if the roots can be zero-extended back to their original type, rather
@@ -11223,8 +11230,7 @@ void BoUpSLP::computeMinimumValueSizes() {
   }
 
   // Round MaxBitWidth up to the next power-of-two.
-  if (!isPowerOf2_64(MaxBitWidth))
-    MaxBitWidth = NextPowerOf2(MaxBitWidth);
+  MaxBitWidth = llvm::bit_ceil(MaxBitWidth);
 
   // If the maximum bit width we compute is less than the with of the roots'
   // type, we can proceed with the narrowing. Otherwise, do nothing.
@@ -11536,7 +11542,7 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
 
     unsigned MaxVecRegSize = R.getMaxVecRegSize();
     unsigned EltSize = R.getVectorElementSize(Operands[0]);
-    unsigned MaxElts = llvm::PowerOf2Floor(MaxVecRegSize / EltSize);
+    unsigned MaxElts = llvm::bit_floor(MaxVecRegSize / EltSize);
 
     unsigned MaxVF = std::min(R.getMaximumVF(EltSize, Instruction::Store),
                               MaxElts);
@@ -11663,7 +11669,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
 
   unsigned Sz = R.getVectorElementSize(I0);
   unsigned MinVF = R.getMinVF(Sz);
-  unsigned MaxVF = std::max<unsigned>(PowerOf2Floor(VL.size()), MinVF);
+  unsigned MaxVF = std::max<unsigned>(llvm::bit_floor(VL.size()), MinVF);
   MaxVF = std::min(R.getMaximumVF(Sz, S.getOpcode()), MaxVF);
   if (MaxVF < 2) {
     R.getORE()->emit([&]() {
@@ -11857,6 +11863,9 @@ class HorizontalReduction {
   WeakTrackingVH ReductionRoot;
   /// The type of reduction operation.
   RecurKind RdxKind;
+  /// Checks if the optimization of original scalar identity operations on
+  /// matched horizontal reductions is enabled and allowed.
+  bool IsSupportedHorRdxIdentityOp = false;
 
   static bool isCmpSelMinMax(Instruction *I) {
     return match(I, m_Select(m_Cmp(), m_Value(), m_Value())) &&
@@ -12232,7 +12241,7 @@ public:
         if (!EdgeInst || getRdxKind(EdgeInst) != RdxKind ||
             IsCmpSelMinMax != isCmpSelMinMax(EdgeInst) ||
             !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst) ||
-            !isVectorizable(getRdxKind(EdgeInst), EdgeInst)) {
+            !isVectorizable(RdxKind, EdgeInst)) {
           PossibleReducedVals.push_back(EdgeVal);
           continue;
         }
@@ -12407,14 +12416,18 @@ public:
     // If there are a sufficient number of reduction values, reduce
     // to a nearby power-of-2. We can safely generate oversized
     // vectors and rely on the backend to split them to legal sizes.
-    size_t NumReducedVals =
+    unsigned NumReducedVals =
         std::accumulate(ReducedVals.begin(), ReducedVals.end(), 0,
-                        [](size_t Num, ArrayRef<Value *> Vals) {
+                        [](unsigned Num, ArrayRef<Value *> Vals) -> unsigned {
                           if (!isGoodForReduction(Vals))
                             return Num;
                           return Num + Vals.size();
                         });
-    if (NumReducedVals < ReductionLimit) {
+    if (NumReducedVals < ReductionLimit &&
+        (!AllowHorRdxIdenityOptimization ||
+         all_of(ReducedVals, [](ArrayRef<Value *> RedV) {
+           return RedV.size() < 2 || !allConstant(RedV) || !isSplat(RedV);
+         }))) {
       for (ReductionOpsType &RdxOps : ReductionOps)
         for (Value *RdxOp : RdxOps)
           V.analyzedReductionRoot(cast<Instruction>(RdxOp));
@@ -12448,6 +12461,18 @@ public:
       return cast<Instruction>(ScalarCond);
     };
 
+    // Return new VectorizedTree, based on previous value.
+    auto GetNewVectorizedTree = [&](Value *VectorizedTree, Value *Res) {
+      if (VectorizedTree) {
+        // Update the final value in the reduction.
+        Builder.SetCurrentDebugLocation(
+            cast<Instruction>(ReductionOps.front().front())->getDebugLoc());
+        return createOp(Builder, RdxKind, VectorizedTree, Res, "op.rdx",
+                        ReductionOps);
+      }
+      // Initialize the final value in the reduction.
+      return Res;
+    };
     // The reduction root is used as the insertion point for new instructions,
     // so set it as externally used to prevent it from being deleted.
     ExternallyUsedValues[ReductionRoot];
@@ -12519,16 +12544,80 @@ public:
           }
         }
       }
-      unsigned NumReducedVals = Candidates.size();
-      if (NumReducedVals < ReductionLimit)
+
+      // Emit code for constant values.
+      if (AllowHorRdxIdenityOptimization && Candidates.size() > 1 &&
+          allConstant(Candidates)) {
+        Value *Res = Candidates.front();
+        ++VectorizedVals.try_emplace(Candidates.front(), 0).first->getSecond();
+        for (Value *V : ArrayRef(Candidates).drop_front()) {
+          Res = createOp(Builder, RdxKind, Res, V, "const.rdx", ReductionOps);
+          ++VectorizedVals.try_emplace(V, 0).first->getSecond();
+        }
+        VectorizedTree = GetNewVectorizedTree(VectorizedTree, Res);
         continue;
+      }
+
+      unsigned NumReducedVals = Candidates.size();
+      if (NumReducedVals < ReductionLimit &&
+          (NumReducedVals < 2 || !AllowHorRdxIdenityOptimization ||
+           !isSplat(Candidates)))
+        continue;
+
+      // Check if we support repeated scalar values processing (optimization of
+      // original scalar identity operations on matched horizontal reductions).
+      IsSupportedHorRdxIdentityOp =
+          AllowHorRdxIdenityOptimization && RdxKind != RecurKind::Mul &&
+          RdxKind != RecurKind::FMul && RdxKind != RecurKind::FMulAdd;
+      // Gather same values.
+      MapVector<Value *, unsigned> SameValuesCounter;
+      if (IsSupportedHorRdxIdentityOp)
+        for (Value *V : Candidates)
+          ++SameValuesCounter.insert(std::make_pair(V, 0)).first->second;
+      // Used to check if the reduced values used same number of times. In this
+      // case the compiler may produce better code. E.g. if reduced values are
+      // aabbccdd (8 x values), then the first node of the tree will have a node
+      // for 4 x abcd + shuffle <4 x abcd>, <0, 0, 1, 1, 2, 2, 3, 3>.
+      // Plus, the final reduction will be performed on <8 x aabbccdd>.
+      // Instead compiler may build <4 x abcd> tree immediately, + reduction (4
+      // x abcd) * 2.
+      // Currently it only handles add/fadd/xor. and/or/min/max do not require
+      // this analysis, other operations may require an extra estimation of
+      // the profitability.
+      bool SameScaleFactor = false;
+      bool OptReusedScalars = IsSupportedHorRdxIdentityOp &&
+                              SameValuesCounter.size() != Candidates.size();
+      if (OptReusedScalars) {
+        SameScaleFactor =
+            (RdxKind == RecurKind::Add || RdxKind == RecurKind::FAdd ||
+             RdxKind == RecurKind::Xor) &&
+            all_of(drop_begin(SameValuesCounter),
+                   [&SameValuesCounter](const std::pair<Value *, unsigned> &P) {
+                     return P.second == SameValuesCounter.front().second;
+                   });
+        Candidates.resize(SameValuesCounter.size());
+        transform(SameValuesCounter, Candidates.begin(),
+                  [](const auto &P) { return P.first; });
+        NumReducedVals = Candidates.size();
+        // Have a reduction of the same element.
+        if (NumReducedVals == 1) {
+          Value *OrigV = TrackedToOrig.find(Candidates.front())->second;
+          unsigned Cnt = SameValuesCounter.lookup(OrigV);
+          Value *RedVal =
+              emitScaleForReusedOps(Candidates.front(), Builder, Cnt);
+          VectorizedTree = GetNewVectorizedTree(VectorizedTree, RedVal);
+          VectorizedVals.try_emplace(OrigV, Cnt);
+          continue;
+        }
+      }
 
       unsigned MaxVecRegSize = V.getMaxVecRegSize();
       unsigned EltSize = V.getVectorElementSize(Candidates[0]);
-      unsigned MaxElts = RegMaxNumber * PowerOf2Floor(MaxVecRegSize / EltSize);
+      unsigned MaxElts =
+          RegMaxNumber * llvm::bit_floor(MaxVecRegSize / EltSize);
 
       unsigned ReduxWidth = std::min<unsigned>(
-          PowerOf2Floor(NumReducedVals), std::max(RedValsMaxNumber, MaxElts));
+          llvm::bit_floor(NumReducedVals), std::max(RedValsMaxNumber, MaxElts));
       unsigned Start = 0;
       unsigned Pos = Start;
       // Restarts vectorization attempt with lower vector factor.
@@ -12551,6 +12640,7 @@ public:
         ReduxWidth /= 2;
         return IsAnyRedOpGathered;
       };
+      bool AnyVectorized = false;
       while (Pos < NumReducedVals - ReduxWidth + 1 &&
              ReduxWidth >= ReductionLimit) {
         // Dependency in tree of the reduction ops - drop this attempt, try
@@ -12603,20 +12693,24 @@ public:
                        LocalExternallyUsedValues[TrackedVals[V]];
                    });
         }
-        // Number of uses of the candidates in the vector of values.
-        SmallDenseMap<Value *, unsigned> NumUses(Candidates.size());
-        for (unsigned Cnt = 0; Cnt < Pos; ++Cnt) {
-          Value *V = Candidates[Cnt];
-          ++NumUses.try_emplace(V, 0).first->getSecond();
-        }
-        for (unsigned Cnt = Pos + ReduxWidth; Cnt < NumReducedVals; ++Cnt) {
-          Value *V = Candidates[Cnt];
-          ++NumUses.try_emplace(V, 0).first->getSecond();
+        if (!IsSupportedHorRdxIdentityOp) {
+          // Number of uses of the candidates in the vector of values.
+          assert(SameValuesCounter.empty() &&
+                 "Reused values counter map is not empty");
+          for (unsigned Cnt = 0; Cnt < NumReducedVals; ++Cnt) {
+            if (Cnt >= Pos && Cnt < Pos + ReduxWidth)
+              continue;
+            Value *V = Candidates[Cnt];
+            Value *OrigV = TrackedToOrig.find(V)->second;
+            ++SameValuesCounter[OrigV];
+          }
         }
         SmallPtrSet<Value *, 4> VLScalars(VL.begin(), VL.end());
         // Gather externally used values.
         SmallPtrSet<Value *, 4> Visited;
-        for (unsigned Cnt = 0; Cnt < Pos; ++Cnt) {
+        for (unsigned Cnt = 0; Cnt < NumReducedVals; ++Cnt) {
+          if (Cnt >= Pos && Cnt < Pos + ReduxWidth)
+            continue;
           Value *RdxVal = Candidates[Cnt];
           if (!Visited.insert(RdxVal).second)
             continue;
@@ -12626,24 +12720,15 @@ public:
             LocalExternallyUsedValues[RdxVal];
             continue;
           }
-          unsigned NumOps = VectorizedVals.lookup(RdxVal) + NumUses[RdxVal];
+          Value *OrigV = TrackedToOrig.find(RdxVal)->second;
+          unsigned NumOps =
+              VectorizedVals.lookup(RdxVal) + SameValuesCounter[OrigV];
           if (NumOps != ReducedValsToOps.find(RdxVal)->second.size())
             LocalExternallyUsedValues[RdxVal];
         }
-        for (unsigned Cnt = Pos + ReduxWidth; Cnt < NumReducedVals; ++Cnt) {
-          Value *RdxVal = Candidates[Cnt];
-          if (!Visited.insert(RdxVal).second)
-            continue;
-          // Check if the scalar was vectorized as part of the vectorization
-          // tree but not the top node.
-          if (!VLScalars.contains(RdxVal) && V.isVectorized(RdxVal)) {
-            LocalExternallyUsedValues[RdxVal];
-            continue;
-          }
-          unsigned NumOps = VectorizedVals.lookup(RdxVal) + NumUses[RdxVal];
-          if (NumOps != ReducedValsToOps.find(RdxVal)->second.size())
-            LocalExternallyUsedValues[RdxVal];
-        }
+        // Do not need the list of reused scalars in regular mode anymore.
+        if (!IsSupportedHorRdxIdentityOp)
+          SameValuesCounter.clear();
         for (Value *RdxVal : VL)
           if (RequiredExtract.contains(RdxVal))
             LocalExternallyUsedValues[RdxVal];
@@ -12727,29 +12812,47 @@ public:
         if (isBoolLogicOp(RdxRootInst))
           VectorizedRoot = Builder.CreateFreeze(VectorizedRoot);
 
+        // Emit code to correctly handle reused reduced values, if required.
+        if (OptReusedScalars && !SameScaleFactor) {
+          VectorizedRoot = emitReusedOps(VectorizedRoot, Builder, VL,
+                                         SameValuesCounter, TrackedToOrig);
+        }
+
         Value *ReducedSubTree =
             emitReduction(VectorizedRoot, Builder, ReduxWidth, TTI);
 
-        if (!VectorizedTree) {
-          // Initialize the final value in the reduction.
-          VectorizedTree = ReducedSubTree;
-        } else {
-          // Update the final value in the reduction.
-          Builder.SetCurrentDebugLocation(
-              cast<Instruction>(ReductionOps.front().front())->getDebugLoc());
-          VectorizedTree = createOp(Builder, RdxKind, VectorizedTree,
-                                    ReducedSubTree, "op.rdx", ReductionOps);
-        }
+        // Improved analysis for add/fadd/xor reductions with same scale factor
+        // for all operands of reductions. We can emit scalar ops for them
+        // instead.
+        if (OptReusedScalars && SameScaleFactor)
+          ReducedSubTree = emitScaleForReusedOps(
+              ReducedSubTree, Builder, SameValuesCounter.front().second);
+
+        VectorizedTree = GetNewVectorizedTree(VectorizedTree, ReducedSubTree);
         // Count vectorized reduced values to exclude them from final reduction.
         for (Value *RdxVal : VL) {
-          ++VectorizedVals.try_emplace(TrackedToOrig.find(RdxVal)->second, 0)
-                .first->getSecond();
+          Value *OrigV = TrackedToOrig.find(RdxVal)->second;
+          if (IsSupportedHorRdxIdentityOp) {
+            VectorizedVals.try_emplace(OrigV, SameValuesCounter[OrigV]);
+            continue;
+          }
+          ++VectorizedVals.try_emplace(OrigV, 0).first->getSecond();
           if (!V.isVectorized(RdxVal))
             RequiredExtract.insert(RdxVal);
         }
         Pos += ReduxWidth;
         Start = Pos;
-        ReduxWidth = PowerOf2Floor(NumReducedVals - Pos);
+        ReduxWidth = llvm::bit_floor(NumReducedVals - Pos);
+        AnyVectorized = true;
+      }
+      if (OptReusedScalars && !AnyVectorized) {
+        for (const std::pair<Value *, unsigned> &P : SameValuesCounter) {
+          Value *RedVal = emitScaleForReusedOps(P.first, Builder, P.second);
+          VectorizedTree = GetNewVectorizedTree(VectorizedTree, RedVal);
+          Value *OrigV = TrackedToOrig.find(P.first)->second;
+          VectorizedVals.try_emplace(OrigV, P.second);
+        }
+        continue;
       }
     }
     if (VectorizedTree) {
@@ -12900,7 +13003,7 @@ private:
     InstructionCost VectorCost = 0, ScalarCost;
     // If all of the reduced values are constant, the vector cost is 0, since
     // the reduction value can be calculated at the compile time.
-    bool AllConsts = all_of(ReducedVals, isConstant);
+    bool AllConsts = allConstant(ReducedVals);
     switch (RdxKind) {
     case RecurKind::Add:
     case RecurKind::Mul:
@@ -12977,8 +13080,144 @@ private:
     ++NumVectorInstructions;
     return createSimpleTargetReduction(Builder, TTI, VectorizedValue, RdxKind);
   }
-};
 
+  /// Emits optimized code for unique scalar value reused \p Cnt times.
+  Value *emitScaleForReusedOps(Value *VectorizedValue, IRBuilderBase &Builder,
+                               unsigned Cnt) {
+    assert(IsSupportedHorRdxIdentityOp &&
+           "The optimization of matched scalar identity horizontal reductions "
+           "must be supported.");
+    switch (RdxKind) {
+    case RecurKind::Add: {
+      // res = mul vv, n
+      Value *Scale = ConstantInt::get(VectorizedValue->getType(), Cnt);
+      LLVM_DEBUG(dbgs() << "SLP: Add (to-mul) " << Cnt << "of "
+                        << VectorizedValue << ". (HorRdx)\n");
+      return Builder.CreateMul(VectorizedValue, Scale);
+    }
+    case RecurKind::Xor: {
+      // res = n % 2 ? 0 : vv
+      LLVM_DEBUG(dbgs() << "SLP: Xor " << Cnt << "of " << VectorizedValue
+                        << ". (HorRdx)\n");
+      if (Cnt % 2 == 0)
+        return Constant::getNullValue(VectorizedValue->getType());
+      return VectorizedValue;
+    }
+    case RecurKind::FAdd: {
+      // res = fmul v, n
+      Value *Scale = ConstantFP::get(VectorizedValue->getType(), Cnt);
+      LLVM_DEBUG(dbgs() << "SLP: FAdd (to-fmul) " << Cnt << "of "
+                        << VectorizedValue << ". (HorRdx)\n");
+      return Builder.CreateFMul(VectorizedValue, Scale);
+    }
+    case RecurKind::And:
+    case RecurKind::Or:
+    case RecurKind::SMax:
+    case RecurKind::SMin:
+    case RecurKind::UMax:
+    case RecurKind::UMin:
+    case RecurKind::FMax:
+    case RecurKind::FMin:
+      // res = vv
+      return VectorizedValue;
+    case RecurKind::Mul:
+    case RecurKind::FMul:
+    case RecurKind::FMulAdd:
+    case RecurKind::SelectICmp:
+    case RecurKind::SelectFCmp:
+    case RecurKind::None:
+      llvm_unreachable("Unexpected reduction kind for repeated scalar.");
+    }
+    return nullptr;
+  }
+
+  /// Emits actual operation for the scalar identity values, found during
+  /// horizontal reduction analysis.
+  Value *emitReusedOps(Value *VectorizedValue, IRBuilderBase &Builder,
+                       ArrayRef<Value *> VL,
+                       const MapVector<Value *, unsigned> &SameValuesCounter,
+                       const DenseMap<Value *, Value *> &TrackedToOrig) {
+    assert(IsSupportedHorRdxIdentityOp &&
+           "The optimization of matched scalar identity horizontal reductions "
+           "must be supported.");
+    switch (RdxKind) {
+    case RecurKind::Add: {
+      // root = mul prev_root, <1, 1, n, 1>
+      SmallVector<Constant *> Vals;
+      for (Value *V : VL) {
+        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig.find(V)->second);
+        Vals.push_back(ConstantInt::get(V->getType(), Cnt, /*IsSigned=*/false));
+      }
+      auto *Scale = ConstantVector::get(Vals);
+      LLVM_DEBUG(dbgs() << "SLP: Add (to-mul) " << Scale << "of "
+                        << VectorizedValue << ". (HorRdx)\n");
+      return Builder.CreateMul(VectorizedValue, Scale);
+    }
+    case RecurKind::And:
+    case RecurKind::Or:
+      // No need for multiple or/and(s).
+      LLVM_DEBUG(dbgs() << "SLP: And/or of same " << VectorizedValue
+                        << ". (HorRdx)\n");
+      return VectorizedValue;
+    case RecurKind::SMax:
+    case RecurKind::SMin:
+    case RecurKind::UMax:
+    case RecurKind::UMin:
+    case RecurKind::FMax:
+    case RecurKind::FMin:
+      // No need for multiple min/max(s) of the same value.
+      LLVM_DEBUG(dbgs() << "SLP: Max/min of same " << VectorizedValue
+                        << ". (HorRdx)\n");
+      return VectorizedValue;
+    case RecurKind::Xor: {
+      // Replace values with even number of repeats with 0, since
+      // x xor x = 0.
+      // root = shuffle prev_root, zeroinitalizer, <0, 1, 2, vf, 4, vf, 5, 6,
+      // 7>, if elements 4th and 6th elements have even number of repeats.
+      SmallVector<int> Mask(
+          cast<FixedVectorType>(VectorizedValue->getType())->getNumElements(),
+          UndefMaskElem);
+      std::iota(Mask.begin(), Mask.end(), 0);
+      bool NeedShuffle = false;
+      for (unsigned I = 0, VF = VL.size(); I < VF; ++I) {
+        Value *V = VL[I];
+        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig.find(V)->second);
+        if (Cnt % 2 == 0) {
+          Mask[I] = VF;
+          NeedShuffle = true;
+        }
+      }
+      LLVM_DEBUG(dbgs() << "SLP: Xor <"; for (int I
+                                              : Mask) dbgs()
+                                         << I << " ";
+                 dbgs() << "> of " << VectorizedValue << ". (HorRdx)\n");
+      if (NeedShuffle)
+        VectorizedValue = Builder.CreateShuffleVector(
+            VectorizedValue,
+            ConstantVector::getNullValue(VectorizedValue->getType()), Mask);
+      return VectorizedValue;
+    }
+    case RecurKind::FAdd: {
+      // root = fmul prev_root, <1.0, 1.0, n.0, 1.0>
+      SmallVector<Constant *> Vals;
+      for (Value *V : VL) {
+        unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig.find(V)->second);
+        Vals.push_back(ConstantFP::get(V->getType(), Cnt));
+      }
+      auto *Scale = ConstantVector::get(Vals);
+      return Builder.CreateFMul(VectorizedValue, Scale);
+    }
+    case RecurKind::Mul:
+    case RecurKind::FMul:
+    case RecurKind::FMulAdd:
+    case RecurKind::SelectICmp:
+    case RecurKind::SelectFCmp:
+    case RecurKind::None:
+      llvm_unreachable("Unexpected reduction kind for reused scalars.");
+    }
+    return nullptr;
+  }
+};
 } // end anonymous namespace
 
 static std::optional<unsigned> getAggregateSize(Instruction *InsertInst) {

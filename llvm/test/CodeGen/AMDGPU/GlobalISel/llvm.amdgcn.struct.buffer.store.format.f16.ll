@@ -155,21 +155,17 @@ define amdgpu_ps void @struct_buffer_store_format_f16__sgpr_val__vgpr_rsrc__sgpr
   ; UNPACKED-NEXT: bb.2:
   ; UNPACKED-NEXT:   successors: %bb.3(0x80000000)
   ; UNPACKED-NEXT: {{  $}}
-  ; UNPACKED-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
-  ; UNPACKED-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; UNPACKED-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub2
-  ; UNPACKED-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub3
-  ; UNPACKED-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; UNPACKED-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
-  ; UNPACKED-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY13]], implicit $exec
-  ; UNPACKED-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY14]], implicit $exec
+  ; UNPACKED-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY1]], implicit $exec
+  ; UNPACKED-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY2]], implicit $exec
+  ; UNPACKED-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY3]], implicit $exec
+  ; UNPACKED-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY4]], implicit $exec
   ; UNPACKED-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; UNPACKED-NEXT:   [[COPY15:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
-  ; UNPACKED-NEXT:   [[COPY16:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; UNPACKED-NEXT:   [[COPY17:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub0_sub1
-  ; UNPACKED-NEXT:   [[COPY18:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub2_sub3
-  ; UNPACKED-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY17]], [[COPY15]], implicit $exec
-  ; UNPACKED-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY18]], [[COPY16]], implicit $exec
+  ; UNPACKED-NEXT:   [[COPY11:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
+  ; UNPACKED-NEXT:   [[COPY12:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
+  ; UNPACKED-NEXT:   [[COPY13:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub0_sub1
+  ; UNPACKED-NEXT:   [[COPY14:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub2_sub3
+  ; UNPACKED-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY13]], [[COPY11]], implicit $exec
+  ; UNPACKED-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY14]], [[COPY12]], implicit $exec
   ; UNPACKED-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def dead $scc
   ; UNPACKED-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
   ; UNPACKED-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY7]], implicit $exec
@@ -213,21 +209,17 @@ define amdgpu_ps void @struct_buffer_store_format_f16__sgpr_val__vgpr_rsrc__sgpr
   ; PACKED-NEXT: bb.2:
   ; PACKED-NEXT:   successors: %bb.3(0x80000000)
   ; PACKED-NEXT: {{  $}}
-  ; PACKED-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
-  ; PACKED-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; PACKED-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub2
-  ; PACKED-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub3
-  ; PACKED-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; PACKED-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY12]], implicit $exec
-  ; PACKED-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY13]], implicit $exec
-  ; PACKED-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY14]], implicit $exec
+  ; PACKED-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY1]], implicit $exec
+  ; PACKED-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY2]], implicit $exec
+  ; PACKED-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY3]], implicit $exec
+  ; PACKED-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY4]], implicit $exec
   ; PACKED-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; PACKED-NEXT:   [[COPY15:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
-  ; PACKED-NEXT:   [[COPY16:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; PACKED-NEXT:   [[COPY17:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub0_sub1
-  ; PACKED-NEXT:   [[COPY18:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub2_sub3
-  ; PACKED-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY17]], [[COPY15]], implicit $exec
-  ; PACKED-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY18]], [[COPY16]], implicit $exec
+  ; PACKED-NEXT:   [[COPY11:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
+  ; PACKED-NEXT:   [[COPY12:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
+  ; PACKED-NEXT:   [[COPY13:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub0_sub1
+  ; PACKED-NEXT:   [[COPY14:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub2_sub3
+  ; PACKED-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY13]], [[COPY11]], implicit $exec
+  ; PACKED-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY14]], [[COPY12]], implicit $exec
   ; PACKED-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def dead $scc
   ; PACKED-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
   ; PACKED-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY7]], implicit $exec

@@ -20,7 +20,6 @@
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "TargetInfo/AArch64TargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/CFIFixup.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
@@ -47,6 +46,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/Scalar.h"
 #include <memory>
@@ -238,6 +238,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64StackTaggingPreRAPass(*PR);
   initializeAArch64LowerHomogeneousPrologEpilogPass(*PR);
   initializeAArch64DAGToDAGISelPass(*PR);
+  initializeAArch64GlobalsTaggingPass(*PR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -587,6 +588,7 @@ void AArch64PassConfig::addIRPasses() {
   if (getOptLevel() == CodeGenOpt::Aggressive && EnableSelectOpt)
     addPass(createSelectOptimizePass());
 
+  addPass(createAArch64GlobalsTaggingPass());
   addPass(createAArch64StackTaggingPass(
       /*IsOptNone=*/TM->getOptLevel() == CodeGenOpt::None));
 

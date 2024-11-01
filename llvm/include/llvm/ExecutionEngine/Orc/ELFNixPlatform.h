@@ -94,6 +94,12 @@ public:
   /// setting up all aliases (including the required ones).
   static Expected<std::unique_ptr<ELFNixPlatform>>
   Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
+         JITDylib &PlatformJD, std::unique_ptr<DefinitionGenerator> OrcRuntime,
+         std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
+
+  /// Construct using a path to the ORC runtime.
+  static Expected<std::unique_ptr<ELFNixPlatform>>
+  Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
          JITDylib &PlatformJD, const char *OrcRuntimePath,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
@@ -118,9 +124,6 @@ public:
   /// Returns the array of standard runtime utility aliases for ELF.
   static ArrayRef<std::pair<const char *, const char *>>
   standardRuntimeUtilityAliases();
-
-  /// Returns true if the given section name is an initializer section.
-  static bool isInitializerSection(StringRef SecName);
 
 private:
   // The ELFNixPlatformPlugin scans/modifies LinkGraphs to support ELF

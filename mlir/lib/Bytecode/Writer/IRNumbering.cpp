@@ -63,6 +63,8 @@ static void groupByDialectPerByte(T range) {
                           const auto &rhs) {
     if (lhs->dialect->number == dialectToOrderFirst)
       return rhs->dialect->number != dialectToOrderFirst;
+    if (rhs->dialect->number == dialectToOrderFirst)
+      return false;
     return lhs->dialect->number < rhs->dialect->number;
   };
 

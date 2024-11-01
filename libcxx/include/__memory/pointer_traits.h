@@ -223,7 +223,7 @@ struct __to_address_helper<_Pointer, decltype((void)pointer_traits<_Pointer>::to
     }
 };
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY constexpr
 auto to_address(_Tp *__p) noexcept {

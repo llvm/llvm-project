@@ -107,7 +107,7 @@ static std::pair<Type *, bool> computeRecurrenceType(Instruction *Exit,
     // must be positive (i.e., IsSigned = false), because if this were not the
     // case, the sign bit would have been demanded.
     auto Mask = DB->getDemandedBits(Exit);
-    MaxBitWidth = Mask.getBitWidth() - Mask.countLeadingZeros();
+    MaxBitWidth = Mask.getBitWidth() - Mask.countl_zero();
   }
 
   if (MaxBitWidth == DL.getTypeSizeInBits(Exit->getType()) && AC && DT) {
@@ -128,8 +128,7 @@ static std::pair<Type *, bool> computeRecurrenceType(Instruction *Exit,
       ++MaxBitWidth;
     }
   }
-  if (!isPowerOf2_64(MaxBitWidth))
-    MaxBitWidth = NextPowerOf2(MaxBitWidth);
+  MaxBitWidth = llvm::bit_ceil(MaxBitWidth);
 
   return std::make_pair(Type::getIntNTy(Exit->getContext(), MaxBitWidth),
                         IsSigned);
@@ -746,15 +745,21 @@ RecurrenceDescriptor::isConditionalRdxPattern(RecurKind Kind, Instruction *I) {
     return InstDesc(false, I);
 
   Value *Op1, *Op2;
-  if ((m_FAdd(m_Value(Op1), m_Value(Op2)).match(I1)  ||
-       m_FSub(m_Value(Op1), m_Value(Op2)).match(I1)) &&
-      I1->isFast())
-    return InstDesc(Kind == RecurKind::FAdd, SI);
+  if (!(((m_FAdd(m_Value(Op1), m_Value(Op2)).match(I1) ||
+          m_FSub(m_Value(Op1), m_Value(Op2)).match(I1)) &&
+         I1->isFast()) ||
+        (m_FMul(m_Value(Op1), m_Value(Op2)).match(I1) && (I1->isFast())) ||
+        ((m_Add(m_Value(Op1), m_Value(Op2)).match(I1) ||
+          m_Sub(m_Value(Op1), m_Value(Op2)).match(I1))) ||
+        (m_Mul(m_Value(Op1), m_Value(Op2)).match(I1))))
+    return InstDesc(false, I);
 
-  if (m_FMul(m_Value(Op1), m_Value(Op2)).match(I1) && (I1->isFast()))
-    return InstDesc(Kind == RecurKind::FMul, SI);
+  Instruction *IPhi = isa<PHINode>(*Op1) ? dyn_cast<Instruction>(Op1)
+                                         : dyn_cast<Instruction>(Op2);
+  if (!IPhi || IPhi != FalseVal)
+    return InstDesc(false, I);
 
-  return InstDesc(false, I);
+  return InstDesc(true, SI);
 }
 
 RecurrenceDescriptor::InstDesc
@@ -787,7 +792,8 @@ RecurrenceDescriptor::isRecurrenceInstr(Loop *L, PHINode *OrigPhi,
     return InstDesc(Kind == RecurKind::FAdd, I,
                     I->hasAllowReassoc() ? nullptr : I);
   case Instruction::Select:
-    if (Kind == RecurKind::FAdd || Kind == RecurKind::FMul)
+    if (Kind == RecurKind::FAdd || Kind == RecurKind::FMul ||
+        Kind == RecurKind::Add || Kind == RecurKind::Mul)
       return isConditionalRdxPattern(Kind, I);
     [[fallthrough]];
   case Instruction::FCmp:

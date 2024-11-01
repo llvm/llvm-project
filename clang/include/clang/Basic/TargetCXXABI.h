@@ -19,8 +19,8 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace clang {
 

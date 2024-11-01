@@ -16,10 +16,10 @@
 #include "SparcFrameLowering.h"
 #include "SparcISelLowering.h"
 #include "SparcInstrInfo.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/TargetParser/Triple.h"
 #include <string>
 
 #define GET_SUBTARGETINFO_HEADER

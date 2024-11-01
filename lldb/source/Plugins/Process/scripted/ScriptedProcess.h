@@ -74,6 +74,8 @@ public:
 
   void UpdateQueueListIfNeeded() override;
 
+  void *GetImplementation() override;
+
 protected:
   ScriptedProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
                   const ScriptedMetadata &scripted_metadata, Status &error);
@@ -91,15 +93,16 @@ protected:
 private:
   friend class ScriptedThread;
 
-  void CheckInterpreterAndScriptObject() const;
+  inline void CheckScriptedInterface() const {
+    lldbassert(m_interface_up && "Invalid scripted process interface.");
+  }
+
   ScriptedProcessInterface &GetInterface() const;
   static bool IsScriptLanguageSupported(lldb::ScriptLanguage language);
 
   // Member variables.
   const ScriptedMetadata m_scripted_metadata;
-  lldb_private::ScriptInterpreter *m_interpreter = nullptr;
-  lldb_private::StructuredData::ObjectSP m_script_object_sp = nullptr;
-  //@}
+  lldb::ScriptedProcessInterfaceUP m_interface_up;
 };
 
 } // namespace lldb_private

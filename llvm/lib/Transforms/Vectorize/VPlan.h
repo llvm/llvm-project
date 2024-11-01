@@ -931,13 +931,19 @@ class VPWidenCallRecipe : public VPRecipeBase, public VPValue {
   /// ID of the vector intrinsic to call when widening the call. If set the
   /// Intrinsic::not_intrinsic, a library call will be used instead.
   Intrinsic::ID VectorIntrinsicID;
+  /// If this recipe represents a library call, Variant stores a pointer to
+  /// the chosen function. There is a 1:1 mapping between a given VF and the
+  /// chosen vectorized variant, so there will be a different vplan for each
+  /// VF with a valid variant.
+  Function *Variant;
 
 public:
   template <typename IterT>
   VPWidenCallRecipe(CallInst &I, iterator_range<IterT> CallArguments,
-                    Intrinsic::ID VectorIntrinsicID)
+                    Intrinsic::ID VectorIntrinsicID,
+                    Function *Variant = nullptr)
       : VPRecipeBase(VPDef::VPWidenCallSC, CallArguments), VPValue(this, &I),
-        VectorIntrinsicID(VectorIntrinsicID) {}
+        VectorIntrinsicID(VectorIntrinsicID), Variant(Variant) {}
 
   ~VPWidenCallRecipe() override = default;
 
@@ -1497,22 +1503,12 @@ class VPReplicateRecipe : public VPRecipeBase, public VPValue {
   /// Indicator if the replicas are also predicated.
   bool IsPredicated;
 
-  /// Indicator if the scalar values should also be packed into a vector.
-  bool AlsoPack;
-
 public:
   template <typename IterT>
   VPReplicateRecipe(Instruction *I, iterator_range<IterT> Operands,
                     bool IsUniform, bool IsPredicated = false)
       : VPRecipeBase(VPDef::VPReplicateSC, Operands), VPValue(this, I),
-        IsUniform(IsUniform), IsPredicated(IsPredicated) {
-    // Retain the previous behavior of predicateInstructions(), where an
-    // insert-element of a predicated instruction got hoisted into the
-    // predicated basic block iff it was its only user. This is achieved by
-    // having predicated instructions also pack their values into a vector by
-    // default unless they have a replicated user which uses their scalar value.
-    AlsoPack = IsPredicated && !I->use_empty();
-  }
+        IsUniform(IsUniform), IsPredicated(IsPredicated) {}
 
   ~VPReplicateRecipe() override = default;
 
@@ -1523,8 +1519,6 @@ public:
   /// the \p State.
   void execute(VPTransformState &State) override;
 
-  void setAlsoPack(bool Pack) { AlsoPack = Pack; }
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -1532,8 +1526,6 @@ public:
 #endif
 
   bool isUniform() const { return IsUniform; }
-
-  bool isPacked() const { return AlsoPack; }
 
   bool isPredicated() const { return IsPredicated; }
 
@@ -1550,6 +1542,11 @@ public:
            "Op must be an operand of the recipe");
     return true;
   }
+
+  /// Returns true if the recipe is used by a widened recipe via an intervening
+  /// VPPredInstPHIRecipe. In this case, the scalar values should also be packed
+  /// in a vector.
+  bool shouldPack() const;
 };
 
 /// A recipe for generating conditional branches on the bits of a mask.

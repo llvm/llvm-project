@@ -46,7 +46,10 @@ Expected<Target> Target::create(StringRef TargetValue) {
 }
 
 Target::operator std::string() const {
-  return (getArchitectureName(Arch) + " (" + getPlatformName(Platform) + ")")
+  auto Version = MinDeployment.empty() ? "" : MinDeployment.getAsString();
+
+  return (getArchitectureName(Arch) + " (" + getPlatformName(Platform) +
+          Version + ")")
       .str();
 }
 
@@ -70,8 +73,11 @@ ArchitectureSet mapToArchitectureSet(ArrayRef<Target> Targets) {
 }
 
 std::string getTargetTripleName(const Target &Targ) {
+  auto Version =
+      Targ.MinDeployment.empty() ? "" : Targ.MinDeployment.getAsString();
+
   return (getArchitectureName(Targ.Arch) + "-apple-" +
-          getOSAndEnvironmentName(Targ.Platform))
+          getOSAndEnvironmentName(Targ.Platform, Version))
       .str();
 }
 

@@ -44,7 +44,7 @@ target triple = "x86_64--linux"
 ; Function Attrs: noinline nounwind uwtable
 define void @use_dbg_addr() #0 !dbg !7 {
 entry:
-  %o = alloca %struct.Foo, align 4
+  %o = alloca %struct.Foo, align 8
   call void @llvm.dbg.addr(metadata ptr %o, metadata !10, metadata !15), !dbg !16
   call void @escape_foo(ptr %o), !dbg !17
   ret void, !dbg !18
@@ -52,7 +52,7 @@ entry:
 
 define void @test_dbg_addr_and_dbg_val_undef() #0 !dbg !117 {
 entry:
-  %o = alloca %struct.Foo, align 4
+  %o = alloca %struct.Foo, align 8
   call void @llvm.dbg.addr(metadata ptr %o, metadata !1110, metadata !1115), !dbg !1116
   call void @escape_foo(ptr %o), !dbg !1117
   call void @llvm.dbg.value(metadata ptr undef, metadata !1110, metadata !1115), !dbg !1116

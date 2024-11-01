@@ -45,14 +45,17 @@
 ! HELP-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
 ! HELP-NEXT: -fno-integrated-as      Disable the integrated assembler
 ! HELP-NEXT: -fno-signed-zeros      Allow optimizations that ignore the sign of floating point zeros
+! HELP-NEXT: -fno-stack-arrays      Allocate array temporaries on the heap (default)
 ! HELP-NEXT: -fopenacc              Enable OpenACC
 ! HELP-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
 ! HELP-NEXT: -fpass-plugin=<dsopath> Load pass plugin from a dynamic shared object file (only with new pass manager).
 ! HELP-NEXT: -freciprocal-math      Allow division operations to be reassociated
+! HELP-NEXT: -fstack-arrays         Attempt to allocate array temporaries on the stack, no matter their size
 ! HELP-NEXT: -fsyntax-only          Run the preprocessor, parser and semantic analysis stages
 ! HELP-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
 ! HELP-NEXT: -help                  Display available options
 ! HELP-NEXT: -I <dir>               Add directory to the end of the list of include search paths
+! HELP-NEXT: -mllvm=<arg>           Alias for -mllvm
 ! HELP-NEXT: -mllvm <value>         Additional arguments to forward to LLVM's option processing
 ! HELP-NEXT: -mmlir <value>         Additional arguments to forward to MLIR's option processing
 ! HELP-NEXT: -module-dir <dir>      Put MODULE files in <dir>
@@ -109,6 +112,8 @@
 ! HELP-FC1-NEXT: -fdefault-double-8  Set the default double precision kind to an 8 byte wide type
 ! HELP-FC1-NEXT: -fdefault-integer-8 Set the default integer kind to an 8 byte wide type
 ! HELP-FC1-NEXT: -fdefault-real-8    Set the default real kind to an 8 byte wide type
+! HELP-FC1-NEXT: -fembed-offload-object=<value>
+! HELP-FC1-NEXT:                        Embed Offloading device-side binary into host object file as a section.
 ! HELP-FC1-NEXT: -ffast-math            Allow aggressive, lossy floating-point optimizations
 ! HELP-FC1-NEXT: -ffixed-form           Process source files in fixed form
 ! HELP-FC1-NEXT: -ffixed-line-length=<value>
@@ -130,10 +135,12 @@
 ! HELP-FC1-NEXT: -fno-debug-pass-manager Disables debug printing for the new pass manager
 ! HELP-FC1-NEXT: -fno-reformat          Dump the cooked character stream in -E mode
 ! HELP-FC1-NEXT: -fno-signed-zeros      Allow optimizations that ignore the sign of floating point zeros
+! HELP-FC1-NEXT: -fno-stack-arrays      Allocate array temporaries on the heap (default)
 ! HELP-FC1-NEXT: -fopenacc              Enable OpenACC
 ! HELP-FC1-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
 ! HELP-FC1-NEXT: -fpass-plugin=<dsopath> Load pass plugin from a dynamic shared object file (only with new pass manager).
 ! HELP-FC1-NEXT: -freciprocal-math      Allow division operations to be reassociated
+! HELP-FC1-NEXT: -fstack-arrays         Attempt to allocate array temporaries on the stack, no matter their size
 ! HELP-FC1-NEXT: -fsyntax-only          Run the preprocessor, parser and semantic analysis stages
 ! HELP-FC1-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
 ! HELP-FC1-NEXT: -help                  Display available options

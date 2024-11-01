@@ -94,14 +94,17 @@ tools = [
     ToolSubst('%flang_fc1', command=FindTool('flang-new'), extra_args=['-fc1'],
         unresolved='fatal')]
 
-# Flang has several unimplemented features. TODO messages are used to mark and fail if these
-# features are exercised. TODOs exit with an error in non-assert builds but in assert builds
-# it aborts. To catch aborts, the `--crash` option for the `not` command has to be used.
+# Flang has several unimplemented features. TODO messages are used to mark
+# and fail if these features are exercised. Some TODOs exit with a non-zero
+# exit code, but others abort the execution in assert builds.
+# To catch aborts, the `--crash` option for the `not` command has to be used.
+tools.append(ToolSubst('%not_todo_cmd', command=FindTool('not'), unresolved='fatal'))
 if 'asserts' in config.available_features:
-    tools.append(ToolSubst('%not_todo_cmd', command=FindTool('not'), extra_args=['--crash'],
-        unresolved='fatal'))
+    tools.append(ToolSubst('%not_todo_abort_cmd', command=FindTool('not'),
+        extra_args=['--crash'], unresolved='fatal'))
 else:
-    tools.append(ToolSubst('%not_todo_cmd', command=FindTool('not'), unresolved='fatal'))
+    tools.append(ToolSubst('%not_todo_abort_cmd', command=FindTool('not'),
+        unresolved='fatal'))
 
 # Define some variables to help us test that the flang runtime doesn't depend on
 # the C++ runtime libraries. For this we need a C compiler. If for some reason

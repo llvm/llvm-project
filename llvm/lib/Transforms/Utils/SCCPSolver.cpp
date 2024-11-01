@@ -123,10 +123,49 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
   return true;
 }
 
-/// Try to replace refine \p Inst with information of its value ranges from \p
-/// Solver. For example, SExts are replaced by ZExt, if the value range of the
-/// result is non-negative.
+/// Try to use \p Inst's value range from \p Solver to infer the NUW flag.
 static bool refineInstruction(SCCPSolver &Solver,
+                              const SmallPtrSetImpl<Value *> &InsertedValues,
+                              Instruction &Inst) {
+  if (!isa<OverflowingBinaryOperator>(Inst))
+    return false;
+
+  auto GetRange = [&Solver, &InsertedValues](Value *Op) {
+    if (auto *Const = dyn_cast<ConstantInt>(Op))
+      return ConstantRange(Const->getValue());
+    if (isa<Constant>(Op) || InsertedValues.contains(Op)) {
+      unsigned Bitwidth = Op->getType()->getScalarSizeInBits();
+      return ConstantRange::getFull(Bitwidth);
+    }
+    return getConstantRange(Solver.getLatticeValueFor(Op), Op->getType(),
+                            /*UndefAllowed=*/false);
+  };
+  auto RangeA = GetRange(Inst.getOperand(0));
+  auto RangeB = GetRange(Inst.getOperand(1));
+  bool Changed = false;
+  if (!Inst.hasNoUnsignedWrap()) {
+    auto NUWRange = ConstantRange::makeGuaranteedNoWrapRegion(
+        Instruction::BinaryOps(Inst.getOpcode()), RangeB,
+        OverflowingBinaryOperator::NoUnsignedWrap);
+    if (NUWRange.contains(RangeA)) {
+      Inst.setHasNoUnsignedWrap();
+      Changed = true;
+    }
+  }
+  if (!Inst.hasNoSignedWrap()) {
+    auto NSWRange = ConstantRange::makeGuaranteedNoWrapRegion(
+        Instruction::BinaryOps(Inst.getOpcode()), RangeB, OverflowingBinaryOperator::NoSignedWrap);
+    if (NSWRange.contains(RangeA)) {
+      Inst.setHasNoSignedWrap();
+      Changed = true;
+    }
+  }
+
+  return Changed;
+}
+
+/// Try to replace signed instructions with their unsigned equivalent.
+static bool replaceSignedInst(SCCPSolver &Solver,
                               SmallPtrSetImpl<Value *> &InsertedValues,
                               Instruction &Inst) {
   // Determine if a signed value is known to be >= 0.
@@ -174,29 +213,6 @@ static bool refineInstruction(SCCPSolver &Solver,
     NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", &Inst);
     break;
   }
-  case Instruction::Add: {
-    auto GetRange = [&Solver, &InsertedValues](Value *Op) {
-      unsigned Bitwidth = Op->getType()->getScalarSizeInBits();
-      if (InsertedValues.contains(Op) || isa<UndefValue>(Op))
-        return ConstantRange::getFull(Bitwidth);
-      if (auto *Const = dyn_cast<ConstantInt>(Op))
-        return ConstantRange(Const->getValue());
-
-      return getConstantRange(Solver.getLatticeValueFor(Op), Op->getType(),
-                              /*UndefAllowed=*/false);
-    };
-
-    auto RangeA = GetRange(Inst.getOperand(0));
-    auto RangeB = GetRange(Inst.getOperand(1));
-    auto NUWRange = ConstantRange::makeGuaranteedNoWrapRegion(
-        Instruction::Add, RangeB, OverflowingBinaryOperator::NoUnsignedWrap);
-    if (!Inst.hasNoUnsignedWrap() && NUWRange.contains(RangeA)) {
-      Inst.setHasNoUnsignedWrap();
-      return true;
-    }
-
-    return false;
-  }
   default:
     return false;
   }
@@ -225,9 +241,11 @@ bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
 
       MadeChanges = true;
       ++InstRemovedStat;
-    } else if (refineInstruction(*this, InsertedValues, Inst)) {
+    } else if (replaceSignedInst(*this, InsertedValues, Inst)) {
       MadeChanges = true;
       ++InstReplacedStat;
+    } else if (refineInstruction(*this, InsertedValues, Inst)) {
+      MadeChanges = true;
     }
   }
   return MadeChanges;

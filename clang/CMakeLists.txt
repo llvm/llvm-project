@@ -595,6 +595,14 @@ if (CLANG_ENABLE_BOOTSTRAP)
     add_dependencies(clang-bootstrap-deps lld)
   endif()
 
+  if (WIN32)
+    # Build llvm-rc and llvm-mt which are needed by the Windows build.
+    add_dependencies(clang-bootstrap-deps llvm-rc)
+    if(LLVM_ENABLE_LIBXML2)
+      add_dependencies(clang-bootstrap-deps llvm-mt)
+    endif()
+  endif()
+
   # If the next stage is LTO we need to depend on LTO and possibly lld or LLVMgold
   if(BOOTSTRAP_LLVM_ENABLE_LTO OR LLVM_ENABLE_LTO AND NOT LLVM_BUILD_INSTRUMENTED)
     if(APPLE)
@@ -856,8 +864,6 @@ if (CLANG_BOLT_INSTRUMENT AND NOT LLVM_BUILD_INSTRUMENTED)
   set(CLANGXX_PATH ${CLANG_PATH}++)
   set(CLANG_INSTRUMENTED ${CLANG_PATH}-bolt.inst)
   set(CLANGXX_INSTRUMENTED ${CLANGXX_PATH}-bolt.inst)
-  set(CLANG_OPTIMIZED ${CLANG_PATH}-bolt)
-  set(CLANGXX_OPTIMIZED ${CLANGXX_PATH}-bolt)
 
   # Instrument clang with BOLT
   add_custom_target(clang-instrumented
@@ -935,6 +941,7 @@ if (CLANG_BOLT_INSTRUMENT AND NOT LLVM_BUILD_INSTRUMENTED)
   )
 
   # Optimize original (pre-bolt) Clang using the collected profile
+  set(CLANG_OPTIMIZED ${CMAKE_CURRENT_BINARY_DIR}/clang.bolt)
   add_custom_target(clang-bolt
     DEPENDS ${CLANG_OPTIMIZED}
   )
@@ -945,20 +952,8 @@ if (CLANG_BOLT_INSTRUMENT AND NOT LLVM_BUILD_INSTRUMENTED)
       -data ${CMAKE_CURRENT_BINARY_DIR}/prof.fdata
       -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions
       -split-all-cold -split-eh -dyno-stats -icf=1 -use-gnu-stack
+    COMMAND ${CMAKE_COMMAND} -E rename ${CLANG_OPTIMIZED} $<TARGET_FILE:clang>
     COMMENT "Optimizing Clang with BOLT"
-    VERBATIM
-  )
-
-  # Make a symlink from clang-bolt to clang++-bolt
-  add_custom_target(clang++-bolt
-    DEPENDS ${CLANGXX_OPTIMIZED}
-  )
-  add_custom_command(OUTPUT ${CLANGXX_OPTIMIZED}
-    DEPENDS clang-bolt
-    COMMAND ${CMAKE_COMMAND} -E create_symlink
-      ${CLANG_OPTIMIZED}
-      ${CLANGXX_OPTIMIZED}
-    COMMENT "Creating symlink from BOLT optimized clang to clang++"
     VERBATIM
   )
 endif()

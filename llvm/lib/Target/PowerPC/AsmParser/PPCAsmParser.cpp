@@ -334,7 +334,7 @@ public:
 
   unsigned getCRBitMask() const {
     assert(isCRBitMask() && "Invalid access!");
-    return 7 - countTrailingZeros<uint64_t>(Imm.Val);
+    return 7 - llvm::countr_zero<uint64_t>(Imm.Val);
   }
 
   bool isToken() const override { return Kind == Token; }
@@ -441,8 +441,10 @@ public:
 
   bool isEvenRegNumber() const { return isRegNumber() && (getImm() & 1) == 0; }
 
-  bool isCRBitMask() const { return Kind == Immediate && isUInt<8>(getImm()) &&
-                                    isPowerOf2_32(getImm()); }
+  bool isCRBitMask() const {
+    return Kind == Immediate && isUInt<8>(getImm()) &&
+           llvm::has_single_bit<uint32_t>(getImm());
+  }
   bool isATBitsAsHint() const { return false; }
   bool isMem() const override { return false; }
   bool isReg() const override { return false; }
@@ -1198,7 +1200,7 @@ void PPCAsmParser::ProcessInstruction(MCInst &Inst,
     break;
   }
   case PPC::MFTB: {
-    if (getSTI().getFeatureBits()[PPC::FeatureMFTB]) {
+    if (getSTI().hasFeature(PPC::FeatureMFTB)) {
       assert(Inst.getNumOperands() == 2 && "Expecting two operands");
       Inst.setOpcode(PPC::MFSPR);
     }
@@ -1640,7 +1642,7 @@ bool PPCAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   //  where th can be omitted when it is 0. dcbtst is the same. We take the
   //  server form to be the default, so swap the operands if we're parsing for
   //  an embedded core (they'll be swapped again upon printing).
-  if (getSTI().getFeatureBits()[PPC::FeatureBookE] &&
+  if (getSTI().hasFeature(PPC::FeatureBookE) &&
       Operands.size() == 4 &&
       (Name == "dcbt" || Name == "dcbtst")) {
     std::swap(Operands[1], Operands[3]);

@@ -400,7 +400,7 @@ def int_amdgcn_class : DefaultAttrsIntrinsic<
   [IntrNoMem, IntrSpeculatable]
 >;
 
-def int_amdgcn_fmed3 : ClangBuiltin<"__builtin_amdgcn_fmed3">,
+def int_amdgcn_fmed3 :
   DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
     [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
     [IntrNoMem, IntrSpeculatable]

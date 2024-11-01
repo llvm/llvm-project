@@ -101,7 +101,8 @@ int DeviceTy::associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size) {
      NewEntry.dynRefCountToStr().c_str(), NewEntry.holdRefCountToStr().c_str());
   (void)NewEntry;
 
-  return OFFLOAD_SUCCESS;
+  // Notify the plugin about the new mapping.
+  return notifyDataMapped(HstPtrBegin, Size);
 }
 
 int DeviceTy::disassociatePtr(void *HstPtrBegin) {
@@ -124,7 +125,9 @@ int DeviceTy::disassociatePtr(void *HstPtrBegin) {
       if (Event)
         destroyEvent(Event);
       HDTTMap->erase(It);
-      return OFFLOAD_SUCCESS;
+
+      // Notify the plugin about the unmapped memory.
+      return notifyDataUnmapped(HstPtrBegin);
     } else {
       REPORT("Trying to disassociate a pointer which was not mapped via "
              "omp_target_associate_ptr\n");
@@ -305,6 +308,12 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
          Entry->dynRefCountToStr().c_str(), Entry->holdRefCountToStr().c_str(),
          (HstPtrName) ? getNameFromMapping(HstPtrName).c_str() : "unknown");
     TargetPointer = (void *)Ptr;
+
+    // Notify the plugin about the new mapping.
+    if (notifyDataMapped(HstPtrBegin, Size))
+      return {{false /* IsNewEntry */, false /* IsHostPointer */},
+              nullptr /* Entry */,
+              nullptr /* TargetPointer */};
   } else {
     // This entry is not present and we did not create a new entry for it.
     IsPresent = false;
@@ -485,6 +494,10 @@ int DeviceTy::deallocTgtPtrAndEntry(HostDataToTargetTy *Entry, int64_t Size) {
   }
 
   int Ret = deleteData((void *)Entry->TgtPtrBegin);
+
+  // Notify the plugin about the unmapped memory.
+  Ret |= notifyDataUnmapped((void *)Entry->HstPtrBegin);
+
   delete Entry;
 
   return Ret;
@@ -589,6 +602,33 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
   }
   return RTL->data_exchange_async(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID,
                                   DstPtr, Size, AsyncInfo);
+}
+
+int32_t DeviceTy::notifyDataMapped(void *HstPtr, int64_t Size) {
+  if (!RTL->data_notify_mapped)
+    return OFFLOAD_SUCCESS;
+
+  DP("Notifying about new mapping: HstPtr=" DPxMOD ", Size=%" PRId64 "\n",
+     DPxPTR(HstPtr), Size);
+
+  if (RTL->data_notify_mapped(RTLDeviceID, HstPtr, Size)) {
+    REPORT("Notifiying about data mapping failed.\n");
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
+  if (!RTL->data_notify_unmapped)
+    return OFFLOAD_SUCCESS;
+
+  DP("Notifying about an unmapping: HstPtr=" DPxMOD "\n", DPxPTR(HstPtr));
+
+  if (RTL->data_notify_unmapped(RTLDeviceID, HstPtr)) {
+    REPORT("Notifiying about data unmapping failed.\n");
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 // Run region on device

@@ -26,7 +26,6 @@ def SCF_Dialect : Dialect {
   let name = "scf";
   let cppNamespace = "::mlir::scf";
   let dependentDialects = ["arith::ArithDialect"];
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 // Base class for SCF dialect ops.
@@ -349,21 +348,21 @@ def ForOp : SCF_Op<"for",
 }
 
 //===----------------------------------------------------------------------===//
-// ForeachThreadOp
+// ForallOp
 //===----------------------------------------------------------------------===//
 
-def ForeachThreadOp : SCF_Op<"foreach_thread", [
+def ForallOp : SCF_Op<"forall", [
        AttrSizedOperandSegments,
-       SingleBlockImplicitTerminator<"scf::PerformConcurrentlyOp">,
-       RecursiveMemoryEffects,
        AutomaticAllocationScope,
-      ]> {
+       RecursiveMemoryEffects,
+       SingleBlockImplicitTerminator<"scf::InParallelOp">,
+     ]> {
   let summary = "evaluate a block multiple times in parallel";
   let description = [{
-    `scf.foreach_thread` is a target-independent multi-dimensional parallel
+    `scf.forall` is a target-independent multi-dimensional parallel
     region application operation. It has exactly one block that represents the
-    parallel body and it takes index operands that indicate how many parallel
-    instances of that function are created.
+    parallel body and it takes index operands that specify lower bounds, upper
+    bounds and steps.
 
     The op also takes a variadic number of tensor operands (`shared_outs`).
     The future buffers corresponding to these tensors are shared among all
@@ -390,28 +389,33 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     the op is lowered to, or to ignore it when the specification is ill-formed
     or unsupported for a particular target.
 
-    The only allowed terminator is `scf.foreach_thread.perform_concurrently`.
-    `scf.foreach_thread` returns one value per `shared_out` operand. The
-    actions of the `perform_concurrently` terminators specify how to combine the
+    The only allowed terminator is `scf.forall.in_parallel`.
+    `scf.forall` returns one value per `shared_out` operand. The
+    actions of the `in_parallel` terminators specify how to combine the
     partial results of all parallel invocations into a full value, in some
     unspecified order. The "destination" of each such op must be a `shared_out`
-    block argument of the `scf.foreach_thread` op.
+    block argument of the `scf.forall` op.
 
     The actions involved in constructing the return values are further described
     by `tensor.parallel_insert_slice`.
 
-    `scf.foreach_thread` acts as an implicit synchronization point.
+    `scf.forall` acts as an implicit synchronization point.
 
     When the parallel function body has side effects, their order is unspecified
     across threads.
 
-    Example:
+    `scf.forall` can be printed in two different ways depending on
+    whether the loop is normalized or not. The loop is 'normalized' when all
+    lower bounds are equal to zero and steps are equal to one. In that case,
+    `lowerBound` and `step` operands will be omitted during printing.
+
+    Normalized loop example:
 
     ```mlir
     //
     // Sequential context.
     //
-    %matmul_and_pointwise:2 = scf.foreach_thread (%thread_id_1, %thread_id_2) in
+    %matmul_and_pointwise:2 = scf.forall (%thread_id_1, %thread_id_2) in
         (%num_threads_1, %numthread_id_2) shared_outs(%o1 = %C, %o2 = %pointwise)
       -> (tensor<?x?xT>, tensor<?xT>) {
       //
@@ -430,12 +434,44 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
         tensor<?xT> to tensor<?xT>
       %sE = add ins(%spointwise) outs(%sD)
 
-      scf.foreach_thread.perform_concurrently {
-        scf.foreach_thread.parallel_insert_slice %sD into %o1[h((%thread_id_1, %thread_id_2))]:
+      scf.forall.in_parallel {
+        scf.forall.parallel_insert_slice %sD into %o1[h((%thread_id_1, %thread_id_2))]:
           tensor<?x?xT> into tensor<?x?xT>
 
-        scf.foreach_thread.parallel_insert_slice %spointwise into %o2[i((%thread_id_1, %thread_id_2))]:
+        scf.forall.parallel_insert_slice %spointwise into %o2[i((%thread_id_1, %thread_id_2))]:
           tensor<?xT> into tensor<?xT>
+      }
+    }
+    // Implicit synchronization point.
+    // Sequential context.
+    //
+    ```
+
+    Loop with loop bounds example:
+
+    ```mlir
+    //
+    // Sequential context.
+    //
+    %pointwise = scf.forall (%i, %j) = (0, 0) to (%dim1, %dim2)
+      step (%tileSize1, %tileSize2) shared_outs(%o1 = %out)
+      -> (tensor<?x?xT>, tensor<?xT>) {
+      //
+      // Parallel context.
+      //
+      %sA = tensor.extract_slice %A[%i, %j][%tileSize1, %tileSize2][1, 1]
+        : tensor<?x?xT> to tensor<?x?xT>
+      %sB = tensor.extract_slice %B[%i, %j][%tileSize1, %tileSize2][1, 1]
+        : tensor<?x?xT> to tensor<?x?xT>
+      %sC = tensor.extract_slice %o[%i, %j][%tileSize1, %tileSize2][1, 1]
+        : tensor<?x?xT> to tensor<?x?xT>
+
+      %add = map {"arith.addf"} ins(%sA, %sB) outs(%sC)
+
+      scf.forall.in_parallel {
+        scf.forall.parallel_insert_slice %add into
+          %o[%i, %j][%tileSize1, %tileSize2][1, 1]
+          : tensor<?x?xT> into tensor<?x?xT>
       }
     }
     // Implicit synchronization point.
@@ -450,14 +486,14 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     // Sequential context. Here `mapping` is expressed as GPU thread mapping
     // attributes
     //
-    %matmul_and_pointwise:2 = scf.foreach_thread (%thread_id_1, %thread_id_2) in
+    %matmul_and_pointwise:2 = scf.forall (%thread_id_1, %thread_id_2) in
         (%num_threads_1, %numthread_id_2) shared_outs(...)
       -> (tensor<?x?xT>, tensor<?xT>) {
       //
       // Parallel context, each thread with id = **(%thread_id_2, %thread_id_1)**
       // runs its version of the code.
       //
-       scf.foreach_thread.perform_concurrently {
+       scf.forall.in_parallel {
          ...
       }
     } { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
@@ -471,9 +507,9 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     ```mlir
     %t0 = ...
     %t1 = ...
-    %r = scf.foreach_thread ... shared_outs(%o = t0) -> tensor<?xf32> {
+    %r = scf.forall ... shared_outs(%o = t0) -> tensor<?xf32> {
       // %t0 and %t1 are privatized. %t0 is definitely copied for each thread
-      // because the scf.foreach_thread op's %t0 use bufferizes to a memory
+      // because the scf.forall op's %t0 use bufferizes to a memory
       // write. In the absence of other conflicts, %t1 is copied only if there
       // are uses of %t1 in the body that bufferize to a memory read and to a
       // memory write.
@@ -482,9 +518,15 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     }
     ```
   }];
-  let arguments = (ins Variadic<Index>:$num_threads,
-                       Variadic<AnyRankedTensor>:$outputs,
-                       OptionalAttr<DeviceMappingArrayAttr>:$mapping);
+  let arguments = (ins
+    Variadic<Index>:$dynamicLowerBound,
+    Variadic<Index>:$dynamicUpperBound,
+    Variadic<Index>:$dynamicStep,
+    DenseI64ArrayAttr:$staticLowerBound,
+    DenseI64ArrayAttr:$staticUpperBound,
+    DenseI64ArrayAttr:$staticStep,
+    Variadic<AnyRankedTensor>:$outputs,
+    OptionalAttr<DeviceMappingArrayAttr>:$mapping);
 
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
@@ -496,57 +538,113 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
   // The default builder does not add the proper body BBargs, roll our own.
   let skipDefaultBuilders = 1;
   let builders = [
-    // Bodyless builder, outputs must be specified.
-    OpBuilder<(ins "ValueRange":$outputs, "ValueRange":$num_threads,
-                   "std::optional<ArrayAttr>":$mapping)>,
-    // Builder that takes a bodyBuilder lambda.
-    OpBuilder<(ins "ValueRange":$outputs, "ValueRange":$num_threads,
-                   "ArrayRef<Attribute>":$mapping,
-                   "function_ref<void(OpBuilder &, Location, ValueRange)>":$bodyBuilder)>
+    // Builder that takes loop bounds.
+    OpBuilder<(ins "ArrayRef<OpFoldResult>":$lbs,
+       "ArrayRef<OpFoldResult>":$ubs, "ArrayRef<OpFoldResult>":$steps,
+       "ValueRange":$outputs, "std::optional<ArrayAttr>":$mapping,
+       CArg<"function_ref<void(OpBuilder &, Location, ValueRange)>",
+            "nullptr"> :$bodyBuilderFn)>,
+
+    // Builder for normalized loop that takes only upper bounds.
+    OpBuilder<(ins "ArrayRef<OpFoldResult>":$ubs,
+       "ValueRange":$outputs, "std::optional<ArrayAttr>":$mapping,
+       CArg<"function_ref<void(OpBuilder &, Location, ValueRange)>",
+            "nullptr"> :$bodyBuilderFn)>,
   ];
+
   let extraClassDeclaration = [{
-    int64_t getRank() { return getNumThreads().size(); }
+    // Get lower bounds as OpFoldResult.
+    SmallVector<OpFoldResult> getMixedLowerBound() {
+      Builder b(getOperation()->getContext());
+      return getMixedValues(getStaticLowerBound(), getDynamicLowerBound(), b);
+    }
+
+    // Get upper bounds as OpFoldResult.
+    SmallVector<OpFoldResult> getMixedUpperBound() {
+      Builder b(getOperation()->getContext());
+      return getMixedValues(getStaticUpperBound(), getDynamicUpperBound(), b);
+    }
+
+    // Get steps as OpFoldResult.
+    SmallVector<OpFoldResult> getMixedStep() {
+      Builder b(getOperation()->getContext());
+      return getMixedValues(getStaticStep(), getDynamicStep(), b);
+    }
+
+    /// Get lower bounds as values.
+    SmallVector<Value> getLowerBound(OpBuilder &b) {
+      return getAsValues(b, getLoc(), getMixedLowerBound());
+    }
+
+    /// Get upper bounds as values.
+    SmallVector<Value> getUpperBound(OpBuilder &b) {
+      return getAsValues(b, getLoc(), getMixedUpperBound());
+    }
+
+    /// Get steps as values.
+    SmallVector<Value> getStep(OpBuilder &b) {
+      return getAsValues(b, getLoc(), getMixedStep());
+    }
+
+    int64_t getRank() { return getStaticLowerBound().size(); }
+
+    /// Number of operands controlling the loop: lbs, ubs, steps
+    unsigned getNumControlOperands() { return 3 * getRank(); }
+
+    /// Number of dynamic operands controlling the loop: lbs, ubs, steps
+    unsigned getNumDynamicControlOperands() {
+      return getODSOperandIndexAndLength(3).first;
+    }
 
     OpResult getTiedOpResult(OpOperand *opOperand) {
-      assert(opOperand->getOperandNumber() >= getRank() && "invalid operand");
+      assert(opOperand->getOperandNumber() >= getNumDynamicControlOperands() &&
+             "invalid operand");
       return getOperation()->getOpResult(
-          opOperand->getOperandNumber() - getRank());
+          opOperand->getOperandNumber() - getNumDynamicControlOperands());
     }
 
     /// Return the num_threads operand that is tied to the given thread id
     /// block argument.
     OpOperand *getTiedOpOperand(BlockArgument bbArg) {
       assert(bbArg.getArgNumber() >= getRank() && "invalid bbArg");
-      return &getOperation()->getOpOperand(bbArg.getArgNumber());
+
+      return &getOperation()->getOpOperand(getNumDynamicControlOperands() +
+                                           bbArg.getArgNumber() - getRank());
     }
 
     /// Return the shared_outs operand that is tied to the given OpResult.
     OpOperand *getTiedOpOperand(OpResult opResult) {
       assert(opResult.getDefiningOp() == getOperation() && "invalid OpResult");
-      return &getOperation()->getOpOperand(
-          opResult.getResultNumber() + getRank());
+      return &getOperation()->getOpOperand(getNumDynamicControlOperands() +
+                                           opResult.getResultNumber());
     }
 
     BlockArgument getTiedBlockArgument(OpOperand *opOperand) {
-      assert(opOperand->getOperandNumber() >= getRank() && "invalid operand");
-      return getBody()->getArgument(opOperand->getOperandNumber());
+      assert(opOperand->getOperandNumber() >= getNumDynamicControlOperands() &&
+             "invalid operand");
+
+      return getBody()->getArgument(opOperand->getOperandNumber() -
+                                    getNumDynamicControlOperands() + getRank());
     }
 
     ArrayRef<BlockArgument> getOutputBlockArguments() {
       return getBody()->getArguments().drop_front(getRank());
     }
 
-    ::mlir::ValueRange getThreadIndices() {
+    ::mlir::ValueRange getInductionVars() {
       return getBody()->getArguments().take_front(getRank());
     }
 
-    ::mlir::Value getThreadIndex(int64_t idx) {
-      return getThreadIndices()[idx];
+    ::mlir::Value getInductionVar(int64_t idx) {
+      return getInductionVars()[idx];
     }
 
     ::mlir::Block::BlockArgListType getRegionOutArgs() {
       return getBody()->getArguments().drop_front(getRank());
     }
+
+    /// Checks if the lbs are zeros and steps are ones.
+    bool isNormalized();
 
     /// Helper to sort `values` according to matching `keys`.
     /// Take a custom `compare` binary comparator which returns true if the first
@@ -560,30 +658,31 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     // The ensureTerminator method generated by SingleBlockImplicitTerminator is
     // unaware of the fact that our terminator also needs a region to be
     // well-formed. We override it here to ensure that we do the right thing.
-    static void ensureTerminator(Region &region, OpBuilder &builder, Location loc);
+    static void ensureTerminator(Region & region, OpBuilder & builder,
+                                 Location loc);
 
-    PerformConcurrentlyOp getTerminator();
+    InParallelOp getTerminator();
   }];
 }
 
 //===----------------------------------------------------------------------===//
-// PerformConcurrentlyOp
+// InParallelOp
 //===----------------------------------------------------------------------===//
 
-def PerformConcurrentlyOp : SCF_Op<"foreach_thread.perform_concurrently", [
+def InParallelOp : SCF_Op<"forall.in_parallel", [
        Pure,
        Terminator,
        DeclareOpInterfaceMethods<ParallelCombiningOpInterface>,
-       HasParent<"ForeachThreadOp">,
+       HasParent<"ForallOp">,
       ] # GraphRegionNoTerminator.traits> {
-  let summary = "terminates a `foreach_thread` block";
+  let summary = "terminates a `forall` block";
   let description = [{
-    `scf.foreach_thread.perform_concurrently` is a designated terminator for
-    the `scf.foreach_thread` operation.
+    `scf.forall.in_parallel` is a designated terminator for
+    the `scf.forall` operation.
 
     It has a single region with a single block that contains a flat list of ops.
     Each such op participates in the aggregate formation of a single result of
-    the enclosing `scf.foreach_thread`.
+    the enclosing `scf.forall`.
     The result number corresponds to the position of the op in the terminator.
   }];
 
@@ -598,8 +697,8 @@ def PerformConcurrentlyOp : SCF_Op<"foreach_thread.perform_concurrently", [
     OpBuilder<(ins)>,
   ];
 
-  // TODO: Add a `PerformConcurrentlyOpInterface` interface for ops that can
-  // appear inside perform_concurrently.
+  // TODO: Add a `InParallelOpInterface` interface for ops that can
+  // appear inside in_parallel.
   let extraClassDeclaration = [{
     ::llvm::SmallVector<::mlir::BlockArgument> getDests();
     ::llvm::iterator_range<::mlir::Block::iterator> getYieldingOps();
@@ -630,8 +729,8 @@ def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
     }
     ```
 
-    `scf.if` may also return results that are defined in its regions. The
-    values defined are determined by which execution path is taken.
+    `scf.if` may also produce results. Which values are returned depends on
+    which execution path is taken.
 
     Example:
 
@@ -647,11 +746,13 @@ def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
     }
     ```
 
-    `scf.if` regions are always terminated with "scf.yield". If "scf.if"
-    defines no values, the "scf.yield" can be left out, and will be inserted
-    implicitly. Otherwise, it must be explicit.
-    Also, if "scf.if" defines one or more values, the 'else' block cannot be
-    omitted.
+    The "then" region has exactly 1 block. The "else" region may have 0 or 1
+    block. In case the `scf.if` produces results, the "else" region must also
+    have exactly 1 block.
+
+    The blocks are always terminated with `scf.yield`. If `scf.if` defines no
+    values, the `scf.yield` can be left out, and will be inserted implicitly.
+    Otherwise, it must be explicit.
 
     Example:
 
@@ -660,10 +761,14 @@ def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
       ...
     }
     ```
+
+    The types of the yielded values must match the result types of the
+    `scf.if`.
   }];
   let arguments = (ins I1:$condition);
   let results = (outs Variadic<AnyType>:$results);
-  let regions = (region SizedRegion<1>:$thenRegion, AnyRegion:$elseRegion);
+  let regions = (region SizedRegion<1>:$thenRegion,
+                        MaxSizedRegion<1>:$elseRegion);
 
   let skipDefaultBuilders = 1;
   let builders = [

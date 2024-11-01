@@ -14,12 +14,13 @@
 #include <__algorithm/iterator_operations.h>
 #include <__config>
 #include <__functional/identity.h>
+#include <__functional/invoke.h>
 #include <__iterator/advance.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_callable.h>
 #include <__utility/pair.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -187,7 +188,7 @@ _ForwardIterator1 search(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
   return std::search(__first1, __last1, __first2, __last2, __equal_to());
 }
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _ForwardIterator, class _Searcher>
 _LIBCPP_NODISCARD_EXT _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 search(_ForwardIterator __f, _ForwardIterator __l, const _Searcher& __s) {

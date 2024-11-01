@@ -54,5 +54,8 @@ PPCLegalizerInfo::PPCLegalizerInfo(const PPCSubtarget &ST) {
   getActionDefinitionsBuilder({G_LOAD, G_STORE})
       .legalForTypesWithMemDesc({{S64, P0, S64, 8}, {S32, P0, S32, 4}});
 
+  getActionDefinitionsBuilder(G_FCONSTANT).lowerFor({S32, S64});
+  getActionDefinitionsBuilder(G_CONSTANT_POOL).legalFor({P0});
+
   getLegacyLegalizerInfo().computeTables();
 }

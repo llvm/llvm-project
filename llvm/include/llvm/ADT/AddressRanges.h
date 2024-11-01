@@ -28,7 +28,11 @@ public:
   uint64_t start() const { return Start; }
   uint64_t end() const { return End; }
   uint64_t size() const { return End - Start; }
+  uint64_t empty() const { return size() == 0; }
   bool contains(uint64_t Addr) const { return Start <= Addr && Addr < End; }
+  bool contains(const AddressRange &R) const {
+    return Start <= R.Start && R.End <= End;
+  }
   bool intersects(const AddressRange &R) const {
     return Start < R.End && R.Start < End;
   }
@@ -45,101 +49,163 @@ private:
   uint64_t End = 0;
 };
 
-/// The AddressRanges class helps normalize address range collections.
-/// This class keeps a sorted vector of AddressRange objects and can perform
-/// insertions and searches efficiently. The address ranges are always sorted
-/// and never contain any invalid or empty address ranges.
-/// Intersecting([100,200), [150,300)) and adjacent([100,200), [200,300))
-/// address ranges are combined during insertion.
-class AddressRanges {
+/// The AddressRangesBase class presents the base functionality for the
+/// normalized address ranges collection. This class keeps a sorted vector
+/// of AddressRange-like objects and can perform searches efficiently.
+/// The address ranges are always sorted and never contain any invalid,
+/// empty or intersected address ranges.
+
+template <typename T> class AddressRangesBase {
 protected:
-  using Collection = SmallVector<AddressRange>;
+  using Collection = SmallVector<T>;
   Collection Ranges;
 
 public:
   void clear() { Ranges.clear(); }
   bool empty() const { return Ranges.empty(); }
-  bool contains(uint64_t Addr) const { return find(Addr) != Ranges.end(); }
-  bool contains(AddressRange Range) const {
-    return find(Range) != Ranges.end();
+  bool contains(uint64_t Addr) const {
+    return find(Addr, Addr + 1) != Ranges.end();
   }
-  std::optional<AddressRange> getRangeThatContains(uint64_t Addr) const {
-    Collection::const_iterator It = find(Addr);
+  bool contains(AddressRange Range) const {
+    return find(Range.start(), Range.end()) != Ranges.end();
+  }
+  void reserve(size_t Capacity) { Ranges.reserve(Capacity); }
+  size_t size() const { return Ranges.size(); }
+
+  std::optional<T> getRangeThatContains(uint64_t Addr) const {
+    typename Collection::const_iterator It = find(Addr, Addr + 1);
     if (It == Ranges.end())
       return std::nullopt;
 
     return *It;
   }
-  Collection::const_iterator insert(AddressRange Range);
-  void reserve(size_t Capacity) { Ranges.reserve(Capacity); }
-  size_t size() const { return Ranges.size(); }
-  bool operator==(const AddressRanges &RHS) const {
-    return Ranges == RHS.Ranges;
-  }
-  const AddressRange &operator[](size_t i) const {
+
+  typename Collection::const_iterator begin() const { return Ranges.begin(); }
+  typename Collection::const_iterator end() const { return Ranges.end(); }
+
+  const T &operator[](size_t i) const {
     assert(i < Ranges.size());
     return Ranges[i];
   }
-  Collection::const_iterator begin() const { return Ranges.begin(); }
-  Collection::const_iterator end() const { return Ranges.end(); }
+
+  bool operator==(const AddressRangesBase<T> &RHS) const {
+    return Ranges == RHS.Ranges;
+  }
 
 protected:
-  Collection::const_iterator find(uint64_t Addr) const;
-  Collection::const_iterator find(AddressRange Range) const;
+  typename Collection::const_iterator find(uint64_t Start, uint64_t End) const {
+    if (Start >= End)
+      return Ranges.end();
+
+    auto It =
+        std::partition_point(Ranges.begin(), Ranges.end(), [=](const T &R) {
+          return AddressRange(R).start() <= Start;
+        });
+
+    if (It == Ranges.begin())
+      return Ranges.end();
+
+    --It;
+    if (End > AddressRange(*It).end())
+      return Ranges.end();
+
+    return It;
+  }
 };
 
-/// AddressRangesMap class maps values to the address ranges.
-/// It keeps address ranges and corresponding values. If ranges
-/// are combined during insertion, then combined range keeps
-/// newly inserted value.
-template <typename T> class AddressRangesMap : protected AddressRanges {
+/// The AddressRanges class helps normalize address range collections.
+/// This class keeps a sorted vector of AddressRange objects and can perform
+/// insertions and searches efficiently. Intersecting([100,200), [150,300))
+/// and adjacent([100,200), [200,300)) address ranges are combined during
+/// insertion.
+class AddressRanges : public AddressRangesBase<AddressRange> {
 public:
-  void clear() {
-    Ranges.clear();
-    Values.clear();
+  Collection::const_iterator insert(AddressRange Range) {
+    if (Range.empty())
+      return Ranges.end();
+
+    auto It = llvm::upper_bound(Ranges, Range);
+    auto It2 = It;
+    while (It2 != Ranges.end() && It2->start() <= Range.end())
+      ++It2;
+    if (It != It2) {
+      Range = {Range.start(), std::max(Range.end(), std::prev(It2)->end())};
+      It = Ranges.erase(It, It2);
+    }
+    if (It != Ranges.begin() && Range.start() <= std::prev(It)->end()) {
+      --It;
+      *It = {It->start(), std::max(It->end(), Range.end())};
+      return It;
+    }
+
+    return Ranges.insert(It, Range);
   }
-  bool empty() const { return AddressRanges::empty(); }
-  bool contains(uint64_t Addr) const { return AddressRanges::contains(Addr); }
-  bool contains(AddressRange Range) const {
-    return AddressRanges::contains(Range);
-  }
-  void insert(AddressRange Range, T Value) {
-    size_t InputSize = Ranges.size();
-    Collection::const_iterator RangesIt = AddressRanges::insert(Range);
-    if (RangesIt == Ranges.end())
+};
+
+class AddressRangeValuePair {
+public:
+  operator AddressRange() const { return Range; }
+
+  AddressRange Range;
+  int64_t Value = 0;
+};
+
+inline bool operator==(const AddressRangeValuePair &LHS,
+                       const AddressRangeValuePair &RHS) {
+  return LHS.Range == RHS.Range && LHS.Value == RHS.Value;
+}
+
+/// AddressRangesMap class maps values to the address ranges.
+/// It keeps normalized address ranges and corresponding values.
+/// This class keeps a sorted vector of AddressRangeValuePair objects
+/// and can perform insertions and searches efficiently.
+/// Intersecting([100,200), [150,300)) ranges splitted into non-conflicting
+/// parts([100,200), [200,300)). Adjacent([100,200), [200,300)) address
+/// ranges are not combined during insertion.
+class AddressRangesMap : public AddressRangesBase<AddressRangeValuePair> {
+public:
+  void insert(AddressRange Range, int64_t Value) {
+    if (Range.empty())
       return;
 
-    // make Values match to Ranges.
-    size_t Idx = RangesIt - Ranges.begin();
-    typename ValuesCollection::iterator ValuesIt = Values.begin() + Idx;
-    if (InputSize < Ranges.size())
-      Values.insert(ValuesIt, T());
-    else if (InputSize > Ranges.size())
-      Values.erase(ValuesIt, ValuesIt + InputSize - Ranges.size());
-    assert(Ranges.size() == Values.size());
+    // Search for range which is less than or equal incoming Range.
+    auto It = std::partition_point(Ranges.begin(), Ranges.end(),
+                                   [=](const AddressRangeValuePair &R) {
+                                     return R.Range.start() <= Range.start();
+                                   });
 
-    // set value to the inserted or combined range.
-    Values[Idx] = Value;
-  }
-  size_t size() const {
-    assert(Ranges.size() == Values.size());
-    return AddressRanges::size();
-  }
-  std::optional<std::pair<AddressRange, T>>
-  getRangeValueThatContains(uint64_t Addr) const {
-    Collection::const_iterator It = find(Addr);
-    if (It == Ranges.end())
-      return std::nullopt;
+    if (It != Ranges.begin())
+      It--;
 
-    return std::make_pair(*It, Values[It - Ranges.begin()]);
-  }
-  std::pair<AddressRange, T> operator[](size_t Idx) const {
-    return std::make_pair(Ranges[Idx], Values[Idx]);
-  }
+    while (!Range.empty()) {
+      // Inserted range does not overlap with any range.
+      // Store it into the Ranges collection.
+      if (It == Ranges.end() || Range.end() <= It->Range.start()) {
+        Ranges.insert(It, {Range, Value});
+        return;
+      }
 
-protected:
-  using ValuesCollection = SmallVector<T>;
-  ValuesCollection Values;
+      // Inserted range partially overlaps with current range.
+      // Store not overlapped part of inserted range.
+      if (Range.start() < It->Range.start()) {
+        It = Ranges.insert(It, {{Range.start(), It->Range.start()}, Value});
+        It++;
+        Range = {It->Range.start(), Range.end()};
+        continue;
+      }
+
+      // Inserted range fully overlaps with current range.
+      if (Range.end() <= It->Range.end())
+        return;
+
+      // Inserted range partially overlaps with current range.
+      // Remove overlapped part from the inserted range.
+      if (Range.start() < It->Range.end())
+        Range = {It->Range.end(), Range.end()};
+
+      It++;
+    }
+  }
 };
 
 } // namespace llvm

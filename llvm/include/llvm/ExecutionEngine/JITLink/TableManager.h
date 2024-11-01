@@ -38,7 +38,7 @@ public:
     if (EntryI == Entries.end()) {
       auto &Entry = impl().createEntry(G, Target);
       DEBUG_WITH_TYPE("jitlink", {
-        dbgs() << "    Created " << impl().getSectionName() << "entry for "
+        dbgs() << "    Created " << impl().getSectionName() << " entry for "
                << Target.getName() << ": " << Entry << "\n";
       });
       EntryI = Entries.insert(std::make_pair(Target.getName(), &Entry)).first;

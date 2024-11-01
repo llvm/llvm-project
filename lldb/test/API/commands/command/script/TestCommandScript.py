@@ -164,6 +164,10 @@ class CmdPythonTestCase(TestBase):
         # This should not crash.
         self.runCmd('bug11569', check=False)
 
+        # Make sure that a reference to a non-existent class raises an error:
+        bad_class_name = "LLDBNoSuchModule.LLDBNoSuchClass"
+        self.expect("command script add wont-work --class {0}".format(bad_class_name), error=True, substrs = [bad_class_name])
+
     def test_persistence(self):
         """
         Ensure that function arguments meaningfully persist (and do not crash!)

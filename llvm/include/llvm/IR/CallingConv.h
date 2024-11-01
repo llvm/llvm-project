@@ -159,13 +159,9 @@ namespace CallingConv {
     /// registers.
     X86_VectorCall = 80,
 
-    /// Used by HipHop Virtual Machine (HHVM) to perform calls to and from
-    /// translation cache, and for calling PHP functions. HHVM calling
-    /// convention supports tail/sibling call elimination.
-    HHVM = 81,
-
-    /// HHVM calling convention for invoking C/C++ helpers.
-    HHVM_C = 82,
+    /// Placeholders for HHVM calling conventions (deprecated, removed).
+    DUMMY_HHVM = 81,
+    DUMMY_HHVM_C = 82,
 
     /// x86 hardware interrupt context. Callee may take one or two parameters,
     /// where the 1st represents a pointer to hardware context frame and the 2nd

@@ -16,6 +16,7 @@
 #include "../bugprone/SpuriouslyWakeUpFunctionsCheck.h"
 #include "../bugprone/SuspiciousMemoryComparisonCheck.h"
 #include "../bugprone/UnhandledSelfAssignmentCheck.h"
+#include "../bugprone/UnsafeFunctionsCheck.h"
 #include "../bugprone/UnusedReturnValueCheck.h"
 #include "../concurrency/ThreadCanceltypeAsynchronousCheck.h"
 #include "../google/UnnamedNamespaceInHeaderCheck.h"
@@ -302,9 +303,13 @@ public:
     // FIO
     CheckFactories.registerCheck<misc::NonCopyableObjectsCheck>("cert-fio38-c");
     // MSC
+    CheckFactories.registerCheck<bugprone::UnsafeFunctionsCheck>(
+        "cert-msc24-c");
     CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc30-c");
     CheckFactories.registerCheck<ProperlySeededRandomGeneratorCheck>(
         "cert-msc32-c");
+    CheckFactories.registerCheck<bugprone::UnsafeFunctionsCheck>(
+        "cert-msc33-c");
     // POS
     CheckFactories.registerCheck<bugprone::BadSignalToKillThreadCheck>(
         "cert-pos44-c");

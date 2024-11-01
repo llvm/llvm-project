@@ -151,7 +151,7 @@ func.func @parallel_insert_slice(
   %f0 = arith.constant 0.0: f32
   %c512 = arith.constant 512 : index
 
-  %r1 = scf.foreach_thread (%iv) in (%c512) shared_outs(%o = %t) -> (tensor<?xf32>) {
+  %r1 = scf.forall (%iv) in (%c512) shared_outs(%o = %t) -> (tensor<?xf32>) {
     // tensor.empty itself does not alloc but forwards to the insert_slice.
     // EmptyTensorOpElimination replaces the tensor.empty with an inplace
     // extract_slice.
@@ -162,10 +162,62 @@ func.func @parallel_insert_slice(
     %f = linalg.fill ins(%f0 : f32) outs(%a : tensor<?xf32>) -> tensor<?xf32>
 
     // Self-copy canonicalizes away later.
-    scf.foreach_thread.perform_concurrently {
+    scf.forall.in_parallel {
       tensor.parallel_insert_slice %f into %o[42][%sz][1]: tensor<?xf32> into tensor<?xf32>
     }
   }
 
   return %r1: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @eleminate_multiple_ops(
+//  CHECK-SAME:   %[[FUNC_ARG:[0-9a-zA-Z]*]]: memref<?xf32>
+//  CHECK-SAME:   %[[sz:[0-9a-zA-Z]*]]: index
+func.func @eleminate_multiple_ops(%t: tensor<?xf32> {bufferization.buffer_layout = affine_map<(d0) -> (d0)>}, %sz: index, %c: i1)
+    -> (tensor<?xf32>)
+{
+  %cst1 = arith.constant 0.0: f32
+  %cst2 = arith.constant 1.0: f32
+
+  // CHECK: %[[r:.*]] = scf.if %{{.*}} -> (memref
+  %if = scf.if %c -> tensor<?xf32> {
+    // CHECK: %[[T_SUBVIEW_1:.*]] =  memref.subview %[[FUNC_ARG]][42] [%[[sz]]] [1]
+    %a1 = tensor.empty(%sz) : tensor<?xf32>
+    // CHECK: linalg.fill ins({{.*}} : f32) outs(%[[T_SUBVIEW_1]] : memref<?xf32
+    %f1 = linalg.fill ins(%cst1 : f32) outs(%a1 : tensor<?xf32>) -> tensor<?xf32>
+    // CHECK: scf.yield %[[T_SUBVIEW_1]]
+    scf.yield %f1 : tensor<?xf32>
+  } else {
+      // CHECK: %[[T_SUBVIEW_2:.*]] =  memref.subview %[[FUNC_ARG]][42] [%[[sz]]] [1]
+    %a2 = tensor.empty(%sz) : tensor<?xf32>
+    // CHECK: linalg.fill ins({{.*}} : f32) outs(%[[T_SUBVIEW_2]] : memref<?xf32
+    %f2 = linalg.fill ins(%cst2 : f32) outs(%a2 : tensor<?xf32>) -> tensor<?xf32>
+    // CHECK: scf.yield %[[T_SUBVIEW_2]]
+    scf.yield %f2 : tensor<?xf32>
+  }
+
+  // Self-copy could canonicalize away later.
+  // CHECK: %[[T_SUBVIEW_3:.*]] =  memref.subview %[[FUNC_ARG]][42] [%[[sz]]] [1]
+  // CHECK: memref.copy %[[r]], %[[T_SUBVIEW_3]]
+  %r1 = tensor.insert_slice %if into %t[42][%sz][1]: tensor<?xf32> into tensor<?xf32>
+  return %r1: tensor<?xf32>
+}
+
+// -----
+
+// This is a regression test. Make sure that the tensor.extract_slice is not
+// eliminated.
+
+// CHECK-LABEL: func.func @regression_do_not_eliminate_non_empty(
+//       CHECK:   memref.subview
+//       CHECK:   memref.subview
+//       CHECK:   memref.copy
+func.func @regression_do_not_eliminate_non_empty(
+    %t: tensor<10xf32>, %t2: tensor<10xf32>) -> tensor<10xf32> {
+  %1 = tensor.extract_slice %t[0] [5] [1] : tensor<10xf32> to tensor<5xf32>
+  %2 = tensor.insert_slice %1 into %t2[1] [5] [1]
+      : tensor<5xf32> into tensor<10xf32>
+  return %2 : tensor<10xf32>
 }

@@ -3966,6 +3966,12 @@ def ReleaseHandle : InheritableParamAttr {
   let Documentation = [ReleaseHandleDocs];
 }
 
+def UnsafeBufferUsage : InheritableAttr {
+  let Spellings = [Clang<"unsafe_buffer_usage">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [UnsafeBufferUsageDocs];
+}
+
 def DiagnoseAsBuiltin : InheritableAttr {
   let Spellings = [Clang<"diagnose_as_builtin">];
   let Args = [DeclArgument<Function, "Function">,

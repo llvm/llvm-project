@@ -2061,51 +2061,6 @@ private:
     return FC0.L;
   }
 };
-
-struct LoopFuseLegacy : public FunctionPass {
-
-  static char ID;
-
-  LoopFuseLegacy() : FunctionPass(ID) {
-    initializeLoopFuseLegacyPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequiredID(LoopSimplifyID);
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<PostDominatorTreeWrapperPass>();
-    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-    AU.addRequired<DependenceAnalysisWrapperPass>();
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-
-    AU.addPreserved<ScalarEvolutionWrapperPass>();
-    AU.addPreserved<LoopInfoWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreserved<PostDominatorTreeWrapperPass>();
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-
-    auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto &DI = getAnalysis<DependenceAnalysisWrapperPass>().getDI();
-    auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-    auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-    auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    const TargetTransformInfo &TTI =
-        getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    const DataLayout &DL = F.getParent()->getDataLayout();
-
-    LoopFuser LF(LI, DT, DI, SE, PDT, ORE, DL, AC, TTI);
-    return LF.fuseLoops(F);
-  }
-};
 } // namespace
 
 PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
@@ -2142,19 +2097,3 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   PA.preserve<LoopAnalysis>();
   return PA;
 }
-
-char LoopFuseLegacy::ID = 0;
-
-INITIALIZE_PASS_BEGIN(LoopFuseLegacy, "loop-fusion", "Loop Fusion", false,
-                      false)
-INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DependenceAnalysisWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(LoopFuseLegacy, "loop-fusion", "Loop Fusion", false, false)
-
-FunctionPass *llvm::createLoopFusePass() { return new LoopFuseLegacy(); }

@@ -2029,6 +2029,10 @@ public:
   /// Returns true for SVE scalable vector types.
   bool isSVESizelessBuiltinType() const;
 
+  /// Check if this is a WebAssembly Reference Type.
+  bool isWebAssemblyReferenceType() const;
+  bool isWebAssemblyExternrefType() const;
+
   /// Determines if this is a sizeless type supported by the
   /// 'arm_sve_vector_bits' type attribute, which can be applied to a single
   /// SVE vector or predicate, excluding tuple types such as svint32x4_t.
@@ -2274,6 +2278,8 @@ public:
   bool isCUDADeviceBuiltinTextureType() const;
 
   bool isRVVType() const;
+
+  bool isRVVType(unsigned Bitwidth, bool IsFloat) const;
 
   /// Return the implicit lifetime for this type, which must not be dependent.
   Qualifiers::ObjCLifetime getObjCARCImplicitLifetime() const;
@@ -2640,6 +2646,9 @@ public:
 // RVV Types
 #define RVV_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/RISCVVTypes.def"
+// WebAssembly reference types
+#define WASM_TYPE(Name, Id, SingletonId) Id,
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
 // All other builtin types
 #define BUILTIN_TYPE(Id, SingletonId) Id,
 #define LAST_BUILTIN_TYPE(Id) LastKind = Id
@@ -7151,6 +7160,17 @@ inline bool Type::isRVVType() const {
   return
 #include "clang/Basic/RISCVVTypes.def"
     false; // end of boolean or operation.
+}
+
+inline bool Type::isRVVType(unsigned Bitwidth, bool IsFloat) const {
+  bool Ret = false;
+#define RVV_TYPE(Name, Id, SingletonId)
+#define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
+                        IsFP)                                                  \
+  if (ElBits == Bitwidth && IsFloat == IsFP)                                   \
+    Ret |= isSpecificBuiltinType(BuiltinType::Id);
+#include "clang/Basic/RISCVVTypes.def"
+  return Ret;
 }
 
 inline bool Type::isTemplateTypeParmType() const {

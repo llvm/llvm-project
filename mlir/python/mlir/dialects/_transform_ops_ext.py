@@ -89,7 +89,9 @@ class ReplicateOp:
 class SequenceOp:
 
   def __init__(self, failure_propagation_mode, results: Sequence[Type],
-               target: Union[Operation, Value, Type]):
+               target: Union[Operation, Value, Type],
+               extra_bindings: Optional[Union[Sequence[Value], Sequence[Type],
+                                              Operation, OpView]] = None):
     root = _get_op_result_or_value(target) if isinstance(
         target, (Operation, Value)) else None
     root_type = root.type if not isinstance(target, Type) else target
@@ -98,10 +100,25 @@ class SequenceOp:
           IntegerType.get_signless(32), failure_propagation_mode._as_int())
     else:
       failure_propagation_mode = failure_propagation_mode
+
+    if extra_bindings is None:
+      extra_bindings = []
+    if isinstance(extra_bindings, (Operation, OpView)):
+      extra_bindings = _get_op_results_or_values(extra_bindings)
+
+    extra_binding_types = []
+    if len(extra_bindings) != 0:
+      if isinstance(extra_bindings[0], Type):
+        extra_binding_types = extra_bindings
+        extra_bindings = []
+      else:
+        extra_binding_types = [v.type for v in extra_bindings]
+
     super().__init__(results_=results,
                      failure_propagation_mode=failure_propagation_mode_attr,
-                     root=root)
-    self.regions[0].blocks.append(root_type)
+                     root=root,
+                     extra_bindings=extra_bindings)
+    self.regions[0].blocks.append(*tuple([root_type] + extra_binding_types))
 
   @property
   def body(self) -> Block:
@@ -110,6 +127,10 @@ class SequenceOp:
   @property
   def bodyTarget(self) -> Value:
     return self.body.arguments[0]
+
+  @property
+  def bodyExtraArgs(self) -> BlockArgumentList:
+    return self.body.arguments[1:]
 
 
 class WithPDLPatternsOp:

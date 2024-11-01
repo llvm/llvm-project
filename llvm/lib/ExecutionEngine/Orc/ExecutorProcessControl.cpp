@@ -11,8 +11,8 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Process.h"
+#include "llvm/TargetParser/Host.h"
 
 #define DEBUG_TYPE "orc"
 

@@ -149,7 +149,7 @@ bool matchAArch64MulConstCombine(
   // which equals to (1+2)*16-(1+2).
   // TrailingZeroes is used to test if the mul can be lowered to
   // shift+add+shift.
-  unsigned TrailingZeroes = ConstValue.countTrailingZeros();
+  unsigned TrailingZeroes = ConstValue.countr_zero();
   if (TrailingZeroes) {
     // Conservatively do not lower to shift+add+shift if the mul might be
     // folded into smul or umul.

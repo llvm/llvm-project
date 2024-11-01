@@ -159,6 +159,27 @@ def test_return():
 	test_return_bool()
 	test_return_string()
 
+# A class that is used to test isl.id.user.
+#
+class S:
+	def __init__(self):
+		self.value = 42
+
+# Test isl.id.user.
+#
+# In particular, check that the object attached to an identifier
+# can be retrieved again.
+#
+def test_user():
+	id = isl.id("test", 5)
+	id2 = isl.id("test2")
+	id3 = isl.id("S", S())
+	assert id.user() == 5, f"unexpected user object {id.user()}"
+	assert id2.user() is None, f"unexpected user object {id2.user()}"
+	s = id3.user()
+	assert isinstance(s, S), f"unexpected user object {s}"
+	assert s.value == 42, f"unexpected user object {s}"
+
 # Test that foreach functions are modeled correctly.
 #
 # Verify that closures are correctly called as callback of a 'foreach'
@@ -191,6 +212,36 @@ def test_foreach():
 	except:
 		caught = True
 	assert(caught)
+
+# Test the functionality of "foreach_scc" functions.
+#
+# In particular, test it on a list of elements that can be completely sorted
+# but where two of the elements ("a" and "b") are incomparable.
+#
+def test_foreach_scc():
+	list = isl.id_list(3)
+	sorted = [isl.id_list(3)]
+	data = {
+		'a' : isl.map("{ [0] -> [1] }"),
+		'b' : isl.map("{ [1] -> [0] }"),
+		'c' : isl.map("{ [i = 0:1] -> [i] }"),
+	}
+	for k, v in data.items():
+		list = list.add(k)
+	id = data['a'].space().domain().identity_multi_pw_aff_on_domain()
+	def follows(a, b):
+		map = data[b.name()].apply_domain(data[a.name()])
+		return not map.lex_ge_at(id).is_empty()
+
+	def add_single(scc):
+		assert(scc.size() == 1)
+		sorted[0] = sorted[0].concat(scc)
+
+	list.foreach_scc(follows, add_single)
+	assert(sorted[0].size() == 3)
+	assert(sorted[0].at(0).name() == "b")
+	assert(sorted[0].at(1).name() == "c")
+	assert(sorted[0].at(2).name() == "a")
 
 # Test the functionality of "every" functions.
 #
@@ -431,7 +482,9 @@ def test_ast_build_expr():
 #  - Object construction
 #  - Different parameter types
 #  - Different return types
+#  - isl.id.user
 #  - Foreach functions
+#  - Foreach SCC function
 #  - Every functions
 #  - Spaces
 #  - Schedule trees
@@ -441,7 +494,9 @@ def test_ast_build_expr():
 test_constructors()
 test_parameters()
 test_return()
+test_user()
 test_foreach()
+test_foreach_scc()
 test_every()
 test_space()
 test_schedule_tree()

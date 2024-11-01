@@ -92,25 +92,24 @@ enum class TypeModifier : uint8_t {
   LLVM_MARK_AS_BITMASK_ENUM(LMUL1),
 };
 
-struct Policy {
-  bool IsUnspecified = false;
+class Policy {
+public:
   enum PolicyType {
     Undisturbed,
     Agnostic,
   };
-  PolicyType TailPolicy = Agnostic;
-  PolicyType MaskPolicy = Agnostic;
-  bool HasTailPolicy, HasMaskPolicy;
-  Policy(bool HasTailPolicy, bool HasMaskPolicy)
-      : IsUnspecified(true), HasTailPolicy(HasTailPolicy),
-        HasMaskPolicy(HasMaskPolicy) {}
-  Policy(PolicyType TailPolicy, bool HasTailPolicy, bool HasMaskPolicy)
-      : TailPolicy(TailPolicy), HasTailPolicy(HasTailPolicy),
-        HasMaskPolicy(HasMaskPolicy) {}
-  Policy(PolicyType TailPolicy, PolicyType MaskPolicy, bool HasTailPolicy,
-         bool HasMaskPolicy)
-      : TailPolicy(TailPolicy), MaskPolicy(MaskPolicy),
-        HasTailPolicy(HasTailPolicy), HasMaskPolicy(HasMaskPolicy) {}
+
+private:
+  // The default assumption for an RVV instruction is TAMA, as an undisturbed
+  // policy generally will affect the performance of an out-of-order core.
+  const PolicyType TailPolicy = Agnostic;
+  const PolicyType MaskPolicy = Agnostic;
+
+public:
+  Policy() = default;
+  Policy(PolicyType TailPolicy) : TailPolicy(TailPolicy) {}
+  Policy(PolicyType TailPolicy, PolicyType MaskPolicy)
+      : TailPolicy(TailPolicy), MaskPolicy(MaskPolicy) {}
 
   bool isTAMAPolicy() const {
     return TailPolicy == Agnostic && MaskPolicy == Agnostic;
@@ -136,17 +135,8 @@ struct Policy {
 
   bool isMUPolicy() const { return MaskPolicy == Undisturbed; }
 
-  bool hasTailPolicy() const { return HasTailPolicy; }
-
-  bool hasMaskPolicy() const { return HasMaskPolicy; }
-
-  bool isUnspecified() const { return IsUnspecified; }
-
   bool operator==(const Policy &Other) const {
-    return IsUnspecified == Other.IsUnspecified &&
-           TailPolicy == Other.TailPolicy && MaskPolicy == Other.MaskPolicy &&
-           HasTailPolicy == Other.HasTailPolicy &&
-           HasMaskPolicy == Other.HasMaskPolicy;
+    return TailPolicy == Other.TailPolicy && MaskPolicy == Other.MaskPolicy;
   }
 
   bool operator!=(const Policy &Other) const { return !(*this == Other); }
@@ -422,7 +412,6 @@ public:
     return IntrinsicTypes;
   }
   Policy getPolicyAttrs() const {
-    assert(PolicyAttrs.IsUnspecified == false);
     return PolicyAttrs;
   }
   unsigned getPolicyAttrsBits() const {
@@ -430,8 +419,6 @@ public:
     // The 0th bit simulates the `vta` of RVV
     // The 1st bit simulates the `vma` of RVV
     // int PolicyAttrs = 0;
-
-    assert(PolicyAttrs.IsUnspecified == false);
 
     if (PolicyAttrs.isTUMAPolicy())
       return 2;
@@ -459,8 +446,7 @@ public:
                       unsigned NF, PolicyScheme DefaultScheme,
                       Policy PolicyAttrs);
 
-  static llvm::SmallVector<Policy>
-  getSupportedUnMaskedPolicies(bool HasTailPolicy, bool HasMaskPolicy);
+  static llvm::SmallVector<Policy> getSupportedUnMaskedPolicies();
   static llvm::SmallVector<Policy>
       getSupportedMaskedPolicies(bool HasTailPolicy, bool HasMaskPolicy);
 

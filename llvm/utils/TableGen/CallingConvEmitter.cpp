@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenTarget.h"
+#include "TableGenBackends.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -41,7 +42,7 @@ private:
 } // End anonymous namespace
 
 void CallingConvEmitter::run(raw_ostream &O) {
-  std::vector<Record*> CCs = Records.getAllDerivedDefinitions("CallingConv");
+  std::vector<Record *> CCs = Records.getAllDerivedDefinitions("CallingConv");
 
   // Emit prototypes for all of the non-custom CC's so that they can forward ref
   // each other.
@@ -433,4 +434,4 @@ void EmitCallingConv(RecordKeeper &RK, raw_ostream &OS) {
   CallingConvEmitter(RK).run(OS);
 }
 
-} // End llvm namespace
+} // namespace llvm

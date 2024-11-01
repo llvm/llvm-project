@@ -180,7 +180,8 @@ public:
                               int32_t VBPtrOffset, uint32_t VBIndex,
                               raw_ostream &Out) override;
   void mangleCXXRTTI(QualType T, raw_ostream &Out) override;
-  void mangleCXXRTTIName(QualType T, raw_ostream &Out) override;
+  void mangleCXXRTTIName(QualType T, raw_ostream &Out,
+                         bool NormalizeIntegers) override;
   void mangleCXXRTTIBaseClassDescriptor(const CXXRecordDecl *Derived,
                                         uint32_t NVOffset, int32_t VBPtrOffset,
                                         uint32_t VBTableOffset, uint32_t Flags,
@@ -193,7 +194,8 @@ public:
   mangleCXXRTTICompleteObjectLocator(const CXXRecordDecl *Derived,
                                      ArrayRef<const CXXRecordDecl *> BasePath,
                                      raw_ostream &Out) override;
-  void mangleTypeName(QualType T, raw_ostream &) override;
+  void mangleTypeName(QualType T, raw_ostream &,
+                      bool NormalizeIntegers) override;
   void mangleReferenceTemporary(const VarDecl *, unsigned ManglingNumber,
                                 raw_ostream &) override;
   void mangleStaticGuardVariable(const VarDecl *D, raw_ostream &Out) override;
@@ -841,6 +843,8 @@ void MicrosoftCXXNameMangler::mangleFloat(llvm::APFloat Number) {
   case APFloat::S_PPCDoubleDouble: Out << 'Z'; break;
   case APFloat::S_Float8E5M2:
   case APFloat::S_Float8E4M3FN:
+  case APFloat::S_Float8E5M2FNUZ:
+  case APFloat::S_Float8E4M3FNUZ:
     llvm_unreachable("Tried to mangle unexpected APFloat semantics");
   }
 
@@ -2477,6 +2481,13 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     mangleArtificialTagType(TTK_Struct, "__bf16", {"__clang"});
     break;
 
+#define WASM_REF_TYPE(InternalName, MangledName, Id, SingletonId, AS)          \
+  case BuiltinType::Id:                                                        \
+    mangleArtificialTagType(TTK_Struct, MangledName);                          \
+    mangleArtificialTagType(TTK_Struct, MangledName, {"__clang"});             \
+    break;
+
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define SVE_TYPE(Name, Id, SingletonId) \
   case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
@@ -3586,8 +3597,8 @@ void MicrosoftMangleContextImpl::mangleCXXRTTI(QualType T, raw_ostream &Out) {
   Mangler.getStream() << "@8";
 }
 
-void MicrosoftMangleContextImpl::mangleCXXRTTIName(QualType T,
-                                                   raw_ostream &Out) {
+void MicrosoftMangleContextImpl::mangleCXXRTTIName(
+    QualType T, raw_ostream &Out, bool NormalizeIntegers = false) {
   MicrosoftCXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << '.';
   Mangler.mangleType(T, SourceRange(), MicrosoftCXXNameMangler::QMM_Result);
@@ -3754,7 +3765,8 @@ void MicrosoftMangleContextImpl::mangleSEHFinallyBlock(
   Mangler.mangleName(EnclosingDecl);
 }
 
-void MicrosoftMangleContextImpl::mangleTypeName(QualType T, raw_ostream &Out) {
+void MicrosoftMangleContextImpl::mangleTypeName(
+    QualType T, raw_ostream &Out, bool NormalizeIntegers = false) {
   // This is just a made up unique string for the purposes of tbaa.  undname
   // does *not* know how to demangle it.
   MicrosoftCXXNameMangler Mangler(*this, Out);

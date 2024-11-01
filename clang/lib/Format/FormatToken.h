@@ -152,8 +152,12 @@ namespace format {
   TYPE(VerilogDimensionedTypeName)                                             \
   /* for the base in a number literal, not including the quote */              \
   TYPE(VerilogNumberBase)                                                      \
+  /* like `(strong1, pull0)` */                                                \
+  TYPE(VerilogStrength)                                                        \
   /* Things inside the table in user-defined primitives. */                    \
   TYPE(VerilogTableItem)                                                       \
+  /* those that separate ports of different types */                           \
+  TYPE(VerilogTypeComma)                                                       \
   TYPE(Unknown)
 
 /// Determines the semantic type of a syntactic token, e.g. whether "<" is a
@@ -743,8 +747,8 @@ public:
   }
 
   /// Returns the next token ignoring comments.
-  [[nodiscard]] const FormatToken *getNextNonComment() const {
-    const FormatToken *Tok = Next;
+  [[nodiscard]] FormatToken *getNextNonComment() const {
+    FormatToken *Tok = Next;
     while (Tok && Tok->is(tok::comment))
       Tok = Tok->Next;
     return Tok;
@@ -1792,6 +1796,27 @@ struct AdditionalKeywords {
                                     kw_input, kw_output, kw_sequence)));
   }
 
+  bool isVerilogQualifier(const FormatToken &Tok) const {
+    switch (Tok.Tok.getKind()) {
+    case tok::kw_extern:
+    case tok::kw_signed:
+    case tok::kw_static:
+    case tok::kw_unsigned:
+    case tok::kw_virtual:
+      return true;
+    case tok::identifier:
+      return Tok.isOneOf(
+          kw_let, kw_var, kw_ref, kw_automatic, kw_bins, kw_coverpoint,
+          kw_ignore_bins, kw_illegal_bins, kw_inout, kw_input, kw_interconnect,
+          kw_local, kw_localparam, kw_output, kw_parameter, kw_pure, kw_rand,
+          kw_randc, kw_scalared, kw_specparam, kw_tri, kw_tri0, kw_tri1,
+          kw_triand, kw_trior, kw_trireg, kw_uwire, kw_vectored, kw_wand,
+          kw_wildcard, kw_wire, kw_wor);
+    default:
+      return false;
+    }
+  }
+
 private:
   /// The JavaScript keywords beyond the C++ keyword set.
   std::unordered_set<IdentifierInfo *> JsExtraKeywords;
@@ -1802,6 +1827,25 @@ private:
   /// The Verilog keywords beyond the C++ keyword set.
   std::unordered_set<IdentifierInfo *> VerilogExtraKeywords;
 };
+
+inline bool isLineComment(const FormatToken &FormatTok) {
+  return FormatTok.is(tok::comment) && !FormatTok.TokenText.startswith("/*");
+}
+
+// Checks if \p FormatTok is a line comment that continues the line comment
+// \p Previous. The original column of \p MinColumnToken is used to determine
+// whether \p FormatTok is indented enough to the right to continue \p Previous.
+inline bool continuesLineComment(const FormatToken &FormatTok,
+                                 const FormatToken *Previous,
+                                 const FormatToken *MinColumnToken) {
+  if (!Previous || !MinColumnToken)
+    return false;
+  unsigned MinContinueColumn =
+      MinColumnToken->OriginalColumn + (isLineComment(*MinColumnToken) ? 0 : 1);
+  return isLineComment(FormatTok) && FormatTok.NewlinesBefore == 1 &&
+         isLineComment(*Previous) &&
+         FormatTok.OriginalColumn >= MinContinueColumn;
+}
 
 } // namespace format
 } // namespace clang

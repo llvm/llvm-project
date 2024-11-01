@@ -9,7 +9,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/stdlib/strtod.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 #include "utils/testutils/RoundingModeUtils.h"
 
 #include <errno.h>

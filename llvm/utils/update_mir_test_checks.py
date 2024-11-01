@@ -135,13 +135,7 @@ def build_run_list(test, run_lines, verbose=False):
 
         cmd_args = llc_cmd[len('llc'):].strip()
         cmd_args = cmd_args.replace('< %s', '').replace('%s', '').strip()
-
-        check_prefixes = [
-            item
-            for m in common.CHECK_PREFIX_RE.finditer(filecheck_cmd)
-            for item in m.group(1).split(',')]
-        if not check_prefixes:
-            check_prefixes = ['CHECK']
+        check_prefixes = common.get_check_prefixes(filecheck_cmd)
         all_prefixes += check_prefixes
 
         run_list.append(Run(check_prefixes, cmd_args, triple))

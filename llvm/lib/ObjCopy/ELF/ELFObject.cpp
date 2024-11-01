@@ -1704,6 +1704,10 @@ Expected<SectionBase &> ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
     else
       return Data.takeError();
   case SHT_SYMTAB: {
+    // Multiple SHT_SYMTAB sections are forbidden by the ELF gABI.
+    if (Obj.SymbolTable != nullptr)
+      return createStringError(llvm::errc::invalid_argument,
+                               "found multiple SHT_SYMTAB sections");
     auto &SymTab = Obj.addSection<SymbolTableSection>();
     Obj.SymbolTable = &SymTab;
     return SymTab;

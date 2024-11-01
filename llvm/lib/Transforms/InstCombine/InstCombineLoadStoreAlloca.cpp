@@ -32,7 +32,7 @@ STATISTIC(NumDeadStore, "Number of dead stores eliminated");
 STATISTIC(NumGlobalCopies, "Number of allocas copied from constant global");
 
 static cl::opt<unsigned> MaxCopiedFromConstantUsers(
-    "instcombine-max-copied-from-constant-users", cl::init(128),
+    "instcombine-max-copied-from-constant-users", cl::init(300),
     cl::desc("Maximum users to visit in copy from constant transform"),
     cl::Hidden);
 
@@ -1024,6 +1024,8 @@ static bool canSimplifyNullLoadOrGEP(LoadInst &LI, Value *Op) {
 
 Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
   Value *Op = LI.getOperand(0);
+  if (Value *Res = simplifyLoadInst(&LI, Op, SQ.getWithInstruction(&LI)))
+    return replaceInstUsesWith(LI, Res);
 
   // Try to canonicalize the loaded type.
   if (Instruction *Res = combineLoadToOperationType(*this, LI))

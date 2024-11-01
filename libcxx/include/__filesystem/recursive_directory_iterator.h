@@ -168,7 +168,7 @@ _LIBCPP_AVAILABILITY_FILESYSTEM_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 template <>
 _LIBCPP_AVAILABILITY_FILESYSTEM
@@ -178,7 +178,7 @@ template <>
 _LIBCPP_AVAILABILITY_FILESYSTEM
 inline constexpr bool _VSTD::ranges::enable_view<_VSTD_FS::recursive_directory_iterator> = true;
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP_CXX03_LANG
 

@@ -11,7 +11,6 @@
 
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/IR/AttrTypeBase.td"
-include "mlir/IR/SubElementInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 
 /// Base class for all LLVM dialect types.
@@ -25,8 +24,7 @@ class LLVMType<string typeName, string typeMnemonic, list<Trait> traits = []>
 //===----------------------------------------------------------------------===//
 
 def LLVMArrayType : LLVMType<"LLVMArray", "array", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface, ["getTypeSize"]>,
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>]> {
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface, ["getTypeSize"]>]> {
   let summary = "LLVM array type";
   let description = [{
     The `!llvm.array` type represents a fixed-size array of element types.
@@ -62,8 +60,7 @@ def LLVMArrayType : LLVMType<"LLVMArray", "array", [
 // LLVMFunctionType
 //===----------------------------------------------------------------------===//
 
-def LLVMFunctionType : LLVMType<"LLVMFunction", "func", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>]> {
+def LLVMFunctionType : LLVMType<"LLVMFunction", "func"> {
   let summary = "LLVM function type";
   let description = [{
     The `!llvm.func` is a function type. It consists of a single return type
@@ -124,8 +121,7 @@ def LLVMFunctionType : LLVMType<"LLVMFunction", "func", [
 
 def LLVMPointerType : LLVMType<"LLVMPointer", "ptr", [
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface, [
-      "areCompatible", "verifyEntries"]>,
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>]> {
+      "areCompatible", "verifyEntries"]>]> {
   let summary = "LLVM pointer type";
   let description = [{
     The `!llvm.ptr` type is an LLVM pointer type. This type typically represents
@@ -171,8 +167,7 @@ def LLVMPointerType : LLVMType<"LLVMPointer", "ptr", [
 // LLVMFixedVectorType
 //===----------------------------------------------------------------------===//
 
-def LLVMFixedVectorType : LLVMType<"LLVMFixedVector", "vec", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>]> {
+def LLVMFixedVectorType : LLVMType<"LLVMFixedVector", "vec"> {
   let summary = "LLVM fixed vector type";
   let description = [{
     LLVM dialect scalable vector type, represents a sequence of elements of
@@ -202,8 +197,7 @@ def LLVMFixedVectorType : LLVMType<"LLVMFixedVector", "vec", [
 // LLVMScalableVectorType
 //===----------------------------------------------------------------------===//
 
-def LLVMScalableVectorType : LLVMType<"LLVMScalableVector", "vec", [
-    DeclareTypeInterfaceMethods<SubElementTypeInterface>]> {
+def LLVMScalableVectorType : LLVMType<"LLVMScalableVector", "vec"> {
   let summary = "LLVM scalable vector type";
   let description = [{
     LLVM dialect scalable vector type, represents a sequence of elements of

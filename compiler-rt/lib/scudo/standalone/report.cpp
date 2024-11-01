@@ -112,6 +112,11 @@ void NORETURN reportAllocationSizeTooBig(uptr UserSize, uptr TotalSize,
                 UserSize, TotalSize, MaxSize);
 }
 
+void NORETURN reportOutOfBatchClass() {
+  ScopedErrorReport Report;
+  Report.append("BatchClass region is used up, can't hold any free block\n");
+}
+
 void NORETURN reportOutOfMemory(uptr RequestedSize) {
   ScopedErrorReport Report;
   Report.append("out of memory trying to allocate %zu bytes\n", RequestedSize);

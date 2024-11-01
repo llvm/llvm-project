@@ -32,6 +32,7 @@ void NORETURN reportSanityCheckError(const char *Field);
 void NORETURN reportAlignmentTooBig(uptr Alignment, uptr MaxAlignment);
 void NORETURN reportAllocationSizeTooBig(uptr UserSize, uptr TotalSize,
                                          uptr MaxSize);
+void NORETURN reportOutOfBatchClass();
 void NORETURN reportOutOfMemory(uptr RequestedSize);
 void NORETURN reportSoftRSSLimit(uptr RssLimitMb);
 void NORETURN reportHardRSSLimit(uptr RssLimitMb);

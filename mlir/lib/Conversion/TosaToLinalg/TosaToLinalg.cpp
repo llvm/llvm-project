@@ -1884,7 +1884,7 @@ public:
         [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
           llvm::SmallVector<Value> indices;
           for (unsigned int i = 0; i < inputTy.getRank(); i++) {
-            auto index =
+            Value index =
                 rewriter.create<linalg::IndexOp>(nestedLoc, i).getResult();
             if (i == axis) {
               auto one = rewriter.create<arith::ConstantIndexOp>(nestedLoc, 1);

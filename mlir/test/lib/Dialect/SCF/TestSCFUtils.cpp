@@ -36,7 +36,7 @@ struct TestSCFForUtilsPass
   Option<bool> testReplaceWithNewYields{
       *this, "test-replace-with-new-yields",
       llvm::cl::desc("Test replacing a loop with a new loop that returns new "
-                     "additional yeild values"),
+                     "additional yield values"),
       llvm::cl::init(false)};
 
   void runOnOperation() override {

@@ -35,7 +35,6 @@ def Builtin_Dialect : Dialect {
   public:
   }];
 
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 #endif // BUILTIN_BASE

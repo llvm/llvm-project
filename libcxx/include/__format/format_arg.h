@@ -30,7 +30,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 namespace __format {
 /// The type stored in @ref basic_format_arg.
@@ -295,7 +295,7 @@ visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
   }
 }
 
-#endif //_LIBCPP_STD_VER > 17
+#endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

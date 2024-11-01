@@ -1,25 +1,25 @@
-; RUN: opt -opaque-pointers=0 -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
-; RUN: opt -opaque-pointers=0 -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
 
 @a = internal unnamed_addr addrspace(3) global [64 x i32] undef, align 4
 @b = internal unnamed_addr addrspace(3) global [64 x i32] undef, align 4
 
 ; CHECK-LABEL: @no_clobber_ds_load_stores_x2_preexisting_aa
-; CHECK: store i32 1, i32 addrspace(3)* %0, align 16, !tbaa !0, !noalias !5
-; CHECK: %val.a = load i32, i32 addrspace(3)* %gep.a, align 4, !tbaa !0, !noalias !5
-; CHECK: store i32 2, i32 addrspace(3)* %1, align 16, !tbaa !0, !noalias !5
-; CHECK: %val.b = load i32, i32 addrspace(3)* %gep.b, align 4, !tbaa !0, !noalias !5
+; CHECK: store i32 1, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds, align 16, !tbaa !0, !noalias !5
+; CHECK: %val.a = load i32, ptr addrspace(3) %gep.a, align 4, !tbaa !0, !noalias !5
+; CHECK: store i32 2, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds, i32 0, i32 1), align 16, !tbaa !0, !noalias !5
+; CHECK: %val.b = load i32, ptr addrspace(3) %gep.b, align 4, !tbaa !0, !noalias !5
 
-define amdgpu_kernel void @no_clobber_ds_load_stores_x2_preexisting_aa(i32 addrspace(1)* %arg, i32 %i) {
+define amdgpu_kernel void @no_clobber_ds_load_stores_x2_preexisting_aa(ptr addrspace(1) %arg, i32 %i) {
 bb:
-  store i32 1, i32 addrspace(3)* getelementptr inbounds ([64 x i32], [64 x i32] addrspace(3)* @a, i32 0, i32 0), align 4, !alias.scope !0, !noalias !3, !tbaa !5
-  %gep.a = getelementptr inbounds [64 x i32], [64 x i32] addrspace(3)* @a, i32 0, i32 %i
-  %val.a = load i32, i32 addrspace(3)* %gep.a, align 4, !alias.scope !0, !noalias !3, !tbaa !5
-  store i32 2, i32 addrspace(3)* getelementptr inbounds ([64 x i32], [64 x i32] addrspace(3)* @b, i32 0, i32 0), align 4, !alias.scope !3, !noalias !0, !tbaa !5
-  %gep.b = getelementptr inbounds [64 x i32], [64 x i32] addrspace(3)* @b, i32 0, i32 %i
-  %val.b = load i32, i32 addrspace(3)* %gep.b, align 4, !alias.scope !3, !noalias !0, !tbaa !5
+  store i32 1, ptr addrspace(3) @a, align 4, !alias.scope !0, !noalias !3, !tbaa !5
+  %gep.a = getelementptr inbounds [64 x i32], ptr addrspace(3) @a, i32 0, i32 %i
+  %val.a = load i32, ptr addrspace(3) %gep.a, align 4, !alias.scope !0, !noalias !3, !tbaa !5
+  store i32 2, ptr addrspace(3) @b, align 4, !alias.scope !3, !noalias !0, !tbaa !5
+  %gep.b = getelementptr inbounds [64 x i32], ptr addrspace(3) @b, i32 0, i32 %i
+  %val.b = load i32, ptr addrspace(3) %gep.b, align 4, !alias.scope !3, !noalias !0, !tbaa !5
   %val = add i32 %val.a, %val.b
-  store i32 %val, i32 addrspace(1)* %arg, align 4
+  store i32 %val, ptr addrspace(1) %arg, align 4
   ret void
 }
 

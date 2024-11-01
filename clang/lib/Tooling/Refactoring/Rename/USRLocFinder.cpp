@@ -227,7 +227,7 @@ public:
   }
 
   bool VisitDesignatedInitExpr(const DesignatedInitExpr *E) {
-    for (const DesignatedInitExpr::Designator &D : E->designators()) {
+    for (const Designator &D : E->designators()) {
       if (D.isFieldDesignator() && D.getField()) {
         const FieldDecl *Decl = D.getField();
         if (isInUSRSet(Decl)) {

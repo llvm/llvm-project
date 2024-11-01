@@ -16,10 +16,10 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/HashBuilder.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/TargetParser/Triple.h"
 #include <string>
 
 namespace clang {

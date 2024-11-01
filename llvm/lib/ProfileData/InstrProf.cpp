@@ -17,7 +17,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Config/config.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -42,6 +41,8 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -1224,7 +1225,10 @@ Error OverlapStats::accumulateCounts(const std::string &BaseFilename,
                                      bool IsCS) {
   auto getProfileSum = [IsCS](const std::string &Filename,
                               CountSumOrPercent &Sum) -> Error {
-    auto ReaderOrErr = InstrProfReader::create(Filename);
+    // This function is only used from llvm-profdata that doesn't use any kind
+    // of VFS. Just create a default RealFileSystem to read profiles.
+    auto FS = vfs::getRealFileSystem();
+    auto ReaderOrErr = InstrProfReader::create(Filename, *FS);
     if (Error E = ReaderOrErr.takeError()) {
       return E;
     }

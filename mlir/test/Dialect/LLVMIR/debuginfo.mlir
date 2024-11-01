@@ -9,8 +9,8 @@
   isOptimized = true, emissionKind = Full
 >
 
-// CHECK-DAG: #[[VOID:.*]] = #llvm.di_void_result_type
-#void = #llvm.di_void_result_type
+// CHECK-DAG: #[[NULL:.*]] = #llvm.di_null_type
+#null = #llvm.di_null_type
 
 // CHECK-DAG: #[[INT0:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int0">
 #int0 = #llvm.di_basic_type<
@@ -30,10 +30,10 @@
   sizeInBits = 64, alignInBits = 32, offsetInBits = 4
 >
 
-// CHECK-DAG: #[[PTR1:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "ptr1", baseType = #[[INT0]]>
+// CHECK-DAG: #[[PTR1:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "ptr1">
 #ptr1 = #llvm.di_derived_type<
   // Specify the name parameter.
-  tag = DW_TAG_pointer_type, name = "ptr1", baseType = #int0
+  tag = DW_TAG_pointer_type, name = "ptr1"
 >
 
 // CHECK-DAG: #[[COMP0:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array0", line = 10, sizeInBits = 128, alignInBits = 32>
@@ -50,15 +50,25 @@
   elements = #llvm.di_subrange<count = 4>
 >
 
-// CHECK-DAG: #[[COMP2:.*]] = #llvm.di_composite_type<tag = DW_TAG_class_type, name = "class_name", file = #[[FILE]], scope = #[[FILE]], flags = "TypePassByReference|NonTrivial">
+// CHECK-DAG: #[[TOPLEVEL:.*]] = #llvm.di_namespace<name = "toplevel", exportSymbols = true>
+#toplevel_namespace = #llvm.di_namespace<
+  name = "toplevel", exportSymbols = true
+>
+
+// CHECK-DAG: #[[NESTED:.*]] = #llvm.di_namespace<name = "nested", scope = #[[TOPLEVEL]], exportSymbols = false>
+#nested_namespace = #llvm.di_namespace<
+  name = "nested", scope = #toplevel_namespace, exportSymbols = false
+>
+
+// CHECK-DAG: #[[COMP2:.*]] = #llvm.di_composite_type<tag = DW_TAG_class_type, name = "class_name", file = #[[FILE]], scope = #[[NESTED]], flags = "TypePassByReference|NonTrivial">
 #comp2 = #llvm.di_composite_type<
-  tag = DW_TAG_class_type, name = "class_name", file = #file, scope = #file,
+  tag = DW_TAG_class_type, name = "class_name", file = #file, scope = #nested_namespace,
   flags = "TypePassByReference|NonTrivial"
 >
 
-// CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[VOID]], #[[INT0]], #[[PTR0]], #[[PTR1]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]]>
+// CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[NULL]], #[[INT0]], #[[PTR0]], #[[PTR1]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]]>
 #spType0 = #llvm.di_subroutine_type<
-  callingConvention = DW_CC_normal, types = #void, #int0, #ptr0, #ptr1, #comp0, #comp1, #comp2
+  callingConvention = DW_CC_normal, types = #null, #int0, #ptr0, #ptr1, #comp0, #comp1, #comp2
 >
 
 // CHECK-DAG: #[[SPTYPE1:.*]] = #llvm.di_subroutine_type<types = #[[INT1]], #[[INT1]]>

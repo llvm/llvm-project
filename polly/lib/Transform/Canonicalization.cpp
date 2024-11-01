@@ -50,7 +50,6 @@ void polly::registerCanonicalicationPasses(llvm::legacy::PassManagerBase &PM) {
   PM.add(llvm::createReassociatePass());
   PM.add(llvm::createLoopRotatePass());
   if (PollyInliner) {
-    PM.add(llvm::createFunctionInliningPass(200));
     PM.add(llvm::createPromoteMemoryToRegisterPass());
     PM.add(llvm::createCFGSimplificationPass());
     PM.add(llvm::createInstructionCombiningPass());

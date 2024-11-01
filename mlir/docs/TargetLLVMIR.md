@@ -35,7 +35,7 @@ Conversion to the LLVM dialect from other dialects is the first step to produce
 LLVM IR. All non-trivial IR modifications are expected to happen at this stage
 or before. The conversion is *progressive*: most passes convert one dialect to
 the LLVM dialect and keep operations from other dialects intact. For example,
-the `-convert-memref-to-llvm` pass will only convert operations from the
+the `-finalize-memref-to-llvm` pass will only convert operations from the
 `memref` dialect but will not convert operations from other dialects even if
 they use or produce `memref`-typed values.
 

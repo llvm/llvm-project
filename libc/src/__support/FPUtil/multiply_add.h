@@ -9,8 +9,9 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_MULTIPLY_ADD_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_MULTIPLY_ADD_H
 
-#include "src/__support/architectures.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
 namespace __llvm_libc {
 namespace fputil {
@@ -26,7 +27,7 @@ template <typename T> LIBC_INLINE T multiply_add(T x, T y, T z) {
 } // namespace fputil
 } // namespace __llvm_libc
 
-#if defined(LIBC_TARGET_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA)
 
 // FMA instructions are available.
 #include "FMA.h"
@@ -34,17 +35,18 @@ template <typename T> LIBC_INLINE T multiply_add(T x, T y, T z) {
 namespace __llvm_libc {
 namespace fputil {
 
-template <> inline float multiply_add<float>(float x, float y, float z) {
+template <> LIBC_INLINE float multiply_add<float>(float x, float y, float z) {
   return fma(x, y, z);
 }
 
-template <> inline double multiply_add<double>(double x, double y, double z) {
+template <>
+LIBC_INLINE double multiply_add<double>(double x, double y, double z) {
   return fma(x, y, z);
 }
 
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LIBC_TARGET_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA
 
 #endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_MULTIPLY_ADD_H

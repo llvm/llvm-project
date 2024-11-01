@@ -713,7 +713,7 @@ Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
     return Result;
 
   // Try hard to fold loads from bitcasted strange and non-type-safe things.
-  if (Offset.getMinSignedBits() <= 64)
+  if (Offset.getSignificantBits() <= 64)
     if (Constant *Result =
             FoldReinterpretLoadFromConst(C, Ty, Offset.getSExtValue(), DL))
       return Result;
@@ -729,26 +729,23 @@ Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
 Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
                                              APInt Offset,
                                              const DataLayout &DL) {
+  // We can only fold loads from constant globals with a definitive initializer.
+  // Check this upfront, to skip expensive offset calculations.
+  auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(C));
+  if (!GV || !GV->isConstant() || !GV->hasDefinitiveInitializer())
+    return nullptr;
+
   C = cast<Constant>(C->stripAndAccumulateConstantOffsets(
           DL, Offset, /* AllowNonInbounds */ true));
 
-  if (auto *GV = dyn_cast<GlobalVariable>(C))
-    if (GV->isConstant() && GV->hasDefinitiveInitializer())
-      if (Constant *Result = ConstantFoldLoadFromConst(GV->getInitializer(), Ty,
-                                                       Offset, DL))
-        return Result;
+  if (C == GV)
+    if (Constant *Result = ConstantFoldLoadFromConst(GV->getInitializer(), Ty,
+                                                     Offset, DL))
+      return Result;
 
   // If this load comes from anywhere in a uniform constant global, the value
   // is always the same, regardless of the loaded offset.
-  if (auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(C))) {
-    if (GV->isConstant() && GV->hasDefinitiveInitializer()) {
-      if (Constant *Res =
-              ConstantFoldLoadFromUniformValue(GV->getInitializer(), Ty))
-        return Res;
-    }
-  }
-
-  return nullptr;
+  return ConstantFoldLoadFromUniformValue(GV->getInitializer(), Ty);
 }
 
 Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
@@ -2398,7 +2395,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case Intrinsic::bswap:
       return ConstantInt::get(Ty->getContext(), Op->getValue().byteSwap());
     case Intrinsic::ctpop:
-      return ConstantInt::get(Ty, Op->getValue().countPopulation());
+      return ConstantInt::get(Ty, Op->getValue().popcount());
     case Intrinsic::bitreverse:
       return ConstantInt::get(Ty->getContext(), Op->getValue().reverseBits());
     case Intrinsic::convert_from_fp16: {
@@ -2804,9 +2801,9 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
       if (!C0)
         return Constant::getNullValue(Ty);
       if (IntrinsicID == Intrinsic::cttz)
-        return ConstantInt::get(Ty, C0->countTrailingZeros());
+        return ConstantInt::get(Ty, C0->countr_zero());
       else
-        return ConstantInt::get(Ty, C0->countLeadingZeros());
+        return ConstantInt::get(Ty, C0->countl_zero());
 
     case Intrinsic::abs:
       assert(C1 && "Must be constant int");

@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_GPU_TRANSFORMS_PASSES_H_
 #define MLIR_DIALECT_GPU_TRANSFORMS_PASSES_H_
 
+#include "Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Pass/Pass.h"
 #include <optional>
@@ -61,26 +62,6 @@ inline void populateGpuRewritePatterns(RewritePatternSet &patterns) {
 }
 
 namespace gpu {
-/// A function that maps a MemorySpace enum to a target-specific integer value.
-using MemorySpaceMapping =
-    std::function<unsigned(gpu::AddressSpace gpuAddressSpace)>;
-
-/// Populates type conversion rules for lowering memory space attributes to
-/// numeric values.
-void populateMemorySpaceAttributeTypeConversions(
-    TypeConverter &typeConverter, const MemorySpaceMapping &mapping);
-
-/// Populates patterns to lower memory space attributes to numeric values.
-void populateMemorySpaceLoweringPatterns(TypeConverter &typeConverter,
-                                         RewritePatternSet &patterns);
-
-/// Populates legality rules for lowering memory space attriutes to numeric
-/// values.
-void populateLowerMemorySpaceOpLegality(ConversionTarget &target);
-
-/// Returns the default annotation name for GPU binary blobs.
-std::string getDefaultGpuBinaryAnnotation();
-
 /// Base pass class to serialize kernel functions through LLVM into
 /// user-specified IR and add the resulting blob as module attribute.
 class SerializeToBlobPass : public OperationPass<gpu::GPUModuleOp> {

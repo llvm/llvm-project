@@ -12,7 +12,6 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Pass/Pass.h"
@@ -39,22 +38,9 @@ static LogicalResult fuseLinalgOpsGreedily(func::FuncOp f) {
   bool changed = false;
   for (LinalgOp linalgOp : llvm::reverse(linalgOps)) {
     for (OpOperand &opOperand : linalgOp->getOpOperands()) {
-      if (opOperand.get().getType().isa<MemRefType>()) {
-        // TODO: LinalgDependenceGraph should be able to update itself.
-        // The current naive and expensive reconstruction of the graph should be
-        // removed.
-        linalg::Aliases aliases;
-        linalg::LinalgDependenceGraph graph(aliases, linalgOps);
-        auto info = fuseProducerOfBuffer(b, opOperand, graph);
-        if (failed(info))
-          continue;
-        auto *originalOp = info->originalProducer.getOperation();
-        eraseSet.insert(originalOp);
-        auto *originalOpInLinalgOpsVector =
-            std::find(linalgOps.begin(), linalgOps.end(), originalOp);
-        *originalOpInLinalgOpsVector = info->fusedProducer.getOperation();
-        changed = true;
-      } else if (opOperand.get().getType().isa<RankedTensorType>()) {
+      if (opOperand.get().getType().isa<MemRefType>())
+        continue;
+      if (opOperand.get().getType().isa<RankedTensorType>()) {
         // Tile and Fuse tensor input.
         if (opOperand.getOperandNumber() >= linalgOp.getNumDpsInputs())
           continue;

@@ -65,14 +65,13 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: %[[STRUCT:.*]] = llvm.call @foo(%[[I32]]) : (i32) -> !llvm.struct<(i32, f64, i32)>
 // CHECK: %[[VALUE:.*]] = llvm.extractvalue %[[STRUCT]][0] : !llvm.struct<(i32, f64, i32)>
 // CHECK: %[[NEW_STRUCT:.*]] = llvm.insertvalue %[[VALUE]], %[[STRUCT]][2] : !llvm.struct<(i32, f64, i32)>
-// CHECK: %[[FUNC:.*]] = llvm.mlir.addressof @foo : !llvm.ptr<func<struct<(i32, f64, i32)> (i32)>>
-// CHECK: %{{.*}} = llvm.call %[[FUNC]](%[[I32]]) : (i32) -> !llvm.struct<(i32, f64, i32)>
+// CHECK: %[[FUNC:.*]] = llvm.mlir.addressof @foo : !llvm.ptr
+// CHECK: %{{.*}} = llvm.call %[[FUNC]](%[[I32]]) : !llvm.ptr, (i32) -> !llvm.struct<(i32, f64, i32)>
   %17 = llvm.call @foo(%arg0) : (i32) -> !llvm.struct<(i32, f64, i32)>
   %18 = llvm.extractvalue %17[0] : !llvm.struct<(i32, f64, i32)>
   %19 = llvm.insertvalue %18, %17[2] : !llvm.struct<(i32, f64, i32)>
-  %20 = llvm.mlir.addressof @foo : !llvm.ptr<func<struct<(i32, f64, i32)> (i32)>>
-  %21 = llvm.call %20(%arg0) : (i32) -> !llvm.struct<(i32, f64, i32)>
-
+  %20 = llvm.mlir.addressof @foo : !llvm.ptr
+  %21 = llvm.call %20(%arg0) : !llvm.ptr, (i32) -> !llvm.struct<(i32, f64, i32)>
 
 // Terminator operations and their successors.
 //
@@ -340,17 +339,39 @@ func.func @null() {
   llvm.return
 }
 
+// CHECK-LABEL: @atomic_load
+func.func @atomic_load(%ptr : !llvm.ptr) {
+  // CHECK: llvm.load %{{.*}} atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> f32
+  %0 = llvm.load %ptr atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> f32
+  // CHECK: llvm.load volatile %{{.*}} atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr -> f32
+  %1 = llvm.load volatile %ptr atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr -> f32
+  llvm.return
+}
+
+// CHECK-LABEL: @atomic_store
+func.func @atomic_store(%val : f32, %ptr : !llvm.ptr) {
+  // CHECK: llvm.store %{{.*}}, %{{.*}} atomic monotonic {alignment = 4 : i64} : f32, !llvm.ptr
+  llvm.store %val, %ptr atomic monotonic {alignment = 4 : i64} : f32, !llvm.ptr
+  // CHECK: llvm.store volatile %{{.*}}, %{{.*}} atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : f32, !llvm.ptr
+  llvm.store volatile %val, %ptr atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : f32, !llvm.ptr
+  llvm.return
+}
+
 // CHECK-LABEL: @atomicrmw
-func.func @atomicrmw(%ptr : !llvm.ptr<f32>, %val : f32) {
-  // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} monotonic : f32
-  %0 = llvm.atomicrmw fadd %ptr, %val monotonic : f32
+func.func @atomicrmw(%ptr : !llvm.ptr, %val : f32) {
+  // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32
+  %0 = llvm.atomicrmw fadd %ptr, %val monotonic : !llvm.ptr, f32
+  // CHECK: llvm.atomicrmw volatile fsub %{{.*}}, %{{.*}} syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr, f32
+  %1 = llvm.atomicrmw volatile fsub %ptr, %val syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr, f32
   llvm.return
 }
 
 // CHECK-LABEL: @cmpxchg
-func.func @cmpxchg(%ptr : !llvm.ptr<i32>, %cmp : i32, %new : i32) {
-  // CHECK: llvm.cmpxchg %{{.*}}, %{{.*}}, %{{.*}} acq_rel monotonic : i32
-  %0 = llvm.cmpxchg %ptr, %cmp, %new acq_rel monotonic : i32
+func.func @cmpxchg(%ptr : !llvm.ptr, %cmp : i32, %new : i32) {
+  // CHECK: llvm.cmpxchg %{{.*}}, %{{.*}}, %{{.*}} acq_rel monotonic : !llvm.ptr, i32
+  %0 = llvm.cmpxchg %ptr, %cmp, %new acq_rel monotonic : !llvm.ptr, i32
+  // CHECK: llvm.cmpxchg weak volatile %{{.*}}, %{{.*}}, %{{.*}} syncscope("singlethread") acq_rel monotonic {alignment = 16 : i64} : !llvm.ptr, i32
+  %1 = llvm.cmpxchg weak volatile %ptr, %cmp, %new syncscope("singlethread") acq_rel monotonic {alignment = 16 : i64} : !llvm.ptr, i32
   llvm.return
 }
 
@@ -401,8 +422,15 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
   llvm.invoke @bar(%8, %6, %4) to ^bb2 unwind ^bb1 : (!llvm.ptr<i8>, !llvm.ptr<i8>, !llvm.ptr<i8>) -> ()
 
 // CHECK: ^[[BB4:.*]]:
-// CHECK:   llvm.return %[[a0]] : i32
+// CHECK: %[[FUNC:.*]] = llvm.mlir.addressof @foo : !llvm.ptr
+// CHECK: %{{.*}} = llvm.invoke %[[FUNC]]{{.*}}: !llvm.ptr,
 ^bb4:
+  %12 = llvm.mlir.addressof @foo : !llvm.ptr
+  %13 = llvm.invoke %12(%7) to ^bb2 unwind ^bb1 : !llvm.ptr, (i32) -> !llvm.struct<(i32, f64, i32)>
+
+// CHECK: ^[[BB5:.*]]:
+// CHECK:   llvm.return %[[a0]] : i32
+^bb5:
   llvm.return %0 : i32
 }
 
@@ -489,22 +517,6 @@ func.func @fastmathFlags(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: vector<2 x f
 // CHECK: {{.*}} = llvm.intr.sin(%arg0) {fastmathFlags = #llvm.fastmath<afn>} : (f32) -> f32
   %12 = llvm.intr.sin(%arg0) {fastmathFlags = #llvm.fastmath<afn>} : (f32) -> f32
   return
-}
-
-module {
-  // CHECK-LABEL: @loopOptions
-  llvm.func @loopOptions() {
-    // CHECK: llvm.br
-    // CHECK-SAME: llvm.loop = {options = #llvm.loopopts<disable_unroll = true, disable_licm = true, interleave_count = 1, disable_pipeline = true, pipeline_initiation_interval = 1>}, parallel_access = [@metadata::@group1]}
-    llvm.br ^bb1 {llvm.loop = {options = #llvm.loopopts<disable_unroll = true, disable_licm = true, interleave_count = 1, disable_pipeline = true, pipeline_initiation_interval = 1>}, parallel_access = [@metadata::@group1]}
-  ^bb1:
-    llvm.return
-  }
-  // CHECK: llvm.metadata @metadata attributes {test_attribute} {
-  llvm.metadata @metadata attributes {test_attribute} {
-    // CHECK: llvm.access_group @group1
-    llvm.access_group @group1
-  }
 }
 
 // CHECK-LABEL: llvm.func @vararg_func

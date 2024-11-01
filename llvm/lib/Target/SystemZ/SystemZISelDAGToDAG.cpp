@@ -1391,7 +1391,7 @@ bool SystemZDAGToDAGISel::tryFoldLoadStoreIntoMemOperand(SDNode *Node) {
   auto OperandV = OperandC->getAPIntValue();
   if (NegateOperand)
     OperandV = -OperandV;
-  if (OperandV.getMinSignedBits() > 8)
+  if (OperandV.getSignificantBits() > 8)
     return false;
   Operand = CurDAG->getTargetConstant(OperandV, DL, MemVT);
 

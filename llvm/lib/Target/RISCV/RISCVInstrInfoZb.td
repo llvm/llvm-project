@@ -66,13 +66,13 @@ def shfl_uimm : Operand<XLenVT>, ImmLeaf<XLenVT, [{
 
 def BCLRXForm : SDNodeXForm<imm, [{
   // Find the lowest 0.
-  return CurDAG->getTargetConstant(countTrailingOnes(N->getZExtValue()),
+  return CurDAG->getTargetConstant(llvm::countr_one(N->getZExtValue()),
                                    SDLoc(N), N->getValueType(0));
 }]>;
 
 def SingleBitSetMaskToIndex : SDNodeXForm<imm, [{
   // Find the lowest 1.
-  return CurDAG->getTargetConstant(countTrailingZeros(N->getZExtValue()),
+  return CurDAG->getTargetConstant(llvm::countr_zero(N->getZExtValue()),
                                    SDLoc(N), N->getValueType(0));
 }]>;
 
@@ -104,7 +104,7 @@ def BSETINVTwoBitsMask : PatLeaf<(imm), [{
 
 def BSETINVTwoBitsMaskHigh : SDNodeXForm<imm, [{
   uint64_t I = N->getZExtValue();
-  return CurDAG->getTargetConstant(63 - countLeadingZeros(I), SDLoc(N),
+  return CurDAG->getTargetConstant(llvm::Log2_64(I), SDLoc(N),
                                    N->getValueType(0));
 }]>;
 
@@ -138,7 +138,7 @@ def BCLRITwoBitsMask : PatLeaf<(imm), [{
 }]>;
 
 def BCLRITwoBitsMaskLow : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(countTrailingZeros(~N->getZExtValue()),
+  return CurDAG->getTargetConstant(llvm::countr_zero(~N->getZExtValue()),
                                    SDLoc(N), N->getValueType(0));
 }]>;
 
@@ -146,7 +146,7 @@ def BCLRITwoBitsMaskHigh : SDNodeXForm<imm, [{
   uint64_t I = N->getSExtValue();
   if (!Subtarget->is64Bit())
     I |= 0xffffffffull << 32;
-  return CurDAG->getTargetConstant(63 - countLeadingZeros(~I), SDLoc(N),
+  return CurDAG->getTargetConstant(llvm::Log2_64(~I), SDLoc(N),
                                    N->getValueType(0));
 }]>;
 
@@ -170,44 +170,38 @@ def BCLRIANDIMaskLow : SDNodeXForm<imm, [{
 
 def C3LeftShift : PatLeaf<(imm), [{
   uint64_t C = N->getZExtValue();
-  return C > 3 && ((C % 3) == 0) && isPowerOf2_64(C / 3);
+  return C > 3 && (C >> llvm::countr_zero(C)) == 3;
 }]>;
 
 def C5LeftShift : PatLeaf<(imm), [{
   uint64_t C = N->getZExtValue();
-  return C > 5 && ((C % 5) == 0) && isPowerOf2_64(C / 5);
+  return C > 5 && (C >> llvm::countr_zero(C)) == 5;
 }]>;
 
 def C9LeftShift : PatLeaf<(imm), [{
   uint64_t C = N->getZExtValue();
-  return C > 9 && ((C % 9) == 0) && isPowerOf2_64(C / 9);
+  return C > 5 && (C >> llvm::countr_zero(C)) == 9;
 }]>;
 
 // Constant of the form (3 << C) where C is less than 32.
 def C3LeftShiftUW : PatLeaf<(imm), [{
   uint64_t C = N->getZExtValue();
-  if (C <= 3 || (C % 3) != 0)
-    return false;
-  C /= 3;
-  return isPowerOf2_64(C) && C < (1ULL << 32);
+  unsigned Shift = llvm::countr_zero(C);
+  return 1 <= Shift && Shift < 32 && (C >> Shift) == 3;
 }]>;
 
 // Constant of the form (5 << C) where C is less than 32.
 def C5LeftShiftUW : PatLeaf<(imm), [{
   uint64_t C = N->getZExtValue();
-  if (C <= 5 || (C % 5) != 0)
-    return false;
-  C /= 5;
-  return isPowerOf2_64(C) && C < (1ULL << 32);
+  unsigned Shift = llvm::countr_zero(C);
+  return 1 <= Shift && Shift < 32 && (C >> Shift) == 5;
 }]>;
 
 // Constant of the form (9 << C) where C is less than 32.
 def C9LeftShiftUW : PatLeaf<(imm), [{
   uint64_t C = N->getZExtValue();
-  if (C <= 9 || (C % 9) != 0)
-    return false;
-  C /= 9;
-  return isPowerOf2_64(C) && C < (1ULL << 32);
+  unsigned Shift = llvm::countr_zero(C);
+  return 1 <= Shift && Shift < 32 && (C >> Shift) == 9;
 }]>;
 
 def CSImm12MulBy4 : PatLeaf<(imm), [{
@@ -248,7 +242,7 @@ def Shifted32OnesMask : PatLeaf<(imm), [{
   if (!isShiftedMask_64(Imm))
     return false;
 
-  unsigned TrailingZeros = countTrailingZeros(Imm);
+  unsigned TrailingZeros = llvm::countr_zero(Imm);
   return TrailingZeros > 0 && TrailingZeros < 32 &&
          Imm == UINT64_C(0xFFFFFFFF) << TrailingZeros;
 }], TrailingZeros>;
@@ -289,20 +283,6 @@ class RVBShiftW_ri<bits<7> imm11_5, bits<3> funct3, RISCVOpcode opcode,
     : RVInstIShiftW<imm11_5, funct3, opcode, (outs GPR:$rd),
                     (ins GPR:$rs1, uimm5:$shamt), opcodestr,
                     "$rd, $rs1, $shamt">;
-
-// Using RVInstIShiftW since it allocates 5 bits instead of 6 to shamt.
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVBShfl_ri<bits<7> imm11_5, bits<3> funct3, RISCVOpcode opcode,
-                 string opcodestr>
-    : RVInstIShiftW<imm11_5, funct3, opcode, (outs GPR:$rd),
-                    (ins GPR:$rs1, shfl_uimm:$shamt), opcodestr,
-                    "$rd, $rs1, $shamt">;
-
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVBTernaryR<bits<2> funct2, bits<3> funct3, RISCVOpcode opcode,
-                  string opcodestr, string argstr>
-    : RVInstR4<funct2, funct3, opcode, (outs GPR:$rd),
-               (ins GPR:$rs1, GPR:$rs2, GPR:$rs3), opcodestr, argstr>;
 
 //===----------------------------------------------------------------------===//
 // Instructions

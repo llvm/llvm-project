@@ -346,8 +346,8 @@ bool Vectorizer::areConsecutivePointers(Value *PtrA, Value *PtrB,
   // stripAndAccumulateInBoundsConstantOffsets should properly handle a
   // possible overflow and the value should fit into a smallest data type
   // used in the cast/gep chain.
-  assert(OffsetA.getMinSignedBits() <= NewPtrBitWidth &&
-         OffsetB.getMinSignedBits() <= NewPtrBitWidth);
+  assert(OffsetA.getSignificantBits() <= NewPtrBitWidth &&
+         OffsetB.getSignificantBits() <= NewPtrBitWidth);
 
   OffsetA = OffsetA.sextOrTrunc(NewPtrBitWidth);
   OffsetB = OffsetB.sextOrTrunc(NewPtrBitWidth);

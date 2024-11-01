@@ -11,13 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVSubtarget.h"
+#include "GISel/RISCVCallLowering.h"
+#include "GISel/RISCVLegalizerInfo.h"
+#include "GISel/RISCVRegisterBankInfo.h"
 #include "RISCV.h"
 #include "RISCVFrameLowering.h"
 #include "RISCVMacroFusion.h"
 #include "RISCVTargetMachine.h"
-#include "GISel/RISCVCallLowering.h"
-#include "GISel/RISCVLegalizerInfo.h"
-#include "GISel/RISCVRegisterBankInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -83,6 +83,9 @@ RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
       FrameLowering(
           initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
       InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {
+  if (RISCV::isX18ReservedByDefault(TT))
+    UserReservedRegister.set(RISCV::X18);
+
   CallLoweringInfo.reset(new RISCVCallLowering(*getTargetLowering()));
   Legalizer.reset(new RISCVLegalizerInfo(*this));
 
@@ -155,10 +158,10 @@ unsigned RISCVSubtarget::getMinRVVVectorSizeInBits() const {
 unsigned RISCVSubtarget::getMaxLMULForFixedLengthVectors() const {
   assert(hasVInstructions() &&
          "Tried to get vector length without Zve or V extension support!");
-  assert(RVVVectorLMULMax <= 8 && isPowerOf2_32(RVVVectorLMULMax) &&
+  assert(RVVVectorLMULMax <= 8 &&
+         llvm::has_single_bit<uint32_t>(RVVVectorLMULMax) &&
          "V extension requires a LMUL to be at most 8 and a power of 2!");
-  return PowerOf2Floor(
-      std::max<unsigned>(std::min<unsigned>(RVVVectorLMULMax, 8), 1));
+  return llvm::bit_floor(std::clamp<unsigned>(RVVVectorLMULMax, 1, 8));
 }
 
 bool RISCVSubtarget::useRVVForFixedLengthVectors() const {

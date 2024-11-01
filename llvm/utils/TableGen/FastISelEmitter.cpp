@@ -18,6 +18,10 @@
 
 #include "CodeGenDAGPatterns.h"
 #include "CodeGenInstruction.h"
+#include "CodeGenRegisters.h"
+#include "CodeGenTarget.h"
+#include "InfoByHwMode.h"
+#include "TableGenBackends.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
@@ -872,4 +876,4 @@ void EmitFastISel(RecordKeeper &RK, raw_ostream &OS) {
   F.printFunctionDefinitions(OS);
 }
 
-} // End llvm namespace
+} // namespace llvm

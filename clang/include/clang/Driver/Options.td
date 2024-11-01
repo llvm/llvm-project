@@ -482,6 +482,40 @@ multiclass BoolGOption<string flag_base, KeyPathAndMacro kpm,
               Group<g_Group>;
 }
 
+// Works like BoolOption except without marshalling
+multiclass BoolOptionWithoutMarshalling<string prefix = "", string spelling_base,
+                                        FlagDef flag1_base, FlagDef flag2_base,
+                                        BothFlags suffix = BothFlags<[], "">> {
+  defvar flag1 = FlagDefExpanded<ApplySuffix<flag1_base, suffix>.Result, prefix,
+                                 NAME, spelling_base>;
+
+  defvar flag2 = FlagDefExpanded<ApplySuffix<flag2_base, suffix>.Result, prefix,
+                                 NAME, spelling_base>;
+
+  // The flags must have different polarity, different values, and only
+  // one can be implied.
+  assert !xor(flag1.Polarity, flag2.Polarity),
+         "the flags must have different polarity: flag1: " #
+             flag1.Polarity # ", flag2: " # flag2.Polarity;
+  assert !ne(flag1.Value, flag2.Value),
+         "the flags must have different values: flag1: " #
+             flag1.Value # ", flag2: " # flag2.Value;
+  assert !not(!and(flag1.CanBeImplied, flag2.CanBeImplied)),
+         "only one of the flags can be implied: flag1: " #
+             flag1.CanBeImplied # ", flag2: " # flag2.CanBeImplied;
+
+  defvar implied = !if(flag1.CanBeImplied, flag1, flag2);
+
+  def flag1.RecordName : Flag<["-"], flag1.Spelling>, Flags<flag1.OptionFlags>,
+                         HelpText<flag1.Help>,
+                         ImpliedByAnyOf<implied.ImpliedBy, implied.ValueAsCode>
+                         {}
+  def flag2.RecordName : Flag<["-"], flag2.Spelling>, Flags<flag2.OptionFlags>,
+                         HelpText<flag2.Help>,
+                         ImpliedByAnyOf<implied.ImpliedBy, implied.ValueAsCode>
+                         {}
+}
+
 // FIXME: Diagnose if target does not support protected visibility.
 class MarshallingInfoVisibility<KeyPathAndMacro kpm, code default>
   : MarshallingInfoEnum<kpm, default>,
@@ -1224,7 +1258,7 @@ defm experimental_library : BoolFOption<"experimental-library",
   NegFlag<SetFalse>>;
 
 def fembed_offload_object_EQ : Joined<["-"], "fembed-offload-object=">,
-  Group<f_Group>, Flags<[NoXarchOption, CC1Option]>,
+  Group<f_Group>, Flags<[NoXarchOption, CC1Option, FC1Option]>,
   HelpText<"Embed Offloading device-side binary into host object file as a section.">,
   MarshallingInfoStringVector<CodeGenOpts<"OffloadObjects">>;
 def fembed_bitcode_EQ : Joined<["-"], "fembed-bitcode=">,
@@ -1692,9 +1726,6 @@ def : Joined<["-"], "fsanitize-blacklist=">,
 
 def fsanitize_system_ignorelist_EQ : Joined<["-"], "fsanitize-system-ignorelist=">,
   HelpText<"Path to system ignorelist file for sanitizers">, Flags<[CC1Option]>;
-def : Joined<["-"], "fsanitize-system-blacklist=">,
-  HelpText<"Alias for -fsanitize-system-ignorelist=">,
-  Flags<[CC1Option, HelpHidden]>, Alias<fsanitize_system_ignorelist_EQ>;
 
 def fno_sanitize_ignorelist : Flag<["-"], "fno-sanitize-ignorelist">,
   Group<f_clang_Group>, HelpText<"Don't use ignorelist file for sanitizers">;
@@ -1725,6 +1756,10 @@ def fexperimental_sanitize_metadata_EQ : CommaJoined<["-"], "fexperimental-sanit
 def fno_experimental_sanitize_metadata_EQ : CommaJoined<["-"], "fno-experimental-sanitize-metadata=">,
   Group<f_Group>, Flags<[CoreOption]>,
   HelpText<"Disable emitting metadata for binary analysis sanitizers">;
+def fexperimental_sanitize_metadata_ignorelist_EQ : Joined<["-"], "fexperimental-sanitize-metadata-ignorelist=">,
+    Group<f_Group>, Flags<[CoreOption]>,
+    HelpText<"Disable sanitizer metadata for modules and functions that match the provided special case list">,
+    MarshallingInfoStringVector<CodeGenOpts<"SanitizeMetadataIgnorelistFiles">>;
 def fsanitize_memory_track_origins_EQ : Joined<["-"], "fsanitize-memory-track-origins=">,
                                         Group<f_clang_Group>,
                                         HelpText<"Enable origins tracking in MemorySanitizer">,
@@ -1869,6 +1904,10 @@ def fsanitize_cfi_icall_generalize_pointers : Flag<["-"], "fsanitize-cfi-icall-g
                                               Group<f_clang_Group>,
                                               HelpText<"Generalize pointers in CFI indirect call type signature checks">,
                                               MarshallingInfoFlag<CodeGenOpts<"SanitizeCfiICallGeneralizePointers">>;
+def fsanitize_cfi_icall_normalize_integers : Flag<["-"], "fsanitize-cfi-icall-experimental-normalize-integers">,
+                                             Group<f_clang_Group>,
+                                             HelpText<"Normalize integers in CFI indirect call type signature checks">,
+                                             MarshallingInfoFlag<CodeGenOpts<"SanitizeCfiICallNormalizeIntegers">>;
 defm sanitize_cfi_canonical_jump_tables : BoolOption<"f", "sanitize-cfi-canonical-jump-tables",
   CodeGenOpts<"SanitizeCfiCanonicalJumpTables">, DefaultFalse,
   PosFlag<SetTrue, [], "Make">, NegFlag<SetFalse, [CoreOption, NoXarchOption], "Do not make">,
@@ -2388,11 +2427,8 @@ def fimplicit_module_maps : Flag <["-"], "fimplicit-module-maps">, Group<f_Group
   Flags<[NoXarchOption, CC1Option, CoreOption]>,
   HelpText<"Implicitly search the file system for module map files.">,
   MarshallingInfoFlag<HeaderSearchOpts<"ImplicitModuleMaps">>;
-def fmodules_ts : Flag <["-"], "fmodules-ts">, Group<f_Group>,
-  Flags<[CC1Option]>, HelpText<"Enable support for the C++ Modules TS">,
-  MarshallingInfoFlag<LangOpts<"ModulesTS">>;
 defm modules : BoolFOption<"modules",
-  LangOpts<"Modules">, Default<!strconcat(fmodules_ts.KeyPath, "||", fcxx_modules.KeyPath)>,
+  LangOpts<"Modules">, Default<fcxx_modules.KeyPath>,
   PosFlag<SetTrue, [CC1Option], "Enable the 'modules' language feature">,
   NegFlag<SetFalse>, BothFlags<[NoXarchOption, CoreOption]>>;
 def fmodule_maps : Flag <["-"], "fmodule-maps">, Flags<[CoreOption]>, Alias<fimplicit_module_maps>;
@@ -3361,6 +3397,9 @@ def iwithsysroot : JoinedOrSeparate<["-"], "iwithsysroot">, Group<clang_i_Group>
   Flags<[CC1Option]>;
 def ivfsoverlay : JoinedOrSeparate<["-"], "ivfsoverlay">, Group<clang_i_Group>, Flags<[CC1Option]>,
   HelpText<"Overlay the virtual filesystem described by file over the real file system">;
+def vfsoverlay : JoinedOrSeparate<["-", "--"], "vfsoverlay">, Flags<[CC1Option, CoreOption]>,
+  HelpText<"Overlay the virtual filesystem described by file over the real file system. "
+           "Additionally, pass this overlay file to the linker if it supports it">;
 def imultilib : Separate<["-"], "imultilib">, Group<gfortran_Group>;
 def keep__private__externs : Flag<["-"], "keep_private_externs">;
 def l : JoinedOrSeparate<["-"], "l">, Flags<[LinkerInput, RenderJoined]>,
@@ -3481,6 +3520,8 @@ def mlinker_version_EQ : Joined<["-"], "mlinker-version=">,
 def mllvm : Separate<["-"], "mllvm">,Flags<[CC1Option,CC1AsOption,CoreOption,FC1Option,FlangOption]>,
   HelpText<"Additional arguments to forward to LLVM's option processing">,
   MarshallingInfoStringVector<FrontendOpts<"LLVMArgs">>;
+def : Joined<["-"], "mllvm=">, Flags<[CoreOption,FlangOption]>, Alias<mllvm>,
+  HelpText<"Alias for -mllvm">, MetaVarName<"<arg>">;
 def mmlir : Separate<["-"], "mmlir">, Flags<[CoreOption,FC1Option,FlangOption]>,
   HelpText<"Additional arguments to forward to MLIR's option processing">;
 def ffuchsia_api_level_EQ : Joined<["-"], "ffuchsia-api-level=">,
@@ -3582,6 +3623,10 @@ def mcmodel_EQ_medany : Flag<["-"], "mcmodel=medany">, Group<m_Group>,
   HelpText<"Equivalent to -mcmodel=medium, compatible with RISC-V gcc.">;
 def menable_experimental_extensions : Flag<["-"], "menable-experimental-extensions">, Group<m_Group>,
   HelpText<"Enable use of experimental RISC-V extensions.">;
+def mrvv_vector_bits_EQ : Joined<["-"], "mrvv-vector-bits=">, Group<m_Group>,
+  HelpText<"Specify the size in bits of an RVV vector register. Defaults to the"
+           " vector length agnostic value of \"scalable\". Also accepts \"zvl\""
+           " to use the value implied by -march/-mcpu (RISC-V only)">;
 
 def munaligned_access : Flag<["-"], "munaligned-access">, Group<m_arm_Features_Group>,
   HelpText<"Allow memory accesses to be unaligned (AArch32/AArch64 only)">;
@@ -4138,6 +4183,7 @@ def pedantic_errors : Flag<["-", "--"], "pedantic-errors">, Group<pedantic_Group
   MarshallingInfoFlag<DiagnosticOpts<"PedanticErrors">>;
 def pedantic : Flag<["-", "--"], "pedantic">, Group<pedantic_Group>, Flags<[CC1Option,FlangOption,FC1Option]>,
   HelpText<"Warn on language extensions">, MarshallingInfoFlag<DiagnosticOpts<"Pedantic">>;
+def p : Flag<["-"], "p">, HelpText<"Enable mcount instrumentation with prof">;
 def pg : Flag<["-"], "pg">, HelpText<"Enable mcount instrumentation">, Flags<[CC1Option]>,
   MarshallingInfoFlag<CodeGenOpts<"InstrumentForProfiling">>;
 def pipe : Flag<["-", "--"], "pipe">,
@@ -4184,7 +4230,6 @@ defm pthread : BoolOption<"", "pthread",
   LangOpts<"POSIXThreads">, DefaultFalse,
   PosFlag<SetTrue, [], "Support POSIX threads in generated code">,
   NegFlag<SetFalse>, BothFlags<[CC1Option]>>;
-def p : Flag<["-"], "p">;
 def pie : Flag<["-"], "pie">, Group<Link_Group>;
 def static_pie : Flag<["-"], "static-pie">, Group<Link_Group>;
 def read__only__relocs : Separate<["-"], "read_only_relocs">;
@@ -4559,6 +4604,8 @@ def mnvs : Flag<["-"], "mnvs">, Group<m_hexagon_Features_Group>,
   Flags<[CC1Option]>, HelpText<"Enable generation of new-value stores">;
 def mno_nvs : Flag<["-"], "mno-nvs">, Group<m_hexagon_Features_Group>,
   Flags<[CC1Option]>, HelpText<"Disable generation of new-value stores">;
+def mcabac: Flag<["-"], "mcabac">, Group<m_hexagon_Features_Group>,
+  HelpText<"Enable CABAC instructions">;
 
 // SPARC feature flags
 def mfpu : Flag<["-"], "mfpu">, Group<m_sparc_Features_Group>;
@@ -4981,7 +5028,6 @@ defm recursive : BooleanFFlag<"recursive">, Group<gfortran_Group>;
 defm repack_arrays : BooleanFFlag<"repack-arrays">, Group<gfortran_Group>;
 defm second_underscore : BooleanFFlag<"second-underscore">, Group<gfortran_Group>;
 defm sign_zero : BooleanFFlag<"sign-zero">, Group<gfortran_Group>;
-defm stack_arrays : BooleanFFlag<"stack-arrays">, Group<gfortran_Group>;
 defm underscoring : BooleanFFlag<"underscoring">, Group<gfortran_Group>;
 defm whole_file : BooleanFFlag<"whole-file">, Group<gfortran_Group>;
 
@@ -5060,6 +5106,10 @@ defm implicit_none : OptInFC1FFlag<"implicit-none", "No implicit typing allowed 
 
 def fno_automatic : Flag<["-"], "fno-automatic">, Group<f_Group>,
   HelpText<"Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE">;
+
+defm stack_arrays : BoolOptionWithoutMarshalling<"f", "stack-arrays",
+  PosFlag<SetTrue, [], "Attempt to allocate array temporaries on the stack, no matter their size">,
+  NegFlag<SetFalse, [], "Allocate array temporaries on the heap (default)">>;
 
 } // let Flags = [FC1Option, FlangOption, FlangOnlyOption]
 
@@ -5926,14 +5976,14 @@ defm fimplicit_modules_use_lock : BoolOption<"f", "implicit-modules-use-lock",
   PosFlag<SetTrue, [],
           "Use filesystem locks for implicit modules builds to avoid "
           "duplicating work in competing clang invocations.">>;
-// FIXME: We only need this in C++ modules / Modules TS if we might textually
+// FIXME: We only need this in C++ modules if we might textually
 // enter a different module (eg, when building a header unit).
 def fmodules_local_submodule_visibility :
   Flag<["-"], "fmodules-local-submodule-visibility">,
   HelpText<"Enforce name visibility rules across submodules of the same "
            "top-level module.">,
   MarshallingInfoFlag<LangOpts<"ModulesLocalVisibility">>,
-  ImpliedByAnyOf<[fmodules_ts.KeyPath, fcxx_modules.KeyPath]>;
+  ImpliedByAnyOf<[fcxx_modules.KeyPath]>;
 def fmodules_codegen :
   Flag<["-"], "fmodules-codegen">,
   HelpText<"Generate code for uses of this module that assumes an explicit "
@@ -7110,3 +7160,7 @@ def dxc_entrypoint : Option<["--", "/", "-"], "E", KIND_JOINED_OR_SEPARATE>,
                      Group<dxc_Group>,
                      Flags<[DXCOption, NoXarchOption]>,
                      HelpText<"Entry point name">;
+def dxc_validator_path_EQ : Joined<["--"], "dxv-path=">, Group<dxc_Group>,
+  HelpText<"DXIL validator installation path">;
+def dxc_disable_validation : DXCFlag<"Vd">,
+  HelpText<"Disable validation">;

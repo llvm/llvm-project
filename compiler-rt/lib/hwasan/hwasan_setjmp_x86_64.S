@@ -37,13 +37,14 @@ __interceptor_setjmp:
   CFI_STARTPROC
   _CET_ENDBR
   xorl %esi, %esi
-  jmp	__interceptor_sigsetjmp
+  jmp	.Linterceptor_sigsetjmp
   CFI_ENDPROC
 ASM_SIZE(__interceptor_setjmp)
 
 .global __interceptor_sigsetjmp
 ASM_TYPE_FUNCTION(__interceptor_sigsetjmp)
 __interceptor_sigsetjmp:
+.Linterceptor_sigsetjmp:
   CFI_STARTPROC
   _CET_ENDBR
 

@@ -174,10 +174,11 @@ namespace thisPointer {
     constexpr int get12() { return 12; }
   };
 
-  constexpr int foo() { // ref-error {{never produces a constant expression}}
+  constexpr int foo() { // ref-error {{never produces a constant expression}} \
+                        // expected-error {{never produces a constant expression}}
     S *s = nullptr;
     return s->get12(); // ref-note 2{{member call on dereferenced null pointer}} \
-                       // expected-note {{member call on dereferenced null pointer}}
+                       // expected-note 2{{member call on dereferenced null pointer}}
 
   }
   static_assert(foo() == 12, ""); // ref-error {{not an integral constant expression}} \

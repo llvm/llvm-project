@@ -547,7 +547,7 @@ public:
     typedef _VSTD::reverse_iterator<iterator>       reverse_iterator;
     typedef _VSTD::reverse_iterator<const_iterator> const_reverse_iterator;
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     typedef __set_node_handle<typename __base::__node, allocator_type> node_type;
     typedef __insert_return_type<iterator, node_type> insert_return_type;
 #endif
@@ -593,7 +593,7 @@ public:
             insert(__f, __l);
         }
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
         template <class _InputIterator>
         _LIBCPP_INLINE_VISIBILITY
         set(_InputIterator __f, _InputIterator __l, const allocator_type& __a)
@@ -650,7 +650,7 @@ public:
             insert(__il.begin(), __il.end());
         }
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     _LIBCPP_INLINE_VISIBILITY
     set(initializer_list<value_type> __il, const allocator_type& __a)
         : set(__il, key_compare(), __a) {}
@@ -767,7 +767,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void clear() _NOEXCEPT {__tree_.clear();}
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     _LIBCPP_INLINE_VISIBILITY
     insert_return_type insert(node_type&& __nh)
     {
@@ -844,7 +844,7 @@ public:
     iterator find(const key_type& __k)             {return __tree_.find(__k);}
     _LIBCPP_INLINE_VISIBILITY
     const_iterator find(const key_type& __k) const {return __tree_.find(__k);}
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
     typename enable_if<__is_transparent<_Compare, _K2>::value,iterator>::type
@@ -858,21 +858,21 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     size_type      count(const key_type& __k) const
         {return __tree_.__count_unique(__k);}
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
     typename enable_if<__is_transparent<_Compare, _K2>::value,size_type>::type
     count(const _K2& __k) const                    {return __tree_.__count_multi(__k);}
 #endif
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     _LIBCPP_INLINE_VISIBILITY
     bool contains(const key_type& __k) const {return find(__k) != end();}
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
     typename enable_if<__is_transparent<_Compare, _K2>::value, bool>::type
     contains(const _K2& __k) const { return find(__k) != end(); }
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
     _LIBCPP_INLINE_VISIBILITY
     iterator lower_bound(const key_type& __k)
@@ -880,7 +880,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     const_iterator lower_bound(const key_type& __k) const
         {return __tree_.lower_bound(__k);}
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
     typename enable_if<__is_transparent<_Compare, _K2>::value,iterator>::type
@@ -898,7 +898,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     const_iterator upper_bound(const key_type& __k) const
         {return __tree_.upper_bound(__k);}
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
     typename enable_if<__is_transparent<_Compare, _K2>::value,iterator>::type
@@ -915,7 +915,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     pair<const_iterator,const_iterator> equal_range(const key_type& __k) const
         {return __tree_.__equal_range_unique(__k);}
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
     typename enable_if<__is_transparent<_Compare, _K2>::value,pair<iterator,iterator>>::type
@@ -1038,7 +1038,7 @@ swap(set<_Key, _Compare, _Allocator>& __x,
     __x.swap(__y);
 }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _Key, class _Compare, class _Allocator, class _Predicate>
 inline _LIBCPP_INLINE_VISIBILITY
     typename set<_Key, _Compare, _Allocator>::size_type
@@ -1084,7 +1084,7 @@ public:
     typedef _VSTD::reverse_iterator<iterator>       reverse_iterator;
     typedef _VSTD::reverse_iterator<const_iterator> const_reverse_iterator;
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     typedef __set_node_handle<typename __base::__node, allocator_type> node_type;
 #endif
 
@@ -1121,7 +1121,7 @@ public:
             insert(__f, __l);
         }
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
         template <class _InputIterator>
         _LIBCPP_INLINE_VISIBILITY
         multiset(_InputIterator __f, _InputIterator __l, const allocator_type& __a)
@@ -1186,7 +1186,7 @@ public:
             insert(__il.begin(), __il.end());
         }
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     _LIBCPP_INLINE_VISIBILITY
     multiset(initializer_list<value_type> __il, const allocator_type& __a)
         : multiset(__il, key_compare(), __a) {}
@@ -1302,7 +1302,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void clear() _NOEXCEPT {__tree_.clear();}
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(node_type&& __nh)
     {
@@ -1380,7 +1380,7 @@ public:
     iterator find(const key_type& __k)             {return __tree_.find(__k);}
     _LIBCPP_INLINE_VISIBILITY
     const_iterator find(const key_type& __k) const {return __tree_.find(__k);}
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
     typename enable_if<__is_transparent<_Compare, _K2>::value,iterator>::type
@@ -1394,21 +1394,21 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     size_type      count(const key_type& __k) const
         {return __tree_.__count_multi(__k);}
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
     typename enable_if<__is_transparent<_Compare, _K2>::value,size_type>::type
     count(const _K2& __k) const            {return __tree_.__count_multi(__k);}
 #endif
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
     _LIBCPP_INLINE_VISIBILITY
     bool contains(const key_type& __k) const {return find(__k) != end();}
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
     typename enable_if<__is_transparent<_Compare, _K2>::value, bool>::type
     contains(const _K2& __k) const { return find(__k) != end(); }
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
     _LIBCPP_INLINE_VISIBILITY
     iterator lower_bound(const key_type& __k)
@@ -1416,7 +1416,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     const_iterator lower_bound(const key_type& __k) const
             {return __tree_.lower_bound(__k);}
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
     typename enable_if<__is_transparent<_Compare, _K2>::value,iterator>::type
@@ -1434,7 +1434,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     const_iterator upper_bound(const key_type& __k) const
             {return __tree_.upper_bound(__k);}
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
     typename enable_if<__is_transparent<_Compare, _K2>::value,iterator>::type
@@ -1451,7 +1451,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     pair<const_iterator,const_iterator> equal_range(const key_type& __k) const
             {return __tree_.__equal_range_multi(__k);}
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
     typename enable_if<__is_transparent<_Compare, _K2>::value,pair<iterator,iterator>>::type
@@ -1573,7 +1573,7 @@ swap(multiset<_Key, _Compare, _Allocator>& __x,
     __x.swap(__y);
 }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _Key, class _Compare, class _Allocator, class _Predicate>
 inline _LIBCPP_INLINE_VISIBILITY
     typename multiset<_Key, _Compare, _Allocator>::size_type
@@ -1584,7 +1584,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 
 _LIBCPP_END_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace pmr {
 template <class _KeyT, class _CompareT = std::less<_KeyT>>

@@ -21,7 +21,7 @@ class TestMacCatalyst(TestBase):
                     patterns=[self.getArchitecture() +
                               r'.*-apple-ios.*-macabi a\.out'])
         self.expect("fr v s", substrs=["Hello macCatalyst"])
-        self.expect("p s", substrs=["Hello macCatalyst"])
+        self.expect("expression s", substrs=["Hello macCatalyst"])
         self.check_debugserver(log)
 
     def check_debugserver(self, log):

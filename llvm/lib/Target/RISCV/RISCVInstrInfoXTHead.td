@@ -43,6 +43,60 @@ class THVdotALUrVX<bits<6> funct6, RISCVVFormat opv, string opcodestr>
                    opcodestr, "$vd, $rs1, $vs2$vm">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
+let Predicates = [HasVendorXTHeadBa], DecoderNamespace = "THeadBa",
+  hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class THShiftALU_rri<bits<3> funct3, string opcodestr>
+    : RVInstR<0, funct3, OPC_CUSTOM_0, (outs GPR:$rd),
+              (ins GPR:$rs1, GPR:$rs2, uimm2:$uimm2),
+	      opcodestr, "$rd, $rs1, $rs2, $uimm2"> {
+  bits<2> uimm2;
+  let Inst{31-27} = 0;
+  let Inst{26-25} = uimm2;
+}
+
+let Predicates = [HasVendorXTHeadBb], DecoderNamespace = "THeadBb",
+  hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+class THShift_ri<bits<5> funct5, bits<3> funct3, string opcodestr>
+    : RVInstIShift<funct5, funct3, OPC_CUSTOM_0, (outs GPR:$rd),
+                   (ins GPR:$rs1, uimmlog2xlen:$shamt),
+		   opcodestr, "$rd, $rs1, $shamt">;
+
+class THBitfieldExtract_rii<bits<3> funct3, string opcodestr>
+    : RVInstI<funct3, OPC_CUSTOM_0, (outs GPR:$rd),
+              (ins GPR:$rs1, uimmlog2xlen:$msb, uimmlog2xlen:$lsb),
+	      opcodestr, "$rd, $rs1, $msb, $lsb"> {
+  bits<6> msb;
+  bits<6> lsb;
+  let Inst{31-26} = msb;
+  let Inst{25-20} = lsb;
+}
+
+class THRev_r<bits<5> funct5, bits<2> funct2, string opcodestr>
+    : RVInstR4<funct2, 0b001, OPC_CUSTOM_0, (outs GPR:$rd), (ins GPR:$rs1),
+               opcodestr, "$rd, $rs1"> {
+  let rs3 = funct5;
+  let rs2 = 0;
+}
+}
+
+let Predicates = [HasVendorXTHeadBb, IsRV64], DecoderNamespace = "THeadBb",
+  hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class THShiftW_ri<bits<7> funct7, bits<3> funct3, string opcodestr>
+    : RVInstIShiftW<funct7, funct3, OPC_CUSTOM_0, (outs GPR:$rd),
+                    (ins GPR:$rs1, uimm5:$shamt),
+		    opcodestr, "$rd, $rs1, $shamt">;
+
+
+let Predicates = [HasVendorXTHeadMac], DecoderNamespace = "THeadMac",
+    hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCommutable = 1 in
+class THMulAccumulate_rr<bits<7> funct7, string opcodestr>
+    : RVInstR<funct7, 0b001, OPC_CUSTOM_0, (outs GPR:$rd_wb),
+              (ins GPR:$rd, GPR:$rs1, GPR:$rs2),
+              opcodestr, "$rd, $rs1, $rs2"> {
+  let Constraints = "$rd_wb = $rd";
+}
+
+
 //===----------------------------------------------------------------------===//
 // Combination of instruction classes.
 // Use these multiclasses to define instructions more easily.
@@ -59,6 +113,47 @@ multiclass THVdotVMAQA<string opcodestr, bits<6> funct6> {
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
+let Predicates = [HasVendorXTHeadBa] in {
+def TH_ADDSL : THShiftALU_rri<0b001, "th.addsl">,
+               Sched<[WriteSHXADD, ReadSHXADD, ReadSHXADD]>;
+} // Predicates = [HasVendorXTHeadBa]
+
+let Predicates = [HasVendorXTHeadBb] in {
+def TH_SRRI : THShift_ri<0b00010, 0b001, "th.srri">;
+def TH_EXT : THBitfieldExtract_rii<0b010, "th.ext">;
+def TH_EXTU : THBitfieldExtract_rii<0b011, "th.extu">;
+def TH_FF0 : THRev_r<0b10000, 0b10, "th.ff0">;
+def TH_FF1 : THRev_r<0b10000, 0b11, "th.ff1">;
+def TH_REV : THRev_r<0b10000, 0b01, "th.rev">;
+def TH_TSTNBZ : THRev_r<0b10000, 0b00, "th.tstnbz">;
+} // Predicates = [HasVendorXTHeadBb]
+
+let Predicates = [HasVendorXTHeadBb, IsRV64], IsSignExtendingOpW = 1 in {
+def TH_SRRIW : THShiftW_ri<0b0001010, 0b001, "th.srriw">;
+def TH_REVW : THRev_r<0b10010, 0b00, "th.revw">;
+} // Predicates = [HasVendorXTHeadBb, IsRV64]
+
+let Predicates = [HasVendorXTHeadBs], DecoderNamespace = "THeadBs" in {
+let IsSignExtendingOpW = 1 in
+def TH_TST : RVBShift_ri<0b10001, 0b001, OPC_CUSTOM_0, "th.tst">,
+             Sched<[WriteSingleBitImm, ReadSingleBitImm]>;
+} // Predicates = [HasVendorXTHeadBs]
+
+let Predicates = [HasVendorXTHeadMac] in {
+def TH_MULA  : THMulAccumulate_rr<0b0010000, "th.mula">;
+def TH_MULS  : THMulAccumulate_rr<0b0010001, "th.muls">;
+}  // Predicates = [HasVendorXTHeadMac]
+
+let Predicates = [HasVendorXTHeadMac], IsSignExtendingOpW = 1 in {
+def TH_MULAH : THMulAccumulate_rr<0b0010100, "th.mulah">;
+def TH_MULSH : THMulAccumulate_rr<0b0010101, "th.mulsh">;
+} // Predicates = [HasVendorXTHeadMac], IsSignExtendingOpW = 1
+
+let Predicates = [HasVendorXTHeadMac, IsRV64], IsSignExtendingOpW = 1 in {
+def TH_MULAW : THMulAccumulate_rr<0b0010010, "th.mulaw">;
+def TH_MULSW : THMulAccumulate_rr<0b0010011, "th.mulsw">;
+} // Predicates = [HasVendorXTHeadMac, IsRV64]
+
 let Predicates = [HasVendorXTHeadVdot],
     Constraints = "@earlyclobber $vd",
     RVVConstraint = WidenV in {
@@ -134,6 +229,155 @@ multiclass VPatTernaryVMAQA_VV_VX<string intrinsic, string instruction,
 //===----------------------------------------------------------------------===//
 // Pseudo-instructions and codegen patterns
 //===----------------------------------------------------------------------===//
+let Predicates = [HasVendorXTHeadBa] in {
+def : Pat<(add GPR:$rs1, (shl GPR:$rs2, uimm2:$uimm2)),
+          (TH_ADDSL GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
+
+// Reuse complex patterns from StdExtZba
+def : Pat<(add sh1add_op:$rs1, non_imm12:$rs2),
+          (TH_ADDSL GPR:$rs2, sh1add_op:$rs1, 1)>;
+def : Pat<(add sh2add_op:$rs1, non_imm12:$rs2),
+          (TH_ADDSL GPR:$rs2, sh2add_op:$rs1, 2)>;
+def : Pat<(add sh3add_op:$rs1, non_imm12:$rs2),
+          (TH_ADDSL GPR:$rs2, sh3add_op:$rs1, 3)>;
+
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 6)), GPR:$rs2),
+          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 1), 1)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 10)), GPR:$rs2),
+          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 2), 1)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 18)), GPR:$rs2),
+          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 3), 1)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 12)), GPR:$rs2),
+          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 1), 2)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 20)), GPR:$rs2),
+          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 2), 2)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 36)), GPR:$rs2),
+          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 3), 2)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 24)), GPR:$rs2),
+          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 1), 3)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 40)), GPR:$rs2),
+          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 2), 3)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 72)), GPR:$rs2),
+          (TH_ADDSL GPR:$rs2, (TH_ADDSL GPR:$rs1, GPR:$rs1, 3), 3)>;
+
+def : Pat<(add GPR:$r, CSImm12MulBy4:$i),
+          (TH_ADDSL GPR:$r, (ADDI X0, (SimmShiftRightBy2XForm CSImm12MulBy4:$i)), 2)>;
+def : Pat<(add GPR:$r, CSImm12MulBy8:$i),
+          (TH_ADDSL GPR:$r, (ADDI X0, (SimmShiftRightBy3XForm CSImm12MulBy8:$i)), 3)>;
+
+def : Pat<(mul GPR:$r, C3LeftShift:$i),
+          (SLLI (TH_ADDSL GPR:$r, GPR:$r, 1),
+                (TrailingZeros C3LeftShift:$i))>;
+def : Pat<(mul GPR:$r, C5LeftShift:$i),
+          (SLLI (TH_ADDSL GPR:$r, GPR:$r, 2),
+                (TrailingZeros C5LeftShift:$i))>;
+def : Pat<(mul GPR:$r, C9LeftShift:$i),
+          (SLLI (TH_ADDSL GPR:$r, GPR:$r, 3),
+                (TrailingZeros C9LeftShift:$i))>;
+
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 11)),
+	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 1)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 19)),
+	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 1)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 13)),
+	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 1), 2)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 21)),
+	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 2)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 37)),
+	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 2)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 25)),
+	  (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 2), (TH_ADDSL GPR:$r, GPR:$r, 2), 2)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 41)),
+	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 2), 3)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 73)),
+	  (TH_ADDSL GPR:$r, (TH_ADDSL GPR:$r, GPR:$r, 3), 3)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 27)),
+	  (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 1)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 45)),
+	  (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 2)>;
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 81)),
+	  (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 3), (TH_ADDSL GPR:$r, GPR:$r, 3), 3)>;
+
+def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 200)),
+	  (SLLI (TH_ADDSL (TH_ADDSL GPR:$r, GPR:$r, 2),
+		       (TH_ADDSL GPR:$r, GPR:$r, 2), 2), 3)>;
+} // Predicates = [HasVendorXTHeadBa]
+
+let Predicates = [HasVendorXTHeadBb] in {
+def : PatGprImm<rotr, TH_SRRI, uimmlog2xlen>;
+// There's no encoding for a rotate-left-immediate in X-THead-Bb, as
+// it can be implemented with th.srri by negating the immediate.
+def : Pat<(rotl GPR:$rs1, uimmlog2xlen:$shamt),
+          (TH_SRRI GPR:$rs1, (ImmSubFromXLen uimmlog2xlen:$shamt))>;
+def : Pat<(rotr GPR:$rs1, GPR:$rs2),
+           (OR (SRL GPR:$rs1, GPR:$rs2),
+               (SLL GPR:$rs1, (SUB X0, GPR:$rs2)))>;
+def : Pat<(rotl GPR:$rs1, GPR:$rs2),
+           (OR (SLL GPR:$rs1, GPR:$rs2),
+               (SRL GPR:$rs1, (SUB X0, GPR:$rs2)))>;
+def : Pat<(sext_inreg GPR:$rs1, i32), (TH_EXT GPR:$rs1, 31, 0)>;
+def : Pat<(sext_inreg GPR:$rs1, i16), (TH_EXT GPR:$rs1, 15, 0)>;
+def : Pat<(sext_inreg GPR:$rs1, i8), (TH_EXT GPR:$rs1, 7, 0)>;
+def : Pat<(sext_inreg GPR:$rs1, i1), (TH_EXT GPR:$rs1, 0, 0)>;
+def : PatGpr<ctlz, TH_FF1>;
+def : Pat<(ctlz (xor GPR:$rs1, -1)), (TH_FF0 GPR:$rs1)>;
+def : PatGpr<bswap, TH_REV>;
+} // Predicates = [HasVendorXTHeadBb]
+
+let Predicates = [HasVendorXTHeadBb, IsRV64] in {
+def : PatGprImm<riscv_rorw, TH_SRRIW, uimm5>;
+def : Pat<(riscv_rolw GPR:$rs1, uimm5:$rs2),
+          (TH_SRRIW GPR:$rs1, (ImmSubFrom32 uimm5:$rs2))>;
+def : Pat<(riscv_rorw i64:$rs1, i64:$rs2),
+          (OR (SRLW i64:$rs1, i64:$rs2),
+              (SLLW i64:$rs1, (SUB X0, i64:$rs2)))>;
+def : Pat<(riscv_rolw i64:$rs1, i64:$rs2),
+          (OR (SLLW i64:$rs1, i64:$rs2),
+              (SRLW i64:$rs1, (SUB X0, i64:$rs2)))>;
+def : Pat<(sra (bswap i64:$rs1), (i64 32)),
+          (TH_REVW i64:$rs1)>;
+def : Pat<(binop_allwusers<srl> (bswap i64:$rs1), (i64 32)),
+          (TH_REVW i64:$rs1)>;
+def : Pat<(riscv_clzw i64:$rs1),
+          (TH_FF0 (SLLI (XORI i64:$rs1, -1), 32))>;
+} // Predicates = [HasVendorXTHeadBb, IsRV64]
+
+let Predicates = [HasVendorXTHeadBs] in {
+def : Pat<(and (srl GPR:$rs1, uimmlog2xlen:$shamt), 1),
+          (TH_TST GPR:$rs1, uimmlog2xlen:$shamt)>;
+def : Pat<(seteq (and GPR:$rs1, SingleBitSetMask:$mask), 0),
+          (TH_TST (XORI GPR:$rs1, -1), SingleBitSetMask:$mask)>;
+} // Predicates = [HasVendorXTHeadBs]
+
+let Predicates = [HasVendorXTHeadMac] in {
+def : Pat<(add GPR:$rd, (mul GPR:$rs1, GPR:$rs2)), (TH_MULA GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+def : Pat<(sub GPR:$rd, (mul GPR:$rs1, GPR:$rs2)), (TH_MULS GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+} // Predicates = [HasVendorXTHeadMac]
+
+let Predicates = [HasVendorXTHeadMac, IsRV64] in {
+// mulaw, mulsw are available only in RV64.
+def : Pat<(binop_allwusers<add> GPR:$rd, (mul GPR:$rs1, GPR:$rs2)),
+          (TH_MULAW GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+def : Pat<(binop_allwusers<sub> GPR:$rd, (mul GPR:$rs1, GPR:$rs2)),
+          (TH_MULSW GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+// mulah, mulsh produce a sign-extended result.
+def : Pat<(binop_allwusers<add> GPR:$rd, (mul
+            (sexti16 GPR:$rs1),
+            (sexti16 GPR:$rs2))),
+          (TH_MULAH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+def : Pat<(binop_allwusers<sub> GPR:$rd, (mul
+            (sexti16 GPR:$rs1),
+            (sexti16 GPR:$rs2))),
+          (TH_MULSH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+} // Predicates = [HasVendorXTHeadMac, IsRV64]
+
+let Predicates = [HasVendorXTHeadMac, IsRV32] in {
+def : Pat<(add GPR:$rd, (mul (sexti16 GPR:$rs1), (sexti16 GPR:$rs2))),
+	  (TH_MULAH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+def : Pat<(sub GPR:$rd, (mul (sexti16 GPR:$rs1), (sexti16 GPR:$rs2))),
+	  (TH_MULSH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+} // Predicates = [HasVendorXTHeadMac, IsRV32]
+
 defm PseudoTHVdotVMAQA      : VPseudoVMAQA_VV_VX;
 defm PseudoTHVdotVMAQAU     : VPseudoVMAQA_VV_VX;
 defm PseudoTHVdotVMAQASU    : VPseudoVMAQA_VV_VX;

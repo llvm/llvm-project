@@ -27,10 +27,10 @@
 // MLLVM-NOT: "-mllvm"{{.*}}"-amdgpu-early-inline-all=true"{{.*}}"-mllvm"{{.*}}"-amdgpu-early-inline-all=true"
 
 // RUN: %clang -### -Xarch_device -g -nogpulib --cuda-gpu-arch=gfx900 \
-// RUN:   -Xarch_device -fcf-protection=branch \
+// RUN:   -Xarch_device -fcf-protection=branch -Xarch_device -mllvm=--inline-threshold=100 \
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefix=DEV %s
-// DEV: "-cc1"{{.*}} "-fcuda-is-device" {{.*}} "-debug-info-kind={{.*}}" {{.*}} "-fcf-protection=branch"
-// DEV: "-cc1"{{.*}} "-fcuda-is-device" {{.*}} "-debug-info-kind={{.*}}" {{.*}} "-fcf-protection=branch"
+// DEV: "-cc1"{{.*}} "-fcuda-is-device" {{.*}} "-debug-info-kind={{.*}}" {{.*}} "-fcf-protection=branch" {{.*}}"-mllvm" "--inline-threshold=100"
+// DEV: "-cc1"{{.*}} "-fcuda-is-device" {{.*}} "-debug-info-kind={{.*}}" {{.*}} "-fcf-protection=branch" {{.*}}"-mllvm" "--inline-threshold=100"
 // DEV-NOT: clang{{.*}} {{.*}} "-debug-info-kind={{.*}}"
 
 // RUN: %clang -### -Xarch_host -g -nogpulib --cuda-gpu-arch=gfx900 \

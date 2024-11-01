@@ -35,11 +35,6 @@ def _getSuitableClangTidy(cfg):
     return None
 
 DEFAULT_FEATURES = [
-  Feature(name='fcoroutines-ts',
-          when=lambda cfg: hasCompileFlag(cfg, '-fcoroutines-ts') and
-                           featureTestMacros(cfg, flags='-fcoroutines-ts').get('__cpp_coroutines', 0) >= 201703,
-          actions=[AddCompileFlag('-fcoroutines-ts')]),
-
   Feature(name='thread-safety',
           when=lambda cfg: hasCompileFlag(cfg, '-Werror=thread-safety'),
           actions=[AddCompileFlag('-Werror=thread-safety')]),

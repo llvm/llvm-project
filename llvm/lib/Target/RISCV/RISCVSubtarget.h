@@ -56,6 +56,9 @@ private:
   uint8_t MaxInterleaveFactor = 2;
   RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
   std::bitset<RISCV::NUM_TARGET_REGS> UserReservedRegister;
+  Align PrefFunctionAlignment;
+  Align PrefLoopAlignment;
+
   RISCVFrameLowering FrameLowering;
   RISCVInstrInfo InstrInfo;
   RISCVRegisterInfo RegInfo;
@@ -94,6 +97,9 @@ public:
     return &TSInfo;
   }
   bool enableMachineScheduler() const override { return true; }
+
+  Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
+  Align getPrefLoopAlignment() const { return PrefLoopAlignment; }
 
   /// Returns RISCV processor family.
   /// Avoid this function! CPU specifics should be kept local to this class
@@ -175,6 +181,8 @@ public:
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
+
+  bool isTargetFuchsia() const { return getTargetTriple().isOSFuchsia(); }
 
   bool useConstantPoolForLargeInts() const;
 

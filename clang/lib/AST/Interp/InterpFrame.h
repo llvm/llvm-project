@@ -133,8 +133,8 @@ private:
   }
 
   /// Returns a pointer to a local's block.
-  void *localBlock(unsigned Offset) const {
-    return Locals.get() + Offset - sizeof(Block);
+  Block *localBlock(unsigned Offset) const {
+    return reinterpret_cast<Block *>(Locals.get() + Offset - sizeof(Block));
   }
 
   // Returns the inline descriptor of the local.

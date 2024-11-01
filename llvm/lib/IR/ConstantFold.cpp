@@ -1053,7 +1053,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
             isa<GlobalValue>(CE1->getOperand(0))) {
           GlobalValue *GV = cast<GlobalValue>(CE1->getOperand(0));
 
-          MaybeAlign GVAlign;
+          Align GVAlign; // defaults to 1
 
           if (Module *TheModule = GV->getParent()) {
             const DataLayout &DL = TheModule->getDataLayout();
@@ -1070,17 +1070,13 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
             // appropriate defaults
             if (isa<Function>(GV) && !DL.getFunctionPtrAlign())
               GVAlign = Align(4);
-          } else if (isa<Function>(GV)) {
-            // Without a datalayout we have to assume the worst case: that the
-            // function pointer isn't aligned at all.
-            GVAlign = std::nullopt;
           } else if (isa<GlobalVariable>(GV)) {
-            GVAlign = cast<GlobalVariable>(GV)->getAlign();
+            GVAlign = cast<GlobalVariable>(GV)->getAlign().valueOrOne();
           }
 
-          if (GVAlign && *GVAlign > 1) {
+          if (GVAlign > 1) {
             unsigned DstWidth = CI2->getType()->getBitWidth();
-            unsigned SrcWidth = std::min(DstWidth, Log2(*GVAlign));
+            unsigned SrcWidth = std::min(DstWidth, Log2(GVAlign));
             APInt BitsNotSet(APInt::getLowBitsSet(DstWidth, SrcWidth));
 
             // If checking bits we know are clear, return zero.
@@ -1945,13 +1941,13 @@ static bool isInBoundsIndices(ArrayRef<IndexTy> Idxs) {
 static bool isIndexInRangeOfArrayType(uint64_t NumElements,
                                       const ConstantInt *CI) {
   // We cannot bounds check the index if it doesn't fit in an int64_t.
-  if (CI->getValue().getMinSignedBits() > 64)
+  if (CI->getValue().getSignificantBits() > 64)
     return false;
 
   // A negative index or an index past the end of our sequential type is
   // considered out-of-range.
   int64_t IndexVal = CI->getSExtValue();
-  if (IndexVal < 0 || (NumElements > 0 && (uint64_t)IndexVal >= NumElements))
+  if (IndexVal < 0 || (IndexVal != 0 && (uint64_t)IndexVal >= NumElements))
     return false;
 
   // Otherwise, it is in-range.
@@ -2202,11 +2198,17 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
       Unknown = true;
       continue;
     }
+
+    // Determine the number of elements in our sequential type.
+    uint64_t NumElements = STy->getArrayNumElements();
+    if (!NumElements) {
+      Unknown = true;
+      continue;
+    }
+
     // It's out of range, but we can factor it into the prior
     // dimension.
     NewIdxs.resize(Idxs.size());
-    // Determine the number of elements in our sequential type.
-    uint64_t NumElements = STy->getArrayNumElements();
 
     // Expand the current index or the previous index to a vector from a scalar
     // if necessary.
@@ -2280,7 +2282,8 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
   // check for the "inbounds" property.
   if (!Unknown && !InBounds)
     if (auto *GV = dyn_cast<GlobalVariable>(C))
-      if (!GV->hasExternalWeakLinkage() && isInBoundsIndices(Idxs))
+      if (!GV->hasExternalWeakLinkage() && GV->getValueType() == PointeeTy &&
+          isInBoundsIndices(Idxs))
         return ConstantExpr::getGetElementPtr(PointeeTy, C, Idxs,
                                               /*InBounds=*/true, InRangeIndex);
 

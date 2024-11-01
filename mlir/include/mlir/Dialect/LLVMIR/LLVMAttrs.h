@@ -22,7 +22,6 @@
 
 namespace mlir {
 namespace LLVM {
-class LoopOptionsAttrBuilder;
 
 /// This class represents the base attribute for all debug info attributes.
 class DINodeAttr : public Attribute {
@@ -73,55 +72,5 @@ using linkage::Linkage;
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.h.inc"
-
-namespace mlir {
-namespace LLVM {
-
-/// Builder class for LoopOptionsAttr. This helper class allows to progressively
-/// build a LoopOptionsAttr one option at a time, and pay the price of attribute
-/// creation once all the options are in place.
-class LoopOptionsAttrBuilder {
-public:
-  /// Construct a empty builder.
-  LoopOptionsAttrBuilder() = default;
-
-  /// Construct a builder with an initial list of options from an existing
-  /// LoopOptionsAttr.
-  LoopOptionsAttrBuilder(LoopOptionsAttr attr);
-
-  /// Set the `disable_licm` option to the provided value. If no value
-  /// is provided the option is deleted.
-  LoopOptionsAttrBuilder &setDisableLICM(std::optional<bool> value);
-
-  /// Set the `interleave_count` option to the provided value. If no value
-  /// is provided the option is deleted.
-  LoopOptionsAttrBuilder &setInterleaveCount(std::optional<uint64_t> count);
-
-  /// Set the `disable_unroll` option to the provided value. If no value
-  /// is provided the option is deleted.
-  LoopOptionsAttrBuilder &setDisableUnroll(std::optional<bool> value);
-
-  /// Set the `disable_pipeline` option to the provided value. If no value
-  /// is provided the option is deleted.
-  LoopOptionsAttrBuilder &setDisablePipeline(std::optional<bool> value);
-
-  /// Set the `pipeline_initiation_interval` option to the provided value.
-  /// If no value is provided the option is deleted.
-  LoopOptionsAttrBuilder &
-  setPipelineInitiationInterval(std::optional<uint64_t> count);
-
-  /// Returns true if any option has been set.
-  bool empty() { return options.empty(); }
-
-private:
-  template <typename T>
-  LoopOptionsAttrBuilder &setOption(LoopOptionCase tag, std::optional<T> value);
-
-  friend class LoopOptionsAttr;
-  SmallVector<LoopOptionsAttr::OptionValuePair> options;
-};
-
-} // namespace LLVM
-} // namespace mlir
 
 #endif // MLIR_DIALECT_LLVMIR_LLVMATTRS_H_

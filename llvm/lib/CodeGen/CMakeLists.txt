@@ -35,6 +35,7 @@ add_llvm_component_library(LLVMCodeGen
   BasicBlockSections.cpp
   BasicBlockSectionsProfileReader.cpp
   CalcSpillWeights.cpp
+  CallBrPrepare.cpp
   CallingConvLower.cpp
   CFGuardLongjmp.cpp
   CFIFixup.cpp

@@ -389,6 +389,39 @@ static_assert(!std::random_access_iterator<RandomAccessIteratorBadIndex>);
 
 using RandomAccessRangeBadIndex = UncheckedRange<RandomAccessIteratorBadIndex>;
 
+class RandomAccessIteratorBadDifferenceType {
+  using Self = RandomAccessIteratorBadDifferenceType;
+
+public:
+  using value_type = int;
+  // Deliberately use a non-integer `difference_type`
+  using difference_type   = double;
+  using pointer           = double*;
+  using reference         = double&;
+  using iterator_category = std::random_access_iterator_tag;
+
+  reference operator*() const;
+  reference operator[](difference_type) const;
+
+  Self& operator++();
+  Self& operator--();
+  Self operator++(int);
+  Self operator--(int);
+
+  Self& operator+=(difference_type);
+  Self& operator-=(difference_type);
+  friend Self operator+(Self, difference_type);
+  friend Self operator+(difference_type, Self);
+  friend Self operator-(Self, difference_type);
+  friend difference_type operator-(Self, Self);
+
+  auto operator<=>(const Self&) const = default;
+};
+
+static_assert(std::regular<RandomAccessIteratorBadDifferenceType>);
+static_assert(!std::weakly_incrementable<RandomAccessIteratorBadDifferenceType>);
+static_assert(!std::random_access_iterator<RandomAccessIteratorBadDifferenceType>);
+
 template <class Iter>
 class ComparatorNotCopyable {
 public:

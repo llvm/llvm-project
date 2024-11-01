@@ -543,7 +543,9 @@ unsigned AMDGPUSubtarget::getImplicitArgNumBytes(const Function &F) const {
     return 16;
 
   // Assume all implicit inputs are used by default
-  unsigned NBytes = (AMDGPU::getAmdhsaCodeObjectVersion() >= 5) ? 256 : 56;
+  const Module *M = F.getParent();
+  unsigned NBytes =
+      AMDGPU::getCodeObjectVersion(*M) >= AMDGPU::AMDHSA_COV5 ? 256 : 56;
   return F.getFnAttributeAsParsedInteger("amdgpu-implicitarg-num-bytes",
                                          NBytes);
 }

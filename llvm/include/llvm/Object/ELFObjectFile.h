@@ -16,7 +16,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/SubtargetFeature.h"
@@ -34,6 +33,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstdint>
 
@@ -431,6 +431,8 @@ public:
 
   basic_symbol_iterator symbol_begin() const override;
   basic_symbol_iterator symbol_end() const override;
+
+  bool is64Bit() const override { return getBytesInAddress() == 8; }
 
   elf_symbol_iterator dynamic_symbol_begin() const;
   elf_symbol_iterator dynamic_symbol_end() const;

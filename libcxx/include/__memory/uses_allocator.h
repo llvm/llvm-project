@@ -49,7 +49,7 @@ struct _LIBCPP_TEMPLATE_VIS uses_allocator
 {
 };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp, class _Alloc>
 inline constexpr size_t uses_allocator_v = uses_allocator<_Tp, _Alloc>::value;
 #endif

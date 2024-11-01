@@ -163,7 +163,7 @@ TEST_F(MemtagTest, StoreTags) {
     uptr TaggedBegin = addFixedTag(NoTagBegin, Tag);
     uptr TaggedEnd = addFixedTag(NoTagEnd, Tag);
 
-    EXPECT_EQ(roundUpTo(TaggedEnd, archMemoryTagGranuleSize()),
+    EXPECT_EQ(roundUp(TaggedEnd, archMemoryTagGranuleSize()),
               storeTags(TaggedBegin, TaggedEnd));
 
     uptr LoadPtr = Addr;

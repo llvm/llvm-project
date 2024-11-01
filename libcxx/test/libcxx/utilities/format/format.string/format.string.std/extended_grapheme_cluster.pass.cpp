@@ -62,11 +62,11 @@ constexpr void test(const Data& data) {
   for (const auto& d : data) {
     assert(d.code_points.size() == d.breaks.size());
 
-    std::__unicode::__extended_grapheme_cluster_view view{d.input.data(), d.input.data() + d.input.size()};
+    std::__unicode::__extended_grapheme_cluster_view view{d.input.begin(), d.input.end()};
     for (size_t i = 0; i < d.breaks.size(); ++i) {
       auto r = view.__consume();
       assert(r.__code_point_ == d.code_points[i]);
-      assert(r.__last_ == d.input.data() + d.breaks[i]);
+      assert(r.__last_ == d.input.begin() + d.breaks[i]);
     }
   }
 }

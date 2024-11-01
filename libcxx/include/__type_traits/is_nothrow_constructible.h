@@ -68,7 +68,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp[_Ns]>
 #endif // __has_builtin(__is_nothrow_constructible)
 
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp, class ..._Args>
 inline constexpr bool is_nothrow_constructible_v = is_nothrow_constructible<_Tp, _Args...>::value;
 #endif

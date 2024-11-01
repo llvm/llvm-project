@@ -133,9 +133,9 @@ public:
     return ConstantPropagationLattice::bottom();
   }
 
-  void transfer(const CFGElement *E, ConstantPropagationLattice &Vars,
+  void transfer(const CFGElement &E, ConstantPropagationLattice &Vars,
                 Environment &Env) {
-    auto CS = E->getAs<CFGStmt>();
+    auto CS = E.getAs<CFGStmt>();
     if (!CS)
       return;
     auto S = CS->getStmt();

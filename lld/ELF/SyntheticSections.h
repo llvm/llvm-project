@@ -970,7 +970,7 @@ private:
   // hash collisions.
   size_t getShardId(uint32_t hash) {
     assert((hash >> 31) == 0);
-    return hash >> (31 - llvm::countTrailingZeros(numShards));
+    return hash >> (31 - llvm::countr_zero(numShards));
   }
 
   // Section size

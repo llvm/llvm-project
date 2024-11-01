@@ -84,3 +84,18 @@ constexpr int f() {
   return 5;
 }
 static_assert(a() == 5, "");
+
+constexpr int invalid() {
+  // Invalid expression in visit().
+  while(huh) {} // expected-error {{use of undeclared identifier}} \
+                // ref-error {{use of undeclared identifier}}
+
+  return 0;
+}
+
+constexpr void invalid2() {
+  int i = 0;
+  // Invalid expression in discard().
+  huh(); // expected-error {{use of undeclared identifier}} \
+         // ref-error {{use of undeclared identifier}}
+}

@@ -23,7 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_volatile : _BoolConstant<__is_volatile(_Tp)> { };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_volatile_v = __is_volatile(_Tp);
 #endif
@@ -33,7 +33,7 @@ inline constexpr bool is_volatile_v = __is_volatile(_Tp);
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_volatile               : public false_type {};
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_volatile<_Tp volatile> : public true_type {};
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_volatile_v = is_volatile<_Tp>::value;
 #endif

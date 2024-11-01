@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRTransformDialectTransforms
   CheckUses.cpp
+  TransformInterpreterPassBase.cpp
 
   DEPENDS
   MLIRTransformDialectTransformsIncGen

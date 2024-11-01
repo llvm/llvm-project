@@ -26,51 +26,6 @@
 using namespace clang;
 using namespace clang::interp;
 
-//===----------------------------------------------------------------------===//
-// Ret
-//===----------------------------------------------------------------------===//
-
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-static bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
-  S.CallStackDepth--;
-  const T &Ret = S.Stk.pop<T>();
-
-  assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
-  if (!S.checkingPotentialConstantExpression())
-    S.Current->popArgs();
-
-  if (InterpFrame *Caller = S.Current->Caller) {
-    PC = S.Current->getRetPC();
-    delete S.Current;
-    S.Current = Caller;
-    S.Stk.push<T>(Ret);
-  } else {
-    delete S.Current;
-    S.Current = nullptr;
-    if (!ReturnValue<T>(Ret, Result))
-      return false;
-  }
-  return true;
-}
-
-static bool RetVoid(InterpState &S, CodePtr &PC, APValue &Result) {
-  S.CallStackDepth--;
-
-  assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
-  if (!S.checkingPotentialConstantExpression())
-    S.Current->popArgs();
-
-  if (InterpFrame *Caller = S.Current->Caller) {
-    PC = S.Current->getRetPC();
-    delete S.Current;
-    S.Current = Caller;
-  } else {
-    delete S.Current;
-    S.Current = nullptr;
-  }
-  return true;
-}
-
 static bool RetValue(InterpState &S, CodePtr &Pt, APValue &Result) {
   llvm::report_fatal_error("Interpreter cannot return values");
 }
@@ -342,6 +297,11 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
   }
 
   if (!F->isConstexpr()) {
+    // Don't emit anything if we're checking for a potential constant
+    // expression. That will happen later when actually executing.
+    if (S.checkingPotentialConstantExpression())
+      return false;
+
     const SourceLocation &Loc = S.Current->getLocation(OpPC);
     if (S.getLangOpts().CPlusPlus11) {
       const FunctionDecl *DiagDecl = F->getDecl();
@@ -381,7 +341,7 @@ bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This) {
   const SourceInfo &Loc = S.Current->getSource(OpPC);
 
   bool IsImplicit = false;
-  if (auto *E = dyn_cast_or_null<CXXThisExpr>(Loc.asExpr()))
+  if (auto *E = dyn_cast_if_present<CXXThisExpr>(Loc.asExpr()))
     IsImplicit = E->isImplicit();
 
   if (S.getLangOpts().CPlusPlus11)
@@ -471,6 +431,49 @@ bool CheckCtorCall(InterpState &S, CodePtr OpPC, const Pointer &This) {
   assert(!This.isZero());
   const Record *R = This.getRecord();
   return CheckFieldsInitialized(S, OpPC, This, R);
+}
+
+bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status) {
+  // In a constant context, assume that any dynamic rounding mode or FP
+  // exception state matches the default floating-point environment.
+  if (S.inConstantContext())
+    return true;
+
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  FPOptions FPO = E.asExpr()->getFPFeaturesInEffect(S.Ctx.getLangOpts());
+
+  if ((Status & APFloat::opInexact) &&
+      FPO.getRoundingMode() == llvm::RoundingMode::Dynamic) {
+    // Inexact result means that it depends on rounding mode. If the requested
+    // mode is dynamic, the evaluation cannot be made in compile time.
+    S.FFDiag(E, diag::note_constexpr_dynamic_rounding);
+    return false;
+  }
+
+  if ((Status != APFloat::opOK) &&
+      (FPO.getRoundingMode() == llvm::RoundingMode::Dynamic ||
+       FPO.getExceptionMode() != LangOptions::FPE_Ignore ||
+       FPO.getAllowFEnvAccess())) {
+    S.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
+    return false;
+  }
+
+  if ((Status & APFloat::opStatus::opInvalidOp) &&
+      FPO.getExceptionMode() != LangOptions::FPE_Ignore) {
+    // There is no usefully definable result.
+    S.FFDiag(E);
+    return false;
+  }
+
+  return true;
+}
+
+bool CastFP(InterpState &S, CodePtr OpPC, const llvm::fltSemantics *Sem,
+            llvm::RoundingMode RM) {
+  Floating F = S.Stk.pop<Floating>();
+  Floating Result = F.toSemantics(Sem, RM);
+  S.Stk.push<Floating>(Result);
+  return true;
 }
 
 bool Interpret(InterpState &S, APValue &Result) {

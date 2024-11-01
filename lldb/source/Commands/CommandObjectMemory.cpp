@@ -594,18 +594,9 @@ protected:
       return false;
     }
 
-    ABISP abi;
-    if (Process *proc = m_exe_ctx.GetProcessPtr())
-      abi = proc->GetABI();
-
-    if (abi)
-      addr = abi->FixDataAddress(addr);
-
     if (argc == 2) {
       lldb::addr_t end_addr = OptionArgParser::ToAddress(
           &m_exe_ctx, command[1].ref(), LLDB_INVALID_ADDRESS, nullptr);
-      if (end_addr != LLDB_INVALID_ADDRESS && abi)
-        end_addr = abi->FixDataAddress(end_addr);
 
       if (end_addr == LLDB_INVALID_ADDRESS) {
         result.AppendError("invalid end address expression.");
@@ -1043,12 +1034,6 @@ protected:
     if (high_addr == LLDB_INVALID_ADDRESS || error.Fail()) {
       result.AppendError("invalid high address");
       return false;
-    }
-
-    ABISP abi = m_exe_ctx.GetProcessPtr()->GetABI();
-    if (abi) {
-      low_addr = abi->FixDataAddress(low_addr);
-      high_addr = abi->FixDataAddress(high_addr);
     }
 
     if (high_addr <= low_addr) {
@@ -1783,7 +1768,6 @@ protected:
       }
 
       auto load_addr_str = command[0].ref();
-      // Non-address bits in this will be handled later by GetMemoryRegion
       load_addr = OptionArgParser::ToAddress(&m_exe_ctx, load_addr_str,
                                              LLDB_INVALID_ADDRESS, &error);
       if (error.Fail() || load_addr == LLDB_INVALID_ADDRESS) {

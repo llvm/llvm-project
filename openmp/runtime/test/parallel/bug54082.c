@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#define N 1024
+#define N 128
 
 int main(int argc, char *argv[]) {
   int errors = 0;

@@ -105,6 +105,12 @@ TYPE_PARSER(construct<OmpDeviceClause>(
         ":"),
     scalarIntExpr))
 
+// device_type(any | host | nohost)
+TYPE_PARSER(construct<OmpDeviceTypeClause>(
+    "ANY" >> pure(OmpDeviceTypeClause::Type::Any) ||
+    "HOST" >> pure(OmpDeviceTypeClause::Type::Host) ||
+    "NOHOST" >> pure(OmpDeviceTypeClause::Type::Nohost)))
+
 // 2.12 IF (directive-name-modifier: scalar-logical-expr)
 TYPE_PARSER(construct<OmpIfClause>(
     maybe(
@@ -208,6 +214,8 @@ TYPE_PARSER(
                     parenthesized(Parser<OmpDependClause>{}))) ||
     "DEVICE" >> construct<OmpClause>(construct<OmpClause::Device>(
                     parenthesized(Parser<OmpDeviceClause>{}))) ||
+    "DEVICE_TYPE" >> construct<OmpClause>(construct<OmpClause::DeviceType>(
+                         parenthesized(Parser<OmpDeviceTypeClause>{}))) ||
     "DIST_SCHEDULE" >>
         construct<OmpClause>(construct<OmpClause::DistSchedule>(
             parenthesized("STATIC" >> maybe("," >> scalarIntExpr)))) ||

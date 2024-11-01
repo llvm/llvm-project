@@ -252,6 +252,20 @@ Value *InstCombinerImpl::EvaluateInDifferentType(Value *V, Type *Ty,
     Res = CastInst::Create(
       static_cast<Instruction::CastOps>(Opc), I->getOperand(0), Ty);
     break;
+  case Instruction::Call:
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+      switch (II->getIntrinsicID()) {
+      default:
+        llvm_unreachable("Unsupported call!");
+      case Intrinsic::vscale: {
+        Function *Fn =
+            Intrinsic::getDeclaration(I->getModule(), Intrinsic::vscale, {Ty});
+        Res = CallInst::Create(Fn->getFunctionType(), Fn);
+        break;
+      }
+      }
+    }
+    break;
   default:
     // TODO: Can handle more cases here.
     llvm_unreachable("Unreachable!");
@@ -501,16 +515,12 @@ static bool canEvaluateTruncated(Value *V, Type *Ty, InstCombinerImpl &IC,
     // If the integer type can hold the max FP value, it is safe to cast
     // directly to that type. Otherwise, we may create poison via overflow
     // that did not exist in the original code.
-    //
-    // The max FP value is pow(2, MaxExponent) * (1 + MaxFraction), so we need
-    // at least one more bit than the MaxExponent to hold the max FP value.
     Type *InputTy = I->getOperand(0)->getType()->getScalarType();
     const fltSemantics &Semantics = InputTy->getFltSemantics();
-    uint32_t MinBitWidth = APFloatBase::semanticsMaxExponent(Semantics);
-    // Extra sign bit needed.
-    if (I->getOpcode() == Instruction::FPToSI)
-      ++MinBitWidth;
-    return Ty->getScalarSizeInBits() > MinBitWidth;
+    uint32_t MinBitWidth =
+      APFloatBase::semanticsIntSizeInBits(Semantics,
+          I->getOpcode() == Instruction::FPToSI);
+    return Ty->getScalarSizeInBits() >= MinBitWidth;
   }
   default:
     // TODO: Can handle more cases here.
@@ -1217,6 +1227,13 @@ static bool canEvaluateZExtd(Value *V, Type *Ty, unsigned &BitsToClear,
         return false;
     return true;
   }
+  case Instruction::Call:
+    // llvm.vscale() can always be executed in larger type, because the
+    // value is automatically zero-extended.
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
+      if (II->getIntrinsicID() == Intrinsic::vscale)
+        return true;
+    return false;
   default:
     // TODO: Can handle more cases here.
     return false;
@@ -1402,7 +1419,7 @@ Instruction *InstCombinerImpl::transformSExtICmp(ICmpInst *Cmp,
         if (!Op1C->isZero() == (Pred == ICmpInst::ICMP_NE)) {
           // sext ((x & 2^n) == 0)   -> (x >> n) - 1
           // sext ((x & 2^n) != 2^n) -> (x >> n) - 1
-          unsigned ShiftAmt = KnownZeroMask.countTrailingZeros();
+          unsigned ShiftAmt = KnownZeroMask.countr_zero();
           // Perform a right shift to place the desired bit in the LSB.
           if (ShiftAmt)
             In = Builder.CreateLShr(In,
@@ -1416,7 +1433,7 @@ Instruction *InstCombinerImpl::transformSExtICmp(ICmpInst *Cmp,
         } else {
           // sext ((x & 2^n) != 0)   -> (x << bitwidth-n) a>> bitwidth-1
           // sext ((x & 2^n) == 2^n) -> (x << bitwidth-n) a>> bitwidth-1
-          unsigned ShiftAmt = KnownZeroMask.countLeadingZeros();
+          unsigned ShiftAmt = KnownZeroMask.countl_zero();
           // Perform a left shift to place the desired bit in the MSB.
           if (ShiftAmt)
             In = Builder.CreateShl(In,

@@ -80,8 +80,8 @@ struct StrView : std::ranges::view_base {
   // C++23 and later.
   template <std::ranges::range R>
   constexpr StrView(R&& r) : buffer_(r.begin(), r.end()) {}
-  constexpr const char* begin() const { return buffer_.begin(); }
-  constexpr const char* end() const { return buffer_.end(); }
+  constexpr std::string_view::const_iterator begin() const { return buffer_.begin(); }
+  constexpr std::string_view::const_iterator end() const { return buffer_.end(); }
   constexpr bool operator==(const StrView& rhs) const { return buffer_ == rhs.buffer_; }
 };
 static_assert( std::ranges::random_access_range<StrView>);

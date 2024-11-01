@@ -260,22 +260,45 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     /// reset to the default/identity.
     SparseTensorEncodingAttr withoutOrdering() const;
 
-    /// Return true if every level is dense in the encoding.
+    /// Returns true if every level is dense.  Also returns true for
+    /// the null encoding (since dense-tensors are always all-dense).
     bool isAllDense() const;
 
-    /// Return true if the encoding has an identity dimension ordering.
+    /// Returns true if every level is ordered.  Also returns true for
+    /// the null encoding (since dense-tensors are always all-ordered).
+    bool isAllOrdered() const;
+
+    /// Returns true if the encoding has an identity dimension ordering.
+    /// Also returns true for the null encoding (since dense-tensors
+    /// always have the identity ordering).
     bool hasIdDimOrdering() const;
+
+    /// Returns the number of storage levels.  Asserts that the encoding
+    /// is non-null (since there is no fixed result that's valid for
+    /// every dense-tensor).
+    ::mlir::sparse_tensor::Level getLvlRank() const;
+
+    /// Safely looks up the level-type for the requested level.  (Returns
+    /// `DimLevelType::Dense` for the null encoding, since dense-tensors
+    /// are always all-dense.)
+    ::mlir::sparse_tensor::DimLevelType getLvlType(::mlir::sparse_tensor::Level l) const;
+
+    bool isDenseLvl(::mlir::sparse_tensor::Level l) const { return isDenseDLT(getLvlType(l)); }
+    bool isCompressedLvl(::mlir::sparse_tensor::Level l) const { return isCompressedDLT(getLvlType(l)); }
+    bool isSingletonLvl(::mlir::sparse_tensor::Level l) const { return isSingletonDLT(getLvlType(l)); }
+    bool isOrderedLvl(::mlir::sparse_tensor::Level l) const { return isOrderedDLT(getLvlType(l)); }
+    bool isUniqueLvl(::mlir::sparse_tensor::Level l) const { return isUniqueDLT(getLvlType(l)); }
 
     bool isSlice() const {
       return !getDimSlices().empty();
     }
 
-    std::optional<uint64_t> getStaticDimSliceOffset(unsigned dim) const;
-    std::optional<uint64_t> getStaticDimSliceSize(unsigned dim) const;
-    std::optional<uint64_t> getStaticDimSliceStride(unsigned dim) const;
-    std::optional<uint64_t> getStaticLvlSliceOffset(unsigned lvl) const;
-    std::optional<uint64_t> getStaticLvlSliceSize(unsigned lvl) const;
-    std::optional<uint64_t> getStaticLvlSliceStride(unsigned lvl) const;
+    std::optional<uint64_t> getStaticDimSliceOffset(::mlir::sparse_tensor::Dimension dim) const;
+    std::optional<uint64_t> getStaticDimSliceSize(::mlir::sparse_tensor::Dimension dim) const;
+    std::optional<uint64_t> getStaticDimSliceStride(::mlir::sparse_tensor::Dimension dim) const;
+    std::optional<uint64_t> getStaticLvlSliceOffset(::mlir::sparse_tensor::Level lvl) const;
+    std::optional<uint64_t> getStaticLvlSliceSize(::mlir::sparse_tensor::Level lvl) const;
+    std::optional<uint64_t> getStaticLvlSliceStride(::mlir::sparse_tensor::Level lvl) const;
   }];
 
   let genVerifyDecl = 1;
@@ -312,17 +335,60 @@ def SparseTensorStorageSpecifierKindAttr
 def IsSparseTensorPred
   : CPred<"!!::mlir::sparse_tensor::getSparseTensorEncoding($_self)">;
 
+def IsSparseTensorSlicePred
+  : CPred<"!!::mlir::sparse_tensor::getSparseTensorEncoding($_self) && "
+          "  ::mlir::sparse_tensor::getSparseTensorEncoding($_self).isSlice()">;
+
 // The following four follow the same idiom as `TensorOf`, `AnyTensor`,
 // `RankedTensorOf`, `AnyRankedTensor`.
 
 class SparseTensorOf<list<Type> allowedTypes>
   : TensorOf<allowedTypes, [IsSparseTensorPred], "sparse tensor">;
 
+class SparseTensorSliceOf<list<Type> allowedTypes>
+  : TensorOf<allowedTypes, [IsSparseTensorSlicePred], "sparse tensor slice">;
+
 def AnySparseTensor : SparseTensorOf<[AnyType]>;
+def AnySparseTensorSlice : SparseTensorSliceOf<[AnyType]>;
 
 class RankedSparseTensorOf<list<Type> allowedTypes>
   : RankedTensorOf<allowedTypes, [IsSparseTensorPred], "ranked sparse tensor">;
 
 def AnyRankedSparseTensor : RankedSparseTensorOf<[AnyType]>;
+
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Sorting Algorithm Attribute.
+//===----------------------------------------------------------------------===//
+
+// TODO: Currently, we only provide four implementations, and expose the
+// implementations via attribute algorithm. In the future, if we will need
+// to support both stable and non-stable quick sort, we may add
+// quick_sort_nonstable enum to the attribute. Alternative, we may use two
+// attributes, (stable|nonstable, algorithm), to specify a sorting
+// implementation.
+//
+// --------------------------------------------------------------------------
+// |           | hybrid_qsort| insertion_sort | qsort       | heap_sort.    |
+// |non-stable | Impl        | X              |  Impl       | Impl          |
+// |stable     | X           | Impl           |  Not Impl   | X             |
+// --------------------------------------------------------------------------
+
+// The C++ enum for sparse tensor sort kind.
+def SparseTensorSortKindEnum
+    : I32EnumAttr<"SparseTensorSortKind", "sparse tensor sort algorithm", [
+        I32EnumAttrCase<"HybridQuickSort",    0, "hybrid_quick_sort">,
+        I32EnumAttrCase<"InsertionSortStable", 1, "insertion_sort_stable">,
+        I32EnumAttrCase<"QuickSort", 2, "quick_sort">,
+        I32EnumAttrCase<"HeapSort", 3, "heap_sort">,
+      ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = SparseTensor_Dialect.cppNamespace;
+}
+
+// Define the enum sparse tensor sort kind attribute.
+def SparseTensorSortKindAttr
+    : EnumAttr<SparseTensor_Dialect, SparseTensorSortKindEnum,
+               "SparseTensorSortAlgorithm"> {
+}
 
 #endif // SPARSETENSOR_ATTRDEFS

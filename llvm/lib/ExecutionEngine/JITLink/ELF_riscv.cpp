@@ -606,8 +606,8 @@ private:
 
 public:
   ELFLinkGraphBuilder_riscv(StringRef FileName,
-                            const object::ELFFile<ELFT> &Obj, const Triple T)
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(T), FileName,
+                            const object::ELFFile<ELFT> &Obj, Triple TT)
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), FileName,
                                   riscv::getEdgeKindName) {}
 };
 

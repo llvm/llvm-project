@@ -1149,6 +1149,12 @@ LLVMMetadataRef LLVMDIBuilderCreateGlobalVariableExpression(
     unsigned LineNo, LLVMMetadataRef Ty, LLVMBool LocalToUnit,
     LLVMMetadataRef Expr, LLVMMetadataRef Decl, uint32_t AlignInBits);
 
+
+/**
+ * Get the dwarf::Tag of a DINode
+ */
+uint16_t LLVMGetDINodeTag(LLVMMetadataRef MD);
+
 /**
  * Retrieves the \c DIVariable associated with this global variable expression.
  * \param GVE    The global variable expression.

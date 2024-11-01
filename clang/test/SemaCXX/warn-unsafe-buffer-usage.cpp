@@ -80,20 +80,24 @@ void testArraySubscripts(int *p, int **pp) {
 
 void testArraySubscriptsWithAuto(int *p, int **pp) {
   int a[10];
-  auto ap1 = a;   // expected-warning{{'ap1' is an unsafe pointer used for buffer access}}
+  auto ap1 = a;   // expected-warning{{'ap1' is an unsafe pointer used for buffer access}} \
+		     expected-note{{change type of 'ap1' to 'std::span' to preserve bounds information}}
 
   foo(ap1[1]);    // expected-note{{used in buffer access here}}
 
-  auto ap2 = p;   // expected-warning{{'ap2' is an unsafe pointer used for buffer access}}
+  auto ap2 = p;   // expected-warning{{'ap2' is an unsafe pointer used for buffer access}} \
+  		     expected-note{{change type of 'ap2' to 'std::span' to preserve bounds information}}
 
   foo(ap2[1]);    // expected-note{{used in buffer access here}}
 
-  auto ap3 = pp;  // expected-warning{{'ap3' is an unsafe pointer used for buffer access}}
+  auto ap3 = pp;  // expected-warning{{'ap3' is an unsafe pointer used for buffer access}} \
+		     expected-note{{change type of 'ap3' to 'std::span' to preserve bounds information}}
 
   foo(ap3[1][1]); // expected-note{{used in buffer access here}}
                   // expected-warning@-1{{unsafe buffer access}}
 
-  auto ap4 = *pp; // expected-warning{{'ap4' is an unsafe pointer used for buffer access}}
+  auto ap4 = *pp; // expected-warning{{'ap4' is an unsafe pointer used for buffer access}} \
+  		     expected-note{{change type of 'ap4' to 'std::span' to preserve bounds information}}
 
   foo(ap4[1]);    // expected-note{{used in buffer access here}}
 }
@@ -355,7 +359,8 @@ void testMultiLineDeclStmt(int * p) {
   auto
 
 
-  ap1 = p;      // expected-warning{{'ap1' is an unsafe pointer used for buffer access}}
+  ap1 = p;      // expected-warning{{'ap1' is an unsafe pointer used for buffer access}} \
+         	   expected-note{{change type of 'ap1' to 'std::span' to preserve bounds information}}
 
   foo(ap1[1]);  // expected-note{{used in buffer access here}}
 }

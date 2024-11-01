@@ -16,11 +16,11 @@
 #ifndef LLVM_TOOLS_BUGPOINT_TOOLRUNNER_H
 #define LLVM_TOOLS_BUGPOINT_TOOLRUNNER_H
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SystemUtils.h"
+#include "llvm/TargetParser/Triple.h"
 #include <exception>
 #include <vector>
 

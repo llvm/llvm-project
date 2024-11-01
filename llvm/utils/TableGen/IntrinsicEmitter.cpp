@@ -14,13 +14,28 @@
 #include "CodeGenTarget.h"
 #include "SequenceToOffsetTable.h"
 #include "TableGenBackends.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MachineValueType.h"
+#include "llvm/Support/ModRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
+#include <cassert>
+#include <map>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
 using namespace llvm;
 
 cl::OptionCategory GenIntrinsicCat("Options for -gen-intrinsic-enums");

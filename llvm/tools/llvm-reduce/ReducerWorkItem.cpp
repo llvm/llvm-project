@@ -30,13 +30,13 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <optional>
@@ -443,7 +443,8 @@ bool ReducerWorkItem::isReduced(const TestRunner &Test) const {
       CurrentFilepath,
       UseBitcode && !isMIR() ? sys::fs::OF_None : sys::fs::OF_Text);
   if (EC) {
-    errs() << "Error making unique filename: " << EC.message() << "!\n";
+    WithColor::error(errs(), Test.getToolName())
+        << "error making unique filename: " << EC.message() << '\n';
     exit(1);
   }
 
@@ -453,8 +454,9 @@ bool ReducerWorkItem::isReduced(const TestRunner &Test) const {
 
   Out.os().close();
   if (Out.os().has_error()) {
-    errs() << "Error emitting bitcode to file '" << CurrentFilepath
-           << "': " << Out.os().error().message();
+    WithColor::error(errs(), Test.getToolName())
+        << "error emitting bitcode to file '" << CurrentFilepath
+        << "': " << Out.os().error().message() << '\n';
     exit(1);
   }
 
@@ -805,7 +807,7 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
 
     if (!isBitcode((const unsigned char *)(*MB)->getBufferStart(),
                    (const unsigned char *)(*MB)->getBufferEnd())) {
-      std::unique_ptr<Module> Result = parseIRFile(Filename, Err, Ctxt);
+      std::unique_ptr<Module> Result = parseIR(**MB, Err, Ctxt);
       if (!Result) {
         Err.print(ToolName.data(), errs());
         return {nullptr, false};

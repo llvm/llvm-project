@@ -26,7 +26,14 @@ public:
 
   ~SBLaunchInfo();
 
+#ifndef SWIG
+  // The copy constructor for SBLaunchInfo presents some problems on some
+  // supported versions of swig (e.g. 3.0.2). When trying to create an
+  // SBLaunchInfo from python with the argument `None`, swig will try to call
+  // the copy constructor instead of SBLaunchInfo(const char **). For that
+  // reason, we avoid exposing the copy constructor to python.
   SBLaunchInfo(const SBLaunchInfo &rhs);
+#endif
 
   SBLaunchInfo &operator=(const SBLaunchInfo &rhs);
 

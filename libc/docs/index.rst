@@ -60,7 +60,7 @@ stages there is no ABI stability in any form.
    :caption: Status
 
    date_and_time
-   math
+   math/index.rst
    strings
    stdio
 

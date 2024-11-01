@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include "src/ctype/isascii.h"
 

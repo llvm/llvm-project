@@ -266,11 +266,6 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         else:
             return lit.Test.Result(lit.Test.UNRESOLVED, "Unknown test suffix for '{}'".format(filename))
 
-    # Utility function to add compile flags in lit.local.cfg files.
-    def addCompileFlags(self, config, *flags):
-        string = ' '.join(flags)
-        config.substitutions = [(s, x + ' ' + string) if s == '%{compile_flags}' else (s, x) for (s, x) in config.substitutions]
-
     def _executeShTest(self, test, litConfig, steps):
         if test.config.unsupported:
             return lit.Test.Result(lit.Test.UNSUPPORTED, 'Test is unsupported')

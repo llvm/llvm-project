@@ -13,7 +13,12 @@ package(default_visibility = ["//visibility:public"])
             "//mlir:mlir-opt",
             "//mlir:mlir-translate",
             "//mlir/test:lit_data",
-        ],
+        ] + glob([
+            "Transform/*-source.mlir",
+        ])
     )
-    for src in glob(["**/*.mlir"])
+    for src in glob(
+        include=["**/*.mlir"],
+        exclude=["Transform/*-source.mlir"]
+    )
 ]

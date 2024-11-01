@@ -24,6 +24,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/EHUtils.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -83,75 +84,13 @@ public:
 } // end anonymous namespace
 
 /// setDescendantEHBlocksCold - This splits all EH pads and blocks reachable
-/// only by EH pad as cold. This will help mark EH pads statically cold instead
-/// of relying on profile data.
-static void
-setDescendantEHBlocksCold(SmallVectorImpl<MachineBasicBlock *> &EHBlocks,
-                          MachineFunction &MF) {
-  MachineBasicBlock *StartBlock = &MF.front();
-  // A block can be unknown if its not reachable from anywhere
-  // EH if its only reachable from start blocks via some path through EH pads
-  // NonEH if it's reachable from Non EH blocks as well.
-  enum Status { Unknown = 0, EH = 1, NonEH = 2 };
-  DenseSet<MachineBasicBlock *> WorkList;
-  DenseMap<MachineBasicBlock *, Status> Statuses;
-
-  auto getStatus = [&](MachineBasicBlock *MBB) {
-    if (Statuses.find(MBB) != Statuses.end())
-      return Statuses[MBB];
-    else
-      return Unknown;
-  };
-
-  auto checkPredecessors = [&](MachineBasicBlock *MBB, Status Stat) {
-    for (auto *PredMBB : MBB->predecessors()) {
-      Status PredStatus = getStatus(PredMBB);
-      // If status of predecessor block has gone above current block
-      // we update current blocks status.
-      if (PredStatus > Stat)
-        Stat = PredStatus;
-    }
-    return Stat;
-  };
-
-  auto addSuccesors = [&](MachineBasicBlock *MBB) {
-    for (auto *SuccMBB : MBB->successors()) {
-      if (!SuccMBB->isEHPad())
-        WorkList.insert(SuccMBB);
-    }
-  };
-
-  // Insert the successors of start block
-  // and landing pads successor.
-  Statuses[StartBlock] = NonEH;
-  addSuccesors(StartBlock);
-  for (auto *LP : EHBlocks) {
-    addSuccesors(LP);
-    Statuses[LP] = EH;
-  }
-
-  // Worklist iterative algorithm.
-  while (!WorkList.empty()) {
-    auto *MBB = *WorkList.begin();
-    WorkList.erase(MBB);
-
-    Status OldStatus = getStatus(MBB);
-
-    // Check on predecessors and check for
-    // Status update.
-    Status NewStatus = checkPredecessors(MBB, OldStatus);
-
-    // Did the block status change?
-    bool changed = OldStatus != NewStatus;
-    if (changed) {
-      addSuccesors(MBB);
-      Statuses[MBB] = NewStatus;
-    }
-  }
-
-  for (auto Entry : Statuses) {
-    if (Entry.second == EH)
-      Entry.first->setSectionID(MBBSectionID::ColdSectionID);
+/// only by EH pad as cold. This will help mark EH pads statically cold
+/// instead of relying on profile data.
+static void setDescendantEHBlocksCold(MachineFunction &MF) {
+  DenseSet<MachineBasicBlock *> EHBlocks;
+  computeEHOnlyBlocks(MF, EHBlocks);
+  for (auto Block : EHBlocks) {
+    Block->setSectionID(MBBSectionID::ColdSectionID);
   }
 }
 
@@ -219,7 +158,7 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
 
   // Split all EH code and it's descendant statically by default.
   if (SplitAllEHCode)
-    setDescendantEHBlocksCold(LandingPads, MF);
+    setDescendantEHBlocksCold(MF);
   // We only split out eh pads if all of them are cold.
   else {
     bool HasHotLandingPads = false;

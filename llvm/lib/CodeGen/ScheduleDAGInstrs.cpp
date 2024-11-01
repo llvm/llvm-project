@@ -214,7 +214,7 @@ void ScheduleDAGInstrs::addSchedBarrierDeps() {
       if (Reg.isPhysical()) {
         Uses.insert(PhysRegSUOper(&ExitSU, -1, Reg));
       } else if (Reg.isVirtual() && MO.readsReg()) {
-        addVRegUseDeps(&ExitSU, ExitMI->getOperandNo(&MO));
+        addVRegUseDeps(&ExitSU, MO.getOperandNo());
       }
     }
   }

@@ -3625,13 +3625,13 @@ public:
     explicit wstring_convert(_Codecvt* __pcvt);
 #else
     _LIBCPP_INLINE_VISIBILITY
-    _LIBCPP_EXPLICIT_AFTER_CXX11
+    _LIBCPP_EXPLICIT_SINCE_CXX14
     wstring_convert(_Codecvt* __pcvt = new _Codecvt);
 #endif
 
     _LIBCPP_INLINE_VISIBILITY
     wstring_convert(_Codecvt* __pcvt, state_type __state);
-    _LIBCPP_EXPLICIT_AFTER_CXX11 wstring_convert(const byte_string& __byte_err,
+    _LIBCPP_EXPLICIT_SINCE_CXX14 wstring_convert(const byte_string& __byte_err,
                     const wide_string& __wide_err = wide_string());
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
@@ -3907,7 +3907,7 @@ public:
                              _Codecvt* __pcvt = new _Codecvt,
                              state_type __state = state_type());
 #else
-    _LIBCPP_EXPLICIT_AFTER_CXX11
+    _LIBCPP_EXPLICIT_SINCE_CXX14
     wbuffer_convert(streambuf* __bytebuf = nullptr,
                     _Codecvt* __pcvt = new _Codecvt,
                     state_type __state = state_type());

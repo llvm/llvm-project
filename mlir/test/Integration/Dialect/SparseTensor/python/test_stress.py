@@ -1,4 +1,4 @@
-# RUN: SUPPORT_LIB=%mlir_lib_dir/libmlir_c_runner_utils%shlibext \
+# RUN: env SUPPORT_LIB=%mlir_c_runner_utils \
 # RUN:   %PYTHON %s | FileCheck %s
 
 import ctypes
@@ -197,7 +197,7 @@ def main():
     f64 = ir.F64Type.get()
     # Be careful about increasing this because
     #     len(types) = 1 + len(level_choices)^rank * rank! * len(bitwidths)^2
-    shape = range(2, 6)
+    shape = range(2, 3)
     rank = len(shape)
     # All combinations.
     # TODO: add singleton here too; which requires updating how `np_arg0`

@@ -68,7 +68,7 @@ public:
   /// Checks if the block is temporary.
   bool isTemporary() const { return Desc->IsTemporary; }
   /// Returns the size of the block.
-  InterpSize getSize() const { return Desc->getAllocSize(); }
+  unsigned getSize() const { return Desc->getAllocSize(); }
   /// Returns the declaration ID.
   std::optional<unsigned> getDeclID() const { return DeclID; }
 

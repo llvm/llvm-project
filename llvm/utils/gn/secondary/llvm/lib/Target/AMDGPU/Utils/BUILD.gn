@@ -10,6 +10,9 @@ static_library("Utils") {
   output_name = "LLVMAMDGPUUtils"
   public_deps = [ ":AMDGPUGenSearchableTables" ]
   deps = [
+    # AMDGPUBaseInfo.cpp includes GCNSubtarget.h which after 490e348e679
+    # includes the generated AMDGPUGenRegisterBank.inc file :/
+    "../:AMDGPUGenRegisterBank",
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/IR",
     "//llvm/lib/MC",

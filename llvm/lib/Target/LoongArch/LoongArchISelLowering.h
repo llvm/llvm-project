@@ -181,6 +181,16 @@ public:
   bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
                               SDValue C) const override;
 
+  bool isUsedByReturnOnly(SDNode *N, SDValue &Chain) const override;
+
+  bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
+                             unsigned AS,
+                             Instruction *I = nullptr) const override;
+
+  bool hasAndNotCompare(SDValue Y) const override;
+
+  bool convertSelectOfConstantsToMath(EVT VT) const override { return true; }
+
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
   typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,

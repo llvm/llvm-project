@@ -21,7 +21,6 @@ include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpAsmInterface.td"
-include "mlir/IR/SubElementInterfaces.td"
 
 // All of the attributes will extend this class.
 class Test_Attr<string name, list<Trait> traits = []>
@@ -120,9 +119,7 @@ def TestI64ElementsAttr : Test_Attr<"TestI64Elements", [
   let hasCustomAssemblyFormat = 1;
 }
 
-def TestSubElementsAccessAttr : Test_Attr<"TestSubElementsAccess", [
-    SubElementAttrInterface
-  ]> {
+def TestSubElementsAccessAttr : Test_Attr<"TestSubElementsAccess"> {
   let mnemonic = "sub_elements_access";
 
   let parameters = (ins

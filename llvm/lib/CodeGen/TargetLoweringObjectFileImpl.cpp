@@ -16,7 +16,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -65,6 +64,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <string>
 
@@ -182,26 +182,14 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
     // The small model guarantees static code/data size < 4GB, but not where it
     // will be in memory. Most of these could end up >2GB away so even a signed
     // pc-relative 32-bit address is insufficient, theoretically.
-    if (isPositionIndependent()) {
-      // ILP32 uses sdata4 instead of sdata8
-      if (TgtM.getTargetTriple().getEnvironment() == Triple::GNUILP32) {
-        PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
-                              dwarf::DW_EH_PE_sdata4;
-        LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
-        TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
-                        dwarf::DW_EH_PE_sdata4;
-      } else {
-        PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
-                              dwarf::DW_EH_PE_sdata8;
-        LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata8;
-        TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
-                        dwarf::DW_EH_PE_sdata8;
-      }
-    } else {
-      PersonalityEncoding = dwarf::DW_EH_PE_absptr;
-      LSDAEncoding = dwarf::DW_EH_PE_absptr;
-      TTypeEncoding = dwarf::DW_EH_PE_absptr;
-    }
+    //
+    // Use DW_EH_PE_indirect even for -fno-pic to avoid copy relocations.
+    LSDAEncoding = dwarf::DW_EH_PE_pcrel |
+                   (TgtM.getTargetTriple().getEnvironment() == Triple::GNUILP32
+                        ? dwarf::DW_EH_PE_sdata4
+                        : dwarf::DW_EH_PE_sdata8);
+    PersonalityEncoding = LSDAEncoding | dwarf::DW_EH_PE_indirect;
+    TTypeEncoding = LSDAEncoding | dwarf::DW_EH_PE_indirect;
     break;
   case Triple::lanai:
     LSDAEncoding = dwarf::DW_EH_PE_absptr;
@@ -591,14 +579,7 @@ static const MCSymbolELF *getLinkedToSymbol(const GlobalObject *GO,
   if (!MD)
     return nullptr;
 
-  const MDOperand &Op = MD->getOperand(0);
-  if (!Op.get())
-    return nullptr;
-
-  auto *VM = dyn_cast<ValueAsMetadata>(Op);
-  if (!VM)
-    report_fatal_error("MD_associated operand is not ValueAsMetadata");
-
+  auto *VM = cast<ValueAsMetadata>(MD->getOperand(0).get());
   auto *OtherGV = dyn_cast<GlobalValue>(VM->getValue());
   return OtherGV ? dyn_cast<MCSymbolELF>(TM.getSymbol(OtherGV)) : nullptr;
 }

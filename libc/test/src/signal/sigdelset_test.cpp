@@ -14,7 +14,7 @@
 #include "src/signal/sigprocmask.h"
 
 #include "test/ErrnoSetterMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcSigdelset, Invalid) {
   using __llvm_libc::testing::ErrnoSetterMatcher::Fails;

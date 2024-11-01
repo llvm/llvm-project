@@ -331,7 +331,7 @@ bool MachineSinking::AllUsesDominatedByBlock(Register Reg,
   //     %p = PHI %y, %bb.0, %def, %bb.1
   if (all_of(MRI->use_nodbg_operands(Reg), [&](MachineOperand &MO) {
         MachineInstr *UseInst = MO.getParent();
-        unsigned OpNo = UseInst->getOperandNo(&MO);
+        unsigned OpNo = MO.getOperandNo();
         MachineBasicBlock *UseBlock = UseInst->getParent();
         return UseBlock == MBB && UseInst->isPHI() &&
                UseInst->getOperand(OpNo + 1).getMBB() == DefMBB;

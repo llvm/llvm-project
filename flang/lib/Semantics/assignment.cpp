@@ -45,7 +45,7 @@ public:
 
 private:
   bool CheckForPureContext(const SomeExpr &rhs, parser::CharBlock rhsSource,
-      bool isPointerAssignment);
+      bool isPointerAssignment, bool isDefinedAssignment);
   void CheckShape(parser::CharBlock, const SomeExpr *);
   template <typename... A>
   parser::Message *Say(parser::CharBlock at, A &&...args) {
@@ -75,7 +75,8 @@ void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
       }
     }
     auto rhsLoc{std::get<parser::Expr>(stmt.t).source};
-    CheckForPureContext(rhs, rhsLoc, false);
+    CheckForPureContext(rhs, rhsLoc, false /*not a pointer assignment*/,
+        std::holds_alternative<evaluate::ProcedureRef>(assignment->u));
     if (whereDepth_ > 0) {
       CheckShape(lhsLoc, &lhs);
     }
@@ -86,7 +87,9 @@ void AssignmentContext::Analyze(const parser::PointerAssignmentStmt &stmt) {
   CHECK(whereDepth_ == 0);
   if (const evaluate::Assignment * assignment{GetAssignment(stmt)}) {
     const SomeExpr &rhs{assignment->rhs};
-    CheckForPureContext(rhs, std::get<parser::Expr>(stmt.t).source, true);
+    CheckForPureContext(rhs, std::get<parser::Expr>(stmt.t).source,
+        true /*this is a pointer assignment*/,
+        false /*not a defined assignment*/);
     parser::CharBlock at{context_.location().value()};
     auto restorer{foldingContext().messages().SetLocation(at)};
     const Scope &scope{context_.FindScope(at)};
@@ -126,7 +129,8 @@ bool CheckCopyabilityInPureScope(parser::ContextualMessages &messages,
 }
 
 bool AssignmentContext::CheckForPureContext(const SomeExpr &rhs,
-    parser::CharBlock rhsSource, bool isPointerAssignment) {
+    parser::CharBlock rhsSource, bool isPointerAssignment,
+    bool isDefinedAssignment) {
   const Scope &scope{context_.FindScope(rhsSource)};
   if (!FindPureProcedureContaining(scope)) {
     return true;
@@ -143,7 +147,7 @@ bool AssignmentContext::CheckForPureContext(const SomeExpr &rhs,
         return false;
       }
     }
-  } else {
+  } else if (!isDefinedAssignment) {
     return CheckCopyabilityInPureScope(messages, rhs, scope);
   }
   return true;

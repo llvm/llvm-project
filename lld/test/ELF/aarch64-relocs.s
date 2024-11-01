@@ -14,7 +14,7 @@ msgend:
 # CHECK: Disassembly of section .R_AARCH64_ADR_PREL_LO21:
 # CHECK-EMPTY:
 # CHECK: <_start>:
-# CHECK:        0:       10000021        adr     x1, #4
+# CHECK:        0:       10000021        adr     x1, 0x210124
 # CHECK: <msg>:
 # CHECK:        4:
 # #4 is the adr immediate value.

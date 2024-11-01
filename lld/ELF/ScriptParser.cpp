@@ -900,7 +900,8 @@ OutputDesc *ScriptParser::readOverlaySectionDescription() {
 }
 
 OutputDesc *ScriptParser::readOutputSectionDescription(StringRef outSec) {
-  OutputDesc *cmd = script->createOutputSection(outSec, getCurrentLocation());
+  OutputDesc *cmd =
+      script->createOutputSection(unquote(outSec), getCurrentLocation());
   OutputSection *osec = &cmd->osec;
   // Maybe relro. Will reset to false if DATA_SEGMENT_RELRO_END is absent.
   osec->relro = seenDataAlign && !seenRelroEnd;

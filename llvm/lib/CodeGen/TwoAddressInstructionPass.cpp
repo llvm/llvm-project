@@ -404,7 +404,7 @@ findOnlyInterestingUse(Register Reg, MachineBasicBlock *MBB,
   }
   if (UseMI.isCommutable()) {
     unsigned Src1 = TargetInstrInfo::CommuteAnyOperandIndex;
-    unsigned Src2 = UseMI.getOperandNo(UseOp);
+    unsigned Src2 = UseOp->getOperandNo();
     if (TII->findCommutedOpIndices(UseMI, Src1, Src2)) {
       MachineOperand &MO = UseMI.getOperand(Src1);
       if (MO.isReg() && MO.isUse() &&
@@ -693,10 +693,8 @@ bool TwoAddressInstructionPass::convertInstTo3Addr(
     assert(NewMI->getNumExplicitDefs() == 1);
 
     // Find the old and new def location.
-    auto OldIt = mi->defs().begin();
-    auto NewIt = NewMI->defs().begin();
-    unsigned OldIdx = mi->getOperandNo(OldIt);
-    unsigned NewIdx = NewMI->getOperandNo(NewIt);
+    unsigned OldIdx = mi->defs().begin()->getOperandNo();
+    unsigned NewIdx = NewMI->defs().begin()->getOperandNo();
 
     // Record that one def has been replaced by the other.
     unsigned NewInstrNum = NewMI->getDebugInstrNum();

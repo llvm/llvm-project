@@ -37,7 +37,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <optional>
 
 using namespace llvm;
@@ -346,6 +346,8 @@ public:
   bool isImmTy(ImmTy ImmT) const {
     return isImm() && Imm.Type == ImmT;
   }
+
+  bool isImmLiteral() const { return isImmTy(ImmTyNone); }
 
   bool isImmModifier() const {
     return isImm() && Imm.Type != ImmTyNone;
@@ -5309,7 +5311,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
 
   getTargetStreamer().EmitAmdhsaKernelDescriptor(
       getSTI(), KernelName, KD, NextFreeVGPR, NextFreeSGPR, ReserveVCC,
-      ReserveFlatScr);
+      ReserveFlatScr, AMDGPU::getAmdhsaCodeObjectVersion());
   return false;
 }
 
@@ -5609,7 +5611,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPULDS() {
     return TokError("expected identifier in directive");
 
   MCSymbol *Symbol = getContext().getOrCreateSymbol(Name);
-  if (parseToken(AsmToken::Comma, "expected ','"))
+  if (getParser().parseComma())
     return true;
 
   unsigned LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(&getSTI());
@@ -7940,7 +7942,7 @@ void AMDGPUAsmParser::cvtIntersectRay(MCInst &Inst,
 //===----------------------------------------------------------------------===//
 
 bool AMDGPUOperand::isSMRDOffset8() const {
-  return isImm() && isUInt<8>(getImm());
+  return isImmLiteral() && isUInt<8>(getImm());
 }
 
 bool AMDGPUOperand::isSMEMOffset() const {
@@ -7951,7 +7953,7 @@ bool AMDGPUOperand::isSMEMOffset() const {
 bool AMDGPUOperand::isSMRDLiteralOffset() const {
   // 32-bit literals are only supported on CI and we only want to use them
   // when the offset is > 8-bits.
-  return isImm() && !isUInt<8>(getImm()) && isUInt<32>(getImm());
+  return isImmLiteral() && !isUInt<8>(getImm()) && isUInt<32>(getImm());
 }
 
 AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMRDOffset8() const {
@@ -8013,7 +8015,9 @@ void AMDGPUAsmParser::onBeginOfFile() {
     return;
 
   if (!getTargetStreamer().getTargetID())
-    getTargetStreamer().initializeTargetID(getSTI(), getSTI().getFeatureString());
+    getTargetStreamer().initializeTargetID(getSTI(), getSTI().getFeatureString(),
+        // TODO: Should try to check code object version from directive???
+        AMDGPU::getAmdhsaCodeObjectVersion());
 
   if (isHsaAbiVersion3AndAbove(&getSTI()))
     getTargetStreamer().EmitDirectiveAMDGCNTarget();
@@ -8439,11 +8443,11 @@ bool AMDGPUOperand::isABID() const {
 }
 
 bool AMDGPUOperand::isS16Imm() const {
-  return isImm() && (isInt<16>(getImm()) || isUInt<16>(getImm()));
+  return isImmLiteral() && (isInt<16>(getImm()) || isUInt<16>(getImm()));
 }
 
 bool AMDGPUOperand::isU16Imm() const {
-  return isImm() && isUInt<16>(getImm());
+  return isImmLiteral() && isUInt<16>(getImm());
 }
 
 //===----------------------------------------------------------------------===//

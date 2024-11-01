@@ -205,6 +205,7 @@ def IsUndef                   : FlagType<0x80000000>; // Codegen `undef` of give
 def IsTupleCreate             : FlagType<0x100000000>;
 def IsTupleGet                : FlagType<0x200000000>;
 def IsTupleSet                : FlagType<0x400000000>;
+def ReverseMergeAnyBinOp      : FlagType<0x800000000>; // e.g. Implement SUBR_X using SUB_X.
 
 // These must be kept in sync with the flags in include/clang/Basic/TargetBuiltins.h
 class ImmCheckType<int val> {
@@ -758,32 +759,32 @@ defm SVNEG : SInstZPZ<"svneg", "csil", "aarch64_sve_neg">;
 
 //------------------------------------------------------------------------------
 
-multiclass SInstZPZZ<string name, string types, string intrinsic, list<FlagType> flags=[]> {
-  def _M   : SInst<name # "[_{d}]",   "dPdd", types, MergeOp1,  intrinsic, flags>;
-  def _X   : SInst<name # "[_{d}]",   "dPdd", types, MergeAny,  intrinsic, flags>;
-  def _Z   : SInst<name # "[_{d}]",   "dPdd", types, MergeZero, intrinsic, flags>;
+multiclass SInstZPZZ<string name, string types, string m_intrinsic, string x_intrinsic, list<FlagType> flags=[]> {
+  def _M   : SInst<name # "[_{d}]",   "dPdd", types, MergeOp1,  m_intrinsic, flags>;
+  def _X   : SInst<name # "[_{d}]",   "dPdd", types, MergeAny,  x_intrinsic, flags>;
+  def _Z   : SInst<name # "[_{d}]",   "dPdd", types, MergeZero, m_intrinsic, flags>;
 
-  def _N_M : SInst<name # "[_n_{d}]", "dPda", types, MergeOp1,  intrinsic, flags>;
-  def _N_X : SInst<name # "[_n_{d}]", "dPda", types, MergeAny,  intrinsic, flags>;
-  def _N_Z : SInst<name # "[_n_{d}]", "dPda", types, MergeZero, intrinsic, flags>;
+  def _N_M : SInst<name # "[_n_{d}]", "dPda", types, MergeOp1,  m_intrinsic, flags>;
+  def _N_X : SInst<name # "[_n_{d}]", "dPda", types, MergeAny,  x_intrinsic, flags>;
+  def _N_Z : SInst<name # "[_n_{d}]", "dPda", types, MergeZero, m_intrinsic, flags>;
 }
 
-defm SVABD_S  : SInstZPZZ<"svabd",  "csil",         "aarch64_sve_sabd">;
-defm SVABD_U  : SInstZPZZ<"svabd",  "UcUsUiUl",     "aarch64_sve_uabd">;
-defm SVADD    : SInstZPZZ<"svadd",  "csilUcUsUiUl", "aarch64_sve_add">;
-defm SVDIV_S  : SInstZPZZ<"svdiv",  "il",           "aarch64_sve_sdiv">;
-defm SVDIV_U  : SInstZPZZ<"svdiv",  "UiUl",         "aarch64_sve_udiv">;
-defm SVDIVR_S : SInstZPZZ<"svdivr", "il",           "aarch64_sve_sdivr">;
-defm SVDIVR_U : SInstZPZZ<"svdivr", "UiUl",         "aarch64_sve_udivr">;
-defm SVMAX_S  : SInstZPZZ<"svmax",  "csil",         "aarch64_sve_smax">;
-defm SVMAX_U  : SInstZPZZ<"svmax",  "UcUsUiUl",     "aarch64_sve_umax">;
-defm SVMIN_S  : SInstZPZZ<"svmin",  "csil",         "aarch64_sve_smin">;
-defm SVMIN_U  : SInstZPZZ<"svmin",  "UcUsUiUl",     "aarch64_sve_umin">;
-defm SVMUL    : SInstZPZZ<"svmul",  "csilUcUsUiUl", "aarch64_sve_mul">;
-defm SVMULH_S : SInstZPZZ<"svmulh", "csil",         "aarch64_sve_smulh">;
-defm SVMULH_U : SInstZPZZ<"svmulh", "UcUsUiUl",     "aarch64_sve_umulh">;
-defm SVSUB    : SInstZPZZ<"svsub",  "csilUcUsUiUl", "aarch64_sve_sub">;
-defm SVSUBR   : SInstZPZZ<"svsubr", "csilUcUsUiUl", "aarch64_sve_subr">;
+defm SVABD_S  : SInstZPZZ<"svabd",  "csil",         "aarch64_sve_sabd",  "aarch64_sve_sabd_u">;
+defm SVABD_U  : SInstZPZZ<"svabd",  "UcUsUiUl",     "aarch64_sve_uabd",  "aarch64_sve_uabd_u">;
+defm SVADD    : SInstZPZZ<"svadd",  "csilUcUsUiUl", "aarch64_sve_add",   "aarch64_sve_add_u">;
+defm SVDIV_S  : SInstZPZZ<"svdiv",  "il",           "aarch64_sve_sdiv",  "aarch64_sve_sdiv_u">;
+defm SVDIV_U  : SInstZPZZ<"svdiv",  "UiUl",         "aarch64_sve_udiv",  "aarch64_sve_udiv_u">;
+defm SVDIVR_S : SInstZPZZ<"svdivr", "il",           "aarch64_sve_sdivr", "aarch64_sve_sdiv_u", [ReverseMergeAnyBinOp]>;
+defm SVDIVR_U : SInstZPZZ<"svdivr", "UiUl",         "aarch64_sve_udivr", "aarch64_sve_udiv_u", [ReverseMergeAnyBinOp]>;
+defm SVMAX_S  : SInstZPZZ<"svmax",  "csil",         "aarch64_sve_smax",  "aarch64_sve_smax_u">;
+defm SVMAX_U  : SInstZPZZ<"svmax",  "UcUsUiUl",     "aarch64_sve_umax",  "aarch64_sve_umax_u">;
+defm SVMIN_S  : SInstZPZZ<"svmin",  "csil",         "aarch64_sve_smin",  "aarch64_sve_smin_u">;
+defm SVMIN_U  : SInstZPZZ<"svmin",  "UcUsUiUl",     "aarch64_sve_umin",  "aarch64_sve_umin_u">;
+defm SVMUL    : SInstZPZZ<"svmul",  "csilUcUsUiUl", "aarch64_sve_mul",   "aarch64_sve_mul_u">;
+defm SVMULH_S : SInstZPZZ<"svmulh", "csil",         "aarch64_sve_smulh", "aarch64_sve_smulh_u">;
+defm SVMULH_U : SInstZPZZ<"svmulh", "UcUsUiUl",     "aarch64_sve_umulh", "aarch64_sve_umulh_u">;
+defm SVSUB    : SInstZPZZ<"svsub",  "csilUcUsUiUl", "aarch64_sve_sub",   "aarch64_sve_sub_u">;
+defm SVSUBR   : SInstZPZZ<"svsubr", "csilUcUsUiUl", "aarch64_sve_subr",  "aarch64_sve_sub_u", [ReverseMergeAnyBinOp]>;
 
 //------------------------------------------------------------------------------
 
@@ -824,10 +825,10 @@ def SVDOT_LANE_U : SInst<"svdot_lane[_{d}]",  "ddqqi",  "UiUl", MergeNone, "aarc
 ////////////////////////////////////////////////////////////////////////////////
 // Logical operations
 
-defm SVAND  : SInstZPZZ<"svand", "csilUcUsUiUl", "aarch64_sve_and">;
-defm SVBIC  : SInstZPZZ<"svbic", "csilUcUsUiUl", "aarch64_sve_bic">;
-defm SVEOR  : SInstZPZZ<"sveor", "csilUcUsUiUl", "aarch64_sve_eor">;
-defm SVORR  : SInstZPZZ<"svorr", "csilUcUsUiUl", "aarch64_sve_orr">;
+defm SVAND  : SInstZPZZ<"svand", "csilUcUsUiUl", "aarch64_sve_and", "aarch64_sve_and_u">;
+defm SVBIC  : SInstZPZZ<"svbic", "csilUcUsUiUl", "aarch64_sve_bic", "aarch64_sve_bic_u">;
+defm SVEOR  : SInstZPZZ<"sveor", "csilUcUsUiUl", "aarch64_sve_eor", "aarch64_sve_eor_u">;
+defm SVORR  : SInstZPZZ<"svorr", "csilUcUsUiUl", "aarch64_sve_orr", "aarch64_sve_orr_u">;
 
 defm SVCNOT : SInstZPZ<"svcnot", "csilUcUsUiUl", "aarch64_sve_cnot">;
 defm SVNOT  : SInstZPZ<"svnot",  "csilUcUsUiUl", "aarch64_sve_not">;
@@ -837,11 +838,11 @@ defm SVNOT  : SInstZPZ<"svnot",  "csilUcUsUiUl", "aarch64_sve_not">;
 
 multiclass SInst_SHIFT<string name, string intrinsic, string ts, string wide_ts> {
   def _M : SInst<name # "[_{d}]", "dPdu", ts, MergeOp1,  intrinsic>;
-  def _X : SInst<name # "[_{d}]", "dPdu", ts, MergeAny,  intrinsic>;
+  def _X : SInst<name # "[_{d}]", "dPdu", ts, MergeAny,  intrinsic # _u>;
   def _Z : SInst<name # "[_{d}]", "dPdu", ts, MergeZero, intrinsic>;
 
   def _N_M : SInst<name # "[_n_{d}]", "dPdL", ts, MergeOp1,  intrinsic>;
-  def _N_X : SInst<name # "[_n_{d}]", "dPdL", ts, MergeAny,  intrinsic>;
+  def _N_X : SInst<name # "[_n_{d}]", "dPdL", ts, MergeAny,  intrinsic # _u>;
   def _N_Z : SInst<name # "[_n_{d}]", "dPdL", ts, MergeZero, intrinsic>;
 
   def _WIDE_M : SInst<name # _wide # "[_{d}]", "dPdg", wide_ts, MergeOp1,  intrinsic # _wide>;
@@ -979,18 +980,18 @@ defm SVREVW : SInstZPZ<"svrevw", "lUl",          "aarch64_sve_revw">;
 defm SVABS_F : SInstZPZ<"svabs", "hfd", "aarch64_sve_fabs">;
 defm SVNEG_F : SInstZPZ<"svneg", "hfd", "aarch64_sve_fneg">;
 
-defm SVABD_F  : SInstZPZZ<"svabd",  "hfd", "aarch64_sve_fabd">;
-defm SVADD_F  : SInstZPZZ<"svadd",  "hfd", "aarch64_sve_fadd">;
-defm SVDIV_F  : SInstZPZZ<"svdiv",  "hfd", "aarch64_sve_fdiv">;
-defm SVDIVR_F : SInstZPZZ<"svdivr", "hfd", "aarch64_sve_fdivr">;
-defm SVMAX_F  : SInstZPZZ<"svmax",  "hfd", "aarch64_sve_fmax">;
-defm SVMAXNM  : SInstZPZZ<"svmaxnm","hfd", "aarch64_sve_fmaxnm">;
-defm SVMIN_F  : SInstZPZZ<"svmin",  "hfd", "aarch64_sve_fmin">;
-defm SVMINNM  : SInstZPZZ<"svminnm","hfd", "aarch64_sve_fminnm">;
-defm SVMUL_F  : SInstZPZZ<"svmul",  "hfd", "aarch64_sve_fmul">;
-defm SVMULX   : SInstZPZZ<"svmulx", "hfd", "aarch64_sve_fmulx">;
-defm SVSUB_F  : SInstZPZZ<"svsub",  "hfd", "aarch64_sve_fsub">;
-defm SVSUBR_F : SInstZPZZ<"svsubr", "hfd", "aarch64_sve_fsubr">;
+defm SVABD_F  : SInstZPZZ<"svabd",  "hfd", "aarch64_sve_fabd",   "aarch64_sve_fabd">;
+defm SVADD_F  : SInstZPZZ<"svadd",  "hfd", "aarch64_sve_fadd",   "aarch64_sve_fadd">;
+defm SVDIV_F  : SInstZPZZ<"svdiv",  "hfd", "aarch64_sve_fdiv",   "aarch64_sve_fdiv">;
+defm SVDIVR_F : SInstZPZZ<"svdivr", "hfd", "aarch64_sve_fdivr",  "aarch64_sve_fdivr">;
+defm SVMAX_F  : SInstZPZZ<"svmax",  "hfd", "aarch64_sve_fmax",   "aarch64_sve_fmax">;
+defm SVMAXNM  : SInstZPZZ<"svmaxnm","hfd", "aarch64_sve_fmaxnm", "aarch64_sve_fmaxnm">;
+defm SVMIN_F  : SInstZPZZ<"svmin",  "hfd", "aarch64_sve_fmin",   "aarch64_sve_fmin">;
+defm SVMINNM  : SInstZPZZ<"svminnm","hfd", "aarch64_sve_fminnm", "aarch64_sve_fminnm">;
+defm SVMUL_F  : SInstZPZZ<"svmul",  "hfd", "aarch64_sve_fmul",   "aarch64_sve_fmul">;
+defm SVMULX   : SInstZPZZ<"svmulx", "hfd", "aarch64_sve_fmulx",  "aarch64_sve_fmulx">;
+defm SVSUB_F  : SInstZPZZ<"svsub",  "hfd", "aarch64_sve_fsub",   "aarch64_sve_fsub">;
+defm SVSUBR_F : SInstZPZZ<"svsubr", "hfd", "aarch64_sve_fsubr",  "aarch64_sve_fsubr">;
 
 defm SVRECPX : SInstZPZ<"svrecpx", "hfd", "aarch64_sve_frecpx">;
 defm SVRINTA : SInstZPZ<"svrinta", "hfd", "aarch64_sve_frinta">;
@@ -1249,16 +1250,37 @@ def SVZIP1_BF16   : SInst<"svzip1[_{d}]",   "ddd",  "b", MergeNone, "aarch64_sve
 def SVZIP2_BF16   : SInst<"svzip2[_{d}]",   "ddd",  "b", MergeNone, "aarch64_sve_zip2">;
 }
 
-def SVREV_B   : SInst<"svrev_{d}",      "PP",   "PcPsPiPl", MergeNone, "aarch64_sve_rev">;
-def SVSEL_B   : SInst<"svsel[_b]",      "PPPP", "Pc",       MergeNone, "aarch64_sve_sel">;
-def SVTRN1_B  : SInst<"svtrn1_{d}",     "PPP",  "PcPsPiPl", MergeNone, "aarch64_sve_trn1">;
-def SVTRN2_B  : SInst<"svtrn2_{d}",     "PPP",  "PcPsPiPl", MergeNone, "aarch64_sve_trn2">;
-def SVPUNPKHI : SInst<"svunpkhi[_b]",   "PP",   "Pc",       MergeNone, "aarch64_sve_punpkhi">;
-def SVPUNPKLO : SInst<"svunpklo[_b]",   "PP",   "Pc",       MergeNone, "aarch64_sve_punpklo">;
-def SVUZP1_B  : SInst<"svuzp1_{d}",     "PPP",  "PcPsPiPl", MergeNone, "aarch64_sve_uzp1">;
-def SVUZP2_B  : SInst<"svuzp2_{d}",     "PPP",  "PcPsPiPl", MergeNone, "aarch64_sve_uzp2">;
-def SVZIP1_B  : SInst<"svzip1_{d}",     "PPP",  "PcPsPiPl", MergeNone, "aarch64_sve_zip1">;
-def SVZIP2_B  : SInst<"svzip2_{d}",     "PPP",  "PcPsPiPl", MergeNone, "aarch64_sve_zip2">;
+def SVREV_B8   : SInst<"svrev_b8",     "PP",   "Pc", MergeNone, "aarch64_sve_rev">;
+def SVREV_B16  : SInst<"svrev_b16",    "PP",   "Pc", MergeNone, "aarch64_sve_rev_b16",  [IsOverloadNone]>;
+def SVREV_B32  : SInst<"svrev_b32",    "PP",   "Pc", MergeNone, "aarch64_sve_rev_b32",  [IsOverloadNone]>;
+def SVREV_B64  : SInst<"svrev_b64",    "PP",   "Pc", MergeNone, "aarch64_sve_rev_b64",  [IsOverloadNone]>;
+def SVSEL_B    : SInst<"svsel[_b]",    "PPPP", "Pc", MergeNone, "aarch64_sve_sel">;
+def SVTRN1_B8  : SInst<"svtrn1_b8",    "PPP",  "Pc", MergeNone, "aarch64_sve_trn1">;
+def SVTRN1_B16 : SInst<"svtrn1_b16",   "PPP",  "Pc", MergeNone, "aarch64_sve_trn1_b16", [IsOverloadNone]>;
+def SVTRN1_B32 : SInst<"svtrn1_b32",   "PPP",  "Pc", MergeNone, "aarch64_sve_trn1_b32", [IsOverloadNone]>;
+def SVTRN1_B64 : SInst<"svtrn1_b64",   "PPP",  "Pc", MergeNone, "aarch64_sve_trn1_b64", [IsOverloadNone]>;
+def SVTRN2_B8  : SInst<"svtrn2_b8",    "PPP",  "Pc", MergeNone, "aarch64_sve_trn2">;
+def SVTRN2_B16 : SInst<"svtrn2_b16",   "PPP",  "Pc", MergeNone, "aarch64_sve_trn2_b16", [IsOverloadNone]>;
+def SVTRN2_B32 : SInst<"svtrn2_b32",   "PPP",  "Pc", MergeNone, "aarch64_sve_trn2_b32", [IsOverloadNone]>;
+def SVTRN2_B64 : SInst<"svtrn2_b64",   "PPP",  "Pc", MergeNone, "aarch64_sve_trn2_b64", [IsOverloadNone]>;
+def SVPUNPKHI  : SInst<"svunpkhi[_b]", "PP",   "Pc", MergeNone, "aarch64_sve_punpkhi">;
+def SVPUNPKLO  : SInst<"svunpklo[_b]", "PP",   "Pc", MergeNone, "aarch64_sve_punpklo">;
+def SVUZP1_B8  : SInst<"svuzp1_b8",    "PPP",  "Pc", MergeNone, "aarch64_sve_uzp1">;
+def SVUZP1_B16 : SInst<"svuzp1_b16",   "PPP",  "Pc", MergeNone, "aarch64_sve_uzp1_b16", [IsOverloadNone]>;
+def SVUZP1_B32 : SInst<"svuzp1_b32",   "PPP",  "Pc", MergeNone, "aarch64_sve_uzp1_b32", [IsOverloadNone]>;
+def SVUZP1_B64 : SInst<"svuzp1_b64",   "PPP",  "Pc", MergeNone, "aarch64_sve_uzp1_b64", [IsOverloadNone]>;
+def SVUZP2_B8  : SInst<"svuzp2_b8",    "PPP",  "Pc", MergeNone, "aarch64_sve_uzp2">;
+def SVUZP2_B16 : SInst<"svuzp2_b16",   "PPP",  "Pc", MergeNone, "aarch64_sve_uzp2_b16", [IsOverloadNone]>;
+def SVUZP2_B32 : SInst<"svuzp2_b32",   "PPP",  "Pc", MergeNone, "aarch64_sve_uzp2_b32", [IsOverloadNone]>;
+def SVUZP2_B64 : SInst<"svuzp2_b64",   "PPP",  "Pc", MergeNone, "aarch64_sve_uzp2_b64", [IsOverloadNone]>;
+def SVZIP1_B8  : SInst<"svzip1_b8",    "PPP",  "Pc", MergeNone, "aarch64_sve_zip1">;
+def SVZIP1_B16 : SInst<"svzip1_b16",   "PPP",  "Pc", MergeNone, "aarch64_sve_zip1_b16", [IsOverloadNone]>;
+def SVZIP1_B32 : SInst<"svzip1_b32",   "PPP",  "Pc", MergeNone, "aarch64_sve_zip1_b32", [IsOverloadNone]>;
+def SVZIP1_B64 : SInst<"svzip1_b64",   "PPP",  "Pc", MergeNone, "aarch64_sve_zip1_b64", [IsOverloadNone]>;
+def SVZIP2_B   : SInst<"svzip2_b8",    "PPP",  "Pc", MergeNone, "aarch64_sve_zip2">;
+def SVZIP2_B16 : SInst<"svzip2_b16",   "PPP",  "Pc", MergeNone, "aarch64_sve_zip2_b16", [IsOverloadNone]>;
+def SVZIP2_B32 : SInst<"svzip2_b32",   "PPP",  "Pc", MergeNone, "aarch64_sve_zip2_b32", [IsOverloadNone]>;
+def SVZIP2_B64 : SInst<"svzip2_b64",   "PPP",  "Pc", MergeNone, "aarch64_sve_zip2_b64", [IsOverloadNone]>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Predicate creation
@@ -1492,21 +1514,21 @@ def SVWHILEHS_U64 : SInst<"svwhilege_{d}[_{1}]", "Pnn", "PUcPUsPUiPUl", MergeNon
 // SVE2 - Uniform DSP operations
 
 let TargetGuard = "sve2" in {
-defm SVQADD_S  : SInstZPZZ<"svqadd",  "csli",     "aarch64_sve_sqadd">;
-defm SVQADD_U  : SInstZPZZ<"svqadd",  "UcUsUiUl", "aarch64_sve_uqadd">;
-defm SVHADD_S  : SInstZPZZ<"svhadd",  "csli",     "aarch64_sve_shadd">;
-defm SVHADD_U  : SInstZPZZ<"svhadd",  "UcUsUiUl", "aarch64_sve_uhadd">;
-defm SVRHADD_S : SInstZPZZ<"svrhadd", "csli",     "aarch64_sve_srhadd">;
-defm SVRHADD_U : SInstZPZZ<"svrhadd", "UcUsUiUl", "aarch64_sve_urhadd">;
+defm SVQADD_S  : SInstZPZZ<"svqadd",  "csli",     "aarch64_sve_sqadd",  "aarch64_sve_sqadd">;
+defm SVQADD_U  : SInstZPZZ<"svqadd",  "UcUsUiUl", "aarch64_sve_uqadd",  "aarch64_sve_uqadd">;
+defm SVHADD_S  : SInstZPZZ<"svhadd",  "csli",     "aarch64_sve_shadd",  "aarch64_sve_shadd">;
+defm SVHADD_U  : SInstZPZZ<"svhadd",  "UcUsUiUl", "aarch64_sve_uhadd",  "aarch64_sve_uhadd">;
+defm SVRHADD_S : SInstZPZZ<"svrhadd", "csli",     "aarch64_sve_srhadd", "aarch64_sve_srhadd">;
+defm SVRHADD_U : SInstZPZZ<"svrhadd", "UcUsUiUl", "aarch64_sve_urhadd", "aarch64_sve_urhadd">;
 
-defm SVQSUB_S  : SInstZPZZ<"svqsub",  "csli",     "aarch64_sve_sqsub">;
-defm SVQSUB_U  : SInstZPZZ<"svqsub",  "UcUsUiUl", "aarch64_sve_uqsub">;
-defm SVQSUBR_S : SInstZPZZ<"svqsubr", "csli",     "aarch64_sve_sqsubr">;
-defm SVQSUBR_U : SInstZPZZ<"svqsubr", "UcUsUiUl", "aarch64_sve_uqsubr">;
-defm SVHSUB_S  : SInstZPZZ<"svhsub",  "csli",     "aarch64_sve_shsub">;
-defm SVHSUB_U  : SInstZPZZ<"svhsub",  "UcUsUiUl", "aarch64_sve_uhsub">;
-defm SVHSUBR_S : SInstZPZZ<"svhsubr", "csli",     "aarch64_sve_shsubr">;
-defm SVHSUBR_U : SInstZPZZ<"svhsubr", "UcUsUiUl", "aarch64_sve_uhsubr">;
+defm SVQSUB_S  : SInstZPZZ<"svqsub",  "csli",     "aarch64_sve_sqsub",  "aarch64_sve_sqsub">;
+defm SVQSUB_U  : SInstZPZZ<"svqsub",  "UcUsUiUl", "aarch64_sve_uqsub",  "aarch64_sve_uqsub">;
+defm SVQSUBR_S : SInstZPZZ<"svqsubr", "csli",     "aarch64_sve_sqsubr", "aarch64_sve_sqsubr">;
+defm SVQSUBR_U : SInstZPZZ<"svqsubr", "UcUsUiUl", "aarch64_sve_uqsubr", "aarch64_sve_uqsubr">;
+defm SVHSUB_S  : SInstZPZZ<"svhsub",  "csli",     "aarch64_sve_shsub",  "aarch64_sve_shsub">;
+defm SVHSUB_U  : SInstZPZZ<"svhsub",  "UcUsUiUl", "aarch64_sve_uhsub",  "aarch64_sve_uhsub">;
+defm SVHSUBR_S : SInstZPZZ<"svhsubr", "csli",     "aarch64_sve_shsubr", "aarch64_sve_shsubr">;
+defm SVHSUBR_U : SInstZPZZ<"svhsubr", "UcUsUiUl", "aarch64_sve_uhsubr", "aarch64_sve_uhsubr">;
 
 defm SVQABS   : SInstZPZ<"svqabs",   "csil", "aarch64_sve_sqabs">;
 defm SVQNEG   : SInstZPZ<"svqneg",   "csil", "aarch64_sve_sqneg">;

@@ -1426,7 +1426,10 @@ __tid = 8
 	// for when we call pkfn below
 	push	{r3-r11,lr}
 	// Load p_argv and &exit_frame
-	ldrd	r4, r5, [sp, #10*4]
+	ldr	r4, [sp, #10*4]
+# if OMPT_SUPPORT
+	ldr	r5, [sp, #11*4]
+# endif
 
 # if KMP_OS_DARWIN || (defined(__thumb__) && !KMP_OS_WINDOWS)
 # define FP r7

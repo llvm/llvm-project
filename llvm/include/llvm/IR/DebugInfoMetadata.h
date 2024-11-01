@@ -2769,10 +2769,18 @@ public:
   /// Return whether the first element a DW_OP_deref.
   bool startsWithDeref() const;
 
+  /// Return whether there is exactly one operator and it is a DW_OP_deref;
+  bool isDeref() const;
+
   /// Holds the characteristics of one fragment of a larger variable.
   struct FragmentInfo {
     uint64_t SizeInBits;
     uint64_t OffsetInBits;
+    /// Return the index of the first bit of the fragment.
+    uint64_t startInBits() const { return OffsetInBits; }
+    /// Return the index of the bit after the end of the fragment, e.g. for
+    /// fragment offset=16 and size=32 return their sum, 48.
+    uint64_t endInBits() const { return OffsetInBits + SizeInBits; }
   };
 
   /// Retrieve the details of this fragment expression.

@@ -29,7 +29,6 @@
 #include <type_traits>
 
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 
 #include <fcntl.h>
@@ -376,9 +375,7 @@ file_time_type::duration SubSec(long long val) {
   }
 }
 
-TEST_SUITE(last_write_time_test_suite)
-
-TEST_CASE(signature_test)
+static void signature_test()
 {
     const file_time_type t;
     const path p; ((void)p);
@@ -393,7 +390,7 @@ TEST_CASE(signature_test)
     ASSERT_NOEXCEPT(last_write_time(p, t, ec));
 }
 
-TEST_CASE(read_last_write_time_static_env_test)
+static void read_last_write_time_static_env_test()
 {
     static_test_env static_env;
     using C = file_time_type::clock;
@@ -405,29 +402,28 @@ TEST_CASE(read_last_write_time_static_env_test)
     SleepFor(MilliSec(30));
     {
         file_time_type ret = last_write_time(static_env.File);
-        TEST_CHECK(ret != min);
-        TEST_CHECK(ret < C::now());
-        TEST_CHECK(CompareTime(ret, LastWriteTime(static_env.File)));
+        assert(ret != min);
+        assert(ret < C::now());
+        assert(CompareTime(ret, LastWriteTime(static_env.File)));
 
         file_time_type ret2 = last_write_time(static_env.SymlinkToFile);
-        TEST_CHECK(CompareTime(ret, ret2));
-        TEST_CHECK(CompareTime(ret2, LastWriteTime(static_env.SymlinkToFile)));
+        assert(CompareTime(ret, ret2));
+        assert(CompareTime(ret2, LastWriteTime(static_env.SymlinkToFile)));
     }
     {
         file_time_type ret = last_write_time(static_env.Dir);
-        TEST_CHECK(ret != min);
-        TEST_CHECK(ret < C::now());
-        TEST_CHECK(CompareTime(ret, LastWriteTime(static_env.Dir)));
+        assert(ret != min);
+        assert(ret < C::now());
+        assert(CompareTime(ret, LastWriteTime(static_env.Dir)));
 
         file_time_type ret2 = last_write_time(static_env.SymlinkToDir);
-        TEST_CHECK(CompareTime(ret, ret2));
-        TEST_CHECK(CompareTime(ret2, LastWriteTime(static_env.SymlinkToDir)));
+        assert(CompareTime(ret, ret2));
+        assert(CompareTime(ret2, LastWriteTime(static_env.SymlinkToDir)));
     }
 }
 
-TEST_CASE(get_last_write_time_dynamic_env_test)
+static void get_last_write_time_dynamic_env_test()
 {
-    using Sec = std::chrono::seconds;
     scoped_test_env env;
 
     const path file = env.create_file("file", 42);
@@ -439,12 +435,12 @@ TEST_CASE(get_last_write_time_dynamic_env_test)
     const TimeSpec dir_write_time = dir_times.write;
 
     file_time_type ftime = last_write_time(file);
-    TEST_CHECK(CompareTime(ftime, file_write_time));
+    assert(CompareTime(ftime, file_write_time));
 
     file_time_type dtime = last_write_time(dir);
-    TEST_CHECK(CompareTime(dtime, dir_write_time));
+    assert(CompareTime(dtime, dir_write_time));
 
-    SleepFor(Sec(2));
+    SleepFor(std::chrono::seconds(2));
 
     // update file and add a file to the directory. Make sure the times increase.
     std::FILE* of = std::fopen(file.string().c_str(), "a");
@@ -455,14 +451,14 @@ TEST_CASE(get_last_write_time_dynamic_env_test)
     file_time_type ftime2 = last_write_time(file);
     file_time_type dtime2 = last_write_time(dir);
 
-    TEST_CHECK(ftime2 > ftime);
-    TEST_CHECK(dtime2 > dtime);
-    TEST_CHECK(CompareTime(LastWriteTime(file), ftime2));
-    TEST_CHECK(CompareTime(LastWriteTime(dir), dtime2));
+    assert(ftime2 > ftime);
+    assert(dtime2 > dtime);
+    assert(CompareTime(LastWriteTime(file), ftime2));
+    assert(CompareTime(LastWriteTime(dir), dtime2));
 }
 
 
-TEST_CASE(set_last_write_time_dynamic_env_test)
+static void set_last_write_time_dynamic_env_test()
 {
     using Clock = file_time_type::clock;
     scoped_test_env env;
@@ -513,25 +509,25 @@ TEST_CASE(set_last_write_time_dynamic_env_test)
     for (const auto& TC : cases) {
         const auto old_times = GetTimes(TC.p);
         file_time_type old_time;
-        TEST_REQUIRE(ConvertFromTimeSpec(old_time, old_times.write));
+        assert(ConvertFromTimeSpec(old_time, old_times.write));
 
         std::error_code ec = GetTestEC();
         last_write_time(TC.p, TC.new_time, ec);
-        TEST_CHECK(!ec);
+        assert(!ec);
 
         ec = GetTestEC();
         file_time_type  got_time = last_write_time(TC.p, ec);
-        TEST_REQUIRE(!ec);
+        assert(!ec);
 
         if (TimeIsRepresentableByFilesystem(TC.new_time)) {
-            TEST_CHECK(got_time != old_time);
-            TEST_CHECK(CompareTime(got_time, TC.new_time));
-            TEST_CHECK(CompareTime(LastAccessTime(TC.p), old_times.access));
+            assert(got_time != old_time);
+            assert(CompareTime(got_time, TC.new_time));
+            assert(CompareTime(LastAccessTime(TC.p), old_times.access));
         }
     }
 }
 
-TEST_CASE(last_write_time_symlink_test)
+static void last_write_time_symlink_test()
 {
     using Clock = file_time_type::clock;
 
@@ -547,24 +543,24 @@ TEST_CASE(last_write_time_symlink_test)
 
     std::error_code ec = GetTestEC();
     last_write_time(sym, new_time, ec);
-    TEST_CHECK(!ec);
+    assert(!ec);
 
     file_time_type  got_time = last_write_time(sym);
-    TEST_CHECK(!CompareTime(got_time, old_times.write));
+    assert(!CompareTime(got_time, old_times.write));
     if (!WorkaroundStatTruncatesToSeconds) {
-      TEST_CHECK(got_time == new_time);
+      assert(got_time == new_time);
     } else {
-      TEST_CHECK(CompareTime(got_time, new_time));
+      assert(CompareTime(got_time, new_time));
     }
 
-    TEST_CHECK(CompareTime(LastWriteTime(file), new_time));
-    TEST_CHECK(CompareTime(LastAccessTime(sym), old_times.access));
+    assert(CompareTime(LastWriteTime(file), new_time));
+    assert(CompareTime(LastAccessTime(sym), old_times.access));
     Times sym_times = GetSymlinkTimes(sym);
-    TEST_CHECK(CompareTime(sym_times.write, old_sym_times.write));
+    assert(CompareTime(sym_times.write, old_sym_times.write));
 }
 
 
-TEST_CASE(test_write_min_time)
+static void test_write_min_time()
 {
     scoped_test_env env;
     const path p = env.create_file("file", 42);
@@ -576,8 +572,8 @@ TEST_CASE(test_write_min_time)
     file_time_type tt = last_write_time(p);
 
     if (TimeIsRepresentableByFilesystem(new_time)) {
-        TEST_CHECK(!ec);
-        TEST_CHECK(CompareTime(tt, new_time));
+        assert(!ec);
+        assert(CompareTime(tt, new_time));
 
         last_write_time(p, old_time);
         new_time = file_time_type::min() + SubSec(1);
@@ -587,19 +583,19 @@ TEST_CASE(test_write_min_time)
         tt = last_write_time(p);
 
         if (TimeIsRepresentableByFilesystem(new_time)) {
-            TEST_CHECK(!ec);
-            TEST_CHECK(CompareTime(tt, new_time));
+            assert(!ec);
+            assert(CompareTime(tt, new_time));
         } else {
-          TEST_CHECK(ErrorIs(ec, std::errc::value_too_large));
-          TEST_CHECK(tt == old_time);
+          assert(ErrorIs(ec, std::errc::value_too_large));
+          assert(tt == old_time);
         }
     } else {
-      TEST_CHECK(ErrorIs(ec, std::errc::value_too_large));
-      TEST_CHECK(tt == old_time);
+      assert(ErrorIs(ec, std::errc::value_too_large));
+      assert(tt == old_time);
     }
 }
 
-TEST_CASE(test_write_max_time) {
+static void test_write_max_time() {
   scoped_test_env env;
   const path p = env.create_file("file", 42);
   const file_time_type old_time = last_write_time(p);
@@ -610,27 +606,27 @@ TEST_CASE(test_write_max_time) {
   file_time_type tt = last_write_time(p);
 
   if (TimeIsRepresentableByFilesystem(new_time)) {
-    TEST_CHECK(!ec);
-    TEST_CHECK(CompareTime(tt, new_time));
+    assert(!ec);
+    assert(CompareTime(tt, new_time));
   } else {
-    TEST_CHECK(ErrorIs(ec, std::errc::value_too_large));
-    TEST_CHECK(tt == old_time);
+    assert(ErrorIs(ec, std::errc::value_too_large));
+    assert(tt == old_time);
   }
 }
 
-TEST_CASE(test_value_on_failure)
+static void test_value_on_failure()
 {
     static_test_env static_env;
     const path p = static_env.DNE;
     std::error_code ec = GetTestEC();
-    TEST_CHECK(last_write_time(p, ec) == file_time_type::min());
-    TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));
+    assert(last_write_time(p, ec) == file_time_type::min());
+    assert(ErrorIs(ec, std::errc::no_such_file_or_directory));
 }
 
 // Windows doesn't support setting perms::none to trigger failures
 // reading directories.
 #ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
-TEST_CASE(test_exists_fails)
+static void test_exists_fails()
 {
     scoped_test_env env;
     const path dir = env.create_dir("dir");
@@ -638,13 +634,26 @@ TEST_CASE(test_exists_fails)
     permissions(dir, perms::none);
 
     std::error_code ec = GetTestEC();
-    TEST_CHECK(last_write_time(file, ec) == file_time_type::min());
-    TEST_CHECK(ErrorIs(ec, std::errc::permission_denied));
+    assert(last_write_time(file, ec) == file_time_type::min());
+    assert(ErrorIs(ec, std::errc::permission_denied));
 
     ExceptionChecker Checker(file, std::errc::permission_denied,
                              "last_write_time");
-    TEST_CHECK_THROW_RESULT(filesystem_error, Checker, last_write_time(file));
+    TEST_VALIDATE_EXCEPTION(filesystem_error, Checker, last_write_time(file));
 }
-#endif
+#endif // TEST_WIN_NO_FILESYSTEM_PERMS_NONE
 
-TEST_SUITE_END()
+int main(int, char**) {
+    signature_test();
+    read_last_write_time_static_env_test();
+    get_last_write_time_dynamic_env_test();
+    set_last_write_time_dynamic_env_test();
+    last_write_time_symlink_test();
+    test_write_min_time();
+    test_write_max_time();
+    test_value_on_failure();
+#ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
+    test_exists_fails();
+#endif
+  return 0;
+}

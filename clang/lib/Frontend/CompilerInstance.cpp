@@ -46,7 +46,6 @@
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -55,6 +54,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 #include <optional>
 #include <time.h>
 #include <utility>
@@ -851,6 +851,9 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
   // relative to that.
   std::optional<SmallString<128>> AbsPath;
   if (OutputPath != "-" && !llvm::sys::path::is_absolute(OutputPath)) {
+    assert(hasFileManager() &&
+           "File Manager is required to fix up relative path.\n");
+
     AbsPath.emplace(OutputPath);
     FileMgr->FixupRelativePath(*AbsPath);
     OutputPath = *AbsPath;
@@ -1983,14 +1986,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     Module = PP->getHeaderSearchInfo().lookupModule(
         ModuleName, ImportLoc, /*AllowSearch*/ true,
         /*AllowExtraModuleMapSearch*/ !IsInclusionDirective);
-    /// FIXME: perhaps we should (a) look for a module using the module name
-    //  to file map (PrebuiltModuleFiles) and (b) diagnose if still not found?
-    //if (Module == nullptr) {
-    //  getDiagnostics().Report(ModuleNameLoc, diag::err_module_not_found)
-    //    << ModuleName;
-    //  DisableGeneratingGlobalModuleIndex = true;
-    //  return ModuleLoadResult();
-    //}
+
     MM.cacheModuleLoad(*Path[0].first, Module);
   } else {
     ModuleLoadResult Result = findOrCompileModuleAndReadAST(

@@ -605,7 +605,7 @@ static std::optional<RegisterInfo> GetARMDWARFRegisterInfo(unsigned reg_num) {
 // Valid return values are {1, 2, 3, 4}, with 0 signifying an error condition.
 static uint32_t CountITSize(uint32_t ITMask) {
   // First count the trailing zeros of the IT mask.
-  uint32_t TZ = llvm::countTrailingZeros(ITMask);
+  uint32_t TZ = llvm::countr_zero(ITMask);
   if (TZ > 3) {
     return 0;
   }

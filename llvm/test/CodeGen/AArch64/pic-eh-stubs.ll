@@ -1,3 +1,4 @@
+; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=static -simplifycfg-require-and-preserve-domtree=1 -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=pic -simplifycfg-require-and-preserve-domtree=1 -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64_be-none-linux-gnu -relocation-model=pic -simplifycfg-require-and-preserve-domtree=1 -o - %s | FileCheck %s
 

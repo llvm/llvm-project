@@ -20,12 +20,13 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/ProfileData/SymbolRemappingReader.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SwapByteOrder.h"
-#include "llvm/Support/SymbolRemappingReader.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -63,9 +64,9 @@ static InstrProfKind getProfileKindFromVersion(uint64_t Version) {
 }
 
 static Expected<std::unique_ptr<MemoryBuffer>>
-setupMemoryBuffer(const Twine &Path) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-      MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/true);
+setupMemoryBuffer(const Twine &Filename, vfs::FileSystem &FS) {
+  auto BufferOrErr = Filename.str() == "-" ? MemoryBuffer::getSTDIN()
+                                           : FS.getBufferForFile(Filename);
   if (std::error_code EC = BufferOrErr.getError())
     return errorCodeToError(EC);
   return std::move(BufferOrErr.get());
@@ -161,10 +162,10 @@ static Error printBinaryIdsInternal(raw_ostream &OS,
 }
 
 Expected<std::unique_ptr<InstrProfReader>>
-InstrProfReader::create(const Twine &Path,
+InstrProfReader::create(const Twine &Path, vfs::FileSystem &FS,
                         const InstrProfCorrelator *Correlator) {
   // Set up the buffer to read.
-  auto BufferOrError = setupMemoryBuffer(Path);
+  auto BufferOrError = setupMemoryBuffer(Path, FS);
   if (Error E = BufferOrError.takeError())
     return std::move(E);
   return InstrProfReader::create(std::move(BufferOrError.get()), Correlator);
@@ -173,10 +174,6 @@ InstrProfReader::create(const Twine &Path,
 Expected<std::unique_ptr<InstrProfReader>>
 InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
                         const InstrProfCorrelator *Correlator) {
-  // Sanity check the buffer.
-  if (uint64_t(Buffer->getBufferSize()) > std::numeric_limits<uint64_t>::max())
-    return make_error<InstrProfError>(instrprof_error::too_large);
-
   if (Buffer->getBufferSize() == 0)
     return make_error<InstrProfError>(instrprof_error::empty_raw_profile);
 
@@ -201,9 +198,10 @@ InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
 }
 
 Expected<std::unique_ptr<IndexedInstrProfReader>>
-IndexedInstrProfReader::create(const Twine &Path, const Twine &RemappingPath) {
+IndexedInstrProfReader::create(const Twine &Path, vfs::FileSystem &FS,
+                               const Twine &RemappingPath) {
   // Set up the buffer to read.
-  auto BufferOrError = setupMemoryBuffer(Path);
+  auto BufferOrError = setupMemoryBuffer(Path, FS);
   if (Error E = BufferOrError.takeError())
     return std::move(E);
 
@@ -211,7 +209,7 @@ IndexedInstrProfReader::create(const Twine &Path, const Twine &RemappingPath) {
   std::unique_ptr<MemoryBuffer> RemappingBuffer;
   std::string RemappingPathStr = RemappingPath.str();
   if (!RemappingPathStr.empty()) {
-    auto RemappingBufferOrError = setupMemoryBuffer(RemappingPathStr);
+    auto RemappingBufferOrError = setupMemoryBuffer(RemappingPathStr, FS);
     if (Error E = RemappingBufferOrError.takeError())
       return std::move(E);
     RemappingBuffer = std::move(RemappingBufferOrError.get());
@@ -224,9 +222,6 @@ IndexedInstrProfReader::create(const Twine &Path, const Twine &RemappingPath) {
 Expected<std::unique_ptr<IndexedInstrProfReader>>
 IndexedInstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
                                std::unique_ptr<MemoryBuffer> RemappingBuffer) {
-  if (uint64_t(Buffer->getBufferSize()) > std::numeric_limits<uint64_t>::max())
-    return make_error<InstrProfError>(instrprof_error::too_large);
-
   // Create the reader.
   if (!IndexedInstrProfReader::hasFormat(*Buffer))
     return make_error<InstrProfError>(instrprof_error::bad_magic);

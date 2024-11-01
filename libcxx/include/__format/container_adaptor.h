@@ -24,7 +24,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
 
 // [container.adaptors.format] only specifies the library should provide the
 // formatter specializations, not which header should provide them.
@@ -63,7 +63,7 @@ template <class _CharT, class _Tp, formattable<_CharT> _Container>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<stack<_Tp, _Container>, _CharT>
     : public __formatter_container_adaptor<stack<_Tp, _Container>, _CharT> {};
 
-#endif //_LIBCPP_STD_VER > 20
+#endif //_LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 

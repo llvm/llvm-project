@@ -13,9 +13,13 @@
 #include "TableGenBackends.h" // Declares all backends.
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Main.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
+#include <cassert>
+#include <string>
+#include <vector>
 
 using namespace llvm;
 
@@ -217,8 +221,7 @@ bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
   case GenOptRST:
     EmitOptRST(Records, OS);
     break;
-  case PrintEnums:
-  {
+  case PrintEnums: {
     for (Record *Rec : Records.getAllDerivedDefinitions(Class))
       OS << Rec->getName() << ", ";
     OS << "\n";

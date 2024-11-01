@@ -712,47 +712,47 @@ TEST(LinkGraphTest, SplitBlock) {
   }
 }
 
-struct InitSymbolsTestParams {
-  InitSymbolsTestParams(StringRef Triple, StringRef Section,
-                        bool ExpectedHasInitializerSection)
-      : Triple(Triple), Section(Section),
-        ExpectedHasInitializerSection(ExpectedHasInitializerSection) {}
+TEST(LinkGraphTest, GraphAllocationMethods) {
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
 
-  StringRef Triple;
-  StringRef Section;
-  bool ExpectedHasInitializerSection;
-};
+  // Test allocation of sized, uninitialized buffer.
+  auto Buf1 = G.allocateBuffer(10);
+  EXPECT_EQ(Buf1.size(), 10U);
 
-class InitSymbolsTestFixture
-    : public ::testing::TestWithParam<InitSymbolsTestParams> {};
+  // Test allocation of content-backed buffer.
+  char Buf2Src[] = {1, static_cast<char>(-1), 0, 42};
+  auto Buf2 = G.allocateContent(ArrayRef<char>(Buf2Src));
+  EXPECT_EQ(Buf2, ArrayRef<char>(Buf2Src));
 
-TEST_P(InitSymbolsTestFixture, InitSymbolSections) {
-  InitSymbolsTestParams Params = GetParam();
-  auto Graph = std::make_unique<LinkGraph>(
-      "foo", Triple(Params.Triple), 8, support::little, getGenericEdgeKindName);
-  Graph->createSection(Params.Section,
-                       orc::MemProt::Read | orc::MemProt::Write);
-  EXPECT_EQ(orc::hasInitializerSection(*Graph),
-            Params.ExpectedHasInitializerSection);
+  // Test c-string allocation from StringRef.
+  StringRef Buf3Src = "hello";
+  auto Buf3 = G.allocateCString(Buf3Src);
+  EXPECT_TRUE(llvm::equal(Buf3.drop_back(1), Buf3Src));
+  EXPECT_EQ(Buf3.back(), '\0');
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    InitSymbolsTests, InitSymbolsTestFixture,
-    ::testing::Values(
-        InitSymbolsTestParams("x86_64-apple-darwin", "__DATA,__objc_selrefs",
-                              true),
-        InitSymbolsTestParams("x86_64-apple-darwin", "__DATA,__mod_init_func",
-                              true),
-        InitSymbolsTestParams("x86_64-apple-darwin", "__DATA,__objc_classlist",
-                              true),
-        InitSymbolsTestParams("x86_64-apple-darwin", "__TEXT,__swift5_proto",
-                              true),
-        InitSymbolsTestParams("x86_64-apple-darwin", "__TEXT,__swift5_protos",
-                              true),
-        InitSymbolsTestParams("x86_64-apple-darwin", "__TEXT,__swift5_types",
-                              true),
-        InitSymbolsTestParams("x86_64-apple-darwin", "__DATA,__not_an_init_sec",
-                              false),
-        InitSymbolsTestParams("x86_64-unknown-linux", ".init_array", true),
-        InitSymbolsTestParams("x86_64-unknown-linux", ".init_array.0", true),
-        InitSymbolsTestParams("x86_64-unknown-linux", ".text", false)));
+TEST(LinkGraphTest, IsCStringBlockTest) {
+  // Check that the LinkGraph::splitBlock test works as expected.
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
+  auto &Sec =
+      G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
+
+  char CString[] = "hello, world!";
+  char NotACString[] = {0, 1, 0, 1, 0};
+
+  auto &CStringBlock =
+      G.createContentBlock(Sec, CString, orc::ExecutorAddr(), 1, 0);
+  auto &NotACStringBlock =
+      G.createContentBlock(Sec, NotACString, orc::ExecutorAddr(), 1, 0);
+  auto &SizeOneZeroFillBlock =
+      G.createZeroFillBlock(Sec, 1, orc::ExecutorAddr(), 1, 0);
+  auto &LargerZeroFillBlock =
+      G.createZeroFillBlock(Sec, 2, orc::ExecutorAddr(), 1, 0);
+
+  EXPECT_TRUE(isCStringBlock(CStringBlock));
+  EXPECT_FALSE(isCStringBlock(NotACStringBlock));
+  EXPECT_TRUE(isCStringBlock(SizeOneZeroFillBlock));
+  EXPECT_FALSE(isCStringBlock(LargerZeroFillBlock));
+}

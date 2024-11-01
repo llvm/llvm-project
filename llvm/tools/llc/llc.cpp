@@ -14,7 +14,6 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/LinkAllAsmWriterComponents.h"
@@ -44,7 +43,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/SourceMgr.h"
@@ -54,6 +52,8 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <memory>
 #include <optional>
@@ -366,7 +366,7 @@ int main(int argc, char **argv) {
   initializeScalarizeMaskedMemIntrinLegacyPassPass(*Registry);
   initializeExpandReductionsPass(*Registry);
   initializeExpandVectorPredicationPass(*Registry);
-  initializeHardwareLoopsPass(*Registry);
+  initializeHardwareLoopsLegacyPass(*Registry);
   initializeTransformUtils(*Registry);
   initializeReplaceWithVeclibLegacyPass(*Registry);
   initializeTLSVariableHoistLegacyPassPass(*Registry);

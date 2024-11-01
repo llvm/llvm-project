@@ -17,7 +17,7 @@
 #include "src/stdio/funlockfile.h"
 #include "src/stdio/fwrite.h"
 #include "src/stdio/getc_unlocked.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <errno.h>
 #include <stdio.h>

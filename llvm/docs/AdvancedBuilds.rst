@@ -224,7 +224,7 @@ Then, build the BOLT-optimized binary by running the following ninja command:
 
 .. code-block:: console
 
-  $ ninja clang++-bolt
+  $ ninja clang-bolt
 
 If you're seeing errors in the build process, try building with a recent
 version of Clang/LLVM by setting the CMAKE_C_COMPILER and
@@ -243,12 +243,11 @@ configuration command:
       -DBOOTSTRAP_BOOTSTRAP_LLVM_ENABLE_LLD=ON \
       -DPGO_INSTRUMENT_LTO=Thin
 
-Then, to build the final optimized binary, build the stage2-clang++-bolt
-target:
+Then, to build the final optimized binary, build the stage2-clang-bolt target:
 
 .. code-block:: console
 
-  $ ninja stage2-clang++-bolt
+  $ ninja stage2-clang-bolt
 
 3-Stage Non-Determinism
 =======================

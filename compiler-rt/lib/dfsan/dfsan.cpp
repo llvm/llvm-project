@@ -197,8 +197,7 @@ static dfsan_origin GetOriginIfTainted(uptr addr, uptr size) {
 
 #define PRINT_CALLER_STACK_TRACE        \
   {                                     \
-    GET_CALLER_PC_BP_SP;                \
-    (void)sp;                           \
+    GET_CALLER_PC_BP;                   \
     GET_STORE_STACK_TRACE_PC_BP(pc, bp) \
     stack.Print();                      \
   }
@@ -381,8 +380,7 @@ static void SetOrigin(const void *dst, uptr size, u32 origin) {
 }
 
 #define RET_CHAIN_ORIGIN(id)           \
-  GET_CALLER_PC_BP_SP;                 \
-  (void)sp;                            \
+  GET_CALLER_PC_BP;                    \
   GET_STORE_STACK_TRACE_PC_BP(pc, bp); \
   return ChainOrigin(id, &stack);
 
@@ -567,8 +565,7 @@ void SetShadow(dfsan_label label, void *addr, uptr size, dfsan_origin origin) {
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_maybe_store_origin(
     dfsan_label s, void *p, uptr size, dfsan_origin o) {
   if (UNLIKELY(s)) {
-    GET_CALLER_PC_BP_SP;
-    (void)sp;
+    GET_CALLER_PC_BP;
     GET_STORE_STACK_TRACE_PC_BP(pc, bp);
     SetOrigin(p, size, ChainOrigin(o, &stack));
   }

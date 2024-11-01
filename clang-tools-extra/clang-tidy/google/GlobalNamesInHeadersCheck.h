@@ -35,8 +35,8 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  const StringRef RawStringHeaderFileExtensions;
-  utils::FileExtensionsSet HeaderFileExtensions;
+  StringRef RawStringHeaderFileExtensions;
+  FileExtensionsSet HeaderFileExtensions;
 };
 
 } // namespace clang::tidy::google::readability

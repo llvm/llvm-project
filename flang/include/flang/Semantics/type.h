@@ -445,5 +445,7 @@ inline const DerivedTypeSpec *DeclTypeSpec::AsDerived() const {
   return const_cast<DeclTypeSpec *>(this)->AsDerived();
 }
 
+bool IsInteroperableIntrinsicType(const DeclTypeSpec &);
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TYPE_H_

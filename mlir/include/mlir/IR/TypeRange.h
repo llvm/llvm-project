@@ -166,13 +166,13 @@ inline bool operator==(ArrayRef<Type> lhs, const ValueTypeRange<RangeT> &rhs) {
 }
 
 //===----------------------------------------------------------------------===//
-// SubElementInterfaces
+// SubElements
 //===----------------------------------------------------------------------===//
 
 /// Enable TypeRange to be introspected for sub-elements.
 template <>
 struct AttrTypeSubElementHandler<TypeRange> {
-  static void walk(TypeRange param, AttrTypeSubElementWalker &walker) {
+  static void walk(TypeRange param, AttrTypeImmediateSubElementWalker &walker) {
     walker.walkRange(param);
   }
   static TypeRange replace(TypeRange param,

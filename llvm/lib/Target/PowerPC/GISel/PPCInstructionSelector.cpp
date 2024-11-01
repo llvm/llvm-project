@@ -12,6 +12,7 @@
 
 #include "PPC.h"
 #include "PPCInstrInfo.h"
+#include "PPCMachineFunctionInfo.h"
 #include "PPCRegisterBankInfo.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
@@ -54,6 +55,8 @@ private:
 
   bool selectZExt(MachineInstr &I, MachineBasicBlock &MBB,
                   MachineRegisterInfo &MRI) const;
+  bool selectConstantPool(MachineInstr &I, MachineBasicBlock &MBB,
+                          MachineRegisterInfo &MRI) const;
 
   std::optional<bool> selectI64ImmDirect(MachineInstr &I,
                                          MachineBasicBlock &MBB,
@@ -62,6 +65,7 @@ private:
   bool selectI64Imm(MachineInstr &I, MachineBasicBlock &MBB,
                     MachineRegisterInfo &MRI) const;
 
+  const PPCTargetMachine &TM;
   const PPCSubtarget &STI;
   const PPCInstrInfo &TII;
   const PPCRegisterInfo &TRI;
@@ -85,7 +89,8 @@ private:
 PPCInstructionSelector::PPCInstructionSelector(const PPCTargetMachine &TM,
                                                const PPCSubtarget &STI,
                                                const PPCRegisterBankInfo &RBI)
-    : STI(STI), TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI),
+    : TM(TM), STI(STI), TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()),
+      RBI(RBI),
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "PPCGenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATES_INIT
@@ -266,8 +271,8 @@ bool PPCInstructionSelector::selectZExt(MachineInstr &I, MachineBasicBlock &MBB,
 // For any 32 < Num < 64, check if the Imm contains at least Num consecutive
 // zeros and return the number of bits by the left of these consecutive zeros.
 static uint32_t findContiguousZerosAtLeast(uint64_t Imm, unsigned Num) {
-  uint32_t HiTZ = countTrailingZeros<uint32_t>(Hi_32(Imm));
-  uint32_t LoLZ = countLeadingZeros<uint32_t>(Lo_32(Imm));
+  uint32_t HiTZ = llvm::countr_zero<uint32_t>(Hi_32(Imm));
+  uint32_t LoLZ = llvm::countl_zero<uint32_t>(Lo_32(Imm));
   if ((HiTZ + LoLZ) >= Num)
     return (32 + HiTZ);
   return 0;
@@ -280,10 +285,10 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
                                                 MachineRegisterInfo &MRI,
                                                 Register Reg,
                                                 uint64_t Imm) const {
-  unsigned TZ = countTrailingZeros<uint64_t>(Imm);
-  unsigned LZ = countLeadingZeros<uint64_t>(Imm);
-  unsigned TO = countTrailingOnes<uint64_t>(Imm);
-  unsigned LO = countLeadingOnes<uint64_t>(Imm);
+  unsigned TZ = llvm::countr_zero<uint64_t>(Imm);
+  unsigned LZ = llvm::countl_zero<uint64_t>(Imm);
+  unsigned TO = llvm::countr_one<uint64_t>(Imm);
+  unsigned LO = llvm::countl_one<uint64_t>(Imm);
   uint32_t Hi32 = Hi_32(Imm);
   uint32_t Lo32 = Lo_32(Imm);
   uint32_t Shift = 0;
@@ -307,7 +312,7 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
 
   assert(LZ < 64 && "Unexpected leading zeros here.");
   // Count of ones follwing the leading zeros.
-  unsigned FO = countLeadingOnes<uint64_t>(Imm << LZ);
+  unsigned FO = llvm::countl_one<uint64_t>(Imm << LZ);
   // 2-1) Patterns : {zeros}{31-bit value}
   //                 {ones}{31-bit value}
   if (isInt<32>(Imm)) {
@@ -636,6 +641,66 @@ bool PPCInstructionSelector::selectI64Imm(MachineInstr &I,
   return true;
 }
 
+bool PPCInstructionSelector::selectConstantPool(
+    MachineInstr &I, MachineBasicBlock &MBB, MachineRegisterInfo &MRI) const {
+  const DebugLoc &DbgLoc = I.getDebugLoc();
+  MachineFunction *MF = MBB.getParent();
+
+  // TODO: handle 32-bit.
+  // TODO: Enabling floating point constant pool selection on AIX requires
+  // global isel on big endian target enabled first.
+  // See CallLowering::enableBigEndian().
+  if (!STI.isPPC64() || !STI.isLittleEndian())
+    return false;
+
+  MF->getInfo<PPCFunctionInfo>()->setUsesTOCBasePtr();
+
+  const Register DstReg = I.getOperand(0).getReg();
+  unsigned CPI = I.getOperand(1).getIndex();
+
+  // Address stored in the TOC entry. This is related to code model and the ABI
+  // we are currently using. For now we only handle 64-bit Linux LE. PowerPC
+  // only supports small, medium and large code model.
+  const CodeModel::Model CModel = TM.getCodeModel();
+  assert(!(CModel == CodeModel::Tiny || CModel == CodeModel::Kernel) &&
+         "PowerPC doesn't support tiny or kernel code models.");
+
+  const MCRegister TOCReg = STI.getTOCPointerRegister();
+  MachineMemOperand *MMO = MF->getMachineMemOperand(
+      MachinePointerInfo::getGOT(*MF), MachineMemOperand::MOLoad,
+      MRI.getType(DstReg), MF->getDataLayout().getPointerABIAlignment(0));
+
+  MachineInstr *MI = nullptr;
+  // For now we only handle 64-bit Linux.
+  if (CModel == CodeModel::Small) {
+    // For small code model, generate LDtocCPT(CPI, X2).
+    MI = BuildMI(MBB, I, DbgLoc, TII.get(PPC::LDtocCPT), DstReg)
+             .addConstantPoolIndex(CPI)
+             .addReg(TOCReg)
+             .addMemOperand(MMO);
+  } else {
+    Register HaAddrReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    BuildMI(MBB, I, DbgLoc, TII.get(PPC::ADDIStocHA8), HaAddrReg)
+        .addReg(TOCReg)
+        .addConstantPoolIndex(CPI);
+
+    if (CModel == CodeModel::Large)
+      // For large code model, generate LDtocL(CPI, ADDIStocHA8(X2, CPI))
+      MI = BuildMI(MBB, I, DbgLoc, TII.get(PPC::LDtocL), DstReg)
+               .addConstantPoolIndex(CPI)
+               .addReg(HaAddrReg)
+               .addMemOperand(MMO);
+    else
+      // For medium code model, generate ADDItocL(CPI, ADDIStocHA8(X2, CPI))
+      MI = BuildMI(MBB, I, DbgLoc, TII.get(PPC::ADDItocL), DstReg)
+               .addReg(HaAddrReg)
+               .addConstantPoolIndex(CPI);
+  }
+
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+}
+
 bool PPCInstructionSelector::select(MachineInstr &I) {
   auto &MBB = *I.getParent();
   auto &MF = *MBB.getParent();
@@ -704,6 +769,8 @@ bool PPCInstructionSelector::select(MachineInstr &I) {
     return selectZExt(I, MBB, MRI);
   case TargetOpcode::G_CONSTANT:
     return selectI64Imm(I, MBB, MRI);
+  case TargetOpcode::G_CONSTANT_POOL:
+    return selectConstantPool(I, MBB, MRI);
   }
   return false;
 }

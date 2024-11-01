@@ -11,56 +11,55 @@ jobs:
     runs-on: ubuntu-latest
     if: github.repository == 'llvm/llvm-project'
     steps:
+      - name: Validate Tag
+        id: validate-tag
+        run: |
+          test "${{ github.actor }}" = "tstellar" || test "${{ github.actor }}" = "tru"
+          echo "${{ github.ref_name }}" | grep -e '^llvmorg-[0-9]\+\.[0-9]\+\.[0-9]\+\(-rc[0-9]\+\)\?$'
+          release_version=$(echo "${{ github.ref_name }}" | sed 's/llvmorg-//g')
+          echo "release-version=$release_version" >> $GITHUB_OUTPUT
 
-    - name: Validate Tag
-      id: validate-tag
-      run: |
-        test "${{ github.actor }}" = "tstellar" || test "${{ github.actor }}" = "tru"
-        echo "${{ github.ref_name }}" | grep -e '^llvmorg-[0-9]\+\.[0-9]\+\.[0-9]\+\(-rc[0-9]\+\)\?$'
-        release_version=`echo "${{ github.ref_name }}" | sed 's/llvmorg-//g'`
-        echo "::set-output name=release-version::$release_version"
+      - name: Install Dependencies
+        run: |
+          sudo apt-get install -y \
+              doxygen \
+              graphviz \
+              python3-github \
+              python3-recommonmark \
+              python3-sphinx \
+              ninja-build \
+              texlive-font-utils
+          pip3 install --user sphinx-markdown-tables
 
-    - name: Install Dependencies
-      run: |
-        sudo apt-get install -y \
-            doxygen \
-            graphviz \
-            python3-github \
-            python3-recommonmark \
-            python3-sphinx \
-            ninja-build \
-            texlive-font-utils
-        pip3 install --user sphinx-markdown-tables
+      - name: Checkout LLVM
+        uses: actions/checkout@v3
 
-    - name: Checkout LLVM
-      uses: actions/checkout@v3
+      - name: Create Release
+        run: |
+          ./llvm/utils/release/./github-upload-release.py --token ${{ github.token }} --release ${{ steps.validate-tag.outputs.release-version }} create
 
-    - name: Create Release
-      run: |
-         ./llvm/utils/release/./github-upload-release.py --token ${{ github.token }} --release ${{ steps.validate-tag.outputs.release-version }} create
+      - name: Build Documentation
+        run: |
+          ./llvm/utils/release/build-docs.sh -srcdir llvm
+          ./llvm/utils/release/github-upload-release.py --token ${{ github.token }} --release ${{ steps.validate-tag.outputs.release-version }} upload --files *doxygen*.tar.xz
 
-    - name: Build Documentation
-      run: |
-        ./llvm/utils/release/build-docs.sh -srcdir llvm
-        ./llvm/utils/release/github-upload-release.py --token ${{ github.token }} --release ${{ steps.validate-tag.outputs.release-version }} upload --files *doxygen*.tar.xz
+      - name: Clone www-releases
+        if: ${{ !contains(steps.validate-tag.outputs.release-version, 'rc') }}
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ github.repository_owner }}/www-releases
+          ref: main
+          fetch-depth: 0
+          path: www-releases
 
-    - name: Clone www-releases
-      if: ${{ !contains(steps.validate-tag.outputs.release-version, 'rc') }}
-      uses: actions/checkout@v3
-      with:
-        repository: ${{ github.repository_owner }}/www-releases
-        ref: main
-        fetch-depth: 0
-        path: www-releases
-
-    - name: Upload Release Notes
-      if: ${{ !contains(steps.validate-tag.outputs.release-version, 'rc') }}
-      run: |
-        mkdir -p ../www-releases/${{ steps.validate-tag.outputs.release-version }}
-        mv ./docs-build/html-export/* ../www-releases/${{ steps.validate-tag.outputs.release-version }}
-        cd ../www-releases
-        git add ${{ steps.validate-tag.outputs.release-version }}
-        git config user.email "llvmbot@llvm.org"
-        git config user.name "llvmbot"
-        git commit -a -m "Add ${{ steps.validate-tag.outputs.release-version }} documentation"
-        git push https://${{ secrets.WWW_RELEASES_TOKEN }}@github.com/${{ github.repository_owner }}/www-releases main:main
+      - name: Upload Release Notes
+        if: ${{ !contains(steps.validate-tag.outputs.release-version, 'rc') }}
+        run: |
+          mkdir -p ../www-releases/${{ steps.validate-tag.outputs.release-version }}
+          mv ./docs-build/html-export/* ../www-releases/${{ steps.validate-tag.outputs.release-version }}
+          cd ../www-releases
+          git add ${{ steps.validate-tag.outputs.release-version }}
+          git config user.email "llvmbot@llvm.org"
+          git config user.name "llvmbot"
+          git commit -a -m "Add ${{ steps.validate-tag.outputs.release-version }} documentation"
+          git push https://${{ secrets.WWW_RELEASES_TOKEN }}@github.com/${{ github.repository_owner }}/www-releases main:main

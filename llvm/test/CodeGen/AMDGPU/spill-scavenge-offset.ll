@@ -11098,7 +11098,7 @@ entry:
   %tid = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
 
 ; allocate enough scratch to go beyond 2^12 addressing
-  %scratch = alloca <1280 x i32>, align 8, addrspace(5)
+  %scratch = alloca <1280 x i32>, align 16, addrspace(5)
 
 ; load VGPR data
   %aptr = getelementptr <64 x i32>, ptr addrspace(1) %in, i32 %tid

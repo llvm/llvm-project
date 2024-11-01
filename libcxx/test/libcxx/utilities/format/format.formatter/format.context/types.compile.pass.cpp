@@ -24,6 +24,7 @@
 // using wformat_context = basic_format_context<unspecified, wchar_t>;
 
 #include <format>
+#include <iterator>
 #include <string_view>
 #include <type_traits>
 

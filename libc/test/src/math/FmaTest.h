@@ -10,9 +10,9 @@
 #define LLVM_LIBC_TEST_SRC_MATH_FMATEST_H
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
-#include "utils/UnitTest/Test.h"
 #include "utils/testutils/RandUtils.h"
 
 namespace mpfr = __llvm_libc::testing::mpfr;

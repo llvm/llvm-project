@@ -118,6 +118,9 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_CONSTANT:
     OperandsMapping = getOperandsMapping({getValueMapping(PMI_GPR64), nullptr});
     break;
+  case TargetOpcode::G_CONSTANT_POOL:
+    OperandsMapping = getOperandsMapping({getValueMapping(PMI_GPR64), nullptr});
+    break;
   case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_FPTOSI: {
     Register SrcReg = MI.getOperand(1).getReg();

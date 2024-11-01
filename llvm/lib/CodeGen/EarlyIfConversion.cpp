@@ -874,7 +874,7 @@ bool EarlyIfConverter::shouldConvertIf() {
     return true;
 
   if (!MinInstr)
-    MinInstr = Traces->getEnsemble(MachineTraceMetrics::TS_MinInstrCount);
+    MinInstr = Traces->getEnsemble(MachineTraceStrategy::TS_MinInstrCount);
 
   MachineTraceMetrics::Trace TBBTrace = MinInstr->getTrace(IfConv.getTPred());
   MachineTraceMetrics::Trace FBBTrace = MinInstr->getTrace(IfConv.getFPred());

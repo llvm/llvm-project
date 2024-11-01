@@ -11,6 +11,7 @@ class TestDbgInfoContentDeque(TestBase):
 
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
+    @skipIf(compiler="clang", compiler_version=['<', '12.0'])
     def test(self):
         self.build()
 
@@ -20,7 +21,11 @@ class TestDbgInfoContentDeque(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
-        deque_type = "std::deque<Foo>"
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
+            deque_type = "std::deque<Foo>"
+        else:
+            deque_type = "std::deque<Foo, std::allocator<Foo> >"
+
         size_type = "size_type"
         value_type = "value_type"
 

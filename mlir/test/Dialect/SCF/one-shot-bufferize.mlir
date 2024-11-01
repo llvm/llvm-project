@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs bufferize-function-boundaries" -drop-equivalent-buffer-results -buffer-deallocation -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs bufferize-function-boundaries" -drop-equivalent-buffer-results -split-input-file | FileCheck %s --check-prefix=CHECK-NO-DEALLOC-PASS
 
 // Run fuzzer with different seeds.
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs test-analysis-only analysis-fuzzer-seed=23 bufferize-function-boundaries" -split-input-file -o /dev/null
@@ -542,8 +543,8 @@ func.func @parallel_insert_slice_no_conflict(
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
 
-  // CHECK: scf.foreach_thread (%[[tidx:.*]]) in (%[[idx2]])
-  %2 = scf.foreach_thread (%arg3) in (%idx2) shared_outs(%o = %arg2) -> (tensor<?xf32>) {
+  // CHECK: scf.forall (%[[tidx:.*]]) in (%[[idx2]])
+  %2 = scf.forall (%arg3) in (%idx2) shared_outs(%o = %arg2) -> (tensor<?xf32>) {
       // CHECK: %[[subview:.*]] = memref.subview %[[arg2]][5] [%[[idx]]] [1]
       %6 = tensor.extract_slice %o[5] [%idx] [%c1] : tensor<?xf32> to tensor<?xf32>
       // CHECK: linalg.fill ins(%{{.*}}) outs(%[[subview]] : memref<?xf32
@@ -552,9 +553,9 @@ func.func @parallel_insert_slice_no_conflict(
       // CHECK: memref.copy %[[subview]], %[[subview]]
 
       // Empty terminator is elided from pretty-printing.
-      // CHECK-NOT: scf.foreach_thread.perform_concurrently
+      // CHECK-NOT: scf.forall.in_parallel
       // CHECK-NOT: parallel_insert_slice
-      scf.foreach_thread.perform_concurrently {
+      scf.forall.in_parallel {
         tensor.parallel_insert_slice %8 into %o[5] [%idx] [%c1] :
           tensor<?xf32> into tensor<?xf32>
       }
@@ -588,8 +589,8 @@ func.func @parallel_insert_slice_with_conflict(
   // CHECK: %[[alloc1:.*]] = memref.alloc
   // CHECK: memref.copy %[[arg2]], %[[alloc1]]
 
-  // CHECK: scf.foreach_thread (%[[tidx:.*]]) in (%[[idx2]])
-  %2 = scf.foreach_thread (%arg3) in (%idx2) shared_outs(%o = %arg2) -> (tensor<?xf32>) {
+  // CHECK: scf.forall (%[[tidx:.*]]) in (%[[idx2]])
+  %2 = scf.forall (%arg3) in (%idx2) shared_outs(%o = %arg2) -> (tensor<?xf32>) {
       // CHECK: %[[subview1:.*]] = memref.subview %[[alloc1]][5] [%[[idx]]] [1]
       %6 = tensor.extract_slice %o[5] [%idx] [%c1] : tensor<?xf32> to tensor<?xf32>
 
@@ -600,9 +601,9 @@ func.func @parallel_insert_slice_with_conflict(
       // CHECK: memref.copy %[[subview1]], %[[subview1]]
 
       // Empty terminator is elided from pretty-printing.
-      // CHECK-NOT: scf.foreach_thread.perform_concurrently
+      // CHECK-NOT: scf.forall.in_parallel
       // CHECK-NOT: parallel_insert_slice
-      scf.foreach_thread.perform_concurrently {
+      scf.forall.in_parallel {
         tensor.parallel_insert_slice %8 into %o[5] [%idx] [%c1] :
           tensor<?xf32> into tensor<?xf32>
       }
@@ -628,8 +629,8 @@ func.func @matmul(%arg0: tensor<8x8xf32>, %arg1: tensor<8x8xf32>, %arg2: tensor<
   %c2 = arith.constant 2 : index
   %c4 = arith.constant 4 : index
 
-  // CHECK: scf.foreach_thread {{.*}}
-  %0 = scf.foreach_thread (%arg3, %arg4) in (%c2, %c4) shared_outs(%o = %arg2) -> (tensor<8x8xf32>) {
+  // CHECK: scf.forall {{.*}}
+  %0 = scf.forall (%arg3, %arg4) in (%c2, %c4) shared_outs(%o = %arg2) -> (tensor<8x8xf32>) {
     %1 = affine.apply #map0(%arg3)
     %3 = tensor.extract_slice %arg0[%1, 0] [4, 8] [1, 1] : tensor<8x8xf32> to tensor<4x8xf32>
     %4 = affine.apply #map1(%arg4)
@@ -638,7 +639,7 @@ func.func @matmul(%arg0: tensor<8x8xf32>, %arg1: tensor<8x8xf32>, %arg2: tensor<
 
     //      CHECK: linalg.matmul ins({{.*}}memref<4x8xf32, strided<[?, ?], offset: ?>>, memref<8x4xf32, strided<[?, ?], offset: ?>>) outs({{.*}} : memref<4x4xf32, strided<[?, ?], offset: ?>>)
     %8 = linalg.matmul ins(%3, %6 : tensor<4x8xf32>, tensor<8x4xf32>) outs(%7 : tensor<4x4xf32>) -> tensor<4x4xf32>
-    scf.foreach_thread.perform_concurrently {
+    scf.forall.in_parallel {
       tensor.parallel_insert_slice %8 into %o[%1, %4] [4, 4] [1, 1] : tensor<4x4xf32> into tensor<8x8xf32>
     }
   }
@@ -657,19 +658,19 @@ func.func @scf_foreach_private_var(%t: tensor<10xf32>) -> f32 {
   // CHECK: %[[t_copy:.*]] = memref.alloc() {{.*}} : memref<10xf32>
   // CHECK: memref.copy %[[t]], %[[t_copy]]
 
-  // CHECK: scf.foreach_thread (%{{.*}}) in (%{{.*}}) {
+  // CHECK: scf.forall (%{{.*}}) in (2) {
 
   // Load from the copy and store into the shared output.
   // CHECK:   %[[subview:.*]] = memref.subview %[[t]]
   // CHECK:   memref.load %[[t_copy]]
   // CHECK:   memref.store %{{.*}}, %[[subview]]
-  %0 = scf.foreach_thread (%tid) in (%c2) shared_outs(%o = %t) -> tensor<10xf32> {
+  %0 = scf.forall (%tid) in (%c2) shared_outs(%o = %t) -> tensor<10xf32> {
     %offset = arith.muli %c5, %tid : index
     %slice = tensor.extract_slice %o[%offset] [5] [1]
         : tensor<10xf32> to tensor<5xf32>
     %r2 = tensor.extract %t[%tid] : tensor<10xf32>
     %i = tensor.insert %r2 into %slice[%c2] : tensor<5xf32>
-    scf.foreach_thread.perform_concurrently {
+    scf.forall.in_parallel {
       tensor.parallel_insert_slice %i into %o[%offset] [5] [1]
           : tensor<5xf32> into tensor<10xf32>
     }
@@ -690,8 +691,8 @@ func.func @scf_foreach_privatized_but_not_copied(
 
   // CHECK-NOT: memref.alloc
   // CHECK-NOT: memref.copy
-  // CHECK: scf.foreach_thread {{.*}} {
-  %0 = scf.foreach_thread (%tid) in (%c2) shared_outs(%o = %t0) -> tensor<10xf32> {
+  // CHECK: scf.forall {{.*}} {
+  %0 = scf.forall (%tid) in (%c2) shared_outs(%o = %t0) -> tensor<10xf32> {
     %offset = arith.muli %c5, %tid : index
     %slice = tensor.extract_slice %o[%offset] [5] [1]
         : tensor<10xf32> to tensor<5xf32>
@@ -700,7 +701,7 @@ func.func @scf_foreach_privatized_but_not_copied(
     // CHECK: memref.load %[[t1]]
     %r2 = tensor.extract %t1[%tid] : tensor<10xf32>
     %i = tensor.insert %r2 into %slice[%c2] : tensor<5xf32>
-    scf.foreach_thread.perform_concurrently {
+    scf.forall.in_parallel {
       tensor.parallel_insert_slice %i into %o[%offset] [5] [1]
           : tensor<5xf32> into tensor<10xf32>
     }
@@ -713,26 +714,28 @@ func.func @scf_foreach_privatized_but_not_copied(
 // -----
 
 // CHECK-LABEL: func @scf_if_memory_space
-func.func @scf_if_memory_space(%c: i1, %f: f32) -> (f32, f32)
+func.func @scf_if_memory_space(%c: i1, %f: f32, %cst: f32) -> (f32, f32)
 {
   %c0 = arith.constant 0 : index
   // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32, 1>
-  %0 = bufferization.alloc_tensor() {memory_space = 1 : i64} : tensor<5xf32>
+  %alloc = bufferization.alloc_tensor() {memory_space = 1 : i64} : tensor<5xf32>
+  // CHECK: linalg.fill {{.*}} outs(%[[alloc]] : memref<5xf32, 1>)
+  %filled = linalg.fill ins(%cst : f32) outs(%alloc : tensor<5xf32>) -> tensor<5xf32>
   // CHECK: scf.if %{{.*}} -> (memref<5xf32, 1>) {
   %1 = scf.if %c -> tensor<5xf32> {
     // CHECK: %[[cloned:.*]] = bufferization.clone %[[alloc]]
     // CHECK: scf.yield %[[cloned]]
-    scf.yield %0 : tensor<5xf32>
+    scf.yield %filled : tensor<5xf32>
   } else {
     // CHECK: %[[alloc2:.*]] = memref.alloc() {{.*}} : memref<5xf32, 1>
     // CHECK: memref.store %{{.*}}, %[[alloc2]]
     // CHECK: %[[cloned2:.*]] = bufferization.clone %[[alloc2]]
     // CHECK: memref.dealloc %[[alloc2]]
     // CHECK: scf.yield %[[cloned2]]
-    %2 = tensor.insert %f into %0[%c0] : tensor<5xf32>
+    %2 = tensor.insert %f into %filled[%c0] : tensor<5xf32>
     scf.yield %2 : tensor<5xf32>
   }
-  %r0 = tensor.extract %0[%c0] : tensor<5xf32>
+  %r0 = tensor.extract %filled[%c0] : tensor<5xf32>
   %r1 = tensor.extract %1[%c0] : tensor<5xf32>
   return %r0, %r1 : f32, f32
 }
@@ -924,4 +927,55 @@ func.func @non_block_argument_yield() {
     scf.yield %ret : tensor<i32>
   }
   return
+}
+
+// -----
+
+// This is a regression test. Make sure that bufferization succeeds.
+
+// CHECK-LABEL: func @regression_cast_in_loop(
+func.func @regression_cast_in_loop() -> tensor<2xindex> {
+  %false = arith.constant false
+  %c0 = arith.constant 0 : index
+  %0 = bufferization.alloc_tensor() : tensor<2xindex>
+  // CHECK: scf.while (%{{.*}} = %{{.*}}) : (memref<2xindex>) -> memref<2xindex>
+  %1 = scf.while (%arg0 = %0) : (tensor<2xindex>) -> tensor<2xindex> {
+    scf.condition(%false) %arg0 : tensor<2xindex>
+  } do {
+  // CHECK: ^bb0(%{{.*}}: memref<2xindex>):
+  ^bb0(%arg0: tensor<2xindex>):
+    %cast = tensor.cast %0 : tensor<2xindex> to tensor<?xindex>
+    %inserted = tensor.insert %c0 into %cast[%c0] : tensor<?xindex>
+    %cast_0 = tensor.cast %inserted : tensor<?xindex> to tensor<2xindex>
+    scf.yield %cast_0 : tensor<2xindex>
+  }
+  return %1 : tensor<2xindex>
+}
+
+// -----
+
+// This test does not compute anything meaningful but it tests that
+// bufferizesToMemoryWrite is correctly propagated through regions.
+
+// CHECK-NO-DEALLOC-PASS-LABEL: func @elide_copy_of_non_writing_scf_if(
+func.func @elide_copy_of_non_writing_scf_if(%c: i1, %p1: index, %p2: index, %f: f32)
+  -> (tensor<10xf32>, f32)
+{
+  %r = scf.if %c -> tensor<10xf32> {
+    // CHECK-NO-DEALLOC-PASS: memref.alloc
+    %t1 = bufferization.alloc_tensor() : tensor<10xf32>
+    scf.yield %t1 : tensor<10xf32>
+  } else {
+    // CHECK-NO-DEALLOC-PASS: memref.alloc
+    %t2 = bufferization.alloc_tensor() : tensor<10xf32>
+    scf.yield %t2 : tensor<10xf32>
+  }
+
+  // No copy should be inserted because %r does not bufferize to a memory write.
+  // I.e., %r does not have defined contents and the copy can be elided.
+  // CHECK-NO-DEALLOC-PASS-NOT: memref.alloc
+  // CHECK-NO-DEALLOC-PASS-NOT: memref.copy
+  %r2 = tensor.insert %f into %r[%p1] : tensor<10xf32>
+  %r3 = tensor.extract %r[%p2] : tensor<10xf32>
+  return %r2, %r3 : tensor<10xf32>, f32
 }

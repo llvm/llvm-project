@@ -34,30 +34,26 @@ define half @f16_positive_zero(ptr %pf) nounwind {
 define half @f16_negative_zero(ptr %pf) nounwind {
 ; RV32IZFHMIN-LABEL: f16_negative_zero:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    fmv.w.x ft0, zero
-; RV32IZFHMIN-NEXT:    fneg.s ft0, ft0
-; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; RV32IZFHMIN-NEXT:    lui a0, 1048568
+; RV32IZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV32IZFHMIN-NEXT:    ret
 ;
 ; RV32IDZFHMIN-LABEL: f16_negative_zero:
 ; RV32IDZFHMIN:       # %bb.0:
-; RV32IDZFHMIN-NEXT:    fmv.w.x ft0, zero
-; RV32IDZFHMIN-NEXT:    fneg.s ft0, ft0
-; RV32IDZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; RV32IDZFHMIN-NEXT:    lui a0, 1048568
+; RV32IDZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV32IDZFHMIN-NEXT:    ret
 ;
 ; RV64IZFHMIN-LABEL: f16_negative_zero:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fmv.w.x ft0, zero
-; RV64IZFHMIN-NEXT:    fneg.s ft0, ft0
-; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; RV64IZFHMIN-NEXT:    lui a0, 1048568
+; RV64IZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV64IDZFHMIN-LABEL: f16_negative_zero:
 ; RV64IDZFHMIN:       # %bb.0:
-; RV64IDZFHMIN-NEXT:    fmv.w.x ft0, zero
-; RV64IDZFHMIN-NEXT:    fneg.s ft0, ft0
-; RV64IDZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; RV64IDZFHMIN-NEXT:    lui a0, 1048568
+; RV64IDZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; RV64IDZFHMIN-NEXT:    ret
   ret half -0.0
 }

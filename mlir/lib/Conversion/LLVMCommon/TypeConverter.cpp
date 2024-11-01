@@ -11,6 +11,7 @@
 #include "mlir/Conversion/LLVMCommon/MemRefBuilder.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include <optional>
 
 using namespace mlir;
 
@@ -158,6 +159,10 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
     return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
         .getResult(0);
   });
+
+  // Integer memory spaces map to themselves.
+  addTypeAttributeConversion(
+      [](BaseMemRefType memref, IntegerAttr addrspace) { return addrspace; });
 }
 
 /// Returns the MLIR context.
@@ -167,6 +172,13 @@ MLIRContext &LLVMTypeConverter::getContext() {
 
 Type LLVMTypeConverter::getIndexType() {
   return IntegerType::get(&getContext(), getIndexTypeBitwidth());
+}
+
+LLVM::LLVMPointerType
+LLVMTypeConverter::getPointerType(Type elementType, unsigned int addressSpace) {
+  if (useOpaquePointers())
+    return LLVM::LLVMPointerType::get(&getContext(), addressSpace);
+  return LLVM::LLVMPointerType::get(elementType, addressSpace);
 }
 
 unsigned LLVMTypeConverter::getPointerBitwidth(unsigned addressSpace) {
@@ -201,7 +213,7 @@ Type LLVMTypeConverter::convertFunctionType(FunctionType type) {
       convertFunctionSignature(type, /*isVariadic=*/false, conversion);
   if (!converted)
     return {};
-  return LLVM::LLVMPointerType::get(converted);
+  return getPointerType(converted);
 }
 
 // Function types are converted to LLVM Function types by recursively converting
@@ -238,10 +250,9 @@ Type LLVMTypeConverter::convertFunctionSignature(
 
 /// Converts the function type to a C-compatible format, in particular using
 /// pointers to memref descriptors for arguments.
-std::pair<Type, bool>
+std::pair<LLVM::LLVMFunctionType, LLVM::LLVMStructType>
 LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) {
   SmallVector<Type, 4> inputs;
-  bool resultIsNowArg = false;
 
   Type resultType = type.getNumResults() == 0
                         ? LLVM::LLVMVoidType::get(&getContext())
@@ -249,12 +260,12 @@ LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) {
   if (!resultType)
     return {};
 
-  if (auto structType = resultType.dyn_cast<LLVM::LLVMStructType>()) {
+  auto structType = resultType.dyn_cast<LLVM::LLVMStructType>();
+  if (structType) {
     // Struct types cannot be safely returned via C interface. Make this a
     // pointer argument, instead.
-    inputs.push_back(LLVM::LLVMPointerType::get(structType));
+    inputs.push_back(getPointerType(structType));
     resultType = LLVM::LLVMVoidType::get(&getContext());
-    resultIsNowArg = true;
   }
 
   for (Type t : type.getInputs()) {
@@ -262,11 +273,11 @@ LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) {
     if (!converted || !LLVM::isCompatibleType(converted))
       return {};
     if (t.isa<MemRefType, UnrankedMemRefType>())
-      converted = LLVM::LLVMPointerType::get(converted);
+      converted = getPointerType(converted);
     inputs.push_back(converted);
   }
 
-  return {LLVM::LLVMFunctionType::get(resultType, inputs), resultIsNowArg};
+  return {LLVM::LLVMFunctionType::get(resultType, inputs), structType};
 }
 
 /// Convert a memref type into a list of LLVM IR types that will form the
@@ -311,8 +322,18 @@ LLVMTypeConverter::getMemRefDescriptorFields(MemRefType type,
   Type elementType = convertType(type.getElementType());
   if (!elementType)
     return {};
-  auto ptrTy =
-      LLVM::LLVMPointerType::get(elementType, type.getMemorySpaceAsInt());
+
+  FailureOr<unsigned> addressSpace = getMemRefAddressSpace(type);
+  if (failed(addressSpace)) {
+    emitError(UnknownLoc::get(type.getContext()),
+              "conversion of memref memory space ")
+        << type.getMemorySpace()
+        << " to integer address space "
+           "failed. Consider adding memory space conversions.";
+    return {};
+  }
+  auto ptrTy = getPointerType(elementType, *addressSpace);
+
   auto indexTy = getIndexType();
 
   SmallVector<Type, 5> results = {ptrTy, ptrTy, indexTy};
@@ -330,7 +351,7 @@ LLVMTypeConverter::getMemRefDescriptorFields(MemRefType type,
 unsigned LLVMTypeConverter::getMemRefDescriptorSize(MemRefType type,
                                                     const DataLayout &layout) {
   // Compute the descriptor size given that of its components indicated above.
-  unsigned space = type.getMemorySpaceAsInt();
+  unsigned space = *getMemRefAddressSpace(type);
   return 2 * llvm::divideCeil(getPointerBitwidth(space), 8) +
          (1 + 2 * type.getRank()) * layout.getTypeSize(getIndexType());
 }
@@ -355,15 +376,14 @@ Type LLVMTypeConverter::convertMemRefType(MemRefType type) {
 ///    stack allocated (alloca) copy of a MemRef descriptor that got casted to
 ///    be unranked.
 SmallVector<Type, 2> LLVMTypeConverter::getUnrankedMemRefDescriptorFields() {
-  return {getIndexType(),
-          LLVM::LLVMPointerType::get(IntegerType::get(&getContext(), 8))};
+  return {getIndexType(), getPointerType(IntegerType::get(&getContext(), 8))};
 }
 
 unsigned
 LLVMTypeConverter::getUnrankedMemRefDescriptorSize(UnrankedMemRefType type,
                                                    const DataLayout &layout) {
   // Compute the descriptor size given that of its components indicated above.
-  unsigned space = type.getMemorySpaceAsInt();
+  unsigned space = *getMemRefAddressSpace(type);
   return layout.getTypeSize(getIndexType()) +
          llvm::divideCeil(getPointerBitwidth(space), 8);
 }
@@ -373,6 +393,21 @@ Type LLVMTypeConverter::convertUnrankedMemRefType(UnrankedMemRefType type) {
     return {};
   return LLVM::LLVMStructType::getLiteral(&getContext(),
                                           getUnrankedMemRefDescriptorFields());
+}
+
+FailureOr<unsigned>
+LLVMTypeConverter::getMemRefAddressSpace(BaseMemRefType type) {
+  if (!type.getMemorySpace()) // Default memory space -> 0.
+    return 0;
+  std::optional<Attribute> converted =
+      convertTypeAttribute(type, type.getMemorySpace());
+  if (!converted)
+    return failure();
+  if (!(*converted)) // Conversion to default is 0.
+    return 0;
+  if (auto explicitSpace = converted->dyn_cast_or_null<IntegerAttr>())
+    return explicitSpace.getInt();
+  return failure();
 }
 
 // Check if a memref type can be converted to a bare pointer.
@@ -406,7 +441,10 @@ Type LLVMTypeConverter::convertMemRefToBarePtr(BaseMemRefType type) {
   Type elementType = convertType(type.getElementType());
   if (!elementType)
     return {};
-  return LLVM::LLVMPointerType::get(elementType, type.getMemorySpaceAsInt());
+  FailureOr<unsigned> addressSpace = getMemRefAddressSpace(type);
+  if (failed(addressSpace))
+    return {};
+  return getPointerType(elementType, *addressSpace);
 }
 
 /// Convert an n-D vector type to an LLVM vector type:
@@ -483,11 +521,11 @@ Value LLVMTypeConverter::promoteOneMemRefDescriptor(Location loc, Value operand,
                                                     OpBuilder &builder) {
   // Alloca with proper alignment. We do not expect optimizations of this
   // alloca op and so we omit allocating at the entry block.
-  auto ptrType = LLVM::LLVMPointerType::get(operand.getType());
+  auto ptrType = getPointerType(operand.getType());
   Value one = builder.create<LLVM::ConstantOp>(loc, builder.getI64Type(),
                                                builder.getIndexAttr(1));
   Value allocated =
-      builder.create<LLVM::AllocaOp>(loc, ptrType, one, /*alignment=*/0);
+      builder.create<LLVM::AllocaOp>(loc, ptrType, operand.getType(), one);
   // Store into the alloca'ed descriptor.
   builder.create<LLVM::StoreOp>(loc, operand, allocated);
   return allocated;

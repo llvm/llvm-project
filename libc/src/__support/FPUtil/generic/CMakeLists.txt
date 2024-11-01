@@ -10,6 +10,7 @@ add_header_library(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.platform_defs
     libc.src.__support.builtin_wrappers
+    libc.src.__support.common
     libc.src.__support.uint128
     libc.include.fenv
 )
@@ -25,6 +26,7 @@ add_header_library(
     libc.src.__support.FPUtil.float_properties
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.builtin_wrappers
+    libc.src.__support.macros.optimization
     libc.src.__support.uint128
 )
 
@@ -39,5 +41,6 @@ add_header_library(
     libc.src.__support.FPUtil.float_properties
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.builtin_wrappers
+    libc.src.__support.macros.optimization
     libc.src.math.generic.math_utils
 )

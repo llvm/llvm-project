@@ -127,7 +127,7 @@ static lto::Config createConfig() {
   c.OptLevel = config->ltoo;
   c.CPU = getCPUStr();
   c.MAttrs = getMAttrs();
-  c.CGOptLevel = args::getCGOptLevel(config->ltoo);
+  c.CGOptLevel = config->ltoCgo;
 
   c.PTO.LoopVectorization = c.OptLevel > 1;
   c.PTO.SLPVectorization = c.OptLevel > 1;
@@ -164,8 +164,6 @@ static lto::Config createConfig() {
   c.CSIRProfile = std::string(config->ltoCSProfileFile);
   c.RunCSIRInstr = config->ltoCSProfileGenerate;
   c.PGOWarnMismatch = config->ltoPGOWarnMismatch;
-
-  c.OpaquePointers = config->opaquePointers;
 
   if (config->emitLLVM) {
     c.PostInternalizeModuleHook = [](size_t task, const Module &m) {

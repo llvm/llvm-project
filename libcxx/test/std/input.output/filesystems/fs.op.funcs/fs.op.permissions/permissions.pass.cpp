@@ -20,16 +20,13 @@
 #include "filesystem_include.h"
 
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 
 using namespace fs;
 
 using PR = fs::perms;
 
-TEST_SUITE(filesystem_permissions_test_suite)
-
-TEST_CASE(test_signatures)
+static void test_signatures()
 {
     const path p; ((void)p);
     const perms pr{}; ((void)pr);
@@ -41,7 +38,7 @@ TEST_CASE(test_signatures)
     LIBCPP_ONLY(ASSERT_NOT_NOEXCEPT(fs::permissions(p, pr, opts, ec)));
 }
 
-TEST_CASE(test_error_reporting)
+static void test_error_reporting()
 {
     auto checkThrow = [](path const& f, fs::perms opts,
                          const std::error_code& ec)
@@ -67,20 +64,20 @@ TEST_CASE(test_error_reporting)
     { // !exists
         std::error_code ec = GetTestEC();
         fs::permissions(dne, fs::perms{}, ec);
-        TEST_REQUIRE(ec);
-        TEST_CHECK(ec != GetTestEC());
-        TEST_CHECK(checkThrow(dne, fs::perms{}, ec));
+        assert(ec);
+        assert(ec != GetTestEC());
+        assert(checkThrow(dne, fs::perms{}, ec));
     }
     {
         std::error_code ec = GetTestEC();
         fs::permissions(dne_sym, fs::perms{}, ec);
-        TEST_REQUIRE(ec);
-        TEST_CHECK(ec != GetTestEC());
-        TEST_CHECK(checkThrow(dne_sym, fs::perms{}, ec));
+        assert(ec);
+        assert(ec != GetTestEC());
+        assert(checkThrow(dne_sym, fs::perms{}, ec));
     }
 }
 
-TEST_CASE(basic_permissions_test)
+static void basic_permissions_test()
 {
     scoped_test_env env;
     const path file = env.create_file("file1", 42);
@@ -120,20 +117,20 @@ TEST_CASE(basic_permissions_test)
         {dir,  perms::group_all, perms::owner_all | perms::group_all, AP | NF}
     };
     for (auto const& TC : cases) {
-        TEST_CHECK(status(TC.p).permissions() != TC.expected);
+        assert(status(TC.p).permissions() != TC.expected);
         {
           std::error_code ec = GetTestEC();
           permissions(TC.p, TC.set_perms, TC.opts, ec);
-          TEST_CHECK(!ec);
+          assert(!ec);
           auto pp = status(TC.p).permissions();
-          TEST_CHECK(pp == NormalizeExpectedPerms(TC.expected));
+          assert(pp == NormalizeExpectedPerms(TC.expected));
         }
         if (TC.opts == perm_options::replace) {
           std::error_code ec = GetTestEC();
           permissions(TC.p, TC.set_perms, ec);
-          TEST_CHECK(!ec);
+          assert(!ec);
           auto pp = status(TC.p).permissions();
-          TEST_CHECK(pp == NormalizeExpectedPerms(TC.expected));
+          assert(pp == NormalizeExpectedPerms(TC.expected));
         }
     }
 }
@@ -142,7 +139,7 @@ TEST_CASE(basic_permissions_test)
 // This test isn't currently meaningful on Windows; the Windows file
 // permissions visible via std::filesystem doesn't show any difference
 // between owner/group/others.
-TEST_CASE(test_no_resolve_symlink_on_symlink)
+static void test_no_resolve_symlink_on_symlink()
 {
     scoped_test_env env;
     const path file = env.create_file("file", 42);
@@ -177,13 +174,21 @@ TEST_CASE(test_no_resolve_symlink_on_symlink)
         std::error_code ec = GetTestEC();
         permissions(sym, TC.set_perms, TC.opts | perm_options::nofollow, ec);
         if (expected_ec)
-            TEST_CHECK(ErrorIs(ec, static_cast<std::errc>(expected_ec.value())));
+            assert(ErrorIs(ec, static_cast<std::errc>(expected_ec.value())));
         else
-            TEST_CHECK(!ec);
-        TEST_CHECK(status(file).permissions() == file_perms);
-        TEST_CHECK(symlink_status(sym).permissions() == expected_link_perms);
+            assert(!ec);
+        assert(status(file).permissions() == file_perms);
+        assert(symlink_status(sym).permissions() == expected_link_perms);
     }
 }
-#endif
+#endif // _WIN32
 
-TEST_SUITE_END()
+int main(int, char**) {
+    test_signatures();
+    test_error_reporting();
+    basic_permissions_test();
+#ifndef _WIN32
+    test_no_resolve_symlink_on_symlink();
+#endif
+    return 0;
+}

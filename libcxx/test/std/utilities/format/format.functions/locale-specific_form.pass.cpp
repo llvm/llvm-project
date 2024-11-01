@@ -94,6 +94,7 @@
 #include "string_literal.h"
 #include "test_format_string.h"
 #include "assert_macros.h"
+#include "concat_macros.h"
 
 #define STR(S) MAKE_STRING(CharT, S)
 #define SV(S) MAKE_STRING_VIEW(CharT, S)
@@ -129,7 +130,7 @@ void test(std::basic_string_view<CharT> expected, test_format_string<CharT, Args
   {
     std::basic_string<CharT> out = std::format(fmt, std::forward<Args>(args)...);
     TEST_REQUIRE(out == expected,
-                 test_concat_message(
+                 TEST_WRITE_CONCATENATED(
                      "\nFormat string   ", fmt.get(), "\nExpected output ", expected, "\nActual output   ", out, '\n'));
   }
   // *** vformat ***

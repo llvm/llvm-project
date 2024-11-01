@@ -1,5 +1,6 @@
 add_llvm_component_library(LLVMMC
   ConstantPools.cpp
+  DXContainerPSVInfo.cpp
   ELFObjectWriter.cpp
   MCAsmBackend.cpp
   MCAsmInfo.cpp

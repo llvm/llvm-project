@@ -66,10 +66,10 @@ void LVSymbol::addLocation(dwarf::Attribute Attr, LVAddress LowPC,
                            LVAddress HighPC, LVUnsigned SectionOffset,
                            uint64_t LocDescOffset, bool CallSiteLocation) {
   if (!Locations)
-    Locations = new LVAutoLocations();
+    Locations = std::make_unique<LVLocations>();
 
   // Create the location entry.
-  CurrentLocation = new LVLocationSymbol();
+  CurrentLocation = getReader().createLocationSymbol();
   CurrentLocation->setParent(this);
   CurrentLocation->setAttr(Attr);
   if (CallSiteLocation)
@@ -105,7 +105,7 @@ LVLocations::iterator LVSymbol::addLocationGap(LVLocations::iterator Pos,
                                                LVAddress LowPC,
                                                LVAddress HighPC) {
   // Create a location entry for the gap.
-  LVLocation *Gap = new LVLocationSymbol();
+  LVLocation *Gap = getReader().createLocationSymbol();
   Gap->setParent(this);
   Gap->setAttr(dwarf::DW_AT_location);
   Gap->addObject(LowPC, HighPC,
@@ -190,7 +190,7 @@ void LVSymbol::getLocations(LVLocations &LocationList) const {
 
 // Calculate coverage factor.
 void LVSymbol::calculateCoverage() {
-  if (!LVLocation::calculateCoverage(Locations, CoverageFactor,
+  if (!LVLocation::calculateCoverage(Locations.get(), CoverageFactor,
                                      CoveragePercentage)) {
     LVScope *Parent = getParentScope();
     if (Parent->getIsInlinedFunction()) {
@@ -444,6 +444,6 @@ void LVSymbol::printExtra(raw_ostream &OS, bool Full) const {
       Reference->printReference(OS, Full, const_cast<LVSymbol *>(this));
 
     // Print location information.
-    LVLocation::print(Locations, OS, Full);
+    LVLocation::print(Locations.get(), OS, Full);
   }
 }

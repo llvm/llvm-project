@@ -1,7 +1,7 @@
 ; RUN:  llc -march=amdgcn -stop-after=amdgpu-isel < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
 ; RUN:  llc -march=amdgcn -mcpu=gfx900 -stop-after=amdgpu-isel < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX900 %s
 
-; FUNC-LABEL: {{^}}v_abs_i32:
+; GCN-LABEL: name: s_abs_i32
 ; GCN: S_ABS_I32
 define amdgpu_kernel void @s_abs_i32(ptr addrspace(1) %out, i32 %val) nounwind {
   %neg = sub i32 0, %val
@@ -12,7 +12,7 @@ define amdgpu_kernel void @s_abs_i32(ptr addrspace(1) %out, i32 %val) nounwind {
   ret void
 }
 
-; FUNC-LABEL: {{^}}v_abs_i32:
+; GCN-LABEL: name: v_abs_i32
 ; SI:  V_SUB_CO_U32_e64
 ; GFX900: V_SUB_U32_e64
 ; GCN: V_MAX_I32_e64
@@ -28,7 +28,7 @@ define amdgpu_kernel void @v_abs_i32(ptr addrspace(1) %out, ptr addrspace(1) %sr
   ret void
 }
 
-; FUNC-LABEL: {{^}}s_abs_v2i32:
+; GCN-LABEL: name: s_abs_v2i32
 ; GCN: S_ABS_I32
 ; GCN: S_ABS_I32
 define amdgpu_kernel void @s_abs_v2i32(ptr addrspace(1) %out, <2 x i32> %val) nounwind {
@@ -44,7 +44,7 @@ define amdgpu_kernel void @s_abs_v2i32(ptr addrspace(1) %out, <2 x i32> %val) no
   ret void
 }
 
-; FUNC-LABEL: {{^}}v_abs_v2i32:
+; GCN-LABEL: name: v_abs_v2i32
 ; SI:  V_SUB_CO_U32_e64
 ; GFX900: V_SUB_U32_e64
 ; GCN: V_MAX_I32_e64

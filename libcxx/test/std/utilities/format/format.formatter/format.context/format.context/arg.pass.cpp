@@ -13,6 +13,7 @@
 // basic_format_arg<basic_format_context> arg(size_t id) const;
 
 #include <format>
+#include <iterator>
 #include <cassert>
 
 #include "test_basic_format_arg.h"

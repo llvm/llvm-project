@@ -1736,7 +1736,7 @@ LogicalResult spirv::BranchConditionalOp::verify() {
       return emitOpError("must have exactly two branch weights");
     }
     if (llvm::all_of(*weights, [](Attribute attr) {
-          return attr.cast<IntegerAttr>().getValue().isNullValue();
+          return attr.cast<IntegerAttr>().getValue().isZero();
         }))
       return emitOpError("branch weights cannot both be zero");
   }
@@ -4028,9 +4028,19 @@ verifyCoopMatrixMulAdd(spirv::NVCooperativeMatrixMulAddOp op) {
       typeR.getScope() != typeB.getScope() ||
       typeR.getScope() != typeC.getScope())
     return op.emitOpError("matrix scope must match");
-  if (typeA.getElementType() != typeB.getElementType() ||
-      typeR.getElementType() != typeC.getElementType())
-    return op.emitOpError("matrix element type must match");
+  auto elementTypeA = typeA.getElementType();
+  auto elementTypeB = typeB.getElementType();
+  if (isa<IntegerType>(elementTypeA) && isa<IntegerType>(elementTypeB)) {
+    if (elementTypeA.cast<IntegerType>().getWidth() !=
+        elementTypeB.cast<IntegerType>().getWidth())
+      return op.emitOpError(
+          "matrix A and B integer element types must be the same bit width");
+  } else if (elementTypeA != elementTypeB) {
+    return op.emitOpError(
+        "matrix A and B non-integer element types must match");
+  }
+  if (typeR.getElementType() != typeC.getElementType())
+    return op.emitOpError("matrix accumulator element type must match");
   return success();
 }
 

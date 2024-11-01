@@ -89,7 +89,23 @@ def OpI: NS_Op<"op_for_arr_min_value_at_index", []> {
 // CHECK: (((tblgen_attr.cast<::mlir::ArrayAttr>().size() > 0)) && ((tblgen_attr.cast<::mlir::ArrayAttr>()[0].cast<::mlir::IntegerAttr>().getInt() >= 8)))))
 // CHECK-NEXT: "attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be at least 8"
 
-def OpJ: NS_Op<"op_for_TCopVTEtAreSameAt", [
+def OpJ: NS_Op<"op_for_arr_max_value_at_index", []> {
+  let arguments = (ins ConfinedAttr<ArrayAttr, [IntArrayNthElemMaxValue<0, 8>]>:$attr);
+}
+
+// CHECK-LABEL: OpJAdaptor::verify
+// CHECK: (((tblgen_attr.cast<::mlir::ArrayAttr>().size() > 0)) && ((tblgen_attr.cast<::mlir::ArrayAttr>()[0].cast<::mlir::IntegerAttr>().getInt() <= 8)))))
+// CHECK-NEXT: "attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be at most 8"
+
+def OpK: NS_Op<"op_for_arr_in_range_at_index", []> {
+  let arguments = (ins ConfinedAttr<ArrayAttr, [IntArrayNthElemInRange<0, 4, 8>]>:$attr);
+}
+
+// CHECK-LABEL: OpKAdaptor::verify
+// CHECK: (((tblgen_attr.cast<::mlir::ArrayAttr>().size() > 0)) && ((tblgen_attr.cast<::mlir::ArrayAttr>()[0].cast<::mlir::IntegerAttr>().getInt() >= 4)) && ((tblgen_attr.cast<::mlir::ArrayAttr>()[0].cast<::mlir::IntegerAttr>().getInt() <= 8)))))
+// CHECK-NEXT: "attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be at least 4 and at most 8"
+
+def OpL: NS_Op<"op_for_TCopVTEtAreSameAt", [
                 PredOpTrait<"operands indexed at 0, 2, 3 should all have "
                  "the same type", TCopVTEtAreSameAt<[0, 2, 3]>>]> {
   let arguments = (ins
@@ -101,28 +117,28 @@ def OpJ: NS_Op<"op_for_TCopVTEtAreSameAt", [
   );
 }
 
-// CHECK-LABEL: OpJAdaptor::verify
+// CHECK-LABEL: OpLAdaptor::verify
 // CHECK:      ::llvm::all_equal(::llvm::map_range(
 // CHECK-SAME:   ::mlir::ArrayRef<unsigned>({0, 2, 3}),
 // CHECK-SAME:   [this](unsigned i) { return getElementTypeOrSelf(this->getOperand(i)); }))
 // CHECK: "failed to verify that operands indexed at 0, 2, 3 should all have the same type"
 
-def OpK : NS_Op<"op_for_AnyTensorOf", []> {
+def OpM : NS_Op<"op_for_AnyTensorOf", []> {
   let arguments = (ins TensorOf<[F32, I32]>:$x);
 }
 
-// CHECK-LABEL: OpK::verify
+// CHECK-LABEL: OpM::verify
 // CHECK: auto valueGroup0 = getODSOperands(0);
 // CHECK: for (auto v : valueGroup0) {
 // CHECK: if (::mlir::failed([[$TENSOR_INTEGER_FLOAT_CONSTRAINT]]
 
-def OpL : NS_Op<"op_for_StringEscaping", []> {
+def OpN : NS_Op<"op_for_StringEscaping", []> {
   let arguments = (ins
     StringBasedAttr<CPred<"$_self.cast<StringAttr>().getValue() == \"foo\"">,
                     "only value \"foo\" is allowed">:$s
   );
 }
 
-// CHECK-LABEL: OpLAdaptor::verify
+// CHECK-LABEL: OpNAdaptor::verify
 // CHECK: getValue() == "foo"
 // CHECK-NEXT: only value \"foo\" is allowed

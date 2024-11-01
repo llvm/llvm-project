@@ -8,6 +8,7 @@
 
 #include "ByteCodeEmitter.h"
 #include "Context.h"
+#include "Floating.h"
 #include "Opcode.h"
 #include "Program.h"
 #include "clang/AST/DeclCXX.h"

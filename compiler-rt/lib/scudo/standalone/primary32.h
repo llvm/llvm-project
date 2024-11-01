@@ -18,6 +18,7 @@
 #include "report.h"
 #include "stats.h"
 #include "string_utils.h"
+#include "thread_annotations.h"
 
 namespace scudo {
 
@@ -62,7 +63,7 @@ public:
 
   static bool canAllocate(uptr Size) { return Size <= SizeClassMap::MaxSize; }
 
-  void init(s32 ReleaseToOsInterval) {
+  void init(s32 ReleaseToOsInterval) NO_THREAD_SAFETY_ANALYSIS {
     if (SCUDO_FUCHSIA)
       reportError("SizeClassAllocator32 is not supported on Fuchsia");
 
@@ -86,7 +87,7 @@ public:
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
 
-  void unmapTestOnly() {
+  void unmapTestOnly() NO_THREAD_SAFETY_ANALYSIS {
     while (NumberOfStashedRegions > 0)
       unmap(reinterpret_cast<void *>(RegionsStash[--NumberOfStashedRegions]),
             RegionSize);
@@ -121,11 +122,11 @@ public:
     DCHECK_LT(ClassId, NumClasses);
     SizeClassInfo *Sci = getSizeClassInfo(ClassId);
     ScopedLock L(Sci->Mutex);
-    TransferBatch *B = popBatchImpl(C, ClassId);
+    TransferBatch *B = popBatchImpl(C, ClassId, Sci);
     if (UNLIKELY(!B)) {
       if (UNLIKELY(!populateFreeList(C, ClassId, Sci)))
         return nullptr;
-      B = popBatchImpl(C, ClassId);
+      B = popBatchImpl(C, ClassId, Sci);
       // if `populateFreeList` succeeded, we are supposed to get free blocks.
       DCHECK_NE(B, nullptr);
     }
@@ -149,7 +150,7 @@ public:
       // the blocks.
       if (Size == 1 && !populateFreeList(C, ClassId, Sci))
         return;
-      pushBlocksImpl(C, ClassId, Array, Size);
+      pushBlocksImpl(C, ClassId, Sci, Array, Size);
       Sci->Stats.PushedBlocks += Size;
       return;
     }
@@ -173,14 +174,14 @@ public:
     }
 
     ScopedLock L(Sci->Mutex);
-    pushBlocksImpl(C, ClassId, Array, Size, SameGroup);
+    pushBlocksImpl(C, ClassId, Sci, Array, Size, SameGroup);
 
     Sci->Stats.PushedBlocks += Size;
     if (ClassId != SizeClassMap::BatchClassId)
       releaseToOSMaybe(Sci, ClassId);
   }
 
-  void disable() {
+  void disable() NO_THREAD_SAFETY_ANALYSIS {
     // The BatchClassId must be locked last since other classes can use it.
     for (sptr I = static_cast<sptr>(NumClasses) - 1; I >= 0; I--) {
       if (static_cast<uptr>(I) == SizeClassMap::BatchClassId)
@@ -192,7 +193,7 @@ public:
     PossibleRegions.disable();
   }
 
-  void enable() {
+  void enable() NO_THREAD_SAFETY_ANALYSIS {
     PossibleRegions.enable();
     RegionsStashMutex.unlock();
     getSizeClassInfo(SizeClassMap::BatchClassId)->Mutex.unlock();
@@ -207,6 +208,10 @@ public:
     uptr MinRegionIndex = NumRegions, MaxRegionIndex = 0;
     for (uptr I = 0; I < NumClasses; I++) {
       SizeClassInfo *Sci = getSizeClassInfo(I);
+      // TODO: The call of `iterateOverBlocks` requires disabling
+      // SizeClassAllocator32. We may consider locking each region on demand
+      // only.
+      Sci->Mutex.assertHeld();
       if (Sci->MinRegionIndex < MinRegionIndex)
         MinRegionIndex = Sci->MinRegionIndex;
       if (Sci->MaxRegionIndex > MaxRegionIndex)
@@ -230,6 +235,7 @@ public:
     uptr PushedBlocks = 0;
     for (uptr I = 0; I < NumClasses; I++) {
       SizeClassInfo *Sci = getSizeClassInfo(I);
+      ScopedLock L(Sci->Mutex);
       TotalMapped += Sci->AllocatedUser;
       PoppedBlocks += Sci->Stats.PoppedBlocks;
       PushedBlocks += Sci->Stats.PushedBlocks;
@@ -237,8 +243,11 @@ public:
     Str->append("Stats: SizeClassAllocator32: %zuM mapped in %zu allocations; "
                 "remains %zu\n",
                 TotalMapped >> 20, PoppedBlocks, PoppedBlocks - PushedBlocks);
-    for (uptr I = 0; I < NumClasses; I++)
-      getStats(Str, I, 0);
+    for (uptr I = 0; I < NumClasses; I++) {
+      SizeClassInfo *Sci = getSizeClassInfo(I);
+      ScopedLock L(Sci->Mutex);
+      getStats(Str, I, Sci, 0);
+    }
   }
 
   bool setOption(Option O, sptr Value) {
@@ -297,17 +306,17 @@ private:
 
   struct alignas(SCUDO_CACHE_LINE_SIZE) SizeClassInfo {
     HybridMutex Mutex;
-    SinglyLinkedList<BatchGroup> FreeList;
-    uptr CurrentRegion;
-    uptr CurrentRegionAllocated;
-    SizeClassStats Stats;
+    SinglyLinkedList<BatchGroup> FreeList GUARDED_BY(Mutex);
+    uptr CurrentRegion GUARDED_BY(Mutex);
+    uptr CurrentRegionAllocated GUARDED_BY(Mutex);
+    SizeClassStats Stats GUARDED_BY(Mutex);
     u32 RandState;
-    uptr AllocatedUser;
+    uptr AllocatedUser GUARDED_BY(Mutex);
     // Lowest & highest region index allocated for this size class, to avoid
     // looping through the whole NumRegions.
-    uptr MinRegionIndex;
-    uptr MaxRegionIndex;
-    ReleaseToOsInfo ReleaseInfo;
+    uptr MinRegionIndex GUARDED_BY(Mutex);
+    uptr MaxRegionIndex GUARDED_BY(Mutex);
+    ReleaseToOsInfo ReleaseInfo GUARDED_BY(Mutex);
   };
   static_assert(sizeof(SizeClassInfo) % SCUDO_CACHE_LINE_SIZE == 0, "");
 
@@ -332,7 +341,7 @@ private:
       else
         MapSize = RegionSize;
     } else {
-      Region = roundUpTo(MapBase, RegionSize);
+      Region = roundUp(MapBase, RegionSize);
       unmap(reinterpret_cast<void *>(MapBase), Region - MapBase);
       MapSize = RegionSize;
     }
@@ -342,7 +351,7 @@ private:
     return Region;
   }
 
-  uptr allocateRegion(SizeClassInfo *Sci, uptr ClassId) {
+  uptr allocateRegion(SizeClassInfo *Sci, uptr ClassId) REQUIRES(Sci->Mutex) {
     DCHECK_LT(ClassId, NumClasses);
     uptr Region = 0;
     {
@@ -395,10 +404,10 @@ private:
   // `SameGroup=true` instead.
   //
   // The region mutex needs to be held while calling this method.
-  void pushBlocksImpl(CacheT *C, uptr ClassId, CompactPtrT *Array, u32 Size,
-                      bool SameGroup = false) {
+  void pushBlocksImpl(CacheT *C, uptr ClassId, SizeClassInfo *Sci,
+                      CompactPtrT *Array, u32 Size, bool SameGroup = false)
+      REQUIRES(Sci->Mutex) {
     DCHECK_GT(Size, 0U);
-    SizeClassInfo *Sci = getSizeClassInfo(ClassId);
 
     auto CreateGroup = [&](uptr GroupId) {
       BatchGroup *BG = nullptr;
@@ -524,8 +533,8 @@ private:
   // group id will be considered first.
   //
   // The region mutex needs to be held while calling this method.
-  TransferBatch *popBatchImpl(CacheT *C, uptr ClassId) {
-    SizeClassInfo *Sci = getSizeClassInfo(ClassId);
+  TransferBatch *popBatchImpl(CacheT *C, uptr ClassId, SizeClassInfo *Sci)
+      REQUIRES(Sci->Mutex) {
     if (Sci->FreeList.empty())
       return nullptr;
 
@@ -553,7 +562,8 @@ private:
     return B;
   }
 
-  NOINLINE bool populateFreeList(CacheT *C, uptr ClassId, SizeClassInfo *Sci) {
+  NOINLINE bool populateFreeList(CacheT *C, uptr ClassId, SizeClassInfo *Sci)
+      REQUIRES(Sci->Mutex) {
     uptr Region;
     uptr Offset;
     // If the size-class currently has a region associated to it, use it. The
@@ -608,7 +618,7 @@ private:
       // it only happens when it crosses the group size boundary. Instead of
       // sorting them, treat them as same group here to avoid sorting the
       // almost-sorted blocks.
-      pushBlocksImpl(C, ClassId, &ShuffleArray[I], N, /*SameGroup=*/true);
+      pushBlocksImpl(C, ClassId, Sci, &ShuffleArray[I], N, /*SameGroup=*/true);
       I += N;
     }
 
@@ -629,8 +639,8 @@ private:
     return true;
   }
 
-  void getStats(ScopedString *Str, uptr ClassId, uptr Rss) {
-    SizeClassInfo *Sci = getSizeClassInfo(ClassId);
+  void getStats(ScopedString *Str, uptr ClassId, SizeClassInfo *Sci, uptr Rss)
+      REQUIRES(Sci->Mutex) {
     if (Sci->AllocatedUser == 0)
       return;
     const uptr InUse = Sci->Stats.PoppedBlocks - Sci->Stats.PushedBlocks;
@@ -643,7 +653,7 @@ private:
   }
 
   NOINLINE uptr releaseToOSMaybe(SizeClassInfo *Sci, uptr ClassId,
-                                 bool Force = false) {
+                                 bool Force = false) REQUIRES(Sci->Mutex) {
     const uptr BlockSize = getSizeByClassId(ClassId);
     const uptr PageSize = getPageSizeCached();
 
@@ -749,14 +759,15 @@ private:
   SizeClassInfo SizeClassInfoArray[NumClasses] = {};
 
   // Track the regions in use, 0 is unused, otherwise store ClassId + 1.
+  // FIXME: There is no dedicated lock for `PossibleRegions`.
   ByteMap PossibleRegions = {};
   atomic_s32 ReleaseToOsIntervalMs = {};
   // Unless several threads request regions simultaneously from different size
   // classes, the stash rarely contains more than 1 entry.
   static constexpr uptr MaxStashedRegions = 4;
   HybridMutex RegionsStashMutex;
-  uptr NumberOfStashedRegions = 0;
-  uptr RegionsStash[MaxStashedRegions] = {};
+  uptr NumberOfStashedRegions GUARDED_BY(RegionsStashMutex) = 0;
+  uptr RegionsStash[MaxStashedRegions] GUARDED_BY(RegionsStashMutex) = {};
 };
 
 } // namespace scudo

@@ -698,7 +698,7 @@ enum class Domain { NonNegative, NonPositive, Unknown };
 static Domain getDomain(const ConstantRange &CR) {
   if (CR.isAllNonNegative())
     return Domain::NonNegative;
-  if (CR.icmp(ICmpInst::ICMP_SLE, APInt::getNullValue(CR.getBitWidth())))
+  if (CR.icmp(ICmpInst::ICMP_SLE, APInt::getZero(CR.getBitWidth())))
     return Domain::NonPositive;
   return Domain::Unknown;
 }
@@ -717,7 +717,6 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, const ConstantRange &LCR,
 
   // What is the smallest bit width that can accommodate the entire value ranges
   // of both of the operands?
-  std::array<std::optional<ConstantRange>, 2> CRs;
   unsigned MinSignedBits =
       std::max(LCR.getMinSignedBits(), RCR.getMinSignedBits());
 

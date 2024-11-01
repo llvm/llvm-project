@@ -299,8 +299,12 @@ EXTERN int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                                int32_t ThreadLimit, void *HostPtr,
                                KernelArgsTy *KernelArgs) {
   TIMESCOPE_WITH_IDENT(Loc);
-  return targetKernel<AsyncInfoTy>(Loc, DeviceId, NumTeams, ThreadLimit,
-                                   HostPtr, KernelArgs);
+  if (KernelArgs->Flags.NoWait)
+    return targetKernel<TaskAsyncInfoWrapperTy>(
+        Loc, DeviceId, NumTeams, ThreadLimit, HostPtr, KernelArgs);
+  else
+    return targetKernel<AsyncInfoTy>(Loc, DeviceId, NumTeams, ThreadLimit,
+                                     HostPtr, KernelArgs);
 }
 
 /// Implements a target kernel entry that replays a pre-recorded kernel.
@@ -408,6 +412,8 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
   if (QueryCounter.isAboveThreshold())
     AsyncInfo->SyncType = AsyncInfoTy::SyncTy::BLOCKING;
 
+  if (const int Rc = AsyncInfo->synchronize())
+    FATAL_MESSAGE0(1, "Error while querying the async queue for completion.\n");
   // If there are device operations still pending, return immediately without
   // deallocating the handle and increase the current thread query count.
   if (!AsyncInfo->isDone()) {

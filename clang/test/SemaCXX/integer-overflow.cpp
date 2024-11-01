@@ -208,3 +208,9 @@ namespace EvaluationCrashes {
     }
   }
 }
+
+namespace GH31643 {
+void f() {
+  int a = -(1<<31); // expected-warning {{overflow in expression; result is -2147483648 with type 'int'}}
+}
+}

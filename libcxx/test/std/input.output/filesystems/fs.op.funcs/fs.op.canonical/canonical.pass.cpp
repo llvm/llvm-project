@@ -17,15 +17,13 @@
 #include <type_traits>
 #include <cassert>
 
+#include "assert_macros.h"
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 
 using namespace fs;
 
-TEST_SUITE(filesystem_canonical_path_test_suite)
-
-TEST_CASE(signature_test)
+static void signature_test()
 {
     const path p; ((void)p);
     std::error_code ec; ((void)ec);
@@ -35,7 +33,7 @@ TEST_CASE(signature_test)
 
 // There are 4 cases is the proposal for absolute path.
 // Each scope tests one of the cases.
-TEST_CASE(test_canonical)
+static void test_canonical()
 {
     static_test_env static_env;
     CWDGuard guard;
@@ -68,30 +66,30 @@ TEST_CASE(test_canonical)
         std::error_code ec = GetTestEC();
         fs::current_path(TC.base);
         const path ret = canonical(TC.p, ec);
-        TEST_REQUIRE(!ec);
+        assert(!ec);
         const path ret2 = canonical(TC.p);
-        TEST_CHECK(PathEq(ret, TC.expect));
-        TEST_CHECK(PathEq(ret, ret2));
-        TEST_CHECK(ret.is_absolute());
+        assert(PathEq(ret, TC.expect));
+        assert(PathEq(ret, ret2));
+        assert(ret.is_absolute());
     }
 }
 
-TEST_CASE(test_dne_path)
+static void test_dne_path()
 {
     static_test_env static_env;
     std::error_code ec = GetTestEC();
     {
         const path ret = canonical(static_env.DNE, ec);
-        TEST_CHECK(ec != GetTestEC());
-        TEST_REQUIRE(ec);
-        TEST_CHECK(ret == path{});
+        assert(ec != GetTestEC());
+        assert(ec);
+        assert(ret == path{});
     }
     {
-        TEST_CHECK_THROW(filesystem_error, canonical(static_env.DNE));
+        TEST_THROWS_TYPE(filesystem_error, canonical(static_env.DNE));
     }
 }
 
-TEST_CASE(test_exception_contains_paths)
+static void test_exception_contains_paths()
 {
 #ifndef TEST_HAS_NO_EXCEPTIONS
     static_test_env static_env;
@@ -99,21 +97,28 @@ TEST_CASE(test_exception_contains_paths)
     const path p = "blabla/dne";
     try {
         (void)canonical(p);
-        TEST_REQUIRE(false);
+        assert(false);
     } catch (filesystem_error const& err) {
-        TEST_CHECK(err.path1() == p);
+        assert(err.path1() == p);
         // libc++ provides the current path as the second path in the exception
-        LIBCPP_ONLY(TEST_CHECK(err.path2() == current_path()));
+        LIBCPP_ONLY(assert(err.path2() == current_path()));
     }
     fs::current_path(static_env.Dir);
     try {
         (void)canonical(p);
-        TEST_REQUIRE(false);
+        assert(false);
     } catch (filesystem_error const& err) {
-        TEST_CHECK(err.path1() == p);
-        LIBCPP_ONLY(TEST_CHECK(err.path2() == static_env.Dir));
+        assert(err.path1() == p);
+        LIBCPP_ONLY(assert(err.path2() == static_env.Dir));
     }
 #endif
 }
 
-TEST_SUITE_END()
+int main(int, char**) {
+    signature_test();
+    test_canonical();
+    test_dne_path();
+    test_exception_contains_paths();
+
+    return 0;
+}

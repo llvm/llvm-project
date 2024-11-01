@@ -839,8 +839,8 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
       auto &CommonRes = RegularLTO.Commons[std::string(Sym.getIRName())];
       CommonRes.Size = std::max(CommonRes.Size, Sym.getCommonSize());
       if (uint32_t SymAlignValue = Sym.getCommonAlignment()) {
-        const Align SymAlign(SymAlignValue);
-        CommonRes.Align = std::max(SymAlign, CommonRes.Align.valueOrOne());
+        CommonRes.Alignment =
+            std::max(Align(SymAlignValue), CommonRes.Alignment);
       }
       CommonRes.Prevailing |= Res.Prevailing;
     }
@@ -1116,7 +1116,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
     if (OldGV && DL.getTypeAllocSize(OldGV->getValueType()) == I.second.Size) {
       // Don't create a new global if the type is already correct, just make
       // sure the alignment is correct.
-      OldGV->setAlignment(I.second.Align);
+      OldGV->setAlignment(I.second.Alignment);
       continue;
     }
     ArrayType *Ty =
@@ -1124,7 +1124,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
     auto *GV = new GlobalVariable(*RegularLTO.CombinedModule, Ty, false,
                                   GlobalValue::CommonLinkage,
                                   ConstantAggregateZero::get(Ty), "");
-    GV->setAlignment(I.second.Align);
+    GV->setAlignment(I.second.Alignment);
     if (OldGV) {
       OldGV->replaceAllUsesWith(ConstantExpr::getBitCast(GV, OldGV->getType()));
       GV->takeName(OldGV);

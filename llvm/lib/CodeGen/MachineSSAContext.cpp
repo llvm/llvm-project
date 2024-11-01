@@ -56,7 +56,7 @@ MachineBasicBlock *MachineSSAContext::getDefBlock(Register value) const {
   return RegInfo->getVRegDef(value)->getParent();
 }
 
-bool MachineSSAContext::isConstantValuePhi(const MachineInstr &Phi) {
+bool MachineSSAContext::isConstantOrUndefValuePhi(const MachineInstr &Phi) {
   return Phi.isConstantValuePHI();
 }
 

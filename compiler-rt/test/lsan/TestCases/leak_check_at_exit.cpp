@@ -16,5 +16,5 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-// CHECK-do: SUMMARY: {{(Leak|Address)}}Sanitizer:
-// CHECK-dont-NOT: SUMMARY: {{(Leak|Address)}}Sanitizer:
+// CHECK-do: SUMMARY: {{.*}}Sanitizer:
+// CHECK-dont-NOT: SUMMARY: {{.*}}Sanitizer:

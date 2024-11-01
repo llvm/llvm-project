@@ -31,33 +31,43 @@ def LLVM_Dialect : Dialect {
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
   let hasOperationAttrVerify = 1;
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 
   let extraClassDeclaration = [{
     /// Name of the data layout attributes.
     static StringRef getDataLayoutAttrName() { return "llvm.data_layout"; }
-    static StringRef getAlignAttrName() { return "llvm.align"; }
-    static StringRef getNoAliasAttrName() { return "llvm.noalias"; }
-    static StringRef getReadonlyAttrName() { return "llvm.readonly"; }
     static StringRef getNoAliasScopesAttrName() { return "noalias_scopes"; }
     static StringRef getAliasScopesAttrName() { return "alias_scopes"; }
-    static StringRef getLoopAttrName() { return "llvm.loop"; }
-    static StringRef getParallelAccessAttrName() { return "parallel_access"; }
-    static StringRef getLoopOptionsAttrName() { return "options"; }
     static StringRef getAccessGroupsAttrName() { return "access_groups"; }
-    static StringRef getStructAttrsAttrName() { return "llvm.struct_attrs"; }
+
+    /// Names of llvm parameter attributes.
+    static StringRef getAlignAttrName() { return "llvm.align"; }
+    static StringRef getAllocAlignAttrName() { return "llvm.allocalign"; }
+    static StringRef getAllocatedPointerAttrName() { return "llvm.allocptr"; }
     static StringRef getByValAttrName() { return "llvm.byval"; }
     static StringRef getByRefAttrName() { return "llvm.byref"; }
-    static StringRef getStructRetAttrName() { return "llvm.sret"; }
-    static StringRef getInAllocaAttrName() { return "llvm.inalloca"; }
     static StringRef getNoUndefAttrName() { return "llvm.noundef"; }
+    static StringRef getDereferenceableAttrName() { return "llvm.dereferenceable"; }
+    static StringRef getDereferenceableOrNullAttrName() { return "llvm.dereferenceable_or_null"; }
+    static StringRef getInAllocaAttrName() { return "llvm.inalloca"; }
+    static StringRef getInRegAttrName() { return "llvm.inreg"; }
+    static StringRef getNestAttrName() { return "llvm.nest"; }
+    static StringRef getNoAliasAttrName() { return "llvm.noalias"; }
+    static StringRef getNoCaptureAttrName() { return "llvm.nocapture"; }
+    static StringRef getNoFreeAttrName() { return "llvm.nofree"; }
+    static StringRef getNonNullAttrName() { return "llvm.nonnull"; }
+    static StringRef getPreallocatedAttrName() { return "llvm.preallocated"; }
+    static StringRef getReadonlyAttrName() { return "llvm.readonly"; }
+    static StringRef getReturnedAttrName() { return "llvm.returned"; }
     static StringRef getSExtAttrName() { return "llvm.signext"; }
+    static StringRef getStackAlignmentAttrName() { return "llvm.alignstack"; }
+    static StringRef getStructRetAttrName() { return "llvm.sret"; }
+    static StringRef getWriteOnlyAttrName() { return "llvm.writeonly"; }
     static StringRef getZExtAttrName() { return "llvm.zeroext"; }
-    static StringRef getTBAAAttrName() { return "llvm.tbaa"; }
-
-    /// Verifies if the attribute is a well-formed value for "llvm.struct_attrs"
-    static LogicalResult verifyStructAttr(
-        Operation *op, Attribute attr, Type annotatedType);
+    // TODO Restrict the usage of this to parameter attributes once there is an
+    // alternative way of modeling memory effects on FunctionOpInterface.
+    /// Name of the attribute that will cause the creation of a readnone memory
+    /// effect when lowering to the LLVMDialect.
+    static StringRef getReadnoneAttrName() { return "llvm.readnone"; }
 
     /// Verifies if the given string is a well-formed data layout descriptor.
     /// Uses `reportError` to report errors.
@@ -75,18 +85,17 @@ def LLVM_Dialect : Dialect {
     /// Returns `true` if the given type is compatible with the LLVM dialect.
     static bool isCompatibleType(Type);
 
-    /// TODO Remove this once there is an alternative way of modeling memory
-    /// effects on FunctionOpInterface.
-    /// Name of the attribute that will cause the creation of a readnone memory
-    /// effect when lowering to the LLVMDialect.
-    static StringRef getReadnoneAttrName() {
-      return "llvm.readnone";
-    }
 
     Type parseType(DialectAsmParser &p) const override;
     void printType(Type, DialectAsmPrinter &p) const override;
 
   private:
+    /// Verifies a parameter attribute attached to a parameter of type
+    /// paramType.
+    LogicalResult verifyParameterAttribute(Operation *op,
+                                           Type paramType,
+                                           NamedAttribute paramAttr);
+
     /// Register all types.
     void registerTypes();
 
@@ -293,13 +302,23 @@ class LLVM_EnumAttrCase<string cppSym, string irSym, string llvmSym, int val> :
 //   - `name`: name of the C++ enum class in MLIR API;
 //   - `llvmName`: name of the C++ enum in LLVM API;
 //   - `description`: textual description for documentation purposes;
-//   - `cases`: list of enum cases.
+//   - `cases`: list of enum cases;
+//   - `unsupportedCases`: optional list of unsupported enum cases.
 // For example, `LLVM_EnumAttr<Linkage, "::llvm::GlobalValue::LinkageTypes`
 // produces `mlir::LLVM::Linkage` enum class in MLIR API that corresponds to (a
 // subset of) values in the `llvm::GlobalValue::LinkageTypes` in LLVM API.
+// All unsupported cases are excluded from the MLIR enum and trigger an error
+// during the import from LLVM IR. They are useful to handle sentinel values
+// such as `llvm::AtomicRMWInst::BinOp::BAD_BINOP` that LLVM commonly uses to
+// terminate its enums.
 class LLVM_EnumAttr<string name, string llvmName, string description,
-                    list<LLVM_EnumAttrCase> cases> :
+                    list<LLVM_EnumAttrCase> cases,
+                    list<LLVM_EnumAttrCase> unsupportedCases = []> :
     I64EnumAttr<name, description, cases> {
+
+
+  // List of unsupported cases that have no conversion to an MLIR value.
+  list<LLVM_EnumAttrCase> unsupported = unsupportedCases;
 
   // The equivalent enum class name in LLVM.
   string llvmClassName = llvmName;

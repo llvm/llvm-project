@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -43,6 +44,16 @@ using namespace llvm;
 static cl::opt<bool> PreferWholeRegisterMove(
     "riscv-prefer-whole-register-move", cl::init(false), cl::Hidden,
     cl::desc("Prefer whole register move for vector registers."));
+
+static cl::opt<MachineTraceStrategy> ForceMachineCombinerStrategy(
+    "riscv-force-machine-combiner-strategy", cl::Hidden,
+    cl::desc("Force machine combiner to use a specific strategy for machine "
+             "trace metrics evaluation."),
+    cl::init(MachineTraceStrategy::TS_NumStrategies),
+    cl::values(clEnumValN(MachineTraceStrategy::TS_Local, "local",
+                          "Local strategy."),
+               clEnumValN(MachineTraceStrategy::TS_MinInstrCount, "min-instr",
+                          "MinInstrCount strategy.")));
 
 namespace llvm::RISCVVPseudosTable {
 
@@ -1257,6 +1268,20 @@ RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   return std::nullopt;
 }
 
+MachineTraceStrategy RISCVInstrInfo::getMachineCombinerTraceStrategy() const {
+  if (ForceMachineCombinerStrategy.getNumOccurrences() == 0) {
+    // The option is unused. Choose Local strategy only for in-order cores. When
+    // scheduling model is unspecified, use MinInstrCount strategy as more
+    // generic one.
+    const auto &SchedModel = STI.getSchedModel();
+    return (!SchedModel.hasInstrSchedModel() || SchedModel.isOutOfOrder())
+               ? MachineTraceStrategy::TS_MinInstrCount
+               : MachineTraceStrategy::TS_Local;
+  }
+  // The strategy was forced by the option.
+  return ForceMachineCombinerStrategy;
+}
+
 void RISCVInstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
                                            MachineInstr &OldMI2,
                                            MachineInstr &NewMI1,
@@ -1620,6 +1645,12 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_UIMM(4)
         CASE_OPERAND_UIMM(5)
         CASE_OPERAND_UIMM(7)
+        CASE_OPERAND_UIMM(12)
+        CASE_OPERAND_UIMM(20)
+          // clang-format on
+        case RISCVOp::OPERAND_UIMM2_LSB0:
+          Ok = isShiftedUInt<1, 1>(Imm);
+          break;
         case RISCVOp::OPERAND_UIMM7_LSB00:
           Ok = isShiftedUInt<5, 2>(Imm);
           break;
@@ -1629,11 +1660,14 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_UIMM8_LSB000:
           Ok = isShiftedUInt<5, 3>(Imm);
           break;
-        CASE_OPERAND_UIMM(12)
-        CASE_OPERAND_UIMM(20)
-          // clang-format on
+        case RISCVOp::OPERAND_UIMM9_LSB000:
+          Ok = isShiftedUInt<6, 3>(Imm);
+          break;
         case RISCVOp::OPERAND_SIMM10_LSB0000_NONZERO:
           Ok = isShiftedInt<6, 4>(Imm) && (Imm != 0);
+          break;
+        case RISCVOp::OPERAND_UIMM10_LSB00_NONZERO:
+          Ok = isShiftedUInt<8, 2>(Imm) && (Imm != 0);
           break;
         case RISCVOp::OPERAND_ZERO:
           Ok = Imm == 0;
@@ -1669,8 +1703,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           Ok = STI.is64Bit() ? isUInt<6>(Imm) : isUInt<5>(Imm);
           Ok = Ok && Imm != 0;
           break;
-        case RISCVOp::OPERAND_UIMM_SHFL:
-          Ok = STI.is64Bit() ? isUInt<5>(Imm) : isUInt<4>(Imm);
+        case RISCVOp::OPERAND_CLUI_IMM:
+          Ok = (isUInt<5>(Imm) && Imm != 0) ||
+               (Imm >= 0xfffe0 && Imm <= 0xfffff);
           break;
         case RISCVOp::OPERAND_RVKRNUM:
           Ok = Imm >= 0 && Imm <= 10;
@@ -1903,7 +1938,7 @@ outliner::OutlinedFunction RISCVInstrInfo::getOutliningCandidateInfo(
 }
 
 outliner::InstrType
-RISCVInstrInfo::getOutliningType(MachineBasicBlock::iterator &MBBI,
+RISCVInstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MBBI,
                                  unsigned Flags) const {
   MachineInstr &MI = *MBBI;
   MachineBasicBlock *MBB = MI.getParent();
@@ -1911,26 +1946,13 @@ RISCVInstrInfo::getOutliningType(MachineBasicBlock::iterator &MBBI,
       MBB->getParent()->getSubtarget().getRegisterInfo();
   const auto &F = MI.getMF()->getFunction();
 
-  // Positions generally can't safely be outlined.
-  if (MI.isPosition()) {
-    // We can manually strip out CFI instructions later.
-    if (MI.isCFIInstruction())
-      // If current function has exception handling code, we can't outline &
-      // strip these CFI instructions since it may break .eh_frame section
-      // needed in unwinding.
-      return F.needsUnwindTableEntry() ? outliner::InstrType::Illegal
-                                       : outliner::InstrType::Invisible;
-
-    return outliner::InstrType::Illegal;
-  }
-
-  // Don't trust the user to write safe inline assembly.
-  if (MI.isInlineAsm())
-    return outliner::InstrType::Illegal;
-
-  // We can't outline branches to other basic blocks.
-  if (MI.isTerminator() && !MBB->succ_empty())
-    return outliner::InstrType::Illegal;
+  // We can manually strip out CFI instructions later.
+  if (MI.isCFIInstruction())
+    // If current function has exception handling code, we can't outline &
+    // strip these CFI instructions since it may break .eh_frame section
+    // needed in unwinding.
+    return F.needsUnwindTableEntry() ? outliner::InstrType::Illegal
+                                     : outliner::InstrType::Invisible;
 
   // We need support for tail calls to outlined functions before return
   // statements can be allowed.
@@ -1945,8 +1967,6 @@ RISCVInstrInfo::getOutliningType(MachineBasicBlock::iterator &MBBI,
 
   // Make sure the operands don't reference something unsafe.
   for (const auto &MO : MI.operands()) {
-    if (MO.isMBB() || MO.isBlockAddress() || MO.isCPI() || MO.isJTI())
-      return outliner::InstrType::Illegal;
 
     // pcrel-hi and pcrel-lo can't put in separate sections, filter that out
     // if any possible.
@@ -1955,11 +1975,6 @@ RISCVInstrInfo::getOutliningType(MachineBasicBlock::iterator &MBBI,
          F.hasSection()))
       return outliner::InstrType::Illegal;
   }
-
-  // Don't allow instructions which won't be materialized to impact outlining
-  // analysis.
-  if (MI.isMetaInstruction())
-    return outliner::InstrType::Invisible;
 
   return outliner::InstrType::Legal;
 }
@@ -2087,6 +2102,14 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
     return false;
 
   switch (MI.getOpcode()) {
+  case RISCV::TH_MULA:
+  case RISCV::TH_MULAW:
+  case RISCV::TH_MULAH:
+  case RISCV::TH_MULS:
+  case RISCV::TH_MULSW:
+  case RISCV::TH_MULSH:
+    // Operands 2 and 3 are commutable.
+    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 2, 3);
   case RISCV::PseudoCCMOVGPR:
     // Operands 4 and 5 are commutable.
     return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 4, 5);
@@ -2461,7 +2484,7 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
   BuildMI(MBB, II, DL, get(RISCV::PseudoReadVLENB), DestReg).setMIFlag(Flag);
   assert(isInt<32>(NumOfVReg) &&
          "Expect the number of vector registers within 32-bits.");
-  if (isPowerOf2_32(NumOfVReg)) {
+  if (llvm::has_single_bit<uint32_t>(NumOfVReg)) {
     uint32_t ShiftAmount = Log2_32(NumOfVReg);
     if (ShiftAmount == 0)
       return;
@@ -2497,7 +2520,7 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
         .addReg(DestReg, RegState::Kill)
         .addReg(DestReg)
         .setMIFlag(Flag);
-  } else if (isPowerOf2_32(NumOfVReg - 1)) {
+  } else if (llvm::has_single_bit<uint32_t>(NumOfVReg - 1)) {
     Register ScaledRegister = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     uint32_t ShiftAmount = Log2_32(NumOfVReg - 1);
     BuildMI(MBB, II, DL, get(RISCV::SLLI), ScaledRegister)
@@ -2508,7 +2531,7 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
         .addReg(ScaledRegister, RegState::Kill)
         .addReg(DestReg, RegState::Kill)
         .setMIFlag(Flag);
-  } else if (isPowerOf2_32(NumOfVReg + 1)) {
+  } else if (llvm::has_single_bit<uint32_t>(NumOfVReg + 1)) {
     Register ScaledRegister = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     uint32_t ShiftAmount = Log2_32(NumOfVReg + 1);
     BuildMI(MBB, II, DL, get(RISCV::SLLI), ScaledRegister)
@@ -2560,7 +2583,7 @@ bool RISCVInstrInfo::hasAllNBitUsers(const MachineInstr &OrigMI,
 
     for (auto &UserOp : MRI.use_operands(MI->getOperand(0).getReg())) {
       const MachineInstr *UserMI = UserOp.getParent();
-      unsigned OpIdx = UserMI->getOperandNo(&UserOp);
+      unsigned OpIdx = UserOp.getOperandNo();
 
       switch (UserMI->getOpcode()) {
       default:

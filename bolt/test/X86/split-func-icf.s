@@ -11,8 +11,8 @@
 # RUN: llvm-bolt %t.exe -o %t.out -v=1 --print-only=main2.cold.1 --print-disasm 2>&1 | FileCheck %s
 
 # CHECK-NOT: unclaimed PC-relative relocations left in data
-# CHECK-DAG: BOLT-INFO: marking main2.cold.1(*2) as a fragment of main
 # CHECK-DAG: BOLT-INFO: marking main2.cold.1(*2) as a fragment of main2
+# CHECK-DAG: BOLT-INFO: marking main2.cold.1(*2) as a fragment of main
 # CHECK: Binary Function "main2.cold.1(*2)" after disassembly
 # CHECK: End of Function "main2.cold.1(*2)"
 # CHECK-DAG: BOLT-WARNING: Ignoring main2

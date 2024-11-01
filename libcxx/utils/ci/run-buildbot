@@ -38,13 +38,16 @@ CC                  The C compiler to use, this value is used by CMake. This
 CXX                 The C++ compiler to use, this value is used by CMake. This
                     variable is optional.
 
+CLANG_FORMAT        The clang-format binary to use when generating the format
+                    ignore list.
+
 GIT_CLANG_FORMAT    The git-clang-format binary to use in the 'format' builder.
                     When the value is omitted, it defaults to
                     'git-clang-format'. This variable or its fallback must work
                     when running the 'format' builder.
 
 ENABLE_CLANG_TIDY   Whether to compile and run clang-tidy checks. This variable
-                    is optional
+                    is optional.
 EOF
 }
 
@@ -184,10 +187,8 @@ check-format)
     fi
     ${GIT_CLANG_FORMAT} \
         --diff \
-        --extensions ',h,hh,hpp,hxx,c,cc,cxx,cpp' HEAD~1 \
-        -- \
-            libcxx/{benchmarks,include,src,test} \
-            libcxxabi/{fuzz,include,src,test} \
+        --extensions ',h,hpp,c,cpp,inc,ipp' HEAD~1 \
+        -- $(find libcxx/{benchmarks,include,src}/ -type f | grep -vf libcxx/utils/data/ignore_format.txt) \
         | tee ${BUILD_DIR}/clang-format.patch
     # Check if the diff is empty, fail otherwise.
     ! grep -q '^--- a' ${BUILD_DIR}/clang-format.patch
@@ -208,6 +209,18 @@ check-generated-output)
         echo "It looks like not all the generator scripts were run,"
         echo "did you forget to build the libcxx-generate-files target?"
         echo "Did you add all new files it generated?"
+        false
+    fi
+
+    ${MONOREPO_ROOT}/libcxx/utils/generate_ignore_format.sh
+    git diff | tee ${BUILD_DIR}/generated_output.patch
+    git ls-files -o --exclude-standard | tee ${BUILD_DIR}/generated_output.status
+    ! grep -q '^--- a' ${BUILD_DIR}/generated_output.patch || false
+    if [ -s ${BUILD_DIR}/generated_output.status ]; then
+        echo "It looks like the list of not formatted files has changed."
+        echo "If a file is now properly formatted with clang-format, remove the file name from "
+        echo "libcxx/utils/data/ignore_format.txt. Otherwise you have to fix the"
+        echo "formatting of some of the changed files."
         false
     fi
 
@@ -371,6 +384,12 @@ generic-modules)
     check-runtimes
     check-abi-list
 ;;
+generic-modules-lsv)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-modules-lsv.cmake"
+    check-runtimes
+    check-abi-list
+;;
 #
 # Parts removed
 #
@@ -417,8 +436,7 @@ generic-no-experimental)
 ;;
 generic-noexceptions)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake" \
-                   -DLIBCXX_ENABLE_CLANG_TIDY=ON
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake"
     check-runtimes
     check-abi-list
 ;;

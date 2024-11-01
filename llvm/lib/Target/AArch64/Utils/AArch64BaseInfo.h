@@ -332,40 +332,6 @@ inline static unsigned getNZCVToSatisfyCondCode(CondCode Code) {
   }
 }
 
-/// Return true if Code is a reflexive relationship:
-/// forall x. (CSET Code (CMP x x)) == 1
-inline static bool isReflexive(CondCode Code) {
-  switch (Code) {
-  case EQ:
-  case HS:
-  case PL:
-  case LS:
-  case GE:
-  case LE:
-  case AL:
-  case NV:
-    return true;
-  default:
-    return false;
-  }
-}
-
-/// Return true if Code is an irreflexive relationship:
-/// forall x. (CSET Code (CMP x x)) == 0
-inline static bool isIrreflexive(CondCode Code) {
-  switch (Code) {
-  case NE:
-  case LO:
-  case MI:
-  case HI:
-  case LT:
-  case GT:
-    return true;
-  default:
-    return false;
-  }
-}
-
 } // end namespace AArch64CC
 
 struct SysAlias {

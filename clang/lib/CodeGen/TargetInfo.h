@@ -339,7 +339,7 @@ public:
   /// convention and ABI as an OpenCL kernel. The wrapper function accepts
   /// block context and block arguments in target-specific way and calls
   /// the original block invoke function.
-  virtual llvm::Function *
+  virtual llvm::Value *
   createEnqueuedBlockKernel(CodeGenFunction &CGF,
                             llvm::Function *BlockInvokeFunc,
                             llvm::Type *BlockTy) const;
@@ -361,6 +361,9 @@ public:
     // By default, no change from the original one.
     return nullptr;
   }
+
+  /// Return the WebAssembly externref reference type.
+  virtual llvm::Type *getWasmExternrefReferenceType() const { return nullptr; }
 
   /// Emit the device-side copy of the builtin surface type.
   virtual bool emitCUDADeviceBuiltinSurfaceDeviceCopy(CodeGenFunction &CGF,

@@ -26,10 +26,6 @@ class Register;
 template <typename _FunctionT> class GenericSSAContext;
 template <typename, bool> class DominatorTreeBase;
 
-inline auto successors(const MachineBasicBlock *BB) { return BB->successors(); }
-inline auto predecessors(const MachineBasicBlock *BB) {
-  return BB->predecessors();
-}
 inline unsigned succ_size(const MachineBasicBlock *BB) {
   return BB->succ_size();
 }
@@ -62,7 +58,7 @@ public:
   static void appendBlockTerms(SmallVectorImpl<const MachineInstr *> &terms,
                                const MachineBasicBlock &block);
   MachineBasicBlock *getDefBlock(Register) const;
-  static bool isConstantValuePhi(const MachineInstr &Phi);
+  static bool isConstantOrUndefValuePhi(const MachineInstr &Phi);
 
   Printable print(const MachineBasicBlock *Block) const;
   Printable print(const MachineInstr *Inst) const;

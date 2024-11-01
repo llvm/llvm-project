@@ -40,7 +40,13 @@ enum class SymbolFlags : uint8_t {
   /// Rexported
   Rexported        = 1U << 4,
 
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/Rexported),
+  /// Data Segment  
+  Data             = 1U << 5,
+
+  /// Text Segment
+  Text             = 1U << 6,
+  
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/Text),
 };
 
 // clang-format on
@@ -91,6 +97,14 @@ public:
 
   bool isReexported() const {
     return (Flags & SymbolFlags::Rexported) == SymbolFlags::Rexported;
+  }
+
+  bool isData() const {
+    return (Flags & SymbolFlags::Data) == SymbolFlags::Data;
+  }
+
+  bool isText() const {
+    return (Flags & SymbolFlags::Text) == SymbolFlags::Text;
   }
 
   using const_target_iterator = TargetList::const_iterator;

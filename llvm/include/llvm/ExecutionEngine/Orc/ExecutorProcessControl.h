@@ -14,7 +14,6 @@
 #define LLVM_EXECUTIONENGINE_ORC_EXECUTORPROCESSCONTROL_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
@@ -23,6 +22,7 @@
 #include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <future>
 #include <mutex>

@@ -48,16 +48,30 @@ typedef NS_ENUM(int, An_NS_ENUM_isdoxy1) { Red, Green, Blue };
 // attach unrelated comments in the following cases where tag decls are
 // embedded in declarators.
 
-#define DECLARE_FUNCTION() \
+#define DECLARE_FUNCTIONS(suffix) \
+    /** functionFromMacro IS_DOXYGEN_SINGLE */ \
     void functionFromMacro(void) { \
+      typedef struct Struct_notdoxy Struct_notdoxy; \
+    } \
+    /** functionFromMacroWithSuffix IS_DOXYGEN_SINGLE */ \
+    void functionFromMacro##suffix(void) { \
       typedef struct Struct_notdoxy Struct_notdoxy; \
     }
 
 /// IS_DOXYGEN_NOT_ATTACHED
-DECLARE_FUNCTION()
+DECLARE_FUNCTIONS(WithSuffix)
 
 /// typedef_isdoxy1 IS_DOXYGEN_SINGLE
 typedef struct Struct_notdoxy *typedef_isdoxy1;
+
+#define DECLARE_ENUMS(name) \
+  /** enumFromMacro IS_DOXYGEN_SINGLE */ \
+  enum enumFromMacro { A }; \
+  /** namedEnumFromMacro IS_DOXYGEN_SINGLE */ \
+  enum name { B };
+
+/// IS_DOXYGEN_NOT_ATTACHED
+DECLARE_ENUMS(namedEnumFromMacro)
 
 #endif
 
@@ -121,5 +135,8 @@ typedef struct Struct_notdoxy *typedef_isdoxy1;
 // CHECK: annotate-comments-objc.m:43:22: EnumDecl=An_NS_ENUM_isdoxy1:{{.*}} An_NS_ENUM_isdoxy1 IS_DOXYGEN_SINGLE
 // CHECK: annotate-comments-objc.m:43:22: TypedefDecl=An_NS_ENUM_isdoxy1:{{.*}} An_NS_ENUM_isdoxy1 IS_DOXYGEN_SINGLE
 // CHECK: annotate-comments-objc.m:43:22: EnumDecl=An_NS_ENUM_isdoxy1:{{.*}} An_NS_ENUM_isdoxy1 IS_DOXYGEN_SINGLE
-// CHECK: annotate-comments-objc.m:60:32: TypedefDecl=typedef_isdoxy1:{{.*}} typedef_isdoxy1 IS_DOXYGEN_SINGLE
-
+// CHECK: annotate-comments-objc.m:62:1: FunctionDecl=functionFromMacro:{{.*}} BriefComment=[functionFromMacro IS_DOXYGEN_SINGLE]
+// CHECK: annotate-comments-objc.m:62:1: FunctionDecl=functionFromMacroWithSuffix:{{.*}} BriefComment=[functionFromMacroWithSuffix IS_DOXYGEN_SINGLE]
+// CHECK: annotate-comments-objc.m:65:32: TypedefDecl=typedef_isdoxy1:{{.*}} typedef_isdoxy1 IS_DOXYGEN_SINGLE
+// CHECK: annotate-comments-objc.m:74:1: EnumDecl=enumFromMacro:{{.*}} BriefComment=[enumFromMacro IS_DOXYGEN_SINGLE]
+// CHECK: annotate-comments-objc.m:74:15: EnumDecl=namedEnumFromMacro:{{.*}} BriefComment=[namedEnumFromMacro IS_DOXYGEN_SINGLE]

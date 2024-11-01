@@ -34,8 +34,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp bit_ceil(_Tp __t) noexcept {
     return _Tp{1} << __n;
   else {
     const unsigned __extra = numeric_limits<unsigned>::digits - numeric_limits<_Tp>::digits;
-    const unsigned __retVal = 1u << (__n + __extra);
-    return (_Tp)(__retVal >> __extra);
+    const unsigned __ret_val = 1u << (__n + __extra);
+    return (_Tp)(__ret_val >> __extra);
   }
 }
 

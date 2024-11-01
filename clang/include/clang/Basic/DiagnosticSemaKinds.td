@@ -7906,7 +7906,7 @@ let CategoryName = "Lambda Issue" in {
     "is a C++20 extension">, InGroup<CXX20>;
   def warn_deprecated_this_capture : Warning<
     "implicit capture of 'this' with a capture default of '=' is deprecated">,
-    InGroup<DeprecatedThisCapture>, DefaultIgnore;
+    InGroup<DeprecatedThisCapture>;
   def note_deprecated_this_capture : Note<
     "add an explicit capture of 'this' to capture '*this' by reference">;
 
@@ -11229,8 +11229,7 @@ def err_export_using_internal : Error<
   "using declaration referring to %1 with %select{internal|module|unknown}0 "
   "linkage cannot be exported">;
 def err_export_not_in_module_interface : Error<
-  "export declaration can only be used within a module interface unit"
-  "%select{ after the module declaration|}0">;
+  "export declaration can only be used within a module purview">;
 def err_export_inline_not_defined : Error<
   "inline function not defined%select{| before the private module fragment}0">;
 def err_export_partition_impl : Error<
@@ -11284,15 +11283,7 @@ def err_coroutine_invalid_func_context : Error<
   "|a consteval function}0">;
 def err_implied_coroutine_type_not_found : Error<
   "%0 type was not found; include <coroutine> before defining "
-  "a coroutine; include <experimental/coroutine> if your version "
-  "of libcxx is less than 14.0">;
-def warn_deprecated_coroutine_namespace : Warning<
-  "support for 'std::experimental::%0' will be removed in Clang 17; "
-  "use 'std::%0' instead">,
-  InGroup<DeprecatedExperimentalCoroutine>;
-def err_mixed_use_std_and_experimental_namespace_for_coroutine : Error<
-  "conflicting mixed use of std and std::experimental namespaces for "
-  "coroutine components">;
+  "a coroutine">;
 def err_implicit_coroutine_std_nothrow_type_not_found : Error<
   "std::nothrow was not found; include <new> before defining a coroutine which "
   "uses get_return_object_on_allocation_failure()">;
@@ -11738,6 +11729,9 @@ def err_riscv_builtin_requires_extension : Error<
   "builtin requires%select{| at least one of the following extensions to be enabled}0: %1">;
 def err_riscv_builtin_invalid_lmul : Error<
   "LMUL argument must be in the range [0,3] or [5,7]">;
+def err_riscv_type_requires_extension : Error<
+  "RISC-V type %0 requires the '%1' extension"
+>;
 
 def err_std_source_location_impl_not_found : Error<
   "'std::source_location::__impl' was not found; it must be defined before '__builtin_source_location' is called">;
@@ -11786,10 +11780,22 @@ def warn_unsafe_buffer_variable : Warning<
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def warn_unsafe_buffer_operation : Warning<
   "%select{unsafe pointer operation|unsafe pointer arithmetic|"
-  "unsafe buffer access}0">,
+  "unsafe buffer access|function introduces unsafe buffer manipulation}0">,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def note_unsafe_buffer_operation : Note<
   "used%select{| in pointer arithmetic| in buffer access}0 here">;
+def note_unsafe_buffer_variable_fixit : Note<
+  "change type of '%0' to '%select{std::span|std::array|std::span::iterator}1' to preserve bounds information">;
 def err_loongarch_builtin_requires_la32 : Error<
   "this builtin requires target: loongarch32">;
+
+def err_builtin_pass_in_regs_non_class : Error<
+  "argument %0 is not an unqualified class type">;
+
+
+// WebAssembly reference type and table diagnostics.
+def err_wasm_reference_pr : Error<
+  "%select{pointer|reference}0 to WebAssembly reference type is not allowed">;
+def err_wasm_ca_reference : Error<
+  "cannot %select{capture|take address of}0 WebAssembly reference">;
 } // end of sema component.

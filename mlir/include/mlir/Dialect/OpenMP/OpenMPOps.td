@@ -28,7 +28,6 @@ def OpenMP_Dialect : Dialect {
   let cppNamespace = "::mlir::omp";
   let dependentDialects = ["::mlir::LLVM::LLVMDialect"];
   let useDefaultAttributePrinterParser = 1;
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 // OmpCommon requires definition of OpenACC_Dialect.
@@ -479,6 +478,26 @@ def YieldOp : OpenMP_Op<"yield",
 // 2.10.1 task Construct
 //===----------------------------------------------------------------------===//
 
+def ClauseTaskDependIn    : I32EnumAttrCase<"taskdependin",    0>;
+def ClauseTaskDependOut   : I32EnumAttrCase<"taskdependout",   1>;
+def ClauseTaskDependInOut : I32EnumAttrCase<"taskdependinout", 2>;
+
+def ClauseTaskDepend : I32EnumAttr<
+    "ClauseTaskDepend",
+    "task depend clause",
+    [ClauseTaskDependIn, ClauseTaskDependOut, ClauseTaskDependInOut]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::omp";
+}
+def ClauseTaskDependAttr :
+  EnumAttr<OpenMP_Dialect, ClauseTaskDepend, "clause_task_depend"> {
+  let assemblyFormat = "`(` $value `)`";
+}
+def TaskDependArrayAttr :
+  TypedArrayAttrBase<ClauseTaskDependAttr, "clause_task_depend array attr"> {
+    let constBuilderCall = ?;
+  }
+
 def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
                        OutlineableOpenMPOpInterface, AutomaticAllocationScope,
                        ReductionClauseInterface]> {
@@ -519,6 +538,10 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
     default priority-value when no priority clause is specified should be
     assumed to be zero (the lowest priority).
 
+    The `depends` and `depend_vars` arguments are variadic lists of values
+    that specify the dependencies of this particular task in relation to
+    other tasks.
+
     The `allocators_vars` and `allocate_vars` arguments are a variadic list of
     values that specify the memory allocator to be used to obtain storage for
     private values.
@@ -533,6 +556,8 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
                        Variadic<OpenMP_PointerLikeType>:$in_reduction_vars,
                        OptionalAttr<SymbolRefArrayAttr>:$in_reductions,
                        Optional<I32>:$priority,
+                       OptionalAttr<TaskDependArrayAttr>:$depends,
+                       Variadic<OpenMP_PointerLikeType>:$depend_vars,
                        Variadic<AnyType>:$allocate_vars,
                        Variadic<AnyType>:$allocators_vars);
   let regions = (region AnyRegion:$region);
@@ -550,6 +575,10 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
               custom<AllocateAndAllocator>(
                 $allocate_vars, type($allocate_vars),
                 $allocators_vars, type($allocators_vars)
+              ) `)`
+          |`depend` `(`
+              custom<DependVarList>(
+                $depend_vars, type($depend_vars), $depends
               ) `)`
     ) $region attr-dict
   }];
@@ -1195,13 +1224,14 @@ def AtomicReadOp : OpenMP_Op<"atomic.read", [AllTypesMatch<["x", "v"]>]> {
 
   let arguments = (ins OpenMP_PointerLikeType:$x,
                        OpenMP_PointerLikeType:$v,
+                       TypeAttr:$element_type,
                        DefaultValuedOptionalAttr<I64Attr, "0">:$hint_val,
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order_val);
   let assemblyFormat = [{
     $v `=` $x
     oilist( `memory_order` `(` custom<ClauseAttr>($memory_order_val) `)`
           | `hint` `(` custom<SynchronizationHint>($hint_val) `)`)
-    `:` type($x) attr-dict
+    `:` type($x) `,` $element_type attr-dict
   }];
   let hasVerifier = 1;
   let extraClassDeclaration = [{
@@ -1329,6 +1359,18 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update",
     /// Returns the new value if the operation is equivalent to just a write
     /// operation. Otherwise, returns nullptr.
     Value getWriteOpVal();
+
+    /// The number of variable operands.
+    unsigned getNumVariableOperands() {
+      assert(getX() && "expected 'x' operand");
+      return 1;
+    }
+
+    /// The i-th variable operand passed.
+    Value getVariableOperand(unsigned i) {
+      assert(i == 0 && "invalid index position for an operand");
+      return getX();
+    }
   }];
 }
 
@@ -1536,11 +1578,7 @@ def ReductionDeclareOp : OpenMP_Op<"reduction.declare", [Symbol,
 // 2.19.5.4 reduction clause
 //===----------------------------------------------------------------------===//
 
-def ReductionOp : OpenMP_Op<"reduction", [
-    TypesMatchWith<"value types matches accumulator element type",
-                   "accumulator", "operand",
-                 "$_self.cast<::mlir::omp::PointerLikeType>().getElementType()">
-  ]> {
+def ReductionOp : OpenMP_Op<"reduction"> {
   let summary = "reduction construct";
   let description = [{
     Indicates the value that is produced by the current reduction-participating
@@ -1550,8 +1588,9 @@ def ReductionOp : OpenMP_Op<"reduction", [
   }];
 
   let arguments= (ins AnyType:$operand, OpenMP_PointerLikeType:$accumulator);
-  let assemblyFormat =
-    "$operand `,` $accumulator attr-dict `:` type($accumulator)";
+  let assemblyFormat = [{
+    $operand `,` $accumulator attr-dict `:` type($operand) `,` type($accumulator)
+  }];
   let hasVerifier = 1;
 }
 

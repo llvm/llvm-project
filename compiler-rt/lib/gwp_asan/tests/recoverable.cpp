@@ -182,9 +182,6 @@ void runInterThreadThrashingSingleAlloc(unsigned NumIterations,
   std::atomic<bool> StartingGun{false};
   std::vector<std::thread> Threads;
   constexpr unsigned kNumThreads = 4;
-  if (std::thread::hardware_concurrency() < kNumThreads) {
-    GTEST_SKIP() << "Not enough threads to run this test";
-  }
 
   char *Ptr = static_cast<char *>(AllocateMemory(*GPA));
 

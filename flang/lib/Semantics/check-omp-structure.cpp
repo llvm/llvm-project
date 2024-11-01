@@ -2634,24 +2634,28 @@ void OmpStructureChecker::CheckPrivateSymbolsInOuterCxt(
 bool OmpStructureChecker::CheckTargetBlockOnlyTeams(
     const parser::Block &block) {
   bool nestedTeams{false};
-  auto it{block.begin()};
 
-  if (const auto *ompConstruct{parser::Unwrap<parser::OpenMPConstruct>(*it)}) {
-    if (const auto *ompBlockConstruct{
-            std::get_if<parser::OpenMPBlockConstruct>(&ompConstruct->u)}) {
-      const auto &beginBlockDir{
-          std::get<parser::OmpBeginBlockDirective>(ompBlockConstruct->t)};
-      const auto &beginDir{
-          std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
-      if (beginDir.v == llvm::omp::Directive::OMPD_teams) {
-        nestedTeams = true;
+  if (!block.empty()) {
+    auto it{block.begin()};
+    if (const auto *ompConstruct{
+            parser::Unwrap<parser::OpenMPConstruct>(*it)}) {
+      if (const auto *ompBlockConstruct{
+              std::get_if<parser::OpenMPBlockConstruct>(&ompConstruct->u)}) {
+        const auto &beginBlockDir{
+            std::get<parser::OmpBeginBlockDirective>(ompBlockConstruct->t)};
+        const auto &beginDir{
+            std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
+        if (beginDir.v == llvm::omp::Directive::OMPD_teams) {
+          nestedTeams = true;
+        }
       }
+    }
+
+    if (nestedTeams && ++it == block.end()) {
+      return true;
     }
   }
 
-  if (nestedTeams && ++it == block.end()) {
-    return true;
-  }
   return false;
 }
 

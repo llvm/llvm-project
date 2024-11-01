@@ -370,11 +370,11 @@ processSTIPredicate(STIPredicateFunction &Fn,
                const std::pair<APInt, APInt> &RhsMasks = OpcodeMasks[RhsIdx];
 
                auto LessThan = [](const APInt &Lhs, const APInt &Rhs) {
-                 unsigned LhsCountPopulation = Lhs.countPopulation();
-                 unsigned RhsCountPopulation = Rhs.countPopulation();
+                 unsigned LhsCountPopulation = Lhs.popcount();
+                 unsigned RhsCountPopulation = Rhs.popcount();
                  return ((LhsCountPopulation < RhsCountPopulation) ||
                          ((LhsCountPopulation == RhsCountPopulation) &&
-                          (Lhs.countLeadingZeros() > Rhs.countLeadingZeros())));
+                          (Lhs.countl_zero() > Rhs.countl_zero())));
                };
 
                if (LhsMasks.first != RhsMasks.first)

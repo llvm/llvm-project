@@ -19,11 +19,8 @@ using namespace lld;
 
 // TODO(sbc): Remove this once CGOptLevel can be set completely based on bitcode
 // function metadata.
-CodeGenOpt::Level lld::args::getCGOptLevel(int optLevelLTO) {
-  if (optLevelLTO == 3)
-    return CodeGenOpt::Aggressive;
-  assert(optLevelLTO < 3);
-  return CodeGenOpt::Default;
+int lld::args::getCGOptLevel(int optLevelLTO) {
+  return std::clamp(optLevelLTO, 2, 3);
 }
 
 static int64_t getInteger(opt::InputArgList &args, unsigned key,

@@ -503,10 +503,8 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   // isa<MemSDNode> almost works but is slightly too permissive for some DS
   // intrinsics.
   if (Opc == ISD::LOAD || Opc == ISD::STORE || isa<AtomicSDNode>(N) ||
-      (Opc == AMDGPUISD::ATOMIC_INC || Opc == AMDGPUISD::ATOMIC_DEC ||
-       Opc == ISD::ATOMIC_LOAD_FADD ||
-       Opc == AMDGPUISD::ATOMIC_LOAD_FMIN ||
-       Opc == AMDGPUISD::ATOMIC_LOAD_FMAX)) {
+      Opc == AMDGPUISD::ATOMIC_LOAD_FMIN ||
+      Opc == AMDGPUISD::ATOMIC_LOAD_FMAX) {
     N = glueCopyToM0LDSInit(N);
     SelectCode(N);
     return;
@@ -714,11 +712,11 @@ bool AMDGPUDAGToDAGISel::isUnneededShiftMask(const SDNode *N,
   assert(N->getOpcode() == ISD::AND);
 
   const APInt &RHS = cast<ConstantSDNode>(N->getOperand(1))->getAPIntValue();
-  if (RHS.countTrailingOnes() >= ShAmtBits)
+  if (RHS.countr_one() >= ShAmtBits)
     return true;
 
   const APInt &LHSKnownZeros = CurDAG->computeKnownBits(N->getOperand(0)).Zero;
-  return (LHSKnownZeros | RHS).countTrailingOnes() >= ShAmtBits;
+  return (LHSKnownZeros | RHS).countr_one() >= ShAmtBits;
 }
 
 static bool getBaseWithOffsetUsingSplitOR(SelectionDAG &DAG, SDValue Addr,

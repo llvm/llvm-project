@@ -232,7 +232,7 @@ public:
       uintptr_t Bits = getSmallBits();
       if (Bits == 0)
         return -1;
-      return countTrailingZeros(Bits);
+      return llvm::countr_zero(Bits);
     }
     return getPointer()->find_first();
   }
@@ -242,7 +242,7 @@ public:
       uintptr_t Bits = getSmallBits();
       if (Bits == 0)
         return -1;
-      return NumBaseBits - countLeadingZeros(Bits) - 1;
+      return NumBaseBits - llvm::countl_zero(Bits) - 1;
     }
     return getPointer()->find_last();
   }
@@ -254,7 +254,7 @@ public:
         return -1;
 
       uintptr_t Bits = getSmallBits();
-      return countTrailingOnes(Bits);
+      return llvm::countr_one(Bits);
     }
     return getPointer()->find_first_unset();
   }
@@ -267,7 +267,7 @@ public:
       uintptr_t Bits = getSmallBits();
       // Set unused bits.
       Bits |= ~uintptr_t(0) << getSmallSize();
-      return NumBaseBits - countLeadingOnes(Bits) - 1;
+      return NumBaseBits - llvm::countl_one(Bits) - 1;
     }
     return getPointer()->find_last_unset();
   }
@@ -281,7 +281,7 @@ public:
       Bits &= ~uintptr_t(0) << (Prev + 1);
       if (Bits == 0 || Prev + 1 >= getSmallSize())
         return -1;
-      return countTrailingZeros(Bits);
+      return llvm::countr_zero(Bits);
     }
     return getPointer()->find_next(Prev);
   }
@@ -298,7 +298,7 @@ public:
 
       if (Bits == ~uintptr_t(0) || Prev + 1 >= getSmallSize())
         return -1;
-      return countTrailingOnes(Bits);
+      return llvm::countr_one(Bits);
     }
     return getPointer()->find_next_unset(Prev);
   }
@@ -316,7 +316,7 @@ public:
       if (Bits == 0)
         return -1;
 
-      return NumBaseBits - countLeadingZeros(Bits) - 1;
+      return NumBaseBits - llvm::countl_zero(Bits) - 1;
     }
     return getPointer()->find_prev(PriorTo);
   }

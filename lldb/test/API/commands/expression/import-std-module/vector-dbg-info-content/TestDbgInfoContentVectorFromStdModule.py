@@ -12,6 +12,7 @@ class TestDbgInfoContentVector(TestBase):
 
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
+    @skipIf(compiler="clang", compiler_version=['<', '12.0'])
     def test(self):
         self.build()
 
@@ -21,7 +22,11 @@ class TestDbgInfoContentVector(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
-        vector_type = "std::vector<Foo>"
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
+            vector_type = "std::vector<Foo>"
+        else:
+            vector_type = "std::vector<Foo, std::allocator<Foo> >"
+
         size_type = "size_type"
         value_type = "value_type"
         iterator = "iterator"

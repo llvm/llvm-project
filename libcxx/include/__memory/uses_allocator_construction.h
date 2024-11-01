@@ -83,7 +83,7 @@ __uses_allocator_construction_args(const _Alloc& __alloc, _Up&& __u, _Vp&& __v) 
       std::forward_as_tuple(std::forward<_Vp>(__v)));
 }
 
-#  if _LIBCPP_STD_VER > 20
+#  if _LIBCPP_STD_VER >= 23
 template <class _Pair, class _Alloc, class _Up, class _Vp, __enable_if_t<__is_std_pair<_Pair>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr auto
 __uses_allocator_construction_args(const _Alloc& __alloc, pair<_Up, _Vp>& __pair) noexcept {
@@ -109,7 +109,7 @@ __uses_allocator_construction_args(const _Alloc& __alloc, pair<_Up, _Vp>&& __pai
       std::forward_as_tuple(std::get<1>(std::move(__pair))));
 }
 
-#  if _LIBCPP_STD_VER > 20
+#  if _LIBCPP_STD_VER >= 23
 template <class _Pair, class _Alloc, class _Up, class _Vp, __enable_if_t<__is_std_pair<_Pair>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr auto
 __uses_allocator_construction_args(const _Alloc& __alloc, const pair<_Up, _Vp>&& __pair) noexcept {

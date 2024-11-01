@@ -373,7 +373,7 @@ static std::optional<APInt> buildAttributeAPInt(Type type, bool isNegative,
   } else if (width < result.getBitWidth()) {
     // The parser can return an unnecessarily wide result with leading zeros.
     // This isn't a problem, but truncating off bits is bad.
-    if (result.countLeadingZeros() < result.getBitWidth() - width)
+    if (result.countl_zero() < result.getBitWidth() - width)
       return std::nullopt;
 
     result = result.trunc(width);

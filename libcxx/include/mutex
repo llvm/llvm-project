@@ -262,9 +262,9 @@ timed_mutex::try_lock_until(const chrono::time_point<_Clock, _Duration>& __t)
 {
     using namespace chrono;
     unique_lock<mutex> __lk(__m_);
-    bool no_timeout = _Clock::now() < __t;
-    while (no_timeout && __locked_)
-        no_timeout = __cv_.wait_until(__lk, __t) == cv_status::no_timeout;
+    bool __no_timeout = _Clock::now() < __t;
+    while (__no_timeout && __locked_)
+        __no_timeout = __cv_.wait_until(__lk, __t) == cv_status::no_timeout;
     if (!__locked_)
     {
         __locked_ = true;
@@ -304,7 +304,7 @@ recursive_timed_mutex::try_lock_until(const chrono::time_point<_Clock, _Duration
 {
     using namespace chrono;
     __thread_id __id = this_thread::get_id();
-    unique_lock<mutex> lk(__m_);
+    unique_lock<mutex> __lk(__m_);
     if (__id == __id_)
     {
         if (__count_ == numeric_limits<size_t>::max())
@@ -312,9 +312,9 @@ recursive_timed_mutex::try_lock_until(const chrono::time_point<_Clock, _Duration
         ++__count_;
         return true;
     }
-    bool no_timeout = _Clock::now() < __t;
-    while (no_timeout && __count_ != 0)
-        no_timeout = __cv_.wait_until(lk, __t) == cv_status::no_timeout;
+    bool __no_timeout = _Clock::now() < __t;
+    while (__no_timeout && __count_ != 0)
+        __no_timeout = __cv_.wait_until(__lk, __t) == cv_status::no_timeout;
     if (__count_ == 0)
     {
         __count_ = 1;
@@ -467,7 +467,7 @@ void __unlock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3) {
 
 #endif // _LIBCPP_CXX03_LANG
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class ..._Mutexes>
 class _LIBCPP_TEMPLATE_VIS scoped_lock;
 
@@ -544,7 +544,7 @@ private:
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(scoped_lock);
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 #endif // !_LIBCPP_HAS_NO_THREADS
 
 struct _LIBCPP_TEMPLATE_VIS once_flag;

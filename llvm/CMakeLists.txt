@@ -16,7 +16,7 @@ include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
 set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 
 if(NOT DEFINED LLVM_VERSION_MAJOR)
-  set(LLVM_VERSION_MAJOR 16)
+  set(LLVM_VERSION_MAJOR 17)
 endif()
 if(NOT DEFINED LLVM_VERSION_MINOR)
   set(LLVM_VERSION_MINOR 0)
@@ -167,6 +167,16 @@ foreach(proj IN LISTS LLVM_ENABLE_RUNTIMES)
     message(FATAL_ERROR "Runtime \"${proj}\" is not a supported runtime. Supported runtimes are: ${LLVM_SUPPORTED_RUNTIMES}")
   endif()
 endforeach()
+
+if ("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
+  # To build the libc runtime, we need to be able to build few libc build
+  # tools from the "libc" project. So, we add it to the list of enabled
+  # projects.
+  if (NOT "libc" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(STATUS "Enabling libc project to build libc build tools")
+    list(APPEND LLVM_ENABLE_PROJECTS "libc")
+  endif()
+endif()
 
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
 # `LLVM_ENABLE_PROJECTS` CMake cache variable.  This exists for
@@ -817,8 +827,7 @@ endif()
 set(LLVM_TARGET_TRIPLE_ENV CACHE STRING "The name of environment variable to override default target. Disabled by blank.")
 mark_as_advanced(LLVM_TARGET_TRIPLE_ENV)
 
-# Per target dir not yet supported on Arm 32 bit due to arm vs armhf handling
-if(CMAKE_SYSTEM_NAME MATCHES "BSD|Linux" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
+if(CMAKE_SYSTEM_NAME MATCHES "BSD|Linux|OS390")
   set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default ON)
 else()
   set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default OFF)

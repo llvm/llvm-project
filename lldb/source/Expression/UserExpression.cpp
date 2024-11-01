@@ -424,7 +424,7 @@ UserExpression::Execute(DiagnosticManager &diagnostic_manager,
   lldb::ExpressionResults expr_result = DoExecute(
       diagnostic_manager, exe_ctx, options, shared_ptr_to_me, result_var);
   Target *target = exe_ctx.GetTargetPtr();
-  if (options.GetResultIsInternal() && result_var && target) {
+  if (options.GetSuppressPersistentResult() && result_var && target) {
     if (auto *persistent_state =
             target->GetPersistentExpressionStateForLanguage(m_language))
       persistent_state->RemovePersistentVariable(result_var);

@@ -262,7 +262,7 @@ NamedMDNode *Module::getOrInsertNamedMetadata(StringRef Name) {
   if (!NMD) {
     NMD = new NamedMDNode(Name);
     NMD->setParent(this);
-    NamedMDList.push_back(NMD);
+    insertNamedMDNode(NMD);
   }
   return NMD;
 }
@@ -271,7 +271,7 @@ NamedMDNode *Module::getOrInsertNamedMetadata(StringRef Name) {
 /// delete it.
 void Module::eraseNamedMetadata(NamedMDNode *NMD) {
   NamedMDSymTab.erase(NMD->getName());
-  NamedMDList.erase(NMD->getIterator());
+  eraseNamedMDNode(NMD);
 }
 
 bool Module::isValidModFlagBehavior(Metadata *MD, ModFlagBehavior &MFB) {
@@ -741,6 +741,13 @@ void Module::setStackProtectorGuardOffset(int Offset) {
 
 unsigned Module::getOverrideStackAlignment() const {
   Metadata *MD = getModuleFlag("override-stack-alignment");
+  if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+    return CI->getZExtValue();
+  return 0;
+}
+
+unsigned Module::getMaxTLSAlignment() const {
+  Metadata *MD = getModuleFlag("MaxTLSAlign");
   if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
     return CI->getZExtValue();
   return 0;

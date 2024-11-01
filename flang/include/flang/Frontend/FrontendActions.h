@@ -221,6 +221,9 @@ protected:
   std::unique_ptr<llvm::LLVMContext> llvmCtx;
   std::unique_ptr<llvm::Module> llvmModule;
 
+  /// Embeds offload objects given with specified with -fembed-offload-object
+  void embedOffloadObjects();
+
   /// Generates an LLVM IR module from CodeGenAction::mlirModule and saves it
   /// in CodeGenAction::llvmModule.
   void generateLLVMIR();

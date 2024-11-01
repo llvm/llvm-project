@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-async-to-llvm | FileCheck %s --dump-input=always
+// RUN: mlir-opt %s -convert-async-to-llvm='use-opaque-pointers=1' | FileCheck %s --dump-input=always
 
 // CHECK-LABEL: @create_token
 func.func @create_token() {
@@ -9,7 +9,7 @@ func.func @create_token() {
 
 // CHECK-LABEL: @create_value
 func.func @create_value() {
-  // CHECK: %[[NULL:.*]] = llvm.mlir.null : !llvm.ptr<f32>
+  // CHECK: %[[NULL:.*]] = llvm.mlir.null : !llvm.ptr
   // CHECK: %[[OFFSET:.*]] = llvm.getelementptr %[[NULL]][1]
   // CHECK: %[[SIZE:.*]] = llvm.ptrtoint %[[OFFSET]]
   // CHECK: %[[VALUE:.*]] = call @mlirAsyncRuntimeCreateValue(%[[SIZE]])
@@ -152,8 +152,7 @@ func.func @store() {
   // CHECK: %[[VALUE:.*]] = call @mlirAsyncRuntimeCreateValue
   %1 = async.runtime.create : !async.value<f32>
   // CHECK: %[[P0:.*]] = call @mlirAsyncRuntimeGetValueStorage(%[[VALUE]])
-  // CHECK: %[[P1:.*]] = llvm.bitcast %[[P0]] : !llvm.ptr<i8> to !llvm.ptr<f32>
-  // CHECK: llvm.store %[[CST]], %[[P1]]
+  // CHECK: llvm.store %[[CST]], %[[P0]] : f32, !llvm.ptr
   async.runtime.store %0, %1 : !async.value<f32>
   return
 }
@@ -163,8 +162,7 @@ func.func @load() -> f32 {
   // CHECK: %[[VALUE:.*]] = call @mlirAsyncRuntimeCreateValue
   %0 = async.runtime.create : !async.value<f32>
   // CHECK: %[[P0:.*]] = call @mlirAsyncRuntimeGetValueStorage(%[[VALUE]])
-  // CHECK: %[[P1:.*]] = llvm.bitcast %[[P0]] : !llvm.ptr<i8> to !llvm.ptr<f32>
-  // CHECK: %[[VALUE:.*]] = llvm.load %[[P1]]
+  // CHECK: %[[VALUE:.*]] = llvm.load %[[P0]] : !llvm.ptr -> f32
   %1 = async.runtime.load %0 : !async.value<f32>
   // CHECK: return %[[VALUE]] : f32
   return %1 : f32

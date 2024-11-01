@@ -77,7 +77,7 @@ TEST(InstSizes, PseudoInst) {
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
     dbgs() << Error;
-    return;
+    GTEST_SKIP();
   }
 
   TargetOptions Options;

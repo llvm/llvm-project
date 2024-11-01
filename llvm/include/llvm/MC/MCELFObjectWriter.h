@@ -9,12 +9,12 @@
 #ifndef LLVM_MC_MCELFOBJECTWRITER_H
 #define LLVM_MC_MCELFOBJECTWRITER_H
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <vector>
 

@@ -65,9 +65,11 @@ add_entrypoint_object(
 )
 
 add_math_entrypoint_object(acosf)
+add_math_entrypoint_object(acoshf)
 
 add_math_entrypoint_object(asin)
 add_math_entrypoint_object(asinf)
+add_math_entrypoint_object(asinhf)
 
 add_math_entrypoint_object(atanf)
 
@@ -189,6 +191,10 @@ add_math_entrypoint_object(rintl)
 add_math_entrypoint_object(round)
 add_math_entrypoint_object(roundf)
 add_math_entrypoint_object(roundl)
+
+add_math_entrypoint_object(scalbn)
+add_math_entrypoint_object(scalbnf)
+add_math_entrypoint_object(scalbnl)
 
 add_math_entrypoint_object(sincosf)
 

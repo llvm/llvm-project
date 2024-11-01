@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/allocatable.h"
-#include "assign.h"
+#include "assign-impl.h"
 #include "derived.h"
 #include "stat.h"
 #include "terminator.h"
@@ -51,7 +51,8 @@ std::int32_t RTNAME(MoveAlloc)(Descriptor &to, Descriptor &from, bool hasStat,
   // If to and from are the same allocatable they must not be allocated
   // and nothing should be done.
   if (from.raw().base_addr == to.raw().base_addr && from.IsAllocated()) {
-    return ReturnError(terminator, StatInvalidDescriptor, errMsg, hasStat);
+    return ReturnError(
+        terminator, StatMoveAllocSameAllocatable, errMsg, hasStat);
   }
 
   if (to.IsAllocated()) {
@@ -84,7 +85,7 @@ void RTNAME(AllocatableSetDerivedLength)(
 }
 
 void RTNAME(AllocatableApplyMold)(
-    Descriptor &descriptor, const Descriptor &mold) {
+    Descriptor &descriptor, const Descriptor &mold, int rank) {
   if (descriptor.IsAllocated()) {
     // 9.7.1.3 Return so the error can be emitted by AllocatableAllocate.
     return;
@@ -92,6 +93,14 @@ void RTNAME(AllocatableApplyMold)(
   descriptor = mold;
   descriptor.set_base_addr(nullptr);
   descriptor.raw().attribute = CFI_attribute_allocatable;
+  descriptor.raw().rank = rank;
+  if (auto *descAddendum{descriptor.Addendum()}) {
+    if (const auto *moldAddendum{mold.Addendum()}) {
+      if (const auto *derived{moldAddendum->derivedType()}) {
+        descAddendum->set_derivedType(derived);
+      }
+    }
+  }
 }
 
 int RTNAME(AllocatableAllocate)(Descriptor &descriptor, bool hasStat,
@@ -126,8 +135,7 @@ int RTNAME(AllocatableAllocateSource)(Descriptor &alloc,
       alloc, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     Terminator terminator{sourceFile, sourceLine};
-    // 9.7.1.2(7)
-    Assign(alloc, source, terminator, /*skipRealloc=*/true);
+    DoFromSourceAssign(alloc, source, terminator);
   }
   return stat;
 }

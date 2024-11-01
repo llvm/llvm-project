@@ -30,7 +30,6 @@ def Vector_Dialect : Dialect {
   let useDefaultAttributePrinterParser = 1;
   let hasConstantMaterializer = 1;
   let dependentDialects = ["arith::ArithDialect"];
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 // Base class for Vector dialect ops.
@@ -92,6 +91,7 @@ def Vector_ContractionOp :
       PredOpTrait<"lhs and rhs have same element type", TCopVTEtIsSameAs<0, 1>>,
       PredOpTrait<"third operand acc and result have same element type",
                   TCresVTEtIsSameAsOpBase<0, 2>>,
+      DeclareOpInterfaceMethods<MaskableOpInterface>,
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
     ]>,
     Arguments<(ins AnyVector:$lhs, AnyVector:$rhs, AnyType:$acc,
@@ -109,6 +109,11 @@ def Vector_ContractionOp :
     vector result of rank K (where K = num_lhs_free_dims + num_rhs_free_dims +
     num_batch_dims (see dimension type descriptions below)). For K = 0 (no
     free or batch dimensions), the accumulator and output are a scalar.
+
+    If operands and the result have types of different bitwidths, operands are
+    promoted to have the same bitwidth as the result before performing the
+    contraction. For integer types, only signless integer types are supported,
+    and the promotion happens via sign extension.
 
     Optional vector mask arguments (produced by CreateMaskOp or ConstantMaskOp)
     specify the dynamic dimension sizes of valid data within the lhs/rhs vector
@@ -316,7 +321,7 @@ def Vector_ReductionOp :
     ```
   }];
   let extraClassDeclaration = [{
-    VectorType getVectorType() {
+    VectorType getSourceVectorType() {
       return getVector().getType().cast<VectorType>();
     }
   }];
@@ -444,7 +449,7 @@ def Vector_BroadcastOp :
   }];
   let extraClassDeclaration = [{
     Type getSourceType() { return getSource().getType(); }
-    VectorType getVectorType() {
+    VectorType getResultVectorType() {
       return getVector().getType().cast<VectorType>();
     }
 
@@ -461,7 +466,7 @@ def Vector_BroadcastOp :
     /// `value`, `dstShape` and `broadcastedDims` must be properly specified or
     /// the helper will assert. This means:
     ///   1. `dstShape` must not be empty.
-    ///   2. `broadcastedDims` must be confined to [0 .. rank(value.getVectorType)]
+    ///   2. `broadcastedDims` must be confined to [0 .. rank(value.getResultVectorType)]
     ///   2. `dstShape` trimmed of the dimensions specified in `broadcastedDims`
     //       must match the `value` shape.
     static Value createOrFoldBroadcastOp(
@@ -532,7 +537,7 @@ def Vector_ShuffleOp :
     VectorType getV2VectorType() {
       return getV2().getType().cast<VectorType>();
     }
-    VectorType getVectorType() {
+    VectorType getResultVectorType() {
       return getVector().getType().cast<VectorType>();
     }
   }];
@@ -579,7 +584,7 @@ def Vector_ExtractElementOp :
     OpBuilder<(ins "Value":$source)>,
   ];
   let extraClassDeclaration = [{
-    VectorType getVectorType() {
+    VectorType getSourceVectorType() {
       return getVector().getType().cast<VectorType>();
     }
   }];
@@ -614,7 +619,7 @@ def Vector_ExtractOp :
   ];
   let extraClassDeclaration = [{
     static StringRef getPositionAttrStrName() { return "position"; }
-    VectorType getVectorType() {
+    VectorType getSourceVectorType() {
       return getVector().getType().cast<VectorType>();
     }
     static bool isCompatibleReturnTypes(TypeRange l, TypeRange r);
@@ -628,6 +633,7 @@ def Vector_ExtractOp :
 def Vector_FMAOp :
   Op<Vector_Dialect, "fma", [
        Pure, AllTypesMatch<["lhs", "rhs", "acc", "result"]>,
+       DeclareOpInterfaceMethods<MaskableOpInterface>,
        DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
      ] # ElementwiseMappable.traits>,
     Arguments<(ins VectorOfAnyRankOf<[AnyFloat]>:$lhs,
@@ -919,7 +925,8 @@ def Vector_OuterProductOp :
     PredOpTrait<"lhs operand and result have same element type",
                 TCresVTEtIsSameAsOpBase<0, 0>>,
     PredOpTrait<"rhs operand and result have same element type",
-                TCresVTEtIsSameAsOpBase<0, 1>>]>,
+                TCresVTEtIsSameAsOpBase<0, 1>>,
+    DeclareOpInterfaceMethods<MaskableOpInterface>]>,
     Arguments<(ins AnyVector:$lhs, AnyType:$rhs,
                Variadic<AnyVector>:$acc,
                DefaultValuedAttr<Vector_CombiningKindAttr, "CombiningKind::ADD">:$kind)>,
@@ -989,7 +996,7 @@ def Vector_OuterProductOp :
         ? VectorType()
         : (*getAcc().begin()).getType().cast<VectorType>();
     }
-    VectorType getVectorType() {
+    VectorType getResultVectorType() {
       return getResult().getType().cast<VectorType>();
     }
     static constexpr StringRef getKindAttrStrName() {
@@ -1165,7 +1172,9 @@ def Vector_ExtractStridedSliceOp :
     static StringRef getOffsetsAttrStrName() { return "offsets"; }
     static StringRef getSizesAttrStrName() { return "sizes"; }
     static StringRef getStridesAttrStrName() { return "strides"; }
-    VectorType getVectorType(){ return getVector().getType().cast<VectorType>(); }
+    VectorType getSourceVectorType() {
+      return getVector().getType().cast<VectorType>(); 
+    }
     void getOffsets(SmallVectorImpl<int64_t> &results);
     bool hasNonUnitStrides() {
       return llvm::any_of(getStrides(), [](Attribute attr) {
@@ -1839,7 +1848,7 @@ def Vector_MaskedStoreOp :
 }
 
 def Vector_GatherOp :
-  Vector_Op<"gather">,
+  Vector_Op<"gather", [DeclareOpInterfaceMethods<MaskableOpInterface>]>,
     Arguments<(ins Arg<AnyShaped, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
                VectorOf<[AnyInteger, Index]>:$index_vec,
@@ -2417,10 +2426,10 @@ def Vector_TransposeOp :
     OpBuilder<(ins "Value":$vector, "ArrayRef<int64_t>":$transp)>
   ];
   let extraClassDeclaration = [{
-    VectorType getVectorType() {
+    VectorType getSourceVectorType() {
       return getVector().getType().cast<VectorType>();
     }
-    VectorType getResultType() {
+    VectorType getResultVectorType() {
       return getResult().getType().cast<VectorType>();
     }
     void getTransp(SmallVectorImpl<int64_t> &results);
@@ -2435,7 +2444,11 @@ def Vector_TransposeOp :
 }
 
 def Vector_PrintOp :
-  Vector_Op<"print", []>, Arguments<(ins AnyType:$source)> {
+  Vector_Op<"print", []>,
+  Arguments<(ins Type<Or<[
+    AnyVectorOfAnyRank.predicate,
+    AnyInteger.predicate, Index.predicate, AnyFloat.predicate
+  ]>>:$source)> {
   let summary = "print operation (for testing and debugging)";
   let description = [{
     Prints the source vector (or scalar) to stdout in human readable

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strcasecmp.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStrCaseCmpTest, EmptyStringsShouldReturnZero) {
   const char *s1 = "";

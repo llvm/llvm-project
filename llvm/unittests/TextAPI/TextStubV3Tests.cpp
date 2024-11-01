@@ -81,10 +81,10 @@ TEST(TBDv3, ReadFile) {
   for (auto &&arch : Archs)
     Targets.emplace_back(Target(arch, Platform));
   EXPECT_EQ(Archs, File->getArchitectures());
-  UUIDs Uuids = {{Target(AK_armv7, PLATFORM_UNKNOWN),
-                  "00000000-0000-0000-0000-000000000000"},
-                 {Target(AK_arm64, PLATFORM_UNKNOWN),
-                  "11111111-1111-1111-1111-111111111111"}};
+  TargetToAttr Uuids = {{Target(AK_armv7, PLATFORM_UNKNOWN),
+                         "00000000-0000-0000-0000-000000000000"},
+                        {Target(AK_arm64, PLATFORM_UNKNOWN),
+                         "11111111-1111-1111-1111-111111111111"}};
   EXPECT_EQ(Uuids, File->uuids());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(Platform, *File->getPlatforms().begin());
@@ -171,10 +171,10 @@ TEST(TBDv3, ReadMultipleDocuments) {
   for (auto &&arch : Archs)
     Targets.emplace_back(Target(arch, Platform));
   EXPECT_EQ(Archs, File->getArchitectures());
-  UUIDs Uuids = {{Target(AK_armv7, PLATFORM_UNKNOWN),
-                  "00000000-0000-0000-0000-000000000000"},
-                 {Target(AK_arm64, PLATFORM_UNKNOWN),
-                  "11111111-1111-1111-1111-111111111111"}};
+  TargetToAttr Uuids = {{Target(AK_armv7, PLATFORM_UNKNOWN),
+                         "00000000-0000-0000-0000-000000000000"},
+                        {Target(AK_arm64, PLATFORM_UNKNOWN),
+                         "11111111-1111-1111-1111-111111111111"}};
   EXPECT_EQ(Uuids, File->uuids());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(Platform, *File->getPlatforms().begin());

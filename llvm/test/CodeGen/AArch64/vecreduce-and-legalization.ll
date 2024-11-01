@@ -97,28 +97,28 @@ define i8 @test_v9i8(<9 x i8> %a) nounwind {
 ; CHECK-LABEL: test_v9i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-1
-; CHECK-NEXT:    umov w9, v0.b[5]
+; CHECK-NEXT:    umov w14, v0.b[6]
 ; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    umov w10, v0.b[6]
-; CHECK-NEXT:    umov w15, v0.b[7]
 ; CHECK-NEXT:    mov v1.b[9], w8
 ; CHECK-NEXT:    mov v1.b[10], w8
 ; CHECK-NEXT:    mov v1.b[11], w8
 ; CHECK-NEXT:    mov v1.b[13], w8
 ; CHECK-NEXT:    umov w8, v0.b[4]
 ; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    and w8, w8, w10
-; CHECK-NEXT:    and w8, w8, w15
 ; CHECK-NEXT:    and v1.8b, v0.8b, v1.8b
-; CHECK-NEXT:    umov w11, v1.b[1]
-; CHECK-NEXT:    umov w12, v1.b[0]
-; CHECK-NEXT:    umov w13, v1.b[2]
-; CHECK-NEXT:    umov w14, v1.b[3]
-; CHECK-NEXT:    and w9, w12, w11
-; CHECK-NEXT:    and w11, w13, w14
+; CHECK-NEXT:    umov w9, v1.b[1]
+; CHECK-NEXT:    umov w10, v1.b[0]
+; CHECK-NEXT:    umov w11, v1.b[2]
+; CHECK-NEXT:    umov w12, v1.b[3]
+; CHECK-NEXT:    umov w13, v1.b[5]
+; CHECK-NEXT:    and w9, w10, w9
+; CHECK-NEXT:    umov w10, v0.b[7]
+; CHECK-NEXT:    and w11, w11, w12
+; CHECK-NEXT:    and w8, w8, w13
 ; CHECK-NEXT:    and w9, w9, w11
-; CHECK-NEXT:    and w0, w9, w8
+; CHECK-NEXT:    and w8, w8, w14
+; CHECK-NEXT:    and w8, w9, w8
+; CHECK-NEXT:    and w0, w8, w10
 ; CHECK-NEXT:    ret
   %b = call i8 @llvm.vector.reduce.and.v9i8(<9 x i8> %a)
   ret i8 %b

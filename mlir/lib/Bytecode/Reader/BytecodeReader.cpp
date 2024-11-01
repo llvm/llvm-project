@@ -281,7 +281,7 @@ private:
     // here because we only care about the first byte, and so that be actually
     // get ctz intrinsic calls when possible (the `uint8_t` overload uses a loop
     // implementation).
-    uint32_t numBytes = llvm::countTrailingZeros<uint32_t>(result);
+    uint32_t numBytes = llvm::countr_zero<uint32_t>(result);
     assert(numBytes > 0 && numBytes <= 7 &&
            "unexpected number of trailing zeros in varint encoding");
 

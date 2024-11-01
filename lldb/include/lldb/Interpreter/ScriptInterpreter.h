@@ -147,8 +147,6 @@ public:
 
   ScriptInterpreter(
       Debugger &debugger, lldb::ScriptLanguage script_lang,
-      lldb::ScriptedProcessInterfaceUP scripted_process_interface_up =
-          std::make_unique<ScriptedProcessInterface>(),
       lldb::ScriptedPlatformInterfaceUP scripted_platform_interface_up =
           std::make_unique<ScriptedPlatformInterface>());
 
@@ -570,8 +568,8 @@ public:
 
   lldb::ScriptLanguage GetLanguage() { return m_script_lang; }
 
-  ScriptedProcessInterface &GetScriptedProcessInterface() {
-    return *m_scripted_process_interface_up;
+  virtual lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() {
+    return std::make_unique<ScriptedProcessInterface>();
   }
 
   ScriptedPlatformInterface &GetScriptedPlatformInterface() {
@@ -589,7 +587,6 @@ public:
 protected:
   Debugger &m_debugger;
   lldb::ScriptLanguage m_script_lang;
-  lldb::ScriptedProcessInterfaceUP m_scripted_process_interface_up;
   lldb::ScriptedPlatformInterfaceUP m_scripted_platform_interface_up;
 };
 

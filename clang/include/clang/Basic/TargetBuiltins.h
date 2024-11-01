@@ -243,10 +243,10 @@ namespace clang {
     };
 
     SVETypeFlags(uint64_t F) : Flags(F) {
-      EltTypeShift = llvm::countTrailingZeros(EltTypeMask);
-      MemEltTypeShift = llvm::countTrailingZeros(MemEltTypeMask);
-      MergeTypeShift = llvm::countTrailingZeros(MergeTypeMask);
-      SplatOperandMaskShift = llvm::countTrailingZeros(SplatOperandMask);
+      EltTypeShift = llvm::countr_zero(EltTypeMask);
+      MemEltTypeShift = llvm::countr_zero(MemEltTypeMask);
+      MergeTypeShift = llvm::countr_zero(MergeTypeMask);
+      SplatOperandMaskShift = llvm::countr_zero(SplatOperandMask);
     }
 
     EltType getEltType() const {
@@ -288,6 +288,7 @@ namespace clang {
     bool isInsertOp1SVALL() const { return Flags & IsInsertOp1SVALL; }
     bool isGatherPrefetch() const { return Flags & IsGatherPrefetch; }
     bool isReverseUSDOT() const { return Flags & ReverseUSDOT; }
+    bool isReverseMergeAnyBinOp() const { return Flags & ReverseMergeAnyBinOp; }
     bool isUndef() const { return Flags & IsUndef; }
     bool isTupleCreate() const { return Flags & IsTupleCreate; }
     bool isTupleGet() const { return Flags & IsTupleGet; }

@@ -8,7 +8,7 @@
 
 #include "src/__support/threads/mutex.h"
 #include "src/__support/threads/thread.h"
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 __llvm_libc::Mutex mutex(false, false, false);
 

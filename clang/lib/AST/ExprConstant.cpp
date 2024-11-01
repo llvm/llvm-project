@@ -2802,7 +2802,7 @@ static bool handleIntIntBinOp(EvalInfo &Info, const Expr *E, const APSInt &LHS,
       // E1 x 2^E2 module 2^N.
       if (LHS.isNegative())
         Info.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS;
-      else if (LHS.countLeadingZeros() < SA)
+      else if (LHS.countl_zero() < SA)
         Info.CCEDiag(E, diag::note_constexpr_lshift_discards);
     }
     Result = LHS << SA;
@@ -8339,6 +8339,7 @@ bool LValueExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return false;
   case Builtin::BIas_const:
   case Builtin::BIforward:
+  case Builtin::BIforward_like:
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
     if (cast<FunctionDecl>(E->getCalleeDecl())->isConstexpr())
@@ -11360,6 +11361,8 @@ EvaluateBuiltinClassifyType(QualType T, const LangOptions &LangOpts) {
 #include "clang/Basic/PPCTypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
       return GCCTypeClass::None;
 
     case BuiltinType::Dependent:
@@ -12005,7 +12008,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
 
-    return Success(Val.getBitWidth() - Val.getMinSignedBits(), E);
+    return Success(Val.getBitWidth() - Val.getSignificantBits(), E);
   }
 
   case Builtin::BI__builtin_clz:
@@ -12018,7 +12021,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!Val)
       return Error(E);
 
-    return Success(Val.countLeadingZeros(), E);
+    return Success(Val.countl_zero(), E);
   }
 
   case Builtin::BI__builtin_constant_p: {
@@ -12064,7 +12067,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!Val)
       return Error(E);
 
-    return Success(Val.countTrailingZeros(), E);
+    return Success(Val.countr_zero(), E);
   }
 
   case Builtin::BI__builtin_eh_return_data_regno: {
@@ -12084,7 +12087,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
 
-    unsigned N = Val.countTrailingZeros();
+    unsigned N = Val.countr_zero();
     return Success(N == Val.getBitWidth() ? 0 : N + 1, E);
   }
 
@@ -12139,7 +12142,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
 
-    return Success(Val.countPopulation() % 2, E);
+    return Success(Val.popcount() % 2, E);
   }
 
   case Builtin::BI__builtin_popcount:
@@ -12149,7 +12152,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
 
-    return Success(Val.countPopulation(), E);
+    return Success(Val.popcount(), E);
   }
 
   case Builtin::BI__builtin_rotateleft8:
@@ -13499,10 +13502,16 @@ bool IntExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
       return false;
     if (!Result.isInt()) return Error(E);
     const APSInt &Value = Result.getInt();
-    if (Value.isSigned() && Value.isMinSignedValue() && E->canOverflow() &&
-        !HandleOverflow(Info, E, -Value.extend(Value.getBitWidth() + 1),
-                        E->getType()))
-      return false;
+    if (Value.isSigned() && Value.isMinSignedValue() && E->canOverflow()) {
+      if (Info.checkingForUndefinedBehavior())
+        Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
+                                         diag::warn_integer_constant_overflow)
+            << toString(Value, 10) << E->getType();
+
+      if (!HandleOverflow(Info, E, -Value.extend(Value.getBitWidth() + 1),
+                          E->getType()))
+        return false;
+    }
     return Success(-Value, E);
   }
   case UO_Not: {

@@ -2236,7 +2236,7 @@ public:
                               unsigned &Idx, LocSeq *Seq = nullptr);
 
   // Read a string
-  static std::string ReadString(const RecordData &Record, unsigned &Idx);
+  static std::string ReadString(const RecordDataImpl &Record, unsigned &Idx);
 
   // Skip a string
   static void SkipString(const RecordData &Record, unsigned &Idx) {

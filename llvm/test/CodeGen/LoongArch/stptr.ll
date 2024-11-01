@@ -76,11 +76,9 @@ define void @stptr_d_too_small_offset(ptr %p, i64 %val) nounwind {
 define void @stptr_d(ptr %p, i64 %val) nounwind {
 ; LA32-LABEL: stptr_d:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ori $a3, $zero, 2052
-; LA32-NEXT:    add.w $a3, $a0, $a3
-; LA32-NEXT:    st.w $a2, $a3, 0
-; LA32-NEXT:    ori $a2, $zero, 2048
-; LA32-NEXT:    add.w $a0, $a0, $a2
+; LA32-NEXT:    ori $a3, $zero, 2048
+; LA32-NEXT:    add.w $a0, $a0, $a3
+; LA32-NEXT:    st.w $a2, $a0, 4
 ; LA32-NEXT:    st.w $a1, $a0, 0
 ; LA32-NEXT:    ret
 ;
@@ -98,11 +96,9 @@ define void @stptr_d_too_big_offset(ptr %p, i64 %val) nounwind {
 ; LA32-LABEL: stptr_d_too_big_offset:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    lu12i.w $a3, 8
-; LA32-NEXT:    add.w $a4, $a0, $a3
-; LA32-NEXT:    st.w $a1, $a4, 0
-; LA32-NEXT:    ori $a1, $a3, 4
-; LA32-NEXT:    add.w $a0, $a0, $a1
-; LA32-NEXT:    st.w $a2, $a0, 0
+; LA32-NEXT:    add.w $a0, $a0, $a3
+; LA32-NEXT:    st.w $a2, $a0, 4
+; LA32-NEXT:    st.w $a1, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: stptr_d_too_big_offset:

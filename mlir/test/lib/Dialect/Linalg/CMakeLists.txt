@@ -4,7 +4,6 @@ add_mlir_library(MLIRLinalgTestPasses
   TestLinalgDecomposeOps.cpp
   TestLinalgElementwiseFusion.cpp
   TestLinalgFusionTransforms.cpp
-  TestLinalgHoisting.cpp
   TestLinalgTransforms.cpp
   TestPadFusion.cpp
 

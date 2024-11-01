@@ -3290,6 +3290,8 @@ static bool TypeInfoIsInStandardLibrary(const BuiltinType *Ty) {
 #include "clang/Basic/PPCTypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
     case BuiltinType::ShortAccum:
     case BuiltinType::Accum:
     case BuiltinType::LongAccum:
@@ -3643,7 +3645,6 @@ static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
     return llvm::GlobalValue::InternalLinkage;
 
   case VisibleNoLinkage:
-  case ModuleInternalLinkage:
   case ModuleLinkage:
   case ExternalLinkage:
     // RTTI is not enabled, which means that this type info struct is going

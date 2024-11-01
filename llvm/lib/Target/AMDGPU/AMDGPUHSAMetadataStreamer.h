@@ -84,7 +84,8 @@ protected:
   msgpack::ArrayDocNode getWorkGroupDimensions(MDNode *Node) const;
 
   msgpack::MapDocNode getHSAKernelProps(const MachineFunction &MF,
-                                        const SIProgramInfo &ProgramInfo) const;
+                                        const SIProgramInfo &ProgramInfo,
+                                        unsigned CodeObjectVersion) const;
 
   void emitVersion() override;
 

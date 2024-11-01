@@ -665,7 +665,7 @@ TEST_F(ConstantRangeTest, getMinSignedBits) {
   EnumerateInterestingConstantRanges([&](const ConstantRange &CR) {
     unsigned Exact = 0;
     ForeachNumInConstantRange(CR, [&](const APInt &N) {
-      Exact = std::max(Exact, N.getMinSignedBits());
+      Exact = std::max(Exact, N.getSignificantBits());
     });
 
     unsigned ResultCR = CR.getMinSignedBits();
@@ -2394,6 +2394,20 @@ TEST_F(ConstantRangeTest, Abs) {
         if (N.isMinSignedValue())
           return std::nullopt;
         return N.abs();
+      });
+}
+
+TEST_F(ConstantRangeTest, Ctlz) {
+  TestUnaryOpExhaustive(
+      [](const ConstantRange &CR) { return CR.ctlz(); },
+      [](const APInt &N) { return APInt(N.getBitWidth(), N.countl_zero()); });
+
+  TestUnaryOpExhaustive(
+      [](const ConstantRange &CR) { return CR.ctlz(/*ZeroIsPoison=*/true); },
+      [](const APInt &N) -> std::optional<APInt> {
+        if (N.isZero())
+          return std::nullopt;
+        return APInt(N.getBitWidth(), N.countl_zero());
       });
 }
 

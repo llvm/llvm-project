@@ -13,6 +13,34 @@ To generate a summary, re-generate the new ABI list using the
 New entries should be added directly below the "Version" header.
 
 ------------
+Version 17.0
+------------
+
+* [libc++] Remove explicit instantiations of __insertion_sort_incomplete and __sort5 from the dylib
+
+  These instantiations were never visible, because they are only used in `__sort`, which is also explicitly
+  instantiated in the dylib.
+
+  All platforms
+  -------------
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIaaEEPaEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIccEEPcEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIddEEPdEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIeeEEPeEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIffEEPfEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIhhEEPhEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIiiEEPiEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIjjEEPjEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIllEEPlEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessImmEEPmEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIssEEPsEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIttEEPtEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIwwEEPwEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIxxEEPxEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIyyEEPyEEbT0_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIeeEEPeEEjT0_S5_S5_S5_S5_T_
+
+------------
 Version 16.0
 ------------
 

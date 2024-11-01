@@ -18,7 +18,6 @@ include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinDialect.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
-include "mlir/IR/SubElementInterfaces.td"
 
 // TODO: Currently the attributes defined in this file are prefixed with
 // `Builtin_`.  This is to differentiate the attributes here with the ones in
@@ -71,9 +70,7 @@ def Builtin_AffineMapAttr : Builtin_Attr<"AffineMap", [
 // ArrayAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_ArrayAttr : Builtin_Attr<"Array", [
-    SubElementAttrInterface
-  ]> {
+def Builtin_ArrayAttr : Builtin_Attr<"Array"> {
   let summary = "A collection of other Attribute values";
   let description = [{
     Syntax:
@@ -491,9 +488,7 @@ def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements", [
 // DictionaryAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary", [
-    SubElementAttrInterface
-  ]> {
+def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary"> {
   let summary = "An dictionary of named Attribute values";
   let description = [{
     Syntax:
@@ -1096,9 +1091,7 @@ def Builtin_StringAttr : Builtin_Attr<"String", [TypedAttrInterface]> {
 // SymbolRefAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_SymbolRefAttr : Builtin_Attr<"SymbolRef", [
-    SubElementAttrInterface
-  ]> {
+def Builtin_SymbolRefAttr : Builtin_Attr<"SymbolRef"> {
   let summary = "An Attribute containing a symbolic reference to an Operation";
   let description = [{
     Syntax:
@@ -1113,13 +1106,6 @@ def Builtin_SymbolRefAttr : Builtin_Attr<"SymbolRef", [
     the nearest parent operation containing the `OpTrait::SymbolTable` trait. It
     may optionally contain a set of nested references that further resolve to a
     symbol nested within a different symbol table.
-
-    This attribute can only be held internally by
-    [array attributes](#array-attribute),
-    [dictionary attributes](#dictionary-attribute)(including the top-level
-    operation attribute dictionary) as well as attributes exposing it via
-    the `SubElementAttrInterface` interface. Symbol reference attributes
-    nested in types are currently not supported.
 
     **Rationale:** Identifying accesses to global data is critical to
     enabling efficient multi-threaded compilation. Restricting global
@@ -1171,9 +1157,7 @@ def Builtin_SymbolRefAttr : Builtin_Attr<"SymbolRef", [
 // TypeAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_TypeAttr : Builtin_Attr<"Type", [
-    SubElementAttrInterface
-  ]> {
+def Builtin_TypeAttr : Builtin_Attr<"Type"> {
   let summary = "An Attribute containing a Type";
   let description = [{
     Syntax:

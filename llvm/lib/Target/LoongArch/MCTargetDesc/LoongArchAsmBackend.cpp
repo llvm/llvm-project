@@ -202,5 +202,5 @@ MCAsmBackend *llvm::createLoongArchAsmBackend(const Target &T,
                                               const MCTargetOptions &Options) {
   const Triple &TT = STI.getTargetTriple();
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
-  return new LoongArchAsmBackend(STI, OSABI, TT.isArch64Bit());
+  return new LoongArchAsmBackend(STI, OSABI, TT.isArch64Bit(), Options);
 }

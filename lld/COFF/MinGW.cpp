@@ -267,8 +267,8 @@ void lld::coff::wrapSymbols(COFFLinkerContext &ctx,
   // Update pointers in input files.
   parallelForEach(ctx.objFileInstances, [&](ObjFile *file) {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
-    for (size_t i = 0, e = syms.size(); i != e; ++i)
-      if (Symbol *s = map.lookup(syms[i]))
-        syms[i] = s;
+    for (auto &sym : syms)
+      if (Symbol *s = map.lookup(sym))
+        sym = s;
   });
 }

@@ -21,16 +21,6 @@ transform.with_pdl_patterns {
   }
 }
 
-// CHECK: transform.sequence
-// CHECK: ^{{.+}}(%[[ARG:.+]]: !pdl.operation):
-transform.sequence failures(propagate) {
-^bb0(%arg0: !pdl.operation):
-  // CHECK: with_pdl_patterns %[[ARG]] : !pdl.operation
-  with_pdl_patterns %arg0 : !pdl.operation {
-  ^bb1(%arg1: !pdl.operation):
-  }
-}
-
 // Using the same value multiple times without consuming it is fine.
 // CHECK: transform.sequence
 // CHECK: %[[V:.+]] = sequence %{{.*}} : !pdl.operation -> !pdl.operation
@@ -47,6 +37,33 @@ transform.sequence failures(propagate) {
   }
   transform.sequence %0 : !pdl.operation failures(propagate) {
   ^bb3(%arg3: !pdl.operation):
+  }
+}
+
+// CHECK: transform.sequence failures(propagate)
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op, %arg1: !transform.any_op, %arg2: !transform.any_op):
+  // CHECK: sequence %{{.*}}, %{{.*}}, %{{.*}} : (!transform.any_op, !transform.any_op, !transform.any_op) failures(propagate)
+  transform.sequence %arg0, %arg1, %arg2 : !transform.any_op, !transform.any_op, !transform.any_op failures(propagate) {
+  ^bb0(%arg3: !transform.any_op, %arg4: !transform.any_op, %arg5: !transform.any_op):
+  }
+}
+
+// CHECK: transform.sequence failures(propagate)
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op, %arg1: !transform.any_op, %arg2: !transform.any_op):
+  // CHECK: sequence %{{.*}}, %{{.*}}, %{{.*}} : (!transform.any_op, !transform.any_op, !transform.any_op) failures(propagate)
+  transform.sequence %arg0, %arg1, %arg2 : (!transform.any_op, !transform.any_op, !transform.any_op) failures(propagate) {
+  ^bb0(%arg3: !transform.any_op, %arg4: !transform.any_op, %arg5: !transform.any_op):
+  }
+}
+
+// CHECK: transform.sequence failures(propagate)
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op, %arg1: !transform.any_op, %arg2: !transform.any_op):
+  // CHECK: sequence %{{.*}}, %{{.*}}, %{{.*}} : (!transform.any_op, !transform.any_op, !transform.any_op) failures(propagate)
+  transform.sequence %arg0, %arg1, %arg2 : (!transform.any_op, !transform.any_op, !transform.any_op) failures(propagate) {
+  ^bb0(%arg3: !transform.any_op, %arg4: !transform.any_op, %arg5: !transform.any_op):
   }
 }
 

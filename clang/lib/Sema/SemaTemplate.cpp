@@ -5897,6 +5897,11 @@ bool Sema::CheckTemplateArgumentList(
                                 CTAK_Specified))
         return true;
 
+      CanonicalConverted.back().setIsDefaulted(
+          clang::isSubstitutedDefaultArgument(
+              Context, NewArgs[ArgIdx].getArgument(), *Param,
+              CanonicalConverted, Params->getDepth()));
+
       bool PackExpansionIntoNonPack =
           NewArgs[ArgIdx].getArgument().isPackExpansion() &&
           (!(*Param)->isTemplateParameterPack() || getExpandedPackSize(*Param));
@@ -6071,6 +6076,8 @@ bool Sema::CheckTemplateArgumentList(
                               SugaredConverted, CanonicalConverted,
                               CTAK_Specified))
       return true;
+
+    CanonicalConverted.back().setIsDefaulted(true);
 
     // Core issue 150 (assumed resolution): if this is a template template
     // parameter, keep track of the default template arguments from the
@@ -7514,7 +7521,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       else if (OldValue.isUnsigned())
         RequiredBits = OldValue.getActiveBits() + 1;
       else
-        RequiredBits = OldValue.getMinSignedBits();
+        RequiredBits = OldValue.getSignificantBits();
       if (RequiredBits > AllowedBits) {
         Diag(Arg->getBeginLoc(), diag::warn_template_arg_too_large)
             << toString(OldValue, 10) << toString(Value, 10) << Param->getType()
@@ -10181,14 +10188,11 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
 
   bool Owned = false;
   bool IsDependent = false;
-  UsingShadowDecl* FoundUsing = nullptr;
-  Decl *TagD =
-      ActOnTag(S, TagSpec, Sema::TUK_Reference, KWLoc, SS, Name, NameLoc, Attr,
-               AS_none, /*ModulePrivateLoc=*/SourceLocation(),
+  Decl *TagD = ActOnTag(S, TagSpec, Sema::TUK_Reference, KWLoc, SS, Name,
+               NameLoc, Attr, AS_none, /*ModulePrivateLoc=*/SourceLocation(),
                MultiTemplateParamsArg(), Owned, IsDependent, SourceLocation(),
                false, TypeResult(), /*IsTypeSpecifier*/ false,
-               /*IsTemplateParamOrArg*/ false, /*OOK=*/OOK_Outside, FoundUsing)
-          .get();
+               /*IsTemplateParamOrArg*/ false, /*OOK=*/OOK_Outside).get();
   assert(!IsDependent && "explicit instantiation of dependent name not yet handled");
 
   if (!TagD)

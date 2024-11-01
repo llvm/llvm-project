@@ -843,7 +843,7 @@ define internal fastcc <8 x float> @PR34577(<8 x float> %inp0, <8 x float> %inp1
 ; AVX512-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,1,1,1]
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vblendps {{.*#+}} ymm2 = ymm0[0,1],ymm2[2,3],ymm0[4,5],ymm2[6,7]
+; AVX512-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm0[4,5],ymm2[6,7]
 ; AVX512-NEXT:    vmovaps {{.*#+}} ymm0 = <23,18,7,2,20,u,3,2>
 ; AVX512-NEXT:    vpermi2ps %zmm2, %zmm1, %zmm0
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0

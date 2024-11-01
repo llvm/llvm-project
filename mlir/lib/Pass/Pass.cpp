@@ -769,11 +769,15 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
 // PassManager
 //===----------------------------------------------------------------------===//
 
-PassManager::PassManager(MLIRContext *ctx, Nesting nesting,
-                         StringRef operationName)
-    : OpPassManager(OperationName(operationName, ctx), nesting), context(ctx),
-      initializationKey(DenseMapInfo<llvm::hash_code>::getTombstoneKey()),
-      passTiming(false), verifyPasses(true) {}
+PassManager::PassManager(MLIRContext *ctx, StringRef operationName,
+                         Nesting nesting)
+    : OpPassManager(operationName, nesting), context(ctx), passTiming(false),
+      verifyPasses(true) {}
+
+PassManager::PassManager(OperationName operationName, Nesting nesting)
+    : OpPassManager(operationName, nesting),
+      context(operationName.getContext()), passTiming(false),
+      verifyPasses(true) {}
 
 PassManager::~PassManager() = default;
 

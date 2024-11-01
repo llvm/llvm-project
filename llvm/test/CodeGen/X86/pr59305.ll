@@ -4,23 +4,28 @@
 define double @foo(double %0) #0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
+; CHECK-NEXT:    movl $1024, %edi # imm = 0x400
+; CHECK-NEXT:    callq fesetround@PLT
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    divsd (%rsp), %xmm1 # 8-byte Folded Reload
+; CHECK-NEXT:    movsd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movl $1024, %edi # imm = 0x400
 ; CHECK-NEXT:    callq fesetround@PLT
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    divsd (%rsp), %xmm0 # 8-byte Folded Reload
-; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
+; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movl $1024, %edi # imm = 0x400
 ; CHECK-NEXT:    callq fesetround@PLT
-; CHECK-NEXT:    movl $1024, %edi # imm = 0x400
-; CHECK-NEXT:    callq fesetround@PLT
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    divsd (%rsp), %xmm2 # 8-byte Folded Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    movaps %xmm0, %xmm2
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    callq fma@PLT
-; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    retq
     %2 = call i32 @fesetround(i32 noundef 1024)
     %3 = call double @llvm.experimental.constrained.fdiv.f64(double 1.000000e+00, double %0, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0

@@ -118,7 +118,7 @@ bb:
 
 ; Verify that if the pointer escapes, then we do fall back onto using a temp copy.
 ; CHECK-LABEL: .visible .entry pointer_escapes
-; CHECK: .local .align 8 .b8     __local_depot{{.*}}
+; CHECK: .local .align 4 .b8     __local_depot{{.*}}
 ; CHECK64: ld.param.u64    [[result_addr:%rd[0-9]+]], [{{.*}}_param_0]
 ; CHECK64: add.u64         %[[copy_addr:rd[0-9]+]], %SPL, 0;
 ; CHECK32: ld.param.u32    [[result_addr:%r[0-9]+]], [{{.*}}_param_0]

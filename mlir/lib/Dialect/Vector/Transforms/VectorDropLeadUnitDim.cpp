@@ -48,7 +48,7 @@ struct CastAwayExtractStridedSliceLeadingOneDim
     // vector.extract_strided_slice requires the input and output vector to have
     // the same rank. Here we drop leading one dimensions from the input vector
     // type to make sure we don't cause mismatch.
-    VectorType oldSrcType = extractOp.getVectorType();
+    VectorType oldSrcType = extractOp.getSourceVectorType();
     VectorType newSrcType = trimLeadingOneDims(oldSrcType);
 
     if (newSrcType.getRank() == oldSrcType.getRank())

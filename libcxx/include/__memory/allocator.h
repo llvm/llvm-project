@@ -116,7 +116,7 @@ public:
         }
     }
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr
     allocation_result<_Tp*> allocate_at_least(size_t __n) {
         return {allocate(__n), __n};
@@ -205,7 +205,7 @@ public:
         }
     }
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr
     allocation_result<const _Tp*> allocate_at_least(size_t __n) {
         return {allocate(__n), __n};

@@ -1,14 +1,14 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i686 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple arm %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple mips %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple mipsel %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc64 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple s390x %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple sparc %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple sparcv9 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple thumb %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i686 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple arm %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple mips %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple mipsel %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple powerpc %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple powerpc64 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple s390x %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple sparc %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple sparcv9 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple thumb %s -emit-llvm -o - | FileCheck %s
 
 int mout0;
 int min1;
@@ -17,7 +17,7 @@ int marray[2];
 // CHECK: @single_m
 void single_m(void)
 {
-  // CHECK: call void asm "foo $1,$0", "=*m,*m[[CLOBBERS:[a-zA-Z0-9@%{},~_$ ]*\"]](i32* elementtype(i32) {{[a-zA-Z0-9@%]+}}, i32* elementtype(i32) {{[a-zA-Z0-9@%]+}})
+  // CHECK: call void asm "foo $1,$0", "=*m,*m[[CLOBBERS:[a-zA-Z0-9@%{},~_$ ]*\"]](ptr elementtype(i32) {{[a-zA-Z0-9@%]+}}, ptr elementtype(i32) {{[a-zA-Z0-9@%]+}})
   asm("foo %1,%0" : "=m" (mout0) : "m" (min1));
 }
 
@@ -130,7 +130,7 @@ void single_X(void)
   asm("foo %1,%0" : "=r" (out0) : "X" (min1));
   // CHECK: call i32 asm "foo $1,$0", "=r,X[[CLOBBERS]](i32 1)
   asm("foo %1,%0" : "=r" (out0) : "X" (1));
-  // CHECK: call i32 asm "foo $1,$0", "=r,X[[CLOBBERS]](i32* getelementptr inbounds ([2 x i32], [2 x i32]* {{[a-zA-Z0-9@%]+}}, i{{32|64}} 0, i{{32|64}} 0))
+  // CHECK: call i32 asm "foo $1,$0", "=r,X[[CLOBBERS]](ptr {{[a-zA-Z0-9@%]+}})
   asm("foo %1,%0" : "=r" (out0) : "X" (marray));
   // CHECK: call i32 asm "foo $1,$0", "=r,X[[CLOBBERS]](double {{[0-9.eE+-]+}})
   asm("foo %1,%0" : "=r" (out0) : "X" (1.0e+01));
@@ -143,14 +143,14 @@ void single_p(void)
 {
   register int out0 = 0;
   // Constraint converted differently on different platforms moved to platform-specific.
-  // : call i32 asm "foo $1,$0", "=r,im[[CLOBBERS]](i32* getelementptr inbounds ([2 x i32], [2 x i32]* {{[a-zA-Z0-9@%]+}}, i{{32|64}} 0, i{{32|64}} 0))
+  // : call i32 asm "foo $1,$0", "=r,im[[CLOBBERS]](ptr getelementptr inbounds ([2 x i32], ptr {{[a-zA-Z0-9@%]+}}, i{{32|64}} 0, i{{32|64}} 0))
   asm("foo %1,%0" : "=r" (out0) : "p" (marray));
 }
 
 // CHECK: @multi_m
 void multi_m(void)
 {
-  // CHECK: call void asm "foo $1,$0", "=*m|r,m|r[[CLOBBERS]](i32* elementtype(i32) {{[a-zA-Z0-9@%]+}}, i32 {{[a-zA-Z0-9@%]+}})
+  // CHECK: call void asm "foo $1,$0", "=*m|r,m|r[[CLOBBERS]](ptr elementtype(i32) {{[a-zA-Z0-9@%]+}}, i32 {{[a-zA-Z0-9@%]+}})
   asm("foo %1,%0" : "=m,r" (mout0) : "m,r" (min1));
 }
 
@@ -263,7 +263,7 @@ void multi_X(void)
   asm("foo %1,%0" : "=r,r" (out0) : "r,X" (min1));
   // CHECK: call i32 asm "foo $1,$0", "=r|r,r|X[[CLOBBERS]](i32 1)
   asm("foo %1,%0" : "=r,r" (out0) : "r,X" (1));
-  // CHECK: call i32 asm "foo $1,$0", "=r|r,r|X[[CLOBBERS]](i32* getelementptr inbounds ([2 x i32], [2 x i32]* {{[a-zA-Z0-9@%]+}}, i{{32|64}} 0, i{{32|64}} 0))
+  // CHECK: call i32 asm "foo $1,$0", "=r|r,r|X[[CLOBBERS]](ptr {{[a-zA-Z0-9@%]+}})
   asm("foo %1,%0" : "=r,r" (out0) : "r,X" (marray));
   // CHECK: call i32 asm "foo $1,$0", "=r|r,r|X[[CLOBBERS]](double {{[0-9.eE+-]+}})
   asm("foo %1,%0" : "=r,r" (out0) : "r,X" (1.0e+01));
@@ -276,6 +276,6 @@ void multi_p(void)
 {
   register int out0 = 0;
   // Constraint converted differently on different platforms moved to platform-specific.
-  // : call i32 asm "foo $1,$0", "=r|r,r|im[[CLOBBERS]](i32* getelementptr inbounds ([2 x i32], [2 x i32]* {{[a-zA-Z0-9@%]+}}, {{i[0-9]*}} 0, {{i[0-9]*}} 0))
+  // : call i32 asm "foo $1,$0", "=r|r,r|im[[CLOBBERS]](ptr getelementptr inbounds ([2 x i32], ptr {{[a-zA-Z0-9@%]+}}, {{i[0-9]*}} 0, {{i[0-9]*}} 0))
   asm("foo %1,%0" : "=r,r" (out0) : "r,p" (marray));
 }

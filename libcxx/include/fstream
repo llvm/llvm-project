@@ -398,17 +398,17 @@ basic_filebuf<_CharT, _Traits>::operator=(basic_filebuf&& __rhs)
 template <class _CharT, class _Traits>
 basic_filebuf<_CharT, _Traits>::~basic_filebuf()
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try
     {
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
         close();
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     }
     catch (...)
     {
     }
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
     if (__owns_eb_)
         delete [] __extbuf_;
     if (__owns_ib_)

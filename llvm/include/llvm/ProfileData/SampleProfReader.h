@@ -232,11 +232,11 @@
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/GCOV.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/ProfileData/SymbolRemappingReader.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Discriminator.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SymbolRemappingReader.h"
 #include <cstdint>
 #include <list>
 #include <memory>
@@ -250,6 +250,10 @@ namespace llvm {
 
 class raw_ostream;
 class Twine;
+
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 
 namespace sampleprof {
 
@@ -270,8 +274,8 @@ public:
   /// Create a remapper from the given remapping file. The remapper will
   /// be used for profile read in by Reader.
   static ErrorOr<std::unique_ptr<SampleProfileReaderItaniumRemapper>>
-  create(const std::string Filename, SampleProfileReader &Reader,
-         LLVMContext &C);
+  create(const std::string Filename, vfs::FileSystem &FS,
+         SampleProfileReader &Reader, LLVMContext &C);
 
   /// Create a remapper from the given Buffer. The remapper will
   /// be used for profile read in by Reader.
@@ -450,7 +454,7 @@ public:
   /// Create a remapper underlying if RemapFilename is not empty.
   /// Parameter P specifies the FSDiscriminatorPass.
   static ErrorOr<std::unique_ptr<SampleProfileReader>>
-  create(const std::string Filename, LLVMContext &C,
+  create(const std::string Filename, LLVMContext &C, vfs::FileSystem &FS,
          FSDiscriminatorPass P = FSDiscriminatorPass::Base,
          const std::string RemapFilename = "");
 
@@ -458,7 +462,7 @@ public:
   /// Create a remapper underlying if RemapFilename is not empty.
   /// Parameter P specifies the FSDiscriminatorPass.
   static ErrorOr<std::unique_ptr<SampleProfileReader>>
-  create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C,
+  create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C, vfs::FileSystem &FS,
          FSDiscriminatorPass P = FSDiscriminatorPass::Base,
          const std::string RemapFilename = "");
 

@@ -48,15 +48,15 @@
     ret i32 0
   }
 
-  ;test1mov1add_ebp_32: 2 operands LEA32r that can be replaced with 1 add 1 mov instructions
+  ;test_leab_ebp_leais_32: 2 operands LEA32r that can be replaced with LEA_IS form
   ; where the base is rbp/r13/ebp register
-  define i32 @test1mov1add_ebp_32() {
+  define i32 @test_leab_ebp_leais_32() {
     ret i32 0
   }
 
-  ;testleaadd_ebp_index_32: 3 operands LEA32r that can be replaced with 1 lea 1 add instructions
+  ;test_leabi_ebp_leais_32: 3 operands LEA32r that can be replaced with LEA_IS form
   ; where the base and the index are ebp register and there is offset
-  define i32 @testleaadd_ebp_index_32() {
+  define i32 @test_leabi_ebp_leais_32() {
     ret i32 0
   }
 
@@ -345,7 +345,7 @@ body:             |
 
 ...
 ---
-name:            test1mov1add_ebp_32
+name:            test_leab_ebp_leais_32
 alignment:       16
 exposesReturnsTwice: false
 legalized:       false
@@ -374,17 +374,16 @@ body:             |
   bb.0 (%ir-block.0):
     liveins: $eax, $ebp, $ebx
 
-    ; CHECK-LABEL: name: test1mov1add_ebp_32
+    ; CHECK-LABEL: name: test_leab_ebp_leais_32
     ; CHECK: liveins: $eax, $ebp, $ebx
-    ; CHECK: $ebx = MOV32rr $ebp
-    ; CHECK: $ebx = ADD32rr $ebx, $ebp, implicit-def $eflags
+    ; CHECK: $ebx = LEA32r $noreg, 2, $ebp, 0, $noreg
     ; CHECK: RET64 $ebx
     $ebx = LEA32r killed $ebp, 1, $ebp, 0, $noreg
     RET64 $ebx
 
 ...
 ---
-name:            testleaadd_ebp_index_32
+name:            test_leabi_ebp_leais_32
 alignment:       16
 exposesReturnsTwice: false
 legalized:       false
@@ -412,10 +411,9 @@ body:             |
   bb.0 (%ir-block.0):
     liveins: $eax, $ebp, $ebx
 
-    ; CHECK-LABEL: name: testleaadd_ebp_index_32
+    ; CHECK-LABEL: name: test_leabi_ebp_leais_32
     ; CHECK: liveins: $eax, $ebp, $ebx
-    ; CHECK: $ebx = LEA32r $noreg, 1, $ebp, 5, $noreg
-    ; CHECK: $ebx = ADD32rr $ebx, $ebp, implicit-def $eflags
+    ; CHECK: $ebx = LEA32r $noreg, 2, $ebp, 5, $noreg
     ; CHECK: RET64 $ebx
     $ebx = LEA32r $ebp, 1, $ebp, 5, $noreg
     RET64 $ebx

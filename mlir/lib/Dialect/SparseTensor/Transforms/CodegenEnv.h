@@ -44,12 +44,15 @@ public:
   // General methods.
   //
 
+  LogicalResult initTensorExp();
+  unsigned getTensorExp() const { return tensorExp; }
+
   linalg::GenericOp op() const { return linalgOp; }
   const SparsificationOptions &options() const { return sparseOptions; }
   Merger &merger() { return latticeMerger; }
   LoopEmitter &emitter() { return loopEmitter; }
 
-  void startEmit(OpOperand *so, unsigned lv);
+  void startEmit();
 
   /// Generates loop boundary statements (entering/exiting loops). The function
   /// passes and updates the passed-in parameters.
@@ -71,6 +74,18 @@ public:
   DimLevelType dlt(unsigned b) const {
     return latticeMerger.getDimLevelType(b);
   }
+
+  //
+  // Code generation environment verify functions.
+  //
+
+  /// Whether the tensor expression is admissible for codegen.
+  /// It also sets the sparseOut if the output tensor is sparse.
+  bool isAdmissibleTensorExp(unsigned exp);
+
+  /// Whether the iteration graph is sorted in admissible topoOrder.
+  /// Sets outerParNest on success with sparse output
+  bool isAdmissibleTopoOrder();
 
   //
   // Topological delegate and sort methods.
@@ -117,6 +132,9 @@ public:
   void updateReduc(Value val);
   Value getReduc() const { return redVal; }
   Value endReduc();
+  void setValidLexInsert(Value val);
+  void clearValidLexInsert();
+  Value getValidLexInsert() const { return redValidLexInsert; }
 
   void startCustomReduc(unsigned exp);
   bool isCustomReduc() const { return redCustom != -1u; }
@@ -156,6 +174,14 @@ private:
   Value redVal;
   unsigned redExp;
   unsigned redCustom;
+
+  // Bookkeeping for lex insertion during reductions. Holds the runtime boolean
+  // value of whether any reduction occurred. This is only set during a
+  // reduction and cleared once the reduction is finished.
+  Value redValidLexInsert;
+
+  // The root tensor expression of the kernel.
+  unsigned tensorExp;
 };
 
 } // namespace sparse_tensor

@@ -981,13 +981,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (II.isStrictFP())
       break;
 
-    if (C && C->isNaN()) {
-      // FIXME: We just need to make the nan quiet here, but that's unavailable
-      // on APFloat, only IEEEfloat
-      auto *Quieted =
-          ConstantFP::get(Ty, scalbn(*C, 0, APFloat::rmNearestTiesToEven));
-      return IC.replaceInstUsesWith(II, Quieted);
-    }
+    if (C && C->isNaN())
+      return IC.replaceInstUsesWith(II, ConstantFP::get(Ty, C->makeQuiet()));
 
     // ldexp(x, 0) -> x
     // ldexp(x, undef) -> x
@@ -1088,7 +1083,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
     // Buffer case.
 
     const unsigned ActiveBits = DemandedElts.getActiveBits();
-    const unsigned UnusedComponentsAtFront = DemandedElts.countTrailingZeros();
+    const unsigned UnusedComponentsAtFront = DemandedElts.countr_zero();
 
     // Start assuming the prefix of elements is demanded, but possibly clear
     // some other bits if there are trailing zeros (unused components at front)
@@ -1157,7 +1152,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       Args[DMaskIdx] = ConstantInt::get(DMask->getType(), NewDMaskVal);
   }
 
-  unsigned NewNumElts = DemandedElts.countPopulation();
+  unsigned NewNumElts = DemandedElts.popcount();
   if (!NewNumElts)
     return UndefValue::get(IIVTy);
 
@@ -1185,7 +1180,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
 
   if (NewNumElts == 1) {
     return IC.Builder.CreateInsertElement(UndefValue::get(IIVTy), NewCall,
-                                          DemandedElts.countTrailingZeros());
+                                          DemandedElts.countr_zero());
   }
 
   SmallVector<int, 8> EltMask;

@@ -23,7 +23,7 @@ APSIntType::testInRange(const llvm::APSInt &Value,
   unsigned MinBits;
   if (AllowSignConversions) {
     if (Value.isSigned() && !IsUnsigned)
-      MinBits = Value.getMinSignedBits();
+      MinBits = Value.getSignificantBits();
     else
       MinBits = Value.getActiveBits();
 
@@ -33,7 +33,7 @@ APSIntType::testInRange(const llvm::APSInt &Value,
     // Unsigned integers can be converted to unsigned integers of the same width
     // or signed integers with one more bit.
     if (Value.isSigned())
-      MinBits = Value.getMinSignedBits() - IsUnsigned;
+      MinBits = Value.getSignificantBits() - IsUnsigned;
     else
       MinBits = Value.getActiveBits() + !IsUnsigned;
   }

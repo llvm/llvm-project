@@ -8,7 +8,7 @@ add_libc_unittest(
     strtoimax_test.cpp
   DEPENDS
     libc.src.inttypes.strtoimax
-    libc.test.stdlib.strtol_test_support
+    libc.test.src.stdlib.strtol_test_support
 )
 
 add_libc_unittest(
@@ -19,7 +19,7 @@ add_libc_unittest(
     strtoumax_test.cpp
   DEPENDS
     libc.src.inttypes.strtoumax
-    libc.test.stdlib.strtol_test_support
+    libc.test.src.stdlib.strtol_test_support
 )
 
 add_libc_unittest(

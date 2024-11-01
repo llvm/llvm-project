@@ -8,10 +8,10 @@
 
 #include "LSPServer.h"
 
-#include "../lsp-server-support/Logging.h"
-#include "../lsp-server-support/Transport.h"
 #include "PDLLServer.h"
 #include "Protocol.h"
+#include "mlir/Tools/lsp-server-support/Logging.h"
+#include "mlir/Tools/lsp-server-support/Transport.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include <optional>

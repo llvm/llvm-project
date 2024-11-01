@@ -218,6 +218,30 @@ func.func @_QPsimd1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref
 // CHECK: llvm.return
 // CHECK: }
 
+func.func @_QPomp_target_data() {
+  %0 = fir.alloca !fir.array<1024xi32> {bindc_name = "a", uniq_name = "_QFomp_target_dataEa"}
+  %1 = fir.alloca !fir.array<1024xi32> {bindc_name = "b", uniq_name = "_QFomp_target_dataEb"}
+  %2 = fir.alloca !fir.array<1024xi32> {bindc_name = "c", uniq_name = "_QFomp_target_dataEc"}
+  %3 = fir.alloca !fir.array<1024xi32> {bindc_name = "d", uniq_name = "_QFomp_target_dataEd"}
+  omp.target_enter_data   map((to -> %0 : !fir.ref<!fir.array<1024xi32>>), (to -> %1 : !fir.ref<!fir.array<1024xi32>>), (always, alloc -> %2 : !fir.ref<!fir.array<1024xi32>>))
+  omp.target_exit_data   map((from -> %0 : !fir.ref<!fir.array<1024xi32>>), (from -> %1 : !fir.ref<!fir.array<1024xi32>>), (release -> %2 : !fir.ref<!fir.array<1024xi32>>), (always, delete -> %3 : !fir.ref<!fir.array<1024xi32>>))
+  return
+}
+
+// CHECK-LABEL:   llvm.func @_QPomp_target_data() {
+// CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:           %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x !llvm.array<1024 x i32> {bindc_name = "a", in_type = !fir.array<1024xi32>, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEa"} : (i64) -> !llvm.ptr<array<1024 x i32>>
+// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:           %[[VAL_3:.*]] = llvm.alloca %[[VAL_2]] x !llvm.array<1024 x i32> {bindc_name = "b", in_type = !fir.array<1024xi32>, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEb"} : (i64) -> !llvm.ptr<array<1024 x i32>>
+// CHECK:           %[[VAL_4:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:           %[[VAL_5:.*]] = llvm.alloca %[[VAL_4]] x !llvm.array<1024 x i32> {bindc_name = "c", in_type = !fir.array<1024xi32>, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEc"} : (i64) -> !llvm.ptr<array<1024 x i32>>
+// CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:           %[[VAL_7:.*]] = llvm.alloca %[[VAL_6]] x !llvm.array<1024 x i32> {bindc_name = "d", in_type = !fir.array<1024xi32>, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEd"} : (i64) -> !llvm.ptr<array<1024 x i32>>
+// CHECK:           omp.target_enter_data   map((to -> %[[VAL_1]] : !llvm.ptr<array<1024 x i32>>), (to -> %[[VAL_3]] : !llvm.ptr<array<1024 x i32>>), (always, alloc -> %[[VAL_5]] : !llvm.ptr<array<1024 x i32>>))
+// CHECK:           omp.target_exit_data   map((from -> %[[VAL_1]] : !llvm.ptr<array<1024 x i32>>), (from -> %[[VAL_3]] : !llvm.ptr<array<1024 x i32>>), (release -> %[[VAL_5]] : !llvm.ptr<array<1024 x i32>>), (always, delete -> %[[VAL_7]] : !llvm.ptr<array<1024 x i32>>))
+// CHECK:           llvm.return
+// CHECK:         }
+
 func.func @_QPsimdloop_with_nested_loop() {
   %0 = fir.alloca i32 {adapt.valuebyref}
   %1 = fir.alloca !fir.array<10xi32> {bindc_name = "a", uniq_name = "_QFsimdloop_with_nested_loopEa"}
@@ -297,3 +321,35 @@ func.func private @_QPwork()
 // CHECK:        }
 // CHECK:        llvm.func @_QPwork() attributes {sym_visibility = "private"}
 // CHECK:      }
+
+// -----
+
+func.func @_QPs() {
+  %0 = fir.address_of(@_QFsEc) : !fir.ref<i32>
+  omp.atomic.update   %0 : !fir.ref<i32> {
+  ^bb0(%arg0: i32):
+    %c1_i32 = arith.constant 1 : i32
+    %1 = arith.addi %arg0, %c1_i32 : i32
+    omp.yield(%1 : i32)
+  }
+  return
+}
+fir.global internal @_QFsEc : i32 {
+  %c10_i32 = arith.constant 10 : i32
+  fir.has_value %c10_i32 : i32
+}
+
+// CHECK-LABEL:  llvm.func @_QPs() {
+// CHECK:    %[[GLOBAL_VAR:.*]] = llvm.mlir.addressof @[[GLOBAL:.*]] : !llvm.ptr<i32>
+// CHECK:    omp.atomic.update   %[[GLOBAL_VAR]] : !llvm.ptr<i32> {
+// CHECK:    ^bb0(%[[IN_VAL:.*]]: i32):
+// CHECK:      %[[CONST_1:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:      %[[OUT_VAL:.*]] = llvm.add %[[IN_VAL]], %[[CONST_1]]  : i32
+// CHECK:      omp.yield(%[[OUT_VAL]] : i32)
+// CHECK:    }
+// CHECK:    llvm.return
+// CHECK:  }
+// CHECK:  llvm.mlir.global internal @[[GLOBAL]]() {{.*}} : i32 {
+// CHECK:    %[[INIT_10:.*]] = llvm.mlir.constant(10 : i32) : i32
+// CHECK:    llvm.return %[[INIT_10]] : i32
+// CHECK:  }

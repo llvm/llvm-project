@@ -306,12 +306,14 @@ func.func @mul_affine_dense2d(%arga: tensor<32x16xf64, #CSR>,
 // CHECK-LABEL:   func.func @mul_affine_sparse2d(
 // CHECK-SAME:                                   %[[VAL_0:.*]]: tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:                                   %[[VAL_1:.*]]: tensor<34x19xf64, #sparse_tensor.encoding<{{{.*}}}>>) -> tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>> {
-// CHECK:           %[[VAL_2:.*]] = arith.constant 32 : index
-// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_5:.*]] = arith.constant 2 : index
-// CHECK:           %[[VAL_6:.*]] = arith.constant 0.000000e+00 : f64
-// CHECK:           %[[VAL_7:.*]] = arith.constant 3 : index
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 32 : index
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 2 : index
+// CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0.000000e+00 : f64
+// CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 3 : index
+// CHECK-DAG:       %[[VAL_TRUE:.*]] = arith.constant true
+// CHECK-DAG:       %[[VAL_FALSE:.*]] = arith.constant false
 // CHECK:           %[[VAL_8:.*]] = bufferization.alloc_tensor() : tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_9:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 1 : index} : tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 1 : index} : tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
@@ -330,22 +332,27 @@ func.func @mul_affine_dense2d(%arga: tensor<32x16xf64, #CSR>,
 // CHECK:               %[[VAL_27:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_18]]] : memref<?xindex>
 // CHECK:               %[[VAL_28:.*]] = arith.addi %[[VAL_18]], %[[VAL_4]] : index
 // CHECK:               %[[VAL_29:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_28]]] : memref<?xindex>
-// CHECK:               %[[VAL_30:.*]]:2 = scf.for %[[VAL_31:.*]] = %[[VAL_27]] to %[[VAL_29]] step %[[VAL_4]] iter_args(%[[VAL_32:.*]] = %[[VAL_6]], %[[VAL_33:.*]] = %[[VAL_24]]) -> (f64, tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>) {
+// CHECK:               %[[VAL_30:.*]]:3 = scf.for %[[VAL_31:.*]] = %[[VAL_27]] to %[[VAL_29]] step %[[VAL_4]] iter_args(%[[VAL_32:.*]] = %[[VAL_6]], %[[VAL_200:.*]] = %[[VAL_FALSE]], %[[VAL_33:.*]] = %[[VAL_24]]) -> (f64, i1, tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>) {
 // CHECK:                 %[[VAL_34:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_31]]] : memref<?xindex>
 // CHECK:                 %[[VAL_35:.*]] = arith.addi %[[VAL_25]], %[[VAL_7]] : index
 // CHECK:                 %[[VAL_36:.*]] = arith.cmpi eq, %[[VAL_34]], %[[VAL_35]] : index
-// CHECK:                 %[[VAL_37:.*]]:2 = scf.if %[[VAL_36]] -> (f64, tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>) {
+// CHECK:                 %[[VAL_37:.*]]:3 = scf.if %[[VAL_36]] -> (f64, i1, tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>) {
 // CHECK:                   %[[VAL_38:.*]] = memref.load %[[VAL_14]]{{\[}}%[[VAL_31]]] : memref<?xf64>
 // CHECK:                   %[[VAL_39:.*]] = arith.mulf %[[VAL_26]], %[[VAL_38]] : f64
 // CHECK:                   %[[VAL_40:.*]] = arith.addf %[[VAL_32]], %[[VAL_39]] : f64
-// CHECK:                   scf.yield %[[VAL_40]], %[[VAL_33]] : f64, tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:                   scf.yield %[[VAL_40]], %[[VAL_TRUE]], %[[VAL_33]] : f64, i1, tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:                 } else {
-// CHECK:                   scf.yield %[[VAL_32]], %[[VAL_33]] : f64, tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:                   scf.yield %[[VAL_32]], %[[VAL_200]], %[[VAL_33]] : f64, i1, tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:                 }
-// CHECK:                 scf.yield %[[VAL_41:.*]]#0, %[[VAL_41]]#1 : f64, tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:                 scf.yield %[[VAL_41:.*]]#0, %[[VAL_41]]#1, %[[VAL_41]]#2 : f64, i1, tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:               }
-// CHECK:               %[[VAL_42:.*]] = sparse_tensor.insert %[[VAL_43:.*]]#0 into %[[VAL_43]]#1{{\[}}%[[VAL_16]], %[[VAL_25]]] : tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK:               scf.yield %[[VAL_42]] : tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:               %[[VAL_201:.*]] = scf.if %[[VAL_30]]#1 -> (tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>) {
+// CHECK:                 %[[VAL_42:.*]] = sparse_tensor.insert %[[VAL_30]]#0 into %[[VAL_30]]#2{{\[}}%[[VAL_16]], %[[VAL_25]]] : tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:                 scf.yield %[[VAL_42]] : tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:               } else {
+// CHECK:                 scf.yield %[[VAL_30]]#2 : tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:               }
+// CHECK:               scf.yield %[[VAL_201]] : tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:             }
 // CHECK:             scf.yield %[[VAL_44:.*]] : tensor<32x16xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           }

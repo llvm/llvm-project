@@ -256,7 +256,7 @@ protected:
     if (!m_should_perform_action)
       return;
     m_should_perform_action = false;
-    bool internal_breakpoint = true;
+    bool all_stopping_locs_internal = true;
 
     ThreadSP thread_sp(m_thread_wp.lock());
 
@@ -421,8 +421,6 @@ protected:
               continue;
             }
 
-            internal_breakpoint = bp_loc_sp->GetBreakpoint().IsInternal();
-
             // First run the precondition, but since the precondition is per
             // breakpoint, only run it once per breakpoint.
             std::pair<std::unordered_set<break_id_t>::iterator, bool> result =
@@ -509,7 +507,7 @@ protected:
                         loc_desc.GetData());
               // We want this stop reported, so you will know we auto-continued
               // but only for external breakpoints:
-              if (!internal_breakpoint)
+              if (!bp_loc_sp->GetBreakpoint().IsInternal())
                 thread_sp->SetShouldReportStop(eVoteYes);
               auto_continue_says_stop = false;
             }
@@ -538,6 +536,9 @@ protected:
               else
                 actually_said_continue = true;
             }
+
+            if (m_should_stop && !bp_loc_sp->GetBreakpoint().IsInternal())
+              all_stopping_locs_internal = false;
 
             // If we are going to stop for this breakpoint, then remove the
             // breakpoint.
@@ -576,7 +577,7 @@ protected:
                   __FUNCTION__, m_value);
       }
 
-      if ((!m_should_stop || internal_breakpoint) &&
+      if ((!m_should_stop || all_stopping_locs_internal) &&
           thread_sp->CompletedPlanOverridesBreakpoint()) {
 
         // Override should_stop decision when we have completed step plan
@@ -822,16 +823,8 @@ protected:
     // stop
 
     ProcessSP process_sp = exe_ctx.GetProcessSP();
-    uint32_t num;
-    bool wp_triggers_after;
+    bool wp_triggers_after = process_sp->GetWatchpointReportedAfter();
 
-    if (!process_sp->GetWatchpointSupportInfo(num, wp_triggers_after)
-            .Success()) {
-      m_should_stop_is_valid = true;
-      m_should_stop = true;
-      return m_should_stop;
-    }
-            
     if (!wp_triggers_after) {
       // We have to step over the watchpoint before we know what to do:   
       StopInfoWatchpointSP me_as_siwp_sp 

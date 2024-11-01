@@ -69,7 +69,7 @@ static VectorType vectorType(VL vl, Type etp) {
 
 /// Constructs vector type from pointer.
 static VectorType vectorType(VL vl, Value ptr) {
-  return vectorType(vl, ptr.getType().cast<MemRefType>().getElementType());
+  return vectorType(vl, getMemRefType(ptr).getElementType());
 }
 
 /// Constructs vector iteration mask.

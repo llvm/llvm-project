@@ -352,7 +352,7 @@ public:
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
   void mergeOutliningCandidateAttributes(
       Function &F, std::vector<outliner::Candidate> &Candidates) const override;
-  outliner::InstrType getOutliningType(MachineBasicBlock::iterator &MIT,
+  outliner::InstrType getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
                                        unsigned Flags) const override;
   bool isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
                               unsigned &Flags) const override;

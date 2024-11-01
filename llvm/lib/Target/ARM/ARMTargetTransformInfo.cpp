@@ -445,7 +445,7 @@ InstructionCost ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     return 0;
 
   // We can convert <= -1 to < 0, which is generally quite cheap.
-  if (Inst && Opcode == Instruction::ICmp && Idx == 1 && Imm.isAllOnesValue()) {
+  if (Inst && Opcode == Instruction::ICmp && Idx == 1 && Imm.isAllOnes()) {
     ICmpInst::Predicate Pred = cast<ICmpInst>(Inst)->getPredicate();
     if (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLE)
       return std::min(getIntImmCost(Imm, Ty, CostKind),
@@ -2286,15 +2286,15 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(
   return canTailPredicateLoop(L, LI, SE, DL, LVL->getLAI());
 }
 
-PredicationStyle ARMTTIImpl::emitGetActiveLaneMask() const {
+TailFoldingStyle ARMTTIImpl::getPreferredTailFoldingStyle() const {
   if (!ST->hasMVEIntegerOps() || !EnableTailPredication)
-    return PredicationStyle::None;
+    return TailFoldingStyle::DataWithoutLaneMask;
 
   // Intrinsic @llvm.get.active.lane.mask is supported.
   // It is used in the MVETailPredication pass, which requires the number of
   // elements processed by this vector loop to setup the tail-predicated
   // loop.
-  return PredicationStyle::Data;
+  return TailFoldingStyle::Data;
 }
 void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::UnrollingPreferences &UP,
@@ -2440,4 +2440,17 @@ InstructionCost ARMTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     return 0;
   }
   return -1;
+}
+
+bool ARMTTIImpl::hasArmWideBranch(bool Thumb) const {
+  if (Thumb) {
+    // B.W is available in any Thumb2-supporting target, and also in every
+    // version of Armv8-M, even Baseline which does not include the rest of
+    // Thumb2.
+    return ST->isThumb2() || ST->hasV8MBaselineOps();
+  } else {
+    // B is available in all versions of the Arm ISA, so the only question is
+    // whether that ISA is available at all.
+    return ST->hasARMOps();
+  }
 }

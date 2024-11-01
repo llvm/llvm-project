@@ -453,8 +453,8 @@ define i32 @freeze_callbr_use_after_phi(i1 %c) {
 ; CHECK-NEXT:    to label [[CALLBR_CONT:%.*]] []
 ; CHECK:       callbr.cont:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[X]], [[ENTRY:%.*]] ], [ 0, [[CALLBR_CONT]] ]
+; CHECK-NEXT:    call void @use_i32(i32 [[X]])
 ; CHECK-NEXT:    [[FR:%.*]] = freeze i32 [[X]]
-; CHECK-NEXT:    call void @use_i32(i32 [[FR]])
 ; CHECK-NEXT:    call void @use_i32(i32 [[FR]])
 ; CHECK-NEXT:    call void @use_i32(i32 [[PHI]])
 ; CHECK-NEXT:    br label [[CALLBR_CONT]]

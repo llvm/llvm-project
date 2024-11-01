@@ -22,7 +22,6 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/IR/SubElementInterfaces.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 
@@ -132,7 +131,6 @@ struct TestRecursiveTypeStorage : public ::mlir::TypeStorage {
 class TestRecursiveType
     : public ::mlir::Type::TypeBase<TestRecursiveType, ::mlir::Type,
                                     TestRecursiveTypeStorage,
-                                    ::mlir::SubElementTypeInterface::Trait,
                                     ::mlir::TypeTrait::IsMutable> {
 public:
   using Base::Base;
@@ -148,18 +146,6 @@ public:
 
   /// Name/key getter.
   ::llvm::StringRef getName() { return getImpl()->name; }
-
-  void walkImmediateSubElements(
-      ::llvm::function_ref<void(::mlir::Attribute)> walkAttrsFn,
-      ::llvm::function_ref<void(::mlir::Type)> walkTypesFn) const {
-    walkTypesFn(getBody());
-  }
-  Type replaceImmediateSubElements(llvm::ArrayRef<mlir::Attribute> replAttrs,
-                                   llvm::ArrayRef<mlir::Type> replTypes) const {
-    // TODO: It's not clear how we support replacing sub-elements of mutable
-    // types.
-    return nullptr;
-  }
 };
 
 } // namespace test

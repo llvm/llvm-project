@@ -43,13 +43,13 @@ class RewriteInstance {
 public:
   // This constructor has complex initialization that can fail during
   // construction. Constructors can’t return errors, so clients must test \p Err
-  // after the object is constructed. Use createRewriteInstance instead.
+  // after the object is constructed. Use `create` method instead.
   RewriteInstance(llvm::object::ELFObjectFileBase *File, const int Argc,
                   const char *const *Argv, StringRef ToolPath, Error &Err);
 
   static Expected<std::unique_ptr<RewriteInstance>>
-  createRewriteInstance(llvm::object::ELFObjectFileBase *File, const int Argc,
-                        const char *const *Argv, StringRef ToolPath);
+  create(llvm::object::ELFObjectFileBase *File, const int Argc,
+         const char *const *Argv, StringRef ToolPath);
   ~RewriteInstance();
 
   /// Assign profile from \p Filename to this instance.
@@ -94,6 +94,9 @@ private:
   /// Populate array of binary functions and other objects of interest
   /// from meta data in the file.
   void discoverFileObjects();
+
+  /// Process fragments, locate parent functions.
+  void registerFragments();
 
   /// Read info from special sections. E.g. eh_frame and .gcc_except_table
   /// for exception and stack unwinding information.

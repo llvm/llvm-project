@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVFIXUPKINDS_H
 
 #include "llvm/MC/MCFixup.h"
+#include <utility>
 
 #undef RISCV
 
@@ -108,6 +109,27 @@ enum Fixups {
   fixup_riscv_invalid,
   NumTargetFixupKinds = fixup_riscv_invalid - FirstTargetFixupKind
 };
+
+static inline std::pair<MCFixupKind, MCFixupKind>
+getRelocPairForSize(unsigned Size) {
+  switch (Size) {
+  default:
+    llvm_unreachable("unsupported fixup size");
+  case 1:
+    return std::make_pair(MCFixupKind(RISCV::fixup_riscv_add_8),
+                          MCFixupKind(RISCV::fixup_riscv_sub_8));
+  case 2:
+    return std::make_pair(MCFixupKind(RISCV::fixup_riscv_add_16),
+                          MCFixupKind(RISCV::fixup_riscv_sub_16));
+  case 4:
+    return std::make_pair(MCFixupKind(RISCV::fixup_riscv_add_32),
+                          MCFixupKind(RISCV::fixup_riscv_sub_32));
+  case 8:
+    return std::make_pair(MCFixupKind(RISCV::fixup_riscv_add_64),
+                          MCFixupKind(RISCV::fixup_riscv_sub_64));
+  }
+}
+
 } // end namespace llvm::RISCV
 
 #endif

@@ -9,13 +9,14 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FMA_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FMA_H
 
-#include "src/__support/architectures.h"
+#include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
-#if !defined(LLVM_LIBC_ARCH_AARCH64)
+#if !defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #error "Invalid include"
 #endif
 
-#if !defined(LIBC_TARGET_HAS_FMA)
+#if !defined(LIBC_TARGET_CPU_HAS_FMA)
 #error "FMA instructions are not supported"
 #endif
 

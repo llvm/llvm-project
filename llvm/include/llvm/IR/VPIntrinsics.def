@@ -106,6 +106,12 @@
 #define VP_PROPERTY_CONSTRAINEDFP(HASROUND, HASEXCEPT, INTRINID)
 #endif
 
+// The intrinsic and/or SDNode has the same function as this ISD Opcode.
+// \p SDOPC      The opcode of the instruction with the same function.
+#ifndef VP_PROPERTY_FUNCTIONAL_SDOPC
+#define VP_PROPERTY_FUNCTIONAL_SDOPC(SDOPC)
+#endif
+
 // Map this VP intrinsic to its canonical functional intrinsic.
 // \p INTRIN     The non-VP intrinsics with the same function.
 #ifndef VP_PROPERTY_FUNCTIONAL_INTRINSIC
@@ -265,27 +271,28 @@ END_REGISTER_VP(vp_fshr, VP_FSHR)
 #error                                                                         \
     "The internal helper macro HELPER_REGISTER_BINARY_FP_VP is already defined!"
 #endif
-#define HELPER_REGISTER_BINARY_FP_VP(OPSUFFIX, VPSD, IROPC)                    \
+#define HELPER_REGISTER_BINARY_FP_VP(OPSUFFIX, VPSD, IROPC, SDOPC)             \
   BEGIN_REGISTER_VP(vp_##OPSUFFIX, 2, 3, VPSD, -1)                             \
   VP_PROPERTY_FUNCTIONAL_OPC(IROPC)                                            \
   VP_PROPERTY_CONSTRAINEDFP(1, 1, experimental_constrained_##OPSUFFIX)         \
+  VP_PROPERTY_FUNCTIONAL_SDOPC(SDOPC)                                          \
   VP_PROPERTY_BINARYOP                                                         \
   END_REGISTER_VP(vp_##OPSUFFIX, VPSD)
 
 // llvm.vp.fadd(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_FP_VP(fadd, VP_FADD, FAdd)
+HELPER_REGISTER_BINARY_FP_VP(fadd, VP_FADD, FAdd, FADD)
 
 // llvm.vp.fsub(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_FP_VP(fsub, VP_FSUB, FSub)
+HELPER_REGISTER_BINARY_FP_VP(fsub, VP_FSUB, FSub, FSUB)
 
 // llvm.vp.fmul(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_FP_VP(fmul, VP_FMUL, FMul)
+HELPER_REGISTER_BINARY_FP_VP(fmul, VP_FMUL, FMul, FMUL)
 
 // llvm.vp.fdiv(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_FP_VP(fdiv, VP_FDIV, FDiv)
+HELPER_REGISTER_BINARY_FP_VP(fdiv, VP_FDIV, FDiv, FDIV)
 
 // llvm.vp.frem(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_FP_VP(frem, VP_FREM, FRem)
+HELPER_REGISTER_BINARY_FP_VP(frem, VP_FREM, FRem, FREM)
 
 #undef HELPER_REGISTER_BINARY_FP_VP
 
@@ -305,6 +312,7 @@ END_REGISTER_VP(vp_sqrt, VP_SQRT)
 // llvm.vp.fma(x,y,z,mask,vlen)
 BEGIN_REGISTER_VP(vp_fma, 3, 4, VP_FMA, -1)
 VP_PROPERTY_CONSTRAINEDFP(1, 1, experimental_constrained_fma)
+VP_PROPERTY_FUNCTIONAL_SDOPC(FMA)
 END_REGISTER_VP(vp_fma, VP_FMA)
 
 // llvm.vp.fmuladd(x,y,z,mask,vlen)
@@ -630,5 +638,6 @@ END_REGISTER_VP(experimental_vp_splice, EXPERIMENTAL_VP_SPLICE)
 #undef VP_PROPERTY_CONSTRAINEDFP
 #undef VP_PROPERTY_FUNCTIONAL_INTRINSIC
 #undef VP_PROPERTY_FUNCTIONAL_OPC
+#undef VP_PROPERTY_FUNCTIONAL_SDOPC
 #undef VP_PROPERTY_MEMOP
 #undef VP_PROPERTY_REDUCTION

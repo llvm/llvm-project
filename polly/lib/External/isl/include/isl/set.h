@@ -488,6 +488,7 @@ __isl_give isl_set *isl_set_gist_basic_set(__isl_take isl_set *set,
 __isl_export
 __isl_give isl_set *isl_set_gist(__isl_take isl_set *set,
 	__isl_take isl_set *context);
+__isl_export
 __isl_give isl_set *isl_set_gist_params(__isl_take isl_set *set,
 	__isl_take isl_set *context);
 isl_stat isl_set_dim_residue_class_val(__isl_keep isl_set *set,
@@ -497,6 +498,8 @@ __isl_give isl_stride_info *isl_set_get_stride_info(__isl_keep isl_set *set,
 	int pos);
 __isl_export
 __isl_give isl_val *isl_set_get_stride(__isl_keep isl_set *set, int pos);
+__isl_export
+__isl_give isl_fixed_box *isl_set_get_lattice_tile(__isl_keep isl_set *set);
 __isl_export
 __isl_give isl_fixed_box *isl_set_get_simple_fixed_box_hull(
 	__isl_keep isl_set *set);

@@ -88,9 +88,8 @@ void check_track_null(void) {
     fclose(F);
     return;
   }
-  fclose(F); // stdargs-warning {{Function argument constraint is not satisfied}}
-             // stdargs-note@-1 {{Function argument constraint is not satisfied}}
-             // stdargs-note@-2 {{The 1st argument should not be NULL}}
+  fclose(F); // stdargs-warning {{The 1st argument to 'fclose' should not be NULL}}
+             // stdargs-note@-1 {{The 1st argument to 'fclose' should not be NULL}}
 }
 
 void check_eof_notes_feof_after_feof(void) {

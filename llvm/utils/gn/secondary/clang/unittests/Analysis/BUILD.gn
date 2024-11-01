@@ -17,5 +17,6 @@ unittest("ClangAnalysisTests") {
     "CloneDetectionTest.cpp",
     "ExprMutationAnalyzerTest.cpp",
     "MacroExpansionContextTest.cpp",
+    "UnsafeBufferUsageTest.cpp",
   ]
 }

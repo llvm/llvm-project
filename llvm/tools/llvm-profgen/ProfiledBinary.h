@@ -42,8 +42,10 @@
 #include <unordered_set>
 #include <vector>
 
+namespace llvm {
 extern cl::opt<bool> EnableCSPreInliner;
 extern cl::opt<bool> UseContextCostForPreInliner;
+} // namespace llvm
 
 using namespace llvm;
 using namespace sampleprof;

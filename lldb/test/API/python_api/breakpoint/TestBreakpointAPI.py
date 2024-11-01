@@ -62,6 +62,9 @@ class BreakpointAPITestCase(TestBase):
         location = breakpoint.GetLocationAtIndex(0)
         self.assertTrue(location.IsValid())
 
+        # Test negative index access.
+        self.assertTrue(breakpoint.location[-1].IsValid())
+
         # Make sure the breakpoint's target is right:
         self.assertEqual(target, breakpoint.GetTarget(), "Breakpoint reports its target correctly")
         

@@ -233,7 +233,7 @@ def MemRef_ReallocOp : MemRef_Op<"realloc"> {
     aligned_realloc.
 
     ```mlir
-    %3 = memref.ralloc %src {alignment = 8} : memref<64xf32> to memref<124xf32>
+    %3 = memref.realloc %src {alignment = 8} : memref<64xf32> to memref<124xf32>
     ```
 
     Referencing the memref through the old SSA value after realloc is undefined
@@ -246,12 +246,16 @@ def MemRef_ReallocOp : MemRef_Op<"realloc"> {
     ```
   }];
 
-  let arguments = (ins MemRefRankOf<[AnyType], [1]>:$source,
+  // Note that we conceptually mark the operands as freeing the incoming
+  // memref and allocating the outcoming memref, even though this may not
+  // physically happen on each execution.
+
+  let arguments = (ins Arg<MemRefRankOf<[AnyType], [1]>, "", [MemFree]>:$source,
                    Optional<Index>:$dynamicResultSize,
                    ConfinedAttr<OptionalAttr<I64Attr>,
                                 [IntMinValue<0>]>:$alignment);
 
-  let results = (outs MemRefRankOf<[AnyType], [1]>);
+  let results = (outs Res<MemRefRankOf<[AnyType], [1]>, "", [MemAlloc<DefaultResource>]>);
 
   let builders = [
     OpBuilder<(ins "MemRefType":$resultType,
@@ -572,7 +576,7 @@ def MemRef_DimOp : MemRef_Op<"dim", [
     ```
   }];
 
-  let arguments = (ins AnyRankedOrUnrankedMemRef:$source,
+  let arguments = (ins AnyNon0RankedOrUnrankedMemRef:$source,
                        Index:$index);
   let results = (outs Index:$result);
 
@@ -600,7 +604,6 @@ def MemRef_DimOp : MemRef_Op<"dim", [
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1155,7 +1158,8 @@ def LoadOp : MemRef_Op<"load",
 
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
                            [MemRead]>:$memref,
-                       Variadic<Index>:$indices);
+                       Variadic<Index>:$indices,
+                       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal);
   let results = (outs AnyType:$result);
 
   let extraClassDeclaration = [{
@@ -1170,6 +1174,54 @@ def LoadOp : MemRef_Op<"load",
   let hasVerifier = 1;
 
   let assemblyFormat = "$memref `[` $indices `]` attr-dict `:` type($memref)";
+}
+
+//===----------------------------------------------------------------------===//
+// MemorySpaceCastOp
+//===----------------------------------------------------------------------===//
+def MemRef_MemorySpaceCastOp : MemRef_Op<"memory_space_cast", [
+      DeclareOpInterfaceMethods<CastOpInterface>,
+      DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+      MemRefsNormalizable,
+      Pure,
+      SameOperandsAndResultElementType,
+      SameOperandsAndResultShape,
+      ViewLikeOpInterface
+    ]> {
+  let summary = "memref memory space cast operation";
+  let description = [{
+    This operation casts memref values between memory spaces.
+    The input and result will be memrefs of the same types and shape that alias
+    the same underlying memory, though, for some casts on some targets,
+    the underlying values of the pointer stored in the memref may be affected
+    by the cast.
+
+    The input and result must have the same shape, element type, rank, and layout.
+
+    If the source and target address spaces are the same, this operation is a noop.
+
+    Example:
+
+    ```mlir
+    // Cast a GPU private memory attribution into a generic pointer
+    %2 = memref.memory_space_cast %1 : memref<?xf32, 5> to memref<?xf32>
+    // Cast a generic pointer to workgroup-local memory
+    %4 = memref.memory_space_cast %3 : memref<5x4xi32> to memref<5x34xi32, 3>
+    // Cast between two non-default memory spaces
+    %6 = memref.memory_space_cast %5
+      : memref<*xmemref<?xf32>, 5> to memref<*xmemref<?xf32>, 3>
+    ```
+  }];
+
+  let arguments = (ins AnyRankedOrUnrankedMemRef:$source);
+  let results = (outs AnyRankedOrUnrankedMemRef:$dest);
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
+
+  let extraClassDeclaration = [{
+    Value getViewSource() { return getSource(); }
+  }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1690,7 +1742,8 @@ def MemRef_StoreOp : MemRef_Op<"store",
   let arguments = (ins AnyType:$value,
                        Arg<AnyMemRef, "the reference to store to",
                            [MemWrite]>:$memref,
-                       Variadic<Index>:$indices);
+                       Variadic<Index>:$indices,
+                       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal);
 
   let builders = [
     OpBuilder<(ins "Value":$valueToStore, "Value":$memref), [{

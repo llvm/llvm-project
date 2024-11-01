@@ -125,6 +125,21 @@ struct VFInfo {
   std::string ScalarName; /// Scalar Function Name.
   std::string VectorName; /// Vector Function Name associated to this VFInfo.
   VFISAKind ISA;          /// Instruction Set Architecture.
+
+  /// Returns the index of the first parameter with the kind 'GlobalPredicate',
+  /// if any exist.
+  std::optional<unsigned> getParamIndexForOptionalMask() const {
+    unsigned ParamCount = Shape.Parameters.size();
+    for (unsigned i = 0; i < ParamCount; ++i)
+      if (Shape.Parameters[i].ParamKind == VFParamKind::GlobalPredicate)
+        return i;
+
+    return std::nullopt;
+  }
+
+  /// Returns true if at least one of the operands to the vectorized function
+  /// has the kind 'GlobalPredicate'.
+  bool isMasked() const { return getParamIndexForOptionalMask().has_value(); }
 };
 
 namespace VFABI {

@@ -9,7 +9,6 @@
 
 // amdgpu does not have a working printf definition
 // XFAIL: amdgcn-amd-amdhsa
-// XFAIL: amdgcn-amd-amdhsa-LTO
 
 #include <omp.h>
 #include <stdio.h>

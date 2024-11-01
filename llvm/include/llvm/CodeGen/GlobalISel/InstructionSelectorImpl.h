@@ -101,7 +101,8 @@ bool InstructionSelector::executeMatchTable(
       break;
     }
 
-    case GIM_RecordInsn: {
+    case GIM_RecordInsn:
+    case GIM_RecordInsnIgnoreCopies: {
       int64_t NewInsnID = MatchTable[CurrentIdx++];
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t OpIdx = MatchTable[CurrentIdx++];
@@ -126,7 +127,12 @@ bool InstructionSelector::executeMatchTable(
         break;
       }
 
-      MachineInstr *NewMI = MRI.getVRegDef(MO.getReg());
+      MachineInstr *NewMI;
+      if (MatcherOpcode == GIM_RecordInsnIgnoreCopies)
+        NewMI = getDefIgnoringCopies(MO.getReg(), MRI);
+      else
+        NewMI = MRI.getVRegDef(MO.getReg());
+
       if ((size_t)NewInsnID < State.MIs.size())
         State.MIs[NewInsnID] = NewMI;
       else {
@@ -816,7 +822,8 @@ bool InstructionSelector::executeMatchTable(
       }
       break;
     }
-    case GIM_CheckIsSameOperand: {
+    case GIM_CheckIsSameOperand:
+    case GIM_CheckIsSameOperandIgnoreCopies: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t OpIdx = MatchTable[CurrentIdx++];
       int64_t OtherInsnID = MatchTable[CurrentIdx++];
@@ -827,8 +834,20 @@ bool InstructionSelector::executeMatchTable(
                              << OtherInsnID << "][" << OtherOpIdx << "])\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       assert(State.MIs[OtherInsnID] != nullptr && "Used insn before defined");
-      if (!State.MIs[InsnID]->getOperand(OpIdx).isIdenticalTo(
-              State.MIs[OtherInsnID]->getOperand(OtherOpIdx))) {
+
+      MachineOperand &Op = State.MIs[InsnID]->getOperand(OpIdx);
+      MachineOperand &OtherOp = State.MIs[OtherInsnID]->getOperand(OtherOpIdx);
+
+      if (MatcherOpcode == GIM_CheckIsSameOperandIgnoreCopies) {
+        if (Op.isReg() && OtherOp.isReg()) {
+          MachineInstr *MI = getDefIgnoringCopies(Op.getReg(), MRI);
+          MachineInstr *OtherMI = getDefIgnoringCopies(OtherOp.getReg(), MRI);
+          if (MI && MI == OtherMI)
+            break;
+        }
+      }
+
+      if (!Op.isIdenticalTo(OtherOp)) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       }

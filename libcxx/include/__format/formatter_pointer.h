@@ -27,13 +27,11 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS __formatter_pointer {
 public:
-  constexpr __formatter_pointer() { __parser_.__alignment_ = __format_spec::__alignment::__right; }
-
   _LIBCPP_HIDE_FROM_ABI constexpr auto
   parse(basic_format_parse_context<_CharT>& __parse_ctx) -> decltype(__parse_ctx.begin()) {
     auto __result = __parser_.__parse(__parse_ctx, __format_spec::__fields_pointer);
@@ -48,7 +46,7 @@ public:
     return __formatter::__format_integer(reinterpret_cast<uintptr_t>(__ptr), __ctx, __specs);
   }
 
-  __format_spec::__parser<_CharT> __parser_;
+  __format_spec::__parser<_CharT> __parser_{.__alignment_ = __format_spec::__alignment::__right};
 };
 
 // [format.formatter.spec]/2.4
@@ -66,7 +64,7 @@ template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<const void*, _CharT>
     : public __formatter_pointer<_CharT> {};
 
-#endif //_LIBCPP_STD_VER > 17
+#endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

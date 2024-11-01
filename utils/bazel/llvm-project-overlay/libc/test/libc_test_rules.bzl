@@ -29,7 +29,7 @@ def libc_test(name, srcs, libc_function_deps, deps = [], **kwargs):
         srcs = srcs,
         deps = [d + INTERNAL_SUFFIX for d in libc_function_deps] + [
             "//libc:libc_root",
-            "//libc/utils/UnitTest:LibcUnitTest",
+            "//libc/test/UnitTest:LibcUnitTest",
         ] + deps,
         features = ["-link_llvmlibc"],  # Do not link libllvmlibc.a
         **kwargs

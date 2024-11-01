@@ -30,7 +30,7 @@
 ; GFX1100: image_sample_lz
 
 define amdgpu_kernel void @image_sample_test(ptr addrspace(1) %out, float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4) {
-  
+
   %result = tail call <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f32(i32 15, float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4, i1 false, i32 0, i32 0)
 
   store <4 x float> %result, ptr addrspace(1) %out

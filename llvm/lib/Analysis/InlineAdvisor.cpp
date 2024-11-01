@@ -231,10 +231,8 @@ bool InlineAdvisorAnalysis::Result::tryCreate(
 #endif
     break;
   case InliningAdvisorMode::Release:
-#ifdef LLVM_HAVE_TF_AOT
     LLVM_DEBUG(dbgs() << "Using release-mode inliner policy.\n");
     Advisor = llvm::getReleaseModeAdvisor(M, MAM);
-#endif
     break;
   }
 

@@ -202,7 +202,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       VisContext(nullptr), PragmaAttributeCurrentTargetDecl(nullptr),
       IsBuildingRecoveryCallExpr(false), LateTemplateParser(nullptr),
       LateTemplateParserCleanup(nullptr), OpaqueParser(nullptr), IdResolver(pp),
-      StdExperimentalNamespaceCache(nullptr), StdInitializerList(nullptr),
+      StdInitializerList(nullptr),
       StdCoroutineTraitsCache(nullptr), CXXTypeInfoDecl(nullptr),
       MSVCGuidDecl(nullptr), StdSourceLocationImplDecl(nullptr),
       NSNumberDecl(nullptr), NSValueDecl(nullptr), NSStringDecl(nullptr),
@@ -442,6 +442,13 @@ void Sema::Initialize() {
 #define RVV_TYPE(Name, Id, SingletonId)                                        \
   addImplicitTypedef(Name, Context.SingletonId);
 #include "clang/Basic/RISCVVTypes.def"
+  }
+
+  if (Context.getTargetInfo().getTriple().isWasm() &&
+      Context.getTargetInfo().hasFeature("reference-types")) {
+#define WASM_TYPE(Name, Id, SingletonId)                                       \
+  addImplicitTypedef(Name, Context.SingletonId);
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
   }
 
   if (Context.getTargetInfo().hasBuiltinMSVaList()) {
@@ -1024,16 +1031,6 @@ void Sema::ActOnStartOfTranslationUnit() {
   if (getLangOpts().CPlusPlusModules &&
       getLangOpts().getCompilingModule() == LangOptions::CMK_HeaderUnit)
     HandleStartOfHeaderUnit();
-  else if (getLangOpts().ModulesTS &&
-           (getLangOpts().getCompilingModule() ==
-                LangOptions::CMK_ModuleInterface ||
-            getLangOpts().getCompilingModule() == LangOptions::CMK_None)) {
-    // We start in an implied global module fragment.
-    SourceLocation StartOfTU =
-        SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
-    ActOnGlobalModuleFragmentDecl(StartOfTU);
-    ModuleScopes.back().ImplicitGlobalModuleFragment = true;
-  }
 }
 
 void Sema::ActOnEndOfTranslationUnitFragment(TUFragmentKind Kind) {
@@ -1206,8 +1203,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   // A global-module-fragment is only permitted within a module unit.
   bool DiagnosedMissingModuleDeclaration = false;
   if (!ModuleScopes.empty() &&
-      ModuleScopes.back().Module->Kind == Module::GlobalModuleFragment &&
-      !ModuleScopes.back().ImplicitGlobalModuleFragment) {
+      ModuleScopes.back().Module->Kind == Module::GlobalModuleFragment) {
     Diag(ModuleScopes.back().BeginLoc,
          diag::err_module_declaration_missing_after_global_module_introducer);
     DiagnosedMissingModuleDeclaration = true;
@@ -1975,6 +1971,8 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
         (Ty->isIbm128Type() && !Context.getTargetInfo().hasIbm128Type()) ||
         (Ty->isIntegerType() && Context.getTypeSize(Ty) == 128 &&
          !Context.getTargetInfo().hasInt128Type()) ||
+        (Ty->isBFloat16Type() && !Context.getTargetInfo().hasBFloat16Type() &&
+         !LangOpts.CUDAIsDevice) ||
         LongDoubleMismatched) {
       PartialDiagnostic PD = PDiag(diag::err_target_unsupported_type);
       if (D)
@@ -2036,6 +2034,21 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       if (D)
         targetDiag(D->getLocation(), diag::note_defined_here, FD) << D;
     }
+
+    // RISC-V vector builtin types (RISCVVTypes.def)
+    if (Ty->isRVVType(/* Bitwidth */ 64, /* IsFloat */ false) &&
+        !Context.getTargetInfo().hasFeature("zve64x"))
+      Diag(Loc, diag::err_riscv_type_requires_extension, FD) << Ty << "zve64x";
+    if (Ty->isRVVType(/* Bitwidth */ 16, /* IsFloat */ true) &&
+        !Context.getTargetInfo().hasFeature("experimental-zvfh"))
+      Diag(Loc, diag::err_riscv_type_requires_extension, FD)
+          << Ty << "zvfh";
+    if (Ty->isRVVType(/* Bitwidth */ 32, /* IsFloat */ true) &&
+        !Context.getTargetInfo().hasFeature("zve32f"))
+      Diag(Loc, diag::err_riscv_type_requires_extension, FD) << Ty << "zve32f";
+    if (Ty->isRVVType(/* Bitwidth */ 64, /* IsFloat */ true) &&
+        !Context.getTargetInfo().hasFeature("zve64d"))
+      Diag(Loc, diag::err_riscv_type_requires_extension, FD) << Ty << "zve64d";
 
     // Don't allow SVE types in functions without a SVE target.
     if (Ty->isSVESizelessBuiltinType() && FD && FD->hasBody()) {

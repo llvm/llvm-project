@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
@@ -1032,7 +1033,7 @@ struct UnrollTransferWriteConversion
     auto vec = getDataVector(xferOp);
     auto xferVecType = xferOp.getVectorType();
     int64_t dimSize = xferVecType.getShape()[0];
-    auto source = xferOp.getSource(); // memref or tensor to be written to.
+    Value source = xferOp.getSource(); // memref or tensor to be written to.
     auto sourceType = isTensorOp(xferOp) ? xferOp.getShapedType() : Type();
 
     // Generate fully unrolled loop of transfer ops.

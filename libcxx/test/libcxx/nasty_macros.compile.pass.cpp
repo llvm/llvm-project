@@ -342,9 +342,6 @@ END-SCRIPT
 #if __cplusplus >= 201103L
 #   include <experimental/algorithm>
 #endif
-#if __cplusplus >= 201103L && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_COROUTINES)
-#   include <experimental/coroutine>
-#endif
 #if __cplusplus >= 201103L
 #   include <experimental/deque>
 #endif

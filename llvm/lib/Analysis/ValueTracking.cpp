@@ -25,7 +25,6 @@
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
@@ -42,6 +41,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -479,7 +479,7 @@ void llvm::computeKnownBitsFromRangeMetadata(const MDNode &Ranges,
 
     // The first CommonPrefixBits of all values in Range are equal.
     unsigned CommonPrefixBits =
-        (Range.getUnsignedMax() ^ Range.getUnsignedMin()).countLeadingZeros();
+        (Range.getUnsignedMax() ^ Range.getUnsignedMin()).countl_zero();
     APInt Mask = APInt::getHighBitsSet(BitWidth, CommonPrefixBits);
     APInt UnsignedMax = Range.getUnsignedMax().zextOrTrunc(BitWidth);
     Known.One &= UnsignedMax & Mask;
@@ -1077,6 +1077,22 @@ static void computeKnownBitsFromOperator(const Operator *I,
     computeKnownBits(I->getOperand(1), DemandedElts, Known, Depth + 1, Q);
     computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
 
+    Value *X = nullptr, *Y = nullptr;
+    // and(x, -x) is a common idiom for clearing all but lowest set bit. If we
+    // have a single known bit in x, we can clear all bits above it.
+    // TODO: instcombine often reassociates independent `and` which can hide
+    // this pattern. Try to match and(x, and(-x, y)) / and(and(x, y), -x).
+    if (!Known.One.isZero() || !Known2.One.isZero()) {
+      if (match(I, m_c_BinOp(m_Value(X), m_Neg(m_Deferred(X))))) {
+        // -(-x) == x so pick whichever we can get a better result with.
+        if (Known.countMaxTrailingZeros() <= Known2.countMaxTrailingZeros())
+          Known = Known.blsi();
+        else
+          Known = Known2.blsi();
+
+        break;
+      }
+    }
     Known &= Known2;
 
     // and(x, add (x, -1)) is a common idiom that always clears the low bit;
@@ -1084,7 +1100,6 @@ static void computeKnownBitsFromOperator(const Operator *I,
     // matching the form add(x, add(x, y)) where y is odd.
     // TODO: This could be generalized to clearing any bit set in y where the
     // following bit is known to be unset in y.
-    Value *X = nullptr, *Y = nullptr;
     if (!Known.Zero[0] && !Known.One[0] &&
         match(I, m_c_BinOp(m_Value(X), m_Add(m_Deferred(X), m_Value(Y))))) {
       Known2.resetAll();
@@ -1100,12 +1115,26 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
     Known |= Known2;
     break;
-  case Instruction::Xor:
+  case Instruction::Xor: {
     computeKnownBits(I->getOperand(1), DemandedElts, Known, Depth + 1, Q);
     computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
 
-    Known ^= Known2;
-    break;
+    Value *X = nullptr;
+    // xor(x, x + -1) is a common idiom that will clear all bits above
+    // the lowest set bit. We can safely say any bit past the lowest
+    // known one must be zero.
+    // TODO: `x + -1` is often shrunk `x + C` which `C` is minimum bits needed
+    // for demanded. This can cause us to miss this pattern. Expand to account
+    // for `x + -1` in the context of demanded bits.
+    if ((!Known.One.isZero() || !Known2.One.isZero()) &&
+        match(I, m_c_BinOp(m_Value(X), m_c_Add(m_Deferred(X), m_AllOnes())))) {
+      // Known2 is confusingly LHS.
+      const KnownBits &XBits = I->getOperand(0) == X ? Known2 : Known;
+      Known = XBits.blsmsk();
+    } else {
+      Known ^= Known2;
+    }
+  } break;
   case Instruction::Mul: {
     bool NSW = Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(I));
     computeKnownBitsMul(I->getOperand(0), I->getOperand(1), NSW, DemandedElts,
@@ -1272,7 +1301,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
     // Trailing zeros of a right-shifted constant never decrease.
     const APInt *C;
     if (match(I->getOperand(0), m_APInt(C)))
-      Known.Zero.setLowBits(C->countTrailingZeros());
+      Known.Zero.setLowBits(C->countr_zero());
     break;
   }
   case Instruction::LShr: {
@@ -1284,7 +1313,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
     // Leading zeros of a left-shifted constant never decrease.
     const APInt *C;
     if (match(I->getOperand(0), m_APInt(C)))
-      Known.Zero.setHighBits(C->countLeadingZeros());
+      Known.Zero.setHighBits(C->countl_zero());
     break;
   }
   case Instruction::AShr: {
@@ -1376,7 +1405,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       if (IndexTypeSize.isScalable()) {
         // For scalable types the only thing we know about sizeof is
         // that this is a multiple of the minimum size.
-        ScalingFactor.Zero.setLowBits(countTrailingZeros(TypeSizeInBytes));
+        ScalingFactor.Zero.setLowBits(llvm::countr_zero(TypeSizeInBytes));
       } else if (IndexBits.isConstant()) {
         APInt IndexConst = IndexBits.getConstant();
         APInt ScalingFactor(IndexBitWidth, TypeSizeInBytes);
@@ -1572,10 +1601,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
                 Known2 = KnownBits::makeConstant(*RHSC);
                 break;
               case CmpInst::Predicate::ICMP_ULE:
-                Known2.Zero.setHighBits(RHSC->countLeadingZeros());
+                Known2.Zero.setHighBits(RHSC->countl_zero());
                 break;
               case CmpInst::Predicate::ICMP_ULT:
-                Known2.Zero.setHighBits((*RHSC - 1).countLeadingZeros());
+                Known2.Zero.setHighBits((*RHSC - 1).countl_zero());
                 break;
               default:
                 // TODO - add additional integer predicate handling.
@@ -1736,10 +1765,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
         break;
       case Intrinsic::riscv_vsetvli:
       case Intrinsic::riscv_vsetvlimax:
-        // Assume that VL output is positive and would fit in an int32_t.
-        // TODO: VLEN might be capped at 16 bits in a future V spec update.
-        if (BitWidth >= 32)
-          Known.Zero.setBitsFrom(31);
+        // Assume that VL output is >= 65536.
+        // TODO: Take SEW and LMUL into account.
+        if (BitWidth > 17)
+          Known.Zero.setBitsFrom(17);
         break;
       case Intrinsic::vscale: {
         if (!II->getParent() || !II->getFunction() ||
@@ -2302,8 +2331,7 @@ static bool isGEPKnownNonNull(const GEPOperator *GEP, unsigned Depth,
 static bool isKnownNonNullFromDominatingCondition(const Value *V,
                                                   const Instruction *CtxI,
                                                   const DominatorTree *DT) {
-  if (isa<Constant>(V))
-    return false;
+  assert(!isa<Constant>(V) && "Called for constant?");
 
   if (!CtxI || !DT)
     return false;
@@ -2579,6 +2607,12 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
             Q.DL.getTypeSizeInBits(I->getType()).getFixedValue())
       return isKnownNonZero(I->getOperand(0), Depth, Q);
     break;
+  case Instruction::Sub:
+    if (auto *C = dyn_cast<Constant>(I->getOperand(0)))
+      if (C->isNullValue() &&
+          isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q))
+        return true;
+    break;
   case Instruction::Or:
     // X | Y != 0 if X != 0 or Y != 0.
     return isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q) ||
@@ -2723,8 +2757,26 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
            isGuaranteedNotToBePoison(I->getOperand(0), Q.AC, Q.CxtI, Q.DT,
                                      Depth);
   case Instruction::Call:
-    if (cast<CallInst>(I)->getIntrinsicID() == Intrinsic::vscale)
-      return true;
+    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::abs:
+      case Intrinsic::bitreverse:
+      case Intrinsic::bswap:
+      case Intrinsic::ctpop:
+        if (isKnownNonZero(II->getArgOperand(0), DemandedElts, Depth, Q))
+          return true;
+        break;
+      case Intrinsic::uadd_sat:
+        if (isKnownNonZero(II->getArgOperand(0), DemandedElts, Depth, Q) ||
+            isKnownNonZero(II->getArgOperand(1), DemandedElts, Depth, Q))
+          return true;
+        break;
+      case Intrinsic::vscale:
+        return true;
+      default:
+        break;
+      }
+    }
     break;
   }
 
@@ -7119,7 +7171,7 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
     } else if (match(BO.getOperand(0), m_APInt(C))) {
       unsigned ShiftAmount = Width - 1;
       if (!C->isZero() && IIQ.isExact(&BO))
-        ShiftAmount = C->countTrailingZeros();
+        ShiftAmount = C->countr_zero();
       if (C->isNegative()) {
         // 'ashr C, x' produces [C, C >> (Width-1)]
         Lower = *C;
@@ -7140,7 +7192,7 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
       // 'lshr C, x' produces [C >> (Width-1), C].
       unsigned ShiftAmount = Width - 1;
       if (!C->isZero() && IIQ.isExact(&BO))
-        ShiftAmount = C->countTrailingZeros();
+        ShiftAmount = C->countr_zero();
       Lower = C->lshr(ShiftAmount);
       Upper = *C + 1;
     }
@@ -7151,16 +7203,16 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
       if (IIQ.hasNoUnsignedWrap(&BO)) {
         // 'shl nuw C, x' produces [C, C << CLZ(C)]
         Lower = *C;
-        Upper = Lower.shl(Lower.countLeadingZeros()) + 1;
+        Upper = Lower.shl(Lower.countl_zero()) + 1;
       } else if (BO.hasNoSignedWrap()) { // TODO: What if both nuw+nsw?
         if (C->isNegative()) {
           // 'shl nsw C, x' produces [C << CLO(C)-1, C]
-          unsigned ShiftAmount = C->countLeadingOnes() - 1;
+          unsigned ShiftAmount = C->countl_one() - 1;
           Lower = C->shl(ShiftAmount);
           Upper = *C + 1;
         } else {
           // 'shl nsw C, x' produces [C, C << CLZ(C)-1]
-          unsigned ShiftAmount = C->countLeadingZeros() - 1;
+          unsigned ShiftAmount = C->countl_zero() - 1;
           Lower = *C;
           Upper = C->shl(ShiftAmount) + 1;
         }
@@ -7177,7 +7229,7 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
         //    where C != -1 and C != 0 and C != 1
         Lower = IntMin + 1;
         Upper = IntMax + 1;
-      } else if (C->countLeadingZeros() < Width - 1) {
+      } else if (C->countl_zero() < Width - 1) {
         // 'sdiv x, C' produces [INT_MIN / C, INT_MAX / C]
         //    where C != -1 and C != 0 and C != 1
         Lower = IntMin.sdiv(*C);

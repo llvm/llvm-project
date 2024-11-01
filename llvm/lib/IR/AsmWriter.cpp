@@ -329,8 +329,12 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::Swift:         Out << "swiftcc"; break;
   case CallingConv::SwiftTail:     Out << "swifttailcc"; break;
   case CallingConv::X86_INTR:      Out << "x86_intrcc"; break;
-  case CallingConv::HHVM:          Out << "hhvmcc"; break;
-  case CallingConv::HHVM_C:        Out << "hhvm_ccc"; break;
+  case CallingConv::DUMMY_HHVM:
+    Out << "hhvmcc";
+    break;
+  case CallingConv::DUMMY_HHVM_C:
+    Out << "hhvm_ccc";
+    break;
   case CallingConv::AMDGPU_VS:     Out << "amdgpu_vs"; break;
   case CallingConv::AMDGPU_LS:     Out << "amdgpu_ls"; break;
   case CallingConv::AMDGPU_HS:     Out << "amdgpu_hs"; break;

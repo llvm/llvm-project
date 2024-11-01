@@ -158,6 +158,15 @@ TYPED_TEST(DenseMapTest, SingleEntryMapTest) {
   EXPECT_EQ(this->getValue(), this->Map[this->getKey()]);
 }
 
+TYPED_TEST(DenseMapTest, AtTest) {
+  this->Map[this->getKey(0)] = this->getValue(0);
+  this->Map[this->getKey(1)] = this->getValue(1);
+  this->Map[this->getKey(2)] = this->getValue(2);
+  EXPECT_EQ(this->getValue(0), this->Map.at(this->getKey(0)));
+  EXPECT_EQ(this->getValue(1), this->Map.at(this->getKey(1)));
+  EXPECT_EQ(this->getValue(2), this->Map.at(this->getKey(2)));
+}
+
 // Test clear() method
 TYPED_TEST(DenseMapTest, ClearTest) {
   this->Map[this->getKey()] = this->getValue();

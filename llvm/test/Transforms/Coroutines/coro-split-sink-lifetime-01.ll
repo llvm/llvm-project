@@ -2,6 +2,9 @@
 ; sink them to the places after the suspend block.
 ; RUN: opt -opaque-pointers=0 < %s -passes='cgscc(coro-split),simplifycfg,early-cse,simplifycfg' -S | FileCheck %s
 
+; CHECK: %a.Frame = type { void (%a.Frame*)*, void (%a.Frame*)*, %"struct.lean_future<int>::Awaiter", i1 }
+; CHECK: %a_optnone.Frame = type { void (%a_optnone.Frame*)*, void (%a_optnone.Frame*)*, %"struct.lean_future<int>::Awaiter", i8*, i32*, i32, i1 }
+
 %"struct.std::coroutine_handle" = type { i8* }
 %"struct.std::coroutine_handle.0" = type { %"struct.std::coroutine_handle" }
 %"struct.lean_future<int>::Awaiter" = type { i32, %"struct.std::coroutine_handle.0" }
@@ -52,6 +55,37 @@ exit:
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* %0)
 ; CHECK-NEXT:    call void @print(i32 %val)
 ; CHECK-NEXT:    ret void
+
+define void @a_optnone() presplitcoroutine optnone noinline {
+entry:
+  %ref.tmp7 = alloca %"struct.lean_future<int>::Awaiter", align 8
+  %testval = alloca i32
+  %cast = bitcast i32* %testval to i8*
+  ; lifetime of %testval starts here, but not used until await.ready.
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %cast)
+  %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
+  %alloc = call i8* @malloc(i64 16) #3
+  %vFrame = call noalias nonnull i8* @llvm.coro.begin(token %id, i8* %alloc)
+
+  %save = call token @llvm.coro.save(i8* null)
+  %Result.i19 = getelementptr inbounds %"struct.lean_future<int>::Awaiter", %"struct.lean_future<int>::Awaiter"* %ref.tmp7, i64 0, i32 0
+  %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
+  switch i8 %suspend, label %exit [
+    i8 0, label %await.ready
+    i8 1, label %exit
+  ]
+await.ready:
+  %StrayCoroSave = call token @llvm.coro.save(i8* null)
+  %val = load i32, i32* %Result.i19
+  %test = load i32, i32* %testval
+  call void @print(i32 %test)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8*  %cast)
+  call void @print(i32 %val)
+  br label %exit
+exit:
+  call i1 @llvm.coro.end(i8* null, i1 false)
+  ret void
+}
 
 declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*)
 declare i1 @llvm.coro.alloc(token) #3

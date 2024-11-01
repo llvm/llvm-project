@@ -14,7 +14,6 @@
 #include "llvm/Object/MachOUniversalWriter.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/IRObjectFile.h"
@@ -27,6 +26,7 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 using namespace object;
@@ -54,8 +54,8 @@ static uint32_t calculateFileAlignment(const MachOObjectFile &O) {
       }
     } else {
       P2CurrentAlignment =
-          countTrailingZeros(Is64Bit ? O.getSegment64LoadCommand(LC).vmaddr
-                                     : O.getSegmentLoadCommand(LC).vmaddr);
+          llvm::countr_zero(Is64Bit ? O.getSegment64LoadCommand(LC).vmaddr
+                                    : O.getSegmentLoadCommand(LC).vmaddr);
     }
     P2MinAlignment = std::min(P2MinAlignment, P2CurrentAlignment);
   }

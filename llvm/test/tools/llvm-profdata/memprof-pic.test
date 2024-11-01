@@ -36,5 +36,5 @@ clang -fuse-ld=lld -Wl,--no-rosegment -gmlt -fdebug-info-for-profiling \
 env MEMPROF_OPTIONS=log_path=stdout ./pic.memprofexe > pic.memprofraw
 ```
 
-RUN: not llvm-profdata show --memory %p/Inputs/pic.memprofraw --profiled-binary %p/Inputs/pic.memprofexe -o - |& FileCheck %s
+RUN: not llvm-profdata show --memory %p/Inputs/pic.memprofraw --profiled-binary %p/Inputs/pic.memprofexe -o - 2>&1 | FileCheck %s
 CHECK: Unsupported position independent code

@@ -16,9 +16,8 @@ void test_buf_size_concrete(void) {
   char buf[3];                       // bugpath-note{{'buf' initialized here}}
   int s = 4;                         // bugpath-note{{'s' initialized to 4}}
   __buf_size_arg_constraint(buf, s); // \
-  // bugpath-warning{{Function argument constraint is not satisfied}} \
-  // bugpath-note{{}} \
-  // bugpath-note{{Function argument constraint is not satisfied}}
+  // bugpath-warning{{The size of the 1st argument to '__buf_size_arg_constraint' should be equal to or greater than the value of the 2nd argument}} \
+  // bugpath-note{{The size of the 1st argument to '__buf_size_arg_constraint' should be equal to or greater than the value of the 2nd argument}}
 }
 
 int __buf_size_arg_constraint_mul(const void *, size_t, size_t);
@@ -27,7 +26,6 @@ void test_buf_size_concrete_with_multiplication(void) {
   int s1 = 4;                                 // bugpath-note{{'s1' initialized to 4}}
   int s2 = sizeof(short);                     // bugpath-note{{'s2' initialized to}}
   __buf_size_arg_constraint_mul(buf, s1, s2); // \
-  // bugpath-warning{{Function argument constraint is not satisfied}} \
-  // bugpath-note{{}} \
-  // bugpath-note{{Function argument constraint is not satisfied}}
+  // bugpath-warning{{The size of the 1st argument to '__buf_size_arg_constraint_mul' should be equal to or greater than the value of the 2nd argument times the 3rd argument}} \
+  // bugpath-note{{The size of the 1st argument to '__buf_size_arg_constraint_mul' should be equal to or greater than the value of the 2nd argument times the 3rd argument}}
 }

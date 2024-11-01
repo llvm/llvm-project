@@ -1305,6 +1305,11 @@ int printBuiltinAttributes(MlirContext ctx) {
           1e-6)
     return 23;
 
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+  MlirAttribute locAttr = mlirLocationGetAttribute(loc);
+  if (!mlirAttributeIsALocation(locAttr))
+    return 24;
+
   return 0;
 }
 
@@ -2159,6 +2164,9 @@ void testDiagnostics(void) {
   fprintf(stderr, "@test_diagnostics\n");
   MlirLocation unknownLoc = mlirLocationUnknownGet(ctx);
   mlirEmitError(unknownLoc, "test diagnostics");
+  MlirAttribute unknownAttr = mlirLocationGetAttribute(unknownLoc);
+  MlirLocation unknownClone = mlirLocationFromAttribute(unknownAttr);
+  mlirEmitError(unknownClone, "test clone");
   MlirLocation fileLineColLoc = mlirLocationFileLineColGet(
       ctx, mlirStringRefCreateFromCString("file.c"), 1, 2);
   mlirEmitError(fileLineColLoc, "test diagnostics");
@@ -2180,6 +2188,9 @@ void testDiagnostics(void) {
   // CHECK-LABEL: @test_diagnostics
   // CHECK: processing diagnostic (userData: 42) <<
   // CHECK:   test diagnostics
+  // CHECK:   loc(unknown)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   test clone
   // CHECK:   loc(unknown)
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<

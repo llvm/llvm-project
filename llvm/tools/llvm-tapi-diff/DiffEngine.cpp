@@ -88,6 +88,8 @@ std::string SymScalar::stringifySymbolFlag(MachO::SymbolFlags Flag) {
     return "Undefined";
   case MachO::SymbolFlags::Rexported:
     return "Reexported";
+  default:
+    return "";
   }
   llvm_unreachable("Unknown llvm::MachO::SymbolFlags enum");
 }

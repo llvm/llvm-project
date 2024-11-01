@@ -191,7 +191,7 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
   case KEYCOROUTINES:
     return LangOpts.Coroutines ? KS_Enabled : KS_Unknown;
   case KEYMODULES:
-    return LangOpts.ModulesTS ? KS_Enabled : KS_Unknown;
+    return KS_Unknown;
   case KEYOPENCLCXX:
     return LangOpts.OpenCLCPlusPlus ? KS_Enabled : KS_Unknown;
   case KEYMSCOMPAT:

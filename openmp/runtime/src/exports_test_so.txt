@@ -19,10 +19,6 @@ VERSION {
 
         *;         # All symbols as exported for testing.
 
-    local: # Non-exported symbols.
-
-        *;         # All other symbols are not exported.
-
 }; # VERSION
 
 # sets up GCC OMP_ version dependency chain

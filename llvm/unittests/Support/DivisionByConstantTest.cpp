@@ -106,9 +106,9 @@ APInt UnsignedDivideUsingMagic(const APInt &Numerator, const APInt &Divisor,
   unsigned Bits = Numerator.getBitWidth();
 
   if (LZOptimization) {
-    unsigned LeadingZeros = Numerator.countLeadingZeros();
+    unsigned LeadingZeros = Numerator.countl_zero();
     // Clip to the number of leading zeros in the divisor.
-    LeadingZeros = std::min(LeadingZeros, Divisor.countLeadingZeros());
+    LeadingZeros = std::min(LeadingZeros, Divisor.countl_zero());
     if (LeadingZeros > 0) {
       Magics = UnsignedDivisionByConstantInfo::get(
           Divisor, LeadingZeros, AllowEvenDivisorOptimization);

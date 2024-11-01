@@ -470,11 +470,10 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
 
 TEST_F(TestTypeSystemClang, TemplateArguments) {
   TypeSystemClang::TemplateParameterInfos infos;
-  infos.names.push_back("T");
-  infos.args.push_back(TemplateArgument(m_ast->getASTContext().IntTy));
-  infos.names.push_back("I");
+  infos.InsertArg("T", TemplateArgument(m_ast->getASTContext().IntTy));
+
   llvm::APSInt arg(llvm::APInt(8, 47));
-  infos.args.push_back(TemplateArgument(m_ast->getASTContext(), arg,
+  infos.InsertArg("I", TemplateArgument(m_ast->getASTContext(), arg,
                                         m_ast->getASTContext().IntTy));
 
   // template<typename T, int I> struct foo;
@@ -598,126 +597,144 @@ TEST_F(TestCreateClassTemplateDecl, FindExistingTemplates) {
   // The behaviour should follow the C++ rules for redeclaring templates
   // (e.g., parameter names can be changed/omitted.)
 
-  // This describes a class template *instantiation* from which we will infer
-  // the structure of the class template.
-  TypeSystemClang::TemplateParameterInfos infos;
-
   // Test an empty template parameter list: <>
-  ExpectNewTemplate("<>", infos);
+  ExpectNewTemplate("<>", {{}, {}});
+
+  clang::TemplateArgument intArg(m_ast->getASTContext().IntTy);
+  clang::TemplateArgument int47Arg(m_ast->getASTContext(),
+                                   llvm::APSInt(llvm::APInt(32, 47)),
+                                   m_ast->getASTContext().IntTy);
+  clang::TemplateArgument floatArg(m_ast->getASTContext().FloatTy);
+  clang::TemplateArgument char47Arg(m_ast->getASTContext(),
+                                    llvm::APSInt(llvm::APInt(8, 47)),
+                                    m_ast->getASTContext().SignedCharTy);
+
+  clang::TemplateArgument char123Arg(m_ast->getASTContext(),
+                                     llvm::APSInt(llvm::APInt(8, 123)),
+                                     m_ast->getASTContext().SignedCharTy);
 
   // Test that <typename T> with T = int creates a new template.
-  infos.names = {"T"};
-  infos.args = {TemplateArgument(m_ast->getASTContext().IntTy)};
-  ClassTemplateDecl *single_type_arg = ExpectNewTemplate("<typename T>", infos);
+  ClassTemplateDecl *single_type_arg =
+      ExpectNewTemplate("<typename T>", {{"T"}, {intArg}});
 
   // Test that changing the parameter name doesn't create a new class template.
-  infos.names = {"A"};
-  ExpectReusedTemplate("<typename A> (A = int)", infos, single_type_arg);
+  ExpectReusedTemplate("<typename A> (A = int)", {{"A"}, {intArg}},
+                       single_type_arg);
 
   // Test that changing the used type doesn't create a new class template.
-  infos.args = {TemplateArgument(m_ast->getASTContext().FloatTy)};
-  ExpectReusedTemplate("<typename A> (A = float)", infos, single_type_arg);
+  ExpectReusedTemplate("<typename A> (A = float)", {{"A"}, {floatArg}},
+                       single_type_arg);
 
   // Test that <typename A, signed char I> creates a new template with A = int
   // and I = 47;
-  infos.names.push_back("I");
-  infos.args.push_back(TemplateArgument(m_ast->getASTContext(),
-                                        llvm::APSInt(llvm::APInt(8, 47)),
-                                        m_ast->getASTContext().SignedCharTy));
   ClassTemplateDecl *type_and_char_value =
-      ExpectNewTemplate("<typename A, signed char I> (I = 47)", infos);
+      ExpectNewTemplate("<typename A, signed char I> (I = 47)",
+                        {{"A", "I"}, {floatArg, char47Arg}});
 
   // Change the value of the I parameter to 123. The previously created
   // class template should still be reused.
-  infos.args.pop_back();
-  infos.args.push_back(TemplateArgument(m_ast->getASTContext(),
-                                        llvm::APSInt(llvm::APInt(8, 123)),
-                                        m_ast->getASTContext().SignedCharTy));
-  ExpectReusedTemplate("<typename A, signed char I> (I = 123)", infos,
+  ExpectReusedTemplate("<typename A, signed char I> (I = 123)",
+                       {{"A", "I"}, {floatArg, char123Arg}},
                        type_and_char_value);
 
   // Change the type of the I parameter to int so we have <typename A, int I>.
   // The class template from above can't be reused.
-  infos.args.pop_back();
-  infos.args.push_back(TemplateArgument(m_ast->getASTContext(),
-                                        llvm::APSInt(llvm::APInt(32, 47)),
-                                        m_ast->getASTContext().IntTy));
-  ExpectNewTemplate("<typename A, int I> (I = 123)", infos);
+  ExpectNewTemplate("<typename A, int I> (I = 123)",
+                    {{"A", "I"}, {floatArg, int47Arg}});
 
   // Test a second type parameter will also cause a new template to be created.
   // We now have <typename A, int I, typename B>.
-  infos.names.push_back("B");
-  infos.args.push_back(TemplateArgument(m_ast->getASTContext().IntTy));
   ClassTemplateDecl *type_and_char_value_and_type =
-      ExpectNewTemplate("<typename A, int I, typename B>", infos);
+      ExpectNewTemplate("<typename A, int I, typename B>",
+                        {{"A", "I", "B"}, {floatArg, int47Arg, intArg}});
 
   // Remove all the names from the parameters which shouldn't influence the
   // way the templates get merged.
-  infos.names = {"", "", ""};
-  ExpectReusedTemplate("<typename, int, typename>", infos,
+  ExpectReusedTemplate("<typename, int, typename>",
+                       {{"", "", ""}, {floatArg, int47Arg, intArg}},
                        type_and_char_value_and_type);
 }
 
 TEST_F(TestCreateClassTemplateDecl, FindExistingTemplatesWithParameterPack) {
   // The same as FindExistingTemplates but for templates with parameter packs.
-
   TypeSystemClang::TemplateParameterInfos infos;
-  infos.packed_args =
-      std::make_unique<TypeSystemClang::TemplateParameterInfos>();
-  infos.packed_args->names = {"", ""};
-  infos.packed_args->args = {TemplateArgument(m_ast->getASTContext().IntTy),
-                             TemplateArgument(m_ast->getASTContext().IntTy)};
+  clang::TemplateArgument intArg(m_ast->getASTContext().IntTy);
+  clang::TemplateArgument int1Arg(m_ast->getASTContext(),
+                                  llvm::APSInt(llvm::APInt(32, 1)),
+                                  m_ast->getASTContext().IntTy);
+  clang::TemplateArgument int123Arg(m_ast->getASTContext(),
+                                    llvm::APSInt(llvm::APInt(32, 123)),
+                                    m_ast->getASTContext().IntTy);
+  clang::TemplateArgument longArg(m_ast->getASTContext().LongTy);
+  clang::TemplateArgument long1Arg(m_ast->getASTContext(),
+                                   llvm::APSInt(llvm::APInt(64, 1)),
+                                   m_ast->getASTContext().LongTy);
+
+  infos.SetParameterPack(
+      std::make_unique<TypeSystemClang::TemplateParameterInfos>(
+          llvm::SmallVector<const char *>{"", ""},
+          llvm::SmallVector<TemplateArgument>{intArg, intArg}));
+
   ClassTemplateDecl *type_pack =
       ExpectNewTemplate("<typename ...> (int, int)", infos);
 
   // Special case: An instantiation for a parameter pack with no values fits
   // to whatever class template we find. There isn't enough information to
   // do an actual comparison here.
-  infos.packed_args =
-      std::make_unique<TypeSystemClang::TemplateParameterInfos>();
+  infos.SetParameterPack(
+      std::make_unique<TypeSystemClang::TemplateParameterInfos>());
   ExpectReusedTemplate("<...> (no values in pack)", infos, type_pack);
 
   // Change the type content of pack type values.
-  infos.packed_args->names = {"", ""};
-  infos.packed_args->args = {TemplateArgument(m_ast->getASTContext().IntTy),
-                             TemplateArgument(m_ast->getASTContext().LongTy)};
+  infos.SetParameterPack(
+      std::make_unique<TypeSystemClang::TemplateParameterInfos>(
+          llvm::SmallVector<const char *>{"", ""},
+          llvm::SmallVector<TemplateArgument>{intArg, longArg}));
   ExpectReusedTemplate("<typename ...> (int, long)", infos, type_pack);
 
   // Change the number of pack values.
-  infos.packed_args->args = {TemplateArgument(m_ast->getASTContext().IntTy)};
+  infos.SetParameterPack(
+      std::make_unique<TypeSystemClang::TemplateParameterInfos>(
+          llvm::SmallVector<const char *>{""},
+          llvm::SmallVector<TemplateArgument>{intArg}));
   ExpectReusedTemplate("<typename ...> (int)", infos, type_pack);
 
   // The names of the pack values shouldn't matter.
-  infos.packed_args->names = {"A", "B"};
+  infos.SetParameterPack(
+      std::make_unique<TypeSystemClang::TemplateParameterInfos>(
+          llvm::SmallVector<const char *>{"A"},
+          llvm::SmallVector<TemplateArgument>{intArg}));
   ExpectReusedTemplate("<typename ...> (int)", infos, type_pack);
 
   // Changing the kind of template argument will create a new template.
-  infos.packed_args->args = {TemplateArgument(m_ast->getASTContext(),
-                                              llvm::APSInt(llvm::APInt(32, 1)),
-                                              m_ast->getASTContext().IntTy)};
+  infos.SetParameterPack(
+      std::make_unique<TypeSystemClang::TemplateParameterInfos>(
+          llvm::SmallVector<const char *>{"A"},
+          llvm::SmallVector<TemplateArgument>{int1Arg}));
   ClassTemplateDecl *int_pack = ExpectNewTemplate("<int ...> (int = 1)", infos);
 
   // Changing the value of integral parameters will not create a new template.
-  infos.packed_args->args = {TemplateArgument(
-      m_ast->getASTContext(), llvm::APSInt(llvm::APInt(32, 123)),
-      m_ast->getASTContext().IntTy)};
+  infos.SetParameterPack(
+      std::make_unique<TypeSystemClang::TemplateParameterInfos>(
+          llvm::SmallVector<const char *>{"A"},
+          llvm::SmallVector<TemplateArgument>{int123Arg}));
   ExpectReusedTemplate("<int ...> (int = 123)", infos, int_pack);
 
   // Changing the integral type will create a new template.
-  infos.packed_args->args = {TemplateArgument(m_ast->getASTContext(),
-                                              llvm::APSInt(llvm::APInt(64, 1)),
-                                              m_ast->getASTContext().LongTy)};
+  infos.SetParameterPack(
+      std::make_unique<TypeSystemClang::TemplateParameterInfos>(
+          llvm::SmallVector<const char *>{"A"},
+          llvm::SmallVector<TemplateArgument>{long1Arg}));
   ExpectNewTemplate("<long ...> (long = 1)", infos);
 
   // Prependinding a non-pack parameter will create a new template.
-  infos.names = {"T"};
-  infos.args = {TemplateArgument(m_ast->getASTContext().IntTy)};
+  infos.InsertArg("T", intArg);
   ExpectNewTemplate("<typename T, long...> (T = int, long = 1)", infos);
 }
 
 TEST_F(TestTypeSystemClang, OnlyPackName) {
   TypeSystemClang::TemplateParameterInfos infos;
-  infos.pack_name = "A";
+  infos.SetPackName("A");
   EXPECT_FALSE(infos.IsValid());
 }
 

@@ -23,7 +23,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 // Let COND_RES(X, Y) be:
 template <class _Tp, class _Up>
 using __cond_type = decltype(false ? std::declval<_Tp>() : std::declval<_Up>());
@@ -125,7 +125,7 @@ struct _LIBCPP_TEMPLATE_VIS
 
 #undef _LIBCPP_OPTIONAL_PACK
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class ..._Tp> using common_type_t = typename common_type<_Tp...>::type;
 #endif
 

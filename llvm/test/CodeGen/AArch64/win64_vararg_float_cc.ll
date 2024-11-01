@@ -3,6 +3,15 @@
 ; RUN: llc < %s -mtriple=aarch64-windows -verify-machineinstrs -O0 -fast-isel | FileCheck %s --check-prefixes=O0,FASTISEL
 ; RUN: llc < %s -mtriple=aarch64-windows -verify-machineinstrs -O0 -global-isel | FileCheck %s --check-prefixes=O0,GISEL
 
+; Check that non-vararg functions compilation is not broken
+define win64cc float @foo(float %arg) nounwind {
+; GISEL-LABEL: foo:
+; GISEL-NEXT:  // %bb.0: // %entry
+; GISEL-NEXT:  ret
+entry:
+  ret float %arg
+}
+
 define win64cc void @float_va_fn(float %a, i32 %b, ...) nounwind {
 ; DAGISEL-LABEL: float_va_fn:
 ; DAGISEL:       // %bb.0: // %entry

@@ -34,7 +34,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 62
+#define CINDEX_VERSION_MINOR 63
 
 #define CINDEX_VERSION_ENCODE(major, minor) (((major)*10000) + ((minor)*1))
 
@@ -4342,6 +4342,51 @@ CINDEX_LINKAGE unsigned clang_CXXMethod_isCopyAssignmentOperator(CXCursor C);
  * Is not.
  */
 CINDEX_LINKAGE unsigned clang_CXXMethod_isMoveAssignmentOperator(CXCursor C);
+
+/**
+ * Determines if a C++ constructor or conversion function was declared
+ * explicit, returning 1 if such is the case and 0 otherwise.
+ *
+ * Constructors or conversion functions are declared explicit through
+ * the use of the explicit specifier.
+ *
+ * For example, the following constructor and conversion function are
+ * not explicit as they lack the explicit specifier:
+ *
+ *     class Foo {
+ *         Foo();
+ *         operator int();
+ *     };
+ *
+ * While the following constructor and conversion function are
+ * explicit as they are declared with the explicit specifier.
+ *
+ *     class Foo {
+ *         explicit Foo();
+ *         explicit operator int();
+ *     };
+ *
+ * This function will return 0 when given a cursor pointing to one of
+ * the former declarations and it will return 1 for a cursor pointing
+ * to the latter declarations.
+ *
+ * The explicit specifier allows the user to specify a
+ * conditional compile-time expression whose value decides
+ * whether the marked element is explicit or not.
+ *
+ * For example:
+ *
+ *     constexpr bool foo(int i) { return i % 2 == 0; }
+ *
+ *     class Foo {
+ *          explicit(foo(1)) Foo();
+ *          explicit(foo(2)) operator int();
+ *     }
+ *
+ * This function will return 0 for the constructor and 1 for
+ * the conversion function.
+ */
+CINDEX_LINKAGE unsigned clang_CXXMethod_isExplicit(CXCursor C);
 
 /**
  * Determine if a C++ record is abstract, i.e. whether a class or struct

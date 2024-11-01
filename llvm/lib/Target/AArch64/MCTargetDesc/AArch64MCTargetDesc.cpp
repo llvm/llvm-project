@@ -413,7 +413,9 @@ public:
     for (unsigned i = 0, e = Inst.getNumOperands(); i != e; i++) {
       if (Desc.operands()[i].OperandType == MCOI::OPERAND_PCREL) {
         int64_t Imm = Inst.getOperand(i).getImm();
-        if (Inst.getOpcode() == AArch64::ADRP)
+        if (Inst.getOpcode() == AArch64::ADR)
+          Target = Addr + Imm;
+        else if (Inst.getOpcode() == AArch64::ADRP)
           Target = (Addr & -4096) + Imm * 4096;
         else
           Target = Addr + Imm * 4;

@@ -285,7 +285,7 @@ def AdrpOperand : AsmOperandClass {
 }
 def adrplabel : Operand<i64> {
   let EncoderMethod = "getAdrLabelOpValue";
-  let PrintMethod = "printAdrpLabel";
+  let PrintMethod = "printAdrAdrpLabel";
   let ParserMatchClass = AdrpOperand;
   let OperandType = "OPERAND_PCREL";
 }
@@ -297,7 +297,9 @@ def AdrOperand : AsmOperandClass {
 }
 def adrlabel : Operand<i64> {
   let EncoderMethod = "getAdrLabelOpValue";
+  let PrintMethod = "printAdrAdrpLabel";
   let ParserMatchClass = AdrOperand;
+  let OperandType = "OPERAND_PCREL";
 }
 
 class SImmOperand<int width> : AsmOperandClass {

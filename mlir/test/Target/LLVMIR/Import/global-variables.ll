@@ -33,11 +33,10 @@
 
 ; CHECK: llvm.mlir.global internal constant @global_gep_const_expr
 ; CHECK-SAME:  {addr_space = 0 : i32, dso_local} : !llvm.ptr {
-; CHECK:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global_int : !llvm.ptr
-; CHECK:  %[[IDX:[0-9]+]] = llvm.mlir.constant(2 : i32) : i32
-; CHECK:  %[[GEP:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr
-; CHECK:  llvm.return %[[GEP]] : !llvm.ptr
-; CHECK:  }
+; CHECK-DAG:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global_int : !llvm.ptr
+; CHECK-DAG:  %[[IDX:[0-9]+]] = llvm.mlir.constant(2 : i32) : i32
+; CHECK-DAG:  %[[GEP:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr
+; CHECK-DAG   llvm.return %[[GEP]] : !llvm.ptr
 @global_gep_const_expr = internal constant ptr getelementptr (i32, ptr @global_int, i32 2)
 
 ; // -----

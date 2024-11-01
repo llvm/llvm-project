@@ -19,18 +19,18 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 struct _LIBCPP_TYPE_VIS to_chars_result
 {
     char* ptr;
     errc ec;
-#  if _LIBCPP_STD_VER > 17
+#  if _LIBCPP_STD_VER >= 20
     _LIBCPP_HIDE_FROM_ABI friend bool operator==(const to_chars_result&, const to_chars_result&) = default;
 #  endif
 };
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -12,6 +12,7 @@
 
 #include "TBAABuilder.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
@@ -159,9 +160,13 @@ void TBAABuilder::attachTBAATag(Operation *op, Type baseFIRType,
   else
     tbaaTagSym = getDataAccessTag(baseFIRType, accessFIRType, gep);
 
-  if (tbaaTagSym)
-    op->setAttr(LLVMDialect::getTBAAAttrName(),
-                ArrayAttr::get(op->getContext(), tbaaTagSym));
+  if (!tbaaTagSym)
+    return;
+
+  auto tbaaAttr = ArrayAttr::get(op->getContext(), tbaaTagSym);
+  llvm::TypeSwitch<Operation *>(op)
+      .Case<LoadOp, StoreOp>([&](auto memOp) { memOp.setTbaaAttr(tbaaAttr); })
+      .Default([](auto) { llvm_unreachable("expected LoadOp or StoreOp"); });
 }
 
 } // namespace fir

@@ -28,8 +28,8 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <system_error>
 
 using namespace clang::driver;
@@ -2849,8 +2849,8 @@ Tool *Generic_GCC::buildLinker() const { return new tools::gcc::Linker(*this); }
 void Generic_GCC::printVerboseInfo(raw_ostream &OS) const {
   // Print the information about how we detected the GCC installation.
   GCCInstallation.print(OS);
-  CudaInstallation.print(OS);
-  RocmInstallation.print(OS);
+  CudaInstallation->print(OS);
+  RocmInstallation->print(OS);
 }
 
 ToolChain::UnwindTableLevel

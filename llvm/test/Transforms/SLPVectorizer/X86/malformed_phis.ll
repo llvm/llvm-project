@@ -62,13 +62,9 @@ define void @test_2(ptr addrspace(1) %arg, i32 %arg1) #0 {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ undef, [[BB:%.*]] ], [ undef, [[BB2]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ 0, [[BB]] ], [ undef, [[BB2]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> poison, i32 [[TMP]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> undef)
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP1]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i32 [[OP_RDX]], undef
-; CHECK-NEXT:    call void @use(i32 [[OP_RDX1]])
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[TMP]], 8
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 undef, [[TMP0]]
+; CHECK-NEXT:    call void @use(i32 [[OP_RDX]])
 ; CHECK-NEXT:    br label [[BB2]]
 ;
 bb:

@@ -279,11 +279,9 @@ class PPCInstrInfo : public PPCGenInstrInfo {
                       SmallVectorImpl<MachineInstr *> &InsInstrs,
                       SmallVectorImpl<MachineInstr *> &DelInstrs,
                       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const;
-  bool isLoadFromConstantPool(MachineInstr *I) const;
   Register
   generateLoadForNewConst(unsigned Idx, MachineInstr *MI, Type *Ty,
                           SmallVectorImpl<MachineInstr *> &InsInstrs) const;
-  const Constant *getConstantFromConstantPool(MachineInstr *I) const;
   virtual void anchor();
 
 protected:
@@ -303,6 +301,9 @@ protected:
 
 public:
   explicit PPCInstrInfo(PPCSubtarget &STI);
+
+  bool isLoadFromConstantPool(MachineInstr *I) const;
+  const Constant *getConstantFromConstantPool(MachineInstr *I) const;
 
   /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
   /// such, whenever a client has an instance of instruction info, it should

@@ -10,6 +10,6 @@
 
 #include "src/stdlib/atol.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 ATOI_TEST(Atol, __llvm_libc::atol)

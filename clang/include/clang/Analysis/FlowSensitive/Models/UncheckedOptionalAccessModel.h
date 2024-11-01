@@ -52,7 +52,7 @@ public:
 
   static NoopLattice initialElement() { return {}; }
 
-  void transfer(const CFGElement *Elt, NoopLattice &L, Environment &Env);
+  void transfer(const CFGElement &Elt, NoopLattice &L, Environment &Env);
 
   ComparisonResult compare(QualType Type, const Value &Val1,
                            const Environment &Env1, const Value &Val2,

@@ -214,8 +214,12 @@ void llvm::parallelFor(size_t Begin, size_t End,
           Fn(I);
       });
     }
-    for (; Begin != End; ++Begin)
-      Fn(Begin);
+    if (Begin != End) {
+      TG.spawn([=, &Fn] {
+        for (size_t I = Begin; I != End; ++I)
+          Fn(I);
+      });
+    }
     return;
   }
 #endif

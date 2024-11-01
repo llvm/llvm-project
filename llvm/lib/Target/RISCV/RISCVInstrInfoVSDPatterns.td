@@ -319,7 +319,7 @@ multiclass VPatWConvertFP2ISDNode_V<SDNode vop, string instruction_name> {
   }
 }
 
-multiclass VPatNConvertI2FPSDNode_V<SDNode vop, string instruction_name> {
+multiclass VPatNConvertI2FPSDNode_W<SDNode vop, string instruction_name> {
   foreach fvtiToFWti = AllWidenableFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar iwti = GetIntVTypeInfo<fvtiToFWti.Wti>.Vti;
@@ -329,7 +329,7 @@ multiclass VPatNConvertI2FPSDNode_V<SDNode vop, string instruction_name> {
   }
 }
 
-multiclass VPatNConvertFP2ISDNode_V<SDNode vop, string instruction_name> {
+multiclass VPatNConvertFP2ISDNode_W<SDNode vop, string instruction_name> {
   foreach vtiToWti = AllWidenableIntToFloatVectors in {
     defvar vti = vtiToWti.Vti;
     defvar fwti = vtiToWti.Wti;
@@ -1000,10 +1000,10 @@ defm : VPatWConvertI2FPSDNode_V<sint_to_fp, "PseudoVFWCVT_F_X_V">;
 defm : VPatWConvertI2FPSDNode_V<uint_to_fp, "PseudoVFWCVT_F_XU_V">;
 
 // 13.19. Narrowing Floating-Point/Integer Type-Convert Instructions
-defm : VPatNConvertFP2ISDNode_V<fp_to_sint, "PseudoVFNCVT_RTZ_X_F_W">;
-defm : VPatNConvertFP2ISDNode_V<fp_to_uint, "PseudoVFNCVT_RTZ_XU_F_W">;
-defm : VPatNConvertI2FPSDNode_V<sint_to_fp, "PseudoVFNCVT_F_X_W">;
-defm : VPatNConvertI2FPSDNode_V<uint_to_fp, "PseudoVFNCVT_F_XU_W">;
+defm : VPatNConvertFP2ISDNode_W<fp_to_sint, "PseudoVFNCVT_RTZ_X_F_W">;
+defm : VPatNConvertFP2ISDNode_W<fp_to_uint, "PseudoVFNCVT_RTZ_XU_F_W">;
+defm : VPatNConvertI2FPSDNode_W<sint_to_fp, "PseudoVFNCVT_F_X_W">;
+defm : VPatNConvertI2FPSDNode_W<uint_to_fp, "PseudoVFNCVT_F_XU_W">;
 foreach fvtiToFWti = AllWidenableFloatVectors in {
   defvar fvti = fvtiToFWti.Vti;
   defvar fwti = fvtiToFWti.Wti;

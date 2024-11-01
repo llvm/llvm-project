@@ -483,6 +483,12 @@ public:
     PSK_Pop_Set   = PSK_Pop | PSK_Set,  // #pragma (pop[, id], value)
   };
 
+  struct PragmaPackInfo {
+    PragmaMsStackAction Action;
+    StringRef SlotLabel;
+    Token Alignment;
+  };
+
   // #pragma pack and align.
   class AlignPackInfo {
   public:
@@ -1137,10 +1143,6 @@ public:
   /// standard library.
   LazyDeclPtr StdAlignValT;
 
-  /// The C++ "std::experimental" namespace, where the experimental parts
-  /// of the standard library resides.
-  NamespaceDecl *StdExperimentalNamespaceCache;
-
   /// The C++ "std::initializer_list" template, which is defined in
   /// \<initializer_list>.
   ClassTemplateDecl *StdInitializerList;
@@ -1148,10 +1150,6 @@ public:
   /// The C++ "std::coroutine_traits" template, which is defined in
   /// \<coroutine_traits>
   ClassTemplateDecl *StdCoroutineTraitsCache;
-  /// The namespace where coroutine components are defined. In standard,
-  /// they are defined in std namespace. And in the previous implementation,
-  /// they are defined in std::experimental namespace.
-  NamespaceDecl *CoroTraitsNamespaceCache;
 
   /// The C++ "type_info" declaration, which is defined in \<typeinfo>.
   RecordDecl *CXXTypeInfoDecl;
@@ -2274,17 +2272,12 @@ private:
     SourceLocation BeginLoc;
     clang::Module *Module = nullptr;
     bool ModuleInterface = false;
-    bool IsPartition = false;
-    bool ImplicitGlobalModuleFragment = false;
     VisibleModuleSet OuterVisibleModules;
   };
   /// The modules we're currently parsing.
   llvm::SmallVector<ModuleScope, 16> ModuleScopes;
   /// The global module fragment of the current translation unit.
   clang::Module *GlobalModuleFragment = nullptr;
-
-  /// The modules we imported directly.
-  llvm::SmallPtrSet<clang::Module *, 8> DirectModuleImports;
 
   /// Namespace definitions that we will export when they finish.
   llvm::SmallPtrSet<const NamespaceDecl*, 8> DeferredExportedNamespaces;
@@ -2301,7 +2294,7 @@ private:
   }
 
   /// Enter the scope of the global module.
-  Module *PushGlobalModuleFragment(SourceLocation BeginLoc, bool IsImplicit);
+  Module *PushGlobalModuleFragment(SourceLocation BeginLoc);
   /// Leave the scope of the global module.
   void PopGlobalModuleFragment();
 
@@ -2334,10 +2327,6 @@ public:
   /// Get the module owning an entity.
   Module *getOwningModule(const Decl *Entity) {
     return Entity->getOwningModule();
-  }
-
-  bool isModuleDirectlyImported(const Module *M) {
-    return DirectModuleImports.contains(M);
   }
 
   // Determine whether the module M belongs to the  current TU.
@@ -3327,9 +3316,7 @@ public:
                       SourceLocation ScopedEnumKWLoc,
                       bool ScopedEnumUsesClassTag, TypeResult UnderlyingType,
                       bool IsTypeSpecifier, bool IsTemplateParamOrArg,
-                      OffsetOfKind OOK,
-                      UsingShadowDecl*& FoundUsingShadow,
-                      SkipBodyInfo *SkipBody = nullptr);
+                      OffsetOfKind OOK, SkipBodyInfo *SkipBody = nullptr);
 
   DeclResult ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
                                      unsigned TagSpec, SourceLocation TagLoc,
@@ -6090,9 +6077,6 @@ public:
   NamespaceDecl *getStdNamespace() const;
   NamespaceDecl *getOrCreateStdNamespace();
 
-  NamespaceDecl *lookupStdExperimentalNamespace();
-  NamespaceDecl *getCachedCoroNamespace() { return CoroTraitsNamespaceCache; }
-
   CXXRecordDecl *getStdBadAlloc() const;
   EnumDecl *getStdAlignValT() const;
 
@@ -7281,24 +7265,34 @@ private:
 
 private:
   // The current stack of constraint satisfactions, so we can exit-early.
-  llvm::SmallVector<llvm::FoldingSetNodeID, 10> SatisfactionStack;
+  using SatisfactionStackEntryTy =
+      std::pair<const NamedDecl *, llvm::FoldingSetNodeID>;
+  llvm::SmallVector<SatisfactionStackEntryTy, 10>
+      SatisfactionStack;
 
 public:
-  void PushSatisfactionStackEntry(const llvm::FoldingSetNodeID &ID) {
-    SatisfactionStack.push_back(ID);
+  void PushSatisfactionStackEntry(const NamedDecl *D,
+                                  const llvm::FoldingSetNodeID &ID) {
+    const NamedDecl *Can = cast<NamedDecl>(D->getCanonicalDecl());
+    SatisfactionStack.emplace_back(Can, ID);
   }
 
   void PopSatisfactionStackEntry() { SatisfactionStack.pop_back(); }
 
-  bool SatisfactionStackContains(const llvm::FoldingSetNodeID &ID) const {
-    return llvm::find(SatisfactionStack, ID) != SatisfactionStack.end();
+  bool SatisfactionStackContains(const NamedDecl *D,
+                                 const llvm::FoldingSetNodeID &ID) const {
+    const NamedDecl *Can = cast<NamedDecl>(D->getCanonicalDecl());
+    return llvm::find(SatisfactionStack,
+                      SatisfactionStackEntryTy{Can, ID}) !=
+           SatisfactionStack.end();
   }
 
   // Resets the current SatisfactionStack for cases where we are instantiating
   // constraints as a 'side effect' of normal instantiation in a way that is not
   // indicative of recursive definition.
   class SatisfactionStackResetRAII {
-    llvm::SmallVector<llvm::FoldingSetNodeID, 10> BackupSatisfactionStack;
+    llvm::SmallVector<SatisfactionStackEntryTy, 10>
+        BackupSatisfactionStack;
     Sema &SemaRef;
 
   public:
@@ -7311,8 +7305,8 @@ public:
     }
   };
 
-  void
-  SwapSatisfactionStack(llvm::SmallVectorImpl<llvm::FoldingSetNodeID> &NewSS) {
+  void SwapSatisfactionStack(
+      llvm::SmallVectorImpl<SatisfactionStackEntryTy> &NewSS) {
     SatisfactionStack.swap(NewSS);
   }
 
@@ -10899,8 +10893,7 @@ public:
   /// Lookup 'coroutine_traits' in std namespace and std::experimental
   /// namespace. The namespace found is recorded in Namespace.
   ClassTemplateDecl *lookupCoroutineTraits(SourceLocation KwLoc,
-                                           SourceLocation FuncLoc,
-                                           NamespaceDecl *&Namespace);
+                                           SourceLocation FuncLoc);
   /// Check that the expression co_await promise.final_suspend() shall not be
   /// potentially-throwing.
   bool checkFinalSuspendNoThrow(const Stmt *FinalSuspend);
@@ -13484,6 +13477,9 @@ private:
                                      CallExpr *TheCall);
   bool CheckLoongArchBuiltinFunctionCall(const TargetInfo &TI,
                                          unsigned BuiltinID, CallExpr *TheCall);
+  bool CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
+                                           unsigned BuiltinID,
+                                           CallExpr *TheCall);
 
   bool SemaBuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall);
   bool SemaBuiltinVAStartARMMicrosoft(CallExpr *Call);
@@ -13539,6 +13535,8 @@ private:
   bool PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall);
   bool PrepareBuiltinReduceMathOneArgCall(CallExpr *TheCall);
 
+  bool SemaBuiltinNonDeterministicValue(CallExpr *TheCall);
+
   // Matrix builtin handling.
   ExprResult SemaBuiltinMatrixTranspose(CallExpr *TheCall,
                                         ExprResult CallResult);
@@ -13546,6 +13544,9 @@ private:
                                               ExprResult CallResult);
   ExprResult SemaBuiltinMatrixColumnMajorStore(CallExpr *TheCall,
                                                ExprResult CallResult);
+
+  // WebAssembly builtin handling.
+  bool BuiltinWasmRefNullExtern(CallExpr *TheCall);
 
 public:
   enum FormatStringType {

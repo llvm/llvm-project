@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/SubtargetFeature.h"
@@ -26,6 +25,7 @@
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
 #include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -73,7 +73,7 @@ ObjectFile::createELFObjectFile(MemoryBufferRef Obj, bool InitContent) {
   std::pair<unsigned char, unsigned char> Ident =
       getElfArchType(Obj.getBuffer());
   std::size_t MaxAlignment =
-      1ULL << countTrailingZeros(
+      1ULL << llvm::countr_zero(
           reinterpret_cast<uintptr_t>(Obj.getBufferStart()));
 
   if (MaxAlignment < 2)
@@ -783,8 +783,6 @@ Expected<std::vector<BBAddrMap>> ELFObjectFileBase::readBBAddrMap(
     return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
   if (const auto *Obj = dyn_cast<ELF32BEObjectFile>(this))
     return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
-  if (const auto *Obj = cast<ELF64BEObjectFile>(this))
-    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
-  else
-    llvm_unreachable("Unsupported binary format");
+  return readBBAddrMapImpl(cast<ELF64BEObjectFile>(this)->getELFFile(),
+                           TextSectionIndex);
 }

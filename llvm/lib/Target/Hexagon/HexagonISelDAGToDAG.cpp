@@ -1170,9 +1170,9 @@ void HexagonDAGToDAGISel::ppAddrRewriteAndSrl(std::vector<SDNode*> &&Nodes) {
       continue;
     uint32_t Mask = MN->getZExtValue();
     // Examine the mask.
-    uint32_t TZ = countTrailingZeros(Mask);
-    uint32_t M1 = countTrailingOnes(Mask >> TZ);
-    uint32_t LZ = countLeadingZeros(Mask);
+    uint32_t TZ = llvm::countr_zero(Mask);
+    uint32_t M1 = llvm::countr_one(Mask >> TZ);
+    uint32_t LZ = llvm::countl_zero(Mask);
     // Trailing zeros + middle ones + leading zeros must equal the width.
     if (TZ + M1 + LZ != 32)
       continue;
@@ -1867,7 +1867,7 @@ static unsigned getPowerOf2Factor(SDValue Val) {
         continue;
       const APInt &CInt = C->getAPIntValue();
       if (CInt.getBoolValue())
-        MaxFactor = CInt.countTrailingZeros();
+        MaxFactor = CInt.countr_zero();
     }
     return MaxFactor;
   }

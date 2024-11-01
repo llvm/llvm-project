@@ -13,7 +13,7 @@
 #include "src/spawn/posix_spawn_file_actions_destroy.h"
 #include "src/spawn/posix_spawn_file_actions_init.h"
 #include "src/sys/wait/waitpid.h"
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 #include <fcntl.h>
 #include <spawn.h>

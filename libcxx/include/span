@@ -166,7 +166,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 template <class _Tp>
 struct __is_std_array : false_type {};
@@ -566,10 +566,10 @@ _LIBCPP_INLINE_VISIBILITY
 auto as_writable_bytes(span<_Tp, _Extent> __s) noexcept
 { return __s.__as_writable_bytes(); }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template<contiguous_iterator _It, class _EndOrSize>
     span(_It, _EndOrSize) -> span<remove_reference_t<iter_reference_t<_It>>>;
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 template<class _Tp, size_t _Sz>
     span(_Tp (&)[_Sz]) -> span<_Tp, _Sz>;
@@ -583,7 +583,7 @@ template<class _Tp, size_t _Sz>
 template<ranges::contiguous_range _Range>
     span(_Range&&) -> span<remove_reference_t<ranges::range_reference_t<_Range>>>;
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

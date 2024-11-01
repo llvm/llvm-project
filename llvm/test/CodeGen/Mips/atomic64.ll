@@ -1145,7 +1145,7 @@ define i64 @AtomicSwap64(i64 signext %newval) nounwind {
 ; MIPS64EB-NEXT:    jr $ra
 ; MIPS64EB-NEXT:    daddiu $sp, $sp, 16
 entry:
-  %newval.addr = alloca i64, align 4
+  %newval.addr = alloca i64, align 8
   store i64 %newval, ptr %newval.addr, align 4
   %tmp = load i64, ptr %newval.addr, align 4
   %0 = atomicrmw xchg ptr @x, i64 %tmp monotonic
@@ -1359,7 +1359,7 @@ define i64 @AtomicCmpSwap64(i64 signext %oldval, i64 signext %newval) nounwind {
 ; MIPS64EB-NEXT:    jr $ra
 ; MIPS64EB-NEXT:    daddiu $sp, $sp, 16
 entry:
-  %newval.addr = alloca i64, align 4
+  %newval.addr = alloca i64, align 8
   store i64 %newval, ptr %newval.addr, align 4
   %tmp = load i64, ptr %newval.addr, align 4
   %0 = cmpxchg ptr @x, i64 %oldval, i64 %tmp monotonic monotonic

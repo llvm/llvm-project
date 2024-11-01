@@ -50,7 +50,7 @@ public:
 
   static bool classof(const Binary *v) { return v->isTapiFile(); }
 
-  bool is64Bit() { return MachO::is64Bit(Arch); }
+  bool is64Bit() const override { return MachO::is64Bit(Arch); }
 
 private:
   struct Symbol {

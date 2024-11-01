@@ -47,7 +47,6 @@ def Tensor_Dialect : Dialect {
 
   let hasCanonicalizer = 1;
   let hasConstantMaterializer = 1;
-  let useFoldAPI = kEmitFoldAdaptorFolder;
   let dependentDialects = [
     "AffineDialect",
     "arith::ArithDialect",

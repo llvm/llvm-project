@@ -142,7 +142,7 @@ void State::addCallStack(unsigned Limit) {
 
     // Use a different note for an inheriting constructor, because from the
     // user's perspective it's not really a function at all.
-    if (auto *CD = dyn_cast_or_null<CXXConstructorDecl>(F->getCallee())) {
+    if (auto *CD = dyn_cast_if_present<CXXConstructorDecl>(F->getCallee())) {
       if (CD->isInheritingConstructor()) {
         addDiag(CallLocation, diag::note_constexpr_inherited_ctor_call_here)
             << CD->getParent();

@@ -136,13 +136,13 @@ bool ProcessMachCore::CheckAddressForDyldOrKernel(lldb::addr_t addr,
     return false;
   if (header.magic == llvm::MachO::MH_CIGAM ||
       header.magic == llvm::MachO::MH_CIGAM_64) {
-    header.magic = llvm::ByteSwap_32(header.magic);
-    header.cputype = llvm::ByteSwap_32(header.cputype);
-    header.cpusubtype = llvm::ByteSwap_32(header.cpusubtype);
-    header.filetype = llvm::ByteSwap_32(header.filetype);
-    header.ncmds = llvm::ByteSwap_32(header.ncmds);
-    header.sizeofcmds = llvm::ByteSwap_32(header.sizeofcmds);
-    header.flags = llvm::ByteSwap_32(header.flags);
+    header.magic = llvm::byteswap<uint32_t>(header.magic);
+    header.cputype = llvm::byteswap<uint32_t>(header.cputype);
+    header.cpusubtype = llvm::byteswap<uint32_t>(header.cpusubtype);
+    header.filetype = llvm::byteswap<uint32_t>(header.filetype);
+    header.ncmds = llvm::byteswap<uint32_t>(header.ncmds);
+    header.sizeofcmds = llvm::byteswap<uint32_t>(header.sizeofcmds);
+    header.flags = llvm::byteswap<uint32_t>(header.flags);
   }
 
   if (header.magic == llvm::MachO::MH_MAGIC ||
@@ -480,13 +480,6 @@ Status ProcessMachCore::DoLoadCore() {
   ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
   if (core_objfile == nullptr) {
     error.SetErrorString("invalid core object file");
-    return error;
-  }
-
-  if (core_objfile->GetNumThreadContexts() == 0) {
-    error.SetErrorString("core file doesn't contain any LC_THREAD load "
-                         "commands, or the LC_THREAD architecture is not "
-                         "supported in this lldb");
     return error;
   }
 

@@ -28,11 +28,6 @@ struct TestOperationEqualPass
                          << opCount;
       return signalPassFailure();
     }
-    DenseMap<Value, Value> valuesMap;
-    auto mapValue = [&](Value lhs, Value rhs) {
-      auto insertion = valuesMap.insert({lhs, rhs});
-      return success(insertion.first->second == rhs);
-    };
 
     Operation *first = &module.getBody()->front();
     llvm::outs() << first->getName().getStringRef() << " with attr "
@@ -41,7 +36,7 @@ struct TestOperationEqualPass
     if (!first->hasAttr("strict_loc_check"))
       flags |= OperationEquivalence::IgnoreLocations;
     if (OperationEquivalence::isEquivalentTo(first, &module.getBody()->back(),
-                                             mapValue, mapValue, flags))
+                                             flags))
       llvm::outs() << " compares equals.\n";
     else
       llvm::outs() << " compares NOT equals!\n";

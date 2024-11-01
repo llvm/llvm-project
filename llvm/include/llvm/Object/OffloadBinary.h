@@ -17,7 +17,7 @@
 #ifndef LLVM_OBJECT_OFFLOADBINARY_H
 #define LLVM_OBJECT_OFFLOADBINARY_H
 
-#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/Error.h"
@@ -59,7 +59,7 @@ enum ImageKind : uint16_t {
 /// offsets from the beginning of the file.
 class OffloadBinary : public Binary {
 public:
-  using string_iterator = StringMap<StringRef>::const_iterator;
+  using string_iterator = MapVector<StringRef, StringRef>::const_iterator;
   using string_iterator_range = iterator_range<string_iterator>;
 
   /// The current version of the binary used for backwards compatibility.
@@ -70,7 +70,7 @@ public:
     ImageKind TheImageKind;
     OffloadKind TheOffloadKind;
     uint32_t Flags;
-    StringMap<StringRef> StringData;
+    MapVector<StringRef, StringRef> StringData;
     std::unique_ptr<MemoryBuffer> Image;
   };
 
@@ -142,7 +142,7 @@ private:
   OffloadBinary(const OffloadBinary &Other) = delete;
 
   /// Map from keys to offsets in the binary.
-  StringMap<StringRef> StringData;
+  MapVector<StringRef, StringRef> StringData;
   /// Raw pointer to the MemoryBufferRef for convenience.
   const char *Buffer;
   /// Location of the header within the binary.

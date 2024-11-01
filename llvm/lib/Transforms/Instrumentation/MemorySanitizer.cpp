@@ -152,7 +152,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -190,6 +189,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -2487,7 +2487,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         if (ConstantInt *Elt =
                 dyn_cast<ConstantInt>(ConstArg->getAggregateElement(Idx))) {
           const APInt &V = Elt->getValue();
-          APInt V2 = APInt(V.getBitWidth(), 1) << V.countTrailingZeros();
+          APInt V2 = APInt(V.getBitWidth(), 1) << V.countr_zero();
           Elements.push_back(ConstantInt::get(EltTy, V2));
         } else {
           Elements.push_back(ConstantInt::get(EltTy, 1));
@@ -2497,7 +2497,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     } else {
       if (ConstantInt *Elt = dyn_cast<ConstantInt>(ConstArg)) {
         const APInt &V = Elt->getValue();
-        APInt V2 = APInt(V.getBitWidth(), 1) << V.countTrailingZeros();
+        APInt V2 = APInt(V.getBitWidth(), 1) << V.countr_zero();
         ShadowMul = ConstantInt::get(Ty, V2);
       } else {
         ShadowMul = ConstantInt::get(Ty, 1);
@@ -5416,6 +5416,7 @@ struct VarArgSystemZHelper : public VarArgHelper {
   Function &F;
   MemorySanitizer &MS;
   MemorySanitizerVisitor &MSV;
+  bool IsSoftFloatABI;
   Value *VAArgTLSCopy = nullptr;
   Value *VAArgTLSOriginCopy = nullptr;
   Value *VAArgOverflowSize = nullptr;
@@ -5434,9 +5435,10 @@ struct VarArgSystemZHelper : public VarArgHelper {
 
   VarArgSystemZHelper(Function &F, MemorySanitizer &MS,
                       MemorySanitizerVisitor &MSV)
-      : F(F), MS(MS), MSV(MSV) {}
+      : F(F), MS(MS), MSV(MSV),
+        IsSoftFloatABI(F.getFnAttribute("use-soft-float").getValueAsBool()) {}
 
-  ArgKind classifyArgument(Type *T, bool IsSoftFloatABI) {
+  ArgKind classifyArgument(Type *T) {
     // T is a SystemZABIInfo::classifyArgumentType() output, and there are
     // only a few possibilities of what it can be. In particular, enums, single
     // element structs and large types have already been taken care of.
@@ -5474,9 +5476,6 @@ struct VarArgSystemZHelper : public VarArgHelper {
   }
 
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
-    bool IsSoftFloatABI = CB.getCalledFunction()
-                              ->getFnAttribute("use-soft-float")
-                              .getValueAsBool();
     unsigned GpOffset = SystemZGpOffset;
     unsigned FpOffset = SystemZFpOffset;
     unsigned VrIndex = 0;
@@ -5487,7 +5486,7 @@ struct VarArgSystemZHelper : public VarArgHelper {
       // SystemZABIInfo does not produce ByVal parameters.
       assert(!CB.paramHasAttr(ArgNo, Attribute::ByVal));
       Type *T = A->getType();
-      ArgKind AK = classifyArgument(T, IsSoftFloatABI);
+      ArgKind AK = classifyArgument(T);
       if (AK == ArgKind::Indirect) {
         T = PointerType::get(T, 0);
         AK = ArgKind::GeneralPurpose;

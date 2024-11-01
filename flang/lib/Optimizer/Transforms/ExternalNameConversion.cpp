@@ -45,27 +45,6 @@ mangleExternalName(const std::pair<fir::NameUniquer::NameKind,
 
 namespace {
 
-class MangleNameOnCallOp : public mlir::OpRewritePattern<fir::CallOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(fir::CallOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    rewriter.startRootUpdate(op);
-    auto callee = op.getCallee();
-    if (callee) {
-      auto result =
-          fir::NameUniquer::deconstruct(callee->getRootReference().getValue());
-      if (fir::NameUniquer::isExternalFacingUniquedName(result))
-        op.setCalleeAttr(
-            SymbolRefAttr::get(op.getContext(), mangleExternalName(result)));
-    }
-    rewriter.finalizeRootUpdate(op);
-    return success();
-  }
-};
-
 struct MangleNameOnFuncOp : public mlir::OpRewritePattern<mlir::func::FuncOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -73,12 +52,22 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::func::FuncOp op,
                   mlir::PatternRewriter &rewriter) const override {
+    mlir::LogicalResult ret = success();
     rewriter.startRootUpdate(op);
     auto result = fir::NameUniquer::deconstruct(op.getSymName());
-    if (fir::NameUniquer::isExternalFacingUniquedName(result))
-      op.setSymNameAttr(rewriter.getStringAttr(mangleExternalName(result)));
+    if (fir::NameUniquer::isExternalFacingUniquedName(result)) {
+      auto newSymbol = rewriter.getStringAttr(mangleExternalName(result));
+
+      // Try to update all SymbolRef's in the module that match the current op
+      if (mlir::ModuleOp mod = op->getParentOfType<mlir::ModuleOp>())
+        ret = op.replaceAllSymbolUses(newSymbol, mod);
+
+      op.setSymNameAttr(newSymbol);
+      mlir::SymbolTable::setSymbolName(op, newSymbol);
+    }
+
     rewriter.finalizeRootUpdate(op);
-    return success();
+    return ret;
   }
 };
 
@@ -134,19 +123,12 @@ void ExternalNameConversionPass::runOnOperation() {
   auto *context = &getContext();
 
   mlir::RewritePatternSet patterns(context);
-  patterns.insert<MangleNameOnCallOp, MangleNameOnCallOp, MangleNameOnFuncOp,
-                  MangleNameForCommonBlock, MangleNameOnAddrOfOp>(context);
+  patterns.insert<MangleNameOnFuncOp, MangleNameForCommonBlock,
+                  MangleNameOnAddrOfOp>(context);
 
   ConversionTarget target(*context);
   target.addLegalDialect<fir::FIROpsDialect, LLVM::LLVMDialect,
                          acc::OpenACCDialect, omp::OpenMPDialect>();
-
-  target.addDynamicallyLegalOp<fir::CallOp>([](fir::CallOp op) {
-    if (op.getCallee())
-      return !fir::NameUniquer::needExternalNameMangling(
-          op.getCallee()->getRootReference().getValue());
-    return true;
-  });
 
   target.addDynamicallyLegalOp<mlir::func::FuncOp>([](mlir::func::FuncOp op) {
     return !fir::NameUniquer::needExternalNameMangling(op.getSymName());

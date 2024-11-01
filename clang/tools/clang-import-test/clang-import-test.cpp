@@ -30,8 +30,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/TargetParser/Host.h"
 
 #include <memory>
 #include <string>

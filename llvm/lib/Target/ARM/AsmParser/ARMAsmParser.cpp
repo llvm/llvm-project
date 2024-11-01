@@ -24,7 +24,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -52,8 +51,9 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -318,7 +318,7 @@ class ARMAsmParser : public MCTargetAsmParser {
   bool inImplicitITBlock() { return inITBlock() && !ITState.IsExplicit; }
 
   bool lastInITBlock() {
-    return ITState.CurPosition == 4 - countTrailingZeros(ITState.Mask);
+    return ITState.CurPosition == 4 - (unsigned)llvm::countr_zero(ITState.Mask);
   }
 
   void forwardITPosition() {
@@ -326,7 +326,7 @@ class ARMAsmParser : public MCTargetAsmParser {
     // Move to the next instruction in the IT block, if there is one. If not,
     // mark the block as done, except for implicit IT blocks, which we leave
     // open until we find an instruction that can't be added to it.
-    unsigned TZ = countTrailingZeros(ITState.Mask);
+    unsigned TZ = llvm::countr_zero(ITState.Mask);
     if (++ITState.CurPosition == 5 - TZ && ITState.IsExplicit)
       ITState.CurPosition = ~0U; // Done with the IT block after this.
   }
@@ -336,7 +336,7 @@ class ARMAsmParser : public MCTargetAsmParser {
     assert(inImplicitITBlock());
     assert(ITState.CurPosition > 1);
     ITState.CurPosition--;
-    unsigned TZ = countTrailingZeros(ITState.Mask);
+    unsigned TZ = llvm::countr_zero(ITState.Mask);
     unsigned NewMask = 0;
     NewMask |= ITState.Mask & (0xC << TZ);
     NewMask |= 0x2 << TZ;
@@ -384,7 +384,7 @@ class ARMAsmParser : public MCTargetAsmParser {
     assert(!isITBlockFull());
     assert(Cond == ITState.Cond ||
            Cond == ARMCC::getOppositeCondition(ITState.Cond));
-    unsigned TZ = countTrailingZeros(ITState.Mask);
+    unsigned TZ = llvm::countr_zero(ITState.Mask);
     unsigned NewMask = 0;
     // Keep any existing condition bits.
     NewMask |= ITState.Mask & (0xE << TZ);
@@ -423,7 +423,7 @@ class ARMAsmParser : public MCTargetAsmParser {
   bool inVPTBlock() { return VPTState.CurPosition != ~0U; }
   void forwardVPTPosition() {
     if (!inVPTBlock()) return;
-    unsigned TZ = countTrailingZeros(VPTState.Mask);
+    unsigned TZ = llvm::countr_zero(VPTState.Mask);
     if (++VPTState.CurPosition == 5 - TZ)
       VPTState.CurPosition = ~0U;
   }
@@ -516,86 +516,86 @@ class ARMAsmParser : public MCTargetAsmParser {
 
   bool isThumb() const {
     // FIXME: Can tablegen auto-generate this?
-    return getSTI().getFeatureBits()[ARM::ModeThumb];
+    return getSTI().hasFeature(ARM::ModeThumb);
   }
 
   bool isThumbOne() const {
-    return isThumb() && !getSTI().getFeatureBits()[ARM::FeatureThumb2];
+    return isThumb() && !getSTI().hasFeature(ARM::FeatureThumb2);
   }
 
   bool isThumbTwo() const {
-    return isThumb() && getSTI().getFeatureBits()[ARM::FeatureThumb2];
+    return isThumb() && getSTI().hasFeature(ARM::FeatureThumb2);
   }
 
   bool hasThumb() const {
-    return getSTI().getFeatureBits()[ARM::HasV4TOps];
+    return getSTI().hasFeature(ARM::HasV4TOps);
   }
 
   bool hasThumb2() const {
-    return getSTI().getFeatureBits()[ARM::FeatureThumb2];
+    return getSTI().hasFeature(ARM::FeatureThumb2);
   }
 
   bool hasV6Ops() const {
-    return getSTI().getFeatureBits()[ARM::HasV6Ops];
+    return getSTI().hasFeature(ARM::HasV6Ops);
   }
 
   bool hasV6T2Ops() const {
-    return getSTI().getFeatureBits()[ARM::HasV6T2Ops];
+    return getSTI().hasFeature(ARM::HasV6T2Ops);
   }
 
   bool hasV6MOps() const {
-    return getSTI().getFeatureBits()[ARM::HasV6MOps];
+    return getSTI().hasFeature(ARM::HasV6MOps);
   }
 
   bool hasV7Ops() const {
-    return getSTI().getFeatureBits()[ARM::HasV7Ops];
+    return getSTI().hasFeature(ARM::HasV7Ops);
   }
 
   bool hasV8Ops() const {
-    return getSTI().getFeatureBits()[ARM::HasV8Ops];
+    return getSTI().hasFeature(ARM::HasV8Ops);
   }
 
   bool hasV8MBaseline() const {
-    return getSTI().getFeatureBits()[ARM::HasV8MBaselineOps];
+    return getSTI().hasFeature(ARM::HasV8MBaselineOps);
   }
 
   bool hasV8MMainline() const {
-    return getSTI().getFeatureBits()[ARM::HasV8MMainlineOps];
+    return getSTI().hasFeature(ARM::HasV8MMainlineOps);
   }
   bool hasV8_1MMainline() const {
-    return getSTI().getFeatureBits()[ARM::HasV8_1MMainlineOps];
+    return getSTI().hasFeature(ARM::HasV8_1MMainlineOps);
   }
   bool hasMVE() const {
-    return getSTI().getFeatureBits()[ARM::HasMVEIntegerOps];
+    return getSTI().hasFeature(ARM::HasMVEIntegerOps);
   }
   bool hasMVEFloat() const {
-    return getSTI().getFeatureBits()[ARM::HasMVEFloatOps];
+    return getSTI().hasFeature(ARM::HasMVEFloatOps);
   }
   bool hasCDE() const {
-    return getSTI().getFeatureBits()[ARM::HasCDEOps];
+    return getSTI().hasFeature(ARM::HasCDEOps);
   }
   bool has8MSecExt() const {
-    return getSTI().getFeatureBits()[ARM::Feature8MSecExt];
+    return getSTI().hasFeature(ARM::Feature8MSecExt);
   }
 
   bool hasARM() const {
-    return !getSTI().getFeatureBits()[ARM::FeatureNoARM];
+    return !getSTI().hasFeature(ARM::FeatureNoARM);
   }
 
   bool hasDSP() const {
-    return getSTI().getFeatureBits()[ARM::FeatureDSP];
+    return getSTI().hasFeature(ARM::FeatureDSP);
   }
 
   bool hasD32() const {
-    return getSTI().getFeatureBits()[ARM::FeatureD32];
+    return getSTI().hasFeature(ARM::FeatureD32);
   }
 
   bool hasV8_1aOps() const {
-    return getSTI().getFeatureBits()[ARM::HasV8_1aOps];
+    return getSTI().hasFeature(ARM::HasV8_1aOps);
   }
 
   bool hasRAS() const {
-    return getSTI().getFeatureBits()[ARM::FeatureRAS];
+    return getSTI().hasFeature(ARM::FeatureRAS);
   }
 
   void SwitchMode() {
@@ -607,7 +607,7 @@ class ARMAsmParser : public MCTargetAsmParser {
   void FixModeAfterArchChange(bool WasThumb, SMLoc Loc);
 
   bool isMClass() const {
-    return getSTI().getFeatureBits()[ARM::FeatureMClass];
+    return getSTI().hasFeature(ARM::FeatureMClass);
   }
 
   /// @name Auto-generated Match Functions
@@ -8798,7 +8798,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
       // before passing it to the ADR instruction.
       unsigned Enc = Inst.getOperand(2).getImm();
       TmpInst.addOperand(MCOperand::createImm(
-        ARM_AM::rotr32(Enc & 0xFF, (Enc & 0xF00) >> 7)));
+          llvm::rotr<uint32_t>(Enc & 0xFF, (Enc & 0xF00) >> 7)));
     } else {
       // Turn PC-relative expression into absolute expression.
       // Reading PC provides the start of the current instruction + 8 and
@@ -11422,7 +11422,7 @@ bool ARMAsmParser::parseDirectiveEabiAttr(SMLoc L) {
     Tag = CE->getValue();
   }
 
-  if (Parser.parseToken(AsmToken::Comma, "comma expected"))
+  if (Parser.parseComma())
     return true;
 
   StringRef StringValue = "";
@@ -11456,7 +11456,7 @@ bool ARMAsmParser::parseDirectiveEabiAttr(SMLoc L) {
   }
 
   if (Tag == ARMBuildAttrs::compatibility) {
-    if (Parser.parseToken(AsmToken::Comma, "comma expected"))
+    if (Parser.parseComma())
       return true;
   }
 
@@ -11668,7 +11668,7 @@ bool ARMAsmParser::parseDirectiveSetFP(SMLoc L) {
   int FPReg = tryParseRegister();
 
   if (check(FPReg == -1, FPRegLoc, "frame pointer register expected") ||
-      Parser.parseToken(AsmToken::Comma, "comma expected"))
+      Parser.parseComma())
     return true;
 
   // Parse spreg
@@ -11927,7 +11927,7 @@ bool ARMAsmParser::parseDirectiveUnwindRaw(SMLoc L) {
 
   StackOffset = CE->getValue();
 
-  if (Parser.parseToken(AsmToken::Comma, "expected comma"))
+  if (Parser.parseComma())
     return true;
 
   SmallVector<uint8_t, 16> Opcodes;
@@ -12071,7 +12071,7 @@ bool ARMAsmParser::parseDirectiveThumbSet(SMLoc L) {
   StringRef Name;
   if (check(Parser.parseIdentifier(Name),
             "expected identifier after '.thumb_set'") ||
-      parseToken(AsmToken::Comma, "expected comma after name '" + Name + "'"))
+      Parser.parseComma())
     return true;
 
   MCSymbol *Sym;

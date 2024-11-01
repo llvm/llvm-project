@@ -14,12 +14,25 @@ set(LIBC_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 # The top-level directory in which libc is being built.
 set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-# For a runtimes build we need to manually include tablgen and LLVM directories.
-if ("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
-  include(TableGen)
-  set(LLVM_LIBC_INCLUDE_DIRS ${LLVM_MAIN_INCLUDE_DIR} ${LLVM_BINARY_DIR}/include)
+if(LLVM_LIBC_FULL_BUILD)
+  if(NOT LIBC_HDRGEN_EXE)
+    # We need to set up hdrgen first since other targets depend on it.
+    add_subdirectory(utils/LibcTableGenUtil)
+    add_subdirectory(utils/HdrGen)
+  else()
+    message(STATUS "Will use ${LIBC_HDRGEN_EXE} for libc header generation.")
+  endif()
 endif()
 
+if(LLVM_ENABLE_RUNTIMES AND NOT LLVM_RUNTIMES_BUILD)
+  # When libc is build as part of the runtimes/bootstrap build's CMake run, we
+  # only need to build the host tools to build the libc. So, we just do enough
+  # to build libc-hdrgen and return.
+  return()
+endif()
+
+option(LIBC_CMAKE_VERBOSE_LOGGING
+       "Log details warnings and notifications during CMake configuration." OFF)
 # Path libc/scripts directory.
 set(LIBC_BUILD_SCRIPTS_DIR "${LIBC_SOURCE_DIR}/utils/build_scripts")
 
@@ -150,19 +163,8 @@ foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
   list(APPEND TARGET_ENTRYPOINT_NAME_LIST ${entrypoint_name})
 endforeach()
 
-if(LLVM_LIBC_FULL_BUILD)
-  # We need to set up hdrgen first since other targets depend on it.
-  add_subdirectory(utils/LibcTableGenUtil)
-  add_subdirectory(utils/HdrGen)
-endif()
-
-set(LIBC_TARGET)
-set(LIBC_COMPONENT)
 set(LIBC_INSTALL_DEPENDS)
-set(LIBC_INSTALL_TARGET)
 if(LLVM_LIBC_FULL_BUILD)
-  set(LIBC_TARGET libc)
-  set(LIBC_COMPONENT libc)
   set(LIBC_INSTALL_DEPENDS "install-libc-static-archives;install-libc-headers")
   if(NOT LIBC_TARGET_OS_IS_BAREMETAL)
     # For now we will disable libc-startup installation for baremetal. The
@@ -170,18 +172,8 @@ if(LLVM_LIBC_FULL_BUILD)
     # and install it as part of the libc installation.
     list(APPEND LIBC_INSTALL_DEPENDS "libc-startup")
   endif()
-  set(LIBC_INSTALL_TARGET install-libc)
-  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
-    set(LIBC_ARCHIVE_NAME cgpu)
-  else()
-    set(LIBC_ARCHIVE_NAME c)
-  endif()
 else()
-  set(LIBC_TARGET llvmlibc)
-  set(LIBC_COMPONENT llvmlibc)
   set(LIBC_INSTALL_DEPENDS install-libc-static-archives)
-  set(LIBC_INSTALL_TARGET install-llvmlibc)
-  set(LIBC_ARCHIVE_NAME llvmlibc)
 endif()
 
 add_subdirectory(include)
@@ -223,7 +215,7 @@ if(LLVM_LIBC_FULL_BUILD)
 endif()
 
 add_llvm_install_targets(
-  ${LIBC_INSTALL_TARGET}
+  install-libc
   DEPENDS ${LIBC_INSTALL_DEPENDS}
-  COMPONENT ${LIBC_COMPONENT}
+  COMPONENT libc
 )

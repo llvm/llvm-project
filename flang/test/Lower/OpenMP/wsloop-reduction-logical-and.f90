@@ -29,7 +29,7 @@
 !CHECK:      %[[SUBI:.*]] = arith.subi %[[CONVI_64]], %[[C1_64]] : i64
 !CHECK:      %[[Y_PVT_REF:.*]] = fir.coordinate_of %[[ARRAY]], %[[SUBI]] : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
 !CHECK:      %[[YVAL:.*]] = fir.load %[[Y_PVT_REF]] : !fir.ref<!fir.logical<4>>
-!CHECK:      omp.reduction %[[YVAL]], %[[XREF]] : !fir.ref<!fir.logical<4>>
+!CHECK:      omp.reduction %[[YVAL]], %[[XREF]] : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 !CHECK:      omp.yield
 !CHECK:    omp.terminator
 !CHECK:  return
@@ -62,7 +62,7 @@ end subroutine
 !CHECK:      %[[SUBI:.*]] = arith.subi %[[CONVI_64]], %[[C1_64]] : i64
 !CHECK:      %[[Y_PVT_REF:.*]] = fir.coordinate_of %[[ARRAY]], %[[SUBI]] : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
 !CHECK:      %[[YVAL:.*]] = fir.load %[[Y_PVT_REF]] : !fir.ref<!fir.logical<4>>
-!CHECK:      omp.reduction %[[YVAL]], %[[XREF]] : !fir.ref<!fir.logical<4>>
+!CHECK:      omp.reduction %[[YVAL]], %[[XREF]] : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 !CHECK:      omp.yield
 !CHECK:    omp.terminator
 !CHECK:  return
@@ -97,21 +97,21 @@ end subroutine
 !CHECK:      %[[SUBI_1:.*]] = arith.subi %[[CONVI_64_1]], %[[C1_64]] : i64
 !CHECK:      %[[W_PVT_REF_1:.*]] = fir.coordinate_of %[[ARRAY]], %[[SUBI_1]] : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
 !CHECK:      %[[WVAL:.*]] = fir.load %[[W_PVT_REF_1]] : !fir.ref<!fir.logical<4>>
-!CHECK:      omp.reduction %[[WVAL]], %[[XREF]] : !fir.ref<!fir.logical<4>>
+!CHECK:      omp.reduction %[[WVAL]], %[[XREF]] : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 !CHECK:      %[[I_PVT_VAL2:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
 !CHECK:      %[[CONVI_64_2:.*]] = fir.convert %[[I_PVT_VAL2]] : (i32) -> i64
 !CHECK:      %[[C1_64:.*]] = arith.constant 1 : i64
 !CHECK:      %[[SUBI_2:.*]] = arith.subi %[[CONVI_64_2]], %[[C1_64]] : i64
 !CHECK:      %[[W_PVT_REF_2:.*]] = fir.coordinate_of %[[ARRAY]], %[[SUBI_2]] : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
 !CHECK:      %[[WVAL:.*]] = fir.load %[[W_PVT_REF_2]] : !fir.ref<!fir.logical<4>>
-!CHECK:      omp.reduction %[[WVAL]], %[[YREF]] : !fir.ref<!fir.logical<4>>
+!CHECK:      omp.reduction %[[WVAL]], %[[YREF]] : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 !CHECK:      %[[I_PVT_VAL3:.*]] = fir.load %[[I_PVT_REF]] : !fir.ref<i32>
 !CHECK:      %[[CONVI_64_3:.*]] = fir.convert %[[I_PVT_VAL3]] : (i32) -> i64
 !CHECK:      %[[C1_64:.*]] = arith.constant 1 : i64
 !CHECK:      %[[SUBI_3:.*]] = arith.subi %[[CONVI_64_3]], %[[C1_64]] : i64
 !CHECK:      %[[W_PVT_REF_3:.*]] = fir.coordinate_of %[[ARRAY]], %[[SUBI_3]] : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
 !CHECK:      %[[WVAL:.*]] = fir.load %[[W_PVT_REF_3]] : !fir.ref<!fir.logical<4>>
-!CHECK:      omp.reduction %[[WVAL]], %[[ZREF]] : !fir.ref<!fir.logical<4>>
+!CHECK:      omp.reduction %[[WVAL]], %[[ZREF]] : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 !CHECK:      omp.yield
 !CHECK:    omp.terminator
 !CHECK:  return

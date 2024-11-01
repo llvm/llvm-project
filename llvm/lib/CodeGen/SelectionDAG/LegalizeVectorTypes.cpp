@@ -4863,7 +4863,16 @@ SDValue DAGTypeLegalizer::WidenVecRes_BITCAST(SDNode *N) {
       NewInVT = EVT::getVectorVT(*DAG.getContext(), InEltVT,
                                  WidenSize / InEltVT.getSizeInBits());
     } else {
-      NewInVT = EVT::getVectorVT(*DAG.getContext(), InVT, NewNumParts);
+      // For big endian systems, using the promoted input scalar type
+      // to produce the scalar_to_vector would put the desired bits into
+      // the least significant byte(s) of the wider element zero. This
+      // will mean that the users of the result vector are using incorrect
+      // bits. Use the original input type instead. Although either input
+      // type can be used on little endian systems, for consistency we
+      // use the original type there as well.
+      EVT OrigInVT = N->getOperand(0).getValueType();
+      NewNumParts = WidenSize / OrigInVT.getSizeInBits();
+      NewInVT = EVT::getVectorVT(*DAG.getContext(), OrigInVT, NewNumParts);
     }
 
     if (TLI.isTypeLegal(NewInVT)) {

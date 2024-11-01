@@ -14,6 +14,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
@@ -629,8 +630,8 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
       goto module_decl;
 
     // Note: no need to handle kw_import here. We only form kw_import under
-    // the Modules TS, and in that case 'export import' is parsed as an
-    // export-declaration containing an import-declaration.
+    // the Standard C++ Modules, and in that case 'export import' is parsed as
+    // an export-declaration containing an import-declaration.
 
     // Recognize context-sensitive C++20 'export module' and 'export import'
     // declarations.
@@ -785,7 +786,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
 ///
 /// [C++0x/GNU] 'extern' 'template' declaration
 ///
-/// [Modules-TS] module-import-declaration
+/// [C++20] module-import-declaration
 ///
 Parser::DeclGroupPtrTy
 Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
@@ -937,7 +938,7 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     SingleDecl = ParseModuleImport(SourceLocation(), IS);
   } break;
   case tok::kw_export:
-    if (getLangOpts().CPlusPlusModules || getLangOpts().ModulesTS) {
+    if (getLangOpts().CPlusPlusModules) {
       ProhibitAttributes(Attrs);
       SingleDecl = ParseExportDeclaration();
       break;
@@ -1404,6 +1405,17 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     if (BodyKind == Sema::FnBodyKind::Other)
       SkipFunctionBody();
 
+    // ExpressionEvaluationContext is pushed in ActOnStartOfFunctionDef
+    // and it would be popped in ActOnFinishFunctionBody.
+    // We pop it explcitly here since ActOnFinishFunctionBody won't get called.
+    //
+    // Do not call PopExpressionEvaluationContext() if it is a lambda because
+    // one is already popped when finishing the lambda in BuildLambdaExpr().
+    //
+    // FIXME: It looks not easy to balance PushExpressionEvaluationContext()
+    // and PopExpressionEvaluationContext().
+    if (!isLambdaCallOperator(dyn_cast_if_present<FunctionDecl>(Res)))
+      Actions.PopExpressionEvaluationContext();
     return Res;
   }
 
@@ -2376,7 +2388,7 @@ void Parser::ParseMicrosoftIfExistsExternalDeclaration() {
 /// Parse a declaration beginning with the 'module' keyword or C++20
 /// context-sensitive keyword (optionally preceded by 'export').
 ///
-///   module-declaration:   [Modules TS + P0629R0]
+///   module-declaration:   [C++20]
 ///     'export'[opt] 'module' module-name attribute-specifier-seq[opt] ';'
 ///
 ///   global-module-fragment:  [C++2a]
@@ -2602,7 +2614,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
   return Import.get();
 }
 
-/// Parse a C++ Modules TS / Objective-C module name (both forms use the same
+/// Parse a C++ / Objective-C module name (both forms use the same
 /// grammar).
 ///
 ///         module-name:

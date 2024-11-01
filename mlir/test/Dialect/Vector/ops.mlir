@@ -401,10 +401,17 @@ func.func @constant_vector_mask() {
   return
 }
 
-// CHECK-LABEL: @vector_print
-func.func @vector_print(%arg0: vector<8x4xf32>) {
+// CHECK-LABEL: @vector_print_on_vector
+func.func @vector_print_on_vector(%arg0: vector<8x4xf32>) {
   // CHECK: vector.print %{{.*}} : vector<8x4xf32>
   vector.print %arg0 : vector<8x4xf32>
+  return
+}
+
+// CHECK-LABEL: @vector_print_on_scalar
+func.func @vector_print_on_scalar(%arg0: i64) {
+  // CHECK: vector.print %{{.*}} : i64
+  vector.print %arg0 : i64
   return
 }
 

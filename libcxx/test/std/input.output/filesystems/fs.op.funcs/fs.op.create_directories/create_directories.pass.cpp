@@ -20,15 +20,13 @@
 #include <type_traits>
 #include <cassert>
 
+#include "assert_macros.h"
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 
 using namespace fs;
 
-TEST_SUITE(filesystem_create_directories_test_suite)
-
-TEST_CASE(test_signatures)
+static void test_signatures()
 {
     const path p; ((void)p);
     std::error_code ec; ((void)ec);
@@ -38,37 +36,37 @@ TEST_CASE(test_signatures)
     ASSERT_NOT_NOEXCEPT(fs::create_directories(p, ec));
 }
 
-TEST_CASE(create_existing_directory)
+static void create_existing_directory()
 {
     scoped_test_env env;
     const path dir = env.create_dir("dir1");
     std::error_code ec;
-    TEST_CHECK(fs::create_directories(dir, ec) == false);
-    TEST_CHECK(!ec);
-    TEST_CHECK(is_directory(dir));
+    assert(fs::create_directories(dir, ec) == false);
+    assert(!ec);
+    assert(is_directory(dir));
 }
 
-TEST_CASE(create_directory_one_level)
+static void create_directory_one_level()
 {
     scoped_test_env env;
     const path dir = env.make_env_path("dir1");
     std::error_code ec;
-    TEST_CHECK(fs::create_directories(dir, ec) == true);
-    TEST_CHECK(!ec);
-    TEST_CHECK(is_directory(dir));
+    assert(fs::create_directories(dir, ec) == true);
+    assert(!ec);
+    assert(is_directory(dir));
 }
 
-TEST_CASE(create_directories_multi_level)
+static void create_directories_multi_level()
 {
     scoped_test_env env;
     const path dir = env.make_env_path("dir1/dir2/dir3");
     std::error_code ec;
-    TEST_CHECK(fs::create_directories(dir, ec) == true);
-    TEST_CHECK(!ec);
-    TEST_CHECK(is_directory(dir));
+    assert(fs::create_directories(dir, ec) == true);
+    assert(!ec);
+    assert(is_directory(dir));
 }
 
-TEST_CASE(create_directory_symlinks) {
+static void create_directory_symlinks() {
   scoped_test_env env;
   const path root = env.create_dir("dir");
   const path sym_dest_dead = env.make_env_path("dead");
@@ -76,82 +74,82 @@ TEST_CASE(create_directory_symlinks) {
   const path target = env.make_env_path("dir/sym_dir/foo");
   {
     std::error_code ec = GetTestEC();
-    TEST_CHECK(create_directories(target, ec) == false);
-    TEST_CHECK(ec);
-    TEST_CHECK(ErrorIs(ec, std::errc::file_exists));
-    TEST_CHECK(!exists(sym_dest_dead));
-    TEST_CHECK(!exists(dead_sym));
+    assert(create_directories(target, ec) == false);
+    assert(ec);
+    assert(ErrorIs(ec, std::errc::file_exists));
+    assert(!exists(sym_dest_dead));
+    assert(!exists(dead_sym));
   }
 }
 
-TEST_CASE(create_directory_through_symlinks) {
+static void create_directory_through_symlinks() {
   scoped_test_env env;
   const path root = env.create_dir("dir");
   const path sym_dir = env.create_directory_symlink(root, "sym_dir");
   const path target = env.make_env_path("sym_dir/foo");
   const path resolved_target = env.make_env_path("dir/foo");
-  TEST_REQUIRE(is_directory(sym_dir));
+  assert(is_directory(sym_dir));
   {
     std::error_code ec = GetTestEC();
-    TEST_CHECK(create_directories(target, ec) == true);
-    TEST_CHECK(!ec);
-    TEST_CHECK(is_directory(target));
-    TEST_CHECK(is_directory(resolved_target));
+    assert(create_directories(target, ec) == true);
+    assert(!ec);
+    assert(is_directory(target));
+    assert(is_directory(resolved_target));
   }
 }
 
-TEST_CASE(dest_is_file)
+static void dest_is_file()
 {
     scoped_test_env env;
     const path file = env.create_file("file", 42);
     std::error_code ec = GetTestEC();
-    TEST_CHECK(fs::create_directories(file, ec) == false);
-    TEST_CHECK(ec);
-    TEST_CHECK(ErrorIs(ec, std::errc::file_exists));
-    TEST_CHECK(is_regular_file(file));
+    assert(fs::create_directories(file, ec) == false);
+    assert(ec);
+    assert(ErrorIs(ec, std::errc::file_exists));
+    assert(is_regular_file(file));
 }
 
-TEST_CASE(dest_part_is_file)
+static void dest_part_is_file()
 {
     scoped_test_env env;
     const path file = env.create_file("file");
     const path dir = env.make_env_path("file/dir1");
     std::error_code ec = GetTestEC();
-    TEST_CHECK(fs::create_directories(dir, ec) == false);
-    TEST_CHECK(ec);
-    TEST_CHECK(ErrorIs(ec, std::errc::not_a_directory));
-    TEST_CHECK(is_regular_file(file));
-    TEST_CHECK(!exists(dir));
+    assert(fs::create_directories(dir, ec) == false);
+    assert(ec);
+    assert(ErrorIs(ec, std::errc::not_a_directory));
+    assert(is_regular_file(file));
+    assert(!exists(dir));
 }
 
-TEST_CASE(dest_final_part_is_file)
+static void dest_final_part_is_file()
 {
     scoped_test_env env;
     env.create_dir("dir");
     const path file = env.create_file("dir/file");
     const path dir = env.make_env_path("dir/file/dir1");
     std::error_code ec = GetTestEC();
-    TEST_CHECK(fs::create_directories(dir, ec) == false);
-    TEST_CHECK(ec);
-    TEST_CHECK(ErrorIs(ec, std::errc::not_a_directory));
-    TEST_CHECK(is_regular_file(file));
-    TEST_CHECK(!exists(dir));
+    assert(fs::create_directories(dir, ec) == false);
+    assert(ec);
+    assert(ErrorIs(ec, std::errc::not_a_directory));
+    assert(is_regular_file(file));
+    assert(!exists(dir));
 }
 
-TEST_CASE(dest_is_empty_path)
+static void dest_is_empty_path()
 {
     std::error_code ec = GetTestEC();
-    TEST_CHECK(fs::create_directories(fs::path{}, ec) == false);
-    TEST_CHECK(ec);
-    TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));
+    assert(fs::create_directories(fs::path{}, ec) == false);
+    assert(ec);
+    assert(ErrorIs(ec, std::errc::no_such_file_or_directory));
     ExceptionChecker Checker(path{}, std::errc::no_such_file_or_directory,
                              "create_directories");
-    TEST_CHECK_THROW_RESULT(filesystem_error, Checker,
+    TEST_VALIDATE_EXCEPTION(filesystem_error, Checker,
                             fs::create_directories(path{}));
 }
 
 #ifdef _WIN32
-TEST_CASE(nonexistent_root)
+static void nonexistent_root()
 {
     std::error_code ec = GetTestEC();
     // If Q:\ doesn't exist, create_directories would try to recurse upwards
@@ -159,9 +157,25 @@ TEST_CASE(nonexistent_root)
     // whole path is the root name, parent_path() returns itself, and it
     // would recurse indefinitely, unless the recursion is broken.
     if (!exists("Q:\\"))
-       TEST_CHECK(fs::create_directories("Q:\\", ec) == false);
-    TEST_CHECK(fs::create_directories("\\\\nonexistentserver", ec) == false);
+       assert(fs::create_directories("Q:\\", ec) == false);
+    assert(fs::create_directories("\\\\nonexistentserver", ec) == false);
 }
+#endif // _WIN32
+
+int main(int, char**) {
+    test_signatures();
+    create_existing_directory();
+    create_directory_one_level();
+    create_directories_multi_level();
+    create_directory_symlinks();
+    create_directory_through_symlinks();
+    dest_is_file();
+    dest_part_is_file();
+    dest_final_part_is_file();
+    dest_is_empty_path();
+#ifdef _WIN32
+    nonexistent_root();
 #endif
 
-TEST_SUITE_END()
+    return 0;
+}

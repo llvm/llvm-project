@@ -39,6 +39,7 @@ struct kernel_descriptor_t;
 
 class AMDGPUAsmPrinter final : public AsmPrinter {
 private:
+  unsigned CodeObjectVersion;
   void initializeTargetID(const Module &M);
 
   AMDGPUResourceUsageAnalysis *ResourceUsage;
@@ -90,6 +91,7 @@ public:
 
   AMDGPUTargetStreamer* getTargetStreamer() const;
 
+  bool doInitialization(Module &M) override;
   bool doFinalization(Module &M) override;
   bool runOnMachineFunction(MachineFunction &MF) override;
 

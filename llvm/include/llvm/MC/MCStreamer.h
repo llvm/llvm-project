@@ -22,11 +22,11 @@
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCWinEH.h"
-#include "llvm/Support/ARMTargetParser.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -214,6 +214,10 @@ class MCStreamer {
   std::unique_ptr<MCTargetStreamer> TargetStreamer;
 
   std::vector<MCDwarfFrameInfo> DwarfFrameInfos;
+  // This is a pair of index into DwarfFrameInfos and the MCSection associated
+  // with the frame. Note, we use an index instead of an iterator because they
+  // can be invalidated in std::vector.
+  SmallVector<std::pair<size_t, MCSection *>, 1> FrameInfoStack;
   MCDwarfFrameInfo *getCurrentDwarfFrameInfo();
 
   /// Similar to DwarfFrameInfos, but for SEH unwind info. Chained frames may

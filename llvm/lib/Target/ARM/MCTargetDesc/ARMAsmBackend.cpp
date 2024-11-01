@@ -17,6 +17,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
@@ -29,13 +30,12 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/TargetParser.h"
 using namespace llvm;
 
 namespace {
@@ -208,8 +208,8 @@ void ARMAsmBackend::handleAssemblerFlag(MCAssemblerFlag Flag) {
 
 unsigned ARMAsmBackend::getRelaxedOpcode(unsigned Op,
                                          const MCSubtargetInfo &STI) const {
-  bool HasThumb2 = STI.getFeatureBits()[ARM::FeatureThumb2];
-  bool HasV8MBaselineOps = STI.getFeatureBits()[ARM::HasV8MBaselineOps];
+  bool HasThumb2 = STI.hasFeature(ARM::FeatureThumb2);
+  bool HasV8MBaselineOps = STI.hasFeature(ARM::HasV8MBaselineOps);
 
   switch (Op) {
   default:
@@ -604,9 +604,9 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   }
   case ARM::fixup_arm_thumb_bl: {
     if (!isInt<25>(Value - 4) ||
-        (!STI->getFeatureBits()[ARM::FeatureThumb2] &&
-         !STI->getFeatureBits()[ARM::HasV8MBaselineOps] &&
-         !STI->getFeatureBits()[ARM::HasV6MOps] &&
+        (!STI->hasFeature(ARM::FeatureThumb2) &&
+         !STI->hasFeature(ARM::HasV8MBaselineOps) &&
+         !STI->hasFeature(ARM::HasV6MOps) &&
          !isInt<23>(Value - 4))) {
       Ctx.reportError(Fixup.getLoc(), "Relocation out of range");
       return 0;
@@ -679,7 +679,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     // On CPUs supporting Thumb2, this will be relaxed to an ldr.w, otherwise we
     // could have an error on our hands.
     assert(STI != nullptr);
-    if (!STI->getFeatureBits()[ARM::FeatureThumb2] && IsResolved) {
+    if (!STI->hasFeature(ARM::FeatureThumb2) && IsResolved) {
       const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
       if (FixupDiagnostic) {
         Ctx.reportError(Fixup.getLoc(), FixupDiagnostic);
@@ -704,8 +704,8 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   case ARM::fixup_arm_thumb_br:
     // Offset by 4 and don't encode the lower bit, which is always 0.
     assert(STI != nullptr);
-    if (!STI->getFeatureBits()[ARM::FeatureThumb2] &&
-        !STI->getFeatureBits()[ARM::HasV8MBaselineOps]) {
+    if (!STI->hasFeature(ARM::FeatureThumb2) &&
+        !STI->hasFeature(ARM::HasV8MBaselineOps)) {
       const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
       if (FixupDiagnostic) {
         Ctx.reportError(Fixup.getLoc(), FixupDiagnostic);
@@ -716,7 +716,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   case ARM::fixup_arm_thumb_bcc:
     // Offset by 4 and don't encode the lower bit, which is always 0.
     assert(STI != nullptr);
-    if (!STI->getFeatureBits()[ARM::FeatureThumb2]) {
+    if (!STI->hasFeature(ARM::FeatureThumb2)) {
       const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
       if (FixupDiagnostic) {
         Ctx.reportError(Fixup.getLoc(), FixupDiagnostic);

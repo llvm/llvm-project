@@ -87,7 +87,7 @@ public:
   static std::optional<TypeAndShape> Characterize(
       const ActualArgument &, FoldingContext &);
 
-  // Handle Expr<T> & Designator<T>
+  // General case for Expr<T>, ActualArgument, &c.
   template <typename A>
   static std::optional<TypeAndShape> Characterize(
       const A &x, FoldingContext &context) {
@@ -104,6 +104,26 @@ public:
             result.set_LEN(std::move(*length));
           }
         }
+      }
+      return std::move(result.Rewrite(context));
+    }
+    return std::nullopt;
+  }
+
+  // Specialization for character designators
+  template <int KIND>
+  static std::optional<TypeAndShape> Characterize(
+      const Designator<Type<TypeCategory::Character, KIND>> &x,
+      FoldingContext &context) {
+    if (const auto *symbol{UnwrapWholeSymbolOrComponentDataRef(x)}) {
+      if (auto result{Characterize(*symbol, context)}) {
+        return result;
+      }
+    }
+    if (auto type{x.GetType()}) {
+      TypeAndShape result{*type, GetShape(context, x)};
+      if (auto length{x.LEN()}) {
+        result.set_LEN(std::move(*length));
       }
       return std::move(result.Rewrite(context));
     }

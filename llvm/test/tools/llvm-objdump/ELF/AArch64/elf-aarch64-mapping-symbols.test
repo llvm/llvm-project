@@ -17,7 +17,7 @@ mystr:
 
 # CHECK: Disassembly of section .mysection:
 # CHECK: <_start>:
-# CHECK:        0:       10000021        adr     x1, #4
+# CHECK:        0:       10000021        adr     x1, 0x4
 # CHECK: <msg>:
 # CHECK:        4:       48 65 6c 6c     .word
 # CHECK:        8:       6f 2c 20 77     .word

@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/arg_list.h"
+#include "src/__support/common.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_config.h"
 
@@ -19,36 +20,30 @@
 namespace __llvm_libc {
 namespace printf_core {
 
+#ifndef LIBC_COPT_MOCK_ARG_LIST
+using ArgProvider = internal::ArgList;
+#else  // not defined LIBC_COPT_MOCK_ARG_LIST
+using ArgProvider = internal::MockArgList;
+#endif // LIBC_COPT_MOCK_ARG_LIST
+
 class Parser {
   const char *__restrict str;
 
   size_t cur_pos = 0;
-  internal::ArgList args_cur;
+  ArgProvider args_cur;
 
-#ifndef LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
   // args_start stores the start of the va_args, which is allows getting the
   // value of arguments that have already been passed. args_index is tracked so
   // that we know which argument args_cur is on.
-  internal::ArgList args_start;
+  ArgProvider args_start;
   size_t args_index = 1;
 
-  enum PrimaryType : uint8_t { Integer = 0, Float = 1, Pointer = 2 };
-
-  // TypeDesc stores the information about a type that is relevant to printf in
-  // a relatively compact manner.
-  struct TypeDesc {
-    uint8_t size;
-    PrimaryType primary_type;
-    constexpr bool operator==(const TypeDesc &other) const {
-      return (size == other.size) && (primary_type == other.primary_type);
-    }
-  };
-
   // Defined in printf_config.h
-  static constexpr size_t DESC_ARR_LEN = LLVM_LIBC_PRINTF_INDEX_ARR_LEN;
+  static constexpr size_t DESC_ARR_LEN = LIBC_COPT_PRINTF_INDEX_ARR_LEN;
 
-  // desc_arr stores the sizes of the variables in the ArgList. This is used in
-  // index mode to reduce repeated string parsing. The sizes are stored as
+  // desc_arr stores the sizes of the variables in the ArgProvider. This is used
+  // in index mode to reduce repeated string parsing. The sizes are stored as
   // TypeDesc objects, which store the size as well as minimal type information.
   // This is necessary because some systems separate the floating point and
   // integer values in va_args.
@@ -56,16 +51,16 @@ class Parser {
 
   // TODO: Look into object stores for optimization.
 
-#endif // LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 
 public:
-#ifndef LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
-  Parser(const char *__restrict new_str, internal::ArgList &args)
+#ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
+  LIBC_INLINE Parser(const char *__restrict new_str, ArgProvider &args)
       : str(new_str), args_cur(args), args_start(args) {}
 #else
-  Parser(const char *__restrict new_str, internal::ArgList &args)
+  LIBC_INLINE Parser(const char *__restrict new_str, ArgProvider &args)
       : str(new_str), args_cur(args) {}
-#endif // LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 
   // get_next_section will parse the format string until it has a fully
   // specified format section. This can either be a raw format section with no
@@ -87,7 +82,7 @@ private:
   LengthModifier parse_length_modifier(size_t *local_pos);
 
   // get_next_arg_value gets the next value from the arg list as type T.
-  template <class T> T inline get_next_arg_value() {
+  template <class T> LIBC_INLINE T get_next_arg_value() {
     return args_cur.next_var<T>();
   }
 
@@ -95,7 +90,7 @@ private:
   // INDEX MODE ONLY FUNCTIONS AFTER HERE:
   //----------------------------------------------------
 
-#ifndef LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 
   // parse_index parses the index of a value inside a format string. It
   // assumes that str[*local_pos] points to character after a '%' or '*', and
@@ -104,20 +99,7 @@ private:
   // local_pos.
   size_t parse_index(size_t *local_pos);
 
-  template <typename T> static constexpr TypeDesc get_type_desc() {
-    if constexpr (cpp::is_same_v<T, void>) {
-      return TypeDesc{0, PrimaryType::Integer};
-    } else {
-      constexpr bool isPointer = cpp::is_same_v<T, void *>;
-      constexpr bool isFloat =
-          cpp::is_same_v<T, double> || cpp::is_same_v<T, long double>;
-      return TypeDesc{sizeof(T), isPointer ? PrimaryType::Pointer
-                                 : isFloat ? PrimaryType::Float
-                                           : PrimaryType::Integer};
-    }
-  }
-
-  void inline set_type_desc(size_t index, TypeDesc value) {
+  LIBC_INLINE void set_type_desc(size_t index, TypeDesc value) {
     if (index != 0 && index <= DESC_ARR_LEN)
       desc_arr[index - 1] = value;
   }
@@ -125,17 +107,17 @@ private:
   // get_arg_value gets the value from the arg list at index (starting at 1).
   // This may require parsing the format string. An index of 0 is interpreted as
   // the next value.
-  template <class T> T inline get_arg_value(size_t index) {
+  template <class T> LIBC_INLINE T get_arg_value(size_t index) {
     if (!(index == 0 || index == args_index))
       args_to_index(index);
 
-    set_type_desc(index, get_type_desc<T>());
+    set_type_desc(index, type_desc_from_type<T>());
 
     ++args_index;
     return get_next_arg_value<T>();
   }
 
-  // the ArgList can only return the next item in the list. This function is
+  // the ArgProvider can only return the next item in the list. This function is
   // used in index mode when the item that needs to be read is not the next one.
   // It moves cur_args to the index requested so the the appropriate value may
   // be read. This may involve parsing the format string, and is in the worst
@@ -148,7 +130,7 @@ private:
   // modify cur_pos.
   TypeDesc get_type_desc(size_t index);
 
-#endif // LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
+#endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 };
 
 } // namespace printf_core

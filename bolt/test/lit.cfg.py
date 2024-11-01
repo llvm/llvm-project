@@ -93,6 +93,7 @@ tools = [
     ToolSubst('merge-fdata', unresolved='fatal'),
     ToolSubst('llvm-readobj', unresolved='fatal'),
     ToolSubst('llvm-dwp', unresolved='fatal'),
+    ToolSubst('split-file', unresolved='fatal'),
 ]
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 

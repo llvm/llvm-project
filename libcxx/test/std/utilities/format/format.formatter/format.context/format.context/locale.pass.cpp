@@ -17,6 +17,7 @@
 // std::locale locale();
 
 #include <format>
+#include <iterator>
 #include <cassert>
 
 #include "make_string.h"

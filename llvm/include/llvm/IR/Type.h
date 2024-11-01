@@ -502,6 +502,8 @@ public:
   static PointerType *getInt16PtrTy(LLVMContext &C, unsigned AS = 0);
   static PointerType *getInt32PtrTy(LLVMContext &C, unsigned AS = 0);
   static PointerType *getInt64PtrTy(LLVMContext &C, unsigned AS = 0);
+  static Type *getWasm_ExternrefTy(LLVMContext &C);
+  static Type *getWasm_FuncrefTy(LLVMContext &C);
 
   /// Return a pointer to the current type. This is equivalent to
   /// PointerType::get(Foo, AddrSpace).

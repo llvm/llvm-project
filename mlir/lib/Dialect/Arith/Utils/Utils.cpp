@@ -23,8 +23,8 @@ detail::op_matcher<arith::ConstantIndexOp> mlir::matchConstantIndex() {
   return detail::op_matcher<arith::ConstantIndexOp>();
 }
 
-/// Detects the `values` produced by a ConstantIndexOp and places the new
-/// constant in place of the corresponding sentinel value.
+// Detects the `values` produced by a ConstantIndexOp and places the new
+// constant in place of the corresponding sentinel value.
 void mlir::canonicalizeSubViewPart(
     SmallVectorImpl<OpFoldResult> &values,
     llvm::function_ref<bool(int64_t)> isDynamic) {
@@ -36,6 +36,25 @@ void mlir::canonicalizeSubViewPart(
             ofr.dyn_cast<Value>().getDefiningOp<arith::ConstantIndexOp>())
       ofr = OpBuilder(cstOp).getIndexAttr(cstOp.value());
   }
+}
+
+// Returns `success` when any of the elements in `ofrs` was produced by
+// arith::ConstantIndexOp. In that case the constant attribute replaces the
+// Value. Returns `failure` when no folding happened.
+LogicalResult mlir::foldDynamicIndexList(Builder &b,
+                                         SmallVectorImpl<OpFoldResult> &ofrs) {
+  bool valuesChanged = false;
+  for (OpFoldResult &ofr : ofrs) {
+    if (ofr.is<Attribute>())
+      continue;
+    // Newly static, move from Value to constant.
+    if (auto cstOp =
+            ofr.dyn_cast<Value>().getDefiningOp<arith::ConstantIndexOp>()) {
+      ofr = b.getIndexAttr(cstOp.value());
+      valuesChanged = true;
+    }
+  }
+  return success(valuesChanged);
 }
 
 llvm::SmallBitVector mlir::getPositionsOfShapeOne(unsigned rank,

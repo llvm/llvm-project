@@ -8,8 +8,8 @@
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/Test.h"
 
 // To test exhaustively for inputs in the range [start, stop) in parallel:
 // 1. Inherit from LlvmLibcExhaustiveTest class

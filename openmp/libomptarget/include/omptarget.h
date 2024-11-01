@@ -243,12 +243,12 @@ public:
 
   /// Check if all asynchronous operations are completed.
   ///
-  /// \note if the operations are completed, the registered post-processing
-  /// functions will be executed once and unregistered afterwards.
+  /// \note only a lightweight check. If needed, use synchronize() to query the
+  /// status of AsyncInfo before checking.
   ///
   /// \returns true if there is no pending asynchronous operations, false
   /// otherwise.
-  bool isDone();
+  bool isDone() const;
 
   /// Add a new post-processing function to be executed after synchronization.
   ///

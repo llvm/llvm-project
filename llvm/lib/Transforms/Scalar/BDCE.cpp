@@ -116,7 +116,7 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
       const uint32_t SrcBitSize = SE->getSrcTy()->getScalarSizeInBits();
       auto *const DstTy = SE->getDestTy();
       const uint32_t DestBitSize = DstTy->getScalarSizeInBits();
-      if (Demanded.countLeadingZeros() >= (DestBitSize - SrcBitSize)) {
+      if (Demanded.countl_zero() >= (DestBitSize - SrcBitSize)) {
         clearAssumptionsOfUsers(SE, DB);
         IRBuilder<> Builder(SE);
         I.replaceAllUsesWith(

@@ -73,7 +73,7 @@ void mlir::sparse_tensor::buildSparseCompiler(
   pm.addPass(memref::createExpandStridedMetadataPass());
   pm.addPass(createLowerAffinePass());
   pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
-  pm.addPass(createMemRefToLLVMConversionPass());
+  pm.addPass(createFinalizeMemRefToLLVMConversionPass());
   pm.addNestedPass<func::FuncOp>(createConvertComplexToStandardPass());
   pm.addNestedPass<mlir::func::FuncOp>(mlir::arith::createArithExpandOpsPass());
   pm.addNestedPass<func::FuncOp>(createConvertMathToLLVMPass());

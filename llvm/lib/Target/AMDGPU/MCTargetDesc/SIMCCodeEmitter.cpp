@@ -140,7 +140,7 @@ static uint32_t getLit16Encoding(uint16_t Val, const MCSubtargetInfo &STI) {
     return 247;
 
   if (Val == 0x3118 && // 1.0 / (2.0 * pi)
-      STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm])
+      STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
     return 248;
 
   return 255;
@@ -151,32 +151,32 @@ static uint32_t getLit32Encoding(uint32_t Val, const MCSubtargetInfo &STI) {
   if (IntImm != 0)
     return IntImm;
 
-  if (Val == FloatToBits(0.5f))
+  if (Val == llvm::bit_cast<uint32_t>(0.5f))
     return 240;
 
-  if (Val == FloatToBits(-0.5f))
+  if (Val == llvm::bit_cast<uint32_t>(-0.5f))
     return 241;
 
-  if (Val == FloatToBits(1.0f))
+  if (Val == llvm::bit_cast<uint32_t>(1.0f))
     return 242;
 
-  if (Val == FloatToBits(-1.0f))
+  if (Val == llvm::bit_cast<uint32_t>(-1.0f))
     return 243;
 
-  if (Val == FloatToBits(2.0f))
+  if (Val == llvm::bit_cast<uint32_t>(2.0f))
     return 244;
 
-  if (Val == FloatToBits(-2.0f))
+  if (Val == llvm::bit_cast<uint32_t>(-2.0f))
     return 245;
 
-  if (Val == FloatToBits(4.0f))
+  if (Val == llvm::bit_cast<uint32_t>(4.0f))
     return 246;
 
-  if (Val == FloatToBits(-4.0f))
+  if (Val == llvm::bit_cast<uint32_t>(-4.0f))
     return 247;
 
   if (Val == 0x3e22f983 && // 1.0 / (2.0 * pi)
-      STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm])
+      STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
     return 248;
 
   return 255;
@@ -187,32 +187,32 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI) {
   if (IntImm != 0)
     return IntImm;
 
-  if (Val == DoubleToBits(0.5))
+  if (Val == llvm::bit_cast<uint64_t>(0.5))
     return 240;
 
-  if (Val == DoubleToBits(-0.5))
+  if (Val == llvm::bit_cast<uint64_t>(-0.5))
     return 241;
 
-  if (Val == DoubleToBits(1.0))
+  if (Val == llvm::bit_cast<uint64_t>(1.0))
     return 242;
 
-  if (Val == DoubleToBits(-1.0))
+  if (Val == llvm::bit_cast<uint64_t>(-1.0))
     return 243;
 
-  if (Val == DoubleToBits(2.0))
+  if (Val == llvm::bit_cast<uint64_t>(2.0))
     return 244;
 
-  if (Val == DoubleToBits(-2.0))
+  if (Val == llvm::bit_cast<uint64_t>(-2.0))
     return 245;
 
-  if (Val == DoubleToBits(4.0))
+  if (Val == llvm::bit_cast<uint64_t>(4.0))
     return 246;
 
-  if (Val == DoubleToBits(-4.0))
+  if (Val == llvm::bit_cast<uint64_t>(-4.0))
     return 247;
 
   if (Val == 0x3fc45f306dc9c882 && // 1.0 / (2.0 * pi)
-      STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm])
+      STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
     return 248;
 
   return 255;
@@ -273,7 +273,7 @@ SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
     return getLit16Encoding(static_cast<uint16_t>(Imm), STI);
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16: {
-    if (!isUInt<16>(Imm) && STI.getFeatureBits()[AMDGPU::FeatureVOP3Literal])
+    if (!isUInt<16>(Imm) && STI.hasFeature(AMDGPU::FeatureVOP3Literal))
       return getLit32Encoding(static_cast<uint32_t>(Imm), STI);
     if (OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP16)
       return getLit16Encoding(static_cast<uint16_t>(Imm), STI);
@@ -367,8 +367,8 @@ void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
       OS.write(0);
   }
 
-  if ((bytes > 8 && STI.getFeatureBits()[AMDGPU::FeatureVOP3Literal]) ||
-      (bytes > 4 && !STI.getFeatureBits()[AMDGPU::FeatureVOP3Literal]))
+  if ((bytes > 8 && STI.hasFeature(AMDGPU::FeatureVOP3Literal)) ||
+      (bytes > 4 && !STI.hasFeature(AMDGPU::FeatureVOP3Literal)))
     return;
 
   // Do not print literals from SISrc Operands for insts with mandatory literals
@@ -419,7 +419,7 @@ void SIMCCodeEmitter::getSOPPBrEncoding(const MCInst &MI, unsigned OpNo,
     const MCExpr *Expr = MO.getExpr();
     MCFixupKind Kind = (MCFixupKind)AMDGPU::fixup_si_sopp_br;
     Fixups.push_back(MCFixup::create(0, Expr, Kind, MI.getLoc()));
-    Op = APInt::getNullValue(96);
+    Op = APInt::getZero(96);
   } else {
     getMachineOpValue(MI, MO, Op, Fixups, STI);
   }

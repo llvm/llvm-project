@@ -16,7 +16,6 @@
 #include "PPCFrameLowering.h"
 #include "PPCISelLowering.h"
 #include "PPCInstrInfo.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
@@ -24,6 +23,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCInstrItineraries.h"
+#include "llvm/TargetParser/Triple.h"
 #include <string>
 
 #define GET_SUBTARGETINFO_HEADER
@@ -239,6 +239,8 @@ public:
   bool useAA() const override;
 
   bool enableSubRegLiveness() const override;
+
+  bool enableSpillageCopyElimination() const override { return true; }
 
   /// True if the GV will be accessed via an indirect symbol.
   bool isGVIndirectSymbol(const GlobalValue *GV) const;

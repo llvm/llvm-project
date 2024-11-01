@@ -16,7 +16,7 @@
 
 using namespace llvm;
 
-SuffixTree::SuffixTree(const std::vector<unsigned> &Str) : Str(Str) {
+SuffixTree::SuffixTree(const ArrayRef<unsigned> &Str) : Str(Str) {
   Root = insertInternalNode(nullptr, EmptyIdx, EmptyIdx, 0);
   Active.Node = Root;
 
@@ -70,7 +70,7 @@ SuffixTreeNode *SuffixTree::insertInternalNode(SuffixTreeNode *Parent,
 void SuffixTree::setSuffixIndices() {
   // List of nodes we need to visit along with the current length of the
   // string.
-  std::vector<std::pair<SuffixTreeNode *, unsigned>> ToVisit;
+  SmallVector<std::pair<SuffixTreeNode *, unsigned>> ToVisit;
 
   // Current node being visited.
   SuffixTreeNode *CurrNode = Root;

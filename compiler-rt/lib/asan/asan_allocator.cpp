@@ -1100,6 +1100,10 @@ uptr GetUserBegin(uptr chunk) {
   return m ? m->Beg() : 0;
 }
 
+uptr GetUserAddr(uptr chunk) {
+  return chunk;
+}
+
 LsanMetadata::LsanMetadata(uptr chunk) {
   metadata_ = chunk ? reinterpret_cast<void *>(chunk - __asan::kChunkHeaderSize)
                     : nullptr;

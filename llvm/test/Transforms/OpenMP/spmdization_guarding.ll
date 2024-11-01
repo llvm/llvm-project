@@ -49,6 +49,7 @@ target triple = "nvptx64"
 ; CHECK: @[[__OMP_OFFLOADING_2A_FBFA7A_SEQUENTIAL_LOOP_L6_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
 ; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [1 x ptr] [ptr @__omp_offloading_2a_fbfa7a_sequential_loop_l6_exec_mode], section "llvm.metadata"
 ; CHECK: @[[LOCGLOB:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(5) global i32 43
+; CHECK: @[[__OMP_OFFLOADING_2A_FBFA7A_SEQUENTIAL_LOOP_L6_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ; CHECK: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 ;.
 ; CHECK-DISABLED: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
@@ -56,6 +57,7 @@ target triple = "nvptx64"
 ; CHECK-DISABLED: @[[__OMP_OFFLOADING_2A_FBFA7A_SEQUENTIAL_LOOP_L6_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
 ; CHECK-DISABLED: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [1 x ptr] [ptr @__omp_offloading_2a_fbfa7a_sequential_loop_l6_exec_mode], section "llvm.metadata"
 ; CHECK-DISABLED: @[[LOCGLOB:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(5) global i32 43
+; CHECK-DISABLED: @[[__OMP_OFFLOADING_2A_FBFA7A_SEQUENTIAL_LOOP_L6_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ; CHECK-DISABLED: @[[__OMP_OUTLINED__1_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
 ;.
 define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %x, i64 %N) #0 {

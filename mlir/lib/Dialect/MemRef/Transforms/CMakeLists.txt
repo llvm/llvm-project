@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRMemRefTransforms
+  BufferizableOpInterfaceImpl.cpp
   ComposeSubView.cpp
   ExpandOps.cpp
   ExpandStridedMetadata.cpp
@@ -20,6 +21,7 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   MLIRAffineUtils
   MLIRArithDialect
   MLIRArithTransforms
+  MLIRBufferizationDialect
   MLIRFuncDialect
   MLIRInferTypeOpInterface
   MLIRLoopLikeInterface

@@ -32,8 +32,8 @@ group("default") {
     deps += [ "//libunwind" ]
   }
 
-  # FIXME: Add this on linux/win after testing that it builds.
-  if (current_os == "mac") {
+  # FIXME: Add this on win after testing that it builds.
+  if (current_os != "win") {
     deps += [ "//bolt/test" ]
   }
 

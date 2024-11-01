@@ -353,7 +353,7 @@ entry:
 define void @call_test_byval_4Byte() {
 entry:
   %s0 = alloca %struct.S0, align 8
-  %s4a = alloca %struct.S4A, align 4
+  %s4a = alloca %struct.S4A, align 8
   %call = call signext i32 @test_byval_4Byte(ptr byval(%struct.S4) align 1 @gS4, ptr byval(%struct.S0) align 1 %s0, ptr byval(%struct.S4A) align 4 %s4a)
   ret void
 }
@@ -945,7 +945,7 @@ entry:
 
 define i32 @call_test_byval_homogeneous_float_struct() {
 entry:
-  %s = alloca %struct.F, align 4
+  %s = alloca %struct.F, align 8
   call void @llvm.memset.p0.i32(ptr align 4 %s, i8 0, i32 12, i1 false)
   %call = call i32 @test_byval_homogeneous_float_struct(ptr byval(%struct.F) align 4 %s)
   ret i32 %call

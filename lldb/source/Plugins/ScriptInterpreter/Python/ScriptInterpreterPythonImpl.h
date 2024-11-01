@@ -124,6 +124,8 @@ public:
   GetRecognizedArguments(const StructuredData::ObjectSP &implementor,
                          lldb::StackFrameSP frame_sp) override;
 
+  lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() override;
+
   StructuredData::GenericSP
   OSPlugin_CreatePluginObject(const char *class_name,
                               lldb::ProcessSP process_sp) override;

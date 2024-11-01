@@ -4,7 +4,7 @@
 
 // RUN: %clang --target=arm-none-eabi -mcpu=cortex-m33 -mfloat-abi=hard -O1 %s -Xclang -opaque-pointers -flto=full -c -o %t.call_full.bc -DCALL_LIB
 // RUN: %clang --target=arm-none-eabi -mcpu=cortex-m33 -mfloat-abi=hard -O1 %s -Xclang -opaque-pointers -flto=full -c -o %t.define_full.bc -DDEFINE_LIB
-// RUN: llvm-lto2 run -lto-opaque-pointers -o %t.lto_full -save-temps %t.call_full.bc %t.define_full.bc \
+// RUN: llvm-lto2 run -o %t.lto_full -save-temps %t.call_full.bc %t.define_full.bc \
 // RUN:  -r %t.call_full.bc,fn,px \
 // RUN:  -r %t.call_full.bc,fwrite,l \
 // RUN:  -r %t.call_full.bc,putchar,l \
@@ -16,7 +16,7 @@
 
 // RUN: %clang --target=arm-none-eabi -mcpu=cortex-m33 -mfloat-abi=hard -O1 %s -Xclang -opaque-pointers -flto=thin -c -o %t.call_thin.bc -DCALL_LIB
 // RUN: %clang --target=arm-none-eabi -mcpu=cortex-m33 -mfloat-abi=hard -O1 %s -Xclang -opaque-pointers -flto=thin -c -o %t.define_thin.bc -DDEFINE_LIB
-// RUN: llvm-lto2 run -lto-opaque-pointers -o %t.lto_thin -save-temps %t.call_thin.bc %t.define_thin.bc \
+// RUN: llvm-lto2 run -o %t.lto_thin -save-temps %t.call_thin.bc %t.define_thin.bc \
 // RUN:  -r %t.call_thin.bc,fn,px \
 // RUN:  -r %t.call_thin.bc,fwrite,l \
 // RUN:  -r %t.call_thin.bc,putchar,l \

@@ -30,6 +30,7 @@
 #include <cassert>
 #include <concepts>
 #include <format>
+#include <iterator>
 #include <tuple>
 #include <utility>
 

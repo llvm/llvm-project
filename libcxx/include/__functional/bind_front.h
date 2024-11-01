@@ -22,7 +22,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 struct __bind_front_op {
     template <class ..._Args>
@@ -51,7 +51,7 @@ constexpr auto bind_front(_Fn&& __f, _Args&&... __args) {
     return __bind_front_t<decay_t<_Fn>, decay_t<_Args>...>(_VSTD::forward<_Fn>(__f), _VSTD::forward<_Args>(__args)...);
 }
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

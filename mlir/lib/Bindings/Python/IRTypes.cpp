@@ -139,6 +139,42 @@ public:
   }
 };
 
+/// Floating Point Type subclass - Float8E4M3FNUZ.
+class PyFloat8E4M3FNUZType : public PyConcreteType<PyFloat8E4M3FNUZType> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAFloat8E4M3FNUZ;
+  static constexpr const char *pyClassName = "Float8E4M3FNUZType";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](DefaultingPyMlirContext context) {
+          MlirType t = mlirFloat8E4M3FNUZTypeGet(context->get());
+          return PyFloat8E4M3FNUZType(context->getRef(), t);
+        },
+        py::arg("context") = py::none(), "Create a float8_e4m3fnuz type.");
+  }
+};
+
+/// Floating Point Type subclass - Float8E5M2FNUZ.
+class PyFloat8E5M2FNUZType : public PyConcreteType<PyFloat8E5M2FNUZType> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAFloat8E5M2FNUZ;
+  static constexpr const char *pyClassName = "Float8E5M2FNUZType";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](DefaultingPyMlirContext context) {
+          MlirType t = mlirFloat8E5M2FNUZTypeGet(context->get());
+          return PyFloat8E5M2FNUZType(context->getRef(), t);
+        },
+        py::arg("context") = py::none(), "Create a float8_e5m2fnuz type.");
+  }
+};
+
 /// Floating Point Type subclass - BF16Type.
 class PyBF16Type : public PyConcreteType<PyBF16Type> {
 public:
@@ -700,6 +736,8 @@ void mlir::python::populateIRTypes(py::module &m) {
   PyIndexType::bind(m);
   PyFloat8E4M3FNType::bind(m);
   PyFloat8E5M2Type::bind(m);
+  PyFloat8E4M3FNUZType::bind(m);
+  PyFloat8E5M2FNUZType::bind(m);
   PyBF16Type::bind(m);
   PyF16Type::bind(m);
   PyF32Type::bind(m);

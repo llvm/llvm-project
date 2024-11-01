@@ -177,9 +177,6 @@ private:
     bool applyValidRelocs(MutableArrayRef<char> Data, uint64_t BaseOffset,
                           bool IsLittleEndian) override;
 
-    llvm::Expected<uint64_t> relocateIndexedAddr(uint64_t StartOffset,
-                                                 uint64_t EndOffset) override;
-
     RangesTy &getValidAddressRanges() override { return AddressRanges; }
 
     void clear() override {

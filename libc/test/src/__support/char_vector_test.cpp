@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/char_vector.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 using __llvm_libc::CharVector;
 

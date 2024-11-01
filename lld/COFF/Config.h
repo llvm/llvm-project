@@ -162,6 +162,8 @@ struct Configuration {
 
   // Used for /opt:lldlto=N
   unsigned ltoo = 2;
+  // Used for /opt:lldltocgo=N
+  std::optional<unsigned> ltoCgo;
 
   // Used for /opt:lldltojobs=N
   std::string thinLTOJobs;

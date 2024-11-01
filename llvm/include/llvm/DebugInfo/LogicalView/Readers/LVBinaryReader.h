@@ -89,7 +89,7 @@ class LVBinaryReader : public LVReader {
   // Scopes with ranges for current compile unit. It is used to find a line
   // giving its exact or closest address. To support comdat functions, all
   // addresses for the same section are recorded in the same map.
-  using LVSectionRanges = std::map<LVSectionIndex, LVRange *>;
+  using LVSectionRanges = std::map<LVSectionIndex, std::unique_ptr<LVRange>>;
   LVSectionRanges SectionRanges;
 
   // Image base and virtual address for Executable file.
@@ -99,6 +99,8 @@ class LVBinaryReader : public LVReader {
   // Object sections with machine code.
   using LVSections = std::map<LVSectionIndex, object::SectionRef>;
   LVSections Sections;
+
+  std::vector<std::unique_ptr<LVLines>> DiscoveredLines;
 
 protected:
   // It contains the LVLineDebug elements representing the logical lines for
@@ -149,7 +151,7 @@ public:
       : LVReader(Filename, FileFormatName, W, BinaryType) {}
   LVBinaryReader(const LVBinaryReader &) = delete;
   LVBinaryReader &operator=(const LVBinaryReader &) = delete;
-  virtual ~LVBinaryReader();
+  virtual ~LVBinaryReader() = default;
 
   void addToSymbolTable(StringRef Name, LVScope *Function,
                         LVSectionIndex SectionIndex = 0);

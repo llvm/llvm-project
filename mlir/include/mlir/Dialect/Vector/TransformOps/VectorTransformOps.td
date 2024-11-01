@@ -10,7 +10,6 @@
 #define VECTOR_TRANSFORM_OPS
 
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformEffects.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
 include "mlir/Dialect/Vector/Transforms/VectorTransformsBase.td"

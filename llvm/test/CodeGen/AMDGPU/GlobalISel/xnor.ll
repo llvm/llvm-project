@@ -252,23 +252,46 @@ entry:
 }
 
 define i64 @vector_xnor_i64_one_use(i64 %a, i64 %b) {
-; GCN-LABEL: vector_xnor_i64_one_use:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_xor_b32_e32 v0, v0, v2
-; GCN-NEXT:    v_xor_b32_e32 v1, v1, v3
-; GCN-NEXT:    v_xor_b32_e32 v0, -1, v0
-; GCN-NEXT:    v_xor_b32_e32 v1, -1, v1
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: vector_xnor_i64_one_use:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_xor_b32_e32 v0, v0, v2
+; GFX7-NEXT:    v_xor_b32_e32 v1, v1, v3
+; GFX7-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX7-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: vector_xnor_i64_one_use:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_xor_b32_e32 v0, v0, v2
+; GFX8-NEXT:    v_xor_b32_e32 v1, v1, v3
+; GFX8-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX8-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX900-LABEL: vector_xnor_i64_one_use:
+; GFX900:       ; %bb.0: ; %entry
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_xor_b32_e32 v0, v0, v2
+; GFX900-NEXT:    v_xor_b32_e32 v1, v1, v3
+; GFX900-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX900-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX906-LABEL: vector_xnor_i64_one_use:
+; GFX906:       ; %bb.0: ; %entry
+; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX906-NEXT:    v_xnor_b32_e32 v0, v0, v2
+; GFX906-NEXT:    v_xnor_b32_e32 v1, v1, v3
+; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: vector_xnor_i64_one_use:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_xor_b32_e32 v0, v0, v2
-; GFX10-NEXT:    v_xor_b32_e32 v1, v1, v3
-; GFX10-NEXT:    v_xor_b32_e32 v0, -1, v0
-; GFX10-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX10-NEXT:    v_xor3_b32 v0, v0, v2, -1
+; GFX10-NEXT:    v_xor3_b32 v1, v1, v3, -1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %xor = xor i64 %a, %b
@@ -375,19 +398,15 @@ define amdgpu_ps <2 x float> @xnor_i64_s_v_one_use(i64 inreg %a, i64 %b64) {
 ; GFX906-LABEL: xnor_i64_s_v_one_use:
 ; GFX906:       ; %bb.0: ; %entry
 ; GFX906-NEXT:    v_lshlrev_b64 v[0:1], 29, v[0:1]
-; GFX906-NEXT:    v_xor_b32_e32 v0, s0, v0
-; GFX906-NEXT:    v_xor_b32_e32 v1, s1, v1
-; GFX906-NEXT:    v_xor_b32_e32 v0, -1, v0
-; GFX906-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX906-NEXT:    v_xnor_b32_e32 v0, s0, v0
+; GFX906-NEXT:    v_xnor_b32_e32 v1, s1, v1
 ; GFX906-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: xnor_i64_s_v_one_use:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    v_lshlrev_b64 v[0:1], 29, v[0:1]
-; GFX10-NEXT:    v_xor_b32_e32 v0, s0, v0
-; GFX10-NEXT:    v_xor_b32_e32 v1, s1, v1
-; GFX10-NEXT:    v_xor_b32_e32 v0, -1, v0
-; GFX10-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX10-NEXT:    v_xor3_b32 v0, s0, v0, -1
+; GFX10-NEXT:    v_xor3_b32 v1, s1, v1, -1
 ; GFX10-NEXT:    ; return to shader part epilog
 entry:
   %b = shl i64 %b64, 29
@@ -428,19 +447,15 @@ define amdgpu_ps <2 x float> @xnor_i64_v_s_one_use(i64 inreg %a, i64 %b64) {
 ; GFX906-LABEL: xnor_i64_v_s_one_use:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    v_lshlrev_b64 v[0:1], 29, v[0:1]
-; GFX906-NEXT:    v_xor_b32_e32 v0, s0, v0
-; GFX906-NEXT:    v_xor_b32_e32 v1, s1, v1
-; GFX906-NEXT:    v_xor_b32_e32 v0, -1, v0
-; GFX906-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX906-NEXT:    v_xnor_b32_e64 v0, v0, s0
+; GFX906-NEXT:    v_xnor_b32_e64 v1, v1, s1
 ; GFX906-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: xnor_i64_v_s_one_use:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshlrev_b64 v[0:1], 29, v[0:1]
-; GFX10-NEXT:    v_xor_b32_e32 v0, s0, v0
-; GFX10-NEXT:    v_xor_b32_e32 v1, s1, v1
-; GFX10-NEXT:    v_xor_b32_e32 v0, -1, v0
-; GFX10-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX10-NEXT:    v_xor3_b32 v0, v0, s0, -1
+; GFX10-NEXT:    v_xor3_b32 v1, v1, s1, -1
 ; GFX10-NEXT:    ; return to shader part epilog
   %b = shl i64 %b64, 29
   %xor = xor i64 %b, %a

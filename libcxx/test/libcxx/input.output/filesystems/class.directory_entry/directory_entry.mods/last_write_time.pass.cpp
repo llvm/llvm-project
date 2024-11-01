@@ -26,17 +26,15 @@
 #include <type_traits>
 #include <cassert>
 
+#include "assert_macros.h"
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 
 #include "filesystem_common.h"
 
 using namespace fs::detail;
 
-TEST_SUITE(directory_entry_mods_suite)
-
-TEST_CASE(last_write_time_not_representable_error) {
+static void last_write_time_not_representable_error() {
   using namespace fs;
   using namespace std::chrono;
   scoped_test_env env;
@@ -55,13 +53,13 @@ TEST_CASE(last_write_time_not_representable_error) {
   file_time_type start_time = file_time_type::clock::now() - hours(1);
   last_write_time(file, start_time);
 
-  TEST_CHECK(ent.last_write_time() == old_time);
+  assert(ent.last_write_time() == old_time);
 
   bool IsRepresentable = true;
   file_time_type rep_value;
   {
     std::error_code ec;
-    TEST_REQUIRE(!set_file_times(file, TS, ec));
+    assert(!set_file_times(file, TS, ec));
     ec.clear();
     rep_value = last_write_time(file, ec);
     IsRepresentable = !bool(ec);
@@ -70,30 +68,34 @@ TEST_CASE(last_write_time_not_representable_error) {
   if (!IsRepresentable) {
     std::error_code rec = GetTestEC();
     ent.refresh(rec);
-    TEST_CHECK(!rec);
+    assert(!rec);
 
     const std::errc expected_err = std::errc::value_too_large;
 
     std::error_code ec = GetTestEC();
-    TEST_CHECK(ent.last_write_time(ec) == file_time_type::min());
-    TEST_CHECK(ErrorIs(ec, expected_err));
+    assert(ent.last_write_time(ec) == file_time_type::min());
+    assert(ErrorIs(ec, expected_err));
 
     ec = GetTestEC();
-    TEST_CHECK(last_write_time(file, ec) == file_time_type::min());
-    TEST_CHECK(ErrorIs(ec, expected_err));
+    assert(last_write_time(file, ec) == file_time_type::min());
+    assert(ErrorIs(ec, expected_err));
 
     ExceptionChecker CheckExcept(file, expected_err,
                                  "directory_entry::last_write_time");
-    TEST_CHECK_THROW_RESULT(filesystem_error, CheckExcept,
+    TEST_VALIDATE_EXCEPTION(filesystem_error, CheckExcept,
                             ent.last_write_time());
 
   } else {
     ent.refresh();
 
     std::error_code ec = GetTestEC();
-    TEST_CHECK(ent.last_write_time(ec) == rep_value);
-    TEST_CHECK(!ec);
+    assert(ent.last_write_time(ec) == rep_value);
+    assert(!ec);
   }
 }
 
-TEST_SUITE_END()
+int main(int, char**) {
+  last_write_time_not_representable_error();
+
+  return 0;
+}

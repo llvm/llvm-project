@@ -1448,6 +1448,20 @@ StringRef sys::getHostCPUName() {
     return "generic";
   }
 }
+#elif defined(__loongarch__)
+StringRef sys::getHostCPUName() {
+  // Use processor id to detect cpu name.
+  uint32_t processor_id;
+  __asm__("cpucfg %[prid], $zero\n\t" : [prid] "=r"(processor_id));
+  switch (processor_id & 0xff00) {
+  case 0xc000: // Loongson 64bit, 4-issue
+    return "la464";
+  // TODO: Others.
+  default:
+    break;
+  }
+  return "generic";
+}
 #elif defined(__riscv)
 StringRef sys::getHostCPUName() {
 #if defined(__linux__)
@@ -1839,6 +1853,23 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
     Features["crc"] = true;
   if (IsProcessorFeaturePresent(PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE))
     Features["crypto"] = true;
+
+  return true;
+}
+#elif defined(__linux__) && defined(__loongarch__)
+#include <sys/auxv.h>
+bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
+  unsigned long hwcap = getauxval(AT_HWCAP);
+  bool HasFPU = hwcap & (1UL << 3); // HWCAP_LOONGARCH_FPU
+  uint32_t cpucfg2 = 0x2;
+  __asm__("cpucfg %[cpucfg2], %[cpucfg2]\n\t" : [cpucfg2] "+r"(cpucfg2));
+
+  Features["f"] = HasFPU && (cpucfg2 & (1U << 1)); // CPUCFG.2.FP_SP
+  Features["d"] = HasFPU && (cpucfg2 & (1U << 2)); // CPUCFG.2.FP_DP
+
+  Features["lsx"] = hwcap & (1UL << 4);  // HWCAP_LOONGARCH_LSX
+  Features["lasx"] = hwcap & (1UL << 5); // HWCAP_LOONGARCH_LASX
+  Features["lvz"] = hwcap & (1UL << 9);  // HWCAP_LOONGARCH_LVZ
 
   return true;
 }

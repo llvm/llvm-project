@@ -4848,7 +4848,7 @@ bool AArch64FastISel::selectSDiv(const Instruction *I) {
       !(C.isPowerOf2() || C.isNegatedPowerOf2()))
     return selectBinaryOp(I, ISD::SDIV);
 
-  unsigned Lg2 = C.countTrailingZeros();
+  unsigned Lg2 = C.countr_zero();
   Register Src0Reg = getRegForValue(I->getOperand(0));
   if (!Src0Reg)
     return false;

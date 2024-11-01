@@ -19,7 +19,6 @@
 #include "X86TargetMachine.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -28,6 +27,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -528,7 +528,7 @@ void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
   BitVector GPRsToZero(TRI->getNumRegs());
   for (MCRegister Reg : RegsToZero.set_bits())
     if (TRI->isGeneralPurposeRegister(MF, Reg)) {
-      GPRsToZero.set(getX86SubSuperRegisterOrZero(Reg, 32));
+      GPRsToZero.set(getX86SubSuperRegister(Reg, 32));
       RegsToZero.reset(Reg);
     }
 

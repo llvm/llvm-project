@@ -481,6 +481,12 @@ static std::optional<Value> createGroupReduceOp(OpBuilder &builder,
                                 spv::GroupNonUniformIMulOp>,
        &createGroupReduceOpImpl<spv::GroupFMulKHROp,
                                 spv::GroupNonUniformFMulOp>},
+      {ReduceType::MIN,
+       &createGroupReduceOpImpl<spv::GroupSMinOp, spv::GroupNonUniformSMinOp>,
+       &createGroupReduceOpImpl<spv::GroupFMinOp, spv::GroupNonUniformFMinOp>},
+      {ReduceType::MAX,
+       &createGroupReduceOpImpl<spv::GroupSMaxOp, spv::GroupNonUniformSMaxOp>,
+       &createGroupReduceOpImpl<spv::GroupFMaxOp, spv::GroupNonUniformFMaxOp>},
   };
 
   for (auto &handler : handlers)

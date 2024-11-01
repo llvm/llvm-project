@@ -1,6 +1,6 @@
-; RUN: opt -hardware-loops -force-hardware-loops=true -hardware-loop-decrement=1 -hardware-loop-counter-bitwidth=32 -S %s -o - | FileCheck %s
-; RUN: opt -hardware-loops -force-hardware-loops=true -hardware-loop-decrement=1 -hardware-loop-counter-bitwidth=32 -force-hardware-loop-phi=true -S %s -o - | FileCheck %s
-; RUN: opt -hardware-loops -force-hardware-loops=true -hardware-loop-decrement=1 -hardware-loop-counter-bitwidth=32 -force-nested-hardware-loop=true -S %s -o - | FileCheck %s
+; RUN: opt -passes=hardware-loops -force-hardware-loops=true -hardware-loop-decrement=1 -hardware-loop-counter-bitwidth=32 -S %s -o - | FileCheck %s
+; RUN: opt -passes=hardware-loops -force-hardware-loops=true -hardware-loop-decrement=1 -hardware-loop-counter-bitwidth=32 -force-hardware-loop-phi=true -S %s -o - | FileCheck %s
+; RUN: opt -passes=hardware-loops -force-hardware-loops=true -hardware-loop-decrement=1 -hardware-loop-counter-bitwidth=32 -force-nested-hardware-loop=true -S %s -o - | FileCheck %s
 
 ; CHECK-LABEL: float_counter
 ; CHECK-NOT: set.loop.iterations

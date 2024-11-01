@@ -35,8 +35,8 @@ define i1 @test_inverted_implication(i1 %cond) {
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
-; CHECK-NEXT:    ret i1 [[TMP0]]
+; CHECK-NEXT:    [[RET:%.*]] = xor i1 [[COND]], true
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:
   br i1 %cond, label %if.true, label %if.false
@@ -129,8 +129,8 @@ define i1 @test_inverted_implication_complex_cfg(i1 %cond, i32 %cnt1) {
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
-; CHECK-NEXT:    ret i1 [[TMP0]]
+; CHECK-NEXT:    [[RET:%.*]] = xor i1 [[COND]], true
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:
   br i1 %cond, label %if.true, label %if.false
@@ -481,8 +481,8 @@ define i8 @test_switch_inverted(i8 %cond) {
 ; CHECK:       default:
 ; CHECK-NEXT:    ret i8 42
 ; CHECK:       merge:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i8 [[COND]], -1
-; CHECK-NEXT:    ret i8 [[TMP0]]
+; CHECK-NEXT:    [[RET:%.*]] = xor i8 [[COND]], -1
+; CHECK-NEXT:    ret i8 [[RET]]
 ;
 entry:
   switch i8 %cond, label %default [

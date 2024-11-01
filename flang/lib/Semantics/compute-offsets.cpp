@@ -101,7 +101,7 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   }
   // Assign offsets for non-COMMON EQUIVALENCE blocks
   for (auto &[symbol, blockInfo] : equivalenceBlock_) {
-    if (!InCommonBlock(*symbol)) {
+    if (!FindCommonBlockContaining(*symbol)) {
       DoSymbol(*symbol);
       DoEquivalenceBlockBase(*symbol, blockInfo);
       offset_ = std::max(offset_, symbol->offset() + blockInfo.size);
@@ -110,7 +110,7 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   // Process remaining non-COMMON symbols; this is all of them if there
   // was no use of EQUIVALENCE in the scope.
   for (auto &symbol : scope.GetSymbols()) {
-    if (!InCommonBlock(*symbol) &&
+    if (!FindCommonBlockContaining(*symbol) &&
         dependents_.find(symbol) == dependents_.end() &&
         equivalenceBlock_.find(symbol) == equivalenceBlock_.end()) {
       DoSymbol(*symbol);

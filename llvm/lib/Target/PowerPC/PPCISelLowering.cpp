@@ -2550,7 +2550,7 @@ SDValue PPC::get_VSPLTI_elt(SDNode *N, unsigned ByteSize, SelectionDAG &DAG) {
     Value = CN->getZExtValue();
   } else if (ConstantFPSDNode *CN = dyn_cast<ConstantFPSDNode>(OpVal)) {
     assert(CN->getValueType(0) == MVT::f32 && "Only one legal FP vector type!");
-    Value = FloatToBits(CN->getValueAPF().convertToFloat());
+    Value = llvm::bit_cast<uint32_t>(CN->getValueAPF().convertToFloat());
   }
 
   // If the splat value is larger than the element value, then we can never do
@@ -5784,7 +5784,7 @@ SDValue PPCTargetLowering::LowerCall_32SVR4(
       if (Result) {
 #ifndef NDEBUG
         errs() << "Call operand #" << i << " has unhandled type "
-             << EVT(ArgVT).getEVTString() << "\n";
+               << ArgVT << "\n";
 #endif
         llvm_unreachable(nullptr);
       }
@@ -7351,7 +7351,7 @@ SDValue PPCTargetLowering::LowerCall_AIX(
              "Unexpected register residue for by-value argument.");
       SDValue ResidueVal;
       for (unsigned Bytes = 0; Bytes != ResidueBytes;) {
-        const unsigned N = PowerOf2Floor(ResidueBytes - Bytes);
+        const unsigned N = llvm::bit_floor(ResidueBytes - Bytes);
         const MVT VT =
             N == 1 ? MVT::i8
                    : ((N == 2) ? MVT::i16 : (N == 4 ? MVT::i32 : MVT::i64));
@@ -7843,15 +7843,15 @@ SDValue PPCTargetLowering::LowerTRUNCATEVector(SDValue Op,
   EVT EltVT = TrgVT.getVectorElementType();
   if (!isOperationCustom(Op.getOpcode(), TrgVT) ||
       TrgVT.getSizeInBits() > 128 || !isPowerOf2_32(TrgNumElts) ||
-      !isPowerOf2_32(EltVT.getSizeInBits()))
+      !llvm::has_single_bit<uint32_t>(EltVT.getSizeInBits()))
     return SDValue();
 
   SDValue N1 = Op.getOperand(0);
   EVT SrcVT = N1.getValueType();  
   unsigned SrcSize = SrcVT.getSizeInBits();
-  if (SrcSize > 256 ||
-      !isPowerOf2_32(SrcVT.getVectorNumElements()) ||
-      !isPowerOf2_32(SrcVT.getVectorElementType().getSizeInBits()))
+  if (SrcSize > 256 || !isPowerOf2_32(SrcVT.getVectorNumElements()) ||
+      !llvm::has_single_bit<uint32_t>(
+          SrcVT.getVectorElementType().getSizeInBits()))
     return SDValue();
   if (SrcSize == 256 && SrcVT.getVectorNumElements() < 2)
     return SDValue();
@@ -16033,7 +16033,7 @@ PPCTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   SDValue N0 = N->getOperand(0);
 
   bool IsNegPow2 = Divisor.isNegatedPowerOf2();
-  unsigned Lg2 = (IsNegPow2 ? -Divisor : Divisor).countTrailingZeros();
+  unsigned Lg2 = (IsNegPow2 ? -Divisor : Divisor).countr_zero();
   SDValue ShiftAmt = DAG.getConstant(Lg2, DL, VT);
 
   SDValue Op = DAG.getNode(PPCISD::SRA_ADDZE, DL, VT, N0, ShiftAmt);
@@ -16929,7 +16929,7 @@ bool PPCTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
     // 2. If the multiplier after shifted fits 16 bits, an extra shift
     // instruction is needed than case 1, ie. MULLI and RLDICR
     int64_t Imm = ConstNode->getSExtValue();
-    unsigned Shift = countTrailingZeros<uint64_t>(Imm);
+    unsigned Shift = llvm::countr_zero<uint64_t>(Imm);
     Imm >>= Shift;
     if (isInt<16>(Imm))
       return false;
@@ -17636,15 +17636,6 @@ bool PPCTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
 
   // If the function is local then we have a good chance at tail-calling it
   return getTargetMachine().shouldAssumeDSOLocal(*Caller->getParent(), Callee);
-}
-
-bool PPCTargetLowering::hasBitPreservingFPLogic(EVT VT) const {
-  if (!Subtarget.hasVSX())
-    return false;
-  if (Subtarget.hasP9Vector() && VT == MVT::f128)
-    return true;
-  return VT == MVT::f32 || VT == MVT::f64 ||
-    VT == MVT::v4f32 || VT == MVT::v2f64;
 }
 
 bool PPCTargetLowering::

@@ -48,8 +48,11 @@ struct TestConvertCallOp
   void runOnOperation() override {
     ModuleOp m = getOperation();
 
+    LowerToLLVMOptions options(m.getContext());
+    options.useOpaquePointers = false;
+
     // Populate type conversions.
-    LLVMTypeConverter typeConverter(m.getContext());
+    LLVMTypeConverter typeConverter(m.getContext(), options);
     typeConverter.addConversion([&](test::TestType type) {
       return LLVM::LLVMPointerType::get(IntegerType::get(m.getContext(), 8));
     });

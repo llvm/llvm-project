@@ -1910,14 +1910,14 @@ error:
 /* Does "aff" only attain non-negative values over build->domain?
  * That is, does it not attain any negative values?
  */
-int isl_ast_build_aff_is_nonneg(__isl_keep isl_ast_build *build,
+isl_bool isl_ast_build_aff_is_nonneg(__isl_keep isl_ast_build *build,
 	__isl_keep isl_aff *aff)
 {
 	isl_set *test;
-	int empty;
+	isl_bool empty;
 
 	if (!build)
-		return -1;
+		return isl_bool_error;
 
 	aff = isl_aff_copy(aff);
 	test = isl_set_from_basic_set(isl_aff_neg_basic_set(aff));

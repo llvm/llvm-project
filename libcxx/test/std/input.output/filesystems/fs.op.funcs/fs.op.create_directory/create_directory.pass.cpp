@@ -23,7 +23,6 @@
 #include <cassert>
 
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 
 #include <sys/types.h>
@@ -37,9 +36,7 @@ fs::perms read_umask() {
     return static_cast<fs::perms>(old_mask);
 }
 
-TEST_SUITE(filesystem_create_directory_test_suite)
-
-TEST_CASE(test_signatures)
+static void test_signatures()
 {
     const path p; ((void)p);
     std::error_code ec; ((void)ec);
@@ -54,84 +51,95 @@ TEST_CASE(test_signatures)
 }
 
 
-TEST_CASE(create_existing_directory)
+static void create_existing_directory()
 {
     scoped_test_env env;
     const path dir = env.create_dir("dir1");
     std::error_code ec;
-    TEST_CHECK(fs::create_directory(dir, ec) == false);
-    TEST_CHECK(!ec);
-    TEST_CHECK(is_directory(dir));
+    assert(fs::create_directory(dir, ec) == false);
+    assert(!ec);
+    assert(is_directory(dir));
     // Test throwing version
-    TEST_CHECK(fs::create_directory(dir) == false);
+    assert(fs::create_directory(dir) == false);
 }
 
-TEST_CASE(create_directory_one_level)
+static void create_directory_one_level()
 {
     scoped_test_env env;
     const path dir = env.make_env_path("dir1");
     std::error_code ec;
-    TEST_CHECK(fs::create_directory(dir, ec) == true);
-    TEST_CHECK(!ec);
-    TEST_CHECK(is_directory(dir));
+    assert(fs::create_directory(dir, ec) == true);
+    assert(!ec);
+    assert(is_directory(dir));
 
     auto st = status(dir);
     const perms expect_perms = perms::all & ~(read_umask());
-    TEST_CHECK((st.permissions() & perms::all) == expect_perms);
+    assert((st.permissions() & perms::all) == expect_perms);
 }
 
-TEST_CASE(create_directory_multi_level)
+static void create_directory_multi_level()
 {
     scoped_test_env env;
     const path dir = env.make_env_path("dir1/dir2");
     const path dir1 = env.make_env_path("dir1");
     std::error_code ec;
-    TEST_CHECK(fs::create_directory(dir, ec) == false);
-    TEST_CHECK(ec);
-    TEST_CHECK(!is_directory(dir));
-    TEST_CHECK(!is_directory(dir1));
+    assert(fs::create_directory(dir, ec) == false);
+    assert(ec);
+    assert(!is_directory(dir));
+    assert(!is_directory(dir1));
 }
 
-TEST_CASE(dest_is_file)
+static void dest_is_file()
 {
     scoped_test_env env;
     const path file = env.create_file("file", 42);
     std::error_code ec = GetTestEC();
-    TEST_CHECK(fs::create_directory(file, ec) == false);
-    TEST_CHECK(ec);
-    TEST_CHECK(is_regular_file(file));
+    assert(fs::create_directory(file, ec) == false);
+    assert(ec);
+    assert(is_regular_file(file));
 }
 
-TEST_CASE(dest_part_is_file)
+static void dest_part_is_file()
 {
     scoped_test_env env;
     const path file = env.create_file("file");
     const path dir = env.make_env_path("file/dir1");
     std::error_code ec = GetTestEC();
-    TEST_CHECK(fs::create_directory(dir, ec) == false);
-    TEST_CHECK(ec);
-    TEST_CHECK(is_regular_file(file));
-    TEST_CHECK(!exists(dir));
+    assert(fs::create_directory(dir, ec) == false);
+    assert(ec);
+    assert(is_regular_file(file));
+    assert(!exists(dir));
 }
 
-TEST_CASE(dest_is_symlink_to_dir)
+static void dest_is_symlink_to_dir()
 {
     scoped_test_env env;
     const path dir = env.create_dir("dir");
     const path sym = env.create_directory_symlink(dir, "sym_name");
     std::error_code ec = GetTestEC();
-    TEST_CHECK(create_directory(sym, ec) == false);
-    TEST_CHECK(!ec);
+    assert(create_directory(sym, ec) == false);
+    assert(!ec);
 }
 
-TEST_CASE(dest_is_symlink_to_file)
+static void dest_is_symlink_to_file()
 {
     scoped_test_env env;
     const path file = env.create_file("file");
     const path sym = env.create_symlink(file, "sym_name");
     std::error_code ec = GetTestEC();
-    TEST_CHECK(create_directory(sym, ec) == false);
-    TEST_CHECK(ec);
+    assert(create_directory(sym, ec) == false);
+    assert(ec);
 }
 
-TEST_SUITE_END()
+int main(int, char**) {
+    test_signatures();
+    create_existing_directory();
+    create_directory_one_level();
+    create_directory_multi_level();
+    dest_is_file();
+    dest_part_is_file();
+    dest_is_symlink_to_dir();
+    dest_is_symlink_to_file();
+
+    return 0;
+}

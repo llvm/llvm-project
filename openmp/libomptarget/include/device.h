@@ -444,6 +444,14 @@ struct DeviceTy {
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
 
+  /// Notify the plugin about a new mapping starting at the host address
+  /// \p HstPtr and \p Size bytes.
+  int32_t notifyDataMapped(void *HstPtr, int64_t Size);
+
+  /// Notify the plugin about an existing mapping being unmapped starting at
+  /// the host address \p HstPtr.
+  int32_t notifyDataUnmapped(void *HstPtr);
+
   // Launch the kernel identified by \p TgtEntryPtr with the given arguments.
   int32_t launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
                        ptrdiff_t *TgtOffsets, const KernelArgsTy &KernelArgs,

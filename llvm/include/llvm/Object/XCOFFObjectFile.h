@@ -576,7 +576,7 @@ public:
   Expected<uint32_t> getSymbolFlags(DataRefImpl Symb) const override;
   basic_symbol_iterator symbol_begin() const override;
   basic_symbol_iterator symbol_end() const override;
-
+  bool is64Bit() const override;
   Expected<StringRef> getSymbolName(DataRefImpl Symb) const override;
   Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const override;
   uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;
@@ -625,7 +625,7 @@ public:
   bool isRelocatableObject() const override;
 
   // Below here is the non-inherited interface.
-  bool is64Bit() const;
+
   Expected<StringRef> getRawData(const char *Start, uint64_t Size,
                                  StringRef Name) const;
 

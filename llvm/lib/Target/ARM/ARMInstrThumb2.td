@@ -1022,9 +1022,9 @@ multiclass T2I_bin_ii12rs<bits<3> op23_21, string opc, SDNode opnode,
 /// T2I_adde_sube_irs - Defines a set of (op reg, {so_imm|r|so_reg}) patterns
 /// for a binary operation that produces a value and use the carry
 /// bit. It's not predicable.
-let Defs = [CPSR], Uses = [CPSR] in {
 multiclass T2I_adde_sube_irs<bits<4> opcod, string opc, SDNode opnode,
-                             bit Commutable = 0> {
+                             bit Commutable = 0, bit PostISelHook = 0> {
+  let Defs = [CPSR], Uses = [CPSR], hasPostISelHook = PostISelHook in {
    // shifted imm
    def ri : T2sTwoRegImm<(outs rGPR:$Rd), (ins rGPR:$Rn, t2_so_imm:$imm),
                  IIC_iALUi, opc, "\t$Rd, $Rn, $imm",
@@ -1058,7 +1058,26 @@ multiclass T2I_adde_sube_irs<bits<4> opcod, string opc, SDNode opnode,
      let Inst{26-25} = 0b01;
      let Inst{24-21} = opcod;
    }
-}
+  }
+  // Shortened forms
+  def : t2InstAlias<!strconcat(opc, "${s}${p}", ".w $Rdn, $imm"),
+     (!cast<Instruction>(NAME#"ri") rGPR:$Rdn, rGPR:$Rdn, t2_so_imm:$imm, pred:$p,
+                                    cc_out:$s)>;
+  def : t2InstAlias<!strconcat(opc, "${s}${p}", ".w $Rdn, $Rm"),
+     (!cast<Instruction>(NAME#"rr") rGPR:$Rdn, rGPR:$Rdn, rGPR:$Rm, pred:$p,
+                                    cc_out:$s)>;
+  def : t2InstAlias<!strconcat(opc, "${s}${p}", ".w $Rdn, $ShiftedRm"),
+     (!cast<Instruction>(NAME#"rs") rGPR:$Rdn, rGPR:$Rdn, t2_so_reg:$ShiftedRm, pred:$p,
+                                    cc_out:$s)>;
+  def : t2InstAlias<!strconcat(opc, "${s}${p}", "$Rdn, $imm"),
+     (!cast<Instruction>(NAME#"ri") rGPR:$Rdn, rGPR:$Rdn, t2_so_imm:$imm, pred:$p,
+                                    cc_out:$s)>;
+  def : t2InstAlias<!strconcat(opc, "${s}${p}", "$Rdn, $Rm"),
+     (!cast<Instruction>(NAME#"rr") rGPR:$Rdn, rGPR:$Rdn, rGPR:$Rm, pred:$p,
+                                    cc_out:$s)>;
+  def : t2InstAlias<!strconcat(opc, "${s}${p}", "$Rdn, $ShiftedRm"),
+     (!cast<Instruction>(NAME#"rs") rGPR:$Rdn, rGPR:$Rdn, t2_so_reg:$ShiftedRm, pred:$p,
+                                    cc_out:$s)>;
 }
 
 /// T2I_sh_ir - Defines a set of (op reg, {so_imm|r}) patterns for a shift /
@@ -2365,15 +2384,17 @@ def : T2Pat<(ARMsubs GPRnopc:$Rn, rGPR:$Rm), (t2SUBSrr $Rn, $Rm)>;
 def : T2Pat<(ARMsubs GPRnopc:$Rn, t2_so_reg:$ShiftedRm),
             (t2SUBSrs $Rn, t2_so_reg:$ShiftedRm)>;
 
-let hasPostISelHook = 1 in {
-defm t2ADC  : T2I_adde_sube_irs<0b1010, "adc", ARMadde, 1>;
-defm t2SBC  : T2I_adde_sube_irs<0b1011, "sbc", ARMsube>;
-}
+defm t2ADC  : T2I_adde_sube_irs<0b1010, "adc", ARMadde, 1, 1>;
+defm t2SBC  : T2I_adde_sube_irs<0b1011, "sbc", ARMsube, 0, 1>;
 
 def : t2InstSubst<"adc${s}${p} $rd, $rn, $imm",
                  (t2SBCri rGPR:$rd, rGPR:$rn, t2_so_imm_not:$imm, pred:$p, s_cc_out:$s)>;
+def : t2InstSubst<"adc${s}${p} $rdn, $imm",
+                 (t2SBCri rGPR:$rdn, rGPR:$rdn, t2_so_imm_not:$imm, pred:$p, s_cc_out:$s)>;
 def : t2InstSubst<"sbc${s}${p} $rd, $rn, $imm",
                  (t2ADCri rGPR:$rd, rGPR:$rn, t2_so_imm_not:$imm, pred:$p, s_cc_out:$s)>;
+def : t2InstSubst<"sbc${s}${p} $rdn, $imm",
+                 (t2ADCri rGPR:$rdn, rGPR:$rdn, t2_so_imm_not:$imm, pred:$p, s_cc_out:$s)>;
 
 def : t2InstSubst<"add${s}${p}.w $rd, $rn, $imm",
                  (t2SUBri rGPR:$rd, GPRnopc:$rn, t2_so_imm_neg:$imm, pred:$p, s_cc_out:$s)>;
@@ -4846,6 +4867,11 @@ def : t2InstAlias<"adc${s}${p} $Rd, $Rn, $Rm",
                   (t2ADCrr rGPR:$Rd, rGPR:$Rn, rGPR:$Rm, pred:$p, cc_out:$s)>;
 def : t2InstAlias<"adc${s}${p} $Rd, $Rn, $ShiftedRm",
                   (t2ADCrs rGPR:$Rd, rGPR:$Rn, t2_so_reg:$ShiftedRm,
+                           pred:$p, cc_out:$s)>;
+def : t2InstAlias<"adc${s}${p} $Rdn, $Rm",
+                  (t2ADCrr rGPR:$Rdn, rGPR:$Rdn, rGPR:$Rm, pred:$p, cc_out:$s)>;
+def : t2InstAlias<"adc${s}${p} $Rdn, $ShiftedRm",
+                  (t2ADCrs rGPR:$Rdn, rGPR:$Rdn, t2_so_reg:$ShiftedRm,
                            pred:$p, cc_out:$s)>;
 
 // Aliases for SBC without the ".w" optional width specifier.

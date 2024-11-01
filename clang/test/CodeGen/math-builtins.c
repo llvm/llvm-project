@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -w -S -o - -emit-llvm              %s | FileCheck %s -check-prefix=NO__ERRNO
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s -check-prefix=HAS_ERRNO
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown-gnu -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_GNU
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-windows-msvc -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_WIN
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -w -S -o - -emit-llvm              %s | FileCheck %s -check-prefix=NO__ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s -check-prefix=HAS_ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown-gnu -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_GNU
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_WIN
 
 // Test attributes and codegen of math builtins.
 
@@ -52,14 +52,14 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   __builtin_frexp(f,i);    __builtin_frexpf(f,i);   __builtin_frexpl(f,i); __builtin_frexpf128(f,i);
 
-// NO__ERRNO: declare double @frexp(double noundef, i32* noundef) [[NOT_READNONE:#[0-9]+]]
-// NO__ERRNO: declare float @frexpf(float noundef, i32* noundef) [[NOT_READNONE]]
-// NO__ERRNO: declare x86_fp80 @frexpl(x86_fp80 noundef, i32* noundef) [[NOT_READNONE]]
-// NO__ERRNO: declare fp128 @frexpf128(fp128 noundef, i32* noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare double @frexp(double noundef, i32* noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare float @frexpf(float noundef, i32* noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare x86_fp80 @frexpl(x86_fp80 noundef, i32* noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare fp128 @frexpf128(fp128 noundef, i32* noundef) [[NOT_READNONE]]
+// NO__ERRNO: declare double @frexp(double noundef, ptr noundef) [[NOT_READNONE:#[0-9]+]]
+// NO__ERRNO: declare float @frexpf(float noundef, ptr noundef) [[NOT_READNONE]]
+// NO__ERRNO: declare x86_fp80 @frexpl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
+// NO__ERRNO: declare fp128 @frexpf128(fp128 noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare double @frexp(double noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare float @frexpf(float noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare x86_fp80 @frexpl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare fp128 @frexpf128(fp128 noundef, ptr noundef) [[NOT_READNONE]]
 
   __builtin_huge_val();    __builtin_huge_valf();   __builtin_huge_vall(); __builtin_huge_valf128();
 
@@ -88,36 +88,36 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   __builtin_modf(f,d);       __builtin_modff(f,fp);      __builtin_modfl(f,l); __builtin_modff128(f,l);
 
-// NO__ERRNO: declare double @modf(double noundef, double* noundef) [[NOT_READNONE]]
-// NO__ERRNO: declare float @modff(float noundef, float* noundef) [[NOT_READNONE]]
-// NO__ERRNO: declare x86_fp80 @modfl(x86_fp80 noundef, x86_fp80* noundef) [[NOT_READNONE]]
-// NO__ERRNO: declare fp128 @modff128(fp128 noundef, fp128* noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare double @modf(double noundef, double* noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare float @modff(float noundef, float* noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare x86_fp80 @modfl(x86_fp80 noundef, x86_fp80* noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare fp128 @modff128(fp128 noundef, fp128* noundef) [[NOT_READNONE]]
+// NO__ERRNO: declare double @modf(double noundef, ptr noundef) [[NOT_READNONE]]
+// NO__ERRNO: declare float @modff(float noundef, ptr noundef) [[NOT_READNONE]]
+// NO__ERRNO: declare x86_fp80 @modfl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
+// NO__ERRNO: declare fp128 @modff128(fp128 noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare double @modf(double noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare float @modff(float noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare x86_fp80 @modfl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare fp128 @modff128(fp128 noundef, ptr noundef) [[NOT_READNONE]]
 
   __builtin_nan(c);        __builtin_nanf(c);       __builtin_nanl(c); __builtin_nanf128(c);
 
-// NO__ERRNO: declare double @nan(i8* noundef) [[PURE:#[0-9]+]]
-// NO__ERRNO: declare float @nanf(i8* noundef) [[PURE]]
-// NO__ERRNO: declare x86_fp80 @nanl(i8* noundef) [[PURE]]
-// NO__ERRNO: declare fp128 @nanf128(i8* noundef) [[PURE]]
-// HAS_ERRNO: declare double @nan(i8* noundef) [[PURE:#[0-9]+]]
-// HAS_ERRNO: declare float @nanf(i8* noundef) [[PURE]]
-// HAS_ERRNO: declare x86_fp80 @nanl(i8* noundef) [[PURE]]
-// HAS_ERRNO: declare fp128 @nanf128(i8* noundef) [[PURE]]
+// NO__ERRNO: declare double @nan(ptr noundef) [[PURE:#[0-9]+]]
+// NO__ERRNO: declare float @nanf(ptr noundef) [[PURE]]
+// NO__ERRNO: declare x86_fp80 @nanl(ptr noundef) [[PURE]]
+// NO__ERRNO: declare fp128 @nanf128(ptr noundef) [[PURE]]
+// HAS_ERRNO: declare double @nan(ptr noundef) [[PURE:#[0-9]+]]
+// HAS_ERRNO: declare float @nanf(ptr noundef) [[PURE]]
+// HAS_ERRNO: declare x86_fp80 @nanl(ptr noundef) [[PURE]]
+// HAS_ERRNO: declare fp128 @nanf128(ptr noundef) [[PURE]]
 
   __builtin_nans(c);        __builtin_nansf(c);       __builtin_nansl(c); __builtin_nansf128(c);
 
-// NO__ERRNO: declare double @nans(i8* noundef) [[PURE]]
-// NO__ERRNO: declare float @nansf(i8* noundef) [[PURE]]
-// NO__ERRNO: declare x86_fp80 @nansl(i8* noundef) [[PURE]]
-// NO__ERRNO: declare fp128 @nansf128(i8* noundef) [[PURE]]
-// HAS_ERRNO: declare double @nans(i8* noundef) [[PURE]]
-// HAS_ERRNO: declare float @nansf(i8* noundef) [[PURE]]
-// HAS_ERRNO: declare x86_fp80 @nansl(i8* noundef) [[PURE]]
-// HAS_ERRNO: declare fp128 @nansf128(i8* noundef) [[PURE]]
+// NO__ERRNO: declare double @nans(ptr noundef) [[PURE]]
+// NO__ERRNO: declare float @nansf(ptr noundef) [[PURE]]
+// NO__ERRNO: declare x86_fp80 @nansl(ptr noundef) [[PURE]]
+// NO__ERRNO: declare fp128 @nansf128(ptr noundef) [[PURE]]
+// HAS_ERRNO: declare double @nans(ptr noundef) [[PURE]]
+// HAS_ERRNO: declare float @nansf(ptr noundef) [[PURE]]
+// HAS_ERRNO: declare x86_fp80 @nansl(ptr noundef) [[PURE]]
+// HAS_ERRNO: declare fp128 @nansf128(ptr noundef) [[PURE]]
 
   __builtin_pow(f,f);        __builtin_powf(f,f);       __builtin_powl(f,f); __builtin_powf128(f,f);
 
@@ -549,14 +549,14 @@ __builtin_remainder(f,f);  __builtin_remainderf(f,f); __builtin_remainderl(f,f);
 
 __builtin_remquo(f,f,i);  __builtin_remquof(f,f,i); __builtin_remquol(f,f,i); __builtin_remquof128(f,f,i);
 
-// NO__ERRNO: declare double @remquo(double noundef, double noundef, i32* noundef) [[NOT_READNONE]]
-// NO__ERRNO: declare float @remquof(float noundef, float noundef, i32* noundef) [[NOT_READNONE]]
-// NO__ERRNO: declare x86_fp80 @remquol(x86_fp80 noundef, x86_fp80 noundef, i32* noundef) [[NOT_READNONE]]
-// NO__ERRNO: declare fp128 @remquof128(fp128 noundef, fp128 noundef, i32* noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare double @remquo(double noundef, double noundef, i32* noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare float @remquof(float noundef, float noundef, i32* noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare x86_fp80 @remquol(x86_fp80 noundef, x86_fp80 noundef, i32* noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare fp128 @remquof128(fp128 noundef, fp128 noundef, i32* noundef) [[NOT_READNONE]]
+// NO__ERRNO: declare double @remquo(double noundef, double noundef, ptr noundef) [[NOT_READNONE]]
+// NO__ERRNO: declare float @remquof(float noundef, float noundef, ptr noundef) [[NOT_READNONE]]
+// NO__ERRNO: declare x86_fp80 @remquol(x86_fp80 noundef, x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
+// NO__ERRNO: declare fp128 @remquof128(fp128 noundef, fp128 noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare double @remquo(double noundef, double noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare float @remquof(float noundef, float noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare x86_fp80 @remquol(x86_fp80 noundef, x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare fp128 @remquof128(fp128 noundef, fp128 noundef, ptr noundef) [[NOT_READNONE]]
 
 __builtin_rint(f);       __builtin_rintf(f);      __builtin_rintl(f); __builtin_rintf128(f);
 

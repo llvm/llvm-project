@@ -2,7 +2,7 @@
 
 ! This test checks the lowering of atomic read
 
-!CHECK: func @_QQmain() {
+!CHECK: func @_QQmain() attributes {fir.bindc_name = "ompatomic"} {
 !CHECK: %[[VAR_A:.*]] = fir.alloca !fir.char<1> {bindc_name = "a", uniq_name = "_QFEa"}
 !CHECK: %[[VAR_B:.*]] = fir.alloca !fir.char<1> {bindc_name = "b", uniq_name = "_QFEb"}
 !CHECK: %[[VAR_C:.*]] = fir.alloca !fir.logical<4> {bindc_name = "c", uniq_name = "_QFEc"}
@@ -13,12 +13,12 @@
 !CHECK: %[[VAR_H:.*]] = fir.alloca f32 {bindc_name = "h", uniq_name = "_QFEh"}
 !CHECK: %[[VAR_X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}
 !CHECK: %[[VAR_Y:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}
-!CHECK: omp.atomic.read %[[VAR_X]] = %[[VAR_Y]] memory_order(acquire)  hint(uncontended) : !fir.ref<i32>
-!CHECK: omp.atomic.read %[[VAR_A]] = %[[VAR_B]] memory_order(relaxed) hint(none)  : !fir.ref<!fir.char<1>>
-!CHECK: omp.atomic.read %[[VAR_C]] = %[[VAR_D]] memory_order(seq_cst)  hint(contended) : !fir.ref<!fir.logical<4>>
-!CHECK: omp.atomic.read %[[VAR_E]] = %[[VAR_F]] hint(speculative) : !fir.ref<!fir.char<1,8>>
-!CHECK: omp.atomic.read %[[VAR_G]] = %[[VAR_H]] hint(nonspeculative) : !fir.ref<f32>
-!CHECK: omp.atomic.read %[[VAR_G]] = %[[VAR_H]] : !fir.ref<f32>
+!CHECK: omp.atomic.read %[[VAR_X]] = %[[VAR_Y]] memory_order(acquire)  hint(uncontended) : !fir.ref<i32>, i32
+!CHECK: omp.atomic.read %[[VAR_A]] = %[[VAR_B]] memory_order(relaxed) hint(none)  : !fir.ref<!fir.char<1>>, !fir.char<1>
+!CHECK: omp.atomic.read %[[VAR_C]] = %[[VAR_D]] memory_order(seq_cst)  hint(contended) : !fir.ref<!fir.logical<4>>, !fir.logical<4>
+!CHECK: omp.atomic.read %[[VAR_E]] = %[[VAR_F]] hint(speculative) : !fir.ref<!fir.char<1,8>>, !fir.char<1,8>
+!CHECK: omp.atomic.read %[[VAR_G]] = %[[VAR_H]] hint(nonspeculative) : !fir.ref<f32>, f32
+!CHECK: omp.atomic.read %[[VAR_G]] = %[[VAR_H]] : !fir.ref<f32>, f32
 !CHECK: return
 !CHECK: }
 
@@ -59,7 +59,7 @@ end program OmpAtomic
 !CHECK:         fir.store %[[VAL_5]] to %[[VAL_4]] : !fir.ref<!fir.ptr<i32>>
 !CHECK:         %[[VAL_6:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.ptr<i32>>
 !CHECK:         %[[VAL_7:.*]] = fir.load %[[VAL_4]] : !fir.ref<!fir.ptr<i32>>
-!CHECK:         omp.atomic.read %[[VAL_7]] = %[[VAL_6]]   : !fir.ptr<i32>
+!CHECK:         omp.atomic.read %[[VAL_7]] = %[[VAL_6]]   : !fir.ptr<i32>, i32
 !CHECK:         %[[VAL_8:.*]] = fir.load %[[VAL_4]] : !fir.ref<!fir.ptr<i32>>
 !CHECK:         %[[VAL_9:.*]] = fir.load %[[VAL_8]] : !fir.ptr<i32>
 !CHECK:         %[[VAL_10:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.ptr<i32>>

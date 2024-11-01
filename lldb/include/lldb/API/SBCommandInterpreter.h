@@ -65,6 +65,7 @@ public:
 
   lldb::SBDebugger GetDebugger();
 
+#ifndef SWIG
   lldb::SBCommand AddMultiwordCommand(const char *name, const char *help);
 
   /// Add a new command to the lldb::CommandInterpreter.
@@ -146,8 +147,9 @@ public:
                              lldb::SBCommandPluginInterface *impl,
                              const char *help, const char *syntax,
                              const char *auto_repeat_command);
-
   void SourceInitFileInGlobalDirectory(lldb::SBCommandReturnObject &result);
+#endif
+
 
   void SourceInitFileInHomeDirectory(lldb::SBCommandReturnObject &result);
   void SourceInitFileInHomeDirectory(lldb::SBCommandReturnObject &result,
@@ -187,9 +189,11 @@ public:
   // (if any), at which point you should display the choices and let the user
   // type further to disambiguate.
 
+#ifndef SWIG
   int HandleCompletion(const char *current_line, const char *cursor,
                        const char *last_char, int match_start_point,
                        int max_return_elements, lldb::SBStringList &matches);
+#endif
 
   int HandleCompletion(const char *current_line, uint32_t cursor_pos,
                        int match_start_point, int max_return_elements,
@@ -197,10 +201,12 @@ public:
 
   // Same as HandleCompletion, but also fills out `descriptions` with
   // descriptions for each match.
+#ifndef SWIG
   int HandleCompletionWithDescriptions(
       const char *current_line, const char *cursor, const char *last_char,
       int match_start_point, int max_return_elements,
       lldb::SBStringList &matches, lldb::SBStringList &descriptions);
+#endif
 
   int HandleCompletionWithDescriptions(const char *current_line,
                                        uint32_t cursor_pos,
@@ -214,13 +220,14 @@ public:
   // Catch commands before they execute by registering a callback that will get
   // called when the command gets executed. This allows GUI or command line
   // interfaces to intercept a command and stop it from happening
+#ifndef SWIG
   bool SetCommandOverrideCallback(const char *command_name,
                                   lldb::CommandOverrideCallback callback,
                                   void *baton);
-
   SBCommandInterpreter(
       lldb_private::CommandInterpreter *interpreter_ptr =
           nullptr); // Access using SBDebugger::GetCommandInterpreter();
+#endif
 
   /// Return true if the command interpreter is the active IO handler.
   ///
@@ -280,6 +287,7 @@ private:
   lldb_private::CommandInterpreter *m_opaque_ptr;
 };
 
+#ifndef SWIG
 class SBCommandPluginInterface {
 public:
   virtual ~SBCommandPluginInterface() = default;
@@ -407,6 +415,7 @@ private:
 
   lldb::CommandObjectSP m_opaque_sp;
 };
+#endif
 
 } // namespace lldb
 

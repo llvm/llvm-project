@@ -205,6 +205,12 @@ def ptr_add_immed_chain : GICombineRule<
          [{ return Helper.matchPtrAddImmedChain(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.applyPtrAddImmedChain(*${d}, ${matchinfo}); }])>;
 
+def shifts_too_big : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_SHL, G_ASHR, G_LSHR):$root,
+         [{ return Helper.matchShiftsTooBig(*${root}); }]),
+  (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
+
 // Fold shift (shift base x), y -> shift base, (x+y), if shifts are same
 def shift_immed_matchdata : GIDefMatchData<"RegisterImmPair">;
 def shift_immed_chain : GICombineRule<
@@ -1089,7 +1095,7 @@ def fma_combines : GICombineGroup<[combine_fadd_fmul_to_fmad_or_fma,
 def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     extract_vec_elt_combines, combines_for_extload,
     combine_indexed_load_store, undef_combines, identity_combines, phi_combines,
-    simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands,
+    simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands, shifts_too_big,
     reassocs, ptr_add_immed_chain,
     shl_ashr_to_sext_inreg, sext_inreg_of_load,
     width_reduction_combines, select_combines,

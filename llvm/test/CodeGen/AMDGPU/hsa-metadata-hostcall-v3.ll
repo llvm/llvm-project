@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=3 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=3 < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck --check-prefix=CHECK %s
 
 declare void @function1()
 
@@ -294,3 +294,6 @@ attributes #1 = { nounwind readnone speculatable willreturn }
 attributes #2 = { "amdgpu-implicitarg-num-bytes"="48" }
 attributes #3 = { "amdgpu-implicitarg-num-bytes"="48" "amdgpu-no-hostcall-ptr" }
 attributes #4 = { noinline }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 300}

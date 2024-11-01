@@ -1705,14 +1705,16 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure,
         float to signed 16      float   int16
         signed 8 to float       int8    float
         signed 16 to float      int16   float
+        float 32 to float 64    float32 float64
+        float 64 to float 32    float64 float32
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input
+    Tosa_Tensor_Cast:$input
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_Tensor_Cast:$output
   );
 
   let hasFolder = 1;

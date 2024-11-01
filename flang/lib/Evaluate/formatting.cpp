@@ -479,7 +479,11 @@ llvm::raw_ostream &StructureConstructor::AsFortran(llvm::raw_ostream &o) const {
 std::string DynamicType::AsFortran() const {
   if (derived_) {
     CHECK(category_ == TypeCategory::Derived);
-    return DerivedTypeSpecAsFortran(*derived_);
+    std::string result{DerivedTypeSpecAsFortran(*derived_)};
+    if (IsPolymorphic()) {
+      result = "CLASS("s + result + ')';
+    }
+    return result;
   } else if (charLengthParamValue_ || knownLength()) {
     std::string result{"CHARACTER(KIND="s + std::to_string(kind_) + ",LEN="};
     if (knownLength()) {

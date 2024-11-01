@@ -102,6 +102,7 @@ public:
   bool Inquire(InquiryKeywordHash, bool &);
   bool Inquire(InquiryKeywordHash, std::int64_t, bool &); // PENDING=
   bool Inquire(InquiryKeywordHash, std::int64_t &);
+  std::int64_t InquirePos();
   void GotChar(signed int = 1); // for READ(SIZE=); can be <0
 
   MutableModes &mutableModes();
@@ -262,6 +263,7 @@ public:
   bool Inquire(InquiryKeywordHash, bool &);
   bool Inquire(InquiryKeywordHash, std::int64_t, bool &);
   bool Inquire(InquiryKeywordHash, std::int64_t &);
+  std::int64_t InquirePos();
 
   void BadInquiryKeywordHashCrash(InquiryKeywordHash);
 
@@ -343,6 +345,7 @@ public:
   MutableModes &mutableModes() { return unit_.modes; }
   void HandleRelativePosition(std::int64_t);
   void HandleAbsolutePosition(std::int64_t);
+  std::int64_t InquirePos();
 
 protected:
   bool free_{true};
@@ -406,6 +409,7 @@ public:
   int EndIoStatement();
   ExternalFileUnit *GetExternalFileUnit() const { return &unit_; }
   void SetAsynchronous();
+  std::int64_t InquirePos();
 
 private:
   ExternalFileUnit &unit_;
@@ -483,7 +487,6 @@ public:
   MutableModes &mutableModes();
   ConnectionState &GetConnectionState();
   ExternalFileUnit *GetExternalFileUnit() const;
-  void CompleteOperation();
   int EndIoStatement();
   bool Emit(const char *, std::size_t bytes, std::size_t elementBytes = 0);
   std::size_t GetNextInputBytes(const char *&);

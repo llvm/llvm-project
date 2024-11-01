@@ -1261,6 +1261,12 @@ template <> struct GraphTraits<Inverse<const MachineBasicBlock*>> {
   static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
 };
 
+// These accessors are handy for sharing templated code between IR and MIR.
+inline auto successors(const MachineBasicBlock *BB) { return BB->successors(); }
+inline auto predecessors(const MachineBasicBlock *BB) {
+  return BB->predecessors();
+}
+
 /// MachineInstrSpan provides an interface to get an iteration range
 /// containing the instruction it was initialized with, along with all
 /// those instructions inserted prior to or following that instruction

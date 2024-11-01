@@ -13,10 +13,10 @@
 #ifndef LLVM_MC_MCOBJECTFILEINFO_H
 #define LLVM_MC_MCOBJECTFILEINFO_H
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Swift.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <array>
 #include <optional>

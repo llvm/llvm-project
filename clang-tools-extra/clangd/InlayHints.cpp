@@ -304,8 +304,8 @@ public:
       return true;
     }
 
-    if (D->getType()->getContainedAutoType()) {
-      if (!D->getType()->isDependentType()) {
+    if (auto *AT = D->getType()->getContainedAutoType()) {
+      if (AT->isDeduced() && !D->getType()->isDependentType()) {
         // Our current approach is to place the hint on the variable
         // and accordingly print the full type
         // (e.g. for `const auto& x = 42`, print `const int&`).

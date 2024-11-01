@@ -306,6 +306,18 @@ PointerType *Type::getInt64PtrTy(LLVMContext &C, unsigned AS) {
   return getInt64Ty(C)->getPointerTo(AS);
 }
 
+Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
+  // opaque pointer in addrspace(10)
+  static PointerType *Ty = PointerType::get(C, 10);
+  return Ty;
+}
+
+Type *Type::getWasm_FuncrefTy(LLVMContext &C) {
+  // opaque pointer in addrspace(20)
+  static PointerType *Ty = PointerType::get(C, 20);
+  return Ty;
+}
+
 //===----------------------------------------------------------------------===//
 //                       IntegerType Implementation
 //===----------------------------------------------------------------------===//

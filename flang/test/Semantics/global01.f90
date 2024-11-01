@@ -23,7 +23,7 @@ end subroutine
 
 program test
   interface
-    !WARNING: The global subprogram 'global1' is not compatible with its local procedure declaration (incompatible dummy argument #1: incompatible dummy data object types: REAL(4) vs INTEGER(4))
+    !WARNING: The global subprogram 'global1' is not compatible with its local procedure declaration (incompatible dummy argument #1: incompatible dummy data object types: INTEGER(4) vs REAL(4))
     subroutine global1(x)
       real, intent(in) :: x
     end subroutine

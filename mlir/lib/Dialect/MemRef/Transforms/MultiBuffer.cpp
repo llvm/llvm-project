@@ -15,8 +15,13 @@
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
+#include "llvm/Support/Debug.h"
 
 using namespace mlir;
+
+#define DEBUG_TYPE "memref-transforms"
+#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
+#define DBGSNL() (llvm::dbgs() << "\n")
 
 /// Return true if the op fully overwrite the given `buffer` value.
 static bool overrideBuffer(Operation *op, Value buffer) {
@@ -77,35 +82,61 @@ static Value getOrCreateValue(OpFoldResult res, OpBuilder &builder,
 // Returns success if the transformation happened and failure otherwise.
 // This is not a pattern as it requires propagating the new memref type to its
 // uses and requires updating subview ops.
-FailureOr<memref::AllocOp> mlir::memref::multiBuffer(memref::AllocOp allocOp,
-                                                     unsigned multiplier) {
+FailureOr<memref::AllocOp>
+mlir::memref::multiBuffer(memref::AllocOp allocOp, unsigned multiplier,
+                          bool skipOverrideAnalysis) {
+  LLVM_DEBUG(DBGS() << "Try multibuffer: " << allocOp << "\n");
   DominanceInfo dom(allocOp->getParentOp());
   LoopLikeOpInterface candidateLoop;
   for (Operation *user : allocOp->getUsers()) {
     auto parentLoop = user->getParentOfType<LoopLikeOpInterface>();
-    if (!parentLoop)
+    if (!parentLoop) {
+      LLVM_DEBUG(DBGS() << "Skip user: no parent loop\n");
       return failure();
-    /// Make sure there is no loop carried dependency on the allocation.
-    if (!overrideBuffer(user, allocOp.getResult()))
-      continue;
-    // If this user doesn't dominate all the other users keep looking.
-    if (llvm::any_of(allocOp->getUsers(), [&](Operation *otherUser) {
-          return !dom.dominates(user, otherUser);
-        }))
-      continue;
+    }
+    if (!skipOverrideAnalysis) {
+      /// Make sure there is no loop-carried dependency on the allocation.
+      if (!overrideBuffer(user, allocOp.getResult())) {
+        LLVM_DEBUG(DBGS() << "Skip user: found loop-carried dependence\n");
+        continue;
+      }
+      // If this user doesn't dominate all the other users keep looking.
+      if (llvm::any_of(allocOp->getUsers(), [&](Operation *otherUser) {
+            return !dom.dominates(user, otherUser);
+          })) {
+        LLVM_DEBUG(DBGS() << "Skip user: does not dominate all other users\n");
+        continue;
+      }
+    } else {
+      if (llvm::any_of(allocOp->getUsers(), [&](Operation *otherUser) {
+            return !isa<memref::DeallocOp>(otherUser) &&
+                   !parentLoop->isProperAncestor(otherUser);
+          })) {
+        LLVM_DEBUG(
+            DBGS()
+            << "Skip user: not all other users are in the parent loop\n");
+        continue;
+      }
+    }
     candidateLoop = parentLoop;
     break;
   }
-  if (!candidateLoop)
+  if (!candidateLoop) {
+    LLVM_DEBUG(DBGS() << "Skip alloc: no candidate loop\n");
     return failure();
+  }
   std::optional<Value> inductionVar = candidateLoop.getSingleInductionVar();
   std::optional<OpFoldResult> lowerBound = candidateLoop.getSingleLowerBound();
   std::optional<OpFoldResult> singleStep = candidateLoop.getSingleStep();
-  if (!inductionVar || !lowerBound || !singleStep)
+  if (!inductionVar || !lowerBound || !singleStep) {
+    LLVM_DEBUG(DBGS() << "Skip alloc: no single iv, lb or step\n");
     return failure();
+  }
 
-  if (!dom.dominates(allocOp.getOperation(), candidateLoop))
+  if (!dom.dominates(allocOp.getOperation(), candidateLoop)) {
+    LLVM_DEBUG(DBGS() << "Skip alloc: does not dominate candidate loop\n");
     return failure();
+  }
 
   OpBuilder builder(candidateLoop);
   SmallVector<int64_t, 4> newShape(1, multiplier);

@@ -830,10 +830,101 @@ InstCombinerImpl::foldIntrinsicWithOverflowCommon(IntrinsicInst *II) {
   return nullptr;
 }
 
+Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
+  Value *Src0 = II.getArgOperand(0);
+  Value *Src1 = II.getArgOperand(1);
+  const ConstantInt *CMask = cast<ConstantInt>(Src1);
+  uint32_t Mask = CMask->getZExtValue();
+  const bool IsStrict = II.isStrictFP();
+
+  Value *FNegSrc;
+  if (match(Src0, m_FNeg(m_Value(FNegSrc)))) {
+    // is.fpclass (fneg x), mask -> is.fpclass x, (fneg mask)
+    unsigned NewMask = Mask & fcNan;
+    if (Mask & fcNegInf)
+      NewMask |= fcPosInf;
+    if (Mask & fcNegNormal)
+      NewMask |= fcPosNormal;
+    if (Mask & fcNegSubnormal)
+      NewMask |= fcPosSubnormal;
+    if (Mask & fcNegZero)
+      NewMask |= fcPosZero;
+    if (Mask & fcPosZero)
+      NewMask |= fcNegZero;
+    if (Mask & fcPosSubnormal)
+      NewMask |= fcNegSubnormal;
+    if (Mask & fcPosNormal)
+      NewMask |= fcNegNormal;
+    if (Mask & fcPosInf)
+      NewMask |= fcNegInf;
+
+    II.setArgOperand(1, ConstantInt::get(Src1->getType(), NewMask));
+    return replaceOperand(II, 0, FNegSrc);
+  }
+
+  Value *FAbsSrc;
+  if (match(Src0, m_FAbs(m_Value(FAbsSrc)))) {
+    unsigned NewMask = Mask & fcNan;
+    if (Mask & fcPosZero)
+      NewMask |= fcZero;
+    if (Mask & fcPosSubnormal)
+      NewMask |= fcSubnormal;
+    if (Mask & fcPosNormal)
+      NewMask |= fcNormal;
+    if (Mask & fcPosInf)
+      NewMask |= fcInf;
+
+    II.setArgOperand(1, ConstantInt::get(Src1->getType(), NewMask));
+    return replaceOperand(II, 0, FAbsSrc);
+  }
+
+  if (Mask == fcNan && !IsStrict) {
+    // Equivalent of isnan. Replace with standard fcmp if we don't care about FP
+    // exceptions.
+    Value *IsNan =
+        Builder.CreateFCmpUNO(Src0, ConstantFP::getZero(Src0->getType()));
+    IsNan->takeName(&II);
+    return replaceInstUsesWith(II, IsNan);
+  }
+
+  if (Mask == (~fcNan & fcAllFlags) && !IsStrict) {
+    // Equivalent of !isnan. Replace with standard fcmp.
+    Value *FCmp =
+        Builder.CreateFCmpORD(Src0, ConstantFP::getZero(Src0->getType()));
+    FCmp->takeName(&II);
+    return replaceInstUsesWith(II, FCmp);
+  }
+
+  // fp_class (nnan x), qnan|snan|other -> fp_class (nnan x), other
+  if ((Mask & fcNan) && isKnownNeverNaN(Src0, &getTargetLibraryInfo())) {
+    II.setArgOperand(1, ConstantInt::get(Src1->getType(), Mask & ~fcNan));
+    return &II;
+  }
+
+  // fp_class (nnan x), ~(qnan|snan) -> true
+  if (Mask == (~fcNan & fcAllFlags) &&
+      isKnownNeverNaN(Src0, &getTargetLibraryInfo())) {
+    return replaceInstUsesWith(II, ConstantInt::get(II.getType(), true));
+  }
+
+  // fp_class (ninf x), ninf|pinf|other -> fp_class (ninf x), other
+  if ((Mask & fcInf) && isKnownNeverInfinity(Src0, &getTargetLibraryInfo())) {
+    II.setArgOperand(1, ConstantInt::get(Src1->getType(), Mask & ~fcInf));
+    return &II;
+  }
+
+  // fp_class (ninf x), ~(ninf|pinf) -> true
+  if (Mask == (~fcInf & fcAllFlags) &&
+      isKnownNeverInfinity(Src0, &getTargetLibraryInfo())) {
+    return replaceInstUsesWith(II, ConstantInt::get(II.getType(), true));
+  }
+
+  return nullptr;
+}
+
 static std::optional<bool> getKnownSign(Value *Op, Instruction *CxtI,
-                                        const DataLayout &DL,
-                                        AssumptionCache *AC,
-                                        DominatorTree *DT) {
+                                   const DataLayout &DL, AssumptionCache *AC,
+                                   DominatorTree *DT) {
   KnownBits Known = computeKnownBits(Op, DL, 0, AC, CxtI, DT);
   if (Known.isNonNegative())
     return false;
@@ -2852,6 +2943,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::is_fpclass: {
+    if (Instruction *I = foldIntrinsicIsFPClass(*II))
+      return I;
+    break;
+  }
   default: {
     // Handle target specific intrinsics
     std::optional<Instruction *> V = targetInstCombineIntrinsic(*II);
@@ -3381,12 +3477,16 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
 }
 
 /// If the callee is a constexpr cast of a function, attempt to move the cast to
-/// the arguments of the call/callbr/invoke.
+/// the arguments of the call/invoke.
+/// CallBrInst is not supported.
 bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   auto *Callee =
       dyn_cast<Function>(Call.getCalledOperand()->stripPointerCasts());
   if (!Callee)
     return false;
+
+  assert(!isa<CallBrInst>(Call) &&
+         "CallBr's don't have a single point after a def to insert at");
 
   // If this is a call to a thunk function, don't remove the cast. Thunks are
   // used to transparently forward all incoming parameters and outgoing return
@@ -3433,7 +3533,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
         return false;   // Attribute not compatible with transformed value.
     }
 
-    // If the callbase is an invoke/callbr instruction, and the return value is
+    // If the callbase is an invoke instruction, and the return value is
     // used by a PHI node in a successor, we cannot change the return type of
     // the call because there is no place to put the cast instruction (without
     // breaking the critical edge).  Bail out in this case.
@@ -3441,8 +3541,6 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
       BasicBlock *PhisNotSupportedBlock = nullptr;
       if (auto *II = dyn_cast<InvokeInst>(Caller))
         PhisNotSupportedBlock = II->getNormalDest();
-      if (auto *CB = dyn_cast<CallBrInst>(Caller))
-        PhisNotSupportedBlock = CB->getDefaultDest();
       if (PhisNotSupportedBlock)
         for (User *U : Caller->users())
           if (PHINode *PN = dyn_cast<PHINode>(U))
@@ -3626,9 +3724,6 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   if (InvokeInst *II = dyn_cast<InvokeInst>(Caller)) {
     NewCall = Builder.CreateInvoke(Callee, II->getNormalDest(),
                                    II->getUnwindDest(), Args, OpBundles);
-  } else if (CallBrInst *CBI = dyn_cast<CallBrInst>(Caller)) {
-    NewCall = Builder.CreateCallBr(Callee, CBI->getDefaultDest(),
-                                   CBI->getIndirectDests(), Args, OpBundles);
   } else {
     NewCall = Builder.CreateCall(Callee, Args, OpBundles);
     cast<CallInst>(NewCall)->setTailCallKind(

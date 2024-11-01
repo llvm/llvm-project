@@ -62,4 +62,25 @@ program main
     integer :: z
   end type
 
+  type, bind(c) :: t10
+    !ERROR: Each component of an interoperable derived type must have an interoperable type
+    character(len=2) x
+  end type
+  type, bind(c) :: t11
+    !ERROR: Each component of an interoperable derived type must have an interoperable type
+    character(kind=2) x
+  end type
+  type, bind(c) :: t12
+    !ERROR: Each component of an interoperable derived type must have an interoperable type
+    logical(kind=8) x
+  end type
+  type, bind(c) :: t13
+    !ERROR: Each component of an interoperable derived type must have an interoperable type
+    real(kind=2) x
+  end type
+  type, bind(c) :: t14
+    !ERROR: Each component of an interoperable derived type must have an interoperable type
+    complex(kind=2) x
+  end type
+
 end

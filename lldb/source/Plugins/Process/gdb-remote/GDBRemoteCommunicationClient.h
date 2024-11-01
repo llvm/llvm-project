@@ -194,13 +194,9 @@ public:
 
   Status GetMemoryRegionInfo(lldb::addr_t addr, MemoryRegionInfo &range_info);
 
-  Status GetWatchpointSupportInfo(uint32_t &num);
+  std::optional<uint32_t> GetWatchpointSlotCount();
 
-  Status GetWatchpointSupportInfo(uint32_t &num, bool &after,
-                                  const ArchSpec &arch);
-
-  Status GetWatchpointsTriggerAfterInstruction(bool &after,
-                                               const ArchSpec &arch);
+  std::optional<bool> GetWatchpointReportedAfter();
 
   const ArchSpec &GetHostArchitecture();
 

@@ -14,14 +14,15 @@
 #include <__algorithm/iterator_operations.h>
 #include <__config>
 #include <__functional/identity.h>
+#include <__functional/invoke.h>
 #include <__iterator/advance.h>
 #include <__iterator/concepts.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__ranges/concepts.h>
+#include <__type_traits/is_callable.h>
 #include <__utility/convert_to_integral.h>
 #include <__utility/pair.h>
-#include <type_traits>  // __convert_to_integral
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

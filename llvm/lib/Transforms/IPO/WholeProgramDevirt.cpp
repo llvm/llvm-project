@@ -58,7 +58,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -94,6 +93,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -259,7 +259,7 @@ wholeprogramdevirt::findLowestOffset(ArrayRef<VirtualCallTarget> Targets,
         if (I < B.size())
           BitsUsed |= B[I];
       if (BitsUsed != 0xff)
-        return (MinByte + I) * 8 + countTrailingZeros(uint8_t(~BitsUsed));
+        return (MinByte + I) * 8 + llvm::countr_zero(uint8_t(~BitsUsed));
     }
   } else {
     // Find a free (Size/8) byte region in each member of Used.
@@ -379,6 +379,7 @@ namespace {
 // conditions
 //   1) All summaries are live.
 //   2) All function summaries indicate it's unreachable
+//   3) There is no non-function with the same GUID (which is rare)
 bool mustBeUnreachableFunction(ValueInfo TheFnVI) {
   if ((!TheFnVI) || TheFnVI.getSummaryList().empty()) {
     // Returns false if ValueInfo is absent, or the summary list is empty
@@ -391,12 +392,13 @@ bool mustBeUnreachableFunction(ValueInfo TheFnVI) {
     // In general either all summaries should be live or all should be dead.
     if (!Summary->isLive())
       return false;
-    if (auto *FS = dyn_cast<FunctionSummary>(Summary.get())) {
+    if (auto *FS = dyn_cast<FunctionSummary>(Summary->getBaseObject())) {
       if (!FS->fflags().MustBeUnreachable)
         return false;
     }
-    // Do nothing if a non-function has the same GUID (which is rare).
-    // This is correct since non-function summaries are not relevant.
+    // Be conservative if a non-function has the same GUID (which is rare).
+    else
+      return false;
   }
   // All function summaries are live and all of them agree that the function is
   // unreachble.
@@ -958,7 +960,7 @@ void DevirtModule::buildTypeIdentifierMap(
     std::vector<VTableBits> &Bits,
     DenseMap<Metadata *, std::set<TypeMemberInfo>> &TypeIdMap) {
   DenseMap<GlobalVariable *, VTableBits *> GVToBits;
-  Bits.reserve(M.getGlobalList().size());
+  Bits.reserve(M.global_size());
   SmallVector<MDNode *, 2> Types;
   for (GlobalVariable &GV : M.globals()) {
     Types.clear();

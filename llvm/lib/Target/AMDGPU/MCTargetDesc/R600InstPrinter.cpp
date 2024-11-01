@@ -97,7 +97,7 @@ void R600InstPrinter::printLiteral(const MCInst *MI, unsigned OpNo,
   assert(Op.isImm() || Op.isExpr());
   if (Op.isImm()) {
     int64_t Imm = Op.getImm();
-    O << Imm << '(' << BitsToFloat(Imm) << ')';
+    O << Imm << '(' << llvm::bit_cast<float>(static_cast<uint32_t>(Imm)) << ')';
   }
   if (Op.isExpr()) {
     Op.getExpr()->print(O << '@', &MAI);

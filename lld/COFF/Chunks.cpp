@@ -658,8 +658,7 @@ void SectionChunk::getRuntimePseudoRelocs(
     }
     // sizeInBits is used to initialize the Flags field; currently no
     // other flags are defined.
-    res.emplace_back(
-        RuntimePseudoReloc(target, this, rel.VirtualAddress, sizeInBits));
+    res.emplace_back(target, this, rel.VirtualAddress, sizeInBits);
   }
 }
 

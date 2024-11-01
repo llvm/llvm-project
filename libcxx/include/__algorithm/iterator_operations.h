@@ -37,7 +37,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy> struct _IterOps;
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 struct _RangeAlgPolicy {};
 
 template <>

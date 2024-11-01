@@ -56,14 +56,12 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
@@ -78,6 +76,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
@@ -110,7 +109,9 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/HashBuilder.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/MisExpect.h"
@@ -2059,6 +2060,7 @@ static void verifyFuncBFI(PGOUseFunc &Func, LoopInfo &LI,
 
 static bool annotateAllFunctions(
     Module &M, StringRef ProfileFileName, StringRef ProfileRemappingFileName,
+    vfs::FileSystem &FS,
     function_ref<TargetLibraryInfo &(Function &)> LookupTLI,
     function_ref<BranchProbabilityInfo *(Function &)> LookupBPI,
     function_ref<BlockFrequencyInfo *(Function &)> LookupBFI,
@@ -2066,8 +2068,8 @@ static bool annotateAllFunctions(
   LLVM_DEBUG(dbgs() << "Read in profile counters: ");
   auto &Ctx = M.getContext();
   // Read the counter array from file.
-  auto ReaderOrErr =
-      IndexedInstrProfReader::create(ProfileFileName, ProfileRemappingFileName);
+  auto ReaderOrErr = IndexedInstrProfReader::create(ProfileFileName, FS,
+                                                    ProfileRemappingFileName);
   if (Error E = ReaderOrErr.takeError()) {
     handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI) {
       Ctx.diagnose(
@@ -2249,15 +2251,18 @@ static bool annotateAllFunctions(
   return true;
 }
 
-PGOInstrumentationUse::PGOInstrumentationUse(std::string Filename,
-                                             std::string RemappingFilename,
-                                             bool IsCS)
+PGOInstrumentationUse::PGOInstrumentationUse(
+    std::string Filename, std::string RemappingFilename, bool IsCS,
+    IntrusiveRefCntPtr<vfs::FileSystem> VFS)
     : ProfileFileName(std::move(Filename)),
-      ProfileRemappingFileName(std::move(RemappingFilename)), IsCS(IsCS) {
+      ProfileRemappingFileName(std::move(RemappingFilename)), IsCS(IsCS),
+      FS(std::move(VFS)) {
   if (!PGOTestProfileFile.empty())
     ProfileFileName = PGOTestProfileFile;
   if (!PGOTestProfileRemappingFile.empty())
     ProfileRemappingFileName = PGOTestProfileRemappingFile;
+  if (!FS)
+    FS = vfs::getRealFileSystem();
 }
 
 PreservedAnalyses PGOInstrumentationUse::run(Module &M,
@@ -2276,7 +2281,7 @@ PreservedAnalyses PGOInstrumentationUse::run(Module &M,
 
   auto *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
 
-  if (!annotateAllFunctions(M, ProfileFileName, ProfileRemappingFileName,
+  if (!annotateAllFunctions(M, ProfileFileName, ProfileRemappingFileName, *FS,
                             LookupTLI, LookupBPI, LookupBFI, PSI, IsCS))
     return PreservedAnalyses::all();
 

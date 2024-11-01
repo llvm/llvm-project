@@ -99,3 +99,13 @@ transform::ParamType::checkPayload(Location loc,
   }
   return DiagnosedSilenceableFailure::success();
 }
+
+//===----------------------------------------------------------------------===//
+// transform::AnyValueType
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::AnyValueType::checkPayload(Location loc,
+                                      ArrayRef<Value> payload) const {
+  return DiagnosedSilenceableFailure::success();
+}

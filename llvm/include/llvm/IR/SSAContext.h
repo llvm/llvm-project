@@ -63,7 +63,7 @@ public:
                                const BasicBlock &block);
 
   static bool comesBefore(const Instruction *lhs, const Instruction *rhs);
-  static bool isConstantValuePhi(const Instruction &Instr);
+  static bool isConstantOrUndefValuePhi(const Instruction &Instr);
   const BasicBlock *getDefBlock(const Value *value) const;
 
   Printable print(const BasicBlock *Block) const;

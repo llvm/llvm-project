@@ -530,8 +530,8 @@ define <vscale x 4 x bfloat> @insert_nxv4bf16_v4bf16(<vscale x 4 x bfloat> %sv0,
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    st1h { z0.s }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    addpl x8, sp, #4
+; CHECK-NEXT:    st1h { z0.s }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    str d1, [x8]
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [sp, #1, mul vl]
 ; CHECK-NEXT:    addvl sp, sp, #1

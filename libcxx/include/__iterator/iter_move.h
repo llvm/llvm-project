@@ -25,7 +25,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // [iterator.cust.move]
 
@@ -97,7 +97,7 @@ template<__dereferenceable _Tp>
   requires requires(_Tp& __t) { { ranges::iter_move(__t) } -> __can_reference; }
 using iter_rvalue_reference_t = decltype(ranges::iter_move(std::declval<_Tp&>()));
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

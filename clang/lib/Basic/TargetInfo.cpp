@@ -19,7 +19,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <cstdlib>
 using namespace clang;
 
@@ -119,7 +119,6 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 0;
   MaxVectorAlign = 0;
   MaxTLSAlign = 0;
-  SimdDefaultAlign = 0;
   SizeType = UnsignedLong;
   PtrDiffType = SignedLong;
   IntMaxType = SignedLongLong;

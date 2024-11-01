@@ -1018,7 +1018,7 @@ void IRTranslator::emitBitTestHeader(SwitchCG::BitTestBlock &B,
 
   LLT MaskTy = SwitchOpTy;
   if (MaskTy.getSizeInBits() > PtrTy.getSizeInBits() ||
-      !isPowerOf2_32(MaskTy.getSizeInBits()))
+      !llvm::has_single_bit<uint32_t>(MaskTy.getSizeInBits()))
     MaskTy = LLT::scalar(PtrTy.getSizeInBits());
   else {
     // Ensure that the type will fit the mask value.
@@ -1074,14 +1074,14 @@ void IRTranslator::emitBitTestCase(SwitchCG::BitTestBlock &BB,
     // Testing for a single bit; just compare the shift count with what it
     // would need to be to shift a 1 bit in that position.
     auto MaskTrailingZeros =
-        MIB.buildConstant(SwitchTy, countTrailingZeros(B.Mask));
+        MIB.buildConstant(SwitchTy, llvm::countr_zero(B.Mask));
     Cmp =
         MIB.buildICmp(ICmpInst::ICMP_EQ, LLT::scalar(1), Reg, MaskTrailingZeros)
             .getReg(0);
   } else if (PopCount == BB.Range) {
     // There is only one zero bit in the range, test for it directly.
     auto MaskTrailingOnes =
-        MIB.buildConstant(SwitchTy, countTrailingOnes(B.Mask));
+        MIB.buildConstant(SwitchTy, llvm::countr_one(B.Mask));
     Cmp = MIB.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Reg, MaskTrailingOnes)
               .getReg(0);
   } else {

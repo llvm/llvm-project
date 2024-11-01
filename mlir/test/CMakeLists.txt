@@ -89,7 +89,7 @@ set(MLIR_TEST_DEPENDS
 # The native target may not be enabled, in this case we won't
 # run tests that involves executing on the host: do not build
 # useless binaries.
-if(TARGET ${LLVM_NATIVE_ARCH})
+if(LLVM_ENABLE_PIC AND TARGET ${LLVM_NATIVE_ARCH})
   list(APPEND MLIR_TEST_DEPENDS
     mlir-cpu-runner
     llc
@@ -121,9 +121,13 @@ if(LLVM_BUILD_EXAMPLES)
     toyc-ch3
     toyc-ch4
     toyc-ch5
-    toyc-ch6
-    toyc-ch7
     )
+  if(MLIR_ENABLE_EXECUTION_ENGINE)
+    list(APPEND MLIR_TEST_DEPENDS
+      toyc-ch6
+      toyc-ch7
+    )
+  endif()
 endif()
 
 if(MLIR_ENABLE_SPIRV_CPU_RUNNER)

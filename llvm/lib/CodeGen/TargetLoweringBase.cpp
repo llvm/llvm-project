@@ -15,7 +15,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -53,6 +52,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include <algorithm>
 #include <cassert>
@@ -1137,8 +1137,7 @@ static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
   unsigned LaneSizeInBits = NewVT.getScalarSizeInBits();
 
   // Convert sizes such as i33 to i64.
-  if (!isPowerOf2_32(LaneSizeInBits))
-    LaneSizeInBits = NextPowerOf2(LaneSizeInBits);
+  LaneSizeInBits = llvm::bit_ceil(LaneSizeInBits);
 
   MVT DestVT = TLI->getRegisterType(NewVT);
   RegisterVT = DestVT;
@@ -1627,7 +1626,7 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context,
   if (EVT(DestVT).bitsLT(NewVT)) {  // Value is expanded, e.g. i64 -> i16.
     TypeSize NewVTSize = NewVT.getSizeInBits();
     // Convert sizes such as i33 to i64.
-    if (!isPowerOf2_32(NewVTSize.getKnownMinValue()))
+    if (!llvm::has_single_bit<uint32_t>(NewVTSize.getKnownMinValue()))
       NewVTSize = NewVTSize.coefficientNextPowerOf2();
     return NumVectorRegs*(NewVTSize/DestVT.getSizeInBits());
   }
@@ -1691,7 +1690,7 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
     // conventions. The frontend should mark functions whose return values
     // require promoting with signext or zeroext attributes.
     if (ExtendKind != ISD::ANY_EXTEND && VT.isInteger()) {
-      MVT MinVT = TLI.getRegisterType(ReturnType->getContext(), MVT::i32);
+      MVT MinVT = TLI.getRegisterType(MVT::i32);
       if (VT.bitsLT(MinVT))
         VT = MinVT;
     }

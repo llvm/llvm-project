@@ -4,7 +4,7 @@ set(LLVM_TARGETS_TO_BUILD X86;ARM;AArch64;RISCV CACHE STRING "")
 
 set(PACKAGE_VENDOR Fuchsia CACHE STRING "")
 
-set(LLVM_ENABLE_PROJECTS "bolt;clang;clang-tools-extra;lld;llvm;polly" CACHE STRING "")
+set(_FUCHSIA_ENABLE_PROJECTS "bolt;clang;clang-tools-extra;lld;llvm;polly")
 set(LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
 
 set(LLVM_ENABLE_BACKTRACES OFF CACHE BOOL "")
@@ -26,6 +26,9 @@ set(LLVM_USE_RELATIVE_PATHS_IN_FILES ON CACHE BOOL "")
 
 if(WIN32)
   set(LLVM_USE_CRT_RELEASE "MT" CACHE STRING "")
+else()
+  set(LLVM_TOOL_LLVM_DRIVER_BUILD ON CACHE BOOL "")
+  set(LLVM_DRIVER_TARGET llvm-driver)
 endif()
 
 set(CLANG_DEFAULT_CXX_STDLIB libc++ CACHE STRING "")
@@ -69,12 +72,43 @@ if(APPLE)
   set(RUNTIMES_CMAKE_ARGS "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13;-DCMAKE_OSX_ARCHITECTURES=arm64|x86_64" CACHE STRING "")
 endif()
 
-if(WIN32)
+if(WIN32 OR LLVM_WINSYSROOT)
+  if((NOT WIN32) AND (NOT LLVM_VFSOVERLAY))
+    message(FATAL_ERROR "LLVM_VFSOVERLAY should be defined.")
+  endif()
   set(target "x86_64-pc-windows-msvc")
+
+  if (LLVM_WINSYSROOT)
+    set(WINDOWS_COMPILER_FLAGS
+      -Xclang
+      -ivfsoverlay
+      -Xclang
+      ${LLVM_VFSOVERLAY}
+      # TODO: /winsysroot should be set by HandleLLVMOptions.cmake automatically
+      # but it current has a bug that prevents it from working under cross
+      # compilation. Set this flag manually for now.
+      /winsysroot
+      ${LLVM_WINSYSROOT})
+    string(REPLACE ";" " " WINDOWS_COMPILER_FLAGS "${WINDOWS_COMPILER_FLAGS}")
+    set(WINDOWS_LINK_FLAGS
+      # TODO: lld-link has a bug that it cannot infer the machine type
+      # correctly when /winsysroot is set while Windows libraries search paths
+      # are not explicitly defined.
+      # Explicitly set the machine type for now.
+      /machine:X64
+      /vfsoverlay:${LLVM_VFSOVERLAY}
+      /winsysroot:${LLVM_WINSYSROOT})
+    string(REPLACE ";" " " WINDOWS_LINK_FLAGS "${WINDOWS_LINK_FLAGS}")
+  endif()
 
   list(APPEND BUILTIN_TARGETS "${target}")
   set(BUILTINS_${target}_CMAKE_SYSTEM_NAME Windows CACHE STRING "")
   set(BUILTINS_${target}_CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "")
+  set(BUILTINS_${target}_CMAKE_C_FLAGS ${WINDOWS_COMPILER_FLAGS} CACHE STRING "")
+  set(BUILTINS_${target}_CMAKE_CXX_FLAGS ${WINDOWS_COMPILER_FLAGS} CACHE STRING "")
+  set(BUILTINS_${target}_CMAKE_EXE_LINKER_FLAGS ${WINDOWS_LINK_FLAGS} CACHE STRING "")
+  set(BUILTINS_${target}_CMAKE_SHARED_LINKER_FLAGS ${WINDOWS_LINK_FLAGS} CACHE STRING "")
+  set(BUILTINS_${target}_CMAKE_MODULE_LINKER_FLAGS ${WINDOWS_LINK_FLAGS} CACHE STRING "")
 
   list(APPEND RUNTIME_TARGETS "${target}")
   set(RUNTIMES_${target}_CMAKE_SYSTEM_NAME Windows CACHE STRING "")
@@ -84,6 +118,11 @@ if(WIN32)
   set(RUNTIMES_${target}_LIBCXX_ENABLE_ABI_LINKER_SCRIPT OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx" CACHE STRING "")
+  set(RUNTIMES_${target}_CMAKE_C_FLAGS ${WINDOWS_COMPILER_FLAGS} CACHE STRING "")
+  set(RUNTIMES_${target}_CMAKE_CXX_FLAGS ${WINDOWS_COMPILER_FLAGS} CACHE STRING "")
+  set(RUNTIMES_${target}_CMAKE_EXE_LINKER_FLAGS ${WINDOWS_LINK_FLAGS} CACHE STRING "")
+  set(RUNTIMES_${target}_CMAKE_SHARED_LINKER_FLAGS ${WINDOWS_LINK_FLAGS} CACHE STRING "")
+  set(RUNTIMES_${target}_CMAKE_MODULE_LINKER_FLAGS ${WINDOWS_LINK_FLAGS} CACHE STRING "")
 endif()
 
 foreach(target aarch64-unknown-linux-gnu;armv7-unknown-linux-gnueabihf;i386-unknown-linux-gnu;x86_64-unknown-linux-gnu)
@@ -224,7 +263,6 @@ if(FUCHSIA_SDK)
   set(RUNTIMES_aarch64-unknown-fuchsia+hwasan_LLVM_USE_SANITIZER "HWAddress" CACHE STRING "")
   set(RUNTIMES_aarch64-unknown-fuchsia+hwasan_LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS OFF CACHE BOOL "")
   set(RUNTIMES_aarch64-unknown-fuchsia+hwasan_LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS OFF CACHE BOOL "")
-  set(RUNTIMES_aarch64-unknown-fuchsia+hwasan_CMAKE_CXX_FLAGS "${FUCHSIA_aarch64-unknown-fuchsia_COMPILER_FLAGS} -mllvm --hwasan-globals=0" CACHE STRING "")
 
   # HWASan+noexcept
   set(RUNTIMES_aarch64-unknown-fuchsia+hwasan+noexcept_LLVM_BUILD_COMPILER_RT OFF CACHE BOOL "")
@@ -233,7 +271,6 @@ if(FUCHSIA_SDK)
   set(RUNTIMES_aarch64-unknown-fuchsia+hwasan+noexcept_LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS OFF CACHE BOOL "")
   set(RUNTIMES_aarch64-unknown-fuchsia+hwasan+noexcept_LIBCXXABI_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
   set(RUNTIMES_aarch64-unknown-fuchsia+hwasan+noexcept_LIBCXX_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
-  set(RUNTIMES_aarch64-unknown-fuchsia+hwasan+noexcept_CMAKE_CXX_FLAGS "${FUCHSIA_aarch64-unknown-fuchsia_COMPILER_FLAGS} -mllvm --hwasan-globals=0" CACHE STRING "")
 
   set(LLVM_RUNTIME_MULTILIBS "asan;noexcept;compat;asan+noexcept;hwasan;hwasan+noexcept" CACHE STRING "")
 
@@ -258,6 +295,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-cxxfilt
   llvm-debuginfod-find
   llvm-dlltool
+  ${LLVM_DRIVER_TARGET}
   llvm-dwarfdump
   llvm-dwp
   llvm-ifs
@@ -286,10 +324,9 @@ set(LLVM_TOOLCHAIN_TOOLS
   scan-build-py
   CACHE STRING "")
 
-set(LLVM_DISTRIBUTION_COMPONENTS
+set(_FUCHSIA_DISTRIBUTION_COMPONENTS
   clang
   lld
-  LTO
   clang-apply-replacements
   clang-doc
   clang-format
@@ -302,5 +339,13 @@ set(LLVM_DISTRIBUTION_COMPONENTS
   find-all-symbols
   builtins
   runtimes
-  ${LLVM_TOOLCHAIN_TOOLS}
-  CACHE STRING "")
+  ${LLVM_TOOLCHAIN_TOOLS})
+
+set(FUCHSIA_ENABLE_LLDB OFF CACHE BOOL "Enable LLDB")
+if(FUCHSIA_ENABLE_LLDB)
+  list(APPEND _FUCHSIA_ENABLE_PROJECTS "lldb")
+  list(APPEND _FUCHSIA_DISTRIBUTION_COMPONENTS "lldb")
+endif()
+
+set(LLVM_ENABLE_PROJECTS ${_FUCHSIA_ENABLE_PROJECTS} CACHE STRING "")
+set(LLVM_DISTRIBUTION_COMPONENTS ${_FUCHSIA_DISTRIBUTION_COMPONENTS} CACHE STRING "")

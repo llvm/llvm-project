@@ -93,6 +93,18 @@ lowerCustomIntrinsic(fir::FirOpBuilder &builder, mlir::Location loc,
                      const OperandPresent &isPresentCheck,
                      const OperandGetter &getOperand, std::size_t numOperands,
                      Fortran::lower::StatementContext &stmtCtx);
+
+/// DEPRICATED: NEW CODE SHOULD USE THE VERSION OF genIntrinsicCall WITHOUT A
+/// StatementContext, DECLARED IN IntrinsicCall.h
+/// Generate the FIR+MLIR operations for the generic intrinsic \p name
+/// with argument \p args and expected result type \p resultType.
+/// Returned fir::ExtendedValue is the returned Fortran intrinsic value.
+fir::ExtendedValue genIntrinsicCall(fir::FirOpBuilder &builder,
+                                    mlir::Location loc, llvm::StringRef name,
+                                    std::optional<mlir::Type> resultType,
+                                    llvm::ArrayRef<fir::ExtendedValue> args,
+                                    StatementContext &stmtCtx);
+
 } // namespace lower
 } // namespace Fortran
 

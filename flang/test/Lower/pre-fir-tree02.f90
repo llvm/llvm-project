@@ -155,6 +155,13 @@ module test
   !![disable]type, extends(a_type) :: b_type
   !![disable]  integer :: y
   !![disable]end type
+  interface
+     subroutine ss(aa)
+       ! CHECK: CompilerDirective
+       !DIR$ IGNORE_TKR aa
+       integer :: aa
+     end subroutine ss
+  end interface
 contains
   ! CHECK: Function foo
   function foo(x)
@@ -212,7 +219,7 @@ contains
   ! CHECK: Subroutine sub
   subroutine sub(a)
     real(4):: a
-    ! CompilerDirective:
+    ! CHECK: CompilerDirective
     !DIR$ IGNORE_TKR a
   end subroutine
 

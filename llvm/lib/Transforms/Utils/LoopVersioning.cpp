@@ -31,6 +31,8 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "loop-versioning"
+
 static cl::opt<bool>
     AnnotateNoAlias("loop-version-annotate-no-alias", cl::init(true),
                     cl::Hidden,
@@ -290,56 +292,6 @@ bool runImpl(LoopInfo *LI, LoopAccessInfoManager &LAIs, DominatorTree *DT,
 
   return Changed;
 }
-
-/// Also expose this is a pass.  Currently this is only used for
-/// unit-testing.  It adds all memchecks necessary to remove all may-aliasing
-/// array accesses from the loop.
-class LoopVersioningLegacyPass : public FunctionPass {
-public:
-  LoopVersioningLegacyPass() : FunctionPass(ID) {
-    initializeLoopVersioningLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto &LAIs = getAnalysis<LoopAccessLegacyAnalysis>().getLAIs();
-    auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-
-    return runImpl(LI, LAIs, DT, SE);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addPreserved<LoopInfoWrapperPass>();
-    AU.addRequired<LoopAccessLegacyAnalysis>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-  }
-
-  static char ID;
-};
-}
-
-#define LVER_OPTION "loop-versioning"
-#define DEBUG_TYPE LVER_OPTION
-
-char LoopVersioningLegacyPass::ID;
-static const char LVer_name[] = "Loop Versioning";
-
-INITIALIZE_PASS_BEGIN(LoopVersioningLegacyPass, LVER_OPTION, LVer_name, false,
-                      false)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopAccessLegacyAnalysis)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
-INITIALIZE_PASS_END(LoopVersioningLegacyPass, LVER_OPTION, LVer_name, false,
-                    false)
-
-namespace llvm {
-FunctionPass *createLoopVersioningLegacyPass() {
-  return new LoopVersioningLegacyPass();
 }
 
 PreservedAnalyses LoopVersioningPass::run(Function &F,
@@ -353,4 +305,3 @@ PreservedAnalyses LoopVersioningPass::run(Function &F,
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
 }
-} // namespace llvm

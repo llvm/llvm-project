@@ -803,8 +803,8 @@ OpFoldResult EqualOp::fold(FoldAdaptor adaptor) {
 
   // If we are comparing an integer value to itself it is always true. We can
   // not do this with float due to float values.
-  if (lhsTy.getElementType().isa<IntegerType>() && resultTy.hasStaticShape() &&
-      lhs == rhs) {
+  if (lhsTy.getElementType().isa<IntegerType>() && resultTy &&
+      resultTy.hasStaticShape() && lhs == rhs) {
     return DenseElementsAttr::get(resultTy, true);
   }
 

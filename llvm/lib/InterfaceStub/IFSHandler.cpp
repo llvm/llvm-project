@@ -10,13 +10,13 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/InterfaceStub/IFSStub.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/TargetParser/Triple.h"
 #include <functional>
 #include <optional>
 
@@ -300,6 +300,9 @@ IFSTarget ifs::parseTriple(StringRef TripleStr) {
     break;
   case Triple::ArchType::x86_64:
     RetTarget.Arch = (IFSArch)ELF::EM_X86_64;
+    break;
+  case Triple::ArchType::riscv64:
+    RetTarget.Arch = (IFSArch)ELF::EM_RISCV;
     break;
   default:
     RetTarget.Arch = (IFSArch)ELF::EM_NONE;

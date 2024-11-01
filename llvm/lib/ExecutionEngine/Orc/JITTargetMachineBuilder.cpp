@@ -9,8 +9,8 @@
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 
 namespace llvm {
 namespace orc {

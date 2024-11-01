@@ -47,6 +47,18 @@ module {
 
 // -----
 
+// expected-error @below {{cannot replace an op with another op producing a different number of results while tracking handles}}
+module {
+  transform.sequence failures(propagate) {
+  ^bb0(%arg0: !pdl.operation):
+    test_add_test_extension "A"
+    %dummy = test_remap_operand_to_self %arg0 : !transform.any_op
+  }
+}
+
+
+// -----
+
 module {
   transform.sequence failures(suppress) {
   ^bb0(%arg0: !pdl.operation):

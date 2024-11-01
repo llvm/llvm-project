@@ -30,11 +30,13 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -226,7 +228,8 @@ static void overlapInput(const std::string &BaseFilename,
                          OverlapStats &Overlap,
                          const OverlapFuncFilters &FuncFilter,
                          raw_fd_ostream &OS, bool IsCS) {
-  auto ReaderOrErr = InstrProfReader::create(TestFilename);
+  auto FS = vfs::getRealFileSystem();
+  auto ReaderOrErr = InstrProfReader::create(TestFilename, *FS);
   if (Error E = ReaderOrErr.takeError()) {
     // Skip the empty profiles by returning sliently.
     instrprof_error IPE = InstrProfError::take(std::move(E));
@@ -298,7 +301,8 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     return;
   }
 
-  auto ReaderOrErr = InstrProfReader::create(Input.Filename, Correlator);
+  auto FS = vfs::getRealFileSystem();
+  auto ReaderOrErr = InstrProfReader::create(Input.Filename, *FS, Correlator);
   if (Error E = ReaderOrErr.takeError()) {
     // Skip the empty profiles by returning sliently.
     instrprof_error IPE = InstrProfError::take(std::move(E));
@@ -838,8 +842,9 @@ static void supplementInstrProfile(
 
   // Read sample profile.
   LLVMContext Context;
+  auto FS = vfs::getRealFileSystem();
   auto ReaderOrErr = sampleprof::SampleProfileReader::create(
-      SampleFilename.str(), Context, FSDiscriminatorPassOption);
+      SampleFilename.str(), Context, *FS, FSDiscriminatorPassOption);
   if (std::error_code EC = ReaderOrErr.getError())
     exitWithErrorCode(EC, SampleFilename);
   auto Reader = std::move(ReaderOrErr.get());
@@ -966,7 +971,7 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
                    bool UseMD5, bool GenPartialProfile, bool GenCSNestedProfile,
                    bool SampleMergeColdContext, bool SampleTrimColdContext,
                    bool SampleColdContextFrameDepth, FailureMode FailMode,
-                   bool DropProfileSymbolList) {
+                   bool DropProfileSymbolList, size_t OutputSizeLimit) {
   using namespace sampleprof;
   SampleProfileMap ProfileMap;
   SmallVector<std::unique_ptr<sampleprof::SampleProfileReader>, 5> Readers;
@@ -975,7 +980,8 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
   std::optional<bool> ProfileIsProbeBased;
   std::optional<bool> ProfileIsCS;
   for (const auto &Input : Inputs) {
-    auto ReaderOrErr = SampleProfileReader::create(Input.Filename, Context,
+    auto FS = vfs::getRealFileSystem();
+    auto ReaderOrErr = SampleProfileReader::create(Input.Filename, Context, *FS,
                                                    FSDiscriminatorPassOption);
     if (std::error_code EC = ReaderOrErr.getError()) {
       warnOrExitGivenError(FailMode, EC, Input.Filename);
@@ -1059,7 +1065,10 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
   auto Buffer = getInputFileBuf(ProfileSymbolListFile);
   handleExtBinaryWriter(*Writer, OutputFormat, Buffer.get(), WriterList,
                         CompressAllSections, UseMD5, GenPartialProfile);
-  if (std::error_code EC = Writer->write(ProfileMap))
+
+  // If OutputSizeLimit is 0 (default), it is the same as write().
+  if (std::error_code EC =
+          Writer->writeWithSizeLimit(ProfileMap, OutputSizeLimit))
     exitWithErrorCode(std::move(EC));
 }
 
@@ -1202,6 +1211,11 @@ static int merge_main(int argc, const char *argv[]) {
       "sample-frame-depth-for-cold-context", cl::init(1),
       cl::desc("Keep the last K frames while merging cold profile. 1 means the "
                "context-less base profile"));
+  cl::opt<size_t> OutputSizeLimit(
+      "output-size-limit", cl::init(0), cl::Hidden,
+      cl::desc("Trim cold functions until profile size is below specified "
+               "limit in bytes. This uses a heursitic and functions may be "
+               "excessively trimmed"));
   cl::opt<bool> GenPartialProfile(
       "gen-partial-profile", cl::init(false), cl::Hidden,
       cl::desc("Generate a partial profile (only meaningful for -extbinary)"));
@@ -1288,7 +1302,8 @@ static int merge_main(int argc, const char *argv[]) {
         WeightedInputs, Remapper.get(), OutputFilename, OutputFormat,
         ProfileSymbolListFile, CompressAllSections, UseMD5, GenPartialProfile,
         GenCSNestedProfile, SampleMergeColdContext, SampleTrimColdContext,
-        SampleColdContextFrameDepth, FailureMode, DropProfileSymbolList);
+        SampleColdContextFrameDepth, FailureMode, DropProfileSymbolList,
+        OutputSizeLimit);
   return 0;
 }
 
@@ -2189,12 +2204,13 @@ std::error_code SampleOverlapAggregator::loadProfiles() {
   using namespace sampleprof;
 
   LLVMContext Context;
-  auto BaseReaderOrErr = SampleProfileReader::create(BaseFilename, Context,
+  auto FS = vfs::getRealFileSystem();
+  auto BaseReaderOrErr = SampleProfileReader::create(BaseFilename, Context, *FS,
                                                      FSDiscriminatorPassOption);
   if (std::error_code EC = BaseReaderOrErr.getError())
     exitWithErrorCode(EC, BaseFilename);
 
-  auto TestReaderOrErr = SampleProfileReader::create(TestFilename, Context,
+  auto TestReaderOrErr = SampleProfileReader::create(TestFilename, Context, *FS,
                                                      FSDiscriminatorPassOption);
   if (std::error_code EC = TestReaderOrErr.getError())
     exitWithErrorCode(EC, TestFilename);
@@ -2372,7 +2388,8 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
     exitWithError("JSON output is not supported for instr profiles");
   if (SFormat == ShowFormat::Yaml)
     exitWithError("YAML output is not supported for instr profiles");
-  auto ReaderOrErr = InstrProfReader::create(Filename);
+  auto FS = vfs::getRealFileSystem();
+  auto ReaderOrErr = InstrProfReader::create(Filename, *FS);
   std::vector<uint32_t> Cutoffs = std::move(DetailedSummaryCutoffs);
   if (ShowDetailedSummary && Cutoffs.empty()) {
     Cutoffs = ProfileSummaryBuilder::DefaultCutoffs;
@@ -2742,8 +2759,9 @@ static int showSampleProfile(const std::string &Filename, bool ShowCounts,
     exitWithError("YAML output is not supported for sample profiles");
   using namespace sampleprof;
   LLVMContext Context;
-  auto ReaderOrErr =
-      SampleProfileReader::create(Filename, Context, FSDiscriminatorPassOption);
+  auto FS = vfs::getRealFileSystem();
+  auto ReaderOrErr = SampleProfileReader::create(Filename, Context, *FS,
+                                                 FSDiscriminatorPassOption);
   if (std::error_code EC = ReaderOrErr.getError())
     exitWithErrorCode(EC, Filename);
 
@@ -2971,7 +2989,8 @@ static int show_main(int argc, const char *argv[]) {
   return showMemProfProfile(Filename, ProfiledBinary, SFormat, OS);
 }
 
-int llvm_profdata_main(int argc, char **argvNonConst) {
+int llvm_profdata_main(int argc, char **argvNonConst,
+                       const llvm::ToolContext &) {
   const char **argv = const_cast<const char **>(argvNonConst);
   InitLLVM X(argc, argv);
 

@@ -164,6 +164,8 @@ public:
   basic_symbol_iterator symbol_end() const override;
   Expected<StringRef> getSymbolName(DataRefImpl Symb) const override;
 
+  bool is64Bit() const override { return false; }
+
   Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const override;
   uint64_t getWasmSymbolValue(const WasmSymbol &Sym) const;
   uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;

@@ -567,6 +567,7 @@ static bool fnegFoldsIntoOp(unsigned Opc) {
   case ISD::FMAXNUM:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
+  case ISD::SELECT:
   case ISD::FSIN:
   case ISD::FTRUNC:
   case ISD::FRINT:
@@ -592,7 +593,16 @@ static bool fnegFoldsIntoOp(unsigned Opc) {
 /// modifiers.
 LLVM_READONLY
 static bool opMustUseVOP3Encoding(const SDNode *N, MVT VT) {
-  return N->getNumOperands() > 2 || VT == MVT::f64;
+  return (N->getNumOperands() > 2 && N->getOpcode() != ISD::SELECT) ||
+         VT == MVT::f64;
+}
+
+/// Return true if v_cndmask_b32 will support fabs/fneg source modifiers for the
+/// type for ISD::SELECT.
+LLVM_READONLY
+static bool selectSupportsSourceMods(const SDNode *N) {
+  // TODO: Only applies if select will be vector
+  return N->getValueType(0) == MVT::f32;
 }
 
 // Most FP instructions support source modifiers, but this could be refined
@@ -604,7 +614,6 @@ static bool hasSourceMods(const SDNode *N) {
 
   switch (N->getOpcode()) {
   case ISD::CopyToReg:
-  case ISD::SELECT:
   case ISD::FDIV:
   case ISD::FREM:
   case ISD::INLINEASM:
@@ -629,6 +638,8 @@ static bool hasSourceMods(const SDNode *N) {
       return true;
     }
   }
+  case ISD::SELECT:
+    return selectSupportsSourceMods(N);
   default:
     return true;
   }
@@ -643,6 +654,8 @@ bool AMDGPUTargetLowering::allUsesHaveSourceMods(const SDNode *N,
   // will save on the instruction count.
   unsigned NumMayIncreaseSize = 0;
   MVT VT = N->getValueType(0).getScalarType().getSimpleVT();
+
+  assert(!N->use_empty());
 
   // XXX - Should this limit number of uses to check?
   for (const SDNode *U : N->uses()) {
@@ -799,6 +812,17 @@ SDValue AMDGPUTargetLowering::getNegatedExpression(
     if (!allUsesHaveSourceMods(Op.getNode()))
       return SDValue();
     break;
+  }
+  case AMDGPUISD::RCP: {
+    SDValue Src = Op.getOperand(0);
+    EVT VT = Op.getValueType();
+    SDLoc SL(Op);
+
+    SDValue NegSrc = getNegatedExpression(Src, DAG, LegalOperations,
+                                          ForCodeSize, Cost, Depth + 1);
+    if (NegSrc)
+      return DAG.getNode(AMDGPUISD::RCP, SL, VT, NegSrc, Op->getFlags());
+    return SDValue();
   }
   default:
     break;
@@ -1406,15 +1430,16 @@ SDValue AMDGPUTargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
   return DAG.getBuildVector(Op.getValueType(), SDLoc(Op), Args);
 }
 
-/// Generate Min/Max node
-SDValue AMDGPUTargetLowering::combineFMinMaxLegacy(const SDLoc &DL, EVT VT,
-                                                   SDValue LHS, SDValue RHS,
-                                                   SDValue True, SDValue False,
-                                                   SDValue CC,
-                                                   DAGCombinerInfo &DCI) const {
-  if (!(LHS == True && RHS == False) && !(LHS == False && RHS == True))
-    return SDValue();
+// TODO: Handle fabs too
+static SDValue peekFNeg(SDValue Val) {
+  if (Val.getOpcode() == ISD::FNEG)
+    return Val.getOperand(0);
 
+  return Val;
+}
+SDValue AMDGPUTargetLowering::combineFMinMaxLegacyImpl(
+    const SDLoc &DL, EVT VT, SDValue LHS, SDValue RHS, SDValue True,
+    SDValue False, SDValue CC, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   ISD::CondCode CCOpcode = cast<CondCodeSDNode>(CC)->get();
   switch (CCOpcode) {
@@ -1477,6 +1502,45 @@ SDValue AMDGPUTargetLowering::combineFMinMaxLegacy(const SDLoc &DL, EVT VT,
   case ISD::SETCC_INVALID:
     llvm_unreachable("Invalid setcc condcode!");
   }
+  return SDValue();
+}
+
+/// Generate Min/Max node
+SDValue AMDGPUTargetLowering::combineFMinMaxLegacy(const SDLoc &DL, EVT VT,
+                                                   SDValue LHS, SDValue RHS,
+                                                   SDValue True, SDValue False,
+                                                   SDValue CC,
+                                                   DAGCombinerInfo &DCI) const {
+  if ((LHS == True && RHS == False) || (LHS == False && RHS == True))
+    return combineFMinMaxLegacyImpl(DL, VT, LHS, RHS, True, False, CC, DCI);
+
+  SelectionDAG &DAG = DCI.DAG;
+
+  // If we can't directly match this, try to see if we can fold an fneg to
+  // match.
+
+  ConstantFPSDNode *CRHS = dyn_cast<ConstantFPSDNode>(RHS);
+  ConstantFPSDNode *CFalse = dyn_cast<ConstantFPSDNode>(False);
+  SDValue NegTrue = peekFNeg(True);
+
+  // Undo the combine foldFreeOpFromSelect does if it helps us match the
+  // fmin/fmax.
+  //
+  // select (fcmp olt (lhs, K)), (fneg lhs), -K
+  // -> fneg (fmin_legacy lhs, K)
+  //
+  // TODO: Use getNegatedExpression
+  if (LHS == NegTrue && CFalse && CRHS) {
+    APFloat NegRHS = neg(CRHS->getValueAPF());
+    if (NegRHS == CFalse->getValueAPF()) {
+      SDValue Combined =
+          combineFMinMaxLegacyImpl(DL, VT, LHS, RHS, NegTrue, False, CC, DCI);
+      if (Combined)
+        return DAG.getNode(ISD::FNEG, DL, VT, Combined);
+      return SDValue();
+    }
+  }
+
   return SDValue();
 }
 
@@ -2670,15 +2734,17 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT64(SDValue Op, SelectionDAG &DAG,
 
   SDValue K0, K1;
   if (SrcVT == MVT::f64) {
-    K0 = DAG.getConstantFP(BitsToDouble(UINT64_C(/*2^-32*/ 0x3df0000000000000)),
-                           SL, SrcVT);
-    K1 = DAG.getConstantFP(BitsToDouble(UINT64_C(/*-2^32*/ 0xc1f0000000000000)),
-                           SL, SrcVT);
+    K0 = DAG.getConstantFP(
+        llvm::bit_cast<double>(UINT64_C(/*2^-32*/ 0x3df0000000000000)), SL,
+        SrcVT);
+    K1 = DAG.getConstantFP(
+        llvm::bit_cast<double>(UINT64_C(/*-2^32*/ 0xc1f0000000000000)), SL,
+        SrcVT);
   } else {
-    K0 = DAG.getConstantFP(BitsToFloat(UINT32_C(/*2^-32*/ 0x2f800000)), SL,
-                           SrcVT);
-    K1 = DAG.getConstantFP(BitsToFloat(UINT32_C(/*-2^32*/ 0xcf800000)), SL,
-                           SrcVT);
+    K0 = DAG.getConstantFP(
+        llvm::bit_cast<float>(UINT32_C(/*2^-32*/ 0x2f800000)), SL, SrcVT);
+    K1 = DAG.getConstantFP(
+        llvm::bit_cast<float>(UINT32_C(/*-2^32*/ 0xcf800000)), SL, SrcVT);
   }
   // TODO: Should this propagate fast-math-flags?
   SDValue Mul = DAG.getNode(ISD::FMUL, SL, SrcVT, Trunc, K0);
@@ -3673,8 +3739,9 @@ static SDValue distributeOpThroughSelect(TargetLowering::DAGCombinerInfo &DCI,
 //
 // select c, (fabs x), (fabs y) -> fabs (select c, x, y)
 // select c, (fabs x), +k -> fabs (select c, x, k)
-static SDValue foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
-                                    SDValue N) {
+SDValue
+AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
+                                           SDValue N) const {
   SelectionDAG &DAG = DCI.DAG;
   SDValue Cond = N.getOperand(0);
   SDValue LHS = N.getOperand(1);
@@ -3683,6 +3750,9 @@ static SDValue foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
   EVT VT = N.getValueType();
   if ((LHS.getOpcode() == ISD::FABS && RHS.getOpcode() == ISD::FABS) ||
       (LHS.getOpcode() == ISD::FNEG && RHS.getOpcode() == ISD::FNEG)) {
+    if (!AMDGPUTargetLowering::allUsesHaveSourceMods(N.getNode()))
+      return SDValue();
+
     return distributeOpThroughSelect(DCI, LHS.getOpcode(),
                                      SDLoc(N), Cond, LHS, RHS);
   }
@@ -3695,7 +3765,8 @@ static SDValue foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
 
   // TODO: Support vector constants.
   ConstantFPSDNode *CRHS = dyn_cast<ConstantFPSDNode>(RHS);
-  if ((LHS.getOpcode() == ISD::FNEG || LHS.getOpcode() == ISD::FABS) && CRHS) {
+  if ((LHS.getOpcode() == ISD::FNEG || LHS.getOpcode() == ISD::FABS) && CRHS &&
+      !selectSupportsSourceMods(N.getNode())) {
     SDLoc SL(N);
     // If one side is an fneg/fabs and the other is a constant, we can push the
     // fneg/fabs down. If it's an fabs, the constant needs to be non-negative.
@@ -3714,10 +3785,24 @@ static SDValue foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
     }
 
     if (ShouldFoldNeg) {
+      if (LHS.getOpcode() == ISD::FABS && CRHS->isNegative())
+        return SDValue();
+
+      // We're going to be forced to use a source modifier anyway, there's no
+      // point to pulling the negate out unless we can get a size reduction by
+      // negating the constant.
+      //
+      // TODO: Generalize to use getCheaperNegatedExpression which doesn't know
+      // about cheaper constants.
+      if (NewLHS.getOpcode() == ISD::FABS &&
+          getConstantNegateCost(CRHS) != NegatibleCost::Cheaper)
+        return SDValue();
+
+      if (!AMDGPUTargetLowering::allUsesHaveSourceMods(N.getNode()))
+        return SDValue();
+
       if (LHS.getOpcode() == ISD::FNEG)
         NewRHS = DAG.getNode(ISD::FNEG, SL, VT, RHS);
-      else if (CRHS->isNegative())
-        return SDValue();
 
       if (Inv)
         std::swap(NewLHS, NewRHS);
@@ -3731,7 +3816,6 @@ static SDValue foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
 
   return SDValue();
 }
-
 
 SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
@@ -3791,15 +3875,26 @@ static bool isInv2Pi(const APFloat &APF) {
 
 // 0 and 1.0 / (0.5 * pi) do not have inline immmediates, so there is an
 // additional cost to negate them.
+TargetLowering::NegatibleCost
+AMDGPUTargetLowering::getConstantNegateCost(const ConstantFPSDNode *C) const {
+  if (C->isZero())
+    return C->isNegative() ? NegatibleCost::Cheaper : NegatibleCost::Expensive;
+
+  if (Subtarget->hasInv2PiInlineImm() && isInv2Pi(C->getValueAPF()))
+    return C->isNegative() ? NegatibleCost::Cheaper : NegatibleCost::Expensive;
+
+  return NegatibleCost::Neutral;
+}
+
 bool AMDGPUTargetLowering::isConstantCostlierToNegate(SDValue N) const {
-  if (const ConstantFPSDNode *C = isConstOrConstSplatFP(N)) {
-    if (C->isZero() && !C->isNegative())
-      return true;
+  if (const ConstantFPSDNode *C = isConstOrConstSplatFP(N))
+    return getConstantNegateCost(C) == NegatibleCost::Expensive;
+  return false;
+}
 
-    if (Subtarget->hasInv2PiInlineImm() && isInv2Pi(C->getValueAPF()))
-      return true;
-  }
-
+bool AMDGPUTargetLowering::isConstantCheaperToNegate(SDValue N) const {
+  if (const ConstantFPSDNode *C = isConstOrConstSplatFP(N))
+    return getConstantNegateCost(C) == NegatibleCost::Cheaper;
   return false;
 }
 
@@ -3822,12 +3917,9 @@ static unsigned inverseMinMax(unsigned Opc) {
   }
 }
 
-SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
-                                                 DAGCombinerInfo &DCI) const {
-  SelectionDAG &DAG = DCI.DAG;
-  SDValue N0 = N->getOperand(0);
-  EVT VT = N->getValueType(0);
-
+/// \return true if it's profitable to try to push an fneg into its source
+/// instruction.
+bool AMDGPUTargetLowering::shouldFoldFNegIntoSrc(SDNode *N, SDValue N0) {
   unsigned Opc = N0.getOpcode();
 
   // If the input has multiple uses and we can either fold the negate down, or
@@ -3838,12 +3930,26 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     // This may be able to fold into the source, but at a code size cost. Don't
     // fold if the fold into the user is free.
     if (allUsesHaveSourceMods(N, 0))
-      return SDValue();
+      return false;
   } else {
     if (fnegFoldsIntoOp(Opc) &&
         (allUsesHaveSourceMods(N) || !allUsesHaveSourceMods(N0.getNode())))
-      return SDValue();
+      return false;
   }
+
+  return true;
+}
+
+SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
+                                                 DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  unsigned Opc = N0.getOpcode();
+
+  if (!shouldFoldFNegIntoSrc(N, N0))
+    return SDValue();
 
   SDLoc SL(N);
   switch (Opc) {
@@ -4026,6 +4132,11 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     SDValue IntFNeg = DAG.getNode(ISD::XOR, SL, SrcVT, Src,
                                   DAG.getConstant(0x8000, SL, SrcVT));
     return DAG.getNode(ISD::FP16_TO_FP, SL, N->getValueType(0), IntFNeg);
+  }
+  case ISD::SELECT: {
+    // fneg (select c, a, b) -> select c, (fneg a), (fneg b)
+    // TODO: Invert conditions of foldFreeOpFromSelect
+    return SDValue();
   }
   default:
     return SDValue();
@@ -4365,7 +4476,7 @@ SDValue AMDGPUTargetLowering::loadInputValue(SelectionDAG &DAG,
     return V;
 
   unsigned Mask = Arg.getMask();
-  unsigned Shift = countTrailingZeros<unsigned>(Mask);
+  unsigned Shift = llvm::countr_zero<unsigned>(Mask);
   V = DAG.getNode(ISD::SRL, SL, VT, V,
                   DAG.getShiftAmountConstant(Shift, VT, SL));
   return DAG.getNode(ISD::AND, SL, VT, V,
@@ -4508,8 +4619,6 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(TBUFFER_LOAD_FORMAT_D16)
   NODE_NAME_CASE(DS_ORDERED_COUNT)
   NODE_NAME_CASE(ATOMIC_CMP_SWAP)
-  NODE_NAME_CASE(ATOMIC_INC)
-  NODE_NAME_CASE(ATOMIC_DEC)
   NODE_NAME_CASE(ATOMIC_LOAD_FMIN)
   NODE_NAME_CASE(ATOMIC_LOAD_FMAX)
   NODE_NAME_CASE(BUFFER_LOAD)
@@ -4749,7 +4858,7 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     case Intrinsic::amdgcn_workitem_id_z: {
       unsigned MaxValue = Subtarget->getMaxWorkitemID(
           DAG.getMachineFunction().getFunction(), workitemIntrinsicDim(IID));
-      Known.Zero.setHighBits(countLeadingZeros(MaxValue));
+      Known.Zero.setHighBits(llvm::countl_zero(MaxValue));
       break;
     }
     default:

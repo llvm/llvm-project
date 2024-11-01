@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=5 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN-V5 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 -mcpu=fiji -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,VI-NOBUG %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 -mcpu=iceland -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,VI-BUG %s
+; RUN: sed 's/CODE_OBJECT_VERSION/200/g' %s | llc -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 -verify-machineinstrs | FileCheck -check-prefixes=GCN,CI %s
+; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 -verify-machineinstrs | FileCheck -check-prefixes=GCN-V5 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/200/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-ipra=0 -verify-machineinstrs | FileCheck -check-prefixes=GCN,VI,VI-NOBUG %s
+; RUN: sed 's/CODE_OBJECT_VERSION/200/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=iceland -enable-ipra=0 -verify-machineinstrs | FileCheck -check-prefixes=GCN,VI,VI-BUG %s
 
 ; Make sure to run a GPU with the SGPR allocation bug.
 
@@ -285,3 +285,6 @@ entry:
 attributes #0 = { nounwind noinline norecurse }
 attributes #1 = { nounwind noinline norecurse }
 attributes #2 = { nounwind noinline }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 CODE_OBJECT_VERSION}

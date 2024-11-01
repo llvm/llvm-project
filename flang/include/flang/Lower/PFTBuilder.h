@@ -638,6 +638,15 @@ struct FunctionLikeUnit : public ProgramUnit {
     return *symbol;
   }
 
+  /// Return a pointer to the main program symbol for named programs
+  /// Return the null pointer for anonymous programs
+  const semantics::Symbol *getMainProgramSymbol() const {
+    if (!isMainProgram()) {
+      llvm::report_fatal_error("call only on main program.");
+    }
+    return entryPointList[activeEntry].first;
+  }
+
   /// Return a pointer to the current entry point Evaluation.
   /// This is null for a primary entry point.
   Evaluation *getEntryEval() const {

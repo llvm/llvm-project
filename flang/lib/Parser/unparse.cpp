@@ -2616,6 +2616,7 @@ public:
   WALK_NESTED_ENUM(OmpMapType, Type) // OMP map-type
   WALK_NESTED_ENUM(OmpScheduleClause, ScheduleType) // OMP schedule-type
   WALK_NESTED_ENUM(OmpDeviceClause, DeviceModifier) // OMP device modifier
+  WALK_NESTED_ENUM(OmpDeviceTypeClause, Type) // OMP DEVICE_TYPE
   WALK_NESTED_ENUM(OmpIfClause, DirectiveNameModifier) // OMP directive-modifier
   WALK_NESTED_ENUM(OmpCancelType, Type) // OMP cancel-type
 #undef WALK_NESTED_ENUM

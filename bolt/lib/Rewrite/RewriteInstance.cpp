@@ -52,6 +52,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
@@ -81,6 +82,10 @@ extern cl::opt<JumpTableSupportLevel> JumpTables;
 extern cl::list<std::string> ReorderData;
 extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 extern cl::opt<bool> TimeBuild;
+
+cl::opt<bool> AllowStripped("allow-stripped",
+                            cl::desc("allow processing of stripped binaries"),
+                            cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool> ForceToDataRelocations(
     "force-data-relocations",
@@ -311,9 +316,8 @@ bool refersToReorderedSection(ErrorOr<BinarySection &> Section) {
 } // anonymous namespace
 
 Expected<std::unique_ptr<RewriteInstance>>
-RewriteInstance::createRewriteInstance(ELFObjectFileBase *File, const int Argc,
-                                       const char *const *Argv,
-                                       StringRef ToolPath) {
+RewriteInstance::create(ELFObjectFileBase *File, const int Argc,
+                        const char *const *Argv, StringRef ToolPath) {
   Error Err = Error::success();
   auto RI = std::make_unique<RewriteInstance>(File, Argc, Argv, ToolPath, Err);
   if (Err)
@@ -925,6 +929,9 @@ void RewriteInstance::discoverFileObjects() {
   BinaryFunction *PreviousFunction = nullptr;
   unsigned AnonymousId = 0;
 
+  // Regex object for matching cold fragments.
+  Regex ColdFragment(".*\\.cold(\\.[0-9]+)?");
+
   const auto SortedSymbolsEnd = LastSymbol == SortedFileSymbols.end()
                                     ? LastSymbol
                                     : std::next(LastSymbol);
@@ -1183,6 +1190,21 @@ void RewriteInstance::discoverFileObjects() {
       if (!IsSimple)
         BF->setSimple(false);
     }
+
+    // Check if it's a cold function fragment.
+    if (ColdFragment.match(SymName)) {
+      static bool PrintedWarning = false;
+      if (!PrintedWarning) {
+        PrintedWarning = true;
+        errs() << "BOLT-WARNING: split function detected on input : "
+               << SymName;
+        if (BC->HasRelocations)
+          errs() << ". The support is limited in relocation mode\n";
+      }
+      BC->HasSplitFunctions = true;
+      BF->IsFragment = true;
+    }
+
     if (!AlternativeName.empty())
       BF->addAlternativeName(AlternativeName);
 
@@ -1262,6 +1284,56 @@ void RewriteInstance::discoverFileObjects() {
   } else {
     // Read all relocations now that we have binary functions mapped.
     processRelocations();
+  }
+  registerFragments();
+}
+
+void RewriteInstance::registerFragments() {
+  if (!BC->HasSplitFunctions)
+    return;
+
+  for (auto &BFI : BC->getBinaryFunctions()) {
+    BinaryFunction &Function = BFI.second;
+    if (!Function.isFragment())
+      continue;
+    unsigned ParentsFound = 0;
+    for (StringRef Name : Function.getNames()) {
+      StringRef BaseName, Suffix;
+      std::tie(BaseName, Suffix) = Name.split('/');
+      const size_t ColdSuffixPos = BaseName.find(".cold");
+      if (ColdSuffixPos == StringRef::npos)
+        continue;
+      // For cold function with local (foo.cold/1) symbol, prefer a parent with
+      // local symbol as well (foo/1) over global symbol (foo).
+      std::string ParentName = BaseName.substr(0, ColdSuffixPos).str();
+      const BinaryData *BD = BC->getBinaryDataByName(ParentName);
+      if (Suffix != "") {
+        ParentName.append(Twine("/", Suffix).str());
+        const BinaryData *BDLocal = BC->getBinaryDataByName(ParentName);
+        if (BDLocal || !BD)
+          BD = BDLocal;
+      }
+      if (!BD) {
+        if (opts::Verbosity >= 1)
+          outs() << "BOLT-INFO: parent function not found for " << Name << "\n";
+        continue;
+      }
+      const uint64_t Address = BD->getAddress();
+      BinaryFunction *BF = BC->getBinaryFunctionAtAddress(Address);
+      if (!BF) {
+        if (opts::Verbosity >= 1)
+          outs() << formatv("BOLT-INFO: parent function not found at {0:x}\n",
+                            Address);
+        continue;
+      }
+      BC->registerFragment(Function, *BF);
+      ++ParentsFound;
+    }
+    if (!ParentsFound) {
+      errs() << "BOLT-ERROR: parent function not found for " << Function
+             << '\n';
+      exit(1);
+    }
   }
 }
 
@@ -1453,26 +1525,6 @@ void RewriteInstance::adjustFunctionBoundaries() {
     if (std::next(BFI) != BFE)
       NextFunction = &std::next(BFI)->second;
 
-    // Check if it's a fragment of a function.
-    std::optional<StringRef> FragName =
-        Function.hasRestoredNameRegex(".*\\.cold(\\.[0-9]+)?");
-    if (FragName) {
-      static bool PrintedWarning = false;
-      if (!PrintedWarning) {
-        PrintedWarning = true;
-        errs() << "BOLT-WARNING: split function detected on input : "
-               << *FragName;
-        if (BC->HasRelocations)
-          errs() << ". The support is limited in relocation mode";
-        if (opts::Lite) {
-          opts::Lite = false;
-          errs() << "\nBOLT-WARNING: disabling lite mode (-lite) when split "
-                 << "functions are present\n";
-        }
-      }
-      Function.IsFragment = true;
-    }
-
     // Check if there's a symbol or a function with a larger address in the
     // same section. If there is - it determines the maximum size for the
     // current function. Otherwise, it is the size of a containing section
@@ -1663,6 +1715,12 @@ Error RewriteInstance::readSpecialSections() {
 
   BC->IsStripped = !HasSymbolTable;
 
+  if (BC->IsStripped && !opts::AllowStripped) {
+    errs() << "BOLT-ERROR: stripped binaries are not supported. If you know "
+              "what you're doing, use --allow-stripped to proceed";
+    exit(1);
+  }
+
   // Force non-relocation mode for heatmap generation
   if (opts::HeatmapMode)
     BC->HasRelocations = false;
@@ -1670,10 +1728,6 @@ Error RewriteInstance::readSpecialSections() {
   if (BC->HasRelocations)
     outs() << "BOLT-INFO: enabling " << (opts::StrictMode ? "strict " : "")
            << "relocation mode\n";
-
-  if (BC->IsStripped)
-    outs() << "BOLT-INFO: input binary is stripped. The support is limited and "
-           << "is considered experimental.\n";
 
   // Read EH frame for function boundaries info.
   Expected<const DWARFDebugFrame *> EHFrameOrError = BC->DwCtx->getEHFrame();
@@ -2452,8 +2506,21 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     if (BinaryData *BD = BC->getBinaryDataByName(SymbolName))
       ReferencedSymbol = BD->getSymbol();
 
-  ErrorOr<BinarySection &> ReferencedSection =
-      BC->getSectionForAddress(SymbolAddress);
+  ErrorOr<BinarySection &> ReferencedSection{std::errc::bad_address};
+  symbol_iterator SymbolIter = Rel.getSymbol();
+  if (SymbolIter != InputFile->symbol_end()) {
+    SymbolRef Symbol = *SymbolIter;
+    section_iterator Section =
+        cantFail(Symbol.getSection(), "cannot get symbol section");
+    if (Section != InputFile->section_end()) {
+      Expected<StringRef> SectionName = Section->getName();
+      if (SectionName && !SectionName->empty())
+        ReferencedSection = BC->getUniqueSectionByName(*SectionName);
+    }
+  }
+
+  if (!ReferencedSection)
+    ReferencedSection = BC->getSectionForAddress(SymbolAddress);
 
   const bool IsToCode = ReferencedSection && ReferencedSection->isText();
 
@@ -2756,15 +2823,29 @@ void RewriteInstance::selectFunctionsToProcess() {
       LiteThresholdExecCount, static_cast<uint64_t>(opts::LiteThresholdCount));
 
   StringSet<> ReorderFunctionsUserSet;
+  StringSet<> ReorderFunctionsLTOCommonSet;
   if (opts::ReorderFunctions == ReorderFunctions::RT_USER) {
     for (const std::string &Function :
-         ReorderFunctions::readFunctionOrderFile())
+         ReorderFunctions::readFunctionOrderFile()) {
       ReorderFunctionsUserSet.insert(Function);
+      if (std::optional<StringRef> LTOCommonName = getLTOCommonName(Function))
+        ReorderFunctionsLTOCommonSet.insert(*LTOCommonName);
+    }
   }
 
   uint64_t NumFunctionsToProcess = 0;
-  auto shouldProcess = [&](const BinaryFunction &Function) {
+  auto mustSkip = [&](const BinaryFunction &Function) {
     if (opts::MaxFunctions && NumFunctionsToProcess > opts::MaxFunctions)
+      return true;
+    for (std::string &Name : opts::SkipFunctionNames)
+      if (Function.hasNameRegex(Name))
+        return true;
+
+    return false;
+  };
+
+  auto shouldProcess = [&](const BinaryFunction &Function) {
+    if (mustSkip(Function))
       return false;
 
     // If the list is not empty, only process functions from the list.
@@ -2782,10 +2863,6 @@ void RewriteInstance::selectFunctionsToProcess() {
       return Match.has_value();
     }
 
-    for (std::string &Name : opts::SkipFunctionNames)
-      if (Function.hasNameRegex(Name))
-        return false;
-
     if (opts::Lite) {
       // Forcibly include functions specified in the -function-order file.
       if (opts::ReorderFunctions == ReorderFunctions::RT_USER) {
@@ -2795,6 +2872,10 @@ void RewriteInstance::selectFunctionsToProcess() {
             });
         if (Match.has_value())
           return true;
+        for (const StringRef Name : Function.getNames())
+          if (std::optional<StringRef> LTOCommonName = getLTOCommonName(Name))
+            if (ReorderFunctionsLTOCommonSet.contains(*LTOCommonName))
+              return true;
       }
 
       if (ProfileReader && !ProfileReader->mayHaveProfileData(Function))
@@ -2817,12 +2898,64 @@ void RewriteInstance::selectFunctionsToProcess() {
       continue;
     }
 
+    // Decide what to do with fragments after parent functions are processed.
+    if (Function.isFragment())
+      continue;
+
     if (!shouldProcess(Function)) {
-      LLVM_DEBUG(dbgs() << "BOLT-INFO: skipping processing of function "
-                        << Function << " per user request\n");
+      if (opts::Verbosity >= 1) {
+        outs() << "BOLT-INFO: skipping processing " << Function
+               << " per user request\n";
+      }
       Function.setIgnored();
     } else {
       ++NumFunctionsToProcess;
+      if (opts::MaxFunctions && NumFunctionsToProcess == opts::MaxFunctions)
+        outs() << "BOLT-INFO: processing ending on " << Function << '\n';
+    }
+  }
+
+  if (!BC->HasSplitFunctions)
+    return;
+
+  // Fragment overrides:
+  // - If the fragment must be skipped, then the parent must be skipped as well.
+  // Otherwise, fragment should follow the parent function:
+  // - if the parent is skipped, skip fragment,
+  // - if the parent is processed, process the fragment(s) as well.
+  for (auto &BFI : BC->getBinaryFunctions()) {
+    BinaryFunction &Function = BFI.second;
+    if (!Function.isFragment())
+      continue;
+    if (mustSkip(Function)) {
+      for (BinaryFunction *Parent : Function.ParentFragments) {
+        if (opts::Verbosity >= 1) {
+          outs() << "BOLT-INFO: skipping processing " << *Parent
+                 << " together with fragment function\n";
+        }
+        Parent->setIgnored();
+        --NumFunctionsToProcess;
+      }
+      Function.setIgnored();
+      continue;
+    }
+
+    bool IgnoredParent =
+        llvm::any_of(Function.ParentFragments, [&](BinaryFunction *Parent) {
+          return Parent->isIgnored();
+        });
+    if (IgnoredParent) {
+      if (opts::Verbosity >= 1) {
+        outs() << "BOLT-INFO: skipping processing " << Function
+               << " together with parent function\n";
+      }
+      Function.setIgnored();
+    } else {
+      ++NumFunctionsToProcess;
+      if (opts::Verbosity >= 1) {
+        outs() << "BOLT-INFO: processing " << Function
+               << " as a sibling of non-ignored function\n";
+      }
       if (opts::MaxFunctions && NumFunctionsToProcess == opts::MaxFunctions)
         outs() << "BOLT-INFO: processing ending on " << Function << '\n';
     }
@@ -4442,8 +4575,7 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
   }
 
   std::vector<ELFShdrTy> SectionsOnly(OutputSections.size());
-  llvm::transform(OutputSections, SectionsOnly.begin(),
-                  [](auto &SectionInfo) { return SectionInfo.second; });
+  llvm::copy(llvm::make_second_range(OutputSections), SectionsOnly.begin());
 
   return SectionsOnly;
 }

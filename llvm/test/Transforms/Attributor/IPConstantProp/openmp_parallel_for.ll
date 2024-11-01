@@ -101,7 +101,7 @@ define internal void @.omp_outlined.(ptr noalias %.global_tid., ptr noalias %.bo
 ; TUNIT:       omp.inner.for.body:
 ; TUNIT-NEXT:    [[ADD10:%.*]] = add nsw i32 [[DOTOMP_IV_0]], 2
 ; TUNIT-NEXT:    [[TMP11:%.*]] = load double, ptr [[Q_ADDR]], align 8
-; TUNIT-NEXT:    call void @bar(i32 [[ADD10]], float 3.000000e+00, double noundef [[TMP11]])
+; TUNIT-NEXT:    call void @bar(i32 [[ADD10]], float 3.000000e+00, double [[TMP11]])
 ; TUNIT-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 ; TUNIT:       omp.body.continue:
 ; TUNIT-NEXT:    br label [[OMP_INNER_FOR_INC]]
@@ -161,7 +161,7 @@ define internal void @.omp_outlined.(ptr noalias %.global_tid., ptr noalias %.bo
 ; CGSCC-NEXT:    [[ADD10:%.*]] = add nsw i32 [[DOTOMP_IV_0]], 2
 ; CGSCC-NEXT:    [[TMP10:%.*]] = load float, ptr [[P]], align 4
 ; CGSCC-NEXT:    [[TMP11:%.*]] = load double, ptr [[Q_ADDR]], align 8
-; CGSCC-NEXT:    call void @bar(i32 [[ADD10]], float [[TMP10]], double noundef [[TMP11]])
+; CGSCC-NEXT:    call void @bar(i32 [[ADD10]], float [[TMP10]], double [[TMP11]])
 ; CGSCC-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 ; CGSCC:       omp.body.continue:
 ; CGSCC-NEXT:    br label [[OMP_INNER_FOR_INC]]

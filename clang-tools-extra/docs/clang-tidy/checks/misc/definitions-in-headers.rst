@@ -93,7 +93,7 @@ Options
 .. option:: HeaderFileExtensions
 
    Note: this option is deprecated, it will be removed in :program:`clang-tidy`
-   version 18. Please use the global configuration option
+   version 19. Please use the global configuration option
    `HeaderFileExtensions`.
 
    A comma-separated list of filename extensions of header files (the filename
@@ -105,7 +105,7 @@ Options
 .. option:: UseHeaderFileExtension
 
    Note: this option is deprecated, it will be removed in :program:`clang-tidy`
-   version 18. The check will unconditionally use the global option
+   version 19. The check will unconditionally use the global option
    `HeaderFileExtensions`.
 
    When `true`, the check will use the file extension to distinguish header

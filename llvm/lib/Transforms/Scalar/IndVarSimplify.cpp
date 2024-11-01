@@ -1359,14 +1359,16 @@ createInvariantCond(const Loop *L, BasicBlock *ExitingBB,
                     const ScalarEvolution::LoopInvariantPredicate &LIP,
                     SCEVExpander &Rewriter) {
   ICmpInst::Predicate InvariantPred = LIP.Pred;
-  BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
-  Rewriter.setInsertPoint(BI);
+  BasicBlock *Preheader = L->getLoopPreheader();
+  assert(Preheader && "Preheader doesn't exist");
+  Rewriter.setInsertPoint(Preheader->getTerminator());
   auto *LHSV = Rewriter.expandCodeFor(LIP.LHS);
   auto *RHSV = Rewriter.expandCodeFor(LIP.RHS);
   bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
   if (ExitIfTrue)
     InvariantPred = ICmpInst::getInversePredicate(InvariantPred);
-  IRBuilder<> Builder(BI);
+  IRBuilder<> Builder(Preheader->getTerminator());
+  BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
   return Builder.CreateICmp(InvariantPred, LHSV, RHSV,
                             BI->getCondition()->getName());
 }
@@ -1519,7 +1521,6 @@ static bool optimizeLoopExitWithUnknownExitCount(
       auto *NewCond = *Replaced;
       if (auto *NCI = dyn_cast<Instruction>(NewCond)) {
         NCI->setName(OldCond->getName() + ".first_iter");
-        NCI->moveBefore(cast<Instruction>(OldCond));
       }
       LLVM_DEBUG(dbgs() << "Unknown exit count: Replacing " << *OldCond
                         << " with " << *NewCond << "\n");

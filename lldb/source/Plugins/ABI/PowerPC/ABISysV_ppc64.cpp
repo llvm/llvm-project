@@ -9,7 +9,7 @@
 #include "ABISysV_ppc64.h"
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "Utility/PPC64LE_DWARF_Registers.h"

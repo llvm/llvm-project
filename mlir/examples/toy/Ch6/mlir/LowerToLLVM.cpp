@@ -206,7 +206,7 @@ void ToyToLLVMLoweringPass::runOnOperation() {
   populateAffineToStdConversionPatterns(patterns);
   populateSCFToControlFlowConversionPatterns(patterns);
   mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
-  populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
+  populateFinalizeMemRefToLLVMConversionPatterns(typeConverter, patterns);
   cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
   populateFuncToLLVMConversionPatterns(typeConverter, patterns);
 

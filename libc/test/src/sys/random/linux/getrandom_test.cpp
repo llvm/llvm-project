@@ -1,7 +1,7 @@
 #include "src/math/fabs.h"
 #include "src/sys/random/getrandom.h"
 #include "test/ErrnoSetterMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcGetRandomTest, InvalidFlag) {
   using __llvm_libc::testing::ErrnoSetterMatcher::Fails;

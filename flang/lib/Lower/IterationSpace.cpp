@@ -512,7 +512,7 @@ public:
   template <int KIND>
   static bool isEqual(const Fortran::evaluate::LogicalOperation<KIND> &x,
                       const Fortran::evaluate::LogicalOperation<KIND> &y) {
-    return isEqual(x.left(), y.left()) && isEqual(x.right(), x.right());
+    return isEqual(x.left(), y.left()) && isEqual(x.right(), y.right());
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Relational<A> &x,

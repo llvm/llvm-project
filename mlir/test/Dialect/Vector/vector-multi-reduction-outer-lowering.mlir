@@ -162,6 +162,15 @@ func.func @vector_reduction_outer(%arg0: vector<2x3x4x5xi32>, %acc: vector<2x3xi
 //       CHECK:   %[[RESULT_VEC:.+]] = vector.shape_cast %[[R18]] : vector<6xi32> to vector<2x3xi32>
 //       CHECK:   return %[[RESULT_VEC]] : vector<2x3xi32>
 
+func.func @vector_multi_reduction_parallel_middle(%arg0: vector<3x4x5xf32>, %acc: vector<4xf32>) -> vector<4xf32> {
+    %0 = vector.multi_reduction <add>, %arg0, %acc [0, 2] : vector<3x4x5xf32> to vector<4xf32>
+    return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: func @vector_multi_reduction_parallel_middle
+//  CHECK-SAME:   %[[INPUT:.+]]: vector<3x4x5xf32>, %[[ACC:.+]]: vector<4xf32>
+//       CHECK: vector.transpose %[[INPUT]], [0, 2, 1] : vector<3x4x5xf32> to vector<3x5x4xf32>
+
 // This test is mainly to catch a bug that running
 // `InnerOuterDimReductionConversion` on this function results in an
 // infinite loop. So just check that some value is returned.

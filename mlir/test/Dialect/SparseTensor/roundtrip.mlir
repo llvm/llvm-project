@@ -13,15 +13,33 @@ func.func @sparse_new(%arg0: !llvm.ptr<i8>) -> tensor<128xf64, #SparseVector> {
 
 // -----
 
-#SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"], indexBitWidth=32}>
 
-// CHECK-LABEL: func @sparse_new_symmetry(
-// CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
-//       CHECK: %[[T:.*]] = sparse_tensor.new expand_symmetry %[[A]] : !llvm.ptr<i8> to tensor<?x?xf64, #{{.*}}>
-//       CHECK: return %[[T]] : tensor<?x?xf64, #{{.*}}>
-func.func @sparse_new_symmetry(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf64, #SparseMatrix> {
-  %0 = sparse_tensor.new expand_symmetry %arg0 : !llvm.ptr<i8> to tensor<?x?xf64, #SparseMatrix>
-  return %0 : tensor<?x?xf64, #SparseMatrix>
+// CHECK-LABEL: func @sparse_pack(
+// CHECK-SAME: %[[D:.*]]: tensor<6xf64>,
+// CHECK-SAME: %[[I:.*]]: tensor<6x1xi32>)
+//       CHECK: %[[R:.*]] = sparse_tensor.pack %[[D]], %[[I]]
+//       CHECK: return %[[R]] : tensor<100xf64, #{{.*}}>
+func.func @sparse_pack(%data: tensor<6xf64>, %index: tensor<6x1xi32>)
+                            -> tensor<100xf64, #SparseVector> {
+  %0 = sparse_tensor.pack %data, %index : tensor<6xf64>, tensor<6x1xi32>
+                                       to tensor<100xf64, #SparseVector>
+  return %0 : tensor<100xf64, #SparseVector>
+}
+
+// -----
+
+#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"], indexBitWidth=32}>
+
+// CHECK-LABEL: func @sparse_unpack(
+//  CHECK-SAME: %[[T:.*]]: tensor<100xf64, #
+//       CHECK: %[[D:.*]], %[[I:.*]], %[[N:.*]] = sparse_tensor.unpack %[[T]]
+//       CHECK: return %[[D]], %[[I]], %[[N]]
+func.func @sparse_unpack(%sp : tensor<100xf64, #SparseVector>)
+                       -> (tensor<6xf64>, tensor<6x1xi32>, i32) {
+  %data, %indices, %nnz = sparse_tensor.unpack %sp : tensor<100xf64, #SparseVector>
+                                                  to tensor<6xf64>, tensor<6x1xi32>, i32
+  return %data, %indices, %nnz : tensor<6xf64>, tensor<6x1xi32>, i32
 }
 
 // -----
@@ -113,6 +131,38 @@ func.func @sparse_indices(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xind
 func.func @sparse_values(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xf64> {
   %0 = sparse_tensor.values %arg0 : tensor<128xf64, #SparseVector> to memref<?xf64>
   return %0 : memref<?xf64>
+}
+
+// -----
+
+#CSR_SLICE = #sparse_tensor.encoding<{
+  dimLevelType = [ "dense", "compressed" ],
+  slice = [ (1, 4, 1), (1, 4, 2) ]
+}>
+
+// CHECK-LABEL: func @sparse_slice_offset(
+//  CHECK-SAME: %[[A:.*]]: tensor<2x8xf64, #{{.*}}>)
+//       CHECK: %[[T:.*]] = sparse_tensor.slice.offset %[[A]] at 1 : tensor<2x8xf64, #{{.*}}>
+//       CHECK: return %[[T]] : index
+func.func @sparse_slice_offset(%arg0: tensor<2x8xf64, #CSR_SLICE>) -> index {
+  %0 = sparse_tensor.slice.offset %arg0 at 1 : tensor<2x8xf64, #CSR_SLICE>
+  return %0 : index
+}
+
+// -----
+
+#CSR_SLICE = #sparse_tensor.encoding<{
+  dimLevelType = [ "dense", "compressed" ],
+  slice = [ (1, 4, 1), (1, 4, 2) ]
+}>
+
+// CHECK-LABEL: func @sparse_slice_stride(
+//  CHECK-SAME: %[[A:.*]]: tensor<2x8xf64, #{{.*}}>)
+//       CHECK: %[[T:.*]] = sparse_tensor.slice.stride %[[A]] at 1 : tensor<2x8xf64, #{{.*}}>
+//       CHECK: return %[[T]] : index
+func.func @sparse_slice_stride(%arg0: tensor<2x8xf64, #CSR_SLICE>) -> index {
+  %0 = sparse_tensor.slice.stride %arg0 at 1 : tensor<2x8xf64, #CSR_SLICE>
+  return %0 : index
 }
 
 // -----
@@ -504,10 +554,10 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> (
 // CHECK-LABEL: func @sparse_sort_1d0v(
 //  CHECK-SAME: %[[A:.*]]: index,
 //  CHECK-SAME: %[[B:.*]]: memref<?xindex>)
-//       CHECK: sparse_tensor.sort %[[A]], %[[B]] : memref<?xindex>
+//       CHECK: sparse_tensor.sort hybrid_quick_sort %[[A]], %[[B]] : memref<?xindex>
 //       CHECK: return %[[B]]
 func.func @sparse_sort_1d0v(%arg0: index, %arg1: memref<?xindex>) -> (memref<?xindex>) {
-  sparse_tensor.sort %arg0, %arg1 : memref<?xindex>
+  sparse_tensor.sort hybrid_quick_sort %arg0, %arg1 : memref<?xindex>
   return %arg1 : memref<?xindex>
 }
 
@@ -518,10 +568,10 @@ func.func @sparse_sort_1d0v(%arg0: index, %arg1: memref<?xindex>) -> (memref<?xi
 //  CHECK-SAME: %[[B:.*]]: memref<20xindex>,
 //  CHECK-SAME: %[[C:.*]]: memref<10xindex>,
 //  CHECK-SAME: %[[D:.*]]: memref<?xf32>)
-//       CHECK: sparse_tensor.sort %[[A]], %[[B]] jointly %[[C]], %[[D]] : memref<20xindex> jointly memref<10xindex>, memref<?xf32>
+//       CHECK: sparse_tensor.sort hybrid_quick_sort %[[A]], %[[B]] jointly %[[C]], %[[D]] : memref<20xindex> jointly memref<10xindex>, memref<?xf32>
 //       CHECK: return %[[B]], %[[C]], %[[D]]
 func.func @sparse_sort_1d2v(%arg0: index, %arg1: memref<20xindex>, %arg2: memref<10xindex>, %arg3: memref<?xf32>) -> (memref<20xindex>, memref<10xindex>, memref<?xf32>) {
-  sparse_tensor.sort %arg0, %arg1 jointly %arg2, %arg3 : memref<20xindex> jointly memref<10xindex>, memref<?xf32>
+  sparse_tensor.sort hybrid_quick_sort %arg0, %arg1 jointly %arg2, %arg3 : memref<20xindex> jointly memref<10xindex>, memref<?xf32>
   return %arg1, %arg2, %arg3 : memref<20xindex>, memref<10xindex>, memref<?xf32>
 }
 
@@ -532,10 +582,10 @@ func.func @sparse_sort_1d2v(%arg0: index, %arg1: memref<20xindex>, %arg2: memref
 //  CHECK-SAME: %[[B:.*]]: memref<10xi8>,
 //  CHECK-SAME: %[[C:.*]]: memref<20xi8>,
 //  CHECK-SAME: %[[D:.*]]: memref<10xf64>)
-//       CHECK: sparse_tensor.sort %[[A]], %[[B]], %[[C]] jointly %[[D]] : memref<10xi8>, memref<20xi8> jointly memref<10xf64>
+//       CHECK: sparse_tensor.sort hybrid_quick_sort %[[A]], %[[B]], %[[C]] jointly %[[D]] : memref<10xi8>, memref<20xi8> jointly memref<10xf64>
 //       CHECK: return %[[B]], %[[C]], %[[D]]
 func.func @sparse_sort_2d1v(%arg0: index, %arg1: memref<10xi8>, %arg2: memref<20xi8>, %arg3: memref<10xf64>) -> (memref<10xi8>, memref<20xi8>, memref<10xf64>) {
-  sparse_tensor.sort %arg0, %arg1, %arg2 jointly %arg3 : memref<10xi8>, memref<20xi8> jointly memref<10xf64>
+  sparse_tensor.sort hybrid_quick_sort %arg0, %arg1, %arg2 jointly %arg3 : memref<10xi8>, memref<20xi8> jointly memref<10xf64>
   return %arg1, %arg2, %arg3 : memref<10xi8>, memref<20xi8>, memref<10xf64>
 }
 
@@ -546,23 +596,34 @@ func.func @sparse_sort_2d1v(%arg0: index, %arg1: memref<10xi8>, %arg2: memref<20
 //  CHECK-SAME: %[[B:.*]]: memref<10xi8>,
 //  CHECK-SAME: %[[C:.*]]: memref<20xi8>,
 //  CHECK-SAME: %[[D:.*]]: memref<10xf64>)
-//       CHECK: sparse_tensor.sort stable %[[A]], %[[B]], %[[C]] jointly %[[D]] : memref<10xi8>, memref<20xi8> jointly memref<10xf64>
+//       CHECK: sparse_tensor.sort insertion_sort_stable %[[A]], %[[B]], %[[C]] jointly %[[D]] : memref<10xi8>, memref<20xi8> jointly memref<10xf64>
 //       CHECK: return %[[B]], %[[C]], %[[D]]
 func.func @sparse_sort_stable(%arg0: index, %arg1: memref<10xi8>, %arg2: memref<20xi8>, %arg3: memref<10xf64>) -> (memref<10xi8>, memref<20xi8>, memref<10xf64>) {
-  sparse_tensor.sort stable %arg0, %arg1, %arg2 jointly %arg3 : memref<10xi8>, memref<20xi8> jointly memref<10xf64>
+  sparse_tensor.sort insertion_sort_stable %arg0, %arg1, %arg2 jointly %arg3 : memref<10xi8>, memref<20xi8> jointly memref<10xf64>
   return %arg1, %arg2, %arg3 : memref<10xi8>, memref<20xi8>, memref<10xf64>
 }
 
 // -----
 
+// CHECK-LABEL: func @sparse_sort_coo(
+//  CHECK-SAME: %[[A:.*]]: index,
+//  CHECK-SAME: %[[B:.*]]: memref<?xindex>)
+//       CHECK: sparse_tensor.sort_coo hybrid_quick_sort %[[A]], %[[B]] {nx = 2 : index, ny = 1 : index} : memref<?xindex>
+//       CHECK: return %[[B]]
 func.func @sparse_sort_coo(%arg0: index, %arg1: memref<?xindex>) -> (memref<?xindex>) {
-  sparse_tensor.sort_coo %arg0, %arg1 { nx=2 : index, ny=1 : index}: memref<?xindex>
+  sparse_tensor.sort_coo hybrid_quick_sort %arg0, %arg1 {nx = 2 : index, ny = 1 : index}: memref<?xindex>
   return %arg1 : memref<?xindex>
 }
 
 // -----
 
+// CHECK-LABEL: func @sparse_sort_coo_stable(
+//  CHECK-SAME: %[[A:.*]]: index,
+//  CHECK-SAME: %[[B:.*]]: memref<?xi64>,
+//  CHECK-SAME: %[[C:.*]]: memref<?xf32>)
+//       CHECK: sparse_tensor.sort_coo insertion_sort_stable %[[A]], %[[B]] jointly %[[C]] {nx = 2 : index, ny = 1 : index}
+//       CHECK: return %[[B]], %[[C]]
 func.func @sparse_sort_coo_stable(%arg0: index, %arg1: memref<?xi64>, %arg2: memref<?xf32>) -> (memref<?xi64>, memref<?xf32>) {
-  sparse_tensor.sort_coo stable %arg0, %arg1 jointly %arg2 { nx=2 : index, ny=1 : index}: memref<?xi64> jointly memref<?xf32>
+  sparse_tensor.sort_coo insertion_sort_stable %arg0, %arg1 jointly %arg2 {nx = 2 : index, ny = 1 : index}: memref<?xi64> jointly memref<?xf32>
   return %arg1, %arg2 : memref<?xi64>, memref<?xf32>
 }

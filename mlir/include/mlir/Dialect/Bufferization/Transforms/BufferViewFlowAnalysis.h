@@ -55,7 +55,7 @@ public:
   ValueSetT resolve(Value value) const;
 
   /// Removes the given values from all alias sets.
-  void remove(const SmallPtrSetImpl<Value> &aliasValues);
+  void remove(const SetVector<Value> &aliasValues);
 
 private:
   /// This function constructs a mapping from values to its immediate
