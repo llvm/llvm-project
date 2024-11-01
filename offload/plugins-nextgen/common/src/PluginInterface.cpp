@@ -9,7 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PluginInterface.h"
-#include "OmptCommonDefs.h"
+#include "OpenMP/OMPT/OmptCommonDefs.h"
 
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"

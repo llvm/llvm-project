@@ -12,14 +12,13 @@
 
 #ifdef OMPT_SUPPORT
 
-#include "OmptTracing.h"
-#include "OmptTracingBuffer.h"
+#include "OpenMP/OMPT/OmptTracing.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
+#include "OpenMP/OMPT/OmptTracingBuffer.h"
 #include "PluginManager.h"
 #include "Shared/Debug.h"
 #include "omp-tools.h"
-#include "private.h"
 
 #include "llvm/Support/DynamicLibrary.h"
 

@@ -12,9 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "OpenMP/OMPT/Interface.h"
-#include "OmptCommonDefs.h"
 #include "OffloadPolicy.h"
 #include "OpenMP/OMPT/Callback.h"
+#include "OpenMP/OMPT/OmptCommonDefs.h"
 #include "OpenMP/omp.h"
 #include "PluginManager.h"
 #include "omptarget.h"

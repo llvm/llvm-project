@@ -16,7 +16,7 @@
 
 #ifdef OMPT_SUPPORT
 
-#include "OmptCommonDefs.h"
+#include "OpenMP/OMPT/OmptCommonDefs.h"
 
 #include "llvm/Support/DynamicLibrary.h"
 

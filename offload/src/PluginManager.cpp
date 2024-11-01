@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "PluginManager.h"
-#include "OmptCommonDefs.h"
-#include "OmptTracing.h"
 #include "OpenMP/OMPT/Callback.h"
+#include "OpenMP/OMPT/OmptCommonDefs.h"
+#include "OpenMP/OMPT/OmptTracing.h"
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
 #include "device.h"

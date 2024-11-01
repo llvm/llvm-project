@@ -12,10 +12,9 @@
 
 #ifdef OMPT_SUPPORT
 
+#include "OpenMP/OMPT/OmptTracingBuffer.h"
+#include "OpenMP/OMPT/OmptTracing.h"
 #include "Shared/Debug.h"
-#include "OmptTracing.h"
-#include "OmptTracingBuffer.h"
-#include "private.h"
 
 #include <atomic>
 #include <cassert>

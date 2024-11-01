@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OmptCommonDefs.h"
 #include "OpenMP/OMPT/Interface.h"
+#include "OpenMP/OMPT/OmptCommonDefs.h"
 #include "omptarget.h"
 #include "private.h"
 

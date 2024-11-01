@@ -82,15 +82,15 @@ public:
    * this 2nd set of locations need to be atomic or synchronized.
    */
   struct Buffer {
-    uint64_t Id;           // Unique identifier of the buffer
-    int64_t DeviceId;      // Device for which this buffer is allocated
-    void *Start;           // Start of allocated space for trace records
-    size_t TotalBytes;     // Total number of bytes in the allocated space
-    size_t RemainingBytes; // Total number of unused bytes
-                           // corresponding to Cursor
+    uint64_t Id;                // Unique identifier of the buffer
+    int64_t DeviceId;           // Device for which this buffer is allocated
+    void *Start;                // Start of allocated space for trace records
+    size_t TotalBytes;          // Total number of bytes in the allocated space
+    size_t RemainingBytes;      // Total number of unused bytes
+                                // corresponding to Cursor
     std::atomic<void *> Cursor; // Address of the last trace record carved out
     std::atomic<bool> isFull;   // true if no more trace records can be
-                              // accomodated, otherwise false
+                                // accomodated, otherwise false
     Buffer(uint64_t BufId, int64_t DevId, void *S, size_t Bytes, size_t Rem,
            void *C, bool F)
         : Id(BufId), DeviceId(DevId), Start(S), TotalBytes(Bytes),

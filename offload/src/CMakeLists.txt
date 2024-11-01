@@ -12,8 +12,6 @@ add_llvm_library(omptarget
   device.cpp
   interface.cpp
   omptarget.cpp
-  OmptTracing.cpp
-  OmptTracingBuffer.cpp
   OffloadRTL.cpp
   LegacyAPI.cpp
   PluginManager.cpp
@@ -23,6 +21,8 @@ add_llvm_library(omptarget
   OpenMP/Mapping.cpp
   OpenMP/InteropAPI.cpp
   OpenMP/OMPT/Callback.cpp
+  OpenMP/OMPT/OmptTracing.cpp
+  OpenMP/OMPT/OmptTracingBuffer.cpp
 
   KernelLanguage/API.cpp
 

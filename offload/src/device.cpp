@@ -12,11 +12,11 @@
 
 #include "device.h"
 #include "OffloadEntry.h"
-#include "OmptCommonDefs.h"
-#include "OmptTracing.h"
 #include "OpenMP/Mapping.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
+#include "OpenMP/OMPT/OmptCommonDefs.h"
+#include "OpenMP/OMPT/OmptTracing.h"
 #include "PluginManager.h"
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"

@@ -26,10 +26,9 @@
 #include <unordered_map>
 #include <variant>
 
-#include "OmptCommonDefs.h"
-
-#include "OpenMP/OMPT/Interface.h"
 #include "ErrorReporting.h"
+#include "OpenMP/OMPT/Interface.h"
+#include "OpenMP/OMPT/OmptCommonDefs.h"
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
