@@ -9189,23 +9189,35 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
 
   // __builtin_counted_by_ref cannot be assigned to a variable, used in
   // function call, or in a return.
-  auto FindBuiltinCountedByRefExpr = [](Expr *E) {
+  auto FindBuiltinCountedByRefExpr = [&](Expr *E) -> CallExpr * {
     struct BuiltinCountedByRefVisitor
         : public RecursiveASTVisitor<BuiltinCountedByRefVisitor> {
-      CallExpr *CE = nullptr;
-      bool VisitCallExpr(CallExpr *E) {
-        if (E->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref)
-          CE = E;
+      CallExpr *TheCall = nullptr;
+      bool VisitCallExpr(CallExpr *CE) {
+        if (CE->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref) {
+          TheCall = CE;
+          return false;
+        }
+        return true;
+      }
+      bool VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *UE) {
+        // A UnaryExprOrTypeTraitExpr---e.g. sizeof, __alignof, etc.---isn't
+        // the same as a CallExpr, so if we find a __builtin_counted_by_ref()
+        // call in one, ignore it.
         return false;
       }
     } V;
     V.TraverseStmt(E);
-    return V.CE;
+    return V.TheCall;
   };
-  if (auto *CE = FindBuiltinCountedByRefExpr(RHS.get()))
+  static llvm::SmallPtrSet<CallExpr *, 4> Diagnosed;
+  if (auto *CE = FindBuiltinCountedByRefExpr(RHS.get());
+      CE && !Diagnosed.count(CE)) {
+    Diagnosed.insert(CE);
     Diag(CE->getExprLoc(),
          diag::err_builtin_counted_by_ref_cannot_leak_reference)
         << CE->getSourceRange();
+  }
 
   // Common case: no conversion required.
   if (LHSType == RHSType) {
@@ -13758,7 +13770,7 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
   // __builtin_counted_by_ref can't be used in a binary expression or array
   // subscript on the LHS.
   int DiagOption = -1;
-  auto FindInvalidUseOfBoundsSafetyCounter = [&](Expr *E) {
+  auto FindInvalidUseOfBoundsSafetyCounter = [&](Expr *E) -> CallExpr * {
     struct BuiltinCountedByRefVisitor
         : public RecursiveASTVisitor<BuiltinCountedByRefVisitor> {
       CallExpr *CE = nullptr;
@@ -13766,9 +13778,11 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
       int Option = -1;
 
       bool VisitCallExpr(CallExpr *E) {
-        if (E->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref)
+        if (E->getBuiltinCallee() == Builtin::BI__builtin_counted_by_ref) {
           CE = E;
-        return false;
+          return false;
+        }
+        return true;
       }
 
       bool VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
