@@ -7474,29 +7474,13 @@ template <> struct DenseMapInfo<const CaseHandleWrapper *> {
       return LHS == RHS;
 
     auto IsBranchEq = [](BranchInst *A, BranchInst *B) {
-      if (A->isConditional() != B->isConditional())
+      assert(A->isUnconditional() && B->isUnconditional() &&
+             "Only supporting unconditional branches for now");
+      assert(A->getNumSuccessors() == 1 && B->getNumSuccessors() == 1 &&
+             "Expected unconditional branches to have one successor");
+
+      if (A->getSuccessor(0) != B->getSuccessor(0))
         return false;
-
-      if (A->isConditional()) {
-        // If the conditions are instructions, check equality up to
-        // commutativity. Otherwise, check that the two Values are the same.
-        Value *AC = A->getCondition();
-        Value *BC = B->getCondition();
-        auto *ACI = dyn_cast<Instruction>(AC);
-        auto *BCI = dyn_cast<Instruction>(BC);
-
-        if (ACI && BCI && !areIdenticalUpToCommutativity(ACI, BCI))
-          return false;
-        if ((!ACI || !BCI) && AC != BC)
-          return false;
-      }
-
-      if (A->getNumSuccessors() != B->getNumSuccessors())
-        return false;
-
-      for (unsigned I = 0; I < A->getNumSuccessors(); ++I)
-        if (A->getSuccessor(I) != B->getSuccessor(I))
-          return false;
 
       return true;
     };
@@ -7546,14 +7530,20 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI) {
     // SI need to be updated.
     if (BB->hasNPredecessorsOrMore(2))
       continue;
-    // FIXME: Relax that the terminator is a BranchInst by checking for equality
-    // on other kinds of terminators.
+
     Instruction *T = BB->getTerminator();
-    if (!T || !isa<BranchInst>(T))
+    if (!T)
+      continue;
+
+    // FIXME: Relax that the terminator is a BranchInst by checking for equality
+    // on other kinds of terminators. We decide to only support unconditional
+    // branches for now for compile time reasons.
+    auto *BI = dyn_cast<BranchInst>(T);
+    if (!BI || BI->isConditional())
       continue;
 
     // Preprocess incoming PHI values for successors of BB.
-    for (BasicBlock *Succ : cast<BranchInst>(T)->successors()) {
+    for (BasicBlock *Succ : BI->successors()) {
       for (PHINode &Phi : Succ->phis()) {
         auto IncomingVals = PhiPredIVs.find(&Phi);
         Value *Incoming = Phi.getIncomingValueForBlock(BB);
