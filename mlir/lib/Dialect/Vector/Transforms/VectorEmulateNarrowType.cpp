@@ -133,7 +133,6 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
 static Value extractSubvectorFrom(RewriterBase &rewriter, Location loc,
                                   VectorType extractType, Value vector,
                                   int64_t frontOffset, int64_t subvecSize) {
-  // get vector's vector type:
   auto vectorType = dyn_cast<VectorType>(vector.getType());
   assert(vectorType && "expected vector type");
   assert(vectorType.getShape().size() == 1 && "expected 1-D vector type");

@@ -1,16 +1,20 @@
 // RUN: mlir-opt --test-emulate-narrow-int="arith-compute-bitwidth=1 memref-load-bitwidth=8" --cse --split-input-file %s | FileCheck %s
 
+// TODO: remove memref.alloc() in the tests to eliminate noises.
+// memref.alloc exists here because sub-byte vector data types such as i2
+// are currently not supported as input arguments.
+
 // CHECK: #map = affine_map<()[s0, s1] -> ((s0 * 3 + s1) floordiv 4)>
 // CHECK: #map1 = affine_map<()[s0, s1] -> ((s0 * 3 + s1) mod 4)>
 
-func.func @vector_load_i2(%arg1: index, %arg2: index) -> vector<3x3xi2> {
-    %0 = memref.alloc() : memref<3x3xi2>
-    %c0 = arith.constant 0 : index
-    %c2 = arith.constant 2 : index
-    %cst = arith.constant dense<0> : vector<3x3xi2>
-    %1 = vector.load %0[%c2, %c0] : memref<3x3xi2>, vector<3xi2>
-    %2 = vector.insert %1, %cst [0] : vector<3xi2> into vector<3x3xi2>
-    return %2 : vector<3x3xi2>
+func.func @vector_load_i2() -> vector<3x3xi2> {
+  %0 = memref.alloc() : memref<3x3xi2>
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %cst = arith.constant dense<0> : vector<3x3xi2>
+  %1 = vector.load %0[%c2, %c0] : memref<3x3xi2>, vector<3xi2>
+  %2 = vector.insert %1, %cst [0] : vector<3xi2> into vector<3x3xi2>
+  return %2 : vector<3x3xi2>
 }
 
 // CHECK: func @vector_load_i2
@@ -23,12 +27,12 @@ func.func @vector_load_i2(%arg1: index, %arg2: index) -> vector<3x3xi2> {
 //-----
 
 func.func @vector_transfer_read_i2() -> vector<3xi2> {
- %0 = memref.alloc() : memref<3x3xi2>
- %c0i2 = arith.constant 0 : i2
- %c0 = arith.constant 0 : index
- %c2 = arith.constant 2 : index
- %1 = vector.transfer_read %0[%c2, %c0], %c0i2 {in_bounds = [true]} : memref<3x3xi2>, vector<3xi2>
- return %1 : vector<3xi2>
+  %0 = memref.alloc() : memref<3x3xi2>
+  %pad = arith.constant 0 : i2
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %1 = vector.transfer_read %0[%c2, %c0], %pad {in_bounds = [true]} : memref<3x3xi2>, vector<3xi2>
+  return %1 : vector<3xi2>
 }
 
 // CHECK: func @vector_transfer_read_i2
@@ -41,15 +45,15 @@ func.func @vector_transfer_read_i2() -> vector<3xi2> {
 //-----
 
 func.func @vector_cst_maskedload_i2(%passthru: vector<5xi2>) -> vector<3x5xi2> {
-    %0 = memref.alloc() : memref<3x5xi2>
-    %cst = arith.constant dense<0> : vector<3x5xi2>
-    %mask = vector.constant_mask [3] : vector<5xi1>
-    %c0 = arith.constant 0 : index
-    %c2 = arith.constant 2 : index
-    %1 = vector.maskedload %0[%c2, %c0], %mask, %passthru :
-      memref<3x5xi2>, vector<5xi1>, vector<5xi2> into vector<5xi2>
-    %2 = vector.insert %1, %cst [0] : vector<5xi2> into vector<3x5xi2>
-    return %2 : vector<3x5xi2>
+  %0 = memref.alloc() : memref<3x5xi2>
+  %cst = arith.constant dense<0> : vector<3x5xi2>
+  %mask = vector.constant_mask [3] : vector<5xi1>
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %1 = vector.maskedload %0[%c2, %c0], %mask, %passthru :
+    memref<3x5xi2>, vector<5xi1>, vector<5xi2> into vector<5xi2>
+  %2 = vector.insert %1, %cst [0] : vector<5xi2> into vector<3x5xi2>
+  return %2 : vector<3x5xi2>
 }
 
 // CHECK: func @vector_cst_maskedload_i2
@@ -71,10 +75,10 @@ func.func @vector_cst_maskedload_i2(%passthru: vector<5xi2>) -> vector<3x5xi2> {
 
 //-----
 
-func.func @vector_load_i2_dynamic_indexing(%arg1: index, %arg2: index) -> vector<3xi2> {
+func.func @vector_load_i2_dynamic_indexing(%idx1: index, %idx2: index) -> vector<3xi2> {
   %0 = memref.alloc() : memref<3x3xi2>
   %cst = arith.constant dense<0> : vector<3x3xi2>
-  %1 = vector.load %0[%arg1, %arg2] : memref<3x3xi2>, vector<3xi2>
+  %1 = vector.load %0[%idx1, %idx2] : memref<3x3xi2>, vector<3xi2>
   return %1 : vector<3xi2>
 }
 
@@ -95,10 +99,10 @@ func.func @vector_load_i2_dynamic_indexing(%arg1: index, %arg2: index) -> vector
 
 //-----
 
-func.func @vector_transfer_read_i2_dynamic_indexing(%arg1: index, %arg2: index) -> vector<3xi2> {
+func.func @vector_transfer_read_i2_dynamic_indexing(%idx1: index, %idx2: index) -> vector<3xi2> {
   %0 = memref.alloc() : memref<3x3xi2>
   %pad = arith.constant 0 : i2
-  %1 = vector.transfer_read %0[%arg1, %arg2], %pad {in_bounds = [true]} : memref<3x3xi2>, vector<3xi2>
+  %1 = vector.transfer_read %0[%idx1, %idx2], %pad {in_bounds = [true]} : memref<3x3xi2>, vector<3xi2>
   return %1 : vector<3xi2>
 }
 
