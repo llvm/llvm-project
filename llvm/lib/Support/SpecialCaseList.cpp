@@ -14,9 +14,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/SpecialCaseList.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include <cstddef>
 #include <stdio.h>
 #include <string>
 #include <system_error>
@@ -113,20 +120,47 @@ bool SpecialCaseList::createInternal(const std::vector<std::string> &Paths,
       Error = (Twine("can't open file '") + Path + "': " + EC.message()).str();
       return false;
     }
-    std::string ParseError;
-    if (!parse(FileOrErr.get().get(), ParseError)) {
-      Error = (Twine("error parsing file '") + Path + "': " + ParseError).str();
+    if (!createInternal(FileOrErr->get(), Error)) {
+      Error = llvm::formatv("error parsing file '{0}': {1}", Path, Error);
       return false;
     }
   }
   return true;
 }
-
 bool SpecialCaseList::createInternal(const MemoryBuffer *MB,
                                      std::string &Error) {
-  if (!parse(MB, Error))
+  auto ParsedInput = ParsedSpecialCaseList::parse(*MB);
+  if (!ParsedInput) {
+    Error = llvm::toString(ParsedInput.takeError());
     return false;
+  }
+  if (auto Err = mergeSections(*std::move(ParsedInput))) {
+    Error = llvm::toString(std::move(Err));
+    return false;
+  }
   return true;
+}
+
+llvm::Error SpecialCaseList::mergeSections(ParsedSpecialCaseList ParsedInput) {
+  bool UseGlobs = !ParsedInput.UseRegexes;
+  for (auto &S : ParsedInput.Sections) {
+    auto MatcherSectionOrErr = addSection(S.Name, S.Line, UseGlobs);
+    if (auto Err = MatcherSectionOrErr.takeError())
+      return Err;
+    auto *MatcherSection = *MatcherSectionOrErr;
+    for (auto &Entry : S.Entries) {
+      Matcher &MatcherForTypeAndCategory =
+          MatcherSection->Entries[Entry.Type][Entry.Category];
+      if (auto Err = MatcherForTypeAndCategory.insert(Entry.Pattern, Entry.Line,
+                                                      UseGlobs)) {
+        return createStringError(
+            llvm::formatv("malformed {0} in line {1}: '{2}': {3}",
+                          UseGlobs ? "glob" : "regex", Entry.Line,
+                          Entry.Pattern, llvm::fmt_consume(std::move(Err))));
+      }
+    }
+  }
+  return llvm::Error::success();
 }
 
 Expected<SpecialCaseList::Section *>
@@ -143,23 +177,18 @@ SpecialCaseList::addSection(StringRef SectionStr, unsigned LineNo,
   return &Section;
 }
 
-bool SpecialCaseList::parse(const MemoryBuffer *MB, std::string &Error) {
-  Section *CurrentSection;
-  if (auto Err = addSection("*", 1).moveInto(CurrentSection)) {
-    Error = toString(std::move(Err));
-    return false;
-  }
-
+llvm::Expected<ParsedSpecialCaseList>
+ParsedSpecialCaseList::parse(const MemoryBuffer &MB) {
+  ParsedSpecialCaseList Result;
   // In https://reviews.llvm.org/D154014 we added glob support and planned to
   // remove regex support in patterns. We temporarily support the original
   // behavior using regexes if "#!special-case-list-v1" is the first line of the
   // file. For more details, see
   // https://discourse.llvm.org/t/use-glob-instead-of-regex-for-specialcaselists/71666
-  bool UseGlobs = !MB->getBuffer().starts_with("#!special-case-list-v1\n");
-
-  for (line_iterator LineIt(*MB, /*SkipBlanks=*/true, /*CommentMarker=*/'#');
+  Result.UseRegexes = MB.getBuffer().starts_with("#!special-case-list-v1\n");
+  for (line_iterator LineIt(MB, /*SkipBlanks=*/true, /*CommentMarker=*/'#');
        !LineIt.is_at_eof(); LineIt++) {
-    unsigned LineNo = LineIt.line_number();
+    std::size_t LineNo = LineIt.line_number();
     StringRef Line = LineIt->trim();
     if (Line.empty())
       continue;
@@ -167,17 +196,12 @@ bool SpecialCaseList::parse(const MemoryBuffer *MB, std::string &Error) {
     // Save section names
     if (Line.starts_with("[")) {
       if (!Line.ends_with("]")) {
-        Error =
-            ("malformed section header on line " + Twine(LineNo) + ": " + Line)
-                .str();
-        return false;
+        return llvm::createStringError(
+            "malformed section header on line " + Twine(LineNo) + ": " + Line);
       }
-
-      if (auto Err = addSection(Line.drop_front().drop_back(), LineNo, UseGlobs)
-                         .moveInto(CurrentSection)) {
-        Error = toString(std::move(Err));
-        return false;
-      }
+      auto &NewSection = Result.Sections.emplace_back();
+      NewSection.Line = LineNo;
+      NewSection.Name = Line.drop_back().drop_front();
       continue;
     }
 
@@ -185,21 +209,23 @@ bool SpecialCaseList::parse(const MemoryBuffer *MB, std::string &Error) {
     auto [Prefix, Postfix] = Line.split(":");
     if (Postfix.empty()) {
       // Missing ':' in the line.
-      Error = ("malformed line " + Twine(LineNo) + ": '" + Line + "'").str();
-      return false;
+      return llvm::createStringError("malformed line " + Twine(LineNo) + ": '" +
+                                     Line + "'");
     }
 
     auto [Pattern, Category] = Postfix.split("=");
-    auto &Entry = CurrentSection->Entries[Prefix][Category];
-    if (auto Err = Entry.insert(Pattern, LineNo, UseGlobs)) {
-      Error =
-          (Twine("malformed ") + (UseGlobs ? "glob" : "regex") + " in line " +
-           Twine(LineNo) + ": '" + Pattern + "': " + toString(std::move(Err)))
-              .str();
-      return false;
+    if (LLVM_UNLIKELY(Result.Sections.empty())) {
+      auto &DefSection = Result.Sections.emplace_back();
+      DefSection.Line = 1;
+      DefSection.Name = "*";
     }
+    auto &Entry = Result.Sections.back().Entries.emplace_back();
+    Entry.Line = LineNo;
+    Entry.Type = Prefix;
+    Entry.Pattern = Pattern;
+    Entry.Category = Category;
   }
-  return true;
+  return Result;
 }
 
 SpecialCaseList::~SpecialCaseList() = default;
