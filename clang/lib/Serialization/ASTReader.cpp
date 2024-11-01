@@ -2120,16 +2120,8 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
   HFI.isImport |= (Flags >> 5) & 0x01;
   HFI.isPragmaOnce |= (Flags >> 4) & 0x01;
   HFI.DirInfo = (Flags >> 1) & 0x07;
-  HFI.IndexHeaderMapHeader = Flags & 0x01;
   HFI.LazyControllingMacro = Reader.getGlobalIdentifierID(
       M, endian::readNext<IdentifierID, llvm::endianness::little>(d));
-  if (unsigned FrameworkOffset =
-          endian::readNext<uint32_t, llvm::endianness::little>(d)) {
-    // The framework offset is 1 greater than the actual offset,
-    // since 0 is used as an indicator for "no framework name".
-    StringRef FrameworkName(FrameworkStrings + FrameworkOffset - 1);
-    HFI.Framework = HS->getUniqueFrameworkName(FrameworkName);
-  }
 
   assert((End - d) % 4 == 0 &&
          "Wrong data length in HeaderFileInfo deserialization");
@@ -3903,13 +3895,10 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       F.HeaderFileInfoTableData = Blob.data();
       F.LocalNumHeaderFileInfos = Record[1];
       if (Record[0]) {
-        F.HeaderFileInfoTable
-          = HeaderFileInfoLookupTable::Create(
-                   (const unsigned char *)F.HeaderFileInfoTableData + Record[0],
-                   (const unsigned char *)F.HeaderFileInfoTableData,
-                   HeaderFileInfoTrait(*this, F,
-                                       &PP.getHeaderSearchInfo(),
-                                       Blob.data() + Record[2]));
+        F.HeaderFileInfoTable = HeaderFileInfoLookupTable::Create(
+            (const unsigned char *)F.HeaderFileInfoTableData + Record[0],
+            (const unsigned char *)F.HeaderFileInfoTableData,
+            HeaderFileInfoTrait(*this, F));
 
         PP.getHeaderSearchInfo().SetExternalSource(this);
         if (!PP.getHeaderSearchInfo().getExternalLookup())
