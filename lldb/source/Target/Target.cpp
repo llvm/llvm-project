@@ -1631,7 +1631,7 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
           std::lock_guard<std::mutex> guard(dependent_files_mutex);
           for (; i < dependent_files.GetSize(); i++)
             task_group.async(GetDependentModules,
-                            dependent_files.GetFileSpecAtIndex(i));
+                             dependent_files.GetFileSpecAtIndex(i));
         }
         task_group.wait();
       }
