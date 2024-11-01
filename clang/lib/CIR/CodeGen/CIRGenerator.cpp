@@ -35,12 +35,12 @@ void CIRGenerator::Initialize(ASTContext &astCtx) {
   this->astCtx = &astCtx;
 
   mlirCtx = std::make_unique<mlir::MLIRContext>();
-  mlirCtx->getOrLoadDialect<mlir::cir::CIRDialect>();
+  mlirCtx->loadDialect<mlir::cir::CIRDialect>();
   cgm = std::make_unique<CIRGenModule>(*mlirCtx.get(), astCtx, codeGenOpts,
                                        diags);
 }
 
-mlir::ModuleOp CIRGenerator::getModule() { return cgm->getModule(); }
+mlir::ModuleOp CIRGenerator::getModule() const { return cgm->getModule(); }
 
 bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef group) {
 

@@ -54,9 +54,8 @@ void CIRGenModule::buildGlobal(clang::GlobalDecl gd) {
   if (const auto *fd = dyn_cast<FunctionDecl>(global)) {
     // Update deferred annotations with the latest declaration if the function
     // was already used or defined.
-    if (fd->hasAttr<AnnotateAttr>()) {
-      errorNYI(fd->getSourceRange(), "defferedAnnotations");
-    }
+    if (fd->hasAttr<AnnotateAttr>())
+      errorNYI(fd->getSourceRange(), "deferredAnnotations");
     if (!fd->doesThisDeclarationHaveABody()) {
       if (!fd->doesDeclarationForceExternallyVisibleDefinition())
         return;
