@@ -2201,6 +2201,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
       for (auto VReg : getOrCreateVRegs(*Arg))
         VRegs.push_back(VReg);
     MIRBuilder.buildInstr(TargetOpcode::FAKE_USE, {}, VRegs);
+    MF->setHasFakeUses(true);
     return true;
   }
   case Intrinsic::dbg_declare: {
@@ -2588,6 +2589,10 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                          getOrCreateVReg(*CI.getOperand(0)),
                          getOrCreateVReg(*CI.getOperand(1)));
     return true;
+  case Intrinsic::vector_extract:
+    return translateExtractVector(CI, MIRBuilder);
+  case Intrinsic::vector_insert:
+    return translateInsertVector(CI, MIRBuilder);
   case Intrinsic::prefetch: {
     Value *Addr = CI.getOperand(0);
     unsigned RW = cast<ConstantInt>(CI.getOperand(1))->getZExtValue();
@@ -3163,6 +3168,57 @@ bool IRTranslator::translateInsertElement(const User &U,
   return true;
 }
 
+bool IRTranslator::translateInsertVector(const User &U,
+                                         MachineIRBuilder &MIRBuilder) {
+  Register Dst = getOrCreateVReg(U);
+  Register Vec = getOrCreateVReg(*U.getOperand(0));
+  Register Elt = getOrCreateVReg(*U.getOperand(1));
+
+  ConstantInt *CI = cast<ConstantInt>(U.getOperand(2));
+  unsigned PreferredVecIdxWidth = TLI->getVectorIdxTy(*DL).getSizeInBits();
+
+  // Resize Index to preferred index width.
+  if (CI->getBitWidth() != PreferredVecIdxWidth) {
+    APInt NewIdx = CI->getValue().zextOrTrunc(PreferredVecIdxWidth);
+    CI = ConstantInt::get(CI->getContext(), NewIdx);
+  }
+
+  // If it is a <1 x Ty> vector, we have to use other means.
+  if (auto *ResultType = dyn_cast<FixedVectorType>(U.getOperand(1)->getType());
+      ResultType && ResultType->getNumElements() == 1) {
+    if (auto *InputType = dyn_cast<FixedVectorType>(U.getOperand(0)->getType());
+        InputType && InputType->getNumElements() == 1) {
+      // We are inserting an illegal fixed vector into an illegal
+      // fixed vector, use the scalar as it is not a legal vector type
+      // in LLT.
+      return translateCopy(U, *U.getOperand(0), MIRBuilder);
+    }
+    if (isa<FixedVectorType>(U.getOperand(0)->getType())) {
+      // We are inserting an illegal fixed vector into a legal fixed
+      // vector, use the scalar as it is not a legal vector type in
+      // LLT.
+      Register Idx = getOrCreateVReg(*CI);
+      MIRBuilder.buildInsertVectorElement(Dst, Vec, Elt, Idx);
+      return true;
+    }
+    if (isa<ScalableVectorType>(U.getOperand(0)->getType())) {
+      // We are inserting an illegal fixed vector into a scalable
+      // vector, use a scalar element insert.
+      LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+      Register Idx = getOrCreateVReg(*CI);
+      auto ScaledIndex = MIRBuilder.buildMul(
+          VecIdxTy, MIRBuilder.buildVScale(VecIdxTy, 1), Idx);
+      MIRBuilder.buildInsertVectorElement(Dst, Vec, Elt, ScaledIndex);
+      return true;
+    }
+  }
+
+  MIRBuilder.buildInsertSubvector(
+      getOrCreateVReg(U), getOrCreateVReg(*U.getOperand(0)),
+      getOrCreateVReg(*U.getOperand(1)), CI->getZExtValue());
+  return true;
+}
+
 bool IRTranslator::translateExtractElement(const User &U,
                                            MachineIRBuilder &MIRBuilder) {
   // If it is a <1 x Ty> vector, use the scalar as it is
@@ -3188,6 +3244,54 @@ bool IRTranslator::translateExtractElement(const User &U,
     Idx = MIRBuilder.buildZExtOrTrunc(VecIdxTy, Idx).getReg(0);
   }
   MIRBuilder.buildExtractVectorElement(Res, Val, Idx);
+  return true;
+}
+
+bool IRTranslator::translateExtractVector(const User &U,
+                                          MachineIRBuilder &MIRBuilder) {
+  Register Res = getOrCreateVReg(U);
+  Register Vec = getOrCreateVReg(*U.getOperand(0));
+  ConstantInt *CI = cast<ConstantInt>(U.getOperand(1));
+  unsigned PreferredVecIdxWidth = TLI->getVectorIdxTy(*DL).getSizeInBits();
+
+  // Resize Index to preferred index width.
+  if (CI->getBitWidth() != PreferredVecIdxWidth) {
+    APInt NewIdx = CI->getValue().zextOrTrunc(PreferredVecIdxWidth);
+    CI = ConstantInt::get(CI->getContext(), NewIdx);
+  }
+
+  // If it is a <1 x Ty> vector, we have to use other means.
+  if (auto *ResultType = dyn_cast<FixedVectorType>(U.getType());
+      ResultType && ResultType->getNumElements() == 1) {
+    if (auto *InputType = dyn_cast<FixedVectorType>(U.getOperand(0)->getType());
+        InputType && InputType->getNumElements() == 1) {
+      // We are extracting an illegal fixed vector from an illegal fixed vector,
+      // use the scalar as it is not a legal vector type in LLT.
+      return translateCopy(U, *U.getOperand(0), MIRBuilder);
+    }
+    if (isa<FixedVectorType>(U.getOperand(0)->getType())) {
+      // We are extracting an illegal fixed vector from a legal fixed
+      // vector, use the scalar as it is not a legal vector type in
+      // LLT.
+      Register Idx = getOrCreateVReg(*CI);
+      MIRBuilder.buildExtractVectorElement(Res, Vec, Idx);
+      return true;
+    }
+    if (isa<ScalableVectorType>(U.getOperand(0)->getType())) {
+      // We are extracting an illegal fixed vector from a scalable
+      // vector, use a scalar element extract.
+      LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+      Register Idx = getOrCreateVReg(*CI);
+      auto ScaledIndex = MIRBuilder.buildMul(
+          VecIdxTy, MIRBuilder.buildVScale(VecIdxTy, 1), Idx);
+      MIRBuilder.buildExtractVectorElement(Res, Vec, ScaledIndex);
+      return true;
+    }
+  }
+
+  MIRBuilder.buildExtractSubvector(getOrCreateVReg(U),
+                                   getOrCreateVReg(*U.getOperand(0)),
+                                   CI->getZExtValue());
   return true;
 }
 

@@ -64,6 +64,11 @@ private:
                                                 fir::cg::XDeclareOp declOp,
                                                 bool genAllocated,
                                                 bool genAssociated);
+  mlir::LLVM::DILocalVariableAttr
+  generateArtificialVariable(mlir::MLIRContext *context, mlir::Value Val,
+                             mlir::LLVM::DIFileAttr fileAttr,
+                             mlir::LLVM::DIScopeAttr scope,
+                             fir::cg::XDeclareOp declOp);
 
   mlir::ModuleOp module;
   mlir::SymbolTable *symbolTable;

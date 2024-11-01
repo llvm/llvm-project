@@ -1441,7 +1441,7 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 
   if (Target.getTriple().isAMDGPU() ||
       (AuxTarget && AuxTarget->getTriple().isAMDGPU())) {
-#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   InitBuiltinType(SingletonId, BuiltinType::Id);
 #include "clang/Basic/AMDGPUTypes.def"
   }
@@ -2264,7 +2264,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Align = 8;                                                                 \
     break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_OPAQUE_PTR_TYPE(NAME, AS, WIDTH, ALIGN, ID, SINGLETONID)        \
+#define AMDGPU_TYPE(NAME, ID, SINGLETONID, WIDTH, ALIGN)                       \
   case BuiltinType::ID:                                                        \
     Width = WIDTH;                                                             \
     Align = ALIGN;                                                             \
@@ -3398,7 +3398,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
 #include "clang/Basic/HLSLIntangibleTypes.def"
     case BuiltinType::Dependent:
       llvm_unreachable("should never get here");
-#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
     case BuiltinType::WasmExternRef:
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
@@ -8633,7 +8633,7 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
       {
         DiagnosticsEngine &Diags = C->getDiagnostics();
@@ -14325,9 +14325,17 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
       Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
     }
   } else if (const auto *TV = FD->getAttr<TargetVersionAttr>()) {
-    llvm::SmallVector<StringRef, 8> Feats;
-    TV->getFeatures(Feats);
-    std::vector<std::string> Features = getFMVBackendFeaturesFor(Feats);
+    std::vector<std::string> Features;
+    if (Target->getTriple().isRISCV()) {
+      ParsedTargetAttr ParsedAttr = Target->parseTargetAttr(TV->getName());
+      Features.insert(Features.begin(), ParsedAttr.Features.begin(),
+                      ParsedAttr.Features.end());
+    } else {
+      assert(Target->getTriple().isAArch64());
+      llvm::SmallVector<StringRef, 8> Feats;
+      TV->getFeatures(Feats);
+      Features = getFMVBackendFeaturesFor(Feats);
+    }
     Features.insert(Features.begin(),
                     Target->getTargetOpts().FeaturesAsWritten.begin(),
                     Target->getTargetOpts().FeaturesAsWritten.end());
@@ -14439,8 +14447,6 @@ bool ASTContext::useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
         Mangler->mangleThunk(Method, Thunk, /* elideOverrideInfo */ false,
                              mangledNameStream);
 
-      if (Thunks.find(ElidedName) == Thunks.end())
-        Thunks[ElidedName] = {};
       Thunks[ElidedName].push_back(std::string(MangledName));
     }
   }

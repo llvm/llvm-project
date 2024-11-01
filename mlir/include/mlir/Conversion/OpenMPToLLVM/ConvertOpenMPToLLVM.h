@@ -22,8 +22,8 @@ class RewritePatternSet;
 
 /// Configure dynamic conversion legality of regionless operations from OpenMP
 /// to LLVM.
-void configureOpenMPToLLVMConversionLegality(ConversionTarget &target,
-                                             LLVMTypeConverter &typeConverter);
+void configureOpenMPToLLVMConversionLegality(
+    ConversionTarget &target, const LLVMTypeConverter &typeConverter);
 
 /// Populate the given list with patterns that convert from OpenMP to LLVM.
 void populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,

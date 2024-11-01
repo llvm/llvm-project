@@ -38,8 +38,9 @@ bool llvm::isEqual(const GCNRPTracker::LiveRegSet &S1,
 unsigned GCNRegPressure::getRegKind(Register Reg,
                                     const MachineRegisterInfo &MRI) {
   assert(Reg.isVirtual());
-  const auto RC = MRI.getRegClass(Reg);
-  auto STI = static_cast<const SIRegisterInfo*>(MRI.getTargetRegisterInfo());
+  const auto *const RC = MRI.getRegClass(Reg);
+  const auto *STI =
+      static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
   return STI->isSGPRClass(RC)
              ? (STI->getRegSizeInBits(*RC) == 32 ? SGPR32 : SGPR_TUPLE)
          : STI->isAGPRClass(RC)
@@ -258,7 +259,8 @@ static void
 collectVirtualRegUses(SmallVectorImpl<RegisterMaskPair> &RegMaskPairs,
                       const MachineInstr &MI, const LiveIntervals &LIS,
                       const MachineRegisterInfo &MRI) {
-  SlotIndex InstrSI;
+
+  auto &TRI = *MRI.getTargetRegisterInfo();
   for (const auto &MO : MI.operands()) {
     if (!MO.isReg() || !MO.getReg().isVirtual())
       continue;
@@ -266,25 +268,31 @@ collectVirtualRegUses(SmallVectorImpl<RegisterMaskPair> &RegMaskPairs,
       continue;
 
     Register Reg = MO.getReg();
-    if (llvm::any_of(RegMaskPairs, [Reg](const RegisterMaskPair &RM) {
-          return RM.RegUnit == Reg;
-        }))
+    auto I = llvm::find_if(RegMaskPairs, [Reg](const RegisterMaskPair &RM) {
+      return RM.RegUnit == Reg;
+    });
+
+    auto &P = I == RegMaskPairs.end()
+                  ? RegMaskPairs.emplace_back(Reg, LaneBitmask::getNone())
+                  : *I;
+
+    P.LaneMask |= MO.getSubReg() ? TRI.getSubRegIndexLaneMask(MO.getSubReg())
+                                 : MRI.getMaxLaneMaskForVReg(Reg);
+  }
+
+  SlotIndex InstrSI;
+  for (auto &P : RegMaskPairs) {
+    auto &LI = LIS.getInterval(P.RegUnit);
+    if (!LI.hasSubRanges())
       continue;
 
-    LaneBitmask UseMask;
-    auto &LI = LIS.getInterval(Reg);
-    if (!LI.hasSubRanges())
-      UseMask = MRI.getMaxLaneMaskForVReg(Reg);
-    else {
-      // For a tentative schedule LIS isn't updated yet but livemask should
-      // remain the same on any schedule. Subreg defs can be reordered but they
-      // all must dominate uses anyway.
-      if (!InstrSI)
-        InstrSI = LIS.getInstructionIndex(*MO.getParent()).getBaseIndex();
-      UseMask = getLiveLaneMask(LI, InstrSI, MRI);
-    }
+    // For a tentative schedule LIS isn't updated yet but livemask should
+    // remain the same on any schedule. Subreg defs can be reordered but they
+    // all must dominate uses anyway.
+    if (!InstrSI)
+      InstrSI = LIS.getInstructionIndex(MI).getBaseIndex();
 
-    RegMaskPairs.emplace_back(Reg, UseMask);
+    P.LaneMask = getLiveLaneMask(LI, InstrSI, MRI, P.LaneMask);
   }
 }
 
@@ -293,22 +301,25 @@ collectVirtualRegUses(SmallVectorImpl<RegisterMaskPair> &RegMaskPairs,
 
 LaneBitmask llvm::getLiveLaneMask(unsigned Reg, SlotIndex SI,
                                   const LiveIntervals &LIS,
-                                  const MachineRegisterInfo &MRI) {
-  return getLiveLaneMask(LIS.getInterval(Reg), SI, MRI);
+                                  const MachineRegisterInfo &MRI,
+                                  LaneBitmask LaneMaskFilter) {
+  return getLiveLaneMask(LIS.getInterval(Reg), SI, MRI, LaneMaskFilter);
 }
 
 LaneBitmask llvm::getLiveLaneMask(const LiveInterval &LI, SlotIndex SI,
-                                  const MachineRegisterInfo &MRI) {
+                                  const MachineRegisterInfo &MRI,
+                                  LaneBitmask LaneMaskFilter) {
   LaneBitmask LiveMask;
   if (LI.hasSubRanges()) {
     for (const auto &S : LI.subranges())
-      if (S.liveAt(SI)) {
+      if ((S.LaneMask & LaneMaskFilter).any() && S.liveAt(SI)) {
         LiveMask |= S.LaneMask;
         assert(LiveMask == (LiveMask & MRI.getMaxLaneMaskForVReg(LI.reg())));
       }
   } else if (LI.liveAt(SI)) {
     LiveMask = MRI.getMaxLaneMaskForVReg(LI.reg());
   }
+  LiveMask &= LaneMaskFilter;
   return LiveMask;
 }
 

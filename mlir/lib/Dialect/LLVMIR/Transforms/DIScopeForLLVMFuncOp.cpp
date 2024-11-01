@@ -78,7 +78,7 @@ static void addScopeToFunction(LLVM::LLVMFuncOp llvmFunc,
   auto subprogramAttr = LLVM::DISubprogramAttr::get(
       context, id, compileUnitAttr, fileAttr, funcName, funcName, fileAttr,
       /*line=*/line, /*scopeline=*/col, subprogramFlags, subroutineTypeAttr,
-      /*retainedNodes=*/{});
+      /*retainedNodes=*/{}, /*annotations=*/{});
   llvmFunc->setLoc(FusedLoc::get(context, {loc}, subprogramAttr));
 }
 
@@ -91,6 +91,10 @@ struct DIScopeForLLVMFuncOp
     Location loc = module.getLoc();
 
     MLIRContext *context = &getContext();
+    if (!context->getLoadedDialect<LLVM::LLVMDialect>()) {
+      emitError(loc, "LLVM dialect is not loaded.");
+      return signalPassFailure();
+    }
 
     // To find a DICompileUnitAttr attached to a parent (the module for
     // example), otherwise create a default one.

@@ -97,6 +97,8 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
         const TargetRegisterClass *RC = TII->getRegClass(Desc, I, TRI, MF);
         if (RC && RC->contains(RISCV::X0)) {
           X0Reg = RISCV::X0;
+        } else if (RC && RC->contains(RISCV::X0_W)) {
+          X0Reg = RISCV::X0_W;
         } else if (RC && RC->contains(RISCV::X0_H)) {
           X0Reg = RISCV::X0_H;
         } else {

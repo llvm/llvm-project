@@ -57,6 +57,7 @@ FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
 ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
 FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPULateCodeGenPrepareLegacyPass();
+FunctionPass *createAMDGPUReserveWWMRegsPass();
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
@@ -153,6 +154,9 @@ struct AMDGPULowerBufferFatPointersPass
 private:
   const TargetMachine &TM;
 };
+
+void initializeAMDGPUReserveWWMRegsPass(PassRegistry &);
+extern char &AMDGPUReserveWWMRegsID;
 
 void initializeAMDGPURewriteOutArgumentsPass(PassRegistry &);
 extern char &AMDGPURewriteOutArgumentsID;

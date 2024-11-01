@@ -124,7 +124,7 @@ void CodeGenIntrinsicTable::CheckTargetIndependentIntrinsics() const {
   }
 }
 
-CodeGenIntrinsic &CodeGenIntrinsicMap::operator[](const Record *Record) {
+const CodeGenIntrinsic &CodeGenIntrinsicMap::operator[](const Record *Record) {
   if (!Record->isSubClassOf("Intrinsic"))
     PrintFatalError("Intrinsic defs should be subclass of 'Intrinsic' class");
 

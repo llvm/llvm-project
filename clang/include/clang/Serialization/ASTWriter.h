@@ -604,6 +604,7 @@ private:
   void WriteMSPointersToMembersPragmaOptions(Sema &SemaRef);
   void WritePackPragmaOptions(Sema &SemaRef);
   void WriteFloatControlPragmaOptions(Sema &SemaRef);
+  void WriteDeclsWithEffectsToVerify(Sema &SemaRef);
   void WriteModuleFileExtension(Sema &SemaRef,
                                 ModuleFileExtensionWriter &Writer);
 

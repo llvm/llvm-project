@@ -116,10 +116,11 @@
   apinotes = "/", line = 42, isDecl = true
 >
 
-// CHECK-DAG: #[[SP2:.*]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[MODULE]], name = "value", file = #[[FILE]], subprogramFlags = Definition, type = #[[SPTYPE2]]>
+// CHECK-DAG: #[[SP2:.*]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[MODULE]], name = "value", file = #[[FILE]], subprogramFlags = Definition, type = #[[SPTYPE2]], annotations = #llvm.di_annotation<name = "foo", value = "bar">
 #sp2 = #llvm.di_subprogram<
   compileUnit = #cu, scope = #module, name = "value",
-  file = #file, subprogramFlags = "Definition", type = #spType2
+  file = #file, subprogramFlags = "Definition", type = #spType2,
+  annotations = #llvm.di_annotation<name = "foo", value = "bar">
 >
 
 // CHECK-DAG: #[[BLOCK0:.*]] = #llvm.di_lexical_block<scope = #[[SP0]], line = 1, column = 2>

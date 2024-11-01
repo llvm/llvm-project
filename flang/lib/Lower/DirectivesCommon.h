@@ -129,8 +129,7 @@ static void processOmpAtomicTODO(mlir::Type elementType,
     // Based on assertion for supported element types in OMPIRBuilder.cpp
     // createAtomicRead
     mlir::Type unwrappedEleTy = fir::unwrapRefType(elementType);
-    bool supportedAtomicType =
-        (!fir::isa_complex(unwrappedEleTy) && fir::isa_trivial(unwrappedEleTy));
+    bool supportedAtomicType = fir::isa_trivial(unwrappedEleTy);
     if (!supportedAtomicType)
       TODO(loc, "Unsupported atomic type");
   }

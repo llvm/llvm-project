@@ -2797,13 +2797,13 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
-  SimplifyQuery SQ(DL, TLI, DT, AC, CI, true, true, DC);
 
   // fmod(x,y) can set errno if y == 0 or x == +/-inf, and returns Nan in those
   // case. If we know those do not happen, then we can convert the fmod into
   // frem.
   bool IsNoNan = CI->hasNoNaNs();
   if (!IsNoNan) {
+    SimplifyQuery SQ(DL, TLI, DT, AC, CI, true, true, DC);
     KnownFPClass Known0 = computeKnownFPClass(CI->getOperand(0), fcInf,
                                               /*Depth=*/0, SQ);
     if (Known0.isKnownNeverInfinity()) {
@@ -2811,8 +2811,7 @@ Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
           computeKnownFPClass(CI->getOperand(1), fcZero | fcSubnormal,
                               /*Depth=*/0, SQ);
       Function *F = CI->getParent()->getParent();
-      if (Known1.isKnownNeverLogicalZero(*F, CI->getType()))
-        IsNoNan = true;
+      IsNoNan = Known1.isKnownNeverLogicalZero(*F, CI->getType());
     }
   }
 

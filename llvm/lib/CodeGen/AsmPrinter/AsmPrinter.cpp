@@ -1703,6 +1703,20 @@ static bool needFuncLabels(const MachineFunction &MF, const AsmPrinter &Asm) {
       classifyEHPersonality(MF.getFunction().getPersonalityFn()));
 }
 
+// Return the mnemonic of a MachineInstr if available, or the MachineInstr
+// opcode name otherwise.
+static StringRef getMIMnemonic(const MachineInstr &MI, MCStreamer &Streamer) {
+  const TargetInstrInfo *TII =
+      MI.getParent()->getParent()->getSubtarget().getInstrInfo();
+  MCInst MCI;
+  MCI.setOpcode(MI.getOpcode());
+  if (StringRef Name = Streamer.getMnemonic(MCI); !Name.empty())
+    return Name;
+  StringRef Name = TII->getName(MI.getOpcode());
+  assert(!Name.empty() && "Missing mnemonic and name for opcode");
+  return Name;
+}
+
 /// EmitFunctionBody - This method emits the body and trailer for a
 /// function.
 void AsmPrinter::emitFunctionBody() {
@@ -1746,7 +1760,6 @@ void AsmPrinter::emitFunctionBody() {
       if (!MI.isPosition() && !MI.isImplicitDef() && !MI.isKill() &&
           !MI.isDebugInstr()) {
         HasAnyRealCode = true;
-        ++NumInstsInFunction;
       }
 
       // If there is a pre-instruction symbol, emit a label for it here.
@@ -1845,12 +1858,25 @@ void AsmPrinter::emitFunctionBody() {
         break;
       default:
         emitInstruction(&MI);
-        if (CanDoExtraAnalysis) {
-          MCInst MCI;
-          MCI.setOpcode(MI.getOpcode());
-          auto Name = OutStreamer->getMnemonic(MCI);
-          auto I = MnemonicCounts.insert({Name, 0u});
-          I.first->second++;
+
+        auto CountInstruction = [&](const MachineInstr &MI) {
+          // Skip Meta instructions inside bundles.
+          if (MI.isMetaInstruction())
+            return;
+          ++NumInstsInFunction;
+          if (CanDoExtraAnalysis) {
+            StringRef Name = getMIMnemonic(MI, *OutStreamer);
+            ++MnemonicCounts[Name];
+          }
+        };
+        if (!MI.isBundle()) {
+          CountInstruction(MI);
+          break;
+        }
+        // Separately count all the instructions in a bundle.
+        for (auto It = std::next(MI.getIterator());
+             It != MBB.end() && It->isInsideBundle(); ++It) {
+          CountInstruction(*It);
         }
         break;
       }

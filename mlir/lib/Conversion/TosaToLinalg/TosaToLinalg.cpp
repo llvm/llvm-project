@@ -2588,7 +2588,7 @@ struct FFT2dConverter final : OpRewritePattern<FFT2dOp> {
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgConversionPatterns(
-    TypeConverter &converter, RewritePatternSet *patterns) {
+    const TypeConverter &converter, RewritePatternSet *patterns) {
 
   // We have multiple resize coverters to handle degenerate cases.
   patterns->add<GenericResizeConverter>(patterns->getContext(),

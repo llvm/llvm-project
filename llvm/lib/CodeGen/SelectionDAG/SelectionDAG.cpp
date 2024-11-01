@@ -11725,7 +11725,7 @@ void SelectionDAG::CreateTopologicalOrder(std::vector<SDNode *> &Order) {
   }
 }
 
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
 void SelectionDAG::VerifyDAGDivergence() {
   std::vector<SDNode *> TopoOrder;
   CreateTopologicalOrder(TopoOrder);

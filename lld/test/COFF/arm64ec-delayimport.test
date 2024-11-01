@@ -1,0 +1,201 @@
+REQUIRES: aarch64, x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows test.s -o test.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+RUN: llvm-lib -machine:arm64ec -def:test.def -out:test-arm64ec.lib
+RUN: llvm-lib -machine:arm64ec -def:test2.def -out:test2-arm64ec.lib
+
+RUN: lld-link -machine:arm64ec -dll -noentry -out:out.dll loadconfig-arm64ec.obj test.obj \
+RUN:          test-arm64ec.lib test2-arm64ec.lib -delayload:test.dll -map
+
+RUN: llvm-readobj --hex-dump=.test out.dll | FileCheck --check-prefix=TESTSEC %s
+TESTSEC:      0x180008000 00600000 88700000 00200000 10100000
+TESTSEC-NEXT: 0x180008010 08600000 90700000 10200000 30100000
+TESTSEC-NEXT: 0x180008020 1c100000 3c100000 00300000
+
+RUN: llvm-objdump -d out.dll | FileCheck --check-prefix=DISASM %s
+DISASM:      0000000180001000 <.text>:
+DISASM-NEXT: 80001000: 52800000     mov     w0, #0x0                // =0
+DISASM-NEXT: 180001004: d65f03c0     ret
+DISASM-NEXT: 180001008: 52800020     mov     w0, #0x1                // =1
+DISASM-NEXT: 18000100c: d65f03c0     ret
+DISASM-NEXT: 180001010: b0000030     adrp    x16, 0x180006000
+DISASM-NEXT: 180001014: f9400210     ldr     x16, [x16]
+DISASM-NEXT: 180001018: d61f0200     br      x16
+DISASM-NEXT: 18000101c: d000002b     adrp    x11, 0x180007000
+DISASM-NEXT: 180001020: f940456b     ldr     x11, [x11, #0x88]
+DISASM-NEXT: 180001024: 9000000a     adrp    x10, 0x180001000 <.text>
+DISASM-NEXT: 180001028: 9101414a     add     x10, x10, #0x50
+DISASM-NEXT: 18000102c: 17fffff5     b       0x180001000 <.text>
+DISASM-NEXT: 180001030: b0000030     adrp    x16, 0x180006000
+DISASM-NEXT: 180001034: f9400610     ldr     x16, [x16, #0x8]
+DISASM-NEXT: 180001038: d61f0200     br      x16
+DISASM-NEXT: 18000103c: d000002b     adrp    x11, 0x180007000
+DISASM-NEXT: 180001040: f940496b     ldr     x11, [x11, #0x90]
+DISASM-NEXT: 180001044: 9000000a     adrp    x10, 0x180001000 <.text>
+DISASM-NEXT: 180001048: 9101614a     add     x10, x10, #0x58
+DISASM-NEXT: 18000104c: 17ffffed     b       0x180001000 <.text>
+DISASM-NEXT: 180001050: 52800040     mov     w0, #0x2                // =2
+DISASM-NEXT: 180001054: d65f03c0     ret
+DISASM-NEXT: 180001058: 52800060     mov     w0, #0x3                // =3
+DISASM-NEXT: 18000105c: d65f03c0     ret
+DISASM-NEXT:                 ...
+DISASM-NEXT: 180002000: ff 25 82 50 00 00            jmpq    *0x5082(%rip)           # 0x180007088
+DISASM-NEXT:                 ...
+DISASM-NEXT: 18000200e: 00 00                        addb    %al, (%rax)
+DISASM-NEXT: 180002010: ff 25 7a 50 00 00            jmpq    *0x507a(%rip)           # 0x180007090
+DISASM-NEXT: 180002016: 48 8d 05 6b 50 00 00         leaq    0x506b(%rip), %rax      # 0x180007088
+DISASM-NEXT: 18000201d: e9 0c 00 00 00               jmp     0x18000202e <.text+0x102e>
+DISASM-NEXT: 180002022: 48 8d 05 67 50 00 00         leaq    0x5067(%rip), %rax      # 0x180007090
+DISASM-NEXT: 180002029: e9 00 00 00 00               jmp     0x18000202e <.text+0x102e>
+DISASM-NEXT: 18000202e: 51                           pushq   %rcx
+DISASM-NEXT: 18000202f: 52                           pushq   %rdx
+DISASM-NEXT: 180002030: 41 50                        pushq   %r8
+DISASM-NEXT: 180002032: 41 51                        pushq   %r9
+DISASM-NEXT: 180002034: 48 83 ec 48                  subq    $0x48, %rsp
+DISASM-NEXT: 180002038: 66 0f 7f 04 24               movdqa  %xmm0, (%rsp)
+DISASM-NEXT: 18000203d: 66 0f 7f 4c 24 10            movdqa  %xmm1, 0x10(%rsp)
+DISASM-NEXT: 180002043: 66 0f 7f 54 24 20            movdqa  %xmm2, 0x20(%rsp)
+DISASM-NEXT: 180002049: 66 0f 7f 5c 24 30            movdqa  %xmm3, 0x30(%rsp)
+DISASM-NEXT: 18000204f: 48 8b d0                     movq    %rax, %rdx
+DISASM-NEXT: 180002052: 48 8d 0d 97 21 00 00         leaq    0x2197(%rip), %rcx      # 0x1800041f0
+DISASM-NEXT: 180002059: e8 aa ef ff ff               callq   0x180001008 <.text+0x8>
+DISASM-NEXT: 18000205e: 66 0f 6f 04 24               movdqa  (%rsp), %xmm0
+DISASM-NEXT: 180002063: 66 0f 6f 4c 24 10            movdqa  0x10(%rsp), %xmm1
+DISASM-NEXT: 180002069: 66 0f 6f 54 24 20            movdqa  0x20(%rsp), %xmm2
+DISASM-NEXT: 18000206f: 66 0f 6f 5c 24 30            movdqa  0x30(%rsp), %xmm3
+DISASM-NEXT: 180002075: 48 83 c4 48                  addq    $0x48, %rsp
+DISASM-NEXT: 180002079: 41 59                        popq    %r9
+DISASM-NEXT: 18000207b: 41 58                        popq    %r8
+DISASM-NEXT: 18000207d: 5a                           popq    %rdx
+DISASM-NEXT: 18000207e: 59                           popq    %rcx
+DISASM-NEXT: 18000207f: ff e0                        jmpq    *%rax
+
+RUN: llvm-readobj --coff-load-config out.dll | FileCheck --check-prefix=LOADCFG %s
+LOADCFG:      CHPEMetadata [
+LOADCFG:       AuxiliaryDelayloadIAT: 0x6000
+LOADCFG-NEXT:  AuxiliaryDelayloadIATCopy: 0x4000
+
+RUN: llvm-readobj --coff-imports out.dll | FileCheck --check-prefix=IMPORTS %s
+IMPORTS:      DelayImport {
+IMPORTS-NEXT:   Name: test.dll
+IMPORTS-NEXT:   Attributes: 0x1
+IMPORTS-NEXT:   ModuleHandle: 0x7080
+IMPORTS-NEXT:   ImportAddressTable: 0x7088
+IMPORTS-NEXT:   ImportNameTable: 0x4230
+IMPORTS-NEXT:   BoundDelayImportTable: 0x0
+IMPORTS-NEXT:   UnloadDelayImportTable: 0x0
+IMPORTS-NEXT:   Import {
+IMPORTS-NEXT:     Symbol: func (0)
+IMPORTS-NEXT:     Address: 0x180002016
+IMPORTS-NEXT:   }
+IMPORTS-NEXT:   Import {
+IMPORTS-NEXT:     Symbol: func2 (0)
+IMPORTS-NEXT:     Address: 0x180002022
+IMPORTS-NEXT:   }
+IMPORTS-NEXT: }
+
+RUN: FileCheck --check-prefix=MAP %s < out.map
+MAP:       0001:00000008       #__delayLoadHelper2        0000000180001008     test.obj
+MAP:       0001:00000010       #func                      0000000180001010     test-arm64ec:test.dll
+MAP-NEXT:  0001:0000001c       __impchk_func              000000018000101c     test-arm64ec:test.dll
+MAP-NEXT:  0001:00000030       #func2                     0000000180001030     test-arm64ec:test.dll
+MAP-NEXT:  0001:0000003c       __impchk_func2             000000018000103c     test-arm64ec:test.dll
+MAP-NEXT:  0001:00000050       func_exit_thunk            0000000180001050     test.obj
+MAP-NEXT:  0001:00000058       func2_exit_thunk           0000000180001058     test.obj
+MAP-NEXT:  0001:00001000       func                       0000000180002000     test-arm64ec:test.dll
+MAP-NEXT:  0001:00001010       func2                      0000000180002010     test-arm64ec:test.dll
+MAP-NEXT:  0002:00000000       __imp_data                 0000000180003000     test2-arm64ec:test2.dll
+MAP-NEXT:  0000:00000000       __hybrid_auxiliary_delayload_iat_copy 0000000180004000     <linker-defined>
+MAP-NEXT:  0002:00001000       __auximpcopy_func          0000000180004000     test-arm64ec:test.dll
+MAP-NEXT:  0002:00001008       __auximpcopy_func2         0000000180004008     test-arm64ec:test.dll
+MAP:       0002:00003000       __imp_func                 0000000180006000     test-arm64ec:test.dll
+MAP-NEXT:  0002:00003008       __imp_func2                0000000180006008     test-arm64ec:test.dll
+MAP:       0003:00000088       __imp_aux_func             0000000180007088     test-arm64ec:test.dll
+MAP-NEXT:  0003:00000090       __imp_aux_func2            0000000180007090     test-arm64ec:test.dll
+
+RUN: llvm-readobj --hex-dump=.rdata out.dll | FileCheck --check-prefix=RDATA %s
+RDATA:      0x180004000 1c100080 01000000 3c100080 01000000
+RDATA-NEXT: 0x180004010 00000000 00000000
+RDATA:      0x180006000 1c100080 01000000 3c100080 01000000
+RDATA-NEXT: 0x180006010 00000000 00000000
+
+RUN: llvm-readobj --coff-basereloc out.dll | FileCheck --check-prefix=RELOC %s
+RELOC:      BaseReloc [
+RELOC-NEXT:   Entry {
+RELOC-NEXT:     Type: DIR64
+RELOC-NEXT:     Address: 0x4000
+RELOC-NEXT:   }
+RELOC-NEXT:   Entry {
+RELOC-NEXT:     Type: DIR64
+RELOC-NEXT:     Address: 0x4008
+RELOC-NEXT:   }
+RELOC:          Address: 0x6000
+RELOC-NEXT:   }
+RELOC-NEXT:   Entry {
+RELOC-NEXT:     Type: DIR64
+RELOC-NEXT:     Address: 0x6008
+RELOC-NEXT:   }
+
+#--- test.s
+    .section .test,"r"
+    .rva __imp_func
+    .rva __imp_aux_func
+    .rva func
+    .rva "#func"
+    .rva __imp_func2
+    .rva __imp_aux_func2
+    .rva func2
+    .rva "#func2"
+    .rva __impchk_func
+    .rva __impchk_func2
+    .rva __imp_data
+
+    .section .text,"xr",discard,__icall_helper_arm64ec
+    .globl __icall_helper_arm64ec
+    .p2align 2, 0x0
+__icall_helper_arm64ec:
+    mov w0, #0
+    ret
+
+    .section .text,"xr",discard,"#__delayLoadHelper2"
+    .globl "#__delayLoadHelper2"
+    .p2align 2, 0x0
+"#__delayLoadHelper2":
+    mov w0, #1
+    ret
+
+    .weak_anti_dep __delayLoadHelper2
+.set __delayLoadHelper2,"#__delayLoadHelper2"
+
+    .section .hybmp$x, "yi"
+    .symidx __imp_func
+    .symidx func_exit_thunk
+    .word 4
+    .symidx __imp_func2
+    .symidx func2_exit_thunk
+    .word 4
+
+    .section .wowthk$aa,"xr",discard,func_exit_thunk
+    .globl func_exit_thunk
+func_exit_thunk:
+    mov w0, #2
+    ret
+
+    .section .wowthk$aa,"xr",discard,func2_exit_thunk
+    .globl func2_exit_thunk
+func2_exit_thunk:
+    mov w0, #3
+    ret
+
+#--- test.def
+NAME test.dll
+EXPORTS
+    func
+    func2
+
+#--- test2.def
+NAME test2.dll
+EXPORTS
+    data DATA

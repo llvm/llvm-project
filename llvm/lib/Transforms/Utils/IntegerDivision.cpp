@@ -70,8 +70,8 @@ static Value *generateSignedRemainderCode(Value *Dividend, Value *Divisor,
 /// code generated, e.g. at the urem instruction. This will generate a udiv in
 /// the process, and Builder's insert point will be pointing at the udiv (if
 /// present, i.e. not folded), ready to be expanded if the user wishes
-static Value *generatedUnsignedRemainderCode(Value *Dividend, Value *Divisor,
-                                             IRBuilder<> &Builder) {
+static Value *generateUnsignedRemainderCode(Value *Dividend, Value *Divisor,
+                                            IRBuilder<> &Builder) {
   // Remainder = Dividend - Quotient*Divisor
 
   // Following instructions are generated for both i32 and i64
@@ -381,9 +381,8 @@ bool llvm::expandRemainder(BinaryOperator *Rem) {
     Rem = BO;
   }
 
-  Value *Remainder = generatedUnsignedRemainderCode(Rem->getOperand(0),
-                                                    Rem->getOperand(1),
-                                                    Builder);
+  Value *Remainder = generateUnsignedRemainderCode(Rem->getOperand(0),
+                                                   Rem->getOperand(1), Builder);
 
   Rem->replaceAllUsesWith(Remainder);
   Rem->dropAllReferences();

@@ -110,6 +110,7 @@ Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
     MemBytes = 2;
     break;
   case RISCV::LW:
+  case RISCV::LW_INX:
   case RISCV::FLW:
   case RISCV::LWU:
     MemBytes = 4;
@@ -150,6 +151,7 @@ Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     MemBytes = 2;
     break;
   case RISCV::SW:
+  case RISCV::SW_INX:
   case RISCV::FSW:
     MemBytes = 4;
     break;
@@ -471,6 +473,13 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  if (RISCV::GPRF32RegClass.contains(DstReg, SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::PseudoMV_FPR32INX), DstReg)
+        .addReg(SrcReg,
+                getKillRegState(KillSrc) | getRenamableRegState(RenamableSrc));
+    return;
+  }
+
   if (RISCV::GPRPairRegClass.contains(DstReg, SrcReg)) {
     // Emit an ADDI for both parts of GPRPair.
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI),
@@ -595,6 +604,9 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   } else if (RISCV::GPRF16RegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::SH_INX;
     IsScalableVector = false;
+  } else if (RISCV::GPRF32RegClass.hasSubClassEq(RC)) {
+    Opcode = RISCV::SW_INX;
+    IsScalableVector = false;
   } else if (RISCV::GPRPairRegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::PseudoRV32ZdinxSD;
     IsScalableVector = false;
@@ -680,6 +692,9 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     IsScalableVector = false;
   } else if (RISCV::GPRF16RegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::LH_INX;
+    IsScalableVector = false;
+  } else if (RISCV::GPRF32RegClass.hasSubClassEq(RC)) {
+    Opcode = RISCV::LW_INX;
     IsScalableVector = false;
   } else if (RISCV::GPRPairRegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::PseudoRV32ZdinxLD;
@@ -804,8 +819,8 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
           MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
       switch (Log2SEW) {
       case 4:
-        // TODO: Support f16/bf16
-        return nullptr;
+        LoadOpc = RISCV::FLH;
+        break;
       case 5:
         LoadOpc = RISCV::FLW;
         break;
@@ -1554,6 +1569,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
   switch (Opcode) {
   case RISCV::PseudoMV_FPR16INX:
+  case RISCV::PseudoMV_FPR32INX:
     // MV is always compressible to either c.mv or c.li rd, 0.
     return STI.hasStdExtCOrZca() ? 2 : 4;
   case TargetOpcode::STACKMAP:
@@ -2614,6 +2630,7 @@ bool RISCVInstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
   case RISCV::LH_INX:
   case RISCV::LHU:
   case RISCV::LW:
+  case RISCV::LW_INX:
   case RISCV::LWU:
   case RISCV::LD:
   case RISCV::FLH:
@@ -2623,6 +2640,7 @@ bool RISCVInstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
   case RISCV::SH:
   case RISCV::SH_INX:
   case RISCV::SW:
+  case RISCV::SW_INX:
   case RISCV::SD:
   case RISCV::FSH:
   case RISCV::FSW:
@@ -2692,9 +2710,11 @@ bool RISCVInstrInfo::getMemOperandsWithOffsetWidth(
   case RISCV::SH_INX:
   case RISCV::FSH:
   case RISCV::LW:
+  case RISCV::LW_INX:
   case RISCV::LWU:
   case RISCV::FLW:
   case RISCV::SW:
+  case RISCV::SW_INX:
   case RISCV::FSW:
   case RISCV::LD:
   case RISCV::FLD:

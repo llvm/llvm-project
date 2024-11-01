@@ -2,7 +2,6 @@
 
 include "llvm/IR/Intrinsics.td"
 
-// ... this intrinsic.
 def int_random_gen   : Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 
 def int_deref_ptr_ret : Intrinsic<[llvm_ptr_ty], [], [Dereferenceable<RetIndex, 16>]>;
@@ -24,14 +23,16 @@ def int_deref_ptr_ret : Intrinsic<[llvm_ptr_ty], [], [Dereferenceable<RetIndex, 
 // CHECK-NEXT: });
 
 
-// CHECK: 1, // llvm.deref.ptr.ret
-// CHECK: 2, // llvm.random.gen
+// CHECK: getAttributes(LLVMContext &C, ID id)
+// CHECK: 0 << 8 | 0, // llvm.deref.ptr.ret
+// CHECK: 1 << 8 | 1, // llvm.random.gen
 
 // CHECK: case 1:
-// CHECK-NEXT: AS[0] = {0, getIntrinsicArgAttributeSet(C, 0)};
-// CHECK-NEXT: AS[1] = {AttributeList::FunctionIndex, getIntrinsicFnAttributeSet(C, 0)};
-// CHECK-NEXT: NumAttrs = 2;
-
-// CHECK: case 2:
-// CHECK-NEXT: AS[0] = {AttributeList::FunctionIndex, getIntrinsicFnAttributeSet(C, 1)};
-// CHECK-NEXT: NumAttrs = 1;
+// CHECK-NEXT: return AttributeList::get(C, {
+// CHECK-NEXT:   {AttributeList::FunctionIndex, getIntrinsicFnAttributeSet(C, FnAttrID)}
+// CHECK-NEXT: });
+// CHECK-NEXT: case 0:
+// CHECK-NEXT: return AttributeList::get(C, {
+// CHECK-NEXT:   {0, getIntrinsicArgAttributeSet(C, 0)},
+// CHECK-NEXT:   {AttributeList::FunctionIndex, getIntrinsicFnAttributeSet(C, FnAttrID)}
+// CHECK-NEXT: });

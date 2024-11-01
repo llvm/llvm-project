@@ -105,17 +105,14 @@ void func() {
 #pragma acc loop collapse(force:)
   for(;;){}
 
-  // expected-error@+2{{invalid tag 'unknown' on 'collapse' clause}}
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented, clause ignored}}
-#pragma acc loop collapse(unknown:5)
+  // expected-error@+1{{invalid tag 'unknown' on 'collapse' clause}}
+#pragma acc loop collapse(unknown:1)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented, clause ignored}}
-#pragma acc loop collapse(force:5)
+#pragma acc loop collapse(force:1)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented, clause ignored}}
-#pragma acc loop collapse(5)
+#pragma acc loop collapse(1)
   for(;;){}
 
   // expected-error@+2{{expected ')'}}
@@ -1156,8 +1153,7 @@ void Tile() {
   // expected-note@+1{{to match this '('}}
 #pragma acc loop tile(
   for(;;){}
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop tile()
   for(;;){}
   // expected-error@+3{{expected expression}}
@@ -1165,43 +1161,44 @@ void Tile() {
   // expected-note@+1{{to match this '('}}
 #pragma acc loop tile(,
   for(;;){}
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop tile(,)
   for(;;){}
-  // expected-error@+2{{use of undeclared identifier 'invalid'}}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
+  // expected-error@+1{{use of undeclared identifier 'invalid'}}
 #pragma acc loop tile(returns_int(), *, invalid, *)
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc loop tile(returns_int() *, Foo, *)
   for(;;){}
 
-  // expected-error@+2{{indirection requires pointer operand ('int' invalid)}}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
+  // expected-error@+1{{indirection requires pointer operand ('int' invalid)}}
 #pragma acc loop tile(* returns_int() , *)
-  for(;;){}
+  for(;;){
+    for(;;);
+  }
 
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
 #pragma acc loop tile(*)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
+  // expected-error@+1{{OpenACC 'tile' clause size expression must be an asterisk or a constant expression}}
 #pragma acc loop tile(*Foo, *Foo)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
 #pragma acc loop tile(5)
   for(;;){}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
 #pragma acc loop tile(*, 5)
-  for(;;){}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
+  for(;;){
+    for(;;);
+  }
 #pragma acc loop tile(5, *)
-  for(;;){}
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
+  for(;;){
+    for(;;);
+  }
 #pragma acc loop tile(5, *, 3, *)
-  for(;;){}
+  for(;;){
+    for(;;)
+      for(;;)
+        for(;;);
+  }
 }
 
 void Gang() {

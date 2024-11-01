@@ -1006,7 +1006,7 @@ class DebugCommunication(object):
         return response
 
     def request_completions(self, text, frameId=None):
-        args_dict = {"text": text, "column": len(text)}
+        args_dict = {"text": text, "column": len(text) + 1}
         if frameId:
             args_dict["frameId"] = frameId
         command_dict = {

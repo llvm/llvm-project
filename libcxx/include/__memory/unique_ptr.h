@@ -102,6 +102,12 @@ public:
 };
 
 template <class _Deleter>
+struct __is_default_deleter : false_type {};
+
+template <class _Tp>
+struct __is_default_deleter<default_delete<_Tp> > : true_type {};
+
+template <class _Deleter>
 struct __unique_ptr_deleter_sfinae {
   static_assert(!is_reference<_Deleter>::value, "incorrect specialization");
   typedef const _Deleter& __lval_ref_type;
@@ -307,10 +313,15 @@ public:
 // 1. When an array cookie (see [1]) exists at the beginning of the array allocation, we are
 //    able to reuse that cookie to extract the size of the array and perform bounds checking.
 //    An array cookie is a size inserted at the beginning of the allocation by the compiler.
-//    That size is inserted implicitly when doing `new T[n]` in some cases, and its purpose
-//    is to allow the runtime to destroy the `n` array elements when doing `delete array`.
+//    That size is inserted implicitly when doing `new T[n]` in some cases (as of writing this
+//    exactly when the array elements are not trivially destructible), and its main purpose is
+//    to allow the runtime to destroy the `n` array elements when doing `delete[] array`.
 //    When we are able to use array cookies, we reuse information already available in the
 //    current runtime, so bounds checking does not require changing libc++'s ABI.
+//
+//    However, note that we cannot assume the presence of an array cookie when a custom deleter
+//    is used, because the unique_ptr could have been created from an allocation that wasn't
+//    obtained via `new T[n]` (since it may not be deleted with `delete[] arr`).
 //
 // 2. When the "bounded unique_ptr" ABI configuration (controlled by `_LIBCPP_ABI_BOUNDED_UNIQUE_PTR`)
 //    is enabled, we store the size of the allocation (when it is known) so we can check it when
@@ -328,7 +339,7 @@ public:
 //    try to fall back to using an array cookie when available.
 //
 //    Finally, note that when this ABI configuration is enabled, we have no choice but to always
-//    make space for a size to be stored in the unique_ptr. Indeed, while we might want to avoid
+//    make space for the size to be stored in the unique_ptr. Indeed, while we might want to avoid
 //    storing the size when an array cookie is available, knowing whether an array cookie is available
 //    requires the type stored in the unique_ptr to be complete, while unique_ptr can normally
 //    accommodate incomplete types.
@@ -339,7 +350,9 @@ struct __unique_ptr_array_bounds_stateless {
   __unique_ptr_array_bounds_stateless() = default;
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __unique_ptr_array_bounds_stateless(size_t) {}
 
-  template <class _Tp, __enable_if_t<__has_array_cookie<_Tp>::value, int> = 0>
+  template <class _Deleter,
+            class _Tp,
+            __enable_if_t<__is_default_deleter<_Deleter>::value && __has_array_cookie<_Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __in_bounds(_Tp* __ptr, size_t __index) const {
     // In constant expressions, we can't check the array cookie so we just pretend that the index
     // is in-bounds. The compiler catches invalid accesses anyway.
@@ -349,7 +362,9 @@ struct __unique_ptr_array_bounds_stateless {
     return __index < __cookie;
   }
 
-  template <class _Tp, __enable_if_t<!__has_array_cookie<_Tp>::value, int> = 0>
+  template <class _Deleter,
+            class _Tp,
+            __enable_if_t<!__is_default_deleter<_Deleter>::value || !__has_array_cookie<_Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __in_bounds(_Tp*, size_t) const {
     return true; // If we don't have an array cookie, we assume the access is in-bounds
   }
@@ -365,7 +380,9 @@ struct __unique_ptr_array_bounds_stored {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __unique_ptr_array_bounds_stored(size_t __size) : __size_(__size) {}
 
   // Use the array cookie if there's one
-  template <class _Tp, __enable_if_t<__has_array_cookie<_Tp>::value, int> = 0>
+  template <class _Deleter,
+            class _Tp,
+            __enable_if_t<__is_default_deleter<_Deleter>::value && __has_array_cookie<_Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __in_bounds(_Tp* __ptr, size_t __index) const {
     if (__libcpp_is_constant_evaluated())
       return true;
@@ -374,7 +391,9 @@ struct __unique_ptr_array_bounds_stored {
   }
 
   // Otherwise, fall back on the stored size (if any)
-  template <class _Tp, __enable_if_t<!__has_array_cookie<_Tp>::value, int> = 0>
+  template <class _Deleter,
+            class _Tp,
+            __enable_if_t<!__is_default_deleter<_Deleter>::value || !__has_array_cookie<_Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __in_bounds(_Tp*, size_t __index) const {
     return __index < __size_;
   }
@@ -562,7 +581,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __add_lvalue_reference_t<_Tp> operator[](size_t __i) const {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__checker_.__in_bounds(std::__to_address(__ptr_), __i),
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__checker_.__in_bounds<deleter_type>(std::__to_address(__ptr_), __i),
                                         "unique_ptr<T[]>::operator[](index): index out of range");
     return __ptr_[__i];
   }

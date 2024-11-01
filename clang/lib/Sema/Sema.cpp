@@ -509,7 +509,7 @@ void Sema::Initialize() {
   if (Context.getTargetInfo().getTriple().isAMDGPU() ||
       (Context.getAuxTargetInfo() &&
        Context.getAuxTargetInfo()->getTriple().isAMDGPU())) {
-#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   addImplicitTypedef(Name, Context.SingletonId);
 #include "clang/Basic/AMDGPUTypes.def"
   }
@@ -643,7 +643,7 @@ void Sema::diagnoseFunctionEffectConversion(QualType DstType, QualType SrcType,
   const auto SrcFX = FunctionEffectsRef::get(SrcType);
   const auto DstFX = FunctionEffectsRef::get(DstType);
   if (SrcFX != DstFX) {
-    for (const auto &Diff : FunctionEffectDifferences(SrcFX, DstFX)) {
+    for (const auto &Diff : FunctionEffectDiffVector(SrcFX, DstFX)) {
       if (Diff.shouldDiagnoseConversion(SrcType, SrcFX, DstType, DstFX))
         Diag(Loc, diag::warn_invalid_add_func_effects) << Diff.effectName();
     }
@@ -1528,6 +1528,9 @@ void Sema::ActOnEndOfTranslationUnit() {
   }
 
   AnalysisWarnings.IssueWarnings(Context.getTranslationUnitDecl());
+
+  if (Context.hasAnyFunctionEffects())
+    performFunctionEffectAnalysis(Context.getTranslationUnitDecl());
 
   // Check we've noticed that we're no longer parsing the initializer for every
   // variable. If we miss cases, then at best we have a performance issue and
@@ -2773,157 +2776,4 @@ bool Sema::isDeclaratorFunctionLike(Declarator &D) {
     return false;
   });
   return Result;
-}
-
-FunctionEffectDifferences::FunctionEffectDifferences(
-    const FunctionEffectsRef &Old, const FunctionEffectsRef &New) {
-
-  FunctionEffectsRef::iterator POld = Old.begin();
-  FunctionEffectsRef::iterator OldEnd = Old.end();
-  FunctionEffectsRef::iterator PNew = New.begin();
-  FunctionEffectsRef::iterator NewEnd = New.end();
-
-  while (true) {
-    int cmp = 0;
-    if (POld == OldEnd) {
-      if (PNew == NewEnd)
-        break;
-      cmp = 1;
-    } else if (PNew == NewEnd)
-      cmp = -1;
-    else {
-      FunctionEffectWithCondition Old = *POld;
-      FunctionEffectWithCondition New = *PNew;
-      if (Old.Effect.kind() < New.Effect.kind())
-        cmp = -1;
-      else if (New.Effect.kind() < Old.Effect.kind())
-        cmp = 1;
-      else {
-        cmp = 0;
-        if (Old.Cond.getCondition() != New.Cond.getCondition()) {
-          // FIXME: Cases where the expressions are equivalent but
-          // don't have the same identity.
-          push_back(FunctionEffectDiff{
-              Old.Effect.kind(), FunctionEffectDiff::Kind::ConditionMismatch,
-              Old, New});
-        }
-      }
-    }
-
-    if (cmp < 0) {
-      // removal
-      FunctionEffectWithCondition Old = *POld;
-      push_back(FunctionEffectDiff{
-          Old.Effect.kind(), FunctionEffectDiff::Kind::Removed, Old, {}});
-      ++POld;
-    } else if (cmp > 0) {
-      // addition
-      FunctionEffectWithCondition New = *PNew;
-      push_back(FunctionEffectDiff{
-          New.Effect.kind(), FunctionEffectDiff::Kind::Added, {}, New});
-      ++PNew;
-    } else {
-      ++POld;
-      ++PNew;
-    }
-  }
-}
-
-bool FunctionEffectDiff::shouldDiagnoseConversion(
-    QualType SrcType, const FunctionEffectsRef &SrcFX, QualType DstType,
-    const FunctionEffectsRef &DstFX) const {
-
-  switch (EffectKind) {
-  case FunctionEffect::Kind::NonAllocating:
-    // nonallocating can't be added (spoofed) during a conversion, unless we
-    // have nonblocking.
-    if (DiffKind == Kind::Added) {
-      for (const auto &CFE : SrcFX) {
-        if (CFE.Effect.kind() == FunctionEffect::Kind::NonBlocking)
-          return false;
-      }
-    }
-    [[fallthrough]];
-  case FunctionEffect::Kind::NonBlocking:
-    // nonblocking can't be added (spoofed) during a conversion.
-    switch (DiffKind) {
-    case Kind::Added:
-      return true;
-    case Kind::Removed:
-      return false;
-    case Kind::ConditionMismatch:
-      // FIXME: Condition mismatches are too coarse right now -- expressions
-      // which are equivalent but don't have the same identity are detected as
-      // mismatches. We're going to diagnose those anyhow until expression
-      // matching is better.
-      return true;
-    }
-    llvm_unreachable("Unhandled FunctionEffectDiff::Kind enum");
-  case FunctionEffect::Kind::Blocking:
-  case FunctionEffect::Kind::Allocating:
-    return false;
-  case FunctionEffect::Kind::None:
-    break;
-  }
-  llvm_unreachable("unknown effect kind");
-}
-
-bool FunctionEffectDiff::shouldDiagnoseRedeclaration(
-    const FunctionDecl &OldFunction, const FunctionEffectsRef &OldFX,
-    const FunctionDecl &NewFunction, const FunctionEffectsRef &NewFX) const {
-  switch (EffectKind) {
-  case FunctionEffect::Kind::NonAllocating:
-  case FunctionEffect::Kind::NonBlocking:
-    // nonblocking/nonallocating can't be removed in a redeclaration.
-    switch (DiffKind) {
-    case Kind::Added:
-      return false; // No diagnostic.
-    case Kind::Removed:
-      return true; // Issue diagnostic.
-    case Kind::ConditionMismatch:
-      // All these forms of mismatches are diagnosed.
-      return true;
-    }
-    llvm_unreachable("Unhandled FunctionEffectDiff::Kind enum");
-  case FunctionEffect::Kind::Blocking:
-  case FunctionEffect::Kind::Allocating:
-    return false;
-  case FunctionEffect::Kind::None:
-    break;
-  }
-  llvm_unreachable("unknown effect kind");
-}
-
-FunctionEffectDiff::OverrideResult
-FunctionEffectDiff::shouldDiagnoseMethodOverride(
-    const CXXMethodDecl &OldMethod, const FunctionEffectsRef &OldFX,
-    const CXXMethodDecl &NewMethod, const FunctionEffectsRef &NewFX) const {
-  switch (EffectKind) {
-  case FunctionEffect::Kind::NonAllocating:
-  case FunctionEffect::Kind::NonBlocking:
-    switch (DiffKind) {
-
-    // If added on an override, that's fine and not diagnosed.
-    case Kind::Added:
-      return OverrideResult::NoAction;
-
-    // If missing from an override (removed), propagate from base to derived.
-    case Kind::Removed:
-      return OverrideResult::Merge;
-
-    // If there's a mismatch involving the effect's polarity or condition,
-    // issue a warning.
-    case Kind::ConditionMismatch:
-      return OverrideResult::Warn;
-    }
-    llvm_unreachable("Unhandled FunctionEffectDiff::Kind enum");
-
-  case FunctionEffect::Kind::Blocking:
-  case FunctionEffect::Kind::Allocating:
-    return OverrideResult::NoAction;
-
-  case FunctionEffect::Kind::None:
-    break;
-  }
-  llvm_unreachable("unknown effect kind");
 }

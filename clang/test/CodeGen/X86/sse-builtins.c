@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 
 #include <immintrin.h>
@@ -84,7 +86,7 @@ __m128 test_mm_cmp_ps_ord_q(__m128 a, __m128 b) {
 
 __m128 test_mm_cmp_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_cmp_ss
-  // CHECK: call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 7)
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 7)
   return _mm_cmp_ss(A, B, _CMP_ORD_Q);
 }
 
@@ -274,43 +276,43 @@ __m128 test_mm_cmpunord_ss(__m128 __a, __m128 __b) {
 
 int test_mm_comieq_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comieq_ss
-  // CHECK: call i32 @llvm.x86.sse.comieq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.comieq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_comieq_ss(A, B);
 }
 
 int test_mm_comige_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comige_ss
-  // CHECK: call i32 @llvm.x86.sse.comige.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.comige.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_comige_ss(A, B);
 }
 
 int test_mm_comigt_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comigt_ss
-  // CHECK: call i32 @llvm.x86.sse.comigt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.comigt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_comigt_ss(A, B);
 }
 
 int test_mm_comile_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comile_ss
-  // CHECK: call i32 @llvm.x86.sse.comile.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.comile.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_comile_ss(A, B);
 }
 
 int test_mm_comilt_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comilt_ss
-  // CHECK: call i32 @llvm.x86.sse.comilt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.comilt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_comilt_ss(A, B);
 }
 
 int test_mm_comineq_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comineq_ss
-  // CHECK: call i32 @llvm.x86.sse.comineq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.comineq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_comineq_ss(A, B);
 }
 
 int test_mm_cvt_ss2si(__m128 A) {
   // CHECK-LABEL: test_mm_cvt_ss2si
-  // CHECK: call i32 @llvm.x86.sse.cvtss2si(<4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.cvtss2si(<4 x float> %{{.*}})
   return _mm_cvt_ss2si(A);
 }
 
@@ -338,34 +340,34 @@ float test_mm_cvtss_f32(__m128 A) {
 
 int test_mm_cvtss_si32(__m128 A) {
   // CHECK-LABEL: test_mm_cvtss_si32
-  // CHECK: call i32 @llvm.x86.sse.cvtss2si(<4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.cvtss2si(<4 x float> %{{.*}})
   return _mm_cvtss_si32(A);
 }
 
 #ifdef __x86_64__
 long long test_mm_cvtss_si64(__m128 A) {
   // CHECK-LABEL: test_mm_cvtss_si64
-  // CHECK: call i64 @llvm.x86.sse.cvtss2si64(<4 x float> %{{.*}})
+  // CHECK: call {{.*}}i64 @llvm.x86.sse.cvtss2si64(<4 x float> %{{.*}})
   return _mm_cvtss_si64(A);
 }
 #endif
 
 int test_mm_cvtt_ss2si(__m128 A) {
   // CHECK-LABEL: test_mm_cvtt_ss2si
-  // CHECK: call i32 @llvm.x86.sse.cvttss2si(<4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.cvttss2si(<4 x float> %{{.*}})
   return _mm_cvtt_ss2si(A);
 }
 
 int test_mm_cvttss_si32(__m128 A) {
   // CHECK-LABEL: test_mm_cvttss_si32
-  // CHECK: call i32 @llvm.x86.sse.cvttss2si(<4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.cvttss2si(<4 x float> %{{.*}})
   return _mm_cvttss_si32(A);
 }
 
 #ifdef __x86_64__
 long long test_mm_cvttss_si64(__m128 A) {
   // CHECK-LABEL: test_mm_cvttss_si64
-  // CHECK: call i64 @llvm.x86.sse.cvttss2si64(<4 x float> %{{.*}})
+  // CHECK: call {{.*}}i64 @llvm.x86.sse.cvttss2si64(<4 x float> %{{.*}})
   return _mm_cvttss_si64(A);
 }
 #endif
@@ -530,7 +532,7 @@ __m128 test_mm_movelh_ps(__m128 A, __m128 B) {
 
 int test_mm_movemask_ps(__m128 A) {
   // CHECK-LABEL: test_mm_movemask_ps
-  // CHECK: call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.movmsk.ps(<4 x float> %{{.*}})
   return _mm_movemask_ps(A);
 }
 
@@ -563,25 +565,25 @@ void test_mm_prefetch(char const* p) {
 
 __m128 test_mm_rcp_ps(__m128 x) {
   // CHECK-LABEL: test_mm_rcp_ps
-  // CHECK: call <4 x float> @llvm.x86.sse.rcp.ps(<4 x float> {{.*}})
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse.rcp.ps(<4 x float> {{.*}})
   return _mm_rcp_ps(x);
 }
 
 __m128 test_mm_rcp_ss(__m128 x) {
   // CHECK-LABEL: test_mm_rcp_ss
-  // CHECK: call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> {{.*}})
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse.rcp.ss(<4 x float> {{.*}})
   return _mm_rcp_ss(x);
 }
 
 __m128 test_mm_rsqrt_ps(__m128 x) {
   // CHECK-LABEL: test_mm_rsqrt_ps
-  // CHECK: call <4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float> {{.*}})
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float> {{.*}})
   return _mm_rsqrt_ps(x);
 }
 
 __m128 test_mm_rsqrt_ss(__m128 x) {
   // CHECK-LABEL: test_mm_rsqrt_ss
-  // CHECK: call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> {{.*}})
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> {{.*}})
   return _mm_rsqrt_ss(x);
 }
 
@@ -701,7 +703,7 @@ __m128 test_mm_shuffle_ps(__m128 A, __m128 B) {
 
 __m128 test_mm_sqrt_ps(__m128 x) {
   // CHECK-LABEL: test_mm_sqrt_ps
-  // CHECK: call <4 x float> @llvm.sqrt.v4f32(<4 x float> {{.*}})
+  // CHECK: call {{.*}}<4 x float> @llvm.sqrt.v4f32(<4 x float> {{.*}})
   return _mm_sqrt_ps(x);
 }
 
@@ -810,37 +812,37 @@ void test_MM_TRANSPOSE4_PS(__m128 *A, __m128 *B, __m128 *C, __m128 *D) {
 
 int test_mm_ucomieq_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_ucomieq_ss
-  // CHECK: call i32 @llvm.x86.sse.ucomieq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.ucomieq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_ucomieq_ss(A, B);
 }
 
 int test_mm_ucomige_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_ucomige_ss
-  // CHECK: call i32 @llvm.x86.sse.ucomige.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.ucomige.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_ucomige_ss(A, B);
 }
 
 int test_mm_ucomigt_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_ucomigt_ss
-  // CHECK: call i32 @llvm.x86.sse.ucomigt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.ucomigt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_ucomigt_ss(A, B);
 }
 
 int test_mm_ucomile_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_ucomile_ss
-  // CHECK: call i32 @llvm.x86.sse.ucomile.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.ucomile.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_ucomile_ss(A, B);
 }
 
 int test_mm_ucomilt_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_ucomilt_ss
-  // CHECK: call i32 @llvm.x86.sse.ucomilt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.ucomilt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_ucomilt_ss(A, B);
 }
 
 int test_mm_ucomineq_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_ucomineq_ss
-  // CHECK: call i32 @llvm.x86.sse.ucomineq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.ucomineq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_ucomineq_ss(A, B);
 }
 
@@ -867,3 +869,86 @@ __m128 test_mm_xor_ps(__m128 A, __m128 B) {
   // CHECK: xor <4 x i32>
   return _mm_xor_ps(A, B);
 }
+
+// Test constexpr handling.
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+
+void test_constexpr() {
+  constexpr __m128 k1 {+1.0f,+0.0f,+2.0f,+4.0f};
+  constexpr __m128 k2 {+8.0f,+4.0f,+2.0f,+1.0f};
+  constexpr __m128 k3 {-4.0f,-5.0f,+6.0f,+7.0f};
+  constexpr __m128 k4 {+0.0f,-0.0f,-0.0f,+0.0f};
+
+  constexpr __m128 v_mm_set_ss = _mm_set_ss(1.0f);
+  static_assert(v_mm_set_ss[0] == +1.0f && v_mm_set_ss[1] == +0.0f && v_mm_set_ss[2] == +0.0f && v_mm_set_ss[3] == +0.0f);
+
+  constexpr __m128 v_mm_set1_ps = _mm_set1_ps(2.0f);
+  static_assert(v_mm_set1_ps[0] == +2.0f && v_mm_set1_ps[1] == +2.0f && v_mm_set1_ps[2] == +2.0f && v_mm_set1_ps[3] == +2.0f);
+
+  constexpr __m128 v_mm_set_ps1 = _mm_set_ps1(-2.0f);
+  static_assert(v_mm_set_ps1[0] == -2.0f && v_mm_set_ps1[1] == -2.0f && v_mm_set_ps1[2] == -2.0f && v_mm_set_ps1[3] == -2.0f);
+
+  constexpr __m128 v_mm_set_ps = _mm_set_ps(+0.0f, +1.0f, +2.0f, +3.0f);
+  static_assert(v_mm_set_ps[0] == +3.0f && v_mm_set_ps[1] == +2.0f && v_mm_set_ps[2] == +1.0f && v_mm_set_ps[3] == +0.0f);
+
+  constexpr __m128 v_mm_setr_ps = _mm_setr_ps(+0.0f, +1.0f, +2.0f, +3.0f);
+  static_assert(v_mm_setr_ps[0] == +0.0f && v_mm_setr_ps[1] == +1.0f && v_mm_setr_ps[2] == +2.0f && v_mm_setr_ps[3] == +3.0f);
+
+  constexpr __m128 v_mm_setzero_ps = _mm_setzero_ps();
+  static_assert(v_mm_setzero_ps[0] == +0.0f && v_mm_setzero_ps[1] == +0.0f && v_mm_setzero_ps[2] == +0.0f && v_mm_setzero_ps[3] == +0.0f);
+
+  constexpr __m128 v_mm_add_ss = _mm_add_ss(k1, k2);
+  static_assert(v_mm_add_ss[0] == +9.0f && v_mm_add_ss[1] == +0.0f && v_mm_add_ss[2] == +2.0f && v_mm_add_ss[3] == +4.0f);
+
+  constexpr __m128 v_mm_add_ps = _mm_add_ps(k1, k2);
+  static_assert(v_mm_add_ps[0] == +9.0f && v_mm_add_ps[1] == +4.0f && v_mm_add_ps[2] == +4.0f && v_mm_add_ps[3] == +5.0f);
+
+  constexpr __m128 v_mm_sub_ss = _mm_sub_ss(k1, k2);
+  static_assert(v_mm_sub_ss[0] == -7.0f && v_mm_sub_ss[1] == +0.0f && v_mm_sub_ss[2] == +2.0f && v_mm_sub_ss[3] == +4.0f);
+
+  constexpr __m128 v_mm_sub_ps = _mm_sub_ps(k1, k2);
+  static_assert(v_mm_sub_ps[0] == -7.0f && v_mm_sub_ps[1] == -4.0f && v_mm_sub_ps[2] == +0.0f && v_mm_sub_ps[3] == +3.0f);
+
+  constexpr __m128 v_mm_mul_ss = _mm_mul_ss(k1, k2);
+  static_assert(v_mm_mul_ss[0] == +8.0f && v_mm_mul_ss[1] == +0.0f && v_mm_mul_ss[2] == +2.0f && v_mm_mul_ss[3] == +4.0f);
+
+  constexpr __m128 v_mm_mul_ps = _mm_mul_ps(k1, k2);
+  static_assert(v_mm_mul_ps[0] == +8.0f && v_mm_mul_ps[1] == +0.0f && v_mm_mul_ps[2] == +4.0f && v_mm_mul_ps[3] == +4.0f);
+
+  constexpr __m128 v_mm_div_ss = _mm_div_ss(k1, k2);
+  static_assert(v_mm_div_ss[0] == +0.125f && v_mm_div_ss[1] == +0.0f && v_mm_div_ss[2] == +2.0f && v_mm_div_ss[3] == +4.0f);
+
+  constexpr __m128 v_mm_div_ps = _mm_div_ps(k1, k2);
+  static_assert(v_mm_div_ps[0] == +0.125f && v_mm_div_ps[1] == +0.0f && v_mm_div_ps[2] == +1.0f && v_mm_div_ps[3] == +4.0f);
+
+  constexpr __m128 v_mm_and_ps = _mm_and_ps(k3, k4);
+  static_assert(v_mm_and_ps[0] == +0.0f && v_mm_and_ps[1] == +0.0f && v_mm_and_ps[2] == +0.0f && v_mm_and_ps[3] == +0.0f);
+
+  constexpr __m128 v_mm_andnot_ps = _mm_andnot_ps(k3, k4);
+  static_assert(v_mm_andnot_ps[0] == +0.0f && v_mm_andnot_ps[1] == +0.0f && v_mm_andnot_ps[2] == +0.0f && v_mm_andnot_ps[3] == +0.0f);
+
+  constexpr __m128 v_mm_or_ps = _mm_or_ps(k3, k4);
+  static_assert(v_mm_or_ps[0] == -4.0f && v_mm_or_ps[1] == -5.0f && v_mm_or_ps[2] == -6.0f && v_mm_or_ps[3] == +7.0f);
+
+  constexpr __m128 v_mm_xor_ps = _mm_xor_ps(k3, k4);
+  static_assert(v_mm_xor_ps[0] == -4.0f && v_mm_xor_ps[1] == +5.0f && v_mm_xor_ps[2] == -6.0f && v_mm_xor_ps[3] == +7.0f);
+
+  constexpr __m128 v_mm_unpackhi_ps = _mm_unpackhi_ps(k1, k2);
+  static_assert(v_mm_unpackhi_ps[0] == +2.0f && v_mm_unpackhi_ps[1] == +2.0f && v_mm_unpackhi_ps[2] == +4.0f && v_mm_unpackhi_ps[3] == +1.0f);
+
+  constexpr __m128 v_mm_unpacklo_ps = _mm_unpacklo_ps(k1, k2);
+  static_assert(v_mm_unpacklo_ps[0] == +1.0f && v_mm_unpacklo_ps[1] == +8.0f && v_mm_unpacklo_ps[2] == +0.0f && v_mm_unpacklo_ps[3] == +4.0f);
+
+  constexpr __m128 v_mm_move_ss = _mm_move_ss(k1, k2);
+  static_assert(v_mm_move_ss[0] == +8.0f && v_mm_move_ss[1] == +0.0f && v_mm_move_ss[2] == +2.0f && v_mm_move_ss[3] == +4.0f);
+
+  constexpr __m128 v_mm_movehl_ps = _mm_movehl_ps(k1, k2);
+  static_assert(v_mm_movehl_ps[0] == +2.0f && v_mm_movehl_ps[1] == +1.0f && v_mm_movehl_ps[2] == +2.0f && v_mm_movehl_ps[3] == +4.0f);
+
+  constexpr __m128 v_mm_movelh_ps = _mm_movelh_ps(k1, k2);
+  static_assert(v_mm_movelh_ps[0] == +1.0f && v_mm_movelh_ps[1] == +0.0f && v_mm_movelh_ps[2] == +8.0f && v_mm_movelh_ps[3] == +4.0f);
+
+  static_assert(_mm_cvtss_f32(k2) == +8.0f);
+}
+
+#endif

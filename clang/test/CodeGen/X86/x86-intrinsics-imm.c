@@ -23,7 +23,6 @@ __m128i check__mm256_cvtps_ph(__m256 val, const int I) {
   return _mm256_cvtps_ph(val, I); // expected-error  {{argument to '__builtin_ia32_vcvtps2ph256' must be a constant integer}}
 }
 
-// SCE_ARCH begin: bug 16381
 void check__mm_slli_si128(__m128i a, const int count) {
   _mm_slli_si128(a, count); // expected-error {{argument to '__builtin_ia32_pslldqi128_byteshift' must be a constant integer}}
 }
@@ -31,7 +30,6 @@ void check__mm_slli_si128(__m128i a, const int count) {
 void check__mm_srli_si128(__m128i a, const int count) {
   _mm_srli_si128(a, count); // expected-error {{argument to '__builtin_ia32_psrldqi128_byteshift' must be a constant integer}}
 }
-// SCE_ARCH end
 
 void check__mm_shuffle_epi32(__m128i  a, const int imm) {
   _mm_shuffle_epi32(a, imm); // expected-error {{argument to '__builtin_ia32_pshufd' must be a constant integer}}

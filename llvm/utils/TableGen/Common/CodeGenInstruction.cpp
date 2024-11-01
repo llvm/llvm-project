@@ -485,8 +485,8 @@ CodeGenInstruction::CodeGenInstruction(const Record *R)
   isCodeGenOnly = R->getValueAsBit("isCodeGenOnly");
   isPseudo = R->getValueAsBit("isPseudo");
   isMeta = R->getValueAsBit("isMeta");
-  ImplicitDefs = R->getValueAsListOfConstDefs("Defs");
-  ImplicitUses = R->getValueAsListOfConstDefs("Uses");
+  ImplicitDefs = R->getValueAsListOfDefs("Defs");
+  ImplicitUses = R->getValueAsListOfDefs("Uses");
 
   // This flag is only inferred from the pattern.
   hasChain = false;

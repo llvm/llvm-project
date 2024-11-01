@@ -162,7 +162,6 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc loop device_type(*) reduction(+:Var)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented, clause ignored}}
 #pragma acc loop device_type(*) collapse(1)
   for(;;);
   // expected-error@+2{{OpenACC clause 'bind' may not follow a 'device_type' clause in a 'loop' construct}}
@@ -189,9 +188,11 @@ void uses() {
   // expected-error@+1{{OpenACC 'async' clause is not valid on 'loop' directive}}
 #pragma acc loop device_type(*) async
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'tile' not yet implemented, clause ignored}}
-#pragma acc loop device_type(*) tile(Var, 1)
-  for(;;);
+
+#pragma acc loop device_type(*) tile(*, 1)
+  for(;;)
+    for(;;);
+
   // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop dtype(*) gang
   for(;;);

@@ -94,6 +94,19 @@ static DecodeStatus DecodeGPRF16RegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeGPRF32RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                              uint64_t Address,
+                                              const MCDisassembler *Decoder) {
+  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
+
+  if (RegNo >= 32 || (IsRVE && RegNo >= 16))
+    return MCDisassembler::Fail;
+
+  MCRegister Reg = RISCV::X0_W + RegNo;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus DecodeGPRX1X5RegisterClass(MCInst &Inst, uint32_t RegNo,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder) {
@@ -356,6 +369,16 @@ static DecodeStatus decodeFRMArg(MCInst &Inst, uint32_t Imm, int64_t Address,
                                  const MCDisassembler *Decoder) {
   assert(isUInt<3>(Imm) && "Invalid immediate");
   if (!llvm::RISCVFPRndMode::isValidRoundingMode(Imm))
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeRTZArg(MCInst &Inst, uint32_t Imm, int64_t Address,
+                                 const MCDisassembler *Decoder) {
+  assert(isUInt<3>(Imm) && "Invalid immediate");
+  if (Imm != RISCVFPRndMode::RTZ)
     return MCDisassembler::Fail;
 
   Inst.addOperand(MCOperand::createImm(Imm));

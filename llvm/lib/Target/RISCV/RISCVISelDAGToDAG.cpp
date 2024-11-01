@@ -931,6 +931,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (VT.SimpleTy == MVT::f16 && Opc == RISCV::COPY) {
       Res =
           CurDAG->getTargetExtractSubreg(RISCV::sub_16, DL, VT, Imm).getNode();
+    } else if (VT.SimpleTy == MVT::f32 && Opc == RISCV::COPY) {
+      Res =
+          CurDAG->getTargetExtractSubreg(RISCV::sub_32, DL, VT, Imm).getNode();
     } else if (Opc == RISCV::FCVT_D_W_IN32X || Opc == RISCV::FCVT_D_W)
       Res = CurDAG->getMachineNode(
           Opc, DL, VT, Imm,
@@ -2933,6 +2936,14 @@ bool RISCVDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
                         CurDAG->getSignedConstant(-CVal, DL, N->getValueType(0),
                                                   /*isTarget=*/true)),
                     0);
+      return true;
+    }
+    if (isPowerOf2_64(CVal) && Subtarget->hasStdExtZbs()) {
+      Val = SDValue(
+          CurDAG->getMachineNode(
+              RISCV::BINVI, DL, N->getValueType(0), LHS,
+              CurDAG->getTargetConstant(Log2_64(CVal), DL, N->getValueType(0))),
+          0);
       return true;
     }
   }

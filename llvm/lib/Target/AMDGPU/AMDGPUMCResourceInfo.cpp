@@ -71,6 +71,8 @@ void MCResourceInfo::assignMaxRegs(MCContext &OutContext) {
   assignMaxRegSym(MaxSGPRSym, MaxSGPR);
 }
 
+void MCResourceInfo::reset() { *this = MCResourceInfo(); }
+
 void MCResourceInfo::finalize(MCContext &OutContext) {
   assert(!Finalized && "Cannot finalize ResourceInfo again.");
   Finalized = true;
@@ -157,8 +159,12 @@ void MCResourceInfo::gatherResourceInfo(
       ArgExprs.push_back(
           MCConstantExpr::create(FRI.CalleeSegmentSize, OutContext));
 
-    if (!FRI.HasIndirectCall) {
-      for (const Function *Callee : FRI.Callees) {
+    SmallPtrSet<const Function *, 8> Seen;
+    Seen.insert(&MF.getFunction());
+    for (const Function *Callee : FRI.Callees) {
+      if (!Seen.insert(Callee).second)
+        continue;
+      if (!Callee->isDeclaration()) {
         MCSymbol *calleeValSym =
             getSymbol(Callee->getName(), RIK_PrivateSegSize, OutContext);
         ArgExprs.push_back(MCSymbolRefExpr::create(calleeValSym, OutContext));

@@ -320,12 +320,9 @@ HeaderIncludes::HeaderIncludes(StringRef FileName, StringRef Code,
   // - If CategoryEndOffset[Priority] isn't set, use the next higher value
   // that is set, up to CategoryEndOffset[Highest].
   auto Highest = Priorities.begin();
-  if (CategoryEndOffsets.find(*Highest) == CategoryEndOffsets.end()) {
-    if (FirstIncludeOffset >= 0)
-      CategoryEndOffsets[*Highest] = FirstIncludeOffset;
-    else
-      CategoryEndOffsets[*Highest] = MinInsertOffset;
-  }
+  auto [It, Inserted] = CategoryEndOffsets.try_emplace(*Highest);
+  if (Inserted)
+    It->second = FirstIncludeOffset >= 0 ? FirstIncludeOffset : MinInsertOffset;
   // By this point, CategoryEndOffset[Highest] is always set appropriately:
   //  - to an appropriate location before/after existing #includes, or
   //  - to right after the header guard, or

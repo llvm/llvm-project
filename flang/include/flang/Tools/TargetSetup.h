@@ -59,6 +59,9 @@ namespace Fortran::tools {
   if (targetTriple.isPPC())
     targetCharacteristics.set_isPPC(true);
 
+  if (targetTriple.isOSWindows())
+    targetCharacteristics.set_isOSWindows(true);
+
   // TODO: use target machine data layout to set-up the target characteristics
   // type size and alignment info.
 }

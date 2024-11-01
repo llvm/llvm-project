@@ -207,6 +207,7 @@ void MIRPrinter::print(const MachineFunction &MF) {
   YamlMF.HasEHCatchret = MF.hasEHCatchret();
   YamlMF.HasEHScopes = MF.hasEHScopes();
   YamlMF.HasEHFunclets = MF.hasEHFunclets();
+  YamlMF.HasFakeUses = MF.hasFakeUses();
   YamlMF.IsOutlined = MF.isOutlined();
   YamlMF.UseDebugInstrRef = MF.useDebugInstrRef();
 

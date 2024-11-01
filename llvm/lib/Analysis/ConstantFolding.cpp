@@ -145,7 +145,8 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
 
   // If this is a scalar -> vector cast, convert the input into a <1 x scalar>
   // vector so the code below can handle it uniformly.
-  if (isa<ConstantFP>(C) || isa<ConstantInt>(C)) {
+  if (!isa<VectorType>(C->getType()) &&
+      (isa<ConstantFP>(C) || isa<ConstantInt>(C))) {
     Constant *Ops = C; // don't take the address of C!
     return FoldBitCast(ConstantVector::get(Ops), DestTy, DL);
   }

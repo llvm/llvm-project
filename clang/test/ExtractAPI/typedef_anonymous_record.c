@@ -35,7 +35,21 @@ typedef struct { } MyStruct;
 // MYSTRUCT:      "kind": {
 // MYSTRUCT-NEXT:   "displayName": "Structure",
 // MYSTRUCT-NEXT:   "identifier": "c.struct"
-// MYSTRUCT: "title": "MyStruct"
+// MYSTRUCT:           "names": {
+// MYSTRUCT-NEXT:        "navigator": [
+// MYSTRUCT-NEXT:          {
+// MYSTRUCT-NEXT:            "kind": "identifier",
+// MYSTRUCT-NEXT:            "spelling": "MyStruct"
+// MYSTRUCT-NEXT:          }
+// MYSTRUCT-NEXT:        ],
+// MYSTRUCT-NEXT:        "subHeading": [
+// MYSTRUCT-NEXT:          {
+// MYSTRUCT-NEXT:            "kind": "identifier",
+// MYSTRUCT-NEXT:            "spelling": "MyStruct"
+// MYSTRUCT-NEXT:          }
+// MYSTRUCT-NEXT:        ],
+// MYSTRUCT-NEXT:        "title": "MyStruct"
+// MYSTRUCT-NEXT:      },
 // MYSTRUCT:      "pathComponents": [
 // MYSTRUCT-NEXT:    "MyStruct"
 // MYSTRUCT-NEXT:  ]
@@ -111,7 +125,21 @@ typedef enum { Case } MyEnum;
 // MYENUM:     "kind": {
 // MYENUM-NEXT:  "displayName": "Enumeration",
 // MYENUM-NEXT:  "identifier": "c.enum"
-// MYENUM: "title": "MyEnum"
+// MYENUM:           "names": {
+// MYENUM-NEXT:        "navigator": [
+// MYENUM-NEXT:          {
+// MYENUM-NEXT:            "kind": "identifier",
+// MYENUM-NEXT:            "spelling": "MyEnum"
+// MYENUM-NEXT:          }
+// MYENUM-NEXT:        ],
+// MYENUM-NEXT:        "subHeading": [
+// MYENUM-NEXT:          {
+// MYENUM-NEXT:            "kind": "identifier",
+// MYENUM-NEXT:            "spelling": "MyEnum"
+// MYENUM-NEXT:          }
+// MYENUM-NEXT:        ],
+// MYENUM-NEXT:        "title": "MyEnum"
+// MYENUM-NEXT:      },
 
 // CASE-LABEL: "!testLabel": "c:@EA@MyEnum@Case"
 // CASE:      "pathComponents": [

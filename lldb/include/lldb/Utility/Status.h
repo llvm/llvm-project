@@ -83,8 +83,7 @@ class ExpressionErrorBase
     : public llvm::ErrorInfo<ExpressionErrorBase, CloneableECError> {
 public:
   using llvm::ErrorInfo<ExpressionErrorBase, CloneableECError>::ErrorInfo;
-  ExpressionErrorBase(std::error_code ec, std::string msg = {})
-      : ErrorInfo(ec) {}
+  ExpressionErrorBase(std::error_code ec) : ErrorInfo(ec) {}
   lldb::ErrorType GetErrorType() const override;
   static char ID;
 };

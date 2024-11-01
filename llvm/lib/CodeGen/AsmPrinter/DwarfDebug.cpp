@@ -352,8 +352,6 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   else
     UseInlineStrings = DwarfInlinedStrings == Enable;
 
-  UseLocSection = !TT.isNVPTX();
-
   // Always emit .debug_aranges for SCE tuning.
   UseARangesSection = GenerateARangeSection || tuneForSCE();
 
@@ -1325,15 +1323,22 @@ void DwarfDebug::finalizeModuleInfo() {
     DwarfCompileUnit &U = SkCU ? *SkCU : TheCU;
 
     if (unsigned NumRanges = TheCU.getRanges().size()) {
-      if (NumRanges > 1 && useRangesSection())
-        // A DW_AT_low_pc attribute may also be specified in combination with
-        // DW_AT_ranges to specify the default base address for use in
-        // location lists (see Section 2.6.2) and range lists (see Section
-        // 2.17.3).
-        U.addUInt(U.getUnitDie(), dwarf::DW_AT_low_pc, dwarf::DW_FORM_addr, 0);
-      else
-        U.setBaseAddress(TheCU.getRanges().front().Begin);
-      U.attachRangesOrLowHighPC(U.getUnitDie(), TheCU.takeRanges());
+      // PTX does not support subtracting labels from the code section in the
+      // debug_loc section.  To work around this, the NVPTX backend needs the
+      // compile unit to have no low_pc in order to have a zero base_address
+      // when handling debug_loc in cuda-gdb.
+      if (!(Asm->TM.getTargetTriple().isNVPTX() && tuneForGDB())) {
+        if (NumRanges > 1 && useRangesSection())
+          // A DW_AT_low_pc attribute may also be specified in combination with
+          // DW_AT_ranges to specify the default base address for use in
+          // location lists (see Section 2.6.2) and range lists (see Section
+          // 2.17.3).
+          U.addUInt(U.getUnitDie(), dwarf::DW_AT_low_pc, dwarf::DW_FORM_addr,
+                    0);
+        else
+          U.setBaseAddress(TheCU.getRanges().front().Begin);
+        U.attachRangesOrLowHighPC(U.getUnitDie(), TheCU.takeRanges());
+      }
     }
 
     // We don't keep track of which addresses are used in which CU so this
@@ -1919,10 +1924,6 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
         continue;
       }
     }
-
-    // Do not emit location lists if .debug_loc secton is disabled.
-    if (!useLocSection())
-      continue;
 
     // Handle multiple DBG_VALUE instructions describing one variable.
     DebugLocStream::ListBuilder List(DebugLocs, TheCU, *Asm, *RegVar);
@@ -2831,7 +2832,8 @@ static void emitRangeList(
 
   // Gather all the ranges that apply to the same section so they can share
   // a base address entry.
-  MapVector<const MCSection *, std::vector<decltype(&*R.begin())>> SectionRanges;
+  SmallMapVector<const MCSection *, std::vector<decltype(&*R.begin())>, 16>
+      SectionRanges;
 
   for (const auto &Range : R)
     SectionRanges[&Range.Begin->getSection()].push_back(&Range);
@@ -2840,7 +2842,17 @@ static void emitRangeList(
   bool BaseIsSet = false;
   for (const auto &P : SectionRanges) {
     auto *Base = CUBase;
-    if (!Base && ShouldUseBaseAddress) {
+    if ((Asm->TM.getTargetTriple().isNVPTX() && DD.tuneForGDB())) {
+      // PTX does not support subtracting labels from the code section in the
+      // debug_loc section.  To work around this, the NVPTX backend needs the
+      // compile unit to have no low_pc in order to have a zero base_address
+      // when handling debug_loc in cuda-gdb.  Additionally, cuda-gdb doesn't
+      // seem to handle setting a per-variable base to zero.  To make cuda-gdb
+      // happy, just emit labels with no base while having no compile unit
+      // low_pc.
+      BaseIsSet = false;
+      Base = nullptr;
+    } else if (!Base && ShouldUseBaseAddress) {
       const MCSymbol *Begin = P.second.front()->Begin;
       const MCSymbol *NewBase = DD.getSectionLabel(&Begin->getSection());
       if (!UseDwarf5) {

@@ -315,3 +315,34 @@ define <3 x i32> @load_v3i32(ptr %ptr){
     %a = load <3 x i32>, ptr %ptr
     ret <3 x i32> %a
 }
+
+define <2 x i128> @load_v2i128(ptr %p) {
+; CHECK-SD-LABEL: load_v2i128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldp x8, x1, [x0]
+; CHECK-SD-NEXT:    ldp x2, x3, [x0, #16]
+; CHECK-SD-NEXT:    mov x0, x8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_v2i128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldp q0, q1, [x0]
+; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    mov d3, v1.d[1]
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    fmov x2, d1
+; CHECK-GI-NEXT:    fmov x1, d2
+; CHECK-GI-NEXT:    fmov x3, d3
+; CHECK-GI-NEXT:    ret
+    %a = load <2 x i128>, ptr %p
+    ret <2 x i128> %a
+}
+
+define <2 x fp128> @load_v2f128(ptr %p) {
+; CHECK-LABEL: load_v2f128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ret
+    %a = load <2 x fp128>, ptr %p
+    ret <2 x fp128> %a
+}

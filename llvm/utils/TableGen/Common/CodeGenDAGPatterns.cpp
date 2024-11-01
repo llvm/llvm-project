@@ -2886,6 +2886,35 @@ TreePatternNodePtr TreePattern::ParseTreePattern(Init *TheInit,
     error("Pattern has unexpected init kind!");
     return nullptr;
   }
+
+  auto ParseCastOperand = [this](DagInit *Dag, StringRef OpName) {
+    if (Dag->getNumArgs() != 1)
+      error("Type cast only takes one operand!");
+
+    if (!OpName.empty())
+      error("Type cast should not have a name!");
+
+    return ParseTreePattern(Dag->getArg(0), Dag->getArgNameStr(0));
+  };
+
+  if (ListInit *LI = dyn_cast<ListInit>(Dag->getOperator())) {
+    // If the operator is a list (of value types), then this must be "type cast"
+    // of a leaf node with multiple results.
+    TreePatternNodePtr New = ParseCastOperand(Dag, OpName);
+
+    size_t NumTypes = New->getNumTypes();
+    if (LI->empty() || LI->size() != NumTypes)
+      error("Invalid number of type casts!");
+
+    // Apply the type casts.
+    const CodeGenHwModes &CGH = getDAGPatterns().getTargetInfo().getHwModes();
+    for (unsigned i = 0; i < std::min(NumTypes, LI->size()); ++i)
+      New->UpdateNodeType(
+          i, getValueTypeByHwMode(LI->getElementAsRecord(i), CGH), *this);
+
+    return New;
+  }
+
   DefInit *OpDef = dyn_cast<DefInit>(Dag->getOperator());
   if (!OpDef) {
     error("Pattern has unexpected operator type!");
@@ -2896,20 +2925,15 @@ TreePatternNodePtr TreePattern::ParseTreePattern(Init *TheInit,
   if (Operator->isSubClassOf("ValueType")) {
     // If the operator is a ValueType, then this must be "type cast" of a leaf
     // node.
-    if (Dag->getNumArgs() != 1)
-      error("Type cast only takes one operand!");
+    TreePatternNodePtr New = ParseCastOperand(Dag, OpName);
 
-    TreePatternNodePtr New =
-        ParseTreePattern(Dag->getArg(0), Dag->getArgNameStr(0));
+    if (New->getNumTypes() != 1)
+      error("ValueType cast can only have one type!");
 
     // Apply the type cast.
-    if (New->getNumTypes() != 1)
-      error("Type cast can only have one type!");
     const CodeGenHwModes &CGH = getDAGPatterns().getTargetInfo().getHwModes();
     New->UpdateNodeType(0, getValueTypeByHwMode(Operator, CGH), *this);
 
-    if (!OpName.empty())
-      error("ValueType cast should not have a name!");
     return New;
   }
 
@@ -3674,7 +3698,7 @@ static bool hasNullFragReference(DagInit *DI) {
   DefInit *OpDef = dyn_cast<DefInit>(DI->getOperator());
   if (!OpDef)
     return false;
-  Record *Operator = OpDef->getDef();
+  const Record *Operator = OpDef->getDef();
 
   // If this is the null fragment, return true.
   if (Operator->getName() == "null_frag")
@@ -4223,8 +4247,10 @@ void CodeGenDAGPatterns::ParseOnePattern(
   Pattern.InlinePatternFragments();
   Result.InlinePatternFragments();
 
-  if (Result.getNumTrees() != 1)
+  if (Result.getNumTrees() != 1) {
     Result.error("Cannot use multi-alternative fragments in result pattern!");
+    return;
+  }
 
   // Infer types.
   bool IterateInference;

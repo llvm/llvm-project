@@ -419,8 +419,8 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
   if (!NewOpc)
     return false;
   MachineInstr *True = MRI->getVRegDef(MI.getOperand(3).getReg());
-  if (!True || !RISCV::getMaskedPseudoInfo(True->getOpcode()) ||
-      !hasSameEEW(MI, *True))
+  if (!True || True->getParent() != MI.getParent() ||
+      !RISCV::getMaskedPseudoInfo(True->getOpcode()) || !hasSameEEW(MI, *True))
     return false;
 
   const MachineInstr *TrueV0Def = V0Defs.lookup(True);

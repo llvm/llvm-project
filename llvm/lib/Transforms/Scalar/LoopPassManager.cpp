@@ -293,7 +293,7 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
     Updater.CurrentL = L;
     Updater.SkipCurrentLoop = false;
 
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     // Save a parent loop pointer for asserts.
     Updater.ParentL = L->getParentLoop();
 #endif

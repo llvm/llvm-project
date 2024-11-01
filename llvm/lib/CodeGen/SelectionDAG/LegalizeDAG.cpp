@@ -1657,7 +1657,8 @@ SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
   SDValue SignBit = DAG.getNode(ISD::AND, DL, IntVT, SignAsInt.IntValue,
                                 SignMask);
 
-  // If FABS is legal transform FCOPYSIGN(x, y) => sign(x) ? -FABS(x) : FABS(X)
+  // If FABS is legal transform
+  // FCOPYSIGN(x, y) => SignBit(y) ? -FABS(x) : FABS(x)
   EVT FloatVT = Mag.getValueType();
   if (TLI.isOperationLegalOrCustom(ISD::FABS, FloatVT) &&
       TLI.isOperationLegalOrCustom(ISD::FNEG, FloatVT)) {
@@ -5851,13 +5852,10 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                     DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)));
     break;
   }
-  case ISD::VP_REDUCE_FADD:
-  case ISD::VP_REDUCE_FMUL:
   case ISD::VP_REDUCE_FMAX:
   case ISD::VP_REDUCE_FMIN:
   case ISD::VP_REDUCE_FMAXIMUM:
   case ISD::VP_REDUCE_FMINIMUM:
-  case ISD::VP_REDUCE_SEQ_FADD:
     Results.push_back(PromoteReduction(Node));
     break;
   }

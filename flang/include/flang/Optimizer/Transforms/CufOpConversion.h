@@ -22,7 +22,7 @@ class DataLayout;
 
 namespace cuf {
 
-void populateCUFToFIRConversionPatterns(fir::LLVMTypeConverter &converter,
+void populateCUFToFIRConversionPatterns(const fir::LLVMTypeConverter &converter,
                                         mlir::DataLayout &dl,
                                         mlir::RewritePatternSet &patterns);
 

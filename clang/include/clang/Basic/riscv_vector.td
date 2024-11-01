@@ -2564,7 +2564,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
 
         return Builder.CreateIntrinsic(Intrinsic::riscv_tuple_extract,
                                        {ResultType, Ops[0]->getType()},
-                                       {Ops[0], Builder.CreateZExt(Ops[1],
+                                       {Ops[0], Builder.CreateTrunc(Ops[1],
                                         Builder.getInt32Ty())});
       }
       }] in {
@@ -2606,7 +2606,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
         return Builder.CreateIntrinsic(Intrinsic::riscv_tuple_insert,
                                        {ResultType, Ops[2]->getType()},
                                        {Ops[0], Ops[2],
-                                        Builder.CreateZExt(Ops[1],Builder.getInt32Ty())});
+                                        Builder.CreateTrunc(Ops[1],Builder.getInt32Ty())});
       }
       }] in {
     foreach dst_lmul = ["(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {

@@ -176,7 +176,7 @@ class Builder:
                 for var, name in util_names.items():
                     # Do not override explicity specified tool from the cmd line.
                     if not os.getenv(var):
-                        util_paths[var] = getToolchainUtil(name)
+                        util_paths[var] = getToolchainUtil("llvm-" + name)
                     else:
                         util_paths[var] = os.getenv(var)
                 utils.extend(["AR=%s" % util_paths["ARCHIVER"]])

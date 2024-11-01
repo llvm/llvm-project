@@ -827,7 +827,7 @@ struct AA::PointerInfo::State : public AbstractState {
     AccessList = R.AccessList;
     OffsetBins = R.OffsetBins;
     RemoteIMap = R.RemoteIMap;
-    ReachesReturn = R.ReachesReturn;
+    ReturnedOffsets = R.ReturnedOffsets;
     return *this;
   }
 
@@ -838,7 +838,7 @@ struct AA::PointerInfo::State : public AbstractState {
     std::swap(AccessList, R.AccessList);
     std::swap(OffsetBins, R.OffsetBins);
     std::swap(RemoteIMap, R.RemoteIMap);
-    std::swap(ReachesReturn, R.ReachesReturn);
+    std::swap(ReturnedOffsets, R.ReturnedOffsets);
     return *this;
   }
 
@@ -883,13 +883,13 @@ protected:
   /// Flag to determine if the underlying pointer is reaching a return statement
   /// in the associated function or not. Returns in other functions cause
   /// invalidation.
-  bool ReachesReturn = false;
+  AAPointerInfo::OffsetInfo ReturnedOffsets;
 
   /// See AAPointerInfo::forallInterferingAccesses.
   bool forallInterferingAccesses(
       AA::RangeTy Range,
       function_ref<bool(const AAPointerInfo::Access &, bool)> CB) const {
-    if (!isValidState() || ReachesReturn)
+    if (!isValidState() || !ReturnedOffsets.isUnassigned())
       return false;
 
     for (const auto &It : OffsetBins) {
@@ -911,7 +911,7 @@ protected:
       Instruction &I,
       function_ref<bool(const AAPointerInfo::Access &, bool)> CB,
       AA::RangeTy &Range) const {
-    if (!isValidState() || ReachesReturn)
+    if (!isValidState() || !ReturnedOffsets.isUnassigned())
       return false;
 
     auto LocalList = RemoteIMap.find(&I);
@@ -1010,54 +1010,9 @@ ChangeStatus AA::PointerInfo::State::addAccess(
 
 namespace {
 
-/// A helper containing a list of offsets computed for a Use. Ideally this
-/// list should be strictly ascending, but we ensure that only when we
-/// actually translate the list of offsets to a RangeList.
-struct OffsetInfo {
-  using VecTy = SmallVector<int64_t>;
-  using const_iterator = VecTy::const_iterator;
-  VecTy Offsets;
-
-  const_iterator begin() const { return Offsets.begin(); }
-  const_iterator end() const { return Offsets.end(); }
-
-  bool operator==(const OffsetInfo &RHS) const {
-    return Offsets == RHS.Offsets;
-  }
-
-  bool operator!=(const OffsetInfo &RHS) const { return !(*this == RHS); }
-
-  void insert(int64_t Offset) { Offsets.push_back(Offset); }
-  bool isUnassigned() const { return Offsets.size() == 0; }
-
-  bool isUnknown() const {
-    if (isUnassigned())
-      return false;
-    if (Offsets.size() == 1)
-      return Offsets.front() == AA::RangeTy::Unknown;
-    return false;
-  }
-
-  void setUnknown() {
-    Offsets.clear();
-    Offsets.push_back(AA::RangeTy::Unknown);
-  }
-
-  void addToAll(int64_t Inc) {
-    for (auto &Offset : Offsets) {
-      Offset += Inc;
-    }
-  }
-
-  /// Copy offsets from \p R into the current list.
-  ///
-  /// Ideally all lists should be strictly ascending, but we defer that to the
-  /// actual use of the list. So we just blindly append here.
-  void merge(const OffsetInfo &R) { Offsets.append(R.Offsets); }
-};
-
 #ifndef NDEBUG
-static raw_ostream &operator<<(raw_ostream &OS, const OffsetInfo &OI) {
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const AAPointerInfo::OffsetInfo &OI) {
   ListSeparator LS;
   OS << "[";
   for (auto Offset : OI) {
@@ -1079,7 +1034,13 @@ struct AAPointerInfoImpl
            (isValidState() ? (std::string("#") +
                               std::to_string(OffsetBins.size()) + " bins")
                            : "<invalid>") +
-           (ReachesReturn ? " (returned)" : "");
+           (reachesReturn()
+                ? (" (returned:" +
+                   join(map_range(ReturnedOffsets,
+                                  [](int64_t O) { return std::to_string(O); }),
+                        ", ") +
+                   ")")
+                : "");
   }
 
   /// See AbstractAttribute::manifest(...).
@@ -1092,13 +1053,34 @@ struct AAPointerInfoImpl
   virtual int64_t numOffsetBins() const override {
     return State::numOffsetBins();
   }
-  virtual bool reachesReturn() const override { return ReachesReturn; }
-  ChangeStatus setReachesReturn(bool Val) {
-    if (ReachesReturn == Val)
-      return ChangeStatus::UNCHANGED;
+  virtual bool reachesReturn() const override {
+    return !ReturnedOffsets.isUnassigned();
+  }
+  virtual void addReturnedOffsetsTo(OffsetInfo &OI) const override {
+    if (ReturnedOffsets.isUnknown()) {
+      OI.setUnknown();
+      return;
+    }
 
-    ReachesReturn = Val;
-    return ChangeStatus::CHANGED;
+    OffsetInfo MergedOI;
+    for (auto Offset : ReturnedOffsets) {
+      OffsetInfo TmpOI = OI;
+      TmpOI.addToAll(Offset);
+      MergedOI.merge(TmpOI);
+    }
+    OI = std::move(MergedOI);
+  }
+
+  ChangeStatus setReachesReturn(const OffsetInfo &ReachedReturnedOffsets) {
+    if (ReturnedOffsets.isUnknown())
+      return ChangeStatus::UNCHANGED;
+    if (ReachedReturnedOffsets.isUnknown()) {
+      ReturnedOffsets.setUnknown();
+      return ChangeStatus::CHANGED;
+    }
+    if (ReturnedOffsets.merge(ReachedReturnedOffsets))
+      return ChangeStatus::CHANGED;
+    return ChangeStatus::UNCHANGED;
   }
 
   bool forallInterferingAccesses(
@@ -1390,7 +1372,7 @@ struct AAPointerInfoImpl
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     const auto &OtherAAImpl = static_cast<const AAPointerInfoImpl &>(OtherAA);
     bool IsByval = OtherAAImpl.getAssociatedArgument()->hasByValAttr();
-    Changed |= setReachesReturn(OtherAAImpl.ReachesReturn);
+    Changed |= setReachesReturn(OtherAAImpl.ReturnedOffsets);
 
     // Combine the accesses bin by bin.
     const auto &State = OtherAAImpl.getState();
@@ -1485,7 +1467,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
   /// Deal with an access and signal if it was handled successfully.
   bool handleAccess(Attributor &A, Instruction &I,
                     std::optional<Value *> Content, AccessKind Kind,
-                    SmallVectorImpl<int64_t> &Offsets, ChangeStatus &Changed,
+                    OffsetInfo::VecTy &Offsets, ChangeStatus &Changed,
                     Type &Ty) {
     using namespace AA::PointerInfo;
     auto Size = AA::RangeTy::Unknown;
@@ -1495,16 +1477,16 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
       Size = AccessSize.getFixedValue();
 
     // Make a strictly ascending list of offsets as required by addAccess()
-    llvm::sort(Offsets);
-    auto *Last = llvm::unique(Offsets);
-    Offsets.erase(Last, Offsets.end());
+    SmallVector<int64_t> OffsetsSorted(Offsets.begin(), Offsets.end());
+    llvm::sort(OffsetsSorted);
 
     VectorType *VT = dyn_cast<VectorType>(&Ty);
     if (!VT || VT->getElementCount().isScalable() ||
         !Content.value_or(nullptr) || !isa<Constant>(*Content) ||
         (*Content)->getType() != VT ||
         DL.getTypeStoreSize(VT->getElementType()).isScalable()) {
-      Changed = Changed | addAccess(A, {Offsets, Size}, I, Content, Kind, &Ty);
+      Changed =
+          Changed | addAccess(A, {OffsetsSorted, Size}, I, Content, Kind, &Ty);
     } else {
       // Handle vector stores with constant content element-wise.
       // TODO: We could look for the elements or create instructions
@@ -1557,7 +1539,7 @@ bool AAPointerInfoFloating::collectConstantsForGEP(Attributor &A,
                                                    const OffsetInfo &PtrOI,
                                                    const GEPOperator *GEP) {
   unsigned BitWidth = DL.getIndexTypeSizeInBits(GEP->getType());
-  MapVector<Value *, APInt> VariableOffsets;
+  SmallMapVector<Value *, APInt, 4> VariableOffsets;
   APInt ConstantOffset(BitWidth, 0);
 
   assert(!UsrOI.isUnknown() && !PtrOI.isUnknown() &&
@@ -1689,8 +1671,12 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     // then check the call site return. Returns from other functions can't be
     // tracked and are cause for invalidation.
     if (auto *RI = dyn_cast<ReturnInst>(Usr)) {
-      Changed |= setReachesReturn(RI->getFunction() == getAssociatedFunction());
-      return ReachesReturn;
+      if (RI->getFunction() == getAssociatedFunction()) {
+        auto &PtrOI = OffsetInfoMap[CurPtr];
+        Changed |= setReachesReturn(PtrOI);
+        return true;
+      }
+      return false;
     }
 
     // For PHIs we need to take care of the recurrence explicitly as the value
@@ -1946,9 +1932,10 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
             *this, IRPosition::callsite_returned(*CB), DepClassTy::REQUIRED);
         if (!CSRetPI)
           return false;
-        Changed = translateAndAddState(A, *CSRetPI, OffsetInfoMap[CurPtr], *CB,
-                                       IsRetMustAcc) |
-                  Changed;
+        OffsetInfo OI = OffsetInfoMap[CurPtr];
+        CSArgPI->addReturnedOffsetsTo(OI);
+        Changed =
+            translateAndAddState(A, *CSRetPI, OI, *CB, IsRetMustAcc) | Changed;
         return isValidState();
       }
       LLVM_DEBUG(dbgs() << "[AAPointerInfo] Call user not handled " << *CB

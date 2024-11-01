@@ -1321,10 +1321,10 @@ static void runThinLTOBackend(
     Conf.CGFileType = getCodeGenFileType(Action);
     break;
   }
-  if (Error E =
-          thinBackend(Conf, -1, AddStream, *M, *CombinedIndex, ImportList,
-                      ModuleToDefinedGVSummaries[M->getModuleIdentifier()],
-                      /* ModuleMap */ nullptr, CGOpts.CmdArgs)) {
+  if (Error E = thinBackend(
+          Conf, -1, AddStream, *M, *CombinedIndex, ImportList,
+          ModuleToDefinedGVSummaries[M->getModuleIdentifier()],
+          /* ModuleMap */ nullptr, Conf.CodeGenOnly, CGOpts.CmdArgs)) {
     handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
       errs() << "Error running ThinLTO backend: " << EIB.message() << '\n';
     });

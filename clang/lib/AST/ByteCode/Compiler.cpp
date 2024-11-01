@@ -2128,6 +2128,13 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     return this->emitConst(1, E);
   }
 
+  if (Kind == UETT_OpenMPRequiredSimdAlign) {
+    assert(E->isArgumentType());
+    unsigned Bits = ASTCtx.getOpenMPDefaultSimdAlign(E->getArgumentType());
+
+    return this->emitConst(ASTCtx.toCharUnitsFromBits(Bits).getQuantity(), E);
+  }
+
   return false;
 }
 
@@ -3579,8 +3586,9 @@ bool Compiler<Emitter>::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
   }
   for (unsigned I = 0; I != NumOutputElems; ++I) {
     APSInt ShuffleIndex = E->getShuffleMaskIdx(Ctx.getASTContext(), I);
+    assert(ShuffleIndex >= -1);
     if (ShuffleIndex == -1)
-      return this->emitInvalid(E); // FIXME: Better diagnostic.
+      return this->emitInvalidShuffleVectorIndex(I, E);
 
     assert(ShuffleIndex < (NumInputElems * 2));
     if (!this->emitGetLocal(PT_Ptr,

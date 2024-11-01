@@ -73,7 +73,7 @@ define internal void @bar.5() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = ashr i64 sub (i64 ptrtoint (ptr addrspace(1) @__fini_array_end to i64), i64 ptrtoint (ptr addrspace(1) @__fini_array_start to i64)), 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [0 x ptr], ptr addrspace(1) @__fini_array_start, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) @__fini_array_start, i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp uge ptr addrspace(1) [[TMP2]], @__fini_array_start
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[WHILE_ENTRY:%.*]], label [[WHILE_END:%.*]]
 ; CHECK:       while.entry:

@@ -358,6 +358,7 @@ gentbl(
     td_file = "include/clang/Basic/BuiltinsRISCV.td",
     td_srcs = [
         "include/clang/Basic/BuiltinsRISCV.td",
+        "include/clang/Basic/BuiltinsRISCVXCV.td",
         "include/clang/Basic/BuiltinsBase.td",
     ],
 )

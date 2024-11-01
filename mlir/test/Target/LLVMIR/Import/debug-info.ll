@@ -816,3 +816,30 @@ define void @imp_fn() !dbg !12 {
 ; CHECK-DAG:  #[[SP_REC:.+]] = #llvm.di_subprogram<recId = distinct{{.*}}<>, isRecSelf = true>
 ; CHECK-DAG: #[[IE:.+]] = #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #[[SP_REC]], entity = #[[M]]{{.*}}>
 ; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<{{.*}}name = "imp_fn"{{.*}}retainedNodes = #[[IE]]>
+
+; // -----
+
+; Test that annotations are handled correctly
+
+; CHECK-LABEL: @fn_with_annotations
+
+define void @fn_with_annotations() !dbg !12 {
+  ret void
+}
+
+!llvm.module.flags = !{!10}
+!llvm.dbg.cu = !{!4}
+
+!2 = !DIModule(scope: !4, name: "mod1", file: !3, line: 1)
+!3 = !DIFile(filename: "test.f90", directory: "")
+!4 = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: !3)
+!8 = !DIModule(scope: !4, name: "mod1", file: !3, line: 5)
+!10 = !{i32 2, !"Debug Info Version", i32 3}
+!12 = distinct !DISubprogram(name: "fn_with_annotations", linkageName: "fn_with_annotations", scope: !3, file: !3, line: 10, type: !14, scopeLine: 10, spFlags: DISPFlagDefinition, unit: !4, annotations: !16)
+!14 = !DISubroutineType(cc: DW_CC_program, types: !15)
+!15 = !{}
+!16 = !{!17}
+!17 = !{!"foo", !"bar"}
+
+
+; CHECK-DAG: #llvm.di_subprogram<{{.*}}name = "fn_with_annotations"{{.*}}annotations = #llvm.di_annotation<name = "foo", value = "bar">>

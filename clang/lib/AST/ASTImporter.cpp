@@ -1138,7 +1138,7 @@ ExpectedType ASTNodeImporter::VisitBuiltinType(const BuiltinType *T) {
   case BuiltinType::Id:                                                        \
     return Importer.getToContext().SingletonId;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   case BuiltinType::Id:                                                        \
     return Importer.getToContext().SingletonId;
 #include "clang/Basic/AMDGPUTypes.def"

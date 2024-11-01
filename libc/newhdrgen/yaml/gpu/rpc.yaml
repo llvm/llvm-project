@@ -16,7 +16,7 @@ functions:
   - name: rpc_host_call
     standards:
       - GPUExtensions
-    return_type: void
+    return_type: unsigned long long
     arguments:
       - type: void *
       - type: void *

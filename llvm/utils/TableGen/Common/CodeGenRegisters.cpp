@@ -80,7 +80,7 @@ void CodeGenSubRegIndex::updateComponents(CodeGenRegBank &RegBank) {
     return;
 
   std::vector<const Record *> Comps =
-      TheDef->getValueAsListOfConstDefs("ComposedOf");
+      TheDef->getValueAsListOfDefs("ComposedOf");
   if (!Comps.empty()) {
     if (Comps.size() != 2)
       PrintFatalError(TheDef->getLoc(),
@@ -93,7 +93,7 @@ void CodeGenSubRegIndex::updateComponents(CodeGenRegBank &RegBank) {
   }
 
   std::vector<const Record *> Parts =
-      TheDef->getValueAsListOfConstDefs("CoveringSubRegIndices");
+      TheDef->getValueAsListOfDefs("CoveringSubRegIndices");
   if (!Parts.empty()) {
     if (Parts.size() < 2)
       PrintFatalError(TheDef->getLoc(),
@@ -169,9 +169,8 @@ CodeGenRegister::CodeGenRegister(const Record *R, unsigned Enum)
 
 void CodeGenRegister::buildObjectGraph(CodeGenRegBank &RegBank) {
   std::vector<const Record *> SRIs =
-      TheDef->getValueAsListOfConstDefs("SubRegIndices");
-  std::vector<const Record *> SRs =
-      TheDef->getValueAsListOfConstDefs("SubRegs");
+      TheDef->getValueAsListOfDefs("SubRegIndices");
+  std::vector<const Record *> SRs = TheDef->getValueAsListOfDefs("SubRegs");
 
   if (SRIs.size() != SRs.size())
     PrintFatalError(TheDef->getLoc(),
@@ -629,7 +628,7 @@ struct TupleExpander : SetTheory::Expander {
   void expand(SetTheory &ST, const Record *Def,
               SetTheory::RecSet &Elts) override {
     std::vector<const Record *> Indices =
-        Def->getValueAsListOfConstDefs("SubRegIndices");
+        Def->getValueAsListOfDefs("SubRegIndices");
     unsigned Dim = Indices.size();
     ListInit *SubRegs = Def->getValueAsListInit("SubRegs");
     if (Dim != SubRegs->size())
@@ -651,7 +650,7 @@ struct TupleExpander : SetTheory::Expander {
 
     // Precompute some types.
     Record *RegisterCl = Def->getRecords().getClass("Register");
-    RecTy *RegisterRecTy = RecordRecTy::get(RegisterCl);
+    const RecTy *RegisterRecTy = RecordRecTy::get(RegisterCl);
     std::vector<StringRef> RegNames =
         Def->getValueAsListOfStrings("RegAsmNames");
 
@@ -698,9 +697,8 @@ struct TupleExpander : SetTheory::Expander {
                         "Register tuple redefines register '" + Name + "'.");
 
       // Copy Proto super-classes.
-      ArrayRef<std::pair<Record *, SMRange>> Supers = Proto->getSuperClasses();
-      for (const auto &SuperPair : Supers)
-        NewReg->addSuperClass(SuperPair.first, SuperPair.second);
+      for (const auto &[Super, Loc] : Proto->getSuperClasses())
+        NewReg->addSuperClass(Super, Loc);
 
       // Copy Proto fields.
       for (unsigned i = 0, e = Proto->getValues().size(); i != e; ++i) {
@@ -764,8 +762,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
     : TheDef(R), Name(std::string(R->getName())),
       TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1), TSFlags(0) {
   GeneratePressureSet = R->getValueAsBit("GeneratePressureSet");
-  std::vector<const Record *> TypeList =
-      R->getValueAsListOfConstDefs("RegTypes");
+  std::vector<const Record *> TypeList = R->getValueAsListOfDefs("RegTypes");
   if (TypeList.empty())
     PrintFatalError(R->getLoc(), "RegTypes list must not be empty!");
   for (unsigned i = 0, e = TypeList.size(); i != e; ++i) {

@@ -78,6 +78,35 @@ static mlir::LLVM::DITypeAttr genPlaceholderType(mlir::MLIRContext *context) {
                       /*bitSize=*/32, llvm::dwarf::DW_ATE_signed);
 }
 
+// Helper function to create DILocalVariableAttr and DbgValueOp when information
+// about the size or dimension of a variable etc lives in an mlir::Value.
+mlir::LLVM::DILocalVariableAttr DebugTypeGenerator::generateArtificialVariable(
+    mlir::MLIRContext *context, mlir::Value val,
+    mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DIScopeAttr scope,
+    fir::cg::XDeclareOp declOp) {
+  // There can be multiple artificial variable for a single declOp. To help
+  // distinguish them, we pad the name with a counter. The counter is the
+  // position of 'val' in the operands of declOp.
+  auto varID = std::distance(
+      declOp.getOperands().begin(),
+      std::find(declOp.getOperands().begin(), declOp.getOperands().end(), val));
+  mlir::OpBuilder builder(context);
+  auto name = mlir::StringAttr::get(context, "." + declOp.getUniqName().str() +
+                                                 std::to_string(varID));
+  builder.setInsertionPoint(declOp);
+  mlir::Type type = val.getType();
+  if (!mlir::isa<mlir::IntegerType>(type) || !type.isSignlessInteger()) {
+    type = builder.getIntegerType(64);
+    val = builder.create<fir::ConvertOp>(declOp.getLoc(), type, val);
+  }
+  mlir::LLVM::DITypeAttr Ty = convertType(type, fileAttr, scope, declOp);
+  auto lvAttr = mlir::LLVM::DILocalVariableAttr::get(
+      context, scope, name, fileAttr, /*line=*/0, /*argNo=*/0,
+      /*alignInBits=*/0, Ty, mlir::LLVM::DIFlags::Artificial);
+  builder.create<mlir::LLVM::DbgValueOp>(declOp.getLoc(), val, lvAttr, nullptr);
+  return lvAttr;
+}
+
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
     fir::SequenceType seqTy, mlir::LLVM::DIFileAttr fileAttr,
     mlir::LLVM::DIScopeAttr scope, fir::cg::XDeclareOp declOp,
@@ -113,10 +142,22 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
   mlir::LLVM::DITypeAttr elemTy =
       convertType(seqTy.getEleTy(), fileAttr, scope, declOp);
   unsigned offset = dimsOffset;
+  unsigned index = 0;
+  mlir::IntegerType intTy = mlir::IntegerType::get(context, 64);
   const unsigned indexSize = dimsSize / 3;
   for ([[maybe_unused]] auto _ : seqTy.getShape()) {
     // For each dimension, find the offset of count, lower bound and stride in
     // the descriptor and generate the dwarf expression to extract it.
+    mlir::Attribute lowerAttr = nullptr;
+    // If declaration has a lower bound, use it.
+    if (declOp && declOp.getShift().size() > index) {
+      if (std::optional<std::int64_t> optint =
+              getIntIfConstant(declOp.getShift()[index]))
+        lowerAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, *optint));
+      else
+        lowerAttr = generateArtificialVariable(
+            context, declOp.getShift()[index], fileAttr, scope, declOp);
+    }
     // FIXME: If `indexSize` happens to be bigger than address size on the
     // system then we may have to change 'DW_OP_deref' here.
     addOp(llvm::dwarf::DW_OP_push_object_address, {});
@@ -129,14 +170,19 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
         mlir::LLVM::DIExpressionAttr::get(context, ops);
     ops.clear();
 
-    addOp(llvm::dwarf::DW_OP_push_object_address, {});
-    addOp(llvm::dwarf::DW_OP_plus_uconst,
-          {offset + (indexSize * kDimLowerBoundPos)});
-    addOp(llvm::dwarf::DW_OP_deref, {});
-    // lower_bound[i] = *(base_addr + offset + (indexSize * kDimLowerBoundPos))
-    mlir::LLVM::DIExpressionAttr lowerAttr =
-        mlir::LLVM::DIExpressionAttr::get(context, ops);
-    ops.clear();
+    // If a lower bound was not found in the declOp, then we will get them from
+    // descriptor only for pointer and allocatable case. DWARF assumes lower
+    // bound of 1 when this attribute is missing.
+    if (!lowerAttr && (genAllocated || genAssociated)) {
+      addOp(llvm::dwarf::DW_OP_push_object_address, {});
+      addOp(llvm::dwarf::DW_OP_plus_uconst,
+            {offset + (indexSize * kDimLowerBoundPos)});
+      addOp(llvm::dwarf::DW_OP_deref, {});
+      // lower_bound[i] = *(base_addr + offset + (indexSize *
+      // kDimLowerBoundPos))
+      lowerAttr = mlir::LLVM::DIExpressionAttr::get(context, ops);
+      ops.clear();
+    }
 
     addOp(llvm::dwarf::DW_OP_push_object_address, {});
     addOp(llvm::dwarf::DW_OP_plus_uconst,
@@ -151,6 +197,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
     mlir::LLVM::DISubrangeAttr subrangeTy = mlir::LLVM::DISubrangeAttr::get(
         context, countAttr, lowerAttr, /*upperBound=*/nullptr, strideAttr);
     elements.push_back(subrangeTy);
+    ++index;
   }
   return mlir::LLVM::DICompositeTypeAttr::get(
       context, llvm::dwarf::DW_TAG_array_type, /*name=*/nullptr,
@@ -303,31 +350,43 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
   unsigned index = 0;
   auto intTy = mlir::IntegerType::get(context, 64);
   for (fir::SequenceType::Extent dim : seqTy.getShape()) {
-    int64_t shift = 1;
+    mlir::Attribute lowerAttr = nullptr;
+    mlir::Attribute countAttr = nullptr;
+    // If declOp is present, we use the shift in it to get the lower bound of
+    // the array. If it is constant, that is used. If it is not constant, we
+    // create a variable that represents its location and use that as lower
+    // bound. As an optimization, we don't create a lower bound when shift is a
+    // constant 1 as that is the default.
     if (declOp && declOp.getShift().size() > index) {
       if (std::optional<std::int64_t> optint =
-              getIntIfConstant(declOp.getShift()[index]))
-        shift = *optint;
+              getIntIfConstant(declOp.getShift()[index])) {
+        if (*optint != 1)
+          lowerAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, *optint));
+      } else
+        lowerAttr = generateArtificialVariable(
+            context, declOp.getShift()[index], fileAttr, scope, declOp);
     }
+
     if (dim == seqTy.getUnknownExtent()) {
-      mlir::IntegerAttr lowerAttr = nullptr;
-      if (declOp && declOp.getShift().size() > index)
-        lowerAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, shift));
-      // FIXME: This path is taken for assumed size arrays but also for arrays
-      // with non constant extent. For the latter case, the DISubrangeAttr
-      // should point to a variable which will have the extent at runtime.
-      auto subrangeTy = mlir::LLVM::DISubrangeAttr::get(
-          context, /*count=*/nullptr, lowerAttr, /*upperBound*/ nullptr,
-          /*stride*/ nullptr);
-      elements.push_back(subrangeTy);
-    } else {
-      auto countAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, dim));
-      auto lowerAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, shift));
-      auto subrangeTy = mlir::LLVM::DISubrangeAttr::get(
-          context, countAttr, lowerAttr, /*upperBound=*/nullptr,
-          /*stride=*/nullptr);
-      elements.push_back(subrangeTy);
-    }
+      // This path is taken for both assumed size array or when the size of the
+      // array is variable. In the case of variable size, we create a variable
+      // to use as countAttr. Note that fir has a constant size of -1 for
+      // assumed size array. So !optint check makes sure we don't generate
+      // variable in that case.
+      if (declOp && declOp.getShape().size() > index) {
+        std::optional<std::int64_t> optint =
+            getIntIfConstant(declOp.getShape()[index]);
+        if (!optint)
+          countAttr = generateArtificialVariable(
+              context, declOp.getShape()[index], fileAttr, scope, declOp);
+      }
+    } else
+      countAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, dim));
+
+    auto subrangeTy = mlir::LLVM::DISubrangeAttr::get(
+        context, countAttr, lowerAttr, /*upperBound=*/nullptr,
+        /*stride=*/nullptr);
+    elements.push_back(subrangeTy);
     ++index;
   }
   // Apart from arrays, the `DICompositeTypeAttr` is used for other things like
@@ -383,23 +442,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     // variable that will contain that length. This variable is used as
     // 'stringLength' in DIStringTypeAttr.
     if (declOp && !declOp.getTypeparams().empty()) {
-      auto name =
-          mlir::StringAttr::get(context, "." + declOp.getUniqName().str());
-      mlir::OpBuilder builder(context);
-      builder.setInsertionPoint(declOp);
-      mlir::Value sizeVal = declOp.getTypeparams()[0];
-      mlir::Type type = sizeVal.getType();
-      if (!mlir::isa<mlir::IntegerType>(type) || !type.isSignlessInteger()) {
-        type = builder.getIntegerType(64);
-        sizeVal =
-            builder.create<fir::ConvertOp>(declOp.getLoc(), type, sizeVal);
-      }
-      mlir::LLVM::DITypeAttr Ty = convertType(type, fileAttr, scope, declOp);
-      auto lvAttr = mlir::LLVM::DILocalVariableAttr::get(
-          context, scope, name, fileAttr, /*line=*/0, /*argNo=*/0,
-          /*alignInBits=*/0, Ty, mlir::LLVM::DIFlags::Artificial);
-      builder.create<mlir::LLVM::DbgValueOp>(declOp.getLoc(), sizeVal, lvAttr,
-                                             nullptr);
+      mlir::LLVM::DILocalVariableAttr lvAttr = generateArtificialVariable(
+          context, declOp.getTypeparams()[0], fileAttr, scope, declOp);
       varAttr = mlir::cast<mlir::LLVM::DIVariableAttr>(lvAttr);
     }
   }
@@ -450,25 +494,14 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
   } else if (mlir::isa<mlir::FloatType>(Ty)) {
     return genBasicType(context, mlir::StringAttr::get(context, "real"),
                         Ty.getIntOrFloatBitWidth(), llvm::dwarf::DW_ATE_float);
-  } else if (auto realTy = mlir::dyn_cast_or_null<fir::RealType>(Ty)) {
-    return genBasicType(context, mlir::StringAttr::get(context, "real"),
-                        kindMapping.getRealBitsize(realTy.getFKind()),
-                        llvm::dwarf::DW_ATE_float);
   } else if (auto logTy = mlir::dyn_cast_or_null<fir::LogicalType>(Ty)) {
     return genBasicType(context,
                         mlir::StringAttr::get(context, logTy.getMnemonic()),
                         kindMapping.getLogicalBitsize(logTy.getFKind()),
                         llvm::dwarf::DW_ATE_boolean);
-  } else if (fir::isa_complex(Ty)) {
-    unsigned bitWidth;
-    if (auto cplxTy = mlir::dyn_cast_or_null<mlir::ComplexType>(Ty)) {
-      auto floatTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
-      bitWidth = floatTy.getWidth();
-    } else if (auto cplxTy = mlir::dyn_cast_or_null<fir::ComplexType>(Ty)) {
-      bitWidth = kindMapping.getRealBitsize(cplxTy.getFKind());
-    } else {
-      llvm_unreachable("Unhandled complex type");
-    }
+  } else if (auto cplxTy = mlir::dyn_cast_or_null<mlir::ComplexType>(Ty)) {
+    auto floatTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
+    unsigned bitWidth = floatTy.getWidth();
     return genBasicType(context, mlir::StringAttr::get(context, "complex"),
                         bitWidth * 2, llvm::dwarf::DW_ATE_complex_float);
   } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(Ty)) {

@@ -549,7 +549,7 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     auto It = MDC.ModularDeps.find(M);
     // Only report direct dependencies that were successfully handled.
     if (It != MDC.ModularDeps.end())
-      MDC.Consumer.handleDirectModuleDependency(MDC.ModularDeps[M]->ID);
+      MDC.Consumer.handleDirectModuleDependency(It->second->ID);
   }
 
   for (auto &&I : MDC.FileDeps)

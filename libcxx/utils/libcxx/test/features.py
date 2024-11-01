@@ -620,21 +620,21 @@ DEFAULT_FEATURES += [
     Feature(
         name="_target-has-llvm-17",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-18 || target={{.+}}-apple-macosx{{14.[4-9](.0)?}} || target={{.+}}-apple-macosx{{1[5-9]([.].+)?}}",
+            "_target-has-llvm-18 || target={{.+}}-apple-macosx{{14.[4-9](.[0-9]+)?}} || target={{.+}}-apple-macosx{{1[5-9]([.].+)?}}",
             cfg.available_features,
         ),
     ),
     Feature(
         name="_target-has-llvm-16",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-17 || target={{.+}}-apple-macosx{{14.[0-3](.0)?}}",
+            "_target-has-llvm-17 || target={{.+}}-apple-macosx{{14.[0-3](.[0-9]+)?}}",
             cfg.available_features,
         ),
     ),
     Feature(
         name="_target-has-llvm-15",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-16 || target={{.+}}-apple-macosx{{13.[4-9](.0)?}}",
+            "_target-has-llvm-16 || target={{.+}}-apple-macosx{{13.[4-9](.[0-9]+)?}}",
             cfg.available_features,
         ),
     ),
@@ -648,21 +648,21 @@ DEFAULT_FEATURES += [
     Feature(
         name="_target-has-llvm-13",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-14 || target={{.+}}-apple-macosx{{13.[0-3](.0)?}}",
+            "_target-has-llvm-14 || target={{.+}}-apple-macosx{{13.[0-3](.[0-9]+)?}}",
             cfg.available_features,
         ),
     ),
     Feature(
         name="_target-has-llvm-12",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-13 || target={{.+}}-apple-macosx{{12.[3-9](.0)?}}",
+            "_target-has-llvm-13 || target={{.+}}-apple-macosx{{12.[3-9](.[0-9]+)?}}",
             cfg.available_features,
         ),
     ),
     Feature(
         name="_target-has-llvm-11",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-12 || target={{.+}}-apple-macosx{{(11.[0-9]|12.[0-2])(.0)?}}",
+            "_target-has-llvm-12 || target={{.+}}-apple-macosx{{(11.[0-9]|12.[0-2])(.[0-9]+)?}}",
             cfg.available_features,
         ),
     ),
@@ -676,7 +676,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="_target-has-llvm-9",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-10 || target={{.+}}-apple-macosx{{10.15(.0)?}}",
+            "_target-has-llvm-10 || target={{.+}}-apple-macosx{{10.15(.[0-9]+)?}}",
             cfg.available_features,
         ),
     ),
@@ -719,7 +719,7 @@ DEFAULT_FEATURES += [
 # a libc++ flavor that enables availability markup. Similarly, a test could fail when
 # run against the system library of an older version of FreeBSD, even though FreeBSD
 # doesn't provide availability markup at the time of writing this.
-for version in ("9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19"):
+for version in ("9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"):
     DEFAULT_FEATURES.append(
         Feature(
             name="using-built-library-before-llvm-{}".format(version),
@@ -755,11 +755,19 @@ DEFAULT_FEATURES += [
             cfg.available_features,
         ),
     ),
+    # Tests that require std::to_chars(floating-point) in the built library
+    Feature(
+        name="availability-fp_to_chars-missing",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-14)",
+            cfg.available_features,
+        ),
+    ),
     # Tests that require __libcpp_verbose_abort support in the built library
     Feature(
         name="availability-verbose_abort-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-13)",
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-15)",
             cfg.available_features,
         ),
     ),
@@ -767,15 +775,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-pmr-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-13)",
-            cfg.available_features,
-        ),
-    ),
-    # Tests that require std::to_chars(floating-point) in the built library
-    Feature(
-        name="availability-fp_to_chars-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-14)",
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-16)",
             cfg.available_features,
         ),
     ),

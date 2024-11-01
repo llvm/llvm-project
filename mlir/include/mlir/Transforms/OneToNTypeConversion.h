@@ -53,7 +53,7 @@ public:
   /// `TypeConverter::convertSignatureArgs` and exists here with a different
   /// name to reflect the broader semantic.
   LogicalResult computeTypeMapping(TypeRange types,
-                                   SignatureConversion &result) {
+                                   SignatureConversion &result) const {
     return convertSignatureArgs(types, result);
   }
 
@@ -126,24 +126,25 @@ public:
   /// Construct a conversion pattern with the given converter, and forward the
   /// remaining arguments to RewritePattern.
   template <typename... Args>
-  RewritePatternWithConverter(TypeConverter &typeConverter, Args &&...args)
+  RewritePatternWithConverter(const TypeConverter &typeConverter,
+                              Args &&...args)
       : RewritePattern(std::forward<Args>(args)...),
         typeConverter(&typeConverter) {}
 
   /// Return the type converter held by this pattern, or nullptr if the pattern
   /// does not require type conversion.
-  TypeConverter *getTypeConverter() const { return typeConverter; }
+  const TypeConverter *getTypeConverter() const { return typeConverter; }
 
   template <typename ConverterTy>
   std::enable_if_t<std::is_base_of<TypeConverter, ConverterTy>::value,
-                   ConverterTy *>
+                   const ConverterTy *>
   getTypeConverter() const {
-    return static_cast<ConverterTy *>(typeConverter);
+    return static_cast<const ConverterTy *>(typeConverter);
   }
 
 protected:
   /// A type converter for use by this pattern.
-  TypeConverter *const typeConverter;
+  const TypeConverter *const typeConverter;
 };
 
 /// Specialization of `PatternRewriter` that `OneToNConversionPattern`s use. The
@@ -212,8 +213,8 @@ public:
 template <typename SourceOp>
 class OneToNOpConversionPattern : public OneToNConversionPattern {
 public:
-  OneToNOpConversionPattern(TypeConverter &typeConverter, MLIRContext *context,
-                            PatternBenefit benefit = 1,
+  OneToNOpConversionPattern(const TypeConverter &typeConverter,
+                            MLIRContext *context, PatternBenefit benefit = 1,
                             ArrayRef<StringRef> generatedNames = {})
       : OneToNConversionPattern(typeConverter, SourceOp::getOperationName(),
                                 benefit, context, generatedNames) {}
@@ -302,11 +303,11 @@ applyPartialOneToNConversion(Operation *op, OneToNTypeConverter &typeConverter,
 /// ops which use FunctionType to represent their type. This is intended to be
 /// used with the 1:N dialect conversion.
 void populateOneToNFunctionOpInterfaceTypeConversionPattern(
-    StringRef functionLikeOpName, TypeConverter &converter,
+    StringRef functionLikeOpName, const TypeConverter &converter,
     RewritePatternSet &patterns);
 template <typename FuncOpT>
 void populateOneToNFunctionOpInterfaceTypeConversionPattern(
-    TypeConverter &converter, RewritePatternSet &patterns) {
+    const TypeConverter &converter, RewritePatternSet &patterns) {
   populateOneToNFunctionOpInterfaceTypeConversionPattern(
       FuncOpT::getOperationName(), converter, patterns);
 }

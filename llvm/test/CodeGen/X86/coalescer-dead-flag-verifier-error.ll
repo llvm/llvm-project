@@ -11,7 +11,7 @@ define void @_ZNK4llvm5APInt21multiplicativeInverseERKS0_(ptr %r) {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    jmp .LBB0_1
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_4: # %_ZNK4llvm5APInt13getActiveBitsEv.exit.i.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl %edx, %edx
@@ -26,7 +26,7 @@ define void @_ZNK4llvm5APInt21multiplicativeInverseERKS0_(ptr %r) {
 ; CHECK-NEXT:    movq %rcx, %r8
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_4
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_3: # %for.body.i.i.i.i.i.3
 ; CHECK-NEXT:    # Parent Loop BB0_1 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
@@ -72,7 +72,7 @@ define void @_ZNK4llvm5APInt21multiplicativeInverseERKS0__assert(ptr %r) {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    jmp .LBB1_1
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_4: # %_ZNK4llvm5APInt13getActiveBitsEv.exit.i.i
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    movl %edx, %edx
@@ -89,7 +89,7 @@ define void @_ZNK4llvm5APInt21multiplicativeInverseERKS0__assert(ptr %r) {
 ; CHECK-NEXT:    xorl %r8d, %r8d
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB1_4
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_3: # %for.body.i.i.i.i.i.3
 ; CHECK-NEXT:    # Parent Loop BB1_1 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2

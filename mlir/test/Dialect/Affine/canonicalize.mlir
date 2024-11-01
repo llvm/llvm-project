@@ -1514,3 +1514,22 @@ func.func @drop_single_loop_delinearize(%arg0 : index, %arg1 : index) -> index {
 //       CHECK:   scf.for %[[IV:[a-zA-Z0-9]+]] =
 //   CHECK-NOT:     affine.delinearize_index
 //       CHECK:     "some_use"(%{{.+}}, %[[IV]])
+
+// -----
+
+// CHECK-LABEL: func @delinearize_non_induction_variable
+func.func @delinearize_non_induction_variable(%arg0: memref<?xi32>, %i : index, %t0 : index, %t1 : index, %t2 : index) -> index {
+  %c1024 = arith.constant 1024 : index
+  %1 = affine.apply affine_map<(d0)[s0, s1, s2] -> (d0 + s0 + s1 * 64 + s2 * 128)>(%i)[%t0, %t1, %t2]
+  %2 = affine.delinearize_index %1 into (%c1024) : index
+  return %2 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @delinearize_non_loop_like
+func.func @delinearize_non_loop_like(%arg0: memref<?xi32>, %i : index) -> index {
+  %c1024 = arith.constant 1024 : index
+  %2 = affine.delinearize_index %i into (%c1024) : index
+  return %2 : index
+}

@@ -521,7 +521,7 @@ define void @frem() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %BF16 = frem bfloat undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = frem float undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = frem double undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1BF16 = frem <1 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1BF16 = frem <1 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2BF16 = frem <2 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4BF16 = frem <4 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8BF16 = frem <8 x bfloat> undef, undef
@@ -761,7 +761,7 @@ define void @fcopysign() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %BF16 = call bfloat @llvm.copysign.bf16(bfloat undef, bfloat undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call float @llvm.copysign.f32(float undef, float undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call double @llvm.copysign.f64(double undef, double undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1BF16 = call <1 x bfloat> @llvm.copysign.v1bf16(<1 x bfloat> undef, <1 x bfloat> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V1BF16 = call <1 x bfloat> @llvm.copysign.v1bf16(<1 x bfloat> undef, <1 x bfloat> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2BF16 = call <2 x bfloat> @llvm.copysign.v2bf16(<2 x bfloat> undef, <2 x bfloat> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4BF16 = call <4 x bfloat> @llvm.copysign.v4bf16(<4 x bfloat> undef, <4 x bfloat> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8BF16 = call <8 x bfloat> @llvm.copysign.v8bf16(<8 x bfloat> undef, <8 x bfloat> undef)
@@ -889,7 +889,7 @@ define void @fma() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %BF16 = call bfloat @llvm.fma.bf16(bfloat undef, bfloat undef, bfloat undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call float @llvm.fma.f32(float undef, float undef, float undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call double @llvm.fma.f64(double undef, double undef, double undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1BF16 = call <1 x bfloat> @llvm.fma.v1bf16(<1 x bfloat> undef, <1 x bfloat> undef, <1 x bfloat> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V1BF16 = call <1 x bfloat> @llvm.fma.v1bf16(<1 x bfloat> undef, <1 x bfloat> undef, <1 x bfloat> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2BF16 = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> undef, <2 x bfloat> undef, <2 x bfloat> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4BF16 = call <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat> undef, <4 x bfloat> undef, <4 x bfloat> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8BF16 = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> undef, <8 x bfloat> undef, <8 x bfloat> undef)

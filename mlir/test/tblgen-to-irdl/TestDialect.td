@@ -106,6 +106,17 @@ def Test_OrOp : Test_Op<"or"> {
 // CHECK-NEXT:    irdl.operands(%[[v3]])
 // CHECK-NEXT:  }
 
+// Check regions are converted correctly.
+def Test_RegionsOp : Test_Op<"regions"> {
+  let regions = (region AnyRegion:$any_region,
+                        SizedRegion<1>:$single_block_region);
+}
+// CHECK-LABEL: irdl.operation @regions {
+// CHECK-NEXT:    %[[v0:[^ ]*]] = irdl.region
+// CHECK-NEXT:    %[[v1:[^ ]*]] = irdl.region with size 1
+// CHECK-NEXT:    irdl.regions(%[[v0]], %[[v1]])
+// CHECK-NEXT:  }
+
 // Check that various types are converted correctly.
 def Test_TypesOp : Test_Op<"types"> {
   let arguments = (ins I32:$a,

@@ -60,11 +60,9 @@ define <vscale x 16 x i8> @and_imm_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8>
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and z0.b, z0.b, #0x3
 ; CHECK-NEXT:    ret
-  %imm = insertelement <vscale x 16 x i8> undef, i8 3, i32 0
-  %imm.splat = shufflevector <vscale x 16 x i8> %imm, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
   %out = call <vscale x 16 x i8> @llvm.aarch64.sve.and.u.nxv16i8(<vscale x 16 x i1> %pg,
                                                                  <vscale x 16 x i8> %a,
-                                                                 <vscale x 16 x i8> %imm.splat)
+                                                                 <vscale x 16 x i8> splat(i8 3))
   ret <vscale x 16 x i8> %out
 }
 
@@ -73,11 +71,9 @@ define <vscale x 8 x i16> @and_imm_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16>
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and z0.h, z0.h, #0x4
 ; CHECK-NEXT:    ret
-  %imm = insertelement <vscale x 8 x i16> undef, i16 4, i32 0
-  %imm.splat = shufflevector <vscale x 8 x i16> %imm, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
   %out = call <vscale x 8 x i16> @llvm.aarch64.sve.and.u.nxv8i16(<vscale x 8 x i1> %pg,
                                                                  <vscale x 8 x i16> %a,
-                                                                 <vscale x 8 x i16> %imm.splat)
+                                                                 <vscale x 8 x i16> splat(i16 4))
   ret <vscale x 8 x i16> %out
 }
 
@@ -86,11 +82,9 @@ define <vscale x 4 x i32> @and_imm_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32>
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and z0.s, z0.s, #0x10
 ; CHECK-NEXT:    ret
-  %imm = insertelement <vscale x 4 x i32> undef, i32 16, i32 0
-  %imm.splat = shufflevector <vscale x 4 x i32> %imm, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> %pg,
                                                                  <vscale x 4 x i32> %a,
-                                                                 <vscale x 4 x i32> %imm.splat)
+                                                                 <vscale x 4 x i32> splat(i32 16))
   ret <vscale x 4 x i32> %out
 }
 
@@ -99,11 +93,9 @@ define <vscale x 2 x i64> @and_imm_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64>
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and z0.d, z0.d, #0x20
 ; CHECK-NEXT:    ret
-  %imm = insertelement <vscale x 2 x i64> undef, i64 32, i32 0
-  %imm.splat = shufflevector <vscale x 2 x i64> %imm, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.and.u.nxv2i64(<vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %a,
-                                                                 <vscale x 2 x i64> %imm.splat)
+                                                                 <vscale x 2 x i64> splat(i64 32))
   ret <vscale x 2 x i64> %out
 }
 
@@ -164,11 +156,9 @@ define <vscale x 16 x i8> @eor_imm_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8>
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    eor z0.b, z0.b, #0x7
 ; CHECK-NEXT:    ret
-  %imm = insertelement <vscale x 16 x i8> undef, i8 7, i32 0
-  %imm.splat = shufflevector <vscale x 16 x i8> %imm, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
   %out = call <vscale x 16 x i8> @llvm.aarch64.sve.eor.u.nxv16i8(<vscale x 16 x i1> %pg,
                                                                  <vscale x 16 x i8> %a,
-                                                                 <vscale x 16 x i8> %imm.splat)
+                                                                 <vscale x 16 x i8> splat(i8 7))
   ret <vscale x 16 x i8> %out
 }
 
@@ -177,11 +167,9 @@ define <vscale x 8 x i16> @eor_imm_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16>
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    eor z0.h, z0.h, #0x8
 ; CHECK-NEXT:    ret
-  %imm = insertelement <vscale x 8 x i16> undef, i16 8, i32 0
-  %imm.splat = shufflevector <vscale x 8 x i16> %imm, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
   %out = call <vscale x 8 x i16> @llvm.aarch64.sve.eor.u.nxv8i16(<vscale x 8 x i1> %pg,
                                                                  <vscale x 8 x i16> %a,
-                                                                 <vscale x 8 x i16> %imm.splat)
+                                                                 <vscale x 8 x i16> splat(i16 8))
   ret <vscale x 8 x i16> %out
 }
 
@@ -190,11 +178,9 @@ define <vscale x 4 x i32> @eor_imm_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32>
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    eor z0.s, z0.s, #0x10
 ; CHECK-NEXT:    ret
-  %imm = insertelement <vscale x 4 x i32> undef, i32 16, i32 0
-  %imm.splat = shufflevector <vscale x 4 x i32> %imm, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1> %pg,
                                                                  <vscale x 4 x i32> %a,
-                                                                 <vscale x 4 x i32> %imm.splat)
+                                                                 <vscale x 4 x i32> splat(i32 16))
   ret <vscale x 4 x i32> %out
 }
 
@@ -203,11 +189,9 @@ define <vscale x 2 x i64> @eor_imm_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64>
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    eor z0.d, z0.d, #0x20
 ; CHECK-NEXT:    ret
-  %imm = insertelement <vscale x 2 x i64> undef, i64 32, i32 0
-  %imm.splat = shufflevector <vscale x 2 x i64> %imm, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.eor.u.nxv2i64(<vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %a,
-                                                                 <vscale x 2 x i64> %imm.splat)
+                                                                 <vscale x 2 x i64> splat(i64 32))
   ret <vscale x 2 x i64> %out
 }
 
@@ -268,11 +252,9 @@ define <vscale x 16 x i8> @orr_imm_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8>
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    orr z0.b, z0.b, #0x8
 ; CHECK-NEXT:    ret
-  %imm = insertelement <vscale x 16 x i8> undef, i8 8, i32 0
-  %imm.splat = shufflevector <vscale x 16 x i8> %imm, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
   %out = call <vscale x 16 x i8> @llvm.aarch64.sve.orr.u.nxv16i8(<vscale x 16 x i1> %pg,
                                                                  <vscale x 16 x i8> %a,
-                                                                 <vscale x 16 x i8> %imm.splat)
+                                                                 <vscale x 16 x i8> splat(i8 8))
   ret <vscale x 16 x i8> %out
 }
 
@@ -281,11 +263,9 @@ define <vscale x 8 x i16> @orr_imm_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16>
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    orr z0.h, z0.h, #0xc
 ; CHECK-NEXT:    ret
-  %imm = insertelement <vscale x 8 x i16> undef, i16 12, i32 0
-  %imm.splat = shufflevector <vscale x 8 x i16> %imm, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
   %out = call <vscale x 8 x i16> @llvm.aarch64.sve.orr.u.nxv8i16(<vscale x 8 x i1> %pg,
                                                                  <vscale x 8 x i16> %a,
-                                                                 <vscale x 8 x i16> %imm.splat)
+                                                                 <vscale x 8 x i16> splat(i16 12))
   ret <vscale x 8 x i16> %out
 }
 
@@ -294,11 +274,9 @@ define <vscale x 4 x i32> @orr_imm_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32>
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    orr z0.s, z0.s, #0x10
 ; CHECK-NEXT:    ret
-  %imm = insertelement <vscale x 4 x i32> undef, i32 16, i32 0
-  %imm.splat = shufflevector <vscale x 4 x i32> %imm, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.orr.u.nxv4i32(<vscale x 4 x i1> %pg,
                                                                  <vscale x 4 x i32> %a,
-                                                                 <vscale x 4 x i32> %imm.splat)
+                                                                 <vscale x 4 x i32> splat(i32 16))
   ret <vscale x 4 x i32> %out
 }
 
@@ -307,11 +285,9 @@ define <vscale x 2 x i64> @orr_imm_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64>
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    orr z0.d, z0.d, #0x20
 ; CHECK-NEXT:    ret
-  %imm = insertelement <vscale x 2 x i64> undef, i64 32, i32 0
-  %imm.splat = shufflevector <vscale x 2 x i64> %imm, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.orr.u.nxv2i64(<vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %a,
-                                                                 <vscale x 2 x i64> %imm.splat)
+                                                                 <vscale x 2 x i64> splat(i64 32))
   ret <vscale x 2 x i64> %out
 }
 
@@ -372,11 +348,9 @@ define <vscale x 16 x i8> @bic_imm_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8>
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and z0.b, z0.b, #0xf8
 ; CHECK-NEXT:    ret
-  %imm = insertelement <vscale x 16 x i8> undef, i8 7, i32 0
-  %imm.splat = shufflevector <vscale x 16 x i8> %imm, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
   %out = call <vscale x 16 x i8> @llvm.aarch64.sve.bic.u.nxv16i8(<vscale x 16 x i1> %pg,
                                                                  <vscale x 16 x i8> %a,
-                                                                 <vscale x 16 x i8> %imm.splat)
+                                                                 <vscale x 16 x i8> splat(i8 7))
   ret <vscale x 16 x i8> %out
 }
 
@@ -385,11 +359,9 @@ define <vscale x 8 x i16> @bic_imm_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16>
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and z0.h, z0.h, #0xfff7
 ; CHECK-NEXT:    ret
-  %imm = insertelement <vscale x 8 x i16> undef, i16 8, i32 0
-  %imm.splat = shufflevector <vscale x 8 x i16> %imm, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
   %out = call <vscale x 8 x i16> @llvm.aarch64.sve.bic.u.nxv8i16(<vscale x 8 x i1> %pg,
                                                                  <vscale x 8 x i16> %a,
-                                                                 <vscale x 8 x i16> %imm.splat)
+                                                                 <vscale x 8 x i16> splat(i16 8))
   ret <vscale x 8 x i16> %out
 }
 
@@ -398,11 +370,9 @@ define <vscale x 4 x i32> @bic_imm_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32>
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and z0.s, z0.s, #0xffffffef
 ; CHECK-NEXT:    ret
-  %imm = insertelement <vscale x 4 x i32> undef, i32 16, i32 0
-  %imm.splat = shufflevector <vscale x 4 x i32> %imm, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.bic.u.nxv4i32(<vscale x 4 x i1> %pg,
                                                                  <vscale x 4 x i32> %a,
-                                                                 <vscale x 4 x i32> %imm.splat)
+                                                                 <vscale x 4 x i32> splat(i32 16))
   ret <vscale x 4 x i32> %out
 }
 
@@ -411,11 +381,9 @@ define <vscale x 2 x i64> @bic_imm_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64>
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and z0.d, z0.d, #0xffffffffffffffdf
 ; CHECK-NEXT:    ret
-  %imm = insertelement <vscale x 2 x i64> undef, i64 32, i32 0
-  %imm.splat = shufflevector <vscale x 2 x i64> %imm, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.bic.u.nxv2i64(<vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %a,
-                                                                 <vscale x 2 x i64> %imm.splat)
+                                                                 <vscale x 2 x i64> splat(i64 32))
   ret <vscale x 2 x i64> %out
 }
 

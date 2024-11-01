@@ -72,6 +72,9 @@ llvm.mlir.global internal @f8E5M2FNUZ_global_as_i8(1.5 : f8E5M2FNUZ) : i8
 // CHECK: @f8E4M3B11FNUZ_global_as_i8 = internal global i8 92
 llvm.mlir.global internal @f8E4M3B11FNUZ_global_as_i8(1.5 : f8E4M3B11FNUZ) : i8
 
+// CHECK: @f8E8M0FNU_global_as_i8 = internal global i8 127
+llvm.mlir.global internal @f8E8M0FNU_global_as_i8(1.0 : f8E8M0FNU) : i8
+
 // CHECK: @bf16_global_as_i16 = internal global i16 16320
 llvm.mlir.global internal @bf16_global_as_i16(1.5 : bf16) : i16
 
@@ -1496,7 +1499,8 @@ llvm.func @elements_constant_3d_array() -> !llvm.array<2 x array<2 x array<2 x i
 // CHECK-LABEL: @atomicrmw
 llvm.func @atomicrmw(
     %f32_ptr : !llvm.ptr, %f32 : f32,
-    %i32_ptr : !llvm.ptr, %i32 : i32) {
+    %i32_ptr : !llvm.ptr, %i32 : i32,
+    %f16_vec_ptr : !llvm.ptr, %f16_vec : vector<2xf16>) {
   // CHECK: atomicrmw fadd ptr %{{.*}}, float %{{.*}} monotonic
   %0 = llvm.atomicrmw fadd %f32_ptr, %f32 monotonic : !llvm.ptr, f32
   // CHECK: atomicrmw fsub ptr %{{.*}}, float %{{.*}} monotonic
@@ -1535,11 +1539,19 @@ llvm.func @atomicrmw(
   %17 = llvm.atomicrmw usub_cond %i32_ptr, %i32 monotonic : !llvm.ptr, i32
   // CHECK: atomicrmw usub_sat ptr %{{.*}}, i32 %{{.*}} monotonic
   %18 = llvm.atomicrmw usub_sat %i32_ptr, %i32 monotonic : !llvm.ptr, i32
+  // CHECK: atomicrmw fadd ptr %{{.*}}, <2 x half> %{{.*}} monotonic
+  %19 = llvm.atomicrmw fadd %f16_vec_ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
+  // CHECK: atomicrmw fsub ptr %{{.*}}, <2 x half> %{{.*}} monotonic
+  %20 = llvm.atomicrmw fsub %f16_vec_ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
+  // CHECK: atomicrmw fmax ptr %{{.*}}, <2 x half> %{{.*}} monotonic
+  %21 = llvm.atomicrmw fmax %f16_vec_ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
+  // CHECK: atomicrmw fmin ptr %{{.*}}, <2 x half> %{{.*}} monotonic
+  %22 = llvm.atomicrmw fmin %f16_vec_ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
 
   // CHECK: atomicrmw volatile
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
-  %19 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic {alignment = 8 : i64} : !llvm.ptr, i32
+  %23 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic {alignment = 8 : i64} : !llvm.ptr, i32
   llvm.return
 }
 

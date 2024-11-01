@@ -11519,6 +11519,7 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
                AlignLeft);
   verifyFormat("template <typename T> void operator=(T) & {}", AlignLeft);
   verifyFormat("template <typename T> void operator=(T) && {}", AlignLeft);
+  verifyFormat("for (foo<void() &&>& cb : X)", AlignLeft);
 
   FormatStyle AlignMiddle = getLLVMStyle();
   AlignMiddle.PointerAlignment = FormatStyle::PAS_Middle;
@@ -20021,6 +20022,12 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "  return 0;\n"
                "}() };",
                BracedAlign);
+
+  Alignment.AlignConsecutiveDeclarations.AlignFunctionDeclarations = false;
+  verifyFormat("unsigned int f1(void);\n"
+               "void f2(void);\n"
+               "size_t f3(void);",
+               Alignment);
 }
 
 TEST_F(FormatTest, AlignConsecutiveShortCaseStatements) {
@@ -20264,9 +20271,16 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
             FormatStyle::AlignConsecutiveStyle(
                 {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
                  /*AcrossComments=*/false, /*AlignCompound=*/false,
-                 /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
+                 /*AlignFunctionDeclarations=*/false,
+                 /*AlignFunctionPointers=*/false,
+                 /*PadOperators=*/true}));
   EXPECT_EQ(Style.AlignConsecutiveDeclarations,
-            FormatStyle::AlignConsecutiveStyle({}));
+            FormatStyle::AlignConsecutiveStyle(
+                {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
+                 /*AcrossComments=*/false, /*AlignCompound=*/false,
+                 /*AlignFunctionDeclarations=*/true,
+                 /*AlignFunctionPointers=*/false,
+                 /*PadOperators=*/false}));
   verifyFormat("void foo() {\n"
                "  int myVar = 5;\n"
                "  double x = 3.14;\n"

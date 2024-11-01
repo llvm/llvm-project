@@ -1455,7 +1455,7 @@ cc_library(
     ]),
     hdrs = glob(["include/llvm/SandboxIR/*.h"]),
     copts = llvm_copts,
-    textual_hdrs = ["include/llvm/SandboxIR/SandboxIRValues.def"],
+    textual_hdrs = ["include/llvm/SandboxIR/Values.def"],
     deps = [
         ":Analysis",
         ":Core",
@@ -1599,6 +1599,18 @@ gentbl(
 )
 
 cc_library(
+    name = "FrontendAtomic",
+    hdrs = glob([
+        "include/llvm/Frontend/Atomic/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":Support",
+        ":ir_headers",
+    ],
+)
+
+cc_library(
     name = "FrontendOpenMP",
     srcs = glob([
         "lib/Frontend/OpenMP/*.cpp",
@@ -1618,6 +1630,7 @@ cc_library(
         ":BitReader",
         ":Core",
         ":Demangle",
+        ":FrontendAtomic",
         ":FrontendOffloading",
         ":MC",
         ":Scalar",

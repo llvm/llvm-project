@@ -59,6 +59,12 @@ typedef __bf16 __m128bh __attribute__((__vector_size__(16), __aligned__(16)));
                  __min_vector_width__(128)))
 #endif
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
+#else
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
+#endif
+
 #define __trunc64(x)                                                           \
   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
 #define __anyext128(x)                                                         \
@@ -1863,7 +1869,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_setr_pd(double __w,
 ///
 /// \returns An initialized 128-bit floating-point vector of [2 x double] with
 ///    all elements set to zero.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_setzero_pd(void) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_setzero_pd(void) {
   return __extension__(__m128d){0.0, 0.0};
 }
 
@@ -3862,7 +3868,7 @@ _mm_setr_epi8(char __b0, char __b1, char __b2, char __b3, char __b4, char __b5,
 ///
 /// \returns An initialized 128-bit integer vector with all elements set to
 ///    zero.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_setzero_si128(void) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR _mm_setzero_si128(void) {
   return __extension__(__m128i)(__v2di){0LL, 0LL};
 }
 
@@ -4900,6 +4906,7 @@ void _mm_pause(void);
 #undef __anyext128
 #undef __trunc64
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 
 #define _MM_SHUFFLE2(x, y) (((x) << 1) | (y))
 

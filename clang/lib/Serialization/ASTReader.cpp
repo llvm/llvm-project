@@ -3912,6 +3912,11 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       FPPragmaOptions.swap(Record);
       break;
 
+    case DECLS_WITH_EFFECTS_TO_VERIFY:
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
+        DeclsWithEffectsToVerify.push_back(ReadDeclID(F, Record, I));
+      break;
+
     case OPENCL_EXTENSIONS:
       for (unsigned I = 0, E = Record.size(); I != E; ) {
         auto Name = ReadString(Record, I);
@@ -7488,7 +7493,7 @@ QualType ASTReader::GetType(TypeID ID) {
     T = Context.SingletonId;                                                   \
     break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   case PREDEF_TYPE_##Id##_ID:                                                  \
     T = Context.SingletonId;                                                   \
     break;
@@ -8412,6 +8417,17 @@ void ASTReader::InitializeSema(Sema &S) {
     SemaObj->CurFPFeatures =
         NewOverrides.applyOverrides(SemaObj->getLangOpts());
   }
+
+  for (GlobalDeclID ID : DeclsWithEffectsToVerify) {
+    Decl *D = GetDecl(ID);
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      SemaObj->addDeclWithEffects(FD, FD->getFunctionEffects());
+    else if (auto *BD = dyn_cast<BlockDecl>(D))
+      SemaObj->addDeclWithEffects(BD, BD->getFunctionEffects());
+    else
+      llvm_unreachable("unexpected Decl type in DeclsWithEffectsToVerify");
+  }
+  DeclsWithEffectsToVerify.clear();
 
   SemaObj->OpenCLFeatures = OpenCLExtensions;
 
@@ -9987,7 +10003,8 @@ void ASTReader::finishPendingActions() {
 
     auto RTD = cast<RedeclarableTemplateDecl>(D)->getCanonicalDecl();
     for (auto *R = getMostRecentExistingDecl(RTD); R; R = R->getPreviousDecl())
-      cast<RedeclarableTemplateDecl>(R)->Common = RTD->Common;
+      cast<RedeclarableTemplateDecl>(R)->setCommonPtr(
+          RTD->getCommonPtrInternal());
   }
   PendingDefinitions.clear();
 
@@ -10588,6 +10605,11 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPSizesClause::CreateEmpty(Context, NumSizes);
     break;
   }
+  case llvm::omp::OMPC_permutation: {
+    unsigned NumLoops = Record.readInt();
+    C = OMPPermutationClause::CreateEmpty(Context, NumLoops);
+    break;
+  }
   case llvm::omp::OMPC_full:
     C = OMPFullClause::CreateEmpty(Context);
     break;
@@ -10972,6 +10994,12 @@ void OMPClauseReader::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
 
 void OMPClauseReader::VisitOMPSizesClause(OMPSizesClause *C) {
   for (Expr *&E : C->getSizesRefs())
+    E = Record.readSubExpr();
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPPermutationClause(OMPPermutationClause *C) {
+  for (Expr *&E : C->getArgsRefs())
     E = Record.readSubExpr();
   C->setLParenLoc(Record.readSourceLocation());
 }
@@ -12283,6 +12311,22 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCIndependentClause::Create(getContext(), BeginLoc, EndLoc);
   case OpenACCClauseKind::Auto:
     return OpenACCAutoClause::Create(getContext(), BeginLoc, EndLoc);
+  case OpenACCClauseKind::Collapse: {
+    SourceLocation LParenLoc = readSourceLocation();
+    bool HasForce = readBool();
+    Expr *LoopCount = readSubExpr();
+    return OpenACCCollapseClause::Create(getContext(), BeginLoc, LParenLoc,
+                                         HasForce, LoopCount, EndLoc);
+  }
+  case OpenACCClauseKind::Tile: {
+    SourceLocation LParenLoc = readSourceLocation();
+    unsigned NumClauses = readInt();
+    llvm::SmallVector<Expr *> SizeExprs;
+    for (unsigned I = 0; I < NumClauses; ++I)
+      SizeExprs.push_back(readSubExpr());
+    return OpenACCTileClause::Create(getContext(), BeginLoc, LParenLoc,
+                                     SizeExprs, EndLoc);
+  }
 
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
@@ -12296,11 +12340,9 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   case OpenACCClauseKind::DeviceResident:
   case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Link:
-  case OpenACCClauseKind::Collapse:
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::DeviceNum:
   case OpenACCClauseKind::DefaultAsync:
-  case OpenACCClauseKind::Tile:
   case OpenACCClauseKind::Gang:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");

@@ -558,7 +558,8 @@ class AMDGPUDSAppendConsumedIntrinsic : Intrinsic<
   [llvm_anyptr_ty, // LDS or GDS ptr
    llvm_i1_ty], // isVolatile
    [IntrConvergent, IntrWillReturn, IntrArgMemOnly,
-    NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>, IntrNoCallback, IntrNoFree],
+    Align<ArgIndex<0>, 4>, NoCapture<ArgIndex<0>>,
+    ImmArg<ArgIndex<1>>, IntrNoCallback, IntrNoFree],
    "",
    [SDNPMemOperand]
 >;
@@ -2964,11 +2965,6 @@ def int_amdgcn_mfma_f32_16x16x8bf16 : AMDGPUMfmaIntrinsic<llvm_v4f32_ty,  llvm_v
 //===----------------------------------------------------------------------===//
 // gfx90a intrinsics
 // ===----------------------------------------------------------------------===//
-
-def int_amdgcn_global_atomic_fmin : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
-def int_amdgcn_global_atomic_fmax : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
-def int_amdgcn_flat_atomic_fmin   : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
-def int_amdgcn_flat_atomic_fmax   : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 
 defset list<Intrinsic> AMDGPUMFMAIntrinsics90A = {
 def int_amdgcn_mfma_f32_32x32x4bf16_1k  : AMDGPUMfmaIntrinsic<llvm_v32f32_ty, llvm_v4i16_ty>;

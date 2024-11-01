@@ -126,11 +126,25 @@ struct Config {
     std::vector<std::string> FullyQualifiedNamespaces;
   } Style;
 
+  /// controls the completion options for argument lists.
+  enum class ArgumentListsPolicy {
+    /// nothing, no argument list and also NO Delimiters "()" or "<>".
+    None,
+    /// open, only opening delimiter "(" or "<".
+    OpenDelimiter,
+    /// empty pair of delimiters "()" or "<>".
+    Delimiters,
+    /// full name of both type and variable.
+    FullPlaceholders,
+  };
+
   /// Configures code completion feature.
   struct {
     /// Whether code completion includes results that are not visible in current
     /// scopes.
     bool AllScopes = true;
+    /// controls the completion options for argument lists.
+    ArgumentListsPolicy ArgumentLists = ArgumentListsPolicy::FullPlaceholders;
   } Completion;
 
   /// Configures hover feature.

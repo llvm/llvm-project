@@ -317,6 +317,15 @@ Unpoisoning may not be an option, if (for example) you are not maintaining the a
 * You are using allocator, which does not call destructor during deallocation.
 * You are aware that memory allocated with an allocator may be accessed, even when unused by container.
 
+Support for compiler extensions
+-------------------------------
+
+Clang, GCC and other compilers all provide their own set of language extensions. These extensions
+have often been developed without particular consideration for their interaction with the library,
+and as such, libc++ does not go out of its way to support them. The library may support specific
+compiler extensions which would then be documented explicitly, but the basic expectation should be
+that no special support is provided for arbitrary compiler extensions.
+
 Platform specific behavior
 ==========================
 

@@ -324,7 +324,7 @@ public:
     for (GlobalVariable *GV : Variables) {
       auto ConstantGepIt = LDSVarsToConstantGEP.find(GV);
       if (ConstantGepIt != LDSVarsToConstantGEP.end()) {
-        auto elt = ConstantExpr::getPtrToInt(ConstantGepIt->second, I32);
+        auto *elt = ConstantExpr::getPtrToInt(ConstantGepIt->second, I32);
         Elements.push_back(elt);
       } else {
         Elements.push_back(PoisonValue::get(I32));
@@ -850,7 +850,7 @@ public:
     }
 
     assert(func->hasName()); // Checked by caller
-    auto emptyCharArray = ArrayType::get(Type::getInt8Ty(Ctx), 0);
+    auto *emptyCharArray = ArrayType::get(Type::getInt8Ty(Ctx), 0);
     GlobalVariable *N = new GlobalVariable(
         M, emptyCharArray, false, GlobalValue::ExternalLinkage, nullptr,
         Twine("llvm.amdgcn." + func->getName() + ".dynlds"), nullptr, GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS,
@@ -890,8 +890,8 @@ public:
 
           markUsedByKernel(func, N);
 
-          auto emptyCharArray = ArrayType::get(Type::getInt8Ty(Ctx), 0);
-          auto GEP = ConstantExpr::getGetElementPtr(
+          auto *emptyCharArray = ArrayType::get(Type::getInt8Ty(Ctx), 0);
+          auto *GEP = ConstantExpr::getGetElementPtr(
               emptyCharArray, N, ConstantInt::get(I32, 0), true);
           newDynamicLDS.push_back(ConstantExpr::getPtrToInt(GEP, I32));
         } else {

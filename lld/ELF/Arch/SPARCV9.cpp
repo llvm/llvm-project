@@ -78,7 +78,7 @@ RelExpr SPARCV9::getRelExpr(RelType type, const Symbol &s,
   case R_SPARC_TLS_LE_LOX10:
     return R_TPREL;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -193,7 +193,4 @@ void SPARCV9::writePlt(uint8_t *buf, const Symbol & /*sym*/,
   relocateNoSym(buf + 4, R_SPARC_WDISP19, -(off + 4 - pltEntrySize));
 }
 
-TargetInfo *elf::getSPARCV9TargetInfo(Ctx &ctx) {
-  static SPARCV9 target(ctx);
-  return &target;
-}
+void elf::setSPARCV9TargetInfo(Ctx &ctx) { ctx.target.reset(new SPARCV9(ctx)); }

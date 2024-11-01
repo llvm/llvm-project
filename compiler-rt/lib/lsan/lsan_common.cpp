@@ -698,11 +698,13 @@ void LeakSuppressionContext::PrintMatchedSuppressions() {
 
 // Fuchsia provides a libc interface that guarantees all threads are
 // covered, and SuspendedThreadList is never really used.
-static void ReportUnsuspendedThreads(const SuspendedThreadsList &) {}
+static bool ReportUnsuspendedThreads(const SuspendedThreadsList &) {
+  return true;
+}
 
 #  else  // !SANITIZER_FUCHSIA
 
-static void ReportUnsuspendedThreads(
+static bool ReportUnsuspendedThreads(
     const SuspendedThreadsList &suspended_threads) {
   InternalMmapVector<tid_t> threads(suspended_threads.ThreadCount());
   for (uptr i = 0; i < suspended_threads.ThreadCount(); ++i)
@@ -713,13 +715,17 @@ static void ReportUnsuspendedThreads(
   InternalMmapVector<tid_t> unsuspended;
   GetRunningThreadsLocked(&unsuspended);
 
+  bool succeded = true;
   for (auto os_id : unsuspended) {
     uptr i = InternalLowerBound(threads, os_id);
-    if (i >= threads.size() || threads[i] != os_id)
+    if (i >= threads.size() || threads[i] != os_id) {
+      succeded = false;
       Report(
           "Running thread %zu was not suspended. False leaks are possible.\n",
           os_id);
+    }
   }
+  return succeded;
 }
 
 #  endif  // !SANITIZER_FUCHSIA
@@ -729,7 +735,18 @@ static void CheckForLeaksCallback(const SuspendedThreadsList &suspended_threads,
   CheckForLeaksParam *param = reinterpret_cast<CheckForLeaksParam *>(arg);
   CHECK(param);
   CHECK(!param->success);
-  ReportUnsuspendedThreads(suspended_threads);
+  if (!ReportUnsuspendedThreads(suspended_threads)) {
+    switch (flags()->thread_suspend_fail) {
+      case 0:
+        param->success = true;
+        return;
+      case 1:
+        break;
+      case 2:
+        // Will crash on return.
+        return;
+    }
+  }
   ClassifyAllChunks(suspended_threads, &param->frontier, param->caller_tid,
                     param->caller_sp);
   ForEachChunk(CollectLeaksCb, &param->leaks);

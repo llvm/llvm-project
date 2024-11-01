@@ -218,6 +218,11 @@ static cl::opt<unsigned> ExtTspBlockPlacementMaxBlocks(
              "block placement."),
     cl::init(UINT_MAX), cl::Hidden);
 
+// Apply the ext-tsp algorithm minimizing the size of a binary.
+static cl::opt<bool>
+    ApplyExtTspForSize("apply-ext-tsp-for-size", cl::init(false), cl::Hidden,
+                       cl::desc("Use ext-tsp for size-aware block placement."));
+
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
 extern cl::opt<bool> ApplyExtTspWithoutProfile;
@@ -595,7 +600,7 @@ class MachineBlockPlacement : public MachineFunctionPass {
   void precomputeTriangleChains();
 
   /// Apply a post-processing step optimizing block placement.
-  void applyExtTsp();
+  void applyExtTsp(bool OptForSize);
 
   /// Modify the existing block placement in the function and adjust all jumps.
   void assignBlockOrder(const std::vector<const MachineBasicBlock *> &NewOrder);
@@ -3505,20 +3510,36 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   // Initialize tail duplication thresholds.
   initTailDupThreshold();
 
+  const bool OptForSize =
+      MF.getFunction().hasOptSize() ||
+      llvm::shouldOptimizeForSize(&MF, PSI, &MBFI->getMBFI());
+  // Determine whether to use ext-tsp for perf/size optimization. The method
+  // is beneficial only for instances with at least 3 basic blocks and it can be
+  // disabled for huge functions (exceeding a certain size).
+  bool UseExtTspForPerf = false;
+  bool UseExtTspForSize = false;
+  if (3 <= MF.size() && MF.size() <= ExtTspBlockPlacementMaxBlocks) {
+    UseExtTspForPerf =
+        EnableExtTspBlockPlacement &&
+        (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData());
+    UseExtTspForSize = OptForSize && ApplyExtTspForSize;
+  }
+
   // Apply tail duplication.
   if (allowTailDupPlacement()) {
     MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
-    bool OptForSize = MF.getFunction().hasOptSize() ||
-                      llvm::shouldOptimizeForSize(&MF, PSI, &MBFI->getMBFI());
     if (OptForSize)
       TailDupSize = 1;
     const bool PreRegAlloc = false;
     TailDup.initMF(MF, PreRegAlloc, MBPI, MBFI.get(), PSI,
                    /* LayoutMode */ true, TailDupSize);
-    precomputeTriangleChains();
+    if (!UseExtTspForSize)
+      precomputeTriangleChains();
   }
 
-  buildCFGChains();
+  // Run the main block placement.
+  if (!UseExtTspForSize)
+    buildCFGChains();
 
   // Changing the layout can create new tail merging opportunities.
   // TailMerge can create jump into if branches that make CFG irreducible for
@@ -3545,14 +3566,14 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  // Apply a post-processing optimizing block placement.
-  if (MF.size() >= 3 && EnableExtTspBlockPlacement &&
-      (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData()) &&
-      MF.size() <= ExtTspBlockPlacementMaxBlocks) {
-    // Find a new placement and modify the layout of the blocks in the function.
-    applyExtTsp();
-
-    // Re-create CFG chain so that we can optimizeBranches and alignBlocks.
+  // Apply a post-processing optimizing block placement:
+  // - find a new placement and modify the layout of the blocks in the function;
+  // - re-create CFG chains so that we can optimizeBranches and alignBlocks.
+  if (UseExtTspForPerf || UseExtTspForSize) {
+    assert(
+        !(UseExtTspForPerf && UseExtTspForSize) &&
+        "UseExtTspForPerf and UseExtTspForSize can not be set simultaneosly");
+    applyExtTsp(/*OptForSize=*/UseExtTspForSize);
     createCFGChainExtTsp();
   }
 
@@ -3577,7 +3598,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-void MachineBlockPlacement::applyExtTsp() {
+void MachineBlockPlacement::applyExtTsp(bool OptForSize) {
   // Prepare data; blocks are indexed by their index in the current ordering.
   DenseMap<const MachineBasicBlock *, uint64_t> BlockIndex;
   BlockIndex.reserve(F->size());
@@ -3589,13 +3610,15 @@ void MachineBlockPlacement::applyExtTsp() {
     CurrentBlockOrder.push_back(&MBB);
   }
 
-  auto BlockSizes = std::vector<uint64_t>(F->size());
-  auto BlockCounts = std::vector<uint64_t>(F->size());
-  std::vector<codelayout::EdgeCount> JumpCounts;
+  SmallVector<uint64_t, 0> BlockCounts(F->size());
+  SmallVector<uint64_t, 0> BlockSizes(F->size());
+  SmallVector<codelayout::EdgeCount, 0> JumpCounts;
+  SmallVector<MachineOperand, 4> Cond; // For analyzeBranch.
+  SmallVector<const MachineBasicBlock *, 4> Succs;
   for (MachineBasicBlock &MBB : *F) {
     // Getting the block frequency.
     BlockFrequency BlockFreq = MBFI->getBlockFreq(&MBB);
-    BlockCounts[BlockIndex[&MBB]] = BlockFreq.getFrequency();
+    BlockCounts[BlockIndex[&MBB]] = OptForSize ? 1 : BlockFreq.getFrequency();
     // Getting the block size:
     // - approximate the size of an instruction by 4 bytes, and
     // - ignore debug instructions.
@@ -3604,23 +3627,49 @@ void MachineBlockPlacement::applyExtTsp() {
     // not see a perf improvement with the exact block sizes.
     auto NonDbgInsts =
         instructionsWithoutDebug(MBB.instr_begin(), MBB.instr_end());
-    int NumInsts = std::distance(NonDbgInsts.begin(), NonDbgInsts.end());
+    size_t NumInsts = std::distance(NonDbgInsts.begin(), NonDbgInsts.end());
     BlockSizes[BlockIndex[&MBB]] = 4 * NumInsts;
+
     // Getting jump frequencies.
-    for (MachineBasicBlock *Succ : MBB.successors()) {
-      auto EP = MBPI->getEdgeProbability(&MBB, Succ);
-      BlockFrequency JumpFreq = BlockFreq * EP;
-      JumpCounts.push_back(
-          {BlockIndex[&MBB], BlockIndex[Succ], JumpFreq.getFrequency()});
+    if (OptForSize) {
+      Cond.clear();
+      MachineBasicBlock *TBB = nullptr, *FBB = nullptr; // For analyzeBranch.
+      if (TII->analyzeBranch(MBB, TBB, FBB, Cond))
+        continue;
+
+      const MachineBasicBlock *FTB = MBB.getFallThrough();
+      // Succs is a collection of distinct destinations of the block reachable
+      // from MBB via a jump instruction; initialize the list using the three
+      // (non-necessarily distinct) blocks, FTB, TBB, and FBB.
+      Succs.clear();
+      if (TBB && TBB != FTB)
+        Succs.push_back(TBB);
+      if (FBB && FBB != FTB)
+        Succs.push_back(FBB);
+      if (FTB)
+        Succs.push_back(FTB);
+      // Absolute magnitude of non-zero counts does not matter for the
+      // optimization; prioritize slightly jumps with a single successor, since
+      // the corresponding jump instruction will be removed from the binary.
+      const uint64_t Freq = Succs.size() == 1 ? 110 : 100;
+      for (const MachineBasicBlock *Succ : Succs)
+        JumpCounts.push_back({BlockIndex[&MBB], BlockIndex[Succ], Freq});
+    } else {
+      for (MachineBasicBlock *Succ : MBB.successors()) {
+        auto EP = MBPI->getEdgeProbability(&MBB, Succ);
+        BlockFrequency JumpFreq = BlockFreq * EP;
+        JumpCounts.push_back(
+            {BlockIndex[&MBB], BlockIndex[Succ], JumpFreq.getFrequency()});
+      }
     }
   }
 
   LLVM_DEBUG(dbgs() << "Applying ext-tsp layout for |V| = " << F->size()
                     << " with profile = " << F->getFunction().hasProfileData()
-                    << " (" << F->getName().str() << ")"
-                    << "\n");
-  LLVM_DEBUG(dbgs() << format("  original  layout score: %0.2f\n",
-                              calcExtTspScore(BlockSizes, JumpCounts)));
+                    << " (" << F->getName() << ")" << "\n");
+
+  const double OrgScore = calcExtTspScore(BlockSizes, JumpCounts);
+  LLVM_DEBUG(dbgs() << format("  original  layout score: %0.2f\n", OrgScore));
 
   // Run the layout algorithm.
   auto NewOrder = computeExtTspLayout(BlockSizes, BlockCounts, JumpCounts);
@@ -3629,12 +3678,14 @@ void MachineBlockPlacement::applyExtTsp() {
   for (uint64_t Node : NewOrder) {
     NewBlockOrder.push_back(CurrentBlockOrder[Node]);
   }
-  LLVM_DEBUG(
-      dbgs() << format("  optimized layout score: %0.2f\n",
-                       calcExtTspScore(NewOrder, BlockSizes, JumpCounts)));
+  const double OptScore = calcExtTspScore(NewOrder, BlockSizes, JumpCounts);
+  LLVM_DEBUG(dbgs() << format("  optimized layout score: %0.2f\n", OptScore));
 
-  // Assign new block order.
-  assignBlockOrder(NewBlockOrder);
+  // If the optimization is unsuccessful, fall back to the original block order.
+  if (OptForSize && OrgScore > OptScore)
+    assignBlockOrder(CurrentBlockOrder);
+  else
+    assignBlockOrder(NewBlockOrder);
 }
 
 void MachineBlockPlacement::assignBlockOrder(

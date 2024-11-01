@@ -20,6 +20,16 @@ bool FunctionPassManager::runOnFunction(Function &F) {
   return Change;
 }
 
+bool RegionPassManager::runOnRegion(Region &R) {
+  bool Change = false;
+  for (RegionPass *Pass : Passes) {
+    Change |= Pass->runOnRegion(R);
+    // TODO: run the verifier.
+  }
+  // TODO: Check ChangeAll against hashes before/after.
+  return Change;
+}
+
 FunctionPassManager &
 PassRegistry::parseAndCreatePassPipeline(StringRef Pipeline) {
   static constexpr const char EndToken = '\0';

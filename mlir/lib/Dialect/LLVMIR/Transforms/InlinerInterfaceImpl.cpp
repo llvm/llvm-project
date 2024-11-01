@@ -16,6 +16,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Debug.h"
@@ -229,11 +230,10 @@ static FailureOr<SmallVector<Value>>
 getUnderlyingObjectSet(Value pointerValue) {
   SmallVector<Value> result;
   WalkContinuation walkResult = walkSlice(pointerValue, [&](Value val) {
-    if (auto gepOp = val.getDefiningOp<LLVM::GEPOp>())
-      return WalkContinuation::advanceTo(gepOp.getBase());
-
-    if (auto addrCast = val.getDefiningOp<LLVM::AddrSpaceCastOp>())
-      return WalkContinuation::advanceTo(addrCast.getOperand());
+    // Attempt to advance to the source of the underlying view-like operation.
+    // Examples of view-like operations include GEPOp and AddrSpaceCastOp.
+    if (auto viewOp = val.getDefiningOp<ViewLikeOpInterface>())
+      return WalkContinuation::advanceTo(viewOp.getViewSource());
 
     // Attempt to advance to control flow predecessors.
     std::optional<SmallVector<Value>> controlFlowPredecessors =

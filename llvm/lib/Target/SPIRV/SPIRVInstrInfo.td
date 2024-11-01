@@ -878,3 +878,7 @@ def OpCooperativeMatrixMulAddKHR: Op<4459, (outs ID:$res),
                   "$res = OpCooperativeMatrixMulAddKHR $type $A $B $C">;
 def OpCooperativeMatrixLengthKHR: Op<4460, (outs ID:$res), (ins TYPE:$type, ID:$coop_matr_type),
                   "$res = OpCooperativeMatrixLengthKHR $type $coop_matr_type">;
+
+// SPV_EXT_arithmetic_fence
+def OpArithmeticFenceEXT: Op<6145, (outs ID:$res), (ins TYPE:$type, ID:$target),
+                  "$res = OpArithmeticFenceEXT $type $target">;

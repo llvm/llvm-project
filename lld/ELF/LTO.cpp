@@ -62,7 +62,7 @@ static lto::Config createConfig(Ctx &ctx) {
   c.Options.DataSections = true;
 
   // Check if basic block sections must be used.
-  // Allowed values for --lto-basic-block-sections are "all", "labels",
+  // Allowed values for --lto-basic-block-sections are "all",
   // "<file name specifying basic block ids>", or none.  This is the equivalent
   // of -fbasic-block-sections= flag in clang.
   if (!ctx.arg.ltoBasicBlockSections.empty()) {
@@ -70,7 +70,8 @@ static lto::Config createConfig(Ctx &ctx) {
       c.Options.BBSections = BasicBlockSection::All;
     } else if (ctx.arg.ltoBasicBlockSections == "labels") {
       c.Options.BBAddrMap = true;
-      c.Options.BBSections = BasicBlockSection::None;
+      warn("'--lto-basic-block-sections=labels' is deprecated; Please use "
+           "'--lto-basic-block-address-map' instead");
     } else if (ctx.arg.ltoBasicBlockSections == "none") {
       c.Options.BBSections = BasicBlockSection::None;
     } else {
@@ -179,6 +180,7 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
   auto onIndexWrite = [&](StringRef s) { thinIndices.erase(s); };
   if (ctx.arg.thinLTOIndexOnly) {
     backend = lto::createWriteIndexesThinBackend(
+        llvm::hardware_concurrency(ctx.arg.thinLTOJobs),
         std::string(ctx.arg.thinLTOPrefixReplaceOld),
         std::string(ctx.arg.thinLTOPrefixReplaceNew),
         std::string(ctx.arg.thinLTOPrefixReplaceNativeObject),
@@ -292,7 +294,7 @@ static void thinLTOCreateEmptyIndexFiles(Ctx &ctx) {
     if (linkedBitCodeFiles.contains(f->getName()))
       continue;
     std::string path =
-        replaceThinLTOSuffix(getThinLTOOutputFile(ctx, f->obj->getName()));
+        replaceThinLTOSuffix(ctx, getThinLTOOutputFile(ctx, f->obj->getName()));
     std::unique_ptr<raw_fd_ostream> os = openFile(path + ".thinlto.bc");
     if (!os)
       continue;
@@ -413,7 +415,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
     if (savePrelink || ctx.arg.ltoEmitAsm)
       saveBuffer(buf[i].second, ltoObjName);
     if (!ctx.arg.ltoEmitAsm)
-      ret.push_back(createObjFile(MemoryBufferRef(objBuf, ltoObjName)));
+      ret.push_back(createObjFile(ctx, MemoryBufferRef(objBuf, ltoObjName)));
   }
   return ret;
 }

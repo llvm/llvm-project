@@ -1380,17 +1380,8 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
 
     SmallVector<Value> indices(linalgOp.getShape(opOperand).size(), zero);
 
-    // Make sure that the in_bounds attribute corresponding to a broadcast dim
-    // is `true`
-    SmallVector<unsigned> broadcastedDims = readMap.getBroadcastDims();
-    SmallVector<bool> inBounds(readType.getRank(), false);
-
-    for (auto idx : broadcastedDims)
-      inBounds[idx] = true;
-
     Operation *read = rewriter.create<vector::TransferReadOp>(
-        loc, readType, opOperand->get(), indices, readMap,
-        ArrayRef<bool>(inBounds));
+        loc, readType, opOperand->get(), indices, readMap);
     read = state.maskOperation(rewriter, read, linalgOp, indexingMap);
     Value readValue = read->getResult(0);
 
@@ -2092,6 +2083,10 @@ LogicalResult mlir::linalg::vectorizeOpPrecondition(
     Operation *op, ArrayRef<int64_t> inputVectorSizes,
     ArrayRef<bool> inputScalableVecDims, bool vectorizeNDExtract,
     bool flatten1DDepthwiseConv) {
+
+  if (!hasVectorizationImpl(op))
+    return failure();
+
   if (failed(vectorizeScalableVectorPrecondition(op, inputVectorSizes,
                                                  inputScalableVecDims)))
     return failure();
@@ -2127,6 +2122,11 @@ static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
         op.getOperands().take_back(op.getAffineMap().getNumSymbols()));
     rewriter.replaceOp(op, expanded);
   }
+}
+
+bool mlir::linalg::hasVectorizationImpl(Operation *op) {
+  return isa<linalg::LinalgOp, tensor::PadOp, tensor::PackOp, tensor::UnPackOp>(
+      op);
 }
 
 /// Emit a suitable vector form for an operation. If provided,

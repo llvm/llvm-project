@@ -6,7 +6,6 @@ add_entrypoint_object(
     ../remove.h
   DEPENDS
     libc.include.fcntl
-    libc.include.stdio
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -32,7 +31,6 @@ add_entrypoint_object(
   HDRS
     ../fdopen.h
   DEPENDS
-    libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
 )

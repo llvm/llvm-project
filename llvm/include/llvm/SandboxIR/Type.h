@@ -35,7 +35,7 @@ class TargetExtType;
 class Module;
 #define DEF_INSTR(ID, OPCODE, CLASS) class CLASS;
 #define DEF_CONST(ID, CLASS) class CLASS;
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
 
 /// Just like llvm::Type these are immutable, unique, never get freed and can
 /// only be created via static factory methods.
@@ -65,7 +65,7 @@ protected:
   // Friend all instruction classes because `create()` functions use LLVMTy.
 #define DEF_INSTR(ID, OPCODE, CLASS) friend class CLASS;
 #define DEF_CONST(ID, CLASS) friend class CLASS;
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
   Context &Ctx;
 
   Type(llvm::Type *LLVMTy, Context &Ctx) : LLVMTy(LLVMTy), Ctx(Ctx) {}

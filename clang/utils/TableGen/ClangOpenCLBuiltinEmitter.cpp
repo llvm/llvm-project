@@ -185,7 +185,7 @@ private:
   //        <<float>, 5>,
   //        ...
   //        <<double, double>, 35>.
-  std::vector<std::pair<std::vector<Record *>, unsigned>> SignaturesList;
+  std::vector<std::pair<std::vector<const Record *>, unsigned>> SignaturesList;
 
   // Map the name of a builtin function to its prototypes (instances of the
   // TableGen "Builtin" class).
@@ -261,8 +261,8 @@ protected:
   // Return the type(s) and vector size(s) for the given type.  For
   // non-GenericTypes, the resulting vectors will contain 1 element.  For
   // GenericTypes, the resulting vectors typically contain multiple elements.
-  void getTypeLists(Record *Type, TypeFlags &Flags,
-                    std::vector<Record *> &TypeList,
+  void getTypeLists(const Record *Type, TypeFlags &Flags,
+                    std::vector<const Record *> &TypeList,
                     std::vector<int64_t> &VectorList) const;
 
   // Expand the TableGen Records representing a builtin function signature into
@@ -278,7 +278,7 @@ protected:
   //   [char, float3, float3]
   //   ...
   void
-  expandTypesInSignature(const std::vector<Record *> &Signature,
+  expandTypesInSignature(ArrayRef<const Record *> Signature,
                          SmallVectorImpl<SmallVector<std::string, 2>> &Types);
 
   // Emit extension enabling pragmas.
@@ -458,7 +458,7 @@ struct OpenCLBuiltinStruct {
 // the same number of actual scalar or vector types.
 //
 // Exit with a fatal error if an unsupported construct is encountered.
-static void VerifySignature(const std::vector<Record *> &Signature,
+static void VerifySignature(ArrayRef<const Record *> Signature,
                             const Record *BuiltinRec) {
   unsigned GenTypeVecSizes = 1;
   unsigned GenTypeTypes = 1;
@@ -513,10 +513,11 @@ void BuiltinNameEmitter::GetOverloads() {
 
     auto Signature = B->getValueAsListOfDefs("Signature");
     // Reuse signatures to avoid unnecessary duplicates.
-    auto it = find_if(SignaturesList,
-                      [&](const std::pair<std::vector<Record *>, unsigned> &a) {
-                        return a.first == Signature;
-                      });
+    auto it =
+        find_if(SignaturesList,
+                [&](const std::pair<std::vector<const Record *>, unsigned> &a) {
+                  return a.first == Signature;
+                });
     unsigned SignIndex;
     if (it == SignaturesList.end()) {
       VerifySignature(Signature, B);
@@ -849,7 +850,7 @@ static void OCL2Qual(Sema &S, const OpenCLTypeStruct &Ty,
     // Build the Cartesian product of (vector sizes) x (types).  Only insert
     // the plain scalar types for now; other type information such as vector
     // size and type qualifiers will be added after the switch statement.
-    std::vector<Record *> BaseTypes =
+    std::vector<const Record *> BaseTypes =
         GenType->getValueAsDef("TypeList")->getValueAsListOfDefs("List");
 
     // Collect all QualTypes for a single vector size into TypeList.
@@ -1022,7 +1023,7 @@ std::string OpenCLBuiltinFileEmitterBase::getTypeString(const Record *Type,
 }
 
 void OpenCLBuiltinFileEmitterBase::getTypeLists(
-    Record *Type, TypeFlags &Flags, std::vector<Record *> &TypeList,
+    const Record *Type, TypeFlags &Flags, std::vector<const Record *> &TypeList,
     std::vector<int64_t> &VectorList) const {
   bool isGenType = Type->isSubClassOf("GenericType");
   if (isGenType) {
@@ -1035,7 +1036,7 @@ void OpenCLBuiltinFileEmitterBase::getTypeLists(
   if (Type->isSubClassOf("PointerType") || Type->isSubClassOf("ConstType") ||
       Type->isSubClassOf("VolatileType")) {
     StringRef SubTypeName = Type->getValueAsString("Name");
-    Record *PossibleGenType = Records.getDef(SubTypeName);
+    const Record *PossibleGenType = Records.getDef(SubTypeName);
     if (PossibleGenType && PossibleGenType->isSubClassOf("GenericType")) {
       // When PointerType, ConstType, or VolatileType is applied to a
       // GenericType, the flags need to be taken from the subtype, not from the
@@ -1055,7 +1056,7 @@ void OpenCLBuiltinFileEmitterBase::getTypeLists(
 }
 
 void OpenCLBuiltinFileEmitterBase::expandTypesInSignature(
-    const std::vector<Record *> &Signature,
+    ArrayRef<const Record *> Signature,
     SmallVectorImpl<SmallVector<std::string, 2>> &Types) {
   // Find out if there are any GenTypes in this signature, and if so, calculate
   // into how many signatures they will expand.
@@ -1063,7 +1064,7 @@ void OpenCLBuiltinFileEmitterBase::expandTypesInSignature(
   SmallVector<SmallVector<std::string, 4>, 4> ExpandedGenTypes;
   for (const auto &Arg : Signature) {
     SmallVector<std::string, 4> ExpandedArg;
-    std::vector<Record *> TypeList;
+    std::vector<const Record *> TypeList;
     std::vector<int64_t> VectorList;
     TypeFlags Flags;
 

@@ -412,8 +412,8 @@ gpuAddressSpaceToOCLAddressSpace(gpu::AddressSpace addressSpace) {
 }
 } // namespace
 
-void populateGpuToLLVMSPVConversionPatterns(LLVMTypeConverter &typeConverter,
-                                            RewritePatternSet &patterns) {
+void populateGpuToLLVMSPVConversionPatterns(
+    const LLVMTypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<GPUBarrierConversion, GPUReturnOpLowering, GPUShuffleConversion,
                GPUSubgroupOpConversion<gpu::LaneIdOp>,
                GPUSubgroupOpConversion<gpu::NumSubgroupsOp>,

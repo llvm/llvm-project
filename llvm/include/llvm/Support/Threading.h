@@ -188,6 +188,18 @@ constexpr bool llvm_is_multithreaded() { return LLVM_ENABLE_THREADS; }
     return S;
   }
 
+  /// Like hardware_concurrency() above, but builds a strategy
+  /// based on the rules described for get_threadpool_strategy().
+  /// If \p Num is invalid, returns a default strategy where one thread per
+  /// hardware core is used.
+  inline ThreadPoolStrategy hardware_concurrency(StringRef Num) {
+    std::optional<ThreadPoolStrategy> S =
+        get_threadpool_strategy(Num, hardware_concurrency());
+    if (S)
+      return *S;
+    return hardware_concurrency();
+  }
+
   /// Returns an optimal thread strategy to execute specified amount of tasks.
   /// This strategy should prevent us from creating too many threads if we
   /// occasionaly have an unexpectedly small amount of tasks.

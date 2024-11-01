@@ -713,6 +713,53 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   return Reg;
 }
 
+static std::string buildSpirvTypeName(const SPIRVType *Type,
+                                      MachineIRBuilder &MIRBuilder) {
+  switch (Type->getOpcode()) {
+  case SPIRV::OpTypeImage: {
+    Register SampledTypeReg = Type->getOperand(1).getReg();
+    auto *SampledType = MIRBuilder.getMRI()->getUniqueVRegDef(SampledTypeReg);
+    std::string TypeName =
+        "image_" + buildSpirvTypeName(SampledType, MIRBuilder);
+    for (uint32_t I = 2; I < Type->getNumOperands(); ++I) {
+      TypeName = (TypeName + '_' + Twine(Type->getOperand(I).getImm())).str();
+    }
+    return TypeName;
+  }
+  case SPIRV::OpTypeFloat:
+    return ("f" + Twine(Type->getOperand(1).getImm())).str();
+  case SPIRV::OpTypeInt:
+    if (Type->getOperand(2).getImm())
+      return ("i" + Twine(Type->getOperand(1).getImm())).str();
+    return ("u" + Twine(Type->getOperand(1).getImm())).str();
+  default:
+    llvm_unreachable("Trying to the the name of an unknown type.");
+  }
+}
+
+Register SPIRVGlobalRegistry::getOrCreateGlobalVariableWithBinding(
+    const SPIRVType *VarType, uint32_t Set, uint32_t Binding,
+    MachineIRBuilder &MIRBuilder) {
+  SPIRVType *VarPointerTypeReg = getOrCreateSPIRVPointerType(
+      VarType, MIRBuilder, SPIRV::StorageClass::UniformConstant);
+  Register VarReg =
+      MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
+
+  // TODO: The name should come from the llvm-ir, but how that name will be
+  // passed from the HLSL to the backend has not been decided. Using this place
+  // holder for now.
+  std::string Name = ("__resource_" + buildSpirvTypeName(VarType, MIRBuilder) +
+                      "_" + Twine(Set) + "_" + Twine(Binding))
+                         .str();
+  buildGlobalVariable(VarReg, VarPointerTypeReg, Name, nullptr,
+                      SPIRV::StorageClass::UniformConstant, nullptr, false,
+                      false, SPIRV::LinkageType::Import, MIRBuilder, false);
+
+  buildOpDecorate(VarReg, MIRBuilder, SPIRV::Decoration::DescriptorSet, {Set});
+  buildOpDecorate(VarReg, MIRBuilder, SPIRV::Decoration::Binding, {Binding});
+  return VarReg;
+}
+
 SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
                                                SPIRVType *ElemType,
                                                MachineIRBuilder &MIRBuilder,
@@ -1128,6 +1175,11 @@ SPIRVGlobalRegistry::getPointerStorageClass(Register VReg) const {
   SPIRVType *Type = getSPIRVTypeForVReg(VReg);
   assert(Type && Type->getOpcode() == SPIRV::OpTypePointer &&
          Type->getOperand(1).isImm() && "Pointer type is expected");
+  return getPointerStorageClass(Type);
+}
+
+SPIRV::StorageClass::StorageClass
+SPIRVGlobalRegistry::getPointerStorageClass(const SPIRVType *Type) const {
   return static_cast<SPIRV::StorageClass::StorageClass>(
       Type->getOperand(1).getImm());
 }
@@ -1144,16 +1196,19 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeImage(
     return Res;
   Register ResVReg = createTypeVReg(MIRBuilder);
   DT.add(TD, &MIRBuilder.getMF(), ResVReg);
-  return MIRBuilder.buildInstr(SPIRV::OpTypeImage)
-      .addDef(ResVReg)
-      .addUse(getSPIRVTypeID(SampledType))
-      .addImm(Dim)
-      .addImm(Depth)        // Depth (whether or not it is a Depth image).
-      .addImm(Arrayed)      // Arrayed.
-      .addImm(Multisampled) // Multisampled (0 = only single-sample).
-      .addImm(Sampled)      // Sampled (0 = usage known at runtime).
-      .addImm(ImageFormat)
-      .addImm(AccessQual);
+  auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeImage)
+                 .addDef(ResVReg)
+                 .addUse(getSPIRVTypeID(SampledType))
+                 .addImm(Dim)
+                 .addImm(Depth)   // Depth (whether or not it is a Depth image).
+                 .addImm(Arrayed) // Arrayed.
+                 .addImm(Multisampled) // Multisampled (0 = only single-sample).
+                 .addImm(Sampled)      // Sampled (0 = usage known at runtime).
+                 .addImm(ImageFormat);
+
+  if (AccessQual != SPIRV::AccessQualifier::None)
+    MIB.addImm(AccessQual);
+  return MIB;
 }
 
 SPIRVType *

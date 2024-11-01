@@ -463,12 +463,11 @@ void DirectiveStructureChecker<D, C, PC,
   }
   // No clause matched in the actual clauses list
   if (warnInsteadOfError) {
-    if (context_.ShouldWarn(common::UsageWarning::Portability)) {
-      context_.Say(GetContext().directiveSource,
-          "At least one of %s clause should appear on the %s directive"_port_en_US,
-          ClauseSetToString(GetContext().requiredClauses),
-          ContextDirectiveAsFortran());
-    }
+    context_.Warn(common::UsageWarning::Portability,
+        GetContext().directiveSource,
+        "At least one of %s clause should appear on the %s directive"_port_en_US,
+        ClauseSetToString(GetContext().requiredClauses),
+        ContextDirectiveAsFortran());
   } else {
     context_.Say(GetContext().directiveSource,
         "At least one of %s clause must appear on the %s directive"_err_en_US,
@@ -493,13 +492,11 @@ bool DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckAllowed(
       !GetContext().allowedExclusiveClauses.test(clause) &&
       !GetContext().requiredClauses.test(clause)) {
     if (warnInsteadOfError) {
-      if (context_.ShouldWarn(common::UsageWarning::Portability)) {
-        context_.Say(GetContext().clauseSource,
-            "%s clause is not allowed on the %s directive and will be ignored"_port_en_US,
-            parser::ToUpperCaseLetters(getClauseName(clause).str()),
-            parser::ToUpperCaseLetters(
-                GetContext().directiveSource.ToString()));
-      }
+      context_.Warn(common::UsageWarning::Portability,
+          GetContext().clauseSource,
+          "%s clause is not allowed on the %s directive and will be ignored"_port_en_US,
+          parser::ToUpperCaseLetters(getClauseName(clause).str()),
+          parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()));
     } else {
       context_.Say(GetContext().clauseSource,
           "%s clause is not allowed on the %s directive"_err_en_US,

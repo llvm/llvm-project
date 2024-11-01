@@ -2508,7 +2508,7 @@ const char *LLVMIntrinsicCopyOverloadedName2(LLVMModuleRef Mod, unsigned ID,
 }
 
 unsigned LLVMLookupIntrinsicID(const char *Name, size_t NameLen) {
-  return Function::lookupIntrinsicID({Name, NameLen});
+  return Intrinsic::lookupIntrinsicID({Name, NameLen});
 }
 
 LLVMBool LLVMIntrinsicIsOverloaded(unsigned ID) {

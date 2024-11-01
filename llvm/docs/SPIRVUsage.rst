@@ -147,6 +147,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds atomic add instruction on floating-point numbers.
    * - ``SPV_EXT_shader_atomic_float_min_max``
      - Adds atomic min and max instruction on floating-point numbers.
+   * - ``SPV_EXT_arithmetic_fence``
+     - Adds an instruction that prevents fast-math optimizations between its argument and the expression that contains it.
    * - ``SPV_INTEL_arbitrary_precision_integers``
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bfloat16_conversion``
@@ -221,19 +223,19 @@ using target extension types and are represented as follows:
 
   .. table:: SPIR-V Opaque Types
 
-     ================== ====================== =========================================================================================
+     ================== ====================== ===========================================================================================
      SPIR-V Type        LLVM type name         LLVM type arguments
-     ================== ====================== =========================================================================================
-     OpTypeImage        ``spirv.Image``        sampled type, dimensionality, depth, arrayed, MS, sampled, image format, access qualifier
+     ================== ====================== ===========================================================================================
+     OpTypeImage        ``spirv.Image``        sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
      OpTypeSampler      ``spirv.Sampler``      (none)
-     OpTypeSampledImage ``spirv.SampledImage`` sampled type, dimensionality, depth, arrayed, MS, sampled, image format, access qualifier
+     OpTypeSampledImage ``spirv.SampledImage`` sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
      OpTypeEvent        ``spirv.Event``        (none)
      OpTypeDeviceEvent  ``spirv.DeviceEvent``  (none)
      OpTypeReserveId    ``spirv.ReserveId``    (none)
      OpTypeQueue        ``spirv.Queue``        (none)
      OpTypePipe         ``spirv.Pipe``         access qualifier
      OpTypePipeStorage  ``spirv.PipeStorage``  (none)
-     ================== ====================== =========================================================================================
+     ================== ====================== ===========================================================================================
 
 All integer arguments take the same value as they do in their `corresponding
 SPIR-V instruction <https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_type_declaration_instructions>`_.
@@ -379,6 +381,13 @@ SPIR-V backend, along with their descriptions and argument details.
      - Pointer
      - `[8-bit Integer]`
      - Creates a resource handle for graphics or compute resources. Facilitates the management and use of resources in shaders.
+   * - `int_spv_handle_fromBinding`
+     - spirv.Image
+     - `[32-bit Integer set, 32-bit Integer binding, 32-bit Integer arraySize, 32-bit Integer index, bool isUniformIndex]`
+     - Returns the handle for the resource at the given set and binding.\
+       If `arraySize > 1`, then the binding represents an array of resources\
+       of the given size, and the handle for the resource at the given index is returned.\
+       If the index is possibly non-uniform, then `isUniformIndex` must get set to true.
 
 .. _spirv-builtin-functions:
 
