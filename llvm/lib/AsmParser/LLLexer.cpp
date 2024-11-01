@@ -267,7 +267,7 @@ void LLLexer::SkipLineComment() {
   }
 }
 
-/// SkipCComment - This skips C-style /**/ comments. Returns true if there
+/// This skips C-style /**/ comments. Returns true if there
 /// was an error.
 bool LLLexer::SkipCComment() {
   while (true) {
