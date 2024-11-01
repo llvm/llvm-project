@@ -1,5 +1,14 @@
 // RUN: %check_clang_tidy %s performance-noexcept-move-constructor %t -- -- -fexceptions
 
+namespace std
+{
+  template <typename T>
+  struct is_nothrow_move_constructible
+  {
+    static constexpr bool value = __is_nothrow_constructible(T, __add_rvalue_reference(T));
+  };
+} // namespace std
+
 struct Empty
 {};
 
@@ -379,3 +388,12 @@ struct OK31 {
   OK31(OK31 &&) noexcept(TrueT<int>::value) = default;
   OK31& operator=(OK31 &&) noexcept(TrueT<int>::value) = default;
 };
+
+namespace gh68101
+{
+  template <typename T>
+  class Container {
+     public:
+      Container(Container&&) noexcept(std::is_nothrow_move_constructible<T>::value);
+  };
+} // namespace gh68101

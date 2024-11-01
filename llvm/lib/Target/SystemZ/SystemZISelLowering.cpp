@@ -1613,7 +1613,23 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
       InVals.push_back(convertLocVTToValVT(DAG, DL, VA, Chain, ArgValue));
   }
 
-  // FIXME: Add support for lowering varargs for XPLINK64 in a later patch.
+  if (IsVarArg && Subtarget.isTargetXPLINK64()) {
+    // Save the number of non-varargs registers for later use by va_start, etc.
+    FuncInfo->setVarArgsFirstGPR(NumFixedGPRs);
+    FuncInfo->setVarArgsFirstFPR(NumFixedFPRs);
+
+    auto *Regs = static_cast<SystemZXPLINK64Registers *>(
+        Subtarget.getSpecialRegisters());
+
+    // Likewise the address (in the form of a frame index) of where the
+    // first stack vararg would be.  The 1-byte size here is arbitrary.
+    // FIXME: Pre-include call frame size in the offset, should not
+    // need to manually add it here.
+    int64_t VarArgOffset = CCInfo.getStackSize() + Regs->getCallFrameSize();
+    int FI = MFI.CreateFixedObject(1, VarArgOffset, true);
+    FuncInfo->setVarArgsFrameIndex(FI);
+  }
+
   if (IsVarArg && Subtarget.isTargetELF()) {
     // Save the number of non-varargs registers for later use by va_start, etc.
     FuncInfo->setVarArgsFirstGPR(NumFixedGPRs);

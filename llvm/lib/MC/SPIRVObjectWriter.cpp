@@ -24,7 +24,7 @@ class SPIRVObjectWriter : public MCObjectWriter {
 public:
   SPIRVObjectWriter(std::unique_ptr<MCSPIRVObjectTargetWriter> MOTW,
                     raw_pwrite_stream &OS)
-      : W(OS, support::little), TargetObjectWriter(std::move(MOTW)) {}
+      : W(OS, llvm::endianness::little), TargetObjectWriter(std::move(MOTW)) {}
 
   ~SPIRVObjectWriter() override {}
 

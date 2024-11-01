@@ -2662,7 +2662,9 @@ TypeSourceInfo *Sema::SubstFunctionDeclType(TypeSourceInfo *T,
   } else {
     Result = Instantiator.TransformType(TLB, TL);
   }
-  if (Result.isNull())
+  // When there are errors resolving types, clang may use IntTy as a fallback,
+  // breaking our assumption that function declarations have function types.
+  if (Result.isNull() || !Result->isFunctionType())
     return nullptr;
 
   return TLB.getTypeSourceInfo(Context, Result);

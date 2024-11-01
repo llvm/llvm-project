@@ -10,7 +10,7 @@
 // CHECK-NEXT: sw t0, 0(a5)
 
 // CHECK-LABEL: Binary Function "tls_ie" after building cfg {
-// CHECK-LABEL: .Ltmp0
+// CHECK-LABEL: .LBB01
 // CHECK:      auipc a0, %pcrel_hi(__BOLT_got_zero+{{[0-9]+}})
 // CHECK-NEXT: ld a0, %pcrel_lo(.Ltmp0)(a0)
     .text

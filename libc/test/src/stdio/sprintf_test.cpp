@@ -748,6 +748,9 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%.5a", nan);
   ASSERT_STREQ_LEN(written, buff, "nan");
 
+  written = LIBC_NAMESPACE::sprintf(buff, "%La", 0.0L);
+  ASSERT_STREQ_LEN(written, buff, "0x0p+0");
+
   written = LIBC_NAMESPACE::sprintf(buff, "%.1La", 0.1L);
 #if defined(SPECIAL_X86_LONG_DOUBLE)
   ASSERT_STREQ_LEN(written, buff, "0xc.dp-7");

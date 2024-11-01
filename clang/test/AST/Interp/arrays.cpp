@@ -333,6 +333,26 @@ namespace IncDec {
                                    // expected-note {{in call to}} \
                                    // ref-error {{not an integral constant expression}} \
                                   // ref-note {{in call to}}
+
+  constexpr int nullptr1(bool Pre) {
+    int *a = nullptr;
+    if (Pre)
+      ++a; // ref-note {{arithmetic on null pointer}} \
+           // expected-note {{arithmetic on null pointer}}
+    else
+      a++; // ref-note {{arithmetic on null pointer}} \
+           // expected-note {{arithmetic on null pointer}}
+    return 1;
+  }
+  static_assert(nullptr1(true) == 1, ""); // ref-error {{not an integral constant expression}} \
+                                          // ref-note {{in call to}} \
+                                          // expected-error {{not an integral constant expression}} \
+                                          // expected-note {{in call to}}
+
+  static_assert(nullptr1(false) == 1, ""); // ref-error {{not an integral constant expression}} \
+                                           // ref-note {{in call to}} \
+                                           // expected-error {{not an integral constant expression}} \
+                                           // expected-note {{in call to}}
 };
 
 namespace ZeroInit {

@@ -2093,6 +2093,7 @@ public:
     AK_DebugComment,
     AK_CustomCXX,
     AK_BuildMI,
+    AK_BuildConstantMI,
     AK_EraseInst,
     AK_ReplaceReg,
     AK_ConstraintOpsToDef,
@@ -2182,6 +2183,24 @@ public:
     OperandRenderers.emplace_back(
         std::make_unique<Kind>(InsnID, std::forward<Args>(args)...));
     return *static_cast<Kind *>(OperandRenderers.back().get());
+  }
+
+  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
+};
+
+/// Generates code to create a constant that defines a TempReg.
+/// The instruction created is usually a G_CONSTANT but it could also be a
+/// G_BUILD_VECTOR for vector types.
+class BuildConstantAction : public MatchAction {
+  unsigned TempRegID;
+  int64_t Val;
+
+public:
+  BuildConstantAction(unsigned TempRegID, int64_t Val)
+      : MatchAction(AK_BuildConstantMI), TempRegID(TempRegID), Val(Val) {}
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_BuildConstantMI;
   }
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;

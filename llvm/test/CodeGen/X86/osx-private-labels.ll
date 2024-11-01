@@ -36,7 +36,7 @@
 
 @private6 = private unnamed_addr constant i128 42
 ; CHECK: .section	__TEXT,__literal16,16byte_literals
-; CHECK-NEXT: .p2align	3
+; CHECK-NEXT: .p2align	4
 ; CHECK-NEXT: L_private6:
 
 %struct._objc_class = type { ptr }

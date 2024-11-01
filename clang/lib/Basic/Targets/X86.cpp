@@ -376,6 +376,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasTSXLDTRK = true;
     } else if (Feature == "+uintr") {
       HasUINTR = true;
+    } else if (Feature == "+usermsr") {
+      HasUSERMSR = true;
     } else if (Feature == "+crc32") {
       HasCRC32 = true;
     } else if (Feature == "+x87") {
@@ -869,6 +871,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__TSXLDTRK__");
   if (HasUINTR)
     Builder.defineMacro("__UINTR__");
+  if (HasUSERMSR)
+    Builder.defineMacro("__USERMSR__");
   if (HasCRC32)
     Builder.defineMacro("__CRC32__");
 
@@ -1053,6 +1057,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("tbm", true)
       .Case("tsxldtrk", true)
       .Case("uintr", true)
+      .Case("usermsr", true)
       .Case("vaes", true)
       .Case("vpclmulqdq", true)
       .Case("wbnoinvd", true)
@@ -1162,6 +1167,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("tbm", HasTBM)
       .Case("tsxldtrk", HasTSXLDTRK)
       .Case("uintr", HasUINTR)
+      .Case("usermsr", HasUSERMSR)
       .Case("vaes", HasVAES)
       .Case("vpclmulqdq", HasVPCLMULQDQ)
       .Case("wbnoinvd", HasWBNOINVD)

@@ -337,29 +337,20 @@ bool DynamicLoaderPOSIXDYLD::SetRendezvousBreakpoint() {
     };
 
     ModuleSP interpreter = LoadInterpreterModule();
-    if (!interpreter) {
-      FileSpecList containingModules;
+    FileSpecList containingModules;
+    if (interpreter)
+      containingModules.Append(interpreter->GetFileSpec());
+    else
       containingModules.Append(
           m_process->GetTarget().GetExecutableModulePointer()->GetFileSpec());
 
-      dyld_break = target.CreateBreakpoint(
-          &containingModules, /*containingSourceFiles=*/nullptr,
-          DebugStateCandidates, eFunctionNameTypeFull, eLanguageTypeC,
-          /*m_offset=*/0,
-          /*skip_prologue=*/eLazyBoolNo,
-          /*internal=*/true,
-          /*request_hardware=*/false);
-    } else {
-      FileSpecList containingModules;
-      containingModules.Append(interpreter->GetFileSpec());
-      dyld_break = target.CreateBreakpoint(
-          &containingModules, /*containingSourceFiles=*/nullptr,
-          DebugStateCandidates, eFunctionNameTypeFull, eLanguageTypeC,
-          /*m_offset=*/0,
-          /*skip_prologue=*/eLazyBoolNo,
-          /*internal=*/true,
-          /*request_hardware=*/false);
-    }
+    dyld_break = target.CreateBreakpoint(
+        &containingModules, /*containingSourceFiles=*/nullptr,
+        DebugStateCandidates, eFunctionNameTypeFull, eLanguageTypeC,
+        /*m_offset=*/0,
+        /*skip_prologue=*/eLazyBoolNo,
+        /*internal=*/true,
+        /*request_hardware=*/false);
   }
 
   if (dyld_break->GetNumResolvedLocations() != 1) {

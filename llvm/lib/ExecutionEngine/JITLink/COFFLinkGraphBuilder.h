@@ -14,7 +14,6 @@
 #define LIB_EXECUTIONENGINE_JITLINK_COFFLINKGRAPHBUILDER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/Object/COFF.h"
 
@@ -162,7 +161,7 @@ private:
                                  const object::coff_section *Section);
   static bool isComdatSection(const object::coff_section *Section);
   static unsigned getPointerSize(const object::COFFObjectFile &Obj);
-  static support::endianness getEndianness(const object::COFFObjectFile &Obj);
+  static llvm::endianness getEndianness(const object::COFFObjectFile &Obj);
   static StringRef getDLLImportStubPrefix() { return "__imp_"; }
   static StringRef getDirectiveSectionName() { return ".drectve"; }
   StringRef getCOFFSectionName(COFFSectionIndex SectionIndex,

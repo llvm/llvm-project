@@ -56,6 +56,7 @@ if(ANDROID)
 endif()
 
 set(SCUDO_HEADERS
+  allocator_common.h
   allocator_config.h
   atomic_helpers.h
   bytemap.h
@@ -83,6 +84,7 @@ set(SCUDO_HEADERS
   quarantine.h
   release.h
   report.h
+  report_linux.h
   secondary.h
   size_class_map.h
   stack_depot.h
@@ -112,6 +114,7 @@ set(SCUDO_SOURCES
   mem_map_linux.cpp
   release.cpp
   report.cpp
+  report_linux.cpp
   string_utils.cpp
   timing.cpp
   )

@@ -376,7 +376,6 @@ CHECK_SIMPLE_CLAUSE(DeviceNum, ACCC_device_num)
 CHECK_SIMPLE_CLAUSE(Finalize, ACCC_finalize)
 CHECK_SIMPLE_CLAUSE(Firstprivate, ACCC_firstprivate)
 CHECK_SIMPLE_CLAUSE(Host, ACCC_host)
-CHECK_SIMPLE_CLAUSE(If, ACCC_if)
 CHECK_SIMPLE_CLAUSE(IfPresent, ACCC_if_present)
 CHECK_SIMPLE_CLAUSE(Independent, ACCC_independent)
 CHECK_SIMPLE_CLAUSE(NoCreate, ACCC_no_create)
@@ -658,6 +657,20 @@ void AccStructureChecker::Enter(const parser::AccClause::DeviceResident &x) {
 void AccStructureChecker::Enter(const parser::AccClause::Link &x) {
   CheckAllowed(llvm::acc::Clause::ACCC_link);
   CheckMultipleOccurrenceInDeclare(x.v, llvm::acc::Clause::ACCC_link);
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::If &x) {
+  CheckAllowed(llvm::acc::Clause::ACCC_if);
+  if (const auto *expr{GetExpr(x.v)}) {
+    if (auto type{expr->GetType()}) {
+      if (type->category() == TypeCategory::Integer ||
+          type->category() == TypeCategory::Logical) {
+        return; // LOGICAL and INTEGER type supported for the if clause.
+      }
+    }
+  }
+  context_.Say(
+      GetContext().clauseSource, "Must have LOGICAL or INTEGER type"_err_en_US);
 }
 
 void AccStructureChecker::Enter(const parser::Module &) {

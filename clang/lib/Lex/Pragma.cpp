@@ -1769,7 +1769,7 @@ struct PragmaModuleBeginHandler : public PragmaHandler {
 
     // If the module isn't available, it doesn't make sense to enter it.
     if (Preprocessor::checkModuleIsAvailable(
-            PP.getLangOpts(), PP.getTargetInfo(), PP.getDiagnostics(), M)) {
+            PP.getLangOpts(), PP.getTargetInfo(), *M, PP.getDiagnostics())) {
       PP.Diag(BeginLoc, diag::note_pp_module_begin_here)
         << M->getTopLevelModuleName();
       return;

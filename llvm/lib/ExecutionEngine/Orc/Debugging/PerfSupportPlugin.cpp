@@ -29,7 +29,7 @@ namespace {
 // to the start of the .eh_frame section. Absolute injects a 64-bit absolute
 // address space offset 4 bytes from the start instead of 4 bytes
 Expected<std::string> createX64EHFrameHeader(Section &EHFrame,
-                                             support::endianness endianness,
+                                             llvm::endianness endianness,
                                              bool absolute) {
   uint8_t Version = 1;
   uint8_t EhFramePtrEnc = 0;

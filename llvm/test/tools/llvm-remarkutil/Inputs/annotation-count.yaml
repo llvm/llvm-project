@@ -1,7 +1,7 @@
 --- !Analysis
 Pass:            annotation-remarks
 Name:            AnnotationSummary
-Function:        func1 
+Function:        func1
 Args:
   - String:          'Annotated '
   - count:           '1'
@@ -10,7 +10,7 @@ Args:
 --- !Analysis
 Pass:            annotation-remarks
 Name:            AnnotationSummary
-Function:        func2 
+Function:        func2
 Args:
   - String:          'Annotated '
   - count:           '2'

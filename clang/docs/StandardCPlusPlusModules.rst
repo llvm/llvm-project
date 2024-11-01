@@ -686,6 +686,15 @@ the BMI within ``clang-cl.exe``.
 
 This is tracked in: https://github.com/llvm/llvm-project/issues/64118
 
+delayed template parsing is not supported/broken with C++ modules
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The feature `-fdelayed-template-parsing` can't work well with C++ modules now.
+Note that this is significant on Windows since the option will be enabled by default
+on Windows.
+
+This is tracked in: https://github.com/llvm/llvm-project/issues/61068
+
 Header Units
 ============
 

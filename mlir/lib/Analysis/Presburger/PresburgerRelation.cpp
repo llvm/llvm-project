@@ -43,7 +43,7 @@ void PresburgerRelation::convertVarKind(VarKind srcKind, unsigned srcPos,
                                         unsigned num, VarKind dstKind,
                                         unsigned dstPos) {
   assert(srcKind != VarKind::Local && dstKind != VarKind::Local &&
-      "srcKind/dstKind cannot be local");
+         "srcKind/dstKind cannot be local");
   assert(srcKind != dstKind && "cannot convert variables to the same kind");
   assert(srcPos + num <= space.getNumVarKind(srcKind) &&
          "invalid range for source variables");
@@ -636,17 +636,13 @@ bool PresburgerRelation::isPlainEqual(const PresburgerRelation &set) const {
 /// one unconstrained disjunct, indicating the absence of constraints or
 /// conditions.
 bool PresburgerRelation::isPlainUniverse() const {
-  for (auto &disjunct : getAllDisjuncts()) {
-    if (disjunct.getNumConstraints() == 0)
-      return true;
-  }
-  return false;
+  return llvm::any_of(getAllDisjuncts(), [](const IntegerRelation &disjunct) {
+    return disjunct.getNumConstraints() == 0;
+  });
 }
 
 bool PresburgerRelation::isConvexNoLocals() const {
-  if (getNumDisjuncts() == 1 && getSpace().getNumLocalVars() == 0)
-    return true;
-  return false;
+  return getNumDisjuncts() == 1 && getSpace().getNumLocalVars() == 0;
 }
 
 /// Return true if there is no disjunct, false otherwise.
@@ -823,8 +819,8 @@ PresburgerRelation SetCoalescer::coalesce() {
   }
 
   PresburgerRelation newSet = PresburgerRelation::getEmpty(space);
-  for (unsigned i = 0, e = disjuncts.size(); i < e; ++i)
-    newSet.unionInPlace(disjuncts[i]);
+  for (const IntegerRelation &disjunct : disjuncts)
+    newSet.unionInPlace(disjunct);
 
   return newSet;
 }

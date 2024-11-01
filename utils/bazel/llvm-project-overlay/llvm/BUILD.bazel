@@ -1664,6 +1664,23 @@ cc_library(
 )
 
 cc_library(
+    name = "HipStdPar",
+    srcs = glob([
+        "lib/Transforms/HipStdPar/*.cpp",
+        "lib/Transforms/HipStdPar/*.h",
+    ]),
+    hdrs = ["include/llvm/Transforms/HipStdPar/HipStdPar.h"],
+    copts = llvm_copts,
+    deps = [
+        ":Analysis",
+        ":Core",
+        ":Support",
+        ":TargetParser",
+        ":TransformUtils",
+    ],
+)
+
+cc_library(
     name = "Coroutines",
     srcs = glob([
         "lib/Transforms/Coroutines/*.cpp",
@@ -2502,22 +2519,23 @@ cc_library(
         ":AggressiveInstCombine",
         ":Analysis",
         ":CodeGen",
+        ":common_transforms",
+        ":config",
         ":Core",
         ":Coroutines",
-        ":IPO",
-        ":IRPrinter",
+        ":HipStdPar",
         ":InstCombine",
         ":Instrumentation",
+        ":IPO",
+        ":IRPrinter",
         ":MLPolicies",
         ":ObjCARC",
+        ":pass_registry_def",
         ":Scalar",
         ":Support",
         ":Target",
         ":TransformUtils",
         ":Vectorize",
-        ":common_transforms",
-        ":config",
-        ":pass_registry_def",
     ],
 )
 

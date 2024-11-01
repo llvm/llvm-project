@@ -227,8 +227,8 @@ protected:
         // Set context format&endianness based on the input file.
         Format.Version = File.Dwarf->getMaxVersion();
         Format.AddrSize = File.Dwarf->getCUAddrSize();
-        Endianness = File.Dwarf->isLittleEndian() ? support::endianness::little
-                                                  : support::endianness::big;
+        Endianness = File.Dwarf->isLittleEndian() ? llvm::endianness::little
+                                                  : llvm::endianness::big;
       }
     }
 

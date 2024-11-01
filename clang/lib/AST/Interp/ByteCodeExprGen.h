@@ -106,6 +106,7 @@ public:
   bool VisitCXXConstructExpr(const CXXConstructExpr *E);
   bool VisitSourceLocExpr(const SourceLocExpr *E);
   bool VisitOffsetOfExpr(const OffsetOfExpr *E);
+  bool VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -221,7 +222,7 @@ private:
   friend class SourceLocScope<Emitter>;
 
   /// Emits a zero initializer.
-  bool visitZeroInitializer(QualType QT, const Expr *E);
+  bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
   bool visitZeroRecordInitializer(const Record *R, const Expr *E);
 
   enum class DerefKind {

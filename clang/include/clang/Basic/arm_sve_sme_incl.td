@@ -61,7 +61,8 @@
 // -------------------
 // prototype: return (arg, arg, ...)
 //
-// 2,3,4: array of default vectors
+// 2,3,4: array of vectors
+// .: indicator for multi-vector modifier that will follow (e.g. 2.x)
 // v: void
 // x: vector of signed integers
 // u: vector of unsigned integers
@@ -246,6 +247,7 @@ def ImmCheck0_3                 : ImmCheckType<15>; // 0..3
 def ImmCheck0_0                 : ImmCheckType<16>; // 0..0
 def ImmCheck0_15                : ImmCheckType<17>; // 0..15
 def ImmCheck0_255               : ImmCheckType<18>; // 0..255
+def ImmCheck2_4_Mul2            : ImmCheckType<19>; // 2, 4
 
 class ImmCheck<int arg, ImmCheckType kind, int eltSizeArg = -1> {
   int Arg = arg;

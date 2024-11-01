@@ -18,6 +18,7 @@
 
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 namespace {
 

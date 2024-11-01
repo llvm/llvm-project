@@ -46,7 +46,6 @@ private:
   bool legalizeSmallCMGlobalValue(MachineInstr &MI, MachineRegisterInfo &MRI,
                                   MachineIRBuilder &MIRBuilder,
                                   GISelChangeObserver &Observer) const;
-  bool legalizeVectorTrunc(MachineInstr &MI, LegalizerHelper &Helper) const;
   bool legalizeBitfieldExtract(MachineInstr &MI, MachineRegisterInfo &MRI,
                                LegalizerHelper &Helper) const;
   bool legalizeRotate(MachineInstr &MI, MachineRegisterInfo &MRI,

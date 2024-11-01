@@ -62,7 +62,7 @@
 // CHECK-CONVERT: memref.dealloc %[[A]] : memref<?xf64>
 // CHECK-CONVERT: memref.dealloc %[[B]] : memref<?xi1>
 // CHECK-CONVERT: memref.dealloc %[[C]] : memref<?xindex>
-// CHECK-CONVERT: call @endInsert
+// CHECK-CONVERT: call @endLexInsert
 //
 func.func @kernel(%arga: tensor<?x?xf64, #DCSC>) -> tensor<?xf64, #SV> {
   %c0 = arith.constant 0 : index
@@ -115,7 +115,7 @@ func.func @kernel(%arga: tensor<?x?xf64, #DCSC>) -> tensor<?xf64, #SV> {
 // CHECK-CONVERT: memref.dealloc %[[A]] : memref<?xf64>
 // CHECK-CONVERT: memref.dealloc %[[B]] : memref<?xi1>
 // CHECK-CONVERT: memref.dealloc %[[C]] : memref<?xindex>
-// CHECK-CONVERT: call @endInsert
+// CHECK-CONVERT: call @endLexInsert
 //
 func.func @matmul1(%A: tensor<8x2xf64, #CSR>,
                    %B: tensor<2x4xf64, #CSR>) -> tensor<8x4xf64, #CSR> {
@@ -163,7 +163,7 @@ func.func @matmul1(%A: tensor<8x2xf64, #CSR>,
 // CHECK-CONVERT: memref.dealloc %[[A]] : memref<?xf64>
 // CHECK-CONVERT: memref.dealloc %[[B]] : memref<?xi1>
 // CHECK-CONVERT: memref.dealloc %[[C]] : memref<?xindex>
-// CHECK-CONVERT: call @endInsert
+// CHECK-CONVERT: call @endLexInsert
 //
 func.func @matmul2(%A: tensor<8x2xf64, #CSC>,
                    %B: tensor<2x4xf64, #CSC>) -> tensor<8x4xf64, #CSC> {

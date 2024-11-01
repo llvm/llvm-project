@@ -380,7 +380,7 @@ let mayStore = 1, mayLoad = 1,
     Defs = [CR0],
     Constraints = "@earlyclobber $scratch,@earlyclobber $RTp" in {
 // Atomic pseudo instructions expanded post-ra.
-def ATOMIC_SWAP_I128 : AtomicRMW128<"#ATOMIC_SWAP_I128">;
+def ATOMIC_SWAP_I128      : AtomicRMW128<"#ATOMIC_SWAP_I128">;
 def ATOMIC_LOAD_ADD_I128  : AtomicRMW128<"#ATOMIC_LOAD_ADD_I128">;
 def ATOMIC_LOAD_SUB_I128  : AtomicRMW128<"#ATOMIC_LOAD_SUB_I128">;
 def ATOMIC_LOAD_AND_I128  : AtomicRMW128<"#ATOMIC_LOAD_AND_I128">;
@@ -395,48 +395,21 @@ def ATOMIC_CMP_SWAP_I128 : PPCPostRAExpPseudo<
                               "#ATOMIC_CMP_SWAP_I128", []>;
 }
 
-def : Pat<(int_ppc_atomicrmw_add_i128 ForceXForm:$ptr,
-                                      i64:$incr_lo,
-                                      i64:$incr_hi),
-          (SPLIT_QUADWORD (ATOMIC_LOAD_ADD_I128 memrr:$ptr,
-                                                g8rc:$incr_lo,
-                                                g8rc:$incr_hi))>;
-def : Pat<(int_ppc_atomicrmw_sub_i128 ForceXForm:$ptr,
-                                      i64:$incr_lo,
-                                      i64:$incr_hi),
-          (SPLIT_QUADWORD (ATOMIC_LOAD_SUB_I128 memrr:$ptr,
-                                                g8rc:$incr_lo,
-                                                g8rc:$incr_hi))>;
-def : Pat<(int_ppc_atomicrmw_xor_i128 ForceXForm:$ptr,
-                                      i64:$incr_lo,
-                                      i64:$incr_hi),
-          (SPLIT_QUADWORD (ATOMIC_LOAD_XOR_I128 memrr:$ptr,
-                                                g8rc:$incr_lo,
-                                                g8rc:$incr_hi))>;
-def : Pat<(int_ppc_atomicrmw_and_i128 ForceXForm:$ptr,
-                                      i64:$incr_lo,
-                                      i64:$incr_hi),
-          (SPLIT_QUADWORD (ATOMIC_LOAD_AND_I128 memrr:$ptr,
-                                                g8rc:$incr_lo,
-                                                g8rc:$incr_hi))>;
-def : Pat<(int_ppc_atomicrmw_nand_i128 ForceXForm:$ptr,
-                                       i64:$incr_lo,
-                                       i64:$incr_hi),
-          (SPLIT_QUADWORD (ATOMIC_LOAD_NAND_I128 memrr:$ptr,
-                                                 g8rc:$incr_lo,
-                                                 g8rc:$incr_hi))>;
-def : Pat<(int_ppc_atomicrmw_or_i128 ForceXForm:$ptr,
-                                     i64:$incr_lo,
-                                     i64:$incr_hi),
-          (SPLIT_QUADWORD (ATOMIC_LOAD_OR_I128 memrr:$ptr,
-                                               g8rc:$incr_lo,
-                                               g8rc:$incr_hi))>;
-def : Pat<(int_ppc_atomicrmw_xchg_i128 ForceXForm:$ptr,
-                                       i64:$incr_lo,
-                                       i64:$incr_hi),
-          (SPLIT_QUADWORD (ATOMIC_SWAP_I128 memrr:$ptr,
-                                            g8rc:$incr_lo,
-                                            g8rc:$incr_hi))>;
+class PatAtomicRMWI128<SDPatternOperator OpNode, AtomicRMW128 Inst> :
+      Pat<(OpNode ForceXForm:$ptr,
+                  i64:$incr_lo,
+                  i64:$incr_hi),
+          (SPLIT_QUADWORD (Inst memrr:$ptr,
+                                g8rc:$incr_lo,
+                                g8rc:$incr_hi))>;
+
+def : PatAtomicRMWI128<int_ppc_atomicrmw_add_i128,  ATOMIC_LOAD_ADD_I128>;
+def : PatAtomicRMWI128<int_ppc_atomicrmw_sub_i128,  ATOMIC_LOAD_SUB_I128>;
+def : PatAtomicRMWI128<int_ppc_atomicrmw_xor_i128,  ATOMIC_LOAD_XOR_I128>;
+def : PatAtomicRMWI128<int_ppc_atomicrmw_and_i128,  ATOMIC_LOAD_AND_I128>;
+def : PatAtomicRMWI128<int_ppc_atomicrmw_nand_i128, ATOMIC_LOAD_NAND_I128>;
+def : PatAtomicRMWI128<int_ppc_atomicrmw_or_i128,   ATOMIC_LOAD_OR_I128>;
+def : PatAtomicRMWI128<int_ppc_atomicrmw_xchg_i128, ATOMIC_SWAP_I128>;
 def : Pat<(int_ppc_cmpxchg_i128 ForceXForm:$ptr,
                                 i64:$cmp_lo,
                                 i64:$cmp_hi,

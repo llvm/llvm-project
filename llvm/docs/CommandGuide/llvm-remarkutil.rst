@@ -75,7 +75,7 @@ CSV format is as follows:
   Function,InstructionCount
   foo,123
 
-if `--use-debug-loc` is passed then the CSV will include the source path, line number and column. 
+if `--use-debug-loc` is passed then the CSV will include the source path, line number and column.
 
 ::
   Source,Function,InstructionCount
@@ -104,11 +104,85 @@ CSV format is as follows:
   Function,Count
   foo,123
 
-if `--use-debug-loc` is passed then the CSV will include the source path, line number and column. 
+if `--use-debug-loc` is passed then the CSV will include the source path, line number and column.
 
 ::
   Source,Function,Count
   path:line:column,foo,3
+
+.. _count_subcommand:
+
+count
+~~~~~
+
+..program:: llvm-remarkutil count
+
+USAGE: :program:`llvm-remarkutil` count [*options*] <input file>
+
+Summary
+^^^^^^^
+
+:program:`llvm-remarkutil count` counts `remarks <https://llvm.org/docs/Remarks.html>` based on specified properties.
+By default the tool counts remarks based on how many occour in a source file or function or total for the generated remark file.
+The tool also supports collecting count based on specific remark arguments. The specified arguments should have an integer value to be able to report a count.
+
+The tool contains utilities to filter the remark count based on remark name, pass name, argument value and remark type.
+OPTIONS
+-------
+
+.. option:: --parser=<yaml|bitstream>
+
+  Select the type of input remark parser. Required.
+  * ``yaml``: The tool will parse YAML remarks.
+  * ``bitstream``: The tool will parse bitstream remarks.
+
+.. option:: --count-by<value>
+  Select option to collect remarks by.
+  * ``remark-name``: count how many individual remarks exist.
+  * ``arg``: count remarks based on specified arguments passed by --(r)args. The argument value must be a number.
+
+.. option:: --group-by=<value>
+  group count of remarks by property.
+  * ``source``: Count will be collected per source path. Remarks with no debug location will not be counted.
+  * ``function``: Count is collected per function.
+  * ``function-with-loc``: Count is collected per function per source. Remarks with no debug location will not be counted.
+  * ``Total``: Report a count for the provided remark file.
+
+.. option:: --args[=arguments]
+  If `count-by` is set to `arg` this flag can be used to collect from specified remark arguments represented as a comma seperated string.
+  The arguments must have a numeral value to be able to count remarks by
+
+.. option:: --rargs[=arguments]
+  If `count-by` is set to `arg` this flag can be used to collect from specified remark arguments using regular expression.
+  The arguments must have a numeral value to be able to count remarks by
+
+.. option:: --pass-name[=<string>]
+  Filter count by pass name.
+
+.. option:: --rpass-name[=<string>]
+  Filter count by pass name using regular expressions.
+
+.. option:: --remark-name[=<string>]
+  Filter count by remark name.
+
+.. option:: --rremark-name[=<string>]
+  Filter count by remark name using regular expressions.
+
+.. option:: --filter-arg-by[=<string>]
+  Filter count by argument value.
+
+.. option:: --rfilter-arg-by[=<string>]
+  Filter count by argument value using regular expressions.
+
+.. option:: --remark-type=<value>
+  Filter remarks by type with the following options.
+  * ``unknown``
+  * ``passed``
+  * ``missed``
+  * ``analysis``
+  * ``analysis-fp-commute``
+  * ``analysis-aliasing``
+  * ``failure``
 
 .. _size-diff_subcommand:
 

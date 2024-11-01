@@ -97,7 +97,8 @@ protected:
   const Target &TheTarget;
 
 public:
-  VEAsmBackend(const Target &T) : MCAsmBackend(support::little), TheTarget(T) {}
+  VEAsmBackend(const Target &T)
+      : MCAsmBackend(llvm::endianness::little), TheTarget(T) {}
 
   unsigned getNumFixupKinds() const override { return VE::NumTargetFixupKinds; }
 
@@ -174,7 +175,7 @@ public:
 
     for (uint64_t i = 0; i < Count; i += 8)
       support::endian::write<uint64_t>(OS, 0x7900000000000000ULL,
-                                       support::little);
+                                       llvm::endianness::little);
 
     return true;
   }
@@ -207,7 +208,8 @@ public:
     // from the fixup value. The Value has been "split up" into the
     // appropriate bitfields above.
     for (unsigned i = 0; i != NumBytes; ++i) {
-      unsigned Idx = Endian == support::little ? i : (NumBytes - 1) - i;
+      unsigned Idx =
+          Endian == llvm::endianness::little ? i : (NumBytes - 1) - i;
       Data[Offset + Idx] |= static_cast<uint8_t>((Value >> (i * 8)) & 0xff);
     }
   }

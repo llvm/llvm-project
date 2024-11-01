@@ -17,6 +17,7 @@
 
 using namespace lldb_private;
 using namespace lldb;
+using namespace lldb_private::plugin::dwarf;
 
 DWARFIndex::~DWARFIndex() = default;
 

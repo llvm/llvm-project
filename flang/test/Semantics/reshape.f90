@@ -44,6 +44,11 @@ program reshaper
   type(dType), parameter :: array19(*) = [dType::dType(field=[1,2])]
   logical, parameter :: lVar = all(array19(:)%field(1) == [2])
 
+  ! RESHAPE on array with maximum valid upper bound
+  integer(8), parameter :: I64_MAX = INT(z'7fffffffffffffff', kind=8)
+  integer, parameter :: array21(I64_MAX - 2 : I64_MAX) = [1, 2, 3]
+  integer, parameter :: array22(2) = RESHAPE(array21, [2])
+
   !ERROR: Size of 'shape=' argument must not be greater than 15
   CALL ext_sub(RESHAPE([(n, n=1,20)], &
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]))

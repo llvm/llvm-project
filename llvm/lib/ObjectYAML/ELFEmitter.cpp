@@ -122,7 +122,7 @@ public:
     return encodeULEB128(Val, OS);
   }
 
-  template <typename T> void write(T Val, support::endianness E) {
+  template <typename T> void write(T Val, llvm::endianness E) {
     if (checkLimit(sizeof(T)))
       support::endian::write<T>(OS, Val, E);
   }

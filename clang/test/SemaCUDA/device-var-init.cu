@@ -31,6 +31,14 @@ __device__ ECD d_ecd_i{};
 __shared__ ECD s_ecd_i{};
 __constant__ ECD c_ecd_i{};
 
+__device__ CEEC d_ceec;
+__shared__ CEEC s_ceec;
+__constant__ CEEC c_ceec;
+
+__device__ CGTC d_cgtc;
+__shared__ CGTC s_cgtc;
+__constant__ CGTC c_cgtc;
+
 __device__ EC d_ec_i(3);
 // expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables.}}
 __shared__ EC s_ec_i(3);
@@ -213,6 +221,17 @@ __device__ void df_sema() {
   static const __device__ int cds = 1;
   static const __constant__ int cdc = 1;
 
+  for (int i = 0; i < 10; i++) {
+    static __device__ CEEC sd_ceec;
+    static __shared__ CEEC ss_ceec;
+    static __constant__ CEEC sc_ceec;
+    __shared__ CEEC s_ceec;
+
+    static __device__ CGTC sd_cgtc;
+    static __shared__ CGTC ss_cgtc;
+    static __constant__ CGTC sc_cgtc;
+    __shared__ CGTC s_cgtc;
+  }
 
   // __shared__ does not need to be explicitly static.
   __shared__ int lsi;
@@ -431,6 +450,35 @@ template <typename T>
 __global__ void bar() {
   __shared__ T bad;
 // expected-error@-1 {{initialization is not supported for __shared__ variables.}}
+  for (int i = 0; i < 10; i++) {
+    static __device__ CEEC sd_ceec;
+    static __shared__ CEEC ss_ceec;
+    static __constant__ CEEC sc_ceec;
+    __shared__ CEEC s_ceec;
+
+    static __device__ CGTC sd_cgtc;
+    static __shared__ CGTC ss_cgtc;
+    static __constant__ CGTC sc_cgtc;
+    __shared__ CGTC s_cgtc;
+  }
+}
+
+// Check specialization of template function.
+template <>
+__global__ void bar<int>() {
+  __shared__ NontrivialInitializer bad;
+// expected-error@-1 {{initialization is not supported for __shared__ variables.}}
+  for (int i = 0; i < 10; i++) {
+    static __device__ CEEC sd_ceec;
+    static __shared__ CEEC ss_ceec;
+    static __constant__ CEEC sc_ceec;
+    __shared__ CEEC s_ceec;
+
+    static __device__ CGTC sd_cgtc;
+    static __shared__ CGTC ss_cgtc;
+    static __constant__ CGTC sc_cgtc;
+    __shared__ CGTC s_cgtc;
+  }
 }
 
 void instantiate() {

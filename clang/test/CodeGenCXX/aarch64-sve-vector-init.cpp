@@ -55,6 +55,7 @@
 // CHECK-NEXT:    [[B8:%.*]] = alloca <vscale x 16 x i1>, align 2
 // CHECK-NEXT:    [[B8X2:%.*]] = alloca <vscale x 32 x i1>, align 2
 // CHECK-NEXT:    [[B8X4:%.*]] = alloca <vscale x 64 x i1>, align 2
+// CHECK-NEXT:    [[CNT:%.*]] = alloca target("aarch64.svcount"), align 2
 // CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[S8]], align 16
 // CHECK-NEXT:    store <vscale x 8 x i16> zeroinitializer, ptr [[S16]], align 16
 // CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[S32]], align 16
@@ -106,6 +107,7 @@
 // CHECK-NEXT:    store <vscale x 16 x i1> zeroinitializer, ptr [[B8]], align 2
 // CHECK-NEXT:    store <vscale x 32 x i1> zeroinitializer, ptr [[B8X2]], align 2
 // CHECK-NEXT:    store <vscale x 64 x i1> zeroinitializer, ptr [[B8X4]], align 2
+// CHECK-NEXT:    store target("aarch64.svcount") zeroinitializer, ptr [[CNT]], align 2
 // CHECK-NEXT:    ret void
 //
 void test_locals(void) {
@@ -164,6 +166,8 @@ void test_locals(void) {
   __SVBool_t b8{};
   __clang_svboolx2_t b8x2{};
   __clang_svboolx4_t b8x4{};
+
+  __SVCount_t cnt{};
 }
 
 // CHECK-LABEL: define dso_local void @_Z12test_copy_s8u10__SVInt8_t
@@ -878,4 +882,18 @@ void test_copy_b8x2(__clang_svboolx2_t a) {
 //
 void test_copy_b8x4(__clang_svboolx4_t a) {
   __clang_svboolx4_t b{a};
+}
+
+// CHECK-LABEL: define dso_local void @_Z13test_copy_cntu11__SVCount_t
+// CHECK-SAME: (target("aarch64.svcount") [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca target("aarch64.svcount"), align 2
+// CHECK-NEXT:    [[B:%.*]] = alloca target("aarch64.svcount"), align 2
+// CHECK-NEXT:    store target("aarch64.svcount") [[A]], ptr [[A_ADDR]], align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load target("aarch64.svcount"), ptr [[A_ADDR]], align 2
+// CHECK-NEXT:    store target("aarch64.svcount") [[TMP0]], ptr [[B]], align 2
+// CHECK-NEXT:    ret void
+//
+void test_copy_cnt(__SVCount_t a) {
+  __SVCount_t b{a};
 }

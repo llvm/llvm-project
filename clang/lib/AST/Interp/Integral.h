@@ -88,6 +88,9 @@ public:
   }
 
   Integral operator-() const { return Integral(-V); }
+  Integral operator-(const Integral &Other) const {
+    return Integral(V - Other.V);
+  }
   Integral operator~() const { return Integral(~V); }
 
   template <unsigned DstBits, bool DstSign>

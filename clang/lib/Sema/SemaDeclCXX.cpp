@@ -1299,8 +1299,9 @@ static bool checkTupleLikeDecomposition(Sema &S,
       //   in the associated namespaces.
       Expr *Get = UnresolvedLookupExpr::Create(
           S.Context, nullptr, NestedNameSpecifierLoc(), SourceLocation(),
-          DeclarationNameInfo(GetDN, Loc), /*RequiresADL*/true, &Args,
-          UnresolvedSetIterator(), UnresolvedSetIterator());
+          DeclarationNameInfo(GetDN, Loc), /*RequiresADL*/ true, &Args,
+          UnresolvedSetIterator(), UnresolvedSetIterator(),
+          /*KnownDependent=*/false);
 
       Expr *Arg = E.get();
       E = S.BuildCallExpr(nullptr, Get, Loc, Arg, Loc);

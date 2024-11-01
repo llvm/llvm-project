@@ -5,6 +5,7 @@
 
 subroutine acc_init
   logical :: ifCondition = .TRUE.
+  integer :: ifInt = 1
 
   !$acc init
 !CHECK: acc.init{{ *}}{{$}}
@@ -27,5 +28,10 @@ subroutine acc_init
 !CHECK: [[DEVTYPE1:%.*]] = arith.constant 1 : i32
 !CHECK: [[DEVTYPE2:%.*]] = arith.constant 2 : i32
 !CHECK: acc.init device_type([[DEVTYPE1]], [[DEVTYPE2]] : i32, i32) device_num([[DEVNUM]] : i32){{$}}
+
+  !$acc init if(ifInt)
+!CHECK: %[[IFINT:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+!CHECK: %[[CONV:.*]] = fir.convert %[[IFINT]] : (i32) -> i1
+!CHECK: acc.init if(%[[CONV]])
 
 end subroutine acc_init

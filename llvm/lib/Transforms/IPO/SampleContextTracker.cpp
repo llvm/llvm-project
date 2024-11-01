@@ -29,7 +29,7 @@ using namespace sampleprof;
 namespace llvm {
 
 ContextTrieNode *ContextTrieNode::getChildContext(const LineLocation &CallSite,
-                                                  StringRef CalleeName) {
+                                                  FunctionId CalleeName) {
   if (CalleeName.empty())
     return getHottestChildContext(CallSite);
 
@@ -104,7 +104,7 @@ SampleContextTracker::moveContextSamples(ContextTrieNode &ToNodeParent,
 }
 
 void ContextTrieNode::removeChildContext(const LineLocation &CallSite,
-                                         StringRef CalleeName) {
+                                         FunctionId CalleeName) {
   uint64_t Hash = FunctionSamples::getCallSiteHash(CalleeName, CallSite);
   // Note this essentially calls dtor and destroys that child context
   AllChildContext.erase(Hash);
@@ -114,7 +114,7 @@ std::map<uint64_t, ContextTrieNode> &ContextTrieNode::getAllChildContext() {
   return AllChildContext;
 }
 
-StringRef ContextTrieNode::getFuncName() const { return FuncName; }
+FunctionId ContextTrieNode::getFuncName() const { return FuncName; }
 
 FunctionSamples *ContextTrieNode::getFunctionSamples() const {
   return FuncSamples;
@@ -178,7 +178,7 @@ void ContextTrieNode::dumpTree() {
 }
 
 ContextTrieNode *ContextTrieNode::getOrCreateChildContext(
-    const LineLocation &CallSite, StringRef CalleeName, bool AllowCreate) {
+    const LineLocation &CallSite, FunctionId CalleeName, bool AllowCreate) {
   uint64_t Hash = FunctionSamples::getCallSiteHash(CalleeName, CallSite);
   auto It = AllChildContext.find(Hash);
   if (It != AllChildContext.end()) {
@@ -232,14 +232,12 @@ SampleContextTracker::getCalleeContextSamplesFor(const CallBase &Inst,
     return nullptr;
 
   CalleeName = FunctionSamples::getCanonicalFnName(CalleeName);
-  // Convert real function names to MD5 names, if the input profile is
-  // MD5-based.
-  std::string FGUID;
-  CalleeName = getRepInFormat(CalleeName, FunctionSamples::UseMD5, FGUID);
+  
+  FunctionId FName = getRepInFormat(CalleeName);
 
   // For indirect call, CalleeName will be empty, in which case the context
   // profile for callee with largest total samples will be returned.
-  ContextTrieNode *CalleeContext = getCalleeContextFor(DIL, CalleeName);
+  ContextTrieNode *CalleeContext = getCalleeContextFor(DIL, FName);
   if (CalleeContext) {
     FunctionSamples *FSamples = CalleeContext->getFunctionSamples();
     LLVM_DEBUG(if (FSamples) {
@@ -305,27 +303,23 @@ SampleContextTracker::getContextSamplesFor(const SampleContext &Context) {
 SampleContextTracker::ContextSamplesTy &
 SampleContextTracker::getAllContextSamplesFor(const Function &Func) {
   StringRef CanonName = FunctionSamples::getCanonicalFnName(Func);
-  return FuncToCtxtProfiles[CanonName];
+  return FuncToCtxtProfiles[getRepInFormat(CanonName)];
 }
 
 SampleContextTracker::ContextSamplesTy &
 SampleContextTracker::getAllContextSamplesFor(StringRef Name) {
-  return FuncToCtxtProfiles[Name];
+  return FuncToCtxtProfiles[getRepInFormat(Name)];
 }
 
 FunctionSamples *SampleContextTracker::getBaseSamplesFor(const Function &Func,
                                                          bool MergeContext) {
   StringRef CanonName = FunctionSamples::getCanonicalFnName(Func);
-  return getBaseSamplesFor(CanonName, MergeContext);
+  return getBaseSamplesFor(getRepInFormat(CanonName), MergeContext);
 }
 
-FunctionSamples *SampleContextTracker::getBaseSamplesFor(StringRef Name,
+FunctionSamples *SampleContextTracker::getBaseSamplesFor(FunctionId Name,
                                                          bool MergeContext) {
   LLVM_DEBUG(dbgs() << "Getting base profile for function: " << Name << "\n");
-  // Convert real function names to MD5 names, if the input profile is
-  // MD5-based.
-  std::string FGUID;
-  Name = getRepInFormat(Name, FunctionSamples::UseMD5, FGUID);
 
   // Base profile is top-level node (child of root node), so try to retrieve
   // existing top-level node for given function first. If it exists, it could be
@@ -373,7 +367,7 @@ void SampleContextTracker::markContextSamplesInlined(
 ContextTrieNode &SampleContextTracker::getRootContext() { return RootContext; }
 
 void SampleContextTracker::promoteMergeContextSamplesTree(
-    const Instruction &Inst, StringRef CalleeName) {
+    const Instruction &Inst, FunctionId CalleeName) {
   LLVM_DEBUG(dbgs() << "Promoting and merging context tree for instr: \n"
                     << Inst << "\n");
   // Get the caller context for the call instruction, we don't use callee
@@ -458,9 +452,9 @@ void SampleContextTracker::dump() { RootContext.dumpTree(); }
 
 StringRef SampleContextTracker::getFuncNameFor(ContextTrieNode *Node) const {
   if (!FunctionSamples::UseMD5)
-    return Node->getFuncName();
+    return Node->getFuncName().stringRef();
   assert(GUIDToFuncNameMap && "GUIDToFuncNameMap needs to be populated first");
-  return GUIDToFuncNameMap->lookup(std::stoull(Node->getFuncName().data()));
+  return GUIDToFuncNameMap->lookup(Node->getFuncName().getHashCode());
 }
 
 ContextTrieNode *
@@ -470,7 +464,7 @@ SampleContextTracker::getContextFor(const SampleContext &Context) {
 
 ContextTrieNode *
 SampleContextTracker::getCalleeContextFor(const DILocation *DIL,
-                                          StringRef CalleeName) {
+                                          FunctionId CalleeName) {
   assert(DIL && "Expect non-null location");
 
   ContextTrieNode *CallContext = getContextFor(DIL);
@@ -485,7 +479,7 @@ SampleContextTracker::getCalleeContextFor(const DILocation *DIL,
 
 ContextTrieNode *SampleContextTracker::getContextFor(const DILocation *DIL) {
   assert(DIL && "Expect non-null location");
-  SmallVector<std::pair<LineLocation, StringRef>, 10> S;
+  SmallVector<std::pair<LineLocation, FunctionId>, 10> S;
 
   // Use C++ linkage name if possible.
   const DILocation *PrevDIL = DIL;
@@ -494,7 +488,8 @@ ContextTrieNode *SampleContextTracker::getContextFor(const DILocation *DIL) {
     if (Name.empty())
       Name = PrevDIL->getScope()->getSubprogram()->getName();
     S.push_back(
-        std::make_pair(FunctionSamples::getCallSiteIdentifier(DIL), Name));
+        std::make_pair(FunctionSamples::getCallSiteIdentifier(DIL),
+                       getRepInFormat(Name)));
     PrevDIL = DIL;
   }
 
@@ -503,24 +498,14 @@ ContextTrieNode *SampleContextTracker::getContextFor(const DILocation *DIL) {
   StringRef RootName = PrevDIL->getScope()->getSubprogram()->getLinkageName();
   if (RootName.empty())
     RootName = PrevDIL->getScope()->getSubprogram()->getName();
-  S.push_back(std::make_pair(LineLocation(0, 0), RootName));
-
-  // Convert real function names to MD5 names, if the input profile is
-  // MD5-based.
-  std::list<std::string> MD5Names;
-  if (FunctionSamples::UseMD5) {
-    for (auto &Location : S) {
-      MD5Names.emplace_back();
-      getRepInFormat(Location.second, FunctionSamples::UseMD5, MD5Names.back());
-      Location.second = MD5Names.back();
-    }
-  }
+  S.push_back(std::make_pair(LineLocation(0, 0),
+                             getRepInFormat(RootName)));
 
   ContextTrieNode *ContextNode = &RootContext;
   int I = S.size();
   while (--I >= 0 && ContextNode) {
     LineLocation &CallSite = S[I].first;
-    StringRef CalleeName = S[I].second;
+    FunctionId CalleeName = S[I].second;
     ContextNode = ContextNode->getChildContext(CallSite, CalleeName);
   }
 
@@ -540,10 +525,10 @@ SampleContextTracker::getOrCreateContextPath(const SampleContext &Context,
     // Create child node at parent line/disc location
     if (AllowCreate) {
       ContextNode =
-          ContextNode->getOrCreateChildContext(CallSiteLoc, Callsite.FuncName);
+          ContextNode->getOrCreateChildContext(CallSiteLoc, Callsite.Func);
     } else {
       ContextNode =
-          ContextNode->getChildContext(CallSiteLoc, Callsite.FuncName);
+          ContextNode->getChildContext(CallSiteLoc, Callsite.Func);
     }
     CallSiteLoc = Callsite.Location;
   }
@@ -553,12 +538,14 @@ SampleContextTracker::getOrCreateContextPath(const SampleContext &Context,
   return ContextNode;
 }
 
-ContextTrieNode *SampleContextTracker::getTopLevelContextNode(StringRef FName) {
+ContextTrieNode *
+SampleContextTracker::getTopLevelContextNode(FunctionId FName) {
   assert(!FName.empty() && "Top level node query must provide valid name");
   return RootContext.getChildContext(LineLocation(0, 0), FName);
 }
 
-ContextTrieNode &SampleContextTracker::addTopLevelContextNode(StringRef FName) {
+ContextTrieNode &
+SampleContextTracker::addTopLevelContextNode(FunctionId FName) {
   assert(!getTopLevelContextNode(FName) && "Node to add must not exist");
   return *RootContext.getOrCreateChildContext(LineLocation(0, 0), FName);
 }

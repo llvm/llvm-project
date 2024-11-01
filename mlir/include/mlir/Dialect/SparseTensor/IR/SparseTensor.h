@@ -11,6 +11,7 @@
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -158,6 +159,19 @@ inline bool hasAnySparseResult(Operation *op) {
 inline bool hasAnySparseOperandOrResult(Operation *op) {
   return hasAnySparseOperand(op) || hasAnySparseResult(op);
 }
+
+//
+// Inference.
+//
+
+/// Given the dimToLvl map, infers the lvlToDim map, or returns
+/// empty Affine map when inference fails.
+AffineMap inferLvlToDim(AffineMap dimToLvl, MLIRContext *context);
+
+/// Returns the lvlToDim map for the given dimToLvl map specific
+/// to the block sparse cases.
+/// Asserts on failure (so only use when known to succeed).
+AffineMap inverseBlockSparsity(AffineMap dimToLvl, MLIRContext *context);
 
 //
 // Reordering.

@@ -792,10 +792,10 @@ def ConvertMemRefToSPIRV : Pass<"convert-memref-to-spirv"> {
 //===----------------------------------------------------------------------===//
 
 def ConvertNVVMToLLVMPass : Pass<"convert-nvvm-to-llvm"> {
-  let summary = "Convert NVVM dialect to LLVM dialect";
+  let summary = "Convert NVVM to PTX with Inline Assembly in LLVM dialect";
   let description = [{
-    This pass generates inline assembly for the NVVM ops which is not 
-    implemented in LLVM core.
+    This pass generates PTX instructions using inline assembly for NVVM 
+    operations implements `BasicPtxBuilderInterface`.
   }];
   let dependentDialects = [
     "NVVM::NVVMDialect",
@@ -1082,6 +1082,14 @@ def TosaToLinalg
   }];
 
   let constructor = "tosa::createTosaToLinalg()";
+  let options = [
+    Option<"disableTosaDecompositions", "disable-tosa-decompositions",
+           "bool", /*default=*/"false",
+           "Disable tosa decompositions pass">,
+    Option<"aggressiveReduceConstant", "aggressive-reduce-constant",
+           "bool", /*default=*/"false",
+           "Always perform the reduce constant optimization">
+  ];
 }
 
 //===----------------------------------------------------------------------===//

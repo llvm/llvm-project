@@ -933,7 +933,7 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
   const auto &attributesTags = RISCVAttrs::getRISCVAttributeTags();
   for (const InputSectionBase *sec : sections) {
     RISCVAttributeParser parser;
-    if (Error e = parser.parse(sec->content(), support::little))
+    if (Error e = parser.parse(sec->content(), llvm::endianness::little))
       warn(toString(sec) + ": " + llvm::toString(std::move(e)));
     for (const auto &tag : attributesTags) {
       switch (RISCVAttrs::AttrType(tag.attr)) {

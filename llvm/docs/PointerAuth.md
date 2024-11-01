@@ -303,8 +303,7 @@ instructions as such:
 
 #### Assembly Representation
 
-At the assembly level,
-[Authenticated Relocations](#authenticated-global-relocation) are represented
+At the assembly level, authenticated relocations are represented
 using the `@AUTH` modifier:
 
 ```asm
@@ -328,8 +327,7 @@ For example:
 
 #### ELF Object File Representation
 
-At the object file level,
-[Authenticated Relocations](#authenticated-global-relocation) are represented
+At the object file level, authenticated relocations are represented
 using the `R_AARCH64_AUTH_ABS64` relocation kind (with value `0xE100`).
 
 The signing schema is encoded in the place of relocation to be applied

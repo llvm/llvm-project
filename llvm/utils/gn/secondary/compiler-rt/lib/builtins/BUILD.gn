@@ -271,6 +271,7 @@ static_library("builtins") {
     sources += [
       "cpu_model.c",
       "divxc3.c",
+      "extendxftf2.c",
       "fixunsxfdi.c",
       "fixunsxfsi.c",
       "fixunsxfti.c",
@@ -285,6 +286,7 @@ static_library("builtins") {
       "powixf2.c",
       "truncdfbf2.c",
       "truncsfbf2.c",
+      "trunctfxf2.c",
     ]
   }
   if (current_cpu == "x86") {
