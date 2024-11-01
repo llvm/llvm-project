@@ -9664,11 +9664,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Overwrite the default driver choice using an env var:
-  // CLANG_USE_LINKER_WRAPPER which can be 0 or 1.
   bool UseOpaqueOffloadLinker = isAMDGPU;
   if (isAMDGPU)
-    if (const char *UseLinkerWrapper = std::getenv("CLANG_USE_LINKER_WRAPPER"))
-      UseOpaqueOffloadLinker = !(atoi(UseLinkerWrapper) == 1);
+    UseOpaqueOffloadLinker = 0;
 
   if (!OpenMPTCs.empty() && Args.hasFlag(options::OPT_opaque_offload_linker,
                                          options::OPT_no_opaque_offload_linker,
@@ -9714,6 +9712,12 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OOpt = "0";
     if (!OOpt.empty())
       CmdArgs.push_back(Args.MakeArgString(Twine("--opt-level=O") + OOpt));
+
+    // Ensure we default to default linking pipeline when linking on AMD GPUs:
+    if (!D.IsFlangMode() && isAMDGPU && OOpt != "0")
+      CmdArgs.push_back(Args.MakeArgString(
+          Twine("--device-linker=--lto-newpm-passes=default<O") + OOpt +
+          Twine(">")));
   }
 
   CmdArgs.push_back(

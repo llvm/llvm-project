@@ -435,11 +435,6 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
                          options::OPT_fno_gpu_allow_device_init, false))
     CC1Args.push_back("-fgpu-allow-device-init");
 
-  // TODO: check if flag is needed for the opaque linker case
-  const char *UseLinkerWrapper = std::getenv("CLANG_USE_LINKER_WRAPPER");
-  if (!UseLinkerWrapper || atoi(UseLinkerWrapper) == 0)
-    CC1Args.push_back("-fcuda-allow-variadic-functions");
-
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
