@@ -156,9 +156,7 @@ struct llvm::GVNPass::Expression {
       return false;
     if (varargs != other.varargs)
       return false;
-    if (attrs.isEmpty() != other.attrs.isEmpty())
-      return false;
-    if (!attrs.isEmpty() &&
+    if (!attrs.isEmpty() && !other.attrs.isEmpty() &&
         !attrs.intersectWith(type->getContext(), other.attrs).has_value())
       return false;
     return true;
