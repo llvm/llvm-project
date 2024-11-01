@@ -276,7 +276,7 @@ typePairInSet(unsigned TypeIdx0, unsigned TypeIdx1,
 /// True iff the given types for the given tuple of type indexes is one of the
 /// specified type tuple.
 LegalityPredicate
-typeTupleInSet(unsigned TypeIdx0, unsigned TypeIdx1, unsigned TypeIdx2,
+typeTupleInSet(unsigned TypeIdx0, unsigned TypeIdx1, unsigned Type2,
                std::initializer_list<std::tuple<LLT, LLT, LLT>> TypesInit);
 /// True iff the given types for the given pair of type indexes is one of the
 /// specified type pairs.

@@ -292,7 +292,7 @@ TARGET_BUILTIN(__builtin_amdgcn_fdot2c_f32_bf16, "fV2yV2yfIb", "nc", "dot13-inst
 //===----------------------------------------------------------------------===//
 TARGET_BUILTIN(__builtin_amdgcn_permlane16, "UiUiUiUiUiIbIb", "nc", "gfx10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_permlanex16, "UiUiUiUiUiIbIb", "nc", "gfx10-insts")
-TARGET_BUILTIN(__builtin_amdgcn_mov_dpp8, "UiUiIUi", "nc", "gfx10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_mov_dpp8, "UiUiIUi", "nct", "gfx10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_s_ttracedata_imm, "vIs", "n", "gfx10-insts")
 
 //===----------------------------------------------------------------------===//

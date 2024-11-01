@@ -1757,8 +1757,8 @@ defm V_PRNG_B32            : VOP1_Real_gfx9 <0x58>;
 defm V_PERMLANE16_SWAP_B32 : VOP1_OpSel_Real_e32e64_gfx9<0x059>;
 defm V_PERMLANE32_SWAP_B32 : VOP1_OpSel_Real_e32e64_gfx9<0x05a>;
 
-class MovDPP8Pattern<Predicate Pred, Instruction Inst> : GCNPat <
-  (i32 (int_amdgcn_mov_dpp8 i32:$src, timm:$dpp8)),
+class MovDPP8Pattern<Predicate Pred, Instruction Inst, ValueType vt> : GCNPat <
+  (vt (int_amdgcn_mov_dpp8 vt:$src, timm:$dpp8)),
   (Inst VGPR_32:$src, VGPR_32:$src, (as_i32timm $dpp8), (i32 DPP8Mode.FI_0))> {
   let OtherPredicates = [Pred];
 }
@@ -1768,15 +1768,19 @@ class MovDPP8Pattern<Predicate Pred, Instruction Inst> : GCNPat <
 //===----------------------------------------------------------------------===//
 
 let OtherPredicates = [isGFX13Only] in {
+foreach vt = Reg32Types.types in {
 def : GCNPat <
-  (i32 (int_amdgcn_mov_dpp8 i32:$src, timm:$dpp8)),
+  (vt (int_amdgcn_mov_dpp8 vt:$src, timm:$dpp8)),
   (V_MOV_B32_dpp8_gfx13 VGPR_32:$src, VGPR_32:$src,
                         (as_i32timm $dpp8), (i32 DPP8Mode.FI_0))
 >;
+}
 } // End OtherPredicates = [isGFX13Only]
 
 defm V_MOV_B64 : VOP1_Real_FULL_gfx1210_gfx13 <0x1d>;
 
-def : MovDPP8Pattern<isGFX10Only, V_MOV_B32_dpp8_gfx10>;
-def : MovDPP8Pattern<isGFX11Only, V_MOV_B32_dpp8_gfx11>;
-def : MovDPP8Pattern<isGFX12Only, V_MOV_B32_dpp8_gfx12>;
+foreach vt = Reg32Types.types in {
+  def : MovDPP8Pattern<isGFX10Only, V_MOV_B32_dpp8_gfx10, vt>;
+  def : MovDPP8Pattern<isGFX11Only, V_MOV_B32_dpp8_gfx11, vt>;
+  def : MovDPP8Pattern<isGFX12Only, V_MOV_B32_dpp8_gfx12, vt>;
+}

@@ -10,23 +10,23 @@
 #ifndef _LIBCPP___NUMERIC_GCD_LCM_H
 #define _LIBCPP___NUMERIC_GCD_LCM_H
 
-#include <__algorithm/min.h>
-#include <__assert>
-#include <__bit/countr.h>
-#include <__config>
-#include <__type_traits/common_type.h>
-#include <__type_traits/is_integral.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/is_signed.h>
-#include <__type_traits/make_unsigned.h>
-#include <limits>
+#include <__cxx03/__algorithm/min.h>
+#include <__cxx03/__assert>
+#include <__cxx03/__bit/countr.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/common_type.h>
+#include <__cxx03/__type_traits/is_integral.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/is_signed.h>
+#include <__cxx03/__type_traits/make_unsigned.h>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

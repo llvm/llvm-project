@@ -1403,7 +1403,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         }
 
         setOperationAction({ISD::BUILD_VECTOR, ISD::VECTOR_SHUFFLE,
-                            ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT},
+                            ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
+                            ISD::SCALAR_TO_VECTOR},
                            VT, Custom);
 
         setOperationAction(
@@ -6511,9 +6512,16 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (VT.isFixedLengthVector())
       ContainerVT = getContainerForFixedLengthVector(VT);
     SDValue VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
-    Scalar = DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getXLenVT(), Scalar);
-    SDValue V = DAG.getNode(RISCVISD::VMV_S_X_VL, DL, ContainerVT,
-                            DAG.getUNDEF(ContainerVT), Scalar, VL);
+
+    SDValue V;
+    if (VT.isFloatingPoint()) {
+      V = DAG.getNode(RISCVISD::VFMV_S_F_VL, DL, ContainerVT,
+                      DAG.getUNDEF(ContainerVT), Scalar, VL);
+    } else {
+      Scalar = DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getXLenVT(), Scalar);
+      V = DAG.getNode(RISCVISD::VMV_S_X_VL, DL, ContainerVT,
+                      DAG.getUNDEF(ContainerVT), Scalar, VL);
+    }
     if (VT.isFixedLengthVector())
       V = convertFromScalableVector(VT, V, DAG, Subtarget);
     return V;
@@ -11114,6 +11122,7 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
   SDValue BasePtr = MemSD->getBasePtr();
 
   SDValue Mask, PassThru, VL;
+  bool IsExpandingLoad = false;
   if (const auto *VPLoad = dyn_cast<VPLoadSDNode>(Op)) {
     Mask = VPLoad->getMask();
     PassThru = DAG.getUNDEF(VT);
@@ -11122,6 +11131,7 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
     const auto *MLoad = cast<MaskedLoadSDNode>(Op);
     Mask = MLoad->getMask();
     PassThru = MLoad->getPassThru();
+    IsExpandingLoad = MLoad->isExpandingLoad();
   }
 
   bool IsUnmasked = ISD::isConstantSplatVectorAllOnes(Mask.getNode());
@@ -11141,18 +11151,26 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
   if (!VL)
     VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
 
-  unsigned IntID =
-      IsUnmasked ? Intrinsic::riscv_vle : Intrinsic::riscv_vle_mask;
+  SDValue ExpandingVL;
+  if (!IsUnmasked && IsExpandingLoad) {
+    ExpandingVL = VL;
+    VL =
+        DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, Mask,
+                    getAllOnesMask(Mask.getSimpleValueType(), VL, DL, DAG), VL);
+  }
+
+  unsigned IntID = IsUnmasked || IsExpandingLoad ? Intrinsic::riscv_vle
+                                                 : Intrinsic::riscv_vle_mask;
   SmallVector<SDValue, 8> Ops{Chain, DAG.getTargetConstant(IntID, DL, XLenVT)};
-  if (IsUnmasked)
+  if (IntID == Intrinsic::riscv_vle)
     Ops.push_back(DAG.getUNDEF(ContainerVT));
   else
     Ops.push_back(PassThru);
   Ops.push_back(BasePtr);
-  if (!IsUnmasked)
+  if (IntID == Intrinsic::riscv_vle_mask)
     Ops.push_back(Mask);
   Ops.push_back(VL);
-  if (!IsUnmasked)
+  if (IntID == Intrinsic::riscv_vle_mask)
     Ops.push_back(DAG.getTargetConstant(RISCVII::TAIL_AGNOSTIC, DL, XLenVT));
 
   SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
@@ -11160,6 +11178,32 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
   SDValue Result =
       DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops, MemVT, MMO);
   Chain = Result.getValue(1);
+  if (ExpandingVL) {
+    MVT IndexVT = ContainerVT;
+    if (ContainerVT.isFloatingPoint())
+      IndexVT = ContainerVT.changeVectorElementTypeToInteger();
+
+    MVT IndexEltVT = IndexVT.getVectorElementType();
+    bool UseVRGATHEREI16 = false;
+    // If index vector is an i8 vector and the element count exceeds 256, we
+    // should change the element type of index vector to i16 to avoid
+    // overflow.
+    if (IndexEltVT == MVT::i8 && VT.getVectorNumElements() > 256) {
+      // FIXME: We need to do vector splitting manually for LMUL=8 cases.
+      assert(getLMUL(IndexVT) != RISCVII::LMUL_8);
+      IndexVT = IndexVT.changeVectorElementType(MVT::i16);
+      UseVRGATHEREI16 = true;
+    }
+
+    SDValue Iota =
+        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, IndexVT,
+                    DAG.getConstant(Intrinsic::riscv_viota, DL, XLenVT),
+                    DAG.getUNDEF(IndexVT), Mask, ExpandingVL);
+    Result =
+        DAG.getNode(UseVRGATHEREI16 ? RISCVISD::VRGATHEREI16_VV_VL
+                                    : RISCVISD::VRGATHER_VV_VL,
+                    DL, ContainerVT, Result, Iota, PassThru, Mask, ExpandingVL);
+  }
 
   if (VT.isFixedLengthVector())
     Result = convertFromScalableVector(VT, Result, DAG, Subtarget);

@@ -66,14 +66,28 @@ define float @f(float %a) {
 ;
 ; LP64D-LABEL: f:
 ; LP64D:       # %bb.0:
-; LP64D-NEXT:    addi.w $a0, $zero, 1
-; LP64D-NEXT:    movgr2fr.w $fa1, $a0
-; LP64D-NEXT:    ffint.s.w $fa1, $fa1
+; LP64D-NEXT:    vldi $vr1, -1168
 ; LP64D-NEXT:    fadd.s $fa0, $fa0, $fa1
 ; LP64D-NEXT:    ret
 ;
-; LP64S-LABEL: f:
-; LP64S:         bl %plt(__addsf3)
+; LP64S-LP64F-NOF-LABEL: f:
+; LP64S-LP64F-NOF:    bl %plt(__addsf3)
+;
+; LP64S-LP64D-NOD-LABEL: f:
+; LP64S-LP64D-NOD:       # %bb.0:
+; LP64S-LP64D-NOD-NEXT:    movgr2fr.w $fa0, $a0
+; LP64S-LP64D-NOD-NEXT:    addi.w $a0, $zero, 1
+; LP64S-LP64D-NOD-NEXT:    movgr2fr.w $fa1, $a0
+; LP64S-LP64D-NOD-NEXT:    ffint.s.w $fa1, $fa1
+; LP64S-LP64D-NOD-NEXT:    fadd.s $fa0, $fa0, $fa1
+; LP64S-LP64D-NOD-NEXT:    movfr2gr.s $a0, $fa0
+; LP64S-LP64D-NOD-NEXT:    ret
+;
+; LP64D-LP64F-NOF-LABEL: f:
+; LP64D-LP64F-NOF:    bl %plt(__addsf3)
+;
+; LP64D-NONE-NOF-LABEL: f:
+; LP64D-NONE-NOF:    bl %plt(__addsf3)
   %1 = fadd float %a, 1.0
   ret float %1
 }
@@ -90,9 +104,7 @@ define double @g(double %a) {
 ;
 ; LP64D-LABEL: g:
 ; LP64D:       # %bb.0:
-; LP64D-NEXT:    addi.d $a0, $zero, 1
-; LP64D-NEXT:    movgr2fr.d $fa1, $a0
-; LP64D-NEXT:    ffint.d.l $fa1, $fa1
+; LP64D-NEXT:    vldi $vr1, -912
 ; LP64D-NEXT:    fadd.d $fa0, $fa0, $fa1
 ; LP64D-NEXT:    ret
 ;

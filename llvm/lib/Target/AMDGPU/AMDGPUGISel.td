@@ -229,6 +229,8 @@ def : GINodeEquiv<G_STORE, AMDGPUst_glue> {
 
 def : GINodeEquiv<G_LOAD, AMDGPUatomic_ld_glue> {
   bit CheckMMOIsAtomic = 1;
+  let IfSignExtend = G_SEXTLOAD;
+  let IfZeroExtend = G_ZEXTLOAD;
 }
 
 def : GINodeEquiv<G_STORE, AMDGPUatomic_st_glue> {

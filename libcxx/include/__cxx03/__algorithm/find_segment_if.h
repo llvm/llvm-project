@@ -9,8 +9,8 @@
 #ifndef _LIBCPP___ALGORITHM_FIND_SEGMENT_IF_H
 #define _LIBCPP___ALGORITHM_FIND_SEGMENT_IF_H
 
-#include <__config>
-#include <__iterator/segmented_iterator.h>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/segmented_iterator.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

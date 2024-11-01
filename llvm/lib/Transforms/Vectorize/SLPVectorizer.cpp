@@ -8160,9 +8160,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   auto *VL0 = cast<Instruction>(S.OpValue);
   BB = VL0->getParent();
 
-  if (S.MainOp && !DT->isReachableFromEntry(BB)) {
+  if (S.MainOp &&
+      (BB->isEHPad() || isa_and_nonnull<UnreachableInst>(BB->getTerminator()) ||
+       !DT->isReachableFromEntry(BB))) {
     // Don't go into unreachable blocks. They may contain instructions with
     // dependency cycles which confuse the final scheduling.
+    // Do not vectorize EH and non-returning blocks, not profitable in most
+    // cases.
     LLVM_DEBUG(dbgs() << "SLP: bundle in unreachable block.\n");
     newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
     return;
@@ -11977,11 +11981,13 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     if (EphValues.count(EU.User))
       continue;
 
-    // Used in unreachable blocks or in landing pads (rarely executed).
+    // Used in unreachable blocks or in EH pads (rarely executed) or is
+    // terminated with unreachable instruction.
     if (BasicBlock *UserParent =
             EU.User ? cast<Instruction>(EU.User)->getParent() : nullptr;
         UserParent &&
-        (!DT->isReachableFromEntry(UserParent) || UserParent->isLandingPad()))
+        (!DT->isReachableFromEntry(UserParent) || UserParent->isEHPad() ||
+         isa_and_present<UnreachableInst>(UserParent->getTerminator())))
       continue;
 
     // We only add extract cost once for the same scalar.
@@ -13808,13 +13814,12 @@ public:
            unsigned VF = 0,
            function_ref<void(Value *&, SmallVectorImpl<int> &)> Action = {}) {
     IsFinalized = true;
+    unsigned ScalarTyNumElements = getNumElements(ScalarTy);
     SmallVector<int> NewExtMask(ExtMask);
-    if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+    if (ScalarTyNumElements != 1) {
       assert(SLPReVec && "FixedVectorType is not expected.");
-      transformScalarShuffleIndiciesToVector(VecTy->getNumElements(),
-                                             CommonMask);
-      transformScalarShuffleIndiciesToVector(VecTy->getNumElements(),
-                                             NewExtMask);
+      transformScalarShuffleIndiciesToVector(ScalarTyNumElements, CommonMask);
+      transformScalarShuffleIndiciesToVector(ScalarTyNumElements, NewExtMask);
       ExtMask = NewExtMask;
     }
     if (Action) {
@@ -13857,12 +13862,14 @@ public:
                                    return !isKnownNonNegative(
                                        V, SimplifyQuery(*R.DL));
                                  }));
+        unsigned InsertionIndex = Idx * ScalarTyNumElements;
         Vec = Builder.CreateInsertVector(Vec->getType(), Vec, V,
-                                         Builder.getInt64(Idx));
+                                         Builder.getInt64(InsertionIndex));
         if (!CommonMask.empty()) {
-          std::iota(std::next(CommonMask.begin(), Idx),
-                    std::next(CommonMask.begin(), Idx + E->getVectorFactor()),
-                    Idx);
+          std::iota(std::next(CommonMask.begin(), InsertionIndex),
+                    std::next(CommonMask.begin(), (Idx + E->getVectorFactor()) *
+                                                      ScalarTyNumElements),
+                    InsertionIndex);
         }
       }
       InVectors.front() = Vec;
@@ -16127,11 +16134,13 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
       if (IE->Idx != 0 &&
           !(VectorizableTree.front()->isGather() &&
             !IE->UserTreeIndices.empty() &&
-            any_of(IE->UserTreeIndices,
-                   [&](const EdgeInfo &EI) {
-                     return EI.UserTE == VectorizableTree.front().get() &&
-                            EI.EdgeIdx == UINT_MAX;
-                   })) &&
+            (ValueToGatherNodes.lookup(I).contains(
+                 VectorizableTree.front().get()) ||
+             any_of(IE->UserTreeIndices,
+                    [&](const EdgeInfo &EI) {
+                      return EI.UserTE == VectorizableTree.front().get() &&
+                             EI.EdgeIdx == UINT_MAX;
+                    }))) &&
           !(GatheredLoadsEntriesFirst.has_value() &&
             IE->Idx >= *GatheredLoadsEntriesFirst &&
             VectorizableTree.front()->isGather() &&
@@ -17728,6 +17737,9 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
 
   // Scan the blocks in the function in post order.
   for (auto *BB : post_order(&F.getEntryBlock())) {
+    if (BB->isEHPad() || isa_and_nonnull<UnreachableInst>(BB->getTerminator()))
+      continue;
+
     // Start new block - clear the list of reduction roots.
     R.clearReductionData();
     collectSeedInstructions(BB);
