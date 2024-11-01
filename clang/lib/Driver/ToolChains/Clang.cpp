@@ -632,6 +632,28 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     }
   }
 
+  if (auto *ColdFuncCoverageArg = Args.getLastArg(
+          options::OPT_fprofile_generate_cold_function_coverage,
+          options::OPT_fprofile_generate_cold_function_coverage_EQ)) {
+    SmallString<128> Path(
+        ColdFuncCoverageArg->getOption().matches(
+            options::OPT_fprofile_generate_cold_function_coverage_EQ)
+            ? ColdFuncCoverageArg->getValue()
+            : "");
+    llvm::sys::path::append(Path, "default_%m.profraw");
+    // FIXME: Idealy the file path should be passed through
+    // `-fprofile-instrument-path=`(InstrProfileOutput), however, this field is
+    // shared with other profile use path(see PGOOptions), we need to refactor
+    // PGOOptions to make it work.
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine("--instrument-cold-function-only-path=") + Path));
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("--pgo-instrument-cold-function-only");
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("--pgo-function-entry-coverage");
+  }
+
   Arg *PGOGenArg = nullptr;
   if (PGOGenerateArg) {
     assert(!CSPGOGenerateArg);
@@ -1185,8 +1207,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
 
   Args.addAllArgs(CmdArgs,
                   {options::OPT_D, options::OPT_U, options::OPT_I_Group,
-                   options::OPT_F, options::OPT_index_header_map,
-                   options::OPT_embed_dir_EQ});
+                   options::OPT_F, options::OPT_embed_dir_EQ});
 
   // Add -Wp, and -Xpreprocessor if using the preprocessor.
 

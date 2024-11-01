@@ -432,7 +432,7 @@ def CUFDeviceGlobal :
     Pass<"cuf-device-global", "mlir::ModuleOp"> {
   let summary = "Flag globals used in device function with data attribute";
   let dependentDialects = [
-    "cuf::CUFDialect"
+    "cuf::CUFDialect", "mlir::gpu::GPUDialect", "mlir::NVVM::NVVMDialect"
   ];
 }
 

@@ -52,6 +52,20 @@ llvm.func @cancellation_point() {
 
 // -----
 
+llvm.func @do_simd(%lb : i32, %ub : i32, %step : i32) {
+  omp.wsloop {
+    // expected-warning@below {{simd information on composite construct discarded}}
+    omp.simd {
+      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+    } {omp.composite}
+  } {omp.composite}
+  llvm.return
+}
+
+// -----
+
 llvm.func @distribute(%lb : i32, %ub : i32, %step : i32) {
   // expected-error@below {{unsupported OpenMP operation: omp.distribute}}
   // expected-error@below {{LLVM Translation failed for operation: omp.distribute}}

@@ -162,6 +162,9 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
 /// Collect all blocks from \p CurLoop which lie on all possible paths from
 /// the header of \p CurLoop (inclusive) to BB (exclusive) into the set
 /// \p Predecessors. If \p BB is the header, \p Predecessors will be empty.
+/// Note: It's possible that we encounter Irreducible control flow, due to
+/// which, we may find that a few predecessors of \p BB are not a part of the
+/// \p CurLoop. We only return Predecessors that are a part of \p CurLoop.
 static void collectTransitivePredecessors(
     const Loop *CurLoop, const BasicBlock *BB,
     SmallPtrSetImpl<const BasicBlock *> &Predecessors) {
@@ -171,6 +174,8 @@ static void collectTransitivePredecessors(
     return;
   SmallVector<const BasicBlock *, 4> WorkList;
   for (const auto *Pred : predecessors(BB)) {
+    if (!CurLoop->contains(Pred))
+      continue;
     Predecessors.insert(Pred);
     WorkList.push_back(Pred);
   }
@@ -187,7 +192,7 @@ static void collectTransitivePredecessors(
     // We can ignore backedge of all loops containing BB to get a sligtly more
     // optimistic result.
     for (const auto *PredPred : predecessors(Pred))
-      if (Predecessors.insert(PredPred).second)
+      if (CurLoop->contains(PredPred) && Predecessors.insert(PredPred).second)
         WorkList.push_back(PredPred);
   }
 }
