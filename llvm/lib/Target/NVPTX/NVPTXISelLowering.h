@@ -63,6 +63,8 @@ enum NodeType : unsigned {
   PRMT,
   FCOPYSIGN,
   DYNAMIC_STACKALLOC,
+  STACKRESTORE,
+  STACKSAVE,
   BrxStart,
   BrxItem,
   BrxEnd,
@@ -526,6 +528,8 @@ public:
                     SmallVectorImpl<SDValue> &InVals) const override;
 
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
 
   std::string
   getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
