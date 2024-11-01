@@ -188,6 +188,8 @@ class CheckedObj {
 public:
   void incrementPtrCount();
   void decrementPtrCount();
+  void method();
+  int trivial() { return 123; }
 };
 
 class RefCountableAndCheckable {

@@ -3366,6 +3366,21 @@ let Predicates = [HasSVEorSME] in {
             (UMOVvi32 (v4i32 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexS:$index)>;
   def : Pat<(i64 (vector_extract nxv2i64:$vec, VectorIndexD:$index)),
             (UMOVvi64 (v2i64 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexD:$index)>;
+
+  // Move element from the bottom 128-bits of a scalable vector to a single-element vector.
+  // Alternative case where insertelement is just scalar_to_vector rather than vector_insert.
+  def : Pat<(v1f64 (scalar_to_vector
+                     (f64 (vector_extract nxv2f64:$vec, VectorIndexD:$index)))),
+            (EXTRACT_SUBREG
+                (INSvi64lane (IMPLICIT_DEF), (i64 0),
+                    (EXTRACT_SUBREG nxv2f64:$vec, zsub), VectorIndexD:$index),
+                dsub)>;
+  def : Pat<(v1i64 (scalar_to_vector
+                     (i64 (vector_extract nxv2i64:$vec, VectorIndexD:$index)))),
+            (EXTRACT_SUBREG
+                (INSvi64lane (IMPLICIT_DEF), (i64 0),
+                    (EXTRACT_SUBREG nxv2i64:$vec, zsub), VectorIndexD:$index),
+                 dsub)>;
   } // End HasNEON
 
   let Predicates = [HasNEON] in {
@@ -4307,6 +4322,13 @@ let Predicates = [HasSVE2p2orSME2p2] in {
   // SVE predicate count
   defm FIRSTP_XPP : sve_int_pcount_pred_tmp<0b001, "firstp">;
   defm LASTP_XPP  : sve_int_pcount_pred_tmp<0b010, "lastp">;
+
+  // SVE reverse within elements, zeroing predicate
+  defm RBIT_ZPzZ : sve_int_perm_rev_rbit_z<"rbit">;
+  defm REVB_ZPzZ : sve_int_perm_rev_revb_z<"revb">;
+  defm REVH_ZPzZ : sve_int_perm_rev_revh_z<"revh">;
+  def  REVW_ZPzZ : sve_int_perm_rev_z<0b11, 0b0110, "revw", ZPR64>;
+  def  REVD_ZPzZ : sve_int_perm_rev_z<0b00, 0b1110, "revd", ZPR128>;
 } // End HasSME2p2orSVE2p2
 
 //===----------------------------------------------------------------------===//

@@ -14,7 +14,7 @@
 // separate header is used to avoid including the entire <ranges> header in
 // <span> and <string_view>.
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -35,9 +35,6 @@ enum IncludeDirGroup {
   /// Paths for '\#include <>' added by '-I'.
   Angled,
 
-  /// Like Angled, but marks header maps used when building frameworks.
-  IndexHeaderMap,
-
   /// Like Angled, but marks system directories.
   System,
 
