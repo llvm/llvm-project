@@ -12776,7 +12776,18 @@ def err_acc_num_arg_conflict
 def err_acc_clause_in_clause_region
     : Error<"loop with a '%0' clause may not exist in the region of a '%1' "
             "clause%select{| on a 'kernels' compute construct}2">;
-
+def err_acc_gang_reduction_conflict
+    : Error<"%select{OpenACC 'gang' clause with a 'dim' value greater than "
+            "1|OpenACC 'reduction' clause}0 cannot "
+            "appear on the same 'loop' construct as a %select{'reduction' "
+            "clause|'gang' clause with a 'dim' value greater than 1}0">;
+def err_acc_gang_reduction_numgangs_conflict
+    : Error<"OpenACC '%0' clause cannot appear on the same 'loop' construct "
+            "as a '%1' clause inside a compute construct with a "
+            "'num_gangs' clause with more than one argument">;
+def err_reduction_op_mismatch
+    : Error<"OpenACC 'reduction' variable must have the same operator in all "
+            "nested constructs (%0 vs %1)">;
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_global_load_lds_size_valid_value : Note<"size must be 1, 2, or 4">;
