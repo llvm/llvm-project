@@ -27,6 +27,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -269,6 +270,15 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   // means that we always must cache transformed nodes.
   DenseMap<SDValue, SDValue>::iterator I = LegalizedNodes.find(Op);
   if (I != LegalizedNodes.end()) return I->second;
+
+  // Handle legalizing the root if it changes.
+  auto FixupRoot = make_scope_exit([&, OldRoot = DAG.getRoot()] {
+    SDValue Root = DAG.getRoot();
+    if (Root != OldRoot) {
+      if (SDValue LegalRoot = LegalizeOp(Root))
+        DAG.setRoot(LegalRoot);
+    }
+  });
 
   // Legalize the operands
   SmallVector<SDValue, 8> Ops;
@@ -1192,11 +1202,13 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
 
     break;
-  case ISD::FSINCOS:
-    if (DAG.expandFSINCOS(Node, Results))
+  case ISD::FSINCOS: {
+    RTLIB::Libcall LC =
+        RTLIB::getFSINCOS(Node->getValueType(0).getVectorElementType());
+    if (DAG.expandMultipleResultFPLibCall(LC, Node, Results))
       return;
-
     break;
+  }
   case ISD::VECTOR_COMPRESS:
     Results.push_back(TLI.expandVECTOR_COMPRESS(Node, DAG));
     return;

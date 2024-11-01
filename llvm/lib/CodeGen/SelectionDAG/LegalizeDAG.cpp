@@ -132,7 +132,6 @@ private:
                         TargetLowering::ArgListTy &&Args, bool isSigned);
   std::pair<SDValue, SDValue> ExpandLibCall(RTLIB::Libcall LC, SDNode *Node, bool isSigned);
 
-  void ExpandFrexpLibCall(SDNode *Node, SmallVectorImpl<SDValue> &Results);
   void ExpandFPLibCall(SDNode *Node, RTLIB::Libcall LC,
                        SmallVectorImpl<SDValue> &Results);
   void ExpandFPLibCall(SDNode *Node, RTLIB::Libcall Call_F32,
@@ -2142,47 +2141,6 @@ std::pair<SDValue, SDValue> SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall L
   }
 
   return ExpandLibCall(LC, Node, std::move(Args), isSigned);
-}
-
-void SelectionDAGLegalize::ExpandFrexpLibCall(
-    SDNode *Node, SmallVectorImpl<SDValue> &Results) {
-  SDLoc dl(Node);
-  EVT VT = Node->getValueType(0);
-  EVT ExpVT = Node->getValueType(1);
-
-  SDValue FPOp = Node->getOperand(0);
-
-  EVT ArgVT = FPOp.getValueType();
-  Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
-
-  TargetLowering::ArgListEntry FPArgEntry;
-  FPArgEntry.Node = FPOp;
-  FPArgEntry.Ty = ArgTy;
-
-  SDValue StackSlot = DAG.CreateStackTemporary(ExpVT);
-  TargetLowering::ArgListEntry PtrArgEntry;
-  PtrArgEntry.Node = StackSlot;
-  PtrArgEntry.Ty = PointerType::get(*DAG.getContext(),
-                                    DAG.getDataLayout().getAllocaAddrSpace());
-
-  TargetLowering::ArgListTy Args = {FPArgEntry, PtrArgEntry};
-
-  RTLIB::Libcall LC = RTLIB::getFREXP(VT);
-  auto [Call, Chain] = ExpandLibCall(LC, Node, std::move(Args), false);
-
-  // FIXME: Get type of int for libcall declaration and cast
-
-  int FrameIdx = cast<FrameIndexSDNode>(StackSlot)->getIndex();
-  auto PtrInfo =
-      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FrameIdx);
-
-  SDValue LoadExp = DAG.getLoad(ExpVT, dl, Chain, StackSlot, PtrInfo);
-  SDValue OutputChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
-                                    LoadExp.getValue(1), DAG.getRoot());
-  DAG.setRoot(OutputChain);
-
-  Results.push_back(Call);
-  Results.push_back(LoadExp);
 }
 
 void SelectionDAGLegalize::ExpandFPLibCall(SDNode* Node,
@@ -4562,10 +4520,11 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     ExpandFPLibCall(Node, RTLIB::TANH_F32, RTLIB::TANH_F64, RTLIB::TANH_F80,
                     RTLIB::TANH_F128, RTLIB::TANH_PPCF128, Results);
     break;
-  case ISD::FSINCOS:
-    // Expand into sincos libcall.
-    (void)DAG.expandFSINCOS(Node, Results);
+  case ISD::FSINCOS: {
+    RTLIB::Libcall LC = RTLIB::getFSINCOS(Node->getValueType(0));
+    DAG.expandMultipleResultFPLibCall(LC, Node, Results);
     break;
+  }
   case ISD::FLOG:
   case ISD::STRICT_FLOG:
     ExpandFPLibCall(Node, RTLIB::LOG_F32, RTLIB::LOG_F64, RTLIB::LOG_F80,
@@ -4649,7 +4608,8 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                     RTLIB::LDEXP_F128, RTLIB::LDEXP_PPCF128, Results);
     break;
   case ISD::FFREXP: {
-    ExpandFrexpLibCall(Node, Results);
+    RTLIB::Libcall LC = RTLIB::getFREXP(Node->getValueType(0));
+    DAG.expandMultipleResultFPLibCall(LC, Node, Results, /*CallRetResNo=*/0);
     break;
   }
   case ISD::FPOWI:
