@@ -29,7 +29,7 @@ namespace lsp {
 SMRange convertTokenLocToRange(SMLoc loc);
 
 /// Extract a documentation comment for the given location within the source
-/// manager. Returns None if no comment could be computed.
+/// manager. Returns std::nullopt if no comment could be computed.
 Optional<std::string> extractSourceDocComment(llvm::SourceMgr &sourceMgr,
                                               SMLoc loc);
 

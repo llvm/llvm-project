@@ -105,7 +105,7 @@ public:
   OptionalFileEntryRefDegradesToFileEntryPtr getFile() const {
     if (auto *P = Val.getPointer())
       return FileEntryRef(*P);
-    return None;
+    return std::nullopt;
   }
   bool isOverridden() const { return Val.getInt() == Overridden; }
   bool isOutOfDate() const { return Val.getInt() == OutOfDate; }

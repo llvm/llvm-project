@@ -308,7 +308,7 @@ static std::unique_ptr<TagNode> genLink(const Twine &Text, const Twine &Link) {
 
 static std::unique_ptr<HTMLNode>
 genReference(const Reference &Type, StringRef CurrentDirectory,
-             llvm::Optional<StringRef> JumpToSection = None) {
+             llvm::Optional<StringRef> JumpToSection = std::nullopt) {
   if (Type.Path.empty()) {
     if (!JumpToSection)
       return std::make_unique<TextNode>(Type.Name);
@@ -437,7 +437,7 @@ genReferencesBlock(const std::vector<Reference> &References,
 
 static std::unique_ptr<TagNode>
 writeFileDefinition(const Location &L,
-                    llvm::Optional<StringRef> RepositoryUrl = None) {
+                    llvm::Optional<StringRef> RepositoryUrl = std::nullopt) {
   if (!L.IsFileInRootDir || !RepositoryUrl)
     return std::make_unique<TagNode>(
         HTMLTag::TAG_P, "Defined at line " + std::to_string(L.LineNumber) +

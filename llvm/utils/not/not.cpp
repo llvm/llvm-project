@@ -58,7 +58,8 @@ int main(int argc, const char **argv) {
   for (int i = 0; i < argc; ++i)
     Argv.push_back(argv[i]);
   std::string ErrMsg;
-  int Result = sys::ExecuteAndWait(*Program, Argv, None, {}, 0, 0, &ErrMsg);
+  int Result =
+      sys::ExecuteAndWait(*Program, Argv, std::nullopt, {}, 0, 0, &ErrMsg);
 #ifdef _WIN32
   // Handle abort() in msvcrt -- It has exit code as 3.  abort(), aka
   // unreachable, should be recognized as a crash.  However, some binaries use

@@ -1,4 +1,4 @@
-; RUN: opt < %s -force-vector-interleave=1 -store-to-load-forwarding-conflict-detection=false -loop-vectorize -dce -instcombine -S | FileCheck %s
+; RUN: opt < %s -force-vector-interleave=1 -store-to-load-forwarding-conflict-detection=false -passes=loop-vectorize,dce,instcombine -S | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"

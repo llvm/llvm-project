@@ -183,7 +183,7 @@ struct LowerGpuOpsToNVVMOpsPass
     converter.addConversion([&](MemRefType type) -> Optional<Type> {
       if (type.getMemorySpaceAsInt() !=
           gpu::GPUDialect::getPrivateAddressSpace())
-        return llvm::None;
+        return std::nullopt;
       return converter.convertType(MemRefType::Builder(type).setMemorySpace(
           IntegerAttr::get(IntegerType::get(m.getContext(), 64), 0)));
     });

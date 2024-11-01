@@ -192,22 +192,28 @@ R_TYPE_INST(FADD_S);
 R_TYPE_INST(FSUB_S);
 R_TYPE_INST(FMUL_S);
 R_TYPE_INST(FDIV_S);
-R_TYPE_INST(FSQRT_S);
+I_TYPE_INST(FSQRT_S);
 R_TYPE_INST(FSGNJ_S);
 R_TYPE_INST(FSGNJN_S);
 R_TYPE_INST(FSGNJX_S);
 R_TYPE_INST(FMIN_S);
 R_TYPE_INST(FMAX_S);
-R_TYPE_INST(FCVT_W_S);
-R_TYPE_INST(FCVT_WU_S);
-R_TYPE_INST(FMV_X_W);
+I_TYPE_INST(FCVT_W_S);
+I_TYPE_INST(FCVT_WU_S);
+I_TYPE_INST(FMV_X_W);
 R_TYPE_INST(FEQ_S);
 R_TYPE_INST(FLT_S);
 R_TYPE_INST(FLE_S);
-R_TYPE_INST(FCLASS_S);
-R_TYPE_INST(FCVT_S_W);
-R_TYPE_INST(FCVT_S_WU);
-R_TYPE_INST(FMV_W_X);
+I_TYPE_INST(FCLASS_S);
+I_TYPE_INST(FCVT_S_W);
+I_TYPE_INST(FCVT_S_WU);
+I_TYPE_INST(FMV_W_X);
+
+// RV64F inst (The standard single-precision floating-point extension)
+I_TYPE_INST(FCVT_L_S);
+I_TYPE_INST(FCVT_LU_S);
+I_TYPE_INST(FCVT_S_L);
+I_TYPE_INST(FCVT_S_LU);
 
 /// Invalid and reserved instructions, the `inst` fields are used for debugging.
 INVALID_INST(INVALID);
@@ -227,7 +233,12 @@ using RISCVInst = std::variant<
     AMOMAXU_D, FLW, FSW, FMADD_S, FMSUB_S, FNMADD_S, FNMSUB_S, FADD_S, FSUB_S,
     FMUL_S, FDIV_S, FSQRT_S, FSGNJ_S, FSGNJN_S, FSGNJX_S, FMIN_S, FMAX_S,
     FCVT_W_S, FCVT_WU_S, FMV_X_W, FEQ_S, FLT_S, FLE_S, FCLASS_S, FCVT_S_W,
-    FCVT_S_WU, FMV_W_X, INVALID, EBREAK, RESERVED, HINT, NOP>;
+    FCVT_S_WU, FMV_W_X, FCVT_L_S, FCVT_LU_S, FCVT_S_L, FCVT_S_LU, INVALID,
+    EBREAK, RESERVED, HINT, NOP>;
+
+constexpr uint8_t RV32 = 1;
+constexpr uint8_t RV64 = 2;
+constexpr uint8_t RV128 = 4;
 
 struct InstrPattern {
   const char *name;
@@ -236,6 +247,8 @@ struct InstrPattern {
   /// Characteristic value after bitwise-and with type_mask.
   uint32_t eigen;
   RISCVInst (*decode)(uint32_t inst);
+  /// If not specified, the inst will be supported by all RV versions.
+  uint8_t inst_type = RV32 | RV64 | RV128;
 };
 
 struct DecodeResult {

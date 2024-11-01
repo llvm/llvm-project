@@ -178,7 +178,7 @@ MlirPass mlirCreateExternalPass(MlirTypeID passID, MlirStringRef name,
                                 void *userData) {
   return wrap(static_cast<mlir::Pass *>(new mlir::ExternalPass(
       unwrap(passID), unwrap(name), unwrap(argument), unwrap(description),
-      opName.length > 0 ? Optional<StringRef>(unwrap(opName)) : None,
+      opName.length > 0 ? Optional<StringRef>(unwrap(opName)) : std::nullopt,
       {dependentDialects, static_cast<size_t>(nDependentDialects)}, callbacks,
       userData)));
 }

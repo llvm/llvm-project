@@ -108,7 +108,7 @@ llvm::Optional<AddressRange> UnwindTable::GetAddressRange(const Address &addr,
   if (m_debug_frame_up && m_debug_frame_up->GetAddressRange(addr, range))
     return range;
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 FuncUnwindersSP

@@ -8,88 +8,87 @@ define void @foo1(ptr %a, ptr readonly %b, ptr readonly %c) #0 {
 ; CHECK-LABEL: foo1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stwu 1, -48(1)
-; CHECK-NEXT:    li 6, 2048
-; CHECK-NEXT:    li 7, 0
 ; CHECK-NEXT:    stw 24, 16(1) # 4-byte Folded Spill
+; CHECK-NEXT:    li 6, 2048
 ; CHECK-NEXT:    stw 25, 20(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 26, 24(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 27, 28(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 28, 32(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 29, 36(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 30, 40(1) # 4-byte Folded Spill
+; CHECK-NEXT:    mtctr 6
+; CHECK-NEXT:    li 6, 0
 ; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lwz 10, 12(5)
-; CHECK-NEXT:    addi 6, 6, -1
-; CHECK-NEXT:    lwz 12, 12(4)
-; CHECK-NEXT:    lwz 11, 8(4)
-; CHECK-NEXT:    subfic 0, 10, 96
-; CHECK-NEXT:    lwz 8, 4(4)
-; CHECK-NEXT:    addi 30, 10, -64
-; CHECK-NEXT:    lwz 9, 0(4)
-; CHECK-NEXT:    cmplwi 10, 64
-; CHECK-NEXT:    slw 25, 12, 10
-; CHECK-NEXT:    addi 29, 10, -96
-; CHECK-NEXT:    subfic 27, 10, 32
-; CHECK-NEXT:    srw 0, 12, 0
-; CHECK-NEXT:    slw 24, 11, 30
+; CHECK-NEXT:    lwz 9, 12(5)
+; CHECK-NEXT:    lwz 10, 8(4)
+; CHECK-NEXT:    lwz 11, 12(4)
+; CHECK-NEXT:    subfic 12, 9, 96
+; CHECK-NEXT:    lwz 7, 4(4)
+; CHECK-NEXT:    addi 0, 9, -64
+; CHECK-NEXT:    lwz 8, 0(4)
+; CHECK-NEXT:    subfic 28, 9, 32
+; CHECK-NEXT:    cmplwi 9, 64
+; CHECK-NEXT:    slw 26, 11, 9
+; CHECK-NEXT:    srw 12, 11, 12
+; CHECK-NEXT:    slw 25, 10, 0
+; CHECK-NEXT:    addi 30, 9, -96
+; CHECK-NEXT:    slw 29, 8, 9
+; CHECK-NEXT:    or 12, 25, 12
+; CHECK-NEXT:    srw 25, 7, 28
 ; CHECK-NEXT:    bc 12, 0, .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ori 25, 7, 0
+; CHECK-NEXT:    ori 26, 6, 0
 ; CHECK-NEXT:    b .LBB0_3
 ; CHECK-NEXT:  .LBB0_3: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    slw 28, 9, 10
-; CHECK-NEXT:    or 0, 24, 0
-; CHECK-NEXT:    srw 24, 8, 27
-; CHECK-NEXT:    stw 25, 12(3)
-; CHECK-NEXT:    subfic 25, 10, 64
-; CHECK-NEXT:    slw 29, 12, 29
-; CHECK-NEXT:    slw 26, 11, 10
-; CHECK-NEXT:    or 28, 28, 24
-; CHECK-NEXT:    srw 24, 12, 27
-; CHECK-NEXT:    or 29, 0, 29
-; CHECK-NEXT:    subfic 0, 25, 32
-; CHECK-NEXT:    or 26, 26, 24
-; CHECK-NEXT:    addi 24, 10, -32
-; CHECK-NEXT:    srw 27, 11, 27
-; CHECK-NEXT:    slw 0, 11, 0
-; CHECK-NEXT:    srw 11, 11, 25
-; CHECK-NEXT:    srw 25, 12, 25
-; CHECK-NEXT:    slw 30, 12, 30
-; CHECK-NEXT:    slw 12, 12, 24
-; CHECK-NEXT:    slw 24, 8, 24
-; CHECK-NEXT:    or 0, 25, 0
-; CHECK-NEXT:    or 28, 28, 24
-; CHECK-NEXT:    cmplwi 1, 10, 0
-; CHECK-NEXT:    slw 10, 8, 10
-; CHECK-NEXT:    or 0, 0, 27
-; CHECK-NEXT:    or 11, 28, 11
-; CHECK-NEXT:    or 10, 10, 0
-; CHECK-NEXT:    or 12, 26, 12
+; CHECK-NEXT:    slw 27, 10, 9
+; CHECK-NEXT:    or 29, 29, 25
+; CHECK-NEXT:    srw 25, 11, 28
+; CHECK-NEXT:    stw 26, 12(3)
+; CHECK-NEXT:    subfic 26, 9, 64
+; CHECK-NEXT:    slw 30, 11, 30
+; CHECK-NEXT:    or 27, 27, 25
+; CHECK-NEXT:    addi 25, 9, -32
+; CHECK-NEXT:    or 12, 12, 30
+; CHECK-NEXT:    subfic 30, 26, 32
+; CHECK-NEXT:    srw 28, 10, 28
+; CHECK-NEXT:    slw 30, 10, 30
+; CHECK-NEXT:    srw 10, 10, 26
+; CHECK-NEXT:    srw 26, 11, 26
+; CHECK-NEXT:    slw 24, 11, 0
+; CHECK-NEXT:    slw 0, 7, 25
+; CHECK-NEXT:    or 0, 29, 0
+; CHECK-NEXT:    or 30, 26, 30
+; CHECK-NEXT:    cmplwi 1, 9, 0
+; CHECK-NEXT:    slw 9, 7, 9
+; CHECK-NEXT:    or 10, 0, 10
+; CHECK-NEXT:    or 0, 30, 28
+; CHECK-NEXT:    slw 11, 11, 25
+; CHECK-NEXT:    or 9, 9, 0
+; CHECK-NEXT:    or 11, 27, 11
 ; CHECK-NEXT:    bc 12, 0, .LBB0_5
 ; CHECK-NEXT:  # %bb.4: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ori 11, 29, 0
-; CHECK-NEXT:    ori 10, 30, 0
-; CHECK-NEXT:    ori 12, 7, 0
+; CHECK-NEXT:    ori 10, 12, 0
+; CHECK-NEXT:    ori 9, 24, 0
+; CHECK-NEXT:    ori 11, 6, 0
 ; CHECK-NEXT:    b .LBB0_5
 ; CHECK-NEXT:  .LBB0_5: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    cmplwi 6, 0
 ; CHECK-NEXT:    bc 12, 6, .LBB0_7
 ; CHECK-NEXT:  # %bb.6: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ori 9, 11, 0
 ; CHECK-NEXT:    ori 8, 10, 0
+; CHECK-NEXT:    ori 7, 9, 0
 ; CHECK-NEXT:    b .LBB0_7
 ; CHECK-NEXT:  .LBB0_7: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    stw 12, 8(3)
-; CHECK-NEXT:    stw 9, 0(3)
-; CHECK-NEXT:    stw 8, 4(3)
-; CHECK-NEXT:    bne 0, .LBB0_1
+; CHECK-NEXT:    stw 11, 8(3)
+; CHECK-NEXT:    stw 8, 0(3)
+; CHECK-NEXT:    stw 7, 4(3)
+; CHECK-NEXT:    bdnz .LBB0_1
 ; CHECK-NEXT:  # %bb.8: # %for.end
 ; CHECK-NEXT:    lwz 30, 40(1) # 4-byte Folded Reload
 ; CHECK-NEXT:    lwz 29, 36(1) # 4-byte Folded Reload
@@ -122,104 +121,105 @@ define void @foo2(ptr %a, ptr readonly %b, ptr readonly %c) #0 {
 ; CHECK-LABEL: foo2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stwu 1, -48(1)
-; CHECK-NEXT:    li 6, 2048
-; CHECK-NEXT:    stw 23, 12(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 24, 16(1) # 4-byte Folded Spill
+; CHECK-NEXT:    li 6, 2048
 ; CHECK-NEXT:    stw 25, 20(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 26, 24(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 27, 28(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 28, 32(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 29, 36(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 30, 40(1) # 4-byte Folded Spill
+; CHECK-NEXT:    mtctr 6
 ; CHECK-NEXT:  .LBB1_1: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lwz 9, 12(5)
-; CHECK-NEXT:    addi 6, 6, -1
-; CHECK-NEXT:    lwz 10, 4(4)
-; CHECK-NEXT:    lwz 11, 0(4)
-; CHECK-NEXT:    subfic 12, 9, 96
-; CHECK-NEXT:    lwz 7, 8(4)
-; CHECK-NEXT:    addi 0, 9, -64
-; CHECK-NEXT:    lwz 8, 12(4)
-; CHECK-NEXT:    subfic 28, 9, 32
-; CHECK-NEXT:    slw 12, 11, 12
-; CHECK-NEXT:    srw 24, 10, 0
-; CHECK-NEXT:    srw 29, 8, 9
-; CHECK-NEXT:    or 12, 24, 12
-; CHECK-NEXT:    slw 24, 7, 28
-; CHECK-NEXT:    srw 26, 10, 9
-; CHECK-NEXT:    or 29, 29, 24
-; CHECK-NEXT:    slw 24, 11, 28
-; CHECK-NEXT:    cmplwi 9, 64
-; CHECK-NEXT:    srawi 25, 11, 31
-; CHECK-NEXT:    or 26, 26, 24
-; CHECK-NEXT:    sraw 24, 11, 9
-; CHECK-NEXT:    addi 30, 9, -96
+; CHECK-NEXT:    lwz 8, 12(5)
+; CHECK-NEXT:    lwz 9, 4(4)
+; CHECK-NEXT:    lwz 10, 0(4)
+; CHECK-NEXT:    subfic 11, 8, 96
+; CHECK-NEXT:    lwz 6, 8(4)
+; CHECK-NEXT:    addi 12, 8, -64
+; CHECK-NEXT:    lwz 7, 12(4)
+; CHECK-NEXT:    subfic 29, 8, 32
+; CHECK-NEXT:    slw 11, 10, 11
+; CHECK-NEXT:    srw 25, 9, 12
+; CHECK-NEXT:    srw 30, 7, 8
+; CHECK-NEXT:    or 11, 25, 11
+; CHECK-NEXT:    slw 25, 6, 29
+; CHECK-NEXT:    srw 27, 9, 8
+; CHECK-NEXT:    or 30, 30, 25
+; CHECK-NEXT:    slw 25, 10, 29
+; CHECK-NEXT:    addi 0, 8, -96
+; CHECK-NEXT:    cmplwi 8, 64
+; CHECK-NEXT:    srawi 26, 10, 31
+; CHECK-NEXT:    or 27, 27, 25
+; CHECK-NEXT:    sraw 25, 10, 8
+; CHECK-NEXT:    cmpwi 1, 0, 1
+; CHECK-NEXT:    sraw 24, 10, 0
 ; CHECK-NEXT:    bc 12, 0, .LBB1_3
 ; CHECK-NEXT:  # %bb.2: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ori 24, 25, 0
-; CHECK-NEXT:    b .LBB1_3
+; CHECK-NEXT:    ori 0, 26, 0
+; CHECK-NEXT:    b .LBB1_4
 ; CHECK-NEXT:  .LBB1_3: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    cmpwi 1, 30, 1
-; CHECK-NEXT:    sraw 30, 11, 30
-; CHECK-NEXT:    stw 24, 0(3)
-; CHECK-NEXT:    subfic 24, 9, 64
-; CHECK-NEXT:    addi 27, 9, -32
-; CHECK-NEXT:    bc 12, 4, .LBB1_5
-; CHECK-NEXT:  # %bb.4: # %for.body
+; CHECK-NEXT:    addi 0, 25, 0
+; CHECK-NEXT:  .LBB1_4: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ori 12, 30, 0
-; CHECK-NEXT:    b .LBB1_5
-; CHECK-NEXT:  .LBB1_5: # %for.body
-; CHECK-NEXT:    #
-; CHECK-NEXT:    subfic 30, 24, 32
-; CHECK-NEXT:    slw 28, 10, 28
-; CHECK-NEXT:    srw 30, 10, 30
-; CHECK-NEXT:    slw 10, 10, 24
-; CHECK-NEXT:    slw 24, 11, 24
-; CHECK-NEXT:    sraw 23, 11, 0
-; CHECK-NEXT:    srw 0, 7, 27
-; CHECK-NEXT:    sraw 11, 11, 27
-; CHECK-NEXT:    cmpwi 1, 27, 1
-; CHECK-NEXT:    or 0, 29, 0
-; CHECK-NEXT:    or 30, 24, 30
+; CHECK-NEXT:    addi 28, 8, -32
+; CHECK-NEXT:    stw 0, 0(3)
+; CHECK-NEXT:    subfic 0, 8, 64
+; CHECK-NEXT:    subfic 25, 0, 32
+; CHECK-NEXT:    slw 29, 9, 29
+; CHECK-NEXT:    srw 25, 9, 25
+; CHECK-NEXT:    slw 9, 9, 0
+; CHECK-NEXT:    slw 0, 10, 0
 ; CHECK-NEXT:    bc 12, 4, .LBB1_6
-; CHECK-NEXT:    b .LBB1_7
+; CHECK-NEXT:  # %bb.5: # %for.body
+; CHECK-NEXT:    #
+; CHECK-NEXT:    ori 11, 24, 0
+; CHECK-NEXT:    b .LBB1_6
 ; CHECK-NEXT:  .LBB1_6: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    addi 11, 26, 0
+; CHECK-NEXT:    sraw 12, 10, 12
+; CHECK-NEXT:    sraw 10, 10, 28
+; CHECK-NEXT:    cmpwi 1, 28, 1
+; CHECK-NEXT:    srw 28, 6, 28
+; CHECK-NEXT:    or 0, 0, 25
+; CHECK-NEXT:    or 30, 30, 28
+; CHECK-NEXT:    bc 12, 4, .LBB1_7
+; CHECK-NEXT:    b .LBB1_8
 ; CHECK-NEXT:  .LBB1_7: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    cmplwi 1, 9, 0
-; CHECK-NEXT:    srw 9, 7, 9
-; CHECK-NEXT:    or 10, 0, 10
-; CHECK-NEXT:    or 0, 30, 28
-; CHECK-NEXT:    or 9, 9, 0
-; CHECK-NEXT:    bc 12, 0, .LBB1_9
-; CHECK-NEXT:  # %bb.8: # %for.body
+; CHECK-NEXT:    addi 10, 27, 0
+; CHECK-NEXT:  .LBB1_8: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ori 10, 12, 0
-; CHECK-NEXT:    ori 9, 23, 0
-; CHECK-NEXT:    ori 11, 25, 0
-; CHECK-NEXT:    b .LBB1_9
-; CHECK-NEXT:  .LBB1_9: # %for.body
+; CHECK-NEXT:    cmplwi 1, 8, 0
+; CHECK-NEXT:    srw 8, 6, 8
+; CHECK-NEXT:    or 0, 0, 29
+; CHECK-NEXT:    or 9, 30, 9
+; CHECK-NEXT:    or 8, 8, 0
+; CHECK-NEXT:    bc 12, 0, .LBB1_10
+; CHECK-NEXT:  # %bb.9: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    cmplwi 6, 0
-; CHECK-NEXT:    bc 12, 6, .LBB1_11
-; CHECK-NEXT:  # %bb.10: # %for.body
+; CHECK-NEXT:    ori 9, 11, 0
+; CHECK-NEXT:    ori 8, 12, 0
+; CHECK-NEXT:    ori 10, 26, 0
+; CHECK-NEXT:    b .LBB1_10
+; CHECK-NEXT:  .LBB1_10: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ori 8, 10, 0
+; CHECK-NEXT:    bc 12, 6, .LBB1_12
+; CHECK-NEXT:  # %bb.11: # %for.body
+; CHECK-NEXT:    #
 ; CHECK-NEXT:    ori 7, 9, 0
-; CHECK-NEXT:    b .LBB1_11
-; CHECK-NEXT:  .LBB1_11: # %for.body
+; CHECK-NEXT:    ori 6, 8, 0
+; CHECK-NEXT:    b .LBB1_12
+; CHECK-NEXT:  .LBB1_12: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    stw 11, 4(3)
-; CHECK-NEXT:    stw 8, 12(3)
-; CHECK-NEXT:    stw 7, 8(3)
-; CHECK-NEXT:    bne 0, .LBB1_1
-; CHECK-NEXT:  # %bb.12: # %for.end
+; CHECK-NEXT:    stw 10, 4(3)
+; CHECK-NEXT:    stw 7, 12(3)
+; CHECK-NEXT:    stw 6, 8(3)
+; CHECK-NEXT:    bdnz .LBB1_1
+; CHECK-NEXT:  # %bb.13: # %for.end
 ; CHECK-NEXT:    lwz 30, 40(1) # 4-byte Folded Reload
 ; CHECK-NEXT:    lwz 29, 36(1) # 4-byte Folded Reload
 ; CHECK-NEXT:    lwz 28, 32(1) # 4-byte Folded Reload
@@ -227,7 +227,6 @@ define void @foo2(ptr %a, ptr readonly %b, ptr readonly %c) #0 {
 ; CHECK-NEXT:    lwz 26, 24(1) # 4-byte Folded Reload
 ; CHECK-NEXT:    lwz 25, 20(1) # 4-byte Folded Reload
 ; CHECK-NEXT:    lwz 24, 16(1) # 4-byte Folded Reload
-; CHECK-NEXT:    lwz 23, 12(1) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi 1, 1, 48
 ; CHECK-NEXT:    blr
 entry:
@@ -252,88 +251,87 @@ define void @foo3(ptr %a, ptr readonly %b, ptr readonly %c) #0 {
 ; CHECK-LABEL: foo3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stwu 1, -48(1)
-; CHECK-NEXT:    li 6, 2048
-; CHECK-NEXT:    li 7, 0
 ; CHECK-NEXT:    stw 24, 16(1) # 4-byte Folded Spill
+; CHECK-NEXT:    li 6, 2048
 ; CHECK-NEXT:    stw 25, 20(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 26, 24(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 27, 28(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 28, 32(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 29, 36(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 30, 40(1) # 4-byte Folded Spill
+; CHECK-NEXT:    mtctr 6
+; CHECK-NEXT:    li 6, 0
 ; CHECK-NEXT:  .LBB2_1: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lwz 10, 12(5)
-; CHECK-NEXT:    addi 6, 6, -1
-; CHECK-NEXT:    lwz 12, 0(4)
-; CHECK-NEXT:    lwz 11, 4(4)
-; CHECK-NEXT:    subfic 0, 10, 96
-; CHECK-NEXT:    lwz 8, 8(4)
-; CHECK-NEXT:    addi 30, 10, -64
-; CHECK-NEXT:    lwz 9, 12(4)
-; CHECK-NEXT:    cmplwi 10, 64
-; CHECK-NEXT:    srw 25, 12, 10
-; CHECK-NEXT:    addi 29, 10, -96
-; CHECK-NEXT:    subfic 27, 10, 32
-; CHECK-NEXT:    slw 0, 12, 0
-; CHECK-NEXT:    srw 24, 11, 30
+; CHECK-NEXT:    lwz 9, 12(5)
+; CHECK-NEXT:    lwz 10, 4(4)
+; CHECK-NEXT:    lwz 11, 0(4)
+; CHECK-NEXT:    subfic 12, 9, 96
+; CHECK-NEXT:    lwz 7, 8(4)
+; CHECK-NEXT:    addi 0, 9, -64
+; CHECK-NEXT:    lwz 8, 12(4)
+; CHECK-NEXT:    subfic 28, 9, 32
+; CHECK-NEXT:    cmplwi 9, 64
+; CHECK-NEXT:    srw 26, 11, 9
+; CHECK-NEXT:    slw 12, 11, 12
+; CHECK-NEXT:    srw 25, 10, 0
+; CHECK-NEXT:    addi 30, 9, -96
+; CHECK-NEXT:    srw 29, 8, 9
+; CHECK-NEXT:    or 12, 25, 12
+; CHECK-NEXT:    slw 25, 7, 28
 ; CHECK-NEXT:    bc 12, 0, .LBB2_3
 ; CHECK-NEXT:  # %bb.2: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ori 25, 7, 0
+; CHECK-NEXT:    ori 26, 6, 0
 ; CHECK-NEXT:    b .LBB2_3
 ; CHECK-NEXT:  .LBB2_3: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    srw 28, 9, 10
-; CHECK-NEXT:    or 0, 24, 0
-; CHECK-NEXT:    slw 24, 8, 27
-; CHECK-NEXT:    stw 25, 0(3)
-; CHECK-NEXT:    subfic 25, 10, 64
-; CHECK-NEXT:    srw 29, 12, 29
-; CHECK-NEXT:    srw 26, 11, 10
-; CHECK-NEXT:    or 28, 28, 24
-; CHECK-NEXT:    slw 24, 12, 27
-; CHECK-NEXT:    or 29, 0, 29
-; CHECK-NEXT:    subfic 0, 25, 32
-; CHECK-NEXT:    or 26, 26, 24
-; CHECK-NEXT:    addi 24, 10, -32
-; CHECK-NEXT:    slw 27, 11, 27
-; CHECK-NEXT:    srw 0, 11, 0
-; CHECK-NEXT:    slw 11, 11, 25
-; CHECK-NEXT:    slw 25, 12, 25
-; CHECK-NEXT:    srw 30, 12, 30
-; CHECK-NEXT:    srw 12, 12, 24
-; CHECK-NEXT:    srw 24, 8, 24
-; CHECK-NEXT:    or 0, 25, 0
-; CHECK-NEXT:    or 28, 28, 24
-; CHECK-NEXT:    cmplwi 1, 10, 0
-; CHECK-NEXT:    srw 10, 8, 10
-; CHECK-NEXT:    or 0, 0, 27
-; CHECK-NEXT:    or 11, 28, 11
-; CHECK-NEXT:    or 10, 10, 0
-; CHECK-NEXT:    or 12, 26, 12
+; CHECK-NEXT:    srw 27, 10, 9
+; CHECK-NEXT:    or 29, 29, 25
+; CHECK-NEXT:    slw 25, 11, 28
+; CHECK-NEXT:    stw 26, 0(3)
+; CHECK-NEXT:    subfic 26, 9, 64
+; CHECK-NEXT:    srw 30, 11, 30
+; CHECK-NEXT:    or 27, 27, 25
+; CHECK-NEXT:    addi 25, 9, -32
+; CHECK-NEXT:    or 12, 12, 30
+; CHECK-NEXT:    subfic 30, 26, 32
+; CHECK-NEXT:    slw 28, 10, 28
+; CHECK-NEXT:    srw 30, 10, 30
+; CHECK-NEXT:    slw 10, 10, 26
+; CHECK-NEXT:    slw 26, 11, 26
+; CHECK-NEXT:    srw 24, 11, 0
+; CHECK-NEXT:    srw 0, 7, 25
+; CHECK-NEXT:    or 0, 29, 0
+; CHECK-NEXT:    or 30, 26, 30
+; CHECK-NEXT:    cmplwi 1, 9, 0
+; CHECK-NEXT:    srw 9, 7, 9
+; CHECK-NEXT:    or 10, 0, 10
+; CHECK-NEXT:    or 0, 30, 28
+; CHECK-NEXT:    srw 11, 11, 25
+; CHECK-NEXT:    or 9, 9, 0
+; CHECK-NEXT:    or 11, 27, 11
 ; CHECK-NEXT:    bc 12, 0, .LBB2_5
 ; CHECK-NEXT:  # %bb.4: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ori 11, 29, 0
-; CHECK-NEXT:    ori 10, 30, 0
-; CHECK-NEXT:    ori 12, 7, 0
+; CHECK-NEXT:    ori 10, 12, 0
+; CHECK-NEXT:    ori 9, 24, 0
+; CHECK-NEXT:    ori 11, 6, 0
 ; CHECK-NEXT:    b .LBB2_5
 ; CHECK-NEXT:  .LBB2_5: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    cmplwi 6, 0
 ; CHECK-NEXT:    bc 12, 6, .LBB2_7
 ; CHECK-NEXT:  # %bb.6: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ori 9, 11, 0
 ; CHECK-NEXT:    ori 8, 10, 0
+; CHECK-NEXT:    ori 7, 9, 0
 ; CHECK-NEXT:    b .LBB2_7
 ; CHECK-NEXT:  .LBB2_7: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    stw 12, 4(3)
-; CHECK-NEXT:    stw 9, 12(3)
-; CHECK-NEXT:    stw 8, 8(3)
-; CHECK-NEXT:    bne 0, .LBB2_1
+; CHECK-NEXT:    stw 11, 4(3)
+; CHECK-NEXT:    stw 8, 12(3)
+; CHECK-NEXT:    stw 7, 8(3)
+; CHECK-NEXT:    bdnz .LBB2_1
 ; CHECK-NEXT:  # %bb.8: # %for.end
 ; CHECK-NEXT:    lwz 30, 40(1) # 4-byte Folded Reload
 ; CHECK-NEXT:    lwz 29, 36(1) # 4-byte Folded Reload

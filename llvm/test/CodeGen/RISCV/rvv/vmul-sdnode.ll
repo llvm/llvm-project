@@ -959,3 +959,48 @@ define <vscale x 8 x i64> @vmul_xx_nxv8i64(i64 %a, i64 %b) nounwind {
   %v = mul <vscale x 8 x i64> %splat1, %splat2
   ret <vscale x 8 x i64> %v
 }
+
+define <vscale x 8 x i32> @vmul_vv_mask_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i32> %vb, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: vmul_vv_mask_nxv8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vmul.vv v8, v8, v12, v0.t
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 8 x i32> poison, i32 1, i32 0
+  %one = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
+  %vs = select <vscale x 8 x i1> %mask, <vscale x 8 x i32> %vb, <vscale x 8 x i32> %one
+  %vc = mul <vscale x 8 x i32> %va, %vs
+  ret <vscale x 8 x i32> %vc
+}
+
+define <vscale x 8 x i32> @vmul_vx_mask_nxv8i32(<vscale x 8 x i32> %va, i32 signext %b, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: vmul_vx_mask_nxv8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vmul.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    ret
+  %head1 = insertelement <vscale x 8 x i32> poison, i32 1, i32 0
+  %one = shufflevector <vscale x 8 x i32> %head1, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
+  %head2 = insertelement <vscale x 8 x i32> poison, i32 %b, i32 0
+  %splat = shufflevector <vscale x 8 x i32> %head2, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
+  %vs = select <vscale x 8 x i1> %mask, <vscale x 8 x i32> %splat, <vscale x 8 x i32> %one
+  %vc = mul <vscale x 8 x i32> %va, %vs
+  ret <vscale x 8 x i32> %vc
+}
+
+define <vscale x 8 x i32> @vmul_vi_mask_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: vmul_vi_mask_nxv8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 7
+; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vmul.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    ret
+  %head1 = insertelement <vscale x 8 x i32> poison, i32 1, i32 0
+  %one = shufflevector <vscale x 8 x i32> %head1, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
+  %head2 = insertelement <vscale x 8 x i32> poison, i32 7, i32 0
+  %splat = shufflevector <vscale x 8 x i32> %head2, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
+  %vs = select <vscale x 8 x i1> %mask, <vscale x 8 x i32> %splat, <vscale x 8 x i32> %one
+  %vc = mul <vscale x 8 x i32> %va, %vs
+  ret <vscale x 8 x i32> %vc
+}
+

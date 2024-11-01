@@ -613,7 +613,7 @@ COFFLinkGraphBuilder::exportCOMDATSymbol(COFFSymbolIndex SymIndex,
   setGraphSymbol(Symbol.getSectionNumber(), PendingComdatExport->SymbolIndex,
                  *GSym);
   DefinedSymbols[SymbolName] = GSym;
-  PendingComdatExport = None;
+  PendingComdatExport = std::nullopt;
   return GSym;
 }
 

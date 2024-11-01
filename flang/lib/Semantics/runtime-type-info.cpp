@@ -387,7 +387,7 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
       for (SymbolRef lenParam : *lenParameters) {
         (void)lenParam;
         derived.AddRawParamValue(
-            std::nullopt, ParamValue::Deferred(common::TypeParamAttr::Len));
+            nullptr, ParamValue::Deferred(common::TypeParamAttr::Len));
       }
       derived.CookParameters(context_.foldingContext());
     }

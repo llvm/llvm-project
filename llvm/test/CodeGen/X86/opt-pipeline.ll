@@ -170,6 +170,7 @@
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       Shrink Wrapping analysis
 ; CHECK-NEXT:       Prologue/Epilogue Insertion & Frame Finalization
+; CHECK-NEXT:       Machine Late Instructions Cleanup Pass
 ; CHECK-NEXT:       Control Flow Optimizer
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Tail Duplication
@@ -206,6 +207,7 @@
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis
+; CHECK-NEXT:       Machine Sanitizer Binary Metadata
 ; CHECK-NEXT:       X86 Speculative Execution Side Effect Suppression
 ; CHECK-NEXT:       X86 Indirect Thunks
 ; CHECK-NEXT:       X86 Return Thunks

@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -loop-vectorize -force-ordered-reductions=true -force-vector-width=1 -S < %s -debug 2> %t.debug | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-ordered-reductions=true -force-vector-width=1 -S < %s -debug 2> %t.debug | FileCheck %s
 ; RUN: cat %t.debug | FileCheck %s --check-prefix=CHECK-DEBUG
 
 target triple = "aarch64-unknown-linux-gnu"

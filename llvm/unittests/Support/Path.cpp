@@ -1994,7 +1994,7 @@ TEST_F(FileSystemTest, readNativeFileToEOF) {
         static_cast<SmallVectorImpl<char> *>(&StaysSmall),
     };
     for (SmallVectorImpl<char> *V : Vectors) {
-      ASSERT_THAT_ERROR(Read(*V, None), Succeeded());
+      ASSERT_THAT_ERROR(Read(*V, std::nullopt), Succeeded());
       ASSERT_EQ(Content, StringRef(V->begin(), V->size()));
     }
     ASSERT_EQ(fs::DefaultReadChunkSize + Content.size(), StaysSmall.capacity());
@@ -2004,7 +2004,7 @@ TEST_F(FileSystemTest, readNativeFileToEOF) {
       constexpr StringLiteral Prefix = "prefix-";
       for (SmallVectorImpl<char> *V : Vectors) {
         V->assign(Prefix.begin(), Prefix.end());
-        ASSERT_THAT_ERROR(Read(*V, None), Succeeded());
+        ASSERT_THAT_ERROR(Read(*V, std::nullopt), Succeeded());
         ASSERT_EQ((Prefix + Content).str(), StringRef(V->begin(), V->size()));
       }
     }

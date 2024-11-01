@@ -17,6 +17,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/ExternalSemaSource.h"
+#include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/Optional.h"
@@ -54,8 +55,10 @@ private:
   /// Generates header insertion fixes for all symbols. Fixes are deduplicated.
   std::vector<Fix> fixesForSymbols(const SymbolSlab &Syms) const;
 
-  llvm::Optional<Fix> insertHeader(llvm::StringRef Name,
-                                   llvm::StringRef Symbol = "") const;
+  llvm::Optional<Fix>
+  insertHeader(llvm::StringRef Name, llvm::StringRef Symbol = "",
+               tooling::IncludeDirective Directive =
+                   tooling::IncludeDirective::Include) const;
 
   struct UnresolvedName {
     std::string Name;   // E.g. "X" in foo::X.
@@ -88,7 +91,7 @@ private:
   // index requests.
   mutable llvm::StringMap<SymbolSlab> FuzzyFindCache;
   mutable llvm::DenseMap<SymbolID, SymbolSlab> LookupCache;
-  // Returns None if the number of index requests has reached the limit.
+  // Returns std::nullopt if the number of index requests has reached the limit.
   llvm::Optional<const SymbolSlab *>
   fuzzyFindCached(const FuzzyFindRequest &Req) const;
   llvm::Optional<const SymbolSlab *> lookupCached(const SymbolID &ID) const;

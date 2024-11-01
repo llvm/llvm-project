@@ -395,7 +395,7 @@ public:
 } // namespace
 
 PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
-                         Optional<PGOOptions> PGOOpt,
+                         std::optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC)
     : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC) {
   if (TM)
@@ -474,19 +474,19 @@ void PassBuilder::registerLoopAnalyses(LoopAnalysisManager &LAM) {
 
 static std::optional<int> parseRepeatPassName(StringRef Name) {
   if (!Name.consume_front("repeat<") || !Name.consume_back(">"))
-    return None;
+    return std::nullopt;
   int Count;
   if (Name.getAsInteger(0, Count) || Count <= 0)
-    return None;
+    return std::nullopt;
   return Count;
 }
 
 static std::optional<int> parseDevirtPassName(StringRef Name) {
   if (!Name.consume_front("devirt<") || !Name.consume_back(">"))
-    return None;
+    return std::nullopt;
   int Count;
   if (Name.getAsInteger(0, Count) || Count < 0)
-    return None;
+    return std::nullopt;
   return Count;
 }
 
@@ -1027,7 +1027,7 @@ static bool isLoopPassName(StringRef Name, CallbacksT &Callbacks,
   return callbacksAcceptPassName<LoopPassManager>(Name, Callbacks);
 }
 
-Optional<std::vector<PassBuilder::PipelineElement>>
+std::optional<std::vector<PassBuilder::PipelineElement>>
 PassBuilder::parsePipelineText(StringRef Text) {
   std::vector<PipelineElement> ResultPipeline;
 
@@ -1060,7 +1060,7 @@ PassBuilder::parsePipelineText(StringRef Text) {
     do {
       // If we try to pop the outer pipeline we have unbalanced parentheses.
       if (PipelineStack.size() == 1)
-        return None;
+        return std::nullopt;
 
       PipelineStack.pop_back();
     } while (Text.consume_front(")"));
@@ -1072,12 +1072,12 @@ PassBuilder::parsePipelineText(StringRef Text) {
     // Otherwise, the end of an inner pipeline always has to be followed by
     // a comma, and then we can continue.
     if (!Text.consume_front(","))
-      return None;
+      return std::nullopt;
   }
 
   if (PipelineStack.size() > 1)
     // Unbalanced paretheses.
-    return None;
+    return std::nullopt;
 
   assert(PipelineStack.back() == &ResultPipeline &&
          "Wrong pipeline at the bottom of the stack!");

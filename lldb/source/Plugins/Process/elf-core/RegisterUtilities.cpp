@@ -22,7 +22,7 @@ getNoteType(const llvm::Triple &Triple,
       continue;
     return Entry.Note;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 DataExtractor lldb_private::getRegset(llvm::ArrayRef<CoreNote> Notes,

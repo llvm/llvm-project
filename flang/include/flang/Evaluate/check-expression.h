@@ -108,5 +108,8 @@ bool IsSimplyContiguous(const A &x, FoldingContext &context) {
 template <typename A> bool IsErrorExpr(const A &);
 extern template bool IsErrorExpr(const Expr<SomeType> &);
 
+std::optional<parser::Message> CheckStatementFunction(
+    const Symbol &, const Expr<SomeType> &, FoldingContext &);
+
 } // namespace Fortran::evaluate
 #endif

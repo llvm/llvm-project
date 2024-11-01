@@ -67,7 +67,7 @@ static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
           .Default([](Operation *) -> Optional<arith::AtomicRMWKind> {
             // TODO: AtomicRMW supports other kinds of reductions this is
             // currently not detecting, add those when the need arises.
-            return llvm::None;
+            return std::nullopt;
           });
   if (!maybeKind)
     return nullptr;
@@ -240,27 +240,36 @@ void mlir::getReachableAffineApplyOps(
 LogicalResult mlir::getIndexSet(MutableArrayRef<Operation *> ops,
                                 FlatAffineValueConstraints *domain) {
   SmallVector<Value, 4> indices;
-  SmallVector<AffineForOp, 8> forOps;
+  SmallVector<Operation *, 8> loopOps;
+  size_t numDims = 0;
   for (Operation *op : ops) {
-    if (!isa<AffineForOp, AffineIfOp>(op)) {
-      // TODO: Support affine.parallel ops.
-      LLVM_DEBUG(llvm::dbgs() << "getIndexSet only handles affine.for/if ops");
+    if (!isa<AffineForOp, AffineIfOp, AffineParallelOp>(op)) {
+      LLVM_DEBUG(llvm::dbgs() << "getIndexSet only handles affine.for/if/"
+                                 "parallel ops");
       return failure();
     }
-    if (AffineForOp forOp = dyn_cast<AffineForOp>(op))
-      forOps.push_back(forOp);
+    if (AffineForOp forOp = dyn_cast<AffineForOp>(op)) {
+      loopOps.push_back(forOp);
+      // An AffineForOp retains only 1 induction variable.
+      numDims += 1;
+    } else if (AffineParallelOp parallelOp = dyn_cast<AffineParallelOp>(op)) {
+      loopOps.push_back(parallelOp);
+      numDims += parallelOp.getNumDims();
+    }
   }
-  extractForInductionVars(forOps, &indices);
-  // Reset while associated Values in 'indices' to the domain.
-  domain->reset(forOps.size(), /*numSymbols=*/0, /*numLocals=*/0, indices);
+  extractInductionVars(loopOps, indices);
+  // Reset while associating Values in 'indices' to the domain.
+  domain->reset(numDims, /*numSymbols=*/0, /*numLocals=*/0, indices);
   for (Operation *op : ops) {
     // Add constraints from forOp's bounds.
     if (AffineForOp forOp = dyn_cast<AffineForOp>(op)) {
       if (failed(domain->addAffineForOpDomain(forOp)))
         return failure();
-    } else if (AffineIfOp ifOp = dyn_cast<AffineIfOp>(op)) {
+    } else if (auto ifOp = dyn_cast<AffineIfOp>(op)) {
       domain->addAffineIfOpDomain(ifOp);
-    }
+    } else if (auto parallelOp = dyn_cast<AffineParallelOp>(op))
+      if (failed(domain->addAffineParallelOpDomain(parallelOp)))
+        return failure();
   }
   return success();
 }
@@ -593,6 +602,12 @@ DependenceResult mlir::checkMemrefAccessDependence(
   // Return 'NoDependence' if these accesses do not access the same memref.
   if (srcAccess.memref != dstAccess.memref)
     return DependenceResult::NoDependence;
+
+  // TODO: Support affine.parallel which does not specify the ordering.
+  auto srcParent = srcAccess.opInst->getParentOfType<AffineParallelOp>();
+  auto dstParent = dstAccess.opInst->getParentOfType<AffineParallelOp>();
+  if (srcParent || dstParent)
+    return DependenceResult::Failure;
 
   // Return 'NoDependence' if one of these accesses is not an
   // AffineWriteOpInterface.

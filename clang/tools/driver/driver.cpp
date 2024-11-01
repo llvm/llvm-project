@@ -48,6 +48,7 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <optional>
 #include <set>
 #include <system_error>
 using namespace clang;
@@ -412,7 +413,7 @@ int clang_main(int Argc, char **Argv) {
   // prepended or appended.
   if (ClangCLMode) {
     // Arguments in "CL" are prepended.
-    llvm::Optional<std::string> OptCL = llvm::sys::Process::GetEnv("CL");
+    std::optional<std::string> OptCL = llvm::sys::Process::GetEnv("CL");
     if (OptCL) {
       SmallVector<const char *, 8> PrependedOpts;
       getCLEnvVarOptions(OptCL.value(), Saver, PrependedOpts);
@@ -421,7 +422,7 @@ int clang_main(int Argc, char **Argv) {
       Args.insert(Args.begin() + 1, PrependedOpts.begin(), PrependedOpts.end());
     }
     // Arguments in "_CL_" are appended.
-    llvm::Optional<std::string> Opt_CL_ = llvm::sys::Process::GetEnv("_CL_");
+    std::optional<std::string> Opt_CL_ = llvm::sys::Process::GetEnv("_CL_");
     if (Opt_CL_) {
       SmallVector<const char *, 8> AppendedOpts;
       getCLEnvVarOptions(Opt_CL_.value(), Saver, AppendedOpts);
@@ -497,7 +498,7 @@ int clang_main(int Argc, char **Argv) {
                      .Case("crash", Driver::ReproLevel::OnCrash)
                      .Case("error", Driver::ReproLevel::OnError)
                      .Case("always", Driver::ReproLevel::Always)
-                     .Default(None);
+                     .Default(std::nullopt);
     if (!Level) {
       llvm::errs() << "Unknown value for " << A->getSpelling() << ": '"
                    << A->getValue() << "'\n";

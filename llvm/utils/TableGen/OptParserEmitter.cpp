@@ -129,7 +129,7 @@ struct SimpleEnumValueTable {
     OS << TableIndex;
   }
 
-  Optional<StringRef> emitValueTable(raw_ostream &OS) const {
+  std::optional<StringRef> emitValueTable(raw_ostream &OS) const {
     if (TableIndex == -1)
       return {};
     OS << "static const SimpleEnumValue " << ValueTableName << "[] = {\n";

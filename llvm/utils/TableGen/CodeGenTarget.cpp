@@ -369,11 +369,9 @@ CodeGenRegBank &CodeGenTarget::getRegBank() const {
   return *RegBank;
 }
 
-Optional<CodeGenRegisterClass *>
-CodeGenTarget::getSuperRegForSubReg(const ValueTypeByHwMode &ValueTy,
-                                    CodeGenRegBank &RegBank,
-                                    const CodeGenSubRegIndex *SubIdx,
-                                    bool MustBeAllocatable) const {
+std::optional<CodeGenRegisterClass *> CodeGenTarget::getSuperRegForSubReg(
+    const ValueTypeByHwMode &ValueTy, CodeGenRegBank &RegBank,
+    const CodeGenSubRegIndex *SubIdx, bool MustBeAllocatable) const {
   std::vector<CodeGenRegisterClass *> Candidates;
   auto &RegClasses = RegBank.getRegClasses();
 
@@ -400,7 +398,7 @@ CodeGenTarget::getSuperRegForSubReg(const ValueTypeByHwMode &ValueTy,
 
   // If we didn't find anything, we're done.
   if (Candidates.empty())
-    return None;
+    return std::nullopt;
 
   // Find and return the largest of our candidate classes.
   llvm::stable_sort(Candidates, [&](const CodeGenRegisterClass *A,

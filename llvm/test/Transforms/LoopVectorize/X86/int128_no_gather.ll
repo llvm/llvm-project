@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -S | FileCheck %s
 
 ; This test checks that gather/scatter not used for i128 data type.
 ;CHECK-NOT: gather
@@ -13,7 +13,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @str = private unnamed_addr constant [45 x i8] c" PASS.....Y3 1/1 (BUBBLE SORT), X(25) = 5085\00"
 
 ; Function Attrs: noinline nounwind uwtable
-declare i32 @y3inner() #0 
+declare i32 @y3inner() #0
 
 define i32 @main() local_unnamed_addr #0 {
 entry:

@@ -30,7 +30,7 @@ static void runPasses(Oracle &O, Module &Program) {
   PassInstrumentationCallbacks PIC;
   PIC.registerShouldRunOptionalPassCallback(
       [&](StringRef, Any) { return !O.shouldKeep(); });
-  PassBuilder PB(nullptr, PipelineTuningOptions(), None, &PIC);
+  PassBuilder PB(nullptr, PipelineTuningOptions(), std::nullopt, &PIC);
 
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);

@@ -27,7 +27,7 @@ public:
   explicit NamespaceAliaser(const SourceManager &SourceMgr);
   // Adds a namespace alias for \p Namespace valid near \p
   // Statement. Picks the first available name from \p Abbreviations.
-  // Returns ``llvm::None`` if an alias already exists or there is an error.
+  // Returns ``std::nullopt`` if an alias already exists or there is an error.
   llvm::Optional<FixItHint>
   createAlias(ASTContext &Context, const Stmt &Statement,
               llvm::StringRef Namespace,

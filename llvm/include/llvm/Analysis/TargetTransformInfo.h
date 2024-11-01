@@ -805,6 +805,9 @@ public:
   MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
                                                bool IsZeroCmp) const;
 
+  /// Should the Select Optimization pass be enabled and ran.
+  bool enableSelectOptimize() const;
+
   /// Enable matching of interleaved access groups.
   bool enableInterleavedAccessVectorization() const;
 
@@ -1683,6 +1686,7 @@ public:
   virtual bool enableAggressiveInterleaving(bool LoopHasReductions) = 0;
   virtual MemCmpExpansionOptions
   enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const = 0;
+  virtual bool enableSelectOptimize() = 0;
   virtual bool enableInterleavedAccessVectorization() = 0;
   virtual bool enableMaskedInterleavedAccessVectorization() = 0;
   virtual bool isFPVectorizationPotentiallyUnsafe() = 0;
@@ -2172,6 +2176,9 @@ public:
   }
   bool enableInterleavedAccessVectorization() override {
     return Impl.enableInterleavedAccessVectorization();
+  }
+  bool enableSelectOptimize() override {
+    return Impl.enableSelectOptimize();
   }
   bool enableMaskedInterleavedAccessVectorization() override {
     return Impl.enableMaskedInterleavedAccessVectorization();

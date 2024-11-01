@@ -921,7 +921,7 @@ bool FunctionResult::IsCompatibleWith(
         if (whyNot) {
           *whyNot = "function results have distinct constant extents";
         }
-      } else if (!ifaceTypeShape->type().IsTkCompatibleWith(
+      } else if (!ifaceTypeShape->type().IsTkLenCompatibleWith(
                      actualTypeShape->type())) {
         if (whyNot) {
           *whyNot = "function results have incompatible types: "s +

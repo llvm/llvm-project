@@ -1174,7 +1174,7 @@ Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1,
 
   Type *Ty = V1->getType();
   Value *NewV = V1;
-  Optional<ConstantRange> CR = CR1.exactUnionWith(CR2);
+  std::optional<ConstantRange> CR = CR1.exactUnionWith(CR2);
   if (!CR) {
     if (!(ICmp1->hasOneUse() && ICmp2->hasOneUse()) || CR1.isWrappedSet() ||
         CR2.isWrappedSet())

@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=i386-unknown-freebsd -mcpu=i486 -loop-vectorize < %s
+; RUN: opt -S -mtriple=i386-unknown-freebsd -mcpu=i486 -passes=loop-vectorize < %s
 
 define i32 @PR14639(i8* nocapture %s, i32 %len) nounwind {
 entry:

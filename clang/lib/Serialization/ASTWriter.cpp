@@ -1044,6 +1044,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(SIGNATURE);
   RECORD(AST_BLOCK_HASH);
   RECORD(DIAGNOSTIC_OPTIONS);
+  RECORD(HEADER_SEARCH_PATHS);
   RECORD(DIAG_PRAGMA_MAPPINGS);
 
 #undef RECORD
@@ -1877,7 +1878,7 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
       // headers list when emitting resolved headers in the first loop below.
       // FIXME: It'd be preferable to avoid doing this if we were given
       // sufficient stat information in the module map.
-      HS.getModuleMap().resolveHeaderDirectives(M, /*File=*/llvm::None);
+      HS.getModuleMap().resolveHeaderDirectives(M, /*File=*/std::nullopt);
 
       // If the file didn't exist, we can still create a module if we were given
       // enough information in the module map.

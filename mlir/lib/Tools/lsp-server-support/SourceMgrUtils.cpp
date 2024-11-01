@@ -71,10 +71,10 @@ Optional<std::string> lsp::extractSourceDocComment(llvm::SourceMgr &sourceMgr,
   // cover the most common. We essentially look for a comment preceding the
   // line, and if we find one, use that as the documentation.
   if (!loc.isValid())
-    return llvm::None;
+    return std::nullopt;
   int bufferId = sourceMgr.FindBufferContainingLoc(loc);
   if (bufferId == 0)
-    return llvm::None;
+    return std::nullopt;
   const char *bufferStart =
       sourceMgr.getMemoryBuffer(bufferId)->getBufferStart();
   StringRef buffer(bufferStart, loc.getPointer() - bufferStart);
@@ -83,7 +83,7 @@ Optional<std::string> lsp::extractSourceDocComment(llvm::SourceMgr &sourceMgr,
   auto popLastLine = [&]() -> Optional<StringRef> {
     size_t newlineOffset = buffer.find_last_of("\n");
     if (newlineOffset == StringRef::npos)
-      return llvm::None;
+      return std::nullopt;
     StringRef lastLine = buffer.drop_front(newlineOffset).trim();
     buffer = buffer.take_front(newlineOffset);
     return lastLine;
@@ -91,7 +91,7 @@ Optional<std::string> lsp::extractSourceDocComment(llvm::SourceMgr &sourceMgr,
 
   // Try to pop the current line.
   if (!popLastLine())
-    return llvm::None;
+    return std::nullopt;
 
   // Try to parse a comment string from the source file.
   SmallVector<StringRef> commentLines;
@@ -105,7 +105,7 @@ Optional<std::string> lsp::extractSourceDocComment(llvm::SourceMgr &sourceMgr,
   }
 
   if (commentLines.empty())
-    return llvm::None;
+    return std::nullopt;
   return llvm::join(llvm::reverse(commentLines), "\n");
 }
 

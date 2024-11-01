@@ -101,7 +101,7 @@ void test_s_dcache_wb()
 }
 
 // CHECK-LABEL: @test_mov_dpp
-// CHECK: call i32 @llvm.amdgcn.update.dpp.i32(i32 undef, i32 %src, i32 0, i32 0, i32 0, i1 false)
+// CHECK: call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 %src, i32 0, i32 0, i32 0, i1 false)
 void test_mov_dpp(global int* out, int src)
 {
   *out = __builtin_amdgcn_mov_dpp(src, 0, 0, 0, false);

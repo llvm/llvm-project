@@ -12,13 +12,13 @@
 
 #include "llvm/IR/DIBuilder.h"
 #include "LLVMContextImpl.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::dwarf;
@@ -156,7 +156,7 @@ DICompileUnit *DIBuilder::createCompileUnit(
     DICompileUnit::DebugNameTableKind NameTableKind, bool RangesBaseAddress,
     StringRef SysRoot, StringRef SDK) {
 
-  assert(((Lang <= dwarf::DW_LANG_Fortran08 && Lang >= dwarf::DW_LANG_C89) ||
+  assert(((Lang <= dwarf::DW_LANG_Ada2012 && Lang >= dwarf::DW_LANG_C89) ||
           (Lang <= dwarf::DW_LANG_hi_user && Lang >= dwarf::DW_LANG_lo_user)) &&
          "Invalid Language tag");
 
@@ -229,8 +229,8 @@ DIBuilder::createImportedDeclaration(DIScope *Context, DINode *Decl,
 }
 
 DIFile *DIBuilder::createFile(StringRef Filename, StringRef Directory,
-                              Optional<DIFile::ChecksumInfo<StringRef>> CS,
-                              Optional<StringRef> Source) {
+                              std::optional<DIFile::ChecksumInfo<StringRef>> CS,
+                              std::optional<StringRef> Source) {
   return DIFile::get(VMContext, Filename, Directory, CS, Source);
 }
 
@@ -318,7 +318,7 @@ DIDerivedType *DIBuilder::createQualifiedType(unsigned Tag, DIType *FromTy) {
 DIDerivedType *
 DIBuilder::createPointerType(DIType *PointeeTy, uint64_t SizeInBits,
                              uint32_t AlignInBits,
-                             Optional<unsigned> DWARFAddressSpace,
+                             std::optional<unsigned> DWARFAddressSpace,
                              StringRef Name, DINodeArray Annotations) {
   // FIXME: Why is there a name here?
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_pointer_type, Name,
@@ -340,7 +340,7 @@ DIDerivedType *DIBuilder::createMemberPointerType(DIType *PointeeTy,
 DIDerivedType *
 DIBuilder::createReferenceType(unsigned Tag, DIType *RTy, uint64_t SizeInBits,
                                uint32_t AlignInBits,
-                               Optional<unsigned> DWARFAddressSpace) {
+                               std::optional<unsigned> DWARFAddressSpace) {
   assert(RTy && "Unable to create reference type");
   return DIDerivedType::get(VMContext, Tag, "", nullptr, 0, nullptr, RTy,
                             SizeInBits, AlignInBits, 0, DWARFAddressSpace,

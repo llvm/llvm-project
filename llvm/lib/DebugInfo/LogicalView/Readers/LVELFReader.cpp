@@ -398,7 +398,7 @@ void LVELFReader::processOneAttribute(const DWARFDie &Die, LVOffset *OffsetPtr,
       // For toolchains that support the removal of unused code, the linker
       // marks functions that have been removed, by setting the value for the
       // low_pc to the max address.
-      if (Optional<uint64_t> Value = FormValue.getAsAddress()) {
+      if (std::optional<uint64_t> Value = FormValue.getAsAddress()) {
         CurrentLowPC = Value.value();
       } else {
         uint64_t UValue = FormValue.getRawUValue();
@@ -424,10 +424,10 @@ void LVELFReader::processOneAttribute(const DWARFDie &Die, LVOffset *OffsetPtr,
   case dwarf::DW_AT_high_pc:
     if (options().getGeneralCollectRanges()) {
       FoundHighPC = true;
-      if (Optional<uint64_t> Address = FormValue.getAsAddress())
+      if (std::optional<uint64_t> Address = FormValue.getAsAddress())
         // High PC is an address.
         CurrentHighPC = *Address;
-      if (Optional<uint64_t> Offset = FormValue.getAsUnsignedConstant())
+      if (std::optional<uint64_t> Offset = FormValue.getAsUnsignedConstant())
         // High PC is an offset from LowPC.
         CurrentHighPC = CurrentLowPC + *Offset;
       // Store the real upper limit for the address range.
@@ -628,7 +628,7 @@ LVScope *LVELFReader::processOneDie(const DWARFDie &InputDIE, LVScope *Parent,
           !CurrentScope->getLinkageNameIndex() &&
           CurrentScope->getHasReferenceSpecification()) {
         // Get the linkage name in order to search for a possible comdat.
-        Optional<DWARFFormValue> LinkageDIE =
+        std::optional<DWARFFormValue> LinkageDIE =
             DIE.findRecursively(dwarf::DW_AT_linkage_name);
         if (LinkageDIE.has_value()) {
           StringRef Name(dwarf::toStringRef(LinkageDIE));
@@ -899,7 +899,7 @@ Error LVELFReader::createScopes() {
     DWARFDie UnitDie = CU->getUnitDIE();
     SmallString<16> DWOAlternativeLocation;
     if (UnitDie) {
-      Optional<const char *> DWOFileName =
+      std::optional<const char *> DWOFileName =
           CU->getVersion() >= 5
               ? dwarf::toString(UnitDie.find(dwarf::DW_AT_dwo_name))
               : dwarf::toString(UnitDie.find(dwarf::DW_AT_GNU_dwo_name));
@@ -1002,13 +1002,13 @@ void LVELFReader::processLocationList(dwarf::Attribute Attr,
       FormValue.isFormClass(DWARFFormValue::FC_SectionOffset)) {
     uint64_t Offset = *FormValue.getAsSectionOffset();
     if (FormValue.getForm() == dwarf::DW_FORM_loclistx) {
-      Optional<uint64_t> LoclistOffset = U->getLoclistOffset(Offset);
+      std::optional<uint64_t> LoclistOffset = U->getLoclistOffset(Offset);
       if (!LoclistOffset)
         return;
       Offset = *LoclistOffset;
     }
     uint64_t BaseAddr = 0;
-    if (Optional<SectionedAddress> BA = U->getBaseAddress())
+    if (std::optional<SectionedAddress> BA = U->getBaseAddress())
       BaseAddr = BA->Address;
     LVAddress LowPC = 0;
     LVAddress HighPC = 0;

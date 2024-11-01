@@ -751,9 +751,9 @@ public:
     return MI == EndLoop;
   }
 
-  Optional<bool>
-  createTripCountGreaterCondition(int TC, MachineBasicBlock &MBB,
-                                  SmallVectorImpl<MachineOperand> &Cond) override {
+  std::optional<bool> createTripCountGreaterCondition(
+      int TC, MachineBasicBlock &MBB,
+      SmallVectorImpl<MachineOperand> &Cond) override {
     if (TripCount == -1) {
       // Check if we're done with the loop.
       Register Done = TII->createVR(MF, MVT::i1);

@@ -8,7 +8,6 @@
 #ifndef LLVM_TESTING_SUPPORT_ANNOTATIONS_H
 #define LLVM_TESTING_SUPPORT_ANNOTATIONS_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"

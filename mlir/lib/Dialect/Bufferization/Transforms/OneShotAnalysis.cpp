@@ -480,7 +480,7 @@ bool canUseOpDominance(const DenseSet<OpOperand *> &usesRead,
                        const DenseSet<OpOperand *> &usesWrite,
                        const AnalysisState &state) {
   const BufferizationOptions &options = state.getOptions();
-  Optional<Region *> commonEnclosingRegion = None;
+  Optional<Region *> commonEnclosingRegion = std::nullopt;
 
   // In case of a write, take the region in which the write takes place.
   for (OpOperand *uWrite : usesWrite) {

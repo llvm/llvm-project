@@ -633,7 +633,7 @@ TEST(SourceCodeTests, HalfOpenFileRange) {
     const NamedDecl &Decl = findUnqualifiedDecl(AST, Name);
     auto FileRange = toHalfOpenFileRange(SM, LangOpts, Decl.getSourceRange());
     SCOPED_TRACE("Checking range: " + Name);
-    ASSERT_NE(FileRange, llvm::None);
+    ASSERT_NE(FileRange, std::nullopt);
     Range HalfOpenRange = SourceRangeToRange(*FileRange);
     EXPECT_EQ(HalfOpenRange, Test.ranges(Name)[0]);
   };

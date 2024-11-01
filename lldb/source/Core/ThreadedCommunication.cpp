@@ -362,7 +362,7 @@ void ThreadedCommunication::SynchronizeWithReadThread() {
 
   // Wait for the synchronization event.
   EventSP event_sp;
-  listener_sp->GetEvent(event_sp, llvm::None);
+  listener_sp->GetEvent(event_sp, std::nullopt);
 }
 
 void ThreadedCommunication::SetConnection(

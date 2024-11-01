@@ -402,6 +402,7 @@ namespace clang {
     void VisitLinkageSpecDecl(LinkageSpecDecl *D);
     void VisitExportDecl(ExportDecl *D);
     void VisitFileScopeAsmDecl(FileScopeAsmDecl *AD);
+    void VisitTopLevelStmtDecl(TopLevelStmtDecl *D);
     void VisitImportDecl(ImportDecl *D);
     void VisitAccessSpecDecl(AccessSpecDecl *D);
     void VisitFriendDecl(FriendDecl *D);
@@ -1676,6 +1677,11 @@ void ASTDeclReader::VisitFileScopeAsmDecl(FileScopeAsmDecl *AD) {
   VisitDecl(AD);
   AD->setAsmString(cast<StringLiteral>(Record.readExpr()));
   AD->setRParenLoc(readSourceLocation());
+}
+
+void ASTDeclReader::VisitTopLevelStmtDecl(TopLevelStmtDecl *D) {
+  VisitDecl(D);
+  D->Statement = Record.readStmt();
 }
 
 void ASTDeclReader::VisitBlockDecl(BlockDecl *BD) {
@@ -3022,8 +3028,8 @@ static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D, bool HasBody) {
       return false;
   }
 
-  if (isa<FileScopeAsmDecl, ObjCProtocolDecl, ObjCImplDecl, ImportDecl,
-          PragmaCommentDecl, PragmaDetectMismatchDecl>(D))
+  if (isa<FileScopeAsmDecl, TopLevelStmtDecl, ObjCProtocolDecl, ObjCImplDecl,
+          ImportDecl, PragmaCommentDecl, PragmaDetectMismatchDecl>(D))
     return true;
   if (isa<OMPThreadPrivateDecl, OMPDeclareReductionDecl, OMPDeclareMapperDecl,
           OMPAllocateDecl, OMPRequiresDecl>(D))
@@ -3828,6 +3834,9 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     break;
   case DECL_FILE_SCOPE_ASM:
     D = FileScopeAsmDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_TOP_LEVEL_STMT_DECL:
+    D = TopLevelStmtDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_BLOCK:
     D = BlockDecl::CreateDeserialized(Context, ID);

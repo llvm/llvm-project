@@ -168,7 +168,7 @@ remarks::createYAMLParserFromMeta(StringRef Buf,
 }
 
 YAMLRemarkParser::YAMLRemarkParser(StringRef Buf)
-    : YAMLRemarkParser(Buf, None) {}
+    : YAMLRemarkParser(Buf, std::nullopt) {}
 
 YAMLRemarkParser::YAMLRemarkParser(StringRef Buf,
                                    Optional<ParsedStringTable> StrTab)

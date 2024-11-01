@@ -136,7 +136,7 @@ static Expected<std::string> searchForFile(const Twine &FileName) {
 
       GlobalDependencyInfo->addMissingInput(Path);
     }
-    return None;
+    return std::nullopt;
   };
 
   Optional<std::string> Found = FindLib(LibrarySearchDirs);

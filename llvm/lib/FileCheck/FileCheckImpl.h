@@ -265,16 +265,16 @@ private:
   /// format.
   ExpressionFormat ImplicitFormat;
 
-  /// Value of numeric variable, if defined, or None otherwise.
+  /// Value of numeric variable, if defined, or std::nullopt otherwise.
   Optional<ExpressionValue> Value;
 
-  /// The input buffer's string from which Value was parsed, or None.  See
-  /// comments on getStringValue for a discussion of the None case.
+  /// The input buffer's string from which Value was parsed, or std::nullopt.
+  /// See comments on getStringValue for a discussion of the None case.
   Optional<StringRef> StrValue;
 
-  /// Line number where this variable is defined, or None if defined before
-  /// input is parsed. Used to determine whether a variable is defined on the
-  /// same line as a given use.
+  /// Line number where this variable is defined, or std::nullopt if defined
+  /// before input is parsed. Used to determine whether a variable is defined on
+  /// the same line as a given use.
   Optional<size_t> DefLineNumber;
 
 public:
@@ -282,7 +282,7 @@ public:
   /// defined at line \p DefLineNumber or defined before input is parsed if
   /// \p DefLineNumber is None.
   explicit NumericVariable(StringRef Name, ExpressionFormat ImplicitFormat,
-                           Optional<size_t> DefLineNumber = None)
+                           Optional<size_t> DefLineNumber = std::nullopt)
       : Name(Name), ImplicitFormat(ImplicitFormat),
         DefLineNumber(DefLineNumber) {}
 
@@ -296,9 +296,9 @@ public:
   Optional<ExpressionValue> getValue() const { return Value; }
 
   /// \returns the input buffer's string from which this variable's value was
-  /// parsed, or None if the value is not yet defined or was not parsed from the
-  /// input buffer.  For example, the value of @LINE is not parsed from the
-  /// input buffer, and some numeric variables are parsed from the command
+  /// parsed, or std::nullopt if the value is not yet defined or was not parsed
+  /// from the input buffer.  For example, the value of @LINE is not parsed from
+  /// the input buffer, and some numeric variables are parsed from the command
   /// line instead.
   Optional<StringRef> getStringValue() const { return StrValue; }
 
@@ -306,7 +306,7 @@ public:
   /// buffer string from which it was parsed to \p NewStrValue.  See comments on
   /// getStringValue for a discussion of when the latter can be None.
   void setValue(ExpressionValue NewValue,
-                Optional<StringRef> NewStrValue = None) {
+                Optional<StringRef> NewStrValue = std::nullopt) {
     Value = NewValue;
     StrValue = NewStrValue;
   }
@@ -314,12 +314,12 @@ public:
   /// Clears value of this numeric variable, regardless of whether it is
   /// currently defined or not.
   void clearValue() {
-    Value = None;
-    StrValue = None;
+    Value = std::nullopt;
+    StrValue = std::nullopt;
   }
 
-  /// \returns the line number where this variable is defined, if any, or None
-  /// if defined before input is parsed.
+  /// \returns the line number where this variable is defined, if any, or
+  /// std::nullopt if defined before input is parsed.
   Optional<size_t> getDefLineNumber() const { return DefLineNumber; }
 };
 
@@ -555,7 +555,7 @@ public:
   SMRange getRange() const { return Range; }
 
   static Error get(const SourceMgr &SM, SMLoc Loc, const Twine &ErrMsg,
-                   SMRange Range = None) {
+                   SMRange Range = std::nullopt) {
     return make_error<ErrorDiagnostic>(
         SM.GetMessage(Loc, SourceMgr::DK_Error, ErrMsg), Range);
   }
@@ -672,9 +672,9 @@ class Pattern {
 
   Check::FileCheckType CheckTy;
 
-  /// Line number for this CHECK pattern or None if it is an implicit pattern.
-  /// Used to determine whether a variable definition is made on an earlier
-  /// line to the one with this CHECK.
+  /// Line number for this CHECK pattern or std::nullopt if it is an implicit
+  /// pattern. Used to determine whether a variable definition is made on an
+  /// earlier line to the one with this CHECK.
   Optional<size_t> LineNumber;
 
   /// Ignore case while matching if set to true.
@@ -682,7 +682,7 @@ class Pattern {
 
 public:
   Pattern(Check::FileCheckType Ty, FileCheckPatternContext *Context,
-          Optional<size_t> Line = None)
+          Optional<size_t> Line = std::nullopt)
       : Context(Context), CheckTy(Ty), LineNumber(Line) {}
 
   /// \returns the location in source code.
@@ -717,7 +717,7 @@ public:
   /// holding a diagnostic against \p SM if parsing fails. If substitution was
   /// successful, sets \p DefinedNumericVariable to point to the class
   /// representing the numeric variable defined in this numeric substitution
-  /// block, or None if this block does not define any variable.
+  /// block, or std::nullopt if this block does not define any variable.
   static Expected<std::unique_ptr<Expression>> parseNumericSubstitutionBlock(
       StringRef Expr, Optional<NumericVariable *> &DefinedNumericVariable,
       bool IsLegacyLineExpr, Optional<size_t> LineNumber,

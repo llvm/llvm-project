@@ -71,6 +71,7 @@
 #include <cstdint>
 #include <iterator>
 #include <limits>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -2138,7 +2139,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   if (CallerPersonality) {
     EHPersonality Personality = classifyEHPersonality(CallerPersonality);
     if (isScopedEHPersonality(Personality)) {
-      Optional<OperandBundleUse> ParentFunclet =
+      std::optional<OperandBundleUse> ParentFunclet =
           CB.getOperandBundle(LLVMContext::OB_funclet);
       if (ParentFunclet)
         CallSiteEHPad = cast<FuncletPadInst>(ParentFunclet->Inputs.front());
@@ -2283,7 +2284,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       HandleByValArgumentInit(Init.Ty, Init.Dst, Init.Src, Caller->getParent(),
                               &*FirstNewBlock, IFI);
 
-    Optional<OperandBundleUse> ParentDeopt =
+    std::optional<OperandBundleUse> ParentDeopt =
         CB.getOperandBundle(LLVMContext::OB_deopt);
     if (ParentDeopt) {
       SmallVector<OperandBundleDef, 2> OpDefs;

@@ -35,13 +35,13 @@ public:
   StringRef getType() const;
 
   /// Return the default value of the option.
-  Optional<StringRef> getDefaultValue() const;
+  std::optional<StringRef> getDefaultValue() const;
 
   /// Return the description for this option.
   StringRef getDescription() const;
 
   /// Return the additional flags passed to the option constructor.
-  Optional<StringRef> getAdditionalFlags() const;
+  std::optional<StringRef> getAdditionalFlags() const;
 
   /// Flag indicating if this is a list option.
   bool isListOption() const;

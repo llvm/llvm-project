@@ -2742,7 +2742,7 @@ bool isKnownNonZero(const Value* V, unsigned Depth, const Query& Q) {
 
 /// If the pair of operators are the same invertible function, return the
 /// the operands of the function corresponding to each input. Otherwise,
-/// return None.  An invertible function is one that is 1-to-1 and maps
+/// return std::nullopt.  An invertible function is one that is 1-to-1 and maps
 /// every input value to exactly one output value.  This is equivalent to
 /// saying that Op1 and Op2 are equal exactly when the specified pair of
 /// operands are equal, (except that Op1 and Op2 may be poison more often.)
@@ -3653,6 +3653,9 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
     switch (IID) {
     default:
       break;
+    case Intrinsic::canonicalize:
+    case Intrinsic::arithmetic_fence:
+      return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly, Depth + 1);
     case Intrinsic::maxnum: {
       Value *V0 = I->getOperand(0), *V1 = I->getOperand(1);
       auto isPositiveNum = [&](Value *V) {
@@ -3691,7 +3694,10 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
     case Intrinsic::exp2:
     case Intrinsic::fabs:
       return true;
-
+    case Intrinsic::copysign:
+      // Only the sign operand matters.
+      return cannotBeOrderedLessThanZeroImpl(I->getOperand(1), TLI, true,
+                                             Depth + 1);
     case Intrinsic::sqrt:
       // sqrt(x) is always >= -0 or NaN.  Moreover, sqrt(x) == -0 iff x == -0.
       if (!SignBitOnly)
@@ -3793,6 +3799,7 @@ bool llvm::isKnownNeverInfinity(const Value *V, const TargetLibraryInfo *TLI,
       case Intrinsic::fabs:
       case Intrinsic::canonicalize:
       case Intrinsic::copysign:
+      case Intrinsic::arithmetic_fence:
         return isKnownNeverInfinity(Inst->getOperand(0), TLI, Depth + 1);
       default:
         break;
@@ -3892,6 +3899,7 @@ bool llvm::isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
     case Intrinsic::nearbyint:
     case Intrinsic::round:
     case Intrinsic::roundeven:
+    case Intrinsic::arithmetic_fence:
       return isKnownNeverNaN(II->getArgOperand(0), TLI, Depth + 1);
     case Intrinsic::sqrt:
       return isKnownNeverNaN(II->getArgOperand(0), TLI, Depth + 1) &&
@@ -5177,7 +5185,24 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly,
     if (auto *II = dyn_cast<IntrinsicInst>(Op)) {
       switch (II->getIntrinsicID()) {
       // TODO: Add more intrinsics.
+      case Intrinsic::ctlz:
+      case Intrinsic::cttz:
+      case Intrinsic::abs:
+        if (cast<ConstantInt>(II->getArgOperand(1))->isNullValue())
+          return false;
+        break;
       case Intrinsic::ctpop:
+      case Intrinsic::bswap:
+      case Intrinsic::bitreverse:
+      case Intrinsic::fshl:
+      case Intrinsic::fshr:
+      case Intrinsic::smax:
+      case Intrinsic::smin:
+      case Intrinsic::umax:
+      case Intrinsic::umin:
+      case Intrinsic::ptrmask:
+      case Intrinsic::fptoui_sat:
+      case Intrinsic::fptosi_sat:
       case Intrinsic::sadd_with_overflow:
       case Intrinsic::ssub_with_overflow:
       case Intrinsic::smul_with_overflow:
@@ -6657,7 +6682,7 @@ static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
 }
 
 /// Return true if "icmp Pred BLHS BRHS" is true whenever "icmp Pred
-/// ALHS ARHS" is true.  Otherwise, return None.
+/// ALHS ARHS" is true.  Otherwise, return std::nullopt.
 static Optional<bool>
 isImpliedCondOperands(CmpInst::Predicate Pred, const Value *ALHS,
                       const Value *ARHS, const Value *BLHS, const Value *BRHS,
@@ -6694,7 +6719,7 @@ static bool areMatchingOperands(const Value *L0, const Value *L1, const Value *R
 
 /// Return true if "icmp1 LPred X, Y" implies "icmp2 RPred X, Y" is true.
 /// Return false if "icmp1 LPred X, Y" implies "icmp2 RPred X, Y" is false.
-/// Otherwise, return None if we can't infer anything.
+/// Otherwise, return std::nullopt if we can't infer anything.
 static Optional<bool> isImpliedCondMatchingOperands(CmpInst::Predicate LPred,
                                                     CmpInst::Predicate RPred,
                                                     bool AreSwappedOps) {
@@ -6712,7 +6737,7 @@ static Optional<bool> isImpliedCondMatchingOperands(CmpInst::Predicate LPred,
 
 /// Return true if "icmp LPred X, LC" implies "icmp RPred X, RC" is true.
 /// Return false if "icmp LPred X, LC" implies "icmp RPred X, RC" is false.
-/// Otherwise, return None if we can't infer anything.
+/// Otherwise, return std::nullopt if we can't infer anything.
 static Optional<bool> isImpliedCondCommonOperandWithConstants(
     CmpInst::Predicate LPred, const APInt &LC, CmpInst::Predicate RPred,
     const APInt &RC) {
@@ -6728,8 +6753,8 @@ static Optional<bool> isImpliedCondCommonOperandWithConstants(
 }
 
 /// Return true if LHS implies RHS (expanded to its components as "R0 RPred R1")
-/// is true.  Return false if LHS implies RHS is false. Otherwise, return None
-/// if we can't infer anything.
+/// is true.  Return false if LHS implies RHS is false. Otherwise, return
+/// std::nullopt if we can't infer anything.
 static Optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
                                          CmpInst::Predicate RPred,
                                          const Value *R0, const Value *R1,
@@ -6761,8 +6786,9 @@ static Optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
 }
 
 /// Return true if LHS implies RHS is true.  Return false if LHS implies RHS is
-/// false.  Otherwise, return None if we can't infer anything.  We expect the
-/// RHS to be an icmp and the LHS to be an 'and', 'or', or a 'select' instruction.
+/// false.  Otherwise, return std::nullopt if we can't infer anything.  We
+/// expect the RHS to be an icmp and the LHS to be an 'and', 'or', or a 'select'
+/// instruction.
 static Optional<bool>
 isImpliedCondAndOr(const Instruction *LHS, CmpInst::Predicate RHSPred,
                    const Value *RHSOp0, const Value *RHSOp1,

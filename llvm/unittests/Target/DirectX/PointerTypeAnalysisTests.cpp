@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PointerTypeAnalysis.h"
+#include "DirectXIRPasses/PointerTypeAnalysis.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"

@@ -46,7 +46,7 @@ struct TestTensorCopyInsertionPass
     options.bufferizeFunctionBoundaries = bufferizeFunctionBoundaries;
     options.createDeallocs = createDeallocs;
     if (mustInferMemorySpace)
-      options.defaultMemorySpace = None;
+      options.defaultMemorySpace = std::nullopt;
     if (failed(bufferization::insertTensorCopies(getOperation(), options)))
       signalPassFailure();
   }

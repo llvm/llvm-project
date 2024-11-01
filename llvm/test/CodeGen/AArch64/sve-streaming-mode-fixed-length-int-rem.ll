@@ -10,16 +10,14 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x i8> @srem_v4i8(<4 x i8> %op1, <4 x i8> %op2) #0 {
 ; CHECK-LABEL: srem_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    ptrue p1.s, vl4
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI0_0]
-; CHECK-NEXT:    lsl z1.h, p0/m, z1.h, z2.h
-; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, z2.h
-; CHECK-NEXT:    asr z1.h, p0/m, z1.h, z2.h
-; CHECK-NEXT:    asr z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    lsl z1.h, p0/m, z1.h, #8
+; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, #8
+; CHECK-NEXT:    asr z1.h, p0/m, z1.h, #8
+; CHECK-NEXT:    asr z0.h, p0/m, z0.h, #8
 ; CHECK-NEXT:    sunpklo z2.s, z1.h
 ; CHECK-NEXT:    sunpklo z3.s, z0.h
 ; CHECK-NEXT:    sdivr z2.s, p1/m, z2.s, z3.s
@@ -325,13 +323,11 @@ define void @srem_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 define <4 x i8> @urem_v4i8(<4 x i8> %op1, <4 x i8> %op2) #0 {
 ; CHECK-LABEL: urem_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI13_0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI13_0]
-; CHECK-NEXT:    and z1.d, z1.d, z2.d
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
+; CHECK-NEXT:    and z0.h, z0.h, #0xff
+; CHECK-NEXT:    and z1.h, z1.h, #0xff
 ; CHECK-NEXT:    uunpklo z2.s, z1.h
 ; CHECK-NEXT:    uunpklo z3.s, z0.h
 ; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z3.s

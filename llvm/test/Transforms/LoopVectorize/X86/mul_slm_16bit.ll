@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -S -debug -loop-vectorize -mcpu=slm 2>&1 | FileCheck %s --check-prefix=SLM
+; RUN: opt < %s -S -debug -passes=loop-vectorize -mcpu=slm 2>&1 | FileCheck %s --check-prefix=SLM
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -30,8 +30,8 @@ for.body:                                         ; preds = %for.body.preheader,
   %arrayidx2 = getelementptr inbounds i8, i8* %dataB, i64 %indvars.iv
   %1 = load i8, i8* %arrayidx2, align 1
   %conv3 = sext i8 %1 to i32
-; sources of the mul is sext\sext from i8 
-; use pmullw\sext seq.   
+; sources of the mul is sext\sext from i8
+; use pmullw\sext seq.
 ; SLM:  cost of 3 for VF 2 {{.*}} mul nsw i32 %conv3, %conv
   %mul = mul nsw i32 %conv3, %conv
 ; sources of the mul is zext\sext from i8
@@ -99,8 +99,8 @@ for.body:                                         ; preds = %for.body.preheader,
   %arrayidx2 = getelementptr inbounds i16, i16* %dataB, i64 %indvars.iv
   %1 = load i16, i16* %arrayidx2, align 1
   %conv3 = sext i16 %1 to i32
-; sources of the mul is sext\sext from i16 
-; use pmulhw\pmullw\pshuf seq.   
+; sources of the mul is sext\sext from i16
+; use pmulhw\pmullw\pshuf seq.
 ; SLM:  cost of 3 for VF 4 {{.*}} mul nsw i32 %conv3, %conv
   %mul = mul nsw i32 %conv3, %conv
 ; sources of the mul is zext\sext from i16

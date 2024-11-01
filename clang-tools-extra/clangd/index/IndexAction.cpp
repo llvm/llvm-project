@@ -30,10 +30,10 @@ namespace {
 
 llvm::Optional<std::string> toURI(Optional<FileEntryRef> File) {
   if (!File)
-    return llvm::None;
+    return std::nullopt;
   auto AbsolutePath = File->getFileEntry().tryGetRealPathName();
   if (AbsolutePath.empty())
-    return llvm::None;
+    return std::nullopt;
   return URI::create(AbsolutePath).toString();
 }
 

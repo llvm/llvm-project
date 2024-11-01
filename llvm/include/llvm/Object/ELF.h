@@ -120,7 +120,7 @@ template <class T> struct DataRegion {
   }
 
   const T *First;
-  Optional<uint64_t> Size = None;
+  std::optional<uint64_t> Size = std::nullopt;
   const uint8_t *BufEnd = nullptr;
 };
 
@@ -202,10 +202,10 @@ public:
   Expected<std::vector<VerNeed>> getVersionDependencies(
       const Elf_Shdr &Sec,
       WarningHandler WarnHandler = &defaultWarningHandler) const;
-  Expected<StringRef>
-  getSymbolVersionByIndex(uint32_t SymbolVersionIndex, bool &IsDefault,
-                          SmallVector<Optional<VersionEntry>, 0> &VersionMap,
-                          Optional<bool> IsSymHidden) const;
+  Expected<StringRef> getSymbolVersionByIndex(
+      uint32_t SymbolVersionIndex, bool &IsDefault,
+      SmallVector<std::optional<VersionEntry>, 0> &VersionMap,
+      std::optional<bool> IsSymHidden) const;
 
   Expected<StringRef>
   getStringTable(const Elf_Shdr &Section,
@@ -233,7 +233,7 @@ public:
   Expected<const Elf_Sym *> getRelocationSymbol(const Elf_Rel &Rel,
                                                 const Elf_Shdr *SymTab) const;
 
-  Expected<SmallVector<Optional<VersionEntry>, 0>>
+  Expected<SmallVector<std::optional<VersionEntry>, 0>>
   loadVersionMap(const Elf_Shdr *VerNeedSec, const Elf_Shdr *VerDefSec) const;
 
   static Expected<ELFFile> create(StringRef Object);
@@ -587,10 +587,10 @@ uint32_t ELFFile<ELFT>::getRelativeRelocationType() const {
 }
 
 template <class ELFT>
-Expected<SmallVector<Optional<VersionEntry>, 0>>
+Expected<SmallVector<std::optional<VersionEntry>, 0>>
 ELFFile<ELFT>::loadVersionMap(const Elf_Shdr *VerNeedSec,
                               const Elf_Shdr *VerDefSec) const {
-  SmallVector<Optional<VersionEntry>, 0> VersionMap;
+  SmallVector<std::optional<VersionEntry>, 0> VersionMap;
 
   // The first two version indexes are reserved.
   // Index 0 is VER_NDX_LOCAL, index 1 is VER_NDX_GLOBAL.
@@ -722,8 +722,8 @@ Expected<uint64_t> ELFFile<ELFT>::getDynSymtabSize() const {
   Expected<Elf_Dyn_Range> DynTable = dynamicEntries();
   if (!DynTable)
     return DynTable.takeError();
-  llvm::Optional<uint64_t> ElfHash;
-  llvm::Optional<uint64_t> ElfGnuHash;
+  std::optional<uint64_t> ElfHash;
+  std::optional<uint64_t> ElfGnuHash;
   for (const Elf_Dyn &Entry : *DynTable) {
     switch (Entry.d_tag) {
     case ELF::DT_HASH:
@@ -876,8 +876,8 @@ Expected<const T *> ELFFile<ELFT>::getEntry(const Elf_Shdr &Section,
 template <typename ELFT>
 Expected<StringRef> ELFFile<ELFT>::getSymbolVersionByIndex(
     uint32_t SymbolVersionIndex, bool &IsDefault,
-    SmallVector<Optional<VersionEntry>, 0> &VersionMap,
-    Optional<bool> IsSymHidden) const {
+    SmallVector<std::optional<VersionEntry>, 0> &VersionMap,
+    std::optional<bool> IsSymHidden) const {
   size_t VersionIndex = SymbolVersionIndex & llvm::ELF::VERSYM_VERSION;
 
   // Special markers for unversioned symbols.

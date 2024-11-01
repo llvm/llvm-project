@@ -75,7 +75,7 @@ struct TestDecomposeCallGraphTypes
         [](OpBuilder &builder, TupleType resultType, ValueRange inputs,
            Location loc) -> Optional<Value> {
           if (inputs.size() == 1)
-            return llvm::None;
+            return std::nullopt;
           TupleType tuple = builder.getTupleType(inputs.getTypes());
           Value value = builder.create<test::MakeTupleOp>(loc, tuple, inputs);
           return value;

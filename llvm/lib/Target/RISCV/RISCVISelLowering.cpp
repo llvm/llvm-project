@@ -1228,6 +1228,18 @@ bool RISCVTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
   return C && C->getAPIntValue().ule(10);
 }
 
+bool RISCVTargetLowering::shouldFoldSelectWithIdentityConstant(unsigned Opcode,
+                                                               EVT VT) const {
+  // Only enable for rvv.
+  if (!VT.isVector() || !Subtarget.hasVInstructions())
+    return false;
+
+  if (VT.isFixedLengthVector() && !isTypeLegal(VT))
+    return false;
+
+  return true;
+}
+
 bool RISCVTargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                                             Type *Ty) const {
   assert(Ty->isIntegerTy());
@@ -8063,14 +8075,16 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
 // (sub x, (select cond, 0, c))
 //   -> (select cond, x, (sub x, c))  [AllOnes=0]
 static SDValue combineSelectAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
-                                   SelectionDAG &DAG, bool AllOnes) {
+                                   SelectionDAG &DAG, bool AllOnes,
+                                   const RISCVSubtarget &Subtarget) {
   EVT VT = N->getValueType(0);
 
   // Skip vectors.
   if (VT.isVector())
     return SDValue();
 
-  if ((Slct.getOpcode() != ISD::SELECT &&
+  if (!Subtarget.hasShortForwardBranchOpt() ||
+      (Slct.getOpcode() != ISD::SELECT &&
        Slct.getOpcode() != RISCVISD::SELECT_CC) ||
       !Slct.hasOneUse())
     return SDValue();
@@ -8111,12 +8125,13 @@ static SDValue combineSelectAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
 
 // Attempt combineSelectAndUse on each operand of a commutative operator N.
 static SDValue combineSelectAndUseCommutative(SDNode *N, SelectionDAG &DAG,
-                                              bool AllOnes) {
+                                              bool AllOnes,
+                                              const RISCVSubtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
-  if (SDValue Result = combineSelectAndUse(N, N0, N1, DAG, AllOnes))
+  if (SDValue Result = combineSelectAndUse(N, N0, N1, DAG, AllOnes, Subtarget))
     return Result;
-  if (SDValue Result = combineSelectAndUse(N, N1, N0, DAG, AllOnes))
+  if (SDValue Result = combineSelectAndUse(N, N1, N0, DAG, AllOnes, Subtarget))
     return Result;
   return SDValue();
 }
@@ -8198,7 +8213,7 @@ static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
     return V;
   // fold (add (select lhs, rhs, cc, 0, y), x) ->
   //      (select lhs, rhs, cc, x, (add x, y))
-  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false);
+  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false, Subtarget);
 }
 
 // Try to turn a sub boolean RHS and constant LHS into an addi.
@@ -8242,7 +8257,8 @@ static SDValue combineSubOfBoolean(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::ADD, DL, VT, NewLHS, NewRHS);
 }
 
-static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG) {
+static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
   if (SDValue V = combineSubOfBoolean(N, DAG))
     return V;
 
@@ -8250,7 +8266,7 @@ static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG) {
   //      (select lhs, rhs, cc, x, (sub x, y))
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
-  return combineSelectAndUse(N, N1, N0, DAG, /*AllOnes*/ false);
+  return combineSelectAndUse(N, N1, N0, DAG, /*AllOnes*/ false, Subtarget);
 }
 
 // Apply DeMorgan's law to (and/or (xor X, 1), (xor Y, 1)) if X and Y are 0/1.
@@ -8356,7 +8372,7 @@ static SDValue performANDCombine(SDNode *N,
 
   // fold (and (select lhs, rhs, cc, -1, y), x) ->
   //      (select lhs, rhs, cc, x, (and x, y))
-  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ true);
+  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ true, Subtarget);
 }
 
 static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
@@ -8372,10 +8388,11 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   // fold (or (select cond, 0, y), x) ->
   //      (select cond, x, (or x, y))
-  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false);
+  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false, Subtarget);
 }
 
-static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG) {
+static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
@@ -8394,7 +8411,7 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG) {
     return V;
   // fold (xor (select cond, 0, y), x) ->
   //      (select cond, x, (xor x, y))
-  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false);
+  return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false, Subtarget);
 }
 
 // Replace (seteq (i64 (and X, 0xffffffff)), C1) with
@@ -8533,7 +8550,7 @@ struct NodeExtensionHelper {
   /// SExt. If \p SExt is None, this returns the source of this operand.
   /// \see ::getSource().
   SDValue getOrCreateExtendedOp(const SDNode *Root, SelectionDAG &DAG,
-                                Optional<bool> SExt) const {
+                                std::optional<bool> SExt) const {
     if (!SExt.has_value())
       return OrigOperand;
 
@@ -8623,7 +8640,7 @@ struct NodeExtensionHelper {
     }
   }
 
-  using CombineToTry = std::function<Optional<CombineResult>(
+  using CombineToTry = std::function<std::optional<CombineResult>(
       SDNode * /*Root*/, const NodeExtensionHelper & /*LHS*/,
       const NodeExtensionHelper & /*RHS*/)>;
 
@@ -8786,8 +8803,8 @@ struct NodeExtensionHelper {
   /// anything. Instead they produce an optional CombineResult that if not None,
   /// need to be materialized for the combine to be applied.
   /// \see CombineResult::materialize.
-  /// If the related CombineToTry function returns None, that means the combine
-  /// didn't match.
+  /// If the related CombineToTry function returns std::nullopt, that means the
+  /// combine didn't match.
   static SmallVector<CombineToTry> getSupportedFoldings(const SDNode *Root);
 };
 
@@ -8798,8 +8815,8 @@ struct CombineResult {
   unsigned TargetOpcode;
   // No value means no extension is needed. If extension is needed, the value
   // indicates if it needs to be sign extended.
-  Optional<bool> SExtLHS;
-  Optional<bool> SExtRHS;
+  std::optional<bool> SExtLHS;
+  std::optional<bool> SExtRHS;
   /// Root of the combine.
   SDNode *Root;
   /// LHS of the TargetOpcode.
@@ -8808,8 +8825,8 @@ struct CombineResult {
   NodeExtensionHelper RHS;
 
   CombineResult(unsigned TargetOpcode, SDNode *Root,
-                const NodeExtensionHelper &LHS, Optional<bool> SExtLHS,
-                const NodeExtensionHelper &RHS, Optional<bool> SExtRHS)
+                const NodeExtensionHelper &LHS, std::optional<bool> SExtLHS,
+                const NodeExtensionHelper &RHS, std::optional<bool> SExtRHS)
       : TargetOpcode(TargetOpcode), SExtLHS(SExtLHS), SExtRHS(SExtRHS),
         Root(Root), LHS(LHS), RHS(RHS) {}
 
@@ -8835,9 +8852,9 @@ struct CombineResult {
 /// \note If the pattern can match with both zext and sext, the returned
 /// CombineResult will feature the zext result.
 ///
-/// \returns None if the pattern doesn't match or a CombineResult that can be
-/// used to apply the pattern.
-static Optional<CombineResult>
+/// \returns std::nullopt if the pattern doesn't match or a CombineResult that
+/// can be used to apply the pattern.
+static std::optional<CombineResult>
 canFoldToVWWithSameExtensionImpl(SDNode *Root, const NodeExtensionHelper &LHS,
                                  const NodeExtensionHelper &RHS, bool AllowSExt,
                                  bool AllowZExt) {
@@ -8861,9 +8878,9 @@ canFoldToVWWithSameExtensionImpl(SDNode *Root, const NodeExtensionHelper &LHS,
 /// where `ext` is the same for both LHS and RHS (i.e., both are sext or both
 /// are zext) and LHS and RHS can be folded into Root.
 ///
-/// \returns None if the pattern doesn't match or a CombineResult that can be
-/// used to apply the pattern.
-static Optional<CombineResult>
+/// \returns std::nullopt if the pattern doesn't match or a CombineResult that
+/// can be used to apply the pattern.
+static std::optional<CombineResult>
 canFoldToVWWithSameExtension(SDNode *Root, const NodeExtensionHelper &LHS,
                              const NodeExtensionHelper &RHS) {
   return canFoldToVWWithSameExtensionImpl(Root, LHS, RHS, /*AllowSExt=*/true,
@@ -8872,11 +8889,11 @@ canFoldToVWWithSameExtension(SDNode *Root, const NodeExtensionHelper &LHS,
 
 /// Check if \p Root follows a pattern Root(LHS, ext(RHS))
 ///
-/// \returns None if the pattern doesn't match or a CombineResult that can be
-/// used to apply the pattern.
-static Optional<CombineResult> canFoldToVW_W(SDNode *Root,
-                                             const NodeExtensionHelper &LHS,
-                                             const NodeExtensionHelper &RHS) {
+/// \returns std::nullopt if the pattern doesn't match or a CombineResult that
+/// can be used to apply the pattern.
+static std::optional<CombineResult>
+canFoldToVW_W(SDNode *Root, const NodeExtensionHelper &LHS,
+              const NodeExtensionHelper &RHS) {
   if (!RHS.areVLAndMaskCompatible(Root))
     return std::nullopt;
 
@@ -8897,9 +8914,9 @@ static Optional<CombineResult> canFoldToVW_W(SDNode *Root,
 
 /// Check if \p Root follows a pattern Root(sext(LHS), sext(RHS))
 ///
-/// \returns None if the pattern doesn't match or a CombineResult that can be
-/// used to apply the pattern.
-static Optional<CombineResult>
+/// \returns std::nullopt if the pattern doesn't match or a CombineResult that
+/// can be used to apply the pattern.
+static std::optional<CombineResult>
 canFoldToVWWithSEXT(SDNode *Root, const NodeExtensionHelper &LHS,
                     const NodeExtensionHelper &RHS) {
   return canFoldToVWWithSameExtensionImpl(Root, LHS, RHS, /*AllowSExt=*/true,
@@ -8908,9 +8925,9 @@ canFoldToVWWithSEXT(SDNode *Root, const NodeExtensionHelper &LHS,
 
 /// Check if \p Root follows a pattern Root(zext(LHS), zext(RHS))
 ///
-/// \returns None if the pattern doesn't match or a CombineResult that can be
-/// used to apply the pattern.
-static Optional<CombineResult>
+/// \returns std::nullopt if the pattern doesn't match or a CombineResult that
+/// can be used to apply the pattern.
+static std::optional<CombineResult>
 canFoldToVWWithZEXT(SDNode *Root, const NodeExtensionHelper &LHS,
                     const NodeExtensionHelper &RHS) {
   return canFoldToVWWithSameExtensionImpl(Root, LHS, RHS, /*AllowSExt=*/false,
@@ -8919,11 +8936,11 @@ canFoldToVWWithZEXT(SDNode *Root, const NodeExtensionHelper &LHS,
 
 /// Check if \p Root follows a pattern Root(sext(LHS), zext(RHS))
 ///
-/// \returns None if the pattern doesn't match or a CombineResult that can be
-/// used to apply the pattern.
-static Optional<CombineResult> canFoldToVW_SU(SDNode *Root,
-                                              const NodeExtensionHelper &LHS,
-                                              const NodeExtensionHelper &RHS) {
+/// \returns std::nullopt if the pattern doesn't match or a CombineResult that
+/// can be used to apply the pattern.
+static std::optional<CombineResult>
+canFoldToVW_SU(SDNode *Root, const NodeExtensionHelper &LHS,
+               const NodeExtensionHelper &RHS) {
   if (!LHS.SupportsSExt || !RHS.SupportsZExt)
     return std::nullopt;
   if (!LHS.areVLAndMaskCompatible(Root) || !RHS.areVLAndMaskCompatible(Root))
@@ -9020,7 +9037,7 @@ combineBinOp_VLToVWBinOp_VL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
 
       for (NodeExtensionHelper::CombineToTry FoldingStrategy :
            FoldingStrategies) {
-        Optional<CombineResult> Res = FoldingStrategy(N, LHS, RHS);
+        std::optional<CombineResult> Res = FoldingStrategy(N, LHS, RHS);
         if (Res) {
           Matched = true;
           CombinesToApply.push_back(*Res);
@@ -9596,13 +9613,13 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ADD:
     return performADDCombine(N, DAG, Subtarget);
   case ISD::SUB:
-    return performSUBCombine(N, DAG);
+    return performSUBCombine(N, DAG, Subtarget);
   case ISD::AND:
     return performANDCombine(N, DCI, Subtarget);
   case ISD::OR:
     return performORCombine(N, DCI, Subtarget);
   case ISD::XOR:
-    return performXORCombine(N, DAG);
+    return performXORCombine(N, DAG, Subtarget);
   case ISD::FADD:
   case ISD::UMAX:
   case ISD::UMIN:
@@ -11224,7 +11241,7 @@ static bool CC_RISCVAssign2XLen(unsigned XLen, CCState &State, CCValAssign VA1,
 }
 
 static unsigned allocateRVVReg(MVT ValVT, unsigned ValNo,
-                               Optional<unsigned> FirstMaskArgument,
+                               std::optional<unsigned> FirstMaskArgument,
                                CCState &State, const RISCVTargetLowering &TLI) {
   const TargetRegisterClass *RC = TLI.getRegClassFor(ValVT);
   if (RC == &RISCV::VRRegClass) {
@@ -11249,7 +11266,7 @@ static bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
                      MVT ValVT, MVT LocVT, CCValAssign::LocInfo LocInfo,
                      ISD::ArgFlagsTy ArgFlags, CCState &State, bool IsFixed,
                      bool IsRet, Type *OrigTy, const RISCVTargetLowering &TLI,
-                     Optional<unsigned> FirstMaskArgument) {
+                     std::optional<unsigned> FirstMaskArgument) {
   unsigned XLen = DL.getLargestLegalIntTypeSizeInBits();
   assert(XLen == 32 || XLen == 64);
   MVT XLenVT = XLen == 32 ? MVT::i32 : MVT::i64;
@@ -11471,7 +11488,7 @@ static bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
 }
 
 template <typename ArgTy>
-static Optional<unsigned> preAssignMask(const ArgTy &Args) {
+static std::optional<unsigned> preAssignMask(const ArgTy &Args) {
   for (const auto &ArgIdx : enumerate(Args)) {
     MVT ArgVT = ArgIdx.value().VT;
     if (ArgVT.isVector() && ArgVT.getVectorElementType() == MVT::i1)
@@ -11487,7 +11504,7 @@ void RISCVTargetLowering::analyzeInputArgs(
   unsigned NumArgs = Ins.size();
   FunctionType *FType = MF.getFunction().getFunctionType();
 
-  Optional<unsigned> FirstMaskArgument;
+  std::optional<unsigned> FirstMaskArgument;
   if (Subtarget.hasVInstructions())
     FirstMaskArgument = preAssignMask(Ins);
 
@@ -11518,7 +11535,7 @@ void RISCVTargetLowering::analyzeOutputArgs(
     CallLoweringInfo *CLI, RISCVCCAssignFn Fn) const {
   unsigned NumArgs = Outs.size();
 
-  Optional<unsigned> FirstMaskArgument;
+  std::optional<unsigned> FirstMaskArgument;
   if (Subtarget.hasVInstructions())
     FirstMaskArgument = preAssignMask(Outs);
 
@@ -11703,7 +11720,7 @@ static bool CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
                             ISD::ArgFlagsTy ArgFlags, CCState &State,
                             bool IsFixed, bool IsRet, Type *OrigTy,
                             const RISCVTargetLowering &TLI,
-                            Optional<unsigned> FirstMaskArgument) {
+                            std::optional<unsigned> FirstMaskArgument) {
 
   // X5 and X6 might be used for save-restore libcall.
   static const MCPhysReg GPRList[] = {
@@ -12387,7 +12404,7 @@ bool RISCVTargetLowering::CanLowerReturn(
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
 
-  Optional<unsigned> FirstMaskArgument;
+  std::optional<unsigned> FirstMaskArgument;
   if (Subtarget.hasVInstructions())
     FirstMaskArgument = preAssignMask(Outs);
 

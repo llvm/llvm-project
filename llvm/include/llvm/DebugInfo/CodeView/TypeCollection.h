@@ -21,8 +21,8 @@ public:
 
   bool empty() { return size() == 0; }
 
-  virtual Optional<TypeIndex> getFirst() = 0;
-  virtual Optional<TypeIndex> getNext(TypeIndex Prev) = 0;
+  virtual std::optional<TypeIndex> getFirst() = 0;
+  virtual std::optional<TypeIndex> getNext(TypeIndex Prev) = 0;
 
   virtual CVType getType(TypeIndex Index) = 0;
   virtual StringRef getTypeName(TypeIndex Index) = 0;
@@ -32,7 +32,7 @@ public:
   virtual bool replaceType(TypeIndex &Index, CVType Data, bool Stabilize) = 0;
 
   template <typename TFunc> void ForEachRecord(TFunc Func) {
-    Optional<TypeIndex> Next = getFirst();
+    std::optional<TypeIndex> Next = getFirst();
 
     while (Next) {
       TypeIndex N = *Next;

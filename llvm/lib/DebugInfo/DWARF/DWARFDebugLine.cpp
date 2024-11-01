@@ -79,9 +79,10 @@ bool DWARFDebugLine::Prologue::hasFileAtIndex(uint64_t FileIndex) const {
   return FileIndex != 0 && FileIndex <= FileNames.size();
 }
 
-Optional<uint64_t> DWARFDebugLine::Prologue::getLastValidFileIndex() const {
+std::optional<uint64_t>
+DWARFDebugLine::Prologue::getLastValidFileIndex() const {
   if (FileNames.empty())
-    return None;
+    return std::nullopt;
   uint16_t DwarfVersion = getVersion();
   assert(DwarfVersion != 0 &&
          "line table prologue has no dwarf version information");
@@ -715,14 +716,14 @@ DWARFDebugLine::ParsingState::handleSpecialOpcode(uint8_t Opcode,
 }
 
 /// Parse a ULEB128 using the specified \p Cursor. \returns the parsed value on
-/// success, or None if \p Cursor is in a failing state.
+/// success, or std::nullopt if \p Cursor is in a failing state.
 template <typename T>
-static Optional<T> parseULEB128(DWARFDataExtractor &Data,
-                                DataExtractor::Cursor &Cursor) {
+static std::optional<T> parseULEB128(DWARFDataExtractor &Data,
+                                     DataExtractor::Cursor &Cursor) {
   T Value = Data.getULEB128(Cursor);
   if (Cursor)
     return Value;
-  return None;
+  return std::nullopt;
 }
 
 Error DWARFDebugLine::LineTable::parse(
@@ -1005,7 +1006,7 @@ Error DWARFDebugLine::LineTable::parse(
         // Takes a single unsigned LEB128 operand, multiplies it by the
         // min_inst_length field of the prologue, and adds the
         // result to the address register of the state machine.
-        if (Optional<uint64_t> Operand =
+        if (std::optional<uint64_t> Operand =
                 parseULEB128<uint64_t>(TableData, Cursor)) {
           uint64_t AddrOffset =
               State.advanceAddr(*Operand, Opcode, OpcodeOffset);
@@ -1030,7 +1031,7 @@ Error DWARFDebugLine::LineTable::parse(
       case DW_LNS_set_file:
         // Takes a single unsigned LEB128 operand and stores it in the file
         // register of the state machine.
-        if (Optional<uint16_t> File =
+        if (std::optional<uint16_t> File =
                 parseULEB128<uint16_t>(TableData, Cursor)) {
           State.Row.File = *File;
           if (Verbose)
@@ -1041,7 +1042,7 @@ Error DWARFDebugLine::LineTable::parse(
       case DW_LNS_set_column:
         // Takes a single unsigned LEB128 operand and stores it in the
         // column register of the state machine.
-        if (Optional<uint16_t> Column =
+        if (std::optional<uint16_t> Column =
                 parseULEB128<uint16_t>(TableData, Cursor)) {
           State.Row.Column = *Column;
           if (Verbose)
@@ -1117,7 +1118,8 @@ Error DWARFDebugLine::LineTable::parse(
       case DW_LNS_set_isa:
         // Takes a single unsigned LEB128 operand and stores it in the
         // ISA register of the state machine.
-        if (Optional<uint8_t> Isa = parseULEB128<uint8_t>(TableData, Cursor)) {
+        if (std::optional<uint8_t> Isa =
+                parseULEB128<uint8_t>(TableData, Cursor)) {
           State.Row.Isa = *Isa;
           if (Verbose)
             *OS << " (" << (uint64_t)State.Row.Isa << ")";
@@ -1135,7 +1137,7 @@ Error DWARFDebugLine::LineTable::parse(
           uint8_t OpcodeLength = Prologue.StandardOpcodeLengths[Opcode - 1];
           std::vector<uint64_t> Operands;
           for (uint8_t I = 0; I < OpcodeLength; ++I) {
-            if (Optional<uint64_t> Value =
+            if (std::optional<uint64_t> Value =
                     parseULEB128<uint64_t>(TableData, Cursor))
               Operands.push_back(*Value);
             else
@@ -1330,14 +1332,15 @@ bool DWARFDebugLine::LineTable::lookupAddressRangeImpl(
   return true;
 }
 
-Optional<StringRef> DWARFDebugLine::LineTable::getSourceByIndex(uint64_t FileIndex,
-                                                                FileLineInfoKind Kind) const {
+std::optional<StringRef>
+DWARFDebugLine::LineTable::getSourceByIndex(uint64_t FileIndex,
+                                            FileLineInfoKind Kind) const {
   if (Kind == FileLineInfoKind::None || !Prologue.hasFileAtIndex(FileIndex))
-    return None;
+    return std::nullopt;
   const FileNameEntry &Entry = Prologue.getFileNameEntry(FileIndex);
   if (auto E = dwarf::toString(Entry.Source))
     return StringRef(*E);
-  return None;
+  return std::nullopt;
 }
 
 static bool isPathAbsoluteOnWindowsOrPosix(const Twine &Path) {

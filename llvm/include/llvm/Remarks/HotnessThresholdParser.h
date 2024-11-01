@@ -15,8 +15,8 @@
 #ifndef LLVM_REMARKS_HOTNESSTHRESHOLDPARSER_H
 #define LLVM_REMARKS_HOTNESSTHRESHOLDPARSER_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/CommandLine.h"
+#include <optional>
 
 namespace llvm {
 namespace remarks {
@@ -26,11 +26,11 @@ namespace remarks {
 // 1. integer: manually specified threshold; or
 // 2. string 'auto': automatically get threshold from profile summary.
 //
-// Return None Optional if 'auto' is specified, indicating the value will
-// be filled later during PSI.
-inline Expected<Optional<uint64_t>> parseHotnessThresholdOption(StringRef Arg) {
+// Return std::nullopt Optional if 'auto' is specified, indicating the value
+// will be filled later during PSI.
+inline Expected<std::optional<uint64_t>> parseHotnessThresholdOption(StringRef Arg) {
   if (Arg == "auto")
-    return None;
+    return std::nullopt;
 
   int64_t Val;
   if (Arg.getAsInteger(10, Val))
@@ -42,12 +42,12 @@ inline Expected<Optional<uint64_t>> parseHotnessThresholdOption(StringRef Arg) {
 }
 
 // A simple CL parser for '*-remarks-hotness-threshold='
-class HotnessThresholdParser : public cl::parser<Optional<uint64_t>> {
+class HotnessThresholdParser : public cl::parser<std::optional<uint64_t>> {
 public:
-  HotnessThresholdParser(cl::Option &O) : cl::parser<Optional<uint64_t>>(O) {}
+  HotnessThresholdParser(cl::Option &O) : cl::parser<std::optional<uint64_t>>(O) {}
 
   bool parse(cl::Option &O, StringRef ArgName, StringRef Arg,
-             Optional<uint64_t> &V) {
+             std::optional<uint64_t> &V) {
     auto ResultOrErr = parseHotnessThresholdOption(Arg);
     if (!ResultOrErr)
       return O.error("Invalid argument '" + Arg +

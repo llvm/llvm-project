@@ -555,7 +555,7 @@ walkSymbolUses(MutableArrayRef<Region> regions,
   return walkSymbolTable(regions, [&](Operation *op) -> Optional<WalkResult> {
     // Check that this isn't a potentially unknown symbol table.
     if (isPotentiallyUnknownSymbolTable(op))
-      return llvm::None;
+      return std::nullopt;
 
     return walkSymbolRefs(op, callback);
   });
@@ -571,7 +571,7 @@ walkSymbolUses(Operation *from,
   // symbol table, so we can't opaquely know if we should traverse to find
   // nested uses.
   if (isPotentiallyUnknownSymbolTable(from))
-    return llvm::None;
+    return std::nullopt;
 
   // Walk the uses on this operation.
   if (walkSymbolRefs(from, callback).wasInterrupted())
@@ -740,7 +740,8 @@ static Optional<SymbolTable::UseRange> getSymbolUsesImpl(FromT from) {
     return WalkResult::advance();
   };
   auto result = walkSymbolUses(from, walkFn);
-  return result ? Optional<SymbolTable::UseRange>(std::move(uses)) : llvm::None;
+  return result ? Optional<SymbolTable::UseRange>(std::move(uses))
+                : std::nullopt;
 }
 
 /// Get an iterator range for all of the uses, for any symbol, that are nested
@@ -770,15 +771,15 @@ static Optional<SymbolTable::UseRange> getSymbolUsesImpl(SymbolT symbol,
           if (isReferencePrefixOf(scope.symbol, symbolUse.getSymbolRef()))
             uses.push_back(symbolUse);
         }))
-      return llvm::None;
+      return std::nullopt;
   }
   return SymbolTable::UseRange(std::move(uses));
 }
 
 /// Get all of the uses of the given symbol that are nested within the given
 /// operation 'from', invoking the provided callback for each. This does not
-/// traverse into any nested symbol tables. This function returns None if there
-/// are any unknown operations that may potentially be symbol tables.
+/// traverse into any nested symbol tables. This function returns std::nullopt
+/// if there are any unknown operations that may potentially be symbol tables.
 auto SymbolTable::getSymbolUses(StringAttr symbol, Operation *from)
     -> Optional<UseRange> {
   return getSymbolUsesImpl(symbol, from);

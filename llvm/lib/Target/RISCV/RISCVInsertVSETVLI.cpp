@@ -85,9 +85,9 @@ static bool isScalarMoveInstr(const MachineInstr &MI) {
   }
 }
 
-/// Get the EEW for a load or store instruction.  Return None if MI is not
-/// a load or store which ignores SEW.
-static Optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
+/// Get the EEW for a load or store instruction.  Return std::nullopt if MI is
+/// not a load or store which ignores SEW.
+static std::optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
   switch (getRVVMCOpcode(MI.getOpcode())) {
   default:
     return std::nullopt;
@@ -659,7 +659,7 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
     InstrInfo.setAVLReg(RISCV::NoRegister);
   }
 #ifndef NDEBUG
-  if (Optional<unsigned> EEW = getEEWForLoadStore(MI)) {
+  if (std::optional<unsigned> EEW = getEEWForLoadStore(MI)) {
     assert(SEW == EEW && "Initial SEW doesn't match expected EEW");
   }
 #endif

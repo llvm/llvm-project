@@ -27,8 +27,8 @@ if.end:
 define void @test2(i64 %foo) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testl $-2147483648, %edi # imm = 0x80000000
-; CHECK-NEXT:    jne .LBB1_2
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    js .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB1_2: # %if.then

@@ -100,7 +100,7 @@ public:
   ///     number of bytes that can be placed into \a dst.
   ///
   /// \param[in] timeout
-  ///     A timeout value or llvm::None for no timeout.
+  ///     A timeout value or std::nullopt for no timeout.
   ///
   /// \return
   ///     The number of bytes actually read.

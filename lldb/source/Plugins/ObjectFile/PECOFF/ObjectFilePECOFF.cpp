@@ -1092,7 +1092,7 @@ llvm::Optional<FileSpec> ObjectFilePECOFF::GetDebugLink() {
   uint32_t gnu_debuglink_crc;
   if (GetDebugLinkContents(*m_binary, gnu_debuglink_file, gnu_debuglink_crc))
     return FileSpec(gnu_debuglink_file);
-  return llvm::None;
+  return std::nullopt;
 }
 
 uint32_t ObjectFilePECOFF::ParseDependentModules() {

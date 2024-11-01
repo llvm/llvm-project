@@ -236,7 +236,7 @@ Error TypeRecordMapping::visitTypeBegin(CVType &CVR) {
   // FieldList and MethodList records can be any length because they can be
   // split with continuation records.  All other record types cannot be
   // longer than the maximum record length.
-  Optional<uint32_t> MaxLen;
+  std::optional<uint32_t> MaxLen;
   if (CVR.kind() != TypeLeafKind::LF_FIELDLIST &&
       CVR.kind() != TypeLeafKind::LF_METHODLIST)
     MaxLen = MaxRecordLength - sizeof(RecordPrefix);

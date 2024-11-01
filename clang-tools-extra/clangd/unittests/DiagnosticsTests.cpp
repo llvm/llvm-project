@@ -1071,7 +1071,7 @@ buildIndexWithSymbol(llvm::ArrayRef<SymbolWithHeader> Syms) {
     Sym.Flags |= Symbol::IndexedForCodeCompletion;
     Sym.CanonicalDeclaration.FileURI = S.DeclaringFile.c_str();
     Sym.Definition.FileURI = S.DeclaringFile.c_str();
-    Sym.IncludeHeaders.emplace_back(S.IncludeHeader, 1);
+    Sym.IncludeHeaders.emplace_back(S.IncludeHeader, 1, Symbol::Include);
     Slab.insert(Sym);
   }
   return MemIndex::build(std::move(Slab).build(), RefSlab(), RelationSlab());
@@ -1129,7 +1129,7 @@ TEST(IncludeFixerTest, IncompleteEnum) {
   Symbol Sym = enm("X");
   Sym.Flags |= Symbol::IndexedForCodeCompletion;
   Sym.CanonicalDeclaration.FileURI = Sym.Definition.FileURI = "unittest:///x.h";
-  Sym.IncludeHeaders.emplace_back("\"x.h\"", 1);
+  Sym.IncludeHeaders.emplace_back("\"x.h\"", 1, Symbol::Include);
   SymbolSlab::Builder Slab;
   Slab.insert(Sym);
   auto Index =
@@ -1172,7 +1172,7 @@ int main() {
   Sym.Flags |= Symbol::IndexedForCodeCompletion;
   Sym.CanonicalDeclaration.FileURI = "unittest:///x.h";
   Sym.Definition.FileURI = "unittest:///x.cc";
-  Sym.IncludeHeaders.emplace_back("\"x.h\"", 1);
+  Sym.IncludeHeaders.emplace_back("\"x.h\"", 1, Symbol::Include);
 
   SymbolSlab::Builder Slab;
   Slab.insert(Sym);
@@ -1503,7 +1503,7 @@ TEST(IncludeFixerTest, CImplicitFunctionDecl) {
   Symbol Sym = func("foo");
   Sym.Flags |= Symbol::IndexedForCodeCompletion;
   Sym.CanonicalDeclaration.FileURI = "unittest:///foo.h";
-  Sym.IncludeHeaders.emplace_back("\"foo.h\"", 1);
+  Sym.IncludeHeaders.emplace_back("\"foo.h\"", 1, Symbol::Include);
 
   SymbolSlab::Builder Slab;
   Slab.insert(Sym);

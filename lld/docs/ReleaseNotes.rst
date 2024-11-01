@@ -33,6 +33,9 @@ ELF Improvements
   (`D133548 <https://reviews.llvm.org/D133548>`_)
 * ``--no-warnings``/``-w`` is now available to suppress warnings.
   (`D136569 <https://reviews.llvm.org/D136569>`_)
+* ``DT_RISCV_VARIANT_CC`` is now produced if at least one ``R_RISCV_JUMP_SLOT``
+  relocation references a symbol with the ``STO_RISCV_VARIANT_CC`` bit.
+  (`D107951 <https://reviews.llvm.org/D107951>`_)
 
 Breaking changes
 ----------------

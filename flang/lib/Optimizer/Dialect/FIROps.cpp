@@ -3353,7 +3353,7 @@ mlir::LogicalResult fir::UnboxProcOp::verify() {
 
 void fir::IfOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
                       mlir::Value cond, bool withElseRegion) {
-  build(builder, result, llvm::None, cond, withElseRegion);
+  build(builder, result, std::nullopt, cond, withElseRegion);
 }
 
 void fir::IfOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,

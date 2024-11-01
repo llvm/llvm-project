@@ -210,7 +210,7 @@ struct AnalysisContext {
 ///
 ///   All predecessors of `Block` except those with loop back edges must have
 ///   already been transferred. States in `AC.BlockStates` that are set to
-///   `llvm::None` represent basic blocks that are not evaluated yet.
+///   `std::nullopt` represent basic blocks that are not evaluated yet.
 static TypeErasedDataflowAnalysisState
 computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
   llvm::DenseSet<const CFGBlock *> Preds;
@@ -414,7 +414,7 @@ runTypeErasedDataflowAnalysis(
   ForwardDataflowWorklist Worklist(CFCtx.getCFG(), &POV);
 
   std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates(
-      CFCtx.getCFG().size(), llvm::None);
+      CFCtx.getCFG().size(), std::nullopt);
 
   // The entry basic block doesn't contain statements so it can be skipped.
   const CFGBlock &Entry = CFCtx.getCFG().getEntry();
@@ -479,7 +479,7 @@ runTypeErasedDataflowAnalysis(
     Worklist.enqueueSuccessors(Block);
   }
   // FIXME: Consider evaluating unreachable basic blocks (those that have a
-  // state set to `llvm::None` at this point) to also analyze dead code.
+  // state set to `std::nullopt` at this point) to also analyze dead code.
 
   if (PostVisitCFG) {
     for (const CFGBlock *Block : CFCtx.getCFG()) {

@@ -171,7 +171,7 @@ public:
   Optional<std::reference_wrapper<AnalysisT>> getCachedAnalysis() const {
     auto res = analyses.find(TypeID::get<AnalysisT>());
     if (res == analyses.end())
-      return llvm::None;
+      return std::nullopt;
     return {static_cast<AnalysisModel<AnalysisT> &>(*res->second).analysis};
   }
 
@@ -309,7 +309,7 @@ public:
         return parentAM->analyses.getCachedAnalysis<AnalysisT>();
       curParent = parentAM;
     }
-    return None;
+    return std::nullopt;
   }
 
   /// Query for the given analysis for the current operation.
@@ -352,7 +352,7 @@ public:
     assert(op->getParentOp() == impl->getOperation());
     auto it = impl->childAnalyses.find(op);
     if (it == impl->childAnalyses.end())
-      return llvm::None;
+      return std::nullopt;
     return it->second->analyses.getCachedAnalysis<AnalysisT>();
   }
 

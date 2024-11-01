@@ -313,7 +313,7 @@ llvm::Optional<FileSpec::Style> FileSpec::GuessPathStyle(llvm::StringRef absolut
       (absolute_path.substr(1, 2) == R"(:\)" ||
        absolute_path.substr(1, 2) == R"(:/)"))
     return Style::windows;
-  return llvm::None;
+  return std::nullopt;
 }
 
 // Dump the object to the supplied stream. If the object contains a valid

@@ -22,7 +22,7 @@ struct ExpectedMatch {
     for (char C : "[]")
       Word.erase(std::remove(Word.begin(), Word.end(), C), Word.end());
     if (Word.size() == Annotated->size())
-      Annotated = llvm::None;
+      Annotated = std::nullopt;
   }
   bool accepts(llvm::StringRef ActualAnnotated) const {
     return !Annotated || ActualAnnotated == *Annotated;

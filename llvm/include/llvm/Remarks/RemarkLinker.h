@@ -65,12 +65,12 @@ public:
   /// \p Buffer.
   /// \p Buffer can be either a standalone remark container or just
   /// metadata. This takes care of uniquing and merging the remarks.
-  Error link(StringRef Buffer, Optional<Format> RemarkFormat = None);
+  Error link(StringRef Buffer, Optional<Format> RemarkFormat = std::nullopt);
 
   /// Link the remarks found in \p Obj by looking for the right section and
   /// calling the method above.
   Error link(const object::ObjectFile &Obj,
-             Optional<Format> RemarkFormat = None);
+             Optional<Format> RemarkFormat = std::nullopt);
 
   /// Serialize the linked remarks to the stream \p OS, using the format \p
   /// RemarkFormat.

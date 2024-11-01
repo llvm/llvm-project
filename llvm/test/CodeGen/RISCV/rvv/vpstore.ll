@@ -418,6 +418,7 @@ define void @vpstore_nxv17f64(<vscale x 17 x double> %val, <vscale x 17 x double
 ; CHECK-NEXT:    csrr a7, vlenb
 ; CHECK-NEXT:    slli a7, a7, 3
 ; CHECK-NEXT:    sub sp, sp, a7
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    vl8re64.v v0, (a0)
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v0, (a0) # Unknown-size Folded Spill

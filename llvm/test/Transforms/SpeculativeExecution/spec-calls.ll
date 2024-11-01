@@ -93,3 +93,19 @@ b:
 
 declare i1 @llvm.is.fpclass.f32(float, i32)
 declare float @llvm.arithmetic.fence.f32(float)
+
+; CHECK-LABEL: @ifThen_fptrunc_round(
+; CHECK: %round = call half @llvm.fptrunc.round.f16.f32(float %x, metadata !"round.downward")
+; CHECK-NEXT: br i1 true
+define void @ifThen_fptrunc_round(float %x) {
+  br i1 true, label %a, label %b
+
+a:
+  %round = call half @llvm.fptrunc.round.f16.f32(float %x, metadata !"round.downward")
+  br label %b
+
+b:
+  ret void
+}
+
+declare half @llvm.fptrunc.round.f16.f32(float, metadata)

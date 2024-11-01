@@ -30,14 +30,14 @@ using namespace mlir;
 /// or splat vector bool constant.
 static Optional<bool> getScalarOrSplatBoolAttr(Attribute attr) {
   if (!attr)
-    return llvm::None;
+    return std::nullopt;
 
   if (auto boolAttr = attr.dyn_cast<BoolAttr>())
     return boolAttr.getValue();
   if (auto splatAttr = attr.dyn_cast<SplatElementsAttr>())
     if (splatAttr.getElementType().isInteger(1))
       return splatAttr.getSplatValue<bool>();
-  return llvm::None;
+  return std::nullopt;
 }
 
 // Extracts an element from the given `composite` by following the given

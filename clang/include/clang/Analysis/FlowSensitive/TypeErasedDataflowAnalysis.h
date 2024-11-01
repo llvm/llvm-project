@@ -135,7 +135,7 @@ struct TypeErasedDataflowAnalysisState {
 ///
 ///   All predecessors of `Block` except those with loop back edges must have
 ///   already been transferred. States in `BlockStates` that are set to
-///   `llvm::None` represent basic blocks that are not evaluated yet.
+///   `std::nullopt` represent basic blocks that are not evaluated yet.
 TypeErasedDataflowAnalysisState transferBlock(
     const ControlFlowContext &CFCtx,
     llvm::ArrayRef<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates,

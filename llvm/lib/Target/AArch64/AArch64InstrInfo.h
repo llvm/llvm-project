@@ -15,7 +15,6 @@
 
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/TypeSize.h"
 
@@ -85,7 +84,7 @@ public:
 
   /// Returns the unscaled load/store for the scaled load/store opcode,
   /// if there is a corresponding unscaled variant available.
-  static Optional<unsigned> getUnscaledLdSt(unsigned Opc);
+  static std::optional<unsigned> getUnscaledLdSt(unsigned Opc);
 
   /// Scaling factor for (scaled or unscaled) load or store.
   static int getMemScale(unsigned Opc);
@@ -133,7 +132,7 @@ public:
   /// Hint that pairing the given load or store is unprofitable.
   static void suppressLdStPair(MachineInstr &MI);
 
-  Optional<ExtAddrMode>
+  std::optional<ExtAddrMode>
   getAddrModeFromMemoryOp(const MachineInstr &MemI,
                           const TargetRegisterInfo *TRI) const override;
 
@@ -314,11 +313,11 @@ public:
   /// on Windows.
   static bool isSEHInstruction(const MachineInstr &MI);
 
-  Optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
-                                      Register Reg) const override;
+  std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
+                                           Register Reg) const override;
 
-  Optional<ParamLoadedValue> describeLoadedValue(const MachineInstr &MI,
-                                                 Register Reg) const override;
+  std::optional<ParamLoadedValue>
+  describeLoadedValue(const MachineInstr &MI, Register Reg) const override;
 
   unsigned int getTailDuplicateSize(CodeGenOpt::Level OptLevel) const override;
 
@@ -339,7 +338,7 @@ protected:
   /// If the specific machine instruction is an instruction that moves/copies
   /// value from one register to another register return destination and source
   /// registers as machine operands.
-  Optional<DestSourcePair>
+  std::optional<DestSourcePair>
   isCopyInstrImpl(const MachineInstr &MI) const override;
 
 private:
@@ -389,10 +388,10 @@ struct UsedNZCV {
 
 /// \returns Conditions flags used after \p CmpInstr in its MachineBB if  NZCV
 /// flags are not alive in successors of the same \p CmpInstr and \p MI parent.
-/// \returns None otherwise.
+/// \returns std::nullopt otherwise.
 ///
 /// Collect instructions using that flags in \p CCUseInstrs if provided.
-Optional<UsedNZCV>
+std::optional<UsedNZCV>
 examineCFlagsUse(MachineInstr &MI, MachineInstr &CmpInstr,
                  const TargetRegisterInfo &TRI,
                  SmallVectorImpl<MachineInstr *> *CCUseInstrs = nullptr);

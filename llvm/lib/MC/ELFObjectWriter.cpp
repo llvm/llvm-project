@@ -1056,7 +1056,7 @@ void ELFWriter::writeSectionHeader(
   // Null section first.
   uint64_t FirstSectionSize =
       (NumSections + 1) >= ELF::SHN_LORESERVE ? NumSections + 1 : 0;
-  WriteSecHdrEntry(0, 0, 0, 0, 0, FirstSectionSize, 0, 0, None, 0);
+  WriteSecHdrEntry(0, 0, 0, 0, 0, FirstSectionSize, 0, 0, std::nullopt, 0);
 
   for (const MCSectionELF *Section : SectionTable) {
     uint32_t GroupSymbolIndex;

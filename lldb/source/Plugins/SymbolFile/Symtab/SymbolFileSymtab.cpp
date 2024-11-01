@@ -232,7 +232,7 @@ Type *SymbolFileSymtab::ResolveTypeUID(lldb::user_id_t type_uid) {
 llvm::Optional<SymbolFile::ArrayInfo>
 SymbolFileSymtab::GetDynamicArrayInfoForUID(
     lldb::user_id_t type_uid, const lldb_private::ExecutionContext *exe_ctx) {
-  return llvm::None;
+  return std::nullopt;
 }
 
 bool SymbolFileSymtab::CompleteType(lldb_private::CompilerType &compiler_type) {

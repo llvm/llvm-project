@@ -217,3 +217,12 @@ entry:
   %cmp = icmp slt i8 %c, %mul
   ret i1 %cmp
 }
+
+define i1 @one_bit(i1 %a, i1 %b) {
+; CHECK-LABEL: @one_bit(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[MUL]]
+;
+  %mul = mul i1 %a, %b
+  ret i1 %mul
+}

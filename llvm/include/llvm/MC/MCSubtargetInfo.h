@@ -14,7 +14,6 @@
 #define LLVM_MC_MCSUBTARGETINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
@@ -247,7 +246,7 @@ public:
 
   /// Return the target cache line size in bytes at a given level.
   ///
-  virtual Optional<unsigned> getCacheLineSize(unsigned Level) const;
+  virtual std::optional<unsigned> getCacheLineSize(unsigned Level) const;
 
   /// Return the target cache line size in bytes.  By default, return
   /// the line size for the bottom-most level of cache.  This provides
@@ -256,7 +255,7 @@ public:
   /// cache model.
   ///
   virtual unsigned getCacheLineSize() const {
-    Optional<unsigned> Size = getCacheLineSize(0);
+    std::optional<unsigned> Size = getCacheLineSize(0);
     if (Size)
       return *Size;
 

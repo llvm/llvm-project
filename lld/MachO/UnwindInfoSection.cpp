@@ -251,6 +251,11 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
   for (size_t i = 0; i < isec->relocs.size(); ++i) {
     Reloc &r = isec->relocs[i];
     assert(target->hasAttr(r.type, RelocAttrBits::UNSIGNED));
+    // Since compact unwind sections aren't part of the inputSections vector,
+    // they don't get canonicalized by scanRelocations(), so we have to do the
+    // canonicalization here.
+    if (auto *referentIsec = r.referent.dyn_cast<InputSection *>())
+      r.referent = referentIsec->canonical();
 
     // Functions and LSDA entries always reside in the same object file as the
     // compact unwind entries that references them, and thus appear as section

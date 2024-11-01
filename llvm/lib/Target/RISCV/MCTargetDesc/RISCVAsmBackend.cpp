@@ -27,7 +27,7 @@
 
 using namespace llvm;
 
-Optional<MCFixupKind> RISCVAsmBackend::getFixupKind(StringRef Name) const {
+std::optional<MCFixupKind> RISCVAsmBackend::getFixupKind(StringRef Name) const {
   if (STI.getTargetTriple().isOSBinFormatELF()) {
     unsigned Type;
     Type = llvm::StringSwitch<unsigned>(Name)

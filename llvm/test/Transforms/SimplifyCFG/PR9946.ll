@@ -1,4 +1,4 @@
-; RUN: opt -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output < %s
+; RUN: opt -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output < %s
 
 @foo = external constant i32
 

@@ -28,6 +28,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -76,7 +77,7 @@ static std::vector<StringRef> getSearchPaths(opt::InputArgList *Args,
     Ret.push_back(Arg->getValue());
 
   // Add $LIB.
-  Optional<std::string> EnvOpt = sys::Process::GetEnv("LIB");
+  std::optional<std::string> EnvOpt = sys::Process::GetEnv("LIB");
   if (!EnvOpt)
     return Ret;
   StringRef Env = Saver.save(*EnvOpt);

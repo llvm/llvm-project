@@ -205,7 +205,7 @@ static void generateFusedElementwiseOpRegion(
     mapper.map(bbArg, fusedBlock->addArgument(bbArg.getType(), bbArg.getLoc()));
 
   // 6. All of the producer's output operands
-  for (auto bbArg : llvm::enumerate(
+  for (const auto &bbArg : llvm::enumerate(
            producerBlock.getArguments().take_back(producer.getNumDpsInits()))) {
     if (!preservedProducerResults.count(bbArg.index()))
       continue;
@@ -254,7 +254,8 @@ static void generateFusedElementwiseOpRegion(
   SmallVector<Value> fusedYieldValues;
   fusedYieldValues.reserve(producerYieldOp.getNumOperands() +
                            consumerYieldOp.getNumOperands());
-  for (auto producerYieldVal : llvm::enumerate(producerYieldOp.getOperands())) {
+  for (const auto &producerYieldVal :
+       llvm::enumerate(producerYieldOp.getOperands())) {
     if (preservedProducerResults.count(producerYieldVal.index()))
       fusedYieldValues.push_back(
           mapper.lookupOrDefault(producerYieldVal.value()));
@@ -281,7 +282,7 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
          "expected producer of input operand");
   /// Find the results of the producer that have uses outside of the consumer.
   llvm::SmallDenseSet<int> preservedProducerResults;
-  for (auto producerResult : llvm::enumerate(producer->getResults())) {
+  for (const auto &producerResult : llvm::enumerate(producer->getResults())) {
     auto outputOperand = producer.getDpsInitOperand(producerResult.index());
     if (producer.payloadUsesValueFromOperand(outputOperand) ||
         !producer.canOpOperandsBeDropped(outputOperand) ||
@@ -335,7 +336,7 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
   }
 
   // 6. Collect all of the producer outputs.
-  for (auto opOperand : llvm::enumerate(producer.getDpsInitOperands())) {
+  for (const auto &opOperand : llvm::enumerate(producer.getDpsInitOperands())) {
     if (!preservedProducerResults.count(opOperand.index()))
       continue;
 
@@ -734,10 +735,10 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
           isExpanding ? expandingReshapeOp.getReassociationMaps()
                       : collapsingReshapeOp.getReassociationMaps(),
           expandedType.getShape(), collapsedType.getShape(), rewriter)))
-    return llvm::None;
+    return std::nullopt;
 
   if (failed(isGenericOpExpandable(genericOp, expansionInfo, rewriter)))
-    return llvm::None;
+    return std::nullopt;
 
   SmallVector<AffineMap, 4> expandedOpIndexingMaps = llvm::to_vector<4>(
       llvm::map_range(genericOp.getIndexingMapsArray(), [&](AffineMap m) {
@@ -772,7 +773,7 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
                 opOperandType.getShape(), expandedOperandType.getShape(),
                 reassociation,
                 /*isExpandingReshape=*/true)))
-          return llvm::None;
+          return std::nullopt;
         expandedOpOperands.push_back(rewriter.create<tensor::ExpandShapeOp>(
             genericOp.getLoc(), expandedOperandType, opOperand->get(),
             reassociation));
@@ -799,7 +800,7 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
               opOperandType.getShape(), expandedOutputType.getShape(),
               reassociation,
               /*isExpandingReshape=*/true)))
-        return llvm::None;
+        return std::nullopt;
       outputs.push_back(rewriter.create<tensor::ExpandShapeOp>(
           genericOp.getLoc(), expandedOutputType, opOperand->get(),
           reassociation));
@@ -960,9 +961,9 @@ private:
 //===---------------------------------------------------------------------===//
 
 /// For a given list of indices in the range of the `indexingMap` that are
-/// folded, return the indices of the corresponding domain. Return `llvm::None`
-/// on failure. Ensures that all the elements of the returned reassociation are
-/// distinct.
+/// folded, return the indices of the corresponding domain. Return
+/// `std::nullopt` on failure. Ensures that all the elements of the returned
+/// reassociation are distinct.
 static ReassociationIndices
 getDomainReassociation(AffineMap indexingMap,
                        ReassociationIndicesRef rangeReassociation) {
@@ -1317,17 +1318,17 @@ getOperandReassociation(AffineMap indexingMap,
   while (counter < indexingMap.getNumResults()) {
     unsigned dim =
         indexingMap.getResult(counter).cast<AffineDimExpr>().getPosition();
+    // This is the start of a collapsed dimensions of the iteration that
+    // is gauranteed to be preserved in the indexing map. The number of folded
+    // dims is obtained from the collapsed op to original op mapping.
+    unsigned numFoldedDims =
+        collapsedOpToOrigOpMapping[origOpToCollapsedOpMapping[dim].first]
+            .size();
     if (origOpToCollapsedOpMapping[dim].second == 0) {
-      // This is the start of a collapsed dimensions of the iteration that
-      // is gauranteed to be preserved in the indexing map. The number of folded
-      // dims is obtained from the collapsed op to original op mapping.
-      unsigned numFoldedDims =
-          collapsedOpToOrigOpMapping[origOpToCollapsedOpMapping[dim].first]
-              .size();
       auto range = llvm::seq<unsigned>(counter, counter + numFoldedDims);
       operandReassociation.emplace_back(range.begin(), range.end());
-      counter += numFoldedDims;
     }
+    counter += numFoldedDims;
   }
   return operandReassociation;
 }

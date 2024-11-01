@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-vectorize -force-vector-interleave=1 -force-vector-width=2 < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 < %s 2>&1 | FileCheck %s
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32-n8:16:32-S128"
 
@@ -338,7 +338,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 ; CHECK-LABEL: vector.body:
 ; CHECK:          %wide.load = load <2 x i32>, <2 x i32>*
-; CHECK:          %wide.load5 = load <2 x i32>, <2 x i32>* 
+; CHECK:          %wide.load5 = load <2 x i32>, <2 x i32>*
 ; CHECK:          [[ADD:%[a-zA-Z0-9.]+]] = add nsw <2 x i32> %wide.load, %wide.load5
 ; CHECK:          store <2 x i32>
 
@@ -376,13 +376,13 @@ f1.exit.loopexit:
 ; CHECK-LABEL: non_uniform_live_out()
 ; CHECK-LABEL:   vector.body:
 ; CHECK:           %vec.ind = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ %vec.ind.next, %vector.body ]
-; CHECK:           [[ADD:%[a-zA-Z0-9.]+]] = add <2 x i32> %vec.ind, <i32 7, i32 7> 
-; CHECK:           [[EE:%[a-zA-Z0-9.]+]] = extractelement <2 x i32> [[ADD]], i32 0 
+; CHECK:           [[ADD:%[a-zA-Z0-9.]+]] = add <2 x i32> %vec.ind, <i32 7, i32 7>
+; CHECK:           [[EE:%[a-zA-Z0-9.]+]] = extractelement <2 x i32> [[ADD]], i32 0
 ; CHECK:           [[GEP:%[a-zA-Z0-9.]+]] = getelementptr inbounds [32 x i8], [32 x i8]* @tab, i32 0, i32 [[EE]]
 ; CHECK-NEXT:      [[GEP2:%[a-zA-Z0-9.]+]] = getelementptr inbounds i8, i8* [[GEP]], i32 0
 ; CHECK-NEXT:      [[BC:%[a-zA-Z0-9.]+]] = bitcast i8* [[GEP2]] to <2 x i8>*
 ; CHECK-NEXT:      %wide.load = load <2 x i8>, <2 x i8>* [[BC]]
-; CHECK-NEXT:      [[ADD2:%[a-zA-Z0-9.]+]] = add <2 x i8> %wide.load, <i8 1, i8 1> 
+; CHECK-NEXT:      [[ADD2:%[a-zA-Z0-9.]+]] = add <2 x i8> %wide.load, <i8 1, i8 1>
 ; CHECK:           store <2 x i8> [[ADD2]], <2 x i8>*
 
 ; CHECK-LABEL:  middle.block:

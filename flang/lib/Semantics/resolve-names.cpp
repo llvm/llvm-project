@@ -873,7 +873,7 @@ private:
   Symbol &PushSubprogramScope(const parser::Name &, Symbol::Flag,
       const parser::LanguageBindingSpec * = nullptr);
   Symbol *GetSpecificFromGeneric(const parser::Name &);
-  SubprogramDetails &PostSubprogramStmt(const parser::Name &);
+  SubprogramDetails &PostSubprogramStmt();
   void CreateEntry(const parser::EntryStmt &stmt, Symbol &subprogram);
   void PostEntryStmt(const parser::EntryStmt &stmt);
   void HandleLanguageBinding(Symbol *,
@@ -3246,9 +3246,8 @@ void InterfaceVisitor::ResolveSpecificsInGeneric(Symbol &generic) {
   specificProcs_.erase(range.first, range.second);
 }
 
-// Check that the specific procedures are all functions or all subroutines.
-// If there is a derived type with the same name they must be functions.
-// Set the corresponding flag on generic.
+// Mixed interfaces are allowed by the standard.
+// If there is a derived type with the same name, they must all be functions.
 void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
   ResolveSpecificsInGeneric(generic);
   auto &details{generic.get<GenericDetails>()};
@@ -3271,10 +3270,11 @@ void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
   }
   const Symbol &firstSpecific{specifics.front()};
   bool isFunction{firstSpecific.test(Symbol::Flag::Function)};
+  bool isBoth{false};
   for (const Symbol &specific : specifics) {
     if (isFunction != specific.test(Symbol::Flag::Function)) { // C1514
       auto &msg{Say(generic.name(),
-          "Generic interface '%s' has both a function and a subroutine"_err_en_US)};
+          "Generic interface '%s' has both a function and a subroutine"_warn_en_US)};
       if (isFunction) {
         msg.Attach(firstSpecific.name(), "Function declaration"_en_US);
         msg.Attach(specific.name(), "Subroutine declaration"_en_US);
@@ -3282,6 +3282,9 @@ void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
         msg.Attach(firstSpecific.name(), "Subroutine declaration"_en_US);
         msg.Attach(specific.name(), "Function declaration"_en_US);
       }
+      isFunction = false;
+      isBoth = true;
+      break;
     }
   }
   if (!isFunction && details.derivedType()) {
@@ -3290,7 +3293,9 @@ void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
         " with same name"_err_en_US,
         *details.derivedType()->GetUltimate().scope());
   }
-  generic.set(isFunction ? Symbol::Flag::Function : Symbol::Flag::Subroutine);
+  if (!isBoth) {
+    generic.set(isFunction ? Symbol::Flag::Function : Symbol::Flag::Subroutine);
+  }
 }
 
 // SubprogramVisitor implementation
@@ -3302,7 +3307,8 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
   // Look up name: provides return type or tells us if it's an array
   if (auto *symbol{FindSymbol(name)}) {
     auto *details{symbol->detailsIf<EntityDetails>()};
-    if (!details) {
+    if (!details || symbol->has<ObjectEntityDetails>() ||
+        symbol->has<ProcEntityDetails>()) {
       badStmtFuncFound_ = true;
       return false;
     }
@@ -3312,7 +3318,7 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
   }
   if (badStmtFuncFound_) {
     Say(name, "'%s' has not been declared as an array"_err_en_US);
-    return true;
+    return false;
   }
   auto &symbol{PushSubprogramScope(name, Symbol::Flag::Function)};
   symbol.set(Symbol::Flag::StmtFunction);
@@ -3337,10 +3343,9 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
   }
   resultDetails.set_funcResult(true);
   Symbol &result{MakeSymbol(name, std::move(resultDetails))};
+  result.flags().set(Symbol::Flag::StmtFunction);
   ApplyImplicitRules(result);
   details.set_result(result);
-  const auto &parsedExpr{std::get<parser::Scalar<parser::Expr>>(x.t)};
-  Walk(parsedExpr);
   // The analysis of the expression that constitutes the body of the
   // statement function is deferred to FinishSpecificationPart() so that
   // all declarations and implicit typing are complete.
@@ -3417,8 +3422,7 @@ bool SubprogramVisitor::Pre(const parser::SubroutineStmt &stmt) {
   Walk(std::get<parser::Name>(stmt.t));
   Walk(std::get<std::list<parser::DummyArg>>(stmt.t));
   // Don't traverse the LanguageBindingSpec now; it's deferred to EndSubprogram.
-  const auto &name{std::get<parser::Name>(stmt.t)};
-  auto &details{PostSubprogramStmt(name)};
+  auto &details{PostSubprogramStmt()};
   for (const auto &dummyArg : std::get<std::list<parser::DummyArg>>(stmt.t)) {
     if (const auto *dummyName{std::get_if<parser::Name>(&dummyArg.u)}) {
       Symbol &dummy{MakeSymbol(*dummyName, EntityDetails{true})};
@@ -3439,7 +3443,7 @@ bool SubprogramVisitor::Pre(const parser::EntryStmt &) { return BeginAttrs(); }
 
 void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
   const auto &name{std::get<parser::Name>(stmt.t)};
-  auto &details{PostSubprogramStmt(name)};
+  auto &details{PostSubprogramStmt()};
   for (const auto &dummyName : std::get<std::list<parser::Name>>(stmt.t)) {
     Symbol &dummy{MakeSymbol(dummyName, EntityDetails{true})};
     details.add_dummyArg(dummy);
@@ -3504,8 +3508,7 @@ void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
   info.resultName = nullptr;
 }
 
-SubprogramDetails &SubprogramVisitor::PostSubprogramStmt(
-    const parser::Name &name) {
+SubprogramDetails &SubprogramVisitor::PostSubprogramStmt() {
   Symbol &symbol{*currScope().symbol()};
   SetExplicitAttrs(symbol, EndAttrs());
   if (symbol.attrs().test(Attr::MODULE)) {
@@ -3732,23 +3735,15 @@ bool SubprogramVisitor::BeginMpSubprogram(const parser::Name &name) {
     symbol->get<SubprogramDetails>().set_isInterface(false);
   } else {
     // Copy the interface into a new subprogram scope.
+    EraseSymbol(name);
     Symbol &newSymbol{MakeSymbol(name, SubprogramDetails{})};
     PushScope(Scope::Kind::Subprogram, &newSymbol);
-    const auto &details{symbol->get<SubprogramDetails>()};
-    auto &newDetails{newSymbol.get<SubprogramDetails>()};
-    newDetails.set_moduleInterface(*symbol);
-    for (const Symbol *dummyArg : details.dummyArgs()) {
-      if (!dummyArg) {
-        newDetails.add_alternateReturn();
-      } else if (Symbol * copy{currScope().CopySymbol(*dummyArg)}) {
-        newDetails.add_dummyArg(*copy);
-      }
-    }
-    if (details.isFunction()) {
-      currScope().erase(symbol->name());
-      newDetails.set_result(*currScope().CopySymbol(details.result()));
-    }
+    newSymbol.get<SubprogramDetails>().set_moduleInterface(*symbol);
     newSymbol.attrs() |= symbol->attrs();
+    newSymbol.set(symbol->test(Symbol::Flag::Subroutine)
+            ? Symbol::Flag::Subroutine
+            : Symbol::Flag::Function);
+    MapSubprogramToNewSymbols(*symbol, newSymbol, currScope());
   }
   return true;
 }
@@ -3770,7 +3765,7 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
     if (moduleInterface && &moduleInterface->owner() == &currScope()) {
       // Subprogram is MODULE FUNCTION or MODULE SUBROUTINE with an interface
       // previously defined in the same scope.
-      currScope().erase(moduleInterface->name());
+      EraseSymbol(name);
     }
   }
   Symbol &newSymbol{PushSubprogramScope(name, subpFlag, bindingSpec)};
@@ -4590,7 +4585,8 @@ void DeclarationVisitor::Post(const parser::DerivedTypeSpec &x) {
     // DerivedTypeSpec::CookParameters().
     ParamValue param{GetParamValue(value, common::TypeParamAttr::Kind)};
     if (!param.isExplicit() || param.GetExplicit()) {
-      spec->AddRawParamValue(optKeyword, std::move(param));
+      spec->AddRawParamValue(
+          common::GetPtrFromOptional(optKeyword), std::move(param));
     }
   }
   // The DerivedTypeSpec *spec is used initially as a search key.
@@ -5984,7 +5980,7 @@ bool DeclarationVisitor::OkToAddComponent(
       } else if (extends) {
         msg = "Type cannot be extended as it has a component named"
               " '%s'"_err_en_US;
-      } else if (CheckAccessibleComponent(currScope(), *prev)) {
+      } else if (CheckAccessibleSymbol(currScope(), *prev)) {
         // inaccessible component -- redeclaration is ok
         msg = "Component '%s' is inaccessibly declared in or as a "
               "parent of this derived type"_warn_en_US;
@@ -6859,8 +6855,7 @@ const parser::Name *DeclarationVisitor::FindComponent(
     derived->Instantiate(currScope()); // in case of forward referenced type
     if (const Scope * scope{derived->scope()}) {
       if (Resolve(component, scope->FindComponent(component.source))) {
-        if (auto msg{
-                CheckAccessibleComponent(currScope(), *component.symbol)}) {
+        if (auto msg{CheckAccessibleSymbol(currScope(), *component.symbol)}) {
           context().Say(component.source, *msg);
         }
         return &component;
@@ -7412,28 +7407,31 @@ void ResolveNamesVisitor::FinishSpecificationPart(
 
 // Analyze the bodies of statement functions now that the symbols in this
 // specification part have been fully declared and implicitly typed.
+// (Statement function references are not allowed in specification
+// expressions, so it's safe to defer processing their definitions.)
 void ResolveNamesVisitor::AnalyzeStmtFunctionStmt(
     const parser::StmtFunctionStmt &stmtFunc) {
   Symbol *symbol{std::get<parser::Name>(stmtFunc.t).symbol};
-  if (!symbol || !symbol->has<SubprogramDetails>()) {
+  auto *details{symbol ? symbol->detailsIf<SubprogramDetails>() : nullptr};
+  if (!details || !symbol->scope()) {
     return;
   }
-  auto &details{symbol->get<SubprogramDetails>()};
-  auto expr{AnalyzeExpr(
-      context(), std::get<parser::Scalar<parser::Expr>>(stmtFunc.t))};
-  if (!expr) {
-    context().SetError(*symbol);
-    return;
-  }
-  if (auto type{evaluate::DynamicType::From(*symbol)}) {
-    auto converted{ConvertToType(*type, std::move(*expr))};
-    if (!converted) {
-      context().SetError(*symbol);
-      return;
+  // Resolve the symbols on the RHS of the statement function.
+  PushScope(*symbol->scope());
+  const auto &parsedExpr{std::get<parser::Scalar<parser::Expr>>(stmtFunc.t)};
+  Walk(parsedExpr);
+  PopScope();
+  if (auto expr{AnalyzeExpr(context(), stmtFunc)}) {
+    if (auto type{evaluate::DynamicType::From(*symbol)}) {
+      if (auto converted{ConvertToType(*type, std::move(*expr))}) {
+        details->set_stmtFunction(std::move(*converted));
+      }
+    } else {
+      details->set_stmtFunction(std::move(*expr));
     }
-    details.set_stmtFunction(std::move(*converted));
-  } else {
-    details.set_stmtFunction(std::move(*expr));
+  }
+  if (!details->stmtFunction()) {
+    context().SetError(*symbol);
   }
 }
 
@@ -7823,6 +7821,7 @@ public:
       resolver_.CheckBindings(tbps);
     }
   }
+  bool Pre(const parser::StmtFunctionStmt &stmtFunc) { return false; }
 
 private:
   void Init(const parser::Name &name,
@@ -7847,7 +7846,7 @@ void ResolveNamesVisitor::FinishSpecificationParts(const ProgramTree &node) {
   }
   SetScope(*node.scope());
   // The initializers of pointers, the default initializers of pointer
-  // components, and non-deferred type-bound procedure bindings have not
+  // components, non-deferred type-bound procedure bindings have not
   // yet been traversed.
   // We do that now, when any (formerly) forward references that appear
   // in those initializers will resolve to the right symbols without

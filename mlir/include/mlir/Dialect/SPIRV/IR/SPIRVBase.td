@@ -340,6 +340,8 @@ def SPV_KHR_fragment_shader_barycentric      : I32EnumAttrCase<"SPV_KHR_fragment
 def SPV_KHR_ray_cull_mask                    : I32EnumAttrCase<"SPV_KHR_ray_cull_mask", 26>;
 def SPV_KHR_uniform_group_instructions       : I32EnumAttrCase<"SPV_KHR_uniform_group_instructions", 27>;
 def SPV_KHR_subgroup_rotate                  : I32EnumAttrCase<"SPV_KHR_subgroup_rotate", 28>;
+def SPV_KHR_non_semantic_info                : I32EnumAttrCase<"SPV_KHR_non_semantic_info", 29>;
+def SPV_KHR_terminate_invocation             : I32EnumAttrCase<"SPV_KHR_terminate_invocation", 30>;
 
 def SPV_EXT_demote_to_helper_invocation  : I32EnumAttrCase<"SPV_EXT_demote_to_helper_invocation", 1000>;
 def SPV_EXT_descriptor_indexing          : I32EnumAttrCase<"SPV_EXT_descriptor_indexing", 1001>;
@@ -430,6 +432,7 @@ def SPIRV_ExtensionAttr :
       SPV_KHR_ray_tracing, SPV_KHR_subgroup_uniform_control_flow, SPV_KHR_linkonce_odr,
       SPV_KHR_fragment_shader_barycentric, SPV_KHR_ray_cull_mask,
       SPV_KHR_uniform_group_instructions, SPV_KHR_subgroup_rotate,
+      SPV_KHR_non_semantic_info, SPV_KHR_terminate_invocation,
       SPV_EXT_demote_to_helper_invocation, SPV_EXT_descriptor_indexing,
       SPV_EXT_fragment_fully_covered, SPV_EXT_fragment_invocation_density,
       SPV_EXT_fragment_shader_interlock, SPV_EXT_physical_storage_buffer,
@@ -4118,6 +4121,9 @@ class SPIRV_ScalarOrVectorOf<Type type> :
 class SPIRV_ScalarOrVectorOrCoopMatrixOf<Type type> :
     AnyTypeOf<[type, VectorOfLengthAndType<[2, 3, 4, 8, 16], [type]>,
                SPIRV_CoopMatrixOfType<[type]>]>;
+
+class SPIRV_MatrixOrCoopMatrixOf<Type type> :
+    AnyTypeOf<[SPIRV_AnyMatrix, SPIRV_CoopMatrixOfType<[type]>]>;
 
 def SPIRV_ScalarOrVector : AnyTypeOf<[SPIRV_Scalar, SPIRV_Vector]>;
 def SPIRV_ScalarOrVectorOrPtr : AnyTypeOf<[SPIRV_ScalarOrVector, SPIRV_AnyPtr]>;

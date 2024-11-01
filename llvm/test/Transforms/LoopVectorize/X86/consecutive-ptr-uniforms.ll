@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes=loop-vectorize,instcombine -S -debug-only=loop-vectorize -disable-output -print-after=instcombine 2>&1 | FileCheck %s
-; RUN: opt < %s -loop-vectorize -force-vector-width=2 -S | FileCheck %s -check-prefix=FORCE
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=2 -S | FileCheck %s -check-prefix=FORCE
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

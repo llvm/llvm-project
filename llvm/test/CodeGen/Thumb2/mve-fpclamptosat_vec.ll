@@ -1890,7 +1890,6 @@ define arm_aapcs_vfpcc <2 x i64> @stest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    cmp.w r2, #-1
 ; CHECK-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    csel r5, r5, r8, gt
-; CHECK-NEXT:    mov.w r8, #0
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    csel r5, r6, r5, eq
@@ -2152,7 +2151,6 @@ define arm_aapcs_vfpcc <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    cmp.w r2, #-1
 ; CHECK-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    csel r5, r5, r8, gt
-; CHECK-NEXT:    mov.w r8, #0
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    csel r5, r6, r5, eq
@@ -2410,7 +2408,6 @@ define arm_aapcs_vfpcc <2 x i64> @stest_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEXT:    cmp.w r2, #-1
 ; CHECK-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    csel r5, r5, r8, gt
-; CHECK-NEXT:    mov.w r8, #0
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    csel r5, r6, r5, eq

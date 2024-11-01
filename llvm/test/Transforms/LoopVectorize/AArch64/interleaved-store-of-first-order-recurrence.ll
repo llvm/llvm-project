@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -mtriple=arm64-apple-darinw -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -mtriple=arm64-apple-darinw -S %s | FileCheck %s
 
 ; In the loop below, both the current and previous values of a first-order
 ; recurrence are stored in an interleave group.

@@ -1,10 +1,10 @@
 ; REQUIRES: asserts
-; RUN: opt -S -loop-vectorize -force-vector-width=8 -force-vector-interleave=1 -enable-interleaved-mem-accesses -debug-only=loop-vectorize,vectorutils -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-width=8 -force-vector-interleave=1 -enable-interleaved-mem-accesses -debug-only=loop-vectorize,vectorutils -disable-output < %s 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 
 ; Ensure that we don't create interleave groups for predicated
-; strided accesses. 
+; strided accesses.
 
 ; CHECK: LV: Checking a loop in 'masked_strided'
 ; CHECK: LV: Analyzing interleaved accesses...

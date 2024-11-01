@@ -54,7 +54,7 @@ static llvm::Optional<llvm::APInt> GetAPInt(const DataExtractor &data,
                                             lldb::offset_t *offset_ptr,
                                             lldb::offset_t byte_size) {
   if (byte_size == 0)
-    return llvm::None;
+    return std::nullopt;
 
   llvm::SmallVector<uint64_t, 2> uint64_array;
   lldb::offset_t bytes_left = byte_size;
@@ -92,7 +92,7 @@ static llvm::Optional<llvm::APInt> GetAPInt(const DataExtractor &data,
     *offset_ptr += byte_size;
     return llvm::APInt(byte_size * 8, llvm::ArrayRef<uint64_t>(uint64_array));
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 static lldb::offset_t DumpAPInt(Stream *s, const DataExtractor &data,
@@ -244,21 +244,21 @@ GetMemoryTags(lldb::addr_t addr, size_t length,
   assert(addr != LLDB_INVALID_ADDRESS);
 
   if (!exe_scope)
-    return llvm::None;
+    return std::nullopt;
 
   TargetSP target_sp = exe_scope->CalculateTarget();
   if (!target_sp)
-    return llvm::None;
+    return std::nullopt;
 
   ProcessSP process_sp = target_sp->CalculateProcess();
   if (!process_sp)
-    return llvm::None;
+    return std::nullopt;
 
   llvm::Expected<const MemoryTagManager *> tag_manager_or_err =
       process_sp->GetMemoryTagManager();
   if (!tag_manager_or_err) {
     llvm::consumeError(tag_manager_or_err.takeError());
-    return llvm::None;
+    return std::nullopt;
   }
 
   MemoryRegionInfos memory_regions;
@@ -272,10 +272,10 @@ GetMemoryTags(lldb::addr_t addr, size_t length,
   // for an error.
   if (!tagged_ranges_or_err) {
     llvm::consumeError(tagged_ranges_or_err.takeError());
-    return llvm::None;
+    return std::nullopt;
   }
   if (tagged_ranges_or_err->empty())
-    return llvm::None;
+    return std::nullopt;
 
   MemoryTagMap memory_tag_map(*tag_manager_or_err);
   for (const MemoryTagManager::TagRange &range : *tagged_ranges_or_err) {
@@ -289,7 +289,7 @@ GetMemoryTags(lldb::addr_t addr, size_t length,
   }
 
   if (memory_tag_map.Empty())
-    return llvm::None;
+    return std::nullopt;
 
   return memory_tag_map;
 }

@@ -60,7 +60,7 @@ public:
 
   /// Returns the name of the TablGen def of this constraint. In some cases
   /// where the current def is anonymous, the name of the base def is used (e.g.
-  /// `Optional<>`/`Variadic<>` type constraints).
+  /// `std::optional<>`/`Variadic<>` type constraints).
   StringRef getDefName() const;
 
   /// Returns a unique name for the TablGen def of this constraint. This is
@@ -79,8 +79,9 @@ protected:
   const llvm::Record *def;
 
 private:
-  /// Return the name of the base def if there is one, or None otherwise.
-  Optional<StringRef> getBaseDefName() const;
+  /// Return the name of the base def if there is one, or std::nullopt
+  /// otherwise.
+  std::optional<StringRef> getBaseDefName() const;
 
   // What kind of constraint this is.
   Kind kind;

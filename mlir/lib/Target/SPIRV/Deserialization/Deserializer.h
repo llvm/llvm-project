@@ -421,7 +421,7 @@ private:
   /// compose the error message) or the next instruction is malformed.
   LogicalResult
   sliceInstruction(spirv::Opcode &opcode, ArrayRef<uint32_t> &operands,
-                   Optional<spirv::Opcode> expectedOpcode = llvm::None);
+                   Optional<spirv::Opcode> expectedOpcode = std::nullopt);
 
   /// Processes a SPIR-V instruction with the given `opcode` and `operands`.
   /// This method is the main entrance for handling SPIR-V instruction; it

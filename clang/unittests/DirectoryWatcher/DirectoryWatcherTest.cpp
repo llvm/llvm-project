@@ -183,7 +183,7 @@ struct VerifyingConsumer {
       return true;
     if (!UnexpectedInitial.empty() || !UnexpectedNonInitial.empty())
       return false;
-    return llvm::None;
+    return std::nullopt;
   }
 
   // This method is used by tests.

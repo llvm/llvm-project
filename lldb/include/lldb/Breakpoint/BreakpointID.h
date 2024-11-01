@@ -55,7 +55,7 @@ public:
   ///     A string containing JUST the breakpoint description.
   /// \return
   ///     If \p input was not a valid breakpoint ID string, returns
-  ///     \b llvm::None.  Otherwise returns a BreakpointID with members filled
+  ///     \b std::nullopt.  Otherwise returns a BreakpointID with members filled
   ///     out accordingly.
   static llvm::Optional<BreakpointID>
   ParseCanonicalReference(llvm::StringRef input);

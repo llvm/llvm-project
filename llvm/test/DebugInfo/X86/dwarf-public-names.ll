@@ -4,6 +4,24 @@
 ; RUN: llvm-dwarfdump -debug-pubnames %t.o | FileCheck --check-prefix=NOPUB %s
 ; RUN: llc -mtriple=x86_64-scei-ps4 -filetype=obj -o %t.o < %s
 ; RUN: llvm-dwarfdump -debug-pubnames %t.o | FileCheck --check-prefix=NOPUB %s
+
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: sed -e "s/C_plus_plus/C_plus_plus_03/" %s > %t/test.ll
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj -o %t/test.o < %t/test.ll
+; RUN: llvm-dwarfdump -debug-pubnames %t/test.o | FileCheck --check-prefix=LINUX %s
+; RUN: sed -e "s/C_plus_plus/C_plus_plus_11/" %s > %t/test.ll
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj -o %t/test.o < %t/test.ll
+; RUN: llvm-dwarfdump -debug-pubnames %t/test.o | FileCheck --check-prefix=LINUX %s
+; RUN: sed -e "s/C_plus_plus/C_plus_plus_14/" %s > %t/test.ll
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj -o %t/test.o < %t/test.ll
+; RUN: llvm-dwarfdump -debug-pubnames %t/test.o | FileCheck --check-prefix=LINUX %s
+; RUN: sed -e "s/C_plus_plus/C_plus_plus_17/" %s > %t/test.ll
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj -o %t/test.o < %t/test.ll
+; RUN: llvm-dwarfdump -debug-pubnames %t/test.o | FileCheck --check-prefix=LINUX %s
+; RUN: sed -e "s/C_plus_plus/C_plus_plus_20/" %s > %t/test.ll
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=obj -o %t/test.o < %t/test.ll
+; RUN: llvm-dwarfdump -debug-pubnames %t/test.o | FileCheck --check-prefix=LINUX %s
 ; ModuleID = 'dwarf-public-names.cpp'
 ;
 ; Generated from:

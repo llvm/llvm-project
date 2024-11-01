@@ -280,7 +280,7 @@ public:
   ///
   /// Entry count is the number of times the function was executed.
   /// When AllowSynthetic is false, only pgo_data will be returned.
-  Optional<ProfileCount> getEntryCount(bool AllowSynthetic = false) const;
+  std::optional<ProfileCount> getEntryCount(bool AllowSynthetic = false) const;
 
   /// Return true if the function is annotated with profile data.
   ///
@@ -299,7 +299,7 @@ public:
   void setSectionPrefix(StringRef Prefix);
 
   /// Get the section prefix for this function.
-  Optional<StringRef> getSectionPrefix() const;
+  std::optional<StringRef> getSectionPrefix() const;
 
   /// hasGC/getGC/setGC/clearGC - The name of the garbage collection algorithm
   ///                             to use during code generation.

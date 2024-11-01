@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 | llvm-dis
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 | llvm-dis
 ; END.
 
 ; ModuleID = '2006-12-08-Ptr-ICmp-Branch.ll'

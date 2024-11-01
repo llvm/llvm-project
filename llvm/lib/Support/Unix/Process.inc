@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
 #include <mutex>
+#include <optional>
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
@@ -173,11 +174,11 @@ void Process::PreventCoreFiles() {
   coreFilesPrevented = true;
 }
 
-Optional<std::string> Process::GetEnv(StringRef Name) {
+std::optional<std::string> Process::GetEnv(StringRef Name) {
   std::string NameStr = Name.str();
   const char *Val = ::getenv(NameStr.c_str());
   if (!Val)
-    return None;
+    return std::nullopt;
   return std::string(Val);
 }
 

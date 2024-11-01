@@ -37,7 +37,7 @@ public:
   llvm::Optional<uint32_t> dwo_num() const {
     if (m_dwo_num_valid)
       return m_dwo_num;
-    return llvm::None;
+    return std::nullopt;
   }
 
   Section section() const { return static_cast<Section>(m_section); }
@@ -71,7 +71,7 @@ public:
   ///   from that gets updated as data gets decoded.
   ///
   /// \return
-  ///   Returns a valid DIERef if decoding succeeded, llvm::None if there was
+  ///   Returns a valid DIERef if decoding succeeded, std::nullopt if there was
   ///   unsufficient or invalid values that were decoded.
   static llvm::Optional<DIERef> Decode(const lldb_private::DataExtractor &data,
                                        lldb::offset_t *offset_ptr);

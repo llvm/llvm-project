@@ -197,7 +197,7 @@ bool DWARFCallFrameInfo::GetAddressRange(Address addr, AddressRange &range) {
 llvm::Optional<DWARFCallFrameInfo::FDEEntryMap::Entry>
 DWARFCallFrameInfo::GetFirstFDEEntryInRange(const AddressRange &range) {
   if (!m_section_sp || m_section_sp->IsEncrypted())
-    return llvm::None;
+    return std::nullopt;
 
   GetFDEIndex();
 
@@ -208,7 +208,7 @@ DWARFCallFrameInfo::GetFirstFDEEntryInRange(const AddressRange &range) {
                  FDEEntryMap::Range(start_file_addr, range.GetByteSize())))
     return *fde;
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 void DWARFCallFrameInfo::GetFunctionAddressAndSizeVector(

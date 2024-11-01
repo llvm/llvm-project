@@ -670,7 +670,7 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
 
   bool HasPrefix = false;
   if (const auto *F = dyn_cast<Function>(GO)) {
-    if (Optional<StringRef> Prefix = F->getSectionPrefix()) {
+    if (std::optional<StringRef> Prefix = F->getSectionPrefix()) {
       raw_svector_ostream(Name) << '.' << *Prefix;
       HasPrefix = true;
     }
@@ -1720,7 +1720,7 @@ MCSection *TargetLoweringObjectFileCOFF::SelectSectionForGlobal(
       StringRef COMDATSymName = Sym->getName();
 
       if (const auto *F = dyn_cast<Function>(GO))
-        if (Optional<StringRef> Prefix = F->getSectionPrefix())
+        if (std::optional<StringRef> Prefix = F->getSectionPrefix())
           raw_svector_ostream(Name) << '$' << *Prefix;
 
       // Append "$symbol" to the section name *before* IR-level mangling is

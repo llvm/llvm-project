@@ -430,5 +430,5 @@ PWMAFunction::valueAt(ArrayRef<MPInt> point) const {
   for (const Piece &piece : pieces)
     if (piece.domain.containsPoint(point))
       return piece.output.valueAt(point);
-  return None;
+  return std::nullopt;
 }

@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
 
 define i1 @foo() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 	%X = invoke i1 @foo( )

@@ -1354,7 +1354,6 @@ define amdgpu_kernel void @test_div_fmas_f32_i1_phi_vcc(ptr addrspace(1) %out, [
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    buffer_load_dwordx3 v[1:3], v[1:2], s[4:7], 0 addr64
-; GFX7-NEXT:    s_mov_b32 s6, 0
 ; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX7-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX7-NEXT:    s_cbranch_execz .LBB13_2

@@ -474,7 +474,7 @@ llvm::Optional<FileEntryRef> FileManager::getBypassFile(FileEntryRef VF) {
   // Stat of the file and return nullptr if it doesn't exist.
   llvm::vfs::Status Status;
   if (getStatValue(VF.getName(), Status, /*isFile=*/true, /*F=*/nullptr))
-    return None;
+    return std::nullopt;
 
   if (!SeenBypassFileEntries)
     SeenBypassFileEntries = std::make_unique<

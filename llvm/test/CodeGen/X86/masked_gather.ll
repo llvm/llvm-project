@@ -650,8 +650,8 @@ define <16 x i8> @gather_v16i8_v16i32_v16i8(ptr %base, <16 x i32> %idx, <16 x i8
 ; SSE-NEXT:    pinsrb $6, (%rcx), %xmm5
 ; SSE-NEXT:  .LBB3_14: # %else17
 ; SSE-NEXT:    pmovsxdq %xmm2, %xmm0
-; SSE-NEXT:    testb $-128, %al
-; SSE-NEXT:    je .LBB3_16
+; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    jns .LBB3_16
 ; SSE-NEXT:  # %bb.15: # %cond.load19
 ; SSE-NEXT:    pextrq $1, %xmm1, %rcx
 ; SSE-NEXT:    pinsrb $7, (%rcx), %xmm5
@@ -789,8 +789,8 @@ define <16 x i8> @gather_v16i8_v16i32_v16i8(ptr %base, <16 x i32> %idx, <16 x i8
 ; AVX1-NEXT:    vpinsrb $6, (%rcx), %xmm3, %xmm3
 ; AVX1-NEXT:  .LBB3_14: # %else17
 ; AVX1-NEXT:    vpaddq %xmm5, %xmm4, %xmm5
-; AVX1-NEXT:    testb $-128, %al
-; AVX1-NEXT:    je .LBB3_16
+; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    jns .LBB3_16
 ; AVX1-NEXT:  # %bb.15: # %cond.load19
 ; AVX1-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX1-NEXT:    vpinsrb $7, (%rcx), %xmm3, %xmm3
@@ -919,8 +919,8 @@ define <16 x i8> @gather_v16i8_v16i32_v16i8(ptr %base, <16 x i32> %idx, <16 x i8
 ; AVX2-NEXT:    vpinsrb $6, (%rcx), %xmm3, %xmm3
 ; AVX2-NEXT:  .LBB3_14: # %else17
 ; AVX2-NEXT:    vpmovsxdq %xmm1, %ymm2
-; AVX2-NEXT:    testb $-128, %al
-; AVX2-NEXT:    je .LBB3_16
+; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    jns .LBB3_16
 ; AVX2-NEXT:  # %bb.15: # %cond.load19
 ; AVX2-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX2-NEXT:    vpinsrb $7, (%rcx), %xmm3, %xmm3
@@ -1034,8 +1034,8 @@ define <16 x i8> @gather_v16i8_v16i32_v16i8(ptr %base, <16 x i32> %idx, <16 x i8
 ; AVX512-NEXT:    vpinsrb $6, (%rcx), %xmm2, %xmm2
 ; AVX512-NEXT:  .LBB3_14: # %else17
 ; AVX512-NEXT:    vpmovsxdq %ymm1, %zmm1
-; AVX512-NEXT:    testb $-128, %al
-; AVX512-NEXT:    je .LBB3_16
+; AVX512-NEXT:    testb %al, %al
+; AVX512-NEXT:    jns .LBB3_16
 ; AVX512-NEXT:  # %bb.15: # %cond.load19
 ; AVX512-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX512-NEXT:    vpinsrb $7, (%rcx), %xmm2, %xmm2

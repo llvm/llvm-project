@@ -2593,8 +2593,8 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE2-NEXT:  .LBB9_14: # %else12
 ; SSE2-NEXT:    psrad $16, %xmm3
 ; SSE2-NEXT:    psrad $16, %xmm2
-; SSE2-NEXT:    testb $-128, %al
-; SSE2-NEXT:    je .LBB9_16
+; SSE2-NEXT:    testb %al, %al
+; SSE2-NEXT:    jns .LBB9_16
 ; SSE2-NEXT:  # %bb.15: # %cond.store13
 ; SSE2-NEXT:    pextrw $7, %xmm8, %ecx
 ; SSE2-NEXT:    movw %cx, 14(%rdi)
@@ -2710,8 +2710,8 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE4-NEXT:  .LBB9_14: # %else12
 ; SSE4-NEXT:    pminud %xmm8, %xmm3
 ; SSE4-NEXT:    pminud %xmm8, %xmm2
-; SSE4-NEXT:    testb $-128, %al
-; SSE4-NEXT:    je .LBB9_16
+; SSE4-NEXT:    testb %al, %al
+; SSE4-NEXT:    jns .LBB9_16
 ; SSE4-NEXT:  # %bb.15: # %cond.store13
 ; SSE4-NEXT:    pextrw $7, %xmm0, 14(%rdi)
 ; SSE4-NEXT:  .LBB9_16: # %else14
@@ -2847,8 +2847,8 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX1-NEXT:    testb $64, %al
 ; AVX1-NEXT:    jne .LBB9_13
 ; AVX1-NEXT:  .LBB9_14: # %else12
-; AVX1-NEXT:    testb $-128, %al
-; AVX1-NEXT:    je .LBB9_16
+; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    jns .LBB9_16
 ; AVX1-NEXT:  .LBB9_15: # %cond.store13
 ; AVX1-NEXT:    vpextrw $7, %xmm0, 14(%rdi)
 ; AVX1-NEXT:  .LBB9_16: # %else14
@@ -2905,8 +2905,8 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX1-NEXT:    je .LBB9_14
 ; AVX1-NEXT:  .LBB9_13: # %cond.store11
 ; AVX1-NEXT:    vpextrw $6, %xmm0, 12(%rdi)
-; AVX1-NEXT:    testb $-128, %al
-; AVX1-NEXT:    jne .LBB9_15
+; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    js .LBB9_15
 ; AVX1-NEXT:    jmp .LBB9_16
 ; AVX1-NEXT:  .LBB9_17: # %cond.store15
 ; AVX1-NEXT:    vpextrw $0, %xmm0, 16(%rdi)
@@ -2980,8 +2980,8 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX2-NEXT:    testb $64, %al
 ; AVX2-NEXT:    jne .LBB9_13
 ; AVX2-NEXT:  .LBB9_14: # %else12
-; AVX2-NEXT:    testb $-128, %al
-; AVX2-NEXT:    je .LBB9_16
+; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    jns .LBB9_16
 ; AVX2-NEXT:  .LBB9_15: # %cond.store13
 ; AVX2-NEXT:    vpextrw $7, %xmm0, 14(%rdi)
 ; AVX2-NEXT:  .LBB9_16: # %else14
@@ -3038,8 +3038,8 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX2-NEXT:    je .LBB9_14
 ; AVX2-NEXT:  .LBB9_13: # %cond.store11
 ; AVX2-NEXT:    vpextrw $6, %xmm0, 12(%rdi)
-; AVX2-NEXT:    testb $-128, %al
-; AVX2-NEXT:    jne .LBB9_15
+; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    js .LBB9_15
 ; AVX2-NEXT:    jmp .LBB9_16
 ; AVX2-NEXT:  .LBB9_17: # %cond.store15
 ; AVX2-NEXT:    vpextrw $0, %xmm0, 16(%rdi)
@@ -3100,8 +3100,8 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX512F-NEXT:    testb $64, %al
 ; AVX512F-NEXT:    jne .LBB9_13
 ; AVX512F-NEXT:  .LBB9_14: # %else12
-; AVX512F-NEXT:    testb $-128, %al
-; AVX512F-NEXT:    je .LBB9_16
+; AVX512F-NEXT:    testb %al, %al
+; AVX512F-NEXT:    jns .LBB9_16
 ; AVX512F-NEXT:  .LBB9_15: # %cond.store13
 ; AVX512F-NEXT:    vpextrw $7, %xmm0, 14(%rdi)
 ; AVX512F-NEXT:  .LBB9_16: # %else14
@@ -3158,8 +3158,8 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX512F-NEXT:    je .LBB9_14
 ; AVX512F-NEXT:  .LBB9_13: # %cond.store11
 ; AVX512F-NEXT:    vpextrw $6, %xmm0, 12(%rdi)
-; AVX512F-NEXT:    testb $-128, %al
-; AVX512F-NEXT:    jne .LBB9_15
+; AVX512F-NEXT:    testb %al, %al
+; AVX512F-NEXT:    js .LBB9_15
 ; AVX512F-NEXT:    jmp .LBB9_16
 ; AVX512F-NEXT:  .LBB9_17: # %cond.store15
 ; AVX512F-NEXT:    vpextrw $0, %xmm0, 16(%rdi)
@@ -3299,8 +3299,8 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE2-NEXT:  # %bb.13: # %cond.store11
 ; SSE2-NEXT:    movb %cl, 6(%rdi)
 ; SSE2-NEXT:  .LBB10_14: # %else12
-; SSE2-NEXT:    testb $-128, %al
-; SSE2-NEXT:    je .LBB10_16
+; SSE2-NEXT:    testb %al, %al
+; SSE2-NEXT:    jns .LBB10_16
 ; SSE2-NEXT:  # %bb.15: # %cond.store13
 ; SSE2-NEXT:    movb %ch, 7(%rdi)
 ; SSE2-NEXT:  .LBB10_16: # %else14
@@ -3413,8 +3413,8 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE4-NEXT:    testb $64, %al
 ; SSE4-NEXT:    jne .LBB10_13
 ; SSE4-NEXT:  .LBB10_14: # %else12
-; SSE4-NEXT:    testb $-128, %al
-; SSE4-NEXT:    jne .LBB10_15
+; SSE4-NEXT:    testb %al, %al
+; SSE4-NEXT:    js .LBB10_15
 ; SSE4-NEXT:  .LBB10_16: # %else14
 ; SSE4-NEXT:    testl $256, %eax # imm = 0x100
 ; SSE4-NEXT:    jne .LBB10_17
@@ -3467,8 +3467,8 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE4-NEXT:    je .LBB10_14
 ; SSE4-NEXT:  .LBB10_13: # %cond.store11
 ; SSE4-NEXT:    pextrb $6, %xmm0, 6(%rdi)
-; SSE4-NEXT:    testb $-128, %al
-; SSE4-NEXT:    je .LBB10_16
+; SSE4-NEXT:    testb %al, %al
+; SSE4-NEXT:    jns .LBB10_16
 ; SSE4-NEXT:  .LBB10_15: # %cond.store13
 ; SSE4-NEXT:    pextrb $7, %xmm0, 7(%rdi)
 ; SSE4-NEXT:    testl $256, %eax # imm = 0x100
@@ -3554,8 +3554,8 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX1-NEXT:    testb $64, %al
 ; AVX1-NEXT:    jne .LBB10_13
 ; AVX1-NEXT:  .LBB10_14: # %else12
-; AVX1-NEXT:    testb $-128, %al
-; AVX1-NEXT:    jne .LBB10_15
+; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    js .LBB10_15
 ; AVX1-NEXT:  .LBB10_16: # %else14
 ; AVX1-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX1-NEXT:    jne .LBB10_17
@@ -3609,8 +3609,8 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX1-NEXT:    je .LBB10_14
 ; AVX1-NEXT:  .LBB10_13: # %cond.store11
 ; AVX1-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
-; AVX1-NEXT:    testb $-128, %al
-; AVX1-NEXT:    je .LBB10_16
+; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    jns .LBB10_16
 ; AVX1-NEXT:  .LBB10_15: # %cond.store13
 ; AVX1-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX1-NEXT:    testl $256, %eax # imm = 0x100
@@ -3689,8 +3689,8 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX2-NEXT:    testb $64, %al
 ; AVX2-NEXT:    jne .LBB10_13
 ; AVX2-NEXT:  .LBB10_14: # %else12
-; AVX2-NEXT:    testb $-128, %al
-; AVX2-NEXT:    jne .LBB10_15
+; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    js .LBB10_15
 ; AVX2-NEXT:  .LBB10_16: # %else14
 ; AVX2-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX2-NEXT:    jne .LBB10_17
@@ -3744,8 +3744,8 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX2-NEXT:    je .LBB10_14
 ; AVX2-NEXT:  .LBB10_13: # %cond.store11
 ; AVX2-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
-; AVX2-NEXT:    testb $-128, %al
-; AVX2-NEXT:    je .LBB10_16
+; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    jns .LBB10_16
 ; AVX2-NEXT:  .LBB10_15: # %cond.store13
 ; AVX2-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX2-NEXT:    testl $256, %eax # imm = 0x100
@@ -3809,8 +3809,8 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX512F-NEXT:    testb $64, %al
 ; AVX512F-NEXT:    jne .LBB10_13
 ; AVX512F-NEXT:  .LBB10_14: # %else12
-; AVX512F-NEXT:    testb $-128, %al
-; AVX512F-NEXT:    jne .LBB10_15
+; AVX512F-NEXT:    testb %al, %al
+; AVX512F-NEXT:    js .LBB10_15
 ; AVX512F-NEXT:  .LBB10_16: # %else14
 ; AVX512F-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX512F-NEXT:    jne .LBB10_17
@@ -3864,8 +3864,8 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX512F-NEXT:    je .LBB10_14
 ; AVX512F-NEXT:  .LBB10_13: # %cond.store11
 ; AVX512F-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
-; AVX512F-NEXT:    testb $-128, %al
-; AVX512F-NEXT:    je .LBB10_16
+; AVX512F-NEXT:    testb %al, %al
+; AVX512F-NEXT:    jns .LBB10_16
 ; AVX512F-NEXT:  .LBB10_15: # %cond.store13
 ; AVX512F-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX512F-NEXT:    testl $256, %eax # imm = 0x100
@@ -5234,8 +5234,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE2-NEXT:  # %bb.13: # %cond.store11
 ; SSE2-NEXT:    movb %cl, 6(%rdi)
 ; SSE2-NEXT:  .LBB15_14: # %else12
-; SSE2-NEXT:    testb $-128, %al
-; SSE2-NEXT:    je .LBB15_16
+; SSE2-NEXT:    testb %al, %al
+; SSE2-NEXT:    jns .LBB15_16
 ; SSE2-NEXT:  # %bb.15: # %cond.store13
 ; SSE2-NEXT:    movb %ch, 7(%rdi)
 ; SSE2-NEXT:  .LBB15_16: # %else14
@@ -5285,8 +5285,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE2-NEXT:    movb %cl, 14(%rdi)
 ; SSE2-NEXT:  .LBB15_30: # %else28
 ; SSE2-NEXT:    packuswb %xmm3, %xmm2
-; SSE2-NEXT:    testl $32768, %eax # imm = 0x8000
-; SSE2-NEXT:    je .LBB15_32
+; SSE2-NEXT:    testw %ax, %ax
+; SSE2-NEXT:    jns .LBB15_32
 ; SSE2-NEXT:  # %bb.31: # %cond.store29
 ; SSE2-NEXT:    movb %ch, 15(%rdi)
 ; SSE2-NEXT:  .LBB15_32: # %else30
@@ -5443,8 +5443,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE4-NEXT:    testb $64, %al
 ; SSE4-NEXT:    jne .LBB15_13
 ; SSE4-NEXT:  .LBB15_14: # %else12
-; SSE4-NEXT:    testb $-128, %al
-; SSE4-NEXT:    jne .LBB15_15
+; SSE4-NEXT:    testb %al, %al
+; SSE4-NEXT:    js .LBB15_15
 ; SSE4-NEXT:  .LBB15_16: # %else14
 ; SSE4-NEXT:    testl $256, %eax # imm = 0x100
 ; SSE4-NEXT:    jne .LBB15_17
@@ -5471,8 +5471,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE4-NEXT:  .LBB15_30: # %else28
 ; SSE4-NEXT:    pminuw %xmm6, %xmm3
 ; SSE4-NEXT:    pminuw %xmm6, %xmm2
-; SSE4-NEXT:    testl $32768, %eax # imm = 0x8000
-; SSE4-NEXT:    je .LBB15_32
+; SSE4-NEXT:    testw %ax, %ax
+; SSE4-NEXT:    jns .LBB15_32
 ; SSE4-NEXT:  # %bb.31: # %cond.store29
 ; SSE4-NEXT:    pextrb $15, %xmm0, 15(%rdi)
 ; SSE4-NEXT:  .LBB15_32: # %else30
@@ -5552,8 +5552,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE4-NEXT:    je .LBB15_14
 ; SSE4-NEXT:  .LBB15_13: # %cond.store11
 ; SSE4-NEXT:    pextrb $6, %xmm0, 6(%rdi)
-; SSE4-NEXT:    testb $-128, %al
-; SSE4-NEXT:    je .LBB15_16
+; SSE4-NEXT:    testb %al, %al
+; SSE4-NEXT:    jns .LBB15_16
 ; SSE4-NEXT:  .LBB15_15: # %cond.store13
 ; SSE4-NEXT:    pextrb $7, %xmm0, 7(%rdi)
 ; SSE4-NEXT:    testl $256, %eax # imm = 0x100
@@ -5690,8 +5690,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; AVX1-NEXT:    testb $64, %al
 ; AVX1-NEXT:    jne .LBB15_13
 ; AVX1-NEXT:  .LBB15_14: # %else12
-; AVX1-NEXT:    testb $-128, %al
-; AVX1-NEXT:    jne .LBB15_15
+; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    js .LBB15_15
 ; AVX1-NEXT:  .LBB15_16: # %else14
 ; AVX1-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX1-NEXT:    jne .LBB15_17
@@ -5714,8 +5714,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; AVX1-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX1-NEXT:    jne .LBB15_29
 ; AVX1-NEXT:  .LBB15_30: # %else28
-; AVX1-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX1-NEXT:    je .LBB15_32
+; AVX1-NEXT:    testw %ax, %ax
+; AVX1-NEXT:    jns .LBB15_32
 ; AVX1-NEXT:  .LBB15_31: # %cond.store29
 ; AVX1-NEXT:    vpextrb $15, %xmm0, 15(%rdi)
 ; AVX1-NEXT:  .LBB15_32: # %else30
@@ -5796,8 +5796,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; AVX1-NEXT:    je .LBB15_14
 ; AVX1-NEXT:  .LBB15_13: # %cond.store11
 ; AVX1-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
-; AVX1-NEXT:    testb $-128, %al
-; AVX1-NEXT:    je .LBB15_16
+; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    jns .LBB15_16
 ; AVX1-NEXT:  .LBB15_15: # %cond.store13
 ; AVX1-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX1-NEXT:    testl $256, %eax # imm = 0x100
@@ -5828,8 +5828,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; AVX1-NEXT:    je .LBB15_30
 ; AVX1-NEXT:  .LBB15_29: # %cond.store27
 ; AVX1-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
-; AVX1-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX1-NEXT:    jne .LBB15_31
+; AVX1-NEXT:    testw %ax, %ax
+; AVX1-NEXT:    js .LBB15_31
 ; AVX1-NEXT:    jmp .LBB15_32
 ; AVX1-NEXT:  .LBB15_33: # %cond.store31
 ; AVX1-NEXT:    vpextrb $0, %xmm0, 16(%rdi)
@@ -5928,8 +5928,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; AVX2-NEXT:    testb $64, %al
 ; AVX2-NEXT:    jne .LBB15_13
 ; AVX2-NEXT:  .LBB15_14: # %else12
-; AVX2-NEXT:    testb $-128, %al
-; AVX2-NEXT:    jne .LBB15_15
+; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    js .LBB15_15
 ; AVX2-NEXT:  .LBB15_16: # %else14
 ; AVX2-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX2-NEXT:    jne .LBB15_17
@@ -5952,8 +5952,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; AVX2-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX2-NEXT:    jne .LBB15_29
 ; AVX2-NEXT:  .LBB15_30: # %else28
-; AVX2-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX2-NEXT:    je .LBB15_32
+; AVX2-NEXT:    testw %ax, %ax
+; AVX2-NEXT:    jns .LBB15_32
 ; AVX2-NEXT:  .LBB15_31: # %cond.store29
 ; AVX2-NEXT:    vpextrb $15, %xmm0, 15(%rdi)
 ; AVX2-NEXT:  .LBB15_32: # %else30
@@ -6034,8 +6034,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; AVX2-NEXT:    je .LBB15_14
 ; AVX2-NEXT:  .LBB15_13: # %cond.store11
 ; AVX2-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
-; AVX2-NEXT:    testb $-128, %al
-; AVX2-NEXT:    je .LBB15_16
+; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    jns .LBB15_16
 ; AVX2-NEXT:  .LBB15_15: # %cond.store13
 ; AVX2-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX2-NEXT:    testl $256, %eax # imm = 0x100
@@ -6066,8 +6066,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; AVX2-NEXT:    je .LBB15_30
 ; AVX2-NEXT:  .LBB15_29: # %cond.store27
 ; AVX2-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
-; AVX2-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX2-NEXT:    jne .LBB15_31
+; AVX2-NEXT:    testw %ax, %ax
+; AVX2-NEXT:    js .LBB15_31
 ; AVX2-NEXT:    jmp .LBB15_32
 ; AVX2-NEXT:  .LBB15_33: # %cond.store31
 ; AVX2-NEXT:    vpextrb $0, %xmm0, 16(%rdi)
@@ -6170,8 +6170,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; AVX512F-NEXT:    testb $64, %al
 ; AVX512F-NEXT:    jne .LBB15_13
 ; AVX512F-NEXT:  .LBB15_14: # %else12
-; AVX512F-NEXT:    testb $-128, %al
-; AVX512F-NEXT:    jne .LBB15_15
+; AVX512F-NEXT:    testb %al, %al
+; AVX512F-NEXT:    js .LBB15_15
 ; AVX512F-NEXT:  .LBB15_16: # %else14
 ; AVX512F-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX512F-NEXT:    jne .LBB15_17
@@ -6194,8 +6194,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; AVX512F-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX512F-NEXT:    jne .LBB15_29
 ; AVX512F-NEXT:  .LBB15_30: # %else28
-; AVX512F-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX512F-NEXT:    je .LBB15_32
+; AVX512F-NEXT:    testw %ax, %ax
+; AVX512F-NEXT:    jns .LBB15_32
 ; AVX512F-NEXT:  .LBB15_31: # %cond.store29
 ; AVX512F-NEXT:    vpextrb $15, %xmm0, 15(%rdi)
 ; AVX512F-NEXT:  .LBB15_32: # %else30
@@ -6276,8 +6276,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; AVX512F-NEXT:    je .LBB15_14
 ; AVX512F-NEXT:  .LBB15_13: # %cond.store11
 ; AVX512F-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
-; AVX512F-NEXT:    testb $-128, %al
-; AVX512F-NEXT:    je .LBB15_16
+; AVX512F-NEXT:    testb %al, %al
+; AVX512F-NEXT:    jns .LBB15_16
 ; AVX512F-NEXT:  .LBB15_15: # %cond.store13
 ; AVX512F-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX512F-NEXT:    testl $256, %eax # imm = 0x100
@@ -6308,8 +6308,8 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; AVX512F-NEXT:    je .LBB15_30
 ; AVX512F-NEXT:  .LBB15_29: # %cond.store27
 ; AVX512F-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
-; AVX512F-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX512F-NEXT:    jne .LBB15_31
+; AVX512F-NEXT:    testw %ax, %ax
+; AVX512F-NEXT:    js .LBB15_31
 ; AVX512F-NEXT:    jmp .LBB15_32
 ; AVX512F-NEXT:  .LBB15_33: # %cond.store31
 ; AVX512F-NEXT:    vpextrb $0, %xmm0, 16(%rdi)
@@ -6448,8 +6448,8 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; SSE2-NEXT:  # %bb.13: # %cond.store11
 ; SSE2-NEXT:    movb %cl, 6(%rdi)
 ; SSE2-NEXT:  .LBB16_14: # %else12
-; SSE2-NEXT:    testb $-128, %al
-; SSE2-NEXT:    je .LBB16_16
+; SSE2-NEXT:    testb %al, %al
+; SSE2-NEXT:    jns .LBB16_16
 ; SSE2-NEXT:  # %bb.15: # %cond.store13
 ; SSE2-NEXT:    movb %ch, 7(%rdi)
 ; SSE2-NEXT:  .LBB16_16: # %else14
@@ -6548,8 +6548,8 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; SSE4-NEXT:    testb $64, %al
 ; SSE4-NEXT:    jne .LBB16_13
 ; SSE4-NEXT:  .LBB16_14: # %else12
-; SSE4-NEXT:    testb $-128, %al
-; SSE4-NEXT:    jne .LBB16_15
+; SSE4-NEXT:    testb %al, %al
+; SSE4-NEXT:    js .LBB16_15
 ; SSE4-NEXT:  .LBB16_16: # %else14
 ; SSE4-NEXT:    testl $256, %eax # imm = 0x100
 ; SSE4-NEXT:    jne .LBB16_17
@@ -6602,8 +6602,8 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; SSE4-NEXT:    je .LBB16_14
 ; SSE4-NEXT:  .LBB16_13: # %cond.store11
 ; SSE4-NEXT:    pextrb $6, %xmm0, 6(%rdi)
-; SSE4-NEXT:    testb $-128, %al
-; SSE4-NEXT:    je .LBB16_16
+; SSE4-NEXT:    testb %al, %al
+; SSE4-NEXT:    jns .LBB16_16
 ; SSE4-NEXT:  .LBB16_15: # %cond.store13
 ; SSE4-NEXT:    pextrb $7, %xmm0, 7(%rdi)
 ; SSE4-NEXT:    testl $256, %eax # imm = 0x100
@@ -6672,8 +6672,8 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; AVX1-NEXT:    testb $64, %al
 ; AVX1-NEXT:    jne .LBB16_13
 ; AVX1-NEXT:  .LBB16_14: # %else12
-; AVX1-NEXT:    testb $-128, %al
-; AVX1-NEXT:    jne .LBB16_15
+; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    js .LBB16_15
 ; AVX1-NEXT:  .LBB16_16: # %else14
 ; AVX1-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX1-NEXT:    jne .LBB16_17
@@ -6727,8 +6727,8 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; AVX1-NEXT:    je .LBB16_14
 ; AVX1-NEXT:  .LBB16_13: # %cond.store11
 ; AVX1-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
-; AVX1-NEXT:    testb $-128, %al
-; AVX1-NEXT:    je .LBB16_16
+; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    jns .LBB16_16
 ; AVX1-NEXT:  .LBB16_15: # %cond.store13
 ; AVX1-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX1-NEXT:    testl $256, %eax # imm = 0x100
@@ -6796,8 +6796,8 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; AVX2-NEXT:    testb $64, %al
 ; AVX2-NEXT:    jne .LBB16_13
 ; AVX2-NEXT:  .LBB16_14: # %else12
-; AVX2-NEXT:    testb $-128, %al
-; AVX2-NEXT:    jne .LBB16_15
+; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    js .LBB16_15
 ; AVX2-NEXT:  .LBB16_16: # %else14
 ; AVX2-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX2-NEXT:    jne .LBB16_17
@@ -6851,8 +6851,8 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; AVX2-NEXT:    je .LBB16_14
 ; AVX2-NEXT:  .LBB16_13: # %cond.store11
 ; AVX2-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
-; AVX2-NEXT:    testb $-128, %al
-; AVX2-NEXT:    je .LBB16_16
+; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    jns .LBB16_16
 ; AVX2-NEXT:  .LBB16_15: # %cond.store13
 ; AVX2-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX2-NEXT:    testl $256, %eax # imm = 0x100
@@ -6920,8 +6920,8 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; AVX512F-NEXT:    testb $64, %al
 ; AVX512F-NEXT:    jne .LBB16_13
 ; AVX512F-NEXT:  .LBB16_14: # %else12
-; AVX512F-NEXT:    testb $-128, %al
-; AVX512F-NEXT:    jne .LBB16_15
+; AVX512F-NEXT:    testb %al, %al
+; AVX512F-NEXT:    js .LBB16_15
 ; AVX512F-NEXT:  .LBB16_16: # %else14
 ; AVX512F-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX512F-NEXT:    jne .LBB16_17
@@ -6975,8 +6975,8 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; AVX512F-NEXT:    je .LBB16_14
 ; AVX512F-NEXT:  .LBB16_13: # %cond.store11
 ; AVX512F-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
-; AVX512F-NEXT:    testb $-128, %al
-; AVX512F-NEXT:    je .LBB16_16
+; AVX512F-NEXT:    testb %al, %al
+; AVX512F-NEXT:    jns .LBB16_16
 ; AVX512F-NEXT:  .LBB16_15: # %cond.store13
 ; AVX512F-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX512F-NEXT:    testl $256, %eax # imm = 0x100

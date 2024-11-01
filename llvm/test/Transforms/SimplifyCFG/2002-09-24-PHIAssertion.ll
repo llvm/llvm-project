@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg
+; RUN: opt < %s -passes=simplifycfg
 
 define i32 @test(i32 %A, i32 %B, i1 %cond) {
 J:

@@ -388,8 +388,9 @@ static bool runAndGetCommandOutput(
     StringRef OutputPath = OutputFile.str();
 
     const std::optional<StringRef> Redirects[] = {
-        /*STDIN=*/None, /*STDOUT=*/OutputPath, /*STDERR=*/None};
-    int RetCode = ExecuteAndWait(ExePath, argv, /*env=*/llvm::None, Redirects);
+        /*STDIN=*/std::nullopt, /*STDOUT=*/OutputPath, /*STDERR=*/std::nullopt};
+    int RetCode =
+        ExecuteAndWait(ExePath, argv, /*env=*/std::nullopt, Redirects);
     ASSERT_EQ(0, RetCode);
 
     int FD = 0;

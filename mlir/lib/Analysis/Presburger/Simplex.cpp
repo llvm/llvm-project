@@ -1325,7 +1325,7 @@ MaybeOptimum<Fraction> Simplex::computeRowOptimum(Direction direction,
   // Keep trying to find a pivot for the row in the specified direction.
   while (Optional<Pivot> maybePivot = findPivot(row, direction)) {
     // If findPivot returns a pivot involving the row itself, then the optimum
-    // is unbounded, so we return None.
+    // is unbounded, so we return std::nullopt.
     if (maybePivot->row == row)
       return OptimumKind::Unbounded;
     pivot(*maybePivot);
@@ -1338,7 +1338,7 @@ MaybeOptimum<Fraction> Simplex::computeRowOptimum(Direction direction,
 }
 
 /// Compute the optimum of the specified expression in the specified direction,
-/// or None if it is unbounded.
+/// or std::nullopt if it is unbounded.
 MaybeOptimum<Fraction> Simplex::computeOptimum(Direction direction,
                                                ArrayRef<MPInt> coeffs) {
   if (empty)
@@ -1610,7 +1610,7 @@ Optional<SmallVector<MPInt, 8>> Simplex::getSamplePointIfIntegral() const {
   SmallVector<MPInt, 8> integerSample;
   integerSample.reserve(var.size());
   for (const Fraction &coord : rationalSample) {
-    // If the sample is non-integral, return None.
+    // If the sample is non-integral, return std::nullopt.
     if (coord.num % coord.den != 0)
       return {};
     integerSample.push_back(coord.num / coord.den);

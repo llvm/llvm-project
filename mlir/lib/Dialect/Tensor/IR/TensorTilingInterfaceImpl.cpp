@@ -8,10 +8,13 @@
 
 #include "mlir/Dialect/Tensor/IR/TensorTilingInterfaceImpl.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/Utils/Utils.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Interfaces/TilingInterface.h"
 
 using namespace mlir;
@@ -64,6 +67,145 @@ struct PadOpTiling : public TilingInterface::ExternalModel<PadOpTiling, PadOp> {
                         SmallVector<OpFoldResult> &resultSizes) const {
     resultOffsets.assign(offsets.begin(), offsets.end());
     resultSizes.assign(sizes.begin(), sizes.end());
+    return success();
+  }
+};
+
+struct PackOpTiling
+    : public TilingInterface::ExternalModel<PackOpTiling, PackOp> {
+
+  SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
+    // Note that here we only consider untiled dimensions and outer tiled data
+    // dimensions, the inner tiled data dimensions are materialized when
+    // building the body of the operation.
+    auto packOp = cast<PackOp>(op);
+    SmallVector<utils::IteratorType> iteratorTypes(
+        packOp.getSourceRank(), utils::IteratorType::parallel);
+    return iteratorTypes;
+  }
+
+  SmallVector<Range> getIterationDomain(Operation *op, OpBuilder &b) const {
+    OpBuilder::InsertionGuard guard(b);
+    auto packOp = cast<PackOp>(op);
+    Location loc = packOp.getLoc();
+    int64_t rank = packOp.getSourceRank();
+    Value zero = b.create<arith::ConstantIndexOp>(loc, 0);
+    Value one = b.create<arith::ConstantIndexOp>(loc, 1);
+    ReifiedRankedShapedTypeDims resultShape;
+    (void)packOp.reifyResultShapes(b, resultShape);
+    SmallVector<Range> loopRanges(rank);
+    for (auto dim : llvm::seq<int64_t>(0, rank)) {
+      loopRanges[dim].offset = zero;
+      loopRanges[dim].stride = one;
+      loopRanges[dim].size = resultShape[0][dim];
+    }
+    return loopRanges;
+  }
+
+  SmallVector<Operation *>
+  getTiledImplementation(Operation *op, OpBuilder &b,
+                         ArrayRef<OpFoldResult> offsets,
+                         ArrayRef<OpFoldResult> sizes) const {
+    auto packOp = cast<PackOp>(op);
+    Location loc = packOp.getLoc();
+
+    // The tiling is applied on interchanged dimensions. We have to undo the
+    // interchange to map sizes and offsets to the original input.
+    int64_t inputRank = packOp.getSourceRank();
+    ArrayRef<int64_t> dimsToOuterBlock(packOp.getOuterDimsPerm());
+    SmallVector<OpFoldResult> origOffsets(offsets.begin(), offsets.end());
+    SmallVector<OpFoldResult> origSizes(sizes.begin(), sizes.end());
+    if (!dimsToOuterBlock.empty()) {
+      SmallVector<int64_t> inversedPerm =
+          invertPermutationVector(dimsToOuterBlock);
+      applyPermutationToVector<OpFoldResult>(origOffsets, inversedPerm);
+      applyPermutationToVector<OpFoldResult>(origSizes, inversedPerm);
+    }
+
+    DenseMap<int64_t, OpFoldResult> dimAndTileMapping =
+        packOp.getDimAndTileMapping();
+    SmallVector<OpFoldResult> srcDimValues =
+        tensor::createDimValues(b, loc, packOp.getSource());
+    SmallVector<OpFoldResult> inputIndices, inputSizes;
+    for (auto dim : llvm::seq<int64_t>(0, inputRank)) {
+      using AV = AffineValueExpr;
+      AffineBuilder ab(b, loc);
+      AffineExpr dim0, dim1, sym;
+      bindDims(b.getContext(), dim0, dim1);
+      bindSymbols(b.getContext(), sym);
+      if (dimAndTileMapping.count(dim)) {
+        // If the data dimension is tiled, the i-th index is the product of
+        // offset_i and tile_i, and the i-th size is the product of sizes_i and
+        // tile_i.
+        auto avOffset = AV(dim0).bind(origOffsets[dim]);
+        auto avSize = AV(dim0).bind(origSizes[dim]);
+        auto avTileSize = AV(sym).bind(dimAndTileMapping[dim]);
+        inputIndices.push_back(ab.mul(avOffset, avTileSize));
+        inputSizes.push_back(ab.mul(avSize, avTileSize));
+      } else {
+        inputIndices.push_back(origOffsets[dim]);
+        inputSizes.push_back(origSizes[dim]);
+      }
+
+      // Limit the size of the input operand for incomplete tiles.
+      OpFoldResult dimSize = srcDimValues[dim];
+      auto avDimSize = AV(dim0).bind(dimSize);
+      auto avInputIdx = AV(dim1).bind(inputIndices.back());
+      inputSizes.back() =
+          ab.min({inputSizes.back(), ab.sub(avDimSize, avInputIdx)});
+    }
+
+    auto oneAttr = b.getI64IntegerAttr(1);
+    SmallVector<OpFoldResult> strides(inputRank, oneAttr);
+
+    SmallVector<Value> tiledOperands;
+    tiledOperands.push_back(b.create<ExtractSliceOp>(
+        loc, packOp.getSource(), inputIndices, inputSizes, strides));
+
+    SmallVector<OpFoldResult> outputOffsets, outputSizes;
+    if (failed(getResultTilePosition(op, b, 0, offsets, sizes, outputOffsets,
+                                     outputSizes)))
+      return {};
+
+    strides.append(packOp.getDestRank() - inputRank, oneAttr);
+    auto extractSlice = b.create<ExtractSliceOp>(
+        loc, packOp.getDest(), outputOffsets, outputSizes, strides);
+    tiledOperands.push_back(extractSlice);
+
+    if (auto val = packOp.getPaddingValue())
+      tiledOperands.push_back(val);
+    for (auto tile : packOp.getInnerTiles())
+      tiledOperands.push_back(tile);
+
+    Operation *tiledPackOp = b.create<PackOp>(
+        loc, TypeRange{extractSlice.getType()}, tiledOperands, op->getAttrs());
+
+    return {tiledPackOp};
+  }
+
+  LogicalResult
+  getResultTilePosition(Operation *op, OpBuilder &b, unsigned resultNumber,
+                        ArrayRef<OpFoldResult> offsets,
+                        ArrayRef<OpFoldResult> sizes,
+                        SmallVector<OpFoldResult> &resultOffsets,
+                        SmallVector<OpFoldResult> &resultSizes) const {
+    // The iteration domain is over outer dimensions of packed layout. In this
+    // context, the outer dimensions of `resultOffsets` are `offsets`. The
+    // inner dimensions of `resultOffsets` are zeros because tiling is not
+    // applied to them.
+    auto packOp = cast<PackOp>(op);
+    int64_t inputRank = packOp.getSourceRank();
+    int64_t outputRank = packOp.getDestRank();
+    auto zeroAttr = b.getI64IntegerAttr(0);
+    resultOffsets.assign(offsets.begin(), offsets.end());
+    resultOffsets.append(outputRank - inputRank, zeroAttr);
+
+    ReifiedRankedShapedTypeDims outputShape;
+    (void)packOp.reifyResultShapes(b, outputShape);
+    resultSizes.assign(sizes.begin(), sizes.end());
+    for (auto dataTileDim : llvm::seq<unsigned>(inputRank, outputRank))
+      resultSizes.push_back(getAsOpFoldResult(outputShape[0][dataTileDim]));
+
     return success();
   }
 };
@@ -282,5 +424,6 @@ void mlir::tensor::registerTilingInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, TensorDialect *dialect) {
     tensor::PadOp::attachInterface<PadOpTiling>(*ctx);
+    tensor::PackOp::attachInterface<PackOpTiling>(*ctx);
   });
 }

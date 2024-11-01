@@ -15,6 +15,7 @@
 
 #include "ARCSubtarget.h"
 #include "llvm/Target/TargetMachine.h"
+#include <optional>
 
 namespace llvm {
 
@@ -27,8 +28,9 @@ class ARCTargetMachine : public LLVMTargetMachine {
 public:
   ARCTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                    StringRef FS, const TargetOptions &Options,
-                   Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
-                   CodeGenOpt::Level OL, bool JIT);
+                   std::optional<Reloc::Model> RM,
+                   std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                   bool JIT);
   ~ARCTargetMachine() override;
 
   const ARCSubtarget *getSubtargetImpl() const { return &Subtarget; }

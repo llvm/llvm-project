@@ -280,6 +280,9 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
               const auto *use{this->detailsIf<UseDetails>()};
               return use && use->symbol() == x.symbol();
             },
+            [&](const HostAssocDetails &) {
+              return this->has<HostAssocDetails>();
+            },
             [](const auto &) { return false; },
         },
         details);

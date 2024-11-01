@@ -250,7 +250,7 @@ OptionalParseResult Parser::parseOptionalInteger(APInt &result) {
 
   Token curToken = getToken();
   if (curToken.isNot(Token::integer, Token::minus))
-    return llvm::None;
+    return std::nullopt;
 
   bool negative = consumeIf(Token::minus);
   Token curTok = getToken();
@@ -533,12 +533,12 @@ public:
   /// skip parsing that component.
   ParseResult parseGenericOperationAfterOpName(
       OperationState &result,
-      Optional<ArrayRef<UnresolvedOperand>> parsedOperandUseInfo = llvm::None,
-      Optional<ArrayRef<Block *>> parsedSuccessors = llvm::None,
+      Optional<ArrayRef<UnresolvedOperand>> parsedOperandUseInfo = std::nullopt,
+      Optional<ArrayRef<Block *>> parsedSuccessors = std::nullopt,
       Optional<MutableArrayRef<std::unique_ptr<Region>>> parsedRegions =
-          llvm::None,
-      Optional<ArrayRef<NamedAttribute>> parsedAttributes = llvm::None,
-      Optional<FunctionType> parsedFnType = llvm::None);
+          std::nullopt,
+      Optional<ArrayRef<NamedAttribute>> parsedAttributes = std::nullopt,
+      Optional<FunctionType> parsedFnType = std::nullopt);
 
   /// Parse an operation instance that is in the generic form and insert it at
   /// the provided insertion point.
@@ -1073,7 +1073,7 @@ Value OperationParser::createForwardRefPlaceholder(SMLoc loc, Type type) {
   auto name = OperationName("builtin.unrealized_conversion_cast", getContext());
   auto *op = Operation::create(
       getEncodedSourceLocation(loc), name, type, /*operands=*/{},
-      /*attributes=*/llvm::None, /*successors=*/{}, /*numRegions=*/0);
+      /*attributes=*/std::nullopt, /*successors=*/{}, /*numRegions=*/0);
   forwardRefPlaceholders[op->getResult(0)] = loc;
   return op->getResult(0);
 }
@@ -1524,7 +1524,7 @@ public:
                        bool allowResultNumber = true) override {
     if (parser.getToken().isOrIsCodeCompletionFor(Token::percent_identifier))
       return parseOperand(result, allowResultNumber);
-    return llvm::None;
+    return std::nullopt;
   }
 
   /// Parse zero or more SSA comma-separated operand references with a specified
@@ -1657,7 +1657,7 @@ public:
                                             bool allowAttrs) override {
     if (parser.getToken().is(Token::percent_identifier))
       return parseArgument(result, allowType, allowAttrs);
-    return llvm::None;
+    return std::nullopt;
   }
 
   ParseResult parseArgumentList(SmallVectorImpl<Argument> &result,
@@ -1697,7 +1697,7 @@ public:
                                           ArrayRef<Argument> arguments,
                                           bool enableNameShadowing) override {
     if (parser.getToken().isNot(Token::l_brace))
-      return llvm::None;
+      return std::nullopt;
     return parseRegion(region, arguments, enableNameShadowing);
   }
 
@@ -1709,7 +1709,7 @@ public:
                       ArrayRef<Argument> arguments,
                       bool enableNameShadowing = false) override {
     if (parser.getToken().isNot(Token::l_brace))
-      return llvm::None;
+      return std::nullopt;
     std::unique_ptr<Region> newRegion = std::make_unique<Region>();
     if (parseRegion(*newRegion, arguments, enableNameShadowing))
       return failure();
@@ -1730,7 +1730,7 @@ public:
   /// Parse an optional operation successor and its operand list.
   OptionalParseResult parseOptionalSuccessor(Block *&dest) override {
     if (!parser.getToken().isOrIsCodeCompletionFor(Token::caret_identifier))
-      return llvm::None;
+      return std::nullopt;
     return parseSuccessor(dest);
   }
 
@@ -1759,7 +1759,7 @@ public:
       SmallVectorImpl<Argument> &lhs,
       SmallVectorImpl<UnresolvedOperand> &rhs) override {
     if (failed(parseOptionalLParen()))
-      return llvm::None;
+      return std::nullopt;
 
     auto parseElt = [&]() -> ParseResult {
       if (parseArgument(lhs.emplace_back()) || parseEqual() ||
@@ -2391,7 +2391,7 @@ public:
     // TODO: We could avoid an additional alloc+copy here if we pre-allocated
     // the buffer to use during hex processing.
     Optional<std::string> blobData =
-        value.is(Token::string) ? value.getHexStringValue() : llvm::None;
+        value.is(Token::string) ? value.getHexStringValue() : std::nullopt;
     if (!blobData)
       return p.emitError(value.getLoc(),
                          "expected hex string blob for key '" + key + "'");

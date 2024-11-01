@@ -10,7 +10,6 @@
 #define LLVM_TOOLS_LLVMPDBDUMP_TYPEREFERENCETRACKER_H
 
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"

@@ -634,7 +634,7 @@ bool MachODumper::compareSymbolsByType(SymbolRef LHS, SymbolRef RHS) const {
   return getSymbolType(LHS) < getSymbolType(RHS);
 }
 
-void MachODumper::printSymbols() { printSymbols(None); }
+void MachODumper::printSymbols() { printSymbols(std::nullopt); }
 
 void MachODumper::printSymbols(Optional<SymbolComparator> SymComp) {
   ListScope Group(W, "Symbols");

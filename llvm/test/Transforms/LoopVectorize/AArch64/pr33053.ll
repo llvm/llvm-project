@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=aarch64 -loop-vectorize -force-vector-width=2 < %s | FileCheck %s
+; RUN: opt -S -mtriple=aarch64 -passes=loop-vectorize -force-vector-width=2 < %s | FileCheck %s
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
 

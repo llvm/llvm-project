@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -prefer-inloop-reductions -dce -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -force-vector-width=4 -prefer-inloop-reductions -S | FileCheck %s
 
 define float @cond_fadd(float* noalias nocapture readonly %a, float* noalias nocapture readonly %cond, i64 %N){
 ; CHECK-LABEL: @cond_fadd(

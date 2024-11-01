@@ -1054,7 +1054,7 @@ allocateArrayTemp(mlir::Location loc, mlir::PatternRewriter &rewriter,
     // The allocatable component descriptors need to be set to a clean
     // deallocated status before anything is done with them.
     mlir::Value box = rewriter.create<fir::EmboxOp>(
-        loc, fir::BoxType::get(baseType), allocmem, shape,
+        loc, fir::BoxType::get(allocmem.getType()), allocmem, shape,
         /*slice=*/mlir::Value{}, typeParams);
     auto module = load->getParentOfType<mlir::ModuleOp>();
     fir::KindMapping kindMap = getKindMapping(module);

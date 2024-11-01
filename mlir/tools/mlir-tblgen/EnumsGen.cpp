@@ -226,7 +226,7 @@ static void emitMaxValueFn(const Record &enumDef, raw_ostream &os) {
   os << "}\n\n";
 }
 
-// Returns the EnumAttrCase whose value is zero if exists; returns llvm::None
+// Returns the EnumAttrCase whose value is zero if exists; returns std::nullopt
 // otherwise.
 static llvm::Optional<EnumAttrCase>
 getAllBitsUnsetCase(llvm::ArrayRef<EnumAttrCase> cases) {
@@ -234,7 +234,7 @@ getAllBitsUnsetCase(llvm::ArrayRef<EnumAttrCase> cases) {
     if (attrCase.getValue() == 0)
       return attrCase;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 // Emits the following inline function for bit enums:
@@ -392,7 +392,7 @@ static void emitStrToSymFnForIntEnum(const Record &enumDef, raw_ostream &os) {
     os << formatv("      .Case(\"{1}\", {0}::{2})\n", enumName, str,
                   makeIdentifier(symbol));
   }
-  os << "      .Default(::llvm::None);\n";
+  os << "      .Default(::std::nullopt);\n";
   os << "}\n";
 }
 
@@ -433,9 +433,9 @@ static void emitStrToSymFnForBitEnum(const Record &enumDef, raw_ostream &os) {
     if (auto val = enumerant.getValue())
       os.indent(6) << formatv(".Case(\"{0}\", {1})\n", enumerant.getStr(), val);
   }
-  os.indent(6) << ".Default(::llvm::None);\n";
+  os.indent(6) << ".Default(::std::nullopt);\n";
 
-  os << "    if (bit) { val |= *bit; } else { return ::llvm::None; }\n";
+  os << "    if (bit) { val |= *bit; } else { return ::std::nullopt; }\n";
   os << "  }\n";
 
   os << formatv("  return static_cast<{0}>(val);\n", enumName);
@@ -468,7 +468,7 @@ static void emitUnderlyingToSymFnForIntEnum(const Record &enumDef,
     os << formatv("  case {0}: return {1}::{2};\n", value, enumName,
                   makeIdentifier(symbol));
   }
-  os << "  default: return ::llvm::None;\n"
+  os << "  default: return ::std::nullopt;\n"
      << "  }\n"
      << "}\n\n";
 }
@@ -548,7 +548,7 @@ static void emitUnderlyingToSymFnForBitEnum(const Record &enumDef,
                   makeIdentifier(allBitsUnsetCase->getSymbol()));
   }
   int64_t validBits = enumDef.getValueAsInt("validBits");
-  os << formatv("  if (value & ~static_cast<{0}>({1}u)) return llvm::None;\n",
+  os << formatv("  if (value & ~static_cast<{0}>({1}u)) return std::nullopt;\n",
                 underlyingType, validBits);
   os << formatv("  return static_cast<{0}>(value);\n", enumName);
   os << "}\n";

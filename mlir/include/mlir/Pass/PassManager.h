@@ -125,12 +125,12 @@ public:
   /// Returns the number of passes held by this manager.
   size_t size() const;
 
-  /// Return the operation name that this pass manager operates on, or None if
-  /// this is an op-agnostic pass manager.
+  /// Return the operation name that this pass manager operates on, or
+  /// std::nullopt if this is an op-agnostic pass manager.
   Optional<OperationName> getOpName(MLIRContext &context) const;
 
-  /// Return the operation name that this pass manager operates on, or None if
-  /// this is an op-agnostic pass manager.
+  /// Return the operation name that this pass manager operates on, or
+  /// std::nullopt if this is an op-agnostic pass manager.
   Optional<StringRef> getOpName() const;
 
   /// Return the name used to anchor this pass manager. This is either the name

@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/Archive.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -1145,7 +1144,7 @@ uint32_t Archive::getNumberOfSymbols() const {
   return read32le(buf);
 }
 
-Expected<Optional<Archive::Child>> Archive::findSym(StringRef name) const {
+Expected<std::optional<Archive::Child>> Archive::findSym(StringRef name) const {
   Archive::symbol_iterator bs = symbol_begin();
   Archive::symbol_iterator es = symbol_end();
 
@@ -1158,7 +1157,7 @@ Expected<Optional<Archive::Child>> Archive::findSym(StringRef name) const {
         return MemberOrErr.takeError();
     }
   }
-  return None;
+  return std::nullopt;
 }
 
 // Returns true if archive file contains no member file.

@@ -10,7 +10,7 @@ subroutine subr1
   end interface
   z = f(1.0)
   z = f(1.0, 2.0)
-  !ERROR: No specific procedure of generic 'f' matches the actual arguments
+  !ERROR: No specific function of generic 'f' matches the actual arguments
   z = f(1.0, 2.0, 3.0)
 end
 

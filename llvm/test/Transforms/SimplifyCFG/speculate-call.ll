@@ -1,4 +1,4 @@
-; RUN: opt -S -simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
+; RUN: opt -S -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 
 ; CHECK-LABEL: @speculatable_attribute
 ; CHECK: select
@@ -26,11 +26,11 @@ define i32 @func() #0 {
 ; since it propagates poison (and call executes fine) if the parameter is indeed
 ; null.
 define i32 @strip_attr(i32 * %p) {
-; CHECK-LABEL: strip_attr  
+; CHECK-LABEL: strip_attr
 ; CHECK-LABEL: entry:
 ; CHECK:         %nullchk = icmp ne i32* %p, null
 ; CHECK:         %val = call i32 @func_nonnull(i32* nonnull %p)
-; CHECK:         select 
+; CHECK:         select
 entry:
   %nullchk = icmp ne i32* %p, null
   br i1 %nullchk, label %if, label %end
@@ -47,11 +47,11 @@ end:
 ; We should strip the deref attribute since it can cause UB when the
 ; speculatable call is moved.
 define i32 @strip_attr2(i32 * %p) {
-; CHECK-LABEL: strip_attr2  
+; CHECK-LABEL: strip_attr2
 ; CHECK-LABEL: entry:
 ; CHECK:         %nullchk = icmp ne i32* %p, null
 ; CHECK:         %val = call i32 @func_nonnull(i32* %p)
-; CHECK:         select 
+; CHECK:         select
 entry:
   %nullchk = icmp ne i32* %p, null
   br i1 %nullchk, label %if, label %end

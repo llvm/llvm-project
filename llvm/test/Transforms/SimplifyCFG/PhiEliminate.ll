@@ -4,7 +4,7 @@
 ; nodes away allows the branches to be eliminated, performing a simple form of
 ; 'if conversion'.
 
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 
 declare void @use(i1)
 

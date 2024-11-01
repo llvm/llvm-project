@@ -93,7 +93,7 @@ ParsedModuleAndIndex llvm::parseAssemblyWithIndex(MemoryBufferRef F,
                                                   SlotMapping *Slots) {
   return ::parseAssemblyWithIndex(F, Err, Context, Slots,
                                   /*UpgradeDebugInfo*/ true,
-                                  [](StringRef) { return None; });
+                                  [](StringRef) { return std::nullopt; });
 }
 
 static ParsedModuleAndIndex
@@ -150,7 +150,7 @@ static bool parseSummaryIndexAssemblyInto(MemoryBufferRef F,
   // index, but we need to initialize it.
   LLVMContext unusedContext;
   return LLParser(F.getBuffer(), SM, Err, nullptr, &Index, unusedContext)
-      .Run(true, [](StringRef) { return None; });
+      .Run(true, [](StringRef) { return std::nullopt; });
 }
 
 std::unique_ptr<ModuleSummaryIndex>

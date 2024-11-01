@@ -333,27 +333,21 @@ public:
 
 /// Class implementing the plugin functionalities for GenELF64.
 struct GenELF64PluginTy final : public GenericPluginTy {
-  /// Create the plugin.
-  GenELF64PluginTy() : GenericPluginTy() {
-    // Initialize the generic plugin structure with multiple devices and a
-    // global handler.
-    GenericPluginTy::init(NUM_DEVICES, new GenELF64GlobalHandlerTy());
-  }
+  /// Create the GenELF64 plugin.
+  GenELF64PluginTy() : GenericPluginTy() {}
 
   /// This class should not be copied.
   GenELF64PluginTy(const GenELF64PluginTy &) = delete;
   GenELF64PluginTy(GenELF64PluginTy &&) = delete;
 
-  ~GenELF64PluginTy() {}
+  /// Initialize the plugin and return the number of devices.
+  Expected<int32_t> initImpl() override { return NUM_DEVICES; }
+
+  /// Deinitialize the plugin.
+  Error deinitImpl() override { return Plugin::success(); }
 
   /// Get the ELF code to recognize the compatible binary images.
   uint16_t getMagicElfBits() const override { return TARGET_ELF_ID; }
-
-  /// Create a GenELF64 device with a specific id.
-  GenELF64DeviceTy &createDevice(int32_t DeviceId) override {
-    GenELF64DeviceTy *Device = new GenELF64DeviceTy(DeviceId, getNumDevices());
-    return *Device;
-  }
 
   /// This plugin does not support exchanging data between two devices.
   bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) override {
@@ -366,24 +360,14 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   }
 };
 
-Error Plugin::init() {
-  // Call the getter to intialize the GenELF64 plugin.
-  get();
-  return Plugin::success();
+GenericPluginTy *Plugin::createPlugin() { return new GenELF64PluginTy(); }
+
+GenericDeviceTy *Plugin::createDevice(int32_t DeviceId, int32_t NumDevices) {
+  return new GenELF64DeviceTy(DeviceId, NumDevices);
 }
 
-Error Plugin::deinit() {
-  // The Generic ELF64 plugin should already be deinitialized at this point.
-  if (Plugin::isActive())
-    return Plugin::error("Generic ELF64 plugin is not deinitialized");
-
-  return Plugin::success();
-}
-
-GenericPluginTy &Plugin::get() {
-  static GenELF64PluginTy GenELF64Plugin;
-  assert(Plugin::isActive() && "Plugin is not active");
-  return GenELF64Plugin;
+GenericGlobalHandlerTy *Plugin::createGlobalHandler() {
+  return new GenELF64GlobalHandlerTy();
 }
 
 template <typename... ArgsTy>

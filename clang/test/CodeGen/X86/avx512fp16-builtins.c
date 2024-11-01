@@ -1473,19 +1473,19 @@ __m128h test_mm_maskz_load_sh(__mmask8 __U, const void *__W) {
 
 __m512h test_mm512_load_ph(void *p) {
   // CHECK-LABEL: @test_mm512_load_ph
-  // CHECK: load <32 x half>, <32 x half>* %{{.*}}, align 64
+  // CHECK: load <32 x half>, <32 x half>* %{{.*}}, align 64{{$}}
   return _mm512_load_ph(p);
 }
 
 __m256h test_mm256_load_ph(void *p) {
   // CHECK-LABEL: @test_mm256_load_ph
-  // CHECK: load <16 x half>, <16 x half>* %{{.*}}, align 32
+  // CHECK: load <16 x half>, <16 x half>* %{{.*}}, align 32{{$}}
   return _mm256_load_ph(p);
 }
 
 __m128h test_mm_load_ph(void *p) {
   // CHECK-LABEL: @test_mm_load_ph
-  // CHECK: load <8 x half>, <8 x half>* %{{.*}}, align 16
+  // CHECK: load <8 x half>, <8 x half>* %{{.*}}, align 16{{$}}
   return _mm_load_ph(p);
 }
 

@@ -210,25 +210,28 @@ public:
       const MCInstPrinter *IP, MCAsmParserSemaCallback &SI) = 0;
 
   /// Emit a note at the location \p L, with the message \p Msg.
-  virtual void Note(SMLoc L, const Twine &Msg, SMRange Range = None) = 0;
+  virtual void Note(SMLoc L, const Twine &Msg,
+                    SMRange Range = std::nullopt) = 0;
 
   /// Emit a warning at the location \p L, with the message \p Msg.
   ///
   /// \return The return value is true, if warnings are fatal.
-  virtual bool Warning(SMLoc L, const Twine &Msg, SMRange Range = None) = 0;
+  virtual bool Warning(SMLoc L, const Twine &Msg,
+                       SMRange Range = std::nullopt) = 0;
 
   /// Return an error at the location \p L, with the message \p Msg. This
   /// may be modified before being emitted.
   ///
   /// \return The return value is always true, as an idiomatic convenience to
   /// clients.
-  bool Error(SMLoc L, const Twine &Msg, SMRange Range = None);
+  bool Error(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt);
 
   /// Emit an error at the location \p L, with the message \p Msg.
   ///
   /// \return The return value is always true, as an idiomatic convenience to
   /// clients.
-  virtual bool printError(SMLoc L, const Twine &Msg, SMRange Range = None) = 0;
+  virtual bool printError(SMLoc L, const Twine &Msg,
+                          SMRange Range = std::nullopt) = 0;
 
   bool hasPendingError() { return !PendingErrors.empty(); }
 
@@ -253,7 +256,7 @@ public:
   const AsmToken &getTok() const;
 
   /// Report an error at the current lexer location.
-  bool TokError(const Twine &Msg, SMRange Range = None);
+  bool TokError(const Twine &Msg, SMRange Range = std::nullopt);
 
   bool parseTokenLoc(SMLoc &Loc);
   bool parseToken(AsmToken::TokenKind T, const Twine &Msg = "unexpected token");

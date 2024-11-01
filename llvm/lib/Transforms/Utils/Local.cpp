@@ -58,6 +58,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
@@ -444,8 +445,24 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
     if (isRemovableAlloc(CB, TLI))
       return true;
 
-  if (!I->willReturn())
-    return false;
+  if (!I->willReturn()) {
+    auto *II = dyn_cast<IntrinsicInst>(I);
+    if (!II)
+      return false;
+
+    // TODO: These intrinsics are not safe to remove, because this may remove
+    // a well-defined trap.
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::wasm_trunc_signed:
+    case Intrinsic::wasm_trunc_unsigned:
+    case Intrinsic::ptrauth_auth:
+    case Intrinsic::ptrauth_resign:
+    case Intrinsic::ptrauth_sign:
+      return true;
+    default:
+      return false;
+    }
+  }
 
   if (!I->mayHaveSideEffects())
     return true;
@@ -489,7 +506,8 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
     }
 
     if (auto *FPI = dyn_cast<ConstrainedFPIntrinsic>(I)) {
-      Optional<fp::ExceptionBehavior> ExBehavior = FPI->getExceptionBehavior();
+      std::optional<fp::ExceptionBehavior> ExBehavior =
+          FPI->getExceptionBehavior();
       return *ExBehavior != fp::ebStrict;
     }
   }
@@ -1472,7 +1490,7 @@ static bool PhiHasDebugValue(DILocalVariable *DIVar,
 static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
   const DataLayout &DL = DII->getModule()->getDataLayout();
   TypeSize ValueSize = DL.getTypeAllocSizeInBits(ValTy);
-  if (Optional<uint64_t> FragmentSize = DII->getFragmentSizeInBits()) {
+  if (std::optional<uint64_t> FragmentSize = DII->getFragmentSizeInBits()) {
     assert(!ValueSize.isScalable() &&
            "Fragments don't work on scalable types.");
     return ValueSize.getFixedSize() >= *FragmentSize;
@@ -1486,7 +1504,8 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
            "address of variable must have exactly 1 location operand.");
     if (auto *AI =
             dyn_cast_or_null<AllocaInst>(DII->getVariableLocationOp(0))) {
-      if (Optional<TypeSize> FragmentSize = AI->getAllocationSizeInBits(DL)) {
+      if (std::optional<TypeSize> FragmentSize =
+              AI->getAllocationSizeInBits(DL)) {
         return TypeSize::isKnownGE(ValueSize, *FragmentSize);
       }
     }

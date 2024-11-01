@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -scalable-vectorization=off -force-vector-width=4 -prefer-predicate-over-epilogue=predicate-dont-vectorize -S < %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -scalable-vectorization=off -force-vector-width=4 -prefer-predicate-over-epilogue=predicate-dont-vectorize -S < %s | FileCheck %s
 
 ; NOTE: These tests aren't really target-specific, but it's convenient to target AArch64
 ; so that TTI.isLegalMaskedLoad can return true.

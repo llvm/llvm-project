@@ -22,7 +22,7 @@ using namespace tosa;
 
 namespace {
 
-class SliceOpConverter : public OpRewritePattern<tosa::SliceOp> {
+class SliceConverter : public OpRewritePattern<tosa::SliceOp> {
 public:
   using OpRewritePattern<tosa::SliceOp>::OpRewritePattern;
 
@@ -59,9 +59,84 @@ public:
   }
 };
 
+class PadConverter : public OpRewritePattern<tosa::PadOp> {
+public:
+  using OpRewritePattern<tosa::PadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::PadOp padOp,
+                                PatternRewriter &rewriter) const final {
+    auto loc = padOp.getLoc();
+    auto input = padOp.getInput1();
+    auto padding = padOp.getPadding();
+
+    ShapedType inputTy = input.getType().cast<ShapedType>();
+    Type elementTy = inputTy.getElementType();
+    int64_t rank = inputTy.getRank();
+
+    // Setup the default constantAttr.
+
+    Value padConstant;
+
+    if (padOp.getPadConst()) {
+      padConstant = rewriter.createOrFold<tensor::ExtractOp>(
+          loc, padOp.getPadConst(), ValueRange({}));
+    } else {
+      Attribute constantAttr;
+      if (elementTy.isa<FloatType>()) {
+        constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
+      } else if (elementTy.isa<IntegerType>() && !padOp.getQuantizationInfo()) {
+        constantAttr = rewriter.getIntegerAttr(elementTy, 0);
+      } else if (elementTy.isa<IntegerType>() && padOp.getQuantizationInfo()) {
+        int64_t value = padOp.getQuantizationInfo()->getInputZp();
+        constantAttr = rewriter.getIntegerAttr(elementTy, value);
+      }
+      if (constantAttr)
+        padConstant = rewriter.create<arith::ConstantOp>(loc, constantAttr);
+    }
+
+    if (!padConstant) {
+      return rewriter.notifyMatchFailure(
+          padOp, "tosa.pad was unable to determine the pad constant value.");
+    }
+
+    Value lowIndex =
+        rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(0));
+    Value highIndex =
+        rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(1));
+
+    SmallVector<OpFoldResult, 3> lowValues;
+    SmallVector<OpFoldResult, 3> highValues;
+
+    lowValues.reserve(rank);
+    highValues.reserve(rank);
+
+    for (int i = 0; i < rank; i++) {
+      Value inputIndex = rewriter.createOrFold<arith::ConstantIndexOp>(loc, i);
+      Value lowVal = rewriter.createOrFold<tensor::ExtractOp>(
+          loc, padding, ValueRange({inputIndex, lowIndex}));
+      Value highVal = rewriter.createOrFold<tensor::ExtractOp>(
+          loc, padding, ValueRange({inputIndex, highIndex}));
+
+      lowVal = rewriter.createOrFold<arith::IndexCastOp>(
+          loc, rewriter.getIndexType(), lowVal);
+      highVal = rewriter.createOrFold<arith::IndexCastOp>(
+          loc, rewriter.getIndexType(), highVal);
+
+      lowValues.push_back(lowVal);
+      highValues.push_back(highVal);
+    }
+
+    auto newPadOp = rewriter.create<tensor::PadOp>(
+        loc, padOp.getType(), input, lowValues, highValues, padConstant);
+
+    rewriter.replaceOp(padOp, newPadOp.getResult());
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::tosa::populateTosaToTensorConversionPatterns(
     RewritePatternSet *patterns) {
-  patterns->add<SliceOpConverter>(patterns->getContext());
+  patterns->add<SliceConverter, PadConverter>(patterns->getContext());
 }

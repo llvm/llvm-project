@@ -63,13 +63,13 @@ private:
       if (auto attr = operandConsts[expr.cast<AffineDimExpr>().getPosition()]
                           .dyn_cast_or_null<IntegerAttr>())
         return attr.getInt();
-      return llvm::None;
+      return std::nullopt;
     case AffineExprKind::SymbolId:
       if (auto attr = operandConsts[numDims +
                                     expr.cast<AffineSymbolExpr>().getPosition()]
                           .dyn_cast_or_null<IntegerAttr>())
         return attr.getInt();
-      return llvm::None;
+      return std::nullopt;
     }
     llvm_unreachable("Unknown AffineExpr");
   }
@@ -81,7 +81,7 @@ private:
     if (auto lhs = constantFoldImpl(binOpExpr.getLHS()))
       if (auto rhs = constantFoldImpl(binOpExpr.getRHS()))
         return op(*lhs, *rhs);
-    return llvm::None;
+    return std::nullopt;
   }
 
   // The number of dimension operands in AffineMap containing this expression.
@@ -330,14 +330,14 @@ unsigned AffineMap::getDimPosition(unsigned idx) const {
 
 Optional<unsigned> AffineMap::getResultPosition(AffineExpr input) const {
   if (!input.isa<AffineDimExpr>())
-    return llvm::None;
+    return std::nullopt;
 
   for (unsigned i = 0, numResults = getNumResults(); i < numResults; i++) {
     if (getResult(i) == input)
       return i;
   }
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 /// Folds the results of the application of an affine map on the provided

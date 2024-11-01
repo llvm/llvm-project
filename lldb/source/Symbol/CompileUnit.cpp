@@ -237,7 +237,8 @@ uint32_t CompileUnit::FindLineEntry(uint32_t start_idx, uint32_t line,
     return UINT32_MAX;
 
   // TODO: Handle SourceLocationSpec column information
-  SourceLocationSpec location_spec(*file_spec_ptr, line, /*column=*/llvm::None,
+  SourceLocationSpec location_spec(*file_spec_ptr, line,
+                                   /*column=*/std::nullopt,
                                    /*check_inlines=*/false, exact);
 
   LineTable *line_table = GetLineTable();
@@ -321,7 +322,7 @@ void CompileUnit::ResolveSymbolContext(
   const llvm::Optional<uint16_t> column =
       src_location_spec.GetColumn()
           ? llvm::Optional<uint16_t>(line_entry.column)
-          : llvm::None;
+          : std::nullopt;
 
   SourceLocationSpec found_entry(line_entry.file, line_entry.line, column,
                                  inlines, exact);

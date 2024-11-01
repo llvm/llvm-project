@@ -1765,7 +1765,7 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     OpBuilder<(ins "Value":$source, "Value":$dest,
       "ArrayRef<int64_t>":$innerDimsPos,
       "ArrayRef<OpFoldResult>":$innerTiles,
-      CArg<"Optional<Value>", "llvm::None">:$paddingValue,
+      CArg<"Optional<Value>", "std::nullopt">:$paddingValue,
       CArg<"ArrayRef<int64_t>", "{}">:$outerDimsPerm)>
   ];
 

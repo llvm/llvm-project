@@ -22,7 +22,7 @@ using namespace llvm;
 ///   The given string or \b None if it's empty.
 static Optional<const char *> ToOptionalString(const char *s) {
   if (!s)
-    return None;
+    return std::nullopt;
   return s;
 }
 
@@ -409,7 +409,7 @@ public:
         m_j.attribute("timestamp_ns", item.timestamp
                                           ? Optional<std::string>(
                                                 std::to_string(*item.timestamp))
-                                          : None);
+                                          : std::nullopt);
 
       if (item.event) {
         DumpEvent(item);

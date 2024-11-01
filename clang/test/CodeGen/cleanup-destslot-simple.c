@@ -64,7 +64,12 @@
 // CHECK-MSAN-NEXT:    [[_MSLD1:%.*]] = load i32, ptr [[TMP11]], align 4, !dbg [[DBG20]]
 // CHECK-MSAN-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull [[P]]), !dbg [[DBG22:![0-9]+]]
 // CHECK-MSAN-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X]]) #[[ATTR2]], !dbg [[DBG22]]
-// CHECK-MSAN-NEXT:    store i32 [[_MSLD1]], ptr @__msan_retval_tls, align 8, !dbg [[DBG23:![0-9]+]]
+// CHECK-MSAN-NEXT:    [[_MSCMP2_NOT:%.*]] = icmp eq i32 [[_MSLD1]], 0, !dbg [[DBG23:![0-9]+]]
+// CHECK-MSAN-NEXT:    br i1 [[_MSCMP2_NOT]], label [[TMP13:%.*]], label [[TMP12:%.*]], !dbg [[DBG23]], !prof [[PROF21]]
+// CHECK-MSAN:       12:
+// CHECK-MSAN-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]], !dbg [[DBG23]]
+// CHECK-MSAN-NEXT:    unreachable, !dbg [[DBG23]]
+// CHECK-MSAN:       13:
 // CHECK-MSAN-NEXT:    ret i32 [[TMP8]], !dbg [[DBG23]]
 //
 // CHECK-KMSAN-LABEL: @test(

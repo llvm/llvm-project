@@ -4889,12 +4889,12 @@ MachOObjectFile::getLinkOptHintsLoadCommand() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoRebaseOpcodes() const {
   if (!DyldInfoLoadCmd)
-    return None;
+    return std::nullopt;
 
   auto DyldInfoOrErr =
     getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return None;
+    return std::nullopt;
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.rebase_off));
@@ -4903,12 +4903,12 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoRebaseOpcodes() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoBindOpcodes() const {
   if (!DyldInfoLoadCmd)
-    return None;
+    return std::nullopt;
 
   auto DyldInfoOrErr =
     getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return None;
+    return std::nullopt;
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.bind_off));
@@ -4917,12 +4917,12 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoBindOpcodes() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoWeakBindOpcodes() const {
   if (!DyldInfoLoadCmd)
-    return None;
+    return std::nullopt;
 
   auto DyldInfoOrErr =
     getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return None;
+    return std::nullopt;
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.weak_bind_off));
@@ -4931,12 +4931,12 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoWeakBindOpcodes() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoLazyBindOpcodes() const {
   if (!DyldInfoLoadCmd)
-    return None;
+    return std::nullopt;
 
   auto DyldInfoOrErr =
       getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return None;
+    return std::nullopt;
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.lazy_bind_off));
@@ -4945,23 +4945,23 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoLazyBindOpcodes() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoExportsTrie() const {
   if (!DyldInfoLoadCmd)
-    return None;
+    return std::nullopt;
 
   auto DyldInfoOrErr =
       getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return None;
+    return std::nullopt;
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.export_off));
   return makeArrayRef(Ptr, DyldInfo.export_size);
 }
 
-Expected<Optional<MachO::linkedit_data_command>>
+Expected<std::optional<MachO::linkedit_data_command>>
 MachOObjectFile::getChainedFixupsLoadCommand() const {
   // Load the dyld chained fixups load command.
   if (!DyldChainedFixupsLoadCmd)
-    return llvm::None;
+    return std::nullopt;
   auto DyldChainedFixupsOrErr = getStructOrErr<MachO::linkedit_data_command>(
       *this, DyldChainedFixupsLoadCmd);
   if (!DyldChainedFixupsOrErr)
@@ -4970,19 +4970,19 @@ MachOObjectFile::getChainedFixupsLoadCommand() const {
       *DyldChainedFixupsOrErr;
 
   // If the load command is present but the data offset has been zeroed out,
-  // as is the case for dylib stubs, return None (no error).
+  // as is the case for dylib stubs, return std::nullopt (no error).
   if (!DyldChainedFixups.dataoff)
-    return llvm::None;
+    return std::nullopt;
   return DyldChainedFixups;
 }
 
-Expected<Optional<MachO::dyld_chained_fixups_header>>
+Expected<std::optional<MachO::dyld_chained_fixups_header>>
 MachOObjectFile::getChainedFixupsHeader() const {
   auto CFOrErr = getChainedFixupsLoadCommand();
   if (!CFOrErr)
     return CFOrErr.takeError();
   if (!CFOrErr->has_value())
-    return llvm::None;
+    return std::nullopt;
 
   const MachO::linkedit_data_command &DyldChainedFixups = **CFOrErr;
 
@@ -5236,12 +5236,12 @@ MachOObjectFile::getDyldChainedFixupTargets() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldExportsTrie() const {
   if (!DyldExportsTrieLoadCmd)
-    return None;
+    return std::nullopt;
 
   auto DyldExportsTrieOrError = getStructOrErr<MachO::linkedit_data_command>(
       *this, DyldExportsTrieLoadCmd);
   if (!DyldExportsTrieOrError)
-    return None;
+    return std::nullopt;
   MachO::linkedit_data_command DyldExportsTrie = DyldExportsTrieOrError.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldExportsTrie.dataoff));
@@ -5265,7 +5265,7 @@ SmallVector<uint64_t> MachOObjectFile::getFunctionStarts() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getUuid() const {
   if (!UuidLoadCmd)
-    return None;
+    return std::nullopt;
   // Returning a pointer is fine as uuid doesn't need endian swapping.
   const char *Ptr = UuidLoadCmd + offsetof(MachO::uuid_command, uuid);
   return makeArrayRef(reinterpret_cast<const uint8_t *>(Ptr), 16);

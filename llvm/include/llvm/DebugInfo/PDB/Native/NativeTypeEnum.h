@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPEENUM_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPEENUM_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
@@ -65,9 +64,9 @@ public:
 
 protected:
   codeview::TypeIndex Index;
-  Optional<codeview::EnumRecord> Record;
+  std::optional<codeview::EnumRecord> Record;
   NativeTypeEnum *UnmodifiedType = nullptr;
-  Optional<codeview::ModifierRecord> Modifiers;
+  std::optional<codeview::ModifierRecord> Modifiers;
 };
 
 } // namespace pdb

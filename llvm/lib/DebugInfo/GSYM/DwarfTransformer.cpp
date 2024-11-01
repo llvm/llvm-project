@@ -140,7 +140,7 @@ getQualifiedNameIndex(DWARFDie &Die, uint64_t Language, GsymCreator &Gsym) {
 
   StringRef ShortName(Die.getName(DINameKind::ShortName));
   if (ShortName.empty())
-    return llvm::None;
+    return std::nullopt;
 
   // For C++ and ObjC, prepend names of all parent declaration contexts
   if (!(Language == dwarf::DW_LANG_C_plus_plus ||
@@ -346,7 +346,7 @@ static void convertFunctionLineTable(raw_ostream &Log, CUInfo &CUI,
   // If not line table rows were added, clear the line table so we don't encode
   // on in the GSYM file.
   if (FI.OptLineTable->empty())
-    FI.OptLineTable = llvm::None;
+    FI.OptLineTable = std::nullopt;
 }
 
 void DwarfTransformer::handleDie(raw_ostream &OS, CUInfo &CUI, DWARFDie Die) {
@@ -429,7 +429,7 @@ Error DwarfTransformer::convert(uint32_t NumThreads) {
   size_t NumBefore = Gsym.getNumFunctionInfos();
   auto getDie = [&](DWARFUnit &DwarfUnit) -> DWARFDie {
     DWARFDie ReturnDie = DwarfUnit.getUnitDIE(false);
-    if (llvm::Optional<uint64_t> DWOId = DwarfUnit.getDWOId()) {
+    if (std::optional<uint64_t> DWOId = DwarfUnit.getDWOId()) {
       DWARFUnit *DWOCU = DwarfUnit.getNonSkeletonUnitDIE(false).getDwarfUnit();
       if (!DWOCU->isDWOUnit()) {
         std::string DWOName = dwarf::toString(

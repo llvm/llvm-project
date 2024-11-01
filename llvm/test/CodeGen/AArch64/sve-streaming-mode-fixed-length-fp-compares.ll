@@ -285,17 +285,16 @@ define void @fcmp_ugt_v16f16(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fcmp_ugt_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q3, [x1]
-; CHECK-NEXT:    adrp x8, .LCPI14_0
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fcmge p1.h, p0/z, z0.h, z1.h
-; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI14_0]
+; CHECK-NEXT:    mov z0.h, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z1.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    fcmge p0.h, p0/z, z3.h, z2.h
-; CHECK-NEXT:    mov z1.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z0.d, z0.d, z4.d
-; CHECK-NEXT:    eor z1.d, z1.d, z4.d
-; CHECK-NEXT:    stp q0, q1, [x2]
+; CHECK-NEXT:    eor z1.d, z1.d, z0.d
+; CHECK-NEXT:    mov z2.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    eor z0.d, z2.d, z0.d
+; CHECK-NEXT:    stp q1, q0, [x2]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
   %op2 = load <16 x half>, ptr %b
@@ -337,17 +336,16 @@ define void @fcmp_ult_v16f16(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fcmp_ult_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q3, [x1]
-; CHECK-NEXT:    adrp x8, .LCPI16_0
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fcmge p1.h, p0/z, z1.h, z0.h
-; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI16_0]
+; CHECK-NEXT:    mov z0.h, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z1.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    fcmge p0.h, p0/z, z2.h, z3.h
-; CHECK-NEXT:    mov z1.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z0.d, z0.d, z4.d
-; CHECK-NEXT:    eor z1.d, z1.d, z4.d
-; CHECK-NEXT:    stp q0, q1, [x2]
+; CHECK-NEXT:    eor z1.d, z1.d, z0.d
+; CHECK-NEXT:    mov z2.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    eor z0.d, z2.d, z0.d
+; CHECK-NEXT:    stp q1, q0, [x2]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
   %op2 = load <16 x half>, ptr %b
@@ -389,17 +387,16 @@ define void @fcmp_uge_v16f16(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fcmp_uge_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q3, [x1]
-; CHECK-NEXT:    adrp x8, .LCPI18_0
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fcmgt p1.h, p0/z, z0.h, z1.h
-; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI18_0]
+; CHECK-NEXT:    mov z0.h, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z1.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    fcmgt p0.h, p0/z, z3.h, z2.h
-; CHECK-NEXT:    mov z1.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z0.d, z0.d, z4.d
-; CHECK-NEXT:    eor z1.d, z1.d, z4.d
-; CHECK-NEXT:    stp q0, q1, [x2]
+; CHECK-NEXT:    eor z1.d, z1.d, z0.d
+; CHECK-NEXT:    mov z2.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    eor z0.d, z2.d, z0.d
+; CHECK-NEXT:    stp q1, q0, [x2]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
   %op2 = load <16 x half>, ptr %b
@@ -441,17 +438,16 @@ define void @fcmp_ule_v16f16(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fcmp_ule_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q3, [x1]
-; CHECK-NEXT:    adrp x8, .LCPI20_0
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fcmgt p1.h, p0/z, z1.h, z0.h
-; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI20_0]
+; CHECK-NEXT:    mov z0.h, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z1.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    fcmgt p0.h, p0/z, z2.h, z3.h
-; CHECK-NEXT:    mov z1.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z0.d, z0.d, z4.d
-; CHECK-NEXT:    eor z1.d, z1.d, z4.d
-; CHECK-NEXT:    stp q0, q1, [x2]
+; CHECK-NEXT:    eor z1.d, z1.d, z0.d
+; CHECK-NEXT:    mov z2.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    eor z0.d, z2.d, z0.d
+; CHECK-NEXT:    stp q1, q0, [x2]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
   %op2 = load <16 x half>, ptr %b
@@ -493,17 +489,16 @@ define void @fcmp_ord_v16f16(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-LABEL: fcmp_ord_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q3, [x1]
-; CHECK-NEXT:    adrp x8, .LCPI22_0
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fcmuo p1.h, p0/z, z1.h, z0.h
-; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI22_0]
+; CHECK-NEXT:    mov z0.h, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z1.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    fcmuo p0.h, p0/z, z2.h, z3.h
-; CHECK-NEXT:    mov z1.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z0.d, z0.d, z4.d
-; CHECK-NEXT:    eor z1.d, z1.d, z4.d
-; CHECK-NEXT:    stp q0, q1, [x2]
+; CHECK-NEXT:    eor z1.d, z1.d, z0.d
+; CHECK-NEXT:    mov z2.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    eor z0.d, z2.d, z0.d
+; CHECK-NEXT:    stp q1, q0, [x2]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
   %op2 = load <16 x half>, ptr %b

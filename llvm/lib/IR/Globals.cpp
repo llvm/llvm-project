@@ -370,7 +370,7 @@ bool GlobalValue::isAbsoluteSymbolRef() const {
   return GO->getMetadata(LLVMContext::MD_absolute_symbol);
 }
 
-Optional<ConstantRange> GlobalValue::getAbsoluteSymbolRange() const {
+std::optional<ConstantRange> GlobalValue::getAbsoluteSymbolRange() const {
   auto *GO = dyn_cast<GlobalObject>(this);
   if (!GO)
     return std::nullopt;
@@ -427,7 +427,7 @@ GlobalVariable::GlobalVariable(Module &M, Type *Ty, bool constant,
                                LinkageTypes Link, Constant *InitVal,
                                const Twine &Name, GlobalVariable *Before,
                                ThreadLocalMode TLMode,
-                               Optional<unsigned> AddressSpace,
+                               std::optional<unsigned> AddressSpace,
                                bool isExternallyInitialized)
     : GlobalObject(Ty, Value::GlobalVariableVal,
                    OperandTraits<GlobalVariable>::op_begin(this),

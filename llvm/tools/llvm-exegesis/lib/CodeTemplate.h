@@ -119,8 +119,8 @@ struct CodeTemplate {
 
   CodeTemplate(CodeTemplate &&);            // default
   CodeTemplate &operator=(CodeTemplate &&); // default
-  CodeTemplate(const CodeTemplate &) = delete;
-  CodeTemplate &operator=(const CodeTemplate &) = delete;
+
+  CodeTemplate clone() const;
 
   ExecutionMode Execution = ExecutionMode::UNKNOWN;
   // See InstructionBenchmarkKey.::Config.
@@ -132,6 +132,10 @@ struct CodeTemplate {
   // If the template uses the provided scratch memory, the register in which
   // the pointer to this memory is passed in to the function.
   unsigned ScratchSpacePointerInReg = 0;
+
+private:
+  CodeTemplate(const CodeTemplate &);            // default
+  CodeTemplate &operator=(const CodeTemplate &); // default
 };
 
 } // namespace exegesis

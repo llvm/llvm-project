@@ -187,7 +187,7 @@ void YAMLStrTabRemarkSerializer::emit(const Remark &Remark) {
   // metadata first and set DidEmitMeta to avoid emitting it again.
   if (Mode == SerializerMode::Standalone && !DidEmitMeta) {
     std::unique_ptr<MetaSerializer> MetaSerializer =
-        metaSerializer(OS, /*ExternalFilename=*/None);
+        metaSerializer(OS, /*ExternalFilename=*/std::nullopt);
     MetaSerializer->emit();
     DidEmitMeta = true;
   }
@@ -243,7 +243,7 @@ static void emitExternalFile(raw_ostream &OS, StringRef Filename) {
 void YAMLMetaSerializer::emit() {
   emitMagic(OS);
   emitVersion(OS);
-  emitStrTab(OS, None);
+  emitStrTab(OS, std::nullopt);
   if (ExternalFilename)
     emitExternalFile(OS, *ExternalFilename);
 }

@@ -61,7 +61,7 @@ namespace {
 /// outer loop in a Function.
 struct LoopUnrollAndJam
     : public impl::AffineLoopUnrollAndJamBase<LoopUnrollAndJam> {
-  explicit LoopUnrollAndJam(Optional<unsigned> unrollJamFactor = None) {
+  explicit LoopUnrollAndJam(Optional<unsigned> unrollJamFactor = std::nullopt) {
     if (unrollJamFactor)
       this->unrollJamFactor = *unrollJamFactor;
   }
@@ -73,7 +73,8 @@ struct LoopUnrollAndJam
 std::unique_ptr<OperationPass<func::FuncOp>>
 mlir::createLoopUnrollAndJamPass(int unrollJamFactor) {
   return std::make_unique<LoopUnrollAndJam>(
-      unrollJamFactor == -1 ? None : Optional<unsigned>(unrollJamFactor));
+      unrollJamFactor == -1 ? std::nullopt
+                            : Optional<unsigned>(unrollJamFactor));
 }
 
 void LoopUnrollAndJam::runOnOperation() {

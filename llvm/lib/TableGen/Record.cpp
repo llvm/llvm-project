@@ -2637,20 +2637,20 @@ Init *Record::getValueInit(StringRef FieldName) const {
 }
 
 StringRef Record::getValueAsString(StringRef FieldName) const {
-  llvm::Optional<StringRef> S = getValueAsOptionalString(FieldName);
+  std::optional<StringRef> S = getValueAsOptionalString(FieldName);
   if (!S)
     PrintFatalError(getLoc(), "Record `" + getName() +
       "' does not have a field named `" + FieldName + "'!\n");
   return S.value();
 }
 
-llvm::Optional<StringRef>
+std::optional<StringRef>
 Record::getValueAsOptionalString(StringRef FieldName) const {
   const RecordVal *R = getValue(FieldName);
   if (!R || !R->getValue())
-    return llvm::None;
+    return std::nullopt;
   if (isa<UnsetInit>(R->getValue()))
-    return llvm::None;
+    return std::nullopt;
 
   if (StringInit *SI = dyn_cast<StringInit>(R->getValue()))
     return SI->getValue();

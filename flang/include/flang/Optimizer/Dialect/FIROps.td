@@ -1903,8 +1903,8 @@ def fir_SliceOp : fir_Op<"slice", [NoMemoryEffect, AttrSizedOperandSegments]> {
 
   let builders = [
     OpBuilder<(ins "mlir::ValueRange":$triples,
-      CArg<"mlir::ValueRange", "llvm::None">:$fields,
-      CArg<"mlir::ValueRange", "llvm::None">:$substr)>
+      CArg<"mlir::ValueRange", "std::nullopt">:$fields,
+      CArg<"mlir::ValueRange", "std::nullopt">:$substr)>
   ];
 
   let hasVerifier = 1;
@@ -2090,7 +2090,7 @@ def fir_DoLoopOp : region_Op<"do_loop",
     OpBuilder<(ins "mlir::Value":$lowerBound, "mlir::Value":$upperBound,
       "mlir::Value":$step, CArg<"bool", "false">:$unordered,
       CArg<"bool", "false">:$finalCountValue,
-      CArg<"mlir::ValueRange", "llvm::None">:$iterArgs,
+      CArg<"mlir::ValueRange", "std::nullopt">:$iterArgs,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>
   ];
 
@@ -2234,7 +2234,7 @@ def fir_IterWhileOp : region_Op<"iterate_while",
     OpBuilder<(ins "mlir::Value":$lowerBound, "mlir::Value":$upperBound,
       "mlir::Value":$step, "mlir::Value":$iterate,
       CArg<"bool", "false">:$finalCountValue,
-      CArg<"mlir::ValueRange", "llvm::None">:$iterArgs,
+      CArg<"mlir::ValueRange", "std::nullopt">:$iterArgs,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>
   ];
 

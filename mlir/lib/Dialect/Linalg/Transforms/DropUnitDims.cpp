@@ -386,7 +386,7 @@ replaceUnitExtents(GenericOp genericOp, OpOperand *opOperand,
   Type actualType = opOperand->get().getType();
   if (auto memref = actualType.dyn_cast<MemRefType>()) {
     if (!memref.getLayout().isIdentity())
-      return llvm::None;
+      return std::nullopt;
   }
 
   int64_t dim = 0;

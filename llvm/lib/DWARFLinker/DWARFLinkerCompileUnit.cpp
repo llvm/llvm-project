@@ -52,7 +52,7 @@ void CompileUnit::markEverythingAsKept() {
         DIE.getTag() != dwarf::DW_TAG_constant)
       continue;
 
-    Optional<DWARFFormValue> Value;
+    std::optional<DWARFFormValue> Value;
     if (!(Value = DIE.find(dwarf::DW_AT_location))) {
       if ((Value = DIE.find(dwarf::DW_AT_const_value)) &&
           !inFunctionScope(*this, I.ParentIdx))

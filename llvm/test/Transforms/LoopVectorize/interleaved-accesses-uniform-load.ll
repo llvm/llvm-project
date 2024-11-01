@@ -1,9 +1,9 @@
-; RUN: opt -S -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -enable-interleaved-mem-accesses=true < %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -enable-interleaved-mem-accesses=true < %s
 
 ; Make sure the vectorizer can handle this loop: The strided load is only used
 ; by the loop's exit condition, which is not vectorized, and is therefore
 ; considered uniform while also forming an interleave group.
-  
+
 %0 = type { i32 ()*, i32 }
 
 @0 = internal unnamed_addr constant [59 x %0] [%0 zeroinitializer,

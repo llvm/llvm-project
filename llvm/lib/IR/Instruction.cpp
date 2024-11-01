@@ -744,11 +744,7 @@ bool Instruction::willReturn() const {
     return !SI->isVolatile();
 
   if (const auto *CB = dyn_cast<CallBase>(this))
-    // FIXME: Temporarily assume that all side-effect free intrinsics will
-    // return. Remove this workaround once all intrinsics are appropriately
-    // annotated.
-    return CB->hasFnAttr(Attribute::WillReturn) ||
-           (isa<IntrinsicInst>(CB) && CB->onlyReadsMemory());
+    return CB->hasFnAttr(Attribute::WillReturn);
   return true;
 }
 

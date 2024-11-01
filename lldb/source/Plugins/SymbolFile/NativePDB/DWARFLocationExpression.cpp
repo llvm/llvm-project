@@ -165,7 +165,7 @@ static DWARFExpression MakeRegisterBasedLocationExpressionInternal(
 
 DWARFExpression lldb_private::npdb::MakeEnregisteredLocationExpression(
     llvm::codeview::RegisterId reg, lldb::ModuleSP module) {
-  return MakeRegisterBasedLocationExpressionInternal(reg, llvm::None, module);
+  return MakeRegisterBasedLocationExpressionInternal(reg, std::nullopt, module);
 }
 
 DWARFExpression lldb_private::npdb::MakeRegRelLocationExpression(
@@ -275,7 +275,7 @@ lldb_private::npdb::MakeEnregisteredLocationExpressionForComposite(
           }
           MemberValLocation loc = offset_loc.second;
           llvm::Optional<int32_t> offset =
-              loc.is_at_reg ? llvm::None
+              loc.is_at_reg ? std::nullopt
                             : llvm::Optional<int32_t>(loc.reg_offset);
           if (!MakeRegisterBasedLocationExpressionInternal(
                   stream, (RegisterId)loc.reg_id, register_kind, offset,

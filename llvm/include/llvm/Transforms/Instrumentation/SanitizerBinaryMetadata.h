@@ -19,6 +19,27 @@
 
 namespace llvm {
 
+struct SanitizerBinaryMetadataOptions {
+  bool Covered = false;
+  bool Atomics = false;
+  bool UAR = false;
+  SanitizerBinaryMetadataOptions() = default;
+};
+
+inline constexpr int kSanitizerBinaryMetadataAtomicsBit = 0;
+inline constexpr int kSanitizerBinaryMetadataUARBit = 1;
+
+inline constexpr uint32_t kSanitizerBinaryMetadataNone = 0;
+inline constexpr uint32_t kSanitizerBinaryMetadataAtomics =
+    1 << kSanitizerBinaryMetadataAtomicsBit;
+inline constexpr uint32_t kSanitizerBinaryMetadataUAR =
+    1 << kSanitizerBinaryMetadataUARBit;
+
+inline constexpr char kSanitizerBinaryMetadataCoveredSection[] =
+    "sanmd_covered";
+inline constexpr char kSanitizerBinaryMetadataAtomicsSection[] =
+    "sanmd_atomics";
+
 /// Public interface to the SanitizerBinaryMetadata module pass for emitting
 /// metadata for binary analysis sanitizers.
 //

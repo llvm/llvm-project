@@ -1027,3 +1027,142 @@ define i8 @not_signbit_trunc(i16 %x) {
   %r2 = trunc i16 %r to i8
   ret i8 %r2
 }
+
+define i2 @bool_add_lshr(i1 %a, i1 %b) {
+; CHECK-LABEL: @bool_add_lshr(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[TMP1]] to i2
+; CHECK-NEXT:    ret i2 [[LSHR]]
+;
+  %zext.a = zext i1 %a to i2
+  %zext.b = zext i1 %b to i2
+  %add = add i2 %zext.a, %zext.b
+  %lshr = lshr i2 %add, 1
+  ret i2 %lshr
+}
+
+; negative test - need bools
+
+define i4 @not_bool_add_lshr(i2 %a, i2 %b) {
+; CHECK-LABEL: @not_bool_add_lshr(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i2 [[A:%.*]] to i4
+; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i2 [[B:%.*]] to i4
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i4 [[ZEXT_A]], [[ZEXT_B]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i4 [[ADD]], 2
+; CHECK-NEXT:    ret i4 [[LSHR]]
+;
+  %zext.a = zext i2 %a to i4
+  %zext.b = zext i2 %b to i4
+  %add = add i4 %zext.a, %zext.b
+  %lshr = lshr i4 %add, 2
+  ret i4 %lshr
+}
+
+; TODO: This could be sext(and a, b).
+
+define i2 @bool_add_ashr(i1 %a, i1 %b) {
+; CHECK-LABEL: @bool_add_ashr(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i2
+; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i1 [[B:%.*]] to i2
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i2 [[ZEXT_A]], [[ZEXT_B]]
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i2 [[ADD]], 1
+; CHECK-NEXT:    ret i2 [[ASHR]]
+;
+  %zext.a = zext i1 %a to i2
+  %zext.b = zext i1 %b to i2
+  %add = add i2 %zext.a, %zext.b
+  %ashr = ashr i2 %add, 1
+  ret i2 %ashr
+}
+
+define <2 x i8> @bool_add_lshr_vec(<2 x i1> %a, <2 x i1> %b) {
+; CHECK-LABEL: @bool_add_lshr_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i1> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[LSHR]]
+;
+  %zext.a = zext <2 x i1> %a to <2 x i8>
+  %zext.b = zext <2 x i1> %b to <2 x i8>
+  %add = add <2 x i8> %zext.a, %zext.b
+  %lshr = lshr <2 x i8> %add, <i8 1, i8 1>
+  ret <2 x i8> %lshr
+}
+
+define i32 @bool_add_lshr_uses(i1 %a, i1 %b) {
+; CHECK-LABEL: @bool_add_lshr_uses(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i32
+; CHECK-NEXT:    call void @use(i32 [[ZEXT_A]])
+; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i1 [[B:%.*]] to i32
+; CHECK-NEXT:    call void @use(i32 [[ZEXT_B]])
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[A]], [[B]]
+; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %zext.a = zext i1 %a to i32
+  call void @use(i32 %zext.a)
+  %zext.b = zext i1 %b to i32
+  call void @use(i32 %zext.b)
+  %add = add i32 %zext.a, %zext.b
+  %lshr = lshr i32 %add, 1
+  ret i32 %lshr
+}
+
+define i32 @bool_add_lshr_uses2(i1 %a, i1 %b) {
+; CHECK-LABEL: @bool_add_lshr_uses2(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i32
+; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i1 [[B:%.*]] to i32
+; CHECK-NEXT:    call void @use(i32 [[ZEXT_B]])
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ZEXT_A]], [[ZEXT_B]]
+; CHECK-NEXT:    call void @use(i32 [[ADD]])
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[A]], [[B]]
+; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %zext.a = zext i1 %a to i32
+  %zext.b = zext i1 %b to i32
+  call void @use(i32 %zext.b)
+  %add = add i32 %zext.a, %zext.b
+  call void @use(i32 %add)
+  %lshr = lshr i32 %add, 1
+  ret i32 %lshr
+}
+
+; negative test - too many extra uses
+
+define i32 @bool_add_lshr_uses3(i1 %a, i1 %b) {
+; CHECK-LABEL: @bool_add_lshr_uses3(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i1 [[A:%.*]] to i32
+; CHECK-NEXT:    call void @use(i32 [[ZEXT_A]])
+; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i1 [[B:%.*]] to i32
+; CHECK-NEXT:    call void @use(i32 [[ZEXT_B]])
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ZEXT_A]], [[ZEXT_B]]
+; CHECK-NEXT:    call void @use(i32 [[ADD]])
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[ADD]], 1
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %zext.a = zext i1 %a to i32
+  call void @use(i32 %zext.a)
+  %zext.b = zext i1 %b to i32
+  call void @use(i32 %zext.b)
+  %add = add i32 %zext.a, %zext.b
+  call void @use(i32 %add)
+  %lshr = lshr i32 %add, 1
+  ret i32 %lshr
+}
+
+; negative test
+
+define <2 x i8> @bool_add_lshr_vec_wrong_shift_amt(<2 x i1> %a, <2 x i1> %b) {
+; CHECK-LABEL: @bool_add_lshr_vec_wrong_shift_amt(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext <2 x i1> [[A:%.*]] to <2 x i8>
+; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext <2 x i1> [[B:%.*]] to <2 x i8>
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i8> [[ZEXT_A]], [[ZEXT_B]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i8> [[ADD]], <i8 1, i8 2>
+; CHECK-NEXT:    ret <2 x i8> [[LSHR]]
+;
+  %zext.a = zext <2 x i1> %a to <2 x i8>
+  %zext.b = zext <2 x i1> %b to <2 x i8>
+  %add = add <2 x i8> %zext.a, %zext.b
+  %lshr = lshr <2 x i8> %add, <i8 1, i8 2>
+  ret <2 x i8> %lshr
+}

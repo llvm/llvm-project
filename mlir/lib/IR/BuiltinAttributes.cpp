@@ -92,10 +92,10 @@ static bool dictionaryAttrSort(ArrayRef<NamedAttribute> value,
 }
 
 /// Returns an entry with a duplicate name from the given sorted array of named
-/// attributes. Returns llvm::None if all elements have unique names.
+/// attributes. Returns std::nullopt if all elements have unique names.
 static Optional<NamedAttribute>
 findDuplicateElement(ArrayRef<NamedAttribute> value) {
-  const Optional<NamedAttribute> none{llvm::None};
+  const Optional<NamedAttribute> none{std::nullopt};
   if (value.size() < 2)
     return none;
 
@@ -690,67 +690,19 @@ DenseElementsAttr::ComplexIntElementIterator::operator*() const {
 
 LogicalResult
 DenseArrayAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                       RankedTensorType type, ArrayRef<char> rawData) {
-  if (type.getRank() != 1)
-    return emitError() << "expected rank 1 tensor type";
-  if (!type.getElementType().isIntOrIndexOrFloat())
+                       Type elementType, int64_t size, ArrayRef<char> rawData) {
+  if (!elementType.isIntOrIndexOrFloat())
     return emitError() << "expected integer or floating point element type";
   int64_t dataSize = rawData.size();
-  int64_t size = type.getShape().front();
-  if (type.getElementType().isInteger(1)) {
-    if (size != dataSize)
-      return emitError() << "expected " << size
-                         << " bytes for i1 array but got " << dataSize;
-  } else if (size * type.getElementTypeBitWidth() != dataSize * 8) {
+  int64_t elementSize =
+      llvm::divideCeil(elementType.getIntOrFloatBitWidth(), CHAR_BIT);
+  if (size * elementSize != dataSize) {
     return emitError() << "expected data size (" << size << " elements, "
-                       << type.getElementTypeBitWidth()
-                       << " bits each) does not match: " << dataSize
+                       << elementSize
+                       << " bytes each) does not match: " << dataSize
                        << " bytes";
   }
   return success();
-}
-
-FailureOr<const bool *>
-DenseArrayAttr::try_value_begin_impl(OverloadToken<bool>) const {
-  if (auto attr = dyn_cast<DenseBoolArrayAttr>())
-    return attr.asArrayRef().begin();
-  return failure();
-}
-FailureOr<const int8_t *>
-DenseArrayAttr::try_value_begin_impl(OverloadToken<int8_t>) const {
-  if (auto attr = dyn_cast<DenseI8ArrayAttr>())
-    return attr.asArrayRef().begin();
-  return failure();
-}
-FailureOr<const int16_t *>
-DenseArrayAttr::try_value_begin_impl(OverloadToken<int16_t>) const {
-  if (auto attr = dyn_cast<DenseI16ArrayAttr>())
-    return attr.asArrayRef().begin();
-  return failure();
-}
-FailureOr<const int32_t *>
-DenseArrayAttr::try_value_begin_impl(OverloadToken<int32_t>) const {
-  if (auto attr = dyn_cast<DenseI32ArrayAttr>())
-    return attr.asArrayRef().begin();
-  return failure();
-}
-FailureOr<const int64_t *>
-DenseArrayAttr::try_value_begin_impl(OverloadToken<int64_t>) const {
-  if (auto attr = dyn_cast<DenseI64ArrayAttr>())
-    return attr.asArrayRef().begin();
-  return failure();
-}
-FailureOr<const float *>
-DenseArrayAttr::try_value_begin_impl(OverloadToken<float>) const {
-  if (auto attr = dyn_cast<DenseF32ArrayAttr>())
-    return attr.asArrayRef().begin();
-  return failure();
-}
-FailureOr<const double *>
-DenseArrayAttr::try_value_begin_impl(OverloadToken<double>) const {
-  if (auto attr = dyn_cast<DenseF64ArrayAttr>())
-    return attr.asArrayRef().begin();
-  return failure();
 }
 
 namespace {
@@ -898,12 +850,11 @@ DenseArrayAttrImpl<T>::operator ArrayRef<T>() const {
 template <typename T>
 DenseArrayAttrImpl<T> DenseArrayAttrImpl<T>::get(MLIRContext *context,
                                                  ArrayRef<T> content) {
-  auto shapedType = RankedTensorType::get(
-      content.size(), DenseArrayAttrUtil<T>::getElementType(context));
+  Type elementType = DenseArrayAttrUtil<T>::getElementType(context);
   auto rawArray = ArrayRef<char>(reinterpret_cast<const char *>(content.data()),
                                  content.size() * sizeof(T));
-  return Base::get(context, shapedType, rawArray)
-      .template cast<DenseArrayAttrImpl<T>>();
+  return llvm::cast<DenseArrayAttrImpl<T>>(
+      Base::get(context, elementType, content.size(), rawArray));
 }
 
 template <typename T>
@@ -1604,7 +1555,7 @@ Optional<ArrayRef<T>>
 DenseResourceElementsAttrBase<T>::tryGetAsArrayRef() const {
   if (AsmResourceBlob *blob = this->getRawHandle().getBlob())
     return blob->template getDataAs<T>();
-  return llvm::None;
+  return std::nullopt;
 }
 
 template <typename T>

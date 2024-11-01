@@ -144,9 +144,9 @@ TraceHTR::TraceHTR(Thread &thread, TraceCursor &cursor)
         pc_addr.CalculateSymbolContext(&sc))
       return sc.GetFunctionName()
                  ? llvm::Optional<ConstString>(sc.GetFunctionName())
-                 : llvm::None;
+                 : std::nullopt;
     else
-      return llvm::None;
+      return std::nullopt;
   };
 
   while (cursor.HasValue()) { if (cursor.IsError()) {
@@ -177,7 +177,7 @@ TraceHTR::TraceHTR(Thread &thread, TraceCursor &cursor)
           // Next instruction is not known - pass None to indicate the name
           // of the function being called is not known
           m_instruction_layer_up->AddCallInstructionMetadata(
-              current_instruction_load_address, llvm::None);
+              current_instruction_load_address, std::nullopt);
         }
       }
     }
@@ -349,7 +349,7 @@ HTRBlockLayerUP lldb_private::BasicSuperBlockMerge(IHTRLayer &layer) {
         // Tail logic
         construct_next_layer(i - superblock_size + 1, superblock_size);
         // Reset the block_head since the prev super block has come to and end
-        superblock_head = llvm::None;
+        superblock_head = std::nullopt;
         superblock_size = 0;
       } else if (isHead) {
         if (superblock_size) { // this handles (tail, head) adjacency -
@@ -369,7 +369,7 @@ HTRBlockLayerUP lldb_private::BasicSuperBlockMerge(IHTRLayer &layer) {
         // End previous super block
         construct_next_layer(i - superblock_size + 1, superblock_size);
         // Reset the block_head since the prev super block has come to and end
-        superblock_head = llvm::None;
+        superblock_head = std::nullopt;
         superblock_size = 0;
       } else {
         if (!superblock_head)

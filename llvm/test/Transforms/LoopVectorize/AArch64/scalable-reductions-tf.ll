@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
+; RUN: opt < %s -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
 ; RUN:   -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S | FileCheck %s
 
 define void @invariant_store_red_exit_is_phi(i32* %dst, i32* readonly %src, i64 %n) {

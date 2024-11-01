@@ -68,8 +68,8 @@ define <vscale x 1 x i1> @above_maxvl(ptr %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    lui a0, 1
-; CHECK-NEXT:    addiw a0, a0, -2048
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    slli a0, a0, 11
 ; CHECK-NEXT:    vmsltu.vx v0, v8, a0
 ; CHECK-NEXT:    ret
   %mask = call <vscale x 1 x i1> @llvm.get.active.lane.mask.nxv1i1.i64(i64 0, i64 2048)

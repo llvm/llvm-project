@@ -44,7 +44,7 @@ using llvm::MapVector;
 static Value allocBuffer(ImplicitLocOpBuilder &b,
                          const LinalgPromotionOptions &options,
                          Type elementType, Value allocSize, DataLayout &layout,
-                         Optional<unsigned> alignment = None) {
+                         Optional<unsigned> alignment = std::nullopt) {
   auto width = layout.getTypeSize(elementType);
 
   IntegerAttr alignmentAttr;

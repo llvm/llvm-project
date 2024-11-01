@@ -24,7 +24,8 @@ using namespace llvm::codeview;
 // just iterate up front to find out.
 static uint32_t getNumRecordsInCollection(LazyRandomTypeCollection &Types) {
   uint32_t NumTypes = 0;
-  for (Optional<TypeIndex> TI = Types.getFirst(); TI; TI = Types.getNext(*TI))
+  for (std::optional<TypeIndex> TI = Types.getFirst(); TI;
+       TI = Types.getNext(*TI))
     ++NumTypes;
   return NumTypes;
 }
@@ -129,9 +130,9 @@ void TypeReferenceTracker::markReferencedTypes() {
     TiRefKind RefKind;
     TypeIndex RefTI;
     std::tie(RefKind, RefTI) = RefWorklist.pop_back_val();
-    Optional<CVType> Rec = (Ids && RefKind == TiRefKind::IndexRef)
-                               ? Ids->tryGetType(RefTI)
-                               : Types.tryGetType(RefTI);
+    std::optional<CVType> Rec = (Ids && RefKind == TiRefKind::IndexRef)
+                                    ? Ids->tryGetType(RefTI)
+                                    : Types.tryGetType(RefTI);
     if (!Rec)
       continue; // FIXME: Report a reference to a non-existant type.
 

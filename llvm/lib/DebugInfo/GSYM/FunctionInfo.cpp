@@ -227,7 +227,7 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
     return LR;
   }
 
-  Optional<FileEntry> LineEntryFile = GR.getFile(LineEntry->File);
+  std::optional<FileEntry> LineEntryFile = GR.getFile(LineEntry->File);
   if (!LineEntryFile)
     return createStringError(std::errc::invalid_argument,
                               "failed to extract file[%" PRIu32 "]",

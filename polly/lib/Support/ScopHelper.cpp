@@ -703,7 +703,7 @@ static Optional<const MDOperand *> findNamedMetadataArg(MDNode *LoopID,
                                                         StringRef Name) {
   MDNode *MD = findNamedMetadataNode(LoopID, Name);
   if (!MD)
-    return None;
+    return std::nullopt;
   switch (MD->getNumOperands()) {
   case 1:
     return nullptr;
@@ -718,7 +718,7 @@ Optional<Metadata *> polly::findMetadataOperand(MDNode *LoopMD,
                                                 StringRef Name) {
   MDNode *MD = findNamedMetadataNode(LoopMD, Name);
   if (!MD)
-    return None;
+    return std::nullopt;
   switch (MD->getNumOperands()) {
   case 1:
     return nullptr;
@@ -733,7 +733,7 @@ static Optional<bool> getOptionalBoolLoopAttribute(MDNode *LoopID,
                                                    StringRef Name) {
   MDNode *MD = findNamedMetadataNode(LoopID, Name);
   if (!MD)
-    return None;
+    return std::nullopt;
   switch (MD->getNumOperands()) {
   case 1:
     return true;
@@ -755,11 +755,11 @@ llvm::Optional<int> polly::getOptionalIntLoopAttribute(MDNode *LoopID,
   const MDOperand *AttrMD =
       findNamedMetadataArg(LoopID, Name).value_or(nullptr);
   if (!AttrMD)
-    return None;
+    return std::nullopt;
 
   ConstantInt *IntMD = mdconst::extract_or_null<ConstantInt>(AttrMD->get());
   if (!IntMD)
-    return None;
+    return std::nullopt;
 
   return IntMD->getSExtValue();
 }

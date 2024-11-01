@@ -44,7 +44,7 @@ struct TraceStartRequest {
   /// Tracing technology name, e.g. intel-pt, arm-coresight.
   std::string type;
 
-  /// If \a llvm::None, then this starts tracing the whole process. Otherwise,
+  /// If \a std::nullopt, then this starts tracing the whole process. Otherwise,
   /// only tracing for the specified threads is enabled.
   llvm::Optional<std::vector<lldb::tid_t>> tids;
 
@@ -72,7 +72,7 @@ struct TraceStopRequest {
 
   /// Tracing technology name, e.g. intel-pt, arm-coresight.
   std::string type;
-  /// If \a llvm::None, then this stops tracing the whole process. Otherwise,
+  /// If \a std::nullopt, then this stops tracing the whole process. Otherwise,
   /// only tracing for the specified threads is stopped.
   llvm::Optional<std::vector<lldb::tid_t>> tids;
 };

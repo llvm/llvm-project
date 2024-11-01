@@ -192,7 +192,7 @@ struct FlattenInfo {
 
   bool matchLinearIVUser(User *U, Value *InnerTripCount,
                          SmallPtrSet<Value *, 4> &ValidOuterPHIUses) {
-    LLVM_DEBUG(dbgs() << "Found use of inner induction variable: "; U->dump());
+    LLVM_DEBUG(dbgs() << "Checking linear i*M+j expression for: "; U->dump());
     Value *MatchedMul = nullptr;
     Value *MatchedItCount = nullptr;
 
@@ -212,6 +212,9 @@ struct FlattenInfo {
     if (!MatchedItCount)
       return false;
 
+    LLVM_DEBUG(dbgs() << "Matched multiplication: "; MatchedMul->dump());
+    LLVM_DEBUG(dbgs() << "Matched iteration count: "; MatchedItCount->dump());
+
     // Look through extends if the IV has been widened. Don't look through
     // extends if we already looked through a trunc.
     if (Widened && IsAdd &&
@@ -223,8 +226,11 @@ struct FlattenInfo {
                            : dyn_cast<ZExtInst>(MatchedItCount)->getOperand(0);
     }
 
+    LLVM_DEBUG(dbgs() << "Looking for inner trip count: ";
+               InnerTripCount->dump());
+
     if ((IsAdd || IsAddTrunc) && MatchedItCount == InnerTripCount) {
-      LLVM_DEBUG(dbgs() << "Use is optimisable\n");
+      LLVM_DEBUG(dbgs() << "Found. This sse is optimisable\n");
       ValidOuterPHIUses.insert(MatchedMul);
       LinearIVUses.insert(U);
       return true;
@@ -241,8 +247,11 @@ struct FlattenInfo {
       SExtInnerTripCount = cast<Instruction>(InnerTripCount)->getOperand(0);
 
     for (User *U : InnerInductionPHI->users()) {
-      if (isInnerLoopIncrement(U))
+      LLVM_DEBUG(dbgs() << "Checking User: "; U->dump());
+      if (isInnerLoopIncrement(U)) {
+        LLVM_DEBUG(dbgs() << "Use is inner loop increment, continuing\n");
         continue;
+      }
 
       // After widening the IVs, a trunc instruction might have been introduced,
       // so look through truncs.
@@ -256,11 +265,16 @@ struct FlattenInfo {
       // branch) then the compare has been altered by another transformation e.g
       // icmp ult %inc, tripcount -> icmp ult %j, tripcount-1, where tripcount is
       // a constant. Ignore this use as the compare gets removed later anyway.
-      if (isInnerLoopTest(U))
+      if (isInnerLoopTest(U)) {
+        LLVM_DEBUG(dbgs() << "Use is the inner loop test, continuing\n");
         continue;
+      }
 
-      if (!matchLinearIVUser(U, SExtInnerTripCount, ValidOuterPHIUses))
+      if (!matchLinearIVUser(U, SExtInnerTripCount, ValidOuterPHIUses)) {
+        LLVM_DEBUG(dbgs() << "Not a linear IV user\n");
         return false;
+      }
+      LLVM_DEBUG(dbgs() << "Linear IV users found!\n");
     }
     return true;
   }

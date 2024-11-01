@@ -202,7 +202,7 @@ function(add_mlir_doc doc_filename output_file output_directory command)
 endfunction()
 
 # Declare an mlir library which can be compiled in libMLIR.so
-# In addition to everything that llvm_add_librar accepts, this
+# In addition to everything that llvm_add_library accepts, this
 # also has the following option:
 # EXCLUDE_FROM_LIBMLIR
 #   Don't include this library in libMLIR.so.  This option should be used

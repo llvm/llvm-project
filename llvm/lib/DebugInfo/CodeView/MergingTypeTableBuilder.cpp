@@ -33,16 +33,16 @@ MergingTypeTableBuilder::MergingTypeTableBuilder(BumpPtrAllocator &Storage)
 
 MergingTypeTableBuilder::~MergingTypeTableBuilder() = default;
 
-Optional<TypeIndex> MergingTypeTableBuilder::getFirst() {
+std::optional<TypeIndex> MergingTypeTableBuilder::getFirst() {
   if (empty())
-    return None;
+    return std::nullopt;
 
   return TypeIndex(TypeIndex::FirstNonSimpleIndex);
 }
 
-Optional<TypeIndex> MergingTypeTableBuilder::getNext(TypeIndex Prev) {
+std::optional<TypeIndex> MergingTypeTableBuilder::getNext(TypeIndex Prev) {
   if (++Prev == nextTypeIndex())
-    return None;
+    return std::nullopt;
   return Prev;
 }
 

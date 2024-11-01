@@ -1334,12 +1334,12 @@ public:
   /// skip parsing that component.
   virtual ParseResult parseGenericOperationAfterOpName(
       OperationState &result,
-      Optional<ArrayRef<UnresolvedOperand>> parsedOperandType = llvm::None,
-      Optional<ArrayRef<Block *>> parsedSuccessors = llvm::None,
+      Optional<ArrayRef<UnresolvedOperand>> parsedOperandType = std::nullopt,
+      Optional<ArrayRef<Block *>> parsedSuccessors = std::nullopt,
       Optional<MutableArrayRef<std::unique_ptr<Region>>> parsedRegions =
-          llvm::None,
-      Optional<ArrayRef<NamedAttribute>> parsedAttributes = llvm::None,
-      Optional<FunctionType> parsedFnType = llvm::None) = 0;
+          std::nullopt,
+      Optional<ArrayRef<NamedAttribute>> parsedAttributes = std::nullopt,
+      Optional<FunctionType> parsedFnType = std::nullopt) = 0;
 
   /// Parse a single SSA value operand name along with a result number if
   /// `allowResultNumber` is true.

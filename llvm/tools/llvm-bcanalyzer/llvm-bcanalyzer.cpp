@@ -114,7 +114,7 @@ int main(int argc, char **argv) {
 
   BitcodeAnalyzer BA(MB->getBuffer(),
                      BlockInfoMB ? Optional<StringRef>(BlockInfoMB->getBuffer())
-                                 : None);
+                                 : std::nullopt);
 
   BCDumpOptions O(outs());
   O.Histogram = !NoHistogram;
@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
 
   ExitOnErr(BA.analyze(
       Dump ? Optional<BCDumpOptions>(O) : Optional<BCDumpOptions>(),
-      CheckHash.empty() ? None : Optional<StringRef>(CheckHash)));
+      CheckHash.empty() ? std::nullopt : Optional<StringRef>(CheckHash)));
 
   if (Dump)
     outs() << "\n\n";

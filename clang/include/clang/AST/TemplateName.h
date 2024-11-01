@@ -397,7 +397,7 @@ public:
 
   Optional<unsigned> getPackIndex() const {
     if (Bits.Data == 0)
-      return None;
+      return std::nullopt;
     return Bits.Data - 1;
   }
 

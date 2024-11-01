@@ -24,8 +24,8 @@ li x10, -1
 li x10, 2047
 # CHECK-EXPAND: addi a0, zero, -2047
 li x10, -2047
-# CHECK-EXPAND: c.lui a1, 1
-# CHECK-EXPAND: addi a1, a1, -2048
+# CHECK-EXPAND: c.li a1, 1
+# CHECK-EXPAND: c.slli a1, 11
 li x11, 2048
 # CHECK-EXPAND: addi a1, zero, -2048
 li x11, -2048

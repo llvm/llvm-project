@@ -32,8 +32,8 @@ public:
   getCalleeSavedRegs(const MachineFunction *MF) const override {
     return nullptr;
   }
-  ArrayRef<const uint32_t *> getRegMasks() const override { return None; }
-  ArrayRef<const char *> getRegMaskNames() const override { return None; }
+  ArrayRef<const uint32_t *> getRegMasks() const override { return std::nullopt; }
+  ArrayRef<const char *> getRegMaskNames() const override { return std::nullopt; }
   BitVector getReservedRegs(const MachineFunction &MF) const override {
     return BitVector();
   }

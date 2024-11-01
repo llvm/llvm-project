@@ -95,6 +95,7 @@ def LinkageSpec : DeclNode<Decl>, DeclContext;
 def Export : DeclNode<Decl>, DeclContext;
 def ObjCPropertyImpl : DeclNode<Decl>;
 def FileScopeAsm : DeclNode<Decl>;
+def TopLevelStmt : DeclNode<Decl>;
 def AccessSpec : DeclNode<Decl>;
 def Friend : DeclNode<Decl>;
 def FriendTemplate : DeclNode<Decl>;

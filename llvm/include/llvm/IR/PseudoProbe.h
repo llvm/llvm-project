@@ -13,10 +13,10 @@
 #ifndef LLVM_IR_PSEUDOPROBE_H
 #define LLVM_IR_PSEUDOPROBE_H
 
-#include "llvm/ADT/Optional.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
+#include <optional>
 
 namespace llvm {
 
@@ -91,7 +91,7 @@ static inline bool isSentinelProbe(uint32_t Flags) {
   return Flags & (uint32_t)PseudoProbeAttributes::Sentinel;
 }
 
-Optional<PseudoProbe> extractProbe(const Instruction &Inst);
+std::optional<PseudoProbe> extractProbe(const Instruction &Inst);
 
 void setProbeDistributionFactor(Instruction &Inst, float Factor);
 } // end namespace llvm

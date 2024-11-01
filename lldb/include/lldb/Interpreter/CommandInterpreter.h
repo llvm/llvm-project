@@ -627,7 +627,7 @@ public:
   /// \return \b true if the session transcript was successfully written to
   /// disk, \b false otherwise.
   bool SaveTranscript(CommandReturnObject &result,
-                      llvm::Optional<std::string> output_file = llvm::None);
+                      llvm::Optional<std::string> output_file = std::nullopt);
 
   FileSpec GetCurrentSourceDir();
 

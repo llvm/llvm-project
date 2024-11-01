@@ -458,7 +458,7 @@ static void printCFIRegister(unsigned DwarfReg, raw_ostream &OS,
     return;
   }
 
-  if (Optional<unsigned> Reg = TRI->getLLVMRegNum(DwarfReg, true))
+  if (std::optional<unsigned> Reg = TRI->getLLVMRegNum(DwarfReg, true))
     OS << printReg(*Reg, TRI);
   else
     OS << "<badreg>";

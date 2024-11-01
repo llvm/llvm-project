@@ -471,7 +471,7 @@ TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
   EXPECT_THAT(Conf.Index.External.MountPoint, FooPath);
 
   // None defaults to ".".
-  Frag = GetFrag(FooPath, llvm::None);
+  Frag = GetFrag(FooPath, std::nullopt);
   compileAndApply();
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   ASSERT_EQ(Conf.Index.External.Kind, Config::ExternalIndexSpec::File);

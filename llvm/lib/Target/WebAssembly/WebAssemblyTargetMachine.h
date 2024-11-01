@@ -17,6 +17,7 @@
 
 #include "WebAssemblySubtarget.h"
 #include "llvm/Target/TargetMachine.h"
+#include <optional>
 
 namespace llvm {
 
@@ -27,9 +28,9 @@ class WebAssemblyTargetMachine final : public LLVMTargetMachine {
 public:
   WebAssemblyTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                            StringRef FS, const TargetOptions &Options,
-                           Optional<Reloc::Model> RM,
-                           Optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
-                           bool JIT);
+                           std::optional<Reloc::Model> RM,
+                           std::optional<CodeModel::Model> CM,
+                           CodeGenOpt::Level OL, bool JIT);
 
   ~WebAssemblyTargetMachine() override;
 

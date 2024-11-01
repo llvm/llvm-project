@@ -910,12 +910,12 @@ void ObjCMethodDecl::setMethodParams(ASTContext &C,
   assert((!SelLocs.empty() || isImplicit()) &&
          "No selector locs for non-implicit method");
   if (isImplicit())
-    return setParamsAndSelLocs(C, Params, llvm::None);
+    return setParamsAndSelLocs(C, Params, std::nullopt);
 
   setSelLocsKind(hasStandardSelectorLocs(getSelector(), SelLocs, Params,
                                         DeclEndLoc));
   if (getSelLocsKind() != SelLoc_NonStandard)
-    return setParamsAndSelLocs(C, Params, llvm::None);
+    return setParamsAndSelLocs(C, Params, std::nullopt);
 
   setParamsAndSelLocs(C, Params, SelLocs);
 }

@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize %s -mtriple=arm64-apple-iphoneos -S | FileCheck %s
+; RUN: opt -passes=loop-vectorize %s -mtriple=arm64-apple-iphoneos -S | FileCheck %s
 
 ; CHECK-LABEL: define void @test(
 ; CHECK: vector.body

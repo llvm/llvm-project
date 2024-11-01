@@ -113,9 +113,9 @@ protected:
 
   /// The struct type returned by getParsedTargetID.
   struct ParsedTargetIDType {
-    Optional<std::string> OptionalTargetID;
-    Optional<std::string> OptionalGPUArch;
-    Optional<llvm::StringMap<bool>> OptionalFeatures;
+    std::optional<std::string> OptionalTargetID;
+    std::optional<std::string> OptionalGPUArch;
+    std::optional<llvm::StringMap<bool>> OptionalFeatures;
   };
 
   /// Get target ID, GPU arch, and target ID features if the target ID is

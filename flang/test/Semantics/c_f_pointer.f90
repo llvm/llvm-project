@@ -8,9 +8,11 @@ program test
     integer, pointer :: p
   end type
   type(with_pointer) :: coindexed[*]
-  integer, pointer :: scalarIntF, arrayIntF(:)
+  integer, pointer :: scalarIntF, arrayIntF(:), multiDimIntF(:,:)
   character(len=:), pointer :: charDeferredF
   integer :: j
+  integer, dimension(2, 2) :: rankTwoArray
+  rankTwoArray = reshape([1, 2, 3, 4], shape(rankTwoArray))
   call c_f_pointer(scalarC, scalarIntF) ! ok
   call c_f_pointer(scalarC, arrayIntF, [1_8]) ! ok
   call c_f_pointer(shape=[1_8], cptr=scalarC, fptr=arrayIntF) ! ok
@@ -31,4 +33,8 @@ program test
   call c_f_pointer(scalarC, coindexed[0]%p)
   !ERROR: FPTR= argument to C_F_POINTER() must have a type
   call c_f_pointer(scalarC, null())
+  !ERROR: SHAPE= argument to C_F_POINTER() must have size equal to the rank of FPTR=
+  call c_f_pointer(scalarC, multiDimIntF, shape=[1_8])
+  !ERROR: SHAPE= argument to C_F_POINTER() must be a rank-one array.
+  call c_f_pointer(scalarC, multiDimIntF, shape=rankTwoArray)
 end program

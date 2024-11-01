@@ -38,7 +38,7 @@ llvm::Optional<std::string> HostInfoOpenBSD::GetOSBuildString() {
   if (::sysctl(mib, 2, &osrev, &osrev_len, NULL, 0) == 0)
     return llvm::formatv("{0,8:8}", osrev).str();
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 FileSpec HostInfoOpenBSD::GetProgramFileSpec() {

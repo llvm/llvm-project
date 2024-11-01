@@ -21,7 +21,7 @@
 
 using namespace llvm;
 
-Optional<wasm::ValType> WebAssembly::parseType(StringRef Type) {
+std::optional<wasm::ValType> WebAssembly::parseType(StringRef Type) {
   // FIXME: can't use StringSwitch because wasm::ValType doesn't have a
   // "invalid" value.
   if (Type == "i32")

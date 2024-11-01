@@ -92,7 +92,7 @@ bool RenderScriptRuntimeModulePass::runOnModule(llvm::Module &module) {
     return false;
   }
 
-  llvm::Optional<llvm::Reloc::Model> reloc_model;
+  std::optional<llvm::Reloc::Model> reloc_model;
   assert(m_process_ptr && "no available lldb process");
   switch (m_process_ptr->GetTarget().GetArchitecture().GetMachine()) {
   case llvm::Triple::ArchType::x86:
@@ -175,7 +175,6 @@ bool RenderScriptRuntime::GetIRPasses(LLVMUserExpression::IRPasses &passes) {
 namespace lldb_renderscript {
 
 RSIRPasses::RSIRPasses(Process *process) {
-  IRPasses();
   assert(process);
 
   EarlyPasses = std::make_shared<llvm::legacy::PassManager>();

@@ -127,7 +127,7 @@ LLDDwarfObj<ELFT>::findAux(const InputSectionBase &sec, uint64_t pos,
   DataRefImpl d;
   d.p = getAddend<ELFT>(rel);
   return RelocAddrEntry{secIndex, RelocationRef(d, nullptr),
-                        val,      Optional<object::RelocationRef>(),
+                        val,      std::optional<object::RelocationRef>(),
                         0,        LLDRelocationResolver<RelTy>::resolve};
 }
 

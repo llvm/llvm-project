@@ -655,7 +655,7 @@ GetRegistersAsJSON(NativeThreadProtocol &thread) {
       reg_ctx.GetExpeditedRegisters(ExpeditedRegs::Minimal);
 #endif
   if (expedited_regs.empty())
-    return llvm::None;
+    return std::nullopt;
 
   for (auto &reg_num : expedited_regs) {
     const RegisterInfo *const reg_info_p =
@@ -3658,7 +3658,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qWatchpointSupportInfo(
   auto hw_debug_cap = m_current_process->GetHardwareDebugSupportInfo();
 
   StreamGDBRemote response;
-  if (hw_debug_cap == llvm::None)
+  if (hw_debug_cap == std::nullopt)
     response.Printf("num:0;");
   else
     response.Printf("num:%d;", hw_debug_cap->second);

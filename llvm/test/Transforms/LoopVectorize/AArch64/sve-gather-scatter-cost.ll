@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -loop-vectorize -mcpu=neoverse-v1 -disable-output %s -debug \
+; RUN: opt -passes=loop-vectorize -mcpu=neoverse-v1 -disable-output %s -debug \
 ; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue 2>&1 | FileCheck %s
 
 target triple="aarch64--linux-gnu"

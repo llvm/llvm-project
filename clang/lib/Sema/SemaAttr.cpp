@@ -890,7 +890,7 @@ getParentAttrMatcherRule(attr::SubjectMatchRule Rule) {
   using namespace attr;
   switch (Rule) {
   default:
-    return None;
+    return std::nullopt;
 #define ATTR_MATCH_RULE(Value, Spelling, IsAbstract)
 #define ATTR_MATCH_SUB_RULE(Value, Spelling, IsAbstract, Parent, IsNegated)    \
   case Value:                                                                  \

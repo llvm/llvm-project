@@ -392,10 +392,10 @@ ReferencedFiles findReferencedFiles(const ReferencedLocations &Locs,
       [&SM, &CanonIncludes](FileID ID) -> Optional<StringRef> {
         auto Entry = SM.getFileEntryRefForID(ID);
         if (!Entry)
-          return llvm::None;
+          return std::nullopt;
         auto PublicHeader = CanonIncludes.mapHeader(*Entry);
         if (PublicHeader.empty())
-          return llvm::None;
+          return std::nullopt;
         return PublicHeader;
       });
 }

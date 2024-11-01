@@ -366,7 +366,7 @@ int main_platform(int argc, char *argv[]) {
       bool interrupt = false;
       bool done = false;
       while (!interrupt && !done) {
-        if (platform.GetPacketAndSendResponse(llvm::None, error, interrupt,
+        if (platform.GetPacketAndSendResponse(std::nullopt, error, interrupt,
                                               done) !=
             GDBRemoteCommunication::PacketResult::Success)
           break;

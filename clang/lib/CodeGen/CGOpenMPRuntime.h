@@ -376,7 +376,7 @@ protected:
   /// Emits \p Callee function call with arguments \p Args with location \p Loc.
   void emitCall(CodeGenFunction &CGF, SourceLocation Loc,
                 llvm::FunctionCallee Callee,
-                ArrayRef<llvm::Value *> Args = llvm::None) const;
+                ArrayRef<llvm::Value *> Args = std::nullopt) const;
 
   /// Emits address of the word in a memory where current thread id is
   /// stored.
@@ -1516,7 +1516,7 @@ public:
   virtual void
   emitOutlinedFunctionCall(CodeGenFunction &CGF, SourceLocation Loc,
                            llvm::FunctionCallee OutlinedFn,
-                           ArrayRef<llvm::Value *> Args = llvm::None) const;
+                           ArrayRef<llvm::Value *> Args = std::nullopt) const;
 
   /// Emits OpenMP-specific function prolog.
   /// Required for device constructs.

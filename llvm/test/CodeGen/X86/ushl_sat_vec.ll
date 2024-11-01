@@ -354,7 +354,6 @@ define <8 x i16> @vec_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; X86-NEXT:    cmpw %si, %dx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    cmovnel %eax, %ebx
-; X86-NEXT:    movl $65535, %eax # imm = 0xFFFF
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    shll %cl, %esi

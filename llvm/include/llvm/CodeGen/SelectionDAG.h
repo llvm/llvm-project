@@ -2156,8 +2156,8 @@ public:
   bool areNonVolatileConsecutiveLoads(LoadSDNode *LD, LoadSDNode *Base,
                                       unsigned Bytes, int Dist) const;
 
-  /// Infer alignment of a load / store address. Return None if it cannot be
-  /// inferred.
+  /// Infer alignment of a load / store address. Return std::nullopt if it
+  /// cannot be inferred.
   MaybeAlign InferPtrAlign(SDValue Ptr) const;
 
   /// Compute the VTs needed for the low/hi parts of a type

@@ -1,4 +1,4 @@
-; RUN: opt -mtriple aarch64-linux-gnu -mattr=+sve -loop-vectorize -dce -instcombine -S \
+; RUN: opt -mtriple aarch64-linux-gnu -mattr=+sve -passes=loop-vectorize,dce,instcombine -S \
 ; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue <%s | FileCheck %s
 
 define void @stride7_i32(i32* noalias nocapture %dst, i64 %n) #0 {

@@ -47,8 +47,6 @@ Non-comprehensive list of changes in this release
    is not a constant in coroutines. This decision may cause unnecessary
    performance regressions and we plan to fix it in later versions.
 
-* The LoopFlatten pass is now enabled by default.
-
 * ...
 
 Update on required toolchains to build LLVM
@@ -189,6 +187,22 @@ Changes to the C API
   constant fold the operands if possible and create an instruction otherwise:
 
   * ``LLVMConstFNeg``
+
+
+* The following deprecated functions have been removed, because they are
+  incompatible with opaque pointers. Use the new functions accepting a separate
+  function/element type instead.
+
+  * ``LLVMBuildLoad`` -> ``LLVMBuildLoad2``
+  * ``LLVMBuildCall`` -> ``LLVMBuildCall2``
+  * ``LLVMBuildInvoke`` -> ``LLVMBuildInvoke2``
+  * ``LLVMBuildGEP`` -> ``LLVMBuildGEP2``
+  * ``LLVMBuildInBoundsGEP`` -> ``LLVMBuildInBoundsGEP2``
+  * ``LLVMBuildStructGEP`` -> ``LLVMBuildStructGEP2``
+  * ``LLVMBuildPtrDiff`` -> ``LLVMBuildPtrDiff2``
+  * ``LLVMConstGEP`` -> ``LLVMConstGEP2``
+  * ``LLVMConstInBoundsGEP`` -> ``LLVMConstInBoundsGEP2``
+  * ``LLVMAddAlias`` -> ``LLVMAddAlias2``
 
 Changes to the Go bindings
 --------------------------

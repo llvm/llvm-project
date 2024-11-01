@@ -236,7 +236,7 @@ public:
                                                       AttributeT &attr,
                                                       Type type = {}) {
     if (getToken().isNot(kind))
-      return llvm::None;
+      return std::nullopt;
 
     if (Attribute parsedAttr = parseAttribute(type)) {
       attr = parsedAttr.cast<AttributeT>();

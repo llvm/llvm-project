@@ -273,13 +273,13 @@ public:
   ///    The command arguments.
   ///
   /// \return
-  ///     llvm::None if there is no special repeat command - it will use the
+  ///     std::nullopt if there is no special repeat command - it will use the
   ///     current command line.
   ///     Otherwise a std::string containing the command to be repeated.
   ///     If the string is empty, the command won't be allow repeating.
   virtual llvm::Optional<std::string>
   GetRepeatCommand(Args &current_command_args, uint32_t index) {
-    return llvm::None;
+    return std::nullopt;
   }
 
   bool HasOverrideCallback() const {

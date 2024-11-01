@@ -1273,7 +1273,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
     }
   }
   return std::make_shared<Type>(
-      die.GetID(), dwarf, attrs.name, llvm::None, nullptr, LLDB_INVALID_UID,
+      die.GetID(), dwarf, attrs.name, std::nullopt, nullptr, LLDB_INVALID_UID,
       Type::eEncodingIsUID, &attrs.decl, clang_type, Type::ResolveState::Full);
 }
 

@@ -608,7 +608,7 @@ void ForeachOp::build(
     OpBuilder &builder, OperationState &result, Value tensor,
     function_ref<void(OpBuilder &, Location, ValueRange, Value, ValueRange)>
         bodyBuilder) {
-  build(builder, result, tensor, llvm::None, bodyBuilder);
+  build(builder, result, tensor, std::nullopt, bodyBuilder);
 }
 
 void ForeachOp::build(

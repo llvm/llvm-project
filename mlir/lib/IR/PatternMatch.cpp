@@ -317,6 +317,18 @@ void RewriterBase::replaceAllUsesWith(Value from, Value to) {
   }
 }
 
+/// Find uses of `from` and replace them with `to` except if the user is
+/// `exceptedUser`. It also marks every modified uses and notifies the
+/// rewriter that an in-place operation modification is about to happen.
+void RewriterBase::replaceAllUsesExcept(Value from, Value to,
+                                        Operation *exceptedUser) {
+  for (OpOperand &operand : llvm::make_early_inc_range(from.getUses())) {
+    Operation *user = operand.getOwner();
+    if (user != exceptedUser)
+      updateRootInPlace(user, [&]() { operand.set(to); });
+  }
+}
+
 // Merge the operations of block 'source' before the operation 'op'. Source
 // block should not have existing predecessors or successors.
 void RewriterBase::mergeBlockBefore(Block *source, Operation *op,

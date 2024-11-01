@@ -45,7 +45,8 @@ private:
 
   // Parses tokens starting at Tok into Tree.
   // If we reach an End or Else directive that ends Tree, returns it.
-  // If TopLevel is true, then we do not expect End and always return None.
+  // If TopLevel is true, then we do not expect End and always return
+  // std::nullopt.
   llvm::Optional<DirectiveTree::Directive> parse(DirectiveTree *Tree,
                                                 bool TopLevel) {
     auto StartsDirective =
@@ -92,7 +93,7 @@ private:
         Tree->Chunks.push_back(std::move(Directive));
       }
     }
-    return None;
+    return std::nullopt;
   }
 
   // Parse the rest of a conditional section, after seeing the If directive.
@@ -292,7 +293,7 @@ private:
     case clang::tok::pp_else:
       return true;
     default: // #ifdef etc
-      return llvm::None;
+      return std::nullopt;
     }
 
     const auto &Tokens = Code.tokens(Dir.Tokens);
@@ -301,11 +302,11 @@ private:
     const Token &Value = Name.nextNC();
     // Does the condition consist of exactly one token?
     if (&Value >= Tokens.end() || &Value.nextNC() < Tokens.end())
-      return llvm::None;
+      return std::nullopt;
     return llvm::StringSwitch<llvm::Optional<bool>>(Value.text())
         .Cases("true", "1", true)
         .Cases("false", "0", false)
-        .Default(llvm::None);
+        .Default(std::nullopt);
   }
 
   const TokenStream &Code;

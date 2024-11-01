@@ -14,7 +14,7 @@
 #ifndef LLVM_MC_MCTARGETOPTIONSCOMMANDFLAGS_H
 #define LLVM_MC_MCTARGETOPTIONSCOMMANDFLAGS_H
 
-#include "llvm/ADT/Optional.h"
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -25,7 +25,7 @@ enum class EmitDwarfUnwindType;
 namespace mc {
 
 bool getRelaxAll();
-Optional<bool> getExplicitRelaxAll();
+std::optional<bool> getExplicitRelaxAll();
 
 bool getIncrementalLinkerCompatible();
 

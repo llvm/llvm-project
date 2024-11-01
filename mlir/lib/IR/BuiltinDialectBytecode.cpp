@@ -494,17 +494,20 @@ void BuiltinDialectBytecodeInterface::write(
 
 DenseArrayAttr BuiltinDialectBytecodeInterface::readDenseArrayAttr(
     DialectBytecodeReader &reader) const {
-  RankedTensorType type;
+  Type elementType;
+  uint64_t size;
   ArrayRef<char> blob;
-  if (failed(reader.readType(type)) || failed(reader.readBlob(blob)))
+  if (failed(reader.readType(elementType)) || failed(reader.readVarInt(size)) ||
+      failed(reader.readBlob(blob)))
     return DenseArrayAttr();
-  return DenseArrayAttr::get(type, blob);
+  return DenseArrayAttr::get(elementType, size, blob);
 }
 
 void BuiltinDialectBytecodeInterface::write(
     DenseArrayAttr attr, DialectBytecodeWriter &writer) const {
   writer.writeVarInt(builtin_encoding::kDenseArrayAttr);
-  writer.writeType(attr.getType());
+  writer.writeType(attr.getElementType());
+  writer.writeVarInt(attr.getSize());
   writer.writeOwnedBlob(attr.getRawData());
 }
 

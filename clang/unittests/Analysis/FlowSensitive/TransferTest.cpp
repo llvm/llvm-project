@@ -3849,7 +3849,7 @@ TEST(TransferTest, ContextSensitiveOptionDisabled) {
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
-      {TransferOptions{/*.ContextSensitiveOpts=*/llvm::None}});
+      {TransferOptions{/*.ContextSensitiveOpts=*/std::nullopt}});
 }
 
 TEST(TransferTest, ContextSensitiveDepthZero) {

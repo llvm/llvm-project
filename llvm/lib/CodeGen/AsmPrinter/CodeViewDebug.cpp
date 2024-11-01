@@ -730,7 +730,7 @@ void CodeViewDebug::emitTypeInformation() {
   TypeRecordMapping typeMapping(CVMCOS);
   Pipeline.addCallbackToPipeline(typeMapping);
 
-  Optional<TypeIndex> B = Table.getFirst();
+  std::optional<TypeIndex> B = Table.getFirst();
   while (B) {
     // This will fail if the record data is invalid.
     CVType Record = Table.getType(*B);
@@ -1343,7 +1343,17 @@ void CodeViewDebug::calculateRanges(
     Optional<DbgVariableLocation> Location =
         DbgVariableLocation::extractFromMachineInstruction(*DVInst);
     if (!Location)
+    {
+      // When we don't have a location this is usually because LLVM has
+      // transformed it into a constant and we only have an llvm.dbg.value. We
+      // can't represent these well in CodeView since S_LOCAL only works on
+      // registers and memory locations. Instead, we will pretend this to be a
+      // constant value to at least have it show up in the debugger.
+      auto Op = DVInst->getDebugOperand(0);
+      if (Op.isImm())
+        Var.ConstantValue = APSInt(APInt(64, Op.getImm()), false);
       continue;
+    }
 
     // CodeView can only express variables in register and variables in memory
     // at a constant offset from a register. However, for variables passed
@@ -2788,9 +2798,19 @@ void CodeViewDebug::emitLocalVariableList(const FunctionInfo &FI,
     emitLocalVariable(FI, *L);
 
   // Next emit all non-parameters in the order that we found them.
-  for (const LocalVariable &L : Locals)
-    if (!L.DIVar->isParameter())
-      emitLocalVariable(FI, L);
+  for (const LocalVariable &L : Locals) {
+    if (!L.DIVar->isParameter()) {
+      if (L.ConstantValue) {
+        // If ConstantValue is set we will emit it as a S_CONSTANT instead of a
+        // S_LOCAL in order to be able to represent it at all.
+        const DIType *Ty = L.DIVar->getType();
+        APSInt Val(L.ConstantValue.value());
+        emitConstantSymbolRecord(Ty, Val, std::string(L.DIVar->getName()));
+      } else {
+        emitLocalVariable(FI, L);
+      }
+    }
+  }
 }
 
 void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,

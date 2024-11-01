@@ -23,6 +23,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Target/TargetOptions.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -47,16 +48,15 @@ static std::string computeDataLayout() {
          "-S64";    // 64 bit natural stack alignment
 }
 
-static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
+static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::PIC_);
 }
 
-LanaiTargetMachine::LanaiTargetMachine(const Target &T, const Triple &TT,
-                                       StringRef Cpu, StringRef FeatureString,
-                                       const TargetOptions &Options,
-                                       Optional<Reloc::Model> RM,
-                                       Optional<CodeModel::Model> CodeModel,
-                                       CodeGenOpt::Level OptLevel, bool JIT)
+LanaiTargetMachine::LanaiTargetMachine(
+    const Target &T, const Triple &TT, StringRef Cpu, StringRef FeatureString,
+    const TargetOptions &Options, std::optional<Reloc::Model> RM,
+    std::optional<CodeModel::Model> CodeModel, CodeGenOpt::Level OptLevel,
+    bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(), TT, Cpu, FeatureString, Options,
                         getEffectiveRelocModel(RM),
                         getEffectiveCodeModel(CodeModel, CodeModel::Medium),

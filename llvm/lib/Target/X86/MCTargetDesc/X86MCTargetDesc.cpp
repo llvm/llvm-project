@@ -506,11 +506,10 @@ public:
 
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target) const override;
-  Optional<uint64_t> evaluateMemoryOperandAddress(const MCInst &Inst,
-                                                  const MCSubtargetInfo *STI,
-                                                  uint64_t Addr,
-                                                  uint64_t Size) const override;
-  Optional<uint64_t>
+  std::optional<uint64_t>
+  evaluateMemoryOperandAddress(const MCInst &Inst, const MCSubtargetInfo *STI,
+                               uint64_t Addr, uint64_t Size) const override;
+  std::optional<uint64_t>
   getMemoryOperandRelocationOffset(const MCInst &Inst,
                                    uint64_t Size) const override;
 };
@@ -637,7 +636,7 @@ bool X86MCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
   return true;
 }
 
-Optional<uint64_t> X86MCInstrAnalysis::evaluateMemoryOperandAddress(
+std::optional<uint64_t> X86MCInstrAnalysis::evaluateMemoryOperandAddress(
     const MCInst &Inst, const MCSubtargetInfo *STI, uint64_t Addr,
     uint64_t Size) const {
   const MCInstrDesc &MCID = Info->get(Inst.getOpcode());
@@ -662,7 +661,7 @@ Optional<uint64_t> X86MCInstrAnalysis::evaluateMemoryOperandAddress(
   return std::nullopt;
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 X86MCInstrAnalysis::getMemoryOperandRelocationOffset(const MCInst &Inst,
                                                      uint64_t Size) const {
   if (Inst.getOpcode() != X86::LEA64r)

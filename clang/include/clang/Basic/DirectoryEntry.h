@@ -272,7 +272,7 @@ public:
 
   OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr &
   operator=(std::nullopt_t) {
-    Optional<DirectoryEntryRef>::operator=(None);
+    Optional<DirectoryEntryRef>::operator=(std::nullopt);
     return *this;
   }
   OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr &operator=(DirectoryEntryRef Ref) {

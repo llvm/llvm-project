@@ -72,7 +72,7 @@ static Optional<std::string>
 getDoubleUnderscoreFixup(StringRef Name, const LangOptions &LangOpts) {
   if (hasReservedDoubleUnderscore(Name, LangOpts))
     return collapseConsecutive(Name, '_');
-  return None;
+  return std::nullopt;
 }
 
 static bool startsWithUnderscoreCapital(StringRef Name) {
@@ -82,7 +82,7 @@ static bool startsWithUnderscoreCapital(StringRef Name) {
 static Optional<std::string> getUnderscoreCapitalFixup(StringRef Name) {
   if (startsWithUnderscoreCapital(Name))
     return std::string(Name.drop_front(1));
-  return None;
+  return std::nullopt;
 }
 
 static bool startsWithUnderscoreInGlobalNamespace(StringRef Name,
@@ -94,7 +94,7 @@ static Optional<std::string>
 getUnderscoreGlobalNamespaceFixup(StringRef Name, bool IsInGlobalNamespace) {
   if (startsWithUnderscoreInGlobalNamespace(Name, IsInGlobalNamespace))
     return std::string(Name.drop_front(1));
-  return None;
+  return std::nullopt;
 }
 
 static std::string getNonReservedFixup(std::string Name) {
@@ -112,7 +112,7 @@ getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace,
                    ArrayRef<StringRef> AllowedIdentifiers) {
   assert(!Name.empty());
   if (llvm::is_contained(AllowedIdentifiers, Name))
-    return None;
+    return std::nullopt;
 
   // TODO: Check for names identical to language keywords, and other names
   // specifically reserved by language standards, e.g. C++ 'zombie names' and C
@@ -149,7 +149,7 @@ getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace,
         startsWithUnderscoreCapital(Name) ||
         startsWithUnderscoreInGlobalNamespace(Name, IsInGlobalNamespace)))
     return FailureInfo{NonReservedTag, getNonReservedFixup(std::string(Name))};
-  return None;
+  return std::nullopt;
 }
 
 Optional<RenamerClangTidyCheck::FailureInfo>

@@ -75,11 +75,11 @@ VariantMatcher::MatcherOps::constructVariadicOperator(
     // Abort if any of the inner matchers can't be converted to
     // Matcher<T>.
     if (!InnerMatcher.Value)
-      return llvm::None;
+      return std::nullopt;
     llvm::Optional<DynTypedMatcher> Inner =
         InnerMatcher.Value->getTypedMatcher(*this);
     if (!Inner)
-      return llvm::None;
+      return std::nullopt;
     DynMatchers.push_back(*Inner);
   }
   return DynTypedMatcher::constructVariadic(Op, NodeKind, DynMatchers);
@@ -105,7 +105,7 @@ public:
     bool Ignore;
     if (Ops.canConstructFrom(Matcher, Ignore))
       return Matcher;
-    return llvm::None;
+    return std::nullopt;
   }
 
   bool isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity) const override {
@@ -126,7 +126,7 @@ public:
 
   llvm::Optional<DynTypedMatcher> getSingleMatcher() const override {
     if (Matchers.size() != 1)
-      return llvm::None;
+      return std::nullopt;
     return Matchers[0];
   }
 
@@ -162,7 +162,7 @@ public:
     // We only succeed if we found exactly one, or if we found an exact match.
     if (Found && (FoundIsExact || NumFound == 1))
       return *Found;
-    return llvm::None;
+    return std::nullopt;
   }
 
   bool isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity) const override {
@@ -190,7 +190,7 @@ public:
       : Op(Op), Args(std::move(Args)) {}
 
   llvm::Optional<DynTypedMatcher> getSingleMatcher() const override {
-    return llvm::None;
+    return std::nullopt;
   }
 
   std::string getTypeAsString() const override {

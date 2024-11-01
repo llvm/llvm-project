@@ -517,6 +517,16 @@ TEST_F(StringMapTest, MoveDtor) {
   ASSERT_TRUE(B.empty());
 }
 
+TEST_F(StringMapTest, StructuredBindings) {
+  StringMap<int> A;
+  A["a"] = 42;
+
+  for (auto &[Key, Value] : A) {
+    EXPECT_EQ("a", Key);
+    EXPECT_EQ(42, Value);
+  }
+}
+
 namespace {
 // Simple class that counts how many moves and copy happens when growing a map
 struct CountCtorCopyAndMove {

@@ -104,7 +104,7 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
             // Mangle external procedure without any scope prefix.
             if (!keepExternalInScope &&
                 Fortran::semantics::IsExternal(ultimateSymbol))
-              return fir::NameUniquer::doProcedure(llvm::None, llvm::None,
+              return fir::NameUniquer::doProcedure(std::nullopt, std::nullopt,
                                                    symbolName);
             // Separate module subprograms must be mangled according to the
             // scope where they were declared (the symbol we have is the
@@ -127,7 +127,7 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
             // Otherwise, this is an external procedure, even if it does not
             // have an explicit EXTERNAL attribute. Mangle it without any
             // prefix.
-            return fir::NameUniquer::doProcedure(llvm::None, llvm::None,
+            return fir::NameUniquer::doProcedure(std::nullopt, std::nullopt,
                                                  symbolName);
           },
           [&](const Fortran::semantics::ObjectEntityDetails &) {

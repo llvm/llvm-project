@@ -1378,7 +1378,11 @@ void CXXRecordDecl::addedSelectedDestructor(CXXDestructorDecl *DD) {
 }
 
 void CXXRecordDecl::addedEligibleSpecialMemberFunction(const CXXMethodDecl *MD,
-                                               unsigned SMKind) {
+                                                       unsigned SMKind) {
+  // FIXME: We shouldn't change DeclaredNonTrivialSpecialMembers if `MD` is
+  // a function template, but this needs CWG attention before we break ABI.
+  // See https://github.com/llvm/llvm-project/issues/59206
+
   if (const auto *DD = dyn_cast<CXXDestructorDecl>(MD)) {
     if (DD->isUserProvided())
       data().HasIrrelevantDestructor = false;
@@ -3139,7 +3143,8 @@ UsingPackDecl *UsingPackDecl::Create(ASTContext &C, DeclContext *DC,
 UsingPackDecl *UsingPackDecl::CreateDeserialized(ASTContext &C, unsigned ID,
                                                  unsigned NumExpansions) {
   size_t Extra = additionalSizeToAlloc<NamedDecl *>(NumExpansions);
-  auto *Result = new (C, ID, Extra) UsingPackDecl(nullptr, nullptr, None);
+  auto *Result =
+      new (C, ID, Extra) UsingPackDecl(nullptr, nullptr, std::nullopt);
   Result->NumExpansions = NumExpansions;
   auto *Trail = Result->getTrailingObjects<NamedDecl *>();
   for (unsigned I = 0; I != NumExpansions; ++I)
@@ -3277,7 +3282,7 @@ DecompositionDecl *DecompositionDecl::CreateDeserialized(ASTContext &C,
   size_t Extra = additionalSizeToAlloc<BindingDecl *>(NumBindings);
   auto *Result = new (C, ID, Extra)
       DecompositionDecl(C, nullptr, SourceLocation(), SourceLocation(),
-                        QualType(), nullptr, StorageClass(), None);
+                        QualType(), nullptr, StorageClass(), std::nullopt);
   // Set up and clean out the bindings array.
   Result->NumBindings = NumBindings;
   auto *Trail = Result->getTrailingObjects<BindingDecl *>();

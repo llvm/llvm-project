@@ -51,7 +51,7 @@ public:
 
   bool hasExtendCoorRef() const { return extendCoorRef.has_value(); }
   ExtendRefFunc getExtendCoorRef() const;
-  void resetExtendCoorRef() { extendCoorRef = llvm::None; }
+  void resetExtendCoorRef() { extendCoorRef = std::nullopt; }
   void resetPC();
 
   llvm::SmallVector<PathComponent> reversePath;
@@ -68,7 +68,7 @@ public:
   /// This optional continuation allows the generation of those dereferences.
   /// These accesses are always on Fortran entities of record types, which are
   /// implicitly in-memory objects.
-  llvm::Optional<ExtendRefFunc> extendCoorRef = llvm::None;
+  llvm::Optional<ExtendRefFunc> extendCoorRef = std::nullopt;
 
 private:
   void setPC(bool isImplicit);

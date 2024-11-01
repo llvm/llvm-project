@@ -142,7 +142,7 @@ public:
     /// defaults and -resource-dir compiler flag).
     /// If None, ClangdServer calls CompilerInvocation::GetResourcePath() to
     /// obtain the standard resource directory.
-    llvm::Optional<std::string> ResourceDir = llvm::None;
+    llvm::Optional<std::string> ResourceDir = std::nullopt;
 
     /// Time to wait after a new file version before computing diagnostics.
     DebouncePolicy UpdateDebounce = DebouncePolicy{

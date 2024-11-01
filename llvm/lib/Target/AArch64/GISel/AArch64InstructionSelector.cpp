@@ -20,7 +20,6 @@
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
@@ -5992,7 +5991,7 @@ AArch64InstructionSelector::selectShiftB_64(const MachineOperand &Root) const {
 
 /// Helper to select an immediate value that can be represented as a 12-bit
 /// value shifted left by either 0 or 12. If it is possible to do so, return
-/// the immediate and shift value. If not, return None.
+/// the immediate and shift value. If not, return std::nullopt.
 ///
 /// Used by selectArithImmed and selectNegArithImmed.
 InstructionSelector::ComplexRendererFns
@@ -6251,8 +6250,8 @@ AArch64InstructionSelector::selectAddrModeShiftedExtendXReg(
 ///
 /// Where x2 is the base register, and x3 is an offset register.
 ///
-/// When possible (or profitable) to fold a G_PTR_ADD into the address calculation,
-/// this will do so. Otherwise, it will return None.
+/// When possible (or profitable) to fold a G_PTR_ADD into the address
+/// calculation, this will do so. Otherwise, it will return std::nullopt.
 InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectAddrModeRegisterOffset(
     MachineOperand &Root) const {

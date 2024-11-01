@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -loop-vectorize -mcpu=core-axv2 -force-vector-interleave=1 -dce -instcombine -debug-only=loop-vectorize -S < %s 2>&1  | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize,dce,instcombine -mcpu=core-axv2 -force-vector-interleave=1 -debug-only=loop-vectorize -S < %s 2>&1  | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

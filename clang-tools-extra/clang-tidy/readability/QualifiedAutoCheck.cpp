@@ -48,7 +48,7 @@ llvm::Optional<Token> findQualToken(const VarDecl *Decl, Qualifier Qual,
       Result.Context->getLangOpts());
 
   if (FileRange.isInvalid())
-    return llvm::None;
+    return std::nullopt;
 
   tok::TokenKind Tok =
       Qual == Qualifier::Const
@@ -70,7 +70,7 @@ getTypeSpecifierLocation(const VarDecl *Var,
 
   if (TypeSpecifier.getBegin().isMacroID() ||
       TypeSpecifier.getEnd().isMacroID())
-    return llvm::None;
+    return std::nullopt;
   return TypeSpecifier;
 }
 
@@ -78,11 +78,11 @@ llvm::Optional<SourceRange> mergeReplacementRange(SourceRange &TypeSpecifier,
                                                   const Token &ConstToken) {
   if (TypeSpecifier.getBegin().getLocWithOffset(-1) == ConstToken.getEndLoc()) {
     TypeSpecifier.setBegin(ConstToken.getLocation());
-    return llvm::None;
+    return std::nullopt;
   }
   if (TypeSpecifier.getEnd().getLocWithOffset(1) == ConstToken.getLocation()) {
     TypeSpecifier.setEnd(ConstToken.getEndLoc());
-    return llvm::None;
+    return std::nullopt;
   }
   return SourceRange(ConstToken.getLocation(), ConstToken.getEndLoc());
 }

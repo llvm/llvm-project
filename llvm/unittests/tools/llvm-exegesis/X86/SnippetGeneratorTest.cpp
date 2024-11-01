@@ -14,6 +14,7 @@
 #include "SerialSnippetGenerator.h"
 #include "TestBase.h"
 #include "X86InstrInfo.h"
+#include "llvm/ADT/SetOperations.h"
 
 #include <unordered_set>
 
@@ -26,8 +27,10 @@ namespace {
 
 using testing::AnyOf;
 using testing::ElementsAre;
+using testing::Ge;
 using testing::Gt;
 using testing::HasSubstr;
+using testing::IsEmpty;
 using testing::Not;
 using testing::SizeIs;
 using testing::UnorderedElementsAre;
@@ -232,7 +235,7 @@ TEST_F(X86ParallelSnippetGeneratorTest, SerialInstruction) {
   ASSERT_THAT(IT.getVariableValues(), SizeIs(0));
 }
 
-TEST_F(X86ParallelSnippetGeneratorTest, StaticRenaming) {
+TEST_F(X86ParallelSnippetGeneratorTest, ReadAfterWrite_CMOV32rr) {
   // CMOV32rr has tied variables, we enumerate the possible values to execute
   // as many in parallel as possible.
 
@@ -248,19 +251,69 @@ TEST_F(X86ParallelSnippetGeneratorTest, StaticRenaming) {
   // - hasAliasingRegisters
   const unsigned Opcode = X86::CMOV32rr;
   const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
-  ASSERT_THAT(CodeTemplates, SizeIs(1));
-  const auto &CT = CodeTemplates[0];
-  EXPECT_THAT(CT.Info, HasSubstr("static renaming"));
-  EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
-  constexpr const unsigned kInstructionCount = 15;
-  ASSERT_THAT(CT.Instructions, SizeIs(kInstructionCount));
-  std::unordered_set<unsigned> AllDefRegisters;
-  for (const auto &IT : CT.Instructions) {
-    ASSERT_THAT(IT.getVariableValues(), SizeIs(3));
-    AllDefRegisters.insert(IT.getVariableValues()[0].getReg());
+  ASSERT_THAT(CodeTemplates, SizeIs(2));
+  for (const auto &CT : CodeTemplates) {
+    EXPECT_THAT(CT.Info, HasSubstr("avoiding Read-After-Write issue"));
+    EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
+    ASSERT_GT(CT.Instructions.size(), 1U);
+    std::unordered_set<unsigned> AllDefRegisters;
+    std::unordered_set<unsigned> AllUseRegisters;
+    for (const auto &IT : CT.Instructions) {
+      ASSERT_THAT(IT.getVariableValues(), SizeIs(3));
+      AllDefRegisters.insert(IT.getVariableValues()[0].getReg());
+      AllUseRegisters.insert(IT.getVariableValues()[1].getReg());
+    }
+    EXPECT_THAT(AllDefRegisters, SizeIs(CT.Instructions.size()))
+        << "Each instruction writes to a different register";
+    EXPECT_THAT(AllUseRegisters, Not(IsEmpty()))
+        << "In total, some other registers are used";
+    auto AllDefAndUseRegs = AllUseRegisters;
+    llvm::set_intersect(AllDefAndUseRegs, AllDefRegisters); // A := A ^ B
+    EXPECT_THAT(AllDefAndUseRegs, IsEmpty())
+        << "No instruction uses any register defined by any of the "
+           "instructions";
   }
-  EXPECT_THAT(AllDefRegisters, SizeIs(kInstructionCount))
-      << "Each instruction writes to a different register";
+}
+
+TEST_F(X86ParallelSnippetGeneratorTest, ReadAfterWrite_VFMADD132PDr) {
+  // VFMADD132PDr has tied variables, we enumerate the possible values
+  // to execute as many in parallel as possible.
+
+  // - VFMADD132PDr
+  // - Op0 Explicit Def RegClass(XMM)
+  // - Op1 Explicit Use RegClass(XMM) TiedToOp0
+  // - Op2 Explicit Use RegClass(XMM)
+  // - Op3 Explicit Use RegClass(XMM)
+  // - Var0 [Op0,Op1]
+  // - Var1 [Op2]
+  // - Var2 [Op3]
+  // - hasTiedRegisters (execution is always serial)
+  // - hasAliasingRegisters
+  const unsigned Opcode = X86::VFMADD132PDr;
+  const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
+  ASSERT_THAT(CodeTemplates, SizeIs(3));
+  for (const auto &CT : CodeTemplates) {
+    EXPECT_THAT(CT.Info, HasSubstr("avoiding Read-After-Write issue"));
+    EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
+    ASSERT_GT(CT.Instructions.size(), 1U);
+    std::unordered_set<unsigned> AllDefRegisters;
+    std::unordered_set<unsigned> AllUseRegisters;
+    for (const auto &IT : CT.Instructions) {
+      ASSERT_THAT(IT.getVariableValues(), SizeIs(3));
+      AllDefRegisters.insert(IT.getVariableValues()[0].getReg());
+      AllUseRegisters.insert(IT.getVariableValues()[1].getReg());
+      AllUseRegisters.insert(IT.getVariableValues()[2].getReg());
+    }
+    EXPECT_THAT(AllDefRegisters, SizeIs(CT.Instructions.size()))
+        << "Each instruction writes to a different register";
+    EXPECT_THAT(AllUseRegisters, Not(IsEmpty()))
+        << "In total, some other registers are used";
+    auto AllDefAndUseRegs = AllUseRegisters;
+    llvm::set_intersect(AllDefAndUseRegs, AllDefRegisters); // A := A ^ B
+    EXPECT_THAT(AllDefAndUseRegs, IsEmpty())
+        << "No instruction uses any register defined by any of the "
+           "instructions";
+  }
 }
 
 TEST_F(X86ParallelSnippetGeneratorTest, NoTiedVariables) {
@@ -280,21 +333,22 @@ TEST_F(X86ParallelSnippetGeneratorTest, NoTiedVariables) {
   // - hasAliasingRegisters
   const unsigned Opcode = X86::CMOV_GR32;
   const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
-  ASSERT_THAT(CodeTemplates, SizeIs(1));
-  const auto &CT = CodeTemplates[0];
-  EXPECT_THAT(CT.Info, HasSubstr("no tied variables"));
-  EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
-  ASSERT_THAT(CT.Instructions, SizeIs(1));
-  const InstructionTemplate &IT = CT.Instructions[0];
-  EXPECT_THAT(IT.getOpcode(), Opcode);
-  ASSERT_THAT(IT.getVariableValues(), SizeIs(4));
-  EXPECT_THAT(IT.getVariableValues()[0].getReg(),
-              Not(IT.getVariableValues()[1].getReg()))
-      << "Def is different from first Use";
-  EXPECT_THAT(IT.getVariableValues()[0].getReg(),
-              Not(IT.getVariableValues()[2].getReg()))
-      << "Def is different from second Use";
-  EXPECT_THAT(IT.getVariableValues()[3], IsInvalid());
+  ASSERT_THAT(CodeTemplates, SizeIs(2));
+  for (const auto &CT : CodeTemplates) {
+    EXPECT_THAT(CT.Info, HasSubstr("no tied variables"));
+    EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
+    ASSERT_THAT(CT.Instructions, SizeIs(1));
+    const InstructionTemplate &IT = CT.Instructions[0];
+    EXPECT_THAT(IT.getOpcode(), Opcode);
+    ASSERT_THAT(IT.getVariableValues(), SizeIs(4));
+    EXPECT_THAT(IT.getVariableValues()[0].getReg(),
+                Not(IT.getVariableValues()[1].getReg()))
+        << "Def is different from first Use";
+    EXPECT_THAT(IT.getVariableValues()[0].getReg(),
+                Not(IT.getVariableValues()[2].getReg()))
+        << "Def is different from second Use";
+    EXPECT_THAT(IT.getVariableValues()[3], IsInvalid());
+  }
 }
 
 TEST_F(X86ParallelSnippetGeneratorTest, MemoryUse) {
@@ -317,18 +371,19 @@ TEST_F(X86ParallelSnippetGeneratorTest, MemoryUse) {
   const unsigned Opcode = X86::MOV32rm;
   const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
   ASSERT_THAT(CodeTemplates, SizeIs(1));
-  const auto &CT = CodeTemplates[0];
-  EXPECT_THAT(CT.Info, HasSubstr("no tied variables"));
-  EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
-  ASSERT_THAT(CT.Instructions,
-              SizeIs(ParallelSnippetGenerator::kMinNumDifferentAddresses));
-  const InstructionTemplate &IT = CT.Instructions[0];
-  EXPECT_THAT(IT.getOpcode(), Opcode);
-  ASSERT_THAT(IT.getVariableValues(), SizeIs(6));
-  EXPECT_EQ(IT.getVariableValues()[2].getImm(), 1);
-  EXPECT_EQ(IT.getVariableValues()[3].getReg(), 0u);
-  EXPECT_EQ(IT.getVariableValues()[4].getImm(), 0);
-  EXPECT_EQ(IT.getVariableValues()[5].getReg(), 0u);
+  for (const auto &CT : CodeTemplates) {
+    EXPECT_THAT(CT.Info, HasSubstr("no tied variables"));
+    EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
+    ASSERT_THAT(CT.Instructions,
+                SizeIs(ParallelSnippetGenerator::kMinNumDifferentAddresses));
+    const InstructionTemplate &IT = CT.Instructions[0];
+    EXPECT_THAT(IT.getOpcode(), Opcode);
+    ASSERT_THAT(IT.getVariableValues(), SizeIs(6));
+    EXPECT_EQ(IT.getVariableValues()[2].getImm(), 1);
+    EXPECT_EQ(IT.getVariableValues()[3].getReg(), 0u);
+    EXPECT_EQ(IT.getVariableValues()[4].getImm(), 0);
+    EXPECT_EQ(IT.getVariableValues()[5].getReg(), 0u);
+  }
 }
 
 TEST_F(X86ParallelSnippetGeneratorTest, MOV16ms) {
@@ -362,7 +417,7 @@ TEST_F(X86ParallelSnippetGeneratorTest,
   auto Err = Generator.generateCodeTemplates(&Instr, AllRegisters);
   EXPECT_FALSE((bool)Err);
   EXPECT_THAT(toString(Err.takeError()),
-              testing::HasSubstr("no available registers"));
+              testing::HasSubstr("Failed to produce any snippet"));
 }
 
 class X86FakeSnippetGenerator : public SnippetGenerator {

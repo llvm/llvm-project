@@ -14,8 +14,8 @@ using namespace mlir;
 static Operation *createOp(MLIRContext *context) {
   context->allowUnregisteredDialects();
   return Operation::create(UnknownLoc::get(context),
-                           OperationName("foo.bar", context), llvm::None,
-                           llvm::None, llvm::None, llvm::None, 0);
+                           OperationName("foo.bar", context), std::nullopt,
+                           std::nullopt, std::nullopt, std::nullopt, 0);
 }
 
 namespace {
@@ -39,7 +39,7 @@ TEST(DialectConversionTest, DynamicallyLegalOpCallbackOrder) {
   int callbackCalled2 = 0;
   target.addDynamicallyLegalOp<DummyOp>([&](Operation *) -> Optional<bool> {
     callbackCalled2 = ++index;
-    return llvm::None;
+    return std::nullopt;
   });
 
   auto *op = createOp(&context);
@@ -60,7 +60,7 @@ TEST(DialectConversionTest, DynamicallyLegalOpCallbackSkip) {
   int callbackCalled = 0;
   target.addDynamicallyLegalOp<DummyOp>([&](Operation *) -> Optional<bool> {
     callbackCalled = ++index;
-    return llvm::None;
+    return std::nullopt;
   });
 
   auto *op = createOp(&context);
@@ -85,7 +85,7 @@ TEST(DialectConversionTest, DynamicallyLegalUnknownOpCallbackOrder) {
   int callbackCalled2 = 0;
   target.markUnknownOpDynamicallyLegal([&](Operation *) -> Optional<bool> {
     callbackCalled2 = ++index;
-    return llvm::None;
+    return std::nullopt;
   });
 
   auto *op = createOp(&context);
@@ -103,7 +103,7 @@ TEST(DialectConversionTest, DynamicallyLegalReturnNone) {
   ConversionTarget target(context);
 
   target.addDynamicallyLegalOp<DummyOp>(
-      [&](Operation *) -> Optional<bool> { return llvm::None; });
+      [&](Operation *) -> Optional<bool> { return std::nullopt; });
 
   auto *op = createOp(&context);
   EXPECT_FALSE(target.isLegal(op));
@@ -120,7 +120,7 @@ TEST(DialectConversionTest, DynamicallyLegalUnknownReturnNone) {
   ConversionTarget target(context);
 
   target.markUnknownOpDynamicallyLegal(
-      [&](Operation *) -> Optional<bool> { return llvm::None; });
+      [&](Operation *) -> Optional<bool> { return std::nullopt; });
 
   auto *op = createOp(&context);
   EXPECT_FALSE(target.isLegal(op));

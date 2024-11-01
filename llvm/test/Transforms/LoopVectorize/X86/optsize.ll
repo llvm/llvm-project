@@ -2,8 +2,8 @@
 ; This test verifies that the loop vectorizer will NOT vectorize loops that
 ; will produce a tail loop with the optimize for size or the minimize size
 ; attributes. This is a target-dependent version of the test.
-; RUN: opt < %s -loop-vectorize -force-vector-width=64 -S -mtriple=x86_64-unknown-linux -mcpu=skx | FileCheck %s
-; RUN: opt < %s -loop-vectorize -S -mtriple=x86_64-unknown-linux -mcpu=skx | FileCheck %s --check-prefix AUTOVF
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=64 -S -mtriple=x86_64-unknown-linux -mcpu=skx | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -S -mtriple=x86_64-unknown-linux -mcpu=skx | FileCheck %s --check-prefix AUTOVF
 
 target datalayout = "E-m:e-p:32:32-i64:32-f64:32:64-a:0:32-n32-S128"
 

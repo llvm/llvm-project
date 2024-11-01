@@ -16,6 +16,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -117,7 +118,8 @@ protected:
     return Path.value_or("");
   }
 
-  llvm::Optional<TextEdit> insert(llvm::StringRef VerbatimHeader) {
+  llvm::Optional<TextEdit> insert(llvm::StringRef VerbatimHeader,
+                                  tooling::IncludeDirective Directive) {
     Clang = setupClang();
     PreprocessOnlyAction Action;
     EXPECT_TRUE(
@@ -126,7 +128,7 @@ protected:
     IncludeInserter Inserter(MainFile, /*Code=*/"", format::getLLVMStyle(),
                              CDB.getCompileCommand(MainFile)->Directory,
                              &Clang->getPreprocessor().getHeaderSearchInfo());
-    auto Edit = Inserter.insert(VerbatimHeader);
+    auto Edit = Inserter.insert(VerbatimHeader, Directive);
     Action.EndSourceFile();
     return Edit;
   }
@@ -330,9 +332,13 @@ TEST_F(HeadersTest, DontInsertDuplicateResolved) {
 }
 
 TEST_F(HeadersTest, PreferInserted) {
-  auto Edit = insert("<y>");
-  EXPECT_TRUE(Edit);
-  EXPECT_TRUE(StringRef(Edit->newText).contains("<y>"));
+  auto Edit = insert("<y>", tooling::IncludeDirective::Include);
+  ASSERT_TRUE(Edit);
+  EXPECT_EQ(Edit->newText, "#include <y>\n");
+
+  Edit = insert("\"header.h\"", tooling::IncludeDirective::Import);
+  ASSERT_TRUE(Edit);
+  EXPECT_EQ(Edit->newText, "#import \"header.h\"\n");
 }
 
 TEST(Headers, NoHeaderSearchInfo) {
@@ -353,7 +359,7 @@ TEST(Headers, NoHeaderSearchInfo) {
   EXPECT_EQ(Inserter.shouldInsertInclude(HeaderPath, Verbatim), true);
 
   EXPECT_EQ(Inserter.calculateIncludePath(Inserting, "sub2/main2.cpp"),
-            llvm::None);
+            std::nullopt);
 }
 
 TEST_F(HeadersTest, PresumedLocations) {

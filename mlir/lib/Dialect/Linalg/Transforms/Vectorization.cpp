@@ -123,7 +123,7 @@ mlir::linalg::getCombinerOpKind(Operation *combinerOp) {
   using ::mlir::vector::CombiningKind;
 
   if (!combinerOp)
-    return llvm::None;
+    return std::nullopt;
   return llvm::TypeSwitch<Operation *, llvm::Optional<CombiningKind>>(
              combinerOp)
       .Case<arith::AddIOp, arith::AddFOp>(
@@ -137,7 +137,7 @@ mlir::linalg::getCombinerOpKind(Operation *combinerOp) {
           [&](auto op) { return CombiningKind::MUL; })
       .Case<arith::OrIOp>([&](auto op) { return CombiningKind::OR; })
       .Case<arith::XOrIOp>([&](auto op) { return CombiningKind::XOR; })
-      .Default([&](auto op) { return llvm::None; });
+      .Default([&](auto op) { return std::nullopt; });
 }
 
 /// Check whether `outputOperand` is a reduction with a single combiner

@@ -437,7 +437,7 @@ bool LLVMSymbolizer::getOrFindDebugBinary(const ArrayRef<uint8_t> BuildID,
   }
   if (!BIDFetcher)
     return false;
-  if (Optional<std::string> Path = BIDFetcher->fetch(BuildID)) {
+  if (std::optional<std::string> Path = BIDFetcher->fetch(BuildID)) {
     Result = *Path;
     auto InsertResult = BuildIDPaths.insert({BuildIDStr, Result});
     assert(InsertResult.second);

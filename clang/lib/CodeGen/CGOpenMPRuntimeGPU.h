@@ -324,7 +324,7 @@ public:
   /// translating these arguments to correct target-specific arguments.
   void emitOutlinedFunctionCall(
       CodeGenFunction &CGF, SourceLocation Loc, llvm::FunctionCallee OutlinedFn,
-      ArrayRef<llvm::Value *> Args = llvm::None) const override;
+      ArrayRef<llvm::Value *> Args = std::nullopt) const override;
 
   /// Emits OpenMP-specific function prolog.
   /// Required for device constructs.
@@ -412,7 +412,7 @@ private:
   using EscapedParamsTy = llvm::SmallPtrSet<const Decl *, 4>;
   struct FunctionData {
     DeclToAddrMapTy LocalVarData;
-    llvm::Optional<DeclToAddrMapTy> SecondaryLocalVarData = llvm::None;
+    llvm::Optional<DeclToAddrMapTy> SecondaryLocalVarData = std::nullopt;
     EscapedParamsTy EscapedParameters;
     llvm::SmallVector<const ValueDecl*, 4> EscapedVariableLengthDecls;
     llvm::SmallVector<std::pair<llvm::Value *, llvm::Value *>, 4>

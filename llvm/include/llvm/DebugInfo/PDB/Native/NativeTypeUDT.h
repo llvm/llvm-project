@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPEUDT_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPEUDT_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
@@ -64,11 +63,11 @@ public:
 protected:
   codeview::TypeIndex Index;
 
-  Optional<codeview::ClassRecord> Class;
-  Optional<codeview::UnionRecord> Union;
+  std::optional<codeview::ClassRecord> Class;
+  std::optional<codeview::UnionRecord> Union;
   NativeTypeUDT *UnmodifiedType = nullptr;
   codeview::TagRecord *Tag = nullptr;
-  Optional<codeview::ModifierRecord> Modifiers;
+  std::optional<codeview::ModifierRecord> Modifiers;
 };
 
 } // namespace pdb

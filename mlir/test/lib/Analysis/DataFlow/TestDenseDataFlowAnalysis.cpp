@@ -21,7 +21,7 @@ namespace {
 class UnderlyingValue {
 public:
   /// Create an underlying value state with a known underlying value.
-  explicit UnderlyingValue(Optional<Value> underlyingValue = None)
+  explicit UnderlyingValue(Optional<Value> underlyingValue = std::nullopt)
       : underlyingValue(underlyingValue) {}
 
   /// Whether the state is uninitialized.

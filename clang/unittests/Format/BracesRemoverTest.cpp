@@ -204,6 +204,20 @@ TEST_F(BracesRemoverTest, RemoveBraces) {
                "while (j < 0) { ++j; }",
                Style);
 
+  verifyFormat("for (;;) {\n"
+               "  for (;;)\n"
+               "    for (;;)\n"
+               "      a;\n"
+               "}",
+               "for (;;) {\n"
+               "  for (;;) {\n"
+               "    for (;;) {\n"
+               "      a;\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
+
   verifyFormat("if (a)\n"
                "  b; // comment\n"
                "else if (c)\n"

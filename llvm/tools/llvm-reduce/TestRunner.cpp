@@ -49,9 +49,9 @@ int TestRunner::run(StringRef Filename) const {
     for (int i = 0; i < 3; ++i)
       Redirects.push_back(Empty);
   }
-  int Result =
-      sys::ExecuteAndWait(TestName, ProgramArgs, /*Env=*/None, Redirects,
-                          /*SecondsToWait=*/0, /*MemoryLimit=*/0, &ErrMsg);
+  int Result = sys::ExecuteAndWait(
+      TestName, ProgramArgs, /*Env=*/std::nullopt, Redirects,
+      /*SecondsToWait=*/0, /*MemoryLimit=*/0, &ErrMsg);
 
   if (Result < 0) {
     Error E = make_error<StringError>("Error running interesting-ness test: " +

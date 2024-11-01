@@ -354,7 +354,7 @@ const uint32_t *AArch64RegisterInfo::getWindowsStackProbePreservedMask() const {
   return CSR_AArch64_StackProbe_Windows_RegMask;
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 AArch64RegisterInfo::explainReservedReg(const MachineFunction &MF,
                                         MCRegister PhysReg) const {
   if (hasBasePointer(MF) && MCRegisterInfo::regsOverlap(PhysReg, AArch64::X19))
