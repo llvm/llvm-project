@@ -8,9 +8,9 @@
 #
 # CHECK: section .func:
 # CHECK-EMPTY:
-# CHECK-NEXT: section .pdata:
+# CHECK-NEXT: section .xdata:
 # CHECK-EMPTY:
-# CHECK: section .xdata:
+# CHECK-NEXT: section .pdata:
 # CHECK-EMPTY:
 
 	.text
