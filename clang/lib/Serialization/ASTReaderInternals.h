@@ -243,8 +243,6 @@ using ASTSelectorLookupTable =
 class HeaderFileInfoTrait {
   ASTReader &Reader;
   ModuleFile &M;
-  HeaderSearch *HS;
-  const char *FrameworkStrings;
 
 public:
   using external_key_type = FileEntryRef;
@@ -262,9 +260,8 @@ public:
   using hash_value_type = unsigned;
   using offset_type = unsigned;
 
-  HeaderFileInfoTrait(ASTReader &Reader, ModuleFile &M, HeaderSearch *HS,
-                      const char *FrameworkStrings)
-      : Reader(Reader), M(M), HS(HS), FrameworkStrings(FrameworkStrings) {}
+  HeaderFileInfoTrait(ASTReader &Reader, ModuleFile &M)
+      : Reader(Reader), M(M) {}
 
   static hash_value_type ComputeHash(internal_key_ref ikey);
   internal_key_type GetInternalKey(external_key_type ekey);
