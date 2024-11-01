@@ -372,15 +372,17 @@ static void generateUnrolledLoop(
   loopBodyBlock->getTerminator()->setOperands(lastYielded);
 }
 
-/// Unrolls 'forOp' by 'unrollFactor', returns success if the loop is unrolled.
-LogicalResult mlir::loopUnrollByFactor(
+/// Unrolls 'forOp' by 'unrollFactor', returns the unrolled main loop and the
+/// eplilog loop in sequence, if the loop is unrolled. Otherwise return an empty
+/// vector.
+SmallVector<scf::ForOp> mlir::loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn) {
   assert(unrollFactor > 0 && "expected positive unroll factor");
 
   // Return if the loop body is empty.
   if (llvm::hasSingleElement(forOp.getBody()->getOperations()))
-    return success();
+    return {forOp};
 
   // Compute tripCount = ceilDiv((upperBound - lowerBound), step) and populate
   // 'upperBoundUnrolled' and 'stepUnrolled' for static and dynamic cases.
@@ -401,8 +403,8 @@ LogicalResult mlir::loopUnrollByFactor(
     if (unrollFactor == 1) {
       if (*constTripCount == 1 &&
           failed(forOp.promoteIfSingleIteration(rewriter)))
-        return failure();
-      return success();
+        return {};
+      return {forOp};
     }
 
     int64_t tripCountEvenMultiple =
@@ -450,6 +452,9 @@ LogicalResult mlir::loopUnrollByFactor(
         boundsBuilder.create<arith::MulIOp>(loc, step, unrollFactorCst);
   }
 
+  SmallVector<scf::ForOp, 2> resultLoops;
+  resultLoops.push_back(forOp);
+
   // Create epilogue clean up loop starting at 'upperBoundUnrolled'.
   if (generateEpilogueLoop) {
     OpBuilder epilogueBuilder(forOp->getContext());
@@ -468,6 +473,7 @@ LogicalResult mlir::loopUnrollByFactor(
     epilogueForOp->setOperands(epilogueForOp.getNumControlOperands(),
                                epilogueForOp.getInitArgs().size(), results);
     (void)epilogueForOp.promoteIfSingleIteration(rewriter);
+    resultLoops.push_back(epilogueForOp);
   }
 
   // Create unrolled loop.
@@ -490,7 +496,7 @@ LogicalResult mlir::loopUnrollByFactor(
       annotateFn, iterArgs, yieldedValues);
   // Promote the loop body up if this has turned into a single iteration loop.
   (void)forOp.promoteIfSingleIteration(rewriter);
-  return success();
+  return resultLoops;
 }
 
 /// Check if bounds of all inner loops are defined outside of `forOp`
