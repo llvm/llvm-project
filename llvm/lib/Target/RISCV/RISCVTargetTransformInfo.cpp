@@ -2491,3 +2491,23 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
   }
   return true;
 }
+
+RISCVTTIImpl::TTI::MemCmpExpansionOptions
+RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
+  TTI::MemCmpExpansionOptions Options;
+  // FIXME: Vector haven't been tested.
+  Options.AllowOverlappingLoads =
+      (ST->enableUnalignedScalarMem() || ST->enableUnalignedVectorMem());
+  Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
+  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+  if (ST->is64Bit())
+    Options.LoadSizes = {8, 4, 2, 1};
+  else
+    Options.LoadSizes = {4, 2, 1};
+  if (IsZeroCmp && ST->hasVInstructions()) {
+    unsigned RealMinVLen = ST->getRealMinVLen() / 8;
+    for (int LMUL = 1; LMUL <= 8; LMUL *= 2)
+      Options.LoadSizes.insert(Options.LoadSizes.begin(), RealMinVLen * LMUL);
+  }
+  return Options;
+}
