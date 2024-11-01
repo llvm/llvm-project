@@ -20,81 +20,117 @@ void TemplUses(ConvertsToInt CTI, Int IsI) {
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: worker clause{{.*}}
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc loop worker
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} parallel
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
   // CHECK-NEXT: worker clause{{.*}}
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc parallel
 #pragma acc loop worker
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
   // CHECK-NEXT: worker clause{{.*}}
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc serial
 #pragma acc loop worker
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} kernels
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
   // CHECK-NEXT: worker clause{{.*}}
   // CHECK-NEXT: DeclRefExpr{{.*}} 'ConvertsToInt' lvalue ParmVar
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc kernels
 #pragma acc loop worker(CTI)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} kernels
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
   // CHECK-NEXT: worker clause{{.*}}
   // CHECK-NEXT: DeclRefExpr{{.*}} 'Int' lvalue ParmVar
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc kernels
 #pragma acc loop worker(num:IsI)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} kernels
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
   // CHECK-NEXT: worker clause{{.*}}
   // CHECK-NEXT: DeclRefExpr{{.*}} 'unsigned int' NonTypeTemplateParm{{.*}}'I' 'unsigned int'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc kernels
 #pragma acc loop worker(num:I)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // Instantiations:
   // CHECK-NEXT: FunctionDecl{{.*}} TemplUses 'void (Converts, int)' implicit_instantiation
@@ -111,30 +147,48 @@ void TemplUses(ConvertsToInt CTI, Int IsI) {
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: worker clause{{.*}}
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} parallel
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
   // CHECK-NEXT: worker clause{{.*}}
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
   // CHECK-NEXT: worker clause{{.*}}
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} kernels
@@ -145,10 +199,16 @@ void TemplUses(ConvertsToInt CTI, Int IsI) {
   // CHECK-NEXT: MemberExpr{{.*}} .operator int
   // CHECK-NEXT: DeclRefExpr{{.*}} 'Converts' lvalue ParmVar
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} kernels
@@ -157,10 +217,16 @@ void TemplUses(ConvertsToInt CTI, Int IsI) {
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}} 'int' lvalue ParmVar{{.*}} 'IsI' 'int'
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
   //
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} kernels
@@ -170,10 +236,16 @@ void TemplUses(ConvertsToInt CTI, Int IsI) {
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}}'unsigned int' depth 0 index 0 I
   // CHECK-NEXT: IntegerLiteral{{.*}} 'unsigned int' 3
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 }
 
@@ -191,39 +263,57 @@ void uses() {
   // CHECK: OpenACCLoopConstruct{{.*}}<orphan>
   // CHECK-NEXT: worker clause{{.*}}
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc loop worker
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} parallel
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
   // CHECK-NEXT: worker clause{{.*}}
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc parallel
 #pragma acc loop worker
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   // CHECK-NEXT: OpenACCComputeConstruct 0x[[COMPUTE_ADDR:[0-9a-f]+]]{{.*}} serial
   // CHECK-NEXT: OpenACCLoopConstruct{{.*}} parent: 0x[[COMPUTE_ADDR]]
   // CHECK-NEXT: worker clause{{.*}}
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc serial
 #pragma acc loop worker
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   Converts CTI;
   // CHECK-NEXT: DeclStmt
@@ -238,14 +328,20 @@ void uses() {
   // CHECK-NEXT: MemberExpr{{.*}} .operator int
   // CHECK-NEXT: DeclRefExpr{{.*}}'Converts' lvalue Var
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc kernels
 #pragma acc loop worker(CTI)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 
   int IsI;
   // CHECK-NEXT: DeclStmt
@@ -257,14 +353,20 @@ void uses() {
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var
   // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
   // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: NullStmt
 #pragma acc kernels
 #pragma acc loop worker(num:IsI)
-  for(;;);
+  for(int i = 0; i < 5; ++i);
 }
 
 #endif // PCH_HELPER

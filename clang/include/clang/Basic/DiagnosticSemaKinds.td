@@ -12735,6 +12735,19 @@ def err_acc_gang_reduction_numgangs_conflict
 def err_reduction_op_mismatch
     : Error<"OpenACC 'reduction' variable must have the same operator in all "
             "nested constructs (%0 vs %1)">;
+def err_acc_loop_variable_type
+    : Error<"loop variable of loop associated with an OpenACC 'loop' construct "
+            "must be of integer, pointer, or random-access-iterator type (is "
+            "%0)">;
+def err_acc_loop_variable
+    : Error<"OpenACC 'loop' construct must have initialization clause in "
+            "canonical form ('var = init' or 'T var = init')">;
+def err_acc_loop_terminating_condition
+    : Error<"OpenACC 'loop' construct must have a terminating condition">;
+def err_acc_loop_not_monotonic
+    : Error<"OpenACC 'loop' variable must monotonically increase or decrease "
+            "('++', '--', or compound assignment)">;
+
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_global_load_lds_size_valid_value : Note<"size must be 1, 2, or 4">;
