@@ -817,7 +817,7 @@ void InstrProfiling::lowerMCDCTestVectorBitmapUpdate(
     InstrProfMCDCTVBitmapUpdate *Update) {
   IRBuilder<> Builder(Update);
   auto *Int8Ty = Type::getInt8Ty(M->getContext());
-  auto *Int8PtrTy = Type::getInt8PtrTy(M->getContext());
+  auto *Int8PtrTy = PointerType::getUnqual(M->getContext());
   auto *Int32Ty = Type::getInt32Ty(M->getContext());
   auto *Int64Ty = Type::getInt64Ty(M->getContext());
   auto *MCDCCondBitmapAddr = Update->getMCDCCondBitmapAddr();
@@ -1002,7 +1002,7 @@ static inline bool shouldUsePublicSymbol(Function *Fn) {
 }
 
 static inline Constant *getFuncAddrForProfData(Function *Fn) {
-  auto *Int8PtrTy = Type::getInt8PtrTy(Fn->getContext());
+  auto *Int8PtrTy = PointerType::getUnqual(Fn->getContext());
   // Store a nullptr in __llvm_profd, if we shouldn't use a real address
   if (!shouldRecordFunctionAddr(Fn))
     return ConstantPointerNull::get(Int8PtrTy);
@@ -1277,7 +1277,7 @@ void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc,
   std::string DataVarName =
       getVarName(Inc, getInstrProfDataVarPrefix(), Renamed);
 
-  auto *Int8PtrTy = Type::getInt8PtrTy(Ctx);
+  auto *Int8PtrTy = PointerType::getUnqual(Ctx);
   // Allocate statically the array of pointers to value profile nodes for
   // the current function.
   Constant *ValuesPtrExpr = ConstantPointerNull::get(Int8PtrTy);
@@ -1296,7 +1296,7 @@ void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc,
     ValuesVar->setAlignment(Align(8));
     maybeSetComdat(ValuesVar, Fn, CntsVarName);
     ValuesPtrExpr =
-        ConstantExpr::getBitCast(ValuesVar, Type::getInt8PtrTy(Ctx));
+        ConstantExpr::getBitCast(ValuesVar, PointerType::getUnqual(Ctx));
   }
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
@@ -1469,7 +1469,7 @@ void InstrProfiling::emitRegistration() {
 
   // Construct the function.
   auto *VoidTy = Type::getVoidTy(M->getContext());
-  auto *VoidPtrTy = Type::getInt8PtrTy(M->getContext());
+  auto *VoidPtrTy = PointerType::getUnqual(M->getContext());
   auto *Int64Ty = Type::getInt64Ty(M->getContext());
   auto *RegisterFTy = FunctionType::get(VoidTy, false);
   auto *RegisterF = Function::Create(RegisterFTy, GlobalValue::InternalLinkage,

@@ -451,7 +451,7 @@ static bool CreatePrologue(Function *F, Module *M, Instruction *CheckLoc,
                            const TargetLoweringBase *TLI, AllocaInst *&AI) {
   bool SupportsSelectionDAGSP = false;
   IRBuilder<> B(&F->getEntryBlock().front());
-  PointerType *PtrTy = Type::getInt8PtrTy(CheckLoc->getContext());
+  PointerType *PtrTy = PointerType::getUnqual(CheckLoc->getContext());
   AI = B.CreateAlloca(PtrTy, nullptr, "StackGuardSlot");
 
   Value *GuardSlot = getStackGuard(TLI, M, B, &SupportsSelectionDAGSP);
@@ -622,7 +622,7 @@ BasicBlock *StackProtector::CreateFailBB() {
   if (Trip.isOSOpenBSD()) {
     StackChkFail = M->getOrInsertFunction("__stack_smash_handler",
                                           Type::getVoidTy(Context),
-                                          Type::getInt8PtrTy(Context));
+                                          PointerType::getUnqual(Context));
     Args.push_back(B.CreateGlobalStringPtr(F->getName(), "SSH"));
   } else {
     StackChkFail =
