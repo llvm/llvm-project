@@ -19,7 +19,7 @@ namespace lldb_dap {
 
 struct BreakpointBase {
   // Associated DAP session.
-  DAP &dap;
+  DAP *dap;
 
   // An optional expression for conditional breakpoints.
   std::string condition;
@@ -27,8 +27,10 @@ struct BreakpointBase {
   // ignored. The backend is expected to interpret the expression as needed
   std::string hitCondition;
 
-  BreakpointBase(DAP &d);
-  BreakpointBase(DAP &d, const llvm::json::Object &obj);
+  BreakpointBase(DAP *d) : dap(d) {}
+  BreakpointBase(DAP *d, const llvm::json::Object &obj);
+  BreakpointBase() = default;
+  BreakpointBase(const BreakpointBase &) = default;
   virtual ~BreakpointBase() = default;
 
   virtual void SetCondition() = 0;

@@ -15,7 +15,7 @@
 namespace lldb_dap {
 
 // Instruction Breakpoint
-InstructionBreakpoint::InstructionBreakpoint(DAP &d,
+InstructionBreakpoint::InstructionBreakpoint(DAP *d,
                                              const llvm::json::Object &obj)
     : Breakpoint(d, obj), instructionAddressReference(LLDB_INVALID_ADDRESS),
       id(0), offset(GetSigned(obj, "offset", 0)) {
@@ -25,7 +25,9 @@ InstructionBreakpoint::InstructionBreakpoint(DAP &d,
 }
 
 void InstructionBreakpoint::SetInstructionBreakpoint() {
-  bp = dap.target.BreakpointCreateByAddress(instructionAddressReference);
+  if (!dap)
+    return;
+  bp = dap->target.BreakpointCreateByAddress(instructionAddressReference);
   id = bp.GetID();
 }
 

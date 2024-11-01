@@ -222,7 +222,7 @@ void FillResponse(const llvm::json::Object &request,
 ///     provided by the setBreakpoints request are returned to the IDE as a
 ///     fallback.
 void AppendBreakpoint(
-    BreakpointBase *bp, llvm::json::Array &breakpoints,
+    BreakpointBase &bp, llvm::json::Array &breakpoints,
     std::optional<llvm::StringRef> request_path = std::nullopt,
     std::optional<uint32_t> request_line = std::nullopt);
 

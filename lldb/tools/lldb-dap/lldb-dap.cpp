@@ -15,7 +15,9 @@
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStringList.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Base64.h"
+#include "llvm/Support/raw_socket_stream.h"
 
 #include <cassert>
 #include <climits>
@@ -26,6 +28,7 @@
 #include <optional>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <system_error>
 #if defined(_WIN32)
 // We need to #define NOMINMAX in order to skip `min()` and `max()` macro
 // definitions that conflict with other system headers.
@@ -33,12 +36,15 @@
 // the JSON code we use also has methods named `GetObject()` and we conflict
 // against these.
 #define NOMINMAX
+#include <afunix.h>
 #include <windows.h>
+#include <winsock2.h>
 #undef GetObject
 #include <io.h>
 #else
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
 #endif
 
@@ -189,95 +195,194 @@ void SetupRedirection(DAP &dap, int stdoutfd = -1, int stderrfd = -1) {
     redirection_test();
 }
 
-int AcceptConnection(llvm::StringRef program_path,
-                     const std::vector<std::string> &pre_init_commands,
-                     std::shared_ptr<std::ofstream> log,
-                     ReplMode default_repl_mode, int portno) {
-  SOCKET sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd < 0) {
-    if (log)
-      *log << "error: opening socket (" << strerror(errno) << ")" << std::endl;
-    perror("error: socket(int, int, int)");
-    return 1;
+void HandleClient(int clientfd, llvm::StringRef program_path,
+                  const std::vector<std::string> &pre_init_commands,
+                  std::shared_ptr<std::ofstream> log,
+                  ReplMode default_repl_mode) {
+  if (log)
+    *log << "client[" << clientfd << "] connected\n";
+  DAP dap = DAP(program_path, log, default_repl_mode);
+  dap.debug_adaptor_path = program_path;
+
+  SetupRedirection(dap);
+  RegisterRequestCallbacks(dap);
+
+  dap.input.descriptor = StreamDescriptor::from_socket(clientfd, false);
+  dap.output.descriptor = StreamDescriptor::from_socket(clientfd, false);
+
+  for (const std::string &arg : pre_init_commands) {
+    dap.pre_init_commands.push_back(arg);
   }
 
-  struct sockaddr_in serv_addr, cli_addr;
+  if (auto Err = dap.Loop()) {
+    if (log)
+      *log << "Transport Error: " << llvm::toString(std::move(Err)) << "\n";
+  }
+
+  if (log)
+    *log << "client[" << clientfd << "] connection closed\n";
+#if defined(_WIN32)
+  closesocket(clientfd);
+#else
+  close(clientfd);
+#endif
+}
+
+std::error_code getLastSocketErrorCode() {
+#ifdef _WIN32
+  return std::error_code(::WSAGetLastError(), std::system_category());
+#else
+  return llvm::errnoAsErrorCode();
+#endif
+}
+
+llvm::Expected<int> getSocketFD(llvm::StringRef path) {
+  if (llvm::sys::fs::exists(path) && (::remove(path.str().c_str()) == -1)) {
+    return llvm::make_error<llvm::StringError>(getLastSocketErrorCode(),
+                                               "Remove existing socket failed");
+  }
+
+  SOCKET sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (sockfd == -1) {
+    return llvm::make_error<llvm::StringError>(getLastSocketErrorCode(),
+                                               "Create socket failed");
+  }
+
+  struct sockaddr_un addr;
+  bzero(&addr, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  strncpy(addr.sun_path, path.str().c_str(), sizeof(addr.sun_path) - 1);
+
+  if (::bind(sockfd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+#if defined(_WIN32)
+    closesocket(sockfd);
+#else
+    close(sockfd);
+#endif
+    return llvm::make_error<llvm::StringError>(getLastSocketErrorCode(),
+                                               "Socket bind() failed");
+  }
+
+  if (listen(sockfd, llvm::hardware_concurrency().compute_thread_count()) < 0) {
+#if defined(_WIN32)
+    closesocket(sockfd);
+#else
+    close(sockfd);
+#endif
+    return llvm::make_error<llvm::StringError>(getLastSocketErrorCode(),
+                                               "Socket listen() failed");
+  }
+
+  return sockfd;
+}
+
+llvm::Expected<int> getSocketFD(int portno) {
+  SOCKET sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd < 0) {
+    return llvm::make_error<llvm::StringError>(getLastSocketErrorCode(),
+                                               "Create socket failed");
+  }
+
+  struct sockaddr_in serv_addr;
   bzero(&serv_addr, sizeof(serv_addr));
-  bzero(&cli_addr, sizeof(cli_addr));
-  socklen_t clilen = sizeof(cli_addr);
   serv_addr.sin_family = AF_INET;
   // serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
   serv_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
   serv_addr.sin_port = htons(portno);
   if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-    if (log)
-      *log << "error: binding socket (" << strerror(errno) << ")" << std::endl;
-    perror("error: bind(int, struct sockaddr *, socklen_t)");
 #if defined(_WIN32)
     closesocket(sockfd);
 #else
     close(sockfd);
 #endif
-    return 1;
+    return llvm::make_error<llvm::StringError>(getLastSocketErrorCode(),
+                                               "Socket bind() failed");
   }
 
-  if (listen(sockfd, 5) < 0) {
-    if (log)
-      *log << "error: listen() (" << strerror(errno) << ")" << std::endl;
-    perror("error: listen(int, int)");
+  if (listen(sockfd, llvm::hardware_concurrency().compute_thread_count()) < 0) {
 #if defined(_WIN32)
     closesocket(sockfd);
 #else
     close(sockfd);
 #endif
-    return 1;
+    return llvm::make_error<llvm::StringError>(getLastSocketErrorCode(),
+                                               "Socket listen() failed");
+  }
+
+  return sockfd;
+}
+
+int AcceptConnection(llvm::StringRef program_path,
+                     const std::vector<std::string> &pre_init_commands,
+                     std::shared_ptr<std::ofstream> log,
+                     ReplMode default_repl_mode,
+                     llvm::StringRef unix_socket_path) {
+  auto listening = getSocketFD(unix_socket_path);
+  if (auto E = listening.takeError()) {
+    llvm::errs() << "Listening on " << unix_socket_path
+                 << " failed: " << llvm::toString(std::move(E)) << "\n";
+    return EXIT_FAILURE;
   }
 
   while (true) {
+    struct sockaddr_un cli_addr;
+    bzero(&cli_addr, sizeof(struct sockaddr_un));
+    socklen_t clilen = sizeof(cli_addr);
     SOCKET clientfd =
-        llvm::sys::RetryAfterSignal(static_cast<SOCKET>(-1), accept, sockfd,
+        llvm::sys::RetryAfterSignal(static_cast<SOCKET>(-1), accept, *listening,
                                     (struct sockaddr *)&cli_addr, &clilen);
     if (clientfd < 0) {
-      if (log)
-        *log << "error: accept (" << strerror(errno) << ")" << std::endl;
-      perror("error: accept(int, struct sockaddr *, socklen_t *)");
-      break;
+      llvm::errs() << "Client accept failed: "
+                   << getLastSocketErrorCode().message() << "\n";
+      return EXIT_FAILURE;
     }
 
-    std::thread t([program_path, pre_init_commands, log, default_repl_mode,
-                   clientfd]() {
-      printf("accepted client fd %d\n", clientfd);
-      DAP dap = DAP(program_path, log, default_repl_mode);
-      dap.debug_adaptor_path = program_path;
-
-      SetupRedirection(dap);
-      RegisterRequestCallbacks(dap);
-
-      dap.input.descriptor = StreamDescriptor::from_socket(clientfd, false);
-      dap.output.descriptor = StreamDescriptor::from_socket(clientfd, false);
-
-      for (const std::string &arg : pre_init_commands) {
-        dap.pre_init_commands.push_back(arg);
-      }
-
-      bool CleanExit = true;
-      if (auto Err = dap.Loop()) {
-        llvm::errs() << "Transport Error: " << llvm::toString(std::move(Err))
-                     << "\n";
-        CleanExit = false;
-      }
-
-      printf("closing client fd %d ? %s\n", clientfd,
-             CleanExit ? "true" : "false");
-      close(clientfd);
-    });
+    std::thread t(HandleClient, clientfd, program_path, pre_init_commands, log,
+                  default_repl_mode);
     t.detach();
   }
 
 #if defined(_WIN32)
-  closesocket(sockfd);
+  closesocket(*listening);
 #else
-  close(sockfd);
+  close(*listening);
+#endif
+  return 0;
+}
+
+int AcceptConnection(llvm::StringRef program_path,
+                     const std::vector<std::string> &pre_init_commands,
+                     std::shared_ptr<std::ofstream> log,
+                     ReplMode default_repl_mode, int portno) {
+  auto listening = getSocketFD(portno);
+  if (auto E = listening.takeError()) {
+    llvm::errs() << "Listening on " << portno
+                 << " failed: " << llvm::toString(std::move(E)) << "\n";
+    return EXIT_FAILURE;
+  }
+
+  while (true) {
+    struct sockaddr_in cli_addr;
+    bzero(&cli_addr, sizeof(struct sockaddr_in));
+    socklen_t clilen = sizeof(cli_addr);
+    SOCKET clientfd =
+        llvm::sys::RetryAfterSignal(static_cast<SOCKET>(-1), accept, *listening,
+                                    (struct sockaddr *)&cli_addr, &clilen);
+    if (clientfd < 0) {
+      llvm::errs() << "Client accept failed: "
+                   << getLastSocketErrorCode().message() << "\n";
+      return EXIT_FAILURE;
+    }
+
+    std::thread t(HandleClient, clientfd, program_path, pre_init_commands, log,
+                  default_repl_mode);
+    t.detach();
+  }
+
+#if defined(_WIN32)
+  closesocket(*listening);
+#else
+  close(*listening);
 #endif
   return 0;
 }
@@ -629,7 +734,7 @@ void EventThreadFunction(DAP &dap) {
           auto event_type =
               lldb::SBBreakpoint::GetBreakpointEventTypeFromEvent(event);
           auto bp = Breakpoint(
-              dap, lldb::SBBreakpoint::GetBreakpointFromEvent(event));
+              &dap, lldb::SBBreakpoint::GetBreakpointFromEvent(event));
           // If the breakpoint was originated from the IDE, it will have the
           // BreakpointBase::GetBreakpointLabel() label attached. Regardless
           // of wether the locations were added or removed, the breakpoint
@@ -2712,12 +2817,12 @@ void request_scopes(DAP &dap, const llvm::json::Object &request) {
 // },
 // "SetBreakpointsArguments": {
 //   "type": "object",
-//   "description": "Arguments for 'setBreakpoints' request.",
+//   "description": "Arguments for `setBreakpoints` request.",
 //   "properties": {
 //     "source": {
 //       "$ref": "#/definitions/Source",
 //       "description": "The source location of the breakpoints; either
-//       source.path or source.reference must be specified."
+// `source.path` or `source.sourceReference` must be specified."
 //     },
 //     "breakpoints": {
 //       "type": "array",
@@ -2731,15 +2836,16 @@ void request_scopes(DAP &dap, const llvm::json::Object &request) {
 //       "items": {
 //         "type": "integer"
 //       },
-//       "description": "Deprecated: The code locations of the breakpoints."
+//       "description": "Deprecated: The code locations of the
+// breakpoints."
 //     },
 //     "sourceModified": {
 //       "type": "boolean",
-//       "description": "A value of true indicates that the underlying source
-//       has been modified which results in new breakpoint locations."
+//       "description": "A value of true indicates that the underlying
+// source has been modified which results in new breakpoint locations."
 //     }
-//   },
-//   "required": [ "source" ]
+// 	},
+// 	"required": [ "source" ]
 // },
 // "SetBreakpointsResponse": {
 //   "allOf": [ { "$ref": "#/definitions/Response" }, {
@@ -2771,36 +2877,55 @@ void request_scopes(DAP &dap, const llvm::json::Object &request) {
 //   }]
 // },
 // "SourceBreakpoint": {
-//   "type": "object",
-//   "description": "Properties of a breakpoint or logpoint passed to the
-//   setBreakpoints request.", "properties": {
+// 	 "type": "object",
+// 	 "description": "Properties of a breakpoint or logpoint passed to the
+// `setBreakpoints` request.",
+//   "properties": {
 //     "line": {
-//       "type": "integer",
-//       "description": "The source line of the breakpoint or logpoint."
+//   	   "type": "integer",
+//   	   "description": "The source line of the breakpoint or logpoint."
 //     },
 //     "column": {
-//       "type": "integer",
-//       "description": "An optional source column of the breakpoint."
+//     	 "type": "integer",
+//     	 "description": "Start position within source line of the breakpoint or
+//       logpoint. It is measured in UTF-16 code units and the client capability
+//       `columnsStartAt1` determines whether it is 0- or 1-based."
 //     },
 //     "condition": {
-//       "type": "string",
-//       "description": "An optional expression for conditional breakpoints."
+//    	 "type": "string",
+//   	   "description": "The expression for conditional breakpoints.\nIt is
+//       only honored by a debug adapter if the corresponding capability
+//       `supportsConditionalBreakpoints` is true."
 //     },
 //     "hitCondition": {
-//       "type": "string",
-//       "description": "An optional expression that controls how many hits of
-//       the breakpoint are ignored. The backend is expected to interpret the
-//       expression as needed."
+//   	   "type": "string",
+//   	   "description": "The expression that controls how many hits of the
+//       breakpoint are ignored.\nThe debug adapter is expected to interpret the
+//       expression as needed.\nThe attribute is only honored by a debug adapter
+//       if the corresponding capability `supportsHitConditionalBreakpoints` is
+//       true.\nIf both this property and `condition` are specified,
+//       `hitCondition` should be evaluated only if the `condition` is met, and
+//       the debug adapter should stop only if both conditions are met."
 //     },
 //     "logMessage": {
-//       "type": "string",
-//       "description": "If this attribute exists and is non-empty, the backend
-//       must not 'break' (stop) but log the message instead. Expressions within
-//       {} are interpolated."
+//   	   "type": "string",
+//   	   "description": "If this attribute exists and is non-empty, the debug
+//       adapter must not 'break' (stop)\nbut log the message instead.
+//       Expressions within `{}` are interpolated.\nThe attribute is only
+//       honored by a debug adapter if the corresponding capability
+//       `supportsLogPoints` is true.\nIf either `hitCondition` or `condition`
+//       is specified, then the message should only be logged if those
+//       conditions are met."
+//     },
+//     "mode": {
+//   	   "type": "string",
+//   	   "description": "The mode of this breakpoint. If defined, this must be
+//       one of the `breakpointModes` the debug adapter advertised in its
+//       `Capabilities`."
 //     }
-//   },
-//   "required": [ "line" ]
-// }
+// 	 },
+// 	 "required": [ "line" ]
+// },
 void request_setBreakpoints(DAP &dap, const llvm::json::Object &request) {
   llvm::json::Object response;
   lldb::SBError error;
@@ -2819,25 +2944,19 @@ void request_setBreakpoints(DAP &dap, const llvm::json::Object &request) {
     for (const auto &bp : *breakpoints) {
       const auto *bp_obj = bp.getAsObject();
       if (bp_obj) {
-        SourceBreakpoint src_bp(dap, *bp_obj);
+        SourceBreakpoint src_bp(&dap, *bp_obj);
         request_bps.try_emplace(src_bp.line, src_bp);
-
+        const auto [kv, inserted] =
+            dap.source_breakpoints[path].try_emplace(src_bp.line, src_bp);
         // We check if this breakpoint already exists to update it
-        auto existing_source_bps = dap.source_breakpoints.find(path);
-        if (existing_source_bps != dap.source_breakpoints.end()) {
-          const auto &existing_bp =
-              existing_source_bps->second.find(src_bp.line);
-          if (existing_bp != existing_source_bps->second.end()) {
-            existing_bp->second.UpdateBreakpoint(src_bp);
-            AppendBreakpoint(&existing_bp->second, response_breakpoints, path,
-                             src_bp.line);
-            continue;
-          }
+        if (inserted) {
+          kv->getSecond().SetBreakpoint(path.data());
+        } else {
+          kv->getSecond().UpdateBreakpoint(src_bp);
         }
-        // At this point the breakpoint is new
-        dap.source_breakpoints[path].try_emplace(src_bp.line, src_bp);
-        src_bp.SetBreakpoint(path.data());
-        AppendBreakpoint(&src_bp, response_breakpoints, path, src_bp.line);
+
+        AppendBreakpoint(kv->getSecond(), response_breakpoints, path,
+                         src_bp.line);
       }
     }
   }
@@ -3030,7 +3149,7 @@ void request_setFunctionBreakpoints(DAP &dap,
     const auto *bp_obj = value.getAsObject();
     if (bp_obj == nullptr)
       continue;
-    FunctionBreakpoint func_bp(dap, *bp_obj);
+    FunctionBreakpoint func_bp(&dap, *bp_obj);
     request_bps.try_emplace(func_bp.functionName, std::move(func_bp));
   }
 
@@ -3052,7 +3171,7 @@ void request_setFunctionBreakpoints(DAP &dap,
       // handled it here and we don't need to set a new breakpoint below.
       request_bps.erase(request_pos);
       // Add this breakpoint info to the response
-      AppendBreakpoint(&pair.second, response_breakpoints);
+      AppendBreakpoint(pair.second, response_breakpoints);
     }
   }
   // Remove any breakpoints that are no longer in our list
@@ -3064,7 +3183,7 @@ void request_setFunctionBreakpoints(DAP &dap,
   for (auto &pair : request_bps) {
     pair.second.SetBreakpoint();
     // Add this breakpoint info to the response
-    AppendBreakpoint(&pair.second, response_breakpoints);
+    AppendBreakpoint(pair.second, response_breakpoints);
     dap.function_breakpoints.try_emplace(pair.first(), std::move(pair.second));
   }
 
@@ -3318,7 +3437,7 @@ void request_setDataBreakpoints(DAP &dap, const llvm::json::Object &request) {
     for (const auto &bp : *breakpoints) {
       const auto *bp_obj = bp.getAsObject();
       if (bp_obj) {
-        Watchpoint wp(dap, *bp_obj);
+        Watchpoint wp(&dap, *bp_obj);
         watchpoints.push_back(wp);
       }
     }
@@ -3334,7 +3453,7 @@ void request_setDataBreakpoints(DAP &dap, const llvm::json::Object &request) {
     }
   }
   for (auto wp : watchpoints)
-    AppendBreakpoint(&wp, response_breakpoints);
+    AppendBreakpoint(wp, response_breakpoints);
 
   llvm::json::Object body;
   body.try_emplace("breakpoints", std::move(response_breakpoints));
@@ -4152,6 +4271,7 @@ void request_variables(DAP &dap, const llvm::json::Object &request) {
           dap.variables.InsertVariable(variable, /*is_permanent=*/false);
       variables.emplace_back(CreateVariable(
           variable, var_ref, hex, dap.enable_auto_variable_summaries,
+          dap.enable_synthetic_child_debugging,
           variable_name_counts[GetNonNullVariableName(variable)] > 1));
     }
   } else {
@@ -4670,8 +4790,8 @@ void request__testGetTargetBreakpoints(DAP &dap,
   FillResponse(request, response);
   llvm::json::Array response_breakpoints;
   for (uint32_t i = 0; dap.target.GetBreakpointAtIndex(i).IsValid(); ++i) {
-    auto bp = Breakpoint(dap, dap.target.GetBreakpointAtIndex(i));
-    AppendBreakpoint(&bp, response_breakpoints);
+    auto bp = Breakpoint(&dap, dap.target.GetBreakpointAtIndex(i));
+    AppendBreakpoint(bp, response_breakpoints);
   }
   llvm::json::Object body;
   body.try_emplace("breakpoints", std::move(response_breakpoints));
@@ -4884,7 +5004,7 @@ void request_setInstructionBreakpoints(DAP &dap,
       const auto *bp_obj = bp.getAsObject();
       if (bp_obj) {
         // Read instruction breakpoint request.
-        InstructionBreakpoint inst_bp(dap, *bp_obj);
+        InstructionBreakpoint inst_bp(&dap, *bp_obj);
         // Store them into map for reference.
         request_ibp.try_emplace(inst_bp.instructionAddressReference,
                                 std::move(inst_bp));
@@ -5139,6 +5259,9 @@ int main(int argc, char *argv[]) {
   auto terminate_debugger =
       llvm::make_scope_exit([] { lldb::SBDebugger::Terminate(); });
 
+  const auto pre_init_commands =
+      input_args.getAllArgValues(OPT_pre_init_command);
+
   int portno = -1;
 
   if (auto *arg = input_args.getLastArg(OPT_port)) {
@@ -5149,6 +5272,12 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "'%s' is not a valid port number.\n", optarg);
       return EXIT_FAILURE;
     }
+  }
+
+  std::string unix_socket_path;
+  if (auto *arg = input_args.getLastArg(OPT_unix_socket)) {
+    const auto *path = arg->getValue();
+    unix_socket_path.assign(path);
   }
 
   const char *log_file_path = getenv("LLDBDAP_LOG");
@@ -5164,33 +5293,34 @@ int main(int argc, char *argv[]) {
 #endif
 
   if (portno != -1) {
-    printf("Listening on port %i...\n", portno);
-    auto pre_init_commands = input_args.getAllArgValues(OPT_pre_init_command);
+    llvm::errs() << llvm::format("Listening on port %i...\n", portno);
     return AcceptConnection(program_path.str(), pre_init_commands,
                             std::move(log), default_repl_mode, portno);
+  }
+
+  if (!unix_socket_path.empty()) {
+    return AcceptConnection(program_path.str(), pre_init_commands,
+                            std::move(log), default_repl_mode,
+                            unix_socket_path);
   }
 
   DAP dap = DAP(program_path.str(), std::move(log), default_repl_mode);
 
   // stdout/stderr redirection to the IDE's console
   int new_stdout_fd = dup(fileno(stdout));
-  SetupRedirection(dap, new_stdout_fd, fileno(stderr));
+  SetupRedirection(dap, fileno(stdout), fileno(stderr));
 
   // Register request callbacks.
   RegisterRequestCallbacks(dap);
 
   dap.input.descriptor = StreamDescriptor::from_file(fileno(stdin), false);
   dap.output.descriptor = StreamDescriptor::from_file(new_stdout_fd, false);
-
-  for (const std::string &arg :
-       input_args.getAllArgValues(OPT_pre_init_command)) {
-    dap.pre_init_commands.push_back(arg);
-  }
+  dap.pre_init_commands = pre_init_commands;
 
   bool CleanExit = true;
   if (auto Err = dap.Loop()) {
-    if (dap.log)
-      *dap.log << "Transport Error: " << llvm::toString(std::move(Err)) << "\n";
+    if (log)
+      *log << "Transport Error: " << llvm::toString(std::move(Err)) << "\n";
     CleanExit = false;
   }
 

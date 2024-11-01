@@ -14,8 +14,8 @@
 #include "JSONUtils.h"
 
 namespace lldb_dap {
-Watchpoint::Watchpoint(DAP &dap, const llvm::json::Object &obj)
-    : BreakpointBase(dap, obj) {
+Watchpoint::Watchpoint(DAP *d, const llvm::json::Object &obj)
+    : BreakpointBase(d, obj) {
   llvm::StringRef dataId = GetString(obj, "dataId");
   std::string accessType = GetString(obj, "accessType").str();
   auto [addr_str, size_str] = dataId.split('/');
@@ -45,7 +45,8 @@ void Watchpoint::CreateJsonObject(llvm::json::Object &object) {
 }
 
 void Watchpoint::SetWatchpoint() {
-  wp = dap.target.WatchpointCreateByAddress(addr, size, options, error);
+  if (!dap) return;
+  wp = dap->target.WatchpointCreateByAddress(addr, size, options, error);
   if (!condition.empty())
     SetCondition();
   if (!hitCondition.empty())

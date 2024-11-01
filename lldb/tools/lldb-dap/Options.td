@@ -22,7 +22,16 @@ def port: S<"port">,
   HelpText<"Communicate with the lldb-dap tool over the defined port.">;
 def: Separate<["-"], "p">,
   Alias<port>,
+  MetaVarName<"<port>">,
   HelpText<"Alias for --port">;
+
+def unix_socket: S<"unix-socket">,
+  MetaVarName<"<path>">,
+  HelpText<"Communicate with the lldb-dap tool over the unix socket or named pipe.">;
+def: Separate<["-"], "u">,
+  Alias<unix_socket>,
+  MetaVarName<"<path>">,
+  HelpText<"Alias for --unix_socket">;
 
 def launch_target: S<"launch-target">,
   MetaVarName<"<target>">,

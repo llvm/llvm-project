@@ -25,8 +25,8 @@ struct Watchpoint : public BreakpointBase {
   lldb::SBWatchpoint wp;
   lldb::SBError error;
 
-  Watchpoint(DAP &dap, const llvm::json::Object &obj);
-  Watchpoint(DAP &dap, lldb::SBWatchpoint wp) : BreakpointBase(dap), wp(wp) {}
+  Watchpoint(DAP *dap, const llvm::json::Object &obj);
+  Watchpoint(DAP *d, lldb::SBWatchpoint wp) : BreakpointBase(d), wp(wp) {}
 
   void SetCondition() override;
   void SetHitCondition() override;

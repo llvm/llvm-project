@@ -903,7 +903,7 @@ class DebugCommunication(object):
             "sourceModified": False,
         }
         if line_array is not None:
-            args_dict["lines"] = "%s" % line_array
+            args_dict["lines"] = line_array
             breakpoints = []
             for i, line in enumerate(line_array):
                 breakpoint_data = None
@@ -1154,34 +1154,32 @@ class DebugAdaptorServer(DebugCommunication):
     def __init__(
         self,
         executable=None,
-        port=None,
+        launch=True,
+        connect=None,
         init_commands=[],
         log_file=None,
         env=None,
     ):
         self.process = None
-        if executable is not None:
-            adaptor_env = os.environ.copy()
-            if env is not None:
-                adaptor_env.update(env)
-
-            if log_file:
-                adaptor_env["LLDBDAP_LOG"] = log_file
-            self.process = subprocess.Popen(
-                [executable],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=adaptor_env,
+        if launch:
+            self.process = DebugAdaptorServer.launch(
+                executable, connect=connect, log_file=log_file, env=env
             )
+
+        if connect:
+            if isinstance(connect, str) and connect.startswith("/"):
+                s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                s.connect(connect)
+            else:
+                port = int(connect)
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.connect(("127.0.0.1", port))
+            DebugCommunication.__init__(
+                self, s.makefile("rb"), s.makefile("wb"), init_commands, log_file
+            )
+        else:
             DebugCommunication.__init__(
                 self, self.process.stdout, self.process.stdin, init_commands, log_file
-            )
-        elif port is not None:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect(("127.0.0.1", port))
-            DebugCommunication.__init__(
-                self, s.makefile("r"), s.makefile("w"), init_commands
             )
 
     def get_pid(self):
@@ -1191,10 +1189,44 @@ class DebugAdaptorServer(DebugCommunication):
 
     def terminate(self):
         super(DebugAdaptorServer, self).terminate()
-        if self.process is not None:
+        if self.process:
             self.process.terminate()
             self.process.wait()
             self.process = None
+
+    @classmethod
+    def launch(
+        cls, executable: str, /, connect=None, log_file=None, env=None
+    ) -> subprocess.Popen:
+        adaptor_env = os.environ.copy()
+        if env:
+            adaptor_env.update(env)
+
+        if log_file:
+            adaptor_env["LLDBDAP_LOG"] = log_file
+
+        args = [executable]
+        if connect:
+            if isinstance(connect, str) and connect.startswith("/"):
+                args.append("--unix-socket")
+                args.append(connect)
+            else:
+                args.append("--port")
+                args.append(str(connect))
+
+        proc = subprocess.Popen(
+            args,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=sys.stdout,
+            env=adaptor_env,
+        )
+
+        if connect:
+            # Wait for the server to startup.
+            time.sleep(0.1)
+
+        return proc
 
 
 def attach_options_specified(options):
@@ -1271,9 +1303,9 @@ def main():
     )
 
     parser.add_option(
-        "--vscode",
+        "--dap",
         type="string",
-        dest="vscode_path",
+        dest="dap",
         help=(
             "The path to the command line program that implements the "
             "Visual Studio Code Debug Adaptor protocol."
@@ -1349,10 +1381,9 @@ def main():
     )
 
     parser.add_option(
-        "--port",
-        type="int",
-        dest="port",
-        help="Attach a socket to a port instead of using STDIN for VSCode",
+        "--connect",
+        dest="connect",
+        help="Attach a socket to the connection ('<port>' or '<path>') instead of using STDIN for VSCode",
         default=None,
     )
 
@@ -1498,15 +1529,15 @@ def main():
 
     (options, args) = parser.parse_args(sys.argv[1:])
 
-    if options.vscode_path is None and options.port is None:
+    if options.dap is None and options.connect is None:
         print(
             "error: must either specify a path to a Visual Studio Code "
-            "Debug Adaptor vscode executable path using the --vscode "
+            "Debug Adaptor vscode executable path using the --dap "
             "option, or a port to attach to for an existing lldb-dap "
-            "using the --port option"
+            "using the --connect option"
         )
         return
-    dbg = DebugAdaptorServer(executable=options.vscode_path, port=options.port)
+    dbg = DebugAdaptorServer(executable=options.dap, port=options.connect)
     if options.debug:
         raw_input('Waiting for debugger to attach pid "%i"' % (dbg.get_pid()))
     if options.replay:

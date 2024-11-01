@@ -27,6 +27,7 @@
 #include "ExceptionBreakpoint.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
+#include "lldb/lldb-defines.h"
 
 namespace lldb_dap {
 
@@ -496,10 +497,10 @@ llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module) {
   return llvm::json::Value(std::move(object));
 }
 
-void AppendBreakpoint(BreakpointBase *bp, llvm::json::Array &breakpoints,
+void AppendBreakpoint(BreakpointBase &bp, llvm::json::Array &breakpoints,
                       std::optional<llvm::StringRef> request_path,
                       std::optional<uint32_t> request_line) {
-  breakpoints.emplace_back(CreateBreakpoint(bp, request_path, request_line));
+  breakpoints.emplace_back(CreateBreakpoint(&bp, request_path, request_line));
 }
 
 // "Event": {

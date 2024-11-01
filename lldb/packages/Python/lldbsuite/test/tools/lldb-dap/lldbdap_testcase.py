@@ -13,7 +13,7 @@ class DAPTestCaseBase(TestBase):
     timeoutval = 10 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)
     NO_DEBUG_INFO_TESTCASE = True
 
-    def create_debug_adaptor(self, lldbDAPEnv=None):
+    def create_debug_adaptor(self, env=None, launch=True, connect=None):
         """Create the Visual Studio Code debug adaptor"""
         self.assertTrue(
             is_exe(self.lldbDAPExec), "lldb-dap must exist and be executable"
@@ -21,14 +21,20 @@ class DAPTestCaseBase(TestBase):
         log_file_path = self.getBuildArtifact("dap.txt")
         self.dap_server = dap_server.DebugAdaptorServer(
             executable=self.lldbDAPExec,
+            launch=launch,
+            connect=connect,
             init_commands=self.setUpCommands(),
             log_file=log_file_path,
-            env=lldbDAPEnv,
+            env=env,
         )
 
-    def build_and_create_debug_adaptor(self, lldbDAPEnv=None):
+    def build_and_create_debug_adaptor(
+        self, lldbDAPEnv=None, lldbDAPLaunch=True, lldbDAPConnect=None
+    ):
         self.build()
-        self.create_debug_adaptor(lldbDAPEnv)
+        self.create_debug_adaptor(
+            lldbDAPEnv, launch=lldbDAPLaunch, connect=lldbDAPConnect
+        )
 
     def set_source_breakpoints(self, source_path, lines, data=None):
         """Sets source breakpoints and returns an array of strings containing
@@ -475,11 +481,13 @@ class DAPTestCaseBase(TestBase):
         customThreadFormat=None,
         launchCommands=None,
         expectFailure=False,
+        lldbDAPConnect=None,
+        lldbDAPLaunch=True,
     ):
         """Build the default Makefile target, create the DAP debug adaptor,
         and launch the process.
         """
-        self.build_and_create_debug_adaptor(lldbDAPEnv)
+        self.build_and_create_debug_adaptor(lldbDAPEnv, lldbDAPLaunch, lldbDAPConnect)
         self.assertTrue(os.path.exists(program), "executable must exist")
 
         return self.launch(

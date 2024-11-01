@@ -31,8 +31,7 @@ struct SourceBreakpoint : public Breakpoint {
   uint32_t line;   ///< The source line of the breakpoint or logpoint
   uint32_t column; ///< An optional source column of the breakpoint
 
-  SourceBreakpoint(DAP &dap) : Breakpoint(dap), line(0), column(0) {}
-  SourceBreakpoint(DAP &dap, const llvm::json::Object &obj);
+  SourceBreakpoint(DAP *d, const llvm::json::Object &obj);
 
   // Set this breakpoint in LLDB as a new breakpoint
   void SetBreakpoint(const llvm::StringRef source_path);

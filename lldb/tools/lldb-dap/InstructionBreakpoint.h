@@ -26,10 +26,10 @@ struct InstructionBreakpoint : public Breakpoint {
   int32_t id;
   int32_t offset;
 
-  InstructionBreakpoint(DAP &d)
+  InstructionBreakpoint(DAP *d)
       : Breakpoint(d), instructionAddressReference(LLDB_INVALID_ADDRESS), id(0),
         offset(0) {}
-  InstructionBreakpoint(DAP &d, const llvm::json::Object &obj);
+  InstructionBreakpoint(DAP *d, const llvm::json::Object &obj);
 
   // Set instruction breakpoint in LLDB as a new breakpoint
   void SetInstructionBreakpoint();
