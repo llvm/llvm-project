@@ -1430,7 +1430,7 @@ static Instruction *cloneInstructionInExitBlock(
     New = I.clone();
   }
 
-  ExitBlock.getInstList().insert(ExitBlock.getFirstInsertionPt(), New);
+  New->insertAt(&ExitBlock, ExitBlock.getFirstInsertionPt());
   if (!I.getName().empty())
     New->setName(I.getName() + ".le");
 

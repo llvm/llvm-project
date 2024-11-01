@@ -121,8 +121,8 @@ void ReplaceInstWithValue(BasicBlock::InstListType &BIL,
 /// Copies DebugLoc from BI to I, if I doesn't already have a DebugLoc. The
 /// original instruction is deleted and BI is updated to point to the new
 /// instruction.
-void ReplaceInstWithInst(BasicBlock::InstListType &BIL,
-                         BasicBlock::iterator &BI, Instruction *I);
+void ReplaceInstWithInst(BasicBlock *BB, BasicBlock::iterator &BI,
+                         Instruction *I);
 
 /// Replace the instruction specified by From with the instruction specified by
 /// To. Copies DebugLoc from BI to I, if I doesn't already have a DebugLoc.
