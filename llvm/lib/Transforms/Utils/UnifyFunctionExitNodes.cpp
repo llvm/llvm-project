@@ -90,7 +90,7 @@ bool unifyReturnBlocks(Function &F) {
     // If the function doesn't return void... add a PHI node to the block...
     PN = PHINode::Create(F.getReturnType(), ReturningBlocks.size(),
                          "UnifiedRetVal");
-    PN->insertAt(NewRetBlock, NewRetBlock->end());
+    PN->insertInto(NewRetBlock, NewRetBlock->end());
     ReturnInst::Create(F.getContext(), PN, NewRetBlock);
   }
 

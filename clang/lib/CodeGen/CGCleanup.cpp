@@ -942,7 +942,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
       // Append the prepared cleanup prologue from above.
       llvm::BasicBlock *NormalExit = Builder.GetInsertBlock();
       for (unsigned I = 0, E = InstsToAppend.size(); I != E; ++I)
-        InstsToAppend[I]->insertAt(NormalExit, NormalExit->end());
+        InstsToAppend[I]->insertInto(NormalExit, NormalExit->end());
 
       // Optimistically hope that any fixups will continue falling through.
       for (unsigned I = FixupDepth, E = EHStack.getNumBranchFixups();
