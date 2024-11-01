@@ -4993,11 +4993,4 @@ def AtomicCmpXchg : CIR_Op<"atomic.cmp_xchg",
   let hasVerifier = 0;
 }
 
-def UndefOp : CIR_Op<"undef", [Pure]> {
-  let summary = "Creates an undefined value of CIR dialect type.";
-  let description = [{ `cir.undef` is similar to the one in the LLVM IR dialect }];
-  let results = (outs AnyType:$res);
-  let assemblyFormat = "attr-dict `:` type($res)";
-}
-
 #endif // LLVM_CLANG_CIR_DIALECT_IR_CIROPS

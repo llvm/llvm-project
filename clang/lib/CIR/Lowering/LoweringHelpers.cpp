@@ -85,7 +85,7 @@ void convertToDenseElementsAttrImpl(
       continue;
     }
 
-    if (mlir::isa<mlir::cir::ZeroAttr>(eltAttr)) {
+    if (mlir::isa<mlir::cir::ZeroAttr, mlir::cir::UndefAttr>(eltAttr)) {
       currentIndex += elementsSizeInCurrentDim;
       continue;
     }

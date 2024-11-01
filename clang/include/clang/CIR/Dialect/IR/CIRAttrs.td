@@ -107,6 +107,21 @@ def ZeroAttr : CIR_Attr<"Zero", "zero", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// UndefAttr
+//===----------------------------------------------------------------------===//
+
+def UndefAttr : CIR_Attr<"Undef", "undef", [TypedAttrInterface]> {
+  let summary = "Represent an undef constant";
+  let description = [{
+    The UndefAttr represents an undef constant, corresponding to LLVM's notion
+    of undef.
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type);
+  let assemblyFormat = [{}];
+}
+
+//===----------------------------------------------------------------------===//
 // ConstArrayAttr
 //===----------------------------------------------------------------------===//
 

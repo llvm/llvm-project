@@ -386,6 +386,12 @@ module {
 
 // -----
 
+module {
+  cir.global external @v = #cir.undef : !cir.void // expected-error {{undef expects non-void type}}
+}
+
+// -----
+
 !s32i = !cir.int<s, 32>
 cir.func @vec_op_size() {
   %0 = cir.const #cir.int<1> : !s32i

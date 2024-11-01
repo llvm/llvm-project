@@ -393,6 +393,12 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return op->emitOpError("zero expects struct or array type");
   }
 
+  if (isa<mlir::cir::UndefAttr>(attrType)) {
+    if (!::mlir::isa<::mlir::cir::VoidType>(opType))
+      return success();
+    return op->emitOpError("undef expects non-void type");
+  }
+
   if (mlir::isa<mlir::cir::BoolAttr>(attrType)) {
     if (!mlir::isa<mlir::cir::BoolType>(opType))
       return op->emitOpError("result type (")

@@ -150,6 +150,13 @@ module {
   cir.global common @comm = #cir.int<0> : !s32i
   // MLIR: llvm.mlir.global common @comm(0 : i32) {addr_space = 0 : i32} : i32
 
+  cir.global external @undefStruct = #cir.undef : !ty_Bar
+  // MLIR: llvm.mlir.global external @undefStruct()
+  // MLIR:   %0 = llvm.mlir.undef : !llvm.struct<"struct.Bar", (i32, i8)>
+  // MLIR:   llvm.return %0 : !llvm.struct<"struct.Bar", (i32, i8)>
+  // MLIR: }
+  // LLVM: @undefStruct = global %struct.Bar undef
+
   cir.global "private" internal @Handlers = #cir.const_array<[#cir.const_struct<{#cir.global_view<@myfun> : !cir.ptr<!cir.func<!void (!s32i)>>}> : !ty_anon2E1_]> : !cir.array<!ty_anon2E1_ x 1>
   cir.func internal private @myfun(%arg0: !s32i) {
     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}

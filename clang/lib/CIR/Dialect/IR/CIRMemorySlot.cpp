@@ -15,6 +15,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "llvm/ADT/STLExtras.h"
@@ -41,7 +42,8 @@ llvm::SmallVector<MemorySlot> cir::AllocaOp::getPromotableSlots() {
 
 Value cir::AllocaOp::getDefaultValue(const MemorySlot &slot,
                                      OpBuilder &builder) {
-  return builder.create<cir::UndefOp>(getLoc(), slot.elemType);
+  return builder.create<cir::ConstantOp>(
+      getLoc(), slot.elemType, builder.getAttr<cir::UndefAttr>(slot.elemType));
 }
 
 void cir::AllocaOp::handleBlockArgument(const MemorySlot &slot,

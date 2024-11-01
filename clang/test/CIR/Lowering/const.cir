@@ -15,6 +15,8 @@ module {
     // CHECK: llvm.mlir.constant(dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf32>) : !llvm.array<2 x f32>
     %4 = cir.const #cir.zero : !cir.array<!s32i x 3>
     // CHECK: llvm.mlir.zero : !llvm.array<3 x i32>
+    %5 = cir.const #cir.undef : !cir.array<!s32i x 3>
+    // CHECK: llvm.mlir.undef : !llvm.array<3 x i32>
     cir.return
   }
 
