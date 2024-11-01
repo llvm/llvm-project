@@ -3944,12 +3944,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  /// Handle intrinsics by applying the intrinsic to the shadows. The trailing
-  /// arguments are passed verbatim e.g., for an intrinsic with one trailing
-  /// verbatim argument:
+  /// Handle intrinsics by applying the intrinsic to the shadows.
+  ///
+  /// The trailing arguments are passed verbatim to the intrinsic, though any
+  /// uninitialized trailing arguments can also taint the shadow e.g., for an
+  /// intrinsic with one trailing verbatim argument:
   ///     out = intrinsic(var1, var2, opType)
   /// we compute:
-  ///     shadow[out] = intrinsic(shadow[var1], shadow[var2], opType)
+  ///     shadow[out] =
+  ///         intrinsic(shadow[var1], shadow[var2], opType) | shadow[opType]
   ///
   /// For example, this can be applied to the Arm NEON vector table intrinsics
   /// (tbl{1,2,3,4}).
@@ -3971,16 +3974,23 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     for (unsigned int i = I.arg_size() - trailingVerbatimArgs; i < I.arg_size();
          i++) {
       Value *Arg = I.getArgOperand(i);
-      insertShadowCheck(Arg, &I);
       ShadowArgs.push_back(Arg);
     }
 
     CallInst *CI =
         IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(), ShadowArgs);
-    setShadow(&I, CI);
+    Value *CombinedShadow = CI;
 
-    // The trailing verbatim args are guaranteed to be initialized (because of
-    // insertShadowCheck above), hence they won't "contaminate" the origin.
+    // Combine the computed shadow with the shadow of trailing args
+    for (unsigned int i = I.arg_size() - trailingVerbatimArgs; i < I.arg_size();
+         i++) {
+      Value *Shadow =
+          CreateShadowCast(IRB, getShadow(&I, i), CombinedShadow->getType());
+      CombinedShadow = IRB.CreateOr(Shadow, CombinedShadow, "_msprop");
+    }
+
+    setShadow(&I, CombinedShadow);
+
     setOriginForNaryOp(I);
   }
 
