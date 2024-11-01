@@ -7,8 +7,11 @@ add_subdirectory(Common)
 
 set(LLVM_LINK_COMPONENTS Support)
 
-# Sources included in llvm-min-tblgen and llvm-tblgen.
-add_llvm_library(LLVMTableGenBoth OBJECT EXCLUDE_FROM_ALL DISABLE_LLVM_LINK_LLVM_DYLIB
+# llvm-min-tablegen only contains a subset of backends necessary to
+# build llvm/include. It must not depend on TableGenCommon, as
+# TableGenCommon depends on this already to generate things such as
+# ValueType definitions.
+add_tablegen(llvm-min-tblgen LLVM_HEADERS
   TableGen.cpp
   ARMTargetDefEmitter.cpp
   Attributes.cpp
@@ -16,16 +19,6 @@ add_llvm_library(LLVMTableGenBoth OBJECT EXCLUDE_FROM_ALL DISABLE_LLVM_LINK_LLVM
   IntrinsicEmitter.cpp
   RISCVTargetDefEmitter.cpp
   VTEmitter.cpp
-
-  PARTIAL_SOURCES_INTENDED
-  )
-
-# llvm-min-tablegen only contains a subset of backends necessary to
-# build llvm/include. It must not depend on TableGenCommon, as
-# TableGenCommon depends on this already to generate things such as
-# ValueType definitions.
-add_tablegen(llvm-min-tblgen LLVM_HEADERS
-  $<TARGET_OBJECTS:obj.LLVMTableGenBoth>
   $<TARGET_OBJECTS:obj.LLVMTableGenBasic>
 
   PARTIAL_SOURCES_INTENDED
@@ -77,7 +70,7 @@ add_tablegen(llvm-tblgen LLVM
   X86ModRMFilters.cpp
   X86RecognizableInstr.cpp
 
-  $<TARGET_OBJECTS:obj.LLVMTableGenBoth>
+  $<TARGET_OBJECTS:llvm-min-tblgen>
   $<TARGET_OBJECTS:obj.LLVMTableGenBasic>
   $<TARGET_OBJECTS:obj.LLVMTableGenCommon>
 
