@@ -13803,13 +13803,12 @@ public:
            unsigned VF = 0,
            function_ref<void(Value *&, SmallVectorImpl<int> &)> Action = {}) {
     IsFinalized = true;
+    unsigned ScalarTyNumElements = getNumElements(ScalarTy);
     SmallVector<int> NewExtMask(ExtMask);
-    if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+    if (ScalarTyNumElements != 1) {
       assert(SLPReVec && "FixedVectorType is not expected.");
-      transformScalarShuffleIndiciesToVector(VecTy->getNumElements(),
-                                             CommonMask);
-      transformScalarShuffleIndiciesToVector(VecTy->getNumElements(),
-                                             NewExtMask);
+      transformScalarShuffleIndiciesToVector(ScalarTyNumElements, CommonMask);
+      transformScalarShuffleIndiciesToVector(ScalarTyNumElements, NewExtMask);
       ExtMask = NewExtMask;
     }
     if (Action) {
@@ -13852,12 +13851,14 @@ public:
                                    return !isKnownNonNegative(
                                        V, SimplifyQuery(*R.DL));
                                  }));
+        unsigned InsertionIndex = Idx * ScalarTyNumElements;
         Vec = Builder.CreateInsertVector(Vec->getType(), Vec, V,
-                                         Builder.getInt64(Idx));
+                                         Builder.getInt64(InsertionIndex));
         if (!CommonMask.empty()) {
-          std::iota(std::next(CommonMask.begin(), Idx),
-                    std::next(CommonMask.begin(), Idx + E->getVectorFactor()),
-                    Idx);
+          std::iota(std::next(CommonMask.begin(), InsertionIndex),
+                    std::next(CommonMask.begin(), (Idx + E->getVectorFactor()) *
+                                                      ScalarTyNumElements),
+                    InsertionIndex);
         }
       }
       InVectors.front() = Vec;
