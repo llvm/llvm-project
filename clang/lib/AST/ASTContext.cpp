@@ -14303,7 +14303,7 @@ static SYCLKernelInfo BuildSYCLKernelInfo(CanQualType KernelNameType,
 
 void ASTContext::registerSYCLEntryPointFunction(FunctionDecl *FD) {
   assert(!FD->isInvalidDecl());
-  assert(!FD->isDependentContext());
+  assert(!FD->isTemplated());
 
   const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
   assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
