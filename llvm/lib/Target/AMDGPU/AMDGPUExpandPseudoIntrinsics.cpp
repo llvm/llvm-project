@@ -22,6 +22,7 @@
 
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 
@@ -33,17 +34,22 @@ static inline PreservedAnalyses expandWaveSizeIntrinsic(const GCNSubtarget &ST,
     return PreservedAnalyses::all();
 
   for (auto &&U : WaveSize->users())
-    U->replaceAllUsesWith(ConstantInt::get(WaveSize->getReturnType(),
-                                           ST.getWavefrontSize()));
+    U->replaceAllUsesWith(
+        ConstantInt::get(WaveSize->getReturnType(), ST.getWavefrontSize()));
 
   return PreservedAnalyses::none();
 }
 
 PreservedAnalyses
-  AMDGPUExpandPseudoIntrinsicsPass::run(Module &M, ModuleAnalysisManager &) {
+AMDGPUExpandPseudoIntrinsicsPass::run(Module &M, ModuleAnalysisManager &) {
+  if (M.empty())
+    return PreservedAnalyses::all();
 
-  if (auto WS = M.getFunction("llvm.amdgcn.wavefrontsize"))
-    return expandWaveSizeIntrinsic(TM.getSubtarget<GCNSubtarget>(*WS), WS);
+  const auto &ST = TM.getSubtarget<GCNSubtarget>(*M.begin());
+
+  if (auto WS =
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::amdgcn_wavefrontsize))
+    return expandWaveSizeIntrinsic(ST, WS);
 
   return PreservedAnalyses::all();
 }
