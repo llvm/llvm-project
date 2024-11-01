@@ -16,7 +16,7 @@ include "llvm/Target/Target.td"
 //                 \      /
 //                   qsub
 //
-// Where the _hi parts are artificial and where ubregs ssub, dsub and qsub
+// Where the _hi parts are artificial and where subregs ssub, dsub and qsub
 // are all addressable as real registers.
 //
 // These are then used in {S0, S1, S2}, {D0, D1, D2} and {Q0, Q1, Q2},

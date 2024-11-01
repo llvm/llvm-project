@@ -410,7 +410,7 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
         Parts.push_back(getSubRegIndex(SR->ExplicitSubRegs[j]));
     }
 
-    if (Parts.size() < 2)
+    if (Parts.size() != SR->ExplicitSubRegs.size())
       continue;
 
     // Offer this as an existing spelling for the concatenation of Parts.
