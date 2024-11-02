@@ -1717,6 +1717,88 @@ TEST(IncludeFixerTest, CImplicitFunctionDecl) {
                                   "Include \"foo.h\" for symbol foo")))));
 }
 
+TEST(NolintFixesTest, DiagInMacro) {
+  Annotations Test(R"cpp(
+    #define SQUARE(X) (X)*(X)
+    int main() {
+      int y = 4;
+$insert[[]]      return SQUARE([[++]]y);
+    }
+  )cpp");
+
+  auto TU = TestTU::withCode(Test.code());
+  TU.ClangTidyProvider = addTidyChecks("bugprone-macro-repeated-side-effects");
+  auto Index = buildIndexWithSymbol({});
+  TU.ExternalIndex = Index.get();
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ElementsAre(
+          AllOf(Diag(Test.range(), "side effects in the 1st macro argument 'X' "
+                                   "are repeated in macro expansion"),
+                containsFix(Fix(
+                    Test.range("insert"),
+                    "      // "
+                    "NOLINTNEXTLINE(bugprone-macro-repeated-side-effects)\n",
+                    "ignore [bugprone-macro-repeated-side-effects] for this "
+                    "line"))),
+          AllOf(Diag(Test.range(), "multiple unsequenced modifications to 'y'"),
+                containsFix(Fix(
+                    Test.range("insert"),
+                    "      // NOLINTNEXTLINE(clang-diagnostic-unsequenced)\n",
+                    "ignore [clang-diagnostic-unsequenced] for this "
+                    "line")))));
+}
+
+TEST(NoLintFixesTest, ExistingNoLint) {
+  Annotations Test(R"cpp(
+    int main() {
+      // NOLINTNEXTLINE(readability-isolate-declaration$insert[[]])
+      int [[y]], z = 4;
+    }
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  TU.ClangTidyProvider = addTidyChecks("readability-isolate-declaration,"
+                                       "cppcoreguidelines-init-variables");
+  auto Index = buildIndexWithSymbol({});
+  TU.ExternalIndex = Index.get();
+
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ElementsAre(AllOf(
+          Diag(Test.range(), "variable 'y' is not initialized"),
+          containsFix(Fix(Test.range("insert"),
+                          ", cppcoreguidelines-init-variables",
+                          "ignore [cppcoreguidelines-init-variables] for this "
+                          "line")))));
+}
+
+TEST(NoLintFixesTest, RenameNoLint) {
+  Annotations Test(R"cpp(
+    int main() {
+$insert[[]]      int [[Y]] = 4;
+    }
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  TU.ClangTidyProvider = [](tidy::ClangTidyOptions &ClangTidyOpts,
+                            llvm::StringRef) {
+    ClangTidyOpts.Checks = {"-*,readability-identifier-naming"};
+    ClangTidyOpts.CheckOptions["readability-identifier-naming.VariableCase"] =
+        "lower_case";
+  };
+  auto Index = buildIndexWithSymbol({});
+  TU.ExternalIndex = Index.get();
+
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ElementsAre(
+          AllOf(Diag(Test.range(), "invalid case style for variable 'Y'"),
+                containsFix(Fix(
+                    Test.range("insert"),
+                    "      // NOLINTNEXTLINE(readability-identifier-naming)\n",
+                    "ignore [readability-identifier-naming] for this "
+                    "line")))));
+}
+
 TEST(DiagsInHeaders, DiagInsideHeader) {
   Annotations Main(R"cpp(
     #include [["a.h"]]
