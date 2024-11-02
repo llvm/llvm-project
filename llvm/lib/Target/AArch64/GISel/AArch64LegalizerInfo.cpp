@@ -393,7 +393,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                                  {v8s16, p0, s128, 8},
                                  {v2s32, p0, s64, 8},
                                  {v4s32, p0, s128, 8},
-                                 {v2s64, p0, s128, 8}})
+                                 {v2s64, p0, s128, 8},
+                                 // SVE vscale x 64 bit base sizes
+                                 {nxv4s16, p0, nxv4s16, 8}})
       // These extends are also legal
       .legalForTypesWithMemDesc(
           {{s32, p0, s8, 8}, {s32, p0, s16, 8}, {s64, p0, s32, 8}})
@@ -1330,11 +1332,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_SCMP, G_UCMP}).lower();
 
-  // FIXME: {nxv2s16, nxv4s16}
   getActionDefinitionsBuilder(G_EXTRACT_SUBVECTOR)
       .legalFor({{v8s8, v16s8}, {v4s16, v8s16}, {v2s32, v4s32}})
-      .legalFor(HasSVE,
-                {{nxv2s16, nxv8s16}, {nxv4s16, nxv8s16}, {nxv2s32, nxv4s32}})
+      .legalFor(HasSVE, {{nxv2s16, nxv4s16},
+                         {nxv2s16, nxv8s16},
+                         {nxv4s16, nxv8s16},
+                         {nxv2s32, nxv4s32}})
       .widenScalarOrEltToNextPow2(0)
       .immIdx(0); // Inform verifier imm idx 0 is handled.
 

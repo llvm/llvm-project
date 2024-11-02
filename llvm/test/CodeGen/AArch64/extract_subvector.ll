@@ -51,3 +51,18 @@ define void @extract_nxv2i16_nxv8i16(<vscale x 8 x i16> %arg, ptr %p) {
   store <vscale x 2 x i16> %ext, ptr %p
   ret void
 }
+
+define void @extract_nxv2i16_nxv4i16(ptr %p, ptr %p2) {
+; CHECK-LABEL: extract_nxv2i16_nxv4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    st1h { z0.d }, p0, [x1]
+; CHECK-NEXT:    ret
+  %vector = load <vscale x 4 x i16>, ptr %p
+  %ext = call <vscale x 2 x i16> @llvm.vector.extract.nxv2i16.nxv4i16(<vscale x 4 x i16> %vector, i64 0)
+  store <vscale x 2 x i16> %ext, ptr %p2
+  ret void
+}
