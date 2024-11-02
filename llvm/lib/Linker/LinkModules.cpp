@@ -352,12 +352,8 @@ bool ModuleLinker::linkIfNeeded(GlobalValue &GV,
         SGVar->setConstant(false);
       }
       if (DGVar->hasCommonLinkage() && SGVar->hasCommonLinkage()) {
-        MaybeAlign DAlign = DGVar->getAlign();
-        MaybeAlign SAlign = SGVar->getAlign();
-        MaybeAlign Align = std::nullopt;
-        if (DAlign || SAlign)
-          Align = std::max(DAlign.valueOrOne(), SAlign.valueOrOne());
-
+        MaybeAlign Align(
+            std::max(DGVar->getAlignment(), SGVar->getAlignment()));
         SGVar->setAlignment(Align);
         DGVar->setAlignment(Align);
       }

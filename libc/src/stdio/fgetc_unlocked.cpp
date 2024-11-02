@@ -9,14 +9,18 @@
 #include "src/stdio/fgetc_unlocked.h"
 #include "src/__support/File/file.h"
 
+#include <errno.h>
 #include <stdio.h>
 
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, fgetc_unlocked, (::FILE * stream)) {
   unsigned char c;
-  size_t r =
+  auto result =
       reinterpret_cast<__llvm_libc::File *>(stream)->read_unlocked(&c, 1);
+  size_t r = result.value;
+  if (result.has_error())
+    errno = result.error;
   if (r != 1)
     return EOF;
   return c;

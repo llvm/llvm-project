@@ -9,7 +9,6 @@
 #include "pthread_setname_np.h"
 
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/CPP/error.h"
 #include "src/__support/common.h"
 #include "src/__support/threads/thread.h"
 

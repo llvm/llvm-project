@@ -9,12 +9,18 @@
 #include "src/stdio/ftell.h"
 #include "src/__support/File/file.h"
 
+#include <errno.h>
 #include <stdio.h>
 
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(long, ftell, (::FILE * stream)) {
-  return reinterpret_cast<__llvm_libc::File *>(stream)->tell();
+  auto result = reinterpret_cast<__llvm_libc::File *>(stream)->tell();
+  if (!result.has_value()) {
+    errno = result.error();
+    return -1;
+  }
+  return result.value();
 }
 
 } // namespace __llvm_libc

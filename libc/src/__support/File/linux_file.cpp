@@ -10,7 +10,7 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 
-#include <errno.h>
+#include <errno.h> // For error macros
 #include <fcntl.h> // For mode_t and other flags to the open syscall
 #include <stdio.h>
 #include <stdlib.h>      // For malloc
@@ -20,9 +20,9 @@ namespace __llvm_libc {
 
 namespace {
 
-size_t write_func(File *, const void *, size_t);
-size_t read_func(File *, void *, size_t);
-long seek_func(File *, long, int);
+FileIOResult write_func(File *, const void *, size_t);
+FileIOResult read_func(File *, void *, size_t);
+ErrorOr<long> seek_func(File *, long, int);
 int close_func(File *);
 int flush_func(File *);
 
@@ -51,75 +51,70 @@ public:
 
 namespace {
 
-size_t write_func(File *f, const void *data, size_t size) {
+FileIOResult write_func(File *f, const void *data, size_t size) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  long ret = __llvm_libc::syscall_impl(SYS_write, lf->get_fd(), data, size);
+  int ret = __llvm_libc::syscall_impl(SYS_write, lf->get_fd(), data, size);
   if (ret < 0) {
-    errno = -ret;
-    return 0;
+    return {0, -ret};
   }
   return ret;
 }
 
-size_t read_func(File *f, void *buf, size_t size) {
+FileIOResult read_func(File *f, void *buf, size_t size) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  long ret = __llvm_libc::syscall_impl(SYS_read, lf->get_fd(), buf, size);
+  int ret = __llvm_libc::syscall_impl(SYS_read, lf->get_fd(), buf, size);
   if (ret < 0) {
-    errno = -ret;
-    return 0;
+    return {0, -ret};
   }
   return ret;
 }
 
-long seek_func(File *f, long offset, int whence) {
+ErrorOr<long> seek_func(File *f, long offset, int whence) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
   long result;
 #ifdef SYS_lseek
-  long ret = __llvm_libc::syscall_impl(SYS_lseek, lf->get_fd(), offset, whence);
+  int ret = __llvm_libc::syscall_impl(SYS_lseek, lf->get_fd(), offset, whence);
   result = ret;
 #elif defined(SYS__llseek)
   long result;
-  long ret = __llvm_libc::syscall_impl(SYS__llseek, lf->get_fd(), offset >> 32,
-                                       offset, &result, whence);
+  int ret = __llvm_libc::syscall_impl(SYS__llseek, lf->get_fd(), offset >> 32,
+                                      offset, &result, whence);
 #else
 #error "lseek and _llseek syscalls not available to perform a seek operation."
 #endif
 
-  if (ret < 0) {
-    errno = -ret;
-    return -1;
-  }
+  if (ret < 0)
+    return Error(-ret);
+
   return result;
 }
 
 int close_func(File *f) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  long ret = __llvm_libc::syscall_impl(SYS_close, lf->get_fd());
+  int ret = __llvm_libc::syscall_impl(SYS_close, lf->get_fd());
   if (ret < 0) {
-    errno = -ret;
-    return -1;
+    return -ret;
   }
   return 0;
 }
 
 int flush_func(File *f) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  long ret = __llvm_libc::syscall_impl(SYS_fsync, lf->get_fd());
+  int ret = __llvm_libc::syscall_impl(SYS_fsync, lf->get_fd());
   if (ret < 0) {
-    errno = -ret;
-    return -1;
+    return -ret;
   }
   return 0;
 }
 
 } // anonymous namespace
 
-File *openfile(const char *path, const char *mode) {
+ErrorOr<File *> openfile(const char *path, const char *mode) {
   using ModeFlags = File::ModeFlags;
   auto modeflags = File::mode_flags(mode);
   if (modeflags == 0) {
-    errno = EINVAL;
-    return nullptr;
+    // return {nullptr, EINVAL};
+    return Error(EINVAL);
   }
   long open_flags = 0;
   if (modeflags & ModeFlags(File::OpenMode::APPEND)) {
@@ -155,8 +150,8 @@ File *openfile(const char *path, const char *mode) {
 #endif
 
   if (fd < 0) {
-    errno = -fd;
-    return nullptr;
+    return Error(-fd);
+    // return {nullptr, -fd};
   }
 
   void *buffer = malloc(File::DEFAULT_BUFFER_SIZE);

@@ -9,6 +9,7 @@
 #include "src/stdio/fgets.h"
 #include "src/__support/File/file.h"
 
+#include <errno.h>
 #include <stddef.h>
 #include <stdio.h>
 
@@ -28,7 +29,11 @@ LLVM_LIBC_FUNCTION(char *, fgets,
   int i = 0;
 
   for (; i < (count - 1) && c != '\n'; ++i) {
-    size_t r = stream->read_unlocked(&c, 1);
+    auto result = stream->read_unlocked(&c, 1);
+    size_t r = result.value;
+    if (result.has_error())
+      errno = result.error;
+
     if (r != 1)
       break;
     str[i] = c;
