@@ -1931,9 +1931,9 @@ Error makeAlignmentError(llvm::orc::ExecutorAddr Loc, uint64_t Value, int N,
 ///   alignment: PointerSize
 ///   alignment-offset: 0
 ///   address: highest allowable
-using AnonymousPointerCreator = unique_function<Expected<Symbol &>(
-    LinkGraph &G, Section &PointerSection, Symbol *InitialTarget,
-    uint64_t InitialAddend)>;
+using AnonymousPointerCreator =
+    unique_function<Symbol &(LinkGraph &G, Section &PointerSection,
+                             Symbol *InitialTarget, uint64_t InitialAddend)>;
 
 /// Get target-specific AnonymousPointerCreator
 AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT);
@@ -1942,7 +1942,7 @@ AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT);
 /// an anonymous symbol pointing to it. Return the anonymous symbol.
 ///
 /// The stub block will be created by createPointerJumpStubBlock.
-using PointerJumpStubCreator = unique_function<Expected<Symbol &>(
+using PointerJumpStubCreator = unique_function<Symbol &(
     LinkGraph &G, Section &StubSection, Symbol &PointerSymbol)>;
 
 /// Get target-specific PointerJumpStubCreator
