@@ -226,14 +226,14 @@ using LocalVisitor = llvm::function_ref<bool(IndirectLocalPath &Path, Local L,
                                              ReferenceKind RK)>;
 } // namespace
 
-static bool isVarOnPath(IndirectLocalPath &Path, VarDecl *VD) {
+static bool isVarOnPath(const IndirectLocalPath &Path, VarDecl *VD) {
   for (auto E : Path)
     if (E.Kind == IndirectLocalPathEntry::VarInit && E.D == VD)
       return true;
   return false;
 }
 
-static bool pathContainsInit(IndirectLocalPath &Path) {
+static bool pathContainsInit(const IndirectLocalPath &Path) {
   return llvm::any_of(Path, [=](IndirectLocalPathEntry E) {
     return E.Kind == IndirectLocalPathEntry::DefaultInit ||
            E.Kind == IndirectLocalPathEntry::VarInit;
@@ -1076,7 +1076,7 @@ static SourceRange nextPathEntryRange(const IndirectLocalPath &Path, unsigned I,
   return E->getSourceRange();
 }
 
-static bool pathOnlyHandlesGslPointer(IndirectLocalPath &Path) {
+static bool pathOnlyHandlesGslPointer(const IndirectLocalPath &Path) {
   for (const auto &It : llvm::reverse(Path)) {
     switch (It.Kind) {
     case IndirectLocalPathEntry::VarInit:
@@ -1124,7 +1124,7 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
 
   // FIXME: consider moving the TemporaryVisitor and visitLocalsRetained*
   // functions to a dedicated class.
-  auto TemporaryVisitor = [&](IndirectLocalPath &Path, Local L,
+  auto TemporaryVisitor = [&](const IndirectLocalPath &Path, Local L,
                               ReferenceKind RK) -> bool {
     SourceRange DiagRange = nextPathEntryRange(Path, 0, L);
     SourceLocation DiagLoc = DiagRange.getBegin();
