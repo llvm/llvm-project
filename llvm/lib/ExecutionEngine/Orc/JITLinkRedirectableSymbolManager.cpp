@@ -118,23 +118,19 @@ Error JITLinkRedirectableSymbolManager::grow(unsigned Need) {
 
   // FIXME: We can batch the stubs into one block and use address to access them
   for (size_t I = OldSize; I < NewSize; I++) {
-    auto Pointer = AnonymousPtrCreator(*G, PointerSection, nullptr, 0);
-    if (auto Err = Pointer.takeError())
-      return Err;
+    auto &Pointer = AnonymousPtrCreator(*G, PointerSection, nullptr, 0);
 
     StringRef PtrSymName = StubPtrSymbolName(I);
-    Pointer->setName(PtrSymName);
-    Pointer->setScope(jitlink::Scope::Default);
+    Pointer.setName(PtrSymName);
+    Pointer.setScope(jitlink::Scope::Default);
     LookupSymbols.add(ES.intern(PtrSymName));
     NewDefsMap[ES.intern(PtrSymName)] = &StubPointers[I];
 
-    auto Stub = PtrJumpStubCreator(*G, StubsSection, *Pointer);
-    if (auto Err = Stub.takeError())
-      return Err;
+    auto &Stub = PtrJumpStubCreator(*G, StubsSection, Pointer);
 
     StringRef JumpStubSymName = JumpStubSymbolName(I);
-    Stub->setName(JumpStubSymName);
-    Stub->setScope(jitlink::Scope::Default);
+    Stub.setName(JumpStubSymName);
+    Stub.setScope(jitlink::Scope::Default);
     LookupSymbols.add(ES.intern(JumpStubSymName));
     NewDefsMap[ES.intern(JumpStubSymName)] = &JumpStubs[I];
   }
