@@ -431,7 +431,9 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
     }
 
     m_failed_lookups.clear();
-
+    ss.PutCString(
+        "\nHint: The expression tried to call a function that is not present "
+        "in the target, perhaps because it was optimized out by the compiler.");
     error.SetErrorString(ss.GetString());
 
     return;

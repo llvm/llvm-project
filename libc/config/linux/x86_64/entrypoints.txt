@@ -22,6 +22,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # fcntl.h entrypoints
     libc.src.fcntl.creat
+    libc.src.fcntl.fcntl
     libc.src.fcntl.open
     libc.src.fcntl.openat
 
@@ -215,6 +216,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.fileno
 
     # sys/epoll.h entrypoints
+    libc.src.sys.epoll.epoll_create
+    libc.src.sys.epoll.epoll_create1
+    libc.src.sys.epoll.epoll_ctl
     libc.src.sys.epoll.epoll_wait
     libc.src.sys.epoll.epoll_pwait
     # TODO: Need to check if pwait2 is available before providing.
@@ -308,6 +312,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.link
     libc.src.unistd.linkat
     libc.src.unistd.lseek
+    libc.src.unistd.pipe
     libc.src.unistd.pread
     libc.src.unistd.pwrite
     libc.src.unistd.read
@@ -337,10 +342,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.fegetround
     libc.src.fenv.feholdexcept
     libc.src.fenv.fesetenv
+    libc.src.fenv.fesetexcept
     libc.src.fenv.fesetexceptflag
     libc.src.fenv.fesetround
     libc.src.fenv.feraiseexcept
     libc.src.fenv.fetestexcept
+    libc.src.fenv.fetestexceptflag
     libc.src.fenv.feupdateenv
 
     # math.h entrypoints
@@ -348,8 +355,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acoshf
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.atan2f
     libc.src.math.atanf
     libc.src.math.atanhf
+    libc.src.math.canonicalize
+    libc.src.math.canonicalizef
+    libc.src.math.canonicalizel
     libc.src.math.copysign
     libc.src.math.copysignf
     libc.src.math.copysignl
@@ -366,6 +377,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.exp10f
     libc.src.math.exp2
     libc.src.math.exp2f
+    libc.src.math.exp2m1f
     libc.src.math.expm1
     libc.src.math.expm1f
     libc.src.math.fabs
@@ -489,6 +501,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.round
     libc.src.math.roundf
     libc.src.math.roundl
+    libc.src.math.roundeven
+    libc.src.math.roundevenf
+    libc.src.math.roundevenl
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl
@@ -516,6 +531,7 @@ set(TARGET_LIBM_ENTRYPOINTS
 if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
+    libc.src.math.canonicalizef128
     libc.src.math.ceilf128
     libc.src.math.copysignf128
     libc.src.math.fabsf128
@@ -545,11 +561,14 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.lroundf128
     libc.src.math.modff128
     libc.src.math.nanf128
+    libc.src.math.nearbyintf128
     libc.src.math.nextafterf128
     libc.src.math.nextdownf128
     libc.src.math.nextupf128
     libc.src.math.rintf128
+    libc.src.math.roundevenf128
     libc.src.math.roundf128
+    libc.src.math.scalbnf128
     libc.src.math.sqrtf128
     libc.src.math.truncf128
     libc.src.math.ufromfpf128
@@ -623,6 +642,12 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_attr_setguardsize
     libc.src.pthread.pthread_attr_setstack
     libc.src.pthread.pthread_attr_setstacksize
+    libc.src.pthread.pthread_condattr_destroy
+    libc.src.pthread.pthread_condattr_getclock
+    libc.src.pthread.pthread_condattr_getpshared
+    libc.src.pthread.pthread_condattr_init
+    libc.src.pthread.pthread_condattr_setclock
+    libc.src.pthread.pthread_condattr_setpshared
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_detach
     libc.src.pthread.pthread_equal
@@ -647,6 +672,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_mutexattr_setrobust
     libc.src.pthread.pthread_mutexattr_settype
     libc.src.pthread.pthread_once
+    libc.src.pthread.pthread_rwlockattr_destroy
+    libc.src.pthread.pthread_rwlockattr_getpshared
+    libc.src.pthread.pthread_rwlockattr_init
+    libc.src.pthread.pthread_rwlockattr_setpshared
     libc.src.pthread.pthread_setspecific
 
     # sched.h entrypoints
@@ -677,6 +706,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fread_unlocked
     libc.src.stdio.fseek
     libc.src.stdio.ftell
+    libc.src.stdio.fseeko
+    libc.src.stdio.ftello
     libc.src.stdio.funlockfile
     libc.src.stdio.fwrite
     libc.src.stdio.fwrite_unlocked
@@ -767,6 +798,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.time
 
     # unistd.h entrypoints
+    libc.src.unistd._exit
     libc.src.unistd.environ
     libc.src.unistd.execv
     libc.src.unistd.fork

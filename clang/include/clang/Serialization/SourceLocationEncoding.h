@@ -6,28 +6,33 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Source locations are stored pervasively in the AST, making up a third of
-// the size of typical serialized files. Storing them efficiently is important.
+// We wish to encode the SourceLocation from other module file not dependent
+// on the other module file. So that the source location changes from other
+// module file may not affect the contents of the current module file. Then the
+// users don't need to recompile the whole project due to a new line in a module
+// unit in the root of the dependency graph.
 //
-// We use integers optimized by VBR-encoding, because:
-//  - when abbreviations cannot be used, VBR6 encoding is our only choice
-//  - in the worst case a SourceLocation can be ~any 32-bit number, but in
-//    practice they are highly predictable
+// To achieve this, we need to encode the index of the module file into the
+// encoding of the source location. The encoding of the source location may be:
 //
-// We encode the integer so that likely values encode as small numbers that
-// turn into few VBR chunks:
-//  - the invalid sentinel location is a very common value: it encodes as 0
-//  - the "macro or not" bit is stored at the bottom of the integer
-//    (rather than at the top, as in memory), so macro locations can have
-//    small representations.
-//  - related locations (e.g. of a left and right paren pair) are usually
-//    similar, so when encoding a sequence of locations we store only
-//    differences between successive elements.
+//      |-----------------------|-----------------------|
+//      |          A            |         B         | C |
+//
+//  * A: 32 bit. The index of the module file in the module manager + 1. The +1
+//  here is necessary since we wish 0 stands for the current module file.
+//  * B: 31 bit. The offset of the source location to the module file containing
+//  it.
+//  * C: The macro bit. We rotate it to the lowest bit so that we can save some
+//  space in case the index of the module file is 0.
+//
+// Specially, if the index of the module file is 0, we allow to encode a
+// sequence of locations we store only differences between successive elements.
 //
 //===----------------------------------------------------------------------===//
 
-#include <climits>
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/Support/MathExtras.h"
+#include <climits>
 
 #ifndef LLVM_CLANG_SERIALIZATION_SOURCELOCATIONENCODING_H
 #define LLVM_CLANG_SERIALIZATION_SOURCELOCATIONENCODING_H
@@ -52,9 +57,13 @@ class SourceLocationEncoding {
   friend SourceLocationSequence;
 
 public:
-  static uint64_t encode(SourceLocation Loc,
-                         SourceLocationSequence * = nullptr);
-  static SourceLocation decode(uint64_t, SourceLocationSequence * = nullptr);
+  using RawLocEncoding = uint64_t;
+
+  static RawLocEncoding encode(SourceLocation Loc, UIntTy BaseOffset,
+                               unsigned BaseModuleFileIndex,
+                               SourceLocationSequence * = nullptr);
+  static std::pair<SourceLocation, unsigned>
+  decode(RawLocEncoding, SourceLocationSequence * = nullptr);
 };
 
 /// Serialized encoding of a sequence of SourceLocations.
@@ -149,14 +158,44 @@ public:
   operator SourceLocationSequence *() { return &Seq; }
 };
 
-inline uint64_t SourceLocationEncoding::encode(SourceLocation Loc,
-                                               SourceLocationSequence *Seq) {
-  return Seq ? Seq->encode(Loc) : encodeRaw(Loc.getRawEncoding());
+inline SourceLocationEncoding::RawLocEncoding
+SourceLocationEncoding::encode(SourceLocation Loc, UIntTy BaseOffset,
+                               unsigned BaseModuleFileIndex,
+                               SourceLocationSequence *Seq) {
+  // If the source location is a local source location, we can try to optimize
+  // the similar sequences to only record the differences.
+  if (!BaseOffset)
+    return Seq ? Seq->encode(Loc) : encodeRaw(Loc.getRawEncoding());
+
+  if (Loc.isInvalid())
+    return 0;
+
+  // Otherwise, the higher bits are used to store the module file index,
+  // so it is meaningless to optimize the source locations into small
+  // integers. Let's try to always use the raw encodings.
+  assert(Loc.getOffset() >= BaseOffset);
+  Loc = Loc.getLocWithOffset(-BaseOffset);
+  RawLocEncoding Encoded = encodeRaw(Loc.getRawEncoding());
+
+  // 16 bits should be sufficient to store the module file index.
+  assert(BaseModuleFileIndex < (1 << 16));
+  Encoded |= (RawLocEncoding)BaseModuleFileIndex << 32;
+  return Encoded;
 }
-inline SourceLocation
-SourceLocationEncoding::decode(uint64_t Encoded, SourceLocationSequence *Seq) {
-  return Seq ? Seq->decode(Encoded)
-             : SourceLocation::getFromRawEncoding(decodeRaw(Encoded));
+inline std::pair<SourceLocation, unsigned>
+SourceLocationEncoding::decode(RawLocEncoding Encoded,
+                               SourceLocationSequence *Seq) {
+  unsigned ModuleFileIndex = Encoded >> 32;
+
+  if (!ModuleFileIndex)
+    return {Seq ? Seq->decode(Encoded)
+                : SourceLocation::getFromRawEncoding(decodeRaw(Encoded)),
+            ModuleFileIndex};
+
+  Encoded &= llvm::maskTrailingOnes<RawLocEncoding>(32);
+  SourceLocation Loc = SourceLocation::getFromRawEncoding(decodeRaw(Encoded));
+
+  return {Loc, ModuleFileIndex};
 }
 
 } // namespace clang

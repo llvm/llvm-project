@@ -10,6 +10,7 @@ unittest("TargetParserTests") {
   sources = [
     "CSKYTargetParserTest.cpp",
     "Host.cpp",
+    "RISCVISAInfoTest.cpp",
     "RISCVTargetParserTest.cpp",
     "TargetParserTest.cpp",
     "TripleTest.cpp",

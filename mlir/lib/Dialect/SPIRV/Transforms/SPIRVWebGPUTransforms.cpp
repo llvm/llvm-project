@@ -39,7 +39,7 @@ namespace {
 //===----------------------------------------------------------------------===//
 // Helpers
 //===----------------------------------------------------------------------===//
-Attribute getScalarOrSplatAttr(Type type, int64_t value) {
+static Attribute getScalarOrSplatAttr(Type type, int64_t value) {
   APInt sizedValue(getElementTypeOrSelf(type).getIntOrFloatBitWidth(), value);
   if (auto intTy = dyn_cast<IntegerType>(type))
     return IntegerAttr::get(intTy, sizedValue);
@@ -47,9 +47,9 @@ Attribute getScalarOrSplatAttr(Type type, int64_t value) {
   return SplatElementsAttr::get(cast<ShapedType>(type), sizedValue);
 }
 
-Value lowerExtendedMultiplication(Operation *mulOp, PatternRewriter &rewriter,
-                                  Value lhs, Value rhs,
-                                  bool signExtendArguments) {
+static Value lowerExtendedMultiplication(Operation *mulOp,
+                                         PatternRewriter &rewriter, Value lhs,
+                                         Value rhs, bool signExtendArguments) {
   Location loc = mulOp->getLoc();
   Type argTy = lhs.getType();
   // Emulate 64-bit multiplication by splitting each input element of type i32
@@ -203,15 +203,39 @@ struct ExpandAddCarryPattern final : OpRewritePattern<IAddCarryOp> {
   }
 };
 
+struct ExpandIsInfPattern final : OpRewritePattern<IsInfOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IsInfOp op,
+                                PatternRewriter &rewriter) const override {
+    // We assume values to be finite and turn `IsInf` info `false`.
+    rewriter.replaceOpWithNewOp<spirv::ConstantOp>(
+        op, op.getType(), getScalarOrSplatAttr(op.getType(), 0));
+    return success();
+  }
+};
+
+struct ExpandIsNanPattern final : OpRewritePattern<IsNanOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IsNanOp op,
+                                PatternRewriter &rewriter) const override {
+    // We assume values to be finite and turn `IsNan` info `false`.
+    rewriter.replaceOpWithNewOp<spirv::ConstantOp>(
+        op, op.getType(), getScalarOrSplatAttr(op.getType(), 0));
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // Passes
 //===----------------------------------------------------------------------===//
-class WebGPUPreparePass
-    : public impl::SPIRVWebGPUPreparePassBase<WebGPUPreparePass> {
-public:
+struct WebGPUPreparePass final
+    : impl::SPIRVWebGPUPreparePassBase<WebGPUPreparePass> {
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateSPIRVExpandExtendedMultiplicationPatterns(patterns);
+    populateSPIRVExpandNonFiniteArithmeticPatterns(patterns);
 
     if (failed(
             applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
@@ -227,12 +251,16 @@ void populateSPIRVExpandExtendedMultiplicationPatterns(
     RewritePatternSet &patterns) {
   // WGSL currently does not support extended multiplication ops, see:
   // https://github.com/gpuweb/gpuweb/issues/1565.
-  patterns.add<
-      // clang-format off
-    ExpandSMulExtendedPattern,
-    ExpandUMulExtendedPattern,
-    ExpandAddCarryPattern
-  >(patterns.getContext());
+  patterns.add<ExpandSMulExtendedPattern, ExpandUMulExtendedPattern,
+               ExpandAddCarryPattern>(patterns.getContext());
 }
+
+void populateSPIRVExpandNonFiniteArithmeticPatterns(
+    RewritePatternSet &patterns) {
+  // WGSL currently does not support `isInf` and `isNan`, see:
+  // https://github.com/gpuweb/gpuweb/pull/2311.
+  patterns.add<ExpandIsInfPattern, ExpandIsNanPattern>(patterns.getContext());
+}
+
 } // namespace spirv
 } // namespace mlir

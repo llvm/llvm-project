@@ -2,6 +2,7 @@
 ; RUN: split-file %s %t
 ; RUN: mkdir -p %t/System/Library/Frameworks 
 ; RUN: cp -r %S/Inputs/Simple/Simple.framework %t/System/Library/Frameworks/
+; RUN: cp -r %S/Inputs/Foundation/Foundation.framework %t/System/Library/Frameworks/
 ; RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
 ; RUN: yaml2obj %S/Inputs/Simple/Simple.yaml -o %t/Simple 
 
@@ -184,24 +185,3 @@
   ],
   "version": "3"
 }
-
-;--- System/Library/Frameworks/Foundation.framework/Headers/Foundation.h
-@interface NSObject 
-@end
-
-typedef unsigned char BOOL; 
-#ifndef NS_AVAILABLE
-#define NS_AVAILABLE(x,y) __attribute__((availability(macosx,introduced=x)))
-#endif 
-#ifndef NS_UNAVAILABLE
-#define NS_UNAVAILABLE  __attribute__((unavailable))
-#endif 
-#ifndef NS_DEPRECATED_MAC
-#define NS_DEPRECATED_MAC(x,y) __attribute__((availability(macosx,introduced=x,deprecated=y,message="" )));
-#endif 
-
-@interface NSManagedObject
-@end 
-
-@interface NSSet 
-@end 

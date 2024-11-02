@@ -4,41 +4,39 @@
 #
 #    pip-compile --output-file=requirements.txt requirements.txt.in
 #
-certifi==2023.7.22
+certifi==2024.2.2
     # via
     #   -r requirements.txt.in
     #   requests
-cffi==1.15.1
+cffi==1.16.0
     # via
     #   cryptography
     #   pynacl
-charset-normalizer==2.1.1
+charset-normalizer==3.3.2
     # via requests
-cryptography==41.0.3
+cryptography==42.0.5
     # via pyjwt
-deprecated==1.2.13
+deprecated==1.2.14
     # via pygithub
-gitdb==4.0.9
+gitdb==4.0.11
     # via gitpython
-gitpython==3.1.32
+gitpython==3.1.43
     # via -r requirements.txt.in
-idna==3.4
+idna==3.7
     # via requests
-pycparser==2.21
+pycparser==2.22
     # via cffi
 pygithub==1.59.1
     # via -r requirements.txt.in
-pyjwt[crypto]==2.5.0
+pyjwt[crypto]==2.8.0
     # via pygithub
 pynacl==1.5.0
     # via pygithub
-requests==2.28.1
+requests==2.31.0
     # via pygithub
-smmap==5.0.0
+smmap==5.0.1
     # via gitdb
-types-cryptography==3.3.23.2
-    # via pyjwt
-urllib3==1.26.12
+urllib3==2.2.1
     # via requests
-wrapt==1.14.1
+wrapt==1.16.0
     # via deprecated

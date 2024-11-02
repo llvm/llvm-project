@@ -139,6 +139,7 @@ static void printBarString(AsmPrinter &printer, StringRef foo) {
 // Tablegen Generated Definitions
 //===----------------------------------------------------------------------===//
 
+#include "TestTypeInterfaces.cpp.inc"
 #define GET_TYPEDEF_CLASSES
 #include "TestTypeDefs.cpp.inc"
 

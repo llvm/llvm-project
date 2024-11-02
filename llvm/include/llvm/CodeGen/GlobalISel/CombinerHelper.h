@@ -237,6 +237,11 @@ public:
   /// or an implicit_def if \p Ops is empty.
   void applyCombineConcatVectors(MachineInstr &MI, SmallVector<Register> &Ops);
 
+  bool matchCombineShuffleConcat(MachineInstr &MI, SmallVector<Register> &Ops);
+  /// Replace \p MI with a flattened build_vector with \p Ops
+  /// or an implicit_def if \p Ops is empty.
+  void applyCombineShuffleConcat(MachineInstr &MI, SmallVector<Register> &Ops);
+
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
   /// Returns true if MI changed.
   ///
@@ -673,6 +678,14 @@ public:
   bool matchSDivByConst(MachineInstr &MI);
   void applySDivByConst(MachineInstr &MI);
 
+  /// Given an G_SDIV \p MI expressing a signed divided by a pow2 constant,
+  /// return expressions that implements it by shifting.
+  bool matchDivByPow2(MachineInstr &MI, bool IsSigned);
+  void applySDivByPow2(MachineInstr &MI);
+  /// Given an G_UDIV \p MI expressing an unsigned divided by a pow2 constant,
+  /// return expressions that implements it by shifting.
+  void applyUDivByPow2(MachineInstr &MI);
+
   // G_UMULH x, (1 << c)) -> x >> (bitwidth - c)
   bool matchUMulHToLShr(MachineInstr &MI);
   void applyUMulHToLShr(MachineInstr &MI);
@@ -797,6 +810,12 @@ public:
   /// Match constant LHS ops that should be commuted.
   bool matchCommuteConstantToRHS(MachineInstr &MI);
 
+  /// Combine sext of trunc.
+  bool matchSextOfTrunc(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  /// Combine zext of trunc.
+  bool matchZextOfTrunc(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
   /// Match constant LHS FP ops that should be commuted.
   bool matchCommuteFPConstantToRHS(MachineInstr &MI);
 
@@ -814,6 +833,38 @@ public:
 
   /// Combine addos.
   bool matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element.
+  bool matchExtractVectorElement(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element with freeze on the vector register.
+  bool matchExtractVectorElementWithFreeze(const MachineOperand &MO,
+                                           BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element with a build vector on the vector register.
+  bool matchExtractVectorElementWithBuildVector(const MachineOperand &MO,
+                                                BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element with a build vector trunc on the vector
+  /// register.
+  bool matchExtractVectorElementWithBuildVectorTrunc(const MachineOperand &MO,
+                                                     BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element with a shuffle vector on the vector
+  /// register.
+  bool matchExtractVectorElementWithShuffleVector(const MachineOperand &MO,
+                                                  BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element with a insert vector element on the vector
+  /// register and different indices.
+  bool matchExtractVectorElementWithDifferentIndices(const MachineOperand &MO,
+                                                     BuildFnTy &MatchInfo);
+  /// Use a function which takes in a MachineIRBuilder to perform a combine.
+  /// By default, it erases the instruction def'd on \p MO from the function.
+  void applyBuildFnMO(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  /// Combine insert vector element OOB.
+  bool matchInsertVectorElementOOB(MachineInstr &MI, BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.

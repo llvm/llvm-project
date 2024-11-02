@@ -1,7 +1,7 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fsyntax-only -verify -verify-ignore-unexpected=error,note -emit-llvm -o - %s
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fsyntax-only -verify=overload -verify-ignore-unexpected=error,note -emit-llvm -o - %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -verify -verify-ignore-unexpected=error,note -emit-llvm -o - %s
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -verify=overload -verify-ignore-unexpected=error,note -emit-llvm -o - %s
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.

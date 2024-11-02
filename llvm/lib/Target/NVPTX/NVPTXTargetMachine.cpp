@@ -132,8 +132,7 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(T, computeDataLayout(is64bit, UseShortPointersOpt), TT,
                         CPU, FS, Options, Reloc::PIC_,
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      is64bit(is64bit), UseShortPointers(UseShortPointersOpt),
-      TLOF(std::make_unique<NVPTXTargetObjectFile>()),
+      is64bit(is64bit), TLOF(std::make_unique<NVPTXTargetObjectFile>()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this),
       StrPool(StrAlloc) {
   if (TT.getOS() == Triple::NVCL)

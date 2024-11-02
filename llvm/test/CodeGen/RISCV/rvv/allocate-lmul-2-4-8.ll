@@ -7,29 +7,67 @@
 ; RUN:    | FileCheck %s --check-prefixes=CHECK,NOMUL
 
 define void @lmul1() nounwind {
-; CHECK-LABEL: lmul1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 1
-; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 1
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    ret
+; NOZBA-LABEL: lmul1:
+; NOZBA:       # %bb.0:
+; NOZBA-NEXT:    csrr a0, vlenb
+; NOZBA-NEXT:    slli a0, a0, 1
+; NOZBA-NEXT:    sub sp, sp, a0
+; NOZBA-NEXT:    csrr a0, vlenb
+; NOZBA-NEXT:    slli a0, a0, 1
+; NOZBA-NEXT:    add sp, sp, a0
+; NOZBA-NEXT:    ret
+;
+; ZBA-LABEL: lmul1:
+; ZBA:       # %bb.0:
+; ZBA-NEXT:    csrr a0, vlenb
+; ZBA-NEXT:    slli a0, a0, 1
+; ZBA-NEXT:    sub sp, sp, a0
+; ZBA-NEXT:    csrr a0, vlenb
+; ZBA-NEXT:    sh1add sp, a0, sp
+; ZBA-NEXT:    ret
+;
+; NOMUL-LABEL: lmul1:
+; NOMUL:       # %bb.0:
+; NOMUL-NEXT:    csrr a0, vlenb
+; NOMUL-NEXT:    slli a0, a0, 1
+; NOMUL-NEXT:    sub sp, sp, a0
+; NOMUL-NEXT:    csrr a0, vlenb
+; NOMUL-NEXT:    slli a0, a0, 1
+; NOMUL-NEXT:    add sp, sp, a0
+; NOMUL-NEXT:    ret
   %v = alloca <vscale x 1 x i64>
   ret void
 }
 
 define void @lmul2() nounwind {
-; CHECK-LABEL: lmul2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 1
-; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 1
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    ret
+; NOZBA-LABEL: lmul2:
+; NOZBA:       # %bb.0:
+; NOZBA-NEXT:    csrr a0, vlenb
+; NOZBA-NEXT:    slli a0, a0, 1
+; NOZBA-NEXT:    sub sp, sp, a0
+; NOZBA-NEXT:    csrr a0, vlenb
+; NOZBA-NEXT:    slli a0, a0, 1
+; NOZBA-NEXT:    add sp, sp, a0
+; NOZBA-NEXT:    ret
+;
+; ZBA-LABEL: lmul2:
+; ZBA:       # %bb.0:
+; ZBA-NEXT:    csrr a0, vlenb
+; ZBA-NEXT:    slli a0, a0, 1
+; ZBA-NEXT:    sub sp, sp, a0
+; ZBA-NEXT:    csrr a0, vlenb
+; ZBA-NEXT:    sh1add sp, a0, sp
+; ZBA-NEXT:    ret
+;
+; NOMUL-LABEL: lmul2:
+; NOMUL:       # %bb.0:
+; NOMUL-NEXT:    csrr a0, vlenb
+; NOMUL-NEXT:    slli a0, a0, 1
+; NOMUL-NEXT:    sub sp, sp, a0
+; NOMUL-NEXT:    csrr a0, vlenb
+; NOMUL-NEXT:    slli a0, a0, 1
+; NOMUL-NEXT:    add sp, sp, a0
+; NOMUL-NEXT:    ret
   %v = alloca <vscale x 2 x i64>
   ret void
 }
@@ -75,15 +113,34 @@ define void @lmul8() nounwind {
 }
 
 define void @lmul1_and_2() nounwind {
-; CHECK-LABEL: lmul1_and_2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 2
-; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 2
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    ret
+; NOZBA-LABEL: lmul1_and_2:
+; NOZBA:       # %bb.0:
+; NOZBA-NEXT:    csrr a0, vlenb
+; NOZBA-NEXT:    slli a0, a0, 2
+; NOZBA-NEXT:    sub sp, sp, a0
+; NOZBA-NEXT:    csrr a0, vlenb
+; NOZBA-NEXT:    slli a0, a0, 2
+; NOZBA-NEXT:    add sp, sp, a0
+; NOZBA-NEXT:    ret
+;
+; ZBA-LABEL: lmul1_and_2:
+; ZBA:       # %bb.0:
+; ZBA-NEXT:    csrr a0, vlenb
+; ZBA-NEXT:    slli a0, a0, 2
+; ZBA-NEXT:    sub sp, sp, a0
+; ZBA-NEXT:    csrr a0, vlenb
+; ZBA-NEXT:    sh2add sp, a0, sp
+; ZBA-NEXT:    ret
+;
+; NOMUL-LABEL: lmul1_and_2:
+; NOMUL:       # %bb.0:
+; NOMUL-NEXT:    csrr a0, vlenb
+; NOMUL-NEXT:    slli a0, a0, 2
+; NOMUL-NEXT:    sub sp, sp, a0
+; NOMUL-NEXT:    csrr a0, vlenb
+; NOMUL-NEXT:    slli a0, a0, 2
+; NOMUL-NEXT:    add sp, sp, a0
+; NOMUL-NEXT:    ret
   %v1 = alloca <vscale x 1 x i64>
   %v2 = alloca <vscale x 2 x i64>
   ret void
@@ -132,15 +189,34 @@ define void @lmul1_and_4() nounwind {
 }
 
 define void @lmul2_and_1() nounwind {
-; CHECK-LABEL: lmul2_and_1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 2
-; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 2
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    ret
+; NOZBA-LABEL: lmul2_and_1:
+; NOZBA:       # %bb.0:
+; NOZBA-NEXT:    csrr a0, vlenb
+; NOZBA-NEXT:    slli a0, a0, 2
+; NOZBA-NEXT:    sub sp, sp, a0
+; NOZBA-NEXT:    csrr a0, vlenb
+; NOZBA-NEXT:    slli a0, a0, 2
+; NOZBA-NEXT:    add sp, sp, a0
+; NOZBA-NEXT:    ret
+;
+; ZBA-LABEL: lmul2_and_1:
+; ZBA:       # %bb.0:
+; ZBA-NEXT:    csrr a0, vlenb
+; ZBA-NEXT:    slli a0, a0, 2
+; ZBA-NEXT:    sub sp, sp, a0
+; ZBA-NEXT:    csrr a0, vlenb
+; ZBA-NEXT:    sh2add sp, a0, sp
+; ZBA-NEXT:    ret
+;
+; NOMUL-LABEL: lmul2_and_1:
+; NOMUL:       # %bb.0:
+; NOMUL-NEXT:    csrr a0, vlenb
+; NOMUL-NEXT:    slli a0, a0, 2
+; NOMUL-NEXT:    sub sp, sp, a0
+; NOMUL-NEXT:    csrr a0, vlenb
+; NOMUL-NEXT:    slli a0, a0, 2
+; NOMUL-NEXT:    add sp, sp, a0
+; NOMUL-NEXT:    ret
   %v1 = alloca <vscale x 2 x i64>
   %v2 = alloca <vscale x 1 x i64>
   ret void
@@ -273,19 +349,46 @@ define void @lmul4_and_2_x2_1() nounwind {
 
 
 define void @gpr_and_lmul1_and_2() nounwind {
-; CHECK-LABEL: gpr_and_lmul1_and_2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 2
-; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    li a0, 3
-; CHECK-NEXT:    sd a0, 8(sp)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 2
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    ret
+; NOZBA-LABEL: gpr_and_lmul1_and_2:
+; NOZBA:       # %bb.0:
+; NOZBA-NEXT:    addi sp, sp, -16
+; NOZBA-NEXT:    csrr a0, vlenb
+; NOZBA-NEXT:    slli a0, a0, 2
+; NOZBA-NEXT:    sub sp, sp, a0
+; NOZBA-NEXT:    li a0, 3
+; NOZBA-NEXT:    sd a0, 8(sp)
+; NOZBA-NEXT:    csrr a0, vlenb
+; NOZBA-NEXT:    slli a0, a0, 2
+; NOZBA-NEXT:    add sp, sp, a0
+; NOZBA-NEXT:    addi sp, sp, 16
+; NOZBA-NEXT:    ret
+;
+; ZBA-LABEL: gpr_and_lmul1_and_2:
+; ZBA:       # %bb.0:
+; ZBA-NEXT:    addi sp, sp, -16
+; ZBA-NEXT:    csrr a0, vlenb
+; ZBA-NEXT:    slli a0, a0, 2
+; ZBA-NEXT:    sub sp, sp, a0
+; ZBA-NEXT:    li a0, 3
+; ZBA-NEXT:    sd a0, 8(sp)
+; ZBA-NEXT:    csrr a0, vlenb
+; ZBA-NEXT:    sh2add sp, a0, sp
+; ZBA-NEXT:    addi sp, sp, 16
+; ZBA-NEXT:    ret
+;
+; NOMUL-LABEL: gpr_and_lmul1_and_2:
+; NOMUL:       # %bb.0:
+; NOMUL-NEXT:    addi sp, sp, -16
+; NOMUL-NEXT:    csrr a0, vlenb
+; NOMUL-NEXT:    slli a0, a0, 2
+; NOMUL-NEXT:    sub sp, sp, a0
+; NOMUL-NEXT:    li a0, 3
+; NOMUL-NEXT:    sd a0, 8(sp)
+; NOMUL-NEXT:    csrr a0, vlenb
+; NOMUL-NEXT:    slli a0, a0, 2
+; NOMUL-NEXT:    add sp, sp, a0
+; NOMUL-NEXT:    addi sp, sp, 16
+; NOMUL-NEXT:    ret
   %x1 = alloca i64
   %v1 = alloca <vscale x 1 x i64>
   %v2 = alloca <vscale x 2 x i64>
@@ -396,15 +499,34 @@ define void @lmul_1_2_4_8_x2_1() nounwind {
 }
 
 define void @masks() nounwind {
-; CHECK-LABEL: masks:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 2
-; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 2
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    ret
+; NOZBA-LABEL: masks:
+; NOZBA:       # %bb.0:
+; NOZBA-NEXT:    csrr a0, vlenb
+; NOZBA-NEXT:    slli a0, a0, 2
+; NOZBA-NEXT:    sub sp, sp, a0
+; NOZBA-NEXT:    csrr a0, vlenb
+; NOZBA-NEXT:    slli a0, a0, 2
+; NOZBA-NEXT:    add sp, sp, a0
+; NOZBA-NEXT:    ret
+;
+; ZBA-LABEL: masks:
+; ZBA:       # %bb.0:
+; ZBA-NEXT:    csrr a0, vlenb
+; ZBA-NEXT:    slli a0, a0, 2
+; ZBA-NEXT:    sub sp, sp, a0
+; ZBA-NEXT:    csrr a0, vlenb
+; ZBA-NEXT:    sh2add sp, a0, sp
+; ZBA-NEXT:    ret
+;
+; NOMUL-LABEL: masks:
+; NOMUL:       # %bb.0:
+; NOMUL-NEXT:    csrr a0, vlenb
+; NOMUL-NEXT:    slli a0, a0, 2
+; NOMUL-NEXT:    sub sp, sp, a0
+; NOMUL-NEXT:    csrr a0, vlenb
+; NOMUL-NEXT:    slli a0, a0, 2
+; NOMUL-NEXT:    add sp, sp, a0
+; NOMUL-NEXT:    ret
   %v1 = alloca <vscale x 1 x i1>
   %v2 = alloca <vscale x 2 x i1>
   %v4 = alloca <vscale x 4 x i1>

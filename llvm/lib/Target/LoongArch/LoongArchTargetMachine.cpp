@@ -34,6 +34,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTarget() {
   RegisterTargetMachine<LoongArchTargetMachine> X(getTheLoongArch32Target());
   RegisterTargetMachine<LoongArchTargetMachine> Y(getTheLoongArch64Target());
   auto *PR = PassRegistry::getPassRegistry();
+  initializeLoongArchOptWInstrsPass(*PR);
   initializeLoongArchPreRAExpandPseudoPass(*PR);
   initializeLoongArchDAGToDAGISelPass(*PR);
 }
@@ -145,6 +146,7 @@ public:
   bool addInstSelector() override;
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
+  void addMachineSSAOptimization() override;
   void addPreRegAlloc() override;
 };
 } // end namespace
@@ -185,6 +187,14 @@ void LoongArchPassConfig::addPreEmitPass2() {
   // avoiding the possibility for other passes to break the requirements for
   // forward progress in the LL/SC block.
   addPass(createLoongArchExpandAtomicPseudoPass());
+}
+
+void LoongArchPassConfig::addMachineSSAOptimization() {
+  TargetPassConfig::addMachineSSAOptimization();
+
+  if (TM->getTargetTriple().isLoongArch64()) {
+    addPass(createLoongArchOptWInstrsPass());
+  }
 }
 
 void LoongArchPassConfig::addPreRegAlloc() {

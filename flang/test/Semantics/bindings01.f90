@@ -4,7 +4,7 @@
 
 module m
   !ERROR: An ABSTRACT derived type must be extensible
-  !PORTABILITY: A derived type with the BIND attribute is empty
+  !PORTABILITY: A derived type with the BIND attribute should not be empty
   type, abstract, bind(c) :: badAbstract1
   end type
   !ERROR: An ABSTRACT derived type must be extensible
@@ -45,7 +45,7 @@ module m
   end type
   type, extends(intermediate) :: concrete2  ! ensure no false missing binding error
   end type
-  !WARNING: A derived type with the BIND attribute is empty
+  !WARNING: A derived type with the BIND attribute should not be empty
   type, bind(c) :: inextensible1
   end type
   !ERROR: The parent type is not extensible

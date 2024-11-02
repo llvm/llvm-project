@@ -568,75 +568,9 @@ bool EquivalenceSets::CheckDataRef(
       x.u);
 }
 
-static bool InCommonWithBind(const Symbol &symbol) {
-  if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
-    const Symbol *commonBlock{details->commonBlock()};
-    return commonBlock && commonBlock->attrs().test(Attr::BIND_C);
-  } else {
-    return false;
-  }
-}
-
-// If symbol can't be in equivalence set report error and return false;
 bool EquivalenceSets::CheckObject(const parser::Name &name) {
-  if (!name.symbol) {
-    return false; // an error has already occurred
-  }
   currObject_.symbol = name.symbol;
-  parser::MessageFixedText msg;
-  const Symbol &symbol{*name.symbol};
-  if (symbol.owner().IsDerivedType()) { // C8107
-    msg = "Derived type component '%s'"
-          " is not allowed in an equivalence set"_err_en_US;
-  } else if (IsDummy(symbol)) { // C8106
-    msg = "Dummy argument '%s' is not allowed in an equivalence set"_err_en_US;
-  } else if (symbol.IsFuncResult()) { // C8106
-    msg = "Function result '%s' is not allow in an equivalence set"_err_en_US;
-  } else if (IsPointer(symbol)) { // C8106
-    msg = "Pointer '%s' is not allowed in an equivalence set"_err_en_US;
-  } else if (IsAllocatable(symbol)) { // C8106
-    msg = "Allocatable variable '%s'"
-          " is not allowed in an equivalence set"_err_en_US;
-  } else if (symbol.Corank() > 0) { // C8106
-    msg = "Coarray '%s' is not allowed in an equivalence set"_err_en_US;
-  } else if (symbol.has<UseDetails>()) { // C8115
-    msg = "Use-associated variable '%s'"
-          " is not allowed in an equivalence set"_err_en_US;
-  } else if (symbol.attrs().test(Attr::BIND_C)) { // C8106
-    msg = "Variable '%s' with BIND attribute"
-          " is not allowed in an equivalence set"_err_en_US;
-  } else if (symbol.attrs().test(Attr::TARGET)) { // C8108
-    msg = "Variable '%s' with TARGET attribute"
-          " is not allowed in an equivalence set"_err_en_US;
-  } else if (IsNamedConstant(symbol)) { // C8106
-    msg = "Named constant '%s' is not allowed in an equivalence set"_err_en_US;
-  } else if (InCommonWithBind(symbol)) { // C8106
-    msg = "Variable '%s' in common block with BIND attribute"
-          " is not allowed in an equivalence set"_err_en_US;
-  } else if (const auto *type{symbol.GetType()}) {
-    const auto *derived{type->AsDerived()};
-    if (derived && !derived->IsVectorType()) {
-      if (const auto *comp{FindUltimateComponent(
-              *derived, IsAllocatableOrPointer)}) { // C8106
-        msg = IsPointer(*comp)
-            ? "Derived type object '%s' with pointer ultimate component"
-              " is not allowed in an equivalence set"_err_en_US
-            : "Derived type object '%s' with allocatable ultimate component"
-              " is not allowed in an equivalence set"_err_en_US;
-      } else if (!derived->typeSymbol().get<DerivedTypeDetails>().sequence()) {
-        msg = "Nonsequence derived type object '%s'"
-              " is not allowed in an equivalence set"_err_en_US;
-      }
-    } else if (IsAutomatic(symbol)) {
-      msg = "Automatic object '%s'"
-            " is not allowed in an equivalence set"_err_en_US;
-    }
-  }
-  if (!msg.text().empty()) {
-    context_.Say(name.source, std::move(msg), name.source);
-    return false;
-  }
-  return true;
+  return currObject_.symbol != nullptr;
 }
 
 bool EquivalenceSets::CheckArrayBound(const parser::Expr &bound) {

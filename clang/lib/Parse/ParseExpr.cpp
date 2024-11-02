@@ -30,6 +30,10 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaOpenACC.h"
+#include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
@@ -1162,7 +1166,6 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
           REVERTIBLE_TYPE_TRAIT(__is_void);
           REVERTIBLE_TYPE_TRAIT(__is_volatile);
           REVERTIBLE_TYPE_TRAIT(__reference_binds_to_temporary);
-          REVERTIBLE_TYPE_TRAIT(__reference_constructs_from_temporary);
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   REVERTIBLE_TYPE_TRAIT(RTT_JOIN(__, Trait));
 #include "clang/Basic/TransformTypeTraits.def"
@@ -2035,7 +2038,8 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         if (Tok.is(tok::colon)) {
           // Consume ':'
           ColonLocFirst = ConsumeToken();
-          Length = Actions.CorrectDelayedTyposInExpr(ParseExpression());
+          if (Tok.isNot(tok::r_square))
+            Length = Actions.CorrectDelayedTyposInExpr(ParseExpression());
         }
       } else if (ArgExprs.size() <= 1 && getLangOpts().OpenMP) {
         ColonProtectionRAIIObject RAII(*this);
@@ -2067,15 +2071,22 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       if (!LHS.isInvalid() && !HasError && !Length.isInvalid() &&
           !Stride.isInvalid() && Tok.is(tok::r_square)) {
         if (ColonLocFirst.isValid() || ColonLocSecond.isValid()) {
-          // FIXME: OpenACC hasn't implemented Sema/Array section handling at a
-          // semantic level yet. For now, just reuse the OpenMP implementation
-          // as it gets the parsing/type management mostly right, and we can
-          // replace this call to ActOnOpenACCArraySectionExpr in the future.
-          // Eventually we'll genericize the OPenMPArraySectionExpr type as
-          // well.
-          LHS = Actions.ActOnOMPArraySectionExpr(
-              LHS.get(), Loc, ArgExprs.empty() ? nullptr : ArgExprs[0],
-              ColonLocFirst, ColonLocSecond, Length.get(), Stride.get(), RLoc);
+          // Like above, AllowOpenACCArraySections is 'more specific' and only
+          // enabled when actively parsing a 'var' in a 'var-list' during
+          // clause/'cache' construct parsing, so it is more specific. So we
+          // should do it first, so that the correct node gets created.
+          if (AllowOpenACCArraySections) {
+            assert(!Stride.isUsable() && !ColonLocSecond.isValid() &&
+                   "Stride/second colon not allowed for OpenACC");
+            LHS = Actions.OpenACC().ActOnArraySectionExpr(
+                LHS.get(), Loc, ArgExprs.empty() ? nullptr : ArgExprs[0],
+                ColonLocFirst, Length.get(), RLoc);
+          } else {
+            LHS = Actions.OpenMP().ActOnOMPArraySectionExpr(
+                LHS.get(), Loc, ArgExprs.empty() ? nullptr : ArgExprs[0],
+                ColonLocFirst, ColonLocSecond, Length.get(), Stride.get(),
+                RLoc);
+          }
         } else {
           LHS = Actions.ActOnArraySubscriptExpr(getCurScope(), LHS.get(), Loc,
                                                 ArgExprs, RLoc);
@@ -2128,10 +2139,8 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         }
 
         if (!LHS.isInvalid()) {
-          ExprResult ECResult = Actions.ActOnCUDAExecConfigExpr(getCurScope(),
-                                    OpenLoc,
-                                    ExecConfigExprs,
-                                    CloseLoc);
+          ExprResult ECResult = Actions.CUDA().ActOnExecConfigExpr(
+              getCurScope(), OpenLoc, ExecConfigExprs, CloseLoc);
           if (ECResult.isInvalid())
             LHS = ExprError();
           else
@@ -2490,8 +2499,8 @@ ExprResult Parser::ParseSYCLUniqueStableNameExpression() {
   if (T.consumeClose())
     return ExprError();
 
-  return Actions.ActOnSYCLUniqueStableNameExpr(OpLoc, T.getOpenLocation(),
-                                               T.getCloseLocation(), Ty.get());
+  return Actions.SYCL().ActOnUniqueStableNameExpr(
+      OpLoc, T.getOpenLocation(), T.getCloseLocation(), Ty.get());
 }
 
 /// Parse a sizeof or alignof expression.
@@ -3277,7 +3286,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
     if (ErrorFound) {
       Result = ExprError();
     } else if (!Result.isInvalid()) {
-      Result = Actions.ActOnOMPArrayShapingExpr(
+      Result = Actions.OpenMP().ActOnOMPArrayShapingExpr(
           Result.get(), OpenLoc, RParenLoc, OMPDimensions, OMPBracketsRanges);
     }
     return Result;

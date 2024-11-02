@@ -112,7 +112,7 @@ SBDebugger &SBDebugger::operator=(const SBDebugger &rhs) {
 const char *SBDebugger::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
-  return Debugger::GetStaticBroadcasterClass().AsCString();
+  return ConstString(Debugger::GetStaticBroadcasterClass()).AsCString();
 }
 
 const char *SBDebugger::GetProgressFromEvent(const lldb::SBEvent &event,

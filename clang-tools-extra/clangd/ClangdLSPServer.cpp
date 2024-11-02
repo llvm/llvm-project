@@ -1390,7 +1390,7 @@ void ClangdLSPServer::onClangdInlayHints(const InlayHintsParams &Params,
           // Extension doesn't have paddingLeft/Right so adjust the label
           // accordingly.
           {"label",
-           ((Hint.paddingLeft ? " " : "") + llvm::StringRef(Hint.label) +
+           ((Hint.paddingLeft ? " " : "") + llvm::StringRef(Hint.joinLabels()) +
             (Hint.paddingRight ? " " : ""))
                .str()},
       });

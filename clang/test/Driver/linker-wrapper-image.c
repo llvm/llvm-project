@@ -26,12 +26,12 @@
 //      OPENMP: @.omp_offloading.device_image = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"\10\FF\10\AD{{.*}}", section ".llvm.offloading", align 8
 // OPENMP-NEXT: @.omp_offloading.device_images = internal unnamed_addr constant [1 x %__tgt_device_image] [%__tgt_device_image { ptr getelementptr inbounds ([[[BEGIN:[0-9]+]] x i8], ptr @.omp_offloading.device_image, i64 1, i64 0), ptr getelementptr inbounds ([[[END:[0-9]+]] x i8], ptr @.omp_offloading.device_image, i64 1, i64 0), ptr @__start_omp_offloading_entries, ptr @__stop_omp_offloading_entries }]
 // OPENMP-NEXT: @.omp_offloading.descriptor = internal constant %__tgt_bin_desc { i32 1, ptr @.omp_offloading.device_images, ptr @__start_omp_offloading_entries, ptr @__stop_omp_offloading_entries }
-// OPENMP-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @.omp_offloading.descriptor_reg, ptr null }]
-// OPENMP-NEXT: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @.omp_offloading.descriptor_unreg, ptr null }]
+// OPENMP-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.omp_offloading.descriptor_reg, ptr null }]
 
 //      OPENMP: define internal void @.omp_offloading.descriptor_reg() section ".text.startup" {
 // OPENMP-NEXT: entry:
 // OPENMP-NEXT:   call void @__tgt_register_lib(ptr @.omp_offloading.descriptor)
+// OPENMP-NEXT:   %0 = call i32 @atexit(ptr @.omp_offloading.descriptor_unreg)
 // OPENMP-NEXT:   ret void
 // OPENMP-NEXT: }
 
@@ -62,7 +62,7 @@
 // CUDA-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1180844977, i32 1, ptr @.fatbin_image, ptr null }, section ".nvFatBinSegment", align 8
 // CUDA-NEXT: @.cuda.binary_handle = internal global ptr null
 
-// CUDA: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @.cuda.fatbin_reg, ptr null }]
+// CUDA: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.cuda.fatbin_reg, ptr null }]
 
 //      CUDA: define internal void @.cuda.fatbin_reg() section ".text.startup" {
 // CUDA-NEXT: entry:
@@ -162,7 +162,7 @@
 // HIP-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1212764230, i32 1, ptr @.fatbin_image, ptr null }, section ".hipFatBinSegment", align 8
 // HIP-NEXT: @.hip.binary_handle = internal global ptr null
 
-// HIP: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @.hip.fatbin_reg, ptr null }]
+// HIP: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.hip.fatbin_reg, ptr null }]
 
 //      HIP: define internal void @.hip.fatbin_reg() section ".text.startup" {
 // HIP-NEXT: entry:

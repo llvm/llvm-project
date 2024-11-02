@@ -353,7 +353,7 @@ SourceLocation CXXPseudoDestructorExpr::getEndLoc() const {
 UnresolvedLookupExpr::UnresolvedLookupExpr(
     const ASTContext &Context, CXXRecordDecl *NamingClass,
     NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
-    const DeclarationNameInfo &NameInfo, bool RequiresADL, bool Overloaded,
+    const DeclarationNameInfo &NameInfo, bool RequiresADL,
     const TemplateArgumentListInfo *TemplateArgs, UnresolvedSetIterator Begin,
     UnresolvedSetIterator End, bool KnownDependent)
     : OverloadExpr(UnresolvedLookupExprClass, Context, QualifierLoc,
@@ -361,7 +361,6 @@ UnresolvedLookupExpr::UnresolvedLookupExpr(
                    KnownDependent, false, false),
       NamingClass(NamingClass) {
   UnresolvedLookupExprBits.RequiresADL = RequiresADL;
-  UnresolvedLookupExprBits.Overloaded = Overloaded;
 }
 
 UnresolvedLookupExpr::UnresolvedLookupExpr(EmptyShell Empty,
@@ -373,15 +372,16 @@ UnresolvedLookupExpr::UnresolvedLookupExpr(EmptyShell Empty,
 UnresolvedLookupExpr *UnresolvedLookupExpr::Create(
     const ASTContext &Context, CXXRecordDecl *NamingClass,
     NestedNameSpecifierLoc QualifierLoc, const DeclarationNameInfo &NameInfo,
-    bool RequiresADL, bool Overloaded, UnresolvedSetIterator Begin,
-    UnresolvedSetIterator End) {
+    bool RequiresADL, UnresolvedSetIterator Begin, UnresolvedSetIterator End,
+    bool KnownDependent) {
   unsigned NumResults = End - Begin;
   unsigned Size = totalSizeToAlloc<DeclAccessPair, ASTTemplateKWAndArgsInfo,
                                    TemplateArgumentLoc>(NumResults, 0, 0);
   void *Mem = Context.Allocate(Size, alignof(UnresolvedLookupExpr));
-  return new (Mem) UnresolvedLookupExpr(Context, NamingClass, QualifierLoc,
-                                        SourceLocation(), NameInfo, RequiresADL,
-                                        Overloaded, nullptr, Begin, End, false);
+  return new (Mem) UnresolvedLookupExpr(
+      Context, NamingClass, QualifierLoc,
+      /*TemplateKWLoc=*/SourceLocation(), NameInfo, RequiresADL,
+      /*TemplateArgs=*/nullptr, Begin, End, KnownDependent);
 }
 
 UnresolvedLookupExpr *UnresolvedLookupExpr::Create(
@@ -390,16 +390,16 @@ UnresolvedLookupExpr *UnresolvedLookupExpr::Create(
     const DeclarationNameInfo &NameInfo, bool RequiresADL,
     const TemplateArgumentListInfo *Args, UnresolvedSetIterator Begin,
     UnresolvedSetIterator End, bool KnownDependent) {
-  assert(Args || TemplateKWLoc.isValid());
   unsigned NumResults = End - Begin;
+  bool HasTemplateKWAndArgsInfo = Args || TemplateKWLoc.isValid();
   unsigned NumTemplateArgs = Args ? Args->size() : 0;
-  unsigned Size =
-      totalSizeToAlloc<DeclAccessPair, ASTTemplateKWAndArgsInfo,
-                       TemplateArgumentLoc>(NumResults, 1, NumTemplateArgs);
+  unsigned Size = totalSizeToAlloc<DeclAccessPair, ASTTemplateKWAndArgsInfo,
+                                   TemplateArgumentLoc>(
+      NumResults, HasTemplateKWAndArgsInfo, NumTemplateArgs);
   void *Mem = Context.Allocate(Size, alignof(UnresolvedLookupExpr));
-  return new (Mem) UnresolvedLookupExpr(
-      Context, NamingClass, QualifierLoc, TemplateKWLoc, NameInfo, RequiresADL,
-      /*Overloaded=*/true, Args, Begin, End, KnownDependent);
+  return new (Mem) UnresolvedLookupExpr(Context, NamingClass, QualifierLoc,
+                                        TemplateKWLoc, NameInfo, RequiresADL,
+                                        Args, Begin, End, KnownDependent);
 }
 
 UnresolvedLookupExpr *UnresolvedLookupExpr::CreateEmpty(

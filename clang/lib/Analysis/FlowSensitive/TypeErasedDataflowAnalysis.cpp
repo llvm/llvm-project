@@ -316,7 +316,7 @@ builtinTransferStatement(unsigned CurBlockID, const CFGStmt &Elt,
   const Stmt *S = Elt.getStmt();
   assert(S != nullptr);
   transfer(StmtToEnvMap(AC.ACFG, AC.BlockStates, CurBlockID, InputState), *S,
-           InputState.Env);
+           InputState.Env, AC.Analysis);
 }
 
 /// Built-in transfer function for `CFGInitializer`.
@@ -367,19 +367,12 @@ builtinTransferInitializer(const CFGInitializer &Elt,
       return;
 
     ParentLoc->setChild(*Member, InitExprLoc);
-  } else if (auto *InitExprVal = Env.getValue(*InitExpr)) {
+    // Record-type initializers construct themselves directly into the result
+    // object, so there is no need to handle them here.
+  } else if (!Member->getType()->isRecordType()) {
     assert(MemberLoc != nullptr);
-    if (Member->getType()->isRecordType()) {
-      auto *InitValStruct = cast<RecordValue>(InitExprVal);
-      // FIXME: Rather than performing a copy here, we should really be
-      // initializing the field in place. This would require us to propagate the
-      // storage location of the field to the AST node that creates the
-      // `RecordValue`.
-      copyRecord(InitValStruct->getLoc(),
-                 *cast<RecordStorageLocation>(MemberLoc), Env);
-    } else {
+    if (auto *InitExprVal = Env.getValue(*InitExpr))
       Env.setValue(*MemberLoc, *InitExprVal);
-    }
   }
 }
 
@@ -459,7 +452,7 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
       // terminator condition, but not as a `CFGElement`. The condition of an if
       // statement is one such example.
       transfer(StmtToEnvMap(AC.ACFG, AC.BlockStates, Block.getBlockID(), State),
-               *TerminatorCond, State.Env);
+               *TerminatorCond, State.Env, AC.Analysis);
 
     // If the transfer function didn't produce a value, create an atom so that
     // we have *some* value for the condition expression. This ensures that

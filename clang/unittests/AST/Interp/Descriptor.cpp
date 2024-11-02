@@ -115,7 +115,7 @@ TEST(Descriptor, Primitives) {
 
   // Check pointer stuff.
   // Global variables have an inline descriptor.
-  ASSERT_FALSE(GlobalPtr.isRoot());
+  ASSERT_TRUE(GlobalPtr.isRoot());
   ASSERT_TRUE(GlobalPtr.isLive());
   ASSERT_FALSE(GlobalPtr.isZero());
   ASSERT_FALSE(GlobalPtr.isField());

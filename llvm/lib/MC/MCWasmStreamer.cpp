@@ -275,11 +275,8 @@ void MCWasmStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
 MCStreamer *llvm::createWasmStreamer(MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> &&MAB,
                                      std::unique_ptr<MCObjectWriter> &&OW,
-                                     std::unique_ptr<MCCodeEmitter> &&CE,
-                                     bool RelaxAll) {
+                                     std::unique_ptr<MCCodeEmitter> &&CE) {
   MCWasmStreamer *S =
       new MCWasmStreamer(Context, std::move(MAB), std::move(OW), std::move(CE));
-  if (RelaxAll)
-    S->getAssembler().setRelaxAll(true);
   return S;
 }

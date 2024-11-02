@@ -9,8 +9,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @test_revbv16i16(ptr %a) {
 ; CHECK-LABEL: test_revbv16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    revb z0.h, p0/m, z0.h
 ; CHECK-NEXT:    revb z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -25,8 +25,8 @@ define void @test_revbv16i16(ptr %a) {
 define void @test_revbv8i32(ptr %a) {
 ; CHECK-LABEL: test_revbv8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    revb z0.s, p0/m, z0.s
 ; CHECK-NEXT:    revb z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -41,8 +41,8 @@ define void @test_revbv8i32(ptr %a) {
 define void @test_revbv4i64(ptr %a) {
 ; CHECK-LABEL: test_revbv4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    revb z0.d, p0/m, z0.d
 ; CHECK-NEXT:    revb z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -57,8 +57,8 @@ define void @test_revbv4i64(ptr %a) {
 define void @test_revhv8i32(ptr %a) {
 ; CHECK-LABEL: test_revhv8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    revh z0.s, p0/m, z0.s
 ; CHECK-NEXT:    revh z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -73,8 +73,8 @@ define void @test_revhv8i32(ptr %a) {
 define void @test_revhv8f32(ptr %a) {
 ; CHECK-LABEL: test_revhv8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    revh z0.s, p0/m, z0.s
 ; CHECK-NEXT:    revh z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -89,8 +89,8 @@ define void @test_revhv8f32(ptr %a) {
 define void @test_revhv4i64(ptr %a) {
 ; CHECK-LABEL: test_revhv4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    revh z0.d, p0/m, z0.d
 ; CHECK-NEXT:    revh z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -105,8 +105,8 @@ define void @test_revhv4i64(ptr %a) {
 define void @test_revwv4i64(ptr %a) {
 ; CHECK-LABEL: test_revwv4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    revw z0.d, p0/m, z0.d
 ; CHECK-NEXT:    revw z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -121,8 +121,8 @@ define void @test_revwv4i64(ptr %a) {
 define void @test_revwv4f64(ptr %a) {
 ; CHECK-LABEL: test_revwv4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    revw z0.d, p0/m, z0.d
 ; CHECK-NEXT:    revw z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -150,8 +150,8 @@ define <16 x i8> @test_revv16i8(ptr %a) {
 define void @test_revwv8i32v8i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: test_revwv8i32v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldp q0, q1, [x1]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    revw z0.d, p0/m, z0.d
 ; CHECK-NEXT:    revw z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -166,8 +166,8 @@ define void @test_revwv8i32v8i32(ptr %a, ptr %b) {
 define void @test_revhv32i16(ptr %a) {
 ; CHECK-LABEL: test_revhv32i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldp q0, q1, [x0, #32]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldp q2, q3, [x0]
 ; CHECK-NEXT:    revh z0.d, p0/m, z0.d
 ; CHECK-NEXT:    revh z1.d, p0/m, z1.d
@@ -202,8 +202,8 @@ define void @test_rev_elts_fail(ptr %a) {
 define void @test_revdv4i64_sve2p1(ptr %a) #1 {
 ; CHECK-LABEL: test_revdv4i64_sve2p1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    revd z0.q, p0/m, z0.q
 ; CHECK-NEXT:    revd z1.q, p0/m, z1.q
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -217,8 +217,8 @@ define void @test_revdv4i64_sve2p1(ptr %a) #1 {
 define void @test_revdv4f64_sve2p1(ptr %a) #1 {
 ; CHECK-LABEL: test_revdv4f64_sve2p1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    revd z0.q, p0/m, z0.q
 ; CHECK-NEXT:    revd z1.q, p0/m, z1.q
 ; CHECK-NEXT:    stp q0, q1, [x0]

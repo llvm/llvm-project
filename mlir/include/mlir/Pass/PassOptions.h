@@ -293,7 +293,8 @@ public:
   /// Parse options out as key=value pairs that can then be handed off to the
   /// `llvm::cl` command line passing infrastructure. Everything is space
   /// separated.
-  LogicalResult parseFromString(StringRef options);
+  LogicalResult parseFromString(StringRef options,
+                                raw_ostream &errorStream = llvm::errs());
 
   /// Print the options held by this struct in a form that can be parsed via
   /// 'parseFromString'.

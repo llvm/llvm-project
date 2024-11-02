@@ -2047,12 +2047,8 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   MBB->splice(Loc, TBB, TBB->begin(), TIB);
   FBB->erase(FBB->begin(), FIB);
 
-  if (UpdateLiveIns) {
-    bool anyChange = false;
-    do {
-      anyChange = recomputeLiveIns(*TBB) || recomputeLiveIns(*FBB);
-    } while (anyChange);
-  }
+  if (UpdateLiveIns)
+    fullyRecomputeLiveIns({TBB, FBB});
 
   ++NumHoist;
   return true;

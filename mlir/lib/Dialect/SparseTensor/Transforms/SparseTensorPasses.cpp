@@ -50,11 +50,12 @@ namespace {
 struct SparseAssembler : public impl::SparseAssemblerBase<SparseAssembler> {
   SparseAssembler() = default;
   SparseAssembler(const SparseAssembler &pass) = default;
+  SparseAssembler(bool dO) { directOut = dO; }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    populateSparseAssembler(patterns);
+    populateSparseAssembler(patterns, directOut);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -274,7 +275,7 @@ struct SparseTensorCodegenPass
         });
     // The following operations and dialects may be introduced by the
     // codegen rules, and are therefore marked as legal.
-    target.addLegalOp<linalg::FillOp>();
+    target.addLegalOp<linalg::FillOp, linalg::YieldOp>();
     target.addLegalDialect<
         arith::ArithDialect, bufferization::BufferizationDialect,
         complex::ComplexDialect, memref::MemRefDialect, scf::SCFDialect>();

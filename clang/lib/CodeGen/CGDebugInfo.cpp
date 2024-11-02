@@ -1313,6 +1313,44 @@ llvm::DIType *CGDebugInfo::CreateType(const BlockPointerType *Ty,
   return DBuilder.createPointerType(EltTy, Size);
 }
 
+static llvm::SmallVector<TemplateArgument>
+GetTemplateArgs(const TemplateDecl *TD, const TemplateSpecializationType *Ty) {
+  assert(Ty->isTypeAlias());
+  // TemplateSpecializationType doesn't know if its template args are
+  // being substituted into a parameter pack. We can find out if that's
+  // the case now by inspecting the TypeAliasTemplateDecl template
+  // parameters. Insert Ty's template args into SpecArgs, bundling args
+  // passed to a parameter pack into a TemplateArgument::Pack. It also
+  // doesn't know the value of any defaulted args, so collect those now
+  // too.
+  SmallVector<TemplateArgument> SpecArgs;
+  ArrayRef SubstArgs = Ty->template_arguments();
+  for (const NamedDecl *Param : TD->getTemplateParameters()->asArray()) {
+    // If Param is a parameter pack, pack the remaining arguments.
+    if (Param->isParameterPack()) {
+      SpecArgs.push_back(TemplateArgument(SubstArgs));
+      break;
+    }
+
+    // Skip defaulted args.
+    // FIXME: Ideally, we wouldn't do this. We can read the default values
+    // for each parameter. However, defaulted arguments which are dependent
+    // values or dependent types can't (easily?) be resolved here.
+    if (SubstArgs.empty()) {
+      // If SubstArgs is now empty (we're taking from it each iteration) and
+      // this template parameter isn't a pack, then that should mean we're
+      // using default values for the remaining template parameters (after
+      // which there may be an empty pack too which we will ignore).
+      break;
+    }
+
+    // Take the next argument.
+    SpecArgs.push_back(SubstArgs.front());
+    SubstArgs = SubstArgs.drop_front();
+  }
+  return SpecArgs;
+}
+
 llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
                                       llvm::DIFile *Unit) {
   assert(Ty->isTypeAlias());
@@ -1332,6 +1370,52 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
   auto PP = getPrintingPolicy();
   Ty->getTemplateName().print(OS, PP, TemplateName::Qualified::None);
 
+  SourceLocation Loc = AliasDecl->getLocation();
+
+  if (CGM.getCodeGenOpts().DebugTemplateAlias &&
+      // FIXME: This is a workaround for the issue
+      //        https://github.com/llvm/llvm-project/issues/89774
+      // The TemplateSpecializationType doesn't contain any instantiation
+      // information; dependent template arguments can't be resolved. For now,
+      // fall back to DW_TAG_typedefs for template aliases that are
+      // instantiation dependent, e.g.:
+      // ```
+      // template <int>
+      // using A = int;
+      //
+      // template<int I>
+      // struct S {
+      //   using AA = A<I>; // Instantiation dependent.
+      //   AA aa;
+      // };
+      //
+      // S<0> s;
+      // ```
+      // S::AA's underlying type A<I> is dependent on I so will be emitted as a
+      // DW_TAG_typedef.
+      !Ty->isInstantiationDependentType()) {
+    auto ArgVector = ::GetTemplateArgs(TD, Ty);
+    TemplateArgs Args = {TD->getTemplateParameters(), ArgVector};
+
+    // FIXME: Respect DebugTemplateNameKind::Mangled, e.g. by using GetName.
+    // Note we can't use GetName without additional work: TypeAliasTemplateDecl
+    // doesn't have instantiation information, so
+    // TypeAliasTemplateDecl::getNameForDiagnostic wouldn't have access to the
+    // template args.
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    TD->getNameForDiagnostic(OS, PP, /*Qualified=*/false);
+    if (CGM.getCodeGenOpts().getDebugSimpleTemplateNames() !=
+            llvm::codegenoptions::DebugTemplateNamesKind::Simple ||
+        !HasReconstitutableArgs(Args.Args))
+      printTemplateArgumentList(OS, Args.Args, PP);
+
+    llvm::DIDerivedType *AliasTy = DBuilder.createTemplateAlias(
+        Src, Name, getOrCreateFile(Loc), getLineNumber(Loc),
+        getDeclContextDescriptor(AliasDecl), CollectTemplateParams(Args, Unit));
+    return AliasTy;
+  }
+
   // Disable PrintCanonicalTypes here because we want
   // the DW_AT_name to benefit from the TypePrinter's ability
   // to skip defaulted template arguments.
@@ -1343,8 +1427,6 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
   PP.PrintCanonicalTypes = false;
   printTemplateArgumentList(OS, Ty->template_arguments(), PP,
                             TD->getTemplateParameters());
-
-  SourceLocation Loc = AliasDecl->getLocation();
   return DBuilder.createTypedef(Src, OS.str(), getOrCreateFile(Loc),
                                 getLineNumber(Loc),
                                 getDeclContextDescriptor(AliasDecl));
@@ -1440,8 +1522,7 @@ static unsigned getDwarfCC(CallingConv CC) {
   case CC_Swift:
     return llvm::dwarf::DW_CC_LLVM_Swift;
   case CC_SwiftAsync:
-    // [FIXME: swiftasynccc] Update to SwiftAsync once LLVM support lands.
-    return llvm::dwarf::DW_CC_LLVM_Swift;
+    return llvm::dwarf::DW_CC_LLVM_SwiftTail;
   case CC_PreserveMost:
     return llvm::dwarf::DW_CC_LLVM_PreserveMost;
   case CC_PreserveAll:
@@ -1452,6 +1533,8 @@ static unsigned getDwarfCC(CallingConv CC) {
     return llvm::dwarf::DW_CC_LLVM_M68kRTD;
   case CC_PreserveNone:
     return llvm::dwarf::DW_CC_LLVM_PreserveNone;
+  case CC_RISCVVectorCall:
+    return llvm::dwarf::DW_CC_LLVM_RISCVVectorCall;
   }
   return 0;
 }
@@ -3239,7 +3322,7 @@ llvm::DIType *CGDebugInfo::CreateType(const ArrayType *Ty, llvm::DIFile *Unit) {
     //   };
     int64_t Count = -1; // Count == -1 is an unbounded array.
     if (const auto *CAT = dyn_cast<ConstantArrayType>(Ty))
-      Count = CAT->getSize().getZExtValue();
+      Count = CAT->getZExtSize();
     else if (const auto *VAT = dyn_cast<VariableArrayType>(Ty)) {
       if (Expr *Size = VAT->getSizeExpr()) {
         Expr::EvalResult Result;
@@ -3640,6 +3723,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::ConstantArray:
   case Type::VariableArray:
   case Type::IncompleteArray:
+  case Type::ArrayParameter:
     return CreateType(cast<ArrayType>(Ty), Unit);
 
   case Type::LValueReference:
@@ -5361,6 +5445,54 @@ static bool IsReconstitutableType(QualType QT) {
   return T.Reconstitutable;
 }
 
+bool CGDebugInfo::HasReconstitutableArgs(
+    ArrayRef<TemplateArgument> Args) const {
+  return llvm::all_of(Args, [&](const TemplateArgument &TA) {
+    switch (TA.getKind()) {
+    case TemplateArgument::Template:
+      // Easy to reconstitute - the value of the parameter in the debug
+      // info is the string name of the template. The template name
+      // itself won't benefit from any name rebuilding, but that's a
+      // representational limitation - maybe DWARF could be
+      // changed/improved to use some more structural representation.
+      return true;
+    case TemplateArgument::Declaration:
+      // Reference and pointer non-type template parameters point to
+      // variables, functions, etc and their value is, at best (for
+      // variables) represented as an address - not a reference to the
+      // DWARF describing the variable/function/etc. This makes it hard,
+      // possibly impossible to rebuild the original name - looking up
+      // the address in the executable file's symbol table would be
+      // needed.
+      return false;
+    case TemplateArgument::NullPtr:
+      // These could be rebuilt, but figured they're close enough to the
+      // declaration case, and not worth rebuilding.
+      return false;
+    case TemplateArgument::Pack:
+      // A pack is invalid if any of the elements of the pack are
+      // invalid.
+      return HasReconstitutableArgs(TA.getPackAsArray());
+    case TemplateArgument::Integral:
+      // Larger integers get encoded as DWARF blocks which are a bit
+      // harder to parse back into a large integer, etc - so punting on
+      // this for now. Re-parsing the integers back into APInt is
+      // probably feasible some day.
+      return TA.getAsIntegral().getBitWidth() <= 64 &&
+             IsReconstitutableType(TA.getIntegralType());
+    case TemplateArgument::StructuralValue:
+      return false;
+    case TemplateArgument::Type:
+      return IsReconstitutableType(TA.getAsType());
+    case TemplateArgument::Expression:
+      return IsReconstitutableType(TA.getAsExpr()->getType());
+    default:
+      llvm_unreachable("Other, unresolved, template arguments should "
+                       "not be seen here");
+    }
+  });
+}
+
 std::string CGDebugInfo::GetName(const Decl *D, bool Qualified) const {
   std::string Name;
   llvm::raw_string_ostream OS(Name);
@@ -5387,49 +5519,7 @@ std::string CGDebugInfo::GetName(const Decl *D, bool Qualified) const {
   } else if (auto *VD = dyn_cast<VarDecl>(ND)) {
     Args = GetTemplateArgs(VD);
   }
-  std::function<bool(ArrayRef<TemplateArgument>)> HasReconstitutableArgs =
-      [&](ArrayRef<TemplateArgument> Args) {
-        return llvm::all_of(Args, [&](const TemplateArgument &TA) {
-          switch (TA.getKind()) {
-          case TemplateArgument::Template:
-            // Easy to reconstitute - the value of the parameter in the debug
-            // info is the string name of the template. (so the template name
-            // itself won't benefit from any name rebuilding, but that's a
-            // representational limitation - maybe DWARF could be
-            // changed/improved to use some more structural representation)
-            return true;
-          case TemplateArgument::Declaration:
-            // Reference and pointer non-type template parameters point to
-            // variables, functions, etc and their value is, at best (for
-            // variables) represented as an address - not a reference to the
-            // DWARF describing the variable/function/etc. This makes it hard,
-            // possibly impossible to rebuild the original name - looking up the
-            // address in the executable file's symbol table would be needed.
-            return false;
-          case TemplateArgument::NullPtr:
-            // These could be rebuilt, but figured they're close enough to the
-            // declaration case, and not worth rebuilding.
-            return false;
-          case TemplateArgument::Pack:
-            // A pack is invalid if any of the elements of the pack are invalid.
-            return HasReconstitutableArgs(TA.getPackAsArray());
-          case TemplateArgument::Integral:
-            // Larger integers get encoded as DWARF blocks which are a bit
-            // harder to parse back into a large integer, etc - so punting on
-            // this for now. Re-parsing the integers back into APInt is probably
-            // feasible some day.
-            return TA.getAsIntegral().getBitWidth() <= 64 &&
-                   IsReconstitutableType(TA.getIntegralType());
-          case TemplateArgument::StructuralValue:
-            return false;
-          case TemplateArgument::Type:
-            return IsReconstitutableType(TA.getAsType());
-          default:
-            llvm_unreachable("Other, unresolved, template arguments should "
-                             "not be seen here");
-          }
-        });
-      };
+
   // A conversion operator presents complications/ambiguity if there's a
   // conversion to class template that is itself a template, eg:
   // template<typename T>

@@ -448,7 +448,7 @@ class DebugCommunication(object):
         response = self.request_completions(text, frameId)
         return response["body"]["targets"]
 
-    def get_scope_variables(self, scope_name, frameIndex=0, threadId=None):
+    def get_scope_variables(self, scope_name, frameIndex=0, threadId=None, is_hex=None):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
         if stackFrame is None:
             return []
@@ -462,7 +462,7 @@ class DebugCommunication(object):
         for scope in frame_scopes:
             if scope["name"] == scope_name:
                 varRef = scope["variablesReference"]
-                variables_response = self.request_variables(varRef)
+                variables_response = self.request_variables(varRef, is_hex=is_hex)
                 if variables_response:
                     if "body" in variables_response:
                         body = variables_response["body"]
@@ -476,9 +476,9 @@ class DebugCommunication(object):
             "Globals", frameIndex=frameIndex, threadId=threadId
         )
 
-    def get_local_variables(self, frameIndex=0, threadId=None):
+    def get_local_variables(self, frameIndex=0, threadId=None, is_hex=None):
         return self.get_scope_variables(
-            "Locals", frameIndex=frameIndex, threadId=threadId
+            "Locals", frameIndex=frameIndex, threadId=threadId, is_hex=is_hex
         )
 
     def get_registers(self, frameIndex=0, threadId=None):
@@ -486,28 +486,32 @@ class DebugCommunication(object):
             "Registers", frameIndex=frameIndex, threadId=threadId
         )
 
-    def get_local_variable(self, name, frameIndex=0, threadId=None):
-        locals = self.get_local_variables(frameIndex=frameIndex, threadId=threadId)
+    def get_local_variable(self, name, frameIndex=0, threadId=None, is_hex=None):
+        locals = self.get_local_variables(
+            frameIndex=frameIndex, threadId=threadId, is_hex=is_hex
+        )
         for local in locals:
             if "name" in local and local["name"] == name:
                 return local
         return None
 
-    def get_local_variable_value(self, name, frameIndex=0, threadId=None):
+    def get_local_variable_value(self, name, frameIndex=0, threadId=None, is_hex=None):
         variable = self.get_local_variable(
-            name, frameIndex=frameIndex, threadId=threadId
+            name, frameIndex=frameIndex, threadId=threadId, is_hex=is_hex
         )
         if variable and "value" in variable:
             return variable["value"]
         return None
 
-    def get_local_variable_child(self, name, child_name, frameIndex=0, threadId=None):
+    def get_local_variable_child(
+        self, name, child_name, frameIndex=0, threadId=None, is_hex=None
+    ):
         local = self.get_local_variable(name, frameIndex, threadId)
         if local["variablesReference"] == 0:
             return None
-        children = self.request_variables(local["variablesReference"])["body"][
-            "variables"
-        ]
+        children = self.request_variables(local["variablesReference"], is_hex=is_hex)[
+            "body"
+        ]["variables"]
         for child in children:
             if child["name"] == child_name:
                 return child
@@ -811,23 +815,34 @@ class DebugCommunication(object):
         command_dict = {"command": "next", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
-    def request_stepIn(self, threadId):
+    def request_stepIn(self, threadId, targetId):
         if self.exit_status is not None:
-            raise ValueError("request_continue called after process exited")
-        args_dict = {"threadId": threadId}
+            raise ValueError("request_stepIn called after process exited")
+        args_dict = {"threadId": threadId, "targetId": targetId}
         command_dict = {"command": "stepIn", "type": "request", "arguments": args_dict}
+        return self.send_recv(command_dict)
+
+    def request_stepInTargets(self, frameId):
+        if self.exit_status is not None:
+            raise ValueError("request_stepInTargets called after process exited")
+        args_dict = {"frameId": frameId}
+        command_dict = {
+            "command": "stepInTargets",
+            "type": "request",
+            "arguments": args_dict,
+        }
         return self.send_recv(command_dict)
 
     def request_stepOut(self, threadId):
         if self.exit_status is not None:
-            raise ValueError("request_continue called after process exited")
+            raise ValueError("request_stepOut called after process exited")
         args_dict = {"threadId": threadId}
         command_dict = {"command": "stepOut", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
     def request_pause(self, threadId=None):
         if self.exit_status is not None:
-            raise ValueError("request_continue called after process exited")
+            raise ValueError("request_pause called after process exited")
         if threadId is None:
             threadId = self.get_thread_id()
         args_dict = {"threadId": threadId}
@@ -1024,12 +1039,16 @@ class DebugCommunication(object):
             self.threads = None
         return response
 
-    def request_variables(self, variablesReference, start=None, count=None):
+    def request_variables(
+        self, variablesReference, start=None, count=None, is_hex=None
+    ):
         args_dict = {"variablesReference": variablesReference}
         if start is not None:
             args_dict["start"] = start
         if count is not None:
             args_dict["count"] = count
+        if is_hex is not None:
+            args_dict["format"] = {"hex": is_hex}
         command_dict = {
             "command": "variables",
             "type": "request",

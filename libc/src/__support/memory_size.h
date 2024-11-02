@@ -19,7 +19,7 @@
 namespace LIBC_NAMESPACE {
 namespace internal {
 template <class T> LIBC_INLINE bool mul_overflow(T a, T b, T *res) {
-#if LIBC_HAS_BUILTIN(__builtin_mul_overflow)
+#if __has_builtin(__builtin_mul_overflow)
   return __builtin_mul_overflow(a, b, res);
 #else
   T max = cpp::numeric_limits<T>::max();

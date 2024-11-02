@@ -126,6 +126,10 @@ void RISCVMCCodeEmitter::expandFunctionCall(const MCInst &MI,
   if (MI.getOpcode() == RISCV::PseudoTAIL) {
     Func = MI.getOperand(0);
     Ra = RISCV::X6;
+    // For Zicfilp, PseudoTAIL should be expanded to a software guarded branch.
+    // It means to use t2(x7) as rs1 of JALR to expand PseudoTAIL.
+    if (STI.hasFeature(RISCV::FeatureStdExtZicfilp))
+      Ra = RISCV::X7;
   } else if (MI.getOpcode() == RISCV::PseudoCALLReg) {
     Func = MI.getOperand(1);
     Ra = MI.getOperand(0).getReg();

@@ -29,7 +29,10 @@
 #include <semaphore.h>
 #endif // KMP_OS_LINUX
 #include <sys/resource.h>
-#if !KMP_OS_AIX
+#if KMP_OS_AIX
+#include <sys/ldr.h>
+#include <libperfstat.h>
+#else
 #include <sys/syscall.h>
 #endif
 #include <sys/time.h>
@@ -1889,21 +1892,8 @@ static int __kmp_get_xproc(void) {
 
 #elif KMP_OS_DARWIN
 
-  // Bug C77011 High "OpenMP Threads and number of active cores".
-
-  // Find the number of available CPUs.
-  kern_return_t rc;
-  host_basic_info_data_t info;
-  mach_msg_type_number_t num = HOST_BASIC_INFO_COUNT;
-  rc = host_info(mach_host_self(), HOST_BASIC_INFO, (host_info_t)&info, &num);
-  if (rc == 0 && num == HOST_BASIC_INFO_COUNT) {
-    // Cannot use KA_TRACE() here because this code works before trace support
-    // is initialized.
-    r = info.avail_cpus;
-  } else {
-    KMP_WARNING(CantGetNumAvailCPU);
-    KMP_INFORM(AssumedNumCPU);
-  }
+  size_t len = sizeof(r);
+  sysctlbyname("hw.logicalcpu", &r, &len, NULL, 0);
 
 #else
 
@@ -2154,10 +2144,10 @@ int __kmp_is_address_mapped(void *addr) {
   // We pass from number of vm entry's semantic
   // to size of whole entry map list.
   lstsz = lstsz * 4 / 3;
-  buf = reinterpret_cast<char *>(kmpc_malloc(lstsz));
+  buf = reinterpret_cast<char *>(KMP_INTERNAL_MALLOC(lstsz));
   rc = sysctl(mib, 4, buf, &lstsz, NULL, 0);
   if (rc < 0) {
-    kmpc_free(buf);
+    KMP_INTERNAL_FREE(buf);
     return 0;
   }
 
@@ -2181,7 +2171,7 @@ int __kmp_is_address_mapped(void *addr) {
     }
     lw += cursz;
   }
-  kmpc_free(buf);
+  KMP_INTERNAL_FREE(buf);
 #elif KMP_OS_DRAGONFLY
   char err[_POSIX2_LINE_MAX];
   kinfo_proc *proc;
@@ -2247,12 +2237,12 @@ int __kmp_is_address_mapped(void *addr) {
     return 0;
   }
 
-  buf = kmpc_malloc(sz);
+  buf = KMP_INTERNAL_MALLOC(sz);
 
   while (sz > 0 && (rd = pread(file, buf, sz, 0)) == sz) {
     void *newbuf;
     sz <<= 1;
-    newbuf = kmpc_realloc(buf, sz);
+    newbuf = KMP_INTERNAL_REALLOC(buf, sz);
     buf = newbuf;
   }
 
@@ -2268,7 +2258,7 @@ int __kmp_is_address_mapped(void *addr) {
     }
   }
 
-  kmpc_free(map);
+  KMP_INTERNAL_FREE(map);
   close(file);
   KMP_INTERNAL_FREE(name);
 #elif KMP_OS_DARWIN
@@ -2351,9 +2341,48 @@ int __kmp_is_address_mapped(void *addr) {
   found = (int)addr < (__builtin_wasm_memory_size(0) * PAGESIZE);
 #elif KMP_OS_AIX
 
-  (void)rc;
-  // FIXME(AIX): Implement this
-  found = 1;
+  uint32_t loadQueryBufSize = 4096u; // Default loadquery buffer size.
+  char *loadQueryBuf;
+
+  for (;;) {
+    loadQueryBuf = (char *)KMP_INTERNAL_MALLOC(loadQueryBufSize);
+    if (loadQueryBuf == NULL) {
+      return 0;
+    }
+
+    rc = loadquery(L_GETXINFO | L_IGNOREUNLOAD, loadQueryBuf, loadQueryBufSize);
+    if (rc < 0) {
+      KMP_INTERNAL_FREE(loadQueryBuf);
+      if (errno != ENOMEM) {
+        return 0;
+      }
+      // errno == ENOMEM; double the size.
+      loadQueryBufSize <<= 1;
+      continue;
+    }
+    // Obtained the load info successfully.
+    break;
+  }
+
+  struct ld_xinfo *curLdInfo = (struct ld_xinfo *)loadQueryBuf;
+
+  // Loop through the load info to find if there is a match.
+  for (;;) {
+    uintptr_t curDataStart = (uintptr_t)curLdInfo->ldinfo_dataorg;
+    uintptr_t curDataEnd = curDataStart + curLdInfo->ldinfo_datasize;
+
+    // The data segment is readable and writable.
+    if (curDataStart <= (uintptr_t)addr && (uintptr_t)addr < curDataEnd) {
+      found = 1;
+      break;
+    }
+    if (curLdInfo->ldinfo_next == 0u) {
+      // Reached the end of load info.
+      break;
+    }
+    curLdInfo = (struct ld_xinfo *)((char *)curLdInfo + curLdInfo->ldinfo_next);
+  }
+  KMP_INTERNAL_FREE(loadQueryBuf);
 
 #else
 
@@ -2397,6 +2426,79 @@ int __kmp_get_load_balance(int max) {
   }
 
   return ret_avg;
+}
+
+#elif KMP_OS_AIX
+
+// The function returns number of running (not sleeping) threads, or -1 in case
+// of error.
+int __kmp_get_load_balance(int max) {
+
+  static int glb_running_threads = 0; // Saved count of the running threads for
+                                      // the thread balance algorithm.
+  static double glb_call_time = 0; // Thread balance algorithm call time.
+  int running_threads = 0; // Number of running threads in the system.
+
+  double call_time = 0.0;
+
+  __kmp_elapsed(&call_time);
+
+  if (glb_call_time &&
+      (call_time - glb_call_time < __kmp_load_balance_interval))
+    return glb_running_threads;
+
+  glb_call_time = call_time;
+
+  if (max <= 0) {
+    max = INT_MAX;
+  }
+
+  // Check how many perfstat_cpu_t structures are available.
+  int logical_cpus = perfstat_cpu(NULL, NULL, sizeof(perfstat_cpu_t), 0);
+  if (logical_cpus <= 0) {
+    glb_call_time = -1;
+    return -1;
+  }
+
+  perfstat_cpu_t *cpu_stat = (perfstat_cpu_t *)KMP_INTERNAL_MALLOC(
+      logical_cpus * sizeof(perfstat_cpu_t));
+  if (cpu_stat == NULL) {
+    glb_call_time = -1;
+    return -1;
+  }
+
+  // Set first CPU as the name of the first logical CPU for which the info is
+  // desired.
+  perfstat_id_t first_cpu_name;
+  strcpy(first_cpu_name.name, FIRST_CPU);
+
+  // Get the stat info of logical CPUs.
+  int rc = perfstat_cpu(&first_cpu_name, cpu_stat, sizeof(perfstat_cpu_t),
+                        logical_cpus);
+  KMP_DEBUG_ASSERT(rc == logical_cpus);
+  if (rc <= 0) {
+    KMP_INTERNAL_FREE(cpu_stat);
+    glb_call_time = -1;
+    return -1;
+  }
+  for (int i = 0; i < logical_cpus; ++i) {
+    running_threads += cpu_stat[i].runque;
+    if (running_threads >= max)
+      break;
+  }
+
+  // There _might_ be a timing hole where the thread executing this
+  // code gets skipped in the load balance, and running_threads is 0.
+  // Assert in the debug builds only!!!
+  KMP_DEBUG_ASSERT(running_threads > 0);
+  if (running_threads <= 0)
+    running_threads = 1;
+
+  KMP_INTERNAL_FREE(cpu_stat);
+
+  glb_running_threads = running_threads;
+
+  return running_threads;
 }
 
 #else // Linux* OS
@@ -2470,14 +2572,9 @@ int __kmp_get_load_balance(int max) {
 
   proc_entry = readdir(proc_dir);
   while (proc_entry != NULL) {
-#if KMP_OS_AIX
-    // Proc entry name starts with a digit. Assume it is a  process' directory.
-    if (isdigit(proc_entry->d_name[0])) {
-#else
     // Proc entry is a directory and name starts with a digit. Assume it is a
     // process' directory.
     if (proc_entry->d_type == DT_DIR && isdigit(proc_entry->d_name[0])) {
-#endif
 
 #ifdef KMP_DEBUG
       ++total_processes;
@@ -2521,11 +2618,7 @@ int __kmp_get_load_balance(int max) {
         task_entry = readdir(task_dir);
         while (task_entry != NULL) {
           // It is a directory and name starts with a digit.
-#if KMP_OS_AIX
-          if (isdigit(task_entry->d_name[0])) {
-#else
           if (proc_entry->d_type == DT_DIR && isdigit(task_entry->d_name[0])) {
-#endif
 
             // Construct complete stat file path. Easiest way would be:
             //  __kmp_str_buf_print( & stat_path, "%s/%s/stat", task_path.str,
@@ -2635,7 +2728,8 @@ finish: // Clean up and exit.
 #if !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_MIC ||                            \
       ((KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64) ||                 \
       KMP_ARCH_PPC64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||            \
-      KMP_ARCH_ARM || KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_PPC_XCOFF)
+      KMP_ARCH_ARM || KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_PPC_XCOFF ||   \
+      KMP_ARCH_AARCH64_32)
 
 // Because WebAssembly will use `call_indirect` to invoke the microtask and
 // WebAssembly indirect calls check that the called signature is a precise

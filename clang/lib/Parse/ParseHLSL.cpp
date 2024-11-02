@@ -15,6 +15,7 @@
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
+#include "clang/Sema/SemaHLSL.h"
 
 using namespace clang;
 
@@ -62,7 +63,7 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
   SourceLocation IdentifierLoc = ConsumeToken();
 
   ParsedAttributes Attrs(AttrFactory);
-  MaybeParseHLSLSemantics(Attrs, nullptr);
+  MaybeParseHLSLAnnotations(Attrs, nullptr);
 
   ParseScope BufferScope(this, Scope::DeclScope);
   BalancedDelimiterTracker T(*this, tok::l_brace);
@@ -71,9 +72,9 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
     return nullptr;
   }
 
-  Decl *D = Actions.ActOnStartHLSLBuffer(getCurScope(), IsCBuffer, BufferLoc,
-                                         Identifier, IdentifierLoc,
-                                         T.getOpenLocation());
+  Decl *D = Actions.HLSL().ActOnStartBuffer(getCurScope(), IsCBuffer, BufferLoc,
+                                            Identifier, IdentifierLoc,
+                                            T.getOpenLocation());
 
   while (Tok.isNot(tok::r_brace) && Tok.isNot(tok::eof)) {
     // FIXME: support attribute on constants inside cbuffer/tbuffer.
@@ -87,7 +88,7 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
       T.skipToEnd();
       DeclEnd = T.getCloseLocation();
       BufferScope.Exit();
-      Actions.ActOnFinishHLSLBuffer(D, DeclEnd);
+      Actions.HLSL().ActOnFinishBuffer(D, DeclEnd);
       return nullptr;
     }
   }
@@ -95,7 +96,7 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
   T.consumeClose();
   DeclEnd = T.getCloseLocation();
   BufferScope.Exit();
-  Actions.ActOnFinishHLSLBuffer(D, DeclEnd);
+  Actions.HLSL().ActOnFinishBuffer(D, DeclEnd);
 
   Actions.ProcessDeclAttributeList(Actions.CurScope, D, Attrs);
   return D;
@@ -117,12 +118,10 @@ static void fixSeparateAttrArgAndNumber(StringRef ArgStr, SourceLocation ArgLoc,
   Slot = IdentifierLoc::create(Ctx, ArgLoc, PP.getIdentifierInfo(FixedArg));
 }
 
-void Parser::ParseHLSLSemantics(ParsedAttributes &Attrs,
-                                SourceLocation *EndLoc) {
-  // FIXME: HLSLSemantic is shared for Semantic and resource binding which is
-  // confusing. Need a better name to avoid misunderstanding. Issue
-  // https://github.com/llvm/llvm-project/issues/57882
-  assert(Tok.is(tok::colon) && "Not a HLSL Semantic");
+void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
+                                  SourceLocation *EndLoc) {
+
+  assert(Tok.is(tok::colon) && "Not a HLSL Annotation");
   ConsumeToken();
 
   IdentifierInfo *II = nullptr;
@@ -140,7 +139,7 @@ void Parser::ParseHLSLSemantics(ParsedAttributes &Attrs,
   if (EndLoc)
     *EndLoc = Tok.getLocation();
   ParsedAttr::Kind AttrKind =
-      ParsedAttr::getParsedKind(II, nullptr, ParsedAttr::AS_HLSLSemantic);
+      ParsedAttr::getParsedKind(II, nullptr, ParsedAttr::AS_HLSLAnnotation);
 
   ArgsVector ArgExprs;
   switch (AttrKind) {
@@ -175,10 +174,98 @@ void Parser::ParseHLSLSemantics(ParsedAttributes &Attrs,
       ArgExprs.push_back(ParseIdentifierLoc());
 
       // Add numeric_constant for fix-it.
-      if (SpaceStr.equals("space") && Tok.is(tok::numeric_constant))
+      if (SpaceStr == "space" && Tok.is(tok::numeric_constant))
         fixSeparateAttrArgAndNumber(SpaceStr, SpaceLoc, Tok, ArgExprs, *this,
                                     Actions.Context, PP);
     }
+    if (ExpectAndConsume(tok::r_paren, diag::err_expected)) {
+      SkipUntil(tok::r_paren, StopAtSemi); // skip through )
+      return;
+    }
+  } break;
+  case ParsedAttr::AT_HLSLPackOffset: {
+    // Parse 'packoffset( c[Subcomponent][.component] )'.
+    // Check '('.
+    if (ExpectAndConsume(tok::l_paren, diag::err_expected_lparen_after)) {
+      SkipUntil(tok::r_paren, StopAtSemi); // skip through )
+      return;
+    }
+    // Check c[Subcomponent] as an identifier.
+    if (!Tok.is(tok::identifier)) {
+      Diag(Tok.getLocation(), diag::err_expected) << tok::identifier;
+      SkipUntil(tok::r_paren, StopAtSemi); // skip through )
+      return;
+    }
+    StringRef OffsetStr = Tok.getIdentifierInfo()->getName();
+    SourceLocation SubComponentLoc = Tok.getLocation();
+    if (OffsetStr[0] != 'c') {
+      Diag(Tok.getLocation(), diag::err_hlsl_packoffset_invalid_reg)
+          << OffsetStr;
+      SkipUntil(tok::r_paren, StopAtSemi); // skip through )
+      return;
+    }
+    OffsetStr = OffsetStr.substr(1);
+    unsigned SubComponent = 0;
+    if (!OffsetStr.empty()) {
+      // Make sure SubComponent is a number.
+      if (OffsetStr.getAsInteger(10, SubComponent)) {
+        Diag(SubComponentLoc.getLocWithOffset(1),
+             diag::err_hlsl_unsupported_register_number);
+        SkipUntil(tok::r_paren, StopAtSemi); // skip through )
+        return;
+      }
+    }
+    unsigned Component = 0;
+    ConsumeToken(); // consume identifier.
+    SourceLocation ComponentLoc;
+    if (Tok.is(tok::period)) {
+      ConsumeToken(); // consume period.
+      if (!Tok.is(tok::identifier)) {
+        Diag(Tok.getLocation(), diag::err_expected) << tok::identifier;
+        SkipUntil(tok::r_paren, StopAtSemi); // skip through )
+        return;
+      }
+      StringRef ComponentStr = Tok.getIdentifierInfo()->getName();
+      ComponentLoc = Tok.getLocation();
+      ConsumeToken(); // consume identifier.
+      // Make sure Component is a single character.
+      if (ComponentStr.size() != 1) {
+        Diag(ComponentLoc, diag::err_hlsl_unsupported_component)
+            << ComponentStr;
+        SkipUntil(tok::r_paren, StopAtSemi); // skip through )
+        return;
+      }
+      switch (ComponentStr[0]) {
+      case 'x':
+      case 'r':
+        Component = 0;
+        break;
+      case 'y':
+      case 'g':
+        Component = 1;
+        break;
+      case 'z':
+      case 'b':
+        Component = 2;
+        break;
+      case 'w':
+      case 'a':
+        Component = 3;
+        break;
+      default:
+        Diag(ComponentLoc, diag::err_hlsl_unsupported_component)
+            << ComponentStr;
+        SkipUntil(tok::r_paren, StopAtSemi); // skip through )
+        return;
+      }
+    }
+    ASTContext &Ctx = Actions.getASTContext();
+    QualType SizeTy = Ctx.getSizeType();
+    uint64_t SizeTySize = Ctx.getTypeSize(SizeTy);
+    ArgExprs.push_back(IntegerLiteral::Create(
+        Ctx, llvm::APInt(SizeTySize, SubComponent), SizeTy, SubComponentLoc));
+    ArgExprs.push_back(IntegerLiteral::Create(
+        Ctx, llvm::APInt(SizeTySize, Component), SizeTy, ComponentLoc));
     if (ExpectAndConsume(tok::r_paren, diag::err_expected)) {
       SkipUntil(tok::r_paren, StopAtSemi); // skip through )
       return;
@@ -191,10 +278,10 @@ void Parser::ParseHLSLSemantics(ParsedAttributes &Attrs,
   case ParsedAttr::AT_HLSLSV_DispatchThreadID:
     break;
   default:
-    llvm_unreachable("invalid HLSL Semantic");
+    llvm_unreachable("invalid HLSL Annotation");
     break;
   }
 
   Attrs.addNew(II, Loc, nullptr, SourceLocation(), ArgExprs.data(),
-               ArgExprs.size(), ParsedAttr::Form::HLSLSemantic());
+               ArgExprs.size(), ParsedAttr::Form::HLSLAnnotation());
 }

@@ -9,6 +9,77 @@ RUN: lld-link -out:out1.dll -dll -noentry test.obj test.lib
 RUN: llvm-readobj --coff-imports out1.dll | FileCheck --check-prefix=IMPORT %s
 IMPORT: Symbol: expfunc
 
+Pass -export argument with EXPORTAS.
+
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows func.s -o func.obj
+RUN: lld-link -out:out2.dll -dll -noentry func.obj -export:func,EXPORTAS,expfunc
+RUN: llvm-readobj --coff-exports out2.dll | FileCheck --check-prefix=EXPORT %s
+EXPORT: Name: expfunc
+
+RUN: llvm-readobj out2.lib | FileCheck --check-prefix=IMPLIB %s
+IMPLIB:      Name type: export as
+IMPLIB-NEXT: Export name: expfunc
+IMPLIB-NEXT: Symbol: __imp_func
+IMPLIB-NEXT: Symbol: func
+
+Use .drectve section with EXPORTAS.
+
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows drectve.s -o drectve.obj
+RUN: lld-link -out:out3.dll -dll -noentry func.obj drectve.obj
+RUN: llvm-readobj --coff-exports out3.dll | FileCheck --check-prefix=EXPORT %s
+RUN: llvm-readobj out3.lib | FileCheck --check-prefix=IMPLIB %s
+
+Use a .def file with EXPORTAS.
+
+RUN: lld-link -out:out4.dll -dll -noentry func.obj -def:test.def
+RUN: llvm-readobj --coff-exports out4.dll | FileCheck --check-prefix=EXPORT %s
+RUN: llvm-readobj out4.lib | FileCheck --check-prefix=IMPLIB %s
+
+Use a .def file with EXPORTAS in a forwarding export.
+
+RUN: lld-link -out:out5.dll -dll -noentry func.obj -def:test2.def
+RUN: llvm-readobj --coff-exports out5.dll | FileCheck --check-prefix=FORWARD-EXPORT %s
+FORWARD-EXPORT:      Export {
+FORWARD-EXPORT-NEXT:   Ordinal: 1
+FORWARD-EXPORT-NEXT:   Name: expfunc
+FORWARD-EXPORT-NEXT:   ForwardedTo: otherdll.otherfunc
+FORWARD-EXPORT-NEXT: }
+
+RUN: llvm-readobj out5.lib | FileCheck --check-prefix=FORWARD-IMPLIB %s
+FORWARD-IMPLIB:      Name type: export as
+FORWARD-IMPLIB-NEXT: Export name: expfunc
+FORWARD-IMPLIB-NEXT: Symbol: __imp_func
+FORWARD-IMPLIB-NEXT: Symbol: func
+
+Pass -export argument with EXPORTAS in a forwarding export.
+
+RUN: lld-link -out:out6.dll -dll -noentry func.obj -export:func=otherdll.otherfunc,EXPORTAS,expfunc
+RUN: llvm-readobj --coff-exports out6.dll | FileCheck --check-prefix=FORWARD-EXPORT %s
+RUN: llvm-readobj out6.lib | FileCheck --check-prefix=FORWARD-IMPLIB %s
+
+Pass -export argument with EXPORTAS in a data export.
+
+RUN: lld-link -out:out7.dll -dll -noentry func.obj -export:func,DATA,@5,EXPORTAS,expfunc
+RUN: llvm-readobj --coff-exports out7.dll | FileCheck --check-prefix=ORD %s
+ORD:      Ordinal: 5
+ORD-NEXT: Name: expfunc
+
+RUN: llvm-readobj out7.lib | FileCheck --check-prefix=ORD-IMPLIB %s
+ORD-IMPLIB:      Type: data
+ORD-IMPLIB-NEXT: Name type: export as
+ORD-IMPLIB-NEXT: Export name: expfunc
+ORD-IMPLIB-NEXT: Symbol: __imp_func
+
+Check invalid EXPORTAS syntax.
+
+RUN: not lld-link -out:err1.dll -dll -noentry func.obj -export:func,EXPORTAS, 2>&1 | \
+RUN:     FileCheck --check-prefix=ERR1 %s
+ERR1: error: invalid EXPORTAS value: {{$}}
+
+RUN: not lld-link -out:err2.dll -dll -noentry func.obj -export:func,EXPORTAS,expfunc,DATA 2>&1 | \
+RUN:     FileCheck --check-prefix=ERR2 %s
+ERR2: error: invalid EXPORTAS value: expfunc,DATA
+
 #--- test.s
     .section ".test", "rd"
     .rva __imp_func
@@ -17,3 +88,20 @@ IMPORT: Symbol: expfunc
 LIBRARY test.dll
 EXPORTS
     func EXPORTAS expfunc
+
+#--- test2.def
+LIBRARY test.dll
+EXPORTS
+    func=otherdll.otherfunc EXPORTAS expfunc
+
+#--- func.s
+    .text
+    .globl func
+    .p2align 2, 0x0
+func:
+    movl $1, %eax
+    retq
+
+#--- drectve.s
+    .section .drectve, "yn"
+    .ascii " -export:func,EXPORTAS,expfunc"

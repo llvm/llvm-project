@@ -22,6 +22,6 @@ body:             |
     ; CHECK: Source type must be a scalar
     %6:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR %2
 
-    ; CHECK: Element type of the destination must be the same type as the source type
-    %7:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR %0
+    ; CHECK: Element type of the destination must be the same size or smaller than the source type
+    %7:_(<vscale x 2 x s128>) = G_SPLAT_VECTOR %0
 ...

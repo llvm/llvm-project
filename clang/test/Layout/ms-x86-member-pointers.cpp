@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fno-rtti -emit-llvm-only -triple i686-pc-win32 -fdump-record-layouts -fms-extensions -fsyntax-only %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fno-rtti -triple i686-pc-win32 -fdump-record-layouts -fms-extensions -fsyntax-only %s 2>&1 | FileCheck %s
 
 struct __single_inheritance S;
 struct __multiple_inheritance M;

@@ -119,7 +119,8 @@ static ValueAsMetadata *getAsMetadata(Value *V) {
 }
 
 void DbgVariableIntrinsic::replaceVariableLocationOp(Value *OldValue,
-                                                     Value *NewValue) {
+                                                     Value *NewValue,
+                                                     bool AllowEmpty) {
   // If OldValue is used as the address part of a dbg.assign intrinsic replace
   // it with NewValue and return true.
   auto ReplaceDbgAssignAddress = [this, OldValue, NewValue]() -> bool {
@@ -136,6 +137,8 @@ void DbgVariableIntrinsic::replaceVariableLocationOp(Value *OldValue,
   auto Locations = location_ops();
   auto OldIt = find(Locations, OldValue);
   if (OldIt == Locations.end()) {
+    if (AllowEmpty || DbgAssignAddrReplaced)
+      return;
     assert(DbgAssignAddrReplaced &&
            "OldValue must be dbg.assign addr if unused in DIArgList");
     return;
@@ -291,6 +294,12 @@ Value *InstrProfIncrementInst::getStep() const {
   return ConstantInt::get(Type::getInt64Ty(Context), 1);
 }
 
+Value *InstrProfCallsite::getCallee() const {
+  if (isa<InstrProfCallsite>(this))
+    return getArgOperand(4);
+  return nullptr;
+}
+
 std::optional<RoundingMode> ConstrainedFPIntrinsic::getRoundingMode() const {
   unsigned NumOperands = arg_size();
   Metadata *MD = nullptr;
@@ -356,37 +365,23 @@ FCmpInst::Predicate ConstrainedFPCmpIntrinsic::getPredicate() const {
   return getFPPredicateFromMD(getArgOperand(2));
 }
 
-bool ConstrainedFPIntrinsic::isUnaryOp() const {
-  switch (getIntrinsicID()) {
-  default:
-    return false;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
-  case Intrinsic::INTRINSIC:                                                   \
-    return NARG == 1;
-#include "llvm/IR/ConstrainedOps.def"
-  }
-}
+unsigned ConstrainedFPIntrinsic::getNonMetadataArgCount() const {
+  // All constrained fp intrinsics have "fpexcept" metadata.
+  unsigned NumArgs = arg_size() - 1;
 
-bool ConstrainedFPIntrinsic::isTernaryOp() const {
-  switch (getIntrinsicID()) {
-  default:
-    return false;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
-  case Intrinsic::INTRINSIC:                                                   \
-    return NARG == 3;
-#include "llvm/IR/ConstrainedOps.def"
-  }
+  // Some intrinsics have "round" metadata.
+  if (Intrinsic::hasConstrainedFPRoundingModeOperand(getIntrinsicID()))
+    NumArgs -= 1;
+
+  // Compare intrinsics take their predicate as metadata.
+  if (isa<ConstrainedFPCmpIntrinsic>(this))
+    NumArgs -= 1;
+
+  return NumArgs;
 }
 
 bool ConstrainedFPIntrinsic::classof(const IntrinsicInst *I) {
-  switch (I->getIntrinsicID()) {
-#define INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC)                        \
-  case Intrinsic::INTRINSIC:
-#include "llvm/IR/ConstrainedOps.def"
-    return true;
-  default:
-    return false;
-  }
+  return Intrinsic::isConstrainedFPIntrinsic(I->getIntrinsicID());
 }
 
 ElementCount VPIntrinsic::getStaticVectorLength() const {
@@ -668,6 +663,7 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
   case Intrinsic::vp_inttoptr:
   case Intrinsic::vp_lrint:
   case Intrinsic::vp_llrint:
+  case Intrinsic::vp_cttz_elts:
     VPFunc =
         Intrinsic::getDeclaration(M, VPID, {ReturnType, Params[0]->getType()});
     break;

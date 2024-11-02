@@ -1560,7 +1560,9 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
       SDValue And = N->getOperand(0);
       unsigned N0Opc = And.getMachineOpcode();
       if ((N0Opc == X86::AND8rr || N0Opc == X86::AND16rr ||
-           N0Opc == X86::AND32rr || N0Opc == X86::AND64rr) &&
+           N0Opc == X86::AND32rr || N0Opc == X86::AND64rr ||
+           N0Opc == X86::AND8rr_ND || N0Opc == X86::AND16rr_ND ||
+           N0Opc == X86::AND32rr_ND || N0Opc == X86::AND64rr_ND) &&
           !And->hasAnyUseOfValue(1)) {
         MachineSDNode *Test = CurDAG->getMachineNode(Opc, SDLoc(N),
                                                      MVT::i32,
@@ -1571,15 +1573,25 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
         continue;
       }
       if ((N0Opc == X86::AND8rm || N0Opc == X86::AND16rm ||
-           N0Opc == X86::AND32rm || N0Opc == X86::AND64rm) &&
+           N0Opc == X86::AND32rm || N0Opc == X86::AND64rm ||
+           N0Opc == X86::AND8rm_ND || N0Opc == X86::AND16rm_ND ||
+           N0Opc == X86::AND32rm_ND || N0Opc == X86::AND64rm_ND) &&
           !And->hasAnyUseOfValue(1)) {
         unsigned NewOpc;
+#define CASE_ND(OP)                                                            \
+  case X86::OP:                                                                \
+  case X86::OP##_ND:
+#define FROM_TO(A, B)                                                          \
+  CASE_ND(A) NewOpc = X86::B;                                                  \
+  break;
         switch (N0Opc) {
-        case X86::AND8rm:  NewOpc = X86::TEST8mr; break;
-        case X86::AND16rm: NewOpc = X86::TEST16mr; break;
-        case X86::AND32rm: NewOpc = X86::TEST32mr; break;
-        case X86::AND64rm: NewOpc = X86::TEST64mr; break;
+          FROM_TO(AND8rm, TEST8mr);
+          FROM_TO(AND16rm, TEST16mr);
+          FROM_TO(AND32rm, TEST32mr);
+          FROM_TO(AND64rm, TEST64mr);
         }
+#undef FROM_TO
+#undef CASE_ND
 
         // Need to swap the memory and register operand.
         SDValue Ops[] = { And.getOperand(1),
@@ -2353,7 +2365,7 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
     SDValue Src = N.getOperand(0);
     unsigned SrcOpc = Src.getOpcode();
     if (((SrcOpc == ISD::ADD && Src->getFlags().hasNoUnsignedWrap()) ||
-         CurDAG->isADDLike(Src)) &&
+         CurDAG->isADDLike(Src, /*NoWrap=*/true)) &&
         Src.hasOneUse()) {
       if (CurDAG->isBaseWithConstantOffset(Src)) {
         SDValue AddSrc = Src.getOperand(0);
@@ -2927,11 +2939,10 @@ bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
 }
 
 bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
-  // Cannot use 32 bit constants to reference objects in kernel code model.
-  // Cannot use 32 bit constants to reference objects in large PIC mode since
-  // GOTOFF is 64 bits.
+  // Cannot use 32 bit constants to reference objects in kernel/large code
+  // model.
   if (TM.getCodeModel() == CodeModel::Kernel ||
-      (TM.getCodeModel() == CodeModel::Large && TM.isPositionIndependent()))
+      TM.getCodeModel() == CodeModel::Large)
     return false;
 
   // In static codegen with small code model, we can get the address of a label
@@ -5047,17 +5058,17 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       switch (IntNo) {
       default: llvm_unreachable("Impossible intrinsic");
       case Intrinsic::x86_encodekey128:
-        Opcode = GET_EGPR_IF_ENABLED(X86::ENCODEKEY128);
+        Opcode = X86::ENCODEKEY128;
         break;
       case Intrinsic::x86_encodekey256:
-        Opcode = GET_EGPR_IF_ENABLED(X86::ENCODEKEY256);
+        Opcode = X86::ENCODEKEY256;
         break;
       }
 
       SDValue Chain = Node->getOperand(0);
       Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM0, Node->getOperand(3),
                                    SDValue());
-      if (Opcode == X86::ENCODEKEY256 || Opcode == X86::ENCODEKEY256_EVEX)
+      if (Opcode == X86::ENCODEKEY256)
         Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM1, Node->getOperand(4),
                                      Chain.getValue(1));
 
@@ -6476,18 +6487,17 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     default:
       llvm_unreachable("Unexpected opcode!");
     case X86ISD::AESENCWIDE128KL:
-      Opcode = GET_EGPR_IF_ENABLED(X86::AESENCWIDE128KL);
+      Opcode = X86::AESENCWIDE128KL;
       break;
     case X86ISD::AESDECWIDE128KL:
-      Opcode = GET_EGPR_IF_ENABLED(X86::AESDECWIDE128KL);
+      Opcode = X86::AESDECWIDE128KL;
       break;
     case X86ISD::AESENCWIDE256KL:
-      Opcode = GET_EGPR_IF_ENABLED(X86::AESENCWIDE256KL);
+      Opcode = X86::AESENCWIDE256KL;
       break;
     case X86ISD::AESDECWIDE256KL:
-      Opcode = GET_EGPR_IF_ENABLED(X86::AESDECWIDE256KL);
+      Opcode = X86::AESDECWIDE256KL;
       break;
-#undef GET_EGPR_IF_ENABLED
     }
 
     SDValue Chain = Node->getOperand(0);

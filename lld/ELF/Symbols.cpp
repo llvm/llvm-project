@@ -539,8 +539,8 @@ void elf::reportDuplicate(const Symbol &sym, const InputFile *newFile,
   if (!d->section && !errSec && errOffset && d->value == errOffset)
     return;
   if (!d->section || !errSec) {
-    error("duplicate symbol: " + toString(sym) + "\n>>> defined in " +
-          toString(sym.file) + "\n>>> defined in " + toString(newFile));
+    errorOrWarn("duplicate symbol: " + toString(sym) + "\n>>> defined in " +
+                toString(sym.file) + "\n>>> defined in " + toString(newFile));
     return;
   }
 
@@ -564,7 +564,7 @@ void elf::reportDuplicate(const Symbol &sym, const InputFile *newFile,
   if (!src2.empty())
     msg += src2 + "\n>>>            ";
   msg += obj2;
-  error(msg);
+  errorOrWarn(msg);
 }
 
 void Symbol::checkDuplicate(const Defined &other) const {

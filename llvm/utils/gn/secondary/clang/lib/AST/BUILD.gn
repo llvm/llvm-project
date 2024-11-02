@@ -127,6 +127,7 @@ static_library("AST") {
     "ODRDiagsEmitter.cpp",
     "ODRHash.cpp",
     "OSLog.cpp",
+    "OpenACCClause.cpp",
     "OpenMPClause.cpp",
     "ParentMap.cpp",
     "ParentMapContext.cpp",

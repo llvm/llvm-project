@@ -36,7 +36,6 @@
 
 // RUN: %clangxx -### --target=hexagon-unknown-elf -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
-// RUN:   --gcc-toolchain="" \
 // RUN:   -nostdlibinc %s 2>&1 | FileCheck -check-prefix=CHECK113 %s
 // CHECK113: "-cc1"
 // CHECK113-NOT: "-internal-isystem"

@@ -346,7 +346,6 @@ define void @conditional_uniform_load(ptr noalias nocapture %a, ptr noalias noca
 ; SCALABLE-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 0
 ; SCALABLE-NEXT:    [[TMP11:%.*]] = icmp ugt <vscale x 2 x i64> [[VEC_IND]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 10, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
 ; SCALABLE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i64> @llvm.masked.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> [[BROADCAST_SPLAT]], i32 8, <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i64> poison)
-; SCALABLE-NEXT:    [[TMP12:%.*]] = xor <vscale x 2 x i1> [[TMP11]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
 ; SCALABLE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i64> [[WIDE_MASKED_GATHER]], <vscale x 2 x i64> zeroinitializer
 ; SCALABLE-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP10]]
 ; SCALABLE-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[TMP13]], i32 0
@@ -395,8 +394,6 @@ define void @conditional_uniform_load(ptr noalias nocapture %a, ptr noalias noca
 ; FIXEDLEN-NEXT:    [[TMP3:%.*]] = icmp ugt <4 x i64> [[STEP_ADD]], <i64 10, i64 10, i64 10, i64 10>
 ; FIXEDLEN-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> [[BROADCAST_SPLAT]], i32 8, <4 x i1> [[TMP2]], <4 x i64> poison)
 ; FIXEDLEN-NEXT:    [[WIDE_MASKED_GATHER2:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> [[BROADCAST_SPLAT]], i32 8, <4 x i1> [[TMP3]], <4 x i64> poison)
-; FIXEDLEN-NEXT:    [[TMP4:%.*]] = xor <4 x i1> [[TMP2]], <i1 true, i1 true, i1 true, i1 true>
-; FIXEDLEN-NEXT:    [[TMP5:%.*]] = xor <4 x i1> [[TMP3]], <i1 true, i1 true, i1 true, i1 true>
 ; FIXEDLEN-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP2]], <4 x i64> [[WIDE_MASKED_GATHER]], <4 x i64> zeroinitializer
 ; FIXEDLEN-NEXT:    [[PREDPHI3:%.*]] = select <4 x i1> [[TMP3]], <4 x i64> [[WIDE_MASKED_GATHER2]], <4 x i64> zeroinitializer
 ; FIXEDLEN-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]

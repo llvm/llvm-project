@@ -100,6 +100,7 @@ struct MappingTraits<FormatStyle::ShortCaseStatementsAlignmentStyle> {
     IO.mapOptional("Enabled", Value.Enabled);
     IO.mapOptional("AcrossEmptyLines", Value.AcrossEmptyLines);
     IO.mapOptional("AcrossComments", Value.AcrossComments);
+    IO.mapOptional("AlignCaseArrows", Value.AlignCaseArrows);
     IO.mapOptional("AlignCaseColons", Value.AlignCaseColons);
   }
 };
@@ -807,7 +808,6 @@ template <> struct MappingTraits<FormatStyle> {
         FormatStyle PredefinedStyle;
         if (getPredefinedStyle(StyleName, Style.Language, &PredefinedStyle) &&
             Style == PredefinedStyle) {
-          IO.mapOptional("# BasedOnStyle", StyleName);
           BasedOnStyle = StyleName;
           break;
         }
@@ -912,6 +912,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AllowBreakBeforeNoexceptSpecifier);
     IO.mapOptional("AllowShortBlocksOnASingleLine",
                    Style.AllowShortBlocksOnASingleLine);
+    IO.mapOptional("AllowShortCaseExpressionOnASingleLine",
+                   Style.AllowShortCaseExpressionOnASingleLine);
     IO.mapOptional("AllowShortCaseLabelsOnASingleLine",
                    Style.AllowShortCaseLabelsOnASingleLine);
     IO.mapOptional("AllowShortCompoundRequirementOnASingleLine",
@@ -955,6 +957,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.BreakBeforeTernaryOperators);
     IO.mapOptional("BreakConstructorInitializers",
                    Style.BreakConstructorInitializers);
+    IO.mapOptional("BreakFunctionDefinitionParameters",
+                   Style.BreakFunctionDefinitionParameters);
     IO.mapOptional("BreakInheritanceList", Style.BreakInheritanceList);
     IO.mapOptional("BreakStringLiterals", Style.BreakStringLiterals);
     IO.mapOptional("BreakTemplateDeclarations",
@@ -1422,6 +1426,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AllowAllParametersOfDeclarationOnNextLine = true;
   LLVMStyle.AllowBreakBeforeNoexceptSpecifier = FormatStyle::BBNSS_Never;
   LLVMStyle.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;
+  LLVMStyle.AllowShortCaseExpressionOnASingleLine = true;
   LLVMStyle.AllowShortCaseLabelsOnASingleLine = false;
   LLVMStyle.AllowShortCompoundRequirementOnASingleLine = true;
   LLVMStyle.AllowShortEnumsOnASingleLine = true;
@@ -1465,6 +1470,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
   LLVMStyle.BreakBeforeTernaryOperators = true;
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
+  LLVMStyle.BreakFunctionDefinitionParameters = false;
   LLVMStyle.BreakInheritanceList = FormatStyle::BILS_BeforeColon;
   LLVMStyle.BreakStringLiterals = true;
   LLVMStyle.BreakTemplateDeclarations = FormatStyle::BTDS_MultiLine;
@@ -3114,6 +3120,7 @@ static void sortCppIncludes(const FormatStyle &Style,
     return;
   }
 
+  const auto OldCursor = Cursor ? *Cursor : 0;
   std::string result;
   for (unsigned Index : Indices) {
     if (!result.empty()) {
@@ -3137,6 +3144,8 @@ static void sortCppIncludes(const FormatStyle &Style,
   // the entire range of blocks. Otherwise, no replacement is generated.
   if (replaceCRLF(result) == replaceCRLF(std::string(Code.substr(
                                  IncludesBeginOffset, IncludesBlockSize)))) {
+    if (Cursor)
+      *Cursor = OldCursor;
     return;
   }
 
@@ -3578,7 +3587,7 @@ cleanupAroundReplacements(StringRef Code, const tooling::Replacements &Replaces,
   // We need to use lambda function here since there are two versions of
   // `cleanup`.
   auto Cleanup = [](const FormatStyle &Style, StringRef Code,
-                    std::vector<tooling::Range> Ranges,
+                    ArrayRef<tooling::Range> Ranges,
                     StringRef FileName) -> tooling::Replacements {
     return cleanup(Style, Code, Ranges, FileName);
   };
@@ -3761,7 +3770,7 @@ reformat(const FormatStyle &Style, StringRef Code,
     tooling::Replacements NonNoOpFixes;
     for (const tooling::Replacement &Fix : Fixes) {
       StringRef OriginalCode = Code.substr(Fix.getOffset(), Fix.getLength());
-      if (!OriginalCode.equals(Fix.getReplacementText())) {
+      if (OriginalCode != Fix.getReplacementText()) {
         auto Err = NonNoOpFixes.add(Fix);
         if (Err) {
           llvm::errs() << "Error adding replacements : "
@@ -3888,7 +3897,11 @@ static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
       FileName.ends_with_insensitive(".protodevel")) {
     return FormatStyle::LK_Proto;
   }
-  if (FileName.ends_with_insensitive(".textpb") ||
+  // txtpb is the canonical extension, and textproto is the legacy canonical
+  // extension
+  // https://protobuf.dev/reference/protobuf/textformat-spec/#text-format-files
+  if (FileName.ends_with_insensitive(".txtpb") ||
+      FileName.ends_with_insensitive(".textpb") ||
       FileName.ends_with_insensitive(".pb.txt") ||
       FileName.ends_with_insensitive(".textproto") ||
       FileName.ends_with_insensitive(".asciipb")) {

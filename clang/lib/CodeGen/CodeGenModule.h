@@ -1241,6 +1241,9 @@ public:
   /// Return true iff the given type uses 'sret' when used as a return type.
   bool ReturnTypeUsesSRet(const CGFunctionInfo &FI);
 
+  /// Return true iff the given type has `inreg` set.
+  bool ReturnTypeHasInReg(const CGFunctionInfo &FI);
+
   /// Return true iff the given type uses an argument slot when 'sret' is used
   /// as a return type.
   bool ReturnSlotInterferesWithArgs(const CGFunctionInfo &FI);

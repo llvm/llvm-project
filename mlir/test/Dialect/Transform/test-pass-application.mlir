@@ -78,6 +78,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
     %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     // expected-error @below {{failed to add pass or pass pipeline to pipeline: canonicalize}}
+    // expected-error @below {{<Pass-Options-Parser>: no such option invalid-option}}
     transform.apply_registered_pass "canonicalize" to %1 {options = "invalid-option=1"} : (!transform.any_op) -> !transform.any_op
     transform.yield
   }

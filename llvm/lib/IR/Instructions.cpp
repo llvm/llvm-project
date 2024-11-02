@@ -454,24 +454,14 @@ bool CallBase::paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
 }
 
 bool CallBase::hasFnAttrOnCalledFunction(Attribute::AttrKind Kind) const {
-  Value *V = getCalledOperand();
-  if (auto *CE = dyn_cast<ConstantExpr>(V))
-    if (CE->getOpcode() == BitCast)
-      V = CE->getOperand(0);
-
-  if (auto *F = dyn_cast<Function>(V))
+  if (auto *F = dyn_cast<Function>(getCalledOperand()))
     return F->getAttributes().hasFnAttr(Kind);
 
   return false;
 }
 
 bool CallBase::hasFnAttrOnCalledFunction(StringRef Kind) const {
-  Value *V = getCalledOperand();
-  if (auto *CE = dyn_cast<ConstantExpr>(V))
-    if (CE->getOpcode() == BitCast)
-      V = CE->getOperand(0);
-
-  if (auto *F = dyn_cast<Function>(V))
+  if (auto *F = dyn_cast<Function>(getCalledOperand()))
     return F->getAttributes().hasFnAttr(Kind);
 
   return false;
@@ -485,12 +475,7 @@ Attribute CallBase::getFnAttrOnCalledFunction(AK Kind) const {
     assert(Kind != Attribute::Memory && "Use getMemoryEffects() instead");
   }
 
-  Value *V = getCalledOperand();
-  if (auto *CE = dyn_cast<ConstantExpr>(V))
-    if (CE->getOpcode() == BitCast)
-      V = CE->getOperand(0);
-
-  if (auto *F = dyn_cast<Function>(V))
+  if (auto *F = dyn_cast<Function>(getCalledOperand()))
     return F->getAttributes().getFnAttr(Kind);
 
   return Attribute();
@@ -499,6 +484,22 @@ Attribute CallBase::getFnAttrOnCalledFunction(AK Kind) const {
 template Attribute
 CallBase::getFnAttrOnCalledFunction(Attribute::AttrKind Kind) const;
 template Attribute CallBase::getFnAttrOnCalledFunction(StringRef Kind) const;
+
+template <typename AK>
+Attribute CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
+                                                 AK Kind) const {
+  Value *V = getCalledOperand();
+
+  if (auto *F = dyn_cast<Function>(V))
+    return F->getAttributes().getParamAttr(ArgNo, Kind);
+
+  return Attribute();
+}
+template Attribute
+CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
+                                       Attribute::AttrKind Kind) const;
+template Attribute CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
+                                                          StringRef Kind) const;
 
 void CallBase::getOperandBundlesAsDefs(
     SmallVectorImpl<OperandBundleDef> &Defs) const {
@@ -833,15 +834,6 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
 // of S/T. The meaning of "branch_weights" meta data for call instruction is
 // transfered to represent call count.
 void CallInst::updateProfWeight(uint64_t S, uint64_t T) {
-  auto *ProfileData = getMetadata(LLVMContext::MD_prof);
-  if (ProfileData == nullptr)
-    return;
-
-  auto *ProfDataName = dyn_cast<MDString>(ProfileData->getOperand(0));
-  if (!ProfDataName || (!ProfDataName->getString().equals("branch_weights") &&
-                        !ProfDataName->getString().equals("VP")))
-    return;
-
   if (T == 0) {
     LLVM_DEBUG(dbgs() << "Attempting to update profile weights will result in "
                          "div by 0. Ignoring. Likely the function "
@@ -850,42 +842,7 @@ void CallInst::updateProfWeight(uint64_t S, uint64_t T) {
                          "with non-zero prof info.");
     return;
   }
-
-  MDBuilder MDB(getContext());
-  SmallVector<Metadata *, 3> Vals;
-  Vals.push_back(ProfileData->getOperand(0));
-  APInt APS(128, S), APT(128, T);
-  if (ProfDataName->getString().equals("branch_weights") &&
-      ProfileData->getNumOperands() > 0) {
-    // Using APInt::div may be expensive, but most cases should fit 64 bits.
-    APInt Val(128, mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(1))
-                       ->getValue()
-                       .getZExtValue());
-    Val *= APS;
-    Vals.push_back(MDB.createConstant(
-        ConstantInt::get(Type::getInt32Ty(getContext()),
-                         Val.udiv(APT).getLimitedValue(UINT32_MAX))));
-  } else if (ProfDataName->getString().equals("VP"))
-    for (unsigned i = 1; i < ProfileData->getNumOperands(); i += 2) {
-      // The first value is the key of the value profile, which will not change.
-      Vals.push_back(ProfileData->getOperand(i));
-      uint64_t Count =
-          mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(i + 1))
-              ->getValue()
-              .getZExtValue();
-      // Don't scale the magic number.
-      if (Count == NOMORE_ICP_MAGICNUM) {
-        Vals.push_back(ProfileData->getOperand(i + 1));
-        continue;
-      }
-      // Using APInt::div may be expensive, but most cases should fit 64 bits.
-      APInt Val(128, Count);
-      Val *= APS;
-      Vals.push_back(MDB.createConstant(
-          ConstantInt::get(Type::getInt64Ty(getContext()),
-                           Val.udiv(APT).getLimitedValue())));
-    }
-  setMetadata(LLVMContext::MD_prof, MDNode::get(getContext(), Vals));
+  scaleProfData(*this, S, T);
 }
 
 //===----------------------------------------------------------------------===//
@@ -968,6 +925,18 @@ InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
 
 LandingPadInst *InvokeInst::getLandingPadInst() const {
   return cast<LandingPadInst>(getUnwindDest()->getFirstNonPHI());
+}
+
+void InvokeInst::updateProfWeight(uint64_t S, uint64_t T) {
+  if (T == 0) {
+    LLVM_DEBUG(dbgs() << "Attempting to update profile weights will result in "
+                         "div by 0. Ignoring. Likely the function "
+                      << getParent()->getParent()->getName()
+                      << " has 0 entry count, and contains call instructions "
+                         "with non-zero prof info.");
+    return;
+  }
+  scaleProfData(*this, S, T);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2933,7 +2902,7 @@ bool ShuffleVectorInst::isOneUseSingleSourceMask(int VF) const {
 bool ShuffleVectorInst::isInterleave(unsigned Factor) {
   FixedVectorType *OpTy = dyn_cast<FixedVectorType>(getOperand(0)->getType());
   // shuffle_vector can only interleave fixed length vectors - for scalable
-  // vectors, see the @llvm.experimental.vector.interleave2 intrinsic
+  // vectors, see the @llvm.vector.interleave2 intrinsic
   if (!OpTy)
     return false;
   unsigned OpNumElts = OpTy->getNumElements();
@@ -3020,6 +2989,31 @@ bool ShuffleVectorInst::isInterleaveMask(
   }
 
   return true;
+}
+
+/// Check if the mask is a DE-interleave mask of the given factor
+/// \p Factor like:
+///     <Index, Index+Factor, ..., Index+(NumElts-1)*Factor>
+bool ShuffleVectorInst::isDeInterleaveMaskOfFactor(ArrayRef<int> Mask,
+                                                   unsigned Factor,
+                                                   unsigned &Index) {
+  // Check all potential start indices from 0 to (Factor - 1).
+  for (unsigned Idx = 0; Idx < Factor; Idx++) {
+    unsigned I = 0;
+
+    // Check that elements are in ascending order by Factor. Ignore undef
+    // elements.
+    for (; I < Mask.size(); I++)
+      if (Mask[I] >= 0 && static_cast<unsigned>(Mask[I]) != Idx + I * Factor)
+        break;
+
+    if (I == Mask.size()) {
+      Index = Idx;
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /// Try to lower a vector shuffle as a bit rotation.
@@ -3370,18 +3364,6 @@ BinaryOperator *BinaryOperator::CreateNSWNeg(Value *Op, const Twine &Name,
                                              BasicBlock *InsertAtEnd) {
   Value *Zero = ConstantInt::get(Op->getType(), 0);
   return BinaryOperator::CreateNSWSub(Zero, Op, Name, InsertAtEnd);
-}
-
-BinaryOperator *BinaryOperator::CreateNUWNeg(Value *Op, const Twine &Name,
-                                             Instruction *InsertBefore) {
-  Value *Zero = ConstantInt::get(Op->getType(), 0);
-  return BinaryOperator::CreateNUWSub(Zero, Op, Name, InsertBefore);
-}
-
-BinaryOperator *BinaryOperator::CreateNUWNeg(Value *Op, const Twine &Name,
-                                             BasicBlock *InsertAtEnd) {
-  Value *Zero = ConstantInt::get(Op->getType(), 0);
-  return BinaryOperator::CreateNUWSub(Zero, Op, Name, InsertAtEnd);
 }
 
 BinaryOperator *BinaryOperator::CreateNot(Value *Op, const Twine &Name,

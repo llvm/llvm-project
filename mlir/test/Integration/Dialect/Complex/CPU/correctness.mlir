@@ -242,7 +242,7 @@ func.func @entry() {
     // CHECK-NEXT:  0.321
     // CHECK-NEXT:  -0.776
     (0.0, 0.0),
-    // CHECK-NEXT:  nan
+    // CHECK-NEXT:  inf
     // CHECK-NEXT:  nan
     (0.0, 1.0),
     // CHECK-NEXT:  0.707

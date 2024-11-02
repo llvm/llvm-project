@@ -777,7 +777,9 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"identity", SameType, Rank::scalar, Optionality::optional},
             {"ordered", AnyLogical, Rank::scalar, Optionality::optional}},
         SameType, Rank::scalar, IntrinsicClass::transformationalFunction},
-    {"repeat", {{"string", SameCharNoLen, Rank::scalar}, {"ncopies", AnyInt}},
+    {"repeat",
+        {{"string", SameCharNoLen, Rank::scalar},
+            {"ncopies", AnyInt, Rank::scalar}},
         SameCharNoLen, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"reshape",
         {{"source", SameType, Rank::array}, {"shape", AnyInt, Rank::shape},
@@ -903,6 +905,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"back", AnyLogical, Rank::elemental, Optionality::optional},
             DefaultingKIND},
         KINDInt},
+    {"__builtin_compiler_options", {}, DefaultChar},
+    {"__builtin_compiler_version", {}, DefaultChar},
     {"__builtin_fma", {{"f1", SameReal}, {"f2", SameReal}, {"f3", SameReal}},
         SameReal},
     {"__builtin_ieee_is_nan", {{"a", AnyFloating}}, DefaultLogical},
@@ -941,8 +945,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"__builtin_ieee_support_underflow_control",
         {{"x", AnyReal, Rank::elemental, Optionality::optional}},
         DefaultLogical},
-    {"__builtin_compiler_options", {}, DefaultChar},
-    {"__builtin_compiler_version", {}, DefaultChar},
+    {"__builtin_numeric_storage_size", {}, DefaultInt},
 };
 
 // TODO: Coarray intrinsic functions
@@ -2280,7 +2283,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
                 UnwrapWholeSymbolOrComponentDataRef(actualForDummy[*dimArg])}) {
           if (IsOptional(*whole) || IsAllocatableOrObjectPointer(whole)) {
             if (context.languageFeatures().ShouldWarn(
-                    common::UsageWarning::DimMustBePresent)) {
+                    common::UsageWarning::OptionalMustBePresent)) {
               if (rank == Rank::scalarIfDim || arrayRank.value_or(-1) == 1) {
                 messages.Say(
                     "The actual argument for DIM= is optional, pointer, or allocatable, and it is assumed to be present and equal to 1 at execution time"_warn_en_US);
@@ -2738,16 +2741,21 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
           context.messages().Say(at,
               "FPTR= argument to C_F_POINTER() may not have a deferred type parameter"_err_en_US);
         } else if (type->category() == TypeCategory::Derived) {
-          if (type->IsUnlimitedPolymorphic()) {
-            context.messages().Say(at,
-                "FPTR= argument to C_F_POINTER() should not be unlimited polymorphic"_warn_en_US);
-          } else if (!type->GetDerivedTypeSpec().typeSymbol().attrs().test(
-                         semantics::Attr::BIND_C)) {
-            context.messages().Say(at,
-                "FPTR= argument to C_F_POINTER() should not have a derived type that is not BIND(C)"_warn_en_US);
+          if (context.languageFeatures().ShouldWarn(
+                  common::UsageWarning::Interoperability)) {
+            if (type->IsUnlimitedPolymorphic()) {
+              context.messages().Say(at,
+                  "FPTR= argument to C_F_POINTER() should not be unlimited polymorphic"_warn_en_US);
+            } else if (!type->GetDerivedTypeSpec().typeSymbol().attrs().test(
+                           semantics::Attr::BIND_C)) {
+              context.messages().Say(at,
+                  "FPTR= argument to C_F_POINTER() should not have a derived type that is not BIND(C)"_warn_en_US);
+            }
           }
         } else if (!IsInteroperableIntrinsicType(
-                       *type, &context.languageFeatures())) {
+                       *type, &context.languageFeatures()) &&
+            context.languageFeatures().ShouldWarn(
+                common::UsageWarning::Interoperability)) {
           context.messages().Say(at,
               "FPTR= argument to C_F_POINTER() should not have the non-interoperable intrinsic type %s"_warn_en_US,
               type->AsFortran());
@@ -2847,7 +2855,9 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
         context.messages().Say(arguments[0]->sourceLocation(),
             "C_LOC() argument may not be zero-length character"_err_en_US);
       } else if (typeAndShape->type().category() != TypeCategory::Derived &&
-          !IsInteroperableIntrinsicType(typeAndShape->type())) {
+          !IsInteroperableIntrinsicType(typeAndShape->type()) &&
+          context.languageFeatures().ShouldWarn(
+              common::UsageWarning::Interoperability)) {
         context.messages().Say(arguments[0]->sourceLocation(),
             "C_LOC() argument has non-interoperable intrinsic type, kind, or length"_warn_en_US);
       }
@@ -2861,7 +2871,8 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
                                       characteristics::DummyArgument{"x"s,
                                           characteristics::DummyDataObject{
                                               std::move(*typeAndShape)}}},
-                                  characteristics::Procedure::Attrs{}}},
+                                  characteristics::Procedure::Attrs{
+                                      characteristics::Procedure::Attr::Pure}}},
           std::move(arguments)};
     }
   }

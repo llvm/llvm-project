@@ -25,8 +25,10 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Linkage.h"
 #include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/PointerAuthOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/Visibility.h"
@@ -139,6 +141,174 @@ using CanQualType = CanQual<Type>;
 #define TYPE(Class, Base) class Class##Type;
 #include "clang/AST/TypeNodes.inc"
 
+/// Pointer-authentication qualifiers.
+class PointerAuthQualifier {
+  enum : uint32_t {
+    EnabledShift = 0,
+    EnabledBits = 1,
+    EnabledMask = 1 << EnabledShift,
+    AddressDiscriminatedShift = EnabledShift + EnabledBits,
+    AddressDiscriminatedBits = 1,
+    AddressDiscriminatedMask = 1 << AddressDiscriminatedShift,
+    AuthenticationModeShift =
+        AddressDiscriminatedShift + AddressDiscriminatedBits,
+    AuthenticationModeBits = 2,
+    AuthenticationModeMask = ((1 << AuthenticationModeBits) - 1)
+                             << AuthenticationModeShift,
+    IsaPointerShift = AuthenticationModeShift + AuthenticationModeBits,
+    IsaPointerBits = 1,
+    IsaPointerMask = ((1 << IsaPointerBits) - 1) << IsaPointerShift,
+    AuthenticatesNullValuesShift = IsaPointerShift + IsaPointerBits,
+    AuthenticatesNullValuesBits = 1,
+    AuthenticatesNullValuesMask = ((1 << AuthenticatesNullValuesBits) - 1)
+                                  << AuthenticatesNullValuesShift,
+    KeyShift = AuthenticatesNullValuesShift + AuthenticatesNullValuesBits,
+    KeyBits = 10,
+    KeyMask = ((1 << KeyBits) - 1) << KeyShift,
+    DiscriminatorShift = KeyShift + KeyBits,
+    DiscriminatorBits = 16,
+    DiscriminatorMask = ((1u << DiscriminatorBits) - 1) << DiscriminatorShift,
+  };
+
+  // bits:     |0      |1      |2..3              |4          |
+  //           |Enabled|Address|AuthenticationMode|ISA pointer|
+  // bits:     |5                |6..15|   16...31   |
+  //           |AuthenticatesNull|Key  |Discriminator|
+  uint32_t Data = 0;
+
+  // The following static assertions check that each of the 32 bits is present
+  // exactly in one of the constants.
+  static_assert((EnabledBits + AddressDiscriminatedBits +
+                 AuthenticationModeBits + IsaPointerBits +
+                 AuthenticatesNullValuesBits + KeyBits + DiscriminatorBits) ==
+                    32,
+                "PointerAuthQualifier should be exactly 32 bits");
+  static_assert((EnabledMask + AddressDiscriminatedMask +
+                 AuthenticationModeMask + IsaPointerMask +
+                 AuthenticatesNullValuesMask + KeyMask + DiscriminatorMask) ==
+                    0xFFFFFFFF,
+                "All masks should cover the entire bits");
+  static_assert((EnabledMask ^ AddressDiscriminatedMask ^
+                 AuthenticationModeMask ^ IsaPointerMask ^
+                 AuthenticatesNullValuesMask ^ KeyMask ^ DiscriminatorMask) ==
+                    0xFFFFFFFF,
+                "All masks should cover the entire bits");
+
+  PointerAuthQualifier(unsigned Key, bool IsAddressDiscriminated,
+                       unsigned ExtraDiscriminator,
+                       PointerAuthenticationMode AuthenticationMode,
+                       bool IsIsaPointer, bool AuthenticatesNullValues)
+      : Data(EnabledMask |
+             (IsAddressDiscriminated
+                  ? llvm::to_underlying(AddressDiscriminatedMask)
+                  : 0) |
+             (Key << KeyShift) |
+             (llvm::to_underlying(AuthenticationMode)
+              << AuthenticationModeShift) |
+             (ExtraDiscriminator << DiscriminatorShift) |
+             (IsIsaPointer << IsaPointerShift) |
+             (AuthenticatesNullValues << AuthenticatesNullValuesShift)) {
+    assert(Key <= KeyNoneInternal);
+    assert(ExtraDiscriminator <= MaxDiscriminator);
+    assert((Data == 0) ==
+           (getAuthenticationMode() == PointerAuthenticationMode::None));
+  }
+
+public:
+  enum {
+    KeyNoneInternal = (1u << KeyBits) - 1,
+
+    /// The maximum supported pointer-authentication key.
+    MaxKey = KeyNoneInternal - 1,
+
+    /// The maximum supported pointer-authentication discriminator.
+    MaxDiscriminator = (1u << DiscriminatorBits) - 1
+  };
+
+public:
+  PointerAuthQualifier() = default;
+
+  static PointerAuthQualifier
+  Create(unsigned Key, bool IsAddressDiscriminated, unsigned ExtraDiscriminator,
+         PointerAuthenticationMode AuthenticationMode, bool IsIsaPointer,
+         bool AuthenticatesNullValues) {
+    if (Key == PointerAuthKeyNone)
+      Key = KeyNoneInternal;
+    assert(Key <= KeyNoneInternal && "out-of-range key value");
+    return PointerAuthQualifier(Key, IsAddressDiscriminated, ExtraDiscriminator,
+                                AuthenticationMode, IsIsaPointer,
+                                AuthenticatesNullValues);
+  }
+
+  bool isPresent() const {
+    assert((Data == 0) ==
+           (getAuthenticationMode() == PointerAuthenticationMode::None));
+    return Data != 0;
+  }
+
+  explicit operator bool() const { return isPresent(); }
+
+  unsigned getKey() const {
+    assert(isPresent());
+    return (Data & KeyMask) >> KeyShift;
+  }
+
+  bool hasKeyNone() const { return isPresent() && getKey() == KeyNoneInternal; }
+
+  bool isAddressDiscriminated() const {
+    assert(isPresent());
+    return (Data & AddressDiscriminatedMask) >> AddressDiscriminatedShift;
+  }
+
+  unsigned getExtraDiscriminator() const {
+    assert(isPresent());
+    return (Data >> DiscriminatorShift);
+  }
+
+  PointerAuthenticationMode getAuthenticationMode() const {
+    return PointerAuthenticationMode((Data & AuthenticationModeMask) >>
+                                     AuthenticationModeShift);
+  }
+
+  bool isIsaPointer() const {
+    assert(isPresent());
+    return (Data & IsaPointerMask) >> IsaPointerShift;
+  }
+
+  bool authenticatesNullValues() const {
+    assert(isPresent());
+    return (Data & AuthenticatesNullValuesMask) >> AuthenticatesNullValuesShift;
+  }
+
+  PointerAuthQualifier withoutKeyNone() const {
+    return hasKeyNone() ? PointerAuthQualifier() : *this;
+  }
+
+  friend bool operator==(PointerAuthQualifier Lhs, PointerAuthQualifier Rhs) {
+    return Lhs.Data == Rhs.Data;
+  }
+  friend bool operator!=(PointerAuthQualifier Lhs, PointerAuthQualifier Rhs) {
+    return Lhs.Data != Rhs.Data;
+  }
+
+  bool isEquivalent(PointerAuthQualifier Other) const {
+    return withoutKeyNone() == Other.withoutKeyNone();
+  }
+
+  uint32_t getAsOpaqueValue() const { return Data; }
+
+  // Deserialize pointer-auth qualifiers from an opaque representation.
+  static PointerAuthQualifier fromOpaqueValue(uint32_t Opaque) {
+    PointerAuthQualifier Result;
+    Result.Data = Opaque;
+    assert((Result.Data == 0) ==
+           (Result.getAuthenticationMode() == PointerAuthenticationMode::None));
+    return Result;
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const { ID.AddInteger(Data); }
+};
+
 /// The collection of all-type qualifiers we support.
 /// Clang supports five independent qualifiers:
 /// * C99: const, volatile, and restrict
@@ -147,8 +317,9 @@ using CanQualType = CanQual<Type>;
 /// * Objective C: the GC attributes (none, weak, or strong)
 class Qualifiers {
 public:
-  enum TQ { // NOTE: These flags must be kept in sync with DeclSpec::TQ.
-    Const    = 0x1,
+  enum TQ : uint64_t {
+    // NOTE: These flags must be kept in sync with DeclSpec::TQ.
+    Const = 0x1,
     Restrict = 0x2,
     Volatile = 0x4,
     CVRMask = Const | Volatile | Restrict
@@ -182,7 +353,7 @@ public:
     OCL_Autoreleasing
   };
 
-  enum {
+  enum : uint64_t {
     /// The maximum supported address space number.
     /// 23 bits should be enough for anyone.
     MaxAddressSpace = 0x7fffffu,
@@ -197,16 +368,25 @@ public:
   /// Returns the common set of qualifiers while removing them from
   /// the given sets.
   static Qualifiers removeCommonQualifiers(Qualifiers &L, Qualifiers &R) {
+    Qualifiers Q;
+    PointerAuthQualifier LPtrAuth = L.getPointerAuth();
+    if (LPtrAuth.isPresent() &&
+        LPtrAuth.getKey() != PointerAuthQualifier::KeyNoneInternal &&
+        LPtrAuth == R.getPointerAuth()) {
+      Q.setPointerAuth(LPtrAuth);
+      PointerAuthQualifier Empty;
+      L.setPointerAuth(Empty);
+      R.setPointerAuth(Empty);
+    }
+
     // If both are only CVR-qualified, bit operations are sufficient.
     if (!(L.Mask & ~CVRMask) && !(R.Mask & ~CVRMask)) {
-      Qualifiers Q;
       Q.Mask = L.Mask & R.Mask;
       L.Mask &= ~Q.Mask;
       R.Mask &= ~Q.Mask;
       return Q;
     }
 
-    Qualifiers Q;
     unsigned CommonCRV = L.getCVRQualifiers() & R.getCVRQualifiers();
     Q.addCVRQualifiers(CommonCRV);
     L.removeCVRQualifiers(CommonCRV);
@@ -251,16 +431,14 @@ public:
   }
 
   // Deserialize qualifiers from an opaque representation.
-  static Qualifiers fromOpaqueValue(unsigned opaque) {
+  static Qualifiers fromOpaqueValue(uint64_t opaque) {
     Qualifiers Qs;
     Qs.Mask = opaque;
     return Qs;
   }
 
   // Serialize these qualifiers into an opaque representation.
-  unsigned getAsOpaqueValue() const {
-    return Mask;
-  }
+  uint64_t getAsOpaqueValue() const { return Mask; }
 
   bool hasConst() const { return Mask & Const; }
   bool hasOnlyConst() const { return Mask == Const; }
@@ -302,7 +480,7 @@ public:
   }
   void removeCVRQualifiers(unsigned mask) {
     assert(!(mask & ~CVRMask) && "bitmask contains non-CVR bits");
-    Mask &= ~mask;
+    Mask &= ~static_cast<uint64_t>(mask);
   }
   void removeCVRQualifiers() {
     removeCVRQualifiers(CVRMask);
@@ -407,6 +585,20 @@ public:
     setAddressSpace(space);
   }
 
+  bool hasPointerAuth() const { return Mask & PtrAuthMask; }
+  PointerAuthQualifier getPointerAuth() const {
+    return PointerAuthQualifier::fromOpaqueValue(Mask >> PtrAuthShift);
+  }
+  void setPointerAuth(PointerAuthQualifier Q) {
+    Mask = (Mask & ~PtrAuthMask) |
+           (uint64_t(Q.getAsOpaqueValue()) << PtrAuthShift);
+  }
+  void removePointerAuth() { Mask &= ~PtrAuthMask; }
+  void addPointerAuth(PointerAuthQualifier Q) {
+    assert(Q.isPresent());
+    setPointerAuth(Q);
+  }
+
   // Fast qualifiers are those that can be allocated directly
   // on a QualType object.
   bool hasFastQualifiers() const { return getFastQualifiers(); }
@@ -417,7 +609,7 @@ public:
   }
   void removeFastQualifiers(unsigned mask) {
     assert(!(mask & ~FastMask) && "bitmask contains non-fast qualifier bits");
-    Mask &= ~mask;
+    Mask &= ~static_cast<uint64_t>(mask);
   }
   void removeFastQualifiers() {
     removeFastQualifiers(FastMask);
@@ -454,6 +646,8 @@ public:
         addObjCGCAttr(Q.getObjCGCAttr());
       if (Q.hasObjCLifetime())
         addObjCLifetime(Q.getObjCLifetime());
+      if (Q.hasPointerAuth())
+        addPointerAuth(Q.getPointerAuth());
     }
   }
 
@@ -471,6 +665,8 @@ public:
         removeObjCLifetime();
       if (getAddressSpace() == Q.getAddressSpace())
         removeAddressSpace();
+      if (getPointerAuth() == Q.getPointerAuth())
+        removePointerAuth();
     }
   }
 
@@ -483,6 +679,8 @@ public:
            !hasObjCGCAttr() || !qs.hasObjCGCAttr());
     assert(getObjCLifetime() == qs.getObjCLifetime() ||
            !hasObjCLifetime() || !qs.hasObjCLifetime());
+    assert(!hasPointerAuth() || !qs.hasPointerAuth() ||
+           getPointerAuth() == qs.getPointerAuth());
     Mask |= qs.Mask;
   }
 
@@ -536,6 +734,8 @@ public:
            // be changed.
            (getObjCGCAttr() == other.getObjCGCAttr() || !hasObjCGCAttr() ||
             !other.hasObjCGCAttr()) &&
+           // Pointer-auth qualifiers must match exactly.
+           getPointerAuth() == other.getPointerAuth() &&
            // ObjC lifetime qualifiers must match exactly.
            getObjCLifetime() == other.getObjCLifetime() &&
            // CVR qualifiers may subset.
@@ -605,24 +805,26 @@ public:
   void print(raw_ostream &OS, const PrintingPolicy &Policy,
              bool appendSpaceIfNonEmpty = false) const;
 
-  void Profile(llvm::FoldingSetNodeID &ID) const {
-    ID.AddInteger(Mask);
-  }
+  void Profile(llvm::FoldingSetNodeID &ID) const { ID.AddInteger(Mask); }
 
 private:
-  // bits:     |0 1 2|3|4 .. 5|6  ..  8|9   ...   31|
-  //           |C R V|U|GCAttr|Lifetime|AddressSpace|
-  uint32_t Mask = 0;
+  // bits:     |0 1 2|3|4 .. 5|6  ..  8|9   ...   31|32 ... 63|
+  //           |C R V|U|GCAttr|Lifetime|AddressSpace| PtrAuth |
+  uint64_t Mask = 0;
+  static_assert(sizeof(PointerAuthQualifier) == sizeof(uint32_t),
+                "PointerAuthQualifier must be 32 bits");
 
-  static const uint32_t UMask = 0x8;
-  static const uint32_t UShift = 3;
-  static const uint32_t GCAttrMask = 0x30;
-  static const uint32_t GCAttrShift = 4;
-  static const uint32_t LifetimeMask = 0x1C0;
-  static const uint32_t LifetimeShift = 6;
-  static const uint32_t AddressSpaceMask =
+  static constexpr uint64_t UMask = 0x8;
+  static constexpr uint64_t UShift = 3;
+  static constexpr uint64_t GCAttrMask = 0x30;
+  static constexpr uint64_t GCAttrShift = 4;
+  static constexpr uint64_t LifetimeMask = 0x1C0;
+  static constexpr uint64_t LifetimeShift = 6;
+  static constexpr uint64_t AddressSpaceMask =
       ~(CVRMask | UMask | GCAttrMask | LifetimeMask);
-  static const uint32_t AddressSpaceShift = 9;
+  static constexpr uint64_t AddressSpaceShift = 9;
+  static constexpr uint64_t PtrAuthShift = 32;
+  static constexpr uint64_t PtrAuthMask = uint64_t(0xffffffff) << PtrAuthShift;
 };
 
 class QualifiersAndAtomic {
@@ -1242,6 +1444,10 @@ public:
   // true when Type is objc's weak and weak is enabled but ARC isn't.
   bool isNonWeakInMRRWithObjCWeak(const ASTContext &Context) const;
 
+  PointerAuthQualifier getPointerAuth() const {
+    return getQualifiers().getPointerAuth();
+  }
+
   enum PrimitiveDefaultInitializeKind {
     /// The type does not fall into any of the following categories. Note that
     /// this case is zero-valued so that values of this enum can be used as a
@@ -1690,7 +1896,10 @@ protected:
 
     /// Whether we have a stored size expression.
     LLVM_PREFERRED_TYPE(bool)
-    unsigned HasStoredSizeExpr : 1;
+    unsigned HasExternalSize : 1;
+
+    LLVM_PREFERRED_TYPE(unsigned)
+    unsigned SizeWidth : 5;
   };
 
   class BuiltinTypeBitfields {
@@ -2169,6 +2378,10 @@ public:
   /// 'riscv_rvv_vector_bits' type attribute as VectorType.
   QualType getRVVEltType(const ASTContext &Ctx) const;
 
+  /// Returns the representative type for the element of a sizeless vector
+  /// builtin type.
+  QualType getSizelessVectorEltType(const ASTContext &Ctx) const;
+
   /// Types are partitioned into 3 broad categories (C99 6.2.5p1):
   /// object types, function types, and incomplete types.
 
@@ -2297,6 +2510,7 @@ public:
   bool isConstantArrayType() const;
   bool isIncompleteArrayType() const;
   bool isVariableArrayType() const;
+  bool isArrayParameterType() const;
   bool isDependentSizedArrayType() const;
   bool isRecordType() const;
   bool isClassType() const;
@@ -3331,42 +3545,114 @@ public:
     return T->getTypeClass() == ConstantArray ||
            T->getTypeClass() == VariableArray ||
            T->getTypeClass() == IncompleteArray ||
-           T->getTypeClass() == DependentSizedArray;
+           T->getTypeClass() == DependentSizedArray ||
+           T->getTypeClass() == ArrayParameter;
   }
 };
 
 /// Represents the canonical version of C arrays with a specified constant size.
 /// For example, the canonical type for 'int A[4 + 4*100]' is a
 /// ConstantArrayType where the element type is 'int' and the size is 404.
-class ConstantArrayType final
-    : public ArrayType,
-      private llvm::TrailingObjects<ConstantArrayType, const Expr *> {
+class ConstantArrayType : public ArrayType {
   friend class ASTContext; // ASTContext creates these.
-  friend TrailingObjects;
 
-  llvm::APInt Size; // Allows us to unique the type.
+  struct ExternalSize {
+    ExternalSize(const llvm::APInt &Sz, const Expr *SE)
+        : Size(Sz), SizeExpr(SE) {}
+    llvm::APInt Size; // Allows us to unique the type.
+    const Expr *SizeExpr;
+  };
 
-  ConstantArrayType(QualType et, QualType can, const llvm::APInt &size,
-                    const Expr *sz, ArraySizeModifier sm, unsigned tq)
-      : ArrayType(ConstantArray, et, can, sm, tq, sz), Size(size) {
-    ConstantArrayTypeBits.HasStoredSizeExpr = sz != nullptr;
-    if (ConstantArrayTypeBits.HasStoredSizeExpr) {
-      assert(!can.isNull() && "canonical constant array should not have size");
-      *getTrailingObjects<const Expr*>() = sz;
-    }
+  union {
+    uint64_t Size;
+    ExternalSize *SizePtr;
+  };
+
+  ConstantArrayType(QualType Et, QualType Can, uint64_t Width, uint64_t Sz,
+                    ArraySizeModifier SM, unsigned TQ)
+      : ArrayType(ConstantArray, Et, Can, SM, TQ, nullptr), Size(Sz) {
+    ConstantArrayTypeBits.HasExternalSize = false;
+    ConstantArrayTypeBits.SizeWidth = Width / 8;
+    // The in-structure size stores the size in bytes rather than bits so we
+    // drop the three least significant bits since they're always zero anyways.
+    assert(Width < 0xFF && "Type width in bits must be less than 8 bits");
   }
 
-  unsigned numTrailingObjects(OverloadToken<const Expr*>) const {
-    return ConstantArrayTypeBits.HasStoredSizeExpr;
+  ConstantArrayType(QualType Et, QualType Can, ExternalSize *SzPtr,
+                    ArraySizeModifier SM, unsigned TQ)
+      : ArrayType(ConstantArray, Et, Can, SM, TQ, SzPtr->SizeExpr),
+        SizePtr(SzPtr) {
+    ConstantArrayTypeBits.HasExternalSize = true;
+    ConstantArrayTypeBits.SizeWidth = 0;
+
+    assert((SzPtr->SizeExpr == nullptr || !Can.isNull()) &&
+           "canonical constant array should not have size expression");
+  }
+
+  static ConstantArrayType *Create(const ASTContext &Ctx, QualType ET,
+                                   QualType Can, const llvm::APInt &Sz,
+                                   const Expr *SzExpr, ArraySizeModifier SzMod,
+                                   unsigned Qual);
+
+protected:
+  ConstantArrayType(TypeClass Tc, const ConstantArrayType *ATy, QualType Can)
+      : ArrayType(Tc, ATy->getElementType(), Can, ATy->getSizeModifier(),
+                  ATy->getIndexTypeQualifiers().getAsOpaqueValue(), nullptr) {
+    ConstantArrayTypeBits.HasExternalSize =
+        ATy->ConstantArrayTypeBits.HasExternalSize;
+    if (!ConstantArrayTypeBits.HasExternalSize) {
+      ConstantArrayTypeBits.SizeWidth = ATy->ConstantArrayTypeBits.SizeWidth;
+      Size = ATy->Size;
+    } else
+      SizePtr = ATy->SizePtr;
   }
 
 public:
-  const llvm::APInt &getSize() const { return Size; }
-  const Expr *getSizeExpr() const {
-    return ConstantArrayTypeBits.HasStoredSizeExpr
-               ? *getTrailingObjects<const Expr *>()
-               : nullptr;
+  /// Return the constant array size as an APInt.
+  llvm::APInt getSize() const {
+    return ConstantArrayTypeBits.HasExternalSize
+               ? SizePtr->Size
+               : llvm::APInt(ConstantArrayTypeBits.SizeWidth * 8, Size);
   }
+
+  /// Return the bit width of the size type.
+  unsigned getSizeBitWidth() const {
+    return ConstantArrayTypeBits.HasExternalSize
+               ? SizePtr->Size.getBitWidth()
+               : static_cast<unsigned>(ConstantArrayTypeBits.SizeWidth * 8);
+  }
+
+  /// Return true if the size is zero.
+  bool isZeroSize() const {
+    return ConstantArrayTypeBits.HasExternalSize ? SizePtr->Size.isZero()
+                                                 : 0 == Size;
+  }
+
+  /// Return the size zero-extended as a uint64_t.
+  uint64_t getZExtSize() const {
+    return ConstantArrayTypeBits.HasExternalSize ? SizePtr->Size.getZExtValue()
+                                                 : Size;
+  }
+
+  /// Return the size sign-extended as a uint64_t.
+  int64_t getSExtSize() const {
+    return ConstantArrayTypeBits.HasExternalSize ? SizePtr->Size.getSExtValue()
+                                                 : static_cast<int64_t>(Size);
+  }
+
+  /// Return the size zero-extended to uint64_t or UINT64_MAX if the value is
+  /// larger than UINT64_MAX.
+  uint64_t getLimitedSize() const {
+    return ConstantArrayTypeBits.HasExternalSize
+               ? SizePtr->Size.getLimitedValue()
+               : Size;
+  }
+
+  /// Return a pointer to the size expression.
+  const Expr *getSizeExpr() const {
+    return ConstantArrayTypeBits.HasExternalSize ? SizePtr->SizeExpr : nullptr;
+  }
+
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
@@ -3383,17 +3669,31 @@ public:
   static unsigned getMaxSizeBits(const ASTContext &Context);
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx) {
-    Profile(ID, Ctx, getElementType(), getSize(), getSizeExpr(),
+    Profile(ID, Ctx, getElementType(), getZExtSize(), getSizeExpr(),
             getSizeModifier(), getIndexTypeCVRQualifiers());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
-                      QualType ET, const llvm::APInt &ArraySize,
-                      const Expr *SizeExpr, ArraySizeModifier SizeMod,
-                      unsigned TypeQuals);
+                      QualType ET, uint64_t ArraySize, const Expr *SizeExpr,
+                      ArraySizeModifier SizeMod, unsigned TypeQuals);
 
   static bool classof(const Type *T) {
-    return T->getTypeClass() == ConstantArray;
+    return T->getTypeClass() == ConstantArray ||
+           T->getTypeClass() == ArrayParameter;
+  }
+};
+
+/// Represents a constant array type that does not decay to a pointer when used
+/// as a function parameter.
+class ArrayParameterType : public ConstantArrayType {
+  friend class ASTContext; // ASTContext creates these.
+
+  ArrayParameterType(const ConstantArrayType *ATy, QualType CanTy)
+      : ConstantArrayType(ArrayParameter, ATy, CanTy) {}
+
+public:
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == ArrayParameter;
   }
 };
 
@@ -7125,7 +7425,8 @@ inline bool QualType::isCanonicalAsParam() const {
   if (T->isVariablyModifiedType() && T->hasSizedVLAType())
     return false;
 
-  return !isa<FunctionType>(T) && !isa<ArrayType>(T);
+  return !isa<FunctionType>(T) &&
+         (!isa<ArrayType>(T) || isa<ArrayParameterType>(T));
 }
 
 inline bool QualType::isConstQualified() const {
@@ -7388,6 +7689,10 @@ inline bool Type::isIncompleteArrayType() const {
 
 inline bool Type::isVariableArrayType() const {
   return isa<VariableArrayType>(CanonicalType);
+}
+
+inline bool Type::isArrayParameterType() const {
+  return isa<ArrayParameterType>(CanonicalType);
 }
 
 inline bool Type::isDependentSizedArrayType() const {
@@ -7753,7 +8058,7 @@ inline bool Type::isTypedefNameType() const {
 
 /// Determines whether this type can decay to a pointer type.
 inline bool Type::canDecayToPointerType() const {
-  return isFunctionType() || isArrayType();
+  return isFunctionType() || (isArrayType() && !isArrayParameterType());
 }
 
 inline bool Type::hasPointerRepresentation() const {

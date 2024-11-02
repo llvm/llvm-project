@@ -15,7 +15,7 @@
 // RUN: %clang_cc1 -fmodules -fno-implicit-modules -fmodule-name=test \
 // RUN:     -fmodule-map-file=test.cppmap -fmodule-map-file=a.cppmap \
 // RUN:     -fmodule-map-file=b.cppmap -fmodule-file=a.pcm -fmodule-file=b.pcm -xc++ \
-// RUN:     test.cc -S -emit-llvm -o - | FileCheck test.cc
+// RUN:     test.cc -emit-llvm -o - | FileCheck test.cc
 
 //--- a.cppmap
 module "a" {

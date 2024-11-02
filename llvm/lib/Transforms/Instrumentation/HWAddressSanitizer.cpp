@@ -21,6 +21,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
@@ -182,20 +183,13 @@ static cl::opt<bool> ClWithTls(
              "platforms that support this"),
     cl::Hidden, cl::init(true));
 
-static cl::opt<bool>
-    CSelectiveInstrumentation("hwasan-selective-instrumentation",
-                              cl::desc("Use selective instrumentation"),
-                              cl::Hidden, cl::init(false));
-
-static cl::opt<int> ClHotPercentileCutoff(
-    "hwasan-percentile-cutoff-hot", cl::init(0),
-    cl::desc("Alternative hot percentile cuttoff."
-             "By default `-profile-summary-cutoff-hot` is used."));
+static cl::opt<int> ClHotPercentileCutoff("hwasan-percentile-cutoff-hot",
+                                          cl::desc("Hot percentile cuttoff."));
 
 static cl::opt<float>
-    ClRandomSkipRate("hwasan-random-skip-rate", cl::init(0),
+    ClRandomSkipRate("hwasan-random-rate",
                      cl::desc("Probability value in the range [0.0, 1.0] "
-                              "to skip instrumentation of a function."));
+                              "to keep instrumentation of a function."));
 
 STATISTIC(NumTotalFuncs, "Number of total funcs");
 STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
@@ -299,8 +293,8 @@ public:
       : M(M), SSI(SSI) {
     this->Recover = optOr(ClRecover, Recover);
     this->CompileKernel = optOr(ClEnableKhwasan, CompileKernel);
-    this->Rng =
-        ClRandomSkipRate.getNumOccurrences() ? M.createRNG("hwasan") : nullptr;
+    this->Rng = ClRandomSkipRate.getNumOccurrences() ? M.createRNG(DEBUG_TYPE)
+                                                     : nullptr;
 
     initializeModule();
   }
@@ -317,7 +311,7 @@ private:
   };
 
   bool selectiveInstrumentationShouldSkip(Function &F,
-                                          FunctionAnalysisManager &FAM);
+                                          FunctionAnalysisManager &FAM) const;
   void initializeModule();
   void createHwasanCtorComdat();
 
@@ -422,6 +416,7 @@ private:
   bool InstrumentLandingPads;
   bool InstrumentWithCalls;
   bool InstrumentStack;
+  bool InstrumentGlobals;
   bool DetectUseAfterScope;
   bool UsePageAliases;
   bool UseMatchAllCallback;
@@ -639,11 +634,13 @@ void HWAddressSanitizer::initializeModule() {
   // If we don't have personality function support, fall back to landing pads.
   InstrumentLandingPads = optOr(ClInstrumentLandingPads, !NewRuntime);
 
+  InstrumentGlobals =
+      !CompileKernel && !UsePageAliases && optOr(ClGlobals, NewRuntime);
+
   if (!CompileKernel) {
     createHwasanCtorComdat();
-    bool InstrumentGlobals = optOr(ClGlobals, NewRuntime);
 
-    if (InstrumentGlobals && !UsePageAliases)
+    if (InstrumentGlobals)
       instrumentGlobals();
 
     bool InstrumentPersonalityFunctions =
@@ -787,6 +784,13 @@ bool HWAddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
     if (SSI && SSI->stackAccessIsSafe(*Inst))
       return true;
   }
+
+  if (isa<GlobalVariable>(getUnderlyingObject(Ptr))) {
+    if (!InstrumentGlobals)
+      return true;
+    // TODO: Optimize inbound global accesses, like Asan `instrumentMop`.
+  }
+
   return false;
 }
 
@@ -907,7 +911,7 @@ HWAddressSanitizer::insertShadowTagCheck(Value *Ptr, Instruction *InsertBefore,
 
   R.TagMismatchTerm = SplitBlockAndInsertIfThen(
       TagMismatch, InsertBefore, false,
-      MDBuilder(*C).createBranchWeights(1, 100000), &DTU, LI);
+      MDBuilder(*C).createUnlikelyBranchWeights(), &DTU, LI);
 
   return R;
 }
@@ -926,11 +930,33 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
 
   IRBuilder<> IRB(InsertBefore);
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  IRB.CreateCall(Intrinsic::getDeclaration(
-                     M, UseShortGranules
-                            ? Intrinsic::hwasan_check_memaccess_shortgranules
-                            : Intrinsic::hwasan_check_memaccess),
-                 {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
+  bool useFixedShadowIntrinsic = false;
+  // The memaccess fixed shadow intrinsic is only supported on AArch64,
+  // which allows a 16-bit immediate to be left-shifted by 32.
+  // Since kShadowBaseAlignment == 32, and Linux by default will not
+  // mmap above 48-bits, practically any valid shadow offset is
+  // representable.
+  // In particular, an offset of 4TB (1024 << 32) is representable, and
+  // ought to be good enough for anybody.
+  if (TargetTriple.isAArch64() && Mapping.Offset != kDynamicShadowSentinel) {
+    uint16_t offset_shifted = Mapping.Offset >> 32;
+    useFixedShadowIntrinsic = (uint64_t)offset_shifted << 32 == Mapping.Offset;
+  }
+
+  if (useFixedShadowIntrinsic)
+    IRB.CreateCall(
+        Intrinsic::getDeclaration(
+            M, UseShortGranules
+                   ? Intrinsic::hwasan_check_memaccess_shortgranules_fixedshadow
+                   : Intrinsic::hwasan_check_memaccess_fixedshadow),
+        {Ptr, ConstantInt::get(Int32Ty, AccessInfo),
+         ConstantInt::get(Int64Ty, Mapping.Offset)});
+  else
+    IRB.CreateCall(Intrinsic::getDeclaration(
+                       M, UseShortGranules
+                              ? Intrinsic::hwasan_check_memaccess_shortgranules
+                              : Intrinsic::hwasan_check_memaccess),
+                   {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
 }
 
 void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
@@ -948,7 +974,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
       IRB.CreateICmpUGT(TCI.MemTag, ConstantInt::get(Int8Ty, 15));
   Instruction *CheckFailTerm = SplitBlockAndInsertIfThen(
       OutOfShortGranuleTagRange, TCI.TagMismatchTerm, !Recover,
-      MDBuilder(*C).createBranchWeights(1, 100000), &DTU, LI);
+      MDBuilder(*C).createUnlikelyBranchWeights(), &DTU, LI);
 
   IRB.SetInsertPoint(TCI.TagMismatchTerm);
   Value *PtrLowBits = IRB.CreateTrunc(IRB.CreateAnd(TCI.PtrLong, 15), Int8Ty);
@@ -956,7 +982,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
       PtrLowBits, ConstantInt::get(Int8Ty, (1 << AccessSizeIndex) - 1));
   Value *PtrLowBitsOOB = IRB.CreateICmpUGE(PtrLowBits, TCI.MemTag);
   SplitBlockAndInsertIfThen(PtrLowBitsOOB, TCI.TagMismatchTerm, false,
-                            MDBuilder(*C).createBranchWeights(1, 100000), &DTU,
+                            MDBuilder(*C).createUnlikelyBranchWeights(), &DTU,
                             LI, CheckFailTerm->getParent());
 
   IRB.SetInsertPoint(TCI.TagMismatchTerm);
@@ -965,7 +991,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
   Value *InlineTag = IRB.CreateLoad(Int8Ty, InlineTagAddr);
   Value *InlineTagMismatch = IRB.CreateICmpNE(TCI.PtrTag, InlineTag);
   SplitBlockAndInsertIfThen(InlineTagMismatch, TCI.TagMismatchTerm, false,
-                            MDBuilder(*C).createBranchWeights(1, 100000), &DTU,
+                            MDBuilder(*C).createUnlikelyBranchWeights(), &DTU,
                             LI, CheckFailTerm->getParent());
 
   IRB.SetInsertPoint(CheckFailTerm);
@@ -1220,8 +1246,11 @@ Value *HWAddressSanitizer::untagPointer(IRBuilder<> &IRB, Value *PtrLong) {
 }
 
 Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB) {
+  // Android provides a fixed TLS slot for sanitizers. See TLS_SLOT_SANITIZER
+  // in Bionic's libc/platform/bionic/tls_defines.h.
+  constexpr int SanitizerSlot = 6;
   if (TargetTriple.isAArch64() && TargetTriple.isAndroid())
-    return memtag::getAndroidSanitizerSlotPtr(IRB);
+    return memtag::getAndroidSlotPtr(IRB, SanitizerSlot);
   return ThreadPtrGlobal;
 }
 
@@ -1242,6 +1271,9 @@ Value *HWAddressSanitizer::getFrameRecordInfo(IRBuilder<> &IRB) {
   // FP is 0xfffffffffffFFFF0  (4 lower bits are zero)
   // We only really need ~20 lower non-zero bits (FFFF), so we mix like this:
   //       0xFFFFPPPPPPPPPPPP
+  //
+  // FP works because in AArch64FrameLowering::getFrameIndexReference, we
+  // prefer FP-relative offsets for functions compiled with HWASan.
   FP = IRB.CreateShl(FP, 44);
   return IRB.CreateOr(PC, FP);
 }
@@ -1297,6 +1329,22 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
       // The use of AShr instead of LShr is due to
       //   https://bugs.llvm.org/show_bug.cgi?id=39030
       // Runtime library makes sure not to use the highest bit.
+      //
+      // Mechanical proof of this address calculation can be found at:
+      // https://github.com/google/sanitizers/blob/master/hwaddress-sanitizer/prove_hwasanwrap.smt2
+      //
+      // Example of the wrap case for N = 1
+      // Pointer:   0x01AAAAAAAAAAAFF8
+      //                     +
+      //            0x0000000000000008
+      //                     =
+      //            0x01AAAAAAAAAAB000
+      //                     &
+      // WrapMask:  0xFFFFFFFFFFFFF000
+      //                     =
+      //            0x01AAAAAAAAAAA000
+      //
+      // Then the WrapMask will be a no-op until the next wrap case.
       Value *WrapMask = IRB.CreateXor(
           IRB.CreateShl(IRB.CreateAShr(ThreadLong, 56), 12, "", true, true),
           ConstantInt::get(IntptrTy, (uint64_t)-1));
@@ -1338,14 +1386,6 @@ bool HWAddressSanitizer::instrumentLandingPads(
             IRB, (TargetTriple.getArch() == Triple::x86_64) ? "rsp" : "sp")});
   }
   return true;
-}
-
-static DbgAssignIntrinsic *DynCastToDbgAssign(DbgVariableIntrinsic *DVI) {
-  return dyn_cast<DbgAssignIntrinsic>(DVI);
-}
-
-static DbgVariableRecord *DynCastToDbgAssign(DbgVariableRecord *DVR) {
-  return DVR->isDbgAssign() ? DVR : nullptr;
 }
 
 bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
@@ -1403,28 +1443,7 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
              !memtag::isLifetimeIntrinsic(User);
     });
 
-    // Helper utility for adding DW_OP_LLVM_tag_offset to debug-info records,
-    // abstracted over whether they're intrinsic-stored or DbgVariableRecord
-    // stored.
-    auto AnnotateDbgRecord = [&](auto *DPtr) {
-      // Prepend "tag_offset, N" to the dwarf expression.
-      // Tag offset logically applies to the alloca pointer, and it makes sense
-      // to put it at the beginning of the expression.
-      SmallVector<uint64_t, 8> NewOps = {dwarf::DW_OP_LLVM_tag_offset,
-                                         retagMask(N)};
-      for (size_t LocNo = 0; LocNo < DPtr->getNumVariableLocationOps(); ++LocNo)
-        if (DPtr->getVariableLocationOp(LocNo) == AI)
-          DPtr->setExpression(DIExpression::appendOpsToArg(
-              DPtr->getExpression(), NewOps, LocNo));
-      if (auto *DAI = DynCastToDbgAssign(DPtr)) {
-        if (DAI->getAddress() == AI)
-          DAI->setAddressExpression(DIExpression::prependOpcodes(
-              DAI->getAddressExpression(), NewOps));
-      }
-    };
-
-    llvm::for_each(Info.DbgVariableIntrinsics, AnnotateDbgRecord);
-    llvm::for_each(Info.DbgVariableRecords, AnnotateDbgRecord);
+    memtag::annotateDebugRecords(Info, retagMask(N));
 
     auto TagEnd = [&](Instruction *Node) {
       IRB.SetInsertPoint(Node);
@@ -1470,29 +1489,42 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
   return true;
 }
 
-bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
-    Function &F, FunctionAnalysisManager &FAM) {
-  if (ClRandomSkipRate.getNumOccurrences()) {
-    std::bernoulli_distribution D(ClRandomSkipRate);
-    if (D(*Rng))
-      return true;
+static void emitRemark(const Function &F, OptimizationRemarkEmitter &ORE,
+                       bool Skip) {
+  if (Skip) {
+    ORE.emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "Skip", &F)
+             << "Skipped: F=" << ore::NV("Function", &F);
+    });
   } else {
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "Sanitize", &F)
+             << "Sanitized: F=" << ore::NV("Function", &F);
+    });
+  }
+}
+
+bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
+    Function &F, FunctionAnalysisManager &FAM) const {
+  bool Skip = [&]() {
+    if (ClRandomSkipRate.getNumOccurrences()) {
+      std::bernoulli_distribution D(ClRandomSkipRate);
+      return !D(*Rng);
+    }
+    if (!ClHotPercentileCutoff.getNumOccurrences())
+      return false;
     auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
     ProfileSummaryInfo *PSI =
         MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-    if (PSI && PSI->hasProfileSummary()) {
-      auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
-      if ((ClHotPercentileCutoff.getNumOccurrences() &&
-           ClHotPercentileCutoff >= 0)
-              ? PSI->isFunctionHotInCallGraphNthPercentile(
-                    ClHotPercentileCutoff, &F, BFI)
-              : PSI->isFunctionHotInCallGraph(&F, BFI))
-        return true;
-    } else {
+    if (!PSI || !PSI->hasProfileSummary()) {
       ++NumNoProfileSummaryFuncs;
+      return false;
     }
-  }
-  return false;
+    return PSI->isFunctionHotInCallGraphNthPercentile(
+        ClHotPercentileCutoff, &F, FAM.getResult<BlockFrequencyAnalysis>(F));
+  }();
+  emitRemark(F, FAM.getResult<OptimizationRemarkEmitterAnalysis>(F), Skip);
+  return Skip;
 }
 
 void HWAddressSanitizer::sanitizeFunction(Function &F,
@@ -1508,7 +1540,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   NumTotalFuncs++;
 
-  if (CSelectiveInstrumentation && selectiveInstrumentationShouldSkip(F, FAM))
+  if (selectiveInstrumentationShouldSkip(F, FAM))
     return;
 
   NumInstrumentedFuncs++;

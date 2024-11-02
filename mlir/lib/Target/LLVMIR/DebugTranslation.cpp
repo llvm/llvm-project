@@ -104,7 +104,10 @@ llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
       attr.getIsOptimized(),
       /*Flags=*/"", /*RV=*/0, /*SplitName=*/{},
       static_cast<llvm::DICompileUnit::DebugEmissionKind>(
-          attr.getEmissionKind()));
+          attr.getEmissionKind()),
+      0, true, false,
+      static_cast<llvm::DICompileUnit::DebugNameTableKind>(
+          attr.getNameTableKind()));
 }
 
 /// Returns a new `DINodeT` that is either distinct or not, depending on
@@ -216,18 +219,15 @@ DebugTranslation::translateImpl(DIGlobalVariableAttr attr) {
 llvm::DIType *
 DebugTranslation::translateRecursive(DIRecursiveTypeAttrInterface attr) {
   DistinctAttr recursiveId = attr.getRecId();
-  if (attr.isRecSelf()) {
-    auto *iter = recursiveTypeMap.find(recursiveId);
-    assert(iter != recursiveTypeMap.end() && "unbound DI recursive self type");
+  if (auto *iter = recursiveTypeMap.find(recursiveId);
+      iter != recursiveTypeMap.end()) {
     return iter->second;
+  } else {
+    assert(!attr.isRecSelf() && "unbound DI recursive self type");
   }
 
   auto setRecursivePlaceholder = [&](llvm::DIType *placeholder) {
-    [[maybe_unused]] auto [iter, inserted] =
-        recursiveTypeMap.try_emplace(recursiveId, placeholder);
-    (void)iter;
-    (void)inserted;
-    assert(inserted && "illegal reuse of recursive id");
+    recursiveTypeMap.try_emplace(recursiveId, placeholder);
   };
 
   llvm::DIType *result =
@@ -352,7 +352,8 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
                      DISubroutineTypeAttr>(
                    [&](auto attr) { return translateImpl(attr); });
 
-  attrToNode.insert({attr, node});
+  if (node && !node->isTemporary())
+    attrToNode.insert({attr, node});
   return node;
 }
 
@@ -405,6 +406,15 @@ llvm::DILocation *DebugTranslation::translateLoc(Location loc,
   if (auto callLoc = dyn_cast<CallSiteLoc>(loc)) {
     // For callsites, the caller is fed as the inlinedAt for the callee.
     auto *callerLoc = translateLoc(callLoc.getCaller(), scope, inlinedAt);
+    // If the caller scope is not translatable, the overall callsite cannot be
+    // represented in LLVM (the callee scope may not match the parent function).
+    if (!callerLoc) {
+      // If there is an inlinedAt scope (an outer caller), skip to that
+      // directly. Otherwise, cannot translate.
+      if (!inlinedAt)
+        return nullptr;
+      callerLoc = inlinedAt;
+    }
     llvmLoc = translateLoc(callLoc.getCallee(), nullptr, callerLoc);
     // Fallback: Ignore callee if it has no debug scope.
     if (!llvmLoc)

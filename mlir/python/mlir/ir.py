@@ -274,7 +274,7 @@ try:
     @register_attribute_builder("F64ElementsAttr")
     def _f64ElementsAttr(x, context):
         return DenseElementsAttr.get(
-            np.array(x, dtype=np.int64),
+            np.array(x, dtype=np.float64),
             type=F64Type.get(context=context),
             context=context,
         )

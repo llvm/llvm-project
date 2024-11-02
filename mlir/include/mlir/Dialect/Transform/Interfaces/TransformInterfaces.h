@@ -52,6 +52,17 @@ void getPotentialTopLevelEffects(
 /// Verification hook for TransformOpInterface.
 LogicalResult verifyTransformOpInterface(Operation *op);
 
+/// Appends the entities associated with the given transform values in `state`
+/// to the pre-existing list of mappings. The array of mappings must have as
+/// many elements as values. If `flatten` is set, multiple values may be
+/// associated with each transform value, and this always succeeds. Otherwise,
+/// checks that each value has exactly one mapping associated and return failure
+/// otherwise.
+LogicalResult appendValueMappings(
+    MutableArrayRef<SmallVector<transform::MappedValue>> mappings,
+    ValueRange values, const transform::TransformState &state,
+    bool flatten = true);
+
 /// Populates `mappings` with mapped values associated with the given transform
 /// IR values in the given `state`.
 void prepareValueMappings(
@@ -317,6 +328,8 @@ public:
   }
   LogicalResult mapBlockArgument(BlockArgument argument,
                                  ArrayRef<MappedValue> values);
+  LogicalResult mapBlockArguments(Block::BlockArgListType arguments,
+                                  ArrayRef<SmallVector<MappedValue>> mapping);
 
   // Forward declarations to support limited visibility.
   class RegionScope;

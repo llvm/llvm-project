@@ -42,6 +42,7 @@ inline foo_templ<char> bar()
 module;
 #include "foo.h"
 export module A;
+export using ::foo_templ;
 
 //--- Use.cppm
 // expected-no-diagnostics
@@ -49,6 +50,7 @@ module;
 #include "foo.h"
 export module Use;
 import A;
+export using ::foo_templ;
 
 //--- Use1.cpp
 import A;         // expected-warning@foo.h:8 {{attribute declaration must precede definition}}

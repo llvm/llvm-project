@@ -587,6 +587,26 @@ define i1 @test_assume_cmp_with_offset(i64 %idx) {
   ret i1 %cmp2
 }
 
+define i1 @test_assume_cmp_with_offset_or(i64 %idx, i1 %other) {
+; CHECK-LABEL: @test_assume_cmp_with_offset_or(
+; CHECK-NEXT:    [[IDX_OFF1:%.*]] = or disjoint i64 [[IDX:%.*]], 5
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[IDX_OFF1]], 10
+; CHECK-NEXT:    br i1 [[CMP1]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       F:
+; CHECK-NEXT:    ret i1 [[CMP2:%.*]]
+;
+  %idx.off1 = or disjoint i64 %idx, 5
+  %cmp1 = icmp ugt i64 %idx.off1, 10
+  br i1 %cmp1, label %T, label %F
+T:
+  %cmp2 = icmp ugt i64 %idx, 2
+  ret i1 %cmp2
+F:
+  ret i1 %other
+}
+
 define void @test_cmp_phi(i8 %a) {
 ; CHECK-LABEL: @test_cmp_phi(
 ; CHECK-NEXT:  entry:

@@ -30,7 +30,7 @@ declare void @free(ptr nocapture) allockind("free")
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
 
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal global ptr undef, align 4
+; CHECK: @G = internal global ptr undef, align 4
 ;.
 define void @h2s_value_simplify_interaction(i1 %c, ptr %A) {
 ; CHECK-LABEL: define {{[^@]+}}@h2s_value_simplify_interaction

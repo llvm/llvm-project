@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fno-bitfield-type-align -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fno-bitfield-type-align -fdump-record-layouts-simple -emit-llvm -o %t %s | FileCheck %s -check-prefix=LAYOUT
+// RUN: FileCheck %s <%t
 
 struct S {
   unsigned short:   0;
@@ -6,6 +7,13 @@ struct S {
   unsigned short:   0;
   unsigned short  f2:15;
 };
+
+// LAYOUT-LABEL: LLVMType:%struct.S =
+// LAYOUT-SAME: type { i32 }
+// LAYOUT: BitFields:[
+// LAYOUT-NEXT: <CGBitFieldInfo Offset:0 Size:15 IsSigned:0 StorageSize:32 StorageOffset:0
+// LAYOUT-NEXT: <CGBitFieldInfo Offset:15 Size:15 IsSigned:0 StorageSize:32 StorageOffset:0
+// LAYOUT-NEXT: ]>
 
 // CHECK: define{{.*}} void @test_zero_width_bitfield(ptr noundef %[[A:.*]])
 // CHECK: %[[BF_LOAD:.*]] = load i32, ptr %[[V1:.*]], align 1

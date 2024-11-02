@@ -139,12 +139,12 @@ will be reevaluated after considering composite constants.
 ### Globals
 
 Global variables are also defined using a special operation,
-[`llvm.mlir.global`](#llvmmlirglobal-mlirllvmglobalop), located at the module
+[`llvm.mlir.global`](#llvmmlirglobal-llvmglobalop), located at the module
 level. Globals are MLIR symbols and are identified by their name.
 
 Since functions need to be isolated-from-above, i.e. values defined outside the
 function cannot be directly used inside the function, an additional operation,
-[`llvm.mlir.addressof`](#llvmmliraddressof-mlirllvmaddressofop), is provided to
+[`llvm.mlir.addressof`](#llvmmliraddressof-llvmaddressofop), is provided to
 locally define a value containing the _address_ of a global. The actual value
 can then be loaded from that pointer, or a new value can be stored into it if
 the global is not declared constant. This is similar to LLVM IR where globals

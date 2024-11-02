@@ -1659,21 +1659,21 @@ define <2 x i1> @icmp_shl_1_ugt_signmask(<2 x i8> %V) {
   ret <2 x i1> %cmp
 }
 
-define <2 x i1> @icmp_shl_1_ugt_signmask_undef(<2 x i8> %V) {
-; CHECK-LABEL: @icmp_shl_1_ugt_signmask_undef(
+define <2 x i1> @icmp_shl_1_ugt_signmask_poison(<2 x i8> %V) {
+; CHECK-LABEL: @icmp_shl_1_ugt_signmask_poison(
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %shl = shl <2 x i8> <i8 1, i8 1>, %V
-  %cmp = icmp ugt <2 x i8> %shl, <i8 128, i8 undef>
+  %cmp = icmp ugt <2 x i8> %shl, <i8 128, i8 poison>
   ret <2 x i1> %cmp
 }
 
-define <2 x i1> @icmp_shl_1_ugt_signmask_undef2(<2 x i8> %V) {
-; CHECK-LABEL: @icmp_shl_1_ugt_signmask_undef2(
+define <2 x i1> @icmp_shl_1_ugt_signmask_poison2(<2 x i8> %V) {
+; CHECK-LABEL: @icmp_shl_1_ugt_signmask_poison2(
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
-  %shl = shl <2 x i8> <i8 1, i8 undef>, %V
-  %cmp = icmp ugt <2 x i8> %shl, <i8 undef, i8 128>
+  %shl = shl <2 x i8> <i8 1, i8 poison>, %V
+  %cmp = icmp ugt <2 x i8> %shl, <i8 poison, i8 128>
   ret <2 x i1> %cmp
 }
 
@@ -1695,21 +1695,21 @@ define <2 x i1> @icmp_shl_1_ule_signmask(<2 x i8> %V) {
   ret <2 x i1> %cmp
 }
 
-define <2 x i1> @icmp_shl_1_ule_signmask_undef(<2 x i8> %V) {
-; CHECK-LABEL: @icmp_shl_1_ule_signmask_undef(
+define <2 x i1> @icmp_shl_1_ule_signmask_poison(<2 x i8> %V) {
+; CHECK-LABEL: @icmp_shl_1_ule_signmask_poison(
 ; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %shl = shl <2 x i8> <i8 1, i8 1>, %V
-  %cmp = icmp ule <2 x i8> %shl, <i8 128, i8 undef>
+  %cmp = icmp ule <2 x i8> %shl, <i8 128, i8 poison>
   ret <2 x i1> %cmp
 }
 
-define <2 x i1> @icmp_shl_1_ule_signmask_undef2(<2 x i8> %V) {
-; CHECK-LABEL: @icmp_shl_1_ule_signmask_undef2(
+define <2 x i1> @icmp_shl_1_ule_signmask_poison2(<2 x i8> %V) {
+; CHECK-LABEL: @icmp_shl_1_ule_signmask_poison2(
 ; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
-  %shl = shl <2 x i8> <i8 1, i8 undef>, %V
-  %cmp = icmp ule <2 x i8> %shl, <i8 undef, i8 128>
+  %shl = shl <2 x i8> <i8 1, i8 poison>, %V
+  %cmp = icmp ule <2 x i8> %shl, <i8 poison, i8 128>
   ret <2 x i1> %cmp
 }
 
@@ -1731,12 +1731,12 @@ define <2 x i1> @shl_1_cmp_eq_nonpow2_splat(<2 x i32> %x) {
   ret <2 x i1> %c
 }
 
-define <2 x i1> @shl_1_cmp_eq_nonpow2_splat_undef(<2 x i32> %x) {
-; CHECK-LABEL: @shl_1_cmp_eq_nonpow2_splat_undef(
+define <2 x i1> @shl_1_cmp_eq_nonpow2_splat_poison(<2 x i32> %x) {
+; CHECK-LABEL: @shl_1_cmp_eq_nonpow2_splat_poison(
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %s = shl <2 x i32> <i32 1, i32 1>, %x
-  %c = icmp eq <2 x i32> %s, <i32 31, i32 undef>
+  %c = icmp eq <2 x i32> %s, <i32 31, i32 poison>
   ret <2 x i1> %c
 }
 
@@ -1758,12 +1758,12 @@ define <2 x i1> @shl_1_cmp_ne_nonpow2_splat(<2 x i32> %x) {
   ret <2 x i1> %c
 }
 
-define <2 x i1> @shl_1_cmp_ne_nonpow2_splat_undef(<2 x i32> %x) {
-; CHECK-LABEL: @shl_1_cmp_ne_nonpow2_splat_undef(
+define <2 x i1> @shl_1_cmp_ne_nonpow2_splat_poison(<2 x i32> %x) {
+; CHECK-LABEL: @shl_1_cmp_ne_nonpow2_splat_poison(
 ; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
-  %s = shl <2 x i32> <i32 undef, i32 1>, %x
-  %c = icmp ne <2 x i32> %s, <i32 42, i32 undef>
+  %s = shl <2 x i32> <i32 poison, i32 1>, %x
+  %c = icmp ne <2 x i32> %s, <i32 42, i32 poison>
   ret <2 x i1> %c
 }
 
@@ -1776,12 +1776,12 @@ define i1 @shl_pow2_cmp_eq_nonpow2(i32 %x) {
   ret i1 %c
 }
 
-define <2 x i1> @shl_pow21_cmp_ne_nonpow2_splat_undef(<2 x i32> %x) {
-; CHECK-LABEL: @shl_pow21_cmp_ne_nonpow2_splat_undef(
+define <2 x i1> @shl_pow21_cmp_ne_nonpow2_splat_poison(<2 x i32> %x) {
+; CHECK-LABEL: @shl_pow21_cmp_ne_nonpow2_splat_poison(
 ; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
-  %s = shl <2 x i32> <i32 undef, i32 4>, %x
-  %c = icmp ne <2 x i32> %s, <i32 31, i32 undef>
+  %s = shl <2 x i32> <i32 poison, i32 4>, %x
+  %c = icmp ne <2 x i32> %s, <i32 31, i32 poison>
   ret <2 x i1> %c
 }
 
@@ -1820,12 +1820,12 @@ define i1 @shl_pow2_cmp_eq_zero_nuw(i32 %x) {
   ret i1 %c
 }
 
-define <2 x i1> @shl_pow2_cmp_ne_zero_nuw_splat_undef(<2 x i32> %x) {
-; CHECK-LABEL: @shl_pow2_cmp_ne_zero_nuw_splat_undef(
+define <2 x i1> @shl_pow2_cmp_ne_zero_nuw_splat_poison(<2 x i32> %x) {
+; CHECK-LABEL: @shl_pow2_cmp_ne_zero_nuw_splat_poison(
 ; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
-  %s = shl nuw <2 x i32> <i32 16, i32 undef>, %x
-  %c = icmp ne <2 x i32> %s, <i32 undef, i32 0>
+  %s = shl nuw <2 x i32> <i32 16, i32 poison>, %x
+  %c = icmp ne <2 x i32> %s, <i32 poison, i32 0>
   ret <2 x i1> %c
 }
 
@@ -1838,12 +1838,12 @@ define i1 @shl_pow2_cmp_ne_zero_nsw(i32 %x) {
   ret i1 %c
 }
 
-define <2 x i1> @shl_pow2_cmp_eq_zero_nsw_splat_undef(<2 x i32> %x) {
-; CHECK-LABEL: @shl_pow2_cmp_eq_zero_nsw_splat_undef(
+define <2 x i1> @shl_pow2_cmp_eq_zero_nsw_splat_poison(<2 x i32> %x) {
+; CHECK-LABEL: @shl_pow2_cmp_eq_zero_nsw_splat_poison(
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
-  %s = shl nsw <2 x i32> <i32 undef, i32 16>, %x
-  %c = icmp eq <2 x i32> %s, <i32 0, i32 undef>
+  %s = shl nsw <2 x i32> <i32 poison, i32 16>, %x
+  %c = icmp eq <2 x i32> %s, <i32 0, i32 poison>
   ret <2 x i1> %c
 }
 

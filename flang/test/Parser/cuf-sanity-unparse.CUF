@@ -37,6 +37,6 @@ include "cuf-sanity-common"
 !CHECK:    CALL globalsub<<<1_4,2_4>>>()
 !CHECK:    CALL globalsub<<<1_4,2_4,3_4>>>()
 !CHECK:    CALL globalsub<<<1_4,2_4,3_4,4_4>>>()
-!CHECK:   ALLOCATE(pa(32_4), STREAM=1_4, PINNED=ispinned)
+!CHECK:   ALLOCATE(pa(32_4), PINNED=ispinned)
 !CHECK:  END SUBROUTINE
 !CHECK: END MODULE

@@ -260,6 +260,8 @@ template <class T, class Container, class Compare>
 #include <__algorithm/ranges_copy.h>
 #include <__config>
 #include <__functional/operations.h>
+#include <__fwd/deque.h>
+#include <__fwd/queue.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/uses_allocator.h>
@@ -286,9 +288,6 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-template <class _Tp, class _Container = deque<_Tp> >
-class _LIBCPP_TEMPLATE_VIS queue;
 
 template <class _Tp, class _Container>
 _LIBCPP_HIDE_FROM_ABI bool operator==(const queue<_Tp, _Container>& __x, const queue<_Tp, _Container>& __y);
@@ -373,7 +372,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI queue(queue&& __q, const _Alloc& __a) : c(std::move(__q.c), __a) {}
 #endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
   _LIBCPP_HIDE_FROM_ABI size_type size() const { return c.size(); }
 
   _LIBCPP_HIDE_FROM_ABI reference front() { return c.front(); }
@@ -511,7 +510,7 @@ template <class _Tp, class _Container, class _Alloc>
 struct _LIBCPP_TEMPLATE_VIS uses_allocator<queue<_Tp, _Container>, _Alloc> : public uses_allocator<_Container, _Alloc> {
 };
 
-template <class _Tp, class _Container = vector<_Tp>, class _Compare = less<typename _Container::value_type> >
+template <class _Tp, class _Container, class _Compare>
 class _LIBCPP_TEMPLATE_VIS priority_queue {
 public:
   typedef _Container container_type;
@@ -650,7 +649,7 @@ public:
 
 #endif
 
-  _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
   _LIBCPP_HIDE_FROM_ABI size_type size() const { return c.size(); }
   _LIBCPP_HIDE_FROM_ABI const_reference top() const { return c.front(); }
 

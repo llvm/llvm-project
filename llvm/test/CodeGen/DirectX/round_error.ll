@@ -8,6 +8,6 @@ entry:
   %a.addr = alloca double, align 8
   store double %a, ptr %a.addr, align 8
   %0 = load double, ptr %a.addr, align 8
-  %elt.round = call double @llvm.round.f64(double %0)
-  ret double %elt.round
+  %elt.roundeven = call double @llvm.roundeven.f64(double %0)
+  ret double %elt.roundeven
 }

@@ -722,7 +722,7 @@ TEST(TBDv5, WriteFile) {
   File.setInstallName("@rpath/S/L/F/Foo.framework/Foo");
   File.setCurrentVersion(PackedVersion(1, 2, 0));
   File.setCompatibilityVersion(PackedVersion(1, 1, 0));
-  File.addRPath(AllTargets[0], "@executable_path/.../Frameworks");
+  File.addRPath("@executable_path/.../Frameworks", AllTargets[0]);
 
   for (const auto &Targ : AllTargets) {
     File.addParentUmbrella(Targ, "System");
@@ -897,7 +897,7 @@ TEST(TBDv5, WriteMultipleDocuments) {
   NestedFile.setTwoLevelNamespace();
   NestedFile.setApplicationExtensionSafe(false);
   NestedFile.setCurrentVersion(PackedVersion(2, 1, 1));
-  NestedFile.addRPath(AllTargets[0], "@executable_path/.../Frameworks");
+  NestedFile.addRPath("@executable_path/.../Frameworks", AllTargets[0]);
   for (const auto &Targ : AllTargets)
     NestedFile.addReexportedLibrary("@rpath/libfoo.dylib", Targ);
   NestedFile.addSymbol(EncodeKind::GlobalSymbol, "_funcFoo", AllTargets,

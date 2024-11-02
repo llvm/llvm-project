@@ -182,6 +182,8 @@ unsigned getAMDHSACodeObjectVersion(unsigned ABIVersion) {
     return 4;
   case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
     return 5;
+  case ELF::ELFABIVERSION_AMDGPU_HSA_V6:
+    return 6;
   default:
     return getDefaultAMDHSACodeObjectVersion();
   }
@@ -496,9 +498,7 @@ bool isVOPC64DPP(unsigned Opc) {
   return isVOPC64DPPOpcodeHelper(Opc) || isVOPC64DPP8OpcodeHelper(Opc);
 }
 
-bool isVOPCAsmOnly(unsigned Opc) {
-  return isVOPCAsmOnlyOpcodeHelper(Opc) || isVOP3CAsmOnlyOpcodeHelper(Opc);
-}
+bool isVOPCAsmOnly(unsigned Opc) { return isVOPCAsmOnlyOpcodeHelper(Opc); }
 
 bool getMAIIsDGEMM(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
@@ -1129,12 +1129,45 @@ unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
 
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
                                       unsigned NumVGPRs) {
-  unsigned MaxWaves = getMaxWavesPerEU(STI);
-  unsigned Granule = getVGPRAllocGranule(STI);
+  return getNumWavesPerEUWithNumVGPRs(NumVGPRs, getVGPRAllocGranule(STI),
+                                      getMaxWavesPerEU(STI),
+                                      getTotalNumVGPRs(STI));
+}
+
+unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
+                                      unsigned MaxWaves,
+                                      unsigned TotalNumVGPRs) {
   if (NumVGPRs < Granule)
     return MaxWaves;
   unsigned RoundedRegs = alignTo(NumVGPRs, Granule);
-  return std::min(std::max(getTotalNumVGPRs(STI) / RoundedRegs, 1u), MaxWaves);
+  return std::min(std::max(TotalNumVGPRs / RoundedRegs, 1u), MaxWaves);
+}
+
+unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
+                                  AMDGPUSubtarget::Generation Gen) {
+  if (Gen >= AMDGPUSubtarget::GFX10)
+    return MaxWaves;
+
+  if (Gen >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+    if (SGPRs <= 80)
+      return 10;
+    if (SGPRs <= 88)
+      return 9;
+    if (SGPRs <= 100)
+      return 8;
+    return 7;
+  }
+  if (SGPRs <= 48)
+    return 10;
+  if (SGPRs <= 56)
+    return 9;
+  if (SGPRs <= 64)
+    return 8;
+  if (SGPRs <= 72)
+    return 7;
+  if (SGPRs <= 80)
+    return 6;
+  return 5;
 }
 
 unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
@@ -1219,47 +1252,6 @@ void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
       S_00B848_WGP_MODE(STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1) |
       S_00B848_MEM_ORDERED(1);
   }
-}
-
-amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
-    const MCSubtargetInfo *STI) {
-  IsaVersion Version = getIsaVersion(STI->getCPU());
-
-  amdhsa::kernel_descriptor_t KD;
-  memset(&KD, 0, sizeof(KD));
-
-  AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                  amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64,
-                  amdhsa::FLOAT_DENORM_MODE_FLUSH_NONE);
-  if (Version.Major >= 12) {
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_ENABLE_WG_RR_EN, 0);
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_DISABLE_PERF, 0);
-  } else {
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP, 1);
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE, 1);
-  }
-  AMDHSA_BITS_SET(KD.compute_pgm_rsrc2,
-                  amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X, 1);
-  if (Version.Major >= 10) {
-    AMDHSA_BITS_SET(KD.kernel_code_properties,
-                    amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
-                    STI->getFeatureBits().test(FeatureWavefrontSize32) ? 1 : 0);
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE,
-                    STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1);
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED, 1);
-  }
-  if (AMDGPU::isGFX90A(*STI)) {
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc3,
-                    amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
-                    STI->getFeatureBits().test(FeatureTgSplit) ? 1 : 0);
-  }
-  return KD;
 }
 
 bool isGroupSegment(const GlobalValue *GV) {
@@ -1537,62 +1529,6 @@ unsigned encodeStorecntDscnt(const IsaVersion &Version,
 }
 
 //===----------------------------------------------------------------------===//
-// Custom Operands.
-//
-// A table of custom operands shall describe "primary" operand names
-// first followed by aliases if any. It is not required but recommended
-// to arrange operands so that operand encoding match operand position
-// in the table. This will make disassembly a bit more efficient.
-// Unused slots in the table shall have an empty name.
-//
-//===----------------------------------------------------------------------===//
-
-template <class T>
-static bool isValidOpr(int Idx, const CustomOperand<T> OpInfo[], int OpInfoSize,
-                       T Context) {
-  return 0 <= Idx && Idx < OpInfoSize && !OpInfo[Idx].Name.empty() &&
-         (!OpInfo[Idx].Cond || OpInfo[Idx].Cond(Context));
-}
-
-template <class T>
-static int getOprIdx(std::function<bool(const CustomOperand<T> &)> Test,
-                     const CustomOperand<T> OpInfo[], int OpInfoSize,
-                     T Context) {
-  int InvalidIdx = OPR_ID_UNKNOWN;
-  for (int Idx = 0; Idx < OpInfoSize; ++Idx) {
-    if (Test(OpInfo[Idx])) {
-      if (!OpInfo[Idx].Cond || OpInfo[Idx].Cond(Context))
-        return Idx;
-      InvalidIdx = OPR_ID_UNSUPPORTED;
-    }
-  }
-  return InvalidIdx;
-}
-
-template <class T>
-static int getOprIdx(const StringRef Name, const CustomOperand<T> OpInfo[],
-                     int OpInfoSize, T Context) {
-  auto Test = [=](const CustomOperand<T> &Op) { return Op.Name == Name; };
-  return getOprIdx<T>(Test, OpInfo, OpInfoSize, Context);
-}
-
-template <class T>
-static int getOprIdx(int Id, const CustomOperand<T> OpInfo[], int OpInfoSize,
-                     T Context, bool QuickCheck = true) {
-  auto Test = [=](const CustomOperand<T> &Op) {
-    return Op.Encoding == Id && !Op.Name.empty();
-  };
-  // This is an optimization that should work in most cases.
-  // As a side effect, it may cause selection of an alias
-  // instead of a primary operand name in case of sparse tables.
-  if (QuickCheck && isValidOpr<T>(Id, OpInfo, OpInfoSize, Context) &&
-      OpInfo[Id].Encoding == Id) {
-    return Id;
-  }
-  return getOprIdx<T>(Test, OpInfo, OpInfoSize, Context);
-}
-
-//===----------------------------------------------------------------------===//
 // Custom Operand Values
 //===----------------------------------------------------------------------===//
 
@@ -1741,24 +1677,6 @@ unsigned encodeFieldSaSdst(unsigned SaSdst) {
 }
 
 } // namespace DepCtr
-
-//===----------------------------------------------------------------------===//
-// hwreg
-//===----------------------------------------------------------------------===//
-
-namespace Hwreg {
-
-int64_t getHwregId(const StringRef Name, const MCSubtargetInfo &STI) {
-  int Idx = getOprIdx<const MCSubtargetInfo &>(Name, Opr, OPR_SIZE, STI);
-  return (Idx < 0) ? Idx : Opr[Idx].Encoding;
-}
-
-StringRef getHwreg(unsigned Id, const MCSubtargetInfo &STI) {
-  int Idx = getOprIdx<const MCSubtargetInfo &>(Id, Opr, OPR_SIZE, STI);
-  return (Idx < 0) ? "" : Opr[Idx].Name;
-}
-
-} // namespace Hwreg
 
 //===----------------------------------------------------------------------===//
 // exp tgt
@@ -1960,30 +1878,8 @@ static uint64_t getMsgIdMask(const MCSubtargetInfo &STI) {
   return isGFX11Plus(STI) ? ID_MASK_GFX11Plus_ : ID_MASK_PreGFX11_;
 }
 
-int64_t getMsgId(const StringRef Name, const MCSubtargetInfo &STI) {
-  int Idx = getOprIdx<const MCSubtargetInfo &>(Name, Msg, MSG_SIZE, STI);
-  return (Idx < 0) ? Idx : Msg[Idx].Encoding;
-}
-
 bool isValidMsgId(int64_t MsgId, const MCSubtargetInfo &STI) {
   return (MsgId & ~(getMsgIdMask(STI))) == 0;
-}
-
-StringRef getMsgName(int64_t MsgId, const MCSubtargetInfo &STI) {
-  int Idx = getOprIdx<const MCSubtargetInfo &>(MsgId, Msg, MSG_SIZE, STI);
-  return (Idx < 0) ? "" : Msg[Idx].Name;
-}
-
-int64_t getMsgOpId(int64_t MsgId, const StringRef Name) {
-  const char* const *S = (MsgId == ID_SYSMSG) ? OpSysSymbolic : OpGsSymbolic;
-  const int F = (MsgId == ID_SYSMSG) ? OP_SYS_FIRST_ : OP_GS_FIRST_;
-  const int L = (MsgId == ID_SYSMSG) ? OP_SYS_LAST_ : OP_GS_LAST_;
-  for (int i = F; i < L; ++i) {
-    if (Name == S[i]) {
-      return i;
-    }
-  }
-  return OP_UNKNOWN_;
 }
 
 bool isValidMsgOp(int64_t MsgId, int64_t OpId, const MCSubtargetInfo &STI,
@@ -1993,23 +1889,14 @@ bool isValidMsgOp(int64_t MsgId, int64_t OpId, const MCSubtargetInfo &STI,
   if (!Strict)
     return 0 <= OpId && isUInt<OP_WIDTH_>(OpId);
 
-  if (MsgId == ID_SYSMSG)
-    return OP_SYS_FIRST_ <= OpId && OpId < OP_SYS_LAST_;
-  if (!isGFX11Plus(STI)) {
-    switch (MsgId) {
-    case ID_GS_PreGFX11:
-      return (OP_GS_FIRST_ <= OpId && OpId < OP_GS_LAST_) && OpId != OP_GS_NOP;
-    case ID_GS_DONE_PreGFX11:
-      return OP_GS_FIRST_ <= OpId && OpId < OP_GS_LAST_;
-    }
-  }
-  return OpId == OP_NONE_;
-}
+  if (msgRequiresOp(MsgId, STI)) {
+    if (MsgId == ID_GS_PreGFX11 && OpId == OP_GS_NOP)
+      return false;
 
-StringRef getMsgOpName(int64_t MsgId, int64_t OpId,
-                       const MCSubtargetInfo &STI) {
-  assert(msgRequiresOp(MsgId, STI));
-  return (MsgId == ID_SYSMSG)? OpSysSymbolic[OpId] : OpGsSymbolic[OpId];
+    return !getMsgOpName(MsgId, OpId, STI).empty();
+  }
+
+  return OpId == OP_NONE_;
 }
 
 bool isValidMsgStream(int64_t MsgId, int64_t OpId, int64_t StreamId,
@@ -2226,6 +2113,8 @@ bool isGFX8Plus(const MCSubtargetInfo &STI) {
 bool isGFX9Plus(const MCSubtargetInfo &STI) {
   return isGFX9(STI) || isGFX10Plus(STI);
 }
+
+bool isNotGFX9Plus(const MCSubtargetInfo &STI) { return !isGFX9Plus(STI); }
 
 bool isGFX10(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGFX10);

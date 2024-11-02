@@ -15,7 +15,7 @@
 
 def NeoverseV2Model : SchedMachineModel {
   let IssueWidth            =  16; // Micro-ops dispatched at a time.
-  let MicroOpBufferSize     = 160; // Entries in micro-op re-order buffer. NOTE: Copied from N2.
+  let MicroOpBufferSize     = 320; // Entries in micro-op re-order buffer.
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  10; // Extra cycles for mispredicted branch.  NOTE: Copied from N2.
   let LoopMicroOpBufferSize =  16; // NOTE: Copied from Cortex-A57.
@@ -1076,14 +1076,12 @@ def V2Write_7cyc_1V02_7rc   : SchedWriteRes<[V2UnitV02]> { let Latency =  7; let
 def V2Write_10cyc_1V02_5rc  : SchedWriteRes<[V2UnitV02]> { let Latency = 10; let ReleaseAtCycles = [ 5]; }
 def V2Write_10cyc_1V02_9rc  : SchedWriteRes<[V2UnitV02]> { let Latency = 10; let ReleaseAtCycles = [ 9]; }
 def V2Write_10cyc_1V02_10rc : SchedWriteRes<[V2UnitV02]> { let Latency = 10; let ReleaseAtCycles = [10]; }
-def V2Write_10cyc_1V0_9rc   : SchedWriteRes<[V2UnitV0]>  { let Latency = 10; let ReleaseAtCycles = [ 9]; }
 def V2Write_10cyc_1V1_9rc   : SchedWriteRes<[V2UnitV1]>  { let Latency = 10; let ReleaseAtCycles = [ 9]; }
-def V2Write_13cyc_1V0_12rc  : SchedWriteRes<[V2UnitV0]>  { let Latency = 13; let ReleaseAtCycles = [12]; }
 def V2Write_13cyc_1V02_12rc : SchedWriteRes<[V2UnitV02]> { let Latency = 13; let ReleaseAtCycles = [12]; }
 def V2Write_13cyc_1V02_13rc : SchedWriteRes<[V2UnitV02]> { let Latency = 13; let ReleaseAtCycles = [13]; }
 def V2Write_15cyc_1V02_14rc : SchedWriteRes<[V2UnitV02]> { let Latency = 15; let ReleaseAtCycles = [14]; }
+def V2Write_16cyc_1V02_14rc : SchedWriteRes<[V2UnitV02]> { let Latency = 16; let ReleaseAtCycles = [14]; }
 def V2Write_16cyc_1V02_15rc : SchedWriteRes<[V2UnitV02]> { let Latency = 16; let ReleaseAtCycles = [15]; }
-def V2Write_16cyc_1V0_14rc  : SchedWriteRes<[V2UnitV0]>  { let Latency = 16; let ReleaseAtCycles = [14]; }
 
 // Miscellaneous
 // -----------------------------------------------------------------------------
@@ -2567,13 +2565,13 @@ def : InstRW<[V2Write_4cyc_2V02], (instregex "^FRINT[AIMNPXZ]_ZPmZ_S")>;
 def : InstRW<[V2Write_3cyc_1V02], (instregex "^FRINT[AIMNPXZ]_ZPmZ_D")>;
 
 // Floating point square root, F16
-def : InstRW<[V2Write_13cyc_1V0_12rc], (instregex "^FSQRT_ZPmZ_H")>;
+def : InstRW<[V2Write_13cyc_1V02_12rc], (instregex "^FSQRT_ZPmZ_H")>;
 
 // Floating point square root, F32
-def : InstRW<[V2Write_10cyc_1V0_9rc], (instregex "^FSQRT_ZPmZ_S")>;
+def : InstRW<[V2Write_10cyc_1V02_9rc], (instregex "^FSQRT_ZPmZ_S")>;
 
 // Floating point square root, F64
-def : InstRW<[V2Write_16cyc_1V0_14rc], (instregex "^FSQRT_ZPmZ_D")>;
+def : InstRW<[V2Write_16cyc_1V02_14rc], (instregex "^FSQRT_ZPmZ_D")>;
 
 // Floating point trigonometric exponentiation
 def : InstRW<[V2Write_3cyc_1V1], (instregex "^FEXPA_ZZ_[HSD]")>;

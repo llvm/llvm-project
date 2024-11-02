@@ -8,7 +8,7 @@ function test1(k)
 end function test1
 ! CHECK-LABEL:   func.func @_QPtest1(
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<i8> {fir.bindc_name = "k"}) -> !fir.array<4xi8> {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest1Ek"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest1Ek"} : (!fir.ref<i8>, !fir.dscope) -> (!fir.ref<i8>, !fir.ref<i8>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.array<4xi8> {bindc_name = "test1", uniq_name = "_QFtest1Etest1"}
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
@@ -58,7 +58,7 @@ function test2(k)
 end function test2
 ! CHECK-LABEL:   func.func @_QPtest2(
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<i16> {fir.bindc_name = "k"}) -> !fir.array<4xi16> {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest2Ek"} : (!fir.ref<i16>) -> (!fir.ref<i16>, !fir.ref<i16>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest2Ek"} : (!fir.ref<i16>, !fir.dscope) -> (!fir.ref<i16>, !fir.ref<i16>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.array<4xi16> {bindc_name = "test2", uniq_name = "_QFtest2Etest2"}
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
@@ -108,7 +108,7 @@ function test3(k)
 end function test3
 ! CHECK-LABEL:   func.func @_QPtest3(
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "k"}) -> !fir.array<4xi32> {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest3Ek"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.array<4xi32> {bindc_name = "test3", uniq_name = "_QFtest3Etest3"}
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
@@ -158,7 +158,7 @@ function test4(k)
 end function test4
 ! CHECK-LABEL:   func.func @_QPtest4(
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<i64> {fir.bindc_name = "k"}) -> !fir.array<4xi64> {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest4Ek"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest4Ek"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.array<4xi64> {bindc_name = "test4", uniq_name = "_QFtest4Etest4"}
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>

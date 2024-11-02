@@ -1,4 +1,5 @@
-!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
+! The "thread_limit" clause was added to the "target" construct in OpenMP 5.1.
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s
 
 !===============================================================================
 ! Target_Enter Simple
@@ -443,7 +444,7 @@ end subroutine omp_target_implicit_nested
 !CHECK: %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 subroutine omp_target_implicit_bounds(n)
    !CHECK: %[[VAL_COPY:.*]] = fir.alloca i32
-   !CHECK: %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFomp_target_implicit_boundsEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+   !CHECK: %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFomp_target_implicit_boundsEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
    !CHECK: %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<i32>
    !CHECK: fir.store %[[VAL_2]] to %[[VAL_COPY]] : !fir.ref<i32>
    !CHECK: %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (i32) -> i64
@@ -454,7 +455,7 @@ subroutine omp_target_implicit_bounds(n)
    !CHECK: %[[VAL_8:.*]] = fir.alloca !fir.array<?xi32>, %[[VAL_7]] {bindc_name = "a", uniq_name = "_QFomp_target_implicit_boundsEa"}
    !CHECK: %[[VAL_9:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
    !CHECK: %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_9]]) {uniq_name = "_QFomp_target_implicit_boundsEa"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
-   !CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %9#0, %c0{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+   !CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %{{[0-9]+}}#0, %c0{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
    !CHECK: %[[UB:.*]] = arith.subi %[[DIMS0]]#1, %c1{{.*}} : index
 
    integer :: n
@@ -490,8 +491,8 @@ end subroutine omp_target_implicit_bounds
 !CHECK-LABEL: func.func @_QPomp_target_thread_limit() {
 subroutine omp_target_thread_limit
    integer :: a
-   !CHECK: %[[VAL_1:.*]] = arith.constant 64 : i32
    !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "a"}
+   !CHECK: %[[VAL_1:.*]] = arith.constant 64 : i32
    !CHECK: omp.target   thread_limit(%[[VAL_1]] : i32) map_entries(%[[MAP]] -> %{{.*}} : !fir.ref<i32>) {
    !CHECK: ^bb0(%{{.*}}: !fir.ref<i32>):
    !$omp target map(tofrom: a) thread_limit(64)
@@ -531,7 +532,7 @@ end subroutine omp_target_device_ptr
    !CHECK: %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "a", uniq_name = "_QFomp_target_device_addrEa"}
    !CHECK: %[[VAL_0_DECL:.*]]:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFomp_target_device_addrEa"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
    !CHECK: %[[MAP_MEMBERS:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, i32) var_ptr_ptr({{.*}} : !fir.llvm_ptr<!fir.ref<i32>>) map_clauses(tofrom) capture(ByRef) -> !fir.llvm_ptr<!fir.ref<i32>> {name = ""}
-   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(tofrom) capture(ByRef) members(%[[MAP_MEMBERS]] : !fir.llvm_ptr<!fir.ref<i32>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>> {name = "a"}
+   !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(tofrom) capture(ByRef) members(%[[MAP_MEMBERS]] : [0] : !fir.llvm_ptr<!fir.ref<i32>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>> {name = "a"}
    !CHECK: omp.target_data map_entries(%[[MAP_MEMBERS]], %[[MAP]] : {{.*}}) use_device_addr(%[[VAL_0_DECL]]#1 : !fir.ref<!fir.box<!fir.ptr<i32>>>) {
    !$omp target data map(tofrom: a) use_device_addr(a)
    !CHECK: ^bb0(%[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>):
@@ -594,7 +595,8 @@ subroutine omp_target_parallel_do
       !$omp target parallel do map(tofrom: a)
          !CHECK: %[[I_PVT_ALLOCA:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
          !CHECK: %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_ALLOCA]] {uniq_name = "_QFomp_target_parallel_doEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-         !CHECK: omp.wsloop for  (%[[I_VAL:.*]]) : i32
+         !CHECK: omp.wsloop {
+         !CHECK-NEXT: omp.loop_nest (%[[I_VAL:.*]]) : i32
          do i = 1, 1024
            !CHECK:   fir.store %[[I_VAL]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
            !CHECK:   %[[C10:.*]] = arith.constant 10 : i32
@@ -605,6 +607,8 @@ subroutine omp_target_parallel_do
             a(i) = 10
          end do
          !CHECK: omp.yield
+         !CHECK: }
+         !CHECK: omp.terminator
          !CHECK: }
       !CHECK: omp.terminator
       !CHECK: }

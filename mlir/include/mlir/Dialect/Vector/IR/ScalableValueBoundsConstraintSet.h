@@ -29,9 +29,12 @@ struct ValueBoundsConstraintSet : protected ::mlir::ValueBoundsConstraintSet {
 struct ScalableValueBoundsConstraintSet
     : public llvm::RTTIExtends<ScalableValueBoundsConstraintSet,
                                detail::ValueBoundsConstraintSet> {
-  ScalableValueBoundsConstraintSet(MLIRContext *context, unsigned vscaleMin,
-                                   unsigned vscaleMax)
-      : RTTIExtends(context), vscaleMin(vscaleMin), vscaleMax(vscaleMax){};
+  ScalableValueBoundsConstraintSet(
+      MLIRContext *context,
+      ValueBoundsConstraintSet::StopConditionFn stopCondition,
+      unsigned vscaleMin, unsigned vscaleMax)
+      : RTTIExtends(context, stopCondition), vscaleMin(vscaleMin),
+        vscaleMax(vscaleMax) {};
 
   using RTTIExtends::bound;
   using RTTIExtends::StopConditionFn;

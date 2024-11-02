@@ -526,4 +526,26 @@ define i64 @pr58109b(i8 signext %0, i64 %a, i64 %b) {
   ret i64 %4
 }
 
+define i64 @test_2_selects(i8 zeroext %a) {
+; CHECK-LABEL: test_2_selects:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    add w9, w0, #24
+; CHECK-NEXT:    mov w8, #131
+; CHECK-NEXT:    and w9, w9, #0xff
+; CHECK-NEXT:    cmp w9, #81
+; CHECK-NEXT:    mov w9, #57
+; CHECK-NEXT:    csel x8, x8, xzr, lo
+; CHECK-NEXT:    csel x9, xzr, x9, eq
+; CHECK-NEXT:    add x0, x8, x9
+; CHECK-NEXT:    ret
+  %1 = add i8 %a, 24
+  %2 = zext i8 %1 to i64
+  %3 = icmp ult i8 %1, 81
+  %4 = select i1 %3, i64 131, i64 0
+  %5 = icmp eq i8 %1, 81
+  %6 = select i1 %5, i64 0, i64 57
+  %7 = add i64 %4, %6
+  ret i64 %7
+}
+
 declare i8 @llvm.usub.sat.i8(i8, i8) #0

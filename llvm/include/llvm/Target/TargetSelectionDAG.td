@@ -1979,6 +1979,7 @@ class Pattern<dag patternToMatch, list<dag> resultInstrs> {
   list<dag>       ResultInstrs    = resultInstrs;
   list<Predicate> Predicates      = [];  // See class Instruction in Target.td.
   int             AddedComplexity = 0;   // See class Instruction in Target.td.
+  bit           GISelShouldIgnore = 0;
 }
 
 // Pat - A simple (but common) form of a pattern, which produces a simple result

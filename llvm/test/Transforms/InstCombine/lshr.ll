@@ -163,6 +163,17 @@ define <2 x i8> @lshr_exact_splat_vec(<2 x i8> %x) {
   ret <2 x i8> %lshr
 }
 
+define <2 x i8> @lshr_exact_splat_vec_nuw(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_exact_splat_vec_nuw(
+; CHECK-NEXT:    [[LSHR:%.*]] = add nuw <2 x i8> [[X:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    ret <2 x i8> [[LSHR]]
+;
+  %shl = shl nuw <2 x i8> %x, <i8 2, i8 2>
+  %add = add nuw <2 x i8> %shl, <i8 4, i8 4>
+  %lshr = lshr <2 x i8> %add, <i8 2, i8 2>
+  ret <2 x i8> %lshr
+}
+
 define i8 @shl_add(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl_add(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[Y:%.*]], 2
@@ -360,7 +371,223 @@ define <3 x i14> @mul_splat_fold_vec(<3 x i14> %x) {
   ret <3 x i14> %t
 }
 
+define i32 @shl_add_lshr_flag_preservation(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_add_lshr_flag_preservation(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[Y:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = add nuw nsw i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw i32 %x, %c
+  %add = add nuw nsw i32 %shl, %y
+  %lshr = lshr exact i32 %add, %c
+  ret i32 %lshr
+}
+
+define i32 @shl_add_lshr(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_add_lshr(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[Y:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = add nuw i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw i32 %x, %c
+  %add = add nuw i32 %shl, %y
+  %lshr = lshr i32 %add, %c
+  ret i32 %lshr
+}
+
+define i32 @shl_add_lshr_comm(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_add_lshr_comm(
+; CHECK-NEXT:    [[Y2:%.*]] = mul i32 [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[Y2]], [[C:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = add nuw i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw i32 %x, %c
+  %y2 = mul i32 %y, %y ; thwart complexity-based canonicalization
+  %add = add nuw i32 %y2, %shl
+  %lshr = lshr i32 %add, %c
+  ret i32 %lshr
+}
+
 ; Negative test
+
+define i32 @shl_add_lshr_no_nuw(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_add_lshr_no_nuw(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[X:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SHL]], [[Y:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[ADD]], [[C]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw i32 %x, %c
+  %add = add i32 %shl, %y
+  %lshr = lshr i32 %add, %c
+  ret i32 %lshr
+}
+
+; Negative test
+
+define i32 @shl_sub_lshr_not_exact(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_sub_lshr_not_exact(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[X:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i32 [[SHL]], [[Y:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[SUB]], [[C]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw i32 %x, %c
+  %sub = sub nuw i32 %shl, %y
+  %lshr = lshr i32 %sub, %c
+  ret i32 %lshr
+}
+
+; Negative test
+
+define i32 @shl_sub_lshr_no_nuw(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_sub_lshr_no_nuw(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[X:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[SHL]], [[Y:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i32 [[SUB]], [[C]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nsw i32 %x, %c
+  %sub = sub nsw i32 %shl, %y
+  %lshr = lshr exact i32 %sub, %c
+  ret i32 %lshr
+}
+
+define i32 @shl_sub_lshr(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_sub_lshr(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[Y:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = sub nuw nsw i32 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw i32 %x, %c
+  %sub = sub nuw nsw i32 %shl, %y
+  %lshr = lshr exact i32 %sub, %c
+  ret i32 %lshr
+}
+
+define i32 @shl_or_lshr(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_or_lshr(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[Y:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = or i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw i32 %x, %c
+  %or = or i32 %shl, %y
+  %lshr = lshr i32 %or, %c
+  ret i32 %lshr
+}
+
+define i32 @shl_or_disjoint_lshr(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_or_disjoint_lshr(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[Y:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = or disjoint i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw i32 %x, %c
+  %or = or disjoint i32 %shl, %y
+  %lshr = lshr i32 %or, %c
+  ret i32 %lshr
+}
+
+define i32 @shl_or_lshr_comm(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_or_lshr_comm(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[Y:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = or i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw i32 %x, %c
+  %or = or i32 %y, %shl
+  %lshr = lshr i32 %or, %c
+  ret i32 %lshr
+}
+
+define i32 @shl_or_disjoint_lshr_comm(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_or_disjoint_lshr_comm(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[Y:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = or disjoint i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw i32 %x, %c
+  %or = or disjoint i32 %y, %shl
+  %lshr = lshr i32 %or, %c
+  ret i32 %lshr
+}
+
+define i32 @shl_xor_lshr(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_xor_lshr(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[Y:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = xor i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw i32 %x, %c
+  %xor = xor i32 %shl, %y
+  %lshr = lshr i32 %xor, %c
+  ret i32 %lshr
+}
+
+define i32 @shl_xor_lshr_comm(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_xor_lshr_comm(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[Y:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = xor i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw i32 %x, %c
+  %xor = xor i32 %y, %shl
+  %lshr = lshr i32 %xor, %c
+  ret i32 %lshr
+}
+
+define i32 @shl_and_lshr(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_and_lshr(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[Y:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = and i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw i32 %x, %c
+  %and = and i32 %shl, %y
+  %lshr = lshr i32 %and, %c
+  ret i32 %lshr
+}
+
+define i32 @shl_and_lshr_comm(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_and_lshr_comm(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[Y:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = and i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw i32 %x, %c
+  %and = and i32 %y, %shl
+  %lshr = lshr i32 %and, %c
+  ret i32 %lshr
+}
+
+define i32 @shl_lshr_and_exact(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_lshr_and_exact(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[Y:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %2 = shl nuw i32 %x, %c
+  %3 = and i32 %2, %y
+  %4 = lshr exact i32 %3, %c
+  ret i32 %4
+}
+
+; Negative test
+
+define i32 @shl_add_lshr_neg(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @shl_add_lshr_neg(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[SHL]], [[Z:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = lshr exact i32 [[ADD]], [[Z]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %shl = shl nuw i32 %x, %y
+  %add = add nuw nsw i32 %shl, %z
+  %res = lshr exact i32 %add, %z
+  ret i32 %res
+}
 
 define i32 @mul_splat_fold_wrong_mul_const(i32 %x) {
 ; CHECK-LABEL: @mul_splat_fold_wrong_mul_const(
@@ -374,6 +601,21 @@ define i32 @mul_splat_fold_wrong_mul_const(i32 %x) {
 }
 
 ; Negative test
+
+define i32 @shl_add_lshr_multiuse(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @shl_add_lshr_multiuse(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[SHL]], [[Z:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[ADD]])
+; CHECK-NEXT:    [[RES:%.*]] = lshr exact i32 [[ADD]], [[Z]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %shl = shl nuw i32 %x, %y
+  %add = add nuw nsw i32 %shl, %z
+  call void @use (i32 %add)
+  %res = lshr exact i32 %add, %z
+  ret i32 %res
+}
 
 define i32 @mul_splat_fold_wrong_lshr_const(i32 %x) {
 ; CHECK-LABEL: @mul_splat_fold_wrong_lshr_const(
@@ -476,7 +718,7 @@ define i32 @srem2_lshr30(i32 %x) {
 define i12 @trunc_sandwich(i32 %x) {
 ; CHECK-LABEL: @trunc_sandwich(
 ; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr i32 [[X:%.*]], 30
-; CHECK-NEXT:    [[R1:%.*]] = trunc i32 [[SUM_SHIFT]] to i12
+; CHECK-NEXT:    [[R1:%.*]] = trunc nuw nsw i32 [[SUM_SHIFT]] to i12
 ; CHECK-NEXT:    ret i12 [[R1]]
 ;
   %sh = lshr i32 %x, 28
@@ -488,7 +730,7 @@ define i12 @trunc_sandwich(i32 %x) {
 define <2 x i12> @trunc_sandwich_splat_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @trunc_sandwich_splat_vec(
 ; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 30, i32 30>
-; CHECK-NEXT:    [[R1:%.*]] = trunc <2 x i32> [[SUM_SHIFT]] to <2 x i12>
+; CHECK-NEXT:    [[R1:%.*]] = trunc nuw nsw <2 x i32> [[SUM_SHIFT]] to <2 x i12>
 ; CHECK-NEXT:    ret <2 x i12> [[R1]]
 ;
   %sh = lshr <2 x i32> %x, <i32 22, i32 22>
@@ -500,7 +742,7 @@ define <2 x i12> @trunc_sandwich_splat_vec(<2 x i32> %x) {
 define i12 @trunc_sandwich_min_shift1(i32 %x) {
 ; CHECK-LABEL: @trunc_sandwich_min_shift1(
 ; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr i32 [[X:%.*]], 21
-; CHECK-NEXT:    [[R1:%.*]] = trunc i32 [[SUM_SHIFT]] to i12
+; CHECK-NEXT:    [[R1:%.*]] = trunc nuw nsw i32 [[SUM_SHIFT]] to i12
 ; CHECK-NEXT:    ret i12 [[R1]]
 ;
   %sh = lshr i32 %x, 20
@@ -512,7 +754,7 @@ define i12 @trunc_sandwich_min_shift1(i32 %x) {
 define i12 @trunc_sandwich_small_shift1(i32 %x) {
 ; CHECK-LABEL: @trunc_sandwich_small_shift1(
 ; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr i32 [[X:%.*]], 20
-; CHECK-NEXT:    [[R1:%.*]] = trunc i32 [[SUM_SHIFT]] to i12
+; CHECK-NEXT:    [[R1:%.*]] = trunc nuw i32 [[SUM_SHIFT]] to i12
 ; CHECK-NEXT:    [[R:%.*]] = and i12 [[R1]], 2047
 ; CHECK-NEXT:    ret i12 [[R]]
 ;
@@ -525,7 +767,7 @@ define i12 @trunc_sandwich_small_shift1(i32 %x) {
 define i12 @trunc_sandwich_max_sum_shift(i32 %x) {
 ; CHECK-LABEL: @trunc_sandwich_max_sum_shift(
 ; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[R1:%.*]] = trunc i32 [[SUM_SHIFT]] to i12
+; CHECK-NEXT:    [[R1:%.*]] = trunc nuw nsw i32 [[SUM_SHIFT]] to i12
 ; CHECK-NEXT:    ret i12 [[R1]]
 ;
   %sh = lshr i32 %x, 20
@@ -537,7 +779,7 @@ define i12 @trunc_sandwich_max_sum_shift(i32 %x) {
 define i12 @trunc_sandwich_max_sum_shift2(i32 %x) {
 ; CHECK-LABEL: @trunc_sandwich_max_sum_shift2(
 ; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[R1:%.*]] = trunc i32 [[SUM_SHIFT]] to i12
+; CHECK-NEXT:    [[R1:%.*]] = trunc nuw nsw i32 [[SUM_SHIFT]] to i12
 ; CHECK-NEXT:    ret i12 [[R1]]
 ;
   %sh = lshr i32 %x, 30
@@ -571,7 +813,7 @@ define i12 @trunc_sandwich_use1(i32 %x) {
 ; CHECK-NEXT:    [[SH:%.*]] = lshr i32 [[X:%.*]], 28
 ; CHECK-NEXT:    call void @use(i32 [[SH]])
 ; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr i32 [[X]], 30
-; CHECK-NEXT:    [[R1:%.*]] = trunc i32 [[SUM_SHIFT]] to i12
+; CHECK-NEXT:    [[R1:%.*]] = trunc nuw nsw i32 [[SUM_SHIFT]] to i12
 ; CHECK-NEXT:    ret i12 [[R1]]
 ;
   %sh = lshr i32 %x, 28
@@ -586,7 +828,7 @@ define <3 x i9> @trunc_sandwich_splat_vec_use1(<3 x i14> %x) {
 ; CHECK-NEXT:    [[SH:%.*]] = lshr <3 x i14> [[X:%.*]], <i14 6, i14 6, i14 6>
 ; CHECK-NEXT:    call void @usevec(<3 x i14> [[SH]])
 ; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr <3 x i14> [[X]], <i14 11, i14 11, i14 11>
-; CHECK-NEXT:    [[R1:%.*]] = trunc <3 x i14> [[SUM_SHIFT]] to <3 x i9>
+; CHECK-NEXT:    [[R1:%.*]] = trunc nuw nsw <3 x i14> [[SUM_SHIFT]] to <3 x i9>
 ; CHECK-NEXT:    ret <3 x i9> [[R1]]
 ;
   %sh = lshr <3 x i14> %x, <i14 6, i14 6, i14 6>
@@ -601,7 +843,7 @@ define i12 @trunc_sandwich_min_shift1_use1(i32 %x) {
 ; CHECK-NEXT:    [[SH:%.*]] = lshr i32 [[X:%.*]], 20
 ; CHECK-NEXT:    call void @use(i32 [[SH]])
 ; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr i32 [[X]], 21
-; CHECK-NEXT:    [[R1:%.*]] = trunc i32 [[SUM_SHIFT]] to i12
+; CHECK-NEXT:    [[R1:%.*]] = trunc nuw nsw i32 [[SUM_SHIFT]] to i12
 ; CHECK-NEXT:    ret i12 [[R1]]
 ;
   %sh = lshr i32 %x, 20
@@ -633,7 +875,7 @@ define i12 @trunc_sandwich_max_sum_shift_use1(i32 %x) {
 ; CHECK-NEXT:    [[SH:%.*]] = lshr i32 [[X:%.*]], 20
 ; CHECK-NEXT:    call void @use(i32 [[SH]])
 ; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr i32 [[X]], 31
-; CHECK-NEXT:    [[R1:%.*]] = trunc i32 [[SUM_SHIFT]] to i12
+; CHECK-NEXT:    [[R1:%.*]] = trunc nuw nsw i32 [[SUM_SHIFT]] to i12
 ; CHECK-NEXT:    ret i12 [[R1]]
 ;
   %sh = lshr i32 %x, 20
@@ -648,7 +890,7 @@ define i12 @trunc_sandwich_max_sum_shift2_use1(i32 %x) {
 ; CHECK-NEXT:    [[SH:%.*]] = lshr i32 [[X:%.*]], 30
 ; CHECK-NEXT:    call void @use(i32 [[SH]])
 ; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr i32 [[X]], 31
-; CHECK-NEXT:    [[R1:%.*]] = trunc i32 [[SUM_SHIFT]] to i12
+; CHECK-NEXT:    [[R1:%.*]] = trunc nuw nsw i32 [[SUM_SHIFT]] to i12
 ; CHECK-NEXT:    ret i12 [[R1]]
 ;
   %sh = lshr i32 %x, 30

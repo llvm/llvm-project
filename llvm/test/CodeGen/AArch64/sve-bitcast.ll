@@ -1698,8 +1698,8 @@ define <vscale x 1 x i64> @bitcast_nxv8i8_to_nxv1i64(<vscale x 8 x i8> %v) #0 {
 ; CHECK_BE:       // %bb.0:
 ; CHECK_BE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK_BE-NEXT:    addvl sp, sp, #-1
-; CHECK_BE-NEXT:    ptrue p0.b
 ; CHECK_BE-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK_BE-NEXT:    ptrue p0.b
 ; CHECK_BE-NEXT:    ptrue p1.d
 ; CHECK_BE-NEXT:    st1b { z0.b }, p0, [sp]
 ; CHECK_BE-NEXT:    ld1d { z0.d }, p1/z, [sp]
@@ -1720,8 +1720,8 @@ define <vscale x 1 x i64> @bitcast_nxv4i16_to_nxv1i64(<vscale x 4 x i16> %v) #0 
 ; CHECK_BE:       // %bb.0:
 ; CHECK_BE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK_BE-NEXT:    addvl sp, sp, #-1
-; CHECK_BE-NEXT:    ptrue p0.h
 ; CHECK_BE-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK_BE-NEXT:    ptrue p0.h
 ; CHECK_BE-NEXT:    ptrue p1.d
 ; CHECK_BE-NEXT:    st1h { z0.h }, p0, [sp]
 ; CHECK_BE-NEXT:    ld1d { z0.d }, p1/z, [sp]
@@ -1742,8 +1742,8 @@ define <vscale x 1 x i64> @bitcast_nxv2i32_to_nxv1i64(<vscale x 2 x i32> %v) #0 
 ; CHECK_BE:       // %bb.0:
 ; CHECK_BE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK_BE-NEXT:    addvl sp, sp, #-1
-; CHECK_BE-NEXT:    ptrue p0.s
 ; CHECK_BE-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK_BE-NEXT:    ptrue p0.s
 ; CHECK_BE-NEXT:    ptrue p1.d
 ; CHECK_BE-NEXT:    st1w { z0.s }, p0, [sp]
 ; CHECK_BE-NEXT:    ld1d { z0.d }, p1/z, [sp]
@@ -2218,8 +2218,8 @@ define <vscale x 1 x double> @bitcast_nxv8i8_to_nxv1f64(<vscale x 8 x i8> %v) #0
 ; CHECK_BE:       // %bb.0:
 ; CHECK_BE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK_BE-NEXT:    addvl sp, sp, #-1
-; CHECK_BE-NEXT:    ptrue p0.b
 ; CHECK_BE-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK_BE-NEXT:    ptrue p0.b
 ; CHECK_BE-NEXT:    ptrue p1.d
 ; CHECK_BE-NEXT:    st1b { z0.b }, p0, [sp]
 ; CHECK_BE-NEXT:    ld1d { z0.d }, p1/z, [sp]
@@ -2240,8 +2240,8 @@ define <vscale x 1 x double> @bitcast_nxv4i16_to_nxv1f64(<vscale x 4 x i16> %v) 
 ; CHECK_BE:       // %bb.0:
 ; CHECK_BE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK_BE-NEXT:    addvl sp, sp, #-1
-; CHECK_BE-NEXT:    ptrue p0.h
 ; CHECK_BE-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK_BE-NEXT:    ptrue p0.h
 ; CHECK_BE-NEXT:    ptrue p1.d
 ; CHECK_BE-NEXT:    st1h { z0.h }, p0, [sp]
 ; CHECK_BE-NEXT:    ld1d { z0.d }, p1/z, [sp]
@@ -2262,8 +2262,8 @@ define <vscale x 1 x double> @bitcast_nxv2i32_to_nxv1f64(<vscale x 2 x i32> %v) 
 ; CHECK_BE:       // %bb.0:
 ; CHECK_BE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK_BE-NEXT:    addvl sp, sp, #-1
-; CHECK_BE-NEXT:    ptrue p0.s
 ; CHECK_BE-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK_BE-NEXT:    ptrue p0.s
 ; CHECK_BE-NEXT:    ptrue p1.d
 ; CHECK_BE-NEXT:    st1w { z0.s }, p0, [sp]
 ; CHECK_BE-NEXT:    ld1d { z0.d }, p1/z, [sp]
@@ -2827,11 +2827,11 @@ define <vscale x 1 x i32> @bitcast_nxv2f16_to_nxv1i32(<vscale x 2 x half> %v) #0
 ; CHECK_BE-NEXT:    addvl sp, sp, #-2
 ; CHECK_BE-NEXT:    ptrue p0.d
 ; CHECK_BE-NEXT:    ptrue p1.h
-; CHECK_BE-NEXT:    ptrue p2.s
 ; CHECK_BE-NEXT:    st1h { z0.d }, p0, [sp]
+; CHECK_BE-NEXT:    ptrue p0.s
 ; CHECK_BE-NEXT:    ld1h { z0.h }, p1/z, [sp]
 ; CHECK_BE-NEXT:    st1h { z0.h }, p1, [sp, #1, mul vl]
-; CHECK_BE-NEXT:    ld1w { z0.s }, p2/z, [sp, #1, mul vl]
+; CHECK_BE-NEXT:    ld1w { z0.s }, p0/z, [sp, #1, mul vl]
 ; CHECK_BE-NEXT:    addvl sp, sp, #2
 ; CHECK_BE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK_BE-NEXT:    ret
@@ -2860,11 +2860,11 @@ define <vscale x 1 x i32> @bitcast_nxv2bf16_to_nxv1i32(<vscale x 2 x bfloat> %v)
 ; CHECK_BE-NEXT:    addvl sp, sp, #-2
 ; CHECK_BE-NEXT:    ptrue p0.d
 ; CHECK_BE-NEXT:    ptrue p1.h
-; CHECK_BE-NEXT:    ptrue p2.s
 ; CHECK_BE-NEXT:    st1h { z0.d }, p0, [sp]
+; CHECK_BE-NEXT:    ptrue p0.s
 ; CHECK_BE-NEXT:    ld1h { z0.h }, p1/z, [sp]
 ; CHECK_BE-NEXT:    st1h { z0.h }, p1, [sp, #1, mul vl]
-; CHECK_BE-NEXT:    ld1w { z0.s }, p2/z, [sp, #1, mul vl]
+; CHECK_BE-NEXT:    ld1w { z0.s }, p0/z, [sp, #1, mul vl]
 ; CHECK_BE-NEXT:    addvl sp, sp, #2
 ; CHECK_BE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK_BE-NEXT:    ret

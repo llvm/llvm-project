@@ -187,6 +187,7 @@ struct Config {
   llvm::StringRef cmseOutputLib;
   StringRef zBtiReport = "none";
   StringRef zCetReport = "none";
+  StringRef zPauthReport = "none";
   bool ltoBBAddrMap;
   llvm::StringRef ltoBasicBlockSections;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
@@ -223,11 +224,13 @@ struct Config {
   bool checkSections;
   bool checkDynamicRelocs;
   std::optional<llvm::DebugCompressionType> compressDebugSections;
-  llvm::SmallVector<std::pair<llvm::GlobPattern, llvm::DebugCompressionType>, 0>
+  llvm::SmallVector<
+      std::tuple<llvm::GlobPattern, llvm::DebugCompressionType, unsigned>, 0>
       compressSections;
   bool cref;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint64_t>, 0>
       deadRelocInNonAlloc;
+  bool debugNames;
   bool demangle = true;
   bool dependentLibraries;
   bool disableVerify;
@@ -499,6 +502,8 @@ struct Ctx {
   void reset();
 
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
+
+  ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
 };
 
 LLVM_LIBRARY_VISIBILITY extern Ctx ctx;

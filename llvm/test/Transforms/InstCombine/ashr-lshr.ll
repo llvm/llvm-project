@@ -229,24 +229,24 @@ define <2 x i32> @ashr_lshr_inv_nonsplat_vec(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i32> %ret
 }
 
-define <2 x i32> @ashr_lshr_vec_undef(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @ashr_lshr_vec_undef(
+define <2 x i32> @ashr_lshr_vec_poison(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @ashr_lshr_vec_poison(
 ; CHECK-NEXT:    [[CMP12:%.*]] = ashr <2 x i32> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[CMP12]]
 ;
-  %cmp = icmp sgt <2 x i32> %x, <i32 undef, i32 -1>
+  %cmp = icmp sgt <2 x i32> %x, <i32 poison, i32 -1>
   %l = lshr <2 x i32> %x, %y
   %r = ashr exact <2 x i32> %x, %y
   %ret = select <2 x i1> %cmp, <2 x i32> %l, <2 x i32> %r
   ret <2 x i32> %ret
 }
 
-define <2 x i32> @ashr_lshr_vec_undef2(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @ashr_lshr_vec_undef2(
+define <2 x i32> @ashr_lshr_vec_poison2(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @ashr_lshr_vec_poison2(
 ; CHECK-NEXT:    [[CMP1:%.*]] = ashr exact <2 x i32> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[CMP1]]
 ;
-  %cmp = icmp slt <2 x i32> %x, <i32 1, i32 undef>
+  %cmp = icmp slt <2 x i32> %x, <i32 1, i32 poison>
   %l = lshr exact <2 x i32> %x, %y
   %r = ashr exact <2 x i32> %x, %y
   %ret = select <2 x i1> %cmp, <2 x i32> %r, <2 x i32> %l
@@ -498,14 +498,14 @@ define <3 x i42> @lshr_sub_nsw_splat(<3 x i42> %x, <3 x i42> %y) {
   ret <3 x i42> %shr
 }
 
-define <3 x i42> @lshr_sub_nsw_splat_undef(<3 x i42> %x, <3 x i42> %y) {
-; CHECK-LABEL: @lshr_sub_nsw_splat_undef(
+define <3 x i42> @lshr_sub_nsw_splat_poison(<3 x i42> %x, <3 x i42> %y) {
+; CHECK-LABEL: @lshr_sub_nsw_splat_poison(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <3 x i42> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <3 x i42> [[SUB]], <i42 41, i42 undef, i42 41>
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <3 x i42> [[SUB]], <i42 41, i42 poison, i42 41>
 ; CHECK-NEXT:    ret <3 x i42> [[SHR]]
 ;
   %sub = sub nsw <3 x i42> %x, %y
-  %shr = lshr <3 x i42> %sub, <i42 41, i42 undef, i42 41>
+  %shr = lshr <3 x i42> %sub, <i42 41, i42 poison, i42 41>
   ret <3 x i42> %shr
 }
 
@@ -572,14 +572,14 @@ define <3 x i43> @ashr_sub_nsw_splat(<3 x i43> %x, <3 x i43> %y) {
   ret <3 x i43> %shr
 }
 
-define <3 x i43> @ashr_sub_nsw_splat_undef(<3 x i43> %x, <3 x i43> %y) {
-; CHECK-LABEL: @ashr_sub_nsw_splat_undef(
+define <3 x i43> @ashr_sub_nsw_splat_poison(<3 x i43> %x, <3 x i43> %y) {
+; CHECK-LABEL: @ashr_sub_nsw_splat_poison(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <3 x i43> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr <3 x i43> [[SUB]], <i43 42, i43 undef, i43 42>
+; CHECK-NEXT:    [[SHR:%.*]] = ashr <3 x i43> [[SUB]], <i43 42, i43 poison, i43 42>
 ; CHECK-NEXT:    ret <3 x i43> [[SHR]]
 ;
   %sub = sub nsw <3 x i43> %x, %y
-  %shr = ashr <3 x i43> %sub, <i43 42, i43 undef, i43 42>
+  %shr = ashr <3 x i43> %sub, <i43 42, i43 poison, i43 42>
   ret <3 x i43> %shr
 }
 

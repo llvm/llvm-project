@@ -225,10 +225,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT, MVT::bf16, Promote);
     AddPromotedToType(ISD::SELECT, MVT::bf16, MVT::i16);
 
-    // TODO: Could make these legal
-    setOperationAction(ISD::FABS, MVT::bf16, Expand);
-    setOperationAction(ISD::FNEG, MVT::bf16, Expand);
-    setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Expand);
+    setOperationAction(ISD::FABS, MVT::bf16, Legal);
+    setOperationAction(ISD::FNEG, MVT::bf16, Legal);
+    setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Legal);
 
     // We only need to custom lower because we can't specify an action for bf16
     // sources.
@@ -854,9 +853,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasPrefetch())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
-  if (Subtarget->hasIEEEMinMax())
+  if (Subtarget->hasIEEEMinMax()) {
     setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
                        {MVT::f16, MVT::f32, MVT::f64, MVT::v2f16}, Legal);
+    setOperationAction({ISD::FMINIMUM, ISD::FMAXIMUM},
+                       {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
+                       Custom);
+  }
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
                      {MVT::Other, MVT::f32, MVT::v4f32, MVT::i16, MVT::f16,
@@ -877,6 +880,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::STACKSAVE, MVT::Other, Custom);
   setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
+  setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
   setOperationAction(ISD::GET_FPENV, MVT::i64, Custom);
   setOperationAction(ISD::SET_FPENV, MVT::i64, Custom);
 
@@ -2124,7 +2128,8 @@ SDValue SITargetLowering::getPreloadedValue(SelectionDAG &DAG,
       AMDGPU::isEntryFunctionCC(CC) && !MFI.hasWorkGroupIDZ() ? ~0u : 0xFFFFu);
   const ArgDescriptor WorkGroupIDZ =
       ArgDescriptor::createRegister(AMDGPU::TTMP7, 0xFFFF0000u);
-  if (Subtarget->hasArchitectedSGPRs() && AMDGPU::isCompute(CC)) {
+  if (Subtarget->hasArchitectedSGPRs() &&
+      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
     switch (PVID) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       Reg = &WorkGroupIDX;
@@ -2798,7 +2803,9 @@ SDValue SITargetLowering::LowerFormalArguments(
     (void)UserSGPRInfo;
     if (!Subtarget->enableFlatScratch())
       assert(!UserSGPRInfo.hasFlatScratchInit());
-    if (CallConv != CallingConv::AMDGPU_CS || !Subtarget->hasArchitectedSGPRs())
+    if ((CallConv != CallingConv::AMDGPU_CS &&
+         CallConv != CallingConv::AMDGPU_Gfx) ||
+        !Subtarget->hasArchitectedSGPRs())
       assert(!Info->hasWorkGroupIDX() && !Info->hasWorkGroupIDY() &&
              !Info->hasWorkGroupIDZ());
   }
@@ -2859,13 +2866,12 @@ SDValue SITargetLowering::LowerFormalArguments(
   } else if (!IsGraphics) {
     // For the fixed ABI, pass workitem IDs in the last argument register.
     allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
-  }
 
-  if (!IsEntryFunc) {
+    // FIXME: Sink this into allocateSpecialInputSGPRs
     if (!Subtarget->enableFlatScratch())
       CCInfo.AllocateReg(Info->getScratchRSrcReg());
-    if (!IsGraphics)
-      allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
+
+    allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
   }
 
   if (!IsKernel) {
@@ -3834,9 +3840,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i64));
   }
 
-  if (!IsTailCall)
-    Ops.push_back(CLI.ConvergenceControlToken);
-
   if (IsTailCall) {
     // Each tail call may have to adjust the stack by a different amount, so
     // this information must travel along with the operation for eventual
@@ -3862,6 +3865,17 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (InGlue.getNode())
     Ops.push_back(InGlue);
+
+  // NOTE: This potentially results in *two* glue operands, and the wrong one
+  // might possibly show up where the other was intended. In particular,
+  // Emitter::EmitMachineNode() expects only the glued convergence token if it
+  // exists. Similarly, the selection of the call expects to match only the
+  // InGlue operand if it exists.
+  if (SDValue Token = CLI.ConvergenceControlToken) {
+    Ops.push_back(SDValue(DAG.getMachineNode(TargetOpcode::CONVERGENCECTRL_GLUE,
+                                             DL, MVT::Glue, Token),
+                          0));
+  }
 
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
@@ -4047,6 +4061,91 @@ SDValue SITargetLowering::lowerGET_ROUNDING(SDValue Op,
                                TableEntry, EnumOffset);
 
   return DAG.getMergeValues({Result, GetReg.getValue(1)}, SL);
+}
+
+SDValue SITargetLowering::lowerSET_ROUNDING(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+
+  SDValue NewMode = Op.getOperand(1);
+  assert(NewMode.getValueType() == MVT::i32);
+
+  // Index a table of 4-bit entries mapping from the C FLT_ROUNDS values to the
+  // hardware MODE.fp_round values.
+  if (auto *ConstMode = dyn_cast<ConstantSDNode>(NewMode)) {
+    uint32_t ClampedVal = std::min(
+        static_cast<uint32_t>(ConstMode->getZExtValue()),
+        static_cast<uint32_t>(AMDGPU::TowardZeroF32_TowardNegativeF64));
+    NewMode = DAG.getConstant(
+        AMDGPU::decodeFltRoundToHWConversionTable(ClampedVal), SL, MVT::i32);
+  } else {
+    // If we know the input can only be one of the supported standard modes in
+    // the range 0-3, we can use a simplified mapping to hardware values.
+    KnownBits KB = DAG.computeKnownBits(NewMode);
+    const bool UseReducedTable = KB.countMinLeadingZeros() >= 30;
+    // The supported standard values are 0-3. The extended values start at 8. We
+    // need to offset by 4 if the value is in the extended range.
+
+    if (UseReducedTable) {
+      // Truncate to the low 32-bits.
+      SDValue BitTable = DAG.getConstant(
+          AMDGPU::FltRoundToHWConversionTable & 0xffff, SL, MVT::i32);
+
+      SDValue Two = DAG.getConstant(2, SL, MVT::i32);
+      SDValue RoundModeTimesNumBits =
+          DAG.getNode(ISD::SHL, SL, MVT::i32, NewMode, Two);
+
+      NewMode =
+          DAG.getNode(ISD::SRL, SL, MVT::i32, BitTable, RoundModeTimesNumBits);
+
+      // TODO: SimplifyDemandedBits on the setreg source here can likely reduce
+      // the table extracted bits into inline immediates.
+    } else {
+      // table_index = umin(value, value - 4)
+      // MODE.fp_round = (bit_table >> (table_index << 2)) & 0xf
+      SDValue BitTable =
+          DAG.getConstant(AMDGPU::FltRoundToHWConversionTable, SL, MVT::i64);
+
+      SDValue Four = DAG.getConstant(4, SL, MVT::i32);
+      SDValue OffsetEnum = DAG.getNode(ISD::SUB, SL, MVT::i32, NewMode, Four);
+      SDValue IndexVal =
+          DAG.getNode(ISD::UMIN, SL, MVT::i32, NewMode, OffsetEnum);
+
+      SDValue Two = DAG.getConstant(2, SL, MVT::i32);
+      SDValue RoundModeTimesNumBits =
+          DAG.getNode(ISD::SHL, SL, MVT::i32, IndexVal, Two);
+
+      SDValue TableValue =
+          DAG.getNode(ISD::SRL, SL, MVT::i64, BitTable, RoundModeTimesNumBits);
+      SDValue TruncTable = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, TableValue);
+
+      // No need to mask out the high bits since the setreg will ignore them
+      // anyway.
+      NewMode = TruncTable;
+    }
+
+    // Insert a readfirstlane in case the value is a VGPR. We could do this
+    // earlier and keep more operations scalar, but that interferes with
+    // combining the source.
+    SDValue ReadFirstLaneID =
+        DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, SL, MVT::i32);
+    NewMode = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32,
+                          ReadFirstLaneID, NewMode);
+  }
+
+  // N.B. The setreg will be later folded into s_round_mode on supported
+  // targets.
+  SDValue IntrinID =
+      DAG.getTargetConstant(Intrinsic::amdgcn_s_setreg, SL, MVT::i32);
+  uint32_t BothRoundHwReg =
+      AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 4);
+  SDValue RoundBothImm = DAG.getTargetConstant(BothRoundHwReg, SL, MVT::i32);
+
+  SDValue SetReg =
+      DAG.getNode(ISD::INTRINSIC_VOID, SL, Op->getVTList(), Op.getOperand(0),
+                  IntrinID, RoundBothImm, NewMode);
+
+  return SetReg;
 }
 
 SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
@@ -5227,24 +5326,8 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MachineInstrBuilder MIB;
     MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL), ReturnAddrReg);
 
-    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
-      MachineOperand &MO = MI.getOperand(I);
-      if (I != 2) {
-        MIB.add(MO);
-        continue;
-      }
-    }
-
-    MachineOperand &MO = MI.getOperand(2);
-    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-    // The token operand is always a register, whose definition is IMPLICIT_DEF
-    // iff there was no token on the call.
-    if (MachineInstr *Def = MRI.getVRegDef(MO.getReg())) {
-      if (Def->getOpcode() != TargetOpcode::IMPLICIT_DEF) {
-        MO.setImplicit();
-        MIB.add(MO);
-      }
-    }
+    for (const MachineOperand &MO : MI.operands())
+      MIB.add(MO);
 
     MIB.cloneMemRefs(MI);
     MI.eraseFromParent();
@@ -5408,6 +5491,14 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
       .addMBB(TrapBB);
 
     BB->addSuccessor(TrapBB);
+    MI.eraseFromParent();
+    return SplitBB;
+  }
+  case AMDGPU::SIMULATED_TRAP: {
+    assert(Subtarget->hasPrivEnabledTrap2NopBug());
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+    MachineBasicBlock *SplitBB =
+        TII->insertSimulatedTrap(MRI, *BB, MI, MI.getDebugLoc());
     MI.eraseFromParent();
     return SplitBB;
   }
@@ -5733,6 +5824,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMUL:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
   case ISD::UADDSAT:
   case ISD::USUBSAT:
   case ISD::SADDSAT:
@@ -5752,6 +5845,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSTACKSAVE(Op, DAG);
   case ISD::GET_ROUNDING:
     return lowerGET_ROUNDING(Op, DAG);
+  case ISD::SET_ROUNDING:
+    return lowerSET_ROUNDING(Op, DAG);
   case ISD::PREFETCH:
     return lowerPREFETCH(Op, DAG);
   case ISD::FP_EXTEND:
@@ -6628,6 +6723,11 @@ SDValue SITargetLowering::lowerTrapHsa(
     SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue Chain = Op.getOperand(0);
+
+  // We need to simulate the 's_trap 2' instruction on targets that run in
+  // PRIV=1 (where it is treated as a nop).
+  if (Subtarget->hasPrivEnabledTrap2NopBug())
+    return DAG.getNode(AMDGPUISD::SIMULATED_TRAP, SL, MVT::Other, Chain);
 
   uint64_t TrapID = static_cast<uint64_t>(GCNSubtarget::TrapID::LLVMAMDHSATrap);
   SDValue Ops[] = {
@@ -15986,6 +16086,8 @@ bool SITargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
                                                             SNaN, Depth);
 }
 
+#if 0
+// FIXME: This should be checked before unsafe fp atomics are enabled
 // Global FP atomic instructions have a hardcoded FP mode and do not support
 // FP32 denormals, and only support v2f16 denormals.
 static bool fpModeMatchesGlobalFPAtomicMode(const AtomicRMWInst *RMW) {
@@ -15995,6 +16097,7 @@ static bool fpModeMatchesGlobalFPAtomicMode(const AtomicRMWInst *RMW) {
     return DenormMode == DenormalMode::getPreserveSign();
   return DenormMode == DenormalMode::getIEEE();
 }
+#endif
 
 // The amdgpu-unsafe-fp-atomics attribute enables generation of unsafe
 // floating point atomic instructions. May generate more efficient code,
@@ -16005,77 +16108,113 @@ bool unsafeFPAtomicsDisabled(Function *F) {
          "true";
 }
 
+static OptimizationRemark emitAtomicRMWLegalRemark(const AtomicRMWInst *RMW) {
+  LLVMContext &Ctx = RMW->getContext();
+  SmallVector<StringRef> SSNs;
+  Ctx.getSyncScopeNames(SSNs);
+  StringRef MemScope = SSNs[RMW->getSyncScopeID()].empty()
+                           ? "system"
+                           : SSNs[RMW->getSyncScopeID()];
+
+  return OptimizationRemark(DEBUG_TYPE, "Passed", RMW)
+         << "Hardware instruction generated for atomic "
+         << RMW->getOperationName(RMW->getOperation())
+         << " operation at memory scope " << MemScope;
+}
+
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   unsigned AS = RMW->getPointerAddressSpace();
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
     return AtomicExpansionKind::NotAtomic;
 
-  auto SSID = RMW->getSyncScopeID();
-
-  auto ReportUnsafeHWInst = [&](TargetLowering::AtomicExpansionKind Kind) {
+  auto ReportUnsafeHWInst = [=](TargetLowering::AtomicExpansionKind Kind) {
     OptimizationRemarkEmitter ORE(RMW->getFunction());
-    LLVMContext &Ctx = RMW->getFunction()->getContext();
-    SmallVector<StringRef> SSNs;
-    Ctx.getSyncScopeNames(SSNs);
-    auto MemScope = SSNs[RMW->getSyncScopeID()].empty()
-                        ? "system"
-                        : SSNs[RMW->getSyncScopeID()];
-    ORE.emit([&]() {
-      return OptimizationRemark(DEBUG_TYPE, "Passed", RMW)
-             << "Hardware instruction generated for atomic "
-             << RMW->getOperationName(RMW->getOperation())
-             << " operation at memory scope " << MemScope
-             << " due to an unsafe request.";
+    ORE.emit([=]() {
+      return emitAtomicRMWLegalRemark(RMW) << " due to an unsafe request.";
     });
     return Kind;
   };
 
+  auto SSID = RMW->getSyncScopeID();
   bool HasSystemScope =
       SSID == SyncScope::System ||
       SSID == RMW->getContext().getOrInsertSyncScopeID("one-as");
 
   switch (RMW->getOperation()) {
+  case AtomicRMWInst::Sub:
+  case AtomicRMWInst::Or:
+  case AtomicRMWInst::Xor: {
+    // Atomic sub/or/xor do not work over PCI express, but atomic add
+    // does. InstCombine transforms these with 0 to or, so undo that.
+    if (HasSystemScope && AMDGPU::isFlatGlobalAddrSpace(AS)) {
+      if (Constant *ConstVal = dyn_cast<Constant>(RMW->getValOperand());
+          ConstVal && ConstVal->isNullValue())
+        return AtomicExpansionKind::Expand;
+    }
+
+    break;
+  }
   case AtomicRMWInst::FAdd: {
     Type *Ty = RMW->getType();
 
-    if (Ty->isHalfTy())
-      return AtomicExpansionKind::CmpXChg;
-
-    if (!Ty->isFloatTy() && (!Subtarget->hasGFX90AInsts() || !Ty->isDoubleTy()))
-      return AtomicExpansionKind::CmpXChg;
-
-    if ((AMDGPU::isFlatGlobalAddrSpace(AS) ||
-         AS == AMDGPUAS::BUFFER_FAT_POINTER) &&
-        Subtarget->hasAtomicFaddNoRtnInsts()) {
-      if (Subtarget->hasGFX940Insts())
-        return AtomicExpansionKind::None;
-
-      if (unsafeFPAtomicsDisabled(RMW->getFunction()))
-        return AtomicExpansionKind::CmpXChg;
-
-      // Always expand system scope fp atomics.
-      if (HasSystemScope)
-        return AtomicExpansionKind::CmpXChg;
-
-      if ((AS == AMDGPUAS::GLOBAL_ADDRESS ||
-           AS == AMDGPUAS::BUFFER_FAT_POINTER) &&
-          Ty->isFloatTy()) {
-        // global/buffer atomic fadd f32 no-rtn: gfx908, gfx90a, gfx940, gfx11+.
-        if (RMW->use_empty() && Subtarget->hasAtomicFaddNoRtnInsts())
-          return ReportUnsafeHWInst(AtomicExpansionKind::None);
-        // global/buffer atomic fadd f32 rtn: gfx90a, gfx940, gfx11+.
-        if (!RMW->use_empty() && Subtarget->hasAtomicFaddRtnInsts())
-          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+    // TODO: Handle REGION_ADDRESS
+    if (AS == AMDGPUAS::LOCAL_ADDRESS) {
+      // DS F32 FP atomics do respect the denormal mode, but the rounding mode
+      // is fixed to round-to-nearest-even.
+      //
+      // F64 / PK_F16 / PK_BF16 never flush and are also fixed to
+      // round-to-nearest-even.
+      //
+      // We ignore the rounding mode problem, even in strictfp. The C++ standard
+      // suggests it is OK if the floating-point mode may not match the calling
+      // thread.
+      if (Ty->isFloatTy()) {
+        return Subtarget->hasLDSFPAtomicAddF32() ? AtomicExpansionKind::None
+                                                 : AtomicExpansionKind::CmpXChg;
       }
 
-      // flat atomic fadd f32: gfx940, gfx11+.
-      if (AS == AMDGPUAS::FLAT_ADDRESS && Ty->isFloatTy() &&
-          Subtarget->hasFlatAtomicFaddF32Inst())
-        return ReportUnsafeHWInst(AtomicExpansionKind::None);
+      if (Ty->isDoubleTy()) {
+        // Ignores denormal mode, but we don't consider flushing mandatory.
+        return Subtarget->hasLDSFPAtomicAddF64() ? AtomicExpansionKind::None
+                                                 : AtomicExpansionKind::CmpXChg;
+      }
 
-      // global and flat atomic fadd f64: gfx90a, gfx940.
-      if (Ty->isDoubleTy() && Subtarget->hasGFX90AInsts())
+      // TODO: Handle v2f16/v2bf16 cases for gfx940
+      return AtomicExpansionKind::CmpXChg;
+    }
+
+    if (!AMDGPU::isFlatGlobalAddrSpace(AS) &&
+        AS != AMDGPUAS::BUFFER_FAT_POINTER)
+      return AtomicExpansionKind::CmpXChg;
+
+    // TODO: gfx940 supports v2f16 and v2bf16
+    if (Subtarget->hasGFX940Insts() && (Ty->isFloatTy() || Ty->isDoubleTy()))
+      return AtomicExpansionKind::None;
+
+    if (unsafeFPAtomicsDisabled(RMW->getFunction()))
+      return AtomicExpansionKind::CmpXChg;
+
+    // Always expand system scope fp atomics.
+    if (HasSystemScope)
+      return AtomicExpansionKind::CmpXChg;
+
+    // global and flat atomic fadd f64: gfx90a, gfx940.
+    if (Subtarget->hasGFX90AInsts() && Ty->isDoubleTy())
+      return ReportUnsafeHWInst(AtomicExpansionKind::None);
+
+    if (AS != AMDGPUAS::FLAT_ADDRESS && Ty->isFloatTy()) {
+      // global/buffer atomic fadd f32 no-rtn: gfx908, gfx90a, gfx940, gfx11+.
+      if (RMW->use_empty() && Subtarget->hasAtomicFaddNoRtnInsts())
+        return ReportUnsafeHWInst(AtomicExpansionKind::None);
+      // global/buffer atomic fadd f32 rtn: gfx90a, gfx940, gfx11+.
+      if (!RMW->use_empty() && Subtarget->hasAtomicFaddRtnInsts())
+        return ReportUnsafeHWInst(AtomicExpansionKind::None);
+    }
+
+    // flat atomic fadd f32: gfx940, gfx11+.
+    if (AS == AMDGPUAS::FLAT_ADDRESS && Ty->isFloatTy()) {
+      if (Subtarget->hasFlatAtomicFaddF32Inst())
         return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
       // If it is in flat address space, and the type is float, we will try to
@@ -16083,32 +16222,12 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       // reason we need that is, in the expansion, we emit the check of address
       // space. If it is in global address space, we emit the global atomic
       // fadd; if it is in shared address space, we emit the LDS atomic fadd.
-      if (AS == AMDGPUAS::FLAT_ADDRESS && Ty->isFloatTy() &&
-          Subtarget->hasLDSFPAtomicAdd()) {
+      if (Subtarget->hasLDSFPAtomicAddF32()) {
         if (RMW->use_empty() && Subtarget->hasAtomicFaddNoRtnInsts())
           return AtomicExpansionKind::Expand;
         if (!RMW->use_empty() && Subtarget->hasAtomicFaddRtnInsts())
           return AtomicExpansionKind::Expand;
       }
-
-      return AtomicExpansionKind::CmpXChg;
-    }
-
-    // DS FP atomics do respect the denormal mode, but the rounding mode is
-    // fixed to round-to-nearest-even.
-    // The only exception is DS_ADD_F64 which never flushes regardless of mode.
-    if (AS == AMDGPUAS::LOCAL_ADDRESS && Subtarget->hasLDSFPAtomicAdd()) {
-      if (!Ty->isDoubleTy())
-        return AtomicExpansionKind::None;
-
-      if (fpModeMatchesGlobalFPAtomicMode(RMW))
-        return AtomicExpansionKind::None;
-
-      return RMW->getFunction()
-                         ->getFnAttribute("amdgpu-unsafe-fp-atomics")
-                         .getValueAsString() == "true"
-                 ? ReportUnsafeHWInst(AtomicExpansionKind::None)
-                 : AtomicExpansionKind::CmpXChg;
     }
 
     return AtomicExpansionKind::CmpXChg;
@@ -16321,14 +16440,24 @@ bool SITargetLowering::checkForPhysRegDependency(
 }
 
 void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
+  AtomicRMWInst::BinOp Op = AI->getOperation();
+
+  if (Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Or ||
+      Op == AtomicRMWInst::Xor) {
+    // atomicrmw or %ptr, 0 -> atomicrmw add %ptr, 0
+    assert(cast<Constant>(AI->getValOperand())->isNullValue() &&
+           "this cannot be replaced with add");
+    AI->setOperation(AtomicRMWInst::Add);
+    return;
+  }
+
   assert(Subtarget->hasAtomicFaddInsts() &&
          "target should have atomic fadd instructions");
   assert(AI->getType()->isFloatTy() &&
          AI->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS &&
          "generic atomicrmw expansion only supports FP32 operand in flat "
          "address space");
-  assert(AI->getOperation() == AtomicRMWInst::FAdd &&
-         "only fadd is supported for now");
+  assert(Op == AtomicRMWInst::FAdd && "only fadd is supported for now");
 
   // Given: atomicrmw fadd ptr %addr, float %val ordering
   //

@@ -336,7 +336,7 @@ def PPCbctrl_load_toc_rm : SDNode<"PPCISD::BCTRL_LOAD_TOC_RM",
                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                    SDNPVariadic]>;
 
-def retglue       : SDNode<"PPCISD::RET_GLUE", SDTNone,
+def PPCretglue   : SDNode<"PPCISD::RET_GLUE", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 def PPCtc_return : SDNode<"PPCISD::TC_RETURN", SDT_PPCTC_ret,
@@ -1299,7 +1299,7 @@ def RESTORE_CRBIT : PPCEmitTimePseudo<(outs crbitrc:$cond), (ins memri:$F),
 let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
   let isPredicable = 1, isReturn = 1, Uses = [LR, RM] in
     def BLR : XLForm_2_ext<19, 16, 20, 0, 0, (outs), (ins), "blr", IIC_BrB,
-                           [(retglue)]>, Requires<[In32BitMode]>;
+                           [(PPCretglue)]>, Requires<[In32BitMode]>;
   let isBranch = 1, isIndirectBranch = 1, Uses = [CTR] in {
     let isPredicable = 1 in
       def BCTR : XLForm_2_ext<19, 528, 20, 0, 0, (outs), (ins), "bctr", IIC_BrB,
@@ -3346,11 +3346,13 @@ def ADDIStocHA : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, tocentr
                        "#ADDIStocHA",
                        [(set i32:$rD,
                          (PPCtoc_entry i32:$reg, tglobaladdr:$disp))]>;
-// Local Data Transform
+// TOC Data Transform AIX
 def ADDItoc : PPCEmitTimePseudo<(outs gprc:$rD), (ins tocentry32:$disp, gprc:$reg),
                    "#ADDItoc",
                    [(set i32:$rD,
                      (PPCtoc_entry tglobaladdr:$disp, i32:$reg))]>;
+def ADDItocL : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, tocentry32:$disp),
+                   "#ADDItocL", []>;
 
 // Get Global (GOT) Base Register offset, from the word immediately preceding
 // the function label.
@@ -4189,6 +4191,7 @@ def : Pat<(v4i32 (selectcc i1:$lhs, i1:$rhs, v4i32:$tval, v4i32:$fval, SETUGT)),
 def : Pat<(v4i32 (selectcc i1:$lhs, i1:$rhs, v4i32:$tval, v4i32:$fval, SETNE)),
           (SELECT_VRRC (CRXOR $lhs, $rhs), $tval, $fval)>;
 
+let Defs = [CR0] in {
 def ANDI_rec_1_EQ_BIT : PPCCustomInserterPseudo<(outs crbitrc:$dst), (ins gprc:$in),
                              "#ANDI_rec_1_EQ_BIT",
                              [(set i1:$dst, (trunc (not i32:$in)))]>;
@@ -4202,6 +4205,7 @@ def ANDI_rec_1_EQ_BIT8 : PPCCustomInserterPseudo<(outs crbitrc:$dst), (ins g8rc:
 def ANDI_rec_1_GT_BIT8 : PPCCustomInserterPseudo<(outs crbitrc:$dst), (ins g8rc:$in),
                               "#ANDI_rec_1_GT_BIT8",
                               [(set i1:$dst, (trunc i64:$in))]>;
+}
 
 def : Pat<(i1 (not (trunc i32:$in))),
            (ANDI_rec_1_EQ_BIT $in)>;

@@ -25,20 +25,9 @@ entry:
 }
 
 define i64 @extract_v2i64_undef_vector(<2 x i64> %a, i32 %c) {
-; CHECK-SD-LABEL: extract_v2i64_undef_vector:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: extract_v2i64_undef_vector:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sub sp, sp, #16
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    mov w9, w0
-; CHECK-GI-NEXT:    mov x8, sp
-; CHECK-GI-NEXT:    and x9, x9, #0x1
-; CHECK-GI-NEXT:    ldr x0, [x8, x9, lsl #3]
-; CHECK-GI-NEXT:    add sp, sp, #16
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: extract_v2i64_undef_vector:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ret
 entry:
   %d = extractelement <2 x i64> undef, i32 %c
   ret i64 %d
@@ -130,7 +119,6 @@ define i64 @extract_v2i64_extract_of_insert_different_const(<2 x i64> %a, i64 %e
 ;
 ; CHECK-GI-LABEL: extract_v2i64_extract_of_insert_different_const:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v0.d[0], x0
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    fmov x0, d0
 ; CHECK-GI-NEXT:    ret
@@ -950,21 +938,10 @@ entry:
 }
 
 define i32 @extract_v4i32_shuffle_const(<4 x i32> %a, <4 x i32> %b, i32 %c) {
-; CHECK-SD-LABEL: extract_v4i32_shuffle_const:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov w0, s1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: extract_v4i32_shuffle_const:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI36_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI36_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-GI-NEXT:    mov s0, v0.s[2]
-; CHECK-GI-NEXT:    fmov w0, s0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: extract_v4i32_shuffle_const:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov w0, s1
+; CHECK-NEXT:    ret
 entry:
   %vector = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 3>
   %d = extractelement <4 x i32> %vector, i32 2
