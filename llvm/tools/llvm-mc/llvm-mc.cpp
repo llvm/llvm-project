@@ -559,6 +559,8 @@ int main(int argc, char **argv) {
         std::unique_ptr<MCCodeEmitter>(CE), *STI));
     if (NoExecStack)
       Str->initSections(true, *STI);
+    Str->emitVersionForTarget(TheTriple, VersionTuple(), nullptr,
+                              VersionTuple());
   }
 
   int Res = 1;

@@ -400,6 +400,12 @@ public:
       return getFieldDesc()->IsArray;
     return false;
   }
+  bool inUnion() const {
+    if (isBlockPointer())
+      return getInlineDesc()->InUnion;
+    return false;
+  };
+
   /// Checks if the structure is a primitive array.
   bool inPrimitiveArray() const {
     if (isBlockPointer())

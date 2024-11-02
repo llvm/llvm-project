@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_CODEGENINTRINSICS_H
-#define LLVM_UTILS_TABLEGEN_CODEGENINTRINSICS_H
+#ifndef LLVM_UTILS_TABLEGEN_BASIC_CODEGENINTRINSICS_H
+#define LLVM_UTILS_TABLEGEN_BASIC_CODEGENINTRINSICS_H
 
 #include "SDNodeProperties.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -183,4 +183,4 @@ public:
 };
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_BASIC_CODEGENINTRINSICS_H

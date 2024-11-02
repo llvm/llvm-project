@@ -804,7 +804,7 @@ NVPTXToolChain::getSystemGPUArchs(const ArgList &Args) const {
   else
     Program = GetProgramPath("nvptx-arch");
 
-  auto StdoutOrErr = executeToolChainProgram(Program, /*SecondsToWait=*/10);
+  auto StdoutOrErr = executeToolChainProgram(Program);
   if (!StdoutOrErr)
     return StdoutOrErr.takeError();
 
@@ -839,17 +839,15 @@ void CudaToolChain::addClangTargetOptions(
           DeviceOffloadingKind == Action::OFK_Cuda) &&
          "Only OpenMP or CUDA offloading kinds are supported for NVIDIA GPUs.");
 
-  if (DeviceOffloadingKind == Action::OFK_Cuda) {
-    CC1Args.append(
-        {"-fcuda-is-device", "-mllvm", "-enable-memcpyopt-without-libcalls"});
+  CC1Args.append(
+      {"-fcuda-is-device", "-mllvm", "-enable-memcpyopt-without-libcalls"});
 
-    // Unsized function arguments used for variadics were introduced in CUDA-9.0
-    // We still do not support generating code that actually uses variadic
-    // arguments yet, but we do need to allow parsing them as recent CUDA
-    // headers rely on that. https://github.com/llvm/llvm-project/issues/58410
-    if (CudaInstallation.version() >= CudaVersion::CUDA_90)
-      CC1Args.push_back("-fcuda-allow-variadic-functions");
-  }
+  // Unsized function arguments used for variadics were introduced in CUDA-9.0
+  // We still do not support generating code that actually uses variadic
+  // arguments yet, but we do need to allow parsing them as recent CUDA
+  // headers rely on that. https://github.com/llvm/llvm-project/issues/58410
+  if (CudaInstallation.version() >= CudaVersion::CUDA_90)
+    CC1Args.push_back("-fcuda-allow-variadic-functions");
 
   if (DriverArgs.hasArg(options::OPT_nogpulib))
     return;
@@ -866,6 +864,13 @@ void CudaToolChain::addClangTargetOptions(
 
   CC1Args.push_back("-mlink-builtin-bitcode");
   CC1Args.push_back(DriverArgs.MakeArgString(LibDeviceFile));
+
+  // For now, we don't use any Offload/OpenMP device runtime when we offload
+  // CUDA via LLVM/Offload. We should split the Offload/OpenMP device runtime
+  // and include the "generic" (or CUDA-specific) parts.
+  if (DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
+                         options::OPT_fno_offload_via_llvm, false))
+    return;
 
   clang::CudaVersion CudaInstallationVersion = CudaInstallation.version();
 

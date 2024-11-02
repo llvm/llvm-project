@@ -32,6 +32,7 @@
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/DDGPrinter.h"
+#include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/Delinearization.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
@@ -199,6 +200,7 @@
 #include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/PoisonChecking.h"
+#include "llvm/Transforms/Instrumentation/RealtimeSanitizer.h"
 #include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
@@ -1084,6 +1086,11 @@ Expected<bool> parseSeparateConstOffsetFromGEPPassOptions(StringRef Params) {
                                             "SeparateConstOffsetFromGEP");
 }
 
+Expected<bool> parseStructurizeCFGPassOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "skip-uniform-regions",
+                                            "StructurizeCFG");
+}
+
 Expected<OptimizationLevel>
 parseFunctionSimplificationPipelineOptions(StringRef Params) {
   std::optional<OptimizationLevel> L = parseOptLevel(Params);
@@ -1208,6 +1215,11 @@ parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
         inconvertibleErrorCode());
   }
   return Opts;
+}
+
+Expected<RealtimeSanitizerOptions> parseRtSanPassOptions(StringRef Params) {
+  RealtimeSanitizerOptions Result;
+  return Result;
 }
 
 } // namespace

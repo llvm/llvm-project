@@ -1189,6 +1189,7 @@ public:
     return 2 + (TI.SwiftImportAs ? TI.SwiftImportAs->size() : 0) +
            2 + (TI.SwiftRetainOp ? TI.SwiftRetainOp->size() : 0) +
            2 + (TI.SwiftReleaseOp ? TI.SwiftReleaseOp->size() : 0) +
+           2 + (TI.SwiftConformance ? TI.SwiftConformance->size() : 0) +
            2 + getCommonTypeInfoSize(TI);
   }
 
@@ -1227,6 +1228,12 @@ public:
     if (auto ReleaseOp = TI.SwiftReleaseOp) {
       writer.write<uint16_t>(ReleaseOp->size() + 1);
       OS.write(ReleaseOp->c_str(), ReleaseOp->size());
+    } else {
+      writer.write<uint16_t>(0);
+    }
+    if (auto Conformance = TI.SwiftConformance) {
+      writer.write<uint16_t>(Conformance->size() + 1);
+      OS.write(Conformance->c_str(), Conformance->size());
     } else {
       writer.write<uint16_t>(0);
     }

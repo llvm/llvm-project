@@ -1391,6 +1391,7 @@ bool InitThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
     return false;
   const Pointer &Field = This.atField(I);
   Field.deref<T>() = S.Stk.pop<T>();
+  Field.activate();
   Field.initialize();
   return true;
 }
@@ -1409,20 +1410,6 @@ bool InitThisBitField(InterpState &S, CodePtr OpPC, const Record::Field *F,
   const Pointer &Field = This.atField(FieldOffset);
   const auto &Value = S.Stk.pop<T>();
   Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue(S.getCtx()));
-  Field.initialize();
-  return true;
-}
-
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool InitThisFieldActive(InterpState &S, CodePtr OpPC, uint32_t I) {
-  if (S.checkingPotentialConstantExpression())
-    return false;
-  const Pointer &This = S.Current->getThis();
-  if (!CheckThis(S, OpPC, This))
-    return false;
-  const Pointer &Field = This.atField(I);
-  Field.deref<T>() = S.Stk.pop<T>();
-  Field.activate();
   Field.initialize();
   return true;
 }
@@ -1446,17 +1433,6 @@ bool InitBitField(InterpState &S, CodePtr OpPC, const Record::Field *F) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Field = S.Stk.peek<Pointer>().atField(F->Offset);
   Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue(S.getCtx()));
-  Field.activate();
-  Field.initialize();
-  return true;
-}
-
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool InitFieldActive(InterpState &S, CodePtr OpPC, uint32_t I) {
-  const T &Value = S.Stk.pop<T>();
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
-  const Pointer &Field = Ptr.atField(I);
-  Field.deref<T>() = Value;
   Field.activate();
   Field.initialize();
   return true;
@@ -1719,8 +1695,10 @@ bool Store(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
-  if (Ptr.canBeInitialized())
+  if (Ptr.canBeInitialized()) {
     Ptr.initialize();
+    Ptr.activate();
+  }
   Ptr.deref<T>() = Value;
   return true;
 }
@@ -1731,8 +1709,10 @@ bool StorePop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
-  if (Ptr.canBeInitialized())
+  if (Ptr.canBeInitialized()) {
     Ptr.initialize();
+    Ptr.activate();
+  }
   Ptr.deref<T>() = Value;
   return true;
 }
@@ -2653,9 +2633,10 @@ inline bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
         ThisPtr.getFieldDesc()->getType()->getAsCXXRecordDecl();
     if (Func->getParentDecl()->isDerivedFrom(ThisFieldDecl)) {
       // If the function we call is further DOWN the hierarchy than the
-      // FieldDesc of our pointer, just get the DeclDesc instead, which
-      // is the furthest we might go up in the hierarchy.
-      ThisPtr = ThisPtr.getDeclPtr();
+      // FieldDesc of our pointer, just go up the hierarchy of this field
+      // the furthest we can go.
+      while (ThisPtr.isBaseClass())
+        ThisPtr = ThisPtr.getBase();
     }
   }
 

@@ -23,6 +23,8 @@ function(libomp_get_definitions_flags cppflags)
   else()
     libomp_append(cppflags_local "-D _GNU_SOURCE")
     libomp_append(cppflags_local "-D _REENTRANT")
+    # or use HAVE_PTHREAD_SETNAME_NP from top-level cmake/config-ix.cmake
+    libomp_append(cppflags_local "-D LIBOMP_HAVE_LINUX_PTHREAD_SETNAME" LIBOMP_HAVE_LINUX_PTHREAD_SETNAME)
   endif()
 
   # CMake doesn't include CPPFLAGS from environment, but we will.

@@ -10872,8 +10872,8 @@ SDValue SITargetLowering::LowerFFREXP(SDValue Op, SelectionDAG &DAG) const {
 
   if (Subtarget->hasFractBug()) {
     SDValue Fabs = DAG.getNode(ISD::FABS, dl, VT, Val);
-    SDValue Inf = DAG.getConstantFP(
-        APFloat::getInf(SelectionDAG::EVTToAPFloatSemantics(VT)), dl, VT);
+    SDValue Inf =
+        DAG.getConstantFP(APFloat::getInf(VT.getFltSemantics()), dl, VT);
 
     SDValue IsFinite = DAG.getSetCC(dl, MVT::i1, Fabs, Inf, ISD::SETOLT);
     SDValue Zero = DAG.getConstant(0, dl, InstrExpVT);
@@ -11383,7 +11383,7 @@ SDValue SITargetLowering::performMemSDNodeCombine(MemSDNode *N,
     SDValue NewPtr = performSHLPtrCombine(Ptr.getNode(),  N->getAddressSpace(),
                                           N->getMemoryVT(), DCI);
     if (NewPtr) {
-      SmallVector<SDValue, 8> NewOps(N->op_begin(), N->op_end());
+      SmallVector<SDValue, 8> NewOps(N->ops());
 
       NewOps[PtrIdx] = NewPtr;
       return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
@@ -12578,9 +12578,8 @@ SDValue SITargetLowering::performRcpCombine(SDNode *N,
   SDValue N0 = N->getOperand(0);
 
   if (N0.isUndef()) {
-    return DCI.DAG.getConstantFP(
-        APFloat::getQNaN(SelectionDAG::EVTToAPFloatSemantics(VT)), SDLoc(N),
-        VT);
+    return DCI.DAG.getConstantFP(APFloat::getQNaN(VT.getFltSemantics()),
+                                 SDLoc(N), VT);
   }
 
   if (VT == MVT::f32 && (N0.getOpcode() == ISD::UINT_TO_FP ||
@@ -12964,7 +12963,7 @@ SDValue SITargetLowering::performFCanonicalizeCombine(
 
   // fcanonicalize undef -> qnan
   if (N0.isUndef()) {
-    APFloat QNaN = APFloat::getQNaN(SelectionDAG::EVTToAPFloatSemantics(VT));
+    APFloat QNaN = APFloat::getQNaN(VT.getFltSemantics());
     return DAG.getConstantFP(QNaN, SDLoc(N), VT);
   }
 
@@ -15103,7 +15102,7 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
     } else
       break;
 
-    SmallVector<SDValue, 9> Ops(Node->op_begin(), Node->op_end());
+    SmallVector<SDValue, 9> Ops(Node->ops());
     Ops[1] = Src0;
     Ops[3] = Src1;
     Ops[5] = Src2;
@@ -16114,6 +16113,39 @@ static bool isBFloat2(Type *Ty) {
   return VT && VT->getNumElements() == 2 && VT->getElementType()->isBFloatTy();
 }
 
+/// \return true if atomicrmw integer ops work for the type.
+static bool isAtomicRMWLegalIntTy(Type *Ty) {
+  if (auto *IT = dyn_cast<IntegerType>(Ty)) {
+    unsigned BW = IT->getBitWidth();
+    return BW == 32 || BW == 64;
+  }
+
+  return false;
+}
+
+/// \return true if this atomicrmw xchg type can be selected.
+static bool isAtomicRMWLegalXChgTy(const AtomicRMWInst *RMW) {
+  Type *Ty = RMW->getType();
+  if (isAtomicRMWLegalIntTy(Ty))
+    return true;
+
+  if (PointerType *PT = dyn_cast<PointerType>(Ty)) {
+    const DataLayout &DL = RMW->getFunction()->getParent()->getDataLayout();
+    unsigned BW = DL.getPointerSizeInBits(PT->getAddressSpace());
+    return BW == 32 || BW == 64;
+  }
+
+  if (Ty->isFloatTy() || Ty->isDoubleTy())
+    return true;
+
+  if (FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty)) {
+    return VT->getNumElements() == 2 &&
+           VT->getElementType()->getPrimitiveSizeInBits() == 16;
+  }
+
+  return false;
+}
+
 /// \returns true if it's valid to emit a native instruction for \p RMW, based
 /// on the properties of the target memory.
 static bool globalMemoryFPAtomicIsLegal(const GCNSubtarget &Subtarget,
@@ -16132,14 +16164,15 @@ static bool globalMemoryFPAtomicIsLegal(const GCNSubtarget &Subtarget,
   } else if (Subtarget.supportsAgentScopeFineGrainedRemoteMemoryAtomics())
     return true;
 
-  if (RMW->hasMetadata("amdgpu.no.fine.grained.memory"))
-    return true;
+  return RMW->hasMetadata("amdgpu.no.fine.grained.memory");
+}
 
-  // TODO: Auto-upgrade this attribute to the metadata in function body and stop
-  // checking it.
-  return RMW->getFunction()
-      ->getFnAttribute("amdgpu-unsafe-fp-atomics")
-      .getValueAsBool();
+/// \return Action to perform on AtomicRMWInsts for integer operations.
+static TargetLowering::AtomicExpansionKind
+atomicSupportedIfLegalIntType(const AtomicRMWInst *RMW) {
+  return isAtomicRMWLegalIntTy(RMW->getType())
+             ? TargetLowering::AtomicExpansionKind::None
+             : TargetLowering::AtomicExpansionKind::CmpXChg;
 }
 
 TargetLowering::AtomicExpansionKind
@@ -16161,7 +16194,22 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       SSID == SyncScope::System ||
       SSID == RMW->getContext().getOrInsertSyncScopeID("one-as");
 
-  switch (RMW->getOperation()) {
+  auto Op = RMW->getOperation();
+  switch (Op) {
+  case AtomicRMWInst::Xchg: {
+    // PCIe supports add and xchg for system atomics.
+    return isAtomicRMWLegalXChgTy(RMW)
+               ? TargetLowering::AtomicExpansionKind::None
+               : TargetLowering::AtomicExpansionKind::CmpXChg;
+
+    // PCIe supports add and xchg for system atomics.
+    return atomicSupportedIfLegalIntType(RMW);
+  }
+  case AtomicRMWInst::Add:
+  case AtomicRMWInst::And:
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap:
+    return atomicSupportedIfLegalIntType(RMW);
   case AtomicRMWInst::Sub:
   case AtomicRMWInst::Or:
   case AtomicRMWInst::Xor: {
@@ -16173,7 +16221,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
         return AtomicExpansionKind::Expand;
     }
 
-    break;
+    return atomicSupportedIfLegalIntType(RMW);
   }
   case AtomicRMWInst::FAdd: {
     Type *Ty = RMW->getType();
@@ -16335,13 +16383,16 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       if (HasSystemScope)
         return AtomicExpansionKind::CmpXChg;
     }
-    break;
+
+    return atomicSupportedIfLegalIntType(RMW);
   }
+  case AtomicRMWInst::Nand:
+  case AtomicRMWInst::FSub:
   default:
-    break;
+    return AtomicExpansionKind::CmpXChg;
   }
 
-  return AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(RMW);
+  llvm_unreachable("covered atomicrmw op switch");
 }
 
 TargetLowering::AtomicExpansionKind
@@ -16550,9 +16601,6 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   //
   // With this expansion we produce the following code:
   //   [...]
-  //   br label %atomicrmw.check.shared
-  //
-  // atomicrmw.check.shared:
   //   %is.shared = call i1 @llvm.amdgcn.is.shared(ptr %addr)
   //   br i1 %is.shared, label %atomicrmw.shared, label %atomicrmw.check.private
   //
@@ -16591,12 +16639,13 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   IRBuilder<> Builder(AI);
   LLVMContext &Ctx = Builder.getContext();
 
+  // If the return value isn't used, do not introduce a false use in the phi.
+  bool ReturnValueIsUsed = !AI->use_empty();
+
   BasicBlock *BB = Builder.GetInsertBlock();
   Function *F = BB->getParent();
   BasicBlock *ExitBB =
       BB->splitBasicBlock(Builder.GetInsertPoint(), "atomicrmw.end");
-  BasicBlock *CheckSharedBB =
-      BasicBlock::Create(Ctx, "atomicrmw.check.shared", F, ExitBB);
   BasicBlock *SharedBB = BasicBlock::Create(Ctx, "atomicrmw.shared", F, ExitBB);
   BasicBlock *CheckPrivateBB =
       BasicBlock::Create(Ctx, "atomicrmw.check.private", F, ExitBB);
@@ -16623,9 +16672,6 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
 
   std::prev(BB->end())->eraseFromParent();
   Builder.SetInsertPoint(BB);
-  Builder.CreateBr(CheckSharedBB);
-
-  Builder.SetInsertPoint(CheckSharedBB);
   CallInst *IsShared = Builder.CreateIntrinsic(Intrinsic::amdgcn_is_shared, {},
                                                {Addr}, nullptr, "is.shared");
   Builder.CreateCondBr(IsShared, SharedBB, CheckPrivateBB);
@@ -16659,13 +16705,18 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   Builder.CreateBr(PhiBB);
 
   Builder.SetInsertPoint(PhiBB);
-  PHINode *Loaded = Builder.CreatePHI(ValTy, 3, "loaded.phi");
-  Loaded->addIncoming(LoadedShared, SharedBB);
-  Loaded->addIncoming(LoadedPrivate, PrivateBB);
-  Loaded->addIncoming(LoadedGlobal, GlobalBB);
+
+  if (ReturnValueIsUsed) {
+    PHINode *Loaded = Builder.CreatePHI(ValTy, 3);
+    Loaded->addIncoming(LoadedShared, SharedBB);
+    Loaded->addIncoming(LoadedPrivate, PrivateBB);
+    Loaded->addIncoming(LoadedGlobal, GlobalBB);
+    Loaded->takeName(AI);
+    AI->replaceAllUsesWith(Loaded);
+  }
+
   Builder.CreateBr(ExitBB);
 
-  AI->replaceAllUsesWith(Loaded);
   AI->eraseFromParent();
 }
 

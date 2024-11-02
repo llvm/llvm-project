@@ -493,7 +493,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
       } else {
         context.messages().Say(
             "Initialization expression for '%s' (%s) cannot be computed as a constant value"_err_en_US,
-            symbol.name(), folded.AsFortran());
+            symbol.name(), x.AsFortran());
       }
     } else if (xType) {
       context.messages().Say(

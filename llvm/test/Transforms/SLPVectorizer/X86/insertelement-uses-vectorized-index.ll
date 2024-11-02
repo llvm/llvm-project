@@ -7,6 +7,7 @@ define void @test(ptr %0) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> <ptr null, ptr poison>, ptr [[TMP0]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint <2 x ptr> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr null to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc <2 x i64> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    switch i32 0, label %[[NEWFUNCROOT994:.*]] [
 ; CHECK-NEXT:      i32 1, label %[[NEWFUNCROOT994]]
@@ -17,7 +18,6 @@ define void @test(ptr %0) {
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[NEWFUNCROOT994]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[TMP5]], i64 [[TMP6]]
 ; CHECK-NEXT:    ret void
 ;

@@ -94,6 +94,7 @@ static_library("AST") {
     "InheritViz.cpp",
     "Interp/ByteCodeEmitter.cpp",
     "Interp/Compiler.cpp",
+    "Interp/CompilerComplex.cpp",
     "Interp/Context.cpp",
     "Interp/Descriptor.cpp",
     "Interp/Disasm.cpp",

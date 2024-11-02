@@ -5272,6 +5272,22 @@ struct StrictFPUpgradeVisitor : public InstVisitor<StrictFPUpgradeVisitor> {
     Call.addFnAttr(Attribute::NoBuiltin);
   }
 };
+
+/// Replace "amdgpu-unsafe-fp-atomics" metadata with atomicrmw metadata
+struct AMDGPUUnsafeFPAtomicsUpgradeVisitor
+    : public InstVisitor<AMDGPUUnsafeFPAtomicsUpgradeVisitor> {
+  AMDGPUUnsafeFPAtomicsUpgradeVisitor() = default;
+
+  void visitAtomicRMWInst(AtomicRMWInst &RMW) {
+    if (!RMW.isFloatingPointOperation())
+      return;
+
+    MDNode *Empty = MDNode::get(RMW.getContext(), {});
+    RMW.setMetadata("amdgpu.no.fine.grained.host.memory", Empty);
+    RMW.setMetadata("amdgpu.no.remote.memory.access", Empty);
+    RMW.setMetadata("amdgpu.ignore.denormal.mode", Empty);
+  }
+};
 } // namespace
 
 void llvm::UpgradeFunctionAttributes(Function &F) {
@@ -5293,6 +5309,24 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
       A.isValid() && A.isStringAttribute()) {
     F.setSection(A.getValueAsString());
     F.removeFnAttr("implicit-section-name");
+  }
+
+  if (!F.empty()) {
+    // For some reason this is called twice, and the first time is before any
+    // instructions are loaded into the body.
+
+    if (Attribute A = F.getFnAttribute("amdgpu-unsafe-fp-atomics");
+        A.isValid()) {
+
+      if (A.getValueAsBool()) {
+        AMDGPUUnsafeFPAtomicsUpgradeVisitor Visitor;
+        Visitor.visit(F);
+      }
+
+      // We will leave behind dead attribute uses on external declarations, but
+      // clang never added these to declarations anyway.
+      F.removeFnAttr("amdgpu-unsafe-fp-atomics");
+    }
   }
 }
 

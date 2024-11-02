@@ -161,18 +161,34 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
 
         // TODO: Skip masking high bits if def is known boolean.
 
-        bool IsSGPR = TRI.isSGPRClass(SrcRC);
-        unsigned AndOpc =
-            IsSGPR ? AMDGPU::S_AND_B32 : AMDGPU::V_AND_B32_e32;
-        auto And = BuildMI(*BB, &I, DL, TII.get(AndOpc), MaskedReg)
-            .addImm(1)
-            .addReg(SrcReg);
-        if (IsSGPR)
-          And.setOperandDead(3); // Dead scc
+        if (AMDGPU::getRegBitWidth(SrcRC->getID()) == 16) {
+          assert(Subtarget->useRealTrue16Insts());
+          const int64_t NoMods = 0;
+          BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_AND_B16_t16_e64), MaskedReg)
+              .addImm(NoMods)
+              .addImm(1)
+              .addImm(NoMods)
+              .addReg(SrcReg)
+              .addImm(NoMods);
+          BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_CMP_NE_U16_t16_e64), DstReg)
+              .addImm(NoMods)
+              .addImm(0)
+              .addImm(NoMods)
+              .addReg(MaskedReg)
+              .addImm(NoMods);
+        } else {
+          bool IsSGPR = TRI.isSGPRClass(SrcRC);
+          unsigned AndOpc = IsSGPR ? AMDGPU::S_AND_B32 : AMDGPU::V_AND_B32_e32;
+          auto And = BuildMI(*BB, &I, DL, TII.get(AndOpc), MaskedReg)
+                         .addImm(1)
+                         .addReg(SrcReg);
+          if (IsSGPR)
+            And.setOperandDead(3); // Dead scc
 
-        BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_CMP_NE_U32_e64), DstReg)
-            .addImm(0)
-            .addReg(MaskedReg);
+          BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_CMP_NE_U32_e64), DstReg)
+              .addImm(0)
+              .addReg(MaskedReg);
+        }
       }
 
       if (!MRI->getRegClassOrNull(SrcReg))
@@ -2204,6 +2220,16 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
       !RBI.constrainGenericRegister(DstReg, *DstRC, *MRI)) {
     LLVM_DEBUG(dbgs() << "Failed to constrain G_TRUNC\n");
     return false;
+  }
+
+  if (DstRC == &AMDGPU::VGPR_16RegClass && SrcSize == 32) {
+    assert(STI.useRealTrue16Insts());
+    const DebugLoc &DL = I.getDebugLoc();
+    MachineBasicBlock *MBB = I.getParent();
+    BuildMI(*MBB, I, DL, TII.get(AMDGPU::COPY), DstReg)
+        .addReg(SrcReg, 0, AMDGPU::lo16);
+    I.eraseFromParent();
+    return true;
   }
 
   if (DstTy == LLT::fixed_vector(2, 16) && SrcTy == LLT::fixed_vector(2, 32)) {
@@ -4466,9 +4492,8 @@ bool AMDGPUInstructionSelector::checkFlatScratchSVSSwizzleBug(
   // from the two low order bits (i.e. from bit 1 into bit 2) when adding
   // voffset to (soffset + inst_offset).
   auto VKnown = KB->getKnownBits(VAddr);
-  auto SKnown = KnownBits::computeForAddSub(
-      /*Add=*/true, /*NSW=*/false, /*NUW=*/false, KB->getKnownBits(SAddr),
-      KnownBits::makeConstant(APInt(32, ImmOffset)));
+  auto SKnown = KnownBits::add(KB->getKnownBits(SAddr),
+                               KnownBits::makeConstant(APInt(32, ImmOffset)));
   uint64_t VMax = VKnown.getMaxValue().getZExtValue();
   uint64_t SMax = SKnown.getMaxValue().getZExtValue();
   return (VMax & 3) + (SMax & 3) >= 4;

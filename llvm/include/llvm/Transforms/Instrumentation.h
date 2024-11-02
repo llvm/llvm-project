@@ -30,6 +30,10 @@ class Triple;
 class OptimizationRemarkEmitter;
 class Comdat;
 class CallBase;
+class Module;
+
+/// Check if module has flag attached, if not add the flag.
+bool checkIfAlreadyInstrumented(Module &M, StringRef Flag);
 
 /// Instrumentation passes often insert conditional checks into entry blocks.
 /// Call this function before splitting the entry block to move instructions

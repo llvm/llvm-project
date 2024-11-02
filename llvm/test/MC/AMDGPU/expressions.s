@@ -337,4 +337,4 @@ v_sin_f32 v0, -s1000
 
 xnack_mask_lo=1
 v_sin_f32 v0, xnack_mask_lo
-// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: register not available on this GPU
+// NOVI: :[[@LINE-1]]:{{[0-9]+}}: error: xnack_mask_lo register not available on this GPU

@@ -110,11 +110,6 @@ Combiner::Combiner(MachineFunction &MF, CombinerInfo &CInfo,
   if (CSEInfo)
     B.setCSEInfo(CSEInfo);
 
-  // Setup observer.
-  ObserverWrapper->addObserver(WLObserver.get());
-  if (CSEInfo)
-    ObserverWrapper->addObserver(CSEInfo);
-
   B.setChangeObserver(*ObserverWrapper);
 }
 
@@ -147,13 +142,16 @@ bool Combiner::combineMachineInstrs() {
     LLVM_DEBUG(dbgs() << "\n\nCombiner iteration #" << Iteration << '\n');
 
     WorkList.clear();
+    ObserverWrapper->clearObservers();
+    if (CSEInfo)
+      ObserverWrapper->addObserver(CSEInfo);
 
     // Collect all instructions. Do a post order traversal for basic blocks and
     // insert with list bottom up, so while we pop_back_val, we'll traverse top
     // down RPOT.
     Changed = false;
 
-    RAIIDelegateInstaller DelInstall(MF, ObserverWrapper.get());
+    RAIIMFObsDelInstaller DelInstall(MF, *ObserverWrapper);
     for (MachineBasicBlock *MBB : post_order(&MF)) {
       for (MachineInstr &CurMI :
            llvm::make_early_inc_range(llvm::reverse(*MBB))) {
@@ -168,6 +166,9 @@ bool Combiner::combineMachineInstrs() {
       }
     }
     WorkList.finalize();
+
+    // Only notify WLObserver during actual combines
+    ObserverWrapper->addObserver(WLObserver.get());
     // Main Loop. Process the instructions here.
     while (!WorkList.empty()) {
       MachineInstr *CurrInst = WorkList.pop_back_val();

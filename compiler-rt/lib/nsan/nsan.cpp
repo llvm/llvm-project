@@ -30,6 +30,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "nsan.h"
+#include "nsan_flags.h"
+#include "nsan_stats.h"
+#include "nsan_suppressions.h"
+#include "nsan_thread.h"
+
 #include <assert.h>
 #include <math.h>
 #include <stdint.h>
@@ -43,11 +49,6 @@
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
 
-#include "nsan/nsan.h"
-#include "nsan/nsan_flags.h"
-#include "nsan/nsan_stats.h"
-#include "nsan/nsan_suppressions.h"
-
 using namespace __sanitizer;
 using namespace __nsan;
 
@@ -55,20 +56,20 @@ constexpr int kMaxVectorWidth = 8;
 
 // When copying application memory, we also copy its shadow and shadow type.
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
-__nsan_copy_values(const u8 *daddr, const u8 *saddr, uptr size) {
-  internal_memmove((void *)GetShadowTypeAddrFor(daddr),
-                   GetShadowTypeAddrFor(saddr), size);
-  internal_memmove((void *)GetShadowAddrFor(daddr), GetShadowAddrFor(saddr),
+__nsan_copy_values(const void *daddr, const void *saddr, uptr size) {
+  internal_memmove(GetShadowTypeAddrFor(daddr), GetShadowTypeAddrFor(saddr),
+                   size);
+  internal_memmove(GetShadowAddrFor(daddr), GetShadowAddrFor(saddr),
                    size * kShadowScale);
 }
 
 #define NSAN_COPY_VALUES_N(N)                                                  \
   extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_copy_##N(               \
       const u8 *daddr, const u8 *saddr) {                                      \
-    __builtin_memmove((void *)GetShadowTypeAddrFor(daddr),                     \
+    __builtin_memmove(GetShadowTypeAddrFor(daddr),                             \
                       GetShadowTypeAddrFor(saddr), N);                         \
-    __builtin_memmove((void *)GetShadowAddrFor(daddr),                         \
-                      GetShadowAddrFor(saddr), N * kShadowScale);              \
+    __builtin_memmove(GetShadowAddrFor(daddr), GetShadowAddrFor(saddr),        \
+                      N *kShadowScale);                                        \
   }
 
 NSAN_COPY_VALUES_N(4)
@@ -76,14 +77,14 @@ NSAN_COPY_VALUES_N(8)
 NSAN_COPY_VALUES_N(16)
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
-__nsan_set_value_unknown(const u8 *addr, uptr size) {
-  internal_memset((void *)GetShadowTypeAddrFor(addr), 0, size);
+__nsan_set_value_unknown(const void *addr, uptr size) {
+  internal_memset(GetShadowTypeAddrFor(addr), 0, size);
 }
 
 #define NSAN_SET_VALUE_UNKNOWN_N(N)                                            \
   extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_set_value_unknown_##N(  \
       const u8 *daddr) {                                                       \
-    __builtin_memset((void *)GetShadowTypeAddrFor(daddr), 0, N);               \
+    __builtin_memset(GetShadowTypeAddrFor(daddr), 0, N);                       \
   }
 
 NSAN_SET_VALUE_UNKNOWN_N(4)
@@ -306,14 +307,14 @@ __nsan_get_shadow_ptr_for_longdouble_load(const u8 *load_addr, uptr n) {
 // opaque.
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE u8 *
 __nsan_internal_get_raw_shadow_ptr(const u8 *addr) {
-  return GetShadowAddrFor(const_cast<u8 *>(addr));
+  return GetShadowAddrFor(addr);
 }
 
 // Returns the raw shadow type pointer. The returned pointer should be
 // considered opaque.
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE u8 *
 __nsan_internal_get_raw_shadow_type_ptr(const u8 *addr) {
-  return reinterpret_cast<u8 *>(GetShadowTypeAddrFor(const_cast<u8 *>(addr)));
+  return reinterpret_cast<u8 *>(GetShadowTypeAddrFor(addr));
 }
 
 static ValueType getValueType(u8 c) { return static_cast<ValueType>(c & 0x3); }
@@ -806,6 +807,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_init() {
   if (nsan_initialized)
     return;
   nsan_init_is_running = true;
+  SanitizerToolName = "NumericalStabilitySanitizer";
 
   InitializeFlags();
   InitializeSuppressions();
@@ -813,10 +815,16 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_init() {
 
   DisableCoreDumperIfNecessary();
 
-  if (!MmapFixedNoReserve(TypesAddr(), UnusedAddr() - TypesAddr()))
+  if (!MmapFixedNoReserve(TypesAddr(), AllocatorAddr() - TypesAddr()))
     Die();
 
   InitializeInterceptors();
+  NsanTSDInit(NsanTSDDtor);
+  NsanAllocatorInit();
+
+  NsanThread *main_thread = NsanThread::Create(nullptr, nullptr);
+  SetCurrentThread(main_thread);
+  main_thread->Init();
 
   InitializeStats();
   if (flags().print_stats_on_exit)

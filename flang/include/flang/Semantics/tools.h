@@ -442,6 +442,18 @@ std::list<std::list<SymbolRef>> GetStorageAssociations(const Scope &);
 //     closure of its components (including POINTERs) and the
 //     PotentialAndPointer subobject components of its non-POINTER derived type
 //     components.
+//
+// type t1                     ultimate components:  x, a, p
+//  real x                     direct components:    x, a, p
+//  real, allocatable :: a     potential components: x, a
+//  real, pointer :: p         potential & pointers: x, a, p
+// end type
+// type t2                     ultimate components:  y, c%x, c%a, c%p, b
+//  real y                     direct components:    y, c, c%x, c%a, c%p, b
+//  type(t1) :: c              potential components: y, c, c%x, c%a, b, b%x, b%a
+//  type(t1), allocatable :: b potential & pointers: potentials + c%p + b%p
+// end type
+//
 // Parent and procedure components are considered against these definitions.
 // For this kind of iterator, the component tree is recursively visited in the
 // following order:
@@ -620,8 +632,8 @@ UltimateComponentIterator::const_iterator FindAllocatableUltimateComponent(
     const DerivedTypeSpec &);
 DirectComponentIterator::const_iterator FindAllocatableOrPointerDirectComponent(
     const DerivedTypeSpec &);
-UltimateComponentIterator::const_iterator
-FindPolymorphicAllocatableUltimateComponent(const DerivedTypeSpec &);
+PotentialComponentIterator::const_iterator
+FindPolymorphicAllocatablePotentialComponent(const DerivedTypeSpec &);
 
 // The LabelEnforce class (given a set of labels) provides an error message if
 // there is a branch to a label which is not in the given set.

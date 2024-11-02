@@ -30,7 +30,7 @@ static cl::list<std::string> ContextRoots(
         "root of an interesting graph, which will be profiled independently "
         "from other similar graphs."));
 
-bool PGOCtxProfLoweringPass::isContextualIRPGOEnabled() {
+bool PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled() {
   return !ContextRoots.empty();
 }
 

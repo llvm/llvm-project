@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Tests valid and invalid usage of forward references to procedures
 ! in specification expressions.
 module m
@@ -56,3 +56,16 @@ subroutine nester
     if2 = n
   end function
 end subroutine
+
+block data
+  common /blk2/ n
+  data n/100/
+  !ERROR: Automatic data object 'a' may not appear in a BLOCK DATA subprogram
+  real a(n)
+end
+
+program main
+  common /blk2/ n
+  !PORTABILITY: Automatic data object 'a' should not appear in the specification part of a main program
+  real a(n)
+end

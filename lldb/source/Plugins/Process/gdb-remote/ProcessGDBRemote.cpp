@@ -2354,6 +2354,9 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         if (!key.getAsInteger(16, reg))
           expedited_register_map[reg] = std::string(std::move(value));
       }
+      // swbreak and hwbreak are also expected keys, but we don't need to
+      // change our behaviour for them because lldb always expects the remote
+      // to adjust the program counter (if relevant, e.g., for x86 targets)
     }
 
     if (stop_pid != LLDB_INVALID_PROCESS_ID && stop_pid != pid) {

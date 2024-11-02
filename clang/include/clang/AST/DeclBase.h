@@ -324,6 +324,7 @@ private:
   static bool StatisticsEnabled;
 
 protected:
+  friend class ASTDeclMerger;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class ASTNodeImporter;

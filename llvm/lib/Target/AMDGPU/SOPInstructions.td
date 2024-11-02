@@ -640,12 +640,12 @@ class SOP2_64_32_32 <string opName, list<dag> pattern=[]> : SOP2_Pseudo <
 
 
 let Defs = [SCC] in { // Carry out goes to SCC
-let isCommutable = 1 in {
+let isCommutable = 1, isAdd = 1 in {
 def S_ADD_U32 : SOP2_32 <"s_add_u32">;
 def S_ADD_I32 : SOP2_32 <"s_add_i32",
   [(set i32:$sdst, (UniformBinFrag<add> SSrc_b32:$src0, SSrc_b32:$src1))]
 >;
-} // End isCommutable = 1
+} // End isCommutable = 1, isAdd = 1
 
 def S_SUB_U32 : SOP2_32 <"s_sub_u32">;
 def S_SUB_I32 : SOP2_32 <"s_sub_i32",

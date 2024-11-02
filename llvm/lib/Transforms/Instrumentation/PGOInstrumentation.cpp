@@ -321,6 +321,7 @@ static cl::opt<unsigned> PGOFunctionCriticalEdgeThreshold(
              " greater than this threshold."));
 
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
+extern cl::opt<std::string> UseCtxProfile;
 
 namespace llvm {
 // Command line option to turn on CFG dot dump after profile annotation.
@@ -338,9 +339,12 @@ extern cl::opt<bool> EnableVTableProfileUse;
 extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
 
+bool shouldInstrumentForCtxProf() {
+  return PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled() ||
+         !UseCtxProfile.empty();
+}
 bool shouldInstrumentEntryBB() {
-  return PGOInstrumentEntry ||
-         PGOCtxProfLoweringPass::isContextualIRPGOEnabled();
+  return PGOInstrumentEntry || shouldInstrumentForCtxProf();
 }
 
 // FIXME(mtrofin): re-enable this for ctx profiling, for non-indirect calls. Ctx
@@ -348,8 +352,7 @@ bool shouldInstrumentEntryBB() {
 // Supporting other values is relatively straight-forward - just another counter
 // range within the context.
 bool isValueProfilingDisabled() {
-  return DisableValueProfiling ||
-         PGOCtxProfLoweringPass::isContextualIRPGOEnabled();
+  return DisableValueProfiling || shouldInstrumentForCtxProf();
 }
 
 // Return a string describing the branch condition that can be
@@ -902,7 +905,7 @@ static void instrumentOneFunc(
   unsigned NumCounters =
       InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
 
-  if (PGOCtxProfLoweringPass::isContextualIRPGOEnabled()) {
+  if (shouldInstrumentForCtxProf()) {
     auto *CSIntrinsic =
         Intrinsic::getDeclaration(M, Intrinsic::instrprof_callsite);
     // We want to count the instrumentable callsites, then instrument them. This
@@ -1861,7 +1864,7 @@ static bool InstrumentAllFunctions(
     function_ref<BlockFrequencyInfo *(Function &)> LookupBFI, bool IsCS) {
   // For the context-sensitve instrumentation, we should have a separated pass
   // (before LTO/ThinLTO linking) to create these variables.
-  if (!IsCS && !PGOCtxProfLoweringPass::isContextualIRPGOEnabled())
+  if (!IsCS && !shouldInstrumentForCtxProf())
     createIRLevelProfileFlagVar(M, /*IsCS=*/false);
 
   Triple TT(M.getTargetTriple());
@@ -2112,7 +2115,7 @@ static bool annotateAllFunctions(
   bool InstrumentFuncEntry = PGOReader->instrEntryBBEnabled();
   if (PGOInstrumentEntry.getNumOccurrences() > 0)
     InstrumentFuncEntry = PGOInstrumentEntry;
-  InstrumentFuncEntry |= PGOCtxProfLoweringPass::isContextualIRPGOEnabled();
+  InstrumentFuncEntry |= shouldInstrumentForCtxProf();
 
   bool HasSingleByteCoverage = PGOReader->hasSingleByteCoverage();
   for (auto &F : M) {

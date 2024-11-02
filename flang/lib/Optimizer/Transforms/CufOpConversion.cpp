@@ -141,6 +141,20 @@ struct CufDeallocateOpConversion
   }
 };
 
+static bool inDeviceContext(mlir::Operation *op) {
+  if (op->getParentOfType<cuf::KernelOp>())
+    return true;
+  if (auto funcOp = op->getParentOfType<mlir::func::FuncOp>()) {
+    if (auto cudaProcAttr =
+            funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
+                cuf::getProcAttrName())) {
+      return cudaProcAttr.getValue() != cuf::ProcAttribute::Host &&
+             cudaProcAttr.getValue() != cuf::ProcAttribute::HostDevice;
+    }
+  }
+  return false;
+}
+
 struct CufAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -156,6 +170,16 @@ struct CufAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
     // Only convert cuf.alloc that allocates a descriptor.
     if (!boxTy)
       return failure();
+
+    if (inDeviceContext(op.getOperation())) {
+      // In device context just replace the cuf.alloc operation with a fir.alloc
+      // the cuf.free will be removed.
+      rewriter.replaceOpWithNewOp<fir::AllocaOp>(
+          op, op.getInType(), op.getUniqName() ? *op.getUniqName() : "",
+          op.getBindcName() ? *op.getBindcName() : "", op.getTypeparams(),
+          op.getShape());
+      return mlir::success();
+    }
 
     auto mod = op->getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
@@ -200,6 +224,11 @@ struct CufFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
     if (!mlir::isa<fir::BaseBoxType>(refTy.getEleTy()))
       return failure();
 
+    if (inDeviceContext(op.getOperation())) {
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
+
     auto mod = op->getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
@@ -234,9 +263,21 @@ public:
         fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/false);
     fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
                                          /*forceUnifiedTBAATree=*/false, *dl);
-
-    target.addIllegalOp<cuf::AllocOp, cuf::AllocateOp, cuf::DeallocateOp,
-                        cuf::FreeOp>();
+    target.addDynamicallyLegalOp<cuf::AllocOp>([](::cuf::AllocOp op) {
+      return !mlir::isa<fir::BaseBoxType>(op.getInType());
+    });
+    target.addDynamicallyLegalOp<cuf::FreeOp>([](::cuf::FreeOp op) {
+      if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(
+              op.getDevptr().getType())) {
+        return !mlir::isa<fir::BaseBoxType>(refTy.getEleTy());
+      }
+      return true;
+    });
+    target.addDynamicallyLegalOp<cuf::AllocateOp>(
+        [](::cuf::AllocateOp op) { return isBoxGlobal(op); });
+    target.addDynamicallyLegalOp<cuf::DeallocateOp>(
+        [](::cuf::DeallocateOp op) { return isBoxGlobal(op); });
+    target.addLegalDialect<fir::FIROpsDialect>();
     patterns.insert<CufAllocOpConversion>(ctx, &*dl, &typeConverter);
     patterns.insert<CufAllocateOpConversion, CufDeallocateOpConversion,
                     CufFreeOpConversion>(ctx);

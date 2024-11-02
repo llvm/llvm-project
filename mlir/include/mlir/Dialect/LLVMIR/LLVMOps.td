@@ -1623,10 +1623,15 @@ def LLVM_ConstantOp
     vectors. It has a mandatory `value` attribute, which may be an integer,
     floating point attribute; dense or sparse attribute containing integers or
     floats. The type of the attribute is one of the corresponding MLIR builtin
-    types. It may be omitted for `i64` and `f64` types that are implied. The
-    operation produces a new SSA value of the specified LLVM IR dialect type.
-    The type of that value _must_ correspond to the attribute type converted to
-    LLVM IR.
+    types. It may be omitted for `i64` and `f64` types that are implied.
+
+    The operation produces a new SSA value of the specified LLVM IR dialect
+    type. Certain builtin types such as integer, float and vector types are
+    also allowed. The result type _must_ correspond to the attribute type
+    converted to LLVM IR. In particular, the number of elements of a container
+    type must match the number of elements in the attribute. If the type is or
+    contains a scalable vector type, the attribute must be a splat elements
+    attribute.
 
     Examples:
 

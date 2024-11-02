@@ -10,6 +10,7 @@
 #include "clang-include-cleaner/Types.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -24,6 +25,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Annotations/Annotations.h"
@@ -53,9 +55,11 @@ MATCHER_P(named, N, "") {
 }
 
 MATCHER_P(FileNamed, N, "") {
-  if (arg.getFileEntry().tryGetRealPathName() == N)
+  llvm::StringRef ActualName =
+      llvm::sys::path::remove_leading_dotslash(arg.getName());
+  if (ActualName == N)
     return true;
-  *result_listener << arg.getFileEntry().tryGetRealPathName().str();
+  *result_listener << ActualName.str();
   return false;
 }
 
@@ -317,7 +321,8 @@ protected:
   }
 
   TestAST build(bool ResetPragmaIncludes = true) {
-    if (ResetPragmaIncludes) PI = PragmaIncludes();
+    if (ResetPragmaIncludes)
+      PI = PragmaIncludes();
     return TestAST(Inputs);
   }
 
@@ -535,16 +540,33 @@ TEST_F(PragmaIncludeTest, IWYUExportBlock) {
   TestAST Processed = build();
   auto &FM = Processed.fileManager();
 
-  EXPECT_THAT(PI.getExporters(FM.getFile("private1.h").get(), FM),
-              testing::UnorderedElementsAre(FileNamed("export1.h"),
-                                            FileNamed("normal.h")));
-  EXPECT_THAT(PI.getExporters(FM.getFile("private2.h").get(), FM),
-              testing::UnorderedElementsAre(FileNamed("export1.h")));
-  EXPECT_THAT(PI.getExporters(FM.getFile("private3.h").get(), FM),
-              testing::UnorderedElementsAre(FileNamed("export1.h")));
+  auto GetNames = [](llvm::ArrayRef<FileEntryRef> FEs) {
+    std::string Result;
+    llvm::raw_string_ostream OS(Result);
+    for (auto &FE : FEs) {
+      OS << FE.getName() << " ";
+    }
+    OS.flush();
+    return Result;
+  };
+  auto Exporters = PI.getExporters(FM.getFile("private1.h").get(), FM);
+  EXPECT_THAT(Exporters, testing::UnorderedElementsAre(FileNamed("export1.h"),
+                                                       FileNamed("normal.h")))
+      << GetNames(Exporters);
 
-  EXPECT_TRUE(PI.getExporters(FM.getFile("foo.h").get(), FM).empty());
-  EXPECT_TRUE(PI.getExporters(FM.getFile("bar.h").get(), FM).empty());
+  Exporters = PI.getExporters(FM.getFile("private2.h").get(), FM);
+  EXPECT_THAT(Exporters, testing::UnorderedElementsAre(FileNamed("export1.h")))
+      << GetNames(Exporters);
+
+  Exporters = PI.getExporters(FM.getFile("private3.h").get(), FM);
+  EXPECT_THAT(Exporters, testing::UnorderedElementsAre(FileNamed("export1.h")))
+      << GetNames(Exporters);
+
+  Exporters = PI.getExporters(FM.getFile("foo.h").get(), FM);
+  EXPECT_TRUE(Exporters.empty()) << GetNames(Exporters);
+
+  Exporters = PI.getExporters(FM.getFile("bar.h").get(), FM);
+  EXPECT_TRUE(Exporters.empty()) << GetNames(Exporters);
 }
 
 TEST_F(PragmaIncludeTest, SelfContained) {

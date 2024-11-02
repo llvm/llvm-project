@@ -63,20 +63,15 @@ class AllocaInst;
 /// The base class for IR Change classes.
 class IRChangeBase {
 protected:
-  Tracker &Parent;
+  friend class Tracker; // For Parent.
 
 public:
-  IRChangeBase(Tracker &Parent);
   /// This runs when changes get reverted.
-  virtual void revert() = 0;
+  virtual void revert(Tracker &Tracker) = 0;
   /// This runs when changes get accepted.
   virtual void accept() = 0;
   virtual ~IRChangeBase() = default;
 #ifndef NDEBUG
-  /// \Returns the index of this change by iterating over all changes in the
-  /// tracker. This is only used for debugging.
-  unsigned getIdx() const;
-  void dumpCommon(raw_ostream &OS) const { OS << getIdx() << ". "; }
   virtual void dump(raw_ostream &OS) const = 0;
   LLVM_DUMP_METHOD virtual void dump() const = 0;
   friend raw_ostream &operator<<(raw_ostream &OS, const IRChangeBase &C) {
@@ -92,21 +87,17 @@ class UseSet : public IRChangeBase {
   Value *OrigV = nullptr;
 
 public:
-  UseSet(const Use &U, Tracker &Tracker)
-      : IRChangeBase(Tracker), U(U), OrigV(U.get()) {}
-  void revert() final { U.set(OrigV); }
+  UseSet(const Use &U) : U(U), OrigV(U.get()) {}
+  void revert(Tracker &Tracker) final { U.set(OrigV); }
   void accept() final {}
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const final {
-    dumpCommon(OS);
-    OS << "UseSet";
-  }
+  void dump(raw_ostream &OS) const final { OS << "UseSet"; }
   LLVM_DUMP_METHOD void dump() const final;
 #endif
 };
 
 class PHISetIncoming : public IRChangeBase {
-  PHINode &PHI;
+  PHINode *PHI;
   unsigned Idx;
   PointerUnion<Value *, BasicBlock *> OrigValueOrBB;
 
@@ -115,50 +106,41 @@ public:
     Value,
     Block,
   };
-  PHISetIncoming(PHINode &PHI, unsigned Idx, What What, Tracker &Tracker);
-  void revert() final;
+  PHISetIncoming(PHINode *PHI, unsigned Idx, What What);
+  void revert(Tracker &Tracker) final;
   void accept() final {}
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const final {
-    dumpCommon(OS);
-    OS << "PHISetIncoming";
-  }
+  void dump(raw_ostream &OS) const final { OS << "PHISetIncoming"; }
   LLVM_DUMP_METHOD void dump() const final;
 #endif
 };
 
 class PHIRemoveIncoming : public IRChangeBase {
-  PHINode &PHI;
+  PHINode *PHI;
   unsigned RemovedIdx;
   Value *RemovedV;
   BasicBlock *RemovedBB;
 
 public:
-  PHIRemoveIncoming(PHINode &PHI, unsigned RemovedIdx, Tracker &Tracker);
-  void revert() final;
+  PHIRemoveIncoming(PHINode *PHI, unsigned RemovedIdx);
+  void revert(Tracker &Tracker) final;
   void accept() final {}
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const final {
-    dumpCommon(OS);
-    OS << "PHISetIncoming";
-  }
+  void dump(raw_ostream &OS) const final { OS << "PHISetIncoming"; }
   LLVM_DUMP_METHOD void dump() const final;
 #endif
 };
 
 class PHIAddIncoming : public IRChangeBase {
-  PHINode &PHI;
+  PHINode *PHI;
   unsigned Idx;
 
 public:
-  PHIAddIncoming(PHINode &PHI, Tracker &Tracker);
-  void revert() final;
+  PHIAddIncoming(PHINode *PHI);
+  void revert(Tracker &Tracker) final;
   void accept() final {}
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const final {
-    dumpCommon(OS);
-    OS << "PHISetIncoming";
-  }
+  void dump(raw_ostream &OS) const final { OS << "PHISetIncoming"; }
   LLVM_DUMP_METHOD void dump() const final;
 #endif
 };
@@ -169,17 +151,14 @@ class UseSwap : public IRChangeBase {
   Use OtherUse;
 
 public:
-  UseSwap(const Use &ThisUse, const Use &OtherUse, Tracker &Tracker)
-      : IRChangeBase(Tracker), ThisUse(ThisUse), OtherUse(OtherUse) {
+  UseSwap(const Use &ThisUse, const Use &OtherUse)
+      : ThisUse(ThisUse), OtherUse(OtherUse) {
     assert(ThisUse.getUser() == OtherUse.getUser() && "Expected same user!");
   }
-  void revert() final { ThisUse.swap(OtherUse); }
+  void revert(Tracker &Tracker) final { ThisUse.swap(OtherUse); }
   void accept() final {}
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const final {
-    dumpCommon(OS);
-    OS << "UseSwap";
-  }
+  void dump(raw_ostream &OS) const final { OS << "UseSwap"; }
   LLVM_DUMP_METHOD void dump() const final;
 #endif
 };
@@ -203,14 +182,11 @@ class EraseFromParent : public IRChangeBase {
   std::unique_ptr<sandboxir::Value> ErasedIPtr;
 
 public:
-  EraseFromParent(std::unique_ptr<sandboxir::Value> &&IPtr, Tracker &Tracker);
-  void revert() final;
+  EraseFromParent(std::unique_ptr<sandboxir::Value> &&IPtr);
+  void revert(Tracker &Tracker) final;
   void accept() final;
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const final {
-    dumpCommon(OS);
-    OS << "EraseFromParent";
-  }
+  void dump(raw_ostream &OS) const final { OS << "EraseFromParent"; }
   LLVM_DUMP_METHOD void dump() const final;
   friend raw_ostream &operator<<(raw_ostream &OS, const EraseFromParent &C) {
     C.dump(OS);
@@ -226,15 +202,12 @@ class RemoveFromParent : public IRChangeBase {
   PointerUnion<Instruction *, BasicBlock *> NextInstrOrBB;
 
 public:
-  RemoveFromParent(Instruction *RemovedI, Tracker &Tracker);
-  void revert() final;
+  RemoveFromParent(Instruction *RemovedI);
+  void revert(Tracker &Tracker) final;
   void accept() final {};
   Instruction *getInstruction() const { return RemovedI; }
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const final {
-    dumpCommon(OS);
-    OS << "RemoveFromParent";
-  }
+  void dump(raw_ostream &OS) const final { OS << "RemoveFromParent"; }
   LLVM_DUMP_METHOD void dump() const final;
 #endif // NDEBUG
 };
@@ -265,15 +238,11 @@ class GenericSetter final : public IRChangeBase {
   SavedValT OrigVal;
 
 public:
-  GenericSetter(InstrT *I, Tracker &Tracker)
-      : IRChangeBase(Tracker), I(I), OrigVal((I->*GetterFn)()) {}
-  void revert() final { (I->*SetterFn)(OrigVal); }
+  GenericSetter(InstrT *I) : I(I), OrigVal((I->*GetterFn)()) {}
+  void revert(Tracker &Tracker) final { (I->*SetterFn)(OrigVal); }
   void accept() final {}
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const final {
-    dumpCommon(OS);
-    OS << "GenericSetter";
-  }
+  void dump(raw_ostream &OS) const final { OS << "GenericSetter"; }
   LLVM_DUMP_METHOD void dump() const final {
     dump(dbgs());
     dbgs() << "\n";
@@ -287,14 +256,11 @@ class CallBrInstSetIndirectDest : public IRChangeBase {
   BasicBlock *OrigIndirectDest;
 
 public:
-  CallBrInstSetIndirectDest(CallBrInst *CallBr, unsigned Idx, Tracker &Tracker);
-  void revert() final;
+  CallBrInstSetIndirectDest(CallBrInst *CallBr, unsigned Idx);
+  void revert(Tracker &Tracker) final;
   void accept() final {}
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const final {
-    dumpCommon(OS);
-    OS << "CallBrInstSetIndirectDest";
-  }
+  void dump(raw_ostream &OS) const final { OS << "CallBrInstSetIndirectDest"; }
   LLVM_DUMP_METHOD void dump() const final;
 #endif
 };
@@ -307,14 +273,11 @@ class MoveInstr : public IRChangeBase {
   PointerUnion<Instruction *, BasicBlock *> NextInstrOrBB;
 
 public:
-  MoveInstr(sandboxir::Instruction *I, Tracker &Tracker);
-  void revert() final;
+  MoveInstr(sandboxir::Instruction *I);
+  void revert(Tracker &Tracker) final;
   void accept() final {}
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const final {
-    dumpCommon(OS);
-    OS << "MoveInstr";
-  }
+  void dump(raw_ostream &OS) const final { OS << "MoveInstr"; }
   LLVM_DUMP_METHOD void dump() const final;
 #endif // NDEBUG
 };
@@ -323,14 +286,11 @@ class InsertIntoBB final : public IRChangeBase {
   Instruction *InsertedI = nullptr;
 
 public:
-  InsertIntoBB(Instruction *InsertedI, Tracker &Tracker);
-  void revert() final;
+  InsertIntoBB(Instruction *InsertedI);
+  void revert(Tracker &Tracker) final;
   void accept() final {}
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const final {
-    dumpCommon(OS);
-    OS << "InsertIntoBB";
-  }
+  void dump(raw_ostream &OS) const final { OS << "InsertIntoBB"; }
   LLVM_DUMP_METHOD void dump() const final;
 #endif // NDEBUG
 };
@@ -339,15 +299,11 @@ class CreateAndInsertInst final : public IRChangeBase {
   Instruction *NewI = nullptr;
 
 public:
-  CreateAndInsertInst(Instruction *NewI, Tracker &Tracker)
-      : IRChangeBase(Tracker), NewI(NewI) {}
-  void revert() final;
+  CreateAndInsertInst(Instruction *NewI) : NewI(NewI) {}
+  void revert(Tracker &Tracker) final;
   void accept() final {}
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const final {
-    dumpCommon(OS);
-    OS << "CreateAndInsertInst";
-  }
+  void dump(raw_ostream &OS) const final { OS << "CreateAndInsertInst"; }
   LLVM_DUMP_METHOD void dump() const final;
 #endif
 };
@@ -364,9 +320,6 @@ public:
 private:
   /// The list of changes that are being tracked.
   SmallVector<std::unique_ptr<IRChangeBase>> Changes;
-#ifndef NDEBUG
-  friend unsigned IRChangeBase::getIdx() const; // For accessing `Changes`.
-#endif
   /// The current state of the tracker.
   TrackerState State = TrackerState::Disabled;
   Context &Ctx;
@@ -383,7 +336,29 @@ public:
   Context &getContext() const { return Ctx; }
   /// Record \p Change and take ownership. This is the main function used to
   /// track Sandbox IR changes.
-  void track(std::unique_ptr<IRChangeBase> &&Change);
+  void track(std::unique_ptr<IRChangeBase> &&Change) {
+    assert(State == TrackerState::Record && "The tracker should be tracking!");
+#ifndef NDEBUG
+    assert(!InMiddleOfCreatingChange &&
+           "We are in the middle of creating another change!");
+    if (isTracking())
+      InMiddleOfCreatingChange = true;
+#endif // NDEBUG
+    Changes.push_back(std::move(Change));
+
+#ifndef NDEBUG
+    InMiddleOfCreatingChange = false;
+#endif
+  }
+  /// A convenience wrapper for `track()` that constructs and tracks the Change
+  /// object if tracking is enabled. \Returns true if tracking is enabled.
+  template <typename ChangeT, typename... ArgsT>
+  bool emplaceIfTracking(ArgsT... Args) {
+    if (!isTracking())
+      return false;
+    track(std::make_unique<ChangeT>(Args...));
+    return true;
+  }
   /// \Returns true if the tracker is recording changes.
   bool isTracking() const { return State == TrackerState::Record; }
   /// \Returns the current state of the tracker.

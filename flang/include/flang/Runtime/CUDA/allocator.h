@@ -10,6 +10,7 @@
 #define FORTRAN_RUNTIME_CUDA_ALLOCATOR_H_
 
 #include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/entry-names.h"
 
 #define CUDA_REPORT_IF_ERROR(expr) \
   [](CUresult result) { \
@@ -25,7 +26,10 @@
 
 namespace Fortran::runtime::cuda {
 
-void CUFRegisterAllocator();
+extern "C" {
+
+void RTDECL(CUFRegisterAllocator)();
+}
 
 void *CUFAllocPinned(std::size_t);
 void CUFFreePinned(void *);

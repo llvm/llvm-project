@@ -388,28 +388,16 @@ define i1 @logical_and_icmp_clamp_partial(<4 x i32> %x) {
 }
 
 define i1 @logical_and_icmp_clamp_pred_diff(<4 x i32> %x) {
-; SSE-LABEL: @logical_and_icmp_clamp_pred_diff(
-; SSE-NEXT:    [[TMP1:%.*]] = icmp slt <4 x i32> [[X:%.*]], <i32 42, i32 42, i32 42, i32 42>
-; SSE-NEXT:    [[TMP2:%.*]] = icmp ult <4 x i32> [[X]], <i32 42, i32 42, i32 42, i32 42>
-; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
-; SSE-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i32> [[X]], <i32 17, i32 17, i32 17, i32 17>
-; SSE-NEXT:    [[TMP5:%.*]] = freeze <4 x i1> [[TMP4]]
-; SSE-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP5]])
-; SSE-NEXT:    [[TMP7:%.*]] = freeze <4 x i1> [[TMP3]]
-; SSE-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP7]])
-; SSE-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP6]], i1 [[TMP8]], i1 false
-; SSE-NEXT:    ret i1 [[OP_RDX]]
-;
-; AVX-LABEL: @logical_and_icmp_clamp_pred_diff(
-; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
-; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 42, i32 42, i32 42, i32 poison>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 3>
-; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> <i32 17, i32 17, i32 17, i32 17, i32 poison, i32 poison, i32 poison, i32 42>, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 15>
-; AVX-NEXT:    [[TMP4:%.*]] = icmp sgt <8 x i32> [[TMP2]], [[TMP3]]
-; AVX-NEXT:    [[TMP5:%.*]] = icmp ult <8 x i32> [[TMP2]], [[TMP3]]
-; AVX-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i1> [[TMP4]], <8 x i1> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 15>
-; AVX-NEXT:    [[TMP7:%.*]] = freeze <8 x i1> [[TMP6]]
-; AVX-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP7]])
-; AVX-NEXT:    ret i1 [[TMP8]]
+; CHECK-LABEL: @logical_and_icmp_clamp_pred_diff(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 42, i32 42, i32 42, i32 poison>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> <i32 17, i32 17, i32 17, i32 17, i32 poison, i32 poison, i32 poison, i32 42>, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 15>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <8 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult <8 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i1> [[TMP4]], <8 x i1> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 15>
+; CHECK-NEXT:    [[TMP7:%.*]] = freeze <8 x i1> [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP7]])
+; CHECK-NEXT:    ret i1 [[TMP8]]
 ;
   %x0 = extractelement <4 x i32> %x, i32 0
   %x1 = extractelement <4 x i32> %x, i32 1

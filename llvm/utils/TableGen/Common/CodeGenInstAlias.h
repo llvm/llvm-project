@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_CODEGENINSTALIAS_H
-#define LLVM_UTILS_TABLEGEN_CODEGENINSTALIAS_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_CODEGENINSTALIAS_H
+#define LLVM_UTILS_TABLEGEN_COMMON_CODEGENINSTALIAS_H
 
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
@@ -102,4 +102,4 @@ public:
 
 } // namespace llvm
 
-#endif // LLVM_UTILS_TABLEGEN_CODEGENINSTALIAS_H
+#endif // LLVM_UTILS_TABLEGEN_COMMON_CODEGENINSTALIAS_H

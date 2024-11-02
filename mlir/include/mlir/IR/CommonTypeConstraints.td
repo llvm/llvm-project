@@ -98,23 +98,23 @@ def HasValueSemanticsPred : CPred<"$_self.hasTrait<::mlir::ValueSemantics>()">;
 
 // A type, carries type constraints.
 class Type<Pred condition, string descr = "",
-           string cppClassName = "::mlir::Type"> :
-    TypeConstraint<condition, descr, cppClassName> {
+           string cppType = "::mlir::Type"> :
+    TypeConstraint<condition, descr, cppType> {
   string description = "";
   string builderCall = "";
 }
 
 // Allows providing an alternative name and summary to an existing type def.
 class TypeAlias<Type t, string summary = t.summary> :
-    Type<t.predicate, summary, t.cppClassName> {
+    Type<t.predicate, summary, t.cppType> {
   let description = t.description;
   let builderCall = t.builderCall;
 }
 
 // A type of a specific dialect.
 class DialectType<Dialect d, Pred condition, string descr = "",
-                  string cppClassName = "::mlir::Type"> :
-    Type<condition, descr, cppClassName> {
+                  string cppType = "::mlir::Type"> :
+    Type<condition, descr, cppType> {
   Dialect dialect = d;
 }
 
@@ -122,7 +122,7 @@ class DialectType<Dialect d, Pred condition, string descr = "",
 // class is used for supporting variadic operands/results.
 class Variadic<Type type> : TypeConstraint<type.predicate,
                                            "variadic of " # type.summary,
-                                           type.cppClassName> {
+                                           type.cppType> {
   Type baseType = type;
   int minSize = 0;
 }
@@ -140,7 +140,7 @@ class VariadicOfVariadic<Type type, string variadicSegmentAttrName>
 // An optional type constraint. It expands to either zero or one of the base
 // type. This class is used for supporting optional operands/results.
 class Optional<Type type> : TypeConstraint<type.predicate, type.summary,
-                                           type.cppClassName> {
+                                           type.cppType> {
   Type baseType = type;
 }
 
@@ -172,33 +172,33 @@ def NoneType : Type<CPred<"::llvm::isa<::mlir::NoneType>($_self)">, "none type",
 
 // Any type from the given list
 class AnyTypeOf<list<Type> allowedTypeList, string summary = "",
-                string cppClassName = "::mlir::Type"> : Type<
+                string cppType = "::mlir::Type"> : Type<
     // Satisfy any of the allowed types' conditions.
     Or<!foreach(allowedtype, allowedTypeList, allowedtype.predicate)>,
     !if(!eq(summary, ""),
         !interleave(!foreach(t, allowedTypeList, t.summary), " or "),
         summary),
-    cppClassName> {
+    cppType> {
   list<Type> allowedTypes = allowedTypeList;
 }
 
 // A type that satisfies the constraints of all given types.
 class AllOfType<list<Type> allowedTypeList, string summary = "",
-                string cppClassName = "::mlir::Type"> : Type<
+                string cppType = "::mlir::Type"> : Type<
     // Satisfy all of the allowed types' conditions.
     And<!foreach(allowedType, allowedTypeList, allowedType.predicate)>,
     !if(!eq(summary, ""),
         !interleave(!foreach(t, allowedTypeList, t.summary), " and "),
         summary),
-    cppClassName> {
+    cppType> {
   list<Type> allowedTypes = allowedTypeList;
 }
 
 // A type that satisfies additional predicates.
 class ConfinedType<Type type, list<Pred> predicates, string summary = "",
-                   string cppClassName = type.cppClassName> : Type<
+                   string cppType = type.cppType> : Type<
     And<!listconcat([type.predicate], !foreach(pred, predicates, pred))>,
-    summary, cppClassName>;
+    summary, cppType>;
 
 // Integer types.
 
@@ -375,23 +375,23 @@ def FunctionType : Type<CPred<"::llvm::isa<::mlir::FunctionType>($_self)">,
 
 // A container type is a type that has another type embedded within it.
 class ContainerType<Type etype, Pred containerPred, code elementTypeCall,
-                    string descr, string cppClassName = "::mlir::Type"> :
+                    string descr, string cppType = "::mlir::Type"> :
     // First, check the container predicate.  Then, substitute the extracted
     // element into the element type checker.
     Type<And<[containerPred,
                 SubstLeaves<"$_self", !cast<string>(elementTypeCall),
                 etype.predicate>]>,
-         descr # " of " # etype.summary # " values", cppClassName>;
+         descr # " of " # etype.summary # " values", cppType>;
 
 class ShapedContainerType<list<Type> allowedTypes,
                           Pred containerPred, string descr,
-                          string cppClassName = "::mlir::Type"> :
+                          string cppType = "::mlir::Type"> :
     Type<And<[containerPred,
               Concat<"[](::mlir::Type elementType) { return ",
                 SubstLeaves<"$_self", "elementType",
                 AnyTypeOf<allowedTypes>.predicate>,
                 "; }(::llvm::cast<::mlir::ShapedType>($_self).getElementType())">]>,
-         descr # " of " # AnyTypeOf<allowedTypes>.summary # " values", cppClassName>;
+         descr # " of " # AnyTypeOf<allowedTypes>.summary # " values", cppType>;
 
 // Whether a shaped type is ranked.
 def HasRankPred : CPred<"::llvm::cast<::mlir::ShapedType>($_self).hasRank()">;
@@ -494,6 +494,14 @@ class VectorOfRankAndType<list<int> allowedRanks,
   VectorOf<allowedTypes>.summary # VectorOfRank<allowedRanks>.summary,
   "::mlir::VectorType">;
 
+// Fixed-width vector where the rank is from the given `allowedRanks` list and
+// the type is from the given `allowedTypes` list
+class FixedVectorOfRankAndType<list<int> allowedRanks,
+                          list<Type> allowedTypes> : AllOfType<
+  [FixedVectorOf<allowedTypes>, VectorOfRank<allowedRanks>],
+  FixedVectorOf<allowedTypes>.summary # VectorOfRank<allowedRanks>.summary,
+  "::mlir::VectorType">;
+
 // Whether the number of elements of a vector is from the given
 // `allowedLengths` list
 class IsVectorOfLengthPred<list<int> allowedLengths> :
@@ -592,7 +600,7 @@ class VectorOfLengthAndType<list<int> allowedLengths,
 // Any fixed-length vector where the number of elements is from the given
 // `allowedLengths` list and the type is from the given `allowedTypes` list
 class FixedVectorOfLengthAndType<list<int> allowedLengths,
-                                    list<Type> allowedTypes> : AllOfType<
+                                 list<Type> allowedTypes> : AllOfType<
   [FixedVectorOf<allowedTypes>, FixedVectorOfLength<allowedLengths>],
   FixedVectorOf<allowedTypes>.summary #
   FixedVectorOfLength<allowedLengths>.summary,

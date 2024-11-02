@@ -4567,7 +4567,7 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
     Type *SextTy = cast<BitCastOperator>(NotOp)->getSrcTy();
     Value *NotX = Builder.CreateNot(X);
     Value *Sext = Builder.CreateSExt(NotX, SextTy);
-    return CastInst::CreateBitOrPointerCast(Sext, Ty);
+    return new BitCastInst(Sext, Ty);
   }
 
   if (auto *NotOpI = dyn_cast<Instruction>(NotOp))

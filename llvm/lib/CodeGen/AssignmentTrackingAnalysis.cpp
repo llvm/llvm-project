@@ -2826,13 +2826,12 @@ bool AssignmentTrackingAnalysis::runOnFunction(Function &F) {
 
   LLVM_DEBUG(dbgs() << "AssignmentTrackingAnalysis run on " << F.getName()
                     << "\n");
-  auto DL = std::make_unique<DataLayout>(F.getParent());
 
   // Clear previous results.
   Results->clear();
 
   FunctionVarLocsBuilder Builder;
-  analyzeFunction(F, *DL.get(), &Builder);
+  analyzeFunction(F, F.getDataLayout(), &Builder);
 
   // Save these results.
   Results->init(Builder);

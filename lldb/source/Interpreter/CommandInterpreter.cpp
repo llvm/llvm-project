@@ -520,10 +520,6 @@ void CommandInterpreter::Initialize() {
 
   cmd_obj_sp = GetCommandSPExact("scripting run");
   if (cmd_obj_sp) {
-    AddAlias("sc", cmd_obj_sp);
-    AddAlias("scr", cmd_obj_sp);
-    AddAlias("scri", cmd_obj_sp);
-    AddAlias("scrip", cmd_obj_sp);
     AddAlias("script", cmd_obj_sp);
   }
 
@@ -1298,6 +1294,39 @@ CommandObject *CommandInterpreter::GetUserCommandObject(
   AddNamesMatchingPartialString(GetUserCommands(), cmd_str, *matches_ptr);
   AddNamesMatchingPartialString(GetUserMultiwordCommands(),
                                 cmd_str, *matches_ptr);
+
+  return {};
+}
+
+CommandObject *CommandInterpreter::GetAliasCommandObject(
+    llvm::StringRef cmd, StringList *matches, StringList *descriptions) const {
+  auto find_exact =
+      [&](const CommandObject::CommandMap &map) -> CommandObject * {
+    auto found_elem = map.find(cmd.str());
+    if (found_elem == map.end())
+      return (CommandObject *)nullptr;
+    CommandObject *exact_cmd = found_elem->second.get();
+    if (!exact_cmd)
+      return nullptr;
+
+    if (matches)
+      matches->AppendString(exact_cmd->GetCommandName());
+
+    if (descriptions)
+      descriptions->AppendString(exact_cmd->GetHelp());
+
+    return exact_cmd;
+    return nullptr;
+  };
+
+  CommandObject *exact_cmd = find_exact(GetAliases());
+  if (exact_cmd)
+    return exact_cmd;
+
+  // We didn't have an exact command, so now look for partial matches.
+  StringList tmp_list;
+  StringList *matches_ptr = matches ? matches : &tmp_list;
+  AddNamesMatchingPartialString(GetAliases(), cmd, *matches_ptr);
 
   return {};
 }
@@ -3421,6 +3450,19 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
   std::string next_word;
   StringList matches;
   bool done = false;
+
+  auto build_alias_cmd = [&](std::string &full_name) {
+    revised_command_line.Clear();
+    matches.Clear();
+    std::string alias_result;
+    cmd_obj =
+        BuildAliasResult(full_name, scratch_command, alias_result, result);
+    revised_command_line.Printf("%s", alias_result.c_str());
+    if (cmd_obj) {
+      wants_raw_input = cmd_obj->WantsRawCommandString();
+    }
+  };
+
   while (!done) {
     char quote_char = '\0';
     std::string suffix;
@@ -3432,14 +3474,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
       bool is_real_command =
           (!is_alias) || (cmd_obj != nullptr && !cmd_obj->IsAlias());
       if (!is_real_command) {
-        matches.Clear();
-        std::string alias_result;
-        cmd_obj =
-            BuildAliasResult(full_name, scratch_command, alias_result, result);
-        revised_command_line.Printf("%s", alias_result.c_str());
-        if (cmd_obj) {
-          wants_raw_input = cmd_obj->WantsRawCommandString();
-        }
+        build_alias_cmd(full_name);
       } else {
         if (cmd_obj) {
           llvm::StringRef cmd_name = cmd_obj->GetCommandName();
@@ -3486,21 +3521,32 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
     if (cmd_obj == nullptr) {
       const size_t num_matches = matches.GetSize();
       if (matches.GetSize() > 1) {
-        StreamString error_msg;
-        error_msg.Printf("Ambiguous command '%s'. Possible matches:\n",
-                         next_word.c_str());
+        StringList alias_matches;
+        GetAliasCommandObject(next_word, &alias_matches);
 
-        for (uint32_t i = 0; i < num_matches; ++i) {
-          error_msg.Printf("\t%s\n", matches.GetStringAtIndex(i));
+        if (alias_matches.GetSize() == 1) {
+          std::string full_name;
+          GetAliasFullName(alias_matches.GetStringAtIndex(0), full_name);
+          build_alias_cmd(full_name);
+          done = static_cast<bool>(cmd_obj);
+        } else {
+          StreamString error_msg;
+          error_msg.Printf("Ambiguous command '%s'. Possible matches:\n",
+                           next_word.c_str());
+
+          for (uint32_t i = 0; i < num_matches; ++i) {
+            error_msg.Printf("\t%s\n", matches.GetStringAtIndex(i));
+          }
+          result.AppendRawError(error_msg.GetString());
         }
-        result.AppendRawError(error_msg.GetString());
       } else {
         // We didn't have only one match, otherwise we wouldn't get here.
         lldbassert(num_matches == 0);
         result.AppendErrorWithFormat("'%s' is not a valid command.\n",
                                      next_word.c_str());
       }
-      return nullptr;
+      if (!done)
+        return nullptr;
     }
 
     if (cmd_obj->IsMultiwordObject()) {

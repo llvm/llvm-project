@@ -1635,7 +1635,58 @@ bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest) {
+static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
+                          Pointer &Dest, bool Activate);
+static bool copyRecord(InterpState &S, CodePtr OpPC, const Pointer &Src,
+                       Pointer &Dest, bool Activate = false) {
+  [[maybe_unused]] const Descriptor *SrcDesc = Src.getFieldDesc();
+  const Descriptor *DestDesc = Dest.getFieldDesc();
+
+  auto copyField = [&](const Record::Field &F, bool Activate) -> bool {
+    Pointer DestField = Dest.atField(F.Offset);
+    if (std::optional<PrimType> FT = S.Ctx.classify(F.Decl->getType())) {
+      TYPE_SWITCH(*FT, {
+        DestField.deref<T>() = Src.atField(F.Offset).deref<T>();
+        if (Src.atField(F.Offset).isInitialized())
+          DestField.initialize();
+        if (Activate)
+          DestField.activate();
+      });
+      return true;
+    }
+    // Composite field.
+    return copyComposite(S, OpPC, Src.atField(F.Offset), DestField, Activate);
+  };
+
+  assert(SrcDesc->isRecord());
+  assert(SrcDesc->ElemRecord == DestDesc->ElemRecord);
+  const Record *R = DestDesc->ElemRecord;
+  for (const Record::Field &F : R->fields()) {
+    if (R->isUnion()) {
+      // For unions, only copy the active field.
+      const Pointer &SrcField = Src.atField(F.Offset);
+      if (SrcField.isActive()) {
+        if (!copyField(F, /*Activate=*/true))
+          return false;
+      }
+    } else {
+      if (!copyField(F, Activate))
+        return false;
+    }
+  }
+
+  for (const Record::Base &B : R->bases()) {
+    Pointer DestBase = Dest.atField(B.Offset);
+    if (!copyRecord(S, OpPC, Src.atField(B.Offset), DestBase, Activate))
+      return false;
+  }
+
+  Dest.initialize();
+  return true;
+}
+
+static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
+                          Pointer &Dest, bool Activate = false) {
   assert(Src.isLive() && Dest.isLive());
 
   [[maybe_unused]] const Descriptor *SrcDesc = Src.getFieldDesc();
@@ -1657,27 +1708,13 @@ bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest) {
     return true;
   }
 
-  if (DestDesc->isRecord()) {
-    assert(SrcDesc->isRecord());
-    assert(SrcDesc->ElemRecord == DestDesc->ElemRecord);
-    const Record *R = DestDesc->ElemRecord;
-    for (const Record::Field &F : R->fields()) {
-      Pointer DestField = Dest.atField(F.Offset);
-      if (std::optional<PrimType> FT = S.Ctx.classify(F.Decl->getType())) {
-        TYPE_SWITCH(*FT, {
-          DestField.deref<T>() = Src.atField(F.Offset).deref<T>();
-          DestField.initialize();
-        });
-      } else {
-        return Invalid(S, OpPC);
-      }
-    }
-    return true;
-  }
-
-  // FIXME: Composite types.
-
+  if (DestDesc->isRecord())
+    return copyRecord(S, OpPC, Src, Dest, Activate);
   return Invalid(S, OpPC);
+}
+
+bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest) {
+  return copyComposite(S, OpPC, Src, Dest);
 }
 
 } // namespace interp
