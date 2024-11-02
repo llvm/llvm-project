@@ -1574,7 +1574,7 @@ void CodeExtractor::emitFunctionBody(
 
     Instruction *ClonedI = I->clone();
     ClonedI->setName(I->getName());
-    newFuncRoot->getInstList().insert(IP, ClonedI);
+    ClonedI->insertInto(newFuncRoot, IP);
     AdditionalRemap.push_back(ClonedI);
     VMap[I] = ClonedI;
     return ClonedI;
