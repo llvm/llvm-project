@@ -79,6 +79,9 @@ struct Configuration {
   // Because dyamanic linking under Wasm is still experimental we default to
   // static linking
   bool isStatic = true;
+  bool thinLTOEmitImportsFiles;
+  bool thinLTOEmitIndexFiles;
+  bool thinLTOIndexOnly;
   bool trace;
   uint64_t globalBase;
   uint64_t initialHeap;
@@ -95,16 +98,18 @@ struct Configuration {
   unsigned ltoo;
   llvm::CodeGenOptLevel ltoCgo;
   unsigned optimize;
-  llvm::StringRef thinLTOJobs;
   bool ltoDebugPassManager;
   UnresolvedPolicy unresolvedSymbols;
   BuildIdKind buildId = BuildIdKind::None;
 
   llvm::StringRef entry;
+  llvm::StringRef ltoObjPath;
   llvm::StringRef mapFile;
   llvm::StringRef outputFile;
   llvm::StringRef soName;
   llvm::StringRef thinLTOCacheDir;
+  llvm::StringRef thinLTOJobs;
+  llvm::StringRef thinLTOIndexOnlyArg;
   llvm::StringRef whyExtract;
 
   llvm::StringSet<> allowUndefinedSymbols;
@@ -126,6 +131,7 @@ struct Ctx {
   llvm::SmallVector<StubFile *, 0> stubFiles;
   llvm::SmallVector<SharedFile *, 0> sharedFiles;
   llvm::SmallVector<BitcodeFile *, 0> bitcodeFiles;
+  llvm::SmallVector<BitcodeFile *, 0> lazyBitcodeFiles;
   llvm::SmallVector<InputFunction *, 0> syntheticFunctions;
   llvm::SmallVector<InputGlobal *, 0> syntheticGlobals;
   llvm::SmallVector<InputTable *, 0> syntheticTables;
