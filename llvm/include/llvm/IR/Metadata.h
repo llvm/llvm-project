@@ -43,7 +43,7 @@ namespace llvm {
 class Module;
 class ModuleSlotTracker;
 class raw_ostream;
-class DPValue;
+class DbgVariableRecord;
 template <typename T> class StringMapEntry;
 template <typename ValueTy> class StringMapEntryStorage;
 class Type;
@@ -205,23 +205,23 @@ private:
 /// Base class for tracking ValueAsMetadata/DIArgLists with user lookups and
 /// Owner callbacks outside of ValueAsMetadata.
 ///
-/// Currently only inherited by DPValue; if other classes need to use it, then
-/// a SubclassID will need to be added (either as a new field or by making
-/// DebugValue into a PointerIntUnion) to discriminate between the subclasses in
-/// lookup and callback handling.
+/// Currently only inherited by DbgVariableRecord; if other classes need to use
+/// it, then a SubclassID will need to be added (either as a new field or by
+/// making DebugValue into a PointerIntUnion) to discriminate between the
+/// subclasses in lookup and callback handling.
 class DebugValueUser {
 protected:
   // Capacity to store 3 debug values.
   // TODO: Not all DebugValueUser instances need all 3 elements, if we
-  // restructure the DPValue class then we can template parameterize this array
-  // size.
+  // restructure the DbgVariableRecord class then we can template parameterize
+  // this array size.
   std::array<Metadata *, 3> DebugValues;
 
   ArrayRef<Metadata *> getDebugValues() const { return DebugValues; }
 
 public:
-  DPValue *getUser();
-  const DPValue *getUser() const;
+  DbgVariableRecord *getUser();
+  const DbgVariableRecord *getUser() const;
   /// To be called by ReplaceableMetadataImpl::replaceAllUsesWith, where `Old`
   /// is a pointer to one of the pointers in `DebugValues` (so should be type
   /// Metadata**), and `NewDebugValue` is the new Metadata* that is replacing
@@ -407,8 +407,8 @@ public:
   static void SalvageDebugInfo(const Constant &C); 
   /// Returns the list of all DIArgList users of this.
   SmallVector<Metadata *> getAllArgListUsers();
-  /// Returns the list of all DPValue users of this.
-  SmallVector<DPValue *> getAllDPValueUsers();
+  /// Returns the list of all DbgVariableRecord users of this.
+  SmallVector<DbgVariableRecord *> getAllDbgVariableRecordUsers();
 
   /// Resolve all uses of this.
   ///
@@ -494,8 +494,8 @@ public:
   SmallVector<Metadata *> getAllArgListUsers() {
     return ReplaceableMetadataImpl::getAllArgListUsers();
   }
-  SmallVector<DPValue *> getAllDPValueUsers() {
-    return ReplaceableMetadataImpl::getAllDPValueUsers();
+  SmallVector<DbgVariableRecord *> getAllDbgVariableRecordUsers() {
+    return ReplaceableMetadataImpl::getAllDbgVariableRecordUsers();
   }
 
   static void handleDeletion(Value *V);

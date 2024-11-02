@@ -6367,10 +6367,10 @@ struct DVIRecoveryRec {
   DVIRecoveryRec(DbgValueInst *DbgValue)
       : DbgRef(DbgValue), Expr(DbgValue->getExpression()),
         HadLocationArgList(false) {}
-  DVIRecoveryRec(DPValue *DPV)
-      : DbgRef(DPV), Expr(DPV->getExpression()), HadLocationArgList(false) {}
+  DVIRecoveryRec(DbgVariableRecord *DVR)
+      : DbgRef(DVR), Expr(DVR->getExpression()), HadLocationArgList(false) {}
 
-  PointerUnion<DbgValueInst *, DPValue *> DbgRef;
+  PointerUnion<DbgValueInst *, DbgVariableRecord *> DbgRef;
   DIExpression *Expr;
   bool HadLocationArgList;
   SmallVector<WeakVH, 2> LocationOps;
@@ -6466,7 +6466,7 @@ static void UpdateDbgValueInst(DVIRecoveryRec &DVIRec,
   if (isa<DbgValueInst *>(DVIRec.DbgRef))
     UpdateDbgValueInstImpl(cast<DbgValueInst *>(DVIRec.DbgRef));
   else
-    UpdateDbgValueInstImpl(cast<DPValue *>(DVIRec.DbgRef));
+    UpdateDbgValueInstImpl(cast<DbgVariableRecord *>(DVIRec.DbgRef));
 }
 
 /// Cached location ops may be erased during LSR, in which case a poison is
@@ -6512,7 +6512,7 @@ static void restorePreTransformState(DVIRecoveryRec &DVIRec) {
   if (isa<DbgValueInst *>(DVIRec.DbgRef))
     RestorePreTransformStateImpl(cast<DbgValueInst *>(DVIRec.DbgRef));
   else
-    RestorePreTransformStateImpl(cast<DPValue *>(DVIRec.DbgRef));
+    RestorePreTransformStateImpl(cast<DbgVariableRecord *>(DVIRec.DbgRef));
 }
 
 static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
@@ -6522,7 +6522,7 @@ static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
 
   if (isa<DbgValueInst *>(DVIRec.DbgRef)
           ? !cast<DbgValueInst *>(DVIRec.DbgRef)->isKillLocation()
-          : !cast<DPValue *>(DVIRec.DbgRef)->isKillLocation())
+          : !cast<DbgVariableRecord *>(DVIRec.DbgRef)->isKillLocation())
     return false;
 
   // LSR may have caused several changes to the dbg.value in the failed salvage
@@ -6620,7 +6620,7 @@ static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
                       << *cast<DbgValueInst *>(DVIRec.DbgRef) << "\n");
   else
     LLVM_DEBUG(dbgs() << "scev-salvage: Updated DVI: "
-                      << *cast<DPValue *>(DVIRec.DbgRef) << "\n");
+                      << *cast<DbgVariableRecord *>(DVIRec.DbgRef) << "\n");
   return true;
 }
 
@@ -6711,9 +6711,9 @@ static void DbgGatherSalvagableDVI(
         SalvageableDVISCEVs.push_back(std::move(NewRec));
         return true;
       };
-      for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
-        if (DPV.isDbgValue() || DPV.isDbgAssign())
-          ProcessDbgValue(&DPV);
+      for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+        if (DVR.isDbgValue() || DVR.isDbgAssign())
+          ProcessDbgValue(&DVR);
       }
       auto DVI = dyn_cast<DbgValueInst>(&I);
       if (!DVI)

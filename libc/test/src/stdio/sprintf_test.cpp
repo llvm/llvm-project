@@ -121,8 +121,8 @@ TEST(LlvmLibcSPrintfTest, StringConv) {
 
 #ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
   written = LIBC_NAMESPACE::sprintf(buff, "%s", nullptr);
-  EXPECT_EQ(written, 4);
-  ASSERT_STREQ(buff, "null");
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "(null)");
 #endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 }
 

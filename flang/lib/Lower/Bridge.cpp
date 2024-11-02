@@ -2529,23 +2529,42 @@ private:
     const std::optional<Fortran::parser::ScalarIntExpr> &stream =
         std::get<3>(dir.t);
 
+    auto isOnlyStars =
+        [&](const std::list<Fortran::parser::CUFKernelDoConstruct::StarOrExpr>
+                &list) -> bool {
+      for (const Fortran::parser::CUFKernelDoConstruct::StarOrExpr &expr :
+           list) {
+        if (expr.v)
+          return false;
+      }
+      return true;
+    };
+
+    mlir::Value zero =
+        builder->createIntegerConstant(loc, builder->getI32Type(), 0);
+
     llvm::SmallVector<mlir::Value> gridValues;
-    for (const Fortran::parser::CUFKernelDoConstruct::StarOrExpr &expr : grid) {
-      if (expr.v) {
-        gridValues.push_back(fir::getBase(
-            genExprValue(*Fortran::semantics::GetExpr(*expr.v), stmtCtx)));
-      } else {
-        // TODO: '*'
+    if (!isOnlyStars(grid)) {
+      for (const Fortran::parser::CUFKernelDoConstruct::StarOrExpr &expr :
+           grid) {
+        if (expr.v) {
+          gridValues.push_back(fir::getBase(
+              genExprValue(*Fortran::semantics::GetExpr(*expr.v), stmtCtx)));
+        } else {
+          gridValues.push_back(zero);
+        }
       }
     }
     llvm::SmallVector<mlir::Value> blockValues;
-    for (const Fortran::parser::CUFKernelDoConstruct::StarOrExpr &expr :
-         block) {
-      if (expr.v) {
-        blockValues.push_back(fir::getBase(
-            genExprValue(*Fortran::semantics::GetExpr(*expr.v), stmtCtx)));
-      } else {
-        // TODO: '*'
+    if (!isOnlyStars(block)) {
+      for (const Fortran::parser::CUFKernelDoConstruct::StarOrExpr &expr :
+           block) {
+        if (expr.v) {
+          blockValues.push_back(fir::getBase(
+              genExprValue(*Fortran::semantics::GetExpr(*expr.v), stmtCtx)));
+        } else {
+          blockValues.push_back(zero);
+        }
       }
     }
     mlir::Value streamValue;
@@ -3692,6 +3711,11 @@ private:
       const Fortran::evaluate::ProcedureRef *userDefinedAssignment) {
     mlir::Location loc = getCurrentLocation();
     fir::FirOpBuilder &builder = getFirOpBuilder();
+
+    if (Fortran::evaluate::HasCUDAAttrs(assign.lhs) ||
+        Fortran::evaluate::HasCUDAAttrs(assign.rhs))
+      TODO(loc, "Assignement with CUDA Fortran variables");
+
     // Gather some information about the assignment that will impact how it is
     // lowered.
     const bool isWholeAllocatableAssignment =

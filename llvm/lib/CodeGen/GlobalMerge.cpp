@@ -309,10 +309,9 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
   for (size_t GI = 0, GE = Globals.size(); GI != GE; ++GI) {
     GlobalVariable *GV = Globals[GI];
 
-    // Reset the encountered sets for this global...
-    std::fill(EncounteredUGS.begin(), EncounteredUGS.end(), 0);
-    // ...and grow it in case we created new sets for the previous global.
-    EncounteredUGS.resize(UsedGlobalSets.size());
+    // Reset the encountered sets for this global and grow it in case we created
+    // new sets for the previous global.
+    EncounteredUGS.assign(UsedGlobalSets.size(), 0);
 
     // We might need to create a set that only consists of the current global.
     // Keep track of its index into UsedGlobalSets.

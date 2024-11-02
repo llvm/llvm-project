@@ -298,7 +298,7 @@ public:
   }
 
   // Return the exact size if the exact size is known at compiletime,
-  // otherwise return MemoryLocation::UnknownSize.
+  // otherwise return LocationSize::beforeOrAfterPointer().
   static LocationSize getSizeOrUnknown(const TypeSize &T) {
     return T.isScalable() ? LocationSize::beforeOrAfterPointer()
                           : LocationSize::precise(T.getFixedValue());

@@ -31,7 +31,6 @@ driver_executable("dsymutil") {
     "MachOUtils.cpp",
     "RelocationMap.cpp",
     "Reproducer.cpp",
-    "SymbolMap.cpp",
     "dsymutil.cpp",
   ]
   if (host_os == "mac") {

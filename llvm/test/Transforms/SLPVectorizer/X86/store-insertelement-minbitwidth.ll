@@ -8,17 +8,18 @@
 ; YAML-NEXT:  Function:        stores
 ; YAML-NEXT:  Args:
 ; YAML-NEXT:    - String:          'Stores SLP vectorized with cost '
-; YAML-NEXT:    - Cost:            '-3'
+; YAML-NEXT:    - Cost:            '-7'
 ; YAML-NEXT:    - String:          ' and with tree size '
 ; YAML-NEXT:    - TreeSize:        '6'
 define void @stores(ptr noalias %in, ptr noalias %inn, ptr noalias %out) {
 ; CHECK-LABEL: @stores(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[IN:%.*]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[INN:%.*]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i64>
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    store <4 x i64> [[TMP5]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i16> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i16> [[TMP5]] to <4 x i64>
+; CHECK-NEXT:    store <4 x i64> [[TMP6]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %load.1 = load i8, ptr %in, align 1
@@ -63,17 +64,18 @@ define void @stores(ptr noalias %in, ptr noalias %inn, ptr noalias %out) {
 ; YAML-NEXT:  Function:        insertelems
 ; YAML-NEXT:  Args:
 ; YAML-NEXT:    - String:          'SLP vectorized with cost '
-; YAML-NEXT:    - Cost:            '-5'
+; YAML-NEXT:    - Cost:            '-9'
 ; YAML-NEXT:    - String:          ' and with tree size '
 ; YAML-NEXT:    - TreeSize:        '6'
 define <4 x i64> @insertelems(ptr noalias %in, ptr noalias %inn) {
 ; CHECK-LABEL: @insertelems(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[IN:%.*]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[INN:%.*]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i64>
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    ret <4 x i64> [[TMP5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i16> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i16> [[TMP5]] to <4 x i64>
+; CHECK-NEXT:    ret <4 x i64> [[TMP6]]
 ;
   %load.1 = load i8, ptr %in, align 1
   %gep.1 = getelementptr inbounds i8, ptr %in, i64 1

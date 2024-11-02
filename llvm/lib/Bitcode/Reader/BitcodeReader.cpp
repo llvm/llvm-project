@@ -100,6 +100,15 @@ static cl::opt<bool> ExpandConstantExprs(
     cl::desc(
         "Expand constant expressions to instructions for testing purposes"));
 
+/// Load bitcode directly into RemoveDIs format (use debug records instead
+/// of debug intrinsics). UNSET is treated as FALSE, so the default action
+/// is to do nothing. Individual tools can override this to incrementally add
+/// support for the RemoveDIs format.
+cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInforFormat(
+    "load-bitcode-into-experimental-debuginfo-iterators", cl::Hidden,
+    cl::desc("Load bitcode directly into the new debug info format (regardless "
+             "of input format)"));
+
 namespace {
 
 enum {
@@ -4276,9 +4285,11 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
 Error BitcodeReader::parseModule(uint64_t ResumeBit,
                                  bool ShouldLazyLoadMetadata,
                                  ParserCallbacks Callbacks) {
-  // Force the debug-info mode into the old format for now.
-  // FIXME: Remove this once all tools support RemoveDIs.
-  TheModule->IsNewDbgInfoFormat = false;
+  // Load directly into RemoveDIs format if LoadBitcodeIntoNewDbgInforFormat
+  // has been set to true (default action: load into the old debug format).
+  TheModule->IsNewDbgInfoFormat =
+      UseNewDbgInfoFormat &&
+      LoadBitcodeIntoNewDbgInforFormat == cl::boolOrDefault::BOU_TRUE;
 
   this->ValueTypeCallback = std::move(Callbacks.ValueType);
   if (ResumeBit) {
@@ -6414,7 +6425,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     case bitc::FUNC_CODE_DEBUG_RECORD_VALUE:
     case bitc::FUNC_CODE_DEBUG_RECORD_DECLARE:
     case bitc::FUNC_CODE_DEBUG_RECORD_ASSIGN: {
-      // DPValues are placed after the Instructions that they are attached to.
+      // DbgVariableRecords are placed after the Instructions that they are
+      // attached to.
       Instruction *Inst = getLastInstruction();
       if (!Inst)
         return error("Invalid dbg record: missing instruction");
@@ -6457,29 +6469,30 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         RawLocation = getFnMetadataByID(Record[Slot++]);
       }
 
-      DPValue *DPV = nullptr;
+      DbgVariableRecord *DVR = nullptr;
       switch (BitCode) {
       case bitc::FUNC_CODE_DEBUG_RECORD_VALUE:
       case bitc::FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE:
-        DPV = new DPValue(RawLocation, Var, Expr, DIL,
-                          DPValue::LocationType::Value);
+        DVR = new DbgVariableRecord(RawLocation, Var, Expr, DIL,
+                                    DbgVariableRecord::LocationType::Value);
         break;
       case bitc::FUNC_CODE_DEBUG_RECORD_DECLARE:
-        DPV = new DPValue(RawLocation, Var, Expr, DIL,
-                          DPValue::LocationType::Declare);
+        DVR = new DbgVariableRecord(RawLocation, Var, Expr, DIL,
+                                    DbgVariableRecord::LocationType::Declare);
         break;
       case bitc::FUNC_CODE_DEBUG_RECORD_ASSIGN: {
         DIAssignID *ID = cast<DIAssignID>(getFnMetadataByID(Record[Slot++]));
         DIExpression *AddrExpr =
             cast<DIExpression>(getFnMetadataByID(Record[Slot++]));
         Metadata *Addr = getFnMetadataByID(Record[Slot++]);
-        DPV = new DPValue(RawLocation, Var, Expr, ID, Addr, AddrExpr, DIL);
+        DVR = new DbgVariableRecord(RawLocation, Var, Expr, ID, Addr, AddrExpr,
+                                    DIL);
         break;
       }
       default:
-        llvm_unreachable("Unknown DPValue bitcode");
+        llvm_unreachable("Unknown DbgVariableRecord bitcode");
       }
-      Inst->getParent()->insertDbgRecordBefore(DPV, Inst->getIterator());
+      Inst->getParent()->insertDbgRecordBefore(DVR, Inst->getIterator());
       continue; // This isn't an instruction.
     }
     case bitc::FUNC_CODE_INST_CALL: {
@@ -6762,9 +6775,9 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   if (Error JumpFailed = Stream.JumpToBit(DFII->second))
     return JumpFailed;
 
-  // Set the debug info mode to "new", forcing a mismatch between
+  // Set the debug info mode to "new", possibly creating a mismatch between
   // module and function debug modes. This is okay because we'll convert
-  // everything back to the old mode after parsing.
+  // everything back to the old mode after parsing if needed.
   // FIXME: Remove this once all tools support RemoveDIs.
   F->IsNewDbgInfoFormat = true;
 
@@ -6774,7 +6787,8 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
 
   // Convert new debug info records into intrinsics.
   // FIXME: Remove this once all tools support RemoveDIs.
-  F->convertFromNewDbgValues();
+  if (!F->getParent()->IsNewDbgInfoFormat)
+    F->convertFromNewDbgValues();
 
   if (StripDebugInfo)
     stripDebugInfo(*F);

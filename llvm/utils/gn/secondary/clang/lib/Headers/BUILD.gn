@@ -205,6 +205,7 @@ copy("Headers") {
     "ia32intrin.h",
     "immintrin.h",
     "intrin.h",
+    "intrin0.h",
     "inttypes.h",
     "invpcidintrin.h",
     "iso646.h",
@@ -310,6 +311,7 @@ copy("Headers") {
     "xsaveoptintrin.h",
     "xsavesintrin.h",
     "xtestintrin.h",
+    "yvals_core.h",
   ]
   outputs = [ "$clang_resource_dir/include/{{source_target_relative}}" ]
 }
