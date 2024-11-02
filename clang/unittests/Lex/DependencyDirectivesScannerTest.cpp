@@ -650,6 +650,33 @@ TEST(MinimizeSourceToDependencyDirectivesTest, AtImport) {
   EXPECT_STREQ("@import A.B;\n", Out.data());
 }
 
+TEST(MinimizeSourceToDependencyDirectivesTest, EmptyIncludesAndImports) {
+  SmallVector<char, 128> Out;
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives("#import\n", Out));
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives("#include\n", Out));
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives("#ifdef A\n"
+                                                    "#import \n"
+                                                    "#endif\n",
+                                                    Out));
+  // The ifdef block is removed because it's "empty".
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives("#ifdef A\n"
+                                                    "#import \n"
+                                                    "#define B\n"
+                                                    "#endif\n",
+                                                    Out));
+  EXPECT_STREQ("#ifdef A\n"
+               "#define B\n"
+               "#endif\n",
+               Out.data());
+}
+
 TEST(MinimizeSourceToDependencyDirectivesTest, AtImportFailures) {
   SmallVector<char, 128> Out;
 

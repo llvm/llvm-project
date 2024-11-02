@@ -34,7 +34,7 @@
 !CHECK-NEXT:  }
 
 !CHECK-LABEL: func @_QPtest_alloc_ptr
-!CHECK:         omp.parallel {
+!CHECK:         omp.parallel {{.*}} {
 !CHECK:           %[[A:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>,
 !CHECK-SAME:        uniq_name = "_QFtest_alloc_ptrEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) ->
 !CHECK-SAME:        (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)

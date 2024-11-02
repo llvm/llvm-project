@@ -1321,11 +1321,8 @@ class DropInnerMostUnitDimsTransferRead
         cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
             srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
             strides));
-    ArrayAttr inBoundsAttr =
-        readOp.getInBounds()
-            ? rewriter.getArrayAttr(
-                  readOp.getInBoundsAttr().getValue().drop_back(dimsToDrop))
-            : ArrayAttr();
+    ArrayAttr inBoundsAttr = rewriter.getArrayAttr(
+        readOp.getInBoundsAttr().getValue().drop_back(dimsToDrop));
     Value rankedReducedView = rewriter.create<memref::SubViewOp>(
         loc, resultMemrefType, readOp.getSource(), offsets, sizes, strides);
     auto permMap = getTransferMinorIdentityMap(
@@ -1415,11 +1412,8 @@ class DropInnerMostUnitDimsTransferWrite
         cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
             srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
             strides));
-    ArrayAttr inBoundsAttr =
-        writeOp.getInBounds()
-            ? rewriter.getArrayAttr(
-                  writeOp.getInBoundsAttr().getValue().drop_back(dimsToDrop))
-            : ArrayAttr();
+    ArrayAttr inBoundsAttr = rewriter.getArrayAttr(
+        writeOp.getInBoundsAttr().getValue().drop_back(dimsToDrop));
 
     Value rankedReducedView = rewriter.create<memref::SubViewOp>(
         loc, resultMemrefType, writeOp.getSource(), offsets, sizes, strides);
@@ -1726,6 +1720,72 @@ struct DropUnitDimFromElementwiseOps final
   }
 };
 
+/// A pattern to drop unit dims from vector.transpose.
+///
+/// Example:
+///
+///  BEFORE:
+///  ```mlir
+///  %transpose = vector.transpose %vector, [3, 0, 1, 2]
+///    : vector<1x1x4x[4]xf32> to vector<[4]x1x1x4xf32>
+///  ```
+///
+///  AFTER:
+///  ```mlir
+///  %dropDims = vector.shape_cast %vector
+///    : vector<1x1x4x[4]xf32> to vector<4x[4]xf32>
+///  %transpose = vector.transpose %0, [1, 0]
+///    : vector<4x[4]xf32> to vector<[4]x4xf32>
+///  %restoreDims = vector.shape_cast %transpose
+///    : vector<[4]x4xf32> to vector<[4]x1x1x4xf32>
+///  ```
+struct DropUnitDimsFromTransposeOp final
+    : OpRewritePattern<vector::TransposeOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::TransposeOp op,
+                                PatternRewriter &rewriter) const override {
+    VectorType sourceType = op.getSourceVectorType();
+    VectorType sourceTypeWithoutUnitDims =
+        dropNonScalableUnitDimFromType(sourceType);
+
+    if (sourceType == sourceTypeWithoutUnitDims)
+      return failure();
+
+    // Construct a map from dimIdx -> number of dims dropped before dimIdx.
+    auto sourceDims = llvm::to_vector(vector::getDims(sourceType));
+    SmallVector<int64_t> droppedDimsBefore(sourceType.getRank());
+    int64_t droppedDims = 0;
+    for (auto [i, dim] : llvm::enumerate(sourceDims)) {
+      droppedDimsBefore[i] = droppedDims;
+      if (dim == std::make_tuple(1, false))
+        ++droppedDims;
+    }
+
+    // Drop unit dims from transpose permutation.
+    ArrayRef<int64_t> perm = op.getPermutation();
+    SmallVector<int64_t> newPerm;
+    for (int64_t idx : perm) {
+      if (sourceDims[idx] == std::make_tuple(1, false))
+        continue;
+      newPerm.push_back(idx - droppedDimsBefore[idx]);
+    }
+
+    Location loc = op.getLoc();
+    // Drop the unit dims via shape_cast.
+    auto dropDimsShapeCast = rewriter.create<vector::ShapeCastOp>(
+        loc, sourceTypeWithoutUnitDims, op.getVector());
+    // Create the new transpose.
+    auto tranposeWithoutUnitDims =
+        rewriter.create<vector::TransposeOp>(loc, dropDimsShapeCast, newPerm);
+    // Restore the unit dims via shape cast.
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
+        op, op.getResultVectorType(), tranposeWithoutUnitDims);
+
+    return failure();
+  }
+};
+
 /// Pattern to eliminate redundant zero-constants added to reduction operands.
 /// It's enough for there to be one initial zero value, so we can eliminate the
 /// extra ones that feed into `vector.reduction <add>`. These get created by the
@@ -1930,8 +1990,8 @@ void mlir::vector::populateShapeCastFoldingPatterns(RewritePatternSet &patterns,
 
 void mlir::vector::populateDropUnitDimWithShapeCastPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<DropUnitDimFromElementwiseOps, ShapeCastOpFolder>(
-      patterns.getContext(), benefit);
+  patterns.add<DropUnitDimFromElementwiseOps, DropUnitDimsFromTransposeOp,
+               ShapeCastOpFolder>(patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateBubbleVectorBitCastOpPatterns(

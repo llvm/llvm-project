@@ -5,98 +5,98 @@ enums: []
 objects: []
 functions:
   - name: isalnum
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: isalpha
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: isblank
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: iscntrl
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: isdigit
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: isgraph
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: islower
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: isprint
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: ispunct
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: isspace
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: isupper
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: isxdigit
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: tolower
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
   - name: toupper
-    standards: 
+    standards:
       - stdc
     return_type: int
     arguments:
       - type: int
     functions:
   - name: isascii
-    standards: 
+    standards:
       - POSIX
     return_type: int
     arguments:
       - type: int
   - name: toascii
-    standards: 
+    standards:
       - GNUExtensions
     return_type: int
     arguments:

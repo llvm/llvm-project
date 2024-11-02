@@ -230,8 +230,8 @@ void DwarfFDECache<A>::iterateCacheEntries(void (*func)(
 }
 #endif // defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 
-
-#define arrayoffsetof(type, index, field) ((size_t)(&((type *)0)[index].field))
+#define arrayoffsetof(type, index, field)                                      \
+  (sizeof(type) * (index) + offsetof(type, field))
 
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
 template <typename A> class UnwindSectionHeader {
@@ -471,7 +471,7 @@ public:
   }
 #endif
 
-#if defined(_LIBUNWIND_USE_CET)
+#if defined(_LIBUNWIND_USE_CET) || defined(_LIBUNWIND_USE_GCS)
   virtual void *get_registers() {
     _LIBUNWIND_ABORT("get_registers not implemented");
   }
@@ -954,7 +954,7 @@ public:
   virtual uintptr_t getDataRelBase();
 #endif
 
-#if defined(_LIBUNWIND_USE_CET)
+#if defined(_LIBUNWIND_USE_CET) || defined(_LIBUNWIND_USE_GCS)
   virtual void *get_registers() { return &_registers; }
 #endif
 
@@ -2589,7 +2589,8 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
     --pc;
 #endif
 
-#if !(defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) && defined(_WIN32))
+#if !(defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) && defined(_WIN32)) &&            \
+    !defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
   // In case of this is frame of signal handler, the IP saved in the signal
   // handler points to first non-executed instruction, while FDE/CIE expects IP
   // to be after the first non-executed instruction.
@@ -3004,7 +3005,7 @@ bool UnwindCursor<A, R>::isReadableAddr(const pint_t addr) const {
 }
 #endif
 
-#if defined(_LIBUNWIND_USE_CET)
+#if defined(_LIBUNWIND_USE_CET) || defined(_LIBUNWIND_USE_GCS)
 extern "C" void *__libunwind_cet_get_registers(unw_cursor_t *cursor) {
   AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
   return co->get_registers();

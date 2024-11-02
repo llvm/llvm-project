@@ -397,6 +397,10 @@ def simm20_pcaddu18i : SImm20Operand {
   let ParserMatchClass = SImmAsmOperand<20, "pcaddu18i">;
 }
 
+def simm20_pcaddi : SImm20Operand {
+  let ParserMatchClass = SImmAsmOperand<20, "pcaddi">;
+}
+
 def simm21_lsl2 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<21, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr<2>";
@@ -455,6 +459,19 @@ def BareSymbol : AsmOperandClass {
 def bare_symbol : Operand<GRLenVT> {
   let ParserMatchClass = BareSymbol;
 }
+
+def TPRelAddSymbol : AsmOperandClass {
+  let Name = "TPRelAddSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidTPRelAddSymbol";
+  let ParserMethod = "parseOperandWithModifier";
+}
+
+// A bare symbol with the %le_add_r variant.
+def tprel_add_symbol : Operand<GRLenVT> {
+  let ParserMatchClass = TPRelAddSymbol;
+}
+
 
 // Standalone (codegen-only) immleaf patterns.
 
@@ -741,7 +758,7 @@ def SLT  : ALU_3R<0x00120000>;
 def SLTU : ALU_3R<0x00128000>;
 def SLTI  : ALU_2RI12<0x02000000, simm12>;
 def SLTUI : ALU_2RI12<0x02400000, simm12>;
-def PCADDI    : ALU_1RI20<0x18000000, simm20>;
+def PCADDI    : ALU_1RI20<0x18000000, simm20_pcaddi>;
 def PCADDU12I : ALU_1RI20<0x1c000000, simm20>;
 def PCALAU12I : ALU_1RI20<0x1a000000, simm20_pcalau12i>;
 def AND  : ALU_3R<0x00148000>;
@@ -1106,7 +1123,7 @@ def : PatGprGpr<urem, MOD_WU>;
 def : PatGprGpr<mul, MUL_W>;
 def : PatGprGpr<mulhs, MULH_W>;
 def : PatGprGpr<mulhu, MULH_WU>;
-def : PatGprGpr<rotr, ROTR_W>;
+def : PatGprGpr<shiftop<rotr>, ROTR_W>;
 def : PatGprImm<rotr, ROTRI_W, uimm5>;
 
 foreach Idx = 1...3 in {
@@ -1129,9 +1146,8 @@ def : PatGprGpr<srem, MOD_D>;
 def : PatGprGpr_32<srem, MOD_W>;
 def : PatGprGpr<urem, MOD_DU>;
 def : PatGprGpr<loongarch_mod_wu, MOD_WU>;
-def : PatGprGpr<rotr, ROTR_D>;
-def : PatGprGpr<loongarch_rotr_w, ROTR_W>;
-def : PatGprGpr_32<rotr, ROTR_W>;
+def : PatGprGpr<shiftop<rotr>, ROTR_D>;
+def : PatGprGpr<shiftopw<loongarch_rotr_w>, ROTR_W>;
 def : PatGprImm<rotr, ROTRI_D, uimm6>;
 def : PatGprImm_32<rotr, ROTRI_W, uimm5>;
 def : PatGprImm<loongarch_rotr_w, ROTRI_W, uimm5>;
@@ -1465,7 +1481,7 @@ def : Pat<(loongarch_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(loongarch_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 
 // Function call with 'Medium' code model.
-let isCall = 1, Defs = [R1, R20], Size = 8 in
+let isCall = 1, Defs = [R1] in
 def PseudoCALL_MEDIUM : Pseudo<(outs), (ins bare_symbol:$func)>;
 
 let Predicates = [IsLA64] in {
@@ -1476,7 +1492,7 @@ def : Pat<(loongarch_call_medium texternalsym:$func),
 } // Predicates = [IsLA64]
 
 // Function call with 'Large' code model.
-let isCall = 1, Defs = [R1, R20], Size = 24 in
+let isCall = 1, Defs = [R1] in
 def PseudoCALL_LARGE: Pseudo<(outs), (ins bare_symbol:$func)>;
 
 let Predicates = [IsLA64] in {
@@ -1514,8 +1530,7 @@ def : Pat<(loongarch_tail (iPTR texternalsym:$dst)),
           (PseudoTAIL texternalsym:$dst)>;
 
 // Tail call with 'Medium' code model.
-let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
-    Uses = [R3], Defs = [R20], Size = 8 in
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
 def PseudoTAIL_MEDIUM : Pseudo<(outs), (ins bare_symbol:$dst)>;
 
 let Predicates = [IsLA64] in {
@@ -1526,8 +1541,7 @@ def : Pat<(loongarch_tail_medium (iPTR texternalsym:$dst)),
 } // Predicates = [IsLA64]
 
 // Tail call with 'Large' code model.
-let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
-    Uses = [R3], Defs = [R19, R20], Size = 24 in
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
 def PseudoTAIL_LARGE : Pseudo<(outs), (ins bare_symbol:$dst)>;
 
 let Predicates = [IsLA64] in {
@@ -1559,16 +1573,31 @@ def PseudoJIRL_TAIL : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
 
 /// call36/taill36 macro instructions
 let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, isAsmParserOnly = 1,
-    Defs = [R1], Size = 8, hasSideEffects = 0, mayStore = 0, mayLoad = 0 in
+    Defs = [R1], hasSideEffects = 0, mayStore = 0, mayLoad = 0 in
 def PseudoCALL36 : Pseudo<(outs), (ins bare_symbol:$dst), [],
                           "call36", "$dst">,
                    Requires<[IsLA64]>;
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3],
-    isCodeGenOnly = 0, isAsmParserOnly = 1, Size = 8, hasSideEffects = 0,
+    isCodeGenOnly = 0, isAsmParserOnly = 1, hasSideEffects = 0,
     mayStore = 0, mayLoad = 0 in
 def PseudoTAIL36 : Pseudo<(outs), (ins GPR:$tmp, bare_symbol:$dst), [],
                           "tail36", "$tmp, $dst">,
                    Requires<[IsLA64]>;
+
+// This is a special case of the ADD_W/D instruction used to facilitate the use
+// of a fourth operand to emit a relocation on a symbol relating to this
+// instruction. The relocation does not affect any bits of the instruction itself
+// but is used as a hint to the linker.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0 in {
+def PseudoAddTPRel_W : Pseudo<(outs GPR:$rd),
+                              (ins GPR:$rj, GPR:$rk, tprel_add_symbol:$sym), [],
+                              "add.w", "$rd, $rj, $rk, $sym">,
+                              Requires<[IsLA32]>;
+def PseudoAddTPRel_D : Pseudo<(outs GPR:$rd),
+                              (ins GPR:$rj, GPR:$rk, tprel_add_symbol:$sym), [],
+                              "add.d", "$rd, $rj, $rk, $sym">,
+                              Requires<[IsLA64]>;
+}
 
 /// Load address (la*) macro instructions.
 
@@ -1586,7 +1615,6 @@ def PseudoLA_TLS_LD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.ld", "$dst, $src">;
 def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.gd", "$dst, $src">;
-let Defs = [R20], Size = 20 in {
 def PseudoLA_PCREL_LARGE : Pseudo<(outs GPR:$dst),
                                   (ins GPR:$tmp, bare_symbol:$src), [],
                                   "la.pcrel", "$dst, $tmp, $src">,
@@ -1601,7 +1629,6 @@ def PseudoLA_TLS_GD_LARGE : Pseudo<(outs GPR:$dst),
                                    (ins GPR:$tmp, bare_symbol:$src), [],
                                    "la.tls.gd", "$dst, $tmp, $src">,
                             Requires<[IsLA64]>;
-} // Defs = [R20], Size = 20
 }
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in {
@@ -1609,7 +1636,6 @@ def PseudoLA_GOT : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                           "la.got", "$dst, $src">;
 def PseudoLA_TLS_IE : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.ie", "$dst, $src">;
-let Defs = [R20], Size = 20 in {
 def PseudoLA_GOT_LARGE : Pseudo<(outs GPR:$dst),
                                 (ins GPR:$tmp, bare_symbol:$src), [],
                                 "la.got", "$dst, $tmp, $src">,
@@ -1618,7 +1644,6 @@ def PseudoLA_TLS_IE_LARGE : Pseudo<(outs GPR:$dst),
                                    (ins GPR:$tmp, bare_symbol:$src), [],
                                    "la.tls.ie", "$dst, $tmp, $src">,
                             Requires<[IsLA64]>;
-} // Defs = [R20], Size = 20
 }
 
 // Used for expand PseudoLA_TLS_DESC_* instructions.
@@ -1643,7 +1668,7 @@ def PseudoLA_TLS_DESC_PC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
 }
 
 let isCall = 1, isBarrier = 1, hasSideEffects = 0, mayStore = 0, mayLoad = 0,
-    isCodeGenOnly = 0, isAsmParserOnly = 1, Defs = [R1, R4, R20], Size = 32 in
+    isCodeGenOnly = 0, isAsmParserOnly = 1, Defs = [R1, R4] in
 def PseudoLA_TLS_DESC_PC_LARGE : Pseudo<(outs GPR:$dst),
                                         (ins GPR:$tmp, bare_symbol:$src), [],
                                         "la.tls.desc", "$dst, $tmp, $src">,

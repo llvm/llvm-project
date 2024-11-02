@@ -5,7 +5,7 @@ enums: []
 objects: []
 functions:
   - name: rpc_host_call
-    standards: 
+    standards:
       - GPUExtensions
     return_type: void
     arguments:
@@ -13,7 +13,7 @@ functions:
       - type: void *
       - type: size_t
   - name: rpc_fprintf
-    standards: 
+    standards:
       - GPUExtensions
     return_type: int
     arguments:

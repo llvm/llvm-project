@@ -944,6 +944,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::SanitizeThread:
       case Attribute::SanitizeHWAddress:
       case Attribute::SanitizeMemTag:
+      case Attribute::SanitizeRealtime:
       case Attribute::SpeculativeLoadHardening:
       case Attribute::StackProtect:
       case Attribute::StackProtectReq:

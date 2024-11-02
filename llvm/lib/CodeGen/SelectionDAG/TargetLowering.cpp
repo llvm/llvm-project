@@ -8556,11 +8556,12 @@ static std::optional<bool> isFCmpEqualZero(FPClassTest Test,
 }
 
 SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
-                                         FPClassTest Test, SDNodeFlags Flags,
-                                         const SDLoc &DL,
+                                         const FPClassTest OrigTestMask,
+                                         SDNodeFlags Flags, const SDLoc &DL,
                                          SelectionDAG &DAG) const {
   EVT OperandVT = Op.getValueType();
   assert(OperandVT.isFloatingPoint());
+  FPClassTest Test = OrigTestMask;
 
   // Degenerated cases.
   if (Test == fcNone)
@@ -8594,8 +8595,20 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
   // exceptions are ignored.
   if (Flags.hasNoFPExcept() &&
       isOperationLegalOrCustom(ISD::SETCC, OperandVT.getScalarType())) {
+    FPClassTest FPTestMask = Test;
+
     ISD::CondCode OrderedCmpOpcode = IsInverted ? ISD::SETUNE : ISD::SETOEQ;
     ISD::CondCode UnorderedCmpOpcode = IsInverted ? ISD::SETONE : ISD::SETUEQ;
+
+    // See if we can fold an | fcNan into an unordered compare.
+    FPClassTest OrderedFPTestMask = FPTestMask & ~fcNan;
+
+    // Can't fold the ordered check if we're only testing for snan or qnan
+    // individually.
+    if ((FPTestMask & fcNan) != fcNan)
+      OrderedFPTestMask = FPTestMask;
+
+    const bool IsOrdered = FPTestMask == OrderedFPTestMask;
 
     if (std::optional<bool> IsCmp0 =
             isFCmpEqualZero(Test, Semantics, DAG.getMachineFunction());
@@ -8627,6 +8640,27 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
           DAG.getConstantFP(APFloat::getInf(Semantics), DL, OperandVT);
       return DAG.getSetCC(DL, ResultVT, Abs, Inf,
                           IsInverted ? ISD::SETUNE : ISD::SETOEQ);
+    }
+
+    if (OrderedFPTestMask == (fcSubnormal | fcZero) && !IsOrdered) {
+      // TODO: Could handle ordered case, but it produces worse code for
+      // x86. Maybe handle ordered if fabs is free?
+
+      ISD::CondCode OrderedOp = IsInverted ? ISD::SETUGE : ISD::SETOLT;
+      ISD::CondCode UnorderedOp = IsInverted ? ISD::SETOGE : ISD::SETULT;
+
+      if (isCondCodeLegalOrCustom(IsOrdered ? OrderedOp : UnorderedOp,
+                                  OperandVT.getScalarType().getSimpleVT())) {
+        // (issubnormal(x) || iszero(x)) --> fabs(x) < smallest_normal
+
+        // TODO: Maybe only makes sense if fabs is free. Integer test of
+        // exponent bits seems better for x86.
+        SDValue Abs = DAG.getNode(ISD::FABS, DL, OperandVT, Op);
+        SDValue SmallestNormal = DAG.getConstantFP(
+            APFloat::getSmallestNormalized(Semantics), DL, OperandVT);
+        return DAG.getSetCC(DL, ResultVT, Abs, SmallestNormal,
+                            IsOrdered ? OrderedOp : UnorderedOp);
+      }
     }
   }
 
@@ -9277,6 +9311,21 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
                        DAG.getNode(ISD::USUBSAT, dl, VT, LHS, RHS),
                        DAG.getNode(ISD::USUBSAT, dl, VT, RHS, LHS));
 
+  // If the subtract doesn't overflow then just use abs(sub())
+  // NOTE: don't use frozen operands for value tracking.
+  bool IsNonNegative = DAG.SignBitIsZero(N->getOperand(1)) &&
+                       DAG.SignBitIsZero(N->getOperand(0));
+
+  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, N->getOperand(0),
+                             N->getOperand(1)))
+    return DAG.getNode(ISD::ABS, dl, VT,
+                       DAG.getNode(ISD::SUB, dl, VT, LHS, RHS));
+
+  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, N->getOperand(1),
+                             N->getOperand(0)))
+    return DAG.getNode(ISD::ABS, dl, VT,
+                       DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
+
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   ISD::CondCode CC = IsSigned ? ISD::CondCode::SETGT : ISD::CondCode::SETUGT;
   SDValue Cmp = DAG.getSetCC(dl, CCVT, LHS, RHS, CC);
@@ -9289,6 +9338,23 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
     SDValue Xor = DAG.getNode(ISD::XOR, dl, VT, Diff, Cmp);
     return DAG.getNode(ISD::SUB, dl, VT, Cmp, Xor);
   }
+
+  // Similar to the branchless expansion, use the (sign-extended) usubo overflow
+  // flag if the (scalar) type is illegal as this is more likely to legalize
+  // cleanly:
+  // abdu(lhs, rhs) -> sub(xor(sub(lhs, rhs), uof(lhs, rhs)), uof(lhs, rhs))
+  if (!IsSigned && VT.isScalarInteger() && !isTypeLegal(VT)) {
+    SDValue USubO =
+        DAG.getNode(ISD::USUBO, dl, DAG.getVTList(VT, MVT::i1), {LHS, RHS});
+    SDValue Cmp = DAG.getNode(ISD::SIGN_EXTEND, dl, VT, USubO.getValue(1));
+    SDValue Xor = DAG.getNode(ISD::XOR, dl, VT, USubO.getValue(0), Cmp);
+    return DAG.getNode(ISD::SUB, dl, VT, Xor, Cmp);
+  }
+
+  // FIXME: Should really try to split the vector in case it's legal on a
+  // subvector.
+  if (VT.isVector() && !isOperationLegalOrCustom(ISD::VSELECT, VT))
+    return DAG.UnrollVectorOp(N);
 
   // abds(lhs, rhs) -> select(sgt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
   // abdu(lhs, rhs) -> select(ugt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
@@ -9343,6 +9409,26 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
                         DAG.getShiftAmountConstant(1, ExtVT, dl));
       return DAG.getNode(ISD::TRUNCATE, dl, VT, Avg);
     }
+  }
+
+  // avgflooru(lhs, rhs) -> or(lshr(add(lhs, rhs),1),shl(overflow, typesize-1))
+  if (Opc == ISD::AVGFLOORU && VT.isScalarInteger() && !isTypeLegal(VT)) {
+    SDValue UAddWithOverflow =
+        DAG.getNode(ISD::UADDO, dl, DAG.getVTList(VT, MVT::i1), {RHS, LHS});
+
+    SDValue Sum = UAddWithOverflow.getValue(0);
+    SDValue Overflow = UAddWithOverflow.getValue(1);
+
+    // Right shift the sum by 1
+    SDValue One = DAG.getShiftAmountConstant(1, VT, dl);
+    SDValue LShrVal = DAG.getNode(ISD::SRL, dl, VT, Sum, One);
+
+    SDValue ZeroExtOverflow = DAG.getNode(ISD::ANY_EXTEND, dl, VT, Overflow);
+    SDValue OverflowShl =
+        DAG.getNode(ISD::SHL, dl, VT, ZeroExtOverflow,
+                    DAG.getConstant(VT.getScalarSizeInBits() - 1, dl, VT));
+
+    return DAG.getNode(ISD::OR, dl, VT, LShrVal, OverflowShl);
   }
 
   // avgceils(lhs, rhs) -> sub(or(lhs,rhs),ashr(xor(lhs,rhs),1))
@@ -10191,10 +10277,13 @@ SDValue TargetLowering::LowerToTLSEmulatedModel(const GlobalAddressSDNode *GA,
 
   ArgListTy Args;
   ArgListEntry Entry;
-  std::string NameString = ("__emutls_v." + GA->getGlobal()->getName()).str();
-  Module *VariableModule = const_cast<Module*>(GA->getGlobal()->getParent());
+  const GlobalValue *GV =
+      cast<GlobalValue>(GA->getGlobal()->stripPointerCastsAndAliases());
+  SmallString<32> NameString("__emutls_v.");
+  NameString += GV->getName();
   StringRef EmuTlsVarName(NameString);
-  GlobalVariable *EmuTlsVar = VariableModule->getNamedGlobal(EmuTlsVarName);
+  const GlobalVariable *EmuTlsVar =
+      GV->getParent()->getNamedGlobal(EmuTlsVarName);
   assert(EmuTlsVar && "Cannot find EmuTlsVar ");
   Entry.Node = DAG.getGlobalAddress(EmuTlsVar, dl, PtrVT);
   Entry.Ty = VoidPtrType;

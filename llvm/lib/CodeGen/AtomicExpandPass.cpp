@@ -142,7 +142,7 @@ struct ReplacementIRBuilder
   // Preserves the DebugLoc from I, and preserves still valid metadata.
   // Enable StrictFP builder mode when appropriate.
   explicit ReplacementIRBuilder(Instruction *I, const DataLayout &DL)
-      : IRBuilder(I->getContext(), DL,
+      : IRBuilder(I->getContext(), InstSimplifyFolder(DL),
                   IRBuilderCallbackInserter(
                       [this](Instruction *I) { addMMRAMD(I); })) {
     SetInsertPoint(I);

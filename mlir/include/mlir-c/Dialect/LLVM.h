@@ -309,7 +309,7 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDILexicalBlockFileAttrGet(
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDILocalVariableAttrGet(
     MlirContext ctx, MlirAttribute scope, MlirAttribute name,
     MlirAttribute diFile, unsigned int line, unsigned int arg,
-    unsigned int alignInBits, MlirAttribute diType);
+    unsigned int alignInBits, MlirAttribute diType, int64_t flags);
 
 /// Creates a LLVM DISubprogramAttr attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDISubprogramAttrGet(

@@ -460,8 +460,7 @@ struct LinalgOpPartialReductionInterface
                                          Location loc, ValueRange partialReduce,
                                          ArrayRef<int> reductionDims) const {
     auto linalgOp = cast<LinalgOp>(op);
-    SmallVector<int64_t> reductionDimsInt64(reductionDims.begin(),
-                                            reductionDims.end());
+    SmallVector<int64_t> reductionDimsInt64(reductionDims);
     auto reduction = b.create<linalg::ReduceOp>(
         loc, partialReduce, linalgOp.getDpsInits(), reductionDimsInt64,
         [&linalgOp](OpBuilder &b, Location loc, ValueRange inputs) {

@@ -1382,6 +1382,34 @@ Sample usage:
   }];
 }
 
+def NoConvergentDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+This attribute prevents a function from being treated as convergent, which
+means that optimizations can only move calls to that function to
+control-equivalent blocks. If a statement is marked as ``noconvergent`` and
+contains calls, it also prevents those calls from being treated as convergent.
+In other words, those calls are not restricted to only being moved to
+control-equivalent blocks.
+
+In languages following SPMD/SIMT programming model, e.g., CUDA/HIP, function
+declarations and calls are treated as convergent by default for correctness.
+This ``noconvergent`` attribute is helpful for developers to prevent them from
+being treated as convergent when it's safe.
+
+.. code-block:: c
+
+  __device__ float bar(float);
+  __device__ float foo(float) __attribute__((noconvergent)) {}
+
+  __device__ int example(void) {
+    float x;
+    [[clang::noconvergent]] x = bar(x);
+  }
+
+  }];
+}
+
 def NoSplitStackDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -2453,7 +2481,7 @@ For example:
   typedef vint8m1_t fixed_vint8m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
   #endif
 
-Creates a type ``fixed_vint8m1_t_t`` that is a fixed-length variant of
+Creates a type ``fixed_vint8m1_t`` that is a fixed-length variant of
 ``vint8m1_t`` that contains exactly 512 bits. Unlike ``vint8m1_t``, this type
 can be used in globals, structs, unions, and arrays, all of which are
 unsupported for sizeless types.
@@ -5800,7 +5828,8 @@ takes precedence over the command line option ``-fpatchable-function-entry=N,M``
 ``M`` defaults to 0 if omitted.
 
 This attribute is only supported on
-aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64 targets.
+aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64 targets.
+For ppc/ppc64 targets, AIX is still not supported.
 }];
 }
 
@@ -5982,6 +6011,16 @@ definition (
 For more information see
 `gcc documentation <https://gcc.gnu.org/onlinedocs/gcc-7.2.0/gcc/Microsoft-Windows-Variable-Attributes.html>`_
 or `msvc documentation <https://docs.microsoft.com/pl-pl/cpp/cpp/selectany>`_.
+}]; }
+
+def HybridPatchableDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``hybrid_patchable`` attribute declares an ARM64EC function with an additional
+x86-64 thunk, which may be patched at runtime.
+
+For more information see
+`ARM64EC ABI documentation <https://learn.microsoft.com/en-us/windows/arm/arm64ec-abi>`_.
 }]; }
 
 def WebAssemblyExportNameDocs : Documentation {

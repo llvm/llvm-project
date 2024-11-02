@@ -346,9 +346,10 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
             *OutStreamer,
             MCInstBuilder(SystemZ::LLILF).addReg(TargetReg).addImm(Disp));
       } else
-        EmitToStreamer(
-            *OutStreamer,
-            MCInstBuilder(SystemZ::ALGFI).addReg(TargetReg).addImm(Disp));
+        EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::ALGFI)
+                                         .addReg(TargetReg)
+                                         .addReg(TargetReg)
+                                         .addImm(Disp));
       Disp = 0;
       Op = Op0;
     }

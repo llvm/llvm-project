@@ -2141,6 +2141,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeMemory;
   case bitc::ATTR_KIND_SANITIZE_NUMERICAL_STABILITY:
     return Attribute::SanitizeNumericalStability;
+  case bitc::ATTR_KIND_SANITIZE_REALTIME:
+    return Attribute::SanitizeRealtime;
   case bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING:
     return Attribute::SpeculativeLoadHardening;
   case bitc::ATTR_KIND_SWIFT_ERROR:
@@ -2496,7 +2498,9 @@ Error BitcodeReader::parseTypeTableBody() {
       ResultTy = Type::getMetadataTy(Context);
       break;
     case bitc::TYPE_CODE_X86_MMX:   // X86_MMX
-      ResultTy = Type::getX86_MMXTy(Context);
+      // Deprecated: decodes as <1 x i64>
+      ResultTy =
+          llvm::FixedVectorType::get(llvm::IntegerType::get(Context, 64), 1);
       break;
     case bitc::TYPE_CODE_X86_AMX:   // X86_AMX
       ResultTy = Type::getX86_AMXTy(Context);

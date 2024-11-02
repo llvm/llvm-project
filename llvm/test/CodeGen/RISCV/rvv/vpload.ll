@@ -536,3 +536,14 @@ define <vscale x 16 x double> @vpload_nxv17f64(ptr %ptr, ptr %out, <vscale x 17 
   store <vscale x 1 x double> %hi, ptr %out
   ret <vscale x 16 x double> %lo
 }
+
+define <vscale x 8 x i8> @vpload_all_active_nxv8i8(ptr %ptr) {
+; CHECK-LABEL: vpload_all_active_nxv8i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl1r.v v8, (a0)
+; CHECK-NEXT:    ret
+  %vscale = call i32 @llvm.vscale()
+  %evl = mul i32 %vscale, 8
+  %load = call <vscale x 8 x i8> @llvm.vp.load.nxv8i8.p0(ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 8 x i8> %load
+}

@@ -565,9 +565,8 @@ void Mapper::remapDbgRecord(DbgRecord &DR) {
   }
 
   // Find Value operands and remap those.
-  SmallVector<Value *, 4> Vals, NewVals;
-  for (Value *Val : V.location_ops())
-    Vals.push_back(Val);
+  SmallVector<Value *, 4> Vals(V.location_ops());
+  SmallVector<Value *, 4> NewVals;
   for (Value *Val : Vals)
     NewVals.push_back(mapValue(Val));
 
@@ -576,8 +575,7 @@ void Mapper::remapDbgRecord(DbgRecord &DR) {
     return;
 
   // Otherwise, do some replacement.
-  if (!IgnoreMissingLocals &&
-      llvm::any_of(NewVals, [&](Value *V) { return V == nullptr; })) {
+  if (!IgnoreMissingLocals && llvm::is_contained(NewVals, nullptr)) {
     V.setKillLocation();
   } else {
     // Either we have all non-empty NewVals, or we're permitted to ignore

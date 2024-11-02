@@ -2128,7 +2128,7 @@ void Driver::HandleAutocompletions(StringRef PassedFlags) const {
   llvm::outs() << llvm::join(SuggestedCompletions, "\n") << '\n';
 }
 
-bool Driver::HandleImmediateArgs(const Compilation &C) {
+bool Driver::HandleImmediateArgs(Compilation &C) {
   // The order these options are handled in gcc is all over the place, but we
   // don't expect inconsistencies w.r.t. that to matter in practice.
 
@@ -2271,6 +2271,14 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
   if (C.getArgs().hasArg(options::OPT_print_libgcc_file_name)) {
     ToolChain::RuntimeLibType RLT = TC.GetRuntimeLibType(C.getArgs());
     const llvm::Triple Triple(TC.ComputeEffectiveClangTriple(C.getArgs()));
+    // The 'Darwin' toolchain is initialized only when its arguments are
+    // computed. Get the default arguments for OFK_None to ensure that
+    // initialization is performed before trying to access properties of
+    // the toolchain in the functions below.
+    // FIXME: Remove when darwin's toolchain is initialized during construction.
+    // FIXME: For some more esoteric targets the default toolchain is not the
+    //        correct one.
+    C.getArgsForToolChain(&TC, Triple.getArchName(), Action::OFK_None);
     RegisterEffectiveTriple TripleRAII(TC, Triple);
     switch (RLT) {
     case ToolChain::RLT_CompilerRT:
@@ -3484,7 +3492,7 @@ class OffloadingActionBuilder final {
         // a fat binary containing all the code objects for different GPU's.
         // The fat binary is then an input to the host action.
         for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I) {
-          if (C.getDriver().isUsingLTO(/*IsOffload=*/true)) {
+          if (C.getDriver().isUsingOffloadLTO()) {
             // When LTO is enabled, skip the backend and assemble phases and
             // use lld to link the bitcode.
             ActionList AL;
@@ -4848,8 +4856,7 @@ Action *Driver::ConstructPhaseAction(
         Output = types::TY_LTO_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
-    if (isUsingLTO(/* IsOffload */ true) &&
-        TargetDeviceOffloadKind != Action::OFK_None) {
+    if (isUsingOffloadLTO() && TargetDeviceOffloadKind != Action::OFK_None) {
       types::ID Output =
           Args.hasArg(options::OPT_S) ? types::TY_LTO_IR : types::TY_LTO_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);

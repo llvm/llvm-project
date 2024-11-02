@@ -809,7 +809,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
     Value *Dst = NF ? NF : CI->getCalledOperand();
     FunctionType *NFTy = inlinableVariadicFunctionType(M, VarargFunctionType);
 
-    NewCB = CallInst::Create(NFTy, Dst, Args, OpBundles, "", CI);
+    NewCB = CallInst::Create(NFTy, Dst, Args, OpBundles, "", CI->getIterator());
 
     CallInst::TailCallKind TCK = CI->getTailCallKind();
     assert(TCK != CallInst::TCK_MustTail);

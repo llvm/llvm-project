@@ -477,17 +477,14 @@ define <8 x i64> @v8i64(<8 x i64> %x, <8 x i64> %y) nounwind {
 define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; CHECK-LABEL: v2i128:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    adds x8, x0, x4
+; CHECK-NEXT:    adcs x9, x1, x5
+; CHECK-NEXT:    csinv x0, x8, xzr, lo
+; CHECK-NEXT:    csinv x1, x9, xzr, lo
 ; CHECK-NEXT:    adds x8, x2, x6
 ; CHECK-NEXT:    adcs x9, x3, x7
 ; CHECK-NEXT:    csinv x2, x8, xzr, lo
 ; CHECK-NEXT:    csinv x3, x9, xzr, lo
-; CHECK-NEXT:    adds x8, x0, x4
-; CHECK-NEXT:    adcs x9, x1, x5
-; CHECK-NEXT:    csinv x8, x8, xzr, lo
-; CHECK-NEXT:    csinv x1, x9, xzr, lo
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    mov v0.d[1], x1
-; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
   %z = call <2 x i128> @llvm.uadd.sat.v2i128(<2 x i128> %x, <2 x i128> %y)
   ret <2 x i128> %z

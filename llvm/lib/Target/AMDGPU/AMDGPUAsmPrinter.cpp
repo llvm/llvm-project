@@ -1487,6 +1487,10 @@ void AMDGPUAsmPrinter::emitResourceUsageRemarks(
   if (!Ctx.getDiagHandlerPtr()->isAnalysisRemarkEnabled(Name))
     return;
 
+  // Currently non-kernel functions have no resources to emit.
+  if (!isEntryFunctionCC(MF.getFunction().getCallingConv()))
+    return;
+
   auto EmitResourceUsageRemark = [&](StringRef RemarkName,
                                      StringRef RemarkLabel, auto Argument) {
     // Add an indent for every line besides the line with the kernel name. This

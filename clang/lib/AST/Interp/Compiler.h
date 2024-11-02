@@ -33,6 +33,7 @@ template <class Emitter> class DestructorScope;
 template <class Emitter> class VariableScope;
 template <class Emitter> class DeclScope;
 template <class Emitter> class InitLinkScope;
+template <class Emitter> class InitStackScope;
 template <class Emitter> class OptionScope;
 template <class Emitter> class ArrayIndexScope;
 template <class Emitter> class SourceLocScope;
@@ -49,6 +50,7 @@ public:
     K_Field = 1,
     K_Temp = 2,
     K_Decl = 3,
+    K_Elem = 5,
   };
 
   static InitLink This() { return InitLink{K_This}; }
@@ -65,6 +67,11 @@ public:
   static InitLink Decl(const ValueDecl *D) {
     InitLink IL{K_Decl};
     IL.D = D;
+    return IL;
+  }
+  static InitLink Elem(unsigned Index) {
+    InitLink IL{K_Elem};
+    IL.Offset = Index;
     return IL;
   }
 
@@ -195,7 +202,6 @@ public:
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
-  bool visitLoopBody(const Stmt *S);
   bool visitDeclStmt(const DeclStmt *DS);
   bool visitReturnStmt(const ReturnStmt *RS);
   bool visitIfStmt(const IfStmt *IS);
@@ -298,6 +304,7 @@ private:
   friend class DestructorScope<Emitter>;
   friend class DeclScope<Emitter>;
   friend class InitLinkScope<Emitter>;
+  friend class InitStackScope<Emitter>;
   friend class OptionScope<Emitter>;
   friend class ArrayIndexScope<Emitter>;
   friend class SourceLocScope<Emitter>;
@@ -351,6 +358,8 @@ private:
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
 
+  bool checkLiteralType(const Expr *E);
+
 protected:
   /// Variable to storage mapping.
   llvm::DenseMap<const ValueDecl *, Scope::Local> Locals;
@@ -379,9 +388,6 @@ protected:
 
   llvm::SmallVector<InitLink> InitStack;
   bool InitStackActive = false;
-
-  /// Flag indicating if we're initializing a global variable.
-  bool GlobalDecl = false;
 
   /// Type of the expression returned by the function.
   std::optional<PrimType> ReturnType;
@@ -442,11 +448,15 @@ public:
     }
 
     // Use the parent scope.
-    addExtended(Local);
+    if (this->Parent)
+      this->Parent->addLocal(Local);
+    else
+      this->addLocal(Local);
   }
 
   virtual void emitDestruction() {}
-  virtual bool emitDestructors() { return true; }
+  virtual bool emitDestructors(const Expr *E = nullptr) { return true; }
+  virtual bool destroyLocals(const Expr *E = nullptr) { return true; }
   VariableScope *getParent() const { return Parent; }
 
 protected:
@@ -473,16 +483,21 @@ public:
   }
 
   /// Overriden to support explicit destruction.
-  void emitDestruction() override { destroyLocals(); }
+  void emitDestruction() override {
+    if (!Idx)
+      return;
+
+    this->emitDestructors();
+    this->Ctx->emitDestroy(*Idx, SourceInfo{});
+  }
 
   /// Explicit destruction of local variables.
-  bool destroyLocals() {
+  bool destroyLocals(const Expr *E = nullptr) override {
     if (!Idx)
       return true;
 
-    bool Success = this->emitDestructors();
-    this->Ctx->emitDestroy(*Idx, SourceInfo{});
-    removeStoredOpaqueValues();
+    bool Success = this->emitDestructors(E);
+    this->Ctx->emitDestroy(*Idx, E);
     this->Idx = std::nullopt;
     return Success;
   }
@@ -491,25 +506,26 @@ public:
     if (!Idx) {
       Idx = this->Ctx->Descriptors.size();
       this->Ctx->Descriptors.emplace_back();
+      this->Ctx->emitInitScope(*Idx, {});
     }
 
     this->Ctx->Descriptors[*Idx].emplace_back(Local);
   }
 
-  bool emitDestructors() override {
+  bool emitDestructors(const Expr *E = nullptr) override {
     if (!Idx)
       return true;
     // Emit destructor calls for local variables of record
     // type with a destructor.
     for (Scope::Local &Local : this->Ctx->Descriptors[*Idx]) {
       if (!Local.Desc->isPrimitive() && !Local.Desc->isPrimitiveArray()) {
-        if (!this->Ctx->emitGetPtrLocal(Local.Offset, SourceInfo{}))
+        if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
           return false;
 
         if (!this->Ctx->emitDestruction(Local.Desc))
           return false;
 
-        if (!this->Ctx->emitPopPtr(SourceInfo{}))
+        if (!this->Ctx->emitPopPtr(E))
           return false;
         removeIfStoredOpaqueValue(Local);
       }
@@ -537,19 +553,6 @@ public:
 
   /// Index of the scope in the chain.
   std::optional<unsigned> Idx;
-};
-
-/// Emits the destructors of the variables of \param OtherScope
-/// when this scope is destroyed. Does not create a Scope in the bytecode at
-/// all, this is just a RAII object to emit destructors.
-template <class Emitter> class DestructorScope final {
-public:
-  DestructorScope(LocalScope<Emitter> &OtherScope) : OtherScope(OtherScope) {}
-
-  ~DestructorScope() { OtherScope.emitDestructors(); }
-
-private:
-  LocalScope<Emitter> &OtherScope;
 };
 
 /// Scope for storage declared in a compound statement.
@@ -610,6 +613,20 @@ public:
 
 private:
   Compiler<Emitter> *Ctx;
+};
+
+template <class Emitter> class InitStackScope final {
+public:
+  InitStackScope(Compiler<Emitter> *Ctx, bool Active)
+      : Ctx(Ctx), OldValue(Ctx->InitStackActive) {
+    Ctx->InitStackActive = Active;
+  }
+
+  ~InitStackScope() { this->Ctx->InitStackActive = OldValue; }
+
+private:
+  Compiler<Emitter> *Ctx;
+  bool OldValue;
 };
 
 } // namespace interp

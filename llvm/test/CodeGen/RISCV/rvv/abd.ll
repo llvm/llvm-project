@@ -26,13 +26,9 @@ define <vscale x 16 x i8> @sabd_b_promoted_ops(<vscale x 16 x i1> %a, <vscale x 
 ; CHECK-LABEL: sabd_b_promoted_ops:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vmerge.vim v12, v10, -1, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v8, v10, -1, v0
-; CHECK-NEXT:    vmin.vv v10, v12, v8
-; CHECK-NEXT:    vmax.vv v8, v12, v8
-; CHECK-NEXT:    vsub.vv v8, v8, v10
+; CHECK-NEXT:    vmxor.mm v0, v0, v8
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    ret
   %a.sext = sext <vscale x 16 x i1> %a to <vscale x 16 x i8>
   %b.sext = sext <vscale x 16 x i1> %b to <vscale x 16 x i8>
@@ -158,13 +154,9 @@ define <vscale x 16 x i8> @uabd_b_promoted_ops(<vscale x 16 x i1> %a, <vscale x 
 ; CHECK-LABEL: uabd_b_promoted_ops:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vmerge.vim v12, v10, 1, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
-; CHECK-NEXT:    vminu.vv v10, v12, v8
-; CHECK-NEXT:    vmaxu.vv v8, v12, v8
-; CHECK-NEXT:    vsub.vv v8, v8, v10
+; CHECK-NEXT:    vmxor.mm v0, v0, v8
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 16 x i1> %a to <vscale x 16 x i8>
   %b.zext = zext <vscale x 16 x i1> %b to <vscale x 16 x i8>

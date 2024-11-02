@@ -2502,7 +2502,10 @@ void BinaryFunction::annotateCFIState() {
     }
   }
 
-  assert(StateStack.empty() && "corrupt CFI stack");
+  if (!StateStack.empty()) {
+    BC.errs() << "BOLT-WARNING: non-empty CFI stack at the end of " << *this
+              << '\n';
+  }
 }
 
 namespace {

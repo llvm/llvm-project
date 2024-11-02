@@ -63,8 +63,7 @@ mlir::tensor::computeTransposedType(RankedTensorType rankedTensorType,
       transposeVector.size() != static_cast<size_t>(rankedTensorType.getRank()))
     return failure();
 
-  SmallVector<int64_t> transposedShape(rankedTensorType.getShape().begin(),
-                                       rankedTensorType.getShape().end());
+  SmallVector<int64_t> transposedShape(rankedTensorType.getShape());
   applyPermutationToVector(transposedShape, transposeVector);
 
   using RTTBuilder = RankedTensorType::Builder;

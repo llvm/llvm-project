@@ -55,9 +55,9 @@ class MCAsmStreamer final : public MCStreamer {
   raw_svector_ostream CommentStream;
   raw_null_ostream NullStream;
 
-  unsigned IsVerboseAsm : 1;
-  unsigned ShowInst : 1;
-  unsigned UseDwarfDirectory : 1;
+  bool IsVerboseAsm = false;
+  bool ShowInst = false;
+  bool UseDwarfDirectory = false;
 
   void EmitRegisterName(int64_t Register);
   void PrintQuotedString(StringRef Data, raw_ostream &OS) const;
@@ -72,24 +72,40 @@ class MCAsmStreamer final : public MCStreamer {
 
 public:
   MCAsmStreamer(MCContext &Context, std::unique_ptr<formatted_raw_ostream> os,
-                bool isVerboseAsm, bool useDwarfDirectory,
                 MCInstPrinter *printer, std::unique_ptr<MCCodeEmitter> emitter,
-                std::unique_ptr<MCAsmBackend> asmbackend, bool showInst)
+                std::unique_ptr<MCAsmBackend> asmbackend)
       : MCStreamer(Context), OSOwner(std::move(os)), OS(*OSOwner),
         MAI(Context.getAsmInfo()), InstPrinter(printer),
         Assembler(std::make_unique<MCAssembler>(
             Context, std::move(asmbackend), std::move(emitter),
             (asmbackend) ? asmbackend->createObjectWriter(NullStream)
                          : nullptr)),
-        CommentStream(CommentToEmit), IsVerboseAsm(isVerboseAsm),
-        ShowInst(showInst), UseDwarfDirectory(useDwarfDirectory) {
+        CommentStream(CommentToEmit) {
     assert(InstPrinter);
-    if (IsVerboseAsm)
-        InstPrinter->setCommentStream(CommentStream);
     if (Assembler->getBackendPtr())
       setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
 
     Context.setUseNamesOnTempLabels(true);
+
+    auto *TO = Context.getTargetOptions();
+    if (!TO)
+      return;
+    IsVerboseAsm = TO->AsmVerbose;
+    if (IsVerboseAsm)
+      InstPrinter->setCommentStream(CommentStream);
+    ShowInst = TO->ShowMCInst;
+    switch (TO->MCUseDwarfDirectory) {
+    case MCTargetOptions::DisableDwarfDirectory:
+      UseDwarfDirectory = false;
+      break;
+    case MCTargetOptions::EnableDwarfDirectory:
+      UseDwarfDirectory = true;
+      break;
+    case MCTargetOptions::DefaultDwarfDirectory:
+      UseDwarfDirectory =
+          Context.getAsmInfo()->enableDwarfFileDirectoryDefault();
+      break;
+    }
   }
 
   MCAssembler &getAssembler() { return *Assembler; }
@@ -2641,12 +2657,9 @@ void MCAsmStreamer::doFinalizationAtSectionEnd(MCSection *Section) {
 
 MCStreamer *llvm::createAsmStreamer(MCContext &Context,
                                     std::unique_ptr<formatted_raw_ostream> OS,
-                                    bool isVerboseAsm, bool useDwarfDirectory,
                                     MCInstPrinter *IP,
                                     std::unique_ptr<MCCodeEmitter> &&CE,
-                                    std::unique_ptr<MCAsmBackend> &&MAB,
-                                    bool ShowInst) {
-  return new MCAsmStreamer(Context, std::move(OS), isVerboseAsm,
-                           useDwarfDirectory, IP, std::move(CE), std::move(MAB),
-                           ShowInst);
+                                    std::unique_ptr<MCAsmBackend> &&MAB) {
+  return new MCAsmStreamer(Context, std::move(OS), IP, std::move(CE),
+                           std::move(MAB));
 }

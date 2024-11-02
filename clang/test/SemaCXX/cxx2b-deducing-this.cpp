@@ -895,6 +895,10 @@ void g() {
 }
 
 namespace P2797 {
+
+int bar(void) { return 55; }
+int (&fref)(void) = bar;
+
 struct C {
   void c(this const C&);    // #first
   void c() &;               // #second
@@ -915,6 +919,8 @@ struct C {
     (&C::c)(C{});
     (&C::c)(*this);     // expected-error {{call to non-static member function without an object argument}}
     (&C::c)();
+
+    (&fref)();
   }
 };
 }
@@ -959,3 +965,10 @@ void f();
 };
 void a::f(this auto) {} // expected-error {{an explicit object parameter cannot appear in a non-member function}}
 }
+
+struct R {
+  void f(this auto &&self, int &&r_value_ref) {} // expected-note {{candidate function template not viable: expects an rvalue for 2nd argument}}
+  void g(int &&r_value_ref) {
+	f(r_value_ref); // expected-error {{no matching member function for call to 'f'}}
+  }
+};

@@ -866,11 +866,11 @@ namespace convertvector {
   constexpr vector8BitInt128 from_vector8BitInt128_to_vector8BitInt128_var =
       __builtin_convertvector((vector8BitInt128){0, 1, 2, 3, 4, 5, 6, 7},
                               vector8BitInt128);
-  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[0] == 0, ""); // ref-error {{not an integral constant expression}}
-  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[1] == 1, ""); // ref-error {{not an integral constant expression}}
-  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[2] == 2, ""); // ref-error {{not an integral constant expression}}
-  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[3] == 3, ""); // ref-error {{not an integral constant expression}}
-  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[4] == 4, ""); // ref-error {{not an integral constant expression}}
+  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[0] == 0, ""); 
+  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[1] == 1, ""); 
+  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[2] == 2, ""); 
+  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[3] == 3, ""); 
+  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[4] == 4, "");
 }
 
 namespace shufflevector {
@@ -890,14 +890,14 @@ namespace shufflevector {
   constexpr vector8char vectorShuffle6 = __builtin_shufflevector(
       vector4charConst1, vector4charConst2, 0, 2, 4, 6, 1, 3, 5, 7);
 
-  static_assert(vectorShuffle6[0] == 0, "");// ref-error {{not an integral constant expression}}
-  static_assert(vectorShuffle6[1] == 2, "");// ref-error {{not an integral constant expression}}
-  static_assert(vectorShuffle6[2] == 4, "");// ref-error {{not an integral constant expression}}
-  static_assert(vectorShuffle6[3] == 6, "");// ref-error {{not an integral constant expression}}
-  static_assert(vectorShuffle6[4] == 1, "");// ref-error {{not an integral constant expression}}
-  static_assert(vectorShuffle6[5] == 3, "");// ref-error {{not an integral constant expression}}
-  static_assert(vectorShuffle6[6] == 5, "");// ref-error {{not an integral constant expression}}
-  static_assert(vectorShuffle6[7] == 7, "");// ref-error {{not an integral constant expression}}
+  static_assert(vectorShuffle6[0] == 0, "");
+  static_assert(vectorShuffle6[1] == 2, "");
+  static_assert(vectorShuffle6[2] == 4, "");
+  static_assert(vectorShuffle6[3] == 6, "");
+  static_assert(vectorShuffle6[4] == 1, "");
+  static_assert(vectorShuffle6[5] == 3, "");
+  static_assert(vectorShuffle6[6] == 5, "");
+  static_assert(vectorShuffle6[7] == 7, "");
 
   constexpr vector4char  vectorShuffleFail1 = __builtin_shufflevector( // both-error {{must be initialized by a constant expression}}\
                                                                        // ref-error {{index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position 0 is not permitted in a constexpr context}}

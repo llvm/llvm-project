@@ -473,9 +473,9 @@ define amdgpu_kernel void @livevariables_update_missed_block(ptr addrspace(1) %s
   ; SI-NEXT: bb.1.if.then:
   ; SI-NEXT:   successors: %bb.7(0x80000000)
   ; SI-NEXT: {{  $}}
-  ; SI-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.src1.kernarg.offset, align 4, addrspace 4)
-  ; SI-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 [[S_LOAD_DWORDX2_IMM]].sub0, killed %54, 0, implicit $exec
-  ; SI-NEXT:   [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADDC_U32_e64 0, killed [[S_LOAD_DWORDX2_IMM]].sub1, killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
+  ; SI-NEXT:   early-clobber %33:sreg_64_xexec = S_LOAD_DWORDX2_IMM_ec killed [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.src1.kernarg.offset, align 4, addrspace 4)
+  ; SI-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %33.sub0, killed %54, 0, implicit $exec
+  ; SI-NEXT:   [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADDC_U32_e64 0, killed %33.sub1, killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
   ; SI-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE killed [[V_ADD_CO_U32_e64_]], %subreg.sub0, killed [[V_ADDC_U32_e64_]], %subreg.sub1
   ; SI-NEXT:   [[GLOBAL_LOAD_UBYTE:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_UBYTE killed [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load (s8) from %ir.i10, addrspace 1)
   ; SI-NEXT:   [[V_MOV_B:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
@@ -570,9 +570,9 @@ define protected amdgpu_kernel void @nested_waterfalls(ptr addrspace(1) %tex.coe
   ; SI-NEXT: bb.1.if.then:
   ; SI-NEXT:   successors: %bb.2(0x80000000)
   ; SI-NEXT: {{  $}}
-  ; SI-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.tex.coerce.kernarg.offset, align 4, addrspace 4)
+  ; SI-NEXT:   early-clobber %10:sreg_64_xexec = S_LOAD_DWORDX2_IMM_ec killed [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.tex.coerce.kernarg.offset, align 4, addrspace 4)
   ; SI-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 3, killed [[COPY1]](s32), implicit $exec
-  ; SI-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR killed [[S_LOAD_DWORDX2_IMM]], killed [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s64) from %ir.idx, addrspace 1)
+  ; SI-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR killed %10, killed [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s64) from %ir.idx, addrspace 1)
   ; SI-NEXT:   [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[GLOBAL_LOAD_DWORDX2_SADDR]], 16, 0, implicit $exec :: (invariant load (s128) from %ir.3 + 16, addrspace 4)
   ; SI-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX4_]].sub3
   ; SI-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX4_]].sub2

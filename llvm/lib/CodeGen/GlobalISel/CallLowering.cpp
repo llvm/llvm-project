@@ -436,7 +436,7 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
 
   if (PartLLT.isVector()) {
     assert(OrigRegs.size() == 1);
-    SmallVector<Register> CastRegs(Regs.begin(), Regs.end());
+    SmallVector<Register> CastRegs(Regs);
 
     // If PartLLT is a mismatched vector in both number of elements and element
     // size, e.g. PartLLT == v2s64 and LLTy is v3s32, then first coerce it to

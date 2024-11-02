@@ -37,7 +37,7 @@ TEST(RecursiveASTVisitor, DeductionGuideNonImplicitMode) {
   // Verify that the synthezied deduction guide for alias is not visited in
   // RAV's implicit mode.
   Visitor.ExpectMatch("Foo(T) -> Foo<int>", 11, 1);
-  Visitor.DisallowMatch("Bar(type-parameter-0-0) -> Foo<int>", 14, 1);
+  Visitor.DisallowMatch("Bar(T) -> Foo<int>", 14, 1);
   EXPECT_TRUE(Visitor.runOver(
       R"cpp(
 template <typename T>
@@ -61,7 +61,7 @@ Bar s(1);
 TEST(RecursiveASTVisitor, DeductionGuideImplicitMode) {
   DeductionGuideVisitor Visitor(/*ShouldVisitImplicitCode*/ true);
   Visitor.ExpectMatch("Foo(T) -> Foo<int>", 11, 1);
-  Visitor.ExpectMatch("Bar(type-parameter-0-0) -> Foo<int>", 14, 1);
+  Visitor.ExpectMatch("Bar(T) -> Foo<int>", 14, 1);
   EXPECT_TRUE(Visitor.runOver(
       R"cpp(
 template <typename T>

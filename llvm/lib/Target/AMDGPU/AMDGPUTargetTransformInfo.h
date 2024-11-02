@@ -137,15 +137,16 @@ public:
                                     unsigned AddrSpace) const;
 
   int64_t getMaxMemIntrinsicInlineSizeThreshold() const;
-  Type *getMemcpyLoopLoweringType(
-      LLVMContext & Context, Value * Length, unsigned SrcAddrSpace,
-      unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
-      std::optional<uint32_t> AtomicElementSize) const;
+  Type *
+  getMemcpyLoopLoweringType(LLVMContext &Context, Value *Length,
+                            unsigned SrcAddrSpace, unsigned DestAddrSpace,
+                            Align SrcAlign, Align DestAlign,
+                            std::optional<uint32_t> AtomicElementSize) const;
 
   void getMemcpyLoopResidualLoweringType(
       SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
-      unsigned SrcAlign, unsigned DestAlign,
+      Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicCpySize) const;
   unsigned getMaxInterleaveFactor(ElementCount VF);
 

@@ -1503,7 +1503,7 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
     Value *V2 = SCCPSolver::isConstant(V2State)
                     ? getConstant(V2State, I.getOperand(1)->getType())
                     : I.getOperand(1);
-    Value *R = simplifyBinOp(I.getOpcode(), V1, V2, SimplifyQuery(DL));
+    Value *R = simplifyBinOp(I.getOpcode(), V1, V2, SimplifyQuery(DL, &I));
     auto *C = dyn_cast_or_null<Constant>(R);
     if (C) {
       // Conservatively assume that the result may be based on operands that may

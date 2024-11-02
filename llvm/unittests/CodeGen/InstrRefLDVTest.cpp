@@ -94,7 +94,7 @@ public:
     const TargetSubtargetInfo &STI = *Machine->getSubtargetImpl(*F);
 
     MF = std::make_unique<MachineFunction>(*F, (LLVMTargetMachine &)*Machine,
-                                           STI, FunctionNum, *MMI);
+                                           STI, MMI->getContext(), FunctionNum);
 
     // Create metadata: CU, subprogram, some blocks and an inline function
     // scope.

@@ -473,6 +473,29 @@ public:
   }
 };
 
+/// Used to deserialize the on-disk C++ method table.
+class CXXMethodTableInfo
+    : public VersionedTableInfo<CXXMethodTableInfo, SingleDeclTableKey,
+                                CXXMethodInfo> {
+public:
+  static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
+    auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    return {CtxID, NameID};
+  }
+
+  hash_value_type ComputeHash(internal_key_type Key) {
+    return static_cast<size_t>(Key.hashValue());
+  }
+
+  static CXXMethodInfo readUnversioned(internal_key_type Key,
+                                       const uint8_t *&Data) {
+    CXXMethodInfo Info;
+    ReadFunctionInfo(Data, Info);
+    return Info;
+  }
+};
+
 /// Used to deserialize the on-disk enumerator table.
 class EnumConstantTableInfo
     : public VersionedTableInfo<EnumConstantTableInfo, uint32_t,
@@ -630,6 +653,12 @@ public:
   /// The Objective-C method table.
   std::unique_ptr<SerializedObjCMethodTable> ObjCMethodTable;
 
+  using SerializedCXXMethodTable =
+      llvm::OnDiskIterableChainedHashTable<CXXMethodTableInfo>;
+
+  /// The C++ method table.
+  std::unique_ptr<SerializedCXXMethodTable> CXXMethodTable;
+
   using SerializedObjCSelectorTable =
       llvm::OnDiskIterableChainedHashTable<ObjCSelectorTableInfo>;
 
@@ -683,6 +712,8 @@ public:
                              llvm::SmallVectorImpl<uint64_t> &Scratch);
   bool readObjCMethodBlock(llvm::BitstreamCursor &Cursor,
                            llvm::SmallVectorImpl<uint64_t> &Scratch);
+  bool readCXXMethodBlock(llvm::BitstreamCursor &Cursor,
+                          llvm::SmallVectorImpl<uint64_t> &Scratch);
   bool readObjCSelectorBlock(llvm::BitstreamCursor &Cursor,
                              llvm::SmallVectorImpl<uint64_t> &Scratch);
   bool readGlobalVariableBlock(llvm::BitstreamCursor &Cursor,
@@ -1118,6 +1149,81 @@ bool APINotesReader::Implementation::readObjCMethodBlock(
       auto base = reinterpret_cast<const uint8_t *>(BlobData.data());
 
       ObjCMethodTable.reset(SerializedObjCMethodTable::Create(
+          base + tableOffset, base + sizeof(uint32_t), base));
+      break;
+    }
+
+    default:
+      // Unknown record, possibly for use by a future version of the
+      // module format.
+      break;
+    }
+
+    MaybeNext = Cursor.advance();
+    if (!MaybeNext) {
+      // FIXME this drops the error on the floor.
+      consumeError(MaybeNext.takeError());
+      return false;
+    }
+    Next = MaybeNext.get();
+  }
+
+  return false;
+}
+
+bool APINotesReader::Implementation::readCXXMethodBlock(
+    llvm::BitstreamCursor &Cursor, llvm::SmallVectorImpl<uint64_t> &Scratch) {
+  if (Cursor.EnterSubBlock(CXX_METHOD_BLOCK_ID))
+    return true;
+
+  llvm::Expected<llvm::BitstreamEntry> MaybeNext = Cursor.advance();
+  if (!MaybeNext) {
+    // FIXME this drops the error on the floor.
+    consumeError(MaybeNext.takeError());
+    return false;
+  }
+  llvm::BitstreamEntry Next = MaybeNext.get();
+  while (Next.Kind != llvm::BitstreamEntry::EndBlock) {
+    if (Next.Kind == llvm::BitstreamEntry::Error)
+      return true;
+
+    if (Next.Kind == llvm::BitstreamEntry::SubBlock) {
+      // Unknown sub-block, possibly for use by a future version of the
+      // API notes format.
+      if (Cursor.SkipBlock())
+        return true;
+
+      MaybeNext = Cursor.advance();
+      if (!MaybeNext) {
+        // FIXME this drops the error on the floor.
+        consumeError(MaybeNext.takeError());
+        return false;
+      }
+      Next = MaybeNext.get();
+      continue;
+    }
+
+    Scratch.clear();
+    llvm::StringRef BlobData;
+    llvm::Expected<unsigned> MaybeKind =
+        Cursor.readRecord(Next.ID, Scratch, &BlobData);
+    if (!MaybeKind) {
+      // FIXME this drops the error on the floor.
+      consumeError(MaybeKind.takeError());
+      return false;
+    }
+    unsigned Kind = MaybeKind.get();
+    switch (Kind) {
+    case cxx_method_block::CXX_METHOD_DATA: {
+      // Already saw C++ method table.
+      if (CXXMethodTable)
+        return true;
+
+      uint32_t tableOffset;
+      cxx_method_block::CXXMethodDataLayout::readRecord(Scratch, tableOffset);
+      auto base = reinterpret_cast<const uint8_t *>(BlobData.data());
+
+      CXXMethodTable.reset(SerializedCXXMethodTable::Create(
           base + tableOffset, base + sizeof(uint32_t), base));
       break;
     }
@@ -1692,6 +1798,14 @@ APINotesReader::APINotesReader(llvm::MemoryBuffer *InputBuffer,
       }
       break;
 
+    case CXX_METHOD_BLOCK_ID:
+      if (!HasValidControlBlock ||
+          Implementation->readCXXMethodBlock(Cursor, Scratch)) {
+        Failed = true;
+        return;
+      }
+      break;
+
     case OBJC_SELECTOR_BLOCK_ID:
       if (!HasValidControlBlock ||
           Implementation->readObjCSelectorBlock(Cursor, Scratch)) {
@@ -1911,6 +2025,23 @@ auto APINotesReader::lookupObjCMethod(ContextID CtxID, ObjCSelectorRef Selector,
   return {Implementation->SwiftVersion, *Known};
 }
 
+auto APINotesReader::lookupCXXMethod(ContextID CtxID, llvm::StringRef Name)
+    -> VersionedInfo<CXXMethodInfo> {
+  if (!Implementation->CXXMethodTable)
+    return std::nullopt;
+
+  std::optional<IdentifierID> NameID = Implementation->getIdentifier(Name);
+  if (!NameID)
+    return std::nullopt;
+
+  auto Known = Implementation->CXXMethodTable->find(
+      SingleDeclTableKey(CtxID.Value, *NameID));
+  if (Known == Implementation->CXXMethodTable->end())
+    return std::nullopt;
+
+  return {Implementation->SwiftVersion, *Known};
+}
+
 auto APINotesReader::lookupGlobalVariable(llvm::StringRef Name,
                                           std::optional<Context> Ctx)
     -> VersionedInfo<GlobalVariableInfo> {
@@ -1963,6 +2094,24 @@ auto APINotesReader::lookupEnumConstant(llvm::StringRef Name)
     return std::nullopt;
 
   return {Implementation->SwiftVersion, *Known};
+}
+
+auto APINotesReader::lookupTagID(llvm::StringRef Name,
+                                 std::optional<Context> ParentCtx)
+    -> std::optional<ContextID> {
+  if (!Implementation->ContextIDTable)
+    return std::nullopt;
+
+  std::optional<IdentifierID> TagID = Implementation->getIdentifier(Name);
+  if (!TagID)
+    return std::nullopt;
+
+  auto KnownID = Implementation->ContextIDTable->find(
+      ContextTableKey(ParentCtx, ContextKind::Tag, *TagID));
+  if (KnownID == Implementation->ContextIDTable->end())
+    return std::nullopt;
+
+  return ContextID(*KnownID);
 }
 
 auto APINotesReader::lookupTag(llvm::StringRef Name, std::optional<Context> Ctx)

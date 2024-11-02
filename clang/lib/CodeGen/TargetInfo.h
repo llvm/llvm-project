@@ -334,6 +334,10 @@ public:
                                                  llvm::AtomicOrdering Ordering,
                                                  llvm::LLVMContext &Ctx) const;
 
+  /// Allow the target to apply other metadata to an atomic instruction
+  virtual void setTargetAtomicMetadata(CodeGenFunction &CGF,
+                                       llvm::AtomicRMWInst &RMW) const {}
+
   /// Interface class for filling custom fields of a block literal for OpenCL.
   class TargetOpenCLBlockHelper {
   public:
@@ -414,6 +418,11 @@ public:
     return nullptr;
   }
 
+  /// Return an LLVM type that corresponds to a HLSL type
+  virtual llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T) const {
+    return nullptr;
+  }
+
   static void
   setBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
                                   llvm::Function &F);
@@ -437,6 +446,7 @@ enum class AArch64ABIKind {
   DarwinPCS,
   Win64,
   AAPCSSoft,
+  PAuthTest,
 };
 
 std::unique_ptr<TargetCodeGenInfo>

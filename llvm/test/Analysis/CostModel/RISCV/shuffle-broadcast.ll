@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -S -mtriple=riscv64 -mattr=+v,+f,+d,+zfh,+zvfh | FileCheck %s
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -S -mtriple=riscv64 -mattr=+v,+f,+d,+zfh,+zvfh | FileCheck %s --check-prefix=SIZE
 
-define void  @broadcast_scalable() #0{
+define void @broadcast_scalable() {
 ; CHECK-LABEL: 'broadcast_scalable'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zero = shufflevector <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = shufflevector <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x i32> zeroinitializer
@@ -151,7 +151,7 @@ define void  @broadcast_scalable() #0{
   ret void
 }
 
-define void  @broadcast_fixed() #0{
+define void @broadcast_fixed() {
 ; CHECK-LABEL: 'broadcast_fixed'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zero = shufflevector <2 x half> undef, <2 x half> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = shufflevector <4 x half> undef, <4 x half> undef, <4 x i32> zeroinitializer

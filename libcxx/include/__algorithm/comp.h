@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__type_traits/desugars_to.h>
+#include <__type_traits/is_integral.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -42,7 +43,7 @@ struct __less<void, void> {
 };
 
 template <class _Tp>
-inline const bool __desugars_to_v<__less_tag, __less<>, _Tp, _Tp> = true;
+inline const bool __desugars_to_v<__totally_ordered_less_tag, __less<>, _Tp, _Tp> = is_integral<_Tp>::value;
 
 _LIBCPP_END_NAMESPACE_STD
 

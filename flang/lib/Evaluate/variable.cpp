@@ -250,7 +250,8 @@ DescriptorInquiry::DescriptorInquiry(NamedEntity &&base, Field field, int dim)
   const Symbol &last{base_.GetLastSymbol()};
   CHECK(IsDescriptor(last));
   CHECK((field == Field::Len && dim == 0) ||
-      (field != Field::Len && dim >= 0 && dim < last.Rank()));
+      (field != Field::Len && dim >= 0 &&
+          (dim < last.Rank() || IsAssumedRank(last))));
 }
 
 // LEN()

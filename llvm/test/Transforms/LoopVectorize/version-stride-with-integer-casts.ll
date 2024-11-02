@@ -34,7 +34,6 @@ define void @test_versioned_with_sext_use(i32 %offset, ptr %dst) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP4]], i32 0
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -110,7 +109,6 @@ define void @test_versioned_with_zext_use(i32 %offset, ptr %dst) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP4]], i32 0
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -267,7 +265,6 @@ define void @test_versioned_with_different_uses(i32 %offset, ptr noalias %dst.1,
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[DST_2]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP12]], i32 0
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP13]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]

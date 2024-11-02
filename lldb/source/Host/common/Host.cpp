@@ -93,9 +93,8 @@ using namespace lldb_private;
 #include <syslog.h>
 void Host::SystemLog(Severity severity, llvm::StringRef message) {
   static llvm::once_flag g_openlog_once;
-  llvm::call_once(g_openlog_once, [] {
-    openlog("lldb", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_USER);
-  });
+  llvm::call_once(g_openlog_once,
+                  [] { openlog("lldb", LOG_PID | LOG_NDELAY, LOG_USER); });
   int level = LOG_DEBUG;
   switch (severity) {
   case lldb::eSeverityInfo:

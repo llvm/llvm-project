@@ -386,6 +386,7 @@ add_header_macro(
     .llvm-libc-types.pthread_once_t
     .llvm-libc-types.pthread_rwlock_t
     .llvm-libc-types.pthread_rwlockattr_t
+    .llvm-libc-types.pthread_spinlock_t
     .llvm-libc-types.pthread_t
 )
 

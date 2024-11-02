@@ -154,7 +154,7 @@ entry:
 ; IR-LABEL:   @memmove_caller
 ; IR:         icmp ult ptr %src, %dst
 ; IR:         [[PHIVAL:%[0-9a-zA-Z_]+]] = phi i64
-; IR-NEXT:    %index_ptr = sub i64 [[PHIVAL]], 1
+; IR-NEXT:    %bwd_main_index = sub i64 [[PHIVAL]], 1
 ; IR:         [[FWDPHIVAL:%[0-9a-zA-Z_]+]] = phi i64
 ; IR:         {{%[0-9a-zA-Z_]+}} = add i64 [[FWDPHIVAL]], 1
 

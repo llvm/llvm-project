@@ -317,7 +317,10 @@ public:
   /// Returns true if opcode \p Opc is a memory operation. If it is, set
   /// \p Scale, \p Width, \p MinOffset, and \p MaxOffset accordingly.
   ///
-  /// For unscaled instructions, \p Scale is set to 1.
+  /// For unscaled instructions, \p Scale is set to 1. All values are in bytes.
+  /// MinOffset/MaxOffset are the un-scaled limits of the immediate in the
+  /// instruction, the actual offset limit is [MinOffset*Scale,
+  /// MaxOffset*Scale].
   static bool getMemOpInfo(unsigned Opcode, TypeSize &Scale, TypeSize &Width,
                            int64_t &MinOffset, int64_t &MaxOffset);
 
@@ -466,11 +469,13 @@ public:
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                    bool OutlineFromLinkOnceODRs) const override;
   std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
+      const MachineModuleInfo &MMI,
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
   void mergeOutliningCandidateAttributes(
       Function &F, std::vector<outliner::Candidate> &Candidates) const override;
-  outliner::InstrType
-  getOutliningTypeImpl(MachineBasicBlock::iterator &MIT, unsigned Flags) const override;
+  outliner::InstrType getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                                           MachineBasicBlock::iterator &MIT,
+                                           unsigned Flags) const override;
   SmallVector<
       std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
   getOutlinableRanges(MachineBasicBlock &MBB, unsigned &Flags) const override;

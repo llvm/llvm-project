@@ -22,8 +22,6 @@
 #  pragma GCC system_header
 #endif
 
-#ifndef _LIBCPP_HAS_NO_THREADS
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Mutex>
@@ -171,7 +169,5 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(unique_lock<_Mutex>& __x, unique_lock<_Mu
 }
 
 _LIBCPP_END_NAMESPACE_STD
-
-#endif // _LIBCPP_HAS_NO_THREADS
 
 #endif // _LIBCPP___MUTEX_UNIQUE_LOCK_H

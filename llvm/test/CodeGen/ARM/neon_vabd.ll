@@ -142,35 +142,30 @@ define <4 x i32> @sabd_4s_promoted_ops(<4 x i16> %a, <4 x i16> %b) {
 define <2 x i64> @sabd_2d(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: sabd_2d:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r11, lr}
-; CHECK-NEXT:    push {r4, r5, r11, lr}
-; CHECK-NEXT:    vmov lr, r1, d1
-; CHECK-NEXT:    vmov r2, r3, d3
-; CHECK-NEXT:    vmov r12, r0, d0
-; CHECK-NEXT:    subs lr, lr, r2
-; CHECK-NEXT:    asr r4, r1, #31
-; CHECK-NEXT:    sbcs r1, r1, r3
-; CHECK-NEXT:    sbcs r2, r4, r3, asr #31
-; CHECK-NEXT:    vmov r2, r5, d2
-; CHECK-NEXT:    sbc r3, r4, r3, asr #31
-; CHECK-NEXT:    eor r4, lr, r3, asr #31
-; CHECK-NEXT:    eor r1, r1, r3, asr #31
-; CHECK-NEXT:    subs r4, r4, r3, asr #31
-; CHECK-NEXT:    sbc lr, r1, r3, asr #31
-; CHECK-NEXT:    asr r3, r0, #31
-; CHECK-NEXT:    vmov.32 d1[0], r4
-; CHECK-NEXT:    subs r2, r12, r2
-; CHECK-NEXT:    sbcs r0, r0, r5
-; CHECK-NEXT:    sbcs r1, r3, r5, asr #31
-; CHECK-NEXT:    sbc r1, r3, r5, asr #31
-; CHECK-NEXT:    eor r2, r2, r1, asr #31
-; CHECK-NEXT:    eor r0, r0, r1, asr #31
-; CHECK-NEXT:    subs r2, r2, r1, asr #31
-; CHECK-NEXT:    sbc r0, r0, r1, asr #31
-; CHECK-NEXT:    vmov.32 d0[0], r2
-; CHECK-NEXT:    vmov.32 d1[1], lr
-; CHECK-NEXT:    vmov.32 d0[1], r0
-; CHECK-NEXT:    pop {r4, r5, r11, pc}
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NEXT:    vmov r0, r12, d0
+; CHECK-NEXT:    mov r6, #0
+; CHECK-NEXT:    vmov r2, r3, d2
+; CHECK-NEXT:    vmov r1, lr, d1
+; CHECK-NEXT:    vmov r4, r5, d3
+; CHECK-NEXT:    vsub.i64 q8, q0, q1
+; CHECK-NEXT:    subs r0, r2, r0
+; CHECK-NEXT:    sbcs r0, r3, r12
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    movwlt r0, #1
+; CHECK-NEXT:    subs r1, r4, r1
+; CHECK-NEXT:    sbcs r1, r5, lr
+; CHECK-NEXT:    movwlt r6, #1
+; CHECK-NEXT:    cmp r6, #0
+; CHECK-NEXT:    mvnne r6, #0
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    vdup.32 d19, r6
+; CHECK-NEXT:    mvnne r0, #0
+; CHECK-NEXT:    vdup.32 d18, r0
+; CHECK-NEXT:    veor q8, q8, q9
+; CHECK-NEXT:    vsub.i64 q0, q9, q8
+; CHECK-NEXT:    pop {r4, r5, r6, pc}
   %a.sext = sext <2 x i64> %a to <2 x i128>
   %b.sext = sext <2 x i64> %b to <2 x i128>
   %sub = sub <2 x i128> %a.sext, %b.sext
@@ -329,34 +324,10 @@ define <4 x i32> @uabd_4s_promoted_ops(<4 x i16> %a, <4 x i16> %b) {
 define <2 x i64> @uabd_2d(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: uabd_2d:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r6, lr}
-; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    vmov r0, r12, d3
-; CHECK-NEXT:    mov r1, #0
-; CHECK-NEXT:    vmov r2, r3, d1
-; CHECK-NEXT:    vmov lr, r6, d2
-; CHECK-NEXT:    vmov r4, r5, d0
-; CHECK-NEXT:    subs r0, r2, r0
-; CHECK-NEXT:    sbcs r2, r3, r12
-; CHECK-NEXT:    sbcs r3, r1, #0
-; CHECK-NEXT:    sbc r3, r1, #0
-; CHECK-NEXT:    eor r0, r0, r3, asr #31
-; CHECK-NEXT:    eor r2, r2, r3, asr #31
-; CHECK-NEXT:    subs r0, r0, r3, asr #31
-; CHECK-NEXT:    sbc r2, r2, r3, asr #31
-; CHECK-NEXT:    subs r3, r4, lr
-; CHECK-NEXT:    sbcs r6, r5, r6
-; CHECK-NEXT:    vmov.32 d1[0], r0
-; CHECK-NEXT:    sbcs r5, r1, #0
-; CHECK-NEXT:    sbc r1, r1, #0
-; CHECK-NEXT:    eor r3, r3, r1, asr #31
-; CHECK-NEXT:    subs r0, r3, r1, asr #31
-; CHECK-NEXT:    vmov.32 d0[0], r0
-; CHECK-NEXT:    eor r0, r6, r1, asr #31
-; CHECK-NEXT:    sbc r0, r0, r1, asr #31
-; CHECK-NEXT:    vmov.32 d1[1], r2
-; CHECK-NEXT:    vmov.32 d0[1], r0
-; CHECK-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-NEXT:    vqsub.u64 q8, q1, q0
+; CHECK-NEXT:    vqsub.u64 q9, q0, q1
+; CHECK-NEXT:    vorr q0, q9, q8
+; CHECK-NEXT:    bx lr
   %a.zext = zext <2 x i64> %a to <2 x i128>
   %b.zext = zext <2 x i64> %b to <2 x i128>
   %sub = sub <2 x i128> %a.zext, %b.zext
@@ -502,56 +473,30 @@ define <4 x i32> @smaxmin_v4i32(<4 x i32> %0, <4 x i32> %1) {
 define <2 x i64> @smaxmin_v2i64(<2 x i64> %0, <2 x i64> %1) {
 ; CHECK-LABEL: smaxmin_v2i64:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
-; CHECK-NEXT:    push {r4, r5, r6, r7, r8, lr}
-; CHECK-NEXT:    vmov r1, r0, d3
-; CHECK-NEXT:    mov r12, #0
-; CHECK-NEXT:    vmov r4, lr, d1
-; CHECK-NEXT:    vmov r6, r8, d0
-; CHECK-NEXT:    subs r2, r4, r1
-; CHECK-NEXT:    mov r3, r0
-; CHECK-NEXT:    sbcs r2, lr, r0
-; CHECK-NEXT:    mov r2, #0
-; CHECK-NEXT:    movwlt r2, #1
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    mov r2, r1
-; CHECK-NEXT:    movne r3, lr
-; CHECK-NEXT:    movne r2, r4
-; CHECK-NEXT:    vmov.32 d17[0], r2
-; CHECK-NEXT:    vmov.32 d17[1], r3
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NEXT:    vmov r0, r12, d0
+; CHECK-NEXT:    mov r6, #0
 ; CHECK-NEXT:    vmov r2, r3, d2
-; CHECK-NEXT:    subs r5, r2, r6
-; CHECK-NEXT:    sbcs r5, r3, r8
-; CHECK-NEXT:    mov r7, r2
-; CHECK-NEXT:    mov r5, #0
-; CHECK-NEXT:    movwlt r5, #1
-; CHECK-NEXT:    cmp r5, #0
-; CHECK-NEXT:    movne r7, r6
-; CHECK-NEXT:    vmov.32 d18[0], r7
-; CHECK-NEXT:    subs r7, r1, r4
-; CHECK-NEXT:    sbcs r7, r0, lr
-; CHECK-NEXT:    mov r7, #0
-; CHECK-NEXT:    movwlt r7, #1
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    movne r1, r4
-; CHECK-NEXT:    vmov.32 d19[0], r1
-; CHECK-NEXT:    subs r1, r6, r2
-; CHECK-NEXT:    sbcs r1, r8, r3
-; CHECK-NEXT:    movwlt r12, #1
-; CHECK-NEXT:    cmp r12, #0
-; CHECK-NEXT:    movne r2, r6
-; CHECK-NEXT:    mov r1, r3
-; CHECK-NEXT:    vmov.32 d16[0], r2
-; CHECK-NEXT:    movne r1, r8
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    movne r0, lr
-; CHECK-NEXT:    cmp r5, #0
-; CHECK-NEXT:    vmov.32 d16[1], r1
-; CHECK-NEXT:    movne r3, r8
-; CHECK-NEXT:    vmov.32 d19[1], r0
-; CHECK-NEXT:    vmov.32 d18[1], r3
+; CHECK-NEXT:    vmov r1, lr, d1
+; CHECK-NEXT:    vmov r4, r5, d3
+; CHECK-NEXT:    vsub.i64 q8, q0, q1
+; CHECK-NEXT:    subs r0, r2, r0
+; CHECK-NEXT:    sbcs r0, r3, r12
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    movwlt r0, #1
+; CHECK-NEXT:    subs r1, r4, r1
+; CHECK-NEXT:    sbcs r1, r5, lr
+; CHECK-NEXT:    movwlt r6, #1
+; CHECK-NEXT:    cmp r6, #0
+; CHECK-NEXT:    mvnne r6, #0
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    vdup.32 d19, r6
+; CHECK-NEXT:    mvnne r0, #0
+; CHECK-NEXT:    vdup.32 d18, r0
+; CHECK-NEXT:    veor q8, q8, q9
 ; CHECK-NEXT:    vsub.i64 q0, q9, q8
-; CHECK-NEXT:    pop {r4, r5, r6, r7, r8, pc}
+; CHECK-NEXT:    pop {r4, r5, r6, pc}
   %a = tail call <2 x i64> @llvm.smax.v2i64(<2 x i64> %0, <2 x i64> %1)
   %b = tail call <2 x i64> @llvm.smin.v2i64(<2 x i64> %0, <2 x i64> %1)
   %sub = sub <2 x i64> %a, %b
@@ -594,11 +539,9 @@ define <4 x i32> @umaxmin_v4i32(<4 x i32> %0, <4 x i32> %1) {
 define <2 x i64> @umaxmin_v2i64(<2 x i64> %0, <2 x i64> %1) {
 ; CHECK-LABEL: umaxmin_v2i64:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vqsub.u64 q8, q0, q1
-; CHECK-NEXT:    vqsub.u64 q9, q1, q0
-; CHECK-NEXT:    vsub.i64 q8, q8, q0
-; CHECK-NEXT:    vadd.i64 q9, q0, q9
-; CHECK-NEXT:    vadd.i64 q0, q9, q8
+; CHECK-NEXT:    vqsub.u64 q8, q1, q0
+; CHECK-NEXT:    vqsub.u64 q9, q0, q1
+; CHECK-NEXT:    vorr q0, q9, q8
 ; CHECK-NEXT:    bx lr
   %a = tail call <2 x i64> @llvm.umax.v2i64(<2 x i64> %0, <2 x i64> %1)
   %b = tail call <2 x i64> @llvm.umin.v2i64(<2 x i64> %0, <2 x i64> %1)

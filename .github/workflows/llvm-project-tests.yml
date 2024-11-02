@@ -131,6 +131,7 @@ jobs:
                 -DCMAKE_BUILD_TYPE=Release \
                 -DLLVM_ENABLE_ASSERTIONS=ON \
                 -DLLDB_INCLUDE_TESTS=OFF \
+                -DLIBCLC_TARGETS_TO_BUILD="amdgcn--;amdgcn--amdhsa;r600--;nvptx--;nvptx64--;nvptx--nvidiacl;nvptx64--nvidiacl" \
                 -DCMAKE_C_COMPILER_LAUNCHER=sccache \
                 -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
                 $extra_cmake_args \
@@ -142,8 +143,6 @@ jobs:
         env:
           LLVM_BUILDDIR: ${{ steps.build-llvm.outputs.llvm-builddir }}
         run: |
-          # Make sure all of LLVM libraries that llvm-config needs are built.
+          # The libclc tests don't have a generated check target so all we can
+          # do is build it.
           ninja -C "$LLVM_BUILDDIR"
-          cmake -G Ninja -S libclc -B libclc-build -DLLVM_DIR="$LLVM_BUILDDIR"/lib/cmake/llvm -DLIBCLC_TARGETS_TO_BUILD="amdgcn--;amdgcn--amdhsa;r600--;nvptx--;nvptx64--;nvptx--nvidiacl;nvptx64--nvidiacl"
-          ninja -C libclc-build
-          ninja -C libclc-build test

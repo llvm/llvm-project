@@ -9,19 +9,19 @@ enums: []
 objects: []
 functions:
   - name: epoll_create
-    standards: 
+    standards:
       - Linux
     return_type: int
     arguments:
       - type: int
   - name: epoll_create1
-    standards: 
+    standards:
       - Linux
     return_type: int
     arguments:
       - type: int
   - name: epoll_ctl
-    standards: 
+    standards:
       - Linux
     return_type: int
     arguments:
@@ -30,7 +30,7 @@ functions:
       - type: int
       - type: struct epoll_event *
   - name: epoll_wait
-    standards: 
+    standards:
       - Linux
     return_type: int
     arguments:
@@ -39,7 +39,7 @@ functions:
       - type: int
       - type: int
   - name: epoll_pwait
-    standards: 
+    standards:
       - Linux
     return_type: int
     arguments:
@@ -49,7 +49,7 @@ functions:
       - type: int
       - type: const sigset_t *
   - name: epoll_pwait2
-    standards: 
+    standards:
       - Linux
     return_type: int
     arguments:

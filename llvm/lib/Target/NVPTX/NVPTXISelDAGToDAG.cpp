@@ -22,6 +22,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetIntrinsicInfo.h"
 
@@ -714,21 +715,28 @@ static unsigned int getCodeAddrSpace(MemSDNode *N) {
   return NVPTX::PTXLdStInstCode::GENERIC;
 }
 
-static unsigned int getCodeMemorySemantic(MemSDNode *N,
-                                          const NVPTXSubtarget *Subtarget) {
+namespace {
+
+struct OperationOrderings {
+  NVPTX::Ordering InstructionOrdering, FenceOrdering;
+  OperationOrderings(NVPTX::Ordering IO = NVPTX::Ordering::NotAtomic,
+                     NVPTX::Ordering FO = NVPTX::Ordering::NotAtomic)
+      : InstructionOrdering(IO), FenceOrdering(FO) {}
+};
+
+static OperationOrderings
+getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   AtomicOrdering Ordering = N->getSuccessOrdering();
   auto CodeAddrSpace = getCodeAddrSpace(N);
 
   bool HasMemoryOrdering = Subtarget->hasMemoryOrdering();
   bool HasRelaxedMMIO = Subtarget->hasRelaxedMMIO();
 
-  // TODO: lowering for SequentiallyConsistent Operations: for now, we error.
-  // TODO: lowering for AcquireRelease Operations: for now, we error.
-  //
-
   // clang-format off
 
-  // Lowering for non-SequentiallyConsistent Operations
+  // Lowering for Load/Store Operations (note: AcquireRelease Loads or Stores error).
+  // Note: uses of Relaxed in the Atomic column of this table refer
+  // to LLVM AtomicOrdering::Monotonic.
   //
   // | Atomic  | Volatile | Statespace         | PTX sm_60- | PTX sm_70+                   |
   // |---------|----------|--------------------|------------|------------------------------|
@@ -736,8 +744,9 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
   // | No      | Yes      | Generic,Shared,    | .volatile  | .volatile                    |
   // |         |          | Global [0]         |            |                              |
   // | No      | Yes      | Local,Const,Param  | plain [1]  | .weak [1]                    |
-  // | Relaxed | No       | Generic,Shared,    |            |                              |
-  // |         |          | Global [0]         | .volatile  | <atomic sem>                 |
+  // | Unorder | Yes/No   | All                | == Relaxed | == Relaxed                   |
+  // | Relaxed | No       | Generic,Shared,    | .volatile  | <atomic sem>                 |
+  // |         |          | Global [0]         |            |                              |
   // | Other   | No       | Generic,Shared,    | Error [2]  | <atomic sem>                 |
   // |         |          | Global [0]         |            |                              |
   // | Yes     | No       | Local,Const,Param  | plain [1]  | .weak [1]                    |
@@ -747,6 +756,25 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
   // | Relaxed | Yes      | Local,Const,Param  | plain [1]  | .weak [1]                    |
   // | Other   | Yes      | Generic, Shared,   | Error [2]  | <atomic sem> [3]             |
   // |         |          | / Global [0]       |            |                              |
+
+  // Lowering of CUDA C++ SequentiallyConsistent Operations and Fences to PTX
+  // by following the ABI proven sound in:
+  //   Lustig et al, A Formal Analysis of the NVIDIA PTX Memory Consistency Model, ASPLOS’19.
+  //   https://dl.acm.org/doi/pdf/10.1145/3297858.3304043
+  //
+  // | CUDA C++ Atomic Operation or Atomic Fence            | PTX Atomic Operation or Fence |
+  // |------------------------------------------------------|-------------------------------|
+  // | cuda::atomic_thread_fence                            | fence.sc.<scope>;             |
+  // |   (memory_order_seq_cst, cuda::thread_scope_<scope>) |                               |
+  // |------------------------------------------------------|-------------------------------|
+  // | cuda::atomic_load                                    | fence.sc.<scope>;             |
+  // |   (memory_order_seq_cst, cuda::thread_scope_<scope>) | ld.acquire.<scope>;           |
+  // |------------------------------------------------------|-------------------------------|  
+  // | cuda::atomic_store                                   | fence.sc.<scope>;             |
+  // |   (memory_order_seq_cst, cuda::thread_scope_<scope>) | st.release.<scope>;           |
+  // |------------------------------------------------------|-------------------------------|
+  // | cuda::atomic_fetch_<op>                              | fence.sc.<scope>;             |
+  // |   (memory_order_seq_cst, cuda::thread_scope_<scope>) | atom.acq_rel.<scope>;         |
 
   // clang-format on
 
@@ -787,24 +815,23 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
   //        - the "weak" memory instruction we are currently lowering to, and
   //        - some other instruction that preserves the side-effect, e.g.,
   //          a dead dummy volatile load.
-
   if (CodeAddrSpace == NVPTX::PTXLdStInstCode::LOCAL ||
       CodeAddrSpace == NVPTX::PTXLdStInstCode::CONSTANT ||
       CodeAddrSpace == NVPTX::PTXLdStInstCode::PARAM) {
-    return NVPTX::PTXLdStInstCode::NotAtomic;
+    return NVPTX::Ordering::NotAtomic;
   }
 
-  // [2]: Atomics with Ordering different than Relaxed are not supported on
-  //      sm_60 and older; this includes volatile atomics.
+  // [2]: Atomics with Ordering different than Unordered or Relaxed are not
+  //      supported on sm_60 and older; this includes volatile atomics.
   if (!(Ordering == AtomicOrdering::NotAtomic ||
+        Ordering == AtomicOrdering::Unordered ||
         Ordering == AtomicOrdering::Monotonic) &&
       !HasMemoryOrdering) {
-    SmallString<256> Msg;
-    raw_svector_ostream OS(Msg);
-    OS << "PTX does not support \"atomic\" for orderings different than"
-          "\"NotAtomic\" or \"Monotonic\" for sm_60 or older, but order is: \""
-       << toIRString(Ordering) << "\".";
-    report_fatal_error(OS.str());
+    report_fatal_error(
+        formatv("PTX does not support \"atomic\" for orderings different than"
+                "\"NotAtomic\" or \"Monotonic\" for sm_60 or older, but order "
+                "is: \"{}\".",
+                toIRString(Ordering)));
   }
 
   // [3]: TODO: these should eventually use .mmio<.atomic sem>; for now we drop
@@ -818,65 +845,75 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
       (CodeAddrSpace == NVPTX::PTXLdStInstCode::GENERIC ||
        CodeAddrSpace == NVPTX::PTXLdStInstCode::GLOBAL ||
        CodeAddrSpace == NVPTX::PTXLdStInstCode::SHARED);
+  if (!AddrGenericOrGlobalOrShared)
+    return NVPTX::Ordering::NotAtomic;
+
   bool UseRelaxedMMIO =
       HasRelaxedMMIO && CodeAddrSpace == NVPTX::PTXLdStInstCode::GLOBAL;
 
   switch (Ordering) {
   case AtomicOrdering::NotAtomic:
-    return N->isVolatile() && AddrGenericOrGlobalOrShared
-               ? NVPTX::PTXLdStInstCode::Volatile
-               : NVPTX::PTXLdStInstCode::NotAtomic;
+    return N->isVolatile() ? NVPTX::Ordering::Volatile
+                           : NVPTX::Ordering::NotAtomic;
+  case AtomicOrdering::Unordered:
+    // We lower unordered in the exact same way as 'monotonic' to respect
+    // LLVM IR atomicity requirements.
   case AtomicOrdering::Monotonic:
     if (N->isVolatile())
-      return UseRelaxedMMIO                ? NVPTX::PTXLdStInstCode::RelaxedMMIO
-             : AddrGenericOrGlobalOrShared ? NVPTX::PTXLdStInstCode::Volatile
-                                           : NVPTX::PTXLdStInstCode::NotAtomic;
+      return UseRelaxedMMIO ? NVPTX::Ordering::RelaxedMMIO
+                            : NVPTX::Ordering::Volatile;
     else
-      return HasMemoryOrdering             ? NVPTX::PTXLdStInstCode::Relaxed
-             : AddrGenericOrGlobalOrShared ? NVPTX::PTXLdStInstCode::Volatile
-                                           : NVPTX::PTXLdStInstCode::NotAtomic;
+      return HasMemoryOrdering ? NVPTX::Ordering::Relaxed
+                               : NVPTX::Ordering::Volatile;
+  // case AtomicOrdering::Consume: // If LLVM ever provides this, lower it to
+  // Acquire.
   case AtomicOrdering::Acquire:
-    if (!N->readMem()) {
-      SmallString<256> Msg;
-      raw_svector_ostream OS(Msg);
-      OS << "PTX only supports Acquire Ordering on reads: "
-         << N->getOperationName();
-      N->print(OS);
-      report_fatal_error(OS.str());
-    }
-    return AddrGenericOrGlobalOrShared ? NVPTX::PTXLdStInstCode::Acquire
-                                       : NVPTX::PTXLdStInstCode::NotAtomic;
+    if (!N->readMem())
+      report_fatal_error(
+          formatv("PTX only supports Acquire Ordering on reads: {}",
+                  N->getOperationName()));
+    return NVPTX::Ordering::Acquire;
   case AtomicOrdering::Release:
-    if (!N->writeMem()) {
-      SmallString<256> Msg;
-      raw_svector_ostream OS(Msg);
-      OS << "PTX only supports Release Ordering on writes: "
-         << N->getOperationName();
-      N->print(OS);
-      report_fatal_error(OS.str());
-    }
-    return AddrGenericOrGlobalOrShared ? NVPTX::PTXLdStInstCode::Release
-                                       : NVPTX::PTXLdStInstCode::NotAtomic;
+    if (!N->writeMem())
+      report_fatal_error(
+          formatv("PTX only supports Release Ordering on writes: {}",
+                  N->getOperationName()));
+    return NVPTX::Ordering::Release;
   case AtomicOrdering::AcquireRelease: {
-    SmallString<256> Msg;
-    raw_svector_ostream OS(Msg);
-    OS << "PTX only supports AcquireRelease Ordering on read-modify-write: "
-       << N->getOperationName();
-    N->print(OS);
-    report_fatal_error(OS.str());
+    report_fatal_error(
+        formatv("NVPTX does not support AcquireRelease Ordering on "
+                "read-modify-write "
+                "yet and PTX does not support it on loads or stores: {}",
+                N->getOperationName()));
   }
-  case AtomicOrdering::SequentiallyConsistent:
-  case AtomicOrdering::Unordered:
-    // TODO: support AcquireRelease and SequentiallyConsistent
-    SmallString<256> Msg;
-    raw_svector_ostream OS(Msg);
-    OS << "NVPTX backend does not support AtomicOrdering \""
-       << toIRString(Ordering) << "\" yet.";
-    report_fatal_error(OS.str());
+  case AtomicOrdering::SequentiallyConsistent: {
+    // LLVM-IR SequentiallyConsistent atomics map to a two-instruction PTX
+    // sequence including a "fence.sc.sco" and the memory instruction with an
+    // Ordering that differs from "sc": acq, rel, or acq_rel, depending on
+    // whether the memory operation is a read, write, or read-modify-write.
+    //
+    // This sets the ordering of the fence to SequentiallyConsistent, and
+    // sets the corresponding ordering for the instruction.
+    NVPTX::Ordering InstrOrder;
+    if (N->readMem())
+      InstrOrder = NVPTX::Ordering::Acquire;
+    else if (N->writeMem())
+      InstrOrder = NVPTX::Ordering::Release;
+    else
+      report_fatal_error(
+          formatv("NVPTX does not support SequentiallyConsistent Ordering on "
+                  "read-modify-writes yet: {}",
+                  N->getOperationName()));
+    return OperationOrderings(InstrOrder,
+                              NVPTX::Ordering::SequentiallyConsistent);
   }
-
-  llvm_unreachable("unexpected unhandled case");
+  }
+  report_fatal_error(
+      formatv("NVPTX backend does not support AtomicOrdering \"{}\" yet.",
+              toIRString(Ordering)));
 }
+
+} // namespace
 
 static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
                           unsigned CodeAddrSpace, MachineFunction *F) {
@@ -918,6 +955,35 @@ static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
       return GV->isConstant();
     return false;
   });
+}
+
+NVPTX::Ordering NVPTXDAGToDAGISel::insertMemoryInstructionFence(SDLoc DL,
+                                                                SDValue &Chain,
+                                                                MemSDNode *N) {
+  // Some memory instructions - loads, stores, atomics - need an extra fence
+  // instruction. Get the memory order of the instruction, and that of its
+  // fence, if any.
+  auto [InstructionOrdering, FenceOrdering] =
+      getOperationOrderings(N, Subtarget);
+
+  // If a fence is required before the operation, insert it:
+  switch (NVPTX::Ordering(FenceOrdering)) {
+  case NVPTX::Ordering::NotAtomic:
+    break;
+  case NVPTX::Ordering::SequentiallyConsistent: {
+    unsigned Op = Subtarget->hasMemoryOrdering()
+                      ? NVPTX::atomic_thread_fence_seq_cst_sys
+                      : NVPTX::INT_MEMBAR_SYS;
+    Chain = SDValue(CurDAG->getMachineNode(Op, DL, MVT::Other, Chain), 0);
+    break;
+  }
+  default:
+    report_fatal_error(
+        formatv("Unexpected fence ordering: \"{}\".",
+                OrderingToCString(NVPTX::Ordering(FenceOrdering))));
+  }
+
+  return InstructionOrdering;
 }
 
 bool NVPTXDAGToDAGISel::tryIntrinsicNoChain(SDNode *N) {
@@ -1066,17 +1132,15 @@ static int getLdStRegType(EVT VT) {
 }
 
 bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
-  SDLoc dl(N);
   MemSDNode *LD = cast<MemSDNode>(N);
   assert(LD->readMem() && "Expected load");
-  LoadSDNode *PlainLoad = dyn_cast<LoadSDNode>(N);
-  EVT LoadedVT = LD->getMemoryVT();
-  SDNode *NVPTXLD = nullptr;
 
   // do not support pre/post inc/dec
+  LoadSDNode *PlainLoad = dyn_cast<LoadSDNode>(N);
   if (PlainLoad && PlainLoad->isIndexed())
     return false;
 
+  EVT LoadedVT = LD->getMemoryVT();
   if (!LoadedVT.isSimple())
     return false;
 
@@ -1085,12 +1149,12 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   if (canLowerToLDG(LD, *Subtarget, CodeAddrSpace, MF)) {
     return tryLDGLDU(N);
   }
-
-  // Memory Semantic Setting
-  unsigned int CodeMemorySem = getCodeMemorySemantic(LD, Subtarget);
-
   unsigned int PointerSize =
       CurDAG->getDataLayout().getPointerSizeInBits(LD->getAddressSpace());
+
+  SDLoc DL(N);
+  SDValue Chain = N->getOperand(0);
+  auto InstructionOrdering = insertMemoryInstructionFence(DL, Chain, LD);
 
   // Type Setting: fromType + fromTypeWidth
   //
@@ -1101,30 +1165,34 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   MVT SimpleVT = LoadedVT.getSimpleVT();
   MVT ScalarVT = SimpleVT.getScalarType();
   // Read at least 8 bits (predicates are stored as 8-bit values)
-  unsigned fromTypeWidth = std::max(8U, (unsigned)ScalarVT.getSizeInBits());
-  unsigned int fromType;
+  unsigned FromTypeWidth = std::max(8U, (unsigned)ScalarVT.getSizeInBits());
+  unsigned int FromType;
 
   // Vector Setting
-  unsigned vecType = NVPTX::PTXLdStInstCode::Scalar;
+  unsigned VecType = NVPTX::PTXLdStInstCode::Scalar;
   if (SimpleVT.isVector()) {
     assert((Isv2x16VT(LoadedVT) || LoadedVT == MVT::v4i8) &&
            "Unexpected vector type");
     // v2f16/v2bf16/v2i16 is loaded using ld.b32
-    fromTypeWidth = 32;
+    FromTypeWidth = 32;
   }
 
   if (PlainLoad && (PlainLoad->getExtensionType() == ISD::SEXTLOAD))
-    fromType = NVPTX::PTXLdStInstCode::Signed;
+    FromType = NVPTX::PTXLdStInstCode::Signed;
   else
-    fromType = getLdStRegType(ScalarVT);
+    FromType = getLdStRegType(ScalarVT);
 
   // Create the machine instruction DAG
-  SDValue Chain = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   SDValue Addr;
   SDValue Offset, Base;
   std::optional<unsigned> Opcode;
   MVT::SimpleValueType TargetVT = LD->getSimpleValueType(0).SimpleTy;
+
+  SmallVector<SDValue, 12> Ops({getI32Imm(InstructionOrdering, DL),
+                                getI32Imm(CodeAddrSpace, DL),
+                                getI32Imm(VecType, DL), getI32Imm(FromType, DL),
+                                getI32Imm(FromTypeWidth, DL)});
 
   if (SelectDirectAddr(N1, Addr)) {
     Opcode = pickOpcodeForVT(TargetVT, NVPTX::LD_i8_avar, NVPTX::LD_i16_avar,
@@ -1132,14 +1200,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                              NVPTX::LD_f32_avar, NVPTX::LD_f64_avar);
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(CodeMemorySem, dl),
-                     getI32Imm(CodeAddrSpace, dl),
-                     getI32Imm(vecType, dl),
-                     getI32Imm(fromType, dl),
-                     getI32Imm(fromTypeWidth, dl),
-                     Addr,
-                     Chain};
-    NVPTXLD = CurDAG->getMachineNode(*Opcode, dl, TargetVT, MVT::Other, Ops);
+    Ops.append({Addr, Chain});
   } else if (PointerSize == 64 ? SelectADDRsi64(N1.getNode(), N1, Base, Offset)
                                : SelectADDRsi(N1.getNode(), N1, Base, Offset)) {
     Opcode = pickOpcodeForVT(TargetVT, NVPTX::LD_i8_asi, NVPTX::LD_i16_asi,
@@ -1147,15 +1208,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                              NVPTX::LD_f32_asi, NVPTX::LD_f64_asi);
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(CodeMemorySem, dl),
-                     getI32Imm(CodeAddrSpace, dl),
-                     getI32Imm(vecType, dl),
-                     getI32Imm(fromType, dl),
-                     getI32Imm(fromTypeWidth, dl),
-                     Base,
-                     Offset,
-                     Chain};
-    NVPTXLD = CurDAG->getMachineNode(*Opcode, dl, TargetVT, MVT::Other, Ops);
+    Ops.append({Base, Offset, Chain});
   } else if (PointerSize == 64 ? SelectADDRri64(N1.getNode(), N1, Base, Offset)
                                : SelectADDRri(N1.getNode(), N1, Base, Offset)) {
     if (PointerSize == 64)
@@ -1169,15 +1222,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                                NVPTX::LD_f32_ari, NVPTX::LD_f64_ari);
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(CodeMemorySem, dl),
-                     getI32Imm(CodeAddrSpace, dl),
-                     getI32Imm(vecType, dl),
-                     getI32Imm(fromType, dl),
-                     getI32Imm(fromTypeWidth, dl),
-                     Base,
-                     Offset,
-                     Chain};
-    NVPTXLD = CurDAG->getMachineNode(*Opcode, dl, TargetVT, MVT::Other, Ops);
+    Ops.append({Base, Offset, Chain});
   } else {
     if (PointerSize == 64)
       Opcode =
@@ -1190,16 +1235,11 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                                NVPTX::LD_f32_areg, NVPTX::LD_f64_areg);
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(CodeMemorySem, dl),
-                     getI32Imm(CodeAddrSpace, dl),
-                     getI32Imm(vecType, dl),
-                     getI32Imm(fromType, dl),
-                     getI32Imm(fromTypeWidth, dl),
-                     N1,
-                     Chain};
-    NVPTXLD = CurDAG->getMachineNode(*Opcode, dl, TargetVT, MVT::Other, Ops);
+    Ops.append({N1, Chain});
   }
 
+  SDNode *NVPTXLD =
+      CurDAG->getMachineNode(*Opcode, DL, TargetVT, MVT::Other, Ops);
   if (!NVPTXLD)
     return false;
 
@@ -1211,16 +1251,8 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
 }
 
 bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
-
-  SDValue Chain = N->getOperand(0);
-  SDValue Op1 = N->getOperand(1);
-  SDValue Addr, Offset, Base;
-  std::optional<unsigned> Opcode;
-  SDLoc DL(N);
-  SDNode *LD;
   MemSDNode *MemSD = cast<MemSDNode>(N);
   EVT LoadedVT = MemSD->getMemoryVT();
-
   if (!LoadedVT.isSimple())
     return false;
 
@@ -1229,12 +1261,12 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   if (canLowerToLDG(MemSD, *Subtarget, CodeAddrSpace, MF)) {
     return tryLDGLDU(N);
   }
-
   unsigned int PointerSize =
       CurDAG->getDataLayout().getPointerSizeInBits(MemSD->getAddressSpace());
 
-  // Memory Semantic Setting
-  unsigned int CodeMemorySem = getCodeMemorySemantic(MemSD, Subtarget);
+  SDLoc DL(N);
+  SDValue Chain = N->getOperand(0);
+  auto InstructionOrdering = insertMemoryInstructionFence(DL, Chain, MemSD);
 
   // Vector Setting
   MVT SimpleVT = LoadedVT.getSimpleVT();
@@ -1282,6 +1314,16 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     FromTypeWidth = 32;
   }
 
+  SDValue Op1 = N->getOperand(1);
+  SDValue Addr, Offset, Base;
+  std::optional<unsigned> Opcode;
+  SDNode *LD;
+
+  SmallVector<SDValue, 12> Ops({getI32Imm(InstructionOrdering, DL),
+                                getI32Imm(CodeAddrSpace, DL),
+                                getI32Imm(VecType, DL), getI32Imm(FromType, DL),
+                                getI32Imm(FromTypeWidth, DL)});
+
   if (SelectDirectAddr(Op1, Addr)) {
     switch (N->getOpcode()) {
     default:
@@ -1301,14 +1343,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(CodeMemorySem, DL),
-                     getI32Imm(CodeAddrSpace, DL),
-                     getI32Imm(VecType, DL),
-                     getI32Imm(FromType, DL),
-                     getI32Imm(FromTypeWidth, DL),
-                     Addr,
-                     Chain};
-    LD = CurDAG->getMachineNode(*Opcode, DL, N->getVTList(), Ops);
+    Ops.append({Addr, Chain});
   } else if (PointerSize == 64
                  ? SelectADDRsi64(Op1.getNode(), Op1, Base, Offset)
                  : SelectADDRsi(Op1.getNode(), Op1, Base, Offset)) {
@@ -1330,15 +1365,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(CodeMemorySem, DL),
-                     getI32Imm(CodeAddrSpace, DL),
-                     getI32Imm(VecType, DL),
-                     getI32Imm(FromType, DL),
-                     getI32Imm(FromTypeWidth, DL),
-                     Base,
-                     Offset,
-                     Chain};
-    LD = CurDAG->getMachineNode(*Opcode, DL, N->getVTList(), Ops);
+    Ops.append({Base, Offset, Chain});
   } else if (PointerSize == 64
                  ? SelectADDRri64(Op1.getNode(), Op1, Base, Offset)
                  : SelectADDRri(Op1.getNode(), Op1, Base, Offset)) {
@@ -1380,16 +1407,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(CodeMemorySem, DL),
-                     getI32Imm(CodeAddrSpace, DL),
-                     getI32Imm(VecType, DL),
-                     getI32Imm(FromType, DL),
-                     getI32Imm(FromTypeWidth, DL),
-                     Base,
-                     Offset,
-                     Chain};
-
-    LD = CurDAG->getMachineNode(*Opcode, DL, N->getVTList(), Ops);
+    Ops.append({Base, Offset, Chain});
   } else {
     if (PointerSize == 64) {
       switch (N->getOpcode()) {
@@ -1430,15 +1448,9 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(CodeMemorySem, DL),
-                     getI32Imm(CodeAddrSpace, DL),
-                     getI32Imm(VecType, DL),
-                     getI32Imm(FromType, DL),
-                     getI32Imm(FromTypeWidth, DL),
-                     Op1,
-                     Chain};
-    LD = CurDAG->getMachineNode(*Opcode, DL, N->getVTList(), Ops);
+    Ops.append({Op1, Chain});
   }
+  LD = CurDAG->getMachineNode(*Opcode, DL, N->getVTList(), Ops);
 
   MachineMemOperand *MemRef = cast<MemSDNode>(N)->getMemOperand();
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(LD), {MemRef});
@@ -1448,8 +1460,6 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
 }
 
 bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
-
-  SDValue Chain = N->getOperand(0);
   SDValue Op1;
   MemSDNode *Mem;
   bool IsLDG = true;
@@ -1479,12 +1489,7 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
     Mem = cast<MemSDNode>(N);
   }
 
-  std::optional<unsigned> Opcode;
-  SDLoc DL(N);
-  SDNode *LD;
-  SDValue Base, Offset, Addr;
   EVT OrigType = N->getValueType(0);
-
   EVT EltVT = Mem->getMemoryVT();
   unsigned NumElts = 1;
   if (EltVT.isVector()) {
@@ -1513,6 +1518,12 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
   }
   InstVTs.push_back(MVT::Other);
   SDVTList InstVTList = CurDAG->getVTList(InstVTs);
+  SDValue Chain = N->getOperand(0);
+
+  std::optional<unsigned> Opcode;
+  SDLoc DL(N);
+  SDNode *LD;
+  SDValue Base, Offset, Addr;
 
   if (SelectDirectAddr(Op1, Addr)) {
     switch (N->getOpcode()) {
@@ -1863,19 +1874,17 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
 }
 
 bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
-  SDLoc dl(N);
   MemSDNode *ST = cast<MemSDNode>(N);
   assert(ST->writeMem() && "Expected store");
   StoreSDNode *PlainStore = dyn_cast<StoreSDNode>(N);
   AtomicSDNode *AtomicStore = dyn_cast<AtomicSDNode>(N);
   assert((PlainStore || AtomicStore) && "Expected store");
-  EVT StoreVT = ST->getMemoryVT();
-  SDNode *NVPTXST = nullptr;
 
   // do not support pre/post inc/dec
   if (PlainStore && PlainStore->isIndexed())
     return false;
 
+  EVT StoreVT = ST->getMemoryVT();
   if (!StoreVT.isSimple())
     return false;
 
@@ -1884,29 +1893,28 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   unsigned int PointerSize =
       CurDAG->getDataLayout().getPointerSizeInBits(ST->getAddressSpace());
 
-  // Memory Semantic Setting
-  unsigned int CodeMemorySem = getCodeMemorySemantic(ST, Subtarget);
+  SDLoc DL(N);
+  SDValue Chain = ST->getChain();
+  auto InstructionOrdering = insertMemoryInstructionFence(DL, Chain, ST);
 
   // Vector Setting
   MVT SimpleVT = StoreVT.getSimpleVT();
-  unsigned vecType = NVPTX::PTXLdStInstCode::Scalar;
+  unsigned VecType = NVPTX::PTXLdStInstCode::Scalar;
 
   // Type Setting: toType + toTypeWidth
   // - for integer type, always use 'u'
-  //
   MVT ScalarVT = SimpleVT.getScalarType();
-  unsigned toTypeWidth = ScalarVT.getSizeInBits();
+  unsigned ToTypeWidth = ScalarVT.getSizeInBits();
   if (SimpleVT.isVector()) {
     assert((Isv2x16VT(StoreVT) || StoreVT == MVT::v4i8) &&
            "Unexpected vector type");
     // v2x16 is stored using st.b32
-    toTypeWidth = 32;
+    ToTypeWidth = 32;
   }
 
-  unsigned int toType = getLdStRegType(ScalarVT);
+  unsigned int ToType = getLdStRegType(ScalarVT);
 
   // Create the machine instruction DAG
-  SDValue Chain = ST->getChain();
   SDValue Value = PlainStore ? PlainStore->getValue() : AtomicStore->getVal();
   SDValue BasePtr = ST->getBasePtr();
   SDValue Addr;
@@ -1915,21 +1923,18 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   MVT::SimpleValueType SourceVT =
       Value.getNode()->getSimpleValueType(0).SimpleTy;
 
+  SmallVector<SDValue, 12> Ops({Value, getI32Imm(InstructionOrdering, DL),
+                                getI32Imm(CodeAddrSpace, DL),
+                                getI32Imm(VecType, DL), getI32Imm(ToType, DL),
+                                getI32Imm(ToTypeWidth, DL)});
+
   if (SelectDirectAddr(BasePtr, Addr)) {
     Opcode = pickOpcodeForVT(SourceVT, NVPTX::ST_i8_avar, NVPTX::ST_i16_avar,
                              NVPTX::ST_i32_avar, NVPTX::ST_i64_avar,
                              NVPTX::ST_f32_avar, NVPTX::ST_f64_avar);
     if (!Opcode)
       return false;
-    SDValue Ops[] = {Value,
-                     getI32Imm(CodeMemorySem, dl),
-                     getI32Imm(CodeAddrSpace, dl),
-                     getI32Imm(vecType, dl),
-                     getI32Imm(toType, dl),
-                     getI32Imm(toTypeWidth, dl),
-                     Addr,
-                     Chain};
-    NVPTXST = CurDAG->getMachineNode(*Opcode, dl, MVT::Other, Ops);
+    Ops.append({Addr, Chain});
   } else if (PointerSize == 64
                  ? SelectADDRsi64(BasePtr.getNode(), BasePtr, Base, Offset)
                  : SelectADDRsi(BasePtr.getNode(), BasePtr, Base, Offset)) {
@@ -1938,16 +1943,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
                              NVPTX::ST_f32_asi, NVPTX::ST_f64_asi);
     if (!Opcode)
       return false;
-    SDValue Ops[] = {Value,
-                     getI32Imm(CodeMemorySem, dl),
-                     getI32Imm(CodeAddrSpace, dl),
-                     getI32Imm(vecType, dl),
-                     getI32Imm(toType, dl),
-                     getI32Imm(toTypeWidth, dl),
-                     Base,
-                     Offset,
-                     Chain};
-    NVPTXST = CurDAG->getMachineNode(*Opcode, dl, MVT::Other, Ops);
+    Ops.append({Base, Offset, Chain});
   } else if (PointerSize == 64
                  ? SelectADDRri64(BasePtr.getNode(), BasePtr, Base, Offset)
                  : SelectADDRri(BasePtr.getNode(), BasePtr, Base, Offset)) {
@@ -1962,17 +1958,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
                                NVPTX::ST_f32_ari, NVPTX::ST_f64_ari);
     if (!Opcode)
       return false;
-
-    SDValue Ops[] = {Value,
-                     getI32Imm(CodeMemorySem, dl),
-                     getI32Imm(CodeAddrSpace, dl),
-                     getI32Imm(vecType, dl),
-                     getI32Imm(toType, dl),
-                     getI32Imm(toTypeWidth, dl),
-                     Base,
-                     Offset,
-                     Chain};
-    NVPTXST = CurDAG->getMachineNode(*Opcode, dl, MVT::Other, Ops);
+    Ops.append({Base, Offset, Chain});
   } else {
     if (PointerSize == 64)
       Opcode =
@@ -1985,16 +1971,11 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
                                NVPTX::ST_f32_areg, NVPTX::ST_f64_areg);
     if (!Opcode)
       return false;
-    SDValue Ops[] = {Value,
-                     getI32Imm(CodeMemorySem, dl),
-                     getI32Imm(CodeAddrSpace, dl),
-                     getI32Imm(vecType, dl),
-                     getI32Imm(toType, dl),
-                     getI32Imm(toTypeWidth, dl),
-                     BasePtr,
-                     Chain};
-    NVPTXST = CurDAG->getMachineNode(*Opcode, dl, MVT::Other, Ops);
+    Ops.append({BasePtr, Chain});
   }
+
+  SDNode *NVPTXST = NVPTXST =
+      CurDAG->getMachineNode(*Opcode, DL, MVT::Other, Ops);
 
   if (!NVPTXST)
     return false;
@@ -2006,11 +1987,9 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
 }
 
 bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
-  SDValue Chain = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   SDValue Addr, Offset, Base;
   std::optional<unsigned> Opcode;
-  SDLoc DL(N);
   SDNode *ST;
   EVT EltVT = Op1.getValueType();
   MemSDNode *MemSD = cast<MemSDNode>(N);
@@ -2025,8 +2004,9 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   unsigned int PointerSize =
       CurDAG->getDataLayout().getPointerSizeInBits(MemSD->getAddressSpace());
 
-  // Memory Semantic Setting
-  unsigned int CodeMemorySem = getCodeMemorySemantic(MemSD, Subtarget);
+  SDLoc DL(N);
+  SDValue Chain = N->getOperand(0);
+  auto InstructionOrdering = insertMemoryInstructionFence(DL, Chain, MemSD);
 
   // Type Setting: toType + toTypeWidth
   // - for integer type, always use 'u'
@@ -2035,23 +2015,20 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   unsigned ToTypeWidth = ScalarVT.getSizeInBits();
   unsigned ToType = getLdStRegType(ScalarVT);
 
-  SmallVector<SDValue, 12> StOps;
+  SmallVector<SDValue, 12> Ops;
   SDValue N2;
   unsigned VecType;
 
   switch (N->getOpcode()) {
   case NVPTXISD::StoreV2:
     VecType = NVPTX::PTXLdStInstCode::V2;
-    StOps.push_back(N->getOperand(1));
-    StOps.push_back(N->getOperand(2));
+    Ops.append({N->getOperand(1), N->getOperand(2)});
     N2 = N->getOperand(3);
     break;
   case NVPTXISD::StoreV4:
     VecType = NVPTX::PTXLdStInstCode::V4;
-    StOps.push_back(N->getOperand(1));
-    StOps.push_back(N->getOperand(2));
-    StOps.push_back(N->getOperand(3));
-    StOps.push_back(N->getOperand(4));
+    Ops.append({N->getOperand(1), N->getOperand(2), N->getOperand(3),
+                N->getOperand(4)});
     N2 = N->getOperand(5);
     break;
   default:
@@ -2068,11 +2045,9 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     ToTypeWidth = 32;
   }
 
-  StOps.push_back(getI32Imm(CodeMemorySem, DL));
-  StOps.push_back(getI32Imm(CodeAddrSpace, DL));
-  StOps.push_back(getI32Imm(VecType, DL));
-  StOps.push_back(getI32Imm(ToType, DL));
-  StOps.push_back(getI32Imm(ToTypeWidth, DL));
+  Ops.append({getI32Imm(InstructionOrdering, DL), getI32Imm(CodeAddrSpace, DL),
+              getI32Imm(VecType, DL), getI32Imm(ToType, DL),
+              getI32Imm(ToTypeWidth, DL)});
 
   if (SelectDirectAddr(N2, Addr)) {
     switch (N->getOpcode()) {
@@ -2091,7 +2066,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
                                NVPTX::STV_f32_v4_avar, std::nullopt);
       break;
     }
-    StOps.push_back(Addr);
+    Ops.push_back(Addr);
   } else if (PointerSize == 64 ? SelectADDRsi64(N2.getNode(), N2, Base, Offset)
                                : SelectADDRsi(N2.getNode(), N2, Base, Offset)) {
     switch (N->getOpcode()) {
@@ -2110,8 +2085,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
                           std::nullopt, NVPTX::STV_f32_v4_asi, std::nullopt);
       break;
     }
-    StOps.push_back(Base);
-    StOps.push_back(Offset);
+    Ops.append({Base, Offset});
   } else if (PointerSize == 64 ? SelectADDRri64(N2.getNode(), N2, Base, Offset)
                                : SelectADDRri(N2.getNode(), N2, Base, Offset)) {
     if (PointerSize == 64) {
@@ -2150,8 +2124,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
         break;
       }
     }
-    StOps.push_back(Base);
-    StOps.push_back(Offset);
+    Ops.append({Base, Offset});
   } else {
     if (PointerSize == 64) {
       switch (N->getOpcode()) {
@@ -2190,15 +2163,15 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
         break;
       }
     }
-    StOps.push_back(N2);
+    Ops.push_back(N2);
   }
 
   if (!Opcode)
     return false;
 
-  StOps.push_back(Chain);
+  Ops.push_back(Chain);
 
-  ST = CurDAG->getMachineNode(*Opcode, DL, MVT::Other, StOps);
+  ST = CurDAG->getMachineNode(*Opcode, DL, MVT::Other, Ops);
 
   MachineMemOperand *MemRef = cast<MemSDNode>(N)->getMemOperand();
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(ST), {MemRef});
@@ -2272,10 +2245,8 @@ bool NVPTXDAGToDAGISel::tryLoadParam(SDNode *Node) {
 
   unsigned OffsetVal = Offset->getAsZExtVal();
 
-  SmallVector<SDValue, 2> Ops;
-  Ops.push_back(CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32));
-  Ops.push_back(Chain);
-  Ops.push_back(Glue);
+  SmallVector<SDValue, 2> Ops(
+      {CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32), Chain, Glue});
 
   ReplaceNode(Node, CurDAG->getMachineNode(*Opcode, DL, VTs, Ops));
   return true;
@@ -2308,8 +2279,7 @@ bool NVPTXDAGToDAGISel::tryStoreRetval(SDNode *N) {
   SmallVector<SDValue, 6> Ops;
   for (unsigned i = 0; i < NumElts; ++i)
     Ops.push_back(N->getOperand(i + 2));
-  Ops.push_back(CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32));
-  Ops.push_back(Chain);
+  Ops.append({CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32), Chain});
 
   // Determine target opcode
   // If we have an i1, use an 8-bit store. The lowering code in
@@ -2489,10 +2459,8 @@ bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
   SmallVector<SDValue, 8> Ops;
   for (unsigned i = 0; i < NumElts; ++i)
     Ops.push_back(N->getOperand(i + 3));
-  Ops.push_back(CurDAG->getTargetConstant(ParamVal, DL, MVT::i32));
-  Ops.push_back(CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32));
-  Ops.push_back(Chain);
-  Ops.push_back(Glue);
+  Ops.append({CurDAG->getTargetConstant(ParamVal, DL, MVT::i32),
+              CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32), Chain, Glue});
 
   // Determine target opcode
   // If we have an i1, use an 8-bit store. The lowering code in
@@ -3914,8 +3882,14 @@ bool NVPTXDAGToDAGISel::SelectADDRri_imp(
         Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), mvt);
       else
         Base = Addr.getOperand(0);
-      Offset = CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(OpNode),
-                                         mvt);
+
+      // Offset must fit in a 32-bit signed int in PTX [register+offset] address
+      // mode
+      if (!CN->getAPIntValue().isSignedIntN(32))
+        return false;
+
+      Offset = CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(OpNode),
+                                         MVT::i32);
       return true;
     }
   }

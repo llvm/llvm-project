@@ -43,8 +43,8 @@ namespace mlir {
 static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
                                               StringRef name,
                                               ArrayRef<Type> paramTypes,
-                                              Type resultType,
-                                              bool isConvergent = false) {
+                                              Type resultType, bool isMemNone,
+                                              bool isConvergent) {
   auto func = dyn_cast_or_null<LLVM::LLVMFuncOp>(
       SymbolTable::lookupSymbolIn(symbolTable, name));
   if (!func) {
@@ -53,6 +53,18 @@ static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
         symbolTable->getLoc(), name,
         LLVM::LLVMFunctionType::get(resultType, paramTypes));
     func.setCConv(LLVM::cconv::CConv::SPIR_FUNC);
+    func.setNoUnwind(true);
+    func.setWillReturn(true);
+
+    if (isMemNone) {
+      // no externally observable effects
+      constexpr auto noModRef = mlir::LLVM::ModRefInfo::NoModRef;
+      auto memAttr = b.getAttr<LLVM::MemoryEffectsAttr>(
+          /*other=*/noModRef,
+          /*argMem=*/noModRef, /*inaccessibleMem=*/noModRef);
+      func.setMemoryEffectsAttr(memAttr);
+    }
+
     func.setConvergent(isConvergent);
   }
   return func;
@@ -64,6 +76,10 @@ static LLVM::CallOp createSPIRVBuiltinCall(Location loc,
                                            ValueRange args) {
   auto call = rewriter.create<LLVM::CallOp>(loc, func, args);
   call.setCConv(func.getCConv());
+  call.setConvergentAttr(func.getConvergentAttr());
+  call.setNoUnwindAttr(func.getNoUnwindAttr());
+  call.setWillReturnAttr(func.getWillReturnAttr());
+  call.setMemoryEffectsAttr(func.getMemoryEffectsAttr());
   return call;
 }
 
@@ -91,8 +107,9 @@ struct GPUBarrierConversion final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
     assert(moduleOp && "Expecting module");
     Type flagTy = rewriter.getI32Type();
     Type voidTy = rewriter.getType<LLVM::LLVMVoidType>();
-    LLVM::LLVMFuncOp func = lookupOrCreateSPIRVFn(
-        moduleOp, funcName, flagTy, voidTy, /*isConvergent=*/true);
+    LLVM::LLVMFuncOp func =
+        lookupOrCreateSPIRVFn(moduleOp, funcName, flagTy, voidTy,
+                              /*isMemNone=*/false, /*isConvergent=*/true);
 
     // Value used by SPIR-V backend to represent `CLK_LOCAL_MEM_FENCE`.
     // See `llvm/lib/Target/SPIRV/SPIRVBuiltins.td`.
@@ -134,8 +151,9 @@ struct LaunchConfigConversion : ConvertToLLVMPattern {
     assert(moduleOp && "Expecting module");
     Type dimTy = rewriter.getI32Type();
     Type indexTy = getTypeConverter()->getIndexType();
-    LLVM::LLVMFuncOp func =
-        lookupOrCreateSPIRVFn(moduleOp, funcName, dimTy, indexTy);
+    LLVM::LLVMFuncOp func = lookupOrCreateSPIRVFn(moduleOp, funcName, dimTy,
+                                                  indexTy, /*isMemNone=*/true,
+                                                  /*isConvergent=*/false);
 
     Location loc = op->getLoc();
     gpu::Dimension dim = getDimension(op);
@@ -268,9 +286,9 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     Type valueType = adaptor.getValue().getType();
     Type offsetType = adaptor.getOffset().getType();
     Type resultType = valueType;
-    LLVM::LLVMFuncOp func =
-        lookupOrCreateSPIRVFn(moduleOp, funcName, {valueType, offsetType},
-                              resultType, /*isConvergent=*/true);
+    LLVM::LLVMFuncOp func = lookupOrCreateSPIRVFn(
+        moduleOp, funcName, {valueType, offsetType}, resultType,
+        /*isMemNone=*/false, /*isConvergent=*/true);
 
     Location loc = op->getLoc();
     std::array<Value, 2> args{adaptor.getValue(), adaptor.getOffset()};

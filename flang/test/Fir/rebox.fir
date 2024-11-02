@@ -121,7 +121,7 @@ func.func @test_rebox_4(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>) {
   // CHECK: %[[STRIDE:.*]] = load i64, ptr %[[STRIDE_GEP]]
   // CHECK: %[[BASE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[INPUT]], i32 0, i32 0
   // CHECK: %[[BASE:.*]] = load ptr, ptr %[[BASE_GEP]]
-  // CHECK: %[[NEWBOX1:.*]] = insertvalue {{{.*}}} { ptr undef, i64 ptrtoint (ptr getelementptr ([10 x i8], ptr null, i32 1) to i64), i32 20180515, i8 1, i8 40, i8 1, i8 0, [1 x [3 x i64]] [{{.*}} [i64 1, i64 undef, i64 undef]] }, i64 %[[EXTENT]], 7, 0, 1
+  // CHECK: %[[NEWBOX1:.*]] = insertvalue {{{.*}}} { ptr undef, i64 ptrtoint (ptr getelementptr ([10 x i8], ptr null, i32 1) to i64), i32 20240719, i8 1, i8 40, i8 1, i8 0, [1 x [3 x i64]] [{{.*}} [i64 1, i64 undef, i64 undef]] }, i64 %[[EXTENT]], 7, 0, 1
   // CHECK: %[[NEWBOX2:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[NEWBOX1]], i64 %[[STRIDE]], 7, 0, 2
   // CHECK: %[[NEWBOX3:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[NEWBOX2]], ptr %[[BASE]], 0
   // CHECK: store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[NEWBOX3]], ptr %[[NEWBOX_STORAGE]]

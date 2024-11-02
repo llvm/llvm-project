@@ -50,14 +50,14 @@ def warn_pch_vfsoverlay_mismatch : Warning<
 def note_pch_vfsoverlay_files : Note<"%select{PCH|current translation unit}0 has the following VFS overlays:\n%1">;
 def note_pch_vfsoverlay_empty : Note<"%select{PCH|current translation unit}0 has no VFS overlays">;
 
-def err_pch_version_too_old : Error<
-    "PCH file uses an older PCH format that is no longer supported">;
-def err_pch_version_too_new : Error<
-    "PCH file uses a newer PCH format that cannot be read">;
-def err_pch_different_branch : Error<
-    "PCH file built from a different branch (%0) than the compiler (%1)">;
-def err_pch_with_compiler_errors : Error<
-    "PCH file contains compiler errors">;
+def err_ast_file_version_too_old : Error<
+    "%select{PCH|module|AST}0 file '%1' uses an older PCH format that is no longer supported">;
+def err_ast_file_version_too_new : Error<
+    "%select{PCH|module|AST}0 file '%1' uses a newer PCH format that cannot be read">;
+def err_ast_file_different_branch : Error<
+    "%select{PCH|module|AST}0 file '%1' built from a different branch (%2) than the compiler (%3)">;
+def err_ast_file_with_compiler_errors : Error<
+    "%select{PCH|module|AST}0 file '%1' contains compiler errors">;
 
 def err_module_file_conflict : Error<
   "module '%0' is defined in both '%1' and '%2'">, DefaultFatal;

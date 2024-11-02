@@ -133,21 +133,56 @@ void InputSectionBase::decompress() const {
   compressed = false;
 }
 
-template <class ELFT> RelsOrRelas<ELFT> InputSectionBase::relsOrRelas() const {
+template <class ELFT>
+RelsOrRelas<ELFT> InputSectionBase::relsOrRelas(bool supportsCrel) const {
   if (relSecIdx == 0)
     return {};
   RelsOrRelas<ELFT> ret;
-  typename ELFT::Shdr shdr =
-      cast<ELFFileBase>(file)->getELFShdrs<ELFT>()[relSecIdx];
+  auto *f = cast<ObjFile<ELFT>>(file);
+  typename ELFT::Shdr shdr = f->template getELFShdrs<ELFT>()[relSecIdx];
+  if (shdr.sh_type == SHT_CREL) {
+    // Return an iterator if supported by caller.
+    if (supportsCrel) {
+      ret.crels = Relocs<typename ELFT::Crel>(
+          (const uint8_t *)f->mb.getBufferStart() + shdr.sh_offset);
+      return ret;
+    }
+    InputSectionBase *const &relSec = f->getSections()[relSecIdx];
+    // Otherwise, allocate a buffer to hold the decoded RELA relocations. When
+    // called for the first time, relSec is null (without --emit-relocs) or an
+    // InputSection with zero eqClass[0].
+    if (!relSec || !cast<InputSection>(relSec)->eqClass[0]) {
+      auto *sec = makeThreadLocal<InputSection>(*f, shdr, name);
+      f->cacheDecodedCrel(relSecIdx, sec);
+      sec->type = SHT_RELA;
+      sec->eqClass[0] = SHT_RELA;
+
+      RelocsCrel<ELFT::Is64Bits> entries(sec->content_);
+      sec->size = entries.size() * sizeof(typename ELFT::Rela);
+      auto *relas = makeThreadLocalN<typename ELFT::Rela>(entries.size());
+      sec->content_ = reinterpret_cast<uint8_t *>(relas);
+      for (auto [i, r] : llvm::enumerate(entries)) {
+        relas[i].r_offset = r.r_offset;
+        relas[i].setSymbolAndType(r.r_symidx, r.r_type, false);
+        relas[i].r_addend = r.r_addend;
+      }
+    }
+    ret.relas = {ArrayRef(
+        reinterpret_cast<const typename ELFT::Rela *>(relSec->content_),
+        relSec->size / sizeof(typename ELFT::Rela))};
+    return ret;
+  }
+
+  const void *content = f->mb.getBufferStart() + shdr.sh_offset;
+  size_t size = shdr.sh_size;
   if (shdr.sh_type == SHT_REL) {
-    ret.rels = ArrayRef(reinterpret_cast<const typename ELFT::Rel *>(
-                            file->mb.getBufferStart() + shdr.sh_offset),
-                        shdr.sh_size / sizeof(typename ELFT::Rel));
+    ret.rels = {ArrayRef(reinterpret_cast<const typename ELFT::Rel *>(content),
+                         size / sizeof(typename ELFT::Rel))};
   } else {
     assert(shdr.sh_type == SHT_RELA);
-    ret.relas = ArrayRef(reinterpret_cast<const typename ELFT::Rela *>(
-                             file->mb.getBufferStart() + shdr.sh_offset),
-                         shdr.sh_size / sizeof(typename ELFT::Rela));
+    ret.relas = {
+        ArrayRef(reinterpret_cast<const typename ELFT::Rela *>(content),
+                 size / sizeof(typename ELFT::Rela))};
   }
   return ret;
 }
@@ -159,6 +194,8 @@ uint64_t SectionBase::getOffset(uint64_t offset) const {
     // For output sections we treat offset -1 as the end of the section.
     return offset == uint64_t(-1) ? os->size : offset;
   }
+  case Class:
+    llvm_unreachable("section classes do not have offsets");
   case Regular:
   case Synthetic:
   case Spill:
@@ -630,7 +667,7 @@ static Relocation *getRISCVPCRelHi20(const Symbol *sym, uint64_t addend) {
 // target-specific adjustment to produce a thread-pointer-relative offset.
 static int64_t getTlsTpOffset(const Symbol &s) {
   // On targets that support TLSDESC, _TLS_MODULE_BASE_@tpoff = 0.
-  if (&s == ElfSym::tlsModuleBase)
+  if (&s == ctx.sym.tlsModuleBase)
     return 0;
 
   // There are 2 TLS layouts. Among targets we support, x86 uses TLS Variant 2
@@ -644,7 +681,7 @@ static int64_t getTlsTpOffset(const Symbol &s) {
   // Variant 2. Static TLS blocks, followed by alignment padding are placed
   // before TP. The alignment padding is added so that (TP - padding -
   // p_memsz) is congruent to p_vaddr modulo p_align.
-  PhdrEntry *tls = Out::tlsPhdr;
+  PhdrEntry *tls = ctx.tlsPhdr;
   switch (config->emachine) {
     // Variant 1.
   case EM_ARM:
@@ -911,7 +948,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
 // So, we handle relocations for non-alloc sections directly in this
 // function as a performance optimization.
 template <class ELFT, class RelTy>
-void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
+void InputSection::relocateNonAlloc(uint8_t *buf, Relocs<RelTy> rels) {
   const unsigned bits = sizeof(typename ELFT::uint) * 8;
   const TargetInfo &target = *elf::target;
   const auto emachine = config->emachine;
@@ -1073,11 +1110,7 @@ void InputSectionBase::relocate(uint8_t *buf, uint8_t *bufEnd) {
   auto *sec = cast<InputSection>(this);
   // For a relocatable link, also call relocateNonAlloc() to rewrite applicable
   // locations with tombstone values.
-  const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();
-  if (rels.areRelocsRel())
-    sec->relocateNonAlloc<ELFT>(buf, rels.rels);
-  else
-    sec->relocateNonAlloc<ELFT>(buf, rels.relas);
+  invokeOnRelocs(*sec, sec->relocateNonAlloc<ELFT>, buf);
 }
 
 // For each function-defining prologue, find any calls to __morestack,
@@ -1252,7 +1285,7 @@ SyntheticSection *EhInputSection::getParent() const {
 // .eh_frame is a sequence of CIE or FDE records.
 // This function splits an input section into records and returns them.
 template <class ELFT> void EhInputSection::split() {
-  const RelsOrRelas<ELFT> rels = relsOrRelas<ELFT>();
+  const RelsOrRelas<ELFT> rels = relsOrRelas<ELFT>(/*supportsCrel=*/false);
   // getReloc expects the relocations to be sorted by r_offset. See the comment
   // in scanRelocs.
   if (rels.areRelocsRel()) {
@@ -1418,10 +1451,14 @@ template void InputSection::writeTo<ELF32BE>(uint8_t *);
 template void InputSection::writeTo<ELF64LE>(uint8_t *);
 template void InputSection::writeTo<ELF64BE>(uint8_t *);
 
-template RelsOrRelas<ELF32LE> InputSectionBase::relsOrRelas<ELF32LE>() const;
-template RelsOrRelas<ELF32BE> InputSectionBase::relsOrRelas<ELF32BE>() const;
-template RelsOrRelas<ELF64LE> InputSectionBase::relsOrRelas<ELF64LE>() const;
-template RelsOrRelas<ELF64BE> InputSectionBase::relsOrRelas<ELF64BE>() const;
+template RelsOrRelas<ELF32LE>
+InputSectionBase::relsOrRelas<ELF32LE>(bool) const;
+template RelsOrRelas<ELF32BE>
+InputSectionBase::relsOrRelas<ELF32BE>(bool) const;
+template RelsOrRelas<ELF64LE>
+InputSectionBase::relsOrRelas<ELF64LE>(bool) const;
+template RelsOrRelas<ELF64BE>
+InputSectionBase::relsOrRelas<ELF64BE>(bool) const;
 
 template MergeInputSection::MergeInputSection(ObjFile<ELF32LE> &,
                                               const ELF32LE::Shdr &, StringRef);

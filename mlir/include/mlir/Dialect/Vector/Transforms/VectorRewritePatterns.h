@@ -56,7 +56,7 @@ struct UnrollVectorOptions {
 
   /// Set the native shape to use for unrolling.
   UnrollVectorOptions &setNativeShape(ArrayRef<int64_t> shape) {
-    SmallVector<int64_t> tsShape(shape.begin(), shape.end());
+    SmallVector<int64_t> tsShape(shape);
     nativeShape = [=](Operation *) -> std::optional<SmallVector<int64_t>> {
       return tsShape;
     };

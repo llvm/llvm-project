@@ -406,6 +406,9 @@ template <> struct ScalarEnumerationTraits<EnumConvenienceAliasKind> {
 } // namespace llvm
 
 namespace {
+struct Tag;
+typedef std::vector<Tag> TagsSeq;
+
 struct Tag {
   StringRef Name;
   AvailabilityItem Availability;
@@ -420,9 +423,12 @@ struct Tag {
   std::optional<bool> FlagEnum;
   std::optional<EnumConvenienceAliasKind> EnumConvenienceKind;
   std::optional<bool> SwiftCopyable;
-};
+  FunctionsSeq Methods;
 
-typedef std::vector<Tag> TagsSeq;
+  /// Tags that are declared within the current tag. Only the tags that have
+  /// corresponding API Notes will be listed.
+  TagsSeq Tags;
+};
 } // namespace
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(Tag)
@@ -454,6 +460,8 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("FlagEnum", T.FlagEnum);
     IO.mapOptional("EnumKind", T.EnumConvenienceKind);
     IO.mapOptional("SwiftCopyable", T.SwiftCopyable);
+    IO.mapOptional("Methods", T.Methods);
+    IO.mapOptional("Tags", T.Tags);
   }
 };
 } // namespace yaml
@@ -874,6 +882,101 @@ public:
                          TheNamespace.Items, SwiftVersion);
   }
 
+  void convertFunction(const Function &Function, FunctionInfo &FI) {
+    convertAvailability(Function.Availability, FI, Function.Name);
+    FI.setSwiftPrivate(Function.SwiftPrivate);
+    FI.SwiftName = std::string(Function.SwiftName);
+    convertParams(Function.Params, FI);
+    convertNullability(Function.Nullability, Function.NullabilityOfRet, FI,
+                       Function.Name);
+    FI.ResultType = std::string(Function.ResultType);
+    FI.setRetainCountConvention(Function.RetainCountConvention);
+  }
+
+  void convertTagContext(std::optional<Context> ParentContext, const Tag &T,
+                         VersionTuple SwiftVersion) {
+    TagInfo TI;
+    std::optional<ContextID> ParentContextID =
+        ParentContext ? std::optional<ContextID>(ParentContext->id)
+                      : std::nullopt;
+    convertCommonType(T, TI, T.Name);
+
+    if ((T.SwiftRetainOp || T.SwiftReleaseOp) && !T.SwiftImportAs) {
+      emitError(llvm::Twine("should declare SwiftImportAs to use "
+                            "SwiftRetainOp and SwiftReleaseOp (for ") +
+                T.Name + ")");
+      return;
+    }
+    if (T.SwiftReleaseOp.has_value() != T.SwiftRetainOp.has_value()) {
+      emitError(llvm::Twine("should declare both SwiftReleaseOp and "
+                            "SwiftRetainOp (for ") +
+                T.Name + ")");
+      return;
+    }
+
+    if (T.SwiftImportAs)
+      TI.SwiftImportAs = T.SwiftImportAs;
+    if (T.SwiftRetainOp)
+      TI.SwiftRetainOp = T.SwiftRetainOp;
+    if (T.SwiftReleaseOp)
+      TI.SwiftReleaseOp = T.SwiftReleaseOp;
+
+    if (T.SwiftCopyable)
+      TI.setSwiftCopyable(T.SwiftCopyable);
+
+    if (T.EnumConvenienceKind) {
+      if (T.EnumExtensibility) {
+        emitError(
+            llvm::Twine("cannot mix EnumKind and EnumExtensibility (for ") +
+            T.Name + ")");
+        return;
+      }
+      if (T.FlagEnum) {
+        emitError(llvm::Twine("cannot mix EnumKind and FlagEnum (for ") +
+                  T.Name + ")");
+        return;
+      }
+      switch (*T.EnumConvenienceKind) {
+      case EnumConvenienceAliasKind::None:
+        TI.EnumExtensibility = EnumExtensibilityKind::None;
+        TI.setFlagEnum(false);
+        break;
+      case EnumConvenienceAliasKind::CFEnum:
+        TI.EnumExtensibility = EnumExtensibilityKind::Open;
+        TI.setFlagEnum(false);
+        break;
+      case EnumConvenienceAliasKind::CFOptions:
+        TI.EnumExtensibility = EnumExtensibilityKind::Open;
+        TI.setFlagEnum(true);
+        break;
+      case EnumConvenienceAliasKind::CFClosedEnum:
+        TI.EnumExtensibility = EnumExtensibilityKind::Closed;
+        TI.setFlagEnum(false);
+        break;
+      }
+    } else {
+      TI.EnumExtensibility = T.EnumExtensibility;
+      TI.setFlagEnum(T.FlagEnum);
+    }
+
+    Writer.addTag(ParentContext, T.Name, TI, SwiftVersion);
+
+    ContextInfo CI;
+    auto TagCtxID = Writer.addContext(ParentContextID, T.Name, ContextKind::Tag,
+                                      CI, SwiftVersion);
+    Context TagCtx(TagCtxID, ContextKind::Tag);
+
+    for (const auto &CXXMethod : T.Methods) {
+      CXXMethodInfo MI;
+      convertFunction(CXXMethod, MI);
+      Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion);
+    }
+
+    // Convert nested tags.
+    for (const auto &Tag : T.Tags)
+      convertTagContext(TagCtx, Tag, SwiftVersion);
+  }
+
   void convertTopLevelItems(std::optional<Context> Ctx,
                             const TopLevelItems &TLItems,
                             VersionTuple SwiftVersion) {
@@ -950,14 +1053,7 @@ public:
       }
 
       GlobalFunctionInfo GFI;
-      convertAvailability(Function.Availability, GFI, Function.Name);
-      GFI.setSwiftPrivate(Function.SwiftPrivate);
-      GFI.SwiftName = std::string(Function.SwiftName);
-      convertParams(Function.Params, GFI);
-      convertNullability(Function.Nullability, Function.NullabilityOfRet, GFI,
-                         Function.Name);
-      GFI.ResultType = std::string(Function.ResultType);
-      GFI.setRetainCountConvention(Function.RetainCountConvention);
+      convertFunction(Function, GFI);
       Writer.addGlobalFunction(Ctx, Function.Name, GFI, SwiftVersion);
     }
 
@@ -988,68 +1084,7 @@ public:
         continue;
       }
 
-      TagInfo TI;
-      convertCommonType(Tag, TI, Tag.Name);
-
-      if ((Tag.SwiftRetainOp || Tag.SwiftReleaseOp) && !Tag.SwiftImportAs) {
-        emitError(llvm::Twine("should declare SwiftImportAs to use "
-                              "SwiftRetainOp and SwiftReleaseOp (for ") +
-                  Tag.Name + ")");
-        continue;
-      }
-      if (Tag.SwiftReleaseOp.has_value() != Tag.SwiftRetainOp.has_value()) {
-        emitError(llvm::Twine("should declare both SwiftReleaseOp and "
-                              "SwiftRetainOp (for ") +
-                  Tag.Name + ")");
-        continue;
-      }
-
-      if (Tag.SwiftImportAs)
-        TI.SwiftImportAs = Tag.SwiftImportAs;
-      if (Tag.SwiftRetainOp)
-        TI.SwiftRetainOp = Tag.SwiftRetainOp;
-      if (Tag.SwiftReleaseOp)
-        TI.SwiftReleaseOp = Tag.SwiftReleaseOp;
-
-      if (Tag.SwiftCopyable)
-        TI.setSwiftCopyable(Tag.SwiftCopyable);
-
-      if (Tag.EnumConvenienceKind) {
-        if (Tag.EnumExtensibility) {
-          emitError(
-              llvm::Twine("cannot mix EnumKind and EnumExtensibility (for ") +
-              Tag.Name + ")");
-          continue;
-        }
-        if (Tag.FlagEnum) {
-          emitError(llvm::Twine("cannot mix EnumKind and FlagEnum (for ") +
-                    Tag.Name + ")");
-          continue;
-        }
-        switch (*Tag.EnumConvenienceKind) {
-        case EnumConvenienceAliasKind::None:
-          TI.EnumExtensibility = EnumExtensibilityKind::None;
-          TI.setFlagEnum(false);
-          break;
-        case EnumConvenienceAliasKind::CFEnum:
-          TI.EnumExtensibility = EnumExtensibilityKind::Open;
-          TI.setFlagEnum(false);
-          break;
-        case EnumConvenienceAliasKind::CFOptions:
-          TI.EnumExtensibility = EnumExtensibilityKind::Open;
-          TI.setFlagEnum(true);
-          break;
-        case EnumConvenienceAliasKind::CFClosedEnum:
-          TI.EnumExtensibility = EnumExtensibilityKind::Closed;
-          TI.setFlagEnum(false);
-          break;
-        }
-      } else {
-        TI.EnumExtensibility = Tag.EnumExtensibility;
-        TI.setFlagEnum(Tag.FlagEnum);
-      }
-
-      Writer.addTag(Ctx, Tag.Name, TI, SwiftVersion);
+      convertTagContext(Ctx, Tag, SwiftVersion);
     }
 
     // Write all typedefs.

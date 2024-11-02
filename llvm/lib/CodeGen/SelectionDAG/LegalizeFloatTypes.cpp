@@ -3577,7 +3577,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_ATOMIC_STORE(SDNode *N,
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_STACKMAP(SDNode *N, unsigned OpNo) {
   assert(OpNo > 1); // Because the first two arguments are guaranteed legal.
-  SmallVector<SDValue> NewOps(N->ops().begin(), N->ops().end());
+  SmallVector<SDValue> NewOps(N->ops());
   SDValue Op = N->getOperand(OpNo);
   NewOps[OpNo] = GetSoftPromotedHalf(Op);
   SDValue NewNode =
@@ -3592,7 +3592,7 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_STACKMAP(SDNode *N, unsigned OpNo) {
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_PATCHPOINT(SDNode *N,
                                                        unsigned OpNo) {
   assert(OpNo >= 7);
-  SmallVector<SDValue> NewOps(N->ops().begin(), N->ops().end());
+  SmallVector<SDValue> NewOps(N->ops());
   SDValue Op = N->getOperand(OpNo);
   NewOps[OpNo] = GetSoftPromotedHalf(Op);
   SDValue NewNode =

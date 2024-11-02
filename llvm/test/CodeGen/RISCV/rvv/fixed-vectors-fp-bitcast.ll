@@ -19,7 +19,7 @@ define i16 @bitcast_v1f16_i16(<1 x half> %a) {
 define half @bitcast_v1f16_f16(<1 x half> %a) {
 ; CHECK-LABEL: bitcast_v1f16_f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <1 x half> %a to half
@@ -49,7 +49,7 @@ define i32 @bitcast_v1f32_i32(<1 x float> %a) {
 define float @bitcast_v2f16_f32(<2 x half> %a) {
 ; CHECK-LABEL: bitcast_v2f16_f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <2 x half> %a to float
@@ -59,7 +59,7 @@ define float @bitcast_v2f16_f32(<2 x half> %a) {
 define float @bitcast_v1f32_f32(<1 x float> %a) {
 ; CHECK-LABEL: bitcast_v1f32_f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %b = bitcast <1 x float> %a to float
@@ -237,7 +237,7 @@ define <1 x double> @bitcast_i64_v1f64(i64 %a) {
 define <1 x i16> @bitcast_f16_v1i16(half %a) {
 ; CHECK-LABEL: bitcast_f16_v1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
   %b = bitcast half %a to <1 x i16>
@@ -247,7 +247,7 @@ define <1 x i16> @bitcast_f16_v1i16(half %a) {
 define <1 x half> @bitcast_f16_v1f16(half %a) {
 ; CHECK-LABEL: bitcast_f16_v1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
   %b = bitcast half %a to <1 x half>
@@ -257,7 +257,7 @@ define <1 x half> @bitcast_f16_v1f16(half %a) {
 define <2 x i16> @bitcast_f32_v2i16(float %a) {
 ; CHECK-LABEL: bitcast_f32_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
   %b = bitcast float %a to <2 x i16>
@@ -267,7 +267,7 @@ define <2 x i16> @bitcast_f32_v2i16(float %a) {
 define <2 x half> @bitcast_f32_v2f16(float %a) {
 ; CHECK-LABEL: bitcast_f32_v2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
   %b = bitcast float %a to <2 x half>
@@ -277,7 +277,7 @@ define <2 x half> @bitcast_f32_v2f16(float %a) {
 define <1 x i32> @bitcast_f32_v1i32(float %a) {
 ; CHECK-LABEL: bitcast_f32_v1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
   %b = bitcast float %a to <1 x i32>
@@ -287,7 +287,7 @@ define <1 x i32> @bitcast_f32_v1i32(float %a) {
 define <1 x float> @bitcast_f32_v1f32(float %a) {
 ; CHECK-LABEL: bitcast_f32_v1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
   %b = bitcast float %a to <1 x float>

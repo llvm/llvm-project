@@ -115,6 +115,10 @@ public:
   // Grid Value for the GPU target
   std::optional<omp::GV> GridValue;
 
+  /// When compilation is being done for the OpenMP host (i.e. `IsTargetDevice =
+  /// false`), this contains the list of offloading triples associated, if any.
+  SmallVector<Triple> TargetTriples;
+
   OpenMPIRBuilderConfig();
   OpenMPIRBuilderConfig(bool IsTargetDevice, bool IsGPU,
                         bool OpenMPOffloadMandatory,
@@ -196,6 +200,9 @@ private:
 /// Data structure to contain the information needed to uniquely identify
 /// a target entry.
 struct TargetRegionEntryInfo {
+  /// The prefix used for kernel names.
+  static constexpr const char *KernelNamePrefix = "__omp_offloading_";
+
   std::string ParentName;
   unsigned DeviceID;
   unsigned FileID;
@@ -2180,21 +2187,22 @@ public:
   /// kernel args vector.
   struct TargetKernelArgs {
     /// Number of arguments passed to the runtime library.
-    unsigned NumTargetItems;
+    unsigned NumTargetItems = 0;
     /// Arguments passed to the runtime library
     TargetDataRTArgs RTArgs;
     /// The number of iterations
-    Value *NumIterations;
+    Value *NumIterations = nullptr;
     /// The number of teams.
-    Value *NumTeams;
+    Value *NumTeams = nullptr;
     /// The number of threads.
-    Value *NumThreads;
+    Value *NumThreads = nullptr;
     /// The size of the dynamic shared memory.
-    Value *DynCGGroupMem;
+    Value *DynCGGroupMem = nullptr;
     /// True if the kernel has 'no wait' clause.
-    bool HasNoWait;
+    bool HasNoWait = false;
 
-    /// Constructor for TargetKernelArgs
+    // Constructors for TargetKernelArgs.
+    TargetKernelArgs() {}
     TargetKernelArgs(unsigned NumTargetItems, TargetDataRTArgs RTArgs,
                      Value *NumIterations, Value *NumTeams, Value *NumThreads,
                      Value *DynCGGroupMem, bool HasNoWait)
@@ -2230,6 +2238,8 @@ public:
     bool HasMapper = false;
     /// The total number of pointers passed to the runtime library.
     unsigned NumberOfPtrs = 0u;
+
+    bool EmitDebug = false;
 
     explicit TargetDataInfo() {}
     explicit TargetDataInfo(bool RequiresDevicePointerInfo,
@@ -2322,6 +2332,26 @@ public:
       EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
       Value *DeviceID, Value *RTLoc, InsertPointTy AllocaIP);
 
+  /// Generate a target-task for the target construct
+  ///
+  /// \param OutlinedFn The outlined device/target kernel function.
+  /// \param OutlinedFnID The ooulined function ID.
+  /// \param EmitTargetCallFallbackCB Call back function to generate host
+  ///        fallback code.
+  /// \param Args Data structure holding information about the kernel arguments.
+  /// \param DeviceID Identifier for the device via the 'device' clause.
+  /// \param RTLoc Source location identifier
+  /// \param AllocaIP The insertion point to be used for alloca instructions.
+  /// \param Dependencies Vector of DependData objects holding information of
+  ///        dependencies as specified by the 'depend' clause.
+  /// \param HasNoWait True if the target construct had 'nowait' on it, false
+  ///        otherwise
+  InsertPointTy emitTargetTask(
+      Function *OutlinedFn, Value *OutlinedFnID,
+      EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
+      Value *DeviceID, Value *RTLoc, InsertPointTy AllocaIP,
+      SmallVector<OpenMPIRBuilder::DependData> &Dependencies, bool HasNoWait);
+
   /// Emit the arguments to be passed to the runtime library based on the
   /// arrays of base pointers, pointers, sizes, map types, and mappers.  If
   /// ForEndCall, emit map types to be passed for the end of the region instead
@@ -2329,7 +2359,6 @@ public:
   void emitOffloadingArraysArgument(IRBuilderBase &Builder,
                                     OpenMPIRBuilder::TargetDataRTArgs &RTArgs,
                                     OpenMPIRBuilder::TargetDataInfo &Info,
-                                    bool EmitDebug = false,
                                     bool ForEndCall = false);
 
   /// Emit an array of struct descriptors to be assigned to the offload args.
@@ -2340,10 +2369,25 @@ public:
 
   /// Emit the arrays used to pass the captures and map information to the
   /// offloading runtime library. If there is no map or capture information,
-  /// return nullptr by reference.
+  /// return nullptr by reference. Accepts a reference to a MapInfosTy object
+  /// that contains information generated for mappable clauses,
+  /// including base pointers, pointers, sizes, map types, user-defined mappers.
   void emitOffloadingArrays(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP, MapInfosTy &CombinedInfo,
       TargetDataInfo &Info, bool IsNonContiguous = false,
+      function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
+      function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
+
+  /// Allocates memory for and populates the arrays required for offloading
+  /// (offload_{baseptrs|ptrs|mappers|sizes|maptypes|mapnames}). Then, it
+  /// emits their base addresses as arguments to be passed to the runtime
+  /// library. In essence, this function is a combination of
+  /// emitOffloadingArrays and emitOffloadingArraysArgument and should arguably
+  /// be preferred by clients of OpenMPIRBuilder.
+  void emitOffloadingArraysAndArgs(
+      InsertPointTy AllocaIP, InsertPointTy CodeGenIP, TargetDataInfo &Info,
+      TargetDataRTArgs &RTArgs, MapInfosTy &CombinedInfo,
+      bool IsNonContiguous = false, bool ForEndCall = false,
       function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
       function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
 
@@ -2795,6 +2839,7 @@ public:
   /// Generator for '#omp target'
   ///
   /// \param Loc where the target data construct was encountered.
+  /// \param IsOffloadEntry whether it is an offload entry.
   /// \param CodeGenIP The insertion point where the call to the outlined
   /// function should be emitted.
   /// \param EntryInfo The entry information about the function.
@@ -2805,7 +2850,10 @@ public:
   /// \param BodyGenCB Callback that will generate the region code.
   /// \param ArgAccessorFuncCB Callback that will generate accessors
   /// instructions for passed in target arguments where neccessary
+  /// \param Dependencies A vector of DependData objects that carry
+  // dependency information as passed in the depend clause
   InsertPointTy createTarget(const LocationDescription &Loc,
+                             bool IsOffloadEntry,
                              OpenMPIRBuilder::InsertPointTy AllocaIP,
                              OpenMPIRBuilder::InsertPointTy CodeGenIP,
                              TargetRegionEntryInfo &EntryInfo, int32_t NumTeams,
@@ -2813,7 +2861,8 @@ public:
                              SmallVectorImpl<Value *> &Inputs,
                              GenMapInfoCallbackTy GenMapInfoCB,
                              TargetBodyGenCallbackTy BodyGenCB,
-                             TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB);
+                             TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
+                             SmallVector<DependData> Dependencies = {});
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call

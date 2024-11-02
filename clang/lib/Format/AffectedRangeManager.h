@@ -26,7 +26,7 @@ class AffectedRangeManager {
 public:
   AffectedRangeManager(const SourceManager &SourceMgr,
                        const ArrayRef<CharSourceRange> Ranges)
-      : SourceMgr(SourceMgr), Ranges(Ranges.begin(), Ranges.end()) {}
+      : SourceMgr(SourceMgr), Ranges(Ranges) {}
 
   // Determines which lines are affected by the SourceRanges given as input.
   // Returns \c true if at least one line in \p Lines or one of their

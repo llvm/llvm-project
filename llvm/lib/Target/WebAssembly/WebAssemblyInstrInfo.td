@@ -78,7 +78,7 @@ def HasSignExt :
 
 def HasSIMD128 :
     Predicate<"Subtarget->hasSIMD128()">,
-    AssemblerPredicate<(all_of FeatureSIMD128), "simd128">;
+    AssemblerPredicate<(any_of FeatureSIMD128, FeatureRelaxedSIMD), "simd128">;
 
 def HasTailCall :
     Predicate<"Subtarget->hasTailCall()">,

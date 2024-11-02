@@ -227,22 +227,20 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
   // Emit file header.
   emitSourceFileHeader("Pseudo-instruction MC lowering Source Fragment", o);
 
-  o << "bool " << Target.getName() + "AsmPrinter"
-    << "::\n"
-    << "emitPseudoExpansionLowering(MCStreamer &OutStreamer,\n"
-    << "                            const MachineInstr *MI) {\n";
+  o << "bool " << Target.getName() + "AsmPrinter::\n"
+    << "lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst) {\n";
 
   if (!Expansions.empty()) {
-    o << "  switch (MI->getOpcode()) {\n"
+    o << "  Inst.clear();\n"
+      << "  switch (MI->getOpcode()) {\n"
       << "  default: return false;\n";
     for (auto &Expansion : Expansions) {
       CodeGenInstruction &Source = Expansion.Source;
       CodeGenInstruction &Dest = Expansion.Dest;
       o << "  case " << Source.Namespace << "::" << Source.TheDef->getName()
         << ": {\n"
-        << "    MCInst TmpInst;\n"
         << "    MCOperand MCOp;\n"
-        << "    TmpInst.setOpcode(" << Dest.Namespace
+        << "    Inst.setOpcode(" << Dest.Namespace
         << "::" << Dest.TheDef->getName() << ");\n";
 
       // Copy the operands from the source instruction.
@@ -260,15 +258,15 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
                          .MIOperandNo +
                      i
               << "), MCOp);\n"
-              << "    TmpInst.addOperand(MCOp);\n";
+              << "    Inst.addOperand(MCOp);\n";
             break;
           case OpData::Imm:
-            o << "    TmpInst.addOperand(MCOperand::createImm("
+            o << "    Inst.addOperand(MCOperand::createImm("
               << Expansion.OperandMap[MIOpNo + i].Data.Imm << "));\n";
             break;
           case OpData::Reg: {
             Record *Reg = Expansion.OperandMap[MIOpNo + i].Data.Reg;
-            o << "    TmpInst.addOperand(MCOperand::createReg(";
+            o << "    Inst.addOperand(MCOperand::createReg(";
             // "zero_reg" is special.
             if (Reg->getName() == "zero_reg")
               o << "0";
@@ -287,10 +285,9 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
         o << "    for (unsigned i = " << MIOpNo
           << ", e = MI->getNumOperands(); i != e; ++i)\n"
           << "      if (lowerOperand(MI->getOperand(i), MCOp))\n"
-          << "        TmpInst.addOperand(MCOp);\n";
+          << "        Inst.addOperand(MCOp);\n";
       }
-      o << "    EmitToStreamer(OutStreamer, TmpInst);\n"
-        << "    break;\n"
+      o << "    break;\n"
         << "  }\n";
     }
     o << "  }\n  return true;";

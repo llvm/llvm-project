@@ -250,6 +250,15 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
         symbol, FPFastMathModeAttr::get(opBuilder.getContext(),
                                         static_cast<FPFastMathMode>(words[2])));
     break;
+  case spirv::Decoration::FPRoundingMode:
+    if (words.size() != 3) {
+      return emitError(unknownLoc, "OpDecorate with ")
+             << decorationName << " needs a single integer literal";
+    }
+    decorations[words[0]].set(
+        symbol, FPRoundingModeAttr::get(opBuilder.getContext(),
+                                        static_cast<FPRoundingMode>(words[2])));
+    break;
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Binding:
     if (words.size() != 3) {
