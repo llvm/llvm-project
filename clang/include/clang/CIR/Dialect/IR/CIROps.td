@@ -3142,7 +3142,7 @@ def VecShuffleDynamicOp : CIR_Op<"vec.shuffle.dynamic",
 }
 
 //===----------------------------------------------------------------------===//
-// BaseClassAddr & BaseClassAddr
+// BaseClassAddr & DerivedClassAddrOp
 //===----------------------------------------------------------------------===//
 
 def BaseClassAddrOp : CIR_Op<"base_class_addr"> {

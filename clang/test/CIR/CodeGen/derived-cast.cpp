@@ -19,10 +19,6 @@ class X : public A, public B {
 
 A *B::getAsA() {
   return static_cast<X*>(this);
-
-  // CHECK-LABEL: define{{.*}} ptr @_ZN1B6getAsAEv
-  // CHECK: %[[THIS:.*]] = load ptr, ptr
-  // CHECK-NEXT: getelementptr inbounds i8, ptr %[[THIS]], i64 -4
 }
 
 // CIR-LABEL: @_ZN1B6getAsAEv
