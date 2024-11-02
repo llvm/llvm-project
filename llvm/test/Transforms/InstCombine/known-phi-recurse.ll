@@ -301,8 +301,7 @@ define i8 @knownbits_phi_phi_test() {
 ; CHECK-NEXT:    [[COND1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[COND1]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[BOOL:%.*]] = and i8 [[CONTAIN]], 1
-; CHECK-NEXT:    ret i8 [[BOOL]]
+; CHECK-NEXT:    ret i8 [[CONTAIN]]
 ;
 entry:
   br label %loop
