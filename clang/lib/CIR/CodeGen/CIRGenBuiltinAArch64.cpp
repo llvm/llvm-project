@@ -2440,6 +2440,12 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
                        : "llvm.aarch64.neon.srhadd";
     break;
   }
+  case NEON::BI__builtin_neon_vhadd_v:
+  case NEON::BI__builtin_neon_vhaddq_v: {
+    intrincsName = (intrinicId != altLLVMIntrinsic) ? "llvm.aarch64.neon.uhadd"
+                                                    : "llvm.aarch64.neon.shadd";
+    break;
+  }
   case NEON::BI__builtin_neon_vqmovun_v: {
     intrincsName = "llvm.aarch64.neon.sqxtun";
     argTypes.push_back(builder.getExtendedOrTruncatedElementVectorType(
