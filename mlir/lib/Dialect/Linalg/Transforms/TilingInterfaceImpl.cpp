@@ -119,6 +119,14 @@ struct LinalgOpTilingInterface
     // specified could lead to out of bounds accesses.
     Location loc = op->getLoc();
     LinalgOp linalgOp = cast<LinalgOp>(op);
+    SmallVector<AffineMap> indexingMaps = linalgOp.getIndexingMapsArray();
+    if (llvm::any_of(linalgOp.getIndexingMapsArray(), [](AffineMap m) {
+          return m.isNonPositiveCoefficients();
+        })) {
+      return linalgOp.emitOpError(
+          "tiling not supported because op has a non positive coefficient");
+    }
+
     SmallVector<Value> valuesToTile = linalgOp->getOperands();
     SmallVector<Value> tiledOperands = makeTiledShapes(
         b, loc, linalgOp, valuesToTile, offsets, sizes, {}, true);
