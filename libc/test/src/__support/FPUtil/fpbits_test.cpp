@@ -9,9 +9,11 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/integer_literals.h"
+#include "src/__support/macros/properties/types.h"
 #include "src/__support/sign.h" // Sign
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
 using LIBC_NAMESPACE::fputil::FPBits;
 using LIBC_NAMESPACE::fputil::FPType;
 using LIBC_NAMESPACE::fputil::internal::FPRep;
@@ -425,12 +427,9 @@ TEST(LlvmLibcFPBitsTest, DoubleType) {
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
 
-#ifdef LIBC_TARGET_ARCH_IS_X86
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 TEST(LlvmLibcFPBitsTest, X86LongDoubleType) {
   using LongDoubleBits = FPBits<long double>;
-
-  if constexpr (sizeof(long double) == sizeof(double))
-    return; // The tests for the "double" type cover for this case.
 
   EXPECT_STREQ(LIBC_NAMESPACE::str(LongDoubleBits::inf(Sign::POS)).c_str(),
                "(+Infinity)");

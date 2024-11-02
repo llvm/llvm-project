@@ -75,8 +75,8 @@ public:
               IDs.push_back(HID);
           }
       }
-      Out->MainFileIncludesBySpelling.try_emplace(Inc.Written)
-          .first->second.push_back(Out->MainFileIncludes.size() - 1);
+      Out->MainFileIncludesBySpelling[Inc.Written].push_back(
+          Out->MainFileIncludes.size() - 1);
     }
 
     // Record include graph (not just for main-file includes)

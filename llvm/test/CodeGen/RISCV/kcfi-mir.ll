@@ -10,7 +10,7 @@ define void @f1(ptr noundef %x) !kcfi_type !1 {
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
   ; CHECK-NEXT:   SD killed $x1, $x2, 8 :: (store (s64) into %stack.0)
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x1, -8
-  ; CHECK-NEXT:   BUNDLE implicit-def $x6, implicit-def $x7, implicit-def $x28, implicit-def $x29, implicit-def $x30, implicit-def $x31, implicit-def dead $x1, implicit-def $x2, implicit killed $x10 {
+  ; CHECK-NEXT:   BUNDLE implicit-def $x6, implicit-def $x6_w, implicit-def $x6_h, implicit-def $x7, implicit-def $x7_w, implicit-def $x7_h, implicit-def $x28, implicit-def $x28_w, implicit-def $x28_h, implicit-def $x29, implicit-def $x29_w, implicit-def $x29_h, implicit-def $x30, implicit-def $x30_w, implicit-def $x30_h, implicit-def $x31, implicit-def $x31_w, implicit-def $x31_h, implicit-def dead $x1, implicit-def $x2, implicit-def $x2_w, implicit-def $x2_h, implicit killed $x10 {
   ; CHECK-NEXT:     KCFI_CHECK $x10, 12345678, implicit-def $x6, implicit-def $x7, implicit-def $x28, implicit-def $x29, implicit-def $x30, implicit-def $x31
   ; CHECK-NEXT:     PseudoCALLIndirect killed $x10, csr_ilp32_lp64, implicit-def dead $x1, implicit-def $x2
   ; CHECK-NEXT:   }
@@ -26,7 +26,7 @@ define void @f2(ptr noundef %x) #0 {
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $x10
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   BUNDLE implicit-def $x6, implicit-def $x7, implicit-def $x28, implicit-def $x29, implicit-def $x30, implicit-def $x31, implicit killed $x10, implicit $x2 {
+  ; CHECK-NEXT:   BUNDLE implicit-def $x6, implicit-def $x6_w, implicit-def $x6_h, implicit-def $x7, implicit-def $x7_w, implicit-def $x7_h, implicit-def $x28, implicit-def $x28_w, implicit-def $x28_h, implicit-def $x29, implicit-def $x29_w, implicit-def $x29_h, implicit-def $x30, implicit-def $x30_w, implicit-def $x30_h, implicit-def $x31, implicit-def $x31_w, implicit-def $x31_h, implicit killed $x10, implicit $x2 {
   ; CHECK-NEXT:     KCFI_CHECK $x10, 12345678, implicit-def $x6, implicit-def $x7, implicit-def $x28, implicit-def $x29, implicit-def $x30, implicit-def $x31
   ; CHECK-NEXT:     PseudoTAILIndirect killed $x10, implicit $x2
   ; CHECK-NEXT:   }

@@ -1,3 +1,5 @@
+.. _header_generation:
+
 Generating Public and Internal headers
 ======================================
 

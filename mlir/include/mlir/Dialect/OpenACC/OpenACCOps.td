@@ -1114,9 +1114,9 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
       UnitAttr:$selfAttr,
       Variadic<AnyType>:$reductionOperands,
       OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
-      Variadic<OpenACC_PointerLikeTypeInterface>:$gangPrivateOperands,
+      Variadic<OpenACC_PointerLikeTypeInterface>:$privateOperands,
       OptionalAttr<SymbolRefArrayAttr>:$privatizations,
-      Variadic<OpenACC_PointerLikeTypeInterface>:$gangFirstPrivateOperands,
+      Variadic<OpenACC_PointerLikeTypeInterface>:$firstprivateOperands,
       OptionalAttr<SymbolRefArrayAttr>:$firstprivatizations,
       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
       OptionalAttr<DefaultValueAttr>:$defaultAttr,
@@ -1134,8 +1134,8 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
       CArg<"mlir::Value", "{}">:$ifCond,
       CArg<"mlir::Value", "{}">:$selfCond,
       CArg<"mlir::ValueRange", "{}">:$reductionOperands,
-      CArg<"mlir::ValueRange", "{}">:$gangPrivateOperands,
-      CArg<"mlir::ValueRange", "{}">:$gangFirstPrivateOperands,
+      CArg<"mlir::ValueRange", "{}">:$privateOperands,
+      CArg<"mlir::ValueRange", "{}">:$firstprivateOperands,
       CArg<"mlir::ValueRange", "{}">:$dataClauseOperands)>];
 
   let extraClassDeclaration = [{
@@ -1144,6 +1144,9 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
 
     /// The i-th data operand passed.
     Value getDataOperand(unsigned i);
+
+    /// Used to retrieve the block inside the op's region.
+    Block &getBody() { return getRegion().front(); }
 
     /// Return true if the op has the async attribute for the
     /// mlir::acc::DeviceType::None device_type.
@@ -1202,15 +1205,15 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType) `)`
-      | `firstprivate` `(` custom<SymOperandList>($gangFirstPrivateOperands,
-            type($gangFirstPrivateOperands), $firstprivatizations)
+      | `firstprivate` `(` custom<SymOperandList>($firstprivateOperands,
+            type($firstprivateOperands), $firstprivatizations)
         `)`
       | `num_gangs` `(` custom<NumGangs>($numGangs,
             type($numGangs), $numGangsDeviceType, $numGangsSegments) `)`
       | `num_workers` `(` custom<DeviceTypeOperands>($numWorkers,
             type($numWorkers), $numWorkersDeviceType) `)`
       | `private` `(` custom<SymOperandList>(
-            $gangPrivateOperands, type($gangPrivateOperands), $privatizations)
+            $privateOperands, type($privateOperands), $privatizations)
         `)`
       | `vector_length` `(` custom<DeviceTypeOperands>($vectorLength,
             type($vectorLength), $vectorLengthDeviceType) `)`
@@ -1271,9 +1274,9 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
       UnitAttr:$selfAttr,
       Variadic<AnyType>:$reductionOperands,
       OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
-      Variadic<OpenACC_PointerLikeTypeInterface>:$gangPrivateOperands,
+      Variadic<OpenACC_PointerLikeTypeInterface>:$privateOperands,
       OptionalAttr<SymbolRefArrayAttr>:$privatizations,
-      Variadic<OpenACC_PointerLikeTypeInterface>:$gangFirstPrivateOperands,
+      Variadic<OpenACC_PointerLikeTypeInterface>:$firstprivateOperands,
       OptionalAttr<SymbolRefArrayAttr>:$firstprivatizations,
       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
       OptionalAttr<DefaultValueAttr>:$defaultAttr,
@@ -1287,6 +1290,9 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
 
     /// The i-th data operand passed.
     Value getDataOperand(unsigned i);
+
+    /// Used to retrieve the block inside the op's region.
+    Block &getBody() { return getRegion().front(); }
 
     /// Return true if the op has the async attribute for the
     /// mlir::acc::DeviceType::None device_type.
@@ -1326,11 +1332,11 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `async` `(` custom<DeviceTypeOperands>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType) `)`
-      | `firstprivate` `(` custom<SymOperandList>($gangFirstPrivateOperands,
-            type($gangFirstPrivateOperands), $firstprivatizations)
+      | `firstprivate` `(` custom<SymOperandList>($firstprivateOperands,
+            type($firstprivateOperands), $firstprivatizations)
         `)`
       | `private` `(` custom<SymOperandList>(
-            $gangPrivateOperands, type($gangPrivateOperands), $privatizations)
+            $privateOperands, type($privateOperands), $privatizations)
         `)`
       | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
           $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
@@ -1409,6 +1415,9 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
 
     /// The i-th data operand passed.
     Value getDataOperand(unsigned i);
+
+    /// Used to retrieve the block inside the op's region.
+    Block &getBody() { return getRegion().front(); }
 
     /// Return true if the op has the async attribute for the
     /// mlir::acc::DeviceType::None device_type.
@@ -1824,6 +1833,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     /// The i-th data operand passed.
     Value getDataOperand(unsigned i);
 
+    /// Used to retrieve the block inside the op's region.
     Block &getBody() { return getLoopRegions().front()->front(); }
 
     /// Return true if the op has the auto attribute for the

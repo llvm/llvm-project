@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
@@ -37,7 +38,6 @@ static std::string makeString(T array, bool breakline = false) {
       os << "\n\t\t";
   }
   os << array.back() << "]";
-  os.flush();
   return buf;
 }
 
@@ -125,6 +125,17 @@ LogicalResult CreateNdDescOp::verify() {
   bool invalidRank = false;
   bool invalidElemTy = false;
 
+  // Memory space of created TensorDesc should match with the source.
+  // Both source and TensorDesc are considered for global memory by default,
+  // if the memory scope attr is not specified. If source is an integer,
+  // it is considered as ptr to global memory.
+  auto srcMemorySpace = getSourceMemorySpace();
+  auto tdescMemorySpace = static_cast<unsigned>(getType().getMemorySpace());
+  if (srcMemorySpace != tdescMemorySpace)
+    return emitOpError("Memory space mismatch.")
+           << " Source: " << srcMemorySpace
+           << ", TensorDesc: " << tdescMemorySpace;
+
   // check source type matches the rank if it is a memref.
   // It also should have the same ElementType as TensorDesc.
   auto memrefTy = dyn_cast<MemRefType>(getSourceType());
@@ -153,8 +164,12 @@ LogicalResult CreateNdDescOp::verify() {
     return emitOpError("TensorDesc should have the same element "
                        "type with the source if it is a memref.\n");
 
-  if (getType().getScattered())
+  if (getType().isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
+
+  if (getType().getRank() == 2 &&
+      tdescMemorySpace == static_cast<unsigned>(MemorySpace::SLM))
+    return emitOpError("SLM is not supported for 2D Block TensorDesc.\n");
 
   return success();
 }
@@ -164,7 +179,7 @@ LogicalResult CreateNdDescOp::verify() {
 //===----------------------------------------------------------------------===//
 LogicalResult PrefetchNdOp::verify() {
   auto tdescTy = getTensorDescType();
-  if (tdescTy.getScattered())
+  if (tdescTy.isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
@@ -189,7 +204,7 @@ LogicalResult LoadNdOp::verify() {
   if (tdescTy.getRank() > 2)
     return emitOpError("Expecting a 1D/2D TensorDesc.\n");
 
-  if (tdescTy.getScattered())
+  if (tdescTy.isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   if (!valueTy)
@@ -229,8 +244,8 @@ LogicalResult LoadNdOp::verify() {
       tdescShape[axis] /= vnni_factor;
       tdescShape.push_back(vnni_factor);
     } else {
-      return emitWarning("Invalid Packed Attr. It is ignored (available for 2D "
-                         "TensorDesc only).");
+      emitWarning("Invalid Packed Attr. It is ignored (available for 2D "
+                  "TensorDesc only).");
     }
   }
 
@@ -257,7 +272,7 @@ LogicalResult StoreNdOp::verify() {
   if (dstTy.getRank() > 2)
     return emitOpError("Expecting a 1D/2D TensorDesc.\n");
 
-  if (dstTy.getScattered())
+  if (dstTy.isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   if (!valTy)
@@ -280,7 +295,7 @@ LogicalResult StoreNdOp::verify() {
 //===----------------------------------------------------------------------===//
 LogicalResult UpdateNdOffsetOp::verify() {
   auto ty = getTensorDescType();
-  if (ty.getScattered())
+  if (ty.isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   // number of offsets specified must match the rank of the tensor descriptor
@@ -293,27 +308,72 @@ LogicalResult UpdateNdOffsetOp::verify() {
 //===----------------------------------------------------------------------===//
 // XeGPU_CreateDescOp
 //===----------------------------------------------------------------------===//
+
 void CreateDescOp::build(OpBuilder &builder, OperationState &state,
                          TensorDescType TensorDesc, Value source,
-                         llvm::ArrayRef<OpFoldResult> offsets,
-                         uint32_t chunk_size) {
-  llvm::SmallVector<int64_t> staticOffsets;
-  llvm::SmallVector<Value> dynamicOffsets;
-  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
-  build(builder, state, TensorDesc, source, dynamicOffsets, staticOffsets,
-        chunk_size);
+                         llvm::ArrayRef<OpFoldResult> offsets) {
+  auto loc = source.getLoc();
+  int64_t size = static_cast<int64_t>(offsets.size());
+  auto type = VectorType::get(size, builder.getIndexType());
+  auto values = getValueOrCreateConstantIndexOp(builder, loc, offsets);
+  auto offset = builder.create<vector::FromElementsOp>(loc, type, values);
+  build(builder, state, TensorDesc, source, offset);
+}
+
+void CreateDescOp::build(OpBuilder &builder, OperationState &state,
+                         TensorDescType TensorDesc, Value source,
+                         llvm::ArrayRef<int64_t> offsets) {
+  auto ofrs = getAsIndexOpFoldResult(builder.getContext(), offsets);
+  build(builder, state, TensorDesc, source, ofrs);
 }
 
 LogicalResult CreateDescOp::verify() {
   auto tdescTy = getTensorDescType();
-  auto chunkSize = getChunkSize();
 
   if (getRankOf(getSource()) > 1)
     return emitOpError(
         "Expecting the source is a 1D memref or pointer (uint64_t).");
 
-  if (!tdescTy.getScattered())
+  if (!tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.\n");
+
+  // Memory space of created TensorDesc should match with the source.
+  // Both source and TensorDesc are considered for global memory by default,
+  // if the memory scope attr is not specified. If source is an integer,
+  // it is considered as ptr to global memory.
+  auto srcMemorySpace = getSourceMemorySpace();
+  auto tdescMemorySpace = static_cast<unsigned>(tdescTy.getMemorySpace());
+  if (srcMemorySpace != tdescMemorySpace)
+    return emitOpError("Memory space mismatch.")
+           << " Source: " << srcMemorySpace
+           << ", TensorDesc: " << tdescMemorySpace;
+
+  auto chunkSize = tdescTy.getChunkSize();
+
+  // check chunk_size
+  llvm::SmallVector<int64_t> supportedChunkSizes = {1,  2,  3,  4,   8,
+                                                    16, 32, 64, 128, 256};
+  if (!llvm::is_contained(supportedChunkSizes, chunkSize))
+    return emitOpError("Invalid chunk_size. Supported values are 1, 2, 3, 4, "
+                       "8, 16, 32, 64, 128, or 256.");
+
+  // check total size
+  auto elemBits = tdescTy.getElementType().getIntOrFloatBitWidth();
+  auto bitsPerLane = elemBits * chunkSize;
+  if (chunkSize > 1 && bitsPerLane % 32) {
+    // For 8-bit and 16-bit data, the hardware only supports chunk size of 1.
+    // For 32-bit data, the hardware can support larger larger chunk size. So
+    // we can bitcast 8-bit/16-bit data to 32-bit data for better performance.
+    // But this requires the total size is 32 bit aligned to make the
+    // optimization work.
+    return emitOpError(
+        "access size (chunk_size * sizeof(elemTy)) should be 32-bit aligned.");
+  }
+
+  auto lscConstraints = 512 * 8; // each access is upto 512 bytes.
+  if (elemBits * tdescTy.getNumElements() > lscConstraints)
+    return emitOpError("total access size (simd_lanes * chunk_size * "
+                       "sizeof(elemTy)) is upto 512 bytes.");
 
   SmallVector<int64_t> shape({(int64_t)getNumOffsets()});
   if (chunkSize != 1)
@@ -332,7 +392,7 @@ LogicalResult CreateDescOp::verify() {
 //===----------------------------------------------------------------------===//
 LogicalResult PrefetchOp::verify() {
   auto tdescTy = getTensorDescType();
-  if (!tdescTy.getScattered())
+  if (!tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
@@ -355,7 +415,7 @@ LogicalResult LoadGatherOp::verify() {
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
 
-  if (!tdescTy.getScattered())
+  if (!tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
@@ -380,12 +440,10 @@ LogicalResult LoadGatherOp::verify() {
   if (tdescShape[0] != maskShape[0])
     return emitOpError("dim-0 of the Mask and TensorDesc should be the same.");
 
-  if (getTransposeAttr()) {
-    auto trans = getTranspose().value();
-    if (tdescShape.size() < trans.size())
-      emitWarning("Invalid transpose attr. It is ignored.");
-    else
-      transpose(trans, tdescShape);
+  if (tdescTy.getRank() == 2) {
+    if (!getTransposeAttr())
+      return emitOpError("load_gather has to be transposed.");
+    transpose({1, 0}, tdescShape);
   }
 
   if (valueShape != tdescShape)
@@ -401,7 +459,7 @@ LogicalResult LoadGatherOp::verify() {
 //===----------------------------------------------------------------------===//
 LogicalResult StoreScatterOp::verify() {
   auto tdescTy = getTensorDescType();
-  if (!tdescTy.getScattered())
+  if (!tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.\n");
 
   if (!isWriteHintOrNone(getL1HintAttr()))
@@ -414,13 +472,49 @@ LogicalResult StoreScatterOp::verify() {
     return emitOpError("invlid l3_hint: ") << getL3HintAttr();
 
   auto maskTy = getMaskType();
+  auto valueTy = getValueType();
   auto maskShape = getShapeOf(maskTy);
   auto tdescShape = getShapeOf(tdescTy);
+  auto valueShape = getShapeOf(valueTy);
   if (tdescShape[0] != maskShape[0])
     return emitOpError("dim-0 of the Mask and TensorDesc should be the same.");
 
+  if (tdescTy.getRank() == 2) {
+    if (!getTransposeAttr())
+      return emitOpError("load_gather has to be transposed.");
+    transpose({1, 0}, tdescShape);
+  }
+
+  if (valueShape != tdescShape)
+    return emitOpError("Unexpected value shape")
+           << "(Expected shape: " << makeString(tdescShape)
+           << ", Given shape: " << makeString(valueShape) << ").\n";
+
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// XeGPU_UpdateOffsetOp
+//===----------------------------------------------------------------------===//
+void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
+                           mlir::Value tensorDesc,
+                           llvm::ArrayRef<OpFoldResult> offsets) {
+  auto tdescTy = mlir::dyn_cast<TensorDescType>(tensorDesc.getType());
+  assert(tdescTy && "Expecting the source is a TensorDescType value.");
+  auto loc = tensorDesc.getLoc();
+  int64_t size = static_cast<int64_t>(offsets.size());
+  auto type = VectorType::get({size}, builder.getIndexType());
+  auto values = getValueOrCreateConstantIndexOp(builder, loc, offsets);
+  auto offset = builder.create<vector::FromElementsOp>(loc, type, values);
+  build(builder, state, tdescTy, tensorDesc, offset);
+}
+
+void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
+                           Value tensorDesc, llvm::ArrayRef<int64_t> offsets) {
+  auto ofrs = getAsIndexOpFoldResult(builder.getContext(), offsets);
+  build(builder, state, tensorDesc, ofrs);
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_DpasOp
 //===----------------------------------------------------------------------===//

@@ -395,7 +395,7 @@ void ExecutionEngine::runStaticConstructorsDestructors(Module &module,
 
     // Execute the ctor/dtor function!
     if (Function *F = dyn_cast<Function>(FP))
-      runFunction(F, std::nullopt);
+      runFunction(F, {});
 
     // FIXME: It is marginally lame that we just do nothing here if we see an
     // entry we don't recognize. It might not be unreasonable for the verifier
@@ -1056,7 +1056,7 @@ void ExecutionEngine::StoreValueToMemory(const GenericValue &Val,
     *((double*)Ptr) = Val.DoubleVal;
     break;
   case Type::X86_FP80TyID:
-    memcpy(Ptr, Val.IntVal.getRawData(), 10);
+    memcpy(static_cast<void *>(Ptr), Val.IntVal.getRawData(), 10);
     break;
   case Type::PointerTyID:
     // Ensure 64 bit target pointers are fully initialized on 32 bit hosts.

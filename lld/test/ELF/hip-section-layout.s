@@ -7,8 +7,10 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux --defsym=NON_HIP_SECTIONS=1 %s -o %t.1.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux --defsym=HIP_SECTIONS=1 %s -o %t.2.o
-# RUN: ld.lld %t.1.o %t.2.o -o %t.s.out
-# RUN: llvm-readobj --sections %t.s.out | FileCheck %s
+# RUN: ld.lld %t.1.o %t.2.o -o %t.1.s.out
+# RUN: llvm-readobj --sections %t.1.s.out | FileCheck %s
+# RUN: ld.lld %t.2.o %t.1.o -o %t.2.s.out
+# RUN: llvm-readobj --sections %t.2.s.out | FileCheck %s
 
 .ifdef HIP_SECTIONS
 .section .hipFatBinSegment,"aw",@progbits; .space 1

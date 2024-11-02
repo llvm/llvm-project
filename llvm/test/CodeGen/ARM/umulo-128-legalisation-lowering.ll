@@ -7,12 +7,11 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; ARMV6:       @ %bb.0: @ %start
 ; ARMV6-NEXT:    push {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; ARMV6-NEXT:    sub sp, sp, #28
-; ARMV6-NEXT:    ldr r7, [sp, #72]
+; ARMV6-NEXT:    ldr lr, [sp, #72]
 ; ARMV6-NEXT:    mov r6, r0
 ; ARMV6-NEXT:    str r0, [sp, #8] @ 4-byte Spill
 ; ARMV6-NEXT:    ldr r4, [sp, #84]
-; ARMV6-NEXT:    umull r1, r0, r2, r7
-; ARMV6-NEXT:    mov lr, r7
+; ARMV6-NEXT:    umull r1, r0, r2, lr
 ; ARMV6-NEXT:    umull r5, r10, r4, r2
 ; ARMV6-NEXT:    str r1, [r6]
 ; ARMV6-NEXT:    ldr r6, [sp, #80]

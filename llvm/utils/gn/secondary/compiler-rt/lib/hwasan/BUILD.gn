@@ -57,14 +57,27 @@ source_set("sources") {
     "hwasan_poisoning.h",
     "hwasan_report.cpp",
     "hwasan_report.h",
-    "hwasan_setjmp_aarch64.S",
-    "hwasan_setjmp_riscv64.S",
     "hwasan_thread.cpp",
     "hwasan_thread.h",
     "hwasan_thread_list.cpp",
     "hwasan_thread_list.h",
     "hwasan_type_test.cpp",
   ]
+  if (current_cpu == "arm64") {
+    sources += [
+      "hwasan_setjmp_aarch64.S",
+      "hwasan_tag_mismatch_aarch64.S",
+    ]
+  }
+  if (current_cpu == "riscv64") {
+    sources += [
+      "hwasan_setjmp_riscv64.S",
+      "hwasan_tag_mismatch_riscv64.S",
+    ]
+  }
+  if (current_cpu == "x64") {
+    sources += [ "hwasan_setjmp_x86_64.S" ]
+  }
 }
 
 source_set("cxx_sources") {

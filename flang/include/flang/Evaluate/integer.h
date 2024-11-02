@@ -828,9 +828,9 @@ public:
           if (Part ypart{y.LEPart(k)}) {
             BigPart xy{xpart};
             xy *= ypart;
-#if defined __GNUC__ && __GNUC__ < 8
-            // && to < (2 * parts) was added to avoid GCC < 8 build failure on
-            // -Werror=array-bounds. This can be removed if -Werror is disable.
+#if defined __GNUC__ && __GNUC__ < 8 || __GNUC__ >= 12
+            // && to < (2 * parts) was added to avoid GCC build failure on
+            // -Werror=array-bounds. This can be removed if -Werror is disabled.
             for (int to{j + k}; xy != 0 && to < (2 * parts); ++to) {
 #else
             for (int to{j + k}; xy != 0; ++to) {

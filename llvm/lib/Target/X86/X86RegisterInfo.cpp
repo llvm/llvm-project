@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86RegisterInfo.h"
-#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86FrameLowering.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
@@ -25,7 +24,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TileShapeInfo.h"
@@ -83,11 +81,6 @@ X86RegisterInfo::X86RegisterInfo(const Triple &TT)
     FramePtr = X86::EBP;
     BasePtr = X86::ESI;
   }
-}
-
-int
-X86RegisterInfo::getSEHRegNum(unsigned i) const {
-  return getEncodingValue(i);
 }
 
 const TargetRegisterClass *
@@ -417,6 +410,11 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   return CallsEHReturn ? CSR_32EHRet_SaveList : CSR_32_SaveList;
 }
 
+const MCPhysReg *
+X86RegisterInfo::getIPRACSRegs(const MachineFunction *MF) const {
+  return Is64Bit ? CSR_IPRA_64_SaveList : CSR_IPRA_32_SaveList;
+}
+
 const MCPhysReg *X86RegisterInfo::getCalleeSavedRegsViaCopy(
     const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
@@ -644,6 +642,10 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       Reserved.set(*AI);
   }
 
+  // Reserve low half pair registers in case they are used by RA aggressively.
+  Reserved.set(X86::TMM0_TMM1);
+  Reserved.set(X86::TMM2_TMM3);
+
   assert(checkAllSuperRegsMarked(Reserved,
                                  {X86::SIL, X86::DIL, X86::BPL, X86::SPL,
                                   X86::SIH, X86::DIH, X86::BPH, X86::SPH}));
@@ -664,7 +666,7 @@ unsigned X86RegisterInfo::getNumSupportedRegs(const MachineFunction &MF) const {
   // and try to return the minimum number of registers supported by the target.
   static_assert((X86::R15WH + 1 == X86::YMM0) && (X86::YMM15 + 1 == X86::K0) &&
                     (X86::K6_K7 + 1 == X86::TMMCFG) &&
-                    (X86::TMM7 + 1 == X86::R16) &&
+                    (X86::TMM6_TMM7 + 1 == X86::R16) &&
                     (X86::R31WH + 1 == X86::NUM_TARGET_REGS),
                 "Register number may be incorrect");
 
@@ -737,7 +739,8 @@ bool X86RegisterInfo::isFixedRegister(const MachineFunction &MF,
 }
 
 bool X86RegisterInfo::isTileRegisterClass(const TargetRegisterClass *RC) const {
-  return RC->getID() == X86::TILERegClassID;
+  return RC->getID() == X86::TILERegClassID ||
+         RC->getID() == X86::TILEPAIRRegClassID;
 }
 
 void X86RegisterInfo::adjustStackMapLiveOutMask(uint32_t *Mask) const {
@@ -907,7 +910,7 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
   // Determine base register and offset.
-  int64_t FIOffset;
+  int FIOffset;
   Register BasePtr;
   if (MI.isReturn()) {
     assert((!hasStackRealignment(MF) ||
@@ -958,34 +961,10 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   }
 
   if (MI.getOperand(FIOperandNum+3).isImm()) {
-    int64_t Imm = MI.getOperand(FIOperandNum + 3).getImm();
-    int64_t Offset = FIOffset + Imm;
-    bool FitsIn32Bits = isInt<32>(Offset);
-    // If the offset will not fit in a 32-bit displacement,
-    // then for 64-bit targets, scavenge a register to hold it.
-    // Otherwise, for 32-bit targets, this is a bug!
-    if (Is64Bit && !FitsIn32Bits) {
-      assert(RS && "RegisterScavenger was NULL");
-      const X86InstrInfo *TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
-      const DebugLoc &DL = MI.getDebugLoc();
-
-      RS->enterBasicBlockEnd(MBB);
-      RS->backward(std::next(II));
-
-      Register ScratchReg = RS->scavengeRegisterBackwards(
-          X86::GR64RegClass, II, /*RestoreAfter=*/false, /*SPAdj=*/0,
-          /*AllowSpill=*/true);
-      assert(ScratchReg != 0 && "scratch reg was 0");
-      RS->setRegUsed(ScratchReg);
-
-      BuildMI(MBB, II, DL, TII->get(X86::MOV64ri), ScratchReg).addImm(Offset);
-
-      MI.getOperand(FIOperandNum + 3).setImm(0);
-      MI.getOperand(FIOperandNum + 2).setReg(ScratchReg);
-
-      return false;
-    }
-    assert((Is64Bit || FitsIn32Bits) &&
+    // Offset is a 32-bit integer.
+    int Imm = (int)(MI.getOperand(FIOperandNum + 3).getImm());
+    int Offset = FIOffset + Imm;
+    assert((!Is64Bit || isInt<32>((long long)FIOffset + Imm)) &&
            "Requesting 64-bit offset in 32-bit immediate!");
     if (Offset != 0 || !tryOptimizeLEAtoMOV(II))
       MI.getOperand(FIOperandNum + 3).ChangeToImmediate(Offset);
@@ -1099,12 +1078,59 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
   case X86::PTDPFP16PSV:
   case X86::PTCMMIMFP16PSV:
   case X86::PTCMMRLFP16PSV:
+  case X86::PTTRANSPOSEDV: {
     MachineOperand &MO1 = MI->getOperand(1);
     MachineOperand &MO2 = MI->getOperand(2);
     ShapeT Shape(&MO1, &MO2, MRI);
     VRM->assignVirt2Shape(VirtReg, Shape);
     return Shape;
   }
+  case X86::PT2RPNTLVWZ0V:
+  case X86::PT2RPNTLVWZ0T1V:
+  case X86::PT2RPNTLVWZ1V:
+  case X86::PT2RPNTLVWZ1T1V: {
+    MachineOperand &MO1 = MI->getOperand(1);
+    MachineOperand &MO2 = MI->getOperand(2);
+    MachineOperand &MO3 = MI->getOperand(3);
+    ShapeT Shape({&MO1, &MO2, &MO1, &MO3}, MRI);
+    VRM->assignVirt2Shape(VirtReg, Shape);
+    return Shape;
+  }
+  }
+}
+
+static bool canHintShape(ShapeT &PhysShape, ShapeT &VirtShape) {
+  unsigned PhysShapeNum = PhysShape.getShapeNum();
+  unsigned VirtShapeNum = VirtShape.getShapeNum();
+
+  if (PhysShapeNum < VirtShapeNum)
+    return false;
+
+  if (PhysShapeNum == VirtShapeNum) {
+    if (PhysShapeNum == 1)
+      return PhysShape == VirtShape;
+
+    for (unsigned I = 0; I < PhysShapeNum; I++) {
+      ShapeT PShape(PhysShape.getRow(I), PhysShape.getCol(I));
+      ShapeT VShape(VirtShape.getRow(I), VirtShape.getCol(I));
+      if (VShape != PShape)
+        return false;
+    }
+    return true;
+  }
+
+  // Hint subreg of mult-tile reg to single tile reg.
+  if (VirtShapeNum == 1) {
+    for (unsigned I = 0; I < PhysShapeNum; I++) {
+      ShapeT PShape(PhysShape.getRow(I), PhysShape.getCol(I));
+      if (VirtShape == PShape)
+        return true;
+    }
+  }
+
+  // Note: Currently we have no requirement for case of
+  // (VirtShapeNum > 1 and PhysShapeNum > VirtShapeNum)
+  return false;
 }
 
 bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
@@ -1125,7 +1151,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
   if (!VRM)
     return BaseImplRetVal;
 
-  if (ID != X86::TILERegClassID) {
+  if (ID != X86::TILERegClassID && ID != X86::TILEPAIRRegClassID) {
     if (DisableRegAllocNDDHints || !ST.hasNDD() ||
         !TRI.isGeneralPurposeRegisterClass(&RC))
       return BaseImplRetVal;
@@ -1177,7 +1203,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
       return;
     }
     ShapeT PhysShape = getTileShape(VReg, const_cast<VirtRegMap *>(VRM), MRI);
-    if (PhysShape == VirtShape)
+    if (canHintShape(PhysShape, VirtShape))
       Hints.push_back(PhysReg);
   };
 

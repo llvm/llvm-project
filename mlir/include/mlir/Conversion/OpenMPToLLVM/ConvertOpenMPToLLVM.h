@@ -11,6 +11,7 @@
 #include <memory>
 
 namespace mlir {
+class DialectRegistry;
 class LLVMTypeConverter;
 class ConversionTarget;
 class MLIRContext;
@@ -22,12 +23,16 @@ class RewritePatternSet;
 
 /// Configure dynamic conversion legality of regionless operations from OpenMP
 /// to LLVM.
-void configureOpenMPToLLVMConversionLegality(ConversionTarget &target,
-                                             LLVMTypeConverter &typeConverter);
+void configureOpenMPToLLVMConversionLegality(
+    ConversionTarget &target, const LLVMTypeConverter &typeConverter);
 
 /// Populate the given list with patterns that convert from OpenMP to LLVM.
 void populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                             RewritePatternSet &patterns);
+
+/// Registers the `ConvertToLLVMPatternInterface` interface in the `OpenMP`
+/// dialect.
+void registerConvertOpenMPToLLVMInterface(DialectRegistry &registry);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_OPENMPTOLLVM_CONVERTOPENMPTOLLVM_H

@@ -96,7 +96,7 @@ define void @test2(i32 %n) nounwind uwtable {
 ; CHECK-NEXT:    br label [[FOR_COND468:%.*]]
 ; CHECK:       for.cond468:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ 1, [[FOR_COND468_PREHEADER]] ], [ [[LSR_IV_NEXT:%.*]], [[IF_THEN477:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ getelementptr inbounds (i8, ptr @tags, i64 8), [[FOR_COND468_PREHEADER]] ], [ [[SCEVGEP:%.*]], [[IF_THEN477]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @tags, i64 8), [[FOR_COND468_PREHEADER]] ], [ [[SCEVGEP:%.*]], [[IF_THEN477]] ]
 ; CHECK-NEXT:    [[K_0:%.*]] = load i32, ptr [[LSR_IV]], align 4
 ; CHECK-NEXT:    [[CMP469:%.*]] = icmp slt i32 [[LSR_IV1]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP469]], label [[FOR_BODY471:%.*]], label [[FOR_INC498_PREHEADER:%.*]]

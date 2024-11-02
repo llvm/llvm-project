@@ -314,7 +314,7 @@ public:
 
     BC.errs()
         << "BOLT-ERROR: unable to find TypeUnit for Type Unit at offset 0x"
-        << DU.getOffset() << "\n";
+        << Twine::utohexstr(DU.getOffset()) << "\n";
     return nullptr;
   }
 

@@ -166,6 +166,7 @@
 ; LAXX-NEXT:       Implement the 'patchable-function' attribute
 ; LAXX-NEXT:       Branch relaxation pass
 ; LAXX-NEXT:       Contiguously Lay Out Funclets
+; LAXX-NEXT:       Remove Loads Into Fake Uses
 ; LAXX-NEXT:       StackMap Liveness Analysis
 ; LAXX-NEXT:       Live DEBUG_VALUE analysis
 ; LAXX-NEXT:       Machine Sanitizer Binary Metadata

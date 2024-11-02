@@ -173,7 +173,7 @@ public:
   template <class _Lock, class _Rep, class _Period, class _Predicate>
   bool _LIBCPP_HIDE_FROM_ABI wait_for(_Lock& __lock, const chrono::duration<_Rep, _Period>& __d, _Predicate __pred);
 
-#  if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
+#  if _LIBCPP_STD_VER >= 20
 
   template <class _Lock, class _Predicate>
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool wait(_Lock& __lock, stop_token __stoken, _Predicate __pred);
@@ -186,7 +186,7 @@ public:
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool
   wait_for(_Lock& __lock, stop_token __stoken, const chrono::duration<_Rep, _Period>& __rel_time, _Predicate __pred);
 
-#  endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
+#  endif // _LIBCPP_STD_VER >= 20
 };
 
 inline condition_variable_any::condition_variable_any() : __mut_(make_shared<mutex>()) {}
@@ -260,7 +260,7 @@ condition_variable_any::wait_for(_Lock& __lock, const chrono::duration<_Rep, _Pe
   return wait_until(__lock, chrono::steady_clock::now() + __d, std::move(__pred));
 }
 
-#  if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
+#  if _LIBCPP_STD_VER >= 20
 
 template <class _Lock, class _Predicate>
 bool condition_variable_any::wait(_Lock& __user_lock, stop_token __stoken, _Predicate __pred) {
@@ -341,7 +341,7 @@ bool condition_variable_any::wait_for(
   return wait_until(__lock, std::move(__stoken), chrono::steady_clock::now() + __rel_time, std::move(__pred));
 }
 
-#  endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
+#  endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_EXPORTED_FROM_ABI void notify_all_at_thread_exit(condition_variable&, unique_lock<mutex>);
 

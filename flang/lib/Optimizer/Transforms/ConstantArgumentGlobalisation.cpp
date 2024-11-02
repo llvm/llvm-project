@@ -126,10 +126,10 @@ public:
       newResultTypes.append(callOp.getResultTypes().begin(),
                             callOp.getResultTypes().end());
       fir::CallOp newOp = builder.create<fir::CallOp>(
-          loc, newResultTypes,
+          loc,
           callOp.getCallee().has_value() ? callOp.getCallee().value()
                                          : mlir::SymbolRefAttr{},
-          newOperands);
+          newResultTypes, newOperands);
       // Copy all the attributes from the old to new op.
       newOp->setAttrs(callOp->getAttrs());
       rewriter.replaceOp(callOp, newOp);

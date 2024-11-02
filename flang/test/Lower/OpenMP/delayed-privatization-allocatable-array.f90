@@ -61,7 +61,7 @@ end subroutine
 
 ! CHECK-NEXT:  fir.if %[[COPY_COND]] {
 ! CHECK-NEXT:    %[[PRIV_ORIG_ARG_VAL:.*]] = fir.load %[[PRIV_ORIG_ARG]]
-! CHECK-NEXT:    hlfir.assign %[[PRIV_ORIG_ARG_VAL]] to %[[PRIV_BASE_VAL]] temporary_lhs
+! CHECK-NEXT:    hlfir.assign %[[PRIV_ORIG_ARG_VAL]] to %[[PRIV_PRIV_ARG]] realloc
 ! CHECK-NEXT:   }
 ! CHECK-NEXT:   omp.yield
 ! CHECK-NEXT: }

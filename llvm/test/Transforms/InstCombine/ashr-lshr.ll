@@ -620,7 +620,7 @@ define <2 x i8> @ashr_known_pos_exact_vec(<2 x i8> %x, <2 x i8> %y) {
 define i32 @lshr_mul_times_3_div_2(i32 %0) {
 ; CHECK-LABEL: @lshr_mul_times_3_div_2(
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0:%.*]], 1
-; CHECK-NEXT:    [[LSHR:%.*]] = add nuw nsw i32 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[LSHR:%.*]] = add nuw nsw i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %mul = mul nsw nuw i32 %0, 3
@@ -631,7 +631,7 @@ define i32 @lshr_mul_times_3_div_2(i32 %0) {
 define i32 @lshr_mul_times_3_div_2_exact(i32 %x) {
 ; CHECK-LABEL: @lshr_mul_times_3_div_2_exact(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[LSHR:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[LSHR:%.*]] = add nsw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %mul = mul nsw i32 %x, 3
@@ -670,7 +670,7 @@ define i32 @mul_times_3_div_2_multiuse_lshr(i32 %x) {
 define i32 @lshr_mul_times_3_div_2_exact_2(i32 %x) {
 ; CHECK-LABEL: @lshr_mul_times_3_div_2_exact_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[LSHR:%.*]] = add nuw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[LSHR:%.*]] = add nuw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %mul = mul nuw i32 %x, 3
@@ -681,7 +681,7 @@ define i32 @lshr_mul_times_3_div_2_exact_2(i32 %x) {
 define i32 @lshr_mul_times_5_div_4(i32 %0) {
 ; CHECK-LABEL: @lshr_mul_times_5_div_4(
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0:%.*]], 2
-; CHECK-NEXT:    [[LSHR:%.*]] = add nuw nsw i32 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[LSHR:%.*]] = add nuw nsw i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %mul = mul nsw nuw i32 %0, 5
@@ -692,7 +692,7 @@ define i32 @lshr_mul_times_5_div_4(i32 %0) {
 define i32 @lshr_mul_times_5_div_4_exact(i32 %x) {
 ; CHECK-LABEL: @lshr_mul_times_5_div_4_exact(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[LSHR:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[LSHR:%.*]] = add nsw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %mul = mul nsw i32 %x, 5
@@ -731,7 +731,7 @@ define i32 @mul_times_5_div_4_multiuse_lshr(i32 %x) {
 define i32 @lshr_mul_times_5_div_4_exact_2(i32 %x) {
 ; CHECK-LABEL: @lshr_mul_times_5_div_4_exact_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[LSHR:%.*]] = add nuw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[LSHR:%.*]] = add nuw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %mul = mul nuw i32 %x, 5
@@ -741,8 +741,8 @@ define i32 @lshr_mul_times_5_div_4_exact_2(i32 %x) {
 
 define i32 @ashr_mul_times_3_div_2(i32 %0) {
 ; CHECK-LABEL: @ashr_mul_times_3_div_2(
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr i32 [[TMP0:%.*]], 1
-; CHECK-NEXT:    [[ASHR:%.*]] = add nuw nsw i32 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0:%.*]], 1
+; CHECK-NEXT:    [[ASHR:%.*]] = add nuw nsw i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[ASHR]]
 ;
   %mul = mul nuw nsw i32 %0, 3
@@ -753,7 +753,7 @@ define i32 @ashr_mul_times_3_div_2(i32 %0) {
 define i32 @ashr_mul_times_3_div_2_exact(i32 %x) {
 ; CHECK-LABEL: @ashr_mul_times_3_div_2_exact(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[ASHR]]
 ;
   %mul = mul nsw i32 %x, 3
@@ -805,7 +805,7 @@ define i32 @mul_times_3_div_2_multiuse_ashr(i32 %x) {
 define i32 @ashr_mul_times_3_div_2_exact_2(i32 %x) {
 ; CHECK-LABEL: @ashr_mul_times_3_div_2_exact_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[ASHR]]
 ;
   %mul = mul nsw i32 %x, 3
@@ -815,8 +815,8 @@ define i32 @ashr_mul_times_3_div_2_exact_2(i32 %x) {
 
 define i32 @ashr_mul_times_5_div_4(i32 %0) {
 ; CHECK-LABEL: @ashr_mul_times_5_div_4(
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr i32 [[TMP0:%.*]], 2
-; CHECK-NEXT:    [[ASHR:%.*]] = add nuw nsw i32 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0:%.*]], 2
+; CHECK-NEXT:    [[ASHR:%.*]] = add nuw nsw i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[ASHR]]
 ;
   %mul = mul nuw nsw i32 %0, 5
@@ -827,7 +827,7 @@ define i32 @ashr_mul_times_5_div_4(i32 %0) {
 define i32 @ashr_mul_times_5_div_4_exact(i32 %x) {
 ; CHECK-LABEL: @ashr_mul_times_5_div_4_exact(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[ASHR]]
 ;
   %mul = mul nsw i32 %x, 5
@@ -866,12 +866,215 @@ define i32 @mul_times_5_div_4_multiuse_ashr(i32 %x) {
 define i32 @ashr_mul_times_5_div_4_exact_2(i32 %x) {
 ; CHECK-LABEL: @ashr_mul_times_5_div_4_exact_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[ASHR]]
 ;
   %mul = mul nsw i32 %x, 5
   %ashr = ashr exact i32 %mul, 2
   ret i32 %ashr
+}
+
+
+define i32 @lsb_mask_sign_zext(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_zext(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = zext i1 [[TMP0]] to i32
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, -1
+  %and = and i32 %sub, %not
+  %shr = lshr i32 %and, 31
+  ret i32 %shr
+}
+
+define i32 @lsb_mask_sign_zext_commuted(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_zext_commuted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = zext i1 [[TMP0]] to i32
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, -1
+  %and = and i32 %not, %sub
+  %shr = lshr i32 %and, 31
+  ret i32 %shr
+}
+
+; Negative tests
+
+define i32 @lsb_mask_sign_zext_wrong_cst1(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_zext_wrong_cst1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -2
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[X]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[NOT]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[AND]], 31
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -2
+  %not = xor i32 %x, -1
+  %and = and i32 %sub, %not
+  %shr = lshr i32 %and, 31
+  ret i32 %shr
+}
+
+define i32 @lsb_mask_sign_zext_wrong_cst2(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_zext_wrong_cst2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[X]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[AND]], 31
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, 2
+  %and = and i32 %sub, %not
+  %shr = lshr i32 %and, 31
+  ret i32 %shr
+}
+
+define i32 @lsb_mask_sign_zext_wrong_cst3(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_zext_wrong_cst3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[X]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[NOT]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[AND]], 30
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, -1
+  %and = and i32 %sub, %not
+  %shr = lshr i32 %and, 30
+  ret i32 %shr
+}
+
+define i32 @lsb_mask_sign_zext_multiuse(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_zext_multiuse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[X]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[NOT]]
+; CHECK-NEXT:    call void @use(i32 [[AND]])
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[AND]], 31
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, -1
+  %and = and i32 %sub, %not
+  call void @use(i32 %and)
+  %shr = lshr i32 %and, 31
+  ret i32 %shr
+}
+
+define i32 @lsb_mask_sign_sext(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_sext(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP0]] to i32
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, -1
+  %and = and i32 %sub, %not
+  %shr = ashr i32 %and, 31
+  ret i32 %shr
+}
+
+define i32 @lsb_mask_sign_sext_commuted(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_sext_commuted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP0]] to i32
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, -1
+  %and = and i32 %not, %sub
+  %shr = ashr i32 %and, 31
+  ret i32 %shr
+}
+
+; Negative tests
+
+define i32 @lsb_mask_sign_sext_wrong_cst1(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_sext_wrong_cst1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -2
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[X]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[NOT]]
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[AND]], 31
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -2
+  %not = xor i32 %x, -1
+  %and = and i32 %sub, %not
+  %shr = ashr i32 %and, 31
+  ret i32 %shr
+}
+
+define i32 @lsb_mask_sign_sext_wrong_cst2(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_sext_wrong_cst2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[X]]
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[AND]], 31
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, 2
+  %and = and i32 %sub, %not
+  %shr = ashr i32 %and, 31
+  ret i32 %shr
+}
+
+define i32 @lsb_mask_sign_sext_wrong_cst3(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_sext_wrong_cst3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[X]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[NOT]]
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[AND]], 30
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, -1
+  %and = and i32 %sub, %not
+  %shr = ashr i32 %and, 30
+  ret i32 %shr
+}
+
+define i32 @lsb_mask_sign_sext_multiuse(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_sext_multiuse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[X]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[NOT]]
+; CHECK-NEXT:    call void @use(i32 [[AND]])
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[AND]], 31
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, -1
+  %and = and i32 %sub, %not
+  call void @use(i32 %and)
+  %shr = ashr i32 %and, 31
+  ret i32 %shr
 }
 
 declare void @use(i32)

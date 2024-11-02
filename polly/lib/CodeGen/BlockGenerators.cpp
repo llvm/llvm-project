@@ -645,7 +645,7 @@ static std::string getInstName(Value *Val) {
   std::string Result;
   raw_string_ostream OS(Result);
   Val->printAsOperand(OS, false);
-  return OS.str();
+  return Result;
 }
 
 void BlockGenerator::generateBeginStmtTrace(ScopStmt &Stmt, LoopToScevMapT &LTS,
@@ -785,12 +785,6 @@ void BlockGenerator::generateScalarStores(
                   DT.dominates(cast<Instruction>(Address)->getParent(),
                                Builder.GetInsertBlock())) &&
                  "Domination violation");
-
-          // The new Val might have a different type than the old Val due to
-          // ScalarEvolution looking through bitcasts.
-          Address = Builder.CreateBitOrPointerCast(
-              Address, Val->getType()->getPointerTo(
-                           Address->getType()->getPointerAddressSpace()));
 
           Builder.CreateStore(Val, Address);
         });

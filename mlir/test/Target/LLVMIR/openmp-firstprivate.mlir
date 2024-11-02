@@ -74,27 +74,38 @@ llvm.func @parallel_op_firstprivate_multi_block(%arg0: !llvm.ptr) {
 // CHECK: [[PRIV_BB2]]:
 // CHECK-NEXT: %[[C1:.*]] = phi i32 [ 1, %[[PRIV_BB1]] ]
 // CHECK-NEXT: %[[PRIV_ALLOC:.*]] = alloca float, i32 %[[C1]], align 4
-// The entry block of the `copy` region is merged into the exit block of the
-// `alloc` region. So check for that.
+// CHECK-NEXT: br label %omp.region.cont
+
+// CHECK: omp.region.cont:
+// CHECK-NEXT: %[[PRIV_ALLOC2:.*]] = phi ptr [ %[[PRIV_ALLOC]], %[[PRIV_BB2]] ]
+// CHECK-NEXT: br label %omp.private.latealloc
+
+// CHECK: omp.private.latealloc:
+// CHECK-NEXT: br label %omp.private.copy
+
+// CHECK: omp.private.copy:
+// CHECK-NEXT: br label %omp.private.copy3
+
+// CHECK: omp.private.copy3:
 // CHECK-NEXT: %[[ORIG_VAL:.*]] = load float, ptr %[[ORIG_PTR]], align 4
 // CHECK-NEXT: br label %[[PRIV_BB3:.*]]
 
 // Check contents of the 2nd block in the `copy` region.
 // CHECK: [[PRIV_BB3]]:
-// CHECK-NEXT: %[[ORIG_VAL2:.*]] = phi float [ %[[ORIG_VAL]], %[[PRIV_BB2]] ]
-// CHECK-NEXT: %[[PRIV_ALLOC2:.*]] = phi ptr [ %[[PRIV_ALLOC]], %[[PRIV_BB2]] ]
-// CHECK-NEXT: store float %[[ORIG_VAL2]], ptr %[[PRIV_ALLOC2]], align 4
+// CHECK-NEXT: %[[ORIG_VAL2:.*]] = phi float [ %[[ORIG_VAL]], %omp.private.copy3 ]
+// CHECK-NEXT: %[[PRIV_ALLOC3:.*]] = phi ptr [ %[[PRIV_ALLOC2]], %omp.private.copy3 ]
+// CHECK-NEXT: store float %[[ORIG_VAL2]], ptr %[[PRIV_ALLOC3]], align 4
 // CHECK-NEXT: br label %[[PRIV_CONT:.*]]
 
 // Check that the privatizer's continuation block yileds the private clone's
 // address.
 // CHECK: [[PRIV_CONT]]:
-// CHECK-NEXT:   %[[PRIV_ALLOC3:.*]] = phi ptr [ %[[PRIV_ALLOC2]], %[[PRIV_BB3]] ]
+// CHECK-NEXT:   %[[PRIV_ALLOC4:.*]] = phi ptr [ %[[PRIV_ALLOC3]], %[[PRIV_BB3]] ]
 // CHECK-NEXT:   br label %[[PAR_REG:.*]]
 
 // Check that the body of the parallel region loads from the private clone.
 // CHECK: [[PAR_REG]]:
-// CHECK:        %{{.*}} = load float, ptr %[[PRIV_ALLOC3]], align 4
+// CHECK:        %{{.*}} = load float, ptr %[[PRIV_ALLOC2]], align 4
 
 omp.private {type = firstprivate} @multi_block.privatizer : !llvm.ptr alloc {
 ^bb0(%arg0: !llvm.ptr):
@@ -156,3 +167,49 @@ llvm.func @foo()
 // CHECK:         %[[STR_LEN:.*]] = extractvalue { ptr, i64 } %{{.*}}, 1
 // CHECK:         %{{.*}} = alloca i8, i64 %[[STR_LEN]], align 1
 // CHECK:         call void @foo()
+
+// -----
+
+// Verifies fix for https://github.com/llvm/llvm-project/issues/102939.
+//
+// The issues occurs because the CodeExtractor component only collect inputs
+// (to the parallel regions) that are defined in the same function in which the
+// parallel regions is present. Howerver, this is problematic because if we are
+// privatizing a global value (e.g. a `target` variable which is emitted as a
+// global), then we miss finding that input and we do not privatize the
+// variable.
+
+omp.private {type = firstprivate} @global_privatizer : !llvm.ptr alloc {
+^bb0(%arg0: !llvm.ptr):
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x f32 {bindc_name = "global", pinned} : (i64) -> !llvm.ptr
+  omp.yield(%1 : !llvm.ptr)
+} copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> f32
+  llvm.store %0, %arg1 : f32, !llvm.ptr
+  omp.yield(%arg1 : !llvm.ptr)
+}
+
+llvm.func @global_accessor() {
+  %global_addr = llvm.mlir.addressof @global : !llvm.ptr
+  omp.parallel private(@global_privatizer %global_addr -> %arg0 : !llvm.ptr) {
+    %1 = llvm.mlir.constant(3.140000e+00 : f32) : f32
+    llvm.store %1, %arg0 : f32, !llvm.ptr
+    omp.terminator
+  }
+  llvm.return
+}
+
+llvm.mlir.global internal @global() {addr_space = 0 : i32} : f32 {
+  %0 = llvm.mlir.zero : f32
+  llvm.return %0 : f32
+}
+
+// CHECK-LABEL: @global_accessor..omp_par({{.*}})
+// CHECK-NEXT:  omp.par.entry:
+// Verify that we found the privatizer by checking that we properly inlined the
+// bodies of the alloc and copy regions.
+// CHECK:         %[[PRIV_ALLOC:.*]] = alloca float, i64 1, align 4
+// CHECK:         %[[GLOB_VAL:.*]] = load float, ptr @global, align 4
+// CHECK:         store float %[[GLOB_VAL]], ptr %[[PRIV_ALLOC]], align 4

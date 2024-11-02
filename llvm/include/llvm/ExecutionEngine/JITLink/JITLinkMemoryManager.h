@@ -25,6 +25,7 @@
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/RecyclingAllocator.h"
 
+#include <cassert>
 #include <cstdint>
 #include <future>
 #include <mutex>
@@ -363,7 +364,9 @@ public:
   static Expected<std::unique_ptr<InProcessMemoryManager>> Create();
 
   /// Create an instance using the given page size.
-  InProcessMemoryManager(uint64_t PageSize) : PageSize(PageSize) {}
+  InProcessMemoryManager(uint64_t PageSize) : PageSize(PageSize) {
+    assert(isPowerOf2_64(PageSize) && "PageSize must be a power of 2");
+  }
 
   void allocate(const JITLinkDylib *JD, LinkGraph &G,
                 OnAllocatedFunction OnAllocated) override;

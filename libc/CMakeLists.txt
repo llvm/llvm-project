@@ -112,6 +112,7 @@ add_compile_definitions(LIBC_NAMESPACE=${LIBC_NAMESPACE})
 
 # Flags to pass down to the compiler while building the libc functions.
 set(LIBC_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Architecture to tell clang to optimize for (e.g. -march=... or -mcpu=...)")
+set(LIBC_TEST_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Common compile options for all the tests.")
 
 list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT ${LIBC_COMMON_TUNE_OPTIONS})
 
@@ -131,12 +132,31 @@ if(COMMAND_RETURN_CODE EQUAL 0)
   message(STATUS "Set COMPILER_RESOURCE_DIR to "
                  "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
 else()
-  if (LIBC_TARGET_OS_IS_GPU)
-    message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
-  else()
-    set(COMPILER_RESOURCE_DIR OFF)
-    message(STATUS "COMPILER_RESOURCE_DIR not set
-                    --print-resource-dir not supported by host compiler")
+  # Try with GCC option: -print-search-dirs, which will output in the form:
+  #   install: <path>
+  #   programs: ........
+  # So we try to capture the <path> after "install: " in the first line of the
+  # output.
+  execute_process(
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND ${CMAKE_CXX_COMPILER} -print-search-dirs
+    RESULT_VARIABLE COMMAND_RETURN_CODE
+    OUTPUT_VARIABLE COMPILER_RESOURCE_DIR
+  )
+  if(COMMAND_RETURN_CODE EQUAL 0)
+    string(REPLACE " " ";" COMPILER_RESOURCE_DIR ${COMPILER_RESOURCE_DIR})
+    string(REPLACE "\n" ";" COMPILER_RESOURCE_DIR "${COMPILER_RESOURCE_DIR}")
+    list(GET COMPILER_RESOURCE_DIR 1 COMPILER_RESOURCE_DIR)
+    message(STATUS "Set COMPILER_RESOURCE_DIR to "
+    "${COMPILER_RESOURCE_DIR} using --print-search-dirs")
+else()
+    if (LIBC_TARGET_OS_IS_GPU)
+      message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
+    else()
+      set(COMPILER_RESOURCE_DIR OFF)
+      message(STATUS "COMPILER_RESOURCE_DIR not set
+                      --print-resource-dir not supported by host compiler")
+    endif()
   endif()
 endif()
 

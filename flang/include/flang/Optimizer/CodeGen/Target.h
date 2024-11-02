@@ -126,6 +126,11 @@ public:
   structArgumentType(mlir::Location loc, fir::RecordType recTy,
                      const Marshalling &previousArguments) const = 0;
 
+  /// Type representation of a `fir.type<T>` type argument when returned by
+  /// value. Such value may need to be converted to a hidden reference argument.
+  virtual Marshalling structReturnType(mlir::Location loc,
+                                       fir::RecordType eleTy) const = 0;
+
   /// Type representation of a `boxchar<n>` type argument when passed by value.
   /// An argument value may need to be passed as a (safe) reference argument.
   ///

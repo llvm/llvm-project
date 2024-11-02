@@ -10,7 +10,6 @@ module attributes {omp.is_target_device = true} {
     %5 = omp.map.bounds lower_bound(%3 : i64) upper_bound(%4 : i64) extent(%1 : i64) stride(%2 : i64) start_idx(%2 : i64)
     %6 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(tofrom) capture(ByRef) bounds(%5) -> !llvm.ptr {name = "sp"}
     omp.target map_entries(%6 -> %arg0 : !llvm.ptr) {
-    ^bb0(%arg0: !llvm.ptr):
       %7 = llvm.mlir.constant(20 : i32) : i32
       %8 = llvm.mlir.constant(0 : i64) : i64
       %9 = llvm.getelementptr %arg0[0, %8] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<10 x i32>

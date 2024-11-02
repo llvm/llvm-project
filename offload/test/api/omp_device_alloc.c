@@ -1,5 +1,8 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 
+// UNSUPPORTED: nvidiagpu
+// UNSUPPORTED: amdgpu
+
 #include <assert.h>
 #include <omp.h>
 #include <stdio.h>

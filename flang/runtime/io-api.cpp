@@ -948,7 +948,7 @@ bool IODEF(SetRecl)(Cookie cookie, std::size_t n) {
     io.GetIoErrorHandler().Crash(
         "SetRecl() called after GetNewUnit() for an OPEN statement");
   }
-  if (n <= 0) {
+  if (static_cast<std::int64_t>(n) <= 0) {
     io.GetIoErrorHandler().SignalError("RECL= must be greater than zero");
     return false;
   } else if (open->wasExtant() &&

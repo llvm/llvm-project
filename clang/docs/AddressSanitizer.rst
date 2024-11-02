@@ -26,7 +26,7 @@ Typical slowdown introduced by AddressSanitizer is **2x**.
 How to build
 ============
 
-Build LLVM/Clang with `CMake <https://llvm.org/docs/CMake.html>` and enable
+Build LLVM/Clang with `CMake <https://llvm.org/docs/CMake.html>`_ and enable
 the ``compiler-rt`` runtime. An example CMake configuration that will allow
 for the use/testing of AddressSanitizer:
 
@@ -312,6 +312,14 @@ Limitations
   virtual address space. This means that tools like ``ulimit`` may not work as
   usually expected.
 * Static linking of executables is not supported.
+
+Security Considerations
+=======================
+
+AddressSanitizer is a bug detection tool and its runtime is not meant to be
+linked against production executables. While it may be useful for testing,
+AddressSanitizer's runtime was not developed with security-sensitive
+constraints in mind and may compromise the security of the resulting executable.
 
 Supported Platforms
 ===================

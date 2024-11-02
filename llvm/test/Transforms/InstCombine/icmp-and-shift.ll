@@ -496,7 +496,7 @@ define i1 @eq_and_lshr_minval_commute(i8 %px, i8 %y) {
 define i1 @eq_and_shl_two(i8 %x, i8 %y) {
 ; CHECK-LABEL: @eq_and_shl_two(
 ; CHECK-NEXT:    [[POW2_OR_ZERO:%.*]] = shl i8 2, [[Y:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[POW2_OR_ZERO]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], [[POW2_OR_ZERO]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], [[POW2_OR_ZERO]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -510,7 +510,7 @@ define i1 @eq_and_shl_two(i8 %x, i8 %y) {
 define i1 @slt_and_shl_one(i8 %x, i8 %y) {
 ; CHECK-LABEL: @slt_and_shl_one(
 ; CHECK-NEXT:    [[POW2:%.*]] = shl nuw i8 1, [[Y:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[POW2]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], [[POW2]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[AND]], [[POW2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -609,13 +609,26 @@ define i1 @fold_ne_rhs_fail_shift_not_1s(i8 %x, i8 %yy) {
 define i1 @test_shr_and_1_ne_0(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_shr_and_1_ne_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr i32 %a, %b
   %and = and i32 %shr, 1
   %cmp = icmp ne i32 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @test_shr_and_1_ne_0_samesign(i32 %a, i32 %b) {
+; CHECK-LABEL: @test_shr_and_1_ne_0_samesign(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shr = lshr i32 %a, %b
+  %and = and i32 %shr, 1
+  %cmp = icmp samesign ne i32 %and, 0
   ret i1 %cmp
 }
 
@@ -710,7 +723,7 @@ define i1 @test_const_shr_and_1_ne_0_multi_use_lshr_negative(i32 %b) {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 42, [[B:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHR]], 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[AND]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[SHR]], [[B]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[B]], [[SHR]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
@@ -727,7 +740,7 @@ define i1 @test_const_shr_and_1_ne_0_multi_use_and_negative(i32 %b) {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 42, [[B:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHR]], 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[AND]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[AND]], [[B]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[B]], [[AND]]
 ; CHECK-NEXT:    [[RET:%.*]] = and i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;

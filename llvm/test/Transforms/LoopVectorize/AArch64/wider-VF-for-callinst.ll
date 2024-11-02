@@ -7,10 +7,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @test_widen(ptr noalias %a, ptr readnone %b) #1 {
 ; WIDE-LABEL: @test_widen(
 ; WIDE-NEXT:  entry:
-; WIDE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; WIDE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; WIDE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1025, [[TMP1]]
-; WIDE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; WIDE-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; WIDE:       vector.ph:
 ; WIDE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; WIDE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4

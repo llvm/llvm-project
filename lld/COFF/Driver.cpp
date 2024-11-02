@@ -37,6 +37,7 @@
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Parallel.h"
@@ -113,9 +114,8 @@ static std::string getOutputPath(StringRef path, bool isDll, bool isDriver) {
 
 // Returns true if S matches /crtend.?\.o$/.
 static bool isCrtend(StringRef s) {
-  if (!s.ends_with(".o"))
+  if (!s.consume_back(".o"))
     return false;
-  s = s.drop_back(2);
   if (s.ends_with("crtend"))
     return true;
   return !s.empty() && s.drop_back().ends_with("crtend");
@@ -415,7 +415,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
     case OPT_entry:
       if (!arg->getValue()[0])
         fatal("missing entry point symbol name");
-      ctx.config.entry = addUndefined(mangle(arg->getValue()));
+      ctx.config.entry = addUndefined(mangle(arg->getValue()), true);
       break;
     case OPT_failifmismatch:
       checkFailIfMismatch(arg->getValue(), file);
@@ -696,13 +696,52 @@ void LinkerDriver::addLibSearchPaths() {
   }
 }
 
-Symbol *LinkerDriver::addUndefined(StringRef name) {
+Symbol *LinkerDriver::addUndefined(StringRef name, bool aliasEC) {
   Symbol *b = ctx.symtab.addUndefined(name);
   if (!b->isGCRoot) {
     b->isGCRoot = true;
     ctx.config.gcroot.push_back(b);
   }
+
+  // On ARM64EC, a symbol may be defined in either its mangled or demangled form
+  // (or both). Define an anti-dependency symbol that binds both forms, similar
+  // to how compiler-generated code references external functions.
+  if (aliasEC && isArm64EC(ctx.config.machine)) {
+    if (std::optional<std::string> mangledName =
+            getArm64ECMangledFunctionName(name)) {
+      auto u = dyn_cast<Undefined>(b);
+      if (u && !u->weakAlias) {
+        Symbol *t = ctx.symtab.addUndefined(saver().save(*mangledName));
+        u->setWeakAlias(t, true);
+      }
+    } else {
+      std::optional<std::string> demangledName =
+          getArm64ECDemangledFunctionName(name);
+      Symbol *us = ctx.symtab.addUndefined(saver().save(*demangledName));
+      auto u = dyn_cast<Undefined>(us);
+      if (u && !u->weakAlias)
+        u->setWeakAlias(b, true);
+    }
+  }
   return b;
+}
+
+void LinkerDriver::addUndefinedGlob(StringRef arg) {
+  Expected<GlobPattern> pat = GlobPattern::create(arg);
+  if (!pat) {
+    error("/includeglob: " + toString(pat.takeError()));
+    return;
+  }
+
+  SmallVector<Symbol *, 0> syms;
+  ctx.symtab.forEachSymbol([&syms, &pat](Symbol *sym) {
+    if (pat->match(sym->getName())) {
+      syms.push_back(sym);
+    }
+  });
+
+  for (Symbol *sym : syms)
+    addUndefined(sym->getName());
 }
 
 StringRef LinkerDriver::mangleMaybe(Symbol *s) {
@@ -719,7 +758,7 @@ StringRef LinkerDriver::mangleMaybe(Symbol *s) {
   // If we find a similar mangled symbol, make this an alias to it and return
   // its name.
   log(unmangled->getName() + " aliased to " + mangled->getName());
-  unmangled->weakAlias = ctx.symtab.addUndefined(mangled->getName());
+  unmangled->setWeakAlias(ctx.symtab.addUndefined(mangled->getName()));
   return mangled->getName();
 }
 
@@ -1315,6 +1354,77 @@ void LinkerDriver::convertResources() {
       make<ObjFile>(ctx, convertResToCOFF(resources, resourceObjFiles));
   ctx.symtab.addFile(f);
   f->includeResourceChunks();
+}
+
+void LinkerDriver::maybeCreateECExportThunk(StringRef name, Symbol *&sym) {
+  Defined *def;
+  if (!sym)
+    return;
+  if (auto undef = dyn_cast<Undefined>(sym))
+    def = undef->getDefinedWeakAlias();
+  else
+    def = dyn_cast<Defined>(sym);
+  if (!def)
+    return;
+
+  if (def->getChunk()->getArm64ECRangeType() != chpe_range_type::Arm64EC)
+    return;
+  StringRef expName;
+  if (auto mangledName = getArm64ECMangledFunctionName(name))
+    expName = saver().save("EXP+" + *mangledName);
+  else
+    expName = saver().save("EXP+" + name);
+  sym = addUndefined(expName);
+  if (auto undef = dyn_cast<Undefined>(sym)) {
+    if (!undef->getWeakAlias()) {
+      auto thunk = make<ECExportThunkChunk>(def);
+      replaceSymbol<DefinedSynthetic>(undef, undef->getName(), thunk);
+    }
+  }
+}
+
+void LinkerDriver::createECExportThunks() {
+  // Check if EXP+ symbols have corresponding $hp_target symbols and use them
+  // to create export thunks when available.
+  for (Symbol *s : ctx.symtab.expSymbols) {
+    if (!s->isUsedInRegularObj)
+      continue;
+    assert(s->getName().starts_with("EXP+"));
+    std::string targetName =
+        (s->getName().substr(strlen("EXP+")) + "$hp_target").str();
+    Symbol *sym = ctx.symtab.find(targetName);
+    if (!sym)
+      continue;
+    Defined *targetSym;
+    if (auto undef = dyn_cast<Undefined>(sym))
+      targetSym = undef->getDefinedWeakAlias();
+    else
+      targetSym = dyn_cast<Defined>(sym);
+    if (!targetSym)
+      continue;
+
+    auto *undef = dyn_cast<Undefined>(s);
+    if (undef && !undef->getWeakAlias()) {
+      auto thunk = make<ECExportThunkChunk>(targetSym);
+      replaceSymbol<DefinedSynthetic>(undef, undef->getName(), thunk);
+    }
+    if (!targetSym->isGCRoot) {
+      targetSym->isGCRoot = true;
+      ctx.config.gcroot.push_back(targetSym);
+    }
+  }
+
+  if (ctx.config.entry)
+    maybeCreateECExportThunk(ctx.config.entry->getName(), ctx.config.entry);
+  for (Export &e : ctx.config.exports) {
+    if (!e.data)
+      maybeCreateECExportThunk(e.extName.empty() ? e.name : e.extName, e.sym);
+  }
+}
+
+void LinkerDriver::pullArm64ECIcallHelper() {
+  if (!ctx.config.arm64ECIcallHelper)
+    ctx.config.arm64ECIcallHelper = addUndefined("__icall_helper_arm64ec");
 }
 
 // In MinGW, if no symbols are chosen to be exported, then all symbols are
@@ -2253,22 +2363,22 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     if (auto *arg = args.getLastArg(OPT_entry)) {
       if (!arg->getValue()[0])
         fatal("missing entry point symbol name");
-      config->entry = addUndefined(mangle(arg->getValue()));
+      config->entry = addUndefined(mangle(arg->getValue()), true);
     } else if (!config->entry && !config->noEntry) {
       if (args.hasArg(OPT_dll)) {
         StringRef s = (config->machine == I386) ? "__DllMainCRTStartup@12"
                                                 : "_DllMainCRTStartup";
-        config->entry = addUndefined(s);
+        config->entry = addUndefined(s, true);
       } else if (config->driverWdm) {
         // /driver:wdm implies /entry:_NtProcessStartup
-        config->entry = addUndefined(mangle("_NtProcessStartup"));
+        config->entry = addUndefined(mangle("_NtProcessStartup"), true);
       } else {
         // Windows specific -- If entry point name is not given, we need to
         // infer that from user-defined entry name.
         StringRef s = findDefaultEntry();
         if (s.empty())
           fatal("entry point must be defined");
-        config->entry = addUndefined(s);
+        config->entry = addUndefined(s, true);
         log("Entry name inferred: " + s);
       }
     }
@@ -2282,7 +2392,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       if (config->machine == I386) {
         config->delayLoadHelper = addUndefined("___delayLoadHelper2@8");
       } else {
-        config->delayLoadHelper = addUndefined("__delayLoadHelper2");
+        config->delayLoadHelper = addUndefined("__delayLoadHelper2", true);
       }
     }
   }
@@ -2374,8 +2484,19 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (isArm64EC(config->machine)) {
     ctx.symtab.addAbsolute("__arm64x_extra_rfe_table", 0);
     ctx.symtab.addAbsolute("__arm64x_extra_rfe_table_size", 0);
+    ctx.symtab.addAbsolute("__arm64x_redirection_metadata", 0);
+    ctx.symtab.addAbsolute("__arm64x_redirection_metadata_count", 0);
+    ctx.symtab.addAbsolute("__hybrid_auxiliary_delayload_iat_copy", 0);
+    ctx.symtab.addAbsolute("__hybrid_auxiliary_delayload_iat", 0);
+    ctx.symtab.addAbsolute("__hybrid_auxiliary_iat", 0);
+    ctx.symtab.addAbsolute("__hybrid_auxiliary_iat_copy", 0);
     ctx.symtab.addAbsolute("__hybrid_code_map", 0);
     ctx.symtab.addAbsolute("__hybrid_code_map_count", 0);
+    ctx.symtab.addAbsolute("__hybrid_image_info_bitfield", 0);
+    ctx.symtab.addAbsolute("__x64_code_ranges_to_entry_points", 0);
+    ctx.symtab.addAbsolute("__x64_code_ranges_to_entry_points_count", 0);
+    ctx.symtab.addSynthetic("__guard_check_icall_a64n_fptr", nullptr);
+    ctx.symtab.addSynthetic("__arm64x_native_entrypoint", nullptr);
   }
 
   if (config->pseudoRelocs) {
@@ -2405,7 +2526,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       for (Export &e : config->exports) {
         if (!e.forwardTo.empty())
           continue;
-        e.sym = addUndefined(e.name);
+        e.sym = addUndefined(e.name, !e.data);
         if (e.source != ExportSource::Directives)
           e.symbolName = mangleMaybe(e.sym);
       }
@@ -2418,9 +2539,19 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         Symbol *sym = ctx.symtab.find(from);
         if (!sym)
           continue;
-        if (auto *u = dyn_cast<Undefined>(sym))
-          if (!u->weakAlias)
-            u->weakAlias = ctx.symtab.addUndefined(to);
+        if (auto *u = dyn_cast<Undefined>(sym)) {
+          if (u->weakAlias) {
+            // On ARM64EC, anti-dependency aliases are treated as undefined
+            // symbols unless a demangled symbol aliases a defined one, which is
+            // part of the implementation.
+            if (!isArm64EC(ctx.config.machine) || !u->isAntiDep)
+              continue;
+            if (!isa<Undefined>(u->weakAlias) &&
+                !isArm64ECMangledFunctionName(u->getName()))
+              continue;
+          }
+          u->setWeakAlias(ctx.symtab.addUndefined(to));
+        }
       }
 
       // If any inputs are bitcode files, the LTO code generator may create
@@ -2447,6 +2578,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       }
     } while (run());
   }
+
+  // Handle /includeglob
+  for (StringRef pat : args::getStrings(args, OPT_incl_glob))
+    addUndefinedGlob(pat);
 
   // Create wrapped symbols for -wrap option.
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(ctx, args);
@@ -2520,8 +2655,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (!wrapped.empty())
     wrapSymbols(ctx, wrapped);
 
+  if (isArm64EC(config->machine))
+    createECExportThunks();
+
   // Resolve remaining undefined symbols and warn about imported locals.
-  ctx.symtab.resolveRemainingUndefines();
+  while (ctx.symtab.resolveRemainingUndefines())
+    run();
+
   if (errorCount())
     return;
 
@@ -2612,7 +2752,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (auto *arg = args.getLastArg(OPT_print_symbol_order))
     config->printSymbolOrder = arg->getValue();
 
-  ctx.symtab.initializeEntryThunks();
+  ctx.symtab.initializeECThunks();
 
   // Identify unreferenced COMDAT sections.
   if (config->doGC) {

@@ -157,7 +157,7 @@ void ProgramPoint::printJson(llvm::raw_ostream &Out, const char *NL) const {
             LHS->printJson(Out, nullptr, PP, AddQuotes);
           } else {
             Out << "null";
-	  }
+          }
 
           Out << ", \"rhs\": ";
           if (const Stmt *RHS = C->getRHS()) {

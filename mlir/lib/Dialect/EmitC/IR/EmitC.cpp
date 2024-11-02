@@ -116,6 +116,11 @@ bool mlir::emitc::isIntegerIndexOrOpaqueType(Type type) {
 bool mlir::emitc::isSupportedFloatType(Type type) {
   if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
     switch (floatType.getWidth()) {
+    case 16: {
+      if (llvm::isa<Float16Type, BFloat16Type>(type))
+        return true;
+      return false;
+    }
     case 32:
     case 64:
       return true;

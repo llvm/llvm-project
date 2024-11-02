@@ -130,6 +130,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasCLFLUSHOPT = false;
   bool HasCLWB = false;
   bool HasMOVBE = false;
+  bool HasMOVRS = false;
   bool HasPREFETCHI = false;
   bool HasRDPID = false;
   bool HasRDPRU = false;
@@ -156,6 +157,8 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasAMXINT8 = false;
   bool HasAMXBF16 = false;
   bool HasAMXCOMPLEX = false;
+  bool HasAMXFP8 = false;
+  bool HasAMXTRANSPOSE = false;
   bool HasSERIALIZE = false;
   bool HasTSXLDTRK = false;
   bool HasUSERMSR = false;
@@ -210,7 +213,7 @@ public:
   ArrayRef<const char *> getGCCRegNames() const override;
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override;
@@ -811,6 +814,43 @@ public:
   bool hasBitIntType() const override { return true; }
   size_t getMaxBitIntWidth() const override {
     return llvm::IntegerType::MAX_INT_BITS;
+  }
+};
+
+// x86-64 UEFI target
+class LLVM_LIBRARY_VISIBILITY UEFIX86_64TargetInfo
+    : public UEFITargetInfo<X86_64TargetInfo> {
+public:
+  UEFIX86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : UEFITargetInfo<X86_64TargetInfo>(Triple, Opts) {
+    this->TheCXXABI.set(TargetCXXABI::Microsoft);
+    this->MaxTLSAlign = 8192u * this->getCharWidth();
+    this->resetDataLayout("e-m:w-p270:32:32-p271:32:32-p272:64:64-"
+                          "i64:64-i128:128-f80:128-n8:16:32:64-S128");
+  }
+
+  void getTargetDefines(const LangOptions &Opts,
+                        MacroBuilder &Builder) const override {
+    getOSDefines(Opts, X86TargetInfo::getTriple(), Builder);
+  }
+
+  BuiltinVaListKind getBuiltinVaListKind() const override {
+    return TargetInfo::CharPtrBuiltinVaList;
+  }
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    switch (CC) {
+    case CC_C:
+    case CC_Win64:
+      return CCCR_OK;
+    default:
+      return CCCR_Warning;
+    }
+  }
+
+  TargetInfo::CallingConvKind
+  getCallingConvKind(bool ClangABICompat4) const override {
+    return CCK_MicrosoftWin64;
   }
 };
 

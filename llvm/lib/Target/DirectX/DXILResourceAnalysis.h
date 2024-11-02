@@ -30,17 +30,6 @@ public:
   dxil::Resources run(Module &M, ModuleAnalysisManager &AM);
 };
 
-/// Printer pass for the \c DXILResourceMDAnalysis results.
-class DXILResourceMDPrinterPass
-    : public PassInfoMixin<DXILResourceMDPrinterPass> {
-  raw_ostream &OS;
-
-public:
-  explicit DXILResourceMDPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
-};
-
 /// The legacy pass manager's analysis pass to compute DXIL resource
 /// information.
 class DXILResourceMDWrapper : public ModulePass {
@@ -60,8 +49,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
-
-  void print(raw_ostream &O, const Module *M = nullptr) const override;
 };
 } // namespace llvm
 

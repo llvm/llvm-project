@@ -206,21 +206,32 @@ namespace cwg1814 { // cwg1814: yes
 #endif
 }
 
-namespace cwg1815 { // cwg1815: no
+namespace cwg1815 { // cwg1815: 20
 #if __cplusplus >= 201402L
-  // FIXME: needs codegen test
-  struct A { int &&r = 0; }; // #cwg1815-A
+  struct A { int &&r = 0; };
   A a = {};
-  // since-cxx14-warning@-1 {{lifetime extension of temporary created by aggregate initialization using a default member initializer is not yet supported; lifetime of temporary will end at the end of the full-expression}} FIXME
-  //   since-cxx14-note@#cwg1815-A {{initializing field 'r' with default member initializer}}
 
   struct B { int &&r = 0; }; // #cwg1815-B
   // since-cxx14-error@-1 {{reference member 'r' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
   //   since-cxx14-note@#cwg1815-B {{initializing field 'r' with default member initializer}}
   //   since-cxx14-note@#cwg1815-b {{in implicit default constructor for 'cwg1815::B' first required here}}
   B b; // #cwg1815-b
+
+#if __cplusplus >= 201703L
+  struct C { const int &r = 0; };
+  constexpr C c = {}; // OK, since cwg1815
+  static_assert(c.r == 0);
+
+  constexpr int f() {
+    A a = {}; // OK, since cwg1815
+    return a.r;
+  }
+  static_assert(f() == 0);
+#endif
 #endif
 }
+
+// cwg1818 is in cwg1818.cpp
 
 namespace cwg1820 { // cwg1820: 3.5
 typedef int A;
@@ -536,6 +547,8 @@ namespace cwg1881 { // cwg1881: 7
   static_assert(!__is_standard_layout(D), "");
 }
 
+// cwg1884 is in cwg1884.cpp
+
 namespace cwg1890 { // cwg1890: no drafting 2018-06-04
 // FIXME: current consensus for CWG2335 is that the examples are well-formed.
 namespace ex1 {
@@ -629,3 +642,86 @@ namespace H {
   struct S s;
 }
 }
+
+namespace cwg1898 { // cwg1898: 2.7
+void e(int) {} // #cwg1898-e
+void e(int) {}
+// expected-error@-1 {{redefinition of 'e'}}
+//   expected-note@#cwg1898-e {{previous definition is here}}
+
+void e2(int) {}
+void e2(long) {} // OK, different type
+
+void f(int) {} // #cwg1898-f
+void f(const int) {}
+// expected-error@-1 {{redefinition of 'f'}}
+//   expected-note@#cwg1898-f {{previous definition is here}}
+
+void g(int) {} // #cwg1898-g
+void g(volatile int) {}
+// since-cxx20-warning@-1 {{volatile-qualified parameter type 'volatile int' is deprecated}}
+// expected-error@-2 {{redefinition of 'g'}}
+//   expected-note@#cwg1898-g {{previous definition is here}}
+
+void h(int *) {} // #cwg1898-h
+void h(int[]) {}
+// expected-error@-1 {{redefinition of 'h'}}
+//   expected-note@#cwg1898-h {{previous definition is here}}
+
+void h2(int *) {} // #cwg1898-h2
+void h2(int[2]) {}
+// expected-error@-1 {{redefinition of 'h2'}}
+//   expected-note@#cwg1898-h2 {{previous definition is here}}
+
+void h3(int (*)[2]) {} // #cwg1898-h3
+void h3(int [3][2]) {}
+// expected-error@-1 {{redefinition of 'h3'}}
+//   expected-note@#cwg1898-h3 {{previous definition is here}}
+
+void h4(int (*)[2]) {}
+void h4(int [3][3]) {} // OK, differ in non-top-level extent of array
+
+void i(int *) {}
+void i(const int *) {} // OK, pointee cv-qualification is not discarded
+
+void i2(int *) {} // #cwg1898-i2
+void i2(int * const) {}
+// expected-error@-1 {{redefinition of 'i2'}}
+//   expected-note@#cwg1898-i2 {{previous definition is here}}
+
+void j(void(*)()) {} // #cwg1898-j
+void j(void()) {}
+// expected-error@-1 {{redefinition of 'j'}}
+//   expected-note@#cwg1898-j {{previous definition is here}}
+
+void j2(void(int)) {} // #cwg1898-j2
+void j2(void(const int)) {}
+// expected-error@-1 {{redefinition of 'j2'}}
+//   expected-note@#cwg1898-j2 {{previous definition is here}}
+
+struct A {
+  void k(int) {} // #cwg1898-k
+  void k(int) {}
+  // expected-error@-1 {{class member cannot be redeclared}}
+  //   expected-note@#cwg1898-k {{previous definition is here}}
+};
+
+struct B : A {
+  void k(int) {} // OK, shadows A::k
+};
+
+void l() {}
+void l(...) {}
+
+#if __cplusplus >= 201103L
+template <typename T>
+void m(T) {}
+template <typename... Ts>
+void m(Ts...) {}
+
+template <typename T, typename U>
+void m2(T, U) {}
+template <typename... Ts, typename U>
+void m2(Ts..., U) {}
+#endif
+} // namespace cwg1898

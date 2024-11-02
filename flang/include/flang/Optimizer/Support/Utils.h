@@ -84,25 +84,33 @@ inline std::string mlirTypeToString(mlir::Type type) {
   return result;
 }
 
+inline std::optional<int> mlirFloatTypeToKind(mlir::Type type) {
+  if (type.isF16())
+    return 2;
+  else if (type.isBF16())
+    return 3;
+  else if (type.isF32())
+    return 4;
+  else if (type.isF64())
+    return 8;
+  else if (type.isF80())
+    return 10;
+  else if (type.isF128())
+    return 16;
+  return std::nullopt;
+}
+
 inline std::string mlirTypeToIntrinsicFortran(fir::FirOpBuilder &builder,
                                               mlir::Type type,
                                               mlir::Location loc,
                                               const llvm::Twine &name) {
-  if (type.isF16())
-    return "REAL(KIND=2)";
-  else if (type.isBF16())
-    return "REAL(KIND=3)";
-  else if (type.isTF32())
-    return "REAL(KIND=unknown)";
-  else if (type.isF32())
-    return "REAL(KIND=4)";
-  else if (type.isF64())
-    return "REAL(KIND=8)";
-  else if (type.isF80())
-    return "REAL(KIND=10)";
-  else if (type.isF128())
-    return "REAL(KIND=16)";
-  else if (type.isInteger(8))
+  if (auto floatTy = mlir::dyn_cast<mlir::FloatType>(type)) {
+    if (std::optional<int> kind = mlirFloatTypeToKind(type))
+      return "REAL(KIND="s + std::to_string(*kind) + ")";
+  } else if (auto cplxTy = mlir::dyn_cast<mlir::ComplexType>(type)) {
+    if (std::optional<int> kind = mlirFloatTypeToKind(cplxTy.getElementType()))
+      return "COMPLEX(KIND+"s + std::to_string(*kind) + ")";
+  } else if (type.isInteger(8))
     return "INTEGER(KIND=1)";
   else if (type.isInteger(16))
     return "INTEGER(KIND=2)";
@@ -112,18 +120,6 @@ inline std::string mlirTypeToIntrinsicFortran(fir::FirOpBuilder &builder,
     return "INTEGER(KIND=8)";
   else if (type.isInteger(128))
     return "INTEGER(KIND=16)";
-  else if (type == fir::ComplexType::get(builder.getContext(), 2))
-    return "COMPLEX(KIND=2)";
-  else if (type == fir::ComplexType::get(builder.getContext(), 3))
-    return "COMPLEX(KIND=3)";
-  else if (type == fir::ComplexType::get(builder.getContext(), 4))
-    return "COMPLEX(KIND=4)";
-  else if (type == fir::ComplexType::get(builder.getContext(), 8))
-    return "COMPLEX(KIND=8)";
-  else if (type == fir::ComplexType::get(builder.getContext(), 10))
-    return "COMPLEX(KIND=10)";
-  else if (type == fir::ComplexType::get(builder.getContext(), 16))
-    return "COMPLEX(KIND=16)";
   else if (type == fir::LogicalType::get(builder.getContext(), 1))
     return "LOGICAL(KIND=1)";
   else if (type == fir::LogicalType::get(builder.getContext(), 2))
@@ -132,9 +128,9 @@ inline std::string mlirTypeToIntrinsicFortran(fir::FirOpBuilder &builder,
     return "LOGICAL(KIND=4)";
   else if (type == fir::LogicalType::get(builder.getContext(), 8))
     return "LOGICAL(KIND=8)";
-  else
-    fir::emitFatalError(loc, "unsupported type in " + name + ": " +
-                                 fir::mlirTypeToString(type));
+
+  fir::emitFatalError(loc, "unsupported type in " + name + ": " +
+                               fir::mlirTypeToString(type));
 }
 
 inline void intrinsicTypeTODO(fir::FirOpBuilder &builder, mlir::Type type,
@@ -159,19 +155,13 @@ inline void intrinsicTypeTODO2(fir::FirOpBuilder &builder, mlir::Type type1,
 
 inline std::pair<Fortran::common::TypeCategory, KindMapping::KindTy>
 mlirTypeToCategoryKind(mlir::Location loc, mlir::Type type) {
-  if (type.isF16())
-    return {Fortran::common::TypeCategory::Real, 2};
-  else if (type.isBF16())
-    return {Fortran::common::TypeCategory::Real, 3};
-  else if (type.isF32())
-    return {Fortran::common::TypeCategory::Real, 4};
-  else if (type.isF64())
-    return {Fortran::common::TypeCategory::Real, 8};
-  else if (type.isF80())
-    return {Fortran::common::TypeCategory::Real, 10};
-  else if (type.isF128())
-    return {Fortran::common::TypeCategory::Real, 16};
-  else if (type.isInteger(8))
+  if (auto floatTy = mlir::dyn_cast<mlir::FloatType>(type)) {
+    if (std::optional<int> kind = mlirFloatTypeToKind(type))
+      return {Fortran::common::TypeCategory::Real, *kind};
+  } else if (auto cplxTy = mlir::dyn_cast<mlir::ComplexType>(type)) {
+    if (std::optional<int> kind = mlirFloatTypeToKind(cplxTy.getElementType()))
+      return {Fortran::common::TypeCategory::Complex, *kind};
+  } else if (type.isInteger(8))
     return {Fortran::common::TypeCategory::Integer, 1};
   else if (type.isInteger(16))
     return {Fortran::common::TypeCategory::Integer, 2};
@@ -181,13 +171,13 @@ mlirTypeToCategoryKind(mlir::Location loc, mlir::Type type) {
     return {Fortran::common::TypeCategory::Integer, 8};
   else if (type.isInteger(128))
     return {Fortran::common::TypeCategory::Integer, 16};
-  else if (auto complexType = mlir::dyn_cast<fir::ComplexType>(type))
-    return {Fortran::common::TypeCategory::Complex, complexType.getFKind()};
   else if (auto logicalType = mlir::dyn_cast<fir::LogicalType>(type))
     return {Fortran::common::TypeCategory::Logical, logicalType.getFKind()};
-  else
-    fir::emitFatalError(loc,
-                        "unsupported type: " + fir::mlirTypeToString(type));
+  else if (auto charType = mlir::dyn_cast<fir::CharacterType>(type))
+    return {Fortran::common::TypeCategory::Character, charType.getFKind()};
+  else if (mlir::isa<fir::RecordType>(type))
+    return {Fortran::common::TypeCategory::Derived, 0};
+  fir::emitFatalError(loc, "unsupported type: " + fir::mlirTypeToString(type));
 }
 
 /// Find the fir.type_info that was created for this \p recordType in \p module,

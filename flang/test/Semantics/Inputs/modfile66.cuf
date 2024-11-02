@@ -1,0 +1,4 @@
+module usereal2
+  !REAL(2) is interoperable under CUDA
+  real(2), bind(c) :: x
+end

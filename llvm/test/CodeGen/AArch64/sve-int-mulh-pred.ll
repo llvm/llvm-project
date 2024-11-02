@@ -11,12 +11,10 @@ define <vscale x 16 x i8> @smulh_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    smulh z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  %insert = insertelement <vscale x 16 x i16> undef, i16 8, i64 0
-  %splat = shufflevector <vscale x 16 x i16> %insert, <vscale x 16 x i16> undef, <vscale x 16 x i32> zeroinitializer
   %1 = sext <vscale x 16 x i8> %a to <vscale x 16 x i16>
   %2 = sext <vscale x 16 x i8> %b to <vscale x 16 x i16>
   %mul = mul <vscale x 16 x i16> %1, %2
-  %shr = lshr <vscale x 16 x i16> %mul, %splat
+  %shr = lshr <vscale x 16 x i16> %mul, splat(i16 8)
   %tr = trunc <vscale x 16 x i16> %shr to <vscale x 16 x i8>
   ret <vscale x 16 x i8> %tr
 }
@@ -27,12 +25,10 @@ define <vscale x 8 x i16> @smulh_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    smulh z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %insert = insertelement <vscale x 8 x i32> undef, i32 16, i64 0
-  %splat = shufflevector <vscale x 8 x i32> %insert, <vscale x 8 x i32> undef, <vscale x 8 x i32> zeroinitializer
   %1 = sext <vscale x 8 x i16> %a to <vscale x 8 x i32>
   %2 = sext <vscale x 8 x i16> %b to <vscale x 8 x i32>
   %mul = mul <vscale x 8 x i32> %1, %2
-  %shr = lshr <vscale x 8 x i32> %mul, %splat
+  %shr = lshr <vscale x 8 x i32> %mul, splat(i32 16)
   %tr = trunc <vscale x 8 x i32> %shr to <vscale x 8 x i16>
   ret <vscale x 8 x i16> %tr
 }
@@ -43,12 +39,10 @@ define <vscale x 4 x i32> @smulh_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    smulh z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %insert = insertelement <vscale x 4 x i64> undef, i64 32, i64 0
-  %splat = shufflevector <vscale x 4 x i64> %insert, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
   %1 = sext <vscale x 4 x i32> %a to <vscale x 4 x i64>
   %2 = sext <vscale x 4 x i32> %b to <vscale x 4 x i64>
   %mul = mul <vscale x 4 x i64> %1, %2
-  %shr = lshr <vscale x 4 x i64> %mul, %splat
+  %shr = lshr <vscale x 4 x i64> %mul, splat(i64 32)
   %tr = trunc <vscale x 4 x i64> %shr to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %tr
 }
@@ -59,12 +53,10 @@ define <vscale x 2 x i64> @smulh_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    smulh z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %insert = insertelement <vscale x 2 x i128> undef, i128 64, i64 0
-  %splat = shufflevector <vscale x 2 x i128> %insert, <vscale x 2 x i128> undef, <vscale x 2 x i32> zeroinitializer
   %1 = sext <vscale x 2 x i64> %a to <vscale x 2 x i128>
   %2 = sext <vscale x 2 x i64> %b to <vscale x 2 x i128>
   %mul = mul <vscale x 2 x i128> %1, %2
-  %shr = lshr <vscale x 2 x i128> %mul, %splat
+  %shr = lshr <vscale x 2 x i128> %mul, splat(i128 64)
   %tr = trunc <vscale x 2 x i128> %shr to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %tr
 }
@@ -79,12 +71,10 @@ define <vscale x 16 x i8> @umulh_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    umulh z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  %insert = insertelement <vscale x 16 x i16> undef, i16 8, i64 0
-  %splat = shufflevector <vscale x 16 x i16> %insert, <vscale x 16 x i16> undef, <vscale x 16 x i32> zeroinitializer
   %1 = zext <vscale x 16 x i8> %a to <vscale x 16 x i16>
   %2 = zext <vscale x 16 x i8> %b to <vscale x 16 x i16>
   %mul = mul <vscale x 16 x i16> %1, %2
-  %shr = lshr <vscale x 16 x i16> %mul, %splat
+  %shr = lshr <vscale x 16 x i16> %mul, splat(i16 8)
   %tr = trunc <vscale x 16 x i16> %shr to <vscale x 16 x i8>
   ret <vscale x 16 x i8> %tr
 }
@@ -95,12 +85,10 @@ define <vscale x 8 x i16> @umulh_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    umulh z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %insert = insertelement <vscale x 8 x i32> undef, i32 16, i64 0
-  %splat = shufflevector <vscale x 8 x i32> %insert, <vscale x 8 x i32> undef, <vscale x 8 x i32> zeroinitializer
   %1 = zext <vscale x 8 x i16> %a to <vscale x 8 x i32>
   %2 = zext <vscale x 8 x i16> %b to <vscale x 8 x i32>
   %mul = mul <vscale x 8 x i32> %1, %2
-  %shr = lshr <vscale x 8 x i32> %mul, %splat
+  %shr = lshr <vscale x 8 x i32> %mul, splat(i32 16)
   %tr = trunc <vscale x 8 x i32> %shr to <vscale x 8 x i16>
   ret <vscale x 8 x i16> %tr
 }
@@ -111,12 +99,10 @@ define <vscale x 4 x i32> @umulh_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    umulh z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %insert = insertelement <vscale x 4 x i64> undef, i64 32, i64 0
-  %splat = shufflevector <vscale x 4 x i64> %insert, <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer
   %1 = zext <vscale x 4 x i32> %a to <vscale x 4 x i64>
   %2 = zext <vscale x 4 x i32> %b to <vscale x 4 x i64>
   %mul = mul <vscale x 4 x i64> %1, %2
-  %shr = lshr <vscale x 4 x i64> %mul, %splat
+  %shr = lshr <vscale x 4 x i64> %mul, splat(i64 32)
   %tr = trunc <vscale x 4 x i64> %shr to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %tr
 }
@@ -127,12 +113,10 @@ define <vscale x 2 x i64> @umulh_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    umulh z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %insert = insertelement <vscale x 2 x i128> undef, i128 64, i64 0
-  %splat = shufflevector <vscale x 2 x i128> %insert, <vscale x 2 x i128> undef, <vscale x 2 x i32> zeroinitializer
   %1 = zext <vscale x 2 x i64> %a to <vscale x 2 x i128>
   %2 = zext <vscale x 2 x i64> %b to <vscale x 2 x i128>
   %mul = mul <vscale x 2 x i128> %1, %2
-  %shr = lshr <vscale x 2 x i128> %mul, %splat
+  %shr = lshr <vscale x 2 x i128> %mul, splat(i128 64)
   %tr = trunc <vscale x 2 x i128> %shr to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %tr
 }

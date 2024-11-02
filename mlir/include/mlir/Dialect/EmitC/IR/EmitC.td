@@ -730,7 +730,7 @@ def EmitC_ReturnOp : EmitC_Op<"return", [Pure, HasParent<"FuncOp">,
 }
 
 def EmitC_IncludeOp
-    : EmitC_Op<"include", [HasParent<"ModuleOp">]> {
+    : EmitC_Op<"include", []> {
   let summary = "Include operation";
   let description = [{
     The `emitc.include` operation allows to define a source file inclusion via the
@@ -1404,6 +1404,7 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
       float v4 = 4.200000000e+01f;
       func2(v4);
       break;
+    }
     }
     ```
   }];

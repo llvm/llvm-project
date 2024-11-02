@@ -304,12 +304,6 @@ def SIdenorm_mode : SDNode<"AMDGPUISD::DENORM_MODE",
   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]
 >;
 
-def SDTFPRoundModeOp  : SDTypeProfile<1, 2, [
-  SDTCisFP<0>, SDTCisFP<1>, SDTCisInt<2>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>
-]>;
-
-def SIfptrunc_round : SDNode<"AMDGPUISD::FPTRUNC_ROUND", SDTFPRoundModeOp>;
-
 //===----------------------------------------------------------------------===//
 // ValueType helpers
 //===----------------------------------------------------------------------===//
@@ -317,6 +311,14 @@ def SIfptrunc_round : SDNode<"AMDGPUISD::FPTRUNC_ROUND", SDTFPRoundModeOp>;
 class isIntType<ValueType SrcVT> {
   bit ret = !and(SrcVT.isInteger, !ne(SrcVT.Value, i1.Value));
 }
+
+def SDTSBufferPrefetch : SDTypeProfile<0, 3,
+    [SDTCisVT<0, v4i32>, // rsrc
+     SDTCisVT<1, i32>,   // offset(imm)
+     SDTCisVT<2, i32>]>; // length
+
+def SIsbuffer_prefetch : SDNode<"AMDGPUISD::SBUFFER_PREFETCH_DATA", SDTSBufferPrefetch,
+                                [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
 
 //===----------------------------------------------------------------------===//
 // SDNodes PatFrags for loads/stores with a glue input.
@@ -346,6 +348,18 @@ def load_glue : PatFrag <(ops node:$ptr), (unindexedload_glue node:$ptr)> {
   let IsNonExtLoad = 1;
 }
 
+def atomic_load_zext_glue :
+  PatFrag<(ops node:$ptr), (AMDGPUatomic_ld_glue node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let IsZeroExtLoad = true;
+}
+
+def atomic_load_sext_glue :
+  PatFrag<(ops node:$ptr), (AMDGPUatomic_ld_glue node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let IsSignExtLoad = true;
+}
+
 def atomic_load_8_glue : PatFrag<(ops node:$ptr),
   (AMDGPUatomic_ld_glue node:$ptr)> {
   let IsAtomic = 1;
@@ -368,6 +382,30 @@ def atomic_load_64_glue : PatFrag<(ops node:$ptr),
   (AMDGPUatomic_ld_glue node:$ptr)> {
   let IsAtomic = 1;
   let MemoryVT = i64;
+}
+
+def atomic_load_zext_8_glue : PatFrag<(ops node:$ptr),
+  (atomic_load_zext_glue node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i8;
+}
+
+def atomic_load_sext_8_glue : PatFrag<(ops node:$ptr),
+  (atomic_load_sext_glue node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i8;
+}
+
+def atomic_load_zext_16_glue : PatFrag<(ops node:$ptr),
+  (atomic_load_zext_glue node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i16;
+}
+
+def atomic_load_sext_16_glue : PatFrag<(ops node:$ptr),
+  (atomic_load_sext_glue node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i16;
 }
 
 def extload_glue : PatFrag<(ops node:$ptr), (unindexedload_glue node:$ptr)> {
@@ -451,6 +489,15 @@ def atomic_load_32_local_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_32_glue node:$ptr)>;
 def atomic_load_64_local_m0 : PatFrag<(ops node:$ptr),
                                        (atomic_load_64_glue node:$ptr)>;
+
+def atomic_load_zext_8_local_m0 : PatFrag<(ops node:$ptr),
+                                      (atomic_load_zext_8_glue node:$ptr)>;
+def atomic_load_sext_8_local_m0 : PatFrag<(ops node:$ptr),
+                                      (atomic_load_sext_8_glue node:$ptr)>;
+def atomic_load_zext_16_local_m0 : PatFrag<(ops node:$ptr),
+                                      (atomic_load_zext_16_glue node:$ptr)>;
+def atomic_load_sext_16_local_m0 : PatFrag<(ops node:$ptr),
+                                      (atomic_load_sext_16_glue node:$ptr)>;
 } // End let AddressSpaces = LoadAddress_local.AddrSpaces
 
 
@@ -794,6 +841,22 @@ def frameindex_to_targetframeindex : SDNodeXForm<frameindex, [{
 def bitcast_fpimm_to_i64 : SDNodeXForm<fpimm, [{
 return CurDAG->getTargetConstant(
   N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i64);
+}]>;
+
+def as_hw_round_mode : SDNodeXForm<timm, [{
+  // "round.towardzero" -> TowardZero 0        -> FP_ROUND_ROUND_TO_ZERO 3
+  // "round.tonearest"  -> NearestTiesToEven 1 -> FP_ROUND_ROUND_TO_NEAREST 0
+  // "round.upward"     -> TowardPositive 2    -> FP_ROUND_ROUND_TO_INF 1
+  // "round.downward    -> TowardNegative 3    -> FP_ROUND_ROUND_TO_NEGINF 2
+  return CurDAG->getTargetConstant((N->getSExtValue() + 3) % 4, SDLoc(N),
+                                    MVT::i32);
+}]>;
+
+def SupportedRoundMode : TImmLeaf<i32, [{
+  return Imm == (int)RoundingMode::TowardZero ||
+         Imm == (int)RoundingMode::NearestTiesToEven ||
+         Imm == (int)RoundingMode::TowardPositive ||
+         Imm == (int)RoundingMode::TowardNegative;
 }]>;
 
 class bitextract_imm<int bitnum> : SDNodeXForm<imm, [{
@@ -1205,9 +1268,11 @@ class FPVCSrcInputModsMatchClass <int opSize> : FPInputModsMatchClass <opSize> {
 }
 
 def FP16InputModsMatchClass : FPInputModsMatchClass<16>;
-def FPT16InputModsMatchClass : FPInputModsMatchClass<16> {
-  let Name = "RegOrImmWithFPT16InputMods";
-  let PredicateMethod = "isRegOrImmWithFPT16InputMods";
+class FPT16InputModsMatchClass<bit IsFake16> : FPInputModsMatchClass<16> {
+  let Name = !if(IsFake16, "RegOrImmWithFPFake16InputMods",
+                 "RegOrImmWithFPT16InputMods");
+  let PredicateMethod = "isRegOrImmWithFPT16InputMods<" #
+                        !if(IsFake16, "true", "false") # ">";
 }
 def FP32InputModsMatchClass : FPInputModsMatchClass<32>;
 def FP64InputModsMatchClass : FPInputModsMatchClass<64>;
@@ -1232,12 +1297,19 @@ class FPInputMods <FPInputModsMatchClass matchClass> : InputMods <matchClass> {
 }
 
 def FP16InputMods : FPInputMods<FP16InputModsMatchClass>;
-def FPT16InputMods : FPInputMods<FPT16InputModsMatchClass>;
+class FPT16InputMods<bit IsFake16> : FPInputMods<FPT16InputModsMatchClass<IsFake16>> {
+  let EncoderMethod = "getMachineOpValueT16";
+}
 def FP32InputMods : FPInputMods<FP32InputModsMatchClass>;
+def FP32T16DstInputMods : FPInputMods<FP32InputModsMatchClass> {
+  let EncoderMethod = "getMachineOpValueT16";
+}
 def FP64InputMods : FPInputMods<FP64InputModsMatchClass>;
 
-class FP16VCSrcInputMods<bit IsFake16>
-  : FPInputMods<FP16VCSrcInputModsMatchClass<IsFake16>>;
+class FPT16VCSrcInputMods<bit IsFake16 = 1>
+  : FPInputMods<FP16VCSrcInputModsMatchClass<IsFake16>> {
+  let EncoderMethod = "getMachineOpValueT16";
+}
 def FP32VCSrcInputMods : FPInputMods<FP32VCSrcInputModsMatchClass>;
 
 class IntInputModsMatchClass <int opSize> : AsmOperandClass {
@@ -1249,21 +1321,38 @@ class IntVCSrcInputModsMatchClass <int opSize> : IntInputModsMatchClass <opSize>
   let Name = "RegOrInlineImmWithInt"#opSize#"InputMods";
   let PredicateMethod = "isRegOrInlineImmWithInt"#opSize#"InputMods";
 }
-def IntT16InputModsMatchClass : IntInputModsMatchClass<16> {
-  let Name = "RegOrImmWithIntT16InputMods";
-  let PredicateMethod = "isRegOrImmWithIntT16InputMods";
+class IntT16InputModsMatchClass<bit IsFake16> : IntInputModsMatchClass<16> {
+  let Name = !if(IsFake16, "RegOrImmWithIntFake16InputMods",
+                 "RegOrImmWithIntT16InputMods");
+  let PredicateMethod = "isRegOrImmWithIntT16InputMods<" #
+                        !if(IsFake16, "true", "false") # ">";
 }
 def Int32InputModsMatchClass : IntInputModsMatchClass<32>;
 def Int64InputModsMatchClass : IntInputModsMatchClass<64>;
 def Int32VCSrcInputModsMatchClass : IntVCSrcInputModsMatchClass<32>;
+class IntT16VCSrcInputModsMatchClass<bit IsFake16> : IntInputModsMatchClass<16> {
+  let Name = !if(IsFake16, "RegOrInlineImmWithIntFake16InputMods",
+                 "RegOrInlineImmWithIntT16InputMods");
+  let PredicateMethod = "isRegOrInlineImmWithIntT16InputMods<" #
+                        !if(IsFake16, "true", "false") # ">";
+}
 
 class IntInputMods <IntInputModsMatchClass matchClass> : InputMods <matchClass> {
   let PrintMethod = "printOperandAndIntInputMods";
 }
-def IntT16InputMods : IntInputMods<IntT16InputModsMatchClass>;
+class IntT16InputMods<bit IsFake16> : IntInputMods<IntT16InputModsMatchClass<IsFake16>> {
+  let EncoderMethod = "getMachineOpValueT16";
+}
 def Int32InputMods : IntInputMods<Int32InputModsMatchClass>;
+def Int32T16DstInputMods : IntInputMods<Int32InputModsMatchClass> {
+  let EncoderMethod = "getMachineOpValueT16";
+}
 def Int64InputMods : IntInputMods<Int64InputModsMatchClass>;
 def Int32VCSrcInputMods : IntInputMods<Int32VCSrcInputModsMatchClass>;
+class IntT16VCSrcInputMods<bit IsFake16 = 1>
+    : IntInputMods<IntT16VCSrcInputModsMatchClass<IsFake16>> {
+  let EncoderMethod = "getMachineOpValueT16";
+}
 
 class OpSelModsMatchClass : AsmOperandClass {
   let Name = "OpSelMods";
@@ -1297,6 +1386,23 @@ def FPVRegInputModsMatchClass : AsmOperandClass {
   let PredicateMethod = "isVRegWithInputMods";
 }
 
+def FPVRegInputMods : InputMods <FPVRegInputModsMatchClass> {
+  let PrintMethod = "printOperandAndFPInputMods";
+}
+
+def FPVRegT16DstInputMods : InputMods <FPVRegInputModsMatchClass> {
+  let PrintMethod = "printOperandAndFPInputMods";
+  let EncoderMethod = "getMachineOpValueT16";
+}
+
+class FPT16_Lo128VRegInputModsMatchClass<bit IsFake16> : AsmOperandClass {
+  let Name = !if(IsFake16, "Fake16_Lo128VRegWithFPInputMods",
+                 "T16_Lo128VRegWithFPInputMods");
+  let ParserMethod = "parseRegWithFPInputMods";
+  let PredicateMethod = "isT16_Lo128VRegWithInputMods<" #
+                        !if(IsFake16, "true", "false") # ">";
+}
+
 class FPT16VRegInputModsMatchClass<bit IsFake16> : AsmOperandClass {
   let Name = !if(IsFake16, "Fake16VRegWithFPInputMods",
                  "T16VRegWithFPInputMods");
@@ -1305,13 +1411,16 @@ class FPT16VRegInputModsMatchClass<bit IsFake16> : AsmOperandClass {
                         !if(IsFake16, "true", "false") # ">";
 }
 
-def FPVRegInputMods : InputMods <FPVRegInputModsMatchClass> {
+class FPT16_Lo128VRegInputMods<bit IsFake16 = 1>
+    : InputMods <FPT16_Lo128VRegInputModsMatchClass<IsFake16>> {
   let PrintMethod = "printOperandAndFPInputMods";
+  let EncoderMethod = "getMachineOpValueT16Lo128";
 }
 
-class FPT16VRegInputMods<bit IsFake16>
+class FPT16VRegInputMods<bit IsFake16 = 1>
     : InputMods <FPT16VRegInputModsMatchClass<IsFake16>> {
   let PrintMethod = "printOperandAndFPInputMods";
+  let EncoderMethod = "getMachineOpValueT16";
 }
 
 class IntSDWAInputModsMatchClass <int opSize> : AsmOperandClass {
@@ -1342,7 +1451,15 @@ def IntVRegInputModsMatchClass : AsmOperandClass {
   let PredicateMethod = "isVRegWithInputMods";
 }
 
-class IntT16VRegInputModsMatchClass<bit IsFake16> : AsmOperandClass {
+class IntT16_Lo128VRegInputModsMatchClass<bit IsFake16 = 1> : AsmOperandClass {
+  let Name = !if(IsFake16, "Fake16_Lo128VRegWithIntInputMods",
+                 "T16_Lo128VRegWithIntInputMods");
+  let ParserMethod = "parseRegWithIntInputMods";
+  let PredicateMethod = "isT16_Lo128VRegWithInputMods<" #
+                        !if(IsFake16, "true", "false") # ">";
+}
+
+class IntT16VRegInputModsMatchClass<bit IsFake16 = 1> : AsmOperandClass {
   let Name = !if(IsFake16, "Fake16VRegWithIntInputMods",
                  "T16VRegWithIntInputMods");
   let ParserMethod = "parseRegWithIntInputMods";
@@ -1350,13 +1467,25 @@ class IntT16VRegInputModsMatchClass<bit IsFake16> : AsmOperandClass {
                         !if(IsFake16, "true", "false") # ">";
 }
 
-class IntT16VRegInputMods<bit IsFake16>
+class IntT16_Lo128VRegInputMods<bit IsFake16 = 1>
+    : InputMods <IntT16_Lo128VRegInputModsMatchClass<IsFake16>> {
+  let PrintMethod = "printOperandAndIntInputMods";
+  let EncoderMethod = "getMachineOpValueT16Lo128";
+}
+
+class IntT16VRegInputMods<bit IsFake16 = 1>
     : InputMods <IntT16VRegInputModsMatchClass<IsFake16>> {
   let PrintMethod = "printOperandAndIntInputMods";
+  let EncoderMethod = "getMachineOpValueT16";
 }
 
 def IntVRegInputMods : InputMods <IntVRegInputModsMatchClass> {
   let PrintMethod = "printOperandAndIntInputMods";
+}
+
+def IntVRegT16DstInputMods : InputMods <IntVRegInputModsMatchClass> {
+  let PrintMethod = "printOperandAndIntInputMods";
+  let EncoderMethod = "getMachineOpValueT16";
 }
 
 class PackedFPInputModsMatchClass <int opSize> : AsmOperandClass {
@@ -1585,7 +1714,7 @@ class getSOPSrcForVT<ValueType VT> {
 }
 
 // Returns the vreg register class to use for source operand given VT
-class getVregSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
+class getVregSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 1> {
   RegisterOperand ret =
   !cond(!eq(VT.Size, 128) : RegisterOperand<VReg_128>,
         !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
@@ -1627,12 +1756,12 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
 }
 
 // Src2 of VOP3 DPP instructions cannot be a literal
-class getVOP3DPPSrcForVT<ValueType VT> {
+class getVOP3DPPSrcForVT<ValueType VT, bit IsFake16 = 1> {
   RegisterOperand ret =
   !cond(!eq(VT, i1)     : SSrc_i1,
-        !eq(VT, i16)    : VCSrc_b16,
-        !eq(VT, f16)    : VCSrc_f16,
-        !eq(VT, bf16)   : VCSrc_bf16,
+        !eq(VT, i16)    : !if (IsFake16, VCSrc_b16, VCSrcT_b16),
+        !eq(VT, f16)    : !if (IsFake16, VCSrc_f16, VCSrcT_f16),
+        !eq(VT, bf16)   : !if (IsFake16, VCSrc_bf16, VCSrcT_bf16),
         !eq(VT, v2i16)  : VCSrc_v2b16,
         !eq(VT, v2f16)  : VCSrc_v2f16,
         !eq(VT, v2bf16) : VCSrc_v2bf16,
@@ -1666,23 +1795,27 @@ class isModifierType<ValueType SrcVT> {
                 !eq(SrcVT.Value, v16bf16.Value));
 }
 
-// Return type of input modifiers operand for specified input operand
-class getSrcMod <ValueType VT, bit IsTrue16 = 0> {
-  Operand ret =  !if(!eq(VT.Size, 64),
+// Return type of input modifiers operand for specified input operand.
+// True16: If the destination is a 16-bit value, the src0 modifier must hold
+// dst's opsel bit. Use a dummy value for DstVT if getting the mod for a src operand besides 0.
+// 64-bit src types are not implemented for True16 dst.
+class getSrc0Mod <ValueType VT, ValueType DstVT, bit IsTrue16 = 0, bit IsFake16 = 1> {
+  defvar T16Dst =  !if(!eq(VT.Size, 64),
                      !if(VT.isFP, FP64InputMods, Int64InputMods),
                      !if(!eq(VT.Size, 16),
-                         !if(VT.isFP, !if(IsTrue16, FPT16InputMods, FP16InputMods),
-                                      !if(IsTrue16, IntT16InputMods, IntOpSelMods)),
+                         !if(VT.isFP, !if(IsTrue16, FPT16InputMods<IsFake16>, FP16InputMods),
+                                      !if(IsTrue16, IntT16InputMods<IsFake16>, IntOpSelMods)),
+                         !if(VT.isFP, FP32T16DstInputMods, Int32T16DstInputMods)));
+  defvar Normal =  !if(!eq(VT.Size, 64),
+                     !if(VT.isFP, FP64InputMods, Int64InputMods),
+                     !if(!eq(VT.Size, 16),
+                         !if(VT.isFP, !if(IsTrue16, FPT16InputMods<IsFake16>, FP16InputMods),
+                                      !if(IsTrue16, IntT16InputMods<IsFake16>, IntOpSelMods)),
                          !if(VT.isFP, FP32InputMods, Int32InputMods)));
+  Operand ret = !if(!and(IsTrue16, !eq(DstVT.Size, 16)), T16Dst, Normal);
 }
 
-class getOpSelMod <ValueType VT> {
-  Operand ret = !cond(!eq(VT, f16) : FP16InputMods,
-                      !eq(VT, bf16) : FP16InputMods,
-                      !eq(VT, v2f16) : PackedF16InputMods,
-                      !eq(VT, v2bf16) : PackedF16InputMods,
-                      1 : IntOpSelMods);
-}
+class getSrcMod<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 1> : getSrc0Mod<VT, f128/*Dummy Arg*/, IsTrue16, IsFake16>;
 
 // Return type of input modifiers operand specified input operand for DPP
 class getSrcModDPP <ValueType VT> {
@@ -1693,18 +1826,42 @@ class getSrcModDPP_t16 <ValueType VT, bit IsFake16 = 1> {
   Operand ret =
       !if (VT.isFP,
            !if (!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
-                FPT16VRegInputMods<IsFake16>, FPVRegInputMods),
+                FPT16_Lo128VRegInputMods<IsFake16>, FPVRegInputMods),
            !if (!eq(VT.Value, i16.Value),
-                IntT16VRegInputMods<IsFake16>, IntVRegInputMods));
+                IntT16_Lo128VRegInputMods<IsFake16>, IntVRegInputMods));
 }
 
 // Return type of input modifiers operand for specified input operand for DPP
-class getSrcModVOP3DPP <ValueType VT, bit IsFake16 = 1> {
+// True16: If the destination is a 16-bit value, the src0 modifier must hold
+// dst's opsel bit. Use a dummy value for DstVT if getting the mod for a src operand besides 0.
+// 64-bit src types are not implemented for True16 dst.
+class getSrc0ModVOP3DPP <ValueType VT, ValueType DstVT, bit IsFake16 = 1> {
+  defvar T16Dst =
+      !if (VT.isFP,
+           !if (!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
+                FPT16VRegInputMods<IsFake16>, FPVRegT16DstInputMods),
+           !if (!eq(VT.Value, i16.Value), IntT16VRegInputMods<IsFake16>,
+                IntVRegT16DstInputMods));
+  defvar Normal =
+      !if (VT.isFP,
+           !if (!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
+                FPT16VRegInputMods<IsFake16>, FPVRegInputMods),
+           !if (!eq(VT.Value, i16.Value),
+                IntT16VRegInputMods<IsFake16>,
+                IntVRegInputMods));
+  Operand ret = !if(!and(!not(IsFake16), !eq(DstVT.Size, 16)), T16Dst, Normal);
+}
+
+// GFX11 only supports VGPR src1, but the restriction is done in AsmParser
+// and GCNDPPCombine.
+class getSrcModVOP3DPP<ValueType VT, bit IsFake16 = 1> {
   Operand ret =
       !if (VT.isFP,
            !if (!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
-                FP16VCSrcInputMods<IsFake16>, FP32VCSrcInputMods),
-           Int32VCSrcInputMods);
+                FPT16VCSrcInputMods<IsFake16>, FP32VCSrcInputMods),
+           !if (!eq(VT.Value, i16.Value),
+                IntT16VCSrcInputMods<IsFake16>,
+                Int32VCSrcInputMods));
 }
 
 // Return type of input modifiers operand specified input operand for SDWA
@@ -1745,9 +1902,11 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
             (ins Src0Mod:$src0_modifiers, Src0RC:$src0)))
       /* else */,
         // VOP1 without modifiers
-        !if (HasClamp,
-          (ins Src0RC:$src0, Clamp0:$clamp),
-          (ins Src0RC:$src0))
+        !if(HasOMod,
+          (ins Src0RC:$src0, Clamp0:$clamp, omod0:$omod),
+          !if (HasClamp,
+            (ins Src0RC:$src0, Clamp0:$clamp),
+            (ins Src0RC:$src0)))
       /* endif */ ),
     !if (!eq(NumSrcArgs, 2),
       !if (HasModifiers,
@@ -2035,6 +2194,8 @@ class getAsmVOP3P <int NumSrcArgs, bit HasModifiers,
   string ret = dst#", "#src0#src1#src2#opsel#mods#clamp;
 }
 
+// FIXME-TRUE16 AsmVOP3OpSel will be deprecated after all
+// VOP3 16 bit instructions are replaced to true16 format
 class getAsmVOP3OpSel <int NumSrcArgs,
                        bit HasClamp,
                        bit HasOMod,
@@ -2123,8 +2284,9 @@ class getAsmVOP3Base <int NumSrcArgs, bit HasDst, bit HasClamp,
   string clamp = !if(HasClamp, "$clamp", "");
   string omod = !if(HasOMod, "$omod", "");
 
-  string ret = dst#!if(!gt(NumSrcArgs,0),", "#src0#src1#src2#opsel#bytesel#3PMods#clamp#omod, "");
-
+  string ret = dst#!if(!eq(NumSrcArgs,0),
+                       "",
+                       !if(HasDst,", ", "")#src0#src1#src2#opsel#bytesel#3PMods#clamp#omod);
 }
 
 class getAsmVOP3DPP<string base> {
@@ -2295,8 +2457,6 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit EnableClamp = _EnableClamp;
   field bit IsTrue16 = 0;
   field bit IsRealTrue16 = 0;
-  field bit IsInvalidSingleUseConsumer = 0;
-  field bit IsInvalidSingleUseProducer = 0;
 
   field ValueType DstVT = ArgVT[0];
   field ValueType Src0VT = ArgVT[1];
@@ -2320,13 +2480,13 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field RegisterOperand Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT>.ret;
   field RegisterOperand Src0SDWA = getSDWASrcForVT<Src0VT>.ret;
   field RegisterOperand Src1SDWA = getSDWASrcForVT<Src0VT>.ret;
-  field Operand Src0Mod = getSrcMod<Src0VT>.ret;
+  field Operand Src0Mod = getSrc0Mod<Src0VT, DstVT>.ret;
   field Operand Src1Mod = getSrcMod<Src1VT>.ret;
   field Operand Src2Mod = getSrcMod<Src2VT>.ret;
   field Operand Src0ModDPP = getSrcModDPP<Src0VT>.ret;
   field Operand Src1ModDPP = getSrcModDPP<Src1VT>.ret;
   field Operand Src2ModDPP = getSrcModDPP<Src2VT>.ret;
-  field Operand Src0ModVOP3DPP = getSrcModDPP<Src0VT>.ret;
+  field Operand Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT>.ret;
   field Operand Src1ModVOP3DPP = getSrcModVOP3DPP<Src1VT>.ret;
   field Operand Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT>.ret;
   field Operand Src0ModSDWA = getSrcModSDWA<Src0VT>.ret;
@@ -2342,6 +2502,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
 
   field bit IsFP8SrcByteSel = 0;
   field bit IsFP8DstByteSel = 0;
+  field bit HasFP8DstByteSel = 0;
   field bit IsFP8ByteSel = !or(IsFP8SrcByteSel, IsFP8DstByteSel);
 
   field bit HasDst = !ne(DstVT.Value, untyped.Value);
@@ -2417,9 +2578,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                    Src0PackedMod, Src1PackedMod, Src2PackedMod>.ret;
   field dag InsVOP3OpSel = getInsVOP3OpSel<Src0RC64, Src1RC64, Src2RC64,
                                 NumSrcArgs, HasClamp, HasOMod,
-                                getOpSelMod<Src0VT>.ret,
-                                getOpSelMod<Src1VT>.ret,
-                                getOpSelMod<Src2VT>.ret>.ret;
+                                Src0Mod, Src1Mod, Src2Mod>.ret;
   field dag InsDPP = !if(HasExtDPP,
                          getInsDPP<DstRCDPP, Src0DPP, Src1DPP, Src2DPP, NumSrcArgs,
                                    HasModifiers, Src0ModDPP, Src1ModDPP, Src2ModDPP>.ret,
@@ -2507,7 +2666,6 @@ class VOPProfile_True16<VOPProfile P> : VOPProfile<P.ArgVT> {
 
   // Most DstVT are 16-bit, but not all.
   let DstRC = getVALUDstForVT<DstVT, 1 /*IsTrue16*/, 0 /*IsVOP3Encoding*/>.ret;
-  let DstRC64 = getVALUDstForVT<DstVT>.ret;
   let Src0RC32 = getVOPSrc0ForVT<Src0VT, 1 /*IsTrue16*/, 0 /*IsFake16*/>.ret;
   let Src1RC32 = getVregSrcForVT<Src1VT, 1 /*IsTrue16*/, 0 /*IsFake16*/>.ret;
   let Src0DPP = getVregSrcForVT<Src0VT, 1 /*IsTrue16*/, 0 /*IsFake16*/>.ret;
@@ -2516,8 +2674,10 @@ class VOPProfile_True16<VOPProfile P> : VOPProfile<P.ArgVT> {
   let Src0ModDPP = getSrcModDPP_t16<Src0VT, 0 /*IsFake16*/>.ret;
   let Src1ModDPP = getSrcModDPP_t16<Src1VT, 0 /*IsFake16*/>.ret;
   let Src2ModDPP = getSrcModDPP_t16<Src2VT, 0 /*IsFake16*/>.ret;
-  let Src0VOP3DPP = VGPRSrc_16;
-  let Src0ModVOP3DPP = getSrcModVOP3DPP<Src0VT, 0 /*IsFake16*/>.ret;
+  let Src0VOP3DPP = !if (!eq(Src0VT.Size, 16), VGPRSrc_16, VGPRSrc_32);
+  let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 0 /*IsFake16*/>.ret;
+  let Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT, 0 /*IsFake16*/>.ret;
+  let Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT, 0/*IsFake16*/>.ret;
   let Src1ModVOP3DPP = getSrcModVOP3DPP<Src1VT, 0 /*IsFake16*/>.ret;
   let Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT, 0 /*IsFake16*/>.ret;
 
@@ -2525,9 +2685,9 @@ class VOPProfile_True16<VOPProfile P> : VOPProfile<P.ArgVT> {
   let Src0RC64 = getVOP3SrcForVT<Src0VT, 1 /*IsTrue16*/>.ret;
   let Src1RC64 = getVOP3SrcForVT<Src1VT, 1 /*IsTrue16*/>.ret;
   let Src2RC64 = getVOP3SrcForVT<Src2VT, 1 /*IsTrue16*/>.ret;
-  let Src0Mod = getSrcMod<Src0VT, 1 /*IsTrue16*/>.ret;
-  let Src1Mod = getSrcMod<Src1VT, 1 /*IsTrue16*/>.ret;
-  let Src2Mod = getSrcMod<Src2VT, 1 /*IsTrue16*/>.ret;
+  let Src0Mod = getSrc0Mod<Src0VT, DstVT, 1/*IsTrue16*/, 0/*IsFake16*/>.ret;
+  let Src1Mod = getSrcMod<Src1VT, 1 /*IsTrue16*/, 0/*IsFake16*/>.ret;
+  let Src2Mod = getSrcMod<Src2VT, 1 /*IsTrue16*/, 0/*IsFake16*/>.ret;
 }
 
 class VOPProfile_Fake16<VOPProfile P> : VOPProfile<P.ArgVT> {
@@ -2539,9 +2699,17 @@ class VOPProfile_Fake16<VOPProfile P> : VOPProfile<P.ArgVT> {
   let Src0DPP = getVregSrcForVT<Src0VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
   let Src1DPP = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
   let Src2DPP = getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
-  let Src0ModDPP = getSrcModDPP_t16<Src0VT>.ret;
-  let Src1ModDPP = getSrcModDPP_t16<Src1VT>.ret;
-  let Src2ModDPP = getSrcModDPP_t16<Src2VT>.ret;
+  let Src0ModDPP = getSrcModDPP_t16<Src0VT, 1/*IsFake16*/>.ret;
+  let Src1ModDPP = getSrcModDPP_t16<Src1VT, 1/*IsFake16*/>.ret;
+  let Src2ModDPP = getSrcModDPP_t16<Src2VT, 1/*IsFake16*/>.ret;
+  let Src0Mod = getSrc0Mod<Src0VT, DstVT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
+  let Src1Mod = getSrcMod<Src1VT, 1 /*IsTrue16*/, 1/*IsFake16*/>.ret;
+  let Src2Mod = getSrcMod<Src2VT, 1 /*IsTrue16*/, 1/*IsFake16*/>.ret;
+  let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 1 /*IsFake16*/>.ret;
+  let Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT, 1 /*IsFake16*/>.ret;
+  let Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT, 1/*IsFake16*/>.ret;
+  let Src1ModVOP3DPP = getSrcModVOP3DPP<Src1VT, 1/*IsFake16*/>.ret;
+  let Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT, 1/*IsFake16*/>.ret;
 }
 
 def VOP_F16_F16 : VOPProfile<[f16, f16, untyped, untyped]>;
@@ -2613,6 +2781,7 @@ def VOP_F32_F32_F16_F16 : VOPProfile <[f32, f32, f16, f16]>;
 def VOP_F32_F32_F32_F32 : VOPProfile <[f32, f32, f32, f32]>;
 def VOP_F64_F64_F64_F64 : VOPProfile <[f64, f64, f64, f64]>;
 def VOP_I32_I32_I32_I32 : VOPProfile <[i32, i32, i32, i32]>;
+def VOP_I32_I32_I32_I16 : VOPProfile <[i32, i32, i32, i16]>;
 def VOP_I64_I32_I32_I64 : VOPProfile <[i64, i32, i32, i64]>;
 def VOP_I32_F32_I32_I32 : VOPProfile <[i32, f32, i32, i32]>;
 def VOP_I64_I64_I32_I64 : VOPProfile <[i64, i64, i32, i64]>;
@@ -2919,6 +3088,15 @@ def getVCMPXOpFromVCMP : InstrMapping {
   let ColFields = ["IsVCMPX"];
   let KeyCol = ["0"];
   let ValueCols = [["1"]];
+}
+
+def FP8DstByteSelTable : GenericTable {
+  let FilterClass = "VOP3_Pseudo";
+  let CppTypeName = "FP8DstByteSelInfo";
+  let Fields = ["Opcode", "HasFP8DstByteSel"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getFP8DstByteSelHelper";
 }
 
 def VOPDComponentTable : GenericTable {

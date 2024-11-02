@@ -14,12 +14,14 @@
 
 #include <algorithm>
 #include <concepts>
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <random>
 #include <ranges>
 #include <type_traits>
 #include <utility>
+
 #include "test_macros.h"
 
 // Niebloids, unlike CPOs, are *not* required to be semiregular or even to have

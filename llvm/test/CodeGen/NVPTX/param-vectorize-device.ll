@@ -84,14 +84,14 @@ define dso_local void @caller_St4x1(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St4x1_param_1
   ; CHECK:       )
   ; CHECK:       .param .b32 param0;
-  ; CHECK:       st.param.b32 [param0+0], {{%r[0-9]+}};
+  ; CHECK:       st.param.b32 [param0], {{%r[0-9]+}};
   ; CHECK:       .param .align 16 .b8 retval0[4];
   ; CHECK:       call.uni (retval0),
   ; CHECK-NEXT:  callee_St4x1,
   ; CHECK-NEXT:  (
   ; CHECK-NEXT:  param0
   ; CHECK-NEXT:  );
-  ; CHECK:       ld.param.b32 {{%r[0-9]+}}, [retval0+0];
+  ; CHECK:       ld.param.b32 {{%r[0-9]+}}, [retval0];
   %1 = load i32, ptr %in, align 4
   %call = tail call fastcc [1 x i32] @callee_St4x1(i32 %1) #2
   %.fca.0.extract = extractvalue [1 x i32] %call, 0
@@ -104,7 +104,7 @@ define internal fastcc [1 x i32] @callee_St4x1(i32 %in.0.val) {
   ; CHECK-LABEL: callee_St4x1(
   ; CHECK-NEXT:  .param .b32 callee_St4x1_param_0
   ; CHECK:       ld.param.u32 [[R1:%r[0-9]+]], [callee_St4x1_param_0];
-  ; CHECK:       st.param.b32 [func_retval0+0], [[R1]];
+  ; CHECK:       st.param.b32 [func_retval0], [[R1]];
   ; CHECK-NEXT:  ret;
   %oldret = insertvalue [1 x i32] poison, i32 %in.0.val, 0
   ret [1 x i32] %oldret
@@ -116,14 +116,14 @@ define dso_local void @caller_St4x2(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St4x2_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[8];
-  ; CHECK:       st.param.v2.b32 [param0+0], {{{%r[0-9]+}}, {{%r[0-9]+}}};
+  ; CHECK:       st.param.v2.b32 [param0], {{{%r[0-9]+}}, {{%r[0-9]+}}};
   ; CHECK:       .param .align 16 .b8 retval0[8];
   ; CHECK:       call.uni (retval0),
   ; CHECK-NEXT:  callee_St4x2,
   ; CHECK-NEXT:  (
   ; CHECK-NEXT:  param0
   ; CHECK-NEXT:  );
-  ; CHECK:       ld.param.v2.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0+0];
+  ; CHECK:       ld.param.v2.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0];
   %agg.tmp = alloca %struct.St4x2, align 8
   %1 = load i64, ptr %in, align 4
   store i64 %1, ptr %agg.tmp, align 8
@@ -141,7 +141,7 @@ define internal fastcc [2 x i32] @callee_St4x2(ptr nocapture noundef readonly by
   ; CHECK-LABEL: callee_St4x2(
   ; CHECK-NEXT:  .param .align 16 .b8 callee_St4x2_param_0[8]
   ; CHECK:       ld.param.v2.u32 {[[R1:%r[0-9]+]], [[R2:%r[0-9]+]]}, [callee_St4x2_param_0];
-  ; CHECK:       st.param.v2.b32 [func_retval0+0], {[[R1]], [[R2]]};
+  ; CHECK:       st.param.v2.b32 [func_retval0], {[[R1]], [[R2]]};
   ; CHECK-NEXT:  ret;
   %1 = load i32, ptr %in, align 4
   %arrayidx.1 = getelementptr inbounds [2 x i32], ptr %in, i64 0, i64 1
@@ -157,7 +157,7 @@ define dso_local void @caller_St4x3(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St4x3_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[12];
-  ; CHECK:       st.param.v2.b32 [param0+0], {{{%r[0-9]+}}, {{%r[0-9]+}}};
+  ; CHECK:       st.param.v2.b32 [param0], {{{%r[0-9]+}}, {{%r[0-9]+}}};
   ; CHECK:       st.param.b32    [param0+8], {{%r[0-9]+}};
   ; CHECK:       .param .align 16 .b8 retval0[12];
   ; CHECK:       call.uni (retval0),
@@ -165,7 +165,7 @@ define dso_local void @caller_St4x3(ptr nocapture noundef readonly byval(%struct
   ; CHECK-NEXT:  (
   ; CHECK-NEXT:  param0
   ; CHECK-NEXT:  );
-  ; CHECK:       ld.param.v2.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0+0];
+  ; CHECK:       ld.param.v2.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0];
   ; CHECK:       ld.param.b32    {{%r[0-9]+}},  [retval0+8];
   %call = tail call fastcc [3 x i32] @callee_St4x3(ptr noundef nonnull byval(%struct.St4x3) align 4 %in) #2
   %.fca.0.extract = extractvalue [3 x i32] %call, 0
@@ -185,7 +185,7 @@ define internal fastcc [3 x i32] @callee_St4x3(ptr nocapture noundef readonly by
   ; CHECK-NEXT:  .param .align 16 .b8 callee_St4x3_param_0[12]
   ; CHECK:       ld.param.v2.u32 {[[R1:%r[0-9]+]], [[R2:%r[0-9]+]]}, [callee_St4x3_param_0];
   ; CHECK:       ld.param.u32    [[R3:%r[0-9]+]],  [callee_St4x3_param_0+8];
-  ; CHECK:       st.param.v2.b32 [func_retval0+0], {[[R1]], [[R2]]};
+  ; CHECK:       st.param.v2.b32 [func_retval0], {[[R1]], [[R2]]};
   ; CHECK:       st.param.b32    [func_retval0+8], [[R3]];
   ; CHECK-NEXT:  ret;
   %1 = load i32, ptr %in, align 4
@@ -205,14 +205,14 @@ define dso_local void @caller_St4x4(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St4x4_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[16];
-  ; CHECK:       st.param.v4.b32 [param0+0], {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
+  ; CHECK:       st.param.v4.b32 [param0], {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
   ; CHECK:       .param .align 16 .b8 retval0[16];
   ; CHECK:       call.uni (retval0),
   ; CHECK-NEXT:  callee_St4x4,
   ; CHECK-NEXT:  (
   ; CHECK-NEXT:  param0
   ; CHECK-NEXT:  );
-  ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0+0];
+  ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0];
   %call = tail call fastcc [4 x i32] @callee_St4x4(ptr noundef nonnull byval(%struct.St4x4) align 4 %in) #2
   %.fca.0.extract = extractvalue [4 x i32] %call, 0
   %.fca.1.extract = extractvalue [4 x i32] %call, 1
@@ -233,7 +233,7 @@ define internal fastcc [4 x i32] @callee_St4x4(ptr nocapture noundef readonly by
   ; CHECK-LABEL: callee_St4x4(
   ; CHECK-NEXT:  .param .align 16 .b8 callee_St4x4_param_0[16]
   ; CHECK:       ld.param.v4.u32 {[[R1:%r[0-9]+]], [[R2:%r[0-9]+]], [[R3:%r[0-9]+]], [[R4:%r[0-9]+]]}, [callee_St4x4_param_0];
-  ; CHECK:       st.param.v4.b32 [func_retval0+0], {[[R1]], [[R2]], [[R3]], [[R4]]};
+  ; CHECK:       st.param.v4.b32 [func_retval0], {[[R1]], [[R2]], [[R3]], [[R4]]};
   ; CHECK-NEXT:  ret;
   %1 = load i32, ptr %in, align 4
   %arrayidx.1 = getelementptr inbounds [4 x i32], ptr %in, i64 0, i64 1
@@ -255,7 +255,7 @@ define dso_local void @caller_St4x5(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St4x5_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[20];
-  ; CHECK:       st.param.v4.b32 [param0+0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
+  ; CHECK:       st.param.v4.b32 [param0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
   ; CHECK:       st.param.b32    [param0+16], {{%r[0-9]+}};
   ; CHECK:       .param .align 16 .b8 retval0[20];
   ; CHECK:       call.uni (retval0),
@@ -263,7 +263,7 @@ define dso_local void @caller_St4x5(ptr nocapture noundef readonly byval(%struct
   ; CHECK-NEXT:  (
   ; CHECK-NEXT:  param0
   ; CHECK-NEXT:  );
-  ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0+0];
+  ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0];
   ; CHECK:       ld.param.b32    {{%r[0-9]+}},  [retval0+16];
   %call = tail call fastcc [5 x i32] @callee_St4x5(ptr noundef nonnull byval(%struct.St4x5) align 4 %in) #2
   %.fca.0.extract = extractvalue [5 x i32] %call, 0
@@ -289,7 +289,7 @@ define internal fastcc [5 x i32] @callee_St4x5(ptr nocapture noundef readonly by
   ; CHECK-NEXT:  .param .align 16 .b8 callee_St4x5_param_0[20]
   ; CHECK:       ld.param.v4.u32 {[[R1:%r[0-9]+]], [[R2:%r[0-9]+]], [[R3:%r[0-9]+]], [[R4:%r[0-9]+]]}, [callee_St4x5_param_0];
   ; CHECK:       ld.param.u32    [[R5:%r[0-9]+]],   [callee_St4x5_param_0+16];
-  ; CHECK:       st.param.v4.b32 [func_retval0+0],  {[[R1]], [[R2]], [[R3]], [[R4]]};
+  ; CHECK:       st.param.v4.b32 [func_retval0],  {[[R1]], [[R2]], [[R3]], [[R4]]};
   ; CHECK:       st.param.b32    [func_retval0+16], [[R5]];
   ; CHECK-NEXT:  ret;
   %1 = load i32, ptr %in, align 4
@@ -315,7 +315,7 @@ define dso_local void @caller_St4x6(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St4x6_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[24];
-  ; CHECK:       st.param.v4.b32 [param0+0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
+  ; CHECK:       st.param.v4.b32 [param0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
   ; CHECK:       st.param.v2.b32 [param0+16], {{{%r[0-9]+}}, {{%r[0-9]+}}};
   ; CHECK:       .param .align 16 .b8 retval0[24];
   ; CHECK:       call.uni (retval0),
@@ -323,7 +323,7 @@ define dso_local void @caller_St4x6(ptr nocapture noundef readonly byval(%struct
   ; CHECK-NEXT:  (
   ; CHECK-NEXT:  param0
   ; CHECK-NEXT:  );
-  ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0+0];
+  ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0];
   ; CHECK:       ld.param.v2.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0+16];
   %call = tail call fastcc [6 x i32] @callee_St4x6(ptr noundef nonnull byval(%struct.St4x6) align 4 %in) #2
   %.fca.0.extract = extractvalue [6 x i32] %call, 0
@@ -352,7 +352,7 @@ define internal fastcc [6 x i32] @callee_St4x6(ptr nocapture noundef readonly by
   ; CHECK-NEXT:  .param .align 16 .b8 callee_St4x6_param_0[24]
   ; CHECK:       ld.param.v4.u32 {[[R1:%r[0-9]+]], [[R2:%r[0-9]+]], [[R3:%r[0-9]+]], [[R4:%r[0-9]+]]}, [callee_St4x6_param_0];
   ; CHECK:       ld.param.v2.u32 {[[R5:%r[0-9]+]],  [[R6:%r[0-9]+]]}, [callee_St4x6_param_0+16];
-  ; CHECK:       st.param.v4.b32 [func_retval0+0],  {[[R1]], [[R2]], [[R3]], [[R4]]};
+  ; CHECK:       st.param.v4.b32 [func_retval0],  {[[R1]], [[R2]], [[R3]], [[R4]]};
   ; CHECK:       st.param.v2.b32 [func_retval0+16], {[[R5]], [[R6]]};
   ; CHECK-NEXT:  ret;
   %1 = load i32, ptr %in, align 4
@@ -381,7 +381,7 @@ define dso_local void @caller_St4x7(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St4x7_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[28];
-  ; CHECK:       st.param.v4.b32 [param0+0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
+  ; CHECK:       st.param.v4.b32 [param0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
   ; CHECK:       st.param.v2.b32 [param0+16], {{{%r[0-9]+}}, {{%r[0-9]+}}};
   ; CHECK:       st.param.b32    [param0+24], {{%r[0-9]+}};
   ; CHECK:       .param .align 16 .b8 retval0[28];
@@ -390,7 +390,7 @@ define dso_local void @caller_St4x7(ptr nocapture noundef readonly byval(%struct
   ; CHECK-NEXT:  (
   ; CHECK-NEXT:  param0
   ; CHECK-NEXT:  );
-  ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0+0];
+  ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0];
   ; CHECK:       ld.param.v2.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0+16];
   ; CHECK:       ld.param.b32    {{%r[0-9]+}}, [retval0+24];
   %call = tail call fastcc [7 x i32] @callee_St4x7(ptr noundef nonnull byval(%struct.St4x7) align 4 %in) #2
@@ -424,7 +424,7 @@ define internal fastcc [7 x i32] @callee_St4x7(ptr nocapture noundef readonly by
   ; CHECK:       ld.param.v4.u32 {[[R1:%r[0-9]+]], [[R2:%r[0-9]+]], [[R3:%r[0-9]+]], [[R4:%r[0-9]+]]}, [callee_St4x7_param_0];
   ; CHECK:       ld.param.v2.u32 {[[R5:%r[0-9]+]],  [[R6:%r[0-9]+]]}, [callee_St4x7_param_0+16];
   ; CHECK:       ld.param.u32    [[R7:%r[0-9]+]],   [callee_St4x7_param_0+24];
-  ; CHECK:       st.param.v4.b32 [func_retval0+0],  {[[R1]], [[R2]], [[R3]], [[R4]]};
+  ; CHECK:       st.param.v4.b32 [func_retval0],  {[[R1]], [[R2]], [[R3]], [[R4]]};
   ; CHECK:       st.param.v2.b32 [func_retval0+16], {[[R5]], [[R6]]};
   ; CHECK:       st.param.b32    [func_retval0+24], [[R7]];
   ; CHECK-NEXT:  ret;
@@ -457,7 +457,7 @@ define dso_local void @caller_St4x8(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St4x8_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[32];
-  ; CHECK:       st.param.v4.b32 [param0+0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
+  ; CHECK:       st.param.v4.b32 [param0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
   ; CHECK:       st.param.v4.b32 [param0+16], {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
   ; CHECK:       .param .align 16 .b8 retval0[32];
   ; CHECK:       call.uni (retval0),
@@ -465,7 +465,7 @@ define dso_local void @caller_St4x8(ptr nocapture noundef readonly byval(%struct
   ; CHECK-NEXT:  (
   ; CHECK-NEXT:  param0
   ; CHECK-NEXT:  );
-  ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0+0];
+  ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0];
   ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0+16];
   %call = tail call fastcc [8 x i32] @callee_St4x8(ptr noundef nonnull byval(%struct.St4x8) align 4 %in) #2
   %.fca.0.extract = extractvalue [8 x i32] %call, 0
@@ -500,7 +500,7 @@ define internal fastcc [8 x i32] @callee_St4x8(ptr nocapture noundef readonly by
   ; CHECK-NEXT:  .param .align 16 .b8 callee_St4x8_param_0[32]
   ; CHECK:       ld.param.v4.u32 {[[R1:%r[0-9]+]], [[R2:%r[0-9]+]], [[R3:%r[0-9]+]], [[R4:%r[0-9]+]]}, [callee_St4x8_param_0];
   ; CHECK:       ld.param.v4.u32 {[[R5:%r[0-9]+]], [[R6:%r[0-9]+]], [[R7:%r[0-9]+]], [[R8:%r[0-9]+]]}, [callee_St4x8_param_0+16];
-  ; CHECK:       st.param.v4.b32 [func_retval0+0],  {[[R1]], [[R2]], [[R3]], [[R4]]};
+  ; CHECK:       st.param.v4.b32 [func_retval0],  {[[R1]], [[R2]], [[R3]], [[R4]]};
   ; CHECK:       st.param.v4.b32 [func_retval0+16], {[[R5]], [[R6]], [[R7]], [[R8]]};
   ; CHECK-NEXT:  ret;
   %1 = load i32, ptr %in, align 4
@@ -535,14 +535,14 @@ define dso_local void @caller_St8x1(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St8x1_param_1
   ; CHECK:       )
   ; CHECK:       .param .b64 param0;
-  ; CHECK:       st.param.b64 [param0+0], {{%rd[0-9]+}};
+  ; CHECK:       st.param.b64 [param0], {{%rd[0-9]+}};
   ; CHECK:       .param .align 16 .b8 retval0[8];
   ; CHECK:       call.uni (retval0),
   ; CHECK-NEXT:  callee_St8x1,
   ; CHECK-NEXT:  (
   ; CHECK-NEXT:  param0
   ; CHECK-NEXT:  );
-  ; CHECK:       ld.param.b64 {{%rd[0-9]+}}, [retval0+0];
+  ; CHECK:       ld.param.b64 {{%rd[0-9]+}}, [retval0];
   %1 = load i64, ptr %in, align 8
   %call = tail call fastcc [1 x i64] @callee_St8x1(i64 %1) #2
   %.fca.0.extract = extractvalue [1 x i64] %call, 0
@@ -555,7 +555,7 @@ define internal fastcc [1 x i64] @callee_St8x1(i64 %in.0.val) {
   ; CHECK-LABEL: callee_St8x1(
   ; CHECK-NEXT:  .param .b64 callee_St8x1_param_0
   ; CHECK:       ld.param.u64 [[RD1:%rd[0-9]+]], [callee_St8x1_param_0];
-  ; CHECK:       st.param.b64 [func_retval0+0],  [[RD1]];
+  ; CHECK:       st.param.b64 [func_retval0],  [[RD1]];
   ; CHECK-NEXT:  ret;
   %oldret = insertvalue [1 x i64] poison, i64 %in.0.val, 0
   ret [1 x i64] %oldret
@@ -567,14 +567,14 @@ define dso_local void @caller_St8x2(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St8x2_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[16];
-  ; CHECK:       st.param.v2.b64 [param0+0],  {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
+  ; CHECK:       st.param.v2.b64 [param0],  {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
   ; CHECK:       .param .align 16 .b8 retval0[16];
   ; CHECK:       call.uni (retval0),
   ; CHECK-NEXT:  callee_St8x2,
   ; CHECK-NEXT:  (
   ; CHECK-NEXT:  param0
   ; CHECK-NEXT:  );
-  ; CHECK:       ld.param.v2.b64 {{{%rd[0-9]+}}, {{%rd[0-9]+}}}, [retval0+0];
+  ; CHECK:       ld.param.v2.b64 {{{%rd[0-9]+}}, {{%rd[0-9]+}}}, [retval0];
   %call = tail call fastcc [2 x i64] @callee_St8x2(ptr noundef nonnull byval(%struct.St8x2) align 8 %in) #2
   %.fca.0.extract = extractvalue [2 x i64] %call, 0
   %.fca.1.extract = extractvalue [2 x i64] %call, 1
@@ -589,7 +589,7 @@ define internal fastcc [2 x i64] @callee_St8x2(ptr nocapture noundef readonly by
   ; CHECK-LABEL: callee_St8x2(
   ; CHECK-NEXT:  .param .align 16 .b8 callee_St8x2_param_0[16]
   ; CHECK:       ld.param.v2.u64 {[[RD1:%rd[0-9]+]], [[RD2:%rd[0-9]+]]}, [callee_St8x2_param_0];
-  ; CHECK:       st.param.v2.b64 [func_retval0+0], {[[RD1]], [[RD2]]};
+  ; CHECK:       st.param.v2.b64 [func_retval0], {[[RD1]], [[RD2]]};
   ; CHECK-NEXT:  ret;
   %1 = load i64, ptr %in, align 8
   %arrayidx.1 = getelementptr inbounds [2 x i64], ptr %in, i64 0, i64 1
@@ -605,7 +605,7 @@ define dso_local void @caller_St8x3(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St8x3_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[24];
-  ; CHECK:       st.param.v2.b64 [param0+0],  {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
+  ; CHECK:       st.param.v2.b64 [param0],  {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
   ; CHECK:       st.param.b64    [param0+16], {{%rd[0-9]+}};
   ; CHECK:       .param .align 16 .b8 retval0[24];
   ; CHECK:       call.uni (retval0),
@@ -613,7 +613,7 @@ define dso_local void @caller_St8x3(ptr nocapture noundef readonly byval(%struct
   ; CHECK-NEXT:  (
   ; CHECK-NEXT:  param0
   ; CHECK-NEXT:  );
-  ; CHECK:       ld.param.v2.b64 {{{%rd[0-9]+}}, {{%rd[0-9]+}}}, [retval0+0];
+  ; CHECK:       ld.param.v2.b64 {{{%rd[0-9]+}}, {{%rd[0-9]+}}}, [retval0];
   ; CHECK:       ld.param.b64    {{%rd[0-9]+}}, [retval0+16];
   %call = tail call fastcc [3 x i64] @callee_St8x3(ptr noundef nonnull byval(%struct.St8x3) align 8 %in) #2
   %.fca.0.extract = extractvalue [3 x i64] %call, 0
@@ -633,7 +633,7 @@ define internal fastcc [3 x i64] @callee_St8x3(ptr nocapture noundef readonly by
   ; CHECK-NEXT:  .param .align 16 .b8 callee_St8x3_param_0[24]
   ; CHECK:       ld.param.v2.u64 {[[RD1:%rd[0-9]+]], [[RD2:%rd[0-9]+]]}, [callee_St8x3_param_0];
   ; CHECK:       ld.param.u64    [[RD3:%rd[0-9]+]],  [callee_St8x3_param_0+16];
-  ; CHECK:       st.param.v2.b64 [func_retval0+0],   {[[RD1]], [[RD2]]};
+  ; CHECK:       st.param.v2.b64 [func_retval0],   {[[RD1]], [[RD2]]};
   ; CHECK:       st.param.b64    [func_retval0+16],  [[RD3]];
   ; CHECK-NEXT:  ret;
   %1 = load i64, ptr %in, align 8
@@ -653,7 +653,7 @@ define dso_local void @caller_St8x4(ptr nocapture noundef readonly byval(%struct
   ; CHECK:               .param .b64 caller_St8x4_param_1
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[32];
-  ; CHECK:       st.param.v2.b64 [param0+0],  {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
+  ; CHECK:       st.param.v2.b64 [param0],  {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
   ; CHECK:       st.param.v2.b64 [param0+16], {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
   ; CHECK:       .param .align 16 .b8 retval0[32];
   ; CHECK:       call.uni (retval0),
@@ -661,7 +661,7 @@ define dso_local void @caller_St8x4(ptr nocapture noundef readonly byval(%struct
   ; CHECK-NEXT:  (
   ; CHECK-NEXT:  param0
   ; CHECK-NEXT:  );
-  ; CHECK:       ld.param.v2.b64 {{{%rd[0-9]+}}, {{%rd[0-9]+}}}, [retval0+0];
+  ; CHECK:       ld.param.v2.b64 {{{%rd[0-9]+}}, {{%rd[0-9]+}}}, [retval0];
   ; CHECK:       ld.param.v2.b64 {{{%rd[0-9]+}}, {{%rd[0-9]+}}}, [retval0+16];
   %call = tail call fastcc [4 x i64] @callee_St8x4(ptr noundef nonnull byval(%struct.St8x4) align 8 %in) #2
   %.fca.0.extract = extractvalue [4 x i64] %call, 0
@@ -684,7 +684,7 @@ define internal fastcc [4 x i64] @callee_St8x4(ptr nocapture noundef readonly by
   ; CHECK-NEXT:  .param .align 16 .b8 callee_St8x4_param_0[32]
   ; CHECK:       ld.param.v2.u64 {[[RD1:%rd[0-9]+]], [[RD2:%rd[0-9]+]]}, [callee_St8x4_param_0];
   ; CHECK:       ld.param.v2.u64 {[[RD3:%rd[0-9]+]], [[RD4:%rd[0-9]+]]}, [callee_St8x4_param_0+16];
-  ; CHECK:       st.param.v2.b64 [func_retval0+0],  {[[RD1]], [[RD2]]};
+  ; CHECK:       st.param.v2.b64 [func_retval0],  {[[RD1]], [[RD2]]};
   ; CHECK:       st.param.v2.b64 [func_retval0+16], {[[RD3]], [[RD4]]};
   ; CHECK-NEXT:  ret;
   %1 = load i64, ptr %in, align 8
@@ -708,7 +708,7 @@ define private fastcc [4 x i32] @callee_St4x4_private(ptr nocapture noundef read
   ; CHECK-LABEL: callee_St4x4_private(
   ; CHECK-NEXT:  .param .align 16 .b8 callee_St4x4_private_param_0[16]
   ; CHECK:       ld.param.v4.u32 {[[R1:%r[0-9]+]], [[R2:%r[0-9]+]], [[R3:%r[0-9]+]], [[R4:%r[0-9]+]]}, [callee_St4x4_private_param_0];
-  ; CHECK:       st.param.v4.b32 [func_retval0+0], {[[R1]], [[R2]], [[R3]], [[R4]]};
+  ; CHECK:       st.param.v4.b32 [func_retval0], {[[R1]], [[R2]], [[R3]], [[R4]]};
   ; CHECK-NEXT:  ret;
   %1 = load i32, ptr %in, align 4
   %arrayidx.1 = getelementptr inbounds [4 x i32], ptr %in, i64 0, i64 1
@@ -735,7 +735,7 @@ define external fastcc [4 x i32] @callee_St4x4_external(ptr nocapture noundef re
   ; CHECK:       ld.param.u32 [[R2:%r[0-9]+]],   [callee_St4x4_external_param_0+4];
   ; CHECK:       ld.param.u32 [[R3:%r[0-9]+]],   [callee_St4x4_external_param_0+8];
   ; CHECK:       ld.param.u32 [[R4:%r[0-9]+]],   [callee_St4x4_external_param_0+12];
-  ; CHECK:       st.param.b32 [func_retval0+0],  [[R1]];
+  ; CHECK:       st.param.b32 [func_retval0],  [[R1]];
   ; CHECK:       st.param.b32 [func_retval0+4],  [[R2]];
   ; CHECK:       st.param.b32 [func_retval0+8],  [[R3]];
   ; CHECK:       st.param.b32 [func_retval0+12], [[R4]];

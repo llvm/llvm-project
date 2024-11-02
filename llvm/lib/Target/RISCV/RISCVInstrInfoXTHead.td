@@ -235,13 +235,13 @@ class THStoreUpdate<bits<5> funct5, string opcodestr>
 //===----------------------------------------------------------------------===//
 
 multiclass THVdotVMAQA_VX<string opcodestr, bits<6> funct6> {
-  let RVVConstraint = WidenV, ActiveElementsAffectResult = 1 in
+  let RVVConstraint = WidenV, ElementsDependOn = EltDepsVLMask in
   def _VX : THVdotALUrVX<funct6, OPMVX, opcodestr # ".vx", EarlyClobber=1>;
 }
 
 multiclass THVdotVMAQA<string opcodestr, bits<6> funct6>
     : THVdotVMAQA_VX<opcodestr, funct6> {
-  let RVVConstraint = WidenV, ActiveElementsAffectResult = 1 in
+  let RVVConstraint = WidenV, ElementsDependOn = EltDepsVLMask in
   def _VV   : THVdotALUrVV<funct6, OPMVX, opcodestr # ".vv", EarlyClobber=1>;
 }
 
@@ -270,7 +270,7 @@ def TH_REVW : THRev_r<0b10010, 0b00, "th.revw">;
 
 let Predicates = [HasVendorXTHeadBs], DecoderNamespace = "XTHeadBs",
     IsSignExtendingOpW = 1 in
-def TH_TST : RVBShift_ri<0b10001, 0b001, OPC_CUSTOM_0, "th.tst">,
+def TH_TST : THShift_ri<0b10001, 0b001, "th.tst">,
              Sched<[WriteSingleBitImm, ReadSingleBitImm]>;
 
 let Predicates = [HasVendorXTHeadCondMov] in {

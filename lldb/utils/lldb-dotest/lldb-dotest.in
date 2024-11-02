@@ -9,6 +9,7 @@ arch = '@LLDB_TEST_ARCH@'
 executable = '@LLDB_TEST_EXECUTABLE_CONFIGURED@'
 compiler = '@LLDB_TEST_COMPILER_CONFIGURED@'
 dsymutil = '@LLDB_TEST_DSYMUTIL_CONFIGURED@'
+make = '@LLDB_TEST_MAKE_CONFIGURED@'
 lldb_build_dir = '@LLDB_TEST_BUILD_DIRECTORY_CONFIGURED@'
 lldb_build_intel_pt = "@LLDB_BUILD_INTEL_PT@"
 lldb_framework_dir = "@LLDB_FRAMEWORK_DIR_CONFIGURED@"
@@ -35,6 +36,7 @@ if __name__ == '__main__':
     cmd.extend(['--executable', executable])
     cmd.extend(['--compiler', compiler])
     cmd.extend(['--dsymutil', dsymutil])
+    cmd.extend(['--make', make])
     cmd.extend(['--lldb-libs-dir', lldb_libs_dir])
     cmd.extend(['--llvm-tools-dir', llvm_tools_dir])
     if has_libcxx:

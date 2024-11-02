@@ -30,7 +30,7 @@ define i8 @xor_2(i8 %a, i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: @xor_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -124
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[TMP1]]
-; CHECK-NEXT:    [[NOT_AB:%.*]] = xor i8 [[TMP2]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT_AB:%.*]] = xor i8 [[A:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret i8 [[NOT_AB]]
 ;
   %nx = xor i8 %x, -1
@@ -45,7 +45,7 @@ define i8 @xor_fail(i8 %a, i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: @xor_fail(
 ; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], i8 [[NX]], i8 [[Y:%.*]]
-; CHECK-NEXT:    [[AB:%.*]] = xor i8 [[B]], [[A:%.*]]
+; CHECK-NEXT:    [[AB:%.*]] = xor i8 [[A:%.*]], [[B]]
 ; CHECK-NEXT:    [[NOT_AB:%.*]] = xor i8 [[AB]], -1
 ; CHECK-NEXT:    ret i8 [[NOT_AB]]
 ;
@@ -91,7 +91,7 @@ define i8 @add_fail(i8 %a, i1 %c, i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], 123
 ; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], i8 [[NX]], i8 [[YY]]
-; CHECK-NEXT:    [[AB:%.*]] = add i8 [[B]], [[A]]
+; CHECK-NEXT:    [[AB:%.*]] = add i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[NOT_AB:%.*]] = xor i8 [[AB]], -1
 ; CHECK-NEXT:    ret i8 [[NOT_AB]]
 ;
@@ -605,7 +605,7 @@ define i32 @test_inv_free_i32(i1 %c1, i1 %c2, i32 %c3, i32 %c4) {
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, [[B1]] ], [ -1, [[B2]] ], [ [[C3:%.*]], [[B3]] ]
-; CHECK-NEXT:    [[COND:%.*]] = xor i32 [[TMP0]], [[C4:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = xor i32 [[C4:%.*]], [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
@@ -682,7 +682,7 @@ define i32 @test_inv_free_i32_newinst(i1 %c1, i1 %c2, i32 %c3, i32 %c4) {
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ -1, [[B1]] ], [ 0, [[B2]] ], [ [[ASHR]], [[B3]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i32 [[VAL]], [[C4:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i32 [[C4:%.*]], [[VAL]]
 ; CHECK-NEXT:    [[COND:%.*]] = xor i32 [[TMP0]], -1
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
