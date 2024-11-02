@@ -75,7 +75,7 @@ public:
 
   // The default copy constructor is deleted due to atomic flags. Define one for
   // places where no atomic is needed.
-  Symbol(const Symbol &o) { memcpy(this, &o, sizeof(o)); }
+  Symbol(const Symbol &o) { memcpy(static_cast<void *>(this), &o, sizeof(o)); }
 
 protected:
   const char *nameData;

@@ -2991,7 +2991,7 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
 
       // Fabricate an empty template parameter list for the invented header.
       return TemplateParameterList::Create(Context, SourceLocation(),
-                                           SourceLocation(), std::nullopt,
+                                           SourceLocation(), {},
                                            SourceLocation(), nullptr);
     }
 
@@ -4381,8 +4381,20 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   SmallVector<VarTemplatePartialSpecializationDecl *, 4> PartialSpecs;
   Template->getPartialSpecializations(PartialSpecs);
 
-  for (unsigned I = 0, N = PartialSpecs.size(); I != N; ++I) {
-    VarTemplatePartialSpecializationDecl *Partial = PartialSpecs[I];
+  for (VarTemplatePartialSpecializationDecl *Partial : PartialSpecs) {
+    // C++ [temp.spec.partial.member]p2:
+    //   If the primary member template is explicitly specialized for a given
+    //   (implicit) specialization of the enclosing class template, the partial
+    //   specializations of the member template are ignored for this
+    //   specialization of the enclosing class template. If a partial
+    //   specialization of the member template is explicitly specialized for a
+    //   given (implicit) specialization of the enclosing class template, the
+    //   primary member template and its other partial specializations are still
+    //   considered for this specialization of the enclosing class template.
+    if (Template->getMostRecentDecl()->isMemberSpecialization() &&
+        !Partial->getMostRecentDecl()->isMemberSpecialization())
+      continue;
+
     TemplateDeductionInfo Info(FailedCandidates.getLocation());
 
     if (TemplateDeductionResult Result =

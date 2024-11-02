@@ -300,6 +300,7 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
       TLI.setUnavailable(LibFunc_expf);
       TLI.setUnavailable(LibFunc_floorf);
       TLI.setUnavailable(LibFunc_fmodf);
+      TLI.setUnavailable(LibFunc_hypotf);
       TLI.setUnavailable(LibFunc_log10f);
       TLI.setUnavailable(LibFunc_logf);
       TLI.setUnavailable(LibFunc_modff);
@@ -331,6 +332,7 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_floorl);
     TLI.setUnavailable(LibFunc_fmodl);
     TLI.setUnavailable(LibFunc_frexpl);
+    TLI.setUnavailable(LibFunc_hypotl);
     TLI.setUnavailable(LibFunc_ldexpl);
     TLI.setUnavailable(LibFunc_log10l);
     TLI.setUnavailable(LibFunc_logl);
@@ -382,6 +384,12 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
       TLI.setUnavailable(LibFunc_rintf);
       TLI.setUnavailable(LibFunc_round);
       TLI.setUnavailable(LibFunc_roundf);
+      TLI.setUnavailable(LibFunc_scalbln);
+      TLI.setUnavailable(LibFunc_scalblnf);
+      TLI.setUnavailable(LibFunc_scalblnl);
+      TLI.setUnavailable(LibFunc_scalbn);
+      TLI.setUnavailable(LibFunc_scalbnf);
+      TLI.setUnavailable(LibFunc_scalbnl);
       TLI.setUnavailable(LibFunc_trunc);
       TLI.setUnavailable(LibFunc_truncf);
     }
@@ -404,6 +412,8 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_nearbyintl);
     TLI.setUnavailable(LibFunc_rintl);
     TLI.setUnavailable(LibFunc_roundl);
+    TLI.setUnavailable(LibFunc_scalblnl);
+    TLI.setUnavailable(LibFunc_scalbnl);
     TLI.setUnavailable(LibFunc_truncl);
 
     // Win32 does not support these functions, but

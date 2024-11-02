@@ -63,7 +63,6 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -953,8 +952,7 @@ bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
   this->Ctx = &Fn.getContext();
   this->Entry = &Entry;
   this->PSI = PSI;
-  this->OptForSize = Entry.getParent()->hasOptSize() ||
-                     llvm::shouldOptimizeForSize(Entry.getParent(), PSI, BFI,
+  this->OptForSize = llvm::shouldOptimizeForSize(Entry.getParent(), PSI, BFI,
                                                  PGSOQueryType::IRPass);
 
   // Collect all constant candidates.

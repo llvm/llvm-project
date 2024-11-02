@@ -581,26 +581,27 @@ Constant *llvm::ConstantFoldUnaryInstruction(unsigned Opcode, Constant *C) {
     case Instruction::FNeg:
       return ConstantFP::get(C->getContext(), neg(CV));
     }
-  } else if (auto *VTy = dyn_cast<FixedVectorType>(C->getType())) {
-
-    Type *Ty = IntegerType::get(VTy->getContext(), 32);
+  } else if (auto *VTy = dyn_cast<VectorType>(C->getType())) {
     // Fast path for splatted constants.
     if (Constant *Splat = C->getSplatValue())
       if (Constant *Elt = ConstantFoldUnaryInstruction(Opcode, Splat))
         return ConstantVector::getSplat(VTy->getElementCount(), Elt);
 
-    // Fold each element and create a vector constant from those constants.
-    SmallVector<Constant *, 16> Result;
-    for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i) {
-      Constant *ExtractIdx = ConstantInt::get(Ty, i);
-      Constant *Elt = ConstantExpr::getExtractElement(C, ExtractIdx);
-      Constant *Res = ConstantFoldUnaryInstruction(Opcode, Elt);
-      if (!Res)
-        return nullptr;
-      Result.push_back(Res);
-    }
+    if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
+      // Fold each element and create a vector constant from those constants.
+      Type *Ty = IntegerType::get(FVTy->getContext(), 32);
+      SmallVector<Constant *, 16> Result;
+      for (unsigned i = 0, e = FVTy->getNumElements(); i != e; ++i) {
+        Constant *ExtractIdx = ConstantInt::get(Ty, i);
+        Constant *Elt = ConstantExpr::getExtractElement(C, ExtractIdx);
+        Constant *Res = ConstantFoldUnaryInstruction(Opcode, Elt);
+        if (!Res)
+          return nullptr;
+        Result.push_back(Res);
+      }
 
-    return ConstantVector::get(Result);
+      return ConstantVector::get(Result);
+    }
   }
 
   // We don't know how to fold this.
@@ -901,11 +902,6 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         Constant *ExtractIdx = ConstantInt::get(Ty, i);
         Constant *LHS = ConstantExpr::getExtractElement(C1, ExtractIdx);
         Constant *RHS = ConstantExpr::getExtractElement(C2, ExtractIdx);
-
-        // If any element of a divisor vector is zero, the whole op is poison.
-        if (Instruction::isIntDivRem(Opcode) && RHS->isNullValue())
-          return PoisonValue::get(VTy);
-
         Constant *Res = ConstantExpr::isDesirableBinOp(Opcode)
                             ? ConstantExpr::get(Opcode, LHS, RHS)
                             : ConstantFoldBinaryInstruction(Opcode, LHS, RHS);

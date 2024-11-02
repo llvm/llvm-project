@@ -83,6 +83,14 @@ FunctionPass *createPromoteMemoryToRegisterPass();
 
 //===----------------------------------------------------------------------===//
 //
+// RegToMemWrapperPass - This pass is used to demote registers to memory
+// references. In basically undoes the PromoteMemoryToRegister pass to make cfg
+// hacking easier.
+//
+FunctionPass *createRegToMemWrapperPass();
+
+//===----------------------------------------------------------------------===//
+//
 // LoopSimplify - Insert Pre-header blocks into the CFG for every function in
 // the module.  This pass updates dominator information, loop information, and
 // does not add critical edges to the CFG.

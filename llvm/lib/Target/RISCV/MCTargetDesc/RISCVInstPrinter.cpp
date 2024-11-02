@@ -75,7 +75,7 @@ void RISCVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   printAnnotation(O, Annot);
 }
 
-void RISCVInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) const {
+void RISCVInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
   markup(O, Markup::Register) << getRegisterName(Reg);
 }
 

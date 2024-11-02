@@ -1060,6 +1060,9 @@ void CXXRecordDecl::addedMember(Decl *D) {
     if (isUnion() && !Field->isAnonymousStructOrUnion())
       data().HasVariantMembers = true;
 
+    if (isUnion() && IsFirstField)
+      data().HasUninitializedFields = true;
+
     // C++0x [class]p9:
     //   A POD struct is a class that is both a trivial class and a
     //   standard-layout class, and has no non-static data members of type
@@ -1128,7 +1131,10 @@ void CXXRecordDecl::addedMember(Decl *D) {
         data().DefaultedCopyConstructorIsDeleted = true;
     }
 
-    if (!Field->hasInClassInitializer() && !Field->isMutable()) {
+    if (isUnion() && !Field->isMutable()) {
+      if (Field->hasInClassInitializer())
+        data().HasUninitializedFields = false;
+    } else if (!Field->hasInClassInitializer() && !Field->isMutable()) {
       if (CXXRecordDecl *FieldType = T->getAsCXXRecordDecl()) {
         if (FieldType->hasDefinition() && !FieldType->allowConstDefaultInit())
           data().HasUninitializedFields = true;
@@ -1414,7 +1420,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
       if (const RecordType *RT = dyn_cast<RecordType>(Ty))
         data().IsHLSLIntangible |= RT->getAsCXXRecordDecl()->isHLSLIntangible();
       else
-        data().IsHLSLIntangible |= Ty->isHLSLIntangibleType();
+        data().IsHLSLIntangible |= (Ty->isHLSLAttributedResourceType() ||
+                                    Ty->isHLSLBuiltinIntangibleType());
     }
   }
 
@@ -2023,7 +2030,7 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
   if (auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(this)) {
     auto From = TD->getInstantiatedFrom();
     if (auto *CTD = From.dyn_cast<ClassTemplateDecl *>()) {
-      while (!CTD->hasMemberSpecialization()) {
+      while (!CTD->isMemberSpecialization()) {
         if (auto *NewCTD = CTD->getInstantiatedFromMemberTemplate())
           CTD = NewCTD;
         else
@@ -2033,7 +2040,7 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
     }
     if (auto *CTPSD =
             From.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
-      while (!CTPSD->hasMemberSpecialization()) {
+      while (!CTPSD->isMemberSpecialization()) {
         if (auto *NewCTPSD = CTPSD->getInstantiatedFromMemberTemplate())
           CTPSD = NewCTPSD;
         else
@@ -3286,8 +3293,7 @@ UsingPackDecl *UsingPackDecl::Create(ASTContext &C, DeclContext *DC,
 UsingPackDecl *UsingPackDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                                  unsigned NumExpansions) {
   size_t Extra = additionalSizeToAlloc<NamedDecl *>(NumExpansions);
-  auto *Result =
-      new (C, ID, Extra) UsingPackDecl(nullptr, nullptr, std::nullopt);
+  auto *Result = new (C, ID, Extra) UsingPackDecl(nullptr, nullptr, {});
   Result->NumExpansions = NumExpansions;
   auto *Trail = Result->getTrailingObjects<NamedDecl *>();
   for (unsigned I = 0; I != NumExpansions; ++I)
@@ -3436,7 +3442,7 @@ DecompositionDecl *DecompositionDecl::CreateDeserialized(ASTContext &C,
   size_t Extra = additionalSizeToAlloc<BindingDecl *>(NumBindings);
   auto *Result = new (C, ID, Extra)
       DecompositionDecl(C, nullptr, SourceLocation(), SourceLocation(),
-                        QualType(), nullptr, StorageClass(), std::nullopt);
+                        QualType(), nullptr, StorageClass(), {});
   // Set up and clean out the bindings array.
   Result->NumBindings = NumBindings;
   auto *Trail = Result->getTrailingObjects<BindingDecl *>();

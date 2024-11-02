@@ -78,7 +78,7 @@ SourceRange StackAddrEscapeChecker::genName(raw_ostream &os, const MemRegion *R,
     const CompoundLiteralExpr *CL = CR->getLiteralExpr();
     os << "stack memory associated with a compound literal "
           "declared on line "
-       << SM.getExpansionLineNumber(CL->getBeginLoc()) << " returned to caller";
+       << SM.getExpansionLineNumber(CL->getBeginLoc());
     range = CL->getSourceRange();
   } else if (const auto *AR = dyn_cast<AllocaRegion>(R)) {
     const Expr *ARE = AR->getExpr();

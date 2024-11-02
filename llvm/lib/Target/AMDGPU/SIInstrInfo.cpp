@@ -2773,9 +2773,8 @@ MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     }
 
   } else if (Src0.isReg() && !Src1.isReg()) {
-    // src0 should always be able to support any operand type, so no need to
-    // check operand legality.
-    CommutedMI = swapRegAndNonRegOperand(MI, Src0, Src1);
+    if (isOperandLegal(MI, Src1Idx, &Src0))
+      CommutedMI = swapRegAndNonRegOperand(MI, Src0, Src1);
   } else if (!Src0.isReg() && Src1.isReg()) {
     if (isOperandLegal(MI, Src1Idx, &Src0))
       CommutedMI = swapRegAndNonRegOperand(MI, Src1, Src0);
@@ -8918,6 +8917,7 @@ bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI,
   uint16_t Opcode = MI.getOpcode();
   return IsNullOrVectorRegister &&
          (isSGPRSpill(Opcode) || isWWMRegSpillOpcode(Opcode) ||
+          Opcode == AMDGPU::IMPLICIT_DEF ||
           (!MI.isTerminator() && Opcode != AMDGPU::COPY &&
            MI.modifiesRegister(AMDGPU::EXEC, &RI)));
 }
