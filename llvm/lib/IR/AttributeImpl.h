@@ -20,7 +20,6 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/ConstantRange.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 #include <cstddef>
@@ -47,7 +46,6 @@ protected:
     IntAttrEntry,
     StringAttrEntry,
     TypeAttrEntry,
-    ConstantRangeAttrEntry,
   };
 
   AttributeImpl(AttrEntryKind KindID) : KindID(KindID) {}
@@ -61,9 +59,6 @@ public:
   bool isIntAttribute() const { return KindID == IntAttrEntry; }
   bool isStringAttribute() const { return KindID == StringAttrEntry; }
   bool isTypeAttribute() const { return KindID == TypeAttrEntry; }
-  bool isConstantRangeAttribute() const {
-    return KindID == ConstantRangeAttrEntry;
-  }
 
   bool hasAttribute(Attribute::AttrKind A) const;
   bool hasAttribute(StringRef Kind) const;
@@ -77,8 +72,6 @@ public:
 
   Type *getValueAsType() const;
 
-  ConstantRange getValueAsConstantRange() const;
-
   /// Used when sorting the attributes.
   bool operator<(const AttributeImpl &AI) const;
 
@@ -89,10 +82,8 @@ public:
       Profile(ID, getKindAsEnum(), getValueAsInt());
     else if (isStringAttribute())
       Profile(ID, getKindAsString(), getValueAsString());
-    else if (isTypeAttribute())
-      Profile(ID, getKindAsEnum(), getValueAsType());
     else
-      Profile(ID, getKindAsEnum(), getValueAsConstantRange());
+      Profile(ID, getKindAsEnum(), getValueAsType());
   }
 
   static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind) {
@@ -116,13 +107,6 @@ public:
                       Type *Ty) {
     ID.AddInteger(Kind);
     ID.AddPointer(Ty);
-  }
-
-  static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
-                      const ConstantRange &CR) {
-    ID.AddInteger(Kind);
-    ID.AddInteger(CR.getLower());
-    ID.AddInteger(CR.getUpper());
   }
 };
 
@@ -210,16 +194,6 @@ public:
       : EnumAttributeImpl(TypeAttrEntry, Kind), Ty(Ty) {}
 
   Type *getTypeValue() const { return Ty; }
-};
-
-class ConstantRangeAttributeImpl : public EnumAttributeImpl {
-  ConstantRange CR;
-
-public:
-  ConstantRangeAttributeImpl(Attribute::AttrKind Kind, const ConstantRange &CR)
-      : EnumAttributeImpl(ConstantRangeAttrEntry, Kind), CR(CR) {}
-
-  ConstantRange getConstantRangeValue() const { return CR; }
 };
 
 class AttributeBitSet {

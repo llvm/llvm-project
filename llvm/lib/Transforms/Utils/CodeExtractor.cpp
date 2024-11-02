@@ -984,7 +984,6 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::WriteOnly:
       case Attribute::Writable:
       case Attribute::DeadOnUnwind:
-      case Attribute::Range:
       //  These are not really attributes.
       case Attribute::None:
       case Attribute::EndAttrKinds:
