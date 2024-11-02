@@ -148,40 +148,22 @@ public:
 
 // Allow structured bindings on StringMapEntry.
 
-namespace detail {
-template <std::size_t Index> struct StringMapEntryGet;
-
-template <> struct StringMapEntryGet<0> {
-  template <typename ValueTy> static StringRef get(StringMapEntry<ValueTy> &E) {
-    return E.getKey();
-  }
-
-  template <typename ValueTy>
-  static StringRef get(const StringMapEntry<ValueTy> &E) {
-    return E.getKey();
-  }
-};
-
-template <> struct StringMapEntryGet<1> {
-  template <typename ValueTy> static ValueTy &get(StringMapEntry<ValueTy> &E) {
-    return E.getValue();
-  }
-
-  template <typename ValueTy>
-  static const ValueTy &get(const StringMapEntry<ValueTy> &E) {
-    return E.getValue();
-  }
-};
-} // namespace detail
-
 template <std::size_t Index, typename ValueTy>
 decltype(auto) get(StringMapEntry<ValueTy> &E) {
-  return detail::StringMapEntryGet<Index>::get(E);
+  static_assert(Index == 0 || Index == 1);
+  if constexpr (Index == 0)
+    return E.getKey();
+  if constexpr (Index == 1)
+    return E.getValue();
 }
 
 template <std::size_t Index, typename ValueTy>
 decltype(auto) get(const StringMapEntry<ValueTy> &E) {
-  return detail::StringMapEntryGet<Index>::get(E);
+  static_assert(Index == 0 || Index == 1);
+  if constexpr (Index == 0)
+    return E.getKey();
+  if constexpr (Index == 1)
+    return E.getValue();
 }
 
 } // end namespace llvm
