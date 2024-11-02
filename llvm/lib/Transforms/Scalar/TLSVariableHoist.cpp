@@ -234,7 +234,7 @@ Instruction *TLSVariableHoistPass::genBitCastInst(Function &Fn,
   BasicBlock::iterator Iter = findInsertPos(Fn, GV, PosBB);
   Type *Ty = GV->getType();
   auto *CastInst = new BitCastInst(GV, Ty, "tls_bitcast");
-  CastInst->insertAt(PosBB, Iter);
+  CastInst->insertInto(PosBB, Iter);
   return CastInst;
 }
 

@@ -1695,7 +1695,7 @@ TEST(InstructionsTest, InsertAtBegin) {
   BasicBlock *BB = &*F->begin();
   Instruction *Ret = &*BB->begin();
   Instruction *I = BinaryOperator::CreateAdd(ArgA, ArgB);
-  auto It = I->insertAt(BB, BB->begin());
+  auto It = I->insertInto(BB, BB->begin());
   EXPECT_EQ(&*It, I);
   EXPECT_EQ(I->getNextNode(), Ret);
 }
@@ -1714,7 +1714,7 @@ TEST(InstructionsTest, InsertAtEnd) {
   BasicBlock *BB = &*F->begin();
   Instruction *Ret = &*BB->begin();
   Instruction *I = BinaryOperator::CreateAdd(ArgA, ArgB);
-  auto It = I->insertAt(BB, BB->end());
+  auto It = I->insertInto(BB, BB->end());
   EXPECT_EQ(&*It, I);
   EXPECT_EQ(Ret->getNextNode(), I);
 }

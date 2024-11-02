@@ -92,8 +92,8 @@ public:
   // These functions and classes need access to the instruction list.
   friend void Instruction::removeFromParent();
   friend iplist<Instruction>::iterator Instruction::eraseFromParent();
-  friend BasicBlock::iterator Instruction::insertAt(BasicBlock *BB,
-                                                    BasicBlock::iterator It);
+  friend BasicBlock::iterator Instruction::insertInto(BasicBlock *BB,
+                                                      BasicBlock::iterator It);
   friend class llvm::SymbolTableListTraits<llvm::Instruction>;
   friend class llvm::ilist_node_with_parent<llvm::Instruction, llvm::BasicBlock>;
 
@@ -378,7 +378,7 @@ private:
   /// Return the underlying instruction list container.
   /// This is deliberately private because we have implemented an adequate set
   /// of functions to modify the list, including BasicBlock::splice(),
-  /// BasicBlock::erase(), Instruction::insertAt() etc.
+  /// BasicBlock::erase(), Instruction::insertInto() etc.
   const InstListType &getInstList() const { return InstList; }
   InstListType &getInstList() { return InstList; }
 
