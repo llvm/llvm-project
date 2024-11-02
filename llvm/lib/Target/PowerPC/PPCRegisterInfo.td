@@ -341,7 +341,9 @@ def GPRC : RegisterClass<"PPC", [i32,f32], 32, (add (sequence "R%u", 2, 12),
   // This also helps setting the correct `NumOfGPRsSaved' in traceback table.
   let AltOrders = [(add (sub GPRC, R2), R2),
                    (add (sequence "R%u", 2, 12),
-                        (sequence "R%u", 31, 13), R0, R1, FP, BP)];
+                        (sequence "R%u", 31, 13), R0, R1, FP, BP),
+                   (add (sequence "R%u", 3, 12),
+                        (sequence "R%u", 31, 13), R2, R0, R1, FP, BP)];
   let AltOrderSelect = [{
     return MF.getSubtarget<PPCSubtarget>().getGPRAllocationOrderIdx();
   }];
@@ -354,7 +356,9 @@ def G8RC : RegisterClass<"PPC", [i64], 64, (add (sequence "X%u", 2, 12),
   // put it at the end of the list.
   let AltOrders = [(add (sub G8RC, X2), X2),
                    (add (sequence "X%u", 2, 12),
-                        (sequence "X%u", 31, 13), X0, X1, FP8, BP8)];
+                        (sequence "X%u", 31, 13), X0, X1, FP8, BP8),
+                   (add (sequence "X%u", 3, 12),
+                        (sequence "X%u", 31, 13), X2, X0, X1, FP8, BP8)];
   let AltOrderSelect = [{
     return MF.getSubtarget<PPCSubtarget>().getGPRAllocationOrderIdx();
   }];
@@ -368,7 +372,9 @@ def GPRC_NOR0 : RegisterClass<"PPC", [i32,f32], 32, (add (sub GPRC, R0), ZERO)> 
   // put it at the end of the list.
   let AltOrders = [(add (sub GPRC_NOR0, R2), R2),
                    (add (sequence "R%u", 2, 12),
-                        (sequence "R%u", 31, 13), R1, FP, BP, ZERO)];
+                        (sequence "R%u", 31, 13), R1, FP, BP, ZERO),
+                   (add (sequence "R%u", 3, 12),
+                        (sequence "R%u", 31, 13), R2, R1, FP, BP, ZERO)];
   let AltOrderSelect = [{
     return MF.getSubtarget<PPCSubtarget>().getGPRAllocationOrderIdx();
   }];
@@ -379,7 +385,9 @@ def G8RC_NOX0 : RegisterClass<"PPC", [i64], 64, (add (sub G8RC, X0), ZERO8)> {
   // put it at the end of the list.
   let AltOrders = [(add (sub G8RC_NOX0, X2), X2),
                    (add (sequence "X%u", 2, 12),
-                        (sequence "X%u", 31, 13), X1, FP8, BP8, ZERO8)];
+                        (sequence "X%u", 31, 13), X1, FP8, BP8, ZERO8),
+                   (add (sequence "X%u", 3, 12),
+                        (sequence "X%u", 31, 13), X2, X1, FP8, BP8, ZERO8)];
   let AltOrderSelect = [{
     return MF.getSubtarget<PPCSubtarget>().getGPRAllocationOrderIdx();
   }];

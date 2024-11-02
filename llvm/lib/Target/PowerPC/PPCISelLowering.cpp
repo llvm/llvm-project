@@ -3437,6 +3437,8 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   if (Subtarget.hasAIXShLibTLSModelOpt())
     updateForAIXShLibTLSModelOpt(Model, DAG, getTargetMachine());
 
+  setUsesTOCBasePtr(DAG);
+
   bool IsTLSLocalExecModel = Model == TLSModel::LocalExec;
 
   if (IsTLSLocalExecModel || Model == TLSModel::InitialExec) {
