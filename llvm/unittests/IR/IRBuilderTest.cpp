@@ -872,15 +872,15 @@ TEST_F(IRBuilderTest, createFunction) {
 
 TEST_F(IRBuilderTest, DIBuilder) {
   auto GetLastDbgRecord = [](const Instruction *I) -> DbgRecord * {
-    if (I->getDbgValueRange().empty())
+    if (I->getDbgRecordRange().empty())
       return nullptr;
-    return &*std::prev(I->getDbgValueRange().end());
+    return &*std::prev(I->getDbgRecordRange().end());
   };
 
   auto ExpectOrder = [&](DbgInstPtr First, BasicBlock::iterator Second) {
     if (M->IsNewDbgInfoFormat) {
       EXPECT_TRUE(First.is<DbgRecord *>());
-      EXPECT_FALSE(Second->getDbgValueRange().empty());
+      EXPECT_FALSE(Second->getDbgRecordRange().empty());
       EXPECT_EQ(GetLastDbgRecord(&*Second), First.get<DbgRecord *>());
     } else {
       EXPECT_TRUE(First.is<Instruction *>());
@@ -951,7 +951,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
           I, VarX, DIB.createExpression(), VarLoc, BB);
       I = Builder.CreateAlloca(Builder.getInt32Ty());
       ExpectOrder(VarXValue, I->getIterator());
-      EXPECT_EQ(BB->getTrailingDPValues(), nullptr);
+      EXPECT_EQ(BB->getTrailingDbgRecords(), nullptr);
     }
     { /* dbg.declare | DPValue::Declare */
       ExpectOrder(DIB.insertDeclare(I, VarY, DIB.createExpression(), VarLoc, I),
@@ -961,7 +961,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
           DIB.insertDeclare(I, VarY, DIB.createExpression(), VarLoc, BB);
       I = Builder.CreateAlloca(Builder.getInt32Ty());
       ExpectOrder(VarYDeclare, I->getIterator());
-      EXPECT_EQ(BB->getTrailingDPValues(), nullptr);
+      EXPECT_EQ(BB->getTrailingDbgRecords(), nullptr);
     }
     { /* dbg.assign | DPValue::Assign */
       I = Builder.CreateAlloca(Builder.getInt32Ty());
@@ -974,7 +974,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
                               DIB.createExpression(), VarLoc);
       I = Builder.CreateAlloca(Builder.getInt32Ty());
       ExpectOrder(VarXAssign, I->getIterator());
-      EXPECT_EQ(BB->getTrailingDPValues(), nullptr);
+      EXPECT_EQ(BB->getTrailingDbgRecords(), nullptr);
     }
 
     Builder.CreateRet(nullptr);
