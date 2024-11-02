@@ -14,18 +14,6 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-AST_MATCHER_P(CallExpr, hasAnyOtherArgument,
-              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
-  for (const auto *Arg : llvm::drop_begin(Node.arguments())) {
-    ast_matchers::internal::BoundNodesTreeBuilder Result(*Builder);
-    if (InnerMatcher.matches(*Arg, Finder, &Result)) {
-      *Builder = std::move(Result);
-      return true;
-    }
-  }
-  return false;
-}
-
 AST_MATCHER_P(IntegerLiteral, hasSameValueAs, std::string, ID) {
   return Builder->removeBindings(
       [this, &Node](const ast_matchers::internal::BoundNodesMap &Nodes) {
@@ -43,27 +31,28 @@ UndefinedSprintfOverlapCheck::UndefinedSprintfOverlapCheck(
       SprintfRegex(Options.get("SprintfFunction", "(::std)?::(sn?printf)")) {}
 
 void UndefinedSprintfOverlapCheck::registerMatchers(MatchFinder *Finder) {
-  auto FirstArg = declRefExpr(to(varDecl().bind("firstArg")));
-  auto OtherRefToArg = declRefExpr(to(varDecl(equalsBoundNode("firstArg"))))
+  auto FirstArg = declRefExpr(to(varDecl().bind("firstArgDecl")));
+  auto OtherRefToArg = declRefExpr(to(varDecl(equalsBoundNode("firstArgDecl"))))
                            .bind("overlappingArg");
   Finder->addMatcher(
-      callExpr(callee(functionDecl(matchesName(SprintfRegex)).bind("decl")),
-               allOf(hasArgument(
-                         0, anyOf(FirstArg.bind("firstArgExpr"),
+      callExpr(
+          callee(functionDecl(matchesName(SprintfRegex)).bind("decl")),
+          allOf(hasArgument(
+                    0, expr(anyOf(FirstArg,
                                   arraySubscriptExpr(
                                       hasBase(FirstArg),
-                                      hasIndex(integerLiteral().bind("index")))
-                                      .bind("firstArgExpr"),
+                                      hasIndex(integerLiteral().bind("index"))),
                                   memberExpr(member(decl().bind("member")),
-                                             hasObjectExpression(FirstArg))
-                                      .bind("firstArgExpr"))),
-                     hasAnyOtherArgument(anyOf(
-                         OtherRefToArg,
-                         arraySubscriptExpr(
-                             hasBase(OtherRefToArg),
-                             hasIndex(integerLiteral(hasSameValueAs("index")))),
-                         memberExpr(member(decl(equalsBoundNode("member"))),
-                                    hasObjectExpression(OtherRefToArg)))))),
+                                             hasObjectExpression(FirstArg))))
+                           .bind("firstArgExpr")),
+                hasAnyArgument(expr(
+                    unless(equalsBoundNode("firstArgExpr")),
+                    anyOf(OtherRefToArg,
+                          arraySubscriptExpr(hasBase(OtherRefToArg),
+                                             hasIndex(integerLiteral(
+                                                 hasSameValueAs("index")))),
+                          memberExpr(member(decl(equalsBoundNode("member"))),
+                                     hasObjectExpression(OtherRefToArg))))))),
       this);
 }
 
