@@ -218,7 +218,23 @@ uint64_t mlir::detail::getDefaultPreferredAlignment(
   reportMissingDataLayout(type);
 }
 
-// Returns the memory space used for allocal operations if specified in the
+std::optional<uint64_t> mlir::detail::getDefaultIndexBitwidth(
+    Type type, const DataLayout &dataLayout,
+    ArrayRef<DataLayoutEntryInterface> params) {
+  if (isa<IndexType>(type))
+    return getIndexBitwidth(params);
+
+  if (auto typeInterface = dyn_cast<DataLayoutTypeInterface>(type))
+    if (std::optional<uint64_t> indexBitwidth =
+            typeInterface.getIndexBitwidth(dataLayout, params))
+      return *indexBitwidth;
+
+  // Return std::nullopt for all other types, which are assumed to be non
+  // pointer-like types.
+  return std::nullopt;
+}
+
+// Returns the memory space used for alloca operations if specified in the
 // given entry. If the entry is empty the default memory space represented by
 // an empty attribute is returned.
 Attribute
@@ -517,6 +533,18 @@ uint64_t mlir::DataLayout::getTypePreferredAlignment(Type t) const {
     if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
       return iface.getTypePreferredAlignment(ty, *this, list);
     return detail::getDefaultPreferredAlignment(ty, *this, list);
+  });
+}
+
+std::optional<uint64_t> mlir::DataLayout::getTypeIndexBitwidth(Type t) const {
+  checkValid();
+  return cachedLookup<std::optional<uint64_t>>(t, indexBitwidths, [&](Type ty) {
+    DataLayoutEntryList list;
+    if (originalLayout)
+      list = originalLayout.getSpecForType(ty.getTypeID());
+    if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+      return iface.getIndexBitwidth(ty, *this, list);
+    return detail::getDefaultIndexBitwidth(ty, *this, list);
   });
 }
 

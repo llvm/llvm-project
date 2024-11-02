@@ -48,15 +48,14 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
       VPRecipeBase *NewRecipe = nullptr;
       if (auto *VPPhi = dyn_cast<VPWidenPHIRecipe>(&Ingredient)) {
         auto *Phi = cast<PHINode>(VPPhi->getUnderlyingValue());
-        if (const auto *II = GetIntOrFpInductionDescriptor(Phi)) {
-          VPValue *Start = Plan->getVPValueOrAddLiveIn(II->getStartValue());
-          VPValue *Step =
-              vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
-          NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, *II);
-        } else {
-          Plan->addVPValue(Phi, VPPhi);
+        const auto *II = GetIntOrFpInductionDescriptor(Phi);
+        if (!II)
           continue;
-        }
+
+        VPValue *Start = Plan->getVPValueOrAddLiveIn(II->getStartValue());
+        VPValue *Step =
+            vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
+        NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, *II);
       } else {
         assert(isa<VPInstruction>(&Ingredient) &&
                "only VPInstructions expected here");
@@ -1216,23 +1215,6 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
       // load/store. If the underlying instruction has poison-generating flags,
       // drop them directly.
       if (auto *RecWithFlags = dyn_cast<VPRecipeWithIRFlags>(CurRec)) {
-        VPValue *A, *B;
-        using namespace llvm::VPlanPatternMatch;
-        // Dropping disjoint from an OR may yield incorrect results, as some
-        // analysis may have converted it to an Add implicitly (e.g. SCEV used
-        // for dependence analysis). Instead, replace it with an equivalent Add.
-        // This is possible as all users of the disjoint OR only access lanes
-        // where the operands are disjoint or poison otherwise.
-        if (match(RecWithFlags, m_Or(m_VPValue(A), m_VPValue(B))) &&
-            RecWithFlags->isDisjoint()) {
-          VPBuilder Builder(RecWithFlags);
-          VPInstruction *New = Builder.createOverflowingOp(
-              Instruction::Add, {A, B}, {false, false},
-              RecWithFlags->getDebugLoc());
-          RecWithFlags->replaceAllUsesWith(New);
-          RecWithFlags->eraseFromParent();
-          CurRec = New;
-        }
         RecWithFlags->dropPoisonGeneratingFlags();
       } else {
         Instruction *Instr = dyn_cast_or_null<Instruction>(

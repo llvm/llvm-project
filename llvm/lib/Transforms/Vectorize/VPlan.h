@@ -1127,12 +1127,6 @@ public:
     return WrapFlags.HasNSW;
   }
 
-  bool isDisjoint() const {
-    assert(OpType == OperationType::DisjointOp &&
-           "recipe cannot have a disjoing flag");
-    return DisjointFlags.IsDisjoint;
-  }
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printFlags(raw_ostream &O) const;
 #endif
@@ -1271,6 +1265,7 @@ public:
     default:
       return false;
     case VPInstruction::BranchOnCount:
+    case VPInstruction::CanonicalIVIncrementForPart:
       return true;
     };
     llvm_unreachable("switch should return");
@@ -2878,10 +2873,6 @@ class VPlan {
   /// definitions are VPValues that hold a pointer to their underlying IR.
   SmallVector<VPValue *, 16> VPLiveInsToFree;
 
-  /// Indicates whether it is safe use the Value2VPValue mapping or if the
-  /// mapping cannot be used any longer, because it is stale.
-  bool Value2VPValueEnabled = true;
-
   /// Values used outside the plan.
   MapVector<PHINode *, VPLiveOut *> LiveOuts;
 
@@ -2960,10 +2951,6 @@ public:
   /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }
 
-  /// Mark the plan to indicate that using Value2VPValue is not safe any
-  /// longer, because it may be stale.
-  void disableValue2VPValue() { Value2VPValueEnabled = false; }
-
   void addVF(ElementCount VF) { VFs.insert(VF); }
 
   void setVF(ElementCount VF) {
@@ -2993,8 +2980,7 @@ public:
   void setName(const Twine &newName) { Name = newName.str(); }
 
   void addVPValue(Value *V, VPValue *VPV) {
-    assert((Value2VPValueEnabled || VPV->isLiveIn()) &&
-           "Value2VPValue mapping may be out of date!");
+    assert(VPV->isLiveIn() && "VPV must be a live-in.");
     assert(V && "Trying to add a null Value to VPlan");
     assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
     Value2VPValue[V] = VPV;
@@ -3004,8 +2990,8 @@ public:
   VPValue *getVPValue(Value *V) {
     assert(V && "Trying to get the VPValue of a null Value");
     assert(Value2VPValue.count(V) && "Value does not exist in VPlan");
-    assert((Value2VPValueEnabled || Value2VPValue[V]->isLiveIn()) &&
-           "Value2VPValue mapping may be out of date!");
+    assert(Value2VPValue[V]->isLiveIn() &&
+           "Only live-ins should be in mapping");
     return Value2VPValue[V];
   }
 
@@ -3035,16 +3021,6 @@ public:
   /// Dump the plan to stderr (for debugging).
   LLVM_DUMP_METHOD void dump() const;
 #endif
-
-  /// Returns a range mapping the values the range \p Operands to their
-  /// corresponding VPValues.
-  iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
-  mapToVPValues(User::op_range Operands) {
-    std::function<VPValue *(Value *)> Fn = [this](Value *Op) {
-      return getVPValueOrAddLiveIn(Op);
-    };
-    return map_range(Operands, Fn);
-  }
 
   /// Returns the VPRegionBlock of the vector loop.
   VPRegionBlock *getVectorLoopRegion() {

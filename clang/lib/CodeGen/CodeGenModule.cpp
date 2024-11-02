@@ -3449,6 +3449,9 @@ bool CodeGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
       // Implicit template instantiations may change linkage if they are later
       // explicitly instantiated, so they should not be emitted eagerly.
       return false;
+    // Defer until all versions have been semantically checked.
+    if (FD->hasAttr<TargetVersionAttr>() && !FD->isMultiVersion())
+      return false;
   }
   if (const auto *VD = dyn_cast<VarDecl>(Global)) {
     if (Context.getInlineVariableDefinitionKind(VD) ==
@@ -3708,7 +3711,8 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
 
     // Forward declarations are emitted lazily on first use.
     if (!FD->doesThisDeclarationHaveABody()) {
-      if (!FD->doesDeclarationForceExternallyVisibleDefinition())
+      if (!FD->doesDeclarationForceExternallyVisibleDefinition() &&
+          !FD->isTargetVersionMultiVersion())
         return;
 
       StringRef MangledName = getMangledName(GD);
@@ -3997,10 +4001,13 @@ void CodeGenModule::EmitMultiVersionFunctionDefinition(GlobalDecl GD,
         EmitGlobalFunctionDefinition(GD.getWithMultiVersionIndex(I), nullptr);
     // Ensure that the resolver function is also emitted.
     GetOrCreateMultiVersionResolver(GD);
-  } else if (FD->hasAttr<TargetVersionAttr>()) {
-    GetOrCreateMultiVersionResolver(GD);
   } else
     EmitGlobalFunctionDefinition(GD, GV);
+
+  // Defer the resolver emission until we can reason whether the TU
+  // contains a default target version implementation.
+  if (FD->isTargetVersionMultiVersion())
+    AddDeferredMultiVersionResolverToEmit(GD);
 }
 
 void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
@@ -4086,6 +4093,23 @@ llvm::GlobalValue::LinkageTypes getMultiversionLinkage(CodeGenModule &CGM,
   return llvm::GlobalValue::WeakODRLinkage;
 }
 
+static FunctionDecl *createDefaultTargetVersionFrom(const FunctionDecl *FD) {
+  DeclContext *DeclCtx = FD->getASTContext().getTranslationUnitDecl();
+  TypeSourceInfo *TInfo = FD->getTypeSourceInfo();
+  StorageClass SC = FD->getStorageClass();
+  DeclarationName Name = FD->getNameInfo().getName();
+
+  FunctionDecl *NewDecl =
+      FunctionDecl::Create(FD->getASTContext(), DeclCtx, FD->getBeginLoc(),
+                           FD->getEndLoc(), Name, TInfo->getType(), TInfo, SC);
+
+  NewDecl->setIsMultiVersion();
+  NewDecl->addAttr(TargetVersionAttr::CreateImplicit(
+      NewDecl->getASTContext(), "default", NewDecl->getSourceRange()));
+
+  return NewDecl;
+}
+
 void CodeGenModule::emitMultiVersionFunctions() {
   std::vector<GlobalDecl> MVFuncsToEmit;
   MultiVersionFuncs.swap(MVFuncsToEmit);
@@ -4093,66 +4117,54 @@ void CodeGenModule::emitMultiVersionFunctions() {
     const auto *FD = cast<FunctionDecl>(GD.getDecl());
     assert(FD && "Expected a FunctionDecl");
 
+    auto createFunction = [&](const FunctionDecl *Decl, unsigned MVIdx = 0) {
+      GlobalDecl CurGD{Decl->isDefined() ? Decl->getDefinition() : Decl, MVIdx};
+      StringRef MangledName = getMangledName(CurGD);
+      llvm::Constant *Func = GetGlobalValue(MangledName);
+      if (!Func) {
+        if (Decl->isDefined()) {
+          EmitGlobalFunctionDefinition(CurGD, nullptr);
+          Func = GetGlobalValue(MangledName);
+        } else {
+          const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(CurGD);
+          llvm::FunctionType *Ty = getTypes().GetFunctionType(FI);
+          Func = GetAddrOfFunction(CurGD, Ty, /*ForVTable=*/false,
+                                   /*DontDefer=*/false, ForDefinition);
+        }
+        assert(Func && "This should have just been created");
+      }
+      return cast<llvm::Function>(Func);
+    };
+
+    bool HasDefaultDecl = !FD->isTargetVersionMultiVersion();
+    bool ShouldEmitResolver = !FD->isTargetVersionMultiVersion();
     SmallVector<CodeGenFunction::MultiVersionResolverOption, 10> Options;
     if (FD->isTargetMultiVersion()) {
       getContext().forEachMultiversionedFunctionVersion(
-          FD, [this, &GD, &Options](const FunctionDecl *CurFD) {
-            GlobalDecl CurGD{
-                (CurFD->isDefined() ? CurFD->getDefinition() : CurFD)};
-            StringRef MangledName = getMangledName(CurGD);
-            llvm::Constant *Func = GetGlobalValue(MangledName);
-            if (!Func) {
-              if (CurFD->isDefined()) {
-                EmitGlobalFunctionDefinition(CurGD, nullptr);
-                Func = GetGlobalValue(MangledName);
-              } else {
-                const CGFunctionInfo &FI =
-                    getTypes().arrangeGlobalDeclaration(GD);
-                llvm::FunctionType *Ty = getTypes().GetFunctionType(FI);
-                Func = GetAddrOfFunction(CurGD, Ty, /*ForVTable=*/false,
-                                         /*DontDefer=*/false, ForDefinition);
-              }
-              assert(Func && "This should have just been created");
-            }
-            if (CurFD->getMultiVersionKind() == MultiVersionKind::Target) {
-              const auto *TA = CurFD->getAttr<TargetAttr>();
-              llvm::SmallVector<StringRef, 8> Feats;
-              TA->getAddedFeatures(Feats);
-              Options.emplace_back(cast<llvm::Function>(Func),
-                                   TA->getArchitecture(), Feats);
-            } else {
-              const auto *TVA = CurFD->getAttr<TargetVersionAttr>();
-              llvm::SmallVector<StringRef, 8> Feats;
-              TVA->getFeatures(Feats);
-              Options.emplace_back(cast<llvm::Function>(Func),
-                                   /*Architecture*/ "", Feats);
-            }
-          });
-    } else if (FD->isTargetClonesMultiVersion()) {
-      const auto *TC = FD->getAttr<TargetClonesAttr>();
-      for (unsigned VersionIndex = 0; VersionIndex < TC->featuresStrs_size();
-           ++VersionIndex) {
-        if (!TC->isFirstOfVersion(VersionIndex))
-          continue;
-        GlobalDecl CurGD{(FD->isDefined() ? FD->getDefinition() : FD),
-                         VersionIndex};
-        StringRef Version = TC->getFeatureStr(VersionIndex);
-        StringRef MangledName = getMangledName(CurGD);
-        llvm::Constant *Func = GetGlobalValue(MangledName);
-        if (!Func) {
-          if (FD->isDefined()) {
-            EmitGlobalFunctionDefinition(CurGD, nullptr);
-            Func = GetGlobalValue(MangledName);
-          } else {
-            const CGFunctionInfo &FI =
-                getTypes().arrangeGlobalDeclaration(CurGD);
-            llvm::FunctionType *Ty = getTypes().GetFunctionType(FI);
-            Func = GetAddrOfFunction(CurGD, Ty, /*ForVTable=*/false,
-                                     /*DontDefer=*/false, ForDefinition);
-          }
-          assert(Func && "This should have just been created");
-        }
+          FD, [&](const FunctionDecl *CurFD) {
+            llvm::SmallVector<StringRef, 8> Feats;
+            llvm::Function *Func = createFunction(CurFD);
 
+            if (const auto *TA = CurFD->getAttr<TargetAttr>()) {
+              TA->getAddedFeatures(Feats);
+              Options.emplace_back(Func, TA->getArchitecture(), Feats);
+            } else if (const auto *TVA = CurFD->getAttr<TargetVersionAttr>()) {
+              bool HasDefaultDef = TVA->isDefaultVersion() &&
+                                   CurFD->doesThisDeclarationHaveABody();
+              HasDefaultDecl |= TVA->isDefaultVersion();
+              ShouldEmitResolver |= (CurFD->isUsed() || HasDefaultDef);
+              TVA->getFeatures(Feats);
+              Options.emplace_back(Func, /*Architecture*/ "", Feats);
+            } else
+              llvm_unreachable("unexpected MultiVersionKind");
+          });
+    } else if (const auto *TC = FD->getAttr<TargetClonesAttr>()) {
+      for (unsigned I = 0; I < TC->featuresStrs_size(); ++I) {
+        if (!TC->isFirstOfVersion(I))
+          continue;
+
+        llvm::Function *Func = createFunction(FD, I);
+        StringRef Version = TC->getFeatureStr(I);
         StringRef Architecture;
         llvm::SmallVector<StringRef, 1> Feature;
 
@@ -4170,11 +4182,21 @@ void CodeGenModule::emitMultiVersionFunctions() {
             Feature.push_back(Version);
         }
 
-        Options.emplace_back(cast<llvm::Function>(Func), Architecture, Feature);
+        Options.emplace_back(Func, Architecture, Feature);
       }
     } else {
       assert(0 && "Expected a target or target_clones multiversion function");
       continue;
+    }
+
+    if (!ShouldEmitResolver)
+      continue;
+
+    if (!HasDefaultDecl) {
+      FunctionDecl *NewFD = createDefaultTargetVersionFrom(FD);
+      llvm::Function *Func = createFunction(NewFD);
+      llvm::SmallVector<StringRef, 1> Feats;
+      Options.emplace_back(Func, /*Architecture*/ "", Feats);
     }
 
     llvm::Constant *ResolverConstant = GetOrCreateMultiVersionResolver(GD);
@@ -4182,17 +4204,19 @@ void CodeGenModule::emitMultiVersionFunctions() {
       ResolverConstant = IFunc->getResolver();
       if (FD->isTargetClonesMultiVersion() ||
           FD->isTargetVersionMultiVersion()) {
-        const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
-        llvm::FunctionType *DeclTy = getTypes().GetFunctionType(FI);
         std::string MangledName = getMangledNameImpl(
             *this, GD, FD, /*OmitMultiVersionMangling=*/true);
-        // In prior versions of Clang, the mangling for ifuncs incorrectly
-        // included an .ifunc suffix. This alias is generated for backward
-        // compatibility. It is deprecated, and may be removed in the future.
-        auto *Alias = llvm::GlobalAlias::create(
-            DeclTy, 0, getMultiversionLinkage(*this, GD),
-            MangledName + ".ifunc", IFunc, &getModule());
-        SetCommonAttributes(FD, Alias);
+        if (!GetGlobalValue(MangledName + ".ifunc")) {
+          const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
+          llvm::FunctionType *DeclTy = getTypes().GetFunctionType(FI);
+          // In prior versions of Clang, the mangling for ifuncs incorrectly
+          // included an .ifunc suffix. This alias is generated for backward
+          // compatibility. It is deprecated, and may be removed in the future.
+          auto *Alias = llvm::GlobalAlias::create(
+              DeclTy, 0, getMultiversionLinkage(*this, GD),
+              MangledName + ".ifunc", IFunc, &getModule());
+          SetCommonAttributes(FD, Alias);
+        }
       }
     }
     llvm::Function *ResolverFunc = cast<llvm::Function>(ResolverConstant);
@@ -4349,6 +4373,20 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
   }
 }
 
+/// Adds a declaration to the list of multi version functions if not present.
+void CodeGenModule::AddDeferredMultiVersionResolverToEmit(GlobalDecl GD) {
+  const auto *FD = cast<FunctionDecl>(GD.getDecl());
+  assert(FD && "Not a FunctionDecl?");
+
+  if (FD->isTargetVersionMultiVersion()) {
+    std::string MangledName =
+        getMangledNameImpl(*this, GD, FD, /*OmitMultiVersionMangling=*/true);
+    if (!DeferredResolversToEmit.insert(MangledName).second)
+      return;
+  }
+  MultiVersionFuncs.push_back(GD);
+}
+
 /// If a dispatcher for the specified mangled name is not in the module, create
 /// and return an llvm Function with the specified type.
 llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
@@ -4388,7 +4426,7 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
   // The resolver needs to be created. For target and target_clones, defer
   // creation until the end of the TU.
   if (FD->isTargetMultiVersion() || FD->isTargetClonesMultiVersion())
-    MultiVersionFuncs.push_back(GD);
+    AddDeferredMultiVersionResolverToEmit(GD);
 
   // For cpu_specific, don't create an ifunc yet because we don't know if the
   // cpu_dispatch will be emitted in this translation unit.
@@ -4451,7 +4489,9 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
 
     if (FD->isMultiVersion()) {
       UpdateMultiVersionNames(GD, FD, MangledName);
-      if (!IsForDefinition)
+      if (FD->isTargetVersionMultiVersion() && !FD->isUsed())
+        AddDeferredMultiVersionResolverToEmit(GD);
+      else if (!IsForDefinition)
         return GetOrCreateMultiVersionResolver(GD);
     }
   }
@@ -7232,7 +7272,7 @@ void CodeGenFunction::EmitDeclMetadata() {
 
   for (auto &I : LocalDeclMap) {
     const Decl *D = I.first;
-    llvm::Value *Addr = I.second.getPointer();
+    llvm::Value *Addr = I.second.emitRawPointer(*this);
     if (auto *Alloca = dyn_cast<llvm::AllocaInst>(Addr)) {
       llvm::Value *DAddr = GetPointerConstant(getLLVMContext(), D);
       Alloca->setMetadata(

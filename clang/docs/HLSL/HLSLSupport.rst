@@ -91,7 +91,7 @@ performance win for HLSL.
 
 If precompiled headers are used when compiling HLSL, the ``ExternalSemaSource``
 will be a ``MultiplexExternalSemaSource`` which includes both the ``ASTReader``
-and ``HLSLExternalSemaSource``. For Built-in declarations that are already
+and -. For Built-in declarations that are already
 completed in the serialized AST, the ``HLSLExternalSemaSource`` will reuse the
 existing declarations and not introduce new declarations. If the built-in types
 are not completed in the serialized AST, the ``HLSLExternalSemaSource`` will
@@ -113,6 +113,54 @@ that will map directly to targets other than DXIL. While IR itself is generally
 not re-targetable, we want to share the Clang CodeGen implementation for HLSL
 with other GPU graphics targets like SPIR-V and possibly other GPU and even CPU
 targets.
+
+hlsl.h
+------
+
+HLSL has a library of standalone functions. This is similar to OpenCL and CUDA,
+and is analogous to C's standard library. The implementation approach for the
+HLSL library functionality draws from patterns in use by OpenCL and other Clang
+resource headers. All of the clang resource headers are part of the
+``ClangHeaders`` component found in the source tree under
+`clang/lib/Headers <https://github.com/llvm/llvm-project/tree/main/clang/lib/Headers>`_.
+
+.. note::
+
+   HLSL's complex data types are not defined in HLSL's header because many of
+   the semantics of those data types cannot be expressed in HLSL due to missing
+   language features. Data types that can't be expressed in HLSL are defined in
+   code in the ``HLSLExternalSemaSource``.
+
+Similar to OpenCL, the HLSL library functionality is implicitly declared in
+translation units without needing to include a header to provide declarations.
+In Clang this is handled by making ``hlsl.h`` an implicitly included header
+distributed as part of the Clang resource directory.
+
+Similar to OpenCL, HLSL's implicit header will explicitly declare all overloads,
+and each overload will map to a corresponding ``__builtin*`` compiler intrinsic
+that is handled in ClangCodeGen. CUDA uses a similar pattern although many CUDA
+functions have full definitions in the included headers which in turn call
+corresponding ``__builtin*`` compiler intrinsics. By not having bodies HLSL
+avoids the need for the inliner to clean up and inline large numbers of small
+library functions.
+
+HLSL's implicit headers also define some of HLSL's typedefs. This is consistent
+with how the AVX vector header is implemented.
+
+Concerns have been expressed that this approach may result in slower compile
+times than the approach DXC uses where library functions are treated more like
+Clang ``__builtin*`` intrinsics. No real world use cases have been identified
+where parsing is a significant compile-time overhead, but the HLSL implicit
+headers can be compiled into a module for performance if needed.
+
+Further, by treating these as functions rather than ``__builtin*`` compiler
+intrinsics, the language behaviors are more consistent and aligned with user
+expectation because normal overload resolution rules and implicit conversions
+apply as expected.
+
+It is a feature of this design that clangd-powered "go to declaration" for
+library functions will jump to a valid header declaration and all overloads will
+be user readable.
 
 HLSL Language
 =============

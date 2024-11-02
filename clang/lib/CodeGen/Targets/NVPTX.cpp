@@ -85,7 +85,7 @@ private:
                                            LValue Src) {
     llvm::Value *Handle = nullptr;
     llvm::Constant *C =
-        llvm::dyn_cast<llvm::Constant>(Src.getAddress(CGF).getPointer());
+        llvm::dyn_cast<llvm::Constant>(Src.getAddress(CGF).emitRawPointer(CGF));
     // Lookup `addrspacecast` through the constant pointer if any.
     if (auto *ASC = llvm::dyn_cast_or_null<llvm::AddrSpaceCastOperator>(C))
       C = llvm::cast<llvm::Constant>(ASC->getPointerOperand());

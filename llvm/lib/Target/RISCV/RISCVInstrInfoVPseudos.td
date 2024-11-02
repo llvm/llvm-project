@@ -3372,22 +3372,6 @@ multiclass VPseudoVMAC_VV_VX_AAXA<string Constraint = ""> {
   }
 }
 
-multiclass VPseudoVMAC_VV_VF_AAXA<string Constraint = ""> {
-  foreach m = MxListF in {
-    defm "" : VPseudoTernaryV_VV_AAXA<m, Constraint>,
-              SchedTernary<"WriteVFMulAddV", "ReadVFMulAddV", "ReadVFMulAddV",
-                           "ReadVFMulAddV", m.MX>;
-  }
-
-  foreach f = FPList in {
-    foreach m = f.MxList in {
-      defm "" : VPseudoTernaryV_VF_AAXA<m, f, Constraint>,
-                SchedTernary<"WriteVFMulAddF", "ReadVFMulAddV", "ReadVFMulAddF",
-                             "ReadVFMulAddV", m.MX>;
-    }
-  }
-}
-
 multiclass VPseudoVMAC_VV_VF_AAXA_RM<string Constraint = ""> {
   foreach m = MxListF in {
     defm "" : VPseudoTernaryV_VV_AAXA_RM<m, Constraint>,
@@ -6698,6 +6682,7 @@ defm PseudoVFWREDOSUM  : VPseudoVFWREDO_VS_RM;
 // 15. Vector Mask Instructions
 //===----------------------------------------------------------------------===//
 
+let Predicates = [HasVInstructions] in {
 //===----------------------------------------------------------------------===//
 // 15.1 Vector Mask-Register Logical Instructions
 //===----------------------------------------------------------------------===//
@@ -6718,7 +6703,6 @@ defm PseudoVMSET : VPseudoNullaryPseudoM<"VMXNOR">;
 //===----------------------------------------------------------------------===//
 // 15.2. Vector mask population count vcpop
 //===----------------------------------------------------------------------===//
-
 let IsSignExtendingOpW = 1 in
 defm PseudoVCPOP: VPseudoVPOP_M;
 
@@ -6753,6 +6737,7 @@ defm PseudoVIOTA_M: VPseudoVIOTA_M;
 // 15.9. Vector Element Index Instruction
 //===----------------------------------------------------------------------===//
 defm PseudoVID : VPseudoVID_V;
+} // Predicates = [HasVInstructions]
 
 //===----------------------------------------------------------------------===//
 // 16. Vector Permutation Instructions
@@ -6828,6 +6813,7 @@ let Predicates = [HasVInstructionsAnyF] in {
 //===----------------------------------------------------------------------===//
 // 16.4. Vector Register Gather Instructions
 //===----------------------------------------------------------------------===//
+let Predicates = [HasVInstructions] in {
 defm PseudoVRGATHER     : VPseudoVGTR_VV_VX_VI<uimm5, "@earlyclobber $rd">;
 defm PseudoVRGATHEREI16 : VPseudoVGTR_VV_EEW<eew=16,
                                              Constraint="@earlyclobber $rd">;
@@ -6836,6 +6822,7 @@ defm PseudoVRGATHEREI16 : VPseudoVGTR_VV_EEW<eew=16,
 // 16.5. Vector Compress Instruction
 //===----------------------------------------------------------------------===//
 defm PseudoVCOMPRESS : VPseudoVCPR_V;
+} // Predicates = [HasVInstructions]
 
 //===----------------------------------------------------------------------===//
 // Patterns.

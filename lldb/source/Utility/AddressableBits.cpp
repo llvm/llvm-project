@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/AddressableBits.h"
-#include "lldb/Target/Process.h"
 #include "lldb/lldb-types.h"
+
+#include <cassert>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -28,9 +29,17 @@ void AddressableBits::SetLowmemAddressableBits(
   m_low_memory_addr_bits = lowmem_addressing_bits;
 }
 
+uint32_t AddressableBits::GetLowmemAddressableBits() const {
+  return m_low_memory_addr_bits;
+}
+
 void AddressableBits::SetHighmemAddressableBits(
     uint32_t highmem_addressing_bits) {
   m_high_memory_addr_bits = highmem_addressing_bits;
+}
+
+uint32_t AddressableBits::GetHighmemAddressableBits() const {
+  return m_high_memory_addr_bits;
 }
 
 addr_t AddressableBits::AddressableBitToMask(uint32_t addressable_bits) {
@@ -39,21 +48,4 @@ addr_t AddressableBits::AddressableBitToMask(uint32_t addressable_bits) {
     return 0; // all bits used for addressing
   else
     return ~((1ULL << addressable_bits) - 1);
-}
-
-void AddressableBits::SetProcessMasks(Process &process) {
-  if (m_low_memory_addr_bits == 0 && m_high_memory_addr_bits == 0)
-    return;
-
-  if (m_low_memory_addr_bits != 0) {
-    addr_t low_addr_mask = AddressableBitToMask(m_low_memory_addr_bits);
-    process.SetCodeAddressMask(low_addr_mask);
-    process.SetDataAddressMask(low_addr_mask);
-  }
-
-  if (m_high_memory_addr_bits != 0) {
-    addr_t hi_addr_mask = AddressableBitToMask(m_high_memory_addr_bits);
-    process.SetHighmemCodeAddressMask(hi_addr_mask);
-    process.SetHighmemDataAddressMask(hi_addr_mask);
-  }
 }

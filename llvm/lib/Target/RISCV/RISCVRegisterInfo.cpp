@@ -446,6 +446,13 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                (Lo12 & 0b11111) != 0) {
       // Prefetch instructions require the offset to be 32 byte aligned.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
+    } else if ((Opc == RISCV::PseudoRV32ZdinxLD ||
+                Opc == RISCV::PseudoRV32ZdinxSD) &&
+               Lo12 >= 2044) {
+      // This instruction will be split into 2 instructions. The second
+      // instruction will add 4 to the immediate. If that would overflow 12
+      // bits, we can't fold the offset.
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
     } else {
       // We can encode an add with 12 bit signed immediate in the immediate
       // operand of our user instruction.  As a result, the remaining
@@ -741,8 +748,11 @@ bool RISCVRegisterInfo::getRegAllocationHints(
                         bool NeedGPRC) -> void {
     Register Reg = MO.getReg();
     Register PhysReg = Reg.isPhysical() ? Reg : Register(VRM->getPhys(Reg));
-    if (PhysReg && (!NeedGPRC || RISCV::GPRCRegClass.contains(PhysReg))) {
-      assert(!MO.getSubReg() && !VRRegMO.getSubReg() && "Unexpected subreg!");
+    // TODO: Support GPRPair subregisters? Need to be careful with even/odd
+    // registers. If the virtual register is an odd register of a pair and the
+    // physical register is even (or vice versa), we should not add the hint.
+    if (PhysReg && (!NeedGPRC || RISCV::GPRCRegClass.contains(PhysReg)) &&
+        !MO.getSubReg() && !VRRegMO.getSubReg()) {
       if (!MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
         TwoAddrHints.insert(PhysReg);
     }

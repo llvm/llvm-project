@@ -293,8 +293,11 @@ static Error readSymbols(MachOObjectFile *Obj, RecordsSlice &Slice,
     RecordLinkage Linkage = RecordLinkage::Unknown;
     SymbolFlags RecordFlags = SymbolFlags::None;
 
-    if (Opt.Undefineds && (Flags & SymbolRef::SF_Undefined)) {
-      Linkage = RecordLinkage::Undefined;
+    if (Flags & SymbolRef::SF_Undefined) {
+      if (Opt.Undefineds)
+        Linkage = RecordLinkage::Undefined;
+      else
+        continue;
       if (Flags & SymbolRef::SF_Weak)
         RecordFlags |= SymbolFlags::WeakReferenced;
     } else if (Flags & SymbolRef::SF_Exported) {

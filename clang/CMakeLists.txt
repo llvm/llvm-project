@@ -13,8 +13,16 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(CLANG_BUILT_STANDALONE TRUE)
 endif()
 
+# Make sure that our source directory is on the current cmake module path so that
+# we can include cmake files from this directory.
+list(INSERT CMAKE_MODULE_PATH 0
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
+  )
+
 # Must go below project(..)
 include(GNUInstallDirs)
+include(GetDarwinLinkerVersion)
 
 if(CLANG_BUILT_STANDALONE)
   set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
@@ -140,13 +148,6 @@ if(CLANG_BUILT_STANDALONE)
   endif() # LLVM_INCLUDE_TESTS
 endif() # standalone
 
-# Make sure that our source directory is on the current cmake module path so that
-# we can include cmake files from this directory.
-list(INSERT CMAKE_MODULE_PATH 0
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
-  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
-  )
-
 # This allows disabling clang's XML dependency even if LLVM finds libxml2.
 # By default, clang depends on libxml2 if LLVM does.
 option(CLANG_ENABLE_LIBXML2 "Whether libclang may depend on libxml2"
@@ -190,11 +191,12 @@ set(CLANG_RESOURCE_DIR "" CACHE STRING
 set(C_INCLUDE_DIRS "" CACHE STRING
   "Colon separated list of directories clang will search for headers.")
 
+set(USE_DEPRECATED_GCC_INSTALL_PREFIX OFF CACHE BOOL "Temporary workaround before GCC_INSTALL_PREFIX is completely removed")
 set(GCC_INSTALL_PREFIX "" CACHE PATH "Directory where gcc is installed." )
 set(DEFAULT_SYSROOT "" CACHE STRING
   "Default <path> to all compiler invocations for --sysroot=<path>." )
-if(GCC_INSTALL_PREFIX)
-  message(WARNING "GCC_INSTALL_PREFIX is deprecated and will be removed. Use "
+if(GCC_INSTALL_PREFIX AND NOT USE_DEPRECATED_GCC_INSTALL_PREFIX)
+  message(FATAL_ERROR "GCC_INSTALL_PREFIX is deprecated and will be removed. Use "
     "configuration files (https://clang.llvm.org/docs/UsersManual.html#configuration-files)"
     "to specify the default --gcc-install-dir= or --gcc-triple=. --gcc-toolchain= is discouraged. "
     "See https://github.com/llvm/llvm-project/pull/77537 for detail.")
@@ -345,20 +347,7 @@ endif ()
 # Determine HOST_LINK_VERSION on Darwin.
 set(HOST_LINK_VERSION)
 if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
-  set(LD_V_OUTPUT)
-  execute_process(
-    COMMAND sh -c "${CMAKE_LINKER} -v 2>&1 | head -1"
-    RESULT_VARIABLE HAD_ERROR
-    OUTPUT_VARIABLE LD_V_OUTPUT
-  )
-  if (HAD_ERROR)
-    message(FATAL_ERROR "${CMAKE_LINKER} failed with status ${HAD_ERROR}")
-  endif()
-  if ("${LD_V_OUTPUT}" MATCHES ".*ld64-([0-9.]+).*")
-    string(REGEX REPLACE ".*ld64-([0-9.]+).*" "\\1" HOST_LINK_VERSION ${LD_V_OUTPUT})
-  elseif ("${LD_V_OUTPUT}" MATCHES "[^0-9]*([0-9.]+).*")
-    string(REGEX REPLACE "[^0-9]*([0-9.]+).*" "\\1" HOST_LINK_VERSION ${LD_V_OUTPUT})
-  endif()
+  get_darwin_linker_version(HOST_LINK_VERSION)
   message(STATUS "Host linker version: ${HOST_LINK_VERSION}")
 endif()
 

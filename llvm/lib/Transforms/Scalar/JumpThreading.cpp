@@ -2113,8 +2113,8 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
   // marker to marker as there isn't an instruction there.
   if (BE != RangeBB->end() && BE->hasDbgRecords()) {
     // Dump them at the end.
-    DPMarker *Marker = RangeBB->getMarker(BE);
-    DPMarker *EndMarker = NewBB->createMarker(NewBB->end());
+    DbgMarker *Marker = RangeBB->getMarker(BE);
+    DbgMarker *EndMarker = NewBB->createMarker(NewBB->end());
     auto DVRRange = EndMarker->cloneDebugInfoFrom(Marker, std::nullopt);
     for (DbgVariableRecord &DVR : filterDbgVars(DVRRange))
       RetargetDbgVariableRecordIfPossible(&DVR);

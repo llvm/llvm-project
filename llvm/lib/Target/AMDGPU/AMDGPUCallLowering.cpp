@@ -715,10 +715,13 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   if (!IsEntryFunc && !IsGraphics) {
     // For the fixed ABI, pass workitem IDs in the last argument register.
     TLI.allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
+  }
 
+  if (!IsEntryFunc) {
     if (!Subtarget.enableFlatScratch())
       CCInfo.AllocateReg(Info->getScratchRSrcReg());
-    TLI.allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
+    if (!IsGraphics)
+      TLI.allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
   }
 
   IncomingValueAssigner Assigner(AssignFn);

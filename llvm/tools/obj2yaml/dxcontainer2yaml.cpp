@@ -99,6 +99,9 @@ dumpDXContainer(MemoryBufferRef Source) {
       else if (const auto *P =
                    std::get_if<dxbc::PSV::v2::RuntimeInfo>(&PSVInfo->getInfo()))
         NewPart.Info = DXContainerYAML::PSVInfo(P);
+      else if (const auto *P =
+                   std::get_if<dxbc::PSV::v3::RuntimeInfo>(&PSVInfo->getInfo()))
+        NewPart.Info = DXContainerYAML::PSVInfo(P, PSVInfo->getStringTable());
       NewPart.Info->ResourceStride = PSVInfo->getResourceStride();
       for (auto Res : PSVInfo->getResources())
         NewPart.Info->Resources.push_back(Res);

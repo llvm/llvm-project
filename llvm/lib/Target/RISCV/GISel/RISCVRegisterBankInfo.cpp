@@ -13,6 +13,7 @@
 #include "RISCVRegisterBankInfo.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "RISCVSubtarget.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
@@ -343,6 +344,8 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
   case TargetOpcode::G_IMPLICIT_DEF: {
     Register Dst = MI.getOperand(0).getReg();
+    LLT DstTy = MRI.getType(Dst);
+    uint64_t DstMinSize = DstTy.getSizeInBits().getKnownMinValue();
     auto Mapping = GPRValueMapping;
     // FIXME: May need to do a better job determining when to use FPRB.
     // For example, the look through COPY case:
@@ -350,7 +353,11 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // %1:_(s32) = COPY %0
     // $f10_d = COPY %1(s32)
     if (anyUseOnlyUseFP(Dst, MRI, TRI))
-      Mapping = getFPValueMapping(MRI.getType(Dst).getSizeInBits());
+      Mapping = getFPValueMapping(DstMinSize);
+
+    if (DstTy.isVector())
+      Mapping = getVRBValueMapping(DstMinSize);
+
     return getInstructionMapping(DefaultMappingID, /*Cost=*/1, Mapping,
                                  NumOperands);
   }
@@ -400,6 +407,17 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
   case TargetOpcode::G_SELECT: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+
+    if (Ty.isVector()) {
+      auto &Sel = cast<GSelect>(MI);
+      LLT TestTy = MRI.getType(Sel.getCondReg());
+      assert(TestTy.isVector() && "Unexpected condition argument type");
+      OpdsMapping[0] = OpdsMapping[2] = OpdsMapping[3] =
+          getVRBValueMapping(Ty.getSizeInBits().getKnownMinValue());
+      OpdsMapping[1] =
+          getVRBValueMapping(TestTy.getSizeInBits().getKnownMinValue());
+      break;
+    }
 
     // Try to minimize the number of copies. If we have more floating point
     // constrained values than not, then we'll put everything on FPR. Otherwise,

@@ -110,21 +110,21 @@ uint64_t test_dot_ulong4(uint64_t4 p0, uint64_t4 p1) { return dot(p0, p1); }
 // NO_HALF: ret float %dx.dot
 half test_dot_half(half p0, half p1) { return dot(p0, p1); }
 
-// NATIVE_HALF: %dx.dot = call half @llvm.dx.dot.v2f16(<2 x half> %0, <2 x half> %1)
+// NATIVE_HALF: %dx.dot = call half @llvm.dx.dot2.v2f16(<2 x half> %0, <2 x half> %1)
 // NATIVE_HALF: ret half %dx.dot
-// NO_HALF: %dx.dot = call float @llvm.dx.dot.v2f32(<2 x float> %0, <2 x float> %1)
+// NO_HALF: %dx.dot = call float @llvm.dx.dot2.v2f32(<2 x float> %0, <2 x float> %1)
 // NO_HALF: ret float %dx.dot
 half test_dot_half2(half2 p0, half2 p1) { return dot(p0, p1); }
 
-// NATIVE_HALF: %dx.dot = call half @llvm.dx.dot.v3f16(<3 x half> %0, <3 x half> %1)
+// NATIVE_HALF: %dx.dot = call half @llvm.dx.dot3.v3f16(<3 x half> %0, <3 x half> %1)
 // NATIVE_HALF: ret half %dx.dot
-// NO_HALF: %dx.dot = call float @llvm.dx.dot.v3f32(<3 x float> %0, <3 x float> %1)
+// NO_HALF: %dx.dot = call float @llvm.dx.dot3.v3f32(<3 x float> %0, <3 x float> %1)
 // NO_HALF: ret float %dx.dot
 half test_dot_half3(half3 p0, half3 p1) { return dot(p0, p1); }
 
-// NATIVE_HALF: %dx.dot = call half @llvm.dx.dot.v4f16(<4 x half> %0, <4 x half> %1)
+// NATIVE_HALF: %dx.dot = call half @llvm.dx.dot4.v4f16(<4 x half> %0, <4 x half> %1)
 // NATIVE_HALF: ret half %dx.dot
-// NO_HALF: %dx.dot = call float @llvm.dx.dot.v4f32(<4 x float> %0, <4 x float> %1)
+// NO_HALF: %dx.dot = call float @llvm.dx.dot4.v4f32(<4 x float> %0, <4 x float> %1)
 // NO_HALF: ret float %dx.dot
 half test_dot_half4(half4 p0, half4 p1) { return dot(p0, p1); }
 
@@ -132,34 +132,34 @@ half test_dot_half4(half4 p0, half4 p1) { return dot(p0, p1); }
 // CHECK: ret float %dx.dot
 float test_dot_float(float p0, float p1) { return dot(p0, p1); }
 
-// CHECK: %dx.dot = call float @llvm.dx.dot.v2f32(<2 x float> %0, <2 x float> %1)
+// CHECK: %dx.dot = call float @llvm.dx.dot2.v2f32(<2 x float> %0, <2 x float> %1)
 // CHECK: ret float %dx.dot
 float test_dot_float2(float2 p0, float2 p1) { return dot(p0, p1); }
 
-// CHECK: %dx.dot = call float @llvm.dx.dot.v3f32(<3 x float> %0, <3 x float> %1)
+// CHECK: %dx.dot = call float @llvm.dx.dot3.v3f32(<3 x float> %0, <3 x float> %1)
 // CHECK: ret float %dx.dot
 float test_dot_float3(float3 p0, float3 p1) { return dot(p0, p1); }
 
-// CHECK: %dx.dot = call float @llvm.dx.dot.v4f32(<4 x float> %0, <4 x float> %1)
+// CHECK: %dx.dot = call float @llvm.dx.dot4.v4f32(<4 x float> %0, <4 x float> %1)
 // CHECK: ret float %dx.dot
 float test_dot_float4(float4 p0, float4 p1) { return dot(p0, p1); }
 
-// CHECK:  %dx.dot = call float @llvm.dx.dot.v2f32(<2 x float> %splat.splat, <2 x float> %1)
+// CHECK:  %dx.dot = call float @llvm.dx.dot2.v2f32(<2 x float> %splat.splat, <2 x float> %1)
 // CHECK: ret float %dx.dot
 float test_dot_float2_splat(float p0, float2 p1) { return dot(p0, p1); }
 
-// CHECK:  %dx.dot = call float @llvm.dx.dot.v3f32(<3 x float> %splat.splat, <3 x float> %1)
+// CHECK:  %dx.dot = call float @llvm.dx.dot3.v3f32(<3 x float> %splat.splat, <3 x float> %1)
 // CHECK: ret float %dx.dot
 float test_dot_float3_splat(float p0, float3 p1) { return dot(p0, p1); }
 
-// CHECK:  %dx.dot = call float @llvm.dx.dot.v4f32(<4 x float> %splat.splat, <4 x float> %1)
+// CHECK:  %dx.dot = call float @llvm.dx.dot4.v4f32(<4 x float> %splat.splat, <4 x float> %1)
 // CHECK: ret float %dx.dot
 float test_dot_float4_splat(float p0, float4 p1) { return dot(p0, p1); }
 
 // CHECK: %conv = sitofp i32 %1 to float
 // CHECK: %splat.splatinsert = insertelement <2 x float> poison, float %conv, i64 0
 // CHECK: %splat.splat = shufflevector <2 x float> %splat.splatinsert, <2 x float> poison, <2 x i32> zeroinitializer
-// CHECK: %dx.dot = call float @llvm.dx.dot.v2f32(<2 x float> %0, <2 x float> %splat.splat)
+// CHECK: %dx.dot = call float @llvm.dx.dot2.v2f32(<2 x float> %0, <2 x float> %splat.splat)
 // CHECK: ret float %dx.dot
 float test_builtin_dot_float2_int_splat(float2 p0, int p1) {
   return dot(p0, p1);
@@ -168,7 +168,7 @@ float test_builtin_dot_float2_int_splat(float2 p0, int p1) {
 // CHECK: %conv = sitofp i32 %1 to float
 // CHECK: %splat.splatinsert = insertelement <3 x float> poison, float %conv, i64 0
 // CHECK: %splat.splat = shufflevector <3 x float> %splat.splatinsert, <3 x float> poison, <3 x i32> zeroinitializer
-// CHECK: %dx.dot = call float @llvm.dx.dot.v3f32(<3 x float> %0, <3 x float> %splat.splat)
+// CHECK: %dx.dot = call float @llvm.dx.dot3.v3f32(<3 x float> %0, <3 x float> %splat.splat)
 // CHECK: ret float %dx.dot
 float test_builtin_dot_float3_int_splat(float3 p0, int p1) {
   return dot(p0, p1);

@@ -567,7 +567,7 @@ public:
   orc::ExecutorAddrDiff getOffset() const { return Offset; }
 
   void setOffset(orc::ExecutorAddrDiff NewOffset) {
-    assert(NewOffset < getBlock().getSize() && "Offset out of range");
+    assert(NewOffset <= getBlock().getSize() && "Offset out of range");
     Offset = NewOffset;
   }
 

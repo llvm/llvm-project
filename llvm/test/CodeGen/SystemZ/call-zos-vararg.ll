@@ -108,7 +108,7 @@ define i64 @call_vararg_both0(i64 %arg0, double %arg1) {
 ; CHECK-LABEL: call_vararg_long_double0:
 ; CHECK:         stmg 6, 7, 1872(4)
 ; CHECK-NEXT:    aghi 4, -192
-; CHECK-NEXT:    larl 1, @CPI5_0
+; CHECK-NEXT:    larl 1, L#CPI5_0
 ; CHECK-NEXT:    ld 0, 0(1)
 ; CHECK-NEXT:    ld 2, 8(1)
 ; CHECK-NEXT:    lg 6, 8(5)
@@ -202,7 +202,7 @@ define void @call_vec_vararg_test0(<2 x double> %v) {
 }
 
 ; ARCH12-LABEL: call_vec_vararg_test1
-; ARCH12: larl  1, @CPI10_0
+; ARCH12: larl  1, L#CPI10_0
 ; ARCH12: vl    0, 0(1), 3
 ; ARCH12: vlgvg 3, 24, 0
 ; ARCH12: vrepg 2, 0, 1
@@ -294,7 +294,7 @@ entry:
 ; CHECK-NEXT:    aghi 4, -192
 ; CHECK-NEXT:    lg 6, 72(5)
 ; CHECK-NEXT:    lg 5, 64(5)
-; CHECK-NEXT:    larl 1, @CPI17_0
+; CHECK-NEXT:    larl 1, L#CPI17_0
 ; CHECK-NEXT:    le 0, 0(1)
 ; CHECK-NEXT:    llihf 0, 1073692672
 ; CHECK-NEXT:    llihh 2, 16384

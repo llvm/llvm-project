@@ -92,15 +92,13 @@ func.func @dealloc_split_when_no_other_aliasing(%arg0: i1, %arg1: memref<2xi32>,
 //  CHECK-NEXT:   [[ALLOC0:%.+]] = memref.alloc(
 //  CHECK-NEXT:   [[ALLOC1:%.+]] = memref.alloc(
 //  CHECK-NEXT:   [[V0:%.+]] = arith.select{{.*}}[[ALLOC0]], [[ALLOC1]] :
-// COM: there is only one value in the retained list because the
-// COM: RemoveRetainedMemrefsGuaranteedToNotAlias pattern also applies here and
-// COM: removes %arg1 from the list. In the second dealloc, this does not apply
-// COM: because function arguments are assumed potentially alias (even if the
-// COM: types don't exactly match).
+// COM: there is only one value in the retained lists because the
+// COM: RemoveRetainedMemrefsGuaranteedToNotAlias pattern also applies here:
+// COM: - %alloc is guaranteed to not alias with %arg1.
+// COM: - %arg2 is guaranteed to not alias with %0.
 //  CHECK-NEXT:   [[V1:%.+]] = bufferization.dealloc ([[ALLOC0]] : memref<2xi32>) if ([[ARG0]]) retain ([[V0]] : memref<2xi32>)
-//  CHECK-NEXT:   [[V2:%.+]]:2 = bufferization.dealloc ([[ARG2]] : memref<2xi32>) if ([[ARG3]]) retain ([[ARG1]], [[V0]] : memref<2xi32>, memref<2xi32>)
-//  CHECK-NEXT:   [[V3:%.+]] = arith.ori [[V1]], [[V2]]#1
-//  CHECK-NEXT:   return [[V2]]#0, [[V3]] :
+//  CHECK-NEXT:   [[V2:%.+]] = bufferization.dealloc ([[ARG2]] : memref<2xi32>) if ([[ARG3]]) retain ([[ARG1]] : memref<2xi32>)
+//  CHECK-NEXT:   return [[V2]], [[V1]] :
 
 // -----
 

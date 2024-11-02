@@ -28,7 +28,8 @@ llvm.func @func_no_debug() {
 >
 #ptr = #llvm.di_derived_type<
   tag = DW_TAG_pointer_type, baseType = #si32,
-  sizeInBits = 64, alignInBits = 32, offsetInBits = 8
+  sizeInBits = 64, alignInBits = 32, offsetInBits = 8,
+  extraData = #si32
 >
 #named = #llvm.di_derived_type<
   // Specify the name parameter.
@@ -135,7 +136,7 @@ llvm.func @empty_types() {
 // CHECK: ![[FUNC_TYPE]] = !DISubroutineType(cc: DW_CC_normal, types: ![[FUNC_ARGS:.*]])
 // CHECK: ![[FUNC_ARGS]] = !{null, ![[ARG_TYPE:.*]], ![[PTR_TYPE:.*]], ![[NAMED_TYPE:.*]], ![[COMPOSITE_TYPE:.*]], ![[VECTOR_TYPE:.*]]}
 // CHECK: ![[ARG_TYPE]] = !DIBasicType(name: "si64")
-// CHECK: ![[PTR_TYPE]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[BASE_TYPE:.*]], size: 64, align: 32, offset: 8)
+// CHECK: ![[PTR_TYPE]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[BASE_TYPE:.*]], size: 64, align: 32, offset: 8, extraData: ![[BASE_TYPE]])
 // CHECK: ![[BASE_TYPE]] = !DIBasicType(name: "si32", size: 32, encoding: DW_ATE_signed)
 // CHECK: ![[NAMED_TYPE]] = !DIDerivedType(tag: DW_TAG_pointer_type, name: "named", baseType: ![[BASE_TYPE:.*]])
 // CHECK: ![[COMPOSITE_TYPE]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "composite", file: ![[CU_FILE_LOC]], line: 42, size: 64, align: 32, elements: ![[COMPOSITE_ELEMENTS:.*]])
@@ -171,14 +172,14 @@ llvm.func @empty_types() {
 
 #di_file = #llvm.di_file<"foo.mlir" in "/test/">
 #di_subprogram = #llvm.di_subprogram<
-  scope = #di_file, name = "func_decl_with_subprogram", file = #di_file, subprogramFlags = "Optimized"
+  scope = #di_file, name = "func_decl_with_subprogram", file = #di_file
 >
 
 // CHECK-LABEL: declare !dbg
 // CHECK-SAME: ![[SUBPROGRAM:.*]] i32 @func_decl_with_subprogram(
 llvm.func @func_decl_with_subprogram() -> (i32) loc(fused<#di_subprogram>["foo.mlir":2:1])
 
-// CHECK: ![[SUBPROGRAM]] = !DISubprogram(name: "func_decl_with_subprogram", scope: ![[FILE:.*]], file: ![[FILE]], spFlags: DISPFlagOptimized)
+// CHECK: ![[SUBPROGRAM]] = !DISubprogram(name: "func_decl_with_subprogram", scope: ![[FILE:.*]], file: ![[FILE]], spFlags: 0)
 // CHECK: ![[FILE]] = !DIFile(filename: "foo.mlir", directory: "/test/")
 
 // -----

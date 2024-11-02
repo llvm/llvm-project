@@ -499,6 +499,15 @@ add_gen_header(
 )
 
 add_gen_header(
+  sys_statvfs
+  DEF_FILE sys/statvfs.h.def
+  GEN_HDR sys/statvfs.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_statvfs
+)
+
+add_gen_header(
   sys_syscall
   DEF_FILE sys/syscall.h.def
   GEN_HDR sys/syscall.h

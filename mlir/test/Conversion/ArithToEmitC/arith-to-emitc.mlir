@@ -37,6 +37,57 @@ func.func @arith_ops(%arg0: f32, %arg1: f32) {
 
 // -----
 
+// CHECK-LABEL: arith_integer_ops
+func.func @arith_integer_ops(%arg0: i32, %arg1: i32) {
+  // CHECK: %[[C1:[^ ]*]] = emitc.cast %arg0 : i32 to ui32
+  // CHECK: %[[C2:[^ ]*]] = emitc.cast %arg1 : i32 to ui32
+  // CHECK: %[[ADD:[^ ]*]] = emitc.add %[[C1]], %[[C2]] : (ui32, ui32) -> ui32
+  // CHECK: %[[C3:[^ ]*]] = emitc.cast %[[ADD]] : ui32 to i32
+  %0 = arith.addi %arg0, %arg1 : i32
+  // CHECK: %[[C1:[^ ]*]] = emitc.cast %arg0 : i32 to ui32
+  // CHECK: %[[C2:[^ ]*]] = emitc.cast %arg1 : i32 to ui32
+  // CHECK: %[[SUB:[^ ]*]] = emitc.sub %[[C1]], %[[C2]] : (ui32, ui32) -> ui32
+  // CHECK: %[[C3:[^ ]*]] = emitc.cast %[[SUB]] : ui32 to i32
+  %1 = arith.subi %arg0, %arg1 : i32
+  // CHECK: %[[C1:[^ ]*]] = emitc.cast %arg0 : i32 to ui32
+  // CHECK: %[[C2:[^ ]*]] = emitc.cast %arg1 : i32 to ui32
+  // CHECK: %[[MUL:[^ ]*]] = emitc.mul %[[C1]], %[[C2]] : (ui32, ui32) -> ui32
+  // CHECK: %[[C3:[^ ]*]] = emitc.cast %[[MUL]] : ui32 to i32
+  %2 = arith.muli %arg0, %arg1 : i32
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: arith_integer_ops_signed_nsw
+func.func @arith_integer_ops_signed_nsw(%arg0: i32, %arg1: i32) {
+  // CHECK: emitc.add %arg0, %arg1 : (i32, i32) -> i32
+  %0 = arith.addi %arg0, %arg1 overflow<nsw> : i32
+  // CHECK: emitc.sub %arg0, %arg1 : (i32, i32) -> i32
+  %1 = arith.subi %arg0, %arg1 overflow<nsw>  : i32
+  // CHECK: emitc.mul %arg0, %arg1 : (i32, i32) -> i32
+  %2 = arith.muli %arg0, %arg1 overflow<nsw> : i32
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: arith_index
+func.func @arith_index(%arg0: index, %arg1: index) {
+  // CHECK: emitc.add %arg0, %arg1 : (index, index) -> index
+  %0 = arith.addi %arg0, %arg1 : index
+  // CHECK: emitc.sub %arg0, %arg1 : (index, index) -> index
+  %1 = arith.subi %arg0, %arg1 : index
+  // CHECK: emitc.mul %arg0, %arg1 : (index, index) -> index
+  %2 = arith.muli %arg0, %arg1 : index
+
+  return
+}
+
+// -----
+
 func.func @arith_select(%arg0: i1, %arg1: tensor<8xi32>, %arg2: tensor<8xi32>) -> () {
   // CHECK: [[V0:[^ ]*]] = emitc.conditional %arg0, %arg1, %arg2 : tensor<8xi32>
   %0 = arith.select %arg0, %arg1, %arg2 : i1, tensor<8xi32>

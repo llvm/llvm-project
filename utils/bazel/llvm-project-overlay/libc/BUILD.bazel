@@ -97,6 +97,11 @@ libc_support_library(
     deps = [":llvm_libc_macros_float_macros"],
 )
 
+libc_support_library(
+    name = "llvm_libc_macros_fcntl_macros",
+    hdrs = ["include/llvm-libc-macros/linux/fcntl-macros.h"],
+)
+
 ############################### Support libraries ##############################
 
 libc_support_library(
@@ -339,6 +344,7 @@ libc_support_library(
         "src/__support/CPP/type_traits/is_base_of.h",
         "src/__support/CPP/type_traits/is_class.h",
         "src/__support/CPP/type_traits/is_const.h",
+        "src/__support/CPP/type_traits/is_constant_evaluated.h",
         "src/__support/CPP/type_traits/is_convertible.h",
         "src/__support/CPP/type_traits/is_destructible.h",
         "src/__support/CPP/type_traits/is_enum.h",
@@ -502,9 +508,18 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_sign",
+    hdrs = ["src/__support/sign.h"],
+    deps = [
+        ":__support_macros_attributes",
+    ],
+)
+
+libc_support_library(
     name = "__support_uint128",
     hdrs = ["src/__support/UInt128.h"],
     deps = [
+        ":__support_macros_attributes",
         ":__support_macros_properties_types",
         ":__support_uint",
     ],
@@ -739,6 +754,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_properties_types",
         ":__support_math_extras",
+        ":__support_sign",
         ":__support_uint128",
     ],
 )
@@ -3249,6 +3265,18 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+    ],
+)
+
+libc_function(
+    name = "rename",
+    srcs = ["src/stdio/linux/rename.cpp"],
+    hdrs = ["src/stdio/rename.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":llvm_libc_macros_fcntl_macros",
     ],
 )
 
