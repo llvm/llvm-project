@@ -487,7 +487,7 @@ bool MergeFunctions::runOnModule(Module &M) {
 
 bool MergeFunctions::runOnFunctions(std::set<Function *> &F) {
   bool Changed = false;
-  std::vector<std::pair<IRHash, Function *>> HashedFuncs;
+  std::vector<std::pair<stable_hash, Function *>> HashedFuncs;
   for (Function *Func : F) {
     if (isEligibleForMerging(*Func)) {
       HashedFuncs.push_back({StructuralHash(*Func), Func});
