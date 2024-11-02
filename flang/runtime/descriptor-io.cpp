@@ -14,7 +14,8 @@ namespace Fortran::runtime::io::descr {
 // Defined formatted I/O (maybe)
 std::optional<bool> DefinedFormattedIo(IoStatementState &io,
     const Descriptor &descriptor, const typeInfo::DerivedType &derived,
-    const typeInfo::SpecialBinding &special) {
+    const typeInfo::SpecialBinding &special,
+    const SubscriptValue subscripts[]) {
   std::optional<DataEdit> peek{io.GetNextDataEdit(0 /*to peek at it*/)};
   if (peek &&
       (peek->descriptor == DataEdit::DefinedDerivedType ||
@@ -61,9 +62,6 @@ std::optional<bool> DefinedFormattedIo(IoStatementState &io,
       // I/O subroutine reads counts towards READ(SIZE=).
       startPos = io.InquirePos();
     }
-    std::size_t numElements{descriptor.Elements()};
-    SubscriptValue subscripts[maxRank];
-    descriptor.GetLowerBounds(subscripts);
     if (special.IsArgDescriptor(0)) {
       // "dtv" argument is "class(t)", pass a descriptor
       auto *p{special.GetProc<void (*)(const Descriptor &, int &, char *,
@@ -72,25 +70,15 @@ std::optional<bool> DefinedFormattedIo(IoStatementState &io,
       Descriptor &elementDesc{elementStatDesc.descriptor()};
       elementDesc.Establish(
           derived, nullptr, 0, nullptr, CFI_attribute_pointer);
-      for (; numElements-- > 0; descriptor.IncrementSubscripts(subscripts)) {
-        elementDesc.set_base_addr(descriptor.Element<char>(subscripts));
-        p(elementDesc, unit, ioType, vListDesc, ioStat, ioMsg, ioTypeLen,
-            sizeof ioMsg);
-        if (ioStat != IostatOk) {
-          break;
-        }
-      }
+      elementDesc.set_base_addr(descriptor.Element<char>(subscripts));
+      p(elementDesc, unit, ioType, vListDesc, ioStat, ioMsg, ioTypeLen,
+          sizeof ioMsg);
     } else {
       // "dtv" argument is "type(t)", pass a raw pointer
       auto *p{special.GetProc<void (*)(const void *, int &, char *,
           const Descriptor &, int &, char *, std::size_t, std::size_t)>()};
-      for (; numElements-- > 0; descriptor.IncrementSubscripts(subscripts)) {
-        p(descriptor.Element<char>(subscripts), unit, ioType, vListDesc, ioStat,
-            ioMsg, ioTypeLen, sizeof ioMsg);
-        if (ioStat != IostatOk) {
-          break;
-        }
-      }
+      p(descriptor.Element<char>(subscripts), unit, ioType, vListDesc, ioStat,
+          ioMsg, ioTypeLen, sizeof ioMsg);
     }
     handler.Forward(ioStat, ioMsg, sizeof ioMsg);
     external->PopChildIo(child);
@@ -119,7 +107,10 @@ bool DefinedUnformattedIo(IoStatementState &io, const Descriptor &descriptor,
   // Unformatted I/O must have an external unit (or child thereof).
   IoErrorHandler &handler{io.GetIoErrorHandler()};
   ExternalFileUnit *external{io.GetExternalFileUnit()};
-  RUNTIME_CHECK(handler, external != nullptr);
+  if (!external) { // INQUIRE(IOLENGTH=)
+    handler.SignalError(IostatNonExternalDefinedUnformattedIo);
+    return false;
+  }
   ChildIo &child{external->PushChildIo(io)};
   int unit{external->unitNumber()};
   int ioStat{IostatOk};

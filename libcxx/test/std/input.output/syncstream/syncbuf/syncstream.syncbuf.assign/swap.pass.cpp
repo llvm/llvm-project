@@ -75,7 +75,8 @@ static void test_short_write_after_swap() {
     sync_buf2.sputn(expected.data(), expected.size());
 
     sync_buf1.swap(sync_buf2);
-    expected.push_back(sync_buf1.sputc(CharT('B')));
+    sync_buf1.sputc(CharT('B'));
+    expected.push_back(CharT('B'));
     sync_buf2.sputc(CharT('Z'));
 
     assert(sstr1.str().empty());

@@ -85,7 +85,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator>=(const weekday& __lhs, const weekday& __rhs) noexcept
 { return !(__lhs < __rhs); }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 weekday operator+(const weekday& __lhs, const days& __rhs) noexcept
 {
     auto const __mu = static_cast<long long>(__lhs.c_encoding()) + __rhs.count();
@@ -93,15 +93,15 @@ weekday operator+(const weekday& __lhs, const days& __rhs) noexcept
     return weekday{static_cast<unsigned>(__mu - __yr * 7)};
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 weekday operator+(const days& __lhs, const weekday& __rhs) noexcept
 { return __rhs + __lhs; }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 weekday operator-(const weekday& __lhs, const days& __rhs) noexcept
 { return __lhs + -__rhs; }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 days operator-(const weekday& __lhs, const weekday& __rhs) noexcept
 {
     const int __wdu = __lhs.c_encoding() - __rhs.c_encoding();

@@ -42,7 +42,7 @@ TEST(FrontendOutputTests, TestOutputStream) {
   bool Success = ExecuteCompilerInvocation(&Compiler);
   EXPECT_TRUE(Success);
   EXPECT_TRUE(!IRBuffer.empty());
-  EXPECT_TRUE(StringRef(IRBuffer.data()).startswith("BC"));
+  EXPECT_TRUE(StringRef(IRBuffer.data()).starts_with("BC"));
 }
 
 TEST(FrontendOutputTests, TestVerboseOutputStreamShared) {

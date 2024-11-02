@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple i686-pc-cygwin -O2 %s -o - | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -mtriple i686-pc-cygwin -O2 %s -o - | FileCheck %s
 ; Check struct X for dead variable xyz from inlined function foo.
 
 ; CHECK: Lsection_info

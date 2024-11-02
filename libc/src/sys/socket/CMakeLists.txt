@@ -9,3 +9,9 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.socket
 )
 
+add_entrypoint_object(
+  bind
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.bind
+)

@@ -7,5 +7,5 @@
 !===------------------------------------------------------------------------===!
 
 module ieee_exceptions
-  use __Fortran_ieee_exceptions
+  use __fortran_ieee_exceptions
 end module ieee_exceptions

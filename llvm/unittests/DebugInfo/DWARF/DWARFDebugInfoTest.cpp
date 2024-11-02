@@ -1615,6 +1615,42 @@ TEST(DWARFDebugInfo, TestFindRecurse) {
   EXPECT_EQ(AbsDieName, StringOpt.value_or(nullptr));
 }
 
+TEST(DWARFDebugInfo, TestSelfRecursiveType) {
+  typedef uint32_t AddrType;
+  Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
+
+  auto ExpectedDG = dwarfgen::Generator::create(Triple, 4);
+  ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());
+  dwarfgen::Generator *DG = ExpectedDG.get().get();
+  dwarfgen::CompileUnit &CU = DG->addCompileUnit();
+  dwarfgen::DIE CUDie = CU.getUnitDIE();
+
+  // Create an invalid self-recursive typedef.
+  dwarfgen::DIE TypedefDie = CUDie.addChild(DW_TAG_typedef);
+  TypedefDie.addAttribute(DW_AT_name, DW_FORM_strp, "illegal");
+  TypedefDie.addAttribute(DW_AT_type, DW_FORM_ref_addr, TypedefDie);
+
+  MemoryBufferRef FileBuffer(DG->generate(), "dwarf");
+  auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
+  EXPECT_TRUE((bool)Obj);
+  std::unique_ptr<DWARFContext> DwarfContext = DWARFContext::create(**Obj);
+
+  // Verify the number of compile units is correct.
+  uint32_t NumCUs = DwarfContext->getNumCompileUnits();
+  EXPECT_EQ(NumCUs, 1u);
+  DWARFCompileUnit *U = cast<DWARFCompileUnit>(DwarfContext->getUnitAtIndex(0));
+  {
+    DWARFDie CUDie = U->getUnitDIE(false);
+    EXPECT_TRUE(CUDie.isValid());
+    DWARFDie TypedefDie = CUDie.getFirstChild();
+
+    // Test that getTypeSize doesn't get into an infinite loop.
+    EXPECT_EQ(TypedefDie.getTypeSize(sizeof(AddrType)), std::nullopt);
+  }
+}
+
 TEST(DWARFDebugInfo, TestDwarfToFunctions) {
   // Test all of the dwarf::toXXX functions that take a
   // std::optional<DWARFFormValue> and extract the values from it.

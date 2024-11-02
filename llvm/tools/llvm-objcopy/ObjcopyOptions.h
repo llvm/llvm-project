@@ -11,7 +11,6 @@
 
 #include "llvm/ObjCopy/ConfigManager.h"
 #include "llvm/Support/Allocator.h"
-#include <vector>
 
 namespace llvm {
 namespace objcopy {

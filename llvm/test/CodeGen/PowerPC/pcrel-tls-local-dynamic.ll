@@ -13,7 +13,7 @@ define nonnull ptr @LocalDynamicAddressLoad() {
   ; CHECK-S-LABEL: LocalDynamicAddressLoad:
   ; CHECK-S:         paddi r3, 0, x@got@tlsld@pcrel, 1
   ; CHECK-S-NEXT:    bl __tls_get_addr@notoc(x@tlsld)
-  ; CHECK-S-NEXT:    paddi r3, r3, x@DTPREL, 0
+  ; CHECK-S-NEXT:    paddi r3, r3, x@DTPREL
   ; CHECK-S-NEXT:    addi r1, r1, 32
   ; CHECK-S-NEXT:    ld r0, 16(r1)
   ; CHECK-S-NEXT:    mtlr r0
@@ -34,7 +34,7 @@ define i32 @LocalDynamicValueLoad() {
   ; CHECK-S-LABEL: LocalDynamicValueLoad:
   ; CHECK-S:         paddi r3, 0, x@got@tlsld@pcrel, 1
   ; CHECK-S-NEXT:    bl __tls_get_addr@notoc(x@tlsld)
-  ; CHECK-S-NEXT:    paddi r3, r3, x@DTPREL, 0
+  ; CHECK-S-NEXT:    paddi r3, r3, x@DTPREL
   ; CHECK-S-NEXT:    lwz r3, 0(r3)
   ; CHECK-S-NEXT:    addi r1, r1, 32
   ; CHECK-S-NEXT:    ld r0, 16(r1)

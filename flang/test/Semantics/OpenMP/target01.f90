@@ -39,19 +39,19 @@ subroutine bar(b1, b2, b3)
   type(c_ptr), pointer :: b2
   type(c_ptr), value :: b3
 
-  !ERROR: Variable 'c' in IS_DEVICE_PTR clause must be a dummy argument
+  !WARNING: Variable 'c' in IS_DEVICE_PTR clause must be a dummy argument. This semantic check is deprecated from OpenMP 5.2 and later.
   !$omp target is_device_ptr(c)
     y = y + 1
   !$omp end target
-  !ERROR: Variable 'b1' in IS_DEVICE_PTR clause must be a dummy argument that does not have the ALLOCATABLE, POINTER or VALUE attribute.
+  !WARNING: Variable 'b1' in IS_DEVICE_PTR clause must be a dummy argument that does not have the ALLOCATABLE, POINTER or VALUE attribute. This semantic check is deprecated from OpenMP 5.2 and later.
   !$omp target is_device_ptr(b1)
     y = y + 1
   !$omp end target
-  !ERROR: Variable 'b2' in IS_DEVICE_PTR clause must be a dummy argument that does not have the ALLOCATABLE, POINTER or VALUE attribute.
+  !WARNING: Variable 'b2' in IS_DEVICE_PTR clause must be a dummy argument that does not have the ALLOCATABLE, POINTER or VALUE attribute. This semantic check is deprecated from OpenMP 5.2 and later.
   !$omp target is_device_ptr(b2)
     y = y + 1
   !$omp end target
-  !ERROR: Variable 'b3' in IS_DEVICE_PTR clause must be a dummy argument that does not have the ALLOCATABLE, POINTER or VALUE attribute.
+  !WARNING: Variable 'b3' in IS_DEVICE_PTR clause must be a dummy argument that does not have the ALLOCATABLE, POINTER or VALUE attribute. This semantic check is deprecated from OpenMP 5.2 and later.
   !$omp target is_device_ptr(b3)
     y = y + 1
   !$omp end target

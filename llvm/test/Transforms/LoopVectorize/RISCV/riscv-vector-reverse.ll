@@ -51,10 +51,11 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Scalarizing: %cmp = icmp ugt i64 %indvars.iv, 1
 ; CHECK-NEXT:  LV: Scalarizing: %indvars.iv.next = add nsw i64 %indvars.iv, -1
 ; CHECK-NEXT:  VPlan 'Initial VPlan for VF={vscale x 4},UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
-; CHECK-NEXT:  vp<%1> = original trip-count
+; CHECK-NEXT:  vp<[[TC:%.+]]> = original trip-count
 ; CHECK:       ph:
-; CHECK-NEXT:    EMIT vp<%1> = EXPAND SCEV (zext i32 %n to i64)
+; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
 ; CHECK-NEXT:  No successors
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:  Successor(s): vector loop
@@ -70,7 +71,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    WIDEN ir<%add9> = add ir<%1>, ir<1>
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
 ; CHECK-NEXT:    WIDEN store ir<%arrayidx3>, ir<%add9>
-; CHECK-NEXT:    EMIT vp<[[IV_INC:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:    EMIT vp<[[IV_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:    EMIT branch-on-count vp<[[IV_INC]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
@@ -188,10 +189,11 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Scalarizing: %cmp = icmp ugt i64 %indvars.iv, 1
 ; CHECK-NEXT:  LV: Scalarizing: %indvars.iv.next = add nsw i64 %indvars.iv, -1
 ; CHECK-NEXT:  VPlan 'Initial VPlan for VF={vscale x 4},UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
-; CHECK-NEXT:  vp<%1> = original trip-count
+; CHECK-NEXT:  vp<[[TC:%.+]]> = original trip-count
 ; CHECK:       ph:
-; CHECK-NEXT:    EMIT vp<%1> = EXPAND SCEV (zext i32 %n to i64)
+; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
 ; CHECK-NEXT:  No successors
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:  Successor(s): vector loop
@@ -207,7 +209,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    WIDEN ir<%conv1> = fadd ir<%1>, ir<1.000000e+00>
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
 ; CHECK-NEXT:    WIDEN store ir<%arrayidx3>, ir<%conv1>
-; CHECK-NEXT:    EMIT vp<[[IV_INC:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:    EMIT vp<[[IV_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:    EMIT branch-on-count vp<[[IV_INC]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }

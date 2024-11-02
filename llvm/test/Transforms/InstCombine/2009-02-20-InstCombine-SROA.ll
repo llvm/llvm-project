@@ -80,7 +80,7 @@ define ptr @_Z3fooRSt6vectorIiSaIiEE(ptr %X) {
 ; IC-NEXT:    [[TMP31:%.*]] = load ptr, ptr [[__FIRST_ADDR_I_I]], align 4
 ; IC-NEXT:    [[TMP32:%.*]] = getelementptr i32, ptr [[TMP31]], i32 1
 ; IC-NEXT:    store ptr [[TMP32]], ptr [[__FIRST_ADDR_I_I]], align 4
-; IC-NEXT:    [[TMP33:%.*]] = add i32 [[__TRIP_COUNT_0_I_I:%.*]], -1
+; IC-NEXT:    [[TMP33:%.*]] = add nsw i32 [[__TRIP_COUNT_0_I_I:%.*]], -1
 ; IC-NEXT:    br label [[BB12_I_I]]
 ; IC:       bb12.i.i:
 ; IC-NEXT:    [[__TRIP_COUNT_0_I_I]] = phi i32 [ [[TMP7]], [[ENTRY:%.*]] ], [ [[TMP33]], [[BB11_I_I]] ]
@@ -188,7 +188,7 @@ define ptr @_Z3fooRSt6vectorIiSaIiEE(ptr %X) {
 ; IC_SROA-NEXT:    br label [[_ZST4FINDIN9__GNU_CXX17__NORMAL_ITERATORIPIST6VECTORIISAIIEEEEIET_S7_S7_RKT0__EXIT]]
 ; IC_SROA:       bb11.i.i:
 ; IC_SROA-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[TMP15]], i32 1
-; IC_SROA-NEXT:    [[TMP19:%.*]] = add i32 [[__TRIP_COUNT_0_I_I:%.*]], -1
+; IC_SROA-NEXT:    [[TMP19:%.*]] = add nsw i32 [[__TRIP_COUNT_0_I_I:%.*]], -1
 ; IC_SROA-NEXT:    br label [[BB12_I_I]]
 ; IC_SROA:       bb12.i.i:
 ; IC_SROA-NEXT:    [[__FIRST_ADDR_I_I_SROA_0_0]] = phi ptr [ [[TMP2]], [[ENTRY:%.*]] ], [ [[TMP18]], [[BB11_I_I]] ]

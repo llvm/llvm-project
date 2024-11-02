@@ -403,17 +403,14 @@ define void @v3i8store(ptr %p) {
 ; CHECK-LABEL: v3i8store:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    sub sp, #4
-; CHECK-NEXT:    vmov.i32 d16, #0xff
-; CHECK-NEXT:    mov r1, sp
-; CHECK-NEXT:    vmov.i32 d17, #0x0
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    vand d16, d17, d16
-; CHECK-NEXT:    vst1.32 {d16[0]}, [r1:32]
-; CHECK-NEXT:    vld1.32 {d16[0]}, [r1:32]
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    mov r2, sp
+; CHECK-NEXT:    str r1, [sp]
+; CHECK-NEXT:    vld1.32 {d16[0]}, [r2:32]
+; CHECK-NEXT:    strb r1, [r0, #2]
 ; CHECK-NEXT:    vmovl.u16 q8, d16
-; CHECK-NEXT:    strb r2, [r0, #2]
-; CHECK-NEXT:    vmov.32 r1, d16[0]
-; CHECK-NEXT:    strh r1, [r0]
+; CHECK-NEXT:    vmov.32 r2, d16[0]
+; CHECK-NEXT:    strh r2, [r0]
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
   store <3 x i8> zeroinitializer, ptr %p, align 4

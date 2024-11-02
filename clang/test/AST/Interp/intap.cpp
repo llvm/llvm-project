@@ -57,9 +57,25 @@ namespace APCast {
 }
 
 #ifdef __SIZEOF_INT128__
+typedef __int128 int128_t;
+typedef unsigned __int128 uint128_t;
+static const __uint128_t UINT128_MAX =__uint128_t(__int128_t(-1L));
+static_assert(UINT128_MAX == -1, "");
+static_assert(UINT128_MAX == 1, ""); // expected-error {{static assertion failed}} \
+                                     // expected-note {{'340282366920938463463374607431768211455 == 1'}} \
+                                     // ref-error {{static assertion failed}} \
+                                     // ref-note {{'340282366920938463463374607431768211455 == 1'}}
+
+static const __int128_t INT128_MAX = UINT128_MAX >> (__int128_t)1;
+static_assert(INT128_MAX != 0, "");
+static_assert(INT128_MAX == 0, ""); // expected-error {{failed}} \
+                                    // expected-note {{evaluates to '170141183460469231731687303715884105727 == 0'}} \
+                                    // ref-error {{failed}} \
+                                    // ref-note {{evaluates to '170141183460469231731687303715884105727 == 0'}}
+static const __int128_t INT128_MIN = -INT128_MAX - 1;
+
 namespace i128 {
-  typedef __int128 int128_t;
-  typedef unsigned __int128 uint128_t;
+
   constexpr int128_t I128_1 = 12;
   static_assert(I128_1 == 12, "");
   static_assert(I128_1 != 10, "");
@@ -198,6 +214,52 @@ namespace BitOps {
   static_assert((Max & 1) == 1, "");
   static_assert((UZero | 1) == 1, "");
   static_assert((Max ^ UZero) == Max, "");
+}
+
+namespace IncDec {
+#if __cplusplus >= 201402L
+  constexpr int128_t maxPlus1(bool Pre) {
+    int128_t a = INT128_MAX;
+
+    if (Pre)
+      ++a; // ref-note {{value 170141183460469231731687303715884105728 is outside the range}} \
+           // expected-note {{value 170141183460469231731687303715884105728 is outside the range}}
+    else
+      a++; // ref-note {{value 170141183460469231731687303715884105728 is outside the range}} \
+           // expected-note {{value 170141183460469231731687303715884105728 is outside the range}}
+    return a;
+  }
+  static_assert(maxPlus1(true) == 0, ""); // ref-error {{not an integral constant expression}} \
+                                          // ref-note {{in call to}} \
+                                          // expected-error {{not an integral constant expression}} \
+                                          // expected-note {{in call to}}
+  static_assert(maxPlus1(false) == 0, ""); // ref-error {{not an integral constant expression}} \
+                                           // ref-note {{in call to}} \
+                                           // expected-error {{not an integral constant expression}} \
+                                           // expected-note {{in call to}}
+
+  constexpr int128_t inc1(bool Pre) {
+    int128_t A = 0;
+    if (Pre)
+      ++A;
+    else
+      A++;
+    return A;
+  }
+  static_assert(inc1(true) == 1, "");
+  static_assert(inc1(false) == 1, "");
+
+  constexpr int128_t dec1(bool Pre) {
+    int128_t A = 2;
+    if (Pre)
+      --A;
+    else
+      A--;
+    return A;
+  }
+  static_assert(dec1(true) == 1, "");
+  static_assert(dec1(false) == 1, "");
+#endif
 }
 
 #endif

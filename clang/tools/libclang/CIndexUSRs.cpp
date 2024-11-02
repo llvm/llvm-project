@@ -28,7 +28,7 @@ using namespace clang::index;
 //===----------------------------------------------------------------------===//
 
 static inline StringRef extractUSRSuffix(StringRef s) {
-  return s.startswith("c:") ? s.substr(2) : "";
+  return s.starts_with("c:") ? s.substr(2) : "";
 }
 
 bool cxcursor::getDeclCursorUSR(const Decl *D, SmallVectorImpl<char> &Buf) {

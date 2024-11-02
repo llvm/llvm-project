@@ -23,10 +23,10 @@ public:
   /// Records that a given file entry is needed for replaying callbacks.
   void addNecessaryFile(FileEntryRef File) {
     // Don't record modulemap files because it breaks same file detection.
-    if (!(File.getName().endswith("module.modulemap") ||
-          File.getName().endswith("module.private.modulemap") ||
-          File.getName().endswith("module.map") ||
-          File.getName().endswith("module_private.map")))
+    if (!(File.getName().ends_with("module.modulemap") ||
+          File.getName().ends_with("module.private.modulemap") ||
+          File.getName().ends_with("module.map") ||
+          File.getName().ends_with("module_private.map")))
       FilesToRecord.insert(File);
   }
 
@@ -171,7 +171,7 @@ void ExpandModularHeadersPPCallbacks::InclusionDirective(
   if (Imported) {
     serialization::ModuleFile *MF =
         Compiler.getASTReader()->getModuleManager().lookup(
-            Imported->getASTFile());
+            *Imported->getASTFile());
     handleModuleFile(MF);
   }
   parseToLocation(DirectiveLoc);

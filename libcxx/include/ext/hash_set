@@ -242,7 +242,7 @@ public:
     typedef typename __table::const_iterator       iterator;
     typedef typename __table::const_iterator       const_iterator;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     hash_set() { }
     _LIBCPP_HIDE_FROM_ABI explicit hash_set(size_type __n, const hasher& __hf = hasher(),
                            const key_equal& __eql = key_equal());
@@ -260,75 +260,75 @@ public:
                       const allocator_type& __a);
     _LIBCPP_HIDE_FROM_ABI hash_set(const hash_set& __u);
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     allocator_type get_allocator() const
         {return allocator_type(__table_.__node_alloc());}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool      empty() const {return __table_.size() == 0;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type size() const  {return __table_.size();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type max_size() const {return __table_.max_size();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator       begin()        {return __table_.begin();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator       end()          {return __table_.end();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_iterator begin()  const {return __table_.begin();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_iterator end()    const {return __table_.end();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     std::pair<iterator, bool> insert(const value_type& __x)
         {return __table_.__insert_unique(__x);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator insert(const_iterator, const value_type& __x) {return insert(__x).first;}
     template <class _InputIterator>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         void insert(_InputIterator __first, _InputIterator __last);
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void erase(const_iterator __p) {__table_.erase(__p);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type erase(const key_type& __k) {return __table_.__erase_unique(__k);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void erase(const_iterator __first, const_iterator __last)
         {__table_.erase(__first, __last);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void clear() {__table_.clear();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(hash_set& __u) {__table_.swap(__u.__table_);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     hasher hash_funct() const {return __table_.hash_function();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     key_equal key_eq() const {return __table_.key_eq();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator       find(const key_type& __k)       {return __table_.find(__k);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_iterator find(const key_type& __k) const {return __table_.find(__k);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type count(const key_type& __k) const {return __table_.__count_unique(__k);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     std::pair<iterator, iterator>             equal_range(const key_type& __k)
         {return __table_.__equal_range_unique(__k);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     std::pair<const_iterator, const_iterator> equal_range(const key_type& __k) const
         {return __table_.__equal_range_unique(__k);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type bucket_count() const {return __table_.bucket_count();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type max_bucket_count() const {return __table_.max_bucket_count();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type elems_in_bucket(size_type __n) const {return __table_.bucket_size(__n);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void resize(size_type __n) {__table_.__rehash_unique(__n);}
 };
 
@@ -399,7 +399,7 @@ hash_set<_Value, _Hash, _Pred, _Alloc>::insert(_InputIterator __first,
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void
 swap(hash_set<_Value, _Hash, _Pred, _Alloc>& __x,
      hash_set<_Value, _Hash, _Pred, _Alloc>& __y)
@@ -427,7 +427,7 @@ operator==(const hash_set<_Value, _Hash, _Pred, _Alloc>& __x,
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator!=(const hash_set<_Value, _Hash, _Pred, _Alloc>& __x,
            const hash_set<_Value, _Hash, _Pred, _Alloc>& __y)
@@ -463,7 +463,7 @@ public:
     typedef typename __table::const_iterator       iterator;
     typedef typename __table::const_iterator       const_iterator;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     hash_multiset() { }
     explicit _LIBCPP_HIDE_FROM_ABI hash_multiset(size_type __n, const hasher& __hf = hasher(),
                                 const key_equal& __eql = key_equal());
@@ -481,74 +481,74 @@ public:
                       const key_equal& __eql, const allocator_type& __a);
     _LIBCPP_HIDE_FROM_ABI hash_multiset(const hash_multiset& __u);
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     allocator_type get_allocator() const
         {return allocator_type(__table_.__node_alloc());}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool      empty() const {return __table_.size() == 0;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type size() const  {return __table_.size();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type max_size() const {return __table_.max_size();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator       begin()        {return __table_.begin();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator       end()          {return __table_.end();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_iterator begin()  const {return __table_.begin();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_iterator end()    const {return __table_.end();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator insert(const value_type& __x) {return __table_.__insert_multi(__x);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator insert(const_iterator, const value_type& __x) {return insert(__x);}
     template <class _InputIterator>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         void insert(_InputIterator __first, _InputIterator __last);
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void erase(const_iterator __p) {__table_.erase(__p);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type erase(const key_type& __k) {return __table_.__erase_multi(__k);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void erase(const_iterator __first, const_iterator __last)
         {__table_.erase(__first, __last);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void clear() {__table_.clear();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(hash_multiset& __u) {__table_.swap(__u.__table_);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     hasher hash_funct() const {return __table_.hash_function();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     key_equal key_eq() const {return __table_.key_eq();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iterator       find(const key_type& __k)       {return __table_.find(__k);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_iterator find(const key_type& __k) const {return __table_.find(__k);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type count(const key_type& __k) const {return __table_.__count_multi(__k);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     std::pair<iterator, iterator>             equal_range(const key_type& __k)
         {return __table_.__equal_range_multi(__k);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     std::pair<const_iterator, const_iterator> equal_range(const key_type& __k) const
         {return __table_.__equal_range_multi(__k);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type bucket_count() const {return __table_.bucket_count();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type max_bucket_count() const {return __table_.max_bucket_count();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type elems_in_bucket(size_type __n) const {return __table_.bucket_size(__n);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void resize(size_type __n) {__table_.__rehash_multi(__n);}
 };
 
@@ -620,7 +620,7 @@ hash_multiset<_Value, _Hash, _Pred, _Alloc>::insert(_InputIterator __first,
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void
 swap(hash_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
      hash_multiset<_Value, _Hash, _Pred, _Alloc>& __y)
@@ -642,9 +642,9 @@ operator==(const hash_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
     {
         _EqRng __xeq = __x.equal_range(*__i);
         _EqRng __yeq = __y.equal_range(*__i);
-        if (_VSTD::distance(__xeq.first, __xeq.second) !=
-            _VSTD::distance(__yeq.first, __yeq.second) ||
-                  !_VSTD::is_permutation(__xeq.first, __xeq.second, __yeq.first))
+        if (std::distance(__xeq.first, __xeq.second) !=
+            std::distance(__yeq.first, __yeq.second) ||
+                  !std::is_permutation(__xeq.first, __xeq.second, __yeq.first))
             return false;
         __i = __xeq.second;
     }
@@ -652,7 +652,7 @@ operator==(const hash_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator!=(const hash_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
            const hash_multiset<_Value, _Hash, _Pred, _Alloc>& __y)

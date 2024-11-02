@@ -234,7 +234,7 @@ int main(int argc, const char **argv) {
     while (std::optional<std::string> Line = LE.readLine()) {
       llvm::StringRef L = *Line;
       L = L.trim();
-      if (L.endswith("\\")) {
+      if (L.ends_with("\\")) {
         // FIXME: Support #ifdef X \ ...
         Input += L.drop_back(1);
         LE.setPrompt("clang-repl...   ");

@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVLegalizerInfo.h"
+#include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -22,6 +24,7 @@
 
 using namespace llvm;
 using namespace LegalityPredicates;
+using namespace LegalizeMutations;
 
 // Is this type supported by scalar FP arithmetic operations given the current
 // subtarget.
@@ -56,11 +59,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).minScalar(0, sXLen).lower();
 
-  getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
-      .customIf([=, &ST](const LegalityQuery &Query) {
-        return ST.is64Bit() && typeIs(0, s32)(Query) && typeIs(1, s32)(Query);
-      })
-      .legalFor({{s32, s32}, {s32, sXLen}, {sXLen, sXLen}})
+  auto &ShiftActions = getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL});
+  if (ST.is64Bit())
+    ShiftActions.customFor({{s32, s32}});
+  ShiftActions.legalFor({{s32, s32}, {s32, sXLen}, {sXLen, sXLen}})
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, sXLen)
       .clampScalar(0, s32, sXLen)
@@ -85,8 +87,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
     unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;
     unsigned LitTyIdx = Op == G_MERGE_VALUES ? 1 : 0;
-    getActionDefinitionsBuilder(Op)
-        .widenScalarToNextPow2(LitTyIdx, XLen)
+    auto &MergeUnmergeActions = getActionDefinitionsBuilder(Op);
+    if (XLen == 32 && ST.hasStdExtD()) {
+      LLT IdxZeroTy = G_MERGE_VALUES ? s64 : s32;
+      LLT IdxOneTy = G_MERGE_VALUES ? s32 : s64;
+      MergeUnmergeActions.legalFor({IdxZeroTy, IdxOneTy});
+    }
+    MergeUnmergeActions.widenScalarToNextPow2(LitTyIdx, XLen)
         .widenScalarToNextPow2(BigTyIdx, XLen)
         .clampScalar(LitTyIdx, sXLen, sXLen)
         .clampScalar(BigTyIdx, sXLen, sXLen);
@@ -94,7 +101,15 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
 
-  getActionDefinitionsBuilder({G_ROTL, G_ROTR}).lower();
+  auto &RotateActions = getActionDefinitionsBuilder({G_ROTL, G_ROTR});
+  if (ST.hasStdExtZbb()) {
+    RotateActions.legalFor({{s32, sXLen}, {sXLen, sXLen}});
+    // Widen s32 rotate amount to s64 so SDAG patterns will match.
+    if (ST.is64Bit())
+      RotateActions.widenScalarIf(all(typeIs(0, s32), typeIs(1, s32)),
+                                  changeTo(1, sXLen));
+  }
+  RotateActions.lower();
 
   getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
 
@@ -169,7 +184,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   LoadStoreActions.clampScalar(0, s32, sXLen).lower();
   ExtLoadActions.widenScalarToNextPow2(0).clampScalar(0, s32, sXLen).lower();
 
-  getActionDefinitionsBuilder(G_PTR_ADD).legalFor({{p0, sXLen}});
+  getActionDefinitionsBuilder({G_PTR_ADD, G_PTRMASK}).legalFor({{p0, sXLen}});
 
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalFor({{sXLen, p0}})
@@ -190,7 +205,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .widenScalarToNextPow2(0)
       .clampScalar(0, sXLen, sXLen);
 
-  getActionDefinitionsBuilder({G_GLOBAL_VALUE, G_JUMP_TABLE}).legalFor({p0});
+  getActionDefinitionsBuilder({G_GLOBAL_VALUE, G_JUMP_TABLE, G_CONSTANT_POOL})
+      .legalFor({p0});
 
   if (ST.hasStdExtM() || ST.hasStdExtZmmul()) {
     getActionDefinitionsBuilder(G_MUL)
@@ -236,7 +252,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
         .widenScalarToNextPow2(0);
   }
 
-  getActionDefinitionsBuilder(G_ABS).lower();
+  auto &AbsActions = getActionDefinitionsBuilder(G_ABS);
+  if (ST.hasStdExtZbb())
+    AbsActions.customFor({s32, sXLen}).minScalar(0, sXLen);
+  AbsActions.lower();
 
   auto &MinMaxActions =
       getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN});
@@ -278,7 +297,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_IS_FPCLASS)
       .customIf(all(typeIs(0, s1), typeIsScalarFPArith(1, ST)));
 
-  getActionDefinitionsBuilder(G_FCONSTANT).legalIf(typeIsScalarFPArith(0, ST));
+  getActionDefinitionsBuilder(G_FCONSTANT)
+      .legalIf(typeIsScalarFPArith(0, ST))
+      .lowerFor({s32, s64});
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalIf(all(typeInSet(0, {s32, sXLen}), typeIsScalarFPArith(1, ST)))
@@ -295,7 +316,60 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR})
       .libcallFor({s32, s64});
 
+  getActionDefinitionsBuilder(G_VASTART).customFor({p0});
+
+  // va_list must be a pointer, but most sized types are pretty easy to handle
+  // as the destination.
+  getActionDefinitionsBuilder(G_VAARG)
+      // TODO: Implement narrowScalar and widenScalar for G_VAARG for types
+      // outside the [s32, sXLen] range.
+      .clampScalar(0, s32, sXLen)
+      .lowerForCartesianProduct({s32, sXLen, p0}, {p0});
+
   getLegacyLegalizerInfo().computeTables();
+}
+
+static Type *getTypeForLLT(LLT Ty, LLVMContext &C) {
+  if (Ty.isVector())
+    return FixedVectorType::get(IntegerType::get(C, Ty.getScalarSizeInBits()),
+                                Ty.getNumElements());
+  return IntegerType::get(C, Ty.getSizeInBits());
+}
+
+bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
+                                           MachineInstr &MI) const {
+  Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+  switch (IntrinsicID) {
+  default:
+    return false;
+  case Intrinsic::vacopy: {
+    // vacopy arguments must be legal because of the intrinsic signature.
+    // No need to check here.
+
+    MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+    MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+    MachineFunction &MF = *MI.getMF();
+    const DataLayout &DL = MIRBuilder.getDataLayout();
+    LLVMContext &Ctx = MF.getFunction().getContext();
+
+    Register DstLst = MI.getOperand(1).getReg();
+    LLT PtrTy = MRI.getType(DstLst);
+
+    // Load the source va_list
+    Align Alignment = DL.getABITypeAlign(getTypeForLLT(PtrTy, Ctx));
+    MachineMemOperand *LoadMMO = MF.getMachineMemOperand(
+        MachinePointerInfo(), MachineMemOperand::MOLoad, PtrTy, Alignment);
+    auto Tmp = MIRBuilder.buildLoad(PtrTy, MI.getOperand(2), *LoadMMO);
+
+    // Store the result in the destination va_list
+    MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+        MachinePointerInfo(), MachineMemOperand::MOStore, PtrTy, Alignment);
+    MIRBuilder.buildStore(DstLst, Tmp, *StoreMMO);
+
+    MI.eraseFromParent();
+    return true;
+  }
+  }
 }
 
 bool RISCVLegalizerInfo::legalizeShlAshrLshr(
@@ -322,6 +396,22 @@ bool RISCVLegalizerInfo::legalizeShlAshrLshr(
   return true;
 }
 
+bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
+                                         MachineIRBuilder &MIRBuilder) const {
+  // Stores the address of the VarArgsFrameIndex slot into the memory location
+  assert(MI.getOpcode() == TargetOpcode::G_VASTART);
+  MachineFunction *MF = MI.getParent()->getParent();
+  RISCVMachineFunctionInfo *FuncInfo = MF->getInfo<RISCVMachineFunctionInfo>();
+  int FI = FuncInfo->getVarArgsFrameIndex();
+  LLT AddrTy = MIRBuilder.getMRI()->getType(MI.getOperand(0).getReg());
+  auto FINAddr = MIRBuilder.buildFrameIndex(AddrTy, FI);
+  assert(MI.hasOneMemOperand());
+  MIRBuilder.buildStore(FINAddr, MI.getOperand(0).getReg(),
+                        *MI.memoperands()[0]);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
                                         MachineInstr &MI) const {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
@@ -330,6 +420,8 @@ bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   default:
     // No idea what to do.
     return false;
+  case TargetOpcode::G_ABS:
+    return Helper.lowerAbsToMaxNeg(MI);
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR:
@@ -362,6 +454,8 @@ bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case TargetOpcode::G_VASTART:
+    return legalizeVAStart(MI, MIRBuilder);
   }
 
   llvm_unreachable("expected switch to return");

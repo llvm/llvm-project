@@ -437,7 +437,7 @@ lazy_split_view(_Range&&, range_value_t<_Range>)
 
 namespace views {
 namespace __lazy_split_view {
-struct __fn : __range_adaptor_closure<__fn> {
+struct __fn {
   template <class _Range, class _Pattern>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
   constexpr auto operator()(_Range&& __range, _Pattern&& __pattern) const

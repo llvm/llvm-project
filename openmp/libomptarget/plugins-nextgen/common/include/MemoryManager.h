@@ -324,7 +324,7 @@ public:
   /// manager explicitly by setting the var to 0. If user doesn't specify
   /// anything, returns <0, true>.
   static std::pair<size_t, bool> getSizeThresholdFromEnv() {
-    static llvm::omp::target::UInt32Envar MemoryManagerThreshold(
+    static UInt32Envar MemoryManagerThreshold(
         "LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD", 0);
 
     size_t Threshold = MemoryManagerThreshold.get();

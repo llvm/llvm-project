@@ -167,3 +167,21 @@ void test_svpmov_lane(){
   zn_u32 = svpmov_lane_u32_m(zn_u32, pn, 5); // expected-error {{argument value 5 is outside the valid range [1, 3]}}
   zn_u64 = svpmov_lane_u64_m(zn_u64, pn, 8); // expected-error {{argument value 8 is outside the valid range [1, 7]}}
 }
+
+__attribute__((target("+sve2p1")))
+void test_svget_svset_b(uint64_t idx, svboolx2_t tuple2, svboolx4_t tuple4, svbool_t res){
+  svset2(tuple2, -1, res); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 1]}}
+  svset2(tuple2, 2,  res); // expected-error {{argument value 2 is outside the valid range [0, 1]}}
+  svset4(tuple4, -1, res); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svset4(tuple4, 4,  res); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+
+  svget2(tuple2, -1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 1]}}
+  svget2(tuple2,  2); // expected-error {{argument value 2 is outside the valid range [0, 1]}}
+  svget4(tuple4, -1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svget4(tuple4,  4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+
+  svset2(tuple2, idx, res); // expected-error {{argument to 'svste2' must be a constant integer}}
+  svset4(tupl4, idx, res); // expected-error {{argument to 'svset4' must be a constant integer}}
+  svget2(tuple2, idx); // expected-error {{argument to 'svget2' must be a constant integer}}
+  svget4(tuple4, idx); // expected-error {{argument to 'svget4' must be a constant integer}}
+}

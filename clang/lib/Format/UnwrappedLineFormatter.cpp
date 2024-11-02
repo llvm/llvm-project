@@ -346,14 +346,10 @@ private:
             return false;
 
           // Check if the found line starts a record.
-          const FormatToken *LastNonComment = Line->Last;
+          const auto *LastNonComment = Line->getLastNonComment();
+          // There must be another token (usually `{`), because we chose a
+          // non-PPDirective and non-comment line that has a smaller level.
           assert(LastNonComment);
-          if (LastNonComment->is(tok::comment)) {
-            LastNonComment = LastNonComment->getPreviousNonComment();
-            // There must be another token (usually `{`), because we chose a
-            // non-PPDirective and non-comment line that has a smaller level.
-            assert(LastNonComment);
-          }
           return isRecordLBrace(*LastNonComment);
         }
       }
@@ -363,12 +359,9 @@ private:
 
     bool MergeShortFunctions = ShouldMergeShortFunctions();
 
-    const FormatToken *FirstNonComment = TheLine->First;
-    if (FirstNonComment->is(tok::comment)) {
-      FirstNonComment = FirstNonComment->getNextNonComment();
-      if (!FirstNonComment)
-        return 0;
-    }
+    const auto *FirstNonComment = TheLine->getFirstNonComment();
+    if (!FirstNonComment)
+      return 0;
     // FIXME: There are probably cases where we should use FirstNonComment
     // instead of TheLine->First.
 
@@ -418,9 +411,16 @@ private:
       }
     }
 
+    const auto *LastNonComment = TheLine->getLastNonComment();
+    assert(LastNonComment);
+    // FIXME: There are probably cases where we should use LastNonComment
+    // instead of TheLine->Last.
+
     // Try to merge a function block with left brace unwrapped.
-    if (TheLine->Last->is(TT_FunctionLBrace) && TheLine->First != TheLine->Last)
+    if (LastNonComment->is(TT_FunctionLBrace) &&
+        TheLine->First != LastNonComment) {
       return MergeShortFunctions ? tryMergeSimpleBlock(I, E, Limit) : 0;
+    }
     // Try to merge a control statement block with left brace unwrapped.
     if (TheLine->Last->is(tok::l_brace) && FirstNonComment != TheLine->Last &&
         FirstNonComment->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for,
@@ -796,7 +796,8 @@ private:
       }
     }
 
-    if (Line.Last->is(tok::l_brace)) {
+    if (const auto *LastNonComment = Line.getLastNonComment();
+        LastNonComment && LastNonComment->is(tok::l_brace)) {
       if (IsSplitBlock && Line.First == Line.Last &&
           I > AnnotatedLines.begin() &&
           (I[-1]->endsWith(tok::kw_else) || IsCtrlStmt(*I[-1]))) {
@@ -812,7 +813,8 @@ private:
 
       if (ShouldMerge()) {
         // We merge empty blocks even if the line exceeds the column limit.
-        Tok->SpacesRequiredBefore = Style.SpaceInEmptyBlock ? 1 : 0;
+        Tok->SpacesRequiredBefore =
+            (Style.SpaceInEmptyBlock || Line.Last->is(tok::comment)) ? 1 : 0;
         Tok->CanBreakBefore = true;
         return 1;
       } else if (Limit != 0 && !Line.startsWithNamespace() &&
@@ -939,6 +941,12 @@ private:
 };
 
 static void markFinalized(FormatToken *Tok) {
+  if (Tok->is(tok::hash) && !Tok->Previous && Tok->Next &&
+      Tok->Next->isOneOf(tok::pp_if, tok::pp_ifdef, tok::pp_ifndef,
+                         tok::pp_elif, tok::pp_elifdef, tok::pp_elifndef,
+                         tok::pp_else, tok::pp_endif)) {
+    Tok = Tok->Next;
+  }
   for (; Tok; Tok = Tok->Next) {
     if (Tok->MacroCtx && Tok->MacroCtx->Role == MR_ExpandedArg) {
       // In the first pass we format all macro arguments in the expanded token
@@ -1060,6 +1068,8 @@ protected:
     }
     Penalty +=
         formatLine(*Child, State.Column + 1, /*FirstStartColumn=*/0, DryRun);
+    if (!DryRun)
+      markFinalized(Child->First);
 
     State.Column += 1 + Child->Last->TotalLength;
     return true;
@@ -1429,16 +1439,8 @@ unsigned UnwrappedLineFormatter::format(
       NextLine = Joiner.getNextMergedLine(DryRun, IndentTracker);
       RangeMinLevel = UINT_MAX;
     }
-    if (!DryRun) {
-      auto *Tok = TheLine.First;
-      if (Tok->is(tok::hash) && !Tok->Previous && Tok->Next &&
-          Tok->Next->isOneOf(tok::pp_if, tok::pp_ifdef, tok::pp_ifndef,
-                             tok::pp_elif, tok::pp_elifdef, tok::pp_elifndef,
-                             tok::pp_else, tok::pp_endif)) {
-        Tok = Tok->Next;
-      }
-      markFinalized(Tok);
-    }
+    if (!DryRun)
+      markFinalized(TheLine.First);
   }
   PenaltyCache[CacheKey] = Penalty;
   return Penalty;

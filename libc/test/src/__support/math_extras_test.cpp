@@ -11,8 +11,29 @@
 
 namespace LIBC_NAMESPACE {
 
-TEST(LlvmLibcBlockMathExtrasTest, TODO) {
-  // TODO Implement me.
+TEST(LlvmLibcBlockMathExtrasTest, mask_trailing_ones) {
+  EXPECT_EQ(uint8_t(0), (mask_leading_ones<uint8_t, 0>()));
+  EXPECT_EQ(uint8_t(0), (mask_trailing_ones<uint8_t, 0>()));
+  EXPECT_EQ(uint16_t(0), (mask_leading_ones<uint16_t, 0>()));
+  EXPECT_EQ(uint16_t(0), (mask_trailing_ones<uint16_t, 0>()));
+  EXPECT_EQ(uint32_t(0), (mask_leading_ones<uint32_t, 0>()));
+  EXPECT_EQ(uint32_t(0), (mask_trailing_ones<uint32_t, 0>()));
+  EXPECT_EQ(uint64_t(0), (mask_leading_ones<uint64_t, 0>()));
+  EXPECT_EQ(uint64_t(0), (mask_trailing_ones<uint64_t, 0>()));
+
+  EXPECT_EQ(uint32_t(0x00000003), (mask_trailing_ones<uint32_t, 2>()));
+  EXPECT_EQ(uint32_t(0xC0000000), (mask_leading_ones<uint32_t, 2>()));
+
+  EXPECT_EQ(uint32_t(0x000007FF), (mask_trailing_ones<uint32_t, 11>()));
+  EXPECT_EQ(uint32_t(0xFFE00000), (mask_leading_ones<uint32_t, 11>()));
+
+  EXPECT_EQ(uint32_t(0xFFFFFFFF), (mask_trailing_ones<uint32_t, 32>()));
+  EXPECT_EQ(uint32_t(0xFFFFFFFF), (mask_leading_ones<uint32_t, 32>()));
+  EXPECT_EQ(uint64_t(0xFFFFFFFFFFFFFFFF), (mask_trailing_ones<uint64_t, 64>()));
+  EXPECT_EQ(uint64_t(0xFFFFFFFFFFFFFFFF), (mask_leading_ones<uint64_t, 64>()));
+
+  EXPECT_EQ(uint64_t(0x0000FFFFFFFFFFFF), (mask_trailing_ones<uint64_t, 48>()));
+  EXPECT_EQ(uint64_t(0xFFFFFFFFFFFF0000), (mask_leading_ones<uint64_t, 48>()));
 }
 
 } // namespace LIBC_NAMESPACE

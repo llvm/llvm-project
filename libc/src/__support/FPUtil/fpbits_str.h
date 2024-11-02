@@ -53,7 +53,7 @@ template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
   s += sign_char(x.get_sign());
 
   s += ", E: ";
-  const details::ZeroPaddedHexFmt<uint16_t> exponent(x.get_unbiased_exponent());
+  const details::ZeroPaddedHexFmt<uint16_t> exponent(x.get_biased_exponent());
   s += exponent.view();
 
   if constexpr (cpp::is_same_v<T, long double> &&

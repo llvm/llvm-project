@@ -33,6 +33,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/ArmSME/Transforms/Passes.h"
 #include "mlir/Dialect/ArmSME/Transforms/PassesEnums.cpp.inc"
 
@@ -56,12 +57,28 @@ constexpr StringLiteral
 
 struct EnableArmStreamingPass
     : public arm_sme::impl::EnableArmStreamingBase<EnableArmStreamingPass> {
-  EnableArmStreamingPass(ArmStreamingMode streamingMode, ArmZaMode zaMode) {
+  EnableArmStreamingPass(ArmStreamingMode streamingMode, ArmZaMode zaMode,
+                         bool onlyIfRequiredByOps) {
     this->streamingMode = streamingMode;
     this->zaMode = zaMode;
+    this->onlyIfRequiredByOps = onlyIfRequiredByOps;
   }
   void runOnOperation() override {
     auto op = getOperation();
+
+    if (onlyIfRequiredByOps) {
+      bool foundTileOp = false;
+      op.walk([&](Operation *op) {
+        if (llvm::isa<ArmSMETileOpInterface>(op)) {
+          foundTileOp = true;
+          return WalkResult::interrupt();
+        }
+        return WalkResult::advance();
+      });
+      if (!foundTileOp)
+        return;
+    }
+
     if (op->getAttr(kEnableArmStreamingIgnoreAttr) ||
         streamingMode == ArmStreamingMode::Disabled)
       return;
@@ -81,6 +98,8 @@ struct EnableArmStreamingPass
 } // namespace
 
 std::unique_ptr<Pass> mlir::arm_sme::createEnableArmStreamingPass(
-    const ArmStreamingMode streamingMode, const ArmZaMode zaMode) {
-  return std::make_unique<EnableArmStreamingPass>(streamingMode, zaMode);
+    const ArmStreamingMode streamingMode, const ArmZaMode zaMode,
+    bool onlyIfRequiredByOps) {
+  return std::make_unique<EnableArmStreamingPass>(streamingMode, zaMode,
+                                                  onlyIfRequiredByOps);
 }

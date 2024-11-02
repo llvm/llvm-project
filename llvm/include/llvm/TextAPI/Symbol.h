@@ -160,6 +160,23 @@ private:
   SymbolFlags Flags;
 };
 
+/// Lightweight struct for passing around symbol information.
+struct SimpleSymbol {
+  StringRef Name;
+  SymbolKind Kind;
+
+  bool operator<(const SimpleSymbol &O) const {
+    return std::tie(Name, Kind) < std::tie(O.Name, O.Kind);
+  }
+};
+
+/// Determine SymbolKind from Flags and parsing Name.
+///
+/// \param Name The name of symbol.
+/// \param Flags The flags pre-determined for the symbol.
+SimpleSymbol parseSymbol(StringRef SymName,
+                         const SymbolFlags Flags = SymbolFlags::None);
+
 } // end namespace MachO.
 } // end namespace llvm.
 

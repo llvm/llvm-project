@@ -780,7 +780,6 @@ add_entrypoint_object(
     .explogxf
     libc.include.errno
     libc.include.math
-    libc.src.__support.bit
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.fenv_impl

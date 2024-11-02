@@ -427,6 +427,8 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
 
   reorder(std::move(Clusters), BFs);
 
+  BC.HasFinalizedFunctionOrder = true;
+
   std::unique_ptr<std::ofstream> FuncsFile;
   if (!opts::GenerateFunctionOrderFile.empty()) {
     FuncsFile = std::make_unique<std::ofstream>(opts::GenerateFunctionOrderFile,

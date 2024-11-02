@@ -55,7 +55,7 @@ bool hasVolatileName(const BinaryFunction &BF) {
 /// Return standard escaped name of the function possibly renamed by BOLT.
 std::string normalizeName(StringRef NameRef) {
   // Strip "PG." prefix used for globalized locals.
-  NameRef = NameRef.startswith("PG.") ? NameRef.substr(2) : NameRef;
+  NameRef = NameRef.starts_with("PG.") ? NameRef.substr(2) : NameRef;
   return getEscapedName(NameRef);
 }
 

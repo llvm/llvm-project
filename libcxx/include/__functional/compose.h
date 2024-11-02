@@ -28,9 +28,9 @@ struct __compose_op {
     template<class _Fn1, class _Fn2, class ..._Args>
     _LIBCPP_HIDE_FROM_ABI
     constexpr auto operator()(_Fn1&& __f1, _Fn2&& __f2, _Args&&... __args) const
-        noexcept(noexcept(_VSTD::invoke(_VSTD::forward<_Fn1>(__f1), _VSTD::invoke(_VSTD::forward<_Fn2>(__f2), _VSTD::forward<_Args>(__args)...))))
-        -> decltype(      _VSTD::invoke(_VSTD::forward<_Fn1>(__f1), _VSTD::invoke(_VSTD::forward<_Fn2>(__f2), _VSTD::forward<_Args>(__args)...)))
-        { return          _VSTD::invoke(_VSTD::forward<_Fn1>(__f1), _VSTD::invoke(_VSTD::forward<_Fn2>(__f2), _VSTD::forward<_Args>(__args)...)); }
+        noexcept(noexcept(std::invoke(std::forward<_Fn1>(__f1), std::invoke(std::forward<_Fn2>(__f2), std::forward<_Args>(__args)...))))
+        -> decltype(      std::invoke(std::forward<_Fn1>(__f1), std::invoke(std::forward<_Fn2>(__f2), std::forward<_Args>(__args)...)))
+        { return          std::invoke(std::forward<_Fn1>(__f1), std::invoke(std::forward<_Fn2>(__f2), std::forward<_Args>(__args)...)); }
 };
 
 template <class _Fn1, class _Fn2>
@@ -41,9 +41,9 @@ struct __compose_t : __perfect_forward<__compose_op, _Fn1, _Fn2> {
 template <class _Fn1, class _Fn2>
 _LIBCPP_HIDE_FROM_ABI
 constexpr auto __compose(_Fn1&& __f1, _Fn2&& __f2)
-    noexcept(noexcept(__compose_t<decay_t<_Fn1>, decay_t<_Fn2>>(_VSTD::forward<_Fn1>(__f1), _VSTD::forward<_Fn2>(__f2))))
-    -> decltype(      __compose_t<decay_t<_Fn1>, decay_t<_Fn2>>(_VSTD::forward<_Fn1>(__f1), _VSTD::forward<_Fn2>(__f2)))
-    { return          __compose_t<decay_t<_Fn1>, decay_t<_Fn2>>(_VSTD::forward<_Fn1>(__f1), _VSTD::forward<_Fn2>(__f2)); }
+    noexcept(noexcept(__compose_t<decay_t<_Fn1>, decay_t<_Fn2>>(std::forward<_Fn1>(__f1), std::forward<_Fn2>(__f2))))
+    -> decltype(      __compose_t<decay_t<_Fn1>, decay_t<_Fn2>>(std::forward<_Fn1>(__f1), std::forward<_Fn2>(__f2)))
+    { return          __compose_t<decay_t<_Fn1>, decay_t<_Fn2>>(std::forward<_Fn1>(__f1), std::forward<_Fn2>(__f2)); }
 
 #endif // _LIBCPP_STD_VER >= 20
 

@@ -31,5 +31,6 @@ add_header_library(
   DEPENDS
     .architectures
     .compiler
+    .cpu_features
     .os
 )

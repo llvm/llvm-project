@@ -1935,7 +1935,7 @@ $fix[[  $diag[[#include "unused.h"]]
   Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::Strict;
   // Set filtering.
   Cfg.Diagnostics.Includes.IgnoreHeader.emplace_back(
-      [](llvm::StringRef Header) { return Header.endswith("ignore.h"); });
+      [](llvm::StringRef Header) { return Header.ends_with("ignore.h"); });
   WithContextValue WithCfg(Config::Key, std::move(Cfg));
   auto AST = TU.build();
   EXPECT_THAT(

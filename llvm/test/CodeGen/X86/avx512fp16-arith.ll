@@ -329,7 +329,7 @@ define half @fcopysign(half %x, half %y) {
 ; CHECK-LABEL: fcopysign:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; CHECK-NEXT:    vpternlogq $226, %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    vpternlogd $226, %xmm1, %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %a = call half @llvm.copysign.f16(half %x, half %y)
   ret half %a
@@ -384,7 +384,7 @@ declare <8 x half> @llvm.fabs.v8f16(<8 x half>)
 define <8 x half> @fcopysignv8f16(<8 x half> %x, <8 x half> %y) {
 ; CHECK-LABEL: fcopysignv8f16:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogq $228, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm1, %xmm0
+; CHECK-NEXT:    vpternlogd $228, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %a = call <8 x half> @llvm.copysign.v8f16(<8 x half> %x, <8 x half> %y)
   ret <8 x half> %a
@@ -439,7 +439,7 @@ declare <16 x half> @llvm.fabs.v16f16(<16 x half>)
 define <16 x half> @fcopysignv16f16(<16 x half> %x, <16 x half> %y) {
 ; CHECK-LABEL: fcopysignv16f16:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogq $228, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %ymm0
+; CHECK-NEXT:    vpternlogd $228, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %a = call <16 x half> @llvm.copysign.v16f16(<16 x half> %x, <16 x half> %y)
   ret <16 x half> %a
@@ -494,7 +494,7 @@ declare <32 x half> @llvm.fabs.v32f16(<32 x half>)
 define <32 x half> @fcopysignv32f16(<32 x half> %x, <32 x half> %y) {
 ; CHECK-LABEL: fcopysignv32f16:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogq $228, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd $228, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %a = call <32 x half> @llvm.copysign.v32f16(<32 x half> %x, <32 x half> %y)
   ret <32 x half> %a

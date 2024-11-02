@@ -44,7 +44,7 @@
 
 template <class BufferPolicy>
 void test_read(BufferPolicy policy, const std::vector<std::streamsize>& payload_sizes) {
-  std::streamsize total_size = std::accumulate(payload_sizes.begin(), payload_sizes.end(), 0);
+  std::streamsize total_size = std::accumulate(payload_sizes.begin(), payload_sizes.end(), std::streamsize{0});
   std::vector<char> data(total_size);
   for (std::size_t i = 0; i < data.size(); ++i) {
     data[i] = static_cast<char>(i % (1 << 8 * sizeof(char)));
@@ -99,7 +99,7 @@ void test_read(BufferPolicy policy, const std::vector<std::streamsize>& payload_
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
 template <class BufferPolicy>
 void test_read_codecvt(BufferPolicy policy, const std::vector<std::streamsize>& payload_sizes) {
-  std::streamsize total_size = std::accumulate(payload_sizes.begin(), payload_sizes.end(), 0);
+  std::streamsize total_size = std::accumulate(payload_sizes.begin(), payload_sizes.end(), std::streamsize{0});
   std::vector<wchar_t> data(total_size);
   for (std::size_t i = 0; i < data.size(); ++i) {
     data[i] = static_cast<wchar_t>(i);

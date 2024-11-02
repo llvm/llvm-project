@@ -26,6 +26,7 @@
 
 #include "deduction_guides_sfinae_checks.h"
 #include "test_allocator.h"
+#include "asan_testing.h"
 
 int main(int, char**) {
   using Char = char16_t;
@@ -33,12 +34,14 @@ int main(int, char**) {
   {
     std::basic_string c(std::from_range, std::array<Char, 0>());
     static_assert(std::is_same_v<decltype(c), std::basic_string<Char>>);
+    LIBCPP_ASSERT(is_string_asan_correct(c));
   }
 
   {
     using Alloc = test_allocator<Char>;
     std::basic_string c(std::from_range, std::array<Char, 0>(), Alloc());
     static_assert(std::is_same_v<decltype(c), std::basic_string<Char, std::char_traits<Char>, Alloc>>);
+    LIBCPP_ASSERT(is_string_asan_correct(c));
   }
 
   // Note: defining `value_type` is a workaround because one of the deduction guides will end up instantiating

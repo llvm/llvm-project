@@ -243,8 +243,6 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-i386-NEXT:    .cfi_offset %edi, -8
 ; CHECK-i386-NEXT:    movl 32(%esp), %esi
 ; CHECK-i386-NEXT:    leal 16(%esp), %edi
-; CHECK-i386-NEXT:    fld1
-; CHECK-i386-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Spill
 ; CHECK-i386-NEXT:  LBB2_1: ## %bb_loop
 ; CHECK-i386-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-i386-NEXT:    movl $0, 16(%esp)
@@ -255,7 +253,7 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-i386-NEXT:    jne LBB2_4
 ; CHECK-i386-NEXT:  ## %bb.2: ## %cont
 ; CHECK-i386-NEXT:    ## in Loop: Header=BB2_1 Depth=1
-; CHECK-i386-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Reload
+; CHECK-i386-NEXT:    fld1
 ; CHECK-i386-NEXT:    fxch %st(1)
 ; CHECK-i386-NEXT:    fucompp
 ; CHECK-i386-NEXT:    fnstsw %ax
@@ -270,7 +268,7 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-i386-NEXT:    fstp %st(0)
 ; CHECK-i386-NEXT:    movl %ecx, (%esp)
 ; CHECK-i386-NEXT:    calll _free
-; CHECK-i386-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Reload
+; CHECK-i386-NEXT:    fld1
 ; CHECK-i386-NEXT:    addl $20, %esp
 ; CHECK-i386-NEXT:    popl %esi
 ; CHECK-i386-NEXT:    popl %edi
@@ -470,8 +468,6 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-i386-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Spill
 ; CHECK-i386-NEXT:    movl 36(%esp), %esi
 ; CHECK-i386-NEXT:    movl 32(%esp), %edi
-; CHECK-i386-NEXT:    fld1
-; CHECK-i386-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Spill
 ; CHECK-i386-NEXT:  LBB4_1: ## %bb_loop
 ; CHECK-i386-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-i386-NEXT:    testl %esi, %esi
@@ -486,7 +482,7 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-i386-NEXT:  LBB4_3: ## %bb_cont
 ; CHECK-i386-NEXT:    ## in Loop: Header=BB4_1 Depth=1
 ; CHECK-i386-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Reload
-; CHECK-i386-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Reload
+; CHECK-i386-NEXT:    fld1
 ; CHECK-i386-NEXT:    fxch %st(1)
 ; CHECK-i386-NEXT:    fucompp
 ; CHECK-i386-NEXT:    fnstsw %ax

@@ -554,14 +554,16 @@ void CGDebugInfo::CreateCompileUnit() {
     // If the main file name provided is identical to the input file name, and
     // if the input file is a preprocessed source, use the module name for
     // debug info. The module name comes from the name specified in the first
-    // linemarker if the input is a preprocessed source.
+    // linemarker if the input is a preprocessed source. In this case we don't
+    // know the content to compute a checksum.
     if (MainFile->getName() == MainFileName &&
         FrontendOptions::getInputKindForExtension(
             MainFile->getName().rsplit('.').second)
-            .isPreprocessed())
+            .isPreprocessed()) {
       MainFileName = CGM.getModule().getName().str();
-
-    CSKind = computeChecksum(SM.getMainFileID(), Checksum);
+    } else {
+      CSKind = computeChecksum(SM.getMainFileID(), Checksum);
+    }
   }
 
   llvm::dwarf::SourceLanguage LangTag;
@@ -635,7 +637,8 @@ void CGDebugInfo::CreateCompileUnit() {
     Sysroot = CGM.getHeaderSearchOpts().Sysroot;
     auto B = llvm::sys::path::rbegin(Sysroot);
     auto E = llvm::sys::path::rend(Sysroot);
-    auto It = std::find_if(B, E, [](auto SDK) { return SDK.endswith(".sdk"); });
+    auto It =
+        std::find_if(B, E, [](auto SDK) { return SDK.ends_with(".sdk"); });
     if (It != E)
       SDK = *It;
   }
@@ -1701,7 +1704,6 @@ CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
   llvm::DIDerivedType *GV = DBuilder.createStaticMemberType(
       RecordTy, VName, VUnit, LineNumber, VTy, Flags, C, Tag, Align);
   StaticDataMemberCache[Var->getCanonicalDecl()].reset(GV);
-  StaticDataMemberDefinitionsToEmit.push_back(Var->getCanonicalDecl());
   return GV;
 }
 
@@ -2884,7 +2886,7 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
   // clang::Module object, but it won't actually be built or imported; it will
   // be textual.
   if (CreateSkeletonCU && IsRootModule && Mod.getASTFile().empty() && M)
-    assert(StringRef(M->Name).startswith(CGM.getLangOpts().ModuleName) &&
+    assert(StringRef(M->Name).starts_with(CGM.getLangOpts().ModuleName) &&
            "clang module without ASTFile must be specified by -fmodule-name");
 
   // Return a StringRef to the remapped Path.
@@ -4248,7 +4250,7 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
 
     Flags |= llvm::DINode::FlagPrototyped;
   }
-  if (Name.startswith("\01"))
+  if (Name.starts_with("\01"))
     Name = Name.substr(1);
 
   assert((!D || !isa<VarDecl>(D) ||
@@ -5605,44 +5607,6 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
       TemplateParameters, Align));
 }
 
-void CGDebugInfo::EmitGlobalVariable(const VarDecl *VD) {
-  assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
-  if (VD->hasAttr<NoDebugAttr>())
-    return;
-
-  if (!VD->hasInit())
-    return;
-
-  const auto CacheIt = DeclCache.find(VD);
-  if (CacheIt != DeclCache.end())
-    return;
-
-  auto const *InitVal = VD->evaluateValue();
-  if (!InitVal)
-    return;
-
-  llvm::DIFile *Unit = nullptr;
-  llvm::DIScope *DContext = nullptr;
-  unsigned LineNo;
-  StringRef DeclName, LinkageName;
-  QualType T;
-  llvm::MDTuple *TemplateParameters = nullptr;
-  collectVarDeclProps(VD, Unit, LineNo, T, DeclName, LinkageName,
-                      TemplateParameters, DContext);
-
-  auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
-  llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(VD);
-  llvm::DIExpression *InitExpr = createConstantValueExpression(VD, *InitVal);
-
-  // Omit linkage name for variable definitions that represent constants.
-  // There hasn't been a need from consumers yet to have it attached.
-  DeclCache[VD].reset(DBuilder.createGlobalVariableExpression(
-      TheCU, DeclName, /* LinkageName */ {}, Unit, LineNo,
-      getOrCreateType(T, Unit), true, true, InitExpr,
-      getOrCreateStaticDataMemberDeclarationOrNull(VD), TemplateParameters,
-      Align, Annotations));
-}
-
 void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,
                                        const VarDecl *D) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
@@ -5847,20 +5811,6 @@ void CGDebugInfo::setDwoId(uint64_t Signature) {
 }
 
 void CGDebugInfo::finalize() {
-  // We can't use a for-each here because `EmitGlobalVariable`
-  // may push new decls into `StaticDataMemberDefinitionsToEmit`,
-  // which would invalidate any iterator.
-  for (size_t i = 0; i < StaticDataMemberDefinitionsToEmit.size(); ++i) {
-    auto const *VD = StaticDataMemberDefinitionsToEmit[i];
-
-    assert(VD && VD->isStaticDataMember());
-
-    if (DeclCache.contains(VD))
-      continue;
-
-    EmitGlobalVariable(VD);
-  }
-
   // Creating types might create further types - invalidating the current
   // element and the size(), so don't cache/reference them.
   for (size_t i = 0; i != ObjCInterfaceCache.size(); ++i) {

@@ -463,7 +463,7 @@ BufferDeallocation::materializeUniqueOwnership(OpBuilder &builder, Value memref,
 }
 
 static bool regionOperatesOnMemrefValues(Region &region) {
-  WalkResult result = region.walk([](Block *block) {
+  auto checkBlock = [](Block *block) {
     if (llvm::any_of(block->getArguments(), isMemref))
       return WalkResult::interrupt();
     for (Operation &op : *block) {
@@ -473,8 +473,18 @@ static bool regionOperatesOnMemrefValues(Region &region) {
         return WalkResult::interrupt();
     }
     return WalkResult::advance();
-  });
-  return result.wasInterrupted();
+  };
+  WalkResult result = region.walk(checkBlock);
+  if (result.wasInterrupted())
+    return true;
+
+  // Note: Block::walk/Region::walk visits only blocks that are nested under
+  // nested operations, but not direct children.
+  for (Block &block : region)
+    if (checkBlock(&block).wasInterrupted())
+      return true;
+
+  return false;
 }
 
 LogicalResult

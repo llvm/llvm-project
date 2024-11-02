@@ -2461,89 +2461,6 @@ void TypeSystemClang::DumpDeclHiearchy(clang::Decl *decl) {
   }
 }
 
-bool TypeSystemClang::DeclsAreEquivalent(clang::Decl *lhs_decl,
-                                         clang::Decl *rhs_decl) {
-  if (lhs_decl && rhs_decl) {
-    // Make sure the decl kinds match first
-    const clang::Decl::Kind lhs_decl_kind = lhs_decl->getKind();
-    const clang::Decl::Kind rhs_decl_kind = rhs_decl->getKind();
-
-    if (lhs_decl_kind == rhs_decl_kind) {
-      // Now check that the decl contexts kinds are all equivalent before we
-      // have to check any names of the decl contexts...
-      clang::DeclContext *lhs_decl_ctx = lhs_decl->getDeclContext();
-      clang::DeclContext *rhs_decl_ctx = rhs_decl->getDeclContext();
-      if (lhs_decl_ctx && rhs_decl_ctx) {
-        while (true) {
-          if (lhs_decl_ctx && rhs_decl_ctx) {
-            const clang::Decl::Kind lhs_decl_ctx_kind =
-                lhs_decl_ctx->getDeclKind();
-            const clang::Decl::Kind rhs_decl_ctx_kind =
-                rhs_decl_ctx->getDeclKind();
-            if (lhs_decl_ctx_kind == rhs_decl_ctx_kind) {
-              lhs_decl_ctx = lhs_decl_ctx->getParent();
-              rhs_decl_ctx = rhs_decl_ctx->getParent();
-
-              if (lhs_decl_ctx == nullptr && rhs_decl_ctx == nullptr)
-                break;
-            } else
-              return false;
-          } else
-            return false;
-        }
-
-        // Now make sure the name of the decls match
-        clang::NamedDecl *lhs_named_decl =
-            llvm::dyn_cast<clang::NamedDecl>(lhs_decl);
-        clang::NamedDecl *rhs_named_decl =
-            llvm::dyn_cast<clang::NamedDecl>(rhs_decl);
-        if (lhs_named_decl && rhs_named_decl) {
-          clang::DeclarationName lhs_decl_name = lhs_named_decl->getDeclName();
-          clang::DeclarationName rhs_decl_name = rhs_named_decl->getDeclName();
-          if (lhs_decl_name.getNameKind() == rhs_decl_name.getNameKind()) {
-            if (lhs_decl_name.getAsString() != rhs_decl_name.getAsString())
-              return false;
-          } else
-            return false;
-        } else
-          return false;
-
-        // We know that the decl context kinds all match, so now we need to
-        // make sure the names match as well
-        lhs_decl_ctx = lhs_decl->getDeclContext();
-        rhs_decl_ctx = rhs_decl->getDeclContext();
-        while (true) {
-          switch (lhs_decl_ctx->getDeclKind()) {
-          case clang::Decl::TranslationUnit:
-            // We don't care about the translation unit names
-            return true;
-          default: {
-            clang::NamedDecl *lhs_named_decl =
-                llvm::dyn_cast<clang::NamedDecl>(lhs_decl_ctx);
-            clang::NamedDecl *rhs_named_decl =
-                llvm::dyn_cast<clang::NamedDecl>(rhs_decl_ctx);
-            if (lhs_named_decl && rhs_named_decl) {
-              clang::DeclarationName lhs_decl_name =
-                  lhs_named_decl->getDeclName();
-              clang::DeclarationName rhs_decl_name =
-                  rhs_named_decl->getDeclName();
-              if (lhs_decl_name.getNameKind() == rhs_decl_name.getNameKind()) {
-                if (lhs_decl_name.getAsString() != rhs_decl_name.getAsString())
-                  return false;
-              } else
-                return false;
-            } else
-              return false;
-          } break;
-          }
-          lhs_decl_ctx = lhs_decl_ctx->getParent();
-          rhs_decl_ctx = rhs_decl_ctx->getParent();
-        }
-      }
-    }
-  }
-  return false;
-}
 bool TypeSystemClang::GetCompleteDecl(clang::ASTContext *ast,
                                       clang::Decl *decl) {
   if (!decl)
@@ -8110,8 +8027,8 @@ clang::ObjCMethodDecl *TypeSystemClang::AddMethodToObjCObjectType(
     const char *name, // the full symbol name as seen in the symbol table
                       // (lldb::opaque_compiler_type_t type, "-[NString
                       // stringWithCString:]")
-    const CompilerType &method_clang_type, lldb::AccessType access,
-    bool is_artificial, bool is_variadic, bool is_objc_direct_call) {
+    const CompilerType &method_clang_type, bool is_artificial, bool is_variadic,
+    bool is_objc_direct_call) {
   if (!type || !method_clang_type.IsValid())
     return nullptr;
 
@@ -9070,6 +8987,66 @@ size_t TypeSystemClang::DeclGetFunctionNumArguments(void *opaque_decl) {
     return 0;
 }
 
+static CompilerContextKind GetCompilerKind(clang::Decl::Kind clang_kind,
+                                           clang::DeclContext const *decl_ctx) {
+  switch (clang_kind) {
+  case Decl::TranslationUnit:
+    return CompilerContextKind::TranslationUnit;
+  case Decl::Namespace:
+    return CompilerContextKind::Namespace;
+  case Decl::Var:
+    return CompilerContextKind::Variable;
+  case Decl::Enum:
+    return CompilerContextKind::Enum;
+  case Decl::Typedef:
+    return CompilerContextKind::Typedef;
+  default:
+    // Many other kinds have multiple values
+    if (decl_ctx) {
+      if (decl_ctx->isFunctionOrMethod())
+        return CompilerContextKind::Function;
+      else if (decl_ctx->isRecord())
+        return (CompilerContextKind)((uint16_t)CompilerContextKind::Class |
+                                     (uint16_t)CompilerContextKind::Struct |
+                                     (uint16_t)CompilerContextKind::Union);
+    }
+    break;
+  }
+  return CompilerContextKind::Any;
+}
+
+static void
+InsertCompilerContext(TypeSystemClang *ts, clang::DeclContext *decl_ctx,
+                      std::vector<lldb_private::CompilerContext> &context) {
+  if (decl_ctx == nullptr)
+    return;
+  InsertCompilerContext(ts, decl_ctx->getParent(), context);
+  clang::Decl::Kind clang_kind = decl_ctx->getDeclKind();
+  if (clang_kind == Decl::TranslationUnit)
+    return; // Stop at the translation unit.
+  const CompilerContextKind compiler_kind =
+      GetCompilerKind(clang_kind, decl_ctx);
+  ConstString decl_ctx_name = ts->DeclContextGetName(decl_ctx);
+  context.push_back({compiler_kind, decl_ctx_name});
+}
+
+std::vector<lldb_private::CompilerContext>
+TypeSystemClang::DeclGetCompilerContext(void *opaque_decl) {
+  std::vector<lldb_private::CompilerContext> context;
+  ConstString decl_name = DeclGetName(opaque_decl);
+  if (decl_name) {
+    clang::Decl *decl = (clang::Decl *)opaque_decl;
+    // Add the entire decl context first
+    clang::DeclContext *decl_ctx = decl->getDeclContext();
+    InsertCompilerContext(this, decl_ctx, context);
+    // Now add the decl information
+    auto compiler_kind =
+        GetCompilerKind(decl->getKind(), dyn_cast<DeclContext>(decl));
+    context.push_back({compiler_kind, decl_name});
+  }
+  return context;
+}
+
 CompilerType TypeSystemClang::DeclGetFunctionArgumentType(void *opaque_decl,
                                                           size_t idx) {
   if (clang::FunctionDecl *func_decl =
@@ -9306,6 +9283,14 @@ bool TypeSystemClang::DeclContextIsClassMethod(void *opaque_decl_ctx) {
   }
 
   return false;
+}
+
+std::vector<lldb_private::CompilerContext>
+TypeSystemClang::DeclContextGetCompilerContext(void *opaque_decl_ctx) {
+  auto *decl_ctx = (clang::DeclContext *)opaque_decl_ctx;
+  std::vector<lldb_private::CompilerContext> context;
+  InsertCompilerContext(this, decl_ctx, context);
+  return context;
 }
 
 bool TypeSystemClang::DeclContextIsContainedInLookup(

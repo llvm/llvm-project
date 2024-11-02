@@ -243,26 +243,37 @@ INTERCEPTOR(uptr, malloc_usable_size, void *ptr) {
 #define MSAN_MAYBE_INTERCEPT_MALLOC_USABLE_SIZE
 #endif
 
-#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
-
+#if (!SANITIZER_FREEBSD && !SANITIZER_NETBSD) || __GLIBC_PREREQ(2, 33)
 template <class T>
 static NOINLINE void clear_mallinfo(T *sret) {
   ENSURE_MSAN_INITED();
   internal_memset(sret, 0, sizeof(*sret));
   __msan_unpoison(sret, sizeof(*sret));
 }
+#endif
 
-// Interceptor relies on NRVO and assumes that sret will be pre-allocated in
+#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
+// Interceptors use NRVO and assume that sret will be pre-allocated in
 // caller frame.
 INTERCEPTOR(__sanitizer_struct_mallinfo, mallinfo) {
   __sanitizer_struct_mallinfo sret;
   clear_mallinfo(&sret);
   return sret;
 }
-
 #  define MSAN_MAYBE_INTERCEPT_MALLINFO INTERCEPT_FUNCTION(mallinfo)
 #else
-#define MSAN_MAYBE_INTERCEPT_MALLINFO
+#  define MSAN_MAYBE_INTERCEPT_MALLINFO
+#endif
+
+#if __GLIBC_PREREQ(2, 33)
+INTERCEPTOR(__sanitizer_struct_mallinfo2, mallinfo2) {
+  __sanitizer_struct_mallinfo2 sret;
+  clear_mallinfo(&sret);
+  return sret;
+}
+#  define MSAN_MAYBE_INTERCEPT_MALLINFO2 INTERCEPT_FUNCTION(mallinfo2)
+#else
+#  define MSAN_MAYBE_INTERCEPT_MALLINFO2
 #endif
 
 #if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
@@ -1315,24 +1326,6 @@ static int setup_at_exit_wrapper(void(*f)(), void *arg, void *dso) {
   return res;
 }
 
-static void BeforeFork() {
-  StackDepotLockAll();
-  ChainedOriginDepotLockAll();
-}
-
-static void AfterFork() {
-  ChainedOriginDepotUnlockAll();
-  StackDepotUnlockAll();
-}
-
-INTERCEPTOR(int, fork, void) {
-  ENSURE_MSAN_INITED();
-  BeforeFork();
-  int pid = REAL(fork)();
-  AfterFork();
-  return pid;
-}
-
 // NetBSD ships with openpty(3) in -lutil, that needs to be prebuilt explicitly
 // with MSan.
 #if SANITIZER_LINUX
@@ -1787,6 +1780,7 @@ void InitializeInterceptors() {
   MSAN_MAYBE_INTERCEPT_CFREE;
   MSAN_MAYBE_INTERCEPT_MALLOC_USABLE_SIZE;
   MSAN_MAYBE_INTERCEPT_MALLINFO;
+  MSAN_MAYBE_INTERCEPT_MALLINFO2;
   MSAN_MAYBE_INTERCEPT_MALLOPT;
   MSAN_MAYBE_INTERCEPT_MALLOC_STATS;
   INTERCEPT_FUNCTION(fread);
@@ -1921,7 +1915,6 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(atexit);
   INTERCEPT_FUNCTION(__cxa_atexit);
   INTERCEPT_FUNCTION(shmat);
-  INTERCEPT_FUNCTION(fork);
   MSAN_MAYBE_INTERCEPT_OPENPTY;
   MSAN_MAYBE_INTERCEPT_FORKPTY;
 

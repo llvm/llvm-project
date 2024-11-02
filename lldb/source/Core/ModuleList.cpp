@@ -557,35 +557,20 @@ ModuleSP ModuleList::FindModule(const UUID &uuid) const {
   return module_sp;
 }
 
-void ModuleList::FindTypes(Module *search_first, ConstString name,
-                           bool name_is_fully_qualified, size_t max_matches,
-                           llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-                           TypeList &types) const {
+void ModuleList::FindTypes(Module *search_first, const TypeQuery &query,
+                           TypeResults &results) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
-
-  collection::const_iterator pos, end = m_modules.end();
   if (search_first) {
-    for (pos = m_modules.begin(); pos != end; ++pos) {
-      if (search_first == pos->get()) {
-        search_first->FindTypes(name, name_is_fully_qualified, max_matches,
-                                searched_symbol_files, types);
-
-        if (types.GetSize() >= max_matches)
-          return;
-      }
-    }
-  }
-
-  for (pos = m_modules.begin(); pos != end; ++pos) {
-    // Search the module if the module is not equal to the one in the symbol
-    // context "sc". If "sc" contains a empty module shared pointer, then the
-    // comparison will always be true (valid_module_ptr != nullptr).
-    if (search_first != pos->get())
-      (*pos)->FindTypes(name, name_is_fully_qualified, max_matches,
-                        searched_symbol_files, types);
-
-    if (types.GetSize() >= max_matches)
+    search_first->FindTypes(query, results);
+    if (results.Done(query))
       return;
+  }
+  for (const auto &module_sp : m_modules) {
+    if (search_first != module_sp.get()) {
+      module_sp->FindTypes(query, results);
+      if (results.Done(query))
+        return;
+    }
   }
 }
 

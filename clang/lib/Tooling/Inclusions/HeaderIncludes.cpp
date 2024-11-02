@@ -196,10 +196,10 @@ IncludeCategoryManager::IncludeCategoryManager(const IncludeStyle &Style,
                                                     ? llvm::Regex::NoFlags
                                                     : llvm::Regex::IgnoreCase);
   }
-  IsMainFile = FileName.endswith(".c") || FileName.endswith(".cc") ||
-               FileName.endswith(".cpp") || FileName.endswith(".c++") ||
-               FileName.endswith(".cxx") || FileName.endswith(".m") ||
-               FileName.endswith(".mm");
+  IsMainFile = FileName.ends_with(".c") || FileName.ends_with(".cc") ||
+               FileName.ends_with(".cpp") || FileName.ends_with(".c++") ||
+               FileName.ends_with(".cxx") || FileName.ends_with(".m") ||
+               FileName.ends_with(".mm");
   if (!Style.IncludeIsMainSourceRegex.empty()) {
     llvm::Regex MainFileRegex(Style.IncludeIsMainSourceRegex);
     IsMainFile |= MainFileRegex.match(FileName);
@@ -234,7 +234,7 @@ int IncludeCategoryManager::getSortIncludePriority(StringRef IncludeName,
   return Ret;
 }
 bool IncludeCategoryManager::isMainHeader(StringRef IncludeName) const {
-  if (!IncludeName.startswith("\""))
+  if (!IncludeName.starts_with("\""))
     return false;
 
   IncludeName =
@@ -357,8 +357,8 @@ HeaderIncludes::insert(llvm::StringRef IncludeName, bool IsAngled,
   if (It != ExistingIncludes.end()) {
     for (const auto &Inc : It->second)
       if (Inc.Directive == Directive &&
-          ((IsAngled && StringRef(Inc.Name).startswith("<")) ||
-           (!IsAngled && StringRef(Inc.Name).startswith("\""))))
+          ((IsAngled && StringRef(Inc.Name).starts_with("<")) ||
+           (!IsAngled && StringRef(Inc.Name).starts_with("\""))))
         return std::nullopt;
   }
   std::string Quoted =
@@ -400,8 +400,8 @@ tooling::Replacements HeaderIncludes::remove(llvm::StringRef IncludeName,
   if (Iter == ExistingIncludes.end())
     return Result;
   for (const auto &Inc : Iter->second) {
-    if ((IsAngled && StringRef(Inc.Name).startswith("\"")) ||
-        (!IsAngled && StringRef(Inc.Name).startswith("<")))
+    if ((IsAngled && StringRef(Inc.Name).starts_with("\"")) ||
+        (!IsAngled && StringRef(Inc.Name).starts_with("<")))
       continue;
     llvm::Error Err = Result.add(tooling::Replacement(
         FileName, Inc.R.getOffset(), Inc.R.getLength(), ""));

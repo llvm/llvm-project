@@ -14,6 +14,8 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -54,11 +56,6 @@ static SmallVector<T> &canonicalizeSetAsVector(SmallVector<T> &vec) {
   auto newEnd = canonicalizeSetAsArray(vec);
   vec.resize(newEnd - vec.begin());
   return vec;
-}
-
-template <typename DimSize>
-static bool isMeshDimensionDynamic(DimSize size) {
-  return size <= DimSize(0);
 }
 
 using MeshAxis = int16_t;
@@ -159,9 +156,9 @@ LogicalResult ClusterOp::verify() {
         "rank of dim_sizes is not expected to be larger than rank of cluster");
 
   for (int64_t dimSize : dimSizes) {
-    if (dimSize < 0)
-      return emitOpError(
-          "dimension size of a mesh cluster is expected to be non-negative");
+    if (dimSize < 0 && !ShapedType::isDynamic(dimSize))
+      return emitOpError("dimension size of a mesh cluster is expected to be "
+                         "non-negative or dynamic");
   }
 
   return success();
@@ -314,7 +311,7 @@ static int64_t collectiveDeviceGroupSize(ArrayRef<MeshAxis> meshAxes,
   int64_t res = 1;
 
   for (MeshAxis axis : meshAxes) {
-    if (isMeshDimensionDynamic(meshShape[axis])) {
+    if (ShapedType::isDynamic(meshShape[axis])) {
       return ShapedType::kDynamic;
     }
     assert(size_t(axis) < meshShape.size());
@@ -508,6 +505,43 @@ void AllToAllOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 }
 
 //===----------------------------------------------------------------------===//
+// mesh.broadcast op
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+BroadcastOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // TODO
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// mesh.gather op
+//===----------------------------------------------------------------------===//
+
+LogicalResult GatherOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // TODO
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// mesh.receive op
+//===----------------------------------------------------------------------===//
+
+LogicalResult RecvOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // TODO
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// mesh.reduce op
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReduceOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // TODO
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
 // mesh.reduce_scatter op
 //===----------------------------------------------------------------------===//
 
@@ -526,6 +560,33 @@ ReduceScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 void ReduceScatterOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                   MLIRContext *context) {
   patterns.add<EmptyMeshAxesCanonicalizationPattern<ReduceScatterOp>>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// mesh.scatter op
+//===----------------------------------------------------------------------===//
+
+LogicalResult ScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // TODO
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// mesh.send op
+//===----------------------------------------------------------------------===//
+
+LogicalResult SendOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // TODO
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// mesh.shift op
+//===----------------------------------------------------------------------===//
+
+LogicalResult ShiftOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // TODO
+  return failure();
 }
 
 //===----------------------------------------------------------------------===//

@@ -161,9 +161,9 @@ public:
     strstreambuf(const unsigned char* __gnext, streamsize __n);
 
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     strstreambuf(strstreambuf&& __rhs);
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     strstreambuf& operator=(strstreambuf&& __rhs);
 #endif // _LIBCPP_CXX03_LANG
 
@@ -202,7 +202,7 @@ private:
 
 #ifndef _LIBCPP_CXX03_LANG
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 strstreambuf::strstreambuf(strstreambuf&& __rhs)
     : streambuf(__rhs),
       __strmode_(__rhs.__strmode_),
@@ -214,7 +214,7 @@ strstreambuf::strstreambuf(strstreambuf&& __rhs)
     __rhs.setp(nullptr, nullptr);
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 strstreambuf&
 strstreambuf::operator=(strstreambuf&& __rhs)
 {
@@ -241,49 +241,49 @@ class _LIBCPP_DEPRECATED _LIBCPP_EXPORTED_FROM_ABI istrstream
     : public istream
 {
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit istrstream(const char* __s)
         : istream(&__sb_), __sb_(__s, 0) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit istrstream(char* __s)
         : istream(&__sb_), __sb_(__s, 0) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     istrstream(const char* __s, streamsize __n)
         : istream(&__sb_), __sb_(__s, __n) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     istrstream(char* __s, streamsize __n)
         : istream(&__sb_), __sb_(__s, __n) {}
 
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     istrstream(istrstream&& __rhs)  // extension
-        : istream(_VSTD::move(static_cast<istream&>(__rhs))),
-          __sb_(_VSTD::move(__rhs.__sb_))
+        : istream(std::move(static_cast<istream&>(__rhs))),
+          __sb_(std::move(__rhs.__sb_))
     {
         istream::set_rdbuf(&__sb_);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     istrstream& operator=(istrstream&& __rhs)
     {
-        __sb_ = _VSTD::move(__rhs.__sb_);
-        istream::operator=(_VSTD::move(__rhs));
+        __sb_ = std::move(__rhs.__sb_);
+        istream::operator=(std::move(__rhs));
         return *this;
     }
 #endif // _LIBCPP_CXX03_LANG
 
     ~istrstream() override;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(istrstream& __rhs)
     {
         istream::swap(__rhs);
         __sb_.swap(__rhs.__sb_);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     strstreambuf* rdbuf() const {return const_cast<strstreambuf*>(&__sb_);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     char *str() {return __sb_.str();}
 
 private:
@@ -294,49 +294,49 @@ class _LIBCPP_DEPRECATED _LIBCPP_EXPORTED_FROM_ABI ostrstream
     : public ostream
 {
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     ostrstream()
         : ostream(&__sb_) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     ostrstream(char* __s, int __n, ios_base::openmode __mode = ios_base::out)
         : ostream(&__sb_),
-          __sb_(__s, __n, __s + (__mode & ios::app ? _VSTD::strlen(__s) : 0))
+          __sb_(__s, __n, __s + (__mode & ios::app ? std::strlen(__s) : 0))
         {}
 
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     ostrstream(ostrstream&& __rhs)  // extension
-        : ostream(_VSTD::move(static_cast<ostream&>(__rhs))),
-          __sb_(_VSTD::move(__rhs.__sb_))
+        : ostream(std::move(static_cast<ostream&>(__rhs))),
+          __sb_(std::move(__rhs.__sb_))
     {
         ostream::set_rdbuf(&__sb_);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     ostrstream& operator=(ostrstream&& __rhs)
     {
-        __sb_ = _VSTD::move(__rhs.__sb_);
-        ostream::operator=(_VSTD::move(__rhs));
+        __sb_ = std::move(__rhs.__sb_);
+        ostream::operator=(std::move(__rhs));
         return *this;
     }
 #endif // _LIBCPP_CXX03_LANG
 
     ~ostrstream() override;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(ostrstream& __rhs)
     {
         ostream::swap(__rhs);
         __sb_.swap(__rhs.__sb_);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     strstreambuf* rdbuf() const {return const_cast<strstreambuf*>(&__sb_);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void freeze(bool __freezefl = true) {__sb_.freeze(__freezefl);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     char* str()         {return __sb_.str();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     int pcount() const  {return __sb_.pcount();}
 
 private:
@@ -354,36 +354,36 @@ public:
     typedef char_traits<char>::off_type off_type;
 
     // constructors/destructor
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     strstream()
         : iostream(&__sb_) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     strstream(char* __s, int __n, ios_base::openmode __mode = ios_base::in | ios_base::out)
         : iostream(&__sb_),
-          __sb_(__s, __n, __s + (__mode & ios::app ? _VSTD::strlen(__s) : 0))
+          __sb_(__s, __n, __s + (__mode & ios::app ? std::strlen(__s) : 0))
         {}
 
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     strstream(strstream&& __rhs)  // extension
-        : iostream(_VSTD::move(static_cast<iostream&>(__rhs))),
-          __sb_(_VSTD::move(__rhs.__sb_))
+        : iostream(std::move(static_cast<iostream&>(__rhs))),
+          __sb_(std::move(__rhs.__sb_))
     {
         iostream::set_rdbuf(&__sb_);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     strstream& operator=(strstream&& __rhs)
     {
-        __sb_ = _VSTD::move(__rhs.__sb_);
-        iostream::operator=(_VSTD::move(__rhs));
+        __sb_ = std::move(__rhs.__sb_);
+        iostream::operator=(std::move(__rhs));
         return *this;
     }
 #endif // _LIBCPP_CXX03_LANG
 
     ~strstream() override;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(strstream& __rhs)
     {
         iostream::swap(__rhs);
@@ -391,13 +391,13 @@ public:
     }
 
     // Members:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     strstreambuf* rdbuf() const {return const_cast<strstreambuf*>(&__sb_);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void freeze(bool __freezefl = true) {__sb_.freeze(__freezefl);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     int pcount() const {return __sb_.pcount();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     char* str()        {return __sb_.str();}
 
 private:

@@ -94,6 +94,7 @@ def _site_initialize():
                 "encountered otherwise and the MLIR Python API may not function."
             )
             logger.warning(message, exc_info=True)
+            return False
 
         logger.debug("Initializing MLIR with module: %s", module_name)
         if hasattr(m, "register_dialects"):

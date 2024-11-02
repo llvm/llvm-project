@@ -75,7 +75,7 @@ static void WriteOutputFile(const Module *M, const ModuleSummaryIndex *Index) {
       OutputFilename = "-";
     } else {
       StringRef IFN = InputFilename;
-      OutputFilename = (IFN.endswith(".ll") ? IFN.drop_back(3) : IFN).str();
+      OutputFilename = (IFN.ends_with(".ll") ? IFN.drop_back(3) : IFN).str();
       OutputFilename += ".bc";
     }
   }

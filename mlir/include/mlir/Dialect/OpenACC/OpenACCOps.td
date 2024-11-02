@@ -156,7 +156,7 @@ def DeclareActionAttr : OpenACC_Attr<"DeclareAction", "declare_action"> {
 }
 
 // Device type enumeration.
-def OpenACC_DeviceTypeStar      : I32EnumAttrCase<"Star", 0, "*">;
+def OpenACC_DeviceTypeStar      : I32EnumAttrCase<"Star", 0, "star">;
 def OpenACC_DeviceTypeDefault   : I32EnumAttrCase<"Default", 1, "default">;
 def OpenACC_DeviceTypeHost      : I32EnumAttrCase<"Host", 2, "host">;
 def OpenACC_DeviceTypeMulticore : I32EnumAttrCase<"Multicore", 3, "multicore">;

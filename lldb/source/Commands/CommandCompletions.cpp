@@ -333,7 +333,7 @@ static void DiskFilesOrDirectories(const llvm::Twine &partial_name,
   llvm::StringRef SearchDir;
   llvm::StringRef PartialItem;
 
-  if (CompletionBuffer.startswith("~")) {
+  if (CompletionBuffer.starts_with("~")) {
     llvm::StringRef Buffer = CompletionBuffer;
     size_t FirstSep =
         Buffer.find_if([](char c) { return path::is_separator(c); });

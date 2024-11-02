@@ -89,10 +89,8 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
-#include <limits>
 #include <optional>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;

@@ -1550,7 +1550,7 @@ static bool isIgnoredParameter(const TheCheck &Check, const ParmVarDecl *Node) {
   if (!NodeTypeName.empty()) {
     if (llvm::any_of(Check.IgnoredParameterTypeSuffixes,
                      [NodeTypeName](StringRef E) {
-                       return !E.empty() && NodeTypeName.endswith(E);
+                       return !E.empty() && NodeTypeName.ends_with(E);
                      })) {
       LLVM_DEBUG(llvm::dbgs() << "\tType suffix ignored.\n");
       return true;

@@ -550,11 +550,11 @@ static bool shouldLinkArch(SmallVectorImpl<StringRef> &Archs, StringRef Arch) {
   if (Archs.empty() || is_contained(Archs, "all") || is_contained(Archs, "*"))
     return true;
 
-  if (Arch.startswith("arm") && Arch != "arm64" && is_contained(Archs, "arm"))
+  if (Arch.starts_with("arm") && Arch != "arm64" && is_contained(Archs, "arm"))
     return true;
 
   SmallString<16> ArchName = Arch;
-  if (Arch.startswith("thumb"))
+  if (Arch.starts_with("thumb"))
     ArchName = ("arm" + Arch.substr(5)).str();
 
   return is_contained(Archs, ArchName);
@@ -729,7 +729,8 @@ void MachODebugMapParser::handleStabSymbolTableEntry(
   }
 
   if (ObjectSymIt == CurrentObjectAddresses.end()) {
-    Warning("could not find object file symbol for symbol " + Twine(Name));
+    Warning("could not find symbol '" + Twine(Name) + "' in object file '" +
+            CurrentDebugMapObject->getObjectFilename() + "'");
     return;
   }
 

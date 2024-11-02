@@ -2019,6 +2019,7 @@ module std_private_type_traits_unwrap_ref                                [system
 module std_private_type_traits_void_t                                    [system] { header "__type_traits/void_t.h" }
 
 module std_private_utility_as_const               [system] { header "__utility/as_const.h" }
+module std_private_utility_as_lvalue              [system] { header "__utility/as_lvalue.h" }
 module std_private_utility_auto_cast              [system] {
   header "__utility/auto_cast.h"
   export std_private_type_traits_decay

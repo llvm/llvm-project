@@ -712,3 +712,30 @@ define i8 @mul8_low_miss_half_width(i8 %in0, i8 %in1) {
   %retLo = add i8 %shl, %m00
   ret i8 %retLo
 }
+
+; Test case to show shl doesn't need hasOneUse constraint
+define i32 @mul32_low_extra_shl_use(i32 %in0, i32 %in1) {
+; CHECK-LABEL: @mul32_low_extra_shl_use(
+; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i32 [[IN0:%.*]], 16
+; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i32 [[IN1:%.*]], 16
+; CHECK-NEXT:    [[M10:%.*]] = mul i32 [[IN1HI]], [[IN0]]
+; CHECK-NEXT:    [[M01:%.*]] = mul i32 [[IN0HI]], [[IN1]]
+; CHECK-NEXT:    [[ADDC:%.*]] = add i32 [[M10]], [[M01]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[ADDC]], 16
+; CHECK-NEXT:    call void @use32(i32 [[SHL]])
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i32 [[IN0]], [[IN1]]
+; CHECK-NEXT:    ret i32 [[RETLO]]
+;
+  %In0Lo = and i32 %in0, 65535
+  %In0Hi = lshr i32 %in0, 16
+  %In1Lo = and i32 %in1, 65535
+  %In1Hi = lshr i32 %in1, 16
+  %m10 = mul i32 %In1Hi, %In0Lo
+  %m01 = mul i32 %In1Lo, %In0Hi
+  %m00 = mul i32 %In1Lo, %In0Lo
+  %addc = add i32 %m10, %m01
+  %shl = shl i32 %addc, 16
+  call void @use32(i32 %shl)
+  %retLo = add i32 %shl, %m00
+  ret i32 %retLo
+}

@@ -63,7 +63,7 @@ entry:
   %a.0 = getelementptr inbounds float, ptr addrspace(1) %a, i64 %zext.id.x
   %c.0 = getelementptr inbounds float, ptr addrspace(1) %c, i64 %zext.id.x
 
-  %id.x.1 = or i32 %shl, 1
+  %id.x.1 = or disjoint i32 %shl, 1
   %id.x.1.ext = zext i32 %id.x.1 to i64
 
   %a.1 = getelementptr inbounds float, ptr addrspace(1) %a, i64 %id.x.1.ext
@@ -90,7 +90,7 @@ entry:
   %a.0 = getelementptr inbounds float, ptr addrspace(1) %a, i64 %zext.id.x
   %c.0 = getelementptr inbounds float, ptr addrspace(1) %c, i64 %zext.id.x
 
-  %id.x.1 = or i32 %shl, 1
+  %id.x.1 = or disjoint i32 %shl, 1
   %id.x.1.ext = sext i32 %id.x.1 to i64
 
   %a.1 = getelementptr inbounds float, ptr addrspace(1) %a, i64 %id.x.1.ext
@@ -127,7 +127,7 @@ loop:
   %c.0 = getelementptr inbounds i32, ptr addrspace(1) %c, i64 %idx.ext
   %a.0 = getelementptr inbounds i32, ptr addrspace(1) %a, i64 %idx.ext
 
-  %idx.1 = or i32 %idx, 1
+  %idx.1 = or disjoint i32 %idx, 1
   %idx.1.ext = zext i32 %idx.1 to i64
   %c.1 = getelementptr inbounds i32, ptr addrspace(1) %c, i64 %idx.1.ext
   %a.1 = getelementptr inbounds i32, ptr addrspace(1) %a, i64 %idx.1.ext

@@ -51,7 +51,7 @@ for.body:
   %i1 = shl nuw nsw i64 %indvars.iv, 2
   %arrayidx2 = getelementptr inbounds i16, ptr %points, i64 %i1
   %i2 = load i16, ptr %arrayidx2, align 2
-  %i3 = or i64 %i1, 1
+  %i3 = or disjoint i64 %i1, 1
   %arrayidx7 = getelementptr inbounds i16, ptr %points, i64 %i3
   %i4 = load i16, ptr %arrayidx7, align 2
   %arrayidx = getelementptr inbounds i16, ptr %x, i64 %indvars.iv
@@ -113,7 +113,7 @@ for.body:
   %i1 = shl nuw nsw i64 %indvars.iv, 2
   %arrayidx2 = getelementptr inbounds i16, ptr %points, i64 %i1
   %i2 = load i16, ptr %arrayidx2, align 2
-  %i3 = or i64 %i1, 1
+  %i3 = or disjoint i64 %i1, 1
   %arrayidx7 = getelementptr inbounds i16, ptr %points, i64 %i3
   %i4 = load i16, ptr %arrayidx7, align 2
   %arrayidx = getelementptr inbounds i16, ptr %x, i64 %indvars.iv

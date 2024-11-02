@@ -1,5 +1,8 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV,CHECK-SPIRV1_4
 
+; TODO(#60133): Requires updates following opaque pointer migration.
+; XFAIL: *
+
 ;; There are no blocks in SPIR-V. Therefore they are translated into regular
 ;; functions. An LLVM module which uses blocks, also contains some auxiliary
 ;; block-specific instructions, which are redundant in SPIR-V and should be

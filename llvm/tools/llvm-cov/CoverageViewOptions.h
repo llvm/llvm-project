@@ -30,12 +30,14 @@ struct CoverageViewOptions {
   bool ShowLineNumbers;
   bool ShowLineStats;
   bool ShowRegionMarkers;
+  bool ShowMCDC;
   bool ShowBranchCounts;
   bool ShowBranchPercents;
   bool ShowExpandedRegions;
   bool ShowFunctionInstantiations;
   bool ShowFullFilenames;
   bool ShowBranchSummary;
+  bool ShowMCDCSummary;
   bool ShowRegionSummary;
   bool ShowInstantiationSummary;
   bool ShowDirectoryCoverage;

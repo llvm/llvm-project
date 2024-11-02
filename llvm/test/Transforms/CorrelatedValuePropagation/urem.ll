@@ -394,4 +394,72 @@ else:
   ret void
 }
 
+define i8 @urem_undef_range_op1(i8 %x) {
+; CHECK-LABEL: @urem_undef_range_op1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i8 [[X:%.*]], label [[JOIN:%.*]] [
+; CHECK-NEXT:      i8 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i8 2, label [[CASE2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       case1:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       case2:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i8 [ 1, [[CASE1]] ], [ 2, [[CASE2]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RES:%.*]] = urem i8 [[PHI]], 3
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+entry:
+  switch i8 %x, label %join [
+  i8 1, label %case1
+  i8 2, label %case2
+  ]
+
+case1:
+  br label %join
+
+case2:
+  br label %join
+
+join:
+  %phi = phi i8 [ 1, %case1 ], [ 2, %case2 ], [ undef, %entry ]
+  %res = urem i8 %phi, 3
+  ret i8 %res
+}
+
+define i8 @urem_undef_range_op2(i8 %x) {
+; CHECK-LABEL: @urem_undef_range_op2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i8 [[X:%.*]], label [[JOIN:%.*]] [
+; CHECK-NEXT:      i8 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i8 2, label [[CASE2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       case1:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       case2:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i8 [ 5, [[CASE1]] ], [ 6, [[CASE2]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RES:%.*]] = sub nuw i8 7, [[PHI]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+entry:
+  switch i8 %x, label %join [
+  i8 1, label %case1
+  i8 2, label %case2
+  ]
+
+case1:
+  br label %join
+
+case2:
+  br label %join
+
+join:
+  %phi = phi i8 [ 5, %case1 ], [ 6, %case2 ], [ undef, %entry ]
+  %res = urem i8 7, %phi
+  ret i8 %res
+}
+
 declare void @use(i1)

@@ -92,47 +92,47 @@ constexpr bool test_iterators() {
   }
 
   { // first range empty
-    int a[] = {};
+    std::array<int, 0> a = {};
     int b[] = {5, 4, 3, 2, 1};
     int c[5];
 
-    auto range1 = std::ranges::subrange(In1(a), Sent1(In1(a)));
+    auto range1 = std::ranges::subrange(In1(a.data()), Sent1(In1(a.data())));
     auto range2 = std::ranges::subrange(In2(b), Sent2(In2(b + 5)));
 
     auto ret = std::ranges::transform(range1, range2, Out(c), [](int i, int j) { return i + j; });
 
-    assert(base(ret.in1) == a);
+    assert(base(ret.in1) == a.data());
     assert(base(ret.in2) == b);
     assert(base(ret.out) == c);
   }
 
   { // second range empty
     int a[] = {5, 4, 3, 2, 1};
-    int b[] = {};
+    std::array<int, 0> b = {};
     int c[5];
 
     auto range1 = std::ranges::subrange(In1(a), Sent1(In1(a + 5)));
-    auto range2 = std::ranges::subrange(In2(b), Sent2(In2(b)));
+    auto range2 = std::ranges::subrange(In2(b.data()), Sent2(In2(b.data())));
 
     auto ret = std::ranges::transform(range1, range2, Out(c), [](int i, int j) { return i + j; });
 
     assert(base(ret.in1) == a);
-    assert(base(ret.in2) == b);
+    assert(base(ret.in2) == b.data());
     assert(base(ret.out) == c);
   }
 
   { // both ranges empty
-    int a[] = {};
-    int b[] = {};
+    std::array<int, 0> a = {};
+    std::array<int, 0> b = {};
     int c[5];
 
-    auto range1 = std::ranges::subrange(In1(a), Sent1(In1(a)));
-    auto range2 = std::ranges::subrange(In2(b), Sent2(In2(b)));
+    auto range1 = std::ranges::subrange(In1(a.data()), Sent1(In1(a.data())));
+    auto range2 = std::ranges::subrange(In2(b.data()), Sent2(In2(b.data())));
 
     auto ret = std::ranges::transform(range1, range2, Out(c), [](int i, int j) { return i + j; });
 
-    assert(base(ret.in1) == a);
-    assert(base(ret.in2) == b);
+    assert(base(ret.in1) == a.data());
+    assert(base(ret.in2) == b.data());
     assert(base(ret.out) == c);
   }
 

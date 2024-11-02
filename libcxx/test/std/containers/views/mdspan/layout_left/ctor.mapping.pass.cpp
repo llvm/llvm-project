@@ -71,7 +71,7 @@ constexpr void test_conversion() {
 }
 
 template <class IdxT, size_t... Extents>
-using mapping_t = typename std::layout_left::template mapping<std::extents<IdxT, Extents...>>;
+using mapping_t = std::layout_left::mapping<std::extents<IdxT, Extents...>>;
 
 constexpr void test_no_implicit_conversion() {
   constexpr size_t D = std::dynamic_extent;

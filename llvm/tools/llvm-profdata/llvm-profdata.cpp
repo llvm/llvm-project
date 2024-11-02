@@ -1006,12 +1006,12 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
     // If sample profile and instrumented profile do not agree on symbol
     // uniqification.
     if (SampleProfileHasFUnique != ProfileHasFUnique) {
-      // If instrumented profile uses -funique-internal-linakge-symbols,
+      // If instrumented profile uses -funique-internal-linkage-symbols,
       // we need to trim the name.
       if (ProfileHasFUnique) {
         NewName = NewName.substr(0, PostfixPos);
       } else {
-        // If sample profile uses -funique-internal-linakge-symbols,
+        // If sample profile uses -funique-internal-linkage-symbols,
         // we build the map.
         std::string NStr =
             NewName.str() + getUniqueInternalLinkagePostfix(FName);
@@ -1514,7 +1514,7 @@ static void parseInputFilenamesFile(MemoryBuffer *Buffer,
   for (const StringRef &FileWeightEntry : Entries) {
     StringRef SanitizedEntry = FileWeightEntry.trim(" \t\v\f\r");
     // Skip comments.
-    if (SanitizedEntry.startswith("#"))
+    if (SanitizedEntry.starts_with("#"))
       continue;
     // If there's no comma, it's an unweighted profile.
     else if (!SanitizedEntry.contains(','))

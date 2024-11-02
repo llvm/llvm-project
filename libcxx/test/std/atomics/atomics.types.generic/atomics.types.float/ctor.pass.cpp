@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: target={{.+}}-windows-gnu
-// ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
 // XFAIL: !has-64-bit-atomics
+// UNSUPPORTED: !non-lockfree-atomics
 
 // constexpr atomic() noexcept;
 // constexpr atomic(floating-point-type) noexcept;
@@ -57,7 +56,8 @@ constexpr void testOne() {
 constexpr bool test() {
   testOne<float>();
   testOne<double>();
-  testOne<long double>();
+  // TODO https://github.com/llvm/llvm-project/issues/47978
+  // testOne<long double>();
   return true;
 }
 

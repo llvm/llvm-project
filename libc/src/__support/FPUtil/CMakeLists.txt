@@ -30,6 +30,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.macros.properties.float
     libc.src.__support.uint128
+    libc.src.__support.math_extras
 )
 
 add_header_library(
@@ -41,7 +42,6 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
-    libc.src.__support.bit
 )
 
 add_header_library(
@@ -146,7 +146,6 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
-    libc.src.__support.bit
     libc.src.__support.uint128
 )
 

@@ -1015,24 +1015,16 @@ define i32 @varargs(ptr %fmt, ...) nounwind {
 ; RV64IZCMP-LABEL: varargs:
 ; RV64IZCMP:       # %bb.0:
 ; RV64IZCMP-NEXT:    addi sp, sp, -80
+; RV64IZCMP-NEXT:    sd a1, 24(sp)
 ; RV64IZCMP-NEXT:    sd a7, 72(sp)
 ; RV64IZCMP-NEXT:    sd a6, 64(sp)
+; RV64IZCMP-NEXT:    addi a0, sp, 28
+; RV64IZCMP-NEXT:    sd a0, 8(sp)
+; RV64IZCMP-NEXT:    lw a0, 24(sp)
 ; RV64IZCMP-NEXT:    sd a5, 56(sp)
 ; RV64IZCMP-NEXT:    sd a4, 48(sp)
 ; RV64IZCMP-NEXT:    sd a3, 40(sp)
 ; RV64IZCMP-NEXT:    sd a2, 32(sp)
-; RV64IZCMP-NEXT:    sd a1, 24(sp)
-; RV64IZCMP-NEXT:    addi a0, sp, 24
-; RV64IZCMP-NEXT:    sd a0, 8(sp)
-; RV64IZCMP-NEXT:    lwu a0, 12(sp)
-; RV64IZCMP-NEXT:    lwu a1, 8(sp)
-; RV64IZCMP-NEXT:    slli a0, a0, 32
-; RV64IZCMP-NEXT:    or a0, a0, a1
-; RV64IZCMP-NEXT:    addi a1, a0, 4
-; RV64IZCMP-NEXT:    sw a1, 8(sp)
-; RV64IZCMP-NEXT:    srli a1, a1, 32
-; RV64IZCMP-NEXT:    sw a1, 12(sp)
-; RV64IZCMP-NEXT:    lw a0, 0(a0)
 ; RV64IZCMP-NEXT:    addi sp, sp, 80
 ; RV64IZCMP-NEXT:    ret
 ;
@@ -1055,24 +1047,16 @@ define i32 @varargs(ptr %fmt, ...) nounwind {
 ; RV64IZCMP-SR-LABEL: varargs:
 ; RV64IZCMP-SR:       # %bb.0:
 ; RV64IZCMP-SR-NEXT:    addi sp, sp, -80
+; RV64IZCMP-SR-NEXT:    sd a1, 24(sp)
 ; RV64IZCMP-SR-NEXT:    sd a7, 72(sp)
 ; RV64IZCMP-SR-NEXT:    sd a6, 64(sp)
+; RV64IZCMP-SR-NEXT:    addi a0, sp, 28
+; RV64IZCMP-SR-NEXT:    sd a0, 8(sp)
+; RV64IZCMP-SR-NEXT:    lw a0, 24(sp)
 ; RV64IZCMP-SR-NEXT:    sd a5, 56(sp)
 ; RV64IZCMP-SR-NEXT:    sd a4, 48(sp)
 ; RV64IZCMP-SR-NEXT:    sd a3, 40(sp)
 ; RV64IZCMP-SR-NEXT:    sd a2, 32(sp)
-; RV64IZCMP-SR-NEXT:    sd a1, 24(sp)
-; RV64IZCMP-SR-NEXT:    addi a0, sp, 24
-; RV64IZCMP-SR-NEXT:    sd a0, 8(sp)
-; RV64IZCMP-SR-NEXT:    lwu a0, 12(sp)
-; RV64IZCMP-SR-NEXT:    lwu a1, 8(sp)
-; RV64IZCMP-SR-NEXT:    slli a0, a0, 32
-; RV64IZCMP-SR-NEXT:    or a0, a0, a1
-; RV64IZCMP-SR-NEXT:    addi a1, a0, 4
-; RV64IZCMP-SR-NEXT:    sw a1, 8(sp)
-; RV64IZCMP-SR-NEXT:    srli a1, a1, 32
-; RV64IZCMP-SR-NEXT:    sw a1, 12(sp)
-; RV64IZCMP-SR-NEXT:    lw a0, 0(a0)
 ; RV64IZCMP-SR-NEXT:    addi sp, sp, 80
 ; RV64IZCMP-SR-NEXT:    ret
 ;
@@ -1095,32 +1079,24 @@ define i32 @varargs(ptr %fmt, ...) nounwind {
 ; RV64I-LABEL: varargs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -80
+; RV64I-NEXT:    sd a1, 24(sp)
 ; RV64I-NEXT:    sd a7, 72(sp)
 ; RV64I-NEXT:    sd a6, 64(sp)
+; RV64I-NEXT:    addi a0, sp, 28
+; RV64I-NEXT:    sd a0, 8(sp)
+; RV64I-NEXT:    lw a0, 24(sp)
 ; RV64I-NEXT:    sd a5, 56(sp)
 ; RV64I-NEXT:    sd a4, 48(sp)
 ; RV64I-NEXT:    sd a3, 40(sp)
 ; RV64I-NEXT:    sd a2, 32(sp)
-; RV64I-NEXT:    sd a1, 24(sp)
-; RV64I-NEXT:    addi a0, sp, 24
-; RV64I-NEXT:    sd a0, 8(sp)
-; RV64I-NEXT:    lwu a0, 12(sp)
-; RV64I-NEXT:    lwu a1, 8(sp)
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    addi a1, a0, 4
-; RV64I-NEXT:    sw a1, 8(sp)
-; RV64I-NEXT:    srli a1, a1, 32
-; RV64I-NEXT:    sw a1, 12(sp)
-; RV64I-NEXT:    lw a0, 0(a0)
 ; RV64I-NEXT:    addi sp, sp, 80
 ; RV64I-NEXT:    ret
-  %va = alloca ptr, align 4
+  %va = alloca ptr
   call void @llvm.va_start(ptr %va)
-  %argp.cur = load ptr, ptr %va, align 4
+  %argp.cur = load ptr, ptr %va
   %argp.next = getelementptr inbounds i8, ptr %argp.cur, i32 4
-  store ptr %argp.next, ptr %va, align 4
-  %1 = load i32, ptr %argp.cur, align 4
+  store ptr %argp.next, ptr %va
+  %1 = load i32, ptr %argp.cur
   call void @llvm.va_end(ptr %va)
   ret i32 %1
 }

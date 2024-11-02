@@ -60,7 +60,7 @@ constexpr bool test() {
     test_swap(a, b);
   }
   {
-    layout_wrapping_integral<4>::template mapping<extents_t> map_a(extents_t(12), not_extents_constructible_tag()),
+    layout_wrapping_integral<4>::mapping<extents_t> map_a(extents_t(12), not_extents_constructible_tag()),
         map_b(extents_t(5), not_extents_constructible_tag());
     std::mdspan a(data_a, map_a);
     std::mdspan b(data_b, map_b);

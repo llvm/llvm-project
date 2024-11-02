@@ -246,7 +246,7 @@ bool TextInstrProfReader::hasFormat(const MemoryBuffer &Buffer) {
 Error TextInstrProfReader::readHeader() {
   Symtab.reset(new InstrProfSymtab());
 
-  while (Line->startswith(":")) {
+  while (Line->starts_with(":")) {
     StringRef Str = Line->substr(1);
     if (Str.equals_insensitive("ir"))
       ProfileKind |= InstrProfKind::IRInstrumentation;
@@ -386,7 +386,7 @@ TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
 
 Error TextInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
   // Skip empty lines and comments.
-  while (!Line.is_at_end() && (Line->empty() || Line->startswith("#")))
+  while (!Line.is_at_end() && (Line->empty() || Line->starts_with("#")))
     ++Line;
   // If we hit EOF while looking for a name, we're done.
   if (Line.is_at_end()) {
@@ -428,7 +428,7 @@ Error TextInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
   }
 
   // Bitmap byte information is indicated with special character.
-  if (Line->startswith("$")) {
+  if (Line->starts_with("$")) {
     Record.BitmapBytes.clear();
     // Read the number of bitmap bytes.
     uint64_t NumBitmapBytes;
@@ -1017,7 +1017,7 @@ public:
     std::pair<StringRef, StringRef> Parts = {StringRef(), Name};
     while (true) {
       Parts = Parts.second.split(':');
-      if (Parts.first.startswith("_Z"))
+      if (Parts.first.starts_with("_Z"))
         return Parts.first;
       if (Parts.second.empty())
         return Name;

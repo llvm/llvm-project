@@ -178,7 +178,7 @@ defined inside macros, like this example demonstrates:
 Counter:
 ^^^^^^^^
 
-A coverage mapping counter can represents a reference to the profile
+A coverage mapping counter can represent a reference to the profile
 instrumentation counter. The execution count for a region with such counter
 is determined by looking up the value of the corresponding profile
 instrumentation counter.

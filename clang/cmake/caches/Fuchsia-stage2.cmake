@@ -336,6 +336,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-symbolizer
   llvm-undname
   llvm-xray
+  opt-viewer
   sancov
   scan-build-py
   CACHE STRING "")

@@ -763,6 +763,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasMad64_32())
     setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, MVT::i32, Custom);
 
+  if (Subtarget->hasIEEEMinMax())
+    setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
+                       {MVT::f16, MVT::f32, MVT::f64, MVT::v2f16}, Legal);
+
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
                      {MVT::Other, MVT::f32, MVT::v4f32, MVT::i16, MVT::f16,
                       MVT::v2i16, MVT::v2f16, MVT::i128},
@@ -800,6 +804,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::FMAXNUM,
                        ISD::FMINNUM_IEEE,
                        ISD::FMAXNUM_IEEE,
+                       ISD::FMINIMUM,
+                       ISD::FMAXIMUM,
                        ISD::FMA,
                        ISD::SMIN,
                        ISD::SMAX,
@@ -1322,7 +1328,9 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   }
 }
 
-bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM) const {
+bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM,
+                                                 unsigned AddrSpace,
+                                                 uint64_t FlatVariant) const {
   if (!Subtarget->hasFlatInstOffsets()) {
     // Flat instructions do not have offsets, and only have the register
     // address.
@@ -1330,29 +1338,27 @@ bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM) const {
   }
 
   return AM.Scale == 0 &&
-         (AM.BaseOffs == 0 ||
-          Subtarget->getInstrInfo()->isLegalFLATOffset(
-              AM.BaseOffs, AMDGPUAS::FLAT_ADDRESS, SIInstrFlags::FLAT));
+         (AM.BaseOffs == 0 || Subtarget->getInstrInfo()->isLegalFLATOffset(
+                                  AM.BaseOffs, AddrSpace, FlatVariant));
 }
 
 bool SITargetLowering::isLegalGlobalAddressingMode(const AddrMode &AM) const {
   if (Subtarget->hasFlatGlobalInsts())
-    return AM.Scale == 0 &&
-           (AM.BaseOffs == 0 || Subtarget->getInstrInfo()->isLegalFLATOffset(
-                                    AM.BaseOffs, AMDGPUAS::GLOBAL_ADDRESS,
-                                    SIInstrFlags::FlatGlobal));
+    return isLegalFlatAddressingMode(AM, AMDGPUAS::GLOBAL_ADDRESS,
+                                     SIInstrFlags::FlatGlobal);
 
   if (!Subtarget->hasAddr64() || Subtarget->useFlatForGlobal()) {
-      // Assume the we will use FLAT for all global memory accesses
-      // on VI.
-      // FIXME: This assumption is currently wrong.  On VI we still use
-      // MUBUF instructions for the r + i addressing mode.  As currently
-      // implemented, the MUBUF instructions only work on buffer < 4GB.
-      // It may be possible to support > 4GB buffers with MUBUF instructions,
-      // by setting the stride value in the resource descriptor which would
-      // increase the size limit to (stride * 4GB).  However, this is risky,
-      // because it has never been validated.
-    return isLegalFlatAddressingMode(AM);
+    // Assume the we will use FLAT for all global memory accesses
+    // on VI.
+    // FIXME: This assumption is currently wrong.  On VI we still use
+    // MUBUF instructions for the r + i addressing mode.  As currently
+    // implemented, the MUBUF instructions only work on buffer < 4GB.
+    // It may be possible to support > 4GB buffers with MUBUF instructions,
+    // by setting the stride value in the resource descriptor which would
+    // increase the size limit to (stride * 4GB).  However, this is risky,
+    // because it has never been validated.
+    return isLegalFlatAddressingMode(AM, AMDGPUAS::FLAT_ADDRESS,
+                                     SIInstrFlags::FLAT);
   }
 
   return isLegalMUBUFAddressingMode(AM);
@@ -1449,7 +1455,10 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
   }
 
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
-    return isLegalMUBUFAddressingMode(AM);
+    return Subtarget->enableFlatScratch()
+               ? isLegalFlatAddressingMode(AM, AMDGPUAS::PRIVATE_ADDRESS,
+                                           SIInstrFlags::FlatScratch)
+               : isLegalMUBUFAddressingMode(AM);
 
   if (AS == AMDGPUAS::LOCAL_ADDRESS ||
       (AS == AMDGPUAS::REGION_ADDRESS && Subtarget->hasGDS())) {
@@ -1475,7 +1484,8 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
     // computation. We don't have instructions that compute pointers with any
     // addressing modes, so treat them as having no offset like flat
     // instructions.
-    return isLegalFlatAddressingMode(AM);
+    return isLegalFlatAddressingMode(AM, AMDGPUAS::FLAT_ADDRESS,
+                                     SIInstrFlags::FLAT);
   }
 
   // Assume a user alias of global for unknown address spaces.
@@ -1787,7 +1797,7 @@ SDValue SITargetLowering::lowerKernArgParameterPtr(SelectionDAG &DAG,
   // We may not have the kernarg segment argument if we have no kernel
   // arguments.
   if (!InputPtrReg)
-    return DAG.getConstant(0, SL, PtrVT);
+    return DAG.getConstant(Offset, SL, PtrVT);
 
   MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
   SDValue BasePtr = DAG.getCopyFromReg(Chain, SL,
@@ -4551,40 +4561,51 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   }
   case AMDGPU::S_ADD_U64_PSEUDO:
   case AMDGPU::S_SUB_U64_PSEUDO: {
-    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+    // For targets older than GFX12, we emit a sequence of 32-bit operations.
+    // For GFX12, we emit s_add_u64 and s_sub_u64.
     const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-    const SIRegisterInfo *TRI = ST.getRegisterInfo();
-    const TargetRegisterClass *BoolRC = TRI->getBoolRC();
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
     const DebugLoc &DL = MI.getDebugLoc();
-
     MachineOperand &Dest = MI.getOperand(0);
     MachineOperand &Src0 = MI.getOperand(1);
     MachineOperand &Src1 = MI.getOperand(2);
-
-    Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-    Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-
-    MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(
-        MI, MRI, Src0, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
-    MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(
-        MI, MRI, Src0, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
-
-    MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(
-        MI, MRI, Src1, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
-    MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(
-        MI, MRI, Src1, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
-
     bool IsAdd = (MI.getOpcode() == AMDGPU::S_ADD_U64_PSEUDO);
+    if (Subtarget->hasScalarAddSub64()) {
+      unsigned Opc = IsAdd ? AMDGPU::S_ADD_U64 : AMDGPU::S_SUB_U64;
+      BuildMI(*BB, MI, DL, TII->get(Opc), Dest.getReg())
+          .addReg(Src0.getReg())
+          .addReg(Src1.getReg());
+    } else {
+      const SIRegisterInfo *TRI = ST.getRegisterInfo();
+      const TargetRegisterClass *BoolRC = TRI->getBoolRC();
 
-    unsigned LoOpc = IsAdd ? AMDGPU::S_ADD_U32 : AMDGPU::S_SUB_U32;
-    unsigned HiOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
-    BuildMI(*BB, MI, DL, TII->get(LoOpc), DestSub0).add(Src0Sub0).add(Src1Sub0);
-    BuildMI(*BB, MI, DL, TII->get(HiOpc), DestSub1).add(Src0Sub1).add(Src1Sub1);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
-        .addReg(DestSub0)
-        .addImm(AMDGPU::sub0)
-        .addReg(DestSub1)
-        .addImm(AMDGPU::sub1);
+      Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+
+      MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(
+          MI, MRI, Src0, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
+      MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(
+          MI, MRI, Src0, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
+
+      MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(
+          MI, MRI, Src1, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
+      MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(
+          MI, MRI, Src1, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
+
+      unsigned LoOpc = IsAdd ? AMDGPU::S_ADD_U32 : AMDGPU::S_SUB_U32;
+      unsigned HiOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
+      BuildMI(*BB, MI, DL, TII->get(LoOpc), DestSub0)
+          .add(Src0Sub0)
+          .add(Src1Sub0);
+      BuildMI(*BB, MI, DL, TII->get(HiOpc), DestSub1)
+          .add(Src0Sub1)
+          .add(Src1Sub1);
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
+          .addReg(DestSub0)
+          .addImm(AMDGPU::sub0)
+          .addReg(DestSub1)
+          .addImm(AMDGPU::sub1);
+    }
     MI.eraseFromParent();
     return BB;
   }
@@ -8608,6 +8629,31 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                    M->getVTList(), Ops, M->getMemoryVT(),
                                    M->getMemOperand());
   }
+  case Intrinsic::amdgcn_s_get_barrier_state: {
+    SDValue Chain = Op->getOperand(0);
+    SmallVector<SDValue, 2> Ops;
+    unsigned Opc;
+    bool IsInlinableBarID = false;
+    int64_t BarID;
+
+    if (isa<ConstantSDNode>(Op->getOperand(2))) {
+      BarID = cast<ConstantSDNode>(Op->getOperand(2))->getSExtValue();
+      IsInlinableBarID = AMDGPU::isInlinableIntLiteral(BarID);
+    }
+
+    if (IsInlinableBarID) {
+      Opc = AMDGPU::S_GET_BARRIER_STATE_IMM;
+      SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
+      Ops.push_back(K);
+    } else {
+      Opc = AMDGPU::S_GET_BARRIER_STATE_M0;
+      SDValue M0Val = copyToM0(DAG, Chain, DL, Op.getOperand(2));
+      Ops.push_back(M0Val.getValue(0));
+    }
+
+    auto NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
+    return SDValue(NewMI, 0);
+  }
   default:
 
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
@@ -8785,13 +8831,29 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return SDValue(DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops), 0);
   }
   case Intrinsic::amdgcn_s_barrier: {
+    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
     if (getTargetMachine().getOptLevel() > CodeGenOptLevel::None) {
-      const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
       unsigned WGSize = ST.getFlatWorkGroupSizes(MF.getFunction()).second;
       if (WGSize <= ST.getWavefrontSize())
         return SDValue(DAG.getMachineNode(AMDGPU::WAVE_BARRIER, DL, MVT::Other,
                                           Op.getOperand(0)), 0);
     }
+
+    // On GFX12 lower s_barrier into s_barrier_signal_imm and s_barrier_wait
+    if (ST.hasSplitBarriers()) {
+      SDValue K =
+          DAG.getTargetConstant(AMDGPU::Barrier::WORKGROUP, DL, MVT::i32);
+      SDValue BarSignal =
+          SDValue(DAG.getMachineNode(AMDGPU::S_BARRIER_SIGNAL_IMM, DL,
+                                     MVT::Other, K, Op.getOperand(0)),
+                  0);
+      SDValue BarWait =
+          SDValue(DAG.getMachineNode(AMDGPU::S_BARRIER_WAIT, DL, MVT::Other, K,
+                                     BarSignal.getValue(0)),
+                  0);
+      return BarWait;
+    }
+
     return SDValue();
   };
   case Intrinsic::amdgcn_tbuffer_store: {
@@ -9085,12 +9147,13 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     auto F = LoadMMO->getFlags() &
              ~(MachineMemOperand::MOStore | MachineMemOperand::MOLoad);
-    LoadMMO = MF.getMachineMemOperand(LoadPtrI, F | MachineMemOperand::MOLoad,
-                                      Size, LoadMMO->getBaseAlign());
+    LoadMMO =
+        MF.getMachineMemOperand(LoadPtrI, F | MachineMemOperand::MOLoad, Size,
+                                LoadMMO->getBaseAlign(), LoadMMO->getAAInfo());
 
-    MachineMemOperand *StoreMMO =
-        MF.getMachineMemOperand(StorePtrI, F | MachineMemOperand::MOStore,
-                                sizeof(int32_t), LoadMMO->getBaseAlign());
+    MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+        StorePtrI, F | MachineMemOperand::MOStore, sizeof(int32_t),
+        LoadMMO->getBaseAlign(), LoadMMO->getAAInfo());
 
     auto Load = DAG.getMachineNode(Opc, DL, M->getVTList(), Ops);
     DAG.setNodeMemRefs(Load, {LoadMMO, StoreMMO});
@@ -9161,11 +9224,12 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     StorePtrI.AddrSpace = AMDGPUAS::LOCAL_ADDRESS;
     auto F = LoadMMO->getFlags() &
              ~(MachineMemOperand::MOStore | MachineMemOperand::MOLoad);
-    LoadMMO = MF.getMachineMemOperand(LoadPtrI, F | MachineMemOperand::MOLoad,
-                                      Size, LoadMMO->getBaseAlign());
-    MachineMemOperand *StoreMMO =
-        MF.getMachineMemOperand(StorePtrI, F | MachineMemOperand::MOStore,
-                                sizeof(int32_t), Align(4));
+    LoadMMO =
+        MF.getMachineMemOperand(LoadPtrI, F | MachineMemOperand::MOLoad, Size,
+                                LoadMMO->getBaseAlign(), LoadMMO->getAAInfo());
+    MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+        StorePtrI, F | MachineMemOperand::MOStore, sizeof(int32_t), Align(4),
+        LoadMMO->getAAInfo());
 
     auto Load = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     DAG.setNodeMemRefs(Load, {LoadMMO, StoreMMO});
@@ -9175,7 +9239,76 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::amdgcn_end_cf:
     return SDValue(DAG.getMachineNode(AMDGPU::SI_END_CF, DL, MVT::Other,
                                       Op->getOperand(2), Chain), 0);
+  case Intrinsic::amdgcn_s_barrier_init:
+  case Intrinsic::amdgcn_s_barrier_join:
+  case Intrinsic::amdgcn_s_wakeup_barrier: {
+    SDValue Chain = Op->getOperand(0);
+    SmallVector<SDValue, 2> Ops;
+    SDValue BarOp = Op->getOperand(2);
+    unsigned Opc;
+    bool IsInlinableBarID = false;
+    int64_t BarVal;
 
+    if (isa<ConstantSDNode>(BarOp)) {
+      BarVal = cast<ConstantSDNode>(BarOp)->getSExtValue();
+      IsInlinableBarID = AMDGPU::isInlinableIntLiteral(BarVal);
+    }
+
+    if (IsInlinableBarID) {
+      switch (IntrinsicID) {
+      default:
+        return SDValue();
+      case Intrinsic::amdgcn_s_barrier_init:
+        Opc = AMDGPU::S_BARRIER_INIT_IMM;
+        break;
+      case Intrinsic::amdgcn_s_barrier_join:
+        Opc = AMDGPU::S_BARRIER_JOIN_IMM;
+        break;
+      case Intrinsic::amdgcn_s_wakeup_barrier:
+        Opc = AMDGPU::S_WAKEUP_BARRIER_IMM;
+        break;
+      }
+
+      SDValue K = DAG.getTargetConstant(BarVal, DL, MVT::i32);
+      Ops.push_back(K);
+    } else {
+      switch (IntrinsicID) {
+      default:
+        return SDValue();
+      case Intrinsic::amdgcn_s_barrier_init:
+        Opc = AMDGPU::S_BARRIER_INIT_M0;
+        break;
+      case Intrinsic::amdgcn_s_barrier_join:
+        Opc = AMDGPU::S_BARRIER_JOIN_M0;
+        break;
+      case Intrinsic::amdgcn_s_wakeup_barrier:
+        Opc = AMDGPU::S_WAKEUP_BARRIER_M0;
+        break;
+      }
+    }
+
+    if (IntrinsicID == Intrinsic::amdgcn_s_barrier_init) {
+      SDValue M0Val;
+      // Member count will be read from M0[16:22]
+      M0Val = DAG.getNode(ISD::SHL, DL, MVT::i32, Op.getOperand(3),
+                          DAG.getShiftAmountConstant(16, MVT::i32, DL));
+
+      if (!IsInlinableBarID) {
+        // If reference to barrier id is not an inline constant then it must be
+        // referenced with M0[4:0]. Perform an OR with the member count to
+        // include it in M0.
+        M0Val = SDValue(DAG.getMachineNode(AMDGPU::S_OR_B32, DL, MVT::i32,
+                                           Op.getOperand(2), M0Val),
+                        0);
+      }
+      Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
+    } else if (!IsInlinableBarID) {
+      Ops.push_back(copyToM0(DAG, Chain, DL, BarOp).getValue(0));
+    }
+
+    auto NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
+    return SDValue(NewMI, 0);
+  }
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))
@@ -10938,7 +11071,6 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
 // performed.
 static const std::optional<ByteProvider<SDValue>>
 calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
-                 std::optional<bool> IsSigned = std::nullopt,
                  unsigned Depth = 0) {
   // We may need to recursively traverse a series of SRLs
   if (Depth >= 6)
@@ -10950,16 +11082,12 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
 
   switch (Op->getOpcode()) {
   case ISD::TRUNCATE: {
-    return calculateSrcByte(Op->getOperand(0), DestByte, SrcIndex, IsSigned,
-                            Depth + 1);
+    return calculateSrcByte(Op->getOperand(0), DestByte, SrcIndex, Depth + 1);
   }
 
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
   case ISD::SIGN_EXTEND_INREG: {
-    IsSigned = IsSigned.value_or(false) ||
-               Op->getOpcode() == ISD::SIGN_EXTEND ||
-               Op->getOpcode() == ISD::SIGN_EXTEND_INREG;
     SDValue NarrowOp = Op->getOperand(0);
     auto NarrowVT = NarrowOp.getValueType();
     if (Op->getOpcode() == ISD::SIGN_EXTEND_INREG) {
@@ -10972,8 +11100,7 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
 
     if (SrcIndex >= NarrowByteWidth)
       return std::nullopt;
-    return calculateSrcByte(Op->getOperand(0), DestByte, SrcIndex, IsSigned,
-                            Depth + 1);
+    return calculateSrcByte(Op->getOperand(0), DestByte, SrcIndex, Depth + 1);
   }
 
   case ISD::SRA:
@@ -10989,24 +11116,11 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
 
     SrcIndex += BitShift / 8;
 
-    return calculateSrcByte(Op->getOperand(0), DestByte, SrcIndex, IsSigned,
-                            Depth + 1);
+    return calculateSrcByte(Op->getOperand(0), DestByte, SrcIndex, Depth + 1);
   }
 
   default: {
-    if (isa<AtomicSDNode>(Op) || Op->isMemIntrinsic()) {
-      // If this causes us to throw away signedness info, then fail.
-      if (IsSigned)
-        return std::nullopt;
-      return ByteProvider<SDValue>::getSrc(Op, DestByte, SrcIndex);
-    }
-
-    if (auto L = dyn_cast<LoadSDNode>(Op))
-      if (L->getExtensionType() != ISD::NON_EXTLOAD)
-        IsSigned =
-            IsSigned.value_or(false) || L->getExtensionType() == ISD::SEXTLOAD;
-
-    return ByteProvider<SDValue>::getSrc(Op, DestByte, SrcIndex, IsSigned);
+    return ByteProvider<SDValue>::getSrc(Op, DestByte, SrcIndex);
   }
   }
   llvm_unreachable("fully handled switch");
@@ -11020,8 +11134,7 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
 // performed. \p StartingIndex is the originally requested byte of the Or
 static const std::optional<ByteProvider<SDValue>>
 calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
-                      unsigned StartingIndex = 0,
-                      std::optional<bool> IsSigned = std::nullopt) {
+                      unsigned StartingIndex = 0) {
   // Finding Src tree of RHS of or typically requires at least 1 additional
   // depth
   if (Depth > 6)
@@ -11036,11 +11149,11 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   switch (Op.getOpcode()) {
   case ISD::OR: {
     auto RHS = calculateByteProvider(Op.getOperand(1), Index, Depth + 1,
-                                     StartingIndex, IsSigned);
+                                     StartingIndex);
     if (!RHS)
       return std::nullopt;
     auto LHS = calculateByteProvider(Op.getOperand(0), Index, Depth + 1,
-                                     StartingIndex, IsSigned);
+                                     StartingIndex);
     if (!LHS)
       return std::nullopt;
     // A well formed Or will have two ByteProviders for each byte, one of which
@@ -11071,7 +11184,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
       return ByteProvider<SDValue>::getConstantZero();
     }
 
-    return calculateSrcByte(Op->getOperand(0), StartingIndex, Index, IsSigned);
+    return calculateSrcByte(Op->getOperand(0), StartingIndex, Index);
   }
 
   case ISD::FSHR: {
@@ -11120,7 +11233,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     // the SRL is Index + ByteShift
     return BytesProvided - ByteShift > Index
                ? calculateSrcByte(Op->getOperand(0), StartingIndex,
-                                  Index + ByteShift, IsSigned)
+                                  Index + ByteShift)
                : ByteProvider<SDValue>::getConstantZero();
   }
 
@@ -11141,7 +11254,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     return Index < ByteShift
                ? ByteProvider<SDValue>::getConstantZero()
                : calculateByteProvider(Op.getOperand(0), Index - ByteShift,
-                                       Depth + 1, StartingIndex, IsSigned);
+                                       Depth + 1, StartingIndex);
   }
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
@@ -11161,21 +11274,12 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
       return std::nullopt;
     uint64_t NarrowByteWidth = NarrowBitWidth / 8;
 
-    IsSigned =
-        Op->getOpcode() != ISD::ANY_EXTEND
-            ? std::optional<bool>(IsSigned.value_or(false) ||
-                                  Op->getOpcode() == ISD::SIGN_EXTEND ||
-                                  Op->getOpcode() == ISD::SIGN_EXTEND_INREG ||
-                                  Op->getOpcode() == ISD::AssertSext)
-            : IsSigned;
-
     if (Index >= NarrowByteWidth)
       return Op.getOpcode() == ISD::ZERO_EXTEND
                  ? std::optional<ByteProvider<SDValue>>(
                        ByteProvider<SDValue>::getConstantZero())
                  : std::nullopt;
-    return calculateByteProvider(NarrowOp, Index, Depth + 1, StartingIndex,
-                                 IsSigned);
+    return calculateByteProvider(NarrowOp, Index, Depth + 1, StartingIndex);
   }
 
   case ISD::TRUNCATE: {
@@ -11183,7 +11287,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
 
     if (NarrowByteWidth >= Index) {
       return calculateByteProvider(Op.getOperand(0), Index, Depth + 1,
-                                   StartingIndex, IsSigned);
+                                   StartingIndex);
     }
 
     return std::nullopt;
@@ -11191,7 +11295,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
 
   case ISD::CopyFromReg: {
     if (BitWidth / 8 > Index)
-      return calculateSrcByte(Op, StartingIndex, Index, IsSigned);
+      return calculateSrcByte(Op, StartingIndex, Index);
 
     return std::nullopt;
   }
@@ -11199,10 +11303,6 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   case ISD::LOAD: {
     auto L = cast<LoadSDNode>(Op.getNode());
 
-    // Only set IsSigned if the load is extended.
-    if (L->getExtensionType() != ISD::NON_EXTLOAD)
-      IsSigned =
-          IsSigned.value_or(false) || L->getExtensionType() == ISD::SEXTLOAD;
     unsigned NarrowBitWidth = L->getMemoryVT().getSizeInBits();
     if (NarrowBitWidth % 8 != 0)
       return std::nullopt;
@@ -11219,7 +11319,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     }
 
     if (NarrowByteWidth > Index) {
-      return calculateSrcByte(Op, StartingIndex, Index, IsSigned);
+      return calculateSrcByte(Op, StartingIndex, Index);
     }
 
     return std::nullopt;
@@ -11227,7 +11327,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
 
   case ISD::BSWAP:
     return calculateByteProvider(Op->getOperand(0), BitWidth / 8 - Index - 1,
-                                 Depth + 1, StartingIndex, IsSigned);
+                                 Depth + 1, StartingIndex);
 
   case ISD::EXTRACT_VECTOR_ELT: {
     auto IdxOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
@@ -11242,7 +11342,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     }
 
     return calculateSrcByte(ScalarSize == 32 ? Op : Op.getOperand(0),
-                            StartingIndex, Index, IsSigned);
+                            StartingIndex, Index);
   }
 
   case AMDGPUISD::PERM: {
@@ -11258,10 +11358,9 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     auto NextOp = Op.getOperand(IdxMask > 0x03 ? 0 : 1);
     auto NextIndex = IdxMask > 0x03 ? IdxMask % 4 : IdxMask;
 
-    return IdxMask != 0x0c
-               ? calculateSrcByte(NextOp, StartingIndex, NextIndex, IsSigned)
-               : ByteProvider<SDValue>(
-                     ByteProvider<SDValue>::getConstantZero());
+    return IdxMask != 0x0c ? calculateSrcByte(NextOp, StartingIndex, NextIndex)
+                           : ByteProvider<SDValue>(
+                                 ByteProvider<SDValue>::getConstantZero());
   }
 
   default: {
@@ -11803,10 +11902,14 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case ISD::FMAXNUM:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
   case AMDGPUISD::CLAMP:
   case AMDGPUISD::FMED3:
   case AMDGPUISD::FMAX3:
-  case AMDGPUISD::FMIN3: {
+  case AMDGPUISD::FMIN3:
+  case AMDGPUISD::FMAXIMUM3:
+  case AMDGPUISD::FMINIMUM3: {
     // FIXME: Shouldn't treat the generic operations different based these.
     // However, we aren't really required to flush the result from
     // minnum/maxnum..
@@ -11960,7 +12063,9 @@ bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
   case AMDGPU::G_FMINNUM:
   case AMDGPU::G_FMAXNUM:
   case AMDGPU::G_FMINNUM_IEEE:
-  case AMDGPU::G_FMAXNUM_IEEE: {
+  case AMDGPU::G_FMAXNUM_IEEE:
+  case AMDGPU::G_FMINIMUM:
+  case AMDGPU::G_FMAXIMUM: {
     if (Subtarget->supportsMinMaxDenormModes() ||
         // FIXME: denormalsEnabledForType is broken for dynamic
         denormalsEnabledForType(MRI.getType(Reg), MF))
@@ -12148,6 +12253,8 @@ static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
   case ISD::FMAXNUM:
   case ISD::FMAXNUM_IEEE:
     return AMDGPUISD::FMAX3;
+  case ISD::FMAXIMUM:
+    return AMDGPUISD::FMAXIMUM3;
   case ISD::SMAX:
     return AMDGPUISD::SMAX3;
   case ISD::UMAX:
@@ -12155,6 +12262,8 @@ static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
   case ISD::FMINNUM:
   case ISD::FMINNUM_IEEE:
     return AMDGPUISD::FMIN3;
+  case ISD::FMINIMUM:
+    return AMDGPUISD::FMINIMUM3;
   case ISD::SMIN:
     return AMDGPUISD::SMIN3;
   case ISD::UMIN:
@@ -12514,7 +12623,9 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
     case ISD::FMAXNUM:
     case ISD::FMINNUM:
     case ISD::FMAXNUM_IEEE:
-    case ISD::FMINNUM_IEEE: {
+    case ISD::FMINNUM_IEEE:
+    case ISD::FMAXIMUM:
+    case ISD::FMINIMUM: {
       SDValue Elt0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT,
                                  Vec.getOperand(0), Idx);
       SDValue Elt1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT,
@@ -13062,32 +13173,67 @@ static bool isMul(const SDValue Op) {
           Opcode == AMDGPUISD::MUL_I24);
 }
 
-static std::optional<bool> checkSignedness(const SDValue &N,
-                                           ByteProvider<SDValue> &Src0,
-                                           ByteProvider<SDValue> &Src1) {
-  auto MulOpcode = N.getOpcode();
-  std::optional<bool> IterIsSigned;
-  // Both sides of the tree must have the same signedness semantics.
-  if ((Src0.IsSigned != Src1.IsSigned) ||
-      (Src0.IsSigned.value_or(false) != Src1.IsSigned.value_or(false)))
-    return IterIsSigned;
-  // If we have a MUL_U24 op with signed semantics, then fail.
-  if (Src0.IsSigned.value_or(false) && MulOpcode == AMDGPUISD::MUL_U24)
-    return IterIsSigned;
-  // If we have a MUL_I24 op with unsigned semantics, then fail.
-  if (!Src0.IsSigned.value_or(true) && MulOpcode == AMDGPUISD::MUL_I24)
-    return IterIsSigned;
+static std::optional<bool>
+checkDot4MulSignedness(const SDValue &N, ByteProvider<SDValue> &Src0,
+                       ByteProvider<SDValue> &Src1, const SDValue &S0Op,
+                       const SDValue &S1Op, const SelectionDAG &DAG) {
+  // If we both ops are i8s (pre legalize-dag), then the signedness semantics
+  // of the dot4 is irrelevant.
+  if (S0Op.getValueSizeInBits() == 8 && S1Op.getValueSizeInBits() == 8)
+    return false;
 
-  bool TopLevelSignedness =
-      MulOpcode == AMDGPUISD::MUL_I24 ||
-      (MulOpcode == ISD::MUL && N.getNode()->getFlags().hasNoSignedWrap() &&
-       !N.getNode()->getFlags().hasNoUnsignedWrap());
+  auto Known0 = DAG.computeKnownBits(S0Op, 0);
+  bool S0IsUnsigned = Known0.countMinLeadingZeros() > 0;
+  bool S0IsSigned = Known0.countMinLeadingOnes() > 0;
+  auto Known1 = DAG.computeKnownBits(S1Op, 0);
+  bool S1IsUnsigned = Known1.countMinLeadingZeros() > 0;
+  bool S1IsSigned = Known1.countMinLeadingOnes() > 0;
 
-  // In cases where we are accumulating into an i8 (for v_dot4), the
-  // ByteProvider will not have signedness info since the MSBs are dont-cares.
-  // In this case, we simply use the TopLevelSignedness of the instruction.
-  IterIsSigned = Src0.IsSigned.value_or(TopLevelSignedness);
-  return IterIsSigned;
+  assert(!(S0IsUnsigned && S0IsSigned));
+  assert(!(S1IsUnsigned && S1IsSigned));
+
+  // There are 9 possible permutations of
+  // {S0IsUnsigned, S0IsSigned, S1IsUnsigned, S1IsSigned}
+
+  // In two permutations, the sign bits are known to be the same for both Ops,
+  // so simply return Signed / Unsigned corresponding to the MSB
+
+  if ((S0IsUnsigned && S1IsUnsigned) || (S0IsSigned && S1IsSigned))
+    return S0IsSigned;
+
+  // In another two permutations, the sign bits are known to be opposite. In
+  // this case return std::nullopt to indicate a bad match.
+
+  if ((S0IsUnsigned && S1IsSigned) || (S0IsSigned && S1IsUnsigned))
+    return std::nullopt;
+
+  // In the remaining five permutations, we don't know the value of the sign
+  // bit for at least one Op. Since we have a valid ByteProvider, we know that
+  // the upper bits must be extension bits. Thus, the only ways for the sign
+  // bit to be unknown is if it was sign extended from unknown value, or if it
+  // was any extended. In either case, it is correct to use the signed
+  // version of the signedness semantics of dot4
+
+  // In two of such permutations, we known the sign bit is set for
+  // one op, and the other is unknown. It is okay to used signed version of
+  // dot4.
+  if ((S0IsSigned && !(S1IsSigned || S1IsUnsigned)) ||
+      ((S1IsSigned && !(S0IsSigned || S0IsUnsigned))))
+    return true;
+
+  // In one such permutation, we don't know either of the sign bits. It is okay
+  // to used the signed version of dot4.
+  if ((!(S1IsSigned || S1IsUnsigned) && !(S0IsSigned || S0IsUnsigned)))
+    return true;
+
+  // In two of such permutations, we known the sign bit is unset for
+  // one op, and the other is unknown. Return std::nullopt to indicate a
+  // bad match.
+  if ((S0IsUnsigned && !(S1IsSigned || S1IsUnsigned)) ||
+      ((S1IsUnsigned && !(S0IsSigned || S0IsUnsigned))))
+    return std::nullopt;
+
+  llvm_unreachable("Fully covered condition");
 }
 
 SDValue SITargetLowering::performAddCombine(SDNode *N,
@@ -13130,8 +13276,10 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
       if (!Src1)
         break;
 
-      auto IterIsSigned =
-          checkSignedness(TempNode->getOperand(MulIdx), *Src0, *Src1);
+      auto IterIsSigned = checkDot4MulSignedness(
+          TempNode->getOperand(MulIdx), *Src0, *Src1,
+          TempNode->getOperand(MulIdx)->getOperand(0),
+          TempNode->getOperand(MulIdx)->getOperand(1), DAG);
       if (!IterIsSigned)
         break;
       if (!IsSigned)
@@ -13152,8 +13300,10 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
             handleMulOperand(TempNode->getOperand(AddIdx)->getOperand(1));
         if (!Src1)
           break;
-        auto IterIsSigned =
-            checkSignedness(TempNode->getOperand(AddIdx), *Src0, *Src1);
+        auto IterIsSigned = checkDot4MulSignedness(
+            TempNode->getOperand(AddIdx), *Src0, *Src1,
+            TempNode->getOperand(AddIdx)->getOperand(0),
+            TempNode->getOperand(AddIdx)->getOperand(1), DAG);
         if (!IterIsSigned)
           break;
         assert(IsSigned);
@@ -13737,6 +13887,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FMINNUM:
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINNUM_IEEE:
+  case ISD::FMAXIMUM:
+  case ISD::FMINIMUM:
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::UMAX:
@@ -14450,7 +14602,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       return std::pair(0U, RC);
   }
 
-  if (Constraint.startswith("{") && Constraint.endswith("}")) {
+  if (Constraint.starts_with("{") && Constraint.ends_with("}")) {
     StringRef RegName(Constraint.data() + 1, Constraint.size() - 2);
     if (RegName.consume_front("v")) {
       RC = &AMDGPU::VGPR_32RegClass;

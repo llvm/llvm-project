@@ -1,4 +1,4 @@
-//===-- llvm-readtapi.cpp - tapi file reader and manipulator -----*- C++-*-===//
+//===-- llvm-readtapi.cpp - tapi file reader and transformer -----*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -56,20 +56,6 @@ public:
   }
 };
 
-// Use unique exit code to differentiate failures not directly caused from
-// TextAPI operations. This is used for wrapping `compare` operations in
-// automation and scripting.
-const int NON_TAPI_EXIT_CODE = 2;
-const std::string TOOLNAME = "llvm-readtapi";
-ExitOnError ExitOnErr;
-
-// Handle error reporting in cases where `ExitOnError` is not used.
-void reportError(Twine Message, int ExitCode = EXIT_FAILURE) {
-  errs() << TOOLNAME << ": error: " << Message << "\n";
-  errs().flush();
-  exit(ExitCode);
-}
-
 struct Context {
   std::vector<std::string> Inputs;
   std::unique_ptr<llvm::raw_fd_stream> OutStream;
@@ -78,8 +64,23 @@ struct Context {
   Architecture Arch = AK_unknown;
 };
 
-std::unique_ptr<InterfaceFile> getInterfaceFile(const StringRef Filename,
-                                                bool ResetBanner = true) {
+// Use unique exit code to differentiate failures not directly caused from
+// TextAPI operations. This is used for wrapping `compare` operations in
+// automation and scripting.
+const int NON_TAPI_EXIT_CODE = 2;
+const std::string TOOLNAME = "llvm-readtapi";
+ExitOnError ExitOnErr;
+} // anonymous namespace
+
+// Handle error reporting in cases where `ExitOnError` is not used.
+static void reportError(Twine Message, int ExitCode = EXIT_FAILURE) {
+  errs() << TOOLNAME << ": error: " << Message << "\n";
+  errs().flush();
+  exit(ExitCode);
+}
+
+static std::unique_ptr<InterfaceFile>
+getInterfaceFile(const StringRef Filename, bool ResetBanner = true) {
   ExitOnErr.setBanner(TOOLNAME + ": error: '" + Filename.str() + "' ");
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFile(Filename);
@@ -94,7 +95,7 @@ std::unique_ptr<InterfaceFile> getInterfaceFile(const StringRef Filename,
   return std::move(*IF);
 }
 
-bool handleCompareAction(const Context &Ctx) {
+static bool handleCompareAction(const Context &Ctx) {
   if (Ctx.Inputs.size() != 2)
     reportError("compare only supports two input files",
                 /*ExitCode=*/NON_TAPI_EXIT_CODE);
@@ -109,8 +110,8 @@ bool handleCompareAction(const Context &Ctx) {
   return DiffEngine(LeftIF.get(), RightIF.get()).compareFiles(OS);
 }
 
-bool handleWriteAction(const Context &Ctx,
-                       std::unique_ptr<InterfaceFile> Out = nullptr) {
+static bool handleWriteAction(const Context &Ctx,
+                              std::unique_ptr<InterfaceFile> Out = nullptr) {
   if (!Out) {
     if (Ctx.Inputs.size() != 1)
       reportError("write only supports one input file");
@@ -121,7 +122,7 @@ bool handleWriteAction(const Context &Ctx,
   return EXIT_SUCCESS;
 }
 
-bool handleMergeAction(const Context &Ctx) {
+static bool handleMergeAction(const Context &Ctx) {
   if (Ctx.Inputs.size() < 2)
     reportError("merge requires at least two input files");
 
@@ -144,8 +145,8 @@ bool handleMergeAction(const Context &Ctx) {
 using IFOperation =
     std::function<llvm::Expected<std::unique_ptr<InterfaceFile>>(
         const llvm::MachO::InterfaceFile &, Architecture)>;
-bool handleSingleFileAction(const Context &Ctx, const StringRef Action,
-                            IFOperation act) {
+static bool handleSingleFileAction(const Context &Ctx, const StringRef Action,
+                                   IFOperation act) {
   if (Ctx.Inputs.size() != 1)
     reportError(Action + " only supports one input file");
   if (Ctx.Arch == AK_unknown)
@@ -159,8 +160,6 @@ bool handleSingleFileAction(const Context &Ctx, const StringRef Action,
   return handleWriteAction(Ctx, std::move(*OutIF));
 }
 
-} // anonymous namespace
-
 int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
   BumpPtrAllocator A;
@@ -172,9 +171,15 @@ int main(int Argc, char **Argv) {
       Argc, Argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) { reportError(Msg); });
   if (Args.hasArg(OPT_help)) {
     Tbl.printHelp(outs(),
-                  "USAGE: llvm-readtapi [options] [-arch <arch>]* <inputs> [-o "
+                  "USAGE: llvm-readtapi <command> [-arch <architecture> "
+                  "<options>]* <inputs> [-o "
                   "<output>]*",
-                  "LLVM TAPI file reader and manipulator");
+                  "LLVM TAPI file reader and transformer");
+    return EXIT_SUCCESS;
+  }
+
+  if (Args.hasArg(OPT_version)) {
+    cl::PrintVersionMessage();
     return EXIT_SUCCESS;
   }
 

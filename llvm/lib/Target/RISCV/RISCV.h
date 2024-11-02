@@ -18,13 +18,8 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
-class AsmPrinter;
 class FunctionPass;
 class InstructionSelector;
-class MCInst;
-class MCOperand;
-class MachineInstr;
-class MachineOperand;
 class PassRegistry;
 class RISCVRegisterBankInfo;
 class RISCVSubtarget;

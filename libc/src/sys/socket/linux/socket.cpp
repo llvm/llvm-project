@@ -23,7 +23,9 @@ LLVM_LIBC_FUNCTION(int, socket, (int domain, int type, int protocol)) {
   int ret =
       LIBC_NAMESPACE::syscall_impl<int>(SYS_socket, domain, type, protocol);
 #elif defined(SYS_socketcall)
-  unsigned long sockcall_args[3] = {domain, type, protocol};
+  unsigned long sockcall_args[3] = {static_cast<unsigned long>(domain),
+                                    static_cast<unsigned long>(type),
+                                    static_cast<unsigned long>(protocol)};
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_socketcall, SYS_SOCKET,
                                               sockcall_args);
 #else

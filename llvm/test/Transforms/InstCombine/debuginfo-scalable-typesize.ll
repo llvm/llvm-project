@@ -1,4 +1,5 @@
 ; RUN: opt -passes=instcombine -S < %s | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=instcombine -S < %s | FileCheck %s
 
 ; This test is defending against a TypeSize message raised in the method
 ; `valueCoversEntireFragment` in Local.cpp because of an implicit cast from

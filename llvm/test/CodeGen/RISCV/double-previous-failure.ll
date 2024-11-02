@@ -31,16 +31,17 @@ define i32 @main() nounwind {
 ; RV32IFD-NEXT:    fld fa5, 0(sp)
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI1_0)
 ; RV32IFD-NEXT:    fld fa4, %lo(.LCPI1_0)(a0)
-; RV32IFD-NEXT:    lui a0, %hi(.LCPI1_1)
-; RV32IFD-NEXT:    fld fa3, %lo(.LCPI1_1)(a0)
 ; RV32IFD-NEXT:    flt.d a0, fa5, fa4
-; RV32IFD-NEXT:    flt.d a1, fa3, fa5
-; RV32IFD-NEXT:    or a0, a0, a1
-; RV32IFD-NEXT:    beqz a0, .LBB1_2
-; RV32IFD-NEXT:  # %bb.1: # %if.then
-; RV32IFD-NEXT:    call abort@plt
-; RV32IFD-NEXT:  .LBB1_2: # %if.end
+; RV32IFD-NEXT:    bnez a0, .LBB1_3
+; RV32IFD-NEXT:  # %bb.1: # %entry
+; RV32IFD-NEXT:    lui a0, %hi(.LCPI1_1)
+; RV32IFD-NEXT:    fld fa4, %lo(.LCPI1_1)(a0)
+; RV32IFD-NEXT:    flt.d a0, fa4, fa5
+; RV32IFD-NEXT:    bnez a0, .LBB1_3
+; RV32IFD-NEXT:  # %bb.2: # %if.end
 ; RV32IFD-NEXT:    call exit@plt
+; RV32IFD-NEXT:  .LBB1_3: # %if.then
+; RV32IFD-NEXT:    call abort@plt
 ;
 ; RV32IZFINXZDINX-LABEL: main:
 ; RV32IZFINXZDINX:       # %bb.0: # %entry
@@ -56,17 +57,18 @@ define i32 @main() nounwind {
 ; RV32IZFINXZDINX-NEXT:    lui a2, %hi(.LCPI1_0)
 ; RV32IZFINXZDINX-NEXT:    lw a3, %lo(.LCPI1_0+4)(a2)
 ; RV32IZFINXZDINX-NEXT:    lw a2, %lo(.LCPI1_0)(a2)
-; RV32IZFINXZDINX-NEXT:    lui a4, %hi(.LCPI1_1)
-; RV32IZFINXZDINX-NEXT:    lw a5, %lo(.LCPI1_1+4)(a4)
-; RV32IZFINXZDINX-NEXT:    lw a4, %lo(.LCPI1_1)(a4)
 ; RV32IZFINXZDINX-NEXT:    flt.d a2, a0, a2
-; RV32IZFINXZDINX-NEXT:    flt.d a0, a4, a0
-; RV32IZFINXZDINX-NEXT:    or a0, a2, a0
-; RV32IZFINXZDINX-NEXT:    beqz a0, .LBB1_2
-; RV32IZFINXZDINX-NEXT:  # %bb.1: # %if.then
-; RV32IZFINXZDINX-NEXT:    call abort@plt
-; RV32IZFINXZDINX-NEXT:  .LBB1_2: # %if.end
+; RV32IZFINXZDINX-NEXT:    bnez a2, .LBB1_3
+; RV32IZFINXZDINX-NEXT:  # %bb.1: # %entry
+; RV32IZFINXZDINX-NEXT:    lui a2, %hi(.LCPI1_1)
+; RV32IZFINXZDINX-NEXT:    lw a3, %lo(.LCPI1_1+4)(a2)
+; RV32IZFINXZDINX-NEXT:    lw a2, %lo(.LCPI1_1)(a2)
+; RV32IZFINXZDINX-NEXT:    flt.d a0, a2, a0
+; RV32IZFINXZDINX-NEXT:    bnez a0, .LBB1_3
+; RV32IZFINXZDINX-NEXT:  # %bb.2: # %if.end
 ; RV32IZFINXZDINX-NEXT:    call exit@plt
+; RV32IZFINXZDINX-NEXT:  .LBB1_3: # %if.then
+; RV32IZFINXZDINX-NEXT:    call abort@plt
 entry:
   %call = call double @test(double 2.000000e+00)
   %cmp = fcmp olt double %call, 2.400000e-01

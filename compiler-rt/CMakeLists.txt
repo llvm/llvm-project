@@ -678,9 +678,24 @@ endif()
 append_list_if(COMPILER_RT_DEBUG -DSANITIZER_DEBUG=1 COMPILER_RT_UNITTEST_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WCOVERED_SWITCH_DEFAULT_FLAG -Wno-covered-switch-default COMPILER_RT_UNITTEST_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WSUGGEST_OVERRIDE_FLAG -Wno-suggest-override COMPILER_RT_UNITTEST_CFLAGS)
-
-if(MSVC)
-  # gtest use a lot of stuff marked as deprecated on Windows.
+# Detect if the compiler toolchain includes gcc-toolset-12.
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
+    "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -v
+                  RESULT_VARIABLE compiler_info_rc
+                  OUTPUT_VARIABLE compiler_info
+                  ERROR_VARIABLE compiler_info)
+  if(compiler_info MATCHES ".*gcc-toolset-12.*")
+    set(USING_GCC_TOOLSET_12 TRUE)
+  endif()
+endif()
+if(MSVC OR (LINUX AND DEFINED USING_GCC_TOOLSET_12 AND
+            CMAKE_CXX_STANDARD EQUAL 17))
+  # gtest use a lot of stuff marked as deprecated on Windows or if using
+  # gcc-toolset-12 in the compiler toolchain on Linux; all of the
+  # deprecated declarations in gcc-toolset-12 used in Google Tests have been
+  # observed to be _GLIBCXX17_DEPRECATED and should go away once
+  # CMAKE_CXX_STANDARD is greater than 17.
   list(APPEND COMPILER_RT_GTEST_CFLAGS -Wno-deprecated-declarations)
 endif()
 

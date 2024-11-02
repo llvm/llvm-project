@@ -64,6 +64,10 @@ This document describes the available MLIR passes and their contracts.
 
 [include "MemRefPasses.md"]
 
+## 'mesh' Dialect Passes
+
+[include "MeshPasses.md"]
+
 ## 'ml\_program' Dialect Passes
 
 [include "MLProgramPasses.md"]

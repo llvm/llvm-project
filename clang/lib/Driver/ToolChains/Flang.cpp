@@ -9,6 +9,7 @@
 #include "Flang.h"
 #include "CommonArgs.h"
 
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/FileSystem.h"
@@ -142,33 +143,11 @@ void Flang::addCodegenOptions(const ArgList &Args,
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");
 
-  Arg *aliasAnalysis = Args.getLastArg(options::OPT_falias_analysis,
-                                       options::OPT_fno_alias_analysis);
-  // only pass on the argument if it does not match that implied by the
-  // optimization level: so if optimization is requested, only forward
-  // -fno-alias-analysis. If optimization is not requested, only forward
-  // -falias-analysis.
-  Arg *optLevel =
-      Args.getLastArg(options::OPT_Ofast, options::OPT_O, options::OPT_O4);
-  if (aliasAnalysis) {
-    bool faliasAnalysis =
-        aliasAnalysis->getOption().matches(options::OPT_falias_analysis);
-    if (optLevel && !faliasAnalysis) {
-      CmdArgs.push_back("-fno-alias-analysis");
-    } else {
-      if (faliasAnalysis)
-        // requested alias analysis but no optimization enabled
-        CmdArgs.push_back("-falias-analysis");
-    }
-  }
-
   Args.addAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
                             options::OPT_flang_deprecated_no_hlfir,
                             options::OPT_flang_experimental_polymorphism,
                             options::OPT_fno_ppc_native_vec_elem_order,
-                            options::OPT_fppc_native_vec_elem_order,
-                            options::OPT_falias_analysis,
-                            options::OPT_fno_alias_analysis});
+                            options::OPT_fppc_native_vec_elem_order});
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
@@ -203,7 +182,7 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
         Val.equals("256+") || Val.equals("512+") || Val.equals("1024+") ||
         Val.equals("2048+")) {
       unsigned Bits = 0;
-      if (Val.endswith("+"))
+      if (Val.ends_with("+"))
         Val = Val.substr(0, Val.size() - 1);
       else {
         [[maybe_unused]] bool Invalid = Val.getAsInteger(10, Bits);
@@ -224,10 +203,36 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
   }
 }
 
+static void addVSDefines(const ToolChain &TC, const ArgList &Args,
+                         ArgStringList &CmdArgs) {
+
+  unsigned ver = 0;
+  const VersionTuple vt = TC.computeMSVCVersion(nullptr, Args);
+  ver = vt.getMajor() * 10000000 + vt.getMinor().value_or(0) * 100000 +
+        vt.getSubminor().value_or(0);
+  CmdArgs.push_back(Args.MakeArgString("-D_MSC_VER=" + Twine(ver / 100000)));
+  CmdArgs.push_back(Args.MakeArgString("-D_MSC_FULL_VER=" + Twine(ver)));
+  CmdArgs.push_back(Args.MakeArgString("-D_WIN32"));
+
+  llvm::Triple triple = TC.getTriple();
+  if (triple.isAArch64()) {
+    CmdArgs.push_back("-D_M_ARM64=1");
+  } else if (triple.isX86() && triple.isArch32Bit()) {
+    CmdArgs.push_back("-D_M_IX86=600");
+  } else if (triple.isX86() && triple.isArch64Bit()) {
+    CmdArgs.push_back("-D_M_X64=100");
+  } else {
+    llvm_unreachable(
+        "Flang on Windows only supports X86_32, X86_64 and AArch64");
+  }
+}
+
 static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
                                     ArgStringList &CmdArgs) {
   assert(TC.getTriple().isKnownWindowsMSVCEnvironment() &&
          "can only add VS runtime library on Windows!");
+  // if -fno-fortran-main has been passed, skip linking Fortran_main.a
+  bool LinkFortranMain = !Args.hasArg(options::OPT_no_fortran_main);
   if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
     CmdArgs.push_back(Args.MakeArgString(
         "--dependent-lib=" + TC.getCompilerRTBasename(Args, "builtins")));
@@ -245,7 +250,8 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
   case options::OPT__SLASH_MT:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("--dependent-lib=libcmt");
-    CmdArgs.push_back("--dependent-lib=Fortran_main.static.lib");
+    if (LinkFortranMain)
+      CmdArgs.push_back("--dependent-lib=Fortran_main.static.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.static.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.static.lib");
     break;
@@ -253,7 +259,8 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DEBUG");
     CmdArgs.push_back("--dependent-lib=libcmtd");
-    CmdArgs.push_back("--dependent-lib=Fortran_main.static_dbg.lib");
+    if (LinkFortranMain)
+      CmdArgs.push_back("--dependent-lib=Fortran_main.static_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.static_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.static_dbg.lib");
     break;
@@ -261,7 +268,8 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrt");
-    CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic.lib");
+    if (LinkFortranMain)
+      CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic.lib");
     break;
@@ -270,7 +278,8 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_DEBUG");
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrtd");
-    CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic_dbg.lib");
+    if (LinkFortranMain)
+      CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic_dbg.lib");
     break;
@@ -353,6 +362,7 @@ void Flang::addTargetOptions(const ArgList &Args,
 
   if (Triple.isKnownWindowsMSVCEnvironment()) {
     processVSRuntimeLibrary(TC, Args, CmdArgs);
+    addVSDefines(TC, Args, CmdArgs);
   }
 
   // TODO: Add target specific flags, ABI, mtune option etc.
@@ -693,6 +703,24 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Forward -Xflang arguments to -fc1
   Args.AddAllArgValues(CmdArgs, options::OPT_Xflang);
+
+  CodeGenOptions::FramePointerKind FPKeepKind =
+      getFramePointerKind(Args, Triple);
+
+  const char *FPKeepKindStr = nullptr;
+  switch (FPKeepKind) {
+  case CodeGenOptions::FramePointerKind::None:
+    FPKeepKindStr = "-mframe-pointer=none";
+    break;
+  case CodeGenOptions::FramePointerKind::NonLeaf:
+    FPKeepKindStr = "-mframe-pointer=non-leaf";
+    break;
+  case CodeGenOptions::FramePointerKind::All:
+    FPKeepKindStr = "-mframe-pointer=all";
+    break;
+  }
+  assert(FPKeepKindStr && "unknown FramePointerKind");
+  CmdArgs.push_back(FPKeepKindStr);
 
   // Forward -mllvm options to the LLVM option parser. In practice, this means
   // forwarding to `-fc1` as that's where the LLVM parser is run.

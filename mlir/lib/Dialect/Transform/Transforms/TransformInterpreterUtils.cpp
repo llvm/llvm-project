@@ -69,7 +69,7 @@ LogicalResult transform::detail::expandPathsToMLIRFiles(
         continue;
       }
 
-      if (!StringRef(fileName).endswith(".mlir")) {
+      if (!StringRef(fileName).ends_with(".mlir")) {
         LLVM_DEBUG(DBGS() << "  Skipping '" << fileName
                           << "' because it does not end with '.mlir'\n");
         continue;

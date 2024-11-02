@@ -63,6 +63,8 @@ private:
   bool legalizeFCopySign(MachineInstr &MI, LegalizerHelper &Helper) const;
   bool legalizeExtractVectorElt(MachineInstr &MI, MachineRegisterInfo &MRI,
                                 LegalizerHelper &Helper) const;
+  bool legalizeDynStackAlloc(MachineInstr &MI, LegalizerHelper &Helper) const;
+  bool legalizePrefetch(MachineInstr &MI, LegalizerHelper &Helper) const;
   const AArch64Subtarget *ST;
 };
 } // End llvm namespace.

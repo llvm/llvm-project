@@ -15,12 +15,12 @@ void reset_input(double *a, double *a_h, double *b, double *c) {
 }
 
 int main(int argc, char *argv[]) {
-  double * a = (double *) malloc(MAX_N * sizeof(double));
-  double * a_h = (double *) malloc(MAX_N * sizeof(double));
-  double * d = (double *) malloc(MAX_N * sizeof(double));
-  double * d_h = (double *) malloc(MAX_N * sizeof(double));
-  double * b = (double *) malloc(MAX_N * sizeof(double));
-  double * c = (double *) malloc(MAX_N * sizeof(double));
+  double *a = (double *)calloc(MAX_N, sizeof(double));
+  double *a_h = (double *)calloc(MAX_N, sizeof(double));
+  double *d = (double *)calloc(MAX_N, sizeof(double));
+  double *d_h = (double *)calloc(MAX_N, sizeof(double));
+  double *b = (double *)calloc(MAX_N, sizeof(double));
+  double *c = (double *)calloc(MAX_N, sizeof(double));
 
 #pragma omp target enter data map(to:a[:MAX_N],b[:MAX_N],c[:MAX_N],d[:MAX_N])
 

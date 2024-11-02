@@ -235,7 +235,7 @@ createIsolatedDecls(llvm::ArrayRef<StringRef> Snippets) {
 
   for (std::size_t I = 1; I < Snippets.size(); ++I)
     Decls[I - 1] = Twine(Snippets[0])
-                       .concat(Snippets[0].endswith(" ") ? "" : " ")
+                       .concat(Snippets[0].ends_with(" ") ? "" : " ")
                        .concat(Snippets[I].ltrim())
                        .concat(";")
                        .str();

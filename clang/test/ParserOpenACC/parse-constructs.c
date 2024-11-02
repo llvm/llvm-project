@@ -7,6 +7,17 @@ void func() {
 #pragma acc
   for(;;){}
 
+  // expected-error@+4{{expected OpenACC directive}}
+  // expected-error@+3{{expected clause-list or newline in OpenACC directive}}
+  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc(whatever) routine
+
+  // expected-error@+3{{expected OpenACC directive}}
+  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc) routine
+
   // expected-error@+2{{invalid OpenACC directive 'invalid'}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc invalid
@@ -61,7 +72,7 @@ void func() {
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc enter
   for(;;){}
-  // expected-error@+3{{invalid OpenACC directive 'exit }'}}
+  // expected-error@+3{{expected identifier}}
   // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc exit }

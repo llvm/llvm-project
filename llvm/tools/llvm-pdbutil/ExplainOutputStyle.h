@@ -13,8 +13,6 @@
 
 #include "llvm/DebugInfo/PDB/Native/LinePrinter.h"
 
-#include <string>
-
 namespace llvm {
 
 namespace pdb {

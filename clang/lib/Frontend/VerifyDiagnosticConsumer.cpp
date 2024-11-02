@@ -226,10 +226,10 @@ public:
     P = C;
     while (P < End) {
       StringRef S(P, End - P);
-      if (S.startswith(OpenBrace)) {
+      if (S.starts_with(OpenBrace)) {
         ++Depth;
         P += OpenBrace.size();
-      } else if (S.startswith(CloseBrace)) {
+      } else if (S.starts_with(CloseBrace)) {
         --Depth;
         if (Depth == 0) {
           PEnd = P + CloseBrace.size();
@@ -445,7 +445,7 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
     // others.
 
     // Regex in initial directive token: -re
-    if (DToken.endswith("-re")) {
+    if (DToken.ends_with("-re")) {
       D.RegexKind = true;
       KindStr = "regex";
       DToken = DToken.substr(0, DToken.size()-3);
@@ -454,20 +454,19 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
     // Type in initial directive token: -{error|warning|note|no-diagnostics}
     bool NoDiag = false;
     StringRef DType;
-    if (DToken.endswith(DType="-error"))
+    if (DToken.ends_with(DType = "-error"))
       D.DL = ED ? &ED->Errors : nullptr;
-    else if (DToken.endswith(DType="-warning"))
+    else if (DToken.ends_with(DType = "-warning"))
       D.DL = ED ? &ED->Warnings : nullptr;
-    else if (DToken.endswith(DType="-remark"))
+    else if (DToken.ends_with(DType = "-remark"))
       D.DL = ED ? &ED->Remarks : nullptr;
-    else if (DToken.endswith(DType="-note"))
+    else if (DToken.ends_with(DType = "-note"))
       D.DL = ED ? &ED->Notes : nullptr;
-    else if (DToken.endswith(DType="-no-diagnostics")) {
+    else if (DToken.ends_with(DType = "-no-diagnostics")) {
       NoDiag = true;
       if (D.RegexKind)
         continue;
-    }
-    else
+    } else
       continue;
     DToken = DToken.substr(0, DToken.size()-DType.size());
 
@@ -1145,7 +1144,7 @@ std::unique_ptr<Directive> Directive::create(bool RegexKind,
   std::string RegexStr;
   StringRef S = Text;
   while (!S.empty()) {
-    if (S.startswith("{{")) {
+    if (S.starts_with("{{")) {
       S = S.drop_front(2);
       size_t RegexMatchLength = S.find("}}");
       assert(RegexMatchLength != StringRef::npos);

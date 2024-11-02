@@ -28,6 +28,8 @@ using namespace mlir::arm_sme;
 
 #include "mlir/Dialect/ArmSME/IR/ArmSMEEnums.cpp.inc"
 
+#include "mlir/Dialect/ArmSME/IR/ArmSMEOpInterfaces.cpp.inc"
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/ArmSME/IR/ArmSMEOps.cpp.inc"
 
@@ -53,24 +55,4 @@ void ArmSMEDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicOps.cpp.inc"
       >();
-}
-
-// cast_vector_to_tile(cast_tile_to_vector(tile_id)) -> tile_id
-LogicalResult CastVectorToTile::canonicalize(CastVectorToTile op,
-                                             PatternRewriter &rewriter) {
-  if (auto castTileToVectorOp = op.getVector().getDefiningOp<CastTileToVector>()) {
-    op.replaceAllUsesWith(castTileToVectorOp.getTileId());
-    return success();
-  }
-  return failure();
-}
-
-// cast_tile_to_vector(cast_vector_to_tile(tile)) -> tile
-LogicalResult CastTileToVector::canonicalize(CastTileToVector op,
-                                             PatternRewriter &rewriter) {
-  if (auto castVectorToTileOp = op.getTileId().getDefiningOp<CastVectorToTile>()) {
-    op.replaceAllUsesWith(castVectorToTileOp.getVector());
-    return success();
-  }
-  return failure();
 }

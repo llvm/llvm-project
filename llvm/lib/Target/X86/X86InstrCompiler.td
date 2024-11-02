@@ -786,16 +786,6 @@ defm LOCK_OR  : LOCK_ArithBinOp<0x08, 0x80, 0x83, MRM1m, X86lock_or , "or">;
 defm LOCK_AND : LOCK_ArithBinOp<0x20, 0x80, 0x83, MRM4m, X86lock_and, "and">;
 defm LOCK_XOR : LOCK_ArithBinOp<0x30, 0x80, 0x83, MRM6m, X86lock_xor, "xor">;
 
-def X86lock_add_nocf : PatFrag<(ops node:$lhs, node:$rhs),
-                               (X86lock_add node:$lhs, node:$rhs), [{
-  return hasNoCarryFlagUses(SDValue(N, 0));
-}]>;
-
-def X86lock_sub_nocf : PatFrag<(ops node:$lhs, node:$rhs),
-                               (X86lock_sub node:$lhs, node:$rhs), [{
-  return hasNoCarryFlagUses(SDValue(N, 0));
-}]>;
-
 let Defs = [EFLAGS], mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
     SchedRW = [WriteALURMW]  in {
   let Predicates = [UseIncDec] in {
@@ -1304,31 +1294,6 @@ def : Pat<(X86call_rvmarker (i64 tglobaladdr:$rvfunc), (i64 tglobaladdr:$dst)),
 // %r11. This happens when calling a vararg function with 6 arguments.
 //
 // Match an X86tcret that uses less than 7 volatile registers.
-def X86tcret_6regs : PatFrag<(ops node:$ptr, node:$off),
-                             (X86tcret node:$ptr, node:$off), [{
-  // X86tcret args: (*chain, ptr, imm, regs..., glue)
-  unsigned NumRegs = 0;
-  for (unsigned i = 3, e = N->getNumOperands(); i != e; ++i)
-    if (isa<RegisterSDNode>(N->getOperand(i)) && ++NumRegs > 6)
-      return false;
-  return true;
-}]>;
-
-def X86tcret_1reg : PatFrag<(ops node:$ptr, node:$off),
-                             (X86tcret node:$ptr, node:$off), [{
-  // X86tcret args: (*chain, ptr, imm, regs..., glue)
-  unsigned NumRegs = 1;
-  const SDValue& BasePtr = cast<LoadSDNode>(N->getOperand(1))->getBasePtr();
-  if (isa<FrameIndexSDNode>(BasePtr))
-    NumRegs = 3;
-  else if (BasePtr->getNumOperands() && isa<GlobalAddressSDNode>(BasePtr->getOperand(0)))
-    NumRegs = 3;
-  for (unsigned i = 3, e = N->getNumOperands(); i != e; ++i)
-    if (isa<RegisterSDNode>(N->getOperand(i)) && ( NumRegs-- == 0))
-      return false;
-  return true;
-}]>;
-
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
           (TCRETURNri ptr_rc_tailcall:$dst, timm:$off)>,
           Requires<[Not64BitMode, NotUseIndirectThunkCalls]>;
@@ -1449,31 +1414,7 @@ def : Pat<(i64 (anyext GR16:$src)),
 def : Pat<(i64 (anyext GR32:$src)),
           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$src, sub_32bit)>;
 
-// If this is an anyext of the remainder of an 8-bit sdivrem, use a MOVSX
-// instead of a MOVZX. The sdivrem lowering will emit emit a MOVSX to move
-// %ah to the lower byte of a register. By using a MOVSX here we allow a
-// post-isel peephole to merge the two MOVSX instructions into one.
-def anyext_sdiv : PatFrag<(ops node:$lhs), (anyext node:$lhs),[{
-  return (N->getOperand(0).getOpcode() == ISD::SDIVREM &&
-          N->getOperand(0).getResNo() == 1);
-}]>;
 def : Pat<(i32 (anyext_sdiv GR8:$src)), (MOVSX32rr8 GR8:$src)>;
-
-// Any instruction that defines a 32-bit result leaves the high half of the
-// register. Truncate can be lowered to EXTRACT_SUBREG. CopyFromReg may
-// be copying from a truncate. AssertSext/AssertZext/AssertAlign aren't saying
-// anything about the upper 32 bits, they're probably just qualifying a
-// CopyFromReg. FREEZE may be coming from a a truncate. Any other 32-bit
-// operation will zero-extend up to 64 bits.
-def def32 : PatLeaf<(i32 GR32:$src), [{
-  return N->getOpcode() != ISD::TRUNCATE &&
-         N->getOpcode() != TargetOpcode::EXTRACT_SUBREG &&
-         N->getOpcode() != ISD::CopyFromReg &&
-         N->getOpcode() != ISD::AssertSext &&
-         N->getOpcode() != ISD::AssertZext &&
-         N->getOpcode() != ISD::AssertAlign &&
-         N->getOpcode() != ISD::FREEZE;
-}]>;
 
 // In the case of a 32-bit def that is known to implicitly zero-extend,
 // we can use a SUBREG_TO_REG.
@@ -1491,17 +1432,6 @@ def : Pat<(i64 (and (anyext def32:$src), 0x00000000FFFFFFFF)),
 // want to finally emit these instructions as an or at the end of the code
 // generator to make the generated code easier to read.  To do this, we select
 // into "disjoint bits" pseudo ops.
-
-// Treat an 'or' node is as an 'add' if the or'ed bits are known to be zero.
-def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
-  if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N->getOperand(1)))
-    return CurDAG->MaskedValueIsZero(N->getOperand(0), CN->getAPIntValue());
-
-  KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
-  KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
-  return (~Known0.Zero & ~Known1.Zero) == 0;
-}]>;
-
 
 // (or x1, x2) -> (add x1, x2) if two operands are known not to share bits.
 // Try this before the selecting to OR.
@@ -1819,23 +1749,6 @@ def : Pat<(shl GR8 :$src1, (i8 1)), (ADD8rr  GR8 :$src1, GR8 :$src1)>;
 def : Pat<(shl GR16:$src1, (i8 1)), (ADD16rr GR16:$src1, GR16:$src1)>;
 def : Pat<(shl GR32:$src1, (i8 1)), (ADD32rr GR32:$src1, GR32:$src1)>;
 def : Pat<(shl GR64:$src1, (i8 1)), (ADD64rr GR64:$src1, GR64:$src1)>;
-
-def shiftMask8 : PatFrag<(ops node:$lhs), (and node:$lhs, imm), [{
-  return isUnneededShiftMask(N, 3);
-}]>;
-
-def shiftMask16 : PatFrag<(ops node:$lhs), (and node:$lhs, imm), [{
-  return isUnneededShiftMask(N, 4);
-}]>;
-
-def shiftMask32 : PatFrag<(ops node:$lhs), (and node:$lhs, imm), [{
-  return isUnneededShiftMask(N, 5);
-}]>;
-
-def shiftMask64 : PatFrag<(ops node:$lhs), (and node:$lhs, imm), [{
-  return isUnneededShiftMask(N, 6);
-}]>;
-
 
 // Shift amount is implicitly masked.
 multiclass MaskedShiftAmountPats<SDNode frag, string name> {

@@ -148,6 +148,30 @@ void PlatformTSDDtor(void *tsd) {
 }
 #endif
 
+void InstallAtForkHandler() {
+  auto before = []() {
+    if (CAN_SANITIZE_LEAKS) {
+      __lsan::LockGlobal();
+    }
+    // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and lock the
+    // stuff we need.
+    __lsan::LockThreads();
+    __lsan::LockAllocator();
+    StackDepotLockAll();
+  };
+  auto after = []() {
+    StackDepotUnlockAll();
+    // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and unlock
+    // the stuff we need.
+    __lsan::UnlockAllocator();
+    __lsan::UnlockThreads();
+    if (CAN_SANITIZE_LEAKS) {
+      __lsan::UnlockGlobal();
+    }
+  };
+  pthread_atfork(before, after, after);
+}
+
 void InstallAtExitCheckLeaks() {
   if (CAN_SANITIZE_LEAKS) {
     if (common_flags()->detect_leaks && common_flags()->leak_check_at_exit) {

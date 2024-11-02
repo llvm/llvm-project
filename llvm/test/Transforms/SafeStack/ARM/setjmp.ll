@@ -1,5 +1,6 @@
 ; Test stack pointer restore after setjmp() with the function-call safestack ABI.
 ; RUN: opt -safe-stack -S -mtriple=arm-linux-androideabi < %s -o - | FileCheck %s
+; RUN: opt -passes=safe-stack -S -mtriple=arm-linux-androideabi < %s -o - | FileCheck %s
 
 @env = global [64 x i32] zeroinitializer, align 4
 

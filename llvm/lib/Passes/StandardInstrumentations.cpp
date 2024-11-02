@@ -1405,7 +1405,9 @@ void VerifyInstrumentation::registerCallbacks(
             dbgs() << "Verifying function " << F->getName() << "\n";
 
           if (verifyFunction(*F, &errs()))
-            report_fatal_error("Broken function found, compilation aborted!");
+            report_fatal_error(formatv("Broken function found after pass "
+                                       "\"{0}\", compilation aborted!",
+                                       P));
         } else {
           const Module **MPtr = llvm::any_cast<const Module *>(&IR);
           const Module *M = MPtr ? *MPtr : nullptr;
@@ -1420,7 +1422,9 @@ void VerifyInstrumentation::registerCallbacks(
               dbgs() << "Verifying module " << M->getName() << "\n";
 
             if (verifyModule(*M, &errs()))
-              report_fatal_error("Broken module found, compilation aborted!");
+              report_fatal_error(formatv("Broken module found after pass "
+                                         "\"{0}\", compilation aborted!",
+                                         P));
           }
         }
       });
