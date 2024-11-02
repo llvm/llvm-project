@@ -7453,11 +7453,11 @@ struct CaseHandleWrapper {
 namespace llvm {
 template <> struct DenseMapInfo<const CaseHandleWrapper *> {
   static const CaseHandleWrapper *getEmptyKey() {
-    return reinterpret_cast<CaseHandleWrapper *>(
+    return static_cast<CaseHandleWrapper *>(
         DenseMapInfo<void *>::getEmptyKey());
   }
   static const CaseHandleWrapper *getTombstoneKey() {
-    return reinterpret_cast<CaseHandleWrapper *>(
+    return static_cast<CaseHandleWrapper *>(
         DenseMapInfo<void *>::getTombstoneKey());
   }
   static unsigned getHashValue(const CaseHandleWrapper *CT) {
@@ -7522,7 +7522,7 @@ template <> struct DenseMapInfo<const CaseHandleWrapper *> {
                  "Expected unconditional branches to have one successor");
           BasicBlock *Succ = ABI->getSuccessor(0);
           for (PHINode &Phi : Succ->phis()) {
-            auto PredIVs = PhiPredIVs[&Phi];
+            auto &PredIVs = PhiPredIVs[&Phi];
             if (PredIVs[A] != PredIVs[B])
               return false;
           }
