@@ -140,7 +140,7 @@ OutputDesc *LinkerScript::createOutputSection(StringRef name,
     // There was a forward reference.
     sec = secRef;
   } else {
-    sec = make<OutputDesc>(name, SHT_PROGBITS, 0);
+    sec = make<OutputDesc>(ctx, name, SHT_PROGBITS, 0);
     if (!secRef)
       secRef = sec;
   }
@@ -151,7 +151,7 @@ OutputDesc *LinkerScript::createOutputSection(StringRef name,
 OutputDesc *LinkerScript::getOrCreateOutputSection(StringRef name) {
   OutputDesc *&cmdRef = nameToOutputSection[CachedHashStringRef(name)];
   if (!cmdRef)
-    cmdRef = make<OutputDesc>(name, SHT_PROGBITS, 0);
+    cmdRef = make<OutputDesc>(ctx, name, SHT_PROGBITS, 0);
   return cmdRef;
 }
 
@@ -830,7 +830,7 @@ void LinkerScript::processSymbolAssignments() {
   // sh_shndx should not be SHN_UNDEF or SHN_ABS. Create a dummy aether section
   // that fills the void outside a section. It has an index of one, which is
   // indistinguishable from any other regular section index.
-  aether = make<OutputSection>("", 0, SHF_ALLOC);
+  aether = make<OutputSection>(ctx, "", 0, SHF_ALLOC);
   aether->sectionIndex = 1;
 
   // `st` captures the local AddressState and makes it accessible deliberately.
@@ -861,7 +861,8 @@ static OutputSection *findByName(ArrayRef<SectionCommand *> vec,
   return nullptr;
 }
 
-static OutputDesc *createSection(InputSectionBase *isec, StringRef outsecName) {
+static OutputDesc *createSection(Ctx &ctx, InputSectionBase *isec,
+                                 StringRef outsecName) {
   OutputDesc *osd = ctx.script->createOutputSection(outsecName, "<internal>");
   osd->osec.recordSection(isec);
   return osd;
@@ -878,7 +879,7 @@ static OutputDesc *addInputSec(Ctx &ctx,
   // as-is because adding/removing members or merging them with other groups
   // change their semantics.
   if (isec->type == SHT_GROUP || (isec->flags & SHF_GROUP))
-    return createSection(isec, outsecName);
+    return createSection(ctx, isec, outsecName);
 
   // Imagine .zed : { *(.foo) *(.bar) } script. Both foo and bar may have
   // relocation sections .rela.foo and .rela.bar for example. Most tools do
@@ -895,7 +896,7 @@ static OutputDesc *addInputSec(Ctx &ctx,
       return nullptr;
     }
 
-    OutputDesc *osd = createSection(isec, outsecName);
+    OutputDesc *osd = createSection(ctx, isec, outsecName);
     out->relocationSection = &osd->osec;
     return osd;
   }
@@ -966,7 +967,7 @@ static OutputDesc *addInputSec(Ctx &ctx,
     return nullptr;
   }
 
-  OutputDesc *osd = createSection(isec, outsecName);
+  OutputDesc *osd = createSection(ctx, isec, outsecName);
   v.push_back(&osd->osec);
   return osd;
 }
@@ -982,7 +983,7 @@ void LinkerScript::addOrphanSections() {
 
       StringRef name = getOutputSectionName(s);
       if (ctx.arg.unique) {
-        v.push_back(createSection(s, name));
+        v.push_back(createSection(ctx, s, name));
       } else if (OutputSection *sec = findByName(sectionCommands, name)) {
         sec->recordSection(s);
       } else {
@@ -1814,6 +1815,13 @@ void LinkerScript::addScriptReferencedSymbolsToSymTable() {
 }
 
 bool LinkerScript::shouldAddProvideSym(StringRef symName) {
+  // This function is called before and after garbage collection. To prevent
+  // undefined references from the RHS, the result of this function for a
+  // symbol must be the same for each call. We use isUsedInRegularObj to not
+  // change the return value of a demoted symbol. The exportDynamic condition,
+  // while not so accurate, allows PROVIDE to define a symbol referenced by a
+  // DSO.
   Symbol *sym = elf::ctx.symtab->find(symName);
-  return sym && !sym->isDefined() && !sym->isCommon();
+  return sym && !sym->isDefined() && !sym->isCommon() &&
+         (sym->isUsedInRegularObj || sym->exportDynamic);
 }

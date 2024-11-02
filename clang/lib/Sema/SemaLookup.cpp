@@ -3666,9 +3666,7 @@ Sema::LookupLiteralOperator(Scope *S, LookupResult &R,
           TemplateArgumentLoc Arg(TemplateArgument(StringLit), StringLit);
           if (CheckTemplateArgument(
                   Params->getParam(0), Arg, FD, R.getNameLoc(), R.getNameLoc(),
-                  0, SugaredChecked, CanonicalChecked, CTAK_Specified,
-                  /*PartialOrdering=*/false,
-                  /*MatchedPackOnParmToNonPackOnArg=*/nullptr) ||
+                  0, SugaredChecked, CanonicalChecked, CTAK_Specified) ||
               Trap.hasErrorOccurred())
             IsTemplate = false;
         }

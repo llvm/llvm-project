@@ -11744,12 +11744,15 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
   for (ExternalUser &EU : ExternalUses) {
     // Uses by ephemeral values are free (because the ephemeral value will be
     // removed prior to code generation, and so the extraction will be
-    // removed as well) as well as uses in unreachable blocks or in landing pads
-    // (rarely executed).
-    if (EphValues.count(EU.User) ||
-        (EU.User &&
-         (!DT->isReachableFromEntry(cast<Instruction>(EU.User)->getParent()) ||
-          cast<Instruction>(EU.User)->getParent()->isLandingPad())))
+    // removed as well).
+    if (EphValues.count(EU.User))
+      continue;
+
+    // Used in unreachable blocks or in landing pads (rarely executed).
+    if (BasicBlock *UserParent =
+            EU.User ? cast<Instruction>(EU.User)->getParent() : nullptr;
+        UserParent &&
+        (!DT->isReachableFromEntry(UserParent) || UserParent->isLandingPad()))
       continue;
 
     // We only add extract cost once for the same scalar.

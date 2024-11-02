@@ -392,7 +392,7 @@ template <class ELFT> static void addCopyRelSymbol(Ctx &ctx, SharedSymbol &ss) {
     osec->commands.push_back(make<InputSectionDescription>(""));
   auto *isd = cast<InputSectionDescription>(osec->commands.back());
   isd->sections.push_back(sec);
-  osec->commitSection(ctx, sec);
+  osec->commitSection(sec);
 
   // Look through the DSO's dynamic symbol table for aliases and create a
   // dynamic symbol for each one. This causes the copy relocation to correctly

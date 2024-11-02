@@ -398,9 +398,9 @@ Patch843419Section::Patch843419Section(Ctx &ctx, InputSection *p, uint64_t off)
       patchee(p), patcheeOffset(off) {
   this->parent = p->getParent();
   patchSym = addSyntheticLocal(
-      saver().save("__CortexA53843419_" + utohexstr(getLDSTAddr())), STT_FUNC,
-      0, getSize(), *this);
-  addSyntheticLocal(saver().save("$x"), STT_NOTYPE, 0, 0, *this);
+      ctx, saver().save("__CortexA53843419_" + utohexstr(getLDSTAddr())),
+      STT_FUNC, 0, getSize(), *this);
+  addSyntheticLocal(ctx, saver().save("$x"), STT_NOTYPE, 0, 0, *this);
 }
 
 uint64_t Patch843419Section::getLDSTAddr() const {

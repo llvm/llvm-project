@@ -630,8 +630,7 @@ static void finishCallSiteParams(ValT Val, const DIExpression *Expr,
 static void addToFwdRegWorklist(FwdRegWorklist &Worklist, unsigned Reg,
                                 const DIExpression *Expr,
                                 ArrayRef<FwdRegParamInfo> ParamsToAdd) {
-  auto I = Worklist.insert({Reg, {}});
-  auto &ParamsForFwdReg = I.first->second;
+  auto &ParamsForFwdReg = Worklist[Reg];
   for (auto Param : ParamsToAdd) {
     assert(none_of(ParamsForFwdReg,
                    [Param](const FwdRegParamInfo &D) {

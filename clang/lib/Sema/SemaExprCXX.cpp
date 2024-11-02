@@ -503,17 +503,23 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
     const IdentifierInfo *II = Name.Identifier;
     ReservedIdentifierStatus Status = II->isReserved(PP.getLangOpts());
     SourceLocation Loc = Name.getEndLoc();
-    if (!PP.getSourceManager().isInSystemHeader(Loc)) {
-      if (auto Hint = FixItHint::CreateReplacement(
-              Name.getSourceRange(),
-              (StringRef("operator\"\"") + II->getName()).str());
-          isReservedInAllContexts(Status)) {
-        Diag(Loc, diag::warn_reserved_extern_symbol)
-            << II << static_cast<int>(Status) << Hint;
-      } else {
-        Diag(Loc, diag::warn_deprecated_literal_operator_id) << II << Hint;
-      }
-    }
+
+    auto Hint = FixItHint::CreateReplacement(
+        Name.getSourceRange(),
+        (StringRef("operator\"\"") + II->getName()).str());
+
+    // Only emit this diagnostic if we start with an underscore, else the
+    // diagnostic for C++11 requiring a space between the quotes and the
+    // identifier conflicts with this and gets confusing. The diagnostic stating
+    // this is a reserved name should force the underscore, which gets this
+    // back.
+    if (II->isReservedLiteralSuffixId() !=
+        ReservedLiteralSuffixIdStatus::NotStartsWithUnderscore)
+      Diag(Loc, diag::warn_deprecated_literal_operator_id) << II << Hint;
+
+    if (isReservedInAllContexts(Status))
+      Diag(Loc, diag::warn_reserved_extern_symbol)
+          << II << static_cast<int>(Status) << Hint;
   }
 
   if (!SS.isValid())

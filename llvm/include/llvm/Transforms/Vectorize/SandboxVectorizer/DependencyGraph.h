@@ -284,6 +284,10 @@ private:
   /// \p DstN.
   void scanAndAddDeps(MemDGNode &DstN, const Interval<MemDGNode> &SrcScanRange);
 
+  /// Create DAG nodes for instrs in \p NewInterval and update the MemNode
+  /// chain.
+  void createNewNodes(const Interval<Instruction> &NewInterval);
+
 public:
   DependencyGraph(AAResults &AA)
       : BatchAA(std::make_unique<BatchAAResults>(AA)) {}
@@ -309,8 +313,10 @@ public:
     return It->second.get();
   }
   /// Build/extend the dependency graph such that it includes \p Instrs. Returns
-  /// the interval spanning \p Instrs.
+  /// the range of instructions added to the DAG.
   Interval<Instruction> extend(ArrayRef<Instruction *> Instrs);
+  /// \Returns the range of instructions included in the DAG.
+  Interval<Instruction> getInterval() const { return DAGInterval; }
 #ifndef NDEBUG
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;

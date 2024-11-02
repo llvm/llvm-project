@@ -1,4 +1,4 @@
-#include "../../source/Commands/DiagnosticRendering.h"
+#include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/Utility/StreamString.h"
 #include "gtest/gtest.h"
 
@@ -7,13 +7,13 @@ using namespace lldb;
 using llvm::StringRef;
 namespace {
 class ErrorDisplayTest : public ::testing::Test {};
-} // namespace
 
-static std::string Render(std::vector<DiagnosticDetail> details) {
+std::string Render(std::vector<DiagnosticDetail> details) {
   StreamString stream;
   RenderDiagnosticDetails(stream, 0, true, details);
   return stream.GetData();
 }
+} // namespace
 
 TEST_F(ErrorDisplayTest, RenderStatus) {
   DiagnosticDetail::SourceLocation inline_loc;

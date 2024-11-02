@@ -1710,7 +1710,8 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     // For ThinLTO we must apply the context disambiguation decisions early, to
     // ensure we can correctly match the callsites to summary data.
     if (EnableMemProfContextDisambiguation)
-      MPM.addPass(MemProfContextDisambiguation(ImportSummary));
+      MPM.addPass(MemProfContextDisambiguation(
+          ImportSummary, PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));
 
     // These passes import type identifier resolutions for whole-program
     // devirtualization and CFI. They must run early because other passes may
@@ -1923,7 +1924,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // amount of additional cloning required to distinguish the allocation
   // contexts.
   if (EnableMemProfContextDisambiguation)
-    MPM.addPass(MemProfContextDisambiguation());
+    MPM.addPass(MemProfContextDisambiguation(
+        /*Summary=*/nullptr,
+        PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));
 
   // Optimize globals again after we ran the inliner.
   MPM.addPass(GlobalOptPass());

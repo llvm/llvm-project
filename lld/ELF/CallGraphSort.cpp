@@ -88,11 +88,12 @@ struct Cluster {
 /// * Sort non-empty clusters by density
 class CallGraphSort {
 public:
-  CallGraphSort();
+  CallGraphSort(Ctx &);
 
   DenseMap<const InputSectionBase *, int> run();
 
 private:
+  Ctx &ctx;
   std::vector<Cluster> clusters;
   std::vector<const InputSectionBase *> sections;
 };
@@ -111,7 +112,7 @@ using SectionPair =
 // Take the edge list in ctx.arg.callGraphProfile, resolve symbol names to
 // Symbols, and generate a graph between InputSections with the provided
 // weights.
-CallGraphSort::CallGraphSort() {
+CallGraphSort::CallGraphSort(Ctx &ctx) : ctx(ctx) {
   MapVector<SectionPair, uint64_t> &profile = ctx.arg.callGraphProfile;
   DenseMap<const InputSectionBase *, int> secToCluster;
 
@@ -274,7 +275,8 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
 // Sort sections by the profile data using the Cache-Directed Sort algorithm.
 // The placement is done by optimizing the locality by co-locating frequently
 // executed code sections together.
-DenseMap<const InputSectionBase *, int> elf::computeCacheDirectedSortOrder() {
+DenseMap<const InputSectionBase *, int>
+elf::computeCacheDirectedSortOrder(Ctx &ctx) {
   SmallVector<uint64_t, 0> funcSizes;
   SmallVector<uint64_t, 0> funcCounts;
   SmallVector<codelayout::EdgeCount, 0> callCounts;
@@ -336,8 +338,9 @@ DenseMap<const InputSectionBase *, int> elf::computeCacheDirectedSortOrder() {
 //
 // This first builds a call graph based on the profile data then merges sections
 // according either to the C³ or Cache-Directed-Sort ordering algorithm.
-DenseMap<const InputSectionBase *, int> elf::computeCallGraphProfileOrder() {
+DenseMap<const InputSectionBase *, int>
+elf::computeCallGraphProfileOrder(Ctx &ctx) {
   if (ctx.arg.callGraphProfileSort == CGProfileSortKind::Cdsort)
-    return computeCacheDirectedSortOrder();
-  return CallGraphSort().run();
+    return computeCacheDirectedSortOrder(ctx);
+  return CallGraphSort(ctx).run();
 }

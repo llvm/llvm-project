@@ -37,7 +37,7 @@ GenericLatticeAnchor::~GenericLatticeAnchor() = default;
 
 AnalysisState::~AnalysisState() = default;
 
-void AnalysisState::addDependency(ProgramPoint dependent,
+void AnalysisState::addDependency(ProgramPoint *dependent,
                                   DataFlowAnalysis *analysis) {
   auto inserted = dependents.insert({dependent, analysis});
   (void)inserted;
@@ -53,7 +53,7 @@ void AnalysisState::addDependency(ProgramPoint dependent,
 void AnalysisState::dump() const { print(llvm::errs()); }
 
 //===----------------------------------------------------------------------===//
-// LatticeAnchor
+// ProgramPoint
 //===----------------------------------------------------------------------===//
 
 void ProgramPoint::print(raw_ostream &os) const {
@@ -61,11 +61,17 @@ void ProgramPoint::print(raw_ostream &os) const {
     os << "<NULL POINT>";
     return;
   }
-  if (Operation *op = llvm::dyn_cast<Operation *>(*this)) {
-    return op->print(os, OpPrintingFlags().skipRegions());
+  if (!isBlockStart()) {
+    os << "<after operation>:";
+    return getPrevOp()->print(os, OpPrintingFlags().skipRegions());
   }
-  return get<Block *>()->print(os);
+  os << "<before operation>:";
+  return getNextOp()->print(os, OpPrintingFlags().skipRegions());
 }
+
+//===----------------------------------------------------------------------===//
+// LatticeAnchor
+//===----------------------------------------------------------------------===//
 
 void LatticeAnchor::print(raw_ostream &os) const {
   if (isNull()) {
@@ -78,7 +84,7 @@ void LatticeAnchor::print(raw_ostream &os) const {
     return value.print(os, OpPrintingFlags().skipRegions());
   }
 
-  return get<ProgramPoint>().print(os);
+  return get<ProgramPoint *>()->print(os);
 }
 
 Location LatticeAnchor::getLoc() const {
@@ -87,10 +93,10 @@ Location LatticeAnchor::getLoc() const {
   if (auto value = llvm::dyn_cast<Value>(*this))
     return value.getLoc();
 
-  ProgramPoint pp = get<ProgramPoint>();
-  if (auto *op = llvm::dyn_cast<Operation *>(pp))
-    return op->getLoc();
-  return pp.get<Block *>()->getParent()->getLoc();
+  ProgramPoint *pp = get<ProgramPoint *>();
+  if (!pp->isBlockStart())
+    return pp->getPrevOp()->getLoc();
+  return pp->getBlock()->getParent()->getLoc();
 }
 
 //===----------------------------------------------------------------------===//
@@ -144,7 +150,8 @@ DataFlowAnalysis::~DataFlowAnalysis() = default;
 
 DataFlowAnalysis::DataFlowAnalysis(DataFlowSolver &solver) : solver(solver) {}
 
-void DataFlowAnalysis::addDependency(AnalysisState *state, ProgramPoint point) {
+void DataFlowAnalysis::addDependency(AnalysisState *state,
+                                     ProgramPoint *point) {
   state->addDependency(point, this);
 }
 

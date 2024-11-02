@@ -945,40 +945,42 @@ bool ClauseProcessor::processMap(
             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
         // If the map type is specified, then process it else Tofrom is the
         // default.
-        if (mapType) {
-          switch (*mapType) {
-          case Map::MapType::To:
-            mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
-            break;
-          case Map::MapType::From:
-            mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
-            break;
-          case Map::MapType::Tofrom:
-            mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
-                           llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
-            break;
-          case Map::MapType::Alloc:
-          case Map::MapType::Release:
-            // alloc and release is the default map_type for the Target Data
-            // Ops, i.e. if no bits for map_type is supplied then alloc/release
-            // is implicitly assumed based on the target directive. Default
-            // value for Target Data and Enter Data is alloc and for Exit Data
-            // it is release.
-            break;
-          case Map::MapType::Delete:
-            mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
-          }
-
-          auto &modTypeMods =
-              std::get<std::optional<Map::MapTypeModifiers>>(clause.t);
-          if (modTypeMods) {
-            if (llvm::is_contained(*modTypeMods, Map::MapTypeModifier::Always))
-              mapTypeBits |=
-                  llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
-          }
-        } else {
+        Map::MapType type = mapType.value_or(Map::MapType::Tofrom);
+        switch (type) {
+        case Map::MapType::To:
+          mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+          break;
+        case Map::MapType::From:
+          mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+          break;
+        case Map::MapType::Tofrom:
           mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+          break;
+        case Map::MapType::Alloc:
+        case Map::MapType::Release:
+          // alloc and release is the default map_type for the Target Data
+          // Ops, i.e. if no bits for map_type is supplied then alloc/release
+          // is implicitly assumed based on the target directive. Default
+          // value for Target Data and Enter Data is alloc and for Exit Data
+          // it is release.
+          break;
+        case Map::MapType::Delete:
+          mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
+        }
+
+        auto &modTypeMods =
+            std::get<std::optional<Map::MapTypeModifiers>>(clause.t);
+        if (modTypeMods) {
+          if (llvm::is_contained(*modTypeMods, Map::MapTypeModifier::Always))
+            mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
+          // Diagnose unimplemented map-type-modifiers.
+          if (llvm::any_of(*modTypeMods, [](Map::MapTypeModifier m) {
+                return m != Map::MapTypeModifier::Always;
+              })) {
+            TODO(currentLocation, "Map type modifiers (other than 'ALWAYS')"
+                                  " are not implemented yet");
+          }
         }
         processMapObjects(stmtCtx, clauseLocation,
                           std::get<omp::ObjectList>(clause.t), mapTypeBits,

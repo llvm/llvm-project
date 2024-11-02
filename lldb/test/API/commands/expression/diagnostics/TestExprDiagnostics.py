@@ -201,8 +201,8 @@ note: candidate function not viable: requires single argument 'x', but 2 argumen
             [
                 "expression -- a+b",
                 "              ^ ^",
-                "              │ ╰─ error: use of undeclared identifier 'b'",
-                "              ╰─ error: use of undeclared identifier 'a'",
+                "              | error: use of undeclared identifier 'b'",
+                "              error: use of undeclared identifier 'a'",
             ]
         )
 
@@ -210,14 +210,14 @@ note: candidate function not viable: requires single argument 'x', but 2 argumen
             [
                 "expr -- a",
                 "        ^",
-                "        ╰─ error: use of undeclared identifier 'a'",
+                "        error: use of undeclared identifier 'a'",
             ]
         )
         check(
             [
                 "expr -i 0 -o 0 -- a",
                 "                  ^",
-                "                  ╰─ error: use of undeclared identifier 'a'",
+                "                  error: use of undeclared identifier 'a'",
             ]
         )
 
@@ -228,7 +228,7 @@ note: candidate function not viable: requires single argument 'x', but 2 argumen
             [
                 'expression -- FOO("")',
                 "              ^",
-                "              ╰─ note: in instantiation of function template specialization 'FOO<const char *>' requested here",
+                "              note: in instantiation of function template specialization 'FOO<const char *>' requested here",
                 "error: <user expression",
                 "invalid operands to binary expression",
             ]

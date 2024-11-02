@@ -440,9 +440,9 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::reserve(size
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::shrink_to_fit() _NOEXCEPT {
   if (capacity() > size()) {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
       __split_buffer<value_type, __alloc_rr&> __t(size(), 0, __alloc());
       __t.__construct_at_end(move_iterator<pointer>(__begin_), move_iterator<pointer>(__end_));
       __t.__end_ = __t.__begin_ + (__end_ - __begin_);
@@ -450,10 +450,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::shrink_to_fi
       std::swap(__begin_, __t.__begin_);
       std::swap(__end_, __t.__end_);
       std::swap(__end_cap(), __t.__end_cap());
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
     } catch (...) {
     }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
   }
 }
 

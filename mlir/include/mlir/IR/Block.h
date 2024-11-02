@@ -406,4 +406,25 @@ private:
 raw_ostream &operator<<(raw_ostream &, Block &);
 } // namespace mlir
 
+namespace llvm {
+template <>
+struct DenseMapInfo<mlir::Block::iterator> {
+  static mlir::Block::iterator getEmptyKey() {
+    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
+    return mlir::Block::iterator((mlir::Operation *)pointer);
+  }
+  static mlir::Block::iterator getTombstoneKey() {
+    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
+    return mlir::Block::iterator((mlir::Operation *)pointer);
+  }
+  static unsigned getHashValue(mlir::Block::iterator iter) {
+    return hash_value(iter.getNodePtr());
+  }
+  static bool isEqual(mlir::Block::iterator lhs, mlir::Block::iterator rhs) {
+    return lhs == rhs;
+  }
+};
+
+} // end namespace llvm
+
 #endif // MLIR_IR_BLOCK_H

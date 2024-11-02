@@ -1916,6 +1916,7 @@ static bool InstrumentAllFunctions(
   std::unordered_multimap<Comdat *, GlobalValue *> ComdatMembers;
   collectComdatMembers(M, ComdatMembers);
 
+  bool AnythingInstrumented = false;
   for (auto &F : M) {
     if (skipPGOGen(F))
       continue;
@@ -1925,8 +1926,9 @@ static bool InstrumentAllFunctions(
     FunctionInstrumenter FI(M, F, TLI, ComdatMembers, BPI, BFI,
                             InstrumentationType);
     FI.instrument();
+    AnythingInstrumented = true;
   }
-  return true;
+  return AnythingInstrumented;
 }
 
 PreservedAnalyses

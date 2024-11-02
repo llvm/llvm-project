@@ -254,9 +254,9 @@ static bool addOptional(Ctx &ctx, StringRef name, uint64_t value,
   Symbol *sym = ctx.symtab->find(name);
   if (!sym || sym->isDefined())
     return false;
-  sym->resolve(Defined{ctx.internalFile, StringRef(), STB_GLOBAL, STV_HIDDEN,
-                       STT_FUNC, value,
-                       /*size=*/0, /*section=*/nullptr});
+  sym->resolve(ctx, Defined{ctx.internalFile, StringRef(), STB_GLOBAL,
+                            STV_HIDDEN, STT_FUNC, value,
+                            /*size=*/0, /*section=*/nullptr});
   defined.push_back(cast<Defined>(sym));
   return true;
 }

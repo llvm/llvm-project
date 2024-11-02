@@ -1150,7 +1150,7 @@ addTaggedSymbolReferences(InputSectionBase &sec,
 // symbols should also be built with tagging. But, to handle these cases, we
 // demote the symbol to be untagged.
 void elf::createTaggedSymbols(Ctx &ctx) {
-  assert(hasMemtag());
+  assert(hasMemtag(ctx));
 
   // First, collect all symbols that are marked as tagged, and count how many
   // times they're marked as tagged.

@@ -214,10 +214,10 @@
 #define TEST_IS_EXECUTED_IN_A_SLOW_ENVIRONMENT
 #endif
 
-#if defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) || \
-  (!(TEST_STD_VER > 14 || \
-    (defined(__cpp_aligned_new) && __cpp_aligned_new >= 201606L)))
-#define TEST_HAS_NO_ALIGNED_ALLOCATION
+#if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_ALIGNED_ALLOCATION
+#  define TEST_HAS_NO_ALIGNED_ALLOCATION
+#elif TEST_STD_VER < 17 && (!defined(__cpp_aligned_new) || __cpp_aligned_new < 201606L)
+#  define TEST_HAS_NO_ALIGNED_ALLOCATION
 #endif
 
 #if TEST_STD_VER > 17
@@ -397,12 +397,12 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #   define TEST_HAS_NO_UNICODE
 #endif
 
-#if defined(_LIBCPP_HAS_OPEN_WITH_WCHAR)
+#if defined(_LIBCPP_VERSION) && _LIBCPP_HAS_OPEN_WITH_WCHAR
 #  define TEST_HAS_OPEN_WITH_WCHAR
 #endif
 
-#if defined(_LIBCPP_HAS_NO_INT128) || defined(_MSVC_STL_VERSION)
-#   define TEST_HAS_NO_INT128
+#if (defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_INT128) || defined(_MSVC_STL_VERSION)
+#  define TEST_HAS_NO_INT128
 #endif
 
 #if defined(_LIBCPP_HAS_NO_LOCALIZATION)
@@ -421,7 +421,7 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_FILESYSTEM
 #endif
 
-#if defined(_LIBCPP_HAS_NO_C8RTOMB_MBRTOC8)
+#if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_C8RTOMB_MBRTOC8
 #  define TEST_HAS_NO_C8RTOMB_MBRTOC8
 #endif
 
@@ -495,7 +495,7 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #endif
 
 // Clang-18 has support for deducing this, but it does not set the FTM.
-#ifdef _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#if defined(_LIBCPP_VERSION) && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
 #  define TEST_HAS_EXPLICIT_THIS_PARAMETER
 #endif
 

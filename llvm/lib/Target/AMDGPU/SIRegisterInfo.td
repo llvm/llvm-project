@@ -88,15 +88,10 @@ class getSubRegs<int size> {
 
 // Generates list of sequential register tuple names.
 // E.g. RegSeq<3,2,2,"s">.ret -> [ "s[0:1]", "s[2:3]" ]
-class RegSeqNames<int last_reg, int stride, int size, string prefix,
-                  int start = 0> {
-  int next = !add(start, stride);
-  int end_reg = !add(start, size, -1);
-  list<string> ret =
-    !if(!le(end_reg, last_reg),
-        !listconcat([prefix # "[" # start # ":" # end_reg # "]"],
-                    RegSeqNames<last_reg, stride, size, prefix, next>.ret),
-                    []);
+class RegSeqNames<int last_reg, int stride, int size, string prefix> {
+  defvar numtuples = !div(!sub(!add(last_reg, stride, 1), size), stride);
+  defvar range = !range(0, !mul(numtuples, stride), stride);
+  list<string> ret = !foreach(n, range, prefix # "[" # n # ":" # !add(n, size, -1) # "]");
 }
 
 // Generates list of dags for register tuples.
