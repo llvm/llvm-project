@@ -1179,6 +1179,12 @@ enum NodeType {
   /// counter-like register (or other high accuracy low latency clock source).
   READCYCLECOUNTER,
 
+  /// READSTEADYCOUNTER - This corresponds to the readfixedcounter intrinsic.
+  /// It has the same semantics as the READCYCLECOUNTER implementation except
+  /// that the result is the content of the architecture-specific fixed
+  /// frequency counter suitable for measuring elapsed time.
+  READSTEADYCOUNTER,
+
   /// HANDLENODE node - Used as a handle for various purposes.
   HANDLENODE,
 

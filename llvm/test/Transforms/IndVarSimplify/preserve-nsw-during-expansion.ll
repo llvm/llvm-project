@@ -23,7 +23,7 @@ define void @test_s172(i32 noundef %xa, i32 noundef %xb, ptr nocapture noundef %
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], [[TMP1]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], [[TMP1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], 32000
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       for.end.loopexit:

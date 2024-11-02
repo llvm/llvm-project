@@ -668,6 +668,8 @@ public:
                             bool isTarget = false);
   SDValue getShiftAmountConstant(uint64_t Val, EVT VT, const SDLoc &DL,
                                  bool LegalTypes = true);
+  SDValue getShiftAmountConstant(const APInt &Val, EVT VT, const SDLoc &DL,
+                                 bool LegalTypes = true);
   SDValue getVectorIdxConstant(uint64_t Val, const SDLoc &DL,
                                bool isTarget = false);
 
@@ -1613,10 +1615,10 @@ public:
   /// Expand the specified \c ISD::VACOPY node as the Legalize pass would.
   SDValue expandVACopy(SDNode *Node);
 
-  /// Returs an GlobalAddress of the function from the current module with
+  /// Return a GlobalAddress of the function from the current module with
   /// name matching the given ExternalSymbol. Additionally can provide the
   /// matched function.
-  /// Panics the function doesn't exists.
+  /// Panic if the function doesn't exist.
   SDValue getSymbolFunctionGlobalAddress(SDValue Op,
                                          Function **TargetFunction = nullptr);
 
@@ -2255,7 +2257,7 @@ public:
   std::pair<EVT, EVT> GetDependentSplitDestVTs(const EVT &VT, const EVT &EnvVT,
                                                bool *HiIsEmpty) const;
 
-  /// Split the vector with EXTRACT_SUBVECTOR using the provides
+  /// Split the vector with EXTRACT_SUBVECTOR using the provided
   /// VTs and return the low/high part.
   std::pair<SDValue, SDValue> SplitVector(const SDValue &N, const SDLoc &DL,
                                           const EVT &LoVT, const EVT &HiVT);

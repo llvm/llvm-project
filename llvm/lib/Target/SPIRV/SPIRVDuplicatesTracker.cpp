@@ -54,7 +54,14 @@ void SPIRVGeneralDuplicatesTracker::buildDepsGraph(
         MachineOperand &Op = MI->getOperand(i);
         if (!Op.isReg())
           continue;
-        MachineOperand *RegOp = &MRI.getVRegDef(Op.getReg())->getOperand(0);
+        MachineInstr *VRegDef = MRI.getVRegDef(Op.getReg());
+        // References to a function via function pointers generate virtual
+        // registers without a definition. We are able to resolve this
+        // reference using Globar Register info into an OpFunction instruction
+        // but do not expect to find it in Reg2Entry.
+        if (MI->getOpcode() == SPIRV::OpConstantFunctionPointerINTEL && i == 2)
+          continue;
+        MachineOperand *RegOp = &VRegDef->getOperand(0);
         assert((MI->getOpcode() == SPIRV::OpVariable && i == 3) ||
                Reg2Entry.count(RegOp));
         if (Reg2Entry.count(RegOp))

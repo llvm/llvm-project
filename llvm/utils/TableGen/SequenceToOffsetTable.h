@@ -44,7 +44,7 @@ static inline void printChar(raw_ostream &OS, char C) {
 ///
 /// @tparam SeqT The sequence container. (vector or string).
 /// @tparam Less A stable comparator for SeqT elements.
-template<typename SeqT, typename Less = std::less<typename SeqT::value_type> >
+template <typename SeqT, typename Less = std::less<typename SeqT::value_type>>
 class SequenceToOffsetTable {
   typedef typename SeqT::value_type ElemT;
 
@@ -53,8 +53,8 @@ class SequenceToOffsetTable {
   struct SeqLess {
     Less L;
     bool operator()(const SeqT &A, const SeqT &B) const {
-      return std::lexicographical_compare(A.rbegin(), A.rend(),
-                                          B.rbegin(), B.rend(), L);
+      return std::lexicographical_compare(A.rbegin(), A.rend(), B.rbegin(),
+                                          B.rend(), L);
     }
   };
 
@@ -87,7 +87,7 @@ public:
     if (I != Seqs.end() && isSuffix(Seq, I->first))
       return;
 
-    I = Seqs.insert(I, std::make_pair(Seq, 0u));
+    I = Seqs.insert(I, std::pair(Seq, 0u));
 
     // The entry before I may be a suffix of Seq that can now be erased.
     if (I != Seqs.begin() && isSuffix((--I)->first, Seq))
@@ -153,15 +153,15 @@ public:
 
   /// emit - Print out the table as the body of an array initializer.
   /// Use the Print function to print elements.
-  void emit(raw_ostream &OS,
-            void (*Print)(raw_ostream&, ElemT),
+  void emit(raw_ostream &OS, void (*Print)(raw_ostream &, ElemT),
             const char *Term = "0") const {
     assert((empty() || Entries) && "Call layout() before emit()");
     for (typename SeqMap::const_iterator I = Seqs.begin(), E = Seqs.end();
          I != E; ++I) {
       OS << "  /* " << I->second << " */ ";
       for (typename SeqT::const_iterator SI = I->first.begin(),
-             SE = I->first.end(); SI != SE; ++SI) {
+                                         SE = I->first.end();
+           SI != SE; ++SI) {
         Print(OS, *SI);
         OS << ", ";
       }

@@ -55,16 +55,20 @@ public:
   std::string UnavailableMsg;
 
   /// Whether this entity is marked unavailable.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Unavailable : 1;
 
   /// Whether this entity is marked unavailable in Swift.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UnavailableInSwift : 1;
 
 private:
   /// Whether SwiftPrivate was specified.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftPrivateSpecified : 1;
 
   /// Whether this entity is considered "private" to a Swift overlay.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftPrivate : 1;
 
 public:
@@ -191,18 +195,25 @@ inline bool operator!=(const CommonTypeInfo &LHS, const CommonTypeInfo &RHS) {
 /// Describes API notes data for an Objective-C class or protocol.
 class ObjCContextInfo : public CommonTypeInfo {
   /// Whether this class has a default nullability.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasDefaultNullability : 1;
 
   /// The default nullability.
+  LLVM_PREFERRED_TYPE(NullabilityKind)
   unsigned DefaultNullability : 2;
 
   /// Whether this class has designated initializers recorded.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasDesignatedInits : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftImportAsNonGenericSpecified : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftImportAsNonGeneric : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftObjCMembersSpecified : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftObjCMembers : 1;
 
 public:
@@ -298,10 +309,12 @@ inline bool operator!=(const ObjCContextInfo &LHS, const ObjCContextInfo &RHS) {
 /// API notes for a variable/property.
 class VariableInfo : public CommonEntityInfo {
   /// Whether this property has been audited for nullability.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NullabilityAudited : 1;
 
   /// The kind of nullability for this property. Only valid if the nullability
   /// has been audited.
+  LLVM_PREFERRED_TYPE(NullabilityKind)
   unsigned Nullable : 2;
 
   /// The C type of the variable, as a string.
@@ -352,7 +365,9 @@ inline bool operator!=(const VariableInfo &LHS, const VariableInfo &RHS) {
 
 /// Describes API notes data for an Objective-C property.
 class ObjCPropertyInfo : public VariableInfo {
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftImportAsAccessorsSpecified : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftImportAsAccessors : 1;
 
 public:
@@ -409,9 +424,11 @@ inline bool operator!=(const ObjCPropertyInfo &LHS,
 /// Describes a function or method parameter.
 class ParamInfo : public VariableInfo {
   /// Whether noescape was specified.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoEscapeSpecified : 1;
 
   /// Whether the this parameter has the 'noescape' attribute.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoEscape : 1;
 
   /// A biased RetainCountConventionKind, where 0 means "unspecified".
@@ -488,6 +505,7 @@ public:
   // unknown nullability.
 
   /// Whether the signature has been audited with respect to nullability.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NullabilityAudited : 1;
 
   /// Number of types whose nullability is encoded with the NullabilityPayload.
@@ -597,9 +615,11 @@ inline bool operator!=(const FunctionInfo &LHS, const FunctionInfo &RHS) {
 class ObjCMethodInfo : public FunctionInfo {
 public:
   /// Whether this is a designated initializer of its class.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned DesignatedInit : 1;
 
   /// Whether this is a required initializer.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned RequiredInit : 1;
 
   ObjCMethodInfo() : DesignatedInit(false), RequiredInit(false) {}
@@ -650,7 +670,9 @@ public:
 
 /// Describes API notes data for a tag.
 class TagInfo : public CommonTypeInfo {
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasFlagEnum : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFlagEnum : 1;
 
 public:

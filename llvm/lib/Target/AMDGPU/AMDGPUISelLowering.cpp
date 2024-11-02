@@ -308,8 +308,11 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v2f64, MVT::v2f32, Expand);
   setTruncStoreAction(MVT::v2f64, MVT::v2f16, Expand);
 
+  setTruncStoreAction(MVT::v3i32, MVT::v3i8, Expand);
+
   setTruncStoreAction(MVT::v3i64, MVT::v3i32, Expand);
   setTruncStoreAction(MVT::v3i64, MVT::v3i16, Expand);
+  setTruncStoreAction(MVT::v3i64, MVT::v3i8, Expand);
   setTruncStoreAction(MVT::v3f64, MVT::v3f32, Expand);
   setTruncStoreAction(MVT::v3f64, MVT::v3f16, Expand);
 

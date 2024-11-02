@@ -432,6 +432,10 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // must be implemented here.
     break;
   case TTI::SK_ExtractSubvector:
+    // Extract at zero is always a subregister extract
+    if (Index == 0)
+      return TTI::TCC_Free;
+
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
     // vslidedown.vi  v8, v9, 2

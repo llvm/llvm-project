@@ -33,14 +33,17 @@ using HexFmt = IntegerToString<uintmax_t, radix::Hex>;
 using HexFmtUppercase = IntegerToString<uintmax_t, radix::Hex::Uppercase>;
 using OctFmt = IntegerToString<uintmax_t, radix::Oct>;
 using DecFmt = IntegerToString<uintmax_t>;
+using BinFmt = IntegerToString<uintmax_t, radix::Bin>;
 
 LIBC_INLINE constexpr size_t num_buf_size() {
-  constexpr auto max = [](size_t a, size_t b) -> size_t {
-    return (a < b) ? b : a;
-  };
-  return max(HexFmt::buffer_size(),
-             max(HexFmtUppercase::buffer_size(),
-                 max(OctFmt::buffer_size(), DecFmt::buffer_size())));
+  cpp::array<size_t, 5> sizes{
+      HexFmt::buffer_size(), HexFmtUppercase::buffer_size(),
+      OctFmt::buffer_size(), DecFmt::buffer_size(), BinFmt::buffer_size()};
+
+  auto result = sizes[0];
+  for (size_t i = 1; i < sizes.size(); i++)
+    result = cpp::max(result, sizes[i]);
+  return result;
 }
 
 LIBC_INLINE cpp::optional<cpp::string_view>
@@ -52,6 +55,8 @@ num_to_strview(uintmax_t num, cpp::span<char> bufref, char conv_name) {
       return HexFmtUppercase::format_to(bufref, num);
   } else if (conv_name == 'o') {
     return OctFmt::format_to(bufref, num);
+  } else if (to_lower(conv_name) == 'b') {
+    return BinFmt::format_to(bufref, num);
   } else {
     return DecFmt::format_to(bufref, num);
   }
@@ -116,6 +121,11 @@ LIBC_INLINE int convert_int(Writer *writer, const FormatSection &to_conv) {
     prefix_len = 2;
     prefix[0] = '0';
     prefix[1] = a + ('x' - 'a');
+  } else if ((to_lower(to_conv.conv_name) == 'b') &&
+             ((flags & FormatFlags::ALTERNATE_FORM) != 0) && num != 0) {
+    prefix_len = 2;
+    prefix[0] = '0';
+    prefix[1] = a + ('b' - 'a');
   } else {
     prefix_len = (sign_char == 0 ? 0 : 1);
     prefix[0] = sign_char;

@@ -203,10 +203,10 @@ def main():
         shape = range(2, 3)
         rank = len(shape)
         # All combinations.
+        dense_lvl = st.EncodingAttr.build_level_type(st.LevelFormat.dense)
+        sparse_lvl = st.EncodingAttr.build_level_type(st.LevelFormat.compressed)
         levels = list(
-            itertools.product(
-                *itertools.repeat([st.LevelType.dense, st.LevelType.compressed], rank)
-            )
+            itertools.product(*itertools.repeat([dense_lvl, sparse_lvl], rank))
         )
         # All permutations.
         orderings = list(

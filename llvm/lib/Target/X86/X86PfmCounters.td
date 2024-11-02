@@ -24,7 +24,8 @@ defvar DefaultIntelPfmValidationCounters = [
   PfmValidationCounter<L1ICacheLoadMiss, "L1-ICACHE-LOAD-MISSES">,
   PfmValidationCounter<DataTLBLoadMiss, "DTLB_LOAD_MISSES:MISS_CAUSES_A_WALK">,
   PfmValidationCounter<DataTLBStoreMiss, "DTLB_STORE_MISSES:MISS_CAUSES_A_WALK">,
-  PfmValidationCounter<InstructionTLBLoadMiss, "ITLB_MISSES:MISS_CAUSES_A_WALK">
+  PfmValidationCounter<InstructionTLBLoadMiss, "ITLB_MISSES:MISS_CAUSES_A_WALK">,
+  PfmValidationCounter<BranchPredictionMiss, "BRANCH-MISSES">
 ];
 
 def PentiumPfmCounters : ProcPfmCounters {
@@ -210,7 +211,8 @@ defvar DefaultAMDPfmValidationCounters = [
   PfmValidationCounter<L1DCacheStoreMiss, "L1-DCACHE-STORE-MISSES">,
   PfmValidationCounter<L1ICacheLoadMiss, "L1-ICACHE-LOAD-MISSES">,
   PfmValidationCounter<DataTLBLoadMiss, "DTLB-LOAD-MISSES">,
-  PfmValidationCounter<InstructionTLBLoadMiss, "ITLB-LOAD-MISSES">
+  PfmValidationCounter<InstructionTLBLoadMiss, "ITLB-LOAD-MISSES">,
+  PfmValidationCounter<BranchPredictionMiss, "BRANCH-MISSES">
 ];
 
 // Set basic counters for AMD cpus that we know libpfm4 supports.

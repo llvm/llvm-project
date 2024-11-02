@@ -4962,4 +4962,7 @@ std::recursive_mutex &Target::GetAPIMutex() {
 }
 
 /// Get metrics associated with this target in JSON format.
-llvm::json::Value Target::ReportStatistics() { return m_stats.ToJSON(*this); }
+llvm::json::Value
+Target::ReportStatistics(const lldb_private::StatisticsOptions &options) {
+  return m_stats.ToJSON(*this, options);
+}

@@ -37,7 +37,7 @@ class TestDAP_terminatedEvent(lldbdap_testcase.DAPTestCaseBase):
         # Set breakpoints
         functions = ["foo"]
         breakpoint_ids = self.set_function_breakpoints(functions)
-        self.assertEquals(len(breakpoint_ids), len(functions), "expect one breakpoint")
+        self.assertEqual(len(breakpoint_ids), len(functions), "expect one breakpoint")
         main_bp_line = line_number("main.cpp", "// main breakpoint 1")
         breakpoint_ids.append(self.set_source_breakpoints("main.cpp", [main_bp_line]))
 

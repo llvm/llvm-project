@@ -2974,6 +2974,7 @@ class OMPAtomicDirective : public OMPExecutableDirective {
     /// This field is 1 for the first form of the expression and 0 for the
     /// second. Required for correct codegen of non-associative operations (like
     /// << or >>).
+    LLVM_PREFERRED_TYPE(bool)
     uint8_t IsXLHSInRHSPart : 1;
     /// Used for 'atomic update' or 'atomic capture' constructs. They may
     /// have atomic expressions of forms:
@@ -2983,9 +2984,11 @@ class OMPAtomicDirective : public OMPExecutableDirective {
     /// \endcode
     /// This field is 1 for the first(postfix) form of the expression and 0
     /// otherwise.
+    LLVM_PREFERRED_TYPE(bool)
     uint8_t IsPostfixUpdate : 1;
     /// 1 if 'v' is updated only when the condition is false (compare capture
     /// only).
+    LLVM_PREFERRED_TYPE(bool)
     uint8_t IsFailOnly : 1;
   } Flags;
 

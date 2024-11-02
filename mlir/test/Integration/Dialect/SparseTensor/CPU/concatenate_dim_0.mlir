@@ -96,6 +96,7 @@ module {
     %1 = sparse_tensor.values %A : tensor<9x4xf64, #MAT_C_C> to memref<?xf64>
     call @printMemref1dF64(%1) : (memref<?xf64>) -> ()
 
+    bufferization.dealloc_tensor %c : tensor<9x4xf64>
     return
   }
 

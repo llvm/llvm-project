@@ -633,13 +633,13 @@ protected:
   using typename UP::Significand;
 
   using UP::FP_MASK;
-  using UP::SIG_LEN;
 
 public:
   // Constants.
   using UP::EXP_BIAS;
   using UP::EXP_MASK;
   using UP::FRACTION_MASK;
+  using UP::SIG_LEN;
   using UP::SIGN_MASK;
   LIBC_INLINE_VAR static constexpr int MAX_BIASED_EXPONENT =
       (1 << UP::EXP_LEN) - 1;
@@ -732,11 +732,14 @@ public:
   // Unsafe function to create a floating point representation.
   // It simply packs the sign, biased exponent and mantissa values without
   // checking bound nor normalization.
+  //
+  // WARNING: For X86 Extended Precision, implicit bit needs to be set correctly
+  // in the 'mantissa' by the caller.  This function will not check for its
+  // validity.
+  //
   // FIXME: Use an uint32_t for 'biased_exp'.
   LIBC_INLINE static constexpr RetT
   create_value(Sign sign, StorageType biased_exp, StorageType mantissa) {
-    static_assert(fp_type != FPType::X86_Binary80,
-                  "This function is not tested for X86 Extended Precision");
     return RetT(encode(sign, BiasedExponent(static_cast<uint32_t>(biased_exp)),
                        Significand(mantissa)));
   }

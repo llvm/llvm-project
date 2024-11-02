@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/DebugInfo/BTF/BTFParser.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
@@ -1149,7 +1150,11 @@ addMissingWasmCodeSymbols(const WasmObjectFile &Obj,
     SymbolAddresses.insert(Sym.Addr);
 
   for (const wasm::WasmFunction &Function : Obj.functions()) {
-    uint64_t Address = Function.CodeSectionOffset;
+    // This adjustment mirrors the one in WasmObjectFile::getSymbolAddress.
+    uint32_t Adjustment = Obj.isRelocatableObject() || Obj.isSharedObject()
+                              ? 0
+                              : Section->getAddress();
+    uint64_t Address = Function.CodeSectionOffset + Adjustment;
     // Only add fallback symbols for functions not already present in the symbol
     // table.
     if (SymbolAddresses.count(Address))
@@ -1354,6 +1359,10 @@ SymbolInfoTy objdump::createSymbolInfo(const ObjectFile &Obj,
     const SymbolRef::Type SymType = unwrapOrError(Symbol.getType(), FileName);
     return SymbolInfoTy(Addr, Name, SymType, /*IsMappingSymbol=*/false,
                         /*IsXCOFF=*/true);
+  } else if (Obj.isWasm()) {
+    uint8_t SymType =
+        cast<WasmObjectFile>(&Obj)->getWasmSymbol(Symbol).Info.Kind;
+    return SymbolInfoTy(Addr, Name, SymType, false);
   } else {
     uint8_t Type =
         Obj.isELF() ? getElfSymbolType(Obj, Symbol) : (uint8_t)ELF::STT_NOTYPE;
@@ -1366,8 +1375,9 @@ static SymbolInfoTy createDummySymbolInfo(const ObjectFile &Obj,
                                           uint8_t Type) {
   if (Obj.isXCOFF() && (SymbolDescription || TracebackTable))
     return SymbolInfoTy(std::nullopt, Addr, Name, std::nullopt, false);
-  else
-    return SymbolInfoTy(Addr, Name, Type);
+  if (Obj.isWasm())
+    return SymbolInfoTy(Addr, Name, wasm::WASM_SYMBOL_TYPE_SECTION);
+  return SymbolInfoTy(Addr, Name, Type);
 }
 
 static void collectBBAddrMapLabels(
@@ -2937,6 +2947,10 @@ void Dumper::printSymbol(const SymbolRef &Symbol,
                               Symbol.getRawDataRefImpl()));
   else if (O.isELF())
     outs() << '\t' << format(Fmt, ELFSymbolRef(Symbol).getSize());
+  else if (O.isWasm())
+    outs() << '\t'
+           << format(Fmt, static_cast<uint64_t>(
+                              cast<WasmObjectFile>(O).getSymbolSize(Symbol)));
 
   if (O.isELF()) {
     if (!SymbolVersions.empty()) {

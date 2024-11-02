@@ -15,6 +15,7 @@
 
 #include <random>
 #include <cassert>
+#include <climits>
 
 #include "test_macros.h"
 
@@ -35,19 +36,41 @@ template <class T>
 void
 test()
 {
-    test1<T, 0, 0, 0>();
-    test1<T, 0, 1, 2>();
-    test1<T, 1, 1, 2>();
-    const T M(static_cast<T>(-1));
-    test1<T, 0, 0, M>();
-    test1<T, 0, M-2, M>();
-    test1<T, 0, M-1, M>();
-    test1<T, M-2, 0, M>();
-    test1<T, M-2, M-2, M>();
-    test1<T, M-2, M-1, M>();
-    test1<T, M-1, 0, M>();
-    test1<T, M-1, M-2, M>();
-    test1<T, M-1, M-1, M>();
+  const int W = sizeof(T) * CHAR_BIT;
+  const T M(static_cast<T>(-1));
+  const T A(static_cast<T>((static_cast<T>(1) << (W / 2)) - 1));
+
+  // Cases where m = 0
+  test1<T, 0, 0, 0>();
+  test1<T, A, 0, 0>();
+  test1<T, 0, 1, 0>();
+  test1<T, A, 1, 0>();
+
+  // Cases where m = 2^n for n < w
+  test1<T, 0, 0, 256>();
+  test1<T, 5, 0, 256>();
+  test1<T, 0, 1, 256>();
+  test1<T, 5, 1, 256>();
+
+  // Cases where m is odd and a = 0
+  test1<T, 0, 0, M>();
+  test1<T, 0, M - 2, M>();
+  test1<T, 0, M - 1, M>();
+
+  // Cases where m is odd and m % a <= m / a (Schrage)
+  test1<T, A, 0, M>();
+  test1<T, A, M - 2, M>();
+  test1<T, A, M - 1, M>();
+
+  /*
+  // Cases where m is odd and m % a > m / a (not implemented)
+  test1<T, M - 2, 0, M>();
+  test1<T, M - 2, M - 2, M>();
+  test1<T, M - 2, M - 1, M>();
+  test1<T, M - 1, 0, M>();
+  test1<T, M - 1, M - 2, M>();
+  test1<T, M - 1, M - 1, M>();
+  */
 }
 
 int main(int, char**)

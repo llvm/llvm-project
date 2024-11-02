@@ -74,6 +74,7 @@ module @func_sparse.2 {
     %dm = sparse_tensor.convert %arg0 : tensor<2x3x4xf64, #SparseMatrix> to tensor<2x3x4xf64>
     %0 = vector.transfer_read %dm[%c0, %c0, %c0], %d0: tensor<2x3x4xf64>, vector<2x3x4xf64>
     vector.print %0 : vector<2x3x4xf64>
+    bufferization.dealloc_tensor %dm : tensor<2x3x4xf64>
     return
   }
 

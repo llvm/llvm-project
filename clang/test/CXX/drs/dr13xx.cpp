@@ -307,6 +307,8 @@ namespace dr1330 { // dr1330: 4 c++11
   E e; // #dr1330-e
 }
 
+// dr1334: sup 1719
+
 namespace dr1341 { // dr1341: sup P0683R1
 #if __cplusplus >= 202002L
 int a;

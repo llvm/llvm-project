@@ -1325,12 +1325,14 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
     if (fir::GlobalOp::verifyValidLinkage(linkage))
       return mlir::failure();
     mlir::StringAttr linkAttr = builder.getStringAttr(linkage);
-    result.addAttribute(fir::GlobalOp::getLinkageAttrNameStr(), linkAttr);
+    result.addAttribute(fir::GlobalOp::getLinkNameAttrName(result.name),
+                        linkAttr);
   }
 
   // Parse the name as a symbol reference attribute.
   mlir::SymbolRefAttr nameAttr;
-  if (parser.parseAttribute(nameAttr, fir::GlobalOp::getSymbolAttrNameStr(),
+  if (parser.parseAttribute(nameAttr,
+                            fir::GlobalOp::getSymrefAttrName(result.name),
                             result.attributes))
     return mlir::failure();
   result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
@@ -1339,7 +1341,8 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
   bool simpleInitializer = false;
   if (mlir::succeeded(parser.parseOptionalLParen())) {
     mlir::Attribute attr;
-    if (parser.parseAttribute(attr, "initVal", result.attributes) ||
+    if (parser.parseAttribute(attr, getInitValAttrName(result.name),
+                              result.attributes) ||
         parser.parseRParen())
       return mlir::failure();
     simpleInitializer = true;
@@ -1348,13 +1351,15 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
   if (parser.parseOptionalAttrDict(result.attributes))
     return mlir::failure();
 
-  if (succeeded(parser.parseOptionalKeyword("constant"))) {
+  if (succeeded(
+          parser.parseOptionalKeyword(getConstantAttrName(result.name)))) {
     // if "constant" keyword then mark this as a constant, not a variable
-    result.addAttribute("constant", builder.getUnitAttr());
+    result.addAttribute(getConstantAttrName(result.name),
+                        builder.getUnitAttr());
   }
 
-  if (succeeded(parser.parseOptionalKeyword("target")))
-    result.addAttribute(getTargetAttrNameStr(), builder.getUnitAttr());
+  if (succeeded(parser.parseOptionalKeyword(getTargetAttrName(result.name))))
+    result.addAttribute(getTargetAttrName(result.name), builder.getUnitAttr());
 
   mlir::Type globalType;
   if (parser.parseColonType(globalType))
@@ -1382,11 +1387,16 @@ void fir::GlobalOp::print(mlir::OpAsmPrinter &p) {
   p.printAttributeWithoutType(getSymrefAttr());
   if (auto val = getValueOrNull())
     p << '(' << val << ')';
-  p.printOptionalAttrDict((*this)->getAttrs(), (*this).getAttributeNames());
-  if (getOperation()->getAttr(fir::GlobalOp::getConstantAttrNameStr()))
-    p << " constant";
+  // Print all other attributes that are not pretty printed here.
+  p.printOptionalAttrDict((*this)->getAttrs(), /*elideAttrs=*/{
+                              getSymNameAttrName(), getSymrefAttrName(),
+                              getTypeAttrName(), getConstantAttrName(),
+                              getTargetAttrName(), getLinkNameAttrName(),
+                              getInitValAttrName()});
+  if (getOperation()->getAttr(getConstantAttrName()))
+    p << " " << getConstantAttrName().strref();
   if (getOperation()->getAttr(getTargetAttrName()))
-    p << " target";
+    p << " " << getTargetAttrName().strref();
   p << " : ";
   p.printType(getType());
   if (hasInitializationBody()) {
@@ -1410,7 +1420,7 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder,
   result.addAttribute(getTypeAttrName(result.name), mlir::TypeAttr::get(type));
   result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));
-  result.addAttribute(getSymbolAttrNameStr(),
+  result.addAttribute(getSymrefAttrName(result.name),
                       mlir::SymbolRefAttr::get(builder.getContext(), name));
   if (isConstant)
     result.addAttribute(getConstantAttrName(result.name),
@@ -1420,7 +1430,7 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder,
   if (initialVal)
     result.addAttribute(getInitValAttrName(result.name), initialVal);
   if (linkage)
-    result.addAttribute(getLinkageAttrNameStr(), linkage);
+    result.addAttribute(getLinkNameAttrName(result.name), linkage);
   result.attributes.append(attrs.begin(), attrs.end());
 }
 
@@ -2279,12 +2289,11 @@ mlir::ParseResult fir::DTEntryOp::parse(mlir::OpAsmParser &parser,
   // allow `methodName` or `"methodName"`
   if (failed(parser.parseOptionalKeyword(&methodName))) {
     mlir::StringAttr methodAttr;
-    if (parser.parseAttribute(methodAttr,
-                              fir::DTEntryOp::getMethodAttrNameStr(),
+    if (parser.parseAttribute(methodAttr, getMethodAttrName(result.name),
                               result.attributes))
       return mlir::failure();
   } else {
-    result.addAttribute(fir::DTEntryOp::getMethodAttrNameStr(),
+    result.addAttribute(getMethodAttrName(result.name),
                         parser.getBuilder().getStringAttr(methodName));
   }
   mlir::SymbolRefAttr calleeAttr;

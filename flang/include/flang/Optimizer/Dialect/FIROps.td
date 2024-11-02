@@ -2433,7 +2433,65 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
     // operand[0] is the object (of class type)
     operand_iterator arg_operand_begin() { return operand_begin() + 1; }
     operand_iterator arg_operand_end() { return operand_end(); }
-    static constexpr llvm::StringRef getMethodAttrNameStr() { return "method"; }
+  }];
+}
+
+def fir_CUDAKernelLaunch : fir_Op<"cuda_kernel_launch", [CallOpInterface,
+    AttrSizedOperandSegments]> {
+  let summary = "call CUDA kernel";
+
+  let description = [{
+    Launch a CUDA kernel from the host.
+
+    ```
+      // launch simple kernel with no arguments. bytes and stream value are
+      // optional in the chevron notation.
+      fir.cuda_kernel_launch @kernel<<<%gx, %gy, %bx, %by, %bz>>>()
+    ```
+  }];
+
+  let arguments = (ins
+    SymbolRefAttr:$callee,
+    I32:$grid_x,
+    I32:$grid_y,
+    I32:$block_x,
+    I32:$block_y,
+    I32:$block_z,
+    Optional<I32>:$bytes,
+    Optional<I32>:$stream,
+    Variadic<AnyType>:$args
+  );
+
+  let assemblyFormat = [{
+    $callee `<` `<` `<` $grid_x `,` $grid_y `,` $block_x `,` $block_y `,`
+        $block_z ( `,` $bytes^ ( `,` $stream^ )? )? `>` `>` `>`
+        `` `(` ( $args^ `:` type($args) )? `)` attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    mlir::CallInterfaceCallable getCallableForCallee() {
+      return getCalleeAttr();
+    }
+
+    void setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
+      (*this)->setAttr(getCalleeAttrName(), callee.get<mlir::SymbolRefAttr>());
+    }
+    mlir::FunctionType getFunctionType();
+
+    unsigned getNbNoArgOperand() {
+      unsigned nbNoArgOperand = 5; // grids and blocks values are always present.
+      if (getBytes()) ++nbNoArgOperand;
+      if (getStream()) ++nbNoArgOperand;
+      return nbNoArgOperand;
+    }
+
+    operand_range getArgOperands() {
+      return {operand_begin() + getNbNoArgOperand(), operand_end()};
+    }
+    mlir::MutableOperandRange getArgOperandsMutable() {
+      return mlir::MutableOperandRange(
+          *this, getNbNoArgOperand(), getArgs().size() - 1);
+    }
   }];
 }
 
@@ -2737,7 +2795,8 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     OptionalAttr<AnyAttr>:$initVal,
     OptionalAttr<UnitAttr>:$constant,
     OptionalAttr<UnitAttr>:$target,
-    OptionalAttr<StrAttr>:$linkName
+    OptionalAttr<StrAttr>:$linkName,
+    OptionalAttr<fir_CUDADataAttributeAttr>:$cuda_attr
   );
 
   let regions = (region AtMostRegion<1>:$region);
@@ -2768,17 +2827,6 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
   ];
 
   let extraClassDeclaration = [{
-    static constexpr llvm::StringRef getSymbolAttrNameStr() { return "symref"; }
-    static constexpr llvm::StringRef getConstantAttrNameStr() {
-      return "constant";
-    }
-    static constexpr llvm::StringRef getLinkageAttrNameStr() {
-      return "linkName";
-    }
-    static constexpr llvm::StringRef getTargetAttrNameStr() {
-      return "target";
-    }
-
     /// The semantic type of the global
     mlir::Type resultType();
 
@@ -2932,7 +2980,6 @@ def fir_DTEntryOp : fir_Op<"dt_entry", [HasParent<"TypeInfoOp">]> {
   let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
-    static constexpr llvm::StringRef getMethodAttrNameStr() { return "method"; }
     static constexpr llvm::StringRef getProcAttrNameStr() { return "proc"; }
   }];
 }
@@ -3027,7 +3074,8 @@ def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
     Optional<AnyShapeOrShiftType>:$shape,
     Variadic<AnyIntegerType>:$typeparams,
     Builtin_StringAttr:$uniq_name,
-    OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs
+    OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
+    OptionalAttr<fir_CUDADataAttributeAttr>:$cuda_attr
   );
 
   let results = (outs AnyRefOrBox);

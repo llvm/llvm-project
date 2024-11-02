@@ -11,7 +11,6 @@
 #define _LIBCPP___MEMORY_COMPRESSED_PAIR_H
 
 #include <__config>
-#include <__fwd/get.h>
 #include <__fwd/tuple.h>
 #include <__tuple/tuple_indices.h>
 #include <__type_traits/decay.h>
@@ -49,7 +48,7 @@ struct __compressed_pair_elem {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair_elem(__default_init_tag) {}
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair_elem(__value_init_tag) : __value_() {}
 
-  template <class _Up, class = __enable_if_t<!is_same<__compressed_pair_elem, __decay_t<_Up> >::value> >
+  template <class _Up, __enable_if_t<!is_same<__compressed_pair_elem, __decay_t<_Up> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair_elem(_Up&& __u)
       : __value_(std::forward<_Up>(__u)) {}
 
@@ -78,7 +77,7 @@ struct __compressed_pair_elem<_Tp, _Idx, true> : private _Tp {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair_elem(__default_init_tag) {}
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair_elem(__value_init_tag) : __value_type() {}
 
-  template <class _Up, class = __enable_if_t<!is_same<__compressed_pair_elem, __decay_t<_Up> >::value> >
+  template <class _Up, __enable_if_t<!is_same<__compressed_pair_elem, __decay_t<_Up> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair_elem(_Up&& __u)
       : __value_type(std::forward<_Up>(__u)) {}
 
@@ -108,9 +107,10 @@ public:
   using _Base1 _LIBCPP_NODEBUG = __compressed_pair_elem<_T1, 0>;
   using _Base2 _LIBCPP_NODEBUG = __compressed_pair_elem<_T2, 1>;
 
-  template <bool _Dummy = true,
-            class       = __enable_if_t< __dependent_type<is_default_constructible<_T1>, _Dummy>::value &&
-                                   __dependent_type<is_default_constructible<_T2>, _Dummy>::value > >
+  template <bool _Dummy         = true,
+            __enable_if_t< __dependent_type<is_default_constructible<_T1>, _Dummy>::value &&
+                               __dependent_type<is_default_constructible<_T2>, _Dummy>::value,
+                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair()
       : _Base1(__value_init_tag()), _Base2(__value_init_tag()) {}
 

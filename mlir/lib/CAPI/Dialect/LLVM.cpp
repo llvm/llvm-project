@@ -36,11 +36,77 @@ MlirType mlirLLVMFunctionTypeGet(MlirType resultType, intptr_t nArgumentTypes,
       unwrapList(nArgumentTypes, argumentTypes, argumentStorage), isVarArg));
 }
 
+bool mlirTypeIsALLVMStructType(MlirType type) {
+  return isa<LLVM::LLVMStructType>(unwrap(type));
+}
+
+bool mlirLLVMStructTypeIsLiteral(MlirType type) {
+  return !cast<LLVM::LLVMStructType>(unwrap(type)).isIdentified();
+}
+
+intptr_t mlirLLVMStructTypeGetNumElementTypes(MlirType type) {
+  return cast<LLVM::LLVMStructType>(unwrap(type)).getBody().size();
+}
+
+MlirType mlirLLVMStructTypeGetElementType(MlirType type, intptr_t position) {
+  return wrap(cast<LLVM::LLVMStructType>(unwrap(type)).getBody()[position]);
+}
+
+bool mlirLLVMStructTypeIsPacked(MlirType type) {
+  return cast<LLVM::LLVMStructType>(unwrap(type)).isPacked();
+}
+
+MlirStringRef mlirLLVMStructTypeGetIdentifier(MlirType type) {
+  return wrap(cast<LLVM::LLVMStructType>(unwrap(type)).getName());
+}
+
+bool mlirLLVMStructTypeIsOpaque(MlirType type) {
+  return cast<LLVM::LLVMStructType>(unwrap(type)).isOpaque();
+}
+
 MlirType mlirLLVMStructTypeLiteralGet(MlirContext ctx, intptr_t nFieldTypes,
                                       MlirType const *fieldTypes,
                                       bool isPacked) {
-  SmallVector<Type, 2> fieldStorage;
+  SmallVector<Type> fieldStorage;
   return wrap(LLVMStructType::getLiteral(
       unwrap(ctx), unwrapList(nFieldTypes, fieldTypes, fieldStorage),
       isPacked));
+}
+
+MlirType mlirLLVMStructTypeLiteralGetChecked(MlirLocation loc,
+                                             intptr_t nFieldTypes,
+                                             MlirType const *fieldTypes,
+                                             bool isPacked) {
+  SmallVector<Type> fieldStorage;
+  return wrap(LLVMStructType::getLiteralChecked(
+      [loc]() { return emitError(unwrap(loc)); }, unwrap(loc)->getContext(),
+      unwrapList(nFieldTypes, fieldTypes, fieldStorage), isPacked));
+}
+
+MlirType mlirLLVMStructTypeOpaqueGet(MlirContext ctx, MlirStringRef name) {
+  return wrap(LLVMStructType::getOpaque(unwrap(name), unwrap(ctx)));
+}
+
+MlirType mlirLLVMStructTypeIdentifiedGet(MlirContext ctx, MlirStringRef name) {
+  return wrap(LLVMStructType::getIdentified(unwrap(ctx), unwrap(name)));
+}
+
+MlirType mlirLLVMStructTypeIdentifiedNewGet(MlirContext ctx, MlirStringRef name,
+                                            intptr_t nFieldTypes,
+                                            MlirType const *fieldTypes,
+                                            bool isPacked) {
+  SmallVector<Type> fields;
+  return wrap(LLVMStructType::getNewIdentified(
+      unwrap(ctx), unwrap(name), unwrapList(nFieldTypes, fieldTypes, fields),
+      isPacked));
+}
+
+MlirLogicalResult mlirLLVMStructTypeSetBody(MlirType structType,
+                                            intptr_t nFieldTypes,
+                                            MlirType const *fieldTypes,
+                                            bool isPacked) {
+  SmallVector<Type> fields;
+  return wrap(
+      cast<LLVM::LLVMStructType>(unwrap(structType))
+          .setBody(unwrapList(nFieldTypes, fieldTypes, fields), isPacked));
 }

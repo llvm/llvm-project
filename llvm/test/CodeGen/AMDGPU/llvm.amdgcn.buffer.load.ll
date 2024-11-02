@@ -444,7 +444,7 @@ main_body:
 ; for stack access.
 
 ; CHECK-LABEL: {{^}}no_fold_fi_imm_soffset:
-; CHECK: v_mov_b32_e32 [[FI:v[0-9]+]], 4{{$}}
+; CHECK: v_mov_b32_e32 [[FI:v[0-9]+]], 0{{$}}
 ; CHECK-NEXT: buffer_load_dword v0, [[FI]], s{{\[[0-9]+:[0-9]+\]}}, 0 idxen
 define amdgpu_ps float @no_fold_fi_imm_soffset(<4 x i32> inreg %rsrc) {
   %alloca = alloca i32, addrspace(5)
@@ -455,7 +455,7 @@ define amdgpu_ps float @no_fold_fi_imm_soffset(<4 x i32> inreg %rsrc) {
 }
 
 ; CHECK-LABEL: {{^}}no_fold_fi_reg_soffset:
-; CHECK-DAG: v_mov_b32_e32 v[[FI:[0-9]+]], 4{{$}}
+; CHECK-DAG: v_mov_b32_e32 v[[FI:[0-9]+]], 0{{$}}
 ; CHECK-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], s
 ; CHECK: buffer_load_dword v0, v[[[FI]]:[[HI]]
 define amdgpu_ps float @no_fold_fi_reg_soffset(<4 x i32> inreg %rsrc, i32 inreg %soffset) {

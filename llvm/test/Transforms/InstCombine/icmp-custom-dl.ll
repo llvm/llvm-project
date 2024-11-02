@@ -40,8 +40,8 @@ define i1 @test59_as1(ptr addrspace(1) %foo) {
 define i1 @test60(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test60(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[I:%.*]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[J:%.*]] to i32
 ; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nsw i32 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[J:%.*]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[GEP1_IDX]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -54,8 +54,8 @@ define i1 @test60(ptr %foo, i64 %i, i64 %j) {
 define i1 @test60_as1(ptr addrspace(1) %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test60_as1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[I:%.*]] to i16
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[J:%.*]] to i16
 ; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nsw i16 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[J:%.*]] to i16
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[GEP1_IDX]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

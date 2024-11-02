@@ -183,6 +183,16 @@ public:
 
   unsigned getNumParams() const { return ParamTypes.size(); }
 
+  /// Returns the number of parameter this function takes when it's called,
+  /// i.e excluding the instance pointer and the RVO pointer.
+  unsigned getNumWrittenParams() const {
+    assert(getNumParams() >= (unsigned)(hasThisPointer() + hasRVO()));
+    return getNumParams() - hasThisPointer() - hasRVO();
+  }
+  unsigned getWrittenArgSize() const {
+    return ArgSize - (align(primSize(PT_Ptr)) * (hasThisPointer() + hasRVO()));
+  }
+
   unsigned getParamOffset(unsigned ParamIndex) const {
     return ParamOffsets[ParamIndex];
   }

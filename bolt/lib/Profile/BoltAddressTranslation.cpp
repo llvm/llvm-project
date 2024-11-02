@@ -108,7 +108,7 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
   writeMaps</*Cold=*/false>(Maps, PrevAddress, OS);
   writeMaps</*Cold=*/true>(Maps, PrevAddress, OS);
 
-  outs() << "BOLT-INFO: Wrote " << Maps.size() << " BAT maps\n";
+  BC.outs() << "BOLT-INFO: Wrote " << Maps.size() << " BAT maps\n";
 }
 
 APInt BoltAddressTranslation::calculateBranchEntriesBitMask(MapTy &Map,
@@ -201,7 +201,7 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
   }
 }
 
-std::error_code BoltAddressTranslation::parse(StringRef Buf) {
+std::error_code BoltAddressTranslation::parse(raw_ostream &OS, StringRef Buf) {
   DataExtractor DE = DataExtractor(Buf, true, 8);
   uint64_t Offset = 0;
   if (Buf.size() < 12)
@@ -225,7 +225,7 @@ std::error_code BoltAddressTranslation::parse(StringRef Buf) {
   uint64_t PrevAddress = 0;
   parseMaps</*Cold=*/false>(HotFuncs, PrevAddress, DE, Offset, Err);
   parseMaps</*Cold=*/true>(HotFuncs, PrevAddress, DE, Offset, Err);
-  outs() << "BOLT-INFO: Parsed " << Maps.size() << " BAT entries\n";
+  OS << "BOLT-INFO: Parsed " << Maps.size() << " BAT entries\n";
   return errorToErrorCode(std::move(Err));
 }
 
@@ -423,6 +423,21 @@ bool BoltAddressTranslation::enabledFor(
       return true;
   }
   return false;
+}
+
+void BoltAddressTranslation::saveMetadata(BinaryContext &BC) {
+  for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
+    // We don't need a translation table if the body of the function hasn't
+    // changed
+    if (BF.isIgnored() || (!BC.HasRelocations && !BF.isSimple()))
+      continue;
+    // Prepare function and block hashes
+    FuncHashes[BF.getAddress()].first = BF.computeHash();
+    BF.computeBlockHashes();
+    for (const BinaryBasicBlock &BB : BF)
+      FuncHashes[BF.getAddress()].second.emplace(BB.getInputOffset(),
+                                                 BB.getHash());
+  }
 }
 } // namespace bolt
 } // namespace llvm

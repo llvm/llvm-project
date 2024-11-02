@@ -12,6 +12,7 @@
 #define LLVM_LIB_TRANSFORMS_COROUTINES_COROINTERNAL_H
 
 #include "CoroInstr.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
@@ -272,9 +273,10 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
 
 bool defaultMaterializable(Instruction &V);
 void buildCoroutineFrame(
-    Function &F, Shape &Shape,
+    Function &F, Shape &Shape, TargetTransformInfo &TTI,
     const std::function<bool(Instruction &)> &MaterializableCallback);
 CallInst *createMustTailCall(DebugLoc Loc, Function *MustTailCallFn,
+                             TargetTransformInfo &TTI,
                              ArrayRef<Value *> Arguments, IRBuilder<> &);
 } // End namespace coro.
 } // End namespace llvm

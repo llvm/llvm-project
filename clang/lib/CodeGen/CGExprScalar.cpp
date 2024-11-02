@@ -774,7 +774,7 @@ public:
   void EmitUndefinedBehaviorIntegerDivAndRemCheck(const BinOpInfo &Ops,
                                                   llvm::Value *Zero,bool isDiv);
   // Common helper for getting how wide LHS of shift is.
-  static Value *GetWidthMinusOneValue(Value* LHS,Value* RHS);
+  static Value *GetMaximumShiftAmount(Value *LHS, Value *RHS);
 
   // Used for shifting constraints for OpenCL, do mask for powers of 2, URem for
   // non powers of two.
@@ -2137,26 +2137,24 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     // If Src is a fixed vector and Dst is a scalable vector, and both have the
     // same element type, use the llvm.vector.insert intrinsic to perform the
     // bitcast.
-    if (const auto *FixedSrc = dyn_cast<llvm::FixedVectorType>(SrcTy)) {
-      if (const auto *ScalableDst = dyn_cast<llvm::ScalableVectorType>(DstTy)) {
-        // If we are casting a fixed i8 vector to a scalable 16 x i1 predicate
+    if (auto *FixedSrcTy = dyn_cast<llvm::FixedVectorType>(SrcTy)) {
+      if (auto *ScalableDstTy = dyn_cast<llvm::ScalableVectorType>(DstTy)) {
+        // If we are casting a fixed i8 vector to a scalable i1 predicate
         // vector, use a vector insert and bitcast the result.
-        bool NeedsBitCast = false;
-        auto PredType = llvm::ScalableVectorType::get(Builder.getInt1Ty(), 16);
-        llvm::Type *OrigType = DstTy;
-        if (ScalableDst == PredType &&
-            FixedSrc->getElementType() == Builder.getInt8Ty()) {
-          DstTy = llvm::ScalableVectorType::get(Builder.getInt8Ty(), 2);
-          ScalableDst = cast<llvm::ScalableVectorType>(DstTy);
-          NeedsBitCast = true;
+        if (ScalableDstTy->getElementType()->isIntegerTy(1) &&
+            ScalableDstTy->getElementCount().isKnownMultipleOf(8) &&
+            FixedSrcTy->getElementType()->isIntegerTy(8)) {
+          ScalableDstTy = llvm::ScalableVectorType::get(
+              FixedSrcTy->getElementType(),
+              ScalableDstTy->getElementCount().getKnownMinValue() / 8);
         }
-        if (FixedSrc->getElementType() == ScalableDst->getElementType()) {
-          llvm::Value *UndefVec = llvm::UndefValue::get(DstTy);
+        if (FixedSrcTy->getElementType() == ScalableDstTy->getElementType()) {
+          llvm::Value *UndefVec = llvm::UndefValue::get(ScalableDstTy);
           llvm::Value *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
           llvm::Value *Result = Builder.CreateInsertVector(
-              DstTy, UndefVec, Src, Zero, "cast.scalable");
-          if (NeedsBitCast)
-            Result = Builder.CreateBitCast(Result, OrigType);
+              ScalableDstTy, UndefVec, Src, Zero, "cast.scalable");
+          if (Result->getType() != DstTy)
+            Result = Builder.CreateBitCast(Result, DstTy);
           return Result;
         }
       }
@@ -2165,18 +2163,19 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     // If Src is a scalable vector and Dst is a fixed vector, and both have the
     // same element type, use the llvm.vector.extract intrinsic to perform the
     // bitcast.
-    if (const auto *ScalableSrc = dyn_cast<llvm::ScalableVectorType>(SrcTy)) {
-      if (const auto *FixedDst = dyn_cast<llvm::FixedVectorType>(DstTy)) {
-        // If we are casting a scalable 16 x i1 predicate vector to a fixed i8
+    if (auto *ScalableSrcTy = dyn_cast<llvm::ScalableVectorType>(SrcTy)) {
+      if (auto *FixedDstTy = dyn_cast<llvm::FixedVectorType>(DstTy)) {
+        // If we are casting a scalable i1 predicate vector to a fixed i8
         // vector, bitcast the source and use a vector extract.
-        auto PredType = llvm::ScalableVectorType::get(Builder.getInt1Ty(), 16);
-        if (ScalableSrc == PredType &&
-            FixedDst->getElementType() == Builder.getInt8Ty()) {
-          SrcTy = llvm::ScalableVectorType::get(Builder.getInt8Ty(), 2);
-          ScalableSrc = cast<llvm::ScalableVectorType>(SrcTy);
-          Src = Builder.CreateBitCast(Src, SrcTy);
+        if (ScalableSrcTy->getElementType()->isIntegerTy(1) &&
+            ScalableSrcTy->getElementCount().isKnownMultipleOf(8) &&
+            FixedDstTy->getElementType()->isIntegerTy(8)) {
+          ScalableSrcTy = llvm::ScalableVectorType::get(
+              FixedDstTy->getElementType(),
+              ScalableSrcTy->getElementCount().getKnownMinValue() / 8);
+          Src = Builder.CreateBitCast(Src, ScalableSrcTy);
         }
-        if (ScalableSrc->getElementType() == FixedDst->getElementType()) {
+        if (ScalableSrcTy->getElementType() == FixedDstTy->getElementType()) {
           llvm::Value *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
           return Builder.CreateExtractVector(DstTy, Src, Zero, "cast.fixed");
         }
@@ -2409,6 +2408,12 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
                                 CE->getExprLoc());
 
   case CK_IntegralCast: {
+    if (E->getType()->isExtVectorType() && DestTy->isExtVectorType()) {
+      QualType SrcElTy = E->getType()->castAs<VectorType>()->getElementType();
+      return Builder.CreateIntCast(Visit(E), ConvertType(DestTy),
+                                   SrcElTy->isSignedIntegerOrEnumerationType(),
+                                   "conv");
+    }
     ScalarConversionOpts Opts;
     if (auto *ICE = dyn_cast<ImplicitCastExpr>(CE)) {
       if (!ICE->isPartOfExplicitCast())
@@ -2417,9 +2422,44 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc(), Opts);
   }
-  case CK_IntegralToFloating:
-  case CK_FloatingToIntegral:
-  case CK_FloatingCast:
+  case CK_IntegralToFloating: {
+    if (E->getType()->isVectorType() && DestTy->isVectorType()) {
+      // TODO: Support constrained FP intrinsics.
+      QualType SrcElTy = E->getType()->castAs<VectorType>()->getElementType();
+      if (SrcElTy->isSignedIntegerOrEnumerationType())
+        return Builder.CreateSIToFP(Visit(E), ConvertType(DestTy), "conv");
+      return Builder.CreateUIToFP(Visit(E), ConvertType(DestTy), "conv");
+    }
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, CE);
+    return EmitScalarConversion(Visit(E), E->getType(), DestTy,
+                                CE->getExprLoc());
+  }
+  case CK_FloatingToIntegral: {
+    if (E->getType()->isVectorType() && DestTy->isVectorType()) {
+      // TODO: Support constrained FP intrinsics.
+      QualType DstElTy = DestTy->castAs<VectorType>()->getElementType();
+      if (DstElTy->isSignedIntegerOrEnumerationType())
+        return Builder.CreateFPToSI(Visit(E), ConvertType(DestTy), "conv");
+      return Builder.CreateFPToUI(Visit(E), ConvertType(DestTy), "conv");
+    }
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, CE);
+    return EmitScalarConversion(Visit(E), E->getType(), DestTy,
+                                CE->getExprLoc());
+  }
+  case CK_FloatingCast: {
+    if (E->getType()->isVectorType() && DestTy->isVectorType()) {
+      // TODO: Support constrained FP intrinsics.
+      QualType SrcElTy = E->getType()->castAs<VectorType>()->getElementType();
+      QualType DstElTy = DestTy->castAs<VectorType>()->getElementType();
+      if (DstElTy->castAs<BuiltinType>()->getKind() <
+          SrcElTy->castAs<BuiltinType>()->getKind())
+        return Builder.CreateFPTrunc(Visit(E), ConvertType(DestTy), "conv");
+      return Builder.CreateFPExt(Visit(E), ConvertType(DestTy), "conv");
+    }
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, CE);
+    return EmitScalarConversion(Visit(E), E->getType(), DestTy,
+                                CE->getExprLoc());
+  }
   case CK_FixedPointToFloating:
   case CK_FloatingToFixedPoint: {
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, CE);
@@ -2468,6 +2508,17 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
 
   case CK_IntToOCLSampler:
     return CGF.CGM.createOpenCLIntToSamplerConversion(E, CGF);
+
+  case CK_HLSLVectorTruncation: {
+    assert(DestTy->isVectorType() && "Expected dest type to be vector type");
+    Value *Vec = Visit(const_cast<Expr *>(E));
+    SmallVector<int, 16> Mask;
+    unsigned NumElts = DestTy->castAs<VectorType>()->getNumElements();
+    for (unsigned I = 0; I != NumElts; ++I)
+      Mask.push_back(I);
+
+    return Builder.CreateShuffleVector(Vec, Mask, "trunc");
+  }
 
   } // end of switch
 
@@ -4115,13 +4166,21 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
   return Builder.CreateExactSDiv(diffInChars, divisor, "sub.ptr.div");
 }
 
-Value *ScalarExprEmitter::GetWidthMinusOneValue(Value* LHS,Value* RHS) {
+Value *ScalarExprEmitter::GetMaximumShiftAmount(Value *LHS, Value *RHS) {
   llvm::IntegerType *Ty;
   if (llvm::VectorType *VT = dyn_cast<llvm::VectorType>(LHS->getType()))
     Ty = cast<llvm::IntegerType>(VT->getElementType());
   else
     Ty = cast<llvm::IntegerType>(LHS->getType());
-  return llvm::ConstantInt::get(RHS->getType(), Ty->getBitWidth() - 1);
+  // For a given type of LHS the maximum shift amount is width(LHS)-1, however
+  // it can occur that width(LHS)-1 > range(RHS). Since there is no check for
+  // this in ConstantInt::get, this results in the value getting truncated.
+  // Constrain the return value to be max(RHS) in this case.
+  llvm::Type *RHSTy = RHS->getType();
+  llvm::APInt RHSMax = llvm::APInt::getMaxValue(RHSTy->getScalarSizeInBits());
+  if (RHSMax.ult(Ty->getBitWidth()))
+    return llvm::ConstantInt::get(RHSTy, RHSMax);
+  return llvm::ConstantInt::get(RHSTy, Ty->getBitWidth() - 1);
 }
 
 Value *ScalarExprEmitter::ConstrainShiftValue(Value *LHS, Value *RHS,
@@ -4133,7 +4192,7 @@ Value *ScalarExprEmitter::ConstrainShiftValue(Value *LHS, Value *RHS,
     Ty = cast<llvm::IntegerType>(LHS->getType());
 
   if (llvm::isPowerOf2_64(Ty->getBitWidth()))
-        return Builder.CreateAnd(RHS, GetWidthMinusOneValue(LHS, RHS), Name);
+    return Builder.CreateAnd(RHS, GetMaximumShiftAmount(LHS, RHS), Name);
 
   return Builder.CreateURem(
       RHS, llvm::ConstantInt::get(RHS->getType(), Ty->getBitWidth()), Name);
@@ -4160,13 +4219,13 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
   bool SanitizeBase = SanitizeSignedBase || SanitizeUnsignedBase;
   bool SanitizeExponent = CGF.SanOpts.has(SanitizerKind::ShiftExponent);
   // OpenCL 6.3j: shift values are effectively % word size of LHS.
-  if (CGF.getLangOpts().OpenCL)
+  if (CGF.getLangOpts().OpenCL || CGF.getLangOpts().HLSL)
     RHS = ConstrainShiftValue(Ops.LHS, RHS, "shl.mask");
   else if ((SanitizeBase || SanitizeExponent) &&
            isa<llvm::IntegerType>(Ops.LHS->getType())) {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
     SmallVector<std::pair<Value *, SanitizerMask>, 2> Checks;
-    llvm::Value *WidthMinusOne = GetWidthMinusOneValue(Ops.LHS, Ops.RHS);
+    llvm::Value *WidthMinusOne = GetMaximumShiftAmount(Ops.LHS, Ops.RHS);
     llvm::Value *ValidExponent = Builder.CreateICmpULE(Ops.RHS, WidthMinusOne);
 
     if (SanitizeExponent) {
@@ -4184,7 +4243,7 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
       Builder.CreateCondBr(ValidExponent, CheckShiftBase, Cont);
       llvm::Value *PromotedWidthMinusOne =
           (RHS == Ops.RHS) ? WidthMinusOne
-                           : GetWidthMinusOneValue(Ops.LHS, RHS);
+                           : GetMaximumShiftAmount(Ops.LHS, RHS);
       CGF.EmitBlock(CheckShiftBase);
       llvm::Value *BitsShiftedOff = Builder.CreateLShr(
           Ops.LHS, Builder.CreateSub(PromotedWidthMinusOne, RHS, "shl.zeros",
@@ -4229,13 +4288,13 @@ Value *ScalarExprEmitter::EmitShr(const BinOpInfo &Ops) {
     RHS = Builder.CreateIntCast(RHS, Ops.LHS->getType(), false, "sh_prom");
 
   // OpenCL 6.3j: shift values are effectively % word size of LHS.
-  if (CGF.getLangOpts().OpenCL)
+  if (CGF.getLangOpts().OpenCL || CGF.getLangOpts().HLSL)
     RHS = ConstrainShiftValue(Ops.LHS, RHS, "shr.mask");
   else if (CGF.SanOpts.has(SanitizerKind::ShiftExponent) &&
            isa<llvm::IntegerType>(Ops.LHS->getType())) {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
     llvm::Value *Valid =
-        Builder.CreateICmpULE(RHS, GetWidthMinusOneValue(Ops.LHS, RHS));
+        Builder.CreateICmpULE(Ops.RHS, GetMaximumShiftAmount(Ops.LHS, Ops.RHS));
     EmitBinOpCheck(std::make_pair(Valid, SanitizerKind::ShiftExponent), Ops);
   }
 

@@ -32,6 +32,7 @@ namespace std {
 */
 
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__availability>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__system_error/system_error.h>
@@ -42,10 +43,6 @@ namespace std {
 #include <string>
 #include <string_view>
 #include <version>
-
-#if __has_include(<unistd.h>)
-#  include <unistd.h>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -68,7 +65,8 @@ _LIBCPP_EXPORTED_FROM_ABI bool __is_windows_terminal(FILE* __stream);
 // Note the function is only implemented on the Windows platform.
 _LIBCPP_EXPORTED_FROM_ABI void __write_to_windows_console(FILE* __stream, wstring_view __view);
 #  endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
-
+#elif __has_include(<unistd.h>)
+_LIBCPP_EXPORTED_FROM_ABI bool __is_posix_terminal(FILE* __stream);
 #endif // _LIBCPP_WIN32API
 
 #if _LIBCPP_STD_VER >= 23
@@ -195,15 +193,17 @@ inline constexpr bool __use_unicode_execution_charset = _MSVC_EXECUTION_CHARACTE
 inline constexpr bool __use_unicode_execution_charset = true;
 #  endif
 
-_LIBCPP_HIDE_FROM_ABI inline bool __is_terminal(FILE* __stream) {
+_LIBCPP_HIDE_FROM_ABI inline bool __is_terminal([[maybe_unused]] FILE* __stream) {
   // The macro _LIBCPP_TESTING_PRINT_IS_TERMINAL is used to change
   // the behavior in the test. This is not part of the public API.
 #  ifdef _LIBCPP_TESTING_PRINT_IS_TERMINAL
   return _LIBCPP_TESTING_PRINT_IS_TERMINAL(__stream);
+#  elif _LIBCPP_AVAILABILITY_HAS_PRINT == 0
+  return false;
 #  elif defined(_LIBCPP_WIN32API)
   return std::__is_windows_terminal(__stream);
 #  elif __has_include(<unistd.h>)
-  return isatty(fileno(__stream));
+  return std::__is_posix_terminal(__stream);
 #  else
 #    error "Provide a way to determine whether a FILE* is a terminal"
 #  endif

@@ -257,11 +257,11 @@ defm : X86WriteRes<WriteEMMS,          [ICXPort05,ICXPort0156], 10, [9,1], 10>;
 defm : ICXWriteResPair<WriteFAdd,      [ICXPort01],  4, [1], 1, 5>; // Floating point add/sub.
 defm : ICXWriteResPair<WriteFAddX,     [ICXPort01],  4, [1], 1, 6>;
 defm : ICXWriteResPair<WriteFAddY,     [ICXPort01],  4, [1], 1, 7>;
-defm : ICXWriteResPair<WriteFAddZ,     [ICXPort05],  4, [1], 1, 7>;
+defm : ICXWriteResPair<WriteFAddZ,     [ICXPort0],   4, [1], 1, 7>;
 defm : ICXWriteResPair<WriteFAdd64,    [ICXPort01],  4, [1], 1, 5>; // Floating point double add/sub.
 defm : ICXWriteResPair<WriteFAdd64X,   [ICXPort01],  4, [1], 1, 6>;
 defm : ICXWriteResPair<WriteFAdd64Y,   [ICXPort01],  4, [1], 1, 7>;
-defm : ICXWriteResPair<WriteFAdd64Z,   [ICXPort05],  4, [1], 1, 7>;
+defm : ICXWriteResPair<WriteFAdd64Z,   [ICXPort0],   4, [1], 1, 7>;
 
 defm : ICXWriteResPair<WriteFCmp,      [ICXPort01],  4, [1], 1, 5>; // Floating point compare.
 defm : ICXWriteResPair<WriteFCmpX,     [ICXPort01],  4, [1], 1, 6>;
@@ -278,11 +278,11 @@ defm : ICXWriteResPair<WriteFComX,      [ICXPort0],  2>; // Floating point compa
 defm : ICXWriteResPair<WriteFMul,      [ICXPort01],  4, [1], 1, 5>; // Floating point multiplication.
 defm : ICXWriteResPair<WriteFMulX,     [ICXPort01],  4, [1], 1, 6>;
 defm : ICXWriteResPair<WriteFMulY,     [ICXPort01],  4, [1], 1, 7>;
-defm : ICXWriteResPair<WriteFMulZ,     [ICXPort05],  4, [1], 1, 7>;
+defm : ICXWriteResPair<WriteFMulZ,     [ICXPort0],   4, [1], 1, 7>;
 defm : ICXWriteResPair<WriteFMul64,    [ICXPort01],  4, [1], 1, 5>; // Floating point double multiplication.
 defm : ICXWriteResPair<WriteFMul64X,   [ICXPort01],  4, [1], 1, 6>;
 defm : ICXWriteResPair<WriteFMul64Y,   [ICXPort01],  4, [1], 1, 7>;
-defm : ICXWriteResPair<WriteFMul64Z,   [ICXPort05],  4, [1], 1, 7>;
+defm : ICXWriteResPair<WriteFMul64Z,   [ICXPort0],   4, [1], 1, 7>;
 
 defm : ICXWriteResPair<WriteFDiv,     [ICXPort0,ICXFPDivider], 11, [1,3], 1, 5>; // 10-14 cycles. // Floating point division.
 defm : ICXWriteResPair<WriteFDivX,    [ICXPort0,ICXFPDivider], 11, [1,3], 1, 6>; // 10-14 cycles.

@@ -221,7 +221,7 @@ std::optional<std::string> NVPTXSerializer::findTool(StringRef tool) {
   // 1. Check the toolkit path given in the command line.
   StringRef pathRef = targetOptions.getToolkitPath();
   SmallVector<char, 256> path;
-  if (pathRef.size()) {
+  if (!pathRef.empty()) {
     path.insert(path.begin(), pathRef.begin(), pathRef.end());
     llvm::sys::path::append(path, "bin", tool);
     if (llvm::sys::fs::can_execute(path))
@@ -236,7 +236,7 @@ std::optional<std::string> NVPTXSerializer::findTool(StringRef tool) {
   // 3. Check `getCUDAToolkitPath()`.
   pathRef = getCUDAToolkitPath();
   path.clear();
-  if (pathRef.size()) {
+  if (!pathRef.empty()) {
     path.insert(path.begin(), pathRef.begin(), pathRef.end());
     llvm::sys::path::append(path, "bin", tool);
     if (llvm::sys::fs::can_execute(path))
@@ -328,7 +328,7 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
        "--opt-level", optLevel});
 
   bool useFatbin32 = false;
-  for (auto cArg : cmdOpts.second) {
+  for (const auto *cArg : cmdOpts.second) {
     // All `cmdOpts` are for `ptxas` except `-32` which passes `-32` to
     // `fatbinary`, indicating a 32-bit target. By default a 64-bit target is
     // assumed.
@@ -411,7 +411,7 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
   LLVM_DEBUG({
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> logBuffer =
         llvm::MemoryBuffer::getFile(logFile->first);
-    if (logBuffer && (*logBuffer)->getBuffer().size()) {
+    if (logBuffer && !(*logBuffer)->getBuffer().empty()) {
       llvm::dbgs() << "Output:\n" << (*logBuffer)->getBuffer() << "\n";
       llvm::dbgs().flush();
     }

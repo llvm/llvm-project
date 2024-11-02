@@ -34,7 +34,7 @@ cl::opt<bool>
     UseNewDbgInfoFormat("experimental-debuginfo-iterators",
                         cl::desc("Enable communicating debuginfo positions "
                                  "through iterators, eliminating intrinsics"),
-                        cl::init(false));
+                        cl::init(true));
 
 DPMarker *BasicBlock::createMarker(Instruction *I) {
   assert(IsNewDbgInfoFormat &&
@@ -677,7 +677,9 @@ BasicBlock *BasicBlock::splitBasicBlockBefore(iterator I, const Twine &BBName) {
 
 BasicBlock::iterator BasicBlock::erase(BasicBlock::iterator FromIt,
                                        BasicBlock::iterator ToIt) {
-  return InstList.erase(FromIt, ToIt);
+  for (Instruction &I : make_early_inc_range(make_range(FromIt, ToIt)))
+    I.eraseFromParent();
+  return ToIt;
 }
 
 void BasicBlock::replacePhiUsesWith(BasicBlock *Old, BasicBlock *New) {

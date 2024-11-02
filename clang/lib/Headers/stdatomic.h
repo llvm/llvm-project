@@ -16,7 +16,7 @@
  * Exclude the MSVC path as well as the MSVC header as of the 14.31.30818
  * explicitly disallows `stdatomic.h` in the C mode via an `#error`.  Fallback
  * to the clang resource header until that is fully supported.  The
- * `stdatomic.h` header requires C++ 23 or newer.
+ * `stdatomic.h` header requires C++23 or newer.
  */
 #if __STDC_HOSTED__ &&                                                         \
     __has_include_next(<stdatomic.h>) &&                                       \

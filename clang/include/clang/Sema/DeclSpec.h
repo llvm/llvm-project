@@ -346,43 +346,61 @@ public:
     // FIXME: Attributes should be included here.
   };
 
-  enum FriendSpecified : bool {
-    No,
-    Yes,
-  };
+  enum FriendSpecified : bool { No, Yes };
 
 private:
   // storage-class-specifier
-  /*SCS*/unsigned StorageClassSpec : 3;
-  /*TSCS*/unsigned ThreadStorageClassSpec : 2;
+  LLVM_PREFERRED_TYPE(SCS)
+  unsigned StorageClassSpec : 3;
+  LLVM_PREFERRED_TYPE(TSCS)
+  unsigned ThreadStorageClassSpec : 2;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SCS_extern_in_linkage_spec : 1;
 
   // type-specifier
-  /*TypeSpecifierWidth*/ unsigned TypeSpecWidth : 2;
-  /*TSC*/unsigned TypeSpecComplex : 2;
-  /*TSS*/unsigned TypeSpecSign : 2;
-  /*TST*/unsigned TypeSpecType : 7;
+  LLVM_PREFERRED_TYPE(TypeSpecifierWidth)
+  unsigned TypeSpecWidth : 2;
+  LLVM_PREFERRED_TYPE(TSC)
+  unsigned TypeSpecComplex : 2;
+  LLVM_PREFERRED_TYPE(TypeSpecifierSign)
+  unsigned TypeSpecSign : 2;
+  LLVM_PREFERRED_TYPE(TST)
+  unsigned TypeSpecType : 7;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned TypeAltiVecVector : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned TypeAltiVecPixel : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned TypeAltiVecBool : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned TypeSpecOwned : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned TypeSpecPipe : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned TypeSpecSat : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ConstrainedAuto : 1;
 
   // type-qualifiers
+  LLVM_PREFERRED_TYPE(TQ)
   unsigned TypeQualifiers : 5;  // Bitwise OR of TQ.
 
   // function-specifier
+  LLVM_PREFERRED_TYPE(bool)
   unsigned FS_inline_specified : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned FS_forceinline_specified: 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned FS_virtual_specified : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned FS_noreturn_specified : 1;
 
   // friend-specifier
-  unsigned Friend_specified : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned FriendSpecifiedFirst : 1;
 
   // constexpr-specifier
+  LLVM_PREFERRED_TYPE(ConstexprSpecKind)
   unsigned ConstexprSpecifier : 2;
 
   union {
@@ -470,7 +488,7 @@ public:
         TypeSpecPipe(false), TypeSpecSat(false), ConstrainedAuto(false),
         TypeQualifiers(TQ_unspecified), FS_inline_specified(false),
         FS_forceinline_specified(false), FS_virtual_specified(false),
-        FS_noreturn_specified(false), Friend_specified(false),
+        FS_noreturn_specified(false), FriendSpecifiedFirst(false),
         ConstexprSpecifier(
             static_cast<unsigned>(ConstexprSpecKind::Unspecified)),
         Attrs(attrFactory), writtenBS(), ObjCQualifiers(nullptr) {}
@@ -797,8 +815,10 @@ public:
                         const char *&PrevSpec, unsigned &DiagID);
 
   FriendSpecified isFriendSpecified() const {
-    return static_cast<FriendSpecified>(Friend_specified);
+    return static_cast<FriendSpecified>(FriendLoc.isValid());
   }
+
+  bool isFriendSpecifiedFirst() const { return FriendSpecifiedFirst; }
 
   SourceLocation getFriendSpecLoc() const { return FriendLoc; }
 
@@ -1246,6 +1266,7 @@ struct DeclaratorChunk {
 
   struct PointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/unaligned/atomic.
+    LLVM_PREFERRED_TYPE(DeclSpec::TQ)
     unsigned TypeQuals : 5;
 
     /// The location of the const-qualifier, if any.
@@ -1279,12 +1300,15 @@ struct DeclaratorChunk {
   struct ArrayTypeInfo {
     /// The type qualifiers for the array:
     /// const/volatile/restrict/__unaligned/_Atomic.
+    LLVM_PREFERRED_TYPE(DeclSpec::TQ)
     unsigned TypeQuals : 5;
 
     /// True if this dimension included the 'static' keyword.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned hasStatic : 1;
 
     /// True if this dimension was [*].  In this case, NumElts is null.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned isStar : 1;
 
     /// This is the size of the array, or null if [] or [*] was specified.
@@ -1331,28 +1355,35 @@ struct DeclaratorChunk {
     /// hasPrototype - This is true if the function had at least one typed
     /// parameter.  If the function is () or (a,b,c), then it has no prototype,
     /// and is treated as a K&R-style function.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned hasPrototype : 1;
 
     /// isVariadic - If this function has a prototype, and if that
     /// proto ends with ',...)', this is true. When true, EllipsisLoc
     /// contains the location of the ellipsis.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned isVariadic : 1;
 
     /// Can this declaration be a constructor-style initializer?
+    LLVM_PREFERRED_TYPE(bool)
     unsigned isAmbiguous : 1;
 
     /// Whether the ref-qualifier (if any) is an lvalue reference.
     /// Otherwise, it's an rvalue reference.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned RefQualifierIsLValueRef : 1;
 
     /// ExceptionSpecType - An ExceptionSpecificationType value.
+    LLVM_PREFERRED_TYPE(ExceptionSpecificationType)
     unsigned ExceptionSpecType : 4;
 
     /// DeleteParams - If this is true, we need to delete[] Params.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned DeleteParams : 1;
 
     /// HasTrailingReturnType - If this is true, a trailing return type was
     /// specified.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasTrailingReturnType : 1;
 
     /// The location of the left parenthesis in the source.
@@ -1567,6 +1598,7 @@ struct DeclaratorChunk {
   struct BlockPointerTypeInfo {
     /// For now, sema will catch these as invalid.
     /// The type qualifiers: const/volatile/restrict/__unaligned/_Atomic.
+    LLVM_PREFERRED_TYPE(DeclSpec::TQ)
     unsigned TypeQuals : 5;
 
     void destroy() {
@@ -1575,6 +1607,7 @@ struct DeclaratorChunk {
 
   struct MemberPointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/__unaligned/_Atomic.
+    LLVM_PREFERRED_TYPE(DeclSpec::TQ)
     unsigned TypeQuals : 5;
     /// Location of the '*' token.
     SourceLocation StarLoc;
@@ -1767,6 +1800,7 @@ private:
   /// The bindings.
   Binding *Bindings;
   unsigned NumBindings : 31;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned DeleteBindings : 1;
 
   friend class Declarator;
@@ -1883,33 +1917,42 @@ private:
   SmallVector<DeclaratorChunk, 8> DeclTypeInfo;
 
   /// InvalidType - Set by Sema::GetTypeForDeclarator().
+  LLVM_PREFERRED_TYPE(bool)
   unsigned InvalidType : 1;
 
   /// GroupingParens - Set by Parser::ParseParenDeclarator().
+  LLVM_PREFERRED_TYPE(bool)
   unsigned GroupingParens : 1;
 
   /// FunctionDefinition - Is this Declarator for a function or member
   /// definition and, if so, what kind?
   ///
   /// Actually a FunctionDefinitionKind.
+  LLVM_PREFERRED_TYPE(FunctionDefinitionKind)
   unsigned FunctionDefinition : 2;
 
   /// Is this Declarator a redeclaration?
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Redeclaration : 1;
 
   /// true if the declaration is preceded by \c __extension__.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Extension : 1;
 
   /// Indicates whether this is an Objective-C instance variable.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ObjCIvar : 1;
 
   /// Indicates whether this is an Objective-C 'weak' property.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ObjCWeakProperty : 1;
 
   /// Indicates whether the InlineParams / InlineBindings storage has been used.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned InlineStorageUsed : 1;
 
   /// Indicates whether this declarator has an initializer.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasInitializer : 1;
 
   /// Attributes attached to the declarator.

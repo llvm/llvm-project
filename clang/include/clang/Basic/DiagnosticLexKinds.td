@@ -100,7 +100,10 @@ def err_raw_delim_too_long : Error<
   "raw string delimiter longer than 16 characters"
   "; use PREFIX( )PREFIX to delimit raw string">;
 def err_invalid_char_raw_delim : Error<
-  "invalid character '%0' character in raw string delimiter"
+  "invalid character '%0' in raw string delimiter"
+  "; use PREFIX( )PREFIX to delimit raw string">;
+def err_invalid_newline_raw_delim : Error<
+  "invalid newline character in raw string delimiter"
   "; use PREFIX( )PREFIX to delimit raw string">;
 def err_unterminated_raw_string : Error<
   "raw string missing terminating delimiter )%0\"">;
@@ -246,7 +249,10 @@ def warn_cxx17_hex_literal : Warning<
   "C++ standards before C++17">,
   InGroup<CXXPre17CompatPedantic>, DefaultIgnore;
 def ext_binary_literal : Extension<
-  "binary integer literals are a GNU extension">, InGroup<GNUBinaryLiteral>;
+  "binary integer literals are a C23 extension">, InGroup<C23>;
+def warn_c23_compat_binary_literal : Warning<
+  "binary integer literals are incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 def ext_binary_literal_cxx14 : Extension<
   "binary integer literals are a C++14 extension">, InGroup<CXX14BinaryLiteral>;
 def warn_cxx11_compat_binary_literal : Warning<

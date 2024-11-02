@@ -73,16 +73,16 @@ static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
   return true;
 }
 
-void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
+void mlir::linalg::hoistRedundantVectorTransfers(Operation *root) {
   bool changed = true;
   while (changed) {
     changed = false;
     // First move loop invariant ops outside of their loop. This needs to be
     // done before as we cannot move ops without interrupting the function walk.
-    func.walk(
+    root->walk(
         [&](LoopLikeOpInterface loopLike) { moveLoopInvariantCode(loopLike); });
 
-    func.walk([&](vector::TransferReadOp transferRead) {
+    root->walk([&](vector::TransferReadOp transferRead) {
       if (!isa<MemRefType>(transferRead.getShapedType()))
         return WalkResult::advance();
 

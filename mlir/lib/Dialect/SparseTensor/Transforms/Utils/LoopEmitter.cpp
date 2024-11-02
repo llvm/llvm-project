@@ -94,7 +94,7 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
   this->loopTag = loopTag;
   this->hasOutput = hasOutput;
   this->isSparseOut = isSparseOut;
-  SparseIterator::setSparseEmitStrategy(emitStrategy);
+  this->emitStrategy = emitStrategy;
 
   const unsigned numManifestTensors = ts.size();
   const unsigned synTensorId = numManifestTensors;
@@ -166,13 +166,13 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
 std::unique_ptr<SparseIterator>
 LoopEmitter::makeLevelIterator(OpBuilder &builder, Location loc, TensorId t,
                                Level l) {
-  auto it = makeSimpleIterator(*lvls[t][l]);
+  auto it = makeSimpleIterator(*lvls[t][l], emitStrategy);
   auto stt = getSparseTensorType(tensors[t]);
   if (stt.hasEncoding() && stt.getEncoding().isSlice()) {
     Value offset = genSliceOffset(builder, loc, tensors[t], l);
     Value stride = genSliceStride(builder, loc, tensors[t], l);
-    auto slicedIt = makeSlicedLevelIterator(std::move(it), offset, stride,
-                                            lvls[t][l]->getSize());
+    auto slicedIt = makeSlicedLevelIterator(
+        std::move(it), offset, stride, lvls[t][l]->getSize(), emitStrategy);
     return slicedIt;
   }
   return it;
@@ -186,7 +186,7 @@ void LoopEmitter::initializeLoopEmit(
     TensorId synId = getSynTensorId();
     for (unsigned i = 0, e = loopHighs.size(); i < e; i++) {
       Value sz = loopHighs[i] = synSetter(builder, loc, i);
-      auto [stl, it] = makeSynLevelAndIterator(sz, synId, i);
+      auto [stl, it] = makeSynLevelAndIterator(sz, synId, i, emitStrategy);
       lvls[synId][i] = std::move(stl);
       iters[synId][i].emplace_back(std::move(it));
     }
@@ -317,12 +317,13 @@ void LoopEmitter::initSubSectIterator(OpBuilder &builder, Location loc) {
           size = ADDI(size, ADDI(MULI(idxMax, C_IDX(stride)), C_IDX(1)));
         }
         it = makeNonEmptySubSectIterator(builder, loc, parent, loopHighs[loop],
-                                         std::move(lvlIt), size, curDep.second);
+                                         std::move(lvlIt), size, curDep.second,
+                                         emitStrategy);
       } else {
         const SparseIterator &subSectIter = *iters[t][lvl].back();
         it = makeTraverseSubSectIterator(builder, loc, subSectIter, *parent,
                                          std::move(lvlIt), loopHighs[loop],
-                                         curDep.second);
+                                         curDep.second, emitStrategy);
       }
       lastIter[t] = it.get();
       iters[t][lvl].emplace_back(std::move(it));

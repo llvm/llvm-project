@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple aarch64-eabi -target-feature +v8a -verify -DHAS8 -S %s -o -
-// RUN: %clang_cc1 -triple aarch64-eabi -target-feature +v8.1a -verify -DHAS81 -S %s -o -
-// RUN: %clang_cc1 -triple aarch64-eabi -target-feature +v9a -verify -DHAS9 -S %s -o -
+// RUN: %clang_cc1 -triple aarch64 -target-feature +v8a -verify -DHAS8 -S %s -o -
+// RUN: %clang_cc1 -triple aarch64 -target-feature +v8.1a -verify -DHAS81 -S %s -o -
+// RUN: %clang_cc1 -triple aarch64 -target-feature +v9a -verify -DHAS9 -S %s -o -
 // REQUIRES: aarch64-registered-target
 
 #ifdef HAS9

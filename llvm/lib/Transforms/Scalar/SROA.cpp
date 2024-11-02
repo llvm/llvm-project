@@ -2914,7 +2914,8 @@ private:
 
       // Do this after copyMetadataForLoad() to preserve the TBAA shift.
       if (AATags)
-        NewLI->setAAMetadata(AATags.shift(NewBeginOffset - BeginOffset));
+        NewLI->setAAMetadata(AATags.adjustForAccess(
+            NewBeginOffset - BeginOffset, NewLI->getType(), DL));
 
       // Try to preserve nonnull metadata
       V = NewLI;
@@ -2935,8 +2936,11 @@ private:
       LoadInst *NewLI =
           IRB.CreateAlignedLoad(TargetTy, getNewAllocaSlicePtr(IRB, LTy),
                                 getSliceAlign(), LI.isVolatile(), LI.getName());
+
       if (AATags)
-        NewLI->setAAMetadata(AATags.shift(NewBeginOffset - BeginOffset));
+        NewLI->setAAMetadata(AATags.adjustForAccess(
+            NewBeginOffset - BeginOffset, NewLI->getType(), DL));
+
       if (LI.isVolatile())
         NewLI->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
       NewLI->copyMetadata(LI, {LLVMContext::MD_mem_parallel_loop_access,
@@ -2956,7 +2960,12 @@ private:
       assert(DL.typeSizeEqualsStoreSize(LI.getType()) &&
              "Non-byte-multiple bit width");
       // Move the insertion point just past the load so that we can refer to it.
-      IRB.SetInsertPoint(&*std::next(BasicBlock::iterator(&LI)));
+      BasicBlock::iterator LIIt = std::next(LI.getIterator());
+      // Ensure the insertion point comes before any debug-info immediately
+      // after the load, so that variable values referring to the load are
+      // dominated by it.
+      LIIt.setHeadBit(true);
+      IRB.SetInsertPoint(LI.getParent(), LIIt);
       // Create a placeholder value with the same type as LI to use as the
       // basis for the new value. This allows us to replace the uses of LI with
       // the computed value, and then replace the placeholder with LI, leaving
@@ -3006,7 +3015,8 @@ private:
     Store->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
                              LLVMContext::MD_access_group});
     if (AATags)
-      Store->setAAMetadata(AATags.shift(NewBeginOffset - BeginOffset));
+      Store->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
+                                                  V->getType(), DL));
     Pass.DeadInsts.push_back(&SI);
 
     // NOTE: Careful to use OrigV rather than V.
@@ -3033,7 +3043,8 @@ private:
     Store->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
                              LLVMContext::MD_access_group});
     if (AATags)
-      Store->setAAMetadata(AATags.shift(NewBeginOffset - BeginOffset));
+      Store->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
+                                                  V->getType(), DL));
 
     migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8, &SI,
                      Store, Store->getPointerOperand(),
@@ -3093,7 +3104,8 @@ private:
     NewSI->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
                              LLVMContext::MD_access_group});
     if (AATags)
-      NewSI->setAAMetadata(AATags.shift(NewBeginOffset - BeginOffset));
+      NewSI->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
+                                                  V->getType(), DL));
     if (SI.isVolatile())
       NewSI->setAtomic(SI.getOrdering(), SI.getSyncScopeID());
     if (NewSI->isAtomic())
@@ -3195,12 +3207,14 @@ private:
     // a single value type, just emit a memset.
     if (!CanContinue) {
       Type *SizeTy = II.getLength()->getType();
-      Constant *Size = ConstantInt::get(SizeTy, NewEndOffset - NewBeginOffset);
+      unsigned Sz = NewEndOffset - NewBeginOffset;
+      Constant *Size = ConstantInt::get(SizeTy, Sz);
       MemIntrinsic *New = cast<MemIntrinsic>(IRB.CreateMemSet(
           getNewAllocaSlicePtr(IRB, OldPtr->getType()), II.getValue(), Size,
           MaybeAlign(getSliceAlign()), II.isVolatile()));
       if (AATags)
-        New->setAAMetadata(AATags.shift(NewBeginOffset - BeginOffset));
+        New->setAAMetadata(
+            AATags.adjustForAccess(NewBeginOffset - BeginOffset, Sz));
 
       migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8, &II,
                        New, New->getRawDest(), nullptr, DL);
@@ -3276,7 +3290,8 @@ private:
     New->copyMetadata(II, {LLVMContext::MD_mem_parallel_loop_access,
                            LLVMContext::MD_access_group});
     if (AATags)
-      New->setAAMetadata(AATags.shift(NewBeginOffset - BeginOffset));
+      New->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
+                                                V->getType(), DL));
 
     migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8, &II,
                      New, New->getPointerOperand(), V, DL);
@@ -3481,7 +3496,8 @@ private:
       Load->copyMetadata(II, {LLVMContext::MD_mem_parallel_loop_access,
                               LLVMContext::MD_access_group});
       if (AATags)
-        Load->setAAMetadata(AATags.shift(NewBeginOffset - BeginOffset));
+        Load->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
+                                                   Load->getType(), DL));
       Src = Load;
     }
 
@@ -3503,7 +3519,8 @@ private:
     Store->copyMetadata(II, {LLVMContext::MD_mem_parallel_loop_access,
                              LLVMContext::MD_access_group});
     if (AATags)
-      Store->setAAMetadata(AATags.shift(NewBeginOffset - BeginOffset));
+      Store->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
+                                                  Src->getType(), DL));
 
     APInt Offset(DL.getIndexTypeSizeInBits(DstPtr->getType()), 0);
     if (IsDest) {
@@ -3831,7 +3848,8 @@ private:
           DL.getIndexSizeInBits(Ptr->getType()->getPointerAddressSpace()), 0);
       if (AATags &&
           GEPOperator::accumulateConstantOffset(BaseTy, GEPIndices, DL, Offset))
-        Load->setAAMetadata(AATags.shift(Offset.getZExtValue()));
+        Load->setAAMetadata(
+            AATags.adjustForAccess(Offset.getZExtValue(), Load->getType(), DL));
 
       Agg = IRB.CreateInsertValue(Agg, Load, Indices, Name + ".insert");
       LLVM_DEBUG(dbgs() << "          to: " << *Load << "\n");
@@ -3882,8 +3900,10 @@ private:
       APInt Offset(
           DL.getIndexSizeInBits(Ptr->getType()->getPointerAddressSpace()), 0);
       GEPOperator::accumulateConstantOffset(BaseTy, GEPIndices, DL, Offset);
-      if (AATags)
-        Store->setAAMetadata(AATags.shift(Offset.getZExtValue()));
+      if (AATags) {
+        Store->setAAMetadata(AATags.adjustForAccess(
+            Offset.getZExtValue(), ExtractValue->getType(), DL));
+      }
 
       // migrateDebugInfo requires the base Alloca. Walk to it from this gep.
       // If we cannot (because there's an intervening non-const or unbounded
@@ -3937,30 +3957,62 @@ private:
     return false;
   }
 
-  // Fold gep (select cond, ptr1, ptr2) => select cond, gep(ptr1), gep(ptr2)
+  // Fold gep (select cond, ptr1, ptr2), idx
+  //   => select cond, gep(ptr1, idx), gep(ptr2, idx)
+  // and  gep ptr, (select cond, idx1, idx2)
+  //   => select cond, gep(ptr, idx1), gep(ptr, idx2)
   bool foldGEPSelect(GetElementPtrInst &GEPI) {
-    if (!GEPI.hasAllConstantIndices())
-      return false;
+    // Check whether the GEP has exactly one select operand and all indices
+    // will become constant after the transform.
+    SelectInst *Sel = dyn_cast<SelectInst>(GEPI.getPointerOperand());
+    for (Value *Op : GEPI.indices()) {
+      if (auto *SI = dyn_cast<SelectInst>(Op)) {
+        if (Sel)
+          return false;
 
-    SelectInst *Sel = cast<SelectInst>(GEPI.getPointerOperand());
+        Sel = SI;
+        if (!isa<ConstantInt>(Sel->getTrueValue()) ||
+            !isa<ConstantInt>(Sel->getFalseValue()))
+          return false;
+        continue;
+      }
+
+      if (!isa<ConstantInt>(Op))
+        return false;
+    }
+
+    if (!Sel)
+      return false;
 
     LLVM_DEBUG(dbgs() << "  Rewriting gep(select) -> select(gep):"
                       << "\n    original: " << *Sel
                       << "\n              " << GEPI);
 
+    auto GetNewOps = [&](Value *SelOp) {
+      SmallVector<Value *> NewOps;
+      for (Value *Op : GEPI.operands())
+        if (Op == Sel)
+          NewOps.push_back(SelOp);
+        else
+          NewOps.push_back(Op);
+      return NewOps;
+    };
+
+    Value *True = Sel->getTrueValue();
+    Value *False = Sel->getFalseValue();
+    SmallVector<Value *> TrueOps = GetNewOps(True);
+    SmallVector<Value *> FalseOps = GetNewOps(False);
+
     IRB.SetInsertPoint(&GEPI);
-    SmallVector<Value *, 4> Index(GEPI.indices());
     bool IsInBounds = GEPI.isInBounds();
 
     Type *Ty = GEPI.getSourceElementType();
-    Value *True = Sel->getTrueValue();
-    Value *NTrue = IRB.CreateGEP(Ty, True, Index, True->getName() + ".sroa.gep",
-                                 IsInBounds);
+    Value *NTrue = IRB.CreateGEP(Ty, TrueOps[0], ArrayRef(TrueOps).drop_front(),
+                                 True->getName() + ".sroa.gep", IsInBounds);
 
-    Value *False = Sel->getFalseValue();
-
-    Value *NFalse = IRB.CreateGEP(Ty, False, Index,
-                                  False->getName() + ".sroa.gep", IsInBounds);
+    Value *NFalse =
+        IRB.CreateGEP(Ty, FalseOps[0], ArrayRef(FalseOps).drop_front(),
+                      False->getName() + ".sroa.gep", IsInBounds);
 
     Value *NSel = IRB.CreateSelect(Sel->getCondition(), NTrue, NFalse,
                                    Sel->getName() + ".sroa.sel");
@@ -4034,8 +4086,7 @@ private:
   }
 
   bool visitGetElementPtrInst(GetElementPtrInst &GEPI) {
-    if (isa<SelectInst>(GEPI.getPointerOperand()) &&
-        foldGEPSelect(GEPI))
+    if (foldGEPSelect(GEPI))
       return true;
 
     if (isa<PHINode>(GEPI.getPointerOperand()) &&
@@ -4506,6 +4557,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 
       Value *StoreBasePtr = SI->getPointerOperand();
       IRB.SetInsertPoint(SI);
+      AAMDNodes AATags = SI->getAAMetadata();
 
       LLVM_DEBUG(dbgs() << "    Splitting store of load: " << *SI << "\n");
 
@@ -4525,6 +4577,10 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
         PStore->copyMetadata(*SI, {LLVMContext::MD_mem_parallel_loop_access,
                                    LLVMContext::MD_access_group,
                                    LLVMContext::MD_DIAssignID});
+
+        if (AATags)
+          PStore->setAAMetadata(
+              AATags.adjustForAccess(PartOffset, PLoad->getType(), DL));
         LLVM_DEBUG(dbgs() << "      +" << PartOffset << ":" << *PStore << "\n");
       }
 

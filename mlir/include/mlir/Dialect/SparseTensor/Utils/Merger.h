@@ -510,7 +510,7 @@ public:
     if (isLvlWithNonTrivialIdxExp(b)) {
       auto lt = getLoopDependentLevelType(b);
       return isCompressedLT(lt) || isSingletonLT(lt) ||
-             isLooseCompressedLT(lt) || is2OutOf4LT(lt);
+             isLooseCompressedLT(lt) || isNOutOfMLT(lt);
     }
     return false;
   }

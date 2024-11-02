@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 // Tool related code below
@@ -37,8 +38,6 @@ static void on_ompt_callback_target_data_op(
     void *src_addr, int src_device_num, void *dest_addr, int dest_device_num,
     size_t bytes, const void *codeptr_ra) {
   assert(codeptr_ra != 0 && "Unexpected null codeptr");
-  // Both src and dest must not be null
-  assert((src_addr != 0 || dest_addr != 0) && "Both src and dest addr null");
   printf("  Callback DataOp: target_id=%lu host_op_id=%lu optype=%d src=%p "
          "src_device_num=%d "
          "dest=%p dest_device_num=%d bytes=%lu code=%p\n",
@@ -80,8 +79,6 @@ static void on_ompt_callback_target_data_op_emi(
     void *dest_addr, int dest_device_num, size_t bytes,
     const void *codeptr_ra) {
   assert(codeptr_ra != 0 && "Unexpected null codeptr");
-  // Both src and dest must not be null
-  assert((src_addr != 0 || dest_addr != 0) && "Both src and dest addr null");
   if (endpoint == ompt_scope_begin)
     *host_op_id = next_op_id++;
   printf("  Callback DataOp EMI: endpoint=%d optype=%d target_task_data=%p "

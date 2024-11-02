@@ -126,6 +126,8 @@ module {
     bufferization.dealloc_tensor %sta : tensor<?x?x?xf64, #ST>
     bufferization.dealloc_tensor %stb : tensor<?x?x?xf64, #ST>
     bufferization.dealloc_tensor %0  : tensor<?x?x?xf64, #ST>
+    bufferization.dealloc_tensor %dt : tensor<?x?x?xf64>
+
     return
   }
 }
