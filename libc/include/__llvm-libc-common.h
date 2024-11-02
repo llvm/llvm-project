@@ -47,7 +47,14 @@
 #define __restrict restrict // C99 and above support the restrict keyword.
 
 #undef __NOEXCEPT
+#if defined(__has_attribute)
+#if __has_attribute(__nothrow__)
+#define __NOEXCEPT __attribute__((__nothrow__))
+#endif // __has_attribute(__nothrow__)
+#endif // defined(__has_attribute)
+#ifndef __NOEXCEPT
 #define __NOEXCEPT
+#endif
 
 #endif // __cplusplus
 
