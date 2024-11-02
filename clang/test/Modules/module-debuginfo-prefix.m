@@ -1,4 +1,4 @@
-// UNSUPPORTED: -zos, target={{.*}}-aix{{.*}}
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // REQUIRES: asserts
 
 // Modules:

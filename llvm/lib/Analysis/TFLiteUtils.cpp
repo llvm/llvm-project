@@ -246,4 +246,4 @@ TFModelEvaluator::EvaluationResult::getUntypedTensorValue(size_t Index) const {
 TFModelEvaluator::EvaluationResult::~EvaluationResult() {}
 TFModelEvaluator::~TFModelEvaluator() {}
 
-#endif // defined(LLVM_HAVE_TF_API)
+#endif // defined(LLVM_HAVE_TFLITE)

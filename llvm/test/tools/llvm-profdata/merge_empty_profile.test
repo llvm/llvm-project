@@ -1,15 +1,15 @@
 # Tests for merge of empty profile files.
 
 RUN: touch %t_empty.proftext
-RUN: llvm-profdata merge -text -o %t_clang.proftext %t_empty.proftext %p/Inputs/clang_profile.proftext
-RUN: FileCheck --input-file=%t_clang.proftext %s -check-prefix=CLANG_PROF_TEXT
+RUN: llvm-profdata merge -text -o - %t_empty.proftext %p/Inputs/clang_profile.proftext | FileCheck %s -check-prefix=CLANG_PROF_TEXT
+RUN: llvm-profdata merge -text -o - %t_empty.proftext %p/Inputs/clang_profile.proftext --num-threads=2 | FileCheck %s -check-prefix=CLANG_PROF_TEXT
 CLANG_PROF_TEXT: main
 CLANG_PROF_TEXT: 0
 CLANG_PROF_TEXT: 1
 CLANG_PROF_TEXT: 1
 
-RUN: llvm-profdata merge -text -o %t_ir.proftext %t_empty.proftext %p/Inputs/IR_profile.proftext
-RUN: FileCheck --input-file=%t_ir.proftext %s -check-prefix=IR_PROF_TEXT
+RUN: llvm-profdata merge -text -o - %t_empty.proftext %p/Inputs/IR_profile.proftext | FileCheck %s -check-prefix=IR_PROF_TEXT
+RUN: llvm-profdata merge -text -o - %t_empty.proftext %p/Inputs/IR_profile.proftext --num-threads=2 | FileCheck %s -check-prefix=IR_PROF_TEXT
 IR_PROF_TEXT: :ir
 IR_PROF_TEXT: main
 IR_PROF_TEXT: 0

@@ -5490,7 +5490,7 @@ TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysArguments) {
 
 TEST_F(OpenMPIRBuilderTest, OffloadEntriesInfoManager) {
   OffloadEntriesInfoManager InfoManager;
-  InfoManager.setConfig(OpenMPIRBuilderConfig(true, false, false));
+  InfoManager.setConfig(OpenMPIRBuilderConfig(true, false, false, false));
   TargetRegionEntryInfo EntryInfo("parent", 1, 2, 4, 0);
   InfoManager.initializeTargetRegionEntryInfo(EntryInfo, 0);
   EXPECT_TRUE(InfoManager.hasTargetRegionEntryInfo(EntryInfo));

@@ -732,7 +732,7 @@ def LLVM_FreezeOp : LLVM_Op<"freeze", [SameOperandsAndResultType]> {
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "$val attr-dict `:` type($val)";
   string llvmInstName = "Freeze";
-  string llvmBuilder = "builder.CreateFreeze($val);";
+  string llvmBuilder = "$res = builder.CreateFreeze($val);";
   string mlirBuilder = [{
     $res = $_builder.create<LLVM::FreezeOp>($_location, $val);
   }];

@@ -287,5 +287,22 @@ getObjectFileInterface(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
   return getGenericObjectFileSymbolInfo(ES, **Obj);
 }
 
+bool hasInitializerSection(jitlink::LinkGraph &G) {
+  bool IsMachO = G.getTargetTriple().isOSBinFormatMachO();
+  bool IsElf = G.getTargetTriple().isOSBinFormatELF();
+  if (!IsMachO && !IsElf)
+    return false;
+
+  for (auto &Sec : G.sections()) {
+    if (IsMachO && std::apply(MachOPlatform::isInitializerSection,
+                              Sec.getName().split(",")))
+      return true;
+    if (IsElf && ELFNixPlatform::isInitializerSection(Sec.getName()))
+      return true;
+  }
+
+  return false;
+}
+
 } // End namespace orc.
 } // End namespace llvm.

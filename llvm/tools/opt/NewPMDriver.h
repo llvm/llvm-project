@@ -71,7 +71,7 @@ void printPasses(raw_ostream &OS);
 bool runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
                      TargetLibraryInfoImpl *TLII, ToolOutputFile *Out,
                      ToolOutputFile *ThinLinkOut, ToolOutputFile *OptRemarkFile,
-                     StringRef PassPipeline, ArrayRef<StringRef> PassInfos,
+                     StringRef PassPipeline,
                      ArrayRef<PassPlugin> PassPlugins, opt_tool::OutputKind OK,
                      opt_tool::VerifierKind VK,
                      bool ShouldPreserveAssemblyUseListOrder,

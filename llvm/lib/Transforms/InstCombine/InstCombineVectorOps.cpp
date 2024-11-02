@@ -1515,6 +1515,57 @@ static Instruction *narrowInsElt(InsertElementInst &InsElt,
   return CastInst::Create(CastOpcode, NewInsElt, InsElt.getType());
 }
 
+/// If we are inserting 2 halves of a value into adjacent elements of a vector,
+/// try to convert to a single insert with appropriate bitcasts.
+static Instruction *foldTruncInsEltPair(InsertElementInst &InsElt,
+                                        bool IsBigEndian,
+                                        InstCombiner::BuilderTy &Builder) {
+  Value *VecOp    = InsElt.getOperand(0);
+  Value *ScalarOp = InsElt.getOperand(1);
+  Value *IndexOp  = InsElt.getOperand(2);
+
+  // inselt (inselt BaseVec, (trunc X), Index0), (trunc (lshr X, BW/2)), Index1
+  // TODO: The insertion order could be reversed.
+  // TODO: Detect smaller fractions of the scalar.
+  // TODO: One-use checks are conservative.
+  auto *VTy = dyn_cast<FixedVectorType>(InsElt.getType());
+  Value *X, *BaseVec;
+  uint64_t ShAmt, Index0, Index1;
+  if (!VTy || (VTy->getNumElements() & 1) ||
+      !match(VecOp, m_OneUse(m_InsertElt(m_Value(BaseVec), m_Trunc(m_Value(X)),
+                                         m_ConstantInt(Index0)))) ||
+      !match(ScalarOp, m_OneUse(m_Trunc(m_LShr(m_Specific(X),
+                                               m_ConstantInt(ShAmt))))) ||
+      !match(IndexOp, m_ConstantInt(Index1)))
+    return nullptr;
+
+  Type *SrcTy = X->getType();
+  unsigned ScalarWidth = SrcTy->getScalarSizeInBits();
+  unsigned VecEltWidth = VTy->getScalarSizeInBits();
+  if (ScalarWidth != VecEltWidth * 2 || ShAmt != VecEltWidth)
+    return nullptr;
+
+  // The low half must be inserted at element +1 for big-endian.
+  // The high half must be inserted at element +1 for little-endian
+  if (IsBigEndian ? Index0 != Index1 + 1 : Index0 + 1 != Index1)
+    return nullptr;
+
+  // The high half must be inserted at an even element for big-endian.
+  // The low half must be inserted at an even element for little-endian.
+  if (IsBigEndian ? Index1 & 1 : Index0 & 1)
+    return nullptr;
+
+  // Bitcast the base vector to a vector type with the source element type.
+  Type *CastTy = FixedVectorType::get(SrcTy, VTy->getNumElements() / 2);
+  Value *CastBaseVec = Builder.CreateBitCast(BaseVec, CastTy);
+
+  // Scale the insert index for a vector with half as many elements.
+  // bitcast (inselt (bitcast BaseVec), X, NewIndex)
+  uint64_t NewIndex = IsBigEndian ? Index1 / 2 : Index0 / 2;
+  Value *NewInsert = Builder.CreateInsertElement(CastBaseVec, X, NewIndex);
+  return new BitCastInst(NewInsert, VTy);
+}
+
 Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
   Value *VecOp    = IE.getOperand(0);
   Value *ScalarOp = IE.getOperand(1);
@@ -1640,6 +1691,9 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
     return IdentityShuf;
 
   if (Instruction *Ext = narrowInsElt(IE, Builder))
+    return Ext;
+
+  if (Instruction *Ext = foldTruncInsEltPair(IE, DL.isBigEndian(), Builder))
     return Ext;
 
   return nullptr;

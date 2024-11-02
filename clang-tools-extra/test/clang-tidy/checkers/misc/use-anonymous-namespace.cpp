@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy %s misc-use-anonymous-namespace %t
+// RUN: %check_clang_tidy %s misc-use-anonymous-namespace %t -- -header-filter=.* -- -I%S/Inputs
+#include "use-anonymous-namespace.h"
 
 static void f1();
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: function 'f1' declared 'static', move to anonymous namespace instead [misc-use-anonymous-namespace]
@@ -41,3 +42,7 @@ void foo()
 {
   static int x;
 }
+
+// OK
+static const int v8{123};
+static constexpr int v9{123};
