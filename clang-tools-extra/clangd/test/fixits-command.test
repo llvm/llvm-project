@@ -34,7 +34,7 @@
 # CHECK-NEXT:      "arguments": [
 # CHECK-NEXT:        {
 # CHECK-NEXT:          "changes": {
-# CHECK-NEXT:            "file:///clangd-test/foo.c": [
+# CHECK-NEXT:            "file://{{.*}}/foo.c": [
 # CHECK-NEXT:              {
 # CHECK-NEXT:                "newText": "// NOLINTNEXTLINE(clang-diagnostic-parentheses)\n",
 # CHECK-NEXT:                "range": {
@@ -129,7 +129,7 @@
 # CHECK-NEXT:      "arguments": [
 # CHECK-NEXT:        {
 # CHECK-NEXT:          "changes": {
-# CHECK-NEXT:            "file:///clangd-test/foo.c": [
+# CHECK-NEXT:            "file://{{.*}}/foo.c": [
 # CHECK-NEXT:              {
 # CHECK-NEXT:                "newText": "// NOLINTNEXTLINE(clang-diagnostic-parentheses)\n",
 # CHECK-NEXT:                "range": {

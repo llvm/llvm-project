@@ -68,7 +68,7 @@
 # CHECK-NEXT:              }
 # CHECK-NEXT:            ],
 # CHECK-NEXT:            "textDocument": {
-# CHECK-NEXT:              "uri": "file:///clangd-test/foo.c",
+# CHECK-NEXT:              "uri": "file://{{.*}}/foo.c",
 # CHECK-NEXT:              "version": 1
 # CHECK-NEXT:            }
 # CHECK-NEXT:          }
