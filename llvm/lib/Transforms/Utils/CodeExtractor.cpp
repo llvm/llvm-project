@@ -1114,7 +1114,6 @@ static void insertLifetimeMarkersSurroundingCall(
 }
 
 void CodeExtractor::moveCodeToFunction(Function *newFunction) {
-  Function *oldFunc = Blocks.front()->getParent();
   auto newFuncIt = newFunction->begin();
   for (BasicBlock *Block : Blocks) {
     // Delete the basic block from the old function, and the list of blocks
