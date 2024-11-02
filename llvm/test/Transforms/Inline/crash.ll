@@ -11,43 +11,43 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 target triple = "i386-apple-darwin10.0"
 
 
-define void @list_DeleteElement(i32 (i8*, i8*)* nocapture %Test) nounwind ssp {
+define void @list_DeleteElement(ptr nocapture %Test) nounwind ssp {
 entry:
-  %0 = call i32 %Test(i8* null, i8* undef) nounwind
+  %0 = call i32 %Test(ptr null, ptr undef) nounwind
   ret void
 }
 
 
-define void @list_DeleteDuplicates(i32 (i8*, i8*)* nocapture %Test) nounwind ssp {
+define void @list_DeleteDuplicates(ptr nocapture %Test) nounwind ssp {
 foo:
-  call void @list_DeleteElement(i32 (i8*, i8*)* %Test) nounwind ssp 
+  call void @list_DeleteElement(ptr %Test) nounwind ssp 
   call fastcc void @list_Rplacd1284() nounwind ssp
   unreachable
 
 }
 
-define internal i32 @inf_LiteralsHaveSameSubtermAndAreFromSameClause(i32* nocapture %L1, i32* nocapture %L2) nounwind readonly ssp {
+define internal i32 @inf_LiteralsHaveSameSubtermAndAreFromSameClause(ptr nocapture %L1, ptr nocapture %L2) nounwind readonly ssp {
 entry:
   unreachable
 }
 
 
-define internal fastcc void @inf_GetBackwardPartnerLits(i32* nocapture %Flags) nounwind ssp {
+define internal fastcc void @inf_GetBackwardPartnerLits(ptr nocapture %Flags) nounwind ssp {
 test:
-  call void @list_DeleteDuplicates(i32 (i8*, i8*)* bitcast (i32 (i32*, i32*)* @inf_LiteralsHaveSameSubtermAndAreFromSameClause to i32 (i8*, i8*)*)) nounwind 
+  call void @list_DeleteDuplicates(ptr @inf_LiteralsHaveSameSubtermAndAreFromSameClause) nounwind 
   ret void
 }
 
 
 define void @inf_BackwardEmptySortPlusPlus() nounwind ssp {
 entry:
-  call fastcc void @inf_GetBackwardPartnerLits(i32* null) nounwind ssp
+  call fastcc void @inf_GetBackwardPartnerLits(ptr null) nounwind ssp
   unreachable
 }
 
 define void @inf_BackwardWeakening() nounwind ssp {
 entry:
-  call fastcc void @inf_GetBackwardPartnerLits(i32* null) nounwind ssp
+  call fastcc void @inf_GetBackwardPartnerLits(ptr null) nounwind ssp
   unreachable
 }
 
@@ -59,7 +59,7 @@ declare fastcc void @list_Rplacd1284() nounwind ssp
 ;============================
 ; PR5208
 
-define void @AAA() personality i32 (...)* @__gxx_personality_v0 {
+define void @AAA() personality ptr @__gxx_personality_v0 {
 entry:
   %A = alloca i8, i32 undef, align 1
   invoke fastcc void @XXX()
@@ -69,7 +69,7 @@ invcont98:
   unreachable
 
 lpad156:                            
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
             cleanup
   unreachable
 }
@@ -78,7 +78,7 @@ declare i32 @__gxx_personality_v0(...)
 
 declare fastcc void @YYY()
 
-define internal fastcc void @XXX() personality i32 (...)* @__gxx_personality_v0 {
+define internal fastcc void @XXX() personality ptr @__gxx_personality_v0 {
 entry:
   %B = alloca i8, i32 undef, align 1
   invoke fastcc void @YYY()
@@ -88,30 +88,30 @@ bb260:
   ret void
 
 lpad:                               
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
             cleanup
-  resume { i8*, i32 } %exn
+  resume { ptr, i32 } %exn
 }
 
 
 
 ;; This exposed a crash handling devirtualized calls.
-define void @f1(void ()* %f) ssp {
+define void @f1(ptr %f) ssp {
 entry:
   call void %f()
   ret void
 }
 
-define void @f4(i32 %size) ssp personality i32 (...)* @__gxx_personality_v0 {
+define void @f4(i32 %size) ssp personality ptr @__gxx_personality_v0 {
 entry:
-  invoke void @f1(void ()* @f3)
+  invoke void @f1(ptr @f3)
           to label %invcont3 unwind label %lpad18
 
 invcont3:                                         ; preds = %bb1
   ret void
 
 lpad18:                                           ; preds = %invcont3, %bb1
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
             cleanup
   unreachable
 }

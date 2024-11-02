@@ -1180,7 +1180,11 @@ LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
   int64_t dim =
       sval.hasRank() ? sval.getShape().front() : ShapedType::kDynamic;
   auto type = IntegerType::get(context, 17);
-  inferredReturnShapes.push_back(ShapedTypeComponents({dim}, type));
+
+  Attribute encoding;
+  if (auto ranked_ty = sval.dyn_cast<RankedTensorType>())
+    encoding = ranked_ty.getEncoding();
+  inferredReturnShapes.push_back(ShapedTypeComponents({dim}, type, encoding));
   return success();
 }
 

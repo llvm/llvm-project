@@ -20,7 +20,7 @@ using namespace llvm::opt;
 #include "clang/Driver/Options.inc"
 #undef PREFIX
 
-static const OptTable::Info InfoTable[] = {
+static constexpr  OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {PREFIX, NAME,  HELPTEXT,    METAVAR,     OPT_##ID,  Option::KIND##Class,    \

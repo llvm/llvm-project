@@ -1,6 +1,5 @@
 ; REQUIRES: asserts
 ; RUN: opt < %s -passes='simple-loop-unswitch<nontrivial>' -disable-output
-; RUN: opt < %s -simple-loop-unswitch -enable-nontrivial-unswitch -disable-output
 
 
 ; Make sure we don't crash due to a dangling use of %tmp2 in bb7.

@@ -20,13 +20,13 @@ int foo(int v __attribute__((annotate("param_ann_0"))) __attribute__((annotate("
 // PARAM: define {{.*}}@foo
 // PARAM:      [[V:%.*]] = alloca i32
 // PARAM:      bitcast i32* [[V]] to i8*
-// PARAM-NEXT: call void @llvm.var.annotation(
+// PARAM-NEXT: call void @llvm.var.annotation.p0i8.p0i8(
 // PARAM-NEXT: bitcast i32* [[V]] to i8*
-// PARAM-NEXT: call void @llvm.var.annotation(
+// PARAM-NEXT: call void @llvm.var.annotation.p0i8.p0i8(
 // PARAM-NEXT: bitcast i32* [[V]] to i8*
-// PARAM-NEXT: call void @llvm.var.annotation(
+// PARAM-NEXT: call void @llvm.var.annotation.p0i8.p0i8(
 // PARAM-NEXT: bitcast i32* [[V]] to i8*
-// PARAM-NEXT: call void @llvm.var.annotation(
+// PARAM-NEXT: call void @llvm.var.annotation.p0i8.p0i8(
 }
 
 void local(void) {
@@ -34,9 +34,9 @@ void local(void) {
 // LOCAL-LABEL: define{{.*}} void @local()
 // LOCAL:      [[LOCALVAR:%.*]] = alloca i32,
 // LOCAL-NEXT: [[T0:%.*]] = bitcast i32* [[LOCALVAR]] to i8*
-// LOCAL-NEXT: call void @llvm.var.annotation(i8* [[T0]], i8* getelementptr inbounds ([15 x i8], [15 x i8]* @{{.*}}), i8* getelementptr inbounds ({{.*}}), i32 33, i8* null)
+// LOCAL-NEXT: call void @llvm.var.annotation.p0i8.p0i8(i8* [[T0]], i8* getelementptr inbounds ([15 x i8], [15 x i8]* @{{.*}}), i8* getelementptr inbounds ({{.*}}), i32 33, i8* null)
 // LOCAL-NEXT: [[T0:%.*]] = bitcast i32* [[LOCALVAR]] to i8*
-// LOCAL-NEXT: call void @llvm.var.annotation(i8* [[T0]], i8* getelementptr inbounds ([15 x i8], [15 x i8]* @{{.*}}), i8* getelementptr inbounds ({{.*}}), i32 33, i8* null)
+// LOCAL-NEXT: call void @llvm.var.annotation.p0i8.p0i8(i8* [[T0]], i8* getelementptr inbounds ([15 x i8], [15 x i8]* @{{.*}}), i8* getelementptr inbounds ({{.*}}), i32 33, i8* null)
 }
 
 void local_after_return(void) {
@@ -53,5 +53,5 @@ void undef(void) {
 // UNDEF-LABEL: define{{.*}} void @undef()
 // UNDEF:      [[UNDEFVAR:%.*]] = alloca i32,
 // UNDEF-NEXT: [[T0:%.*]] = bitcast i32* [[UNDEFVAR]] to i8*
-// UNDEF-NEXT: call void @llvm.var.annotation(i8* [[T0]], i8* getelementptr inbounds ([15 x i8], [15 x i8]* @{{.*}}), i8* getelementptr inbounds ({{.*}}), i32 52, i8* null)
+// UNDEF-NEXT: call void @llvm.var.annotation.p0i8.p0i8(i8* [[T0]], i8* getelementptr inbounds ([15 x i8], [15 x i8]* @{{.*}}), i8* getelementptr inbounds ({{.*}}), i32 52, i8* null)
 }

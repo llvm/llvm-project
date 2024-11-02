@@ -715,39 +715,50 @@ bool TargetInstrInfo::hasReassociableOperands(
   return MI1 && MI2 && MI1->getParent() == MBB && MI2->getParent() == MBB;
 }
 
+bool TargetInstrInfo::areOpcodesEqualOrInverse(unsigned Opcode1,
+                                               unsigned Opcode2) const {
+  return Opcode1 == Opcode2 || getInverseOpcode(Opcode1) == Opcode2;
+}
+
 bool TargetInstrInfo::hasReassociableSibling(const MachineInstr &Inst,
                                              bool &Commuted) const {
   const MachineBasicBlock *MBB = Inst.getParent();
   const MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
   MachineInstr *MI1 = MRI.getUniqueVRegDef(Inst.getOperand(1).getReg());
   MachineInstr *MI2 = MRI.getUniqueVRegDef(Inst.getOperand(2).getReg());
-  unsigned AssocOpcode = Inst.getOpcode();
+  unsigned Opcode = Inst.getOpcode();
 
-  // If only one operand has the same opcode and it's the second source operand,
-  // the operands must be commuted.
-  Commuted = MI1->getOpcode() != AssocOpcode && MI2->getOpcode() == AssocOpcode;
+  // If only one operand has the same or inverse opcode and it's the second
+  // source operand, the operands must be commuted.
+  Commuted = !areOpcodesEqualOrInverse(Opcode, MI1->getOpcode()) &&
+             areOpcodesEqualOrInverse(Opcode, MI2->getOpcode());
   if (Commuted)
     std::swap(MI1, MI2);
 
   // 1. The previous instruction must be the same type as Inst.
-  // 2. The previous instruction must also be associative/commutative (this can
-  //    be different even for instructions with the same opcode if traits like
-  //    fast-math-flags are included).
+  // 2. The previous instruction must also be associative/commutative or be the
+  //    inverse of such an operation (this can be different even for
+  //    instructions with the same opcode if traits like fast-math-flags are
+  //    included).
   // 3. The previous instruction must have virtual register definitions for its
   //    operands in the same basic block as Inst.
   // 4. The previous instruction's result must only be used by Inst.
-  return MI1->getOpcode() == AssocOpcode && isAssociativeAndCommutative(*MI1) &&
+  return areOpcodesEqualOrInverse(Opcode, MI1->getOpcode()) &&
+         (isAssociativeAndCommutative(*MI1) ||
+          isAssociativeAndCommutative(*MI1, /* Invert */ true)) &&
          hasReassociableOperands(*MI1, MBB) &&
          MRI.hasOneNonDBGUse(MI1->getOperand(0).getReg());
 }
 
-// 1. The operation must be associative and commutative.
+// 1. The operation must be associative and commutative or be the inverse of
+//    such an operation.
 // 2. The instruction must have virtual register definitions for its
 //    operands in the same basic block.
 // 3. The instruction must have a reassociable sibling.
 bool TargetInstrInfo::isReassociationCandidate(const MachineInstr &Inst,
                                                bool &Commuted) const {
-  return isAssociativeAndCommutative(Inst) &&
+  return (isAssociativeAndCommutative(Inst) ||
+          isAssociativeAndCommutative(Inst, /* Invert */ true)) &&
          hasReassociableOperands(Inst, Inst.getParent()) &&
          hasReassociableSibling(Inst, Commuted);
 }
@@ -799,6 +810,111 @@ bool TargetInstrInfo::getMachineCombinerPatterns(
 bool
 TargetInstrInfo::isThroughputPattern(MachineCombinerPattern Pattern) const {
   return false;
+}
+
+std::pair<unsigned, unsigned>
+TargetInstrInfo::getReassociationOpcodes(MachineCombinerPattern Pattern,
+                                         const MachineInstr &Root,
+                                         const MachineInstr &Prev) const {
+  bool AssocCommutRoot = isAssociativeAndCommutative(Root);
+  bool AssocCommutPrev = isAssociativeAndCommutative(Prev);
+
+  // Early exit if both opcodes are associative and commutative. It's a trivial
+  // reassociation when we only change operands order. In this case opcodes are
+  // not required to have inverse versions.
+  if (AssocCommutRoot && AssocCommutPrev) {
+    assert(Root.getOpcode() == Prev.getOpcode() && "Expected to be equal");
+    return std::make_pair(Root.getOpcode(), Root.getOpcode());
+  }
+
+  // At least one instruction is not associative or commutative.
+  // Since we have matched one of the reassociation patterns, we expect that the
+  // instructions' opcodes are equal or one of them is the inversion of the
+  // other.
+  assert(areOpcodesEqualOrInverse(Root.getOpcode(), Prev.getOpcode()) &&
+         "Incorrectly matched pattern");
+  unsigned AssocCommutOpcode = Root.getOpcode();
+  unsigned InverseOpcode = getInverseOpcode(Root.getOpcode()).value();
+  if (!AssocCommutRoot)
+    std::swap(AssocCommutOpcode, InverseOpcode);
+
+  // The transformation rule (`+` is any associative and commutative binary
+  // operation, `-` is the inverse):
+  // REASSOC_AX_BY:
+  //   (A + X) + Y => A + (X + Y)
+  //   (A + X) - Y => A + (X - Y)
+  //   (A - X) + Y => A - (X - Y)
+  //   (A - X) - Y => A - (X + Y)
+  // REASSOC_XA_BY:
+  //   (X + A) + Y => (X + Y) + A
+  //   (X + A) - Y => (X - Y) + A
+  //   (X - A) + Y => (X + Y) - A
+  //   (X - A) - Y => (X - Y) - A
+  // REASSOC_AX_YB:
+  //   Y + (A + X) => (Y + X) + A
+  //   Y - (A + X) => (Y - X) - A
+  //   Y + (A - X) => (Y - X) + A
+  //   Y - (A - X) => (Y + X) - A
+  // REASSOC_XA_YB:
+  //   Y + (X + A) => (Y + X) + A
+  //   Y - (X + A) => (Y - X) - A
+  //   Y + (X - A) => (Y + X) - A
+  //   Y - (X - A) => (Y - X) + A
+  switch (Pattern) {
+  default:
+    llvm_unreachable("Unexpected pattern");
+  case MachineCombinerPattern::REASSOC_AX_BY:
+    if (!AssocCommutRoot && AssocCommutPrev)
+      return {AssocCommutOpcode, InverseOpcode};
+    if (AssocCommutRoot && !AssocCommutPrev)
+      return {InverseOpcode, InverseOpcode};
+    if (!AssocCommutRoot && !AssocCommutPrev)
+      return {InverseOpcode, AssocCommutOpcode};
+    break;
+  case MachineCombinerPattern::REASSOC_XA_BY:
+    if (!AssocCommutRoot && AssocCommutPrev)
+      return {AssocCommutOpcode, InverseOpcode};
+    if (AssocCommutRoot && !AssocCommutPrev)
+      return {InverseOpcode, AssocCommutOpcode};
+    if (!AssocCommutRoot && !AssocCommutPrev)
+      return {InverseOpcode, InverseOpcode};
+    break;
+  case MachineCombinerPattern::REASSOC_AX_YB:
+    if (!AssocCommutRoot && AssocCommutPrev)
+      return {InverseOpcode, InverseOpcode};
+    if (AssocCommutRoot && !AssocCommutPrev)
+      return {AssocCommutOpcode, InverseOpcode};
+    if (!AssocCommutRoot && !AssocCommutPrev)
+      return {InverseOpcode, AssocCommutOpcode};
+    break;
+  case MachineCombinerPattern::REASSOC_XA_YB:
+    if (!AssocCommutRoot && AssocCommutPrev)
+      return {InverseOpcode, InverseOpcode};
+    if (AssocCommutRoot && !AssocCommutPrev)
+      return {InverseOpcode, AssocCommutOpcode};
+    if (!AssocCommutRoot && !AssocCommutPrev)
+      return {AssocCommutOpcode, InverseOpcode};
+    break;
+  }
+  llvm_unreachable("Unhandled combination");
+}
+
+// Return a pair of boolean flags showing if the new root and new prev operands
+// must be swapped. See visual example of the rule in
+// TargetInstrInfo::getReassociationOpcodes.
+static std::pair<bool, bool> mustSwapOperands(MachineCombinerPattern Pattern) {
+  switch (Pattern) {
+  default:
+    llvm_unreachable("Unexpected pattern");
+  case MachineCombinerPattern::REASSOC_AX_BY:
+    return {false, false};
+  case MachineCombinerPattern::REASSOC_XA_BY:
+    return {true, false};
+  case MachineCombinerPattern::REASSOC_AX_YB:
+    return {true, true};
+  case MachineCombinerPattern::REASSOC_XA_YB:
+    return {true, true};
+  }
 }
 
 /// Attempt the reassociation transformation to reduce critical path length.
@@ -863,21 +979,35 @@ void TargetInstrInfo::reassociateOps(
   Register NewVR = MRI.createVirtualRegister(RC);
   InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
 
-  unsigned Opcode = Root.getOpcode();
+  auto [NewRootOpc, NewPrevOpc] = getReassociationOpcodes(Pattern, Root, Prev);
   bool KillA = OpA.isKill();
   bool KillX = OpX.isKill();
   bool KillY = OpY.isKill();
+  bool KillNewVR = true;
+
+  auto [SwapRootOperands, SwapPrevOperands] = mustSwapOperands(Pattern);
+
+  if (SwapPrevOperands) {
+    std::swap(RegX, RegY);
+    std::swap(KillX, KillY);
+  }
 
   // Create new instructions for insertion.
   MachineInstrBuilder MIB1 =
-      BuildMI(*MF, MIMetadata(Prev), TII->get(Opcode), NewVR)
+      BuildMI(*MF, MIMetadata(Prev), TII->get(NewPrevOpc), NewVR)
           .addReg(RegX, getKillRegState(KillX))
           .addReg(RegY, getKillRegState(KillY))
           .setMIFlags(Prev.getFlags());
+
+  if (SwapRootOperands) {
+    std::swap(RegA, NewVR);
+    std::swap(KillA, KillNewVR);
+  }
+
   MachineInstrBuilder MIB2 =
-      BuildMI(*MF, MIMetadata(Root), TII->get(Opcode), RegC)
+      BuildMI(*MF, MIMetadata(Root), TII->get(NewRootOpc), RegC)
           .addReg(RegA, getKillRegState(KillA))
-          .addReg(NewVR, getKillRegState(true))
+          .addReg(NewVR, getKillRegState(KillNewVR))
           .setMIFlags(Root.getFlags());
 
   setSpecialOperandAttr(Root, Prev, *MIB1, *MIB2);

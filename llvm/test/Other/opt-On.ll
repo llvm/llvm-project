@@ -1,6 +1,6 @@
 ; RUN: not opt -O1 -O2 < %s 2>&1 | FileCheck %s --check-prefix=MULTIPLE
 ; RUN: not opt -O1 -passes='no-op-module' < %s 2>&1 | FileCheck %s --check-prefix=BOTH
-; RUN: not opt -O1 --gvn < %s 2>&1 | FileCheck %s --check-prefix=BOTH
+; RUN: not opt -O1 -passes=gvn < %s 2>&1 | FileCheck %s --check-prefix=BOTH
 ; RUN: opt -O0 < %s -S 2>&1 | FileCheck %s --check-prefix=OPT
 ; RUN: opt -O1 < %s -S 2>&1 | FileCheck %s --check-prefix=OPT
 ; RUN: opt -O2 < %s -S 2>&1 | FileCheck %s --check-prefix=OPT

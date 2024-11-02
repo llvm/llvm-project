@@ -9,6 +9,11 @@ declare i32 @llvm.loongarch.crcc.w.b.w(i32, i32)
 declare i32 @llvm.loongarch.crcc.w.h.w(i32, i32)
 declare i32 @llvm.loongarch.crcc.w.w.w(i32, i32)
 declare i32 @llvm.loongarch.crcc.w.d.w(i64, i32)
+declare i64 @llvm.loongarch.csrrd.d(i32 immarg)
+declare i64 @llvm.loongarch.csrwr.d(i64, i32 immarg)
+declare i64 @llvm.loongarch.csrxchg.d(i64, i64, i32 immarg)
+declare i64 @llvm.loongarch.iocsrrd.d(i32)
+declare void @llvm.loongarch.iocsrwr.d(i64, i32)
 
 define i32 @crc_w_b_w(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: crc_w_b_w:
@@ -80,4 +85,54 @@ define i32 @crcc_w_d_w(i64 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    ret
   %res = call i32 @llvm.loongarch.crcc.w.d.w(i64 %a, i32 %b)
   ret i32 %res
+}
+
+define i64 @csrrd_d() {
+; CHECK-LABEL: csrrd_d:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    csrrd $a0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i64 @llvm.loongarch.csrrd.d(i32 1)
+  ret i64 %0
+}
+
+define i64 @csrwr_d(i64 %a) {
+; CHECK-LABEL: csrwr_d:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    csrwr $a0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i64 @llvm.loongarch.csrwr.d(i64 %a, i32 1)
+  ret i64 %0
+}
+
+define i64 @csrxchg_d(i64 %a, i64 %b) {
+; CHECK-LABEL: csrxchg_d:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    csrxchg $a0, $a1, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i64 @llvm.loongarch.csrxchg.d(i64 %a, i64 %b, i32 1)
+  ret i64 %0
+}
+
+define i64 @iocsrrd_d(i32 %a) {
+; CHECK-LABEL: iocsrrd_d:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    iocsrrd.d $a0, $a0
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i64 @llvm.loongarch.iocsrrd.d(i32 %a)
+  ret i64 %0
+}
+
+define void @iocsrwr_d(i64 %a, i32 signext %b) {
+; CHECK-LABEL: iocsrwr_d:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    iocsrwr.d $a0, $a1
+; CHECK-NEXT:    ret
+entry:
+  tail call void @llvm.loongarch.iocsrwr.d(i64 %a, i32 %b)
+  ret void
 }

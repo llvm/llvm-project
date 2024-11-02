@@ -698,7 +698,7 @@ define <32 x double> @vfma_vv_v32f64(<32 x double> %va, <32 x double> %b, <32 x 
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vl8re8.v v24, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v24, (a1) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vfmadd.vv v8, v24, v16, v0.t
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
@@ -716,20 +716,20 @@ define <32 x double> @vfma_vv_v32f64(<32 x double> %va, <32 x double> %b, <32 x 
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8re8.v v24, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8re8.v v16, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8re8.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vfmadd.vv v8, v24, v16, v0.t
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8re8.v v16, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 5
 ; CHECK-NEXT:    add sp, sp, a0
@@ -779,7 +779,7 @@ define <32 x double> @vfma_vv_v32f64_unmasked(<32 x double> %va, <32 x double> %
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8re8.v v24, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vfmadd.vv v0, v8, v24
 ; CHECK-NEXT:    addi a0, a4, -16
 ; CHECK-NEXT:    sltu a1, a4, a0
@@ -790,9 +790,9 @@ define <32 x double> @vfma_vv_v32f64_unmasked(<32 x double> %va, <32 x double> %
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8re8.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8re8.v v24, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vfmadd.vv v24, v16, v8
 ; CHECK-NEXT:    vmv8r.v v8, v0
 ; CHECK-NEXT:    vmv.v.v v16, v24

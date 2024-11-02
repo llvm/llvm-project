@@ -528,7 +528,7 @@ Sections:
   // Check that we can detect unsupported versions.
   SmallString<128> UnsupportedVersionYamlString(CommonYamlString);
   UnsupportedVersionYamlString += R"(
-        Version: 2
+        Version: 3
         BBEntries:
           - AddressOffset: 0x0
             Size:          0x1
@@ -536,13 +536,14 @@ Sections:
 )";
 
   DoCheck(UnsupportedVersionYamlString,
-          "unsupported SHT_LLVM_BB_ADDR_MAP version: 2");
+          "unsupported SHT_LLVM_BB_ADDR_MAP version: 3");
 
   SmallString<128> CommonVersionedYamlString(CommonYamlString);
   CommonVersionedYamlString += R"(
-        Version: 1
+        Version: 2
         BBEntries:
-          - AddressOffset: 0x0
+          - ID:            1
+            AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x2
 )";
@@ -551,9 +552,9 @@ Sections:
   // truncated.
   SmallString<128> TruncatedYamlString(CommonVersionedYamlString);
   TruncatedYamlString += R"(
-    ShSize: 0xa
+    ShSize: 0xb
 )";
-  DoCheck(TruncatedYamlString, "unable to decode LEB128 at offset 0x0000000a: "
+  DoCheck(TruncatedYamlString, "unable to decode LEB128 at offset 0x0000000b: "
                                "malformed uleb128, extends past end");
 
   // Check that we can detect when the encoded BB entry fields exceed the UINT32
@@ -561,29 +562,32 @@ Sections:
   SmallVector<SmallString<128>, 3> OverInt32LimitYamlStrings(
       3, CommonVersionedYamlString);
   OverInt32LimitYamlStrings[0] += R"(
-          - AddressOffset: 0x100000000
+          - ID:            1
+            AddressOffset: 0x100000000
             Size:          0xFFFFFFFF
             Metadata:      0xFFFFFFFF
 )";
 
   OverInt32LimitYamlStrings[1] += R"(
-          - AddressOffset: 0xFFFFFFFF
+          - ID:            2
+            AddressOffset: 0xFFFFFFFF
             Size:          0x100000000
             Metadata:      0xFFFFFFFF
 )";
 
   OverInt32LimitYamlStrings[2] += R"(
-          - AddressOffset: 0xFFFFFFFF
+          - ID:            3
+            AddressOffset: 0xFFFFFFFF
             Size:          0xFFFFFFFF
             Metadata:      0x100000000
 )";
 
   DoCheck(OverInt32LimitYamlStrings[0],
-          "ULEB128 value at offset 0xe exceeds UINT32_MAX (0x100000000)");
+          "ULEB128 value at offset 0x10 exceeds UINT32_MAX (0x100000000)");
   DoCheck(OverInt32LimitYamlStrings[1],
-          "ULEB128 value at offset 0x13 exceeds UINT32_MAX (0x100000000)");
+          "ULEB128 value at offset 0x15 exceeds UINT32_MAX (0x100000000)");
   DoCheck(OverInt32LimitYamlStrings[2],
-          "ULEB128 value at offset 0x18 exceeds UINT32_MAX (0x100000000)");
+          "ULEB128 value at offset 0x1a exceeds UINT32_MAX (0x100000000)");
 
   // Check the proper error handling when the section has fields exceeding
   // UINT32 and is also truncated. This is for checking that we don't generate
@@ -592,24 +596,24 @@ Sections:
       3, OverInt32LimitYamlStrings[1]);
   // Truncate before the end of the 5-byte field.
   OverInt32LimitAndTruncated[0] += R"(
-    ShSize: 0x17
+    ShSize: 0x19
 )";
   // Truncate at the end of the 5-byte field.
   OverInt32LimitAndTruncated[1] += R"(
-    ShSize: 0x18
+    ShSize: 0x1a
 )";
   // Truncate after the end of the 5-byte field.
   OverInt32LimitAndTruncated[2] += R"(
-    ShSize: 0x19
+    ShSize: 0x1b
 )";
 
   DoCheck(OverInt32LimitAndTruncated[0],
-          "unable to decode LEB128 at offset 0x00000013: malformed uleb128, "
+          "unable to decode LEB128 at offset 0x00000015: malformed uleb128, "
           "extends past end");
   DoCheck(OverInt32LimitAndTruncated[1],
-          "ULEB128 value at offset 0x13 exceeds UINT32_MAX (0x100000000)");
+          "ULEB128 value at offset 0x15 exceeds UINT32_MAX (0x100000000)");
   DoCheck(OverInt32LimitAndTruncated[2],
-          "ULEB128 value at offset 0x13 exceeds UINT32_MAX (0x100000000)");
+          "ULEB128 value at offset 0x15 exceeds UINT32_MAX (0x100000000)");
 
   // Check for proper error handling when the 'NumBlocks' field is overridden
   // with an out-of-range value.
@@ -635,41 +639,57 @@ Sections:
     Type: SHT_LLVM_BB_ADDR_MAP
     Link: 1
     Entries:
-      - Version: 1
+      - Version: 2
         Address: 0x11111
         BBEntries:
-          - AddressOffset: 0x0
+          - ID:            1
+            AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x2
   - Name: .llvm_bb_addr_map_2
     Type: SHT_LLVM_BB_ADDR_MAP
     Link: 1
     Entries:
-      - Version: 1
+      - Version: 2
         Address: 0x22222
         BBEntries:
-          - AddressOffset: 0x0
+          - ID:            2
+            AddressOffset: 0x0
             Size:          0x2
             Metadata:      0x4
-  - Name: .llvm_bb_addr_map
-    Type: SHT_LLVM_BB_ADDR_MAP_V0
-  # Link: 0 (by default)
+  - Name: .llvm_bb_addr_map_3
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Link: 2
     Entries:
-      - Version: 0
+      - Version: 1
         Address: 0x33333
         BBEntries:
-          - AddressOffset: 0x0
+          - ID:            0
+            AddressOffset: 0x0
             Size:          0x3
             Metadata:      0x6
+  - Name: .llvm_bb_addr_map_4
+    Type: SHT_LLVM_BB_ADDR_MAP_V0
+  # Link: 0 (by default, can be overriden)
+    Entries:
+      - Version: 0
+        Address: 0x44444
+        BBEntries:
+          - ID:            0
+            AddressOffset: 0x0
+            Size:          0x4
+            Metadata:      0x8
 )");
 
-  BBAddrMap E1 = {0x11111, {{0x0, 0x1, 0x2}}};
-  BBAddrMap E2 = {0x22222, {{0x0, 0x2, 0x4}}};
-  BBAddrMap E3 = {0x33333, {{0x0, 0x3, 0x6}}};
+  BBAddrMap E1 = {0x11111, {{1, 0x0, 0x1, 0x2}}};
+  BBAddrMap E2 = {0x22222, {{2, 0x0, 0x2, 0x4}}};
+  BBAddrMap E3 = {0x33333, {{0, 0x0, 0x3, 0x6}}};
+  BBAddrMap E4 = {0x44444, {{0, 0x0, 0x4, 0x8}}};
 
-  std::vector<BBAddrMap> Section0BBAddrMaps = {E3};
-  std::vector<BBAddrMap> Section1BBAddrMaps = {E1, E2};
-  std::vector<BBAddrMap> AllBBAddrMaps = {E1, E2, E3};
+  std::vector<BBAddrMap> Section0BBAddrMaps = {E4};
+  std::vector<BBAddrMap> Section1BBAddrMaps = {E3};
+  std::vector<BBAddrMap> Section2BBAddrMaps = {E1, E2};
+  std::vector<BBAddrMap> AllBBAddrMaps = {E1, E2, E3, E4};
 
   auto DoCheckSucceeds = [&](StringRef YamlString,
                              std::optional<unsigned> TextSectionIndex,
@@ -706,10 +726,11 @@ Sections:
   DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/std::nullopt,
                   AllBBAddrMaps);
   DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/0, Section0BBAddrMaps);
-  DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/1, Section1BBAddrMaps);
+  DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/2, Section1BBAddrMaps);
+  DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/1, Section2BBAddrMaps);
   // Check that when no bb-address-map section is found for a text section,
   // we return an empty result.
-  DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/2, {});
+  DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/3, {});
 
   // Check that we detect when a bb-addr-map section is linked to an invalid
   // (not present) section.
@@ -718,9 +739,9 @@ Sections:
     Link: 10
 )";
 
-  DoCheckFails(InvalidLinkedYamlString, /*TextSectionIndex=*/1,
+  DoCheckFails(InvalidLinkedYamlString, /*TextSectionIndex=*/4,
                "unable to get the linked-to section for "
-               "SHT_LLVM_BB_ADDR_MAP_V0 section with index 3: invalid section "
+               "SHT_LLVM_BB_ADDR_MAP_V0 section with index 4: invalid section "
                "index: 10");
   // Linked sections are not checked when we don't target a specific text
   // section.
@@ -734,12 +755,12 @@ Sections:
 )";
 
   DoCheckFails(TruncatedYamlString, /*TextSectionIndex=*/std::nullopt,
-               "unable to read SHT_LLVM_BB_ADDR_MAP_V0 section with index 3: "
+               "unable to read SHT_LLVM_BB_ADDR_MAP_V0 section with index 4: "
                "unable to decode LEB128 at offset 0x00000008: malformed "
                "uleb128, extends past end");
   // Check that we can read the other section's bb-address-maps which are
   // valid.
-  DoCheckSucceeds(TruncatedYamlString, /*TextSectionIndex=*/1,
+  DoCheckSucceeds(TruncatedYamlString, /*TextSectionIndex=*/2,
                   Section1BBAddrMaps);
 }
 

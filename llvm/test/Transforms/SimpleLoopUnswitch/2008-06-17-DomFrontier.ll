@@ -1,4 +1,4 @@
-; RUN: opt < %s -licm -simple-loop-unswitch -disable-output
+; RUN: opt < %s -passes=licm,simple-loop-unswitch -disable-output
 @g_56 = external global i16		; <i16*> [#uses=2]
 
 define i32 @func_67(i32 %p_68, i8 signext  %p_69, i8 signext  %p_71) nounwind  {

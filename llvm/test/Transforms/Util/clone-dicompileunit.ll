@@ -1,4 +1,4 @@
-; RUN: opt -run-twice -verify -disable-debug-info-type-map -S -o - %s | FileCheck %s
+; RUN: opt -run-twice -passes=verify -disable-debug-info-type-map -S -o - %s | FileCheck %s
 
 ; Generated using:
 ; $ cat p.cpp

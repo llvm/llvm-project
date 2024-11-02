@@ -28,7 +28,6 @@
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"

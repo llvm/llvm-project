@@ -1,4 +1,4 @@
-; RUN: opt -lower-expect -S < %s
+; RUN: opt -passes=lower-expect -S < %s
 ; RUN: opt -passes='function(lower-expect)' -S < %s
 
 define i64 @foo(i64 %arg) #0 {

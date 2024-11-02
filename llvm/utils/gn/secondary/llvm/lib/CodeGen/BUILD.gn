@@ -21,6 +21,7 @@ static_library("CodeGen") {
     "AggressiveAntiDepBreaker.cpp",
     "AllocationOrder.cpp",
     "Analysis.cpp",
+    "AssignmentTrackingAnalysis.cpp",
     "AtomicExpandPass.cpp",
     "BasicBlockSections.cpp",
     "BasicBlockSectionsProfileReader.cpp",

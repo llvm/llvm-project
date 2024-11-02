@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-fusion < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=loop-fusion < %s 2>&1 | FileCheck %s
 
 ; Verify that LoopFusion can fuse two double-loop nests with guarded inner
 ; loops. Loops are in canonical form.

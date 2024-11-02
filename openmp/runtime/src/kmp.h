@@ -3901,6 +3901,9 @@ KMP_EXPORT kmp_int32 __kmpc_bound_num_threads(ident_t *);
 KMP_EXPORT kmp_int32 __kmpc_ok_to_fork(ident_t *);
 KMP_EXPORT void __kmpc_fork_call(ident_t *, kmp_int32 nargs,
                                  kmpc_micro microtask, ...);
+KMP_EXPORT void __kmpc_fork_call_if(ident_t *loc, kmp_int32 nargs,
+                                    kmpc_micro microtask, kmp_int32 cond,
+                                    void *args);
 
 KMP_EXPORT void __kmpc_serialized_parallel(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT void __kmpc_end_serialized_parallel(ident_t *, kmp_int32 global_tid);

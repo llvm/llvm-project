@@ -30,18 +30,19 @@ define double @select_nsz_nfabs_lt_fmfProp(double %x) {
   ret double %sel
 }
 
-; Tests with various predicate types.
-define double @select_nsz_nfabs_olt(double %x) {
-; CHECK-LABEL: @select_nsz_nfabs_olt(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nsz double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[SEL:%.*]] = fneg nsz double [[TMP1]]
+define double @select_nsz_nnan_nfabs_lt_fmfProp(double %x) {
+; CHECK-LABEL: @select_nsz_nnan_nfabs_lt_fmfProp(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan nsz double [[TMP1]]
 ; CHECK-NEXT:    ret double [[SEL]]
 ;
   %cmp = fcmp olt double %x, 0.000000e+00
-  %negX = fneg double %x
-  %sel = select nsz i1 %cmp, double %x, double %negX
+  %negX = fneg fast double %x
+  %sel = select nsz nnan i1 %cmp, double %x, double %negX
   ret double %sel
 }
+
+; Tests with various predicate types.
 
 define double @select_nsz_nfabs_ult(double %x) {
 ; CHECK-LABEL: @select_nsz_nfabs_ult(
@@ -52,6 +53,18 @@ define double @select_nsz_nfabs_ult(double %x) {
   %cmp = fcmp ult double %x, 0.000000e+00
   %negX = fneg double %x
   %sel = select nsz i1 %cmp, double %x, double %negX
+  ret double %sel
+}
+
+define double @select_nsz_nnan_nfabs_ult(double %x) {
+; CHECK-LABEL: @select_nsz_nnan_nfabs_ult(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan nsz double [[TMP1]]
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %cmp = fcmp ult double %x, 0.000000e+00
+  %negX = fneg double %x
+  %sel = select nsz nnan i1 %cmp, double %x, double %negX
   ret double %sel
 }
 
@@ -67,6 +80,18 @@ define double @select_nsz_nfabs_ole(double %x) {
   ret double %sel
 }
 
+define double @select_nsz_nnan_nfabs_ole(double %x) {
+; CHECK-LABEL: @select_nsz_nnan_nfabs_ole(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan nsz double [[TMP1]]
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %cmp = fcmp ole double %x, 0.000000e+00
+  %negX = fneg double %x
+  %sel = select nsz nnan i1 %cmp, double %x, double %negX
+  ret double %sel
+}
+
 define double @select_nsz_nfabs_ule(double %x) {
 ; CHECK-LABEL: @select_nsz_nfabs_ule(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call nsz double @llvm.fabs.f64(double [[X:%.*]])
@@ -76,6 +101,18 @@ define double @select_nsz_nfabs_ule(double %x) {
   %cmp = fcmp ule double %x, 0.000000e+00
   %negX = fneg double %x
   %sel = select nsz i1 %cmp, double %x, double %negX
+  ret double %sel
+}
+
+define double @select_nsz_nnan_nfabs_ule(double %x) {
+; CHECK-LABEL: @select_nsz_nnan_nfabs_ule(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan nsz double [[TMP1]]
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %cmp = fcmp ule double %x, 0.000000e+00
+  %negX = fneg double %x
+  %sel = select nsz nnan i1 %cmp, double %x, double %negX
   ret double %sel
 }
 
@@ -108,6 +145,18 @@ define double @select_nsz_nfabs_gt_fmfProp(double %x) {
   ret double %sel
 }
 
+define double @select_nsz_nnan_nfabs_gt_fmfProp(double %x) {
+; CHECK-LABEL: @select_nsz_nnan_nfabs_gt_fmfProp(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan nsz double [[TMP1]]
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %cmp = fcmp ogt double %x, 0.000000e+00
+  %negX = fneg fast double %x
+  %sel = select nsz nnan i1 %cmp, double %negX, double %x
+  ret double %sel
+}
+
 ; Tests with various predicate types.
 define double @select_nsz_nfabs_ogt(double %x) {
 ; CHECK-LABEL: @select_nsz_nfabs_ogt(
@@ -118,6 +167,18 @@ define double @select_nsz_nfabs_ogt(double %x) {
   %cmp = fcmp ogt double %x, 0.000000e+00
   %negX = fneg double %x
   %sel = select nsz i1 %cmp, double %negX, double %x
+  ret double %sel
+}
+
+define double @select_nsz_nnan_nfabs_ogt(double %x) {
+; CHECK-LABEL: @select_nsz_nnan_nfabs_ogt(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan nsz double [[TMP1]]
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %cmp = fcmp ogt double %x, 0.000000e+00
+  %negX = fneg double %x
+  %sel = select nsz nnan i1 %cmp, double %negX, double %x
   ret double %sel
 }
 
@@ -133,6 +194,18 @@ define double @select_nsz_nfabs_ugt(double %x) {
   ret double %sel
 }
 
+define double @select_nsz_nnan_nfabs_ugt(double %x) {
+; CHECK-LABEL: @select_nsz_nnan_nfabs_ugt(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan nsz double [[TMP1]]
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %cmp = fcmp ugt double %x, 0.000000e+00
+  %negX = fneg double %x
+  %sel = select nsz nnan i1 %cmp, double %negX, double %x
+  ret double %sel
+}
+
 define double @select_nsz_nfabs_oge(double %x) {
 ; CHECK-LABEL: @select_nsz_nfabs_oge(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call nsz double @llvm.fabs.f64(double [[X:%.*]])
@@ -145,6 +218,18 @@ define double @select_nsz_nfabs_oge(double %x) {
   ret double %sel
 }
 
+define double @select_nsz_nnan_nfabs_oge(double %x) {
+; CHECK-LABEL: @select_nsz_nnan_nfabs_oge(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan nsz double [[TMP1]]
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %cmp = fcmp oge double %x, 0.000000e+00
+  %negX = fneg double %x
+  %sel = select nsz nnan i1 %cmp, double %negX, double %x
+  ret double %sel
+}
+
 define double @select_nsz_nfabs_uge(double %x) {
 ; CHECK-LABEL: @select_nsz_nfabs_uge(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call nsz double @llvm.fabs.f64(double [[X:%.*]])
@@ -154,6 +239,18 @@ define double @select_nsz_nfabs_uge(double %x) {
   %cmp = fcmp uge double %x, 0.000000e+00
   %negX = fneg double %x
   %sel = select nsz i1 %cmp, double %negX, double %x
+  ret double %sel
+}
+
+define double @select_nsz_nnan_nfabs_uge(double %x) {
+; CHECK-LABEL: @select_nsz_nnan_nfabs_uge(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan nsz double [[TMP1]]
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %cmp = fcmp uge double %x, 0.000000e+00
+  %negX = fneg double %x
+  %sel = select nsz nnan i1 %cmp, double %negX, double %x
   ret double %sel
 }
 

@@ -1,4 +1,4 @@
-; RUN: opt %s -verify 2>&1 | FileCheck %s
+; RUN: opt %s -passes=verify 2>&1 | FileCheck %s
 ; CHECK: invalid type
 ; CHECK: !20 = !DILocalVariable(name: "f", scope: !21, file: !13, line: 970, type: !14)
 ; CHECK: !14 = !DISubroutineType(types: !15)

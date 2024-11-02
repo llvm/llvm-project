@@ -1,4 +1,4 @@
-; RUN: opt -S -mergefunc < %s | FileCheck %s
+; RUN: opt -S -passes=mergefunc < %s | FileCheck %s
 
 ; CHECK-LABEL: define i32 @func1
 ; CHECK: call i32 @func2

@@ -199,6 +199,7 @@ void AArch64TargetInfo::getTargetDefinesARMV83A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   Builder.defineMacro("__ARM_FEATURE_COMPLEX", "1");
   Builder.defineMacro("__ARM_FEATURE_JCVT", "1");
+  Builder.defineMacro("__ARM_FEATURE_PAUTH", "1");
   // Also include the Armv8.2 defines
   getTargetDefinesARMV82A(Opts, Builder);
 }
@@ -212,6 +213,7 @@ void AArch64TargetInfo::getTargetDefinesARMV84A(const LangOptions &Opts,
 void AArch64TargetInfo::getTargetDefinesARMV85A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   Builder.defineMacro("__ARM_FEATURE_FRINT", "1");
+  Builder.defineMacro("__ARM_FEATURE_BTI", "1");
   // Also include the Armv8.4 defines
   getTargetDefinesARMV84A(Opts, Builder);
 }
@@ -384,6 +386,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_FEATURE_SM3", "1");
     Builder.defineMacro("__ARM_FEATURE_SM4", "1");
   }
+
+  if (HasPAuth)
+    Builder.defineMacro("__ARM_FEATURE_PAUTH", "1");
 
   if (HasUnaligned)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
@@ -574,36 +579,6 @@ void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
 
 bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
                                              DiagnosticsEngine &Diags) {
-  FPU = FPUMode;
-  HasCRC = false;
-  HasAES = false;
-  HasSHA2 = false;
-  HasSHA3 = false;
-  HasSM4 = false;
-  HasUnaligned = true;
-  HasFullFP16 = false;
-  HasDotProd = false;
-  HasFP16FML = false;
-  HasMTE = false;
-  HasTME = false;
-  HasLS64 = false;
-  HasRandGen = false;
-  HasMatMul = false;
-  HasBFloat16 = false;
-  HasSVE2 = false;
-  HasSVE2AES = false;
-  HasSVE2SHA3 = false;
-  HasSVE2SM4 = false;
-  HasSVE2BitPerm = false;
-  HasMatmulFP64 = false;
-  HasMatmulFP32 = false;
-  HasLSE = false;
-  HasMOPS = false;
-  HasD128 = false;
-  HasRCPC = false;
-
-  ArchKind = llvm::AArch64::ArchKind::INVALID;
-
   for (const auto &Feature : Features) {
     if (Feature == "+neon")
       FPU |= NeonMode;

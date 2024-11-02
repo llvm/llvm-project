@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-rotate -licm -S | FileCheck %s
+; RUN: opt < %s -passes='loop-mssa(loop-rotate,licm)' -S | FileCheck %s
 ; PR9604
 
 @g_3 = global i32 0, align 4

@@ -33,3 +33,22 @@ func.func @rank_reducing_insert_of_collapse_shape(
       : tensor<?x1x5xf32> into tensor<?x?x?x?xf32>
   return %1 : tensor<?x?x?x?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @rank_reducing_parallel_insert_of_collapse_shape(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?x1x1x5xf32>
+//       CHECK:   tensor.parallel_insert_slice %[[t]] into %{{.*}}[0, 0, 0, 0] [%{{.*}}, 1, 1, 5] [1, 1, 1, 1] : tensor<?x1x1x5xf32> into tensor<?x?x?x?xf32>
+func.func @rank_reducing_parallel_insert_of_collapse_shape(
+    %t: tensor<?x1x1x5xf32>, %d: tensor<?x?x?x?xf32>, %sz: index, %thr: index)
+  -> tensor<?x?x?x?xf32> {
+  %0 = tensor.collapse_shape %t [[0, 1], [2], [3]]
+      : tensor<?x1x1x5xf32> into tensor<?x1x5xf32>
+  %1 = scf.foreach_thread (%iv) in (%thr) shared_outs(%o = %d) -> (tensor<?x?x?x?xf32>) {
+    scf.foreach_thread.perform_concurrently {
+      tensor.parallel_insert_slice %0 into %o[0, 0, 0, 0][%sz, 1, 1, 5][1, 1, 1, 1]
+          : tensor<?x1x5xf32> into tensor<?x?x?x?xf32>
+    }
+  }
+  return %1 : tensor<?x?x?x?xf32>
+}

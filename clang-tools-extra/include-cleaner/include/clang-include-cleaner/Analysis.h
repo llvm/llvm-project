@@ -40,6 +40,7 @@ using UsedSymbolCB = llvm::function_ref<void(const SymbolReference &SymRef,
                                              llvm::ArrayRef<Header> Providers)>;
 
 /// Find and report all references to symbols in a region of code.
+/// It only reports references from main file.
 ///
 /// The AST traversal is rooted at ASTRoots - typically top-level declarations
 /// of a single source file.

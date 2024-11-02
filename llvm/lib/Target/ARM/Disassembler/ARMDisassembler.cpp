@@ -629,6 +629,9 @@ static DecodeStatus DecodeVPTMaskOperand(MCInst &Inst, unsigned Val,
 static DecodeStatus DecodeVpredROperand(MCInst &Inst, unsigned Val,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder);
+static DecodeStatus DecodeVpredNOperand(MCInst &Inst, unsigned Val,
+                                        uint64_t Address,
+                                        const MCDisassembler *Decoder);
 static DecodeStatus
 DecodeRestrictedIPredicateOperand(MCInst &Inst, unsigned Val, uint64_t Address,
                                   const MCDisassembler *Decoder);
@@ -6541,6 +6544,17 @@ static DecodeStatus DecodeVpredROperand(MCInst &Inst, unsigned RegNo,
   // constraint. So this is a deliberately empty decoder method that
   // will inhibit the auto-generated disassembly code from adding an
   // operand at all.
+  return MCDisassembler::Success;
+}
+
+[[maybe_unused]] static DecodeStatus
+DecodeVpredNOperand(MCInst &Inst, unsigned RegNo, uint64_t Address,
+                    const MCDisassembler *Decoder) {
+  // Similar to above, we want to ensure that no operands are added for the
+  // vpred operands. (This is marked "maybe_unused" for the moment; because
+  // DecoderEmitter currently (wrongly) omits operands with no instruction bits,
+  // the decoder doesn't actually call it yet. That will be addressed in a
+  // future change.)
   return MCDisassembler::Success;
 }
 

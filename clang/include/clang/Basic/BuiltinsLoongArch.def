@@ -31,5 +31,21 @@ TARGET_BUILTIN(__builtin_loongarch_crcc_w_h_w, "iii", "nc", "64bit")
 TARGET_BUILTIN(__builtin_loongarch_crcc_w_w_w, "iii", "nc", "64bit")
 TARGET_BUILTIN(__builtin_loongarch_crcc_w_d_w, "iLii", "nc", "64bit")
 
+TARGET_BUILTIN(__builtin_loongarch_csrrd_w, "UiIUi", "nc", "")
+TARGET_BUILTIN(__builtin_loongarch_csrrd_d, "ULiIUi", "nc", "64bit")
+TARGET_BUILTIN(__builtin_loongarch_csrwr_w, "UiUiIUi", "nc", "")
+TARGET_BUILTIN(__builtin_loongarch_csrwr_d, "ULiULiIUi", "nc", "64bit")
+TARGET_BUILTIN(__builtin_loongarch_csrxchg_w, "UiUiUiIUi", "nc", "")
+TARGET_BUILTIN(__builtin_loongarch_csrxchg_d, "ULiULiULiIUi", "nc", "64bit")
+
+TARGET_BUILTIN(__builtin_loongarch_iocsrrd_b, "UiUi", "nc", "")
+TARGET_BUILTIN(__builtin_loongarch_iocsrrd_h, "UiUi", "nc", "")
+TARGET_BUILTIN(__builtin_loongarch_iocsrrd_w, "UiUi", "nc", "")
+TARGET_BUILTIN(__builtin_loongarch_iocsrrd_d, "ULiUi", "nc", "64bit")
+TARGET_BUILTIN(__builtin_loongarch_iocsrwr_b, "vUiUi", "nc", "")
+TARGET_BUILTIN(__builtin_loongarch_iocsrwr_h, "vUiUi", "nc", "")
+TARGET_BUILTIN(__builtin_loongarch_iocsrwr_w, "vUiUi", "nc", "")
+TARGET_BUILTIN(__builtin_loongarch_iocsrwr_d, "vULiUi", "nc", "64bit")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN

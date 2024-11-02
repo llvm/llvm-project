@@ -91,24 +91,24 @@ void MCXCOFFStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
 }
 
 void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                                       unsigned ByteAlignment) {
+                                       Align ByteAlignment) {
   getAssembler().registerSymbol(*Symbol);
   Symbol->setExternal(cast<MCSymbolXCOFF>(Symbol)->getStorageClass() !=
                       XCOFF::C_HIDEXT);
-  Symbol->setCommon(Size, ByteAlignment);
+  Symbol->setCommon(Size, ByteAlignment.value());
 
   // Default csect align is 4, but common symbols have explicit alignment values
   // and we should honor it.
   cast<MCSymbolXCOFF>(Symbol)->getRepresentedCsect()->setAlignment(
-      Align(ByteAlignment));
+      ByteAlignment);
 
   // Emit the alignment and storage for the variable to the section.
-  emitValueToAlignment(Align(ByteAlignment));
+  emitValueToAlignment(ByteAlignment);
   emitZeros(Size);
 }
 
 void MCXCOFFStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
-                                   uint64_t Size, unsigned ByteAlignment,
+                                   uint64_t Size, Align ByteAlignment,
                                    SMLoc Loc) {
   report_fatal_error("Zero fill not implemented for XCOFF.");
 }
@@ -150,5 +150,5 @@ void MCXCOFFStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,
                                                  uint64_t Size,
                                                  MCSymbol *CsectSym,
                                                  Align Alignment) {
-  emitCommonSymbol(CsectSym, Size, Alignment.value());
+  emitCommonSymbol(CsectSym, Size, Alignment);
 }

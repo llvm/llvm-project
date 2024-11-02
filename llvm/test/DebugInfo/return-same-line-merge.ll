@@ -1,4 +1,4 @@
-; RUN: opt -simplifycfg -S < %s | FileCheck %s
+; RUN: opt -passes=simplifycfg -S < %s | FileCheck %s
 ;
 ; Simplified from the following code:
 ; int foo() {

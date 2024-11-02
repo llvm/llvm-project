@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -enable-pre -jump-threading -S | FileCheck %s
+; RUN: opt < %s -passes=gvn,jump-threading -enable-pre -S | FileCheck %s
 
 @H = common global i32 0
 @G = common global i32 0

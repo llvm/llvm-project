@@ -282,6 +282,19 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
       }
       continue; // success so far
     }
+    // Address calculation 'i = add inv, idx' (after LICM).
+    if (auto load = cast.getDefiningOp<arith::AddIOp>()) {
+      Value inv = load.getOperand(0);
+      Value idx = load.getOperand(1);
+      if (!inv.dyn_cast<BlockArgument>() &&
+          inv.getDefiningOp()->getBlock() != &forOp.getRegion().front() &&
+          idx.dyn_cast<BlockArgument>()) {
+        if (codegen)
+          idxs.push_back(
+              rewriter.create<arith::AddIOp>(forOp.getLoc(), inv, idx));
+        continue; // success so far
+      }
+    }
     return false;
   }
   return true;
@@ -409,6 +422,7 @@ static bool vectorizeExpr(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
       TYPEDUNAOP(arith::IndexCastOp)
       TYPEDUNAOP(arith::TruncIOp)
       TYPEDUNAOP(arith::BitcastOp)
+      // TODO: complex?
     }
   } else if (def->getNumOperands() == 2) {
     Value vx, vy;
@@ -428,6 +442,7 @@ static bool vectorizeExpr(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
       BINOP(arith::AndIOp)
       BINOP(arith::OrIOp)
       BINOP(arith::XOrIOp)
+      // TODO: complex?
       // TODO: shift by invariant?
     }
   }
@@ -602,6 +617,7 @@ void mlir::populateSparseVectorizationPatterns(RewritePatternSet &patterns,
                                                unsigned vectorLength,
                                                bool enableVLAVectorization,
                                                bool enableSIMDIndex32) {
+  assert(vectorLength > 0);
   patterns.add<ForOpRewriter>(patterns.getContext(), vectorLength,
                               enableVLAVectorization, enableSIMDIndex32);
   patterns.add<ReducChainRewriter<vector::InsertElementOp>,

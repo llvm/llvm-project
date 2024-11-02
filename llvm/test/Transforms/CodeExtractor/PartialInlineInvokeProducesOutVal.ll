@@ -1,4 +1,4 @@
-; RUN: opt < %s -partial-inliner -S | FileCheck %s
+; RUN: opt < %s -passes=partial-inliner -S | FileCheck %s
 
 ; Function Attrs: nounwind uwtable
 define dso_local i8* @bar(i32 %arg) local_unnamed_addr #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {

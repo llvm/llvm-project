@@ -11,6 +11,7 @@
 #include "ClangdServer.h"
 #include "CodeComplete.h"
 #include "Compiler.h"
+#include "Feature.h"
 #include "Matchers.h"
 #include "Protocol.h"
 #include "Quality.h"
@@ -174,6 +175,7 @@ Symbol withReferences(int N, Symbol S) {
   return S;
 }
 
+#if CLANGD_DECISION_FOREST
 TEST(DecisionForestRankingModel, NameMatchSanityTest) {
   clangd::CodeCompleteOptions Opts;
   Opts.RankingModel = CodeCompleteOptions::DecisionForest;
@@ -207,6 +209,7 @@ TEST(DecisionForestRankingModel, ReferencesAffectRanking) {
           .Completions,
       ElementsAre(named("clangA"), named("clangD")));
 }
+#endif // CLANGD_DECISION_FOREST
 
 TEST(DecisionForestRankingModel, DecisionForestScorerCallbackTest) {
   clangd::CodeCompleteOptions Opts;

@@ -88,6 +88,10 @@ void populateDataLayoutPropagationPatterns(RewritePatternSet &patterns);
 /// This is effectively DCE for a linalg op.
 void populateEraseUnusedOperandsAndResultsPatterns(RewritePatternSet &patterns);
 
+/// Patterns to promote inputs to outputs and remove unused inputs of
+/// `linalg.generic` ops.
+void populateEraseUnnecessaryInputsPatterns(RewritePatternSet &patterns);
+
 /// Function type to control generic op dimension collapsing. It is expected
 /// to return an array of `ReassociationIndices` representing dimensions that
 /// should be merged.
@@ -496,7 +500,8 @@ struct ForeachThreadReductionTilingResult {
 FailureOr<ForeachThreadReductionTilingResult>
 tileReductionUsingForeachThread(RewriterBase &b, PartialReductionOpInterface op,
                                 ArrayRef<OpFoldResult> numThreads,
-                                Optional<ArrayAttr> mapping);
+                                ArrayRef<OpFoldResult> tileSizes = {},
+                                Optional<ArrayAttr> mapping = std::nullopt);
 
 /// All indices returned by IndexOp should be invariant with respect to
 /// tiling. Therefore, if an operation is tiled, we have to transform the

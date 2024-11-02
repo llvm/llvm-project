@@ -1,4 +1,4 @@
-; RUN: opt < %s -simple-loop-unswitch -verify-memoryssa -disable-output
+; RUN: opt < %s -passes=simple-loop-unswitch -verify-memoryssa -disable-output
 
 define i32 @main(i32 %argc, i8** %argv) {
 entry:

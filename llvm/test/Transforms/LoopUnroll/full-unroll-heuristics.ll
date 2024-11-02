@@ -17,9 +17,9 @@
 ; optimizations to remove ~55% of the instructions, the loop body size is 9,
 ; and unrolled size is 65.
 
-; RUN: opt < %s -S -loop-unroll -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=10 -unroll-max-percent-threshold-boost=100 | FileCheck %s -check-prefix=TEST1
-; RUN: opt < %s -S -loop-unroll -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=20 -unroll-max-percent-threshold-boost=200 | FileCheck %s -check-prefix=TEST2
-; RUN: opt < %s -S -loop-unroll -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=20 -unroll-max-percent-threshold-boost=100 | FileCheck %s -check-prefix=TEST3
+; RUN: opt < %s -S -passes=loop-unroll -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=10 -unroll-max-percent-threshold-boost=100 | FileCheck %s -check-prefix=TEST1
+; RUN: opt < %s -S -passes=loop-unroll -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=20 -unroll-max-percent-threshold-boost=200 | FileCheck %s -check-prefix=TEST2
+; RUN: opt < %s -S -passes=loop-unroll -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=20 -unroll-max-percent-threshold-boost=100 | FileCheck %s -check-prefix=TEST3
 
 ; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=10 -unroll-max-percent-threshold-boost=100 | FileCheck %s -check-prefix=TEST1
 ; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=20 -unroll-max-percent-threshold-boost=200 | FileCheck %s -check-prefix=TEST2
@@ -40,7 +40,7 @@
 ; TEST3: %array_const_idx = getelementptr inbounds [9 x i32], [9 x i32]* @known_constant, i64 0, i64 %iv
 
 ; And check that we don't crash when we're not allowed to do any analysis.
-; RUN: opt < %s -loop-unroll -unroll-max-iteration-count-to-analyze=0 -disable-output
+; RUN: opt < %s -passes=loop-unroll -unroll-max-iteration-count-to-analyze=0 -disable-output
 ; RUN: opt < %s -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -unroll-max-iteration-count-to-analyze=0 -disable-output
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 

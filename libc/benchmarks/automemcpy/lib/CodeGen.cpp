@@ -310,8 +310,8 @@ namespace descriptors {
 // e.g.
 // ArrayRef<NamedFunctionDescriptor> getFunctionDescriptors() {
 //   static constexpr NamedFunctionDescriptor kDescriptors[] = {
-//     {"memcpy_0xE00E29EE73994E2B",{FunctionType::MEMCPY,llvm::None,llvm::None,llvm::None,llvm::None,Accelerator{{0,kMaxSize}},ElementTypeClass::NATIVE}},
-//     {"memcpy_0x8661D80472487AB5",{FunctionType::MEMCPY,Contiguous{{0,1}},llvm::None,llvm::None,llvm::None,Accelerator{{1,kMaxSize}},ElementTypeClass::NATIVE}},
+//     {"memcpy_0xE00E29EE73994E2B",{FunctionType::MEMCPY,std::nullopt,std::nullopt,std::nullopt,std::nullopt,Accelerator{{0,kMaxSize}},ElementTypeClass::NATIVE}},
+//     {"memcpy_0x8661D80472487AB5",{FunctionType::MEMCPY,Contiguous{{0,1}},std::nullopt,std::nullopt,std::nullopt,Accelerator{{1,kMaxSize}},ElementTypeClass::NATIVE}},
 //     ...
 //   };
 //   return makeArrayRef(kDescriptors);
@@ -380,7 +380,7 @@ static raw_ostream &operator<<(raw_ostream &Stream,
                                const llvm::Optional<T> &MaybeT) {
   if (MaybeT)
     return Stream << *MaybeT;
-  return Stream << "llvm::None";
+  return Stream << "std::nullopt";
 }
 static raw_ostream &operator<<(raw_ostream &Stream,
                                const FunctionDescriptor &FD) {

@@ -89,14 +89,14 @@ public:
 private:
   // We only care about instructions, we don't implement this part of the API.
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                        unsigned ByteAlignment) override {}
+                        Align ByteAlignment) override {}
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
     return false;
   }
   void emitValueToAlignment(Align Alignment, int64_t Value, unsigned ValueSize,
                             unsigned MaxBytesToEmit) override {}
   void emitZerofill(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
-                    unsigned ByteAlignment, SMLoc Loc) override {}
+                    Align ByteAlignment, SMLoc Loc) override {}
 
   unsigned findRegisterByName(const StringRef RegName) const {
     // FIXME: Can we do better than this ?

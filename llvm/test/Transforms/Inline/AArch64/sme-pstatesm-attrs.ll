@@ -1,4 +1,4 @@
-; RUN: opt < %s -mtriple=aarch64-unknown-linux-gnu -mattr=+sme -S -inline | FileCheck %s
+; RUN: opt < %s -mtriple=aarch64-unknown-linux-gnu -mattr=+sme -S -passes=inline | FileCheck %s
 
 declare void @inlined_body() "aarch64_pstate_sm_compatible";
 

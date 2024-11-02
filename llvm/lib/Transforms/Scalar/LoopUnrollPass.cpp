@@ -15,7 +15,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -343,7 +342,7 @@ struct PragmaInfo {
 /// cost of the 'false'-block).
 /// \returns Optional value, holding the RolledDynamicCost and UnrolledCost. If
 /// the analysis failed (no benefits expected from the unrolling, or the loop is
-/// too big to analyze), the returned value is None.
+/// too big to analyze), the returned value is std::nullopt.
 static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
     const Loop *L, unsigned TripCount, DominatorTree &DT, ScalarEvolution &SE,
     const SmallPtrSetImpl<const Value *> &EphValues,

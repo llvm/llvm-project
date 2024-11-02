@@ -1,5 +1,4 @@
 ; RUN: opt -passes=objc-arc-expand -S < %s | FileCheck %s
-; RUN: opt -passes=objc-arc-expand -S < %s | FileCheck %s
 
 target datalayout = "e-p:64:64:64"
 

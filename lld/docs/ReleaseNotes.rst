@@ -36,6 +36,12 @@ ELF Improvements
 * ``DT_RISCV_VARIANT_CC`` is now produced if at least one ``R_RISCV_JUMP_SLOT``
   relocation references a symbol with the ``STO_RISCV_VARIANT_CC`` bit.
   (`D107951 <https://reviews.llvm.org/D107951>`_)
+* ``--no-undefined-version`` is now the default; symbols named in version
+  scripts that have no matching symbol in the output will be reported. Use
+  ``--undefined-version`` to revert to the old behavior.
+* The output ``SHT_RISCV_ATTRIBUTES`` section now merges all input components
+  instead of picking the first input component.
+  (`D138550 <https://reviews.llvm.org/D138550>`_)
 
 Breaking changes
 ----------------

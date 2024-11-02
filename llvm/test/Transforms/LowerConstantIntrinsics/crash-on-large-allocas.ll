@@ -1,4 +1,4 @@
-; RUN: opt -S -lower-constant-intrinsics %s -o - | FileCheck %s
+; RUN: opt -S -passes=lower-constant-intrinsics %s -o - | FileCheck %s
 ;
 ; Ensure that we don't {crash,return a bad value} when given an alloca larger
 ; than what a pointer can represent.

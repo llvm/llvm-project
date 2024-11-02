@@ -817,10 +817,7 @@ kmp_set_disp_num_buffers                    890
 
     %endif
 
-    # These are specific to x86 and x64
-    %ifdef IS_IA_ARCH
-
-        # ATOMIC extensions for OpenMP 3.1 spec (x86 and x64 only)
+        # ATOMIC extensions for OpenMP 3.1 spec
 
         __kmpc_atomic_fixed1_rd                2265
         __kmpc_atomic_fixed2_rd                2266
@@ -1046,6 +1043,9 @@ kmp_set_disp_num_buffers                    890
         __kmpc_atomic_float10_mul_cpt_fp
         __kmpc_atomic_float10_div_cpt_fp
         %endif
+
+            # These are specific to x86 and x64
+            %ifdef IS_IA_ARCH
 
             # ATOMIC extensions for OpenMP 4.0 spec (x86 and x64 only)
 

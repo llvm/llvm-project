@@ -17,10 +17,8 @@ C++20,`lazy_split <https://wg21.link/P0896R4>`_,Zoe Carver and Konstantin Varlam
 C++20,`counted <https://wg21.link/P0896R4>`_,Zoe Carver,`D106923 <https://llvm.org/D106923>`_,✅
 C++20,`common <https://wg21.link/P0896R4>`_,Zoe Carver,`D105753 <https://llvm.org/D105753>`_,✅
 C++20,`reverse <https://wg21.link/P0896R4>`_,Zoe Carver,`D107096 <https://llvm.org/D107096>`_,✅
-C++20,`elements / keys / values <https://wg21.link/P1035R7>`_,Hui Xie,`D136268 <https://llvm.org/D136268>`_,In progress
+C++20,`elements / keys / values <https://wg21.link/P1035R7>`_,Hui Xie,`D136268 <https://llvm.org/D136268>`_,Under review
 C++20,`istream <https://wg21.link/P1035R7>`_,Hui Xie,`D133317 <https://llvm.org/D133317>`_,✅
-,,,,
-,,,,
 ,,,,
 ,,,,
 ,,,,
@@ -35,5 +33,5 @@ C++23,`slide <https://wg21.link/P2442R1>`_,Unassigned,No patch yet,Not started
 C++23,`chunk <https://wg21.link/P2442R1>`_,Unassigned,No patch yet,Not started
 C++23,`chunk_by <https://wg21.link/P2443R1>`_,Unassigned,No patch yet,Not started
 C++23,`as_const <https://wg21.link/P2278R4>`_,Unassigned,No patch yet,Not started
-C++23,`as_rvalue <https://wg21.link/P2446R2>`_,Unassigned,No patch yet,Not started
+C++23,`as_rvalue <https://wg21.link/P2446R2>`_,Nikolas Klauser,`D137637 <https://llvm.org/D137637>`_,Under review
 C++23,`stride <https://wg21.link/P1899R3>`_,Unassigned,No patch yet,Not started

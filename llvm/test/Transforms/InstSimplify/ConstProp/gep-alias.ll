@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S -o - %s | FileCheck %s
+; RUN: opt -passes=instcombine -S -o - %s | FileCheck %s
 ; Test that we don't replace an alias with its aliasee when simplifying GEPs.
 ; In this test case the transformation is invalid because it replaces the
 ; reference to the symbol "b" (which refers to whichever instance of "b"

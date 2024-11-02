@@ -1,5 +1,4 @@
 ; RUN: opt -passes=jump-threading -S < %s | FileCheck %s
-; RUN: opt -passes=jump-threading -S < %s | FileCheck %s
 
 define void @test() {
 ; CHECK-LABEL: @test()

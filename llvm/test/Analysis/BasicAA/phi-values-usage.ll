@@ -12,39 +12,38 @@
 
 target datalayout = "p:8:8-n8"
 
-declare void @otherfn([4 x i8]*)
+declare void @otherfn(ptr)
 declare i32 @__gxx_personality_v0(...)
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
-@c = external global i8*, align 1
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+@c = external global ptr, align 1
 
 ; This function is one where if we didn't free basicaa after memcpyopt then the
 ; usage of basicaa in instcombine would cause a segfault due to stale phi-values
 ; results being used.
-define void @fn(i8* %this, i64* %ptr) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @fn(ptr %this, ptr %ptr) personality ptr @__gxx_personality_v0 {
 entry:
   %arr = alloca [4 x i8], align 8
-  %gep1 = getelementptr inbounds [4 x i8], [4 x i8]* %arr, i64 0, i32 0
   br i1 undef, label %then, label %if
 
 if:
   br label %then
 
 then:
-  %phi = phi i64* [ %ptr, %if ], [ null, %entry ]
-  store i8 1, i8* %gep1, align 8
-  %load = load i64, i64* %phi, align 8
-  %gep2 = getelementptr inbounds i8, i8* undef, i64 %load
-  %gep3 = getelementptr inbounds i8, i8* %gep2, i64 40
-  invoke i32 undef(i8* undef)
+  %phi = phi ptr [ %ptr, %if ], [ null, %entry ]
+  store i8 1, ptr %arr, align 8
+  %load = load i64, ptr %phi, align 8
+  %gep2 = getelementptr inbounds i8, ptr undef, i64 %load
+  %gep3 = getelementptr inbounds i8, ptr %gep2, i64 40
+  invoke i32 undef(ptr undef)
      to label %invoke unwind label %lpad
 
 invoke:
   unreachable
 
 lpad:
-  landingpad { i8*, i32 }
-     catch i8* null
-  call void @otherfn([4 x i8]* nonnull %arr)
+  landingpad { ptr, i32 }
+     catch ptr null
+  call void @otherfn(ptr nonnull %arr)
   unreachable
 }
 
@@ -54,21 +53,20 @@ lpad:
 define void @fn2() {
 entry:
   %a = alloca i8, align 1
-  %0 = load i8*, i8** @c, align 1
-  %1 = bitcast i8* %0 to i8**
+  %0 = load ptr, ptr @c, align 1
   br label %for.cond
 
 for.cond:                                         ; preds = %for.body, %entry
-  %d.0 = phi i8** [ %1, %entry ], [ null, %for.body ]
+  %d.0 = phi ptr [ %0, %entry ], [ null, %for.body ]
   br i1 undef, label %for.body, label %for.cond.cleanup
 
 for.body:                                         ; preds = %for.cond
-  store volatile i8 undef, i8* %a, align 1
+  store volatile i8 undef, ptr %a, align 1
   br label %for.cond
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* %a)
-  %2 = load i8*, i8** %d.0, align 1
-  store i8* %2, i8** @c, align 1
+  call void @llvm.lifetime.end.p0(i64 1, ptr %a)
+  %1 = load ptr, ptr %d.0, align 1
+  store ptr %1, ptr @c, align 1
   ret void
 }

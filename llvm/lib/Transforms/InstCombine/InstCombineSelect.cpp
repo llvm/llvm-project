@@ -316,33 +316,42 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
 
   Value *OtherOpT, *OtherOpF;
   bool MatchIsOpZero;
-  auto getCommonOp = [&](Instruction *TI, Instruction *FI,
-                         bool Commute) -> Value * {
-    Value *CommonOp = nullptr;
-    if (TI->getOperand(0) == FI->getOperand(0)) {
-      CommonOp = TI->getOperand(0);
-      OtherOpT = TI->getOperand(1);
-      OtherOpF = FI->getOperand(1);
-      MatchIsOpZero = true;
-    } else if (TI->getOperand(1) == FI->getOperand(1)) {
-      CommonOp = TI->getOperand(1);
-      OtherOpT = TI->getOperand(0);
-      OtherOpF = FI->getOperand(0);
-      MatchIsOpZero = false;
-    } else if (!Commute) {
-      return nullptr;
-    } else if (TI->getOperand(0) == FI->getOperand(1)) {
-      CommonOp = TI->getOperand(0);
-      OtherOpT = TI->getOperand(1);
-      OtherOpF = FI->getOperand(0);
-      MatchIsOpZero = true;
-    } else if (TI->getOperand(1) == FI->getOperand(0)) {
-      CommonOp = TI->getOperand(1);
-      OtherOpT = TI->getOperand(0);
-      OtherOpF = FI->getOperand(1);
-      MatchIsOpZero = true;
+  auto getCommonOp = [&](Instruction *TI, Instruction *FI, bool Commute,
+                         bool Swapped = false) -> Value * {
+    assert(!(Commute && Swapped) &&
+           "Commute and Swapped can't set at the same time");
+    if (!Swapped) {
+      if (TI->getOperand(0) == FI->getOperand(0)) {
+        OtherOpT = TI->getOperand(1);
+        OtherOpF = FI->getOperand(1);
+        MatchIsOpZero = true;
+        return TI->getOperand(0);
+      } else if (TI->getOperand(1) == FI->getOperand(1)) {
+        OtherOpT = TI->getOperand(0);
+        OtherOpF = FI->getOperand(0);
+        MatchIsOpZero = false;
+        return TI->getOperand(1);
+      }
     }
-    return CommonOp;
+
+    if (!Commute && !Swapped)
+      return nullptr;
+
+    // If we are allowing commute or swap of operands, then
+    // allow a cross-operand match. In that case, MatchIsOpZero
+    // means that TI's operand 0 (FI's operand 1) is the common op.
+    if (TI->getOperand(0) == FI->getOperand(1)) {
+      OtherOpT = TI->getOperand(1);
+      OtherOpF = FI->getOperand(0);
+      MatchIsOpZero = true;
+      return TI->getOperand(0);
+    } else if (TI->getOperand(1) == FI->getOperand(0)) {
+      OtherOpT = TI->getOperand(0);
+      OtherOpF = FI->getOperand(1);
+      MatchIsOpZero = false;
+      return TI->getOperand(1);
+    }
+    return nullptr;
   };
 
   if (TI->hasOneUse() || FI->hasOneUse()) {
@@ -379,16 +388,20 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
       }
     }
 
-    // icmp eq/ne with a common operand also can have the common operand
+    // icmp with a common operand also can have the common operand
     // pulled after the select.
     ICmpInst::Predicate TPred, FPred;
     if (match(TI, m_ICmp(TPred, m_Value(), m_Value())) &&
         match(FI, m_ICmp(FPred, m_Value(), m_Value()))) {
-      if (TPred == FPred && ICmpInst::isEquality(TPred)) {
-        if (Value *MatchOp = getCommonOp(TI, FI, true)) {
+      if (TPred == FPred || TPred == CmpInst::getSwappedPredicate(FPred)) {
+        bool Swapped = TPred != FPred;
+        if (Value *MatchOp =
+                getCommonOp(TI, FI, ICmpInst::isEquality(TPred), Swapped)) {
           Value *NewSel = Builder.CreateSelect(Cond, OtherOpT, OtherOpF,
                                                SI.getName() + ".v", &SI);
-          return new ICmpInst(TPred, NewSel, MatchOp);
+          return new ICmpInst(
+              MatchIsOpZero ? TPred : CmpInst::getSwappedPredicate(TPred),
+              MatchOp, NewSel);
         }
       }
     }
@@ -2960,8 +2973,23 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         Value *NewSel = Builder.CreateSelect(NewCond, FalseVal, TrueVal);
         return replaceInstUsesWith(SI, NewSel);
       }
+    }
+  }
 
-      // NOTE: if we wanted to, this is where to detect MIN/MAX
+  if (isa<FPMathOperator>(SI)) {
+    // TODO: Try to forward-propagate FMF from select arms to the select.
+
+    // Canonicalize select of FP values where NaN and -0.0 are not valid as
+    // minnum/maxnum intrinsics.
+    if (SI.hasNoNaNs() && SI.hasNoSignedZeros()) {
+      Value *X, *Y;
+      if (match(&SI, m_OrdFMax(m_Value(X), m_Value(Y))))
+        return replaceInstUsesWith(
+            SI, Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, X, Y, &SI));
+
+      if (match(&SI, m_OrdFMin(m_Value(X), m_Value(Y))))
+        return replaceInstUsesWith(
+            SI, Builder.CreateBinaryIntrinsic(Intrinsic::minnum, X, Y, &SI));
     }
   }
 
@@ -3074,19 +3102,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         return replaceInstUsesWith(SI, NewCast);
       }
     }
-  }
-
-  // Canonicalize select of FP values where NaN and -0.0 are not valid as
-  // minnum/maxnum intrinsics.
-  if (isa<FPMathOperator>(SI) && SI.hasNoNaNs() && SI.hasNoSignedZeros()) {
-    Value *X, *Y;
-    if (match(&SI, m_OrdFMax(m_Value(X), m_Value(Y))))
-      return replaceInstUsesWith(
-          SI, Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, X, Y, &SI));
-
-    if (match(&SI, m_OrdFMin(m_Value(X), m_Value(Y))))
-      return replaceInstUsesWith(
-          SI, Builder.CreateBinaryIntrinsic(Intrinsic::minnum, X, Y, &SI));
   }
 
   // See if we can fold the select into a phi node if the condition is a select.

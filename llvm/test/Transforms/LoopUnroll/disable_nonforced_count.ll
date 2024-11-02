@@ -1,4 +1,4 @@
-; RUN: opt -loop-unroll -unroll-count=2 -S < %s | FileCheck %s
+; RUN: opt -passes=loop-unroll -unroll-count=2 -S < %s | FileCheck %s
 ;
 ; Check whether the llvm.loop.unroll.count loop property overrides
 ; llvm.loop.disable_nonforced.

@@ -194,7 +194,7 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
 #if !defined(__APPLE__)
   url << m_socket_scheme << "://";
 #endif
-  uint16_t *port_ptr = port.getPointer();
+  uint16_t *port_ptr = &*port;
   if (m_socket_protocol == Socket::ProtocolTcp) {
     std::string platform_uri = GetConnection()->GetURI();
     llvm::Optional<URI> parsed_uri = URI::Parse(platform_uri);

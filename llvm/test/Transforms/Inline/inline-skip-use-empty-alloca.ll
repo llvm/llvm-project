@@ -1,5 +1,5 @@
-; RUN: opt < %s -S -inline | FileCheck %s
-; RUN: opt < %s -S -strip-debug -inline | FileCheck %s
+; RUN: opt < %s -S -passes=inline | FileCheck %s
+; RUN: opt < %s -S -strip-debug -passes=inline | FileCheck %s
 
 ; https://bugs.llvm.org/show_bug.cgi?id=43291
 ; The purpose of this test is to check if there is use_empty in the inner loop when scanning

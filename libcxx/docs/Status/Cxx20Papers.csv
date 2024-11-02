@@ -80,7 +80,7 @@
 "`P1285R0 <https://wg21.link/P1285R0>`__","LWG","Improving Completeness Requirements for Type Traits","San Diego","* *",""
 "`P1353R0 <https://wg21.link/P1353R0>`__","CWG","Missing feature test macros","San Diego","* *",""
 "","","","","",""
-"`P0339R6 <https://wg21.link/P0339R6>`__","LWG","polymorphic_allocator<> as a vocabulary type","Kona","",""
+"`P0339R6 <https://wg21.link/P0339R6>`__","LWG","polymorphic_allocator<> as a vocabulary type","Kona","|Complete|","16.0"
 "`P0340R3 <https://wg21.link/P0340R3>`__","LWG","Making std::underlying_type SFINAE-friendly","Kona","|Complete|","9.0"
 "`P0738R2 <https://wg21.link/P0738R2>`__","LWG","I Stream, You Stream, We All Stream for istream_iterator","Kona","",""
 "`P0811R3 <https://wg21.link/P0811R3>`__","LWG","Well-behaved interpolation for numbers and pointers","Kona","|Complete|","9.0"

@@ -1,9 +1,9 @@
-; This testcase tests for a problem where LICM hoists loads out of a loop 
-; despite the fact that calls to unknown functions may modify what is being 
+; This testcase tests for a problem where LICM hoists loads out of a loop
+; despite the fact that calls to unknown functions may modify what is being
 ; loaded from.  Basically if the load gets hoisted, the subtract gets turned
 ; into a constant zero.
 ;
-; RUN: opt < %s -licm -gvn -instcombine -S | grep load
+; RUN: opt < %s -passes='loop-mssa(licm),gvn,instcombine' -S | grep load
 
 @X = global i32 7		; <ptr> [#uses=2]
 

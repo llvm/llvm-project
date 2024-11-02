@@ -1,4 +1,3 @@
-; RUN: opt -S -rewrite-statepoints-for-gc < %s | FileCheck %s
 ; RUN: opt -S -passes=rewrite-statepoints-for-gc < %s | FileCheck %s
 
 target datalayout = "e-ni:1:6"
@@ -12,7 +11,7 @@ define i8 @test() gc "statepoint-example" {
 ; CHECK-LABEL: @test
 ; CHECK: gc.statepoint
 ; CHECK-NEXT: load i8, i8 addrspace(1)* inttoptr (i64 15 to i8 addrspace(1)*)
-; Mostly just here to show reasonable code test can come from.  
+; Mostly just here to show reasonable code test can come from.
 entry:
   call void @foo() [ "deopt"() ]
   %res = load i8, i8 addrspace(1)* inttoptr (i64 15 to i8 addrspace(1)*)
@@ -55,7 +54,7 @@ entry:
 
 ; Even for source languages without constant references, we can
 ; see constants can show up along paths where the value is dead.
-; This is particular relevant when computing bases of PHIs.  
+; This is particular relevant when computing bases of PHIs.
 define i8 addrspace(1)* @test4(i8 addrspace(1)* %p) gc "statepoint-example" {
 ; CHECK-LABEL: @test4
 entry:
@@ -241,9 +240,9 @@ define <2 x i32 addrspace(1)*> @test12(i1 %c) gc "statepoint-example" {
 ; CHECK-LABEL: @test12
 ; Same as test11 but with vectors
 entry:
-  %val = select i1 %c, <2 x i32 addrspace(1)*> <i32 addrspace(1)* inttoptr (i64 5 to i32 addrspace(1)*), 
-                                                i32 addrspace(1)* inttoptr (i64 15 to i32 addrspace(1)*)>, 
-                       <2 x i32 addrspace(1)*> <i32 addrspace(1)* inttoptr (i64 30 to i32 addrspace(1)*), 
+  %val = select i1 %c, <2 x i32 addrspace(1)*> <i32 addrspace(1)* inttoptr (i64 5 to i32 addrspace(1)*),
+                                                i32 addrspace(1)* inttoptr (i64 15 to i32 addrspace(1)*)>,
+                       <2 x i32 addrspace(1)*> <i32 addrspace(1)* inttoptr (i64 30 to i32 addrspace(1)*),
                                                 i32 addrspace(1)* inttoptr (i64 60 to i32 addrspace(1)*)>
   ; CHECK: gc.statepoint
   ; CHECK-NOT: call {{.*}}gc.relocate
@@ -255,7 +254,7 @@ define <2 x i32 addrspace(1)*> @test13(i1 %c, <2 x i32 addrspace(1)*> %ptr) gc "
 ; CHECK-LABEL: @test13
 ; Similar to test8, test9 and test10 but with vectors
 entry:
-  %val = select i1 %c, <2 x i32 addrspace(1)*> %ptr, 
+  %val = select i1 %c, <2 x i32 addrspace(1)*> %ptr,
                        <2 x i32 addrspace(1)*> <i32 addrspace(1)* inttoptr (i64 30 to i32 addrspace(1)*), i32 addrspace(1)* inttoptr (i64 60 to i32 addrspace(1)*)>
   ; CHECK: %val.base = select i1 %c, <2 x i32 addrspace(1)*> %ptr, <2 x i32 addrspace(1)*> zeroinitializer, !is_base_value !0
   ; CHECK: gc.statepoint

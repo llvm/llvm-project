@@ -1,4 +1,4 @@
-; RUN: opt -S  -passes=loop-reroll   %s | FileCheck %s
+; RUN: opt -S -passes=loop-reroll   %s | FileCheck %s
 target triple = "aarch64--linux-gnu"
 @buf = global [16 x i8] c"\0A\0A\0A\0A\0A\0A\0A\0A\0A\0A\0A\0A\0A\0A\0A\0A", align 1
 

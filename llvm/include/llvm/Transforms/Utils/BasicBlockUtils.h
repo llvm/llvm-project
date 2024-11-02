@@ -464,10 +464,13 @@ Instruction *SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
 ///     ElseBlock
 ///   SplitBefore
 ///   Tail
+///
+/// Updates DT if given.
 void SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
                                    Instruction **ThenTerm,
                                    Instruction **ElseTerm,
-                                   MDNode *BranchWeights = nullptr);
+                                   MDNode *BranchWeights = nullptr,
+                                   DomTreeUpdater *DTU = nullptr);
 
 /// Check whether BB is the merge point of a if-region.
 /// If so, return the branch instruction that determines which entry into

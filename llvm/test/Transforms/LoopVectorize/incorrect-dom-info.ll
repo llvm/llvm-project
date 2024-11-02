@@ -1,6 +1,6 @@
 ; This test is based on one of benchmarks from SPEC2006. It exposes a bug with
 ; incorrect updating of the dom-tree.
-; RUN: opt < %s  -passes=loop-vectorize -verify-dom-info
+; RUN: opt < %s -passes=loop-vectorize -verify-dom-info
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 @PL_utf8skip = external constant [0 x i8]

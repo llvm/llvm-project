@@ -1,4 +1,4 @@
-; RUN: opt -S -mergefunc < %s | FileCheck %s
+; RUN: opt -S -passes=mergefunc < %s | FileCheck %s
 
 define weak i32 @sum(i32 %x, i32 %y) {
   %sum = add i32 %x, %y

@@ -1,4 +1,4 @@
-; RUN: opt -S -hotcoldsplit -hotcoldsplit-threshold=-1 < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=hotcoldsplit -hotcoldsplit-threshold=-1 < %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: define {{.*}} @foo(
 ; CHECK-NOT: llvm.assume

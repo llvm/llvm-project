@@ -1,4 +1,4 @@
-; RUN: opt -S -mergefunc %s | FileCheck %s
+; RUN: opt -S -passes=mergefunc %s | FileCheck %s
 
 @i = global i32 0
 @f = global float 0.0

@@ -1,4 +1,4 @@
-; RUN: not opt -S %s -verify 2>&1 | FileCheck %s
+; RUN: not opt -S %s -passes=verify 2>&1 | FileCheck %s
 
 declare token @llvm.call.preallocated.setup(i32)
 declare i8* @llvm.call.preallocated.arg(token, i32)

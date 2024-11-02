@@ -1,4 +1,3 @@
-; RUN: opt -S -function-attrs %s | FileCheck %s
 ; RUN: opt -S -passes=function-attrs %s | FileCheck %s
 
 @a = external global i8, !absolute_symbol !0

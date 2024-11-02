@@ -1,7 +1,6 @@
-; RUN: opt -S -rewrite-statepoints-for-gc < %s | FileCheck %s
 ; RUN: opt -S -passes=rewrite-statepoints-for-gc < %s | FileCheck %s
 
-; This test checks that metadata that's invalid after RS4GC is dropped. 
+; This test checks that metadata that's invalid after RS4GC is dropped.
 ; We can miscompile if optimizations scheduled after RS4GC uses the
 ; metadata that's infact invalid.
 

@@ -1,4 +1,4 @@
-; RUN: opt -hotcoldsplit -hotcoldsplit-threshold=0 -S < %s | FileCheck %s
+; RUN: opt -passes=hotcoldsplit -hotcoldsplit-threshold=0 -S < %s | FileCheck %s
 
 ; Do not outline calls to @llvm.eh.typeid.for. See llvm.org/PR39545.
 

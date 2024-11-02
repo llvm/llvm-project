@@ -1,5 +1,5 @@
-; RUN: opt < %s -S -loop-unroll -pass-remarks=loop-unroll -pass-remarks-with-hotness -unroll-count=16 2>&1 | FileCheck -check-prefix=COMPLETE-UNROLL %s
-; RUN: opt < %s -S -loop-unroll -pass-remarks=loop-unroll -pass-remarks-with-hotness -unroll-count=4 2>&1 | FileCheck -check-prefix=PARTIAL-UNROLL %s
+; RUN: opt < %s -S -passes=loop-unroll -pass-remarks=loop-unroll -pass-remarks-with-hotness -unroll-count=16 2>&1 | FileCheck -check-prefix=COMPLETE-UNROLL %s
+; RUN: opt < %s -S -passes=loop-unroll -pass-remarks=loop-unroll -pass-remarks-with-hotness -unroll-count=4 2>&1 | FileCheck -check-prefix=PARTIAL-UNROLL %s
 
 ; COMPLETE-UNROLL: remark: {{.*}}: completely unrolled loop with 16 iterations (hotness: 300)
 ; PARTIAL-UNROLL: remark: {{.*}}: unrolled loop by a factor of 4 (hotness: 300)

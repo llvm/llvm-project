@@ -9,17 +9,17 @@
 ; RUN: opt -passes=inliner-wrapper -S < %s | FileCheck %s --check-prefix=INLINE --check-prefix=CHECK
 ; RUN: opt -passes=scc-oz-module-inliner -S < %s | FileCheck %s --check-prefix=MODULE --check-prefix=CHECK
 
-define void @modify_value({i32, float}* %v) {
-    %f = getelementptr { i32, float }, { i32, float }* %v, i64 0, i32 0
-    store i32 10, i32* %f
+define void @modify_value(ptr %v) {
+    %f = getelementptr { i32, float }, ptr %v, i64 0, i32 0
+    store i32 10, ptr %f
     ret void
 }
 
 define i32 @main() {
     %my_val = alloca {i32, float}
-    call void @modify_value({i32, float}* %my_val)
-    %f = getelementptr { i32, float }, { i32, float }* %my_val, i64 0, i32 0
-    %ret = load i32, i32* %f
+    call void @modify_value(ptr %my_val)
+    %f = getelementptr { i32, float }, ptr %my_val, i64 0, i32 0
+    %ret = load i32, ptr %f
     ret i32 %ret
 }
 

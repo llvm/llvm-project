@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-simplify -lcssa -S | FileCheck %s
+; RUN: opt < %s -passes=loop-simplify,lcssa -S | FileCheck %s
 
         %struct.SetJmpMapEntry = type { i8*, i32, %struct.SetJmpMapEntry* }
 

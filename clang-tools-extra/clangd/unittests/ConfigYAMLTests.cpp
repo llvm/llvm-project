@@ -10,7 +10,6 @@
 #include "ConfigFragment.h"
 #include "ConfigTesting.h"
 #include "Protocol.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"

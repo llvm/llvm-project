@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-unroll < %s | FileCheck %s
+; RUN: opt -S -passes=loop-unroll < %s | FileCheck %s
 ; RUN: opt < %s -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -S | FileCheck %s
 
 ; LLVM should not try to fully unroll this loop.

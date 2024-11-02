@@ -55,6 +55,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <time.h>
 #include <utility>
 
@@ -804,7 +805,7 @@ std::unique_ptr<raw_pwrite_stream> CompilerInstance::createDefaultOutputFile(
     bool Binary, StringRef InFile, StringRef Extension, bool RemoveFileOnSignal,
     bool CreateMissingDirectories, bool ForceUseTemporary) {
   StringRef OutputPath = getFrontendOpts().OutputFile;
-  Optional<SmallString<128>> PathStorage;
+  std::optional<SmallString<128>> PathStorage;
   if (OutputPath.empty()) {
     if (InFile == "-" || Extension.empty()) {
       OutputPath = "-";
@@ -848,7 +849,7 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
 
   // If '-working-directory' was passed, the output filename should be
   // relative to that.
-  Optional<SmallString<128>> AbsPath;
+  std::optional<SmallString<128>> AbsPath;
   if (OutputPath != "-" && !llvm::sys::path::is_absolute(OutputPath)) {
     AbsPath.emplace(OutputPath);
     FileMgr->FixupRelativePath(*AbsPath);
@@ -856,7 +857,7 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
   }
 
   std::unique_ptr<llvm::raw_fd_ostream> OS;
-  Optional<StringRef> OSFile;
+  std::optional<StringRef> OSFile;
 
   if (UseTemporary) {
     if (OutputPath == "-")

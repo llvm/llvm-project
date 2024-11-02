@@ -1,4 +1,4 @@
-; RUN: opt -function-specialization -force-function-specialization -S < %s | FileCheck %s
+; RUN: opt -passes=ipsccp -specialize-functions -force-function-specialization -S < %s | FileCheck %s
 
 ; Check that we don't crash and specialise on a function call with byval attribute.
 

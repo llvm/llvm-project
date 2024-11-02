@@ -7,6 +7,10 @@
 ; RUN:   < %s | FileCheck -check-prefixes=RV32C %s
 ; RUN: llc -mtriple=riscv64 -mattr=+c -verify-machineinstrs --riscv-no-aliases \
 ; RUN:   < %s | FileCheck -check-prefixes=RV64C %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-zca -verify-machineinstrs --riscv-no-aliases \
+; RUN:   < %s | FileCheck -check-prefixes=RV32C %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-zca -verify-machineinstrs --riscv-no-aliases \
+; RUN:   < %s | FileCheck -check-prefixes=RV64C %s
 
 ; These test that constant adds are not moved after shifts by DAGCombine,
 ; if the constant is cheaper to materialise before it has been shifted.

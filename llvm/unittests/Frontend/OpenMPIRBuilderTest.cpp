@@ -986,38 +986,22 @@ TEST_F(OpenMPIRBuilderTest, ParallelIfCond) {
   EXPECT_EQ(OutlinedFn->arg_size(), 3U);
 
   EXPECT_EQ(&OutlinedFn->getEntryBlock(), PrivAI->getParent());
-  ASSERT_EQ(OutlinedFn->getNumUses(), 2U);
+  ASSERT_EQ(OutlinedFn->getNumUses(), 1U);
 
-  CallInst *DirectCI = nullptr;
   CallInst *ForkCI = nullptr;
   for (User *Usr : OutlinedFn->users()) {
-    if (isa<CallInst>(Usr)) {
-      ASSERT_EQ(DirectCI, nullptr);
-      DirectCI = cast<CallInst>(Usr);
-    } else {
-      ASSERT_TRUE(isa<ConstantExpr>(Usr));
-      ASSERT_EQ(Usr->getNumUses(), 1U);
-      ASSERT_TRUE(isa<CallInst>(Usr->user_back()));
-      ForkCI = cast<CallInst>(Usr->user_back());
-    }
+    ASSERT_TRUE(isa<ConstantExpr>(Usr));
+    ASSERT_EQ(Usr->getNumUses(), 1U);
+    ASSERT_TRUE(isa<CallInst>(Usr->user_back()));
+    ForkCI = cast<CallInst>(Usr->user_back());
   }
 
-  EXPECT_EQ(ForkCI->getCalledFunction()->getName(), "__kmpc_fork_call");
-  EXPECT_EQ(ForkCI->arg_size(), 4U);
+  EXPECT_EQ(ForkCI->getCalledFunction()->getName(), "__kmpc_fork_call_if");
+  EXPECT_EQ(ForkCI->arg_size(), 5U);
   EXPECT_TRUE(isa<GlobalVariable>(ForkCI->getArgOperand(0)));
   EXPECT_EQ(ForkCI->getArgOperand(1),
             ConstantInt::get(Type::getInt32Ty(Ctx), 1));
-  Value *StoredForkArg =
-      findStoredValueInAggregateAt(Ctx, ForkCI->getArgOperand(3), 0);
-  EXPECT_EQ(StoredForkArg, F->arg_begin());
-
-  EXPECT_EQ(DirectCI->getCalledFunction(), OutlinedFn);
-  EXPECT_EQ(DirectCI->arg_size(), 3U);
-  EXPECT_TRUE(isa<AllocaInst>(DirectCI->getArgOperand(0)));
-  EXPECT_TRUE(isa<AllocaInst>(DirectCI->getArgOperand(1)));
-  Value *StoredDirectArg =
-      findStoredValueInAggregateAt(Ctx, DirectCI->getArgOperand(2), 0);
-  EXPECT_EQ(StoredDirectArg, F->arg_begin());
+  EXPECT_EQ(ForkCI->getArgOperand(3)->getType(), Type::getInt32Ty(Ctx));
 }
 
 TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {

@@ -771,7 +771,7 @@ define void @strided_store_nxv17f64(<vscale x 17 x double> %v, double* %ptr, i32
 ; CHECK-RV32-NEXT:    add a1, a1, a3
 ; CHECK-RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    addi a0, sp, 16
-; CHECK-RV32-NEXT:    vl8re8.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-RV32-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
 ; CHECK-RV32-NEXT:    vsse64.v v8, (a1), a2, v0.t
 ; CHECK-RV32-NEXT:    csrr a0, vlenb
 ; CHECK-RV32-NEXT:    slli a0, a0, 3
@@ -832,7 +832,7 @@ define void @strided_store_nxv17f64(<vscale x 17 x double> %v, double* %ptr, i32
 ; CHECK-RV64-NEXT:    add a1, a1, a3
 ; CHECK-RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    addi a0, sp, 16
-; CHECK-RV64-NEXT:    vl8re8.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-RV64-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
 ; CHECK-RV64-NEXT:    vsse64.v v8, (a1), a2, v0.t
 ; CHECK-RV64-NEXT:    csrr a0, vlenb
 ; CHECK-RV64-NEXT:    slli a0, a0, 3

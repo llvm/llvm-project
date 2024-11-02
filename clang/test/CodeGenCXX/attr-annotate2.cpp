@@ -10,7 +10,7 @@
 // CHECK-NEXT:    [[N:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[J:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 10, ptr [[N]], align 4
-// CHECK-NEXT:    call void @llvm.var.annotation(ptr [[J]], ptr @[[STR]], ptr @[[FILENAME]], i32 {{.*}}, ptr @[[ARGS]])
+// CHECK-NEXT:    call void @llvm.var.annotation.p0.p0(ptr [[J]], ptr @[[STR]], ptr @[[FILENAME]], i32 {{.*}}, ptr @[[ARGS]])
 // CHECK-NEXT:    store i32 0, ptr [[J]], align 4
 // CHECK-NEXT:    ret void
 //

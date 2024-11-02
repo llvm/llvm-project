@@ -1,4 +1,4 @@
-; RUN: opt -loop-versioning -S < %s | FileCheck %s
+; RUN: opt -passes=loop-versioning -S < %s | FileCheck %s
 
 ; Make sure all PHIs are properly updated in the exit block.  Based on
 ; PR28037.

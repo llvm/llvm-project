@@ -73,7 +73,21 @@ enum NodeType : unsigned {
   CRCC_W_B_W,
   CRCC_W_H_W,
   CRCC_W_W_W,
-  CRCC_W_D_W
+  CRCC_W_D_W,
+
+  CSRRD,
+  CSRWR,
+  CSRXCHG,
+
+  // IOCSR access operations
+  IOCSRRD_B,
+  IOCSRRD_W,
+  IOCSRRD_H,
+  IOCSRRD_D,
+  IOCSRWR_B,
+  IOCSRWR_H,
+  IOCSRWR_W,
+  IOCSRWR_D,
 };
 } // end namespace LoongArchISD
 

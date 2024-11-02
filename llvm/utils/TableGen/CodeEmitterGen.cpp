@@ -25,7 +25,6 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <cassert>
 #include <cstdint>
 #include <map>
 #include <set>
@@ -113,8 +112,6 @@ bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
   } else if (CGI.Operands.hasOperandNamed(VarName, OpIdx)) {
     // Get the machine operand number for the indicated operand.
     OpIdx = CGI.Operands[OpIdx].MIOperandNo;
-    assert(!CGI.Operands.isFlatOperandNotEmitted(OpIdx) &&
-           "Explicitly used operand also marked as not emitted!");
   } else {
     // Fall back to positional lookup. By default, we now disable positional
     // lookup (and print an error, below), but even so, we'll do the lookup to
@@ -164,30 +161,30 @@ bool CodeEmitterGen::addCodeToMergeInOperand(Record *R, BitsInit *BI,
     }
   }
 
+  if (CGI.Operands.isFlatOperandNotEmitted(OpIdx)) {
+    PrintError(R, "Operand " + VarName + " used but also marked as not emitted!");
+    return false;
+  }
+
   std::pair<unsigned, unsigned> SO = CGI.Operands.getSubOperandNumber(OpIdx);
-  std::string &EncoderMethodName = CGI.Operands[SO.first].EncoderMethodName;
+  std::string &EncoderMethodName =
+      CGI.Operands[SO.first].EncoderMethodNames[SO.second];
 
   if (UseAPInt)
     Case += "      op.clearAllBits();\n";
 
-  // If the source operand has a custom encoder, use it. This will
-  // get the encoding for all of the suboperands.
+  Case += "      // op: " + VarName + "\n";
+
+  // If the source operand has a custom encoder, use it.
   if (!EncoderMethodName.empty()) {
-    // A custom encoder has all of the information for the
-    // sub-operands, if there are more than one, so only
-    // query the encoder once per source operand.
-    if (SO.second == 0) {
-      Case += "      // op: " + VarName + "\n";
-      if (UseAPInt) {
-        Case += "      " + EncoderMethodName + "(MI, " + utostr(OpIdx);
-        Case += ", op";
-      } else {
-        Case += "      op = " + EncoderMethodName + "(MI, " + utostr(OpIdx);
-      }
-      Case += ", Fixups, STI);\n";
+    if (UseAPInt) {
+      Case += "      " + EncoderMethodName + "(MI, " + utostr(OpIdx);
+      Case += ", op";
+    } else {
+      Case += "      op = " + EncoderMethodName + "(MI, " + utostr(OpIdx);
     }
+    Case += ", Fixups, STI);\n";
   } else {
-    Case += "      // op: " + VarName + "\n";
     if (UseAPInt) {
       Case += "      getMachineOpValue(MI, MI.getOperand(" + utostr(OpIdx) + ")";
       Case += ", op, Fixups, STI";

@@ -12,12 +12,12 @@ retq
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      600
-# CHECK-NEXT: Total Cycles:      413
+# CHECK-NEXT: Total Cycles:      809
 # CHECK-NEXT: Total uOps:        1300
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    3.15
-# CHECK-NEXT: IPC:               1.45
+# CHECK-NEXT: uOps Per Cycle:    1.61
+# CHECK-NEXT: IPC:               0.74
 # CHECK-NEXT: Block RThroughput: 3.3
 
 # CHECK:      Instruction Info:
@@ -50,39 +50,39 @@ retq
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -      -     1.99   1.50   1.66   1.67   2.00   1.52   1.99   1.67
+# CHECK-NEXT:  -      -     1.77   1.71   1.75   1.75   2.00   1.81   1.71   1.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
-# CHECK-NEXT:  -      -      -      -     0.16    -     1.00   1.00    -     0.84   stmxcsr	-4(%rsp)
-# CHECK-NEXT:  -      -     0.49   0.49    -      -      -     0.01   0.01    -     movl	$-24577, %eax
-# CHECK-NEXT:  -      -     0.49   0.02   0.49   0.51    -     0.01   0.48    -     andl	-4(%rsp), %eax
-# CHECK-NEXT:  -      -      -      -     0.17    -     1.00    -      -     0.83   movl	%eax, -8(%rsp)
-# CHECK-NEXT:  -      -     1.00   0.01   0.33   0.67    -     0.49   0.50    -     ldmxcsr	-8(%rsp)
-# CHECK-NEXT:  -      -     0.01   0.98   0.51   0.49    -     0.01   1.00    -     retq
+# CHECK-NEXT:  -      -      -      -      -      -     1.00   1.00    -     1.00   stmxcsr	-4(%rsp)
+# CHECK-NEXT:  -      -     0.26   0.46    -      -      -     0.27   0.01    -     movl	$-24577, %eax
+# CHECK-NEXT:  -      -     0.28   0.28   0.49   0.51    -     0.07   0.37    -     andl	-4(%rsp), %eax
+# CHECK-NEXT:  -      -      -      -     0.18   0.32   1.00    -      -     0.50   movl	%eax, -8(%rsp)
+# CHECK-NEXT:  -      -     1.00   0.67   0.58   0.42    -      -     0.33    -     ldmxcsr	-8(%rsp)
+# CHECK-NEXT:  -      -     0.23   0.30   0.50   0.50    -     0.47   1.00    -     retq
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01234
+# CHECK-NEXT:                     0123456789          012
+# CHECK-NEXT: Index     0123456789          0123456789
 
-# CHECK:      [0,0]     DeeER.    .    .    .   .   stmxcsr	-4(%rsp)
-# CHECK-NEXT: [0,1]     DeE-R.    .    .    .   .   movl	$-24577, %eax
-# CHECK-NEXT: [0,2]     .DeeeeeeER.    .    .   .   andl	-4(%rsp), %eax
-# CHECK-NEXT: [0,3]     .D======eER    .    .   .   movl	%eax, -8(%rsp)
-# CHECK-NEXT: [0,4]     . D=====eeeeeeeER   .   .   ldmxcsr	-8(%rsp)
-# CHECK-NEXT: [0,5]     .  DeeeeeeeE----R   .   .   retq
-# CHECK-NEXT: [1,0]     .   D====eeE----R   .   .   stmxcsr	-4(%rsp)
-# CHECK-NEXT: [1,1]     .   DeE---------R   .   .   movl	$-24577, %eax
-# CHECK-NEXT: [1,2]     .    DeeeeeeE---R   .   .   andl	-4(%rsp), %eax
-# CHECK-NEXT: [1,3]     .    D======eE--R   .   .   movl	%eax, -8(%rsp)
-# CHECK-NEXT: [1,4]     .    .D=====eeeeeeeER   .   ldmxcsr	-8(%rsp)
-# CHECK-NEXT: [1,5]     .    . D=eeeeeeeE---R   .   retq
-# CHECK-NEXT: [2,0]     .    .  D====eeE----R   .   stmxcsr	-4(%rsp)
-# CHECK-NEXT: [2,1]     .    .  DeE---------R   .   movl	$-24577, %eax
-# CHECK-NEXT: [2,2]     .    .   DeeeeeeE---R   .   andl	-4(%rsp), %eax
-# CHECK-NEXT: [2,3]     .    .   D======eE--R   .   movl	%eax, -8(%rsp)
-# CHECK-NEXT: [2,4]     .    .    D=====eeeeeeeER   ldmxcsr	-8(%rsp)
-# CHECK-NEXT: [2,5]     .    .    .DeeeeeeeE----R   retq
+# CHECK:      [0,0]     DeeER.    .    .    .    .    . .   stmxcsr	-4(%rsp)
+# CHECK-NEXT: [0,1]     DeE-R.    .    .    .    .    . .   movl	$-24577, %eax
+# CHECK-NEXT: [0,2]     .DeeeeeeER.    .    .    .    . .   andl	-4(%rsp), %eax
+# CHECK-NEXT: [0,3]     .D======eER    .    .    .    . .   movl	%eax, -8(%rsp)
+# CHECK-NEXT: [0,4]     . D=====eeeeeeeER   .    .    . .   ldmxcsr	-8(%rsp)
+# CHECK-NEXT: [0,5]     .  DeeeeeeeE----R   .    .    . .   retq
+# CHECK-NEXT: [1,0]     .   D==========eeER .    .    . .   stmxcsr	-4(%rsp)
+# CHECK-NEXT: [1,1]     .   DeE-----------R .    .    . .   movl	$-24577, %eax
+# CHECK-NEXT: [1,2]     .    DeeeeeeE-----R .    .    . .   andl	-4(%rsp), %eax
+# CHECK-NEXT: [1,3]     .    D==========eER .    .    . .   movl	%eax, -8(%rsp)
+# CHECK-NEXT: [1,4]     .    .D=========eeeeeeeER.    . .   ldmxcsr	-8(%rsp)
+# CHECK-NEXT: [1,5]     .    . D=eeeeeeeE-------R.    . .   retq
+# CHECK-NEXT: [2,0]     .    .  D==============eeER   . .   stmxcsr	-4(%rsp)
+# CHECK-NEXT: [2,1]     .    .  DeE---------------R   . .   movl	$-24577, %eax
+# CHECK-NEXT: [2,2]     .    .   DeeeeeeE---------R   . .   andl	-4(%rsp), %eax
+# CHECK-NEXT: [2,3]     .    .   D==============eER   . .   movl	%eax, -8(%rsp)
+# CHECK-NEXT: [2,4]     .    .    D=============eeeeeeeER   ldmxcsr	-8(%rsp)
+# CHECK-NEXT: [2,5]     .    .    .DeeeeeeeE------------R   retq
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -91,10 +91,10 @@ retq
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     3     3.7    1.0    2.7       stmxcsr	-4(%rsp)
-# CHECK-NEXT: 1.     3     1.0    1.0    6.3       movl	$-24577, %eax
-# CHECK-NEXT: 2.     3     1.0    1.0    2.0       andl	-4(%rsp), %eax
-# CHECK-NEXT: 3.     3     7.0    0.0    1.3       movl	%eax, -8(%rsp)
-# CHECK-NEXT: 4.     3     6.0    0.0    0.0       ldmxcsr	-8(%rsp)
-# CHECK-NEXT: 5.     3     1.3    1.3    3.7       retq
-# CHECK-NEXT:        3     3.3    0.7    2.7       <total>
+# CHECK-NEXT: 0.     3     9.0    0.3    0.0       stmxcsr	-4(%rsp)
+# CHECK-NEXT: 1.     3     1.0    1.0    9.0       movl	$-24577, %eax
+# CHECK-NEXT: 2.     3     1.0    1.0    4.7       andl	-4(%rsp), %eax
+# CHECK-NEXT: 3.     3     11.0   0.7    0.0       movl	%eax, -8(%rsp)
+# CHECK-NEXT: 4.     3     10.0   0.0    0.0       ldmxcsr	-8(%rsp)
+# CHECK-NEXT: 5.     3     1.3    1.3    7.7       retq
+# CHECK-NEXT:        3     5.6    0.7    3.6       <total>

@@ -1055,7 +1055,7 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   // Only add the version-min options if we got a version from somewhere
   if (!version.empty() && sdk_type != XcodeSDK::Type::Linux) {
 #define OPTION(PREFIX, NAME, VAR, ...)                                         \
-  const char *opt_##VAR = NAME;                                                \
+  llvm::StringRef opt_##VAR = NAME;                                            \
   (void)opt_##VAR;
 #include "clang/Driver/Options.inc"
 #undef OPTION

@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -loop-unroll -unroll-allow-partial=1 | FileCheck %s
+; RUN: opt -S < %s -passes=loop-unroll -unroll-allow-partial=1 | FileCheck %s
 ;
 ; Bugpointed test that triggered UB while cleaning up dead
 ; instructions after simplifying indvars

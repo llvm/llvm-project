@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -licm -verify-memoryssa -disable-basic-aa -stats -S 2>&1 | grep "1 licm"
+; RUN: opt < %s -passes=licm -verify-memoryssa -disable-basic-aa -stats -S 2>&1 | grep "1 licm"
 
 @"\01L_OBJC_METH_VAR_NAME_" = internal global [4 x i8] c"foo\00", section "__TEXT,__objc_methname,cstring_literals", align 1
 @"\01L_OBJC_SELECTOR_REFERENCES_" = internal global ptr @"\01L_OBJC_METH_VAR_NAME_", section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip"

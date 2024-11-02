@@ -60,6 +60,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstring>
 #include <functional>
+#include <optional>
 
 #define DEBUG_TYPE "exprconstant"
 
@@ -6833,7 +6834,7 @@ class BitCastBuffer {
   // FIXME: Its possible under the C++ standard for 'char' to not be 8 bits, but
   // we don't support a host or target where that is the case. Still, we should
   // use a more generic type in case we ever do.
-  SmallVector<Optional<unsigned char>, 32> Bytes;
+  SmallVector<std::optional<unsigned char>, 32> Bytes;
 
   static_assert(std::numeric_limits<unsigned char>::digits >= 8,
                 "Need at least 8 bit unsigned char");

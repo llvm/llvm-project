@@ -838,6 +838,14 @@ codegen with GlobalISel.
 
 The above example generates a pointer to the source jump table index.
 
+G_INVOKE_REGION_START
+^^^^^^^^^^^^^^^^^^^^^
+
+A marker instruction that acts as a pseudo-terminator for regions of code that may
+throw exceptions. Being a terminator, it prevents code from being inserted after
+it during passes like legalization. This is needed because calls to exception
+throw routines do not return, so no code that must be on an executable path must
+be placed after throwing.
 
 G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -15,6 +15,7 @@ define { ptr, i32 } @bar() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   G_INVOKE_REGION_START
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $w0 = COPY [[C]](s32)
@@ -61,6 +62,7 @@ define void @test_invoke_indirect(ptr %callee) personality ptr @__gxx_personalit
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64(p0) = COPY $x0
+  ; CHECK-NEXT:   G_INVOKE_REGION_START
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   BLR [[COPY]](p0), csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
@@ -99,6 +101,7 @@ define void @test_invoke_varargs() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
+  ; CHECK-NEXT:   G_INVOKE_REGION_START
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
@@ -151,6 +154,7 @@ define i32 @test_lpad_phi() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 13
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 55
   ; CHECK-NEXT:   G_STORE [[C]](s32), [[GV]](p0) :: (store (s32) into @global_var)
+  ; CHECK-NEXT:   G_INVOKE_REGION_START
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   BL @may_throw, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp

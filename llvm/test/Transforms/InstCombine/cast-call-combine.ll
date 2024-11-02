@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -always-inline -S | FileCheck %s
+; RUN: opt < %s -passes='function(instcombine),always-inline' -S | FileCheck %s
 
 define internal void @foo(ptr) alwaysinline {
   ret void

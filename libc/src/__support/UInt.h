@@ -386,18 +386,39 @@ template <size_t Bits> struct UInt {
   }
 
   constexpr void shift_right(size_t s) {
+#ifdef __SIZEOF_INT128__
+    if constexpr (Bits == 128) {
+      // Use builtin 128 bits if available;
+      if (s >= 128) {
+        val[0] = 0;
+        val[1] = 0;
+        return;
+      }
+      __uint128_t tmp = __uint128_t(val[0]) + (__uint128_t(val[1]) << 64);
+      tmp >>= s;
+      val[0] = uint64_t(tmp);
+      val[1] = uint64_t(tmp >> 64);
+      return;
+    }
+#endif // __SIZEOF_INT128__
+
     const size_t drop = s / 64;  // Number of words to drop
     const size_t shift = s % 64; // Bit shift in the remaining words.
 
     size_t i = 0;
 
     if (drop < WordCount) {
-      size_t j = drop;
-      for (; j < WordCount - 1; ++i, ++j) {
-        val[i] = (val[j] >> shift) | (val[j + 1] << (64 - shift));
+      if (shift > 0) {
+        for (size_t j = drop; j < WordCount - 1; ++i, ++j) {
+          val[i] = (val[j] >> shift) | (val[j + 1] << (64 - shift));
+        }
+        val[i] = val[WordCount - 1] >> shift;
+        ++i;
+      } else {
+        for (size_t j = drop; j < WordCount; ++i, ++j) {
+          val[i] = val[j];
+        }
       }
-      val[i] = val[j] >> shift;
-      ++i;
     }
 
     for (; i < WordCount; ++i) {

@@ -1,4 +1,4 @@
-; RUN: not opt -S -verify < %s 2>&1 | FileCheck %s
+; RUN: not opt -S -passes=verify < %s 2>&1 | FileCheck %s
 
 ;; Global variables cannot be scalable vectors, since we don't
 ;; know the size at compile time.

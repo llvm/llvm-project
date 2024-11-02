@@ -1,6 +1,6 @@
-; RUN: opt < %s -indvars -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes='loop(indvars),instcombine' -S | FileCheck %s
 ;
-; Test that -indvars can reduce variable stride IVs.  If it can reduce variable
+; Test that -passes=indvars can reduce variable stride IVs.  If it can reduce variable
 ; stride iv's, it will make %iv. and %m.0.0 isomorphic to each other without
 ; cycles, allowing the tmp.21 subtraction to be eliminated.
 

@@ -12,6 +12,7 @@
 #include <__assert>
 #include <__config>
 #include <__memory_resource/memory_resource.h>
+#include <__utility/transaction.h>
 #include <cstddef>
 #include <limits>
 #include <new>
@@ -33,8 +34,13 @@ namespace pmr {
 
 // [mem.poly.allocator.class]
 
-template <class _ValueType>
+template <class _ValueType
+#  if _LIBCPP_STD_VER >= 20
+          = byte
+#  endif
+          >
 class _LIBCPP_TEMPLATE_VIS polymorphic_allocator {
+
 public:
   using value_type = _ValueType;
 
@@ -65,6 +71,46 @@ public:
     _LIBCPP_ASSERT(__n <= __max_size(), "deallocate called for size which exceeds max_size()");
     __res_->deallocate(__p, __n * sizeof(_ValueType), alignof(_ValueType));
   }
+
+#  if _LIBCPP_STD_VER >= 20
+
+  [[nodiscard]] [[using __gnu__: __alloc_size__(2), __alloc_align__(3)]] void*
+  allocate_bytes(size_t __nbytes, size_t __alignment = alignof(max_align_t)) {
+    return __res_->allocate(__nbytes, __alignment);
+  }
+
+  void deallocate_bytes(void* __ptr, size_t __nbytes, size_t __alignment = alignof(max_align_t)) {
+    __res_->deallocate(__ptr, __nbytes, __alignment);
+  }
+
+  template <class _Type>
+  [[nodiscard]] _Type* allocate_object(size_t __n = 1) {
+    if (numeric_limits<size_t>::max() / sizeof(_Type) < __n)
+      std::__throw_bad_array_new_length();
+    return static_cast<_Type*>(allocate_bytes(__n * sizeof(_Type), alignof(_Type)));
+  }
+
+  template <class _Type>
+  void deallocate_object(_Type* __ptr, size_t __n = 1) {
+    deallocate_bytes(__ptr, __n * sizeof(_Type), alignof(_Type));
+  }
+
+  template <class _Type, class... _CtorArgs>
+  [[nodiscard]] _Type* new_object(_CtorArgs&&... __ctor_args) {
+    _Type* __ptr = allocate_object<_Type>();
+    __transaction __guard([&] { deallocate_object(__ptr); });
+    construct(__ptr, std::forward<_CtorArgs>(__ctor_args)...);
+    __guard.__complete();
+    return __ptr;
+  }
+
+  template <class _Type>
+  void delete_object(_Type* __ptr) {
+    destroy(__ptr);
+    deallocate_object(__ptr);
+  }
+
+#  endif // _LIBCPP_STD_VER >= 20
 
   template <class _Tp, class... _Ts>
   _LIBCPP_HIDE_FROM_ABI void construct(_Tp* __p, _Ts&&... __args) {

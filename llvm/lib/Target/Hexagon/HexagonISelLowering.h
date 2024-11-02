@@ -169,6 +169,8 @@ public:
   bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
       unsigned Index) const override;
 
+  bool isTargetCanonicalConstantNode(SDValue Op) const override;
+
   bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override;
   LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
   LegalizeAction getCustomOperationAction(SDNode &Op) const override;

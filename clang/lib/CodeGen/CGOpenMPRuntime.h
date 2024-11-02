@@ -328,9 +328,10 @@ protected:
 
   /// Emits object of ident_t type with info for source location.
   /// \param Flags Flags for OpenMP location.
+  /// \param EmitLoc emit source location with debug-info is off.
   ///
   llvm::Value *emitUpdateLocation(CodeGenFunction &CGF, SourceLocation Loc,
-                                  unsigned Flags = 0);
+                                  unsigned Flags = 0, bool EmitLoc = false);
 
   /// Emit the number of teams for a target directive.  Inspect the num_teams
   /// clause associated with a teams construct combined or closely nested
@@ -820,6 +821,11 @@ public:
 
   /// Emits code for a taskyield directive.
   virtual void emitTaskyieldCall(CodeGenFunction &CGF, SourceLocation Loc);
+
+  /// Emit __kmpc_error call for error directive
+  /// extern void __kmpc_error(ident_t *loc, int severity, const char *message);
+  virtual void emitErrorCall(CodeGenFunction &CGF, SourceLocation Loc, Expr *ME,
+                             bool IsFatal);
 
   /// Emit a taskgroup region.
   /// \param TaskgroupOpGen Generator for the statement associated with the

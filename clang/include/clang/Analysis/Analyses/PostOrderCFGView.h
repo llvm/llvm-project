@@ -18,7 +18,6 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include <utility>
 #include <vector>

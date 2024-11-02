@@ -1,4 +1,4 @@
-; RUN: opt < %s  -passes=instcombine -S 
+; RUN: opt < %s -passes=instcombine -S
 ; no crash
 
 %A = type { %B }
@@ -84,7 +84,7 @@ declare void @scale() local_unnamed_addr #2 align 2
 declare void @lazy() unnamed_addr #2 align 2
 
 attributes #0 = { inlinehint sanitize_memory uwtable}
-attributes #1 = { nobuiltin } 
-attributes #2 = { sanitize_memory uwtable } 
+attributes #1 = { nobuiltin }
+attributes #2 = { sanitize_memory uwtable }
 attributes #3 = { builtin }
 

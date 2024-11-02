@@ -46,16 +46,7 @@ bool HwasanChunkView::IsAllocated() const {
          metadata_->get_requested_size();
 }
 
-// Aligns the 'addr' right to the granule boundary.
-static uptr AlignRight(uptr addr, uptr requested_size) {
-  uptr tail_size = requested_size % kShadowAlignment;
-  if (!tail_size) return addr;
-  return addr + kShadowAlignment - tail_size;
-}
-
 uptr HwasanChunkView::Beg() const {
-  if (metadata_ && metadata_->right_aligned)
-    return AlignRight(block_, metadata_->get_requested_size());
   return block_;
 }
 uptr HwasanChunkView::End() const {
@@ -159,7 +150,6 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
       reinterpret_cast<Metadata *>(allocator.GetMetaData(allocated));
   meta->set_requested_size(orig_size);
   meta->alloc_context_id = StackDepotPut(*stack);
-  meta->right_aligned = false;
   if (zeroise) {
     internal_memset(allocated, 0, size);
   } else if (flags()->max_malloc_fill_size > 0) {
@@ -353,13 +343,7 @@ static uptr AllocationSize(const void *tagged_ptr) {
   if (!untagged_ptr) return 0;
   const void *beg = allocator.GetBlockBegin(untagged_ptr);
   Metadata *b = (Metadata *)allocator.GetMetaData(untagged_ptr);
-  if (b->right_aligned) {
-    if (beg != reinterpret_cast<void *>(RoundDownTo(
-                   reinterpret_cast<uptr>(untagged_ptr), kShadowAlignment)))
-      return 0;
-  } else {
-    if (beg != untagged_ptr) return 0;
-  }
+  if (beg != untagged_ptr) return 0;
   return b->get_requested_size();
 }
 

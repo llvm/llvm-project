@@ -836,6 +836,19 @@ Expected<GVNOptions> parseGVNOptions(StringRef Params) {
   return Result;
 }
 
+Expected<SROAOptions> parseSROAOptions(StringRef Params) {
+  if (Params.empty() || Params == "modify-cfg")
+    return SROAOptions::ModifyCFG;
+  if (Params == "preserve-cfg")
+    return SROAOptions::PreserveCFG;
+  return make_error<StringError>(
+      formatv("invalid SROA pass parameter '{0}' (either preserve-cfg or "
+              "modify-cfg can be specified)",
+              Params)
+          .str(),
+      inconvertibleErrorCode());
+}
+
 Expected<StackLifetime::LivenessType>
 parseStackLifetimeOptions(StringRef Params) {
   StackLifetime::LivenessType Result = StackLifetime::LivenessType::May;

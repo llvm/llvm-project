@@ -1,4 +1,4 @@
-; RUN: opt -S -rewrite-statepoints-for-gc < %s | FileCheck %s
+; RUN: opt -S -passes=rewrite-statepoints-for-gc < %s | FileCheck %s
 
 ; Regression test to incorrectly testing fixed state causing infinite loop.
 ; CHECK: test
@@ -20,7 +20,7 @@ ph.R:
 ph.M:
   %ph.M.p = phi i8 addrspace(1)* [ %ph.L.p, %ph.L ], [ %ph.R.p, %ph.R ]
   br label %header
-  
+
 header:
   %header.p = phi i8 addrspace(1)* [ %ph.M.p, %ph.M ], [ %backedge.p, %backedge]
   br i1 %c1, label %loop.M, label %loop.R
@@ -39,7 +39,7 @@ loop.R.M:
 loop.M:
   %loop.M.p = phi i8 addrspace(1)* [ %loop.R.M.p, %loop.R.M ], [ %header.p, %header ]
   br i1 %c4, label %backedge, label %pre.backedge.R
-  
+
 pre.backedge.R:
   br i1 %c5, label %pre.backedge.R.L, label %pre.backedge.R.R
 pre.backedge.R.L:
@@ -52,11 +52,11 @@ pre.backedge.R.R:
 pre.backedge.R.M:
   %pre.backedge.R.M.p = phi i8 addrspace(1)* [ %pre.backedge.R.L.p, %pre.backedge.R.L ], [ %pre.backedge.R.R.p, %pre.backedge.R.R ]
   br label %backedge
-  
+
 backedge:
   %backedge.p = phi i8 addrspace(1)* [ %pre.backedge.R.M.p, %pre.backedge.R.M ], [ %loop.M.p, %loop.M ]
   br i1 %c.exit, label %header, label %exit
-  
+
 exit:                                                ; preds = %3, %1
   call void @bar(i8 addrspace(1)* align 8 %header.p) [ "deopt"() ]
   ret i8 addrspace(1)* %header.p

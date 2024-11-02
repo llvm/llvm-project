@@ -1,9 +1,9 @@
-;RUN: opt -instcombine -S < %s | llc -mtriple=armv5e--linux-gnueabi | FileCheck %s
-;RUN: opt -instcombine -S < %s | llc -mtriple=thumbv4t--linux-gnueabi | FileCheck %s
-;RUN: opt -instcombine -S < %s | llc -mtriple=armv6--linux-gnueabi | FileCheck %s
+;RUN: opt -passes=instcombine -S < %s | llc -mtriple=armv5e--linux-gnueabi | FileCheck %s
+;RUN: opt -passes=instcombine -S < %s | llc -mtriple=thumbv4t--linux-gnueabi | FileCheck %s
+;RUN: opt -passes=instcombine -S < %s | llc -mtriple=armv6--linux-gnueabi | FileCheck %s
 
-;RUN: opt -instcombine -S < %s | llc -mtriple=armv7--linux-gnueabi | FileCheck %s --check-prefix=RBIT
-;RUN: opt -instcombine -S < %s | llc -mtriple=thumbv8--linux-gnueabi | FileCheck %s --check-prefix=RBIT
+;RUN: opt -passes=instcombine -S < %s | llc -mtriple=armv7--linux-gnueabi | FileCheck %s --check-prefix=RBIT
+;RUN: opt -passes=instcombine -S < %s | llc -mtriple=thumbv8--linux-gnueabi | FileCheck %s --check-prefix=RBIT
 
 ;CHECK-NOT: rbit
 ;RBIT: rbit

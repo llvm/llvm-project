@@ -11,8 +11,8 @@ Header:
   FileSize:        64
   PartCount:       2
 Parts:
-  - Name:            SFI0
+  - Name:            FKE0
     Size:            8
-  - Name:            ISG1
+  - Name:            FKE1
     Size:            8
 ...

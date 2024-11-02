@@ -91,9 +91,9 @@ ModulePass *createAMDGPULowerIntrinsicsPass();
 void initializeAMDGPULowerIntrinsicsPass(PassRegistry &);
 extern char &AMDGPULowerIntrinsicsID;
 
-ModulePass *createAMDGPUCtorDtorLoweringPass();
-void initializeAMDGPUCtorDtorLoweringPass(PassRegistry &);
-extern char &AMDGPUCtorDtorLoweringID;
+ModulePass *createAMDGPUCtorDtorLoweringLegacyPass();
+void initializeAMDGPUCtorDtorLoweringLegacyPass(PassRegistry &);
+extern char &AMDGPUCtorDtorLoweringLegacyPassID;
 
 FunctionPass *createAMDGPULowerKernelArgumentsPass();
 void initializeAMDGPULowerKernelArgumentsPass(PassRegistry &);

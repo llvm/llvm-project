@@ -667,6 +667,19 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
     printRegOperand(Op.getReg(), O, MRI);
+
+    // Check if operand register class contains register used.
+    // Intention: print disassembler message when invalid code is decoded,
+    // for example sgpr register used in VReg or VISrc(VReg or imm) operand.
+    int RCID = Desc.OpInfo[OpNo].RegClass;
+    if (RCID != -1) {
+      const MCRegisterClass RC = MRI.getRegClass(RCID);
+      auto Reg = mc2PseudoReg(Op.getReg());
+      if (!RC.contains(Reg) && !isInlineValue(Reg)) {
+        O << "/*Invalid register, operand has \'" << MRI.getRegClassName(&RC)
+          << "\' register class*/";
+      }
+    }
   } else if (Op.isImm()) {
     const uint8_t OpTy = Desc.OpInfo[OpNo].OperandType;
     switch (OpTy) {

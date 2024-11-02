@@ -777,7 +777,7 @@ MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> mbs,
 #undef PREFIX
 
 // Create table mapping all options defined in Options.td
-static const llvm::opt::OptTable::Info infoTable[] = {
+static constexpr llvm::opt::OptTable::Info infoTable[] = {
 #define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
   {X1, X2, X10,         X11,         OPT_##ID, llvm::opt::Option::KIND##Class, \
    X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},

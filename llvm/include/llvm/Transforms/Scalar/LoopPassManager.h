@@ -184,7 +184,7 @@ protected:
   std::vector<std::unique_ptr<LoopPassConceptT>> LoopPasses;
   std::vector<std::unique_ptr<LoopNestPassConceptT>> LoopNestPasses;
 
-  /// Run either a loop pass or a loop-nest pass. Returns `None` if
+  /// Run either a loop pass or a loop-nest pass. Returns `std::nullopt` if
   /// PassInstrumentation's BeforePass returns false. Otherwise, returns the
   /// preserved analyses of the pass.
   template <typename IRUnitT, typename PassT>

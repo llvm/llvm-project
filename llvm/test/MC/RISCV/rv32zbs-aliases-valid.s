@@ -30,3 +30,7 @@ binv x5, x6, 8
 # CHECK-S-OBJ-NOALIAS: bexti t0, t1, 8
 # CHECK-S-OBJ: bexti t0, t1, 8
 bext x5, x6, 8
+
+# CHECK-S-OBJ-NOALIAS: bseti t2, zero, 11
+# CHECK-S-OBJ: bseti t2, zero, 11
+li x7, 2048

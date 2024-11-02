@@ -155,8 +155,8 @@ std::string Token::getSymbolReference() const {
 }
 
 /// Given a hash_identifier token like #123, try to parse the number out of
-/// the identifier, returning None if it is a named identifier like #x or
-/// if the integer doesn't fit.
+/// the identifier, returning std::nullopt if it is a named identifier like #x
+/// or if the integer doesn't fit.
 Optional<unsigned> Token::getHashIdentifierNumber() const {
   assert(getKind() == hash_identifier);
   unsigned result = 0;

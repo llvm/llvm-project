@@ -1,4 +1,4 @@
-; RUN: not opt -verify < %s 2>&1 | FileCheck %s
+; RUN: not opt -passes=verify < %s 2>&1 | FileCheck %s
 
 ; Mask is not a vector
 ; CHECK: Intrinsic has incorrect argument type!
@@ -56,7 +56,7 @@ define <8 x float> @gather8(<16 x float*> %ptrs, <8 x i1> %mask, <8 x float> %pa
 }
 declare <8 x float> @llvm.masked.gather.v8f32.v16p0f32(<16 x float*>, i32, <8 x i1>, <8 x float>)
 
-; Passthru type doesn't match return type 
+; Passthru type doesn't match return type
 ; CHECK: Intrinsic has incorrect argument type!
 define <16 x i32> @gather9(<16 x i32*> %ptrs, <16 x i1> %mask, <8 x i32> %passthru) {
   %res = call <16 x i32> @llvm.masked.gather.v16i32.v16p0i32(<16 x i32*> %ptrs, i32 4, <16 x i1> %mask, <8 x i32> %passthru)

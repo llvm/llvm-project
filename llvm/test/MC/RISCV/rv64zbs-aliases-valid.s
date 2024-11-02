@@ -56,3 +56,7 @@ li x6, 9223354442718100411
 # CHECK-S-OBJ-NEXT: bseti t1, t1, 46
 # CHECK-S-OBJ-NEXT: bseti t1, t1, 63
 li x6, -9223301666034697285
+
+# CHECK-S-OBJ-NOALIAS: bseti t2, zero, 11
+# CHECK-S-OBJ: bseti t2, zero, 11
+li x7, 2048

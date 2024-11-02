@@ -1,4 +1,4 @@
-; RUN: opt -loop-rotate %s -S | FileCheck %s
+; RUN: opt -passes=loop-rotate %s -S | FileCheck %s
 ; REQUIRES: asserts
 
 ; Check that loop rotate keeps proper mapping between cloned instructions,

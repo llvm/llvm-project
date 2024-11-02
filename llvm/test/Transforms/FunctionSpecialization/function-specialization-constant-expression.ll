@@ -4,7 +4,7 @@
 ; Note that this test case shows that function specialization pass would
 ; transform the function even if no specialization happened.
 
-; RUN: opt -function-specialization -force-function-specialization -S < %s | FileCheck %s
+; RUN: opt -passes=ipsccp -specialize-functions -force-function-specialization -S < %s | FileCheck %s
 
 %struct = type { i8, i16, i32, i64, i64}
 @Global = internal constant %struct {i8 0, i16 1, i32 2, i64 3, i64 4}
@@ -18,8 +18,7 @@ entry:
 define internal i64 @func(ptr %x, ptr %binop) {
 ; CHECK-LABEL: @func(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 [[BINOP:%.*]](ptr [[X:%.*]])
-; CHECK-NEXT:    ret i64 [[TMP0]]
+; CHECK-NEXT:    unreachable
 ;
 entry:
   %tmp0 = call i64 %binop(ptr %x)

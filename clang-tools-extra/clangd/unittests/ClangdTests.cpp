@@ -25,7 +25,6 @@
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/Core/Replacement.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"

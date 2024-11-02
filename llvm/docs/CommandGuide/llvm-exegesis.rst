@@ -19,9 +19,10 @@ Given an LLVM opcode name and a benchmarking mode, :program:`llvm-exegesis`
 generates a code snippet that makes execution as serial (resp. as parallel) as
 possible so that we can measure the latency (resp. inverse throughput/uop decomposition)
 of the instruction.
-The code snippet is jitted and executed on the host subtarget. The time taken
-(resp. resource usage) is measured using hardware performance counters. The
-result is printed out as YAML to the standard output.
+The code snippet is jitted and, unless requested not to, executed on the
+host subtarget. The time taken (resp. resource usage) is measured using
+hardware performance counters. The result is printed out as YAML
+to the standard output.
 
 The main goal of this tool is to automatically (in)validate the LLVM's TableDef
 scheduling models. To that end, we also provide analysis of the results.
@@ -195,6 +196,14 @@ OPTIONS
  In `analysis` mode, you also need to specify at least one of the
  `-analysis-clusters-output-file=` and `-analysis-inconsistencies-output-file=`.
 
+.. option:: --skip-measurements
+
+  By default, when `-mode=` is specified, the generated snippet will be executed
+  and measured, and that requires that we are running on the hardware for which
+  the snippet was generated, and that supports performance measurements.
+  But sometimes, you just want to generate snippets, and this is exactly what
+  this options allows one to do.
+
 .. option:: -x86-lbr-sample-period=<nBranches/sample>
 
   Specify the LBR sampling period - how many branches before we take a sample.
@@ -203,6 +212,15 @@ OPTIONS
   On choosing the "right" sampling period, a small value is preferred, but throttling
   could occur if the sampling is too frequent. A prime number should be used to
   avoid consistently skipping certain blocks.
+
+.. option:: -x86-disable-upper-sse-registers
+
+  Using the upper xmm registers (xmm8-xmm15) forces a longer instruction encoding
+  which may put greater pressure on the frontend fetch and decode stages,
+  potentially reducing the rate that instructions are dispatched to the backend,
+  particularly on older hardware. Comparing baseline results with this mode
+  enabled can help determine the effects of the frontend and can be used to
+  improve latency and throughput estimates.
 
 .. option:: -repetition-mode=[duplicate|loop|min]
 
@@ -293,10 +311,21 @@ OPTIONS
 
  If set, ignore instructions that do not have a sched class (class idx = 0).
 
+.. option:: -mtriple=<triple name>
+
+ Target triple. See `-version` for available targets.
+
 .. option:: -mcpu=<cpu name>
 
  If set, measure the cpu characteristics using the counters for this CPU. This
  is useful when creating new sched models (the host CPU is unknown to LLVM).
+ (`-mcpu=help` for details)
+
+.. option:: --analysis-override-benchmark-triple-and-cpu
+
+  By default, llvm-exegesis will analyze the benchmarks for the triple/CPU they
+  were measured for, but if you want to analyze them for some other combination
+  (specified via `-mtriple`/`-mcpu`), you can pass this flag.
 
 .. option:: --dump-object-to-disk=true
 

@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=x86_64-- %s -S --instcombine  -o - | FileCheck %s
-; Verify that demanded bits optimisations don't affect debuginfo 
+; RUN: opt -mtriple=x86_64-- %s -S -passes=instcombine  -o - | FileCheck %s
+; Verify that demanded bits optimisations don't affect debuginfo
 ; variable values.
 ; Bugzilla #44371
 

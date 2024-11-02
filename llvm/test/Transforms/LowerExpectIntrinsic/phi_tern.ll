@@ -1,8 +1,8 @@
-; RUN: opt -lower-expect  -S -o - < %s | FileCheck %s
+; RUN: opt -passes=lower-expect  -S -o - < %s | FileCheck %s
 ; RUN: opt -S -passes='function(lower-expect)' < %s | FileCheck %s
 
 ; return __builtin_expect((a > b ? 1, goo(), 0);
-;  
+;
 ; Function Attrs: noinline nounwind uwtable
 define i32 @foo(i32 %arg, i32 %arg1)  {
 ; CHECK-LABEL: i32 @foo
@@ -44,8 +44,8 @@ bb9:                                              ; preds = %bb7, %bb6
   ret i32 %tmp12
 }
 
-declare i32 @goo() 
-declare i64 @llvm.expect.i64(i64, i64) 
+declare i32 @goo()
+declare i64 @llvm.expect.i64(i64, i64)
 
 
 

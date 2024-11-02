@@ -1,5 +1,5 @@
-; RUN: opt < %s -S -loop-unroll -mtriple aarch64 -mcpu=falkor | FileCheck %s
-; RUN: opt < %s -S -loop-unroll -mtriple aarch64 -mcpu=falkor -enable-falkor-hwpf-unroll-fix=0 | FileCheck %s --check-prefix=NOHWPF
+; RUN: opt < %s -S -passes=loop-unroll -mtriple aarch64 -mcpu=falkor | FileCheck %s
+; RUN: opt < %s -S -passes=loop-unroll -mtriple aarch64 -mcpu=falkor -enable-falkor-hwpf-unroll-fix=0 | FileCheck %s --check-prefix=NOHWPF
 
 ; Check that loop unroller doesn't exhaust HW prefetcher resources.
 

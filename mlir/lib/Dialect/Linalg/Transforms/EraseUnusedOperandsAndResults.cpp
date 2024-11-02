@@ -56,7 +56,9 @@ namespace {
 
 struct DeduplicateAndRemoveDeadOperandsAndResults
     : public OpRewritePattern<GenericOp> {
-  using OpRewritePattern<GenericOp>::OpRewritePattern;
+  DeduplicateAndRemoveDeadOperandsAndResults(MLIRContext *ctx,
+                                             bool removeOutputs)
+      : OpRewritePattern<GenericOp>(ctx), removeOutputs(removeOutputs) {}
 
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
@@ -120,6 +122,9 @@ struct DeduplicateAndRemoveDeadOperandsAndResults
   }
 
 private:
+  /// If unset, outputs are not modified by this pattern.
+  bool removeOutputs;
+
   // Deduplicate input operands, and return the
   // - Mapping from operand position in the original op, to operand position in
   // the canonicalized op.
@@ -176,9 +181,9 @@ private:
     llvm::SmallDenseMap<unsigned, unsigned> origToNewPos;
     llvm::SmallDenseMap<std::tuple<Value, AffineMap, Value>, unsigned>
         dedupedOutpts;
-    // If the op doesnt have tensor semantics, keep all the outputs as
-    // preserved.
-    if (!genericOp.hasTensorSemantics()) {
+    // If the op doesn't have tensor semantics or outputs should not be removed,
+    // keep all the outputs as preserved.
+    if (!genericOp.hasTensorSemantics() || !removeOutputs) {
       for (const auto &en : llvm::enumerate(genericOp.getDpsInitOperands())) {
         origToNewPos[en.index()] = newOutputOperands.size();
         newOutputOperands.push_back(en.value()->get());
@@ -353,10 +358,69 @@ struct RemoveUnusedCycleInGenericOp : public OpRewritePattern<GenericOp> {
     return failure();
   }
 };
+
+/// Fold uses of duplicate inputs in the body of a linalg.generic. E.g.:
+/// ```
+/// linalg.generic ins(%a, %b, %a, %b) outs(%a)
+/// ^bb0(%in0, %in1, %in2, %in3, %out1)
+/// ```
+/// Assuming that all %a and %b have the same index map:
+/// * All uses of %in0 and %in2 are replaced with %out1
+/// * All uses of %in1 are replaced with %in3
+/// This pattern can enable additional canonicalizations: In the above example,
+/// %in0, %in1 and %in3 have no uses anymore and their corresponding operands
+/// can be folded away. This pattern does not modify uses of output block args.
+struct FoldDuplicateInputBbArgs : public OpRewritePattern<GenericOp> {
+  using OpRewritePattern<GenericOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(GenericOp genericOp,
+                                PatternRewriter &rewriter) const override {
+    // Find replacement bbArgs for all input bbArg.
+    DenseMap<int, int> replacements;
+    for (int i = 0; i < genericOp.getNumDpsInputs(); ++i) {
+      // Skip bbArgs that have no uses.
+      if (genericOp.getBody()->getArgument(i).getUses().empty())
+        continue;
+      // Find replacement bbArg. This can be an input or an output bbArg.
+      for (int j = genericOp->getNumOperands() - 1; j > i; --j) {
+        if (genericOp->getOperand(i) == genericOp->getOperand(j) &&
+            genericOp.getIndexingMapsArray()[i] ==
+                genericOp.getIndexingMapsArray()[j]) {
+          replacements[i] = j;
+          break;
+        }
+      }
+    }
+
+    // Stop here if no replacements were found.
+    if (replacements.empty())
+      return failure();
+
+    // Rewrite the op.
+    rewriter.updateRootInPlace(genericOp, [&]() {
+      for (auto [before, after] : replacements) {
+        BlockArgument bbArg = genericOp.getBody()->getArgument(before);
+        BlockArgument replacement = genericOp.getBody()->getArgument(after);
+        rewriter.replaceAllUsesWith(bbArg, replacement);
+      }
+    });
+
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::linalg::populateEraseUnusedOperandsAndResultsPatterns(
     RewritePatternSet &patterns) {
-  patterns.insert<DeduplicateAndRemoveDeadOperandsAndResults,
-                  RemoveUnusedCycleInGenericOp>(patterns.getContext());
+  patterns.insert<DeduplicateAndRemoveDeadOperandsAndResults>(
+      patterns.getContext(), /*removeOutputs=*/true);
+  patterns.insert<RemoveUnusedCycleInGenericOp>(patterns.getContext());
+}
+
+void mlir::linalg::populateEraseUnnecessaryInputsPatterns(
+    RewritePatternSet &patterns) {
+  patterns.insert<DeduplicateAndRemoveDeadOperandsAndResults>(
+      patterns.getContext(), /*removeOutputs=*/false);
+  patterns.insert<FoldDuplicateInputBbArgs>(patterns.getContext());
 }

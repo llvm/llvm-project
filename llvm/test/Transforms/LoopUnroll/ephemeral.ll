@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -unroll-threshold=50 | FileCheck %s
+; RUN: opt < %s -S -passes=loop-unroll -unroll-threshold=50 | FileCheck %s
 
 ; Make sure this loop is completely unrolled...
 ; CHECK-LABEL: @test1

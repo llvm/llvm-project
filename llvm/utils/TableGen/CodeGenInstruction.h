@@ -84,13 +84,16 @@ template <typename T> class ArrayRef;
       /// otherwise, it's empty.
       std::string Name;
 
+      /// The names of sub-operands, if given, otherwise empty.
+      std::vector<std::string> SubOpNames;
+
       /// PrinterMethodName - The method used to print operands of this type in
       /// the asmprinter.
       std::string PrinterMethodName;
 
-      /// EncoderMethodName - The method used to get the machine operand value
-      /// for binary encoding. "getMachineOpValue" by default.
-      std::string EncoderMethodName;
+      /// The method used to get the machine operand value for binary
+      /// encoding, per sub-operand. If empty, uses "getMachineOpValue".
+      std::vector<std::string> EncoderMethodNames;
 
       /// OperandType - A value from MCOI::OperandType representing the type of
       /// the operand.
@@ -119,12 +122,12 @@ template <typename T> class ArrayRef;
       std::vector<ConstraintInfo> Constraints;
 
       OperandInfo(Record *R, const std::string &N, const std::string &PMN,
-                  const std::string &EMN, const std::string &OT, unsigned MION,
-                  unsigned MINO, DagInit *MIOI)
-      : Rec(R), Name(N), PrinterMethodName(PMN), EncoderMethodName(EMN),
-        OperandType(OT), MIOperandNo(MION), MINumOperands(MINO),
-        MIOperandInfo(MIOI) {}
-
+                  const std::string &OT, unsigned MION, unsigned MINO,
+                  DagInit *MIOI)
+          : Rec(R), Name(N), SubOpNames(MINO), PrinterMethodName(PMN),
+            EncoderMethodNames(MINO), OperandType(OT), MIOperandNo(MION),
+            MINumOperands(MINO), DoNotEncode(MINO), MIOperandInfo(MIOI),
+            Constraints(MINO) {}
 
       /// getTiedOperand - If this operand is tied to another one, return the
       /// other operand number.  Otherwise, return -1.

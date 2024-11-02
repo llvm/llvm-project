@@ -415,5 +415,23 @@ void hlfir::EndAssociateOp::build(mlir::OpBuilder &builder,
                associate.getMustFreeStrorageFlag());
 }
 
+//===----------------------------------------------------------------------===//
+// AsExprOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::AsExprOp::build(mlir::OpBuilder &builder,
+                            mlir::OperationState &result, mlir::Value var) {
+  hlfir::ExprType::Shape typeShape;
+  mlir::Type type = getFortranElementOrSequenceType(var.getType());
+  if (auto seqType = type.dyn_cast<fir::SequenceType>()) {
+    typeShape.append(seqType.getShape().begin(), seqType.getShape().end());
+    type = seqType.getEleTy();
+  }
+
+  auto resultType = hlfir::ExprType::get(builder.getContext(), typeShape, type,
+                                         /*isPolymorphic: TODO*/ false);
+  return build(builder, result, resultType, var);
+}
+
 #define GET_OP_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIROps.cpp.inc"

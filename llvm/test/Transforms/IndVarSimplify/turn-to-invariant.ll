@@ -120,22 +120,20 @@ failed_2:
   ret i32 -2
 }
 
-
-; TODO: Simplified version 1 of test_litter_conditions.
 define i32 @test_litter_conditions_01(i32 %start, i32 %len) {
 ; CHECK-LABEL: @test_litter_conditions_01(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[ZERO_CHECK:%.*]] = icmp ne i32 [[IV]], 0
 ; CHECK-NEXT:    [[FAKE_1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[ZERO_CHECK]], [[FAKE_1]]
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[RANGE_CHECK_BLOCK:%.*]], label [[FAILED_1:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[IV_MINUS_1:%.*]] = add i32 [[IV]], -1
-; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp ult i32 [[IV_MINUS_1]], [[LEN:%.*]]
-; CHECK-NEXT:    br i1 [[RANGE_CHECK]], label [[BACKEDGE]], label [[FAILED_2:%.*]]
+; CHECK-NEXT:    [[RANGE_CHECK3:%.*]] = icmp ult i32 [[TMP0]], [[LEN:%.*]]
+; CHECK-NEXT:    br i1 [[RANGE_CHECK3]], label [[BACKEDGE]], label [[FAILED_2:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @cond()

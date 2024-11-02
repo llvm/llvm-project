@@ -1,4 +1,4 @@
-; RUN: opt < %s -instsimplify | llvm-dis -disable-output
+; RUN: opt < %s -passes=instsimplify | llvm-dis -disable-output
 ; RUN: verify-uselistorder < %s
 ; PR3465
 

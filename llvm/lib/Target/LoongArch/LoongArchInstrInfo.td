@@ -38,6 +38,17 @@ def SDT_LoongArchBStrPick: SDTypeProfile<1, 3, [
 // "VI" means no output and an integer input.
 def SDT_LoongArchVI : SDTypeProfile<0, 1, [SDTCisVT<0, GRLenVT>]>;
 
+def SDT_LoongArchCsrrd : SDTypeProfile<1, 1, [SDTCisInt<0>,
+                                              SDTCisVT<1, GRLenVT>]>;
+def SDT_LoongArchCsrwr : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
+                                              SDTCisVT<2, GRLenVT>]>;
+def SDT_LoongArchCsrxchg : SDTypeProfile<1, 3, [SDTCisInt<0>,
+                                                SDTCisSameAs<0, 1>,
+                                                SDTCisSameAs<0, 2>,
+                                                SDTCisVT<3, GRLenVT>]>;
+def SDT_LoongArchIocsrwr : SDTypeProfile<0, 2, [SDTCisInt<0>,
+                                                SDTCisSameAs<0, 1>]>;
+
 // TODO: Add LoongArch specific DAG Nodes
 // Target-independent nodes, but with target-specific formats.
 def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
@@ -93,6 +104,33 @@ def loongarch_break : SDNode<"LoongArchISD::BREAK", SDT_LoongArchVI,
                               [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_syscall : SDNode<"LoongArchISD::SYSCALL", SDT_LoongArchVI,
                                 [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_csrrd : SDNode<"LoongArchISD::CSRRD", SDT_LoongArchCsrrd,
+                              [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_csrwr : SDNode<"LoongArchISD::CSRWR", SDT_LoongArchCsrwr,
+                              [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_csrxchg : SDNode<"LoongArchISD::CSRXCHG",
+                                SDT_LoongArchCsrxchg,
+                                [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrrd_b : SDNode<"LoongArchISD::IOCSRRD_B", SDTUnaryOp,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrrd_h : SDNode<"LoongArchISD::IOCSRRD_H", SDTUnaryOp,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrrd_w : SDNode<"LoongArchISD::IOCSRRD_W", SDTUnaryOp,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrrd_d : SDNode<"LoongArchISD::IOCSRRD_D", SDTUnaryOp,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrwr_b : SDNode<"LoongArchISD::IOCSRWR_B",
+                                  SDT_LoongArchIocsrwr,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrwr_h : SDNode<"LoongArchISD::IOCSRWR_H",
+                                  SDT_LoongArchIocsrwr,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrwr_w : SDNode<"LoongArchISD::IOCSRWR_W",
+                                  SDT_LoongArchIocsrwr,
+                                  [SDNPHasChain, SDNPSideEffect]>;
+def loongarch_iocsrwr_d : SDNode<"LoongArchISD::IOCSRWR_D",
+                                  SDT_LoongArchIocsrwr,
+                                  [SDNPHasChain, SDNPSideEffect]>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -159,7 +197,8 @@ def uimm12_ori : UImm12Operand {
   let ParserMatchClass = UImmAsmOperand<12, "ori">;
 }
 
-def uimm14 : Operand<GRLenVT> {
+def uimm14 : Operand<GRLenVT>,
+             ImmLeaf <GRLenVT, [{return isUInt<14>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<14>;
 }
 
@@ -1302,6 +1341,7 @@ class PseudoMaskedAM
   let mayLoad = 1;
   let mayStore = 1;
   let hasSideEffects = 0;
+  let Size = 36;
 }
 
 def PseudoMaskedAtomicSwap32 : PseudoMaskedAM;
@@ -1315,6 +1355,7 @@ class PseudoAM : Pseudo<(outs GPR:$res, GPR:$scratch),
   let mayLoad = 1;
   let mayStore = 1;
   let hasSideEffects = 0;
+  let Size = 24;
 }
 
 def PseudoAtomicSwap32 : PseudoAM;
@@ -1347,6 +1388,7 @@ class PseudoMaskedAMUMinUMax
   let mayLoad = 1;
   let mayStore = 1;
   let hasSideEffects = 0;
+  let Size = 48;
 }
 
 def PseudoMaskedAtomicLoadUMax32 : PseudoMaskedAMUMinUMax;
@@ -1361,6 +1403,7 @@ class PseudoMaskedAMMinMax
   let mayLoad = 1;
   let mayStore = 1;
   let hasSideEffects = 0;
+  let Size = 56;
 }
 
 def PseudoMaskedAtomicLoadMax32 : PseudoMaskedAMMinMax;
@@ -1375,6 +1418,7 @@ class PseudoCmpXchg
   let mayLoad = 1;
   let mayStore = 1;
   let hasSideEffects = 0;
+  let Size = 36;
 }
 
 def PseudoCmpXchg32 : PseudoCmpXchg;
@@ -1388,6 +1432,7 @@ def PseudoMaskedCmpXchg32
   let mayLoad = 1;
   let mayStore = 1;
   let hasSideEffects = 0;
+  let Size = 44;
 }
 
 class PseudoMaskedAMMinMaxPat<Intrinsic intrin, Pseudo AMInst>
@@ -1621,3 +1666,26 @@ def LDPTE : FmtLDPTE<(outs), (ins GPR:$rj, uimm8:$seq), "ldpte", "$rj, $seq">;
 def ERTN : FmtI32<0b00000110010010000011100000000000, "ertn">;
 def DBCL : MISC_I15<0b00000000001010101, "dbcl">;
 def IDLE : MISC_I15<0b00000110010010001, "idle">;
+
+//===----------------------------------------------------------------------===//
+// Privilege Intrinsics
+//===----------------------------------------------------------------------===//
+
+def : Pat<(loongarch_csrrd uimm14:$imm14), (CSRRD uimm14:$imm14)>;
+def : Pat<(loongarch_csrwr GPR:$rd, uimm14:$imm14),
+          (CSRWR GPR:$rd, uimm14:$imm14)>;
+def : Pat<(loongarch_csrxchg GPR:$rd, GPR:$rj, uimm14:$imm14),
+          (CSRXCHG GPR:$rd, GPR:$rj, uimm14:$imm14)>;
+
+def : Pat<(loongarch_iocsrrd_b GPR:$rj), (IOCSRRD_B GPR:$rj)>;
+def : Pat<(loongarch_iocsrrd_h GPR:$rj), (IOCSRRD_H GPR:$rj)>;
+def : Pat<(loongarch_iocsrrd_w GPR:$rj), (IOCSRRD_W GPR:$rj)>;
+
+def : Pat<(loongarch_iocsrwr_b GPR:$rd, GPR:$rj), (IOCSRWR_B GPR:$rd, GPR:$rj)>;
+def : Pat<(loongarch_iocsrwr_h GPR:$rd, GPR:$rj), (IOCSRWR_H GPR:$rd, GPR:$rj)>;
+def : Pat<(loongarch_iocsrwr_w GPR:$rd, GPR:$rj), (IOCSRWR_W GPR:$rd, GPR:$rj)>;
+
+let Predicates = [IsLA64] in {
+def : Pat<(loongarch_iocsrrd_d GPR:$rj), (IOCSRRD_D GPR:$rj)>;
+def : Pat<(loongarch_iocsrwr_d GPR:$rd, GPR:$rj), (IOCSRWR_D GPR:$rd, GPR:$rj)>;
+} // Predicates = [IsLA64]

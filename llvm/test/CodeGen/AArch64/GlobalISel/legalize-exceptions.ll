@@ -16,6 +16,7 @@ define void @bar() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.exn.slot
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.ehselector.slot
+  ; CHECK-NEXT:   G_INVOKE_REGION_START
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $w0 = COPY [[C]](s32)

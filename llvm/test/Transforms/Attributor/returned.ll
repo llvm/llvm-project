@@ -105,7 +105,7 @@ define i32 @scc_r2(i32 %a, i32 %b, i32 %r) #0 {
 ; TUNIT-NEXT:    [[COND:%.*]] = phi i32 [ [[R]], [[COND_TRUE]] ], [ [[R]], [[COND_FALSE]] ]
 ; TUNIT-NEXT:    br label [[RETURN]]
 ; TUNIT:       return:
-; TUNIT-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[R]], [[IF_THEN]] ], [ [[R]], [[IF_THEN3]] ], [ [[COND]], [[COND_END]] ]
+; TUNIT-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[R]], [[IF_THEN]] ], [ [[R]], [[IF_THEN3]] ], [ [[R]], [[COND_END]] ]
 ; TUNIT-NEXT:    ret i32 [[R]]
 ;
 ; CGSCC: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
@@ -140,7 +140,7 @@ define i32 @scc_r2(i32 %a, i32 %b, i32 %r) #0 {
 ; CGSCC-NEXT:    [[COND:%.*]] = phi i32 [ [[R]], [[COND_TRUE]] ], [ [[R]], [[COND_FALSE]] ]
 ; CGSCC-NEXT:    br label [[RETURN]]
 ; CGSCC:       return:
-; CGSCC-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[R]], [[IF_THEN]] ], [ [[R]], [[IF_THEN3]] ], [ [[COND]], [[COND_END]] ]
+; CGSCC-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[R]], [[IF_THEN]] ], [ [[R]], [[IF_THEN3]] ], [ [[R]], [[COND_END]] ]
 ; CGSCC-NEXT:    ret i32 [[R]]
 ;
 entry:
@@ -220,7 +220,7 @@ define i32 @scc_rX(i32 %a, i32 %b, i32 %r) #0 {
 ; TUNIT-NEXT:    [[COND:%.*]] = phi i32 [ [[R]], [[COND_TRUE]] ], [ [[R]], [[COND_FALSE]] ]
 ; TUNIT-NEXT:    br label [[RETURN]]
 ; TUNIT:       return:
-; TUNIT-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[R]], [[IF_THEN]] ], [ [[B]], [[IF_THEN3]] ], [ [[COND]], [[COND_END]] ]
+; TUNIT-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[R]], [[IF_THEN]] ], [ [[B]], [[IF_THEN3]] ], [ [[R]], [[COND_END]] ]
 ; TUNIT-NEXT:    ret i32 [[RETVAL_0]]
 ;
 ; CGSCC: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
@@ -256,7 +256,7 @@ define i32 @scc_rX(i32 %a, i32 %b, i32 %r) #0 {
 ; CGSCC-NEXT:    [[COND:%.*]] = phi i32 [ [[R]], [[COND_TRUE]] ], [ [[CALL14]], [[COND_FALSE]] ]
 ; CGSCC-NEXT:    br label [[RETURN]]
 ; CGSCC:       return:
-; CGSCC-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[CALL1]], [[IF_THEN]] ], [ [[CALL11]], [[IF_THEN3]] ], [ [[COND]], [[COND_END]] ]
+; CGSCC-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[CALL1]], [[IF_THEN]] ], [ [[CALL11]], [[IF_THEN3]] ], [ [[R]], [[COND_END]] ]
 ; CGSCC-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
@@ -389,7 +389,7 @@ define double* @ptr_scc_r2(double* %a, double* %b, double* %r) #0 {
 ; TUNIT-NEXT:    [[COND:%.*]] = phi double* [ [[R]], [[COND_TRUE]] ], [ [[R]], [[COND_FALSE]] ]
 ; TUNIT-NEXT:    br label [[RETURN]]
 ; TUNIT:       return:
-; TUNIT-NEXT:    [[RETVAL_0:%.*]] = phi double* [ [[R]], [[IF_THEN]] ], [ [[R]], [[IF_THEN3]] ], [ [[COND]], [[COND_END]] ]
+; TUNIT-NEXT:    [[RETVAL_0:%.*]] = phi double* [ [[R]], [[IF_THEN]] ], [ [[R]], [[IF_THEN3]] ], [ [[R]], [[COND_END]] ]
 ; TUNIT-NEXT:    ret double* [[R]]
 ;
 ; CGSCC: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
@@ -424,7 +424,7 @@ define double* @ptr_scc_r2(double* %a, double* %b, double* %r) #0 {
 ; CGSCC-NEXT:    [[COND:%.*]] = phi double* [ [[R]], [[COND_TRUE]] ], [ [[R]], [[COND_FALSE]] ]
 ; CGSCC-NEXT:    br label [[RETURN]]
 ; CGSCC:       return:
-; CGSCC-NEXT:    [[RETVAL_0:%.*]] = phi double* [ [[R]], [[IF_THEN]] ], [ [[R]], [[IF_THEN3]] ], [ [[COND]], [[COND_END]] ]
+; CGSCC-NEXT:    [[RETVAL_0:%.*]] = phi double* [ [[R]], [[IF_THEN]] ], [ [[R]], [[IF_THEN3]] ], [ [[R]], [[COND_END]] ]
 ; CGSCC-NEXT:    ret double* [[R]]
 ;
 entry:
@@ -800,6 +800,7 @@ define double @select_and_phi(double %b) #0 {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi double [ [[B]], [[IF_THEN]] ], [ [[B]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret double [[B]]
 ;
 entry:
@@ -838,6 +839,7 @@ define double @recursion_select_and_phi(i32 %a, double %b) #0 {
 ; TUNIT-NEXT:    [[CALL:%.*]] = call double @recursion_select_and_phi(i32 [[DEC]], double [[B]]) #[[ATTR10]]
 ; TUNIT-NEXT:    br label [[IF_END]]
 ; TUNIT:       if.end:
+; TUNIT-NEXT:    [[PHI:%.*]] = phi double [ [[B]], [[IF_THEN]] ], [ [[B]], [[ENTRY:%.*]] ]
 ; TUNIT-NEXT:    ret double [[B]]
 ;
 ; CGSCC: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
@@ -851,6 +853,7 @@ define double @recursion_select_and_phi(i32 %a, double %b) #0 {
 ; CGSCC-NEXT:    [[CALL:%.*]] = call double @recursion_select_and_phi(i32 [[DEC]], double [[B]]) #[[ATTR7]]
 ; CGSCC-NEXT:    br label [[IF_END]]
 ; CGSCC:       if.end:
+; CGSCC-NEXT:    [[PHI:%.*]] = phi double [ [[B]], [[IF_THEN]] ], [ [[B]], [[ENTRY:%.*]] ]
 ; CGSCC-NEXT:    ret double [[B]]
 ;
 entry:

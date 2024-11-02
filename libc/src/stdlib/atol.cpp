@@ -13,7 +13,11 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(long, atol, (const char *str)) {
-  return internal::strtointeger<long>(str, nullptr, 10);
+  auto result = internal::strtointeger<int>(str, 10);
+  if (result.has_error())
+    errno = result.error;
+
+  return result;
 }
 
 } // namespace __llvm_libc

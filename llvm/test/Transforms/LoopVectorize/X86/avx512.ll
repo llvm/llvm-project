@@ -1,5 +1,5 @@
-; RUN: opt -mattr=+avx512f  -passes=loop-vectorize -S < %s | llc -mattr=+avx512f | FileCheck %s
-; RUN: opt -mattr=+avx512vl,+prefer-256-bit  -passes=loop-vectorize -S < %s | llc -mattr=+avx512f | FileCheck %s --check-prefix=CHECK-PREFER-AVX256
+; RUN: opt -mattr=+avx512f -passes=loop-vectorize -S < %s | llc -mattr=+avx512f | FileCheck %s
+; RUN: opt -mattr=+avx512vl,+prefer-256-bit -passes=loop-vectorize -S < %s | llc -mattr=+avx512f | FileCheck %s --check-prefix=CHECK-PREFER-AVX256
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"

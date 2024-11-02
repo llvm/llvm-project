@@ -31,12 +31,12 @@ svfloat32_t test_bfdot_f32(svfloat32_t x, svbfloat16_t y, svbfloat16_t z) {
 
 // CHECK-LABEL: @test_bfdot_lane_0_f32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfdot.lane(<vscale x 4 x float> [[X:%.*]], <vscale x 8 x bfloat> [[Y:%.*]], <vscale x 8 x bfloat> [[Z:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfdot.lane.v2(<vscale x 4 x float> [[X:%.*]], <vscale x 8 x bfloat> [[Y:%.*]], <vscale x 8 x bfloat> [[Z:%.*]], i32 0)
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z21test_bfdot_lane_0_f32u13__SVFloat32_tu14__SVBFloat16_tu14__SVBFloat16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfdot.lane(<vscale x 4 x float> [[X:%.*]], <vscale x 8 x bfloat> [[Y:%.*]], <vscale x 8 x bfloat> [[Z:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfdot.lane.v2(<vscale x 4 x float> [[X:%.*]], <vscale x 8 x bfloat> [[Y:%.*]], <vscale x 8 x bfloat> [[Z:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 svfloat32_t test_bfdot_lane_0_f32(svfloat32_t x, svbfloat16_t y, svbfloat16_t z) {
@@ -45,12 +45,12 @@ svfloat32_t test_bfdot_lane_0_f32(svfloat32_t x, svbfloat16_t y, svbfloat16_t z)
 
 // CHECK-LABEL: @test_bfdot_lane_3_f32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfdot.lane(<vscale x 4 x float> [[X:%.*]], <vscale x 8 x bfloat> [[Y:%.*]], <vscale x 8 x bfloat> [[Z:%.*]], i64 3)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfdot.lane.v2(<vscale x 4 x float> [[X:%.*]], <vscale x 8 x bfloat> [[Y:%.*]], <vscale x 8 x bfloat> [[Z:%.*]], i32 3)
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z21test_bfdot_lane_3_f32u13__SVFloat32_tu14__SVBFloat16_tu14__SVBFloat16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfdot.lane(<vscale x 4 x float> [[X:%.*]], <vscale x 8 x bfloat> [[Y:%.*]], <vscale x 8 x bfloat> [[Z:%.*]], i64 3)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfdot.lane.v2(<vscale x 4 x float> [[X:%.*]], <vscale x 8 x bfloat> [[Y:%.*]], <vscale x 8 x bfloat> [[Z:%.*]], i32 3)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 svfloat32_t test_bfdot_lane_3_f32(svfloat32_t x, svbfloat16_t y, svbfloat16_t z) {

@@ -260,7 +260,7 @@ void MCWinCOFFStreamer::emitCOFFImgRel32(const MCSymbol *Symbol,
 }
 
 void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
-                                         unsigned ByteAlignment) {
+                                         Align ByteAlignment) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
 
   const Triple &T = getContext().getTargetTriple();
@@ -269,12 +269,12 @@ void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
       report_fatal_error("alignment is limited to 32-bytes");
 
     // Round size up to alignment so that we will honor the alignment request.
-    Size = std::max(Size, static_cast<uint64_t>(ByteAlignment));
+    Size = std::max(Size, ByteAlignment.value());
   }
 
   getAssembler().registerSymbol(*Symbol);
   Symbol->setExternal(true);
-  Symbol->setCommon(Size, ByteAlignment);
+  Symbol->setCommon(Size, ByteAlignment.value());
 
   if (!T.isWindowsMSVCEnvironment() && ByteAlignment > 1) {
     SmallString<128> Directive;
@@ -282,7 +282,7 @@ void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
     const MCObjectFileInfo *MFI = getContext().getObjectFileInfo();
 
     OS << " -aligncomm:\"" << Symbol->getName() << "\","
-       << Log2_32_Ceil(ByteAlignment);
+       << Log2_32_Ceil(ByteAlignment.value());
 
     pushSection();
     switchSection(MFI->getDrectveSection());
@@ -292,13 +292,13 @@ void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
 }
 
 void MCWinCOFFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
-                                              unsigned ByteAlignment) {
+                                              Align ByteAlignment) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
 
   MCSection *Section = getContext().getObjectFileInfo()->getBSSSection();
   pushSection();
   switchSection(Section);
-  emitValueToAlignment(Align(ByteAlignment), 0, 1, 0);
+  emitValueToAlignment(ByteAlignment, 0, 1, 0);
   emitLabel(Symbol);
   Symbol->setExternal(false);
   emitZeros(Size);
@@ -316,13 +316,13 @@ void MCWinCOFFStreamer::emitWeakReference(MCSymbol *AliasS,
 }
 
 void MCWinCOFFStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
-                                     uint64_t Size, unsigned ByteAlignment,
+                                     uint64_t Size, Align ByteAlignment,
                                      SMLoc Loc) {
   llvm_unreachable("not implemented");
 }
 
 void MCWinCOFFStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
-                                       uint64_t Size, unsigned ByteAlignment) {
+                                       uint64_t Size, Align ByteAlignment) {
   llvm_unreachable("not implemented");
 }
 

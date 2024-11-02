@@ -21,6 +21,7 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
@@ -667,6 +668,7 @@ void mlir::linalg::populateFoldUnitExtentDimsPatterns(
   tensor::CollapseShapeOp::getCanonicalizationPatterns(patterns, context);
   tensor::EmptyOp::getCanonicalizationPatterns(patterns, context);
   tensor::ExpandShapeOp::getCanonicalizationPatterns(patterns, context);
+  tensor::populateFoldTensorEmptyPatterns(patterns);
   memref::populateResolveRankedShapeTypeResultDimsPatterns(patterns);
   memref::populateResolveShapedTypeResultDimsPatterns(patterns);
 }

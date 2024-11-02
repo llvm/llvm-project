@@ -1,4 +1,4 @@
-; RUN: opt -mergefunc -disable-output < %s
+; RUN: opt -passes=mergefunc -disable-output < %s
 ; This used to trigger a ConstantExpr::getBitCast assertion.
 
 define void @t1() unnamed_addr uwtable ssp align 2 {

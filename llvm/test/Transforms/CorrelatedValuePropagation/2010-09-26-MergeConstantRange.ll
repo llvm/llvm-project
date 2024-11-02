@@ -1,4 +1,4 @@
-; RUN: opt < %s -jump-threading -correlated-propagation
+; RUN: opt < %s -passes=jump-threading,correlated-propagation
 
 %struct.S2 = type {}
 

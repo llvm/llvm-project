@@ -1,4 +1,4 @@
-; RUN: opt -mergefunc -S < %s | FileCheck %s
+; RUN: opt -passes=mergefunc -S < %s | FileCheck %s
 
 ; This test makes sure that the mergefunc pass, uses extract and insert value
 ; to convert the struct result type; as struct types cannot be bitcast.

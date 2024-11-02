@@ -3,11 +3,11 @@
 declare void @personalityFn1();
 declare void @personalityFn2();
 
-define i32 @a() personality void ()* @personalityFn1 {
+define i32 @a() personality ptr @personalityFn1 {
     ret i32 1
 }
 
-define i32 @b() personality void ()* @personalityFn2 {
+define i32 @b() personality ptr @personalityFn2 {
     %r = call i32 @a() alwaysinline
     ret i32 %r
 }

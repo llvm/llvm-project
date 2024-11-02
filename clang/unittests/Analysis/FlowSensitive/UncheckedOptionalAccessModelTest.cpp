@@ -762,6 +762,29 @@ template <typename T, typename U, typename... Args>
 constexpr optional<T> make_optional(std::initializer_list<U> il,
                                     Args&&... args);
 
+template <typename T, typename U>
+constexpr bool operator==(const optional<T> &lhs, const optional<U> &rhs);
+template <typename T, typename U>
+constexpr bool operator!=(const optional<T> &lhs, const optional<U> &rhs);
+
+template <typename T>
+constexpr bool operator==(const optional<T> &opt, nullopt_t);
+template <typename T>
+constexpr bool operator==(nullopt_t, const optional<T> &opt);
+template <typename T>
+constexpr bool operator!=(const optional<T> &opt, nullopt_t);
+template <typename T>
+constexpr bool operator!=(nullopt_t, const optional<T> &opt);
+
+template <typename T, typename U>
+constexpr bool operator==(const optional<T> &opt, const U &value);
+template <typename T, typename U>
+constexpr bool operator==(const T &value, const optional<U> &opt);
+template <typename T, typename U>
+constexpr bool operator!=(const optional<T> &opt, const U &value);
+template <typename T, typename U>
+constexpr bool operator!=(const T &value, const optional<U> &opt);
+
 } // namespace std
 )";
 
@@ -984,6 +1007,29 @@ template <typename T, typename U, typename... Args>
 constexpr optional<T> make_optional(std::initializer_list<U> il,
                                     Args&&... args);
 
+template <typename T, typename U>
+constexpr bool operator==(const optional<T> &lhs, const optional<U> &rhs);
+template <typename T, typename U>
+constexpr bool operator!=(const optional<T> &lhs, const optional<U> &rhs);
+
+template <typename T>
+constexpr bool operator==(const optional<T> &opt, nullopt_t);
+template <typename T>
+constexpr bool operator==(nullopt_t, const optional<T> &opt);
+template <typename T>
+constexpr bool operator!=(const optional<T> &opt, nullopt_t);
+template <typename T>
+constexpr bool operator!=(nullopt_t, const optional<T> &opt);
+
+template <typename T, typename U>
+constexpr bool operator==(const optional<T> &opt, const U &value);
+template <typename T, typename U>
+constexpr bool operator==(const T &value, const optional<U> &opt);
+template <typename T, typename U>
+constexpr bool operator!=(const optional<T> &opt, const U &value);
+template <typename T, typename U>
+constexpr bool operator!=(const T &value, const optional<U> &opt);
+
 } // namespace absl
 )";
 
@@ -1176,6 +1222,29 @@ constexpr Optional<T> make_optional(Args&&... args);
 template <typename T, typename U, typename... Args>
 constexpr Optional<T> make_optional(std::initializer_list<U> il,
                                     Args&&... args);
+
+template <typename T, typename U>
+constexpr bool operator==(const Optional<T> &lhs, const Optional<U> &rhs);
+template <typename T, typename U>
+constexpr bool operator!=(const Optional<T> &lhs, const Optional<U> &rhs);
+
+template <typename T>
+constexpr bool operator==(const Optional<T> &opt, nullopt_t);
+template <typename T>
+constexpr bool operator==(nullopt_t, const Optional<T> &opt);
+template <typename T>
+constexpr bool operator!=(const Optional<T> &opt, nullopt_t);
+template <typename T>
+constexpr bool operator!=(nullopt_t, const Optional<T> &opt);
+
+template <typename T, typename U>
+constexpr bool operator==(const Optional<T> &opt, const U &value);
+template <typename T, typename U>
+constexpr bool operator==(const T &value, const Optional<U> &opt);
+template <typename T, typename U>
+constexpr bool operator!=(const Optional<T> &opt, const U &value);
+template <typename T, typename U>
+constexpr bool operator!=(const T &value, const Optional<U> &opt);
 
 } // namespace base
 )";
@@ -2117,6 +2186,325 @@ TEST_P(UncheckedOptionalAccessTest, CallReturningOptional) {
   )");
 }
 
+
+TEST_P(UncheckedOptionalAccessTest, EqualityCheckLeftSet) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt1 = 3;
+      $ns::$optional<int> opt2 = Make<$ns::$optional<int>>();
+
+      if (opt1 == opt2) {
+        opt2.value();
+      } else {
+        opt2.value(); // [[unsafe]]
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, EqualityCheckRightSet) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt1 = 3;
+      $ns::$optional<int> opt2 = Make<$ns::$optional<int>>();
+
+      if (opt2 == opt1) {
+        opt2.value();
+      } else {
+        opt2.value(); // [[unsafe]]
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, EqualityCheckVerifySetAfterEq) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt1 = Make<$ns::$optional<int>>();
+      $ns::$optional<int> opt2 = Make<$ns::$optional<int>>();
+
+      if (opt1 == opt2) {
+        if (opt1.has_value())
+          opt2.value();
+        if (opt2.has_value())
+          opt1.value();
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, EqualityCheckLeftUnset) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt1 = $ns::nullopt;
+      $ns::$optional<int> opt2 = Make<$ns::$optional<int>>();
+
+      if (opt1 == opt2) {
+        opt2.value(); // [[unsafe]]
+      } else {
+        opt2.value();
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, EqualityCheckRightUnset) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt1 = $ns::nullopt;
+      $ns::$optional<int> opt2 = Make<$ns::$optional<int>>();
+
+      if (opt2 == opt1) {
+        opt2.value(); // [[unsafe]]
+      } else {
+        opt2.value();
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, EqualityCheckRightNullopt) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt = Make<$ns::$optional<int>>();
+
+      if (opt == $ns::nullopt) {
+        opt.value(); // [[unsafe]]
+      } else {
+        opt.value();
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, EqualityCheckLeftNullopt) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt = Make<$ns::$optional<int>>();
+
+      if ($ns::nullopt == opt) {
+        opt.value(); // [[unsafe]]
+      } else {
+        opt.value();
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, EqualityCheckRightValue) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt = Make<$ns::$optional<int>>();
+
+      if (opt == 3) {
+        opt.value();
+      } else {
+        opt.value(); // [[unsafe]]
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, EqualityCheckLeftValue) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt = Make<$ns::$optional<int>>();
+
+      if (3 == opt) {
+        opt.value();
+      } else {
+        opt.value(); // [[unsafe]]
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, InequalityCheckLeftSet) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt1 = 3;
+      $ns::$optional<int> opt2 = Make<$ns::$optional<int>>();
+
+      if (opt1 != opt2) {
+        opt2.value(); // [[unsafe]]
+      } else {
+        opt2.value();
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, InequalityCheckRightSet) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt1 = 3;
+      $ns::$optional<int> opt2 = Make<$ns::$optional<int>>();
+
+      if (opt2 != opt1) {
+        opt2.value(); // [[unsafe]]
+      } else {
+        opt2.value();
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, InequalityCheckVerifySetAfterEq) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt1 = Make<$ns::$optional<int>>();
+      $ns::$optional<int> opt2 = Make<$ns::$optional<int>>();
+
+      if (opt1 != opt2) {
+        if (opt1.has_value())
+          opt2.value(); // [[unsafe]]
+        if (opt2.has_value())
+          opt1.value(); // [[unsafe]]
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, InequalityCheckLeftUnset) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt1 = $ns::nullopt;
+      $ns::$optional<int> opt2 = Make<$ns::$optional<int>>();
+
+      if (opt1 != opt2) {
+        opt2.value();
+      } else {
+        opt2.value(); // [[unsafe]]
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, InequalityCheckRightUnset) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt1 = $ns::nullopt;
+      $ns::$optional<int> opt2 = Make<$ns::$optional<int>>();
+
+      if (opt2 != opt1) {
+        opt2.value();
+      } else {
+        opt2.value(); // [[unsafe]]
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, InequalityCheckRightNullopt) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt = Make<$ns::$optional<int>>();
+
+      if (opt != $ns::nullopt) {
+        opt.value();
+      } else {
+        opt.value(); // [[unsafe]]
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, InequalityCheckLeftNullopt) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt = Make<$ns::$optional<int>>();
+
+      if ($ns::nullopt != opt) {
+        opt.value();
+      } else {
+        opt.value(); // [[unsafe]]
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, InequalityCheckRightValue) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt = Make<$ns::$optional<int>>();
+
+      if (opt != 3) {
+        opt.value(); // [[unsafe]]
+      } else {
+        opt.value();
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, InequalityCheckLeftValue) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt = Make<$ns::$optional<int>>();
+
+      if (3 != opt) {
+        opt.value(); // [[unsafe]]
+      } else {
+        opt.value();
+      }
+    }
+  )");
+}
+
 // Verifies that the model sees through aliases.
 TEST_P(UncheckedOptionalAccessTest, WithAlias) {
   ExpectDiagnosticsFor(
@@ -2468,6 +2856,59 @@ TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoop) {
         opt = Make<$ns::$optional<int>>();
         if (!opt.has_value()) continue;
       }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, StructuredBindingsFromStruct) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct kv { $ns::$optional<int> opt; int x; };
+    int target() {
+      auto [contents, x] = Make<kv>();
+      return contents ? *contents : x;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    template <typename T1, typename T2>
+    struct pair { T1 fst;  T2 snd; };
+    int target() {
+      auto [contents, x] = Make<pair<$ns::$optional<int>, int>>();
+      return contents ? *contents : x;
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, StructuredBindingsFromTupleLikeType) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    namespace std {
+    template <class> struct tuple_size;
+    template <size_t, class> struct tuple_element;
+    template <class...> class tuple;
+
+    template <class... T>
+    struct tuple_size<tuple<T...>> : integral_constant<size_t, sizeof...(T)> {};
+
+    template <size_t I, class... T>
+    struct tuple_element<I, tuple<T...>> {
+      using type =  __type_pack_element<I, T...>;
+    };
+
+    template <class...> class tuple {};
+    template <size_t I, class... T>
+    typename tuple_element<I, tuple<T...>>::type get(tuple<T...>);
+    } // namespace std
+
+    std::tuple<$ns::$optional<const char *>, int> get_opt();
+    void target() {
+      auto [content, ck] = get_opt();
+      content ? *content : "";
     }
   )");
 }

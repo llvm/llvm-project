@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -enable-pre -S | FileCheck %s
+; RUN: opt < %s -passes=gvn -enable-pre -S | FileCheck %s
 
 @H = common global i32 0
 @G = common global i32 0

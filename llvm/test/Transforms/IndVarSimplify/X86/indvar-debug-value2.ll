@@ -1,4 +1,4 @@
-; RUN: opt %s -indvars -verify -S -o - | FileCheck %s
+; RUN: opt %s -passes='loop(indvars),verify' -S -o - | FileCheck %s
 
 ; Hand-reduced from this example:
 ;
@@ -13,7 +13,7 @@
 ; }
 
 ; clang++ -g -O -mllvm -disable-llvm-optzns -gno-column-info
-; opt  -mem2reg -scalar-evolution
+; opt -passes=mem2reg -scalar-evolution
 
 ; CHECK: @main
 ; CHECK: llvm.dbg.value(metadata i32 1, metadata [[METADATA_IDX1:![0-9]+]]

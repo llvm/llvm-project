@@ -1,9 +1,9 @@
-; RUN: opt -S < %s -loop-rotate -licm -verify-dom-info -verify-loop-info | FileCheck %s
+; RUN: opt -S < %s -passes='loop-mssa(loop-rotate,licm)'  -verify-dom-info -verify-loop-info | FileCheck %s
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-ios8.0.0"
 
 ;CHECK: for.inc:
-;CHECK-NEXT: %incdec.ptr.i = getelementptr 
+;CHECK-NEXT: %incdec.ptr.i = getelementptr
 
 ; Function Attrs: alwaysinline inlinehint nounwind readonly ssp
 define linkonce_odr hidden i64 @_ZNSt3__14findINS_11__wrap_iterIPiEEiEET_S4_S4_RKT0_(i64 %__first.coerce, i64 %__last.coerce, i32* nocapture readonly dereferenceable(4) %__value_) {

@@ -357,7 +357,8 @@ private:
   void getLoopExitBlocks(const LoopBlock &LB,
                          SmallVectorImpl<BasicBlock *> &Exits) const;
 
-  /// Returns estimated weight for \p BB. None if \p BB has no estimated weight.
+  /// Returns estimated weight for \p BB. std::nullopt if \p BB has no estimated
+  /// weight.
   Optional<uint32_t> getEstimatedBlockWeight(const BasicBlock *BB) const;
 
   /// Returns estimated weight to enter \p L. In other words it is weight of

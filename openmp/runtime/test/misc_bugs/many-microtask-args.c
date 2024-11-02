@@ -1,11 +1,6 @@
 // RUN: %libomp-compile-and-run
 #include <stdio.h>
 
-// This test fails with Clang unless __kmp_invoke_microtask supports at least
-// 17 arguments. On ARM, the fallback C implementation of __kmp_invoke_microtask
-// is used, and that one only currently supports up to 15 arguments.
-// XFAIL: arm
-
 int main()
 {
 

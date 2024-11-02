@@ -51,12 +51,12 @@ static B<int long, -1>::foo<unsigned, 9> gf;
 // CHECK-NEXT:    store ptr [[ARGV:%.*]], ptr [[ARGV_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4
 // CHECK-NEXT:    [[V:%.*]] = getelementptr inbounds %"struct.B<int, 7>::foo", ptr [[F]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP2:%.*]] = call ptr @llvm.ptr.annotation.p0(ptr [[V]], ptr @.str, ptr @.str.1, i32 {{.*}}, ptr @.args)
-// CHECK-NEXT:    [[TMP5:%.*]] = call ptr @llvm.ptr.annotation.p0(ptr [[TMP2]], ptr @.str.3, ptr @.str.1, i32 {{.*}}, ptr @.args.4)
+// CHECK-NEXT:    [[TMP2:%.*]] = call ptr @llvm.ptr.annotation.p0.p0(ptr [[V]], ptr @.str, ptr @.str.1, i32 {{.*}}, ptr @.args)
+// CHECK-NEXT:    [[TMP5:%.*]] = call ptr @llvm.ptr.annotation.p0.p0(ptr [[TMP2]], ptr @.str.3, ptr @.str.1, i32 {{.*}}, ptr @.args.4)
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP5]], align 4
 // CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4
-// CHECK-NEXT:    [[TMP8:%.*]] = call ptr @llvm.ptr.annotation.p0(ptr @_ZL2gf, ptr @.str, ptr @.str.1, i32 {{.*}}, ptr @.args.5)
-// CHECK-NEXT:    [[TMP11:%.*]] = call ptr @llvm.ptr.annotation.p0(ptr [[TMP8]], ptr @.str.3, ptr @.str.1, i32 {{.*}}, ptr @.args.4)
+// CHECK-NEXT:    [[TMP8:%.*]] = call ptr @llvm.ptr.annotation.p0.p0(ptr @_ZL2gf, ptr @.str, ptr @.str.1, i32 {{.*}}, ptr @.args.5)
+// CHECK-NEXT:    [[TMP11:%.*]] = call ptr @llvm.ptr.annotation.p0.p0(ptr [[TMP8]], ptr @.str.3, ptr @.str.1, i32 {{.*}}, ptr @.args.4)
 // CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP11]], align 4
 // CHECK-NEXT:    ret i32 0
 //

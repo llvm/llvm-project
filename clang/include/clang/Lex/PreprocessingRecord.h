@@ -19,7 +19,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"

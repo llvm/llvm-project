@@ -68,7 +68,7 @@ getDurationInverseForScale(DurationScale Scale) {
 }
 
 /// If `Node` is a call to the inverse of `Scale`, return that inverse's
-/// argument, otherwise None.
+/// argument, otherwise std::nullopt.
 static llvm::Optional<std::string>
 rewriteInverseDurationCall(const MatchFinder::MatchResult &Result,
                            DurationScale Scale, const Expr &Node) {
@@ -87,7 +87,7 @@ rewriteInverseDurationCall(const MatchFinder::MatchResult &Result,
 }
 
 /// If `Node` is a call to the inverse of `Scale`, return that inverse's
-/// argument, otherwise None.
+/// argument, otherwise std::nullopt.
 static llvm::Optional<std::string>
 rewriteInverseTimeCall(const MatchFinder::MatchResult &Result,
                        DurationScale Scale, const Expr &Node) {

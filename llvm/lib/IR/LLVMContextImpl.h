@@ -668,11 +668,11 @@ template <> struct MDNodeKeyImpl<DIFile> {
   MDString *Filename;
   MDString *Directory;
   std::optional<DIFile::ChecksumInfo<MDString *>> Checksum;
-  std::optional<MDString *> Source;
+  MDString *Source;
 
   MDNodeKeyImpl(MDString *Filename, MDString *Directory,
                 std::optional<DIFile::ChecksumInfo<MDString *>> Checksum,
-                std::optional<MDString *> Source)
+                MDString *Source)
       : Filename(Filename), Directory(Directory), Checksum(Checksum),
         Source(Source) {}
   MDNodeKeyImpl(const DIFile *N)
@@ -687,8 +687,7 @@ template <> struct MDNodeKeyImpl<DIFile> {
 
   unsigned getHashValue() const {
     return hash_combine(Filename, Directory, Checksum ? Checksum->Kind : 0,
-                        Checksum ? Checksum->Value : nullptr,
-                        Source.value_or(nullptr));
+                        Checksum ? Checksum->Value : nullptr, Source);
   }
 };
 

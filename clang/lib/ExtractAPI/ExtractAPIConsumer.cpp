@@ -47,6 +47,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <optional>
 #include <utility>
 
 using namespace clang;
@@ -61,9 +62,9 @@ StringRef getTypedefName(const TagDecl *Decl) {
   return {};
 }
 
-Optional<std::string> getRelativeIncludeName(const CompilerInstance &CI,
-                                             StringRef File,
-                                             bool *IsQuoted = nullptr) {
+std::optional<std::string> getRelativeIncludeName(const CompilerInstance &CI,
+                                                  StringRef File,
+                                                  bool *IsQuoted = nullptr) {
   assert(CI.hasFileManager() &&
          "CompilerInstance does not have a FileNamager!");
 

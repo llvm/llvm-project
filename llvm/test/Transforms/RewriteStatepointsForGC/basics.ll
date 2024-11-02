@@ -1,5 +1,4 @@
 ; This is a collection of really basic tests for gc.statepoint rewriting.
-; RUN: opt < %s -rewrite-statepoints-for-gc -spp-rematerialization-threshold=0 -S | FileCheck %s
 ; RUN: opt < %s -passes=rewrite-statepoints-for-gc -spp-rematerialization-threshold=0 -S | FileCheck %s
 
 ; Trivial relocation over a single call
@@ -40,7 +39,7 @@ entry:
 ; CHECK-NEXT: %derived.relocated = call coldcc i8 addrspace(1)*
 ; CHECK-NEXT: load i8, i8 addrspace(1)* %derived.relocated
 ; CHECK-NEXT: load i8, i8 addrspace(1)* %obj.relocated
-; Tests to make sure we visit both the taken and untaken predeccessor 
+; Tests to make sure we visit both the taken and untaken predeccessor
 ; of merge.  This was a bug in the dataflow liveness at one point.
   %derived = getelementptr i8, i8 addrspace(1)* %obj, i64 10
   call void @foo() [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]

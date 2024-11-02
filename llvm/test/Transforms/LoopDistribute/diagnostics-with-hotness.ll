@@ -1,7 +1,7 @@
-; RUN: opt -loop-simplify -loop-distribute -enable-loop-distribute -S -pass-remarks-missed=loop-distribute \
+; RUN: opt -passes=loop-simplify,loop-distribute -enable-loop-distribute -S -pass-remarks-missed=loop-distribute \
 ; RUN:     -pass-remarks-analysis=loop-distribute \
 ; RUN:     -pass-remarks-with-hotness < %s 2>&1 | FileCheck %s --check-prefix=HOTNESS
-; RUN: opt -loop-simplify -loop-distribute -enable-loop-distribute -S -pass-remarks-missed=loop-distribute \
+; RUN: opt -passes=loop-simplify,loop-distribute -enable-loop-distribute -S -pass-remarks-missed=loop-distribute \
 ; RUN:     -pass-remarks-analysis=loop-distribute \
 ; RUN:                                < %s 2>&1 | FileCheck %s --check-prefix=NO_HOTNESS
 

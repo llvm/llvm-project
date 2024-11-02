@@ -2408,14 +2408,18 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
   Value *Cond;
   if (match(Op, m_OneUse(m_Select(m_Value(Cond), m_Value(X), m_Value(Y))))) {
     // Unlike most transforms, this one is not safe to propagate nsz unless
-    // it is present on the original select. (We are conservatively intersecting
-    // the nsz flags from the select and root fneg instruction.)
+    // it is present on the original select. We union the flags from the select
+    // and fneg and then remove nsz if needed.
     auto propagateSelectFMF = [&](SelectInst *S, bool CommonOperand) {
       S->copyFastMathFlags(&I);
-      if (auto *OldSel = dyn_cast<SelectInst>(Op))
+      if (auto *OldSel = dyn_cast<SelectInst>(Op)) {
+        FastMathFlags FMF = I.getFastMathFlags();
+        FMF |= OldSel->getFastMathFlags();
+        S->setFastMathFlags(FMF);
         if (!OldSel->hasNoSignedZeros() && !CommonOperand &&
             !isGuaranteedNotToBeUndefOrPoison(OldSel->getCondition()))
           S->setHasNoSignedZeros(false);
+      }
     };
     // -(Cond ? -P : Y) --> Cond ? P : -Y
     Value *P;

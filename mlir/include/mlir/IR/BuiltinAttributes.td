@@ -530,7 +530,7 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary", [
     Attribute get(StringRef name) const;
     Attribute get(StringAttr name) const;
 
-    /// Return the specified named attribute if present, None otherwise.
+    /// Return the specified named attribute if present, std::nullopt otherwise.
     Optional<NamedAttribute> getNamed(StringRef name) const;
     Optional<NamedAttribute> getNamed(StringAttr name) const;
 

@@ -358,9 +358,9 @@ define <32 x double> @vfmin_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8re8.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8re8.v v24, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vfmin.vv v8, v8, v24, v0.t
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4

@@ -9,7 +9,7 @@
 ; - PhaseOrdering/fast-reassociate-gvn.ll
 ; - Reassociate/fast-basictest.ll
 ;
-; RUN: opt < %s -reassociate -gvn -S | FileCheck %s --check-prefixes=CHECK,REASSOC_AND_GVN --allow-unused-prefixes
+; RUN: opt < %s -passes=reassociate,gvn -S | FileCheck %s --check-prefixes=CHECK,REASSOC_AND_GVN --allow-unused-prefixes
 ; RUN: opt < %s -O2 -S | FileCheck %s --check-prefixes=CHECK,O2 --allow-unused-prefixes
 
 @fe = external global float

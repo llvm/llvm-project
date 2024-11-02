@@ -14,7 +14,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -1506,6 +1505,7 @@ void RedirectingFileSystem::setRedirection(
 
 std::vector<StringRef> RedirectingFileSystem::getRoots() const {
   std::vector<StringRef> R;
+  R.reserve(Roots.size());
   for (const auto &Root : Roots)
     R.push_back(Root->getName());
   return R;

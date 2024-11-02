@@ -30,11 +30,11 @@
 #ifndef LLVM_REMARKS_REMARKSTREAMER_H
 #define LLVM_REMARKS_REMARKSTREAMER_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Remarks/RemarkSerializer.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
 #include <memory>
+#include <optional>
 
 namespace llvm {
 
@@ -43,19 +43,19 @@ class raw_ostream;
 namespace remarks {
 class RemarkStreamer final {
   /// The regex used to filter remarks based on the passes that emit them.
-  Optional<Regex> PassFilter;
+  std::optional<Regex> PassFilter;
   /// The object used to serialize the remarks to a specific format.
   std::unique_ptr<remarks::RemarkSerializer> RemarkSerializer;
   /// The filename that the remark diagnostics are emitted to.
-  const Optional<std::string> Filename;
+  const std::optional<std::string> Filename;
 
 public:
   RemarkStreamer(std::unique_ptr<remarks::RemarkSerializer> RemarkSerializer,
-                 Optional<StringRef> Filename = std::nullopt);
+                 std::optional<StringRef> Filename = std::nullopt);
 
   /// Return the filename that the remark diagnostics are emitted to.
-  Optional<StringRef> getFilename() const {
-    return Filename ? Optional<StringRef>(*Filename) : std::nullopt;
+  std::optional<StringRef> getFilename() const {
+    return Filename ? std::optional<StringRef>(*Filename) : std::nullopt;
   }
   /// Return stream that the remark diagnostics are emitted to.
   raw_ostream &getStream() { return RemarkSerializer->OS; }

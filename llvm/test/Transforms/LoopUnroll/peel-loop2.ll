@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-unroll -unroll-force-peel-count=1 -verify-dom-info <%s
+; RUN: opt -S -passes=loop-unroll -unroll-force-peel-count=1 -verify-dom-info <%s
 
 ; Check if loop composed of several BBs is peeled correctly.
 

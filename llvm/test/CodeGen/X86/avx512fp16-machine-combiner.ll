@@ -26,7 +26,7 @@ define half @reassociate_adds2(half %x0, half %x1, half %x2, half %x3) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddsh %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vaddsh %xmm3, %xmm2, %xmm1
-; CHECK-NEXT:    vaddsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vaddsh %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %t0 = fadd reassoc nsz half %x0, %x1
   %t1 = fadd reassoc nsz half %x2, %t0
@@ -38,8 +38,8 @@ define half @reassociate_adds3(half %x0, half %x1, half %x2, half %x3) {
 ; CHECK-LABEL: reassociate_adds3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddsh %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vaddsh %xmm3, %xmm2, %xmm1
-; CHECK-NEXT:    vaddsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vaddsh %xmm2, %xmm3, %xmm1
+; CHECK-NEXT:    vaddsh %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %t0 = fadd reassoc nsz half %x0, %x1
   %t1 = fadd reassoc nsz half %t0, %x2
@@ -51,8 +51,8 @@ define half @reassociate_adds4(half %x0, half %x1, half %x2, half %x3) {
 ; CHECK-LABEL: reassociate_adds4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddsh %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vaddsh %xmm3, %xmm2, %xmm1
-; CHECK-NEXT:    vaddsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vaddsh %xmm2, %xmm3, %xmm1
+; CHECK-NEXT:    vaddsh %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %t0 = fadd reassoc nsz half %x0, %x1
   %t1 = fadd reassoc nsz half %x2, %t0
@@ -93,8 +93,8 @@ define half @reassociate_adds6(half %x0, half %x1, half %x2, half %x3) {
 ; CHECK-LABEL: reassociate_adds6:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vdivsh %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vaddsh %xmm3, %xmm2, %xmm1
-; CHECK-NEXT:    vaddsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vaddsh %xmm2, %xmm3, %xmm1
+; CHECK-NEXT:    vaddsh %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %t0 = fdiv reassoc nsz half %x0, %x1
   %t1 = fadd reassoc nsz half %x2, %t0
@@ -108,8 +108,8 @@ define half @reassociate_muls1(half %x0, half %x1, half %x2, half %x3) {
 ; CHECK-LABEL: reassociate_muls1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vdivsh %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vmulsh %xmm3, %xmm2, %xmm1
-; CHECK-NEXT:    vmulsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vmulsh %xmm2, %xmm3, %xmm1
+; CHECK-NEXT:    vmulsh %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %t0 = fdiv reassoc nsz half %x0, %x1
   %t1 = fmul reassoc nsz half %x2, %t0
@@ -123,8 +123,8 @@ define <8 x half> @reassociate_adds_v8f16(<8 x half> %x0, <8 x half> %x1, <8 x h
 ; CHECK-LABEL: reassociate_adds_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vdivph %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vaddph %xmm3, %xmm2, %xmm1
-; CHECK-NEXT:    vaddph %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vaddph %xmm2, %xmm3, %xmm1
+; CHECK-NEXT:    vaddph %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %t0 = fdiv reassoc nsz <8 x half> %x0, %x1
   %t1 = fadd reassoc nsz <8 x half> %x2, %t0
@@ -138,8 +138,8 @@ define <8 x half> @reassociate_muls_v8f16(<8 x half> %x0, <8 x half> %x1, <8 x h
 ; CHECK-LABEL: reassociate_muls_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddph %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vmulph %xmm3, %xmm2, %xmm1
-; CHECK-NEXT:    vmulph %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vmulph %xmm2, %xmm3, %xmm1
+; CHECK-NEXT:    vmulph %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %t0 = fadd reassoc nsz <8 x half> %x0, %x1
   %t1 = fmul reassoc nsz <8 x half> %x2, %t0
@@ -153,8 +153,8 @@ define <16 x half> @reassociate_adds_v16f16(<16 x half> %x0, <16 x half> %x1, <1
 ; CHECK-LABEL: reassociate_adds_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vdivph %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vaddph %ymm3, %ymm2, %ymm1
-; CHECK-NEXT:    vaddph %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vaddph %ymm2, %ymm3, %ymm1
+; CHECK-NEXT:    vaddph %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %t0 = fdiv reassoc nsz <16 x half> %x0, %x1
   %t1 = fadd reassoc nsz <16 x half> %x2, %t0
@@ -168,8 +168,8 @@ define <16 x half> @reassociate_muls_v16f16(<16 x half> %x0, <16 x half> %x1, <1
 ; CHECK-LABEL: reassociate_muls_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddph %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vmulph %ymm3, %ymm2, %ymm1
-; CHECK-NEXT:    vmulph %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vmulph %ymm2, %ymm3, %ymm1
+; CHECK-NEXT:    vmulph %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %t0 = fadd reassoc nsz <16 x half> %x0, %x1
   %t1 = fmul reassoc nsz <16 x half> %x2, %t0
@@ -183,8 +183,8 @@ define <32 x half> @reassociate_adds_v32f16(<32 x half> %x0, <32 x half> %x1, <3
 ; CHECK-LABEL: reassociate_adds_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vdivph %zmm1, %zmm0, %zmm0
-; CHECK-NEXT:    vaddph %zmm3, %zmm2, %zmm1
-; CHECK-NEXT:    vaddph %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vaddph %zmm2, %zmm3, %zmm1
+; CHECK-NEXT:    vaddph %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %t0 = fdiv reassoc nsz <32 x half> %x0, %x1
   %t1 = fadd reassoc nsz <32 x half> %x2, %t0
@@ -198,8 +198,8 @@ define <32 x half> @reassociate_muls_v32f16(<32 x half> %x0, <32 x half> %x1, <3
 ; CHECK-LABEL: reassociate_muls_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddph %zmm1, %zmm0, %zmm0
-; CHECK-NEXT:    vmulph %zmm3, %zmm2, %zmm1
-; CHECK-NEXT:    vmulph %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vmulph %zmm2, %zmm3, %zmm1
+; CHECK-NEXT:    vmulph %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %t0 = fadd reassoc nsz <32 x half> %x0, %x1
   %t1 = fmul reassoc nsz <32 x half> %x2, %t0
@@ -213,8 +213,8 @@ define half @reassociate_mins_half(half %x0, half %x1, half %x2, half %x3) {
 ; CHECK-LABEL: reassociate_mins_half:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vdivsh %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vminsh %xmm3, %xmm2, %xmm1
-; CHECK-NEXT:    vminsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vminsh %xmm2, %xmm3, %xmm1
+; CHECK-NEXT:    vminsh %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %t0 = fdiv half %x0, %x1
   %cmp1 = fcmp olt half %x2, %t0
@@ -230,8 +230,8 @@ define half @reassociate_maxs_half(half %x0, half %x1, half %x2, half %x3) {
 ; CHECK-LABEL: reassociate_maxs_half:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vdivsh %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vmaxsh %xmm3, %xmm2, %xmm1
-; CHECK-NEXT:    vmaxsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vmaxsh %xmm2, %xmm3, %xmm1
+; CHECK-NEXT:    vmaxsh %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %t0 = fdiv half %x0, %x1
   %cmp1 = fcmp ogt half %x2, %t0
@@ -247,8 +247,8 @@ define <8 x half> @reassociate_mins_v8f16(<8 x half> %x0, <8 x half> %x1, <8 x h
 ; CHECK-LABEL: reassociate_mins_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddph %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vminph %xmm3, %xmm2, %xmm1
-; CHECK-NEXT:    vminph %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vminph %xmm2, %xmm3, %xmm1
+; CHECK-NEXT:    vminph %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %t0 = fadd <8 x half> %x0, %x1
   %cmp1 = fcmp olt <8 x half> %x2, %t0
@@ -264,8 +264,8 @@ define <8 x half> @reassociate_maxs_v8f16(<8 x half> %x0, <8 x half> %x1, <8 x h
 ; CHECK-LABEL: reassociate_maxs_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddph %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vmaxph %xmm3, %xmm2, %xmm1
-; CHECK-NEXT:    vmaxph %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vmaxph %xmm2, %xmm3, %xmm1
+; CHECK-NEXT:    vmaxph %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %t0 = fadd <8 x half> %x0, %x1
   %cmp1 = fcmp ogt <8 x half> %x2, %t0
@@ -281,8 +281,8 @@ define <16 x half> @reassociate_mins_v16f16(<16 x half> %x0, <16 x half> %x1, <1
 ; CHECK-LABEL: reassociate_mins_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddph %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vminph %ymm3, %ymm2, %ymm1
-; CHECK-NEXT:    vminph %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vminph %ymm2, %ymm3, %ymm1
+; CHECK-NEXT:    vminph %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %t0 = fadd <16 x half> %x0, %x1
   %cmp1 = fcmp olt <16 x half> %x2, %t0
@@ -298,8 +298,8 @@ define <16 x half> @reassociate_maxs_v16f16(<16 x half> %x0, <16 x half> %x1, <1
 ; CHECK-LABEL: reassociate_maxs_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddph %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vmaxph %ymm3, %ymm2, %ymm1
-; CHECK-NEXT:    vmaxph %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vmaxph %ymm2, %ymm3, %ymm1
+; CHECK-NEXT:    vmaxph %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %t0 = fadd <16 x half> %x0, %x1
   %cmp1 = fcmp ogt <16 x half> %x2, %t0
@@ -315,8 +315,8 @@ define <32 x half> @reassociate_mins_v32f16(<32 x half> %x0, <32 x half> %x1, <3
 ; CHECK-LABEL: reassociate_mins_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddph %zmm1, %zmm0, %zmm0
-; CHECK-NEXT:    vminph %zmm3, %zmm2, %zmm1
-; CHECK-NEXT:    vminph %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vminph %zmm2, %zmm3, %zmm1
+; CHECK-NEXT:    vminph %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %t0 = fadd <32 x half> %x0, %x1
   %cmp1 = fcmp olt <32 x half> %x2, %t0
@@ -332,8 +332,8 @@ define <32 x half> @reassociate_maxs_v16f32(<32 x half> %x0, <32 x half> %x1, <3
 ; CHECK-LABEL: reassociate_maxs_v16f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddph %zmm1, %zmm0, %zmm0
-; CHECK-NEXT:    vmaxph %zmm3, %zmm2, %zmm1
-; CHECK-NEXT:    vmaxph %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vmaxph %zmm2, %zmm3, %zmm1
+; CHECK-NEXT:    vmaxph %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %t0 = fadd <32 x half> %x0, %x1
   %cmp1 = fcmp ogt <32 x half> %x2, %t0

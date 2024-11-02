@@ -7,7 +7,7 @@ Header:
   Version:
     Major:           1
     Minor:           0
-  PartCount:       7
+  PartCount:       2
 Parts:
   - Name:            SFI0
     Size:            8
@@ -44,17 +44,7 @@ Parts:
       AdvancedTextureOps: false
       WriteableMSAATextures: false
       NextUnusedBit:   false
-  - Name:            ISG1
-    Size:            8
-  - Name:            OSG1
-    Size:            8
-  - Name:            PSV0
-    Size:            8
-  - Name:            STAT
-    Size:            8
-  - Name:            HASH
-    Size:            20
-  - Name:            CXIL
+  - Name:            FKE0
     Size:            8
 ...
 
@@ -62,4 +52,4 @@ Parts:
 # CHECK-NEXT:   - Name:            SFI0
 # CHECK-NEXT:     Size:            8
 # CHECK-NOT:      Flags:
-# CHECK-NEXT:   - Name:            ISG1
+# CHECK-NEXT:   - Name:            FKE0

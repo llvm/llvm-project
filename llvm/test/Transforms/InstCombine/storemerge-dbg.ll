@@ -1,4 +1,4 @@
-; RUN: opt < %s -debugify -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=debugify,instcombine -S | FileCheck %s
 
 declare i32 @escape(i32)
 

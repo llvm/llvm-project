@@ -1,4 +1,4 @@
-; RUN: opt -function-specialization -func-specialization-avg-iters-cost=5 -func-specialization-size-threshold=10 -S < %s | FileCheck %s
+; RUN: opt -passes=ipsccp -specialize-functions -func-specialization-avg-iters-cost=5 -func-specialization-size-threshold=10 -S < %s | FileCheck %s
 
 ; Check that the loop depth results in a larger specialization bonus.
 ; CHECK: @foo.1(

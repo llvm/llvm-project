@@ -1,4 +1,4 @@
-; RUN: opt -mergefunc -S < %s | FileCheck %s
+; RUN: opt -passes=mergefunc -S < %s | FileCheck %s
 
 define i8 @call_with_range() {
   bitcast i8 0 to i8 ; dummy to make the function large enough

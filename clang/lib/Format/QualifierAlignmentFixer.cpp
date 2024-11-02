@@ -18,6 +18,7 @@
 #include "llvm/Support/Regex.h"
 
 #include <algorithm>
+#include <optional>
 
 #define DEBUG_TYPE "format-qualifier-alignment-fixer"
 
@@ -66,7 +67,7 @@ std::pair<tooling::Replacements, unsigned> QualifierAlignmentFixer::analyze(
                                NextStartColumn, LastStartColumn);
   if (!Env)
     return {};
-  llvm::Optional<std::string> CurrentCode;
+  std::optional<std::string> CurrentCode;
   tooling::Replacements Fixes;
   for (size_t I = 0, E = Passes.size(); I < E; ++I) {
     std::pair<tooling::Replacements, unsigned> PassFixes = Passes[I](*Env);

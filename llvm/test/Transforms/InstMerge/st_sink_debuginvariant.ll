@@ -1,5 +1,5 @@
-; RUN: opt < %s -S -mldst-motion -o - | FileCheck %s
-; RUN: opt < %s -S -strip-debug -mldst-motion -o - | FileCheck %s
+; RUN: opt < %s -S -passes=mldst-motion -o - | FileCheck %s
+; RUN: opt < %s -S -strip-debug -passes=mldst-motion -o - | FileCheck %s
 
 ; Verify that the amount of stores that are sunk is invariant regarding debug
 ; info.  This used to fail due to including dbg.value instructions when

@@ -6,6 +6,9 @@ declare void @llvm.loongarch.dbar(i32)
 declare void @llvm.loongarch.ibar(i32)
 declare void @llvm.loongarch.break(i32)
 declare void @llvm.loongarch.syscall(i32)
+declare i32 @llvm.loongarch.csrrd.w(i32 immarg)
+declare i32 @llvm.loongarch.csrwr.w(i32, i32 immarg)
+declare i32 @llvm.loongarch.csrxchg.w(i32, i32, i32 immarg)
 
 define void @dbar_imm_out_of_hi_range() nounwind {
 ; CHECK: argument to 'llvm.loongarch.dbar' out of range
@@ -61,4 +64,46 @@ define void @syscall_imm_out_of_lo_range() nounwind {
 entry:
   call void @llvm.loongarch.syscall(i32 -1)
   ret void
+}
+
+define i32 @csrrd_w_imm_out_of_hi_range() nounwind {
+; CHECK: argument to 'llvm.loongarch.csrrd.w' out of range
+entry:
+  %0 = call i32 @llvm.loongarch.csrrd.w(i32 16384)
+  ret i32 %0
+}
+
+define i32 @csrrd_w_imm_out_of_lo_range() nounwind {
+; CHECK: argument to 'llvm.loongarch.csrrd.w' out of range
+entry:
+  %0 = call i32 @llvm.loongarch.csrrd.w(i32 -1)
+  ret i32 %0
+}
+
+define i32 @csrwr_w_imm_out_of_hi_range(i32 %a) nounwind {
+; CHECK: argument to 'llvm.loongarch.csrwr.w' out of range
+entry:
+  %0 = call i32 @llvm.loongarch.csrwr.w(i32 %a, i32 16384)
+  ret i32 %0
+}
+
+define i32 @csrwr_w_imm_out_of_lo_range(i32 %a) nounwind {
+; CHECK: argument to 'llvm.loongarch.csrwr.w' out of range
+entry:
+  %0 = call i32 @llvm.loongarch.csrwr.w(i32 %a, i32 -1)
+  ret i32 %0
+}
+
+define i32 @csrxchg_w_imm_out_of_hi_range(i32 %a, i32 %b) nounwind {
+; CHECK: argument to 'llvm.loongarch.csrxchg.w' out of range
+entry:
+  %0 = call i32 @llvm.loongarch.csrxchg.w(i32 %a, i32 %b, i32 16384)
+  ret i32 %0
+}
+
+define i32 @csrxchg_w_imm_out_of_lo_range(i32 %a, i32 %b) nounwind {
+; CHECK: argument to 'llvm.loongarch.csrxchg.w' out of range
+entry:
+  %0 = call i32 @llvm.loongarch.csrxchg.w(i32 %a, i32 %b, i32 -1)
+  ret i32 %0
 }

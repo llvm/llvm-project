@@ -1,4 +1,4 @@
-; RUN: opt -S %s -verify
+; RUN: opt -S %s -passes=verify
 
 declare token @llvm.call.preallocated.setup(i32)
 declare i8* @llvm.call.preallocated.arg(token, i32)

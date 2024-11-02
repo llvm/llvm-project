@@ -751,6 +751,8 @@ def TileReductionUsingForeachThreadOp :
     All the partial reduction value is are parallel inserted to create a new
     tensor. After the loop a merge operation is created to do a final reduction
     with the partial reductions tensor.
+    If an extra `tile_sizes` parameter is passed the tiles are cyclically
+    distributed on the threads of the `scf.foreach_threads` loop.
 
     #### Return modes
 
@@ -794,7 +796,7 @@ def TileReductionUsingForeachThreadOp :
         scf.foreach_thread.perform_concurrently {
           tensor.parallel_insert_slice %7 into %arg3[0, %arg2] [%dim, 1] [1, 1] : tensor<?xf32> into tensor<?x5xf32>
         }
-      } {thread_dim_mapping = []}
+      } {mapping = []}
       %3 = linalg.generic {indexing_maps = [#map3, #map4], iterator_types = ["parallel", "reduction"]} ins(%2 : tensor<?x5xf32>) outs(%arg1 : tensor<?xf32>) {
       ^bb0(%in: f32, %out: f32):
         %4 = arith.addf %in, %out : f32
@@ -804,7 +806,9 @@ def TileReductionUsingForeachThreadOp :
   }];
 
   let arguments = (ins PDL_Operation:$target,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$num_threads);
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$num_threads,
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes,
+                   OptionalAttr<DeviceMappingArrayAttr>:$mapping);
   let results = (outs PDL_Operation:$fill_op,
                       PDL_Operation:$split_linalg_op,
                       PDL_Operation:$combining_linalg_op);

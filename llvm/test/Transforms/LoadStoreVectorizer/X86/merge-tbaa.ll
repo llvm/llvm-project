@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=x86_64-unknown-linux-gnu -load-store-vectorizer -S < %s | \
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -passes=load-store-vectorizer -S < %s | \
 ; RUN:     FileCheck %s
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' -S < %s | \
 ; RUN:     FileCheck %s

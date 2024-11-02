@@ -1,4 +1,4 @@
-; RUN: opt -S -partial-inliner  -skip-partial-inlining-cost-analysis  < %s |   FileCheck %s
+; RUN: opt -S -passes=partial-inliner  -skip-partial-inlining-cost-analysis  < %s |   FileCheck %s
 ; RUN: opt -S -passes=partial-inliner  -skip-partial-inlining-cost-analysis  < %s   | FileCheck %s
 
 %class.A = type { i32 }
@@ -24,12 +24,12 @@ bb5:                                              ; preds = %bb4, %bb
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) 
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 
-declare void @_ZN1A7memfuncEv(%class.A*) local_unnamed_addr 
+declare void @_ZN1A7memfuncEv(%class.A*) local_unnamed_addr
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) 
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 
 ; Function Attrs: uwtable
 define void @_Z3goov() local_unnamed_addr  {

@@ -3,7 +3,7 @@
 
 declare void @ext();
 declare void @ext1();
-@func = global void ()* null
+@func = global ptr null
 
 ; CHECK: define void @callee(i32 %n) !prof ![[ENTRY_COUNT:[0-9]*]]
 define void  @callee(i32 %n) !prof !15 {
@@ -18,7 +18,7 @@ cond_false:
 ; ext is cloned and updated.
 ; CHECK: call void @ext(), !prof ![[COUNT_CALLEE:[0-9]*]]
   call void @ext(), !prof !16
-  %f = load void ()*, void ()** @func
+  %f = load ptr, ptr @func
 ; CHECK: call void %f(), !prof ![[COUNT_IND_CALLEE:[0-9]*]] 
   call void %f(), !prof !18
   ret void

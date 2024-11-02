@@ -1,7 +1,6 @@
 ; Test that the inliner can handle deleting functions within an SCC while still
 ; processing the calls in that SCC.
 ;
-; RUN: opt < %s -S -inline | FileCheck %s
 ; RUN: opt < %s -S -passes=inline | FileCheck %s
 ; RUN: opt < %s -S -passes=inliner-wrapper | FileCheck %s
 

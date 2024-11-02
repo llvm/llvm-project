@@ -1,4 +1,4 @@
-; RUN: opt < %s  -passes=loop-vectorize -mtriple=x86_64-apple-macosx10.8.0 -mcpu=corei7-avx -debug-only=loop-vectorize -stats -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -mtriple=x86_64-apple-macosx10.8.0 -mcpu=corei7-avx -debug-only=loop-vectorize -stats -S 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK: LV: Loop hints: force=enabled

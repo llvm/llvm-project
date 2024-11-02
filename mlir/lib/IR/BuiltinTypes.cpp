@@ -804,6 +804,16 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
   return success();
 }
 
+std::pair<SmallVector<int64_t>, int64_t>
+mlir::getStridesAndOffset(MemRefType t) {
+  SmallVector<int64_t> strides;
+  int64_t offset;
+  LogicalResult status = getStridesAndOffset(t, strides, offset);
+  (void)status;
+  assert(succeeded(status) && "Invalid use of check-free getStridesAndOffset");
+  return {strides, offset};
+}
+
 //===----------------------------------------------------------------------===//
 /// TupleType
 //===----------------------------------------------------------------------===//

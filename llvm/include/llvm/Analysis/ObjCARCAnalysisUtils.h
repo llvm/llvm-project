@@ -22,7 +22,6 @@
 #ifndef LLVM_ANALYSIS_OBJCARCANALYSISUTILS_H
 #define LLVM_ANALYSIS_OBJCARCANALYSISUTILS_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Analysis/ObjCARCInstKind.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"

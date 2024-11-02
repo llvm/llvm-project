@@ -1,4 +1,4 @@
-; RUN: opt -indvars -S < %s | FileCheck %s
+; RUN: opt -passes=indvars -S < %s | FileCheck %s
 ;
 ; When the induction variable is widened by indvars, check that the debug loc
 ; associated with the loop increment is correctly propagated.

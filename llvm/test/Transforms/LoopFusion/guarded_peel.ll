@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-fusion -loop-fusion-peel-max-count=3 < %s | FileCheck %s
+; RUN: opt -S -passes=loop-fusion -loop-fusion-peel-max-count=3 < %s | FileCheck %s
 
 ; Tests if we are able to fuse two guarded loops which have constant but
 ; different trip counts. The first two iterations of the first loop should be

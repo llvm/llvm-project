@@ -53,7 +53,7 @@
       "uri": "file://INPUT_DIR/the-file.cpp",
       "languageId":"cpp",
       "version":1,
-      "text":"#include <a.h>\n#include <b.h>\n#if !defined(__ARM_ARCH) || !defined(__gnu_linux__)\n#error \"Invalid target\"\n#endif"
+      "text":"#include <a.h>\n#include <b.h>\n#if !defined(__ARM_ARCH) || !defined(__gnu_linux__)\n#error \"Invalid target\"\n#endif\n"
     }
   }
 }
