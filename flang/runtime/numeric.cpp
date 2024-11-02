@@ -316,6 +316,27 @@ CppTypeFor<TypeCategory::Integer, 16> RTDEF(Ceiling16_16)(
 #endif
 #endif
 
+CppTypeFor<TypeCategory::Real, 4> RTDEF(ErfcScaled4)(
+    CppTypeFor<TypeCategory::Real, 4> x) {
+  return ErfcScaled(x);
+}
+CppTypeFor<TypeCategory::Real, 8> RTDEF(ErfcScaled8)(
+    CppTypeFor<TypeCategory::Real, 8> x) {
+  return ErfcScaled(x);
+}
+#if LDBL_MANT_DIG == 64
+CppTypeFor<TypeCategory::Real, 10> RTDEF(ErfcScaled10)(
+    CppTypeFor<TypeCategory::Real, 10> x) {
+  return ErfcScaled(x);
+}
+#endif
+#if LDBL_MANT_DIG == 113
+CppTypeFor<TypeCategory::Real, 16> RTDEF(ErfcScaled16)(
+    CppTypeFor<TypeCategory::Real, 16> x) {
+  return ErfcScaled(x);
+}
+#endif
+
 CppTypeFor<TypeCategory::Integer, 4> RTDEF(Exponent4_4)(
     CppTypeFor<TypeCategory::Real, 4> x) {
   return Exponent<CppTypeFor<TypeCategory::Integer, 4>>(x);

@@ -1915,6 +1915,24 @@ SourceManager::getDecomposedIncludedLoc(FileID FID) const {
   return DecompLoc;
 }
 
+FileID SourceManager::getUniqueLoadedASTFileID(SourceLocation Loc) const {
+  assert(isLoadedSourceLocation(Loc) &&
+         "Must be a source location in a loaded PCH/Module file");
+
+  auto [FID, Ignore] = getDecomposedLoc(Loc);
+  // `LoadedSLocEntryAllocBegin` stores the sorted lowest FID of each loaded
+  // allocation. Later allocations have lower FileIDs. The call below is to find
+  // the lowest FID of a loaded allocation from any FID in the same allocation.
+  // The lowest FID is used to identify a loaded allocation.
+  const FileID *FirstFID =
+      llvm::lower_bound(LoadedSLocEntryAllocBegin, FID, std::greater<FileID>{});
+
+  assert(FirstFID &&
+         "The failure to find the first FileID of a "
+         "loaded AST from a loaded source location was unexpected.");
+  return *FirstFID;
+}
+
 bool SourceManager::isInTheSameTranslationUnitImpl(
     const std::pair<FileID, unsigned> &LOffs,
     const std::pair<FileID, unsigned> &ROffs) const {

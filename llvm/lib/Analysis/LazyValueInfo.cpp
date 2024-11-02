@@ -1188,13 +1188,10 @@ std::optional<ValueLatticeElement> LazyValueInfoImpl::getValueFromICmpCondition(
       return ValueLatticeElement::getRange(
           ConstantRange::fromKnownBits(Known, /*IsSigned*/ false));
     }
-    // If (Val & Mask) != 0 then the value must be larger than the lowest set
-    // bit of Mask.
-    if (EdgePred == ICmpInst::ICMP_NE && !Mask->isZero() && C->isZero()) {
-      return ValueLatticeElement::getRange(ConstantRange::getNonEmpty(
-          APInt::getOneBitSet(BitWidth, Mask->countr_zero()),
-          APInt::getZero(BitWidth)));
-    }
+
+    if (EdgePred == ICmpInst::ICMP_NE)
+      return ValueLatticeElement::getRange(
+          ConstantRange::makeMaskNotEqualRange(*Mask, *C));
   }
 
   // If (X urem Modulus) >= C, then X >= C.

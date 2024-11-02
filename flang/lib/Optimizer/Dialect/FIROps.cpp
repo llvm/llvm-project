@@ -272,8 +272,6 @@ mlir::LogicalResult fir::AllocaOp::verify() {
   mlir::Type outType = getType();
   if (!mlir::isa<fir::ReferenceType>(outType))
     return emitOpError("must be a !fir.ref type");
-  if (fir::isa_unknown_size_box(fir::dyn_cast_ptrEleTy(outType)))
-    return emitOpError("cannot allocate !fir.box of unknown rank or type");
   return mlir::success();
 }
 
@@ -1060,9 +1058,9 @@ void fir::BoxRankOp::getEffects(
     llvm::SmallVectorImpl<
         mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
         &effects) {
-  mlir::Value inputBox = getBox();
-  if (fir::isBoxAddress(inputBox.getType()))
-    effects.emplace_back(mlir::MemoryEffects::Read::get(), inputBox,
+  mlir::OpOperand &inputBox = getBoxMutable();
+  if (fir::isBoxAddress(inputBox.get().getType()))
+    effects.emplace_back(mlir::MemoryEffects::Read::get(), &inputBox,
                          mlir::SideEffects::DefaultResource::get());
 }
 
@@ -2903,9 +2901,9 @@ void fir::ReboxAssumedRankOp::getEffects(
     llvm::SmallVectorImpl<
         mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
         &effects) {
-  mlir::Value inputBox = getBox();
-  if (fir::isBoxAddress(inputBox.getType()))
-    effects.emplace_back(mlir::MemoryEffects::Read::get(), inputBox,
+  mlir::OpOperand &inputBox = getBoxMutable();
+  if (fir::isBoxAddress(inputBox.get().getType()))
+    effects.emplace_back(mlir::MemoryEffects::Read::get(), &inputBox,
                          mlir::SideEffects::DefaultResource::get());
 }
 
@@ -3793,8 +3791,6 @@ void fir::StoreOp::print(mlir::OpAsmPrinter &p) {
 mlir::LogicalResult fir::StoreOp::verify() {
   if (getValue().getType() != fir::dyn_cast_ptrEleTy(getMemref().getType()))
     return emitOpError("store value type must match memory reference type");
-  if (fir::isa_unknown_size_box(getValue().getType()))
-    return emitOpError("cannot store !fir.box of unknown rank or type");
   return mlir::success();
 }
 

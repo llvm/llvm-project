@@ -47,7 +47,6 @@ def get_input_signature():
             "edge_count",
             "callsite_height",
             "cost_estimate",
-            "inlining_default",
             "sroa_savings",
             "sroa_losses",
             "load_elimination",
@@ -102,12 +101,12 @@ def get_output_spec_path(path):
     return os.path.join(path, "output_spec.json")
 
 
-def build_mock_model(path, signature):
+def build_mock_model(path, signature, advice):
     """Build and save the mock model with the given signature"""
     module = tf.Module()
 
     def action(*inputs):
-        return {signature["output"]: tf.constant(value=1, dtype=tf.int64)}
+        return {signature["output"]: tf.constant(value=advice, dtype=tf.int64)}
 
     module.action = tf.function()(action)
     action = {"action": module.action.get_concrete_function(signature["inputs"])}
@@ -128,12 +127,18 @@ def get_signature():
 
 
 def main(argv):
-    assert len(argv) == 2
+    assert len(argv) == 2 or (len(argv) == 3 and argv[2] == "never")
     model_path = argv[1]
 
     print(f"Output model to: [{argv[1]}]")
+
+    constant_advice = 1
+    if len(argv) == 3:
+        constant_advice = 0
+    print(f"The model will always return: {constant_advice}")
+
     signature = get_signature()
-    build_mock_model(model_path, signature)
+    build_mock_model(model_path, signature, constant_advice)
 
 
 if __name__ == "__main__":

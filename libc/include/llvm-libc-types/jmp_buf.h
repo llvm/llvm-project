@@ -32,6 +32,9 @@ typedef struct {
 #elif defined(__riscv_float_abi_single)
 #error "__jmp_buf not available for your target architecture."
 #endif
+#elif defined(__arm__)
+  // r4, r5, r6, r7, r8, r9, r10, r11, r12, lr
+  long opaque[10];
 #else
 #error "__jmp_buf not available for your target architecture."
 #endif

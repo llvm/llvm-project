@@ -1,7 +1,13 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-undef %s
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-undef -Wno-unknown-warning-option -DAVOID_UNKNOWN_WARNING %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Werror=undef -DINITIAL_UNDEF %s
 
+#ifdef INITIAL_UNDEF
+#if FOO    // expected-error {{'FOO' is not defined}}
+#endif
+#else
 #if FOO    // ok.
+#endif
 #endif
 
 #pragma GCC diagnostic warning "-Wundef"
@@ -52,6 +58,6 @@ void ppq(void){}
 void ppr(void){} // expected-error {{no previous prototype for function 'ppr'}}
 // expected-note@-1{{declare 'static' if the function is not intended to be used outside of this translation unit}}
 
-#pragma clang diagnostic warning "-Weverything" // This should not be effective
-void pps(void){} // expected-error {{no previous prototype for function 'pps'}}
+#pragma clang diagnostic warning "-Weverything" // Set to warning
+void pps(void){} // expected-warning {{no previous prototype for function 'pps'}}
 // expected-note@-1{{declare 'static' if the function is not intended to be used outside of this translation unit}}

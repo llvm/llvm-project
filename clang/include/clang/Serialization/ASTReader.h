@@ -375,6 +375,7 @@ public:
   friend class serialization::reader::ASTIdentifierLookupTrait;
   friend class serialization::ReadMethodPoolVisitor;
   friend class TypeLocReader;
+  friend class LocalDeclID;
 
   using RecordData = SmallVector<uint64_t, 64>;
   using RecordDataImpl = SmallVectorImpl<uint64_t>;
@@ -489,14 +490,6 @@ private:
   /// When the pointer at index I is non-NULL, the type with
   /// ID = (I + 1) << FastQual::Width has already been loaded
   llvm::PagedVector<QualType> TypesLoaded;
-
-  using GlobalTypeMapType =
-      ContinuousRangeMap<serialization::TypeID, ModuleFile *, 4>;
-
-  /// Mapping from global type IDs to the module in which the
-  /// type resides along with the offset that should be added to the
-  /// global type ID to produce a local ID.
-  GlobalTypeMapType GlobalTypeMap;
 
   /// Declarations that have already been loaded from the chain.
   ///
@@ -660,14 +653,6 @@ private:
   /// been loaded.
   std::vector<IdentifierInfo *> IdentifiersLoaded;
 
-  using GlobalIdentifierMapType =
-      ContinuousRangeMap<serialization::IdentifierID, ModuleFile *, 4>;
-
-  /// Mapping from global identifier IDs to the module in which the
-  /// identifier resides along with the offset that should be added to the
-  /// global identifier ID to produce a local ID.
-  GlobalIdentifierMapType GlobalIdentifierMap;
-
   /// A vector containing macros that have already been
   /// loaded.
   ///
@@ -804,6 +789,11 @@ private:
   /// in the chain. The referenced declarations are deserialized and passed to
   /// the consumer eagerly.
   SmallVector<GlobalDeclID, 16> EagerlyDeserializedDecls;
+
+  /// The IDs of all vtables to emit. The referenced declarations are passed
+  /// to the consumers's HandleVTable eagerly after passing
+  /// EagerlyDeserializedDecls.
+  SmallVector<GlobalDeclID, 16> VTablesToEmit;
 
   /// The IDs of all tentative definitions stored in the chain.
   ///
@@ -1431,8 +1421,8 @@ private:
     RecordLocation(ModuleFile *M, uint64_t O) : F(M), Offset(O) {}
   };
 
-  QualType readTypeRecord(unsigned Index);
-  RecordLocation TypeCursorForIndex(unsigned Index);
+  QualType readTypeRecord(serialization::TypeID ID);
+  RecordLocation TypeCursorForIndex(serialization::TypeID ID);
   void LoadedDecl(unsigned Index, Decl *D);
   Decl *ReadDeclRecord(GlobalDeclID ID);
   void markIncompleteDeclChain(Decl *D);
@@ -1496,7 +1486,8 @@ public:
         : iterator_adaptor_base(Pos), Reader(Reader), Mod(Mod) {}
 
     value_type operator*() const {
-      return Reader->GetDecl(Reader->getGlobalDeclID(*Mod, (LocalDeclID)*I));
+      LocalDeclID ID = LocalDeclID::get(*Reader, *Mod, *I);
+      return Reader->GetDecl(Reader->getGlobalDeclID(*Mod, ID));
     }
 
     value_type operator->() const { return **this; }
@@ -1514,6 +1505,7 @@ private:
   bool isConsumerInterestedIn(Decl *D);
   void PassInterestingDeclsToConsumer();
   void PassInterestingDeclToConsumer(Decl *D);
+  void PassVTableToConsumer(CXXRecordDecl *RD);
 
   void finishPendingActions();
   void diagnoseOdrViolations();
@@ -1538,6 +1530,16 @@ private:
 
   /// Translate a \param GlobalDeclID to the index of DeclsLoaded array.
   unsigned translateGlobalDeclIDToIndex(GlobalDeclID ID) const;
+
+  /// Translate an \param IdentifierID ID to the index of IdentifiersLoaded
+  /// array and the corresponding module file.
+  std::pair<ModuleFile *, unsigned>
+  translateIdentifierIDToIndex(serialization::IdentifierID ID) const;
+
+  /// Translate an \param TypeID ID to the index of TypesLoaded
+  /// array and the corresponding module file.
+  std::pair<ModuleFile *, unsigned>
+  translateTypeIDToIndex(serialization::TypeID ID) const;
 
 public:
   /// Load the AST file and validate its contents against the given
@@ -1887,10 +1889,11 @@ public:
   QualType GetType(serialization::TypeID ID);
 
   /// Resolve a local type ID within a given AST file into a type.
-  QualType getLocalType(ModuleFile &F, unsigned LocalID);
+  QualType getLocalType(ModuleFile &F, serialization::LocalTypeID LocalID);
 
   /// Map a local type ID within a given AST file into a global type ID.
-  serialization::TypeID getGlobalTypeID(ModuleFile &F, unsigned LocalID) const;
+  serialization::TypeID
+  getGlobalTypeID(ModuleFile &F, serialization::LocalTypeID LocalID) const;
 
   /// Read a type from the current position in the given record, which
   /// was read from the given AST file.
@@ -1949,12 +1952,12 @@ public:
   /// given module.
   ///
   /// \returns The declaration ID read from the record, adjusted to a global ID.
-  GlobalDeclID ReadDeclID(ModuleFile &F, const RecordData &Record,
+  GlobalDeclID ReadDeclID(ModuleFile &F, const RecordDataImpl &Record,
                           unsigned &Idx);
 
   /// Reads a declaration from the given position in a record in the
   /// given module.
-  Decl *ReadDecl(ModuleFile &F, const RecordData &R, unsigned &I) {
+  Decl *ReadDecl(ModuleFile &F, const RecordDataImpl &R, unsigned &I) {
     return GetDecl(ReadDeclID(F, R, I));
   }
 
@@ -1963,8 +1966,8 @@ public:
   ///
   /// \returns The declaration read from this location, casted to the given
   /// result type.
-  template<typename T>
-  T *ReadDeclAs(ModuleFile &F, const RecordData &R, unsigned &I) {
+  template <typename T>
+  T *ReadDeclAs(ModuleFile &F, const RecordDataImpl &R, unsigned &I) {
     return cast_or_null<T>(GetDecl(ReadDeclID(F, R, I)));
   }
 
@@ -2123,7 +2126,7 @@ public:
   /// Load a selector from disk, registering its ID if it exists.
   void LoadSelector(Selector Sel);
 
-  void SetIdentifierInfo(unsigned ID, IdentifierInfo *II);
+  void SetIdentifierInfo(serialization::IdentifierID ID, IdentifierInfo *II);
   void SetGloballyVisibleDecls(IdentifierInfo *II,
                                const SmallVectorImpl<GlobalDeclID> &DeclIDs,
                                SmallVectorImpl<Decl *> *Decls = nullptr);
@@ -2150,10 +2153,10 @@ public:
     return DecodeIdentifierInfo(ID);
   }
 
-  IdentifierInfo *getLocalIdentifier(ModuleFile &M, unsigned LocalID);
+  IdentifierInfo *getLocalIdentifier(ModuleFile &M, uint64_t LocalID);
 
   serialization::IdentifierID getGlobalIdentifierID(ModuleFile &M,
-                                                    unsigned LocalID);
+                                                    uint64_t LocalID);
 
   void resolvePendingMacro(IdentifierInfo *II, const PendingMacroInfo &PMInfo);
 

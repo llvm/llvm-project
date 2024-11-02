@@ -148,7 +148,7 @@ There are several kinds of mapping regions:
 
 * Decision regions associate multiple branch regions with a boolean
   expression in the source code.  This information also includes the number of
-  bitmap bytes needed to represent the expression's executed test vectors as
+  bitmap bits needed to represent the expression's executed test vectors as
   well as the total number of instrumentable branch conditions that comprise
   the expression.  Decision regions are used to visualize Modified
   Condition/Decision Coverage (MC/DC) in *llvm-cov* for each boolean

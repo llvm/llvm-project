@@ -765,7 +765,7 @@ static PartwordMaskValues createMaskInstrs(IRBuilderBase &Builder,
   assert(ValueSize < MinWordSize);
 
   PointerType *PtrTy = cast<PointerType>(Addr->getType());
-  IntegerType *IntTy = DL.getIntPtrType(Ctx, PtrTy->getAddressSpace());
+  IntegerType *IntTy = DL.getIndexType(Ctx, PtrTy->getAddressSpace());
   Value *PtrLSB;
 
   if (AddrAlign < MinWordSize) {

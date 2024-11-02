@@ -822,8 +822,7 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughCFG(
 
     // Sort and unique the codes to minimize them.
     llvm::sort(UncondCodeSeq);
-    UncondCodeSeq.erase(std::unique(UncondCodeSeq.begin(), UncondCodeSeq.end()),
-                        UncondCodeSeq.end());
+    UncondCodeSeq.erase(llvm::unique(UncondCodeSeq), UncondCodeSeq.end());
 
     // Build a checking version of the successor.
     BuildCheckingBlockForSuccAndConds(MBB, *UncondSucc, /*SuccCount*/ 1,

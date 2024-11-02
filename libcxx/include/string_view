@@ -293,10 +293,10 @@ public:
   using difference_type                         = ptrdiff_t;
   static _LIBCPP_CONSTEXPR const size_type npos = -1; // size_type(-1);
 
-  static_assert((!is_array<value_type>::value), "Character type of basic_string_view must not be an array");
-  static_assert((is_standard_layout<value_type>::value), "Character type of basic_string_view must be standard-layout");
-  static_assert((is_trivial<value_type>::value), "Character type of basic_string_view must be trivial");
-  static_assert((is_same<_CharT, typename traits_type::char_type>::value),
+  static_assert(!is_array<value_type>::value, "Character type of basic_string_view must not be an array");
+  static_assert(is_standard_layout<value_type>::value, "Character type of basic_string_view must be standard-layout");
+  static_assert(is_trivial<value_type>::value, "Character type of basic_string_view must be trivial");
+  static_assert(is_same<_CharT, typename traits_type::char_type>::value,
                 "traits_type::char_type must be the same type as CharT");
 
   // [string.view.cons], construct/copy
@@ -394,9 +394,7 @@ public:
     return numeric_limits<size_type>::max() / sizeof(value_type);
   }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool empty() const _NOEXCEPT {
-    return __size_ == 0;
-  }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool empty() const _NOEXCEPT { return __size_ == 0; }
 
   // [string.view.access], element access
   _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_reference operator[](size_type __pos) const _NOEXCEPT {

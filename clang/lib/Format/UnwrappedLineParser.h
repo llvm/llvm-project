@@ -49,6 +49,9 @@ struct UnwrappedLine {
   /// Whether it is part of a macro body.
   bool InMacroBody = false;
 
+  /// Nesting level of unbraced body of a control statement.
+  unsigned UnbracedBodyLevel = 0;
+
   bool MustBeDeclaration = false;
 
   /// Whether the parser has seen \c decltype(auto) in this line.

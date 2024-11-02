@@ -1980,12 +1980,12 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
     return false;
 
   // There are no conversions between extended vector types, only identity.
-  if (ToType->isExtVectorType()) {
-    if (FromType->isExtVectorType()) {
+  if (auto *ToExtType = ToType->getAs<ExtVectorType>()) {
+    if (auto *FromExtType = FromType->getAs<ExtVectorType>()) {
       // HLSL allows implicit truncation of vector types.
       if (S.getLangOpts().HLSL) {
-        unsigned FromElts = FromType->getAs<VectorType>()->getNumElements();
-        unsigned ToElts = ToType->getAs<VectorType>()->getNumElements();
+        unsigned FromElts = FromExtType->getNumElements();
+        unsigned ToElts = ToExtType->getNumElements();
         if (FromElts < ToElts)
           return false;
         if (FromElts == ToElts)
@@ -1993,8 +1993,8 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
         else
           ICK = ICK_HLSL_Vector_Truncation;
 
-        QualType FromElTy = FromType->getAs<VectorType>()->getElementType();
-        QualType ToElTy = ToType->getAs<VectorType>()->getElementType();
+        QualType FromElTy = FromExtType->getElementType();
+        QualType ToElTy = ToExtType->getElementType();
         if (S.Context.hasSameUnqualifiedType(FromElTy, ToElTy))
           return true;
         return IsVectorElementConversion(S, FromElTy, ToElTy, ElConv, From);

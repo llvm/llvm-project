@@ -40,7 +40,6 @@ public:
       : __m_(__m) {}
   _LIBCPP_HIDE_FROM_ABI ~lock_guard() _LIBCPP_THREAD_SAFETY_ANNOTATION(release_capability()) { __m_.unlock(); }
 
-private:
   lock_guard(lock_guard const&)            = delete;
   lock_guard& operator=(lock_guard const&) = delete;
 };

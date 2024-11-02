@@ -1655,6 +1655,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[2], tok::arrow, TT_TrailingReturnArrow);
   EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_LambdaLBrace);
 
+  Tokens = annotate("[] -> struct S { return {}; }");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[2], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_LambdaLBrace);
+
   Tokens = annotate("foo([&](u32 bar) __attribute__((attr)) -> void {});");
   ASSERT_EQ(Tokens.size(), 22u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::l_square, TT_LambdaLSquare);
@@ -3156,6 +3162,34 @@ TEST_F(TokenAnnotatorTest, CppAltOperatorKeywords) {
   Tokens = annotate("int xor = foo;");
   ASSERT_EQ(Tokens.size(), 6u);
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
+}
+
+TEST_F(TokenAnnotatorTest, FunctionTryBlock) {
+  auto Tokens =
+      annotate("Foo::Foo(int x, int y) try\n"
+               "    : foo{[] -> std::string { return {}; }(), x}, bar{y} {\n"
+               "} catch (...) {\n"
+               "}");
+  ASSERT_EQ(Tokens.size(), 45u);
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_CtorDtorDeclName);
+  EXPECT_TOKEN(Tokens[11], tok::colon, TT_CtorInitializerColon);
+  EXPECT_TOKEN(Tokens[14], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[16], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_TOKEN(Tokens[20], tok::l_brace, TT_LambdaLBrace);
+  EXPECT_TOKEN(Tokens[31], tok::comma, TT_CtorInitializerComma);
+  EXPECT_TOKEN(Tokens[36], tok::l_brace, TT_FunctionLBrace);
+}
+
+TEST_F(TokenAnnotatorTest, TypenameMacro) {
+  auto Style = getLLVMStyle();
+  Style.TypenameMacros.push_back("STRUCT");
+
+  auto Tokens = annotate("STRUCT(T, B) { int i; };", Style);
+  ASSERT_EQ(Tokens.size(), 13u);
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TypenameMacro);
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_TypeDeclarationParen);
+  EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_TypeDeclarationParen);
+  EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_Unknown);
 }
 
 } // namespace

@@ -19,6 +19,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -263,9 +264,11 @@ void scaleProfData(Instruction &I, uint64_t S, uint64_t T) {
   if (ProfDataName->getString() == "branch_weights" &&
       ProfileData->getNumOperands() > 0) {
     // Using APInt::div may be expensive, but most cases should fit 64 bits.
-    APInt Val(128, mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(1))
-                       ->getValue()
-                       .getZExtValue());
+    APInt Val(128,
+              mdconst::dyn_extract<ConstantInt>(
+                  ProfileData->getOperand(getBranchWeightOffset(ProfileData)))
+                  ->getValue()
+                  .getZExtValue());
     Val *= APS;
     Vals.push_back(MDB.createConstant(ConstantInt::get(
         Type::getInt32Ty(C), Val.udiv(APT).getLimitedValue(UINT32_MAX))));

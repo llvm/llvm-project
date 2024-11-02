@@ -69,7 +69,7 @@ class SPIRVEmitIntrinsics
   DenseSet<Instruction *> AggrStores;
 
   // deduce element type of untyped pointers
-  Type *deduceElementType(Value *I);
+  Type *deduceElementType(Value *I, bool UnknownElemTypeI8);
   Type *deduceElementTypeHelper(Value *I);
   Type *deduceElementTypeHelper(Value *I, std::unordered_set<Value *> &Visited);
   Type *deduceElementTypeByValueDeep(Type *ValueTy, Value *Operand,
@@ -105,7 +105,8 @@ class SPIRVEmitIntrinsics
 
   void replaceMemInstrUses(Instruction *Old, Instruction *New, IRBuilder<> &B);
   void processInstrAfterVisit(Instruction *I, IRBuilder<> &B);
-  void insertAssignPtrTypeIntrs(Instruction *I, IRBuilder<> &B);
+  bool insertAssignPtrTypeIntrs(Instruction *I, IRBuilder<> &B,
+                                bool UnknownElemTypeI8);
   void insertAssignTypeIntrs(Instruction *I, IRBuilder<> &B);
   void insertAssignPtrTypeTargetExt(TargetExtType *AssignedType, Value *V,
                                     IRBuilder<> &B);
@@ -367,6 +368,23 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       if (Ty)
         break;
     }
+  } else if (auto *CI = dyn_cast<CallInst>(I)) {
+    static StringMap<unsigned> ResTypeByArg = {
+        {"to_global", 0},
+        {"to_local", 0},
+        {"to_private", 0},
+        {"__spirv_GenericCastToPtr_ToGlobal", 0},
+        {"__spirv_GenericCastToPtr_ToLocal", 0},
+        {"__spirv_GenericCastToPtr_ToPrivate", 0}};
+    // TODO: maybe improve performance by caching demangled names
+    if (Function *CalledF = CI->getCalledFunction()) {
+      std::string DemangledName =
+          getOclOrSpirvBuiltinDemangledName(CalledF->getName());
+      auto AsArgIt = ResTypeByArg.find(DemangledName);
+      if (AsArgIt != ResTypeByArg.end())
+        Ty = deduceElementTypeHelper(CI->getArgOperand(AsArgIt->second),
+                                     Visited);
+    }
   }
 
   // remember the found relationship
@@ -460,10 +478,10 @@ Type *SPIRVEmitIntrinsics::deduceNestedTypeHelper(
   return OrigTy;
 }
 
-Type *SPIRVEmitIntrinsics::deduceElementType(Value *I) {
+Type *SPIRVEmitIntrinsics::deduceElementType(Value *I, bool UnknownElemTypeI8) {
   if (Type *Ty = deduceElementTypeHelper(I))
     return Ty;
-  return IntegerType::getInt8Ty(I->getContext());
+  return UnknownElemTypeI8 ? IntegerType::getInt8Ty(I->getContext()) : nullptr;
 }
 
 // If the Instruction has Pointer operands with unresolved types, this function
@@ -1152,16 +1170,23 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
     B.CreateIntrinsic(Intrinsic::spv_unref_global, GV.getType(), &GV);
 }
 
-void SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I,
-                                                   IRBuilder<> &B) {
+// Return true, if we can't decide what is the pointee type now and will get
+// back to the question later. Return false is spv_assign_ptr_type is not needed
+// or can be inserted immediately.
+bool SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I,
+                                                   IRBuilder<> &B,
+                                                   bool UnknownElemTypeI8) {
   reportFatalOnTokenType(I);
   if (!isPointerTy(I->getType()) || !requireAssignType(I) ||
       isa<BitCastInst>(I))
-    return;
+    return false;
 
   setInsertPointAfterDef(B, I);
-  Type *ElemTy = deduceElementType(I);
-  buildAssignPtr(B, ElemTy, I);
+  if (Type *ElemTy = deduceElementType(I, UnknownElemTypeI8)) {
+    buildAssignPtr(B, ElemTy, I);
+    return false;
+  }
+  return true;
 }
 
 void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
@@ -1199,7 +1224,7 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
           buildAssignPtr(B, PType->getElementType(), Op);
         } else if (isPointerTy(OpTy)) {
           Type *ElemTy = GR->findDeducedElementType(Op);
-          buildAssignPtr(B, ElemTy ? ElemTy : deduceElementType(Op), Op);
+          buildAssignPtr(B, ElemTy ? ElemTy : deduceElementType(Op, true), Op);
         } else {
           CallInst *AssignCI = buildIntrWithMD(Intrinsic::spv_assign_type,
                                                {OpTy}, Op, Op, {}, B);
@@ -1395,10 +1420,15 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     if (isConvergenceIntrinsic(I))
       continue;
 
-    insertAssignPtrTypeIntrs(I, B);
+    bool Postpone = insertAssignPtrTypeIntrs(I, B, false);
+    // if Postpone is true, we can't decide on pointee type yet
     insertAssignTypeIntrs(I, B);
     insertPtrCastOrAssignTypeInstr(I, B);
     insertSpirvDecorations(I, B);
+    // if instruction requires a pointee type set, let's check if we know it
+    // already, and force it to be i8 if not
+    if (Postpone && !GR->findAssignPtrTypeInstr(I))
+      insertAssignPtrTypeIntrs(I, B, true);
   }
 
   for (auto &I : instructions(Func))

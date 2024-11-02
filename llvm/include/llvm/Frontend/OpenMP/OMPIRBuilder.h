@@ -198,7 +198,7 @@ struct TargetRegionEntryInfo {
                                          unsigned DeviceID, unsigned FileID,
                                          unsigned Line, unsigned Count);
 
-  bool operator<(const TargetRegionEntryInfo RHS) const {
+  bool operator<(const TargetRegionEntryInfo &RHS) const {
     return std::make_tuple(ParentName, DeviceID, FileID, Line, Count) <
            std::make_tuple(RHS.ParentName, RHS.DeviceID, RHS.FileID, RHS.Line,
                            RHS.Count);

@@ -343,10 +343,7 @@ group("test") {
     # loadable_modules don't work on Windows.
     # FIXME: In the CMake build, ENABLE_SHARED makes them work somehow
     # (but they're off by default there too).
-    deps += [
-      "//llvm/lib/Transforms/Hello",
-      "//llvm/tools/bugpoint-passes",
-    ]
+    deps += [ "//llvm/tools/bugpoint-passes" ]
   }
 
   # FIXME: llvm_build_examples

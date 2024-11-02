@@ -214,6 +214,7 @@ template <class T, class Allocator, class Predicate>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_swappable.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -448,7 +449,7 @@ public:
 
   using value_type = _Tp;
 
-  static_assert((is_same<typename _Allocator::value_type, value_type>::value),
+  static_assert(is_same<typename _Allocator::value_type, value_type>::value,
                 "Allocator::value_type must be same type as value_type");
 
   using allocator_type = _Allocator;
@@ -476,6 +477,16 @@ public:
       __deque_iterator<value_type, const_pointer, const_reference, __map_const_pointer, difference_type>;
   using reverse_iterator       = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+  // A deque contains the following members which may be trivially relocatable:
+  // - __map: is a `__split_buffer`, see `__split_buffer` for more information on when it is trivially relocatable
+  // - size_type: is always trivially relocatable, since it is required to be an integral type
+  // - allocator_type: may not be trivially relocatable, so it's checked
+  // None of these are referencing the `deque` itself, so if all of them are trivially relocatable, `deque` is too.
+  using __trivially_relocatable = __conditional_t<
+      __libcpp_is_trivially_relocatable<__map>::value && __libcpp_is_trivially_relocatable<allocator_type>::value,
+      deque,
+      void>;
 
   static_assert(is_same<allocator_type, __rebind_alloc<__alloc_traits, value_type> >::value,
                 "[allocator.requirements] states that rebinding an allocator to the same type should result in the "
@@ -794,7 +805,7 @@ public:
 #if _LIBCPP_STD_VER >= 14
       _NOEXCEPT;
 #else
-      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable<allocator_type>::value);
+      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>);
 #endif
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT;
 
@@ -2452,7 +2463,7 @@ inline void deque<_Tp, _Allocator>::swap(deque& __c)
 #if _LIBCPP_STD_VER >= 14
     _NOEXCEPT
 #else
-    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable<allocator_type>::value)
+    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>)
 #endif
 {
   __map_.swap(__c.__map_);

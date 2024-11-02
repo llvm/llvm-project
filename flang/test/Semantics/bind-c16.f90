@@ -84,3 +84,8 @@ module m3
     end
   end interface
 end
+
+!CHECK: cdef01, BIND(C), PUBLIC size=4 offset=0: ObjectEntity type: REAL(4) bindName:cDef01 CDEFINED
+module m4
+  real, bind(c, name='cDef01', cdefined) :: cdef01
+end

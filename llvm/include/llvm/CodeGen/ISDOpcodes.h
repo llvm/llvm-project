@@ -678,6 +678,12 @@ enum NodeType {
   UMIN,
   UMAX,
 
+  /// [US]CMP - 3-way comparison of signed or unsigned integers. Returns -1, 0,
+  /// or 1 depending on whether Op0 <, ==, or > Op1. The operands can have type
+  /// different to the result.
+  SCMP,
+  UCMP,
+
   /// Bitwise operators - logical and, logical or, logical xor.
   AND,
   OR,

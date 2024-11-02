@@ -248,12 +248,12 @@ entry:
 define i8 @and8mr(ptr %a, i8 noundef %b) {
 ; CHECK-LABEL: and8mr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andb %sil, (%rdi), %al # encoding: [0x62,0xf4,0x7c,0x18,0x20,0x37]
+; CHECK-NEXT:    andb (%rdi), %sil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x22,0x37]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: and8mr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} andb %sil, (%rdi), %al # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x20,0x37]
+; NF-NEXT:    {nf} andb (%rdi), %sil, %al # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x22,0x37]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i8, ptr %a
@@ -264,12 +264,12 @@ entry:
 define i16 @and16mr(ptr %a, i16 noundef %b) {
 ; CHECK-LABEL: and16mr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andw %si, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x21,0x37]
+; CHECK-NEXT:    andw (%rdi), %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x23,0x37]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: and16mr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} andw %si, (%rdi), %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x21,0x37]
+; NF-NEXT:    {nf} andw (%rdi), %si, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x23,0x37]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i16, ptr %a
@@ -280,12 +280,12 @@ entry:
 define i32 @and32mr(ptr %a, i32 noundef %b) {
 ; CHECK-LABEL: and32mr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andl %esi, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0x21,0x37]
+; CHECK-NEXT:    andl (%rdi), %esi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x23,0x37]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: and32mr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} andl %esi, (%rdi), %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x21,0x37]
+; NF-NEXT:    {nf} andl (%rdi), %esi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x23,0x37]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i32, ptr %a
@@ -296,12 +296,12 @@ entry:
 define i64 @and64mr(ptr %a, i64 noundef %b) {
 ; CHECK-LABEL: and64mr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andq %rsi, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0x21,0x37]
+; CHECK-NEXT:    andq (%rdi), %rsi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x23,0x37]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: and64mr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} andq %rsi, (%rdi), %rax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0xfc,0x1c,0x21,0x37]
+; NF-NEXT:    {nf} andq (%rdi), %rsi, %rax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0xfc,0x1c,0x23,0x37]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i64, ptr %a

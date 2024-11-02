@@ -325,7 +325,7 @@ void insertChildMapInfoIntoParent(
 
 semantics::Symbol *getOmpObjectSymbol(const parser::OmpObject &ompObject) {
   semantics::Symbol *sym = nullptr;
-  std::visit(
+  Fortran::common::visit(
       common::visitors{
           [&](const parser::Designator &designator) {
             if (auto *arrayEle =

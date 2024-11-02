@@ -36,7 +36,7 @@
 
 // -----
 
-// expected-error@below {{unknown attrribute type: unknown}}
+// expected-error@below {{unknown attribute `unknown` in dialect `dlti`}}
 "test.unknown_op"() { test.unknown_attr = #dlti.unknown } : () -> ()
 
 // -----
@@ -90,3 +90,68 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"unknown.unknown
   // expected-note@above {{enclosing op with data layout}}
   "test.op_with_data_layout"() { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"unknown.unknown", 32>>} : () -> ()
 }
+
+// -----
+
+// expected-error@below {{'dlti.target_system_spec' is expected to be a #dlti.target_system_spec attribute}}
+"test.unknown_op"() { dlti.target_system_spec = 42 } : () -> ()
+
+// -----
+
+// expected-error@below {{expected string}}
+// expected-error@below {{DeviceID is missing, or is not of string type}}
+// expected-error@below {{failed to parse DLTI_TargetSystemSpecAttr parameter 'entries' which is to be a `::llvm::ArrayRef<DeviceIDTargetDeviceSpecPair>`}}
+"test.unknown_op"() { dlti.target_system_spec = #dlti.target_system_spec<[]> } : () -> ()
+
+// -----
+
+module attributes {
+  // Device ID is missing
+  //
+  // expected-error@+4 {{expected string}}
+  // expected-error@+3 {{DeviceID is missing, or is not of string type}}
+  // expected-error@+2 {{failed to parse DLTI_TargetSystemSpecAttr parameter 'entries' which is to be a `::llvm::ArrayRef<DeviceIDTargetDeviceSpecPair>`}}
+  dlti.target_system_spec = #dlti.target_system_spec<
+    : #dlti.target_device_spec<
+      #dlti.dl_entry<"L1_cache_size_in_bytes", 4096 : i32>>
+  >} {}
+
+// -----
+
+module attributes {
+  // Device ID is wrong type
+  //
+  // expected-error@+4 {{expected string}}
+  // expected-error@+3 {{DeviceID is missing, or is not of string type}}
+  // expected-error@+2 {{failed to parse DLTI_TargetSystemSpecAttr parameter 'entries' which is to be a `::llvm::ArrayRef<DeviceIDTargetDeviceSpecPair>`}}
+  dlti.target_system_spec = #dlti.target_system_spec<
+    0: #dlti.target_device_spec<
+        #dlti.dl_entry<"L1_cache_size_in_bytes", 4096: i32>> 
+  >} {}
+
+// -----
+
+module attributes {
+  // Repeated Device ID
+  //
+  // expected-error@below {{repeated Device ID in dlti.target_system_spec: "CPU"}}
+  dlti.target_system_spec = #dlti.target_system_spec<
+    "CPU": #dlti.target_device_spec<
+            #dlti.dl_entry<"L1_cache_size_in_bytes", 4096>>,
+    "CPU": #dlti.target_device_spec<
+            #dlti.dl_entry<"L1_cache_size_in_bytes", 8192>>
+  >} {}
+
+// -----
+
+module attributes {
+  // Repeated DLTI entry
+  //
+  // expected-error@+4 {{repeated layout entry key: L1_cache_size_in_bytes}}
+  // expected-error@+6 {{Error in parsing target device spec}}
+  // expected-error@+5 {{failed to parse DLTI_TargetSystemSpecAttr parameter 'entries' which is to be a `::llvm::ArrayRef<DeviceIDTargetDeviceSpecPair>`}}
+  dlti.target_system_spec = #dlti.target_system_spec<
+    "CPU": #dlti.target_device_spec<
+            #dlti.dl_entry<"L1_cache_size_in_bytes", 4096>,
+            #dlti.dl_entry<"L1_cache_size_in_bytes", 8192>>
+  >} {}

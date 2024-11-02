@@ -779,12 +779,14 @@ defm V_SUBREV_U32 : VOP2Inst <"v_subrev_u32", VOP_I32_I32_I32_ARITH, null_frag, 
 } // End isCommutable = 1
 
 // These are special and do not read the exec mask.
-let isConvergent = 1, Uses = []<Register> in {
+let isConvergent = 1, Uses = []<Register>, IsInvalidSingleUseConsumer = 1 in {
 def V_READLANE_B32 : VOP2_Pseudo<"v_readlane_b32", VOP_READLANE,
   [(set i32:$vdst, (int_amdgcn_readlane i32:$src0, i32:$src1))]>;
 let IsNeverUniform = 1, Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
 def V_WRITELANE_B32 : VOP2_Pseudo<"v_writelane_b32", VOP_WRITELANE,
-  [(set i32:$vdst, (int_amdgcn_writelane i32:$src0, i32:$src1, i32:$vdst_in))]>;
+  [(set i32:$vdst, (int_amdgcn_writelane i32:$src0, i32:$src1, i32:$vdst_in))]> {
+    let IsInvalidSingleUseProducer = 1;
+  }
 } // End IsNeverUniform, $vdst = $vdst_in, DisableEncoding $vdst_in
 } // End isConvergent = 1
 

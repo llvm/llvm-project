@@ -31,6 +31,14 @@ TEST(Numeric, Floor) {
   EXPECT_EQ(RTNAME(Floor4_1)(Real<4>{0}), 0);
 }
 
+TEST(Numeric, Erfc_scaled) {
+  EXPECT_NEAR(RTNAME(ErfcScaled4)(Real<4>{20.0}), 0.02817434874, 1.0e-8);
+  EXPECT_NEAR(RTNAME(ErfcScaled8)(Real<8>{20.0}), 0.02817434874, 1.0e-11);
+#if LDBL_MANT_DIG == 64
+  EXPECT_NEAR(RTNAME(ErfcScaled10)(Real<10>{20.0}), 0.02817434874, 1.0e-8);
+#endif
+}
+
 TEST(Numeric, Exponent) {
   EXPECT_EQ(RTNAME(Exponent4_4)(Real<4>{0}), 0);
   EXPECT_EQ(RTNAME(Exponent4_8)(Real<4>{1.0}), 1);

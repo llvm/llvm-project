@@ -36,14 +36,14 @@ MachineLoopInfo::MachineLoopInfo() : MachineFunctionPass(ID) {
 }
 INITIALIZE_PASS_BEGIN(MachineLoopInfo, "machine-loops",
                 "Machine Natural Loop Construction", true, true)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(MachineLoopInfo, "machine-loops",
                 "Machine Natural Loop Construction", true, true)
 
 char &llvm::MachineLoopInfoID = MachineLoopInfo::ID;
 
 bool MachineLoopInfo::runOnMachineFunction(MachineFunction &) {
-  calculate(getAnalysis<MachineDominatorTree>());
+  calculate(getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree());
   return false;
 }
 
@@ -54,7 +54,7 @@ void MachineLoopInfo::calculate(MachineDominatorTree &MDT) {
 
 void MachineLoopInfo::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<MachineDominatorTree>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 

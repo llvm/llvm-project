@@ -1532,6 +1532,10 @@ void Writer::assignAddresses() {
       }
       if (padding && c->isHotPatchable())
         virtualSize += padding;
+      // If chunk has EC entry thunk, reserve a space for an offset to the
+      // thunk.
+      if (c->getEntryThunk())
+        virtualSize += sizeof(uint32_t);
       virtualSize = alignTo(virtualSize, c->getAlignment());
       c->setRVA(rva + virtualSize);
       virtualSize += c->getSize();

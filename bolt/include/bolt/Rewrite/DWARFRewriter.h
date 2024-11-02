@@ -150,9 +150,6 @@ private:
   /// blocks) to be updated.
   void updateDebugAddressRanges();
 
-  /// Rewrite .gdb_index section if present.
-  void updateGdbIndexSection(CUOffsetMap &CUMap, uint32_t NumCUs);
-
   /// DWARFDie contains a pointer to a DIE and hence gets invalidated once the
   /// embedded DIE is destroyed. This wrapper class stores a DIE internally and
   /// could be cast to a DWARFDie that is valid even after the initial DIE is
@@ -192,14 +189,6 @@ public:
 
   void setDwoRangesBase(uint64_t DWOId, uint64_t RangesBase) {
     DwoRangesBase[DWOId] = RangesBase;
-  }
-
-  /// Adds an GDBIndexTUEntry if .gdb_index seciton exists.
-  void addGDBTypeUnitEntry(const GDBIndexTUEntry &&Entry);
-
-  /// Returns all entries needed for Types CU list
-  const GDBIndexTUEntryType &getGDBIndexTUEntryVector() const {
-    return GDBIndexTUEntryVector;
   }
 
   using OverriddenSectionsMap = std::unordered_map<DWARFSectionKind, StringRef>;

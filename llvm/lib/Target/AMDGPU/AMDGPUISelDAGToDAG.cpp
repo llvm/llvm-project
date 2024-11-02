@@ -502,9 +502,7 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
 
   // isa<MemSDNode> almost works but is slightly too permissive for some DS
   // intrinsics.
-  if (Opc == ISD::LOAD || Opc == ISD::STORE || isa<AtomicSDNode>(N) ||
-      Opc == AMDGPUISD::ATOMIC_LOAD_FMIN ||
-      Opc == AMDGPUISD::ATOMIC_LOAD_FMAX) {
+  if (Opc == ISD::LOAD || Opc == ISD::STORE || isa<AtomicSDNode>(N)) {
     N = glueCopyToM0LDSInit(N);
     SelectCode(N);
     return;
@@ -2556,7 +2554,8 @@ void AMDGPUDAGToDAGISel::SelectPOPSExitingWaveID(SDNode *N) {
   // intrinsic is IntrReadMem/IntrWriteMem but the instruction is not marked
   // mayLoad/mayStore and tablegen complains about the mismatch.
   SDValue Reg = CurDAG->getRegister(AMDGPU::SRC_POPS_EXITING_WAVE_ID, MVT::i32);
-  CurDAG->SelectNodeTo(N, AMDGPU::S_MOV_B32, N->getVTList(), Reg);
+  SDValue Chain = N->getOperand(0);
+  CurDAG->SelectNodeTo(N, AMDGPU::S_MOV_B32, N->getVTList(), {Reg, Chain});
 }
 
 static unsigned gwsIntrinToOpcode(unsigned IntrID) {

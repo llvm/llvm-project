@@ -194,6 +194,102 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface"> {
   }];
 }
 
+def TargetDeviceSpecInterface : AttrInterface<"TargetDeviceSpecInterface"> {
+  let cppNamespace = "::mlir";
+
+  let description = [{
+    Attribute interface describing a target device description specification.
+
+    A target device description specification is a list of device properties (key)
+    and their values for a specific device. The device is identified using "device_id"
+    (as a key and ui32 value) and "device_type" key which must have a string value.
+    Both "device_id" and "device_type" are mandatory keys. As an example, L1 cache
+    size could be a device property, and its value would be a device specific size.
+
+    A target device description specification is attached to a module as a module level
+    attribute.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the list of layout entries.",
+      /*retTy=*/"::mlir::DataLayoutEntryListRef",
+      /*methodName=*/"getEntries",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the entry related to the given identifier, if "
+                      "present.",
+      /*retTy=*/"::mlir::DataLayoutEntryInterface",
+      /*methodName=*/"getSpecForIdentifier",
+      /*args=*/(ins "::mlir::StringAttr":$identifier),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::filterEntryForIdentifier($_attr.getEntries(),
+                                                        identifier);
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/"Checks that the entry is well-formed, reports errors "
+                      "at the provided location.",
+      /*retTy=*/"::mlir::LogicalResult",
+      /*methodName=*/"verifyEntry",
+      /*args=*/(ins "::mlir::Location":$loc),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{ return ::mlir::success(); }]
+    >
+  ];
+}
+
+def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface"> {
+  let cppNamespace = "::mlir";
+
+  let description = [{
+    Attribute interface describing a target system description specification.
+
+    A target system description specification is a list of target device
+    specifications, with one device specification for a device in the system. As
+    such, a target system description specification allows specifying a heterogenous
+    system, with devices of different types (e.g., CPU, GPU, etc.)
+
+    The only requirement on a valid target system description specification is that
+    the "device_id" in every target device description specification needs to be
+    unique. This is because, ultimately, this "device_id" is used by the user to
+    query a value of a device property.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the list of layout entries.",
+      /*retTy=*/"llvm::ArrayRef<DeviceIDTargetDeviceSpecPair>",
+      /*methodName=*/"getEntries",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the device description spec for given device "
+                      "ID",
+      /*retTy=*/"std::optional<::mlir::TargetDeviceSpecInterface>",
+      /*methodName=*/"getDeviceSpecForDeviceID",
+      /*args=*/(ins "StringAttr":$deviceID)
+    >,
+    InterfaceMethod<
+      /*description=*/"Verifies the validity of the specification and "
+                      "reports any errors at the given location.",
+      /*retTy=*/"::mlir::LogicalResult",
+      /*methodName=*/"verifySpec",
+      /*args=*/(ins "::mlir::Location":$loc),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::verifyTargetSystemSpec($_attr, loc);
+      }]
+    >
+  ];
+
+  let extraClassDeclaration = [{
+    using DeviceID = StringAttr;
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Operation interface
 //===----------------------------------------------------------------------===//
@@ -225,6 +321,13 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
                       "null if it does not exist.",
       /*retTy=*/"::mlir::DataLayoutSpecInterface",
       /*methodName=*/"getDataLayoutSpec",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the target system desc specification for this "
+                      "op, or null if it does not exist.",
+      /*retTy=*/"::mlir::TargetSystemSpecInterface",
+      /*methodName=*/"getTargetSystemSpec",
       /*args=*/(ins)
     >,
     StaticInterfaceMethod<
@@ -362,6 +465,17 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
         return ::mlir::detail::getDefaultStackAlignment(entry);
       }]
     >,
+    StaticInterfaceMethod<
+      /*description=*/"Returns the value of the property, if the property is "
+                      "defined. Otherwise, it returns std::nullopt.",
+      /*retTy=*/"std::optional<int64_t>",
+      /*methodName=*/"getDevicePropertyValueAsInt",
+      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::getDevicePropertyValueAsInt(entry);
+      }]
+    >
   ];
 
   let verify = [{ return ::mlir::detail::verifyDataLayoutOp($_op); }];

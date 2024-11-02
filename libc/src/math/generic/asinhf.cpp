@@ -97,9 +97,9 @@ LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
 
   // asinh(x) = log(x + sqrt(x^2 + 1))
   return static_cast<float>(
-      x_sign *
-      log_eval(fputil::multiply_add(
-          x_d, x_sign, fputil::sqrt(fputil::multiply_add(x_d, x_d, 1.0)))));
+      x_sign * log_eval(fputil::multiply_add(
+                   x_d, x_sign,
+                   fputil::sqrt<double>(fputil::multiply_add(x_d, x_d, 1.0)))));
 }
 
 } // namespace LIBC_NAMESPACE

@@ -1,14 +1,87 @@
 // RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
 ///----------------------------------------------------------------------------------------
-/// vector.transfer_write
+/// vector.transfer_write -> vector.transpose + vector.transfer_write
+/// [Pattern: TransferWritePermutationLowering]
 ///----------------------------------------------------------------------------------------
-/// Input: 
-///   * vector.transfer_write op with a map which _is not_ the permutation of a
+/// Input:
+///   * vector.transfer_write op with a permutation that under a transpose
+///     _would be_ a minor identity permutation map
+/// Output:
+///   * vector.transpose + vector.transfer_write with a permutation map which
+///     _is_ a minor identity
+
+// CHECK-LABEL:   func.func @xfer_write_transposing_permutation_map
+// CHECK-SAME:       %[[ARG_0:.*]]: vector<4x8xi16>,
+// CHECK-SAME:       %[[MEM:.*]]: memref<2x2x8x4xi16>) {
+// CHECK:           %[[TR:.*]] = vector.transpose %[[ARG_0]], [1, 0] : vector<4x8xi16> to vector<8x4xi16>
+// CHECK:           vector.transfer_write
+// CHECK-NOT:       permutation_map
+// CHECK-SAME:      %[[TR]], %[[MEM]]{{.*}} {in_bounds = [true, true]} : vector<8x4xi16>, memref<2x2x8x4xi16>
+func.func @xfer_write_transposing_permutation_map(
+    %arg0: vector<4x8xi16>,
+    %mem: memref<2x2x8x4xi16>) {
+
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %arg0, %mem[%c0, %c0, %c0, %c0] {
+    in_bounds = [true, true],
+    permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
+  } : vector<4x8xi16>, memref<2x2x8x4xi16>
+
+  return
+}
+
+// CHECK-LABEL:   func.func @xfer_write_transposing_permutation_map_with_mask_scalable
+// CHECK-SAME:      %[[ARG_0:.*]]: vector<4x[8]xi16>,
+// CHECK-SAME:      %[[MEM:.*]]: memref<2x2x?x4xi16>,
+// CHECK-SAME:      %[[MASK:.*]]: vector<[8]x4xi1>) {
+// CHECK:           %[[TR:.*]] = vector.transpose %[[ARG_0]], [1, 0] : vector<4x[8]xi16> to vector<[8]x4xi16>
+// CHECK:           vector.transfer_write
+// CHECK-NOT:       permutation_map
+// CHECK-SAME:      %[[TR]], %[[MEM]]{{.*}}, %[[MASK]] {in_bounds = [true, true]} : vector<[8]x4xi16>, memref<2x2x?x4xi16>
+func.func @xfer_write_transposing_permutation_map_with_mask_scalable(
+    %arg0: vector<4x[8]xi16>,
+    %mem: memref<2x2x?x4xi16>,
+    %mask: vector<[8]x4xi1>) {
+
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %arg0, %mem[%c0, %c0, %c0, %c0], %mask {
+    in_bounds = [true, true],
+    permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
+  } : vector<4x[8]xi16>, memref<2x2x?x4xi16>
+
+  return
+}
+
+// Masked version is not supported
+// CHECK-LABEL:   func.func @xfer_write_transposing_permutation_map_masked
+// CHECK-NOT: vector.transpose
+func.func @xfer_write_transposing_permutation_map_masked(
+    %arg0: vector<4x8xi16>,
+    %mem: memref<2x2x8x4xi16>,
+    %mask: vector<8x4xi1>) {
+
+  %c0 = arith.constant 0 : index
+  vector.mask %mask {
+    vector.transfer_write %arg0, %mem[%c0, %c0, %c0, %c0] {
+      in_bounds = [true, true],
+      permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
+    } : vector<4x8xi16>, memref<2x2x8x4xi16>
+  } : vector<8x4xi1>
+
+  return
+}
+
+///----------------------------------------------------------------------------------------
+/// vector.transfer_write -> vector.broadcast + vector.transpose + vector.transfer_write
+/// [Patterns: TransferWriteNonPermutationLowering + TransferWritePermutationLowering]
+///----------------------------------------------------------------------------------------
+/// Input:
+///   * vector.transfer_write op with a map which _is not_ a permutation of a
 ///     minor identity
 /// Output:
-///   * vector.broadcast + vector.transfer_write with a map which _is_ the permutation of a
-///     minor identity
+///   * vector.broadcast + vector.transpose + vector.transfer_write with a map
+///     which _is_ a permutation of a minor identity
 
 // CHECK-LABEL: func @permutation_with_mask_xfer_write_fixed_width(
 //       CHECK:   %[[vec:.*]] = arith.constant dense<-2.000000e+00> : vector<7x1xf32>
@@ -94,7 +167,7 @@ func.func @masked_non_permutation_xfer_write_fixed_width(
 ///----------------------------------------------------------------------------------------
 /// vector.transfer_read
 ///----------------------------------------------------------------------------------------
-/// Input: 
+/// Input:
 ///   * vector.transfer_read op with a permutation map
 /// Output:
 ///   * vector.transfer_read with a permutation map composed of leading zeros followed by a minor identiy +
@@ -175,6 +248,56 @@ func.func @masked_permutation_xfer_read_scalable(%t: tensor<?x?xf32>, %mask : ve
     {in_bounds = [true, true, true], permutation_map = affine_map<(d0, d1) -> (0, d1, d0)>}
     : tensor<?x?xf32>, vector<8x[4]x2xf32> } :vector<2x[4]xi1> -> vector<8x[4]x2xf32>
   return %1 : vector<8x[4]x2xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %f = transform.structured.match ops{["func.func"]} in %module_op
+      : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %f {
+      transform.apply_patterns.vector.transfer_permutation_patterns
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+///----------------------------------------------------------------------------------------
+/// vector.transfer_read
+///----------------------------------------------------------------------------------------
+/// TODO: Review and categorize
+
+//       CHECK:   #[[MAP:.*]] = affine_map<(d0, d1, d2, d3) -> (d1, 0, d3)>
+//       CHECK:   func.func @transfer_read_reduce_rank_scalable(
+//  CHECK-SAME:       %[[ARG_0:.*]]: memref<?x?x?x?xf32>) -> vector<8x[4]x2x3xf32> {
+//       CHECK:     %[[C0:.*]] = arith.constant 0 : index
+//       CHECK:     %[[TFR:.*]] = vector.transfer_read %arg0[%[[C0]], %[[C0]], %[[C0]], %[[C0]]]{{.*}} permutation_map = #[[MAP]]} : memref<?x?x?x?xf32>, vector<[4]x2x3xf32>
+//       CHECK:     %[[BC:.*]] = vector.broadcast %[[TFR]] : vector<[4]x2x3xf32> to vector<8x[4]x2x3xf32>
+//       CHECK:     return %[[BC]] : vector<8x[4]x2x3xf32>
+func.func @transfer_read_reduce_rank_scalable(%mem: memref<?x?x?x?xf32>) -> vector<8x[4]x2x3xf32> {
+  %c0 = arith.constant 0 : index
+  %cst_0 = arith.constant 0.000000e+00 : f32
+  %1 = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst_0
+    {in_bounds = [true, true, true, true], permutation_map = affine_map<(d0, d1, d2, d3) -> (0, d1, 0, d3)>}
+    : memref<?x?x?x?xf32>, vector<8x[4]x2x3xf32>
+  return %1 : vector<8x[4]x2x3xf32>
+}
+
+// Masked case not supported.
+// CHECK-LABEL:   func.func @masked_transfer_read_reduce_rank(
+//  CHECK-SAME:       %[[ARG_0:.*]]: memref<?x?x?x?xf32>,
+//  CHECK-SAME:       %[[DIM:.*]]: index) -> vector<8x[4]x2x3xf32> {
+//   CHECK-NOT:     vector.broadcast
+//       CHECK:     %[[MASK:.*]] = vector.mask %0 { vector.transfer_read %arg0{{.*}} : memref<?x?x?x?xf32>, vector<8x[4]x2x3xf32> } : vector<[4]x3xi1> -> vector<8x[4]x2x3xf32>
+func.func @masked_transfer_read_reduce_rank(%mem: memref<?x?x?x?xf32>, %dim: index) -> vector<8x[4]x2x3xf32> {
+  %c0 = arith.constant 0 : index
+  %cst_0 = arith.constant 0.000000e+00 : f32
+  %mask = vector.create_mask %dim, %dim: vector<[4]x3xi1>
+  %res = vector.mask %mask { vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst_0
+    {in_bounds = [true, true, true, true], permutation_map = affine_map<(d0, d1, d2, d3) -> (0, d1, 0, d3)>}
+    : memref<?x?x?x?xf32>, vector<8x[4]x2x3xf32> } : vector<[4]x3xi1> -> vector<8x[4]x2x3xf32>
+  return %res : vector<8x[4]x2x3xf32>
 }
 
 module attributes {transform.with_named_sequence} {

@@ -44,6 +44,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include <deque>
 #include <sstream>
 #include <unordered_map>
 #include <vector>
@@ -2574,8 +2575,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   for (auto &Edge : CallerEdges) {
     // Skip any that have been removed by an earlier recursive call.
     if (Edge->Callee == nullptr && Edge->Caller == nullptr) {
-      assert(!std::count(Node->CallerEdges.begin(), Node->CallerEdges.end(),
-                         Edge));
+      assert(!is_contained(Node->CallerEdges, Edge));
       continue;
     }
     recursivelyRemoveNoneTypeCalleeEdges(Edge->Caller, Visited);

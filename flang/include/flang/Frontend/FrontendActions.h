@@ -223,8 +223,11 @@ protected:
   std::unique_ptr<llvm::LLVMContext> llvmCtx;
   std::unique_ptr<llvm::Module> llvmModule;
 
-  /// Embeds offload objects given with specified with -fembed-offload-object
+  /// Embeds offload objects specified with -fembed-offload-object
   void embedOffloadObjects();
+
+  /// Links in BC libraries spefified with -mlink-builtin-bitcode
+  void linkBuiltinBCLibs();
 
   /// Runs pass pipeline to lower HLFIR into FIR
   void lowerHLFIRToFIR();

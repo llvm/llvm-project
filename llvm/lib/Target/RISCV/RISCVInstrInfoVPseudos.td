@@ -382,17 +382,6 @@ class GetIntVTypeInfo<VTypeInfo vti> {
                                                  !cast<string>(vti))));
 }
 
-// This functor is used to obtain the fp vector type that has the same SEW and
-// multiplier as the input parameter type.
-class GetFpVTypeInfo<VTypeInfo vti> {
-  // Equivalent integer vector type. Eg.
-  //   VF16M1 → VF16M1 (identity)
-  //   VBF16M1 → VF16M1
-  VTypeInfo Vti = !cast<VTypeInfo>(!subst("VBF", "VF",
-                                          !subst("VI", "VF",
-                                                 !cast<string>(vti))));
-}
-
 class MTypeInfo<ValueType Mas, LMULInfo M, string Bx> {
   ValueType Mask = Mas;
   // {SEW, VLMul} values set a valid VType to deal with this mask type.
@@ -767,11 +756,6 @@ class GetVTypePredicates<VTypeInfo vti> {
                                      !eq(vti.Scalar, f64) : [HasVInstructionsF64],
                                      !eq(vti.SEW, 64) : [HasVInstructionsI64],
                                      true : [HasVInstructions]);
-}
-
-class GetVTypeScalarPredicates<VTypeInfo vti> {
-  list<Predicate> Predicates = !cond(!eq(vti.Scalar, bf16) : [HasStdExtZfbfmin],
-                                     true : []);
 }
 
 class VPseudoUSLoadNoMask<VReg RetClass,

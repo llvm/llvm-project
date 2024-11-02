@@ -329,7 +329,18 @@ private:
 mlir::Value fir::factory::createUnallocatedBox(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type boxType,
     mlir::ValueRange nonDeferredParams, mlir::Value typeSourceBox) {
-  auto baseAddrType = mlir::dyn_cast<fir::BaseBoxType>(boxType).getEleTy();
+  auto baseBoxType = mlir::cast<fir::BaseBoxType>(boxType);
+  // Giving unallocated/disassociated status to assumed-rank POINTER/
+  // ALLOCATABLE is not directly possible to a Fortran user. But the
+  // compiler may need to create such temporary descriptor to deal with
+  // cases like ENTRY or host association. In such case, all that mater
+  // is that the base address is set to zero and the rank is set to
+  // some defined value. Hence, a scalar descriptor is created and
+  // cast to assumed-rank.
+  const bool isAssumedRank = baseBoxType.isAssumedRank();
+  if (isAssumedRank)
+    baseBoxType = baseBoxType.getBoxTypeWithNewShape(/*rank=*/0);
+  auto baseAddrType = baseBoxType.getEleTy();
   if (!fir::isa_ref_type(baseAddrType))
     baseAddrType = builder.getRefType(baseAddrType);
   auto type = fir::unwrapRefType(baseAddrType);
@@ -361,8 +372,11 @@ mlir::Value fir::factory::createUnallocatedBox(
     }
   }
   mlir::Value emptySlice;
-  return builder.create<fir::EmboxOp>(loc, boxType, nullAddr, shape, emptySlice,
-                                      lenParams, typeSourceBox);
+  auto embox = builder.create<fir::EmboxOp>(
+      loc, baseBoxType, nullAddr, shape, emptySlice, lenParams, typeSourceBox);
+  if (isAssumedRank)
+    return builder.createConvert(loc, boxType, embox);
+  return embox;
 }
 
 fir::MutableBoxValue fir::factory::createTempMutableBox(
@@ -527,7 +541,14 @@ void fir::factory::associateMutableBox(fir::FirOpBuilder &builder,
         mlir::ValueRange newLbounds = lbounds.empty()
                                           ? mlir::ValueRange{arr.getLBounds()}
                                           : mlir::ValueRange{lbounds};
-        if (box.isDescribedByVariables()) {
+        if (box.hasAssumedRank()) {
+          assert(arr.hasAssumedRank() &&
+                 "expect both arr and box to be assumed-rank");
+          mlir::Value reboxed = builder.create<fir::ReboxAssumedRankOp>(
+              loc, box.getBoxTy(), arr.getAddr(),
+              fir::LowerBoundModifierAttribute::Preserve);
+          writer.updateWithIrBox(reboxed);
+        } else if (box.isDescribedByVariables()) {
           // LHS is a contiguous pointer described by local variables. Open RHS
           // fir.box to update the LHS.
           auto rawAddr = builder.create<fir::BoxAddrOp>(loc, arr.getMemTy(),

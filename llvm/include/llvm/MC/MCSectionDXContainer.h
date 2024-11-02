@@ -24,7 +24,7 @@ class MCSectionDXContainer final : public MCSection {
   friend class MCContext;
 
   MCSectionDXContainer(StringRef Name, SectionKind K, MCSymbol *Begin)
-      : MCSection(SV_DXContainer, Name, K, Begin) {}
+      : MCSection(SV_DXContainer, Name, K.isText(), Begin) {}
 
 public:
   void printSwitchToSection(const MCAsmInfo &, const Triple &, raw_ostream &,

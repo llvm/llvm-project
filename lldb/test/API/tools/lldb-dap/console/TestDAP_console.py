@@ -140,7 +140,9 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         process.wait()
 
         # Get the console output
-        console_output = self.collect_console(1.0)
+        console_output = self.collect_console(
+            timeout_secs=10.0, pattern="exited with status"
+        )
 
         # Verify the exit status message is printed.
         self.assertIn(
@@ -151,13 +153,14 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
 
     @skipIfWindows
     def test_exit_status_message_ok(self):
-        source = "main.cpp"
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, commandEscapePrefix="")
         self.continue_to_exit()
 
         # Get the console output
-        console_output = self.collect_console(1.0)
+        console_output = self.collect_console(
+            timeout_secs=10.0, pattern="exited with status"
+        )
 
         # Verify the exit status message is printed.
         self.assertIn(

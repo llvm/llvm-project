@@ -22,6 +22,10 @@
 #define DEBUG_TYPE "pipeliner"
 using namespace llvm;
 
+static cl::opt<bool> SwapBranchTargetsMVE(
+    "pipeliner-swap-branch-targets-mve", cl::Hidden, cl::init(false),
+    cl::desc("Swap target blocks of a conditional branch for MVE expander"));
+
 void ModuloSchedule::print(raw_ostream &OS) {
   for (MachineInstr *MI : ScheduledInstrs)
     OS << "[stage " << getStage(MI) << " @" << getCycle(MI) << "c] " << *MI;
@@ -2095,6 +2099,642 @@ void PeelingModuloScheduleExpander::validateAgainstModuloScheduleExpander() {
   // ModuloScheduleExpander intended.
   Preheader->removeSuccessor(BB);
   MSE.cleanup();
+}
+
+MachineInstr *ModuloScheduleExpanderMVE::cloneInstr(MachineInstr *OldMI) {
+  MachineInstr *NewMI = MF.CloneMachineInstr(OldMI);
+
+  // TODO: Offset information needs to be corrected.
+  NewMI->dropMemRefs(MF);
+
+  return NewMI;
+}
+
+/// Create a dedicated exit for Loop. Exit is the original exit for Loop.
+/// If it is already dedicated exit, return it. Otherwise, insert a new
+/// block between them and return the new block.
+static MachineBasicBlock *createDedicatedExit(MachineBasicBlock *Loop,
+                                              MachineBasicBlock *Exit) {
+  if (Exit->pred_size() == 1)
+    return Exit;
+
+  MachineFunction *MF = Loop->getParent();
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+
+  MachineBasicBlock *NewExit =
+      MF->CreateMachineBasicBlock(Loop->getBasicBlock());
+  MF->insert(Loop->getIterator(), NewExit);
+
+  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  SmallVector<MachineOperand, 4> Cond;
+  TII->analyzeBranch(*Loop, TBB, FBB, Cond);
+  if (TBB == Loop)
+    FBB = NewExit;
+  else if (FBB == Loop)
+    TBB = NewExit;
+  else
+    llvm_unreachable("unexpected loop structure");
+  TII->removeBranch(*Loop);
+  TII->insertBranch(*Loop, TBB, FBB, Cond, DebugLoc());
+  Loop->replaceSuccessor(Exit, NewExit);
+  TII->insertUnconditionalBranch(*NewExit, Exit, DebugLoc());
+  NewExit->addSuccessor(Exit);
+
+  Exit->replacePhiUsesWith(Loop, NewExit);
+
+  return NewExit;
+}
+
+/// Insert branch code into the end of MBB. It branches to GreaterThan if the
+/// remaining trip count for instructions in LastStage0Insts is greater than
+/// RequiredTC, and to Otherwise otherwise.
+void ModuloScheduleExpanderMVE::insertCondBranch(MachineBasicBlock &MBB,
+                                                 int RequiredTC,
+                                                 InstrMapTy &LastStage0Insts,
+                                                 MachineBasicBlock &GreaterThan,
+                                                 MachineBasicBlock &Otherwise) {
+  SmallVector<MachineOperand, 4> Cond;
+  LoopInfo->createRemainingIterationsGreaterCondition(RequiredTC, MBB, Cond,
+                                                      LastStage0Insts);
+
+  if (SwapBranchTargetsMVE) {
+    // Set SwapBranchTargetsMVE to true if a target prefers to replace TBB and
+    // FBB for optimal performance.
+    if (TII->reverseBranchCondition(Cond))
+      llvm_unreachable("can not reverse branch condition");
+    TII->insertBranch(MBB, &Otherwise, &GreaterThan, Cond, DebugLoc());
+  } else {
+    TII->insertBranch(MBB, &GreaterThan, &Otherwise, Cond, DebugLoc());
+  }
+}
+
+/// Generate a pipelined loop that is unrolled by using MVE algorithm and any
+/// other necessary blocks. The control flow is modified to execute the
+/// pipelined loop if the trip count satisfies the condition, otherwise the
+/// original loop. The original loop is also used to execute the remainder
+/// iterations which occur due to unrolling.
+void ModuloScheduleExpanderMVE::generatePipelinedLoop() {
+  // The control flow for pipelining with MVE:
+  //
+  // OrigPreheader:
+  //   // The block that is originally the loop preheader
+  //   goto Check
+  //
+  // Check:
+  //   // Check whether the trip count satisfies the requirements to pipeline.
+  //   if (LoopCounter > NumStages + NumUnroll - 2)
+  //     // The minimum number of iterations to pipeline =
+  //     //   iterations executed in prolog/epilog (NumStages-1) +
+  //     //   iterations executed in one kernel run (NumUnroll)
+  //     goto Prolog
+  //   // fallback to the original loop
+  //   goto NewPreheader
+  //
+  // Prolog:
+  //   // All prolog stages. There are no direct branches to the epilogue.
+  //   goto NewKernel
+  //
+  // NewKernel:
+  //   // NumUnroll copies of the kernel
+  //   if (LoopCounter > MVE-1)
+  //     goto NewKernel
+  //   goto Epilog
+  //
+  // Epilog:
+  //   // All epilog stages.
+  //   if (LoopCounter > 0)
+  //     // The remainder is executed in the original loop
+  //     goto NewPreheader
+  //   goto NewExit
+  //
+  // NewPreheader:
+  //   // Newly created preheader for the original loop.
+  //   // The initial values of the phis in the loop are merged from two paths.
+  //   NewInitVal = Phi OrigInitVal, Check, PipelineLastVal, Epilog
+  //   goto OrigKernel
+  //
+  // OrigKernel:
+  //   // The original loop block.
+  //   if (LoopCounter != 0)
+  //     goto OrigKernel
+  //   goto NewExit
+  //
+  // NewExit:
+  //   // Newly created dedicated exit for the original loop.
+  //   // Merge values which are referenced after the loop
+  //   Merged = Phi OrigVal, OrigKernel, PipelineVal, Epilog
+  //   goto OrigExit
+  //
+  // OrigExit:
+  //   // The block that is originally the loop exit.
+  //   // If it is already deicated exit, NewExit is not created.
+
+  // An example of where each stage is executed:
+  // Assume #Stages 3, #MVE 4, #Iterations 12
+  // Iter   0 1 2 3 4 5 6 7 8 9 10-11
+  // -------------------------------------------------
+  // Stage  0                          Prolog#0
+  // Stage  1 0                        Prolog#1
+  // Stage  2 1 0                      Kernel Unroll#0 Iter#0
+  // Stage    2 1 0                    Kernel Unroll#1 Iter#0
+  // Stage      2 1 0                  Kernel Unroll#2 Iter#0
+  // Stage        2 1 0                Kernel Unroll#3 Iter#0
+  // Stage          2 1 0              Kernel Unroll#0 Iter#1
+  // Stage            2 1 0            Kernel Unroll#1 Iter#1
+  // Stage              2 1 0          Kernel Unroll#2 Iter#1
+  // Stage                2 1 0        Kernel Unroll#3 Iter#1
+  // Stage                  2 1        Epilog#0
+  // Stage                    2        Epilog#1
+  // Stage                      0-2    OrigKernel
+
+  LoopInfo = TII->analyzeLoopForPipelining(OrigKernel);
+  assert(LoopInfo && "Must be able to analyze loop!");
+
+  calcNumUnroll();
+
+  Check = MF.CreateMachineBasicBlock(OrigKernel->getBasicBlock());
+  Prolog = MF.CreateMachineBasicBlock(OrigKernel->getBasicBlock());
+  NewKernel = MF.CreateMachineBasicBlock(OrigKernel->getBasicBlock());
+  Epilog = MF.CreateMachineBasicBlock(OrigKernel->getBasicBlock());
+  NewPreheader = MF.CreateMachineBasicBlock(OrigKernel->getBasicBlock());
+
+  MF.insert(OrigKernel->getIterator(), Check);
+  MF.insert(OrigKernel->getIterator(), Prolog);
+  MF.insert(OrigKernel->getIterator(), NewKernel);
+  MF.insert(OrigKernel->getIterator(), Epilog);
+  MF.insert(OrigKernel->getIterator(), NewPreheader);
+
+  NewExit = createDedicatedExit(OrigKernel, OrigExit);
+
+  NewPreheader->transferSuccessorsAndUpdatePHIs(OrigPreheader);
+  TII->insertUnconditionalBranch(*NewPreheader, OrigKernel, DebugLoc());
+
+  OrigPreheader->addSuccessor(Check);
+  TII->removeBranch(*OrigPreheader);
+  TII->insertUnconditionalBranch(*OrigPreheader, Check, DebugLoc());
+
+  Check->addSuccessor(Prolog);
+  Check->addSuccessor(NewPreheader);
+
+  Prolog->addSuccessor(NewKernel);
+
+  NewKernel->addSuccessor(NewKernel);
+  NewKernel->addSuccessor(Epilog);
+
+  Epilog->addSuccessor(NewPreheader);
+  Epilog->addSuccessor(NewExit);
+
+  InstrMapTy LastStage0Insts;
+  insertCondBranch(*Check, Schedule.getNumStages() + NumUnroll - 2,
+                   LastStage0Insts, *Prolog, *NewPreheader);
+
+  // VRMaps map (prolog/kernel/epilog phase#, original register#) to new
+  // register#
+  SmallVector<ValueMapTy> PrologVRMap, KernelVRMap, EpilogVRMap;
+  generateProlog(PrologVRMap);
+  generateKernel(PrologVRMap, KernelVRMap, LastStage0Insts);
+  generateEpilog(KernelVRMap, EpilogVRMap, LastStage0Insts);
+}
+
+/// Replace MI's use operands according to the maps.
+void ModuloScheduleExpanderMVE::updateInstrUse(
+    MachineInstr *MI, int StageNum, int PhaseNum,
+    SmallVectorImpl<ValueMapTy> &CurVRMap,
+    SmallVectorImpl<ValueMapTy> *PrevVRMap) {
+  // If MI is in the prolog/kernel/epilog block, CurVRMap is
+  // PrologVRMap/KernelVRMap/EpilogVRMap respectively.
+  // PrevVRMap is nullptr/PhiVRMap/KernelVRMap respectively.
+  // Refer to the appropriate map according to the stage difference between
+  // MI and the definition of an operand.
+
+  for (MachineOperand &UseMO : MI->uses()) {
+    if (!UseMO.isReg() || !UseMO.getReg().isVirtual())
+      continue;
+    int DiffStage = 0;
+    Register OrigReg = UseMO.getReg();
+    MachineInstr *DefInst = MRI.getVRegDef(OrigReg);
+    if (!DefInst || DefInst->getParent() != OrigKernel)
+      continue;
+    unsigned InitReg = 0;
+    unsigned DefReg = OrigReg;
+    if (DefInst->isPHI()) {
+      ++DiffStage;
+      unsigned LoopReg;
+      getPhiRegs(*DefInst, OrigKernel, InitReg, LoopReg);
+      // LoopReg is guaranteed to be defined within the loop by canApply()
+      DefReg = LoopReg;
+      DefInst = MRI.getVRegDef(LoopReg);
+    }
+    unsigned DefStageNum = Schedule.getStage(DefInst);
+    DiffStage += StageNum - DefStageNum;
+    Register NewReg;
+    if (PhaseNum >= DiffStage && CurVRMap[PhaseNum - DiffStage].count(DefReg))
+      // NewReg is defined in a previous phase of the same block
+      NewReg = CurVRMap[PhaseNum - DiffStage][DefReg];
+    else if (!PrevVRMap)
+      // Since this is the first iteration, refer the initial register of the
+      // loop
+      NewReg = InitReg;
+    else
+      // Cases where DiffStage is larger than PhaseNum.
+      // If MI is in the kernel block, the value is defined by the previous
+      // iteration and PhiVRMap is referenced. If MI is in the epilog block, the
+      // value is defined in the kernel block and KernelVRMap is referenced.
+      NewReg = (*PrevVRMap)[PrevVRMap->size() - (DiffStage - PhaseNum)][DefReg];
+
+    const TargetRegisterClass *NRC =
+        MRI.constrainRegClass(NewReg, MRI.getRegClass(OrigReg));
+    if (NRC)
+      UseMO.setReg(NewReg);
+    else {
+      Register SplitReg = MRI.createVirtualRegister(MRI.getRegClass(OrigReg));
+      BuildMI(*OrigKernel, MI, MI->getDebugLoc(), TII->get(TargetOpcode::COPY),
+              SplitReg)
+          .addReg(NewReg);
+      UseMO.setReg(SplitReg);
+    }
+  }
+}
+
+/// Return a phi if Reg is referenced by the phi.
+/// canApply() guarantees that at most only one such phi exists.
+static MachineInstr *getLoopPhiUser(Register Reg, MachineBasicBlock *Loop) {
+  for (MachineInstr &Phi : Loop->phis()) {
+    unsigned InitVal, LoopVal;
+    getPhiRegs(Phi, Loop, InitVal, LoopVal);
+    if (LoopVal == Reg)
+      return &Phi;
+  }
+  return nullptr;
+}
+
+/// Generate phis for registers defined by OrigMI.
+void ModuloScheduleExpanderMVE::generatePhi(
+    MachineInstr *OrigMI, int UnrollNum,
+    SmallVectorImpl<ValueMapTy> &PrologVRMap,
+    SmallVectorImpl<ValueMapTy> &KernelVRMap,
+    SmallVectorImpl<ValueMapTy> &PhiVRMap) {
+  int StageNum = Schedule.getStage(OrigMI);
+  bool UsePrologReg;
+  if (Schedule.getNumStages() - NumUnroll + UnrollNum - 1 >= StageNum)
+    UsePrologReg = true;
+  else if (Schedule.getNumStages() - NumUnroll + UnrollNum == StageNum)
+    UsePrologReg = false;
+  else
+    return;
+
+  // Examples that show which stages are merged by phi.
+  // Meaning of the symbol following the stage number:
+  //   a/b: Stages with the same letter are merged (UsePrologReg == true)
+  //   +: Merged with the initial value (UsePrologReg == false)
+  //   *: No phis required
+  //
+  // #Stages 3, #MVE 4
+  // Iter   0 1 2 3 4 5 6 7 8
+  // -----------------------------------------
+  // Stage  0a                 Prolog#0
+  // Stage  1a 0b              Prolog#1
+  // Stage  2* 1* 0*           Kernel Unroll#0
+  // Stage     2* 1* 0+        Kernel Unroll#1
+  // Stage        2* 1+ 0a     Kernel Unroll#2
+  // Stage           2+ 1a 0b  Kernel Unroll#3
+  //
+  // #Stages 3, #MVE 2
+  // Iter   0 1 2 3 4 5 6 7 8
+  // -----------------------------------------
+  // Stage  0a                 Prolog#0
+  // Stage  1a 0b              Prolog#1
+  // Stage  2* 1+ 0a           Kernel Unroll#0
+  // Stage     2+ 1a 0b        Kernel Unroll#1
+  //
+  // #Stages 3, #MVE 1
+  // Iter   0 1 2 3 4 5 6 7 8
+  // -----------------------------------------
+  // Stage  0*                 Prolog#0
+  // Stage  1a 0b              Prolog#1
+  // Stage  2+ 1a 0b           Kernel Unroll#0
+
+  for (MachineOperand &DefMO : OrigMI->defs()) {
+    if (!DefMO.isReg() || DefMO.isDead())
+      continue;
+    Register OrigReg = DefMO.getReg();
+    auto NewReg = KernelVRMap[UnrollNum].find(OrigReg);
+    if (NewReg == KernelVRMap[UnrollNum].end())
+      continue;
+    Register CorrespondReg;
+    if (UsePrologReg) {
+      int PrologNum = Schedule.getNumStages() - NumUnroll + UnrollNum - 1;
+      CorrespondReg = PrologVRMap[PrologNum][OrigReg];
+    } else {
+      MachineInstr *Phi = getLoopPhiUser(OrigReg, OrigKernel);
+      if (!Phi)
+        continue;
+      CorrespondReg = getInitPhiReg(*Phi, OrigKernel);
+    }
+
+    assert(CorrespondReg.isValid());
+    Register PhiReg = MRI.createVirtualRegister(MRI.getRegClass(OrigReg));
+    BuildMI(*NewKernel, NewKernel->getFirstNonPHI(), DebugLoc(),
+            TII->get(TargetOpcode::PHI), PhiReg)
+        .addReg(NewReg->second)
+        .addMBB(NewKernel)
+        .addReg(CorrespondReg)
+        .addMBB(Prolog);
+    PhiVRMap[UnrollNum][OrigReg] = PhiReg;
+  }
+}
+
+static void replacePhiSrc(MachineInstr &Phi, Register OrigReg, Register NewReg,
+                          MachineBasicBlock *NewMBB) {
+  for (unsigned Idx = 1; Idx < Phi.getNumOperands(); Idx += 2) {
+    if (Phi.getOperand(Idx).getReg() == OrigReg) {
+      Phi.getOperand(Idx).setReg(NewReg);
+      Phi.getOperand(Idx + 1).setMBB(NewMBB);
+      return;
+    }
+  }
+}
+
+/// Generate phis that merge values from multiple routes
+void ModuloScheduleExpanderMVE::mergeRegUsesAfterPipeline(Register OrigReg,
+                                                          Register NewReg) {
+  SmallVector<MachineOperand *> UsesAfterLoop;
+  SmallVector<MachineInstr *> LoopPhis;
+  for (MachineRegisterInfo::use_iterator I = MRI.use_begin(OrigReg),
+                                         E = MRI.use_end();
+       I != E; ++I) {
+    MachineOperand &O = *I;
+    if (O.getParent()->getParent() != OrigKernel &&
+        O.getParent()->getParent() != Prolog &&
+        O.getParent()->getParent() != NewKernel &&
+        O.getParent()->getParent() != Epilog)
+      UsesAfterLoop.push_back(&O);
+    if (O.getParent()->getParent() == OrigKernel && O.getParent()->isPHI())
+      LoopPhis.push_back(O.getParent());
+  }
+
+  // Merge the route that only execute the pipelined loop (when there are no
+  // remaining iterations) with the route that execute the original loop.
+  if (!UsesAfterLoop.empty()) {
+    Register PhiReg = MRI.createVirtualRegister(MRI.getRegClass(OrigReg));
+    BuildMI(*NewExit, NewExit->getFirstNonPHI(), DebugLoc(),
+            TII->get(TargetOpcode::PHI), PhiReg)
+        .addReg(OrigReg)
+        .addMBB(OrigKernel)
+        .addReg(NewReg)
+        .addMBB(Epilog);
+
+    for (MachineOperand *MO : UsesAfterLoop)
+      MO->setReg(PhiReg);
+
+    if (!LIS.hasInterval(PhiReg))
+      LIS.createEmptyInterval(PhiReg);
+  }
+
+  // Merge routes from the pipelined loop and the bypassed route before the
+  // original loop
+  if (!LoopPhis.empty()) {
+    for (MachineInstr *Phi : LoopPhis) {
+      unsigned InitReg, LoopReg;
+      getPhiRegs(*Phi, OrigKernel, InitReg, LoopReg);
+      Register NewInit = MRI.createVirtualRegister(MRI.getRegClass(InitReg));
+      BuildMI(*NewPreheader, NewPreheader->getFirstNonPHI(), Phi->getDebugLoc(),
+              TII->get(TargetOpcode::PHI), NewInit)
+          .addReg(InitReg)
+          .addMBB(Check)
+          .addReg(NewReg)
+          .addMBB(Epilog);
+      replacePhiSrc(*Phi, InitReg, NewInit, NewPreheader);
+    }
+  }
+}
+
+void ModuloScheduleExpanderMVE::generateProlog(
+    SmallVectorImpl<ValueMapTy> &PrologVRMap) {
+  PrologVRMap.clear();
+  PrologVRMap.resize(Schedule.getNumStages() - 1);
+  DenseMap<MachineInstr *, std::pair<int, int>> NewMIMap;
+  for (int PrologNum = 0; PrologNum < Schedule.getNumStages() - 1;
+       ++PrologNum) {
+    for (MachineInstr *MI : Schedule.getInstructions()) {
+      if (MI->isPHI())
+        continue;
+      int StageNum = Schedule.getStage(MI);
+      if (StageNum > PrologNum)
+        continue;
+      MachineInstr *NewMI = cloneInstr(MI);
+      updateInstrDef(NewMI, PrologVRMap[PrologNum], false);
+      NewMIMap[NewMI] = {PrologNum, StageNum};
+      Prolog->push_back(NewMI);
+    }
+  }
+
+  for (auto I : NewMIMap) {
+    MachineInstr *MI = I.first;
+    int PrologNum = I.second.first;
+    int StageNum = I.second.second;
+    updateInstrUse(MI, StageNum, PrologNum, PrologVRMap, nullptr);
+  }
+
+  LLVM_DEBUG({
+    dbgs() << "prolog:\n";
+    Prolog->dump();
+  });
+}
+
+void ModuloScheduleExpanderMVE::generateKernel(
+    SmallVectorImpl<ValueMapTy> &PrologVRMap,
+    SmallVectorImpl<ValueMapTy> &KernelVRMap, InstrMapTy &LastStage0Insts) {
+  KernelVRMap.clear();
+  KernelVRMap.resize(NumUnroll);
+  SmallVector<ValueMapTy> PhiVRMap;
+  PhiVRMap.resize(NumUnroll);
+  DenseMap<MachineInstr *, std::pair<int, int>> NewMIMap;
+  DenseMap<MachineInstr *, MachineInstr *> MIMapLastStage0;
+  for (int UnrollNum = 0; UnrollNum < NumUnroll; ++UnrollNum) {
+    for (MachineInstr *MI : Schedule.getInstructions()) {
+      if (MI->isPHI())
+        continue;
+      int StageNum = Schedule.getStage(MI);
+      MachineInstr *NewMI = cloneInstr(MI);
+      if (UnrollNum == NumUnroll - 1)
+        LastStage0Insts[MI] = NewMI;
+      updateInstrDef(NewMI, KernelVRMap[UnrollNum],
+                     (UnrollNum == NumUnroll - 1 && StageNum == 0));
+      generatePhi(MI, UnrollNum, PrologVRMap, KernelVRMap, PhiVRMap);
+      NewMIMap[NewMI] = {UnrollNum, StageNum};
+      NewKernel->push_back(NewMI);
+    }
+  }
+
+  for (auto I : NewMIMap) {
+    MachineInstr *MI = I.first;
+    int UnrollNum = I.second.first;
+    int StageNum = I.second.second;
+    updateInstrUse(MI, StageNum, UnrollNum, KernelVRMap, &PhiVRMap);
+  }
+
+  // If remaining trip count is greater than NumUnroll-1, loop continues
+  insertCondBranch(*NewKernel, NumUnroll - 1, LastStage0Insts, *NewKernel,
+                   *Epilog);
+
+  LLVM_DEBUG({
+    dbgs() << "kernel:\n";
+    NewKernel->dump();
+  });
+}
+
+void ModuloScheduleExpanderMVE::generateEpilog(
+    SmallVectorImpl<ValueMapTy> &KernelVRMap,
+    SmallVectorImpl<ValueMapTy> &EpilogVRMap, InstrMapTy &LastStage0Insts) {
+  EpilogVRMap.clear();
+  EpilogVRMap.resize(Schedule.getNumStages() - 1);
+  DenseMap<MachineInstr *, std::pair<int, int>> NewMIMap;
+  for (int EpilogNum = 0; EpilogNum < Schedule.getNumStages() - 1;
+       ++EpilogNum) {
+    for (MachineInstr *MI : Schedule.getInstructions()) {
+      if (MI->isPHI())
+        continue;
+      int StageNum = Schedule.getStage(MI);
+      if (StageNum <= EpilogNum)
+        continue;
+      MachineInstr *NewMI = cloneInstr(MI);
+      updateInstrDef(NewMI, EpilogVRMap[EpilogNum], StageNum - 1 == EpilogNum);
+      NewMIMap[NewMI] = {EpilogNum, StageNum};
+      Epilog->push_back(NewMI);
+    }
+  }
+
+  for (auto I : NewMIMap) {
+    MachineInstr *MI = I.first;
+    int EpilogNum = I.second.first;
+    int StageNum = I.second.second;
+    updateInstrUse(MI, StageNum, EpilogNum, EpilogVRMap, &KernelVRMap);
+  }
+
+  // If there are remaining iterations, they are executed in the original loop.
+  // Instructions related to loop control, such as loop counter comparison,
+  // are indicated by shouldIgnoreForPipelining() and are assumed to be placed
+  // in stage 0. Thus, the map is for the last one in the kernel.
+  insertCondBranch(*Epilog, 0, LastStage0Insts, *NewPreheader, *NewExit);
+
+  LLVM_DEBUG({
+    dbgs() << "epilog:\n";
+    Epilog->dump();
+  });
+}
+
+/// Calculate the number of unroll required and set it to NumUnroll
+void ModuloScheduleExpanderMVE::calcNumUnroll() {
+  DenseMap<MachineInstr *, unsigned> Inst2Idx;
+  NumUnroll = 1;
+  for (unsigned I = 0; I < Schedule.getInstructions().size(); ++I)
+    Inst2Idx[Schedule.getInstructions()[I]] = I;
+
+  for (MachineInstr *MI : Schedule.getInstructions()) {
+    if (MI->isPHI())
+      continue;
+    int StageNum = Schedule.getStage(MI);
+    for (const MachineOperand &MO : MI->uses()) {
+      if (!MO.isReg() || !MO.getReg().isVirtual())
+        continue;
+      MachineInstr *DefMI = MRI.getVRegDef(MO.getReg());
+      if (DefMI->getParent() != OrigKernel)
+        continue;
+
+      int NumUnrollLocal = 1;
+      if (DefMI->isPHI()) {
+        ++NumUnrollLocal;
+        // canApply() guarantees that DefMI is not phi and is an instruction in
+        // the loop
+        DefMI = MRI.getVRegDef(getLoopPhiReg(*DefMI, OrigKernel));
+      }
+      NumUnrollLocal += StageNum - Schedule.getStage(DefMI);
+      if (Inst2Idx[MI] <= Inst2Idx[DefMI])
+        --NumUnrollLocal;
+      NumUnroll = std::max(NumUnroll, NumUnrollLocal);
+    }
+  }
+  LLVM_DEBUG(dbgs() << "NumUnroll: " << NumUnroll << "\n");
+}
+
+/// Create new virtual registers for definitions of NewMI and update NewMI.
+/// If the definitions are referenced after the pipelined loop, phis are
+/// created to merge with other routes.
+void ModuloScheduleExpanderMVE::updateInstrDef(MachineInstr *NewMI,
+                                               ValueMapTy &VRMap,
+                                               bool LastDef) {
+  for (MachineOperand &MO : NewMI->operands()) {
+    if (!MO.isReg() || !MO.getReg().isVirtual() || !MO.isDef())
+      continue;
+    Register Reg = MO.getReg();
+    const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+    Register NewReg = MRI.createVirtualRegister(RC);
+    MO.setReg(NewReg);
+    VRMap[Reg] = NewReg;
+    if (LastDef)
+      mergeRegUsesAfterPipeline(Reg, NewReg);
+  }
+}
+
+void ModuloScheduleExpanderMVE::expand() {
+  OrigKernel = Schedule.getLoop()->getTopBlock();
+  OrigPreheader = Schedule.getLoop()->getLoopPreheader();
+  OrigExit = Schedule.getLoop()->getExitBlock();
+
+  LLVM_DEBUG(Schedule.dump());
+
+  generatePipelinedLoop();
+}
+
+/// Check if ModuloScheduleExpanderMVE can be applied to L
+bool ModuloScheduleExpanderMVE::canApply(MachineLoop &L) {
+  if (!L.getExitBlock()) {
+    LLVM_DEBUG(
+        dbgs() << "Can not apply MVE expander: No single exit block.\n";);
+    return false;
+  }
+
+  MachineBasicBlock *BB = L.getTopBlock();
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+
+  // Put some constraints on the operands of the phis to simplify the
+  // transformation
+  DenseSet<unsigned> UsedByPhi;
+  for (MachineInstr &MI : BB->phis()) {
+    // Registers defined by phis must be used only inside the loop and be never
+    // used by phis.
+    for (MachineOperand &MO : MI.defs())
+      if (MO.isReg())
+        for (MachineInstr &Ref : MRI.use_instructions(MO.getReg()))
+          if (Ref.getParent() != BB || Ref.isPHI()) {
+            LLVM_DEBUG(dbgs()
+                           << "Can not apply MVE expander: A phi result is "
+                              "referenced outside of the loop or by phi.\n";);
+            return false;
+          }
+
+    // A source register from the loop block must be defined inside the loop.
+    // A register defined inside the loop must be referenced by only one phi at
+    // most.
+    unsigned InitVal, LoopVal;
+    getPhiRegs(MI, MI.getParent(), InitVal, LoopVal);
+    if (!Register(LoopVal).isVirtual() ||
+        MRI.getVRegDef(LoopVal)->getParent() != BB) {
+      LLVM_DEBUG(
+          dbgs() << "Can not apply MVE expander: A phi source value coming "
+                    "from the loop is not defined in the loop.\n";);
+      return false;
+    }
+    if (UsedByPhi.count(LoopVal)) {
+      LLVM_DEBUG(dbgs() << "Can not apply MVE expander: A value defined in the "
+                           "loop is referenced by two or more phis.\n";);
+      return false;
+    }
+    UsedByPhi.insert(LoopVal);
+  }
+
+  return true;
 }
 
 //===----------------------------------------------------------------------===//

@@ -11,11 +11,11 @@ define ptr @vfs_addname(ptr %name, i32 %len, i32 %hash, i32 %flags) nounwind ssp
 ; CHECK-LABEL: define {{[^@]+}}@vfs_addname
 ; CHECK-SAME: (ptr [[NAME:%.*]], i32 [[LEN:%.*]], i32 [[HASH:%.*]], i32 [[FLAGS:%.*]]) #[[ATTR0:[0-9]+]] !dbg [[DBG4:![0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata ptr [[NAME]], metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG12:![0-9]+]]
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 [[LEN]], metadata [[META13:![0-9]+]], metadata !DIExpression()), !dbg [[DBG12]]
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 [[HASH]], metadata [[META14:![0-9]+]], metadata !DIExpression()), !dbg [[DBG12]]
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 [[FLAGS]], metadata [[META15:![0-9]+]], metadata !DIExpression()), !dbg [[DBG12]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call fastcc ptr @add_name_internal(ptr [[NAME]], i32 [[HASH]]) #[[ATTR3:[0-9]+]], !dbg [[DBG16:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(ptr [[NAME]], [[META11:![0-9]+]], !DIExpression(), [[META12:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(i32 [[LEN]], [[META13:![0-9]+]], !DIExpression(), [[META12]])
+; CHECK-NEXT:      #dbg_value(i32 [[HASH]], [[META14:![0-9]+]], !DIExpression(), [[META12]])
+; CHECK-NEXT:      #dbg_value(i32 [[FLAGS]], [[META15:![0-9]+]], !DIExpression(), [[META12]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call fastcc ptr @add_name_internal(ptr [[NAME]], i32 [[HASH]]) #[[ATTR2:[0-9]+]], !dbg [[DBG16:![0-9]+]]
 ; CHECK-NEXT:    ret ptr [[TMP0]], !dbg [[DBG16]]
 ;
 entry:
@@ -34,11 +34,11 @@ define internal fastcc ptr @add_name_internal(ptr %name, i32 %len, i32 %hash, i8
 ; CHECK-LABEL: define {{[^@]+}}@add_name_internal
 ; CHECK-SAME: (ptr [[NAME:%.*]], i32 [[HASH:%.*]]) #[[ATTR1:[0-9]+]] !dbg [[DBG18:![0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata ptr [[NAME]], metadata [[META22:![0-9]+]], metadata !DIExpression()), !dbg [[DBG23:![0-9]+]]
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 poison, metadata [[META24:![0-9]+]], metadata !DIExpression()), !dbg [[DBG23]]
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 [[HASH]], metadata [[META25:![0-9]+]], metadata !DIExpression()), !dbg [[DBG23]]
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i8 poison, metadata [[META26:![0-9]+]], metadata !DIExpression()), !dbg [[DBG23]]
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 poison, metadata [[META27:![0-9]+]], metadata !DIExpression()), !dbg [[DBG23]]
+; CHECK-NEXT:      #dbg_value(ptr [[NAME]], [[META22:![0-9]+]], !DIExpression(), [[META23:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(i32 poison, [[META24:![0-9]+]], !DIExpression(), [[META23]])
+; CHECK-NEXT:      #dbg_value(i32 [[HASH]], [[META25:![0-9]+]], !DIExpression(), [[META23]])
+; CHECK-NEXT:      #dbg_value(i8 poison, [[META26:![0-9]+]], !DIExpression(), [[META23]])
+; CHECK-NEXT:      #dbg_value(i32 poison, [[META27:![0-9]+]], !DIExpression(), [[META23]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[HASH]], 0, !dbg [[DBG28:![0-9]+]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[BB:%.*]], label [[BB1:%.*]], !dbg [[DBG28]]
 ; CHECK:       bb:
@@ -72,8 +72,7 @@ bb2:                                              ; preds = %bb1, %bb
 declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 ; CHECK: attributes #0 = { nounwind ssp }
-; CHECK: attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #2 = { noinline nounwind ssp }
+; CHECK: attributes #1 = { noinline nounwind ssp }
 
 !llvm.dbg.cu = !{!3}
 !llvm.module.flags = !{!30}

@@ -160,5 +160,29 @@ inline Type *toTypedPointer(Type *Ty) {
              : Ty;
 }
 
+inline Type *toTypedFunPointer(FunctionType *FTy) {
+  Type *OrigRetTy = FTy->getReturnType();
+  Type *RetTy = toTypedPointer(OrigRetTy);
+  bool IsUntypedPtr = false;
+  for (Type *PTy : FTy->params()) {
+    if (isUntypedPointerTy(PTy)) {
+      IsUntypedPtr = true;
+      break;
+    }
+  }
+  if (!IsUntypedPtr && RetTy == OrigRetTy)
+    return FTy;
+  SmallVector<Type *> ParamTys;
+  for (Type *PTy : FTy->params())
+    ParamTys.push_back(toTypedPointer(PTy));
+  return FunctionType::get(RetTy, ParamTys, FTy->isVarArg());
+}
+
+inline const Type *unifyPtrType(const Type *Ty) {
+  if (auto FTy = dyn_cast<FunctionType>(Ty))
+    return toTypedFunPointer(const_cast<FunctionType *>(FTy));
+  return toTypedPointer(const_cast<Type *>(Ty));
+}
+
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

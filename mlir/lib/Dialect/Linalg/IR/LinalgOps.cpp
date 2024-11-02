@@ -1123,28 +1123,23 @@ static void getGenericEffectsImpl(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects,
     LinalgOp linalgOp) {
-  SmallVector<Value> inputOperands = linalgOp.getDpsInputs();
-  for (auto [index, operand] : llvm::enumerate(inputOperands)) {
+  for (auto [index, operand] : llvm::enumerate(linalgOp.getDpsInputs())) {
     if (!llvm::isa<MemRefType>(operand.getType()))
       continue;
-    if (linalgOp.payloadUsesValueFromOperand(&linalgOp->getOpOperand(index))) {
-      effects.emplace_back(MemoryEffects::Read::get(), operand, /*stage=*/0,
-                           /*effectOnFullRegion=*/true,
-                           SideEffects::DefaultResource::get());
-    }
+    effects.emplace_back(
+        MemoryEffects::Read::get(), &linalgOp->getOpOperand(index), /*stage=*/0,
+        /*effectOnFullRegion=*/true, SideEffects::DefaultResource::get());
   }
-  unsigned inputOperandSize = inputOperands.size();
 
-  for (auto [index, operand] : llvm::enumerate(linalgOp.getDpsInits())) {
-    if (!llvm::isa<MemRefType>(operand.getType()))
+  for (OpOperand &operand : linalgOp.getDpsInitsMutable()) {
+    if (!llvm::isa<MemRefType>(operand.get().getType()))
       continue;
-    if (linalgOp.payloadUsesValueFromOperand(
-            &linalgOp->getOpOperand(index + inputOperandSize))) {
-      effects.emplace_back(MemoryEffects::Read::get(), operand, /*stage=*/0,
+    if (linalgOp.payloadUsesValueFromOperand(&operand)) {
+      effects.emplace_back(MemoryEffects::Read::get(), &operand, /*stage=*/0,
                            /*effectOnFullRegion=*/true,
                            SideEffects::DefaultResource::get());
     }
-    effects.emplace_back(MemoryEffects::Write::get(), operand, /*stage=*/0,
+    effects.emplace_back(MemoryEffects::Write::get(), &operand, /*stage=*/0,
                          /*effectOnFullRegion=*/true,
                          SideEffects::DefaultResource::get());
   }
@@ -2546,20 +2541,22 @@ SoftmaxOp::reifyResultShapes(OpBuilder &b,
 void SoftmaxOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  for (Value operand : getDpsInputs()) {
+  for (auto [index, operand] : llvm::enumerate(getDpsInputs())) {
     if (!llvm::isa<MemRefType>(operand.getType()))
       continue;
-    effects.emplace_back(MemoryEffects::Read::get(), operand, /*stage=*/0,
+    effects.emplace_back(MemoryEffects::Read::get(),
+                         &getOperation()->getOpOperand(index), /*stage=*/0,
                          /*effectOnFullRegion=*/true,
                          SideEffects::DefaultResource::get());
   }
-  for (Value operand : getDpsInits()) {
-    if (!llvm::isa<MemRefType>(operand.getType()))
+
+  for (OpOperand &operand : getDpsInitsMutable()) {
+    if (!llvm::isa<MemRefType>(operand.get().getType()))
       continue;
-    effects.emplace_back(MemoryEffects::Read::get(), operand, /*stage=*/0,
+    effects.emplace_back(MemoryEffects::Read::get(), &operand, /*stage=*/0,
                          /*effectOnFullRegion=*/true,
                          SideEffects::DefaultResource::get());
-    effects.emplace_back(MemoryEffects::Write::get(), operand, /*stage=*/0,
+    effects.emplace_back(MemoryEffects::Write::get(), &operand, /*stage=*/0,
                          /*effectOnFullRegion=*/true,
                          SideEffects::DefaultResource::get());
   }
@@ -2717,8 +2714,8 @@ FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
   Value neutralForMaxFInit =
       b.create<linalg::FillOp>(loc, Value{neutralForMaxF}, outputReduce)
           .result();
-  Value max = reduce<arith::MaximumFOp>(b, loc, input, neutralForMaxFInit,
-                                        reductionDim);
+  Value max =
+      reduce<arith::MaxNumFOp>(b, loc, input, neutralForMaxFInit, reductionDim);
 
   // Step 2: Subtract max from input and exponentiate.
   Value numerator = buildSubAndExpOp(b, loc, input, max, output, reductionDim);

@@ -61,7 +61,7 @@ class ListeningSocket {
   std::atomic<int> FD;
   std::string SocketPath; // Not modified after construction
 
-  /// If a seperate thread calls ListeningSocket::shutdown, the ListeningSocket
+  /// If a separate thread calls ListeningSocket::shutdown, the ListeningSocket
   /// file descriptor (FD) could be closed while ::poll is waiting for it to be
   /// ready to perform a I/O operations. ::poll will continue to block even
   /// after FD is closed so use a self-pipe mechanism to get ::poll to return

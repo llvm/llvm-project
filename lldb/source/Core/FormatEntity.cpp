@@ -1401,7 +1401,10 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
           ValueObjectSP return_valobj_sp =
               StopInfo::GetReturnValueObject(stop_info_sp);
           if (return_valobj_sp) {
-            return_valobj_sp->Dump(s);
+            if (llvm::Error error = return_valobj_sp->Dump(s)) {
+              s << "error: " << toString(std::move(error));
+              return false;
+            }
             return true;
           }
         }
@@ -1418,7 +1421,11 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
           ExpressionVariableSP expression_var_sp =
               StopInfo::GetExpressionVariable(stop_info_sp);
           if (expression_var_sp && expression_var_sp->GetValueObject()) {
-            expression_var_sp->GetValueObject()->Dump(s);
+            if (llvm::Error error =
+                    expression_var_sp->GetValueObject()->Dump(s)) {
+              s << "error: " << toString(std::move(error));
+              return false;
+            }
             return true;
           }
         }

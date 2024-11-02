@@ -1845,6 +1845,10 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
   auto AddIntToBuffer = [AggBuffer, Bytes](const APInt &Val) {
     size_t NumBytes = (Val.getBitWidth() + 7) / 8;
     SmallVector<unsigned char, 16> Buf(NumBytes);
+    // `extractBitsAsZExtValue` does not allow the extraction of bits beyond the
+    // input's bit width, and i1 arrays may not have a length that is a multuple
+    // of 8. We handle the last byte separately, so we never request out of
+    // bounds bits.
     for (unsigned I = 0; I < NumBytes - 1; ++I) {
       Buf[I] = Val.extractBitsAsZExtValue(8, I * 8);
     }

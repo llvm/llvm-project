@@ -768,41 +768,6 @@ Platform::ResolveExecutable(const ModuleSpec &module_spec,
                             const FileSpecList *module_search_paths_ptr) {
   Status error;
 
-  if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
-    if (module_spec.GetArchitecture().IsValid()) {
-      error = ModuleList::GetSharedModule(module_spec, exe_module_sp,
-                                          module_search_paths_ptr, nullptr,
-                                          nullptr);
-    } else {
-      // No valid architecture was specified, ask the platform for the
-      // architectures that we should be using (in the correct order) and see
-      // if we can find a match that way
-      ModuleSpec arch_module_spec(module_spec);
-      ArchSpec process_host_arch;
-      for (const ArchSpec &arch :
-           GetSupportedArchitectures(process_host_arch)) {
-        arch_module_spec.GetArchitecture() = arch;
-        error = ModuleList::GetSharedModule(arch_module_spec, exe_module_sp,
-                                            module_search_paths_ptr, nullptr,
-                                            nullptr);
-        // Did we find an executable using one of the
-        if (error.Success() && exe_module_sp)
-          break;
-      }
-    }
-  } else {
-    error.SetErrorStringWithFormat(
-        "'%s' does not exist", module_spec.GetFileSpec().GetPath().c_str());
-  }
-  return error;
-}
-
-Status
-Platform::ResolveRemoteExecutable(const ModuleSpec &module_spec,
-                            lldb::ModuleSP &exe_module_sp,
-                            const FileSpecList *module_search_paths_ptr) {
-  Status error;
-
   // We may connect to a process and use the provided executable (Don't use
   // local $PATH).
   ModuleSpec resolved_module_spec(module_spec);
@@ -822,9 +787,9 @@ Platform::ResolveRemoteExecutable(const ModuleSpec &module_spec,
         return error;
       exe_module_sp.reset();
     }
-    // No valid architecture was specified or the exact arch wasn't found so
-    // ask the platform for the architectures that we should be using (in the
-    // correct order) and see if we can find a match that way
+    // No valid architecture was specified or the exact arch wasn't found.
+    // Ask the platform for the architectures that we should be using (in the
+    // correct order) and see if we can find a match that way.
     StreamString arch_names;
     llvm::ListSeparator LS;
     ArchSpec process_host_arch;
@@ -833,12 +798,10 @@ Platform::ResolveRemoteExecutable(const ModuleSpec &module_spec,
       error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
                                           module_search_paths_ptr, nullptr,
                                           nullptr);
-      // Did we find an executable using one of the
       if (error.Success()) {
         if (exe_module_sp && exe_module_sp->GetObjectFile())
           break;
-        else
-          error.SetErrorToGenericError();
+        error.SetErrorToGenericError();
       }
 
       arch_names << LS << arch.GetArchitectureName();
@@ -1516,8 +1479,7 @@ Platform::GetCachedExecutable(ModuleSpec &module_spec,
   Status error = GetRemoteSharedModule(
       module_spec, nullptr, module_sp,
       [&](const ModuleSpec &spec) {
-        return ResolveRemoteExecutable(spec, module_sp,
-                                       module_search_paths_ptr);
+        return ResolveExecutable(spec, module_sp, module_search_paths_ptr);
       },
       nullptr);
   if (error.Success()) {

@@ -30,6 +30,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
@@ -57,6 +58,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
@@ -108,6 +110,7 @@ cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat(
     "load-bitcode-into-experimental-debuginfo-iterators", cl::Hidden,
     cl::desc("Load bitcode directly into the new debug info format (regardless "
              "of input format)"));
+extern cl::opt<bool> UseNewDbgInfoFormat;
 extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
 extern bool WriteNewDbgInfoFormatToBitcode;
 extern cl::opt<bool> WriteNewDbgInfoFormat;
@@ -836,10 +839,10 @@ private:
   }
 
   Expected<ConstantRange> readConstantRange(ArrayRef<uint64_t> Record,
-                                            unsigned &OpNum) {
-    if (Record.size() - OpNum < 3)
+                                            unsigned &OpNum,
+                                            unsigned BitWidth) {
+    if (Record.size() - OpNum < 2)
       return error("Too few records for range");
-    unsigned BitWidth = Record[OpNum++];
     if (BitWidth > 64) {
       unsigned LowerActiveWords = Record[OpNum];
       unsigned UpperActiveWords = Record[OpNum++] >> 32;
@@ -857,6 +860,14 @@ private:
       int64_t End = BitcodeReader::decodeSignRotatedValue(Record[OpNum++]);
       return ConstantRange(APInt(BitWidth, Start), APInt(BitWidth, End));
     }
+  }
+
+  Expected<ConstantRange>
+  readBitWidthAndConstantRange(ArrayRef<uint64_t> Record, unsigned &OpNum) {
+    if (Record.size() - OpNum < 1)
+      return error("Too few records for range");
+    unsigned BitWidth = Record[OpNum++];
+    return readConstantRange(Record, OpNum, BitWidth);
   }
 
   /// Upgrades old-style typeless byval/sret/inalloca attributes by adding the
@@ -2172,6 +2183,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::DeadOnUnwind;
   case bitc::ATTR_KIND_RANGE:
     return Attribute::Range;
+  case bitc::ATTR_KIND_INITIALIZES:
+    return Attribute::Initializes;
   }
 }
 
@@ -2350,12 +2363,39 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           if (!Attribute::isConstantRangeAttrKind(Kind))
             return error("Not a ConstantRange attribute");
 
-          Expected<ConstantRange> MaybeCR = readConstantRange(Record, i);
+          Expected<ConstantRange> MaybeCR =
+              readBitWidthAndConstantRange(Record, i);
           if (!MaybeCR)
             return MaybeCR.takeError();
           i--;
 
           B.addConstantRangeAttr(Kind, MaybeCR.get());
+        } else if (Record[i] == 8) {
+          Attribute::AttrKind Kind;
+
+          i++;
+          if (Error Err = parseAttrKind(Record[i++], &Kind))
+            return Err;
+          if (!Attribute::isConstantRangeListAttrKind(Kind))
+            return error("Not a constant range list attribute");
+
+          SmallVector<ConstantRange, 2> Val;
+          if (i + 2 > e)
+            return error("Too few records for constant range list");
+          unsigned RangeSize = Record[i++];
+          unsigned BitWidth = Record[i++];
+          for (unsigned Idx = 0; Idx < RangeSize; ++Idx) {
+            Expected<ConstantRange> MaybeCR =
+                readConstantRange(Record, i, BitWidth);
+            if (!MaybeCR)
+              return MaybeCR.takeError();
+            Val.push_back(MaybeCR.get());
+          }
+          i--;
+
+          if (!ConstantRangeList::isOrderedRanges(Val))
+            return error("Invalid (unordered or overlapping) range list");
+          B.addConstantRangeListAttr(Kind, Val);
         } else {
           return error("Invalid attribute group entry");
         }
@@ -3370,7 +3410,8 @@ Error BitcodeReader::parseConstants() {
         (void)InRangeIndex;
       } else if (BitCode == bitc::CST_CODE_CE_GEP_WITH_INRANGE) {
         Flags = Record[OpNum++];
-        Expected<ConstantRange> MaybeInRange = readConstantRange(Record, OpNum);
+        Expected<ConstantRange> MaybeInRange =
+            readBitWidthAndConstantRange(Record, OpNum);
         if (!MaybeInRange)
           return MaybeInRange.takeError();
         InRange = MaybeInRange.get();
@@ -6951,8 +6992,10 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         else
           continue; // ignore and continue.
 
+        unsigned Offset = getBranchWeightOffset(MD);
+
         // If branch weight doesn't match, just strip branch weight.
-        if (MD->getNumOperands() != 1 + ExpectedNumOperands)
+        if (MD->getNumOperands() != Offset + ExpectedNumOperands)
           I.setMetadata(LLVMContext::MD_prof, nullptr);
       }
     }
@@ -7329,7 +7372,13 @@ ModuleSummaryIndexBitcodeReader::makeCallList(ArrayRef<uint64_t> Record,
                                               bool IsOldProfileFormat,
                                               bool HasProfile, bool HasRelBF) {
   std::vector<FunctionSummary::EdgeTy> Ret;
-  Ret.reserve(Record.size());
+  // In the case of new profile formats, there are two Record entries per
+  // Edge. Otherwise, conservatively reserve up to Record.size.
+  if (!IsOldProfileFormat && (HasProfile || HasRelBF))
+    Ret.reserve(Record.size() / 2);
+  else
+    Ret.reserve(Record.size());
+
   for (unsigned I = 0, E = Record.size(); I != E; ++I) {
     CalleeInfo::HotnessType Hotness = CalleeInfo::HotnessType::Unknown;
     bool HasTailCall = false;

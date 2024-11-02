@@ -385,6 +385,8 @@ inline uint64_t PowerOf2Ceil(uint64_t A) {
 ///   alignTo(~0LL, 8) = 0
 ///   alignTo(321, 255) = 510
 /// \endcode
+///
+/// May overflow.
 inline uint64_t alignTo(uint64_t Value, uint64_t Align) {
   assert(Align != 0u && "Align can't be 0.");
   return (Value + Align - 1) / Align * Align;
@@ -424,14 +426,54 @@ template <uint64_t Align> constexpr inline uint64_t alignTo(uint64_t Value) {
   return (Value + Align - 1) / Align * Align;
 }
 
-/// Returns the integer ceil(Numerator / Denominator).
+/// Returns the integer ceil(Numerator / Denominator). Unsigned version.
+/// Guaranteed to never overflow.
 inline uint64_t divideCeil(uint64_t Numerator, uint64_t Denominator) {
-  return alignTo(Numerator, Denominator) / Denominator;
+  assert(Denominator && "Division by zero");
+  uint64_t Bias = (Numerator != 0);
+  return (Numerator - Bias) / Denominator + Bias;
 }
 
-/// Returns the integer nearest(Numerator / Denominator).
+/// Returns the integer ceil(Numerator / Denominator). Signed version.
+/// Guaranteed to never overflow.
+inline int64_t divideCeilSigned(int64_t Numerator, int64_t Denominator) {
+  assert(Denominator && "Division by zero");
+  if (!Numerator)
+    return 0;
+  // C's integer division rounds towards 0.
+  int64_t Bias = (Denominator >= 0 ? 1 : -1);
+  bool SameSign = (Numerator >= 0) == (Denominator >= 0);
+  return SameSign ? (Numerator - Bias) / Denominator + 1
+                  : Numerator / Denominator;
+}
+
+/// Returns the integer floor(Numerator / Denominator). Signed version.
+/// Guaranteed to never overflow.
+inline int64_t divideFloorSigned(int64_t Numerator, int64_t Denominator) {
+  assert(Denominator && "Division by zero");
+  if (!Numerator)
+    return 0;
+  // C's integer division rounds towards 0.
+  int64_t Bias = Denominator >= 0 ? -1 : 1;
+  bool SameSign = (Numerator >= 0) == (Denominator >= 0);
+  return SameSign ? Numerator / Denominator
+                  : (Numerator - Bias) / Denominator - 1;
+}
+
+/// Returns the remainder of the Euclidean division of LHS by RHS. Result is
+/// always non-negative.
+inline int64_t mod(int64_t Numerator, int64_t Denominator) {
+  assert(Denominator >= 1 && "Mod by non-positive number");
+  int64_t Mod = Numerator % Denominator;
+  return Mod < 0 ? Mod + Denominator : Mod;
+}
+
+/// Returns (Numerator / Denominator) rounded by round-half-up. Guaranteed to
+/// never overflow.
 inline uint64_t divideNearest(uint64_t Numerator, uint64_t Denominator) {
-  return (Numerator + (Denominator / 2)) / Denominator;
+  assert(Denominator && "Division by zero");
+  uint64_t Mod = Numerator % Denominator;
+  return (Numerator / Denominator) + (Mod > (Denominator - 1) / 2);
 }
 
 /// Returns the largest uint64_t less than or equal to \p Value and is
@@ -635,6 +677,9 @@ std::enable_if_t<std::is_signed_v<T>, T> SubOverflow(T X, T Y, T &Result) {
 /// result, returning true if an overflow ocurred.
 template <typename T>
 std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
+#if __has_builtin(__builtin_mul_overflow)
+  return __builtin_mul_overflow(X, Y, &Result);
+#else
   // Perform the unsigned multiplication on absolute values.
   using U = std::make_unsigned_t<T>;
   const U UX = X < 0 ? (0 - static_cast<U>(X)) : static_cast<U>(X);
@@ -656,6 +701,7 @@ std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
     return UX > (static_cast<U>(std::numeric_limits<T>::max()) + U(1)) / UY;
   else
     return UX > (static_cast<U>(std::numeric_limits<T>::max())) / UY;
+#endif
 }
 
 } // namespace llvm

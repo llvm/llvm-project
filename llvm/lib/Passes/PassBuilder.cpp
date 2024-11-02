@@ -506,15 +506,6 @@ void PassBuilder::registerLoopAnalyses(LoopAnalysisManager &LAM) {
     C(LAM);
 }
 
-static std::optional<int> parseRepeatPassName(StringRef Name) {
-  if (!Name.consume_front("repeat<") || !Name.consume_back(">"))
-    return std::nullopt;
-  int Count;
-  if (Name.getAsInteger(0, Count) || Count <= 0)
-    return std::nullopt;
-  return Count;
-}
-
 static std::optional<std::pair<bool, bool>>
 parseFunctionPipelineName(StringRef Name) {
   std::pair<bool, bool> Params;
@@ -1173,14 +1164,15 @@ parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
 
     if (ParamName.consume_front("filter=")) {
-      RegClassFilterFunc Filter = PB.parseRegAllocFilter(ParamName);
+      std::optional<RegClassFilterFunc> Filter =
+          PB.parseRegAllocFilter(ParamName);
       if (!Filter) {
         return make_error<StringError>(
             formatv("invalid regallocfast register filter '{0}' ", ParamName)
                 .str(),
             inconvertibleErrorCode());
       }
-      Opts.Filter = Filter;
+      Opts.Filter = *Filter;
       Opts.FilterName = ParamName;
       continue;
     }
@@ -1243,10 +1235,6 @@ static bool isModulePassName(StringRef Name, CallbacksT &Callbacks) {
   if (Name == "coro-cond")
     return true;
 
-  // Explicitly handle custom-parsed pass names.
-  if (parseRepeatPassName(Name))
-    return true;
-
 #define MODULE_PASS(NAME, CREATE_PASS)                                         \
   if (Name == NAME)                                                            \
     return true;
@@ -1271,8 +1259,6 @@ static bool isCGSCCPassName(StringRef Name, CallbacksT &Callbacks) {
     return true;
 
   // Explicitly handle custom-parsed pass names.
-  if (parseRepeatPassName(Name))
-    return true;
   if (parseDevirtPassName(Name))
     return true;
 
@@ -1299,10 +1285,6 @@ static bool isFunctionPassName(StringRef Name, CallbacksT &Callbacks) {
   if (Name == "loop" || Name == "loop-mssa" || Name == "machine-function")
     return true;
 
-  // Explicitly handle custom-parsed pass names.
-  if (parseRepeatPassName(Name))
-    return true;
-
 #define FUNCTION_PASS(NAME, CREATE_PASS)                                       \
   if (Name == NAME)                                                            \
     return true;
@@ -1321,10 +1303,6 @@ template <typename CallbacksT>
 static bool isMachineFunctionPassName(StringRef Name, CallbacksT &Callbacks) {
   // Explicitly handle pass manager names.
   if (Name == "machine-function")
-    return true;
-
-  // Explicitly handle custom-parsed pass names.
-  if (parseRepeatPassName(Name))
     return true;
 
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)                               \
@@ -1349,10 +1327,6 @@ static bool isLoopNestPassName(StringRef Name, CallbacksT &Callbacks,
                                bool &UseMemorySSA) {
   UseMemorySSA = false;
 
-  // Explicitly handle custom-parsed pass names.
-  if (parseRepeatPassName(Name))
-    return true;
-
   if (PassBuilder::checkParametrizedPassName(Name, "lnicm")) {
     UseMemorySSA = true;
     return true;
@@ -1370,10 +1344,6 @@ template <typename CallbacksT>
 static bool isLoopPassName(StringRef Name, CallbacksT &Callbacks,
                            bool &UseMemorySSA) {
   UseMemorySSA = false;
-
-  // Explicitly handle custom-parsed pass names.
-  if (parseRepeatPassName(Name))
-    return true;
 
   if (PassBuilder::checkParametrizedPassName(Name, "licm")) {
     UseMemorySSA = true;
@@ -1489,13 +1459,6 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
         return Err;
       MPM.addPass(
           createModuleToFunctionPassAdaptor(std::move(FPM), Params->first));
-      return Error::success();
-    }
-    if (auto Count = parseRepeatPassName(Name)) {
-      ModulePassManager NestedMPM;
-      if (auto Err = parseModulePassPipeline(NestedMPM, InnerPipeline))
-        return Err;
-      MPM.addPass(createRepeatedPass(*Count, std::move(NestedMPM)));
       return Error::success();
     }
 
@@ -1660,13 +1623,6 @@ Error PassBuilder::parseCGSCCPass(CGSCCPassManager &CGPM,
           std::move(FPM), Params->first, Params->second));
       return Error::success();
     }
-    if (auto Count = parseRepeatPassName(Name)) {
-      CGSCCPassManager NestedCGPM;
-      if (auto Err = parseCGSCCPassPipeline(NestedCGPM, InnerPipeline))
-        return Err;
-      CGPM.addPass(createRepeatedPass(*Count, std::move(NestedCGPM)));
-      return Error::success();
-    }
     if (auto MaxRepetitions = parseDevirtPassName(Name)) {
       CGSCCPassManager NestedCGPM;
       if (auto Err = parseCGSCCPassPipeline(NestedCGPM, InnerPipeline))
@@ -1789,13 +1745,6 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
                                                   UseBFI, UseBPI));
       return Error::success();
     }
-    if (auto Count = parseRepeatPassName(Name)) {
-      FunctionPassManager NestedFPM;
-      if (auto Err = parseFunctionPassPipeline(NestedFPM, InnerPipeline))
-        return Err;
-      FPM.addPass(createRepeatedPass(*Count, std::move(NestedFPM)));
-      return Error::success();
-    }
     if (Name == "machine-function") {
       MachineFunctionPassManager MFPM;
       if (auto Err = parseMachinePassPipeline(MFPM, InnerPipeline))
@@ -1886,13 +1835,6 @@ Error PassBuilder::parseLoopPass(LoopPassManager &LPM,
         return Err;
       // Add the nested pass manager with the appropriate adaptor.
       LPM.addPass(std::move(NestedLPM));
-      return Error::success();
-    }
-    if (auto Count = parseRepeatPassName(Name)) {
-      LoopPassManager NestedLPM;
-      if (auto Err = parseLoopPassPipeline(NestedLPM, InnerPipeline))
-        return Err;
-      LPM.addPass(createRepeatedPass(*Count, std::move(NestedLPM)));
       return Error::success();
     }
 
@@ -2220,13 +2162,14 @@ Error PassBuilder::parseAAPipeline(AAManager &AA, StringRef PipelineText) {
   return Error::success();
 }
 
-RegClassFilterFunc PassBuilder::parseRegAllocFilter(StringRef FilterName) {
+std::optional<RegClassFilterFunc>
+PassBuilder::parseRegAllocFilter(StringRef FilterName) {
   if (FilterName == "all")
-    return allocateAllRegClasses;
+    return nullptr;
   for (auto &C : RegClassFilterParsingCallbacks)
     if (auto F = C(FilterName))
       return F;
-  return nullptr;
+  return std::nullopt;
 }
 
 static void printPassName(StringRef PassName, raw_ostream &OS) {

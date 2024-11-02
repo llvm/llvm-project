@@ -21,7 +21,6 @@
 using namespace llvm;
 
 namespace {
-
 uint32_t getTestKey(int i, uint32_t *) { return i; }
 uint32_t getTestValue(int i, uint32_t *) { return 42 + i; }
 
@@ -34,6 +33,14 @@ uint32_t *getTestValue(int i, uint32_t **) {
   static uint32_t dummy_arr1[8192];
   assert(i < 8192 && "Only support 8192 dummy keys.");
   return &dummy_arr1[i];
+}
+
+enum class EnumClass { Val };
+
+EnumClass getTestKey(int i, EnumClass *) {
+  // We can't possibly support 100 values for the swap test, so just return an
+  // invalid EnumClass for testing.
+  return static_cast<EnumClass>(i);
 }
 
 /// A test class that tries to check that construction and destruction
@@ -104,14 +111,19 @@ template <typename T>
 typename T::mapped_type *const DenseMapTest<T>::dummy_value_ptr = nullptr;
 
 // Register these types for testing.
+// clang-format off
 typedef ::testing::Types<DenseMap<uint32_t, uint32_t>,
                          DenseMap<uint32_t *, uint32_t *>,
                          DenseMap<CtorTester, CtorTester, CtorTesterMapInfo>,
+                         DenseMap<EnumClass, uint32_t>,
                          SmallDenseMap<uint32_t, uint32_t>,
                          SmallDenseMap<uint32_t *, uint32_t *>,
                          SmallDenseMap<CtorTester, CtorTester, 4,
-                                       CtorTesterMapInfo>
+                                       CtorTesterMapInfo>,
+                         SmallDenseMap<EnumClass, uint32_t>
                          > DenseMapTestTypes;
+// clang-format on
+
 TYPED_TEST_SUITE(DenseMapTest, DenseMapTestTypes, );
 
 // Empty map tests

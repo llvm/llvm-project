@@ -3224,18 +3224,18 @@ int X86::getCCMPCondFlagsFromCondCode(X86::CondCode CC) {
 #define GET_X86_NF_TRANSFORM_TABLE
 #define GET_X86_ND2NONND_TABLE
 #include "X86GenInstrMapping.inc"
-unsigned X86::getNFVariant(unsigned Opc) {
-  ArrayRef<X86TableEntry> Table = ArrayRef(X86NFTransformTable);
+
+static unsigned getNewOpcFromTable(ArrayRef<X86TableEntry> Table,
+                                   unsigned Opc) {
   const auto I = llvm::lower_bound(Table, Opc);
   return (I == Table.end() || I->OldOpc != Opc) ? 0U : I->NewOpc;
 }
+unsigned X86::getNFVariant(unsigned Opc) {
+  return getNewOpcFromTable(X86NFTransformTable, Opc);
+}
 
-static unsigned getNonNDVariant(unsigned Opc, const X86Subtarget &STI) {
-  if (!STI.hasNDD())
-    return 0U;
-  ArrayRef<X86TableEntry> Table = ArrayRef(X86ND2NonNDTable);
-  const auto I = llvm::lower_bound(Table, Opc);
-  return (I == Table.end() || I->OldOpc != Opc) ? 0U : I->NewOpc;
+unsigned X86::getNonNDVariant(unsigned Opc) {
+  return getNewOpcFromTable(X86ND2NonNDTable, Opc);
 }
 
 /// Return the inverse of the specified condition,
@@ -7202,7 +7202,7 @@ static MachineInstr *fuseInst(MachineFunction &MF, unsigned Opcode,
   return MIB;
 }
 
-static MachineInstr *MakeM0Inst(const TargetInstrInfo &TII, unsigned Opcode,
+static MachineInstr *makeM0Inst(const TargetInstrInfo &TII, unsigned Opcode,
                                 ArrayRef<MachineOperand> MOs,
                                 MachineBasicBlock::iterator InsertPt,
                                 MachineInstr &MI) {
@@ -7281,6 +7281,12 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
         return NewMI;
       }
     }
+    break;
+  case X86::MOV32r0:
+    if (auto *NewMI =
+            makeM0Inst(*this, (Size == 4) ? X86::MOV32mi : X86::MOV64mi32, MOs,
+                       InsertPt, MI))
+      return NewMI;
     break;
   }
 
@@ -7382,16 +7388,12 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
                                                Size, Alignment))
     return CustomMI;
 
-  if (Opc == X86::MOV32r0)
-    if (auto *NewMI = MakeM0Inst(*this, X86::MOV32mi, MOs, InsertPt, MI))
-      return NewMI;
-
   // Folding a memory location into the two-address part of a two-address
   // instruction is different than folding it other places.  It requires
   // replacing the *two* registers with the memory location.
   //
   // Utilize the mapping NonNDD -> RMW for the NDD variant.
-  unsigned NonNDOpc = getNonNDVariant(Opc, Subtarget);
+  unsigned NonNDOpc = Subtarget.hasNDD() ? X86::getNonNDVariant(Opc) : 0U;
   const X86FoldTableEntry *I =
       IsTwoAddr ? lookupTwoAddrFoldTable(NonNDOpc ? NonNDOpc : Opc)
                 : lookupFoldTable(Opc, OpNum);
@@ -7483,6 +7485,10 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   for (auto Op : Ops) {
     MachineOperand &MO = MI.getOperand(Op);
     auto SubReg = MO.getSubReg();
+    // MOV32r0 is special b/c it's used to clear a 64-bit register too.
+    // (See patterns for MOV32r0 in TD files).
+    if (MI.getOpcode() == X86::MOV32r0 && SubReg == X86::sub_32bit)
+      continue;
     if (SubReg && (MO.isDef() || SubReg == X86::sub_8bit_hi))
       return nullptr;
   }
@@ -7508,7 +7514,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     switch (Opc) {
     default:
       // NDD can be folded into RMW though its Op0 and Op1 are not tied.
-      return getNonNDVariant(Opc, Subtarget) ? Impl() : nullptr;
+      return (Subtarget.hasNDD() ? X86::getNonNDVariant(Opc) : 0U) ? Impl()
+                                                                   : nullptr;
     case X86::TEST8rr:
       NewOpc = X86::CMP8ri;
       RCSize = 1;
@@ -10324,7 +10331,8 @@ struct LDTLSCleanup : public MachineFunctionPass {
       return false;
     }
 
-    MachineDominatorTree *DT = &getAnalysis<MachineDominatorTree>();
+    MachineDominatorTree *DT =
+        &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
     return VisitNode(DT->getRootNode(), 0);
   }
 
@@ -10411,7 +10419,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };

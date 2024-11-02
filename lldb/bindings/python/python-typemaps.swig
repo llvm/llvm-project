@@ -427,7 +427,6 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   free($1);
 }
 
-
 // For Log::LogOutputCallback
 %typemap(in) (lldb::LogOutputCallback log_callback, void *baton) {
   if (!($input == Py_None ||
@@ -472,6 +471,23 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 }
 
 %typemap(typecheck) (lldb::SBDebuggerDestroyCallback destroy_callback, void *baton) {
+  $1 = $input == Py_None;
+  $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
+}
+
+%typemap(in) (lldb::CommandOverrideCallback callback, void *baton) {
+  if (!($input == Py_None ||
+        PyCallable_Check(reinterpret_cast<PyObject *>($input)))) {
+    PyErr_SetString(PyExc_TypeError, "Need a callable object or None!");
+    SWIG_fail;
+  }
+
+  // Don't lose the callback reference.
+  Py_INCREF($input);
+  $1 = LLDBSwigPythonCallPythonSBCommandInterpreterSetCommandOverrideCallback;
+  $2 = $input;
+}
+%typemap(typecheck) (lldb::CommandOverrideCallback callback, void *baton) {
   $1 = $input == Py_None;
   $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
 }

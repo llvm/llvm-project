@@ -893,11 +893,13 @@ define i64 @rotr_select_zext_shamt(i64 %x, i32 %y) {
 define i32 @rotl_constant_expr(i32 %shamt) {
 ; CHECK-LABEL: @rotl_constant_expr(
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 ptrtoint (ptr @external_global to i32), [[SHAMT:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[SHR]], shl (i32 ptrtoint (ptr @external_global to i32), i32 11)
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 ptrtoint (ptr @external_global to i32), 11
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[SHR]], [[SHL]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %shr = lshr i32 ptrtoint (ptr @external_global to i32), %shamt
-  %r = or i32 %shr, shl (i32 ptrtoint (ptr @external_global to i32), i32 11)
+  %shl = shl i32 ptrtoint (ptr @external_global to i32), 11
+  %r = or i32 %shr, %shl
   ret i32 %r
 }
 

@@ -39,19 +39,6 @@ using namespace llvm;
 
 MCWasmStreamer::~MCWasmStreamer() = default; // anchor.
 
-void MCWasmStreamer::mergeFragment(MCDataFragment *DF, MCDataFragment *EF) {
-  flushPendingLabels(DF, DF->getContents().size());
-
-  for (unsigned I = 0, E = EF->getFixups().size(); I != E; ++I) {
-    EF->getFixups()[I].setOffset(EF->getFixups()[I].getOffset() +
-                                 DF->getContents().size());
-    DF->getFixups().push_back(EF->getFixups()[I]);
-  }
-  if (DF->getSubtargetInfo() == nullptr && EF->getSubtargetInfo())
-    DF->setHasInstructions(*EF->getSubtargetInfo());
-  DF->getContents().append(EF->getContents().begin(), EF->getContents().end());
-}
-
 void MCWasmStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
   auto *Symbol = cast<MCSymbolWasm>(S);
   MCObjectStreamer::emitLabel(Symbol, Loc);

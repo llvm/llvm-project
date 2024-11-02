@@ -14,6 +14,7 @@
 #include "llvm/Transforms/IPO/SampleProfileMatcher.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 using namespace sampleprof;
@@ -23,6 +24,11 @@ using namespace sampleprof;
 extern cl::opt<bool> SalvageStaleProfile;
 extern cl::opt<bool> PersistProfileStaleness;
 extern cl::opt<bool> ReportProfileStaleness;
+
+static cl::opt<unsigned> SalvageStaleProfileMaxCallsites(
+    "salvage-stale-profile-max-callsites", cl::Hidden, cl::init(UINT_MAX),
+    cl::desc("The maximum number of callsites in a function, above which stale "
+             "profile matching will be skipped."));
 
 void SampleProfileMatcher::findIRAnchors(const Function &F,
                                          AnchorMap &IRAnchors) {
@@ -299,6 +305,16 @@ void SampleProfileMatcher::runStaleProfileMatching(
 
   if (FilteredIRAnchorsList.empty() || FilteredProfileAnchorList.empty())
     return;
+
+  if (FilteredIRAnchorsList.size() > SalvageStaleProfileMaxCallsites ||
+      FilteredProfileAnchorList.size() > SalvageStaleProfileMaxCallsites) {
+    LLVM_DEBUG(dbgs() << "Skip stale profile matching for " << F.getName()
+                      << " because the number of callsites in the IR is "
+                      << FilteredIRAnchorsList.size()
+                      << " and in the profile is "
+                      << FilteredProfileAnchorList.size() << "\n");
+    return;
+  }
 
   // Match the callsite anchors by finding the longest common subsequence
   // between IR and profile. Note that we need to use IR anchor as base(A side)

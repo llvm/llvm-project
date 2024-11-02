@@ -42,6 +42,15 @@ define float @cos_f(float %a) {
   ret float %1
 }
 
+declare float     @llvm.tan.f32(float %Val)
+define float @tan_f(float %a) {
+; CHECK-LABEL: tan_f:
+; SOFT: bl tanf
+; HARD: b tanf
+  %1 = call float @llvm.tan.f32(float %a)
+  ret float %1
+}
+
 declare float     @llvm.pow.f32(float %Val, float %power)
 define float @pow_f(float %a, float %b) {
 ; CHECK-LABEL: pow_f:
