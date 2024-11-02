@@ -222,6 +222,11 @@ Value *handleAsDoubleBuiltin(CodeGenFunction &CGF, const CallExpr *E) {
     ResultType = llvm::FixedVectorType::get(CGF.DoubleTy, N);
   }
 
+  if (CGF.CGM.getTarget().getTriple().isDXIL())
+    return CGF.Builder.CreateIntrinsic(
+        /*ReturnType=*/ResultType, Intrinsic::dx_asdouble,
+        ArrayRef<Value *>{OpLowBits, OpHighBits}, nullptr, "hlsl.asdouble");
+
   if (!E->getArg(0)->getType()->isVectorType()) {
     OpLowBits = CGF.Builder.CreateVectorSplat(1, OpLowBits);
     OpHighBits = CGF.Builder.CreateVectorSplat(1, OpHighBits);
