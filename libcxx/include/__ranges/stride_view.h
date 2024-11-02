@@ -12,6 +12,7 @@
 
 #include <__assert>
 #include <__compare/three_way_comparable.h>
+#include <__concepts/constructible.h>
 #include <__concepts/convertible_to.h>
 #include <__concepts/derived_from.h>
 #include <__concepts/equality_comparable.h>
@@ -34,6 +35,8 @@
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/range_adaptor.h>
 #include <__ranges/view_interface.h>
+
+#include <__type_traits/make_unsigned.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -395,7 +398,7 @@ struct __fn {
 
   template <class _Np>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Np&& __n) const {
-    return __range_adaptor_closure_t(std::__bind_back(*this, std::forward<_Np>(__n)));
+    return __pipeable(std::__bind_back(*this, std::forward<_Np>(__n)));
   }
 };
 } // namespace __stride_view
