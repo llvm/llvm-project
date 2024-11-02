@@ -701,43 +701,45 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   }
 
   auto LegalizeNarrowFP = [this](MVT ScalarVT) {
-    for (auto Op : {ISD::SETCC,
-                    ISD::SELECT_CC,
-                    ISD::BR_CC,
-                    ISD::FADD,
-                    ISD::FSUB,
-                    ISD::FMUL,
-                    ISD::FDIV,
-                    ISD::FMA,
-                    ISD::FCEIL,
-                    ISD::FSQRT,
-                    ISD::FFLOOR,
-                    ISD::FNEARBYINT,
-                    ISD::FRINT,
-                    ISD::FROUND,
-                    ISD::FROUNDEVEN,
-                    ISD::FTRUNC,
-                    ISD::FMINNUM,
-                    ISD::FMAXNUM,
-                    ISD::FMINIMUM,
-                    ISD::FMAXIMUM,
-                    ISD::STRICT_FADD,
-                    ISD::STRICT_FSUB,
-                    ISD::STRICT_FMUL,
-                    ISD::STRICT_FDIV,
-                    ISD::STRICT_FMA,
-                    ISD::STRICT_FCEIL,
-                    ISD::STRICT_FFLOOR,
-                    ISD::STRICT_FSQRT,
-                    ISD::STRICT_FRINT,
-                    ISD::STRICT_FNEARBYINT,
-                    ISD::STRICT_FROUND,
-                    ISD::STRICT_FTRUNC,
-                    ISD::STRICT_FROUNDEVEN,
-                    ISD::STRICT_FMINNUM,
-                    ISD::STRICT_FMAXNUM,
-                    ISD::STRICT_FMINIMUM,
-                    ISD::STRICT_FMAXIMUM})
+    for (auto Op : {
+             ISD::SETCC,
+             ISD::SELECT_CC,
+             ISD::BR_CC,
+             ISD::FADD,
+             ISD::FSUB,
+             ISD::FMUL,
+             ISD::FDIV,
+             ISD::FMA,
+             ISD::FCEIL,
+             ISD::FSQRT,
+             ISD::FFLOOR,
+             ISD::FNEARBYINT,
+             ISD::FRINT,
+             ISD::FROUND,
+             ISD::FROUNDEVEN,
+             ISD::FTRUNC,
+             ISD::FMINNUM,
+             ISD::FMAXNUM,
+             ISD::FMINIMUM,
+             ISD::FMAXIMUM,
+             ISD::STRICT_FADD,
+             ISD::STRICT_FSUB,
+             ISD::STRICT_FMUL,
+             ISD::STRICT_FDIV,
+             ISD::STRICT_FMA,
+             ISD::STRICT_FCEIL,
+             ISD::STRICT_FFLOOR,
+             ISD::STRICT_FSQRT,
+             ISD::STRICT_FRINT,
+             ISD::STRICT_FNEARBYINT,
+             ISD::STRICT_FROUND,
+             ISD::STRICT_FTRUNC,
+             ISD::STRICT_FROUNDEVEN,
+             ISD::STRICT_FMINNUM,
+             ISD::STRICT_FMAXNUM,
+             ISD::STRICT_FMINIMUM,
+             ISD::STRICT_FMAXIMUM,
+         })
       setOperationAction(Op, ScalarVT, Promote);
 
     for (auto Op : {ISD::FNEG, ISD::FABS})
@@ -752,45 +754,45 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     // promote v4f16 to v4f32 when that is known to be safe.
     auto V4Narrow = MVT::getVectorVT(ScalarVT, 4);
-    setOperationPromotedToType(ISD::FADD, V4Narrow, MVT::v4f32);
-    setOperationPromotedToType(ISD::FSUB, V4Narrow, MVT::v4f32);
-    setOperationPromotedToType(ISD::FMUL, V4Narrow, MVT::v4f32);
-    setOperationPromotedToType(ISD::FDIV, V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FADD,       V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FSUB,       V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FMUL,       V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FDIV,       V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FCEIL,      V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FFLOOR,     V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FROUND,     V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FTRUNC,     V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FROUNDEVEN, V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FRINT,      V4Narrow, MVT::v4f32);
+    setOperationPromotedToType(ISD::FNEARBYINT, V4Narrow, MVT::v4f32);
 
-    setOperationAction(ISD::FABS, V4Narrow, Legal);
-    setOperationAction(ISD::FNEG, V4Narrow, Legal);
-    setOperationAction(ISD::FROUND,      V4Narrow, Expand);
-    setOperationAction(ISD::FROUNDEVEN,  V4Narrow, Expand);
+    setOperationAction(ISD::FABS,        V4Narrow, Legal);
+    setOperationAction(ISD::FNEG, 	 V4Narrow, Legal);
     setOperationAction(ISD::FMA,         V4Narrow, Expand);
     setOperationAction(ISD::SETCC,       V4Narrow, Custom);
     setOperationAction(ISD::BR_CC,       V4Narrow, Expand);
     setOperationAction(ISD::SELECT,      V4Narrow, Expand);
     setOperationAction(ISD::SELECT_CC,   V4Narrow, Expand);
-    setOperationAction(ISD::FTRUNC,      V4Narrow, Expand);
-    setOperationAction(ISD::FCOPYSIGN, V4Narrow, Custom);
-    setOperationAction(ISD::FFLOOR,      V4Narrow, Expand);
-    setOperationAction(ISD::FCEIL,       V4Narrow, Expand);
-    setOperationAction(ISD::FRINT,       V4Narrow, Expand);
-    setOperationAction(ISD::FNEARBYINT,  V4Narrow, Expand);
+    setOperationAction(ISD::FCOPYSIGN,   V4Narrow, Custom);
     setOperationAction(ISD::FSQRT,       V4Narrow, Expand);
 
     auto V8Narrow = MVT::getVectorVT(ScalarVT, 8);
-    setOperationAction(ISD::FABS, V8Narrow, Legal);
-    setOperationAction(ISD::FADD,        V8Narrow, Expand);
-    setOperationAction(ISD::FCEIL,       V8Narrow, Expand);
-    setOperationAction(ISD::FCOPYSIGN, V8Narrow, Custom);
-    setOperationAction(ISD::FDIV,        V8Narrow, Expand);
-    setOperationAction(ISD::FFLOOR,      V8Narrow, Expand);
+    setOperationAction(ISD::FABS,        V8Narrow, Legal);
+    setOperationAction(ISD::FADD,        V8Narrow, Legal);
+    setOperationAction(ISD::FCEIL,       V8Narrow, Legal);
+    setOperationAction(ISD::FCOPYSIGN,   V8Narrow, Custom);
+    setOperationAction(ISD::FDIV,        V8Narrow, Legal);
+    setOperationAction(ISD::FFLOOR,      V8Narrow, Legal);
     setOperationAction(ISD::FMA,         V8Narrow, Expand);
-    setOperationAction(ISD::FMUL,        V8Narrow, Expand);
-    setOperationAction(ISD::FNEARBYINT,  V8Narrow, Expand);
-    setOperationAction(ISD::FNEG, V8Narrow, Legal);
-    setOperationAction(ISD::FROUND,      V8Narrow, Expand);
-    setOperationAction(ISD::FROUNDEVEN,  V8Narrow, Expand);
-    setOperationAction(ISD::FRINT,       V8Narrow, Expand);
+    setOperationAction(ISD::FMUL,        V8Narrow, Legal);
+    setOperationAction(ISD::FNEARBYINT,  V8Narrow, Legal);
+    setOperationAction(ISD::FNEG, 	 V8Narrow, Legal);
+    setOperationAction(ISD::FROUND,      V8Narrow, Legal);
+    setOperationAction(ISD::FROUNDEVEN,  V8Narrow, Legal);
+    setOperationAction(ISD::FRINT,       V8Narrow, Legal);
     setOperationAction(ISD::FSQRT,       V8Narrow, Expand);
-    setOperationAction(ISD::FSUB,        V8Narrow, Expand);
-    setOperationAction(ISD::FTRUNC,      V8Narrow, Expand);
+    setOperationAction(ISD::FSUB,        V8Narrow, Legal);
+    setOperationAction(ISD::FTRUNC,      V8Narrow, Legal);
     setOperationAction(ISD::SETCC,       V8Narrow, Expand);
     setOperationAction(ISD::BR_CC,       V8Narrow, Expand);
     setOperationAction(ISD::SELECT,      V8Narrow, Expand);
@@ -4507,13 +4509,16 @@ SDValue AArch64TargetLowering::LowerINT_TO_FP(SDValue Op,
   };
 
   if (Op.getValueType() == MVT::bf16) {
+    unsigned MaxWidth = IsSigned
+                            ? DAG.ComputeMaxSignificantBits(SrcVal)
+                            : DAG.computeKnownBits(SrcVal).countMaxActiveBits();
     // bf16 conversions are promoted to f32 when converting from i16.
-    if (DAG.ComputeMaxSignificantBits(SrcVal) <= 24) {
+    if (MaxWidth <= 24) {
       return IntToFpViaPromotion(MVT::f32);
     }
 
     // bf16 conversions are promoted to f64 when converting from i32.
-    if (DAG.ComputeMaxSignificantBits(SrcVal) <= 53) {
+    if (MaxWidth <= 53) {
       return IntToFpViaPromotion(MVT::f64);
     }
 
@@ -10590,13 +10595,19 @@ static SDValue getEstimate(const AArch64Subtarget *ST, unsigned Opcode,
         VT == MVT::v4f32)) ||
       (ST->hasSVE() &&
        (VT == MVT::nxv8f16 || VT == MVT::nxv4f32 || VT == MVT::nxv2f64))) {
-    if (ExtraSteps == TargetLoweringBase::ReciprocalEstimate::Unspecified)
+    if (ExtraSteps == TargetLoweringBase::ReciprocalEstimate::Unspecified) {
       // For the reciprocal estimates, convergence is quadratic, so the number
       // of digits is doubled after each iteration.  In ARMv8, the accuracy of
       // the initial estimate is 2^-8.  Thus the number of extra steps to refine
       // the result for float (23 mantissa bits) is 2 and for double (52
       // mantissa bits) is 3.
-      ExtraSteps = VT.getScalarType() == MVT::f64 ? 3 : 2;
+      constexpr unsigned AccurateBits = 8;
+      unsigned DesiredBits =
+          APFloat::semanticsPrecision(DAG.EVTToAPFloatSemantics(VT));
+      ExtraSteps = DesiredBits <= AccurateBits
+                       ? 0
+                       : Log2_64_Ceil(DesiredBits) - Log2_64_Ceil(AccurateBits);
+    }
 
     return DAG.getNode(Opcode, SDLoc(Operand), VT, Operand);
   }
@@ -19375,6 +19386,94 @@ static SDValue performBuildVectorCombine(SDNode *N,
                                          SelectionDAG &DAG) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
+
+  if (VT == MVT::v4f16 || VT == MVT::v4bf16) {
+    SDValue Elt0 = N->getOperand(0), Elt1 = N->getOperand(1),
+            Elt2 = N->getOperand(2), Elt3 = N->getOperand(3);
+    if (Elt0->getOpcode() == ISD::FP_ROUND &&
+        Elt1->getOpcode() == ISD::FP_ROUND &&
+        isa<ConstantSDNode>(Elt0->getOperand(1)) &&
+        isa<ConstantSDNode>(Elt1->getOperand(1)) &&
+        Elt0->getConstantOperandVal(1) == Elt1->getConstantOperandVal(1) &&
+        Elt0->getOperand(0)->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        Elt1->getOperand(0)->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        // Constant index.
+        isa<ConstantSDNode>(Elt0->getOperand(0)->getOperand(1)) &&
+        isa<ConstantSDNode>(Elt1->getOperand(0)->getOperand(1)) &&
+        Elt0->getOperand(0)->getOperand(0) ==
+            Elt1->getOperand(0)->getOperand(0) &&
+        Elt0->getOperand(0)->getConstantOperandVal(1) == 0 &&
+        Elt1->getOperand(0)->getConstantOperandVal(1) == 1) {
+      SDValue LowLanesSrcVec = Elt0->getOperand(0)->getOperand(0);
+      if (LowLanesSrcVec.getValueType() == MVT::v2f64) {
+        SDValue HighLanes;
+        if (Elt2->getOpcode() == ISD::UNDEF &&
+            Elt3->getOpcode() == ISD::UNDEF) {
+          HighLanes = DAG.getUNDEF(MVT::v2f32);
+        } else if (Elt2->getOpcode() == ISD::FP_ROUND &&
+                   Elt3->getOpcode() == ISD::FP_ROUND &&
+                   isa<ConstantSDNode>(Elt2->getOperand(1)) &&
+                   isa<ConstantSDNode>(Elt3->getOperand(1)) &&
+                   Elt2->getConstantOperandVal(1) ==
+                       Elt3->getConstantOperandVal(1) &&
+                   Elt2->getOperand(0)->getOpcode() ==
+                       ISD::EXTRACT_VECTOR_ELT &&
+                   Elt3->getOperand(0)->getOpcode() ==
+                       ISD::EXTRACT_VECTOR_ELT &&
+                   // Constant index.
+                   isa<ConstantSDNode>(Elt2->getOperand(0)->getOperand(1)) &&
+                   isa<ConstantSDNode>(Elt3->getOperand(0)->getOperand(1)) &&
+                   Elt2->getOperand(0)->getOperand(0) ==
+                       Elt3->getOperand(0)->getOperand(0) &&
+                   Elt2->getOperand(0)->getConstantOperandVal(1) == 0 &&
+                   Elt3->getOperand(0)->getConstantOperandVal(1) == 1) {
+          SDValue HighLanesSrcVec = Elt2->getOperand(0)->getOperand(0);
+          HighLanes =
+              DAG.getNode(AArch64ISD::FCVTXN, DL, MVT::v2f32, HighLanesSrcVec);
+        }
+        if (HighLanes) {
+          SDValue DoubleToSingleSticky =
+              DAG.getNode(AArch64ISD::FCVTXN, DL, MVT::v2f32, LowLanesSrcVec);
+          SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4f32,
+                                       DoubleToSingleSticky, HighLanes);
+          return DAG.getNode(ISD::FP_ROUND, DL, VT, Concat,
+                             Elt0->getOperand(1));
+        }
+      }
+    }
+  }
+
+  if (VT == MVT::v2f64) {
+    SDValue Elt0 = N->getOperand(0), Elt1 = N->getOperand(1);
+    if (Elt0->getOpcode() == ISD::FP_EXTEND &&
+        Elt1->getOpcode() == ISD::FP_EXTEND &&
+        Elt0->getOperand(0)->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        Elt1->getOperand(0)->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        Elt0->getOperand(0)->getOperand(0) ==
+            Elt1->getOperand(0)->getOperand(0) &&
+        // Constant index.
+        isa<ConstantSDNode>(Elt0->getOperand(0)->getOperand(1)) &&
+        isa<ConstantSDNode>(Elt1->getOperand(0)->getOperand(1)) &&
+        Elt0->getOperand(0)->getConstantOperandVal(1) + 1 ==
+            Elt1->getOperand(0)->getConstantOperandVal(1) &&
+        // EXTRACT_SUBVECTOR requires that Idx be a constant multiple of
+        // ResultType's known minimum vector length.
+        Elt0->getOperand(0)->getConstantOperandVal(1) %
+                VT.getVectorMinNumElements() ==
+            0) {
+      SDValue SrcVec = Elt0->getOperand(0)->getOperand(0);
+      if (SrcVec.getValueType() == MVT::v4f16 ||
+          SrcVec.getValueType() == MVT::v4bf16) {
+        SDValue HalfToSingle =
+            DAG.getNode(ISD::FP_EXTEND, DL, MVT::v4f32, SrcVec);
+        SDValue SubvectorIdx = Elt0->getOperand(0)->getOperand(1);
+        SDValue Extract = DAG.getNode(
+            ISD::EXTRACT_SUBVECTOR, DL, VT.changeVectorElementType(MVT::f32),
+            HalfToSingle, SubvectorIdx);
+        return DAG.getNode(ISD::FP_EXTEND, DL, VT, Extract);
+      }
+    }
+  }
 
   // A build vector of two extracted elements is equivalent to an
   // extract subvector where the inner vector is any-extended to the

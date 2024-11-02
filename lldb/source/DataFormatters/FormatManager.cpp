@@ -451,8 +451,13 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
   if (valobj.GetSummaryFormat().get() != nullptr)
     return valobj.GetSummaryFormat()->IsOneLiner();
 
+  auto num_children = valobj.GetNumChildren();
+  if (!num_children) {
+    llvm::consumeError(num_children.takeError());
+    return true;
+  }
   // no children, no party
-  if (valobj.GetNumChildren() == 0)
+  if (*num_children == 0)
     return false;
 
   // ask the type if it has any opinion about this eLazyBoolCalculate == no
@@ -471,7 +476,7 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
 
   size_t total_children_name_len = 0;
 
-  for (size_t idx = 0; idx < valobj.GetNumChildren(); idx++) {
+  for (size_t idx = 0; idx < *num_children; idx++) {
     bool is_synth_val = false;
     ValueObjectSP child_sp(valobj.GetChildAtIndex(idx));
     // something is wrong here - bail out
@@ -523,7 +528,7 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
     }
 
     // if this child has children..
-    if (child_sp->GetNumChildren()) {
+    if (child_sp->HasChildren()) {
       // ...and no summary...
       // (if it had a summary and the summary wanted children, we would have
       // bailed out anyway

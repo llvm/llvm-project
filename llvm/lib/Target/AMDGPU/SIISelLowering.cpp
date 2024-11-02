@@ -15495,16 +15495,32 @@ bool SITargetLowering::checkAsmConstraintVal(SDValue Op, StringRef Constraint,
   llvm_unreachable("Invalid asm constraint");
 }
 
-bool SITargetLowering::checkAsmConstraintValA(SDValue Op,
-                                              uint64_t Val,
+bool SITargetLowering::checkAsmConstraintValA(SDValue Op, uint64_t Val,
                                               unsigned MaxSize) const {
   unsigned Size = std::min<unsigned>(Op.getScalarValueSizeInBits(), MaxSize);
   bool HasInv2Pi = Subtarget->hasInv2PiInlineImm();
-  if ((Size == 16 && AMDGPU::isInlinableLiteral16(Val, HasInv2Pi)) ||
-      (Size == 32 && AMDGPU::isInlinableLiteral32(Val, HasInv2Pi)) ||
-      (Size == 64 && AMDGPU::isInlinableLiteral64(Val, HasInv2Pi))) {
-    return true;
+  if (Size == 16) {
+    MVT VT = Op.getSimpleValueType();
+    switch (VT.SimpleTy) {
+    default:
+      return false;
+    case MVT::i16:
+      return AMDGPU::isInlinableLiteralI16(Val, HasInv2Pi);
+    case MVT::f16:
+      return AMDGPU::isInlinableLiteralFP16(Val, HasInv2Pi);
+    case MVT::bf16:
+      return AMDGPU::isInlinableLiteralBF16(Val, HasInv2Pi);
+    case MVT::v2i16:
+      return AMDGPU::getInlineEncodingV2I16(Val).has_value();
+    case MVT::v2f16:
+      return AMDGPU::getInlineEncodingV2F16(Val).has_value();
+    case MVT::v2bf16:
+      return AMDGPU::getInlineEncodingV2BF16(Val).has_value();
+    }
   }
+  if ((Size == 32 && AMDGPU::isInlinableLiteral32(Val, HasInv2Pi)) ||
+      (Size == 64 && AMDGPU::isInlinableLiteral64(Val, HasInv2Pi)))
+    return true;
   return false;
 }
 

@@ -857,10 +857,11 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                   "\"(%s) %s\" is not an array type",
                   valobj_sp->GetTypeName().AsCString("<invalid type>"),
                   var_expr_path_strm.GetData());
-            } else if (
-                static_cast<uint32_t>(child_index) >=
-                synthetic
-                    ->GetNumChildren() /* synthetic does not have that many values */) {
+            } else if (static_cast<uint32_t>(child_index) >=
+                       synthetic
+                           ->GetNumChildrenIgnoringErrors() /* synthetic does
+                                                                not have that
+                                                                many values */) {
               valobj_sp->GetExpressionPath(var_expr_path_strm);
               error.SetErrorStringWithFormat(
                   "array index %ld is not valid for \"(%s) %s\"", child_index,
@@ -929,10 +930,9 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                 "\"(%s) %s\" is not an array type",
                 valobj_sp->GetTypeName().AsCString("<invalid type>"),
                 var_expr_path_strm.GetData());
-          } else if (
-              static_cast<uint32_t>(child_index) >=
-              synthetic
-                  ->GetNumChildren() /* synthetic does not have that many values */) {
+          } else if (static_cast<uint32_t>(child_index) >=
+                     synthetic->GetNumChildrenIgnoringErrors() /* synthetic
+                                     does not have that many values */) {
             valobj_sp->GetExpressionPath(var_expr_path_strm);
             error.SetErrorStringWithFormat(
                 "array index %ld is not valid for \"(%s) %s\"", child_index,
@@ -1397,7 +1397,8 @@ ValueObjectSP GetValueForOffset(StackFrame &frame, ValueObjectSP &parent,
     return parent;
   }
 
-  for (int ci = 0, ce = parent->GetNumChildren(); ci != ce; ++ci) {
+  for (int ci = 0, ce = parent->GetNumChildrenIgnoringErrors(); ci != ce;
+       ++ci) {
     ValueObjectSP child_sp = parent->GetChildAtIndex(ci);
 
     if (!child_sp) {

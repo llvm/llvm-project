@@ -380,7 +380,6 @@ set(files
   __format/format_context.h
   __format/format_error.h
   __format/format_functions.h
-  __format/format_fwd.h
   __format/format_parse_context.h
   __format/format_string.h
   __format/format_to_n_result.h
@@ -430,6 +429,7 @@ set(files
   __fwd/array.h
   __fwd/bit_reference.h
   __fwd/complex.h
+  __fwd/format.h
   __fwd/fstream.h
   __fwd/functional.h
   __fwd/ios.h
