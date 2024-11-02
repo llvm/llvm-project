@@ -1267,9 +1267,12 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
         continue;
       DILabel *OldLabel = DLI->getLabel();
       DINode *&NewLabel = RemappedMetadata[OldLabel];
-      if (!NewLabel)
-        NewLabel = DILabel::get(Ctx, NewSP, OldLabel->getName(),
+      if (!NewLabel) {
+        DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
+            *OldLabel->getScope(), *NewSP, Ctx, Cache);
+        NewLabel = DILabel::get(Ctx, NewScope, OldLabel->getName(),
                                 OldLabel->getFile(), OldLabel->getLine());
+      }
       DLI->setArgOperand(0, MetadataAsValue::get(Ctx, NewLabel));
       continue;
     }
