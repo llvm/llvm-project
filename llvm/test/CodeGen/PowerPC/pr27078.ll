@@ -7,23 +7,22 @@ define <4 x float> @bar(float* %p, float* %q) {
 ; CHECK-NEXT:    li 5, 16
 ; CHECK-NEXT:    lxvw4x 2, 0, 3
 ; CHECK-NEXT:    lxvw4x 3, 0, 4
+; CHECK-NEXT:    addis 6, 2, .LCPI0_0@toc@ha
 ; CHECK-NEXT:    lxvw4x 0, 3, 5
 ; CHECK-NEXT:    lxvw4x 1, 4, 5
 ; CHECK-NEXT:    li 5, 32
 ; CHECK-NEXT:    xvsubsp 35, 3, 2
 ; CHECK-NEXT:    xvsubsp 34, 1, 0
 ; CHECK-NEXT:    lxvw4x 0, 3, 5
+; CHECK-NEXT:    addi 3, 6, .LCPI0_0@toc@l
 ; CHECK-NEXT:    lxvw4x 1, 4, 5
-; CHECK-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI0_0@toc@l
 ; CHECK-NEXT:    lxvw4x 36, 0, 3
 ; CHECK-NEXT:    addis 3, 2, .LCPI0_1@toc@ha
-; CHECK-NEXT:    xvsubsp 0, 1, 0
 ; CHECK-NEXT:    addi 3, 3, .LCPI0_1@toc@l
+; CHECK-NEXT:    xvsubsp 37, 1, 0
 ; CHECK-NEXT:    vperm 2, 3, 2, 4
-; CHECK-NEXT:    lxvw4x 36, 0, 3
-; CHECK-NEXT:    xxmrghw 35, 0, 0
-; CHECK-NEXT:    vperm 2, 2, 3, 4
+; CHECK-NEXT:    lxvw4x 35, 0, 3
+; CHECK-NEXT:    vperm 2, 2, 5, 3
 ; CHECK-NEXT:    blr
   %1 = bitcast float* %p to <12 x float>*
   %2 = bitcast float* %q to <12 x float>*

@@ -1688,6 +1688,11 @@ SDValue peekThroughExtractSubvectors(SDValue V);
 /// constant is canonicalized to be operand 1.
 bool isBitwiseNot(SDValue V, bool AllowUndefs = false);
 
+/// If \p V is a bitwise not, returns the inverted operand. Otherwise returns
+/// an empty SDValue. Only bits set in \p Mask are required to be inverted,
+/// other bits may be arbitrary.
+SDValue getBitwiseNotOperand(SDValue V, SDValue Mask, bool AllowUndefs);
+
 /// Returns the SDNode if it is a constant splat BuildVector or constant int.
 ConstantSDNode *isConstOrConstSplat(SDValue N, bool AllowUndefs = false,
                                     bool AllowTruncation = false);
@@ -2698,13 +2703,9 @@ public:
     return static_cast<ISD::MemIndexType>(LSBaseSDNodeBits.AddressingMode);
   }
   bool isIndexScaled() const {
-    return (getIndexType() == ISD::SIGNED_SCALED) ||
-           (getIndexType() == ISD::UNSIGNED_SCALED);
+    return !cast<ConstantSDNode>(getScale())->isOne();
   }
-  bool isIndexSigned() const {
-    return (getIndexType() == ISD::SIGNED_SCALED) ||
-           (getIndexType() == ISD::SIGNED_UNSCALED);
-  }
+  bool isIndexSigned() const { return isIndexTypeSigned(getIndexType()); }
 
   // In the both nodes address is Op1, mask is Op2:
   // VPGatherSDNode  (Chain, base, index, scale, mask, vlen)
@@ -2785,17 +2786,10 @@ public:
   ISD::MemIndexType getIndexType() const {
     return static_cast<ISD::MemIndexType>(LSBaseSDNodeBits.AddressingMode);
   }
-  void setIndexType(ISD::MemIndexType IndexType) {
-    LSBaseSDNodeBits.AddressingMode = IndexType;
-  }
   bool isIndexScaled() const {
-    return (getIndexType() == ISD::SIGNED_SCALED) ||
-           (getIndexType() == ISD::UNSIGNED_SCALED);
+    return !cast<ConstantSDNode>(getScale())->isOne();
   }
-  bool isIndexSigned() const {
-    return (getIndexType() == ISD::SIGNED_SCALED) ||
-           (getIndexType() == ISD::SIGNED_UNSCALED);
-  }
+  bool isIndexSigned() const { return isIndexTypeSigned(getIndexType()); }
 
   // In the both nodes address is Op1, mask is Op2:
   // MaskedGatherSDNode  (Chain, passthru, mask, base, index, scale)

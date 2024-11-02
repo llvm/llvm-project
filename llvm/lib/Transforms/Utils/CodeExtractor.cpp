@@ -935,6 +935,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::StackAlignment:
       case Attribute::WillReturn:
       case Attribute::WriteOnly:
+      case Attribute::AllocKind:
         continue;
       // Those attributes should be safe to propagate to the extracted function.
       case Attribute::AlwaysInline:
@@ -978,6 +979,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
         break;
       // These attributes cannot be applied to functions.
       case Attribute::Alignment:
+      case Attribute::AllocatedPointer:
       case Attribute::AllocAlign:
       case Attribute::ByVal:
       case Attribute::Dereferenceable:

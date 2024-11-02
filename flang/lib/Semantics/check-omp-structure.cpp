@@ -170,6 +170,42 @@ bool OmpStructureChecker::IsCloselyNestedRegion(const OmpDirectiveSet &set) {
   return false;
 }
 
+void OmpStructureChecker::CheckMultListItems() {
+  semantics::UnorderedSymbolSet listVars;
+  auto checkMultipleOcurrence = [&](const std::list<parser::Name> &nameList,
+                                    const parser::CharBlock &item,
+                                    const std::string &clauseName) {
+    for (auto const &var : nameList) {
+      if (llvm::is_contained(listVars, *(var.symbol))) {
+        context_.Say(item,
+            "List item '%s' present at multiple %s clauses"_err_en_US,
+            var.ToString(), clauseName);
+      }
+      listVars.insert(*(var.symbol));
+    }
+  };
+
+  // Aligned clause
+  auto alignedClauses{FindClauses(llvm::omp::Clause::OMPC_aligned)};
+  for (auto itr = alignedClauses.first; itr != alignedClauses.second; ++itr) {
+    const auto &alignedClause{
+        std::get<parser::OmpClause::Aligned>(itr->second->u)};
+    const auto &alignedNameList{
+        std::get<std::list<parser::Name>>(alignedClause.v.t)};
+    checkMultipleOcurrence(alignedNameList, itr->second->source, "ALIGNED");
+  }
+
+  // Nontemporal clause
+  auto nonTemporalClauses{FindClauses(llvm::omp::Clause::OMPC_nontemporal)};
+  for (auto itr = nonTemporalClauses.first; itr != nonTemporalClauses.second;
+       ++itr) {
+    const auto &nontempClause{
+        std::get<parser::OmpClause::Nontemporal>(itr->second->u)};
+    const auto &nontempNameList{nontempClause.v};
+    checkMultipleOcurrence(nontempNameList, itr->second->source, "NONTEMPORAL");
+  }
+}
+
 bool OmpStructureChecker::HasInvalidWorksharingNesting(
     const parser::CharBlock &source, const OmpDirectiveSet &set) {
   // set contains all the invalid closely nested directives
@@ -886,6 +922,8 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
         common::visitors{
             [&](const parser::Designator &) {
               if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
+                const auto &useScope{
+                    context_.FindScope(GetContext().directiveSource)};
                 const auto &declScope{
                     GetProgramUnitContaining(name->symbol->GetUltimate())};
                 const auto *sym =
@@ -930,6 +968,12 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
                       "A variable that appears in a %s directive must be "
                       "declared in the scope of a module or have the SAVE "
                       "attribute, either explicitly or implicitly"_err_en_US,
+                      ContextDirectiveAsFortran());
+                } else if (useScope != declScope) {
+                  context_.Say(name->source,
+                      "The %s directive and the common block or variable in it "
+                      "must appear in the same declaration section of a "
+                      "scoping unit"_err_en_US,
                       ContextDirectiveAsFortran());
                 } else if (FindEquivalenceSet(*name->symbol)) {
                   context_.Say(name->source,
@@ -1660,24 +1704,9 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
         }
       }
     }
-    // A list-item cannot appear in more than one aligned clause
-    semantics::UnorderedSymbolSet alignedVars;
-    auto clauseAll = FindClauses(llvm::omp::Clause::OMPC_aligned);
-    for (auto itr = clauseAll.first; itr != clauseAll.second; ++itr) {
-      const auto &alignedClause{
-          std::get<parser::OmpClause::Aligned>(itr->second->u)};
-      const auto &alignedNameList{
-          std::get<std::list<parser::Name>>(alignedClause.v.t)};
-      for (auto const &var : alignedNameList) {
-        if (alignedVars.count(*(var.symbol)) == 1) {
-          context_.Say(itr->second->source,
-              "List item '%s' present at multiple ALIGNED clauses"_err_en_US,
-              var.ToString());
-          break;
-        }
-        alignedVars.insert(*(var.symbol));
-      }
-    }
+    // Sema checks related to presence of multiple list items within the same
+    // clause
+    CheckMultListItems();
   } // SIMD
 
   // 2.7.3 Single Construct Restriction
@@ -1806,6 +1835,7 @@ CHECK_SIMPLE_CLAUSE(MemoryOrder, OMPC_memory_order)
 CHECK_SIMPLE_CLAUSE(Bind, OMPC_bind)
 CHECK_SIMPLE_CLAUSE(Align, OMPC_align)
 CHECK_SIMPLE_CLAUSE(Compare, OMPC_compare)
+CHECK_SIMPLE_CLAUSE(CancellationConstructType, OMPC_cancellation_construct_type)
 
 CHECK_REQ_SCALAR_INT_CLAUSE(Grainsize, OMPC_grainsize)
 CHECK_REQ_SCALAR_INT_CLAUSE(NumTasks, OMPC_num_tasks)

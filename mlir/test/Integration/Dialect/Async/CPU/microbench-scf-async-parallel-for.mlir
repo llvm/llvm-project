@@ -56,7 +56,7 @@
 
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
 
-func @scf_parallel(%lhs: memref<?x?xf32>,
+func.func @scf_parallel(%lhs: memref<?x?xf32>,
                    %rhs: memref<?x?xf32>,
                    %sum: memref<?x?xf32>) {
   %c0 = arith.constant 0 : index
@@ -75,7 +75,7 @@ func @scf_parallel(%lhs: memref<?x?xf32>,
   return
 }
 
-func @entry() {
+func.func @entry() {
   %f1 = arith.constant 1.0 : f32
   %f4 = arith.constant 4.0 : f32
   %c0 = arith.constant 0 : index
@@ -102,7 +102,7 @@ func @entry() {
 
   // CHECK: [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
   %U = memref.cast %DST10 :  memref<1x10xf32> to memref<*xf32>
-  call @print_memref_f32(%U): (memref<*xf32>) -> ()
+  call @printMemrefF32(%U): (memref<*xf32>) -> ()
 
   memref.dealloc %LHS10: memref<1x10xf32>
   memref.dealloc %RHS10: memref<1x10xf32>
@@ -133,7 +133,7 @@ func @entry() {
 
   %t0 = call @rtclock() : () -> f64
   scf.for %i = %c0 to %cN step %c1 {
-    call @scf_parallel(%LHS0, %RHS0, %DST0)
+    func.call @scf_parallel(%LHS0, %RHS0, %DST0)
       : (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>) -> ()
   }
   %t1 = call @rtclock() : () -> f64
@@ -150,7 +150,7 @@ func @entry() {
   return
 }
 
-func private @rtclock() -> f64
+func.func private @rtclock() -> f64
 
-func private @print_memref_f32(memref<*xf32>)
+func.func private @printMemrefF32(memref<*xf32>)
   attributes { llvm.emit_c_interface }

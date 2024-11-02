@@ -198,6 +198,8 @@ TEST_F(FormatTestJava, EnumDeclarations) {
                "  void f() {}\n"
                "}");
   verifyFormat("enum SomeThing {\n"
+               "  void f() {}");
+  verifyFormat("enum SomeThing {\n"
                "  ABC(1, \"ABC\"),\n"
                "  CDE(2, \"CDE\");\n"
                "  Something(int i, String s) {}\n"

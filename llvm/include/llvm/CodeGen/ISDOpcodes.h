@@ -281,12 +281,25 @@ enum NodeType {
 
   /// Carry-using nodes for multiple precision addition and subtraction.
   /// These nodes take three operands: The first two are the normal lhs and
-  /// rhs to the add or sub, and the third is a boolean indicating if there
-  /// is an incoming carry. These nodes produce two results: the normal
-  /// result of the add or sub, and the output carry so they can be chained
-  /// together. The use of this opcode is preferable to adde/sube if the
-  /// target supports it, as the carry is a regular value rather than a
-  /// glue, which allows further optimisation.
+  /// rhs to the add or sub, and the third is a boolean value that is 1 if and
+  /// only if there is an incoming carry/borrow. These nodes produce two
+  /// results: the normal result of the add or sub, and a boolean value that is
+  /// 1 if and only if there is an outgoing carry/borrow.
+  ///
+  /// Care must be taken if these opcodes are lowered to hardware instructions
+  /// that use the inverse logic -- 0 if and only if there is an
+  /// incoming/outgoing carry/borrow.  In such cases, you must preserve the
+  /// semantics of these opcodes by inverting the incoming carry/borrow, feeding
+  /// it to the add/sub hardware instruction, and then inverting the outgoing
+  /// carry/borrow.
+  ///
+  /// The use of these opcodes is preferable to adde/sube if the target supports
+  /// it, as the carry is a regular value rather than a glue, which allows
+  /// further optimisation.
+  ///
+  /// These opcodes are different from [US]{ADD,SUB}O in that ADDCARRY/SUBCARRY
+  /// consume and produce a carry/borrow, whereas [US]{ADD,SUB}O produce an
+  /// overflow.
   ADDCARRY,
   SUBCARRY,
 
@@ -484,6 +497,13 @@ enum NodeType {
 
   /// Returns platform specific canonical encoding of a floating point number.
   FCANONICALIZE,
+
+  /// Performs a check of floating point class property, defined by IEEE-754.
+  /// The first operand is the floating point value to check. The second operand
+  /// specifies the checked property and is a TargetConstant which specifies
+  /// test in the same way as intrinsic 'is_fpclass'.
+  /// Returns boolean value.
+  IS_FPCLASS,
 
   /// BUILD_VECTOR(ELT0, ELT1, ELT2, ELT3,...) - Return a fixed-width vector
   /// with the specified, possibly variable, elements. The types of the
@@ -1338,18 +1358,18 @@ static const int LAST_INDEXED_MODE = POST_DEC + 1;
 /// MemIndexType enum - This enum defines how to interpret MGATHER/SCATTER's
 /// index parameter when calculating addresses.
 ///
-/// SIGNED_SCALED     Addr = Base + ((signed)Index * sizeof(element))
-/// SIGNED_UNSCALED   Addr = Base + (signed)Index
-/// UNSIGNED_SCALED   Addr = Base + ((unsigned)Index * sizeof(element))
-/// UNSIGNED_UNSCALED Addr = Base + (unsigned)Index
-enum MemIndexType {
-  SIGNED_SCALED = 0,
-  SIGNED_UNSCALED,
-  UNSIGNED_SCALED,
-  UNSIGNED_UNSCALED
-};
+/// SIGNED_SCALED     Addr = Base + ((signed)Index * Scale)
+/// UNSIGNED_SCALED   Addr = Base + ((unsigned)Index * Scale)
+///
+/// NOTE: The value of Scale is typically only known to the node owning the
+/// IndexType, with a value of 1 the equivalent of being unscaled.
+enum MemIndexType { SIGNED_SCALED = 0, UNSIGNED_SCALED };
 
-static const int LAST_MEM_INDEX_TYPE = UNSIGNED_UNSCALED + 1;
+static const int LAST_MEM_INDEX_TYPE = UNSIGNED_SCALED + 1;
+
+inline bool isIndexTypeSigned(MemIndexType IndexType) {
+  return IndexType == SIGNED_SCALED;
+}
 
 //===--------------------------------------------------------------------===//
 /// LoadExtType enum - This enum defines the three variants of LOADEXT

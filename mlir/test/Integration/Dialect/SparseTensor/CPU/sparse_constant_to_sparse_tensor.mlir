@@ -12,7 +12,7 @@
 // Integration tests for conversions from sparse constants to sparse tensors.
 //
 module {
-  func @entry() {
+  func.func @entry() {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %c2 = arith.constant 2 : index

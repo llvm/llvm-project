@@ -32,6 +32,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeCalc.h"
@@ -48,6 +49,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/RegisterBank.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -96,6 +98,7 @@ namespace {
     const TargetInstrInfo *TII;
     const TargetRegisterInfo *TRI;
     const MachineRegisterInfo *MRI;
+    const RegisterBankInfo *RBI;
 
     unsigned foundErrors;
 
@@ -371,6 +374,7 @@ unsigned MachineVerifier::verify(const MachineFunction &MF) {
   TM = &MF.getTarget();
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
+  RBI = MF.getSubtarget().getRegBankInfo();
   MRI = &MF.getRegInfo();
 
   const bool isFunctionFailedISel = MF.getProperties().hasProperty(
@@ -1001,17 +1005,23 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    if (MRI->getRegBankOrNull(Src) != MRI->getRegBankOrNull(Dst)) {
-      report(
-          Twine(OpcName, " source and destination register banks must match"),
-          MI);
+    const RegisterBank *SrcRB = RBI->getRegBank(Src, *MRI, *TRI);
+    const RegisterBank *DstRB = RBI->getRegBank(Dst, *MRI, *TRI);
+
+    // Allow only the source bank to be set.
+    if ((SrcRB && DstRB && SrcRB != DstRB) || (DstRB && !SrcRB)) {
+      report(Twine(OpcName, " cannot change register bank"), MI);
       break;
     }
 
-    if (MRI->getRegClassOrNull(Src) != MRI->getRegClassOrNull(Dst))
+    // Don't allow a class change. Do allow member class->regbank.
+    const TargetRegisterClass *DstRC = MRI->getRegClassOrNull(Dst);
+    if (DstRC && DstRC != MRI->getRegClassOrNull(Src)) {
       report(
           Twine(OpcName, " source and destination register classes must match"),
           MI);
+      break;
+    }
 
     break;
   }
@@ -1639,6 +1649,43 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   case TargetOpcode::G_LLROUND:
   case TargetOpcode::G_LROUND: {
     verifyAllRegOpsScalar(*MI, *MRI);
+    break;
+  }
+  case TargetOpcode::G_IS_FPCLASS: {
+    LLT DestTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT DestEltTy = DestTy.getScalarType();
+    if (!DestEltTy.isScalar()) {
+      report("Destination must be a scalar or vector of scalars", MI);
+      break;
+    }
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+    LLT SrcEltTy = SrcTy.getScalarType();
+    if (!SrcEltTy.isScalar()) {
+      report("Source must be a scalar or vector of scalars", MI);
+      break;
+    }
+    if (!verifyVectorElementMatch(DestTy, SrcTy, MI))
+      break;
+    const MachineOperand &TestMO = MI->getOperand(2);
+    if (!TestMO.isImm()) {
+      report("floating-point class set (operand 2) must be an immediate", MI);
+      break;
+    }
+    int64_t Test = TestMO.getImm();
+    if (Test < 0 || Test > fcAllFlags) {
+      report("Incorrect floating-point class set (operand 2)", MI);
+      break;
+    }
+    const MachineOperand &SemanticsMO = MI->getOperand(3);
+    if (!SemanticsMO.isImm()) {
+      report("floating-point semantics (operand 3) must be an immediate", MI);
+      break;
+    }
+    int64_t Semantics = SemanticsMO.getImm();
+    if (Semantics < 0 || Semantics > APFloat::S_MaxSemantics) {
+      report("Incorrect floating-point semantics (operand 3)", MI);
+      break;
+    }
     break;
   }
   default:

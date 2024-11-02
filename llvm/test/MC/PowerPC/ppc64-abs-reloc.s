@@ -1,6 +1,9 @@
 # RUN: llvm-mc -triple powerpc64le-unknown-linux-gnu %s -filetype=obj -o - | \
 # RUN:    llvm-objdump -D -r - | FileCheck %s
-	.text
+
+# RUN: llvm-mc -triple powerpc64-ibm-aix-xcoff %s -filetype=obj -o - | \
+# RUN:    llvm-objdump -D -r - | FileCheck %s
+
 test:                                   # @test
         add 5, 3, 4
         extsw 3, 5

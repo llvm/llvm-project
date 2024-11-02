@@ -17,11 +17,21 @@ namespace llvm {
 class APInt;
 
 namespace RISCVMatInt {
+
+enum OpndKind {
+  RegImm, // ADDI/ADDIW/SLLI/SRLI/BSETI/BCLRI
+  Imm,    // LUI
+  RegReg, // SH1ADD/SH2ADD/SH3ADD
+  RegX0,  // ADD_UW
+};
+
 struct Inst {
   unsigned Opc;
   int64_t Imm;
 
   Inst(unsigned Opc, int64_t Imm) : Opc(Opc), Imm(Imm) {}
+
+  OpndKind getOpndKind() const;
 };
 using InstSeq = SmallVector<Inst, 8>;
 

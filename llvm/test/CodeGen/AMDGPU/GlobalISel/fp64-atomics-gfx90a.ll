@@ -319,10 +319,10 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret(double addrspace(1)* %pt
 ; GFX90A-LABEL: global_atomic_fadd_f64_noret:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-NEXT:    global_atomic_add_f64 v[0:1], v[0:1], v[2:3], off glc
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-NEXT:    global_atomic_add_f64 v[0:1], v2, v[0:1], s[0:1] glc
 ; GFX90A-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.global.atomic.fadd.f64.p1f64.f64(double addrspace(1)* %ptr, double %data)
@@ -333,10 +333,10 @@ define amdgpu_kernel void @global_atomic_fmin_f64_noret(double addrspace(1)* %pt
 ; GFX90A-LABEL: global_atomic_fmin_f64_noret:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-NEXT:    global_atomic_min_f64 v[0:1], v[0:1], v[2:3], off glc
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-NEXT:    global_atomic_min_f64 v[0:1], v2, v[0:1], s[0:1] glc
 ; GFX90A-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.global.atomic.fmin.f64.p1f64.f64(double addrspace(1)* %ptr, double %data)
@@ -347,10 +347,10 @@ define amdgpu_kernel void @global_atomic_fmax_f64_noret(double addrspace(1)* %pt
 ; GFX90A-LABEL: global_atomic_fmax_f64_noret:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-NEXT:    global_atomic_max_f64 v[0:1], v[0:1], v[2:3], off glc
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[2:3], s[2:3] op_sel:[0,1]
+; GFX90A-NEXT:    global_atomic_max_f64 v[0:1], v2, v[0:1], s[0:1] glc
 ; GFX90A-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.global.atomic.fmax.f64.p1f64.f64(double addrspace(1)* %ptr, double %data)

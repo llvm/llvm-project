@@ -4,7 +4,7 @@
 
 ; Check that a triple prefix on the executable gets picked up as target triple.
 
-; RUN: ln -fs $(which llvm-windres) %t/aarch64-w64-mingw32-windres
+; RUN: ln -fs llvm-windres %t/aarch64-w64-mingw32-windres
 ; RUN: %t/aarch64-w64-mingw32-windres -### %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK-PREPROC
 ; CHECK-PREPROC: "clang" "--driver-mode=gcc" "-target" "aarch64-w64-mingw32"
 

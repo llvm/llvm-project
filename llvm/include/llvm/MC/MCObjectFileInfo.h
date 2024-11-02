@@ -213,6 +213,7 @@ protected:
   MCSection *LazySymbolPointerSection = nullptr;
   MCSection *NonLazySymbolPointerSection = nullptr;
   MCSection *ThreadLocalPointerSection = nullptr;
+  MCSection *AddrSigSection = nullptr;
 
   /// COFF specific sections.
   MCSection *DrectveSection = nullptr;
@@ -223,6 +224,9 @@ protected:
   MCSection *GFIDsSection = nullptr;
   MCSection *GIATsSection = nullptr;
   MCSection *GLJMPSection = nullptr;
+
+  // GOFF specific sections.
+  MCSection *PPA1Section = nullptr;
 
   // XCOFF specific sections
   MCSection *TOCBaseSection = nullptr;
@@ -410,6 +414,7 @@ public:
   MCSection *getThreadLocalPointerSection() const {
     return ThreadLocalPointerSection;
   }
+  MCSection *getAddrSigSection() const { return AddrSigSection; }
 
   // COFF specific sections.
   MCSection *getDrectveSection() const { return DrectveSection; }
@@ -420,6 +425,9 @@ public:
   MCSection *getGFIDsSection() const { return GFIDsSection; }
   MCSection *getGIATsSection() const { return GIATsSection; }
   MCSection *getGLJMPSection() const { return GLJMPSection; }
+
+  // GOFF specific sections.
+  MCSection *getPPA1Section() const { return PPA1Section; }
 
   // XCOFF specific sections
   MCSection *getTOCBaseSection() const { return TOCBaseSection; }

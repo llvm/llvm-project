@@ -46,7 +46,7 @@
 // CHECK:           %[[VAL_18:.*]] = sparse_tensor.load %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           return %[[VAL_18]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:         }
-func @sparse_simply_dynamic1(%argx: tensor<32x16xf32, #DCSR> {linalg.inplaceable = true}) -> tensor<32x16xf32, #DCSR> {
+func.func @sparse_simply_dynamic1(%argx: tensor<32x16xf32, #DCSR> {linalg.inplaceable = true}) -> tensor<32x16xf32, #DCSR> {
   %c = arith.constant 2.0 : f32
   %0 = linalg.generic #trait_scale_inpl
     outs(%argx: tensor<32x16xf32, #DCSR>) {
@@ -80,7 +80,7 @@ func @sparse_simply_dynamic1(%argx: tensor<32x16xf32, #DCSR> {linalg.inplaceable
 // CHECK:           %[[VAL_16:.*]] = sparse_tensor.load %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           return %[[VAL_16]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:         }
-func @sparse_simply_dynamic2(%argx: tensor<32x16xf32, #DCSR> {linalg.inplaceable = true}) -> tensor<32x16xf32, #DCSR> {
+func.func @sparse_simply_dynamic2(%argx: tensor<32x16xf32, #DCSR> {linalg.inplaceable = true}) -> tensor<32x16xf32, #DCSR> {
   %0 = linalg.generic #trait_scale_inpl
     outs(%argx: tensor<32x16xf32, #DCSR>) {
       ^bb(%x: f32):
@@ -103,11 +103,10 @@ func @sparse_simply_dynamic2(%argx: tensor<32x16xf32, #DCSR> {linalg.inplaceable
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<10x20xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 2.000000e+00 : f32
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 10 : index
-// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 20 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 2 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.init{{\[}}%[[VAL_2]], %[[VAL_3]]] : tensor<10x20xf32, #sparse_tensor.encoding<{{.*}}>>
+// CHECK:           %[[VAL_7:.*]] = bufferization.alloc_tensor() : tensor<10x20xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<10x20xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           %[[VAL_9:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_4]] : tensor<10x20xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<10x20xf32, #sparse_tensor.encoding<{{.*}}>>
@@ -128,11 +127,9 @@ func @sparse_simply_dynamic2(%argx: tensor<32x16xf32, #DCSR> {linalg.inplaceable
 // CHECK:           %[[VAL_20:.*]] = sparse_tensor.load %[[VAL_7]] hasInserts : tensor<10x20xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           return %[[VAL_20]] : tensor<10x20xf32, #sparse_tensor.encoding<{
 // CHECK:         }
-func @sparse_truly_dynamic(%arga: tensor<10x20xf32, #CSR>) -> tensor<10x20xf32, #DCSR> {
+func.func @sparse_truly_dynamic(%arga: tensor<10x20xf32, #CSR>) -> tensor<10x20xf32, #DCSR> {
   %s = arith.constant 2.0 : f32
-  %d10 = arith.constant 10 : index
-  %d20 = arith.constant 20 : index
-  %xm = sparse_tensor.init [%d10, %d20] : tensor<10x20xf32, #DCSR>
+  %xm = bufferization.alloc_tensor() : tensor<10x20xf32, #DCSR>
   %0 = linalg.generic #trait_scale
      ins(%arga: tensor<10x20xf32, #CSR>)
       outs(%xm: tensor<10x20xf32, #DCSR>) {
@@ -162,7 +159,7 @@ func @sparse_truly_dynamic(%arga: tensor<10x20xf32, #CSR>) -> tensor<10x20xf32, 
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0 : i32
 // CHECK:           %[[VAL_6:.*]] = tensor.dim %[[VAL_0]], %[[VAL_2]] : tensor<?x?x?xi32, #{{.*}}>>
 // CHECK:           %[[VAL_7:.*]] = tensor.dim %[[VAL_0]], %[[VAL_3]] : tensor<?x?x?xi32, #{{.*}}>>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.init{{\[}}%[[VAL_6]], %[[VAL_7]]] : tensor<?x?xi32, #{{.*}}>>
+// CHECK:           %[[VAL_8:.*]] = bufferization.alloc_tensor(%[[VAL_6]], %[[VAL_7]]) : tensor<?x?xi32, #{{.*}}>>
 // CHECK:           %[[VAL_9:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_2]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_2]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
 // CHECK:           %[[VAL_11:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
@@ -282,13 +279,13 @@ func @sparse_truly_dynamic(%arga: tensor<10x20xf32, #CSR>) -> tensor<10x20xf32, 
 // CHECK:           %[[VAL_112:.*]] = sparse_tensor.load %[[VAL_8]] hasInserts : tensor<?x?xi32, #{{.*}}>
 // CHECK:           return %[[VAL_112]] : tensor<?x?xi32, #{{.*}}>
 // CHECK:         }
-func @sumred(%arga: tensor<?x?x?xi32, #SparseTensor>,
+func.func @sumred(%arga: tensor<?x?x?xi32, #SparseTensor>,
              %argb: tensor<?x?x?xi32, #SparseTensor>) -> tensor<?x?xi32, #DCSR> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %d0 = tensor.dim %arga, %c0 : tensor<?x?x?xi32, #SparseTensor>
   %d1 = tensor.dim %arga, %c1 : tensor<?x?x?xi32, #SparseTensor>
-  %xinit = sparse_tensor.init [%d0, %d1] : tensor<?x?xi32, #DCSR>
+  %xinit = bufferization.alloc_tensor(%d0, %d1) : tensor<?x?xi32, #DCSR>
   %0 = linalg.generic #trait_sumred
     ins(%arga, %argb: tensor<?x?x?xi32, #SparseTensor>,
                       tensor<?x?x?xi32, #SparseTensor>)
@@ -321,7 +318,7 @@ func @sumred(%arga: tensor<?x?x?xi32, #SparseTensor>,
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant true
 // CHECK:           %[[VAL_7:.*]] = tensor.dim %[[VAL_0]], %[[VAL_2]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_8:.*]] = tensor.dim %[[VAL_1]], %[[VAL_3]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.init{{\[}}%[[VAL_7]], %[[VAL_8]]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:           %[[VAL_9:.*]] = bufferization.alloc_tensor(%[[VAL_7]], %[[VAL_8]]) : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_2]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK:           %[[VAL_11:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_2]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK:           %[[VAL_12:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
@@ -399,13 +396,13 @@ func @sumred(%arga: tensor<?x?x?xi32, #SparseTensor>,
 // CHECK:           %[[VAL_78:.*]] = sparse_tensor.load %[[VAL_9]] hasInserts : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           return %[[VAL_78]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:         }
-func @matmat(%arga: tensor<?x?xf32, #DCSR>,
+func.func @matmat(%arga: tensor<?x?xf32, #DCSR>,
              %argb: tensor<?x?xf32, #DCSR>) -> tensor<?x?xf32, #DCSR> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %d0 = tensor.dim %arga, %c0 : tensor<?x?xf32, #DCSR>
   %d1 = tensor.dim %argb, %c1 : tensor<?x?xf32, #DCSR>
-  %cinit = sparse_tensor.init [%d0, %d1] : tensor<?x?xf32, #DCSR>
+  %cinit = bufferization.alloc_tensor(%d0, %d1) : tensor<?x?xf32, #DCSR>
   %0 = linalg.generic #trait_matmat
        ins(%arga, %argb: tensor<?x?xf32, #DCSR>,
                          tensor<?x?xf32, #DCSR>)

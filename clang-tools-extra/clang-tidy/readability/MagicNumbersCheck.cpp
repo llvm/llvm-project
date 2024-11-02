@@ -72,16 +72,20 @@ MagicNumbersCheck::MagicNumbersCheck(StringRef Name, ClangTidyContext *Context)
       RawIgnoredFloatingPointValues(Options.get(
           "IgnoredFloatingPointValues", DefaultIgnoredFloatingPointValues)) {
   // Process the set of ignored integer values.
-  const std::vector<std::string> IgnoredIntegerValuesInput =
+  const std::vector<StringRef> IgnoredIntegerValuesInput =
       utils::options::parseStringList(RawIgnoredIntegerValues);
   IgnoredIntegerValues.resize(IgnoredIntegerValuesInput.size());
   llvm::transform(IgnoredIntegerValuesInput, IgnoredIntegerValues.begin(),
-                  [](const std::string &Value) { return std::stoll(Value); });
+                  [](StringRef Value) {
+                    int64_t Res;
+                    Value.getAsInteger(10, Res);
+                    return Res;
+                  });
   llvm::sort(IgnoredIntegerValues);
 
   if (!IgnoreAllFloatingPointValues) {
     // Process the set of ignored floating point values.
-    const std::vector<std::string> IgnoredFloatingPointValuesInput =
+    const std::vector<StringRef> IgnoredFloatingPointValuesInput =
         utils::options::parseStringList(RawIgnoredFloatingPointValues);
     IgnoredFloatingPointValues.reserve(IgnoredFloatingPointValuesInput.size());
     IgnoredDoublePointValues.reserve(IgnoredFloatingPointValuesInput.size());

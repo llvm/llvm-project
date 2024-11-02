@@ -280,4 +280,24 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 
 }
 
+
+declare void @panic() unnamed_addr
+
+; We used to crash while compiling the following function.
+; ARM-linux-LABEL: build_should_not_segfault:
+; ARM-android-LABEL: build_should_not_segfault:
+define void @build_should_not_segfault(i8 %x) unnamed_addr #0 {
+start:
+  %_0 = icmp ult i8 %x, 16
+  %or.cond = select i1 undef, i1 true, i1 %_0
+  br i1 %or.cond, label %bb1, label %bb2
+
+bb1:
+  ret void
+
+bb2:
+  call void @panic()
+  unreachable
+}
+
 attributes #0 = { "split-stack" }

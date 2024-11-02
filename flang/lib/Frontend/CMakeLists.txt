@@ -40,6 +40,7 @@ add_flang_library(flangFrontend
   LINK_COMPONENTS
   Passes
   Analysis
+  IRReader
   Option
   Support
   Target

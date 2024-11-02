@@ -31,7 +31,7 @@ private:
   void registerMatchersForVariables(ast_matchers::MatchFinder *Finder);
   void registerMatchersForReturn(ast_matchers::MatchFinder *Finder);
 
-  const std::vector<std::string> HandleClasses;
+  const std::vector<StringRef> HandleClasses;
   const ast_matchers::internal::Matcher<RecordDecl> IsAHandle;
 };
 

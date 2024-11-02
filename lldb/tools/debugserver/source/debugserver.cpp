@@ -368,7 +368,7 @@ RNBRunLoopMode RNBRunLoopLaunchAttaching(RNBRemote *remote,
   DNBLogThreadedIf(LOG_RNB_MINIMAL, "%s Attaching to pid %i...", __FUNCTION__,
                    attach_pid);
   char err_str[1024];
-  pid = DNBProcessAttach(attach_pid, NULL, ctx.GetUnmaskSignals(), err_str,
+  pid = DNBProcessAttach(attach_pid, NULL, ctx.GetIgnoredExceptions(), err_str,
                          sizeof(err_str));
   g_pid = pid;
 
@@ -1275,7 +1275,7 @@ int main(int argc, char *argv[]) {
       break;
 
     case 'U':
-      ctx.SetUnmaskSignals(true);
+      ctx.AddDefaultIgnoredExceptions();
       break;
 
     case '2':
@@ -1574,7 +1574,7 @@ int main(int argc, char *argv[]) {
 
         RNBLogSTDOUT("Attaching to process %s...\n", attach_pid_name.c_str());
         nub_process_t pid = DNBProcessAttachByName(
-            attach_pid_name.c_str(), timeout_ptr, ctx.GetUnmaskSignals(),
+            attach_pid_name.c_str(), timeout_ptr, ctx.GetIgnoredExceptions(),
             err_str, sizeof(err_str));
         g_pid = pid;
         if (pid == INVALID_NUB_PROCESS) {

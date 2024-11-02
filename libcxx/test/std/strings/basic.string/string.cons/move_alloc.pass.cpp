@@ -8,9 +8,11 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
-// basic_string(basic_string&& str, const Allocator& alloc);
+// basic_string(basic_string&& str, const Allocator& alloc); // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -32,7 +34,7 @@ test(S s0, const typename S::allocator_type& a)
     assert(s2.get_allocator() == a);
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   test_allocator_statistics alloc_stats;
   {
     typedef test_allocator<char> A;
@@ -80,7 +82,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

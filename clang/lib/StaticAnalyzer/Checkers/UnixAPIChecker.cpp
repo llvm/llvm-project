@@ -43,7 +43,7 @@ class UnixAPIMisuseChecker : public Checker< check::PreStmt<CallExpr> > {
   mutable Optional<uint64_t> Val_O_CREAT;
 
 public:
-  DefaultBool CheckMisuse, CheckPortability;
+  bool CheckMisuse = false, CheckPortability = false;
 
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
 

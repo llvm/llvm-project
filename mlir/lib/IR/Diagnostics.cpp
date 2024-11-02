@@ -272,10 +272,10 @@ DiagnosticEngine::~DiagnosticEngine() = default;
 /// Register a new handler for diagnostics to the engine. This function returns
 /// a unique identifier for the registered handler, which can be used to
 /// unregister this handler at a later time.
-auto DiagnosticEngine::registerHandler(const HandlerTy &handler) -> HandlerID {
+auto DiagnosticEngine::registerHandler(HandlerTy handler) -> HandlerID {
   llvm::sys::SmartScopedLock<true> lock(impl->mutex);
   auto uniqueID = impl->uniqueHandlerId++;
-  impl->handlers.insert({uniqueID, handler});
+  impl->handlers.insert({uniqueID, std::move(handler)});
   return uniqueID;
 }
 

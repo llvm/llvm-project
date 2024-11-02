@@ -91,11 +91,11 @@ define void @PR40815(%struct.Mat4* nocapture readonly dereferenceable(64), %stru
 ;
 ; AVX512-LABEL: PR40815:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps 16(%rdi), %xmm0
-; AVX512-NEXT:    vmovaps 48(%rdi), %xmm1
-; AVX512-NEXT:    vinsertf128 $1, (%rdi), %ymm0, %ymm0
-; AVX512-NEXT:    vinsertf128 $1, 32(%rdi), %ymm1, %ymm1
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; AVX512-NEXT:    vmovaps 48(%rdi), %xmm0
+; AVX512-NEXT:    vmovups 16(%rdi), %ymm1
+; AVX512-NEXT:    vinsertf128 $1, (%rdi), %ymm1, %ymm1
+; AVX512-NEXT:    vinsertf128 $1, 32(%rdi), %ymm0, %ymm0
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vmovups %zmm0, (%rsi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq

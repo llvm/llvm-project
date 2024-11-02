@@ -29,10 +29,12 @@ enum TestLanguage {
   Lang_CXX17,
   Lang_CXX20,
   Lang_OpenCL,
+  Lang_OBJC,
   Lang_OBJCXX
 };
 
 std::vector<std::string> getCommandLineArgsForTesting(TestLanguage Lang);
+std::vector<std::string> getCC1ArgsForTesting(TestLanguage Lang);
 
 StringRef getFilenameForTesting(TestLanguage Lang);
 

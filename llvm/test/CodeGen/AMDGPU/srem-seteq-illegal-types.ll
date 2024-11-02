@@ -22,13 +22,15 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; CHECK-LABEL: test_srem_even:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_bfe_i32 v0, v0, 0, 4
-; CHECK-NEXT:    s_mov_b32 s4, 0x2aaaaaab
-; CHECK-NEXT:    v_mul_hi_i32 v1, v0, s4
-; CHECK-NEXT:    v_lshrrev_b32_e32 v2, 31, v1
-; CHECK-NEXT:    v_add_i32_e32 v1, vcc, v1, v2
-; CHECK-NEXT:    v_mul_lo_u32 v1, v1, 6
+; CHECK-NEXT:    v_bfe_i32 v1, v0, 0, 4
+; CHECK-NEXT:    v_mul_i32_i24_e32 v1, 3, v1
+; CHECK-NEXT:    v_lshrrev_b32_e32 v2, 4, v1
+; CHECK-NEXT:    v_bfe_u32 v1, v1, 7, 1
+; CHECK-NEXT:    v_add_i32_e32 v1, vcc, v2, v1
+; CHECK-NEXT:    v_and_b32_e32 v1, 15, v1
+; CHECK-NEXT:    v_mul_u32_u24_e32 v1, 6, v1
 ; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
+; CHECK-NEXT:    v_and_b32_e32 v0, 15, v0
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -64,8 +66,7 @@ define <3 x i1> @test_srem_vec(<3 x i31> %X) nounwind {
 ; CHECK-NEXT:    v_bfe_i32 v5, v0, 0, 31
 ; CHECK-NEXT:    s_mov_b32 s4, 0x38e38e39
 ; CHECK-NEXT:    s_mov_b32 s5, 0xc71c71c7
-; CHECK-NEXT:    s_brev_b32 s6, -2
-; CHECK-NEXT:    s_mov_b32 s7, 0x7ffffffd
+; CHECK-NEXT:    s_mov_b32 s6, 0x7ffffffd
 ; CHECK-NEXT:    v_mul_hi_i32 v5, v5, s4
 ; CHECK-NEXT:    v_mul_hi_i32 v4, v4, s4
 ; CHECK-NEXT:    v_mul_hi_i32 v3, v3, s5
@@ -84,12 +85,12 @@ define <3 x i1> @test_srem_vec(<3 x i31> %X) nounwind {
 ; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v5
 ; CHECK-NEXT:    v_sub_i32_e32 v1, vcc, v1, v4
 ; CHECK-NEXT:    v_sub_i32_e32 v2, vcc, v2, v3
-; CHECK-NEXT:    v_and_b32_e32 v2, s6, v2
-; CHECK-NEXT:    v_and_b32_e32 v1, s6, v1
-; CHECK-NEXT:    v_and_b32_e32 v0, s6, v0
+; CHECK-NEXT:    v_and_b32_e32 v2, 0x7fffffff, v2
+; CHECK-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
+; CHECK-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 3, v0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s7, v1
+; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s6, v1
 ; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 3, v2
 ; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc

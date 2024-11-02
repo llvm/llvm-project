@@ -1,7 +1,7 @@
 # Check that llvm-bolt rejects input that is not a valid ELF executable
 # bzip2.debuginfo is the result of running "objcopy --only-keep-debug".
-RUN: %clang %S/Inputs/icf-jump-tables.c -g -o %t
+RUN: %clang %cflags %S/Inputs/icf-jump-tables.c -g -o %t
 RUN: llvm-objcopy --only-keep-debug %t %t.debuginfo
-RUN: not llvm-bolt %t.debuginfo -o /dev/null |& FileCheck %s
+RUN: not llvm-bolt %t.debuginfo -o /dev/null 2>&1 | FileCheck %s
 
 CHECK: input binary is not a valid ELF executable

@@ -4,7 +4,6 @@
 ; Verify when widening a divide/remainder operation, we only generate a
 ; divide/rem per element since divide/remainder can trap.
 
-; CHECK: vectorDiv
 define void @vectorDiv (<2 x i32> addrspace(1)* %nsource, <2 x i32> addrspace(1)* %dsource, <2 x i32> addrspace(1)* %qdest) nounwind {
 ; CHECK-LABEL: vectorDiv:
 ; CHECK:       # %bb.0: # %entry
@@ -54,7 +53,6 @@ entry:
   ret void
 }
 
-; CHECK: test_char_div
 define <3 x i8> @test_char_div(<3 x i8> %num, <3 x i8> %div) {
 ; CHECK-LABEL: test_char_div:
 ; CHECK:       # %bb.0:
@@ -74,7 +72,6 @@ define <3 x i8> @test_char_div(<3 x i8> %num, <3 x i8> %div) {
   ret <3 x i8>  %div.r
 }
 
-; CHECK: test_uchar_div
 define <3 x i8> @test_uchar_div(<3 x i8> %num, <3 x i8> %div) {
 ; CHECK-LABEL: test_uchar_div:
 ; CHECK:       # %bb.0:
@@ -94,7 +91,6 @@ define <3 x i8> @test_uchar_div(<3 x i8> %num, <3 x i8> %div) {
   ret <3 x i8>  %div.r
 }
 
-; CHECK: test_short_div
 define <5 x i16> @test_short_div(<5 x i16> %num, <5 x i16> %div) {
 ; CHECK-LABEL: test_short_div:
 ; CHECK:       # %bb.0:
@@ -138,7 +134,6 @@ define <5 x i16> @test_short_div(<5 x i16> %num, <5 x i16> %div) {
   ret <5 x i16>  %div.r
 }
 
-; CHECK: test_ushort_div
 define <4 x i16> @test_ushort_div(<4 x i16> %num, <4 x i16> %div) {
 ; CHECK-LABEL: test_ushort_div:
 ; CHECK:       # %bb.0:
@@ -176,7 +171,6 @@ define <4 x i16> @test_ushort_div(<4 x i16> %num, <4 x i16> %div) {
   ret <4 x i16>  %div.r
 }
 
-; CHECK: test_uint_div
 define <3 x i32> @test_uint_div(<3 x i32> %num, <3 x i32> %div) {
 ; CHECK-LABEL: test_uint_div:
 ; CHECK:       # %bb.0:
@@ -202,7 +196,6 @@ define <3 x i32> @test_uint_div(<3 x i32> %num, <3 x i32> %div) {
   ret <3 x i32>  %div.r
 }
 
-; CHECK: test_long_div
 define <3 x i64> @test_long_div(<3 x i64> %num, <3 x i64> %div) {
 ; CHECK-LABEL: test_long_div:
 ; CHECK:       # %bb.0:
@@ -227,7 +220,6 @@ define <3 x i64> @test_long_div(<3 x i64> %num, <3 x i64> %div) {
   ret <3 x i64>  %div.r
 }
 
-; CHECK: test_ulong_div
 define <3 x i64> @test_ulong_div(<3 x i64> %num, <3 x i64> %div) {
 ; CHECK-LABEL: test_ulong_div:
 ; CHECK:       # %bb.0:
@@ -252,7 +244,6 @@ define <3 x i64> @test_ulong_div(<3 x i64> %num, <3 x i64> %div) {
   ret <3 x i64>  %div.r
 }
 
-; CHECK: test_char_rem
 define <4 x i8> @test_char_rem(<4 x i8> %num, <4 x i8> %rem) {
 ; CHECK-LABEL: test_char_rem:
 ; CHECK:       # %bb.0:
@@ -286,7 +277,6 @@ define <4 x i8> @test_char_rem(<4 x i8> %num, <4 x i8> %rem) {
   ret <4 x i8>  %rem.r
 }
 
-; CHECK: test_short_rem
 define <5 x i16> @test_short_rem(<5 x i16> %num, <5 x i16> %rem) {
 ; CHECK-LABEL: test_short_rem:
 ; CHECK:       # %bb.0:
@@ -330,7 +320,6 @@ define <5 x i16> @test_short_rem(<5 x i16> %num, <5 x i16> %rem) {
   ret <5 x i16>  %rem.r
 }
 
-; CHECK: test_uint_rem
 define <4 x i32> @test_uint_rem(<4 x i32> %num, <4 x i32> %rem) {
 ; CHECK-LABEL: test_uint_rem:
 ; CHECK:       # %bb.0:
@@ -362,7 +351,6 @@ define <4 x i32> @test_uint_rem(<4 x i32> %num, <4 x i32> %rem) {
 }
 
 
-; CHECK: test_ulong_rem
 define <5 x i64> @test_ulong_rem(<5 x i64> %num, <5 x i64> %rem) {
 ; CHECK-LABEL: test_ulong_rem:
 ; CHECK:       # %bb.0:
@@ -396,7 +384,6 @@ define <5 x i64> @test_ulong_rem(<5 x i64> %num, <5 x i64> %rem) {
   ret <5 x i64>  %rem.r
 }
 
-; CHECK: test_int_div
 define void @test_int_div(<3 x i32>* %dest, <3 x i32>* %old, i32 %n) {
 ; CHECK-LABEL: test_int_div:
 ; CHECK:       # %bb.0: # %entry

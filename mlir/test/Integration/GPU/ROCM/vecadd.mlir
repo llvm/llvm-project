@@ -9,7 +9,7 @@
 // RUN:   --entry-point-result=void \
 // RUN: | FileCheck %s
 
-func @vecadd(%arg0 : memref<?xf32>, %arg1 : memref<?xf32>, %arg2 : memref<?xf32>) {
+func.func @vecadd(%arg0 : memref<?xf32>, %arg1 : memref<?xf32>, %arg2 : memref<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %block_dim = memref.dim %arg0, %c0 : memref<?xf32>
@@ -25,7 +25,7 @@ func @vecadd(%arg0 : memref<?xf32>, %arg1 : memref<?xf32>, %arg2 : memref<?xf32>
 }
 
 // CHECK: [2.46, 2.46, 2.46, 2.46, 2.46]
-func @main() {
+func.func @main() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c5 = arith.constant 5 : index
@@ -51,9 +51,9 @@ func @main() {
   %11 = call @mgpuMemGetDeviceMemRef1dFloat(%5) : (memref<?xf32>) -> (memref<?xf32>)
 
   call @vecadd(%9, %10, %11) : (memref<?xf32>, memref<?xf32>, memref<?xf32>) -> ()
-  call @print_memref_f32(%8) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%8) : (memref<*xf32>) -> ()
   return
 }
 
-func private @mgpuMemGetDeviceMemRef1dFloat(%ptr : memref<?xf32>) -> (memref<?xf32>)
-func private @print_memref_f32(%ptr : memref<*xf32>)
+func.func private @mgpuMemGetDeviceMemRef1dFloat(%ptr : memref<?xf32>) -> (memref<?xf32>)
+func.func private @printMemrefF32(%ptr : memref<*xf32>)

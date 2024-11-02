@@ -12,7 +12,7 @@
 
 // bool always_noconv() const throw();
 
-// XFAIL: libcpp-has-no-wide-characters
+// XFAIL: no-wide-characters
 
 #include <locale>
 #include <cassert>

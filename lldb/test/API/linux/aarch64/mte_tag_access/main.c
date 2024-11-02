@@ -2,6 +2,7 @@
 #include <asm/hwcap.h>
 #include <asm/mman.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/auxv.h>
 #include <sys/mman.h>
 #include <sys/prctl.h>
@@ -52,6 +53,9 @@ int main(int argc, char const *argv[]) {
 
   char *non_mte_buf = checked_mmap(page_size, PROT_READ);
   char *mte_read_only = checked_mmap(page_size, mte_prot);
+
+  // Target value for "memory find" testing.
+  strncpy(mte_buf+128, "LLDB", 4);
 
   // Set incrementing tags until end of the first page
   char *tagged_ptr = mte_buf;

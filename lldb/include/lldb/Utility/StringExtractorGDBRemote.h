@@ -174,6 +174,7 @@ public:
     eServerPacketType_QMemTags, // write memory tags
 
     eServerPacketType_qLLDBSaveCore,
+    eServerPacketType_QSetIgnoredExceptions
   };
 
   ServerPacketType GetServerPacketType() const;

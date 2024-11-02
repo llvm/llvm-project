@@ -61,9 +61,9 @@ int main(void) {
   // CHECK: store i8* [[SV]], i8** [[SV_ADDR:%.+]], align 8
   // CHECK: [[VLA:%.+]] = alloca %struct.kmp_depend_info, i64 [[SIZE]],
   // CHECK: [[SIZE32:%.+]] = trunc i64 [[SIZE]] to i32
+  // CHECK: [[A_ADDR_CAST:%.+]] = ptrtoint i32* [[A_ADDR]] to i64
   // CHECK: [[VLA0:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA]], i64 0
   // CHECK: [[BASE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA0]], i{{.+}} 0, i{{.+}} 0
-  // CHECK: [[A_ADDR_CAST:%.+]] = ptrtoint i32* [[A_ADDR]] to i64
   // CHECK: store i64 [[A_ADDR_CAST]], i64* [[BASE_ADDR]], align 16
   // CHECK: [[SIZE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA0]], i{{.+}} 0, i{{.+}} 1
   // CHECK: store i64 4, i64* [[SIZE_ADDR]], align 8
@@ -75,9 +75,9 @@ int main(void) {
   // CHECK: [[A:%.+]] = load i32, i32* [[A_ADDR]], align 4
   // CHECK: [[A_CAST:%.+]] = sext i32 [[A]] to i64
   // CHECK: [[SZ:%.+]] = mul nuw i64 [[SZ1]], [[A_CAST]]
+  // CHECK: [[B_ADDR_CAST:%.+]] = ptrtoint i32** %{{.+}} to i64
   // CHECK: [[VLA1:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA]], i64 1
   // CHECK: [[BASE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA1]], i{{.+}} 0, i{{.+}} 0
-  // CHECK: [[B_ADDR_CAST:%.+]] = ptrtoint i32** %{{.+}} to i64
   // CHECK: store i64 [[B_ADDR_CAST]], i64* [[BASE_ADDR]], align 8
   // CHECK: [[SIZE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA1]], i{{.+}} 0, i{{.+}} 1
   // CHECK: store i64 [[SZ]], i64* [[SIZE_ADDR]], align 8
@@ -198,12 +198,12 @@ for (int i = 0; i < 10; ++i)
   // CHECK: [[I:%.+]] = load i32, i32* [[I_ADDR]],
   // CHECK: [[IDX:%.+]] = sext i32 [[I]] to i64
   // CHECK: [[AKI_ADDR:%.+]] = getelementptr inbounds i32, i32* [[AK]], i64 [[IDX]]
+  // CHECK: [[AKI_INT:%.+]] = ptrtoint i32* [[AKI_ADDR]] to i64
 
   // DEPS[DEP_COUNTER].base_addr = &a[k][i];
   // CHECK: [[DEP_COUNTER:%.+]] = load i64, i64* [[DEP_COUNTER_ADDR]],
   // CHECK: [[DEPS_DC:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEPS]], i64 [[DEP_COUNTER]]
   // CHECK: [[DEPS_DC_BASE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEPS_DC]], i{{.+}} 0, i{{.+}} 0
-  // CHECK: [[AKI_INT:%.+]] = ptrtoint i32* [[AKI_ADDR]] to i64
   // CHECK: store i64 [[AKI_INT]], i64* [[DEPS_DC_BASE_ADDR]],
 
   // DEPS[DEP_COUNTER].size = sizeof(a[k][i]);

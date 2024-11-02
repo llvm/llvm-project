@@ -64,6 +64,25 @@ enum DWARFSectionKind {
   DW_SECT_EXT_MACINFO = 10,
 };
 
+inline const char *toString(DWARFSectionKind Kind) {
+  switch (Kind) {
+  case DW_SECT_EXT_unknown:
+    return "Unknown DW_SECT value 0";
+#define STRINGIZE(X) #X
+#define HANDLE_DW_SECT(ID, NAME)                                               \
+  case DW_SECT_##NAME:                                                         \
+    return "DW_SECT_" STRINGIZE(NAME);
+#include "llvm/BinaryFormat/Dwarf.def"
+  case DW_SECT_EXT_TYPES:
+    return "DW_SECT_TYPES";
+  case DW_SECT_EXT_LOC:
+    return "DW_SECT_LOC";
+  case DW_SECT_EXT_MACINFO:
+    return "DW_SECT_MACINFO";
+  }
+  llvm_unreachable("unknown DWARFSectionKind");
+}
+
 /// Convert the internal value for a section kind to an on-disk value.
 ///
 /// The conversion depends on the version of the index section.

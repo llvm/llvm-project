@@ -1,7 +1,7 @@
 // RUN: mlir-opt -verify-diagnostics %s | mlir-opt | FileCheck %s
 
 // CHECK-LABEL: arm_neon_smull
-func @arm_neon_smull(%a: vector<8xi8>, %b: vector<8xi8>)
+func.func @arm_neon_smull(%a: vector<8xi8>, %b: vector<8xi8>)
     -> (vector<8xi16>, vector<4xi32>, vector<2xi64>) {
   // CHECK: arm_neon.intr.smull {{.*}}: vector<8xi8> to vector<8xi16>
   %0 = arm_neon.intr.smull %a, %b : vector<8xi8> to vector<8xi16>
@@ -20,7 +20,7 @@ func @arm_neon_smull(%a: vector<8xi8>, %b: vector<8xi8>)
 }
 
 // CHECK-LABEL: arm_neon_sdot
-func @arm_neon_sdot(%a: vector<2xi32>, %b: vector<8xi8>, %c: vector<8xi8>) -> vector<2xi32> {
+func.func @arm_neon_sdot(%a: vector<2xi32>, %b: vector<8xi8>, %c: vector<8xi8>) -> vector<2xi32> {
   // CHECK: arm_neon.intr.sdot {{.*}}: vector<8xi8>, vector<8xi8> to vector<2xi32>
   %0 = arm_neon.intr.sdot %a, %b, %c : vector<8xi8>, vector<8xi8> to vector<2xi32>
   return %0 : vector<2xi32>

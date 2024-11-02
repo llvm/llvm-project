@@ -87,10 +87,11 @@ getTiledProducerLoops(OpResult producerResult,
   assert(tiledProducerIndexingSubMap.isProjectedPermutation() &&
          "expect slice and producer loop dimensions map one-to-one");
   SmallVector<int64_t> tiledProducerLoopIndices;
-  transform(llvm::seq<unsigned>(0, tiledProducerIndexingSubMap.getNumResults()),
-            std::back_inserter(tiledProducerLoopIndices), [&](unsigned idx) {
-              return tiledProducerIndexingSubMap.getDimPosition(idx);
-            });
+  llvm::transform(
+      llvm::seq<unsigned>(0, tiledProducerIndexingSubMap.getNumResults()),
+      std::back_inserter(tiledProducerLoopIndices), [&](unsigned idx) {
+        return tiledProducerIndexingSubMap.getDimPosition(idx);
+      });
 
   return tiledProducerLoopIndices;
 }
@@ -141,9 +142,9 @@ static LinalgOp getTiledProducer(OpBuilder &b, OpResult producerResult,
 
   // Obtain the `producerOp` loop bounds and the `sliceOp` ranges.
   SmallVector<Value> producerLoopBounds;
-  transform(producerOp.createLoopRanges(b, loc),
-            std::back_inserter(producerLoopBounds),
-            [](Range range) { return range.size; });
+  llvm::transform(producerOp.createLoopRanges(b, loc),
+                  std::back_inserter(producerLoopBounds),
+                  [](Range range) { return range.size; });
   SmallVector<Range> sliceOpRanges = sliceOp.getOrCreateRanges(b, loc);
 
   // Tile the producer operands given the `sliceOp` ranges. Iterate the

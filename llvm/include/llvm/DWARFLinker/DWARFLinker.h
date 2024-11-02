@@ -29,7 +29,8 @@ template <typename T> class SmallVectorImpl;
 enum class DwarfLinkerClient { Dsymutil, LLD, General };
 
 /// The kind of accelerator tables we should emit.
-enum class AccelTableKind {
+enum class DwarfLinkerAccelTableKind : uint8_t {
+  None,
   Apple,   ///< .apple_names, .apple_namespaces, .apple_types, .apple_objc.
   Dwarf,   ///< DWARF v5 .debug_names.
   Default, ///< Dwarf for DWARF5 or later, Apple otherwise.
@@ -63,28 +64,21 @@ class AddressesMap {
 public:
   virtual ~AddressesMap();
 
-  /// Returns true if represented addresses are from linked file.
-  /// Returns false if represented addresses are from not-linked
-  /// object file.
-  virtual bool areRelocationsResolved() const = 0;
-
   /// Checks that there are valid relocations against a .debug_info
   /// section.
   virtual bool hasValidRelocs() = 0;
 
-  /// Checks that the specified DIE has a DW_AT_Location attribute
-  /// that references into a live code section.
-  ///
+  /// Checks that the specified variable \p DIE references live code section.
+  /// Allowed kind of input die: DW_TAG_variable, DW_TAG_constant.
   /// \returns true and sets Info.InDebugMap if it is the case.
-  virtual bool hasLiveMemoryLocation(const DWARFDie &DIE,
-                                     CompileUnit::DIEInfo &Info) = 0;
+  virtual bool isLiveVariable(const DWARFDie &DIE,
+                              CompileUnit::DIEInfo &Info) = 0;
 
-  /// Checks that the specified DIE has a DW_AT_Low_pc attribute
-  /// that references into a live code section.
-  ///
+  /// Checks that the specified subprogram \p DIE references live code section.
+  /// Allowed kind of input die: DW_TAG_subprogram, DW_TAG_label.
   /// \returns true and sets Info.InDebugMap if it is the case.
-  virtual bool hasLiveAddressRange(const DWARFDie &DIE,
-                                   CompileUnit::DIEInfo &Info) = 0;
+  virtual bool isLiveSubprogram(const DWARFDie &DIE,
+                                CompileUnit::DIEInfo &Info) = 0;
 
   /// Apply the valid relocations to the buffer \p Data, taking into
   /// account that Data is at \p BaseOffset in the .debug_info section.
@@ -300,7 +294,7 @@ public:
   void setNumThreads(unsigned NumThreads) { Options.Threads = NumThreads; }
 
   /// Set kind of accelerator tables to be generated.
-  void setAccelTableKind(AccelTableKind Kind) {
+  void setAccelTableKind(DwarfLinkerAccelTableKind Kind) {
     Options.TheAccelTableKind = Kind;
   }
 
@@ -811,7 +805,8 @@ private:
     unsigned Threads = 1;
 
     /// The accelerator table kind
-    AccelTableKind TheAccelTableKind = AccelTableKind::Default;
+    DwarfLinkerAccelTableKind TheAccelTableKind =
+        DwarfLinkerAccelTableKind::Default;
 
     /// Prepend path for the clang modules.
     std::string PrependPath;

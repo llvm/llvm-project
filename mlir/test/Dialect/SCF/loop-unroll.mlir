@@ -5,7 +5,7 @@
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 annotate=true' | FileCheck %s --check-prefix UNROLL-BY-2-ANNOTATE
 // RUN: mlir-opt %s --affine-loop-unroll='unroll-factor=6 unroll-up-to-factor=true' | FileCheck %s --check-prefix UNROLL-UP-TO
 
-func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
+func.func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
                           %arg3: memref<?xf32>) {
   %0 = arith.constant 7.0 : f32
   scf.for %i0 = %arg0 to %arg1 step %arg2 {
@@ -83,7 +83,7 @@ func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
 //  UNROLL-BY-3-NEXT:  }
 //  UNROLL-BY-3-NEXT:  return
 
-func @dynamic_loop_unroll_outer_by_2(
+func.func @dynamic_loop_unroll_outer_by_2(
   %arg0 : index, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index,
   %arg5 : index, %arg6: memref<?xf32>) {
   %0 = arith.constant 7.0 : f32
@@ -118,7 +118,7 @@ func @dynamic_loop_unroll_outer_by_2(
 //  UNROLL-OUTER-BY-2-NEXT:  }
 //  UNROLL-OUTER-BY-2-NEXT:  return
 
-func @dynamic_loop_unroll_inner_by_2(
+func.func @dynamic_loop_unroll_inner_by_2(
   %arg0 : index, %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index,
   %arg5 : index, %arg6: memref<?xf32>) {
   %0 = arith.constant 7.0 : f32
@@ -154,7 +154,7 @@ func @dynamic_loop_unroll_inner_by_2(
 
 // Test that no epilogue clean-up loop is generated because the trip count is
 // a multiple of the unroll factor.
-func @static_loop_unroll_by_2(%arg0 : memref<?xf32>) {
+func.func @static_loop_unroll_by_2(%arg0 : memref<?xf32>) {
   %0 = arith.constant 7.0 : f32
   %lb = arith.constant 0 : index
   %ub = arith.constant 20 : index
@@ -186,7 +186,7 @@ func @static_loop_unroll_by_2(%arg0 : memref<?xf32>) {
 
 // Test that epilogue clean up loop is generated (trip count is not
 // a multiple of unroll factor).
-func @static_loop_unroll_by_3(%arg0 : memref<?xf32>) {
+func.func @static_loop_unroll_by_3(%arg0 : memref<?xf32>) {
   %0 = arith.constant 7.0 : f32
   %lb = arith.constant 0 : index
   %ub = arith.constant 20 : index
@@ -223,7 +223,7 @@ func @static_loop_unroll_by_3(%arg0 : memref<?xf32>) {
 
 // Test that the single iteration epilogue loop body is promoted to the loops
 // containing block.
-func @static_loop_unroll_by_3_promote_epilogue(%arg0 : memref<?xf32>) {
+func.func @static_loop_unroll_by_3_promote_epilogue(%arg0 : memref<?xf32>) {
   %0 = arith.constant 7.0 : f32
   %lb = arith.constant 0 : index
   %ub = arith.constant 10 : index
@@ -256,7 +256,7 @@ func @static_loop_unroll_by_3_promote_epilogue(%arg0 : memref<?xf32>) {
 //  UNROLL-BY-3-NEXT:  return
 
 // Test unroll-up-to functionality.
-func @static_loop_unroll_up_to_factor(%arg0 : memref<?xf32>) {
+func.func @static_loop_unroll_up_to_factor(%arg0 : memref<?xf32>) {
   %0 = arith.constant 7.0 : f32
   %lb = arith.constant 0 : index
   %ub = arith.constant 2 : index
@@ -276,3 +276,41 @@ func @static_loop_unroll_up_to_factor(%arg0 : memref<?xf32>) {
 //   UNROLL-UP-TO-NEXT: affine.store %{{.*}}, %[[MEM]][%[[V1]]] : memref<?xf32>
 //   UNROLL-UP-TO-NEXT: return
 
+// Test that epilogue's arguments are correctly renamed.
+func.func @static_loop_unroll_by_3_rename_epilogue_arguments() -> (f32, f32) {
+  %0 = arith.constant 7.0 : f32
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 20 : index
+  %step = arith.constant 1 : index
+  %result:2 = scf.for %i0 = %lb to %ub step %step iter_args(%arg0 = %0, %arg1 = %0) -> (f32, f32) {
+    %add = arith.addf %arg0, %arg1 : f32
+    %mul = arith.mulf %arg0, %arg1 : f32
+    scf.yield %add, %mul : f32, f32
+  }
+  return %result#0, %result#1 : f32, f32
+}
+// UNROLL-BY-3-LABEL: func @static_loop_unroll_by_3_rename_epilogue_arguments
+//
+//   UNROLL-BY-3-DAG:   %[[CST:.*]] = arith.constant {{.*}} : f32
+//   UNROLL-BY-3-DAG:   %[[C0:.*]] = arith.constant 0 : index
+//   UNROLL-BY-3-DAG:   %[[C1:.*]] = arith.constant 1 : index
+//   UNROLL-BY-3-DAG:   %[[C20:.*]] = arith.constant 20 : index
+//   UNROLL-BY-3-DAG:   %[[C18:.*]] = arith.constant 18 : index
+//   UNROLL-BY-3-DAG:   %[[C3:.*]] = arith.constant 3 : index
+//       UNROLL-BY-3:   %[[FOR:.*]]:2 = scf.for %[[IV:.*]] = %[[C0]] to %[[C18]] step %[[C3]]
+//  UNROLL-BY-3-SAME:     iter_args(%[[ARG0:.*]] = %[[CST]], %[[ARG1:.*]] = %[[CST]]) -> (f32, f32) {
+//  UNROLL-BY-3-NEXT:     %[[ADD0:.*]] = arith.addf %[[ARG0]], %[[ARG1]] : f32
+//  UNROLL-BY-3-NEXT:     %[[MUL0:.*]] = arith.mulf %[[ARG0]], %[[ARG1]] : f32
+//  UNROLL-BY-3-NEXT:     %[[ADD1:.*]] = arith.addf %[[ADD0]], %[[MUL0]] : f32
+//  UNROLL-BY-3-NEXT:     %[[MUL1:.*]] = arith.mulf %[[ADD0]], %[[MUL0]] : f32
+//  UNROLL-BY-3-NEXT:     %[[ADD2:.*]] = arith.addf %[[ADD1]], %[[MUL1]] : f32
+//  UNROLL-BY-3-NEXT:     %[[MUL2:.*]] = arith.mulf %[[ADD1]], %[[MUL1]] : f32
+//  UNROLL-BY-3-NEXT:     scf.yield %[[ADD2]], %[[MUL2]] : f32, f32
+//  UNROLL-BY-3-NEXT:   }
+//       UNROLL-BY-3:   %[[EFOR:.*]]:2 = scf.for %[[EIV:.*]] = %[[C18]] to %[[C20]] step %[[C1]]
+//  UNROLL-BY-3-SAME:     iter_args(%[[EARG0:.*]] = %[[FOR]]#0, %[[EARG1:.*]] = %[[FOR]]#1) -> (f32, f32) {
+//  UNROLL-BY-3-NEXT:     %[[EADD:.*]] = arith.addf %[[EARG0]], %[[EARG1]] : f32
+//  UNROLL-BY-3-NEXT:     %[[EMUL:.*]] = arith.mulf %[[EARG0]], %[[EARG1]] : f32
+//  UNROLL-BY-3-NEXT:     scf.yield %[[EADD]], %[[EMUL]] : f32, f32
+//  UNROLL-BY-3-NEXT:   }
+//  UNROLL-BY-3-NEXT:   return %[[EFOR]]#0, %[[EFOR]]#1 : f32, f32

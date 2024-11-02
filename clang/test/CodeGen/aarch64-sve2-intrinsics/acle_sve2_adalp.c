@@ -3,8 +3,6 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify -verify-ignore-unexpected=error %s
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify=overload -verify-ignore-unexpected=error %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -33,8 +31,6 @@
 //
 svint16_t test_svadalp_s16_z(svbool_t pg, svint16_t op1, svint8_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svadalp_z'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svadalp_s16_z'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svadalp,_s16,_z,)(pg, op1, op2);
 }
 
@@ -54,8 +50,6 @@ svint16_t test_svadalp_s16_z(svbool_t pg, svint16_t op1, svint8_t op2)
 //
 svint32_t test_svadalp_s32_z(svbool_t pg, svint32_t op1, svint16_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svadalp_z'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svadalp_s32_z'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svadalp,_s32,_z,)(pg, op1, op2);
 }
 
@@ -75,8 +69,6 @@ svint32_t test_svadalp_s32_z(svbool_t pg, svint32_t op1, svint16_t op2)
 //
 svint64_t test_svadalp_s64_z(svbool_t pg, svint64_t op1, svint32_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svadalp_z'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svadalp_s64_z'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svadalp,_s64,_z,)(pg, op1, op2);
 }
 
@@ -96,8 +88,6 @@ svint64_t test_svadalp_s64_z(svbool_t pg, svint64_t op1, svint32_t op2)
 //
 svuint16_t test_svadalp_u16_z(svbool_t pg, svuint16_t op1, svuint8_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svadalp_z'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svadalp_u16_z'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svadalp,_u16,_z,)(pg, op1, op2);
 }
 
@@ -117,8 +107,6 @@ svuint16_t test_svadalp_u16_z(svbool_t pg, svuint16_t op1, svuint8_t op2)
 //
 svuint32_t test_svadalp_u32_z(svbool_t pg, svuint32_t op1, svuint16_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svadalp_z'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svadalp_u32_z'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svadalp,_u32,_z,)(pg, op1, op2);
 }
 
@@ -138,8 +126,6 @@ svuint32_t test_svadalp_u32_z(svbool_t pg, svuint32_t op1, svuint16_t op2)
 //
 svuint64_t test_svadalp_u64_z(svbool_t pg, svuint64_t op1, svuint32_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svadalp_z'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svadalp_u64_z'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svadalp,_u64,_z,)(pg, op1, op2);
 }
 
@@ -157,8 +143,6 @@ svuint64_t test_svadalp_u64_z(svbool_t pg, svuint64_t op1, svuint32_t op2)
 //
 svint16_t test_svadalp_s16_m(svbool_t pg, svint16_t op1, svint8_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svadalp_m'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svadalp_s16_m'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svadalp,_s16,_m,)(pg, op1, op2);
 }
 
@@ -176,8 +160,6 @@ svint16_t test_svadalp_s16_m(svbool_t pg, svint16_t op1, svint8_t op2)
 //
 svint32_t test_svadalp_s32_m(svbool_t pg, svint32_t op1, svint16_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svadalp_m'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svadalp_s32_m'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svadalp,_s32,_m,)(pg, op1, op2);
 }
 
@@ -195,8 +177,6 @@ svint32_t test_svadalp_s32_m(svbool_t pg, svint32_t op1, svint16_t op2)
 //
 svint64_t test_svadalp_s64_m(svbool_t pg, svint64_t op1, svint32_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svadalp_m'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svadalp_s64_m'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svadalp,_s64,_m,)(pg, op1, op2);
 }
 
@@ -214,8 +194,6 @@ svint64_t test_svadalp_s64_m(svbool_t pg, svint64_t op1, svint32_t op2)
 //
 svuint16_t test_svadalp_u16_m(svbool_t pg, svuint16_t op1, svuint8_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svadalp_m'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svadalp_u16_m'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svadalp,_u16,_m,)(pg, op1, op2);
 }
 
@@ -233,8 +211,6 @@ svuint16_t test_svadalp_u16_m(svbool_t pg, svuint16_t op1, svuint8_t op2)
 //
 svuint32_t test_svadalp_u32_m(svbool_t pg, svuint32_t op1, svuint16_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svadalp_m'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svadalp_u32_m'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svadalp,_u32,_m,)(pg, op1, op2);
 }
 
@@ -252,8 +228,6 @@ svuint32_t test_svadalp_u32_m(svbool_t pg, svuint32_t op1, svuint16_t op2)
 //
 svuint64_t test_svadalp_u64_m(svbool_t pg, svuint64_t op1, svuint32_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svadalp_m'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svadalp_u64_m'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svadalp,_u64,_m,)(pg, op1, op2);
 }
 
@@ -271,8 +245,6 @@ svuint64_t test_svadalp_u64_m(svbool_t pg, svuint64_t op1, svuint32_t op2)
 //
 svint16_t test_svadalp_s16_x(svbool_t pg, svint16_t op1, svint8_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svadalp_x'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svadalp_s16_x'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svadalp,_s16,_x,)(pg, op1, op2);
 }
 
@@ -290,8 +262,6 @@ svint16_t test_svadalp_s16_x(svbool_t pg, svint16_t op1, svint8_t op2)
 //
 svint32_t test_svadalp_s32_x(svbool_t pg, svint32_t op1, svint16_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svadalp_x'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svadalp_s32_x'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svadalp,_s32,_x,)(pg, op1, op2);
 }
 
@@ -309,8 +279,6 @@ svint32_t test_svadalp_s32_x(svbool_t pg, svint32_t op1, svint16_t op2)
 //
 svint64_t test_svadalp_s64_x(svbool_t pg, svint64_t op1, svint32_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svadalp_x'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svadalp_s64_x'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svadalp,_s64,_x,)(pg, op1, op2);
 }
 
@@ -328,8 +296,6 @@ svint64_t test_svadalp_s64_x(svbool_t pg, svint64_t op1, svint32_t op2)
 //
 svuint16_t test_svadalp_u16_x(svbool_t pg, svuint16_t op1, svuint8_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svadalp_x'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svadalp_u16_x'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svadalp,_u16,_x,)(pg, op1, op2);
 }
 
@@ -347,8 +313,6 @@ svuint16_t test_svadalp_u16_x(svbool_t pg, svuint16_t op1, svuint8_t op2)
 //
 svuint32_t test_svadalp_u32_x(svbool_t pg, svuint32_t op1, svuint16_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svadalp_x'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svadalp_u32_x'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svadalp,_u32,_x,)(pg, op1, op2);
 }
 
@@ -366,7 +330,5 @@ svuint32_t test_svadalp_u32_x(svbool_t pg, svuint32_t op1, svuint16_t op2)
 //
 svuint64_t test_svadalp_u64_x(svbool_t pg, svuint64_t op1, svuint32_t op2)
 {
-  // overload-warning@+2 {{call to undeclared function 'svadalp_x'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svadalp_u64_x'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svadalp,_u64,_x,)(pg, op1, op2);
 }

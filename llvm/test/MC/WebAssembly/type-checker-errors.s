@@ -468,6 +468,26 @@ catch_superfluous_value_at_end:
 # CHECK: :[[@LINE+1]]:3: error: 1 superfluous return values
   end_function
 
+ref_is_null_empty_stack_while_popping:
+  .functype ref_is_null_empty_stack_while_popping () -> ()
+# CHECK: [[@LINE+1]]:3: error: empty stack while popping reftype
+  ref.is_null
+  end_function
+
+ref_is_null_type_mismatch:
+  .functype ref_is_null_type_mismatch () -> ()
+  i32.const 1
+# CHECK: [[@LINE+1]]:3: error: popped i32, expected reftype
+  ref.is_null
+  end_function
+
+ref_is_null_pushes_i32:
+  .functype ref_is_null_pushes_i32 () -> (i64)
+  ref.null_func
+  ref.is_null
+# CHECK: :[[@LINE+1]]:3: error: popped i32, expected i64
+  end_function
+
 # For the other instructions, the type checker checks vs the operands in the
 # instruction definition. Perform some simple checks for these rather than
 # exhaustively testing all instructions.

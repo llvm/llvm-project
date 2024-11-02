@@ -457,6 +457,20 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_1(i32 %x) {
   ret i1 %t5
 }
 
+define <2 x i1> @masked_icmps_mask_notallzeros_bmask_mixed_1_vector(<2 x i32> %x) {
+; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_1_vector(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 15, i32 15>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 9, i32 9>
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+;
+  %t1 = and <2 x i32> %x, <i32 12, i32 12>
+  %t2 = icmp ne <2 x i32> %t1, zeroinitializer
+  %t3 = and <2 x i32> %x, <i32 7, i32 7>
+  %t4 = icmp eq <2 x i32> %t3, <i32 1, i32 1>
+  %t5 = and <2 x i1> %t2, %t4
+  ret <2 x i1> %t5
+}
+
 define i1 @masked_icmps_mask_notallzeros_bmask_mixed_1_logical(i32 %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_1_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15

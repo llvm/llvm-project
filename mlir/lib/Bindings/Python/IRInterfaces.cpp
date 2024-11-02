@@ -63,13 +63,13 @@ public:
       : obj(std::move(object)) {
     try {
       operation = &py::cast<PyOperation &>(obj);
-    } catch (py::cast_error &err) {
+    } catch (py::cast_error &) {
       // Do nothing.
     }
 
     try {
       operation = &py::cast<PyOpView &>(obj).getOperation();
-    } catch (py::cast_error &err) {
+    } catch (py::cast_error &) {
       // Do nothing.
     }
 
@@ -86,7 +86,7 @@ public:
     } else {
       try {
         opName = obj.attr("OPERATION_NAME").template cast<std::string>();
-      } catch (py::cast_error &err) {
+      } catch (py::cast_error &) {
         throw py::type_error(
             "Op interface does not refer to an operation or OpView class");
       }

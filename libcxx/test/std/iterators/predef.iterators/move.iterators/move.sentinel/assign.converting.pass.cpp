@@ -21,7 +21,7 @@
 #include <concepts>
 
 struct NonAssignable {
-    NonAssignable& operator=(int i);
+  NonAssignable& operator=(int i);
 };
 static_assert(std::semiregular<NonAssignable>);
 static_assert(std::is_assignable_v<NonAssignable, int>);
@@ -29,17 +29,22 @@ static_assert(!std::assignable_from<NonAssignable, int>);
 
 constexpr bool test()
 {
+  // Assigning from an lvalue.
   {
     std::move_sentinel<int> m(42);
     std::move_sentinel<long> m2;
     m2 = m;
     assert(m2.base() == 42L);
   }
+
+  // Assigning from an rvalue.
   {
     std::move_sentinel<long> m2;
     m2 = std::move_sentinel<int>(43);
     assert(m2.base() == 43L);
   }
+
+  // SFINAE checks.
   {
     static_assert( std::is_assignable_v<std::move_sentinel<int>, std::move_sentinel<long>>);
     static_assert(!std::is_assignable_v<std::move_sentinel<int*>, std::move_sentinel<const int*>>);

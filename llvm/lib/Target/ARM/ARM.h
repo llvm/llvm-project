@@ -57,6 +57,7 @@ Pass *createMVEGatherScatterLoweringPass();
 FunctionPass *createARMSLSHardeningPass();
 FunctionPass *createARMIndirectThunks();
 Pass *createMVELaneInterleavingPass();
+FunctionPass *createARMFixCortexA57AES1742098Pass();
 
 void LowerARMMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                   ARMAsmPrinter &AP);
@@ -77,6 +78,7 @@ void initializeMVETailPredicationPass(PassRegistry &);
 void initializeMVEGatherScatterLoweringPass(PassRegistry &);
 void initializeARMSLSHardeningPass(PassRegistry &);
 void initializeMVELaneInterleavingPass(PassRegistry &);
+void initializeARMFixCortexA57AES1742098Pass(PassRegistry &);
 
 } // end namespace llvm
 

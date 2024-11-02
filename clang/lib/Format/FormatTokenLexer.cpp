@@ -85,10 +85,11 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
     if (Style.Language == FormatStyle::LK_TextProto)
       tryParsePythonComment();
     tryMergePreviousTokens();
-    if (Style.isCSharp())
+    if (Style.isCSharp()) {
       // This needs to come after tokens have been merged so that C#
       // string literals are correctly identified.
       handleCSharpVerbatimAndInterpolatedStrings();
+    }
     if (Tokens.back()->NewlinesBefore > 0 || Tokens.back()->IsMultiline)
       FirstInLineIndex = Tokens.size() - 1;
   } while (Tokens.back()->isNot(tok::eof));
@@ -335,8 +336,9 @@ bool FormatTokenLexer::tryMergeNullishCoalescingEqual() {
   auto &NullishCoalescing = *(Tokens.end() - 2);
   auto &Equal = *(Tokens.end() - 1);
   if (NullishCoalescing->getType() != TT_NullCoalescingOperator ||
-      !Equal->is(tok::equal))
+      !Equal->is(tok::equal)) {
     return false;
+  }
   NullishCoalescing->Tok.setKind(tok::equal); // no '??=' in clang tokens.
   NullishCoalescing->TokenText =
       StringRef(NullishCoalescing->TokenText.begin(),
@@ -577,8 +579,9 @@ void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
 
   // Deal with multiline strings.
   if (!(CSharpStringLiteral->TokenText.startswith(R"(@")") ||
-        CSharpStringLiteral->TokenText.startswith(R"($@")")))
+        CSharpStringLiteral->TokenText.startswith(R"($@")"))) {
     return;
+  }
 
   const char *StrBegin =
       Lex->getBufferLocation() - CSharpStringLiteral->TokenText.size();
@@ -792,13 +795,14 @@ bool FormatTokenLexer::tryMergeConflictMarkers() {
     LineStart = Buffer.substr(LineOffset, FirstSpace - LineOffset);
 
   TokenType Type = TT_Unknown;
-  if (LineStart == "<<<<<<<" || LineStart == ">>>>")
+  if (LineStart == "<<<<<<<" || LineStart == ">>>>") {
     Type = TT_ConflictStart;
-  else if (LineStart == "|||||||" || LineStart == "=======" ||
-           LineStart == "====")
+  } else if (LineStart == "|||||||" || LineStart == "=======" ||
+             LineStart == "====") {
     Type = TT_ConflictAlternative;
-  else if (LineStart == ">>>>>>>" || LineStart == "<<<<")
+  } else if (LineStart == ">>>>>>>" || LineStart == "<<<<") {
     Type = TT_ConflictEnd;
+  }
 
   if (Type != TT_Unknown) {
     FormatToken *Next = Tokens.back();
@@ -945,12 +949,13 @@ FormatToken *FormatTokenLexer::getNextToken() {
   while (FormatTok->TokenText.size() > 1 && FormatTok->TokenText[0] == '\\') {
     unsigned SkippedWhitespace = 0;
     if (FormatTok->TokenText.size() > 2 &&
-        (FormatTok->TokenText[1] == '\r' && FormatTok->TokenText[2] == '\n'))
+        (FormatTok->TokenText[1] == '\r' && FormatTok->TokenText[2] == '\n')) {
       SkippedWhitespace = 3;
-    else if (FormatTok->TokenText[1] == '\n')
+    } else if (FormatTok->TokenText[1] == '\n') {
       SkippedWhitespace = 2;
-    else
+    } else {
       break;
+    }
 
     ++FormatTok->NewlinesBefore;
     WhitespaceLength += SkippedWhitespace;
@@ -1063,18 +1068,21 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
 
   if ((Style.isJavaScript() || Style.Language == FormatStyle::LK_Proto ||
        Style.Language == FormatStyle::LK_TextProto) &&
-      Tok.is(tok::char_constant))
+      Tok.is(tok::char_constant)) {
     Tok.Tok.setKind(tok::string_literal);
+  }
 
   if (Tok.is(tok::comment) && (Tok.TokenText == "// clang-format on" ||
-                               Tok.TokenText == "/* clang-format on */"))
+                               Tok.TokenText == "/* clang-format on */")) {
     FormattingDisabled = false;
+  }
 
   Tok.Finalized = FormattingDisabled;
 
   if (Tok.is(tok::comment) && (Tok.TokenText == "// clang-format off" ||
-                               Tok.TokenText == "/* clang-format off */"))
+                               Tok.TokenText == "/* clang-format off */")) {
     FormattingDisabled = true;
+  }
 }
 
 void FormatTokenLexer::resetLexer(unsigned Offset) {

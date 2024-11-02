@@ -26,8 +26,11 @@ public:
   }
   bool isPICDefaultForced() const override { return false; }
 
-  std::string ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
-                                          types::ID InputType) const override;
+  llvm::opt::DerivedArgList *
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+                Action::OffloadKind DeviceOffloadKind) const override;
+  static llvm::Optional<std::string>
+  parseTargetProfile(StringRef TargetProfile);
 };
 
 } // end namespace toolchains

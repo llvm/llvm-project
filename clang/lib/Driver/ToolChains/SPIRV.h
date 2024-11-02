@@ -64,8 +64,9 @@ public:
       : ToolChain(D, Triple, Args) {}
 
   bool useIntegratedAs() const override { return true; }
-  bool useIntegratedBackend() const override { return false; }
 
+  bool IsIntegratedBackendDefault() const override { return false; }
+  bool IsNonIntegratedBackendSupported() const override { return true; }
   bool IsMathErrnoDefault() const override { return false; }
   bool isCrossCompiling() const override { return true; }
   bool isPICDefault() const override { return false; }

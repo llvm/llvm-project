@@ -49,7 +49,7 @@ module {
   // are typically not concerned with such details, but the test ensures
   // everything is working "under the hood".
   //
-  func @entry() {
+  func.func @entry() {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %d0 = arith.constant 0.0 : f64

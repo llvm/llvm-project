@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s -test-linalg-transform-patterns=test-linalg-to-vector-patterns \
-// RUN: -linalg-bufferize -arith-bufferize -tensor-bufferize -func-bufferize \
+// RUN: -linalg-init-tensor-to-alloc-tensor -linalg-bufferize -arith-bufferize \
+// RUN: -bufferization-bufferize -tensor-bufferize -func-bufferize \
 // RUN: -finalizing-bufferize -buffer-deallocation \
 // RUN: -convert-linalg-to-loops -convert-scf-to-cf -convert-linalg-to-llvm -convert-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
@@ -7,7 +8,7 @@
 // RUN: | FileCheck %s
 
 
-func @main() {
+func.func @main() {
   %const = arith.constant dense<[[[1.0, 2.0, 3.0], [2.0, 3.0, 4.0]]]> : tensor<1x2x3xf32>
   %dynamic = tensor.cast %const: tensor<1x2x3xf32> to tensor<1x?x3xf32>
   %offset = arith.constant 2 : index
@@ -18,7 +19,7 @@ func @main() {
     tensor.yield %cst : f32
   } : tensor<1x?x3xf32> to tensor<1x?x?xf32>
   %unranked = tensor.cast %out: tensor<1x?x?xf32> to tensor<*xf32>
-  call @print_memref_f32(%unranked) : (tensor<*xf32>) -> ()
+  call @printMemrefF32(%unranked) : (tensor<*xf32>) -> ()
 
   //      CHECK: Unranked Memref base@ = {{0x[-9a-f]*}}
   // CHECK-SAME: rank = 3 offset = 0 sizes = [1, 4, 5] strides = [20, 5, 1] data =
@@ -30,4 +31,4 @@ func @main() {
   return
 }
 
-func private @print_memref_f32(%ptr : tensor<*xf32>)
+func.func private @printMemrefF32(%ptr : tensor<*xf32>)

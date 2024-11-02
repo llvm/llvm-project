@@ -428,6 +428,14 @@ bool Language::GetFormatterPrefixSuffix(ValueObject &valobj,
   return false;
 }
 
+bool Language::DemangledNameContainsPath(llvm::StringRef path, 
+                                         ConstString demangled) const {
+  // The base implementation does a simple contains comparision:
+  if (path.empty())
+    return false;
+  return demangled.GetStringRef().contains(path);                                         
+}
+
 DumpValueObjectOptions::DeclPrintingHelper Language::GetDeclPrintingHelper() {
   return nullptr;
 }

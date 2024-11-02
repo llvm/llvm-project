@@ -25,13 +25,13 @@ def riscv_remuw : SDNode<"RISCVISD::REMUW", SDT_RISCVIntBinOpW>;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtM] in {
-def MUL     : ALU_rr<0b0000001, 0b000, "mul">,
+def MUL     : ALU_rr<0b0000001, 0b000, "mul", /*Commutable*/1>,
               Sched<[WriteIMul, ReadIMul, ReadIMul]>;
-def MULH    : ALU_rr<0b0000001, 0b001, "mulh">,
+def MULH    : ALU_rr<0b0000001, 0b001, "mulh", /*Commutable*/1>,
               Sched<[WriteIMul, ReadIMul, ReadIMul]>;
 def MULHSU  : ALU_rr<0b0000001, 0b010, "mulhsu">,
               Sched<[WriteIMul, ReadIMul, ReadIMul]>;
-def MULHU   : ALU_rr<0b0000001, 0b011, "mulhu">,
+def MULHU   : ALU_rr<0b0000001, 0b011, "mulhu", /*Commutable*/1>,
               Sched<[WriteIMul, ReadIMul, ReadIMul]>;
 def DIV     : ALU_rr<0b0000001, 0b100, "div">,
               Sched<[WriteIDiv, ReadIDiv, ReadIDiv]>;
@@ -44,7 +44,7 @@ def REMU    : ALU_rr<0b0000001, 0b111, "remu">,
 } // Predicates = [HasStdExtM]
 
 let Predicates = [HasStdExtM, IsRV64] in {
-def MULW    : ALUW_rr<0b0000001, 0b000, "mulw">,
+def MULW    : ALUW_rr<0b0000001, 0b000, "mulw", /*Commutable*/1>,
               Sched<[WriteIMul32, ReadIMul32, ReadIMul32]>;
 def DIVW    : ALUW_rr<0b0000001, 0b100, "divw">,
               Sched<[WriteIDiv32, ReadIDiv32, ReadIDiv32]>;

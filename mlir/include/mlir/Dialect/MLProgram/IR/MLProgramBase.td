@@ -27,6 +27,8 @@ def MLProgram_Dialect : Dialect {
     it is recommended to inquire further prior to using this dialect.
   }];
 
+  let useDefaultAttributePrinterParser = 1;
+  let useDefaultTypePrinterParser = 1;
   let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 

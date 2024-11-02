@@ -1,4 +1,6 @@
 ; RUN: llc < %s | FileCheck %s
+; RUN: %if ptxas %{ llc < %s | %ptxas-verify %}
+
 target triple = "nvptx64-nvidia-cuda"
 
 declare void @llvm.nvvm.barrier0()

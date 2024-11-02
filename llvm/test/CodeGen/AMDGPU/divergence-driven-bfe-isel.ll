@@ -1,6 +1,6 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-; GCN_LABEL: @bfe_uniform
+; GCN-LABEL: @bfe_uniform
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x40010
 define amdgpu_kernel void @bfe_uniform(i32 %val, i32 addrspace(1)* %out) {
   %hibits = lshr i32 %val, 16
@@ -9,7 +9,7 @@ define amdgpu_kernel void @bfe_uniform(i32 %val, i32 addrspace(1)* %out) {
   ret void
 }
 
-; GCN_LABEL: @bfe_divergent
+; GCN-LABEL: @bfe_divergent
 ; GCN: v_bfe_u32 v{{[0-9]+}}, v{{[0-9]+}}, 16, 4
 define amdgpu_kernel void @bfe_divergent(i32 %val, i32 addrspace(1)* %out) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

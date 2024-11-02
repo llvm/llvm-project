@@ -61,6 +61,7 @@ FEATURE(attribute_availability_app_extension, true)
 FEATURE(attribute_availability_with_version_underscores, true)
 FEATURE(attribute_availability_tvos, true)
 FEATURE(attribute_availability_watchos, true)
+FEATURE(attribute_availability_driverkit, true)
 FEATURE(attribute_availability_with_strict, true)
 FEATURE(attribute_availability_with_replacement, true)
 FEATURE(attribute_availability_in_templates, true)
@@ -269,6 +270,9 @@ EXTENSION(matrix_types_scalar_division, true)
 EXTENSION(cxx_attributes_on_using_declarations, LangOpts.CPlusPlus11)
 
 FEATURE(cxx_abi_relative_vtable, LangOpts.CPlusPlus && LangOpts.RelativeCXXABIVTables)
+
+// CUDA/HIP Features
+FEATURE(cuda_noinline_keyword, LangOpts.CUDA)
 
 #undef EXTENSION
 #undef FEATURE

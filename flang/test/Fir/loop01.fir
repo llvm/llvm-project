@@ -1,6 +1,6 @@
 // RUN: fir-opt --split-input-file --cfg-conversion %s | FileCheck %s
 
-func @x(%lb : index, %ub : index, %step : index, %b : i1, %addr : !fir.ref<index>) {
+func.func @x(%lb : index, %ub : index, %step : index, %b : i1, %addr : !fir.ref<index>) {
   fir.do_loop %iv = %lb to %ub step %step unordered {
     // expect following conditional blocks to get fused
     fir.if %b {
@@ -13,7 +13,7 @@ func @x(%lb : index, %ub : index, %step : index, %b : i1, %addr : !fir.ref<index
   return
 }
 
-func private @f2() -> i1
+func.func private @f2() -> i1
 
 // CHECK:     func @x(%[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: index, %[[VAL_3:.*]]: i1, %[[VAL_4:.*]]: !fir.ref<index>) {
 // CHECK:       %[[VAL_5:.*]] = arith.subi %[[VAL_1]], %[[VAL_0]] : index
@@ -45,7 +45,7 @@ func private @f2() -> i1
 
 // -----
 
-func @x2(%lo : index, %up : index, %ok : i1) {
+func.func @x2(%lo : index, %up : index, %ok : i1) {
   %c1 = arith.constant 1 : index
   %unused = fir.iterate_while (%i = %lo to %up step %c1) and (%ok1 = %ok) {
     %ok2 = fir.call @f2() : () -> i1
@@ -54,7 +54,7 @@ func @x2(%lo : index, %up : index, %ok : i1) {
   return
 }
 
-func private @f3(i16)
+func.func private @f3(i16)
 
 // CHECK:   func @x2(%[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: i1) {
 // CHECK:     %[[VAL_3:.*]] = arith.constant 1 : index
@@ -82,7 +82,7 @@ func private @f3(i16)
 // -----
 
 // do_loop with an extra loop-carried value
-func @x3(%lo : index, %up : index) -> i1 {
+func.func @x3(%lo : index, %up : index) -> i1 {
   %c1 = arith.constant 1 : index
   %ok1 = arith.constant true
   %ok2 = fir.do_loop %i = %lo to %up step %c1 iter_args(%j = %ok1) -> i1 {
@@ -118,7 +118,7 @@ func @x3(%lo : index, %up : index) -> i1 {
 // -----
 
 // iterate_while with an extra loop-carried value
-func @y3(%lo : index, %up : index) -> i1 {
+func.func @y3(%lo : index, %up : index) -> i1 {
   %c1 = arith.constant 1 : index
   %ok1 = arith.constant true
   %ok4 = fir.call @f2() : () -> i1
@@ -130,7 +130,7 @@ func @y3(%lo : index, %up : index) -> i1 {
   return %andok : i1
 }
 
-func private @f4(i32) -> i1
+func.func private @f4(i32) -> i1
 
 // CHECK-LABEL:   func @y3(
 // CHECK-SAME:             %[[VAL_0:.*]]: index,
@@ -163,7 +163,7 @@ func private @f4(i32) -> i1
 // -----
 
 // do_loop that returns the final value of the induction
-func @x4(%lo : index, %up : index) -> index {
+func.func @x4(%lo : index, %up : index) -> index {
   %c1 = arith.constant 1 : index
   %v = fir.do_loop %i = %lo to %up step %c1 -> index {
     %i1 = fir.convert %i : (index) -> i32
@@ -199,7 +199,7 @@ func @x4(%lo : index, %up : index) -> index {
 // -----
 
 // iterate_while that returns the final value of both inductions
-func @y4(%lo : index, %up : index) -> index {
+func.func @y4(%lo : index, %up : index) -> index {
   %c1 = arith.constant 1 : index
   %ok1 = arith.constant true
   %v:2 = fir.iterate_while (%i = %lo to %up step %c1) and (%ok2 = %ok1) -> (index, i1) {
@@ -240,7 +240,7 @@ func @y4(%lo : index, %up : index) -> index {
 
 // do_loop that returns the final induction value
 // and an extra loop-carried value
-func @x5(%lo : index, %up : index) -> index {
+func.func @x5(%lo : index, %up : index) -> index {
   %c1 = arith.constant 1 : index
   %s1 = arith.constant 42 : i16
   %v:2 = fir.do_loop %i = %lo to %up step %c1 iter_args(%s = %s1) -> (index, i16) {
@@ -281,7 +281,7 @@ func @x5(%lo : index, %up : index) -> index {
 
 // iterate_while that returns the both induction values
 // and an extra loop-carried value
-func @y5(%lo : index, %up : index) -> index {
+func.func @y5(%lo : index, %up : index) -> index {
   %c1 = arith.constant 1 : index
   %s1 = arith.constant 42 : i16
   %ok1 = arith.constant true

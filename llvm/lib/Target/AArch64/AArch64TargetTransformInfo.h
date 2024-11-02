@@ -135,6 +135,8 @@ public:
     return ST->getVScaleForTuning();
   }
 
+  bool shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const;
+
   /// Try to return an estimate cost factor that can be used as a multiplier
   /// when scalarizing an operation for a vector with ElementCount \p VF.
   /// For scalable vectors this currently takes the most pessimistic view based
@@ -278,6 +280,23 @@ public:
     return isLegalMaskedGatherScatter(DataType);
   }
 
+  bool isLegalBroadcastLoad(Type *ElementTy, ElementCount NumElements) const {
+    // Return true if we can generate a `ld1r` splat load instruction.
+    if (!ST->hasNEON() || NumElements.isScalable())
+      return false;
+    switch (unsigned ElementBits = ElementTy->getScalarSizeInBits()) {
+    case 8:
+    case 16:
+    case 32:
+    case 64: {
+      // We accept bit-widths >= 64bits and elements {8,16,32,64} bits.
+      unsigned VectorBits = NumElements.getFixedValue() * ElementBits;
+      return VectorBits >= 64;
+    }
+    }
+    return false;
+  }
+
   bool isLegalNTStore(Type *DataType, Align Alignment) {
     // NOTE: The logic below is mostly geared towards LV, which calls it with
     //       vectors with 2 elements. We might want to improve that, if other
@@ -331,7 +350,7 @@ public:
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<Value *> Args = None);
+                                 ArrayRef<const Value *> Args = None);
   /// @}
 };
 

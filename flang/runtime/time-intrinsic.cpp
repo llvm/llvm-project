@@ -62,10 +62,13 @@ template <typename Unused = void> double GetCpuTime(fallback_implementation) {
 #define CLOCKID CLOCK_THREAD_CPUTIME_ID
 #elif defined CLOCK_MONOTONIC
 #define CLOCKID CLOCK_MONOTONIC
-#else
+#elif defined CLOCK_REALTIME
 #define CLOCKID CLOCK_REALTIME
+#else
+#undef CLOCKID
 #endif
 
+#ifdef CLOCKID
 // POSIX implementation using clock_gettime. This is only enabled where
 // clock_gettime is available.
 template <typename T = int, typename U = struct timespec>
@@ -80,6 +83,7 @@ double GetCpuTime(preferred_implementation,
   // Return some negative value to represent failure.
   return -1.0;
 }
+#endif
 
 using count_t = std::int64_t;
 using unsigned_count_t = std::uint64_t;
@@ -136,6 +140,7 @@ constexpr unsigned_count_t DS_PER_SEC{10u};
 constexpr unsigned_count_t MS_PER_SEC{1'000u};
 constexpr unsigned_count_t NS_PER_SEC{1'000'000'000u};
 
+#ifdef CLOCKID
 template <typename T = int, typename U = struct timespec>
 count_t GetSystemClockCount(int kind, preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
@@ -156,6 +161,7 @@ count_t GetSystemClockCount(int kind, preferred_implementation,
     return (sec * DS_PER_SEC + (nsec / (NS_PER_SEC / DS_PER_SEC))) % (huge + 1);
   }
 }
+#endif
 
 template <typename T = int, typename U = struct timespec>
 count_t GetSystemClockCountRate(int kind, preferred_implementation,

@@ -497,7 +497,7 @@ Sections:
 }
 
 // Tests for error paths of the ELFFile::decodeBBAddrMap API.
-TEST(ELFObjectFileTest, InvalidBBAddrMap) {
+TEST(ELFObjectFileTest, InvalidDecodeBBAddrMap) {
   StringRef CommonYamlString(R"(
 --- !ELF
 FileHeader:
@@ -602,6 +602,122 @@ Sections:
 
   DoCheck(OverLimitNumBlocks,
           "ULEB128 value at offset 0x8 exceeds UINT32_MAX (0x100000000)");
+}
+
+// Test for the ELFObjectFile::readBBAddrMap API.
+TEST(ELFObjectFileTest, ReadBBAddrMap) {
+  StringRef CommonYamlString(R"(
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .llvm_bb_addr_map_1
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Link: 1
+    Entries:
+      - Address: 0x11111
+        BBEntries:
+          - AddressOffset: 0x0
+            Size:          0x1
+            Metadata:      0x2
+  - Name: .llvm_bb_addr_map_2
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Link: 1
+    Entries:
+      - Address: 0x22222
+        BBEntries:
+          - AddressOffset: 0x0
+            Size:          0x2
+            Metadata:      0x4
+  - Name: .llvm_bb_addr_map
+    Type: SHT_LLVM_BB_ADDR_MAP
+  # Link: 0 (by default)
+    Entries:
+      - Address: 0x33333
+        BBEntries:
+          - AddressOffset: 0x0
+            Size:          0x3
+            Metadata:      0x6
+)");
+
+  BBAddrMap E1 = {0x11111, {{0x0, 0x1, 0x2}}};
+  BBAddrMap E2 = {0x22222, {{0x0, 0x2, 0x4}}};
+  BBAddrMap E3 = {0x33333, {{0x0, 0x3, 0x6}}};
+
+  std::vector<BBAddrMap> Section0BBAddrMaps = {E3};
+  std::vector<BBAddrMap> Section1BBAddrMaps = {E1, E2};
+  std::vector<BBAddrMap> AllBBAddrMaps = {E1, E2, E3};
+
+  auto DoCheckSucceeds = [&](StringRef YamlString,
+                             Optional<unsigned> TextSectionIndex,
+                             std::vector<BBAddrMap> ExpectedResult) {
+    SmallString<0> Storage;
+    Expected<ELFObjectFile<ELF64LE>> ElfOrErr =
+        toBinary<ELF64LE>(Storage, YamlString);
+    ASSERT_THAT_EXPECTED(ElfOrErr, Succeeded());
+
+    Expected<const typename ELF64LE::Shdr *> BBAddrMapSecOrErr =
+        ElfOrErr->getELFFile().getSection(1);
+    ASSERT_THAT_EXPECTED(BBAddrMapSecOrErr, Succeeded());
+    auto BBAddrMaps = ElfOrErr->readBBAddrMap(TextSectionIndex);
+    EXPECT_THAT_EXPECTED(BBAddrMaps, Succeeded());
+    EXPECT_EQ(*BBAddrMaps, ExpectedResult);
+  };
+
+  auto DoCheckFails = [&](StringRef YamlString,
+                          Optional<unsigned> TextSectionIndex,
+                          const char *ErrMsg) {
+    SmallString<0> Storage;
+    Expected<ELFObjectFile<ELF64LE>> ElfOrErr =
+        toBinary<ELF64LE>(Storage, YamlString);
+    ASSERT_THAT_EXPECTED(ElfOrErr, Succeeded());
+
+    Expected<const typename ELF64LE::Shdr *> BBAddrMapSecOrErr =
+        ElfOrErr->getELFFile().getSection(1);
+    ASSERT_THAT_EXPECTED(BBAddrMapSecOrErr, Succeeded());
+    EXPECT_THAT_ERROR(ElfOrErr->readBBAddrMap(TextSectionIndex).takeError(),
+                      FailedWithMessage(ErrMsg));
+  };
+
+  // Check that we can retrieve the data in the normal case.
+  DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/None, AllBBAddrMaps);
+  DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/0, Section0BBAddrMaps);
+  DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/1, Section1BBAddrMaps);
+  // Check that when no bb-address-map section is found for a text section,
+  // we return an empty result.
+  DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/2, {});
+
+  // Check that we detect when a bb-addr-map section is linked to an invalid
+  // (not present) section.
+  SmallString<128> InvalidLinkedYamlString(CommonYamlString);
+  InvalidLinkedYamlString += R"(
+    Link: 10
+)";
+
+  DoCheckFails(InvalidLinkedYamlString, /*TextSectionIndex=*/1,
+               "unable to get the linked-to section for SHT_LLVM_BB_ADDR_MAP "
+               "section with index 3: invalid section index: 10");
+  // Linked sections are not checked when we don't target a specific text
+  // section.
+  DoCheckSucceeds(InvalidLinkedYamlString, /*TextSectionIndex=*/None,
+                  AllBBAddrMaps);
+
+  // Check that we can detect when bb-address-map decoding fails.
+  SmallString<128> TruncatedYamlString(CommonYamlString);
+  TruncatedYamlString += R"(
+    ShSize: 0x8
+)";
+
+  DoCheckFails(TruncatedYamlString, /*TextSectionIndex=*/None,
+               "unable to read SHT_LLVM_BB_ADDR_MAP section with index 3: "
+               "unable to decode LEB128 at offset 0x00000008: malformed "
+               "uleb128, extends past end");
+  // Check that we can read the other section's bb-address-maps which are
+  // valid.
+  DoCheckSucceeds(TruncatedYamlString, /*TextSectionIndex=*/1,
+                  Section1BBAddrMaps);
 }
 
 // Test for ObjectFile::getRelocatedSection: check that it returns a relocated

@@ -494,6 +494,10 @@ def FeatureNoNegativeImmediates
 def FeatureUseMISched: SubtargetFeature<"use-misched", "UseMISched", "true",
                                         "Use the MachineScheduler">;
 
+// Use the MachinePipeliner for instruction scheduling for the subtarget.
+def FeatureUseMIPipeliner: SubtargetFeature<"use-mipipeliner", "UseMIPipeliner", "true",
+                                            "Use the MachinePipeliner">;
+
 // False if scheduling should happen again after register allocation.
 def FeatureNoPostRASched : SubtargetFeature<"disable-postra-scheduler",
     "DisablePostRAScheduler", "true",
@@ -537,6 +541,10 @@ def FeatureNoBTIAtReturnTwice : SubtargetFeature<"no-bti-at-return-twice",
                                                  "NoBTIAtReturnTwice", "true",
                                                  "Don't place a BTI instruction "
                                                  "after a return-twice">;
+
+def FeatureFixCortexA57AES1742098 : SubtargetFeature<"fix-cortex-a57-aes-1742098",
+  "FixCortexA57AES1742098", "true",
+  "Work around Cortex-A57 Erratum 1742098 / Cortex-A72 Erratum 1655431 (AES)">;
 
 //===----------------------------------------------------------------------===//
 // ARM architecture class
@@ -1395,6 +1403,7 @@ def : ProcessorModel<"cortex-m4", CortexM4Model,        [ARMv7em,
 def : ProcessorModel<"cortex-m7", CortexM7Model,        [ARMv7em,
                                                          ProcM7,
                                                          FeatureFPARMv8_D16,
+                                                         FeatureUseMIPipeliner,
                                                          FeatureUseMISched]>;
 
 def : ProcNoItin<"cortex-m23",                          [ARMv8mBaseline,
@@ -1462,13 +1471,15 @@ def : ProcessorModel<"cortex-a57",  CortexA57Model,     [ARMv8a, ProcA57,
                                                          FeatureCRC,
                                                          FeatureFPAO,
                                                          FeatureAvoidPartialCPSR,
-                                                         FeatureCheapPredicableCPSR]>;
+                                                         FeatureCheapPredicableCPSR,
+                                                         FeatureFixCortexA57AES1742098]>;
 
 def : ProcessorModel<"cortex-a72",  CortexA57Model,     [ARMv8a, ProcA72,
                                                          FeatureHWDivThumb,
                                                          FeatureHWDivARM,
                                                          FeatureCrypto,
-                                                         FeatureCRC]>;
+                                                         FeatureCRC,
+                                                         FeatureFixCortexA57AES1742098]>;
 
 def : ProcNoItin<"cortex-a73",                          [ARMv8a, ProcA73,
                                                          FeatureHWDivThumb,

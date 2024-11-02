@@ -68,7 +68,7 @@ IncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
 
   if (!Sym)
     return Sym.takeError();
-  return Sym->getAddress();
+  return Sym->getValue();
 }
 
 } // end namespace clang

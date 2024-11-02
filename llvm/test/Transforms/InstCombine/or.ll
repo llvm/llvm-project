@@ -37,6 +37,18 @@ define i1 @test14(i32 %A, i32 %B) {
   ret i1 %D
 }
 
+define i1 @test14_commuted(i32 %A, i32 %B) {
+; CHECK-LABEL: @test14_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %C1 = icmp ult i32 %A, %B
+  %C2 = icmp ult i32 %B, %A
+  ; (A < B) | (A > B) === A != B
+  %D = or i1 %C1, %C2
+  ret i1 %D
+}
+
 define i1 @test14_logical(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test14_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
@@ -799,6 +811,22 @@ define <2 x i1> @test46_undef(<2 x i8> %c)  {
   %cmp2 = icmp ult <2 x i8> %c.off17, <i8 26, i8 undef>
   %or = or <2 x i1> %cmp1, %cmp2
   ret <2 x i1> %or
+}
+
+; This is the variant of the above pattern where one of the ranges is
+; represented with an add.
+define i1 @two_ranges_to_mask_and_range_degenerate(i16 %x) {
+; CHECK-LABEL: @two_ranges_to_mask_and_range_degenerate(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[X:%.*]], -20
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i16 [[TMP1]], 12
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %cmp1 = icmp ult i16 %x, 12
+  %cmp2 = icmp uge i16 %x, 16
+  %cmp3 = icmp ult i16 %x, 28
+  %and = and i1 %cmp2, %cmp3
+  %or = or i1 %cmp1, %and
+  ret i1 %or
 }
 
 define i1 @test47(i8 signext %c)  {

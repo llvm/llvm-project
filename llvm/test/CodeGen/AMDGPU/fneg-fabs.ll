@@ -84,9 +84,8 @@ define amdgpu_kernel void @v_fneg_fabs_f32(float addrspace(1)* %out, float addrs
 ; R600: -PV
 
 ; FIXME: In this case two uses of the constant should be folded
-; SI: s_brev_b32 [[SIGNBITK:s[0-9]+]], 1{{$}}
-; SI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[SIGNBITK]]
-; SI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[SIGNBITK]]
+; SI: s_bitset1_b32 s{{[0-9]+}}, 31
+; SI: s_bitset1_b32 s{{[0-9]+}}, 31
 define amdgpu_kernel void @fneg_fabs_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %in) {
   %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %in)
   %fsub = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %fabs
@@ -95,11 +94,10 @@ define amdgpu_kernel void @fneg_fabs_v2f32(<2 x float> addrspace(1)* %out, <2 x 
 }
 
 ; FUNC-LABEL: {{^}}fneg_fabs_v4f32:
-; SI: s_brev_b32 [[SIGNBITK:s[0-9]+]], 1{{$}}
-; SI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[SIGNBITK]]
-; SI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[SIGNBITK]]
-; SI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[SIGNBITK]]
-; SI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[SIGNBITK]]
+; SI: s_bitset1_b32 s{{[0-9]+}}, 31
+; SI: s_bitset1_b32 s{{[0-9]+}}, 31
+; SI: s_bitset1_b32 s{{[0-9]+}}, 31
+; SI: s_bitset1_b32 s{{[0-9]+}}, 31
 define amdgpu_kernel void @fneg_fabs_v4f32(<4 x float> addrspace(1)* %out, <4 x float> %in) {
   %fabs = call <4 x float> @llvm.fabs.v4f32(<4 x float> %in)
   %fsub = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %fabs

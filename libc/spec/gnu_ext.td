@@ -1,4 +1,5 @@
 def GnuExtensions : StandardSpec<"GNUExtensions"> {
+  NamedType CookieIOFunctionsT = NamedType<"cookie_io_functions_t">;
   HeaderSpec CType = HeaderSpec<
     "ctype.h",
     [], // Macros
@@ -68,9 +69,29 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
   HeaderSpec StdIO = HeaderSpec<
       "stdio.h",
       [], // Macros
-      [], // Types
+      [CookieIOFunctionsT], // Types
       [], // Enumerations
       [
+          FunctionSpec<
+              "clearerr_unlocked",
+              RetValSpec<VoidType>,
+              [ArgSpec<FILEPtr>]
+          >,
+          FunctionSpec<
+              "feof_unlocked",
+              RetValSpec<IntType>,
+              [ArgSpec<FILEPtr>]
+          >,
+          FunctionSpec<
+              "ferror_unlocked",
+              RetValSpec<IntType>,
+              [ArgSpec<FILEPtr>]
+          >,
+          FunctionSpec<
+              "fopencookie",
+              RetValSpec<FILEPtr>,
+              [ArgSpec<VoidPtr>, ArgSpec<ConstCharPtr>, ArgSpec<CookieIOFunctionsT>]
+          >,
           FunctionSpec<
               "fread_unlocked",
               RetValSpec<SizeTType>,
@@ -88,7 +109,7 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
                ArgSpec<FILERestrictedPtr>]
           >,
       ]
-   >;
+  >;
 
   let Headers = [
     CType,

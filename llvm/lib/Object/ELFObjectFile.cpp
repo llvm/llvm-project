@@ -485,6 +485,16 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1035";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1036:
     return "gfx1036";
+
+  // AMDGCN GFX11.
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1100:
+    return "gfx1100";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1101:
+    return "gfx1101";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1102:
+    return "gfx1102";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1103:
+    return "gfx1103";
   default:
     llvm_unreachable("Unknown EF_AMDGPU_MACH value");
   }
@@ -574,6 +584,9 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
     case ARMBuildAttrs::v8_1_M_Main:
       Triple += "v8.1m.main";
       break;
+    case ARMBuildAttrs::v9_A:
+      Triple += "v9a";
+      break;
     }
   }
   if (!isLittleEndian())
@@ -658,6 +671,35 @@ ELFObjectFileBase::getPltAddresses() const {
 }
 
 template <class ELFT>
+Expected<std::vector<BBAddrMap>>
+readBBAddrMapImpl(const ELFFile<ELFT> &EF,
+                  Optional<unsigned> TextSectionIndex) {
+  using Elf_Shdr = typename ELFT::Shdr;
+  std::vector<BBAddrMap> BBAddrMaps;
+  const auto &Sections = cantFail(EF.sections());
+  for (const Elf_Shdr &Sec : Sections) {
+    if (Sec.sh_type != ELF::SHT_LLVM_BB_ADDR_MAP)
+      continue;
+    if (TextSectionIndex) {
+      Expected<const Elf_Shdr *> TextSecOrErr = EF.getSection(Sec.sh_link);
+      if (!TextSecOrErr)
+        return createError("unable to get the linked-to section for " +
+                           describe(EF, Sec) + ": " +
+                           toString(TextSecOrErr.takeError()));
+      if (*TextSectionIndex != std::distance(Sections.begin(), *TextSecOrErr))
+        continue;
+    }
+    Expected<std::vector<BBAddrMap>> BBAddrMapOrErr = EF.decodeBBAddrMap(Sec);
+    if (!BBAddrMapOrErr)
+      return createError("unable to read " + describe(EF, Sec) + ": " +
+                         toString(BBAddrMapOrErr.takeError()));
+    std::move(BBAddrMapOrErr->begin(), BBAddrMapOrErr->end(),
+              std::back_inserter(BBAddrMaps));
+  }
+  return BBAddrMaps;
+}
+
+template <class ELFT>
 static Expected<std::vector<VersionEntry>>
 readDynsymVersionsImpl(const ELFFile<ELFT> &EF,
                        ELFObjectFileBase::elf_symbol_iterator_range Symbols) {
@@ -724,4 +766,18 @@ ELFObjectFileBase::readDynsymVersions() const {
     return readDynsymVersionsImpl(Obj->getELFFile(), Symbols);
   return readDynsymVersionsImpl(cast<ELF64BEObjectFile>(this)->getELFFile(),
                                 Symbols);
+}
+
+Expected<std::vector<BBAddrMap>>
+ELFObjectFileBase::readBBAddrMap(Optional<unsigned> TextSectionIndex) const {
+  if (const auto *Obj = dyn_cast<ELF32LEObjectFile>(this))
+    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
+  if (const auto *Obj = dyn_cast<ELF64LEObjectFile>(this))
+    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
+  if (const auto *Obj = dyn_cast<ELF32BEObjectFile>(this))
+    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
+  if (const auto *Obj = cast<ELF64BEObjectFile>(this))
+    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
+  else
+    llvm_unreachable("Unsupported binary format");
 }

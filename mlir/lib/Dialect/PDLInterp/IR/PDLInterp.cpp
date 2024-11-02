@@ -47,6 +47,23 @@ static LogicalResult verifySwitchOp(OpT op) {
 // pdl_interp::CreateOperationOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult CreateOperationOp::verify() {
+  if (!getInferredResultTypes())
+    return success();
+  if (!getInputResultTypes().empty()) {
+    return emitOpError("with inferred results cannot also have "
+                       "explicit result types");
+  }
+  OperationName opName(getName(), getContext());
+  if (!opName.hasInterface<InferTypeOpInterface>()) {
+    return emitOpError()
+           << "has inferred results, but the created operation '" << opName
+           << "' does not support result type inference (or is not "
+              "registered)";
+  }
+  return success();
+}
+
 static ParseResult parseCreateOperationOpAttributes(
     OpAsmParser &p,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &attrOperands,
@@ -54,7 +71,7 @@ static ParseResult parseCreateOperationOpAttributes(
   Builder &builder = p.getBuilder();
   SmallVector<Attribute, 4> attrNames;
   if (succeeded(p.parseOptionalLBrace())) {
-    do {
+    auto parseOperands = [&]() {
       StringAttr nameAttr;
       OpAsmParser::UnresolvedOperand operand;
       if (p.parseAttribute(nameAttr) || p.parseEqual() ||
@@ -62,8 +79,9 @@ static ParseResult parseCreateOperationOpAttributes(
         return failure();
       attrNames.push_back(nameAttr);
       attrOperands.push_back(operand);
-    } while (succeeded(p.parseOptionalComma()));
-    if (p.parseRBrace())
+      return success();
+    };
+    if (p.parseCommaSeparatedList(parseOperands) || p.parseRBrace())
       return failure();
   }
   attrNamesAttr = builder.getArrayAttr(attrNames);
@@ -80,6 +98,41 @@ static void printCreateOperationOpAttributes(OpAsmPrinter &p,
   interleaveComma(llvm::seq<int>(0, attrNames.size()), p,
                   [&](int i) { p << attrNames[i] << " = " << attrArgs[i]; });
   p << '}';
+}
+
+static ParseResult parseCreateOperationOpResults(
+    OpAsmParser &p,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &resultOperands,
+    SmallVectorImpl<Type> &resultTypes, UnitAttr &inferredResultTypes) {
+  if (failed(p.parseOptionalArrow()))
+    return success();
+
+  // Handle the case of inferred results.
+  if (succeeded(p.parseOptionalLess())) {
+    if (p.parseKeyword("inferred") || p.parseGreater())
+      return failure();
+    inferredResultTypes = p.getBuilder().getUnitAttr();
+    return success();
+  }
+
+  // Otherwise, parse the explicit results.
+  return failure(p.parseLParen() || p.parseOperandList(resultOperands) ||
+                 p.parseColonTypeList(resultTypes) || p.parseRParen());
+}
+
+static void printCreateOperationOpResults(OpAsmPrinter &p, CreateOperationOp op,
+                                          OperandRange resultOperands,
+                                          TypeRange resultTypes,
+                                          UnitAttr inferredResultTypes) {
+  // Handle the case of inferred results.
+  if (inferredResultTypes) {
+    p << " -> <inferred>";
+    return;
+  }
+
+  // Otherwise, handle the explicit results.
+  if (!resultTypes.empty())
+    p << " -> (" << resultOperands << " : " << resultTypes << ")";
 }
 
 //===----------------------------------------------------------------------===//
@@ -101,41 +154,29 @@ void ForEachOp::build(::mlir::OpBuilder &builder, ::mlir::OperationState &state,
 
 ParseResult ForEachOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse the loop variable followed by type.
-  OpAsmParser::UnresolvedOperand loopVariable;
-  Type loopVariableType;
-  if (parser.parseRegionArgument(loopVariable) ||
-      parser.parseColonType(loopVariableType))
-    return failure();
-
-  // Parse the "in" keyword.
-  if (parser.parseKeyword("in", " after loop variable"))
-    return failure();
-
-  // Parse the operand (value range).
+  OpAsmParser::Argument loopVariable;
   OpAsmParser::UnresolvedOperand operandInfo;
-  if (parser.parseOperand(operandInfo))
+  if (parser.parseArgument(loopVariable, /*allowType=*/true) ||
+      parser.parseKeyword("in", " after loop variable") ||
+      // Parse the operand (value range).
+      parser.parseOperand(operandInfo))
     return failure();
 
   // Resolve the operand.
-  Type rangeType = pdl::RangeType::get(loopVariableType);
+  Type rangeType = pdl::RangeType::get(loopVariable.type);
   if (parser.resolveOperand(operandInfo, rangeType, result.operands))
     return failure();
 
   // Parse the body region.
   Region *body = result.addRegion();
-  if (parser.parseRegion(*body, {loopVariable}, {loopVariableType}))
-    return failure();
-
-  // Parse the attribute dictionary.
-  if (parser.parseOptionalAttrDict(result.attributes))
-    return failure();
-
-  // Parse the successor.
   Block *successor;
-  if (parser.parseArrow() || parser.parseSuccessor(successor))
+  if (parser.parseRegion(*body, loopVariable) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      // Parse the successor.
+      parser.parseArrow() || parser.parseSuccessor(successor))
     return failure();
-  result.addSuccessors(successor);
 
+  result.addSuccessors(successor);
   return success();
 }
 

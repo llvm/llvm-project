@@ -30,6 +30,8 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
         self.expect("continue")
         self.expect("thread trace dump instructions", substrs=['main.cpp:4'])
 
+        self.traceStopProcess()
+
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
     @testSBAPIAndCommands
     def testStartMultipleLiveThreadsWithStops(self):
@@ -65,6 +67,8 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
 
         self.expect("thread trace dump instructions 2", substrs=['not traced'])
 
+        self.traceStopProcess()
+
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
     @testSBAPIAndCommands
     def testStartMultipleLiveThreadsWithStops(self):
@@ -99,6 +103,8 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
         self.expect("thread trace dump instructions 3", substrs=['main.cpp:4'])
         self.expect("thread trace dump instructions 1", substrs=['not traced'])
         self.expect("thread trace dump instructions 2", substrs=['not traced'])
+
+        self.traceStopProcess()
 
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
     def testStartMultipleLiveThreadsWithThreadStartAll(self):
@@ -150,5 +156,47 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
         self.expect("c", substrs=['Thread', "can't be traced"])
         # we get the stop event when trace 3 appears and can't be traced
         self.expect("c", substrs=['Thread', "can't be traced"])
+
+        self.traceStopProcess()
+
+    @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
+    @testSBAPIAndCommands
+    def testStartPerCoreSession(self):
+        self.skipIfPerCoreTracingIsNotSupported()
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        self.dbg.CreateTarget(exe)
+
+        self.expect("b main")
+        self.expect("r")
+
+        # We should fail if we hit the total buffer limit. Useful if the number
+        # of cores is huge.
+        self.traceStartProcess(error="True", processBufferSizeLimit=100,
+            perCoreTracing=True,
+            substrs=["The process can't be traced because the process trace size "
+            "limit has been reached. Consider retracing with a higher limit."])
+
+        self.traceStartProcess(perCoreTracing=True)
+        self.traceStopProcess()
+
+        self.traceStartProcess(perCoreTracing=True)
+        # We can't support multiple per-core tracing sessions.
+        self.traceStartProcess(error=True, perCoreTracing=True,
+            substrs=["Process currently traced. Stop process tracing first"])
+
+        # We can't support tracing per thread is per core is enabled.
+        self.traceStartThread(
+            error="True",
+            substrs=["Process currently traced with per-core tracing. Stop process tracing first"])
+
+        # We can't stop individual thread when per core is enabled.
+        self.traceStopThread(error="True",
+            substrs=["Can't stop tracing an individual thread when per-core process tracing is enabled"])
+
+        # The GetState packet should return trace buffers per core and at least one traced thread
+        self.expect("""process plugin packet send 'jLLDBTraceGetState:{"type":"intel-pt"}]'""",
+            substrs=['''[{"kind":"traceBuffer","size":4096}],"coreId":''', '"tid":'])
 
         self.traceStopProcess()

@@ -36,6 +36,8 @@ lu52i.d $a0, $a0, -2049
 # CHECK: :[[#@LINE-1]]:19: error: immediate must be an integer in the range [-2048, 2047]
 ld.wu $a0, $a0, 2048
 # CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [-2048, 2047]
+ld.d $a0, $a0, 2048
+# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
 st.d $a0, $a0, 2048
 # CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
 
@@ -64,3 +66,12 @@ lu32i.d $a0, -0x80001
 # CHECK: :[[#@LINE-1]]:14: error: immediate must be an integer in the range [-524288, 524287]
 pcaddu18i $a0, 0x80000
 # CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-524288, 524287]
+
+## msbd < lsbd
+# CHECK: :[[#@LINE+1]]:21: error: msb is less than lsb
+bstrins.d $a0, $a0, 1, 2
+# CHECK:            ^~~~
+
+# CHECK: :[[#@LINE+1]]:22: error: msb is less than lsb
+bstrpick.d $a0, $a0, 32, 63
+# CHECK:             ^~~~~~

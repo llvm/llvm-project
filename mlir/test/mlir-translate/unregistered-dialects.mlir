@@ -8,6 +8,6 @@
 // UNREGOK: cannot be converted to LLVM IR
 // REGONLY: operation being parsed with an unregistered dialect
 
-func @trivial() {
+func.func @trivial() {
   "simple.terminator"() : () -> ()
 }

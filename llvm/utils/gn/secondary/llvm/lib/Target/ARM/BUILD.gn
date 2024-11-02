@@ -76,6 +76,7 @@ static_library("LLVMARMCodeGen") {
     "ARMConstantPoolValue.cpp",
     "ARMExpandPseudoInsts.cpp",
     "ARMFastISel.cpp",
+    "ARMFixCortexA57AES1742098Pass.cpp",
     "ARMFrameLowering.cpp",
     "ARMHazardRecognizer.cpp",
     "ARMISelDAGToDAG.cpp",

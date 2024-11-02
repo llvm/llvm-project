@@ -584,7 +584,7 @@ template <> struct FieldParser<MyParameter> {
 
 Example of using ODS parameter classes:
 
-```
+```tablegen
 def MyParameter : TypeParameter<"std::pair<int, int>", "pair of ints"> {
   let printer = [{ $_printer << $_self.first << " * " << $_self.second }];
   let parser = [{ [&] -> FailureOr<std::pair<int, int>> {
@@ -655,7 +655,7 @@ the equality operator is used.
 
 For example:
 
-```
+```tablegen
 let parameters = (ins DefaultValuedParameter<"Optional<int>", "5">:$a)
 let mnemonic = "default_valued";
 let assemblyFormat = "(`<` $a^ `>`)?";
@@ -663,7 +663,7 @@ let assemblyFormat = "(`<` $a^ `>`)?";
 
 Which will look like:
 
-```
+```mlir
 !test.default_valued     // a = 5
 !test.default_valued<10> // a = 10
 ```
@@ -671,7 +671,7 @@ Which will look like:
 For optional `Attribute` or `Type` parameters, the current MLIR context is
 available through `$_ctx`. E.g.
 
-```
+```tablegen
 DefaultValuedParameter<"IntegerType", "IntegerType::get($_ctx, 32)">
 ```
 

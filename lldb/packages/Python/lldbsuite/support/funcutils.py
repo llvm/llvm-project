@@ -1,7 +1,7 @@
 import inspect
 
 def requires_self(func):
-    func_argc = len(inspect.getargspec(func).args)
+    func_argc = len(inspect.getfullargspec(func).args)
     if func_argc == 0 or (
         getattr(
             func,

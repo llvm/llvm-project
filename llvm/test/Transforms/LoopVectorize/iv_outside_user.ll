@@ -206,7 +206,7 @@ define i32 @iv_2_dead_in_loop_only_used_outside(i64* %ptr) {
 ; CHECK-LABEL: vector.body:
 ; CHECK-NEXT:   [[INDEX:%.+]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.+]], %vector.body ]
 ; VEC-NEXT:     [[VEC_IND:%.+]] = phi <2 x i64> [ <i64 0, i64 1>, %vector.ph ], [ [[VEC_IND_NEXT:%.+]], %vector.body ]
-; CHECK-NEXT:   [[IV_0:%.+]] = add i64 [[INDEX]], 0
+; CHECK:        [[IV_0:%.+]] = add i64 [[INDEX]], 0
 ; VEC-NOT:      add i64 [[INDEX]], 1
 ; CHECK-NOT:    [[IV_2_0:%.+]] = add i32 %offset.idx, 0
 ; CHECK-LABEL: scalar.ph:

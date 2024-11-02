@@ -126,7 +126,7 @@ struct ScheduleTreeVisitor {
 /// Recursively visit all nodes of a schedule tree.
 template <typename Derived, typename RetTy = void, typename... Args>
 struct RecursiveScheduleTreeVisitor
-    : public ScheduleTreeVisitor<Derived, RetTy, Args...> {
+    : ScheduleTreeVisitor<Derived, RetTy, Args...> {
   using BaseTy = ScheduleTreeVisitor<Derived, RetTy, Args...>;
   BaseTy &getBase() { return *this; }
   const BaseTy &getBase() const { return *this; }

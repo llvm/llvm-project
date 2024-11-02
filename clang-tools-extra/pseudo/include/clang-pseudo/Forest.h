@@ -43,7 +43,7 @@ namespace pseudo {
 // doesn't have parent pointers.
 class alignas(class ForestNode *) ForestNode {
 public:
-  enum Kind : uint8_t {
+  enum Kind {
     // A Terminal node is a single terminal symbol bound to a token.
     Terminal,
     // A Sequence node is a nonterminal symbol parsed from a grammar rule,
@@ -155,6 +155,10 @@ public:
   }
   ForestNode &createOpaque(SymbolID SID, Token::Index Start) {
     return create(ForestNode::Opaque, SID, Start, 0, {});
+  }
+
+  ForestNode &createTerminal(tok::TokenKind TK, Token::Index Start) {
+    return create(ForestNode::Terminal, tokenSymbol(TK), Start, 0, {});
   }
 
   size_t nodeCount() const { return NodeCount; }

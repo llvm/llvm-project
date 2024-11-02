@@ -3,6 +3,7 @@
 # RUN: llc -march=amdgcn -mcpu=fiji -run-pass=legalizer %s -o - | FileCheck -check-prefix=GFX8 %s
 # RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=legalizer %s -o - | FileCheck -check-prefix=GFX9 %s
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass=legalizer %s -o - | FileCheck -check-prefix=GFX9 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -run-pass=legalizer %s -o - | FileCheck -check-prefix=GFX9 %s
 
 ---
 name: ushlsat_s7

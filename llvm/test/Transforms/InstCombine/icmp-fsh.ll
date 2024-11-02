@@ -53,16 +53,49 @@ define <2 x i1> @rotl_ne_n1(<2 x i5> %x, <2 x i5> %y) {
   ret <2 x i1> %r
 }
 
-; TODO: We filter out vector constants with undef elts, but that isn't needed for this transform.
-
 define <2 x i1> @rotl_ne_n1_undef(<2 x i5> %x, <2 x i5> %y) {
 ; CHECK-LABEL: @rotl_ne_n1_undef(
-; CHECK-NEXT:    [[ROT:%.*]] = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5> [[X:%.*]], <2 x i5> [[X]], <2 x i5> [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i5> [[ROT]], <i5 -1, i5 undef>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i5> [[X:%.*]], <i5 -1, i5 undef>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %rot = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5>%x, <2 x i5> %x, <2 x i5> %y)
   %r = icmp ne <2 x i5> %rot, <i5 -1, i5 undef>
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @rotl_eq_0_undef(<2 x i5> %x, <2 x i5> %y) {
+; CHECK-LABEL: @rotl_eq_0_undef(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[X:%.*]], <i5 0, i5 undef>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %rot = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5>%x, <2 x i5> %x, <2 x i5> %y)
+  %r = icmp eq <2 x i5> %rot, <i5 0, i5 undef>
+  ret <2 x i1> %r
+}
+
+; negative test - wrong constant value
+
+define <2 x i1> @rotl_eq_1_undef(<2 x i5> %x, <2 x i5> %y) {
+; CHECK-LABEL: @rotl_eq_1_undef(
+; CHECK-NEXT:    [[ROT:%.*]] = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5> [[X:%.*]], <2 x i5> [[X]], <2 x i5> [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i5> [[ROT]], <i5 undef, i5 1>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %rot = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5>%x, <2 x i5> %x, <2 x i5> %y)
+  %r = icmp eq <2 x i5> %rot, <i5 undef, i5 1>
+  ret <2 x i1> %r
+}
+
+; negative test - wrong predicate
+
+define <2 x i1> @rotl_sgt_0_undef(<2 x i5> %x, <2 x i5> %y) {
+; CHECK-LABEL: @rotl_sgt_0_undef(
+; CHECK-NEXT:    [[ROT:%.*]] = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5> [[X:%.*]], <2 x i5> [[X]], <2 x i5> [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i5> [[ROT]], <i5 0, i5 undef>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %rot = tail call <2 x i5> @llvm.fshl.v2i5(<2 x i5>%x, <2 x i5> %x, <2 x i5> %y)
+  %r = icmp sgt <2 x i5> %rot, <i5 0, i5 undef>
   ret <2 x i1> %r
 }
 

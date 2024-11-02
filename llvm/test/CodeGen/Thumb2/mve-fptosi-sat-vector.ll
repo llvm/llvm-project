@@ -1851,32 +1851,33 @@ define arm_aapcs_vfpcc <4 x i50> @test_signed_v4f32_v4i50(<4 x float> %f) {
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    mov r8, r0
-; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    vmov r0, s17
 ; CHECK-NEXT:    bl __aeabi_f2lz
 ; CHECK-NEXT:    mov r9, r0
 ; CHECK-NEXT:    vmov r0, s19
 ; CHECK-NEXT:    vldr s20, .LCPI28_0
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    vcmp.f32 s18, s20
+; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    vmov r4, s16
+; CHECK-NEXT:    vcmp.f32 s17, s20
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    itt lt
+; CHECK-NEXT:    movlt r7, #0
+; CHECK-NEXT:    movtlt r7, #65534
+; CHECK-NEXT:    bl __aeabi_f2lz
+; CHECK-NEXT:    vldr s22, .LCPI28_1
+; CHECK-NEXT:    vcmp.f32 s19, s20
+; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r0, r4
+; CHECK-NEXT:    vcmp.f32 s17, s22
 ; CHECK-NEXT:    itt lt
 ; CHECK-NEXT:    movlt r5, #0
 ; CHECK-NEXT:    movtlt r5, #65534
-; CHECK-NEXT:    bl __aeabi_f2lz
-; CHECK-NEXT:    mov r7, r0
-; CHECK-NEXT:    vmov r0, s16
-; CHECK-NEXT:    vldr s22, .LCPI28_1
-; CHECK-NEXT:    vcmp.f32 s19, s20
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov r6, r1
-; CHECK-NEXT:    vcmp.f32 s18, s22
-; CHECK-NEXT:    itt lt
-; CHECK-NEXT:    movlt r6, #0
-; CHECK-NEXT:    movtlt r6, #65534
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    itt gt
-; CHECK-NEXT:    movwgt r5, #65535
-; CHECK-NEXT:    movtgt r5, #1
+; CHECK-NEXT:    movwgt r7, #65535
+; CHECK-NEXT:    movtgt r7, #1
 ; CHECK-NEXT:    bl __aeabi_f2lz
 ; CHECK-NEXT:    vcmp.f32 s16, s20
 ; CHECK-NEXT:    mov r4, r1
@@ -1887,8 +1888,8 @@ define arm_aapcs_vfpcc <4 x i50> @test_signed_v4f32_v4i50(<4 x float> %f) {
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s16, s22
 ; CHECK-NEXT:    itt gt
-; CHECK-NEXT:    movwgt r6, #65535
-; CHECK-NEXT:    movtgt r6, #1
+; CHECK-NEXT:    movwgt r5, #65535
+; CHECK-NEXT:    movtgt r5, #1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s16, s16
 ; CHECK-NEXT:    it gt
@@ -1898,27 +1899,46 @@ define arm_aapcs_vfpcc <4 x i50> @test_signed_v4f32_v4i50(<4 x float> %f) {
 ; CHECK-NEXT:    it vs
 ; CHECK-NEXT:    movvs r0, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vcmp.f32 s19, s22
 ; CHECK-NEXT:    str.w r0, [r8]
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r7, #0
-; CHECK-NEXT:    vcmp.f32 s19, s22
+; CHECK-NEXT:    movlt r6, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vcmp.f32 s19, s19
+; CHECK-NEXT:    it gt
+; CHECK-NEXT:    movgt.w r6, #-1
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vcmp.f32 s17, s17
+; CHECK-NEXT:    itt vs
+; CHECK-NEXT:    movvs r6, #0
+; CHECK-NEXT:    movvs r5, #0
+; CHECK-NEXT:    lsls r0, r5, #22
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vcmp.f32 s17, s20
+; CHECK-NEXT:    orr.w r0, r0, r6, lsr #10
+; CHECK-NEXT:    str.w r0, [r8, #20]
+; CHECK-NEXT:    it vs
+; CHECK-NEXT:    movvs r7, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    it lt
+; CHECK-NEXT:    movlt.w r9, #0
+; CHECK-NEXT:    vcmp.f32 s17, s22
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r7, #-1
-; CHECK-NEXT:    vcmp.f32 s19, s19
+; CHECK-NEXT:    movgt.w r9, #-1
+; CHECK-NEXT:    vcmp.f32 s17, s17
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    itt vs
-; CHECK-NEXT:    movvs r7, #0
-; CHECK-NEXT:    movvs r6, #0
-; CHECK-NEXT:    lsls r0, r6, #22
-; CHECK-NEXT:    orr.w r1, r0, r7, lsr #10
-; CHECK-NEXT:    vmov r0, s17
-; CHECK-NEXT:    str.w r1, [r8, #20]
+; CHECK-NEXT:    it vs
+; CHECK-NEXT:    movvs.w r9, #0
+; CHECK-NEXT:    lsr.w r0, r9, #14
+; CHECK-NEXT:    orr.w r1, r0, r7, lsl #18
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    str.w r1, [r8, #8]
 ; CHECK-NEXT:    bl __aeabi_f2lz
-; CHECK-NEXT:    vcmp.f32 s17, s20
-; CHECK-NEXT:    lsrs r2, r6, #10
+; CHECK-NEXT:    vcmp.f32 s18, s20
+; CHECK-NEXT:    lsrs r2, r5, #10
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s17, s22
+; CHECK-NEXT:    vcmp.f32 s18, s22
 ; CHECK-NEXT:    itt lt
 ; CHECK-NEXT:    movlt r1, #0
 ; CHECK-NEXT:    movtlt r1, #65534
@@ -1933,60 +1953,40 @@ define arm_aapcs_vfpcc <4 x i50> @test_signed_v4f32_v4i50(<4 x float> %f) {
 ; CHECK-NEXT:    movlt r4, #0
 ; CHECK-NEXT:    movtlt r4, #65534
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s17, s20
+; CHECK-NEXT:    vcmp.f32 s18, s20
 ; CHECK-NEXT:    itt gt
 ; CHECK-NEXT:    movwgt r4, #65535
 ; CHECK-NEXT:    movtgt r4, #1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s17, s22
+; CHECK-NEXT:    vcmp.f32 s18, s22
 ; CHECK-NEXT:    strb.w r2, [r8, #24]
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r0, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s17, s17
+; CHECK-NEXT:    vcmp.f32 s18, s18
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt.w r0, #-1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    ubfx r2, r7, #14, #4
 ; CHECK-NEXT:    vcmp.f32 s16, s16
 ; CHECK-NEXT:    it vs
 ; CHECK-NEXT:    movvs r0, #0
+; CHECK-NEXT:    orr.w r2, r2, r0, lsl #4
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    str.w r2, [r8, #12]
 ; CHECK-NEXT:    it vs
 ; CHECK-NEXT:    movvs r4, #0
-; CHECK-NEXT:    vcmp.f32 s18, s20
+; CHECK-NEXT:    vcmp.f32 s18, s18
 ; CHECK-NEXT:    bfc r4, #18, #14
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s18, s22
-; CHECK-NEXT:    orr.w r2, r4, r0, lsl #18
+; CHECK-NEXT:    orr.w r2, r4, r9, lsl #18
 ; CHECK-NEXT:    str.w r2, [r8, #4]
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt.w r9, #0
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s18, s18
-; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r9, #-1
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s17, s17
-; CHECK-NEXT:    it vs
-; CHECK-NEXT:    movvs.w r9, #0
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it vs
 ; CHECK-NEXT:    movvs r1, #0
-; CHECK-NEXT:    vcmp.f32 s18, s18
+; CHECK-NEXT:    lsrs r0, r0, #28
 ; CHECK-NEXT:    bfc r1, #18, #14
-; CHECK-NEXT:    lsrs r0, r0, #14
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    lsr.w r2, r1, #14
-; CHECK-NEXT:    orr.w r0, r0, r1, lsl #18
-; CHECK-NEXT:    orr.w r2, r2, r9, lsl #4
-; CHECK-NEXT:    str.w r2, [r8, #12]
-; CHECK-NEXT:    str.w r0, [r8, #8]
-; CHECK-NEXT:    it vs
-; CHECK-NEXT:    movvs r5, #0
-; CHECK-NEXT:    bfc r5, #18, #14
-; CHECK-NEXT:    lsr.w r0, r9, #28
-; CHECK-NEXT:    orr.w r0, r0, r5, lsl #4
-; CHECK-NEXT:    orr.w r0, r0, r7, lsl #22
+; CHECK-NEXT:    orr.w r0, r0, r1, lsl #4
+; CHECK-NEXT:    orr.w r0, r0, r6, lsl #22
 ; CHECK-NEXT:    str.w r0, [r8, #16]
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    add sp, #4
@@ -4883,104 +4883,100 @@ define arm_aapcs_vfpcc <8 x i19> @test_signed_v8f16_v8i19(<8 x half> %f) {
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    .vsave {d8}
 ; CHECK-NEXT:    vpush {d8}
-; CHECK-NEXT:    vldr s5, .LCPI46_0
+; CHECK-NEXT:    vldr s12, .LCPI46_0
 ; CHECK-NEXT:    vcvtt.f32.f16 s15, s3
-; CHECK-NEXT:    vldr s7, .LCPI46_1
-; CHECK-NEXT:    vcvtb.f32.f16 s8, s2
-; CHECK-NEXT:    vmaxnm.f32 s16, s15, s5
+; CHECK-NEXT:    vldr s14, .LCPI46_1
+; CHECK-NEXT:    vcvtb.f32.f16 s7, s0
+; CHECK-NEXT:    vmaxnm.f32 s16, s15, s12
 ; CHECK-NEXT:    vcvtb.f32.f16 s4, s1
-; CHECK-NEXT:    vcvtt.f32.f16 s12, s1
-; CHECK-NEXT:    vcvtb.f32.f16 s1, s0
-; CHECK-NEXT:    vminnm.f32 s16, s16, s7
+; CHECK-NEXT:    vcvtt.f32.f16 s8, s1
+; CHECK-NEXT:    vcvtb.f32.f16 s1, s2
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s2, s2
 ; CHECK-NEXT:    vcvtb.f32.f16 s3, s3
-; CHECK-NEXT:    vmaxnm.f32 s6, s4, s5
-; CHECK-NEXT:    vmaxnm.f32 s10, s8, s5
-; CHECK-NEXT:    vmaxnm.f32 s14, s12, s5
-; CHECK-NEXT:    vmaxnm.f32 s9, s1, s5
-; CHECK-NEXT:    vmaxnm.f32 s11, s0, s5
-; CHECK-NEXT:    vmaxnm.f32 s13, s2, s5
-; CHECK-NEXT:    vmaxnm.f32 s5, s3, s5
+; CHECK-NEXT:    vmaxnm.f32 s6, s4, s12
+; CHECK-NEXT:    vmaxnm.f32 s10, s8, s12
+; CHECK-NEXT:    vmaxnm.f32 s5, s1, s12
+; CHECK-NEXT:    vmaxnm.f32 s9, s7, s12
+; CHECK-NEXT:    vmaxnm.f32 s11, s0, s12
+; CHECK-NEXT:    vmaxnm.f32 s13, s2, s12
+; CHECK-NEXT:    vminnm.f32 s16, s16, s14
+; CHECK-NEXT:    vmaxnm.f32 s12, s3, s12
 ; CHECK-NEXT:    vcvt.s32.f32 s16, s16
-; CHECK-NEXT:    vminnm.f32 s5, s5, s7
-; CHECK-NEXT:    vminnm.f32 s13, s13, s7
-; CHECK-NEXT:    vcvt.s32.f32 s5, s5
-; CHECK-NEXT:    vminnm.f32 s11, s11, s7
+; CHECK-NEXT:    vminnm.f32 s12, s12, s14
+; CHECK-NEXT:    vminnm.f32 s13, s13, s14
+; CHECK-NEXT:    vcvt.s32.f32 s12, s12
+; CHECK-NEXT:    vminnm.f32 s9, s9, s14
 ; CHECK-NEXT:    vcvt.s32.f32 s13, s13
-; CHECK-NEXT:    vminnm.f32 s9, s9, s7
-; CHECK-NEXT:    vcmp.f32 s15, s15
-; CHECK-NEXT:    vminnm.f32 s10, s10, s7
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vminnm.f32 s11, s11, s14
 ; CHECK-NEXT:    vcvt.s32.f32 s11, s11
-; CHECK-NEXT:    vcmp.f32 s3, s3
-; CHECK-NEXT:    vminnm.f32 s14, s14, s7
+; CHECK-NEXT:    vminnm.f32 s5, s5, s14
+; CHECK-NEXT:    vcvt.s32.f32 s9, s9
+; CHECK-NEXT:    vminnm.f32 s10, s10, s14
+; CHECK-NEXT:    vcmp.f32 s15, s15
+; CHECK-NEXT:    vminnm.f32 s6, s6, s14
 ; CHECK-NEXT:    vmov r1, s16
-; CHECK-NEXT:    vminnm.f32 s6, s6, s7
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it vs
 ; CHECK-NEXT:    movvs r1, #0
 ; CHECK-NEXT:    lsrs r2, r1, #11
+; CHECK-NEXT:    vcmp.f32 s3, s3
 ; CHECK-NEXT:    strb r2, [r0, #18]
-; CHECK-NEXT:    vmov r2, s5
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    it vs
-; CHECK-NEXT:    movvs r2, #0
-; CHECK-NEXT:    vcvt.s32.f32 s9, s9
-; CHECK-NEXT:    bfc r2, #19, #13
-; CHECK-NEXT:    vcmp.f32 s2, s2
-; CHECK-NEXT:    vmov r12, s13
-; CHECK-NEXT:    lsrs r3, r2, #14
-; CHECK-NEXT:    orr.w r1, r3, r1, lsl #5
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    strh r1, [r0, #16]
-; CHECK-NEXT:    it vs
-; CHECK-NEXT:    movvs.w r12, #0
-; CHECK-NEXT:    vcvt.s32.f32 s10, s10
-; CHECK-NEXT:    bfc r12, #19, #13
-; CHECK-NEXT:    vcvt.s32.f32 s14, s14
-; CHECK-NEXT:    lsr.w r3, r12, #1
-; CHECK-NEXT:    vcmp.f32 s0, s0
-; CHECK-NEXT:    vmov lr, s11
-; CHECK-NEXT:    orr.w r2, r3, r2, lsl #18
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    str r2, [r0, #12]
-; CHECK-NEXT:    it vs
-; CHECK-NEXT:    movvs.w lr, #0
-; CHECK-NEXT:    vcmp.f32 s1, s1
-; CHECK-NEXT:    vmov r3, s9
+; CHECK-NEXT:    vmov r3, s12
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it vs
 ; CHECK-NEXT:    movvs r3, #0
-; CHECK-NEXT:    bfc lr, #19, #13
-; CHECK-NEXT:    bfc r3, #19, #13
-; CHECK-NEXT:    vcmp.f32 s12, s12
-; CHECK-NEXT:    orr.w r3, r3, lr, lsl #19
-; CHECK-NEXT:    vcvt.s32.f32 s6, s6
-; CHECK-NEXT:    str r3, [r0]
+; CHECK-NEXT:    ubfx r2, r3, #14, #5
+; CHECK-NEXT:    vcvt.s32.f32 s5, s5
+; CHECK-NEXT:    orr.w r1, r2, r1, lsl #5
+; CHECK-NEXT:    vcmp.f32 s2, s2
+; CHECK-NEXT:    strh r1, [r0, #16]
+; CHECK-NEXT:    vmov lr, s13
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vmov r3, s14
-; CHECK-NEXT:    vmov r1, s10
+; CHECK-NEXT:    it vs
+; CHECK-NEXT:    movvs.w lr, #0
+; CHECK-NEXT:    ubfx r1, lr, #1, #18
+; CHECK-NEXT:    vcmp.f32 s0, s0
+; CHECK-NEXT:    orr.w r1, r1, r3, lsl #18
+; CHECK-NEXT:    vcvt.s32.f32 s10, s10
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vmov r12, s11
+; CHECK-NEXT:    str r1, [r0, #12]
+; CHECK-NEXT:    vmov r3, s9
+; CHECK-NEXT:    it vs
+; CHECK-NEXT:    movvs.w r12, #0
+; CHECK-NEXT:    vcmp.f32 s7, s7
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    it vs
+; CHECK-NEXT:    movvs r3, #0
+; CHECK-NEXT:    bfc r3, #19, #13
+; CHECK-NEXT:    vcvt.s32.f32 s6, s6
+; CHECK-NEXT:    orr.w r3, r3, r12, lsl #19
+; CHECK-NEXT:    str r3, [r0]
+; CHECK-NEXT:    vcmp.f32 s1, s1
+; CHECK-NEXT:    vmov r3, s5
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it vs
 ; CHECK-NEXT:    movvs r3, #0
 ; CHECK-NEXT:    vcmp.f32 s8, s8
 ; CHECK-NEXT:    bfc r3, #19, #13
+; CHECK-NEXT:    vmov r1, s10
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it vs
 ; CHECK-NEXT:    movvs r1, #0
-; CHECK-NEXT:    bfc r1, #19, #13
-; CHECK-NEXT:    lsrs r2, r3, #7
+; CHECK-NEXT:    ubfx r2, r1, #7, #12
 ; CHECK-NEXT:    vcmp.f32 s4, s4
-; CHECK-NEXT:    orr.w r1, r2, r1, lsl #12
+; CHECK-NEXT:    orr.w r2, r2, r3, lsl #12
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    orr.w r1, r1, r12, lsl #31
-; CHECK-NEXT:    str r1, [r0, #8]
-; CHECK-NEXT:    vmov r1, s6
-; CHECK-NEXT:    lsr.w r2, lr, #13
+; CHECK-NEXT:    orr.w r2, r2, lr, lsl #31
+; CHECK-NEXT:    str r2, [r0, #8]
+; CHECK-NEXT:    vmov r2, s6
+; CHECK-NEXT:    ubfx r3, r12, #13, #6
 ; CHECK-NEXT:    it vs
-; CHECK-NEXT:    movvs r1, #0
-; CHECK-NEXT:    bfc r1, #19, #13
-; CHECK-NEXT:    orr.w r1, r2, r1, lsl #6
-; CHECK-NEXT:    orr.w r1, r1, r3, lsl #25
+; CHECK-NEXT:    movvs r2, #0
+; CHECK-NEXT:    bfc r2, #19, #13
+; CHECK-NEXT:    orr.w r2, r3, r2, lsl #6
+; CHECK-NEXT:    orr.w r1, r2, r1, lsl #25
 ; CHECK-NEXT:    str r1, [r0, #4]
 ; CHECK-NEXT:    vpop {d8}
 ; CHECK-NEXT:    pop {r7, pc}
@@ -5033,42 +5029,42 @@ define arm_aapcs_vfpcc <8 x i50> @test_signed_v8f16_v8i50(<8 x half> %f) {
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; CHECK-NEXT:    .pad #4
 ; CHECK-NEXT:    sub sp, #4
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    .pad #8
-; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14}
+; CHECK-NEXT:    .pad #16
+; CHECK-NEXT:    sub sp, #16
 ; CHECK-NEXT:    vmov q4, q0
-; CHECK-NEXT:    mov r10, r0
-; CHECK-NEXT:    vcvtt.f32.f16 s30, s19
-; CHECK-NEXT:    vmov r0, s30
+; CHECK-NEXT:    mov r11, r0
+; CHECK-NEXT:    vcvtt.f32.f16 s28, s19
+; CHECK-NEXT:    vmov r0, s28
 ; CHECK-NEXT:    bl __aeabi_f2lz
 ; CHECK-NEXT:    vcvtb.f32.f16 s26, s18
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r7, r0
 ; CHECK-NEXT:    vmov r0, s26
 ; CHECK-NEXT:    vldr s22, .LCPI48_1
 ; CHECK-NEXT:    vcvtb.f32.f16 s24, s16
-; CHECK-NEXT:    vcvtt.f32.f16 s28, s17
-; CHECK-NEXT:    vcmp.f32 s30, s22
-; CHECK-NEXT:    mov r6, r1
+; CHECK-NEXT:    vcvtt.f32.f16 s18, s18
+; CHECK-NEXT:    vcmp.f32 s28, s22
+; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vmov r7, s24
+; CHECK-NEXT:    vmov r6, s24
 ; CHECK-NEXT:    vldr s20, .LCPI48_0
-; CHECK-NEXT:    vmov r8, s28
+; CHECK-NEXT:    vmov r5, s18
 ; CHECK-NEXT:    itt lt
-; CHECK-NEXT:    movlt r6, #0
-; CHECK-NEXT:    movtlt r6, #65534
+; CHECK-NEXT:    movlt r4, #0
+; CHECK-NEXT:    movtlt r4, #65534
 ; CHECK-NEXT:    bl __aeabi_f2lz
 ; CHECK-NEXT:    vcmp.f32 s26, s22
-; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    str r1, [sp, #4] @ 4-byte Spill
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s30, s20
+; CHECK-NEXT:    vcmp.f32 s28, s20
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r0, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s26, s20
 ; CHECK-NEXT:    itt gt
-; CHECK-NEXT:    movwgt r6, #65535
-; CHECK-NEXT:    movtgt r6, #1
+; CHECK-NEXT:    movwgt r4, #65535
+; CHECK-NEXT:    movtgt r4, #1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt.w r0, #-1
@@ -5076,11 +5072,11 @@ define arm_aapcs_vfpcc <8 x i50> @test_signed_v8f16_v8i50(<8 x half> %f) {
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it vs
 ; CHECK-NEXT:    movvs r0, #0
-; CHECK-NEXT:    str.w r0, [r10, #25]
-; CHECK-NEXT:    mov r0, r7
+; CHECK-NEXT:    str.w r0, [r11, #25]
+; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    bl __aeabi_f2lz
 ; CHECK-NEXT:    vcmp.f32 s24, s22
-; CHECK-NEXT:    mov r11, r1
+; CHECK-NEXT:    str r1, [sp, #8] @ 4-byte Spill
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s24, s20
 ; CHECK-NEXT:    it lt
@@ -5090,99 +5086,97 @@ define arm_aapcs_vfpcc <8 x i50> @test_signed_v8f16_v8i50(<8 x half> %f) {
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt.w r0, #-1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s30, s22
+; CHECK-NEXT:    vcmp.f32 s28, s22
 ; CHECK-NEXT:    it vs
 ; CHECK-NEXT:    movvs r0, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    str.w r0, [r10]
+; CHECK-NEXT:    str.w r0, [r11]
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r4, #0
-; CHECK-NEXT:    vcmp.f32 s30, s20
+; CHECK-NEXT:    movlt r7, #0
+; CHECK-NEXT:    vcmp.f32 s28, s20
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r4, #-1
-; CHECK-NEXT:    vcmp.f32 s30, s30
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    it vs
-; CHECK-NEXT:    movvs r4, #0
-; CHECK-NEXT:    str r4, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    it vs
-; CHECK-NEXT:    movvs r6, #0
-; CHECK-NEXT:    lsls r0, r6, #22
-; CHECK-NEXT:    orr.w r7, r0, r4, lsr #10
-; CHECK-NEXT:    mov r0, r8
-; CHECK-NEXT:    bl __aeabi_f2lz
-; CHECK-NEXT:    vcmp.f32 s28, s22
-; CHECK-NEXT:    mov r4, r1
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s28, s20
-; CHECK-NEXT:    itt lt
-; CHECK-NEXT:    movlt r4, #0
-; CHECK-NEXT:    movtlt r4, #65534
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s28, s22
-; CHECK-NEXT:    mov r1, r0
-; CHECK-NEXT:    itt gt
-; CHECK-NEXT:    movwgt r4, #65535
-; CHECK-NEXT:    movtgt r4, #1
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    str.w r7, [r10, #45]
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r1, #0
-; CHECK-NEXT:    vcmp.f32 s28, s20
-; CHECK-NEXT:    vcvtt.f32.f16 s18, s18
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r1, #-1
+; CHECK-NEXT:    movgt.w r7, #-1
 ; CHECK-NEXT:    vcmp.f32 s28, s28
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it vs
-; CHECK-NEXT:    movvs r1, #0
-; CHECK-NEXT:    str r1, [sp] @ 4-byte Spill
+; CHECK-NEXT:    movvs r7, #0
+; CHECK-NEXT:    str r7, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    it vs
 ; CHECK-NEXT:    movvs r4, #0
 ; CHECK-NEXT:    lsls r0, r4, #22
-; CHECK-NEXT:    orr.w r0, r0, r1, lsr #10
-; CHECK-NEXT:    str.w r0, [r10, #20]
-; CHECK-NEXT:    vmov r0, s18
-; CHECK-NEXT:    lsrs r1, r6, #10
-; CHECK-NEXT:    strb.w r1, [r10, #49]
+; CHECK-NEXT:    orr.w r7, r0, r7, lsr #10
+; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    bl __aeabi_f2lz
 ; CHECK-NEXT:    vcmp.f32 s18, s22
-; CHECK-NEXT:    mov r9, r0
+; CHECK-NEXT:    mov r6, r1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s18, s20
+; CHECK-NEXT:    itt lt
+; CHECK-NEXT:    movlt r6, #0
+; CHECK-NEXT:    movtlt r6, #65534
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vcmp.f32 s18, s18
+; CHECK-NEXT:    itt gt
+; CHECK-NEXT:    movwgt r6, #65535
+; CHECK-NEXT:    movtgt r6, #1
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    vcmp.f32 s18, s22
+; CHECK-NEXT:    str.w r7, [r11, #45]
+; CHECK-NEXT:    it vs
+; CHECK-NEXT:    movvs r6, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt.w r9, #0
+; CHECK-NEXT:    movlt r5, #0
+; CHECK-NEXT:    vcmp.f32 s18, s20
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s18, s18
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r9, #-1
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s26, s22
-; CHECK-NEXT:    it vs
-; CHECK-NEXT:    movvs.w r9, #0
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    itt lt
-; CHECK-NEXT:    movlt r5, #0
-; CHECK-NEXT:    movtlt r5, #65534
-; CHECK-NEXT:    vcmp.f32 s26, s20
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    itt gt
-; CHECK-NEXT:    movwgt r5, #65535
-; CHECK-NEXT:    movtgt r5, #1
-; CHECK-NEXT:    vcmp.f32 s26, s26
-; CHECK-NEXT:    vcvtt.f32.f16 s16, s16
+; CHECK-NEXT:    movgt.w r5, #-1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it vs
 ; CHECK-NEXT:    movvs r5, #0
-; CHECK-NEXT:    bfc r5, #18, #14
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    orr.w r0, r5, r9, lsl #18
-; CHECK-NEXT:    str.w r0, [r10, #29]
+; CHECK-NEXT:    lsrs r0, r5, #14
+; CHECK-NEXT:    orr.w r0, r0, r6, lsl #18
+; CHECK-NEXT:    vcvtt.f32.f16 s18, s17
+; CHECK-NEXT:    str.w r0, [r11, #33]
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    bl __aeabi_f2lz
+; CHECK-NEXT:    vcmp.f32 s18, s22
+; CHECK-NEXT:    mov r9, r1
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vcmp.f32 s18, s20
+; CHECK-NEXT:    it lt
+; CHECK-NEXT:    movlt r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vcmp.f32 s18, s18
+; CHECK-NEXT:    it gt
+; CHECK-NEXT:    movgt.w r0, #-1
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vcmp.f32 s18, s22
+; CHECK-NEXT:    it vs
+; CHECK-NEXT:    movvs r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    str r0, [sp] @ 4-byte Spill
+; CHECK-NEXT:    itt lt
+; CHECK-NEXT:    movwlt r9, #0
+; CHECK-NEXT:    movtlt r9, #65534
+; CHECK-NEXT:    vcmp.f32 s18, s20
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    itt gt
+; CHECK-NEXT:    movwgt r9, #65535
+; CHECK-NEXT:    movtgt r9, #1
+; CHECK-NEXT:    vcmp.f32 s18, s18
+; CHECK-NEXT:    vcvtt.f32.f16 s16, s16
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    it vs
+; CHECK-NEXT:    movvs.w r9, #0
+; CHECK-NEXT:    lsl.w r0, r9, #22
+; CHECK-NEXT:    orr.w r0, r0, r1, lsr #10
+; CHECK-NEXT:    str.w r0, [r11, #20]
 ; CHECK-NEXT:    vmov r0, s16
-; CHECK-NEXT:    lsrs r1, r4, #10
-; CHECK-NEXT:    strb.w r1, [r10, #24]
 ; CHECK-NEXT:    bl __aeabi_f2lz
 ; CHECK-NEXT:    vcmp.f32 s16, s22
 ; CHECK-NEXT:    mov r8, r0
@@ -5195,105 +5189,109 @@ define arm_aapcs_vfpcc <8 x i50> @test_signed_v8f16_v8i50(<8 x half> %f) {
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt.w r8, #-1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s24, s22
+; CHECK-NEXT:    mov r10, r1
+; CHECK-NEXT:    vcmp.f32 s16, s22
 ; CHECK-NEXT:    it vs
 ; CHECK-NEXT:    movvs.w r8, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    itt lt
-; CHECK-NEXT:    movwlt r11, #0
-; CHECK-NEXT:    movtlt r11, #65534
-; CHECK-NEXT:    vcmp.f32 s24, s20
+; CHECK-NEXT:    movwlt r10, #0
+; CHECK-NEXT:    movtlt r10, #65534
+; CHECK-NEXT:    vcmp.f32 s16, s20
+; CHECK-NEXT:    lsr.w r0, r8, #14
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s24, s24
+; CHECK-NEXT:    vcmp.f32 s16, s16
 ; CHECK-NEXT:    itt gt
-; CHECK-NEXT:    movwgt r11, #65535
-; CHECK-NEXT:    movtgt r11, #1
+; CHECK-NEXT:    movwgt r10, #65535
+; CHECK-NEXT:    movtgt r10, #1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it vs
-; CHECK-NEXT:    movvs.w r11, #0
-; CHECK-NEXT:    vcvtb.f32.f16 s24, s19
-; CHECK-NEXT:    bfc r11, #18, #14
-; CHECK-NEXT:    mov r6, r1
-; CHECK-NEXT:    orr.w r0, r11, r8, lsl #18
-; CHECK-NEXT:    str.w r0, [r10, #4]
-; CHECK-NEXT:    vmov r0, s24
+; CHECK-NEXT:    movvs.w r10, #0
+; CHECK-NEXT:    orr.w r0, r0, r10, lsl #18
+; CHECK-NEXT:    str.w r0, [r11, #8]
+; CHECK-NEXT:    lsrs r0, r4, #10
+; CHECK-NEXT:    vcvtb.f32.f16 s16, s19
+; CHECK-NEXT:    strb.w r0, [r11, #49]
+; CHECK-NEXT:    vmov r0, s16
 ; CHECK-NEXT:    bl __aeabi_f2lz
-; CHECK-NEXT:    vcmp.f32 s24, s22
-; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    vcmp.f32 s16, s22
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s24, s20
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r5, #0
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s24, s24
-; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r5, #-1
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s18, s22
-; CHECK-NEXT:    it vs
-; CHECK-NEXT:    movvs r5, #0
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    itt lt
 ; CHECK-NEXT:    movlt r7, #0
-; CHECK-NEXT:    movtlt r7, #65534
-; CHECK-NEXT:    vcmp.f32 s18, s20
+; CHECK-NEXT:    vcmp.f32 s16, s20
+; CHECK-NEXT:    ubfx r0, r6, #14, #4
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s18, s18
-; CHECK-NEXT:    itt gt
-; CHECK-NEXT:    movwgt r7, #65535
-; CHECK-NEXT:    movtgt r7, #1
+; CHECK-NEXT:    it gt
+; CHECK-NEXT:    movgt.w r7, #-1
+; CHECK-NEXT:    vcmp.f32 s16, s16
+; CHECK-NEXT:    vcvtb.f32.f16 s18, s17
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it vs
 ; CHECK-NEXT:    movvs r7, #0
-; CHECK-NEXT:    vcvtb.f32.f16 s18, s17
-; CHECK-NEXT:    bfc r7, #18, #14
+; CHECK-NEXT:    orr.w r0, r0, r7, lsl #4
+; CHECK-NEXT:    str.w r0, [r11, #37]
+; CHECK-NEXT:    vcmp.f32 s26, s22
+; CHECK-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    itt lt
+; CHECK-NEXT:    movlt r0, #0
+; CHECK-NEXT:    movtlt r0, #65534
+; CHECK-NEXT:    vcmp.f32 s26, s20
 ; CHECK-NEXT:    mov r4, r1
-; CHECK-NEXT:    lsrs r0, r7, #14
-; CHECK-NEXT:    orr.w r0, r0, r5, lsl #4
-; CHECK-NEXT:    str.w r0, [r10, #37]
-; CHECK-NEXT:    lsr.w r0, r9, #14
-; CHECK-NEXT:    orr.w r0, r0, r7, lsl #18
-; CHECK-NEXT:    str.w r0, [r10, #33]
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    itt gt
+; CHECK-NEXT:    movwgt r0, #65535
+; CHECK-NEXT:    movtgt r0, #1
+; CHECK-NEXT:    vcmp.f32 s26, s26
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    it vs
+; CHECK-NEXT:    movvs r0, #0
+; CHECK-NEXT:    bfc r0, #18, #14
+; CHECK-NEXT:    orr.w r0, r0, r5, lsl #18
+; CHECK-NEXT:    str.w r0, [r11, #29]
+; CHECK-NEXT:    lsr.w r0, r9, #10
+; CHECK-NEXT:    strb.w r0, [r11, #24]
 ; CHECK-NEXT:    vmov r0, s18
 ; CHECK-NEXT:    bl __aeabi_f2lz
 ; CHECK-NEXT:    vcmp.f32 s18, s22
+; CHECK-NEXT:    ubfx r2, r10, #14, #4
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s18, s20
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r0, #0
+; CHECK-NEXT:    vcmp.f32 s18, s20
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s18, s18
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt.w r0, #-1
+; CHECK-NEXT:    vcmp.f32 s18, s18
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s16, s22
 ; CHECK-NEXT:    it vs
 ; CHECK-NEXT:    movvs r0, #0
+; CHECK-NEXT:    orr.w r2, r2, r0, lsl #4
+; CHECK-NEXT:    str.w r2, [r11, #12]
+; CHECK-NEXT:    vcmp.f32 s24, s22
+; CHECK-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vcmp.f32 s24, s20
 ; CHECK-NEXT:    itt lt
-; CHECK-NEXT:    movlt r6, #0
-; CHECK-NEXT:    movtlt r6, #65534
-; CHECK-NEXT:    vcmp.f32 s16, s20
+; CHECK-NEXT:    movlt r2, #0
+; CHECK-NEXT:    movtlt r2, #65534
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vcmp.f32 s24, s24
 ; CHECK-NEXT:    itt gt
-; CHECK-NEXT:    movwgt r6, #65535
-; CHECK-NEXT:    movtgt r6, #1
-; CHECK-NEXT:    vcmp.f32 s16, s16
+; CHECK-NEXT:    movwgt r2, #65535
+; CHECK-NEXT:    movtgt r2, #1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    it vs
-; CHECK-NEXT:    movvs r6, #0
-; CHECK-NEXT:    bfc r6, #18, #14
 ; CHECK-NEXT:    vcmp.f32 s18, s22
+; CHECK-NEXT:    it vs
+; CHECK-NEXT:    movvs r2, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s18, s20
-; CHECK-NEXT:    lsr.w r2, r6, #14
-; CHECK-NEXT:    orr.w r2, r2, r0, lsl #4
-; CHECK-NEXT:    str.w r2, [r10, #12]
 ; CHECK-NEXT:    itt lt
 ; CHECK-NEXT:    movlt r1, #0
 ; CHECK-NEXT:    movtlt r1, #65534
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s24, s22
+; CHECK-NEXT:    vcmp.f32 s16, s22
 ; CHECK-NEXT:    itt gt
 ; CHECK-NEXT:    movwgt r1, #65535
 ; CHECK-NEXT:    movtgt r1, #1
@@ -5301,36 +5299,36 @@ define arm_aapcs_vfpcc <8 x i50> @test_signed_v8f16_v8i50(<8 x half> %f) {
 ; CHECK-NEXT:    itt lt
 ; CHECK-NEXT:    movlt r4, #0
 ; CHECK-NEXT:    movtlt r4, #65534
-; CHECK-NEXT:    vcmp.f32 s24, s20
-; CHECK-NEXT:    lsr.w r2, r8, #14
+; CHECK-NEXT:    vcmp.f32 s16, s20
+; CHECK-NEXT:    bfc r2, #18, #14
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    itt gt
 ; CHECK-NEXT:    movwgt r4, #65535
 ; CHECK-NEXT:    movtgt r4, #1
-; CHECK-NEXT:    vcmp.f32 s24, s24
-; CHECK-NEXT:    orr.w r2, r2, r6, lsl #18
-; CHECK-NEXT:    str.w r2, [r10, #8]
+; CHECK-NEXT:    vcmp.f32 s16, s16
+; CHECK-NEXT:    orr.w r2, r2, r8, lsl #18
+; CHECK-NEXT:    str.w r2, [r11, #4]
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it vs
 ; CHECK-NEXT:    movvs r4, #0
-; CHECK-NEXT:    ldr r3, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    bfc r4, #18, #14
-; CHECK-NEXT:    lsrs r2, r5, #28
+; CHECK-NEXT:    ldr r3, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    lsrs r2, r7, #28
 ; CHECK-NEXT:    vcmp.f32 s18, s18
-; CHECK-NEXT:    lsrs r0, r0, #28
 ; CHECK-NEXT:    orr.w r2, r2, r4, lsl #4
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    orr.w r2, r2, r3, lsl #22
-; CHECK-NEXT:    str.w r2, [r10, #41]
+; CHECK-NEXT:    str.w r2, [r11, #41]
 ; CHECK-NEXT:    it vs
 ; CHECK-NEXT:    movvs r1, #0
+; CHECK-NEXT:    lsrs r0, r0, #28
 ; CHECK-NEXT:    bfc r1, #18, #14
 ; CHECK-NEXT:    orr.w r0, r0, r1, lsl #4
 ; CHECK-NEXT:    ldr r1, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    orr.w r0, r0, r1, lsl #22
-; CHECK-NEXT:    str.w r0, [r10, #16]
-; CHECK-NEXT:    add sp, #8
-; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
+; CHECK-NEXT:    str.w r0, [r11, #16]
+; CHECK-NEXT:    add sp, #16
+; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14}
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 ; CHECK-NEXT:    .p2align 2

@@ -165,8 +165,7 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
       // contain other types of InputSections (due to S_ATTR_LIVE_SUPPORT), but
       // those entries should never be pushed onto the worklist.
       auto *isec = cast<ConcatInputSection>(getInputSection(entry));
-      assert(isec->live &&
-             "We mark as live when pushing onto the worklist!");
+      assert(isec->live && "We mark as live when pushing onto the worklist!");
 
       // Mark all symbols listed in the relocation table for this section.
       for (const Reloc &r : isec->relocs) {
@@ -228,11 +227,10 @@ void markLive() {
       // -exported_symbol(s_list)
       if (!config->exportedSymbols.empty() &&
           config->exportedSymbols.match(defined->getName())) {
-        // FIXME: Instead of doing this here, maybe the Driver code doing
-        // the matching should add them to explicitUndefineds? Then the
-        // explicitUndefineds code below would handle this automatically.
-        assert(!defined->privateExtern &&
-               "should have been rejected by driver");
+        // NOTE: Even though exporting private externs is an ill-defined
+        // operation, we are purposely not checking for privateExtern in
+        // order to follow ld64's behavior of treating all exported private
+        // extern symbols as live, irrespective of whether they are autohide.
         marker->addSym(defined);
         continue;
       }

@@ -396,6 +396,19 @@ void test_wave_barrier()
   __builtin_amdgcn_wave_barrier();
 }
 
+// CHECK-LABEL: @test_sched_barrier
+// CHECK: call void @llvm.amdgcn.sched.barrier(i32 0)
+// CHECK: call void @llvm.amdgcn.sched.barrier(i32 1)
+// CHECK: call void @llvm.amdgcn.sched.barrier(i32 4)
+// CHECK: call void @llvm.amdgcn.sched.barrier(i32 15)
+void test_sched_barrier()
+{
+  __builtin_amdgcn_sched_barrier(0);
+  __builtin_amdgcn_sched_barrier(1);
+  __builtin_amdgcn_sched_barrier(4);
+  __builtin_amdgcn_sched_barrier(15);
+}
+
 // CHECK-LABEL: @test_s_sleep
 // CHECK: call void @llvm.amdgcn.s.sleep(i32 1)
 // CHECK: call void @llvm.amdgcn.s.sleep(i32 15)

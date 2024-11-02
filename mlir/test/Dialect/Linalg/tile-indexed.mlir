@@ -2,7 +2,7 @@
 // RUN: mlir-opt %s -linalg-tile="tile-sizes=25,0" -split-input-file | FileCheck %s -check-prefix=TILE-25n0
 // RUN: mlir-opt %s -linalg-tile="tile-sizes=0,25" -split-input-file | FileCheck %s -check-prefix=TILE-0n25
 
-func @indexed_vector(%arg0: memref<50xindex>) {
+func.func @indexed_vector(%arg0: memref<50xindex>) {
   linalg.generic {indexing_maps = [affine_map<(i) -> (i)>],
                   iterator_types = ["parallel"]}
      outs(%arg0 : memref<50xindex>) {
@@ -36,7 +36,7 @@ func @indexed_vector(%arg0: memref<50xindex>) {
 
 // -----
 
-func @indexed_matrix(%arg0: memref<50x50xindex>) {
+func.func @indexed_matrix(%arg0: memref<50x50xindex>) {
   linalg.generic {indexing_maps = [affine_map<(i, j) -> (i, j)>],
                   iterator_types = ["parallel", "parallel"]}
     outs(%arg0 : memref<50x50xindex>) {

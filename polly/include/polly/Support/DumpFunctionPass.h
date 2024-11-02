@@ -25,7 +25,7 @@ namespace polly {
 llvm::FunctionPass *createDumpFunctionWrapperPass(std::string Suffix);
 
 /// A pass that isolates a function into a new Module and writes it into a file.
-struct DumpFunctionPass : llvm::PassInfoMixin<DumpFunctionPass> {
+struct DumpFunctionPass final : llvm::PassInfoMixin<DumpFunctionPass> {
   std::string Suffix;
 
   DumpFunctionPass(std::string Suffix) : Suffix(std::move(Suffix)) {}

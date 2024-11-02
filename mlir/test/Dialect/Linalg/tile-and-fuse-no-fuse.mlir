@@ -23,7 +23,7 @@ func.func @tile_sizes_zero(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>) -> 
 
 // -----
 
-// UNARY_LABEL: @shape_only(
+// UNARY-LABEL: @shape_only(
 func.func @shape_only(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>) -> tensor<?x?xf32> {
   %cst = arith.constant 0.0 : f32
 

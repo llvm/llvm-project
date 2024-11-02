@@ -11,7 +11,7 @@ body:            |
     S_NOP 0, implicit %0
 
     %1:sreg_64_xexec = IMPLICIT_DEF
-    %2:sreg_64_xexec = SI_CALL %1, 0, csr_amdgpu_highregs, implicit $vgpr1_vgpr2
+    %2:sreg_64_xexec = SI_CALL %1, 0, csr_amdgpu, implicit $vgpr1_vgpr2
 
     ; noreg is OK
     DS_WRITE_B64_gfx9 $noreg, $noreg, 0, 0, implicit $exec

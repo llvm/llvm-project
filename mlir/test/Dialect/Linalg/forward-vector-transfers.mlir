@@ -7,7 +7,7 @@
 //       CHECK: %[[ALLOC:.*]] = memref.alloc
 //       CHECK: vector.transfer_read %[[ARG0]]
 //   CHECK-NOT: in_bounds
-func @testAllocRead(%in: memref<? x f32>) -> vector<32 x f32> {
+func.func @testAllocRead(%in: memref<? x f32>) -> vector<32 x f32> {
   %c0 = arith.constant 0: index
   %f0 = arith.constant 0.0: f32
   %alloc = memref.alloc() : memref<32 x f32>
@@ -25,7 +25,7 @@ func @testAllocRead(%in: memref<? x f32>) -> vector<32 x f32> {
 //       CHECK: %[[ALLOC:.*]] = memref.alloc
 //       CHECK: vector.transfer_read %[[ARG0]]
 //   CHECK-NOT: in_bounds
-func @testAllocFillRead(%in: memref<? x f32>) -> vector<32 x f32> {
+func.func @testAllocFillRead(%in: memref<? x f32>) -> vector<32 x f32> {
   %c0 = arith.constant 0: index
   %f0 = arith.constant 0.0: f32
   %alloc = memref.alloc() : memref<32 x f32>
@@ -44,7 +44,7 @@ func @testAllocFillRead(%in: memref<? x f32>) -> vector<32 x f32> {
 //       CHECK: %[[ALLOC:.*]] = memref.alloc
 //       CHECK: vector.transfer_read %[[ARG0]]
 //   CHECK-NOT: in_bounds
-func @testViewRead(%in: memref<? x f32>) -> vector<32 x f32> {
+func.func @testViewRead(%in: memref<? x f32>) -> vector<32 x f32> {
   %c0 = arith.constant 0: index
   %f0 = arith.constant 0.0: f32
   %alloc = memref.alloc() : memref<128 x i8>
@@ -63,7 +63,7 @@ func @testViewRead(%in: memref<? x f32>) -> vector<32 x f32> {
 //       CHECK: %[[ALLOC:.*]] = memref.alloc
 //       CHECK: vector.transfer_read %[[ARG0]]
 //   CHECK-NOT: in_bounds
-func @testViewFillRead(%in: memref<? x f32>) -> vector<32 x f32> {
+func.func @testViewFillRead(%in: memref<? x f32>) -> vector<32 x f32> {
   %c0 = arith.constant 0: index
   %f0 = arith.constant 0.0: f32
   %alloc = memref.alloc() : memref<128 x i8>
@@ -83,7 +83,7 @@ func @testViewFillRead(%in: memref<? x f32>) -> vector<32 x f32> {
 //       CHECK: %[[ALLOC:.*]] = memref.alloc
 //       CHECK: vector.transfer_write %[[ARG0]], %[[ARG1]]
 //   CHECK-NOT: in_bounds
-func @testAllocWrite(%vec: vector<32 x f32>, %out: memref<? x f32>) {
+func.func @testAllocWrite(%vec: vector<32 x f32>, %out: memref<? x f32>) {
   %c0 = arith.constant 0: index
   %f0 = arith.constant 0.0: f32
   %alloc = memref.alloc() : memref<32 x f32>
@@ -101,7 +101,7 @@ func @testAllocWrite(%vec: vector<32 x f32>, %out: memref<? x f32>) {
 //       CHECK: %[[ALLOC:.*]] = memref.alloc
 //       CHECK: vector.transfer_write %[[ARG0]], %[[ARG1]]
 //   CHECK-NOT: in_bounds
-func @testViewWrite(%vec: vector<32 x f32>, %out: memref<? x f32>) {
+func.func @testViewWrite(%vec: vector<32 x f32>, %out: memref<? x f32>) {
   %c0 = arith.constant 0: index
   %f0 = arith.constant 0.0: f32
   %alloc = memref.alloc() : memref<128 x i8>
@@ -124,7 +124,7 @@ func @testViewWrite(%vec: vector<32 x f32>, %out: memref<? x f32>) {
 //       CHECK: %[[ALLOC:.*]] = memref.alloc
 //       CHECK: memref.copy
 //       CHECK: vector.transfer_read %[[ALLOC]]
-func @failAllocFillRead(%in: memref<? x f32>) -> vector<32 x f32> {
+func.func @failAllocFillRead(%in: memref<? x f32>) -> vector<32 x f32> {
   %c0 = arith.constant 0: index
   %f0 = arith.constant 0.0: f32
   %f1 = arith.constant 1.0: f32
@@ -146,7 +146,7 @@ func @failAllocFillRead(%in: memref<? x f32>) -> vector<32 x f32> {
 //       CHECK: %[[ALLOC:.*]] = memref.alloc
 //       CHECK: vector.transfer_write %[[ARG0]], %[[ALLOC]]
 //       CHECK: memref.copy
-func @failAllocWrite(%vec: vector<32 x f32>, %out: memref<? x f32>) {
+func.func @failAllocWrite(%vec: vector<32 x f32>, %out: memref<? x f32>) {
   %c0 = arith.constant 0: index
   %f0 = arith.constant 0.0: f32
   %alloc = memref.alloc() : memref<32 x f32>

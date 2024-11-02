@@ -1,3 +1,4 @@
+// XFAIL: aix
 // UNSUPPORTED: windows
 // RUN: %clang_pgogen -o %t.bin %s -DTESTPATH=\"%t.dir\"
 // RUN: rm -rf %t.dir

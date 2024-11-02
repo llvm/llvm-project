@@ -37,7 +37,7 @@ define amdgpu_ps float @test2() #0 {
 ; CHECK: s_mov_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], exec
 ; CHECK-DAG: s_wqm_b64 exec, exec
 ; CHECK-DAG: s_xor_b64 [[HELPER:s\[[0-9]+:[0-9]+\]]], [[LIVE]], -1
-; CHECK_DAG: s_and_saveexec_b64 [[SAVED:s\[[0-9]+:[0-9]+\]]], [[HELPER]]
+; CHECK-DAG: s_and_saveexec_b64 [[SAVED:s\[[0-9]+:[0-9]+\]]], [[HELPER]]
 ; CHECK: ; %dead
 define amdgpu_ps float @test3(i32 %in) #0 {
 entry:

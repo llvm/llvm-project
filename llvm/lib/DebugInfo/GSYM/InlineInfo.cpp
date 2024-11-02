@@ -75,7 +75,7 @@ llvm::Optional<InlineInfo::InlineArray> InlineInfo::getInlineStack(uint64_t Addr
 
 static bool skip(DataExtractor &Data, uint64_t &Offset, bool SkippedRanges) {
   if (!SkippedRanges) {
-    if (AddressRanges::skip(Data, Offset) == 0)
+    if (skipRanges(Data, Offset) == 0)
       return false;
   }
   bool HasChildren = Data.getU8(&Offset) != 0;
@@ -109,7 +109,7 @@ static bool lookup(const GsymReader &GR, DataExtractor &Data, uint64_t &Offset,
                    uint64_t BaseAddr, uint64_t Addr, SourceLocations &SrcLocs,
                    llvm::Error &Err) {
   InlineInfo Inline;
-  Inline.Ranges.decode(Data, BaseAddr, Offset);
+  decodeRanges(Inline.Ranges, Data, BaseAddr, Offset);
   if (Inline.Ranges.empty())
     return true;
   // Check if the address is contained within the inline information, and if
@@ -128,7 +128,7 @@ static bool lookup(const GsymReader &GR, DataExtractor &Data, uint64_t &Offset,
   if (HasChildren) {
     // Child address ranges are encoded relative to the first address in the
     // parent InlineInfo object.
-    const auto ChildBaseAddr = Inline.Ranges[0].Start;
+    const auto ChildBaseAddr = Inline.Ranges[0].start();
     bool Done = false;
     while (!Done)
       Done = lookup(GR, Data, Offset, ChildBaseAddr, Addr, SrcLocs, Err);
@@ -150,7 +150,7 @@ static bool lookup(const GsymReader &GR, DataExtractor &Data, uint64_t &Offset,
     SrcLoc.Base = GR.getString(CallFile->Base);
     SrcLoc.Line = Inline.CallLine;
     SrcLocs.back().Name = GR.getString(Inline.Name);
-    SrcLocs.back().Offset = Addr - Inline.Ranges[0].Start;
+    SrcLocs.back().Offset = Addr - Inline.Ranges[0].start();
     SrcLocs.push_back(SrcLoc);
   }
   return true;
@@ -182,7 +182,7 @@ static llvm::Expected<InlineInfo> decode(DataExtractor &Data, uint64_t &Offset,
   if (!Data.isValidOffset(Offset))
     return createStringError(std::errc::io_error,
         "0x%8.8" PRIx64 ": missing InlineInfo address ranges data", Offset);
-  Inline.Ranges.decode(Data, BaseAddr, Offset);
+  decodeRanges(Inline.Ranges, Data, BaseAddr, Offset);
   if (Inline.Ranges.empty())
     return Inline;
   if (!Data.isValidOffsetForDataOfSize(Offset, 1))
@@ -205,7 +205,7 @@ static llvm::Expected<InlineInfo> decode(DataExtractor &Data, uint64_t &Offset,
   if (HasChildren) {
     // Child address ranges are encoded relative to the first address in the
     // parent InlineInfo object.
-    const auto ChildBaseAddr = Inline.Ranges[0].Start;
+    const auto ChildBaseAddr = Inline.Ranges[0].start();
     while (true) {
       llvm::Expected<InlineInfo> Child = decode(Data, Offset, ChildBaseAddr);
       if (!Child)
@@ -232,7 +232,7 @@ llvm::Error InlineInfo::encode(FileWriter &O, uint64_t BaseAddr) const {
   if (!isValid())
     return createStringError(std::errc::invalid_argument,
                              "attempted to encode invalid InlineInfo object");
-  Ranges.encode(O, BaseAddr);
+  encodeRanges(Ranges, O, BaseAddr);
   bool HasChildren = !Children.empty();
   O.writeU8(HasChildren);
   O.writeU32(Name);
@@ -242,7 +242,7 @@ llvm::Error InlineInfo::encode(FileWriter &O, uint64_t BaseAddr) const {
     // Child address ranges are encoded as relative to the first
     // address in the Ranges for this object. This keeps the offsets
     // small and allows for efficient encoding using ULEB offsets.
-    const uint64_t ChildBaseAddr = Ranges[0].Start;
+    const uint64_t ChildBaseAddr = Ranges[0].start();
     for (const auto &Child : Children) {
       // Make sure all child address ranges are contained in the parent address
       // ranges.

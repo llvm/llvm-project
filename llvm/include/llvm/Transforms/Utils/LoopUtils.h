@@ -14,6 +14,7 @@
 #define LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
 
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 namespace llvm {
@@ -412,8 +413,10 @@ Value *createOrderedReduction(IRBuilderBase &B,
 /// of each scalar operation (VL) that will be converted into a vector (I).
 /// If OpValue is non-null, we only consider operations similar to OpValue
 /// when intersecting.
-/// Flag set: NSW, NUW, exact, and all of fast-math.
-void propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue = nullptr);
+/// Flag set: NSW, NUW (if IncludeWrapFlags is true), exact, and all of
+/// fast-math.
+void propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue = nullptr,
+                      bool IncludeWrapFlags = true);
 
 /// Returns true if we can prove that \p S is defined and always negative in
 /// loop \p L.
@@ -498,6 +501,12 @@ Value *
 addRuntimeChecks(Instruction *Loc, Loop *TheLoop,
                  const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
                  SCEVExpander &Expander);
+
+Value *
+addDiffRuntimeChecks(Instruction *Loc, Loop *TheLoop,
+                     ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
+                     function_ref<Value *(IRBuilderBase &, unsigned)> GetVF,
+                     unsigned IC);
 
 /// Struct to hold information about a partially invariant condition.
 struct IVConditionInfo {

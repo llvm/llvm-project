@@ -1,7 +1,7 @@
 // RUN: mlir-opt -pass-pipeline="func.func(convert-arith-to-llvm)" %s -split-input-file | FileCheck %s
 
 // CHECK-LABEL: @vector_ops
-func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4xi64>, %arg3: vector<4xi64>) -> vector<4xf32> {
+func.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4xi64>, %arg3: vector<4xi64>) -> vector<4xf32> {
 // CHECK-NEXT:  %0 = llvm.mlir.constant(dense<4.200000e+01> : vector<4xf32>) : vector<4xf32>
   %0 = arith.constant dense<42.> : vector<4xf32>
 // CHECK-NEXT:  %1 = llvm.fadd %arg0, %0 : vector<4xf32>
@@ -34,7 +34,7 @@ func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4xi64>
 }
 
 // CHECK-LABEL: @ops
-func @ops(f32, f32, i32, i32, f64) -> (f32, i32) {
+func.func @ops(f32, f32, i32, i32, f64) -> (f32, i32) {
 ^bb0(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: i32, %arg4: f64):
 // CHECK:  = llvm.fsub %arg0, %arg1 : f32
   %0 = arith.subf %arg0, %arg1: f32
@@ -75,7 +75,7 @@ func @ops(f32, f32, i32, i32, f64) -> (f32, i32) {
 // system would have a 1-bit address space.  Otherwise, we would have had to
 // make this test dependent on the pointer size on the target system.
 // CHECK-LABEL: @index_cast
-func @index_cast(%arg0: index, %arg1: i1) {
+func.func @index_cast(%arg0: index, %arg1: i1) {
 // CHECK: = llvm.trunc %0 : i{{.*}} to i1
   %0 = arith.index_cast %arg0: index to i1
 // CHECK-NEXT: = llvm.sext %arg1 : i1 to i{{.*}}
@@ -84,7 +84,7 @@ func @index_cast(%arg0: index, %arg1: i1) {
 }
 
 // CHECK-LABEL: @vector_index_cast
-func @vector_index_cast(%arg0: vector<2xindex>, %arg1: vector<2xi1>) {
+func.func @vector_index_cast(%arg0: vector<2xindex>, %arg1: vector<2xi1>) {
 // CHECK: = llvm.trunc %{{.*}} : vector<2xi{{.*}}> to vector<2xi1>
   %0 = arith.index_cast %arg0: vector<2xindex> to vector<2xi1>
 // CHECK-NEXT: = llvm.sext %{{.*}} : vector<2xi1> to vector<2xi{{.*}}>
@@ -94,7 +94,7 @@ func @vector_index_cast(%arg0: vector<2xindex>, %arg1: vector<2xi1>) {
 
 // Checking conversion of signed integer types to floating point.
 // CHECK-LABEL: @sitofp
-func @sitofp(%arg0 : i32, %arg1 : i64) {
+func.func @sitofp(%arg0 : i32, %arg1 : i64) {
 // CHECK-NEXT: = llvm.sitofp {{.*}} : i32 to f32
   %0 = arith.sitofp %arg0: i32 to f32
 // CHECK-NEXT: = llvm.sitofp {{.*}} : i32 to f64
@@ -108,7 +108,7 @@ func @sitofp(%arg0 : i32, %arg1 : i64) {
 
 // Checking conversion of integer vectors to floating point vector types.
 // CHECK-LABEL: @sitofp_vector
-func @sitofp_vector(%arg0 : vector<2xi16>, %arg1 : vector<2xi32>, %arg2 : vector<2xi64>) {
+func.func @sitofp_vector(%arg0 : vector<2xi16>, %arg1 : vector<2xi32>, %arg2 : vector<2xi64>) {
 // CHECK-NEXT: = llvm.sitofp {{.*}} : vector<2xi16> to vector<2xf32>
   %0 = arith.sitofp %arg0: vector<2xi16> to vector<2xf32>
 // CHECK-NEXT: = llvm.sitofp {{.*}} : vector<2xi16> to vector<2xf64>
@@ -126,7 +126,7 @@ func @sitofp_vector(%arg0 : vector<2xi16>, %arg1 : vector<2xi32>, %arg2 : vector
 
 // Checking conversion of unsigned integer types to floating point.
 // CHECK-LABEL: @uitofp
-func @uitofp(%arg0 : i32, %arg1 : i64) {
+func.func @uitofp(%arg0 : i32, %arg1 : i64) {
 // CHECK-NEXT: = llvm.uitofp {{.*}} : i32 to f32
   %0 = arith.uitofp %arg0: i32 to f32
 // CHECK-NEXT: = llvm.uitofp {{.*}} : i32 to f64
@@ -140,7 +140,7 @@ func @uitofp(%arg0 : i32, %arg1 : i64) {
 
 // Checking conversion of integer types to floating point.
 // CHECK-LABEL: @fpext
-func @fpext(%arg0 : f16, %arg1 : f32) {
+func.func @fpext(%arg0 : f16, %arg1 : f32) {
 // CHECK-NEXT: = llvm.fpext {{.*}} : f16 to f32
   %0 = arith.extf %arg0: f16 to f32
 // CHECK-NEXT: = llvm.fpext {{.*}} : f16 to f64
@@ -152,7 +152,7 @@ func @fpext(%arg0 : f16, %arg1 : f32) {
 
 // Checking conversion of integer types to floating point.
 // CHECK-LABEL: @fpext
-func @fpext_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>) {
+func.func @fpext_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>) {
 // CHECK-NEXT: = llvm.fpext {{.*}} : vector<2xf16> to vector<2xf32>
   %0 = arith.extf %arg0: vector<2xf16> to vector<2xf32>
 // CHECK-NEXT: = llvm.fpext {{.*}} : vector<2xf16> to vector<2xf64>
@@ -164,7 +164,7 @@ func @fpext_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>) {
 
 // Checking conversion of floating point to integer types.
 // CHECK-LABEL: @fptosi
-func @fptosi(%arg0 : f32, %arg1 : f64) {
+func.func @fptosi(%arg0 : f32, %arg1 : f64) {
 // CHECK-NEXT: = llvm.fptosi {{.*}} : f32 to i32
   %0 = arith.fptosi %arg0: f32 to i32
 // CHECK-NEXT: = llvm.fptosi {{.*}} : f32 to i64
@@ -178,7 +178,7 @@ func @fptosi(%arg0 : f32, %arg1 : f64) {
 
 // Checking conversion of floating point vectors to integer vector types.
 // CHECK-LABEL: @fptosi_vector
-func @fptosi_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>, %arg2 : vector<2xf64>) {
+func.func @fptosi_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>, %arg2 : vector<2xf64>) {
 // CHECK-NEXT: = llvm.fptosi {{.*}} : vector<2xf16> to vector<2xi32>
   %0 = arith.fptosi %arg0: vector<2xf16> to vector<2xi32>
 // CHECK-NEXT: = llvm.fptosi {{.*}} : vector<2xf16> to vector<2xi64>
@@ -196,7 +196,7 @@ func @fptosi_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>, %arg2 : vector
 
 // Checking conversion of floating point to integer types.
 // CHECK-LABEL: @fptoui
-func @fptoui(%arg0 : f32, %arg1 : f64) {
+func.func @fptoui(%arg0 : f32, %arg1 : f64) {
 // CHECK-NEXT: = llvm.fptoui {{.*}} : f32 to i32
   %0 = arith.fptoui %arg0: f32 to i32
 // CHECK-NEXT: = llvm.fptoui {{.*}} : f32 to i64
@@ -210,7 +210,7 @@ func @fptoui(%arg0 : f32, %arg1 : f64) {
 
 // Checking conversion of floating point vectors to integer vector types.
 // CHECK-LABEL: @fptoui_vector
-func @fptoui_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>, %arg2 : vector<2xf64>) {
+func.func @fptoui_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>, %arg2 : vector<2xf64>) {
 // CHECK-NEXT: = llvm.fptoui {{.*}} : vector<2xf16> to vector<2xi32>
   %0 = arith.fptoui %arg0: vector<2xf16> to vector<2xi32>
 // CHECK-NEXT: = llvm.fptoui {{.*}} : vector<2xf16> to vector<2xi64>
@@ -228,7 +228,7 @@ func @fptoui_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>, %arg2 : vector
 
 // Checking conversion of integer vectors to floating point vector types.
 // CHECK-LABEL: @uitofp_vector
-func @uitofp_vector(%arg0 : vector<2xi16>, %arg1 : vector<2xi32>, %arg2 : vector<2xi64>) {
+func.func @uitofp_vector(%arg0 : vector<2xi16>, %arg1 : vector<2xi32>, %arg2 : vector<2xi64>) {
 // CHECK-NEXT: = llvm.uitofp {{.*}} : vector<2xi16> to vector<2xf32>
   %0 = arith.uitofp %arg0: vector<2xi16> to vector<2xf32>
 // CHECK-NEXT: = llvm.uitofp {{.*}} : vector<2xi16> to vector<2xf64>
@@ -246,7 +246,7 @@ func @uitofp_vector(%arg0 : vector<2xi16>, %arg1 : vector<2xi32>, %arg2 : vector
 
 // Checking conversion of integer types to floating point.
 // CHECK-LABEL: @fptrunc
-func @fptrunc(%arg0 : f32, %arg1 : f64) {
+func.func @fptrunc(%arg0 : f32, %arg1 : f64) {
 // CHECK-NEXT: = llvm.fptrunc {{.*}} : f32 to f16
   %0 = arith.truncf %arg0: f32 to f16
 // CHECK-NEXT: = llvm.fptrunc {{.*}} : f64 to f16
@@ -258,7 +258,7 @@ func @fptrunc(%arg0 : f32, %arg1 : f64) {
 
 // Checking conversion of integer types to floating point.
 // CHECK-LABEL: @fptrunc
-func @fptrunc_vector(%arg0 : vector<2xf32>, %arg1 : vector<2xf64>) {
+func.func @fptrunc_vector(%arg0 : vector<2xf32>, %arg1 : vector<2xf64>) {
 // CHECK-NEXT: = llvm.fptrunc {{.*}} : vector<2xf32> to vector<2xf16>
   %0 = arith.truncf %arg0: vector<2xf32> to vector<2xf16>
 // CHECK-NEXT: = llvm.fptrunc {{.*}} : vector<2xf64> to vector<2xf16>
@@ -270,7 +270,7 @@ func @fptrunc_vector(%arg0 : vector<2xf32>, %arg1 : vector<2xf64>) {
 
 // Check sign and zero extension and truncation of integers.
 // CHECK-LABEL: @integer_extension_and_truncation
-func @integer_extension_and_truncation(%arg0 : i3) {
+func.func @integer_extension_and_truncation(%arg0 : i3) {
 // CHECK-NEXT: = llvm.sext %arg0 : i3 to i6
   %0 = arith.extsi %arg0 : i3 to i6
 // CHECK-NEXT: = llvm.zext %arg0 : i3 to i6
@@ -281,7 +281,7 @@ func @integer_extension_and_truncation(%arg0 : i3) {
 }
 
 // CHECK-LABEL: func @fcmp(%arg0: f32, %arg1: f32) {
-func @fcmp(f32, f32) -> () {
+func.func @fcmp(f32, f32) -> () {
 ^bb0(%arg0: f32, %arg1: f32):
   // CHECK:      llvm.fcmp "oeq" %arg0, %arg1 : f32
   // CHECK-NEXT: llvm.fcmp "ogt" %arg0, %arg1 : f32
@@ -319,7 +319,7 @@ func @fcmp(f32, f32) -> () {
 // -----
 
 // CHECK-LABEL: @index_vector
-func @index_vector(%arg0: vector<4xindex>) {
+func.func @index_vector(%arg0: vector<4xindex>) {
   // CHECK: %[[CST:.*]] = llvm.mlir.constant(dense<[0, 1, 2, 3]> : vector<4xindex>) : vector<4xi64>
   %0 = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
   // CHECK: %[[V:.*]] = llvm.add %{{.*}}, %[[CST]] : vector<4xi64>
@@ -330,7 +330,7 @@ func @index_vector(%arg0: vector<4xindex>) {
 // -----
 
 // CHECK-LABEL: @bitcast_1d
-func @bitcast_1d(%arg0: vector<2xf32>) {
+func.func @bitcast_1d(%arg0: vector<2xf32>) {
   // CHECK: llvm.bitcast %{{.*}} : vector<2xf32> to vector<2xi32>
   arith.bitcast %arg0 : vector<2xf32> to vector<2xi32>
   return
@@ -339,7 +339,7 @@ func @bitcast_1d(%arg0: vector<2xf32>) {
 // -----
 
 // CHECK-LABEL: func @cmpf_2dvector(
-func @cmpf_2dvector(%arg0 : vector<4x3xf32>, %arg1 : vector<4x3xf32>) {
+func.func @cmpf_2dvector(%arg0 : vector<4x3xf32>, %arg1 : vector<4x3xf32>) {
   // CHECK: %[[ARG0:.*]] = builtin.unrealized_conversion_cast
   // CHECK: %[[ARG1:.*]] = builtin.unrealized_conversion_cast
   // CHECK: %[[EXTRACT1:.*]] = llvm.extractvalue %[[ARG0]][0] : !llvm.array<4 x vector<3xf32>>
@@ -353,7 +353,7 @@ func @cmpf_2dvector(%arg0 : vector<4x3xf32>, %arg1 : vector<4x3xf32>) {
 // -----
 
 // CHECK-LABEL: func @cmpi_0dvector(
-func @cmpi_0dvector(%arg0 : vector<i32>, %arg1 : vector<i32>) {
+func.func @cmpi_0dvector(%arg0 : vector<i32>, %arg1 : vector<i32>) {
   // CHECK: %[[ARG0:.*]] = builtin.unrealized_conversion_cast
   // CHECK: %[[ARG1:.*]] = builtin.unrealized_conversion_cast
   // CHECK: %[[CMP:.*]] = llvm.icmp "ult" %[[ARG0]], %[[ARG1]] : vector<1xi32>
@@ -364,7 +364,7 @@ func @cmpi_0dvector(%arg0 : vector<i32>, %arg1 : vector<i32>) {
 // -----
 
 // CHECK-LABEL: func @cmpi_2dvector(
-func @cmpi_2dvector(%arg0 : vector<4x3xi32>, %arg1 : vector<4x3xi32>) {
+func.func @cmpi_2dvector(%arg0 : vector<4x3xi32>, %arg1 : vector<4x3xi32>) {
   // CHECK: %[[ARG0:.*]] = builtin.unrealized_conversion_cast
   // CHECK: %[[ARG1:.*]] = builtin.unrealized_conversion_cast
   // CHECK: %[[EXTRACT1:.*]] = llvm.extractvalue %[[ARG0]][0] : !llvm.array<4 x vector<3xi32>>
@@ -378,7 +378,7 @@ func @cmpi_2dvector(%arg0 : vector<4x3xi32>, %arg1 : vector<4x3xi32>) {
 // -----
 
 // CHECK-LABEL: @select
-func @select(%arg0 : i1, %arg1 : i32, %arg2 : i32) -> i32 {
+func.func @select(%arg0 : i1, %arg1 : i32, %arg2 : i32) -> i32 {
   // CHECK: = llvm.select %arg0, %arg1, %arg2 : i1, i32
   %0 = arith.select %arg0, %arg1, %arg2 : i32
   return %0 : i32

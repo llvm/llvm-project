@@ -247,7 +247,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["numeric"],
   }, {
     "name": "__cpp_lib_constexpr_string",
-    "values": { "c++20": 201811 },  # because P1032R1 is implemented; but should become 201907 after P0980R1
+    "values": { "c++20": 201907 },
     "headers": ["string"],
   }, {
     "name": "__cpp_lib_constexpr_string_view",
@@ -471,10 +471,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["memory_resource"],
     "unimplemented": True,
   }, {
-    "name": "__cpp_lib_monadic_optional",
-    "values": { "c++2b": 202110 },
-    "headers": ["optional"],
-  }, {
     "name": "__cpp_lib_move_only_function",
     "values": { "c++2b": 202110 },
     "headers": ["functional"],
@@ -497,7 +493,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["iterator"],
   }, {
     "name": "__cpp_lib_optional",
-    "values": { "c++17": 201606 },
+    "values": { "c++17": 201606, "c++2b": 202110 },
     "headers": ["optional"],
   }, {
     "name": "__cpp_lib_out_ptr",
@@ -658,7 +654,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_stdatomic_h",
     "values": { "c++2b": 202011 },
     "headers": ["stdatomic.h"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_string_contains",
     "values": { "c++2b": 202011 },
@@ -765,22 +760,23 @@ assert all(all(key in ["name", "values", "headers", "libcxx_guard", "test_suite_
 # <thread> should be marked as UNSUPPORTED, because including <thread>
 # is a hard error in that case.
 lit_markup = {
-  "barrier": ["UNSUPPORTED: libcpp-has-no-threads"],
-  "filesystem": ["UNSUPPORTED: libcpp-has-no-filesystem-library"],
+  "barrier": ["UNSUPPORTED: no-threads"],
+  "filesystem": ["UNSUPPORTED: no-filesystem"],
   "format": ["UNSUPPORTED: libcpp-has-no-incomplete-format"],
-  "iomanip": ["UNSUPPORTED: libcpp-has-no-localization"],
-  "ios": ["UNSUPPORTED: libcpp-has-no-localization"],
-  "iostream": ["UNSUPPORTED: libcpp-has-no-localization"],
-  "istream": ["UNSUPPORTED: libcpp-has-no-localization"],
-  "latch": ["UNSUPPORTED: libcpp-has-no-threads"],
-  "locale": ["UNSUPPORTED: libcpp-has-no-localization"],
-  "mutex": ["UNSUPPORTED: libcpp-has-no-threads"],
-  "ostream": ["UNSUPPORTED: libcpp-has-no-localization"],
+  "iomanip": ["UNSUPPORTED: no-localization"],
+  "ios": ["UNSUPPORTED: no-localization"],
+  "iostream": ["UNSUPPORTED: no-localization"],
+  "istream": ["UNSUPPORTED: no-localization"],
+  "latch": ["UNSUPPORTED: no-threads"],
+  "locale": ["UNSUPPORTED: no-localization"],
+  "mutex": ["UNSUPPORTED: no-threads"],
+  "ostream": ["UNSUPPORTED: no-localization"],
   "ranges": ["UNSUPPORTED: libcpp-has-no-incomplete-ranges"],
-  "regex": ["UNSUPPORTED: libcpp-has-no-localization"],
-  "semaphore": ["UNSUPPORTED: libcpp-has-no-threads"],
-  "shared_mutex": ["UNSUPPORTED: libcpp-has-no-threads"],
-  "thread": ["UNSUPPORTED: libcpp-has-no-threads"]
+  "regex": ["UNSUPPORTED: no-localization"],
+  "semaphore": ["UNSUPPORTED: no-threads"],
+  "shared_mutex": ["UNSUPPORTED: no-threads"],
+  "stdatomic.h": ["UNSUPPORTED: no-threads"],
+  "thread": ["UNSUPPORTED: no-threads"],
 }
 
 def get_std_dialects():

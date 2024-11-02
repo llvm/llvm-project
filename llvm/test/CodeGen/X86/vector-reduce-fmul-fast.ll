@@ -648,8 +648,8 @@ define double @test_v16f64(double %a0, <16 x double> %a1) {
 ; SSE-NEXT:    mulpd %xmm6, %xmm2
 ; SSE-NEXT:    mulpd %xmm7, %xmm3
 ; SSE-NEXT:    mulpd %xmm5, %xmm1
-; SSE-NEXT:    mulpd %xmm3, %xmm1
 ; SSE-NEXT:    mulpd {{[0-9]+}}(%rsp), %xmm4
+; SSE-NEXT:    mulpd %xmm3, %xmm1
 ; SSE-NEXT:    mulpd %xmm2, %xmm4
 ; SSE-NEXT:    mulpd %xmm1, %xmm4
 ; SSE-NEXT:    movapd %xmm4, %xmm1

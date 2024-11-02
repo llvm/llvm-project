@@ -23,15 +23,14 @@ void whatever(void) {
 void again() {} // strict-warning {{a function declaration without a prototype is deprecated in all versions of C}}
 
 // On by default warnings
-void func();                 // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}} \
-                                strict-warning {{a function declaration without a prototype is deprecated in all versions of C}} \
-                                strict-note {{a function declaration without a prototype is not supported in C2x}}
-void func(a, b) int a, b; {} // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
+void func();                 // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C2x, conflicting with a subsequent definition}} \
+                                strict-warning {{a function declaration without a prototype is deprecated in all versions of C}}
+void func(a, b) int a, b; {} // both-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
 
-void one_more(a, b) int a, b; {} // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
+void one_more(a, b) int a, b; {} // both-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
 
 void sheesh(int a);
-void sheesh(a) int a; {} // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
+void sheesh(a) int a; {} // both-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
 
 void another(); // strict-warning {{a function declaration without a prototype is deprecated in all versions of C}}
 
@@ -39,35 +38,26 @@ int main(void) {
   another(1, 2);  // both-warning {{passing arguments to 'another' without a prototype is deprecated in all versions of C and is not supported in C2x}}
 }
 
-void order1();        // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}} \
-                         strict-warning {{a function declaration without a prototype is deprecated in all versions of C}} \
-                         strict-note {{a function declaration without a prototype is not supported in C2x}}
-void order1(int i);   // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
+void order1();        // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C2x, conflicting with a subsequent declaration}} \
+                         strict-warning {{a function declaration without a prototype is deprecated in all versions of C}}
+void order1(int i);   // both-note {{conflicting prototype is here}}
 
-void order2(int i);
-void order2();        // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}} \
+void order2(int i);   // both-note {{conflicting prototype is here}}
+void order2();        // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C2x, conflicting with a previous declaration}} \
                          strict-warning {{a function declaration without a prototype is deprecated in all versions of C}}
 
-void order3();        // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}} \
-                         strict-warning {{a function declaration without a prototype is deprecated in all versions of C}} \
-                         strict-note {{a function declaration without a prototype is not supported in C2x}}
-void order3(int i) {} // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
+void order3();        // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C2x, conflicting with a subsequent definition}} \
+                         strict-warning {{a function declaration without a prototype is deprecated in all versions of C}}
+void order3(int i) {} // both-note {{conflicting prototype is here}}
 
 // Just because the prototype is variadic doesn't mean we shouldn't warn on the
 // K&R C function definition; this still changes behavior in C2x.
 void test(char*,...);
-void test(fmt)        // both-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
+void test(fmt)        // both-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
         char*fmt;
 {
 }
 
-// FIXME: we get two diagnostics here when running in pedantic mode. The first
-// comes when forming the function type for the definition, and the second
-// comes from merging the function declarations together. The second is the
-// point at which we know the behavior has changed (because we can see the
-// previous declaration at that point), but we've already issued the type
-// error by that point. It's not ideal to be this chatty, but this situation
-// should be pretty rare.
 void blapp(int); // both-note {{previous declaration is here}}
 void blapp() { } // both-error {{conflicting types for 'blapp'}} \
                  // strict-warning {{a function declaration without a prototype is deprecated in all versions of C}}

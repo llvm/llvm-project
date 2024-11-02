@@ -11,7 +11,7 @@ unsigned long _Accum u_long_accum;    // expected-error{{compile with '-ffixed-p
 // Aliased fixed point types
 short _Accum short_accum;             // expected-error{{compile with '-ffixed-point' to enable fixed point types}}
 _Accum accum;                         // expected-error{{compile with '-ffixed-point' to enable fixed point types}}
-                                      // expected-warning@-1{{type specifier missing, defaults to 'int'}}
+                                      // expected-error@-1{{type specifier missing, defaults to 'int'}}
 long _Accum long_accum;               // expected-error{{compile with '-ffixed-point' to enable fixed point types}}
 
 // Cannot use fixed point suffixes

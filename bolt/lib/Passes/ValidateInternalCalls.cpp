@@ -261,8 +261,8 @@ bool ValidateInternalCalls::analyzeFunction(BinaryFunction &Function) const {
         int64_t Output;
         std::pair<MCPhysReg, int64_t> Input1 = std::make_pair(Reg, 0);
         std::pair<MCPhysReg, int64_t> Input2 = std::make_pair(0, 0);
-        if (!BC.MIB->evaluateSimple(Use, Output, Input1, Input2)) {
-          LLVM_DEBUG(dbgs() << "Evaluate simple failed.\n");
+        if (!BC.MIB->evaluateStackOffsetExpr(Use, Output, Input1, Input2)) {
+          LLVM_DEBUG(dbgs() << "Evaluate stack offset expr failed.\n");
           return false;
         }
         if (Offset + Output < 0 ||

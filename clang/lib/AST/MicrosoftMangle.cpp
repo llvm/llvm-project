@@ -147,7 +147,8 @@ class MicrosoftMangleContextImpl : public MicrosoftMangleContext {
   SmallString<16> AnonymousNamespaceHash;
 
 public:
-  MicrosoftMangleContextImpl(ASTContext &Context, DiagnosticsEngine &Diags);
+  MicrosoftMangleContextImpl(ASTContext &Context, DiagnosticsEngine &Diags,
+                             bool IsAux = false);
   bool shouldMangleCXXName(const NamedDecl *D) override;
   bool shouldMangleStringLiteral(const StringLiteral *SL) override;
   void mangleCXXName(GlobalDecl GD, raw_ostream &Out) override;
@@ -221,7 +222,7 @@ public:
 
     // Use the canonical number for externally visible decls.
     if (ND->isExternallyVisible()) {
-      disc = getASTContext().getManglingNumber(ND);
+      disc = getASTContext().getManglingNumber(ND, isAux());
       return true;
     }
 
@@ -459,8 +460,9 @@ private:
 }
 
 MicrosoftMangleContextImpl::MicrosoftMangleContextImpl(ASTContext &Context,
-                                                       DiagnosticsEngine &Diags)
-    : MicrosoftMangleContext(Context, Diags) {
+                                                       DiagnosticsEngine &Diags,
+                                                       bool IsAux)
+    : MicrosoftMangleContext(Context, Diags, IsAux) {
   // To mangle anonymous namespaces, hash the path to the main source file. The
   // path should be whatever (probably relative) path was passed on the command
   // line. The goal is for the compiler to produce the same output regardless of
@@ -806,8 +808,8 @@ void MicrosoftCXXNameMangler::mangleNumber(llvm::APSInt Number) {
   // to convert every integer to signed 64 bit before mangling (including
   // unsigned 64 bit values). Do the same, but preserve bits beyond the bottom
   // 64.
-  llvm::APInt Value =
-      Number.isSigned() ? Number.sextOrSelf(64) : Number.zextOrSelf(64);
+  unsigned Width = std::max(Number.getBitWidth(), 64U);
+  llvm::APInt Value = Number.extend(Width);
 
   // <non-negative integer> ::= A@              # when Number == 0
   //                        ::= <decimal digit> # when 1 <= Number <= 10
@@ -3944,7 +3946,8 @@ void MicrosoftMangleContextImpl::mangleStringLiteral(const StringLiteral *SL,
   Mangler.getStream() << '@';
 }
 
-MicrosoftMangleContext *
-MicrosoftMangleContext::create(ASTContext &Context, DiagnosticsEngine &Diags) {
-  return new MicrosoftMangleContextImpl(Context, Diags);
+MicrosoftMangleContext *MicrosoftMangleContext::create(ASTContext &Context,
+                                                       DiagnosticsEngine &Diags,
+                                                       bool IsAux) {
+  return new MicrosoftMangleContextImpl(Context, Diags, IsAux);
 }

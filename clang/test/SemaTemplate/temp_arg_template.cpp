@@ -19,7 +19,7 @@ namespace N {
 template<class, class> struct TooMany; // expected-note{{too many template parameters in template template argument}}
 
 
-A<X> *a1; 
+A<X> *a1;
 A<N::Z> *a2;
 A< ::N::Z> *a3;
 
@@ -42,19 +42,19 @@ A<::N::Z> *a10;
 
 // Do not do a digraph correction here.
 A<: :N::Z> *a11;  // expected-error{{expected expression}} \
-          expected-error{{C++ requires a type specifier for all declarations}}
+                     expected-error{{a type specifier is required for all declarations}}
 
 // PR7807
 namespace N {
-  template <typename, typename = int> 
+  template <typename, typename = int>
   struct X
   { };
 
-  template <typename ,int> 
+  template <typename ,int>
   struct Y
   { X<int> const_ref(); };
 
-  template <template<typename,int> class TT, typename T, int N> 
+  template <template<typename,int> class TT, typename T, int N>
   int operator<<(int, TT<T, N> a) { // expected-note{{candidate template ignored}}
     0 << a.const_ref(); // expected-error{{invalid operands to binary expression ('int' and 'X<int>')}}
   }

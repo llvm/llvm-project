@@ -4044,6 +4044,9 @@ CXCursorKind clang::getCursorKindForDecl(const Decl *D) {
   case Decl::ObjCTypeParam:
     return CXCursor_TemplateTypeParameter;
 
+  case Decl::Concept:
+    return CXCursor_ConceptDecl;
+
   default:
     if (const auto *TD = dyn_cast<TagDecl>(D)) {
       switch (TD->getTagKind()) {

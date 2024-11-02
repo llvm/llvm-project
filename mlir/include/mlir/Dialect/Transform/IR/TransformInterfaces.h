@@ -11,6 +11,8 @@
 
 #include "mlir/IR/OpDefinition.h"
 
+#include "mlir/Interfaces/SideEffectInterfaces.h"
+
 namespace mlir {
 namespace transform {
 
@@ -71,6 +73,10 @@ public:
   /// Returns the list of ops that the given transform IR value corresponds to.
   /// This is helpful for transformations that apply to a particular handle.
   ArrayRef<Operation *> getPayloadOps(Value value) const;
+
+  /// Returns the Transform IR handle for the given Payload IR op if it exists
+  /// in the state, null otherwise.
+  Value getHandleForPayloadOp(Operation *op) const;
 
   /// Applies the transformation specified by the given transform op and updates
   /// the state accordingly.
@@ -140,6 +146,96 @@ public:
   };
   friend class RegionScope;
 
+  /// Base class for TransformState extensions that allow TransformState to
+  /// contain user-specified information in the state object. Clients are
+  /// expected to derive this class, add the desired fields, and make the
+  /// derived class compatible with the MLIR TypeID mechanism:
+  ///
+  /// ```mlir
+  /// class MyExtension final : public TransformState::Extension {
+  /// public:
+  ///   MyExtension(TranfsormState &state, int myData)
+  ///     : Extension(state) {...}
+  /// private:
+  ///   int mySupplementaryData;
+  /// };
+  /// ```
+  ///
+  /// Instances of this and derived classes are not expected to be created by
+  /// the user, instead they are directly constructed within a TransformState. A
+  /// TransformState can only contain one extension with the given TypeID.
+  /// Extensions can be obtained from a TransformState instance, and can be
+  /// removed when they are no longer required.
+  ///
+  /// ```mlir
+  /// transformState.addExtension<MyExtension>(/*myData=*/42);
+  /// MyExtension *ext = transformState.getExtension<MyExtension>();
+  /// ext->doSomething();
+  /// ```
+  class Extension {
+    // Allow TransformState to allocate Extensions.
+    friend class TransformState;
+
+  public:
+    /// Base virtual destructor.
+    // Out-of-line definition ensures symbols are emitted in a single object
+    // file.
+    virtual ~Extension();
+
+  protected:
+    /// Constructs an extension of the given TransformState object.
+    Extension(TransformState &state) : state(state) {}
+
+    /// Provides read-only access to the parent TransformState object.
+    const TransformState &getTransformState() const { return state; }
+
+    /// Replaces the given payload op with another op. If the replacement op is
+    /// null, removes the association of the payload op with its handle.
+    LogicalResult replacePayloadOp(Operation *op, Operation *replacement);
+
+  private:
+    /// Back-reference to the state that is being extended.
+    TransformState &state;
+  };
+
+  /// Adds a new Extension of the type specified as template parameter,
+  /// constructing it with the arguments provided. The extension is owned by the
+  /// TransformState. It is expected that the state does not already have an
+  /// extension of the same type. Extension constructors are expected to take
+  /// a reference to TransformState as first argument, automatically supplied
+  /// by this call.
+  template <typename Ty, typename... Args>
+  Ty &addExtension(Args &&...args) {
+    static_assert(
+        std::is_base_of<Extension, Ty>::value,
+        "only an class derived from TransformState::Extension is allowed here");
+    auto ptr = std::make_unique<Ty>(*this, std::forward<Args>(args)...);
+    auto result = extensions.try_emplace(TypeID::get<Ty>(), std::move(ptr));
+    assert(result.second && "extension already added");
+    return *static_cast<Ty *>(result.first->second.get());
+  }
+
+  /// Returns the extension of the specified type.
+  template <typename Ty>
+  Ty *getExtension() {
+    static_assert(
+        std::is_base_of<Extension, Ty>::value,
+        "only an class derived from TransformState::Extension is allowed here");
+    auto iter = extensions.find(TypeID::get<Ty>());
+    if (iter == extensions.end())
+      return nullptr;
+    return static_cast<Ty *>(iter->second.get());
+  }
+
+  /// Removes the extension of the specified type.
+  template <typename Ty>
+  void removeExtension() {
+    static_assert(
+        std::is_base_of<Extension, Ty>::value,
+        "only an class derived from TransformState::Extension is allowed here");
+    extensions.erase(TypeID::get<Ty>());
+  }
+
 private:
   /// Identifier for storing top-level value in the `operations` mapping.
   static constexpr Value kTopLevelValue = Value();
@@ -188,13 +284,25 @@ private:
   /// The callback function is called once per associated operation and is
   /// expected to return the modified operation or nullptr. In the latter case,
   /// the corresponding operation is no longer associated with the transform IR
-  /// value.
-  void updatePayloadOps(Value value,
-                        function_ref<Operation *(Operation *)> callback);
+  /// value. May fail if the operation produced by the update callback is
+  /// already associated with a different Transform IR handle value.
+  LogicalResult
+  updatePayloadOps(Value value,
+                   function_ref<Operation *(Operation *)> callback);
+
+  /// Attempts to record the mapping between the given Payload IR operation and
+  /// the given Transform IR handle. Fails and reports an error if the operation
+  /// is already tracked by another handle.
+  static LogicalResult tryEmplaceReverseMapping(Mappings &map, Operation *op,
+                                                Value handle);
 
   /// The mappings between transform IR values and payload IR ops, aggregated by
   /// the region in which the transform IR values are defined.
   llvm::SmallDenseMap<Region *, Mappings> mappings;
+
+  /// Extensions attached to the TransformState, identified by the TypeID of
+  /// their type. Only one extension of any given type is allowed.
+  DenseMap<TypeID, std::unique_ptr<Extension>> extensions;
 
   /// The top-level operation that contains all payload IR, typically a module.
   Operation *topLevel;
@@ -241,9 +349,252 @@ TransformState::RegionScope TransformState::make_region_scope(Region &region) {
   return RegionScope(*this, region);
 }
 
+namespace detail {
+/// Maps the only block argument of the op with PossibleTopLevelTransformOpTrait
+/// to either the list of operations associated with its operand or the root of
+/// the payload IR, depending on what is available in the context.
+LogicalResult
+mapPossibleTopLevelTransformOpBlockArguments(TransformState &state,
+                                             Operation *op);
+
+/// Verification hook for PossibleTopLevelTransformOpTrait.
+LogicalResult verifyPossibleTopLevelTransformOpTrait(Operation *op);
+} // namespace detail
+
+/// This trait is supposed to be attached to Transform dialect operations that
+/// can be standalone top-level transforms. Such operations typically contain
+/// other Transform dialect operations that can be executed following some
+/// control flow logic specific to the current operation. The operations with
+/// this trait are expected to have exactly one single-block region with one
+/// argument of PDL Operation type. The operations are also expected to be valid
+/// without operands, in which case they are considered top-level, and with one
+/// or more arguments, in which case they are considered nested. Top-level
+/// operations have the block argument of the entry block in the Transform IR
+/// correspond to the root operation of Payload IR. Nested operations have the
+/// block argument of the entry block in the Transform IR correspond to a list
+/// of Payload IR operations mapped to the first operand of the Transform IR
+/// operation. The operation must implement TransformOpInterface.
+template <typename OpTy>
+class PossibleTopLevelTransformOpTrait
+    : public OpTrait::TraitBase<OpTy, PossibleTopLevelTransformOpTrait> {
+public:
+  /// Verifies that `op` satisfies the invariants of this trait. Not expected to
+  /// be called directly.
+  static LogicalResult verifyTrait(Operation *op) {
+    return detail::verifyPossibleTopLevelTransformOpTrait(op);
+  }
+
+  /// Returns the single block of the op's only region.
+  Block *getBodyBlock() { return &this->getOperation()->getRegion(0).front(); }
+
+  /// Sets up the mapping between the entry block of the only region of this op
+  /// and the relevant list of Payload IR operations in the given state. The
+  /// state is expected to be already scoped at the region of this operation.
+  /// Returns failure if the mapping failed, e.g., the value is already mapped.
+  LogicalResult mapBlockArguments(TransformState &state) {
+    return detail::mapPossibleTopLevelTransformOpBlockArguments(
+        state, this->getOperation());
+  }
+};
+
+/// Trait implementing the TransformOpInterface for operations applying a
+/// transformation to a single operation handle and producing a single operation
+/// handle. The op must implement a method with one of the following signatures:
+///   - FailureOr<convertible-to-Operation*> applyToOne(OpTy)
+///   - LogicalResult applyToOne(OpTy)
+/// to perform a transformation that is applied in turn to all payload IR
+/// operations that correspond to the handle of the transform IR operation.
+/// In the functions above, OpTy is either Operation * or a concrete payload IR
+/// Op class that the transformation is applied to (NOT the class of the
+/// transform IR op). The op is expected to have one operand and zero or one
+/// results.
+template <typename OpTy>
+class TransformEachOpTrait
+    : public OpTrait::TraitBase<OpTy, TransformEachOpTrait> {
+public:
+  /// Calls `applyToOne` for every payload operation associated with the operand
+  /// of this transform IR op. If `applyToOne` returns ops, associates them with
+  /// the result of this transform op.
+  LogicalResult apply(TransformResults &transformResults,
+                      TransformState &state);
+
+  /// Checks that the op matches the expectations of this trait.
+  static LogicalResult verifyTrait(Operation *op);
+};
+
+/// Side effect resource corresponding to the mapping between Transform IR
+/// values and Payload IR operations. An Allocate effect from this resource
+/// means creating a new mapping entry, it is always accompanied by a Write
+/// effet. A Read effect from this resource means accessing the mapping. A Free
+/// effect on this resource indicates the removal of the mapping entry,
+/// typically after a transformation that modifies the Payload IR operations
+/// associated with one of the Transform IR operation's operands. It is always
+/// accompanied by a Read effect. Read-after-Free and double-Free are not
+/// allowed (they would be problematic with "regular" memory effects too) as
+/// they indicate an attempt to access Payload IR operations that have been
+/// modified, potentially erased, by the previous tranfsormations.
+// TODO: consider custom effects if these are not enabling generic passes such
+// as CSE/DCE to work.
+struct TransformMappingResource
+    : public SideEffects::Resource::Base<TransformMappingResource> {
+  StringRef getName() override { return "transform.mapping"; }
+};
+
+/// Side effect resource corresponding to the Payload IR itself. Only Read and
+/// Write effects are expected on this resource, with Write always accompanied
+/// by a Read (short of fully replacing the top-level Payload IR operation, one
+/// cannot modify the Payload IR without reading it first). This is intended
+/// to disallow reordering of Transform IR operations that mutate the Payload IR
+/// while still allowing the reordering of those that only access it.
+struct PayloadIRResource
+    : public SideEffects::Resource::Base<PayloadIRResource> {
+  StringRef getName() override { return "transform.payload_ir"; }
+};
+
+/// Trait implementing the MemoryEffectOpInterface for single-operand
+/// single-result operations that "consume" their operand and produce a new
+/// result.
+template <typename OpTy>
+class FunctionalStyleTransformOpTrait
+    : public OpTrait::TraitBase<OpTy, FunctionalStyleTransformOpTrait> {
+public:
+  /// This op "consumes" the operand by reading and freeing it, "produces" the
+  /// result by allocating and writing it and reads/writes the payload IR in the
+  /// process.
+  void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+    effects.emplace_back(MemoryEffects::Read::get(),
+                         this->getOperation()->getOperand(0),
+                         TransformMappingResource::get());
+    effects.emplace_back(MemoryEffects::Free::get(),
+                         this->getOperation()->getOperand(0),
+                         TransformMappingResource::get());
+    effects.emplace_back(MemoryEffects::Allocate::get(),
+                         this->getOperation()->getResult(0),
+                         TransformMappingResource::get());
+    effects.emplace_back(MemoryEffects::Write::get(),
+                         this->getOperation()->getResult(0),
+                         TransformMappingResource::get());
+    effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
+    effects.emplace_back(MemoryEffects::Write::get(), PayloadIRResource::get());
+  }
+
+  /// Checks that the op matches the expectations of this trait.
+  static LogicalResult verifyTrait(Operation *op) {
+    static_assert(OpTy::template hasTrait<OpTrait::OneOperand>(),
+                  "expected single-operand op");
+    static_assert(OpTy::template hasTrait<OpTrait::OneResult>(),
+                  "expected single-result op");
+    if (!op->getName().getInterface<MemoryEffectOpInterface>()) {
+      op->emitError()
+          << "FunctionalStyleTransformOpTrait should only be attached to ops "
+             "that implement MemoryEffectOpInterface";
+    }
+    return success();
+  }
+};
+
 } // namespace transform
 } // namespace mlir
 
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h.inc"
+
+namespace mlir {
+namespace transform {
+namespace detail {
+/// Appends `result` to the vector assuming it corresponds to the success state
+/// in `FailureOr<convertible-to-Operation*>`. If `result` is just a
+/// `LogicalResult`, does nothing.
+template <typename Ty>
+std::enable_if_t<std::is_same<Ty, LogicalResult>::value, LogicalResult>
+appendTransformResultToVector(Ty result,
+                              SmallVectorImpl<Operation *> &results) {
+  return result;
+}
+template <typename Ty>
+std::enable_if_t<!std::is_same<Ty, LogicalResult>::value, LogicalResult>
+appendTransformResultToVector(Ty result,
+                              SmallVectorImpl<Operation *> &results) {
+  static_assert(
+      std::is_convertible<typename Ty::value_type, Operation *>::value,
+      "expected transform function to return operations");
+  if (failed(result))
+    return failure();
+
+  results.push_back(*result);
+  return success();
+}
+
+/// Applies a one-to-one transform to each of the given targets. Puts the
+/// results of transforms, if any, in `results` in the same order. Fails if any
+/// of the application fails. Individual transforms must be callable with
+/// one of the following signatures:
+///   - FailureOr<convertible-to-Operation*>(OpTy)
+///   - LogicalResult(OpTy)
+/// where OpTy is either
+///   - Operation *, in which case the transform is always applied;
+///   - a concrete Op class, in which case a check is performed whether
+///   `targets` contains operations of the same class and a failure is reported
+///   if it does not.
+template <typename FnTy>
+LogicalResult applyTransformToEach(ArrayRef<Operation *> targets,
+                                   SmallVectorImpl<Operation *> &results,
+                                   FnTy transform) {
+  using OpTy = typename llvm::function_traits<FnTy>::template arg_t<0>;
+  static_assert(std::is_convertible<OpTy, Operation *>::value,
+                "expected transform function to take an operation");
+  using RetTy = typename llvm::function_traits<FnTy>::result_t;
+  static_assert(std::is_convertible<RetTy, LogicalResult>::value,
+                "expected transform function to return LogicalResult or "
+                "FailureOr<convertible-to-Operation*>");
+  for (Operation *target : targets) {
+    auto specificOp = dyn_cast<OpTy>(target);
+    if (!specificOp)
+      return failure();
+
+    auto result = transform(specificOp);
+    if (failed(appendTransformResultToVector(result, results)))
+      return failure();
+  }
+  return success();
+}
+} // namespace detail
+} // namespace transform
+} // namespace mlir
+
+template <typename OpTy>
+mlir::LogicalResult mlir::transform::TransformEachOpTrait<OpTy>::apply(
+    TransformResults &transformResults, TransformState &state) {
+  using TransformOpType = typename llvm::function_traits<
+      decltype(&OpTy::applyToOne)>::template arg_t<0>;
+  ArrayRef<Operation *> targets =
+      state.getPayloadOps(this->getOperation()->getOperand(0));
+  SmallVector<Operation *> results;
+  if (failed(detail::applyTransformToEach(
+          targets, results, [&](TransformOpType specificOp) {
+            return static_cast<OpTy *>(this)->applyToOne(specificOp);
+          })))
+    return failure();
+  if (OpTy::template hasTrait<OpTrait::OneResult>()) {
+    transformResults.set(
+        this->getOperation()->getResult(0).template cast<OpResult>(), results);
+  }
+  return success();
+}
+
+template <typename OpTy>
+mlir::LogicalResult
+mlir::transform::TransformEachOpTrait<OpTy>::verifyTrait(Operation *op) {
+  static_assert(OpTy::template hasTrait<OpTrait::OneOperand>(),
+                "expected single-operand op");
+  static_assert(OpTy::template hasTrait<OpTrait::OneResult>() ||
+                    OpTy::template hasTrait<OpTrait::ZeroResults>(),
+                "expected zero- or single-result op");
+  if (!op->getName().getInterface<TransformOpInterface>()) {
+    return op->emitError() << "TransformEachOpTrait should only be attached to "
+                              "ops that implement TransformOpInterface";
+  }
+
+  return success();
+}
 
 #endif // DIALECT_TRANSFORM_IR_TRANSFORMINTERFACES_H

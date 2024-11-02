@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // UNSUPPORTED: c++03
 
 // <string>
 
-// basic_string& replace(const_iterator i1, const_iterator i2, initializer_list<charT> il);
+// basic_string& replace(const_iterator i1, const_iterator i2, initializer_list<charT> il); // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -18,7 +20,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     std::string s("123def456");
     s.replace(s.cbegin() + 3, s.cbegin() + 6, {'a', 'b', 'c'});
@@ -38,7 +40,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

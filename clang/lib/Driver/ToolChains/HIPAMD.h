@@ -36,6 +36,10 @@ private:
   void constructLldCommand(Compilation &C, const JobAction &JA,
                            const InputInfoList &Inputs, const InputInfo &Output,
                            const llvm::opt::ArgList &Args) const;
+  void constructLlvmLinkCommand(Compilation &C, const JobAction &JA,
+                                const InputInfoList &Inputs,
+                                const InputInfo &Output,
+                                const llvm::opt::ArgList &Args) const;
 };
 
 } // end namespace AMDGCN

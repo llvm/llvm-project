@@ -156,9 +156,10 @@ static std::error_code WildcardExpand(StringRef Arg,
 
   // Don't expand Arg if it does not contain any wildcard characters. This is
   // the common case. Also don't wildcard expand /?. Always treat it as an
-  // option.
+  // option. Paths that start with \\?\ are absolute paths, and aren't
+  // expected to be used with wildcard expressions.
   if (Arg.find_first_of("*?") == StringRef::npos || Arg == "/?" ||
-      Arg == "-?") {
+      Arg == "-?" || Arg.startswith("\\\\?\\")) {
     Args.push_back(Arg.data());
     return EC;
   }
@@ -247,13 +248,16 @@ windows::GetCommandLineArguments(SmallVectorImpl<const char *> &Args,
 
   SmallVector<const char *, 20> TmpArgs;
   StringSaver Saver(Alloc);
-  cl::TokenizeWindowsCommandLine(Cmd, Saver, TmpArgs, /*MarkEOLs=*/false);
+  cl::TokenizeWindowsCommandLineFull(Cmd, Saver, TmpArgs, /*MarkEOLs=*/false);
 
   for (const char *Arg : TmpArgs) {
     EC = WildcardExpand(Arg, Args, Saver);
     if (EC)
       return EC;
   }
+
+  if (Args.size() == 0)
+    return std::make_error_code(std::errc::invalid_argument);
 
   SmallVector<char, MAX_PATH> Arg0(Args[0], Args[0] + strlen(Args[0]));
   SmallVector<char, MAX_PATH> Filename;

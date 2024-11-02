@@ -13,12 +13,12 @@
 // basic_string& operator=(basic_string&& c)
 //     noexcept(
 //         allocator_traits<allocator_type>::propagate_on_container_move_assignment::value ||
-//         allocator_traits<allocator_type>::is_always_equal::value); // C++17
+//         allocator_traits<allocator_type>::is_always_equal::value); // C++17, constexpr since C++20
 //
 //  before C++17, we use the conforming extension
 //     noexcept(
 //         allocator_type::propagate_on_container_move_assignment::value &&
-//         is_nothrow_move_assignable<allocator_type>::value);
+//         is_nothrow_move_assignable<allocator_type>::value); // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -62,7 +62,7 @@ struct some_alloc3
     typedef std::false_type is_always_equal;
 };
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string C;
     static_assert(std::is_nothrow_move_assignable<C>::value, "");
@@ -100,7 +100,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

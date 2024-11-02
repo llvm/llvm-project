@@ -53,13 +53,21 @@ define internal x86_fp80 @UseLongDoubleSafely(%union.u* byval(%union.u) align 16
 ; CHECK-LABEL: define {{[^@]+}}@UseLongDoubleSafely
 ; CHECK-SAME: (x86_fp80 [[ARG_0:%.*]]) {
 ; CHECK-NEXT:    [[ARG:%.*]] = alloca [[UNION_U:%.*]], align 16
-; CHECK-NEXT:    [[DOT0:%.*]] = getelementptr [[UNION_U]], %union.u* [[ARG]], i32 0, i32 0
+; CHECK-NEXT:    [[DOT0:%.*]] = getelementptr [[UNION_U]], [[UNION_U]]* [[ARG]], i32 0, i32 0
 ; CHECK-NEXT:    store x86_fp80 [[ARG_0]], x86_fp80* [[DOT0]], align 16
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[UNION_U]], %union.u* [[ARG]], i64 0, i32 0
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[UNION_U]], [[UNION_U]]* [[ARG]], i64 0, i32 0
+; CHECK-NEXT:    [[IDX_P:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    store i64 0, i64* [[IDX_P]], align 8
+; CHECK-NEXT:    [[IDX:%.*]] = load i64, i64* [[IDX_P]], align 8
+; CHECK-NEXT:    [[GEP_IDX:%.*]] = getelementptr inbounds [[UNION_U]], [[UNION_U]]* [[ARG]], i64 [[IDX]], i32 0
 ; CHECK-NEXT:    [[FP80:%.*]] = load x86_fp80, x86_fp80* [[GEP]], align 16
 ; CHECK-NEXT:    ret x86_fp80 [[FP80]]
 ;
   %gep = getelementptr inbounds %union.u, %union.u* %arg, i64 0, i32 0
+  %idx_slot = alloca i64, align 8
+  store i64 0, i64* %idx_slot, align 8
+  %idx = load i64, i64* %idx_slot, align 8
+  %gep_idx = getelementptr inbounds %union.u, %union.u* %arg, i64 %idx, i32 0 ; to protect from "usual" promotion
   %fp80 = load x86_fp80, x86_fp80* %gep
   ret x86_fp80 %fp80
 }

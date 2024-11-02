@@ -245,7 +245,7 @@ read packet: OK
 //  OUTPUT SCHEMA
 //   {
 //     "name": <string>,
-//         Tracing technology name, e.g. intel-pt, arm-coresight.
+//         Tracing technology name, e.g. intel-pt, arm-etm.
 //     "description": <string>,
 //         Description for this technology.
 //   }
@@ -280,10 +280,10 @@ read packet: {"name":<name>, "description":<description>}/E<error code>;AAAAAAAA
 // INPUT SCHEMA
 //  {
 //    "type": <string>,
-//        Tracing technology name, e.g. intel-pt, arm-coresight.
+//        Tracing technology name, e.g. intel-pt, arm-etm.
 //
 //    /* thread tracing only */
-//    "tids": [<decimal integer>],
+//    "tids"?: [<decimal integer>],
 //        Individual threads to trace.
 //
 //    ... other parameters specific to the provided tracing type
@@ -298,16 +298,25 @@ read packet: {"name":<name>, "description":<description>}/E<error code>;AAAAAAAA
 // INTEL-PT
 //  intel-pt supports both "thread tracing" and "process tracing".
 //
-//  "Process tracing" is implemented by tracing each thread individually, but
-//  managed by the same "process trace" instance.
-//  Each actual thread trace, either from "process tracing" or "thread tracing",
+//  "Process tracing" is implemented in two different ways. If the
+//  "perCoreTracing" option is false, then each thread is traced individually
+//  but managed by the same "process trace" instance. This means that the
+//  amount of trace buffers used is proportional to the number of running
+//  threads. This is the recommended option unless the number of threads is
+//  huge. If "perCoreTracing" is true, then each cpu core is traced invidually
+//  instead of each thread, which uses a fixed number of trace buffers, but
+//  might result in less data available for less frequent threads. See
+//  "perCoreTracing" below for more information.
+//
+//  Each actual trace buffer, either from "process tracing" or "thread tracing",
 //  is stored in an in-memory circular buffer, which keeps the most recent data.
 //
 //  Additional params in the input schema:
 //   {
-//     "threadBufferSize": <decimal integer>,
-//         Trace buffer size per thread in bytes. It must be a power of 2
-//         greater than or equal to 4096 (2^12) bytes.
+//     "traceBufferSize": <decimal integer>,
+//         Size in bytes used by each individual per-thread or per-core trace
+//         buffer. It must be a power of 2 greater than or equal to 4096 (2^12)
+//         bytes.
 //
 //     "enableTsc": <boolean>,
 //         Whether to enable TSC timestamps or not. This is supported on
@@ -342,15 +351,36 @@ read packet: {"name":<name>, "description":<description>}/E<error code>;AAAAAAAA
 //          0 if supported.
 //
 //     /* process tracing only */
+//     "perCoreTracing": <boolean>
+//         Instead of having an individual trace buffer per thread, this option
+//         triggers the collection on a per cpu core basis. This effectively
+//         traces the entire activity on all cores. At decoding time, in order
+//         to correctly associate a decoded instruction with a thread, the
+//         context switch trace of each core is needed, as well as a record per
+//         cpu indicating which thread was running on each core when tracing
+//         started. These secondary traces are correlated with the intel-pt
+//         trace by comparing TSC timestamps.
+//
+//         This option forces the capture of TSC timestamps (see "enableTsc").
+//
+//         Note: This option can't be used simulatenously with any other trace
+//         sessions because of its system-wide nature.
+//
+//     /* process tracing only */
 //     "processBufferSizeLimit": <decimal integer>,
 //         Maximum total buffer size per process in bytes.
-//         This limit applies to the sum of the sizes of all trace buffers for
-//         the current process, excluding the ones started with "thread tracing".
+//         This limit applies to the sum of the sizes of all thread or core
+//         buffers for the current process, excluding the ones started with
+//         "thread tracing".
 //
-//         Whenever a thread is attempted to be traced due to "process tracing"
-//         and the limit would be reached, the process is stopped with a
-//         "tracing" reason along with a meaningful description, so that the
-//         user can retrace the process if needed.
+//         If "perCoreTracing" is false, whenever a thread is attempted to be
+//         traced due to "process tracing" and the limit would be reached, the
+//         process is stopped with a "tracing" reason along with a meaningful
+//         description, so that the user can retrace the process if needed.
+//
+//         If "perCoreTracing" is true, then starting the system-wide trace
+//         session fails if all the individual per-core trace buffers require
+//         in total more memory that the limit impossed by this parameter.
 //   }
 //
 //  Notes:
@@ -392,7 +422,7 @@ read packet: OK/E<error code>;AAAAAAAAA
 //
 //  {
 //    "type": <string>
-//       Tracing technology name, e.g. intel-pt, arm-coresight.
+//       Tracing technology name, e.g. intel-pt, arm-etm.
 //
 //    /* thread trace stopping only */
 //    "tids":  [<decimal integer>]
@@ -426,7 +456,7 @@ read packet: OK/E<error code>;AAAAAAAAA
 // INPUT SCHEMA
 //  {
 //     "type": <string>
-//        Tracing technology name, e.g. intel-pt, arm-coresight.
+//        Tracing technology name, e.g. intel-pt, arm-etm.
 //  }
 //
 // OUTPUT SCHEMA
@@ -452,10 +482,23 @@ read packet: OK/E<error code>;AAAAAAAAA
 //            Size in bytes of this thread data.
 //      },
 //    ],
+//    "cores"?: [
+//      "id": <decimal integer>,
+//          Identifier for this CPU logical core.
+//      "binaryData": [
+//        {
+//          "kind": <string>,
+//              Identifier for some binary data related to this thread to
+//              fetch with the jLLDBTraceGetBinaryData packet.
+//          "size": <decimal integer>,
+//              Size in bytes of this cpu core data.
+//        },
+//      ]
+//    ],
 //    "counters"?: {
 //      "info_kind": {...parameters specific to the provided counter info kind},
-//          Each entry includes information related to counters associated with the trace.
-//          They are described below.
+//          Each entry includes information related to counters associated with
+//          the trace. They are described below.
 //    }
 //  }
 //
@@ -465,9 +508,15 @@ read packet: OK/E<error code>;AAAAAAAAA
 //
 // INTEL PT
 //
+//  If per-core process tracing is enabled, "tracedThreads" will contain all
+//  the threads of the process without any trace buffers. Besides that, the
+//  "cores" field will also be returned with per core trace buffers.
+//  A side effect of per-core tracing is that all the threads of unrelated
+//  processes will also be traced, thus polluting the tracing data.
+//
 //  Binary data kinds:
-//    - threadTraceBuffer: trace buffer for a thread.
-//    - cpuInfo: contents of the /proc/cpuinfo file.
+//    - traceBuffer: trace buffer for a thread or a core.
+//    - procfsCpuInfo: contents of the /proc/cpuinfo file.
 //
 //  Counter info kinds:
 //    tsc-perf-zero-conversion:
@@ -507,9 +556,11 @@ read packet: {...object}/E<error code>;AAAAAAAAA
 //
 //  {
 //   "type": <string>,
-//       Tracing technology name, e.g. intel-pt, arm-coresight.
+//       Tracing technology name, e.g. intel-pt, arm-etm.
 //   "kind": <string>,
 //       Identifier for the data.
+//   "coreId": <Optional decimal>,
+//       Core id in decimal if the data belongs to a CPU core.
 //   "tid"?: <Optional decimal>,
 //       Tid in decimal if the data belongs to a thread.
 //   "offset": <decimal>,
@@ -521,8 +572,8 @@ read packet: {...object}/E<error code>;AAAAAAAAA
 // INTEL PT
 //
 //  Binary data kinds:
-//    - threadTraceBuffer: trace buffer for a thread.
-//    - cpuInfo: contents of the /proc/cpuinfo file.
+//    - traceBuffer: trace buffer for a thread or a core.
+//    - procfsCpuInfo: contents of the /proc/cpuinfo file.
 //----------------------------------------------------------------------
 
 send packet: jLLDBTraceGetBinaryData:{"type":<type>,"kind":<query>,"tid":<tid>,"offset":<offset>,"size":<size>}]

@@ -575,6 +575,7 @@ bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
   return false;
 }
 
+bool Host::IsInteractiveGraphicSession() { return false; }
 #endif
 
 std::unique_ptr<Connection> Host::CreateDefaultConnection(llvm::StringRef url) {

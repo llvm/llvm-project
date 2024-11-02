@@ -1,0 +1,8 @@
+; RUN: not llvm-ml %s /Fo /dev/null 2>&1 | FileCheck %s --check-prefixes=CHECK-INVALID
+; RUN: llvm-ml /Ta %s -m64 -filetype=s /Fo - | FileCheck %s --check-prefixes=CHECK-TA
+
+; CHECK-INVALID: error: invalid option '{{.*}}invalid_file_extension.blah'
+
+.code
+foo:
+; CHECK-TA: foo:

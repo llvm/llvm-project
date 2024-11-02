@@ -204,6 +204,12 @@ public:
   /// to an LLVM basic block.
   const BasicBlock *getBasicBlock() const { return BB; }
 
+  /// Remove the reference to the underlying IR BasicBlock. This is for
+  /// reduction tools and should generally not be used.
+  void clearBasicBlock() {
+    BB = nullptr;
+  }
+
   /// Return the name of the corresponding LLVM basic block, or an empty string.
   StringRef getName() const;
 

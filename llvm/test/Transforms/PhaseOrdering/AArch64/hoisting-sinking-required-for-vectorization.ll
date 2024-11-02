@@ -41,21 +41,20 @@ return:                                           ; preds = %if.end3, %if.then2,
 define void @loop(double* %X, double* %Y) {
 ; CHECK-LABEL: @loop(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr double, double* [[X:%.*]], i64 20000
-; CHECK-NEXT:    [[SCEVGEP9:%.*]] = getelementptr double, double* [[Y:%.*]], i64 20000
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt double* [[SCEVGEP9]], [[X]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt double* [[SCEVGEP]], [[Y]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY:%.*]]
+; CHECK-NEXT:    [[X6:%.*]] = ptrtoint double* [[X:%.*]] to i64
+; CHECK-NEXT:    [[Y7:%.*]] = ptrtoint double* [[Y:%.*]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[X6]], [[Y7]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[INDEX]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, double* [[Y]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double* [[TMP1]] to <2 x double>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, <2 x double>* [[TMP2]], align 8, !alias.scope !0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, <2 x double>* [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, double* [[TMP1]], i64 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* [[TMP3]] to <2 x double>*
-; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <2 x double>, <2 x double>* [[TMP4]], align 8, !alias.scope !0
+; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <2 x double>, <2 x double>* [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp olt <2 x double> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp olt <2 x double> [[WIDE_LOAD11]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp ogt <2 x double> [[WIDE_LOAD]], <double 6.000000e+00, double 6.000000e+00>
@@ -66,10 +65,10 @@ define void @loop(double* %X, double* %Y) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = select <2 x i1> [[TMP6]], <2 x double> zeroinitializer, <2 x double> [[TMP10]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds double, double* [[X]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast double* [[TMP13]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP11]], <2 x double>* [[TMP14]], align 8, !alias.scope !3, !noalias !0
+; CHECK-NEXT:    store <2 x double> [[TMP11]], <2 x double>* [[TMP14]], align 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds double, double* [[TMP13]], i64 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast double* [[TMP15]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP12]], <2 x double>* [[TMP16]], align 8, !alias.scope !3, !noalias !0
+; CHECK-NEXT:    store <2 x double> [[TMP12]], <2 x double>* [[TMP16]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], 20000
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
@@ -161,19 +160,19 @@ define void @loop2(float* %A, float* %B, i32* %C, float %x) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP2]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 4, !alias.scope !8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 4, !alias.scope !3
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], <i32 20, i32 20, i32 20, i32 20>
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast float* [[TMP5]] to <4 x float>*
-; CHECK-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x float>, <4 x float>* [[TMP6]], align 4, !alias.scope !11
+; CHECK-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x float>, <4 x float>* [[TMP6]], align 4, !alias.scope !6
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <4 x float> [[WIDE_LOAD14]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr float, float* [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast float* [[TMP8]] to <4 x float>*
-; CHECK-NEXT:    [[WIDE_LOAD15:%.*]] = load <4 x float>, <4 x float>* [[TMP9]], align 4, !alias.scope !13, !noalias !15
+; CHECK-NEXT:    [[WIDE_LOAD15:%.*]] = load <4 x float>, <4 x float>* [[TMP9]], align 4, !alias.scope !8, !noalias !10
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP4]], <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, <4 x float> [[WIDE_LOAD15]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = fadd <4 x float> [[TMP7]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast float* [[TMP8]] to <4 x float>*
-; CHECK-NEXT:    store <4 x float> [[PREDPHI]], <4 x float>* [[TMP11]], align 4, !alias.scope !13, !noalias !15
+; CHECK-NEXT:    store <4 x float> [[PREDPHI]], <4 x float>* [[TMP11]], align 4, !alias.scope !8, !noalias !10
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[EXIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]

@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -std=c++11 -triple i686-windows         -fdeclspec -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-MS
 // RUN: %clang_cc1 -std=c++11 -triple i686-windows-itanium -fdeclspec -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-IA
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-scei-ps4      -fdeclspec -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-PS4
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-sie-ps5       -fdeclspec -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-PS4
 
 template <typename>
 struct s {};

@@ -11,7 +11,9 @@
 
 // constexpr iterator& operator++();
 // constexpr void operator++(int);
-// constexpr iterator operator++(int);
+// constexpr iterator operator++(int)
+//            requires ref-is-glvalue && forward_­range<Base> &&
+//                     forward_range<range_reference_t<Base>>;
 
 #include <cassert>
 #include <ranges>
@@ -34,6 +36,7 @@ constexpr bool test() {
       assert(*iter++ == i);
     }
   }
+
   {
     ValueView<int> children[4] = {ValueView(buffer1[0]), ValueView(buffer1[1]), ValueView(buffer2[0]), ValueView(buffer2[1])};
     std::ranges::join_view jv(ValueView<ValueView<int>>{children});
@@ -45,12 +48,14 @@ constexpr bool test() {
 
     ASSERT_SAME_TYPE(decltype(iter++), void);
   }
+
   {
     std::ranges::join_view jv(buffer1);
     auto iter = std::next(jv.begin(), 7);
     assert(*iter++ == 8);
     assert(iter == jv.end());
   }
+
   {
     int small[2][1] = {{1}, {2}};
     std::ranges::join_view jv(small);
@@ -59,6 +64,7 @@ constexpr bool test() {
       assert(*iter++ == i);
     }
   }
+
   // Has some empty children.
   {
     CopyableChild children[4] = {CopyableChild(buffer1[0], 4), CopyableChild(buffer1[1], 0), CopyableChild(buffer2[0], 1), CopyableChild(buffer2[1], 0)};
@@ -71,12 +77,14 @@ constexpr bool test() {
     assert(*iter == 9); iter++;
     assert(iter == jv.end());
   }
+
   // Parent is empty.
   {
     CopyableChild children[4] = {CopyableChild(buffer1[0]), CopyableChild(buffer1[1]), CopyableChild(buffer2[0]), CopyableChild(buffer2[1])};
     std::ranges::join_view jv(ParentView(children, 0));
     assert(jv.begin() == jv.end());
   }
+
   // Parent size is one.
   {
     CopyableChild children[1] = {CopyableChild(buffer1[0])};
@@ -88,6 +96,7 @@ constexpr bool test() {
     assert(*iter == 4); iter++;
     assert(iter == jv.end());
   }
+
   // Parent and child size is one.
   {
     CopyableChild children[1] = {CopyableChild(buffer1[0], 1)};
@@ -96,18 +105,21 @@ constexpr bool test() {
     assert(*iter == 1); iter++;
     assert(iter == jv.end());
   }
+
   // Parent size is one child is empty
   {
     CopyableChild children[1] = {CopyableChild(buffer1[0], 0)};
     std::ranges::join_view jv(ParentView(children, 1));
     assert(jv.begin() == jv.end());
   }
+
   // Has all empty children.
   {
     CopyableChild children[4] = {CopyableChild(buffer1[0], 0), CopyableChild(buffer1[1], 0), CopyableChild(buffer2[0], 0), CopyableChild(buffer2[1], 0)};
     auto jv = std::ranges::join_view(ParentView(children));
     assert(jv.begin() == jv.end());
   }
+
   // First child is empty, others are not.
   {
     CopyableChild children[4] = {CopyableChild(buffer1[0], 4), CopyableChild(buffer1[1], 0), CopyableChild(buffer2[0], 0), CopyableChild(buffer2[1], 0)};
@@ -119,6 +131,7 @@ constexpr bool test() {
     assert(*iter == 4); iter++;
     assert(iter == jv.end());
   }
+
   // Last child is empty, others are not.
   {
     CopyableChild children[4] = {CopyableChild(buffer1[0], 4), CopyableChild(buffer1[1], 4), CopyableChild(buffer2[0], 4), CopyableChild(buffer2[1], 0)};
@@ -129,6 +142,7 @@ constexpr bool test() {
       iter++;
     }
   }
+
   // operator++();
   {
     std::ranges::join_view jv(buffer1);
@@ -137,6 +151,7 @@ constexpr bool test() {
       assert(*++iter == i);
     }
   }
+
   {
     ValueView<int> children[4] = {ValueView(buffer1[0]), ValueView(buffer1[1]), ValueView(buffer2[0]), ValueView(buffer2[1])};
     std::ranges::join_view jv(ValueView<ValueView<int>>{children});
@@ -146,6 +161,46 @@ constexpr bool test() {
     }
 
     ASSERT_SAME_TYPE(decltype(++iter), decltype(iter)&);
+  }
+
+  {
+    // check return value
+    std::ranges::join_view jv(buffer1);
+    auto iter = jv.begin();
+    using iterator = decltype(iter);
+
+    decltype(auto) iter2 = ++iter;
+    static_assert(std::is_same_v<decltype(iter2), iterator&>);
+    assert(&iter2 == &iter);
+
+    std::same_as<iterator> decltype(auto) iter3 = iter++;
+    assert(std::next(iter3) == iter);
+  }
+
+  {
+    // !ref-is-glvalue
+    BidiCommonInner inners[2] = {buffer1[0], buffer1[1]};
+    InnerRValue<BidiCommonOuter<BidiCommonInner>> outer{inners};
+    std::ranges::join_view jv(outer);
+    auto iter = jv.begin();
+    static_assert(std::is_void_v<decltype(iter++)>);
+  }
+
+  {
+    // !forward_­range<Base>
+    BufferView<int*> inners[2] = {buffer1[0], buffer1[1]};
+    using Outer = SimpleInputCommonOuter<BufferView<int*>>;
+    std::ranges::join_view jv{Outer(inners)};
+    auto iter = jv.begin();
+    static_assert(std::is_void_v<decltype(iter++)>);
+  }
+
+  {
+    // !forward_range<range_reference_t<Base>>
+    InputCommonInner inners[1] = {buffer1[0]};
+    std::ranges::join_view jv{inners};
+    auto iter = jv.begin();
+    static_assert(std::is_void_v<decltype(iter++)>);
   }
 
   return true;

@@ -97,13 +97,20 @@ end subroutine s7bii
 !   (b) a variable that is not an optional dummy argument, and whose
 !     properties inquired about are not
 !  (iii) defined by an expression that is not a restricted expression,
-subroutine s7biii()
+subroutine s7biii(x, y)
+  real, intent(out) :: x(:)
+  real, optional :: y(:)
   integer, parameter :: localConst = 5
   integer :: local = 5
   ! OK, since "localConst" is a constant
   real, dimension(localConst) :: realArray1
   !ERROR: Invalid specification expression: reference to local entity 'local'
   real, dimension(local) :: realArray2
+  real, dimension(size(realArray1)) :: realArray3 ! ok
+  real, dimension(size(x)) :: realArray4 ! ok
+  real, dimension(merge(1,2,present(y))) :: realArray5 ! ok
+  !ERROR: Invalid specification expression: reference to OPTIONAL dummy argument 'y'
+  real, dimension(size(y)) :: realArray6
 end subroutine s7biii
 
 ! a specification inquiry that is a constant expression,

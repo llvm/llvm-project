@@ -7,7 +7,7 @@
 
 // CHECK-LABEL: func @buffer_not_deallocated(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>
-func @buffer_not_deallocated(%t : tensor<?xf32>, %c : i1) -> tensor<?xf32> {
+func.func @buffer_not_deallocated(%t : tensor<?xf32>, %c : i1) -> tensor<?xf32> {
   // CHECK: %[[r:.*]] = scf.if %{{.*}} {
   %r = scf.if %c -> tensor<?xf32> {
     // CHECK: %[[some_op:.*]] = "test.some_op"
@@ -16,7 +16,7 @@ func @buffer_not_deallocated(%t : tensor<?xf32>, %c : i1) -> tensor<?xf32> {
     // CHECK-NOT: dealloc
     // CHECK: scf.yield %[[casted]]
     %sz = "test.some_op"() : () -> (index)
-    %0 = linalg.init_tensor[%sz] : tensor<?xf32>
+    %0 = bufferization.alloc_tensor(%sz) : tensor<?xf32>
     scf.yield %0 : tensor<?xf32>
   } else {
   // CHECK: } else {

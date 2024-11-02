@@ -30,7 +30,7 @@ class CloneChecker
 public:
   // Checker options.
   int MinComplexity;
-  bool ReportNormalClones;
+  bool ReportNormalClones = false;
   StringRef IgnoredFilesPattern;
 
 private:

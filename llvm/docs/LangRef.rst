@@ -481,7 +481,10 @@ styles:
     means that the declaration is visible to other modules and, in
     shared libraries, means that the declared entity may be overridden.
     On Darwin, default visibility means that the declaration is visible
-    to other modules. Default visibility corresponds to "external
+    to other modules. On XCOFF, default visibility means no explicit
+    visibility bit will be set and whether the symbol is visible
+    (i.e "exported") to other modules depends primarily on export lists
+    provided to the linker. Default visibility corresponds to "external
     linkage" in the language.
 "``hidden``" - Hidden style
     Two declarations of an object with hidden visibility refer to the
@@ -512,12 +515,15 @@ DLL storage class:
     symbol. On Microsoft Windows targets, the pointer name is formed by
     combining ``__imp_`` and the function or variable name.
 ``dllexport``
-    "``dllexport``" causes the compiler to provide a global pointer to a pointer
-    in a DLL, so that it can be referenced with the ``dllimport`` attribute. On
-    Microsoft Windows targets, the pointer name is formed by combining
-    ``__imp_`` and the function or variable name. Since this storage class
-    exists for defining a dll interface, the compiler, assembler and linker know
-    it is externally referenced and must refrain from deleting the symbol.
+    On Microsoft Windows targets, "``dllexport``" causes the compiler to provide
+    a global pointer to a pointer in a DLL, so that it can be referenced with the
+    ``dllimport`` attribute. the pointer name is formed by combining ``__imp_``
+    and the function or variable name. On XCOFF targets, ``dllexport`` indicates
+    that the symbol will be made visible to other modules using "exported"
+    visibility and thus placed by the linker in the loader section symbol table.
+    Since this storage class exists for defining a dll interface, the compiler,
+    assembler and linker know it is externally referenced and must refrain from
+    deleting the symbol.
 
 .. _tls_model:
 
@@ -776,13 +782,30 @@ an optional ``unnamed_addr`` attribute, a return type, an optional
 :ref:`parameter attribute <paramattrs>` for the return type, a function
 name, a (possibly empty) argument list (each with optional :ref:`parameter
 attributes <paramattrs>`), optional :ref:`function attributes <fnattrs>`,
-an optional address space, an optional section, an optional alignment,
-an optional :ref:`comdat <langref_comdats>`,
+an optional address space, an optional section, an optional partition,
+an optional alignment, an optional :ref:`comdat <langref_comdats>`,
 an optional :ref:`garbage collector name <gc>`, an optional :ref:`prefix <prefixdata>`,
 an optional :ref:`prologue <prologuedata>`,
 an optional :ref:`personality <personalityfn>`,
 an optional list of attached :ref:`metadata <metadata>`,
 an opening curly brace, a list of basic blocks, and a closing curly brace.
+
+Syntax::
+
+    define [linkage] [PreemptionSpecifier] [visibility] [DLLStorageClass]
+           [cconv] [ret attrs]
+           <ResultType> @<FunctionName> ([argument list])
+           [(unnamed_addr|local_unnamed_addr)] [AddrSpace] [fn Attrs]
+           [section "name"] [partition "name"] [comdat [($name)]] [align N]
+           [gc] [prefix Constant] [prologue Constant] [personality Constant]
+           (!name !N)* { ... }
+
+The argument list is a comma separated sequence of arguments where each
+argument is of the following form:
+
+Syntax::
+
+   <type> [parameter Attrs] [name]
 
 LLVM function declarations consist of the "``declare``" keyword, an
 optional :ref:`linkage type <linkage>`, an optional :ref:`visibility style
@@ -793,6 +816,14 @@ an optional :ref:`parameter attribute <paramattrs>` for the return type, a funct
 empty list of arguments, an optional alignment, an optional :ref:`garbage
 collector name <gc>`, an optional :ref:`prefix <prefixdata>`, and an optional
 :ref:`prologue <prologuedata>`.
+
+Syntax::
+
+    declare [linkage] [visibility] [DLLStorageClass]
+            [cconv] [ret attrs]
+            <ResultType> @<FunctionName> ([argument list])
+            [(unnamed_addr|local_unnamed_addr)] [align N] [gc]
+            [prefix Constant] [prologue Constant]
 
 A function definition contains a list of basic blocks, forming the CFG (Control
 Flow Graph) for the function. Each basic block may optionally start with a label
@@ -830,24 +861,6 @@ not be significant within the module.
 
 If an explicit address space is not given, it will default to the program
 address space from the :ref:`datalayout string<langref_datalayout>`.
-
-Syntax::
-
-    define [linkage] [PreemptionSpecifier] [visibility] [DLLStorageClass]
-           [cconv] [ret attrs]
-           <ResultType> @<FunctionName> ([argument list])
-           [(unnamed_addr|local_unnamed_addr)] [AddrSpace] [fn Attrs]
-           [section "name"] [partition "name"] [comdat [($name)]] [align N]
-           [gc] [prefix Constant] [prologue Constant] [personality Constant]
-           (!name !N)* { ... }
-
-The argument list is a comma separated sequence of arguments where each
-argument is of the following form:
-
-Syntax::
-
-   <type> [parameter Attrs] [name]
-
 
 .. _langref_aliases:
 
@@ -1392,6 +1405,13 @@ Currently, only the following parameter attributes are defined:
     alignments are permitted for the allocalign parameter, so long as the returned pointer
     is null. This attribute may only be applied to integer parameters.
 
+``allocptr``
+    The function parameter marked with this attribute is the pointer
+    that will be manipulated by the allocator. For a realloc-like
+    function the pointer will be invalidated upon success (but the
+    same address may be returned), for a free-like function the
+    pointer will always be invalidated.
+
 .. _gc:
 
 Garbage Collector Strategy Names
@@ -1556,6 +1576,37 @@ example:
     epilogue, the backend should forcibly align the stack pointer.
     Specify the desired alignment, which must be a power of two, in
     parentheses.
+``"alloc-family"="FAMILY"``
+    This indicates which "family" an allocator function is part of. To avoid 
+    collisions, the family name should match the mangled name of the primary 
+    allocator function, that is "malloc" for malloc/calloc/realloc/free, 
+    "_Znwm" for ``::operator::new`` and ``::operator::delete``, and
+    "_ZnwmSt11align_val_t" for aligned ``::operator::new`` and
+    ``::operator::delete``. Matching malloc/realloc/free calls within a family
+    can be optimized, but mismatched ones will be left alone.
+``allockind("KIND")``
+    Describes the behavior of an allocation function. The KIND string contains comma
+    separated entries from the following options:
+
+    * "alloc": the function returns a new block of memory or null.
+    * "realloc": the function returns a new block of memory or null. If the
+      result is non-null the memory contents from the start of the block up to
+      the smaller of the original allocation size and the new allocation size
+      will match that of the ``allocptr`` argument and the ``allocptr``
+      argument is invalidated, even if the function returns the same address.
+    * "free": the function frees the block of memory specified by ``allocptr``.
+    * "uninitialized": Any newly-allocated memory (either a new block from 
+      a "alloc" function or the enlarged capacity from a "realloc" function)
+      will be uninitialized.
+    * "zeroed": Any newly-allocated memory (either a new block from a "alloc"
+      function or the enlarged capacity from a "realloc" function) will be
+      zeroed.
+    * "aligned": the function returns memory aligned according to the 
+      ``allocalign`` parameter.
+
+    The first three options are mutually exclusive, and the remaining options
+    describe more details of how the function behaves. The remaining options
+    are invalid for "free"-type functions.
 ``allocsize(<EltSizeParam>[, <NumEltsParam>])``
     This attribute indicates that the annotated function will always return at
     least a given number of bytes (or null). Its arguments are zero-indexed
@@ -1870,26 +1921,27 @@ example:
     On a function, this attribute indicates that the function computes its
     result (or decides to unwind an exception) based strictly on its arguments,
     without dereferencing any pointer arguments or otherwise accessing
-    any mutable state (e.g. memory, control registers, etc) visible to
-    caller functions. It does not write through any pointer arguments
-    (including ``byval`` arguments) and never changes any state visible
-    to callers. This means while it cannot unwind exceptions by calling
-    the ``C++`` exception throwing methods (since they write to memory), there may
-    be non-``C++`` mechanisms that throw exceptions without writing to LLVM
-    visible memory.
+    any mutable state (e.g. memory, control registers, etc) visible outside the
+    ``readnone`` function. It does not write through any pointer arguments
+    (including ``byval`` arguments) and never changes any state visible to
+    callers. This means while it cannot unwind exceptions by calling the ``C++``
+    exception throwing methods (since they write to memory), there may be
+    non-``C++`` mechanisms that throw exceptions without writing to LLVM visible
+    memory.
 
     On an argument, this attribute indicates that the function does not
     dereference that pointer argument, even though it may read or write the
     memory that the pointer points to if accessed through other pointers.
 
-    If a readnone function reads or writes memory visible to the program, or
-    has other side-effects, the behavior is undefined. If a function reads from
-    or writes to a readnone pointer argument, the behavior is undefined.
+    If a readnone function reads or writes memory visible outside the function,
+    or has other side-effects, the behavior is undefined. If a
+    function reads from or writes to a readnone pointer argument, the behavior
+    is undefined.
 ``readonly``
     On a function, this attribute indicates that the function does not write
     through any pointer arguments (including ``byval`` arguments) or otherwise
-    modify any state (e.g. memory, control registers, etc) visible to
-    caller functions. It may dereference pointer arguments and read
+    modify any state (e.g. memory, control registers, etc) visible outside the
+    ``readonly`` function. It may dereference pointer arguments and read
     state that may be set in the caller. A readonly function always
     returns the same value (or unwinds an exception identically) when
     called with the same set of arguments and global state.  This means while it
@@ -1901,9 +1953,9 @@ example:
     through this pointer argument, even though it may write to the memory that
     the pointer points to.
 
-    If a readonly function writes memory visible to the program, or
-    has other side-effects, the behavior is undefined. If a function writes to
-    a readonly pointer argument, the behavior is undefined.
+    If a readonly function writes memory visible outside the function, or has
+    other side-effects, the behavior is undefined. If a function writes to a
+    readonly pointer argument, the behavior is undefined.
 ``"stack-probe-size"``
     This attribute controls the behavior of stack probes: either
     the ``"probe-stack"`` attribute, or ABI-required stack probes, if any.
@@ -1923,14 +1975,14 @@ example:
     This attribute disables ABI-required stack probes, if any.
 ``writeonly``
     On a function, this attribute indicates that the function may write to but
-    does not read from memory.
+    does not read from memory visible outside the ``writeonly`` function.
 
     On an argument, this attribute indicates that the function may write to but
     does not read through this pointer argument (even though it may read from
     the memory that the pointer points to).
 
-    If a writeonly function reads memory visible to the program, or
-    has other side-effects, the behavior is undefined. If a function reads
+    If a writeonly function reads memory visible outside the function or has
+    other side-effects, the behavior is undefined. If a function reads
     from a writeonly pointer argument, the behavior is undefined.
 ``argmemonly``
     This attribute indicates that the only memory accesses inside function are
@@ -2174,6 +2226,14 @@ example:
     unbounded. If the optional max value is omitted then max is set to the
     value of min. If the attribute is not present, no assumptions are made
     about the range of vscale.
+``"min-legal-vector-width"="<size>"``
+    This attribute indicates the minimum legal vector width required by the
+    calling conversion. It is the maximum width of vector arguments and
+    returnings in the function and functions called by this function. Because
+    all the vectors are supposed to be legal type for compatibility.
+    Backends are free to ignore the attribute if they don't need to support
+    different maximum legal vector types or such information can be inferred by
+    other attributes.
 
 Call Site Attributes
 ----------------------
@@ -10233,8 +10293,8 @@ operation. The operation must be one of the following keywords:
 For most of these operations, the type of '<value>' must be an integer
 type whose bit width is a power of two greater than or equal to eight
 and less than or equal to a target-specific size limit. For xchg, this
-may also be a floating point type with the same size constraints as
-integers.  For fadd/fsub, this must be a floating point type.  The
+may also be a floating point or a pointer type with the same size constraints
+as integers.  For fadd/fsub, this must be a floating point type.  The
 type of the '``<pointer>``' operand must be a pointer to that type. If
 the ``atomicrmw`` is marked as ``volatile``, then the optimizer is not
 allowed to modify the number or order of execution of this
@@ -14915,7 +14975,7 @@ Semantics:
 """"""""""
 
 The ``llvm.bitreverse.iN`` intrinsic returns an iN value that has bit
-``M`` in the input moved to bit ``N-M`` in the output. The vector
+``M`` in the input moved to bit ``N-M-1`` in the output. The vector
 intrinsics, such as ``llvm.bitreverse.v4i32``, operate on a per-element
 basis and the element order is not affected.
 
@@ -15827,7 +15887,7 @@ multiplication can be represented as
         ; Expands to
         %a2 = sext i4 %a to i8
         %b2 = sext i4 %b to i8
-        %mul = mul nsw nuw i8 %a, %b
+        %mul = mul nsw nuw i8 %a2, %b2
         %scale2 = trunc i32 %scale to i8
         %r = ashr i8 %mul, i8 %scale2  ; this is for a target rounding down towards negative infinity
         %result = trunc i8 %r to i4
@@ -17957,7 +18017,7 @@ Example:
       ;; Lanes at and above %pivot are taken from %on_false
       %atfirst = insertelement <4 x i32> undef, i32 %pivot, i32 0
       %splat = shufflevector <4 x i32> %atfirst, <4 x i32> poison, <4 x i32> zeroinitializer
-      %pivotmask = icmp ult <4 x i32> %splat, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+      %pivotmask = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> %splat
       %mergemask = and <4 x i1> %cond, <4 x i1> %pivotmask
       %also.r = select <4 x i1> %mergemask, <4 x i32> %on_true, <4 x i32> %on_false
 
@@ -23241,6 +23301,83 @@ The '``llvm.set.rounding``' intrinsic sets the current rounding mode. It is
 similar to C library function 'fesetround', however this intrinsic does not
 return any value and uses platform-independent representation of IEEE rounding
 modes.
+
+
+Floating-Point Test Intrinsics
+------------------------------
+
+These functions get properties of floating-point values.
+
+
+'``llvm.is.fpclass``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare i1 @llvm.is.fpclass(<fptype> <op>, i32 <test>)
+      declare <N x i1> @llvm.is.fpclass(<vector-fptype> <op>, i32 <test>)
+
+Overview:
+"""""""""
+
+The '``llvm.is.fpclass``' intrinsic returns a boolean value or vector of boolean
+values depending on whether the first argument satisfies the test specified by
+the second argument.
+
+If the first argument is a floating-point scalar, then the result type is a
+boolean (:ref:`i1 <t_integer>`).
+
+If the first argument is a floating-point vector, then the result type is a
+vector of boolean with the same number of elements as the first argument.
+
+Arguments:
+""""""""""
+
+The first argument to the '``llvm.is.fpclass``' intrinsic must be
+:ref:`floating-point <t_floating>` or :ref:`vector <t_vector>`
+of floating-point values.
+
+The second argument specifies, which tests to perform. It must be a compile-time
+integer constant, each bit in which specifies floating-point class:
+
++-------+----------------------+
+| Bit # | floating-point class |
++=======+======================+
+| 0     | Signaling NaN        |
++-------+----------------------+
+| 1     | Quiet NaN            |
++-------+----------------------+
+| 2     | Negative infinity    |
++-------+----------------------+
+| 3     | Negative normal      |
++-------+----------------------+
+| 4     | Negative subnormal   |
++-------+----------------------+
+| 5     | Negative zero        |
++-------+----------------------+
+| 6     | Positive zero        |
++-------+----------------------+
+| 7     | Positive subnormal   |
++-------+----------------------+
+| 8     | Positive normal      |
++-------+----------------------+
+| 9     | Positive infinity    |
++-------+----------------------+
+
+Semantics:
+""""""""""
+
+The function checks if ``op`` belongs to any of the floating-point classes
+specified by ``test``. If ``op`` is a vector, then the check is made element by
+element. Each check yields an :ref:`i1 <t_integer>` result, which is ``true``,
+if the element value satisfies the specified test. The argument ``test`` is a
+bit mask where each bit specifies floating-point class to test. For example, the
+value 0x108 makes test for normal value, - bits 3 and 8 in it are set, which
+means that the function returns ``true`` if ``op`` is a positive or negative
+normal value. The function never raises floating-point exceptions.
 
 
 General Intrinsics

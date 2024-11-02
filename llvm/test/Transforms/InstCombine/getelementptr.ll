@@ -552,7 +552,7 @@ define i32 @test27(%struct.compat_siginfo* %to, %struct.siginfo_t* %from) {
 ; CHECK-NEXT:    [[T349:%.*]] = getelementptr [[STRUCT_SIGINFO_T:%.*]], %struct.siginfo_t* [[T344]], i64 0, i32 3, i32 0, i32 3, i32 0
 ; CHECK-NEXT:    [[T349350:%.*]] = bitcast i8** [[T349]] to i32*
 ; CHECK-NEXT:    [[T351:%.*]] = load i32, i32* [[T349350]], align 8
-; CHECK-NEXT:    [[T360:%.*]] = call i32 asm sideeffect "...", "=r,ir,*m,i,0,~{dirflag},~{fpsr},~{flags}"(i32 [[T351]], %struct.__large_struct* elementtype(%struct.__large_struct) null, i32 -14, i32 0) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[T360:%.*]] = call i32 asm sideeffect "...", "=r,ir,*m,i,0,~{dirflag},~{fpsr},~{flags}"(i32 [[T351]], %struct.__large_struct* elementtype([[STRUCT___LARGE_STRUCT:%.*]]) null, i32 -14, i32 0) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -1300,9 +1300,8 @@ define i8* @gep_null_inbounds_different_type(i64 %idx1, i64 %idx2) {
 
 define i8* @D98588(i8* %c1, i64 %offset) {
 ; CHECK-LABEL: @D98588(
-; CHECK-NEXT:    [[C2:%.*]] = bitcast i8* [[C1:%.*]] to i64*
-; CHECK-NEXT:    [[C2_NEXT:%.*]] = getelementptr inbounds i64, i64* [[C2]], i64 [[OFFSET:%.*]]
-; CHECK-NEXT:    [[GEP:%.*]] = bitcast i64* [[C2_NEXT]] to i8*
+; CHECK-NEXT:    [[C2_NEXT_IDX:%.*]] = shl nsw i64 [[OFFSET:%.*]], 3
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[C1:%.*]], i64 [[C2_NEXT_IDX]]
 ; CHECK-NEXT:    ret i8* [[GEP]]
 ;
   %c2 = bitcast i8* %c1 to i64*

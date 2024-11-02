@@ -60,15 +60,15 @@ std::wstring convert_thousands_sep_fr_FR(std::wstring const& in) {
 }
 
 // GLIBC 2.27 uses U+202F NARROW NO-BREAK SPACE as a thousands separator.
-// FreeBSD and Windows use U+00A0 NO-BREAK SPACE.
+// FreeBSD, AIX and Windows use U+00A0 NO-BREAK SPACE.
 std::wstring convert_thousands_sep_ru_RU(std::wstring const& in) {
 #if defined(TEST_HAS_GLIBC)
   return convert_thousands_sep(in, L'\u202F');
-#elif defined(__FreeBSD__) || defined(_WIN32)
+#  elif defined(__FreeBSD__) || defined(_WIN32) || defined(_AIX)
   return convert_thousands_sep(in, L'\u00A0');
-#else
+#  else
   return in;
-#endif
+#  endif
 }
 
 std::wstring negate_en_US(std::wstring s) {
@@ -95,7 +95,7 @@ MultiStringType currency_symbol_ru_RU() {
     return MKSTR("\u0440\u0443\u0431");
   else
     return MKSTR("\u20BD"); // U+20BD RUBLE SIGN
-#elif defined(_WIN32) || defined(__FreeBSD__)
+#elif defined(_WIN32) || defined(__FreeBSD__) || defined(_AIX)
   return MKSTR("\u20BD"); // U+20BD RUBLE SIGN
 #else
   return MKSTR("\u0440\u0443\u0431.");

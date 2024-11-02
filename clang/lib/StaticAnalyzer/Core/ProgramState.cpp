@@ -55,7 +55,7 @@ ProgramState::ProgramState(ProgramStateManager *mgr, const Environment& env,
 
 ProgramState::ProgramState(const ProgramState &RHS)
     : stateMgr(RHS.stateMgr), Env(RHS.Env), store(RHS.store), GDM(RHS.GDM),
-      refCount(0) {
+      PosteriorlyOverconstrained(RHS.PosteriorlyOverconstrained), refCount(0) {
   stateMgr->getStoreManager().incrementReferenceCount(store);
 }
 
@@ -314,12 +314,12 @@ ProgramStateRef ProgramState::BindExpr(const Stmt *S,
   return getStateManager().getPersistentState(NewSt);
 }
 
-ProgramStateRef ProgramState::assumeInBound(DefinedOrUnknownSVal Idx,
-                                      DefinedOrUnknownSVal UpperBound,
-                                      bool Assumption,
-                                      QualType indexTy) const {
+LLVM_NODISCARD std::pair<ProgramStateRef, ProgramStateRef>
+ProgramState::assumeInBoundDual(DefinedOrUnknownSVal Idx,
+                                DefinedOrUnknownSVal UpperBound,
+                                QualType indexTy) const {
   if (Idx.isUnknown() || UpperBound.isUnknown())
-    return this;
+    return {this, this};
 
   // Build an expression for 0 <= Idx < UpperBound.
   // This is the same as Idx + MIN < UpperBound + MIN, if overflow is allowed.
@@ -338,7 +338,7 @@ ProgramStateRef ProgramState::assumeInBound(DefinedOrUnknownSVal Idx,
   SVal newIdx = svalBuilder.evalBinOpNN(this, BO_Add,
                                         Idx.castAs<NonLoc>(), Min, indexTy);
   if (newIdx.isUnknownOrUndef())
-    return this;
+    return {this, this};
 
   // Adjust the upper bound.
   SVal newBound =
@@ -346,17 +346,26 @@ ProgramStateRef ProgramState::assumeInBound(DefinedOrUnknownSVal Idx,
                             Min, indexTy);
 
   if (newBound.isUnknownOrUndef())
-    return this;
+    return {this, this};
 
   // Build the actual comparison.
   SVal inBound = svalBuilder.evalBinOpNN(this, BO_LT, newIdx.castAs<NonLoc>(),
                                          newBound.castAs<NonLoc>(), Ctx.IntTy);
   if (inBound.isUnknownOrUndef())
-    return this;
+    return {this, this};
 
   // Finally, let the constraint manager take care of it.
   ConstraintManager &CM = SM.getConstraintManager();
-  return CM.assume(this, inBound.castAs<DefinedSVal>(), Assumption);
+  return CM.assumeDual(this, inBound.castAs<DefinedSVal>());
+}
+
+ProgramStateRef ProgramState::assumeInBound(DefinedOrUnknownSVal Idx,
+                                            DefinedOrUnknownSVal UpperBound,
+                                            bool Assumption,
+                                            QualType indexTy) const {
+  std::pair<ProgramStateRef, ProgramStateRef> R =
+      assumeInBoundDual(Idx, UpperBound, indexTy);
+  return Assumption ? R.first : R.second;
 }
 
 ConditionTruthVal ProgramState::isNonNull(SVal V) const {
@@ -426,6 +435,12 @@ ProgramStateRef ProgramStateManager::getPersistentState(ProgramState &State) {
 ProgramStateRef ProgramState::makeWithStore(const StoreRef &store) const {
   ProgramState NewSt(*this);
   NewSt.setStore(store);
+  return getStateManager().getPersistentState(NewSt);
+}
+
+ProgramStateRef ProgramState::cloneAsPosteriorlyOverconstrained() const {
+  ProgramState NewSt(*this);
+  NewSt.PosteriorlyOverconstrained = true;
   return getStateManager().getPersistentState(NewSt);
 }
 

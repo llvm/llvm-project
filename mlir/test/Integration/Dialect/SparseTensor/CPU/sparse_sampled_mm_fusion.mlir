@@ -49,7 +49,7 @@ module {
   // A kernel that computes a direct sampled matrix matrix multiplication
   // (with dense result).
   //
-  func @sampled_dd(%args: tensor<8x8xf64, #SM>,
+  func.func @sampled_dd(%args: tensor<8x8xf64, #SM>,
                    %arga: tensor<8x8xf64>,
                    %argb: tensor<8x8xf64>) -> tensor<8x8xf64> {
     %1 = arith.constant dense<0.0> : tensor<8x8xf64>
@@ -70,7 +70,7 @@ module {
   // A kernel that computes an unfused sampled matrix matrix multiplication
   // (with dense result).
   //
-  func @sampled_dd_unfused(%args: tensor<8x8xf64, #SM>,
+  func.func @sampled_dd_unfused(%args: tensor<8x8xf64, #SM>,
                            %arga: tensor<8x8xf64>,
                            %argb: tensor<8x8xf64>) -> tensor<8x8xf64> {
     // Perform dense-dense matrix matrix multiplication.
@@ -98,11 +98,10 @@ module {
   // A kernel that computes a direct sampled matrix matrix multiplication
   // (with sparse result).
   //
-  func @sparse_sampled_dd(%args: tensor<8x8xf64, #SM>,
+  func.func @sparse_sampled_dd(%args: tensor<8x8xf64, #SM>,
                           %arga: tensor<8x8xf64>,
                           %argb: tensor<8x8xf64>) -> tensor<8x8xf64, #SM> {
-    %c8 = arith.constant 8 : index
-    %1 = sparse_tensor.init [%c8, %c8] : tensor<8x8xf64, #SM>
+    %1 = bufferization.alloc_tensor() : tensor<8x8xf64, #SM>
     %2 = linalg.generic #trait_sampled_dense_dense
       ins(%args, %arga, %argb: tensor<8x8xf64, #SM>,
                                tensor<8x8xf64>, tensor<8x8xf64>)
@@ -120,7 +119,7 @@ module {
   // A kernel that computes an unfused sampled matrix matrix multiplication
   // (with sparse result).
   //
-  func @sparse_sampled_dd_unfused(
+  func.func @sparse_sampled_dd_unfused(
         %args: tensor<8x8xf64, #SM>,
         %arga: tensor<8x8xf64>,
         %argb: tensor<8x8xf64>) -> tensor<8x8xf64, #SM> {
@@ -135,8 +134,7 @@ module {
           linalg.yield %q : f64
     } -> tensor<8x8xf64>
     // Sample the result with elements-wise multiplication with sparse matrix.
-    %c8 = arith.constant 8 : index
-    %3 = sparse_tensor.init [%c8, %c8] : tensor<8x8xf64, #SM>
+    %3 = bufferization.alloc_tensor() : tensor<8x8xf64, #SM>
     %4 = linalg.generic #trait_scale
       ins(%2, %args : tensor<8x8xf64>, tensor<8x8xf64, #SM>)
       outs(%3 : tensor<8x8xf64, #SM>) {
@@ -150,7 +148,7 @@ module {
   //
   // Main driver.
   //
-  func @entry() {
+  func.func @entry() {
     %d0 = arith.constant 0.0 : f64
     %c0 = arith.constant 0 : index
 

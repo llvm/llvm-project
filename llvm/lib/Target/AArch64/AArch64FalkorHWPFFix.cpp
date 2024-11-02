@@ -813,7 +813,7 @@ void FalkorHWPFFix::runOnLoop(MachineLoop &L, MachineFunction &Fn) {
 }
 
 bool FalkorHWPFFix::runOnMachineFunction(MachineFunction &Fn) {
-  auto &ST = static_cast<const AArch64Subtarget &>(Fn.getSubtarget());
+  auto &ST = Fn.getSubtarget<AArch64Subtarget>();
   if (ST.getProcFamily() != AArch64Subtarget::Falkor)
     return false;
 

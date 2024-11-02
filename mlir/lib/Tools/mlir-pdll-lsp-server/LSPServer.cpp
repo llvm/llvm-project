@@ -9,9 +9,9 @@
 #include "LSPServer.h"
 
 #include "../lsp-server-support/Logging.h"
-#include "../lsp-server-support/Protocol.h"
 #include "../lsp-server-support/Transport.h"
 #include "PDLLServer.h"
+#include "Protocol.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringMap.h"
 
@@ -52,6 +52,12 @@ struct LSPServer {
   void onReference(const ReferenceParams &params,
                    Callback<std::vector<Location>> reply);
 
+  //===----------------------------------------------------------------------===//
+  // DocumentLink
+
+  void onDocumentLink(const DocumentLinkParams &params,
+                      Callback<std::vector<DocumentLink>> reply);
+
   //===--------------------------------------------------------------------===//
   // Hover
 
@@ -75,6 +81,12 @@ struct LSPServer {
 
   void onSignatureHelp(const TextDocumentPositionParams &params,
                        Callback<SignatureHelp> reply);
+
+  //===--------------------------------------------------------------------===//
+  // PDLL View Output
+
+  void onPDLLViewOutput(const PDLLViewOutputParams &params,
+                        Callback<Optional<PDLLViewOutputResult>> reply);
 
   //===--------------------------------------------------------------------===//
   // Fields
@@ -109,11 +121,12 @@ void LSPServer::onInitialize(const InitializeParams &params,
       {"completionProvider",
        llvm::json::Object{
            {"allCommitCharacters",
-            {" ", "\t", "(", ")", "[", "]", "{",  "}", "<",
-             ">", ":",  ";", ",", "+", "-", "/",  "*", "%",
-             "^", "&",  "#", "?", ".", "=", "\"", "'", "|"}},
+            {"\t", "(", ")", "[", "]", "{",  "}", "<", ">",
+             ":",  ";", ",", "+", "-", "/",  "*", "%", "^",
+             "&",  "#", "?", ".", "=", "\"", "'", "|"}},
            {"resolveProvider", false},
-           {"triggerCharacters", {".", ">", "(", "{", ",", "<", ":", "[", " "}},
+           {"triggerCharacters",
+            {".", ">", "(", "{", ",", "<", ":", "[", " ", "\"", "/"}},
        }},
       {"signatureHelpProvider",
        llvm::json::Object{
@@ -121,6 +134,10 @@ void LSPServer::onInitialize(const InitializeParams &params,
        }},
       {"definitionProvider", true},
       {"referencesProvider", true},
+      {"documentLinkProvider",
+       llvm::json::Object{
+           {"resolveProvider", false},
+       }},
       {"hoverProvider", true},
       {"documentSymbolProvider", true},
   };
@@ -194,6 +211,16 @@ void LSPServer::onReference(const ReferenceParams &params,
 }
 
 //===----------------------------------------------------------------------===//
+// DocumentLink
+
+void LSPServer::onDocumentLink(const DocumentLinkParams &params,
+                               Callback<std::vector<DocumentLink>> reply) {
+  std::vector<DocumentLink> links;
+  server.getDocumentLinks(params.textDocument.uri, links);
+  reply(std::move(links));
+}
+
+//===----------------------------------------------------------------------===//
 // Hover
 
 void LSPServer::onHover(const TextDocumentPositionParams &params,
@@ -228,6 +255,15 @@ void LSPServer::onSignatureHelp(const TextDocumentPositionParams &params,
 }
 
 //===----------------------------------------------------------------------===//
+// PDLL ViewOutput
+
+void LSPServer::onPDLLViewOutput(
+    const PDLLViewOutputParams &params,
+    Callback<Optional<PDLLViewOutputResult>> reply) {
+  reply(server.getPDLLViewOutput(params.uri, params.kind));
+}
+
+//===----------------------------------------------------------------------===//
 // Entry Point
 //===----------------------------------------------------------------------===//
 
@@ -256,6 +292,10 @@ LogicalResult mlir::lsp::runPdllLSPServer(PDLLServer &server,
   messageHandler.method("textDocument/references", &lspServer,
                         &LSPServer::onReference);
 
+  // Document Link
+  messageHandler.method("textDocument/documentLink", &lspServer,
+                        &LSPServer::onDocumentLink);
+
   // Hover
   messageHandler.method("textDocument/hover", &lspServer, &LSPServer::onHover);
 
@@ -270,6 +310,10 @@ LogicalResult mlir::lsp::runPdllLSPServer(PDLLServer &server,
   // Signature Help
   messageHandler.method("textDocument/signatureHelp", &lspServer,
                         &LSPServer::onSignatureHelp);
+
+  // PDLL ViewOutput
+  messageHandler.method("pdll/viewOutput", &lspServer,
+                        &LSPServer::onPDLLViewOutput);
 
   // Diagnostics
   lspServer.publishDiagnostics =

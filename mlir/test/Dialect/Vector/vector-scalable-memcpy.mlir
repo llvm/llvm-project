@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -convert-vector-to-llvm | mlir-opt | FileCheck %s
 
 // CHECK: vector_scalable_memcopy([[SRC:%arg[0-9]+]]: memref<?xf32>, [[DST:%arg[0-9]+]]
-func @vector_scalable_memcopy(%src : memref<?xf32>, %dst : memref<?xf32>, %size : index) {
+func.func @vector_scalable_memcopy(%src : memref<?xf32>, %dst : memref<?xf32>, %size : index) {
   %c0 = arith.constant 0 : index
   %c4 = arith.constant 4 : index
   %vs = vector.vscale

@@ -164,6 +164,7 @@ static bool simplifyInstsInBlock(SCCPSolver &Solver, BasicBlock &BB,
         continue;
       if (IV.getConstantRange().isAllNonNegative()) {
         auto *ZExt = new ZExtInst(ExtOp, Inst.getType(), "", &Inst);
+        ZExt->takeName(&Inst);
         InsertedValues.insert(ZExt);
         Inst.replaceAllUsesWith(ZExt);
         Solver.removeLatticeValueFor(&Inst);
@@ -336,7 +337,8 @@ static void findReturnsToZap(Function &F,
 }
 
 static bool removeNonFeasibleEdges(const SCCPSolver &Solver, BasicBlock *BB,
-                                   DomTreeUpdater &DTU) {
+                                   DomTreeUpdater &DTU,
+                                   BasicBlock *&NewUnreachableBB) {
   SmallPtrSet<BasicBlock *, 8> FeasibleSuccessors;
   bool HasNonFeasibleEdges = false;
   for (BasicBlock *Succ : successors(BB)) {
@@ -379,6 +381,23 @@ static bool removeNonFeasibleEdges(const SCCPSolver &Solver, BasicBlock *BB,
   } else if (FeasibleSuccessors.size() > 1) {
     SwitchInstProfUpdateWrapper SI(*cast<SwitchInst>(TI));
     SmallVector<DominatorTree::UpdateType, 8> Updates;
+
+    // If the default destination is unfeasible it will never be taken. Replace
+    // it with a new block with a single Unreachable instruction.
+    BasicBlock *DefaultDest = SI->getDefaultDest();
+    if (!FeasibleSuccessors.contains(DefaultDest)) {
+      if (!NewUnreachableBB) {
+        NewUnreachableBB =
+            BasicBlock::Create(DefaultDest->getContext(), "default.unreachable",
+                               DefaultDest->getParent(), DefaultDest);
+        new UnreachableInst(DefaultDest->getContext(), NewUnreachableBB);
+      }
+
+      SI->setDefaultDest(NewUnreachableBB);
+      Updates.push_back({DominatorTree::Delete, BB, DefaultDest});
+      Updates.push_back({DominatorTree::Insert, BB, NewUnreachableBB});
+    }
+
     for (auto CI = SI->case_begin(); CI != SI->case_end();) {
       if (FeasibleSuccessors.contains(CI->getCaseSuccessor())) {
         ++CI;
@@ -526,8 +545,9 @@ bool llvm::runIPSCCP(
       NumInstRemoved += changeToUnreachable(F.front().getFirstNonPHI(),
                                             /*PreserveLCSSA=*/false, &DTU);
 
+    BasicBlock *NewUnreachableBB = nullptr;
     for (BasicBlock &BB : F)
-      MadeChanges |= removeNonFeasibleEdges(Solver, &BB, DTU);
+      MadeChanges |= removeNonFeasibleEdges(Solver, &BB, DTU, NewUnreachableBB);
 
     for (BasicBlock *DeadBB : BlocksToErase)
       if (!DeadBB->hasAddressTaken())

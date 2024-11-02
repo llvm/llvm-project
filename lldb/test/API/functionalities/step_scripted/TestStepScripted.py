@@ -19,13 +19,13 @@ class StepScriptedTestCase(TestBase):
         self.runCmd("command script import Steps.py")
 
     def test_standard_step_out(self):
-        """Tests stepping with the scripted thread plan laying over a standard 
+        """Tests stepping with the scripted thread plan laying over a standard
         thread plan for stepping out."""
         self.build()
         self.step_out_with_scripted_plan("Steps.StepOut")
 
     def test_scripted_step_out(self):
-        """Tests stepping with the scripted thread plan laying over an another 
+        """Tests stepping with the scripted thread plan laying over an another
         scripted thread plan for stepping out."""
         self.build()
         self.step_out_with_scripted_plan("Steps.StepScripted")
@@ -54,23 +54,23 @@ class StepScriptedTestCase(TestBase):
         stop_id = process.GetStopID()
         # Pass a non-existent class for the plan class:
         err = thread.StepUsingScriptedThreadPlan("NoSuchModule.NoSuchPlan")
-        
+
         # Make sure we got a good error:
         self.assertTrue(err.Fail(), "We got a failure state")
         msg = err.GetCString()
         self.assertIn("NoSuchModule.NoSuchPlan", msg, "Mentioned missing class")
-        
+
         # Make sure we didn't let the process run:
         self.assertEqual(stop_id, process.GetStopID(), "Process didn't run")
-        
+
     def test_checking_variable(self):
         """Test that we can call SBValue API's from a scripted thread plan - using SBAPI's to step"""
         self.do_test_checking_variable(False)
-        
+
     def test_checking_variable_cli(self):
         """Test that we can call SBValue API's from a scripted thread plan - using cli to step"""
         self.do_test_checking_variable(True)
-        
+
     def do_test_checking_variable(self, use_cli):
         self.build()
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
@@ -101,7 +101,7 @@ class StepScriptedTestCase(TestBase):
 
         # We should not have exited:
         self.assertEqual(process.GetState(), lldb.eStateStopped, "We are stopped")
-        
+
         # We should still be in foo:
         self.assertEqual("foo", frame.GetFunctionName())
 
@@ -127,18 +127,14 @@ class StepScriptedTestCase(TestBase):
         print(Steps.StepReportsStopOthers.stop_mode_dict)
         value = Steps.StepReportsStopOthers.stop_mode_dict[token]
         self.assertEqual(value, stop_others_value, "Stop others has the correct value.")
-        
+
     def do_test_stop_others(self):
         self.build()
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
                                                                             "Set a breakpoint here",
                                                                             self.main_source_file)
         # First run with stop others false and see that we got that.
-        thread_id = ""
-        if sys.version_info.major == 2:
-            thread_id = str(threading._get_ident())
-        else:
-            thread_id = str(threading.get_ident())
+        thread_id = str(threading.get_ident())
 
         # all-threads should set stop others to False.
         self.run_step(False, "all-threads", thread_id)
@@ -152,13 +148,8 @@ class StepScriptedTestCase(TestBase):
         # The target.process.run-all-threads should override this:
         interp = self.dbg.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
-        
+
         interp.HandleCommand("settings set target.process.run-all-threads true", result)
         self.assertTrue(result.Succeeded, "setting run-all-threads works.")
 
         self.run_step(False, None, thread_id)
-
-        
-        
-
-        

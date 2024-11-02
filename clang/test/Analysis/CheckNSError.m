@@ -27,7 +27,7 @@ extern NSString * const NSXMLParserErrorDomain ;
 
 @implementation A
 - (void)myMethodWhichMayFail:(NSError **)error {   // expected-warning {{Method accepting NSError** should have a non-void return value to indicate whether or not an error occurred}}
-  *error = [NSError errorWithDomain:@"domain" code:1 userInfo:0]; // expected-warning {{Potential null dereference}}
+  *error = [NSError errorWithDomain:@"domain" code:1 userInfo:0]; // expected-warning {{Potential null dereference. According to coding standards in 'Creating and Returning NSError Objects' the parameter may be null [osx.cocoa.NSError]}}
 }
 
 - (BOOL)myMethodWhichMayFail2:(NSError **)error {  // no-warning
@@ -50,7 +50,7 @@ struct __CFError {};
 typedef struct __CFError* CFErrorRef;
 
 void foo(CFErrorRef* error) { // expected-warning {{Function accepting CFErrorRef* should have a non-void return value to indicate whether or not an error occurred}}
-  *error = 0;  // expected-warning {{Potential null dereference}}
+  *error = 0;                 // expected-warning {{Potential null dereference. According to coding standards documented in CoreFoundation/CFError.h the parameter may be null [osx.coreFoundation.CFError]}}
 }
 
 int f1(CFErrorRef* error) {
@@ -74,7 +74,7 @@ int __attribute__((nonnull)) f4(CFErrorRef *error) {
 }
 
 int __attribute__((nonnull(1))) f5(int *x, CFErrorRef *error) {
-  *error = 0; // expected-warning {{Potential null dereference}}
+  *error = 0; // expected-warning {{Potential null dereference. According to coding standards documented in CoreFoundation/CFError.h the parameter may be null [osx.coreFoundation.CFError]}}
   return 0;
 }
 

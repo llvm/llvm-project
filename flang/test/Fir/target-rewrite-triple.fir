@@ -5,7 +5,7 @@
 // CHANGED: llvm.target_triple = "x86_64-unknown-linux-gnu"
 // CHANGED-NOT: llvm.target_triple = "aarch64-unknown-linux-gnu"
 module attributes {llvm.target_triple = "aarch64-unknown-linux-gnu"}  {
-  func @dummyfunc() -> () {
+  func.func @dummyfunc() -> () {
     return
   }
 }

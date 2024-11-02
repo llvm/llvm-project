@@ -17,6 +17,8 @@ static_library("ObjectYAML") {
     "CodeViewYAMLTypes.cpp",
     "DWARFEmitter.cpp",
     "DWARFYAML.cpp",
+    "DXContainerEmitter.cpp",
+    "DXContainerYAML.cpp",
     "ELFEmitter.cpp",
     "ELFYAML.cpp",
     "MachOEmitter.cpp",

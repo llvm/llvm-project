@@ -20,7 +20,7 @@
 // Epilogue:
 //  CHECK-NEXT:   %[[ADD1:.*]] = arith.addf %[[L1]], %{{.*}} : f32
 //  CHECK-NEXT:   memref.store %[[ADD1]], %[[R]][%[[C3]]] : memref<?xf32>
-func @simple_pipeline(%A: memref<?xf32>, %result: memref<?xf32>) {
+func.func @simple_pipeline(%A: memref<?xf32>, %result: memref<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
@@ -59,7 +59,7 @@ func @simple_pipeline(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  CHECK-NEXT:   memref.store %[[ADD1]], %[[R]][%[[C6]]] : memref<?xf32>
 //  CHECK-NEXT:   %[[ADD2:.*]] = arith.addf %[[L2]]#1, %{{.*}} : f32
 //  CHECK-NEXT:   memref.store %[[ADD2]], %[[R]][%[[C9]]] : memref<?xf32>
-func @simple_pipeline_step(%A: memref<?xf32>, %result: memref<?xf32>) {
+func.func @simple_pipeline_step(%A: memref<?xf32>, %result: memref<?xf32>) {
   %c0 = arith.constant 0 : index
   %c3 = arith.constant 3 : index
   %c11 = arith.constant 11 : index
@@ -114,7 +114,7 @@ func @simple_pipeline_step(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  ANNOTATE:   arith.addf {{.*}} {__test_pipelining_iteration = 0 : i32, __test_pipelining_part = "epilogue"}
 //  ANNOTATE:   memref.store {{.*}} {__test_pipelining_iteration = 1 : i32, __test_pipelining_part = "epilogue"}
 
-func @three_stage(%A: memref<?xf32>, %result: memref<?xf32>) {
+func.func @three_stage(%A: memref<?xf32>, %result: memref<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
@@ -164,7 +164,7 @@ func @three_stage(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  CHECK-NEXT:  memref.store %[[ADD3]], %[[R]][%[[C8]]] : memref<?xf32>
 //  CHECK-NEXT:  %[[ADD4:.*]] = arith.addf %[[LR]]#3, %{{.*}} : f32
 //  CHECK-NEXT:  memref.store %[[ADD4]], %[[R]][%[[C9]]] : memref<?xf32>
-func @long_liverange(%A: memref<?xf32>, %result: memref<?xf32>) {
+func.func @long_liverange(%A: memref<?xf32>, %result: memref<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
@@ -214,7 +214,7 @@ func @long_liverange(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  CHECK-NEXT:   %[[MUL3:.*]] = arith.mulf %[[ADD3]], %[[LR]]#1 : f32
 //  CHECK-NEXT:   memref.store %[[MUL2]], %[[R]][%[[C8]]] : memref<?xf32>
 //  CHECK-NEXT:   memref.store %[[MUL3]], %[[R]][%[[C9]]] : memref<?xf32>
-func @multiple_uses(%A: memref<?xf32>, %result: memref<?xf32>) {
+func.func @multiple_uses(%A: memref<?xf32>, %result: memref<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
@@ -250,7 +250,7 @@ func @multiple_uses(%A: memref<?xf32>, %result: memref<?xf32>) {
 // Epilogue:
 //  CHECK-NEXT:   %[[ADD1:.*]] = arith.addf %[[LR]]#1, %[[LR]]#0 : f32
 //  CHECK-NEXT:   memref.store %[[ADD1]], %[[R]][%[[C0]]] : memref<?xf32>
-func @loop_carried(%A: memref<?xf32>, %result: memref<?xf32>) {
+func.func @loop_carried(%A: memref<?xf32>, %result: memref<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
@@ -288,7 +288,7 @@ func @loop_carried(%A: memref<?xf32>, %result: memref<?xf32>) {
 // Epilogue:
 //  CHECK-NEXT:   %[[ADD2:.*]] = arith.addf %[[R]]#2, %[[R]]#1 : f32
 //  CHECK-NEXT:   return %[[ADD2]] : f32
-func @backedge_different_stage(%A: memref<?xf32>) -> f32 {
+func.func @backedge_different_stage(%A: memref<?xf32>) -> f32 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
@@ -324,7 +324,7 @@ func @backedge_different_stage(%A: memref<?xf32>) -> f32 {
 // Epilogue:
 //  CHECK-NEXT:   %[[ADD1:.*]] = arith.addf %[[R]]#1, %[[R]]#0 : f32
 //  CHECK-NEXT:   return %[[ADD1]] : f32
-func @backedge_same_stage(%A: memref<?xf32>) -> f32 {
+func.func @backedge_same_stage(%A: memref<?xf32>) -> f32 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index

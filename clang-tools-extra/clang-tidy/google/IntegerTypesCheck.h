@@ -39,9 +39,9 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Options) override;
 
 private:
-  const std::string UnsignedTypePrefix;
-  const std::string SignedTypePrefix;
-  const std::string TypeSuffix;
+  const StringRef UnsignedTypePrefix;
+  const StringRef SignedTypePrefix;
+  const StringRef TypeSuffix;
 
   std::unique_ptr<IdentifierTable> IdentTable;
 };

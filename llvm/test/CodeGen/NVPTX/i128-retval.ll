@@ -1,4 +1,5 @@
 ; RUN: llc < %s -O0 -march=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -O0 -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 ; CHECK-LABEL: .visible .func (.param .align 16 .b8 func_retval0[16]) callee(
 define i128 @callee(i128) {

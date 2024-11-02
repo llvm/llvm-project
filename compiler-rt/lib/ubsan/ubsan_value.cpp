@@ -18,7 +18,7 @@
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 
-// TODO(dliew): Prefer '__APPLE__' here over 'SANITIZER_MAC', as the latter is
+// TODO(dliew): Prefer '__APPLE__' here over 'SANITIZER_APPLE', as the latter is
 // unclear. rdar://58124919 tracks using a more obviously portable guard.
 #if defined(__APPLE__)
 #include <dlfcn.h>

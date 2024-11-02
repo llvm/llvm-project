@@ -10,13 +10,11 @@ add_header_library(
     ArrayRef.h
 )
 
-
 add_header_library(
   bit
   HDRS
     Bit.h
 )
-
 
 add_header_library(
   bitset
@@ -78,4 +76,12 @@ add_header_library(
   error
   HDRS
     error.h
+)
+
+add_header_library(
+  uint
+  HDRS
+    UInt.h
+  DEPENDS
+    libc.src.__support.CPP.array
 )

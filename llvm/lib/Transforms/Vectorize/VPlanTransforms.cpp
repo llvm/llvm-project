@@ -24,15 +24,9 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         GetIntOrFpInductionDescriptor,
     SmallPtrSetImpl<Instruction *> &DeadInstructions, ScalarEvolution &SE) {
 
-  auto *TopRegion = cast<VPRegionBlock>(Plan->getEntry());
-  ReversePostOrderTraversal<VPBlockBase *> RPOT(TopRegion->getEntry());
-
-  for (VPBlockBase *Base : RPOT) {
-    // Do not widen instructions in pre-header and exit blocks.
-    if (Base->getNumPredecessors() == 0 || Base->getNumSuccessors() == 0)
-      continue;
-
-    VPBasicBlock *VPBB = Base->getEntryBasicBlock();
+  ReversePostOrderTraversal<VPBlockRecursiveTraversalWrapper<VPBlockBase *>>
+      RPOT(Plan->getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     // Introduce each ingredient into VPlan.
     for (VPRecipeBase &Ingredient : llvm::make_early_inc_range(*VPBB)) {
       VPValue *VPV = Ingredient.getVPSingleValue();
@@ -363,50 +357,15 @@ void VPlanTransforms::removeRedundantCanonicalIVs(VPlan &Plan) {
   }
 }
 
-// Check for live-out users currently not modeled in VPlan.
-// Note that exit values of inductions are generated independent of
-// the recipe. This means  VPWidenIntOrFpInductionRecipe &
-// VPScalarIVStepsRecipe can be removed, independent of uses outside
-// the loop.
-// TODO: Remove once live-outs are modeled in VPlan.
-static bool hasOutsideUser(Instruction &I, Loop &OrigLoop) {
-  return any_of(I.users(), [&OrigLoop](User *U) {
-    if (!OrigLoop.contains(cast<Instruction>(U)))
-      return true;
-
-    // Look through single-value phis in the loop, as they won't be modeled in
-    // VPlan and may be used outside the loop.
-    if (auto *PN = dyn_cast<PHINode>(U))
-      if (PN->getNumIncomingValues() == 1)
-        return hasOutsideUser(*PN, OrigLoop);
-
-    return false;
-  });
-}
-
 void VPlanTransforms::removeDeadRecipes(VPlan &Plan, Loop &OrigLoop) {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-  // Check if \p R is used outside the loop, if required.
-  // TODO: Remove once live-outs are modeled in VPlan.
-  auto HasUsersOutsideLoop = [&OrigLoop](VPRecipeBase &R) {
-    // Exit values for induction recipes are generated independent of the
-    // recipes, expect for truncated inductions. Hence there is no need to check
-    // for users outside the loop for them.
-    if (isa<VPScalarIVStepsRecipe>(&R) ||
-        (isa<VPWidenIntOrFpInductionRecipe>(&R) &&
-         !isa<TruncInst>(R.getUnderlyingInstr())))
-      return false;
-    return R.getUnderlyingInstr() &&
-           hasOutsideUser(*R.getUnderlyingInstr(), OrigLoop);
-  };
   // Remove dead recipes in header block. The recipes in the block are processed
   // in reverse order, to catch chains of dead recipes.
   // TODO: Remove dead recipes across whole plan.
   for (VPRecipeBase &R : make_early_inc_range(reverse(*Header))) {
-    if (R.mayHaveSideEffects() ||
-        any_of(R.definedValues(),
-               [](VPValue *V) { return V->getNumUsers() > 0; }) ||
-        HasUsersOutsideLoop(R))
+    if (R.mayHaveSideEffects() || any_of(R.definedValues(), [](VPValue *V) {
+          return V->getNumUsers() > 0;
+        }))
       continue;
     R.eraseFromParent();
   }
@@ -440,13 +399,12 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
     // SetVector to ensure the list of users doesn't contain duplicates.
     SetVector<VPUser *> Users(IV->user_begin(), IV->user_end());
     for (VPUser *U : Users) {
-      VPRecipeBase *R = cast<VPRecipeBase>(U);
-      if (!R->usesScalars(IV))
+      if (!U->usesScalars(IV))
         continue;
-      for (unsigned I = 0, E = R->getNumOperands(); I != E; I++) {
-        if (R->getOperand(I) != IV)
+      for (unsigned I = 0, E = U->getNumOperands(); I != E; I++) {
+        if (U->getOperand(I) != IV)
           continue;
-        R->setOperand(I, Steps);
+        U->setOperand(I, Steps);
       }
     }
   }

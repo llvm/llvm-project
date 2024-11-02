@@ -42,8 +42,8 @@ double _Complex Complex; // not supported
 // CHECK: !{{[0-9]+}} = !{void ()* @eV, !"f{0}(0)"}
 // CHECK: !{{[0-9]+}} = !{void (i32, ...)* @gVA, !"f{0}(si,va)"}
 // CHECK: !{{[0-9]+}} = !{void (i32, ...)* @eVA, !"f{0}(si,va)"}
-// CHECK: !{{[0-9]+}} = !{i32* (i32*)* @gQ, !"f{crv:p(cv:si)}(p(cv:si))"}
-// CHECK: !{{[0-9]+}} = !{i32* (i32*)* @eQ, !"f{crv:p(cv:si)}(p(cv:si))"}
+// CHECK: !{{[0-9]+}} = !{i32* (i32*)* @gQ, !"f{p(cv:si)}(p(cv:si))"}
+// CHECK: !{{[0-9]+}} = !{i32* (i32*)* @eQ, !"f{p(cv:si)}(p(cv:si))"}
 extern void eI();
 void gI() {eI();};
 extern void eV(void);

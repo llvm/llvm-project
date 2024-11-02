@@ -30,7 +30,7 @@ public:
     if (!dstType)
       return failure();
     if (SPIRVOp::template hasTrait<OpTrait::spirv::UnsignedOp>() &&
-        dstType != op.getType()) {
+        !op.getType().isIndex() && dstType != op.getType()) {
       return op.emitError(
           "bitwidth emulation is not implemented yet on unsigned op");
     }

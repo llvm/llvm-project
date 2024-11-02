@@ -45,6 +45,20 @@ entry:
 
 ; ILLEGAL INTEGER TYPES
 
+define <vscale x 6 x i64> @stepvector_nxv6i64() {
+; CHECK-LABEL: stepvector_nxv6i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    index z0.d, #0, #1
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    incd z1.d
+; CHECK-NEXT:    incd z2.d, all, mul #2
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <vscale x 6 x i64> @llvm.experimental.stepvector.nxv6i64()
+  ret <vscale x 6 x i64> %0
+}
+
 define <vscale x 4 x i64> @stepvector_nxv4i64() {
 ; CHECK-LABEL: stepvector_nxv4i64:
 ; CHECK:       // %bb.0: // %entry
@@ -71,6 +85,16 @@ define <vscale x 16 x i32> @stepvector_nxv16i32() {
 entry:
   %0 = call <vscale x 16 x i32> @llvm.experimental.stepvector.nxv16i32()
   ret <vscale x 16 x i32> %0
+}
+
+define <vscale x 3 x i32> @stepvector_nxv3i32() {
+; CHECK-LABEL: stepvector_nxv3i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    index z0.s, #0, #1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <vscale x 3 x i32> @llvm.experimental.stepvector.nxv3i32()
+  ret <vscale x 3 x i32> %0
 }
 
 define <vscale x 2 x i32> @stepvector_nxv2i32() {
@@ -422,8 +446,10 @@ declare <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
 declare <vscale x 8 x i16> @llvm.experimental.stepvector.nxv8i16()
 declare <vscale x 16 x i8> @llvm.experimental.stepvector.nxv16i8()
 
+declare <vscale x 6 x i64> @llvm.experimental.stepvector.nxv6i64()
 declare <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
 declare <vscale x 16 x i32> @llvm.experimental.stepvector.nxv16i32()
+declare <vscale x 3 x i32> @llvm.experimental.stepvector.nxv3i32()
 declare <vscale x 2 x i32> @llvm.experimental.stepvector.nxv2i32()
 declare <vscale x 8 x i8> @llvm.experimental.stepvector.nxv8i8()
 declare <vscale x 4 x i16> @llvm.experimental.stepvector.nxv4i16()

@@ -2123,7 +2123,9 @@ void InitListChecker::CheckStructUnionTypes(
   // worthwhile to skip over the rest of the initializer, though.
   RecordDecl *RD = DeclType->castAs<RecordType>()->getDecl();
   RecordDecl::field_iterator FieldEnd = RD->field_end();
-  size_t NumRecordFields = std::distance(RD->field_begin(), RD->field_end());
+  size_t NumRecordDecls = llvm::count_if(RD->decls(), [&](const Decl *D) {
+    return isa<FieldDecl>(D) || isa<RecordDecl>(D);
+  });
   bool CheckForMissingFields =
     !IList->isIdiomaticZeroInitializer(SemaRef.getLangOpts());
   bool HasDesignatedInit = false;
@@ -2168,11 +2170,6 @@ void InitListChecker::CheckStructUnionTypes(
       continue;
     }
 
-    if (Field == FieldEnd) {
-      // We've run out of fields. We're done.
-      break;
-    }
-
     // Check if this is an initializer of forms:
     //
     //   struct foo f = {};
@@ -2186,7 +2183,7 @@ void InitListChecker::CheckStructUnionTypes(
     //   struct foo h = {bar};
     auto IsZeroInitializer = [&](const Expr *I) {
       if (IList->getNumInits() == 1) {
-        if (NumRecordFields == 1)
+        if (NumRecordDecls == 1)
           return true;
         if (const auto *IL = dyn_cast<IntegerLiteral>(I))
           return IL->getValue().isZero();
@@ -2199,6 +2196,11 @@ void InitListChecker::CheckStructUnionTypes(
       if (!VerifyOnly)
         SemaRef.Diag(InitLoc, diag::err_non_designated_init_used);
       hadError = true;
+      break;
+    }
+
+    if (Field == FieldEnd) {
+      // We've run out of fields. We're done.
       break;
     }
 
@@ -3467,7 +3469,7 @@ unsigned InitializedEntity::dumpImpl(raw_ostream &OS) const {
     D->printQualifiedName(OS);
   }
 
-  OS << " '" << getType().getAsString() << "'\n";
+  OS << " '" << getType() << "'\n";
 
   return Depth + 1;
 }
@@ -9800,7 +9802,7 @@ void InitializationSequence::dump(raw_ostream &OS) const {
       break;
     }
 
-    OS << " [" << S->Type.getAsString() << ']';
+    OS << " [" << S->Type << ']';
   }
 
   OS << '\n';

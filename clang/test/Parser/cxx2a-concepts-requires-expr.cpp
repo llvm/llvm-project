@@ -130,6 +130,7 @@ bool r35 = requires { requires true };
 
 bool r36 = requires (bool b) { requires sizeof(b) == 1; };
 
+template<typename T>
 void r37(bool b) requires requires { 1 } {}
 // expected-error@-1 {{expected ';' at end of requirement}}
 

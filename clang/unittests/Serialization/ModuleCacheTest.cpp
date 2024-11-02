@@ -10,6 +10,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
@@ -95,13 +96,15 @@ TEST_F(ModuleCacheTest, CachedModuleNewPath) {
   MCPArg.append(ModuleCachePath);
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(new DiagnosticOptions());
+  CreateInvocationOptions CIOpts;
+  CIOpts.Diags = Diags;
 
   // First run should pass with no errors
   const char *Args[] = {"clang",        "-fmodules",          "-Fframeworks",
                         MCPArg.c_str(), "-working-directory", TestDir.c_str(),
                         "test.m"};
   std::shared_ptr<CompilerInvocation> Invocation =
-      createInvocationFromCommandLine(Args, Diags);
+      createInvocation(Args, CIOpts);
   ASSERT_TRUE(Invocation);
   CompilerInstance Instance;
   Instance.setDiagnostics(Diags.get());
@@ -124,7 +127,7 @@ TEST_F(ModuleCacheTest, CachedModuleNewPath) {
                          "-Fframeworks",  MCPArg.c_str(), "-working-directory",
                          TestDir.c_str(), "test.m"};
   std::shared_ptr<CompilerInvocation> Invocation2 =
-      createInvocationFromCommandLine(Args2, Diags);
+      createInvocation(Args2, CIOpts);
   ASSERT_TRUE(Invocation2);
   CompilerInstance Instance2(Instance.getPCHContainerOperations(),
                              &Instance.getModuleCache());
@@ -142,13 +145,15 @@ TEST_F(ModuleCacheTest, CachedModuleNewPathAllowErrors) {
   MCPArg.append(ModuleCachePath);
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(new DiagnosticOptions());
+  CreateInvocationOptions CIOpts;
+  CIOpts.Diags = Diags;
 
   // First run should pass with no errors
   const char *Args[] = {"clang",        "-fmodules",          "-Fframeworks",
                         MCPArg.c_str(), "-working-directory", TestDir.c_str(),
                         "test.m"};
   std::shared_ptr<CompilerInvocation> Invocation =
-      createInvocationFromCommandLine(Args, Diags);
+      createInvocation(Args, CIOpts);
   ASSERT_TRUE(Invocation);
   CompilerInstance Instance;
   Instance.setDiagnostics(Diags.get());
@@ -165,7 +170,7 @@ TEST_F(ModuleCacheTest, CachedModuleNewPathAllowErrors) {
       TestDir.c_str(), "-Xclang",      "-fallow-pcm-with-compiler-errors",
       "test.m"};
   std::shared_ptr<CompilerInvocation> Invocation2 =
-      createInvocationFromCommandLine(Args2, Diags);
+      createInvocation(Args2, CIOpts);
   ASSERT_TRUE(Invocation2);
   CompilerInstance Instance2(Instance.getPCHContainerOperations(),
                              &Instance.getModuleCache());

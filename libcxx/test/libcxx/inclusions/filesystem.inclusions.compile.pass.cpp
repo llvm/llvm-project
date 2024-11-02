@@ -12,7 +12,7 @@
 // clang-format off
 
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-has-no-filesystem-library
+// UNSUPPORTED: no-filesystem
 
 // <filesystem>
 

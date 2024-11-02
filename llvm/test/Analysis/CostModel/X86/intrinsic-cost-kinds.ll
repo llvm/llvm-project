@@ -74,7 +74,7 @@ define void @umul(i32 %a, i32 %b, <16 x i32> %va, <16 x i32> %vb) {
 define void @smax(i32 %a, i32 %b, <16 x i32> %va, <16 x i32> %vb) {
 ; THRU-LABEL: 'smax'
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s = call i32 @llvm.smax.i32(i32 %a, i32 %b)
-; THRU-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v = call <16 x i32> @llvm.smax.v16i32(<16 x i32> %va, <16 x i32> %vb)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v = call <16 x i32> @llvm.smax.v16i32(<16 x i32> %va, <16 x i32> %vb)
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; LATE-LABEL: 'smax'
@@ -256,7 +256,7 @@ define void @ctlz(i32 %a, <16 x i32> %va) {
 define void @fshl(i32 %a, i32 %b, i32 %c, <16 x i32> %va, <16 x i32> %vb, <16 x i32> %vc) {
 ; THRU-LABEL: 'fshl'
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %s = call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %c)
-; THRU-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %v = call <16 x i32> @llvm.fshl.v16i32(<16 x i32> %va, <16 x i32> %vb, <16 x i32> %vc)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v = call <16 x i32> @llvm.fshl.v16i32(<16 x i32> %va, <16 x i32> %vb, <16 x i32> %vc)
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; LATE-LABEL: 'fshl'
@@ -281,7 +281,7 @@ define void @fshl(i32 %a, i32 %b, i32 %c, <16 x i32> %va, <16 x i32> %vb, <16 x 
 
 define void @maskedgather(<16 x float*> %va, <16 x i1> %vb, <16 x float> %vc) {
 ; THRU-LABEL: 'maskedgather'
-; THRU-NEXT:  Cost Model: Found an estimated cost of 92 for instruction: %v = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %va, i32 1, <16 x i1> %vb, <16 x float> %vc)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 77 for instruction: %v = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %va, i32 1, <16 x i1> %vb, <16 x float> %vc)
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; LATE-LABEL: 'maskedgather'
@@ -302,7 +302,7 @@ define void @maskedgather(<16 x float*> %va, <16 x i1> %vb, <16 x float> %vc) {
 
 define void @maskedscatter(<16 x float> %va, <16 x float*> %vb, <16 x i1> %vc) {
 ; THRU-LABEL: 'maskedscatter'
-; THRU-NEXT:  Cost Model: Found an estimated cost of 92 for instruction: call void @llvm.masked.scatter.v16f32.v16p0f32(<16 x float> %va, <16 x float*> %vb, i32 1, <16 x i1> %vc)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 77 for instruction: call void @llvm.masked.scatter.v16f32.v16p0f32(<16 x float> %va, <16 x float*> %vb, i32 1, <16 x i1> %vc)
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; LATE-LABEL: 'maskedscatter'

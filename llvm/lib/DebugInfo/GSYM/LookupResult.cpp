@@ -8,6 +8,7 @@
 
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/DebugInfo/GSYM/ExtractRanges.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -42,7 +43,7 @@ raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const SourceLocation &SL) {
     OS << " @ ";
     if (!SL.Dir.empty()) {
       OS << SL.Dir;
-      if (SL.Dir.contains('\\') and not SL.Dir.contains('/'))
+      if (SL.Dir.contains('\\') && !SL.Dir.contains('/'))
         OS << '\\';
       else
         OS << '/';

@@ -10,6 +10,8 @@
 define void @vector_reverse_f64(i64 %N, double* %a, double* %b) #0{
 ; CHECK-LABEL: @vector_reverse_f64(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A2:%.*]] = ptrtoint double* [[A:%.*]] to i64
+; CHECK-NEXT:    [[B1:%.*]] = ptrtoint double* [[B:%.*]] to i64
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp sgt i64 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP7]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
@@ -18,16 +20,18 @@ define void @vector_reverse_f64(i64 %N, double* %a, double* %b) #0{
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ugt i64 [[TMP1]], [[N]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr double, double* [[A:%.*]], i64 [[N]]
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr double, double* [[B:%.*]], i64 [[N]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt double* [[SCEVGEP4]], [[A]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt double* [[SCEVGEP]], [[B]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 6
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N]], 3
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], [[B1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], [[A2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP7]], [[TMP3]]
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP8]], 3
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP9]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -41,7 +45,7 @@ define void @vector_reverse_f64(i64 %N, double* %a, double* %b) #0{
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext i32 [[TMP8]] to i64
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds double, double* [[TMP6]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast double* [[TMP10]] to <vscale x 8 x double>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x double>, <vscale x 8 x double>* [[TMP11]], align 8, !alias.scope !0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x double>, <vscale x 8 x double>* [[TMP11]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds double, double* [[A]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = fadd <vscale x 8 x double> [[WIDE_LOAD]], shufflevector (<vscale x 8 x double> insertelement (<vscale x 8 x double> poison, double 1.000000e+00, i32 0), <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vscale.i32()
@@ -50,7 +54,7 @@ define void @vector_reverse_f64(i64 %N, double* %a, double* %b) #0{
 ; CHECK-NEXT:    [[TMP16:%.*]] = sext i32 [[TMP15]] to i64
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds double, double* [[TMP12]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = bitcast double* [[TMP17]] to <vscale x 8 x double>*
-; CHECK-NEXT:    store <vscale x 8 x double> [[TMP13]], <vscale x 8 x double>* [[TMP18]], align 8, !alias.scope !3, !noalias !0
+; CHECK-NEXT:    store <vscale x 8 x double> [[TMP13]], <vscale x 8 x double>* [[TMP18]], align 8
 ; CHECK-NEXT:    [[TMP19:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP20:%.*]] = shl i64 [[TMP19]], 3
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP20]]
@@ -100,6 +104,8 @@ for.body:                                         ; preds = %entry, %for.body
 define void @vector_reverse_i64(i64 %N, i64* %a, i64* %b) #0 {
 ; CHECK-LABEL: @vector_reverse_i64(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A2:%.*]] = ptrtoint i64* [[A:%.*]] to i64
+; CHECK-NEXT:    [[B1:%.*]] = ptrtoint i64* [[B:%.*]] to i64
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i64 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP8]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
@@ -108,16 +114,18 @@ define void @vector_reverse_i64(i64 %N, i64* %a, i64* %b) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ugt i64 [[TMP1]], [[N]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i64, i64* [[A:%.*]], i64 [[N]]
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i64, i64* [[B:%.*]], i64 [[N]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt i64* [[SCEVGEP4]], [[A]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt i64* [[SCEVGEP]], [[B]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 6
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N]], 3
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], [[B1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], [[A2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP7]], [[TMP3]]
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP8]], 3
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP9]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -131,7 +139,7 @@ define void @vector_reverse_i64(i64 %N, i64* %a, i64* %b) #0 {
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext i32 [[TMP8]] to i64
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, i64* [[TMP6]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i64* [[TMP10]] to <vscale x 8 x i64>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i64>, <vscale x 8 x i64>* [[TMP11]], align 8, !alias.scope !9
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i64>, <vscale x 8 x i64>* [[TMP11]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = add <vscale x 8 x i64> [[WIDE_LOAD]], shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 1, i32 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vscale.i32()
@@ -140,7 +148,7 @@ define void @vector_reverse_i64(i64 %N, i64* %a, i64* %b) #0 {
 ; CHECK-NEXT:    [[TMP16:%.*]] = sext i32 [[TMP15]] to i64
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i64, i64* [[TMP12]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i64* [[TMP17]] to <vscale x 8 x i64>*
-; CHECK-NEXT:    store <vscale x 8 x i64> [[TMP13]], <vscale x 8 x i64>* [[TMP18]], align 8, !alias.scope !12, !noalias !9
+; CHECK-NEXT:    store <vscale x 8 x i64> [[TMP13]], <vscale x 8 x i64>* [[TMP18]], align 8
 ; CHECK-NEXT:    [[TMP19:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP20:%.*]] = shl i64 [[TMP19]], 3
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP20]]

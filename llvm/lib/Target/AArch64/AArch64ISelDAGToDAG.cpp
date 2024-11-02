@@ -3148,7 +3148,7 @@ bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm,
   SDLoc DL(N);
   uint64_t Val = cast<ConstantSDNode>(N)
                      ->getAPIntValue()
-                     .truncOrSelf(VT.getFixedSizeInBits())
+                     .trunc(VT.getFixedSizeInBits())
                      .getZExtValue();
 
   switch (VT.SimpleTy) {
@@ -3188,7 +3188,7 @@ bool AArch64DAGToDAGISel::SelectSVECpyDupImm(SDValue N, MVT VT, SDValue &Imm,
   SDLoc DL(N);
   int64_t Val = cast<ConstantSDNode>(N)
                     ->getAPIntValue()
-                    .truncOrSelf(VT.getFixedSizeInBits())
+                    .trunc(VT.getFixedSizeInBits())
                     .getSExtValue();
 
   switch (VT.SimpleTy) {
@@ -5092,12 +5092,19 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
                                                    SDValue &OffImm) {
   const EVT MemVT = getMemVTFromNode(*(CurDAG->getContext()), Root);
   const DataLayout &DL = CurDAG->getDataLayout();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
 
   if (N.getOpcode() == ISD::FrameIndex) {
     int FI = cast<FrameIndexSDNode>(N)->getIndex();
-    Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
-    OffImm = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i64);
-    return true;
+    // We can only encode VL scaled offsets, so only fold in frame indexes
+    // referencing SVE objects.
+    if (FI == 0 || MFI.getStackID(FI) == TargetStackID::ScalableVector) {
+      Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
+      OffImm = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i64);
+      return true;
+    }
+
+    return false;
   }
 
   if (MemVT == EVT())
@@ -5124,7 +5131,10 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
   Base = N.getOperand(0);
   if (Base.getOpcode() == ISD::FrameIndex) {
     int FI = cast<FrameIndexSDNode>(Base)->getIndex();
-    Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
+    // We can only encode VL scaled offsets, so only fold in frame indexes
+    // referencing SVE objects.
+    if (FI == 0 || MFI.getStackID(FI) == TargetStackID::ScalableVector)
+      Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
   }
 
   OffImm = CurDAG->getTargetConstant(Offset, SDLoc(N), MVT::i64);

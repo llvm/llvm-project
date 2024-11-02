@@ -11,7 +11,7 @@
 # CHECK-DAG: .debug_info.dwo contents:
 # CHECK: 0x00000000: Type Unit: length = 0x00000017, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_type, abbr_offset = 0x0000, addr_size = 0x08, name = '', type_signature = [[TUID1:.*]], type_offset = 0x0019 (next unit at 0x0000001b)
 # CHECK: 0x0000001b: Type Unit: length = 0x00000017, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_type, abbr_offset = 0x0000, addr_size = 0x08, name = '', type_signature = [[TUID2:.*]], type_offset = 0x0019 (next unit at 0x00000036)
-# CHECK_DAG: .debug_tu_index contents:
+# CHECK-DAG: .debug_tu_index contents:
 # CHECK: version = 5, units = 2, slots = 4
 # CHECK: Index Signature          INFO                     ABBREV
 # CHECK:     1 [[TUID1]]          [0x00000000, 0x0000001b) [0x00000000, 0x00000010)

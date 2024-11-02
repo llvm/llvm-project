@@ -9,6 +9,7 @@ define void @foo(<4 x float>* %p, <4 x float> %x) nounwind {
   store <4 x float> %x, <4 x float>* %p, align 4
   ret void
 }
+
 define void @bar(<2 x double>* %p, <2 x double> %x) nounwind {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0:

@@ -32,6 +32,7 @@
 #include "clang/Serialization/ModuleFile.h"
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "clang/Serialization/ModuleManager.h"
+#include "clang/Serialization/SourceLocationEncoding.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -396,6 +397,8 @@ public:
   using ModuleReverseIterator = ModuleManager::ModuleReverseIterator;
 
 private:
+  using LocSeq = SourceLocationSequence;
+
   /// The receiver of some callbacks invoked by ASTReader.
   std::unique_ptr<ASTReaderListener> Listener;
 
@@ -1105,6 +1108,18 @@ private:
   /// The DeclContexts for these Decls will be set once recursive loading has
   /// been completed.
   std::deque<PendingDeclContextInfo> PendingDeclContextInfos;
+
+  template <typename DeclTy>
+  using DuplicateObjCDecls = std::pair<DeclTy *, DeclTy *>;
+
+  /// When resolving duplicate ivars from Objective-C extensions we don't error
+  /// out immediately but check if can merge identical extensions. Not checking
+  /// extensions for equality immediately because ivar deserialization isn't
+  /// over yet at that point.
+  llvm::SmallMapVector<DuplicateObjCDecls<ObjCCategoryDecl>,
+                       llvm::SmallVector<DuplicateObjCDecls<ObjCIvarDecl>, 4>,
+                       2>
+      PendingObjCExtensionIvarRedeclarations;
 
   /// The set of NamedDecls that have been loaded, but are members of a
   /// context that has been merged into another context where the corresponding
@@ -2143,16 +2158,16 @@ public:
 
   /// Read a source location from raw form and return it in its
   /// originating module file's source location space.
-  SourceLocation
-  ReadUntranslatedSourceLocation(SourceLocation::UIntTy Raw) const {
-    return SourceLocation::getFromRawEncoding((Raw >> 1) |
-                                              (Raw << (8 * sizeof(Raw) - 1)));
+  SourceLocation ReadUntranslatedSourceLocation(SourceLocation::UIntTy Raw,
+                                                LocSeq *Seq = nullptr) const {
+    return SourceLocationEncoding::decode(Raw, Seq);
   }
 
   /// Read a source location from raw form.
   SourceLocation ReadSourceLocation(ModuleFile &ModuleFile,
-                                    SourceLocation::UIntTy Raw) const {
-    SourceLocation Loc = ReadUntranslatedSourceLocation(Raw);
+                                    SourceLocation::UIntTy Raw,
+                                    LocSeq *Seq = nullptr) const {
+    SourceLocation Loc = ReadUntranslatedSourceLocation(Raw, Seq);
     return TranslateSourceLocation(ModuleFile, Loc);
   }
 
@@ -2172,14 +2187,14 @@ public:
 
   /// Read a source location.
   SourceLocation ReadSourceLocation(ModuleFile &ModuleFile,
-                                    const RecordDataImpl &Record,
-                                    unsigned &Idx) {
-    return ReadSourceLocation(ModuleFile, Record[Idx++]);
+                                    const RecordDataImpl &Record, unsigned &Idx,
+                                    LocSeq *Seq = nullptr) {
+    return ReadSourceLocation(ModuleFile, Record[Idx++], Seq);
   }
 
   /// Read a source range.
-  SourceRange ReadSourceRange(ModuleFile &F,
-                              const RecordData &Record, unsigned &Idx);
+  SourceRange ReadSourceRange(ModuleFile &F, const RecordData &Record,
+                              unsigned &Idx, LocSeq *Seq = nullptr);
 
   // Read a string
   static std::string ReadString(const RecordData &Record, unsigned &Idx);

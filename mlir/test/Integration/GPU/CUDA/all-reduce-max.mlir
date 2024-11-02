@@ -8,7 +8,7 @@
 // RUN:   --entry-point-result=void \
 // RUN: | FileCheck %s
 
-func @main() {
+func.func @main() {
   %data = memref.alloc() : memref<2x6xi32>
   %sum = memref.alloc() : memref<2xi32>
   %cst0 = arith.constant 0 : i32
@@ -60,11 +60,11 @@ func @main() {
     gpu.terminator
   }
 
-  call @print_memref_i32(%cast_sum) : (memref<*xi32>) -> ()
+  call @printMemrefI32(%cast_sum) : (memref<*xi32>) -> ()
   // CHECK: [16, 11]
 
   return
 }
 
-func private @print_memref_i32(memref<*xi32>)
+func.func private @printMemrefI32(memref<*xi32>)
 

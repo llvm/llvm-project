@@ -166,7 +166,7 @@ class NSOrCFErrorDerefChecker
   mutable std::unique_ptr<NSErrorDerefBug> NSBT;
   mutable std::unique_ptr<CFErrorDerefBug> CFBT;
 public:
-  DefaultBool ShouldCheckNSError, ShouldCheckCFError;
+  bool ShouldCheckNSError = false, ShouldCheckCFError = false;
   CheckerNameRef NSErrorName, CFErrorName;
   NSOrCFErrorDerefChecker() : NSErrorII(nullptr), CFErrorII(nullptr) {}
 
@@ -266,7 +266,7 @@ void NSOrCFErrorDerefChecker::checkEvent(ImplicitNullDerefEvent event) const {
   SmallString<128> Buf;
   llvm::raw_svector_ostream os(Buf);
 
-  os << "Potential null dereference.  According to coding standards ";
+  os << "Potential null dereference. According to coding standards ";
   os << (isNSError
          ? "in 'Creating and Returning NSError Objects' the parameter"
          : "documented in CoreFoundation/CFError.h the parameter");

@@ -170,7 +170,7 @@ OPTIONS
 .. option:: --zero-counter-threshold=<float>
 
  For the function which is cold in instr profile but hot in sample profile, if
- the ratio of the number of zero counters divided by the the total number of
+ the ratio of the number of zero counters divided by the total number of
  counters is above the threshold, the profile of the function will be regarded
  as being harmful for performance and will be dropped.
 

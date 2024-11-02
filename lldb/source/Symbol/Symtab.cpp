@@ -1204,6 +1204,7 @@ bool DecodeCStrMap(const DataExtractor &data, lldb::offset_t *offset_ptr,
   if (identifier != kIdentifierCStrMap)
     return false;
   const uint32_t count = data.GetU32(offset_ptr);
+  cstr_map.Reserve(count);
   for (uint32_t i=0; i<count; ++i)
   {
     llvm::StringRef str(strtab.Get(data.GetU32(offset_ptr)));
@@ -1213,6 +1214,16 @@ bool DecodeCStrMap(const DataExtractor &data, lldb::offset_t *offset_ptr,
       return false;
     cstr_map.Append(ConstString(str), value);
   }
+  // We must sort the UniqueCStringMap after decoding it since it is a vector
+  // of UniqueCStringMap::Entry objects which contain a ConstString and type T.
+  // ConstString objects are sorted by "const char *" and then type T and
+  // the "const char *" are point values that will depend on the order in which
+  // ConstString objects are created and in which of the 256 string pools they
+  // are created in. So after we decode all of the entries, we must sort the
+  // name map to ensure name lookups succeed. If we encode and decode within
+  // the same process we wouldn't need to sort, so unit testing didn't catch
+  // this issue when first checked in.
+  cstr_map.Sort();
   return true;
 }
 

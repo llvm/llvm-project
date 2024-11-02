@@ -185,17 +185,25 @@ subroutine s13()
   where ([1==1]) x='*'
   where ([1==1]) n='*' ! fine
   forall (j=1:1)
+    !ERROR: The mask or variable must not be scalar
     where (j==1)
       !ERROR: Defined assignment in WHERE must be elemental, but 'ctor' is not
+      !ERROR: The mask or variable must not be scalar
       x(j)='?'
+      !ERROR: The mask or variable must not be scalar
       n(j)='?' ! fine
+    !ERROR: The mask or variable must not be scalar
     elsewhere (.false.)
       !ERROR: Defined assignment in WHERE must be elemental, but 'ctor' is not
+      !ERROR: The mask or variable must not be scalar
       x(j)='1'
+      !ERROR: The mask or variable must not be scalar
       n(j)='1' ! fine
     elsewhere
       !ERROR: Defined assignment in WHERE must be elemental, but 'ctor' is not
+      !ERROR: The mask or variable must not be scalar
       x(j)='9'
+      !ERROR: The mask or variable must not be scalar
       n(j)='9' ! fine
     end where
   end forall

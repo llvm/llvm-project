@@ -592,7 +592,7 @@ static ParseResult parseStructMemberDecorations(
     return failure();
 
   // Check for spirv::Decorations.
-  do {
+  auto parseDecorations = [&]() {
     auto memberDecoration = parseAndVerify<spirv::Decoration>(dialect, parser);
     if (!memberDecoration)
       return failure();
@@ -613,10 +613,13 @@ static ParseResult parseStructMemberDecorations(
           static_cast<uint32_t>(memberTypes.size() - 1), 0,
           memberDecoration.getValue(), 0);
     }
+    return success();
+  };
+  if (failed(parser.parseCommaSeparatedList(parseDecorations)) ||
+      failed(parser.parseRSquare()))
+    return failure();
 
-  } while (succeeded(parser.parseOptionalComma()));
-
-  return parser.parseRSquare();
+  return success();
 }
 
 // struct-member-decoration ::= integer-literal? spirv-decoration*
@@ -885,17 +888,16 @@ static ParseResult parseKeywordList(
 
   // Keep parsing the keyword and an optional comma following it. If the comma
   // is successfully parsed, then we have more keywords to parse.
-  do {
-    auto loc = parser.getCurrentLocation();
-    StringRef keyword;
-    if (parser.parseKeyword(&keyword) || failed(processKeyword(loc, keyword)))
-      return failure();
-  } while (succeeded(parser.parseOptionalComma()));
-
-  if (parser.parseRSquare())
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        auto loc = parser.getCurrentLocation();
+        StringRef keyword;
+        if (parser.parseKeyword(&keyword) ||
+            failed(processKeyword(loc, keyword)))
+          return failure();
+        return success();
+      })))
     return failure();
-
-  return success();
+  return parser.parseRSquare();
 }
 
 /// Parses a spirv::InterfaceVarABIAttr.

@@ -35,6 +35,7 @@ index_expression = mlir_pytaco.IndexExpr
 access = mlir_pytaco.Access
 
 # Data type constants defined by PyTACO API.
+int8 = mlir_pytaco.DType(mlir_pytaco.Type.INT8)
 int16 = mlir_pytaco.DType(mlir_pytaco.Type.INT16)
 int32 = mlir_pytaco.DType(mlir_pytaco.Type.INT32)
 int64 = mlir_pytaco.DType(mlir_pytaco.Type.INT64)

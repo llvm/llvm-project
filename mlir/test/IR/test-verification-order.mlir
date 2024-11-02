@@ -1,6 +1,6 @@
 // RUN: mlir-opt --mlir-disable-threading -split-input-file -verify-diagnostics %s
 
-func @verify_operand_type() {
+func.func @verify_operand_type() {
   %0 = arith.constant 1 : index
   // expected-error@+1 {{op operand #0 must be 32-bit signless integer, but got 'index'}}
   "test.verifiers"(%0) ({
@@ -11,7 +11,7 @@ func @verify_operand_type() {
 
 // -----
 
-func @verify_nested_op_block_trait() {
+func.func @verify_nested_op_block_trait() {
   %0 = arith.constant 1 : i32
   // expected-remark@+1 {{success run of verifier}}
   "test.verifiers"(%0) ({
@@ -24,7 +24,7 @@ func @verify_nested_op_block_trait() {
 
 // -----
 
-func @verify_nested_op_operand() {
+func.func @verify_nested_op_operand() {
   %0 = arith.constant 1 : i32
   // expected-remark@+1 {{success run of verifier}}
   "test.verifiers"(%0) ({
@@ -39,7 +39,7 @@ func @verify_nested_op_operand() {
 
 // -----
 
-func @verify_nested_isolated_above() {
+func.func @verify_nested_isolated_above() {
   %0 = arith.constant 1 : i32
   // expected-remark@+1 {{success run of verifier}}
   "test.verifiers"(%0) ({

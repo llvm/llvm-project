@@ -1,7 +1,7 @@
 ## Test invalid instructions on both loongarch32 and loongarch64 target.
 
-# RUN: not llvm-mc --triple=loongarch32 %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK64
-# RUN: not llvm-mc --triple=loongarch64 %s 2>&1 --defsym=LA64=1 | FileCheck %s
+# RUN: not llvm-mc --triple=loongarch32 --mattr=-f %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK64
+# RUN: not llvm-mc --triple=loongarch64 --mattr=-f %s 2>&1 --defsym=LA64=1 | FileCheck %s
 
 ## Out of range immediates
 ## uimm2
@@ -168,9 +168,24 @@ and $a0, $a0
 andi $a0, $a0
 # CHECK: :[[#@LINE-1]]:1: error: too few operands for instruction
 
-## Instructions outside the base ISA
+## Instructions outside the base integer ISA
 ## TODO: Test instructions in LSX/LASX/LBT/LVZ after their introduction.
+
+## Floating-Point mnemonics
+fadd.s $fa0, $fa0, $fa0
+# CHECK:   :[[#@LINE-1]]:1: error: instruction requires the following: 'F' (Single-Precision Floating-Point)
+fadd.d $fa0, $fa0, $fa0
+# CHECK:   :[[#@LINE-1]]:1: error: instruction requires the following: 'D' (Double-Precision Floating-Point)
 
 ## Using floating point registers when integer registers are expected
 sll.w $a0, $a0, $fa0
 # CHECK: :[[#@LINE-1]]:18: error: invalid operand for instruction
+
+## msbw < lsbw
+# CHECK: :[[#@LINE+1]]:21: error: msb is less than lsb
+bstrins.w $a0, $a0, 1, 2
+# CHECK:            ^~~~
+
+# CHECK: :[[#@LINE+1]]:22: error: msb is less than lsb
+bstrpick.w $a0, $a0, 30, 31
+# CHECK:             ^~~~~~

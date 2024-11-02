@@ -8,8 +8,12 @@ add_llvm_library(LLVMBOLTProfile
   YAMLProfileWriter.cpp
 
   LINK_COMPONENTS
-  BOLTCore
-  BOLTPasses
-  BOLTUtils
   Support
+  )
+
+target_link_libraries(LLVMBOLTProfile
+  PRIVATE
+  LLVMBOLTCore
+  LLVMBOLTPasses
+  LLVMBOLTUtils
   )

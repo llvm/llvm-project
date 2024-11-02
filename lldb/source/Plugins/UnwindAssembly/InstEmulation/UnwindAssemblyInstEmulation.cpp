@@ -614,6 +614,26 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
           m_curr_row->SetRegisterLocationToSame(reg_num,
                                                 false /*must_replace*/);
           m_curr_row_modified = true;
+
+          // FP has been restored to its original value, we are back
+          // to using SP to calculate the CFA.
+          if (m_fp_is_cfa) {
+            m_fp_is_cfa = false;
+            RegisterInfo sp_reg_info;
+            lldb::RegisterKind sp_reg_kind = eRegisterKindGeneric;
+            uint32_t sp_reg_num = LLDB_REGNUM_GENERIC_SP;
+            m_inst_emulator_up->GetRegisterInfo(sp_reg_kind, sp_reg_num,
+                                                sp_reg_info);
+            RegisterValue sp_reg_val;
+            if (GetRegisterValue(sp_reg_info, sp_reg_val)) {
+              m_cfa_reg_info = sp_reg_info;
+              const uint32_t cfa_reg_num =
+                  sp_reg_info.kinds[m_unwind_plan_ptr->GetRegisterKind()];
+              assert(cfa_reg_num != LLDB_INVALID_REGNUM);
+              m_curr_row->GetCFAValue().SetIsRegisterPlusOffset(
+                  cfa_reg_num, m_initial_sp - sp_reg_val.GetAsUInt64());
+            }
+          }
         }
         break;
       case EmulateInstruction::eInfoTypeISA:

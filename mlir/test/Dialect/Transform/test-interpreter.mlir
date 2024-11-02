@@ -69,3 +69,62 @@ transform.sequence {
   // expected-remark @below {{succeeded}}
   test_consume_operand_if_matches_param_or_fail %0[42]
 }
+
+// -----
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  sequence %arg0 {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = pdl_match @some in %arg1
+    test_print_remark_at_operand %0, "matched"
+  }
+
+  pdl.pattern @some : benefit(1) {
+    %0 = pdl.operation "test.some_op"
+    pdl.rewrite %0 with "transform.dialect"
+  }
+
+  pdl.pattern @other : benefit(1) {
+    %0 = pdl.operation "test.other_op"
+    pdl.rewrite %0 with "transform.dialect"
+  }
+}
+
+// expected-remark @below {{matched}}
+"test.some_op"() : () -> ()
+"test.other_op"() : () -> ()
+// expected-remark @below {{matched}}
+"test.some_op"() : () -> ()
+
+// -----
+
+// expected-remark @below {{parent function}}
+func.func @foo() {
+  %0 = arith.constant 0 : i32
+  return
+}
+
+// expected-remark @below {{parent function}}
+func.func @bar() {
+  %0 = arith.constant 0 : i32
+  %1 = arith.constant 1 : i32
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @const : benefit(1) {
+    %r = pdl.types
+    %0 = pdl.operation "arith.constant" -> (%r : !pdl.range<type>)
+    pdl.rewrite %0 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 {
+  ^bb1(%arg1: !pdl.operation):
+    %f = pdl_match @const in %arg1
+    // CHECK: %{{.+}} = get_closest_isolated_parent %{{.+}}
+    %m = get_closest_isolated_parent %f
+    test_print_remark_at_operand %m, "parent function"
+  }
+}

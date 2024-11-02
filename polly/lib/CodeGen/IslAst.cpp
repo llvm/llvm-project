@@ -828,7 +828,7 @@ INITIALIZE_PASS_END(IslAstInfoWrapperPass, "polly-ast",
 
 namespace {
 /// Print result from IslAstInfoWrapperPass.
-class IslAstInfoPrinterLegacyPass : public ScopPass {
+class IslAstInfoPrinterLegacyPass final : public ScopPass {
 public:
   static char ID;
 

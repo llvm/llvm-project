@@ -13,9 +13,9 @@
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/modules_cdb.json > %t.cdb
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/modules_cdb_clangcl.json > %t_clangcl.cdb
 //
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -mode preprocess-minimized-sources | \
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -mode preprocess-dependency-directives | \
 // RUN:   FileCheck --check-prefixes=CHECK1,CHECK2,CHECK2NO %s
-// RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 1 -mode preprocess-minimized-sources | \
+// RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 1 -mode preprocess-dependency-directives | \
 // RUN:   FileCheck --check-prefixes=CHECK1,CHECK2,CHECK2NO %s
 //
 // The output order is non-deterministic when using more than one thread,
@@ -23,17 +23,17 @@
 // as it might fail if the results for `modules_cdb_input.cpp` are reported before
 // `modules_cdb_input2.cpp`.
 //
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess-minimized-sources | \
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess-dependency-directives | \
 // RUN:   FileCheck --check-prefix=CHECK1 %s
-// RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 2 -mode preprocess-minimized-sources | \
+// RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 2 -mode preprocess-dependency-directives | \
 // RUN:   FileCheck --check-prefix=CHECK1 %s
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess | \
 // RUN:   FileCheck --check-prefix=CHECK1 %s
 // RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 2 -mode preprocess | \
 // RUN:   FileCheck --check-prefix=CHECK1 %s
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess-minimized-sources | \
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess-dependency-directives | \
 // RUN:   FileCheck --check-prefix=CHECK2 %s
-// RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 2 -mode preprocess-minimized-sources | \
+// RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 2 -mode preprocess-dependency-directives | \
 // RUN:   FileCheck --check-prefix=CHECK2 %s
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess | \
 // RUN:   FileCheck --check-prefix=CHECK2 %s

@@ -2,7 +2,7 @@
   "name": "vscode-mlir",
   "displayName": "MLIR",
   "description": "MLIR Language Extension",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://mlir.llvm.org/",
   "icon": "icon.png",
@@ -15,11 +15,15 @@
   "keywords": [
     "LLVM",
     "MLIR",
-    "PDLL"
+    "PDLL",
+    "TableGen",
+    "tblgen",
+    "tablegen"
   ],
   "activationEvents": [
     "onLanguage:mlir",
-    "onLanguage:pdll"
+    "onLanguage:pdll",
+    "onLanguage:tablegen"
   ],
   "main": "./out/extension",
   "scripts": {
@@ -75,6 +79,17 @@
           ".pdll"
         ],
         "configuration": "./pdll-language-configuration.json"
+      },
+      {
+        "id": "tablegen",
+        "aliases": [
+          "TableGen",
+          "tblgen"
+        ],
+        "extensions": [
+          ".td"
+        ],
+        "configuration": "./tablegen-language-configuration.json"
       }
     ],
     "grammars": [
@@ -91,7 +106,9 @@
           "text.html.markdown"
         ],
         "embeddedLanguages": {
-          "meta.embedded.block.mlir": "mlir"
+          "meta.embedded.block.mlir": "mlir",
+          "meta.embedded.block.pdll": "pdll",
+          "meta.embedded.block.tablegen": "tablegen"
         }
       },
       {
@@ -108,6 +125,11 @@
         "language": "pdll",
         "scopeName": "source.pdll",
         "path": "./pdll-grammar.json"
+      },
+      {
+        "language": "tablegen",
+        "scopeName": "source.tablegen",
+        "path": "./tablegen-grammar.json"
       }
     ],
     "configuration": {
@@ -123,6 +145,21 @@
           "scope": "resource",
           "type": "string",
           "description": "The file path of the mlir-pdll-lsp-server executable."
+        },
+        "mlir.pdll_compilation_databases": {
+          "scope": "resource",
+          "type": "array",
+          "description": "A list of `pdll_compile_commands.yml` database files containing information about .pdll files processed by the server."
+        },
+        "mlir.tablegen_server_path": {
+          "scope": "resource",
+          "type": "string",
+          "description": "The file path of the tblgen-lsp-server executable."
+        },
+        "mlir.tablegen_compilation_databases": {
+          "scope": "resource",
+          "type": "array",
+          "description": "A list of `tablegen_compile_commands.yml` database files containing information about .td files processed by the server."
         },
         "mlir.onSettingsChanged": {
           "type": "string",
@@ -145,7 +182,20 @@
       {
         "command": "mlir.restart",
         "title": "mlir: Restart language server"
+      },
+      {
+        "command": "mlir.viewPDLLOutput",
+        "title": "mlir-pdll: View PDLL output"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "mlir.viewPDLLOutput",
+          "group": "z_commands",
+          "when": "editorLangId == pdll"
+        }
+      ]
+    }
   }
 }

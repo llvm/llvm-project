@@ -33,6 +33,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/IPO.h"
 using namespace llvm;
 
 static cl::opt<bool> EnableRedundantCopyElimination(
@@ -45,6 +46,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
   auto *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
+  initializeRISCVMakeCompressibleOptPass(*PR);
   initializeRISCVGatherScatterLoweringPass(*PR);
   initializeRISCVMergeBaseOffsetOptPass(*PR);
   initializeRISCVSExtWRemovalPass(*PR);
@@ -80,6 +82,7 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
 
   // RISC-V supports the MachineOutliner.
   setMachineOutliner(true);
+  setSupportsDefaultOutlining(true);
 }
 
 const RISCVSubtarget *
@@ -141,6 +144,7 @@ public:
   }
 
   void addIRPasses() override;
+  bool addPreISel() override;
   bool addInstSelector() override;
   bool addIRTranslator() override;
   bool addLegalizeMachineIR() override;
@@ -167,8 +171,18 @@ void RISCVPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 }
 
+bool RISCVPassConfig::addPreISel() {
+  if (TM->getOptLevel() != CodeGenOpt::None) {
+    // Add a barrier before instruction selection so that we will not get
+    // deleted block address after enabling default outlining. See D99707 for
+    // more details.
+    addPass(createBarrierNoopPass());
+  }
+  return false;
+}
+
 bool RISCVPassConfig::addInstSelector() {
-  addPass(createRISCVISelDag(getRISCVTargetMachine()));
+  addPass(createRISCVISelDag(getRISCVTargetMachine(), getOptLevel()));
 
   return false;
 }
@@ -195,7 +209,10 @@ bool RISCVPassConfig::addGlobalInstructionSelect() {
 
 void RISCVPassConfig::addPreSched2() {}
 
-void RISCVPassConfig::addPreEmitPass() { addPass(&BranchRelaxationPassID); }
+void RISCVPassConfig::addPreEmitPass() {
+  addPass(&BranchRelaxationPassID);
+  addPass(createRISCVMakeCompressibleOptPass());
+}
 
 void RISCVPassConfig::addPreEmitPass2() {
   addPass(createRISCVExpandPseudoPass());

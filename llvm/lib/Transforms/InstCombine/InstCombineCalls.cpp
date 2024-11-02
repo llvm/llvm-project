@@ -258,6 +258,15 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
     return MI;
   }
 
+  // Remove memset with an undef value.
+  // FIXME: This is technically incorrect because it might overwrite a poison
+  // value. Change to PoisonValue once #52930 is resolved.
+  if (isa<UndefValue>(MI->getValue())) {
+    // Set the size of the copy to 0, it will be deleted on the next iteration.
+    MI->setLength(Constant::getNullValue(MI->getLength()->getType()));
+    return MI;
+  }
+
   // Extract the length and alignment and fill if they are constant.
   ConstantInt *LenC = dyn_cast<ConstantInt>(MI->getLength());
   ConstantInt *FillC = dyn_cast<ConstantInt>(MI->getValue());
@@ -1071,6 +1080,56 @@ static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
   return CallInst::Create(MinMax, { MinMaxOp, ThirdOp });
 }
 
+/// If all arguments of the intrinsic are unary shuffles with the same mask,
+/// try to shuffle after the intrinsic.
+static Instruction *
+foldShuffledIntrinsicOperands(IntrinsicInst *II,
+                              InstCombiner::BuilderTy &Builder) {
+  // TODO: This should be extended to handle other intrinsics like fshl, ctpop,
+  //       etc. Use llvm::isTriviallyVectorizable() and related to determine
+  //       which intrinsics are safe to shuffle?
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::smax:
+  case Intrinsic::smin:
+  case Intrinsic::umax:
+  case Intrinsic::umin:
+  case Intrinsic::fma:
+  case Intrinsic::fshl:
+  case Intrinsic::fshr:
+    break;
+  default:
+    return nullptr;
+  }
+
+  Value *X;
+  ArrayRef<int> Mask;
+  if (!match(II->getArgOperand(0),
+             m_Shuffle(m_Value(X), m_Undef(), m_Mask(Mask))))
+    return nullptr;
+
+  // At least 1 operand must have 1 use because we are creating 2 instructions.
+  if (none_of(II->args(), [](Value *V) { return V->hasOneUse(); }))
+    return nullptr;
+
+  // See if all arguments are shuffled with the same mask.
+  SmallVector<Value *, 4> NewArgs(II->arg_size());
+  NewArgs[0] = X;
+  Type *SrcTy = X->getType();
+  for (unsigned i = 1, e = II->arg_size(); i != e; ++i) {
+    if (!match(II->getArgOperand(i),
+               m_Shuffle(m_Value(X), m_Undef(), m_SpecificMask(Mask))) ||
+        X->getType() != SrcTy)
+      return nullptr;
+    NewArgs[i] = X;
+  }
+
+  // intrinsic (shuf X, M), (shuf Y, M), ... --> shuf (intrinsic X, Y, ...), M
+  Instruction *FPI = isa<FPMathOperator>(II) ? II : nullptr;
+  Value *NewIntrinsic =
+      Builder.CreateIntrinsic(II->getIntrinsicID(), SrcTy, NewArgs, FPI);
+  return new ShuffleVectorInst(NewIntrinsic, Mask);
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -1115,13 +1174,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Constant *NumBytes = dyn_cast<Constant>(MI->getLength())) {
       if (NumBytes->isNullValue())
         return eraseInstFromFunction(CI);
-
-      if (ConstantInt *CI = dyn_cast<ConstantInt>(NumBytes))
-        if (CI->getZExtValue() == 1) {
-          // Replace the instruction with just byte operations.  We would
-          // transform other cases to loads/stores, but we don't know if
-          // alignment is sufficient.
-        }
     }
 
     // No other transformations apply to volatile transfers.
@@ -1183,6 +1235,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   if (II->isCommutative()) {
     if (CallInst *NewCall = canonicalizeConstantArg0ToArg1(CI))
       return NewCall;
+  }
+
+  // Unused constrained FP intrinsic calls may have declared side effect, which
+  // prevents it from being removed. In some cases however the side effect is
+  // actually absent. To detect this case, call SimplifyConstrainedFPCall. If it
+  // returns a replacement, the call may be removed.
+  if (CI.use_empty() && isa<ConstrainedFPIntrinsic>(CI)) {
+    if (SimplifyConstrainedFPCall(&CI, SQ.getWithInstruction(&CI)))
+      return eraseInstFromFunction(CI);
   }
 
   Intrinsic::ID IID = II->getIntrinsicID();
@@ -1372,23 +1433,25 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::bswap: {
     Value *IIOperand = II->getArgOperand(0);
-    Value *X = nullptr;
 
     // Try to canonicalize bswap-of-logical-shift-by-8-bit-multiple as
     // inverse-shift-of-bswap:
-    // bswap (shl X, C) --> lshr (bswap X), C
-    // bswap (lshr X, C) --> shl (bswap X), C
-    // TODO: Use knownbits to allow variable shift and non-splat vector match.
-    BinaryOperator *BO;
-    if (match(IIOperand, m_OneUse(m_BinOp(BO)))) {
+    // bswap (shl X, Y) --> lshr (bswap X), Y
+    // bswap (lshr X, Y) --> shl (bswap X), Y
+    Value *X, *Y;
+    if (match(IIOperand, m_OneUse(m_LogicalShift(m_Value(X), m_Value(Y))))) {
+      // The transform allows undef vector elements, so try a constant match
+      // first. If knownbits can handle that case, that clause could be removed.
+      unsigned BitWidth = IIOperand->getType()->getScalarSizeInBits();
       const APInt *C;
-      if (match(BO, m_LogicalShift(m_Value(X), m_APIntAllowUndef(C))) &&
-          (*C & 7) == 0) {
+      if ((match(Y, m_APIntAllowUndef(C)) && (*C & 7) == 0) ||
+          MaskedValueIsZero(Y, APInt::getLowBitsSet(BitWidth, 3))) {
         Value *NewSwap = Builder.CreateUnaryIntrinsic(Intrinsic::bswap, X);
         BinaryOperator::BinaryOps InverseShift =
-            BO->getOpcode() == Instruction::Shl ? Instruction::LShr
-                                                : Instruction::Shl;
-        return BinaryOperator::Create(InverseShift, NewSwap, BO->getOperand(1));
+            cast<BinaryOperator>(IIOperand)->getOpcode() == Instruction::Shl
+                ? Instruction::LShr
+                : Instruction::Shl;
+        return BinaryOperator::Create(InverseShift, NewSwap, Y);
       }
     }
 
@@ -2620,6 +2683,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
   }
+
+  if (Instruction *Shuf = foldShuffledIntrinsicOperands(II, Builder))
+    return Shuf;
+
   // Some intrinsics (like experimental_gc_statepoint) can be used in invoke
   // context, so it is handled in visitCallBase and we should trigger it.
   return visitCallBase(*II);

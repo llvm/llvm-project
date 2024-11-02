@@ -49,6 +49,7 @@ void FdEventCreate(ThreadState *thr, uptr pc, int fd);
 void FdSignalCreate(ThreadState *thr, uptr pc, int fd);
 void FdInotifyCreate(ThreadState *thr, uptr pc, int fd);
 void FdPollCreate(ThreadState *thr, uptr pc, int fd);
+void FdPollAdd(ThreadState *thr, uptr pc, int epfd, int fd);
 void FdSocketCreate(ThreadState *thr, uptr pc, int fd);
 void FdSocketAccept(ThreadState *thr, uptr pc, int fd, int newfd);
 void FdSocketConnecting(ThreadState *thr, uptr pc, int fd);

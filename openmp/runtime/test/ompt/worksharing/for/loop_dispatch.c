@@ -9,22 +9,33 @@
 
 int main() {
   int i;
+  int wait_s = 0;
 
 #pragma omp parallel num_threads(4)
   {
+    int wait_id = 0;
+    int team_size = omp_get_num_threads();
 #pragma omp for schedule(static, WORK_SIZE / 4)
     for (i = 0; i < WORK_SIZE; i++) {}
 
 #pragma omp for schedule(dynamic)
     for (i = 0; i < WORK_SIZE; i++) {
-      // Make every iteration takes at least 1ms.
-      delay(1000);
+      if (wait_id == 0) {
+        // Wait until every thread has at least one iteration assigned
+        OMPT_SIGNAL(wait_s);
+        OMPT_WAIT(wait_s, team_size);
+        wait_id++;
+      }
     }
 
 #pragma omp for schedule(guided)
     for (i = 0; i < WORK_SIZE; i++) {
-      // Make every iteration takes at least 1ms.
-      delay(1000);
+      if (wait_id == 1) {
+        // Wait until every thread has at least one iteration assigned
+        OMPT_SIGNAL(wait_s);
+        OMPT_WAIT(wait_s, 2 * team_size);
+        wait_id++;
+      }
     }
   }
 

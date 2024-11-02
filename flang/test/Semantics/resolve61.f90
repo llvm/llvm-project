@@ -1,5 +1,5 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-program p1
+subroutine p1
   integer(8) :: a, b, c, d
   pointer(a, b)
   !ERROR: 'b' cannot be a Cray pointer as it is already a Cray pointee
@@ -8,38 +8,38 @@ program p1
   pointer(d, a)
 end
 
-program p2
+subroutine p2
   pointer(a, c)
   !ERROR: 'c' was already declared as a Cray pointee
   pointer(b, c)
 end
 
-program p3
+subroutine p3
   real a
   !ERROR: Cray pointer 'a' must have type INTEGER(8)
   pointer(a, b)
 end
 
-program p4
+subroutine p4
   implicit none
   real b
   !ERROR: No explicit type declared for 'd'
   pointer(a, b), (c, d)
 end
 
-program p5
+subroutine p5
   integer(8) a(10)
   !ERROR: Cray pointer 'a' must be a scalar
   pointer(a, b)
 end
 
-program p6
+subroutine p6
   real b(8)
   !ERROR: Array spec was already declared for 'b'
   pointer(a, b(4))
 end
 
-program p7
+subroutine p7
   !ERROR: Cray pointee 'b' must have must have explicit shape or assumed size
   pointer(a, b(:))
 contains
@@ -51,7 +51,7 @@ contains
   end
 end
 
-program p8
+subroutine p8
   integer(8), parameter :: k = 2
   type t
   end type
@@ -66,7 +66,7 @@ contains
   end
 end
 
-program p9
+subroutine p9
   integer(8), parameter :: k = 2
   type t
   end type
@@ -85,13 +85,13 @@ module m10
   integer(8) :: a
   real :: b
 end
-program p10
+subroutine p10
   use m10
   !ERROR: 'b' cannot be a Cray pointee as it is use-associated
   pointer(a, c),(d, b)
 end
 
-program p11
+subroutine p11
   pointer(a, b)
   !ERROR: PARAMETER attribute not allowed on 'a'
   parameter(a=2)
@@ -99,7 +99,7 @@ program p11
   parameter(b=3)
 end
 
-program p12
+subroutine p12
   type t1
     sequence
     real c1

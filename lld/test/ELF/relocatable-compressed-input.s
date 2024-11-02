@@ -24,10 +24,10 @@
 # CHECK-NEXT:   AddressAlignment: 1
 # CHECK-NEXT:   EntrySize: 1
 # CHECK-NEXT:   SectionData (
-# CHECK-NEXT:     0000: {{.*}}  |long unsigned in|
-# CHECK-NEXT:     0010: {{.*}}  |t.unsigned char.|
-# CHECK-NEXT:     0020: {{.*}}  |unsigned int.cha|
-# CHECK-NEXT:     0030: {{.*}}  |r.short unsigned|
+# CHECK-NEXT:     0000: {{.*}}  |unsigned int.cha|
+# CHECK-NEXT:     0010: {{.*}}  |r.unsigned char.|
+# CHECK-NEXT:     0020: {{.*}}  |short unsigned i|
+# CHECK-NEXT:     0030: {{.*}}  |nt.long unsigned|
 # CHECK-NEXT:     0040: {{.*}}  | int.|
 # CHECK-NEXT:   )
 # CHECK-NEXT: }

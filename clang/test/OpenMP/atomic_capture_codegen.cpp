@@ -216,20 +216,8 @@ int main(void) {
 #pragma omp atomic capture
   llv = ullx |= ullv;
 // CHECK: [[EXPR:%.+]] = load float, float* @{{.+}},
-// CHECK: [[X:%.+]] = load atomic i32, i32*  bitcast (float* [[X_ADDR:@.+]] to i32*) monotonic, align 4
-// CHECK: br label %[[CONT:.+]]
-// CHECK: [[CONT]]
-// CHECK: [[EXPECTED:%.+]] = phi i32 [ [[X]], %{{.+}} ], [ [[OLD_X:%.+]], %[[CONT]] ]
-// CHECK: [[TEMP_I:%.+]] = bitcast float* [[TEMP:%.+]] to i32*
-// CHECK: [[OLD:%.+]] = bitcast i32 [[EXPECTED]] to float
+// CHECK: [[OLD:%.+]] = atomicrmw fadd float* @{{.+}}, float [[EXPR]] monotonic, align 4
 // CHECK: [[ADD:%.+]] = fadd float [[OLD]], [[EXPR]]
-// CHECK: store float [[ADD]], float* [[TEMP]],
-// CHECK: [[DESIRED:%.+]] = load i32, i32* [[TEMP_I]],
-// CHECK: [[RES:%.+]] = cmpxchg i32* bitcast (float* [[X_ADDR]] to i32*), i32 [[EXPECTED]], i32 [[DESIRED]] monotonic monotonic, align 4
-// CHECK: [[OLD_X:%.+]] = extractvalue { i32, i1 } [[RES]], 0
-// CHECK: [[SUCCESS_FAIL:%.+]] = extractvalue { i32, i1 } [[RES]], 1
-// CHECK: br i1 [[SUCCESS_FAIL]], label %[[EXIT:.+]], label %[[CONT]]
-// CHECK: [[EXIT]]
 // CHECK: [[CAST:%.+]] = fpext float [[ADD]] to double
 // CHECK: store double [[CAST]], double* @{{.+}},
 #pragma omp atomic capture

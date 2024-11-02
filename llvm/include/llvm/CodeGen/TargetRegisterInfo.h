@@ -55,6 +55,8 @@ public:
   const LaneBitmask LaneMask;
   /// Classes with a higher priority value are assigned first by register
   /// allocators using a greedy heuristic. The value is in the range [0,63].
+  /// Values >= 32 should be used with care since they may overlap with other
+  /// fields in the allocator's priority heuristics.
   const uint8_t AllocationPriority;
   /// Configurable target specific flags.
   const uint8_t TSFlags;
@@ -1073,6 +1075,14 @@ public:
   virtual bool
   shouldUseDeferredSpillingForVirtReg(const MachineFunction &MF,
                                       const LiveInterval &VirtReg) const {
+    return false;
+  }
+
+  /// When prioritizing live ranges in register allocation, if this hook returns
+  /// true then the AllocationPriority of the register class will be treated as
+  /// more important than whether the range is local to a basic block or global.
+  virtual bool
+  regClassPriorityTrumpsGlobalness(const MachineFunction &MF) const {
     return false;
   }
 

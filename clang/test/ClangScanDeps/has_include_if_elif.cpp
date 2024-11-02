@@ -10,7 +10,7 @@
 // RUN: cp %S/Inputs/header.h %t.dir/Inputs/header4.h
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/has_include_if_elif.json > %t.cdb
 //
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -mode preprocess-minimized-sources | \
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -mode preprocess-dependency-directives | \
 // RUN:   FileCheck %s
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -mode preprocess | \
 // RUN:   FileCheck %s

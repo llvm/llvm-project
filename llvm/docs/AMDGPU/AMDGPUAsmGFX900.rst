@@ -6,7 +6,7 @@
     **************************************************
 
 ====================================================================================
-Syntax of gfx900, gfx902 and gfx909 Instructions
+Syntax of gfx900, gfx902, gfx909 and gfx90c Instructions
 ====================================================================================
 
 .. contents::
@@ -15,9 +15,9 @@ Syntax of gfx900, gfx902 and gfx909 Instructions
 Introduction
 ============
 
-This document describes the syntax of *instructions specific to gfx900, gfx902 and gfx909*.
+This document describes the syntax of *instructions specific to gfx900, gfx902, gfx909 and gfx90c*.
 
-For a description of other gfx900, gfx902 and gfx909 instructions see :doc:`Syntax of Core GFX9 Instructions<AMDGPUAsmGFX9>`.
+For a description of other gfx900, gfx902, gfx909 and gfx90c instructions see :doc:`Syntax of Core GFX9 Instructions<AMDGPUAsmGFX9>`.
 
 Notation
 ========

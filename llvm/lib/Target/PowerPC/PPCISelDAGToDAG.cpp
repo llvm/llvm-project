@@ -4646,7 +4646,8 @@ static bool mayUseP9Setb(SDNode *N, const ISD::CondCode &CC, SelectionDAG *DAG,
 static bool isSWTestOp(SDValue N) {
   if (N.getOpcode() == PPCISD::FTSQRT)
     return true;
-  if (N.getNumOperands() < 1 || !isa<ConstantSDNode>(N.getOperand(0)))
+  if (N.getNumOperands() < 1 || !isa<ConstantSDNode>(N.getOperand(0)) ||
+      N.getOpcode() != ISD::INTRINSIC_WO_CHAIN)
     return false;
   switch (N.getConstantOperandVal(0)) {
   case Intrinsic::ppc_vsx_xvtdivdp:

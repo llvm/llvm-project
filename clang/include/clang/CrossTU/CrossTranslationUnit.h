@@ -197,6 +197,14 @@ public:
   getMacroExpansionContextForSourceLocation(
       const clang::SourceLocation &ToLoc) const;
 
+  /// Returns true if the given Decl is newly created during the import.
+  bool isImportedAsNew(const Decl *ToDecl) const;
+
+  /// Returns true if the given Decl is mapped (or created) during an import
+  /// but there was an unrecoverable error (the AST node cannot be erased, it
+  /// is marked with an Error object in this case).
+  bool hasError(const Decl *ToDecl) const;
+
 private:
   void lazyInitImporterSharedSt(TranslationUnitDecl *ToTU);
   ASTImporter &getOrCreateASTImporter(ASTUnit *Unit);

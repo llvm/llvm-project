@@ -8,7 +8,7 @@ A A
 // RUN: %clang -### -E -dD %s 2>&1 | FileCheck --check-prefix=CHECK-dD %s
 // RUN: %clang -### -E -dM %s 2>&1 | FileCheck --check-prefix=CHECK-dM %s
 // RUN: %clang -### -E -dI %s 2>&1 | FileCheck --check-prefix=CHECK-dI %s
-// CHECK-dD: clang{{.*}} "-cc1" {{.*}} "-dD"
-// CHECK-dM: clang{{.*}} "-cc1" {{.*}} "-dM"
-// CHECK-dI: clang{{.*}} "-cc1" {{.*}} "-dI"
+// CHECK-dD: "-cc1" {{.*}} "-dD"
+// CHECK-dM: "-cc1" {{.*}} "-dM"
+// CHECK-dI: "-cc1" {{.*}} "-dI"
 

@@ -107,13 +107,13 @@ public:
   /// Get the target system's VM page size in bytes.
   /// \return
   ///     0 is returned if this information is unavailable.
-  int GetPageSize() { return m_pagesize; }
+  int GetPageSize() const { return m_pagesize; }
 
   /// Get a vector of target VM pages that are dirty -- that have been
   /// modified -- within this memory region.  This is an Optional return
   /// value; it will only be available if the remote stub was able to
   /// detail this.
-  llvm::Optional<std::vector<lldb::addr_t>> &GetDirtyPageList() {
+  const llvm::Optional<std::vector<lldb::addr_t>> &GetDirtyPageList() const {
     return m_dirty_pages;
   }
 

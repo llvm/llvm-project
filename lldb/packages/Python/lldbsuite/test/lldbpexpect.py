@@ -24,15 +24,20 @@ class PExpectTest(TestBase):
         self.child.expect_exact(self.PROMPT)
 
     def launch(self, executable=None, extra_args=None, timeout=60,
-               dimensions=None, run_under=None, post_spawn=None):
+               dimensions=None, run_under=None, post_spawn=None,
+               use_colors=False):
         logfile = getattr(sys.stdout, 'buffer',
                             sys.stdout) if self.TraceOn() else None
 
         args = []
         if run_under is not None:
             args += run_under
-        args += [lldbtest_config.lldbExec, '--no-lldbinit', '--no-use-colors']
+        args += [lldbtest_config.lldbExec, '--no-lldbinit']
+        if not use_colors:
+            args.append('--no-use-colors')
         for cmd in self.setUpCommands():
+            if "use-color false" in cmd and use_colors:
+                continue
             args += ['-O', cmd]
         if executable is not None:
             args += ['--file', executable]
@@ -54,6 +59,8 @@ class PExpectTest(TestBase):
             post_spawn()
         self.expect_prompt()
         for cmd in self.setUpCommands():
+            if "use-color false" in cmd and use_colors:
+                continue
             self.child.expect_exact(cmd)
             self.expect_prompt()
         if executable is not None:

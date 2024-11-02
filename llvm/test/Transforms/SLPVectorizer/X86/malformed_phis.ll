@@ -12,23 +12,25 @@ define void @test() #0 {
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ undef, [[BB1]] ], [ undef, [[BB:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP18:%.*]], [[BB1]] ], [ undef, [[BB]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 undef, [[TMP]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP3]], [[TMP]]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP4]], [[TMP]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP5]], [[TMP]]
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP6]], [[TMP]]
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i32 [[TMP7]], [[TMP]]
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i32 [[TMP8]], [[TMP]]
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], [[TMP]]
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[TMP10]], [[TMP]]
-; CHECK-NEXT:    [[TMP12:%.*]] = mul i32 [[TMP11]], [[TMP]]
-; CHECK-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], [[TMP]]
-; CHECK-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP13]], [[TMP]]
-; CHECK-NEXT:    [[TMP15:%.*]] = mul i32 [[TMP14]], [[TMP]]
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i32 [[TMP15]], [[TMP]]
-; CHECK-NEXT:    [[TMP17:%.*]] = mul i32 [[TMP16]], [[TMP]]
-; CHECK-NEXT:    [[TMP18]] = mul i32 [[TMP17]], [[TMP]]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[OP_RDX:%.*]], [[BB1]] ], [ undef, [[BB]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i32> poison, i32 [[TMP]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i32> [[TMP0]], i32 [[TMP]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i32> [[TMP1]], i32 [[TMP]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i32> [[TMP2]], i32 [[TMP]], i32 3
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i32> [[TMP3]], i32 [[TMP]], i32 4
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x i32> [[TMP4]], i32 [[TMP]], i32 5
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x i32> [[TMP5]], i32 [[TMP]], i32 6
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i32> [[TMP6]], i32 [[TMP]], i32 7
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x i32> [[TMP7]], i32 [[TMP]], i32 8
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i32> [[TMP8]], i32 [[TMP]], i32 9
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i32> [[TMP9]], i32 [[TMP]], i32 10
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <16 x i32> [[TMP10]], i32 [[TMP]], i32 11
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <16 x i32> [[TMP11]], i32 [[TMP]], i32 12
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <16 x i32> [[TMP12]], i32 [[TMP]], i32 13
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x i32> [[TMP13]], i32 [[TMP]], i32 14
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x i32> [[TMP14]], i32 [[TMP]], i32 15
+; CHECK-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.mul.v16i32(<16 x i32> [[TMP15]])
+; CHECK-NEXT:    [[OP_RDX]] = mul i32 [[TMP16]], undef
 ; CHECK-NEXT:    br label [[BB1]]
 ;
 bb:
@@ -63,23 +65,19 @@ define void @test_2(i8 addrspace(1)* %arg, i32 %arg1) #0 {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ undef, [[BB:%.*]] ], [ undef, [[BB2]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ 0, [[BB]] ], [ undef, [[BB2]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP]], undef
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 undef, [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 undef, [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = add i32 undef, [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = add i32 undef, [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = add i32 undef, [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = add i32 undef, [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = add i32 [[TMP]], [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = add i32 undef, [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[TMP]], [[TMP17]]
-; CHECK-NEXT:    [[TMP19:%.*]] = add i32 undef, [[TMP18]]
-; CHECK-NEXT:    call void @use(i32 [[TMP19]])
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> poison, i32 [[TMP]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> [[TMP0]], i32 [[TMP]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> [[TMP1]], i32 [[TMP]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[TMP]], i32 3
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[TMP]], i32 4
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[TMP]], i32 5
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[TMP]], i32 6
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[TMP]], i32 7
+; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> undef)
+; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP7]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i32 [[OP_RDX]], undef
+; CHECK-NEXT:    call void @use(i32 [[OP_RDX1]])
 ; CHECK-NEXT:    br label [[BB2]]
 ;
 bb:
@@ -106,6 +104,156 @@ bb2:                                              ; preds = %bb2, %bb
   %tmp19 = add i32 undef, %tmp18
   call void @use(i32 %tmp19)
   br label %bb2
+}
+
+; Make sure we don't crash.
+define i64 @test_3() #0 {
+; CHECK-LABEL: @test_3(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ undef, [[BB1]] ], [ poison, [[BB2:%.*]] ]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <8 x i32> [[SHUFFLE]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i32> poison, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i32> [[TMP2]], i32 [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x i32> [[TMP3]], i32 [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x i32> [[TMP4]], i32 [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x i32> [[TMP5]], i32 [[TMP1]], i32 4
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i32> [[TMP6]], i32 [[TMP1]], i32 5
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x i32> [[TMP7]], i32 [[TMP1]], i32 6
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i32> [[TMP8]], i32 [[TMP1]], i32 7
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i32> [[TMP9]], i32 [[TMP1]], i32 8
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <16 x i32> [[TMP10]], i32 [[TMP1]], i32 9
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <16 x i32> [[TMP11]], i32 [[TMP1]], i32 10
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <16 x i32> [[TMP12]], i32 [[TMP1]], i32 11
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x i32> [[TMP13]], i32 [[TMP1]], i32 12
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x i32> [[TMP14]], i32 [[TMP1]], i32 13
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <16 x i32> [[TMP15]], i32 [[TMP1]], i32 14
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <16 x i32> [[TMP16]], i32 [[TMP1]], i32 15
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <32 x i32> poison, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <32 x i32> [[TMP18]], i32 [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <32 x i32> [[TMP19]], i32 [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <32 x i32> [[TMP20]], i32 [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <32 x i32> [[TMP21]], i32 [[TMP1]], i32 4
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <32 x i32> [[TMP22]], i32 [[TMP1]], i32 5
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <32 x i32> [[TMP23]], i32 [[TMP1]], i32 6
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <32 x i32> [[TMP24]], i32 [[TMP1]], i32 7
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <32 x i32> [[TMP25]], i32 [[TMP1]], i32 8
+; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <32 x i32> [[TMP26]], i32 [[TMP1]], i32 9
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <32 x i32> [[TMP27]], i32 [[TMP1]], i32 10
+; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <32 x i32> [[TMP28]], i32 [[TMP1]], i32 11
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <32 x i32> [[TMP29]], i32 [[TMP1]], i32 12
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <32 x i32> [[TMP30]], i32 [[TMP1]], i32 13
+; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <32 x i32> [[TMP31]], i32 [[TMP1]], i32 14
+; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <32 x i32> [[TMP32]], i32 [[TMP1]], i32 15
+; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <32 x i32> [[TMP33]], i32 [[TMP1]], i32 16
+; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <32 x i32> [[TMP34]], i32 [[TMP1]], i32 17
+; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <32 x i32> [[TMP35]], i32 [[TMP1]], i32 18
+; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <32 x i32> [[TMP36]], i32 [[TMP1]], i32 19
+; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <32 x i32> [[TMP37]], i32 [[TMP1]], i32 20
+; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <32 x i32> [[TMP38]], i32 [[TMP1]], i32 21
+; CHECK-NEXT:    [[TMP40:%.*]] = insertelement <32 x i32> [[TMP39]], i32 [[TMP1]], i32 22
+; CHECK-NEXT:    [[TMP41:%.*]] = insertelement <32 x i32> [[TMP40]], i32 [[TMP1]], i32 23
+; CHECK-NEXT:    [[TMP42:%.*]] = insertelement <32 x i32> [[TMP41]], i32 [[TMP1]], i32 24
+; CHECK-NEXT:    [[TMP43:%.*]] = insertelement <32 x i32> [[TMP42]], i32 [[TMP1]], i32 25
+; CHECK-NEXT:    [[TMP44:%.*]] = insertelement <32 x i32> [[TMP43]], i32 [[TMP1]], i32 26
+; CHECK-NEXT:    [[TMP45:%.*]] = insertelement <32 x i32> [[TMP44]], i32 [[TMP1]], i32 27
+; CHECK-NEXT:    [[TMP46:%.*]] = insertelement <32 x i32> [[TMP45]], i32 [[TMP1]], i32 28
+; CHECK-NEXT:    [[TMP47:%.*]] = insertelement <32 x i32> [[TMP46]], i32 [[TMP1]], i32 29
+; CHECK-NEXT:    [[TMP48:%.*]] = insertelement <32 x i32> [[TMP47]], i32 [[TMP1]], i32 30
+; CHECK-NEXT:    [[TMP49:%.*]] = insertelement <32 x i32> [[TMP48]], i32 [[TMP1]], i32 31
+; CHECK-NEXT:    [[TMP50:%.*]] = call i32 @llvm.vector.reduce.mul.v32i32(<32 x i32> [[TMP49]])
+; CHECK-NEXT:    [[TMP51:%.*]] = call i32 @llvm.vector.reduce.mul.v16i32(<16 x i32> [[TMP17]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = mul i32 [[TMP50]], [[TMP51]]
+; CHECK-NEXT:    [[TMP52:%.*]] = call i32 @llvm.vector.reduce.mul.v8i32(<8 x i32> [[SHUFFLE]])
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = mul i32 [[OP_RDX]], [[TMP52]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = mul i32 [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = mul i32 [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    [[OP_RDX4:%.*]] = mul i32 [[OP_RDX2]], [[OP_RDX3]]
+; CHECK-NEXT:    [[OP_RDX5:%.*]] = mul i32 [[OP_RDX1]], [[OP_RDX4]]
+; CHECK-NEXT:    [[VAL64:%.*]] = add i32 undef, [[OP_RDX5]]
+; CHECK-NEXT:    [[VAL65:%.*]] = sext i32 [[VAL64]] to i64
+; CHECK-NEXT:    ret i64 [[VAL65]]
+;
+bb:
+  br label %bb1
+
+bb1:                                              ; preds = %bb
+  br label %bb3
+
+bb2:                                              ; No predecessors!
+  br label %bb3
+
+bb3:                                              ; preds = %bb2, %bb1
+  %val = phi i32 [ undef, %bb1 ], [ undef, %bb2 ]
+  %val4 = phi i32 [ undef, %bb1 ], [ undef, %bb2 ]
+  %val5 = mul i32 %val, %val4
+  %val6 = mul i32 %val5, %val4
+  %val7 = mul i32 %val6, %val4
+  %val8 = mul i32 %val7, %val4
+  %val9 = mul i32 %val8, %val4
+  %val10 = mul i32 %val9, %val4
+  %val11 = mul i32 %val10, %val4
+  %val12 = mul i32 %val11, %val4
+  %val13 = mul i32 %val12, %val4
+  %val14 = mul i32 %val13, %val4
+  %val15 = mul i32 %val14, %val4
+  %val16 = mul i32 %val15, %val4
+  %val17 = mul i32 %val16, %val4
+  %val18 = mul i32 %val17, %val4
+  %val19 = mul i32 %val18, %val4
+  %val20 = mul i32 %val19, %val4
+  %val21 = mul i32 %val20, %val4
+  %val22 = mul i32 %val21, %val4
+  %val23 = mul i32 %val22, %val4
+  %val24 = mul i32 %val23, %val4
+  %val25 = mul i32 %val24, %val4
+  %val26 = mul i32 %val25, %val4
+  %val27 = mul i32 %val26, %val4
+  %val28 = mul i32 %val27, %val4
+  %val29 = mul i32 %val28, %val4
+  %val30 = mul i32 %val29, %val4
+  %val31 = mul i32 %val30, %val4
+  %val32 = mul i32 %val31, %val4
+  %val33 = mul i32 %val32, %val4
+  %val34 = mul i32 %val33, %val4
+  %val35 = mul i32 %val34, %val4
+  %val36 = mul i32 %val35, %val4
+  %val37 = mul i32 %val36, %val4
+  %val38 = mul i32 %val37, %val4
+  %val39 = mul i32 %val38, %val4
+  %val40 = mul i32 %val39, %val4
+  %val41 = mul i32 %val40, %val4
+  %val42 = mul i32 %val41, %val4
+  %val43 = mul i32 %val42, %val4
+  %val44 = mul i32 %val43, %val4
+  %val45 = mul i32 %val44, %val4
+  %val46 = mul i32 %val45, %val4
+  %val47 = mul i32 %val46, %val4
+  %val48 = mul i32 %val47, %val4
+  %val49 = mul i32 %val48, %val4
+  %val50 = mul i32 %val49, %val4
+  %val51 = mul i32 %val50, %val4
+  %val52 = mul i32 %val51, %val4
+  %val53 = mul i32 %val52, %val4
+  %val54 = mul i32 %val53, %val4
+  %val55 = mul i32 %val54, %val4
+  %val56 = mul i32 %val55, %val4
+  %val57 = mul i32 %val56, %val4
+  %val58 = mul i32 %val57, %val4
+  %val59 = mul i32 %val58, %val4
+  %val60 = mul i32 %val59, %val4
+  %val61 = mul i32 %val60, %val4
+  %val62 = mul i32 %val61, %val4
+  %val63 = mul i32 %val62, %val4
+  %val64 = add i32 undef, %val63
+  %val65 = sext i32 %val64 to i64
+  ret i64 %val65
 }
 
 declare void @use(i32) #0

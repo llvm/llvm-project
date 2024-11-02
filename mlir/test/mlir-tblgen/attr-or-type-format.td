@@ -162,6 +162,17 @@ def AttrC : TestAttr<"TestF"> {
   let assemblyFormat = "params";
 }
 
+/// Test attribute with self type parameter
+
+// ATTR: TestGAttr::parse
+// ATTR:   return TestGAttr::get
+// ATTR:     odsType
+def AttrD : TestAttr<"TestG"> {
+  let parameters = (ins "int":$a, AttributeSelfTypeParameter<"">:$type);
+  let mnemonic = "attr_d";
+  let assemblyFormat = "$a";
+}
+
 /// Test type parser and printer that mix variables and struct are generated
 /// correctly.
 

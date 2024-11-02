@@ -11,11 +11,10 @@ define i32 @foo(i16 signext %0, i32 %1, i32* nocapture %2) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    incl %edi
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andl $65527, %eax # imm = 0xFFF7
-; CHECK-NEXT:    movl %eax, (%rdx)
+; CHECK-NEXT:    andl $65527, %edi # imm = 0xFFF7
+; CHECK-NEXT:    movl %edi, (%rdx)
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb $-9, %dil
+; CHECK-NEXT:    testb %dil, %dil
 ; CHECK-NEXT:    cmovel %esi, %eax
 ; CHECK-NEXT:    retq
   %4 = add i16 %0, 1

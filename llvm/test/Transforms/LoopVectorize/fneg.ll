@@ -1,4 +1,4 @@
-; RUN: opt %s -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
+; RUN: opt %s -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
 
 define void @foo(float* %a, i64 %n) {
 ; CHECK:       vector.body:

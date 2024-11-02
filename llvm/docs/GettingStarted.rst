@@ -48,7 +48,7 @@ This is an example workflow and configuration to get and build the LLVM source:
    * ``cd llvm-project``
    * ``mkdir build``
    * ``cd build``
-   * ``cmake -G <generator> [options] ../llvm``
+   * ``cmake -G <generator> -DCMAKE_BUILD_TYPE=<type> [options] ../llvm``
 
      Some common build system generators are:
 
@@ -72,8 +72,11 @@ This is an example workflow and configuration to get and build the LLVM source:
        pathname of where you want the LLVM tools and libraries to be installed
        (default ``/usr/local``).
 
-     * ``-DCMAKE_BUILD_TYPE=type`` --- Valid options for *type* are Debug,
-       Release, RelWithDebInfo, and MinSizeRel. Default is Debug.
+     * ``-DCMAKE_BUILD_TYPE=type`` --- Controls optimization level and debug information
+       of the build. The default value is ``Debug`` which fits people who want
+       to work on LLVM or its libraries. ``Release`` is a better fit for most
+       users of LLVM and Clang. For more detailed information see
+       :ref:`CMAKE_BUILD_TYPE <cmake_build_type>`.
 
      * ``-DLLVM_ENABLE_ASSERTIONS=On`` --- Compile with assertion checks enabled
        (default is Yes for Debug builds, No for all other build types).
@@ -662,7 +665,7 @@ To configure LLVM, follow these steps:
 
    .. code-block:: console
 
-     % cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX=/install/path
+     % cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=<type> -DCMAKE_INSTALL_PREFIX=/install/path
        [other options] SRC_ROOT
 
 Compiling the LLVM Suite Source Code
@@ -674,7 +677,7 @@ invocation:
 
    .. code-block:: console
 
-     % cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=type SRC_ROOT
+     % cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=<type> -DCMAKE_BUILD_TYPE=type SRC_ROOT
 
 Between runs, CMake preserves the values set for all options. CMake has the
 following build types defined:
@@ -781,7 +784,7 @@ platforms or configurations using the same source tree.
 
   .. code-block:: console
 
-    % cmake -G "Unix Makefiles" SRC_ROOT
+    % cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release SRC_ROOT
 
 The LLVM build will create a structure underneath *OBJ_ROOT* that matches the
 LLVM source tree. At each level where source files are present in the source
@@ -1185,15 +1188,9 @@ following options with cmake:
    you may want to use the gold linker as a faster alternative to GNU ld.
 
  * -DCMAKE_BUILD_TYPE
-
-    - Debug --- This is the default build type. This disables optimizations while
-      compiling LLVM and enables debug info. On ELF-based platforms (e.g. Linux)
-      linking with debug info may consume a large amount of memory.
-
-    - Release --- Turns on optimizations and disables debug info. Combining the
-      Release build type with -DLLVM_ENABLE_ASSERTIONS=ON may be a good trade-off
-      between speed and debugability during development, particularly for running
-      the test suite.
+   Controls optimization level and debug information of the build.  This setting
+   can affect RAM and disk usage, see :ref:`CMAKE_BUILD_TYPE <cmake_build_type>`
+   for more information.
 
  * -DLLVM_ENABLE_ASSERTIONS
    This option defaults to ON for Debug builds and defaults to OFF for Release

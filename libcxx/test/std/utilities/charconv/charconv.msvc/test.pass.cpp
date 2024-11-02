@@ -13,9 +13,9 @@
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0}}
 
 // steady_clock requires threads.
-// UNSUPPORTED: libcpp-has-no-threads
-// UNSUPPORTED: libcpp-has-no-random-device
-// UNSUPPORTED: libcpp-has-no-localization
+// UNSUPPORTED: no-threads
+// UNSUPPORTED: no-random-device
+// UNSUPPORTED: no-localization
 
 // XFAIL: LIBCXX-AIX-FIXME
 

@@ -21,6 +21,7 @@
 // RUN: not %clang -cl-std=invalid -DOPENCL %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID %s
 // RUN: %clang -S -### -target spir-unknown-unknown %s 2>&1 | FileCheck --check-prefix=CHECK-W-SPIR-COMPAT %s
 // RUN: %clang -S -### -target amdgcn-amd-amdhsa-opencl %s 2>&1 | FileCheck --check-prefix=CHECK-NO-W-SPIR-COMPAT %s
+// RUN: %clang -S -### -cl-ext="+test_ext" %s 2>&1 | FileCheck --check-prefix=CHECK-EXT %s
 
 // CHECK-CL: "-cc1" {{.*}} "-cl-std=CL"
 // CHECK-CL10: "-cc1" {{.*}} "-cl-std=CL1.0"
@@ -49,5 +50,7 @@
 
 // CHECK-W-SPIR-COMPAT: "-Wspir-compat"
 // CHECK-NO-W-SPIR-COMPAT-NOT: "-Wspir-compat"
+
+// CHECK-EXT: "-cc1" {{.*}} "-cl-ext=+test_ext"
 
 kernel void func(void);

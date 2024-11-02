@@ -66,6 +66,44 @@ void GenericCycle<ContextT>::getExitBlocks(
   }
 }
 
+template <typename ContextT>
+auto GenericCycle<ContextT>::getCyclePreheader() const -> BlockT * {
+  BlockT *Predecessor = getCyclePredecessor();
+  if (!Predecessor)
+    return nullptr;
+
+  assert(isReducible() && "Cycle Predecessor must be in a reducible cycle!");
+
+  if (succ_size(Predecessor) != 1)
+    return nullptr;
+
+  // Make sure we are allowed to hoist instructions into the predecessor.
+  if (!Predecessor->isLegalToHoistInto())
+    return nullptr;
+
+  return Predecessor;
+}
+
+template <typename ContextT>
+auto GenericCycle<ContextT>::getCyclePredecessor() const -> BlockT * {
+  if (!isReducible())
+    return nullptr;
+
+  BlockT *Out = nullptr;
+
+  // Loop over the predecessors of the header node...
+  BlockT *Header = getHeader();
+  for (const auto Pred : predecessors(Header)) {
+    if (!contains(Pred)) {
+      if (Out && Out != Pred)
+        return nullptr;
+      Out = Pred;
+    }
+  }
+
+  return Out;
+}
+
 /// \brief Helper class for computing cycle information.
 template <typename ContextT> class GenericCycleInfoCompute {
   using BlockT = typename ContextT::BlockT;
@@ -326,6 +364,19 @@ auto GenericCycleInfo<ContextT>::getCycle(const BlockT *Block) const
   return nullptr;
 }
 
+/// \brief get the depth for the cycle which containing a given block.
+///
+/// \returns the depth for the innermost cycle containing \p Block or 0 if it is
+///          not contained in any cycle.
+template <typename ContextT>
+unsigned GenericCycleInfo<ContextT>::getCycleDepth(const BlockT *Block) const {
+  CycleT *Cycle = getCycle(Block);
+  if (!Cycle)
+    return 0;
+  return Cycle->getDepth();
+}
+
+#ifndef NDEBUG
 /// \brief Validate the internal consistency of the cycle tree.
 ///
 /// Note that this does \em not check that cycles are really cycles in the CFG,
@@ -391,6 +442,7 @@ bool GenericCycleInfo<ContextT>::validateTree() const {
 
   return true;
 }
+#endif
 
 /// \brief Print the cycle info.
 template <typename ContextT>

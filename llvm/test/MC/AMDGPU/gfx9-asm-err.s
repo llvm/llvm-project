@@ -32,3 +32,12 @@ v_subrev_u16_e64 v5, v1, -4.0
 
 v_cvt_u32_f64 v5, v[0:1] quad_perm:[0,2,1,1] row_mask:0xf bank_mask:0xf
 // GFX9ERR: error: not a valid operand.
+
+global_load_lds_dword v[2:3], off
+// GFX9ERR: error: instruction not supported on this GPU
+
+global_load_dword v[2:3], off
+// GFX9ERR: error: invalid operands for instruction
+
+scratch_load_dword v2, off, offset:256
+// GFX9ERR: error: invalid operands for instruction

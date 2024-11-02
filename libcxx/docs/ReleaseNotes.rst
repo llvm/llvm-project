@@ -42,17 +42,32 @@ New Features
 
 - Implemented P1165R1 (Make stateful allocator propagation more consistent for ``operator+(basic_string)``)
 
-- Implemented P0674R1 (Support arrays in make_shared and allocate_shared)
+- Implemented P0674R1 (Support arrays in ``make_shared`` and ``allocate_shared``)
+
+- Implemented P0980R1 (Making ``std::string`` constexpr)
+
+- Marked the following papers as "Complete" (note that some of those might have
+  been implemented in a previous release but not marked as such):
+
+    - P1207R4 (Movability of Single-pass Iterators);
+    - P1474R1 (Helpful pointers for ``ContiguousIterator``);
+    - P1522R1 (Iterator Difference Type and Integer Overflow);
+    - P1523R1 (Views and Size Types);
+    - P1456R1 (Move-only views);
+    - P1870R1 (``forwarding-range`` is too subtle);
+    - P1878R1 (Constraining Readable Types);
+    - P1970R2 (Consistency for ``size()`` functions: Add ``ranges::ssize``);
+    - P1983R0 (Wording for GB301, US296, US292, US291, and US283).
 
 - `pop_heap` now uses an algorithm known as "bottom-up heapsort" or
   "heapsort with bounce" to reduce the number of comparisons, and rearranges
   elements using move-assignment instead of `swap`.
 
- - Libc++ now supports a variety of assertions that can be turned on to help catch
-   undefined behavior in user code. This new support is now separate from the old
-   (and incomplete) Debug Mode. Vendors can select whether the library they ship
-   should include assertions or not by default. For details, see
-   :ref:`the documentation <assertions-mode>` about this new feature.
+- Libc++ now supports a variety of assertions that can be turned on to help catch
+  undefined behavior in user code. This new support is now separate from the old
+  (and incomplete) Debug Mode. Vendors can select whether the library they ship
+  should include assertions or not by default. For details, see
+  :ref:`the documentation <assertions-mode>` about this new feature.
 
 API Changes
 -----------
@@ -67,10 +82,15 @@ API Changes
   ``<filesystem>`` header. The associated macro
   ``_LIBCPP_DEPRECATED_EXPERIMENTAL_FILESYSTEM`` has also been removed.
 
-- Some libc++ headers no longer transitively include all of ``<algorithm>``, ``<chrono>`` and ``<utility>``.
-  If, after updating libc++, you see compiler errors related to missing declarations in
-  namespace ``std``, it might be because one of your source files now needs to
-  ``#include <algorithm>``, ``#include <chrono>`` and/or ``#include <utility>``.
+- Some libc++ headers no longer transitively include all of:
+    - ``<algorithm>``
+    - ``<chrono>``
+    - ``<functional>``
+    - ``<utility>``
+
+  If, after updating libc++, you see compiler errors related to missing declarations
+  in namespace ``std``, it might be because one of your source files now needs to
+  include one or more of the headers listed above.
 
 - The integer distributions ``binomial_distribution``, ``discrete_distribution``,
   ``geometric_distribution``, ``negative_binomial_distribution``, ``poisson_distribution``,
@@ -86,6 +106,9 @@ API Changes
   supported anymore. Please migrate to using the new support for
   :ref:`assertions <assertions-mode>` instead.
 
+- ``vector<bool>::const_reference``, ``vector<bool>::const_iterator::reference``
+  and ``bitset::const_reference`` are now aliases for `bool` in the unstable ABI.
+
 ABI Changes
 -----------
 
@@ -93,6 +116,11 @@ ABI Changes
   emulation for ``std::nullptr_t`` in C++03 mode has been removed. After this change,
   ``_LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION`` will not be honoured anymore and there
   will be no way to opt back into the C++03 emulation of ``std::nullptr_t``.
+
+- On FreeBSD, NetBSD, DragonFlyBSD and Solaris, ``std::random_device`` is now implemented on
+  top of ``arc4random()`` instead of reading from ``/dev/urandom``. Any implementation-defined
+  token used when constructing a ``std::random_device`` will now be ignored instead of
+  interpreted as a file to read entropy from.
 
 Build System Changes
 --------------------
@@ -120,7 +148,8 @@ Build System Changes
   its own headers.
 
 - The legacy testing configuration is now deprecated and will be removed in the next release. For
-  most users, this should not have any impact. However, if you are testing libc++ in a configuration
-  or on a platform that used to be supported by the legacy testing configuration and isn't supported
-  by one of the configurations in ``libcxx/test/configs``, please reach out to the libc++ developers
-  to get your configuration supported officially.
+  most users, this should not have any impact. However, if you are testing libc++, libc++abi or
+  libunwind in a configuration or on a platform that used to be supported by the legacy testing
+  configuration and isn't supported by one of the configurations in ``libcxx/test/configs``,
+  ``libcxxabi/test/configs`` or ``libunwind/test/configs``, please move to one of those
+  configurations or define your own.

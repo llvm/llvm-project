@@ -1536,8 +1536,12 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::DereferenceableOrNull;
   case bitc::ATTR_KIND_ALLOC_ALIGN:
     return Attribute::AllocAlign;
+  case bitc::ATTR_KIND_ALLOC_KIND:
+    return Attribute::AllocKind;
   case bitc::ATTR_KIND_ALLOC_SIZE:
     return Attribute::AllocSize;
+  case bitc::ATTR_KIND_ALLOCATED_POINTER:
+    return Attribute::AllocatedPointer;
   case bitc::ATTR_KIND_NO_RED_ZONE:
     return Attribute::NoRedZone;
   case bitc::ATTR_KIND_NO_RETURN:
@@ -1734,6 +1738,8 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addVScaleRangeAttrFromRawRepr(Record[++i]);
           else if (Kind == Attribute::UWTable)
             B.addUWTableAttr(UWTableKind(Record[++i]));
+          else if (Kind == Attribute::AllocKind)
+            B.addAllocKindAttr(static_cast<AllocFnKind>(Record[++i]));
         } else if (Record[i] == 3 || Record[i] == 4) { // String attribute
           bool HasValue = (Record[i++] == 4);
           SmallString<64> KindStr;
@@ -1888,6 +1894,8 @@ Error BitcodeReader::parseTypeTableBody() {
       if (!ResultTy ||
           !PointerType::isValidElementType(ResultTy))
         return error("Invalid type");
+      if (LLVM_UNLIKELY(!Context.hasSetOpaquePointersValue()))
+        Context.setOpaquePointers(false);
       ContainedIDs.push_back(Record[0]);
       ResultTy = PointerType::get(ResultTy, AddressSpace);
       break;
@@ -5134,6 +5142,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         }
       }
 
+      // Upgrade the bundles if needed.
+      if (!OperandBundles.empty())
+        UpgradeOperandBundles(OperandBundles);
+
       I = InvokeInst::Create(FTy, Callee, NormalBB, UnwindBB, Ops,
                              OperandBundles);
       ResTypeID = getContainedTypeID(FTyID);
@@ -5230,6 +5242,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           ArgTyIDs.push_back(OpTypeID);
         }
       }
+
+      // Upgrade the bundles if needed.
+      if (!OperandBundles.empty())
+        UpgradeOperandBundles(OperandBundles);
 
       I = CallBrInst::Create(FTy, Callee, DefaultDest, IndirectDests, Args,
                              OperandBundles);
@@ -5841,6 +5857,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           ArgTyIDs.push_back(OpTypeID);
         }
       }
+
+      // Upgrade the bundles if needed.
+      if (!OperandBundles.empty())
+        UpgradeOperandBundles(OperandBundles);
 
       I = CallInst::Create(FTy, Callee, Args, OperandBundles);
       ResTypeID = getContainedTypeID(FTyID);

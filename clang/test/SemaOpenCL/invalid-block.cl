@@ -35,7 +35,7 @@ bl_t f3b(bl_t bl);
 void f3c(void) {
   // Block with a block argument.
   int (^const bl2)(bl_t block_arg) = ^(void) { // expected-error{{declaring function parameter of type '__private bl_t' (aka 'int (__generic ^const __private)(void)') is not allowed}}
-    return block_arg(); // expected-error{{implicit declaration of function 'block_arg' is invalid in OpenCL}}
+    return block_arg(); // expected-error{{use of undeclared identifier 'block_arg'}}
   };
 }
 

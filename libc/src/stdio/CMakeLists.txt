@@ -25,6 +25,90 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  clearerr
+  SRCS
+    clearerr.cpp
+  HDRS
+    clearerr.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  clearerr_unlocked
+  SRCS
+    clearerr_unlocked.cpp
+  HDRS
+    clearerr_unlocked.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  feof
+  SRCS
+    feof.cpp
+  HDRS
+    feof.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  feof_unlocked
+  SRCS
+    feof_unlocked.cpp
+  HDRS
+    feof_unlocked.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  ferror
+  SRCS
+    ferror.cpp
+  HDRS
+    ferror.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  ferror_unlocked
+  SRCS
+    ferror_unlocked.cpp
+  HDRS
+    ferror_unlocked.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  fflush
+  SRCS
+    fflush.cpp
+  HDRS
+    fflush.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
   flockfile
   SRCS
     flockfile.cpp
@@ -106,4 +190,76 @@ add_entrypoint_object(
     libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  fopencookie
+  SRCS
+    fopencookie.cpp
+  HDRS
+    fopencookie.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+)
+
+add_entrypoint_object(
+  stdout
+  SRCS
+    stdout.cpp
+  HDRS
+    stdout.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  stderr
+  SRCS
+    stderr.cpp
+  HDRS
+    stderr.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  sprintf
+  SRCS
+    sprintf.cpp
+  HDRS
+    sprintf.h
+  DEPENDS
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.string_writer
+    libc.src.stdio.printf_core.writer
+)
+
+add_entrypoint_object(
+  snprintf
+  SRCS
+    snprintf.cpp
+  HDRS
+    snprintf.h
+  DEPENDS
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.string_writer
+    libc.src.stdio.printf_core.writer
+)
+
+add_entrypoint_object(
+  fprintf
+  SRCS
+    fprintf.cpp
+  HDRS
+    fprintf.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.file_writer
+    libc.src.stdio.printf_core.writer
 )

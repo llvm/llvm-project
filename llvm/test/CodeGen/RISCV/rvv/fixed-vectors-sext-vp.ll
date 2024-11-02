@@ -147,3 +147,61 @@ define <4 x i64> @vsext_v4i64_v4i32_unmasked(<4 x i32> %va, i32 zeroext %evl) {
   %v = call <4 x i64> @llvm.vp.sext.v4i64.v4i32(<4 x i32> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
   ret <4 x i64> %v
 }
+
+declare <32 x i64> @llvm.vp.sext.v32i64.v32i32(<32 x i32>, <32 x i1>, i32)
+
+define <32 x i64> @vsext_v32i64_v32i32(<32 x i32> %va, <32 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vsext_v32i64_v32i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv1r.v v1, v0
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; CHECK-NEXT:    addi a2, a0, -16
+; CHECK-NEXT:    vslidedown.vi v0, v0, 2
+; CHECK-NEXT:    bltu a0, a2, .LBB12_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a1, a2
+; CHECK-NEXT:  .LBB12_2:
+; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, mu
+; CHECK-NEXT:    vslidedown.vi v24, v8, 16
+; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
+; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:    vsext.vf2 v16, v24, v0.t
+; CHECK-NEXT:    bltu a0, a1, .LBB12_4
+; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    li a0, 16
+; CHECK-NEXT:  .LBB12_4:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vmv1r.v v0, v1
+; CHECK-NEXT:    vsext.vf2 v24, v8, v0.t
+; CHECK-NEXT:    vmv.v.v v8, v24
+; CHECK-NEXT:    ret
+  %v = call <32 x i64> @llvm.vp.sext.v32i64.v32i32(<32 x i32> %va, <32 x i1> %m, i32 %evl)
+  ret <32 x i64> %v
+}
+
+define <32 x i64> @vsext_v32i64_v32i32_unmasked(<32 x i32> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vsext_v32i64_v32i32_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a2, a0, -16
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    bltu a0, a2, .LBB13_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a1, a2
+; CHECK-NEXT:  .LBB13_2:
+; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, mu
+; CHECK-NEXT:    vslidedown.vi v24, v8, 16
+; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
+; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:    vsext.vf2 v16, v24
+; CHECK-NEXT:    bltu a0, a1, .LBB13_4
+; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    li a0, 16
+; CHECK-NEXT:  .LBB13_4:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vsext.vf2 v24, v8
+; CHECK-NEXT:    vmv.v.v v8, v24
+; CHECK-NEXT:    ret
+  %v = call <32 x i64> @llvm.vp.sext.v32i64.v32i32(<32 x i32> %va, <32 x i1> shufflevector (<32 x i1> insertelement (<32 x i1> undef, i1 true, i32 0), <32 x i1> undef, <32 x i32> zeroinitializer), i32 %evl)
+  ret <32 x i64> %v
+}

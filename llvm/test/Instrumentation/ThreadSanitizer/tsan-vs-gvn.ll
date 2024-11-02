@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -gvn -tsan -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes='gvn,tsan' -S | FileCheck %s
 ; TSAN conflicts with load widening. Make sure the load widening is off with -tsan.
 
 ; 32-bit little endian target.

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -std=c++11 -emit-llvm -o - -triple=x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 %s -std=c++14 -emit-llvm -o - -triple=x86_64-linux-gnu | FileCheck %s
 
 struct AM {
   int f1, f2;
@@ -26,5 +26,25 @@ AM load2() {
   // CHECK-LABEL: @_Z5load2v
   // CHECK: load atomic {{.*}} monotonic, align 8
   __atomic_load(&bm.f2, &am, 0);
+  return am;
+}
+
+namespace std {
+  template <class _Tp>
+  inline constexpr
+  __attribute__ ((__visibility__("hidden"), __internal_linkage__))
+  _Tp* __addressof(_Tp& __x) noexcept
+  {
+      return __builtin_addressof(__x);
+  }
+}
+
+AM load3() {
+  AM am;
+  // m is declared to align to 8bytes, so generate load atomic instead
+  // of libcall.
+  // CHECK-LABEL: @_Z5load3v
+  // CHECK: load atomic {{.*}} monotonic, align 8
+  __atomic_load(std::__addressof(m), &am, 0);
   return am;
 }

@@ -3,4 +3,4 @@
 struct Foo {
   member; // no-crash
 };
-// CHECK-MESSAGES: :[[@LINE-2]]:3: error: C++ requires a type specifier for all declarations [clang-diagnostic-error]
+// CHECK-MESSAGES: :[[@LINE-2]]:3: error: a type specifier is required for all declarations [clang-diagnostic-error]

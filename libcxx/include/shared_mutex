@@ -140,8 +140,8 @@ _LIBCPP_PUSH_MACROS
 #endif
 
 #ifdef _LIBCPP_HAS_NO_THREADS
-#error <shared_mutex> is not supported on this single threaded system
-#else // !_LIBCPP_HAS_NO_THREADS
+# error "<shared_mutex> is not supported since libc++ has been configured without support for threads."
+#endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -500,8 +500,6 @@ swap(shared_lock<_Mutex>& __x, shared_lock<_Mutex>& __y) _NOEXCEPT
     {__x.swap(__y);}
 
 _LIBCPP_END_NAMESPACE_STD
-
-#endif // !_LIBCPP_HAS_NO_THREADS
 
 #endif // _LIBCPP_STD_VER > 11
 

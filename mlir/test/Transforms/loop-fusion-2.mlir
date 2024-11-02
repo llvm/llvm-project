@@ -8,7 +8,7 @@
 // -----
 
 // CHECK-LABEL: func @should_fuse_at_depth_above_loop_carried_dependence(%{{.*}}: memref<64x4xf32>, %{{.*}}: memref<64x4xf32>) {
-func @should_fuse_at_depth_above_loop_carried_dependence(%arg0: memref<64x4xf32>, %arg1: memref<64x4xf32>) {
+func.func @should_fuse_at_depth_above_loop_carried_dependence(%arg0: memref<64x4xf32>, %arg1: memref<64x4xf32>) {
   %out = memref.alloc() : memref<64x4xf32>
   %0 = arith.constant 0.0 : f32
   affine.for %i0 = 0 to 64 {
@@ -76,7 +76,7 @@ func @should_fuse_at_depth_above_loop_carried_dependence(%arg0: memref<64x4xf32>
 // -----
 
 // CHECK-LABEL: func @should_fuse_only_two_loops_and_remove_producer() {
-func @should_fuse_only_two_loops_and_remove_producer() {
+func.func @should_fuse_only_two_loops_and_remove_producer() {
   %a = memref.alloc() : memref<10xf32>
   %b = memref.alloc() : memref<10xf32>
 
@@ -120,7 +120,7 @@ func @should_fuse_only_two_loops_and_remove_producer() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_after_one_loop_interchange() {
-func @should_fuse_after_one_loop_interchange() {
+func.func @should_fuse_after_one_loop_interchange() {
   %a = memref.alloc() : memref<10xf32>
 
   %cf0 = arith.constant 0.0 : f32
@@ -154,7 +154,7 @@ func @should_fuse_after_one_loop_interchange() {
 
 // -----
 // CHECK-LABEL: func @should_fuse_after_two_loop_interchanges() {
-func @should_fuse_after_two_loop_interchanges() {
+func.func @should_fuse_after_two_loop_interchanges() {
   %a = memref.alloc() : memref<6x8xf32>
 
   %cf0 = arith.constant 0.0 : f32
@@ -201,7 +201,7 @@ func @should_fuse_after_two_loop_interchanges() {
 
 // -----
 
-func @should_fuse_live_out_writer(%arg0 : memref<10xf32>) -> memref<10xf32> {
+func.func @should_fuse_live_out_writer(%arg0 : memref<10xf32>) -> memref<10xf32> {
   %cst = arith.constant 0.000000e+00 : f32
   affine.for %i0 = 0 to 10 {
     affine.store %cst, %arg0[%i0] : memref<10xf32>
@@ -229,7 +229,7 @@ func @should_fuse_live_out_writer(%arg0 : memref<10xf32>) -> memref<10xf32> {
 // CHECK-DAG: [[$MAP_UB:#map[0-9]+]] = affine_map<(d0) -> (d0 * 16 + 16)>
 
 // CHECK-LABEL: slice_tile
-func @slice_tile(%arg0: memref<128x8xf32>, %arg1: memref<32x8xf32>, %0 : f32) -> memref<32x8xf32> {
+func.func @slice_tile(%arg0: memref<128x8xf32>, %arg1: memref<32x8xf32>, %0 : f32) -> memref<32x8xf32> {
   affine.for %i0 = 0 to 32 {
     affine.for %i1 = 0 to 8 {
       affine.store %0, %arg1[%i0, %i1] : memref<32x8xf32>
@@ -276,7 +276,7 @@ func @slice_tile(%arg0: memref<128x8xf32>, %arg1: memref<32x8xf32>, %0 : f32) ->
 // -----
 
 // Test case which illustrates fix for b/126454413
-func @test_add_slice_bounds() {
+func.func @test_add_slice_bounds() {
   %a = memref.alloc() : memref<10xf32>
   %b = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
@@ -322,7 +322,7 @@ func @test_add_slice_bounds() {
 
 // -----
 
-func @should_fuse_init_loops_siblings_then_shared_producer(%arg0: memref<10x10xf32>, %arg1: memref<10x10xf32>) {
+func.func @should_fuse_init_loops_siblings_then_shared_producer(%arg0: memref<10x10xf32>, %arg1: memref<10x10xf32>) {
   %0 = memref.alloc() : memref<10x10xf32>
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
@@ -389,7 +389,7 @@ func @should_fuse_init_loops_siblings_then_shared_producer(%arg0: memref<10x10xf
 
 // -----
 
-func @two_matrix_vector_products() {
+func.func @two_matrix_vector_products() {
   %in_matrix = memref.alloc() : memref<10x10xf32>
   %in_vec0 = memref.alloc() : memref<10xf32>
   %in_vec1 = memref.alloc() : memref<10xf32>
@@ -453,7 +453,7 @@ func @two_matrix_vector_products() {
 
 // -----
 
-func @should_not_slice_past_slice_barrier() {
+func.func @should_not_slice_past_slice_barrier() {
   %0 = memref.alloc() : memref<100x16xf32>
   affine.for %i0 = 0 to 100 {
     affine.for %i1 = 0 to 16 {
@@ -485,7 +485,7 @@ func @should_not_slice_past_slice_barrier() {
 // -----
 
 #map0 = affine_map<(d0, d1) -> (d0 * 16 + d1)>
-func @fuse_across_dim_mismatch(%arg0: memref<4x4x16x1xf32>, %arg1: memref<144x9xf32>, %arg2: memref<9xf32>) {
+func.func @fuse_across_dim_mismatch(%arg0: memref<4x4x16x1xf32>, %arg1: memref<144x9xf32>, %arg2: memref<9xf32>) {
   %1 = memref.alloc() : memref<144x4xf32>
   %2 = arith.constant 0.0 : f32
   affine.for %i2 = 0 to 9 {
@@ -534,7 +534,7 @@ func @fuse_across_dim_mismatch(%arg0: memref<4x4x16x1xf32>, %arg1: memref<144x9x
 #map10 = affine_map<(d0, d1) -> (d0 * 16 + d1)>
 #map11 = affine_map<(d0, d1) -> (d0 * 16 + d1)>
 #map12 = affine_map<(d0, d1) -> (d0 * 16 - d1 + 15)>
-func @fuse_across_varying_dims_complex(%arg0: f32) {
+func.func @fuse_across_varying_dims_complex(%arg0: f32) {
   %c0 = arith.constant 0 : index
   %0 = memref.alloc() : memref<2x2x3x3x16x1xf32>
   %1 = memref.alloc() : memref<64x9xf32>
@@ -618,7 +618,7 @@ func @fuse_across_varying_dims_complex(%arg0: f32) {
 
 // -----
 
-func @should_fuse_with_slice_union() {
+func.func @should_fuse_with_slice_union() {
   %a = memref.alloc() : memref<100xf32>
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
@@ -653,7 +653,7 @@ func @should_fuse_with_slice_union() {
 
 // -----
 
-func @affine_add_mm_fused(%arg0: memref<1024x1024xf32>, %arg1: memref<1024x1024xf32>, %arg2: memref<1024x1024xf32>, %arg3: memref<1024x1024xf32>) {
+func.func @affine_add_mm_fused(%arg0: memref<1024x1024xf32>, %arg1: memref<1024x1024xf32>, %arg2: memref<1024x1024xf32>, %arg3: memref<1024x1024xf32>) {
   affine.for %i2 = 0 to 1024 {
     affine.for %i3 = 0 to 1024 {
       %0 = affine.load %arg3[%i2, %i3] : memref<1024x1024xf32>
@@ -697,7 +697,7 @@ func @affine_add_mm_fused(%arg0: memref<1024x1024xf32>, %arg1: memref<1024x1024x
 
 // -----
 
-func @affine_2mm_fused(%arg0: memref<1024x1024xf32>, %arg1: memref<1024x1024xf32>, %arg2: memref<1024x1024xf32>, %arg3: memref<1024x1024xf32>, %arg4: memref<1024x1024xf32>) {
+func.func @affine_2mm_fused(%arg0: memref<1024x1024xf32>, %arg1: memref<1024x1024xf32>, %arg2: memref<1024x1024xf32>, %arg3: memref<1024x1024xf32>, %arg4: memref<1024x1024xf32>) {
   %cst = arith.constant 0.000000e+00 : f32
   affine.for %i0 = 0 to 1024 {
     affine.for %i1 = 0 to 1024 {
@@ -767,7 +767,7 @@ func @affine_2mm_fused(%arg0: memref<1024x1024xf32>, %arg1: memref<1024x1024xf32
 
 // -----
 
-func @affine_2_dependent_mm_fused(%arg0: memref<1024x1024xf32>, %arg1: memref<1024x1024xf32>, %arg2: memref<1024x1024xf32>, %arg3: memref<1024x1024xf32>, %arg4: memref<1024x1024xf32>) {
+func.func @affine_2_dependent_mm_fused(%arg0: memref<1024x1024xf32>, %arg1: memref<1024x1024xf32>, %arg2: memref<1024x1024xf32>, %arg3: memref<1024x1024xf32>, %arg4: memref<1024x1024xf32>) {
   affine.for %i0 = 0 to 1024 {
     affine.for %i1 = 0 to 1024 {
       affine.for %i2 = 0 to 1024 {
@@ -821,7 +821,7 @@ func @affine_2_dependent_mm_fused(%arg0: memref<1024x1024xf32>, %arg1: memref<10
 // -----
 
 // CHECK-LABEL: func @should_fuse_self_dependence_multi_store_producer() {
-func @should_fuse_self_dependence_multi_store_producer() {
+func.func @should_fuse_self_dependence_multi_store_producer() {
   %m = memref.alloc() : memref<10xf32>
   %local_m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
@@ -847,7 +847,7 @@ func @should_fuse_self_dependence_multi_store_producer() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_dead_multi_store_producer() {
-func @should_fuse_dead_multi_store_producer() {
+func.func @should_fuse_dead_multi_store_producer() {
   %m = memref.alloc() : memref<10xf32>
   %dead_m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
@@ -871,7 +871,7 @@ func @should_fuse_dead_multi_store_producer() {
 // -----
 
 // CHECK-LABEL: func @should_fuse_function_live_out_multi_store_producer
-func @should_fuse_function_live_out_multi_store_producer(%live_in_out_m : memref<10xf32>) {
+func.func @should_fuse_function_live_out_multi_store_producer(%live_in_out_m : memref<10xf32>) {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
 

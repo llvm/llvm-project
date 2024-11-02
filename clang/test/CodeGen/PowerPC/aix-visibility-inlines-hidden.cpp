@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 -triple powerpc-unknown-aix -mcmodel=large -emit-llvm -o - -x c++ %s  | \
-// RUN: FileCheck -check-prefix=NOVISIBILITY-IR %s
+// RUN: FileCheck -check-prefix=VISIBILITY-IR %s
 
 // RUN: %clang_cc1 -triple powerpc-unknown-aix -mcmodel=large \
 // RUN:            -fvisibility-inlines-hidden -emit-llvm -o - -x c++ %s  | \
-// RUN: FileCheck -check-prefix=NOVISIBILITY-IR %s
+// RUN: FileCheck -check-prefixes=VISIBILITY-IR,HIDDENINLINE-IR %s
 
 // RUN: %clang_cc1 -triple powerpc-unknown-aix -mcmodel=large -fvisibility-inlines-hidden \
 // RUN:            -fvisibility default -emit-llvm -o - -x c++ %s  | \
-// RUN: FileCheck -check-prefix=VISIBILITY-IR %s
+// RUN: FileCheck -check-prefixes=VISIBILITY-IR,HIDDENINLINE-IR %s
 
 // RUN: %clang_cc1 -triple powerpc-unknown-aix -mcmodel=large -mignore-xcoff-visibility -emit-llvm \
 // RUN:            -fvisibility-inlines-hidden -fvisibility default -o - -x c++ %s  | \
@@ -30,7 +30,7 @@ int bar() {
   return x;
 }
 
-// VISIBILITY-IR:     define linkonce_odr hidden void @_Z1fv()
+// HIDDENINLINE-IR:     define linkonce_odr hidden void @_Z1fv()
 // NOVISIBILITY-IR:   define linkonce_odr void @_Z1fv()
 
 // VISIBILITY-IR:     define linkonce_odr hidden void @_Z3foov()

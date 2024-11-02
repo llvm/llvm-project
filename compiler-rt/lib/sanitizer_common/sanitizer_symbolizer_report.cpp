@@ -94,7 +94,7 @@ void ReportMmapWriteExec(int prot, int flags) {
   if ((prot & pflags) != pflags)
     return;
 
-#  if SANITIZER_MAC && defined(MAP_JIT)
+#  if SANITIZER_APPLE && defined(MAP_JIT)
   if ((flags & MAP_JIT) == MAP_JIT)
     return;
 #  endif

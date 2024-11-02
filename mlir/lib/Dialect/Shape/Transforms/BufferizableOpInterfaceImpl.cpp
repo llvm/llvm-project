@@ -66,6 +66,7 @@ struct AssumingOpInterface
     SmallVector<Type> newResultTypes;
     for (Type type : assumingOp->getResultTypes()) {
       if (auto tensorType = type.dyn_cast<TensorType>()) {
+        // TODO: Infer the result type instead of computing it.
         newResultTypes.push_back(getMemRefType(tensorType, state.getOptions()));
       } else {
         newResultTypes.push_back(type);
@@ -117,11 +118,6 @@ struct AssumingOpInterface
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
                                 const AnalysisState &state) const {
     return BufferRelation::Equivalent;
-  }
-
-  bool isAllocationHoistingBarrier(Operation *op) const {
-    // Allocations should not be hoisted out of AssumingOps.
-    return true;
   }
 };
 

@@ -10,13 +10,12 @@
 #define LLVM_DEBUGINFO_GSYM_INLINEINFO_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/DebugInfo/GSYM/ExtractRanges.h"
 #include "llvm/DebugInfo/GSYM/LineEntry.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
-#include "llvm/DebugInfo/GSYM/Range.h"
 #include "llvm/Support/Error.h"
 #include <stdint.h>
 #include <vector>
-
 
 namespace llvm {
 class raw_ostream;

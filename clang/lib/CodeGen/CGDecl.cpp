@@ -2442,6 +2442,7 @@ namespace {
 /// for the specified parameter and set up LocalDeclMap.
 void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
                                    unsigned ArgNo) {
+  bool NoDebugInfo = false;
   // FIXME: Why isn't ImplicitParamDecl a ParmVarDecl?
   assert((isa<ParmVarDecl>(D) || isa<ImplicitParamDecl>(D)) &&
          "Invalid argument to EmitParmDecl");
@@ -2461,6 +2462,10 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       setBlockContextParameter(IPD, ArgNo, V);
       return;
     }
+    // Suppressing debug info for ThreadPrivateVar parameters, else it hides
+    // debug info of TLS variables.
+    NoDebugInfo =
+        (IPD->getParameterKind() == ImplicitParamDecl::ThreadPrivateVar);
   }
 
   Address DeclPtr = Address::invalid();
@@ -2591,7 +2596,8 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
 
   // Emit debug info for param declarations in non-thunk functions.
   if (CGDebugInfo *DI = getDebugInfo()) {
-    if (CGM.getCodeGenOpts().hasReducedDebugInfo() && !CurFuncIsThunk) {
+    if (CGM.getCodeGenOpts().hasReducedDebugInfo() && !CurFuncIsThunk &&
+        !NoDebugInfo) {
       llvm::DILocalVariable *DILocalVar = DI->EmitDeclareOfArgVariable(
           &D, AllocaPtr.getPointer(), ArgNo, Builder);
       if (const auto *Var = dyn_cast_or_null<ParmVarDecl>(&D))
@@ -2687,4 +2693,23 @@ void CodeGenModule::EmitOMPAllocateDecl(const OMPAllocateDecl *D) {
     DummyGV->replaceAllUsesWith(NewPtrForOldDecl);
     DummyGV->eraseFromParent();
   }
+}
+
+llvm::Optional<CharUnits>
+CodeGenModule::getOMPAllocateAlignment(const VarDecl *VD) {
+  if (const auto *AA = VD->getAttr<OMPAllocateDeclAttr>()) {
+    if (Expr *Alignment = AA->getAlignment()) {
+      unsigned UserAlign =
+          Alignment->EvaluateKnownConstInt(getContext()).getExtValue();
+      CharUnits NaturalAlign =
+          getNaturalTypeAlignment(VD->getType().getNonReferenceType());
+
+      // OpenMP5.1 pg 185 lines 7-10
+      //   Each item in the align modifier list must be aligned to the maximum
+      //   of the specified alignment and the type's natural alignment.
+      return CharUnits::fromQuantity(
+          std::max<unsigned>(UserAlign, NaturalAlign.getQuantity()));
+    }
+  }
+  return llvm::None;
 }

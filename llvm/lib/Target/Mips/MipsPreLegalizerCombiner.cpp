@@ -51,8 +51,7 @@ bool MipsPreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
     // Don't attempt to combine non power of 2 loads or unaligned loads when
     // subtarget doesn't support them.
     auto MMO = *MI.memoperands_begin();
-    const MipsSubtarget &STI =
-        static_cast<const MipsSubtarget &>(MI.getMF()->getSubtarget());
+    const MipsSubtarget &STI = MI.getMF()->getSubtarget<MipsSubtarget>();
     if (!isPowerOf2_64(MMO->getSize()))
       return false;
     bool isUnaligned = MMO->getAlign() < MMO->getSize();

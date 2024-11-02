@@ -15,7 +15,6 @@ program omp_parallel
     do j = 1, 10
       print *, "Hello"
       !CHECK: In the enclosing PARALLEL directive branched into
-      !CHECK: STOP statement is not allowed in a PARALLEL construct
       10 stop
     end do
   end do

@@ -44,7 +44,7 @@
 // lengths. Another example in this directory illustrates a DOT
 // version of the operation.
 
-func @spmv8x8(%AVAL: memref<4xvector<8xf32>>,
+func.func @spmv8x8(%AVAL: memref<4xvector<8xf32>>,
               %AIDX: memref<4xvector<8xi32>>,
 	      %X: memref<?xf32>, %B: memref<1xvector<8xf32>>) {
   %c0 = arith.constant 0 : index
@@ -66,7 +66,7 @@ func @spmv8x8(%AVAL: memref<4xvector<8xf32>>,
   return
 }
 
-func @entry() {
+func.func @entry() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index

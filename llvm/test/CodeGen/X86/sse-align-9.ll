@@ -9,6 +9,7 @@ define <4 x float> @foo(<4 x float>* %p) nounwind {
   %t = load <4 x float>, <4 x float>* %p, align 4
   ret <4 x float> %t
 }
+
 define <2 x double> @bar(<2 x double>* %p) nounwind {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0:

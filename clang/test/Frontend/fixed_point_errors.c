@@ -228,9 +228,9 @@ void CheckSuffixOnIntegerLiterals(void) {
 
   // Using auto
   auto auto_fract = 0r;  // expected-error{{invalid suffix 'r' on integer constant}}
-                         // expected-warning@-1{{type specifier missing, defaults to 'int'}}
+                         // expected-error@-1{{type specifier missing, defaults to 'int'}}
   auto auto_accum = 0k;  // expected-error{{invalid suffix 'k' on integer constant}}
-                         // expected-warning@-1{{type specifier missing, defaults to 'int'}}
+                         // expected-error@-1{{type specifier missing, defaults to 'int'}}
 }
 
 // Ok conversions

@@ -405,8 +405,8 @@ normal input. Also produce a carry output in addition to the normal result.
 G_UMULH, G_SMULH
 ^^^^^^^^^^^^^^^^
 
-Multiply two numbers at twice the incoming bit width (signed) and return
-the high half of the result.
+Multiply two numbers at twice the incoming bit width (unsigned or signed) and
+return the high half of the result.
 
 .. code-block:: none
 
@@ -479,6 +479,16 @@ G_FCANONICALIZE
 ^^^^^^^^^^^^^^^
 
 See :ref:`i_intr_llvm_canonicalize`.
+
+G_IS_FPCLASS
+^^^^^^^^^^^^
+
+Tests if the first operand, which must be floating-point scalar or vector, has
+floating-point class specified by the second operand. The third operand
+specifies floating-point semantics of the tested value. Returns non-zero (true)
+or zero (false). It's target specific whether a true value is 1, ~0U, or some
+other non-zero value. If the first operand is a vector, the returned value is a
+vector of the same length.
 
 G_FMINNUM
 ^^^^^^^^^

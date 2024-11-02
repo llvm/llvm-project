@@ -315,12 +315,6 @@ def pp_pragma_sysheader_in_main_file : Warning<
   "#pragma system_header ignored in main file">,
   InGroup<DiagGroup<"pragma-system-header-outside-header">>;
 
-def err_pragma_include_instead_not_sysheader : Error<
-  "'#pragma clang include_instead' cannot be used outside of system headers">;
-def err_pragma_include_instead_system_reserved : Error<
-  "header '%0' is an implementation detail; #include %select{'%2'|either '%2' "
-  "or '%3'|one of %2}1 instead">;
-
 def err_illegal_use_of_flt_eval_macro : Error<
   "'__FLT_EVAL_METHOD__' cannot be expanded inside a scope containing "
   "'#pragma clang fp eval_method'">;
@@ -433,7 +427,13 @@ def note_macro_expansion_here : Note<"expansion of macro %0 requested here">;
 def ext_pp_opencl_variadic_macros : Extension<
   "variadic macros are a Clang extension in OpenCL">;
 
-def err_pp_invalid_directive : Error<"invalid preprocessing directive">;
+def ext_pp_gnu_line_directive : Extension<
+  "this style of line directive is a GNU extension">,
+  InGroup<GNULineMarker>;
+def err_pp_invalid_directive : Error<
+  "invalid preprocessing directive%select{|, did you mean '#%1'?}0">;
+def warn_pp_invalid_directive : Warning<
+  err_pp_invalid_directive.Text>, InGroup<DiagGroup<"unknown-directives">>;
 def err_pp_directive_required : Error<
   "%0 must be used within a preprocessing directive">;
 def err_pp_file_not_found : Error<"'%0' file not found">, DefaultFatal;
@@ -700,6 +700,23 @@ def warn_cxx98_compat_pp_line_too_big : Warning<
   "#line number greater than 32767 is incompatible with C++98">,
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
 
+def warn_c2x_compat_pp_directive : Warning<
+  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
+  "is incompatible with C standards before C2x">,
+  InGroup<CPre2xCompat>, DefaultIgnore;
+def ext_c2x_pp_directive : ExtWarn<
+  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
+  "is a C2x extension">,
+  InGroup<C2x>;
+def warn_cxx2b_compat_pp_directive : Warning<
+  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
+  "is incompatible with C++ standards before C++2b">,
+  InGroup<CXXPre2bCompat>, DefaultIgnore;
+def ext_cxx2b_pp_directive : ExtWarn<
+  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
+  "is a C++2b extension">,
+  InGroup<CXX2b>;
+
 def err_pp_visibility_non_macro : Error<"no macro named %0">;
 
 def err_pp_arc_cf_code_audited_syntax : Error<"expected 'begin' or 'end'">;
@@ -882,11 +899,11 @@ def err_pp_eof_in_assume_nonnull : Error<
 
 }
 
-let CategoryName = "Dependency Directive Source Minimization Issue" in {
+let CategoryName = "Dependency Directive Source Scanner Issue" in {
 
-def err_dep_source_minimizer_missing_sema_after_at_import : Error<
+def err_dep_source_scanner_missing_semi_after_at_import : Error<
   "could not find ';' after @import">;
-def err_dep_source_minimizer_unexpected_tokens_at_import : Error<
+def err_dep_source_scanner_unexpected_tokens_at_import : Error<
   "unexpected extra tokens at end of @import declaration">;
 
 }

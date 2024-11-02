@@ -283,6 +283,7 @@ enum : unsigned {
   WASM_OPCODE_CALL = 0x10,
   WASM_OPCODE_LOCAL_GET = 0x20,
   WASM_OPCODE_LOCAL_SET = 0x21,
+  WASM_OPCODE_LOCAL_TEE = 0x22,
   WASM_OPCODE_GLOBAL_GET = 0x23,
   WASM_OPCODE_GLOBAL_SET = 0x24,
   WASM_OPCODE_I32_STORE = 0x36,
@@ -469,8 +470,9 @@ inline bool operator==(const WasmTableType &LHS, const WasmTableType &RHS) {
   return LHS.ElemType == RHS.ElemType && LHS.Limits == RHS.Limits;
 }
 
-std::string toString(WasmSymbolType type);
-std::string relocTypetoString(uint32_t type);
+llvm::StringRef toString(WasmSymbolType type);
+llvm::StringRef relocTypetoString(uint32_t type);
+llvm::StringRef sectionTypeToString(uint32_t type);
 bool relocTypeHasAddend(uint32_t type);
 
 } // end namespace wasm

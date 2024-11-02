@@ -1983,12 +1983,21 @@ static bool isIntegerWideningViableForSlice(const Slice &S,
   uint64_t RelBegin = S.beginOffset() - AllocBeginOffset;
   uint64_t RelEnd = S.endOffset() - AllocBeginOffset;
 
+  Use *U = S.getUse();
+
+  // Lifetime intrinsics operate over the whole alloca whose sizes are usually
+  // larger than other load/store slices (RelEnd > Size). But lifetime are
+  // always promotable and should not impact other slices' promotability of the
+  // partition.
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U->getUser())) {
+    if (II->isLifetimeStartOrEnd() || II->isDroppable())
+      return true;
+  }
+
   // We can't reasonably handle cases where the load or store extends past
   // the end of the alloca's type and into its padding.
   if (RelEnd > Size)
     return false;
-
-  Use *U = S.getUse();
 
   if (LoadInst *LI = dyn_cast<LoadInst>(U->getUser())) {
     if (LI->isVolatile())
@@ -2044,9 +2053,6 @@ static bool isIntegerWideningViableForSlice(const Slice &S,
       return false;
     if (!S.isSplittable())
       return false; // Skip any unsplittable intrinsics.
-  } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U->getUser())) {
-    if (!II->isLifetimeStartOrEnd() && !II->isDroppable())
-      return false;
   } else {
     return false;
   }
@@ -3474,19 +3480,13 @@ private:
 
     Type *Ty = GEPI.getSourceElementType();
     Value *True = Sel->getTrueValue();
-    Value *NTrue =
-        IsInBounds
-            ? IRB.CreateInBoundsGEP(Ty, True, Index,
-                                    True->getName() + ".sroa.gep")
-            : IRB.CreateGEP(Ty, True, Index, True->getName() + ".sroa.gep");
+    Value *NTrue = IRB.CreateGEP(Ty, True, Index, True->getName() + ".sroa.gep",
+                                 IsInBounds);
 
     Value *False = Sel->getFalseValue();
 
-    Value *NFalse =
-        IsInBounds
-            ? IRB.CreateInBoundsGEP(Ty, False, Index,
-                                    False->getName() + ".sroa.gep")
-            : IRB.CreateGEP(Ty, False, Index, False->getName() + ".sroa.gep");
+    Value *NFalse = IRB.CreateGEP(Ty, False, Index,
+                                  False->getName() + ".sroa.gep", IsInBounds);
 
     Value *NSel = IRB.CreateSelect(Sel->getCondition(), NTrue, NFalse,
                                    Sel->getName() + ".sroa.sel");
@@ -3540,10 +3540,8 @@ private:
 
         IRB.SetInsertPoint(In->getParent(), std::next(In->getIterator()));
         Type *Ty = GEPI.getSourceElementType();
-        NewVal = IsInBounds ? IRB.CreateInBoundsGEP(Ty, In, Index,
-                                                    In->getName() + ".sroa.gep")
-                            : IRB.CreateGEP(Ty, In, Index,
-                                            In->getName() + ".sroa.gep");
+        NewVal = IRB.CreateGEP(Ty, In, Index, In->getName() + ".sroa.gep",
+                               IsInBounds);
       }
       NewPN->addIncoming(NewVal, B);
     }

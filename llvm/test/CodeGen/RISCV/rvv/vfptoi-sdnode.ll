@@ -16,6 +16,28 @@ define <vscale x 1 x i1> @vfptosi_nxv1f16_nxv1i1(<vscale x 1 x half> %va) {
   ret <vscale x 1 x i1> %evec
 }
 
+define <vscale x 1 x i7> @vfptosi_nxv1f16_nxv1i7(<vscale x 1 x half> %va) {
+; CHECK-LABEL: vfptosi_nxv1f16_nxv1i7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v9, v8
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %evec = fptosi <vscale x 1 x half> %va to <vscale x 1 x i7>
+  ret <vscale x 1 x i7> %evec
+}
+
+define <vscale x 1 x i7> @vfptoui_nxv1f16_nxv1i7(<vscale x 1 x half> %va) {
+; CHECK-LABEL: vfptoui_nxv1f16_nxv1i7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v9, v8
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %evec = fptoui <vscale x 1 x half> %va to <vscale x 1 x i7>
+  ret <vscale x 1 x i7> %evec
+}
+
 define <vscale x 1 x i1> @vfptoui_nxv1f16_nxv1i1(<vscale x 1 x half> %va) {
 ; CHECK-LABEL: vfptoui_nxv1f16_nxv1i1:
 ; CHECK:       # %bb.0:

@@ -976,6 +976,8 @@ private:
   bool parseDirectiveEnds(StringRef Name, SMLoc NameLoc);
   bool parseDirectiveNestedEnds();
 
+  bool parseDirectiveExtern();
+
   /// Parse a directive like ".globl" which accepts a single symbol (which
   /// should be a label or an external).
   bool parseDirectiveSymbolAttribute(MCSymbolAttr Attr);
@@ -2405,8 +2407,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     case DK_ORG:
       return parseDirectiveOrg();
     case DK_EXTERN:
-      eatToEndOfStatement(); // .extern is the default, ignore it.
-      return false;
+      return parseDirectiveExtern();
     case DK_PUBLIC:
       return parseDirectiveSymbolAttribute(MCSA_Global);
     case DK_COMM:
@@ -5093,7 +5094,7 @@ bool MasmParser::parseDirectiveCVFile() {
   ArrayRef<uint8_t> ChecksumAsBytes(reinterpret_cast<const uint8_t *>(CKMem),
                                     Checksum.size());
 
-  if (!getStreamer().EmitCVFileDirective(FileNumber, Filename, ChecksumAsBytes,
+  if (!getStreamer().emitCVFileDirective(FileNumber, Filename, ChecksumAsBytes,
                                          static_cast<uint8_t>(ChecksumKind)))
     return Error(FileNumberLoc, "file number already allocated");
 
@@ -5134,7 +5135,7 @@ bool MasmParser::parseDirectiveCVFuncId() {
                  "unexpected token in '.cv_func_id' directive"))
     return true;
 
-  if (!getStreamer().EmitCVFuncIdDirective(FunctionId))
+  if (!getStreamer().emitCVFuncIdDirective(FunctionId))
     return Error(FunctionIdLoc, "function id already allocated");
 
   return false;
@@ -5194,7 +5195,7 @@ bool MasmParser::parseDirectiveCVInlineSiteId() {
                  "unexpected token in '.cv_inline_site_id' directive"))
     return true;
 
-  if (!getStreamer().EmitCVInlineSiteIdDirective(FunctionId, IAFunc, IAFile,
+  if (!getStreamer().emitCVInlineSiteIdDirective(FunctionId, IAFunc, IAFile,
                                                  IALine, IACol, FunctionIdLoc))
     return Error(FunctionIdLoc, "function id already allocated");
 
@@ -5494,7 +5495,7 @@ bool MasmParser::parseDirectiveCVFPOData() {
   if (parseEOL("unexpected tokens"))
     return addErrorSuffix(" in '.cv_fpo_data' directive");
   MCSymbol *ProcSym = getContext().getOrCreateSymbol(ProcName);
-  getStreamer().EmitCVFPOData(ProcSym, DirLoc);
+  getStreamer().emitCVFPOData(ProcSym, DirLoc);
   return false;
 }
 
@@ -6016,6 +6017,39 @@ bool MasmParser::parseDirectivePurgeMacro(SMLoc DirectiveLoc) {
     parseOptionalToken(AsmToken::EndOfStatement);
   }
 
+  return false;
+}
+
+bool MasmParser::parseDirectiveExtern() {
+  // .extern is the default - but we still need to take any provided type info.
+  auto parseOp = [&]() -> bool {
+    StringRef Name;
+    SMLoc NameLoc = getTok().getLoc();
+    if (parseIdentifier(Name))
+      return Error(NameLoc, "expected name");
+    if (parseToken(AsmToken::Colon))
+      return true;
+
+    StringRef TypeName;
+    SMLoc TypeLoc = getTok().getLoc();
+    if (parseIdentifier(TypeName))
+      return Error(TypeLoc, "expected type");
+    if (!TypeName.equals_insensitive("proc")) {
+      AsmTypeInfo Type;
+      if (lookUpType(TypeName, Type))
+        return Error(TypeLoc, "unrecognized type");
+      KnownType[Name.lower()] = Type;
+    }
+
+    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+    Sym->setExternal(true);
+    getStreamer().emitSymbolAttribute(Sym, MCSA_Extern);
+
+    return false;
+  };
+
+  if (parseMany(parseOp))
+    return addErrorSuffix(" in directive 'extern'");
   return false;
 }
 

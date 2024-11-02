@@ -1689,18 +1689,37 @@ define float @copysign3(float %x) {
   ret float %r
 }
 
-; TODO: Allow undefs when matching vectors.
-
-define <2 x float> @copysign4(<2 x float> %x) {
-; CHECK-LABEL: @copysign4(
-; CHECK-NEXT:    [[I:%.*]] = bitcast <2 x float> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <2 x i32> [[I]], zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = select nnan arcp <2 x i1> [[ISNEG]], <2 x float> <float 4.200000e+01, float undef>, <2 x float> <float -4.200000e+01, float -4.200000e+01>
+define <2 x float> @copysign_vec_undef(<2 x float> %x) {
+; CHECK-LABEL: @copysign_vec_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <2 x float> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> <float 4.200000e+01, float 4.200000e+01>, <2 x float> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %i = bitcast <2 x float> %x to <2 x i32>
   %isneg = icmp ugt <2 x i32> %i, <i32 2147483647, i32 2147483647>
   %r = select arcp nnan <2 x i1> %isneg, <2 x float> <float 42.0, float undef>, <2 x float> <float -42.0, float -42.0>
+  ret <2 x float> %r
+}
+
+define <2 x float> @copysign_vec_undef1(<2 x float> %x) {
+; CHECK-LABEL: @copysign_vec_undef1(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> <float 4.200000e+01, float 4.200000e+01>, <2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %i = bitcast <2 x float> %x to <2 x i32>
+  %isneg = icmp ult <2 x i32> %i, <i32 2147483648, i32 2147483648>
+  %r = select arcp nnan <2 x i1> %isneg, <2 x float> <float 42.0, float 42.0>, <2 x float> <float undef, float -42.0>
+  ret <2 x float> %r
+}
+
+define <2 x float> @copysign_vec_undef3(<2 x float> %x) {
+; CHECK-LABEL: @copysign_vec_undef3(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> <float 4.200000e+01, float 4.200000e+01>, <2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %i = bitcast <2 x float> %x to <2 x i32>
+  %isneg = icmp ugt <2 x i32> %i, <i32 2147483647, i32 2147483647>
+  %r = select arcp nnan <2 x i1> %isneg, <2 x float> <float -42.0, float undef>, <2 x float> <float +42.0, float undef>
   ret <2 x float> %r
 }
 
@@ -2633,9 +2652,7 @@ define <2 x i8> @cond_freeze_constant_true_val_vec(<2 x i8> %x) {
 
 define <2 x i8> @partial_cond_freeze_constant_true_val_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @partial_cond_freeze_constant_true_val_vec(
-; CHECK-NEXT:    [[COND_FR:%.*]] = freeze <2 x i1> <i1 true, i1 undef>
-; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[COND_FR]], <2 x i8> <i8 1, i8 2>, <2 x i8> [[X:%.*]]
-; CHECK-NEXT:    ret <2 x i8> [[S]]
+; CHECK-NEXT:    ret <2 x i8> <i8 1, i8 2>
 ;
   %cond.fr = freeze <2 x i1> <i1 true, i1 undef>
   %s = select <2 x i1> %cond.fr, <2 x i8> <i8 1, i8 2>, <2 x i8> %x
@@ -2644,9 +2661,8 @@ define <2 x i8> @partial_cond_freeze_constant_true_val_vec(<2 x i8> %x) {
 
 define <2 x i8> @partial_cond_freeze_constant_false_val_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @partial_cond_freeze_constant_false_val_vec(
-; CHECK-NEXT:    [[COND_FR:%.*]] = freeze <2 x i1> <i1 true, i1 undef>
-; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[COND_FR]], <2 x i8> [[X:%.*]], <2 x i8> <i8 1, i8 2>
-; CHECK-NEXT:    ret <2 x i8> [[S]]
+; CHECK-NEXT:    [[S1:%.*]] = insertelement <2 x i8> [[X:%.*]], i8 2, i64 1
+; CHECK-NEXT:    ret <2 x i8> [[S1]]
 ;
   %cond.fr = freeze <2 x i1> <i1 true, i1 undef>
   %s = select <2 x i1> %cond.fr, <2 x i8> %x, <2 x i8> <i8 1, i8 2>
@@ -2655,9 +2671,7 @@ define <2 x i8> @partial_cond_freeze_constant_false_val_vec(<2 x i8> %x) {
 
 define <2 x i8> @partial_cond_freeze_both_arms_constant_vec() {
 ; CHECK-LABEL: @partial_cond_freeze_both_arms_constant_vec(
-; CHECK-NEXT:    [[COND_FR:%.*]] = freeze <2 x i1> <i1 false, i1 undef>
-; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[COND_FR]], <2 x i8> <i8 1, i8 2>, <2 x i8> <i8 42, i8 43>
-; CHECK-NEXT:    ret <2 x i8> [[S]]
+; CHECK-NEXT:    ret <2 x i8> <i8 42, i8 2>
 ;
   %cond.fr = freeze <2 x i1> <i1 false, i1 undef>
   %s = select <2 x i1> %cond.fr, <2 x i8> <i8 1, i8 2>, <2 x i8> <i8 42, i8 43>

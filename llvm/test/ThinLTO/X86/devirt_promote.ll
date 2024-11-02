@@ -58,7 +58,7 @@ entry:
   %fptr1 = load i32 (%struct.A*, i32)*, i32 (%struct.A*, i32)** %2, align 8
 
   ; Check that the call was devirtualized.
-  ; CHECK-IR1: %call = tail call i32 bitcast (void ()* @_ZN1A1nEi
+  ; CHECK-IR1: %call = tail call i32 @_ZN1A1nEi
   %call = tail call i32 %fptr1(%struct.A* nonnull %obj, i32 %a)
 
   ret i32 %call

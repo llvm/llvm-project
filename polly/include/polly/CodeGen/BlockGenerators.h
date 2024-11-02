@@ -625,7 +625,7 @@ protected:
 /// Generate a new vector basic block for a polyhedral statement.
 ///
 /// The only public function exposed is generate().
-class VectorBlockGenerator : BlockGenerator {
+class VectorBlockGenerator final : BlockGenerator {
 public:
   /// Generate a new vector basic block for a ScoPStmt.
   ///
@@ -803,7 +803,7 @@ private:
 };
 
 /// Generator for new versions of polyhedral region statements.
-class RegionGenerator : public BlockGenerator {
+class RegionGenerator final : BlockGenerator {
 public:
   /// Create a generator for regions.
   ///

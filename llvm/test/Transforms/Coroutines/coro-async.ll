@@ -1,5 +1,5 @@
-; RUN: opt < %s -enable-coroutines -passes='default<O2>' -S | FileCheck --check-prefixes=CHECK %s
-; RUN: opt < %s -enable-coroutines -O0 -S | FileCheck --check-prefixes=CHECK-O0 %s
+; RUN: opt < %s -passes='default<O2>' -S | FileCheck --check-prefixes=CHECK %s
+; RUN: opt < %s -O0 -S | FileCheck --check-prefixes=CHECK-O0 %s
 target datalayout = "p:64:64:64"
 
 %async.task = type { i64 }

@@ -113,6 +113,19 @@ inline unsigned getNumPrimeOperands(const MCInst &Inst) {
   return Inst.getNumOperands();
 }
 
+/// Return iterator range of operands excluding operands representing
+/// annotations.
+inline iterator_range<MCInst::iterator> primeOperands(MCInst &Inst) {
+  return iterator_range<MCInst::iterator>(
+      Inst.begin(), Inst.begin() + getNumPrimeOperands(Inst));
+}
+
+inline iterator_range<MCInst::const_iterator>
+primeOperands(const MCInst &Inst) {
+  return iterator_range<MCInst::const_iterator>(
+      Inst.begin(), Inst.begin() + getNumPrimeOperands(Inst));
+}
+
 } // namespace MCPlus
 
 } // namespace bolt

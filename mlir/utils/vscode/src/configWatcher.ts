@@ -41,41 +41,45 @@ async function promptRestart(settingName: string, promptMessage: string) {
  *  Activate watchers that track configuration changes for the given workspace
  *  folder, or null if the workspace is top-level.
  */
-export async function activate(mlirContext: MLIRContext,
-                               workspaceFolder: vscode.WorkspaceFolder,
-                               serverSetting: string, serverPath: string) {
+export async function activate(
+    mlirContext: MLIRContext, workspaceFolder: vscode.WorkspaceFolder,
+    serverSettings: string[], serverPaths: string[]) {
   // When a configuration change happens, check to see if we should restart the
   // server.
   mlirContext.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
-    const expandedSetting = `mlir.${serverSetting}`;
-    if (event.affectsConfiguration(expandedSetting, workspaceFolder)) {
-      promptRestart(
-          'onSettingsChanged',
-          `setting '${
-              expandedSetting}' has changed. Do you want to reload the server?`);
+    for (const serverSetting of serverSettings) {
+      const expandedSetting = `mlir.${serverSetting}`;
+      if (event.affectsConfiguration(expandedSetting, workspaceFolder)) {
+        promptRestart(
+            'onSettingsChanged',
+            `setting '${
+                expandedSetting}' has changed. Do you want to reload the server?`);
+      }
     }
   }));
 
-  // If the server path actually exists, track it in case it changes. Check that
-  // the path actually exists.
-  if (serverPath === '') {
-    return;
-  }
-
+  // Setup watchers for the provided server paths.
   const fileWatcherConfig = {
     disableGlobbing : true,
     followSymlinks : true,
     ignoreInitial : true,
     awaitWriteFinish : true,
   };
-  const fileWatcher = chokidar.watch(serverPath, fileWatcherConfig);
-  fileWatcher.on('all', (event, _filename, _details) => {
-    if (event != 'unlink') {
-      promptRestart(
-          'onSettingsChanged',
-          'MLIR language server binary has changed. Do you want to reload the server?');
+  for (const serverPath of serverPaths) {
+    if (serverPath === '') {
+      return;
     }
-  });
-  mlirContext.subscriptions.push(
-      new vscode.Disposable(() => { fileWatcher.close(); }));
+
+    // If the server path actually exists, track it in case it changes.
+    const fileWatcher = chokidar.watch(serverPath, fileWatcherConfig);
+    fileWatcher.on('all', (event, _filename, _details) => {
+      if (event != 'unlink') {
+        promptRestart(
+            'onSettingsChanged',
+            'MLIR language server file has changed. Do you want to reload the server?');
+      }
+    });
+    mlirContext.subscriptions.push(
+        new vscode.Disposable(() => { fileWatcher.close(); }));
+  }
 }

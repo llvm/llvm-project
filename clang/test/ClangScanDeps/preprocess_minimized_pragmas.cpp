@@ -11,7 +11,7 @@
 // RUN: touch %t.dir/Inputs/c_alias.h
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/preprocess_minimized_pragmas_cdb.json > %t.cdb
 //
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -mode preprocess-minimized-sources | \
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -mode preprocess-dependency-directives | \
 // RUN:   FileCheck %s
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -mode preprocess | \
 // RUN:   FileCheck %s

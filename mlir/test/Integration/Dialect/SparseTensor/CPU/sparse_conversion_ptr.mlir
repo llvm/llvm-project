@@ -35,28 +35,28 @@ module {
   // Helper method to print values and indices arrays. The transfer actually
   // reads more than required to verify size of buffer as well.
   //
-  func @dumpf64(%arg0: memref<?xf64>) {
+  func.func @dumpf64(%arg0: memref<?xf64>) {
     %c = arith.constant 0 : index
     %d = arith.constant -1.0 : f64
     %0 = vector.transfer_read %arg0[%c], %d: memref<?xf64>, vector<8xf64>
     vector.print %0 : vector<8xf64>
     return
   }
-  func @dumpi08(%arg0: memref<?xi8>) {
+  func.func @dumpi08(%arg0: memref<?xi8>) {
     %c = arith.constant 0 : index
     %d = arith.constant -1 : i8
     %0 = vector.transfer_read %arg0[%c], %d: memref<?xi8>, vector<8xi8>
     vector.print %0 : vector<8xi8>
     return
   }
-  func @dumpi32(%arg0: memref<?xi32>) {
+  func.func @dumpi32(%arg0: memref<?xi32>) {
     %c = arith.constant 0 : index
     %d = arith.constant -1 : i32
     %0 = vector.transfer_read %arg0[%c], %d: memref<?xi32>, vector<8xi32>
     vector.print %0 : vector<8xi32>
     return
   }
-  func @dumpi64(%arg0: memref<?xi64>) {
+  func.func @dumpi64(%arg0: memref<?xi64>) {
     %c = arith.constant 0 : index
     %d = arith.constant -1 : i64
     %0 = vector.transfer_read %arg0[%c], %d: memref<?xi64>, vector<8xi64>
@@ -64,7 +64,7 @@ module {
     return
   }
 
-  func @entry() {
+  func.func @entry() {
     %c1 = arith.constant 1 : index
     %t1 = arith.constant sparse<
       [ [0,0], [0,1], [0,63], [1,0], [1,1], [31,0], [31,63] ],

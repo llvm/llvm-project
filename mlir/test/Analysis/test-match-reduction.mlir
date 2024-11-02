@@ -4,7 +4,7 @@
 // dialects.
 
 // expected-remark@below {{Testing function}}
-func @linalg_red_add(%in0t : tensor<?xf32>, %out0t : tensor<1xf32>) {
+func.func @linalg_red_add(%in0t : tensor<?xf32>, %out0t : tensor<1xf32>) {
   // expected-remark@below {{Reduction found in output #0!}}
   // expected-remark@below {{Reduced Value: <block argument> of type 'f32' at index: 0}}
   // expected-remark@below {{Combiner Op: %1 = arith.addf %arg2, %arg3 : f32}}
@@ -23,7 +23,7 @@ func @linalg_red_add(%in0t : tensor<?xf32>, %out0t : tensor<1xf32>) {
 // -----
 
 // expected-remark@below {{Testing function}}
-func @affine_red_add(%in: memref<256x512xf32>, %out: memref<256xf32>) {
+func.func @affine_red_add(%in: memref<256x512xf32>, %out: memref<256xf32>) {
  %cst = arith.constant 0.000000e+00 : f32
  affine.for %i = 0 to 256 {
    // expected-remark@below {{Reduction found in output #0!}}
@@ -43,7 +43,7 @@ func @affine_red_add(%in: memref<256x512xf32>, %out: memref<256xf32>) {
 
 // TODO: Iteration-carried values with multiple uses are not supported yet.
 // expected-remark@below {{Testing function}}
-func @linalg_red_max(%in0t: tensor<4x4xf32>, %out0t: tensor<4xf32>) {
+func.func @linalg_red_max(%in0t: tensor<4x4xf32>, %out0t: tensor<4xf32>) {
   // expected-remark@below {{Reduction NOT found in output #0!}}
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0)>],
@@ -61,7 +61,7 @@ func @linalg_red_max(%in0t: tensor<4x4xf32>, %out0t: tensor<4xf32>) {
 // -----
 
 // expected-remark@below {{Testing function}}
-func @linalg_fused_red_add(%in0t: tensor<4x4xf32>, %out0t: tensor<4xf32>) {
+func.func @linalg_fused_red_add(%in0t: tensor<4x4xf32>, %out0t: tensor<4xf32>) {
   // expected-remark@below {{Reduction found in output #0!}}
   // expected-remark@below {{Reduced Value: %2 = arith.subf %1, %arg2 : f32}}
   // expected-remark@below {{Combiner Op: %3 = arith.addf %2, %arg3 : f32}}
@@ -82,7 +82,7 @@ func @linalg_fused_red_add(%in0t: tensor<4x4xf32>, %out0t: tensor<4xf32>) {
 // -----
 
 // expected-remark@below {{Testing function}}
-func @affine_no_red_rec(%in: memref<512xf32>) {
+func.func @affine_no_red_rec(%in: memref<512xf32>) {
  %cst = arith.constant 0.000000e+00 : f32
  // %rec is the value loaded in the previous iteration.
  // expected-remark@below {{Reduction NOT found in output #0!}}
@@ -97,7 +97,7 @@ func @affine_no_red_rec(%in: memref<512xf32>) {
 // -----
 
 // expected-remark@below {{Testing function}}
-func @affine_output_dep(%in: memref<512xf32>) {
+func.func @affine_output_dep(%in: memref<512xf32>) {
  %cst = arith.constant 0.000000e+00 : f32
  // Reduction %red is not supported because it depends on another
  // loop-carried dependence.

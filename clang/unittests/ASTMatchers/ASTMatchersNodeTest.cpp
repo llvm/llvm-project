@@ -735,6 +735,17 @@ TEST_P(ASTMatchersTest, ParmVarDecl) {
   EXPECT_TRUE(notMatches("void f();", parmVarDecl()));
 }
 
+TEST_P(ASTMatchersTest, StaticAssertDecl) {
+  if (!GetParam().isCXX11OrLater())
+    return;
+
+  EXPECT_TRUE(matches("static_assert(true, \"\");", staticAssertDecl()));
+  EXPECT_TRUE(
+      notMatches("constexpr bool staticassert(bool B, const char *M) "
+                 "{ return true; };\n void f() { staticassert(true, \"\"); }",
+                 staticAssertDecl()));
+}
+
 TEST_P(ASTMatchersTest, Matcher_ConstructorCall) {
   if (!GetParam().isCXX()) {
     return;
@@ -2084,8 +2095,18 @@ TEST_P(ASTMatchersTest, QualifiedTypeLocTest_BindsToConstIntVarDecl) {
 }
 
 TEST_P(ASTMatchersTest, QualifiedTypeLocTest_BindsToConstIntFunctionDecl) {
-  EXPECT_TRUE(matches("const int f() { return 5; }",
-                      qualifiedTypeLoc(loc(asString("const int")))));
+  StringRef Code = R"(
+    const int f() { return 5; }
+  )";
+  // In C++, the qualified return type is retained.
+  EXPECT_TRUE(matchesConditionally(
+      Code, qualifiedTypeLoc(loc(asString("const int"))), true, langAnyCxx()));
+  // In C, the qualifications on the return type are dropped, so we expect it
+  // to match 'int' rather than 'const int'.
+  EXPECT_TRUE(matchesConditionally(
+      Code, qualifiedTypeLoc(loc(asString("const int"))), false, langAnyC()));
+  EXPECT_TRUE(
+      matchesConditionally(Code, loc(asString("int")), true, langAnyC()));
 }
 
 TEST_P(ASTMatchersTest, QualifiedTypeLocTest_DoesNotBindToUnqualifiedVarDecl) {

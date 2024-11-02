@@ -19,7 +19,7 @@
 #include "Types.h"
 #include "Utils.h"
 
-#pragma omp declare target
+#pragma omp begin declare target device_type(nohost)
 
 using namespace _OMP;
 
@@ -62,6 +62,22 @@ uint64_t atomicAdd(uint64_t *Address, uint64_t Val, int Ordering) {
   return __atomic_fetch_add(Address, Val, Ordering);
 }
 ///}
+
+// Forward declarations defined to be defined for AMDGCN and NVPTX.
+uint32_t atomicInc(uint32_t *A, uint32_t V, int Ordering);
+void namedBarrierInit();
+void namedBarrier();
+void fenceTeam(int Ordering);
+void fenceKernel(int Ordering);
+void fenceSystem(int Ordering);
+void syncWarp(__kmpc_impl_lanemask_t);
+void syncThreads();
+void syncThreadsAligned() { syncThreads(); }
+void unsetLock(omp_lock_t *);
+int testLock(omp_lock_t *);
+void initLock(omp_lock_t *);
+void destroyLock(omp_lock_t *);
+void setLock(omp_lock_t *);
 
 /// AMDGCN Implementation
 ///

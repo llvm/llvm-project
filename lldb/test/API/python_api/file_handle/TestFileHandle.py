@@ -276,7 +276,6 @@ class FileHandleTestCase(lldbtest.TestBase):
             self.assertTrue(re.search(r'QUUX', output))
 
 
-    @skipIf(py_version=['<', (3,)])
     def test_immediate_string(self):
         f = io.StringIO()
         ret = lldb.SBCommandReturnObject()
@@ -291,7 +290,6 @@ class FileHandleTestCase(lldbtest.TestBase):
         self.assertTrue(re.search(r'QUUX', output))
 
 
-    @skipIf(py_version=['<', (3,)])
     def test_immediate_sbfile_string(self):
         f = io.StringIO()
         ret = lldb.SBCommandReturnObject()
@@ -361,7 +359,6 @@ class FileHandleTestCase(lldbtest.TestBase):
             self.assertIn('Show a list of all debugger commands', output)
 
 
-    @skipIf(py_version=['<', (3,)])
     def test_string_inout(self):
         inf = io.StringIO("help help\np/x ~0\n")
         outf = io.StringIO()
@@ -377,7 +374,6 @@ class FileHandleTestCase(lldbtest.TestBase):
         self.assertIn('0xfff', output)
 
 
-    @skipIf(py_version=['<', (3,)])
     def test_bytes_inout(self):
         inf = io.BytesIO(b"help help\nhelp b\n")
         outf = io.BytesIO()
@@ -447,7 +443,6 @@ class FileHandleTestCase(lldbtest.TestBase):
 
 
 
-    @skipIf(py_version=['<', (3,)])
     def test_sbfile_write_forced(self):
         with open(self.out_filename, 'w') as f:
             written = MutableBool(False)
@@ -467,7 +462,6 @@ class FileHandleTestCase(lldbtest.TestBase):
             self.assertEqual(f.read().strip(), 'FOO')
 
 
-    @skipIf(py_version=['<', (3,)])
     def test_sbfile_write_forced_borrowed(self):
         with open(self.out_filename, 'w') as f:
             written = MutableBool(False)
@@ -487,7 +481,6 @@ class FileHandleTestCase(lldbtest.TestBase):
             self.assertEqual(f.read().strip(), 'FOO')
 
 
-    @skipIf(py_version=['<', (3,)])
     def test_sbfile_write_string(self):
         f = io.StringIO()
         sbf = lldb.SBFile(f)
@@ -499,7 +492,6 @@ class FileHandleTestCase(lldbtest.TestBase):
         self.assertTrue(f.closed)
 
 
-    @skipIf(py_version=['<', (3,)])
     def test_string_out(self):
         f = io.StringIO()
         status = self.dbg.SetOutputFile(f)
@@ -508,7 +500,6 @@ class FileHandleTestCase(lldbtest.TestBase):
         self.assertEqual(f.getvalue().strip(), "'foobar'")
 
 
-    @skipIf(py_version=['<', (3,)])
     def test_string_error(self):
         f = io.StringIO()
         status = self.dbg.SetErrorFile(f)
@@ -518,7 +509,6 @@ class FileHandleTestCase(lldbtest.TestBase):
         self.assertTrue(re.search(r'error:.*lolwut', errors))
 
 
-    @skipIf(py_version=['<', (3,)])
     def test_sbfile_write_bytes(self):
         f = io.BytesIO()
         sbf = lldb.SBFile(f)
@@ -529,7 +519,6 @@ class FileHandleTestCase(lldbtest.TestBase):
         sbf.Close()
         self.assertTrue(f.closed)
 
-    @skipIf(py_version=['<', (3,)])
     def test_sbfile_read_string(self):
         f = io.StringIO('zork')
         sbf = lldb.SBFile(f)
@@ -539,7 +528,6 @@ class FileHandleTestCase(lldbtest.TestBase):
         self.assertEqual(buf[:n], b'zork')
 
 
-    @skipIf(py_version=['<', (3,)])
     def test_sbfile_read_string_one_byte(self):
         f = io.StringIO('z')
         sbf = lldb.SBFile(f)
@@ -550,7 +538,6 @@ class FileHandleTestCase(lldbtest.TestBase):
         self.assertEqual(e.GetCString(), "can't read less than 6 bytes from a utf8 text stream")
 
 
-    @skipIf(py_version=['<', (3,)])
     def test_sbfile_read_bytes(self):
         f = io.BytesIO(b'zork')
         sbf = lldb.SBFile(f)
@@ -560,7 +547,6 @@ class FileHandleTestCase(lldbtest.TestBase):
         self.assertEqual(buf[:n], b'zork')
 
 
-    @skipIf(py_version=['<', (3,)])
     def test_sbfile_out(self):
         with open(self.out_filename, 'w') as f:
             sbf = lldb.SBFile(f)
@@ -571,7 +557,6 @@ class FileHandleTestCase(lldbtest.TestBase):
             self.assertEqual(f.read().strip(), '4')
 
 
-    @skipIf(py_version=['<', (3,)])
     def test_file_out(self):
         with open(self.out_filename, 'w') as f:
             status = self.dbg.SetOutputFile(f)
@@ -605,21 +590,17 @@ class FileHandleTestCase(lldbtest.TestBase):
     def test_exceptions(self):
         self.assertRaises(Exception, lldb.SBFile, None)
         self.assertRaises(Exception, lldb.SBFile, "ham sandwich")
-        if sys.version_info[0] < 3:
-            self.assertRaises(Exception, lldb.SBFile, ReallyBadIO())
-        else:
-            self.assertRaises(OhNoe, lldb.SBFile, ReallyBadIO())
-            error, n = lldb.SBFile(BadIO()).Write(b"FOO")
-            self.assertEqual(n, 0)
-            self.assertTrue(error.Fail())
-            self.assertIn('OH NOE', error.GetCString())
-            error, n = lldb.SBFile(BadIO()).Read(bytearray(100))
-            self.assertEqual(n, 0)
-            self.assertTrue(error.Fail())
-            self.assertIn('OH NOE', error.GetCString())
+        self.assertRaises(OhNoe, lldb.SBFile, ReallyBadIO())
+        error, n = lldb.SBFile(BadIO()).Write(b"FOO")
+        self.assertEqual(n, 0)
+        self.assertTrue(error.Fail())
+        self.assertIn('OH NOE', error.GetCString())
+        error, n = lldb.SBFile(BadIO()).Read(bytearray(100))
+        self.assertEqual(n, 0)
+        self.assertTrue(error.Fail())
+        self.assertIn('OH NOE', error.GetCString())
 
 
-    @skipIf(py_version=['<', (3,)])
     def test_exceptions_logged(self):
         messages = list()
         self.dbg.SetLoggingCallback(messages.append)
@@ -629,7 +610,6 @@ class FileHandleTestCase(lldbtest.TestBase):
         self.assertTrue(any('OH NOE' in msg for msg in messages))
 
 
-    @skipIf(py_version=['<', (3,)])
     def test_flush(self):
         flushed = MutableBool(False)
         closed = MutableBool(False)
@@ -695,7 +675,6 @@ class FileHandleTestCase(lldbtest.TestBase):
             self.assertTrue(re.search(r'ZAP', output))
 
 
-    @skipIf(py_version=['<', (3,)])
     def test_stdout(self):
         f = io.StringIO()
         status = self.dbg.SetOutputFile(f)
@@ -718,9 +697,7 @@ class FileHandleTestCase(lldbtest.TestBase):
             self.assertEqual(lines, ["foobar"])
 
 
-    @skipIf(py_version=['<', (3,)])
     def test_identity(self):
-
         f = io.StringIO()
         sbf = lldb.SBFile(f)
         self.assertTrue(f is sbf.GetFile())
@@ -810,22 +787,15 @@ class FileHandleTestCase(lldbtest.TestBase):
             self.dbg.SetOutputFileHandle(None, False)
             self.dbg.SetErrorFileHandle(None, False)
             sbf = self.dbg.GetOutputFile()
-            if sys.version_info.major >= 3:
-                # python 2 lacks PyFile_FromFd, so GetFile() will
-                # have to duplicate the file descriptor and make a FILE*
-                # in order to convert a NativeFile it back to a python
-                # file.
-                self.assertEqual(sbf.GetFile().fileno(), 1)
+            self.assertEqual(sbf.GetFile().fileno(), 1)
             sbf = self.dbg.GetErrorFile()
-            if sys.version_info.major >= 3:
-                self.assertEqual(sbf.GetFile().fileno(), 2)
+            self.assertEqual(sbf.GetFile().fileno(), 2)
         with open(self.out_filename, 'r') as f:
             status = self.dbg.SetInputFile(f)
             self.assertSuccess(status)
             self.dbg.SetInputFileHandle(None, False)
             sbf = self.dbg.GetInputFile()
-            if sys.version_info.major >= 3:
-                self.assertEqual(sbf.GetFile().fileno(), 0)
+            self.assertEqual(sbf.GetFile().fileno(), 0)
 
 
     def test_sbstream(self):

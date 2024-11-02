@@ -380,9 +380,8 @@ define i32 @not_rotr_5(i32 %a, i32 %b) {
 ; CHECK:       rotbb:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[B]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fshr.i32(i32 [[TMP0]], i32 [[A:%.*]], i32 [[B]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshr.i32(i32 [[B]], i32 [[A:%.*]], i32 [[B]])
+; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
   %cmp = icmp eq i32 %b, 0

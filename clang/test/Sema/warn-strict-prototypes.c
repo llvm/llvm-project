@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i386-pc-unknown -fsyntax-only -Wstrict-prototypes -Wno-implicit-function-declaration -verify %s
-// RUN: %clang_cc1 -triple i386-pc-unknown -fsyntax-only -Wstrict-prototypes -Wno-implicit-function-declaration -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple i386-pc-unknown -fsyntax-only -Wstrict-prototypes -Wno-implicit-function-declaration -Wno-error=implicit-int -verify %s
+// RUN: %clang_cc1 -triple i386-pc-unknown -fsyntax-only -Wstrict-prototypes -Wno-implicit-function-declaration -Wno-error=implicit-int -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
 // function definition with 0 params, no prototype, no preceding declaration.
 void foo0() {} // expected-warning {{a function declaration without a prototype is deprecated in all versions of C}}
@@ -48,7 +48,7 @@ void bar3(void) {
 }
 
 // K&R function definition not preceded by full prototype
-int foo9(a, b) // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
+int foo9(a, b) // expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
   int a, b;
 {
   return a + b;
@@ -56,16 +56,17 @@ int foo9(a, b) // expected-warning {{a function declaration without a prototype 
 
 // Function declaration with no types
 void foo10(); // expected-warning {{a function declaration without a prototype is deprecated in all versions of C}} \
-                 expected-note {{a function declaration without a prototype is not supported in C2x}}
+                 expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C2x, conflicting with a subsequent definition}}
               // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"void"
 // K&R function definition with incomplete param list declared
-void foo10(p, p2) void *p; {} // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
+void foo10(p, p2) void *p; {} // expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}} \
+                                 expected-warning {{parameter 'p2' was not declared, defaults to 'int'; ISO C99 and later do not support implicit int}}
 
 void foo11(int p, int p2);
-void foo11(p, p2) int p; int p2; {} // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
+void foo11(p, p2) int p; int p2; {} // expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
 
 // PR31020
-void __attribute__((cdecl)) foo12(d) // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
+void __attribute__((cdecl)) foo12(d) // expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
   short d;
 {}
 

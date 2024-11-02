@@ -52,3 +52,26 @@ subroutine s3
     end where
   end where
 end
+
+subroutine s4
+  integer :: x1 = 0, x2(2) = 0
+  logical :: l1 = .false., l2(2) = (/.true., .false./), l3 = .false.
+  !ERROR: The mask or variable must not be scalar
+  where (l1)
+    !ERROR: The mask or variable must not be scalar
+    x1 = 1
+  end where
+  !ERROR: The mask or variable must not be scalar
+  where (l1)
+    !ERROR: The mask or variable must not be scalar
+    where (l3)
+      !ERROR: The mask or variable must not be scalar
+      x1 = 1
+    end where
+  end where
+  !ERROR: The mask or variable must not be scalar
+  where (l2(2))
+    !ERROR: The mask or variable must not be scalar
+    x2(2) = 1
+  end where
+end

@@ -95,7 +95,7 @@ let Command = "breakpoint modify" in {
   def breakpoint_modify_command : Option<"command", "C">, Group<4>,
     Arg<"Command">,
     Desc<"A command to run when the breakpoint is hit, can be provided more "
-    "than once, the commands will get run in order left to right.">;
+    "than once, the commands will be run in left-to-right order.">;
 }
 
 let Command = "breakpoint dummy" in {
@@ -132,8 +132,8 @@ let Command = "breakpoint set" in {
     "no matter where the binary eventually loads.  Alternately, if you also "
     "specify the module - with the -s option - then the address will be "
     "treated as a file address in that module, and resolved accordingly.  "
-    "Again, this will allow lldb to track that offset on subsequent reloads. "
-    " The module need not have been loaded at the time you specify this "
+    "Again, this will allow lldb to track that offset on subsequent reloads.  "
+    "The module need not have been loaded at the time you specify this "
     "breakpoint, and will get resolved when the module is loaded.">;
   def breakpoint_set_name : Option<"name", "n">, Group<3>, Arg<"FunctionName">,
     Completion<"Symbol">, Required,
@@ -152,8 +152,8 @@ let Command = "breakpoint set" in {
     " to make one breakpoint for multiple names.">;
   def breakpoint_set_selector : Option<"selector", "S">, Group<5>,
     Arg<"Selector">, Required,
-    Desc<"Set the breakpoint by ObjC selector name. Can be repeated multiple "
-    "times to make one breakpoint for multiple Selectors.">;
+    Desc<"Set the breakpoint by Objective-C selector name.  Can be repeated "
+    "multiple times to make one breakpoint for multiple Selectors.">;
   def breakpoint_set_method : Option<"method", "M">, Group<6>, Arg<"Method">,
     Required, Desc<"Set the breakpoint by C++ method names.  Can be repeated "
     "multiple times to make one breakpoint for multiple methods.">;
@@ -491,8 +491,6 @@ let Command = "memory read" in {
     "display data.">;
   def memory_read_force : Option<"force", "r">, Groups<[1,2,3]>,
     Desc<"Necessary if reading over target.max-memory-read-size bytes.">;
-  def memory_read_show_tags : Option<"show-tags", "\\x01">, Group<1>,
-    Desc<"Include memory tags in output (does not apply to binary output).">;
 }
 
 let Command = "memory find" in {
@@ -513,6 +511,12 @@ let Command = "memory write" in {
     Required, Desc<"Write memory using the contents of a file.">;
   def memory_write_offset : Option<"offset", "o">, Group<1>, Arg<"Offset">,
     Desc<"Start writing bytes from an offset within the input file.">;
+}
+
+let Command = "memory region" in {
+  def memory_region_all : Option<"all", "a">, Group<2>, Required,
+    Desc<"Show all memory regions. This is equivalent to starting from address "
+         "0 and repeating the command. Unmapped areas are included.">;
 }
 
 let Command = "memory tag write" in {
@@ -738,6 +742,8 @@ let Command = "process load" in {
 }
 
 let Command = "process handle" in {
+  def process_handle_clear : Option<"clear", "c">, Group<2>,
+    Desc<"Removes the signals listed from the Target signal handlers">;
   def process_handle_stop : Option<"stop", "s">, Group<1>, Arg<"Boolean">,
     Desc<"Whether or not the process should be stopped if the signal is "
     "received.">;
@@ -746,6 +752,10 @@ let Command = "process handle" in {
     "received.">;
   def process_handle_pass : Option<"pass", "p">, Group<1>, Arg<"Boolean">,
     Desc<"Whether or not the signal should be passed to the process.">;
+  def process_handle_only_target : Option<"target", "t">, Group<1>,
+    Desc<"Show only the signals with behaviors modified in this target">;
+  def process_handle_dummy : Option<"dummy", "d">, Group<2>,
+    Desc<"Also clear the values in the dummy target so they won't be inherited by new targets.">;
 }
 
 let Command = "process status" in {
@@ -1121,12 +1131,15 @@ let Command = "thread trace dump instructions" in {
   def thread_trace_dump_instructions_show_tsc : Option<"tsc", "t">, Group<1>,
     Desc<"For each instruction, print the corresponding timestamp counter if "
     "available.">;
+  def thread_trace_dump_instructions_hide_events : Option<"events", "e">,
+    Group<1>,
+    Desc<"Dump the events that happened during the execution of the target.">;
   def thread_trace_dump_instructions_continue: Option<"continue", "C">,
     Group<1>,
-    Desc<"Continue dumping instructions right where the previous invocation of this "
-    "command was left, or from the beginning if this is the first invocation. The --skip "
-    "argument is discarded and the other arguments are preserved from the previous "
-    "invocation when possible.">;
+    Desc<"Continue dumping instructions right where the previous invocation of "
+    "this command was left, or from the beginning if this is the first "
+    "invocation. The --skip argument is discarded and the other arguments are "
+    "preserved from the previous invocation when possible.">;
 }
 
 let Command = "thread trace dump info" in {

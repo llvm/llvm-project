@@ -435,5 +435,22 @@ define i32 @fuzz9935() {
   ret i32 %4
 }
 
+; Ensure we normalize the inner rotation before adding the results.
+define i5 @rotl_merge_i5(i5 %x) {
+; CHECK-LABEL: rotl_merge_i5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal (,%rdi,4), %ecx
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andb $24, %al
+; CHECK-NEXT:    shrb $3, %al
+; CHECK-NEXT:    orb %cl, %al
+; CHECK-NEXT:    retq
+  %r1 = call i5 @llvm.fshl.i5(i5 %x, i5 %x, i5 -1)
+  %r2 = call i5 @llvm.fshl.i5(i5 %r1, i5 %r1, i5 1)
+  ret i5 %r2
+}
+declare i5 @llvm.fshl.i5(i5, i5, i5)
+
 declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 declare <4 x i32> @llvm.fshr.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)

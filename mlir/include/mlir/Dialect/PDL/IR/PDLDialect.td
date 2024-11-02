@@ -20,8 +20,8 @@ include "mlir/IR/OpBase.td"
 //===----------------------------------------------------------------------===//
 
 def PDL_Dialect : Dialect {
-  string summary = "High level pattern definition dialect";
-  string description = [{
+  let summary = "High level pattern definition dialect";
+  let description = [{
     PDL presents a high level abstraction for the rewrite pattern infrastructure
     available in MLIR. This abstraction allows for representing patterns
     transforming MLIR, as MLIR. This allows for applying all of the benefits
@@ -64,6 +64,8 @@ def PDL_Dialect : Dialect {
 
   let name = "pdl";
   let cppNamespace = "::mlir::pdl";
+
+  let useDefaultTypePrinterParser = 1;
   let extraClassDeclaration = [{
     void registerTypes();
   }];

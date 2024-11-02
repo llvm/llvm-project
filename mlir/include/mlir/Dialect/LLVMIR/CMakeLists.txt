@@ -37,6 +37,7 @@ add_public_tablegen_target(MLIRLLVMConversionsIncGen)
 
 set(LLVM_TARGET_DEFINITIONS LLVMIntrinsicOps.td)
 mlir_tablegen(LLVMIntrinsicConversions.inc -gen-llvmir-conversions)
+mlir_tablegen(LLVMIntrinsicToLLVMIROpPairs.inc -gen-llvmintrinsic-to-llvmirop-pairs)
 add_public_tablegen_target(MLIRLLVMIntrinsicConversionsIncGen)
 
 add_mlir_dialect(NVVMOps nvvm)

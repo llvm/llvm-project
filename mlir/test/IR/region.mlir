@@ -4,7 +4,7 @@
 // Test the number of regions
 //===----------------------------------------------------------------------===//
 
-func @correct_number_of_regions() {
+func.func @correct_number_of_regions() {
     // CHECK: test.two_region_op
     "test.two_region_op"()(
       {"work"() : () -> ()},
@@ -15,7 +15,7 @@ func @correct_number_of_regions() {
 
 // -----
 
-func @missing_regions() {
+func.func @missing_regions() {
     // expected-error@+1 {{expected 2 regions}}
     "test.two_region_op"()(
       {"work"() : () -> ()}
@@ -25,7 +25,7 @@ func @missing_regions() {
 
 // -----
 
-func @extra_regions() {
+func.func @extra_regions() {
     // expected-error@+1 {{expected 2 regions}}
     "test.two_region_op"()(
       {"work"() : () -> ()},
@@ -41,7 +41,7 @@ func @extra_regions() {
 // Test SizedRegion
 //===----------------------------------------------------------------------===//
 
-func @unnamed_region_has_wrong_number_of_blocks() {
+func.func @unnamed_region_has_wrong_number_of_blocks() {
     // expected-error@+1 {{region #1 failed to verify constraint: region with 1 blocks}}
     "test.sized_region_op"() (
     {
@@ -62,7 +62,7 @@ func @unnamed_region_has_wrong_number_of_blocks() {
 // -----
 
 // Test region name in error message
-func @named_region_has_wrong_number_of_blocks() {
+func.func @named_region_has_wrong_number_of_blocks() {
     // expected-error@+1 {{region #0 ('my_region') failed to verify constraint: region with 2 blocks}}
     "test.sized_region_op"() (
     {
@@ -87,18 +87,18 @@ func @named_region_has_wrong_number_of_blocks() {
 // CHECK: test.single_no_terminator_op
 "test.single_no_terminator_op"() (
   {
-    func @foo1() { return }
-    func @foo2() { return }
+    func.func @foo1() { return }
+    func.func @foo2() { return }
   }
 ) : () -> ()
 
 // CHECK: test.variadic_no_terminator_op
 "test.variadic_no_terminator_op"() (
   {
-    func @foo1() { return }
+    func.func @foo1() { return }
   },
   {
-    func @foo2() { return }
+    func.func @foo2() { return }
   }
 ) : () -> ()
 

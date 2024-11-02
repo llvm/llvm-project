@@ -9,6 +9,10 @@
 # RUN:           --check-prefixes=INTRINSICS,NOEXTGEOM,NOINT,NOSUBINT,NOMMA,NODOUBLE,NOALTFLOAT,NOLDMATRIX
 # RUN: llc < %t-ptx60-sm_70.ll -march=nvptx64 -mcpu=sm_70 -mattr=+ptx60 \
 # RUN:           | FileCheck %t-ptx60-sm_70.ll
+# RUN: %if ptxas %{                                                       \
+# RUN:   llc < %t-ptx60-sm_70.ll -march=nvptx64 -mcpu=sm_70 -mattr=+ptx60 \
+# RUN:           | %ptxas-verify -arch=sm_70                              \
+# RUN: %}
 
 # Check all variants of instructions supported by PTX61 on SM70
 # RUN: %python %s --ptx=61 --gpu-arch=70 > %t-ptx61-sm_70.ll
@@ -18,6 +22,10 @@
 # RUN:           --check-prefixes=INTRINSICS,NOINT,NOSUBINT,NOMMA,NODOUBLE,NOALTFLOAT,NOLDMATRIX
 # RUN: llc < %t-ptx61-sm_70.ll -march=nvptx64 -mcpu=sm_70 -mattr=+ptx61 \
 # RUN:           | FileCheck %t-ptx61-sm_70.ll
+# RUN: %if ptxas-9.1 %{                                                   \
+# RUN:   llc < %t-ptx61-sm_70.ll -march=nvptx64 -mcpu=sm_70 -mattr=+ptx61 \
+# RUN:           | %ptxas-verify -arch=sm_70                              \
+# RUN: %}
 
 # Check all variants of instructions supported by PTX63 on SM72
 # RUN: %python %s --ptx=63 --gpu-arch=72 > %t-ptx63-sm_72.ll
@@ -27,6 +35,10 @@
 # RUN:           --check-prefixes=INTRINSICS,NOSUBINT,NOMMA,NODOUBLE,NOALTFLOAT,NOLDMATRIX
 # RUN: llc < %t-ptx63-sm_72.ll -march=nvptx64 -mcpu=sm_72 -mattr=+ptx63 \
 # RUN:           | FileCheck %t-ptx63-sm_72.ll
+# RUN: %if ptxas-10.0 %{                                                  \
+# RUN:   llc < %t-ptx63-sm_72.ll -march=nvptx64 -mcpu=sm_72 -mattr=+ptx63 \
+# RUN:           | %ptxas-verify -arch=sm_72                              \
+# RUN: %}
 
 # Check all variants of instructions supported by PTX63 on SM75
 # RUN: %python %s --ptx=63 --gpu-arch=75 > %t-ptx63-sm_75.ll
@@ -36,6 +48,10 @@
 # RUN:           --check-prefixes=INTRINSICS,NOMMA,NODOUBLE,NOALTFLOAT,NOLDMATRIX
 # RUN: llc < %t-ptx63-sm_75.ll -march=nvptx64 -mcpu=sm_75 -mattr=+ptx63 \
 # RUN:           | FileCheck %t-ptx63-sm_75.ll
+# RUN: %if ptxas-10.0 %{                                                  \
+# RUN:   llc < %t-ptx63-sm_75.ll -march=nvptx64 -mcpu=sm_75 -mattr=+ptx63 \
+# RUN:           | %ptxas-verify -arch=sm_75                              \
+# RUN: %}
 
 # Check all variants of instructions supported by PTX64 on SM70+
 # RUN: %python %s --ptx=64 --gpu-arch=70 > %t-ptx64-sm_70.ll
@@ -45,6 +61,10 @@
 # RUN:           --check-prefixes=INTRINSICS,NOINT,NOSUBINT,NODOUBLE,NOALTFLOAT,NOLDMATRIX
 # RUN: llc < %t-ptx64-sm_70.ll -march=nvptx64 -mcpu=sm_70 -mattr=+ptx64 \
 # RUN:           | FileCheck %t-ptx64-sm_70.ll
+# RUN: %if ptxas-10.1 %{                                                  \
+# RUN:   llc < %t-ptx64-sm_70.ll -march=nvptx64 -mcpu=sm_70 -mattr=+ptx64 \
+# RUN:           | %ptxas-verify -arch=sm_70                              \
+# RUN: %}
 
 # Check all variants of instructions supported by PTX65 on SM75+
 # RUN: %python %s --ptx=65 --gpu-arch=75 > %t-ptx65-sm_75.ll
@@ -54,6 +74,10 @@
 # RUN:           --check-prefixes=INTRINSICS
 # RUN: llc < %t-ptx65-sm_75.ll -march=nvptx64 -mcpu=sm_75 -mattr=+ptx65 \
 # RUN:           | FileCheck %t-ptx65-sm_75.ll
+# RUN: %if ptxas-10.2 %{                                                  \
+# RUN:   llc < %t-ptx65-sm_75.ll -march=nvptx64 -mcpu=sm_75 -mattr=+ptx65 \
+# RUN:           | %ptxas-verify -arch=sm_75                              \
+# RUN: %}
 
 # Check all variants of instructions supported by PTX71 on SM80+
 # RUN: %python %s --ptx=71 --gpu-arch=80 > %t-ptx71-sm_80.ll
@@ -63,6 +87,10 @@
 # RUN:           --check-prefixes=INTRINSICS
 # RUN: llc < %t-ptx71-sm_80.ll -march=nvptx64 -mcpu=sm_80 -mattr=+ptx71 \
 # RUN:           | FileCheck %t-ptx71-sm_80.ll
+# RUN: %if ptxas-11.1 %{                                                  \
+# RUN:   llc < %t-ptx71-sm_80.ll -march=nvptx64 -mcpu=sm_80 -mattr=+ptx71 \
+# RUN:           | %ptxas-verify -arch=sm_80                              \
+# RUN: %}
 
 from __future__ import print_function
 

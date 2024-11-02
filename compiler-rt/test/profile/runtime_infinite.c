@@ -1,3 +1,4 @@
+// XFAIL: aix
 // The waiting loop never exits via the normal
 // path before the profile is dumped and the
 // program is terminated. This tests checks

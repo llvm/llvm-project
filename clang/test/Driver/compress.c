@@ -26,6 +26,7 @@
 // RUN: %clang -### -target x86_64-unknown-linux-gnu -gz=zlib -x assembler %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_ZLIB %s
 // RUN: %clang -### -target x86_64-unknown-linux-gnu -gz=zlib %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_ZLIB %s
 // RUN: %clang -### -target x86_64-unknown-freebsd -gz=zlib %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_ZLIB %s
+// RUN: %clang -### -target x86_64-unknown-fuchsia -gz=zlib %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_ZLIB %s
 // CHECK-OPT_GZ_EQ_ZLIB: {{.* "-cc1(as)?".* "--compress-debug-sections=zlib"}}
 // CHECK-OPT_GZ_EQ_ZLIB: "--compress-debug-sections=zlib"
 

@@ -99,8 +99,8 @@ define i32 @t8(i64 %a, i32 %b) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.smin.i64(i64 [[A:%.*]], i64 -32767)
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[B:%.*]], 42
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 42, i32 [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i32 [[TMP4]], [[B]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP2]], [[B]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], i1 true, i1 [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i1 [[TMP5]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;

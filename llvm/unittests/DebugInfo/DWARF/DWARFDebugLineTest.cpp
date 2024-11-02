@@ -331,6 +331,82 @@ TEST_P(DebugLineParameterisedFixture, GetOrParseLineTableValidTable) {
 }
 
 #ifdef _AIX
+TEST_P(DebugLineParameterisedFixture, DISABLED_ClearLineValidTable) {
+#else
+TEST_P(DebugLineParameterisedFixture, ClearLineValidTable) {
+#endif
+  if (!setupGenerator(Version))
+    GTEST_SKIP();
+
+  SCOPED_TRACE("Checking Version " + std::to_string(Version) + ", Format " +
+               (Format == DWARF64 ? "DWARF64" : "DWARF32"));
+
+  LineTable &LT = Gen->addLineTable(Format);
+  LT.addExtendedOpcode(9, DW_LNE_set_address, {{0xadd4e55, LineTable::Quad}});
+  LT.addStandardOpcode(DW_LNS_copy, {});
+  LT.addByte(0xaa);
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+
+  LineTable &LT2 = Gen->addLineTable(Format);
+  LT2.addExtendedOpcode(9, DW_LNE_set_address, {{0x11223344, LineTable::Quad}});
+  LT2.addStandardOpcode(DW_LNS_copy, {});
+  LT2.addByte(0xbb);
+  LT2.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+  LT2.addExtendedOpcode(9, DW_LNE_set_address, {{0x55667788, LineTable::Quad}});
+  LT2.addStandardOpcode(DW_LNS_copy, {});
+  LT2.addByte(0xcc);
+  LT2.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+
+  generate();
+
+  // Check that we have what we expect before calling clearLineTable().
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
+                                                    nullptr, RecordRecoverable);
+  ASSERT_TRUE((bool)ExpectedLineTable);
+  EXPECT_FALSE(Recoverable);
+  const DWARFDebugLine::LineTable *Expected = *ExpectedLineTable;
+  checkDefaultPrologue(Version, Format, Expected->Prologue, 16);
+  EXPECT_EQ(Expected->Sequences.size(), 1u);
+
+  uint64_t SecondOffset =
+      Expected->Prologue.sizeofTotalLength() + Expected->Prologue.TotalLength;
+  Recoverable = Error::success();
+  auto ExpectedLineTable2 = Line.getOrParseLineTable(
+      LineData, SecondOffset, *Context, nullptr, RecordRecoverable);
+  ASSERT_TRUE((bool)ExpectedLineTable2);
+  EXPECT_FALSE(Recoverable);
+  const DWARFDebugLine::LineTable *Expected2 = *ExpectedLineTable2;
+  checkDefaultPrologue(Version, Format, Expected2->Prologue, 32);
+  EXPECT_EQ(Expected2->Sequences.size(), 2u);
+
+  // Check that we no longer get the line tables after clearLineTable().
+  Line.clearLineTable(0);
+  Line.clearLineTable(SecondOffset);
+  EXPECT_EQ(Line.getLineTable(0), nullptr);
+  EXPECT_EQ(Line.getLineTable(SecondOffset), nullptr);
+
+  // Check that if the same offset is requested, the contents match what we
+  // had before.
+  Recoverable = Error::success();
+  auto ExpectedLineTable3 = Line.getOrParseLineTable(
+      LineData, 0, *Context, nullptr, RecordRecoverable);
+  ASSERT_TRUE((bool)ExpectedLineTable3);
+  EXPECT_FALSE(Recoverable);
+  const DWARFDebugLine::LineTable *Expected3 = *ExpectedLineTable3;
+  checkDefaultPrologue(Version, Format, Expected3->Prologue, 16);
+  EXPECT_EQ(Expected3->Sequences.size(), 1u);
+
+  Recoverable = Error::success();
+  auto ExpectedLineTable4 = Line.getOrParseLineTable(
+      LineData, SecondOffset, *Context, nullptr, RecordRecoverable);
+  ASSERT_TRUE((bool)ExpectedLineTable4);
+  EXPECT_FALSE(Recoverable);
+  const DWARFDebugLine::LineTable *Expected4 = *ExpectedLineTable4;
+  checkDefaultPrologue(Version, Format, Expected4->Prologue, 32);
+  EXPECT_EQ(Expected4->Sequences.size(), 2u);
+}
+
+#ifdef _AIX
 TEST_F(DebugLineBasicFixture, DISABLED_ErrorForReservedLength) {
 #else
 TEST_F(DebugLineBasicFixture, ErrorForReservedLength) {

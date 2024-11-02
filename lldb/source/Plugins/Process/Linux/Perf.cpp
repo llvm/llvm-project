@@ -8,9 +8,14 @@
 
 #include "Perf.h"
 
+#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
+#include "lldb/Host/linux/Support.h"
+
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/MemoryBuffer.h"
 
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -18,6 +23,54 @@
 using namespace lldb_private;
 using namespace process_linux;
 using namespace llvm;
+
+void lldb_private::process_linux::ReadCyclicBuffer(
+    llvm::MutableArrayRef<uint8_t> &dst, llvm::ArrayRef<uint8_t> src,
+    size_t src_cyc_index, size_t offset) {
+
+  Log *log = GetLog(POSIXLog::Trace);
+
+  if (dst.empty() || src.empty()) {
+    dst = dst.drop_back(dst.size());
+    return;
+  }
+
+  if (dst.data() == nullptr || src.data() == nullptr) {
+    dst = dst.drop_back(dst.size());
+    return;
+  }
+
+  if (src_cyc_index > src.size()) {
+    dst = dst.drop_back(dst.size());
+    return;
+  }
+
+  if (offset >= src.size()) {
+    LLDB_LOG(log, "Too Big offset ");
+    dst = dst.drop_back(dst.size());
+    return;
+  }
+
+  llvm::SmallVector<ArrayRef<uint8_t>, 2> parts = {
+      src.slice(src_cyc_index), src.take_front(src_cyc_index)};
+
+  if (offset > parts[0].size()) {
+    parts[1] = parts[1].slice(offset - parts[0].size());
+    parts[0] = parts[0].drop_back(parts[0].size());
+  } else if (offset == parts[0].size()) {
+    parts[0] = parts[0].drop_back(parts[0].size());
+  } else {
+    parts[0] = parts[0].slice(offset);
+  }
+  auto next = dst.begin();
+  auto bytes_left = dst.size();
+  for (auto part : parts) {
+    size_t chunk_size = std::min(part.size(), bytes_left);
+    next = std::copy_n(part.begin(), chunk_size, next);
+    bytes_left -= chunk_size;
+  }
+  dst = dst.drop_back(bytes_left);
+}
 
 Expected<LinuxPerfZeroTscConversion>
 lldb_private::process_linux::LoadPerfTscConversionParameters() {
@@ -65,10 +118,13 @@ void resource_handle::FileDescriptorDeleter::operator()(long *ptr) {
 }
 
 llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
-                                          lldb::pid_t pid, int cpu,
-                                          int group_fd, unsigned long flags) {
+                                          Optional<lldb::pid_t> pid,
+                                          Optional<lldb::core_id_t> cpu,
+                                          Optional<int> group_fd,
+                                          unsigned long flags) {
   errno = 0;
-  long fd = syscall(SYS_perf_event_open, &attr, pid, cpu, group_fd, flags);
+  long fd = syscall(SYS_perf_event_open, &attr, pid.getValueOr(-1),
+                    cpu.getValueOr(-1), group_fd.getValueOr(-1), flags);
   if (fd == -1) {
     std::string err_msg =
         llvm::formatv("perf event syscall failed: {0}", std::strerror(errno));
@@ -78,8 +134,9 @@ llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
 }
 
 llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
-                                          lldb::pid_t pid) {
-  return Init(attr, pid, -1, -1, 0);
+                                          Optional<lldb::pid_t> pid,
+                                          Optional<lldb::core_id_t> cpu) {
+  return Init(attr, pid, cpu, -1, 0);
 }
 
 llvm::Expected<resource_handle::MmapUP>
@@ -162,4 +219,20 @@ ArrayRef<uint8_t> PerfEvent::GetAuxBuffer() const {
   perf_event_mmap_page &mmap_metadata = GetMetadataPage();
   return {reinterpret_cast<uint8_t *>(m_aux_base.get()),
            static_cast<size_t>(mmap_metadata.aux_size)};
+}
+
+Error PerfEvent::DisableWithIoctl() const {
+  if (ioctl(*m_fd, PERF_EVENT_IOC_DISABLE) < 0)
+    return createStringError(inconvertibleErrorCode(),
+                             "Can't disable perf event. %s",
+                             std::strerror(errno));
+  return Error::success();
+}
+
+Error PerfEvent::EnableWithIoctl() const {
+  if (ioctl(*m_fd, PERF_EVENT_IOC_ENABLE) < 0)
+    return createStringError(inconvertibleErrorCode(),
+                             "Can't disable perf event. %s",
+                             std::strerror(errno));
+  return Error::success();
 }

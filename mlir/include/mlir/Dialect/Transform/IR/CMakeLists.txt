@@ -9,5 +9,7 @@ add_public_tablegen_target(MLIRTransformDialectIncGen)
 add_dependencies(mlir-headers MLIRTransformDialectIncGen)
 
 add_mlir_dialect(TransformOps transform)
+add_mlir_doc(TransformOps TransformOps Dialects/ -gen-dialect-doc -dialect=transform)
 
 add_mlir_interface(TransformInterfaces)
+add_mlir_doc(TransformInterfaces TransformOpInterfaces Dialects/ -gen-op-interface-docs)

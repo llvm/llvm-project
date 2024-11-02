@@ -38,7 +38,7 @@ using namespace llvm;
 #define DEBUG_TYPE "mips-isel"
 
 bool MipsSEDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &static_cast<const MipsSubtarget &>(MF.getSubtarget());
+  Subtarget = &MF.getSubtarget<MipsSubtarget>();
   if (Subtarget->inMips16Mode())
     return false;
   return MipsDAGToDAGISel::runOnMachineFunction(MF);
@@ -954,6 +954,38 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
     }
     }
     break;
+  }
+
+  case MipsISD::FAbs: {
+    MVT ResTy = Node->getSimpleValueType(0);
+    assert((ResTy == MVT::f64 || ResTy == MVT::f32) &&
+           "Unsupported float type!");
+    unsigned Opc = 0;
+    if (ResTy == MVT::f64)
+      Opc = (Subtarget->isFP64bit() ? Mips::FABS_D64 : Mips::FABS_D32);
+    else
+      Opc = Mips::FABS_S;
+
+    if (Subtarget->inMicroMipsMode()) {
+      switch (Opc) {
+      case Mips::FABS_D64:
+        Opc = Mips::FABS_D64_MM;
+        break;
+      case Mips::FABS_D32:
+        Opc = Mips::FABS_D32_MM;
+        break;
+      case Mips::FABS_S:
+        Opc = Mips::FABS_S_MM;
+        break;
+      default:
+        llvm_unreachable("Unknown opcode for MIPS floating point abs!");
+      }
+    }
+
+    ReplaceNode(Node,
+                CurDAG->getMachineNode(Opc, DL, ResTy, Node->getOperand(0)));
+
+    return true;
   }
 
   // Manually match MipsISD::Ins nodes to get the correct instruction. It has

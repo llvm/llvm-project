@@ -1,6 +1,6 @@
 // RUN: mlir-opt -resolve-shaped-type-result-dims -split-input-file %s | FileCheck %s
 
-func @insert_slice(
+func.func @insert_slice(
     %arg0 : tensor<?x?x?xf32>, %arg1 : tensor<?x?x?xf32>,
     %arg2 : index, %arg3 : index, %arg4 : index) -> (index, index, index) {
   %c0 = arith.constant 0 : index
@@ -28,7 +28,7 @@ func @insert_slice(
 
 // -----
 
-func @extract_slice(%arg0 : tensor<?x?x?xf32>, %arg1 : index, %arg2 : index,
+func.func @extract_slice(%arg0 : tensor<?x?x?xf32>, %arg1 : index, %arg2 : index,
     %arg3 : index) -> (index, index, index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -49,7 +49,7 @@ func @extract_slice(%arg0 : tensor<?x?x?xf32>, %arg1 : index, %arg2 : index,
 
 // -----
 
-func @extract_slice_rank_reduced_1(%arg0 : tensor<?x?x?xf32>,
+func.func @extract_slice_rank_reduced_1(%arg0 : tensor<?x?x?xf32>,
     %arg1 : index) -> index {
   %c0 = arith.constant 0 : index
   %0 = tensor.extract_slice %arg0[0, 0, 0] [1, %arg1, 1] [1, 1, 1] :
@@ -64,7 +64,7 @@ func @extract_slice_rank_reduced_1(%arg0 : tensor<?x?x?xf32>,
 
 // -----
 
-func @extract_slice_rank_reduced_2(%arg0 : tensor<?x?x?xf32>,
+func.func @extract_slice_rank_reduced_2(%arg0 : tensor<?x?x?xf32>,
     %arg1 : index) -> index {
   %c0 = arith.constant 0 : index
   %0 = tensor.extract_slice %arg0[0, 0, 0] [1, %arg1, 1] [1, 1, 1] :
@@ -79,7 +79,7 @@ func @extract_slice_rank_reduced_2(%arg0 : tensor<?x?x?xf32>,
 
 // -----
 
-func @extract_slice_rank_reduced_3(%arg0 : tensor<?x?x?xf32>,
+func.func @extract_slice_rank_reduced_3(%arg0 : tensor<?x?x?xf32>,
     %arg1 : index) -> index {
   %c1 = arith.constant 1 : index
   %0 = tensor.extract_slice %arg0[0, 0, 0] [1, %arg1, 1] [1, 1, 1] :
@@ -94,7 +94,7 @@ func @extract_slice_rank_reduced_3(%arg0 : tensor<?x?x?xf32>,
 
 // -----
 
-func @extract_slice_rank_reduced_4(%arg0 : tensor<?x?x?xf32>,
+func.func @extract_slice_rank_reduced_4(%arg0 : tensor<?x?x?xf32>,
     %arg1 : index) -> index {
   %c1 = arith.constant 1 : index
   %0 = tensor.extract_slice %arg0[0, 0, 0] [1, %arg1, 1] [1, 1, 1] :
@@ -109,7 +109,7 @@ func @extract_slice_rank_reduced_4(%arg0 : tensor<?x?x?xf32>,
 
 // -----
 
-func @extract_slice_rank_reduced_5(%arg0 : tensor<?x?x?xf32>, %arg1 : index,
+func.func @extract_slice_rank_reduced_5(%arg0 : tensor<?x?x?xf32>, %arg1 : index,
     %arg2 : index) -> (index, index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -127,7 +127,7 @@ func @extract_slice_rank_reduced_5(%arg0 : tensor<?x?x?xf32>, %arg1 : index,
 
 // -----
 
-func @extract_slice_rank_reduced_6(%arg0 : tensor<?x?x?xf32>, %arg1 : index,
+func.func @extract_slice_rank_reduced_6(%arg0 : tensor<?x?x?xf32>, %arg1 : index,
     %arg2 : index) -> (index, index) {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index

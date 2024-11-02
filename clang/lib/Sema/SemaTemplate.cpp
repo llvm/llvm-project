@@ -284,17 +284,13 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
     }
 
     TemplateDecl *TD = cast<TemplateDecl>(D);
-
+    Template =
+        FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD);
+    assert(!FoundUsingShadow || FoundUsingShadow->getTargetDecl() == TD);
     if (SS.isSet() && !SS.isInvalid()) {
       NestedNameSpecifier *Qualifier = SS.getScopeRep();
-      // FIXME: store the using TemplateName in QualifiedTemplateName if
-      // the TD is referred via a using-declaration.
-      Template =
-          Context.getQualifiedTemplateName(Qualifier, hasTemplateKeyword, TD);
-    } else {
-      Template =
-          FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD);
-      assert(!FoundUsingShadow || FoundUsingShadow->getTargetDecl() == TD);
+      Template = Context.getQualifiedTemplateName(Qualifier, hasTemplateKeyword,
+                                                  Template);
     }
 
     if (isa<FunctionTemplateDecl>(TD)) {
@@ -1005,8 +1001,8 @@ ParsedTemplateArgument Sema::ActOnTemplateTypeArgument(TypeResult ParsedType) {
       TemplateName Name = DTST.getTypePtr()->getTemplateName();
       if (SS.isSet())
         Name = Context.getQualifiedTemplateName(SS.getScopeRep(),
-                                                /*HasTemplateKeyword*/ false,
-                                                Name.getAsTemplateDecl());
+                                                /*HasTemplateKeyword=*/false,
+                                                Name);
       ParsedTemplateArgument Result(SS, TemplateTy::make(Name),
                                     DTST.getTemplateNameLoc());
       if (EllipsisLoc.isValid())
@@ -9764,7 +9760,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
 
       if (!getDLLAttr(Def) && getDLLAttr(Specialization) &&
           (Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
-           !Context.getTargetInfo().getTriple().isPS4())) {
+           !Context.getTargetInfo().getTriple().isPS())) {
         // An explicit instantiation definition can add a dll attribute to a
         // template with a previous instantiation declaration. MinGW doesn't
         // allow this.
@@ -9782,7 +9778,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
         !PreviouslyDLLExported && Specialization->hasAttr<DLLExportAttr>();
     if (Old_TSK == TSK_ImplicitInstantiation && NewlyDLLExported &&
         (Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
-         !Context.getTargetInfo().getTriple().isPS4())) {
+         !Context.getTargetInfo().getTriple().isPS())) {
       // An explicit instantiation definition can add a dll attribute to a
       // template with a previous implicit instantiation. MinGW doesn't allow
       // this. We limit clang to only adding dllexport, to avoid potentially

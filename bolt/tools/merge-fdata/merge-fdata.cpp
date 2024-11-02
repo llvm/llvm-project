@@ -15,6 +15,7 @@
 #include "bolt/Profile/ProfileYAMLMapping.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
@@ -63,6 +64,12 @@ SuppressMergedDataOutput("q",
   cl::Optional,
   cl::cat(MergeFdataCategory));
 
+static cl::opt<std::string>
+OutputFilePath("o",
+  cl::value_desc("file"),
+  cl::desc("Write output to <file>"),
+  cl::cat(MergeFdataCategory));
+
 } // namespace opts
 
 namespace {
@@ -78,6 +85,18 @@ static void report_error(StringRef Message, std::error_code EC) {
 static void report_error(Twine Message, StringRef CustomError) {
   errs() << ToolName << ": '" << Message << "': " << CustomError << ".\n";
   exit(1);
+}
+
+static raw_fd_ostream &output() {
+  if (opts::OutputFilePath.empty() || opts::OutputFilePath == "-")
+    return outs();
+  else {
+    std::error_code EC;
+    static raw_fd_ostream Output(opts::OutputFilePath, EC);
+    if (EC)
+      report_error(opts::OutputFilePath, EC);
+    return Output;
+  }
 }
 
 void mergeProfileHeaders(BinaryProfileHeader &MergedHeader,
@@ -235,7 +254,7 @@ bool isYAML(const StringRef Filename) {
   return false;
 }
 
-void mergeLegacyProfiles(const cl::list<std::string> &Filenames) {
+void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   errs() << "Using legacy profile format.\n";
   bool BoltedCollection = false;
   bool First = true;
@@ -257,8 +276,7 @@ void mergeLegacyProfiles(const cl::list<std::string> &Filenames) {
             Filename,
             "cannot mix profile collected in BOLT and non-BOLT deployments");
       BoltedCollection = true;
-      if (!First)
-        Buf = Buf.drop_front(17);
+      Buf = Buf.drop_front(17);
     } else {
       if (BoltedCollection)
         report_error(
@@ -266,7 +284,7 @@ void mergeLegacyProfiles(const cl::list<std::string> &Filenames) {
             "cannot mix profile collected in BOLT and non-BOLT deployments");
     }
 
-    SmallVector<StringRef, 10> Lines;
+    SmallVector<StringRef> Lines;
     SplitString(Buf, Lines, "\n");
     for (StringRef Line : Lines) {
       size_t Pos = Line.rfind(" ");
@@ -282,8 +300,10 @@ void mergeLegacyProfiles(const cl::list<std::string> &Filenames) {
     First = false;
   }
 
+  if (BoltedCollection)
+    output() << "boltedcollection\n";
   for (const auto &Entry : Entries)
-    outs() << Entry.getKey() << " " << Entry.getValue() << "\n";
+    output() << Entry.getKey() << " " << Entry.getValue() << "\n";
 
   errs() << "Profile from " << Filenames.size() << " files merged.\n";
 }
@@ -304,8 +324,28 @@ int main(int argc, char **argv) {
 
   ToolName = argv[0];
 
-  if (!isYAML(opts::InputDataFilenames.front())) {
-    mergeLegacyProfiles(opts::InputDataFilenames);
+  // Recursively expand input directories into input file lists.
+  SmallVector<std::string> Inputs;
+  for (std::string &InputDataFilename : opts::InputDataFilenames) {
+    if (!llvm::sys::fs::exists(InputDataFilename))
+      report_error(InputDataFilename,
+                   std::make_error_code(std::errc::no_such_file_or_directory));
+    if (llvm::sys::fs::is_regular_file(InputDataFilename))
+      Inputs.emplace_back(InputDataFilename);
+    else if (llvm::sys::fs::is_directory(InputDataFilename)) {
+      std::error_code EC;
+      for (llvm::sys::fs::recursive_directory_iterator F(InputDataFilename, EC),
+           E;
+           F != E && !EC; F.increment(EC))
+        if (llvm::sys::fs::is_regular_file(F->path()))
+          Inputs.emplace_back(F->path());
+      if (EC)
+        report_error(InputDataFilename, EC);
+    }
+  }
+
+  if (!isYAML(Inputs.front())) {
+    mergeLegacyProfiles(Inputs);
     return 0;
   }
 
@@ -316,7 +356,7 @@ int main(int argc, char **argv) {
   // Merged information for all functions.
   StringMap<BinaryFunctionProfile> MergedBFs;
 
-  for (std::string &InputDataFilename : opts::InputDataFilenames) {
+  for (std::string &InputDataFilename : Inputs) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
         MemoryBuffer::getFileOrSTDIN(InputDataFilename);
     if (std::error_code EC = MB.getError())
@@ -353,7 +393,7 @@ int main(int argc, char **argv) {
   }
 
   if (!opts::SuppressMergedDataOutput) {
-    yaml::Output YamlOut(outs());
+    yaml::Output YamlOut(output());
 
     BinaryProfile MergedProfile;
     MergedProfile.Header = MergedHeader;

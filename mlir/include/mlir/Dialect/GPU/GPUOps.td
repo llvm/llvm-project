@@ -373,7 +373,7 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
 
       // This module creates a separate compilation unit for the GPU compiler.
       gpu.module @kernels {
-        func @kernel_1(%arg0 : f32, %arg1 : memref<?xf32, 1>)
+        func.func @kernel_1(%arg0 : f32, %arg1 : memref<?xf32, 1>)
             attributes { nvvm.kernel = true } {
 
           // Operations that produce block/thread IDs and dimensions are
@@ -420,18 +420,20 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
   let builders = [
     OpBuilder<(ins "GPUFuncOp":$kernelFunc, "KernelDim3":$gridSize,
       "KernelDim3":$blockSize, "Value":$dynamicSharedMemorySize,
-      "ValueRange":$kernelOperands)>
+      "ValueRange":$kernelOperands,
+      CArg<"Type", "nullptr">:$asyncTokenType,
+      CArg<"ValueRange", "{}">:$asyncDependencies)>
   ];
 
   let extraClassDeclaration = [{
-    /// The number of operands passed to the kernel function.
-    unsigned getNumKernelOperands();
-
     /// The name of the kernel's containing module.
     StringAttr getKernelModuleName();
 
     /// The name of the kernel.
     StringAttr getKernelName();
+
+    /// The number of operands passed to the kernel function.
+    unsigned getNumKernelOperands();
 
     /// The i-th operand passed to the kernel function.
     Value getKernelOperand(unsigned i);
@@ -441,10 +443,6 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
 
     /// Get the SSA values passed as operands to specify the block size.
     KernelDim3 getBlockSizeOperandValues();
-
-    /// The number of launch configuration operands, placed at the leading
-    /// positions of the operand list.
-    static constexpr unsigned kNumConfigOperands = 6;
 
     // This needs to quietly verify if attributes with names defined below are
     // present since it is run before the verifier of this op.
@@ -466,25 +464,32 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
   let hasVerifier = 1;
 }
 
-def GPU_LaunchOp : GPU_Op<"launch", [AutomaticAllocationScope]>,
-    Arguments<(ins Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
+def GPU_LaunchOp : GPU_Op<"launch",
+    [AutomaticAllocationScope, AttrSizedOperandSegments, GPU_AsyncOpInterface]>,
+    Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+               Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
                Optional<I32>:$dynamicSharedMemorySize)>,
-    Results<(outs)> {
+    Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "GPU kernel launch operation";
 
   let description = [{
     Launch a kernel on the specified grid of thread blocks. The body of the
     kernel is defined by the single region that this operation contains. The
-    operation takes six operands followed by an optional operand: the first
-    three operands are grid sizes along the x,y,z dimensions and the following
-    three are block sizes along the x,y,z dimensions. The last operand is
-    optional and corresponds to the amount of dynamic shared memory a kernel's
-    workgroup should be allocated; when this operand is not present, a zero size
-    is assumed.
+    operation takes an optional list of async dependencies followed by six
+    operands and an optional operand.
 
-    When a lower-dimensional kernel is required, unused sizes must
-    be explicitly set to `1`.
+    The `async` keyword indicates the kernel should be launched asynchronously;
+    the operation returns a new !gpu.async.token when the keyword is specified.
+    The kernel launched does not start executing until the ops producing its
+    async dependencies (optional operands) have completed.
+
+    The first three operands (following any async dependencies) are grid sizes
+    along the x,y,z dimensions and the following three are block sizes along the
+    x,y,z dimensions. When a lower-dimensional kernel is required, unused sizes
+    must be explicitly set to `1`.  The last operand is optional and corresponds
+    to the amount of dynamic shared memory a kernel's workgroup should be
+    allocated; when this operand is not present, a zero size is assumed.
 
     The body region has _twelve_ arguments, grouped as follows:
 
@@ -496,7 +501,8 @@ def GPU_LaunchOp : GPU_Op<"launch", [AutomaticAllocationScope]>,
     Syntax:
 
     ```
-    operation ::= `gpu.launch` `block` `(` ssa-id-list `)` `in` ssa-reassignment
+    operation ::= `gpu.launch` (`async` (`[` ssa-id-list `]`)? )?
+                             `block` `(` ssa-id-list `)` `in` ssa-reassignment
                              `threads` `(` ssa-id-list `)` `in` ssa-reassignment
                              (dynamic_shared_memory_size ssa-use)?
                              region attr-dict?
@@ -548,7 +554,9 @@ def GPU_LaunchOp : GPU_Op<"launch", [AutomaticAllocationScope]>,
     OpBuilder<(ins "Value":$gridSizeX, "Value":$gridSizeY,
       "Value":$gridSizeZ, "Value":$blockSizeX, "Value":$blockSizeY,
       "Value":$blockSizeZ,
-      CArg<"Value", "nullptr">:$dynamic_shared_memory_size)>
+      CArg<"Value", "nullptr">:$dynamicSharedMemorySize,
+      CArg<"Type", "nullptr">:$asyncTokenType,
+      CArg<"ValueRange", "{}">:$asyncDependencies)>
   ];
 
   let extraClassDeclaration = [{
@@ -1266,107 +1274,6 @@ def GPU_SubgroupMmaElementwiseOp : GPU_Op<"subgroup_mma_elementwise",
 
   let assemblyFormat = [{
     $operation $args attr-dict `:` functional-type($args, $res)
-  }];
-}
-
-def GPU_DeviceAsyncCopyOp : GPU_Op<"device_async_copy",
-  [AttrSizedOperandSegments]> {
-  let summary = "device-side asynchronous copy";
-  let description = [{
-    The `gpu.device_async_copy` op initiates an asynchronous copy operation of
-    `$size` elements from source to the destination without blocking the thread.
-    The destination has to be in shared memory.
-
-    This is memory access will be pending to be added to a group.
-
-    This op is meant to be used with `gpu.device_async_create_group` and
-    `gpu.device_async_wait` to synchronize copies as explained in those ops
-    descriptions.
-
-    In order to do a copy and wait for the result we need the following
-    combination:
-    ```
-    // copy 1.
-    %cp1 = gpu.device_async_copy %A[%c0], %B[%c0], 4 :memref<16xf32> to memref<16xf32, 3>
-    // copy 2.
-    %cp2 = gpu.device_async_copy %C[%c0], %D[%c0], 4 : memref<16xf32> to memref<16xf32, 3>
-    // group 1 contains copy 1 and copy 2.
-    %token1 = gpu.device_async_create_group %cp1, %cp2
-    // copy 3.
-    %cp3 = gpu.device_async_copy %E[%c0], %F[%c0], 4 : memref<16xf32> to memref<16xf32, 3>
-    // group 2 contains copy 3.
-    %token2 = gpu.device_async_create_group %cp3
-    // after the wait copy 1 and copy 2 are complete.
-    gpu.device_async_wait %token1
-    // after the wait copy 3 is complete.
-    gpu.device_async_wait %token2
-    ```
-
-    Example:
-
-    ```mlir
-    %0 = gpu.device_async_copy %src[%c0, %c0], %dst[%c0, %c0, %c0], 4 :
-      memref<4x5xf32> to memref<2x7x5xf32, 3>
-    ```
-  }];
-  let results = (outs GPU_DeviceAsyncToken:$asyncToken);
-  let arguments = (ins Arg<AnyMemRef, "", [MemWrite]>:$dst,
-                       Variadic<Index>:$dstIndices,
-                       Arg<AnyMemRef, "", [MemRead]>:$src,
-                       Variadic<Index>:$srcIndices,
-                       IndexAttr:$numElements);
-  let assemblyFormat = [{
-    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` `,` $numElements
-      attr-dict `:` type($src) `to` type($dst)
-  }];
-  let hasVerifier = 1;
-}
-
-def GPU_DeviceAsyncCreateGroupOp : GPU_Op<"device_async_create_group", []> {
-  let summary = "device side asynchronous create group operation";
-  let description = [{
-  The `gpu.device_async_create_group` op creates a group of memory accesses
-  containing all the pending `device_async_copy` operations associated with
-  argument tokens. Each token can only be part of one group.
-
-  It returns a token that can be use to wait until the group fully completes.
-
-  This is meant to be used with `gpu.device_async_wait` to synchronize copies
-  as explained in those ops descriptions.
-
-  Groups are executed in the order they are created.
-
-  Example:
-
-  ```mlir
-  %0 = gpu.device_async_create_group
-  ```
-  }];
-  let results = (outs GPU_DeviceAsyncToken:$asyncToken);
-  let arguments = (ins Variadic<GPU_DeviceAsyncToken>:$inputTokens);
-  let assemblyFormat = [{
-    $inputTokens attr-dict
-  }];
-}
-
-def GPU_DeviceAsyncWaitOp : GPU_Op<"device_async_wait", []> {
-  let summary = "Wait for async gpu ops to complete.";
-  let description = [{
-  The `gpu.device_async_wait` op will block the execution thread until the group
-  associated with the source token is fully completed.
-
-    The optional `$numGroup` attribute gives a lower bound of the number of
-    groups uncompleted when the wait can unblock the thread.
-  Example:
-
-  ```mlir
-  gpu.device_async_wait %0
-  ```
-  }];
-  let arguments = (ins GPU_DeviceAsyncToken:$asyncDependencies,
-                       OptionalAttr<I32Attr>:$numGroups);
-  let assemblyFormat = [{
-    $asyncDependencies attr-dict
   }];
 }
 

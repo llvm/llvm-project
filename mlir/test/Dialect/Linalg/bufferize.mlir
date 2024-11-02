@@ -23,7 +23,7 @@
 // CHECK:           }
 // CHECK:           %[[RESULT:.*]] = bufferization.to_tensor %[[RESULT_MEMREF]] : memref<4xf32>
 // CHECK:           return %[[RESULT]] : tensor<4xf32>
-func @basic(%arg0: tensor<4xf32>) -> tensor<4xf32> {
+func.func @basic(%arg0: tensor<4xf32>) -> tensor<4xf32> {
     %0 = linalg.generic {
       indexing_maps = [#map0, #map0],
       iterator_types = ["parallel"]
@@ -51,7 +51,7 @@ func @basic(%arg0: tensor<4xf32>) -> tensor<4xf32> {
 // CHECK:         linalg.generic
 // CHECK-SAME:    ins(%[[MEMREF]] : memref<?xf32>)
 // CHECK-SAME:    outs(%[[OUT_BUF]] : memref<?xf32>) {
-func @init_tensor(%in : tensor<?xf32>, %size: index) -> tensor<?xf32> {
+func.func @init_tensor(%in : tensor<?xf32>, %size: index) -> tensor<?xf32> {
   %init = linalg.init_tensor [%size] : tensor<?xf32>
   %0 = linalg.generic {
     indexing_maps = [#map0, #map0],
@@ -77,7 +77,7 @@ func @init_tensor(%in : tensor<?xf32>, %size: index) -> tensor<?xf32> {
 // CHECK-SAME:      ins(%{{.*}} : memref<4xf32>)
 // CHECK-SAME:      outs(%[[RESULT0]], %[[RESULT1]] : memref<4xf32>, memref<4xf32>)
 // CHECK-NEXT: ^bb0(%{{.*}}: f32, %{{.*}}: f32, %{{.*}}: f32):
-func @multiple_results(%arg0: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
+func.func @multiple_results(%arg0: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
     %0, %1 = linalg.generic {
       indexing_maps = [#map0, #map0, #map0],
       iterator_types = ["parallel"]
@@ -109,7 +109,7 @@ func @multiple_results(%arg0: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
 // CHECK:           linalg.generic
 // CHECK-SAME:      ins(%[[MEMREF_ARG]] : memref<?x?xf32>)
 // CHECK-SAME:      outs(%[[RESULT0]], %[[RESULT1]] : memref<?x?xf32>, memref<?x?xf32>)
-func @dynamic_results(%arg0: tensor<?x?xf32>)
+func.func @dynamic_results(%arg0: tensor<?x?xf32>)
          -> (tensor<?x?xf32>, tensor<?x?xf32>) {
     %0, %1 = linalg.generic {
       indexing_maps = [#map_2d, #map_2d, #map_2d],
@@ -147,7 +147,7 @@ func @dynamic_results(%arg0: tensor<?x?xf32>)
 // CHECK:           linalg.generic
 // CHECK-SAME:      ins(%[[ARG0_MEMREF]] : memref<2x3x4xvector<3x4xi4>>)
 // CHECK-SAME:      outs(%[[INIT_BUFFER]] : memref<3x2xf32>) {
-func @generic_with_init_tensor(%arg0: tensor<2x3x4xvector<3x4xi4>>,
+func.func @generic_with_init_tensor(%arg0: tensor<2x3x4xvector<3x4xi4>>,
   %arg1: tensor<3x2xf32>) -> (tensor<3x2xf32>) {
 
   %0 = linalg.generic #trait
@@ -164,7 +164,7 @@ func @generic_with_init_tensor(%arg0: tensor<2x3x4xvector<3x4xi4>>,
 
 // CHECK-LABEL: func @bufferize_fill(
 // CHECK-SAME:    %[[IN:.*]]: tensor<?xf32>
-func @bufferize_fill(%arg0: tensor<?xf32>) -> tensor<?xf32> {
+func.func @bufferize_fill(%arg0: tensor<?xf32>) -> tensor<?xf32> {
   %c0 = arith.constant 0.0 : f32
   // CHECK: %[[ALLOC:.*]] = memref.alloc
   // CHECK: linalg.fill ins(%cst : f32) outs(%[[ALLOC]] : memref<?xf32>)
@@ -177,7 +177,7 @@ func @bufferize_fill(%arg0: tensor<?xf32>) -> tensor<?xf32> {
 // -----
 
 // CHECK-LABEL:   func @bufferize_dot
-func @bufferize_dot(%in: tensor<4xf32>, %out: tensor<f32>) -> tensor<f32> {
+func.func @bufferize_dot(%in: tensor<4xf32>, %out: tensor<f32>) -> tensor<f32> {
   %dot = linalg.dot ins(%in, %in : tensor<4xf32>, tensor<4xf32>)
                     outs(%out : tensor<f32>) -> tensor<f32>
   return %dot : tensor<f32>
@@ -188,4 +188,32 @@ func @bufferize_dot(%in: tensor<4xf32>, %out: tensor<f32>) -> tensor<f32> {
   // CHECK-SAME:       outs(%[[ALLOC:.*]] : memref<f32>)
   // CHECK: %[[OUT_TENSOR:.*]] = bufferization.to_tensor %[[ALLOC]] : memref<f32>
   // CHECK: return %[[OUT_TENSOR]]
+}
+
+// -----
+
+// This is a regression test. The linalg-bufferize pass should ignore all func
+// dialect ops.
+
+// CHECK-LABEL: func private @csum(tensor<6xi64>) -> tensor<6xi64>
+func.func private @csum(%arg0: tensor<6xi64>) -> tensor<6xi64>
+
+// CHECK: func public @main(%[[arg0:.*]]: tensor<2x3xi1>)
+// CHECK:   %[[collapse:.*]] = tensor.collapse_shape %[[arg0]]
+// CHECK:   %[[collapse_m:.*]] = bufferization.to_memref %[[collapse]]
+// CHECK:   %[[alloc:.*]] = memref.alloc()
+// CHECK:   linalg.generic {{.*}} ins(%[[collapse_m]] : memref<6xi1>) outs(%[[alloc]] : memref<6xi64>)
+// CHECK:   %[[generic_t:.*]] = bufferization.to_tensor %[[alloc]]
+// CHECK:   %[[call:.*]] = call @csum(%[[generic_t]])
+// CHECK:   return %[[call]]
+func.func public @main(%arg0: tensor<2x3xi1>) -> tensor<6xi64> {
+  %0 = tensor.collapse_shape %arg0 [[0, 1]] : tensor<2x3xi1> into tensor<6xi1>
+  %1 = linalg.init_tensor [6] : tensor<6xi64>
+  %2 = linalg.generic {indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>], iterator_types = ["parallel"]} ins(%0 : tensor<6xi1>) outs(%1 : tensor<6xi64>) {
+  ^bb0(%arg1: i1, %arg2: i64):
+    %4 = arith.extui %arg1 : i1 to i64
+    linalg.yield %4 : i64
+  } -> tensor<6xi64>
+  %3 = func.call @csum(%2) : (tensor<6xi64>) -> tensor<6xi64>
+  return %3 : tensor<6xi64>
 }

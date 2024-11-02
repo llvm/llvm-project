@@ -7,8 +7,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-has-no-incomplete-format
-// TODO FMT Evaluate gcc-11 status
-// UNSUPPORTED: gcc-11
 
 // <format>
 
@@ -24,17 +22,6 @@
 
 #include "test_macros.h"
 
-void test(const auto& store) {
-#ifdef _LIBCPP_VERSION
-  for (const auto& arg : store.__args) {
-    assert(arg);
-    assert(static_cast<bool>(arg));
-  }
-#else
-  (void)store;
-#endif
-}
-
 template <class CharT>
 void test() {
   using Context = std::basic_format_context<CharT*, CharT>;
@@ -45,19 +32,13 @@ void test() {
     ASSERT_NOEXCEPT(static_cast<bool>(format_arg));
     assert(!static_cast<bool>(format_arg));
   }
-  test(std::make_format_args<Context>());
-  test(std::make_format_args<Context>(1));
-  test(std::make_format_args<Context>(1, 'c'));
-  test(std::make_format_args<Context>(1, 'c', nullptr));
-}
-
-void test() {
-  test<char>();
-  test<wchar_t>();
 }
 
 int main(int, char**) {
-  test();
+  test<char>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  test<wchar_t>();
+#endif
 
   return 0;
 }

@@ -20,7 +20,7 @@ void context_async_okay(void *context [[clang::swift_async_context]]) [[clang::s
 void context_async_okay2(void *context [[clang::swift_async_context]], void *selfType, char **selfWitnessTable) [[clang::swiftasynccall]];
 
 [[clang::ownership_returns(foo)]] void *f1(void);
-[[clang::ownership_returns(foo)]] void *f2(); // expected-warning {{'ownership_returns' attribute only applies to non-K&R-style functions}}
+[[clang::ownership_returns(foo)]] void *f2();
 
 [[clang::unavailable("not available - replaced")]] void foo2(void); // expected-note {{'foo2' has been explicitly marked unavailable here}}
 void bar(void) {

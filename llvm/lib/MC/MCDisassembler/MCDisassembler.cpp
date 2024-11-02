@@ -22,11 +22,12 @@ MCDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
 
 bool MCDisassembler::tryAddingSymbolicOperand(MCInst &Inst, int64_t Value,
                                               uint64_t Address, bool IsBranch,
-                                              uint64_t Offset,
+                                              uint64_t Offset, uint64_t OpSize,
                                               uint64_t InstSize) const {
   if (Symbolizer)
-    return Symbolizer->tryAddingSymbolicOperand(
-        Inst, *CommentStream, Value, Address, IsBranch, Offset, InstSize);
+    return Symbolizer->tryAddingSymbolicOperand(Inst, *CommentStream, Value,
+                                                Address, IsBranch, Offset,
+                                                OpSize, InstSize);
   return false;
 }
 

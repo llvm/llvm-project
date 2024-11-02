@@ -68,4 +68,4 @@
 // RUN: not grep "Dsymutil" %t
 
 // Check that we don't crash when translating arguments for dsymutil.
-// RUN: %clang -m32 -arch x86_64 -g %s -###
+// RUN: %clang -m32 -target x86_64-apple-darwin10 -arch x86_64 -g %s -###

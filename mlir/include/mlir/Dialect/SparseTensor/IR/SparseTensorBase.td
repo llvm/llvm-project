@@ -72,6 +72,8 @@ def SparseTensor_Dialect : Dialect {
     * [Kjolstad20] Fredrik Berg Kjolstad. Sparse Tensor Algebra Compilation.
     PhD thesis, MIT, February, 2020.
   }];
+
+  let useDefaultAttributePrinterParser = 1;
 }
 
 #endif // SPARSETENSOR_BASE

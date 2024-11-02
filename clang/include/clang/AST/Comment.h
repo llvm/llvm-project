@@ -194,6 +194,11 @@ public:
 #include "clang/AST/CommentNodes.inc"
   };
 
+  struct Argument {
+    SourceRange Range;
+    StringRef Text;
+  };
+
   Comment(CommentKind K,
           SourceLocation LocBegin,
           SourceLocation LocEnd) :
@@ -296,13 +301,6 @@ private:
 /// A command with word-like arguments that is considered inline content.
 class InlineCommandComment : public InlineContentComment {
 public:
-  struct Argument {
-    SourceRange Range;
-    StringRef Text;
-
-    Argument(SourceRange Range, StringRef Text) : Range(Range), Text(Text) { }
-  };
-
   /// The most appropriate rendering mode for this command, chosen on command
   /// semantics in Doxygen.
   enum RenderKind {
@@ -588,15 +586,6 @@ private:
 /// arguments depends on command name) and a paragraph as an argument
 /// (e. g., \\brief).
 class BlockCommandComment : public BlockContentComment {
-public:
-  struct Argument {
-    SourceRange Range;
-    StringRef Text;
-
-    Argument() { }
-    Argument(SourceRange Range, StringRef Text) : Range(Range), Text(Text) { }
-  };
-
 protected:
   /// Word-like arguments.
   ArrayRef<Argument> Args;

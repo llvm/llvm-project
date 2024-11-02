@@ -27,7 +27,12 @@
 #    define _PSTL_USAGE_WARNINGS
 #endif
 
-#if !defined(_PSTL_ASSERT)
+#if defined(_LIBCPP_VERSION)
+#    include <__assert>
+#    define _PSTL_ASSERT(pred) _LIBCPP_ASSERT(pred, "")
+#elif defined(__GLIBCXX__)
+#    define _PSTL_ASSERT(pred) __glibcxx_assert(pred)
+#else
 #    include <cassert>
 #    define _PSTL_ASSERT(pred) (assert((pred)))
 #endif

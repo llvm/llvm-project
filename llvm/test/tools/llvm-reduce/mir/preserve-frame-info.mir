@@ -1,5 +1,5 @@
 # REQUIRES: amdgpu-registered-target
-# RUN: llvm-reduce -simplify-mir -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: llvm-reduce -simplify-mir -mtriple=amdgcn-amd-amdhsa --delta-passes=instructions --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
 # RUN: FileCheck --match-full-lines --check-prefix=RESULT %s < %t
 
 # CHECK-INTERESTINGNESS-COUNT-15: V_MOV_B32
@@ -46,7 +46,7 @@
 # RESULT-NEXT:  - { id: 9, name: guard, offset: 128, size: 4, alignment: 4 }
 
 
-# RESULT: S_NOP 0
+# RESULT: bb.0:
 # RESULT-NEXT: [[FI0:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.1, implicit $exec
 # RESULT-NEXT: [[FI1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0.bigalloca, implicit $exec
 # RESULT-NEXT: [[FI2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.2, implicit $exec

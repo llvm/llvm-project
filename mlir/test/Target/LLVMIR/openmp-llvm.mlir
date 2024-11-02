@@ -891,7 +891,15 @@ llvm.func @test_omp_wsloop_dynamic_monotonic_ordered(%lb : i64, %ub : i64, %step
 
 // -----
 
-omp.critical.declare @mutex hint(contended)
+omp.critical.declare @mutex_none hint(none) // 0
+omp.critical.declare @mutex_uncontended hint(uncontended) // 1
+omp.critical.declare @mutex_contended hint(contended) // 2
+omp.critical.declare @mutex_nonspeculative hint(nonspeculative) // 4
+omp.critical.declare @mutex_nonspeculative_uncontended hint(nonspeculative, uncontended) // 5
+omp.critical.declare @mutex_nonspeculative_contended hint(nonspeculative, contended) // 6
+omp.critical.declare @mutex_speculative hint(speculative) // 8
+omp.critical.declare @mutex_speculative_uncontended hint(speculative, uncontended) // 9
+omp.critical.declare @mutex_speculative_contended hint(speculative, contended) // 10
 
 // CHECK-LABEL: @omp_critical
 llvm.func @omp_critical(%x : !llvm.ptr<i32>, %xval : i32) -> () {
@@ -905,15 +913,95 @@ llvm.func @omp_critical(%x : !llvm.ptr<i32>, %xval : i32) -> () {
   }
   // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_.var{{.*}})
 
-  // CHECK: call void @__kmpc_critical_with_hint({{.*}}critical_user_mutex.var{{.*}}, i32 2)
+  // CHECK: call void @__kmpc_critical_with_hint({{.*}}critical_user_mutex_none.var{{.*}}, i32 0)
   // CHECK: br label %omp.critical.region
   // CHECK: omp.critical.region
-  omp.critical(@mutex) {
+  omp.critical(@mutex_none) {
   // CHECK: store
     llvm.store %xval, %x : !llvm.ptr<i32>
     omp.terminator
   }
-  // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex.var{{.*}})
+  // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex_none.var{{.*}})
+
+  // CHECK: call void @__kmpc_critical_with_hint({{.*}}critical_user_mutex_uncontended.var{{.*}}, i32 1)
+  // CHECK: br label %omp.critical.region
+  // CHECK: omp.critical.region
+  omp.critical(@mutex_uncontended) {
+  // CHECK: store
+    llvm.store %xval, %x : !llvm.ptr<i32>
+    omp.terminator
+  }
+  // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex_uncontended.var{{.*}})
+
+  // CHECK: call void @__kmpc_critical_with_hint({{.*}}critical_user_mutex_contended.var{{.*}}, i32 2)
+  // CHECK: br label %omp.critical.region
+  // CHECK: omp.critical.region
+  omp.critical(@mutex_contended) {
+  // CHECK: store
+    llvm.store %xval, %x : !llvm.ptr<i32>
+    omp.terminator
+  }
+  // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex_contended.var{{.*}})
+
+  // CHECK: call void @__kmpc_critical_with_hint({{.*}}critical_user_mutex_nonspeculative.var{{.*}}, i32 4)
+  // CHECK: br label %omp.critical.region
+  // CHECK: omp.critical.region
+  omp.critical(@mutex_nonspeculative) {
+  // CHECK: store
+    llvm.store %xval, %x : !llvm.ptr<i32>
+    omp.terminator
+  }
+  // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex_nonspeculative.var{{.*}})
+
+  // CHECK: call void @__kmpc_critical_with_hint({{.*}}critical_user_mutex_nonspeculative_uncontended.var{{.*}}, i32 5)
+  // CHECK: br label %omp.critical.region
+  // CHECK: omp.critical.region
+  omp.critical(@mutex_nonspeculative_uncontended) {
+  // CHECK: store
+    llvm.store %xval, %x : !llvm.ptr<i32>
+    omp.terminator
+  }
+  // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex_nonspeculative_uncontended.var{{.*}})
+
+  // CHECK: call void @__kmpc_critical_with_hint({{.*}}critical_user_mutex_nonspeculative_contended.var{{.*}}, i32 6)
+  // CHECK: br label %omp.critical.region
+  // CHECK: omp.critical.region
+  omp.critical(@mutex_nonspeculative_contended) {
+  // CHECK: store
+    llvm.store %xval, %x : !llvm.ptr<i32>
+    omp.terminator
+  }
+  // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex_nonspeculative_contended.var{{.*}})
+
+  // CHECK: call void @__kmpc_critical_with_hint({{.*}}critical_user_mutex_speculative.var{{.*}}, i32 8)
+  // CHECK: br label %omp.critical.region
+  // CHECK: omp.critical.region
+  omp.critical(@mutex_speculative) {
+  // CHECK: store
+    llvm.store %xval, %x : !llvm.ptr<i32>
+    omp.terminator
+  }
+  // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex_speculative.var{{.*}})
+
+  // CHECK: call void @__kmpc_critical_with_hint({{.*}}critical_user_mutex_speculative_uncontended.var{{.*}}, i32 9)
+  // CHECK: br label %omp.critical.region
+  // CHECK: omp.critical.region
+  omp.critical(@mutex_speculative_uncontended) {
+  // CHECK: store
+    llvm.store %xval, %x : !llvm.ptr<i32>
+    omp.terminator
+  }
+  // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex_speculative_uncontended.var{{.*}})
+
+  // CHECK: call void @__kmpc_critical_with_hint({{.*}}critical_user_mutex_speculative_contended.var{{.*}}, i32 10)
+  // CHECK: br label %omp.critical.region
+  // CHECK: omp.critical.region
+  omp.critical(@mutex_speculative_contended) {
+  // CHECK: store
+    llvm.store %xval, %x : !llvm.ptr<i32>
+    omp.terminator
+  }
+  // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex_speculative_contended.var{{.*}})
   llvm.return
 }
 
@@ -1059,11 +1147,10 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
 
   omp.wsloop ordered(0)
   for (%arg7) : i32 = (%arg0) to (%arg1) step (%arg2) {
-    // CHECK: [[OMP_THREAD:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
-    // CHECK-NEXT:  call void @__kmpc_ordered(%struct.ident_t* @[[GLOB1]], i32 [[OMP_THREAD]])
+    // CHECK:  call void @__kmpc_ordered(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 [[OMP_THREAD2:%.*]])
     omp.ordered_region  {
       omp.terminator
-    // CHECK: call void @__kmpc_end_ordered(%struct.ident_t* @[[GLOB1]], i32 [[OMP_THREAD]])
+    // CHECK: call void @__kmpc_end_ordered(%struct.ident_t* @[[GLOB3]], i32 [[OMP_THREAD2]])
     }
     omp.yield
   }
@@ -1875,6 +1962,26 @@ llvm.func @omp_sections_trivial() -> () {
   // CHECK-NEXT:     i32 1, label %[[SECTION2:.*]]
   // CHECK-NEXT: ]
 
+  omp.sections {
+    omp.section {
+      // CHECK: [[SECTION1]]:
+      // CHECK-NEXT: br label %[[SECTION1_REGION1:[^ ,]*]]
+      // CHECK-EMPTY:
+      // CHECK-NEXT: [[SECTION1_REGION1]]:
+      // CHECK-NEXT: br label %[[SECTION1_REGION2:[^ ,]*]]
+      // CHECK-EMPTY:
+      // CHECK-NEXT: [[SECTION1_REGION2]]:
+      // CHECK-NEXT: br label %[[INC]]
+      omp.terminator
+    }
+    omp.section {
+      // CHECK: [[SECTION2]]:
+      // CHECK: br label %[[INC]]
+      omp.terminator
+    }
+    omp.terminator
+  }
+
   // CHECK: [[INC]]:
   // CHECK:   %{{.*}} = add {{.*}}, 1
   // CHECK:   br label %[[HEADER]]
@@ -1885,27 +1992,7 @@ llvm.func @omp_sections_trivial() -> () {
   // CHECK:   br label %[[AFTER:.*]]
 
   // CHECK: [[AFTER]]:
-  // CHECK:   br label %[[END:.*]]
-
-  // CHECK: [[END]]:
   // CHECK:   ret void
-  omp.sections {
-    omp.section {
-      // CHECK: [[SECTION1]]:
-      // CHECK-NEXT: br label %[[REGION1:[^ ,]*]]
-      // CHECK: [[REGION1]]:
-      // CHECK-NEXT: br label %[[EXIT]]
-      omp.terminator
-    }
-    omp.section {
-      // CHECK: [[SECTION2]]:
-      // CHECK-NEXT: br label %[[REGION2:[^ ,]*]]
-      // CHECK: [[REGION2]]:
-      // CHECK-NEXT: br label %[[EXIT]]
-      omp.terminator
-    }
-    omp.terminator
-  }
   llvm.return
 }
 

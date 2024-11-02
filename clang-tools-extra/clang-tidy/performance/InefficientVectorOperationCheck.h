@@ -38,7 +38,7 @@ private:
                   StringRef VarDeclName, StringRef VarDeclStmtName,
                   const ast_matchers::DeclarationMatcher &AppendMethodDecl,
                   StringRef AppendCallName, ast_matchers::MatchFinder *Finder);
-  const std::vector<std::string> VectorLikeClasses;
+  const std::vector<StringRef> VectorLikeClasses;
 
   // If true, also check inefficient operations for proto repeated fields.
   bool EnableProto;

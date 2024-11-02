@@ -17,11 +17,6 @@ int printf(__constant const char *st, ...);
 
 void foo(void) {
   NO_VAR_FUNC(1, 2, 3);
-  VAR_FUNC(1, 2, 3);
-#if !__OPENCL_CPP_VERSION__
-// expected-error@-2{{implicit declaration of function 'func' is invalid in OpenCL}}
-#else
-// expected-error@-4{{use of undeclared identifier 'func'}}
-#endif
+  VAR_FUNC(1, 2, 3); // expected-error {{use of undeclared identifier 'func'}}
   VAR_PRINTF("%i", 1);
 }

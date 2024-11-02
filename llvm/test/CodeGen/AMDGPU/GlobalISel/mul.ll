@@ -12,25 +12,22 @@ define amdgpu_ps i16 @s_mul_i16(i16 inreg %num, i16 inreg %den) {
 ;
 ; GFX8-LABEL: s_mul_i16:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_mov_b32 s2, 0xffff
-; GFX8-NEXT:    s_and_b32 s0, s0, s2
-; GFX8-NEXT:    s_and_b32 s1, s1, s2
+; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX8-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX8-NEXT:    s_mul_i32 s0, s0, s1
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_mul_i16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_mov_b32 s2, 0xffff
-; GFX9-NEXT:    s_and_b32 s0, s0, s2
-; GFX9-NEXT:    s_and_b32 s1, s1, s2
+; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX9-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX9-NEXT:    s_mul_i32 s0, s0, s1
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: s_mul_i16:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s2, 0xffff
-; GFX10-NEXT:    s_and_b32 s0, s0, s2
-; GFX10-NEXT:    s_and_b32 s1, s1, s2
+; GFX10-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX10-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX10-NEXT:    s_mul_i32 s0, s0, s1
 ; GFX10-NEXT:    ; return to shader part epilog
   %result = mul i16 %num, %den
@@ -41,9 +38,8 @@ define i16 @v_mul_i16(i16 %num, i16 %den) {
 ; GFX7-LABEL: v_mul_i16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    s_mov_b32 s4, 0xffff
-; GFX7-NEXT:    v_and_b32_e32 v0, s4, v0
-; GFX7-NEXT:    v_and_b32_e32 v1, s4, v1
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -78,29 +74,26 @@ define amdgpu_ps zeroext i16 @s_mul_i16_zeroext(i16 inreg zeroext %num, i16 inre
 ;
 ; GFX8-LABEL: s_mul_i16_zeroext:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_mov_b32 s2, 0xffff
-; GFX8-NEXT:    s_and_b32 s0, s0, s2
-; GFX8-NEXT:    s_and_b32 s1, s1, s2
+; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX8-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX8-NEXT:    s_mul_i32 s0, s0, s1
-; GFX8-NEXT:    s_and_b32 s0, s0, s2
+; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_mul_i16_zeroext:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_mov_b32 s2, 0xffff
-; GFX9-NEXT:    s_and_b32 s0, s0, s2
-; GFX9-NEXT:    s_and_b32 s1, s1, s2
+; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX9-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX9-NEXT:    s_mul_i32 s0, s0, s1
-; GFX9-NEXT:    s_and_b32 s0, s0, s2
+; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: s_mul_i16_zeroext:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s2, 0xffff
-; GFX10-NEXT:    s_and_b32 s0, s0, s2
-; GFX10-NEXT:    s_and_b32 s1, s1, s2
+; GFX10-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX10-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX10-NEXT:    s_mul_i32 s0, s0, s1
-; GFX10-NEXT:    s_and_b32 s0, s0, s2
+; GFX10-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX10-NEXT:    ; return to shader part epilog
   %result = mul i16 %num, %den
   ret i16 %result
@@ -146,27 +139,24 @@ define amdgpu_ps signext i16 @s_mul_i16_signext(i16 inreg signext %num, i16 inre
 ;
 ; GFX8-LABEL: s_mul_i16_signext:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_mov_b32 s2, 0xffff
-; GFX8-NEXT:    s_and_b32 s0, s0, s2
-; GFX8-NEXT:    s_and_b32 s1, s1, s2
+; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX8-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX8-NEXT:    s_mul_i32 s0, s0, s1
 ; GFX8-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_mul_i16_signext:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_mov_b32 s2, 0xffff
-; GFX9-NEXT:    s_and_b32 s0, s0, s2
-; GFX9-NEXT:    s_and_b32 s1, s1, s2
+; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX9-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX9-NEXT:    s_mul_i32 s0, s0, s1
 ; GFX9-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: s_mul_i16_signext:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s2, 0xffff
-; GFX10-NEXT:    s_and_b32 s0, s0, s2
-; GFX10-NEXT:    s_and_b32 s1, s1, s2
+; GFX10-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX10-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX10-NEXT:    s_mul_i32 s0, s0, s1
 ; GFX10-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX10-NEXT:    ; return to shader part epilog
@@ -178,9 +168,8 @@ define signext i16 @v_mul_i16_signext(i16 signext %num, i16 signext %den) {
 ; GFX7-LABEL: v_mul_i16_signext:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    s_mov_b32 s4, 0xffff
-; GFX7-NEXT:    v_and_b32_e32 v0, s4, v0
-; GFX7-NEXT:    v_and_b32_e32 v1, s4, v1
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
 ; GFX7-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]

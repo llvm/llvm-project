@@ -27,7 +27,7 @@ namespace {
 struct VectorBufferizePass : public VectorBufferizeBase<VectorBufferizePass> {
   void runOnOperation() override {
     BufferizationOptions options = getPartialBufferizationOptions();
-    options.allowDialectInFilter<vector::VectorDialect>();
+    options.opFilter.allowDialect<vector::VectorDialect>();
 
     if (failed(bufferizeOp(getOperation(), options)))
       signalPassFailure();

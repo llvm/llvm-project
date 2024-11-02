@@ -22,6 +22,7 @@
 // RUN: %clang -### -c -target x86_64-unknown-linux -fsanitize=undefined %s 2>&1 | FileCheck -check-prefix=CHECK-OK %s
 // RUN: %clang -### -c -target x86_64-unknown-linux -fsanitize=undefined -frtti %s 2>&1 | FileCheck -check-prefix=CHECK-OK %s
 // RUN: %clang -### -c -target x86_64-scei-ps4 -fsanitize=vptr %s 2>&1 | FileCheck -check-prefix=CHECK-SAN-WARN %s
+// RUN: %clang -### -c -target x86_64-sie-ps5 -fsanitize=vptr %s 2>&1 | FileCheck -check-prefix=CHECK-SAN-WARN %s
 
 // Exceptions + no/default rtti
 // RUN: %clang -### -c -target x86_64-unknown-unknown -fcxx-exceptions -fno-rtti %s 2>&1 | FileCheck -check-prefix=CHECK-OK %s
@@ -35,6 +36,7 @@
 
 // -f{no-,}rtti/default
 // RUN: %clang -### -c -target x86_64-scei-ps4 %s 2>&1 | FileCheck -check-prefix=CHECK-NO-RTTI %s
+// RUN: %clang -### -c -target x86_64-sie-ps5 %s 2>&1 | FileCheck -check-prefix=CHECK-NO-RTTI %s
 // RUN: %clang -### -c -target x86_64-unknown-unknown -frtti %s 2>&1 | FileCheck -check-prefix=CHECK-RTTI %s
 // RUN: %clang -### -c -target x86_64-unknown-unknown -fno-rtti %s 2>&1 | FileCheck -check-prefix=CHECK-NO-RTTI %s
 // RUN: %clang -### -c -target x86_64-unknown-unknown %s 2>&1 | FileCheck -check-prefix=CHECK-RTTI %s

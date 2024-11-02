@@ -87,7 +87,7 @@ void InitializeFlags() {
   RegisterCommonFlags(&ubsan_parser);
 #endif
 
-  if (SANITIZER_MAC) {
+  if (SANITIZER_APPLE) {
     // Support macOS MallocScribble and MallocPreScribble:
     // <https://developer.apple.com/library/content/documentation/Performance/
     // Conceptual/ManagingMemory/Articles/MallocDebug.html>

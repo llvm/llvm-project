@@ -117,8 +117,12 @@ ELFNixPlatform::Create(ExecutionSession &ES,
                                    inconvertibleErrorCode());
 
   // Create default aliases if the caller didn't supply any.
-  if (!RuntimeAliases)
-    RuntimeAliases = standardPlatformAliases(ES);
+  if (!RuntimeAliases) {
+    auto StandardRuntimeAliases = standardPlatformAliases(ES, PlatformJD);
+    if (!StandardRuntimeAliases)
+      return StandardRuntimeAliases.takeError();
+    RuntimeAliases = std::move(*StandardRuntimeAliases);
+  }
 
   // Define the aliases.
   if (auto Err = PlatformJD.define(symbolAliases(std::move(*RuntimeAliases))))
@@ -189,10 +193,53 @@ static void addAliases(ExecutionSession &ES, SymbolAliasMap &Aliases,
   }
 }
 
-SymbolAliasMap ELFNixPlatform::standardPlatformAliases(ExecutionSession &ES) {
+Expected<SymbolAliasMap>
+ELFNixPlatform::standardPlatformAliases(ExecutionSession &ES,
+                                        JITDylib &PlatformJD) {
   SymbolAliasMap Aliases;
   addAliases(ES, Aliases, requiredCXXAliases());
   addAliases(ES, Aliases, standardRuntimeUtilityAliases());
+
+  // Determine whether or not the libunwind extended-API function for
+  // dynamically registering an entire .eh_frame section is available.
+  // If it is not, we assume that libgcc_s is being used, and alias to
+  // its __register_frame with the same functionality.
+  auto RTRegisterFrame = ES.intern("__orc_rt_register_eh_frame_section");
+  auto LibUnwindRegisterFrame = ES.intern("__unw_add_dynamic_eh_frame_section");
+  auto RTDeregisterFrame = ES.intern("__orc_rt_deregister_eh_frame_section");
+  auto LibUnwindDeregisterFrame =
+      ES.intern("__unw_remove_dynamic_eh_frame_section");
+  auto SM = ES.lookup(makeJITDylibSearchOrder(&PlatformJD),
+                      SymbolLookupSet()
+                          .add(LibUnwindRegisterFrame,
+                               SymbolLookupFlags::WeaklyReferencedSymbol)
+                          .add(LibUnwindDeregisterFrame,
+                               SymbolLookupFlags::WeaklyReferencedSymbol));
+  if (!SM) { // Weak-ref means no "missing symbol" errors, so this must be
+             // something more serious that we should report.
+    return SM.takeError();
+  } else if (SM->size() == 2) {
+    LLVM_DEBUG({
+      dbgs() << "Using libunwind " << LibUnwindRegisterFrame
+             << " for unwind info registration\n";
+    });
+    Aliases[std::move(RTRegisterFrame)] = {LibUnwindRegisterFrame,
+                                           JITSymbolFlags::Exported};
+    Aliases[std::move(RTDeregisterFrame)] = {LibUnwindDeregisterFrame,
+                                             JITSymbolFlags::Exported};
+  } else {
+    // Since LLVM libunwind is not present, we assume that unwinding
+    // is provided by libgcc
+    LLVM_DEBUG({
+      dbgs() << "Using libgcc __register_frame"
+             << " for unwind info registration\n";
+    });
+    Aliases[std::move(RTRegisterFrame)] = {ES.intern("__register_frame"),
+                                           JITSymbolFlags::Exported};
+    Aliases[std::move(RTDeregisterFrame)] = {ES.intern("__deregister_frame"),
+                                             JITSymbolFlags::Exported};
+  }
+
   return Aliases;
 }
 

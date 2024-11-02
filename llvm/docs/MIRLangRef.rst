@@ -911,5 +911,6 @@ The additional operands to ``DBG_INSTR_REF`` are identical to ``DBG_VALUE``,
 and the ``DBG_INSTR_REF`` s position records where the variable takes on the
 designated value in the same way.
 
-More information about how these constructs are used will appear on the source
-level debugging page in due course, see also :doc:`SourceLevelDebugging` and :doc:`HowToUpdateDebugInfo`.
+More information about how these constructs are used is available in
+:doc:`InstrRefDebugInfo`. The related documents :doc:`SourceLevelDebugging` and
+:doc:`HowToUpdateDebugInfo` may be useful as well.

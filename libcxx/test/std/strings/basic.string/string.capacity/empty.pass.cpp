@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
-// bool empty() const noexcept;
+// bool empty() const noexcept; // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -24,7 +26,7 @@ test(const S& s)
     assert(s.empty() == (s.size() == 0));
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     test(S());
@@ -47,7 +49,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

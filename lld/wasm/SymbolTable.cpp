@@ -854,7 +854,7 @@ void SymbolTable::replaceWithUndefined(Symbol *sym) {
 // the call instruction that passes Wasm validation.
 void SymbolTable::handleWeakUndefines() {
   for (Symbol *sym : getSymbols()) {
-    if (sym->isUndefWeak()) {
+    if (sym->isUndefWeak() && sym->isUsedInRegularObj) {
       if (sym->getSignature()) {
         replaceWithUndefined(sym);
       } else {

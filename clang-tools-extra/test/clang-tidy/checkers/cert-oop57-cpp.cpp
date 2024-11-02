@@ -88,3 +88,17 @@ void baz(const NonTrivial &Other) {
   mymemcmp(&Data, &Other, sizeof(Data));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: consider using comparison operators instead of calling 'mymemcmp'
 }
+
+void nonNullSetValue() {
+  NonTrivial Data;
+  // Check non-null-valued second argument.
+  std::memset(&Data, 1, sizeof(Data));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: calling 'memset' on a non-trivially default constructible class is undefined
+}
+
+void nonLiteralSetValue(char C) {
+  NonTrivial Data;
+  // Check non-literal second argument.
+  std::memset(&Data, C, sizeof(Data));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: calling 'memset' on a non-trivially default constructible class is undefined
+}

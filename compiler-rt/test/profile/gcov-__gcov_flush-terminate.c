@@ -1,3 +1,4 @@
+// XFAIL: aix
 /// https://bugs.llvm.org/show_bug.cgi?id=38067
 /// An abnormal exit does not clear execution counts of subsequent instructions.
 // RUN: mkdir -p %t.dir && cd %t.dir

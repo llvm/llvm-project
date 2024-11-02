@@ -16,6 +16,8 @@
 #define LLVM_CLANG_BASIC_BUILTINS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include <cstring>
 
 // VC++ defines 'alloca' as an object-like macro, which interferes with our
@@ -263,7 +265,15 @@ private:
               const char *Fmt) const;
 };
 
-}
+/// Returns true if the required target features of a builtin function are
+/// enabled.
+/// \p TargetFeatureMap maps a target feature to true if it is enabled and
+///    false if it is disabled.
+bool evaluateRequiredTargetFeatures(
+    llvm::StringRef RequiredFatures,
+    const llvm::StringMap<bool> &TargetFetureMap);
+
+} // namespace Builtin
 
 /// Kinds of BuiltinTemplateDecl.
 enum BuiltinTemplateKind : int {

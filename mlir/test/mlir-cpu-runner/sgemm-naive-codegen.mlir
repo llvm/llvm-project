@@ -1,6 +1,6 @@
 // RUN: mlir-opt -pass-pipeline="func.func(convert-linalg-to-loops,lower-affine,convert-scf-to-cf,convert-arith-to-llvm),convert-vector-to-llvm,convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts" %s | mlir-cpu-runner -O3 -e main -entry-point-result=void -shared-libs=%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext | FileCheck %s
 
-func @main() {
+func.func @main() {
   %A = memref.alloc() : memref<16x16xf32>
   %B = memref.alloc() : memref<16x16xf32>
   %C = memref.alloc() : memref<16x16xf32>
@@ -15,7 +15,7 @@ func @main() {
   %t_start = call @rtclock() : () -> f64
   affine.for %arg0 = 0 to 5 {
     linalg.fill ins(%cf1 : f32) outs(%C : memref<16x16xf32>)
-    call @sgemm_naive(%A, %B, %C) : (memref<16x16xf32>, memref<16x16xf32>, memref<16x16xf32>) -> ()
+    func.call @sgemm_naive(%A, %B, %C) : (memref<16x16xf32>, memref<16x16xf32>, memref<16x16xf32>) -> ()
   }
   %t_end = call @rtclock() : () -> f64
   %t = arith.subf %t_end, %t_start : f64
@@ -40,7 +40,7 @@ func @main() {
   %num_flops_i = arith.index_cast %num_flops : index to i16
   %num_flops_f = arith.sitofp %num_flops_i : i16 to f64
   %flops = arith.divf %num_flops_f, %t : f64
-  call @print_flops(%flops) : (f64) -> ()
+  call @printFlops(%flops) : (f64) -> ()
 
   memref.dealloc %A : memref<16x16xf32>
   memref.dealloc %B : memref<16x16xf32>
@@ -49,7 +49,7 @@ func @main() {
 }
 // CHECK: 17
 
-func @sgemm_naive(%arg0: memref<16x16xf32>, %arg1: memref<16x16xf32>, %arg2: memref<16x16xf32>) {
+func.func @sgemm_naive(%arg0: memref<16x16xf32>, %arg1: memref<16x16xf32>, %arg2: memref<16x16xf32>) {
   %c0 = arith.constant 0 : index
   affine.for %arg3 = 0 to 16 {
     affine.for %arg4 = 0 to 16 {
@@ -72,5 +72,5 @@ func @sgemm_naive(%arg0: memref<16x16xf32>, %arg1: memref<16x16xf32>, %arg2: mem
   return
 }
 
-func private @print_flops(f64)
-func private @rtclock() -> f64
+func.func private @printFlops(f64)
+func.func private @rtclock() -> f64

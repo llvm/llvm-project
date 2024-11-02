@@ -57,6 +57,11 @@ static struct {
   uint64_t data = 0xfffffffffffffffeULL;
 } garbage_string_long_mode4;
 
+size_t touch_string(std::string &in_str)
+{
+  return in_str.size(); // Break here to look at bad string
+}
+
 int main()
 {
     std::wstring wempty(L"");
@@ -93,5 +98,7 @@ int main()
 #endif
 
     S.assign(L"!!!!!"); // Set break point at this line.
+    std::string *not_a_string = (std::string *) 0x0;
+    touch_string(*not_a_string);
     return 0;
 }

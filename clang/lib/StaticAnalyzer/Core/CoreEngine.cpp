@@ -43,6 +43,8 @@ using namespace ento;
 
 STATISTIC(NumSteps,
             "The # of steps executed.");
+STATISTIC(NumSTUSteps, "The # of STU steps executed.");
+STATISTIC(NumCTUSteps, "The # of CTU steps executed.");
 STATISTIC(NumReachedMaxSteps,
             "The # of times we reached the max number of steps.");
 STATISTIC(NumPathsExplored,
@@ -73,11 +75,18 @@ static std::unique_ptr<WorkList> generateWorkList(AnalyzerOptions &Opts) {
 CoreEngine::CoreEngine(ExprEngine &exprengine, FunctionSummariesTy *FS,
                        AnalyzerOptions &Opts)
     : ExprEng(exprengine), WList(generateWorkList(Opts)),
+      CTUWList(Opts.IsNaiveCTUEnabled ? generateWorkList(Opts) : nullptr),
       BCounterFactory(G.getAllocator()), FunctionSummaries(FS) {}
 
+void CoreEngine::setBlockCounter(BlockCounter C) {
+  WList->setBlockCounter(C);
+  if (CTUWList)
+    CTUWList->setBlockCounter(C);
+}
+
 /// ExecuteWorkList - Run the worklist algorithm for a maximum number of steps.
-bool CoreEngine::ExecuteWorkList(const LocationContext *L, unsigned Steps,
-                                   ProgramStateRef InitState) {
+bool CoreEngine::ExecuteWorkList(const LocationContext *L, unsigned MaxSteps,
+                                 ProgramStateRef InitState) {
   if (G.num_roots() == 0) { // Initialize the analysis by constructing
     // the root if none exists.
 
@@ -100,7 +109,7 @@ bool CoreEngine::ExecuteWorkList(const LocationContext *L, unsigned Steps,
     BlockEdge StartLoc(Entry, Succ, L);
 
     // Set the current block counter to being empty.
-    WList->setBlockCounter(BCounterFactory.GetEmptyCounter());
+    setBlockCounter(BCounterFactory.GetEmptyCounter());
 
     if (!InitState)
       InitState = ExprEng.getInitialState(L);
@@ -118,34 +127,54 @@ bool CoreEngine::ExecuteWorkList(const LocationContext *L, unsigned Steps,
   }
 
   // Check if we have a steps limit
-  bool UnlimitedSteps = Steps == 0;
+  bool UnlimitedSteps = MaxSteps == 0;
+
   // Cap our pre-reservation in the event that the user specifies
   // a very large number of maximum steps.
   const unsigned PreReservationCap = 4000000;
   if(!UnlimitedSteps)
-    G.reserve(std::min(Steps,PreReservationCap));
+    G.reserve(std::min(MaxSteps, PreReservationCap));
 
-  while (WList->hasWork()) {
-    if (!UnlimitedSteps) {
-      if (Steps == 0) {
-        NumReachedMaxSteps++;
-        break;
+  auto ProcessWList = [this, UnlimitedSteps](unsigned MaxSteps) {
+    unsigned Steps = MaxSteps;
+    while (WList->hasWork()) {
+      if (!UnlimitedSteps) {
+        if (Steps == 0) {
+          NumReachedMaxSteps++;
+          break;
+        }
+        --Steps;
       }
-      --Steps;
+
+      NumSteps++;
+
+      const WorkListUnit &WU = WList->dequeue();
+
+      // Set the current block counter.
+      setBlockCounter(WU.getBlockCounter());
+
+      // Retrieve the node.
+      ExplodedNode *Node = WU.getNode();
+
+      dispatchWorkItem(Node, Node->getLocation(), WU);
     }
+    return MaxSteps - Steps;
+  };
+  const unsigned STUSteps = ProcessWList(MaxSteps);
 
-    NumSteps++;
+  if (CTUWList) {
+    NumSTUSteps += STUSteps;
+    const unsigned MinCTUSteps =
+        this->ExprEng.getAnalysisManager().options.CTUMaxNodesMin;
+    const unsigned Pct =
+        this->ExprEng.getAnalysisManager().options.CTUMaxNodesPercentage;
+    unsigned MaxCTUSteps = std::max(STUSteps * Pct / 100, MinCTUSteps);
 
-    const WorkListUnit& WU = WList->dequeue();
-
-    // Set the current block counter.
-    WList->setBlockCounter(WU.getBlockCounter());
-
-    // Retrieve the node.
-    ExplodedNode *Node = WU.getNode();
-
-    dispatchWorkItem(Node, Node->getLocation(), WU);
+    WList = std::move(CTUWList);
+    const unsigned CTUSteps = ProcessWList(MaxCTUSteps);
+    NumCTUSteps += CTUSteps;
   }
+
   ExprEng.processEndWorklist();
   return WList->hasWork();
 }
@@ -282,7 +311,7 @@ void CoreEngine::HandleBlockEntrance(const BlockEntrance &L,
   BlockCounter Counter = WList->getBlockCounter();
   Counter = BCounterFactory.IncrementCount(Counter, LC->getStackFrame(),
                                            BlockId);
-  WList->setBlockCounter(Counter);
+  setBlockCounter(Counter);
 
   // Process the entrance of the block.
   if (Optional<CFGElement> E = L.getFirstElement()) {

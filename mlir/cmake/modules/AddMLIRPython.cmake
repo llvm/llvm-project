@@ -229,12 +229,20 @@ function(add_mlir_python_modules name)
         get_filename_component(_install_path "${ARG_INSTALL_PREFIX}/${_dest_relative_path}" DIRECTORY)
 
         file(MAKE_DIRECTORY "${_dest_dir}")
+
+        # On Windows create_symlink requires special permissions. Use copy_if_different instead.
+        if(CMAKE_HOST_WIN32)
+          set(_link_or_copy copy_if_different)
+        else()
+          set(_link_or_copy create_symlink)
+        endif()
+
         add_custom_command(
           TARGET ${modules_target} PRE_BUILD
           COMMENT "Copying python source ${_src_path} -> ${_dest_path}"
           DEPENDS "${_src_path}"
           BYPRODUCTS "${_dest_path}"
-          COMMAND "${CMAKE_COMMAND}" -E create_symlink
+          COMMAND "${CMAKE_COMMAND}" -E ${_link_or_copy}
               "${_src_path}" "${_dest_path}"
         )
         install(
@@ -285,7 +293,7 @@ function(add_mlir_python_modules name)
   endforeach()
 
   # Create an install target.
-  if (NOT LLVM_ENABLE_IDE)
+  if(NOT LLVM_ENABLE_IDE)
     add_llvm_install_targets(
       install-${name}
       DEPENDS ${name}
@@ -343,6 +351,61 @@ function(declare_mlir_dialect_python_bindings)
       ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}"
       ADD_TO_PARENT "${_dialect_target}"
       SOURCES "${dialect_filename}"
+    )
+  endif()
+endfunction()
+
+# Function: declare_mlir_dialect_extension_python_bindings
+# Helper to generate source groups for dialect extensions, including both
+# static source files and a TD_FILE to generate wrappers.
+#
+# This will generate a source group named ${ADD_TO_PARENT}.${EXTENSION_NAME}.
+#
+# Arguments:
+#   ROOT_DIR: Same as for declare_mlir_python_sources().
+#   ADD_TO_PARENT: Same as for declare_mlir_python_sources(). Unique names
+#     for the subordinate source groups are derived from this.
+#   TD_FILE: Tablegen file to generate source for (relative to ROOT_DIR).
+#   DIALECT_NAME: Python name of the dialect.
+#   EXTENSION_NAME: Python name of the dialect extension.
+#   SOURCES: Same as declare_mlir_python_sources().
+#   SOURCES_GLOB: Same as declare_mlir_python_sources().
+#   DEPENDS: Additional dependency targets.
+function(declare_mlir_dialect_extension_python_bindings)
+  cmake_parse_arguments(ARG
+    ""
+    "ROOT_DIR;ADD_TO_PARENT;TD_FILE;DIALECT_NAME;EXTENSION_NAME"
+    "SOURCES;SOURCES_GLOB;DEPENDS"
+    ${ARGN})
+  # Source files.
+  set(_extension_target "${ARG_ADD_TO_PARENT}.${ARG_EXTENSION_NAME}")
+  declare_mlir_python_sources(${_extension_target}
+    ROOT_DIR "${ARG_ROOT_DIR}"
+    ADD_TO_PARENT "${ARG_ADD_TO_PARENT}"
+    SOURCES "${ARG_SOURCES}"
+    SOURCES_GLOB "${ARG_SOURCES_GLOB}"
+  )
+
+  # Tablegen
+  if(ARG_TD_FILE)
+    set(tblgen_target "${ARG_ADD_TO_PARENT}.${ARG_EXTENSION_NAME}.tablegen")
+    set(td_file "${ARG_ROOT_DIR}/${ARG_TD_FILE}")
+    get_filename_component(relative_td_directory "${ARG_TD_FILE}" DIRECTORY)
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${relative_td_directory}")
+    set(output_filename "${relative_td_directory}/_${ARG_EXTENSION_NAME}_ops_gen.py")
+    set(LLVM_TARGET_DEFINITIONS ${td_file})
+    mlir_tablegen("${output_filename}" -gen-python-op-bindings
+                  -bind-dialect=${ARG_DIALECT_NAME}
+                  -dialect-extension=${ARG_EXTENSION_NAME})
+    add_public_tablegen_target(${tblgen_target})
+    if(ARG_DEPENDS)
+      add_dependencies(${tblgen_target} ${ARG_DEPENDS})
+    endif()
+
+    declare_mlir_python_sources("${_extension_target}.ops_gen"
+      ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}"
+      ADD_TO_PARENT "${_extension_target}"
+      SOURCES "${output_filename}"
     )
   endif()
 endfunction()
@@ -483,10 +546,10 @@ function(add_mlir_python_extension libname extname)
   "INSTALL_COMPONENT;INSTALL_DIR;OUTPUT_DIRECTORY"
   "SOURCES;LINK_LIBS"
   ${ARGN})
-  if (ARG_UNPARSED_ARGUMENTS)
+  if(ARG_UNPARSED_ARGUMENTS)
     message(FATAL_ERROR " Unhandled arguments to add_mlir_python_extension(${libname}, ... : ${ARG_UNPARSED_ARGUMENTS}")
   endif()
-  if ("${ARG_SOURCES}" STREQUAL "")
+  if("${ARG_SOURCES}" STREQUAL "")
     message(FATAL_ERROR " Missing SOURCES argument to add_mlir_python_extension(${libname}, ...")
   endif()
 
@@ -527,12 +590,9 @@ function(add_mlir_python_extension libname extname)
     )
   endif()
 
-  # Python extensions depends *only* on the public API and LLVMSupport unless
-  # if further dependencies are added explicitly.
   target_link_libraries(${libname}
     PRIVATE
     ${ARG_LINK_LIBS}
-    ${PYEXT_LIBADD}
   )
 
   target_link_options(${libname}
@@ -542,10 +602,23 @@ function(add_mlir_python_extension libname extname)
       $<$<PLATFORM_ID:Linux>:LINKER:--exclude-libs,ALL>
   )
 
+  if(WIN32)
+    # On Windows, pyconfig.h (and by extension python.h) hardcode the version of the
+    # python library which will be used for linkage depending on the flavor of the build.
+    # pybind11 has a workaround which depends on the definition of Py_DEBUG (if Py_DEBUG
+    # is not passed in as a compile definition, pybind11 undefs _DEBUG when including
+    # python.h, so that the release python library would be used).
+    # Since mlir uses pybind11, we can leverage their workaround by never directly
+    # pyconfig.h or python.h and instead relying on the pybind11 headers to include the
+    # necessary python headers. This results in mlir always linking against the
+    # release python library via the (undocumented) cmake property Python3_LIBRARY_RELEASE.
+    target_link_libraries(${libname} PRIVATE ${Python3_LIBRARY_RELEASE})
+  endif()
+
   ################################################################################
   # Install
   ################################################################################
-  if (ARG_INSTALL_DIR)
+  if(ARG_INSTALL_DIR)
     install(TARGETS ${libname}
       COMPONENT ${ARG_INSTALL_COMPONENT}
       LIBRARY DESTINATION ${ARG_INSTALL_DIR}

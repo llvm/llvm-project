@@ -13,6 +13,7 @@
 #include "CSKYFrameLowering.h"
 #include "CSKYMachineFunctionInfo.h"
 #include "CSKYSubtarget.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -270,6 +271,17 @@ void CSKYFrameLowering::emitEpilogue(MachineFunction &MF,
             MachineInstr::FrameDestroy);
 }
 
+static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
+                                            const CSKYInstrInfo &TII) {
+  unsigned FnSize = 0;
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB)
+      FnSize += TII.getInstSizeInBytes(MI);
+  }
+  FnSize += MF.getConstantPool()->getConstants().size() * 4;
+  return FnSize;
+}
+
 static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
                                          const CSKYSubtarget &STI) {
   unsigned Limit = (1 << 12) - 1;
@@ -349,6 +361,7 @@ void CSKYFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   CSKYMachineFunctionInfo *CFI = MF.getInfo<CSKYMachineFunctionInfo>();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const CSKYInstrInfo *TII = STI.getInstrInfo();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
@@ -411,8 +424,6 @@ void CSKYFrameLowering::determineCalleeSaves(MachineFunction &MF,
     }
   }
 
-  CFI->setLRIsSpilled(SavedRegs.test(CSKY::R15));
-
   unsigned CSStackSize = 0;
   for (unsigned Reg : SavedRegs.set_bits()) {
     auto RegSize = TRI->getRegSizeInBits(Reg, MRI) / 8;
@@ -432,6 +443,14 @@ void CSKYFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
     RS->addScavengingFrameIndex(MFI.CreateStackObject(size, align, false));
   }
+
+  unsigned FnSize = EstimateFunctionSizeInBytes(MF, *TII);
+  // Force R15 to be spilled if the function size is > 65534. This enables
+  // use of BSR to implement far jump.
+  if (FnSize >= ((1 << (16 - 1)) * 2))
+    SavedRegs.set(CSKY::R15);
+
+  CFI->setLRIsSpilled(SavedRegs.test(CSKY::R15));
 }
 
 // Not preserve stack space within prologue for outgoing variables when the

@@ -11,7 +11,7 @@
 // RUN:   --entry-point-result=void -O0 \
 // RUN: | FileCheck %s
 
-func @main() {
+func.func @main() {
   %c0    = arith.constant 0 : index
   %c1    = arith.constant 1 : index
   %count = arith.constant 2 : index
@@ -66,8 +66,8 @@ func @main() {
 
   async.await %t3 : !async.token
   // CHECK: [84, 84]
-  call @print_memref_i32(%h0_unranked) : (memref<*xi32>) -> ()
+  call @printMemrefI32(%h0_unranked) : (memref<*xi32>) -> ()
   return
 }
 
-func private @print_memref_i32(memref<*xi32>)
+func.func private @printMemrefI32(memref<*xi32>)

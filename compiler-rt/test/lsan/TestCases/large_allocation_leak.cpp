@@ -1,7 +1,6 @@
 // Test that LargeMmapAllocator's chunks aren't reachable via some internal data structure.
-// RUN: LSAN_BASE="report_objects=1:use_stacks=0:use_registers=0"
 // RUN: %clangxx_lsan %s -o %t
-// RUN: %env_lsan_opts=$LSAN_BASE not %run %t 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts=report_objects=1:use_stacks=0:use_registers=0 not %run %t 2>&1 | FileCheck %s
 
 // For 32 bit LSan it's pretty likely that large chunks are "reachable" from some
 // internal data structures (e.g. Glibc global data).

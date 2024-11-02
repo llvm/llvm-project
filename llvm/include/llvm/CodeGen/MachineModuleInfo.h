@@ -30,7 +30,6 @@
 #ifndef LLVM_CODEGEN_MACHINEMODULEINFO_H
 #define LLVM_CODEGEN_MACHINEMODULEINFO_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/IR/PassManager.h"
@@ -162,6 +161,9 @@ public:
   /// Delete the MachineFunction \p MF and reset the link in the IR Function to
   /// Machine Function map.
   void deleteMachineFunctionFor(Function &F);
+
+  /// Add an externally created MachineFunction \p MF for \p F.
+  void insertFunction(const Function &F, std::unique_ptr<MachineFunction> &&MF);
 
   /// Keep track of various per-module pieces of information for backends
   /// that would like to do so.

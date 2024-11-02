@@ -56,14 +56,14 @@ def get_kernel_func_from_module(module: ir.Module) -> func.FuncOp:
 
 
 def emit_timer_func() -> func.FuncOp:
-    """Returns the declaration of nano_time function. If nano_time function is
+    """Returns the declaration of nanoTime function. If nanoTime function is
     used, the `MLIR_RUNNER_UTILS` and `MLIR_C_RUNNER_UTILS` must be included.
     """
     i64_type = ir.IntegerType.get_signless(64)
-    nano_time = func.FuncOp(
-        "nano_time", ([], [i64_type]), visibility="private")
-    nano_time.attributes["llvm.emit_c_interface"] = ir.UnitAttr.get()
-    return nano_time
+    nanoTime = func.FuncOp(
+        "nanoTime", ([], [i64_type]), visibility="private")
+    nanoTime.attributes["llvm.emit_c_interface"] = ir.UnitAttr.get()
+    return nanoTime
 
 
 def emit_benchmark_wrapped_main_func(func, timer_func):

@@ -133,8 +133,8 @@ public:
   // For fixed-width fields, initialize the number of remaining characters.
   // Skip over leading blanks, then return the first non-blank character (if
   // any).
-  std::optional<char32_t> PrepareInput(const DataEdit &edit,
-      std::optional<int> &remaining, bool skipSpaces = true) {
+  std::optional<char32_t> PrepareInput(
+      const DataEdit &edit, std::optional<int> &remaining) {
     remaining.reset();
     if (edit.descriptor == DataEdit::ListDirected) {
       std::size_t byteCount{0};
@@ -143,9 +143,7 @@ public:
       if (edit.width.value_or(0) > 0) {
         remaining = *edit.width;
       }
-      if (skipSpaces) {
-        SkipSpaces(remaining);
-      }
+      SkipSpaces(remaining);
     }
     return NextInField(remaining, edit);
   }
@@ -584,29 +582,34 @@ private:
   CloseStatus status_{CloseStatus::Keep};
 };
 
-// For CLOSE(bad unit) and INQUIRE(unconnected unit)
+// For CLOSE(bad unit), WAIT(bad unit, ID=nonzero) and INQUIRE(unconnected unit)
 class NoUnitIoStatementState : public IoStatementBase {
 public:
   IoStatementState &ioStatementState() { return ioStatementState_; }
   MutableModes &mutableModes() { return connection_.modes; }
   ConnectionState &GetConnectionState() { return connection_; }
+  int badUnitNumber() const { return badUnitNumber_; }
   void CompleteOperation();
   int EndIoStatement();
 
 protected:
   template <typename A>
-  NoUnitIoStatementState(const char *sourceFile, int sourceLine, A &stmt)
-      : IoStatementBase{sourceFile, sourceLine}, ioStatementState_{stmt} {}
+  NoUnitIoStatementState(A &stmt, const char *sourceFile = nullptr,
+      int sourceLine = 0, int badUnitNumber = -1)
+      : IoStatementBase{sourceFile, sourceLine}, ioStatementState_{stmt},
+        badUnitNumber_{badUnitNumber} {}
 
 private:
   IoStatementState ioStatementState_; // points to *this
   ConnectionState connection_;
+  int badUnitNumber_;
 };
 
 class NoopStatementState : public NoUnitIoStatementState {
 public:
-  NoopStatementState(const char *sourceFile, int sourceLine)
-      : NoUnitIoStatementState{sourceFile, sourceLine, *this} {}
+  NoopStatementState(
+      const char *sourceFile = nullptr, int sourceLine = 0, int unitNumber = -1)
+      : NoUnitIoStatementState{*this, sourceFile, sourceLine, unitNumber} {}
   void set_status(CloseStatus) {} // discards
 };
 
@@ -658,7 +661,8 @@ public:
 
 class InquireNoUnitState : public NoUnitIoStatementState {
 public:
-  InquireNoUnitState(const char *sourceFile = nullptr, int sourceLine = 0);
+  InquireNoUnitState(const char *sourceFile = nullptr, int sourceLine = 0,
+      int badUnitNumber = -1);
   bool Inquire(InquiryKeywordHash, char *, std::size_t);
   bool Inquire(InquiryKeywordHash, bool &);
   bool Inquire(InquiryKeywordHash, std::int64_t, bool &);

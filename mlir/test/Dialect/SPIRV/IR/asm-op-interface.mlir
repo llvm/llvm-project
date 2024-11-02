@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -split-input-file | FileCheck %s
 
-func @const() -> () {
+func.func @const() -> () {
   // CHECK: %true
   %0 = spv.Constant true
   // CHECK: %false

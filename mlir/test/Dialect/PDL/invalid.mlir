@@ -36,7 +36,7 @@ pdl.pattern : benefit(1) {
   %type = type
 
   // expected-error@below {{expected only one of [`type`, `value`] to be set}}
-  %attr = attribute : %type 10
+  %attr = attribute : %type = 10
 
   %op = operation "foo.op" {"attr" = %attr} -> (%type : !pdl.type)
   rewrite %op with "rewriter"
@@ -136,7 +136,21 @@ pdl.pattern : benefit(1) {
 
     // expected-error@below {{op must have inferable or constrained result types when nested within `pdl.rewrite`}}
     // expected-note@below {{result type #0 was not constrained}}
-    %newOp = operation "foo.op" -> (%type : !pdl.type)
+    %newOp = operation "builtin.unrealized_conversion_cast" -> (%type : !pdl.type)
+  }
+}
+
+// -----
+
+// Unused operation only necessary to ensure the func dialect is loaded.
+func.func private @unusedOpToLoadFuncDialect()
+
+pdl.pattern : benefit(1) {
+  %op = operation "foo.op"
+  rewrite %op {
+    // expected-error@below {{op must have inferable or constrained result types when nested within `pdl.rewrite`}}
+    // expected-note@below {{operation is created in a non-inferrable context, but 'func.constant' does not implement InferTypeOpInterface}}
+    %newOp = operation "func.constant"
   }
 }
 

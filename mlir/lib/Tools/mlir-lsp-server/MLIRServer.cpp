@@ -9,6 +9,7 @@
 #include "MLIRServer.h"
 #include "../lsp-server-support/Logging.h"
 #include "../lsp-server-support/Protocol.h"
+#include "../lsp-server-support/SourceMgrUtils.h"
 #include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Parser/AsmParserState.h"
@@ -30,7 +31,7 @@ static Optional<lsp::Location> getLocationFromLoc(FileLineColLoc loc) {
 
   lsp::Position position;
   position.line = loc.getLine() - 1;
-  position.character = loc.getColumn();
+  position.character = loc.getColumn() ? loc.getColumn() - 1 : 0;
   return lsp::Location{*sourceURI, lsp::Range(position)};
 }
 
@@ -55,7 +56,7 @@ getLocationFromLoc(llvm::SourceMgr &sourceMgr, Location loc,
       // Use range of potential identifier starting at location, else length 1
       // range.
       location->range.end.character += 1;
-      if (Optional<SMRange> range = AsmParserState::convertIdLocToRange(loc)) {
+      if (Optional<SMRange> range = lsp::convertTokenLocToRange(loc)) {
         auto lineCol = sourceMgr.getLineAndColumn(range->End);
         location->range.end.character =
             std::max(fileLoc.getColumn() + 1, lineCol.second - 1);

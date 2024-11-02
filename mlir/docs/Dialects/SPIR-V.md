@@ -422,7 +422,7 @@ the SPIR-V dialect. Instead, we reuse the builtin `func` op to express functions
 more concisely:
 
 ```mlir
-func @f(%arg: i32) -> i32 {
+func.func @f(%arg: i32) -> i32 {
   "spv.ReturnValue"(%arg) : (i32) -> (i32)
 }
 ```
@@ -580,7 +580,7 @@ void loop(bool cond) {
 It will be represented as
 
 ```mlir
-func @selection(%cond: i1) -> () {
+func.func @selection(%cond: i1) -> () {
   %zero = spv.Constant 0: i32
   %one = spv.Constant 1: i32
   %two = spv.Constant 2: i32
@@ -668,7 +668,7 @@ void loop(int count) {
 It will be represented as
 
 ```mlir
-func @loop(%count : i32) -> () {
+func.func @loop(%count : i32) -> () {
   %zero = spv.Constant 0: i32
   %one = spv.Constant 1: i32
   %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
@@ -728,7 +728,7 @@ example, for the following SPIR-V function `foo`:
 It will be represented as:
 
 ```mlir
-func @foo() -> () {
+func.func @foo() -> () {
   %var = spv.Variable : !spv.ptr<i32, Function>
 
   spv.mlir.selection {

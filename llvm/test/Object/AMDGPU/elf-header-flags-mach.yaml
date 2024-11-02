@@ -198,6 +198,22 @@
 # RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1036 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1036 %s
 # RUN: obj2yaml %t.o.AMDGCN_GFX1036 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1036 %s
 
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX1100/' %s | yaml2obj -o %t.o.AMDGCN_GFX1100
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1100 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1100 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX1100 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1100 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX1101/' %s | yaml2obj -o %t.o.AMDGCN_GFX1101
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1101 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1101 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX1101 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1101 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX1102/' %s | yaml2obj -o %t.o.AMDGCN_GFX1102
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1102 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1102 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX1102 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1102 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX1103/' %s | yaml2obj -o %t.o.AMDGCN_GFX1103
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1103 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1103 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX1103 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1103 %s
+
 # ELF-R600-ALL:       Format: elf32-amdgpu
 # ELF-R600-ALL:       Arch: r600
 # ELF-R600-ALL:       AddressSize: 32bit
@@ -364,6 +380,18 @@
 
 # ELF-AMDGCN-GFX1036:   EF_AMDGPU_MACH_AMDGCN_GFX1036 (0x45)
 # YAML-AMDGCN-GFX1036:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1036 ]
+
+# ELF-AMDGCN-GFX1100:   EF_AMDGPU_MACH_AMDGCN_GFX1100 (0x41)
+# YAML-AMDGCN-GFX1100:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1100 ]
+
+# ELF-AMDGCN-GFX1101:   EF_AMDGPU_MACH_AMDGCN_GFX1101 (0x46)
+# YAML-AMDGCN-GFX1101:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1101 ]
+
+# ELF-AMDGCN-GFX1102:   EF_AMDGPU_MACH_AMDGCN_GFX1102 (0x47)
+# YAML-AMDGCN-GFX1102:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1102 ]
+
+# ELF-AMDGCN-GFX1103:   EF_AMDGPU_MACH_AMDGCN_GFX1103 (0x44)
+# YAML-AMDGCN-GFX1103:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1103 ]
 
 # ELF-AMDGCN-ALL:       ]
 

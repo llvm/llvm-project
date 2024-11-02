@@ -51,3 +51,8 @@
 // RUN: grep '__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__' %t | grep '20100' | count 1
 // RUN: not grep '__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__' %t
 // RUN: not grep '__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__' %t
+
+// RUN: %clang_cc1 -triple x86_64-apple-driverkit19.0 -dM -E -o %t %s
+// RUN: grep '__ENVIRONMENT_DRIVERKIT_VERSION_MIN_REQUIRED__' %t | grep '1900' | count 1
+// RUN: not grep '__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__' %t
+// RUN: not grep '__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__' %t

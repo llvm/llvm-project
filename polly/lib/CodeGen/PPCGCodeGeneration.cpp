@@ -346,7 +346,7 @@ static int computeSizeInBytes(const Type *T) {
 /// for generating GPU specific user nodes.
 ///
 /// @see GPUNodeBuilder::createUser
-class GPUNodeBuilder : public IslNodeBuilder {
+class GPUNodeBuilder final : public IslNodeBuilder {
 public:
   GPUNodeBuilder(PollyIRBuilder &Builder, ScopAnnotator &Annotator,
                  const DataLayout &DL, LoopInfo &LI, ScalarEvolution &SE,
@@ -409,7 +409,7 @@ private:
   GPUArch Arch;
 
   /// Class to free isl_ids.
-  class IslIdDeleter {
+  class IslIdDeleter final {
   public:
     void operator()(__isl_take isl_id *Id) { isl_id_free(Id); };
   };
@@ -2558,7 +2558,7 @@ alignPwAffs(const std::vector<__isl_take isl_pw_aff *> &&PwAffs,
 }
 
 namespace {
-class PPCGCodeGeneration : public ScopPass {
+class PPCGCodeGeneration final : public ScopPass {
 public:
   static char ID;
 

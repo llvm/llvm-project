@@ -1320,6 +1320,11 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
 
         int FirstSlot = SortedSlots[I];
         int SecondSlot = SortedSlots[J];
+
+        // Objects with different stack IDs cannot be merged.
+        if (MFI->getStackID(FirstSlot) != MFI->getStackID(SecondSlot))
+          continue;
+
         LiveInterval *First = &*Intervals[FirstSlot];
         LiveInterval *Second = &*Intervals[SecondSlot];
         auto &FirstS = LiveStarts[FirstSlot];

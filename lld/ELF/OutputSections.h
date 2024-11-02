@@ -100,6 +100,10 @@ public:
   // that wasn't needed). This is needed for orphan placement.
   bool hasInputSections = false;
 
+  // The output section description is specified between DATA_SEGMENT_ALIGN and
+  // DATA_RELRO_END.
+  bool relro = false;
+
   void finalize();
   template <class ELFT> void writeTo(uint8_t *buf);
   // Check that the addends for dynamic relocations were written correctly.

@@ -10,6 +10,7 @@ targets.
 import lldb
 import platform
 import re
+import sys
 
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -57,13 +58,8 @@ class DarwinNSLogOutputTestCase(TestBase):
 
         # So that the child gets torn down after the test.
         import pexpect
-        import sys
-        if sys.version_info.major == 3:
-          self.child = pexpect.spawnu('%s %s %s' % (lldbtest_config.lldbExec,
-                                                    self.lldbOption, exe))
-        else:
-          self.child = pexpect.spawn('%s %s %s' % (lldbtest_config.lldbExec,
-                                                   self.lldbOption, exe))
+        self.child = pexpect.spawnu('%s %s %s' % (lldbtest_config.lldbExec,
+                                                  self.lldbOption, exe))
         child = self.child
 
         # Turn on logging for what the child sends back.

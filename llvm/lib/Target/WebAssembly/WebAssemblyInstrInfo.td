@@ -225,8 +225,8 @@ def getStackOpcode : InstrMapping {
   let FilterClass = "StackRel";
   let RowFields = ["BaseName"];
   let ColFields = ["StackBased"];
-  let KeyCol = ["false"];
-  let ValueCols = [["true"]];
+  let KeyCol = ["0"];
+  let ValueCols = [["1"]];
 }
 
 //===----------------------------------------------------------------------===//
@@ -238,8 +238,8 @@ def getRegisterOpcode : InstrMapping {
   let FilterClass = "RegisterRel";
   let RowFields = ["BaseName"];
   let ColFields = ["StackBased"];
-  let KeyCol = ["true"];
-  let ValueCols = [["false"]];
+  let KeyCol = ["1"];
+  let ValueCols = [["0"]];
 }
 
 //===----------------------------------------------------------------------===//
@@ -251,8 +251,8 @@ def getWasm64Opcode : InstrMapping {
   let FilterClass = "Wasm64Rel";
   let RowFields = ["Wasm32Name"];
   let ColFields = ["IsWasm64"];
-  let KeyCol = ["false"];
-  let ValueCols = [["true"]];
+  let KeyCol = ["0"];
+  let ValueCols = [["1"]];
 }
 
 //===----------------------------------------------------------------------===//

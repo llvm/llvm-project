@@ -27,13 +27,13 @@ define <vscale x 64 x i8> @callee(<vscale x 64 x i8> %arg0, <vscale x 64 x i8> %
 define <vscale x 64 x i8> @caller() {
 ; RV64IV-LABEL: caller:
 ; RV64IV:       # %bb.0:
-; RV64IV-NEXT:    addi sp, sp, -64
-; RV64IV-NEXT:    .cfi_def_cfa_offset 64
-; RV64IV-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; RV64IV-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
+; RV64IV-NEXT:    addi sp, sp, -80
+; RV64IV-NEXT:    .cfi_def_cfa_offset 80
+; RV64IV-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; RV64IV-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
 ; RV64IV-NEXT:    .cfi_offset ra, -8
 ; RV64IV-NEXT:    .cfi_offset s0, -16
-; RV64IV-NEXT:    addi s0, sp, 64
+; RV64IV-NEXT:    addi s0, sp, 80
 ; RV64IV-NEXT:    .cfi_def_cfa s0, 0
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 5
@@ -43,26 +43,26 @@ define <vscale x 64 x i8> @caller() {
 ; RV64IV-NEXT:    li a1, 24
 ; RV64IV-NEXT:    mul a0, a0, a1
 ; RV64IV-NEXT:    add a0, sp, a0
-; RV64IV-NEXT:    addi a0, a0, 48
+; RV64IV-NEXT:    addi a0, a0, 64
 ; RV64IV-NEXT:    vl8r.v v8, (a0)
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 4
 ; RV64IV-NEXT:    add a0, sp, a0
-; RV64IV-NEXT:    addi a0, a0, 48
+; RV64IV-NEXT:    addi a0, a0, 64
 ; RV64IV-NEXT:    vl8r.v v16, (a0)
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 3
 ; RV64IV-NEXT:    add a0, sp, a0
-; RV64IV-NEXT:    addi a0, a0, 48
+; RV64IV-NEXT:    addi a0, a0, 64
 ; RV64IV-NEXT:    vl8r.v v24, (a0)
-; RV64IV-NEXT:    addi a0, sp, 48
-; RV64IV-NEXT:    addi a1, sp, 48
+; RV64IV-NEXT:    addi a0, sp, 64
+; RV64IV-NEXT:    addi a1, sp, 64
 ; RV64IV-NEXT:    vs8r.v v24, (a1)
 ; RV64IV-NEXT:    call callee@plt
-; RV64IV-NEXT:    addi sp, s0, -64
-; RV64IV-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
-; RV64IV-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
-; RV64IV-NEXT:    addi sp, sp, 64
+; RV64IV-NEXT:    addi sp, s0, -80
+; RV64IV-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; RV64IV-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64IV-NEXT:    addi sp, sp, 80
 ; RV64IV-NEXT:    ret
   %local0 = alloca <vscale x 64 x i8>
   %local1 = alloca <vscale x 64 x i8>

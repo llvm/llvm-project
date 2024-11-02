@@ -1143,13 +1143,13 @@ define <16 x float> @v16f32_one_step(<16 x float> %x) #1 {
 ; SANDY-NEXT:    vmulps %ymm2, %ymm0, %ymm0
 ; SANDY-NEXT:    vmovaps {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; SANDY-NEXT:    vsubps %ymm0, %ymm3, %ymm0
+; SANDY-NEXT:    vrcpps %ymm1, %ymm4
 ; SANDY-NEXT:    vmulps %ymm0, %ymm2, %ymm0
 ; SANDY-NEXT:    vaddps %ymm0, %ymm2, %ymm0
-; SANDY-NEXT:    vrcpps %ymm1, %ymm2
-; SANDY-NEXT:    vmulps %ymm2, %ymm1, %ymm1
+; SANDY-NEXT:    vmulps %ymm4, %ymm1, %ymm1
 ; SANDY-NEXT:    vsubps %ymm1, %ymm3, %ymm1
-; SANDY-NEXT:    vmulps %ymm1, %ymm2, %ymm1
-; SANDY-NEXT:    vaddps %ymm1, %ymm2, %ymm1
+; SANDY-NEXT:    vmulps %ymm1, %ymm4, %ymm1
+; SANDY-NEXT:    vaddps %ymm1, %ymm4, %ymm1
 ; SANDY-NEXT:    retq
 ;
 ; HASWELL-LABEL: v16f32_one_step:
@@ -1333,13 +1333,13 @@ define <16 x float> @v16f32_two_step(<16 x float> %x) #2 {
 ; SANDY-NEXT:    vaddps %ymm3, %ymm2, %ymm2
 ; SANDY-NEXT:    vmulps %ymm2, %ymm0, %ymm0
 ; SANDY-NEXT:    vsubps %ymm0, %ymm4, %ymm0
+; SANDY-NEXT:    vrcpps %ymm1, %ymm3
 ; SANDY-NEXT:    vmulps %ymm0, %ymm2, %ymm0
 ; SANDY-NEXT:    vaddps %ymm0, %ymm2, %ymm0
-; SANDY-NEXT:    vrcpps %ymm1, %ymm2
-; SANDY-NEXT:    vmulps %ymm2, %ymm1, %ymm3
-; SANDY-NEXT:    vsubps %ymm3, %ymm4, %ymm3
-; SANDY-NEXT:    vmulps %ymm3, %ymm2, %ymm3
-; SANDY-NEXT:    vaddps %ymm3, %ymm2, %ymm2
+; SANDY-NEXT:    vmulps %ymm3, %ymm1, %ymm2
+; SANDY-NEXT:    vsubps %ymm2, %ymm4, %ymm2
+; SANDY-NEXT:    vmulps %ymm2, %ymm3, %ymm2
+; SANDY-NEXT:    vaddps %ymm2, %ymm3, %ymm2
 ; SANDY-NEXT:    vmulps %ymm2, %ymm1, %ymm1
 ; SANDY-NEXT:    vsubps %ymm1, %ymm4, %ymm1
 ; SANDY-NEXT:    vmulps %ymm1, %ymm2, %ymm1

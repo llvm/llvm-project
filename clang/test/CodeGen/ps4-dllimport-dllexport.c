@@ -1,9 +1,5 @@
-// RUN: %clang_cc1 \
-// RUN:     -triple x86_64-scei-ps4 \
-// RUN:     -fdeclspec \
-// RUN:     -Werror \
-// RUN:     -emit-llvm %s -o - | \
-// RUN:   FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-scei-ps4 -fdeclspec -Werror -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-sie-ps5  -fdeclspec -Werror -emit-llvm %s -o - | FileCheck %s
 
 __declspec(dllexport) int export_int;
 

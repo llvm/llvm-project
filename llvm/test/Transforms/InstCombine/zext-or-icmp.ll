@@ -118,6 +118,38 @@ block2:
   ret i1 %r
 }
 
+; PR43261
+
+define i32 @zext_or_eq_ult_add(i32 %i) {
+; CHECK-LABEL: @zext_or_eq_ult_add(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[I:%.*]], -3
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 3
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %i, -3
+  %c1 = icmp ult i32 %a, 3
+  %c2 = icmp eq i32 %i, 5
+  %o = or i1 %c1, %c2
+  %r = zext i1 %o to i32
+  ret i32 %r
+}
+
+define i32 @select_zext_or_eq_ult_add(i32 %i) {
+; CHECK-LABEL: @select_zext_or_eq_ult_add(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[I:%.*]], -3
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 3
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %i, -3
+  %c1 = icmp ult i32 %a, 2
+  %c2 = icmp eq i32 %i, 5
+  %z = zext i1 %c2 to i32
+  %r = select i1 %c1, i32 1, i32 %z
+  ret i32 %r
+}
+
 ; This should not end with more instructions than it started from.
 
 define i32 @PR49475(i32 %x, i16 %y) {

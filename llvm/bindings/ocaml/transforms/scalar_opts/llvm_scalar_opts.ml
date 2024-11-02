@@ -57,9 +57,6 @@ external add_loop_reroll
 external add_loop_unroll
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
   = "llvm_add_loop_unroll"
-external add_loop_unswitch
-  : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
-  = "llvm_add_loop_unswitch"
 external add_memcpy_opt
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
   = "llvm_add_memcpy_opt"

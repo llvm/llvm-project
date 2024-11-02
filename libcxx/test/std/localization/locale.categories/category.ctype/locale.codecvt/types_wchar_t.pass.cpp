@@ -20,7 +20,7 @@
 //     ...
 // };
 
-// XFAIL: libcpp-has-no-wide-characters
+// XFAIL: no-wide-characters
 
 #include <locale>
 #include <type_traits>

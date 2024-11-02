@@ -1214,3 +1214,26 @@ done:                                             ; preds = %backedge
   %sum.next.lcssa = phi i32 [ %sum.next, %backedge ]
   ret i32 %sum.next.lcssa
 }
+
+@g = external global i32
+
+define void @ptr54615(i32* byval(i32) %arg) {
+; CHECK-LABEL: @ptr54615(
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast i32* @g to i32*
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32* [[CAST]], [[ARG:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_END:%.*]], label [[FOR_COND]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+  br label %for.cond
+
+for.cond:
+  %cast = bitcast i32* @g to i32*
+  %cmp = icmp eq i32* %cast, %arg
+  br i1 %cmp, label %for.end, label %for.cond
+
+for.end:
+  ret void
+}

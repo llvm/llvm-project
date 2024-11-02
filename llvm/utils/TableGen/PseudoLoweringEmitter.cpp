@@ -109,7 +109,8 @@ addDagOperandMapping(Record *Rec, DagInit *Dag, CodeGenInstruction &Insn,
       OperandMap[BaseIdx + i].Data.Imm = II->getValue();
       ++OpsAdded;
     } else if (auto *BI = dyn_cast<BitsInit>(Dag->getArg(i))) {
-      auto *II = cast<IntInit>(BI->convertInitializerTo(IntRecTy::get()));
+      auto *II =
+          cast<IntInit>(BI->convertInitializerTo(IntRecTy::get(Records)));
       OperandMap[BaseIdx + i].Kind = OpData::Imm;
       OperandMap[BaseIdx + i].Data.Imm = II->getValue();
       ++OpsAdded;

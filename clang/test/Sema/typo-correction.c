@@ -10,11 +10,11 @@ void PR21656(void) {
   x = (float)arst;  // expected-error-re {{use of undeclared identifier 'arst'{{$}}}}
 }
 
-a = b ? : 0;  // expected-warning {{type specifier missing, defaults to 'int'}} \
+a = b ? : 0;  // expected-error {{type specifier missing, defaults to 'int'}} \
               // expected-error {{use of undeclared identifier 'b'}}
 
 int foobar;  // expected-note {{'foobar' declared here}}
-new_a = goobar ?: 4; // expected-warning {{type specifier missing, defaults to 'int'}} \
+new_a = goobar ?: 4; // expected-error {{type specifier missing, defaults to 'int'}} \
                       // expected-error {{use of undeclared identifier 'goobar'; did you mean 'foobar'?}} \
                       // expected-error {{initializer element is not a compile-time constant}}
 

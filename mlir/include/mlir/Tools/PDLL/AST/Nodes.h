@@ -506,6 +506,7 @@ class OperationExpr final
                                     NamedAttributeDecl *> {
 public:
   static OperationExpr *create(Context &ctx, SMRange loc,
+                               const ods::Operation *odsOp,
                                const OpNameDecl *nameDecl,
                                ArrayRef<Expr *> operands,
                                ArrayRef<Expr *> resultTypes,
@@ -830,16 +831,15 @@ protected:
 ///     - This is a constraint which is defined using only PDLL constructs.
 class UserConstraintDecl final
     : public Node::NodeBase<UserConstraintDecl, ConstraintDecl>,
-      llvm::TrailingObjects<UserConstraintDecl, VariableDecl *> {
+      llvm::TrailingObjects<UserConstraintDecl, VariableDecl *, StringRef> {
 public:
   /// Create a native constraint with the given optional code block.
-  static UserConstraintDecl *createNative(Context &ctx, const Name &name,
-                                          ArrayRef<VariableDecl *> inputs,
-                                          ArrayRef<VariableDecl *> results,
-                                          Optional<StringRef> codeBlock,
-                                          Type resultType) {
-    return createImpl(ctx, name, inputs, results, codeBlock, /*body=*/nullptr,
-                      resultType);
+  static UserConstraintDecl *
+  createNative(Context &ctx, const Name &name, ArrayRef<VariableDecl *> inputs,
+               ArrayRef<VariableDecl *> results, Optional<StringRef> codeBlock,
+               Type resultType, ArrayRef<StringRef> nativeInputTypes = {}) {
+    return createImpl(ctx, name, inputs, nativeInputTypes, results, codeBlock,
+                      /*body=*/nullptr, resultType);
   }
 
   /// Create a PDLL constraint with the given body.
@@ -848,8 +848,8 @@ public:
                                         ArrayRef<VariableDecl *> results,
                                         const CompoundStmt *body,
                                         Type resultType) {
-    return createImpl(ctx, name, inputs, results, /*codeBlock=*/llvm::None,
-                      body, resultType);
+    return createImpl(ctx, name, inputs, /*nativeInputTypes=*/llvm::None,
+                      results, /*codeBlock=*/llvm::None, body, resultType);
   }
 
   /// Return the name of the constraint.
@@ -862,6 +862,10 @@ public:
   ArrayRef<VariableDecl *> getInputs() const {
     return const_cast<UserConstraintDecl *>(this)->getInputs();
   }
+
+  /// Return the explicit native type to use for the given input. Returns None
+  /// if no explicit type was set.
+  Optional<StringRef> getNativeInputType(unsigned index) const;
 
   /// Return the explicit results of the constraint declaration. May be empty,
   /// even if the constraint has results (e.g. in the case of inferred results).
@@ -891,10 +895,12 @@ private:
   /// components.
   static UserConstraintDecl *
   createImpl(Context &ctx, const Name &name, ArrayRef<VariableDecl *> inputs,
+             ArrayRef<StringRef> nativeInputTypes,
              ArrayRef<VariableDecl *> results, Optional<StringRef> codeBlock,
              const CompoundStmt *body, Type resultType);
 
-  UserConstraintDecl(const Name &name, unsigned numInputs, unsigned numResults,
+  UserConstraintDecl(const Name &name, unsigned numInputs,
+                     bool hasNativeInputTypes, unsigned numResults,
                      Optional<StringRef> codeBlock, const CompoundStmt *body,
                      Type resultType)
       : Base(name.getLoc(), &name), numInputs(numInputs),
@@ -916,8 +922,14 @@ private:
   /// The result type of the constraint.
   Type resultType;
 
+  /// Flag indicating if this constraint has explicit native input types.
+  bool hasNativeInputTypes;
+
   /// Allow access to various internals.
-  friend llvm::TrailingObjects<UserConstraintDecl, VariableDecl *>;
+  friend llvm::TrailingObjects<UserConstraintDecl, VariableDecl *, StringRef>;
+  size_t numTrailingObjects(OverloadToken<VariableDecl *>) const {
+    return numInputs + numResults;
+  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -1143,6 +1155,23 @@ public:
     if (const auto *cst = dyn_cast<UserConstraintDecl>(this))
       return cst->getResultType();
     return cast<UserRewriteDecl>(this)->getResultType();
+  }
+
+  /// Return the explicit results of the declaration. Note that these may be
+  /// empty, even if the callable has results (e.g. in the case of inferred
+  /// results).
+  ArrayRef<VariableDecl *> getResults() const {
+    if (const auto *cst = dyn_cast<UserConstraintDecl>(this))
+      return cst->getResults();
+    return cast<UserRewriteDecl>(this)->getResults();
+  }
+
+  /// Return the optional code block of this callable, if this is a native
+  /// callable with a provided implementation.
+  Optional<StringRef> getCodeBlock() const {
+    if (const auto *cst = dyn_cast<UserConstraintDecl>(this))
+      return cst->getCodeBlock();
+    return cast<UserRewriteDecl>(this)->getCodeBlock();
   }
 
   /// Support LLVM type casting facilities.

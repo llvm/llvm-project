@@ -139,15 +139,21 @@ public:
 
   llvm::ArrayRef<State> states() const { return States; }
   llvm::ArrayRef<Edge> edges() const { return Edges; }
+  llvm::ArrayRef<std::pair<SymbolID, StateID>> startStates() const {
+    return StartStates;
+  }
 
   std::string dumpForTests(const Grammar &) const;
 
 private:
-  LRGraph(std::vector<State> States, std::vector<Edge> Edges)
-      : States(std::move(States)), Edges(std::move(Edges)) {}
+  LRGraph(std::vector<State> States, std::vector<Edge> Edges,
+          std::vector<std::pair<SymbolID, StateID>> StartStates)
+      : States(std::move(States)), Edges(std::move(Edges)),
+        StartStates(std::move(StartStates)) {}
 
   std::vector<State> States;
   std::vector<Edge> Edges;
+  std::vector<std::pair<SymbolID, StateID>> StartStates;
 };
 
 } // namespace pseudo

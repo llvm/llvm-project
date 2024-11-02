@@ -154,9 +154,8 @@ Trace::GetLiveThreadBinaryData(lldb::tid_t tid, llvm::StringRef kind) {
         "Tracing data \"%s\" is not available for thread %" PRIu64 ".",
         kind.data(), tid);
 
-  TraceGetBinaryDataRequest request{GetPluginName().str(), kind.str(),
-                                    static_cast<int64_t>(tid), 0,
-                                    static_cast<int64_t>(*size)};
+  TraceGetBinaryDataRequest request{GetPluginName().str(), kind.str(), tid, 0,
+                                    *size};
   return m_live_process->TraceGetBinaryData(request);
 }
 
@@ -172,7 +171,7 @@ Trace::GetLiveProcessBinaryData(llvm::StringRef kind) {
         "Tracing data \"%s\" is not available for the process.", kind.data());
 
   TraceGetBinaryDataRequest request{GetPluginName().str(), kind.str(), None, 0,
-                                    static_cast<int64_t>(*size)};
+                                    *size};
   return m_live_process->TraceGetBinaryData(request);
 }
 
@@ -200,12 +199,12 @@ void Trace::RefreshLiveProcessState() {
   }
 
   for (const TraceThreadState &thread_state :
-       live_process_state->tracedThreads) {
-    for (const TraceBinaryData &item : thread_state.binaryData)
+       live_process_state->traced_threads) {
+    for (const TraceBinaryData &item : thread_state.binary_data)
       m_live_thread_data[thread_state.tid][item.kind] = item.size;
   }
 
-  for (const TraceBinaryData &item : live_process_state->processBinaryData)
+  for (const TraceBinaryData &item : live_process_state->process_binary_data)
     m_live_process_data[item.kind] = item.size;
 
   DoRefreshLiveProcessState(std::move(live_process_state));

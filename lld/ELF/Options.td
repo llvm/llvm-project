@@ -582,8 +582,6 @@ def opt_remarks_with_hotness: FF<"opt-remarks-with-hotness">,
   HelpText<"Include hotness information in the optimization remarks file">;
 def opt_remarks_format: Separate<["--"], "opt-remarks-format">,
   HelpText<"The format used for serializing remarks (default: YAML)">;
-def opt_stats_filename: JJ<"stats-file=">,
-  HelpText<"Filename to write statistics to">;
 def save_temps: F<"save-temps">, HelpText<"Save intermediate LTO compilation results">;
 def lto_basic_block_sections: JJ<"lto-basic-block-sections=">,
   HelpText<"Enable basic block sections for LTO">;
@@ -628,6 +626,10 @@ def: J<"plugin-opt=cs-profile-path=">,
 def: J<"plugin-opt=obj-path=">,
   Alias<lto_obj_path_eq>,
   HelpText<"Alias for --lto-obj-path=">;
+def plugin_opt_opaque_pointers: F<"plugin-opt=opaque-pointers">,
+  HelpText<"Use opaque pointers in IR during LTO (default)">;
+def plugin_opt_no_opaque_pointers: F<"plugin-opt=no-opaque-pointers">,
+  HelpText<"Use typed pointers in IR during LTO">;
 def: J<"plugin-opt=opt-remarks-filename=">,
   Alias<opt_remarks_filename>,
   HelpText<"Alias for --opt-remarks-filename">;
@@ -646,6 +648,8 @@ def: J<"plugin-opt=opt-remarks-hotness-threshold=">,
 def: J<"plugin-opt=sample-profile=">,
   Alias<lto_sample_profile>, HelpText<"Alias for --lto-sample-profile">;
 def: F<"plugin-opt=save-temps">, Alias<save_temps>, HelpText<"Alias for --save-temps">;
+def plugin_opt_stats_file: J<"plugin-opt=stats-file=">,
+  HelpText<"Filename to write LTO statistics to">;
 def: F<"plugin-opt=thinlto-emit-imports-files">,
   Alias<thinlto_emit_imports_files>,
   HelpText<"Alias for --thinlto-emit-imports-files">;

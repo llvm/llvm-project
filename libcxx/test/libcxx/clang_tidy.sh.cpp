@@ -166,6 +166,9 @@ END-SCRIPT
 #   include <sstream>
 #endif
 #include <stack>
+#if __cplusplus > 202002L && !defined(_LIBCPP_HAS_NO_THREADS)
+#   include <stdatomic.h>
+#endif
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdexcept>
@@ -204,8 +207,10 @@ END-SCRIPT
 #if !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
 #   include <wctype.h>
 #endif
-#include <experimental/algorithm>
-#if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_COROUTINES)
+#if __cplusplus >= 201103L
+#   include <experimental/algorithm>
+#endif
+#if __cplusplus >= 201103L && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_COROUTINES)
 #   include <experimental/coroutine>
 #endif
 #if __cplusplus >= 201103L
@@ -214,8 +219,12 @@ END-SCRIPT
 #if __cplusplus >= 201103L
 #   include <experimental/forward_list>
 #endif
-#include <experimental/functional>
-#include <experimental/iterator>
+#if __cplusplus >= 201103L
+#   include <experimental/functional>
+#endif
+#if __cplusplus >= 201103L
+#   include <experimental/iterator>
+#endif
 #if __cplusplus >= 201103L
 #   include <experimental/list>
 #endif
@@ -225,25 +234,33 @@ END-SCRIPT
 #if __cplusplus >= 201103L
 #   include <experimental/memory_resource>
 #endif
-#include <experimental/propagate_const>
+#if __cplusplus >= 201103L
+#   include <experimental/propagate_const>
+#endif
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION) && __cplusplus >= 201103L
 #   include <experimental/regex>
 #endif
 #if __cplusplus >= 201103L
 #   include <experimental/set>
 #endif
-#include <experimental/simd>
+#if __cplusplus >= 201103L
+#   include <experimental/simd>
+#endif
 #if __cplusplus >= 201103L
 #   include <experimental/string>
 #endif
-#include <experimental/type_traits>
+#if __cplusplus >= 201103L
+#   include <experimental/type_traits>
+#endif
 #if __cplusplus >= 201103L
 #   include <experimental/unordered_map>
 #endif
 #if __cplusplus >= 201103L
 #   include <experimental/unordered_set>
 #endif
-#include <experimental/utility>
+#if __cplusplus >= 201103L
+#   include <experimental/utility>
+#endif
 #if __cplusplus >= 201103L
 #   include <experimental/vector>
 #endif

@@ -107,6 +107,7 @@ public:
 };
 
 using InputRangeNotSentinelSemiregular = UncheckedRange<cpp20_input_iterator<int*>, SentinelForNotSemiregular>;
+using OutputRangeNotSentinelSemiregular = UncheckedRange<cpp20_output_iterator<int*>, SentinelForNotSemiregular>;
 
 static_assert(std::input_or_output_iterator<SentinelForNotSemiregular>);
 static_assert(!std::semiregular<SentinelForNotSemiregular>);
@@ -123,6 +124,8 @@ public:
 
 using InputRangeNotSentinelEqualityComparableWith =
   UncheckedRange<cpp20_input_iterator<int*>, SentinelForNotWeaklyEqualityComparableWith>;
+using OutputRangeNotSentinelEqualityComparableWith =
+  UncheckedRange<cpp20_output_iterator<int*>, SentinelForNotWeaklyEqualityComparableWith>;
 
 static_assert(std::input_or_output_iterator<SentinelForNotWeaklyEqualityComparableWith>);
 static_assert(std::semiregular<SentinelForNotWeaklyEqualityComparableWith>);
@@ -138,5 +141,164 @@ public:
 
 static_assert(!std::movable<WeaklyIncrementableNotMovable>);
 static_assert(!std::weakly_incrementable<WeaklyIncrementableNotMovable>);
+
+// almost a forward_iterator
+class ForwardIteratorNotDerivedFrom {
+public:
+  using difference_type = long;
+  using value_type = int;
+  using iterator_category = std::input_iterator_tag;
+
+  ForwardIteratorNotDerivedFrom& operator++();
+  ForwardIteratorNotDerivedFrom operator++(int);
+  const int& operator*() const;
+  bool operator==(const ForwardIteratorNotDerivedFrom&) const = default;
+};
+
+using ForwardRangeNotDerivedFrom = UncheckedRange<ForwardIteratorNotDerivedFrom>;
+
+static_assert(std::input_iterator<ForwardIteratorNotDerivedFrom>);
+static_assert(std::incrementable<ForwardIteratorNotDerivedFrom>);
+static_assert(std::sentinel_for<ForwardIteratorNotDerivedFrom, ForwardIteratorNotDerivedFrom>);
+static_assert(!std::forward_iterator<ForwardIteratorNotDerivedFrom>);
+
+class ForwardIteratorNotIncrementable {
+public:
+  using difference_type = long;
+  using value_type = int;
+  using iterator_category = std::forward_iterator_tag;
+
+  ForwardIteratorNotIncrementable& operator++();
+  int operator++(int);
+  const int& operator*() const;
+  bool operator==(const ForwardIteratorNotIncrementable&) const = default;
+};
+
+using ForwardRangeNotIncrementable = UncheckedRange<ForwardIteratorNotIncrementable>;
+
+static_assert(std::input_iterator<ForwardIteratorNotIncrementable>);
+static_assert(!std::incrementable<ForwardIteratorNotIncrementable>);
+static_assert(std::sentinel_for<ForwardIteratorNotIncrementable, ForwardIteratorNotIncrementable>);
+static_assert(!std::forward_iterator<ForwardIteratorNotIncrementable>);
+
+using ForwardRangeNotSentinelSemiregular = UncheckedRange<forward_iterator<int*>, SentinelForNotSemiregular>;
+using ForwardRangeNotSentinelEqualityComparableWith =
+    UncheckedRange<forward_iterator<int*>, SentinelForNotWeaklyEqualityComparableWith>;
+
+class BidirectionalIteratorNotDerivedFrom {
+public:
+  using difference_type = long;
+  using value_type = int;
+  using iterator_category = std::forward_iterator_tag;
+
+  BidirectionalIteratorNotDerivedFrom& operator++();
+  BidirectionalIteratorNotDerivedFrom operator++(int);
+  BidirectionalIteratorNotDerivedFrom& operator--();
+  BidirectionalIteratorNotDerivedFrom operator--(int);
+  int& operator*() const;
+
+  bool operator==(const BidirectionalIteratorNotDerivedFrom&) const = default;
+};
+
+using BidirectionalRangeNotDerivedFrom = UncheckedRange<BidirectionalIteratorNotDerivedFrom>;
+
+static_assert(std::forward_iterator<BidirectionalIteratorNotDerivedFrom>);
+static_assert(!std::bidirectional_iterator<BidirectionalIteratorNotDerivedFrom>);
+static_assert(!std::ranges::bidirectional_range<BidirectionalRangeNotDerivedFrom>);
+
+class BidirectionalIteratorNotDecrementable {
+public:
+  using difference_type = long;
+  using value_type = int;
+  using iterator_category = std::bidirectional_iterator_tag;
+
+  BidirectionalIteratorNotDecrementable& operator++();
+  BidirectionalIteratorNotDecrementable operator++(int);
+  int& operator*() const;
+
+  bool operator==(const BidirectionalIteratorNotDecrementable&) const = default;
+};
+
+using BidirectionalRangeNotDecrementable = UncheckedRange<BidirectionalIteratorNotDecrementable>;
+
+static_assert(std::forward_iterator<BidirectionalIteratorNotDecrementable>);
+static_assert(!std::bidirectional_iterator<BidirectionalIteratorNotDecrementable>);
+static_assert(!std::ranges::bidirectional_range<BidirectionalRangeNotDecrementable>);
+
+class PermutableNotForwardIterator {
+public:
+  using difference_type = long;
+  using value_type = int;
+  using iterator_category = std::input_iterator_tag;
+
+  PermutableNotForwardIterator& operator++();
+  void operator++(int);
+  int& operator*() const;
+};
+
+using PermutableRangeNotForwardIterator = UncheckedRange<PermutableNotForwardIterator>;
+
+static_assert(std::input_iterator<PermutableNotForwardIterator>);
+static_assert(!std::forward_iterator<PermutableNotForwardIterator>);
+static_assert(!std::permutable<PermutableNotForwardIterator>);
+
+class PermutableNotSwappable {
+public:
+  class NotSwappable {
+    NotSwappable(NotSwappable&&) = delete;
+  };
+
+  using difference_type = long;
+  using value_type = NotSwappable;
+  using iterator_category = std::contiguous_iterator_tag;
+
+  PermutableNotSwappable& operator++();
+  PermutableNotSwappable operator++(int);
+  NotSwappable& operator*() const;
+
+  bool operator==(const PermutableNotSwappable&) const = default;
+};
+
+using PermutableRangeNotSwappable = UncheckedRange<PermutableNotSwappable>;
+
+static_assert(std::input_iterator<PermutableNotSwappable>);
+static_assert(std::forward_iterator<PermutableNotSwappable>);
+static_assert(!std::permutable<PermutableNotSwappable>);
+static_assert(!std::indirectly_swappable<PermutableNotSwappable>);
+
+class OutputIteratorNotInputOrOutputIterator {
+public:
+  using difference_type = long;
+  using value_type = int;
+  using iterator_category = std::input_iterator_tag;
+
+  int& operator++();
+  void operator++(int);
+  int& operator*();
+};
+
+using OutputRangeNotInputOrOutputIterator = UncheckedRange<InputIteratorNotInputOrOutputIterator>;
+
+static_assert(!std::input_or_output_iterator<OutputIteratorNotInputOrOutputIterator>);
+static_assert(std::indirectly_writable<OutputIteratorNotInputOrOutputIterator, int>);
+static_assert(!std::output_iterator<OutputIteratorNotInputOrOutputIterator, int>);
+static_assert(!std::ranges::input_range<OutputRangeNotInputOrOutputIterator>);
+
+class OutputIteratorNotIndirectlyWritable {
+public:
+  using difference_type = long;
+  using iterator_category = std::input_iterator_tag;
+
+  OutputIteratorNotIndirectlyWritable& operator++();
+  void operator++(int);
+  const int& operator*() const;
+};
+
+using OutputRangeNotIndirectlyWritable = UncheckedRange<OutputIteratorNotIndirectlyWritable>;
+
+static_assert(std::input_or_output_iterator<OutputIteratorNotIndirectlyWritable>);
+static_assert(!std::indirectly_writable<OutputIteratorNotIndirectlyWritable, int>);
+static_assert(!std::output_iterator<OutputIteratorNotIndirectlyWritable, int>);
+static_assert(!std::ranges::output_range<OutputIteratorNotIndirectlyWritable, int>);
 
 #endif // ALMOST_SATISFIES_TYPES_H

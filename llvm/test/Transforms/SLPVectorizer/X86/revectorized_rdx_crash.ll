@@ -21,26 +21,21 @@ define void @test() {
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* undef, i64 0, i64 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[I]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 8
-; CHECK-NEXT:    [[I5:%.*]] = add i32 undef, undef
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
-; CHECK-NEXT:    [[OP_EXTRA2:%.*]] = add i32 [[TMP2]], [[I5]]
-; CHECK-NEXT:    [[I10:%.*]] = add i32 [[OP_EXTRA2]], undef
-; CHECK-NEXT:    [[I11:%.*]] = add i32 [[OP_EXTRA2]], [[I10]]
+; CHECK-NEXT:    [[OP_RDX6:%.*]] = add i32 [[TMP2]], undef
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[I1]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 4
-; CHECK-NEXT:    [[I12:%.*]] = add i32 undef, undef
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
-; CHECK-NEXT:    [[OP_EXTRA:%.*]] = add i32 [[TMP5]], [[I12]]
-; CHECK-NEXT:    [[OP_EXTRA1:%.*]] = add i32 [[OP_EXTRA]], undef
-; CHECK-NEXT:    [[I18:%.*]] = add i32 [[OP_EXTRA1]], [[I11]]
-; CHECK-NEXT:    [[I19:%.*]] = add i32 [[OP_EXTRA1]], [[I18]]
-; CHECK-NEXT:    [[I20:%.*]] = add i32 undef, [[I19]]
-; CHECK-NEXT:    [[I21:%.*]] = add i32 undef, [[I20]]
-; CHECK-NEXT:    [[I22:%.*]] = add i32 undef, [[I21]]
-; CHECK-NEXT:    [[I23:%.*]] = add i32 undef, [[I22]]
+; CHECK-NEXT:    [[OP_RDX5:%.*]] = add i32 [[TMP5]], undef
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> undef)
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 undef, [[OP_RDX6]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i32 [[OP_RDX6]], [[OP_RDX5]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = add i32 [[OP_RDX]], [[OP_RDX1]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = add i32 [[OP_RDX2]], [[OP_RDX5]]
+; CHECK-NEXT:    [[OP_RDX4:%.*]] = add i32 [[TMP6]], [[OP_RDX3]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[I23]], [[FOR_COND_PREHEADER]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[OP_RDX4]], [[FOR_COND_PREHEADER]] ], [ undef, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:

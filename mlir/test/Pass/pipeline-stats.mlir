@@ -14,10 +14,10 @@
 // PIPELINE-NEXT:   TestStatisticPass
 // PIPELINE-NEXT:     (S) {{0|4}} num-ops - Number of operations counted
 
-func @foo() {
+func.func @foo() {
   return
 }
 
-func @bar() {
+func.func @bar() {
   return
 }

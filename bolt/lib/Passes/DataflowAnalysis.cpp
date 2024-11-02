@@ -25,14 +25,14 @@ raw_ostream &operator<<(raw_ostream &OS, const BitVector &State) {
       OS << "all, except: ";
       BitVector BV = State;
       BV.flip();
-      for (int I = BV.find_first(); I != -1; I = BV.find_next(I)) {
+      for (int I : BV.set_bits()) {
         OS << Sep << I;
         Sep = " ";
       }
       OS << ")";
       return OS;
     }
-    for (int I = State.find_first(); I != -1; I = State.find_next(I)) {
+    for (int I : State.set_bits()) {
       OS << Sep << I;
       Sep = " ";
     }
@@ -83,11 +83,11 @@ void RegStatePrinter::print(raw_ostream &OS, const BitVector &State) const {
     OS << "all, except: ";
     BitVector BV = State;
     BV.flip();
-    for (int I = BV.find_first(); I != -1; I = BV.find_next(I))
+    for (int I : BV.set_bits())
       OS << BC.MRI->getName(I) << " ";
     return;
   }
-  for (int I = State.find_first(); I != -1; I = State.find_next(I))
+  for (int I : State.set_bits())
     OS << BC.MRI->getName(I) << " ";
 }
 

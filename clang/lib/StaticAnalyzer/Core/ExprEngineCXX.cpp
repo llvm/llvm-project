@@ -945,8 +945,17 @@ void ExprEngine::VisitCXXDeleteExpr(const CXXDeleteExpr *CDE,
 
   ExplodedNodeSet DstPreCall;
   getCheckerManager().runCheckersForPreCall(DstPreCall, Pred, *Call, *this);
+  ExplodedNodeSet DstPostCall;
 
-  getCheckerManager().runCheckersForPostCall(Dst, DstPreCall, *Call, *this);
+  if (AMgr.getAnalyzerOptions().MayInlineCXXAllocator) {
+    StmtNodeBuilder Bldr(DstPreCall, DstPostCall, *currBldrCtx);
+    for (ExplodedNode *I : DstPreCall) {
+      defaultEvalCall(Bldr, I, *Call);
+    }
+  } else {
+    DstPostCall = DstPreCall;
+  }
+  getCheckerManager().runCheckersForPostCall(Dst, DstPostCall, *Call, *this);
 }
 
 void ExprEngine::VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,

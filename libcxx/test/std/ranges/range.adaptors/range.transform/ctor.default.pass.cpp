@@ -34,8 +34,8 @@ struct DefaultConstructibleFunction {
   constexpr int operator()(int i) const { return i + state_; }
 };
 
-struct NoDefaultView : std::ranges::view_base {
-  NoDefaultView() = delete;
+struct NoDefaultCtrView : std::ranges::view_base {
+  NoDefaultCtrView() = delete;
   int* begin() const;
   int* end() const;
 };
@@ -62,9 +62,9 @@ constexpr bool test() {
     assert(view[2] == 103);
   }
 
-  static_assert(!std::is_default_constructible_v<std::ranges::transform_view<NoDefaultView,            DefaultConstructibleFunction>>);
+  static_assert(!std::is_default_constructible_v<std::ranges::transform_view<NoDefaultCtrView,            DefaultConstructibleFunction>>);
   static_assert(!std::is_default_constructible_v<std::ranges::transform_view<DefaultConstructibleView, NoDefaultFunction>>);
-  static_assert(!std::is_default_constructible_v<std::ranges::transform_view<NoDefaultView,            NoDefaultFunction>>);
+  static_assert(!std::is_default_constructible_v<std::ranges::transform_view<NoDefaultCtrView,            NoDefaultFunction>>);
 
   return true;
 }

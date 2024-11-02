@@ -663,12 +663,12 @@ let Class = PropertyTypeCase<TemplateName, "QualifiedTemplate"> in {
   def : Property<"hasTemplateKeyword", Bool> {
     let Read = [{ qtn->hasTemplateKeyword() }];
   }
-  def : Property<"declaration", TemplateDeclRef> {
-    let Read = [{ qtn->getTemplateDecl() }];
+  def : Property<"underlyingTemplateName", TemplateName> {
+    let Read = [{ qtn->getUnderlyingTemplate() }];
   }
   def : Creator<[{
     return ctx.getQualifiedTemplateName(qualifier, hasTemplateKeyword,
-                                        declaration);
+                                        underlyingTemplateName);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateName, "DependentTemplate"> in {

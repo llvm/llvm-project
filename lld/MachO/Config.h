@@ -94,6 +94,13 @@ public:
   bool match(llvm::StringRef symbolName) const;
 };
 
+enum class SymtabPresence {
+  All,
+  None,
+  SelectivelyIncluded,
+  SelectivelyExcluded,
+};
+
 struct Configuration {
   Symbol *entry = nullptr;
   bool hasReexports = false;
@@ -151,6 +158,7 @@ struct Configuration {
   bool deadStrip = false;
   bool errorForArchMismatch = false;
   PlatformInfo platformInfo;
+  llvm::Optional<PlatformInfo> secondaryPlatformInfo;
   NamespaceKind namespaceKind = NamespaceKind::twolevel;
   UndefinedSymbolTreatment undefinedSymbolTreatment =
       UndefinedSymbolTreatment::error;
@@ -177,6 +185,9 @@ struct Configuration {
   SymbolPatterns exportedSymbols;
   SymbolPatterns unexportedSymbols;
   SymbolPatterns whyLive;
+
+  SymtabPresence localSymbolsPresence = SymtabPresence::All;
+  SymbolPatterns localSymbolPatterns;
 
   bool zeroModTime = false;
 

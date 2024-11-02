@@ -881,7 +881,7 @@ define i8 @test_v32i8_sext(<32 x i8> %a0, <32 x i8> %a1) {
   ret i8 %11
 }
 
-; FIXME: Should not "MOVMSK(PCMPEQ(..)) -> PTESTZ(..)" when cmp result has muti-uses.
+; Should not "MOVMSK(PCMPEQ(..)) -> PTESTZ(..)" when cmp result has muti-uses.
 define i32 @test_v32i8_muti_uses(<32 x i8> %x, <32 x i8>%y, i32 %z) {
 ; SSE-LABEL: test_v32i8_muti_uses:
 ; SSE:       # %bb.0:
@@ -914,10 +914,9 @@ define i32 @test_v32i8_muti_uses(<32 x i8> %x, <32 x i8>%y, i32 %z) {
 ;
 ; AVX2-LABEL: test_v32i8_muti_uses:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm2
-; AVX2-NEXT:    vpmovmskb %ymm2, %ecx
-; AVX2-NEXT:    vpsubb %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vptest %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
+; AVX2-NEXT:    cmpl $-1, %ecx
 ; AVX2-NEXT:    movl $16, %eax
 ; AVX2-NEXT:    cmovnel %ecx, %eax
 ; AVX2-NEXT:    vzeroupper

@@ -31,7 +31,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  std::vector<std::string> Names;
+  std::vector<StringRef> Names;
 };
 
 } // namespace zircon

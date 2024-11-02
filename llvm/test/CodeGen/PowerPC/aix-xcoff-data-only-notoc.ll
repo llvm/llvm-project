@@ -4,7 +4,8 @@
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefix=SYMS %s
 
-;; FIXME: currently only fileHeader and sectionHeaders are supported in XCOFF64.
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -filetype=obj -o %t64.o < %s
+; RUN: llvm-readobj --syms %t64.o | FileCheck --check-prefix=SYMS %s
 
 @a = external global i32, align 4
 @b = external global i64, align 8

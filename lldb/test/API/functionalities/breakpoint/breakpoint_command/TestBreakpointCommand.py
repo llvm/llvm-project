@@ -283,6 +283,34 @@ class BreakpointCommandTestCase(TestBase):
         self.assertEqual(com_list.GetStringAtIndex(1), "thread list", "Next thread list")
         self.assertEqual(com_list.GetStringAtIndex(2), "continue", "Last continue")
 
+    def test_add_commands_by_breakpoint_name(self):
+        """Make sure that when you specify a breakpoint name to "break command add"
+           it gets added to all the breakpoints marked with that name."""
+        self.build()
+        target = self.createTestTarget()
+
+        bp_ids = []
+        bp_names = ["main", "not_here", "main"]
+        for bp_name in bp_names:
+            bp = target.BreakpointCreateByName(bp_name)
+            bp.AddName("MyBKPTS")
+            bp_ids.append(bp.GetID())
+        # First do it with a script one-liner:
+        self.runCmd("breakpoint command add -s py -o 'print(\"some command\")' MyBKPTS")
+        for id in bp_ids:
+            self.expect("breakpoint command list {0}".format(id),
+                        patterns=["some command"])
+        # Now do the same thing with a python function:
+        import side_effect
+        self.runCmd("command script import --allow-reload ./bktptcmd.py")
+
+        self.runCmd("breakpoint command add --python-function bktptcmd.function MyBKPTS")
+        for id in bp_ids:
+            self.expect("breakpoint command list {0}".format(id),
+                        patterns=["bktptcmd.function"])
+        
+        
+
     def test_breakpoint_delete_disabled(self):
         """Test 'break delete --disabled' works"""
         self.build()

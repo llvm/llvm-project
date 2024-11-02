@@ -261,6 +261,8 @@ LLVMPointerType::getTypeSizeInBits(const DataLayout &dataLayout,
 
   // For other memory spaces, use the size of the pointer to the default memory
   // space.
+  if (isOpaque())
+    return dataLayout.getTypeSizeInBits(get(getContext()));
   return dataLayout.getTypeSizeInBits(get(getElementType()));
 }
 
@@ -270,6 +272,8 @@ unsigned LLVMPointerType::getABIAlignment(const DataLayout &dataLayout,
           getPointerDataLayoutEntry(params, *this, DLEntryPos::Abi))
     return *alignment;
 
+  if (isOpaque())
+    return dataLayout.getTypeABIAlignment(get(getContext()));
   return dataLayout.getTypeABIAlignment(get(getElementType()));
 }
 
@@ -280,6 +284,8 @@ LLVMPointerType::getPreferredAlignment(const DataLayout &dataLayout,
           getPointerDataLayoutEntry(params, *this, DLEntryPos::Preferred))
     return *alignment;
 
+  if (isOpaque())
+    return dataLayout.getTypePreferredAlignment(get(getContext()));
   return dataLayout.getTypePreferredAlignment(get(getElementType()));
 }
 
@@ -334,7 +340,7 @@ LogicalResult LLVMPointerType::verifyEntries(DataLayoutEntryListRef entries,
              << " to be a dense integer elements attribute with 3 or 4 "
                 "elements";
     }
-    if (!key.getElementType().isInteger(8)) {
+    if (key.getElementType() && !key.getElementType().isInteger(8)) {
       return emitError(loc) << "unexpected layout attribute for pointer to "
                             << key.getElementType();
     }

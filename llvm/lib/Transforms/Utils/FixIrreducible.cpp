@@ -138,9 +138,17 @@ static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
     // not be necessary if we can retain such backedges.
     if (Headers.count(Child->getHeader())) {
       for (auto BB : Child->blocks()) {
+        if (LI.getLoopFor(BB) != Child)
+          continue;
         LI.changeLoopFor(BB, NewLoop);
         LLVM_DEBUG(dbgs() << "moved block from child: " << BB->getName()
                           << "\n");
+      }
+      std::vector<Loop *> GrandChildLoops;
+      std::swap(GrandChildLoops, Child->getSubLoopsVector());
+      for (auto GrandChildLoop : GrandChildLoops) {
+        GrandChildLoop->setParentLoop(nullptr);
+        NewLoop->addChildLoop(GrandChildLoop);
       }
       LI.destroy(Child);
       LLVM_DEBUG(dbgs() << "subsumed child loop (common header)\n");

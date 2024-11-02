@@ -106,8 +106,8 @@ void NativeInlineSiteSymbol::getLineOffset(uint32_t OffsetInFunc,
   uint32_t CodeOffset = 0;
   Optional<uint32_t> CodeOffsetBase;
   Optional<uint32_t> CodeOffsetEnd;
-  Optional<uint32_t> CurLineOffset;
-  Optional<uint32_t> NextLineOffset;
+  Optional<int32_t> CurLineOffset;
+  Optional<int32_t> NextLineOffset;
   Optional<uint32_t> NextFileOffset;
   auto UpdateCodeOffset = [&](uint32_t Delta) {
     if (!CodeOffsetBase)
@@ -138,9 +138,12 @@ void NativeInlineSiteSymbol::getLineOffset(uint32_t OffsetInFunc,
       // Set base, end, file offset and line offset for next range.
       if (NextFileOffset)
         FileOffset = *NextFileOffset;
-      CurLineOffset = NextLineOffset ? NextLineOffset : None;
+      if (NextLineOffset) {
+        CurLineOffset = NextLineOffset;
+        NextLineOffset = None;
+      }
       CodeOffsetBase = CodeOffsetEnd;
-      CodeOffsetEnd = NextLineOffset = NextFileOffset = None;
+      CodeOffsetEnd = NextFileOffset = None;
     }
     return false;
   };

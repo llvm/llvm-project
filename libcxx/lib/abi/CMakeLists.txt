@@ -57,7 +57,7 @@ else()
 endif()
 cxx_abi_list_identifier(abi_list_identifier
   "${triple}"
-  "${LIBCXX_CXX_ABI_LIBNAME}"
+  "${LIBCXX_CXX_ABI}"
   "${LIBCXX_ABI_VERSION}"
   "${LIBCXX_ABI_UNSTABLE}"
   "${LIBCXX_ENABLE_EXCEPTIONS}"

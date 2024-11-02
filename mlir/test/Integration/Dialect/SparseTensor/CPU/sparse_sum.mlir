@@ -14,7 +14,7 @@
 // RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-!Filename = type !llvm.ptr<i8>
+!Filename = !llvm.ptr<i8>
 
 #SparseMatrix = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed", "compressed" ]
@@ -38,7 +38,7 @@ module {
   //
   // A kernel that sum-reduces a matrix to a single scalar.
   //
-  func @kernel_sum_reduce(%arga: tensor<?x?xf64, #SparseMatrix>,
+  func.func @kernel_sum_reduce(%arga: tensor<?x?xf64, #SparseMatrix>,
                           %argx: tensor<f64> {linalg.inplaceable = true}) -> tensor<f64> {
     %0 = linalg.generic #trait_sum_reduce
       ins(%arga: tensor<?x?xf64, #SparseMatrix>)
@@ -50,12 +50,12 @@ module {
     return %0 : tensor<f64>
   }
 
-  func private @getTensorFilename(index) -> (!Filename)
+  func.func private @getTensorFilename(index) -> (!Filename)
 
   //
   // Main driver that reads matrix from file and calls the sparse kernel.
   //
-  func @entry() {
+  func.func @entry() {
     %d0 = arith.constant 0.0 : f64
     %c0 = arith.constant 0 : index
 

@@ -79,6 +79,9 @@ public:
   void setConstantStride(OpBuilder &builder, Location loc, unsigned pos,
                          uint64_t stride);
 
+  /// Returns the type of array element in this descriptor.
+  Type getIndexType() { return indexType; };
+
   /// Returns the (LLVM) pointer type this descriptor contains.
   LLVM::LLVMPointerType getElementPtrType();
 

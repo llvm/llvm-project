@@ -168,7 +168,7 @@ static void addDefaultIgnorelists(const Driver &D, SanitizerMask Kinds,
     else if (BL.Mask == SanitizerKind::CFI && DiagnoseErrors)
       // If cfi_ignorelist.txt cannot be found in the resource dir, driver
       // should fail.
-      D.Diag(clang::diag::err_drv_no_such_file) << Path;
+      D.Diag(clang::diag::err_drv_missing_sanitizer_ignorelist) << Path;
   }
   validateSpecialCaseListFormat(
       D, IgnorelistFiles, clang::diag::err_drv_malformed_sanitizer_ignorelist,
@@ -857,13 +857,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                      AsanOutlineInstrumentation);
 
     // As a workaround for a bug in gold 2.26 and earlier, dead stripping of
-    // globals in ASan is disabled by default on ELF targets.
+    // globals in ASan is disabled by default on most ELF targets.
     // See https://sourceware.org/bugzilla/show_bug.cgi?id=19002
     AsanGlobalsDeadStripping = Args.hasFlag(
         options::OPT_fsanitize_address_globals_dead_stripping,
         options::OPT_fno_sanitize_address_globals_dead_stripping,
         !TC.getTriple().isOSBinFormatELF() || TC.getTriple().isOSFuchsia() ||
-            TC.getTriple().isPS4());
+            TC.getTriple().isPS());
 
     AsanUseOdrIndicator =
         Args.hasFlag(options::OPT_fsanitize_address_use_odr_indicator,

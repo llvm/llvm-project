@@ -9,7 +9,7 @@ void bar(_AS2 int a); // expected-error {{parameter may not be qualified with an
 void foo(_AS3 float *a,
          _AS1 float b) // expected-error {{parameter may not be qualified with an address space}}
 {
-  _AS2 *x;// expected-warning {{type specifier missing, defaults to 'int'}}
+  _AS2 *x;// expected-error {{type specifier missing, defaults to 'int'}}
   _AS1 float * _AS2 *B;
 
   int _AS1 _AS2 *Y;   // expected-error {{multiple address spaces specified for type}}

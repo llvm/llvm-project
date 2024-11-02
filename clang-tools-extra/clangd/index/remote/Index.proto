@@ -47,6 +47,7 @@ message RefsRequest {
   repeated string ids = 1;
   optional uint32 filter = 2;
   optional uint32 limit = 3;
+  optional bool want_container = 4;
 }
 
 // The response is a stream of reference messages, and one terminating has_more

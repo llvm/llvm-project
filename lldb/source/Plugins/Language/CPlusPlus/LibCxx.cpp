@@ -546,7 +546,7 @@ bool lldb_private::formatters::LibcxxContainerSummaryProvider(
                                        nullptr, nullptr, &valobj, false, false);
 }
 
-// the field layout in a libc++ string (cap, side, data or data, size, cap)
+/// The field layout in a libc++ string (cap, side, data or data, size, cap).
 enum LibcxxStringLayoutMode {
   eLibcxxStringLayoutModeCSD = 0,
   eLibcxxStringLayoutModeDSC = 1,
@@ -555,14 +555,17 @@ enum LibcxxStringLayoutMode {
 
 /// Determine the size in bytes of \p valobj (a libc++ std::string object) and
 /// extract its data payload. Return the size + payload pair.
+// TODO: Support big-endian architectures.
 static llvm::Optional<std::pair<uint64_t, ValueObjectSP>>
 ExtractLibcxxStringInfo(ValueObject &valobj) {
-  ValueObjectSP D(valobj.GetChildAtIndexPath({0, 0, 0, 0}));
-  if (!D)
+  ValueObjectSP dataval_sp(valobj.GetChildAtIndexPath({0, 0, 0, 0}));
+  if (!dataval_sp)
+    return {};
+  if (!dataval_sp->GetError().Success())
     return {};
 
   ValueObjectSP layout_decider(
-      D->GetChildAtIndexPath(llvm::ArrayRef<size_t>({0, 0})));
+      dataval_sp->GetChildAtIndexPath(llvm::ArrayRef<size_t>({0, 0})));
 
   // this child should exist
   if (!layout_decider)
@@ -572,20 +575,33 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
   ConstString g_size_name("__size_");
   bool short_mode = false; // this means the string is in short-mode and the
                            // data is stored inline
+  bool using_bitmasks = true; // Whether the class uses bitmasks for the mode
+                              // flag (pre-D123580).
+  uint64_t size;
   LibcxxStringLayoutMode layout = (layout_decider->GetName() == g_data_name)
                                       ? eLibcxxStringLayoutModeDSC
                                       : eLibcxxStringLayoutModeCSD;
   uint64_t size_mode_value = 0;
 
-  if (layout == eLibcxxStringLayoutModeDSC) {
+  if (ValueObjectSP is_long = dataval_sp->GetChildAtNamePath(
+          {ConstString("__s"), ConstString("__is_long_")})) {
+    using_bitmasks = false;
+    short_mode = !is_long->GetValueAsUnsigned(/*fail_value=*/0);
+    if (ValueObjectSP size_member =
+            dataval_sp->GetChildAtNamePath({ConstString("__s"), ConstString("__size_")}))
+      size = size_member->GetValueAsUnsigned(/*fail_value=*/0);
+    else
+      return {};
+  } else if (layout == eLibcxxStringLayoutModeDSC) {
     llvm::SmallVector<size_t, 3> size_mode_locations[] = {
-        {1, 2}, // Post-c3d0205ee771 layout
+        {1, 2}, // Post-c3d0205ee771 layout. This was in use for only a brief
+                // period, so we can delete it if it becomes a burden.
         {1, 1, 0},
         {1, 1, 1},
     };
     ValueObjectSP size_mode;
     for (llvm::ArrayRef<size_t> loc : size_mode_locations) {
-      size_mode = D->GetChildAtIndexPath(loc);
+      size_mode = dataval_sp->GetChildAtIndexPath(loc);
       if (size_mode && size_mode->GetName() == g_size_name)
         break;
     }
@@ -596,7 +612,7 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
     size_mode_value = (size_mode->GetValueAsUnsigned(0));
     short_mode = ((size_mode_value & 0x80) == 0);
   } else {
-    ValueObjectSP size_mode(D->GetChildAtIndexPath({1, 0, 0}));
+    ValueObjectSP size_mode(dataval_sp->GetChildAtIndexPath({1, 0, 0}));
     if (!size_mode)
       return {};
 
@@ -605,14 +621,18 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
   }
 
   if (short_mode) {
-    ValueObjectSP s(D->GetChildAtIndex(1, true));
-    if (!s)
+    ValueObjectSP short_sp(dataval_sp->GetChildAtIndex(1, true));
+    if (!short_sp)
       return {};
-    ValueObjectSP location_sp = s->GetChildAtIndex(
+    ValueObjectSP location_sp = short_sp->GetChildAtIndex(
         (layout == eLibcxxStringLayoutModeDSC) ? 0 : 1, true);
-    const uint64_t size = (layout == eLibcxxStringLayoutModeDSC)
-                              ? size_mode_value
-                              : ((size_mode_value >> 1) % 256);
+    // After D125496, there is a flat layout.
+    if (location_sp->GetName() == g_size_name)
+      location_sp = short_sp->GetChildAtIndex(3, true);
+    if (using_bitmasks)
+      size = (layout == eLibcxxStringLayoutModeDSC)
+                 ? size_mode_value
+                 : ((size_mode_value >> 1) % 256);
 
     // When the small-string optimization takes place, the data must fit in the
     // inline string buffer (23 bytes on x86_64/Darwin). If it doesn't, it's
@@ -627,22 +647,22 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
     return std::make_pair(size, location_sp);
   }
 
-  ValueObjectSP l(D->GetChildAtIndex(0, true));
+  ValueObjectSP l(dataval_sp->GetChildAtIndex(0, true));
   if (!l)
     return {};
   // we can use the layout_decider object as the data pointer
-  ValueObjectSP location_sp = (layout == eLibcxxStringLayoutModeDSC)
-                                  ? layout_decider
-                                  : l->GetChildAtIndex(2, true);
-  ValueObjectSP size_vo(l->GetChildAtIndex(1, true));
-  const unsigned capacity_index =
-      (layout == eLibcxxStringLayoutModeDSC) ? 2 : 0;
-  ValueObjectSP capacity_vo(l->GetChildAtIndex(capacity_index, true));
+  ValueObjectSP location_sp =
+      l->GetChildMemberWithName(ConstString("__data_"), /*can_create=*/true);
+  ValueObjectSP size_vo =
+      l->GetChildMemberWithName(ConstString("__size_"), /*can_create=*/true);
+  ValueObjectSP capacity_vo =
+      l->GetChildMemberWithName(ConstString("__cap_"), /*can_create=*/true);
   if (!size_vo || !location_sp || !capacity_vo)
     return {};
-  const uint64_t size = size_vo->GetValueAsUnsigned(LLDB_INVALID_OFFSET);
-  const uint64_t capacity =
-      capacity_vo->GetValueAsUnsigned(LLDB_INVALID_OFFSET);
+  size = size_vo->GetValueAsUnsigned(LLDB_INVALID_OFFSET);
+  uint64_t capacity = capacity_vo->GetValueAsUnsigned(LLDB_INVALID_OFFSET);
+  if (!using_bitmasks && layout == eLibcxxStringLayoutModeCSD)
+    capacity *= 2;
   if (size == LLDB_INVALID_OFFSET || capacity == LLDB_INVALID_OFFSET ||
       capacity < size)
     return {};

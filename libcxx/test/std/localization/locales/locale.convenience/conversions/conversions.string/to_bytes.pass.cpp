@@ -15,7 +15,7 @@
 // byte_string to_bytes(const wide_string& wstr);
 // byte_string to_bytes(const Elem* first, const Elem* last);
 
-// XFAIL: libcpp-has-no-wide-characters
+// XFAIL: no-wide-characters
 
 #include <locale>
 #include <codecvt>

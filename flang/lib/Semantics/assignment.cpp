@@ -216,10 +216,13 @@ bool AssignmentContext::CheckForPureContext(const SomeExpr &lhs,
   return true;
 }
 
-// 10.2.3.1(2) The masks and LHS of assignments must all have the same shape
+// 10.2.3.1(2) The masks and LHS of assignments must be arrays of the same shape
 void AssignmentContext::CheckShape(parser::CharBlock at, const SomeExpr *expr) {
   if (auto shape{evaluate::GetShape(foldingContext(), expr)}) {
     std::size_t size{shape->size()};
+    if (size == 0) {
+      Say(at, "The mask or variable must not be scalar"_err_en_US);
+    }
     if (whereDepth_ == 0) {
       whereExtents_.resize(size);
     } else if (whereExtents_.size() != size) {

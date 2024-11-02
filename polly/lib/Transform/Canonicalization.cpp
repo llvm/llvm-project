@@ -132,7 +132,7 @@ polly::buildCanonicalicationPassesForNPM(llvm::ModulePassManager &MPM,
 }
 
 namespace {
-class PollyCanonicalize : public ModulePass {
+class PollyCanonicalize final : public ModulePass {
   PollyCanonicalize(const PollyCanonicalize &) = delete;
   const PollyCanonicalize &operator=(const PollyCanonicalize &) = delete;
 

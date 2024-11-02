@@ -10,14 +10,14 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/GSYM/DwarfTransformer.h"
-#include "llvm/DebugInfo/GSYM/Header.h"
+#include "llvm/DebugInfo/GSYM/ExtractRanges.h"
 #include "llvm/DebugInfo/GSYM/FileEntry.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
+#include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
-#include "llvm/DebugInfo/GSYM/Range.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/Support/DataExtractor.h"
@@ -112,11 +112,11 @@ TEST(GSYMTest, TestFunctionInfo) {
   EXPECT_EQ(A1, A2);
   // Make sure things are not equal if they only differ by start address.
   B = A2;
-  B.setStartAddress(0x2000);
+  B.Range = {0x1001, B.endAddress()};
   EXPECT_NE(B, A2);
   // Make sure things are not equal if they only differ by size.
   B = A2;
-  B.setSize(0x101);
+  B.Range = {B.startAddress(), B.startAddress() + 0x101};
   EXPECT_NE(B, A2);
   // Make sure things are not equal if they only differ by name.
   B = A2;
@@ -125,7 +125,7 @@ TEST(GSYMTest, TestFunctionInfo) {
   // Check < operator.
   // Check less than where address differs.
   B = A2;
-  B.setStartAddress(A2.startAddress() + 0x1000);
+  B.Range = {A2.startAddress() + 0x1000, A2.endAddress() + 0x1000};
   EXPECT_LT(A1, B);
 
   // We use the < operator to take a variety of different FunctionInfo
@@ -253,8 +253,8 @@ static void TestFunctionInfoEncodeDecode(llvm::support::endianness ByteOrder,
   std::string Bytes(OutStrm.str());
   uint8_t AddressSize = 4;
   DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
-  llvm::Expected<FunctionInfo> Decoded = FunctionInfo::decode(Data,
-                                                              FI.Range.Start);
+  llvm::Expected<FunctionInfo> Decoded =
+      FunctionInfo::decode(Data, FI.Range.start());
   // Make sure decoding succeeded.
   ASSERT_TRUE((bool)Decoded);
   // Make sure decoded object is the same as the one we encoded.
@@ -323,7 +323,7 @@ static void TestInlineInfoEncodeDecode(llvm::support::endianness ByteOrder,
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
-  const uint64_t BaseAddr = Inline.Ranges[0].Start;
+  const uint64_t BaseAddr = Inline.Ranges[0].start();
   llvm::Error Err = Inline.encode(FW, BaseAddr);
   ASSERT_FALSE(Err);
   std::string Bytes(OutStrm.str());
@@ -354,7 +354,8 @@ static void TestInlineInfoEncodeError(llvm::support::endianness ByteOrder,
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
-  const uint64_t BaseAddr = Inline.Ranges.empty() ? 0 : Inline.Ranges[0].Start;
+  const uint64_t BaseAddr =
+      Inline.Ranges.empty() ? 0 : Inline.Ranges[0].start();
   llvm::Error Err = Inline.encode(FW, BaseAddr);
   checkError(ExpectedErrorMsg, std::move(Err));
 }
@@ -407,33 +408,33 @@ TEST(GSYMTest, TestInlineInfo) {
   EXPECT_FALSE(Root.getInlineStack(0x50));
 
   // Verify that we get no inline stacks for addresses out of [0x100-0x200)
-  EXPECT_FALSE(Root.getInlineStack(Root.Ranges[0].Start - 1));
-  EXPECT_FALSE(Root.getInlineStack(Root.Ranges[0].End));
+  EXPECT_FALSE(Root.getInlineStack(Root.Ranges[0].start() - 1));
+  EXPECT_FALSE(Root.getInlineStack(Root.Ranges[0].end()));
 
   // Verify we get no inline stack entries for addresses that are in
   // [0x100-0x200) but not in [0x150-0x160)
-  EXPECT_FALSE(Root.getInlineStack(Inline1.Ranges[0].Start - 1));
-  EXPECT_FALSE(Root.getInlineStack(Inline1.Ranges[0].End));
+  EXPECT_FALSE(Root.getInlineStack(Inline1.Ranges[0].start() - 1));
+  EXPECT_FALSE(Root.getInlineStack(Inline1.Ranges[0].end()));
 
   // Verify we get one inline stack entry for addresses that are in
   // [[0x150-0x160)) but not in [0x152-0x155) or [0x157-0x158)
-  auto InlineInfos = Root.getInlineStack(Inline1.Ranges[0].Start);
+  auto InlineInfos = Root.getInlineStack(Inline1.Ranges[0].start());
   ASSERT_TRUE(InlineInfos);
   ASSERT_EQ(InlineInfos->size(), 1u);
   ASSERT_EQ(*InlineInfos->at(0), Inline1);
-  InlineInfos = Root.getInlineStack(Inline1.Ranges[0].End - 1);
+  InlineInfos = Root.getInlineStack(Inline1.Ranges[0].end() - 1);
   EXPECT_TRUE(InlineInfos);
   ASSERT_EQ(InlineInfos->size(), 1u);
   ASSERT_EQ(*InlineInfos->at(0), Inline1);
 
   // Verify we get two inline stack entries for addresses that are in
   // [0x152-0x155)
-  InlineInfos = Root.getInlineStack(Inline1Sub1.Ranges[0].Start);
+  InlineInfos = Root.getInlineStack(Inline1Sub1.Ranges[0].start());
   EXPECT_TRUE(InlineInfos);
   ASSERT_EQ(InlineInfos->size(), 2u);
   ASSERT_EQ(*InlineInfos->at(0), Inline1Sub1);
   ASSERT_EQ(*InlineInfos->at(1), Inline1);
-  InlineInfos = Root.getInlineStack(Inline1Sub1.Ranges[0].End - 1);
+  InlineInfos = Root.getInlineStack(Inline1Sub1.Ranges[0].end() - 1);
   EXPECT_TRUE(InlineInfos);
   ASSERT_EQ(InlineInfos->size(), 2u);
   ASSERT_EQ(*InlineInfos->at(0), Inline1Sub1);
@@ -441,12 +442,12 @@ TEST(GSYMTest, TestInlineInfo) {
 
   // Verify we get two inline stack entries for addresses that are in
   // [0x157-0x158)
-  InlineInfos = Root.getInlineStack(Inline1Sub2.Ranges[0].Start);
+  InlineInfos = Root.getInlineStack(Inline1Sub2.Ranges[0].start());
   EXPECT_TRUE(InlineInfos);
   ASSERT_EQ(InlineInfos->size(), 2u);
   ASSERT_EQ(*InlineInfos->at(0), Inline1Sub2);
   ASSERT_EQ(*InlineInfos->at(1), Inline1);
-  InlineInfos = Root.getInlineStack(Inline1Sub2.Ranges[0].End - 1);
+  InlineInfos = Root.getInlineStack(Inline1Sub2.Ranges[0].end() - 1);
   EXPECT_TRUE(InlineInfos);
   ASSERT_EQ(InlineInfos->size(), 2u);
   ASSERT_EQ(*InlineInfos->at(0), Inline1Sub2);
@@ -470,7 +471,7 @@ TEST(GSYMTest, TestInlineInfoEncodeErrors) {
   // Verify that we get an error trying to encode an InlineInfo object that has
   // a child InlineInfo that has no ranges.
   InlineInfo ContainsEmpty;
-  ContainsEmpty.Ranges.insert({0x100,200});
+  ContainsEmpty.Ranges.insert({0x100, 0x200});
   ContainsEmpty.Children.push_back(Empty);
   TestInlineInfoEncodeError(llvm::support::little, ContainsEmpty, EmptyErr);
   TestInlineInfoEncodeError(llvm::support::big, ContainsEmpty, EmptyErr);
@@ -479,9 +480,9 @@ TEST(GSYMTest, TestInlineInfoEncodeErrors) {
   // a child whose address range is not contained in the parent address range.
   InlineInfo ChildNotContained;
   std::string ChildNotContainedErr("child range not contained in parent");
-  ChildNotContained.Ranges.insert({0x100,200});
+  ChildNotContained.Ranges.insert({0x100, 0x200});
   InlineInfo ChildNotContainedChild;
-  ChildNotContainedChild.Ranges.insert({0x200,300});
+  ChildNotContainedChild.Ranges.insert({0x200, 0x300});
   ChildNotContained.Children.push_back(ChildNotContainedChild);
   TestInlineInfoEncodeError(llvm::support::little, ChildNotContained,
                             ChildNotContainedErr);
@@ -502,7 +503,7 @@ TEST(GSYMTest, TestInlineInfoDecodeErrors) {
       "0x00000000: missing InlineInfo address ranges data");
   AddressRanges Ranges;
   Ranges.insert({BaseAddr, BaseAddr+0x100});
-  Ranges.encode(FW, BaseAddr);
+  encodeRanges(Ranges, FW, BaseAddr);
   TestInlineInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
       "0x00000004: missing InlineInfo uint8_t indicating children");
   FW.writeU8(0);
@@ -540,134 +541,6 @@ TEST(GSYMTest, TestLineEntry) {
   EXPECT_NE(E1, DifferentFile);
   EXPECT_NE(E1, DifferentLine);
   EXPECT_LT(E1, DifferentAddr);
-}
-
-TEST(GSYMTest, TestRanges) {
-  // test llvm::gsym::AddressRange.
-  const uint64_t StartAddr = 0x1000;
-  const uint64_t EndAddr = 0x2000;
-  // Verify constructor and API to ensure it takes start and end address.
-  const AddressRange Range(StartAddr, EndAddr);
-  EXPECT_EQ(Range.size(), EndAddr - StartAddr);
-
-  // Verify llvm::gsym::AddressRange::contains().
-  EXPECT_FALSE(Range.contains(0));
-  EXPECT_FALSE(Range.contains(StartAddr - 1));
-  EXPECT_TRUE(Range.contains(StartAddr));
-  EXPECT_TRUE(Range.contains(EndAddr - 1));
-  EXPECT_FALSE(Range.contains(EndAddr));
-  EXPECT_FALSE(Range.contains(UINT64_MAX));
-
-  const AddressRange RangeSame(StartAddr, EndAddr);
-  const AddressRange RangeDifferentStart(StartAddr + 1, EndAddr);
-  const AddressRange RangeDifferentEnd(StartAddr, EndAddr + 1);
-  const AddressRange RangeDifferentStartEnd(StartAddr + 1, EndAddr + 1);
-  // Test == and != with values that are the same
-  EXPECT_EQ(Range, RangeSame);
-  EXPECT_FALSE(Range != RangeSame);
-  // Test == and != with values that are the different
-  EXPECT_NE(Range, RangeDifferentStart);
-  EXPECT_NE(Range, RangeDifferentEnd);
-  EXPECT_NE(Range, RangeDifferentStartEnd);
-  EXPECT_FALSE(Range == RangeDifferentStart);
-  EXPECT_FALSE(Range == RangeDifferentEnd);
-  EXPECT_FALSE(Range == RangeDifferentStartEnd);
-
-  // Test "bool operator<(const AddressRange &, const AddressRange &)".
-  EXPECT_FALSE(Range < RangeSame);
-  EXPECT_FALSE(RangeSame < Range);
-  EXPECT_LT(Range, RangeDifferentStart);
-  EXPECT_LT(Range, RangeDifferentEnd);
-  EXPECT_LT(Range, RangeDifferentStartEnd);
-  // Test "bool operator<(const AddressRange &, uint64_t)"
-  EXPECT_LT(Range.Start, StartAddr + 1);
-  // Test "bool operator<(uint64_t, const AddressRange &)"
-  EXPECT_LT(StartAddr - 1, Range.Start);
-
-  // Verify llvm::gsym::AddressRange::isContiguousWith() and
-  // llvm::gsym::AddressRange::intersects().
-  const AddressRange EndsBeforeRangeStart(0, StartAddr - 1);
-  const AddressRange EndsAtRangeStart(0, StartAddr);
-  const AddressRange OverlapsRangeStart(StartAddr - 1, StartAddr + 1);
-  const AddressRange InsideRange(StartAddr + 1, EndAddr - 1);
-  const AddressRange OverlapsRangeEnd(EndAddr - 1, EndAddr + 1);
-  const AddressRange StartsAtRangeEnd(EndAddr, EndAddr + 0x100);
-  const AddressRange StartsAfterRangeEnd(EndAddr + 1, EndAddr + 0x100);
-
-  EXPECT_FALSE(Range.intersects(EndsBeforeRangeStart));
-  EXPECT_FALSE(Range.intersects(EndsAtRangeStart));
-  EXPECT_TRUE(Range.intersects(OverlapsRangeStart));
-  EXPECT_TRUE(Range.intersects(InsideRange));
-  EXPECT_TRUE(Range.intersects(OverlapsRangeEnd));
-  EXPECT_FALSE(Range.intersects(StartsAtRangeEnd));
-  EXPECT_FALSE(Range.intersects(StartsAfterRangeEnd));
-
-  // Test the functions that maintain GSYM address ranges:
-  //  "bool AddressRange::contains(uint64_t Addr) const;"
-  //  "void AddressRanges::insert(const AddressRange &R);"
-  AddressRanges Ranges;
-  Ranges.insert(AddressRange(0x1000, 0x2000));
-  Ranges.insert(AddressRange(0x2000, 0x3000));
-  Ranges.insert(AddressRange(0x4000, 0x5000));
-
-  EXPECT_FALSE(Ranges.contains(0));
-  EXPECT_FALSE(Ranges.contains(0x1000 - 1));
-  EXPECT_TRUE(Ranges.contains(0x1000));
-  EXPECT_TRUE(Ranges.contains(0x2000));
-  EXPECT_TRUE(Ranges.contains(0x4000));
-  EXPECT_TRUE(Ranges.contains(0x2000 - 1));
-  EXPECT_TRUE(Ranges.contains(0x3000 - 1));
-  EXPECT_FALSE(Ranges.contains(0x3000 + 1));
-  EXPECT_TRUE(Ranges.contains(0x5000 - 1));
-  EXPECT_FALSE(Ranges.contains(0x5000 + 1));
-  EXPECT_FALSE(Ranges.contains(UINT64_MAX));
-
-  EXPECT_FALSE(Ranges.contains(AddressRange()));
-  EXPECT_FALSE(Ranges.contains(AddressRange(0x1000-1, 0x1000)));
-  EXPECT_FALSE(Ranges.contains(AddressRange(0x1000, 0x1000)));
-  EXPECT_TRUE(Ranges.contains(AddressRange(0x1000, 0x1000+1)));
-  EXPECT_TRUE(Ranges.contains(AddressRange(0x1000, 0x2000)));
-  EXPECT_FALSE(Ranges.contains(AddressRange(0x1000, 0x2001)));
-  EXPECT_TRUE(Ranges.contains(AddressRange(0x2000, 0x3000)));
-  EXPECT_FALSE(Ranges.contains(AddressRange(0x2000, 0x3001)));
-  EXPECT_FALSE(Ranges.contains(AddressRange(0x3000, 0x3001)));
-  EXPECT_FALSE(Ranges.contains(AddressRange(0x1500, 0x4500)));
-  EXPECT_FALSE(Ranges.contains(AddressRange(0x5000, 0x5001)));
-
-  // Verify that intersecting ranges get combined
-  Ranges.clear();
-  Ranges.insert(AddressRange(0x1100, 0x1F00));
-  // Verify a wholy contained range that is added doesn't do anything.
-  Ranges.insert(AddressRange(0x1500, 0x1F00));
-  EXPECT_EQ(Ranges.size(), 1u);
-  EXPECT_EQ(Ranges[0], AddressRange(0x1100, 0x1F00));
-
-  // Verify a range that starts before and intersects gets combined.
-  Ranges.insert(AddressRange(0x1000, Ranges[0].Start + 1));
-  EXPECT_EQ(Ranges.size(), 1u);
-  EXPECT_EQ(Ranges[0], AddressRange(0x1000, 0x1F00));
-
-  // Verify a range that starts inside and extends ranges gets combined.
-  Ranges.insert(AddressRange(Ranges[0].End - 1, 0x2000));
-  EXPECT_EQ(Ranges.size(), 1u);
-  EXPECT_EQ(Ranges[0], AddressRange(0x1000, 0x2000));
-
-  // Verify that adjacent ranges don't get combined
-  Ranges.insert(AddressRange(0x2000, 0x3000));
-  EXPECT_EQ(Ranges.size(), 2u);
-  EXPECT_EQ(Ranges[0], AddressRange(0x1000, 0x2000));
-  EXPECT_EQ(Ranges[1], AddressRange(0x2000, 0x3000));
-  // Verify if we add an address range that intersects two ranges
-  // that they get combined
-  Ranges.insert(AddressRange(Ranges[0].End - 1, Ranges[1].Start + 1));
-  EXPECT_EQ(Ranges.size(), 1u);
-  EXPECT_EQ(Ranges[0], AddressRange(0x1000, 0x3000));
-
-  Ranges.insert(AddressRange(0x3000, 0x4000));
-  Ranges.insert(AddressRange(0x4000, 0x5000));
-  Ranges.insert(AddressRange(0x2000, 0x4500));
-  EXPECT_EQ(Ranges.size(), 1u);
-  EXPECT_EQ(Ranges[0], AddressRange(0x1000, 0x5000));
 }
 
 TEST(GSYMTest, TestStringTable) {
@@ -745,16 +618,16 @@ TEST(GSYMTest, TestAddressRangeEncodeDecode) {
   const uint64_t BaseAddr = 0x1000;
   const AddressRange Range1(0x1000, 0x1010);
   const AddressRange Range2(0x1020, 0x1030);
-  Range1.encode(FW, BaseAddr);
-  Range2.encode(FW, BaseAddr);
+  encodeRange(Range1, FW, BaseAddr);
+  encodeRange(Range2, FW, BaseAddr);
   std::string Bytes(OutStrm.str());
   uint8_t AddressSize = 4;
   DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
 
   AddressRange DecodedRange1, DecodedRange2;
   uint64_t Offset = 0;
-  DecodedRange1.decode(Data, BaseAddr, Offset);
-  DecodedRange2.decode(Data, BaseAddr, Offset);
+  DecodedRange1 = decodeRange(Data, BaseAddr, Offset);
+  DecodedRange2 = decodeRange(Data, BaseAddr, Offset);
   EXPECT_EQ(Range1, DecodedRange1);
   EXPECT_EQ(Range2, DecodedRange2);
 }
@@ -765,7 +638,7 @@ static void TestAddressRangeEncodeDecodeHelper(const AddressRanges &Ranges,
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::support::endian::system_endianness();
   FileWriter FW(OutStrm, ByteOrder);
-  Ranges.encode(FW, BaseAddr);
+  encodeRanges(Ranges, FW, BaseAddr);
 
   std::string Bytes(OutStrm.str());
   uint8_t AddressSize = 4;
@@ -773,7 +646,7 @@ static void TestAddressRangeEncodeDecodeHelper(const AddressRanges &Ranges,
 
   AddressRanges DecodedRanges;
   uint64_t Offset = 0;
-  DecodedRanges.decode(Data, BaseAddr, Offset);
+  decodeRanges(DecodedRanges, Data, BaseAddr, Offset);
   EXPECT_EQ(Ranges, DecodedRanges);
 }
 
@@ -1119,7 +992,7 @@ static void Compare(const GsymCreator &GC, const GsymReader &GR) {
   // Verify that all of the data in a GsymCreator is correctly decoded from
   // a GsymReader. To do this, we iterator over
   GC.forEachFunctionInfo([&](const FunctionInfo &FI) -> bool {
-    auto DecodedFI = GR.getFunctionInfo(FI.Range.Start);
+    auto DecodedFI = GR.getFunctionInfo(FI.Range.start());
     EXPECT_TRUE(bool(DecodedFI));
     EXPECT_EQ(FI, *DecodedFI);
     return true; // Keep iterating over all FunctionInfo objects.

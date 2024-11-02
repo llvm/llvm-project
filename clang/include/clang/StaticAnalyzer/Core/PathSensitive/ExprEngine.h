@@ -135,6 +135,7 @@ public:
 
 private:
   cross_tu::CrossTranslationUnitContext &CTU;
+  bool IsCTUEnabled;
 
   AnalysisManager &AMgr;
 
@@ -585,14 +586,6 @@ public:
   static std::pair<const ProgramPointTag *, const ProgramPointTag *>
     geteagerlyAssumeBinOpBifurcationTags();
 
-  SVal evalMinus(SVal X) {
-    return X.isValid() ? svalBuilder.evalMinus(X.castAs<NonLoc>()) : X;
-  }
-
-  SVal evalComplement(SVal X) {
-    return X.isValid() ? svalBuilder.evalComplement(X.castAs<NonLoc>()) : X;
-  }
-
   ProgramStateRef handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
                                       const LocationContext *LCtx, QualType T,
                                       QualType ExTy, const CastExpr *CastE,
@@ -805,8 +798,14 @@ private:
                         const ExplodedNode *Pred,
                         const EvalCallOptions &CallOpts = {});
 
-  bool inlineCall(const CallEvent &Call, const Decl *D, NodeBuilder &Bldr,
-                  ExplodedNode *Pred, ProgramStateRef State);
+  void inlineCall(WorkList *WList, const CallEvent &Call, const Decl *D,
+                  NodeBuilder &Bldr, ExplodedNode *Pred, ProgramStateRef State);
+
+  void ctuBifurcate(const CallEvent &Call, const Decl *D, NodeBuilder &Bldr,
+                    ExplodedNode *Pred, ProgramStateRef State);
+
+  /// Returns true if the CTU analysis is running its second phase.
+  bool isSecondPhaseCTU() { return IsCTUEnabled && !Engine.getCTUWorkList(); }
 
   /// Conservatively evaluate call by invalidating regions and binding
   /// a conjured return value.

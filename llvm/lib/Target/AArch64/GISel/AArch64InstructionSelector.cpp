@@ -2312,6 +2312,16 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     I.eraseFromParent();
     return true;
   }
+  case TargetOpcode::G_FENCE: {
+    if (I.getOperand(1).getImm() == 0)
+      BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::CompilerBarrier))
+          .addImm(I.getOperand(0).getImm());
+    else
+      BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::DMB))
+          .addImm(I.getOperand(0).getImm() == 4 ? 0x9 : 0xb);
+    I.eraseFromParent();
+    return true;
+  }
   default:
     return false;
   }
@@ -2325,8 +2335,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  const AArch64Subtarget *Subtarget =
-      &static_cast<const AArch64Subtarget &>(MF.getSubtarget());
+  const AArch64Subtarget *Subtarget = &MF.getSubtarget<AArch64Subtarget>();
   if (Subtarget->requiresStrictAlign()) {
     // We don't support this feature yet.
     LLVM_DEBUG(dbgs() << "AArch64 GISel does not support strict-align yet\n");
@@ -2781,12 +2790,18 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         return false;
 
       if (isa<GLoad>(LdSt)) {
-        static unsigned Opcodes[] = {AArch64::LDARB, AArch64::LDARH,
-                                     AArch64::LDARW, AArch64::LDARX};
+        static constexpr unsigned LDAPROpcodes[] = {
+            AArch64::LDAPRB, AArch64::LDAPRH, AArch64::LDAPRW, AArch64::LDAPRX};
+        static constexpr unsigned LDAROpcodes[] = {
+            AArch64::LDARB, AArch64::LDARH, AArch64::LDARW, AArch64::LDARX};
+        ArrayRef<unsigned> Opcodes =
+            STI.hasLDAPR() && Order != AtomicOrdering::SequentiallyConsistent
+                ? LDAPROpcodes
+                : LDAROpcodes;
         I.setDesc(TII.get(Opcodes[Log2_32(MemSizeInBytes)]));
       } else {
-        static unsigned Opcodes[] = {AArch64::STLRB, AArch64::STLRH,
-                                     AArch64::STLRW, AArch64::STLRX};
+        static constexpr unsigned Opcodes[] = {AArch64::STLRB, AArch64::STLRH,
+                                               AArch64::STLRW, AArch64::STLRX};
         Register ValReg = LdSt.getReg(0);
         if (MRI.getType(ValReg).getSizeInBits() == 64 && MemSizeInBits != 64) {
           // Emit a subreg copy of 32 bits.

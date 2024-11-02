@@ -92,6 +92,11 @@ std::unique_ptr<Pass> createSymbolDCEPass();
 std::unique_ptr<Pass>
 createSymbolPrivatizePass(ArrayRef<std::string> excludeSymbols = {});
 
+/// Creates a pass that recursively sorts nested regions without SSA dominance
+/// topologically such that, as much as possible, users of values appear after
+/// their producers.
+std::unique_ptr<Pass> createTopologicalSortPass();
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//

@@ -703,6 +703,11 @@ let hasSideEffects = 0 in {
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xsnabsdp $XT, $XB", IIC_VecFP,
                       [(set f64:$XT, (fneg (fabs f64:$XB)))]>;
+  let isCodeGenOnly = 1 in
+  def XSNABSDPs : XX2Form<60, 361,
+                      (outs vssrc:$XT), (ins vssrc:$XB),
+                      "xsnabsdp $XT, $XB", IIC_VecFP,
+                      [(set f32:$XT, (fneg (fabs f32:$XB)))]>;
   def XSNEGDP : XX2Form<60, 377,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xsnegdp $XT, $XB", IIC_VecFP,
@@ -2871,6 +2876,8 @@ def : Pat<(int_ppc_fmsub f64:$A, f64:$B, f64:$C), (XSMSUBMDP $A, $B, $C)>;
 def : Pat<(int_ppc_fnmadd f64:$A, f64:$B, f64:$C), (XSNMADDMDP $A, $B, $C)>;
 def : Pat<(int_ppc_fre f64:$A), (XSREDP $A)>;
 def : Pat<(int_ppc_frsqrte vsfrc:$XB), (XSRSQRTEDP $XB)>;
+def : Pat<(int_ppc_fnabs f64:$A), (XSNABSDP $A)>;
+def : Pat<(int_ppc_fnabss f32:$A), (XSNABSDPs $A)>;
 
 // XXMRG[LH]W is a direct replacement for VMRG[LH]W respectively.
 // Prefer the VSX form for greater register range.
@@ -3360,6 +3367,15 @@ def : Pat<(f32 (vector_extract v4f32:$S, i32:$Idx)),
 
 def : Pat<(f64 (vector_extract v2f64:$S, i32:$Idx)),
           (f64 VectorExtractions.BE_32B_VARIABLE_DOUBLE)>;
+
+defm : ScalToVecWPermute<
+  v4i32, (i32 (load ForceXForm:$src)),
+  (XXSLDWIs (LIWZX ForceXForm:$src), 1),
+  (SUBREG_TO_REG (i64 1), (LIWZX ForceXForm:$src), sub_64)>;
+defm : ScalToVecWPermute<
+  v4f32, (f32 (load ForceXForm:$src)),
+  (XXSLDWIs (LIWZX ForceXForm:$src), 1),
+  (SUBREG_TO_REG (i64 1), (LIWZX ForceXForm:$src), sub_64)>;
 } // HasVSX, HasP8Vector, IsBigEndian
 
 // Big endian Power8 64Bit VSX subtarget.
@@ -3374,14 +3390,6 @@ def : Pat<(v2i64 (scalar_to_vector (i64 (sextloadi32 ForceXForm:$src)))),
           (v2i64 (SUBREG_TO_REG (i64 1), (LIWAX ForceXForm:$src), sub_64))>;
 def : Pat<(v2i64 (scalar_to_vector (i64 (zextloadi32 ForceXForm:$src)))),
           (v2i64 (SUBREG_TO_REG (i64 1), (LIWZX ForceXForm:$src), sub_64))>;
-defm : ScalToVecWPermute<
-  v4i32, (i32 (load ForceXForm:$src)),
-  (XXSLDWIs (LIWZX ForceXForm:$src), 1),
-  (SUBREG_TO_REG (i64 1), (LIWZX ForceXForm:$src), sub_64)>;
-defm : ScalToVecWPermute<
-  v4f32, (f32 (load ForceXForm:$src)),
-  (XXSLDWIs (LIWZX ForceXForm:$src), 1),
-  (SUBREG_TO_REG (i64 1), (LIWZX ForceXForm:$src), sub_64)>;
 
 def : Pat<DWToSPExtractConv.BVU,
           (v4f32 (VPKUDUM (XXSLDWI (XVCVUXDSP $S1), (XVCVUXDSP $S1), 3),

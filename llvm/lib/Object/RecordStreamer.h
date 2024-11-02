@@ -58,8 +58,8 @@ public:
   // but the default implementation of these methods crashes, so we override
   // them with versions that do nothing.
   void BeginCOFFSymbolDef(const MCSymbol *Symbol) override {}
-  void EmitCOFFSymbolStorageClass(int StorageClass) override {}
-  void EmitCOFFSymbolType(int Type) override {}
+  void emitCOFFSymbolStorageClass(int StorageClass) override {}
+  void emitCOFFSymbolType(int Type) override {}
   void EndCOFFSymbolDef() override {}
 
   /// Record .symver aliases for later processing.

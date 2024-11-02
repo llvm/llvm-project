@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -fno-signed-char
 // RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -fno-wchar -DNO_PREDEFINED_WCHAR_T
 
-# 9 "/usr/include/string.h" 1 3 4
+# 9 "/usr/include/string.h" 1 3 4  // expected-warning {{this style of line directive is a GNU extension}}
 extern "C" {
   typedef decltype(sizeof(int)) size_t;
 
@@ -29,7 +29,7 @@ extern "C" {
 }
 # 25 "SemaCXX/constexpr-string.cpp" 2
 
-# 27 "/usr/include/wchar.h" 1 3 4
+# 27 "/usr/include/wchar.h" 1 3 4  // expected-warning {{this style of line directive is a GNU extension}}
 extern "C" {
 #if NO_PREDEFINED_WCHAR_T
   typedef decltype(L'0') wchar_t;

@@ -166,6 +166,11 @@ static bool isPermlane(const MachineInstr &MI) {
          Opcode == AMDGPU::V_PERMLANEX16_B32_e64;
 }
 
+static bool isLdsDma(const MachineInstr &MI) {
+  return SIInstrInfo::isVALU(MI) &&
+         (SIInstrInfo::isMUBUF(MI) || SIInstrInfo::isFLAT(MI));
+}
+
 static unsigned getHWReg(const SIInstrInfo *TII, const MachineInstr &RegInstr) {
   const MachineOperand *RegOp = TII->getNamedOperand(RegInstr,
                                                      AMDGPU::OpName::simm16);
@@ -226,12 +231,12 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   if (isRFE(MI->getOpcode()) && checkRFEHazards(MI) > 0)
     return HazardType;
 
-  if (ST.hasReadM0MovRelInterpHazard() &&
-      (TII.isVINTRP(*MI) || isSMovRel(MI->getOpcode())) &&
-      checkReadM0Hazards(MI) > 0)
-    return HazardType;
-
-  if (ST.hasReadM0SendMsgHazard() && isSendMsgTraceDataOrGDS(TII, *MI) &&
+  if (((ST.hasReadM0MovRelInterpHazard() &&
+        (TII.isVINTRP(*MI) || isSMovRel(MI->getOpcode()))) ||
+       (ST.hasReadM0SendMsgHazard() && isSendMsgTraceDataOrGDS(TII, *MI)) ||
+       (ST.hasReadM0LdsDmaHazard() && isLdsDma(*MI)) ||
+       (ST.hasReadM0LdsDirectHazard() &&
+        MI->readsRegister(AMDGPU::LDS_DIRECT))) &&
       checkReadM0Hazards(MI) > 0)
     return HazardType;
 
@@ -351,11 +356,11 @@ unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) {
   if (isRFE(MI->getOpcode()))
     return std::max(WaitStates, checkRFEHazards(MI));
 
-  if (ST.hasReadM0MovRelInterpHazard() && (TII.isVINTRP(*MI) ||
-                                           isSMovRel(MI->getOpcode())))
-    return std::max(WaitStates, checkReadM0Hazards(MI));
-
-  if (ST.hasReadM0SendMsgHazard() && isSendMsgTraceDataOrGDS(TII, *MI))
+  if ((ST.hasReadM0MovRelInterpHazard() &&
+       (TII.isVINTRP(*MI) || isSMovRel(MI->getOpcode()))) ||
+      (ST.hasReadM0SendMsgHazard() && isSendMsgTraceDataOrGDS(TII, *MI)) ||
+      (ST.hasReadM0LdsDmaHazard() && isLdsDma(*MI)) ||
+      (ST.hasReadM0LdsDirectHazard() && MI->readsRegister(AMDGPU::LDS_DIRECT)))
     return std::max(WaitStates, checkReadM0Hazards(MI));
 
   if (SIInstrInfo::isMAI(*MI))
@@ -1014,10 +1019,10 @@ int GCNHazardRecognizer::checkRFEHazards(MachineInstr *RFE) {
 
 int GCNHazardRecognizer::checkReadM0Hazards(MachineInstr *MI) {
   const SIInstrInfo *TII = ST.getInstrInfo();
-  const int SMovRelWaitStates = 1;
+  const int ReadM0WaitStates = 1;
   auto IsHazardFn = [TII](const MachineInstr &MI) { return TII->isSALU(MI); };
-  return SMovRelWaitStates - getWaitStatesSinceDef(AMDGPU::M0, IsHazardFn,
-                                                   SMovRelWaitStates);
+  return ReadM0WaitStates -
+         getWaitStatesSinceDef(AMDGPU::M0, IsHazardFn, ReadM0WaitStates);
 }
 
 void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {

@@ -19,10 +19,8 @@ define i1 @test_redxor_v1i1(<1 x i1> %a) {
 define i1 @test_redxor_v2i1(<2 x i1> %a) {
 ; CHECK-LABEL: test_redxor_v2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    eor w8, w9, w8
+; CHECK-NEXT:    addp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
 ;
@@ -42,14 +40,8 @@ define i1 @test_redxor_v2i1(<2 x i1> %a) {
 define i1 @test_redxor_v4i1(<4 x i1> %a) {
 ; CHECK-LABEL: test_redxor_v4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w8, v0.h[1]
-; CHECK-NEXT:    umov w9, v0.h[0]
-; CHECK-NEXT:    umov w10, v0.h[2]
-; CHECK-NEXT:    umov w11, v0.h[3]
-; CHECK-NEXT:    eor w8, w9, w8
-; CHECK-NEXT:    eor w8, w8, w10
-; CHECK-NEXT:    eor w8, w8, w11
+; CHECK-NEXT:    addv h0, v0.4h
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
 ;
@@ -75,22 +67,8 @@ define i1 @test_redxor_v4i1(<4 x i1> %a) {
 define i1 @test_redxor_v8i1(<8 x i1> %a) {
 ; CHECK-LABEL: test_redxor_v8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w8, v0.b[1]
-; CHECK-NEXT:    umov w9, v0.b[0]
-; CHECK-NEXT:    umov w10, v0.b[2]
-; CHECK-NEXT:    umov w11, v0.b[3]
-; CHECK-NEXT:    umov w12, v0.b[4]
-; CHECK-NEXT:    umov w13, v0.b[5]
-; CHECK-NEXT:    eor w8, w9, w8
-; CHECK-NEXT:    umov w9, v0.b[6]
-; CHECK-NEXT:    eor w8, w8, w10
-; CHECK-NEXT:    umov w10, v0.b[7]
-; CHECK-NEXT:    eor w8, w8, w11
-; CHECK-NEXT:    eor w8, w8, w12
-; CHECK-NEXT:    eor w8, w8, w13
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w8, w8, w10
+; CHECK-NEXT:    addv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
 ;
@@ -128,23 +106,8 @@ define i1 @test_redxor_v8i1(<8 x i1> %a) {
 define i1 @test_redxor_v16i1(<16 x i1> %a) {
 ; CHECK-LABEL: test_redxor_v16i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    umov w8, v0.b[1]
-; CHECK-NEXT:    umov w9, v0.b[0]
-; CHECK-NEXT:    umov w10, v0.b[2]
-; CHECK-NEXT:    umov w11, v0.b[3]
-; CHECK-NEXT:    umov w12, v0.b[4]
-; CHECK-NEXT:    eor w8, w9, w8
-; CHECK-NEXT:    umov w9, v0.b[5]
-; CHECK-NEXT:    eor w8, w8, w10
-; CHECK-NEXT:    umov w10, v0.b[6]
-; CHECK-NEXT:    eor w8, w8, w11
-; CHECK-NEXT:    umov w11, v0.b[7]
-; CHECK-NEXT:    eor w8, w8, w12
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w8, w8, w10
-; CHECK-NEXT:    eor w8, w8, w11
+; CHECK-NEXT:    addv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
 ;

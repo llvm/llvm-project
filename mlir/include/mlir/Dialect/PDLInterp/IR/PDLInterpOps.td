@@ -409,14 +409,18 @@ def PDLInterp_CreateOperationOp
   let description = [{
     `pdl_interp.create_operation` operations create an `Operation` instance with
     the specified attributes, operands, and result types. See `pdl.operation`
-    for a more detailed description on the interpretation of the arguments to
-    this operation.
+    for a more detailed description on the general interpretation of the arguments
+    to this operation.
 
     Example:
 
     ```mlir
     // Create an instance of a `foo.op` operation.
     %op = pdl_interp.create_operation "foo.op"(%arg0 : !pdl.value) {"attrA" = %attr0} -> (%type : !pdl.type)
+    
+    // Create an instance of a `foo.op` operation that has inferred result types
+    // (using the InferTypeOpInterface).
+    %op = pdl_interp.create_operation "foo.op"(%arg0 : !pdl.value) {"attrA" = %attr0} -> <inferred>
     ```
   }];
 
@@ -424,22 +428,26 @@ def PDLInterp_CreateOperationOp
                        Variadic<PDL_InstOrRangeOf<PDL_Value>>:$inputOperands,
                        Variadic<PDL_Attribute>:$inputAttributes,
                        StrArrayAttr:$inputAttributeNames,
-                       Variadic<PDL_InstOrRangeOf<PDL_Type>>:$inputResultTypes);
+                       Variadic<PDL_InstOrRangeOf<PDL_Type>>:$inputResultTypes,
+                       UnitAttr:$inferredResultTypes);
   let results = (outs PDL_Operation:$resultOp);
 
   let builders = [
     OpBuilder<(ins "StringRef":$name, "ValueRange":$types,
-      "ValueRange":$operands, "ValueRange":$attributes,
-      "ArrayAttr":$attributeNames), [{
+      "bool":$inferredResultTypes, "ValueRange":$operands,
+      "ValueRange":$attributes, "ArrayAttr":$attributeNames), [{
       build($_builder, $_state, $_builder.getType<pdl::OperationType>(), name,
-            operands, attributes, attributeNames, types);
+            operands, attributes, attributeNames, types, inferredResultTypes);
     }]>
   ];
   let assemblyFormat = [{
-    $name (`(` $inputOperands^ `:` type($inputOperands) `)`)?
+    $name (`(` $inputOperands^ `:` type($inputOperands) `)`)? ``
     custom<CreateOperationOpAttributes>($inputAttributes, $inputAttributeNames)
-    (`->` `(` $inputResultTypes^ `:` type($inputResultTypes) `)`)? attr-dict
+    custom<CreateOperationOpResults>($inputResultTypes, type($inputResultTypes),
+                                     $inferredResultTypes)
+    attr-dict
   }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -957,33 +965,6 @@ def PDLInterp_GetValueTypeOp : PDLInterp_Op<"get_value_type", [NoSideEffect,
             valType.isa<pdl::RangeType>() ? pdl::RangeType::get(typeType)
                                           : typeType,
             value);
-    }]>
-  ];
-}
-
-//===----------------------------------------------------------------------===//
-// pdl_interp::InferredTypesOp
-//===----------------------------------------------------------------------===//
-
-def PDLInterp_InferredTypesOp : PDLInterp_Op<"inferred_types"> {
-  let summary = "Generate a handle to a range of Types that are \"inferred\"";
-  let description = [{
-    `pdl_interp.inferred_types` operations generate handles to ranges of types
-    that should be inferred. This signals to other operations, such as
-    `pdl_interp.create_operation`, that these types should be inferred.
-
-    Example:
-
-    ```mlir
-    %types = pdl_interp.inferred_types
-    ```
-  }];
-  let results = (outs PDL_RangeOf<PDL_Type>:$result);
-  let assemblyFormat = "attr-dict";
-  let builders = [
-    OpBuilder<(ins), [{
-      build($_builder, $_state,
-            pdl::RangeType::get($_builder.getType<pdl::TypeType>()));
     }]>
   ];
 }

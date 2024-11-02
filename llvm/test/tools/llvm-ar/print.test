@@ -1,5 +1,5 @@
 ## Test Print output
-# XFAIL: system-darwin,system-aix
+# XFAIL: system-darwin
 
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: echo file1 > %t/1.txt
@@ -9,7 +9,7 @@
 # RUN: llvm-ar -rc %t/archive.a %t/1.txt %t/2.txt %t/3.txt
 
 ## Print empty archive:
-# RUN: llvm-ar cr %t/empty.a
+# RUN: llvm-ar --format=gnu  cr %t/empty.a
 # RUN: llvm-ar p %t/empty.a 2>&1 | count 0
 # RUN: llvm-ar pv %t/empty.a 2>&1 | count 0
 

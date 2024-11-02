@@ -426,11 +426,7 @@ define double @bitcast_v1i64_f64(<1 x i64> %a) {
 ;
 ; RV64ELEN32-LABEL: bitcast_v1i64_f64:
 ; RV64ELEN32:       # %bb.0:
-; RV64ELEN32-NEXT:    addi sp, sp, -16
-; RV64ELEN32-NEXT:    .cfi_def_cfa_offset 16
-; RV64ELEN32-NEXT:    sd a0, 8(sp)
-; RV64ELEN32-NEXT:    fld fa0, 8(sp)
-; RV64ELEN32-NEXT:    addi sp, sp, 16
+; RV64ELEN32-NEXT:    fmv.d.x fa0, a0
 ; RV64ELEN32-NEXT:    ret
   %b = bitcast <1 x i64> %a to double
   ret double %b
@@ -515,7 +511,7 @@ define <4 x i16> @bitcast_i64_v4i16(i64 %a) {
 ; RV32-NEXT:    vmv.v.i v8, 0
 ; RV32-NEXT:    vslide1up.vx v9, v8, a1
 ; RV32-NEXT:    vslide1up.vx v10, v9, a0
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, tu, mu
 ; RV32-NEXT:    vslideup.vi v8, v10, 0
 ; RV32-NEXT:    ret
 ;
@@ -554,7 +550,7 @@ define <2 x i32> @bitcast_i64_v2i32(i64 %a) {
 ; RV32-NEXT:    vmv.v.i v8, 0
 ; RV32-NEXT:    vslide1up.vx v9, v8, a1
 ; RV32-NEXT:    vslide1up.vx v10, v9, a0
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, tu, mu
 ; RV32-NEXT:    vslideup.vi v8, v10, 0
 ; RV32-NEXT:    ret
 ;
@@ -593,7 +589,7 @@ define <1 x i64> @bitcast_i64_v1i64(i64 %a) {
 ; RV32-NEXT:    vmv.v.i v8, 0
 ; RV32-NEXT:    vslide1up.vx v9, v8, a1
 ; RV32-NEXT:    vslide1up.vx v10, v9, a0
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, tu, mu
 ; RV32-NEXT:    vslideup.vi v8, v10, 0
 ; RV32-NEXT:    ret
 ;

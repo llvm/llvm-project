@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-monotonic-clock
+// UNSUPPORTED: no-monotonic-clock
 
 // Due to C++17 inline variables ASAN flags this test as containing an ODR
 // violation because Clock::is_steady is defined in both the dylib and this TU.

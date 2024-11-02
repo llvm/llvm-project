@@ -2,7 +2,7 @@
 
 define i1 @TestULT(double %t0) {
 ; CHECK-LABEL: TestULT:
-; CHECK: xscmpudp
+; CHECK: fcmpu
 ; CHECK: blr
 entry:
   %t1 = fcmp ult double %t0, 0.000000e+00
@@ -49,7 +49,7 @@ good:
 
 define i1 @TestUEQ(double %t0) {
 ; CHECK-LABEL: TestUEQ:
-; CHECK: xscmpudp
+; CHECK: fcmpu
 ; CHECK: blr
 entry:
   %t1 = fcmp ueq double %t0, 0.000000e+00
@@ -64,7 +64,7 @@ good:
 
 define i1 @TestUGT(double %t0) {
 ; CHECK-LABEL: TestUGT:
-; CHECK: xscmpudp
+; CHECK: fcmpu
 ; CHECK: blr
 entry:
   %t1 = fcmp ugt double %t0, 0.000000e+00
@@ -111,7 +111,7 @@ good:
 
 define i1 @TestOLE(double %t0) {
 ; CHECK-LABEL: TestOLE:
-; CHECK: xscmpudp
+; CHECK: fcmpu
 ; CHECK: blr
 entry:
   %t1 = fcmp ole double %t0, 0.000000e+00
@@ -126,7 +126,7 @@ good:
 
 define i1 @TestONE(double %t0) {
 ; CHECK-LABEL: TestONE:
-; CHECK: xscmpudp
+; CHECK: fcmpu
 ; CHECK: blr
 entry:
   %t1 = fcmp one double %t0, 0.000000e+00
@@ -173,7 +173,7 @@ good:
 
 define i1 @TestOGE(double %t0) {
 ; CHECK-LABEL: TestOGE:
-; CHECK: xscmpudp
+; CHECK: fcmpu
 ; CHECK: blr
 entry:
   %t1 = fcmp oge double %t0, 0.000000e+00

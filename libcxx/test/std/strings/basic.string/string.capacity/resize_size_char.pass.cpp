@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
-// void resize(size_type n, charT c);
+// void resize(size_type n, charT c); // constexpr since C++20
 
 #include <string>
 #include <stdexcept>
@@ -43,7 +45,7 @@ test(S s, typename S::size_type n, typename S::value_type c, S expected)
 #endif
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     test(S(), 0, 'a', S());
@@ -92,7 +94,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

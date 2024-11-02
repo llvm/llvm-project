@@ -27,7 +27,7 @@ class Scop;
 typedef std::pair<isl::pw_aff, isl::set> PWACtx;
 
 /// Translate a SCEV to an isl::pw_aff and the domain on which it is invalid.
-struct SCEVAffinator : public llvm::SCEVVisitor<SCEVAffinator, PWACtx> {
+class SCEVAffinator final : public llvm::SCEVVisitor<SCEVAffinator, PWACtx> {
 public:
   SCEVAffinator(Scop *S, llvm::LoopInfo &LI);
 

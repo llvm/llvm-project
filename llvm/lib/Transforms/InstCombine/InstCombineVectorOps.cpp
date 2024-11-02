@@ -2242,6 +2242,88 @@ static Instruction *narrowVectorSelect(ShuffleVectorInst &Shuf,
   return SelectInst::Create(NarrowCond, NarrowX, NarrowY);
 }
 
+/// Canonicalize FP negate after shuffle.
+static Instruction *foldFNegShuffle(ShuffleVectorInst &Shuf,
+                                    InstCombiner::BuilderTy &Builder) {
+  Instruction *FNeg0;
+  Value *X;
+  if (!match(Shuf.getOperand(0), m_CombineAnd(m_Instruction(FNeg0),
+                                              m_FNeg(m_Value(X)))))
+    return nullptr;
+
+  // shuffle (fneg X), Mask --> fneg (shuffle X, Mask)
+  if (FNeg0->hasOneUse() && match(Shuf.getOperand(1), m_Undef())) {
+    Value *NewShuf = Builder.CreateShuffleVector(X, Shuf.getShuffleMask());
+    return UnaryOperator::CreateFNegFMF(NewShuf, FNeg0);
+  }
+
+  Instruction *FNeg1;
+  Value *Y;
+  if (!match(Shuf.getOperand(1), m_CombineAnd(m_Instruction(FNeg1),
+                                              m_FNeg(m_Value(Y)))))
+    return nullptr;
+
+  // shuffle (fneg X), (fneg Y), Mask --> fneg (shuffle X, Y, Mask)
+  if (FNeg0->hasOneUse() || FNeg1->hasOneUse()) {
+    Value *NewShuf = Builder.CreateShuffleVector(X, Y, Shuf.getShuffleMask());
+    Instruction *NewFNeg = UnaryOperator::CreateFNeg(NewShuf);
+    NewFNeg->copyIRFlags(FNeg0);
+    NewFNeg->andIRFlags(FNeg1);
+    return NewFNeg;
+  }
+
+  return nullptr;
+}
+
+/// Canonicalize casts after shuffle.
+static Instruction *foldCastShuffle(ShuffleVectorInst &Shuf,
+                                    InstCombiner::BuilderTy &Builder) {
+  // Do we have 2 matching cast operands?
+  auto *Cast0 = dyn_cast<CastInst>(Shuf.getOperand(0));
+  auto *Cast1 = dyn_cast<CastInst>(Shuf.getOperand(1));
+  if (!Cast0 || !Cast1 || Cast0->getOpcode() != Cast1->getOpcode() ||
+      Cast0->getSrcTy() != Cast1->getSrcTy())
+    return nullptr;
+
+  // TODO: Allow other opcodes? That would require easing the type restrictions
+  //       below here.
+  CastInst::CastOps CastOpcode = Cast0->getOpcode();
+  switch (CastOpcode) {
+  case Instruction::FPToSI:
+  case Instruction::FPToUI:
+  case Instruction::SIToFP:
+  case Instruction::UIToFP:
+    break;
+  default:
+    return nullptr;
+  }
+
+  VectorType *ShufTy = Shuf.getType();
+  VectorType *ShufOpTy = cast<VectorType>(Shuf.getOperand(0)->getType());
+  VectorType *CastSrcTy = cast<VectorType>(Cast0->getSrcTy());
+
+  // TODO: Allow length-increasing shuffles?
+  if (ShufTy->getElementCount().getKnownMinValue() >
+      ShufOpTy->getElementCount().getKnownMinValue())
+    return nullptr;
+
+  // TODO: Allow element-size-decreasing casts (ex: fptosi float to i8)?
+  assert(isa<FixedVectorType>(CastSrcTy) && isa<FixedVectorType>(ShufOpTy) &&
+         "Expected fixed vector operands for casts and binary shuffle");
+  if (CastSrcTy->getPrimitiveSizeInBits() > ShufOpTy->getPrimitiveSizeInBits())
+    return nullptr;
+
+  // At least one of the operands must have only one use (the shuffle).
+  if (!Cast0->hasOneUse() && !Cast1->hasOneUse())
+    return nullptr;
+
+  // shuffle (cast X), (cast Y), Mask --> cast (shuffle X, Y, Mask)
+  Value *X = Cast0->getOperand(0);
+  Value *Y = Cast1->getOperand(0);
+  Value *NewShuf = Builder.CreateShuffleVector(X, Y, Shuf.getShuffleMask());
+  return CastInst::Create(CastOpcode, NewShuf, ShufTy);
+}
+
 /// Try to fold an extract subvector operation.
 static Instruction *foldIdentityExtractShuffle(ShuffleVectorInst &Shuf) {
   Value *Op0 = Shuf.getOperand(0), *Op1 = Shuf.getOperand(1);
@@ -2535,6 +2617,12 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     return I;
 
   if (Instruction *I = narrowVectorSelect(SVI, Builder))
+    return I;
+
+  if (Instruction *I = foldFNegShuffle(SVI, Builder))
+    return I;
+
+  if (Instruction *I = foldCastShuffle(SVI, Builder))
     return I;
 
   APInt UndefElts(VWidth, 0);

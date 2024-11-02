@@ -44,42 +44,21 @@ Pattern => erase op<test.op3>;
 // Check the generation of native constraints and rewrites.
 
 // CHECK:      static ::mlir::LogicalResult TestCstPDLFn(::mlir::PatternRewriter &rewriter,
-// CHECK-SAME:                                           ::llvm::ArrayRef<::mlir::PDLValue> values) {
-// CHECK:   ::mlir::Attribute attr = {};
-// CHECK:   if (values[0])
-// CHECK:     attr = values[0].cast<::mlir::Attribute>();
-// CHECK:   ::mlir::Operation * op = {};
-// CHECK:   if (values[1])
-// CHECK:     op = values[1].cast<::mlir::Operation *>();
-// CHECK:   ::mlir::Type type = {};
-// CHECK:   if (values[2])
-// CHECK:     type = values[2].cast<::mlir::Type>();
-// CHECK:   ::mlir::Value value = {};
-// CHECK:   if (values[3])
-// CHECK:     value = values[3].cast<::mlir::Value>();
-// CHECK:   ::mlir::TypeRange typeRange = {};
-// CHECK:   if (values[4])
-// CHECK:     typeRange = values[4].cast<::mlir::TypeRange>();
-// CHECK:   ::mlir::ValueRange valueRange = {};
-// CHECK:   if (values[5])
-// CHECK:     valueRange = values[5].cast<::mlir::ValueRange>();
-
-// CHECK:   return success();
+// CHECK-SAME:     ::mlir::Attribute attr, ::mlir::Operation * op, ::mlir::Type type,
+// CHECK-SAME:     ::mlir::Value value, ::mlir::TypeRange typeRange, ::mlir::ValueRange valueRange) {
+// CHECK-NEXT:   return success();
 // CHECK: }
 
 // CHECK-NOT: TestUnusedCst
 
-// CHECK: static void TestRewritePDLFn(::mlir::PatternRewriter &rewriter, ::mlir::PDLResultList &results,
-// CHECK-SAME:                         ::llvm::ArrayRef<::mlir::PDLValue> values) {
-// CHECK:   ::mlir::Attribute attr = {};
-// CHECK:   ::mlir::Operation * op = {};
-// CHECK:   ::mlir::Type type = {};
-// CHECK:   ::mlir::Value value = {};
-// CHECK:   ::mlir::TypeRange typeRange = {};
-// CHECK:   ::mlir::ValueRange valueRange = {};
-
+// CHECK: static void TestRewritePDLFn(::mlir::PatternRewriter &rewriter,
+// CHECK-SAME:     ::mlir::Attribute attr, ::mlir::Operation * op, ::mlir::Type type,
+// CHECK-SAME:     ::mlir::Value value, ::mlir::TypeRange typeRange, ::mlir::ValueRange valueRange) {
 // CHECK: foo;
 // CHECK: }
+
+// CHECK: static ::mlir::Attribute TestRewriteSinglePDLFn(::mlir::PatternRewriter &rewriter) {
+// CHECK: std::tuple<::mlir::Attribute, ::mlir::Type> TestRewriteTuplePDLFn(::mlir::PatternRewriter &rewriter) {
 
 // CHECK-NOT: TestUnusedRewrite
 
@@ -93,6 +72,8 @@ Constraint TestCst(attr: Attr, op: Op, type: Type, value: Value, typeRange: Type
 Constraint TestUnusedCst() [{ return success(); }];
 
 Rewrite TestRewrite(attr: Attr, op: Op, type: Type, value: Value, typeRange: TypeRange, valueRange: ValueRange) [{ foo; }];
+Rewrite TestRewriteSingle() -> Attr [{}];
+Rewrite TestRewriteTuple() -> (Attr, Type) [{}];
 Rewrite TestUnusedRewrite(op: Op) [{}];
 
 Pattern TestCstAndRewrite {
@@ -100,6 +81,8 @@ Pattern TestCstAndRewrite {
   TestCst(attr<"true">, root, type, operand, types, operands);
   rewrite root with {
     TestRewrite(attr<"true">, root, type, operand, types, operands);
+    TestRewriteSingle();
+    TestRewriteTuple();
     erase root;
   };
 }

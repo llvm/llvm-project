@@ -1,6 +1,3 @@
-// FIXME: Remove rm after a few days.
-// RUN: rm -f %S/test-wunaligned-access.ll
-
 // RUN: %clang_cc1 %s -triple=armv7-none-none-eabi -verify -Wunaligned-access -S -emit-llvm -o %t
 // REQUIRES: arm-registered-target
 //

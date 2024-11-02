@@ -158,25 +158,25 @@ void VPBlockBase::setPlan(VPlan *ParentPlan) {
 }
 
 /// \return the VPBasicBlock that is the exit of Block, possibly indirectly.
-const VPBasicBlock *VPBlockBase::getExitBasicBlock() const {
+const VPBasicBlock *VPBlockBase::getExitingBasicBlock() const {
   const VPBlockBase *Block = this;
   while (const VPRegionBlock *Region = dyn_cast<VPRegionBlock>(Block))
-    Block = Region->getExit();
+    Block = Region->getExiting();
   return cast<VPBasicBlock>(Block);
 }
 
-VPBasicBlock *VPBlockBase::getExitBasicBlock() {
+VPBasicBlock *VPBlockBase::getExitingBasicBlock() {
   VPBlockBase *Block = this;
   while (VPRegionBlock *Region = dyn_cast<VPRegionBlock>(Block))
-    Block = Region->getExit();
+    Block = Region->getExiting();
   return cast<VPBasicBlock>(Block);
 }
 
 VPBlockBase *VPBlockBase::getEnclosingBlockWithSuccessors() {
   if (!Successors.empty() || !Parent)
     return this;
-  assert(Parent->getExit() == this &&
-         "Block w/o successors not the exit of its parent.");
+  assert(Parent->getExiting() == this &&
+         "Block w/o successors not the exiting block of its parent.");
   return Parent->getEnclosingBlockWithSuccessors();
 }
 
@@ -261,54 +261,43 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
 
   // Hook up the new basic block to its predecessors.
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
-    VPBasicBlock *PredVPBB = PredVPBlock->getExitBasicBlock();
+    VPBasicBlock *PredVPBB = PredVPBlock->getExitingBasicBlock();
     auto &PredVPSuccessors = PredVPBB->getSuccessors();
     BasicBlock *PredBB = CFG.VPBB2IRBB[PredVPBB];
-
-    // In outer loop vectorization scenario, the predecessor BBlock may not yet
-    // be visited(backedge). Mark the VPBasicBlock for fixup at the end of
-    // vectorization. We do not encounter this case in inner loop vectorization
-    // as we start out by building a loop skeleton with the vector loop header
-    // and latch blocks. As a result, we never enter this function for the
-    // header block in the non VPlan-native path.
-    if (!PredBB) {
-      assert(EnableVPlanNativePath &&
-             "Unexpected null predecessor in non VPlan-native path");
-      CFG.VPBBsToFix.push_back(PredVPBB);
-      continue;
-    }
 
     assert(PredBB && "Predecessor basic-block not found building successor.");
     auto *PredBBTerminator = PredBB->getTerminator();
     LLVM_DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
 
     auto *TermBr = dyn_cast<BranchInst>(PredBBTerminator);
-    if (isa<UnreachableInst>(PredBBTerminator) ||
-        (TermBr && !TermBr->isConditional())) {
+    if (isa<UnreachableInst>(PredBBTerminator)) {
       assert(PredVPSuccessors.size() == 1 &&
              "Predecessor ending w/o branch must have single successor.");
-      if (TermBr) {
-        TermBr->setSuccessor(0, NewBB);
-      } else {
-        DebugLoc DL = PredBBTerminator->getDebugLoc();
-        PredBBTerminator->eraseFromParent();
-        auto *Br = BranchInst::Create(NewBB, PredBB);
-        Br->setDebugLoc(DL);
-      }
+      DebugLoc DL = PredBBTerminator->getDebugLoc();
+      PredBBTerminator->eraseFromParent();
+      auto *Br = BranchInst::Create(NewBB, PredBB);
+      Br->setDebugLoc(DL);
+    } else if (TermBr && !TermBr->isConditional()) {
+      TermBr->setSuccessor(0, NewBB);
+    } else if (PredVPSuccessors.size() == 2) {
+      unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
+      assert(!PredBBTerminator->getSuccessor(idx) &&
+             "Trying to reset an existing successor block.");
+      PredBBTerminator->setSuccessor(idx, NewBB);
     } else {
-      if (PredVPSuccessors.size() == 2) {
-        unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
-        assert(!PredBBTerminator->getSuccessor(idx) &&
-               "Trying to reset an existing successor block.");
-        PredBBTerminator->setSuccessor(idx, NewBB);
-      } else {
-        auto *Reg = dyn_cast<VPRegionBlock>(PredVPBB->getParent());
-        assert(Reg && !Reg->isReplicator());
-        assert(this == Reg->getSingleSuccessor());
-        PredBBTerminator->setSuccessor(0, NewBB);
-        PredBBTerminator->setSuccessor(
-            1, CFG.VPBB2IRBB[Reg->getEntryBasicBlock()]);
-      }
+      // PredVPBB is the exiting block of a loop region. Connect its successor
+      // outside the region.
+      auto *LoopRegion = cast<VPRegionBlock>(PredVPBB->getParent());
+      assert(!LoopRegion->isReplicator() &&
+             "predecessor must be in a loop region");
+      assert(PredVPSuccessors.empty() &&
+             LoopRegion->getExitingBasicBlock() == PredVPBB &&
+             "PredVPBB must be the exiting block of its parent region");
+      assert(this == LoopRegion->getSingleSuccessor() &&
+             "the current block must be the single successor of the region");
+      PredBBTerminator->setSuccessor(0, NewBB);
+      PredBBTerminator->setSuccessor(
+          1, CFG.VPBB2IRBB[LoopRegion->getEntryBasicBlock()]);
     }
   }
   return NewBB;
@@ -320,32 +309,38 @@ void VPBasicBlock::execute(VPTransformState *State) {
   VPBlockBase *SingleHPred = nullptr;
   BasicBlock *NewBB = State->CFG.PrevBB; // Reuse it if possible.
 
-  auto IsNonReplicateR = [](VPBlockBase *BB) {
+  auto IsLoopRegion = [](VPBlockBase *BB) {
     auto *R = dyn_cast<VPRegionBlock>(BB);
     return R && !R->isReplicator();
   };
 
-  // 1. Create an IR basic block, or reuse the last one if possible.
-  // The last IR basic block is reused, as an optimization, in three cases:
-  // A. the first VPBB reuses the loop pre-header BB - when PrevVPBB is null;
-  // B. when the current VPBB has a single (hierarchical) predecessor which
-  //    is PrevVPBB and the latter has a single (hierarchical) successor which
-  //    both are in the same non-replicator region; and
-  // C. when the current VPBB is an entry of a region replica - where PrevVPBB
-  //    is the exit of this region from a previous instance, or the predecessor
-  //    of this region.
-  if (PrevVPBB && /* A */
-      !((SingleHPred = getSingleHierarchicalPredecessor()) &&
-        SingleHPred->getExitBasicBlock() == PrevVPBB &&
-        PrevVPBB->getSingleHierarchicalSuccessor() &&
-        (SingleHPred->getParent() == getEnclosingLoopRegion() &&
-         !IsNonReplicateR(SingleHPred))) &&      /* B */
-      !(Replica && getPredecessors().empty())) { /* C */
+  // 1. Create an IR basic block, or reuse the last one or ExitBB if possible.
+  if (getPlan()->getVectorLoopRegion()->getSingleSuccessor() == this) {
+    // ExitBB can be re-used for the exit block of the Plan.
+    NewBB = State->CFG.ExitBB;
+    State->CFG.PrevBB = NewBB;
+  } else if (PrevVPBB && /* A */
+             !((SingleHPred = getSingleHierarchicalPredecessor()) &&
+               SingleHPred->getExitingBasicBlock() == PrevVPBB &&
+               PrevVPBB->getSingleHierarchicalSuccessor() &&
+               (SingleHPred->getParent() == getEnclosingLoopRegion() &&
+                !IsLoopRegion(SingleHPred))) &&         /* B */
+             !(Replica && getPredecessors().empty())) { /* C */
+    // The last IR basic block is reused, as an optimization, in three cases:
+    // A. the first VPBB reuses the loop pre-header BB - when PrevVPBB is null;
+    // B. when the current VPBB has a single (hierarchical) predecessor which
+    //    is PrevVPBB and the latter has a single (hierarchical) successor which
+    //    both are in the same non-replicator region; and
+    // C. when the current VPBB is an entry of a region replica - where PrevVPBB
+    //    is the exiting VPBB of this region from a previous instance, or the
+    //    predecessor of this region.
+
     NewBB = createEmptyBasicBlock(State->CFG);
     State->Builder.SetInsertPoint(NewBB);
     // Temporarily terminate with unreachable until CFG is rewired.
     UnreachableInst *Terminator = State->Builder.CreateUnreachable();
-    // Register NewBB in its loop. In innermost loops its the same for all BB's.
+    // Register NewBB in its loop. In innermost loops its the same for all
+    // BB's.
     if (State->CurrentVectorLoop)
       State->CurrentVectorLoop->addBasicBlockToLoop(NewBB, *State->LI);
     State->Builder.SetInsertPoint(Terminator);
@@ -637,6 +632,15 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   default:
     return true;
   }
+}
+
+void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
+  auto Lane = VPLane::getLastLaneForVF(State.VF);
+  VPValue *ExitValue = getOperand(0);
+  if (Plan.isUniformAfterVectorization(ExitValue))
+    Lane = VPLane::getFirstLane();
+  Phi->addIncoming(State.get(ExitValue, VPIteration(State.UF - 1, Lane)),
+                   State.Builder.GetInsertBlock());
 }
 
 void VPRecipeBase::insertBefore(VPRecipeBase *InsertPos) {
@@ -951,25 +955,8 @@ void VPlan::execute(VPTransformState *State) {
   for (VPBlockBase *Block : depth_first(Entry))
     Block->execute(State);
 
-  // Setup branch terminator successors for VPBBs in VPBBsToFix based on
-  // VPBB's successors.
-  for (auto VPBB : State->CFG.VPBBsToFix) {
-    assert(EnableVPlanNativePath &&
-           "Unexpected VPBBsToFix in non VPlan-native path");
-    BasicBlock *BB = State->CFG.VPBB2IRBB[VPBB];
-    assert(BB && "Unexpected null basic block for VPBB");
-
-    unsigned Idx = 0;
-    auto *BBTerminator = BB->getTerminator();
-
-    for (VPBlockBase *SuccVPBlock : VPBB->getHierarchicalSuccessors()) {
-      VPBasicBlock *SuccVPBB = SuccVPBlock->getEntryBasicBlock();
-      BBTerminator->setSuccessor(Idx, State->CFG.VPBB2IRBB[SuccVPBB]);
-      ++Idx;
-    }
-  }
-
-  BasicBlock *VectorLatchBB = State->CFG.PrevBB;
+  VPBasicBlock *LatchVPBB = getVectorLoopRegion()->getExitingBasicBlock();
+  BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
 
   // Fix the latch value of canonical, reduction and first-order recurrences
   // phis in the vector loop.
@@ -988,9 +975,7 @@ void VPlan::execute(VPTransformState *State) {
         auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
         // TODO: Split off the case that all users of a pointer phi are scalar
         // from the VPWidenPointerInductionRecipe.
-        if (all_of(WidenPhi->users(), [WidenPhi](const VPUser *U) {
-              return cast<VPRecipeBase>(U)->usesScalars(WidenPhi);
-            }))
+        if (WidenPhi->onlyScalarsGenerated(State->VF))
           continue;
 
         auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi, 0));
@@ -1056,6 +1041,17 @@ void VPlan::print(raw_ostream &O) const {
     O << '\n';
     Block->print(O, "", SlotTracker);
   }
+
+  if (!LiveOuts.empty())
+    O << "\n";
+  for (auto &KV : LiveOuts) {
+    O << "Live-out ";
+    KV.second->getPhi()->printAsOperand(O);
+    O << " = ";
+    KV.second->getOperand(0)->printAsOperand(O, SlotTracker);
+    O << "\n";
+  }
+
   O << "}\n";
 }
 
@@ -1068,6 +1064,11 @@ void VPlan::printDOT(raw_ostream &O) const {
 LLVM_DUMP_METHOD
 void VPlan::dump() const { print(dbgs()); }
 #endif
+
+void VPlan::addLiveOut(PHINode *PN, VPValue *V) {
+  assert(LiveOuts.count(PN) == 0 && "an exit value for PN already exists");
+  LiveOuts.insert({PN, new VPLiveOut(PN, V)});
+}
 
 void VPlan::updateDominatorTree(DominatorTree *DT, BasicBlock *LoopHeaderBB,
                                 BasicBlock *LoopLatchBB,
@@ -1155,8 +1156,8 @@ void VPlanPrinter::dumpBlock(const VPBlockBase *Block) {
 void VPlanPrinter::drawEdge(const VPBlockBase *From, const VPBlockBase *To,
                             bool Hidden, const Twine &Label) {
   // Due to "dot" we print an edge between two regions as an edge between the
-  // exit basic block and the entry basic of the respective regions.
-  const VPBlockBase *Tail = From->getExitBasicBlock();
+  // exiting basic block and the entry basic of the respective regions.
+  const VPBlockBase *Tail = From->getExitingBasicBlock();
   const VPBlockBase *Head = To->getEntryBasicBlock();
   OS << Indent << getUID(Tail) << " -> " << getUID(Head);
   OS << " [ label=\"" << Label << '\"';
@@ -1411,6 +1412,9 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
     getCondOp()->printAsOperand(O, SlotTracker);
   }
   O << ")";
+  if (RdxDesc->IntermediateStore)
+    O << " (with final reduction value stored in invariant address sank "
+         "outside of loop)";
 }
 
 void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
@@ -1421,8 +1425,17 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
     printAsOperand(O, SlotTracker);
     O << " = ";
   }
-  O << Instruction::getOpcodeName(getUnderlyingInstr()->getOpcode()) << " ";
-  printOperands(O, SlotTracker);
+  if (auto *CB = dyn_cast<CallBase>(getUnderlyingInstr())) {
+    O << "call @" << CB->getCalledFunction()->getName() << "(";
+    interleaveComma(make_range(op_begin(), op_begin() + (getNumOperands() - 1)),
+                    O, [&O, &SlotTracker](VPValue *Op) {
+                      Op->printAsOperand(O, SlotTracker);
+                    });
+    O << ")";
+  } else {
+    O << Instruction::getOpcodeName(getUnderlyingInstr()->getOpcode()) << " ";
+    printOperands(O, SlotTracker);
+  }
 
   if (AlsoPack)
     O << " (S->V)";
@@ -1441,7 +1454,7 @@ void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN ";
 
   if (!isStore()) {
-    printAsOperand(O, SlotTracker);
+    getVPSingleValue()->printAsOperand(O, SlotTracker);
     O << " = ";
   }
   O << Instruction::getOpcodeName(Ingredient.getOpcode()) << " ";
@@ -1470,6 +1483,13 @@ void VPCanonicalIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = CANONICAL-INDUCTION";
 }
 #endif
+
+bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(ElementCount VF) {
+  bool IsUniform = vputils::onlyFirstLaneUsed(this);
+  return all_of(users(),
+                [&](const VPUser *U) { return U->usesScalars(this); }) &&
+         (IsUniform || !VF.isScalable());
+}
 
 void VPExpandSCEVRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "cannot be used in per-lane");
@@ -1748,9 +1768,8 @@ void VPSlotTracker::assignSlots(const VPlan &Plan) {
 }
 
 bool vputils::onlyFirstLaneUsed(VPValue *Def) {
-  return all_of(Def->users(), [Def](VPUser *U) {
-    return cast<VPRecipeBase>(U)->onlyFirstLaneUsed(Def);
-  });
+  return all_of(Def->users(),
+                [Def](VPUser *U) { return U->onlyFirstLaneUsed(Def); });
 }
 
 VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,

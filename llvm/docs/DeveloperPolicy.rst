@@ -405,7 +405,11 @@ Obtaining Commit Access
 We grant commit access to contributors with a track record of submitting high
 quality patches.  If you would like commit access, please send an email to
 `Chris <mailto:clattner@llvm.org>`_ with your GitHub username.  This is true
-for former contributors with SVN access as well as new contributors.
+for former contributors with SVN access as well as new contributors. If
+approved, a GitHub invitation will be sent to your GitHub account. In case you
+don't get notification from GitHub, go to
+`Invitation Link <https://github.com/orgs/llvm/invitation>`_ directly. Once
+accept the invitation, you'll get commit access.
 
 Prior to obtaining commit access, it is common practice to request that
 someone with commit access commits on your behalf. When doing so, please

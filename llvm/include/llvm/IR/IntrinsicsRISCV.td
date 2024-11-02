@@ -672,16 +672,16 @@ let TargetPrefix = "riscv" in {
                     [ImmArg<ArgIndex<5>>, IntrNoMem, IntrHasSideEffects]>, RISCVVIntrinsic {
     let VLOperand = 4;
   }
-  // Input: (vector_in, vector_in, vector_in/scalar_in, vl)
-  class RISCVTernaryAAAXUnMasked
+  // Input: (vector_in, vector_in, scalar_in, vl, policy)
+  class RVVSlideUnMasked
         : Intrinsic<[llvm_anyvector_ty],
                     [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyint_ty,
-                     LLVMMatchType<1>],
-                    [IntrNoMem]>, RISCVVIntrinsic {
+                     LLVMMatchType<1>, LLVMMatchType<1>],
+                    [ImmArg<ArgIndex<4>>, IntrNoMem]>, RISCVVIntrinsic {
     let VLOperand = 3;
   }
   // Input: (vector_in, vector_in, vector_in/scalar_in, mask, vl, policy)
-  class RISCVTernaryAAAXMasked
+  class RVVSlideMasked
         : Intrinsic<[llvm_anyvector_ty],
                     [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyint_ty,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
@@ -842,13 +842,14 @@ let TargetPrefix = "riscv" in {
   }
 
   // For unit stride segment load
-  // Input: (pointer, vl)
+  // Input: (passthru, pointer, vl)
   class RISCVUSSegLoad<int nf>
         : Intrinsic<!listconcat([llvm_anyvector_ty], !listsplat(LLVMMatchType<0>,
                                 !add(nf, -1))),
-                    [LLVMPointerToElt<0>, llvm_anyint_ty],
-                    [NoCapture<ArgIndex<0>>, IntrReadMem]>, RISCVVIntrinsic {
-    let VLOperand = 1;
+                    !listconcat(!listsplat(LLVMMatchType<0>, nf),
+                                [LLVMPointerToElt<0>, llvm_anyint_ty]),
+                    [NoCapture<ArgIndex<nf>>, IntrReadMem]>, RISCVVIntrinsic {
+    let VLOperand = !add(nf, 1);
   }
   // For unit stride segment load with mask
   // Input: (maskedoff, pointer, mask, vl, policy)
@@ -865,16 +866,17 @@ let TargetPrefix = "riscv" in {
   }
 
   // For unit stride fault-only-first segment load
-  // Input: (pointer, vl)
+  // Input: (passthru, pointer, vl)
   // Output: (data, vl)
   // NOTE: We model this with default memory properties since we model writing
   // VL as a side effect. IntrReadMem, IntrHasSideEffects does not work.
   class RISCVUSSegLoadFF<int nf>
         : Intrinsic<!listconcat([llvm_anyvector_ty], !listsplat(LLVMMatchType<0>,
                                 !add(nf, -1)), [llvm_anyint_ty]),
-                    [LLVMPointerToElt<0>, LLVMMatchType<1>],
-                    [NoCapture<ArgIndex<0>>]>, RISCVVIntrinsic {
-    let VLOperand = 1;
+                    !listconcat(!listsplat(LLVMMatchType<0>, nf),
+                    [LLVMPointerToElt<0>, LLVMMatchType<1>]),
+                    [NoCapture<ArgIndex<nf>>]>, RISCVVIntrinsic {
+    let VLOperand = !add(nf, 1);
   }
   // For unit stride fault-only-first segment load with mask
   // Input: (maskedoff, pointer, mask, vl, policy)
@@ -894,13 +896,14 @@ let TargetPrefix = "riscv" in {
   }
 
   // For stride segment load
-  // Input: (pointer, offset, vl)
+  // Input: (passthru, pointer, offset, vl)
   class RISCVSSegLoad<int nf>
         : Intrinsic<!listconcat([llvm_anyvector_ty], !listsplat(LLVMMatchType<0>,
                                 !add(nf, -1))),
-                    [LLVMPointerToElt<0>, llvm_anyint_ty, LLVMMatchType<1>],
-                    [NoCapture<ArgIndex<0>>, IntrReadMem]>, RISCVVIntrinsic {
-    let VLOperand = 2;
+                    !listconcat(!listsplat(LLVMMatchType<0>, nf),
+                    [LLVMPointerToElt<0>, llvm_anyint_ty, LLVMMatchType<1>]),
+                    [NoCapture<ArgIndex<nf>>, IntrReadMem]>, RISCVVIntrinsic {
+    let VLOperand = !add(nf, 2);
   }
   // For stride segment load with mask
   // Input: (maskedoff, pointer, offset, mask, vl, policy)
@@ -918,13 +921,14 @@ let TargetPrefix = "riscv" in {
   }
 
   // For indexed segment load
-  // Input: (pointer, index, vl)
+  // Input: (passthru, pointer, index, vl)
   class RISCVISegLoad<int nf>
         : Intrinsic<!listconcat([llvm_anyvector_ty], !listsplat(LLVMMatchType<0>,
                                 !add(nf, -1))),
-                    [LLVMPointerToElt<0>, llvm_anyvector_ty, llvm_anyint_ty],
-                    [NoCapture<ArgIndex<0>>, IntrReadMem]>, RISCVVIntrinsic {
-    let VLOperand = 2;
+                    !listconcat(!listsplat(LLVMMatchType<0>, nf),
+                    [LLVMPointerToElt<0>, llvm_anyvector_ty, llvm_anyint_ty]),
+                    [NoCapture<ArgIndex<nf>>, IntrReadMem]>, RISCVVIntrinsic {
+    let VLOperand = !add(nf, 2);
   }
   // For indexed segment load with mask
   // Input: (maskedoff, pointer, index, mask, vl, policy)
@@ -1106,9 +1110,9 @@ let TargetPrefix = "riscv" in {
     def "int_riscv_" # NAME : RISCVSaturatingBinaryABShiftUnMasked;
     def "int_riscv_" # NAME # "_mask" : RISCVSaturatingBinaryABShiftMasked;
   }
-  multiclass RISCVTernaryAAAX {
-    def "int_riscv_" # NAME : RISCVTernaryAAAXUnMasked;
-    def "int_riscv_" # NAME # "_mask" : RISCVTernaryAAAXMasked;
+  multiclass RVVSlide {
+    def "int_riscv_" # NAME : RVVSlideUnMasked;
+    def "int_riscv_" # NAME # "_mask" : RVVSlideMasked;
   }
   multiclass RISCVTernaryAAXA {
     def "int_riscv_" # NAME : RISCVTernaryAAXAUnMasked;
@@ -1355,8 +1359,8 @@ let TargetPrefix = "riscv" in {
 
   defm vfmerge : RISCVBinaryWithV0;
 
-  defm vslideup : RISCVTernaryAAAX;
-  defm vslidedown : RISCVTernaryAAAX;
+  defm vslideup : RVVSlide;
+  defm vslidedown : RVVSlide;
 
   defm vslide1up : RISCVBinaryAAX;
   defm vslide1down : RISCVBinaryAAX;

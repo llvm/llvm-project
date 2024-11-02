@@ -90,7 +90,7 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
   int SS = INT_MAX;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (MI.getOpcode() == X86::LDTILECFG) {
+      if (MI.getOpcode() == X86::PLDTILECFGV) {
         SS = MI.getOperand(0).getIndex();
         break;
       }
@@ -98,6 +98,9 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
     if (SS != INT_MAX)
       break;
   }
+  // Didn't find PLDTILECFGV, just return false;
+  if (SS == INT_MAX)
+    return false;
 
   // Try to find a point to insert MIs for constant shapes.
   // Here we are leveraging the palette id inserted in PreRA pass.

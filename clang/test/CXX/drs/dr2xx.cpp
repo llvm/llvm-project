@@ -1094,7 +1094,7 @@ namespace dr298 { // dr298: yes
   struct B b; // expected-error {{typedef 'B' cannot be referenced with a struct specifier}}
   struct C c; // expected-error {{typedef 'C' cannot be referenced with a struct specifier}}
 
-  B::B() {} // expected-error {{requires a type specifier}}
+  B::B() {} // expected-error {{a type specifier is required}}
   B::A() {} // ok
   C::~C() {} // expected-error {{destructor cannot be declared using a typedef 'dr298::C' (aka 'const dr298::A') of the class name}}
 

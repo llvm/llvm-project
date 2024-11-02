@@ -13,6 +13,13 @@
 #ifndef TSAN_TEST_UTIL_H
 #define TSAN_TEST_UTIL_H
 
+#include "gtest/gtest.h"
+
+class ThreadSanitizer : public ::testing::Test {
+ protected:
+  void TearDown() override;
+};
+
 void TestMutexBeforeInit();
 
 // A location of memory on which a race may be detected.

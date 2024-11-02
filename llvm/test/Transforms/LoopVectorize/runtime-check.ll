@@ -13,7 +13,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define i32 @foo(float* nocapture %a, float* nocapture %b, i32 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N:%.*]], 0, [[DBG4:!dbg !.*]]
+; CHECK-NEXT:    [[B2:%.*]] = ptrtoint float* [[B:%.*]] to i64, [[DBG4:!dbg !.*]]
+; CHECK-NEXT:    [[A1:%.*]] = ptrtoint float* [[A:%.*]] to i64, [[DBG4]]
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N:%.*]], 0, [[DBG4]]
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]], [[DBG4]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1, [[DBG9:!dbg !.*]]
@@ -22,15 +24,9 @@ define i32 @foo(float* nocapture %a, float* nocapture %b, i32 %n) nounwind uwtab
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 3, [[DBG9]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]], [[DBG9]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[N]], -1, [[DBG9]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64, [[DBG9]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[TMP4]], 1, [[DBG9]]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr float, float* [[A:%.*]], i64 [[TMP5]], [[DBG9]]
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr float, float* [[B:%.*]], i64 [[TMP5]], [[DBG9]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt float* [[SCEVGEP4]], [[A]], [[DBG9]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt float* [[SCEVGEP]], [[B]], [[DBG9]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]], [[DBG9]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]], [[DBG9]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[A1]], [[B2]], [[DBG9]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], 16, [[DBG9]]
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]], [[DBG9]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934588, [[DBG9]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]], [[DBG9]]
@@ -38,11 +34,11 @@ define i32 @foo(float* nocapture %a, float* nocapture %b, i32 %n) nounwind uwtab
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], [[DBG9]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, float* [[B]], i64 [[INDEX]], [[DBG9]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast float* [[TMP6]] to <4 x float>*, [[DBG9]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, <4 x float>* [[TMP7]], align 4, [[DBG9]], !alias.scope !10
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, <4 x float>* [[TMP7]], align 4, [[DBG9]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <4 x float> [[WIDE_LOAD]], <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>, [[DBG9]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[INDEX]], [[DBG9]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast float* [[TMP9]] to <4 x float>*, [[DBG9]]
-; CHECK-NEXT:    store <4 x float> [[TMP8]], <4 x float>* [[TMP10]], align 4, [[DBG9]], !alias.scope !13, !noalias !10
+; CHECK-NEXT:    store <4 x float> [[TMP8]], <4 x float>* [[TMP10]], align 4, [[DBG9]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4, [[DBG9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]], [[DBG9]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[DBG9]], [[LOOP15:!llvm.loop !.*]]

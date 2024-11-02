@@ -45,6 +45,10 @@
 #   include <unistd.h> // close
 #endif
 
+#if defined(_CS_GNU_LIBC_VERSION)
+# include <string.h> // strverscmp
+#endif
+
 #if defined(_NEWLIB_VERSION) && defined(__STRICT_ANSI__)
 // Newlib provides this, but in the header it's under __STRICT_ANSI__
 extern "C" {

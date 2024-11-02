@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=nvptx -O0 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx -O0 | %ptxas-verify %}
 
 define i16 @test1(i16* %sur1) {
 ; CHECK-NOT: mov.u16 %rs{{[0-9]+}}, 32767

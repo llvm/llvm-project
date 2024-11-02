@@ -21,7 +21,7 @@
 // CHECK-DAG: #[[$SUBVIEW_MAP12:map[0-9]+]] = affine_map<()[s0] -> (s0)>
 
 // CHECK-LABEL: func @memref_subview(%arg0
-func @memref_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
+func.func @memref_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
 

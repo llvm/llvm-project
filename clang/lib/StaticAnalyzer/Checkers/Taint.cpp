@@ -37,7 +37,9 @@ void taint::printTaint(ProgramStateRef State, raw_ostream &Out, const char *NL,
     Out << I.first << " : " << I.second << NL;
 }
 
-void dumpTaint(ProgramStateRef State) { printTaint(State, llvm::errs()); }
+void taint::dumpTaint(ProgramStateRef State) {
+  printTaint(State, llvm::errs());
+}
 
 ProgramStateRef taint::addTaint(ProgramStateRef State, const Stmt *S,
                                 const LocationContext *LCtx,

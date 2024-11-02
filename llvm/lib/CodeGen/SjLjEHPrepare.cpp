@@ -413,7 +413,7 @@ bool SjLjEHPrepare::setupEntryBlockAndCallSites(Function &F) {
   Val = Builder.CreateCall(StackAddrFn, {}, "sp");
   Builder.CreateStore(Val, StackPtr, /*isVolatile=*/true);
 
-  // Call the setup_dispatch instrinsic. It fills in the rest of the jmpbuf.
+  // Call the setup_dispatch intrinsic. It fills in the rest of the jmpbuf.
   Builder.CreateCall(BuiltinSetupDispatchFn, {});
 
   // Store a pointer to the function context so that the back-end will know

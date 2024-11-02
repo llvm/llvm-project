@@ -16,7 +16,7 @@
 // moved to bb0, we need to insert allocs and copies.
 
 // CHECK-LABEL: func @condBranch
-func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
   cf.br ^bb3(%arg1 : memref<2xf32>)
@@ -57,7 +57,7 @@ func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // to %2 in block bb3.
 
 // CHECK-LABEL: func @condBranchDynamicType
-func @condBranchDynamicType(
+func.func @condBranchDynamicType(
   %arg0: i1,
   %arg1: memref<?xf32>,
   %arg2: memref<?xf32>,
@@ -93,7 +93,7 @@ func @condBranchDynamicType(
 // Test case: See above.
 
 // CHECK-LABEL: func @condBranchUnrankedType
-func @condBranchUnrankedType(
+func.func @condBranchUnrankedType(
   %arg0: i1,
   %arg1: memref<*xf32>,
   %arg2: memref<*xf32>,
@@ -148,7 +148,7 @@ func @condBranchUnrankedType(
 // bb6. Furthermore, there should be no copy inserted for %4.
 
 // CHECK-LABEL: func @condBranchDynamicTypeNested
-func @condBranchDynamicTypeNested(
+func.func @condBranchDynamicTypeNested(
   %arg0: i1,
   %arg1: memref<?xf32>,
   %arg2: memref<?xf32>,
@@ -203,7 +203,7 @@ func @condBranchDynamicTypeNested(
 // before ReturnOp.
 
 // CHECK-LABEL: func @emptyUsesValue
-func @emptyUsesValue(%arg0: memref<4xf32>) {
+func.func @emptyUsesValue(%arg0: memref<4xf32>) {
   %0 = memref.alloc() : memref<4xf32>
   return
 }
@@ -224,7 +224,7 @@ func @emptyUsesValue(%arg0: memref<4xf32>) {
 // we have to insert a copy and an alloc in the beginning of the function.
 
 // CHECK-LABEL: func @criticalEdge
-func @criticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @criticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   cf.cond_br %arg0, ^bb1, ^bb2(%arg1 : memref<2xf32>)
 ^bb1:
   %0 = memref.alloc() : memref<2xf32>
@@ -257,7 +257,7 @@ func @criticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // exit block after CopyOp since %1 is an alias for %0 and %arg1.
 
 // CHECK-LABEL: func @invCriticalEdge
-func @invCriticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @invCriticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   cf.cond_br %arg0, ^bb1, ^bb2(%arg1 : memref<2xf32>)
@@ -285,7 +285,7 @@ func @invCriticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // %7 should happen after CopyOp.
 
 // CHECK-LABEL: func @ifElse
-func @ifElse(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @ifElse(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   cf.cond_br %arg0,
@@ -323,7 +323,7 @@ func @ifElse(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // in the exit block since %5 or %6 are the latest aliases of %0.
 
 // CHECK-LABEL: func @ifElseNoUsers
-func @ifElseNoUsers(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @ifElseNoUsers(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   cf.cond_br %arg0,
@@ -358,7 +358,7 @@ func @ifElseNoUsers(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // inserted in the exit block.
 
 // CHECK-LABEL: func @ifElseNested
-func @ifElseNested(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @ifElseNested(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   cf.cond_br %arg0,
@@ -395,7 +395,7 @@ func @ifElseNested(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // DeallocOps after the last BufferBasedOp.
 
 // CHECK-LABEL: func @redundantOperations
-func @redundantOperations(%arg0: memref<2xf32>) {
+func.func @redundantOperations(%arg0: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg0: memref<2xf32>) out(%0: memref<2xf32>)
   %1 = memref.alloc() : memref<2xf32>
@@ -426,7 +426,7 @@ func @redundantOperations(%arg0: memref<2xf32>) {
 // block.
 
 // CHECK-LABEL: func @moving_alloc_and_inserting_missing_dealloc
-func @moving_alloc_and_inserting_missing_dealloc(
+func.func @moving_alloc_and_inserting_missing_dealloc(
   %cond: i1,
     %arg0: memref<2xf32>,
     %arg1: memref<2xf32>) {
@@ -475,7 +475,7 @@ func @moving_alloc_and_inserting_missing_dealloc(
 // moved to exit block.
 
 // CHECK-LABEL: func @moving_invalid_dealloc_op_complex
-func @moving_invalid_dealloc_op_complex(
+func.func @moving_invalid_dealloc_op_complex(
   %cond: i1,
     %arg0: memref<2xf32>,
     %arg1: memref<2xf32>) {
@@ -503,7 +503,7 @@ func @moving_invalid_dealloc_op_complex(
 // Test Case: Inserting missing DeallocOp in a single block.
 
 // CHECK-LABEL: func @inserting_missing_dealloc_simple
-func @inserting_missing_dealloc_simple(
+func.func @inserting_missing_dealloc_simple(
   %arg0 : memref<2xf32>,
   %arg1: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
@@ -522,7 +522,7 @@ func @inserting_missing_dealloc_simple(
 // single block.
 
 // CHECK-LABEL: func @moving_invalid_dealloc_op
-func @moving_invalid_dealloc_op(%arg0 : memref<2xf32>, %arg1: memref<2xf32>) {
+func.func @moving_invalid_dealloc_op(%arg0 : memref<2xf32>, %arg1: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg0: memref<2xf32>) out(%0: memref<2xf32>)
   memref.dealloc %0 : memref<2xf32>
@@ -544,7 +544,7 @@ func @moving_invalid_dealloc_op(%arg0 : memref<2xf32>, %arg1: memref<2xf32>) {
 // inserted after CopyOp.
 
 // CHECK-LABEL: func @nested_regions_and_cond_branch
-func @nested_regions_and_cond_branch(
+func.func @nested_regions_and_cond_branch(
   %arg0: i1,
   %arg1: memref<2xf32>,
   %arg2: memref<2xf32>) {
@@ -589,7 +589,7 @@ func @nested_regions_and_cond_branch(
 // deallocating. It should dealloc %y after CopyOp.
 
 // CHECK-LABEL: func @memref_in_function_results
-func @memref_in_function_results(
+func.func @memref_in_function_results(
   %arg0: memref<5xf32>,
   %arg1: memref<10xf32>,
   %arg2: memref<5xf32>) -> (memref<10xf32>, memref<15xf32>) {
@@ -615,7 +615,7 @@ func @memref_in_function_results(
 // requires a dealloc.
 
 // CHECK-LABEL: func @nested_region_control_flow
-func @nested_region_control_flow(
+func.func @nested_region_control_flow(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
   %0 = arith.cmpi eq, %arg0, %arg1 : index
@@ -645,7 +645,7 @@ func @nested_region_control_flow(
 // returned in the end.
 
 // CHECK-LABEL: func @nested_region_control_flow_div
-func @nested_region_control_flow_div(
+func.func @nested_region_control_flow_div(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
   %0 = arith.cmpi eq, %arg0, %arg1 : index
@@ -677,7 +677,7 @@ func @nested_region_control_flow_div(
 // the method.
 
 // CHECK-LABEL: func @inner_region_control_flow
-func @inner_region_control_flow(%arg0 : index) -> memref<?x?xf32> {
+func.func @inner_region_control_flow(%arg0 : index) -> memref<?x?xf32> {
   %0 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
   %1 = test.region_if %0 : memref<?x?xf32> -> (memref<?x?xf32>) then {
     ^bb0(%arg1 : memref<?x?xf32>):
@@ -705,7 +705,7 @@ func @inner_region_control_flow(%arg0 : index) -> memref<?x?xf32> {
 // -----
 
 // CHECK-LABEL: func @subview
-func @subview(%arg0 : index, %arg1 : index, %arg2 : memref<?x?xf32>) {
+func.func @subview(%arg0 : index, %arg1 : index, %arg2 : memref<?x?xf32>) {
   %0 = memref.alloc() : memref<64x4xf32, offset: 0, strides: [4, 1]>
   %1 = memref.subview %0[%arg0, %arg1][%arg0, %arg1][%arg0, %arg1] :
     memref<64x4xf32, offset: 0, strides: [4, 1]>
@@ -727,7 +727,7 @@ func @subview(%arg0 : index, %arg1 : index, %arg2 : memref<?x?xf32>) {
 // Therefore, all allocas are not handled.
 
 // CHECK-LABEL: func @condBranchAlloca
-func @condBranchAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @condBranchAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
   cf.br ^bb3(%arg1 : memref<2xf32>)
@@ -754,7 +754,7 @@ func @condBranchAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // dealloc.
 
 // CHECK-LABEL: func @ifElseAlloca
-func @ifElseAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @ifElseAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   cf.cond_br %arg0,
@@ -782,7 +782,7 @@ func @ifElseAlloca(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // -----
 
 // CHECK-LABEL: func @ifElseNestedAlloca
-func @ifElseNestedAlloca(
+func.func @ifElseNestedAlloca(
   %arg0: i1,
   %arg1: memref<2xf32>,
   %arg2: memref<2xf32>) {
@@ -817,7 +817,7 @@ func @ifElseNestedAlloca(
 // -----
 
 // CHECK-LABEL: func @nestedRegionsAndCondBranchAlloca
-func @nestedRegionsAndCondBranchAlloca(
+func.func @nestedRegionsAndCondBranchAlloca(
   %arg0: i1,
   %arg1: memref<2xf32>,
   %arg2: memref<2xf32>) {
@@ -857,7 +857,7 @@ func @nestedRegionsAndCondBranchAlloca(
 // -----
 
 // CHECK-LABEL: func @nestedRegionControlFlowAlloca
-func @nestedRegionControlFlowAlloca(
+func.func @nestedRegionControlFlowAlloca(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
   %0 = arith.cmpi eq, %arg0, %arg1 : index
@@ -885,7 +885,7 @@ func @nestedRegionControlFlowAlloca(
 // memory leaks.
 
 // CHECK-LABEL: func @loop_alloc
-func @loop_alloc(
+func.func @loop_alloc(
   %lb: index,
   %ub: index,
   %step: index,
@@ -926,7 +926,7 @@ func @loop_alloc(
 // that are passed via the backedges.
 
 // CHECK-LABEL: func @loop_nested_if_no_alloc
-func @loop_nested_if_no_alloc(
+func.func @loop_nested_if_no_alloc(
   %lb: index,
   %ub: index,
   %step: index,
@@ -967,7 +967,7 @@ func @loop_nested_if_no_alloc(
 // "returning" %3.
 
 // CHECK-LABEL: func @loop_nested_if_alloc
-func @loop_nested_if_alloc(
+func.func @loop_nested_if_alloc(
   %lb: index,
   %ub: index,
   %step: index,
@@ -1017,7 +1017,7 @@ func @loop_nested_if_alloc(
 // before each yield in all loops recursively.
 
 // CHECK-LABEL: func @loop_nested_alloc
-func @loop_nested_alloc(
+func.func @loop_nested_alloc(
   %lb: index,
   %ub: index,
   %step: index,
@@ -1093,7 +1093,7 @@ func @loop_nested_alloc(
 // -----
 
 // CHECK-LABEL: func @affine_loop
-func @affine_loop() {
+func.func @affine_loop() {
   %buffer = memref.alloc() : memref<1024xf32>
   %sum_init_0 = arith.constant 0.0 : f32
   %res = affine.for %i = 0 to 10 step 2 iter_args(%sum_iter = %sum_init_0) -> f32 {
@@ -1115,7 +1115,7 @@ func @affine_loop() {
 // control-flow loop since they are not supported.
 
 // expected-error@+1 {{Only structured control-flow loops are supported}}
-func @loop_dynalloc(
+func.func @loop_dynalloc(
   %arg0 : i32,
   %arg1 : i32,
   %arg2: memref<?xf32>,
@@ -1148,7 +1148,7 @@ func @loop_dynalloc(
 // control-flow loop since they are not supported.
 
 // expected-error@+1 {{Only structured control-flow loops are supported}}
-func @do_loop_alloc(
+func.func @do_loop_alloc(
   %arg0 : i32,
   %arg1 : i32,
   %arg2: memref<2xf32>,
@@ -1176,7 +1176,7 @@ func @do_loop_alloc(
 // -----
 
 // CHECK-LABEL: func @assumingOp(
-func @assumingOp(
+func.func @assumingOp(
   %arg0: !shape.witness,
   %arg2: memref<2xf32>,
   %arg3: memref<2xf32>) {
@@ -1214,7 +1214,7 @@ func @assumingOp(
 // Test Case: The op "test.bar" does not implement the RegionBranchOpInterface.
 // This is not allowed in buffer deallocation.
 
-func @noRegionBranchOpInterface() {
+func.func @noRegionBranchOpInterface() {
 // expected-error@+1 {{All operations with attached regions need to implement the RegionBranchOpInterface.}}
   %0 = "test.bar"() ({
 // expected-error@+1 {{All operations with attached regions need to implement the RegionBranchOpInterface.}}
@@ -1235,7 +1235,7 @@ func @noRegionBranchOpInterface() {
 // CHECK-NOT: memref.dealloc %[[RES0]]
 // CHECK: memref.dealloc %[[RES1]]
 // CHECK: return %[[RES0]]
-func @dealloc_existing_clones(%arg0: memref<?x?xf64>, %arg1: memref<?x?xf64>) -> memref<?x?xf64> {
+func.func @dealloc_existing_clones(%arg0: memref<?x?xf64>, %arg1: memref<?x?xf64>) -> memref<?x?xf64> {
   %0 = bufferization.clone %arg0 : memref<?x?xf64> to memref<?x?xf64>
   %1 = bufferization.clone %arg1 : memref<?x?xf64> to memref<?x?xf64>
   return %0 : memref<?x?xf64>
@@ -1244,7 +1244,7 @@ func @dealloc_existing_clones(%arg0: memref<?x?xf64>, %arg1: memref<?x?xf64>) ->
 // -----
 
 // CHECK-LABEL: func @while_two_arg
-func @while_two_arg(%arg0: index) {
+func.func @while_two_arg(%arg0: index) {
   %a = memref.alloc(%arg0) : memref<?xf32>
 // CHECK: %[[WHILE:.*]]:2 = scf.while (%[[ARG1:.*]] = %[[ALLOC:.*]], %[[ARG2:.*]] = %[[CLONE:.*]])
   scf.while (%arg1 = %a, %arg2 = %a) : (memref<?xf32>, memref<?xf32>) -> (memref<?xf32>, memref<?xf32>) {
@@ -1271,7 +1271,7 @@ func @while_two_arg(%arg0: index) {
 
 // -----
 
-func @while_three_arg(%arg0: index) {
+func.func @while_three_arg(%arg0: index) {
 // CHECK: %[[ALLOC:.*]] = memref.alloc
   %a = memref.alloc(%arg0) : memref<?xf32>
 // CHECK-NEXT: %[[CLONE1:.*]] = bufferization.clone %[[ALLOC]]

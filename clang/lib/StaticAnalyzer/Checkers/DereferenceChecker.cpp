@@ -11,9 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
+#include "clang/Basic/TargetInfo.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -39,6 +40,8 @@ class DereferenceChecker
   void reportBug(DerefKind K, ProgramStateRef State, const Stmt *S,
                  CheckerContext &C) const;
 
+  bool suppressReport(CheckerContext &C, const Expr *E) const;
+
 public:
   void checkLocation(SVal location, bool isLoad, const Stmt* S,
                      CheckerContext &C) const;
@@ -49,6 +52,8 @@ public:
                              const Expr *Ex, const ProgramState *state,
                              const LocationContext *LCtx,
                              bool loadedFrom = false);
+
+  bool SuppressAddressSpaces = false;
 };
 } // end anonymous namespace
 
@@ -109,9 +114,35 @@ static const Expr *getDereferenceExpr(const Stmt *S, bool IsBind=false){
   return E;
 }
 
-static bool suppressReport(const Expr *E) {
-  // Do not report dereferences on memory in non-default address spaces.
-  return E->getType().hasAddressSpace();
+bool DereferenceChecker::suppressReport(CheckerContext &C,
+                                        const Expr *E) const {
+  // Do not report dereferences on memory that use address space #256, #257,
+  // and #258. Those address spaces are used when dereferencing address spaces
+  // relative to the GS, FS, and SS segments on x86/x86-64 targets.
+  // Dereferencing a null pointer in these address spaces is not defined
+  // as an error. All other null dereferences in other address spaces
+  // are defined as an error unless explicitly defined.
+  // See https://clang.llvm.org/docs/LanguageExtensions.html, the section
+  // "X86/X86-64 Language Extensions"
+
+  QualType Ty = E->getType();
+  if (!Ty.hasAddressSpace())
+    return false;
+  if (SuppressAddressSpaces)
+    return true;
+
+  const llvm::Triple::ArchType Arch =
+      C.getASTContext().getTargetInfo().getTriple().getArch();
+
+  if ((Arch == llvm::Triple::x86) || (Arch == llvm::Triple::x86_64)) {
+    switch (toTargetAddressSpace(E->getType().getAddressSpace())) {
+    case 256:
+    case 257:
+    case 258:
+      return true;
+    }
+  }
+  return false;
 }
 
 static bool isDeclRefExprToReference(const Expr *E) {
@@ -209,7 +240,7 @@ void DereferenceChecker::checkLocation(SVal l, bool isLoad, const Stmt* S,
   // Check for dereference of an undefined value.
   if (l.isUndef()) {
     const Expr *DerefExpr = getDereferenceExpr(S);
-    if (!suppressReport(DerefExpr))
+    if (!suppressReport(C, DerefExpr))
       reportBug(DerefKind::UndefinedPointerValue, C.getState(), DerefExpr, C);
     return;
   }
@@ -230,7 +261,7 @@ void DereferenceChecker::checkLocation(SVal l, bool isLoad, const Stmt* S,
       // We know that 'location' can only be null.  This is what
       // we call an "explicit" null dereference.
       const Expr *expr = getDereferenceExpr(S);
-      if (!suppressReport(expr)) {
+      if (!suppressReport(C, expr)) {
         reportBug(DerefKind::NullPointer, nullState, expr, C);
         return;
       }
@@ -272,7 +303,7 @@ void DereferenceChecker::checkBind(SVal L, SVal V, const Stmt *S,
   if (StNull) {
     if (!StNonNull) {
       const Expr *expr = getDereferenceExpr(S, /*IsBind=*/true);
-      if (!suppressReport(expr)) {
+      if (!suppressReport(C, expr)) {
         reportBug(DerefKind::NullPointer, StNull, expr, C);
         return;
       }
@@ -308,7 +339,9 @@ void DereferenceChecker::checkBind(SVal L, SVal V, const Stmt *S,
 }
 
 void ento::registerDereferenceChecker(CheckerManager &mgr) {
-  mgr.registerChecker<DereferenceChecker>();
+  auto *Chk = mgr.registerChecker<DereferenceChecker>();
+  Chk->SuppressAddressSpaces = mgr.getAnalyzerOptions().getCheckerBooleanOption(
+      mgr.getCurrentCheckerName(), "SuppressAddressSpaces");
 }
 
 bool ento::shouldRegisterDereferenceChecker(const CheckerManager &mgr) {

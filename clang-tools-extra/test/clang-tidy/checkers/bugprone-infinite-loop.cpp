@@ -650,3 +650,38 @@ void test_dependent_condition() {
   do {
   } while (1, (false) && val4 == 1);
 }
+
+void test_typeof() {
+  __typeof__({
+    for (int i = 0; i < 10; ++i) {
+    }
+    0;
+  }) x;
+}
+
+void test_typeof_infinite() {
+  __typeof__({
+    for (int i = 0; i < 10;) {
+    }
+    0;
+  }) x;
+}
+
+void test_typeof_while_infinite() {
+  __typeof__({
+    int i = 0;
+    while (i < 10) {
+    }
+    0;
+  }) x;
+}
+
+void test_typeof_dowhile_infinite() {
+  __typeof__({
+    int i = 0;
+    do {
+
+    } while (i < 10);
+    0;
+  }) x;
+}

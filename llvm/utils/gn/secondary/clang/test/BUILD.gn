@@ -145,6 +145,7 @@ group("test") {
     "//clang/tools/c-index-test",
     "//clang/tools/clang-diff",
     "//clang/tools/clang-format",
+    "//clang/tools/clang-fuzzer/dictionary:clang-fuzzer-dictionary",
     "//clang/tools/clang-import-test",
     "//clang/tools/clang-offload-bundler",
     "//clang/tools/clang-refactor",

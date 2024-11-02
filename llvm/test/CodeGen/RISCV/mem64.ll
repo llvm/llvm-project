@@ -215,10 +215,10 @@ define dso_local i64 @ld_sd_global(i64 %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, %hi(G)
 ; RV64I-NEXT:    ld a1, %lo(G)(a2)
+; RV64I-NEXT:    addi a3, a2, %lo(G)
 ; RV64I-NEXT:    sd a0, %lo(G)(a2)
-; RV64I-NEXT:    addi a2, a2, %lo(G)
-; RV64I-NEXT:    ld a3, 72(a2)
-; RV64I-NEXT:    sd a0, 72(a2)
+; RV64I-NEXT:    ld a2, 72(a3)
+; RV64I-NEXT:    sd a0, 72(a3)
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    ret
   %1 = load volatile i64, i64* @G
@@ -228,3 +228,118 @@ define dso_local i64 @ld_sd_global(i64 %a) nounwind {
   store i64 %a, i64* %2
   ret i64 %1
 }
+
+define i64 @lw_far_local(i64* %a)  {
+; RV64I-LABEL: lw_far_local:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 8
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ld a0, -8(a0)
+; RV64I-NEXT:    ret
+  %1 = getelementptr inbounds i64, i64* %a, i64 4095
+  %2 = load volatile i64, i64* %1
+  ret i64 %2
+}
+
+define void @st_far_local(i64* %a, i64 %b)  {
+; RV64I-LABEL: st_far_local:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a2, 8
+; RV64I-NEXT:    add a0, a0, a2
+; RV64I-NEXT:    sd a1, -8(a0)
+; RV64I-NEXT:    ret
+  %1 = getelementptr inbounds i64, i64* %a, i64 4095
+  store i64 %b, i64* %1
+  ret void
+}
+
+define i64 @lw_sw_far_local(i64* %a, i64 %b)  {
+; RV64I-LABEL: lw_sw_far_local:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a2, 8
+; RV64I-NEXT:    addiw a2, a2, -8
+; RV64I-NEXT:    add a2, a0, a2
+; RV64I-NEXT:    ld a0, 0(a2)
+; RV64I-NEXT:    sd a1, 0(a2)
+; RV64I-NEXT:    ret
+  %1 = getelementptr inbounds i64, i64* %a, i64 4095
+  %2 = load volatile i64, i64* %1
+  store i64 %b, i64* %1
+  ret i64 %2
+}
+
+; Make sure we don't fold the addiw into the load offset. The sign extend of the
+; addiw is required.
+define i64 @lw_really_far_local(i64* %a)  {
+; RV64I-LABEL: lw_really_far_local:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 524288
+; RV64I-NEXT:    addiw a1, a1, -2048
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ld a0, 0(a0)
+; RV64I-NEXT:    ret
+  %1 = getelementptr inbounds i64, i64* %a, i64 268435200
+  %2 = load volatile i64, i64* %1
+  ret i64 %2
+}
+
+; Make sure we don't fold the addiw into the store offset. The sign extend of
+; the addiw is required.
+define void @st_really_far_local(i64* %a, i64 %b)  {
+; RV64I-LABEL: st_really_far_local:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a2, 524288
+; RV64I-NEXT:    addiw a2, a2, -2048
+; RV64I-NEXT:    add a0, a0, a2
+; RV64I-NEXT:    sd a1, 0(a0)
+; RV64I-NEXT:    ret
+  %1 = getelementptr inbounds i64, i64* %a, i64 268435200
+  store i64 %b, i64* %1
+  ret void
+}
+
+; Make sure we don't fold the addiw into the load/store offset. The sign extend
+; of the addiw is required.
+define i64 @lw_sw_really_far_local(i64* %a, i64 %b)  {
+; RV64I-LABEL: lw_sw_really_far_local:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a2, 524288
+; RV64I-NEXT:    addiw a2, a2, -2048
+; RV64I-NEXT:    add a2, a0, a2
+; RV64I-NEXT:    ld a0, 0(a2)
+; RV64I-NEXT:    sd a1, 0(a2)
+; RV64I-NEXT:    ret
+  %1 = getelementptr inbounds i64, i64* %a, i64 268435200
+  %2 = load volatile i64, i64* %1
+  store i64 %b, i64* %1
+  ret i64 %2
+}
+
+%struct.quux = type { i32, [0 x i8] }
+
+; Make sure we don't remove the addi and fold the C from
+; (add (addi FrameIndex, C), X) into the store address.
+; FrameIndex cannot be the operand of an ADD. We must keep the ADDI.
+define void @addi_fold_crash(i64 %arg) nounwind {
+; RV64I-LABEL: addi_fold_crash:
+; RV64I:       # %bb.0: # %bb
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    addi a1, sp, 4
+; RV64I-NEXT:    add a0, a1, a0
+; RV64I-NEXT:    sb zero, 0(a0)
+; RV64I-NEXT:    mv a0, a1
+; RV64I-NEXT:    call snork@plt
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+bb:
+  %tmp = alloca %struct.quux, align 4
+  %tmp1 = getelementptr inbounds %struct.quux, %struct.quux* %tmp, i64 0, i32 1
+  %tmp2 = getelementptr inbounds %struct.quux, %struct.quux* %tmp, i64 0, i32 1, i64 %arg
+  store i8 0, i8* %tmp2, align 1
+  call void @snork([0 x i8]* %tmp1)
+  ret void
+}
+
+declare void @snork([0 x i8]*)

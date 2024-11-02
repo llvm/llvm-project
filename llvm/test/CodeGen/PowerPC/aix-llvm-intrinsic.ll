@@ -6,10 +6,13 @@
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
 ; RUN:     -mattr=-altivec -filetype=obj -o %t.o < %s
-; RUN: llvm-readobj --symbols %t.o | FileCheck --check-prefix=CHECKSYM %s
-; RUN: llvm-objdump -r -d --symbol-description %t.o | FileCheck --check-prefix=CHECKRELOC %s
+; RUN: llvm-readobj --symbols %t.o | FileCheck --check-prefixes=CHECKSYM,CHECKSYM32 %s
+; RUN: llvm-objdump -r -d --symbol-description %t.o | FileCheck --check-prefixes=CHECKRELOC,CHECKRELOC32 %s
 
-;; FIXME: currently only fileHeader and sectionHeaders are supported in XCOFF64.
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
+; RUN:     -mattr=-altivec -filetype=obj -o %t64.o < %s
+; RUN: llvm-readobj --symbols %t64.o | FileCheck --check-prefixes=CHECKSYM,CHECKSYM64 %s
+; RUN: llvm-objdump -r -d --symbol-description %t64.o | FileCheck --check-prefixes=CHECKRELOC,CHECKRELOC64 %s
 
 %struct.S = type { i32, i32 }
 
@@ -60,18 +63,25 @@ declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1 immarg)
 ; CHECKSYM-NEXT:       SymbolAlignmentLog2: 0
 ; CHECKSYM-NEXT:       SymbolType: XTY_ER (0x0)
 ; CHECKSYM-NEXT:       StorageMappingClass: XMC_PR (0x0)
-; CHECKSYM-NEXT:       StabInfoIndex: 0x0
-; CHECKSYM-NEXT:       StabSectNum: 0x0
+; CHECKSYM32-NEXT:     StabInfoIndex: 0x0
+; CHECKSYM32-NEXT:     StabSectNum: 0x0
+; CHECKSYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 
-; CHECKRELOC:      00000000 (idx: 7) .bar:
+; CHECKRELOC32:      00000000 (idx: 7) .bar:
+; CHECKRELOC64:      0000000000000000 (idx: 7) .bar:
 ; CHECKRELOC-NEXT:        0: 7c 08 02 a6                        mflr 0
-; CHECKRELOC-NEXT:        4: 90 01 00 08                        stw 0, 8(1)
-; CHECKRELOC-NEXT:        8: 94 21 ff c0                        stwu 1, -64(1)
-; CHECKRELOC-NEXT:        c: 80 62 00 00                        lwz 3, 0(2)
-; CHECKRELOC-NEXT:                      0000000e:  R_TOC        (idx: 13) s[TC]
+; CHECKRELOC32-NEXT:        4: 90 01 00 08                      stw 0, 8(1)
+; CHECKRELOC32-NEXT:        8: 94 21 ff c0                      stwu 1, -64(1)
+; CHECKRELOC32-NEXT:        c: 80 62 00 00                      lwz 3, 0(2)
+; CHECKRELOC64-NEXT:        4: f8 01 00 10                      std 0, 16(1)
+; CHECKRELOC64-NEXT:        8: f8 21 ff 91                      stdu 1, -112(1)
+; CHECKRELOC64-NEXT:        c: e8 62 00 00                      ld 3, 0(2)
+; CHECKRELOC32-NEXT:    0000000e:  R_TOC        (idx: 13) s[TC]
+; CHECKRELOC64-NEXT:    000000000000000e:  R_TOC	(idx: 13) s[TC]
 ; CHECKRELOC-NEXT:       10: 80 83 00 04                        lwz 4, 4(3)
 ; CHECKRELOC-NEXT:       14: 7c 85 23 78                        mr 5, 4
 ; CHECKRELOC-NEXT:       18: 4b ff ff e9                        bl 0x0
-; CHECKRELOC-NEXT:                      00000018:  R_RBR        (idx: 1) .memset[PR]
+; CHECKRELOC32-NEXT:    00000018:  R_RBR        (idx: 1) .memset[PR]
+; CHECKRELOC64-NEXT:    0000000000000018:  R_RBR	(idx: 1) .memset[PR]

@@ -8,8 +8,11 @@
 
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/Matchers.h"
@@ -397,14 +400,16 @@ void ForOp::print(OpAsmPrinter &p) {
 
 ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
-  OpAsmParser::UnresolvedOperand inductionVariable, lb, ub, step;
-  // Parse the induction variable followed by '='.
-  if (parser.parseRegionArgument(inductionVariable) || parser.parseEqual())
-    return failure();
-
-  // Parse loop bounds.
   Type indexType = builder.getIndexType();
-  if (parser.parseOperand(lb) ||
+
+  OpAsmParser::Argument inductionVariable;
+  inductionVariable.type = indexType;
+  OpAsmParser::UnresolvedOperand lb, ub, step;
+
+  // Parse the induction variable followed by '='.
+  if (parser.parseArgument(inductionVariable) || parser.parseEqual() ||
+      // Parse loop bounds.
+      parser.parseOperand(lb) ||
       parser.resolveOperand(lb, indexType, result.operands) ||
       parser.parseKeyword("to") || parser.parseOperand(ub) ||
       parser.resolveOperand(ub, indexType, result.operands) ||
@@ -413,8 +418,8 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   // Parse the optional initial iteration arguments.
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> regionArgs, operands;
-  SmallVector<Type, 4> argTypes;
+  SmallVector<OpAsmParser::Argument, 4> regionArgs;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> operands;
   regionArgs.push_back(inductionVariable);
 
   if (succeeded(parser.parseOptionalKeyword("iter_args"))) {
@@ -422,24 +427,26 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
     if (parser.parseAssignmentList(regionArgs, operands) ||
         parser.parseArrowTypeList(result.types))
       return failure();
+
     // Resolve input operands.
-    for (auto operandType : llvm::zip(operands, result.types))
-      if (parser.resolveOperand(std::get<0>(operandType),
-                                std::get<1>(operandType), result.operands))
+    for (auto argOperandType :
+         llvm::zip(llvm::drop_begin(regionArgs), operands, result.types)) {
+      Type type = std::get<2>(argOperandType);
+      std::get<0>(argOperandType).type = type;
+      if (parser.resolveOperand(std::get<1>(argOperandType), type,
+                                result.operands))
         return failure();
+    }
   }
-  // Induction variable.
-  argTypes.push_back(indexType);
-  // Loop carried variables
-  argTypes.append(result.types.begin(), result.types.end());
-  // Parse the body region.
-  Region *body = result.addRegion();
-  if (regionArgs.size() != argTypes.size())
+
+  if (regionArgs.size() != result.types.size() + 1)
     return parser.emitError(
         parser.getNameLoc(),
         "mismatch in number of loop-carried values and defined values");
 
-  if (parser.parseRegion(*body, regionArgs, argTypes))
+  // Parse the body region.
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body, regionArgs))
     return failure();
 
   ForOp::ensureTerminator(*body, builder, result.location);
@@ -654,6 +661,7 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
     scf::ForOp newForOp = rewriter.create<scf::ForOp>(
         forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
         forOp.getStep(), newIterArgs);
+    newForOp->setAttrs(forOp->getAttrs());
     Block &newBlock = newForOp.getRegion().front();
 
     // Replace the null placeholders with newly constructed values.
@@ -796,6 +804,7 @@ static ForOp replaceTensorCastForOpIterArg(PatternRewriter &rewriter,
   scf::ForOp newForOp = rewriter.create<scf::ForOp>(
       forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
       forOp.getStep(), newIterOperands);
+  newForOp->setAttrs(forOp->getAttrs());
   Block &newBlock = newForOp.getRegion().front();
   SmallVector<Value, 4> newBlockTransferArgs(newBlock.getArguments().begin(),
                                              newBlock.getArguments().end());
@@ -1034,6 +1043,242 @@ void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
   results.add<ForOpIterArgsFolder, SimplifyTrivialLoops,
               LastTensorLoadCanonicalization, ForOpTensorCastFolder>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// ForeachThreadOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ForeachThreadOp::verify() {
+  // Call terminator's verify to produce most informative error messages.
+  if (failed(getTerminator().verify()))
+    return failure();
+
+  // Check that the body defines as single block argument for the thread index.
+  auto *body = getBody();
+  if (body->getNumArguments() != getRank())
+    return emitOpError("region expects ") << getRank() << " arguments";
+
+  // Verify consistency between the result types and the terminator.
+  auto terminatorTypes = getTerminator().yieldedTypes();
+  auto opResults = getResults();
+  if (opResults.size() != terminatorTypes.size())
+    return emitOpError("produces ")
+           << opResults.size() << " results, but its terminator yields "
+           << terminatorTypes.size() << " value(s)";
+  unsigned i = 0;
+  for (auto e : llvm::zip(terminatorTypes, opResults)) {
+    if (std::get<0>(e) != std::get<1>(e).getType())
+      return emitOpError() << "type mismatch between result " << i << " ("
+                           << std::get<1>(e).getType() << ") and terminator ("
+                           << std::get<0>(e) << ")";
+    i++;
+  }
+  return success();
+}
+
+void ForeachThreadOp::print(OpAsmPrinter &p) {
+  p << " (";
+  llvm::interleaveComma(getThreadIndices(), p);
+  p << ") in (";
+  llvm::interleaveComma(getNumThreads(), p);
+  p << ") -> (" << getResultTypes() << ") ";
+  p.printRegion(getRegion(),
+                /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/getNumResults() > 0);
+  p.printOptionalAttrDict(getOperation()->getAttrs());
+}
+
+ParseResult ForeachThreadOp::parse(OpAsmParser &parser,
+                                   OperationState &result) {
+  auto &builder = parser.getBuilder();
+  // Parse an opening `(` followed by thread index variables followed by `)`
+  // TODO: when we can refer to such "induction variable"-like handles from the
+  // declarative assembly format, we can implement the parser as a custom hook.
+  SmallVector<OpAsmParser::Argument, 4> threadIndices;
+  if (parser.parseArgumentList(threadIndices, OpAsmParser::Delimiter::Paren))
+    return failure();
+
+  // Parse `in` threadNums.
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> threadNums;
+  if (parser.parseKeyword("in") ||
+      parser.parseOperandList(threadNums, threadIndices.size(),
+                              OpAsmParser::Delimiter::Paren) ||
+      parser.resolveOperands(threadNums, builder.getIndexType(),
+                             result.operands))
+    return failure();
+
+  // Parse optional results.
+  if (parser.parseOptionalArrowTypeList(result.types))
+    return failure();
+
+  // Parse region.
+  std::unique_ptr<Region> region = std::make_unique<Region>();
+  for (auto &idx : threadIndices)
+    idx.type = builder.getIndexType();
+  if (parser.parseRegion(*region, threadIndices))
+    return failure();
+
+  // Ensure terminator and move region.
+  OpBuilder b(builder.getContext());
+  ForeachThreadOp::ensureTerminator(*region, b, result.location);
+  result.addRegion(std::move(region));
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return success();
+}
+
+// Bodyless builder, result types must be specified.
+void ForeachThreadOp::build(mlir::OpBuilder &builder,
+                            mlir::OperationState &result, TypeRange resultTypes,
+                            ValueRange numThreads) {
+  result.addOperands(numThreads);
+
+  Region *bodyRegion = result.addRegion();
+  {
+    OpBuilder::InsertionGuard g(builder);
+    builder.createBlock(bodyRegion);
+  }
+  Block &bodyBlock = bodyRegion->front();
+  bodyBlock.addArguments(
+      SmallVector<Type>(numThreads.size(), builder.getIndexType()),
+      SmallVector<Location>(numThreads.size(), result.location));
+  ForeachThreadOp::ensureTerminator(*bodyRegion, builder, result.location);
+  result.addTypes(resultTypes);
+}
+
+// Builder that takes a bodyBuilder lambda, result types are inferred from
+// the terminator.
+void ForeachThreadOp::build(
+    mlir::OpBuilder &builder, mlir::OperationState &result,
+    ValueRange numThreads,
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
+  result.addOperands(numThreads);
+
+  Region *bodyRegion = result.addRegion();
+  bodyRegion->push_back(new Block);
+  Block &bodyBlock = bodyRegion->front();
+  bodyBlock.addArguments(
+      SmallVector<Type>(numThreads.size(), builder.getIndexType()),
+      SmallVector<Location>(numThreads.size(), result.location));
+
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(&bodyBlock);
+  bodyBuilder(builder, result.location, bodyBlock.getArgument(0));
+  auto terminator =
+      llvm::cast<PerformConcurrentlyOp>(bodyBlock.getTerminator());
+  result.addTypes(terminator.yieldedTypes());
+}
+
+// The ensureTerminator method generated by SingleBlockImplicitTerminator is
+// unaware of the fact that our terminator also needs a region to be
+// well-formed. We override it here to ensure that we do the right thing.
+void ForeachThreadOp::ensureTerminator(Region &region, OpBuilder &builder,
+                                       Location loc) {
+  OpTrait::SingleBlockImplicitTerminator<PerformConcurrentlyOp>::Impl<
+      ForeachThreadOp>::ensureTerminator(region, builder, loc);
+  auto terminator =
+      llvm::dyn_cast<PerformConcurrentlyOp>(region.front().getTerminator());
+  if (terminator.getRegion().empty())
+    builder.createBlock(&terminator.getRegion());
+}
+
+PerformConcurrentlyOp ForeachThreadOp::getTerminator() {
+  return cast<PerformConcurrentlyOp>(getBody()->getTerminator());
+}
+
+//===----------------------------------------------------------------------===//
+// ParallelInsertSliceOp
+//===----------------------------------------------------------------------===//
+
+// Build a ParallelInsertSliceOp with mixed static and dynamic entries.
+void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
+                                  Value source, Value dest,
+                                  ArrayRef<OpFoldResult> offsets,
+                                  ArrayRef<OpFoldResult> sizes,
+                                  ArrayRef<OpFoldResult> strides,
+                                  ArrayRef<NamedAttribute> attrs) {
+  SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
+  SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
+  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets,
+                             ShapedType::kDynamicStrideOrOffset);
+  dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes,
+                             ShapedType::kDynamicSize);
+  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides,
+                             ShapedType::kDynamicStrideOrOffset);
+  build(b, result, {}, source, dest, dynamicOffsets, dynamicSizes,
+        dynamicStrides, b.getI64ArrayAttr(staticOffsets),
+        b.getI64ArrayAttr(staticSizes), b.getI64ArrayAttr(staticStrides));
+  result.addAttributes(attrs);
+}
+
+// Build a ParallelInsertSliceOp with dynamic entries.
+void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
+                                  Value source, Value dest, ValueRange offsets,
+                                  ValueRange sizes, ValueRange strides,
+                                  ArrayRef<NamedAttribute> attrs) {
+  SmallVector<OpFoldResult> offsetValues = llvm::to_vector<4>(
+      llvm::map_range(offsets, [](Value v) -> OpFoldResult { return v; }));
+  SmallVector<OpFoldResult> sizeValues = llvm::to_vector<4>(
+      llvm::map_range(sizes, [](Value v) -> OpFoldResult { return v; }));
+  SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
+      llvm::map_range(strides, [](Value v) -> OpFoldResult { return v; }));
+  build(b, result, source, dest, offsetValues, sizeValues, strideValues);
+}
+
+//===----------------------------------------------------------------------===//
+// PerformConcurrentlyOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult PerformConcurrentlyOp::verify() {
+  // TODO: PerformConcurrentlyOpInterface.
+  for (const Operation &op : getRegion().front().getOperations())
+    if (!isa<ParallelInsertSliceOp>(op))
+      return emitOpError(
+          "expected only scf.foreach_thread.parallel_insert_slice ops");
+  return success();
+}
+
+void PerformConcurrentlyOp::print(OpAsmPrinter &p) {
+  p << " ";
+  p.printRegion(getRegion(),
+                /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/false);
+  p.printOptionalAttrDict(getOperation()->getAttrs());
+}
+
+ParseResult PerformConcurrentlyOp::parse(OpAsmParser &parser,
+                                         OperationState &result) {
+  auto &builder = parser.getBuilder();
+
+  SmallVector<OpAsmParser::Argument, 8> regionOperands;
+  std::unique_ptr<Region> region = std::make_unique<Region>();
+  if (parser.parseRegion(*region, regionOperands))
+    return failure();
+
+  if (region->empty())
+    OpBuilder(builder.getContext()).createBlock(region.get());
+  result.addRegion(std::move(region));
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+  return success();
+}
+
+SmallVector<Type> PerformConcurrentlyOp::yieldedTypes() {
+  return llvm::to_vector<4>(
+      llvm::map_range(this->yieldingOps(), [](Operation &op) {
+        auto insertSliceOp = dyn_cast<ParallelInsertSliceOp>(&op);
+        return insertSliceOp ? insertSliceOp.yieldedType() : Type();
+      }));
+}
+
+llvm::iterator_range<Block::iterator> PerformConcurrentlyOp::yieldingOps() {
+  return getRegion().front().getOperations();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1972,9 +2217,8 @@ LogicalResult ParallelOp::verify() {
 ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
   // Parse an opening `(` followed by induction variables followed by `)`
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> ivs;
-  if (parser.parseRegionArgumentList(ivs, /*requiredOperandCount=*/-1,
-                                     OpAsmParser::Delimiter::Paren))
+  SmallVector<OpAsmParser::Argument, 4> ivs;
+  if (parser.parseArgumentList(ivs, OpAsmParser::Delimiter::Paren))
     return failure();
 
   // Parse loop bounds.
@@ -2003,8 +2247,7 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse init values.
   SmallVector<OpAsmParser::UnresolvedOperand, 4> initVals;
   if (succeeded(parser.parseOptionalKeyword("init"))) {
-    if (parser.parseOperandList(initVals, /*requiredOperandCount=*/-1,
-                                OpAsmParser::Delimiter::Paren))
+    if (parser.parseOperandList(initVals, OpAsmParser::Delimiter::Paren))
       return failure();
   }
 
@@ -2014,8 +2257,9 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Now parse the body.
   Region *body = result.addRegion();
-  SmallVector<Type, 4> types(ivs.size(), builder.getIndexType());
-  if (parser.parseRegion(*body, ivs, types))
+  for (auto &iv : ivs)
+    iv.type = builder.getIndexType();
+  if (parser.parseRegion(*body, ivs))
     return failure();
 
   // Set `operand_segment_sizes` attribute.
@@ -2027,15 +2271,13 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
                                 static_cast<int32_t>(initVals.size())}));
 
   // Parse attributes.
-  if (parser.parseOptionalAttrDict(result.attributes))
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.resolveOperands(initVals, result.types, parser.getNameLoc(),
+                             result.operands))
     return failure();
 
-  if (!initVals.empty())
-    parser.resolveOperands(initVals, result.types, parser.getNameLoc(),
-                           result.operands);
   // Add a terminator if none was parsed.
   ForOp::ensureTerminator(*body, builder, result.location);
-
   return success();
 }
 
@@ -2368,7 +2610,8 @@ void WhileOp::getSuccessorRegions(Optional<unsigned> index,
 /// assignment-list ::= assignment | assignment `,` assignment-list
 /// assignment ::= ssa-value `=` ssa-value
 ParseResult scf::WhileOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> regionArgs, operands;
+  SmallVector<OpAsmParser::Argument, 4> regionArgs;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> operands;
   Region *before = result.addRegion();
   Region *after = result.addRegion();
 
@@ -2397,10 +2640,13 @@ ParseResult scf::WhileOp::parse(OpAsmParser &parser, OperationState &result) {
                                     result.operands)))
     return failure();
 
-  return failure(
-      parser.parseRegion(*before, regionArgs, functionType.getInputs()) ||
-      parser.parseKeyword("do") || parser.parseRegion(*after) ||
-      parser.parseOptionalAttrDictWithKeyword(result.attributes));
+  // Propagate the types into the region arguments.
+  for (size_t i = 0, e = regionArgs.size(); i != e; ++i)
+    regionArgs[i].type = functionType.getInput(i);
+
+  return failure(parser.parseRegion(*before, regionArgs) ||
+                 parser.parseKeyword("do") || parser.parseRegion(*after) ||
+                 parser.parseOptionalAttrDictWithKeyword(result.attributes));
 }
 
 /// Prints a `while` op.

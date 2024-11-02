@@ -1,4 +1,3 @@
-# XFAIL: system-aix
 ## Show that the archive library does not emit an error or add any symbols to
 ## the archive symbol table, when it encounters an unknown file type, but still
 ## adds the file to the archive.

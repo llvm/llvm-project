@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-nvidia-cuda | %ptxas-verify %}
 
 ; // Bitcode int this test case is reduced version of compiled code below:
 ;__device__ inline void res(float x, float y, float *res) { *res = x + y; }
@@ -35,7 +36,7 @@
 ; CHECK: .loc [[DEBUG_INFO_CU]] 7 9
 ; CHECK: setp.ge.s32     %p{{.+}}, %r{{.+}}, %r{{.+}};
 ; CHECK: .loc [[DEBUG_INFO_CU]] 7 7
-; CHECK: @%p{{.+}} bra   [[BB:.+]];
+; CHECK: @%p{{.+}} bra   [[BB:\$L__.+]];
 ; CHECK: ld.param.f32    %f{{.+}}, [{{.+}}];
 ; CHECK: ld.param.u64    %rd{{.+}}, [{{.+}}];
 ; CHECK: cvta.to.global.u64      %rd{{.+}}, %rd{{.+}};
@@ -100,7 +101,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-DAG: .file {{[0-9]+}} "{{.*}}/usr/include{{/|\\\\}}stdlib-bsearch.h"
 ; CHECK-DAG: .file {{[0-9]+}} "{{.*}}clang/include{{/|\\\\}}stddef.h"
 ; CHECK-DAG: .file {{[0-9]+}} "{{.*}}/usr/local/cuda/include{{/|\\\\}}math_functions.hpp"
-; CHECK_DAG: .file {{[0-9]+}} "{{.*}}clang/include{{/|\\\\}}__clang_cuda_cmath.h"
+; CHECK-DAG: .file {{[0-9]+}} "{{.*}}clang/include{{/|\\\\}}__clang_cuda_cmath.h"
 ; CHECK-DAG: .file {{[0-9]+}} "{{.*}}/usr/local/cuda/include{{/|\\\\}}device_functions.hpp"
 ; CHECK-DAG: .file [[DEBUG_INFO_CU]] "{{.*}}debug-info.cu"
 ; CHECK-DAG: .file [[BUILTUIN_VARS_H]] "{{.*}}clang/include{{/|\\\\}}__clang_cuda_builtin_vars.h"
@@ -742,8 +743,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT:.b8 114
 ; CHECK-NEXT:.b8 121
 ; CHECK-NEXT:.b8 0
-; CHECK-NEXT:.b64 Lfunc_begin0                       // DW_AT_low_pc
-; CHECK-NEXT:.b64 Lfunc_end0                         // DW_AT_high_pc
+; CHECK-NEXT:.b64 $L__func_begin0                    // DW_AT_low_pc
+; CHECK-NEXT:.b64 $L__func_end0                      // DW_AT_high_pc
 ; CHECK-NEXT:.b8 2                                   // Abbrev [2] 0x41:0x588 DW_TAG_namespace
 ; CHECK-NEXT:.b8 115                                 // DW_AT_name
 ; CHECK-NEXT:.b8 116
@@ -8307,8 +8308,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT:.b32 3345                               // DW_AT_type
 ; CHECK-NEXT:.b8 0                                   // End Of Children Mark
 ; CHECK-NEXT:.b8 40                                  // Abbrev [40] 0x2671:0xbf DW_TAG_subprogram
-; CHECK-NEXT:.b64 Lfunc_begin0                       // DW_AT_low_pc
-; CHECK-NEXT:.b64 Lfunc_end0                         // DW_AT_high_pc
+; CHECK-NEXT:.b64 $L__func_begin0                    // DW_AT_low_pc
+; CHECK-NEXT:.b64 $L__func_end0                      // DW_AT_high_pc
 ; CHECK-NEXT:.b8 1                                   // DW_AT_frame_base
 ; CHECK-NEXT:.b8 156
 ; CHECK-NEXT:.b8 95                                  // DW_AT_MIPS_linkage_name
@@ -8367,29 +8368,29 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT:.b32 2332                               // DW_AT_type
 ; CHECK-NEXT:.b8 42                                  // Abbrev [42] 0x26c9:0x18 DW_TAG_inlined_subroutine
 ; CHECK-NEXT:.b32 8432                               // DW_AT_abstract_origin
-; CHECK-NEXT:.b64 Ltmp0                              // DW_AT_low_pc
-; CHECK-NEXT:.b64 Ltmp1                              // DW_AT_high_pc
+; CHECK-NEXT:.b64 $L__tmp0                           // DW_AT_low_pc
+; CHECK-NEXT:.b64 $L__tmp1                           // DW_AT_high_pc
 ; CHECK-NEXT:.b8 12                                  // DW_AT_call_file
 ; CHECK-NEXT:.b8 6                                   // DW_AT_call_line
 ; CHECK-NEXT:.b8 11                                  // DW_AT_call_column
 ; CHECK-NEXT:.b8 42                                  // Abbrev [42] 0x26e1:0x18 DW_TAG_inlined_subroutine
 ; CHECK-NEXT:.b32 9191                               // DW_AT_abstract_origin
-; CHECK-NEXT:.b64 Ltmp1                              // DW_AT_low_pc
-; CHECK-NEXT:.b64 Ltmp2                              // DW_AT_high_pc
+; CHECK-NEXT:.b64 $L__tmp1                           // DW_AT_low_pc
+; CHECK-NEXT:.b64 $L__tmp2                           // DW_AT_high_pc
 ; CHECK-NEXT:.b8 12                                  // DW_AT_call_file
 ; CHECK-NEXT:.b8 6                                   // DW_AT_call_line
 ; CHECK-NEXT:.b8 24                                  // DW_AT_call_column
 ; CHECK-NEXT:.b8 42                                  // Abbrev [42] 0x26f9:0x18 DW_TAG_inlined_subroutine
 ; CHECK-NEXT:.b32 9785                               // DW_AT_abstract_origin
-; CHECK-NEXT:.b64 Ltmp2                              // DW_AT_low_pc
-; CHECK-NEXT:.b64 Ltmp3                              // DW_AT_high_pc
+; CHECK-NEXT:.b64 $L__tmp2                           // DW_AT_low_pc
+; CHECK-NEXT:.b64 $L__tmp3                           // DW_AT_high_pc
 ; CHECK-NEXT:.b8 12                                  // DW_AT_call_file
 ; CHECK-NEXT:.b8 6                                   // DW_AT_call_line
 ; CHECK-NEXT:.b8 37                                  // DW_AT_call_column
 ; CHECK-NEXT:.b8 43                                  // Abbrev [43] 0x2711:0x1e DW_TAG_inlined_subroutine
 ; CHECK-NEXT:.b32 9791                               // DW_AT_abstract_origin
-; CHECK-NEXT:.b64 Ltmp9                              // DW_AT_low_pc
-; CHECK-NEXT:.b64 Ltmp10                             // DW_AT_high_pc
+; CHECK-NEXT:.b64 $L__tmp9                           // DW_AT_low_pc
+; CHECK-NEXT:.b64 $L__tmp10                          // DW_AT_high_pc
 ; CHECK-NEXT:.b8 12                                  // DW_AT_call_file
 ; CHECK-NEXT:.b8 8                                   // DW_AT_call_line
 ; CHECK-NEXT:.b8 5                                   // DW_AT_call_column

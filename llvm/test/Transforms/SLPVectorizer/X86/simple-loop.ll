@@ -71,38 +71,28 @@ define i32 @unrollable(i32* %in, i32* %out, i64 %n) nounwind ssp uwtable {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[DOT_CRIT_EDGE:%.*]], label [[DOTLR_PH:%.*]]
 ; CHECK:       .lr.ph:
-; CHECK-NEXT:    [[I_019:%.*]] = phi i64 [ [[TMP26:%.*]], [[DOTLR_PH]] ], [ 0, [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[I_019:%.*]] = phi i64 [ [[TMP18:%.*]], [[DOTLR_PH]] ], [ 0, [[TMP0:%.*]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[I_019]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, i32* [[IN:%.*]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[IN]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = or i64 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[IN]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP9]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = or i64 [[TMP2]], 3
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[IN]], i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP12]], align 4
-; CHECK-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP4]], 7
-; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[TMP14]], 7
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i32 [[TMP7]], 7
-; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP16]], 14
-; CHECK-NEXT:    [[TMP18:%.*]] = mul i32 [[TMP10]], 7
-; CHECK-NEXT:    [[TMP19:%.*]] = add i32 [[TMP18]], 21
-; CHECK-NEXT:    [[TMP20:%.*]] = mul i32 [[TMP13]], 7
-; CHECK-NEXT:    [[TMP21:%.*]] = add i32 [[TMP20]], 28
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, i32* [[OUT:%.*]], i64 [[TMP2]]
-; CHECK-NEXT:    store i32 [[TMP15]], i32* [[TMP22]], align 4
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 [[TMP5]]
-; CHECK-NEXT:    store i32 [[TMP17]], i32* [[TMP23]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[IN]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[OUT:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP3]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x i32>, <2 x i32>* [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = mul <2 x i32> [[TMP8]], <i32 7, i32 7>
+; CHECK-NEXT:    [[TMP10:%.*]] = add <2 x i32> [[TMP9]], <i32 7, i32 14>
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32* [[TMP6]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast i32* [[TMP5]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP14:%.*]] = load <2 x i32>, <2 x i32>* [[TMP13]], align 4
+; CHECK-NEXT:    [[TMP15:%.*]] = mul <2 x i32> [[TMP14]], <i32 7, i32 7>
+; CHECK-NEXT:    [[TMP16:%.*]] = add <2 x i32> [[TMP15]], <i32 21, i32 28>
+; CHECK-NEXT:    store <2 x i32> [[TMP10]], <2 x i32>* [[TMP11]], align 4
 ; CHECK-NEXT:    [[BARRIER:%.*]] = call i32 @goo(i32 0)
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 [[TMP8]]
-; CHECK-NEXT:    store i32 [[TMP19]], i32* [[TMP24]], align 4
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 [[TMP11]]
-; CHECK-NEXT:    store i32 [[TMP21]], i32* [[TMP25]], align 4
-; CHECK-NEXT:    [[TMP26]] = add i64 [[I_019]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[TMP26]], [[N]]
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast i32* [[TMP12]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP16]], <2 x i32>* [[TMP17]], align 4
+; CHECK-NEXT:    [[TMP18]] = add i64 [[I_019]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[TMP18]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[DOT_CRIT_EDGE]], label [[DOTLR_PH]]
 ; CHECK:       ._crit_edge:
 ; CHECK-NEXT:    ret i32 undef

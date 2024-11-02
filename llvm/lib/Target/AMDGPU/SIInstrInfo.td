@@ -17,7 +17,8 @@ class GCNPredicateControl : PredicateControl {
 }
 
 // Except for the NONE field, this must be kept in sync with the
-// SIEncodingFamily enum in AMDGPUInstrInfo.cpp
+// SIEncodingFamily enum in SIInstrInfo.cpp and the columns of the
+// getMCOpcodeGen table.
 def SIEncodingFamily {
   int NONE = -1;
   int SI = 0;
@@ -30,6 +31,7 @@ def SIEncodingFamily {
   int SDWA10 = 7;
   int GFX90A = 8;
   int GFX940 = 9;
+  int GFX11 = 10;
 }
 
 //===----------------------------------------------------------------------===//
@@ -466,50 +468,36 @@ def load_local_m0 : PatFrag<(ops node:$ptr), (load_glue node:$ptr)> {
   let IsNonExtLoad = 1;
 }
 
-let MemoryVT = i8 in {
 def extloadi8_local_m0 : PatFrag<(ops node:$ptr), (extloadi8_glue node:$ptr)>;
 def sextloadi8_local_m0 : PatFrag<(ops node:$ptr), (sextloadi8_glue node:$ptr)>;
 def zextloadi8_local_m0 : PatFrag<(ops node:$ptr), (zextloadi8_glue node:$ptr)>;
-}
 
-let MemoryVT = i16 in {
 def extloadi16_local_m0 : PatFrag<(ops node:$ptr), (extloadi16_glue node:$ptr)>;
 def sextloadi16_local_m0 : PatFrag<(ops node:$ptr), (sextloadi16_glue node:$ptr)>;
 def zextloadi16_local_m0 : PatFrag<(ops node:$ptr), (zextloadi16_glue node:$ptr)>;
-}
+} // End IsLoad = 1, , AddressSpaces = LoadAddress_local.AddrSpaces
 
 def load_align8_local_m0 : PatFrag<(ops node:$ptr),
-                                   (load_local_m0 node:$ptr)>, Aligned<8> {
+                                   (load_local_m0 node:$ptr)> {
   let IsLoad = 1;
-  let IsNonExtLoad = 1;
+  int MinAlignment = 8;
 }
 
 def load_align16_local_m0 : PatFrag<(ops node:$ptr),
-                                   (load_local_m0 node:$ptr)>, Aligned<16> {
+                                   (load_local_m0 node:$ptr)> {
   let IsLoad = 1;
-  let IsNonExtLoad = 1;
+  int MinAlignment = 16;
 }
-
-} // End IsLoad = 1
 
 let IsAtomic = 1, AddressSpaces = LoadAddress_local.AddrSpaces in {
 def atomic_load_8_local_m0 : PatFrag<(ops node:$ptr),
-                                      (atomic_load_8_glue node:$ptr)> {
-  let MemoryVT = i8;
-}
+                                      (atomic_load_8_glue node:$ptr)>;
 def atomic_load_16_local_m0 : PatFrag<(ops node:$ptr),
-                                      (atomic_load_16_glue node:$ptr)> {
-  let MemoryVT = i16;
-}
+                                      (atomic_load_16_glue node:$ptr)>;
 def atomic_load_32_local_m0 : PatFrag<(ops node:$ptr),
-                                      (atomic_load_32_glue node:$ptr)> {
-  let MemoryVT = i32;
-}
+                                      (atomic_load_32_glue node:$ptr)>;
 def atomic_load_64_local_m0 : PatFrag<(ops node:$ptr),
-                                       (atomic_load_64_glue node:$ptr)> {
-  let MemoryVT = i64;
-}
-
+                                       (atomic_load_64_glue node:$ptr)>;
 } // End let AddressSpaces = LoadAddress_local.AddrSpaces
 
 
@@ -543,46 +531,35 @@ def truncstorei8_glue : PatFrag<(ops node:$val, node:$ptr),
                            (truncstore_glue node:$val, node:$ptr)> {
   let IsStore = 1;
   let MemoryVT = i8;
+  let IsTruncStore = 1;
 }
 
 def truncstorei16_glue : PatFrag<(ops node:$val, node:$ptr),
                            (truncstore_glue node:$val, node:$ptr)> {
   let IsStore = 1;
   let MemoryVT = i16;
+  let IsTruncStore = 1;
 }
 
 let IsStore = 1, AddressSpaces = StoreAddress_local.AddrSpaces in {
 def store_local_m0 : PatFrag<(ops node:$val, node:$ptr),
-                             (store_glue node:$val, node:$ptr)> {
-  let IsStore = 1;
-  let IsTruncStore = 0;
-}
-
+                             (store_glue node:$val, node:$ptr)>;
 def truncstorei8_local_m0 : PatFrag<(ops node:$val, node:$ptr),
-                                    (unindexedstore_glue node:$val, node:$ptr)> {
-  let IsStore = 1;
-  let MemoryVT = i8;
-}
-
+                                    (truncstorei8_glue node:$val, node:$ptr)>;
 def truncstorei16_local_m0 : PatFrag<(ops node:$val, node:$ptr),
-                                    (unindexedstore_glue node:$val, node:$ptr)> {
-  let IsStore = 1;
-  let MemoryVT = i16;
-}
+                                    (truncstorei16_glue node:$val, node:$ptr)>;
 }
 
 def store_align8_local_m0 : PatFrag <(ops node:$value, node:$ptr),
                                      (store_local_m0 node:$value, node:$ptr)>,
                             Aligned<8> {
   let IsStore = 1;
-  let IsTruncStore = 0;
 }
 
 def store_align16_local_m0 : PatFrag <(ops node:$value, node:$ptr),
                                      (store_local_m0 node:$value, node:$ptr)>,
                             Aligned<16> {
   let IsStore = 1;
-  let IsTruncStore = 0;
 }
 
 let PredicateCode = [{return cast<MemSDNode>(N)->getAlignment() < 4;}],
@@ -613,33 +590,44 @@ def store_align_less_than_4_local_m0 : PatFrag <(ops node:$value, node:$ptr),
 }
 }
 
-let AddressSpaces = StoreAddress_local.AddrSpaces in {
-
-def atomic_store_local_8_m0 : PatFrag <
-  (ops node:$value, node:$ptr),
-  (AMDGPUatomic_st_glue node:$value, node:$ptr)> {
+def atomic_store_8_glue : PatFrag <
+  (ops node:$ptr, node:$value),
+  (AMDGPUatomic_st_glue node:$ptr, node:$value)> {
   let IsAtomic = 1;
   let MemoryVT = i8;
 }
-def atomic_store_local_16_m0 : PatFrag <
-  (ops node:$value, node:$ptr),
-  (AMDGPUatomic_st_glue node:$value, node:$ptr)> {
+
+def atomic_store_16_glue : PatFrag <
+  (ops node:$ptr, node:$value),
+  (AMDGPUatomic_st_glue node:$ptr, node:$value)> {
   let IsAtomic = 1;
   let MemoryVT = i16;
 }
-def atomic_store_local_32_m0 : PatFrag <
-  (ops node:$value, node:$ptr),
-  (AMDGPUatomic_st_glue node:$value, node:$ptr)> {
+
+def atomic_store_32_glue : PatFrag <
+  (ops node:$ptr, node:$value),
+  (AMDGPUatomic_st_glue node:$ptr, node:$value)> {
   let IsAtomic = 1;
   let MemoryVT = i32;
 }
-def atomic_store_local_64_m0 : PatFrag <
-  (ops node:$value, node:$ptr),
-  (AMDGPUatomic_st_glue node:$value, node:$ptr)> {
+
+def atomic_store_64_glue : PatFrag <
+  (ops node:$ptr, node:$value),
+  (AMDGPUatomic_st_glue node:$ptr, node:$value)> {
   let IsAtomic = 1;
   let MemoryVT = i64;
 }
-} // End let AddressSpaces = StoreAddress_local.AddrSpaces
+
+let IsAtomic = 1, AddressSpaces = StoreAddress_local.AddrSpaces in {
+def atomic_store_8_local_m0 : PatFrag<(ops node:$ptr, node:$val),
+                                       (atomic_store_8_glue node:$ptr, node:$val)>;
+def atomic_store_16_local_m0 : PatFrag<(ops node:$ptr, node:$val),
+                                       (atomic_store_16_glue node:$ptr, node:$val)>;
+def atomic_store_32_local_m0 : PatFrag<(ops node:$ptr, node:$val),
+                                       (atomic_store_32_glue node:$ptr, node:$val)>;
+def atomic_store_64_local_m0 : PatFrag<(ops node:$ptr, node:$val),
+                                       (atomic_store_64_glue node:$ptr, node:$val)>;
+} // End let IsAtomic = 1, AddressSpaces = StoreAddress_local.AddrSpaces
 
 
 def si_setcc_uniform : PatFrag <
@@ -1050,6 +1038,12 @@ def DepCtrMatchClass : AsmOperandClass {
   let ParserMethod = "parseDepCtrOps";
 }
 
+def SDelayMatchClass : AsmOperandClass {
+  let Name = "SDelayAlu";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseSDelayAluOps";
+}
+
 def VReg32OrOffClass : AsmOperandClass {
   let Name = "VReg32OrOff";
   let ParserMethod = "parseVReg32OrOff";
@@ -1079,6 +1073,11 @@ def WAIT_FLAG : Operand <i32> {
 def DepCtrImm : Operand <i32> {
   let ParserMatchClass = DepCtrMatchClass;
   let PrintMethod = "printDepCtr";
+}
+
+def DELAY_FLAG : Operand <i32> {
+  let ParserMatchClass = SDelayMatchClass;
+  let PrintMethod = "printDelayFlag";
 }
 } // End OperandType = "OPERAND_IMMEDIATE"
 
@@ -1292,6 +1291,9 @@ def exp_tgt : NamedOperandU32<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
 
 }
 
+def wait_vdst : NamedOperandU8<"WaitVDST", NamedMatchClass<"WaitVDST">>;
+def wait_exp : NamedOperandU8<"WaitEXP", NamedMatchClass<"WaitEXP">>;
+
 } // End OperandType = "OPERAND_IMMEDIATE"
 
 class KImmMatchClass<int size> : AsmOperandClass {
@@ -1474,6 +1476,9 @@ def VOP3OpSel  : ComplexPattern<untyped, 2, "SelectVOP3OpSel">;
 def VOP3OpSelMods  : ComplexPattern<untyped, 2, "SelectVOP3OpSelMods">;
 
 def VOP3PMadMixMods  : ComplexPattern<untyped, 2, "SelectVOP3PMadMixMods">;
+
+def VINTERPMods  : ComplexPattern<untyped, 2, "SelectVINTERPMods">;
+def VINTERPModsHi  : ComplexPattern<untyped, 2, "SelectVINTERPModsHi">;
 
 //===----------------------------------------------------------------------===//
 // SI assembler operands
@@ -2517,10 +2522,11 @@ multiclass VINTRP_m <bits <2> op, dag outs, dag ins, string asm,
 
   def _vi : VINTRP_Real_vi <op, NAME, outs, ins, asm>;
 
-  let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
+  let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
     def _gfx10 : VINTRP_Real_si<op, NAME, outs, ins, asm, SIEncodingFamily.GFX10>;
-  } // End AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10"
+  } // End AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10"
 }
+
 //===----------------------------------------------------------------------===//
 // Vector instruction mappings
 //===----------------------------------------------------------------------===//
@@ -2593,6 +2599,7 @@ def getMCOpcodeGen : InstrMapping {
   let RowFields = ["PseudoInstr"];
   let ColFields = ["Subtarget"];
   let KeyCol = [!cast<string>(SIEncodingFamily.NONE)];
+  // These columns must be kept in sync with the SIEncodingFamily enumeration.
   let ValueCols = [[!cast<string>(SIEncodingFamily.SI)],
                    [!cast<string>(SIEncodingFamily.VI)],
                    [!cast<string>(SIEncodingFamily.SDWA)],
@@ -2606,7 +2613,8 @@ def getMCOpcodeGen : InstrMapping {
                    [!cast<string>(SIEncodingFamily.GFX10)],
                    [!cast<string>(SIEncodingFamily.SDWA10)],
                    [!cast<string>(SIEncodingFamily.GFX90A)],
-                   [!cast<string>(SIEncodingFamily.GFX940)]];
+                   [!cast<string>(SIEncodingFamily.GFX940)],
+                   [!cast<string>(SIEncodingFamily.GFX11)]];
 }
 
 // Get equivalent SOPK instruction.
@@ -2632,14 +2640,6 @@ def getIfAddr64Inst : InstrMapping {
   let ColFields = ["IsAddr64"];
   let KeyCol = ["1"];
   let ValueCols = [["1"]];
-}
-
-def getMUBUFNoLdsInst : InstrMapping {
-  let FilterClass = "MUBUFLdsTable";
-  let RowFields = ["OpName"];
-  let ColFields = ["IsLds"];
-  let KeyCol = ["1"];
-  let ValueCols = [["0"]];
 }
 
 // Maps an atomic opcode to its returnless version.

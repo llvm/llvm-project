@@ -36,7 +36,7 @@ private:
   template <typename LiteralType>
   bool checkBoundMatch(const ast_matchers::MatchFinder::MatchResult &Result);
 
-  const std::vector<std::string> NewSuffixes;
+  const std::vector<StringRef> NewSuffixes;
   const bool IgnoreMacros;
 };
 

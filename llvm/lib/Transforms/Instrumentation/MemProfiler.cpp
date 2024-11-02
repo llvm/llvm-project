@@ -32,6 +32,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -408,6 +409,25 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
   if (Access.Addr->isSwiftError())
     return None;
 
+  // Peel off GEPs and BitCasts.
+  auto *Addr = Access.Addr->stripInBoundsOffsets();
+
+  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Addr)) {
+    // Do not instrument PGO counter updates.
+    if (GV->hasSection()) {
+      StringRef SectionName = GV->getSection();
+      // Check if the global is in the PGO counters section.
+      auto OF = Triple(I->getModule()->getTargetTriple()).getObjectFormat();
+      if (SectionName.endswith(
+              getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false)))
+        return None;
+    }
+
+    // Do not instrument accesses to LLVM internal variables.
+    if (GV->getName().startswith("__llvm"))
+      return None;
+  }
+
   const DataLayout &DL = I->getModule()->getDataLayout();
   Access.TypeSize = DL.getTypeStoreSizeInBits(Access.AccessTy);
   return Access;
@@ -613,8 +633,6 @@ bool MemProfiler::instrumentFunction(Function &F) {
 
   initializeCallbacks(*F.getParent());
 
-  FunctionModified |= insertDynamicShadowAtFunctionEntry(F);
-
   SmallVector<Instruction *, 16> ToInstrument;
 
   // Fill the set of memory operations to instrument.
@@ -624,6 +642,15 @@ bool MemProfiler::instrumentFunction(Function &F) {
         ToInstrument.push_back(&Inst);
     }
   }
+
+  if (ToInstrument.empty()) {
+    LLVM_DEBUG(dbgs() << "MEMPROF done instrumenting: " << FunctionModified
+                      << " " << F << "\n");
+
+    return FunctionModified;
+  }
+
+  FunctionModified |= insertDynamicShadowAtFunctionEntry(F);
 
   int NumInstrumented = 0;
   for (auto *Inst : ToInstrument) {

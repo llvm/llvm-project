@@ -99,8 +99,8 @@ def ParallelOp : OpenMP_Op<"parallel", [
     of the parallel region.
   }];
 
-  let arguments = (ins Optional<AnyType>:$if_expr_var,
-             Optional<AnyType>:$num_threads_var,
+  let arguments = (ins Optional<I1>:$if_expr_var,
+             Optional<IntLikeType>:$num_threads_var,
              Variadic<AnyType>:$allocate_vars,
              Variadic<AnyType>:$allocators_vars,
              Variadic<OpenMP_PointerLikeType>:$reduction_vars,
@@ -813,6 +813,20 @@ def AtomicReadOp : OpenMP_Op<"atomic.read", [AllTypesMatch<["x", "v"]>]> {
     `:` type($x) attr-dict
   }];
   let hasVerifier = 1;
+  let extraClassDeclaration = [{
+    /// The number of variable operands.
+    unsigned getNumVariableOperands() {
+      assert(x() && "expected 'x' operand");
+      assert(v() && "expected 'v' operand");
+      return 2;
+    }
+
+    /// The i-th variable operand passed.
+    Value getVariableOperand(unsigned i) {
+      assert(i < 2 && "invalid index position for an operand");
+      return i == 0 ? x() : v();
+    }
+  }];
 }
 
 def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
@@ -847,6 +861,20 @@ def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
     attr-dict
   }];
   let hasVerifier = 1;
+  let extraClassDeclaration = [{
+    /// The number of variable operands.
+    unsigned getNumVariableOperands() {
+      assert(address() && "expected address operand");
+      assert(value() && "expected value operand");
+      return 2;
+    }
+
+    /// The i-th variable operand passed.
+    Value getVariableOperand(unsigned i) {
+      assert(i < 2 && "invalid index position for an operand");
+      return i == 0 ? address() : value();
+    }
+  }];
 }
 
 def AtomicUpdateOp : OpenMP_Op<"atomic.update",
@@ -946,6 +974,7 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
     $region attr-dict
   }];
   let hasRegionVerifier = 1;
+  let hasVerifier = 1;
   let extraClassDeclaration = [{
     /// Returns the first operation in atomic capture region
     Operation* getFirstOp();
@@ -995,6 +1024,53 @@ def ThreadprivateOp : OpenMP_Op<"threadprivate"> {
   let assemblyFormat = [{
     $sym_addr `:` type($sym_addr) `->` type($tls_addr) attr-dict
   }];
+  let extraClassDeclaration = [{
+    /// The number of variable operands.
+    unsigned getNumVariableOperands() {
+      assert(sym_addr() && "expected one variable operand");
+      return 1;
+    }
+
+    /// The i-th variable operand passed.
+    Value getVariableOperand(unsigned i) {
+      assert(i == 0 && "invalid index position for an operand");
+      return sym_addr();
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// 2.18.1 Cancel Construct
+//===----------------------------------------------------------------------===//
+def CancelOp : OpenMP_Op<"cancel"> {
+  let summary = "cancel directive";
+  let description = [{
+    The cancel construct activates cancellation of the innermost enclosing
+    region of the type specified.
+  }];
+  let arguments = (ins CancellationConstructTypeAttr:$cancellation_construct_type_val,
+                       Optional<I1>:$if_expr);
+  let assemblyFormat = [{ `cancellation_construct_type` `(`
+                          custom<ClauseAttr>($cancellation_construct_type_val) `)`
+                          ( `if` `(` $if_expr^ `)` )? attr-dict}];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// 2.18.2 Cancellation Point Construct
+//===----------------------------------------------------------------------===//
+def CancellationPointOp : OpenMP_Op<"cancellationpoint"> {
+  let summary = "cancellation point directive";
+  let description = [{
+    The cancellation point construct introduces a user-defined cancellation
+    point at which implicit or explicit tasks check if cancellation of the
+    innermost enclosing region of the type specified has been activated.
+  }];
+  let arguments = (ins CancellationConstructTypeAttr:$cancellation_construct_type_val);
+  let assemblyFormat = [{ `cancellation_construct_type` `(`
+                           custom<ClauseAttr>($cancellation_construct_type_val) `)`
+                           attr-dict}];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

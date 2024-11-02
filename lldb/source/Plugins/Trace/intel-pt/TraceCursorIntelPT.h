@@ -30,6 +30,8 @@ public:
 
   llvm::Optional<uint64_t> GetCounter(lldb::TraceCounter counter_type) override;
 
+  lldb::TraceEvents GetEvents() override;
+
   lldb::TraceInstructionControlFlowType
   GetInstructionControlFlowType() override;
 

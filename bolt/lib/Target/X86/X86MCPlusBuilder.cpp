@@ -13,6 +13,7 @@
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86InstrRelaxTables.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
+#include "X86MCSymbolizer.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -80,6 +81,11 @@ public:
   X86MCPlusBuilder(const MCInstrAnalysis *Analysis, const MCInstrInfo *Info,
                    const MCRegisterInfo *RegInfo)
       : MCPlusBuilder(Analysis, Info, RegInfo) {}
+
+  std::unique_ptr<MCSymbolizer>
+  createTargetSymbolizer(BinaryFunction &Function) const override {
+    return std::make_unique<X86MCSymbolizer>(Function);
+  }
 
   bool isBranch(const MCInst &Inst) const override {
     return Analysis->isBranch(Inst) && !isTailCall(Inst);
@@ -985,8 +991,7 @@ public:
     case X86::MOVZX32rm8:
     case X86::MOVZX32rr8:
     case X86::TEST8ri:
-      for (int I = 0, E = MCPlus::getNumPrimeOperands(Inst); I != E; ++I) {
-        const MCOperand &Operand = Inst.getOperand(I);
+      for (const MCOperand &Operand : MCPlus::primeOperands(Inst)) {
         if (!Operand.isReg())
           continue;
         if (isUpper8BitReg(Operand.getReg()))
@@ -1245,9 +1250,10 @@ public:
     return false;
   }
 
-  bool evaluateSimple(const MCInst &Inst, int64_t &Output,
-                      std::pair<MCPhysReg, int64_t> Input1,
-                      std::pair<MCPhysReg, int64_t> Input2) const override {
+  bool
+  evaluateStackOffsetExpr(const MCInst &Inst, int64_t &Output,
+                          std::pair<MCPhysReg, int64_t> Input1,
+                          std::pair<MCPhysReg, int64_t> Input2) const override {
 
     auto getOperandVal = [&](MCPhysReg Reg) -> ErrorOr<int64_t> {
       if (Reg == Input1.first)
@@ -1261,16 +1267,6 @@ public:
     default:
       return false;
 
-    case X86::AND64ri32:
-    case X86::AND64ri8:
-      if (!Inst.getOperand(2).isImm())
-        return false;
-      if (ErrorOr<int64_t> InputVal =
-              getOperandVal(Inst.getOperand(1).getReg()))
-        Output = *InputVal & Inst.getOperand(2).getImm();
-      else
-        return false;
-      break;
     case X86::SUB64ri32:
     case X86::SUB64ri8:
       if (!Inst.getOperand(2).isImm())
@@ -1745,9 +1741,8 @@ public:
 
   bool convertCallToIndirectCall(MCInst &Inst, const MCSymbol *TargetLocation,
                                  MCContext *Ctx) override {
-    bool IsTailCall = isTailCall(Inst);
     assert((Inst.getOpcode() == X86::CALL64pcrel32 ||
-            (Inst.getOpcode() == X86::JMP_4 && IsTailCall)) &&
+            (Inst.getOpcode() == X86::JMP_4 && isTailCall(Inst))) &&
            "64-bit direct (tail) call instruction expected");
     const auto NewOpcode =
         (Inst.getOpcode() == X86::CALL64pcrel32) ? X86::CALL64m : X86::JMP32m;

@@ -26,7 +26,7 @@ define void @foo(%class.e* %this, %struct.a* %p, i32 %add7) {
 ; CHECK:       sw.epilog:
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i32> [ undef, [[ENTRY:%.*]] ], [ [[TMP5]], [[SW_BB]] ]
 ; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 1, i32 1, i32 0, i32 0>
-; CHECK-NEXT:    [[TMP7:%.*]] = sub <4 x i32> poison, [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub <4 x i32> undef, [[SHUFFLE]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP7]], [[SHUFFLE1]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[B]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP8]], <4 x i32>* [[TMP9]], align 4

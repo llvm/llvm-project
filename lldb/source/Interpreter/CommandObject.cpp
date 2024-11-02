@@ -132,7 +132,7 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
       } else {
         // No error string, output the usage information into result
         options->GenerateOptionUsage(
-            result.GetErrorStream(), this,
+            result.GetErrorStream(), *this,
             GetCommandInterpreter().GetDebugger().GetTerminalWidth());
       }
     }
@@ -326,7 +326,7 @@ bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
   if (!found_word && search_options && GetOptions() != nullptr) {
     StreamString usage_help;
     GetOptions()->GenerateOptionUsage(
-        usage_help, this,
+        usage_help, *this,
         GetCommandInterpreter().GetDebugger().GetTerminalWidth());
     if (!usage_help.Empty()) {
       llvm::StringRef usage_text = usage_help.GetString();
@@ -863,7 +863,7 @@ void CommandObject::GenerateHelpText(Stream &output_strm) {
   Options *options = GetOptions();
   if (options != nullptr) {
     options->GenerateOptionUsage(
-        output_strm, this,
+        output_strm, *this,
         GetCommandInterpreter().GetDebugger().GetTerminalWidth());
   }
   llvm::StringRef long_help = GetHelpLong();

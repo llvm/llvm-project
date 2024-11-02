@@ -745,6 +745,13 @@ def G_FCANONICALIZE : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Generic opcode equivalent to the llvm.is_fpclass intrinsic.
+def G_IS_FPCLASS: GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src, unknown:$test, unknown:$fpsem);
+  let hasSideEffects = false;
+}
+
 // FMINNUM/FMAXNUM - Perform floating-point minimum or maximum on two
 // values.
 //

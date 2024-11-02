@@ -30,6 +30,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDGPUMemoryUtils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -163,9 +164,10 @@ public:
   }
 
   bool runOnModule(Module &M) override {
+    CallGraph CG = CallGraph(M);
     UsedList = getUsedList(M);
     bool Changed = superAlignLDSGlobals(M);
-    Changed |= processUsedLDS(M);
+    Changed |= processUsedLDS(CG, M);
 
     for (Function &F : M.functions()) {
       if (F.isDeclaration())
@@ -174,7 +176,7 @@ public:
       // Only lower compute kernels' LDS.
       if (!AMDGPU::isKernel(F.getCallingConv()))
         continue;
-      Changed |= processUsedLDS(M, &F);
+      Changed |= processUsedLDS(CG, M, &F);
     }
 
     UsedList.clear();
@@ -226,7 +228,7 @@ private:
     return Changed;
   }
 
-  bool processUsedLDS(Module &M, Function *F = nullptr) {
+  bool processUsedLDS(CallGraph const &CG, Module &M, Function *F = nullptr) {
     LLVMContext &Ctx = M.getContext();
     const DataLayout &DL = M.getDataLayout();
 
@@ -374,7 +376,20 @@ private:
       IRBuilder<> Builder(Ctx);
       for (Function &Func : M.functions()) {
         if (!Func.isDeclaration() && AMDGPU::isKernelCC(&Func)) {
-          markUsedByKernel(Builder, &Func, SGV);
+          const CallGraphNode *N = CG[&Func];
+          const bool CalleesRequireModuleLDS = N->size() > 0;
+
+          if (CalleesRequireModuleLDS) {
+            // If a function this kernel might call requires module LDS,
+            // annotate the kernel to let later passes know it will allocate
+            // this structure, even if not apparent from the IR.
+            markUsedByKernel(Builder, &Func, SGV);
+          } else {
+            // However if we are certain this kernel cannot call a function that
+            // requires module LDS, annotate the kernel so the backend can elide
+            // the allocation without repeating callgraph walks.
+            Func.addFnAttr("amdgpu-elide-module-lds");
+          }
         }
       }
     }

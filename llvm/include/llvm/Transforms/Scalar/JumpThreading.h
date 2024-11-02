@@ -21,7 +21,6 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/IR/ValueHandle.h"
-#include <memory>
 #include <utility>
 
 namespace llvm {
@@ -93,10 +92,9 @@ class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
 
   unsigned BBDupThreshold;
   unsigned DefaultBBDupThreshold;
-  bool InsertFreezeWhenUnfoldingSelect;
 
 public:
-  JumpThreadingPass(bool InsertFreezeWhenUnfoldingSelect = false, int T = -1);
+  JumpThreadingPass(int T = -1);
 
   // Glue for old PM.
   bool runImpl(Function &F, TargetLibraryInfo *TLI, TargetTransformInfo *TTI,

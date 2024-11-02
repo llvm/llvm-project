@@ -488,6 +488,27 @@ let Uses = [ICC], usesCustomInserter = 1 in {
             [(set f128:$dst, (SPselecticc f128:$T, f128:$F, imm:$Cond))]>;
 }
 
+let Uses = [ICC], usesCustomInserter = 1 in {
+  def SELECT_CC_Int_XCC
+   : Pseudo<(outs IntRegs:$dst), (ins IntRegs:$T, IntRegs:$F, i32imm:$Cond),
+            "; SELECT_CC_Int_XCC PSEUDO!",
+            [(set i32:$dst, (SPselectxcc i32:$T, i32:$F, imm:$Cond))]>;
+  def SELECT_CC_FP_XCC
+   : Pseudo<(outs FPRegs:$dst), (ins FPRegs:$T, FPRegs:$F, i32imm:$Cond),
+            "; SELECT_CC_FP_XCC PSEUDO!",
+            [(set f32:$dst, (SPselectxcc f32:$T, f32:$F, imm:$Cond))]>;
+
+  def SELECT_CC_DFP_XCC
+   : Pseudo<(outs DFPRegs:$dst), (ins DFPRegs:$T, DFPRegs:$F, i32imm:$Cond),
+            "; SELECT_CC_DFP_XCC PSEUDO!",
+            [(set f64:$dst, (SPselectxcc f64:$T, f64:$F, imm:$Cond))]>;
+
+  def SELECT_CC_QFP_XCC
+   : Pseudo<(outs QFPRegs:$dst), (ins QFPRegs:$T, QFPRegs:$F, i32imm:$Cond),
+            "; SELECT_CC_QFP_XCC PSEUDO!",
+            [(set f128:$dst, (SPselectxcc f128:$T, f128:$F, imm:$Cond))]>;
+}
+
 let usesCustomInserter = 1, Uses = [FCC0] in {
 
   def SELECT_CC_Int_FCC
@@ -1444,12 +1465,12 @@ let Predicates = [HasV9], Constraints = "$f = $rd" in {
                (ins DFPRegs:$rs2, DFPRegs:$f, CCOp:$cond),
                "fmovd$cond %icc, $rs2, $rd",
                [(set f64:$rd, (SPselecticc f64:$rs2, f64:$f, imm:$cond))]>;
+    let Predicates = [HasV9, HasHardQuad] in
     def FMOVQ_ICC
       : F4_3<0b110101, 0b000011, (outs QFPRegs:$rd),
                (ins QFPRegs:$rs2, QFPRegs:$f, CCOp:$cond),
                "fmovq$cond %icc, $rs2, $rd",
-               [(set f128:$rd, (SPselecticc f128:$rs2, f128:$f, imm:$cond))]>,
-               Requires<[HasHardQuad]>;
+               [(set f128:$rd, (SPselecticc f128:$rs2, f128:$f, imm:$cond))]>;
   }
 
   let Uses = [FCC0], intcc = 0, opf_cc = 0b00 in {
@@ -1463,12 +1484,12 @@ let Predicates = [HasV9], Constraints = "$f = $rd" in {
              (ins DFPRegs:$rs2, DFPRegs:$f, CCOp:$cond),
              "fmovd$cond %fcc0, $rs2, $rd",
              [(set f64:$rd, (SPselectfcc f64:$rs2, f64:$f, imm:$cond))]>;
+    let Predicates = [HasV9, HasHardQuad] in
     def FMOVQ_FCC
       : F4_3<0b110101, 0b000011, (outs QFPRegs:$rd),
              (ins QFPRegs:$rs2, QFPRegs:$f, CCOp:$cond),
              "fmovq$cond %fcc0, $rs2, $rd",
-             [(set f128:$rd, (SPselectfcc f128:$rs2, f128:$f, imm:$cond))]>,
-             Requires<[HasHardQuad]>;
+             [(set f128:$rd, (SPselectfcc f128:$rs2, f128:$f, imm:$cond))]>;
   }
 
 }
@@ -1478,28 +1499,28 @@ let Predicates = [HasV9] in {
   def FMOVD : F3_3u<2, 0b110100, 0b000000010,
                    (outs DFPRegs:$rd), (ins DFPRegs:$rs2),
                    "fmovd $rs2, $rd", []>;
+  let Predicates = [HasV9, HasHardQuad] in
   def FMOVQ : F3_3u<2, 0b110100, 0b000000011,
                    (outs QFPRegs:$rd), (ins QFPRegs:$rs2),
-                   "fmovq $rs2, $rd", []>,
-                   Requires<[HasHardQuad]>;
+                   "fmovq $rs2, $rd", []>;
   def FNEGD : F3_3u<2, 0b110100, 0b000000110,
                    (outs DFPRegs:$rd), (ins DFPRegs:$rs2),
                    "fnegd $rs2, $rd",
                    [(set f64:$rd, (fneg f64:$rs2))]>;
+  let Predicates = [HasV9, HasHardQuad] in
   def FNEGQ : F3_3u<2, 0b110100, 0b000000111,
                    (outs QFPRegs:$rd), (ins QFPRegs:$rs2),
                    "fnegq $rs2, $rd",
-                   [(set f128:$rd, (fneg f128:$rs2))]>,
-                   Requires<[HasHardQuad]>;
+                   [(set f128:$rd, (fneg f128:$rs2))]>;
   def FABSD : F3_3u<2, 0b110100, 0b000001010,
                    (outs DFPRegs:$rd), (ins DFPRegs:$rs2),
                    "fabsd $rs2, $rd",
                    [(set f64:$rd, (fabs f64:$rs2))]>;
+  let Predicates = [HasV9, HasHardQuad] in
   def FABSQ : F3_3u<2, 0b110100, 0b000001011,
                    (outs QFPRegs:$rd), (ins QFPRegs:$rs2),
                    "fabsq $rs2, $rd",
-                   [(set f128:$rd, (fabs f128:$rs2))]>,
-                   Requires<[HasHardQuad]>;
+                   [(set f128:$rd, (fabs f128:$rs2))]>;
 }
 
 // Floating-point compare instruction with %fcc0-%fcc3.
@@ -1546,11 +1567,11 @@ let Predicates = [HasV9] in {
       : F4_3<0b110101, 0b000010, (outs DFPRegs:$rd),
              (ins FCCRegs:$opf_cc, DFPRegs:$rs2, DFPRegs:$f, CCOp:$cond),
              "fmovd$cond $opf_cc, $rs2, $rd", []>;
+    let Predicates = [HasV9, HasHardQuad] in
     def V9FMOVQ_FCC
       : F4_3<0b110101, 0b000011, (outs QFPRegs:$rd),
              (ins FCCRegs:$opf_cc, QFPRegs:$rs2, QFPRegs:$f, CCOp:$cond),
-             "fmovq$cond $opf_cc, $rs2, $rd", []>,
-             Requires<[HasHardQuad]>;
+             "fmovq$cond $opf_cc, $rs2, $rd", []>;
   } // Constraints = "$f = $rd", ...
 } // let Predicates = [hasV9]
 

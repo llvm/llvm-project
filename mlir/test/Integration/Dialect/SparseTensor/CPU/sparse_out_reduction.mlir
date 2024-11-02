@@ -23,14 +23,14 @@
 }
 
 module {
-  func @redsum(%arga: tensor<?x?x?xi32, #SparseTensor>,
+  func.func @redsum(%arga: tensor<?x?x?xi32, #SparseTensor>,
                %argb: tensor<?x?x?xi32, #SparseTensor>)
 	           -> tensor<?x?xi32, #SparseMatrix> {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %d0 = tensor.dim %arga, %c0 : tensor<?x?x?xi32, #SparseTensor>
     %d1 = tensor.dim %arga, %c1 : tensor<?x?x?xi32, #SparseTensor>
-    %xinit = sparse_tensor.init [%d0, %d1] : tensor<?x?xi32, #SparseMatrix>
+    %xinit = bufferization.alloc_tensor(%d0, %d1): tensor<?x?xi32, #SparseMatrix>
     %0 = linalg.generic #redsum
       ins(%arga, %argb: tensor<?x?x?xi32, #SparseTensor>,
                         tensor<?x?x?xi32, #SparseTensor>)
@@ -44,7 +44,7 @@ module {
   }
 
   // Driver method to call and verify tensor kernel.
-  func @entry() {
+  func.func @entry() {
     %c0 = arith.constant 0 : index
     %i0 = arith.constant -1 : i32
 

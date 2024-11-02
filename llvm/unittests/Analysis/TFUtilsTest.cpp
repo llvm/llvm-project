@@ -10,6 +10,8 @@
 #include "google/protobuf/struct.pb.h"
 #include "tensorflow/core/example/example.pb.h"
 #include "tensorflow/core/example/feature.pb.h"
+#include "llvm/Analysis/ModelUnderTrainingRunner.h"
+#include "llvm/Analysis/TensorSpec.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -102,48 +104,34 @@ TEST(TFUtilsTest, EvalError) {
   EXPECT_FALSE(Evaluator.isValid());
 }
 
-TEST(TFUtilsTest, JSONParsing) {
-  auto Value = json::parse(
-      R"({"name": "tensor_name", 
-        "port": 2, 
-        "type": "int32_t", 
-        "shape":[1,4]
-        })");
-  EXPECT_TRUE(!!Value);
-  LLVMContext Ctx;
-  Optional<TensorSpec> Spec = getTensorSpecFromJSON(Ctx, *Value);
-  EXPECT_TRUE(Spec.hasValue());
-  EXPECT_EQ(*Spec, TensorSpec::createSpec<int32_t>("tensor_name", {1, 4}, 2));
-}
+TEST(TFUtilsTest, UnsupportedFeature) {
+  const static int64_t KnownSize = 214;
+  std::vector<TensorSpec> InputSpecs{
+      TensorSpec::createSpec<int32_t>("serving_default_input_1",
+                                      {1, KnownSize}),
+      TensorSpec::createSpec<float>("this_feature_does_not_exist", {2, 5})};
 
-TEST(TFUtilsTest, JSONParsingInvalidTensorType) {
-  auto Value = json::parse(
-      R"(
-        {"name": "tensor_name", 
-        "port": 2, 
-        "type": "no such type", 
-        "shape":[1,4]
-        }
-      )");
-  EXPECT_TRUE(!!Value);
   LLVMContext Ctx;
-  auto Spec = getTensorSpecFromJSON(Ctx, *Value);
-  EXPECT_FALSE(Spec.hasValue());
-}
+  auto Evaluator = ModelUnderTrainingRunner::createAndEnsureValid(
+      Ctx, getModelPath(), "StatefulPartitionedCall", InputSpecs,
+      {LoggedFeatureSpec{
+          TensorSpec::createSpec<float>("StatefulPartitionedCall", {1}),
+          None}});
+  int32_t *V = Evaluator->getTensor<int32_t>(0);
+  // Fill it up with 1s, we know the output.
+  for (auto I = 0; I < KnownSize; ++I)
+    V[I] = 1;
 
-TEST(TFUtilsTest, TensorSpecSizesAndTypes) {
-  auto Spec1D = TensorSpec::createSpec<int16_t>("Hi1", {1});
-  auto Spec2D = TensorSpec::createSpec<int16_t>("Hi2", {1, 1});
-  auto Spec1DLarge = TensorSpec::createSpec<float>("Hi3", {10});
-  auto Spec3DLarge = TensorSpec::createSpec<float>("Hi3", {2, 4, 10});
-  EXPECT_TRUE(Spec1D.isElementType<int16_t>());
-  EXPECT_FALSE(Spec3DLarge.isElementType<double>());
-  EXPECT_EQ(Spec1D.getElementCount(), 1U);
-  EXPECT_EQ(Spec2D.getElementCount(), 1U);
-  EXPECT_EQ(Spec1DLarge.getElementCount(), 10U);
-  EXPECT_EQ(Spec3DLarge.getElementCount(), 80U);
-  EXPECT_EQ(Spec3DLarge.getElementByteSize(), sizeof(float));
-  EXPECT_EQ(Spec1D.getElementByteSize(), sizeof(int16_t));
+  float *F = Evaluator->getTensor<float>(1);
+  for (auto I = 0; I < 2 * 5; ++I)
+    F[I] = 3.14 + I;
+  float Ret = Evaluator->evaluate<float>();
+  EXPECT_EQ(static_cast<int64_t>(Ret), 80);
+  // The input vector should be unchanged
+  for (auto I = 0; I < KnownSize; ++I)
+    EXPECT_EQ(V[I], 1);
+  for (auto I = 0; I < 2 * 5; ++I)
+    EXPECT_FLOAT_EQ(F[I], 3.14 + I);
 }
 
 #define PROTO_CHECKER(FNAME, TYPE, INDEX, EXP)                                 \

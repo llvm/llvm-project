@@ -86,7 +86,7 @@ public:
                                 const OptionDefinition &option_def,
                                 uint32_t output_max_columns);
 
-  void GenerateOptionUsage(Stream &strm, CommandObject *cmd,
+  void GenerateOptionUsage(Stream &strm, CommandObject &cmd,
                            uint32_t screen_width);
 
   bool SupportsLongOption(const char *long_option);

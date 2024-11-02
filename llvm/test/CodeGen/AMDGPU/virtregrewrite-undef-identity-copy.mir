@@ -33,7 +33,7 @@ body:             |
     ; CHECK: renamable $sgpr6_sgpr7 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @foo + 4, target-flags(amdgpu-rel32-hi) @foo + 4, implicit-def dead $scc
     ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr95, implicit-def $scc
     ; CHECK: $sgpr4 = COPY $sgpr95
-    ; CHECK: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr6_sgpr7, @foo, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4
+    ; CHECK: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr6_sgpr7, @foo, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4
     ; CHECK: ADJCALLSTACKDOWN 0, 4, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr95
     ; CHECK: renamable $sgpr6_sgpr7 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @bar + 4, target-flags(amdgpu-rel32-hi) @bar + 4, implicit-def dead $scc
     ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr95
@@ -42,7 +42,7 @@ body:             |
     ; CHECK: $vgpr1 = COPY renamable $vgpr41
     ; CHECK: $vgpr2 = COPY killed renamable $vgpr42
     ; CHECK: $vgpr3 = KILL undef renamable $vgpr3
-    ; CHECK: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr6_sgpr7, @bar, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4, implicit $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit-def $vgpr0
+    ; CHECK: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr6_sgpr7, @bar, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4, implicit $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit-def $vgpr0
     ; CHECK: ADJCALLSTACKDOWN 0, 4, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr95
     ; CHECK: FLAT_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
     ; CHECK: S_ENDPGM 0
@@ -50,7 +50,7 @@ body:             |
     %2:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @foo + 4, target-flags(amdgpu-rel32-hi) @foo + 4, implicit-def dead $scc
     ADJCALLSTACKUP 0, 0, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr95, implicit-def $scc
     $sgpr4 = COPY $sgpr95
-    dead $sgpr30_sgpr31 = SI_CALL %2, @foo, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4
+    dead $sgpr30_sgpr31 = SI_CALL %2, @foo, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4
     ADJCALLSTACKDOWN 0, 4, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr95
     %3:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @bar + 4, target-flags(amdgpu-rel32-hi) @bar + 4, implicit-def dead $scc
     ADJCALLSTACKUP 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr95
@@ -59,7 +59,7 @@ body:             |
     $vgpr1 = COPY %0.sub1
     $vgpr2 = COPY %0.sub2
     $vgpr3 = COPY undef %4:vgpr_32
-    dead $sgpr30_sgpr31 = SI_CALL %3, @bar, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4, implicit $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit-def $vgpr0
+    dead $sgpr30_sgpr31 = SI_CALL %3, @bar, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4, implicit $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit-def $vgpr0
     %5:vgpr_32 = COPY $vgpr0
     ADJCALLSTACKDOWN 0, 4, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr95
     FLAT_STORE_DWORD undef %6:vreg_64, %5, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)

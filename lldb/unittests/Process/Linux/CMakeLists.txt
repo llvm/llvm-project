@@ -1,6 +1,6 @@
 add_lldb_unittest(ProcessLinuxTests
-  IntelPTCollectorTests.cpp
   PerfTests.cpp
+  ProcfsTests.cpp
 
   LINK_LIBS
     lldbPluginProcessLinux

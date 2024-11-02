@@ -2,9 +2,8 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
 ; SI-LABEL: {{^}}s_movk_i32_k0:
-; SI-DAG: s_mov_b32 [[LO_S_IMM:s[0-9]+]], 0xffff{{$}}
 ; SI-DAG: buffer_load_dwordx2 v[[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]],
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[LO_S_IMM]], v[[LO_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0xffff, v[[LO_VREG]]
 ; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 1, v[[HI_VREG]]
 ; SI: s_endpgm
 define amdgpu_kernel void @s_movk_i32_k0(i64 addrspace(1)* %out, i64 addrspace(1)* %a, i64 addrspace(1)* %b) {
@@ -16,9 +15,8 @@ define amdgpu_kernel void @s_movk_i32_k0(i64 addrspace(1)* %out, i64 addrspace(1
 }
 
 ; SI-LABEL: {{^}}s_movk_i32_k1:
-; SI-DAG: s_movk_i32 [[LO_S_IMM:s[0-9]+]], 0x7fff{{$}}
 ; SI-DAG: buffer_load_dwordx2 v[[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]],
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[LO_S_IMM]], v[[LO_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x7fff, v[[LO_VREG]]
 ; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 1, v[[HI_VREG]]
 ; SI: s_endpgm
 define amdgpu_kernel void @s_movk_i32_k1(i64 addrspace(1)* %out, i64 addrspace(1)* %a, i64 addrspace(1)* %b) {
@@ -32,7 +30,7 @@ define amdgpu_kernel void @s_movk_i32_k1(i64 addrspace(1)* %out, i64 addrspace(1
 ; SI-LABEL: {{^}}s_movk_i32_k2:
 ; SI-DAG: s_movk_i32 [[LO_S_IMM:s[0-9]+]], 0x7fff{{$}}
 ; SI-DAG: buffer_load_dwordx2 v[[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]],
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[LO_S_IMM]], v[[LO_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x7fff, v[[LO_VREG]]
 ; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 64, v[[HI_VREG]]
 ; SI: s_endpgm
 define amdgpu_kernel void @s_movk_i32_k2(i64 addrspace(1)* %out, i64 addrspace(1)* %a, i64 addrspace(1)* %b) {
@@ -44,9 +42,8 @@ define amdgpu_kernel void @s_movk_i32_k2(i64 addrspace(1)* %out, i64 addrspace(1
 }
 
 ; SI-LABEL: {{^}}s_movk_i32_k3:
-; SI-DAG: s_mov_b32 [[LO_S_IMM:s[0-9]+]], 0x8000{{$}}
 ; SI-DAG: buffer_load_dwordx2 v[[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]],
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[LO_S_IMM]], v[[LO_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x8000, v[[LO_VREG]]
 ; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 1, v[[HI_VREG]]
 ; SI: s_endpgm
 define amdgpu_kernel void @s_movk_i32_k3(i64 addrspace(1)* %out, i64 addrspace(1)* %a, i64 addrspace(1)* %b) {
@@ -58,9 +55,8 @@ define amdgpu_kernel void @s_movk_i32_k3(i64 addrspace(1)* %out, i64 addrspace(1
 }
 
 ; SI-LABEL: {{^}}s_movk_i32_k4:
-; SI-DAG: s_mov_b32 [[LO_S_IMM:s[0-9]+]], 0x20000{{$}}
 ; SI-DAG: buffer_load_dwordx2 v[[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]],
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[LO_S_IMM]], v[[LO_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x20000, v[[LO_VREG]]
 ; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 1, v[[HI_VREG]]
 ; SI: s_endpgm
 define amdgpu_kernel void @s_movk_i32_k4(i64 addrspace(1)* %out, i64 addrspace(1)* %a, i64 addrspace(1)* %b) {
@@ -72,11 +68,9 @@ define amdgpu_kernel void @s_movk_i32_k4(i64 addrspace(1)* %out, i64 addrspace(1
 }
 
 ; SI-LABEL: {{^}}s_movk_i32_k5:
-; SI-DAG: s_movk_i32 [[LO_S_IMM:s[0-9]+]], 0xffef{{$}}
-; SI-DAG: s_mov_b32 [[HI_S_IMM:s[0-9]+]], 0xff00ffff{{$}}
 ; SI-DAG: buffer_load_dwordx2 v[[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]],
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[LO_S_IMM]], v[[LO_VREG]]
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[HI_S_IMM]], v[[HI_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0xffffffef, v[[LO_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0xff00ffff, v[[HI_VREG]]
 ; SI: s_endpgm
 define amdgpu_kernel void @s_movk_i32_k5(i64 addrspace(1)* %out, i64 addrspace(1)* %a, i64 addrspace(1)* %b) {
   %loada = load i64, i64 addrspace(1)* %a, align 4
@@ -87,9 +81,8 @@ define amdgpu_kernel void @s_movk_i32_k5(i64 addrspace(1)* %out, i64 addrspace(1
 }
 
 ; SI-LABEL: {{^}}s_movk_i32_k6:
-; SI-DAG: s_movk_i32 [[LO_S_IMM:s[0-9]+]], 0x41{{$}}
 ; SI-DAG: buffer_load_dwordx2 v[[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]],
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[LO_S_IMM]], v[[LO_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x41, v[[LO_VREG]]
 ; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 63, v[[HI_VREG]]
 ; SI: s_endpgm
 define amdgpu_kernel void @s_movk_i32_k6(i64 addrspace(1)* %out, i64 addrspace(1)* %a, i64 addrspace(1)* %b) {
@@ -101,11 +94,9 @@ define amdgpu_kernel void @s_movk_i32_k6(i64 addrspace(1)* %out, i64 addrspace(1
 }
 
 ; SI-LABEL: {{^}}s_movk_i32_k7:
-; SI-DAG: s_movk_i32 [[LO_S_IMM:s[0-9]+]], 0x2000{{$}}
-; SI-DAG: s_movk_i32 [[HI_S_IMM:s[0-9]+]], 0x4000{{$}}
 ; SI-DAG: buffer_load_dwordx2 v[[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]],
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[LO_S_IMM]], v[[LO_VREG]]
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[HI_S_IMM]], v[[HI_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x2000, v[[LO_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x4000, v[[HI_VREG]]
 ; SI: s_endpgm
 define amdgpu_kernel void @s_movk_i32_k7(i64 addrspace(1)* %out, i64 addrspace(1)* %a, i64 addrspace(1)* %b) {
   %loada = load i64, i64 addrspace(1)* %a, align 4
@@ -116,11 +107,9 @@ define amdgpu_kernel void @s_movk_i32_k7(i64 addrspace(1)* %out, i64 addrspace(1
 }
 
 ; SI-LABEL: {{^}}s_movk_i32_k8:
-; SI-DAG: s_movk_i32 [[LO_S_IMM:s[0-9]+]], 0x8000{{$}}
-; SI-DAG: s_mov_b32 [[HI_S_IMM:s[0-9]+]], 0x11111111{{$}}
 ; SI-DAG: buffer_load_dwordx2 v[[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]],
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[LO_S_IMM]], v[[LO_VREG]]
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[HI_S_IMM]], v[[HI_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0xffff8000, v[[LO_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x11111111, v[[HI_VREG]]
 ; SI: s_endpgm
 define amdgpu_kernel void @s_movk_i32_k8(i64 addrspace(1)* %out, i64 addrspace(1)* %a, i64 addrspace(1)* %b) {
   %loada = load i64, i64 addrspace(1)* %a, align 4
@@ -131,11 +120,9 @@ define amdgpu_kernel void @s_movk_i32_k8(i64 addrspace(1)* %out, i64 addrspace(1
 }
 
 ; SI-LABEL: {{^}}s_movk_i32_k9:
-; SI-DAG: s_movk_i32 [[LO_S_IMM:s[0-9]+]], 0x8001{{$}}
-; SI-DAG: s_mov_b32 [[HI_S_IMM:s[0-9]+]], 0x11111111{{$}}
 ; SI-DAG: buffer_load_dwordx2 v[[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]],
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[LO_S_IMM]], v[[LO_VREG]]
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[HI_S_IMM]], v[[HI_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0xffff8001, v[[LO_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x11111111, v[[HI_VREG]]
 ; SI: s_endpgm
 define amdgpu_kernel void @s_movk_i32_k9(i64 addrspace(1)* %out, i64 addrspace(1)* %a, i64 addrspace(1)* %b) {
   %loada = load i64, i64 addrspace(1)* %a, align 4
@@ -146,11 +133,9 @@ define amdgpu_kernel void @s_movk_i32_k9(i64 addrspace(1)* %out, i64 addrspace(1
 }
 
 ; SI-LABEL: {{^}}s_movk_i32_k10:
-; SI-DAG: s_movk_i32 [[LO_S_IMM:s[0-9]+]], 0x8888{{$}}
-; SI-DAG: s_mov_b32 [[HI_S_IMM:s[0-9]+]], 0x11111111{{$}}
 ; SI-DAG: buffer_load_dwordx2 v[[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]],
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[LO_S_IMM]], v[[LO_VREG]]
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[HI_S_IMM]], v[[HI_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0xffff8888, v[[LO_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x11111111, v[[HI_VREG]]
 ; SI: s_endpgm
 define amdgpu_kernel void @s_movk_i32_k10(i64 addrspace(1)* %out, i64 addrspace(1)* %a, i64 addrspace(1)* %b) {
   %loada = load i64, i64 addrspace(1)* %a, align 4
@@ -161,11 +146,9 @@ define amdgpu_kernel void @s_movk_i32_k10(i64 addrspace(1)* %out, i64 addrspace(
 }
 
 ; SI-LABEL: {{^}}s_movk_i32_k11:
-; SI-DAG: s_movk_i32 [[LO_S_IMM:s[0-9]+]], 0x8fff{{$}}
-; SI-DAG: s_mov_b32 [[HI_S_IMM:s[0-9]+]], 0x11111111{{$}}
 ; SI-DAG: buffer_load_dwordx2 v[[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]],
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[LO_S_IMM]], v[[LO_VREG]]
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[HI_S_IMM]], v[[HI_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0xffff8fff, v[[LO_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x11111111, v[[HI_VREG]]
 ; SI: s_endpgm
 define amdgpu_kernel void @s_movk_i32_k11(i64 addrspace(1)* %out, i64 addrspace(1)* %a, i64 addrspace(1)* %b) {
   %loada = load i64, i64 addrspace(1)* %a, align 4
@@ -176,11 +159,9 @@ define amdgpu_kernel void @s_movk_i32_k11(i64 addrspace(1)* %out, i64 addrspace(
 }
 
 ; SI-LABEL: {{^}}s_movk_i32_k12:
-; SI-DAG: s_mov_b32 [[LO_S_IMM:s[0-9]+]], 0xffff7001{{$}}
-; SI-DAG: s_mov_b32 [[HI_S_IMM:s[0-9]+]], 0x11111111{{$}}
 ; SI-DAG: buffer_load_dwordx2 v[[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]],
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[LO_S_IMM]], v[[LO_VREG]]
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[HI_S_IMM]], v[[HI_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0xffff7001, v[[LO_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x11111111, v[[HI_VREG]]
 ; SI: s_endpgm
 define amdgpu_kernel void @s_movk_i32_k12(i64 addrspace(1)* %out, i64 addrspace(1)* %a, i64 addrspace(1)* %b) {
   %loada = load i64, i64 addrspace(1)* %a, align 4

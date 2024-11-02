@@ -96,7 +96,7 @@ public:
 
   /// Overload to create or fold a zero result operation.
   template <typename OpTy, typename... Args>
-  typename std::enable_if<OpTy::template hasTrait<OpTrait::ZeroResult>(),
+  typename std::enable_if<OpTy::template hasTrait<OpTrait::ZeroResults>(),
                           OpTy>::type
   create(OpBuilder &builder, Location location, Args &&... args) {
     auto op = builder.create<OpTy>(location, std::forward<Args>(args)...);

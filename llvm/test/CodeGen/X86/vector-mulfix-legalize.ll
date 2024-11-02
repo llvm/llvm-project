@@ -58,10 +58,10 @@ define <4 x i16> @smulfixsat(<4 x i16> %a) {
 ; CHECK-NEXT:    cmovll %ecx, %edx
 ; CHECK-NEXT:    pextrw $1, %xmm0, %esi
 ; CHECK-NEXT:    movswl %si, %edi
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shrl $16, %eax
-; CHECK-NEXT:    leal (%rdi,%rdi), %esi
-; CHECK-NEXT:    shrdw $15, %ax, %si
+; CHECK-NEXT:    leal (%rdi,%rdi), %eax
+; CHECK-NEXT:    movl %eax, %esi
+; CHECK-NEXT:    shrl $16, %esi
+; CHECK-NEXT:    shldw $1, %ax, %si
 ; CHECK-NEXT:    sarl $15, %edi
 ; CHECK-NEXT:    cmpl $16384, %edi # imm = 0x4000
 ; CHECK-NEXT:    cmovgel %r8d, %esi
@@ -83,10 +83,10 @@ define <4 x i16> @smulfixsat(<4 x i16> %a) {
 ; CHECK-NEXT:    pinsrw $2, %edx, %xmm1
 ; CHECK-NEXT:    pextrw $3, %xmm0, %eax
 ; CHECK-NEXT:    cwtl
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    shrl $14, %edx
-; CHECK-NEXT:    leal (,%rax,4), %esi
-; CHECK-NEXT:    shrdw $15, %dx, %si
+; CHECK-NEXT:    leal (,%rax,4), %edx
+; CHECK-NEXT:    movl %edx, %esi
+; CHECK-NEXT:    shrl $16, %esi
+; CHECK-NEXT:    shldw $1, %dx, %si
 ; CHECK-NEXT:    sarl $14, %eax
 ; CHECK-NEXT:    cmpl $16384, %eax # imm = 0x4000
 ; CHECK-NEXT:    cmovgel %r8d, %esi

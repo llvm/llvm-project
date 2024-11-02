@@ -7,7 +7,7 @@
   iterator_types = []
 }
 
-func @main() -> (tensor<i32>) attributes {} {
+func.func @main() -> (tensor<i32>) attributes {} {
   %c0 = arith.constant 0 : i32
   %0 = tensor.from_elements %c0 : tensor<i32>
   %c10 = arith.constant 10 : i32
@@ -68,7 +68,7 @@ func @main() -> (tensor<i32>) attributes {} {
   iterator_types = []
 }
 
-func @main() -> (tensor<i32>) attributes {} {
+func.func @main() -> (tensor<i32>) attributes {} {
   %c0 = arith.constant 0 : i32
   %0 = tensor.from_elements %c0 : tensor<i32>
   %c10 = arith.constant 10 : i32
@@ -131,7 +131,7 @@ func @main() -> (tensor<i32>) attributes {} {
   iterator_types = []
 }
 
-func @main() -> (tensor<i32>) attributes {} {
+func.func @main() -> (tensor<i32>) attributes {} {
   %c0 = arith.constant 0 : i32
   %0 = tensor.from_elements %c0 : tensor<i32>
   %c10 = arith.constant 10 : i32

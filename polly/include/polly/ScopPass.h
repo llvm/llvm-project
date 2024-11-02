@@ -124,7 +124,7 @@ extern template class OuterAnalysisManagerProxy<FunctionAnalysisManager, Scop,
 namespace polly {
 
 template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
-class OwningInnerAnalysisManagerProxy
+class OwningInnerAnalysisManagerProxy final
     : public InnerAnalysisManagerProxy<AnalysisManagerT, IRUnitT> {
 public:
   OwningInnerAnalysisManagerProxy()
@@ -191,7 +191,7 @@ struct ScopStandardAnalysisResults {
   TargetTransformInfo &TTI;
 };
 
-class SPMUpdater {
+class SPMUpdater final {
 public:
   SPMUpdater(SmallPriorityWorklist<Region *, 4> &Worklist,
              ScopAnalysisManager &SAM)
@@ -212,13 +212,12 @@ private:
   bool InvalidateCurrentScop;
   SmallPriorityWorklist<Region *, 4> &Worklist;
   ScopAnalysisManager &SAM;
-  template <typename ScopPassT> friend class FunctionToScopPassAdaptor;
+  template <typename ScopPassT> friend struct FunctionToScopPassAdaptor;
 };
 
 template <typename ScopPassT>
-class FunctionToScopPassAdaptor
-    : public PassInfoMixin<FunctionToScopPassAdaptor<ScopPassT>> {
-public:
+struct FunctionToScopPassAdaptor final
+    : PassInfoMixin<FunctionToScopPassAdaptor<ScopPassT>> {
   explicit FunctionToScopPassAdaptor(ScopPassT Pass) : Pass(std::move(Pass)) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) {

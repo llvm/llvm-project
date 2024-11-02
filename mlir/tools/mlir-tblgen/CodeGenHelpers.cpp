@@ -234,41 +234,6 @@ void StaticVerifierFunctionEmitter::emitPatternConstraints() {
 //===----------------------------------------------------------------------===//
 // Constraint Uniquing
 
-using RecordDenseMapInfo = llvm::DenseMapInfo<const llvm::Record *>;
-
-Constraint StaticVerifierFunctionEmitter::ConstraintUniquer::getEmptyKey() {
-  return Constraint(RecordDenseMapInfo::getEmptyKey(),
-                    Constraint::CK_Uncategorized);
-}
-
-Constraint StaticVerifierFunctionEmitter::ConstraintUniquer::getTombstoneKey() {
-  return Constraint(RecordDenseMapInfo::getTombstoneKey(),
-                    Constraint::CK_Uncategorized);
-}
-
-unsigned StaticVerifierFunctionEmitter::ConstraintUniquer::getHashValue(
-    Constraint constraint) {
-  if (constraint == getEmptyKey())
-    return RecordDenseMapInfo::getHashValue(RecordDenseMapInfo::getEmptyKey());
-  if (constraint == getTombstoneKey()) {
-    return RecordDenseMapInfo::getHashValue(
-        RecordDenseMapInfo::getTombstoneKey());
-  }
-  return llvm::hash_combine(constraint.getPredicate(), constraint.getSummary());
-}
-
-bool StaticVerifierFunctionEmitter::ConstraintUniquer::isEqual(Constraint lhs,
-                                                               Constraint rhs) {
-  if (lhs == rhs)
-    return true;
-  if (lhs == getEmptyKey() || lhs == getTombstoneKey())
-    return false;
-  if (rhs == getEmptyKey() || rhs == getTombstoneKey())
-    return false;
-  return lhs.getPredicate() == rhs.getPredicate() &&
-         lhs.getSummary() == rhs.getSummary();
-}
-
 /// An attribute constraint that references anything other than itself and the
 /// current op cannot be generically extracted into a function. Most
 /// prohibitive are operands and results, which require calls to

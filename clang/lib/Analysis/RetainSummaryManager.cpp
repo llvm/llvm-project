@@ -398,7 +398,7 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
   } else if (FName.startswith("NSLog")) {
     return getDoNothingSummary();
   } else if (FName.startswith("NS") && FName.contains("Insert")) {
-    // Whitelist NSXXInsertXX, for example NSMapInsertIfAbsent, since they can
+    // Allowlist NSXXInsertXX, for example NSMapInsertIfAbsent, since they can
     // be deallocated by NSMapRemove. (radar://11152419)
     ScratchArgs = AF.add(ScratchArgs, 1, ArgEffect(StopTracking));
     ScratchArgs = AF.add(ScratchArgs, 2, ArgEffect(StopTracking));

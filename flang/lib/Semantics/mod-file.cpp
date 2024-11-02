@@ -911,6 +911,8 @@ static bool VerifyHeader(llvm::ArrayRef<char> content) {
 Scope *ModFileReader::Read(const SourceName &name,
     std::optional<bool> isIntrinsic, Scope *ancestor, bool silent) {
   std::string ancestorName; // empty for module
+  Symbol *notAModule{nullptr};
+  bool fatalError{false};
   if (ancestor) {
     if (auto *scope{ancestor->FindSubmodule(name)}) {
       return scope;
@@ -920,7 +922,14 @@ Scope *ModFileReader::Read(const SourceName &name,
     if (!isIntrinsic.value_or(false)) {
       auto it{context_.globalScope().find(name)};
       if (it != context_.globalScope().end()) {
-        return it->second->scope();
+        Scope *scope{it->second->scope()};
+        if (scope->kind() == Scope::Kind::Module) {
+          return scope;
+        } else {
+          notAModule = scope->symbol();
+          // USE, NON_INTRINSIC global name isn't a module?
+          fatalError = isIntrinsic.has_value();
+        }
       }
     }
     if (isIntrinsic.value_or(true)) {
@@ -935,7 +944,8 @@ Scope *ModFileReader::Read(const SourceName &name,
   options.isModuleFile = true;
   options.features.Enable(common::LanguageFeature::BackslashEscapes);
   options.features.Enable(common::LanguageFeature::OpenMP);
-  if (!isIntrinsic.value_or(false)) {
+  if (!isIntrinsic.value_or(false) && !notAModule) {
+    // Scan non-intrinsic module directories
     options.searchDirectories = context_.searchDirectories();
     // If a directory is in both lists, the intrinsic module directory
     // takes precedence.
@@ -950,14 +960,21 @@ Scope *ModFileReader::Read(const SourceName &name,
     }
   }
   auto path{ModFileName(name, ancestorName, context_.moduleFileSuffix())};
-  const auto *sourceFile{parsing.Prescan(path, options)};
-  if (parsing.messages().AnyFatalError()) {
+  const auto *sourceFile{fatalError ? nullptr : parsing.Prescan(path, options)};
+  if (fatalError || parsing.messages().AnyFatalError()) {
     if (!silent) {
-      for (auto &msg : parsing.messages().messages()) {
-        std::string str{msg.ToString()};
-        Say(name, ancestorName,
-            parser::MessageFixedText{str.c_str(), str.size(), msg.severity()},
-            path);
+      if (notAModule) {
+        // Module is not explicitly INTRINSIC, and there's already a global
+        // symbol of the same name that is not a module.
+        context_.SayWithDecl(
+            *notAModule, name, "'%s' is not a module"_err_en_US, name);
+      } else {
+        for (auto &msg : parsing.messages().messages()) {
+          std::string str{msg.ToString()};
+          Say(name, ancestorName,
+              parser::MessageFixedText{str.c_str(), str.size(), msg.severity()},
+              path);
+        }
       }
     }
     return nullptr;
@@ -970,13 +987,14 @@ Scope *ModFileReader::Read(const SourceName &name,
   }
   llvm::raw_null_ostream NullStream;
   parsing.Parse(NullStream);
-  auto &parseTree{parsing.parseTree()};
+  std::optional<parser::Program> &parsedProgram{parsing.parseTree()};
   if (!parsing.messages().empty() || !parsing.consumedWholeFile() ||
-      !parseTree) {
+      !parsedProgram) {
     Say(name, ancestorName, "Module file is corrupt: %s"_err_en_US,
         sourceFile->path());
     return nullptr;
   }
+  parser::Program &parseTree{context_.SaveParseTree(std::move(*parsedProgram))};
   Scope *parentScope; // the scope this module/submodule goes into
   if (!isIntrinsic.has_value()) {
     for (const auto &dir : context_.intrinsicModuleDirectories()) {
@@ -991,7 +1009,7 @@ Scope *ModFileReader::Read(const SourceName &name,
                                               : context_.globalScope()};
   if (!ancestor) {
     parentScope = &topScope;
-  } else if (std::optional<SourceName> parent{GetSubmoduleParent(*parseTree)}) {
+  } else if (std::optional<SourceName> parent{GetSubmoduleParent(parseTree)}) {
     parentScope = Read(*parent, false /*not intrinsic*/, ancestor, silent);
   } else {
     parentScope = ancestor;
@@ -1000,9 +1018,13 @@ Scope *ModFileReader::Read(const SourceName &name,
   if (!pair.second) {
     return nullptr;
   }
+  // Process declarations from the module file
   Symbol &modSymbol{*pair.first->second};
   modSymbol.set(Symbol::Flag::ModFile);
-  ResolveNames(context_, *parseTree, topScope);
+  bool wasInModuleFile{context_.foldingContext().inModuleFile()};
+  context_.foldingContext().set_inModuleFile(true);
+  ResolveNames(context_, parseTree, topScope);
+  context_.foldingContext().set_inModuleFile(wasInModuleFile);
   CHECK(modSymbol.has<ModuleDetails>());
   CHECK(modSymbol.test(Symbol::Flag::ModFile));
   if (isIntrinsic.value_or(false)) {

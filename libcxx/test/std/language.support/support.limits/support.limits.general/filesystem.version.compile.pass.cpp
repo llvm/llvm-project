@@ -11,7 +11,7 @@
 //
 // clang-format off
 
-// UNSUPPORTED: libcpp-has-no-filesystem-library
+// UNSUPPORTED: no-filesystem
 
 // <filesystem>
 

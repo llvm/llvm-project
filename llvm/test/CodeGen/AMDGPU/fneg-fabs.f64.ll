@@ -69,10 +69,9 @@ define amdgpu_kernel void @fneg_fabs_f64(double addrspace(1)* %out, [8 x i32], d
 }
 
 ; GCN-LABEL: {{^}}fneg_fabs_v2f64:
-; GCN: s_brev_b32 [[IMMREG:s[0-9]+]], 1{{$}}
 ; GCN-NOT: 0x80000000
-; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[IMMREG]]
-; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[IMMREG]]
+; GCN: s_bitset1_b32 s{{[0-9]+}}, 31
+; GCN: s_bitset1_b32 s{{[0-9]+}}, 31
 define amdgpu_kernel void @fneg_fabs_v2f64(<2 x double> addrspace(1)* %out, <2 x double> %in) {
   %fabs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %in)
   %fsub = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %fabs
@@ -81,12 +80,11 @@ define amdgpu_kernel void @fneg_fabs_v2f64(<2 x double> addrspace(1)* %out, <2 x
 }
 
 ; GCN-LABEL: {{^}}fneg_fabs_v4f64:
-; GCN: s_brev_b32 [[IMMREG:s[0-9]+]], 1{{$}}
 ; GCN-NOT: 0x80000000
-; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[IMMREG]]
-; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[IMMREG]]
-; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[IMMREG]]
-; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[IMMREG]]
+; GCN: s_bitset1_b32 s{{[0-9]+}}, 31
+; GCN: s_bitset1_b32 s{{[0-9]+}}, 31
+; GCN: s_bitset1_b32 s{{[0-9]+}}, 31
+; GCN: s_bitset1_b32 s{{[0-9]+}}, 31
 define amdgpu_kernel void @fneg_fabs_v4f64(<4 x double> addrspace(1)* %out, <4 x double> %in) {
   %fabs = call <4 x double> @llvm.fabs.v4f64(<4 x double> %in)
   %fsub = fsub <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %fabs

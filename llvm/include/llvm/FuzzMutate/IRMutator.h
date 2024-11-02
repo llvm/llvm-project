@@ -10,6 +10,9 @@
 // configurable set of strategies. Some common strategies are also included
 // here.
 //
+// Fuzzer-friendly (de)serialization functions are also provided, as these
+// are usually needed when mutating IR.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_FUZZMUTATE_IRMUTATOR_H
@@ -112,6 +115,29 @@ public:
   using IRMutationStrategy::mutate;
   void mutate(Instruction &Inst, RandomIRBuilder &IB) override;
 };
+
+/// Fuzzer friendly interface for the llvm bitcode parser.
+///
+/// \param Data Bitcode we are going to parse
+/// \param Size Size of the 'Data' in bytes
+/// \return New module or nullptr in case of error
+std::unique_ptr<Module> parseModule(const uint8_t *Data, size_t Size,
+                                    LLVMContext &Context);
+
+/// Fuzzer friendly interface for the llvm bitcode printer.
+///
+/// \param M Module to print
+/// \param Dest Location to store serialized module
+/// \param MaxSize Size of the destination buffer
+/// \return Number of bytes that were written. When module size exceeds MaxSize
+///         returns 0 and leaves Dest unchanged.
+size_t writeModule(const Module &M, uint8_t *Dest, size_t MaxSize);
+
+/// Try to parse module and verify it. May output verification errors to the
+/// errs().
+/// \return New module or nullptr in case of error.
+std::unique_ptr<Module> parseAndVerify(const uint8_t *Data, size_t Size,
+                                       LLVMContext &Context);
 
 } // end llvm namespace
 

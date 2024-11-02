@@ -1,10 +1,10 @@
 ## Test extract operation.
-# XFAIL: system-darwin,system-aix
+# XFAIL: system-darwin
 
 # RUN: rm -rf %t && mkdir -p %t/extracted/
 
 ## Extracting from an empty archive should not warn or error:
-# RUN: llvm-ar cr %t/empty.a
+# RUN: llvm-ar cr --format=gnu %t/empty.a
 # RUN: llvm-ar xv %t/empty.a 2>&1 | count 0
 
 # RUN: echo filea > %t/a.txt

@@ -313,7 +313,7 @@ TEST_F(LlvmLibcStrToFloatTest, EiselLemireFloat80Fallback) {
   ASSERT_FALSE(__llvm_libc::internal::eisel_lemire<long double>(
       1, -1000, &quadOutputMantissa, &outputExp2));
 }
-#else
+#elif defined(__SIZEOF_INT128__)
 TEST_F(LlvmLibcStrToFloatTest, EiselLemireFloat128Simple) {
   eisel_lemire_test<long double>(123, 0, (__uint128_t(0x1ec0000000000) << 64),
                                  16389);

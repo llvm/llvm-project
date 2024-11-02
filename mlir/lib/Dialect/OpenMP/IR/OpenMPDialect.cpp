@@ -76,7 +76,7 @@ static ParseResult parseAllocateAndAllocator(
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operandsAllocator,
     SmallVectorImpl<Type> &typesAllocator) {
 
-  return parser.parseCommaSeparatedList([&]() -> ParseResult {
+  return parser.parseCommaSeparatedList([&]() {
     OpAsmParser::UnresolvedOperand operand;
     Type type;
     if (parser.parseOperand(operand) || parser.parseColonType(type))
@@ -142,7 +142,7 @@ parseLinearClause(OpAsmParser &parser,
                   SmallVectorImpl<OpAsmParser::UnresolvedOperand> &vars,
                   SmallVectorImpl<Type> &types,
                   SmallVectorImpl<OpAsmParser::UnresolvedOperand> &stepVars) {
-  do {
+  return parser.parseCommaSeparatedList([&]() {
     OpAsmParser::UnresolvedOperand var;
     Type type;
     OpAsmParser::UnresolvedOperand stepVar;
@@ -153,8 +153,8 @@ parseLinearClause(OpAsmParser &parser,
     vars.push_back(var);
     types.push_back(type);
     stepVars.push_back(stepVar);
-  } while (succeeded(parser.parseOptionalComma()));
-  return success();
+    return success();
+  });
 }
 
 /// Print Linear Clause
@@ -304,12 +304,15 @@ parseReductionVarList(OpAsmParser &parser,
                       SmallVectorImpl<Type> &types,
                       ArrayAttr &redcuctionSymbols) {
   SmallVector<SymbolRefAttr> reductionVec;
-  do {
-    if (parser.parseAttribute(reductionVec.emplace_back()) ||
-        parser.parseArrow() || parser.parseOperand(operands.emplace_back()) ||
-        parser.parseColonType(types.emplace_back()))
-      return failure();
-  } while (succeeded(parser.parseOptionalComma()));
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        if (parser.parseAttribute(reductionVec.emplace_back()) ||
+            parser.parseArrow() ||
+            parser.parseOperand(operands.emplace_back()) ||
+            parser.parseColonType(types.emplace_back()))
+          return failure();
+        return success();
+      })))
+    return failure();
   SmallVector<Attribute> reductions(reductionVec.begin(), reductionVec.end());
   redcuctionSymbols = ArrayAttr::get(parser.getContext(), reductions);
   return success();
@@ -382,7 +385,11 @@ static ParseResult parseSynchronizationHint(OpAsmParser &parser,
                                             IntegerAttr &hintAttr) {
   StringRef hintKeyword;
   int64_t hint = 0;
-  do {
+  if (succeeded(parser.parseOptionalKeyword("none"))) {
+    hintAttr = IntegerAttr::get(parser.getBuilder().getI64Type(), 0);
+    return success();
+  }
+  auto parseKeyword = [&]() -> ParseResult {
     if (failed(parser.parseKeyword(&hintKeyword)))
       return failure();
     if (hintKeyword == "uncontended")
@@ -396,7 +403,10 @@ static ParseResult parseSynchronizationHint(OpAsmParser &parser,
     else
       return parser.emitError(parser.getCurrentLocation())
              << hintKeyword << " is not a valid hint";
-  } while (succeeded(parser.parseOptionalComma()));
+    return success();
+  };
+  if (parser.parseCommaSeparatedList(parseKeyword))
+    return failure();
   hintAttr = IntegerAttr::get(parser.getBuilder().getI64Type(), hint);
   return success();
 }
@@ -406,8 +416,10 @@ static void printSynchronizationHint(OpAsmPrinter &p, Operation *op,
                                      IntegerAttr hintAttr) {
   int64_t hint = hintAttr.getInt();
 
-  if (hint == 0)
+  if (hint == 0) {
+    p << "none";
     return;
+  }
 
   // Helper function to get n-th bit from the right end of `value`
   auto bitn = [](int value, int n) -> bool { return value & (1 << n); };
@@ -517,41 +529,32 @@ parseWsLoopControl(OpAsmParser &parser, Region &region,
                    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &steps,
                    SmallVectorImpl<Type> &loopVarTypes, UnitAttr &inclusive) {
   // Parse an opening `(` followed by induction variables followed by `)`
-  SmallVector<OpAsmParser::UnresolvedOperand> ivs;
-  if (parser.parseRegionArgumentList(ivs, /*requiredOperandCount=*/-1,
-                                     OpAsmParser::Delimiter::Paren))
-    return failure();
-
-  size_t numIVs = ivs.size();
+  SmallVector<OpAsmParser::Argument> ivs;
   Type loopVarType;
-  if (parser.parseColonType(loopVarType))
-    return failure();
-
-  // Parse loop bounds.
-  if (parser.parseEqual() ||
-      parser.parseOperandList(lowerBound, numIVs,
-                              OpAsmParser::Delimiter::Paren))
-    return failure();
-  if (parser.parseKeyword("to") ||
-      parser.parseOperandList(upperBound, numIVs,
+  if (parser.parseArgumentList(ivs, OpAsmParser::Delimiter::Paren) ||
+      parser.parseColonType(loopVarType) ||
+      // Parse loop bounds.
+      parser.parseEqual() ||
+      parser.parseOperandList(lowerBound, ivs.size(),
+                              OpAsmParser::Delimiter::Paren) ||
+      parser.parseKeyword("to") ||
+      parser.parseOperandList(upperBound, ivs.size(),
                               OpAsmParser::Delimiter::Paren))
     return failure();
 
-  if (succeeded(parser.parseOptionalKeyword("inclusive"))) {
+  if (succeeded(parser.parseOptionalKeyword("inclusive")))
     inclusive = UnitAttr::get(parser.getBuilder().getContext());
-  }
 
   // Parse step values.
   if (parser.parseKeyword("step") ||
-      parser.parseOperandList(steps, numIVs, OpAsmParser::Delimiter::Paren))
+      parser.parseOperandList(steps, ivs.size(), OpAsmParser::Delimiter::Paren))
     return failure();
 
   // Now parse the body.
-  loopVarTypes = SmallVector<Type>(numIVs, loopVarType);
-  SmallVector<OpAsmParser::UnresolvedOperand> blockArgs(ivs);
-  if (parser.parseRegion(region, blockArgs, loopVarTypes))
-    return failure();
-  return success();
+  loopVarTypes = SmallVector<Type>(ivs.size(), loopVarType);
+  for (auto &iv : ivs)
+    iv.type = loopVarType;
+  return parser.parseRegion(region, ivs);
 }
 
 void printWsLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
@@ -580,33 +583,28 @@ void printWsLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
 /// clause ::= TODO
 ParseResult SimdLoopOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse an opening `(` followed by induction variables followed by `)`
-  SmallVector<OpAsmParser::UnresolvedOperand> ivs;
-  if (parser.parseRegionArgumentList(ivs, /*requiredOperandCount=*/-1,
-                                     OpAsmParser::Delimiter::Paren))
-    return failure();
-  int numIVs = static_cast<int>(ivs.size());
+  SmallVector<OpAsmParser::Argument> ivs;
   Type loopVarType;
-  if (parser.parseColonType(loopVarType))
-    return failure();
-  // Parse loop bounds.
-  SmallVector<OpAsmParser::UnresolvedOperand> lower;
-  if (parser.parseEqual() ||
-      parser.parseOperandList(lower, numIVs, OpAsmParser::Delimiter::Paren) ||
-      parser.resolveOperands(lower, loopVarType, result.operands))
-    return failure();
-  SmallVector<OpAsmParser::UnresolvedOperand> upper;
-  if (parser.parseKeyword("to") ||
-      parser.parseOperandList(upper, numIVs, OpAsmParser::Delimiter::Paren) ||
-      parser.resolveOperands(upper, loopVarType, result.operands))
-    return failure();
-
-  // Parse step values.
-  SmallVector<OpAsmParser::UnresolvedOperand> steps;
-  if (parser.parseKeyword("step") ||
-      parser.parseOperandList(steps, numIVs, OpAsmParser::Delimiter::Paren) ||
+  SmallVector<OpAsmParser::UnresolvedOperand> lower, upper, steps;
+  if (parser.parseArgumentList(ivs, OpAsmParser::Delimiter::Paren) ||
+      parser.parseColonType(loopVarType) ||
+      // Parse loop bounds.
+      parser.parseEqual() ||
+      parser.parseOperandList(lower, ivs.size(),
+                              OpAsmParser::Delimiter::Paren) ||
+      parser.resolveOperands(lower, loopVarType, result.operands) ||
+      parser.parseKeyword("to") ||
+      parser.parseOperandList(upper, ivs.size(),
+                              OpAsmParser::Delimiter::Paren) ||
+      parser.resolveOperands(upper, loopVarType, result.operands) ||
+      // Parse step values.
+      parser.parseKeyword("step") ||
+      parser.parseOperandList(steps, ivs.size(),
+                              OpAsmParser::Delimiter::Paren) ||
       parser.resolveOperands(steps, loopVarType, result.operands))
     return failure();
 
+  int numIVs = static_cast<int>(ivs.size());
   SmallVector<int> segments{numIVs, numIVs, numIVs};
   // TODO: Add parseClauses() when we support clauses
   result.addAttribute("operand_segment_sizes",
@@ -614,11 +612,9 @@ ParseResult SimdLoopOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Now parse the body.
   Region *body = result.addRegion();
-  SmallVector<Type> ivTypes(numIVs, loopVarType);
-  SmallVector<OpAsmParser::UnresolvedOperand> blockArgs(ivs);
-  if (parser.parseRegion(*body, blockArgs, ivTypes))
-    return failure();
-  return success();
+  for (auto &iv : ivs)
+    iv.type = loopVarType;
+  return parser.parseRegion(*body, ivs);
 }
 
 void SimdLoopOp::print(OpAsmPrinter &p) {
@@ -842,6 +838,9 @@ LogicalResult AtomicWriteOp::verify() {
           "memory-order must not be acq_rel or acquire for atomic writes");
     }
   }
+  if (address().getType().cast<PointerLikeType>().getElementType() !=
+      value().getType())
+    return emitError("address must dereference to value type");
   return verifySynchronizationHint(*this, hint_val());
 }
 
@@ -864,7 +863,7 @@ LogicalResult AtomicUpdateOp::verify() {
                      "element type is the same as that of the region argument");
   }
 
-  return success();
+  return verifySynchronizationHint(*this, hint_val());
 }
 
 LogicalResult AtomicUpdateOp::verifyRegions() {
@@ -915,6 +914,10 @@ AtomicUpdateOp AtomicCaptureOp::getAtomicUpdateOp() {
   return dyn_cast<AtomicUpdateOp>(getSecondOp());
 }
 
+LogicalResult AtomicCaptureOp::verify() {
+  return verifySynchronizationHint(*this, hint_val());
+}
+
 LogicalResult AtomicCaptureOp::verifyRegions() {
   Block::OpListType &ops = region().front().getOperations();
   if (ops.size() != 3)
@@ -949,6 +952,88 @@ LogicalResult AtomicCaptureOp::verifyRegions() {
     return firstReadStmt.emitError()
            << "captured variable in omp.atomic.read must be updated in "
               "second operation";
+
+  if (getFirstOp()->getAttr("hint_val") || getSecondOp()->getAttr("hint_val"))
+    return emitOpError(
+        "operations inside capture region must not have hint clause");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Verifier for CancelOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult CancelOp::verify() {
+  ClauseCancellationConstructType cct = cancellation_construct_type_val();
+  Operation *parentOp = (*this)->getParentOp();
+
+  if (!parentOp) {
+    return emitOpError() << "must be used within a region supporting "
+                            "cancel directive";
+  }
+
+  if ((cct == ClauseCancellationConstructType::Parallel) &&
+      !isa<ParallelOp>(parentOp)) {
+    return emitOpError() << "cancel parallel must appear "
+                         << "inside a parallel region";
+  }
+  if (cct == ClauseCancellationConstructType::Loop) {
+    if (!isa<WsLoopOp>(parentOp)) {
+      return emitOpError() << "cancel loop must appear "
+                           << "inside a worksharing-loop region";
+    }
+    if (cast<WsLoopOp>(parentOp).nowaitAttr()) {
+      return emitError() << "A worksharing construct that is canceled "
+                         << "must not have a nowait clause";
+    }
+    if (cast<WsLoopOp>(parentOp).ordered_valAttr()) {
+      return emitError() << "A worksharing construct that is canceled "
+                         << "must not have an ordered clause";
+    }
+
+  } else if (cct == ClauseCancellationConstructType::Sections) {
+    if (!(isa<SectionsOp>(parentOp) || isa<SectionOp>(parentOp))) {
+      return emitOpError() << "cancel sections must appear "
+                           << "inside a sections region";
+    }
+    if (isa_and_nonnull<SectionsOp>(parentOp->getParentOp()) &&
+        cast<SectionsOp>(parentOp->getParentOp()).nowaitAttr()) {
+      return emitError() << "A sections construct that is canceled "
+                         << "must not have a nowait clause";
+    }
+  }
+  // TODO : Add more when we support taskgroup.
+  return success();
+}
+//===----------------------------------------------------------------------===//
+// Verifier for CancelOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult CancellationPointOp::verify() {
+  ClauseCancellationConstructType cct = cancellation_construct_type_val();
+  Operation *parentOp = (*this)->getParentOp();
+
+  if (!parentOp) {
+    return emitOpError() << "must be used within a region supporting "
+                            "cancellation point directive";
+  }
+
+  if ((cct == ClauseCancellationConstructType::Parallel) &&
+      !(isa<ParallelOp>(parentOp))) {
+    return emitOpError() << "cancellation point parallel must appear "
+                         << "inside a parallel region";
+  }
+  if ((cct == ClauseCancellationConstructType::Loop) &&
+      !isa<WsLoopOp>(parentOp)) {
+    return emitOpError() << "cancellation point loop must appear "
+                         << "inside a worksharing-loop region";
+  }
+  if ((cct == ClauseCancellationConstructType::Sections) &&
+      !(isa<SectionsOp>(parentOp) || isa<SectionOp>(parentOp))) {
+    return emitOpError() << "cancellation point sections must appear "
+                         << "inside a sections region";
+  }
+  // TODO : Add more when we support taskgroup.
   return success();
 }
 

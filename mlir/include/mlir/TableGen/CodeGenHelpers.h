@@ -187,19 +187,9 @@ private:
   /// ensure that the static functions have a unique name.
   std::string uniqueOutputLabel;
 
-  /// Unique constraints by their predicate and summary. Constraints that share
-  /// the same predicate may have different descriptions; ensure that the
-  /// correct error message is reported when verification fails.
-  struct ConstraintUniquer {
-    static Constraint getEmptyKey();
-    static Constraint getTombstoneKey();
-    static unsigned getHashValue(Constraint constraint);
-    static bool isEqual(Constraint lhs, Constraint rhs);
-  };
   /// Use a MapVector to ensure that functions are generated deterministically.
-  using ConstraintMap =
-      llvm::MapVector<Constraint, std::string,
-                      llvm::DenseMap<Constraint, unsigned, ConstraintUniquer>>;
+  using ConstraintMap = llvm::MapVector<Constraint, std::string,
+                                        llvm::DenseMap<Constraint, unsigned>>;
 
   /// A generic function to emit constraints
   void emitConstraints(const ConstraintMap &constraints, StringRef selfName,

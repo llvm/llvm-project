@@ -27,7 +27,7 @@ using namespace llvm;
 using namespace polly;
 
 namespace {
-class ScopInliner : public CallGraphSCCPass {
+class ScopInliner final : public CallGraphSCCPass {
   using llvm::Pass::doInitialization;
 
 public:

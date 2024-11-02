@@ -116,7 +116,7 @@ declare {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a, i8 %b)
 
 define i8 @caller4(i8 %z) {
 ; Check that we can constant fold through intrinsics such as the
-; overflow-detecting arithmetic instrinsics. These are particularly important
+; overflow-detecting arithmetic intrinsics. These are particularly important
 ; as they are used heavily in standard library code and generic C++ code where
 ; the arguments are oftent constant but complete generality is required.
 ;

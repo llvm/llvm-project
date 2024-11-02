@@ -2,12 +2,12 @@
 // REQUIRES: amdgpu-registered-target
 
 // RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-amd-amdhsa -fcuda-is-device \
-// RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s | FileCheck \
-// RUN:   -check-prefixes=DEV,INT-DEV %s
+// RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o %t.nocuid.dev -x hip %s
+// RUN: cat %t.nocuid.dev | FileCheck -check-prefixes=DEV,INT-DEV %s
 
 // RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-gnu-linux \
-// RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s | FileCheck \
-// RUN:   -check-prefixes=HOST,INT-HOST %s
+// RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o %t.nocuid.host -x hip %s
+// RUN: cat %t.nocuid.host | FileCheck -check-prefixes=HOST,INT-HOST %s
 
 // RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=abc \
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s > %t.dev
@@ -21,6 +21,7 @@
 // variable names.
 
 // RUN: cat %t.dev %t.host | FileCheck -check-prefix=POSTFIX %s
+// RUN: cat %t.nocuid.dev %t.nocuid.host | FileCheck -check-prefix=POSTFIX-ID %s
 
 // Negative tests.
 
@@ -40,8 +41,16 @@
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s > %t.host
 // RUN: cat %t.host | FileCheck -check-prefix=HOST-NEG %s
 
+// Check postfix for CUDA.
+
+// RUN: %clang_cc1 -no-opaque-pointers -triple nvptx -fcuda-is-device -cuid=abc \
+// RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - %s | FileCheck \
+// RUN:   -check-prefixes=CUDA %s
 
 #include "Inputs/cuda.h"
+
+// Make sure we can still mangle with a line directive.
+#line 0 "-"
 
 // Test function scope static device variable, which should not be externalized.
 // DEV-DAG: @_ZZ6kernelPiPPKiE1w = internal addrspace(4) constant i32 1
@@ -51,15 +60,18 @@
 // HOST-DAG: @_ZL1y = internal global i32 undef
 
 // Test normal static device variables
-// INT-DEV-DAG: @_ZL1x = addrspace(1) externally_initialized global i32 0
-// INT-HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x\00"
+// INT-DEV-DAG: @_ZL1x[[FILEID:.*]] = addrspace(1) externally_initialized global i32 0
+// INT-HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x[[FILEID:.*]]\00"
 
 // Test externalized static device variables
-// EXT-DEV-DAG: @_ZL1x__static__[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
-// EXT-HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x__static__[[HASH:.*]]\00"
+// EXT-DEV-DAG: @_ZL1x.static.[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
+// EXT-HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x.static.[[HASH:.*]]\00"
+// CUDA-DAG: @_ZL1x__static__[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
 
-// POSTFIX: @_ZL1x__static__[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
-// POSTFIX: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x__static__[[HASH]]\00"
+// POSTFIX: @_ZL1x.static.[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
+// POSTFIX: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x.static.[[HASH]]\00"
+// POSTFIX-ID: @_ZL1x.static.[[FILEID:.*]] = addrspace(1) externally_initialized global i32 0
+// POSTFIX-ID: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x.static.[[FILEID]]\00"
 
 static __device__ int x;
 
@@ -69,12 +81,12 @@ static __device__ int x;
 static __device__ int x2;
 
 // Test normal static device variables
-// INT-DEV-DAG: @_ZL1y = addrspace(4) externally_initialized global i32 0
-// INT-HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y\00"
+// INT-DEV-DAG: @_ZL1y[[FILEID:.*]] = addrspace(4) externally_initialized global i32 0
+// INT-HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y[[FILEID:.*]]\00"
 
 // Test externalized static device variables
-// EXT-DEV-DAG: @_ZL1y__static__[[HASH]] = addrspace(4) externally_initialized global i32 0
-// EXT-HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y__static__[[HASH]]\00"
+// EXT-DEV-DAG: @_ZL1y.static.[[HASH]] = addrspace(4) externally_initialized global i32 0
+// EXT-HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y.static.[[HASH]]\00"
 
 static __constant__ int y;
 

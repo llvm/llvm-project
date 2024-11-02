@@ -7,6 +7,7 @@ class LLVMFlag<string name> : Flag<["--", "-"], name>;
 class LLVMJoined<string name> : Joined<["--", "-"], name>;
 class LLVMJoinedOrSeparate<string name> : JoinedOrSeparate<["--", "-"], name>;
 class LLVMSeparate<string name> : Separate<["--", "-"], name>;
+class LLVMCommaJoined<string name> : CommaJoined<["--", "-"], name>;
 
 def ml_Group : OptionGroup<"<ml options>">,
                HelpText<"ML.EXE COMPATIBILITY OPTIONS">;
@@ -30,7 +31,12 @@ class UnsupportedSeparate<string name> : Separate<["/", "-"], name>,
 def bitness : LLVMJoined<"m">, Values<"32,64">,
               HelpText<"Target platform (x86 or x86-64)">;
 def as_lex : LLVMFlag<"as-lex">,
-             HelpText<"Lex tokens from a .asm file without assembling">;
+             HelpText<"Lex tokens from an .asm or .S file without assembling">;
+def debug : LLVMFlag<"debug">, Flags<[HelpHidden]>,
+            HelpText<"Enable debug output">;
+def debug_only : LLVMCommaJoined<"debug-only=">, Flags<[HelpHidden]>,
+                 HelpText<"Enable a specific type of debug output (comma "
+                          "separated list of types)">;
 def fatal_warnings : LLVMFlag<"fatal-warnings">,
                      HelpText<"Treat warnings as errors">;
 def filetype : LLVMJoined<"filetype=">, Values<"obj,s,null">,
@@ -76,7 +82,7 @@ def safeseh : MLFlag<"safeseh">,
                        "32-bit.">;
 def assembly_file : MLJoinedOrSeparate<"Ta">,
                     HelpText<"Assemble source file with name not ending with "
-                             "the .asm extension">;
+                             "the .asm or the .S extension">;
 def error_on_warning : MLFlag<"WX">, Alias<fatal_warnings>;
 def parse_only : MLFlag<"Zs">, HelpText<"Run a syntax-check only">,
                  Alias<filetype>, AliasArgs<["null"]>;

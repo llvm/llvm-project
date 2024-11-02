@@ -3,7 +3,7 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-func @gather8(%base: memref<?xf32>, %indices: vector<8xi32>,
+func.func @gather8(%base: memref<?xf32>, %indices: vector<8xi32>,
               %mask: vector<8xi1>, %pass_thru: vector<8xf32>) -> vector<8xf32> {
   %c0 = arith.constant 0: index
   %g = vector.gather %base[%c0][%indices], %mask, %pass_thru
@@ -11,7 +11,7 @@ func @gather8(%base: memref<?xf32>, %indices: vector<8xi32>,
   return %g : vector<8xf32>
 }
 
-func @entry() {
+func.func @entry() {
   // Set up memory.
   %c0 = arith.constant 0: index
   %c1 = arith.constant 1: index

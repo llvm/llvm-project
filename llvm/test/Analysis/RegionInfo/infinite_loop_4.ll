@@ -40,7 +40,7 @@ define void @normal_condition() nounwind {
 ; CHECK-NOT: =>
 ; CHECK: [0] 0 => <Function Return>
 ; CHECK-NEXT: [1] 2 => 10
-; CHECK_NEXT: [2] 5 => 6
+; CHECK-NEXT: [2] 5 => 6
 ; STAT: 3 region - The # of regions
 ; STAT: 1 region - The # of simple regions
 

@@ -7,7 +7,7 @@ add_llvm_component_library(LLVMDXILBitWriter
   intrinsics_gen
 
   LINK_COMPONENTS
-  Bitwriter
+  BitWriter
   Core
   MC
   Object

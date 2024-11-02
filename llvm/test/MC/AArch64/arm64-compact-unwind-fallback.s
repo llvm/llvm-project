@@ -6,6 +6,8 @@
 // CHECK: Contents of __compact_unwind section:
 // CHECK: compact encoding:     0x03000000
 // CHECK: compact encoding:     0x03000000
+// CHECK: compact encoding:     0x03000000
+// CHECK: compact encoding:     0x03000000
 
 // CHECK: .eh_frame contents:
 // CHECK: DW_CFA_def_cfa: reg1 +32
@@ -23,3 +25,16 @@ _cfi_dwarf1:
  .cfi_def_cfa_offset 32
  .cfi_def_cfa_offset 64
  .cfi_endproc
+
+_cfi_dwarf2:
+  .cfi_startproc
+  .cfi_def_cfa w29, 16
+  .cfi_def_cfa w29, 16
+  .cfi_endproc
+
+_cfi_dwarf3:
+  .cfi_startproc
+  .cfi_def_cfa w29, 16
+  .cfi_offset w16, -16
+  .cfi_offset w17, -8
+  .cfi_endproc

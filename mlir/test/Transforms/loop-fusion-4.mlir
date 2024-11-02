@@ -8,7 +8,7 @@
 // Expects fusion of producer into consumer at depth 4 and subsequent removal of
 // source loop.
 // PRODUCER-CONSUMER-LABEL: func @unflatten4d
-func @unflatten4d(%arg1: memref<7x8x9x10xf32>) {
+func.func @unflatten4d(%arg1: memref<7x8x9x10xf32>) {
   %m = memref.alloc() : memref<5040xf32>
   %cf7 = arith.constant 7.0 : f32
 
@@ -46,7 +46,7 @@ func @unflatten4d(%arg1: memref<7x8x9x10xf32>) {
 // Expects fusion of producer into consumer at depth 2 and subsequent removal of
 // source loop.
 // PRODUCER-CONSUMER-LABEL: func @unflatten2d_with_transpose
-func @unflatten2d_with_transpose(%arg1: memref<8x7xf32>) {
+func.func @unflatten2d_with_transpose(%arg1: memref<8x7xf32>) {
   %m = memref.alloc() : memref<56xf32>
   %cf7 = arith.constant 7.0 : f32
 
@@ -74,7 +74,7 @@ func @unflatten2d_with_transpose(%arg1: memref<8x7xf32>) {
 // Expects fusion of producer into consumer at depth 1 and source loop to not
 // be removed due to difference in loop steps.
 // PRODUCER-CONSUMER-LABEL: func @check_src_dst_step
-func @check_src_dst_step(%m : memref<100xf32>,
+func.func @check_src_dst_step(%m : memref<100xf32>,
                          %src: memref<100xf32>,
                          %out: memref<100xf32>) {
   affine.for %i0 = 0 to 100 {
@@ -104,7 +104,7 @@ func @check_src_dst_step(%m : memref<100xf32>,
 // -----
 
 // SIBLING-MAXIMAL-LABEL:   func @reduce_add_non_maximal_f32_f32(
-func @reduce_add_non_maximal_f32_f32(%arg0: memref<64x64xf32, 1>, %arg1 : memref<1x64xf32, 1>, %arg2 : memref<1x64xf32, 1>) {
+func.func @reduce_add_non_maximal_f32_f32(%arg0: memref<64x64xf32, 1>, %arg1 : memref<1x64xf32, 1>, %arg2 : memref<1x64xf32, 1>) {
     %cst_0 = arith.constant 0.000000e+00 : f32
     %cst_1 = arith.constant 1.000000e+00 : f32
     affine.for %arg3 = 0 to 1 {

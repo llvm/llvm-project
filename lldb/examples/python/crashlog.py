@@ -26,11 +26,9 @@
 #   PYTHONPATH=/path/to/LLDB.framework/Resources/Python ./crashlog.py ~/Library/Logs/DiagnosticReports/a.crash
 #----------------------------------------------------------------------
 
-from __future__ import print_function
-import cmd
+import concurrent.futures
 import contextlib
 import datetime
-import glob
 import json
 import optparse
 import os
@@ -41,8 +39,12 @@ import shlex
 import string
 import subprocess
 import sys
+import threading
 import time
 import uuid
+
+
+print_lock = threading.RLock()
 
 try:
     # First try for LLDB in case PYTHONPATH is already correctly setup.
@@ -112,14 +114,12 @@ class CrashLog(symbolication.Symbolicator):
             for frame_idx, frame in enumerate(self.frames):
                 disassemble = (
                     this_thread_crashed or options.disassemble_all_threads) and frame_idx < options.disassemble_depth
-                if frame_idx == 0:
-                    symbolicated_frame_addresses = crash_log.symbolicate(
-                        frame.pc & crash_log.addr_mask, options.verbose)
-                else:
-                    # Any frame above frame zero and we have to subtract one to
-                    # get the previous line entry
-                    symbolicated_frame_addresses = crash_log.symbolicate(
-                        (frame.pc & crash_log.addr_mask) - 1, options.verbose)
+
+                # Except for the zeroth frame, we should subtract 1 from every
+                # frame pc to get the previous line entry.
+                pc = frame.pc & crash_log.addr_mask
+                pc = pc if frame_idx == 0 or pc == 0 else pc - 1
+                symbolicated_frame_addresses = crash_log.symbolicate(pc, options.verbose)
 
                 if symbolicated_frame_addresses:
                     symbolicated_frame_address_idx = 0
@@ -269,7 +269,8 @@ class CrashLog(symbolication.Symbolicator):
             self.resolved = True
             uuid_str = self.get_normalized_uuid_string()
             if self.show_symbol_progress():
-                print('Getting symbols for %s %s...\n' % (uuid_str, self.path), end=' ')
+                with print_lock:
+                    print('Getting symbols for %s %s...' % (uuid_str, self.path))
             if os.path.exists(self.dsymForUUIDBinary):
                 dsym_for_uuid_command = '%s %s' % (
                     self.dsymForUUIDBinary, uuid_str)
@@ -278,7 +279,8 @@ class CrashLog(symbolication.Symbolicator):
                     try:
                         plist_root = read_plist(s)
                     except:
-                        print(("Got exception: ", sys.exc_info()[1], " handling dsymForUUID output: \n", s))
+                        with print_lock:
+                            print(("Got exception: ", sys.exc_info()[1], " handling dsymForUUID output: \n", s))
                         raise
                     if plist_root:
                         plist = plist_root[uuid_str]
@@ -306,7 +308,8 @@ class CrashLog(symbolication.Symbolicator):
                         if not os.path.exists(dwarf_dir):
                             # Not a dSYM bundle, probably an Xcode archive.
                             continue
-                        print('falling back to binary inside "%s"' % dsym)
+                        with print_lock:
+                            print('falling back to binary inside "%s"' % dsym)
                         self.symfile = dsym
                         for filename in os.listdir(dwarf_dir):
                            self.path = os.path.join(dwarf_dir, filename)
@@ -319,7 +322,8 @@ class CrashLog(symbolication.Symbolicator):
                     pass
             if (self.resolved_path and os.path.exists(self.resolved_path)) or (
                     self.path and os.path.exists(self.path)):
-                print('Resolved symbols for %s %s...\n' % (uuid_str, self.path), end=' ')
+                with print_lock:
+                    print('Resolved symbols for %s %s...' % (uuid_str, self.path))
                 return True
             else:
                 self.unavailable = True
@@ -516,6 +520,23 @@ class JSONCrashLogParser:
             image_addr = self.get_used_image(image_id)['base']
             pc = image_addr + frame_offset
             thread.frames.append(self.crashlog.Frame(idx, pc, frame_offset))
+
+            # on arm64 systems, if it jump through a null function pointer,
+            # we end up at address 0 and the crash reporter unwinder
+            # misses the frame that actually faulted.
+            # But $lr can tell us where the last BL/BLR instruction used
+            # was at, so insert that address as the caller stack frame.
+            if idx == 0 and pc == 0 and "lr" in thread.registers:
+                pc = thread.registers["lr"]
+                for image in self.data['usedImages']:
+                    text_lo = image['base']
+                    text_hi = text_lo + image['size']
+                    if text_lo <= pc < text_hi:
+                      idx += 1
+                      frame_offset = pc - text_lo
+                      thread.frames.append(self.crashlog.Frame(idx, pc, frame_offset))
+                      break
+
             idx += 1
 
     def parse_threads(self, json_threads):
@@ -551,7 +572,7 @@ class JSONCrashLogParser:
                 continue
             try:
                 value = int(state['value'])
-                registers["{}{}".format(prefix,key)] = value
+                registers["{}{}".format(prefix or '',key)] = value
             except (KeyError, ValueError, TypeError):
                 pass
         return registers
@@ -902,10 +923,7 @@ class Symbolicate:
         pass
 
     def __call__(self, debugger, command, exe_ctx, result):
-        try:
-            SymbolicateCrashLogs(debugger, shlex.split(command))
-        except Exception as e:
-            result.PutCString("error: python exception: %s" % e)
+        SymbolicateCrashLogs(debugger, shlex.split(command))
 
     def get_short_help(self):
         return "Symbolicate one or more darwin crash log files."
@@ -961,9 +979,16 @@ def SymbolicateCrashLog(crash_log, options):
                 else:
                     print('error: can\'t find image for identifier "%s"' % ident)
 
-    for image in images_to_load:
-        if image not in loaded_images:
-            err = image.add_module(target)
+    futures = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        def add_module(image, target):
+            return image, image.add_module(target)
+
+        for image in images_to_load:
+            futures.append(executor.submit(add_module, image=image, target=target))
+
+        for future in concurrent.futures.as_completed(futures):
+            image, err = future.result()
             if err:
                 print(err)
             else:
@@ -990,11 +1015,7 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options):
     if not os.path.exists(crashlog_path):
         result.PutCString("error: crashlog file %s does not exist" % crashlog_path)
 
-    try:
-        crashlog = CrashLogParser().parse(debugger, crashlog_path, False)
-    except Exception as e:
-        result.PutCString("error: python exception: %s" % e)
-        return
+    crashlog = CrashLogParser().parse(debugger, crashlog_path, False)
 
     if debugger.GetNumTargets() > 0:
         target = debugger.GetTargetAtIndex(0)

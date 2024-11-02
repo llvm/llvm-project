@@ -16,8 +16,8 @@ define float @f32_no_daz(float %f) #0 {
 ; NHM-NEXT:    mulss %xmm2, %xmm3
 ; NHM-NEXT:    mulss %xmm1, %xmm2
 ; NHM-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; NHM-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; NHM-NEXT:    mulss %xmm3, %xmm2
+; NHM-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; NHM-NEXT:    cmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; NHM-NEXT:    andnps %xmm2, %xmm0
 ; NHM-NEXT:    retq
@@ -40,8 +40,8 @@ define <4 x float> @v4f32_no_daz(<4 x float> %f) #0 {
 ; NHM-NEXT:    mulps %xmm2, %xmm3
 ; NHM-NEXT:    mulps %xmm1, %xmm2
 ; NHM-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; NHM-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; NHM-NEXT:    mulps %xmm3, %xmm2
+; NHM-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; NHM-NEXT:    movaps {{.*#+}} xmm1 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; NHM-NEXT:    cmpleps %xmm0, %xmm1
 ; NHM-NEXT:    andps %xmm2, %xmm1
@@ -55,8 +55,8 @@ define <4 x float> @v4f32_no_daz(<4 x float> %f) #0 {
 ; SNB-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm3
 ; SNB-NEXT:    vmulps %xmm1, %xmm2, %xmm1
 ; SNB-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; SNB-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; SNB-NEXT:    vmulps %xmm1, %xmm3, %xmm1
+; SNB-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; SNB-NEXT:    vmovaps {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; SNB-NEXT:    vcmpleps %xmm0, %xmm2, %xmm0
 ; SNB-NEXT:    vandps %xmm1, %xmm0, %xmm0
@@ -126,8 +126,8 @@ define <8 x float> @v8f32_no_daz(<8 x float> %f) #0 {
 ; SNB-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm3
 ; SNB-NEXT:    vmulps %ymm1, %ymm2, %ymm1
 ; SNB-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
-; SNB-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; SNB-NEXT:    vmulps %ymm1, %ymm3, %ymm1
+; SNB-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; SNB-NEXT:    vmovaps {{.*#+}} ymm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; SNB-NEXT:    vcmpleps %ymm0, %ymm2, %ymm0
 ; SNB-NEXT:    vandps %ymm1, %ymm0, %ymm0

@@ -6,22 +6,38 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/stdio/clearerr.h"
 #include "src/stdio/fclose.h"
+#include "src/stdio/feof.h"
+#include "src/stdio/ferror.h"
+#include "src/stdio/fflush.h"
 #include "src/stdio/fopen.h"
 #include "src/stdio/fread.h"
 #include "src/stdio/fseek.h"
 #include "src/stdio/fwrite.h"
 #include "utils/UnitTest/Test.h"
 
+#include <errno.h>
 #include <stdio.h>
 
-TEST(LlvmLibcStdio, SimpleOperations) {
+TEST(LlvmLibcFILETest, SimpleFileOperations) {
   constexpr char FILENAME[] = "testdata/simple_operations.test";
   ::FILE *file = __llvm_libc::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   constexpr char CONTENT[] = "1234567890987654321";
   ASSERT_EQ(sizeof(CONTENT) - 1,
             __llvm_libc::fwrite(CONTENT, 1, sizeof(CONTENT) - 1, file));
+
+  // This is not a readable file.
+  char read_data[sizeof(CONTENT)];
+  ASSERT_EQ(__llvm_libc::fread(read_data, 1, sizeof(CONTENT), file), size_t(0));
+  ASSERT_NE(__llvm_libc::ferror(file), 0);
+  EXPECT_NE(errno, 0);
+  errno = 0;
+
+  __llvm_libc::clearerr(file);
+  ASSERT_EQ(__llvm_libc::ferror(file), 0);
+
   ASSERT_EQ(0, __llvm_libc::fclose(file));
 
   file = __llvm_libc::fopen(FILENAME, "r");
@@ -38,6 +54,41 @@ TEST(LlvmLibcStdio, SimpleOperations) {
   ASSERT_EQ(__llvm_libc::fseek(file, -5, SEEK_CUR), 0);
   ASSERT_EQ(__llvm_libc::fread(data, 1, READ_SIZE - 1, file), READ_SIZE - 1);
   ASSERT_STREQ(data, "9098");
+
+  // Reading another time should trigger eof.
+  ASSERT_NE(sizeof(CONTENT),
+            __llvm_libc::fread(read_data, 1, sizeof(CONTENT), file));
+  ASSERT_NE(__llvm_libc::feof(file), 0);
+
+  // Should be an error to write.
+  ASSERT_EQ(size_t(0), __llvm_libc::fwrite(CONTENT, 1, sizeof(CONTENT), file));
+  ASSERT_NE(__llvm_libc::ferror(file), 0);
+  ASSERT_NE(errno, 0);
+  errno = 0;
+
+  __llvm_libc::clearerr(file);
+  ASSERT_EQ(__llvm_libc::ferror(file), 0);
+
+  ASSERT_EQ(__llvm_libc::fclose(file), 0);
+}
+
+TEST(LlvmLibcFILETest, FFlush) {
+  constexpr char FILENAME[] = "testdata/fflush.test";
+  ::FILE *file = __llvm_libc::fopen(FILENAME, "w+");
+  ASSERT_FALSE(file == nullptr);
+  constexpr char CONTENT[] = "1234567890987654321";
+  ASSERT_EQ(sizeof(CONTENT),
+            __llvm_libc::fwrite(CONTENT, 1, sizeof(CONTENT), file));
+
+  // Flushing at this point should write the data to disk. So, we should be
+  // able to read it back.
+  ASSERT_EQ(0, __llvm_libc::fflush(file));
+
+  char data[sizeof(CONTENT)];
+  ASSERT_EQ(__llvm_libc::fseek(file, 0, SEEK_SET), 0);
+  ASSERT_EQ(__llvm_libc::fread(data, 1, sizeof(CONTENT), file),
+            sizeof(CONTENT));
+  ASSERT_STREQ(data, CONTENT);
 
   ASSERT_EQ(__llvm_libc::fclose(file), 0);
 }

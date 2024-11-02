@@ -4,6 +4,8 @@
 # RUN: llc -march=amdgcn -mcpu=gfx900  -run-pass=instruction-select -verify-machineinstrs -o - %s  | FileCheck -check-prefix=GFX9 %s
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64  -run-pass=instruction-select -verify-machineinstrs -o - %s  | FileCheck -check-prefix=GFX10-WAVE64 %s
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64  -run-pass=instruction-select -verify-machineinstrs -o - %s  | FileCheck -check-prefix=GFX10-WAVE32 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64  -run-pass=instruction-select -verify-machineinstrs -o - %s  | FileCheck -check-prefix=GFX10-WAVE64 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64  -run-pass=instruction-select -verify-machineinstrs -o - %s  | FileCheck -check-prefix=GFX10-WAVE32 %s
 
 ---
 name:  gep_p0_sgpr_sgpr

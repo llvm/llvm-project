@@ -177,6 +177,9 @@ void InfiniteLoopCheck::check(const MatchFinder::MatchResult &Result) {
     }
   }
 
+  if (ExprMutationAnalyzer::isUnevaluated(LoopStmt, *LoopStmt, *Result.Context))
+    return;
+
   if (isAtLeastOneCondVarChanged(Func, LoopStmt, Cond, Result.Context))
     return;
 

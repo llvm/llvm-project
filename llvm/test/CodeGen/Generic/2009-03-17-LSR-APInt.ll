@@ -1,6 +1,9 @@
 ; RUN: llc < %s
 ; PR3806
 
+; NVPTX does not support 'alias' yet
+; XFAIL: nvptx
+
 	%struct..0__pthread_mutex_s = type { i32, i32, i32, i32, i32, i32, %struct.__pthread_list_t }
 	%struct.Alignment = type { i32 }
 	%struct.QDesignerFormWindowInterface = type { %struct.QWidget }

@@ -16,26 +16,40 @@
 #include <chrono>
 
 /// See docs/lldb-gdb-remote.txt for more information.
+///
+/// Do not use system-dependent types, like size_t, because they might cause
+/// issues when compiling on arm.
 namespace lldb_private {
+
+// List of data kinds used by jLLDBGetState and jLLDBGetBinaryData.
+struct IntelPTDataKinds {
+  static const char *kProcFsCpuInfo;
+  static const char *kTraceBuffer;
+};
 
 /// jLLDBTraceStart gdb-remote packet
 /// \{
 struct TraceIntelPTStartRequest : TraceStartRequest {
   /// Size in bytes to use for each thread's trace buffer.
-  int64_t threadBufferSize;
+  uint64_t trace_buffer_size;
 
   /// Whether to enable TSC
-  bool enableTsc;
+  bool enable_tsc;
 
   /// PSB packet period
-  llvm::Optional<int64_t> psbPeriod;
+  llvm::Optional<uint64_t> psb_period;
 
   /// Required when doing "process tracing".
   ///
   /// Limit in bytes on all the thread traces started by this "process trace"
   /// instance. When a thread is about to be traced and the limit would be hit,
   /// then a "tracing" stop event is triggered.
-  llvm::Optional<int64_t> processBufferSizeLimit;
+  llvm::Optional<uint64_t> process_buffer_size_limit;
+
+  /// Whether to have a trace buffer per thread or per cpu core.
+  llvm::Optional<bool> per_core_tracing;
+
+  bool IsPerCoreTracing() const;
 };
 
 bool fromJSON(const llvm::json::Value &value, TraceIntelPTStartRequest &packet,

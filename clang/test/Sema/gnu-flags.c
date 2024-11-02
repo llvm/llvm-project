@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DNONE -Wno-gnu
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DALL -Wgnu 
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DALL -Wgnu
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DALL -Wno-gnu \
 // RUN:   -Wgnu-alignof-expression -Wgnu-case-range -Wgnu-complex-integer -Wgnu-conditional-omitted-operand \
 // RUN:   -Wgnu-empty-initializer -Wgnu-label-as-value -Wgnu-statement-expression \
@@ -20,6 +20,7 @@
 // %clang_cc1 -fsyntax-only -verify %s -DEMPTYINIT -Wno-gnu -Wgnu-empty-initializer
 // %clang_cc1 -fsyntax-only -verify %s -DLABELVALUE -Wno-gnu -Wgnu-label-as-value
 // %clang_cc1 -fsyntax-only -verify %s -DSTATEMENTEXP -Wno-gnu -Wgnu-statement-expression
+// %clang_cc1 -fsyntax-only -verify %s -DSTATEMENTEXPMACRO -Wno-gnu -Wgnu-statement-expression-from-macro-expansion
 // %clang_cc1 -fsyntax-only -verify %s -DCOMPOUNDLITERALINITIALIZER -Wno-gnu -Wgnu-compound-literal-initializer
 // %clang_cc1 -fsyntax-only -verify %s -DFLEXIBLEARRAYINITIALIZER -Wno-gnu -Wgnu-flexible-array-initializer
 // %clang_cc1 -fsyntax-only -verify %s -DREDECLAREDENUM -Wno-gnu -Wgnu-redeclared-enum
@@ -95,6 +96,14 @@ void statementexp(void)
 	int a = ({ 1; });
 }
 
+#if ALL || STATEMENTEXP || STATEMENTEXPMACRO
+// expected-warning@+5 {{use of GNU statement expression extension from macro expansion}}
+#endif
+
+#define STMT_EXPR_MACRO(a) ({ (a); })
+void statementexprmacro(void) {
+  int a = STMT_EXPR_MACRO(1);
+}
 
 #if ALL || COMPOUNDLITERALINITIALIZER
 // expected-warning@+4 {{initialization of an array of type 'int[5]' from a compound literal of type 'int[5]' is a GNU extension}}

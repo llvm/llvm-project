@@ -77,9 +77,9 @@ define i16 @cnt16(i16 %x) nounwind readnone {
 ; X86-NEXT:    addl %eax, %ecx
 ; X86-NEXT:    andl $3855, %ecx # imm = 0xF0F
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    shll $8, %eax
+; X86-NEXT:    shrl $8, %eax
 ; X86-NEXT:    addl %ecx, %eax
-; X86-NEXT:    movzbl %ah, %eax
+; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
@@ -99,9 +99,9 @@ define i16 @cnt16(i16 %x) nounwind readnone {
 ; X64-NEXT:    addl %edi, %eax
 ; X64-NEXT:    andl $3855, %eax # imm = 0xF0F
 ; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    shll $8, %ecx
+; X64-NEXT:    shrl $8, %ecx
 ; X64-NEXT:    addl %eax, %ecx
-; X64-NEXT:    movzbl %ch, %eax
+; X64-NEXT:    movzbl %cl, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ;
@@ -1540,9 +1540,9 @@ define i32 @popcount_i16_zext(i16 zeroext %x) {
 ; X86-NEXT:    addl %eax, %ecx
 ; X86-NEXT:    andl $3855, %ecx # imm = 0xF0F
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    shll $8, %eax
+; X86-NEXT:    shrl $8, %eax
 ; X86-NEXT:    addl %ecx, %eax
-; X86-NEXT:    movzbl %ah, %eax
+; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: popcount_i16_zext:
@@ -1561,9 +1561,9 @@ define i32 @popcount_i16_zext(i16 zeroext %x) {
 ; X64-NEXT:    addl %edi, %eax
 ; X64-NEXT:    andl $3855, %eax # imm = 0xF0F
 ; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    shll $8, %ecx
+; X64-NEXT:    shrl $8, %ecx
 ; X64-NEXT:    addl %eax, %ecx
-; X64-NEXT:    movzbl %ch, %eax
+; X64-NEXT:    movzbl %cl, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-POPCNT-LABEL: popcount_i16_zext:

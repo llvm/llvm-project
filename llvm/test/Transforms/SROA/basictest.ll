@@ -888,7 +888,7 @@ entry:
 }
 
 define void @test18(i8* %src, i8* %dst, i32 %size) {
-; Preserve transfer instrinsics with a variable size, even if they overlap with
+; Preserve transfer intrinsics with a variable size, even if they overlap with
 ; fixed size operations. Further, continue to split and promote allocas preceding
 ; the variable sized intrinsic.
 ; CHECK-LABEL: @test18(

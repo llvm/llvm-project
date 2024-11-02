@@ -110,6 +110,7 @@ static_library("LLVMMipsCodeGen") {
     "MipsSubtarget.cpp",
     "MipsTargetMachine.cpp",
     "MipsTargetObjectFile.cpp",
+    "MipsTargetTransformInfo.cpp",
   ]
 }
 

@@ -8,10 +8,10 @@
 
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
 #include "CoroInternal.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Pass.h"
 
 using namespace llvm;
 
@@ -35,7 +35,7 @@ public:
         AnyResumeFnPtrTy(FunctionType::get(Type::getVoidTy(Context), Int8Ptr,
                                            /*isVarArg=*/false)
                              ->getPointerTo()) {}
-  bool lowerEarlyIntrinsics(Function &F);
+  void lowerEarlyIntrinsics(Function &F);
 };
 }
 
@@ -145,8 +145,7 @@ static void setCannotDuplicate(CoroIdInst *CoroId) {
       CB->setCannotDuplicate();
 }
 
-bool Lowerer::lowerEarlyIntrinsics(Function &F) {
-  bool Changed = false;
+void Lowerer::lowerEarlyIntrinsics(Function &F) {
   CoroIdInst *CoroId = nullptr;
   SmallVector<CoroFreeInst *, 4> CoroFrees;
   bool HasCoroSuspend = false;
@@ -182,11 +181,8 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
         if (auto *CII = cast<CoroIdInst>(&I)) {
           if (CII->getInfo().isPreSplit()) {
             assert(F.hasFnAttribute(CORO_PRESPLIT_ATTR) &&
-                   F.getFnAttribute(CORO_PRESPLIT_ATTR).getValueAsString() ==
-                       UNPREPARED_FOR_SPLIT &&
                    "The frontend uses Swtich-Resumed ABI should emit "
-                   "\"coroutine.presplit\" attribute with value \"0\" for the "
-                   "coroutine.");
+                   "\"coroutine.presplit\" attribute for the coroutine.");
             setCannotDuplicate(CII);
             CII->setCoroutineSelf();
             CoroId = cast<CoroIdInst>(&I);
@@ -198,7 +194,7 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
       case Intrinsic::coro_id_async:
         // TODO: Remove the line once we support it in the corresponding
         // frontend.
-        F.addFnAttr(CORO_PRESPLIT_ATTR, PREPARED_FOR_SPLIT);
+        F.addFnAttr(CORO_PRESPLIT_ATTR);
         break;
       case Intrinsic::coro_resume:
         lowerResumeOrDestroy(*CB, CoroSubFnInst::ResumeIndex);
@@ -213,8 +209,6 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
         lowerCoroDone(cast<IntrinsicInst>(&I));
         break;
     }
-
-    Changed = true;
   }
 
   // Make sure that all CoroFree reference the coro.id intrinsic.
@@ -231,8 +225,6 @@ bool Lowerer::lowerEarlyIntrinsics(Function &F) {
     for (Argument &A : F.args())
       if (A.hasNoAliasAttr())
         A.removeAttr(Attribute::NoAlias);
-
-  return Changed;
 }
 
 static bool declaresCoroEarlyIntrinsics(const Module &M) {
@@ -256,43 +248,3 @@ PreservedAnalyses CoroEarlyPass::run(Module &M, ModuleAnalysisManager &) {
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
-
-namespace {
-
-struct CoroEarlyLegacy : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid.
-  CoroEarlyLegacy() : FunctionPass(ID) {
-    initializeCoroEarlyLegacyPass(*PassRegistry::getPassRegistry());
-  }
-
-  std::unique_ptr<Lowerer> L;
-
-  // This pass has work to do only if we find intrinsics we are going to lower
-  // in the module.
-  bool doInitialization(Module &M) override {
-    if (declaresCoroEarlyIntrinsics(M))
-      L = std::make_unique<Lowerer>(M);
-    return false;
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (!L)
-      return false;
-
-    return L->lowerEarlyIntrinsics(F);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-  }
-  StringRef getPassName() const override {
-    return "Lower early coroutine intrinsics";
-  }
-};
-}
-
-char CoroEarlyLegacy::ID = 0;
-INITIALIZE_PASS(CoroEarlyLegacy, "coro-early",
-                "Lower early coroutine intrinsics", false, false)
-
-Pass *llvm::createCoroEarlyLegacyPass() { return new CoroEarlyLegacy(); }

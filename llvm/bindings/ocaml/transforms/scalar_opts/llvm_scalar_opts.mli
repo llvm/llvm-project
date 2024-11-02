@@ -96,11 +96,6 @@ external add_loop_unroll
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
   = "llvm_add_loop_unroll"
 
-(** See the [llvm::createLoopUnswitchPass] function. *)
-external add_loop_unswitch
-  : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
-  = "llvm_add_loop_unswitch"
-
 (** See the [llvm::createMemCpyOptPass] function. *)
 external add_memcpy_opt
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit

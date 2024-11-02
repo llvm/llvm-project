@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/NestedMatcher.h"
@@ -1428,21 +1429,29 @@ static Operation *vectorizeAffineYieldOp(AffineYieldOp yieldOp,
   // being added to the accumulator by inserting `select` operations, for
   // example:
   //
-  //   %res = arith.addf %acc, %val : vector<128xf32>
-  //   %res_masked = select %mask, %res, %acc : vector<128xi1>, vector<128xf32>
-  //   affine.yield %res_masked : vector<128xf32>
+  //   %val_masked = select %mask, %val, %neutralCst : vector<128xi1>,
+  //   vector<128xf32>
+  //   %res = arith.addf %acc, %val_masked : vector<128xf32>
+  //   affine.yield %res : vector<128xf32>
   //
   if (Value mask = state.vecLoopToMask.lookup(newParentOp)) {
     state.builder.setInsertionPoint(newYieldOp);
     for (unsigned i = 0; i < newYieldOp->getNumOperands(); ++i) {
-      Value result = newYieldOp->getOperand(i);
-      Value iterArg = cast<AffineForOp>(newParentOp).getRegionIterArgs()[i];
-      Value maskedResult = state.builder.create<arith::SelectOp>(
-          result.getLoc(), mask, result, iterArg);
+      SmallVector<Operation *> combinerOps;
+      Value reducedVal = matchReduction(
+          cast<AffineForOp>(newParentOp).getRegionIterArgs(), i, combinerOps);
+      assert(reducedVal && "expect non-null value for parallel reduction loop");
+      assert(combinerOps.size() == 1 && "expect only one combiner op");
+      // IterOperands are neutral element vectors.
+      Value neutralVal = cast<AffineForOp>(newParentOp).getIterOperands()[i];
+      state.builder.setInsertionPoint(combinerOps.back());
+      Value maskedReducedVal = state.builder.create<arith::SelectOp>(
+          reducedVal.getLoc(), mask, reducedVal, neutralVal);
       LLVM_DEBUG(
-          dbgs() << "\n[early-vect]+++++ masking a yielded vector value: "
-                 << maskedResult);
-      newYieldOp->setOperand(i, maskedResult);
+          dbgs() << "\n[early-vect]+++++ masking an input to a binary op that"
+                    "produces value for a yield Op: "
+                 << maskedReducedVal);
+      combinerOps.back()->replaceUsesOfWith(reducedVal, maskedReducedVal);
     }
   }
 

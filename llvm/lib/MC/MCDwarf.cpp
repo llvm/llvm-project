@@ -334,12 +334,18 @@ void MCDwarfLineStr::emitSection(MCStreamer *MCOS) {
   // Switch to the .debug_line_str section.
   MCOS->SwitchSection(
       MCOS->getContext().getObjectFileInfo()->getDwarfLineStrSection());
+  SmallString<0> Data = getFinalizedData();
+  MCOS->emitBinaryData(Data.str());
+}
+
+SmallString<0> MCDwarfLineStr::getFinalizedData() {
   // Emit the strings without perturbing the offsets we used.
-  LineStrings.finalizeInOrder();
+  if (!LineStrings.isFinalized())
+    LineStrings.finalizeInOrder();
   SmallString<0> Data;
   Data.resize(LineStrings.getSize());
   LineStrings.write((uint8_t *)Data.data());
-  MCOS->emitBinaryData(Data.str());
+  return Data;
 }
 
 void MCDwarfLineStr::emitRef(MCStreamer *MCOS, StringRef Path) {

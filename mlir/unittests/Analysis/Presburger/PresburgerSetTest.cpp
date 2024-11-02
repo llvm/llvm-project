@@ -455,6 +455,11 @@ TEST(SetTest, divisions) {
   PresburgerSet setA{parsePoly("(x) : (-x >= 0)")};
   PresburgerSet setB{parsePoly("(x) : (x floordiv 2 - 4 >= 0)")};
   EXPECT_TRUE(setA.subtract(setB).isEqual(setA));
+
+  IntegerPolyhedron evensDefByEquality(PresburgerSpace::getSetSpace(
+      /*numDims=*/1, /*numSymbols=*/0, /*numLocals=*/1));
+  evensDefByEquality.addEquality({1, -2, 0});
+  expectEqual(evens, PresburgerSet(evensDefByEquality));
 }
 
 TEST(SetTest, subtractDuplicateDivsRegression) {

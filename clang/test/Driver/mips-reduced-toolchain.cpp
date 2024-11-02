@@ -1,7 +1,7 @@
 // Check frontend and linker invocations on reduced Debian MIPS toolchain.
 // This toolchain icludes O32 ABI only.
 
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-linux-gnu \
 // RUN:     --sysroot=%S/Inputs/debian_reduced_mips_tree \
 // RUN:     --gcc-toolchain="" -no-pie \
@@ -13,7 +13,7 @@
 // CHECK-DEBIAN-MIPS: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-MIPS: "-L[[SYSROOT]]/usr/lib"
 
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-linux-gnu \
 // RUN:     --sysroot=%S/Inputs/debian_reduced_mips_tree \
 // RUN:     --gcc-toolchain="" -no-pie \

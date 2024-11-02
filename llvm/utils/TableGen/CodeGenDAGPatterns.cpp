@@ -2816,6 +2816,7 @@ void TreePattern::ComputeNamedNodes(TreePatternNode *N) {
 
 TreePatternNodePtr TreePattern::ParseTreePattern(Init *TheInit,
                                                  StringRef OpName) {
+  RecordKeeper &RK = TheInit->getRecordKeeper();
   if (DefInit *DI = dyn_cast<DefInit>(TheInit)) {
     Record *R = DI->getDef();
 
@@ -2854,13 +2855,13 @@ TreePatternNodePtr TreePattern::ParseTreePattern(Init *TheInit,
     if (!OpName.empty())
       error("Constant int or bit argument should not have a name!");
     if (isa<BitInit>(TheInit))
-      TheInit = TheInit->convertInitializerTo(IntRecTy::get());
+      TheInit = TheInit->convertInitializerTo(IntRecTy::get(RK));
     return std::make_shared<TreePatternNode>(TheInit, 1);
   }
 
   if (BitsInit *BI = dyn_cast<BitsInit>(TheInit)) {
     // Turn this into an IntInit.
-    Init *II = BI->convertInitializerTo(IntRecTy::get());
+    Init *II = BI->convertInitializerTo(IntRecTy::get(RK));
     if (!II || !isa<IntInit>(II))
       error("Bits value must be constants!");
     return ParseTreePattern(II, OpName);
@@ -2959,8 +2960,8 @@ TreePatternNodePtr TreePattern::ParseTreePattern(Init *TheInit,
     else // Otherwise, no chain.
       Operator = getDAGPatterns().get_intrinsic_wo_chain_sdnode();
 
-    Children.insert(Children.begin(),
-                    std::make_shared<TreePatternNode>(IntInit::get(IID), 1));
+    Children.insert(Children.begin(), std::make_shared<TreePatternNode>(
+                                          IntInit::get(RK, IID), 1));
   }
 
   if (Operator->isSubClassOf("ComplexPattern")) {
@@ -4367,7 +4368,7 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
     PatternsToMatch.emplace_back(P.getSrcRecord(), P.getPredicates(),
                                  std::move(NewSrc), std::move(NewDst),
                                  P.getDstRegs(), P.getAddedComplexity(),
-                                 Record::getNewUID(), Mode, Check);
+                                 Record::getNewUID(Records), Mode, Check);
   };
 
   for (PatternToMatch &P : Copy) {
@@ -4743,7 +4744,7 @@ void CodeGenDAGPatterns::GenerateVariants() {
           PatternsToMatch[i].getSrcRecord(), PatternsToMatch[i].getPredicates(),
           Variant, PatternsToMatch[i].getDstPatternShared(),
           PatternsToMatch[i].getDstRegs(),
-          PatternsToMatch[i].getAddedComplexity(), Record::getNewUID(),
+          PatternsToMatch[i].getAddedComplexity(), Record::getNewUID(Records),
           PatternsToMatch[i].getForceMode(),
           PatternsToMatch[i].getHwModeFeatures());
     }

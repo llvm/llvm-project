@@ -312,6 +312,26 @@ public:
     return getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace, I);
   }
 
+  unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
+                             Type *ScalarValTy) const {
+    auto &&IsSupportedByTarget = [this, ScalarMemTy, ScalarValTy](unsigned VF) {
+      auto *SrcTy = FixedVectorType::get(ScalarMemTy, VF / 2);
+      EVT VT = getTLI()->getValueType(DL, SrcTy);
+      if (getTLI()->isOperationLegal(ISD::STORE, VT) ||
+          getTLI()->isOperationCustom(ISD::STORE, VT))
+        return true;
+
+      EVT ValVT =
+          getTLI()->getValueType(DL, FixedVectorType::get(ScalarValTy, VF / 2));
+      EVT LegalizedVT =
+          getTLI()->getTypeToTransformTo(ScalarMemTy->getContext(), VT);
+      return getTLI()->isTruncStoreLegal(LegalizedVT, ValVT);
+    };
+    while (VF > 2 && IsSupportedByTarget(VF))
+      VF /= 2;
+    return VF;
+  }
+
   bool isIndexedLoadLegal(TTI::MemIndexedMode M, Type *Ty,
                           const DataLayout &DL) const {
     EVT VT = getTLI()->getValueType(DL, Ty);
@@ -362,10 +382,9 @@ public:
     return getTLI()->isTypeLegal(VT);
   }
 
-  InstructionCost getRegUsageForType(Type *Ty) {
-    InstructionCost Val = getTLI()->getTypeLegalizationCost(DL, Ty).first;
-    assert(Val >= 0 && "Negative cost!");
-    return Val;
+  unsigned getRegUsageForType(Type *Ty) {
+    EVT ETy = getTLI()->getValueType(DL, Ty);
+    return getTLI()->getNumRegisters(Ty->getContext(), ETy);
   }
 
   InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
@@ -872,7 +891,7 @@ public:
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<Value *> Args = None) {
+                                 ArrayRef<const Value *> Args = None) {
 
     switch (improveShuffleKindFromMask(Kind, Mask)) {
     case TTI::SK_Broadcast:
@@ -1919,6 +1938,32 @@ public:
 
       Cost += thisT()->getCmpSelInstrCost(
           BinaryOperator::ICmp, MulTy, OverflowTy, CmpInst::ICMP_NE, CostKind);
+      return Cost;
+    }
+    case Intrinsic::fptosi_sat:
+    case Intrinsic::fptoui_sat: {
+      if (Tys.empty())
+        break;
+      Type *FromTy = Tys[0];
+      bool IsSigned = IID == Intrinsic::fptosi_sat;
+
+      InstructionCost Cost = 0;
+      IntrinsicCostAttributes Attrs1(Intrinsic::minnum, FromTy,
+                                     {FromTy, FromTy});
+      Cost += thisT()->getIntrinsicInstrCost(Attrs1, CostKind);
+      IntrinsicCostAttributes Attrs2(Intrinsic::maxnum, FromTy,
+                                     {FromTy, FromTy});
+      Cost += thisT()->getIntrinsicInstrCost(Attrs2, CostKind);
+      Cost += thisT()->getCastInstrCost(
+          IsSigned ? Instruction::FPToSI : Instruction::FPToUI, RetTy, FromTy,
+          TTI::CastContextHint::None, CostKind);
+      if (IsSigned) {
+        Type *CondTy = RetTy->getWithNewBitWidth(1);
+        Cost += thisT()->getCmpSelInstrCost(
+            BinaryOperator::FCmp, FromTy, CondTy, CmpInst::FCMP_UNO, CostKind);
+        Cost += thisT()->getCmpSelInstrCost(
+            BinaryOperator::Select, RetTy, CondTy, CmpInst::FCMP_UNO, CostKind);
+      }
       return Cost;
     }
     case Intrinsic::ctpop:

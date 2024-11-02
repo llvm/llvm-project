@@ -488,10 +488,9 @@ define <4 x half> @test_v4f16_sub_mul(<4 x half> %x, <4 x half> %y, <4 x half> %
 ; GFX10-NEXT:    v_add_f16_e64 v2, v0, -v4
 ; GFX10-NEXT:    v_add_f16_sdwa v0, v0, -v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX10-NEXT:    v_add_f16_e64 v3, v1, -v5
-; GFX10-NEXT:    v_mov_b32_e32 v4, 0xffff
 ; GFX10-NEXT:    v_add_f16_sdwa v1, v1, -v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX10-NEXT:    v_and_or_b32 v0, v2, v4, v0
-; GFX10-NEXT:    v_and_or_b32 v1, v3, v4, v1
+; GFX10-NEXT:    v_and_or_b32 v0, 0xffff, v2, v0
+; GFX10-NEXT:    v_and_or_b32 v1, 0xffff, v3, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-CONTRACT-LABEL: test_v4f16_sub_mul:
@@ -511,10 +510,9 @@ define <4 x half> @test_v4f16_sub_mul(<4 x half> %x, <4 x half> %y, <4 x half> %
 ; GFX10-DENORM-NEXT:    v_add_f16_e64 v2, v0, -v4
 ; GFX10-DENORM-NEXT:    v_add_f16_sdwa v0, v0, -v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX10-DENORM-NEXT:    v_add_f16_e64 v3, v1, -v5
-; GFX10-DENORM-NEXT:    v_mov_b32_e32 v4, 0xffff
 ; GFX10-DENORM-NEXT:    v_add_f16_sdwa v1, v1, -v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX10-DENORM-NEXT:    v_and_or_b32 v0, v2, v4, v0
-; GFX10-DENORM-NEXT:    v_and_or_b32 v1, v3, v4, v1
+; GFX10-DENORM-NEXT:    v_and_or_b32 v0, 0xffff, v2, v0
+; GFX10-DENORM-NEXT:    v_and_or_b32 v1, 0xffff, v3, v1
 ; GFX10-DENORM-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   %a = fmul <4 x half> %x, %y
@@ -567,10 +565,9 @@ define <4 x half> @test_v4f16_sub_mul_rhs(<4 x half> %x, <4 x half> %y, <4 x hal
 ; GFX10-NEXT:    v_add_f16_e64 v2, v4, -v0
 ; GFX10-NEXT:    v_add_f16_sdwa v0, v4, -v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX10-NEXT:    v_add_f16_e64 v3, v5, -v1
-; GFX10-NEXT:    v_mov_b32_e32 v4, 0xffff
 ; GFX10-NEXT:    v_add_f16_sdwa v1, v5, -v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX10-NEXT:    v_and_or_b32 v0, v2, v4, v0
-; GFX10-NEXT:    v_and_or_b32 v1, v3, v4, v1
+; GFX10-NEXT:    v_and_or_b32 v0, 0xffff, v2, v0
+; GFX10-NEXT:    v_and_or_b32 v1, 0xffff, v3, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-CONTRACT-LABEL: test_v4f16_sub_mul_rhs:
@@ -590,10 +587,9 @@ define <4 x half> @test_v4f16_sub_mul_rhs(<4 x half> %x, <4 x half> %y, <4 x hal
 ; GFX10-DENORM-NEXT:    v_add_f16_e64 v2, v4, -v0
 ; GFX10-DENORM-NEXT:    v_add_f16_sdwa v0, v4, -v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX10-DENORM-NEXT:    v_add_f16_e64 v3, v5, -v1
-; GFX10-DENORM-NEXT:    v_mov_b32_e32 v4, 0xffff
 ; GFX10-DENORM-NEXT:    v_add_f16_sdwa v1, v5, -v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX10-DENORM-NEXT:    v_and_or_b32 v0, v2, v4, v0
-; GFX10-DENORM-NEXT:    v_and_or_b32 v1, v3, v4, v1
+; GFX10-DENORM-NEXT:    v_and_or_b32 v0, 0xffff, v2, v0
+; GFX10-DENORM-NEXT:    v_and_or_b32 v1, 0xffff, v3, v1
 ; GFX10-DENORM-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   %a = fmul <4 x half> %x, %y

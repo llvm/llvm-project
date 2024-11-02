@@ -16,8 +16,8 @@ using namespace std;
 
 void f() {
   int i = 0;
-  (void)move(i); // expected-warning {{unqualified call to std::move}}
+  (void)move(i); // expected-warning {{unqualified call to 'std::move}}
   // CHECK: {{^}}  (void)std::move
-  (void)forward(i); // expected-warning {{unqualified call to std::forward}}
+  (void)forward(i); // expected-warning {{unqualified call to 'std::forward}}
   // CHECK: {{^}}  (void)std::forward
 }

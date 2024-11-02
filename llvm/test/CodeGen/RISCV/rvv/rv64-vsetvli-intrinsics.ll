@@ -9,7 +9,7 @@ declare i64 @llvm.riscv.vsetvlimax.opt.i64(i64, i64)
 define void @test_vsetvli_e8m1(i64 %avl) nounwind {
 ; CHECK-LABEL: test_vsetvli_e8m1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
 ; CHECK-NEXT:    ret
   call i64 @llvm.riscv.vsetvli.i64(i64 %avl, i64 0, i64 0)
   ret void
@@ -18,7 +18,7 @@ define void @test_vsetvli_e8m1(i64 %avl) nounwind {
 define void @test_vsetvli_e16mf4(i64 %avl) nounwind {
 ; CHECK-LABEL: test_vsetvli_e16mf4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
 ; CHECK-NEXT:    ret
   call i64 @llvm.riscv.vsetvli.i64(i64 %avl, i64 1, i64 6)
   ret void
@@ -27,7 +27,7 @@ define void @test_vsetvli_e16mf4(i64 %avl) nounwind {
 define void @test_vsetvli_e32mf8_zero_avl() nounwind {
 ; CHECK-LABEL: test_vsetvli_e32mf8_zero_avl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 0, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, mf4, ta, mu
 ; CHECK-NEXT:    ret
   call i64 @llvm.riscv.vsetvli.i64(i64 0, i64 1, i64 6)
   ret void
@@ -119,7 +119,7 @@ declare <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.i64(<vscale x 4 x i32>, <vsca
 define <vscale x 4 x i32> @redundant_vsetvli(i64 %avl, <vscale x 4 x i32>* %ptr) nounwind {
 ; CHECK-LABEL: redundant_vsetvli:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    ret
   %vl = call i64 @llvm.riscv.vsetvli.i64(i64 %avl, i64 2, i64 1)
@@ -135,7 +135,7 @@ define <vscale x 4 x i32> @repeated_vsetvli(i64 %avl, <vscale x 4 x i32>* %ptr) 
 ; CHECK-LABEL: repeated_vsetvli:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, a0, e32, m2, ta, mu
-; CHECK-NEXT:    vsetvli a0, a0, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    ret
   %vl0 = call i64 @llvm.riscv.vsetvli.i64(i64 %avl, i64 2, i64 1)

@@ -406,7 +406,7 @@ the concept, let's take a look at a quick example. Consider the `.mlir` snippet
 below:
 
 ```mlir
-func @baz(%arg: i32) {
+func.func @baz(%arg: i32) {
   %result = my_dialect.foo %arg, %arg -> i32
 }
 ```
@@ -577,9 +577,10 @@ let root = op<>;
 #### Operands
 
 The operands section corresponds to the operands of the operation. This section
-of an operation expression may be elided, in which case the operands are not
-constrained in any way. When present, the operands of an operation expression
-are interpreted in the following ways:
+of an operation expression may be elided, which within a `match` section means
+that the operands are not constrained in any way. If elided within a `rewrite`
+section, the operation is treated as having no operands. When present, the
+operands of an operation expression are interpreted in the following ways:
 
 1) A single instance of type `ValueRange`:
 
@@ -612,10 +613,11 @@ let root = op<my_dialect.indirect_call>(call: Value, args: ValueRange);
 
 #### Results
 
-The results section corresponds to the result types of the operation. This
-section of an operation expression may be elided, in which case the result types
-are not constrained in any way. When present, the result types of an operation
-expression are interpreted in the following ways:
+The results section corresponds to the result types of the operation. This section
+of an operation expression may be elided, which within a `match` section means
+that the result types are not constrained in any way. If elided within a `rewrite`
+section, the results of the operation are [inferred](#inferred-results). When present,
+the result types of an operation expression are interpreted in the following ways:
 
 1) A single instance of type `TypeRange`:
 
@@ -645,6 +647,87 @@ We can match the result types as so:
 ```pdll
 let root = op<my_dialect.op> -> (result: Type, otherResults: TypeRange);
 ```
+
+#### Inferred Results
+
+Within the `rewrite` section of a pattern, the result types of an
+operation are inferred if they are elided or otherwise not
+previously bound. The ["variable binding"](#variable-binding) section above
+discusses the concept of "binding" in more detail. Below are various examples
+that build upon this to help showcase how a result type may be "bound":
+
+* Binding to a [constant](#type-expression):
+
+```pdll
+op<my_dialect.op> -> (type<"i32">);
+```
+
+* Binding to types within the `match` section:
+
+```pdll
+Pattern {
+  replace op<dialect.inputOp> -> (resultTypes: TypeRange)
+    with op<dialect.outputOp> -> (resultTypes);
+}
+```
+
+* Binding to previously inferred types:
+
+```pdll
+Pattern {
+  rewrite root: Op with {
+    // `resultTypes` here is *not* yet bound, and will be inferred when
+    // creating `dialect.op`. Any uses of `resultTypes` after this expression,
+    // will use the types inferred when creating this operation.
+    op<dialect.op> -> (resultTypes: TypeRange);
+
+    // `resultTypes` here is bound to the types inferred when creating `dialect.op`.
+    op<dialect.bar> -> (resultTypes);
+  };
+}
+```
+
+* Binding to a [`Native Rewrite`](#native-rewriters) method result:
+
+```pdll
+Rewrite BuildTypes() -> TypeRange;
+
+Pattern {
+  rewrite root: Op with {
+    op<dialect.op> -> (BuildTypes());
+  };
+}
+```
+
+Below are the set of contexts in which result type inferrence is supported:
+
+##### Inferred Results of Replacement Operation
+
+Replacements have the invariant that the types of the replacement values must
+match the result types of the input operation. This means that when replacing
+one operation with another, the result types of the replacement operation may
+be inferred from the result types of the operation being replaced. For example,
+consider the following pattern:
+
+```pdll
+Pattern => replace op<dialect.inputOp> with op<dialect.outputOp>;
+```
+
+This pattern could be written in a more explicit way as:
+
+```pdll
+Pattern {
+  replace op<dialect.inputOp> -> (resultTypes: TypeRange)
+    with op<dialect.outputOp> -> (resultTypes);
+}
+```
+
+##### Inferred Results with InferTypeOpInterface
+
+`InferTypeOpInterface` is an interface that enables operations to infer its result
+types from its input attributes, operands, regions, etc. When the result types of
+an operation cannot be inferred from any other context, this interface is invoked
+to infer the result types of the operation.
 
 #### Attributes
 
@@ -700,9 +783,9 @@ let inputOp = op<my_dialect.input_op>(resultOp.result, resultOp.0);
 ```
 
 Along with result name access, variables of `Op` type may implicitly convert to
-`Value` or `ValueRange`. These variables are converted to `Value` when they are
-known (via ODS) to only have one result, in all other cases they convert to
-`ValueRange`:
+`Value` or `ValueRange`. If these variables are registered (has ODS entry), they
+are converted to `Value` when they are known to only have one result, otherwise
+they will be converted to `ValueRange`:
 
 ```pdll
 // `resultOp` may also convert implicitly to a Value for use in `inputOp`:
@@ -711,6 +794,17 @@ let inputOp = op<my_dialect.input_op>(resultOp);
 
 // We could also inline `resultOp` directly:
 let inputOp = op<my_dialect.input_op>(op<my_dialect.result_op>);
+```
+
+#### Unregistered Operations
+
+A variable of unregistered op is still available for numeric result indexing.
+Given that we don't have knowledge of its result groups, numeric indexing
+returns a Value corresponding to the individual result at the given index.
+
+```pdll
+// Use the index `0` to refer to the first result value of the unregistered op.
+let inputOp = op<my_dialect.input_op>(op<my_dialect.unregistered_op>.0);
 ```
 
 ### Attribute Expression
@@ -1052,17 +1146,86 @@ Pattern {
 ```
 
 The arguments of the constraint are accessible within the code block via the
-same name. The type of these native variables are mapped directly to the
-corresponding MLIR type of the [core constraint](#core-constraints) used. For
-example, an `Op` corresponds to a variable of type `Operation *`.
+same name. See the ["type translation"](#native-constraint-type-translations) below for
+detailed information on how PDLL types are converted to native types. In addition to the
+PDLL arguments, the code block may also access the current `PatternRewriter` using
+`rewriter`. The result type of the native constraint function is implicitly defined
+as a `::mlir::LogicalResult`.
 
-The results of the constraint can be populated using the provided `results`
-variable. This variable is a `PDLResultList`, and expects results to be
-populated in the order that they are defined within the result list of the
-constraint declaration.
+Taking the constraints defined above as an example, these function would roughly be
+translated into:
 
-In addition to the above, the code block may also access the current
-`PatternRewriter` using `rewriter`.
+```c++
+LogicalResult HasOneUse(PatternRewriter &rewriter, Value value) {
+  return success(value.hasOneUse());
+}
+LogicalResult HasSameElementType(Value value1, Value value2) {
+  return success(value1.getType().cast<ShapedType>().getElementType() ==
+                 value2.getType().cast<ShapedType>().getElementType());
+}
+```
+
+TODO: Native constraints should also be allowed to return values in certain cases.
+
+###### Native Constraint Type Translations
+
+The types of argument and result variables are generally mapped to the corresponding
+MLIR type of the [constraint](#constraints) used. Below is a detailed description
+of how the mapped type of a variable is determined for the various different types of
+constraints.
+
+* Attr, Op, Type, TypeRange, Value, ValueRange:
+
+These are all core constraints, and are mapped directly to the MLIR equivalent
+(that their names suggest), namely:
+
+  * `Attr`       -> "::mlir::Attribute"
+  * `Op`         -> "::mlir::Operation *"
+  * `Type`       -> "::mlir::Type"
+  * `TypeRange`  -> "::mlir::TypeRange"
+  * `Value`      -> "::mlir::Value"
+  * `ValueRange` -> "::mlir::ValueRange"
+
+* Op<dialect.name>
+
+A named operation constraint has a unique translation. If the ODS registration of the
+referenced operation has been included, the qualified C++ is used. If the ODS information
+is not available, this constraint maps to "::mlir::Operation *", similarly to the unnamed
+variant. For example, given the following:
+
+```pdll
+// `my_ops.td` provides the ODS definition of the `my_dialect` operations, such as
+// `my_dialect.bar` used below.
+#include "my_ops.td"
+
+Constraint Cst(op: Op<my_dialect.bar>) [{
+  return success(op ... );
+}];
+```
+
+The native type used for `op` may be of the form `my_dialect::BarOp`, as opposed to the
+default `::mlir::Operation *`. Below is a sample translation of the above constraint:
+
+```c++
+LogicalResult Cst(my_dialect::BarOp op) {
+  return success(op ... );
+}
+```
+
+* Imported ODS Constraints
+
+Aside from the core constraints, certain constraints imported from ODS may use a unique
+native type. How to enable this unique type depends on the ODS constraint construct that
+was imported:
+
+  * `Attr` constraints
+    - Imported `Attr` constraints utilize the `storageType` field for native type translation.
+  
+  * `Type` constraints
+    - Imported `Type` constraints utilize the `cppClassName` field for native type translation.
+
+  * `AttrInterface`/`OpInterface`/`TypeInterface` constraints
+    - Imported interfaces utilize the `cppClassName` field for native type translation.
 
 #### Defining Constraints Inline
 
@@ -1320,10 +1483,7 @@ be defined by specifying a string code block after the rewrite declaration:
 
 ```pdll
 Rewrite BuildOp(value: Value) -> (foo: Op<my_dialect.foo>, bar: Op<my_dialect.bar>) [{
-  // We push back the results into the `results` variable in the order defined
-  // by the result list of the rewrite declaration.
-  results.push_back(rewriter.create<my_dialect::FooOp>(value));
-  results.push_back(rewriter.create<my_dialect::BarOp>());
+  return {rewriter.create<my_dialect::FooOp>(value), rewriter.create<my_dialect::BarOp>()};
 }];
 
 Pattern {
@@ -1337,17 +1497,85 @@ Pattern {
 ```
 
 The arguments of the rewrite are accessible within the code block via the
-same name. The type of these native variables are mapped directly to the
-corresponding MLIR type of the [core constraint](#core-constraints) used. For
-example, an `Op` corresponds to a variable of type `Operation *`.
+same name. See the ["type translation"](#native-rewrite-type-translations) below for
+detailed information on how PDLL types are converted to native types. In addition to the
+PDLL arguments, the code block may also access the current `PatternRewriter` using
+`rewriter`. See the ["result translation"](#native-rewrite-result-translation) section
+for detailed information on how the result type of the native function is determined.
 
-The results of the rewrite can be populated using the provided `results`
-variable. This variable is a `PDLResultList`, and expects results to be
-populated in the order that they are defined within the result list of the
-rewrite declaration.
+Taking the rewrite defined above as an example, this function would roughly be
+translated into:
 
-In addition to the above, the code block may also access the current
-`PatternRewriter` using `rewriter`.
+```c++
+std::tuple<my_dialect::FooOp, my_dialect::BarOp> BuildOp(Value value) {
+  return {rewriter.create<my_dialect::FooOp>(value), rewriter.create<my_dialect::BarOp>()};
+}
+```
+
+###### Native Rewrite Type Translations
+
+The types of argument and result variables are generally mapped to the corresponding
+MLIR type of the [constraint](#constraints) used. The rules of native `Rewrite` type translation
+are identical to those of native `Constraint`s, please view the corresponding
+[native `Constraint` type translation](#native-constraint-type-translations) section for a
+detailed description of how the mapped type of a variable is determined.
+
+###### Native Rewrite Result Translation
+
+The results of a native rewrite are directly translated to the results of the native function,
+using the type translation rules [described above](#native-rewrite-type-translations). The section
+below describes the various result translation scenarios:
+
+* Zero Result
+
+```pdll
+Rewrite createOp() [{
+  rewriter.create<my_dialect::FooOp>();
+}];
+```
+
+In the case where a native `Rewrite` has no results, the native function returns `void`:
+
+```c++
+void createOp(PatternRewriter &rewriter) {
+  rewriter.create<my_dialect::FooOp>();
+}
+```
+
+* Single Result
+
+```pdll
+Rewrite createOp() -> Op<my_dialect.foo> [{
+  return rewriter.create<my_dialect::FooOp>();
+}];
+```
+
+In the case where a native `Rewrite` has a single result, the native function returns the corresponding
+native type for that single result:
+
+```c++
+my_dialect::FooOp createOp(PatternRewriter &rewriter) {
+  return rewriter.create<my_dialect::FooOp>();
+}
+```
+
+* Multi Result
+
+```pdll
+Rewrite complexRewrite(value: Value) -> (Op<my_dialect.foo>, FunctionOpInterface) [{
+  ...
+}];
+```
+
+In the case where a native `Rewrite` has multiple results, the native function returns a `std::tuple<...>`
+containing the corresponding native types for each of the results:
+
+```c++
+std::tuple<my_dialect::FooOp, FunctionOpInterface>
+complexRewrite(PatternRewriter &rewriter, Value value) {
+  ...
+}
+```
 
 #### Defining Rewrites Inline
 

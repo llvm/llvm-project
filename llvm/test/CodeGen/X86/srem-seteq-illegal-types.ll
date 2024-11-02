@@ -34,38 +34,41 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; X86-LABEL: test_srem_even:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    shlb $4, %al
-; X86-NEXT:    sarb $4, %al
-; X86-NEXT:    movsbl %al, %ecx
-; X86-NEXT:    imull $43, %ecx, %ecx
-; X86-NEXT:    movzwl %cx, %ecx
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shlb $4, %cl
+; X86-NEXT:    sarb $4, %cl
+; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    leal (%ecx,%ecx,2), %ecx
 ; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    shrl $15, %edx
-; X86-NEXT:    addb %ch, %dl
-; X86-NEXT:    movzbl %dl, %ecx
+; X86-NEXT:    shrb $7, %dl
+; X86-NEXT:    shrb $4, %cl
+; X86-NEXT:    addb %dl, %cl
+; X86-NEXT:    movzbl %cl, %ecx
 ; X86-NEXT:    addl %ecx, %ecx
 ; X86-NEXT:    leal (%ecx,%ecx,2), %ecx
 ; X86-NEXT:    subb %cl, %al
+; X86-NEXT:    andb $15, %al
 ; X86-NEXT:    cmpb $1, %al
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_srem_even:
 ; X64:       # %bb.0:
-; X64-NEXT:    shlb $4, %dil
-; X64-NEXT:    sarb $4, %dil
-; X64-NEXT:    movsbl %dil, %eax
-; X64-NEXT:    imull $43, %eax, %ecx
-; X64-NEXT:    movzwl %cx, %ecx
-; X64-NEXT:    movl %ecx, %edx
-; X64-NEXT:    shrl $15, %edx
-; X64-NEXT:    shrl $8, %ecx
-; X64-NEXT:    addb %dl, %cl
-; X64-NEXT:    movzbl %cl, %ecx
-; X64-NEXT:    addl %ecx, %ecx
-; X64-NEXT:    leal (%rcx,%rcx,2), %ecx
-; X64-NEXT:    subb %cl, %al
-; X64-NEXT:    cmpb $1, %al
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shlb $4, %al
+; X64-NEXT:    sarb $4, %al
+; X64-NEXT:    movzbl %al, %eax
+; X64-NEXT:    leal (%rax,%rax,2), %eax
+; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    shrb $7, %cl
+; X64-NEXT:    shrb $4, %al
+; X64-NEXT:    addb %cl, %al
+; X64-NEXT:    movzbl %al, %eax
+; X64-NEXT:    addl %eax, %eax
+; X64-NEXT:    leal (%rax,%rax,2), %eax
+; X64-NEXT:    subb %al, %dil
+; X64-NEXT:    andb $15, %dil
+; X64-NEXT:    cmpb $1, %dil
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
   %srem = srem i4 %X, 6

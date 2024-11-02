@@ -61,12 +61,12 @@ IntegerRelation IntegerRelation::intersect(IntegerRelation other) const {
 }
 
 bool IntegerRelation::isEqual(const IntegerRelation &other) const {
-  assert(space.isEqual(other.getSpace()) && "Spaces must be equal.");
+  assert(space.isCompatible(other.getSpace()) && "Spaces must be compatible.");
   return PresburgerRelation(*this).isEqual(PresburgerRelation(other));
 }
 
 bool IntegerRelation::isSubsetOf(const IntegerRelation &other) const {
-  assert(space.isEqual(other.getSpace()) && "Spaces must be equal.");
+  assert(space.isCompatible(other.getSpace()) && "Spaces must be compatible.");
   return PresburgerRelation(*this).isSubsetOf(PresburgerRelation(other));
 }
 
@@ -1184,16 +1184,16 @@ void IntegerRelation::removeRedundantLocalVars() {
 }
 
 void IntegerRelation::convertIdKind(IdKind srcKind, unsigned idStart,
-                                    unsigned idLimit, IdKind dstKind) {
+                                    unsigned idLimit, IdKind dstKind,
+                                    unsigned pos) {
   assert(idLimit <= getNumIdKind(srcKind) && "Invalid id range");
 
   if (idStart >= idLimit)
     return;
 
   // Append new local variables corresponding to the dimensions to be converted.
-  unsigned newIdsBegin = getIdKindEnd(dstKind);
   unsigned convertCount = idLimit - idStart;
-  appendId(dstKind, convertCount);
+  unsigned newIdsBegin = insertId(dstKind, pos, convertCount);
 
   // Swap the new local variables with dimensions.
   //
@@ -2074,6 +2074,102 @@ void IntegerRelation::removeIndependentConstraints(unsigned pos, unsigned num) {
   for (auto nbIndex : llvm::reverse(nbEqIndices))
     removeEquality(nbIndex);
 }
+
+IntegerPolyhedron IntegerRelation::getDomainSet() const {
+  IntegerRelation copyRel = *this;
+
+  // Convert Range variables to Local variables.
+  copyRel.convertIdKind(IdKind::Range, 0, getNumIdKind(IdKind::Range),
+                        IdKind::Local);
+
+  // Convert Domain variables to SetDim(Range) variables.
+  copyRel.convertIdKind(IdKind::Domain, 0, getNumIdKind(IdKind::Domain),
+                        IdKind::SetDim);
+
+  return IntegerPolyhedron(std::move(copyRel));
+}
+
+IntegerPolyhedron IntegerRelation::getRangeSet() const {
+  IntegerRelation copyRel = *this;
+
+  // Convert Domain variables to Local variables.
+  copyRel.convertIdKind(IdKind::Domain, 0, getNumIdKind(IdKind::Domain),
+                        IdKind::Local);
+
+  // We do not need to do anything to Range variables since they are already in
+  // SetDim position.
+
+  return IntegerPolyhedron(std::move(copyRel));
+}
+
+void IntegerRelation::intersectDomain(const IntegerPolyhedron &poly) {
+  assert(getDomainSet().getSpace().isCompatible(poly.getSpace()) &&
+         "Domain set is not compatible with poly");
+
+  // Treating the poly as a relation, convert it from `0 -> R` to `R -> 0`.
+  IntegerRelation rel = poly;
+  rel.inverse();
+
+  // Append dummy range variables to make the spaces compatible.
+  rel.appendId(IdKind::Range, getNumRangeIds());
+
+  // Intersect in place.
+  mergeLocalIds(rel);
+  append(rel);
+}
+
+void IntegerRelation::intersectRange(const IntegerPolyhedron &poly) {
+  assert(getRangeSet().getSpace().isCompatible(poly.getSpace()) &&
+         "Range set is not compatible with poly");
+
+  IntegerRelation rel = poly;
+
+  // Append dummy domain variables to make the spaces compatible.
+  rel.appendId(IdKind::Domain, getNumDomainIds());
+
+  mergeLocalIds(rel);
+  append(rel);
+}
+
+void IntegerRelation::inverse() {
+  unsigned numRangeIds = getNumIdKind(IdKind::Range);
+  convertIdKind(IdKind::Domain, 0, getIdKindEnd(IdKind::Domain), IdKind::Range);
+  convertIdKind(IdKind::Range, 0, numRangeIds, IdKind::Domain);
+}
+
+void IntegerRelation::compose(const IntegerRelation &rel) {
+  assert(getRangeSet().getSpace().isCompatible(rel.getDomainSet().getSpace()) &&
+         "Range of `this` should be compatible with Domain of `rel`");
+
+  IntegerRelation copyRel = rel;
+
+  // Let relation `this` be R1: A -> B, and `rel` be R2: B -> C.
+  // We convert R1 to A -> (B X C), and R2 to B X C then intersect the range of
+  // R1 with R2. After this, we get R1: A -> C, by projecting out B.
+  // TODO: Using nested spaces here would help, since we could directly
+  // intersect the range with another relation.
+  unsigned numBIds = getNumRangeIds();
+
+  // Convert R1 from A -> B to A -> (B X C).
+  appendId(IdKind::Range, copyRel.getNumRangeIds());
+
+  // Convert R2 to B X C.
+  copyRel.convertIdKind(IdKind::Domain, 0, numBIds, IdKind::Range, 0);
+
+  // Intersect R2 to range of R1.
+  intersectRange(IntegerPolyhedron(copyRel));
+
+  // Project out B in R1.
+  convertIdKind(IdKind::Range, 0, numBIds, IdKind::Local);
+}
+
+void IntegerRelation::applyDomain(const IntegerRelation &rel) {
+  inverse();
+  compose(rel);
+  inverse();
+}
+
+void IntegerRelation::applyRange(const IntegerRelation &rel) { compose(rel); }
 
 void IntegerRelation::printSpace(raw_ostream &os) const {
   space.print(os);

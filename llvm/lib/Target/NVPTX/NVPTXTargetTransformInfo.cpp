@@ -96,7 +96,7 @@ bool NVPTXTTIImpl::isSourceOfDivergence(const Value *V) {
       // Instructions that read threadIdx are obviously divergent.
       if (readsThreadIndex(II) || readsLaneId(II))
         return true;
-      // Handle the NVPTX atomic instrinsics that cannot be represented as an
+      // Handle the NVPTX atomic intrinsics that cannot be represented as an
       // atomic IR instruction.
       if (isNVVMAtomic(II))
         return true;

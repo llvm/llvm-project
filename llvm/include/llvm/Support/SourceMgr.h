@@ -151,11 +151,19 @@ public:
   }
 
   /// Takes the source buffers from the given source manager and append them to
+  /// the current manager. `MainBufferIncludeLoc` is an optional include
+  /// location to attach to the main buffer of `SrcMgr` after it gets moved to
   /// the current manager.
-  void takeSourceBuffersFrom(SourceMgr &SrcMgr) {
+  void takeSourceBuffersFrom(SourceMgr &SrcMgr,
+                             SMLoc MainBufferIncludeLoc = SMLoc()) {
+    if (SrcMgr.Buffers.empty())
+      return;
+
+    size_t OldNumBuffers = getNumBuffers();
     std::move(SrcMgr.Buffers.begin(), SrcMgr.Buffers.end(),
               std::back_inserter(Buffers));
     SrcMgr.Buffers.clear();
+    Buffers[OldNumBuffers].IncludeLoc = MainBufferIncludeLoc;
   }
 
   /// Search for a file with the specified name in the current directory or in

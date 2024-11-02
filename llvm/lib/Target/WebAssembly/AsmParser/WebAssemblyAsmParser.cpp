@@ -1103,7 +1103,8 @@ public:
   }
 
   void onEndOfFunction(SMLoc ErrorLoc) {
-    TC.endOfFunction(ErrorLoc);
+    if (!SkipTypeCheck)
+      TC.endOfFunction(ErrorLoc);
     // Reset the type checker state.
     TC.Clear();
 

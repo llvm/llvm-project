@@ -139,13 +139,12 @@ def build_run_list(test, run_lines, verbose=False):
 
         run_list.append(Run(check_prefixes, cmd_args, triple))
 
-    # Remove any common prefixes. We'll just leave those entirely alone.
-    common_prefixes = set([prefix for prefix in all_prefixes
-                           if all_prefixes.count(prefix) > 1])
+    # Sort prefixes that are shared between run lines before unshared prefixes.
+    # This causes us to prefer printing shared prefixes.
     for run in run_list:
-        run.prefixes = [p for p in run.prefixes if p not in common_prefixes]
+        run.prefixes.sort(key=lambda prefix: -all_prefixes.count(prefix))
 
-    return run_list, common_prefixes
+    return run_list
 
 
 def find_functions_with_one_bb(lines, verbose=False):
@@ -176,11 +175,30 @@ def build_function_body_dictionary(test, raw_tool_output, triple, prefixes,
             log('Processing function: {}'.format(func))
             for l in body.splitlines():
                 log('  {}'.format(l))
+
+        # Vreg mangling
+        mangled = []
+        vreg_map = {}
+        for func_line in body.splitlines(keepends=True):
+            m = VREG_DEF_RE.match(func_line)
+            if m:
+                for vreg in VREG_RE.finditer(m.group('vregs')):
+                    name = mangle_vreg(m.group('opcode'), vreg_map.values())
+                    vreg_map[vreg.group(1)] = name
+                    func_line = func_line.replace(
+                        vreg.group(1), '[[{}:%[0-9]+]]'.format(name), 1)
+            for number, name in vreg_map.items():
+                func_line = re.sub(r'{}\b'.format(number), '[[{}]]'.format(name),
+                                func_line)
+            mangled.append(func_line)
+        body = ''.join(mangled)
+
         for prefix in prefixes:
-            if func in func_dict[prefix] and func_dict[prefix][func] != body:
-                common.warn('Found conflicting asm for prefix: {}'.format(prefix),
-                     test_file=test)
-            func_dict[prefix][func] = body
+            if func in func_dict[prefix]:
+                if func_dict[prefix][func] != body:
+                    func_dict[prefix][func] = None
+            else:
+                func_dict[prefix][func] = body
 
 
 def add_checks_for_function(test, output_lines, run_list, func_dict, func_name,
@@ -189,7 +207,7 @@ def add_checks_for_function(test, output_lines, run_list, func_dict, func_name,
     for run in run_list:
         for prefix in run.prefixes:
             if prefix in printed_prefixes:
-                continue
+                break
             if not func_dict[prefix][func_name]:
                 continue
             # if printed_prefixes:
@@ -200,6 +218,10 @@ def add_checks_for_function(test, output_lines, run_list, func_dict, func_name,
             add_check_lines(test, output_lines, prefix, func_name, single_bb,
                             func_dict[prefix][func_name].splitlines())
             break
+        else:
+            common.warn(
+                'Found conflicting asm for function: {}'.format(func_name),
+                test_file=test)
     return output_lines
 
 
@@ -222,22 +244,11 @@ def add_check_lines(test, output_lines, prefix, func_name, single_bb,
     output_lines.append('{}-LABEL: name: {}'.format(check, func_name))
     first_check = True
 
-    vreg_map = {}
     for func_line in func_body:
         if not func_line.strip():
             # The mir printer prints leading whitespace so we can't use CHECK-EMPTY:
             output_lines.append(check + '-NEXT: {{' + func_line + '$}}')
             continue
-        m = VREG_DEF_RE.match(func_line)
-        if m:
-            for vreg in VREG_RE.finditer(m.group('vregs')):
-                name = mangle_vreg(m.group('opcode'), vreg_map.values())
-                vreg_map[vreg.group(1)] = name
-                func_line = func_line.replace(
-                    vreg.group(1), '[[{}:%[0-9]+]]'.format(name), 1)
-        for number, name in vreg_map.items():
-            func_line = re.sub(r'{}\b'.format(number), '[[{}]]'.format(name),
-                               func_line)
         filecheck_directive = check if first_check else check + '-NEXT'
         first_check = False
         check_line = '{}: {}'.format(filecheck_directive, func_line[indent:]).rstrip()
@@ -302,7 +313,7 @@ def update_test_file(args, test):
 
     triple_in_ir = find_triple_in_ir(input_lines, args.verbose)
     run_lines = common.find_run_lines(test, input_lines)
-    run_list, common_prefixes = build_run_list(test, run_lines, args.verbose)
+    run_list = build_run_list(test, run_lines, args.verbose)
 
     simple_functions = find_functions_with_one_bb(input_lines, args.verbose)
 
@@ -327,12 +338,6 @@ def update_test_file(args, test):
     func_name = None
     prefix_set = set([prefix for run in run_list for prefix in run.prefixes])
     log('Rewriting FileCheck prefixes: {}'.format(prefix_set), args.verbose)
-
-    if args.remove_common_prefixes:
-        prefix_set.update(common_prefixes)
-    elif common_prefixes:
-        common.warn('Ignoring common prefixes: {}'.format(common_prefixes),
-             test_file=test)
 
     comment_char = '#' if test.endswith('.mir') else ';'
     autogenerated_note = ('{} NOTE: Assertions have been autogenerated by '
@@ -420,9 +425,6 @@ def main():
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--llc-binary', dest='llc', default='llc', type=LLC,
                         help='The "llc" binary to generate the test case with')
-    parser.add_argument('--remove-common-prefixes', action='store_true',
-                        help='Remove existing check lines whose prefixes are '
-                             'shared between multiple commands')
     parser.add_argument('tests', nargs='+')
     args = common.parse_commandline_args(parser)
 

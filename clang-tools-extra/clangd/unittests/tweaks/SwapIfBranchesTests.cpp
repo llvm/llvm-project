@@ -27,19 +27,17 @@ TEST_F(SwapIfBranchesTest, Test) {
   EXPECT_AVAILABLE("^i^f^^(^t^r^u^e^) { return; } ^e^l^s^e^ { return; }");
   EXPECT_UNAVAILABLE("if (true) {^return ^;^ } else { ^return^;^ }");
   // Available in subexpressions of the condition;
-  EXPECT_THAT("if(2 + [[2]] + 2) { return; } else {return;}", isAvailable());
+  EXPECT_AVAILABLE("if(2 + [[2]] + 2) { return; } else {return;}");
   // But not as part of the branches.
-  EXPECT_THAT("if(2 + 2 + 2) { [[return]]; } else { return; }",
-              Not(isAvailable()));
+  EXPECT_UNAVAILABLE("if(2 + 2 + 2) { [[return]]; } else { return; }");
   // Range covers the "else" token, so available.
-  EXPECT_THAT("if(2 + 2 + 2) { return[[; } else {return;]]}", isAvailable());
+  EXPECT_AVAILABLE("if(2 + 2 + 2) { return[[; } else {return;]]}");
   // Not available in compound statements in condition.
-  EXPECT_THAT("if([]{return [[true]];}()) { return; } else { return; }",
-              Not(isAvailable()));
+  EXPECT_UNAVAILABLE("if([]{return [[true]];}()) { return; } else { return; }");
   // Not available if both sides aren't braced.
-  EXPECT_THAT("^if (1) return; else { return; }", Not(isAvailable()));
+  EXPECT_UNAVAILABLE("^if (1) return; else { return; }");
   // Only one if statement is supported!
-  EXPECT_THAT("[[if(1){}else{}if(2){}else{}]]", Not(isAvailable()));
+  EXPECT_UNAVAILABLE("[[if(1){}else{}if(2){}else{}]]");
 }
 
 } // namespace

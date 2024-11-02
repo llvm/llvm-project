@@ -62,3 +62,5 @@ add_llvm_target_unittest(LLVMExegesisTests
   ${exegesis_sources}
   )
 target_link_libraries(LLVMExegesisTests PRIVATE ${exegesis_link_libraries})
+
+set_property(TARGET LLVMExegesisTests PROPERTY FOLDER "Tests/UnitTests/ToolTests")

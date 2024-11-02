@@ -12,6 +12,7 @@
 # RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=neoverse-e1 --disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=neoverse-n1 --disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=neoverse-n2 --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=ampere1 --disassemble < %s | FileCheck %s
 
 # CHECK: ldaprb w0, [x0]
 # CHECK: ldaprh w0, [x0]

@@ -256,7 +256,7 @@ define void @fcmp_ule_vv_v32f16(<32 x half>* %x, <32 x half>* %y, <32 x i1>* %z)
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v12, (a1)
 ; CHECK-NEXT:    vmflt.vv v16, v12, v8
-; CHECK-NEXT:    vmnand.mm v8, v16, v16
+; CHECK-NEXT:    vmnot.m v8, v16
 ; CHECK-NEXT:    vsm.v v8, (a2)
 ; CHECK-NEXT:    ret
   %a = load <32 x half>, <32 x half>* %x
@@ -290,7 +290,7 @@ define void @fcmp_uge_vv_v16f32(<16 x float>* %x, <16 x float>* %y, <16 x i1>* %
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vle32.v v12, (a1)
 ; CHECK-NEXT:    vmflt.vv v16, v8, v12
-; CHECK-NEXT:    vmnand.mm v8, v16, v16
+; CHECK-NEXT:    vmnot.m v8, v16
 ; CHECK-NEXT:    vsm.v v8, (a2)
 ; CHECK-NEXT:    ret
   %a = load <16 x float>, <16 x float>* %x
@@ -323,7 +323,7 @@ define void @fcmp_ult_vv_v8f64(<8 x double>* %x, <8 x double>* %y, <8 x i1>* %z)
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vle64.v v12, (a1)
 ; CHECK-NEXT:    vmfle.vv v16, v12, v8
-; CHECK-NEXT:    vmnand.mm v8, v16, v16
+; CHECK-NEXT:    vmnot.m v8, v16
 ; CHECK-NEXT:    vsm.v v8, (a2)
 ; CHECK-NEXT:    ret
   %a = load <8 x double>, <8 x double>* %x
@@ -357,7 +357,7 @@ define void @fcmp_ugt_vv_v64f16(<64 x half>* %x, <64 x half>* %y, <64 x i1>* %z)
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v16, (a1)
 ; CHECK-NEXT:    vmfle.vv v24, v8, v16
-; CHECK-NEXT:    vmnand.mm v8, v24, v24
+; CHECK-NEXT:    vmnot.m v8, v24
 ; CHECK-NEXT:    vsm.v v8, (a2)
 ; CHECK-NEXT:    ret
   %a = load <64 x half>, <64 x half>* %x
@@ -761,7 +761,7 @@ define void @fcmp_ule_vf_v32f16(<32 x half>* %x, half %y, <32 x i1>* %z) {
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmfgt.vf v12, v8, fa0
-; CHECK-NEXT:    vmnand.mm v8, v12, v12
+; CHECK-NEXT:    vmnot.m v8, v12
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x half>, <32 x half>* %x
@@ -795,7 +795,7 @@ define void @fcmp_uge_vf_v16f32(<16 x float>* %x, float %y, <16 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmflt.vf v12, v8, fa0
-; CHECK-NEXT:    vmnand.mm v8, v12, v12
+; CHECK-NEXT:    vmnot.m v8, v12
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x float>, <16 x float>* %x
@@ -828,7 +828,7 @@ define void @fcmp_ult_vf_v8f64(<8 x double>* %x, double %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vmfge.vf v12, v8, fa0
-; CHECK-NEXT:    vmnand.mm v8, v12, v12
+; CHECK-NEXT:    vmnot.m v8, v12
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x double>, <8 x double>* %x
@@ -862,7 +862,7 @@ define void @fcmp_ugt_vf_v64f16(<64 x half>* %x, half %y, <64 x i1>* %z) {
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmfle.vf v16, v8, fa0
-; CHECK-NEXT:    vmnand.mm v8, v16, v16
+; CHECK-NEXT:    vmnot.m v8, v16
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <64 x half>, <64 x half>* %x
@@ -1269,7 +1269,7 @@ define void @fcmp_ule_fv_v32f16(<32 x half>* %x, half %y, <32 x i1>* %z) {
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmflt.vf v12, v8, fa0
-; CHECK-NEXT:    vmnand.mm v8, v12, v12
+; CHECK-NEXT:    vmnot.m v8, v12
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x half>, <32 x half>* %x
@@ -1303,7 +1303,7 @@ define void @fcmp_uge_fv_v16f32(<16 x float>* %x, float %y, <16 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmfgt.vf v12, v8, fa0
-; CHECK-NEXT:    vmnand.mm v8, v12, v12
+; CHECK-NEXT:    vmnot.m v8, v12
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <16 x float>, <16 x float>* %x
@@ -1336,7 +1336,7 @@ define void @fcmp_ult_fv_v8f64(<8 x double>* %x, double %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vmfle.vf v12, v8, fa0
-; CHECK-NEXT:    vmnand.mm v8, v12, v12
+; CHECK-NEXT:    vmnot.m v8, v12
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x double>, <8 x double>* %x
@@ -1370,7 +1370,7 @@ define void @fcmp_ugt_fv_v64f16(<64 x half>* %x, half %y, <64 x i1>* %z) {
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vmfge.vf v16, v8, fa0
-; CHECK-NEXT:    vmnand.mm v8, v16, v16
+; CHECK-NEXT:    vmnot.m v8, v16
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <64 x half>, <64 x half>* %x

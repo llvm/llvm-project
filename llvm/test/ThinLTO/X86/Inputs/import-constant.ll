@@ -10,6 +10,6 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define dso_local nonnull %struct.S* @_Z6getObjv() local_unnamed_addr {
 entry:
-  store %struct.S* null, %struct.S** getelementptr inbounds (%struct.Q, %struct.Q* @outer, i64 0, i32 0), align 8
+  store %struct.S* null, %struct.S** getelementptr inbounds (%struct.Q, %struct.Q* @outer, i64 1, i32 0), align 8
   ret %struct.S* @_ZL3Obj
 }

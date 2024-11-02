@@ -5,7 +5,7 @@
 // Module and function op and their immediately nested blocks are not erased in
 // callbacks with return so that the output includes more cases in pre-order.
 
-func @structured_cfg() {
+func.func @structured_cfg() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
@@ -112,7 +112,7 @@ func @structured_cfg() {
 
 // -----
 
-func @unstructured_cfg() {
+func.func @unstructured_cfg() {
   "regionOp0"() ({
     ^bb0:
       "op0"() : () -> ()

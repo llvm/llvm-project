@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 
 // Until 58a0a70fb2f1, this_thread::sleep_for could sometimes get interrupted
 // by signals and this test would fail spuriously. Disable the test on the

@@ -6,7 +6,7 @@ void f0(); /* expected-warning {{a function declaration without a prototype is d
 void f1(int [*]);
 void f2(int [const *]);
 void f3(int [volatile const*]);
-int f4(*XX)(void); /* expected-error {{cannot return}} expected-warning {{type specifier missing, defaults to 'int'}} */
+int f4(*XX)(void); /* expected-error {{cannot return}} expected-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}} */
 int f5(int [static]); /* expected-error {{'static' may not be used without an array size}} */
 
 char ((((*X))));
@@ -27,12 +27,12 @@ void test2(int *P, int A) {
 }
 
 typedef int atype;
-void test3(x,            /* expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}} */
+void test3(x,            /* expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}} */
            atype         /* expected-error {{unexpected type name 'atype': expected identifier}} */
           ) int x, atype; {}
 
 void test4(x, x) int x; {} // expected-error {{redefinition of parameter 'x'}} \
-                           // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
+                           // expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
 
 
 // PR3031
@@ -64,9 +64,9 @@ struct xyz test8(void) { return a; }  // a should be be marked invalid, no diag.
 
 
 // Verify that implicit int still works.
-static f;      // expected-warning {{type specifier missing, defaults to 'int'}}
-static g = 4;  // expected-warning {{type specifier missing, defaults to 'int'}}
-static h        // expected-warning {{type specifier missing, defaults to 'int'}} 
+static f;      // expected-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
+static g = 4;  // expected-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
+static h        // expected-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
       __asm__("foo");
 
 
@@ -103,11 +103,11 @@ void *test14b = (void*)test14a; // Make sure test14a didn't get skipped.
 long struct X { int x; } test15(void); // expected-error {{'long struct' is invalid}}
 
 void test16(i) int i j; { } // expected-error {{expected ';' at end of declaration}} \
-                            // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
+                            // expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
 void test17(i, j) int i, j k; { } // expected-error {{expected ';' at end of declaration}} \
-                                  // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
+                                  // expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
 void knrNoSemi(i) int i { } // expected-error {{expected ';' at end of declaration}} \
-                            // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is not supported in C2x}}
+                            // expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
 
 // PR12595
 void test18(void) {

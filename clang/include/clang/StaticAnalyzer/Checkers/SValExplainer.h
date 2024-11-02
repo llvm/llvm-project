@@ -135,6 +135,11 @@ public:
            " (" + Visit(S->getRHS()) + ")";
   }
 
+  std::string VisitUnarySymExpr(const UnarySymExpr *S) {
+    return std::string(UnaryOperator::getOpcodeStr(S->getOpcode())) + " (" +
+           Visit(S->getOperand()) + ")";
+  }
+
   // TODO: SymbolCast doesn't appear in practice.
   // Add the relevant code once it does.
 
@@ -169,8 +174,7 @@ public:
   std::string VisitElementRegion(const ElementRegion *R) {
     std::string Str;
     llvm::raw_string_ostream OS(Str);
-    OS << "element of type '" << R->getElementType().getAsString()
-       << "' with index ";
+    OS << "element of type '" << R->getElementType() << "' with index ";
     // For concrete index: omit type of the index integer.
     if (auto I = R->getIndex().getAs<nonloc::ConcreteInt>())
       OS << I->getValue();

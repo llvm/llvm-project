@@ -30,7 +30,12 @@ pushd $SCRATCH_DIR
 for INPUT in *; do
   for OBJ in $($AR t $INPUT); do
     $AR x $INPUT $OBJ
-    mv -f $OBJ $(basename $INPUT).$OBJ
+    if [[ $(file $OBJ) =~ 'LLVM IR bitcode' ]]; then
+      mv -f $OBJ $(basename $INPUT).$OBJ
+    else
+      # Skip $OBJ which may come from an assembly file (e.g. Support/BLAKE3/*.S).
+      rm -f $OBJ
+    fi
   done
 done
 

@@ -667,9 +667,6 @@ private:
                                            uint64_t Offset,
                                            uint64_t &TargetAddress);
 
-  DenseMap<const MCInst *, SmallVector<MCInst *, 4>>
-  computeLocalUDChain(const MCInst *CurInstr);
-
   BinaryFunction &operator=(const BinaryFunction &) = delete;
   BinaryFunction(const BinaryFunction &) = delete;
 
@@ -834,6 +831,15 @@ public:
   iterator_range<std::map<uint64_t, JumpTable *>::const_iterator>
   jumpTables() const {
     return make_range(JumpTables.begin(), JumpTables.end());
+  }
+
+  /// Return relocation associated with a given \p Offset in the function,
+  /// or nullptr if no such relocation exists.
+  const Relocation *getRelocationAt(uint64_t Offset) const {
+    assert(CurrentState == State::Empty &&
+           "Relocations unavailable in the current function state.");
+    auto RI = Relocations.find(Offset);
+    return (RI == Relocations.end()) ? nullptr : &RI->second;
   }
 
   /// Returns the raw binary encoding of this function.
@@ -1279,6 +1285,9 @@ public:
     case ELF::R_AARCH64_MOVW_UABS_G2:
     case ELF::R_AARCH64_MOVW_UABS_G2_NC:
     case ELF::R_AARCH64_MOVW_UABS_G3:
+    case ELF::R_AARCH64_PREL16:
+    case ELF::R_AARCH64_PREL32:
+    case ELF::R_AARCH64_PREL64:
       Rels[Offset] = Relocation{Offset, Symbol, RelType, Addend, Value};
       return;
     case ELF::R_AARCH64_CALL26:
@@ -1947,11 +1956,6 @@ public:
 
     return ColdLSDASymbol;
   }
-
-  /// True if the symbol is a mapping symbol used in AArch64 to delimit
-  /// data inside code section.
-  bool isDataMarker(const SymbolRef &Symbol, uint64_t SymbolSize) const;
-  bool isCodeMarker(const SymbolRef &Symbol, uint64_t SymbolSize) const;
 
   void setOutputDataAddress(uint64_t Address) { OutputDataOffset = Address; }
 

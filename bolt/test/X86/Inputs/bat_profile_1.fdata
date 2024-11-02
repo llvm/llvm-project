@@ -1,0 +1,20 @@
+boltedcollection
+1 main 451 1 SolveCubic 0 0 151
+1 main 489 1 main 46a 0 27
+1 main 4ad 1 main 428 0 135
+1 main 4cb 1 main 410 2 19
+1 main 4e9 1 main 3fa 0 1
+1 main 521 1 usqrt 0 0 168
+1 main 543 1 main 519 0 179
+1 main 55c 1 usqrt 0 0 31
+1 main 57f 1 main 554 0 34
+1 main 5d6 1 main 58f 0 1001
+1 main 62d 1 main 5e6 0 22
+1 SolveCubic 82 1 SolveCubic 130 2 4
+1 SolveCubic 107 1 SolveCubic 111 0 89
+1 SolveCubic 12c 1 main 456 0 87
+1 SolveCubic 2a6 1 main 456 0 5
+1 usqrt 30 1 usqrt 39 171 2886
+1 usqrt 3d 1 usqrt 10 33 4711
+1 usqrt 42 1 main 526 0 73
+1 usqrt 42 1 main 561 0 19

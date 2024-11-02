@@ -334,20 +334,53 @@ static bool AreCompatibleDerivedTypes(const semantics::DerivedTypeSpec *x,
   }
 }
 
+static bool AreCompatibleTypes(const DynamicType &x, const DynamicType &y,
+    bool ignoreTypeParameterValues) {
+  if (x.IsUnlimitedPolymorphic()) {
+    return true;
+  } else if (y.IsUnlimitedPolymorphic()) {
+    return false;
+  } else if (x.category() != y.category()) {
+    return false;
+  } else if (x.category() != TypeCategory::Derived) {
+    return x.kind() == y.kind();
+  } else {
+    const auto *xdt{GetDerivedTypeSpec(x)};
+    const auto *ydt{GetDerivedTypeSpec(y)};
+    return AreCompatibleDerivedTypes(xdt, ydt, x.IsPolymorphic()) &&
+        (ignoreTypeParameterValues ||
+            (xdt && ydt && AreTypeParamCompatible(*xdt, *ydt)));
+  }
+}
+
 // See 7.3.2.3 (5) & 15.5.2.4
 bool DynamicType::IsTkCompatibleWith(const DynamicType &that) const {
-  if (IsUnlimitedPolymorphic()) {
-    return true;
-  } else if (that.IsUnlimitedPolymorphic()) {
-    return false;
-  } else if (category_ != that.category_) {
-    return false;
-  } else if (derived_) {
-    return that.derived_ &&
-        AreCompatibleDerivedTypes(derived_, that.derived_, IsPolymorphic()) &&
-        AreTypeParamCompatible(*derived_, *that.derived_);
+  return AreCompatibleTypes(*this, that, false);
+}
+
+// 16.9.165
+std::optional<bool> DynamicType::SameTypeAs(const DynamicType &that) const {
+  bool x{AreCompatibleTypes(*this, that, true)};
+  bool y{AreCompatibleTypes(that, *this, true)};
+  if (x == y) {
+    return x;
   } else {
-    return kind_ == that.kind_;
+    // If either is unlimited polymorphic, the result is unknown.
+    return std::nullopt;
+  }
+}
+
+// 16.9.76
+std::optional<bool> DynamicType::ExtendsTypeOf(const DynamicType &that) const {
+  if (IsUnlimitedPolymorphic() || that.IsUnlimitedPolymorphic()) {
+    return std::nullopt; // unknown
+  } else if (!AreCompatibleDerivedTypes(evaluate::GetDerivedTypeSpec(that),
+                 evaluate::GetDerivedTypeSpec(*this), true)) {
+    return false;
+  } else if (that.IsPolymorphic()) {
+    return std::nullopt; // unknown
+  } else {
+    return true;
   }
 }
 

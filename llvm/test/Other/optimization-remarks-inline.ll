@@ -10,7 +10,7 @@
 ; RUN: opt < %s -inline -pass-remarks='inl' -pass-remarks='vector' -S 2>&1 | FileCheck --check-prefix=REMARKS %s
 
 ; RUN: opt < %s -inline -S 2>&1 | FileCheck --check-prefix=REMARKS %s
-; RUN: not --crash opt < %s -pass-remarks='(' 2>&1 | FileCheck --check-prefix=BAD-REGEXP %s
+; RUN: not opt < %s -pass-remarks='(' 2>&1 | FileCheck --check-prefix=BAD-REGEXP %s
 
 define i32 @foo(i32 %x, i32 %y) #0 {
 entry:

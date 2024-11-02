@@ -34,6 +34,9 @@ public:
 
   lldb::SBLineEntry GetLineEntryAtIndex(uint32_t idx) const;
 
+  uint32_t FindLineEntryIndex(lldb::SBLineEntry &line_entry,
+                              bool exact = false) const;
+
   uint32_t FindLineEntryIndex(uint32_t start_idx, uint32_t line,
                               lldb::SBFileSpec *inline_file_spec) const;
 

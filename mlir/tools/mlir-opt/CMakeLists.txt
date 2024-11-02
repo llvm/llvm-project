@@ -28,6 +28,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestDialect
     MLIRTestIR
     MLIRTestPass
+    MLIRTestPDLL
     MLIRTestReducer
     MLIRTestRewrite
     MLIRTestTransformDialect

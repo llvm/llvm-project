@@ -97,7 +97,7 @@ private:
 
 ExpandPseudo::ExpandPseudo(MachineFunction &MF_)
     : MF(MF_), MRI(MF.getRegInfo()),
-      Subtarget(static_cast<const MipsSubtarget &>(MF.getSubtarget())),
+      Subtarget(MF.getSubtarget<MipsSubtarget>()),
       TII(*static_cast<const MipsSEInstrInfo *>(Subtarget.getInstrInfo())),
       RegInfo(*Subtarget.getRegisterInfo()) {}
 

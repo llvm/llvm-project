@@ -3,7 +3,7 @@
 // RUN: sed -e "s|DIR|%/t.dir|g" %t.dir/build/compile-commands.json.in > %t.dir/build/compile-commands.json
 // RUN: sed -e "s|DIR|%/t.dir|g" %t.dir/build/vfs.yaml.in > %t.dir/build/vfs.yaml
 // RUN: clang-scan-deps -compilation-database %t.dir/build/compile-commands.json -j 1 -format experimental-full \
-// RUN:   -mode preprocess-minimized-sources -generate-modules-path-args > %t.db
+// RUN:   -mode preprocess-dependency-directives -generate-modules-path-args > %t.db
 // RUN: %deps-to-rsp %t.db --module-name=A > %t.A.cc1.rsp
 // RUN: cat %t.A.cc1.rsp | sed 's:\\\\\?:/:g' | FileCheck %s
 

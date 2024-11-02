@@ -83,7 +83,7 @@
 
 ### TODO:
 ### * Fold: funcs only differ in alignment
-### * No fold: func is weak? preemptable?
+### * No fold: func is weak? preemptible?
 ### * Test that we hash things appropriately w/ minimal collisions
 
 #--- abs.s

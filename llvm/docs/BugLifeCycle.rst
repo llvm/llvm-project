@@ -99,7 +99,7 @@ Actively working on fixing bugs
 
 Please remember to assign the bug to yourself if you're actively working on
 fixing it and to unassign it when you're no longer actively working on it.  You
-unassign a bug by removing the person from the the ``Assignees`` field.
+unassign a bug by removing the person from the ``Assignees`` field.
 
 .. _Closing:
 

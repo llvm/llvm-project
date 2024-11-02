@@ -16,6 +16,7 @@
 include "mlir/Dialect/EmitC/IR/EmitCAttributes.td"
 include "mlir/Dialect/EmitC/IR/EmitCTypes.td"
 
+include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -86,6 +87,33 @@ def EmitC_CallOp : EmitC_Op<"call", []> {
     $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
   }];
   let hasVerifier = 1;
+}
+
+def EmitC_CastOp : EmitC_Op<"cast", [
+    DeclareOpInterfaceMethods<CastOpInterface>,
+    SameOperandsAndResultShape
+  ]> {
+  let summary = "Cast operation";
+  let description = [{
+    The `cast` operation performs an explicit type conversion and is emitted
+    as a C-style cast expression. It can be applied to integer, float, index
+    and EmitC types.
+
+    Example:
+
+    ```mlir
+    // Cast from `int32_t` to `float`
+    %0 = emitc.cast %arg0: i32 to f32
+
+    // Cast from `void` to `int32_t` pointer
+    %1 = emitc.cast %arg1 :
+        !emitc.ptr<!emitc.opaque<"void">> to !emitc.ptr<i32>
+    ```
+  }];
+
+  let arguments = (ins AnyType:$source);
+  let results = (outs AnyType:$dest);
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 }
 
 def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {

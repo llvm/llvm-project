@@ -30,6 +30,14 @@
 #include <sys/pseg.h>
 #endif
 
+#if defined(_LIBUNWIND_TARGET_LINUX) &&                                        \
+    (defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_S390X))
+#include <sys/syscall.h>
+#include <sys/uio.h>
+#include <unistd.h>
+#define _LIBUNWIND_CHECK_LINUX_SIGRETURN 1
+#endif
+
 #if defined(_LIBUNWIND_SUPPORT_SEH_UNWIND)
 // Provide a definition for the DISPATCHER_CONTEXT struct for old (Win7 and
 // earlier) SDKs.
@@ -953,7 +961,7 @@ private:
   }
 #endif
 
-#if defined(_LIBUNWIND_TARGET_LINUX) && defined(_LIBUNWIND_TARGET_AARCH64)
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN)
   bool setInfoForSigReturn() {
     R dummy;
     return setInfoForSigReturn(dummy);
@@ -962,8 +970,14 @@ private:
     R dummy;
     return stepThroughSigReturn(dummy);
   }
+#if defined(_LIBUNWIND_TARGET_AARCH64)
   bool setInfoForSigReturn(Registers_arm64 &);
   int stepThroughSigReturn(Registers_arm64 &);
+#endif
+#if defined(_LIBUNWIND_TARGET_S390X)
+  bool setInfoForSigReturn(Registers_s390x &);
+  int stepThroughSigReturn(Registers_s390x &);
+#endif
   template <typename Registers> bool setInfoForSigReturn(Registers &) {
     return false;
   }
@@ -1220,6 +1234,12 @@ private:
   }
 #endif
 
+#if defined (_LIBUNWIND_TARGET_S390X)
+  compact_unwind_encoding_t dwarfEncoding(Registers_s390x &) const {
+    return 0;
+  }
+#endif
+
 #endif // defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 
 #if defined(_LIBUNWIND_SUPPORT_SEH_UNWIND)
@@ -1252,7 +1272,7 @@ private:
   unw_proc_info_t  _info;
   bool             _unwindInfoMissing;
   bool             _isSignalFrame;
-#if defined(_LIBUNWIND_TARGET_LINUX) && defined(_LIBUNWIND_TARGET_AARCH64)
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN)
   bool             _isSigReturn = false;
 #endif
 };
@@ -2459,7 +2479,7 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
 
 template <typename A, typename R>
 void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
-#if defined(_LIBUNWIND_TARGET_LINUX) && defined(_LIBUNWIND_TARGET_AARCH64)
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN)
   _isSigReturn = false;
 #endif
 
@@ -2574,7 +2594,7 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
   }
 #endif // #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 
-#if defined(_LIBUNWIND_TARGET_LINUX) && defined(_LIBUNWIND_TARGET_AARCH64)
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN)
   if (setInfoForSigReturn())
     return;
 #endif
@@ -2583,7 +2603,8 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
   _unwindInfoMissing = true;
 }
 
-#if defined(_LIBUNWIND_TARGET_LINUX) && defined(_LIBUNWIND_TARGET_AARCH64)
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
+    defined(_LIBUNWIND_TARGET_AARCH64)
 template <typename A, typename R>
 bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
   // Look for the sigreturn trampoline. The trampoline's body is two
@@ -2602,14 +2623,28 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
   //
   // [1] https://github.com/torvalds/linux/blob/master/arch/arm64/kernel/vdso/sigreturn.S
   const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
+  // The PC might contain an invalid address if the unwind info is bad, so
+  // directly accessing it could cause a segfault. Use process_vm_readv to read
+  // the memory safely instead. process_vm_readv was added in Linux 3.2, and
+  // AArch64 supported was added in Linux 3.7, so the syscall is guaranteed to
+  // be present. Unfortunately, there are Linux AArch64 environments where the
+  // libc wrapper for the syscall might not be present (e.g. Android 5), so call
+  // the syscall directly instead.
+  uint32_t instructions[2];
+  struct iovec local_iov = {&instructions, sizeof instructions};
+  struct iovec remote_iov = {reinterpret_cast<void *>(pc), sizeof instructions};
+  long bytesRead =
+      syscall(SYS_process_vm_readv, getpid(), &local_iov, 1, &remote_iov, 1, 0);
   // Look for instructions: mov x8, #0x8b; svc #0x0
-  if (_addressSpace.get32(pc) == 0xd2801168 &&
-      _addressSpace.get32(pc + 4) == 0xd4000001) {
-    _info = {};
-    _isSigReturn = true;
-    return true;
-  }
-  return false;
+  if (bytesRead != sizeof instructions || instructions[0] != 0xd2801168 ||
+      instructions[1] != 0xd4000001)
+    return false;
+
+  _info = {};
+  _info.start_ip = pc;
+  _info.end_ip = pc + 4;
+  _isSigReturn = true;
+  return true;
 }
 
 template <typename A, typename R>
@@ -2643,7 +2678,108 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_arm64 &) {
   _isSignalFrame = true;
   return UNW_STEP_SUCCESS;
 }
-#endif // defined(_LIBUNWIND_TARGET_LINUX) && defined(_LIBUNWIND_TARGET_AARCH64)
+#endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
+       // defined(_LIBUNWIND_TARGET_AARCH64)
+
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
+    defined(_LIBUNWIND_TARGET_S390X)
+template <typename A, typename R>
+bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_s390x &) {
+  // Look for the sigreturn trampoline. The trampoline's body is a
+  // specific instruction (see below). Typically the trampoline comes from the
+  // vDSO (i.e. the __kernel_[rt_]sigreturn function). A libc might provide its
+  // own restorer function, though, or user-mode QEMU might write a trampoline
+  // onto the stack.
+  const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
+  const uint16_t inst = _addressSpace.get16(pc);
+  if (inst == 0x0a77 || inst == 0x0aad) {
+    _info = {};
+    _info.start_ip = pc;
+    _info.end_ip = pc + 2;
+    _isSigReturn = true;
+    return true;
+  }
+  return false;
+}
+
+template <typename A, typename R>
+int UnwindCursor<A, R>::stepThroughSigReturn(Registers_s390x &) {
+  // Determine current SP.
+  const pint_t sp = static_cast<pint_t>(this->getReg(UNW_REG_SP));
+  // According to the s390x ABI, the CFA is at (incoming) SP + 160.
+  const pint_t cfa = sp + 160;
+
+  // Determine current PC and instruction there (this must be either
+  // a "svc __NR_sigreturn" or "svc __NR_rt_sigreturn").
+  const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
+  const uint16_t inst = _addressSpace.get16(pc);
+
+  // Find the addresses of the signo and sigcontext in the frame.
+  pint_t pSigctx = 0;
+  pint_t pSigno = 0;
+
+  // "svc __NR_sigreturn" uses a non-RT signal trampoline frame.
+  if (inst == 0x0a77) {
+    // Layout of a non-RT signal trampoline frame, starting at the CFA:
+    //  - 8-byte signal mask
+    //  - 8-byte pointer to sigcontext, followed by signo
+    //  - 4-byte signo
+    pSigctx = _addressSpace.get64(cfa + 8);
+    pSigno = pSigctx + 344;
+  }
+
+  // "svc __NR_rt_sigreturn" uses a RT signal trampoline frame.
+  if (inst == 0x0aad) {
+    // Layout of a RT signal trampoline frame, starting at the CFA:
+    //  - 8-byte retcode (+ alignment)
+    //  - 128-byte siginfo struct (starts with signo)
+    //  - ucontext struct:
+    //     - 8-byte long (uc_flags)
+    //     - 8-byte pointer (uc_link)
+    //     - 24-byte stack_t
+    //     - 8 bytes of padding because sigcontext has 16-byte alignment
+    //     - sigcontext/mcontext_t
+    pSigctx = cfa + 8 + 128 + 8 + 8 + 24 + 8;
+    pSigno = cfa + 8;
+  }
+
+  assert(pSigctx != 0);
+  assert(pSigno != 0);
+
+  // Offsets from sigcontext to each register.
+  const pint_t kOffsetPc = 8;
+  const pint_t kOffsetGprs = 16;
+  const pint_t kOffsetFprs = 216;
+
+  // Restore all registers.
+  for (int i = 0; i < 16; ++i) {
+    uint64_t value = _addressSpace.get64(pSigctx + kOffsetGprs +
+                                         static_cast<pint_t>(i * 8));
+    _registers.setRegister(UNW_S390X_R0 + i, value);
+  }
+  for (int i = 0; i < 16; ++i) {
+    static const int fpr[16] = {
+      UNW_S390X_F0, UNW_S390X_F1, UNW_S390X_F2, UNW_S390X_F3,
+      UNW_S390X_F4, UNW_S390X_F5, UNW_S390X_F6, UNW_S390X_F7,
+      UNW_S390X_F8, UNW_S390X_F9, UNW_S390X_F10, UNW_S390X_F11,
+      UNW_S390X_F12, UNW_S390X_F13, UNW_S390X_F14, UNW_S390X_F15
+    };
+    double value = _addressSpace.getDouble(pSigctx + kOffsetFprs +
+                                           static_cast<pint_t>(i * 8));
+    _registers.setFloatRegister(fpr[i], value);
+  }
+  _registers.setIP(_addressSpace.get64(pSigctx + kOffsetPc));
+
+  // SIGILL, SIGFPE and SIGTRAP are delivered with psw_addr
+  // after the faulting instruction rather than before it.
+  // Do not set _isSignalFrame in that case.
+  uint32_t signo = _addressSpace.get32(pSigno);
+  _isSignalFrame = (signo != 4 && signo != 5 && signo != 8);
+
+  return UNW_STEP_SUCCESS;
+}
+#endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
+       // defined(_LIBUNWIND_TARGET_S390X)
 
 template <typename A, typename R>
 int UnwindCursor<A, R>::step() {
@@ -2653,7 +2789,7 @@ int UnwindCursor<A, R>::step() {
 
   // Use unwinding info to modify register set as if function returned.
   int result;
-#if defined(_LIBUNWIND_TARGET_LINUX) && defined(_LIBUNWIND_TARGET_AARCH64)
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN)
   if (_isSigReturn) {
     result = this->stepThroughSigReturn();
   } else

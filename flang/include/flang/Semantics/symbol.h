@@ -15,6 +15,7 @@
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
 #include "llvm/ADT/DenseMapInfo.h"
+
 #include <array>
 #include <functional>
 #include <list>
@@ -75,6 +76,9 @@ private:
   std::optional<std::string> bindName_;
 };
 
+// A subroutine or function definition, or a subprogram interface defined
+// in an INTERFACE block as part of the definition of a dummy procedure
+// or a procedure pointer (with just POINTER).
 class SubprogramDetails : public WithBindName {
 public:
   bool isFunction() const { return result_ != nullptr; }
@@ -133,16 +137,10 @@ public:
   SubprogramNameDetails() = delete;
   SubprogramKind kind() const { return kind_; }
   ProgramTree &node() const { return *node_; }
-  bool isEntryStmt() const { return isEntryStmt_; }
-  SubprogramNameDetails &set_isEntryStmt(bool yes = true) {
-    isEntryStmt_ = yes;
-    return *this;
-  }
 
 private:
   SubprogramKind kind_;
   common::Reference<ProgramTree> node_;
-  bool isEntryStmt_{false};
 };
 
 // A name from an entity-decl -- could be object or function.
@@ -243,7 +241,9 @@ private:
   std::optional<SourceName> passName_;
 };
 
-// A procedure pointer, dummy procedure, or external procedure
+// A procedure pointer (other than one defined with POINTER and an
+// INTERFACE block), a dummy procedure (without an INTERFACE but with
+// EXTERNAL or use in a procedure reference), or external procedure.
 class ProcEntityDetails : public EntityDetails, public WithPassArg {
 public:
   ProcEntityDetails() = default;
@@ -637,38 +637,7 @@ public:
   bool operator==(const Symbol &that) const { return this == &that; }
   bool operator!=(const Symbol &that) const { return !(*this == that); }
 
-  int Rank() const {
-    return common::visit(
-        common::visitors{
-            [](const SubprogramDetails &sd) {
-              return sd.isFunction() ? sd.result().Rank() : 0;
-            },
-            [](const GenericDetails &) {
-              return 0; /*TODO*/
-            },
-            [](const ProcBindingDetails &x) { return x.symbol().Rank(); },
-            [](const UseDetails &x) { return x.symbol().Rank(); },
-            [](const HostAssocDetails &x) { return x.symbol().Rank(); },
-            [](const ObjectEntityDetails &oed) { return oed.shape().Rank(); },
-            [](const ProcEntityDetails &ped) {
-              const Symbol *iface{ped.interface().symbol()};
-              return iface ? iface->Rank() : 0;
-            },
-            [](const AssocEntityDetails &aed) {
-              if (const auto &expr{aed.expr()}) {
-                if (auto assocRank{aed.rank()}) {
-                  return *assocRank;
-                } else {
-                  return expr->Rank();
-                }
-              } else {
-                return 0;
-              }
-            },
-            [](const auto &) { return 0; },
-        },
-        details_);
-  }
+  int Rank() const { return RankImpl(); }
 
   int Corank() const {
     return common::visit(
@@ -718,6 +687,48 @@ private:
   friend llvm::raw_ostream &DumpForUnparse(
       llvm::raw_ostream &, const Symbol &, bool);
 
+  static constexpr int startRecursionDepth{100};
+
+  inline const DeclTypeSpec *GetTypeImpl(int depth = startRecursionDepth) const;
+  inline int RankImpl(int depth = startRecursionDepth) const {
+    if (depth-- == 0) {
+      return 0;
+    }
+    return common::visit(
+        common::visitors{
+            [&](const SubprogramDetails &sd) {
+              return sd.isFunction() ? sd.result().RankImpl(depth) : 0;
+            },
+            [](const GenericDetails &) {
+              return 0; /*TODO*/
+            },
+            [&](const ProcBindingDetails &x) {
+              return x.symbol().RankImpl(depth);
+            },
+            [&](const UseDetails &x) { return x.symbol().RankImpl(depth); },
+            [&](const HostAssocDetails &x) {
+              return x.symbol().RankImpl(depth);
+            },
+            [](const ObjectEntityDetails &oed) { return oed.shape().Rank(); },
+            [&](const ProcEntityDetails &ped) {
+              const Symbol *iface{ped.interface().symbol()};
+              return iface ? iface->RankImpl(depth) : 0;
+            },
+            [](const AssocEntityDetails &aed) {
+              if (const auto &expr{aed.expr()}) {
+                if (auto assocRank{aed.rank()}) {
+                  return *assocRank;
+                } else {
+                  return expr->Rank();
+                }
+              } else {
+                return 0;
+              }
+            },
+            [](const auto &) { return 0; },
+        },
+        details_);
+  }
   template <std::size_t> friend class Symbols;
   template <class, std::size_t> friend class std::array;
 };
@@ -786,27 +797,37 @@ inline DeclTypeSpec *Symbol::GetType() {
   return const_cast<DeclTypeSpec *>(
       const_cast<const Symbol *>(this)->GetType());
 }
-inline const DeclTypeSpec *Symbol::GetType() const {
+
+inline const DeclTypeSpec *Symbol::GetTypeImpl(int depth) const {
+  if (depth-- == 0) {
+    return nullptr;
+  }
   return common::visit(
       common::visitors{
           [](const EntityDetails &x) { return x.type(); },
           [](const ObjectEntityDetails &x) { return x.type(); },
           [](const AssocEntityDetails &x) { return x.type(); },
-          [](const SubprogramDetails &x) {
-            return x.isFunction() ? x.result().GetType() : nullptr;
+          [&](const SubprogramDetails &x) {
+            return x.isFunction() ? x.result().GetTypeImpl(depth) : nullptr;
           },
-          [](const ProcEntityDetails &x) {
+          [&](const ProcEntityDetails &x) {
             const Symbol *symbol{x.interface().symbol()};
-            return symbol ? symbol->GetType() : x.interface().type();
+            return symbol ? symbol->GetTypeImpl(depth) : x.interface().type();
           },
-          [](const ProcBindingDetails &x) { return x.symbol().GetType(); },
+          [&](const ProcBindingDetails &x) {
+            return x.symbol().GetTypeImpl(depth);
+          },
           [](const TypeParamDetails &x) { return x.type(); },
-          [](const UseDetails &x) { return x.symbol().GetType(); },
-          [](const HostAssocDetails &x) { return x.symbol().GetType(); },
+          [&](const UseDetails &x) { return x.symbol().GetTypeImpl(depth); },
+          [&](const HostAssocDetails &x) {
+            return x.symbol().GetTypeImpl(depth);
+          },
           [](const auto &) -> const DeclTypeSpec * { return nullptr; },
       },
       details_);
 }
+
+inline const DeclTypeSpec *Symbol::GetType() const { return GetTypeImpl(); }
 
 // Sets and maps keyed by Symbols
 

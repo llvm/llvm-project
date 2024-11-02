@@ -558,7 +558,7 @@ define <8 x i32> @slidedown_v8i32(<8 x i32> %x) {
 define <4 x i16> @slideup_v4i16(<4 x i16> %x) {
 ; CHECK-LABEL: slideup_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, tu, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -569,9 +569,9 @@ define <4 x i16> @slideup_v4i16(<4 x i16> %x) {
 define <8 x i32> @slideup_v8i32(<8 x i32> %x) {
 ; CHECK-LABEL: slideup_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, tu, mu
 ; CHECK-NEXT:    vslideup.vi v10, v8, 3
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
   %s = shufflevector <8 x i32> %x, <8 x i32> poison, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 1, i32 2, i32 3, i32 4>
   ret <8 x i32> %s

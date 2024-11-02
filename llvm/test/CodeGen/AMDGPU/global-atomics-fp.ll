@@ -800,5 +800,5 @@ define amdgpu_kernel void @infer_as_before_atomic(float* addrspace(4)* %arg) #0 
 }
 
 attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
-attributes #1 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "target-cpu"="gfx803" "target-features"="+atomic-fadd-insts" "amdgpu-unsafe-fp-atomics"="true" }
+attributes #1 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "target-cpu"="gfx803" "target-features"="+atomic-fadd-no-rtn-insts" "amdgpu-unsafe-fp-atomics"="true" }
 attributes #2 = { "amdgpu-unsafe-fp-atomics"="true" }

@@ -644,6 +644,51 @@ Now we can load the module into LLDB and use it
   -rw-r--r--@  1 someuser  wheel         6148 Jan 19 17:27 .DS_Store
   -rw-------   1 someuser  wheel         7331 Jan 19 15:37 crash.log
 
+You can also make "container" commands to organize the commands you are adding to
+lldb.  Most of the lldb built-in commands structure themselves this way, and using
+a tree structure has the benefit of leaving the one-word command space free for user
+aliases.  It can also make it easier to find commands if you are adding more than
+a few of them.  Here's a trivial example of adding two "utility" commands into a
+"my-utilities" container:
+
+::
+
+  #!/usr/bin/env python
+
+  import lldb
+
+  def first_utility(debugger, command, result, internal_dict):
+      print("I am the first utility")
+
+  def second_utility(debugger, command, result, internal_dict):
+      print("I am the second utility")
+
+  # And the initialization code to add your commands
+  def __lldb_init_module(debugger, internal_dict):
+      debugger.HandleCommand('command container add -h "A container for my utilities" my-utilities')
+      debugger.HandleCommand('command script add -f my_utilities.first_utility -h "My first utility" my-utilities first')
+      debugger.HandleCommand('command script add -f my_utilities.second_utility -h "My second utility" my-utilities second')
+      print('The "my-utilities" python command has been installed and its subcommands are ready for use.')
+
+Then your new commands are available under the my-utilities node:
+
+::
+
+  (lldb) help my-utilities
+  A container for my utilities
+
+  Syntax: my-utilities
+
+  The following subcommands are supported:
+
+      first  -- My first utility  Expects 'raw' input (see 'help raw-input'.)
+      second -- My second utility  Expects 'raw' input (see 'help raw-input'.)
+
+  For more help on any particular subcommand, type 'help <command> <subcommand>'.
+  (lldb) my-utilities first
+  I am the first utility
+
+
 A more interesting template has been created in the source repository that can
 help you to create lldb command quickly:
 

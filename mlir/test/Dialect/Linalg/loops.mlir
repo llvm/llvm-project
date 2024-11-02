@@ -14,7 +14,7 @@
 // CHECKPARALLEL-DAG: #[[$strided3D:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>
 // CHECKPARALLEL-DAG: #[[$stride1Dilation1:.*]] = affine_map<(d0, d1) -> (d0  + d1)>
 
-func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
+func.func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %A = memref.view %arg0[%c0][%M, %K] : memref<?xi8> to memref<?x?xf32>
@@ -59,7 +59,7 @@ func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
 
 
 
-func @matvec(%arg0: memref<?xi8>, %M: index, %N: index) {
+func.func @matvec(%arg0: memref<?xi8>, %M: index, %N: index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %2 = memref.view %arg0[%c0][%M, %N] : memref<?xi8> to memref<?x?xf32>
@@ -100,7 +100,7 @@ func @matvec(%arg0: memref<?xi8>, %M: index, %N: index) {
 //       CHECKPARALLEL:     store %[[res]], %[[C]][%{{.*}}] : memref<?xf32>
 
 
-func @dot(%arg0: memref<?xi8>, %M: index) {
+func.func @dot(%arg0: memref<?xi8>, %M: index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %1 = memref.view %arg0[%c0][%M] : memref<?xi8> to memref<?xf32>
@@ -137,7 +137,7 @@ func @dot(%arg0: memref<?xi8>, %M: index) {
 //       CHECKPARALLEL:   store %[[res]], %[[C]][] : memref<f32>
 
 
-func @dot_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf32, offset: ?, strides: [1]>, %arg2: memref<f32>) {
+func.func @dot_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf32, offset: ?, strides: [1]>, %arg2: memref<f32>) {
   linalg.dot ins(%arg0, %arg1 : memref<?xf32, offset: ?, strides: [1]>,
                                 memref<?xf32, offset: ?, strides: [1]>)
             outs(%arg2:  memref<f32>)
@@ -165,7 +165,7 @@ func @dot_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf3
 //   CHECKPARALLEL-DAG:   %[[res:.*]] = arith.addf %[[c]], %[[inc]] : f32
 //       CHECKPARALLEL:   store %[[res]], %{{.*}}[] : memref<f32>
 
-func @fill_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: f32) {
+func.func @fill_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: f32) {
   linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<?xf32, offset: ?, strides: [1]>)
   return
 }
@@ -179,7 +179,7 @@ func @fill_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: f32) {
 //       CHECKPARALLEL:   scf.parallel (%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) {
 //       CHECKPARALLEL:     store %{{.*}}, %{{.*}}[%{{.*}}] : memref<?xf32, #[[$strided1D]]>
 
-func @fill_view0(%arg0: memref<f32>, %arg1: f32) {
+func.func @fill_view0(%arg0: memref<f32>, %arg1: f32) {
   linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<f32>)
   return
 }
@@ -189,7 +189,7 @@ func @fill_view0(%arg0: memref<f32>, %arg1: f32) {
 // CHECKPARALLEL-LABEL: func @fill_view0(%{{.*}}: memref<f32>, %{{.*}}: f32) {
 //       CHECKPARALLEL:   store %{{.*}}, %{{.*}}[] : memref<f32>
 
-func @fill_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1: f32) {
+func.func @fill_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1: f32) {
   linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>)
   return
 }
@@ -205,7 +205,7 @@ func @fill_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1:
 //       CHECKPARALLEL:   scf.parallel (%{{.*}}, %{{.*}}, %{{.*}}) = (%{{.*}}, %{{.*}}, %{{.*}}) to (%{{.*}}, %{{.*}}, %{{.*}}) step (%{{.*}}, %{{.*}}, %{{.*}}) {
 //       CHECKPARALLEL:     store %{{.*}}, {{.*}} : memref<?x?x?xf32, #[[$strided3D]]>
 
-func @copy_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf32, offset: ?, strides: [1]>) {
+func.func @copy_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf32, offset: ?, strides: [1]>) {
   linalg.generic {
     iterator_types = ["parallel"],
     indexing_maps = [ affine_map<(i) -> (i)>, affine_map<(i) -> (i)>] }
@@ -241,7 +241,7 @@ func @copy_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf
   library_call = "some_external_function_name_2",
   doc = "B(i,j,k), C(i,k,j) = foo(A(i, j), B(i,j,k), C(i,k,j))"
 }
-func @generic_region(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg2: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
+func.func @generic_region(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg2: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
   linalg.generic #trait2
     ins(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>)
    outs(%arg1, %arg2 : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>,
@@ -283,7 +283,7 @@ func @generic_region(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: 
   library_call = "some_external_function_name_2",
   doc = "B(i,j,k), C(i,k,j) = foo(A(i, j) * B(i,j,k), i * j * k + C(i,k,j))"
 }
-func @generic_index_region(
+func.func @generic_index_region(
         %arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
         %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>,
         %arg2: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
@@ -353,7 +353,7 @@ func @generic_index_region(
   library_call = "some_broadcast_external_fn"
 }
 
-func @generic_op_zero_rank(%arg0: memref<f32>, %arg1: memref<3x4xf32>)
+func.func @generic_op_zero_rank(%arg0: memref<f32>, %arg1: memref<3x4xf32>)
 {
   linalg.generic #trait_broadcast
       ins(%arg0 : memref<f32>)
@@ -379,7 +379,7 @@ func @generic_op_zero_rank(%arg0: memref<f32>, %arg1: memref<3x4xf32>)
 //       CHECKPARALLEL:   %[[a:.*]] = memref.load %[[ARG0]][]
 //       CHECKPARALLEL:   store %[[a]], %[[ARG1]][%[[i]], %[[j]]]
 
-func @generic_op_scalar(%arg0: f32, %arg1: memref<3x4xf32>)
+func.func @generic_op_scalar(%arg0: f32, %arg1: memref<3x4xf32>)
 {
   linalg.generic #trait_broadcast
       ins(%arg0 : f32)
@@ -403,7 +403,7 @@ func @generic_op_scalar(%arg0: f32, %arg1: memref<3x4xf32>)
 //       CHECKPARALLEL: scf.parallel (%[[i:[a-zA-Z0-9_]*]], %[[j:[a-zA-Z0-9_]*]])
 //       CHECKPARALLEL:   store %[[ARG0]], %[[ARG1]][%[[i]], %[[j]]]
 
-func @generic_index_op_zero_rank(%arg0: memref<i32>, %arg1: memref<3x4xi32>)
+func.func @generic_index_op_zero_rank(%arg0: memref<i32>, %arg1: memref<3x4xi32>)
 {
   linalg.generic #trait_broadcast
       ins(%arg0 : memref<i32>)
@@ -453,7 +453,7 @@ func @generic_index_op_zero_rank(%arg0: memref<i32>, %arg1: memref<3x4xi32>)
   library_call = "some_reduce_external_fn"
 }
 
-func @generic_op_1D_reduce(%arg0: memref<?xf32>, %arg1: memref<f32>)
+func.func @generic_op_1D_reduce(%arg0: memref<?xf32>, %arg1: memref<f32>)
 {
   linalg.generic #trait_reduce_1D
       ins(%arg0 : memref<?xf32>)
@@ -497,7 +497,7 @@ func @generic_op_1D_reduce(%arg0: memref<?xf32>, %arg1: memref<f32>)
   library_call = "some_reduce_external_fn"
 }
 
-func @generic_index_op_1D_reduce(%arg0: memref<?xf32>,
+func.func @generic_index_op_1D_reduce(%arg0: memref<?xf32>,
                                 %arg1: memref<f32>,
                                 %arg2: memref<f32>)
 {
@@ -545,7 +545,7 @@ func @generic_index_op_1D_reduce(%arg0: memref<?xf32>,
   iterator_types = ["parallel"],
   library_call = "some_external_fn"
 }
-func @generic_const_init(%arg0: memref<?xf32>) {
+func.func @generic_const_init(%arg0: memref<?xf32>) {
         %cst = arith.constant 1.0 : f32
   linalg.generic #trait_const_fill outs(%arg0 : memref<?xf32>) {
     ^bb0(%arg1: f32):   
@@ -577,7 +577,7 @@ func @generic_const_init(%arg0: memref<?xf32>) {
   indexing_maps = #scalar_access,
   library_call = "some_external_fn"
 }
-func @scalar_code(%arg0: memref<f32>, %arg1 : memref<f32>, %arg2 : memref<f32>, %arg3 : i1)
+func.func @scalar_code(%arg0: memref<f32>, %arg1 : memref<f32>, %arg2 : memref<f32>, %arg3 : i1)
 {
   linalg.generic #scalar_trait
     ins(%arg0, %arg1 : memref<f32>, memref<f32>)
@@ -621,7 +621,7 @@ func @scalar_code(%arg0: memref<f32>, %arg1 : memref<f32>, %arg2 : memref<f32>, 
 //----------------------------------------------------------------------------//
 // Named ops to loops.
 //----------------------------------------------------------------------------//
-func @named_batch_matmul(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?x?xf32>) {
+func.func @named_batch_matmul(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?x?xf32>) {
   linalg.batch_matmul ins(%A, %B : memref<?x?x?xf32>, memref<?x?x?xf32>)
                      outs(%C : memref<?x?x?xf32>)
   return
@@ -663,7 +663,7 @@ func @named_batch_matmul(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memre
 //       CHECKPARALLEL:       store %[[res]], %[[mC]][%[[b]], %[[m]], %[[n]]] : memref<?x?x?xf32>
 
 
-func @conv1d_no_symbols(%in : memref<?xf32>, %filter : memref<?xf32>, %out : memref<?xf32>) -> () {
+func.func @conv1d_no_symbols(%in : memref<?xf32>, %filter : memref<?xf32>, %out : memref<?xf32>) -> () {
   linalg.conv_1d ins(%in, %filter : memref<?xf32>, memref<?xf32>)
                 outs(%out : memref<?xf32>)
   return
@@ -706,7 +706,7 @@ func @conv1d_no_symbols(%in : memref<?xf32>, %filter : memref<?xf32>, %out : mem
 //       CHECKPARALLEL:     store %[[res]], %[[arg2]][%[[b]]] : memref<?xf32>
 
 
-func @conv2d_no_symbols(%in : memref<?x?xf32>, %filter : memref<?x?xf32>, %out : memref<?x?xf32>) -> () {
+func.func @conv2d_no_symbols(%in : memref<?x?xf32>, %filter : memref<?x?xf32>, %out : memref<?x?xf32>) -> () {
   linalg.conv_2d ins(%in, %filter : memref<?x?xf32>, memref<?x?xf32>)
                 outs(%out: memref<?x?xf32>)
   return
@@ -759,7 +759,7 @@ func @conv2d_no_symbols(%in : memref<?x?xf32>, %filter : memref<?x?xf32>, %out :
 //       CHECKPARALLEL:       store %[[res]], %[[arg2]][%[[arg3]], %[[arg4]]] : memref<?x?xf32>
 
 
-func @conv3d_no_symbols(%in : memref<?x?x?xf32>, %filter : memref<?x?x?xf32>, %out : memref<?x?x?xf32>) -> () {
+func.func @conv3d_no_symbols(%in : memref<?x?x?xf32>, %filter : memref<?x?x?xf32>, %out : memref<?x?x?xf32>) -> () {
   linalg.conv_3d ins(%in, %filter : memref<?x?x?xf32>, memref<?x?x?xf32>)
                 outs(%out : memref<?x?x?xf32>)
   return
@@ -825,7 +825,7 @@ func @conv3d_no_symbols(%in : memref<?x?x?xf32>, %filter : memref<?x?x?xf32>, %o
 
 // -----
 
-func @lower_to_loops_with_rank_reducing_subviews(
+func.func @lower_to_loops_with_rank_reducing_subviews(
     %arg0 : memref<?xi32>, %arg1 : memref<?x?xi32>, %arg2 : index,
     %arg3 : index, %arg4 : index) {
   %0 = memref.subview %arg0[%arg2] [%arg3] [1]

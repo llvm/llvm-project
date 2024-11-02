@@ -77,8 +77,11 @@ namespace ranges {
   class _LIBCPP_TEMPLATE_VIS subrange
     : public view_interface<subrange<_Iter, _Sent, _Kind>>
   {
-  private:
+  public:
+    // Note: this is an internal implementation detail that is public only for internal usage.
     static constexpr bool _StoreSize = (_Kind == subrange_kind::sized && !sized_sentinel_for<_Sent, _Iter>);
+
+  private:
     static constexpr bool _MustProvideSizeAtConstruction = !_StoreSize; // just to improve compiler diagnostics
     struct _Empty { constexpr _Empty(auto) noexcept { } };
     using _Size = conditional_t<_StoreSize, make_unsigned_t<iter_difference_t<_Iter>>, _Empty>;

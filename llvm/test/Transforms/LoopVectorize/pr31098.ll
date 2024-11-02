@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -S -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -enable-interleaved-mem-accesses=true -debug-only=loop-accesses < %s  2>&1 | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -enable-interleaved-mem-accesses=true -debug-only=loop-accesses < %s  2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

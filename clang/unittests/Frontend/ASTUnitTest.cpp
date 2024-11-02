@@ -43,7 +43,9 @@ protected:
 
     Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
 
-    CInvok = createInvocationFromCommandLine(Args, Diags);
+    CreateInvocationOptions CIOpts;
+    CIOpts.Diags = Diags;
+    CInvok = createInvocation(Args, std::move(CIOpts));
 
     if (!CInvok)
       return nullptr;
@@ -133,7 +135,9 @@ TEST_F(ASTUnitTest, ModuleTextualHeader) {
   const char *Args[] = {"clang", "test.cpp", "-fmodule-map-file=m.modulemap",
                         "-fmodule-name=M"};
   Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
-  CInvok = createInvocationFromCommandLine(Args, Diags);
+  CreateInvocationOptions CIOpts;
+  CIOpts.Diags = Diags;
+  CInvok = createInvocation(Args, std::move(CIOpts));
   ASSERT_TRUE(CInvok);
 
   FileManager *FileMgr = new FileManager(FileSystemOptions(), InMemoryFs);

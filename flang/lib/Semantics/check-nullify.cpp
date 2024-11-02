@@ -29,9 +29,10 @@ void NullifyChecker::Leave(const parser::NullifyStmt &nullifyStmt) {
               const Symbol *symbol{name.symbol};
               if (context_.HasError(symbol)) {
                 // already reported an error
-              } else if (!IsVariableName(*symbol) && !IsProcName(*symbol)) {
+              } else if (!IsVariableName(*symbol) &&
+                  !IsProcedurePointer(*symbol)) {
                 messages.Say(name.source,
-                    "name in NULLIFY statement must be a variable or procedure pointer name"_err_en_US);
+                    "name in NULLIFY statement must be a variable or procedure pointer"_err_en_US);
               } else if (!IsPointer(*symbol)) { // C951
                 messages.Say(name.source,
                     "name in NULLIFY statement must have the POINTER attribute"_err_en_US);

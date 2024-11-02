@@ -32,9 +32,6 @@ public:
   void HasEndLabel() { flags_ |= hasEnd; }
   void HasEorLabel() { flags_ |= hasEor; }
   void HasIoMsg() { flags_ |= hasIoMsg; }
-  void HandleAnything() {
-    flags_ = hasIoStat | hasErr | hasEnd | hasEor | hasIoMsg;
-  }
 
   bool InError() const {
     return ioStat_ != IostatOk || pendingError_ != IostatOk;

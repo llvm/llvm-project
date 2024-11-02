@@ -174,6 +174,9 @@ def err_stmtexpr_file_scope : Error<
   "statement expression not allowed at file scope">;
 def ext_gnu_statement_expr : Extension<
   "use of GNU statement expression extension">, InGroup<GNUStatementExpression>;
+def ext_gnu_statement_expr_macro : Extension<
+  "use of GNU statement expression extension from macro expansion">,
+  InGroup<GNUStatementExpressionFromMacroExpansion>;
 def ext_gnu_conditional_expr : Extension<
   "use of GNU ?: conditional expression extension, omitting middle operand">, InGroup<GNUConditionalOmittedOperand>;
 def ext_gnu_empty_initializer : Extension<
@@ -1464,6 +1467,12 @@ def warn_omp51_compat_attributes : Warning<
 def err_omp_expected_colon : Error<"missing ':' in %0">;
 def err_omp_expected_context_selector
     : Error<"expected valid context selector in %0">;
+def err_omp_requires_out_inout_depend_type : Error<
+  "reserved locator 'omp_all_memory' requires 'out' or 'inout' "
+  "dependency types">;
+def warn_omp_more_one_omp_all_memory : Warning<
+  "reserved locator 'omp_all_memory' cannot be specified more than once">,
+  InGroup<OpenMPClauses>;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<
@@ -1599,5 +1608,8 @@ def note_max_tokens_total_override : Note<"total token limit set here">;
 def err_expected_semantic_identifier : Error<
   "expected HLSL Semantic identifier">;
 def err_unknown_hlsl_semantic : Error<"unknown HLSL semantic %0">;
+def ext_hlsl_access_specifiers : ExtWarn<
+  "access specifiers are a clang HLSL extension">,
+  InGroup<HLSLExtension>;
 
 } // end of Parser diagnostics

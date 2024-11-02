@@ -1,5 +1,4 @@
 ; Make sure that all library helper coro intrinsics are lowered.
-; RUN: opt < %s -coro-cleanup -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-cleanup -S | FileCheck %s
 
 ; CHECK-LABEL: @uses_library_support_coro_intrinsics(

@@ -234,8 +234,8 @@ public:
   ModuleAST(std::vector<FunctionAST> functions)
       : functions(std::move(functions)) {}
 
-  auto begin() -> decltype(functions.begin()) { return functions.begin(); }
-  auto end() -> decltype(functions.end()) { return functions.end(); }
+  auto begin() { return functions.begin(); }
+  auto end() { return functions.end(); }
 };
 
 void dump(ModuleAST &);

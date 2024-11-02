@@ -1919,6 +1919,9 @@ Status Process::DisableSoftwareBreakpoint(BreakpointSite *bp_site) {
 //#define VERIFY_MEMORY_READS
 
 size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Status &error) {
+  if (ABISP abi_sp = GetABI())
+    addr = abi_sp->FixAnyAddress(addr);
+
   error.Clear();
   if (!GetDisableMemoryCache()) {
 #if defined(VERIFY_MEMORY_READS)
@@ -2031,6 +2034,9 @@ size_t Process::ReadMemoryFromInferior(addr_t addr, void *buf, size_t size,
                                        Status &error) {
   LLDB_SCOPED_TIMER();
 
+  if (ABISP abi_sp = GetABI())
+    addr = abi_sp->FixAnyAddress(addr);
+
   if (buf == nullptr || size == 0)
     return 0;
 
@@ -2113,6 +2119,9 @@ size_t Process::WriteMemoryPrivate(addr_t addr, const void *buf, size_t size,
 
 size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
                             Status &error) {
+  if (ABISP abi_sp = GetABI())
+    addr = abi_sp->FixAnyAddress(addr);
+
 #if defined(ENABLE_MEMORY_CACHING)
   m_memory_cache.Flush(addr, size);
 #endif
@@ -2557,6 +2566,13 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
 
   if (state == eStateStopped || state == eStateCrashed) {
     DidLaunch();
+    
+    // Now that we know the process type, update its signal responses from the 
+    // ones stored in the Target:
+    if (m_unix_signals_sp) {
+      StreamSP warning_strm = GetTarget().GetDebugger().GetAsyncErrorStream();
+      GetTarget().UpdateSignalsFromDummy(m_unix_signals_sp, warning_strm);
+    }
 
     DynamicLoader *dyld = GetDynamicLoader();
     if (dyld)
@@ -2918,6 +2934,12 @@ void Process::CompleteAttach() {
                   GetID());
       }
     }
+  }
+  // Now that we know the process type, update its signal responses from the 
+  // ones stored in the Target:
+  if (m_unix_signals_sp) {
+    StreamSP warning_strm = GetTarget().GetDebugger().GetAsyncErrorStream();
+    GetTarget().UpdateSignalsFromDummy(m_unix_signals_sp, warning_strm);
   }
 
   // We have completed the attach, now it is time to find the dynamic loader
@@ -5831,7 +5853,7 @@ Process::AdvanceAddressToNextBranchInstruction(Address default_stop_addr,
 Status Process::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                     MemoryRegionInfo &range_info) {
   if (const lldb::ABISP &abi = GetABI())
-    load_addr = abi->FixDataAddress(load_addr);
+    load_addr = abi->FixAnyAddress(load_addr);
   return DoGetMemoryRegionInfo(load_addr, range_info);
 }
 
@@ -5866,7 +5888,7 @@ Status Process::GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) {
       range_end != LLDB_INVALID_ADDRESS &&
       // If we have non-address bits and some are set then the end
       // is at or beyond the end of mappable memory.
-      !(abi && (abi->FixDataAddress(range_end) != range_end)));
+      !(abi && (abi->FixAnyAddress(range_end) != range_end)));
 
   return error;
 }

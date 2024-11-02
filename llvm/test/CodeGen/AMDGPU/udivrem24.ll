@@ -346,9 +346,8 @@ define amdgpu_kernel void @test_no_urem24_i32_2(i32 addrspace(1)* %out, i32 addr
 }
 
 ; FUNC-LABEL: {{^}}test_udiv24_u16_u23_i32:
-; SI-DAG: v_rcp_iflag_f32
-; SI-DAG: s_mov_b32 [[MASK:s[0-9]+]], 0x7fffff{{$}}
-; SI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]],
+; SI: v_rcp_iflag_f32
+; SI: v_and_b32_e32 v{{[0-9]+}}, 0x7fffff,
 
 ; EG: RECIP_IEEE
 define amdgpu_kernel void @test_udiv24_u16_u23_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
@@ -365,9 +364,8 @@ define amdgpu_kernel void @test_udiv24_u16_u23_i32(i32 addrspace(1)* %out, i32 a
 }
 
 ; FUNC-LABEL: {{^}}test_udiv24_u23_u16_i32:
-; SI-DAG: v_rcp_iflag_f32
-; SI-DAG: s_mov_b32 [[MASK:s[0-9]+]], 0x7fffff{{$}}
-; SI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]],
+; SI: v_rcp_iflag_f32
+; SI: v_and_b32_e32 v{{[0-9]+}}, 0x7fffff,
 
 ; EG: RECIP_IEEE
 define amdgpu_kernel void @test_udiv24_u23_u16_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {

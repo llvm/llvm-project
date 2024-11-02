@@ -231,7 +231,7 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    STI = &static_cast<const M68kSubtarget &>(MF.getSubtarget());
+    STI = &MF.getSubtarget<M68kSubtarget>();
     TII = STI->getInstrInfo();
     TRI = STI->getRegisterInfo();
     MFI = MF.getInfo<M68kMachineFunctionInfo>();

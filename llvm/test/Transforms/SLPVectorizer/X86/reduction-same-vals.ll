@@ -8,20 +8,13 @@ define i64 @test() {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ 0, [[BB2:%.*]] ], [ 0, [[BB1:%.*]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ 0, [[BB2]] ], [ 0, [[BB1]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP6]], [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i32 [[TMP7]], [[TMP4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i32 [[TMP8]], [[TMP4]]
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], [[TMP4]]
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[TMP10]], [[TMP4]]
-; CHECK-NEXT:    [[TMP12:%.*]] = mul i32 [[TMP11]], [[TMP4]]
-; CHECK-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], [[TMP4]]
-; CHECK-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP13]], [[TMP4]]
-; CHECK-NEXT:    [[TMP15:%.*]] = mul i32 [[TMP14]], [[TMP4]]
-; CHECK-NEXT:    [[TMP65:%.*]] = sext i32 [[TMP15]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ poison, [[BB2:%.*]] ], [ zeroinitializer, [[BB1:%.*]] ]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.mul.v8i32(<8 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[SHUFFLE]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = mul i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP65:%.*]] = sext i32 [[OP_RDX]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP65]]
 ;
 bb1:

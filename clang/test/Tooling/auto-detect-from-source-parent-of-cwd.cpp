@@ -6,7 +6,7 @@
 // RUN: cd %t/abc/def2
 // RUN: env PWD="%t/abc/def" not clang-check "ijk/qwe/test.cpp" 2>&1 | FileCheck %s
 
-// CHECK: C++ requires
+// CHECK: a type specifier is required
 // CHECK: /abc/def/ijk/qwe/test.cpp
 invalid;
 

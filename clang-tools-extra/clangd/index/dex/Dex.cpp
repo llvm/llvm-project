@@ -13,14 +13,19 @@
 #include "URI.h"
 #include "index/Index.h"
 #include "index/dex/Iterator.h"
+#include "index/dex/Token.h"
 #include "index/dex/Trigram.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
 #include <queue>
+#include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -76,23 +81,38 @@ public:
   }
 
   // Assemble the final compressed posting lists for the added symbols.
-  llvm::DenseMap<Token, PostingList> build() {
+  llvm::DenseMap<Token, PostingList> build() && {
     llvm::DenseMap<Token, PostingList> Result(/*InitialReserve=*/
                                               TrigramDocs.size() +
                                               RestrictedCCDocs.size() +
                                               TypeDocs.size() +
                                               ScopeDocs.size() +
                                               ProximityDocs.size());
-    for (const auto &E : TrigramDocs)
+    // Tear down intermediate structs as we go to reduce memory usage.
+    // Since we're trying to get rid of underlying allocations, clearing the
+    // containers is not enough.
+    auto CreatePostingList =
+        [&Result](Token::Kind TK, llvm::StringMap<std::vector<DocID>> &Docs) {
+          for (auto &E : Docs) {
+            Result.try_emplace(Token(TK, E.first()), E.second);
+            E.second = {};
+          }
+          Docs = {};
+        };
+    CreatePostingList(Token::Kind::Type, TypeDocs);
+    CreatePostingList(Token::Kind::Scope, ScopeDocs);
+    CreatePostingList(Token::Kind::ProximityURI, ProximityDocs);
+
+    // TrigramDocs are stored in a DenseMap and RestrictedCCDocs is not even a
+    // map, treat them specially.
+    for (auto &E : TrigramDocs) {
       Result.try_emplace(Token(Token::Kind::Trigram, E.first.str()), E.second);
-    for (const auto &E : TypeDocs)
-      Result.try_emplace(Token(Token::Kind::Type, E.first()), E.second);
-    for (const auto &E : ScopeDocs)
-      Result.try_emplace(Token(Token::Kind::Scope, E.first()), E.second);
-    for (const auto &E : ProximityDocs)
-      Result.try_emplace(Token(Token::Kind::ProximityURI, E.first()), E.second);
+      E.second = {};
+    }
+    TrigramDocs = llvm::DenseMap<Trigram, std::vector<DocID>>{};
     if (!RestrictedCCDocs.empty())
-      Result.try_emplace(RestrictedForCodeCompletion, RestrictedCCDocs);
+      Result.try_emplace(RestrictedForCodeCompletion,
+                         std::move(RestrictedCCDocs));
     return Result;
   }
 };
@@ -125,7 +145,7 @@ void Dex::buildIndex() {
   IndexBuilder Builder;
   for (DocID SymbolRank = 0; SymbolRank < Symbols.size(); ++SymbolRank)
     Builder.add(*Symbols[SymbolRank], SymbolRank);
-  InvertedIndex = Builder.build();
+  InvertedIndex = std::move(Builder).build();
 }
 
 std::unique_ptr<Iterator> Dex::iterator(const Token &Tok) const {

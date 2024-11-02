@@ -164,8 +164,6 @@ private:
 
   // Shortcuts to some useful interface.
   const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
-  RegisterClassInfo RCI;
 
   // analyses
   SlotIndexes *Indexes;
@@ -321,6 +319,10 @@ private:
   /// The register cost values. This list will be recreated for each Machine
   /// Function
   ArrayRef<uint8_t> RegCosts;
+
+  /// Flags for the live range priority calculation, determined once per
+  /// machine function.
+  bool RegClassPriorityTrumpsGlobalness;
 
 public:
   RAGreedy(const RegClassFilterFunc F = allocateAllRegClasses);

@@ -140,6 +140,9 @@ public:
   // This method is *not* marked noalias, because
   // SpecificBumpPtrAllocator::DestroyAll() loops over all allocations, and
   // that loop is not based on the Allocate() return value.
+  //
+  // Allocate(0, N) is valid, it returns a non-null pointer (which should not
+  // be dereferenced).
   LLVM_ATTRIBUTE_RETURNS_NONNULL void *Allocate(size_t Size, Align Alignment) {
     // Keep track of how many bytes we've allocated.
     BytesAllocated += Size;
@@ -154,7 +157,9 @@ public:
 #endif
 
     // Check if we have enough space.
-    if (Adjustment + SizeToAllocate <= size_t(End - CurPtr)) {
+    if (Adjustment + SizeToAllocate <= size_t(End - CurPtr)
+        // We can't return nullptr even for a zero-sized allocation!
+        && CurPtr != nullptr) {
       char *AlignedPtr = CurPtr + Adjustment;
       CurPtr = AlignedPtr + SizeToAllocate;
       // Update the allocation point of this memory block in MemorySanitizer.

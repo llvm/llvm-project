@@ -27,3 +27,4 @@ target_link_libraries(elf_common INTERFACE ${OPENMP_PTHREAD_LIB})
 
 # Expose elf_common.h directory to the users of this library.
 target_include_directories(elf_common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(elf_common PRIVATE ${LIBOMPTARGET_INCLUDE_DIR})

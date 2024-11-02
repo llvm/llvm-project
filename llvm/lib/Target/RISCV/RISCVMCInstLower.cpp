@@ -87,7 +87,7 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
   return MCOperand::createExpr(ME);
 }
 
-bool llvm::LowerRISCVMachineOperandToMCOperand(const MachineOperand &MO,
+bool llvm::lowerRISCVMachineOperandToMCOperand(const MachineOperand &MO,
                                                MCOperand &MCOp,
                                                const AsmPrinter &AP) {
   switch (MO.getType()) {
@@ -210,11 +210,21 @@ bool llvm::lowerRISCVMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
   if (lowerRISCVVMachineInstrToMCInst(MI, OutMI))
     return false;
 
+  // Only need the output operand when lower PseudoReadVL from MI to MCInst.
+  if (MI->getOpcode() == RISCV::PseudoReadVL) {
+    OutMI.setOpcode(RISCV::CSRRS);
+    OutMI.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
+    OutMI.addOperand(
+        MCOperand::createImm(RISCVSysReg::lookupSysRegByName("VL")->Encoding));
+    OutMI.addOperand(MCOperand::createReg(RISCV::X0));
+    return false;
+  }
+
   OutMI.setOpcode(MI->getOpcode());
 
   for (const MachineOperand &MO : MI->operands()) {
     MCOperand MCOp;
-    if (LowerRISCVMachineOperandToMCOperand(MO, MCOp, AP))
+    if (lowerRISCVMachineOperandToMCOperand(MO, MCOp, AP))
       OutMI.addOperand(MCOp);
   }
 
@@ -236,12 +246,6 @@ bool llvm::lowerRISCVMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
     OutMI.setOpcode(RISCV::CSRRS);
     OutMI.addOperand(MCOperand::createImm(
         RISCVSysReg::lookupSysRegByName("VLENB")->Encoding));
-    OutMI.addOperand(MCOperand::createReg(RISCV::X0));
-    break;
-  case RISCV::PseudoReadVL:
-    OutMI.setOpcode(RISCV::CSRRS);
-    OutMI.addOperand(
-        MCOperand::createImm(RISCVSysReg::lookupSysRegByName("VL")->Encoding));
     OutMI.addOperand(MCOperand::createReg(RISCV::X0));
     break;
   }

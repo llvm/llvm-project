@@ -108,6 +108,13 @@ void APIIndexer::indexStandardSpecDef(llvm::Record *StandardSpec) {
         EnumerationSpecMap[std::string(
             EnumerationSpec->getValueAsString("Name"))] = EnumerationSpec;
       }
+
+      auto ObjectSpecList = HeaderSpec->getValueAsListOfDefs("Objects");
+      for (llvm::Record *ObjectSpec : ObjectSpecList) {
+        auto ObjectName = std::string(ObjectSpec->getValueAsString("Name"));
+        ObjectSpecMap[ObjectName] = ObjectSpec;
+        ObjectToHeaderMap[ObjectName] = std::string(Header);
+      }
     }
   }
 }
@@ -135,6 +142,10 @@ void APIIndexer::indexPublicAPIDef(llvm::Record *PublicAPI) {
   auto EnumerationList = PublicAPI->getValueAsListOfStrings("Enumerations");
   for (llvm::StringRef EnumerationName : EnumerationList)
     Enumerations.insert(std::string(EnumerationName));
+
+  auto ObjectList = PublicAPI->getValueAsListOfStrings("Objects");
+  for (llvm::StringRef ObjectName : ObjectList)
+    Objects.insert(std::string(ObjectName));
 }
 
 void APIIndexer::index(llvm::RecordKeeper &Records) {

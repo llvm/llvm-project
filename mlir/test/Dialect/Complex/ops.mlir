@@ -4,7 +4,7 @@
 
 // CHECK-LABEL: func @ops(
 // CHECK-SAME:            %[[F:.*]]: f32) {
-func @ops(%f: f32) {
+func.func @ops(%f: f32) {
   // CHECK: complex.constant [1.{{.*}}, -1.{{.*}}] : complex<f64>
   %cst_f64 = complex.constant [0.1, -1.0] : complex<f64>
 
@@ -26,6 +26,9 @@ func @ops(%f: f32) {
   // CHECK: complex.add %[[C]], %[[C]] : complex<f32>
   %sum = complex.add %complex, %complex : complex<f32>
 
+  // CHECK: complex.cos %[[C]] : complex<f32>
+  %cos = complex.cos %complex : complex<f32>
+
   // CHECK: complex.div %[[C]], %[[C]] : complex<f32>
   %div = complex.div %complex, %complex : complex<f32>
 
@@ -34,6 +37,9 @@ func @ops(%f: f32) {
 
   // CHECK: complex.exp %[[C]] : complex<f32>
   %exp = complex.exp %complex : complex<f32>
+
+  // CHECK: complex.expm1 %[[C]] : complex<f32>
+  %expm1 = complex.expm1 %complex : complex<f32>
 
   // CHECK: complex.log %[[C]] : complex<f32>
   %log = complex.log %complex : complex<f32>
@@ -53,7 +59,26 @@ func @ops(%f: f32) {
   // CHECK: complex.sign %[[C]] : complex<f32>
   %sign = complex.sign %complex : complex<f32>
 
+  // CHECK: complex.sin %[[C]] : complex<f32>
+  %sin = complex.sin %complex : complex<f32>
+
   // CHECK: complex.sub %[[C]], %[[C]] : complex<f32>
   %diff = complex.sub %complex, %complex : complex<f32>
+
+  // CHECK: complex.tanh %[[C]] : complex<f32>
+  %tanh = complex.tanh %complex : complex<f32>
+
+  // CHECK: complex.pow %[[C]], %[[C]] : complex<f32>
+  %pow = complex.pow %complex, %complex : complex<f32>
+
+  // CHECK: complex.sqrt %[[C]] : complex<f32>
+  %sqrt = complex.sqrt %complex : complex<f32>
+
+  // CHECK: complex.rsqrt %[[C]] : complex<f32>
+  %rsqrt = complex.rsqrt %complex : complex<f32>
+
+  // CHECK: complex.atan2 %[[C]], %[[C]] : complex<f32>
+  %atan2 = complex.atan2 %complex, %complex : complex<f32>
+
   return
 }

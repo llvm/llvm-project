@@ -13,7 +13,7 @@
 // -----
 
 // CHECK-LABEL: func @loop_nest_1d() {
-func @loop_nest_1d() {
+func.func @loop_nest_1d() {
   %A = memref.alloc() : memref<256 x f32>
   %B = memref.alloc() : memref<512 x f32>
   %F = memref.alloc() : memref<256 x f32, 2>
@@ -107,7 +107,7 @@ func @loop_nest_1d() {
 // CHECK-NEXT:  dealloc [[BUFB]] : memref<512x32xf32, 2>
 // CHECK-NEXT:  return
 // CHECK-NEXT:}
-func @loop_nest_high_d(%A: memref<512 x 32 x f32>,
+func.func @loop_nest_high_d(%A: memref<512 x 32 x f32>,
     %B: memref<512 x 32 x f32>, %C: memref<512 x 32 x f32>) {
   // DMAs will be performed at this level (jT is the first loop without a stride).
   // A and B are read, while C is both read and written. A total of three new buffers
@@ -160,7 +160,7 @@ func @loop_nest_high_d(%A: memref<512 x 32 x f32>,
 // CHECK-NEXT:      dealloc %{{.*}} : memref<1x2xf32, 2>
 // CHECK-NEXT:    }
 // CHECK-NEXT:    return
-func @loop_nest_modulo() {
+func.func @loop_nest_modulo() {
   %A = memref.alloc() : memref<256 x 8 x f32>
   affine.for %i = 0 to 32 step 4 {
     // DMAs will be performed at this level (%j is the first unit stride loop)
@@ -178,7 +178,7 @@ func @loop_nest_modulo() {
 // DMA on tiled loop nest. This also tests the case where the bounds are
 // dependent on outer loop IVs.
 // CHECK-LABEL: func @loop_nest_tiled() -> memref<256x1024xf32> {
-func @loop_nest_tiled() -> memref<256x1024xf32> {
+func.func @loop_nest_tiled() -> memref<256x1024xf32> {
   %0 = memref.alloc() : memref<256x1024xf32>
   affine.for %i0 = 0 to 256 step 32 {
     affine.for %i1 = 0 to 1024 step 32 {
@@ -203,7 +203,7 @@ func @loop_nest_tiled() -> memref<256x1024xf32> {
 // -----
 
 // CHECK-LABEL: func @dma_constant_dim_access
-func @dma_constant_dim_access(%A : memref<100x100xf32>) {
+func.func @dma_constant_dim_access(%A : memref<100x100xf32>) {
   %one = arith.constant 1 : index
   %N = arith.constant 100 : index
   // CHECK:      memref.alloc() : memref<1x100xf32, 2>
@@ -223,7 +223,7 @@ func @dma_constant_dim_access(%A : memref<100x100xf32>) {
 // -----
 
 // CHECK-LABEL: func @dma_with_symbolic_accesses
-func @dma_with_symbolic_accesses(%A : memref<100x100xf32>, %M : index) {
+func.func @dma_with_symbolic_accesses(%A : memref<100x100xf32>, %M : index) {
   %N = arith.constant 9 : index
   affine.for %i = 0 to 100 {
     affine.for %j = 0 to 100 {
@@ -247,7 +247,7 @@ func @dma_with_symbolic_accesses(%A : memref<100x100xf32>, %M : index) {
 // -----
 
 // CHECK-LABEL: func @dma_with_symbolic_loop_bounds
-func @dma_with_symbolic_loop_bounds(%A : memref<100x100xf32>, %M : index, %N: index) {
+func.func @dma_with_symbolic_loop_bounds(%A : memref<100x100xf32>, %M : index, %N: index) {
   %K = arith.constant 9 : index
 // The buffer size can't be bound by a constant smaller than the original
 // memref size; so the DMA buffer is the entire 100x100.
@@ -267,7 +267,7 @@ func @dma_with_symbolic_loop_bounds(%A : memref<100x100xf32>, %M : index, %N: in
 // -----
 
 // CHECK-LABEL: func @dma_unknown_size
-func @dma_unknown_size(%arg0: memref<?x?xf32>) {
+func.func @dma_unknown_size(%arg0: memref<?x?xf32>) {
   %c0 = arith.constant 0 : index
   %M = memref.dim %arg0, %c0 : memref<? x ? x f32>
   %N = memref.dim %arg0, %c0 : memref<? x ? x f32>
@@ -285,7 +285,7 @@ func @dma_unknown_size(%arg0: memref<?x?xf32>) {
 // -----
 
 // CHECK-LABEL: func @dma_memref_3d
-func @dma_memref_3d(%arg0: memref<1024x1024x1024xf32>) {
+func.func @dma_memref_3d(%arg0: memref<1024x1024x1024xf32>) {
   affine.for %i = 0 to 1024 {
     affine.for %j = 0 to 1024 {
       affine.for %k = 0 to 1024 {
@@ -312,7 +312,7 @@ func @dma_memref_3d(%arg0: memref<1024x1024x1024xf32>) {
 // 2), i.e., the window ([2,320), [2,448)) in the original space.
 
 // CHECK-LABEL: func @multi_load_store_union() {
-func @multi_load_store_union() {
+func.func @multi_load_store_union() {
   %A = memref.alloc() : memref<512 x 512 x f32>
   affine.for %i = 0 to 256 {
     affine.for %j = 0 to 256 {
@@ -358,7 +358,7 @@ func @multi_load_store_union() {
 // -----
 
 // CHECK-LABEL: func @dma_loop_straightline_interspersed() {
-func @dma_loop_straightline_interspersed() {
+func.func @dma_loop_straightline_interspersed() {
   %c0 = arith.constant 0 : index
   %c255 = arith.constant 255 : index
   %A = memref.alloc() : memref<256 x f32>
@@ -406,7 +406,7 @@ func @dma_loop_straightline_interspersed() {
 // -----
 
 // CHECK-LABEL: func @dma_mixed_loop_blocks() {
-func @dma_mixed_loop_blocks() {
+func.func @dma_mixed_loop_blocks() {
   %c0 = arith.constant 0 : index
   %A = memref.alloc() : memref<256 x 256 x vector<8 x f32>>
   affine.for %i = 0 to 256 {
@@ -432,7 +432,7 @@ func @dma_mixed_loop_blocks() {
 // -----
 
 // CHECK-LABEL: func @relative_loop_bounds
-func @relative_loop_bounds(%arg0: memref<1027xf32>) {
+func.func @relative_loop_bounds(%arg0: memref<1027xf32>) {
   affine.for %i0 = 0 to 1024 {
     affine.for %i2 = affine_map<(d0) -> (d0)>(%i0) to affine_map<(d0) -> (d0 + 4)>(%i0) {
       %0 = arith.constant 0.0 : f32
@@ -453,7 +453,7 @@ func @relative_loop_bounds(%arg0: memref<1027xf32>) {
 
 // -----
 
-func @test_read_write_region_union() {
+func.func @test_read_write_region_union() {
   %0 = memref.alloc() : memref<256xf32>
   affine.for %i0 = 0 to 10 {
     // memref dims:  [0, 256)
@@ -489,7 +489,7 @@ func @test_read_write_region_union() {
 #map_ub = affine_map<(d0) -> (d0 + 3)>
 #map_acc = affine_map<(d0) -> (d0 floordiv 8)>
 // CHECK-LABEL: func @test_analysis_util
-func @test_analysis_util(%arg0: memref<4x4x16x1xf32>, %arg1: memref<144x9xf32>, %arg2: memref<2xf32>) -> (memref<144x9xf32>, memref<2xf32>) {
+func.func @test_analysis_util(%arg0: memref<4x4x16x1xf32>, %arg1: memref<144x9xf32>, %arg2: memref<2xf32>) -> (memref<144x9xf32>, memref<2xf32>) {
   %c0 = arith.constant 0 : index
   %0 = memref.alloc() : memref<64x1xf32>
   %1 = memref.alloc() : memref<144x4xf32>
@@ -522,7 +522,7 @@ func @test_analysis_util(%arg0: memref<4x4x16x1xf32>, %arg1: memref<144x9xf32>, 
 #map16 = affine_map<(d0, d1) -> (((((d0 + d1 * 72) mod 2304) mod 1152) floordiv 9) floordiv 8)>
 // Test for test case in b/128303048 #4.
 // CHECK-LABEL: func @test_memref_bounds
-func @test_memref_bounds(%arg0: memref<4x4x16x1xvector<8x128xf32>>, %arg1: memref<144x9xvector<8x128xf32>>, %arg2: memref<2xvector<8x128xf32>>) -> (memref<144x9xvector<8x128xf32>>, memref<2xvector<8x128xf32>>) {
+func.func @test_memref_bounds(%arg0: memref<4x4x16x1xvector<8x128xf32>>, %arg1: memref<144x9xvector<8x128xf32>>, %arg2: memref<2xvector<8x128xf32>>) -> (memref<144x9xvector<8x128xf32>>, memref<2xvector<8x128xf32>>) {
   %c0 = arith.constant 0 : index
   affine.for %i8 = 0 to 9 step 3 {
     affine.for %i9 = #map3(%i8) to #map12(%i8) {
@@ -548,7 +548,7 @@ func @test_memref_bounds(%arg0: memref<4x4x16x1xvector<8x128xf32>>, %arg1: memre
 // %i0.
 
 // FAST-MEM-16KB-LABEL: func @load_store_same_memref
-func @load_store_same_memref(%arg0: memref<256x1024xf32>) {
+func.func @load_store_same_memref(%arg0: memref<256x1024xf32>) {
   // FAST-MEM-16KB:  affine.for %{{.*}} = 0 to 256 step 4
   affine.for %i0 = 0 to 256 step 4 {
     // FAST-MEM-16KB: [[BUF:%[0-9]+]] = memref.alloc() : memref<4x1024xf32, 2>
@@ -584,7 +584,7 @@ func @load_store_same_memref(%arg0: memref<256x1024xf32>) {
 #map0 = affine_map<(d0) -> (d0)>
 #map1 = affine_map<(d0) -> (d0 + 4)>
 // FAST-MEM-16KB-LABEL: func @simple_matmul
-func @simple_matmul(%arg0: memref<8x8xvector<64xf32>>, %arg1: memref<8x8xvector<64xf32>>, %arg2: memref<8x8xvector<64xf32>>) -> memref<8x8xvector<64xf32>> {
+func.func @simple_matmul(%arg0: memref<8x8xvector<64xf32>>, %arg1: memref<8x8xvector<64xf32>>, %arg2: memref<8x8xvector<64xf32>>) -> memref<8x8xvector<64xf32>> {
   affine.for %i = 0 to 8 step 4 {
     affine.for %j = 0 to 8 step 4 {
       affine.for %k = 0 to 8 step 4 {

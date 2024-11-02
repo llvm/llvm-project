@@ -5,18 +5,18 @@ define dso_local void @rftbsub(double* %a) local_unnamed_addr #0 {
 ; CHECK-LABEL: @rftbsub(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load double, double* [[ARRAYIDX6]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = or i64 2, 1
-; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds double, double* [[A]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load double, double* [[ARRAYIDX12]], align 8
+; CHECK-NEXT:    [[SUB22:%.*]] = fsub double undef, undef
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[ARRAYIDX6]] to <2 x double>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[ADD16:%.*]] = fadd double [[TMP2]], undef
 ; CHECK-NEXT:    [[MUL18:%.*]] = fmul double undef, [[ADD16]]
 ; CHECK-NEXT:    [[ADD19:%.*]] = fadd double undef, [[MUL18]]
-; CHECK-NEXT:    [[SUB22:%.*]] = fsub double undef, undef
-; CHECK-NEXT:    [[SUB25:%.*]] = fsub double [[TMP0]], [[ADD19]]
-; CHECK-NEXT:    store double [[SUB25]], double* [[ARRAYIDX6]], align 8
-; CHECK-NEXT:    [[SUB29:%.*]] = fsub double [[TMP2]], [[SUB22]]
-; CHECK-NEXT:    store double [[SUB29]], double* [[ARRAYIDX12]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[ADD19]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[SUB22]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x double> [[TMP1]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[ARRAYIDX6]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP5]], <2 x double>* [[TMP6]], align 8
 ; CHECK-NEXT:    unreachable
 ;
 entry:

@@ -236,21 +236,33 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
       // such inequalities to b.
       llvm::SmallBitVector canIgnoreIneq(sI.getNumInequalities() +
                                          2 * sI.getNumEqualities());
-      for (MaybeLocalRepr &maybeInequality : repr) {
+      for (MaybeLocalRepr &maybeRepr : repr) {
         assert(
-            maybeInequality.kind == ReprKind::Inequality &&
+            maybeRepr &&
             "Subtraction is not supported when a representation of the local "
             "variables of the subtrahend cannot be found!");
-        unsigned lb = maybeInequality.repr.inequalityPair.lowerBoundIdx;
-        unsigned ub = maybeInequality.repr.inequalityPair.upperBoundIdx;
 
-        b.addInequality(sI.getInequality(lb));
-        b.addInequality(sI.getInequality(ub));
+        if (maybeRepr.kind == ReprKind::Inequality) {
+          unsigned lb = maybeRepr.repr.inequalityPair.lowerBoundIdx;
+          unsigned ub = maybeRepr.repr.inequalityPair.upperBoundIdx;
 
-        assert(lb != ub &&
-               "Upper and lower bounds must be different inequalities!");
-        canIgnoreIneq[lb] = true;
-        canIgnoreIneq[ub] = true;
+          b.addInequality(sI.getInequality(lb));
+          b.addInequality(sI.getInequality(ub));
+
+          assert(lb != ub &&
+                 "Upper and lower bounds must be different inequalities!");
+          canIgnoreIneq[lb] = true;
+          canIgnoreIneq[ub] = true;
+        } else {
+          assert(maybeRepr.kind == ReprKind::Equality &&
+                 "ReprKind isn't inequality so should be equality");
+          unsigned idx = maybeRepr.repr.equalityIdx;
+          b.addEquality(sI.getEquality(idx));
+          // We can ignore both inequalities corresponding to this equality.
+          unsigned offset = sI.getNumInequalities();
+          canIgnoreIneq[offset + 2 * idx] = true;
+          canIgnoreIneq[offset + 2 * idx + 1] = true;
+        }
       }
 
       unsigned offset = simplex.getNumConstraints();

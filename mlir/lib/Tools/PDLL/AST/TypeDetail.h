@@ -75,13 +75,15 @@ struct ConstraintTypeStorage : public TypeStorageBase<ConstraintTypeStorage> {};
 //===----------------------------------------------------------------------===//
 
 struct OperationTypeStorage
-    : public TypeStorageBase<OperationTypeStorage, StringRef> {
+    : public TypeStorageBase<OperationTypeStorage,
+                             std::pair<StringRef, const ods::Operation *>> {
   using Base::Base;
 
   static OperationTypeStorage *
-  construct(StorageUniquer::StorageAllocator &alloc, StringRef key) {
-    return new (alloc.allocate<OperationTypeStorage>())
-        OperationTypeStorage(alloc.copyInto(key));
+  construct(StorageUniquer::StorageAllocator &alloc,
+            const std::pair<StringRef, const ods::Operation *> &key) {
+    return new (alloc.allocate<OperationTypeStorage>()) OperationTypeStorage(
+        std::make_pair(alloc.copyInto(key.first), key.second));
   }
 };
 

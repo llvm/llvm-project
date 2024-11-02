@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03 && !stdlib=libc++
 
 // <vector>
 
@@ -21,11 +21,11 @@
 
 void test() {
   {
-    std::vector<operator_hijacker> vo{};
-    std::vector<operator_hijacker> v{std::move(vo)};
+    std::vector<operator_hijacker> vo;
+    std::vector<operator_hijacker> v(std::move(vo));
   }
   {
-    std::vector<operator_hijacker> vo{};
-    std::vector<operator_hijacker> v{std::move(vo), std::allocator<operator_hijacker>{}};
+    std::vector<operator_hijacker> vo;
+    std::vector<operator_hijacker> v(std::move(vo), std::allocator<operator_hijacker>());
   }
 }

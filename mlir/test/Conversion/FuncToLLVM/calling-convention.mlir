@@ -10,7 +10,7 @@
 // CHECK-LABEL: @external
 // CHECK: %[[ALLOC0:.*]]: !llvm.ptr<f32>, %[[ALIGN0:.*]]: !llvm.ptr<f32>, %[[OFFSET0:.*]]: i64, %[[SIZE00:.*]]: i64, %[[SIZE01:.*]]: i64, %[[STRIDE00:.*]]: i64, %[[STRIDE01:.*]]: i64,
 // CHECK: %[[ALLOC1:.*]]: !llvm.ptr<f32>, %[[ALIGN1:.*]]: !llvm.ptr<f32>, %[[OFFSET1:.*]]: i64)
-func private @external(%arg0: memref<?x?xf32>, %arg1: memref<f32>)
+func.func private @external(%arg0: memref<?x?xf32>, %arg1: memref<f32>)
   // Populate the descriptor for arg0.
   // CHECK: %[[DESC00:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: %[[DESC01:.*]] = llvm.insertvalue %arg0, %[[DESC00]][0]
@@ -47,10 +47,10 @@ func private @external(%arg0: memref<?x?xf32>, %arg1: memref<f32>)
 // Verify that the return value is not affected.
 // CHECK-LABEL: @returner
 // CHECK: -> !llvm.struct<(struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>, struct<(ptr<f32>, ptr<f32>, i64)>)>
-func private @returner() -> (memref<?x?xf32>, memref<f32>)
+func.func private @returner() -> (memref<?x?xf32>, memref<f32>)
 
 // CHECK-LABEL: @caller
-func @caller() {
+func.func @caller() {
   %0:2 = call @returner() : () -> (memref<?x?xf32>, memref<f32>)
   // Extract individual values from the descriptor for the first memref.
   // CHECK: %[[ALLOC0:.*]] = llvm.extractvalue %[[DESC0:.*]][0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
@@ -74,7 +74,7 @@ func @caller() {
 
 // CHECK-LABEL: @callee
 // EMIT_C_ATTRIBUTE-LABEL: @callee
-func @callee(%arg0: memref<?xf32>, %arg1: index) {
+func.func @callee(%arg0: memref<?xf32>, %arg1: index) {
   %0 = memref.load %arg0[%arg1] : memref<?xf32>
   return
 }
@@ -99,7 +99,7 @@ func @callee(%arg0: memref<?xf32>, %arg1: index) {
 
 // CHECK-LABEL: @other_callee
 // EMIT_C_ATTRIBUTE-LABEL: @other_callee
-func @other_callee(%arg0: memref<?xf32>, %arg1: index) attributes { llvm.emit_c_interface } {
+func.func @other_callee(%arg0: memref<?xf32>, %arg1: index) attributes { llvm.emit_c_interface } {
   %0 = memref.load %arg0[%arg1] : memref<?xf32>
   return
 }
@@ -115,7 +115,7 @@ func @other_callee(%arg0: memref<?xf32>, %arg1: index) attributes { llvm.emit_c_
 //===========================================================================//
 
 // CHECK-LABEL: llvm.func @return_var_memref_caller
-func @return_var_memref_caller(%arg0: memref<4x3xf32>) {
+func.func @return_var_memref_caller(%arg0: memref<4x3xf32>) {
   // CHECK: %[[CALL_RES:.*]] = llvm.call @return_var_memref
   %0 = call @return_var_memref(%arg0) : (memref<4x3xf32>) -> memref<*xf32>
 
@@ -144,7 +144,7 @@ func @return_var_memref_caller(%arg0: memref<4x3xf32>) {
 }
 
 // CHECK-LABEL: llvm.func @return_var_memref
-func @return_var_memref(%arg0: memref<4x3xf32>) -> memref<*xf32> attributes { llvm.emit_c_interface } {
+func.func @return_var_memref(%arg0: memref<4x3xf32>) -> memref<*xf32> attributes { llvm.emit_c_interface } {
   // Match the construction of the unranked descriptor.
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca
   // CHECK: %[[MEMORY:.*]] = llvm.bitcast %[[ALLOCA]]
@@ -181,7 +181,7 @@ func @return_var_memref(%arg0: memref<4x3xf32>) -> memref<*xf32> attributes { ll
 // CHECK-SAME: (%{{.*}}: !llvm.ptr<struct<(i64, ptr<i8>)>>, %{{.*}}: !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>>)
 
 // CHECK-LABEL: llvm.func @return_two_var_memref_caller
-func @return_two_var_memref_caller(%arg0: memref<4x3xf32>) {
+func.func @return_two_var_memref_caller(%arg0: memref<4x3xf32>) {
   // Only check that we create two different descriptors using different
   // memory, and deallocate both sources. The size computation is same as for
   // the single result.
@@ -209,7 +209,7 @@ func @return_two_var_memref_caller(%arg0: memref<4x3xf32>) {
 }
 
 // CHECK-LABEL: llvm.func @return_two_var_memref
-func @return_two_var_memref(%arg0: memref<4x3xf32>) -> (memref<*xf32>, memref<*xf32>) attributes { llvm.emit_c_interface } {
+func.func @return_two_var_memref(%arg0: memref<4x3xf32>) -> (memref<*xf32>, memref<*xf32>) attributes { llvm.emit_c_interface } {
   // Match the construction of the unranked descriptor.
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca
   // CHECK: %[[MEMORY:.*]] = llvm.bitcast %[[ALLOCA]]

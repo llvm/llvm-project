@@ -1,4 +1,5 @@
 ; RUN: llc < %s -O0 -march=nvptx -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -O0 -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
 
 ; CHECK-LABEL: .visible .func callee(
 ; CHECK-NEXT: .param .align 16 .b8 callee_param_0[16],

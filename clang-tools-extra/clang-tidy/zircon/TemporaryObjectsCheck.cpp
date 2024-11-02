@@ -20,7 +20,7 @@ namespace clang {
 namespace tidy {
 namespace zircon {
 
-AST_MATCHER_P(CXXRecordDecl, matchesAnyName, ArrayRef<std::string>, Names) {
+AST_MATCHER_P(CXXRecordDecl, matchesAnyName, ArrayRef<StringRef>, Names) {
   std::string QualifiedName = Node.getQualifiedNameAsString();
   return llvm::any_of(Names,
                       [&](StringRef Name) { return QualifiedName == Name; });

@@ -13,26 +13,25 @@
 ; Stage1 and stage2 are described in type-mapping-bug4_1.ll.
 ; Stage3 is described in this file.
 
-; CHECK: %class.CCSM = type opaque
-; CHECK: %class.CB = type { %"class.std::unique_ptr_base.1" }
-; CHECK: %"class.std::unique_ptr_base.1" = type { %class.CCSM* }
+; CHECK: %class.CB.1 = type { %"class.std::unique_ptr_base.2" }
+; CHECK: %"class.std::unique_ptr_base.2" = type { ptr }
 
 ; CHECK: define void @j() {
-; CHECK:   call void @h(%class.CCSM* undef)
+; CHECK:   call void @h(ptr undef)
 ; CHECK:   ret void
 ; CHECK: }
 
-; CHECK: declare void @h(%class.CCSM*)
+; CHECK: declare void @h(ptr)
 
 ; CHECK: define void @a() {
-; CHECK:   call void @llvm.dbg.value(metadata %class.CB* undef, metadata !10, metadata !DIExpression())
+; CHECK:   call void @llvm.dbg.value(metadata ptr undef, metadata !10, metadata !DIExpression())
 ; CHECK:   ret void
 ; CHECK: }
 
 ; CHECK: declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
-; CHECK: define void @d(%class.CB* %0) {
-; CHECK:   %2 = getelementptr inbounds %class.CB, %class.CB* undef, i64 0, i32 0, i32 0
+; CHECK: define void @d(ptr %0) {
+; CHECK:   %2 = getelementptr inbounds %class.CB.1, ptr undef, i64 0, i32 0, i32 0
 ; CHECK:   ret void
 ; CHECK: }
 

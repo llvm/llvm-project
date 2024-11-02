@@ -11,6 +11,7 @@
 #include "mlir/Tools/PDLL/AST/Context.h"
 
 using namespace mlir;
+using namespace mlir::pdll;
 using namespace mlir::pdll::ast;
 
 MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::AttributeTypeStorage)
@@ -68,14 +69,20 @@ ConstraintType ConstraintType::get(Context &context) {
 // OperationType
 //===----------------------------------------------------------------------===//
 
-OperationType OperationType::get(Context &context, Optional<StringRef> name) {
+OperationType OperationType::get(Context &context, Optional<StringRef> name,
+                                 const ods::Operation *odsOp) {
   return context.getTypeUniquer().get<ImplTy>(
-      /*initFn=*/function_ref<void(ImplTy *)>(), name.getValueOr(""));
+      /*initFn=*/function_ref<void(ImplTy *)>(),
+      std::make_pair(name.getValueOr(""), odsOp));
 }
 
 Optional<StringRef> OperationType::getName() const {
-  StringRef name = getImplAs<ImplTy>()->getValue();
+  StringRef name = getImplAs<ImplTy>()->getValue().first;
   return name.empty() ? Optional<StringRef>() : Optional<StringRef>(name);
+}
+
+const ods::Operation *OperationType::getODSOperation() const {
+  return getImplAs<ImplTy>()->getValue().second;
 }
 
 //===----------------------------------------------------------------------===//

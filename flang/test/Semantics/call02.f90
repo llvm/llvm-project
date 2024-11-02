@@ -15,6 +15,12 @@ subroutine s01(elem, subr)
       !ERROR: A dummy procedure may not be ELEMENTAL
       procedure(elem) :: dummy
     end subroutine
+    subroutine optionalsubr(dummy)
+      procedure(sin), optional :: dummy
+    end subroutine
+    subroutine ptrsubr(dummy)
+      procedure(sin), pointer, intent(in) :: dummy
+    end subroutine
   end interface
   intrinsic :: cos
   call subr(cos) ! not an error
@@ -22,9 +28,20 @@ subroutine s01(elem, subr)
   call subr(elem) ! C1533
   !ERROR: Actual argument associated with procedure dummy argument 'dummy=' is a null pointer
   call subr(null())
+  call optionalsubr(null()) ! ok
+  call ptrsubr(null()) ! ok
   !ERROR: Actual argument associated with procedure dummy argument 'dummy=' is typeless
   call subr(B"1010")
 end subroutine
+
+subroutine s02
+  !ERROR: Non-intrinsic ELEMENTAL procedure 'elem' may not be passed as an actual argument
+  call sub(elem)
+ contains
+  elemental integer function elem()
+    elem = 1
+  end function
+end
 
 module m01
   procedure(sin) :: elem01
@@ -73,6 +90,18 @@ module m02
   end subroutine
 end module
 
+module m03
+ contains
+  subroutine test
+    !ERROR: Non-intrinsic ELEMENTAL procedure 'elem' may not be passed as an actual argument
+    call sub(elem)
+   contains
+    elemental integer function elem()
+      elem = 1
+    end function
+  end
+end
+
 program p03
   logical :: l
   call s1(index)
@@ -89,8 +118,23 @@ contains
   end
 end
 
-program p04
+subroutine p04
   implicit none
   !ERROR: No explicit type declared for 'index'
   call s1(index)
+end
+
+subroutine p05
+  integer :: a1(2), a2, a3
+  !ERROR: In an elemental procedure reference with at least one array argument, actual argument a2 that corresponds to an INTENT(OUT) or INTENT(INOUT) dummy argument must be an array
+  !ERROR: In an elemental procedure reference with at least one array argument, actual argument a3 that corresponds to an INTENT(OUT) or INTENT(INOUT) dummy argument must be an array
+  call s1(a1, a2, a3)
+contains
+  elemental subroutine s1(a, b, c)
+    integer, intent(in) :: a
+    integer, intent(out) :: b
+    integer, intent(inout) :: c
+    b = a
+    c = a
+  end
 end

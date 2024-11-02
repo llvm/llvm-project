@@ -6,12 +6,12 @@
 #
 #===----------------------------------------------------------------------===##
 
+from pprint import pformat
 import ast
 import distutils.spawn
-import sys
 import re
-import libcxx.util
-from pprint import pformat
+import subprocess
+import sys
 
 
 def read_syms_from_list(slist):
@@ -66,11 +66,10 @@ _cppfilt_exe = distutils.spawn.find_executable('c++filt')
 def demangle_symbol(symbol):
     if _cppfilt_exe is None:
         return symbol
-    out, _, exit_code = libcxx.util.executeCommandVerbose(
-        [_cppfilt_exe], input=symbol)
-    if exit_code != 0:
+    result = subprocess.run([_cppfilt_exe], input=symbol.encode(), capture_output=True)
+    if result.returncode != 0:
         return symbol
-    return out
+    return result.stdout.decode()
 
 
 def is_elf(filename):

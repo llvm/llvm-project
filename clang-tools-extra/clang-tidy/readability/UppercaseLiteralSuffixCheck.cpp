@@ -87,18 +87,18 @@ llvm::Optional<SourceRange> getMacroAwareSourceRange(SourceRange Loc,
 
 llvm::Optional<std::string>
 getNewSuffix(llvm::StringRef OldSuffix,
-             const std::vector<std::string> &NewSuffixes) {
+             const std::vector<StringRef> &NewSuffixes) {
   // If there is no config, just uppercase the entirety of the suffix.
   if (NewSuffixes.empty())
     return OldSuffix.upper();
   // Else, find matching suffix, case-*insensitive*ly.
-  auto NewSuffix = llvm::find_if(
-      NewSuffixes, [OldSuffix](const std::string &PotentialNewSuffix) {
+  auto NewSuffix =
+      llvm::find_if(NewSuffixes, [OldSuffix](StringRef PotentialNewSuffix) {
         return OldSuffix.equals_insensitive(PotentialNewSuffix);
       });
   // Have a match, return it.
   if (NewSuffix != NewSuffixes.end())
-    return *NewSuffix;
+    return NewSuffix->str();
   // Nope, I guess we have to keep it as-is.
   return llvm::None;
 }
@@ -106,7 +106,7 @@ getNewSuffix(llvm::StringRef OldSuffix,
 template <typename LiteralType>
 llvm::Optional<NewSuffix>
 shouldReplaceLiteralSuffix(const Expr &Literal,
-                           const std::vector<std::string> &NewSuffixes,
+                           const std::vector<StringRef> &NewSuffixes,
                            const SourceManager &SM, const LangOptions &LO) {
   NewSuffix ReplacementDsc;
 

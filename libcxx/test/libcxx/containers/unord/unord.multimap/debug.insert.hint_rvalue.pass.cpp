@@ -12,7 +12,8 @@
 //           class = typename enable_if<is_convertible<P, value_type>::value>::type>
 //     iterator insert(const_iterator p, P&& x);
 
-// UNSUPPORTED: libcxx-no-debug-mode, c++03, windows
+// REQUIRES: has-unix-headers
+// UNSUPPORTED: libcxx-no-debug-mode, c++03
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
 
 #include <unordered_map>

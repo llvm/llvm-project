@@ -14,6 +14,8 @@
 
 #include "../src/cxa_exception.h"
 
+#include "test_macros.h"
+
 typedef __cxxabiv1::__cxa_eh_globals globals_t ;
 
 void *thread_code (void *parm) {
@@ -29,20 +31,20 @@ void *thread_code (void *parm) {
         std::printf("Got different globals!\n");
 
     *result = (size_t) glob1;
-#ifndef _LIBCXXABI_HAS_NO_THREADS
+#ifndef TEST_HAS_NO_THREADS
     sleep ( 1 );
 #endif
     return parm;
 }
 
-#ifndef _LIBCXXABI_HAS_NO_THREADS
+#ifndef TEST_HAS_NO_THREADS
 #define NUMTHREADS  10
 size_t                 thread_globals [ NUMTHREADS ] = { 0 };
 std::__libcpp_thread_t   threads        [ NUMTHREADS ];
 #endif
 
 int main() {
-#ifndef _LIBCXXABI_HAS_NO_THREADS
+#ifndef TEST_HAS_NO_THREADS
 //  Make the threads, let them run, and wait for them to finish
     for ( int i = 0; i < NUMTHREADS; ++i )
         std::__libcpp_thread_create ( threads + i, thread_code, (void *) (thread_globals + i));
@@ -65,10 +67,10 @@ int main() {
         }
     }
     return retVal;
-#else // _LIBCXXABI_HAS_NO_THREADS
+#else // TEST_HAS_NO_THREADS
     size_t thread_globals;
     thread_code(&thread_globals);
     // Check that __cxa_get_globals() is not NULL.
     return (thread_globals == 0) ? 1 : 0;
-#endif // !_LIBCXXABI_HAS_NO_THREADS
+#endif // !TEST_HAS_NO_THREADS
 }

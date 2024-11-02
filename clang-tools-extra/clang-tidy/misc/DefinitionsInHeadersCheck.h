@@ -43,7 +43,7 @@ public:
 
 private:
   const bool UseHeaderFileExtension;
-  const std::string RawStringHeaderFileExtensions;
+  const StringRef RawStringHeaderFileExtensions;
   utils::FileExtensionsSet HeaderFileExtensions;
 };
 

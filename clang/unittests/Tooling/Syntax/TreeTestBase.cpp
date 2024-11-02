@@ -134,7 +134,10 @@ SyntaxTreeTest::buildTree(StringRef Code, const TestClangConfig &ClangConfig) {
     ArgsCStr.push_back(arg.c_str());
   }
 
-  Invocation = createInvocationFromCommandLine(ArgsCStr, Diags, FS);
+  CreateInvocationOptions CIOpts;
+  CIOpts.Diags = Diags;
+  CIOpts.VFS = FS;
+  Invocation = createInvocation(ArgsCStr, std::move(CIOpts));
   assert(Invocation);
   Invocation->getFrontendOpts().DisableFree = false;
   Invocation->getPreprocessorOpts().addRemappedFile(

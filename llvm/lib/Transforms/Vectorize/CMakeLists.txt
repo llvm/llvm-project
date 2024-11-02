@@ -7,7 +7,6 @@ add_llvm_component_library(LLVMVectorize
   VectorCombine.cpp
   VPlan.cpp
   VPlanHCFGBuilder.cpp
-  VPlanPredicator.cpp
   VPlanSLP.cpp
   VPlanTransforms.cpp
   VPlanVerifier.cpp

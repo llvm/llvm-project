@@ -100,11 +100,12 @@ private:
                         function_ref<Value(Value)> mapRewriteValue);
 
   /// Generate the values used for resolving the result types of an operation
-  /// created within a dag rewriter region.
+  /// created within a dag rewriter region. If the result types of the operation
+  /// should be inferred, `hasInferredResultTypes` is set to true.
   void generateOperationResultTypeRewriter(
-      pdl::OperationOp op, SmallVectorImpl<Value> &types,
-      DenseMap<Value, Value> &rewriteValues,
-      function_ref<Value(Value)> mapRewriteValue);
+      pdl::OperationOp op, function_ref<Value(Value)> mapRewriteValue,
+      SmallVectorImpl<Value> &types, DenseMap<Value, Value> &rewriteValues,
+      bool &hasInferredResultTypes);
 
   /// A builder to use when generating interpreter operations.
   OpBuilder builder;
@@ -707,15 +708,16 @@ void PatternLowering::generateRewriter(
   for (Value attr : operationOp.attributes())
     attributes.push_back(mapRewriteValue(attr));
 
+  bool hasInferredResultTypes = false;
   SmallVector<Value, 2> types;
-  generateOperationResultTypeRewriter(operationOp, types, rewriteValues,
-                                      mapRewriteValue);
+  generateOperationResultTypeRewriter(operationOp, mapRewriteValue, types,
+                                      rewriteValues, hasInferredResultTypes);
 
   // Create the new operation.
   Location loc = operationOp.getLoc();
   Value createdOp = builder.create<pdl_interp::CreateOperationOp>(
-      loc, *operationOp.name(), types, operands, attributes,
-      operationOp.attributeNames());
+      loc, *operationOp.name(), types, hasInferredResultTypes, operands,
+      attributes, operationOp.attributeNames());
   rewriteValues[operationOp.op()] = createdOp;
 
   // Generate accesses for any results that have their types constrained.
@@ -825,9 +827,9 @@ void PatternLowering::generateRewriter(
 }
 
 void PatternLowering::generateOperationResultTypeRewriter(
-    pdl::OperationOp op, SmallVectorImpl<Value> &types,
-    DenseMap<Value, Value> &rewriteValues,
-    function_ref<Value(Value)> mapRewriteValue) {
+    pdl::OperationOp op, function_ref<Value(Value)> mapRewriteValue,
+    SmallVectorImpl<Value> &types, DenseMap<Value, Value> &rewriteValues,
+    bool &hasInferredResultTypes) {
   // Look for an operation that was replaced by `op`. The result types will be
   // inferred from the results that were replaced.
   Block *rewriterBlock = op->getBlock();
@@ -851,36 +853,54 @@ void PatternLowering::generateOperationResultTypeRewriter(
     return;
   }
 
-  // Check if the operation has type inference support.
+  // Try to handle resolution for each of the result types individually. This is
+  // preferred over type inferrence because it will allow for us to use existing
+  // types directly, as opposed to trying to rebuild the type list.
+  OperandRange resultTypeValues = op.types();
+  auto tryResolveResultTypes = [&] {
+    types.reserve(resultTypeValues.size());
+    for (const auto &it : llvm::enumerate(resultTypeValues)) {
+      Value resultType = it.value();
+
+      // Check for an already translated value.
+      if (Value existingRewriteValue = rewriteValues.lookup(resultType)) {
+        types.push_back(existingRewriteValue);
+        continue;
+      }
+
+      // Check for an input from the matcher.
+      if (resultType.getDefiningOp()->getBlock() != rewriterBlock) {
+        types.push_back(mapRewriteValue(resultType));
+        continue;
+      }
+
+      // Otherwise, we couldn't infer the result types. Bail out here to see if
+      // we can infer the types for this operation from another way.
+      types.clear();
+      return failure();
+    }
+    return success();
+  };
+  if (!resultTypeValues.empty() && succeeded(tryResolveResultTypes()))
+    return;
+
+  // Otherwise, check if the operation has type inference support itself.
   if (op.hasTypeInference()) {
-    types.push_back(builder.create<pdl_interp::InferredTypesOp>(op.getLoc()));
+    hasInferredResultTypes = true;
     return;
   }
 
-  // Otherwise, handle inference for each of the result types individually.
-  OperandRange resultTypeValues = op.types();
-  types.reserve(resultTypeValues.size());
-  for (const auto &it : llvm::enumerate(resultTypeValues)) {
-    Value resultType = it.value();
+  // If the types could not be inferred from any context and there weren't any
+  // explicit result types, assume the user actually meant for the operation to
+  // have no results.
+  if (resultTypeValues.empty())
+    return;
 
-    // Check for an already translated value.
-    if (Value existingRewriteValue = rewriteValues.lookup(resultType)) {
-      types.push_back(existingRewriteValue);
-      continue;
-    }
-
-    // Check for an input from the matcher.
-    if (resultType.getDefiningOp()->getBlock() != rewriterBlock) {
-      types.push_back(mapRewriteValue(resultType));
-      continue;
-    }
-
-    // The verifier asserts that the result types of each pdl.operation can be
-    // inferred. If we reach here, there is a bug either in the logic above or
-    // in the verifier for pdl.operation.
-    op->emitOpError() << "unable to infer result type for operation";
-    llvm_unreachable("unable to infer result type for operation");
-  }
+  // The verifier asserts that the result types of each pdl.operation can be
+  // inferred. If we reach here, there is a bug either in the logic above or
+  // in the verifier for pdl.operation.
+  op->emitOpError() << "unable to infer result type for operation";
+  llvm_unreachable("unable to infer result type for operation");
 }
 
 //===----------------------------------------------------------------------===//

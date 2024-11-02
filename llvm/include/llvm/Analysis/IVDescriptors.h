@@ -29,6 +29,7 @@ class Loop;
 class PredicatedScalarEvolution;
 class ScalarEvolution;
 class SCEV;
+class StoreInst;
 
 /// These are the kinds of recurrences that we support.
 enum class RecurKind {
@@ -69,14 +70,14 @@ class RecurrenceDescriptor {
 public:
   RecurrenceDescriptor() = default;
 
-  RecurrenceDescriptor(Value *Start, Instruction *Exit, RecurKind K,
-                       FastMathFlags FMF, Instruction *ExactFP, Type *RT,
-                       bool Signed, bool Ordered,
+  RecurrenceDescriptor(Value *Start, Instruction *Exit, StoreInst *Store,
+                       RecurKind K, FastMathFlags FMF, Instruction *ExactFP,
+                       Type *RT, bool Signed, bool Ordered,
                        SmallPtrSetImpl<Instruction *> &CI,
                        unsigned MinWidthCastToRecurTy)
-      : StartValue(Start), LoopExitInstr(Exit), Kind(K), FMF(FMF),
-        ExactFPMathInst(ExactFP), RecurrenceType(RT), IsSigned(Signed),
-        IsOrdered(Ordered),
+      : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
+        Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
+        IsSigned(Signed), IsOrdered(Ordered),
         MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
     CastInsts.insert(CI.begin(), CI.end());
   }
@@ -163,22 +164,21 @@ public:
   /// RecurrenceDescriptor. If either \p DB is non-null or \p AC and \p DT are
   /// non-null, the minimal bit width needed to compute the reduction will be
   /// computed.
-  static bool AddReductionVar(PHINode *Phi, RecurKind Kind, Loop *TheLoop,
-                              FastMathFlags FuncFMF,
-                              RecurrenceDescriptor &RedDes,
-                              DemandedBits *DB = nullptr,
-                              AssumptionCache *AC = nullptr,
-                              DominatorTree *DT = nullptr);
+  static bool
+  AddReductionVar(PHINode *Phi, RecurKind Kind, Loop *TheLoop,
+                  FastMathFlags FuncFMF, RecurrenceDescriptor &RedDes,
+                  DemandedBits *DB = nullptr, AssumptionCache *AC = nullptr,
+                  DominatorTree *DT = nullptr, ScalarEvolution *SE = nullptr);
 
   /// Returns true if Phi is a reduction in TheLoop. The RecurrenceDescriptor
   /// is returned in RedDes. If either \p DB is non-null or \p AC and \p DT are
   /// non-null, the minimal bit width needed to compute the reduction will be
-  /// computed.
-  static bool isReductionPHI(PHINode *Phi, Loop *TheLoop,
-                             RecurrenceDescriptor &RedDes,
-                             DemandedBits *DB = nullptr,
-                             AssumptionCache *AC = nullptr,
-                             DominatorTree *DT = nullptr);
+  /// computed. If \p SE is non-null, store instructions to loop invariant
+  /// addresses are processed.
+  static bool
+  isReductionPHI(PHINode *Phi, Loop *TheLoop, RecurrenceDescriptor &RedDes,
+                 DemandedBits *DB = nullptr, AssumptionCache *AC = nullptr,
+                 DominatorTree *DT = nullptr, ScalarEvolution *SE = nullptr);
 
   /// Returns true if Phi is a first-order recurrence. A first-order recurrence
   /// is a non-reduction recurrence relation in which the value of the
@@ -269,6 +269,11 @@ public:
     return isa<IntrinsicInst>(I) &&
            cast<IntrinsicInst>(I)->getIntrinsicID() == Intrinsic::fmuladd;
   }
+
+  /// Reductions may store temporary or final result to an invariant address.
+  /// If there is such a store in the loop then, after successfull run of
+  /// AddReductionVar method, this field will be assigned the last met store.
+  StoreInst *IntermediateStore = nullptr;
 
 private:
   // The starting value of the recurrence.

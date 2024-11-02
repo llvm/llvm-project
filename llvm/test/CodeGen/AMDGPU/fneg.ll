@@ -18,9 +18,8 @@ define amdgpu_kernel void @s_fneg_f32(float addrspace(1)* %out, float %in) {
 ; R600: -PV
 ; R600: -PV
 
-; GCN: s_brev_b32 [[SIGNBIT:s[0-9]+]], 1
-; GCN: s_xor_b32
-; GCN: s_xor_b32
+; GCN: s_xor_b32 {{s[0-9]+}}, {{s[0-9]+}}, 0x80000000
+; GCN: s_xor_b32 {{s[0-9]+}}, {{s[0-9]+}}, 0x80000000
 define amdgpu_kernel void @s_fneg_v2f32(<2 x float> addrspace(1)* nocapture %out, <2 x float> %in) {
   %fneg = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %in
   store <2 x float> %fneg, <2 x float> addrspace(1)* %out
@@ -33,10 +32,10 @@ define amdgpu_kernel void @s_fneg_v2f32(<2 x float> addrspace(1)* nocapture %out
 ; R600: -PV
 ; R600: -PV
 
-; GCN: s_xor_b32
-; GCN: s_xor_b32
-; GCN: s_xor_b32
-; GCN: s_xor_b32
+; GCN: s_xor_b32 {{s[0-9]+}}, {{s[0-9]+}}, 0x80000000
+; GCN: s_xor_b32 {{s[0-9]+}}, {{s[0-9]+}}, 0x80000000
+; GCN: s_xor_b32 {{s[0-9]+}}, {{s[0-9]+}}, 0x80000000
+; GCN: s_xor_b32 {{s[0-9]+}}, {{s[0-9]+}}, 0x80000000
 define amdgpu_kernel void @s_fneg_v4f32(<4 x float> addrspace(1)* nocapture %out, <4 x float> %in) {
   %fneg = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %in
   store <4 x float> %fneg, <4 x float> addrspace(1)* %out

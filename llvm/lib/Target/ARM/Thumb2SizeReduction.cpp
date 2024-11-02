@@ -1130,7 +1130,7 @@ bool Thumb2SizeReduce::runOnMachineFunction(MachineFunction &MF) {
   if (PredicateFtor && !PredicateFtor(MF.getFunction()))
     return false;
 
-  STI = &static_cast<const ARMSubtarget &>(MF.getSubtarget());
+  STI = &MF.getSubtarget<ARMSubtarget>();
   if (STI->isThumb1Only() || STI->prefers32BitThumb())
     return false;
 

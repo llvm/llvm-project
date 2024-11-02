@@ -30,6 +30,10 @@ def Toy_Dialect : Dialect {
   // We set this bit to generate a declaration of the `materializeConstant`
   // method so that we can materialize constants for our toy operations.
   let hasConstantMaterializer = 1;
+
+  // We set this bit to generate the declarations for the dialect's type parsing
+  // and printing hooks.
+  let useDefaultTypePrinterParser = 1;
 }
 
 // Base class for toy dialect operations. This operation inherits from the base
@@ -331,7 +335,7 @@ def ReturnOp : Toy_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
     the operation. For example:
 
     ```mlir
-      func @foo() -> tensor<2xf64> {
+      toy.func @foo() -> tensor<2xf64> {
         ...
         toy.return %0 : tensor<2xf64>
       }

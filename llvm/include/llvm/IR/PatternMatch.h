@@ -2212,6 +2212,11 @@ m_FShr(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
   return m_Intrinsic<Intrinsic::fshr>(Op0, Op1, Op2);
 }
 
+template <typename Opnd0>
+inline typename m_Intrinsic_Ty<Opnd0>::Ty m_Sqrt(const Opnd0 &Op0) {
+  return m_Intrinsic<Intrinsic::sqrt>(Op0);
+}
+
 //===----------------------------------------------------------------------===//
 // Matchers for two-operands operators with the operators in either order
 //

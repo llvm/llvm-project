@@ -102,10 +102,7 @@ template <> struct GraphTraits<PostDominatorTree*>
   }
 
   static nodes_iterator nodes_begin(PostDominatorTree *N) {
-    if (getEntryNode(N))
-      return df_begin(getEntryNode(N));
-    else
-      return df_end(getEntryNode(N));
+    return df_begin(getEntryNode(N));
   }
 
   static nodes_iterator nodes_end(PostDominatorTree *N) {

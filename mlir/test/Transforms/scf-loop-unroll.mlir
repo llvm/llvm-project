@@ -2,7 +2,7 @@
 // RUN: mlir-opt %s --test-loop-unrolling="unroll-factor=1" -split-input-file -canonicalize | FileCheck %s --check-prefix UNROLL-BY-1
 
 // CHECK-LABEL: scf_loop_unroll_single
-func @scf_loop_unroll_single(%arg0 : f32, %arg1 : f32) -> f32 {
+func.func @scf_loop_unroll_single(%arg0 : f32, %arg1 : f32) -> f32 {
   %from = arith.constant 0 : index
   %to = arith.constant 10 : index
   %step = arith.constant 1 : index
@@ -23,7 +23,7 @@ func @scf_loop_unroll_single(%arg0 : f32, %arg1 : f32) -> f32 {
 
 // CHECK-LABEL: scf_loop_unroll_double_symbolic_ub
 // CHECK-SAME:     (%{{.*}}: f32, %{{.*}}: f32, %[[N:.*]]: index)
-func @scf_loop_unroll_double_symbolic_ub(%arg0 : f32, %arg1 : f32, %n : index) -> (f32,f32) {
+func.func @scf_loop_unroll_double_symbolic_ub(%arg0 : f32, %arg1 : f32, %n : index) -> (f32,f32) {
   %from = arith.constant 0 : index
   %step = arith.constant 1 : index
   %sum:2 = scf.for %iv = %from to %n step %step iter_args(%i0 = %arg0, %i1 = %arg1) -> (f32, f32) {
@@ -45,7 +45,7 @@ func @scf_loop_unroll_double_symbolic_ub(%arg0 : f32, %arg1 : f32, %n : index) -
 }
 
 // UNROLL-BY-1-LABEL: scf_loop_unroll_factor_1_promote
-func @scf_loop_unroll_factor_1_promote() -> () {
+func.func @scf_loop_unroll_factor_1_promote() -> () {
   %step = arith.constant 1 : index
   %lo = arith.constant 0 : index
   %hi = arith.constant 1 : index

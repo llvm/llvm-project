@@ -21,14 +21,14 @@ define i32 @foo() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[ARRAYIDX43]] to <4 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, <4 x double>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x double> [[TMP1]], <double 0x7FF8000000000000, double 0x7FF8000000000000, double 0x7FF8000000000000, double 0x7FF8000000000000>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> poison, <4 x double> zeroinitializer, <4 x double> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> undef, <4 x double> zeroinitializer, <4 x double> [[TMP2]])
 ; CHECK-NEXT:    br label [[SW_EPILOG:%.*]]
 ; CHECK:       sw.bb195:
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       do.body:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       sw.epilog:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x double> [ poison, [[SW_BB195]] ], [ [[TMP3]], [[SW_BB]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x double> [ undef, [[SW_BB195]] ], [ [[TMP3]], [[SW_BB]] ]
 ; CHECK-NEXT:    ret i32 undef
 ; CHECK:       if.end.1:
 ; CHECK-NEXT:    br label [[FOR_COND15_1:%.*]]

@@ -42,7 +42,7 @@ module @operation_attributes {
     %attr = attribute
     %root = operation "foo.op" {"attr" = %attr}
     rewrite %root {
-      %attr1 = attribute true
+      %attr1 = attribute = true
       %newOp = operation "foo.op" {"attr" = %attr, "attr1" = %attr1}
       erase %root
     }
@@ -121,6 +121,29 @@ module @operation_infer_types_from_otherop_results {
     %root = operation "foo.op" -> (%rootTypes : !pdl.range<type>)
     rewrite %root {
       %newOp = operation "foo.op" -> (%rootTypes : !pdl.range<type>)
+    }
+  }
+}
+
+// -----
+
+// CHECK-LABEL: module @operation_infer_types_from_interface
+module @operation_infer_types_from_interface {
+  // Unused operation that ensures the arithmetic dialect is loaded for use in the pattern.
+  arith.constant true
+
+  // CHECK: module @rewriters
+  // CHECK:   func @pdl_generated_rewriter
+  // CHECK:     %[[CST:.*]] = pdl_interp.create_operation "arith.constant" -> <inferred>
+  // CHECK:     %[[CST_RES:.*]] = pdl_interp.get_results of %[[CST]] : !pdl.range<value>
+  // CHECK:     %[[CST_TYPE:.*]] = pdl_interp.get_value_type of %[[CST_RES]] : !pdl.range<type>
+  // CHECK:     pdl_interp.create_operation "foo.op"  -> (%[[CST_TYPE]] : !pdl.range<type>)
+  pdl.pattern : benefit(1) {
+    %root = operation "foo.op"
+    rewrite %root {
+      %types = types
+      %newOp = operation "arith.constant" -> (%types : !pdl.range<type>)
+      %newOp2 = operation "foo.op" -> (%types : !pdl.range<type>)
     }
   }
 }

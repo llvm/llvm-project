@@ -37,8 +37,8 @@ define arm_aapcs_vfpcc <4 x half> @fptrunc_4(<4 x float> %src1) {
 ; CHECK-LABEL: fptrunc_4:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-NEXT:    vcvtb.f16.f32 s2, s2
 ; CHECK-NEXT:    vcvtt.f16.f32 s0, s1
+; CHECK-NEXT:    vcvtb.f16.f32 s1, s2
 ; CHECK-NEXT:    vcvtt.f16.f32 s1, s3
 ; CHECK-NEXT:    bx lr
 entry:
@@ -50,13 +50,13 @@ define arm_aapcs_vfpcc <8 x half> @fptrunc_8(<8 x float> %src1) {
 ; CHECK-LABEL: fptrunc_8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-NEXT:    vcvtb.f16.f32 s2, s2
-; CHECK-NEXT:    vcvtb.f16.f32 s2, s4
 ; CHECK-NEXT:    vcvtt.f16.f32 s0, s1
+; CHECK-NEXT:    vcvtb.f16.f32 s1, s2
+; CHECK-NEXT:    vcvtb.f16.f32 s2, s4
 ; CHECK-NEXT:    vcvtt.f16.f32 s1, s3
+; CHECK-NEXT:    vcvtb.f16.f32 s3, s6
 ; CHECK-NEXT:    vcvtt.f16.f32 s2, s5
 ; CHECK-NEXT:    vcvtt.f16.f32 s3, s7
-; CHECK-NEXT:    vcvtb.f16.f32 s4, s6
 ; CHECK-NEXT:    bx lr
 entry:
   %out = fptrunc <8 x float> %src1 to <8 x half>

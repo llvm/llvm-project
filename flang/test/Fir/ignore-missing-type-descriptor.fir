@@ -4,11 +4,11 @@
 // Missing derived type descriptor pointers are replaced by null pointers.
 // RUN: tco --ignore-missing-type-desc -o - %s | FileCheck %s
 
-!some_freestyle_type = type !fir.type<some_not_mangled_type{j:i32}>
+!some_freestyle_type = !fir.type<some_not_mangled_type{j:i32}>
 
-func private @bar(!fir.box<!some_freestyle_type>)
+func.func private @bar(!fir.box<!some_freestyle_type>)
 
-func @test_embox(%addr: !fir.ref<!some_freestyle_type>) {
+func.func @test_embox(%addr: !fir.ref<!some_freestyle_type>) {
   %0 = fir.embox %addr : (!fir.ref<!some_freestyle_type>) -> !fir.box<!some_freestyle_type>
   fir.call @bar(%0) : (!fir.box<!some_freestyle_type>) -> ()
   return

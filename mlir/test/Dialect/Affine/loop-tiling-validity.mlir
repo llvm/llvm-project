@@ -8,7 +8,7 @@
 // CHECK-DAG: [[$UB:#map[0-9]+]] = affine_map<(d0) -> (d0 + 32)>
 
 // CHECK-LABEL: func @legal_loop()
-func @legal_loop() {
+func.func @legal_loop() {
   %0 = memref.alloc() : memref<64xf32>
 
   affine.for %i = 0 to 64 {
@@ -30,7 +30,7 @@ func @legal_loop() {
 // The default tiling method (hyper-rect) will violate tiling legality.
 // We expect a remark that points that issue out to be emitted.
 
-func @illegal_loop_with_diag_dependence() {
+func.func @illegal_loop_with_diag_dependence() {
   %A = memref.alloc() : memref<64x64xf32>
 
   affine.for %i = 0 to 64 {

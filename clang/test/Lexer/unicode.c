@@ -28,6 +28,9 @@ CHECK : The preprocessor should not complain about Unicode characters like ©.
 
         int _;
 
+extern int X\UAAAAAAAA; // expected-error {{not allowed in an identifier}}
+int Y = '\UAAAAAAAA'; // expected-error {{invalid universal character}}
+
 #ifdef __cplusplus
 
 extern int ༀ;

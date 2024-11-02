@@ -31,7 +31,7 @@ class Scop;
 class ScopInfo;
 class DependenceInfoWrapperPass;
 
-class PolyhedralInfo : public llvm::FunctionPass {
+class PolyhedralInfo final : public llvm::FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 

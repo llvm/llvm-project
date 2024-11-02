@@ -1,6 +1,9 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/callback-external-addr.perfscript --binary=%S/Inputs/callback-external-addr.perfbin --output=%t --skip-symbolization
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER
 
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/callback-external-addr.perfscript --binary=%S/Inputs/callback-external-addr.perfbin --output=%t --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
+; RUN: FileCheck %s --input-file %t
+
 ; Test if call stack is correctly truncated.
 ; CHECK-UNWINDER-NOT: main:3 @ bar
 ; CHECK-UNWINDER-NOT: main:3 @ foo
@@ -18,9 +21,18 @@
 ; [foo:2 @ qux:2 @ callBeforeReturn] and [foo:2 @ qux:4 @ callAfterReturn] should exist
 ; which means the callback return won't interrupt the previous call stack
 
+
+; CHECK-UNWINDER: []
+; CHECK-UNWINDER:   0
+; CHECK-UNWINDER:   5
+; CHECK-UNWINDER:   ffffffffffc00001->690:13
+; CHECK-UNWINDER:   ffffffffffc00001->6a0:7
+; CHECK-UNWINDER:   ffffffffffc00001->715:7
+; CHECK-UNWINDER:   ffffffffffc00001->730:5
+; CHECK-UNWINDER:   ffffffffffc00001->7b0:5
 ; CHECK-UNWINDER: [bar]
 ; CHECK-UNWINDER:   1
-; CHECK-UNWINDER:   690-69e:12
+; CHECK-UNWINDER:   690-69e:13
 ; CHECK-UNWINDER:   0
 ; CHECK-UNWINDER: [baz]
 ; CHECK-UNWINDER:   1
@@ -58,6 +70,34 @@
 ; CHECK-UNWINDER:   7b0-7bf:5
 ; CHECK-UNWINDER:   1
 ; CHECK-UNWINDER:   7bf->77d:5
+
+; CHECK: [foo:2 @ qux]:132:5
+; CHECK:  0: 5
+; CHECK:  1: 5
+; CHECK:  2: 6 callBeforeReturn:6
+; CHECK:  3: 7
+; CHECK:  4: 7 callAfterReturn:7
+; CHECK:  5: 6
+; CHECK: [bar]:91:13
+; CHECK:  0: 13
+; CHECK:  1: 13
+; CHECK: [main]:65:0
+; CHECK:  2.1: 5
+; CHECK:  2.2: 5
+; CHECK:  3: 5
+; CHECK: [foo]:60:5
+; CHECK:  0: 5
+; CHECK:  1: 5
+; CHECK:  2: 5 qux:5
+; CHECK: [baz]:49:7
+; CHECK:  0: 7
+; CHECK:  1: 7
+; CHECK: [foo:2 @ qux:4 @ callAfterReturn]:49:7
+; CHECK:  0: 7
+; CHECK:  1: 7
+; CHECK: [foo:2 @ qux:2 @ callBeforeReturn]:42:6
+; CHECK:  0: 6
+; CHECK:  1: 6
 
 ; libcallback.c
 ; clang -shared -fPIC -o libcallback.so libcallback.c

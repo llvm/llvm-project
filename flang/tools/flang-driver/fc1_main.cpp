@@ -11,6 +11,10 @@
 // demonstration and testing purposes.
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/CompilerInvocation.h"
@@ -31,8 +35,8 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
   std::unique_ptr<CompilerInstance> flang(new CompilerInstance());
 
   // Create DiagnosticsEngine for the frontend driver
-  flang->CreateDiagnostics();
-  if (!flang->HasDiagnostics())
+  flang->createDiagnostics();
+  if (!flang->hasDiagnostics())
     return 1;
 
   // We will buffer diagnostics from argument parsing so that we can output
@@ -47,23 +51,23 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
       new clang::DiagnosticOptions();
   clang::DiagnosticsEngine diags(diagID, &*diagOpts, diagsBuffer);
   bool success =
-      CompilerInvocation::CreateFromArgs(flang->invocation(), argv, diags);
+      CompilerInvocation::createFromArgs(flang->getInvocation(), argv, diags);
 
   // Initialize targets first, so that --version shows registered targets.
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmPrinters();
 
-  diagsBuffer->FlushDiagnostics(flang->diagnostics());
+  diagsBuffer->flushDiagnostics(flang->getDiagnostics());
 
   if (!success)
     return 1;
 
   // Execute the frontend actions.
-  success = ExecuteCompilerInvocation(flang.get());
+  success = executeCompilerInvocation(flang.get());
 
   // Delete output files to free Compiler Instance
-  flang->ClearOutputFiles(/*EraseFiles=*/false);
+  flang->clearOutputFiles(/*EraseFiles=*/false);
 
   return !success;
 }

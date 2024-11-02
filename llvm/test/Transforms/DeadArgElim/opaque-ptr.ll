@@ -11,7 +11,7 @@ define void @callee(i32 %unused) {
 
 define void @caller() {
 ; CHECK-LABEL: define {{[^@]+}}@caller() {
-; CHECK-NEXT:    call void @callee(i32 undef)
+; CHECK-NEXT:    call void @callee(i32 poison)
 ; CHECK-NEXT:    call void @callee()
 ; CHECK-NEXT:    call void @callee(i32 42, i32 24)
 ; CHECK-NEXT:    ret void

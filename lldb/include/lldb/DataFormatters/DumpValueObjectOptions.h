@@ -66,7 +66,7 @@ public:
   DumpValueObjectOptions &
   SetMaximumPointerDepth(PointerDepth depth = {PointerDepth::Mode::Never, 0});
 
-  DumpValueObjectOptions &SetMaximumDepth(uint32_t depth = 0);
+  DumpValueObjectOptions &SetMaximumDepth(uint32_t depth, bool is_default);
 
   DumpValueObjectOptions &SetDeclPrintingHelper(DeclPrintingHelper helper);
 
@@ -125,6 +125,7 @@ public:
   SetPointerAsArray(const PointerAsArraySettings &ptr_array);
 
   uint32_t m_max_depth = UINT32_MAX;
+  bool m_max_depth_is_default = true;
   lldb::DynamicValueType m_use_dynamic = lldb::eNoDynamicValues;
   uint32_t m_omit_summary_depth = 0;
   lldb::Format m_format = lldb::eFormatDefault;

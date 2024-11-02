@@ -59,13 +59,14 @@ const Dialect *Context::lookupDialect(StringRef name) const {
   return it == dialects.end() ? nullptr : &*it->second;
 }
 
-std::pair<Operation *, bool> Context::insertOperation(StringRef name,
-                                                      StringRef summary,
-                                                      StringRef desc,
-                                                      SMLoc loc) {
+std::pair<Operation *, bool>
+Context::insertOperation(StringRef name, StringRef summary, StringRef desc,
+                         StringRef nativeClassName,
+                         bool supportsResultTypeInferrence, SMLoc loc) {
   std::pair<StringRef, StringRef> dialectAndName = name.split('.');
   return insertDialect(dialectAndName.first)
-      .insertOperation(name, summary, desc, loc);
+      .insertOperation(name, summary, desc, nativeClassName,
+                       supportsResultTypeInferrence, loc);
 }
 
 const Operation *Context::lookupOperation(StringRef name) const {
@@ -120,7 +121,7 @@ void Context::print(raw_ostream &os) const {
 
           auto kind = attr.isOptional() ? VariableLengthKind::Optional
                                         : VariableLengthKind::Single;
-          printVariableLengthCst(attr.getConstraint().getName(), kind);
+          printVariableLengthCst(attr.getConstraint().getDemangledName(), kind);
         });
         os << " }\n";
       }
@@ -132,7 +133,7 @@ void Context::print(raw_ostream &os) const {
         llvm::interleaveComma(
             operands, os, [&](const OperandOrResult &operand) {
               os << operand.getName() << " : ";
-              printVariableLengthCst(operand.getConstraint().getName(),
+              printVariableLengthCst(operand.getConstraint().getDemangledName(),
                                      operand.getVariableLengthKind());
             });
         os << " }\n";
@@ -144,7 +145,7 @@ void Context::print(raw_ostream &os) const {
         printer.startLine() << "Results { ";
         llvm::interleaveComma(results, os, [&](const OperandOrResult &result) {
           os << result.getName() << " : ";
-          printVariableLengthCst(result.getConstraint().getName(),
+          printVariableLengthCst(result.getConstraint().getDemangledName(),
                                  result.getVariableLengthKind());
         });
         os << " }\n";
@@ -155,7 +156,8 @@ void Context::print(raw_ostream &os) const {
     printer.objectEnd();
   }
   for (const AttributeConstraint *cst : sortMapByName(attributeConstraints)) {
-    printer.startLine() << "AttributeConstraint `" << cst->getName() << "` {\n";
+    printer.startLine() << "AttributeConstraint `" << cst->getDemangledName()
+                        << "` {\n";
     printer.indent();
 
     printer.startLine() << "Summary: " << cst->getSummary() << "\n";
@@ -163,7 +165,8 @@ void Context::print(raw_ostream &os) const {
     printer.objectEnd();
   }
   for (const TypeConstraint *cst : sortMapByName(typeConstraints)) {
-    printer.startLine() << "TypeConstraint `" << cst->getName() << "` {\n";
+    printer.startLine() << "TypeConstraint `" << cst->getDemangledName()
+                        << "` {\n";
     printer.indent();
 
     printer.startLine() << "Summary: " << cst->getSummary() << "\n";

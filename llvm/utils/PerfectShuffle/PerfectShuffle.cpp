@@ -326,6 +326,24 @@ int main() {
             ShufTab[i].Arg1 = LaneIdx;
           }
         }
+
+        // Similar idea for using a D register mov, masking out 2 lanes to undef
+        for (unsigned LaneIdx = 0; LaneIdx < 4; LaneIdx += 2) {
+          unsigned Ln0 = getMaskElt(i, LaneIdx);
+          unsigned Ln1 = getMaskElt(i, LaneIdx + 1);
+          if ((Ln0 == 0 && Ln1 == 1) || (Ln0 == 2 && Ln1 == 3) ||
+              (Ln0 == 4 && Ln1 == 5) || (Ln0 == 6 && Ln1 == 7)) {
+            unsigned NewElt = setMaskElt(i, LaneIdx, 8);
+            NewElt = setMaskElt(NewElt, LaneIdx + 1, 8);
+            if (ShufTab[NewElt].Cost + 1 < ShufTab[i].Cost) {
+              MadeChange = true;
+              ShufTab[i].Cost = ShufTab[NewElt].Cost + 1;
+              ShufTab[i].Op = &InsOp;
+              ShufTab[i].Arg0 = NewElt;
+              ShufTab[i].Arg1 = (LaneIdx >> 1) | 0x4;
+            }
+          }
+        }
       }
 #endif
     }

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t
+// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t -- -- -fno-delayed-template-parsing
 
 // CHECK-FIXES: #include <utility>
 
@@ -109,7 +109,7 @@ struct PositiveConstValueConstructor {
 
 template <typename T> void templateWithNonTemplatizedParameter(const ExpensiveToCopyType S, T V) {
   // CHECK-MESSAGES: [[@LINE-1]]:90: warning: the const qualified parameter 'S'
-  // CHECK-FIXES: template <typename T> void templateWithNonTemplatizedParameter(const ExpensiveToCopyType& S, T V) {
+  // CHECK-FIXES-NOT: template <typename T> void templateWithNonTemplatizedParameter(const ExpensiveToCopyType& S, T V) {
 }
 
 void instantiated() {
@@ -380,4 +380,25 @@ void templateFunction<ExpensiveToCopyType>(ExpensiveToCopyType E) {
   // CHECK-MESSAGES: [[@LINE-1]]:64: warning: the parameter 'E' is copied
   // CHECK-FIXES: void templateFunction<ExpensiveToCopyType>(ExpensiveToCopyType E) {
   E.constReference();
+}
+
+template <class T>
+T templateSpecializationFunction(ExpensiveToCopyType E) {
+  // CHECK-MESSAGES: [[@LINE-1]]:54: warning: the parameter 'E' is copied
+  // CHECK-FIXES-NOT: T templateSpecializationFunction(const ExpensiveToCopyType& E) {
+  return T();
+}
+
+template <>
+bool templateSpecializationFunction(ExpensiveToCopyType E) {
+  // CHECK-MESSAGES: [[@LINE-1]]:57: warning: the parameter 'E' is copied
+  // CHECK-FIXES-NOT: bool templateSpecializationFunction(const ExpensiveToCopyType& E) {
+  return true;
+}
+
+template <>
+int templateSpecializationFunction(ExpensiveToCopyType E) {
+  // CHECK-MESSAGES: [[@LINE-1]]:56: warning: the parameter 'E' is copied
+  // CHECK-FIXES-NOT: int templateSpecializationFunction(const ExpensiveToCopyType& E) {
+  return 0;
 }

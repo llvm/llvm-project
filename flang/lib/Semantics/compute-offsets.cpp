@@ -200,6 +200,7 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
   }
   commonBlock.set_size(std::max(minSize, offset_));
   details.set_alignment(std::max(minAlignment, alignment_));
+  context_.MapCommonBlockAndCheckConflicts(commonBlock);
 }
 
 void ComputeOffsetsHelper::DoEquivalenceBlockBase(

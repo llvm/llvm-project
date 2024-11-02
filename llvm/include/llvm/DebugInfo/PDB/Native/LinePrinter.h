@@ -30,8 +30,10 @@ struct FilterOptions {
   std::list<std::string> IncludeCompilands;
   uint32_t PaddingThreshold;
   uint32_t SizeThreshold;
-  uint32_t DumpModi;
-  uint32_t NumOccurrences;
+  llvm::Optional<uint32_t> DumpModi;
+  llvm::Optional<uint32_t> ParentRecurseDepth;
+  llvm::Optional<uint32_t> ChildrenRecurseDepth;
+  llvm::Optional<uint32_t> SymbolOffset;
   bool JustMyCode;
 };
 

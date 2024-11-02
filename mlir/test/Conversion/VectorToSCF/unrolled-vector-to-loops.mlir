@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -pass-pipeline="func.func(convert-vector-to-scf{full-unroll=true})" -split-input-file -allow-unregistered-dialect | FileCheck %s
 
 // CHECK-LABEL: func @transfer_read_inbounds
-func @transfer_read_inbounds(%A : memref<?x?x?xf32>) -> (vector<2x3x4xf32>) {
+func.func @transfer_read_inbounds(%A : memref<?x?x?xf32>) -> (vector<2x3x4xf32>) {
   %f0 = arith.constant 0.0: f32
   %c0 = arith.constant 0: index
 
@@ -26,7 +26,7 @@ func @transfer_read_inbounds(%A : memref<?x?x?xf32>) -> (vector<2x3x4xf32>) {
 // -----
 
 // CHECK-LABEL: func @transfer_read_out_of_bounds
-func @transfer_read_out_of_bounds(%A : memref<?x?x?xf32>) -> (vector<2x3x4xf32>) {
+func.func @transfer_read_out_of_bounds(%A : memref<?x?x?xf32>) -> (vector<2x3x4xf32>) {
   %f0 = arith.constant 0.0: f32
   %c0 = arith.constant 0: index
 
@@ -57,7 +57,7 @@ func @transfer_read_out_of_bounds(%A : memref<?x?x?xf32>) -> (vector<2x3x4xf32>)
 
 // -----
 
-func @transfer_read_mask(%A : memref<?x?x?xf32>, %mask : vector<2x3x4xi1>) -> (vector<2x3x4xf32>) {
+func.func @transfer_read_mask(%A : memref<?x?x?xf32>, %mask : vector<2x3x4xi1>) -> (vector<2x3x4xf32>) {
   %f0 = arith.constant 0.0: f32
   %c0 = arith.constant 0: index
 

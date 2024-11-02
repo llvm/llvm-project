@@ -196,7 +196,7 @@ public:
 };
 
 /// Meta qualifiers for a value. Pair of whatever expression is used to qualify
-/// the the value, and Boolean of whether or not it's indirect.
+/// the value, and Boolean of whether or not it's indirect.
 class DbgValueProperties {
 public:
   DbgValueProperties(const DIExpression *DIExpr, bool Indirect)
@@ -632,6 +632,19 @@ public:
 
   /// Return true if Idx is a spill machine location.
   bool isSpill(LocIdx Idx) const { return LocIdxToLocID[Idx] >= NumRegs; }
+
+  /// How large is this location (aka, how wide is a value defined there?).
+  unsigned getLocSizeInBits(LocIdx L) const {
+    unsigned ID = LocIdxToLocID[L];
+    if (!isSpill(L)) {
+      return TRI.getRegSizeInBits(Register(ID), MF.getRegInfo());
+    } else {
+      // The slot location on the stack is uninteresting, we care about the
+      // position of the value within the slot (which comes with a size).
+      StackSlotPos Pos = locIDToSpillIdx(ID);
+      return Pos.first;
+    }
+  }
 
   MLocIterator begin() { return MLocIterator(LocIdxToIDNum, 0); }
 

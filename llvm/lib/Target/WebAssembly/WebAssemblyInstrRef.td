@@ -27,6 +27,12 @@ multiclass REF_I<WebAssemblyRegClass rc, ValueType vt, string ht> {
                      vt#".select\t$dst, $lhs, $rhs, $cond",
                      vt#".select", 0x1b>,
                    Requires<[HasReferenceTypes]>;
+  defm REF_IS_NULL_#rc
+      : I<(outs I32:$dst), (ins rc:$ref), (outs), (ins),
+          [(set I32:$dst, (!cast<Intrinsic>("int_wasm_ref_is_null_" # ht) rc:$ref))],
+          "ref.is_null\t$ref",
+          "ref.is_null", 0xd1>,
+        Requires<[HasReferenceTypes]>;
 }
 
 defm "" : REF_I<FUNCREF, funcref, "func">;

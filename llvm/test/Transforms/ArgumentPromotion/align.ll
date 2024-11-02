@@ -81,6 +81,72 @@ define void @caller_guaranteed_aligned_2(i1 %c, i32* %p) {
   ret void
 }
 
+; We have seen the offset before but with a lower alignment
+define internal i32 @callee_guaranteed_aligned_3(i1 %c, i32* align 16 dereferenceable(4) %p) {
+; CHECK-LABEL: define {{[^@]+}}@callee_guaranteed_aligned_3
+; CHECK-SAME: (i1 [[C:%.*]], i32 [[P_0_VAL:%.*]]) {
+; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    ret i32 [[P_0_VAL]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i32 -1
+;
+  %x = load i32, i32* %p, align 8
+  br i1 %c, label %if, label %else
+
+if:
+  %y = load i32, i32* %p, align 16
+  ret i32 %y
+
+else:
+  ret i32 -1
+}
+
+define void @caller_guaranteed_aligned_3(i1 %c, i32* %p) {
+; CHECK-LABEL: define {{[^@]+}}@caller_guaranteed_aligned_3
+; CHECK-SAME: (i1 [[C:%.*]], i32* [[P:%.*]]) {
+; CHECK-NEXT:    [[P_VAL:%.*]] = load i32, i32* [[P]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @callee_guaranteed_aligned_3(i1 [[C]], i32 [[P_VAL]])
+; CHECK-NEXT:    ret void
+;
+  call i32 @callee_guaranteed_aligned_3(i1 %c, i32* %p)
+  ret void
+}
+
+; We have seen the offset before but with a lower alignment, the guaranteed
+; alignment is insufficient and the argument should not be promoted.
+define internal i32 @callee_guaranteed_insufficient_aligned(i1 %c, i32* align 8 dereferenceable(4) %p) {
+; CHECK-LABEL: define {{[^@]+}}@callee_guaranteed_insufficient_aligned
+; CHECK-SAME: (i1 [[C:%.*]], i32* align 8 dereferenceable(4) [[P:%.*]]) {
+; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P]], align 8
+; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[Y:%.*]] = load i32, i32* [[P]], align 16
+; CHECK-NEXT:    ret i32 [[Y]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i32 -1
+;
+  %x = load i32, i32* %p, align 8
+  br i1 %c, label %if, label %else
+
+if:
+  %y = load i32, i32* %p, align 16
+  ret i32 %y
+
+else:
+  ret i32 -1
+}
+
+define void @caller_guaranteed_insufficient_aligned(i1 %c, i32* %p) {
+; CHECK-LABEL: define {{[^@]+}}@caller_guaranteed_insufficient_aligned
+; CHECK-SAME: (i1 [[C:%.*]], i32* [[P:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @callee_guaranteed_insufficient_aligned(i1 [[C]], i32* [[P]])
+; CHECK-NEXT:    ret void
+;
+  call i32 @callee_guaranteed_insufficient_aligned(i1 %c, i32* %p)
+  ret void
+}
+
 ; This should not be promoted, as the caller only guarantees that the
 ; pointer is dereferenceable, not that it is aligned.
 define internal i32 @callee_not_guaranteed_aligned(i1 %c, i32* %p) {

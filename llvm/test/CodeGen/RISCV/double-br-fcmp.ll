@@ -548,7 +548,6 @@ if.then:
 }
 
 define void @br_fcmp_uno(double %a, double %b) nounwind {
-; TODO: sltiu+bne -> beq
 ; RV32IFD-LABEL: br_fcmp_uno:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16

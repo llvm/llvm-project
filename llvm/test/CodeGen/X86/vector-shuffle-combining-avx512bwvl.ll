@@ -108,12 +108,12 @@ define void @PR46178(i16* %0) {
 ; X86-NEXT:    vmovdqu (%eax), %ymm1
 ; X86-NEXT:    vpmovqw %ymm0, %xmm0
 ; X86-NEXT:    vpmovqw %ymm1, %xmm1
-; X86-NEXT:    vpsllw $8, %xmm1, %xmm1
-; X86-NEXT:    vpsraw $8, %xmm1, %xmm1
 ; X86-NEXT:    vpsllw $8, %xmm0, %xmm0
 ; X86-NEXT:    vpsraw $8, %xmm0, %xmm0
-; X86-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[3]
-; X86-NEXT:    vmovupd %ymm0, (%eax)
+; X86-NEXT:    vpsllw $8, %xmm1, %xmm1
+; X86-NEXT:    vpsraw $8, %xmm1, %xmm1
+; X86-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; X86-NEXT:    vmovdqu %ymm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
@@ -126,8 +126,9 @@ define void @PR46178(i16* %0) {
 ; X64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; X64-NEXT:    vpsllw $8, %ymm0, %ymm0
 ; X64-NEXT:    vpsraw $8, %ymm0, %ymm0
-; X64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; X64-NEXT:    vmovdqa %xmm0, %xmm0
+; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5,6,7]
+; X64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,1]
 ; X64-NEXT:    vmovdqu %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
@@ -174,3 +175,47 @@ define <8 x i32> @PR46393(<8 x i16> %a0, i8 %a1) {
   %sel = select <8 x i1> %mask, <8 x i32> %shl, <8 x i32> zeroinitializer
   ret <8 x i32> %sel
 }
+
+define i64 @PR55050() {
+; X86-LABEL: PR55050:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    testb %al, %al
+; X86-NEXT:    jne .LBB10_2
+; X86-NEXT:  # %bb.1: # %if
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:  .LBB10_2: # %exit
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    retl
+;
+; X64-LABEL: PR55050:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    testb %al, %al
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    retq
+entry:
+  %i275 = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> undef, <16 x i8> zeroinitializer)
+  %i277 = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> undef, <16 x i8> zeroinitializer)
+  br i1 undef, label %exit, label %if
+
+if:
+  %i298 = bitcast <2 x i64> %i275 to <4 x i32>
+  %i299 = bitcast <2 x i64> %i277 to <4 x i32>
+  %i300 = shufflevector <4 x i32> %i298, <4 x i32> %i299, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %i339 = call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> %i300, <4 x i32> undef)
+  %i354 = shufflevector <8 x i16> %i339, <8 x i16> undef, <8 x i32> <i32 0, i32 undef, i32 2, i32 undef, i32 4, i32 undef, i32 6, i32 undef>
+  %i356 = call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> %i354, <8 x i16> undef)
+  %i357 = shufflevector <16 x i8> %i356, <16 x i8> zeroinitializer, <16 x i32> <i32 6, i32 5, i32 4, i32 16, i32 2, i32 1, i32 0, i32 16, i32 10, i32 9, i32 8, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %i361 = extractelement <16 x i8> %i357, i64 8
+  %i360 = and i8 %i361, 63
+  %i379 = zext i8 %i360 to i64
+  br label %exit
+
+exit:
+  %res = phi i64 [ %i379, %if ], [ 0, %entry ]
+  ret i64 %res
+}
+declare <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>, <16 x i8>)
+declare <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16>, <8 x i16>)
+declare <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32>, <4 x i32>)

@@ -15,7 +15,7 @@
 // AllocaOp.
 
 // CHECK-LABEL: func @condBranch
-func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   cf.cond_br %arg0, ^bb1, ^bb2
 ^bb1:
   cf.br ^bb3(%arg1 : memref<2xf32>)
@@ -46,7 +46,7 @@ func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // Since the alloc has dynamic type, it is not converted into an alloca.
 
 // CHECK-LABEL: func @condBranchDynamicType
-func @condBranchDynamicType(
+func.func @condBranchDynamicType(
   %arg0: i1,
   %arg1: memref<?xf32>,
   %arg2: memref<?xf32>,
@@ -76,7 +76,7 @@ func @condBranchDynamicType(
 // -----
 
 // CHECK-LABEL: func @dynamicRanked
-func @dynamicRanked(%memref: memref<*xf32>) {
+func.func @dynamicRanked(%memref: memref<*xf32>) {
   %0 = memref.rank %memref : memref<*xf32>
   %1 = memref.alloc(%0) : memref<?xindex>
   return
@@ -88,7 +88,7 @@ func @dynamicRanked(%memref: memref<*xf32>) {
 // -----
 
 // CHECK-LABEL: func @dynamicRanked2D
-func @dynamicRanked2D(%memref: memref<*xf32>) {
+func.func @dynamicRanked2D(%memref: memref<*xf32>) {
   %0 = memref.rank %memref : memref<*xf32>
   %1 = memref.alloc(%0, %0) : memref<?x?xindex>
   return
@@ -101,7 +101,7 @@ func @dynamicRanked2D(%memref: memref<*xf32>) {
 // -----
 
 // CHECK-LABEL: func @dynamicNoRank
-func @dynamicNoRank(%arg0: index) {
+func.func @dynamicNoRank(%arg0: index) {
   %0 = memref.alloc(%arg0) : memref<?xindex>
   return
 }
@@ -115,7 +115,7 @@ func @dynamicNoRank(%arg0: index) {
 // AllocaOp.
 
 // CHECK-LABEL: func @emptyUsesValue
-func @emptyUsesValue(%arg0: memref<4xf32>) {
+func.func @emptyUsesValue(%arg0: memref<4xf32>) {
   %0 = memref.alloc() : memref<4xf32>
   return
 }
@@ -134,7 +134,7 @@ func @emptyUsesValue(%arg0: memref<4xf32>) {
 // AllocaOp.
 
 // CHECK-LABEL: func @criticalEdge
-func @criticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @criticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   cf.cond_br %arg0, ^bb1, ^bb2(%arg1 : memref<2xf32>)
 ^bb1:
   %0 = memref.alloc() : memref<2xf32>
@@ -162,7 +162,7 @@ func @criticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // PromoteBuffersToStack expected behavior: It converts the alloc in an alloca.
 
 // CHECK-LABEL: func @invCriticalEdge
-func @invCriticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @invCriticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   cf.cond_br %arg0, ^bb1, ^bb2(%arg1 : memref<2xf32>)
@@ -189,7 +189,7 @@ func @invCriticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // PromoteBuffersToStack expected behavior: It converts the allocs into allocas.
 
 // CHECK-LABEL: func @ifElse
-func @ifElse(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @ifElse(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   cf.cond_br %arg0,
@@ -224,7 +224,7 @@ func @ifElse(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // PromoteBuffersToStack expected behavior: It converts the alloc into alloca.
 
 // CHECK-LABEL: func @ifElseNoUsers
-func @ifElseNoUsers(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @ifElseNoUsers(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   cf.cond_br %arg0,
@@ -257,7 +257,7 @@ func @ifElseNoUsers(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // into allocas.
 
 // CHECK-LABEL: func @ifElseNested
-func @ifElseNested(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+func.func @ifElseNested(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg1: memref<2xf32>) out(%0: memref<2xf32>)
   cf.cond_br %arg0,
@@ -292,7 +292,7 @@ func @ifElseNested(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 // allocas.
 
 // CHECK-LABEL: func @redundantOperations
-func @redundantOperations(%arg0: memref<2xf32>) {
+func.func @redundantOperations(%arg0: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
   test.buffer_based in(%arg0: memref<2xf32>) out(%0: memref<2xf32>)
   %1 = memref.alloc() : memref<2xf32>
@@ -319,7 +319,7 @@ func @redundantOperations(%arg0: memref<2xf32>) {
 // allocas.
 
 // CHECK-LABEL: func @moving_alloc_and_inserting_missing_dealloc
-func @moving_alloc_and_inserting_missing_dealloc(
+func.func @moving_alloc_and_inserting_missing_dealloc(
   %cond: i1,
     %arg0: memref<2xf32>,
     %arg1: memref<2xf32>) {
@@ -353,7 +353,7 @@ func @moving_alloc_and_inserting_missing_dealloc(
 // allocas.
 
 // CHECK-LABEL: func @nested_regions_and_cond_branch
-func @nested_regions_and_cond_branch(
+func.func @nested_regions_and_cond_branch(
   %arg0: i1,
   %arg1: memref<2xf32>,
   %arg2: memref<2xf32>) {
@@ -389,7 +389,7 @@ func @nested_regions_and_cond_branch(
 // only remains in the scope of the function.
 
 // CHECK-LABEL: func @memref_in_function_results
-func @memref_in_function_results(
+func.func @memref_in_function_results(
   %arg0: memref<5xf32>,
   %arg1: memref<10xf32>,
   %arg2: memref<5xf32>) -> (memref<10xf32>, memref<15xf32>) {
@@ -413,7 +413,7 @@ func @memref_in_function_results(
 // due to its dynamic memory allocation behavior.
 
 // CHECK-LABEL: func @nested_region_control_flow
-func @nested_region_control_flow(
+func.func @nested_region_control_flow(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
   %0 = arith.cmpi eq, %arg0, %arg1 : index
@@ -441,7 +441,7 @@ func @nested_region_control_flow(
 // allocation finally escapes the method.
 
 // CHECK-LABEL: func @inner_region_control_flow
-func @inner_region_control_flow(%arg0 : index) -> memref<2x2xf32> {
+func.func @inner_region_control_flow(%arg0 : index) -> memref<2x2xf32> {
   %0 = memref.alloc() : memref<2x2xf32>
   %1 = test.region_if %0 : memref<2x2xf32> -> (memref<2x2xf32>) then {
     ^bb0(%arg1 : memref<2x2xf32>):
@@ -472,7 +472,7 @@ func @inner_region_control_flow(%arg0 : index) -> memref<2x2xf32> {
 // Alloc %0 will be converted to an alloca. %3 is not transformed.
 
 // CHECK-LABEL: func @loop_alloc
-func @loop_alloc(
+func.func @loop_alloc(
   %lb: index,
   %ub: index,
   %step: index,
@@ -502,7 +502,7 @@ func @loop_alloc(
 // that are passed via the backedges. The alloc is converted to an AllocaOp.
 
 // CHECK-LABEL: func @loop_nested_if_no_alloc
-func @loop_nested_if_no_alloc(
+func.func @loop_nested_if_no_alloc(
   %lb: index,
   %ub: index,
   %step: index,
@@ -538,7 +538,7 @@ func @loop_nested_if_no_alloc(
 // The allocs are not converted in this case.
 
 // CHECK-LABEL: func @loop_nested_if_alloc
-func @loop_nested_if_alloc(
+func.func @loop_nested_if_alloc(
   %lb: index,
   %ub: index,
   %step: index,
@@ -573,7 +573,7 @@ func @loop_nested_if_alloc(
 // converted. In the actual implementation the largest size is 1KB.
 
 // CHECK-LABEL: func @large_buffer_allocation
-func @large_buffer_allocation(%arg0: memref<2048xf32>) {
+func.func @large_buffer_allocation(%arg0: memref<2048xf32>) {
   %0 = memref.alloc() : memref<2048xf32>
   test.copy(%0, %arg0) : (memref<2048xf32>, memref<2048xf32>)
   return
@@ -589,7 +589,7 @@ func @large_buffer_allocation(%arg0: memref<2048xf32>) {
 // AllocaOp.
 
 // CHECK-LABEL: func @indexElementType
-func @indexElementType() {
+func.func @indexElementType() {
   %0 = memref.alloc() : memref<4xindex>
   return
 }
@@ -602,7 +602,7 @@ func @indexElementType() {
 
 // CHECK-LABEL: func @bigIndexElementType
 module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 256>>} {
-  func @bigIndexElementType() {
+  func.func @bigIndexElementType() {
     %0 = memref.alloc() : memref<4xindex>
     return
   }

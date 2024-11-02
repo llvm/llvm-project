@@ -101,6 +101,18 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT
   }
 };
 
+// Formatter char[].
+template <__formatter::__char_type _CharT, size_t _Size>
+struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<_CharT[_Size], _CharT>
+    : public __format_spec::__formatter_string<_CharT> {
+  static_assert(!is_const_v<_CharT>);
+  using _Base = __format_spec::__formatter_string<_CharT>;
+
+  _LIBCPP_HIDE_FROM_ABI auto format(_CharT __str[_Size], auto& __ctx) -> decltype(__ctx.out()) {
+    return _Base::format(basic_string_view<_CharT>(__str, _Size), __ctx);
+  }
+};
+
 // Formatter const char[].
 template <__formatter::__char_type _CharT, size_t _Size>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT

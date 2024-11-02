@@ -10,13 +10,18 @@
 #define LIB_MLIR_TOOLS_MLIRPDLLSPSERVER_SERVER_H_
 
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/StringRef.h"
 #include <memory>
 #include <string>
 
 namespace mlir {
 namespace lsp {
 struct Diagnostic;
+class CompilationDatabase;
+struct PDLLViewOutputResult;
+enum class PDLLViewOutputKind;
 struct CompletionList;
+struct DocumentLink;
 struct DocumentSymbol;
 struct Hover;
 struct Location;
@@ -30,7 +35,13 @@ class URIForFile;
 class PDLLServer {
 public:
   struct Options {
-    Options(const std::vector<std::string> &extraDirs) : extraDirs(extraDirs){};
+    Options(const std::vector<std::string> &compilationDatabases,
+            const std::vector<std::string> &extraDirs)
+        : compilationDatabases(compilationDatabases), extraDirs(extraDirs) {}
+
+    /// The filenames for databases containing compilation commands for PDLL
+    /// files passed to the server.
+    const std::vector<std::string> &compilationDatabases;
 
     /// Additional list of include directories to search.
     const std::vector<std::string> &extraDirs;
@@ -59,6 +70,10 @@ public:
   void findReferencesOf(const URIForFile &uri, const Position &pos,
                         std::vector<Location> &references);
 
+  /// Return the document links referenced by the given file.
+  void getDocumentLinks(const URIForFile &uri,
+                        std::vector<DocumentLink> &documentLinks);
+
   /// Find a hover description for the given hover position, or None if one
   /// couldn't be found.
   Optional<Hover> findHover(const URIForFile &uri, const Position &hoverPos);
@@ -74,6 +89,11 @@ public:
   /// Get the signature help for the position within the given file.
   SignatureHelp getSignatureHelp(const URIForFile &uri,
                                  const Position &helpPos);
+
+  /// Get the output of the given PDLL file, or None if there is no valid
+  /// output.
+  Optional<PDLLViewOutputResult> getPDLLViewOutput(const URIForFile &uri,
+                                                   PDLLViewOutputKind kind);
 
 private:
   struct Impl;

@@ -560,6 +560,18 @@ unsigned __int64 __cdecl _byteswap_uint64(unsigned __int64 val);
 
 __int64 __mulh(__int64 __a, __int64 __b);
 unsigned __int64 __umulh(unsigned __int64 __a, unsigned __int64 __b);
+
+void __break(int);
+
+void __writex18byte(unsigned long offset, unsigned char data);
+void __writex18word(unsigned long offset, unsigned short data);
+void __writex18dword(unsigned long offset, unsigned long data);
+void __writex18qword(unsigned long offset, unsigned __int64 data);
+
+unsigned char __readx18byte(unsigned long offset);
+unsigned short __readx18word(unsigned long offset);
+unsigned long __readx18dword(unsigned long offset);
+unsigned __int64 __readx18qword(unsigned long offset);
 #endif
 
 /*----------------------------------------------------------------------------*\

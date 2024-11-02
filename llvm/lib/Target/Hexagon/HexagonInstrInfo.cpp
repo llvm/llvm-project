@@ -1429,8 +1429,8 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       // Generate a misaligned load that is guaranteed to cause a crash.
       class CrashPseudoSourceValue : public PseudoSourceValue {
       public:
-        CrashPseudoSourceValue(const TargetInstrInfo &TII)
-          : PseudoSourceValue(TargetCustom, TII) {}
+        CrashPseudoSourceValue(const TargetMachine &TM)
+            : PseudoSourceValue(TargetCustom, TM) {}
 
         bool isConstant(const MachineFrameInfo *) const override {
           return false;
@@ -1446,7 +1446,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         }
       };
 
-      static const CrashPseudoSourceValue CrashPSV(*this);
+      static const CrashPseudoSourceValue CrashPSV(MF.getTarget());
       MachineMemOperand *MMO = MF.getMachineMemOperand(
           MachinePointerInfo(&CrashPSV),
           MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile, 8,

@@ -1,6 +1,6 @@
 // RUN: mlir-opt -resolve-shaped-type-result-dims -split-input-file %s | FileCheck %s
 
-func @init_tensor_static_dim() -> (index, index) {
+func.func @init_tensor_static_dim() -> (index, index) {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %c6 = arith.constant 6 : index
@@ -16,7 +16,7 @@ func @init_tensor_static_dim() -> (index, index) {
 
 // -----
 
-func @init_tensor_dynamic_dim(%arg0 : index) -> (index) {
+func.func @init_tensor_dynamic_dim(%arg0 : index) -> (index) {
   %c2 = arith.constant 2 : index
   %0 = linalg.init_tensor [4, 5, %arg0] : tensor<4x5x?xf32>
   %1 = tensor.dim %0, %c2 : tensor<4x5x?xf32>
@@ -28,7 +28,7 @@ func @init_tensor_dynamic_dim(%arg0 : index) -> (index) {
 
 // -----
 
-func @init_tensor_dynamic_dim2(%arg0 : index, %arg1 : index) -> (index, index) {
+func.func @init_tensor_dynamic_dim2(%arg0 : index, %arg1 : index) -> (index, index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %0 = linalg.init_tensor [%arg0, %arg1] : tensor<?x?xf32>
@@ -43,7 +43,7 @@ func @init_tensor_dynamic_dim2(%arg0 : index, %arg1 : index) -> (index, index) {
 
 // -----
 
-func @remove_dim_result_uses
+func.func @remove_dim_result_uses
   (%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
    %arg2 : tensor<?x?xf32>) -> (index, index) {
   %c0 = arith.constant 0 : index
@@ -82,7 +82,7 @@ func @remove_dim_result_uses
 
 // -----
 
-func @remove_dim_result_uses_outs
+func.func @remove_dim_result_uses_outs
   (%arg0 : tensor<?xf32>, %arg1 : index) -> (index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -105,7 +105,7 @@ func @remove_dim_result_uses_outs
 
 // -----
 
-func @remove_dim_result_uses_sequence
+func.func @remove_dim_result_uses_sequence
   (%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
    %arg2 : tensor<?x?xf32>) -> (index, index, index, index) {
   %c0 = arith.constant 0 : index
@@ -144,7 +144,7 @@ func @remove_dim_result_uses_sequence
 
 // -----
 
-func @keep_result_dim_uses_sequence2
+func.func @keep_result_dim_uses_sequence2
   (%arg0 : tensor<?xf32>, %arg1 : index) -> (index, index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -173,7 +173,7 @@ func @keep_result_dim_uses_sequence2
 
 #map = affine_map<(d0) -> (d0)>
 
-func @init_tensor_dim_of_linalg_result(%arg_0 : tensor<?xf32>,
+func.func @init_tensor_dim_of_linalg_result(%arg_0 : tensor<?xf32>,
     %arg_1: tensor<?xf32>) -> (index, index) {
   %0, %1 = linalg.generic {
     indexing_maps = [#map, #map, #map],
@@ -199,7 +199,7 @@ func @init_tensor_dim_of_linalg_result(%arg_0 : tensor<?xf32>,
 
 // -----
 
-func @dim_reshape_expansion(%arg0 : tensor<6x5x?xf32>) -> (index, index, index)
+func.func @dim_reshape_expansion(%arg0 : tensor<6x5x?xf32>) -> (index, index, index)
 {
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index
@@ -223,7 +223,7 @@ func @dim_reshape_expansion(%arg0 : tensor<6x5x?xf32>) -> (index, index, index)
 
 // -----
 
-func @dim_reshape_collapse(%arg0 : tensor<2x3x5x4x?x7xf32>) -> (index, index)
+func.func @dim_reshape_collapse(%arg0 : tensor<2x3x5x4x?x7xf32>) -> (index, index)
 {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -244,7 +244,7 @@ func @dim_reshape_collapse(%arg0 : tensor<2x3x5x4x?x7xf32>) -> (index, index)
 
 // -----
 
-func @dim_of_pad_op(%arg0 : tensor<2x?x?xf32>, %arg1 : index, %arg2 : index,
+func.func @dim_of_pad_op(%arg0 : tensor<2x?x?xf32>, %arg1 : index, %arg2 : index,
     %arg3: f32) -> (index, index, index)
 {
    %c0 = arith.constant 0 : index

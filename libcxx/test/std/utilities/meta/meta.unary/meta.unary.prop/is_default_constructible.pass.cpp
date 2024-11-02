@@ -106,21 +106,11 @@ int main(int, char**)
 #if TEST_STD_VER >= 11
     test_is_not_default_constructible<B>();
     test_is_not_default_constructible<int&&>();
-
-// TODO: Remove this workaround once Clang <= 3.7 are no longer used regularly.
-// In those compiler versions the __is_constructible builtin gives the wrong
-// results for abominable function types.
-#if (defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER < 703) \
- || (defined(TEST_CLANG_VER) && TEST_CLANG_VER < 308)
-#define WORKAROUND_CLANG_BUG
-#endif
-#if !defined(WORKAROUND_CLANG_BUG)
     test_is_not_default_constructible<void()>();
     test_is_not_default_constructible<void() const> ();
     test_is_not_default_constructible<void() volatile> ();
     test_is_not_default_constructible<void() &> ();
     test_is_not_default_constructible<void() &&> ();
-#endif
 #endif
 
   return 0;

@@ -41,7 +41,7 @@ ParseResult Parser::parseCallSiteLocation(LocationAttr &loc) {
   // Parse the 'at'.
   if (getToken().isNot(Token::bare_identifier) ||
       getToken().getSpelling() != "at")
-    return emitError("expected 'at' in callsite location");
+    return emitWrongTokenError("expected 'at' in callsite location");
   consumeToken(Token::bare_identifier);
 
   // Parse the caller location.
@@ -66,7 +66,8 @@ ParseResult Parser::parseFusedLocation(LocationAttr &loc) {
   if (consumeIf(Token::less)) {
     metadata = parseAttribute();
     if (!metadata)
-      return emitError("expected valid attribute metadata");
+      return failure();
+
     // Parse the '>' token.
     if (parseToken(Token::greater,
                    "expected '>' after fused location metadata"))
@@ -100,10 +101,12 @@ ParseResult Parser::parseNameOrFileLineColLocation(LocationAttr &loc) {
   if (consumeIf(Token::colon)) {
     // Parse the line number.
     if (getToken().isNot(Token::integer))
-      return emitError("expected integer line number in FileLineColLoc");
+      return emitWrongTokenError(
+          "expected integer line number in FileLineColLoc");
     auto line = getToken().getUnsignedIntegerValue();
     if (!line.hasValue())
-      return emitError("expected integer line number in FileLineColLoc");
+      return emitWrongTokenError(
+          "expected integer line number in FileLineColLoc");
     consumeToken(Token::integer);
 
     // Parse the ':'.
@@ -112,7 +115,8 @@ ParseResult Parser::parseNameOrFileLineColLocation(LocationAttr &loc) {
 
     // Parse the column number.
     if (getToken().isNot(Token::integer))
-      return emitError("expected integer column number in FileLineColLoc");
+      return emitWrongTokenError(
+          "expected integer column number in FileLineColLoc");
     auto column = getToken().getUnsignedIntegerValue();
     if (!column.hasValue())
       return emitError("expected integer column number in FileLineColLoc");
@@ -151,7 +155,7 @@ ParseResult Parser::parseLocationInstance(LocationAttr &loc) {
 
   // Bare tokens required for other cases.
   if (!getToken().is(Token::bare_identifier))
-    return emitError("expected location instance");
+    return emitWrongTokenError("expected location instance");
 
   // Check for the 'callsite' signifying a callsite location.
   if (getToken().getSpelling() == "callsite")
@@ -168,5 +172,5 @@ ParseResult Parser::parseLocationInstance(LocationAttr &loc) {
     return success();
   }
 
-  return emitError("expected location instance");
+  return emitWrongTokenError("expected location instance");
 }

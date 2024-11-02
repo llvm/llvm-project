@@ -13,7 +13,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
@@ -156,11 +155,8 @@ bool AMDGPULowerIntrinsics::runOnModule(Module &M) {
         Changed = true;
       break;
 
-    case Intrinsic::amdgcn_workitem_id_x:
     case Intrinsic::r600_read_tidig_x:
-    case Intrinsic::amdgcn_workitem_id_y:
     case Intrinsic::r600_read_tidig_y:
-    case Intrinsic::amdgcn_workitem_id_z:
     case Intrinsic::r600_read_tidig_z:
     case Intrinsic::r600_read_local_size_x:
     case Intrinsic::r600_read_local_size_y:

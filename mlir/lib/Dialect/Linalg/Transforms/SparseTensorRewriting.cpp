@@ -15,6 +15,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
@@ -23,6 +25,7 @@
 #include "mlir/Support/LLVM.h"
 
 using namespace mlir;
+using namespace mlir::bufferization;
 using namespace mlir::linalg;
 using namespace mlir::sparse_tensor;
 
@@ -46,7 +49,8 @@ static bool isSparseTensor(OpOperand *op) {
 static bool isEmptyInit(OpOperand *op) {
   Value val = op->get();
   return matchPattern(val, m_Zero()) || matchPattern(val, m_AnyZeroFloat()) ||
-         val.getDefiningOp<InitTensorOp>() || val.getDefiningOp<InitOp>();
+         val.getDefiningOp<InitTensorOp>() ||
+         val.getDefiningOp<AllocTensorOp>();
 }
 
 // Helper to detect sampling operation.

@@ -1177,4 +1177,46 @@ enum {
   UNW_VE_VL   = 145,
 };
 
+// s390x register numbers
+enum {
+  UNW_S390X_R0      = 0,
+  UNW_S390X_R1      = 1,
+  UNW_S390X_R2      = 2,
+  UNW_S390X_R3      = 3,
+  UNW_S390X_R4      = 4,
+  UNW_S390X_R5      = 5,
+  UNW_S390X_R6      = 6,
+  UNW_S390X_R7      = 7,
+  UNW_S390X_R8      = 8,
+  UNW_S390X_R9      = 9,
+  UNW_S390X_R10     = 10,
+  UNW_S390X_R11     = 11,
+  UNW_S390X_R12     = 12,
+  UNW_S390X_R13     = 13,
+  UNW_S390X_R14     = 14,
+  UNW_S390X_R15     = 15,
+  UNW_S390X_F0      = 16,
+  UNW_S390X_F2      = 17,
+  UNW_S390X_F4      = 18,
+  UNW_S390X_F6      = 19,
+  UNW_S390X_F1      = 20,
+  UNW_S390X_F3      = 21,
+  UNW_S390X_F5      = 22,
+  UNW_S390X_F7      = 23,
+  UNW_S390X_F8      = 24,
+  UNW_S390X_F10     = 25,
+  UNW_S390X_F12     = 26,
+  UNW_S390X_F14     = 27,
+  UNW_S390X_F9      = 28,
+  UNW_S390X_F11     = 29,
+  UNW_S390X_F13     = 30,
+  UNW_S390X_F15     = 31,
+  // 32-47 Control Registers
+  // 48-63 Access Registers
+  UNW_S390X_PSWM    = 64,
+  UNW_S390X_PSWA    = 65,
+  // 66-67 Reserved
+  // 68-83 Vector Registers %v16-%v31
+};
+
 #endif

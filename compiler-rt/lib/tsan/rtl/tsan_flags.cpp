@@ -97,7 +97,7 @@ void InitializeFlags(Flags *f, const char *env, const char *env_option_name) {
   ubsan_parser.ParseStringFromEnv("UBSAN_OPTIONS");
 #endif
 
-  // Sanity check.
+  // Check flags.
   if (!f->report_bugs) {
     f->report_thread_leaks = false;
     f->report_destroy_locked = false;

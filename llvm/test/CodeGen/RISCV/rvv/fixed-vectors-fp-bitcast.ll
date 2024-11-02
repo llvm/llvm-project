@@ -202,7 +202,7 @@ define <4 x half> @bitcast_i64_v4f16(i64 %a) {
 ; RV32-FP-NEXT:    vmv.v.i v8, 0
 ; RV32-FP-NEXT:    vslide1up.vx v9, v8, a1
 ; RV32-FP-NEXT:    vslide1up.vx v10, v9, a0
-; RV32-FP-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-FP-NEXT:    vsetivli zero, 1, e64, m1, tu, mu
 ; RV32-FP-NEXT:    vslideup.vi v8, v10, 0
 ; RV32-FP-NEXT:    ret
 ;
@@ -222,7 +222,7 @@ define <2 x float> @bitcast_i64_v2f32(i64 %a) {
 ; RV32-FP-NEXT:    vmv.v.i v8, 0
 ; RV32-FP-NEXT:    vslide1up.vx v9, v8, a1
 ; RV32-FP-NEXT:    vslide1up.vx v10, v9, a0
-; RV32-FP-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-FP-NEXT:    vsetivli zero, 1, e64, m1, tu, mu
 ; RV32-FP-NEXT:    vslideup.vi v8, v10, 0
 ; RV32-FP-NEXT:    ret
 ;
@@ -242,7 +242,7 @@ define <1 x double> @bitcast_i64_v1f64(i64 %a) {
 ; RV32-FP-NEXT:    vmv.v.i v8, 0
 ; RV32-FP-NEXT:    vslide1up.vx v9, v8, a1
 ; RV32-FP-NEXT:    vslide1up.vx v10, v9, a0
-; RV32-FP-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-FP-NEXT:    vsetivli zero, 1, e64, m1, tu, mu
 ; RV32-FP-NEXT:    vslideup.vi v8, v10, 0
 ; RV32-FP-NEXT:    ret
 ;

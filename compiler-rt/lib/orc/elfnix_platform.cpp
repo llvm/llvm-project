@@ -29,10 +29,10 @@ ORC_RT_JIT_DISPATCH_TAG(__orc_rt_elfnix_get_initializers_tag)
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_elfnix_get_deinitializers_tag)
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_elfnix_symbol_lookup_tag)
 
-// eh-frame registration functions.
-// We expect these to be available for all processes.
-extern "C" void __register_frame(const void *);
-extern "C" void __deregister_frame(const void *);
+// eh-frame registration functions, made available via aliases
+// installed by the Platform
+extern "C" void __orc_rt_register_eh_frame_section(const void *);
+extern "C" void __orc_rt_deregister_eh_frame_section(const void *);
 
 namespace {
 
@@ -172,7 +172,8 @@ void ELFNixPlatformRuntimeState::destroy() {
 Error ELFNixPlatformRuntimeState::registerObjectSections(
     ELFNixPerObjectSectionsToRegister POSR) {
   if (POSR.EHFrameSection.Start)
-    __register_frame(POSR.EHFrameSection.Start.toPtr<const char *>());
+    __orc_rt_register_eh_frame_section(
+        POSR.EHFrameSection.Start.toPtr<const char *>());
 
   if (POSR.ThreadDataSection.Start) {
     if (auto Err = registerThreadDataSection(
@@ -186,7 +187,8 @@ Error ELFNixPlatformRuntimeState::registerObjectSections(
 Error ELFNixPlatformRuntimeState::deregisterObjectSections(
     ELFNixPerObjectSectionsToRegister POSR) {
   if (POSR.EHFrameSection.Start)
-    __deregister_frame(POSR.EHFrameSection.Start.toPtr<const char *>());
+    __orc_rt_deregister_eh_frame_section(
+        POSR.EHFrameSection.Start.toPtr<const char *>());
 
   return Error::success();
 }

@@ -37,7 +37,7 @@
 //   CHECK-DAG: %[[M:.*]] = memref.alloc() : memref<13xi32>
 //   CHECK-DAG: linalg.fill ins(%[[zeroI32]] : i32) outs(%[[M]] : memref<13xi32>)
 //       CHECK: scf.while : () -> () {
-//       CHECK:   %[[Cond:.*]] = call @getNextI32(%[[Iter]], %[[IndD]], %[[ElemBuffer]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<i32>) -> i1
+//       CHECK:   %[[Cond:.*]] = func.call @getNextI32(%[[Iter]], %[[IndD]], %[[ElemBuffer]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<i32>) -> i1
 //       CHECK:   scf.condition(%[[Cond]])
 //       CHECK: } do {
 //       CHECK:   %[[Iv0:.*]] = memref.load %[[IndS]][%[[I0]]] : memref<1xindex>
@@ -47,7 +47,7 @@
 //       CHECK: }
 //       CHECK: %[[T:.*]] = bufferization.to_tensor %[[M]] : memref<13xi32>
 //       CHECK: return %[[T]] : tensor<13xi32>
-func @sparse_convert_1d(%arg0: tensor<13xi32, #SparseVector>) -> tensor<13xi32> {
+func.func @sparse_convert_1d(%arg0: tensor<13xi32, #SparseVector>) -> tensor<13xi32> {
   %0 = sparse_tensor.convert %arg0 : tensor<13xi32, #SparseVector> to tensor<13xi32>
   return %0 : tensor<13xi32>
 }
@@ -76,7 +76,7 @@ func @sparse_convert_1d(%arg0: tensor<13xi32, #SparseVector>) -> tensor<13xi32> 
 //   CHECK-DAG: %[[M:.*]] = memref.alloc(%[[SizeI0]]) : memref<?xi32>
 //   CHECK-DAG: linalg.fill ins(%[[zeroI32]] : i32) outs(%[[M]] : memref<?xi32>)
 //       CHECK: scf.while : () -> () {
-//       CHECK:   %[[Cond:.*]] = call @getNextI32(%[[Iter]], %[[IndD]], %[[ElemBuffer]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<i32>) -> i1
+//       CHECK:   %[[Cond:.*]] = func.call @getNextI32(%[[Iter]], %[[IndD]], %[[ElemBuffer]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<i32>) -> i1
 //       CHECK:   scf.condition(%[[Cond]])
 //       CHECK: } do {
 //       CHECK:   %[[Iv0:.*]] = memref.load %[[IndS]][%[[I0]]] : memref<1xindex>
@@ -86,7 +86,7 @@ func @sparse_convert_1d(%arg0: tensor<13xi32, #SparseVector>) -> tensor<13xi32> 
 //       CHECK: }
 //       CHECK: %[[T:.*]] = bufferization.to_tensor %[[M]] : memref<?xi32>
 //       CHECK: return %[[T]] : tensor<?xi32>
-func @sparse_convert_1d_dyn(%arg0: tensor<?xi32, #SparseVector>) -> tensor<?xi32> {
+func.func @sparse_convert_1d_dyn(%arg0: tensor<?xi32, #SparseVector>) -> tensor<?xi32> {
   %0 = sparse_tensor.convert %arg0 : tensor<?xi32, #SparseVector> to tensor<?xi32>
   return %0 : tensor<?xi32>
 }
@@ -119,7 +119,7 @@ func @sparse_convert_1d_dyn(%arg0: tensor<?xi32, #SparseVector>) -> tensor<?xi32
 //   CHECK-DAG: %[[E0:.*]] = arith.constant 0.000000e+00 : f64
 //   CHECK-DAG: linalg.fill ins(%[[E0]] : f64) outs(%[[M]] : memref<2x4xf64>)
 //       CHECK: scf.while : () -> () {
-//       CHECK:   %[[Cond:.*]] = call @getNextF64(%[[Iter]], %[[IndD]], %[[ElemBuffer]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<f64>) -> i1
+//       CHECK:   %[[Cond:.*]] = func.call @getNextF64(%[[Iter]], %[[IndD]], %[[ElemBuffer]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<f64>) -> i1
 //       CHECK:   scf.condition(%[[Cond]])
 //       CHECK: } do {
 //       CHECK:   %[[Iv0:.*]] = memref.load %[[IndS]][%[[I0]]] : memref<2xindex>
@@ -130,7 +130,7 @@ func @sparse_convert_1d_dyn(%arg0: tensor<?xi32, #SparseVector>) -> tensor<?xi32
 //       CHECK: }
 //       CHECK: %[[T:.*]] = bufferization.to_tensor %[[M]] : memref<2x4xf64>
 //       CHECK: return %[[T]] : tensor<2x4xf64>
-func @sparse_convert_2d(%arg0: tensor<2x4xf64, #SparseMatrix>) -> tensor<2x4xf64> {
+func.func @sparse_convert_2d(%arg0: tensor<2x4xf64, #SparseMatrix>) -> tensor<2x4xf64> {
   %0 = sparse_tensor.convert %arg0 : tensor<2x4xf64, #SparseMatrix> to tensor<2x4xf64>
   return %0 : tensor<2x4xf64>
 }
@@ -163,7 +163,7 @@ func @sparse_convert_2d(%arg0: tensor<2x4xf64, #SparseMatrix>) -> tensor<2x4xf64
 //   CHECK-DAG: %[[E0:.*]] = arith.constant 0.000000e+00 : f64
 //   CHECK-DAG: linalg.fill ins(%[[E0]] : f64) outs(%[[M]] : memref<?x4xf64>)
 //       CHECK: scf.while : () -> () {
-//       CHECK:   %[[Cond:.*]] = call @getNextF64(%[[Iter]], %[[IndD]], %[[ElemBuffer]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<f64>) -> i1
+//       CHECK:   %[[Cond:.*]] = func.call @getNextF64(%[[Iter]], %[[IndD]], %[[ElemBuffer]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<f64>) -> i1
 //       CHECK:   scf.condition(%[[Cond]])
 //       CHECK: } do {
 //       CHECK:   %[[Iv0:.*]] = memref.load %[[IndS]][%[[I0]]] : memref<2xindex>
@@ -174,7 +174,7 @@ func @sparse_convert_2d(%arg0: tensor<2x4xf64, #SparseMatrix>) -> tensor<2x4xf64
 //       CHECK: }
 //       CHECK: %[[T:.*]] = bufferization.to_tensor %[[M]] : memref<?x4xf64>
 //       CHECK: return %[[T]] : tensor<?x4xf64>
-func @sparse_convert_2d_dyn0(%arg0: tensor<?x4xf64, #SparseMatrix>) -> tensor<?x4xf64> {
+func.func @sparse_convert_2d_dyn0(%arg0: tensor<?x4xf64, #SparseMatrix>) -> tensor<?x4xf64> {
   %0 = sparse_tensor.convert %arg0 : tensor<?x4xf64, #SparseMatrix> to tensor<?x4xf64>
   return %0 : tensor<?x4xf64>
 }
@@ -207,7 +207,7 @@ func @sparse_convert_2d_dyn0(%arg0: tensor<?x4xf64, #SparseMatrix>) -> tensor<?x
 //   CHECK-DAG: %[[E0:.*]] = arith.constant 0.000000e+00 : f64
 //   CHECK-DAG: linalg.fill ins(%[[E0]] : f64) outs(%[[M]] : memref<2x?xf64>)
 //       CHECK: scf.while : () -> () {
-//       CHECK:   %[[Cond:.*]] = call @getNextF64(%[[Iter]], %[[IndD]], %[[ElemBuffer]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<f64>) -> i1
+//       CHECK:   %[[Cond:.*]] = func.call @getNextF64(%[[Iter]], %[[IndD]], %[[ElemBuffer]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<f64>) -> i1
 //       CHECK:   scf.condition(%[[Cond]])
 //       CHECK: } do {
 //       CHECK:   %[[Iv0:.*]] = memref.load %[[IndS]][%[[I0]]] : memref<2xindex>
@@ -218,7 +218,7 @@ func @sparse_convert_2d_dyn0(%arg0: tensor<?x4xf64, #SparseMatrix>) -> tensor<?x
 //       CHECK: }
 //       CHECK: %[[T:.*]] = bufferization.to_tensor %[[M]] : memref<2x?xf64>
 //       CHECK: return %[[T]] : tensor<2x?xf64>
-func @sparse_convert_2d_dyn1(%arg0: tensor<2x?xf64, #SparseMatrix>) -> tensor<2x?xf64> {
+func.func @sparse_convert_2d_dyn1(%arg0: tensor<2x?xf64, #SparseMatrix>) -> tensor<2x?xf64> {
   %0 = sparse_tensor.convert %arg0 : tensor<2x?xf64, #SparseMatrix> to tensor<2x?xf64>
   return %0 : tensor<2x?xf64>
 }
@@ -251,7 +251,7 @@ func @sparse_convert_2d_dyn1(%arg0: tensor<2x?xf64, #SparseMatrix>) -> tensor<2x
 //   CHECK-DAG: %[[E0:.*]] = arith.constant 0.000000e+00 : f64
 //   CHECK-DAG: linalg.fill ins(%[[E0]] : f64) outs(%[[M]] : memref<?x?xf64>)
 //       CHECK: scf.while : () -> () {
-//       CHECK:   %[[Cond:.*]] = call @getNextF64(%[[Iter]], %[[IndD]], %[[ElemBuffer]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<f64>) -> i1
+//       CHECK:   %[[Cond:.*]] = func.call @getNextF64(%[[Iter]], %[[IndD]], %[[ElemBuffer]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<f64>) -> i1
 //       CHECK:   scf.condition(%[[Cond]])
 //       CHECK: } do {
 //       CHECK:   %[[Iv0:.*]] = memref.load %[[IndS]][%[[I0]]] : memref<2xindex>
@@ -262,7 +262,7 @@ func @sparse_convert_2d_dyn1(%arg0: tensor<2x?xf64, #SparseMatrix>) -> tensor<2x
 //       CHECK: }
 //       CHECK: %[[T:.*]] = bufferization.to_tensor %[[M]] : memref<?x?xf64>
 //       CHECK: return %[[T]] : tensor<?x?xf64>
-func @sparse_convert_2d_dyn2(%arg0: tensor<?x?xf64, #SparseMatrix>) -> tensor<?x?xf64> {
+func.func @sparse_convert_2d_dyn2(%arg0: tensor<?x?xf64, #SparseMatrix>) -> tensor<?x?xf64> {
   %0 = sparse_tensor.convert %arg0 : tensor<?x?xf64, #SparseMatrix> to tensor<?x?xf64>
   return %0 : tensor<?x?xf64>
 }
@@ -299,7 +299,7 @@ func @sparse_convert_2d_dyn2(%arg0: tensor<?x?xf64, #SparseMatrix>) -> tensor<?x
 //   CHECK-DAG: %[[E0:.*]] = arith.constant 0.000000e+00 : f64
 //   CHECK-DAG: linalg.fill ins(%[[E0]] : f64) outs(%[[M]] : memref<2x3x4xf64>)
 //       CHECK: scf.while : () -> () {
-//       CHECK:   %[[Cond:.*]] = call @getNextF64(%[[Iter]], %[[IndD]], %[[ElemBuffer]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<f64>) -> i1
+//       CHECK:   %[[Cond:.*]] = func.call @getNextF64(%[[Iter]], %[[IndD]], %[[ElemBuffer]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<f64>) -> i1
 //       CHECK:   scf.condition(%[[Cond]])
 //       CHECK: } do {
 //       CHECK:   %[[Iv0:.*]] = memref.load %[[IndS]][%[[I0]]] : memref<3xindex>
@@ -311,7 +311,7 @@ func @sparse_convert_2d_dyn2(%arg0: tensor<?x?xf64, #SparseMatrix>) -> tensor<?x
 //       CHECK: }
 //       CHECK: %[[T:.*]] = bufferization.to_tensor %[[M]] : memref<2x3x4xf64>
 //       CHECK: return %[[T]] : tensor<2x3x4xf64>
-func @sparse_convert_3d(%arg0: tensor<2x3x4xf64, #SparseTensor>) -> tensor<2x3x4xf64> {
+func.func @sparse_convert_3d(%arg0: tensor<2x3x4xf64, #SparseTensor>) -> tensor<2x3x4xf64> {
   %0 = sparse_tensor.convert %arg0 : tensor<2x3x4xf64, #SparseTensor> to tensor<2x3x4xf64>
   return %0 : tensor<2x3x4xf64>
 }

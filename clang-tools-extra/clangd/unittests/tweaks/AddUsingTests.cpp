@@ -102,7 +102,7 @@ TEST_F(AddUsingTest, Apply) {
 #include "test.hpp"
 namespace {
 void fun() {
-  ^o^n^e^:^:^t^w^o^:^:^f^f();
+  ^one::two::ff();
 }
 })cpp",
                 R"cpp(
@@ -120,7 +120,7 @@ void fun() {
 #include "test.hpp"
 namespace {
 void fun() {
-  ::on^e::t^wo::c^c inst;
+  ::one::t^wo::cc inst;
 }
 })cpp",
                 R"cpp(
@@ -138,7 +138,7 @@ void fun() {
 #include "test.hpp"
 
 void fun() {
-  on^e::t^wo::e^e inst;
+  one::two::e^e inst;
 })cpp",
                 R"cpp(
 #include "test.hpp"
@@ -185,7 +185,7 @@ namespace {
 using one::two::ff;
 
 void fun() {
-  o^ne::o^o();
+  o^ne::oo();
 }
 })cpp",
                 R"cpp(
@@ -469,8 +469,7 @@ vec<int> foo;
 )cpp"}};
   llvm::StringMap<std::string> EditedFiles;
   for (const auto &Case : Cases) {
-    for (const auto &SubCase : expandCases(Case.TestSource)) {
-      ExtraFiles["test.hpp"] = R"cpp(
+    ExtraFiles["test.hpp"] = R"cpp(
 namespace one {
 void oo() {}
 namespace two {
@@ -485,8 +484,7 @@ public:
 using uu = two::cc;
 template<typename T> struct vec {};
 })cpp";
-      EXPECT_EQ(apply(SubCase, &EditedFiles), Case.ExpectedSource);
-    }
+    EXPECT_EQ(apply(Case.TestSource, &EditedFiles), Case.ExpectedSource);
   }
 }
 

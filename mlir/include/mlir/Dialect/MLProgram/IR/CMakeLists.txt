@@ -1,3 +1,17 @@
 set(LLVM_TARGET_DEFINITIONS MLProgramOps.td)
 add_mlir_dialect(MLProgramOps ml_program)
 add_mlir_doc(MLProgramOps MLProgramOps Dialects/ -gen-dialect-doc)
+
+set(LLVM_TARGET_DEFINITIONS MLProgramAttributes.td)
+mlir_tablegen(MLProgramAttributes.h.inc -gen-attrdef-decls)
+mlir_tablegen(MLProgramAttributes.cpp.inc -gen-attrdef-defs)
+add_public_tablegen_target(MLIRMLProgramAttributesIncGen)
+add_dependencies(mlir-headers MLIRMLProgramAttributesIncGen)
+add_mlir_doc(MLProgramAttributes MLProgramAttributes Dialects/ -gen-attrdef-doc)
+
+set(LLVM_TARGET_DEFINITIONS MLProgramTypes.td)
+mlir_tablegen(MLProgramTypes.h.inc -gen-typedef-decls)
+mlir_tablegen(MLProgramTypes.cpp.inc -gen-typedef-defs)
+add_public_tablegen_target(MLIRMLProgramTypesIncGen)
+add_dependencies(mlir-headers MLIRMLProgramTypesIncGen)
+add_mlir_doc(MLProgramTypes MLProgramTypes Dialects/ -gen-typedef-doc)

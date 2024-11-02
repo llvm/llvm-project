@@ -1763,8 +1763,6 @@ define signext i32 @sext_slliw_zext(i32 zeroext %a) nounwind {
   ret i32 %1
 }
 
-; TODO: the constant shifts could be combined.
-
 define zeroext i32 @zext_slliw_aext(i32 %a) nounwind {
 ; RV64-LABEL: zext_slliw_aext:
 ; RV64:       # %bb.0:

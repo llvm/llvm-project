@@ -14,8 +14,8 @@
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
-#include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -61,6 +61,42 @@ static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint64_t RegNo,
   if (RegNo >= 32)
     return MCDisassembler::Fail;
   Inst.addOperand(MCOperand::createReg(LoongArch::R0 + RegNo));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeFPR32RegisterClass(MCInst &Inst, uint64_t RegNo,
+                                             uint64_t Address,
+                                             const MCDisassembler *Decoder) {
+  if (RegNo >= 32)
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createReg(LoongArch::F0 + RegNo));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeFPR64RegisterClass(MCInst &Inst, uint64_t RegNo,
+                                             uint64_t Address,
+                                             const MCDisassembler *Decoder) {
+  if (RegNo >= 32)
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createReg(LoongArch::F0_64 + RegNo));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeCFRRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                           uint64_t Address,
+                                           const MCDisassembler *Decoder) {
+  if (RegNo >= 8)
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createReg(LoongArch::FCC0 + RegNo));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeFCSRRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  if (RegNo >= 4)
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createReg(LoongArch::FCSR0 + RegNo));
   return MCDisassembler::Success;
 }
 

@@ -1,5 +1,3 @@
-; XFAIL: system-aix
-
 ; RUN: echo create %t.a > %t.mri
 ; RUN: echo save >> %t.mri
 ; RUN: echo end >> %t.mri

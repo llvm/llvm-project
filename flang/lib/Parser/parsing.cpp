@@ -103,7 +103,13 @@ void Parsing::EmitPreprocessedSource(
   int column{1};
   bool inDirective{false};
   bool inContinuation{false};
+  bool lineWasBlankBefore{true};
   const AllSources &allSources{allCooked().allSources()};
+  // All directives that flang support are known to have a length of 3 chars
+  constexpr int directiveNameLength{3};
+  // We need to know the current directive in order to provide correct
+  // continuation for the directive
+  std::string directive;
   for (const char &atChar : cooked().AsCharBlock()) {
     char ch{atChar};
     if (ch == '\n') {
@@ -111,15 +117,36 @@ void Parsing::EmitPreprocessedSource(
       column = 1;
       inDirective = false;
       inContinuation = false;
+      lineWasBlankBefore = true;
       ++sourceLine;
+      directive.clear();
     } else {
-      if (ch == '!') {
+      auto provenance{cooked().GetProvenanceRange(CharBlock{&atChar, 1})};
+
+      // Preserves original case of the character
+      const auto getOriginalChar{[&](char ch) {
+        if (IsLetter(ch) && provenance && provenance->size() == 1) {
+          if (const char *orig{allSources.GetSource(*provenance)}) {
+            const char upper{ToUpperCaseLetter(ch)};
+            if (*orig == upper) {
+              return upper;
+            }
+          }
+        }
+        return ch;
+      }};
+
+      if (ch == '!' && lineWasBlankBefore) {
         // Other comment markers (C, *, D) in original fixed form source
         // input card column 1 will have been deleted or normalized to !,
         // which signifies a comment (directive) in both source forms.
         inDirective = true;
       }
-      auto provenance{cooked().GetProvenanceRange(CharBlock{&atChar, 1})};
+      if (inDirective && directive.size() < directiveNameLength &&
+          IsLetter(ch)) {
+        directive += getOriginalChar(ch);
+      }
+
       std::optional<SourcePosition> position{provenance
               ? allSources.GetSourcePosition(provenance->start())
               : std::nullopt};
@@ -145,14 +172,18 @@ void Parsing::EmitPreprocessedSource(
       }
       if (column > 72) {
         // Wrap long lines in a portable fashion that works in both
-        // of the Fortran source forms.  The first free-form continuation
+        // of the Fortran source forms. The first free-form continuation
         // marker ("&") lands in column 73, which begins the card commentary
         // field of fixed form, and the second one is put in column 6,
         // where it signifies fixed form line continuation.
         // The standard Fortran fixed form column limit (72) is used
         // for output, even if the input was parsed with a nonstandard
         // column limit override option.
-        out << "&\n     &";
+        // OpenMP and OpenACC directives' continuations should have the
+        // corresponding sentinel at the next line.
+        const auto continuation{
+            inDirective ? "&\n!$" + directive + "&" : "&\n     &"s};
+        out << continuation;
         column = 7; // start of fixed form source field
         ++sourceLine;
         inContinuation = true;
@@ -169,16 +200,8 @@ void Parsing::EmitPreprocessedSource(
           out << ' ';
         }
       }
-      if (ch >= 'a' && ch <= 'z' && provenance && provenance->size() == 1) {
-        // Preserve original case
-        if (const char *orig{allSources.GetSource(*provenance)}) {
-          auto upper{static_cast<char>(ch + 'A' - 'a')};
-          if (*orig == upper) {
-            ch = upper;
-          }
-        }
-      }
-      out << ch;
+      out << getOriginalChar(ch);
+      lineWasBlankBefore = ch == ' ' && lineWasBlankBefore;
       ++column;
     }
   }

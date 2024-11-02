@@ -48,9 +48,8 @@ done:
 
 ; GCN-LABEL: {{^}}legal_offset_fi_offset:
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], 0 offen{{$}}
-; This constant isn't folded, because it has multiple uses.
 ; GCN-DAG: v_mov_b32_e32 [[K8000:v[0-9]+]], 0x8004
-; GCN-DAG: v_add_{{[iu]}}32_e32 [[OFFSET:v[0-9]+]], vcc, [[K8000]]
+; GCN-DAG: v_add_{{[iu]}}32_e32 [[OFFSET:v[0-9]+]], vcc, 0x8004
 ; GCN: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], 0 offen{{$}}
 
 define amdgpu_kernel void @legal_offset_fi_offset(i32 addrspace(1)* %out, i32 %cond, i32 addrspace(1)* %offsets, i32 %if_offset, i32 %else_offset) {

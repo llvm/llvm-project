@@ -155,7 +155,8 @@ struct APFloatBase {
     S_IEEEdouble,
     S_x87DoubleExtended,
     S_IEEEquad,
-    S_PPCDoubleDouble
+    S_PPCDoubleDouble,
+    S_MaxSemantics = S_PPCDoubleDouble
   };
 
   static const llvm::fltSemantics &EnumToSemantics(Semantics S);

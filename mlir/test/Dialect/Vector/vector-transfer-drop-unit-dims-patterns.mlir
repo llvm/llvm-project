@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -test-vector-transfer-drop-unit-dims-patterns -split-input-file | FileCheck %s
 
-func @transfer_read_rank_reducing(
+func.func @transfer_read_rank_reducing(
       %arg : memref<1x1x3x2xi8, offset:?, strides:[6, 6, 2, 1]>) -> vector<3x2xi8> {
     %c0 = arith.constant 0 : index
     %cst = arith.constant 0 : i8
@@ -17,7 +17,7 @@ func @transfer_read_rank_reducing(
 
 // -----
 
-func @transfer_write_rank_reducing(%arg : memref<1x1x3x2xi8, offset:?, strides:[6, 6, 2, 1]>, %vec : vector<3x2xi8>) {
+func.func @transfer_write_rank_reducing(%arg : memref<1x1x3x2xi8, offset:?, strides:[6, 6, 2, 1]>, %vec : vector<3x2xi8>) {
     %c0 = arith.constant 0 : index
     vector.transfer_write %vec, %arg [%c0, %c0, %c0, %c0] : 
       vector<3x2xi8>, memref<1x1x3x2xi8, offset:?, strides:[6, 6, 2, 1]>

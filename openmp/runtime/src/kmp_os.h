@@ -17,6 +17,7 @@
 #include <atomic>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define KMP_FTN_PLAIN 1
 #define KMP_FTN_APPEND 2
@@ -864,15 +865,25 @@ static inline bool mips_sync_val_compare_and_swap(volatile kmp_uint64 *p,
   __sync_lock_test_and_set((volatile kmp_uint64 *)(p), (kmp_uint64)(v))
 
 inline kmp_real32 KMP_XCHG_REAL32(volatile kmp_real32 *p, kmp_real32 v) {
-  kmp_int32 tmp =
-      __sync_lock_test_and_set((volatile kmp_uint32 *)(p), *(kmp_uint32 *)&v);
-  return *(kmp_real32 *)&tmp;
+  volatile kmp_uint32 *up;
+  kmp_uint32 uv;
+  memcpy(&up, &p, sizeof(up));
+  memcpy(&uv, &v, sizeof(uv));
+  kmp_int32 tmp = __sync_lock_test_and_set(up, uv);
+  kmp_real32 ftmp;
+  memcpy(&ftmp, &tmp, sizeof(tmp));
+  return ftmp;
 }
 
 inline kmp_real64 KMP_XCHG_REAL64(volatile kmp_real64 *p, kmp_real64 v) {
-  kmp_int64 tmp =
-      __sync_lock_test_and_set((volatile kmp_uint64 *)(p), *(kmp_uint64 *)&v);
-  return *(kmp_real64 *)&tmp;
+  volatile kmp_uint64 *up;
+  kmp_uint64 uv;
+  memcpy(&up, &p, sizeof(up));
+  memcpy(&uv, &v, sizeof(uv));
+  kmp_int64 tmp = __sync_lock_test_and_set(up, uv);
+  kmp_real64 dtmp;
+  memcpy(&dtmp, &tmp, sizeof(tmp));
+  return dtmp;
 }
 
 #else

@@ -48,6 +48,12 @@ class InstSI <dag outs, dag ins, string asm = "",
   field bit VGPRSpill = 0;
   field bit SGPRSpill = 0;
 
+  // LDSDIR instruction format.
+  field bit LDSDIR = 0;
+
+  // VINTERP instruction format.
+  field bit VINTERP = 0;
+
   // High bits - other information.
   field bit VM_CNT = 0;
   field bit EXP_CNT = 0;
@@ -173,6 +179,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{24} = VGPRSpill;
   let TSFlags{25} = SGPRSpill;
 
+  let TSFlags{26} = LDSDIR;
+  let TSFlags{27} = VINTERP;
+
   let TSFlags{32} = VM_CNT;
   let TSFlags{33} = EXP_CNT;
   let TSFlags{34} = LGKM_CNT;
@@ -284,7 +293,7 @@ class VINTRPe <bits<2> op> : Enc32 {
   let Inst{31-26} = 0x32; // encoding
 }
 
-class MIMGe : Enc64 {
+class MIMGe_gfxpre11 : Enc64 {
   bits<10> vdata;
   bits<4> dmask;
   bits<1> unorm;
@@ -309,7 +318,7 @@ class MIMGe : Enc64 {
   let Inst{63} = d16;
 }
 
-class MIMGe_gfx6789 <bits<8> op> : MIMGe {
+class MIMGe_gfx6789 <bits<8> op> : MIMGe_gfxpre11 {
   bits<8> vaddr;
   bits<1> da;
 
@@ -321,7 +330,7 @@ class MIMGe_gfx6789 <bits<8> op> : MIMGe {
   let Inst{39-32} = vaddr;
 }
 
-class MIMGe_gfx90a <bits<8> op> : MIMGe {
+class MIMGe_gfx90a <bits<8> op> : MIMGe_gfxpre11 {
   bits<8> vaddr;
   bits<1> da;
 
@@ -333,7 +342,7 @@ class MIMGe_gfx90a <bits<8> op> : MIMGe {
   let Inst{39-32} = vaddr;
 }
 
-class MIMGe_gfx10 <bits<8> op> : MIMGe {
+class MIMGe_gfx10 <bits<8> op> : MIMGe_gfxpre11 {
   bits<8> vaddr0;
   bits<3> dim;
   bits<2> nsa;
@@ -349,12 +358,46 @@ class MIMGe_gfx10 <bits<8> op> : MIMGe {
   let Inst{62} = a16;
 }
 
+class MIMGe_gfx11 <bits<8> op> : Enc64 {
+  bits<8> vdata;
+  bits<4> dmask;
+  bits<1> unorm;
+  bits<5> cpol;
+  bits<1> r128;
+  bits<1> tfe;
+  bits<1> lwe;
+  bits<7> srsrc;
+  bits<7> ssamp;
+  bit d16;
+  bits<1> a16;
+  bits<8> vaddr0;
+  bits<3> dim;
+  bits<1> nsa;
+
+  let Inst{0} = nsa;
+  let Inst{4-2} = dim;
+  let Inst{7} = unorm;
+  let Inst{11-8} = dmask;
+  let Inst{12} = cpol{CPolBit.SLC};
+  let Inst{13} = cpol{CPolBit.DLC};
+  let Inst{14} = cpol{CPolBit.GLC};
+  let Inst{15} = r128;
+  let Inst{16} = a16;
+  let Inst{17} = d16;
+  let Inst{25-18} = op;
+  let Inst{31-26} = 0x3c;
+  let Inst{39-32} = vaddr0;
+  let Inst{47-40} = vdata;
+  let Inst{52-48} = srsrc{6-2};
+  let Inst{53} = tfe;
+  let Inst{54} = lwe;
+  let Inst{62-58} = ssamp{6-2};
+}
+
 class EXPe : Enc64 {
   bits<4> en;
   bits<6> tgt;
-  bits<1> compr;
   bits<1> done;
-  bits<1> vm;
   bits<8> src0;
   bits<8> src1;
   bits<8> src2;
@@ -362,14 +405,28 @@ class EXPe : Enc64 {
 
   let Inst{3-0} = en;
   let Inst{9-4} = tgt;
-  let Inst{10} = compr;
   let Inst{11} = done;
-  let Inst{12} = vm;
   let Inst{31-26} = 0x3e;
   let Inst{39-32} = src0;
   let Inst{47-40} = src1;
   let Inst{55-48} = src2;
   let Inst{63-56} = src3;
+}
+
+// Pre-GFX11 encoding has compr and vm bits.
+class EXPe_ComprVM : EXPe {
+  bits<1> compr;
+  bits<1> vm;
+
+  let Inst{10} = compr;
+  let Inst{12} = vm;
+}
+
+// GFX11+ encoding has row bit.
+class EXPe_Row : EXPe {
+  bits<1> row;
+
+  let Inst{13} = row;
 }
 
 let Uses = [EXEC] in {

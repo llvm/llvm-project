@@ -19,11 +19,15 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Interpreter/OptionValueString.h"
+#include "lldb/Interpreter/Options.h"
 #include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -48,11 +52,136 @@
 using namespace lldb;
 using namespace lldb_private;
 
+static Status ExceptionMaskValidator(const char *string, void *unused) {
+  Status error;
+  llvm::StringRef str_ref(string);
+  llvm::SmallVector<llvm::StringRef> candidates;
+  str_ref.split(candidates, '|');
+  for (auto candidate : candidates) {
+    if (!(candidate == "EXC_BAD_ACCESS"
+          || candidate == "EXC_BAD_INSTRUCTION"
+          || candidate == "EXC_ARITHMETIC"
+          || candidate == "EXC_RESOURCE"
+          || candidate == "EXC_GUARD")) {
+      error.SetErrorStringWithFormat("invalid exception type: '%s'", 
+          candidate.str().c_str());
+      return error;
+    }
+  }
+  return {};
+}
+
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
 PlatformDarwin::~PlatformDarwin() = default;
+
+// Static Variables
+static uint32_t g_initialize_count = 0;
+
+void PlatformDarwin::Initialize() {
+  Platform::Initialize();
+
+  if (g_initialize_count++ == 0) {
+    PluginManager::RegisterPlugin(PlatformDarwin::GetPluginNameStatic(),
+                                  PlatformDarwin::GetDescriptionStatic(),
+                                  PlatformDarwin::CreateInstance,
+                                  PlatformDarwin::DebuggerInitialize);
+  }
+}
+
+void PlatformDarwin::Terminate() {
+  if (g_initialize_count > 0) {
+    if (--g_initialize_count == 0) {
+      PluginManager::UnregisterPlugin(PlatformDarwin::CreateInstance);
+    }
+  }
+
+  Platform::Terminate();
+}
+
+llvm::StringRef PlatformDarwin::GetDescriptionStatic() {
+  return "Darwin platform plug-in.";
+}
+
+PlatformSP PlatformDarwin::CreateInstance(bool force, const ArchSpec *arch) {
+   // We only create subclasses of the PlatformDarwin plugin.
+   return PlatformSP();
+}
+
+#define LLDB_PROPERTIES_platformdarwin
+#include "PlatformMacOSXProperties.inc"
+
+#define LLDB_PROPERTIES_platformdarwin
+enum {
+#include "PlatformMacOSXPropertiesEnum.inc"
+};
+
+class PlatformDarwinProperties : public Properties {
+public:
+  static ConstString &GetSettingName() {
+    static ConstString g_setting_name("darwin");
+    return g_setting_name;
+  }
+
+  PlatformDarwinProperties() : Properties() {
+    m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
+    m_collection_sp->Initialize(g_platformdarwin_properties);
+  }
+
+  ~PlatformDarwinProperties() override = default;
+
+  const char *GetIgnoredExceptions() const {
+    const uint32_t idx = ePropertyIgnoredExceptions;
+    const OptionValueString *option_value =
+        m_collection_sp->GetPropertyAtIndexAsOptionValueString(
+            NULL, false, idx);
+    assert(option_value);
+    return option_value->GetCurrentValue();
+  }
+    
+  OptionValueString *GetIgnoredExceptionValue() {
+    const uint32_t idx = ePropertyIgnoredExceptions;
+    OptionValueString *option_value =
+        m_collection_sp->GetPropertyAtIndexAsOptionValueString(
+            NULL, false, idx);
+    assert(option_value);
+    return option_value;
+  }
+};
+
+static PlatformDarwinProperties &GetGlobalProperties() {
+  static PlatformDarwinProperties g_settings;
+  return g_settings;
+}
+
+void PlatformDarwin::DebuggerInitialize(
+    lldb_private::Debugger &debugger) {
+  if (!PluginManager::GetSettingForPlatformPlugin(
+          debugger, PlatformDarwinProperties::GetSettingName())) {
+    const bool is_global_setting = false;
+    PluginManager::CreateSettingForPlatformPlugin(
+        debugger, GetGlobalProperties().GetValueProperties(),
+        ConstString("Properties for the Darwin platform plug-in."),
+        is_global_setting);
+    OptionValueString *value = GetGlobalProperties().GetIgnoredExceptionValue();
+    value->SetValidator(ExceptionMaskValidator);
+  }
+}
+
+Args
+PlatformDarwin::GetExtraStartupCommands() {
+  std::string ignored_exceptions 
+      = GetGlobalProperties().GetIgnoredExceptions();
+  if (ignored_exceptions.empty())
+    return {};
+  Args ret_args;
+  std::string packet = "QSetIgnoredExceptions:";
+  packet.append(ignored_exceptions);
+  ret_args.AppendArgument(packet);
+  return ret_args;
+}
 
 lldb_private::Status
 PlatformDarwin::PutFile(const lldb_private::FileSpec &source,
@@ -198,167 +327,6 @@ Status PlatformDarwin::ResolveSymbolFile(Target &target,
                                                sym_spec.GetArchitecturePtr());
   }
   return {};
-}
-
-static lldb_private::Status
-MakeCacheFolderForFile(const FileSpec &module_cache_spec) {
-  FileSpec module_cache_folder =
-      module_cache_spec.CopyByRemovingLastPathComponent();
-  return llvm::sys::fs::create_directory(module_cache_folder.GetPath());
-}
-
-static lldb_private::Status
-BringInRemoteFile(Platform *platform,
-                  const lldb_private::ModuleSpec &module_spec,
-                  const FileSpec &module_cache_spec) {
-  MakeCacheFolderForFile(module_cache_spec);
-  Status err = platform->GetFile(module_spec.GetFileSpec(), module_cache_spec);
-  return err;
-}
-
-lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
-    const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-    const lldb_private::FileSpecList *module_search_paths_ptr,
-    llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr) {
-
-  Log *log = GetLog(LLDBLog::Platform);
-  LLDB_LOGF(log,
-            "[%s] Trying to find module %s/%s - platform path %s/%s symbol "
-            "path %s/%s",
-            (IsHost() ? "host" : "remote"),
-            module_spec.GetFileSpec().GetDirectory().AsCString(),
-            module_spec.GetFileSpec().GetFilename().AsCString(),
-            module_spec.GetPlatformFileSpec().GetDirectory().AsCString(),
-            module_spec.GetPlatformFileSpec().GetFilename().AsCString(),
-            module_spec.GetSymbolFileSpec().GetDirectory().AsCString(),
-            module_spec.GetSymbolFileSpec().GetFilename().AsCString());
-
-  Status err;
-
-  if (CheckLocalSharedCache()) {
-    // When debugging on the host, we are most likely using the same shared
-    // cache as our inferior. The dylibs from the shared cache might not
-    // exist on the filesystem, so let's use the images in our own memory
-    // to create the modules.
-
-    // Check if the requested image is in our shared cache.
-    SharedCacheImageInfo image_info =
-        HostInfo::GetSharedCacheImageInfo(module_spec.GetFileSpec().GetPath());
-
-    // If we found it and it has the correct UUID, let's proceed with
-    // creating a module from the memory contents.
-    if (image_info.uuid &&
-        (!module_spec.GetUUID() || module_spec.GetUUID() == image_info.uuid)) {
-      ModuleSpec shared_cache_spec(module_spec.GetFileSpec(), image_info.uuid,
-                                   image_info.data_sp);
-      err = ModuleList::GetSharedModule(shared_cache_spec, module_sp,
-                                        module_search_paths_ptr, old_modules,
-                                        did_create_ptr);
-      if (module_sp)
-        return err;
-    }
-  }
-
-  err = ModuleList::GetSharedModule(module_spec, module_sp,
-                                    module_search_paths_ptr, old_modules,
-                                    did_create_ptr);
-  if (module_sp)
-    return err;
-
-  if (!IsHost()) {
-    std::string cache_path(GetLocalCacheDirectory());
-    // Only search for a locally cached file if we have a valid cache path
-    if (!cache_path.empty()) {
-      std::string module_path(module_spec.GetFileSpec().GetPath());
-      cache_path.append(module_path);
-      FileSpec module_cache_spec(cache_path);
-
-      // if rsync is supported, always bring in the file - rsync will be very
-      // efficient when files are the same on the local and remote end of the
-      // connection
-      if (this->GetSupportsRSync()) {
-        err = BringInRemoteFile(this, module_spec, module_cache_spec);
-        if (err.Fail())
-          return err;
-        if (FileSystem::Instance().Exists(module_cache_spec)) {
-          Log *log = GetLog(LLDBLog::Platform);
-          LLDB_LOGF(log, "[%s] module %s/%s was rsynced and is now there",
-                    (IsHost() ? "host" : "remote"),
-                    module_spec.GetFileSpec().GetDirectory().AsCString(),
-                    module_spec.GetFileSpec().GetFilename().AsCString());
-          ModuleSpec local_spec(module_cache_spec,
-                                module_spec.GetArchitecture());
-          module_sp = std::make_shared<Module>(local_spec);
-          module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());
-          return Status();
-        }
-      }
-
-      // try to find the module in the cache
-      if (FileSystem::Instance().Exists(module_cache_spec)) {
-        // get the local and remote MD5 and compare
-        if (m_remote_platform_sp) {
-          // when going over the *slow* GDB remote transfer mechanism we first
-          // check the hashes of the files - and only do the actual transfer if
-          // they differ
-          uint64_t high_local, high_remote, low_local, low_remote;
-          auto MD5 = llvm::sys::fs::md5_contents(module_cache_spec.GetPath());
-          if (!MD5)
-            return Status(MD5.getError());
-          std::tie(high_local, low_local) = MD5->words();
-
-          m_remote_platform_sp->CalculateMD5(module_spec.GetFileSpec(),
-                                             low_remote, high_remote);
-          if (low_local != low_remote || high_local != high_remote) {
-            // bring in the remote file
-            Log *log = GetLog(LLDBLog::Platform);
-            LLDB_LOGF(log,
-                      "[%s] module %s/%s needs to be replaced from remote copy",
-                      (IsHost() ? "host" : "remote"),
-                      module_spec.GetFileSpec().GetDirectory().AsCString(),
-                      module_spec.GetFileSpec().GetFilename().AsCString());
-            Status err =
-                BringInRemoteFile(this, module_spec, module_cache_spec);
-            if (err.Fail())
-              return err;
-          }
-        }
-
-        ModuleSpec local_spec(module_cache_spec, module_spec.GetArchitecture());
-        module_sp = std::make_shared<Module>(local_spec);
-        module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());
-        Log *log = GetLog(LLDBLog::Platform);
-        LLDB_LOGF(log, "[%s] module %s/%s was found in the cache",
-                  (IsHost() ? "host" : "remote"),
-                  module_spec.GetFileSpec().GetDirectory().AsCString(),
-                  module_spec.GetFileSpec().GetFilename().AsCString());
-        return Status();
-      }
-
-      // bring in the remote module file
-      LLDB_LOGF(log, "[%s] module %s/%s needs to come in remotely",
-                (IsHost() ? "host" : "remote"),
-                module_spec.GetFileSpec().GetDirectory().AsCString(),
-                module_spec.GetFileSpec().GetFilename().AsCString());
-      Status err = BringInRemoteFile(this, module_spec, module_cache_spec);
-      if (err.Fail())
-        return err;
-      if (FileSystem::Instance().Exists(module_cache_spec)) {
-        Log *log = GetLog(LLDBLog::Platform);
-        LLDB_LOGF(log, "[%s] module %s/%s is now cached and fine",
-                  (IsHost() ? "host" : "remote"),
-                  module_spec.GetFileSpec().GetDirectory().AsCString(),
-                  module_spec.GetFileSpec().GetFilename().AsCString());
-        ModuleSpec local_spec(module_cache_spec, module_spec.GetArchitecture());
-        module_sp = std::make_shared<Module>(local_spec);
-        module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());
-        return Status();
-      } else
-        return Status("unable to obtain valid module file");
-    } else
-      return Status("no cache path");
-  } else
-    return Status("unable to resolve module");
 }
 
 Status PlatformDarwin::GetSharedModule(

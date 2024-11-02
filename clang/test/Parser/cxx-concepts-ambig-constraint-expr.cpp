@@ -6,4 +6,4 @@
 
 // type-specifier-seq in conversion-type-id
 template <typename T> requires T::operator short
-unsigned int foo(); // expected-error {{C++ requires a type specifier for all declarations}}
+unsigned int foo(); // expected-error {{a type specifier is required for all declarations}}

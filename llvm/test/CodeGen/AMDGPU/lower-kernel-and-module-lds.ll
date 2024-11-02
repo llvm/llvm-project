@@ -21,9 +21,8 @@
 ; CHECK: @llvm.amdgcn.kernel..lds = internal addrspace(3) global %llvm.amdgcn.kernel..lds.t undef, align 2
 ; CHECK: @llvm.amdgcn.kernel..lds.1 = internal addrspace(3) global %llvm.amdgcn.kernel..lds.t.0 undef, align 4
 ;.
-define amdgpu_kernel void @k0() {
+define amdgpu_kernel void @k0() #0 {
 ; CHECK-LABEL: @k0(
-; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(%llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds) ]
 ; CHECK-NEXT:    %lds.size.1.align.1.bc = bitcast [1 x i8] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 1) to i8 addrspace(3)*
 ; CHECK-NEXT:    store i8 1, i8 addrspace(3)* %lds.size.1.align.1.bc, align 8
 ; CHECK-NEXT:    %lds.size.2.align.2.bc = bitcast [2 x i8] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.kernel.k0.lds.t, %llvm.amdgcn.kernel.k0.lds.t addrspace(3)* @llvm.amdgcn.kernel.k0.lds, i32 0, i32 2) to i8 addrspace(3)*
@@ -49,9 +48,8 @@ define amdgpu_kernel void @k0() {
   ret void
 }
 
-define amdgpu_kernel void @k1() {
+define amdgpu_kernel void @k1() #0 {
 ; CHECK-LABEL: @k1(
-; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(%llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds) ]
 ; CHECK-NEXT:    %lds.size.2.align.2.bc = bitcast [2 x i8] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.kernel.k1.lds.t, %llvm.amdgcn.kernel.k1.lds.t addrspace(3)* @llvm.amdgcn.kernel.k1.lds, i32 0, i32 2) to i8 addrspace(3)*
 ; CHECK-NEXT:    store i8 2, i8 addrspace(3)* %lds.size.2.align.2.bc, align 4
 ; CHECK-NEXT:    %lds.size.4.align.4.bc = bitcast [4 x i8] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.kernel.k1.lds.t, %llvm.amdgcn.kernel.k1.lds.t addrspace(3)* @llvm.amdgcn.kernel.k1.lds, i32 0, i32 1) to i8 addrspace(3)*
@@ -72,9 +70,8 @@ define amdgpu_kernel void @k1() {
   ret void
 }
 
-define amdgpu_kernel void @0() {
+define amdgpu_kernel void @0() #0 {
 ; CHECK-LABEL: @0(
-; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(%llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds) ]
 ; CHECK-NEXT:    %lds.size.2.align.2.bc = bitcast [2 x i8] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.kernel..lds.t, %llvm.amdgcn.kernel..lds.t addrspace(3)* @llvm.amdgcn.kernel..lds, i32 0, i32 0) to i8 addrspace(3)*
 ; CHECK-NEXT:    store i8 2, i8 addrspace(3)* %lds.size.2.align.2.bc, align 2
 ; CHECK-NEXT:    ret void
@@ -85,9 +82,8 @@ define amdgpu_kernel void @0() {
   ret void
 }
 
-define amdgpu_kernel void @1() {
+define amdgpu_kernel void @1() #0 {
 ; CHECK-LABEL: @1(
-; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(%llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds) ]
 ; CHECK-NEXT:    %lds.size.4.align.4.bc = bitcast [4 x i8] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.kernel..lds.t.0, %llvm.amdgcn.kernel..lds.t.0 addrspace(3)* @llvm.amdgcn.kernel..lds.1, i32 0, i32 0) to i8 addrspace(3)*
 ; CHECK-NEXT:    store i8 4, i8 addrspace(3)* %lds.size.4.align.4.bc, align 4
 ; CHECK-NEXT:    ret void
@@ -114,6 +110,6 @@ define void @f0() {
 
   ret void
 }
-;.
-; CHECK: attributes #0 = { nocallback nofree nosync nounwind readnone willreturn }
-;.
+
+attributes #0 = { "amdgpu-elide-module-lds" }
+; CHECK: attributes #0 = { "amdgpu-elide-module-lds" }

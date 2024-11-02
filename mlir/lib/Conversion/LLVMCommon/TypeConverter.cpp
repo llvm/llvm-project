@@ -49,6 +49,8 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   // LLVM container types may (recursively) contain other types that must be
   // converted even when the outer type is compatible.
   addConversion([&](LLVM::LLVMPointerType type) -> llvm::Optional<Type> {
+    if (type.isOpaque())
+      return type;
     if (auto pointee = convertType(type.getElementType()))
       return LLVM::LLVMPointerType::get(pointee, type.getAddressSpace());
     return llvm::None;

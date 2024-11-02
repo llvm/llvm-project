@@ -37,7 +37,7 @@ struct RISCVSupportedExtension {
 
 } // end anonymous namespace
 
-static constexpr StringLiteral AllStdExts = "mafdqlcbjtpvn";
+static constexpr StringLiteral AllStdExts = "mafdqlcbkjtpvn";
 
 static const RISCVSupportedExtension SupportedExtensions[] = {
     {"i", RISCVExtensionVersion{2, 0}},
@@ -406,8 +406,8 @@ static Error getExtensionVersion(StringRef Ext, StringRef In, unsigned &Major,
       if (!MinorStr.empty())
         Error += "." + MinorStr.str();
       Error += " for experimental extension '" + Ext.str() +
-               "'(this compiler supports " + utostr(SupportedVers.Major) + "." +
-               utostr(SupportedVers.Minor) + ")";
+               "' (this compiler supports " + utostr(SupportedVers.Major) +
+               "." + utostr(SupportedVers.Minor) + ")";
       return createStringError(errc::invalid_argument, Error);
     }
     return Error::success();

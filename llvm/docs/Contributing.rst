@@ -26,7 +26,7 @@ about it. Please let us know and follow the instructions in
 Bug Fixes
 ---------
 If you are interested in contributing code to LLVM, bugs labeled with the
-`beginner`_ keyword in the `bug tracker`_ are a good way to get familiar with
+`good first issue`_ keyword in the `bug tracker`_ are a good way to get familiar with
 the code base. If you are interested in fixing a bug please comment on it to
 let people know you are working on it.
 
@@ -148,7 +148,7 @@ of LLVM's high-level design, as well as its internals:
 
 .. _Forum: https://discourse.llvm.org
 .. _irc.oftc.net: irc://irc.oftc.net/llvm
-.. _beginner: https://github.com/llvm/llvm-project/issues?q=is%3Aopen+is%3Aissue+label%3Abeginner
+.. _good first issue: https://github.com/llvm/llvm-project/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22
 .. _bug tracker: https://github.com/llvm/llvm-project/issues
 .. _clang-format-diff.py: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/clang-format-diff.py
 .. _git-clang-format: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/git-clang-format

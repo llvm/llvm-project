@@ -1,14 +1,14 @@
 Category,Algorithm,Assignee,CL,Complete
-Search,any_of,Christopher Di Bella,`D105793 <https://llvm.org/D105793>`_
-Search,all_of,Christopher Di Bella,`D105793 <https://llvm.org/D105793>`_
-Search,none_of,Christopher Di Bella,`D105793 <https://llvm.org/D105793>`_
+Search,any_of,Nikolas Klauser,`D123016 <https://llvm.org/D123016>`_,✅
+Search,all_of,Nikolas Klauser,`D123016 <https://llvm.org/D123016>`_,✅
+Search,none_of,Nikolas Klauser,`D123016 <https://llvm.org/D123016>`_,✅
 Search,find,Nikolas Klauser,`D121248 <https://reviews.llvm.org/D121248>`_,✅
 Search,find_if,Nikolas Klauser,`D121248 <https://reviews.llvm.org/D121248>`_,✅
 Search,find_if_not,Nikolas Klauser,`D121248 <https://reviews.llvm.org/D121248>`_,✅
 Search,find_first_of,Not assigned,n/a,Not started
 Search,adjacent_find,Not assigned,n/a,Not started
 Search,mismatch,Nikolas Klauser,`D117817 <https://llvm.org/D117817>`_,✅
-Search,equal,Not assigned,n/a,Not started
+Search,equal,Nikolas Klauser,`D123681 <https://reviews.llvm.org/D123681>`,✅
 Search,lexicographical_compare,Not assigned,n/a,Not started
 Search,partition_point,Christopher Di Bella,`D105794 <https://llvm.org/D105794>`_,Under review
 Search,lower_bound,Christopher Di Bella,`D105795 <https://llvm.org/D105795>`_,Under review
@@ -26,24 +26,24 @@ Search,count_if,Nikolas Klauser, `D121523 <https://llvm.org/D121523>`_,✅
 Search,search,Not assigned,n/a,Not started
 Search,search_n,Not assigned,n/a,Not started
 Search,find_end,Not assigned,n/a,Not started
-Read-only,is_partitioned,Christopher Di Bella,`D105794 <https://llvm.org/D105794>`_,Under review
-Read-only,is_sorted,Not assigned,n/a,Not started
-Read-only,is_sorted_unitl,Not assigned,n/a,Not started
+Read-only,is_partitioned,Nikolas Klauser,`D124440 <https://llvm.org/D124440>`_,✅
+Read-only,is_sorted,Nikolas Klauser,`D125608 <https://llvm.org/D125608>`_,✅
+Read-only,is_sorted_unitl,Nikolas Klauser,`D125608 <https://llvm.org/D125608>`_,✅
 Read-only,includes,Not assigned,n/a,Not started
 Read-only,is_heap,Not assigned,n/a,Not started
 Read-only,is_heap_until,Not assigned,n/a,Not started
 Read-only,clamp,Not assigned,n/a,Not started
 Read-only,is_permutation,Not assigned,n/a,Not started
-Read-only,for_each,Not assigned,n/a,Not started
-Read-only,for_each_n,Not assigned,n/a,Not started
+Read-only,for_each,Nikolas Klauser,`D124332 <https://llvm.org/D124332>`_,✅
+Read-only,for_each_n,Nikolas Klauser,`D124332 <https://llvm.org/D124332>`_,✅
 Write,copy,Nikolas Klauser,`D122982 <https://llvm.org/D122982>`_,✅
 Write,copy_if,Nikolas Klauser,`D122982 <https://llvm.org/D122982>`_,✅
 Write,copy_n,Nikolas Klauser,`D122982 <https://llvm.org/D122982>`_,✅
 Write,copy_backward,Nikolas Klauser,`D122982 <https://llvm.org/D122982>`_,✅
 Write,move,Not assigned,n/a,Not started
 Write,move_backward,Not assigned,n/a,Not started
-Write,fill,Not assigned,n/a,Not started
-Write,fill_n,Not assigned,n/a,Not started
+Write,fill,Nikolas Klauser,`D123462 <https://reviews.llvm.org/D123462>`_,✅
+Write,fill_n,Nikolas Klauser,`D123462 <https://reviews.llvm.org/D123462>`_,✅
 Write,transform,Nikolas Klauser,`D122173 <https://llvm.org/D122173>`_,✅
 Write,generate,Not assigned,n/a,Not started
 Write,generate_n,Not assigned,n/a,Not started
@@ -67,7 +67,7 @@ Merge,set_symmetric_difference,Not assigned,n/a,Not started
 Merge,set_union,Not assigned,n/a,Not started
 Permutation,remove,Not assigned,n/a,Not started
 Permutation,remove_if,Not assigned,n/a,Not started
-Permutation,reverse,Not assigned,n/a,Not started
+Permutation,reverse,Nikolas Klauser,`D125752 <https://llvm.org/D125752>`_,✅
 Permutation,rotate,Not assigned,n/a,Not started
 Permutation,shuffle,Not assigned,n/a,Not started
 Permutation,unique,Not assigned,n/a,Not started

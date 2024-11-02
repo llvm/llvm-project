@@ -42,8 +42,8 @@ private:
   void handleCopyFromLocalVar(const VarDecl &NewVar, const VarDecl &OldVar,
                               const Stmt &BlockStmt, const DeclStmt &Stmt,
                               bool IssueFix, ASTContext &Context);
-  const std::vector<std::string> AllowedTypes;
-  const std::vector<std::string> ExcludedContainerTypes;
+  const std::vector<StringRef> AllowedTypes;
+  const std::vector<StringRef> ExcludedContainerTypes;
 };
 
 } // namespace performance

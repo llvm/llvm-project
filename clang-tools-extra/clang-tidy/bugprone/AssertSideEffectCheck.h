@@ -40,9 +40,9 @@ public:
 
 private:
   const bool CheckFunctionCalls;
-  const std::string RawAssertList;
+  const StringRef RawAssertList;
   SmallVector<StringRef, 5> AssertMacros;
-  const std::vector<std::string> IgnoredFunctions;
+  const std::vector<StringRef> IgnoredFunctions;
 };
 
 } // namespace bugprone

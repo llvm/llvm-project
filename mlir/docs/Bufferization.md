@@ -336,16 +336,29 @@ simpler memref type (e.g., identity layout map), we expect that canonicalization
 patterns would clean up unnecessarily dynamic layout maps. (Some of these
 canonicalization patterns may not be implemented yet.)
 
-Note that One-Shot Bufferize always generates the most specific memref type when
-the entire IR is bufferizable. In that case, we do not have to rely on
-canonicalization patterns to clean up the bufferized IR.
+One-Shot Bufferize tries to infer the most precise memref type when bufferizing
+an op. If the entire IR is bufferizable, we do not have to resort to
+conservatively use fully dynamic layout maps. In that case, we also do not have
+to rely on canonicalization patterns to clean up the bufferized IR.
 
-One-Shot Bufferize can be configured to always generate memref types with
-identity layout when the exact target memref type is not known via
-`fully-dynamic-layout-maps=0`. This can be useful for legacy code that cannot
-handle memref types with layout maps. Note that this leads to additional buffer
-copies when folding a `to_tensor`/`to_memref` pair with memref types that are
-not cast-compatible.
+Note: There are some bufferizable ops for which a percise layout map cannot be
+inferred. E.g., a `tensor.cast` from a `tensor<*xf32>` to a `tensor<?x?xf32>`
+must be bufferized to a `memref.cast` with a memref type that has a fully
+dynamic layout map.
+
+One-Shot Bufferize has an option `unknown-type-conversion` to control the
+generation of layout maps when no precise layout can be inferred:
+
+*   `fully-dynamic-layout-map` uses fully dynamic layout maps and is the default
+    behavior. This composes well when IR is partially bufferized.
+*   `identity-layout-map` uses static identity layout maps. This option can be
+    useful for legacy code that cannot handle memref types with layout maps.
+    Note that this setting can lead to additional buffer copies when folding a
+    `to_tensor`/`to_memref` pair with memref types that are not cast-compatible.
+
+Note: The `unknown-type-conversion` option does not affect layout maps of
+function signatures. There is a separate `function-signature-type-conversion`
+option that controls layout maps of function parameters and function results.
 
 ## Extending One-Shot Bufferize
 

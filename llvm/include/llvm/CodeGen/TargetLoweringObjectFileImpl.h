@@ -286,6 +286,13 @@ public:
 
   MCSymbol *getFunctionEntryPointSymbol(const GlobalValue *Func,
                                         const TargetMachine &TM) const override;
+
+  /// For functions, this will return the LSDA section. If option
+  /// -ffunction-sections is on, this will return a unique csect with the
+  /// function name appended to .gcc_except_table as a suffix of the LSDA
+  /// section name.
+  MCSection *getSectionForLSDA(const Function &F, const MCSymbol &FnSym,
+                               const TargetMachine &TM) const override;
 };
 
 class TargetLoweringObjectFileGOFF : public TargetLoweringObjectFile {

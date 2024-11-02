@@ -289,13 +289,13 @@ HELPER_REGISTER_FP_CAST_VP(fpext, VP_FP_EXTEND, FPExt, 0)
   END_REGISTER_VP(vp_##OPSUFFIX, VPSD)
 
 // llvm.vp.trunc(x,mask,vlen)
-HELPER_REGISTER_INT_CAST_VP(trunc, VP_TRUNC, Trunc)
+HELPER_REGISTER_INT_CAST_VP(trunc, VP_TRUNCATE, Trunc)
 
 // llvm.vp.zext(x,mask,vlen)
-HELPER_REGISTER_INT_CAST_VP(zext, VP_ZEXT, ZExt)
+HELPER_REGISTER_INT_CAST_VP(zext, VP_ZERO_EXTEND, ZExt)
 
 // llvm.vp.sext(x,mask,vlen)
-HELPER_REGISTER_INT_CAST_VP(sext, VP_SEXT, SExt)
+HELPER_REGISTER_INT_CAST_VP(sext, VP_SIGN_EXTEND, SExt)
 
 // llvm.vp.ptrtoint(x,mask,vlen)
 HELPER_REGISTER_INT_CAST_VP(ptrtoint, VP_PTRTOINT, PtrToInt)

@@ -2565,6 +2565,20 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
           XCOFF::XTY_SD));
 }
 
+MCSection *TargetLoweringObjectFileXCOFF::getSectionForLSDA(
+    const Function &F, const MCSymbol &FnSym, const TargetMachine &TM) const {
+  auto *LSDA = cast<MCSectionXCOFF>(LSDASection);
+  if (TM.getFunctionSections()) {
+    // If option -ffunction-sections is on, append the function name to the
+    // name of the LSDA csect so that each function has its own LSDA csect.
+    // This helps the linker to garbage-collect EH info of unused functions.
+    SmallString<128> NameStr = LSDA->getName();
+    raw_svector_ostream(NameStr) << '.' << F.getName();
+    LSDA = getContext().getXCOFFSection(NameStr, LSDA->getKind(),
+                                        LSDA->getCsectProp());
+  }
+  return LSDA;
+}
 //===----------------------------------------------------------------------===//
 //                                  GOFF
 //===----------------------------------------------------------------------===//
@@ -2579,8 +2593,8 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   auto *Symbol = TM.getSymbol(GO);
   if (Kind.isBSS())
-    return getContext().getGOFFSection(Symbol->getName(),
-                                       SectionKind::getBSS());
+    return getContext().getGOFFSection(Symbol->getName(), SectionKind::getBSS(),
+                                       nullptr, nullptr);
 
   return getContext().getObjectFileInfo()->getTextSection();
 }

@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S %s | FileCheck %s
 
 define void @test_chained_first_order_recurrences_1(i16* %ptr) {
 ; CHECK-LABEL: @test_chained_first_order_recurrences_1

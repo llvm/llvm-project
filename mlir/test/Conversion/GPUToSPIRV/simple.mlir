@@ -14,7 +14,7 @@ module attributes {gpu.container_module} {
     }
   }
 
-  func @main() {
+  func.func @main() {
     %0 = "op"() : () -> (f32)
     %1 = "op"() : () -> (memref<12xf32>)
     %cst = arith.constant 1 : index
@@ -60,7 +60,7 @@ module attributes {gpu.container_module} {
     }
   }
 
-  func @main() {
+  func.func @main() {
     %0 = "op"() : () -> (f32)
     %1 = "op"() : () -> (memref<12xf32>)
     %cst = arith.constant 1 : index
@@ -118,7 +118,7 @@ module attributes {gpu.container_module} {
     }
   }
 
-  func @main() {
+  func.func @main() {
     %0 = "op"() : () -> (f32)
     %1 = "op"() : () -> (memref<12xf32>)
     %cst = arith.constant 1 : index

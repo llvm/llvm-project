@@ -99,7 +99,7 @@
 // NOCOMDAT-OFF-NOT: "harden-sls-nocomdat"
 // NOCOMDAT: "+harden-sls-nocomdat"
 
-// BAD-SLS-SPEC: invalid sls hardening option '{{[^']+}}' in '-mharden-sls=
+// BAD-SLS-SPEC: unsupported argument '{{[^']+}}' to option '-mharden-sls='
 
 // RUN: %clang -target armv6a--none-eabi -c %s -### -mharden-sls=all 2>&1 | \
 // RUN: FileCheck %s --check-prefix=SLS-NOT-SUPPORTED

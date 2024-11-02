@@ -98,7 +98,7 @@ def replace_symbol(matchobj):
     assert symname in symbols, f"ERROR: symbol {symname} is not defined in binary"
     return symbols[symname]
 
-with open(args.output, 'w') as f:
+with open(args.output, 'w', newline='\n') as f:
     for etype, expr in exprs:
         if etype == 'FDATA':
             issym1, anchor1, offsym1, issym2, anchor2, offsym2, execnt, mispred = expr

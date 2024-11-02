@@ -194,7 +194,7 @@ test.mlir:3:3: note: diagnostic emitted with trace:
  #3 0x000055dd3f998e87 mlir::Operation::emitError(llvm::Twine const&) /lib/IR/Operation.cpp:324:29
  #4 0x000055dd3f99d21c mlir::Operation::emitOpError(llvm::Twine const&) /lib/IR/Operation.cpp:652:10
  #5 0x000055dd3f96b01c mlir::OpTrait::HasParent<mlir::ModuleOp>::Impl<mlir::ModuleTerminatorOp>::verifyTrait(mlir::Operation*) /mlir/IR/OpDefinition.h:897:18
- #6 0x000055dd3f96ab38 mlir::Op<mlir::ModuleTerminatorOp, mlir::OpTrait::ZeroOperands, mlir::OpTrait::ZeroResult, mlir::OpTrait::HasParent<mlir::ModuleOp>::Impl, mlir::OpTrait::IsTerminator>::BaseVerifier<mlir::OpTrait::HasParent<mlir::ModuleOp>::Impl<mlir::ModuleTerminatorOp>, mlir::OpTrait::IsTerminator<mlir::ModuleTerminatorOp> >::verifyTrait(mlir::Operation*) /mlir/IR/OpDefinition.h:1052:29
+ #6 0x000055dd3f96ab38 mlir::Op<mlir::ModuleTerminatorOp, mlir::OpTrait::ZeroOperands, mlir::OpTrait::ZeroResults, mlir::OpTrait::HasParent<mlir::ModuleOp>::Impl, mlir::OpTrait::IsTerminator>::BaseVerifier<mlir::OpTrait::HasParent<mlir::ModuleOp>::Impl<mlir::ModuleTerminatorOp>, mlir::OpTrait::IsTerminator<mlir::ModuleTerminatorOp> >::verifyTrait(mlir::Operation*) /mlir/IR/OpDefinition.h:1052:29
  #  ...
   "module_terminator"() : () -> ()
   ^
@@ -243,7 +243,7 @@ diagnostic. Example usage of this handler can be seen in the `mlir-opt` tool.
 $ mlir-opt foo.mlir
 
 /tmp/test.mlir:6:24: error: expected non-function type
-func @foo() -> (index, ind) {
+func.func @foo() -> (index, ind) {
                        ^
 ```
 
@@ -306,12 +306,12 @@ A few examples are shown below:
 
 ```mlir
 // Expect an error on the same line.
-func @bad_branch() {
+func.func @bad_branch() {
   cf.br ^missing  // expected-error {{reference to an undefined block}}
 }
 
 // Expect an error on an adjacent line.
-func @foo(%a : f32) {
+func.func @foo(%a : f32) {
   // expected-error@+1 {{unknown comparison predicate "foo"}}
   %result = arith.cmpf "foo", %a, %a : f32
   return
@@ -320,10 +320,10 @@ func @foo(%a : f32) {
 // Expect an error on the next line that does not contain a designator.
 // expected-remark@below {{remark on function below}}
 // expected-remark@below {{another remark on function below}}
-func @bar(%a : f32)
+func.func @bar(%a : f32)
 
 // Expect an error on the previous line that does not contain a designator.
-func @baz(%a : f32)
+func.func @baz(%a : f32)
 // expected-remark@above {{remark on function above}}
 // expected-remark@above {{another remark on function above}}
 
@@ -336,7 +336,7 @@ any expected diagnostics weren't.
 $ mlir-opt foo.mlir
 
 /tmp/test.mlir:6:24: error: unexpected error: expected non-function type
-func @foo() -> (index, ind) {
+func.func @foo() -> (index, ind) {
                        ^
 
 /tmp/test.mlir:15:4: error: expected remark "expected some remark" was not produced

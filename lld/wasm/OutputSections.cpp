@@ -33,41 +33,6 @@ std::string toString(const wasm::OutputSection &sec) {
 }
 
 namespace wasm {
-static StringRef sectionTypeToString(uint32_t sectionType) {
-  switch (sectionType) {
-  case WASM_SEC_CUSTOM:
-    return "CUSTOM";
-  case WASM_SEC_TYPE:
-    return "TYPE";
-  case WASM_SEC_IMPORT:
-    return "IMPORT";
-  case WASM_SEC_FUNCTION:
-    return "FUNCTION";
-  case WASM_SEC_TABLE:
-    return "TABLE";
-  case WASM_SEC_MEMORY:
-    return "MEMORY";
-  case WASM_SEC_GLOBAL:
-    return "GLOBAL";
-  case WASM_SEC_TAG:
-    return "TAG";
-  case WASM_SEC_EXPORT:
-    return "EXPORT";
-  case WASM_SEC_START:
-    return "START";
-  case WASM_SEC_ELEM:
-    return "ELEM";
-  case WASM_SEC_CODE:
-    return "CODE";
-  case WASM_SEC_DATA:
-    return "DATA";
-  case WASM_SEC_DATACOUNT:
-    return "DATACOUNT";
-  default:
-    fatal("invalid section type");
-  }
-}
-
 StringRef OutputSection::getSectionName() const {
   return sectionTypeToString(type);
 }

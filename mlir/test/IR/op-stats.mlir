@@ -1,6 +1,6 @@
 // RUN: mlir-opt -allow-unregistered-dialect -print-op-stats %s -o=/dev/null 2>&1 | FileCheck %s
 
-func @main(tensor<4xf32>, tensor<4xf32>) -> tensor<4xf32> {
+func.func @main(tensor<4xf32>, tensor<4xf32>) -> tensor<4xf32> {
 ^bb0(%arg0: tensor<4xf32>, %arg1: tensor<4xf32>):
   %0 = arith.addf %arg0, %arg1 : tensor<4xf32>
   %1 = arith.addf %arg0, %arg1 : tensor<4xf32>

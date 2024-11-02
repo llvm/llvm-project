@@ -26,11 +26,16 @@ protected:
   llvm::CSKY::ArchKind Arch = llvm::CSKY::ArchKind::INVALID;
   std::string CPU;
 
-  bool HardFloat;
-  bool VDSPV2;
-  bool VDSPV1;
-  bool DSPV2;
-  bool is3E3R1;
+  bool HardFloat = false;
+  bool HardFloatABI = false;
+  bool FPUV2_SF = false;
+  bool FPUV2_DF = false;
+  bool FPUV3_SF = false;
+  bool FPUV3_DF = false;
+  bool VDSPV2 = false;
+  bool VDSPV1 = false;
+  bool DSPV2 = false;
+  bool is3E3R1 = false;
 
 public:
   CSKYTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
@@ -81,6 +86,7 @@ public:
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
+  bool hasFeature(StringRef Feature) const override;
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;
 

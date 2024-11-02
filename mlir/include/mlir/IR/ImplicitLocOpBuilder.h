@@ -85,7 +85,7 @@ public:
 
   /// Overload to create or fold a zero result operation.
   template <typename OpTy, typename... Args>
-  typename std::enable_if<OpTy::template hasTrait<mlir::OpTrait::ZeroResult>(),
+  typename std::enable_if<OpTy::template hasTrait<mlir::OpTrait::ZeroResults>(),
                           OpTy>::type
   createOrFold(Args &&...args) {
     return OpBuilder::createOrFold<OpTy>(curLoc, std::forward<Args>(args)...);

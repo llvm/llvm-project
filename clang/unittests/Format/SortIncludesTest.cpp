@@ -458,101 +458,18 @@ TEST_F(SortIncludesTest, HandlesMultilineIncludes) {
                  "#include \"b.h\"\n"));
 }
 
-TEST_F(SortIncludesTest, SupportAtImportLines) {
-  // Test from https://github.com/llvm/llvm-project/issues/38995
-  EXPECT_EQ("#import \"a.h\"\n"
-            "#import \"b.h\"\n"
-            "#import \"c.h\"\n"
-            "#import <d/e.h>\n"
-            "@import Foundation;\n",
-            sort("#import \"b.h\"\n"
-                 "#import \"c.h\"\n"
-                 "#import <d/e.h>\n"
-                 "@import Foundation;\n"
-                 "#import \"a.h\"\n"));
-
-  // Slightly more complicated test that shows sorting in each priorities still
-  // works.
-  EXPECT_EQ("#import \"a.h\"\n"
-            "#import \"b.h\"\n"
-            "#import \"c.h\"\n"
-            "#import <d/e.h>\n"
-            "@import Base;\n"
-            "@import Foundation;\n"
-            "@import base;\n"
-            "@import foundation;\n",
-            sort("#import \"b.h\"\n"
-                 "#import \"c.h\"\n"
-                 "@import Base;\n"
-                 "#import <d/e.h>\n"
-                 "@import foundation;\n"
-                 "@import Foundation;\n"
-                 "@import base;\n"
-                 "#import \"a.h\"\n"));
-
-  // Test that shows main headers in two groups are still found and sorting
-  // still works. The @import's are kept in their respective group but are
-  // put at the end of each group.
-  FmtStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Preserve;
-  EXPECT_EQ("#import \"foo.hpp\"\n"
-            "#import \"b.h\"\n"
-            "#import \"c.h\"\n"
-            "#import <d/e.h>\n"
-            "@import Base;\n"
-            "@import Foundation;\n"
-            "@import foundation;\n"
+TEST_F(SortIncludesTest, HandlesTrailingCommentsWithAngleBrackets) {
+  // Regression test from the discussion at https://reviews.llvm.org/D121370.
+  EXPECT_EQ("#include <cstdint>\n"
             "\n"
-            "#import \"foo.h\"\n"
-            "#include \"foobar\"\n"
-            "#import <f/g.h>\n"
-            "@import AAAA;\n"
-            "@import aaaa;\n",
-            sort("#import \"b.h\"\n"
-                 "@import Foundation;\n"
-                 "@import foundation;\n"
-                 "#import \"c.h\"\n"
-                 "#import <d/e.h>\n"
-                 "@import Base;\n"
-                 "#import \"foo.hpp\"\n"
+            "#include \"util/bar.h\"\n"
+            "#include \"util/foo/foo.h\" // foo<T>\n",
+            sort("#include <cstdint>\n"
                  "\n"
-                 "@import aaaa;\n"
-                 "#import <f/g.h>\n"
-                 "@import AAAA;\n"
-                 "#include \"foobar\"\n"
-                 "#import \"foo.h\"\n",
-                 "foo.c", 2));
-
-  // Regrouping and putting @import's in the very last group
-  FmtStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
-  EXPECT_EQ("#import \"foo.hpp\"\n"
-            "\n"
-            "#import \"b.h\"\n"
-            "#import \"c.h\"\n"
-            "#import \"foo.h\"\n"
-            "#include \"foobar\"\n"
-            "\n"
-            "#import <d/e.h>\n"
-            "#import <f/g.h>\n"
-            "\n"
-            "@import AAAA;\n"
-            "@import Base;\n"
-            "@import Foundation;\n"
-            "@import aaaa;\n"
-            "@import foundation;\n",
-            sort("#import \"b.h\"\n"
-                 "@import Foundation;\n"
-                 "@import foundation;\n"
-                 "#import \"c.h\"\n"
-                 "#import <d/e.h>\n"
-                 "@import Base;\n"
-                 "#import \"foo.hpp\"\n"
-                 "\n"
-                 "@import aaaa;\n"
-                 "#import <f/g.h>\n"
-                 "@import AAAA;\n"
-                 "#include \"foobar\"\n"
-                 "#import \"foo.h\"\n",
-                 "foo.c"));
+                 "#include \"util/bar.h\"\n"
+                 "#include \"util/foo/foo.h\" // foo<T>\n",
+                 /*FileName=*/"input.cc",
+                 /*ExpectedNumRanges=*/0));
 }
 
 TEST_F(SortIncludesTest, LeavesMainHeaderFirst) {
@@ -888,6 +805,21 @@ TEST_F(SortIncludesTest, CalculatesCorrectCursorPosition) {
   EXPECT_EQ(41u, newCursor(Code, 10));
   EXPECT_EQ(23u, newCursor(Code, 25));
   EXPECT_EQ(10u, newCursor(Code, 43));
+}
+
+TEST_F(SortIncludesTest, CalculatesCorrectCursorPositionWithRegrouping) {
+  Style.IncludeBlocks = Style.IBS_Regroup;
+  std::string Code = "#include \"b\"\n"      // Start of line: 0
+                     "\n"                    // Start of line: 13
+                     "#include \"aa\"\n"     // Start of line: 14
+                     "int i;";               // Start of line: 28
+  std::string Expected = "#include \"aa\"\n" // Start of line: 0
+                         "#include \"b\"\n"  // Start of line: 14
+                         "int i;";           // Start of line: 27
+  EXPECT_EQ(Expected, sort(Code));
+  EXPECT_EQ(12u, newCursor(Code, 26)); // Closing quote of "aa"
+  EXPECT_EQ(26u, newCursor(Code, 27)); // Newline after "aa"
+  EXPECT_EQ(27u, newCursor(Code, 28)); // Start of last line
 }
 
 TEST_F(SortIncludesTest, DeduplicateIncludes) {

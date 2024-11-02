@@ -87,7 +87,8 @@ std::error_code collectReplacementsFromDirectory(
 ///          \li false If there were conflicts.
 bool mergeAndDeduplicate(const TUReplacements &TUs, const TUDiagnostics &TUDs,
                          FileToChangesMap &FileChanges,
-                         clang::SourceManager &SM);
+                         clang::SourceManager &SM,
+                         bool IgnoreInsertConflict = false);
 
 /// Apply \c AtomicChange on File and rewrite it.
 ///

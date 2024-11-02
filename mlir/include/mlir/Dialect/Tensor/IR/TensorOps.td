@@ -489,7 +489,7 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     * dest: the tensor into which the source tensor is inserted.
     * offsets: tensor-rank number of offsets into the `dest` tensor into which
                the slice is inserted.
-    * sizes: tensor-rank number of sizes which specify the sizes of the result
+    * sizes: tensor-rank number of sizes which specify the sizes of the source
              tensor type.
     * strides: tensor-rank number of strides that specify subsampling in each
                dimension.

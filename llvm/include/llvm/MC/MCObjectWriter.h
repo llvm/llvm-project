@@ -10,6 +10,7 @@
 #define LLVM_MC_MCOBJECTWRITER_H
 
 #include "llvm/ADT/Triple.h"
+#include "llvm/MC/MCSymbol.h"
 #include <cstdint>
 
 namespace llvm {
@@ -32,6 +33,9 @@ class MCValue;
 /// should be emitted as part of writeObject().
 class MCObjectWriter {
 protected:
+  std::vector<const MCSymbol *> AddrsigSyms;
+  bool EmitAddrsigSection = false;
+
   MCObjectWriter() = default;
 
 public:
@@ -91,11 +95,15 @@ public:
   /// Tell the object writer to emit an address-significance table during
   /// writeObject(). If this function is not called, all symbols are treated as
   /// address-significant.
-  virtual void emitAddrsigSection() {}
+  void emitAddrsigSection() { EmitAddrsigSection = true; }
+
+  bool getEmitAddrsigSection() { return EmitAddrsigSection; }
 
   /// Record the given symbol in the address-significance table to be written
   /// diring writeObject().
-  virtual void addAddrsigSymbol(const MCSymbol *Sym) {}
+  void addAddrsigSymbol(const MCSymbol *Sym) { AddrsigSyms.push_back(Sym); }
+
+  std::vector<const MCSymbol *> &getAddrsigSyms() { return AddrsigSyms; }
 
   /// Write the object file and returns the number of bytes written.
   ///

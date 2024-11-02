@@ -40,11 +40,16 @@ thread #1: tid = 3842849
 
   Memory usage:
     Raw trace size: 4 KiB
-    Total approximate memory usage (excluding raw trace): 0.27 KiB
-    Average memory usage per instruction (excluding raw trace): 13.00 bytes
+    Total approximate memory usage (excluding raw trace): 1.27 KiB
+    Average memory usage per instruction (excluding raw trace): 61.76 bytes
 
   Timing:
     Decoding instructions: ''', '''s
+
+  Events:
+    Number of instructions with events: 1
+    Number of individual events: 1
+      paused: 1
 
   Errors:
     Number of TSC decoding errors: 0'''])

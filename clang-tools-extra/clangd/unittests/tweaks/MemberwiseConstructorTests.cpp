@@ -23,6 +23,8 @@ TWEAK_TEST(MemberwiseConstructor);
 
 TEST_F(MemberwiseConstructorTest, Availability) {
   EXPECT_AVAILABLE("^struct ^S ^{ int x, y; };");
+  // Verify no crashes on incomplete member fields.
+  EXPECT_UNAVAILABLE("/*error-ok*/class Forward; class ^A { Forward f;}");
   EXPECT_UNAVAILABLE("struct S { ^int ^x, y; }; struct ^S;");
   EXPECT_UNAVAILABLE("struct ^S {};");
   EXPECT_UNAVAILABLE("union ^S { int x; };");

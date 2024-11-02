@@ -137,14 +137,32 @@ ProgramTree ProgramTree::Build(const parser::FunctionSubprogram &x) {
   const auto &stmt{std::get<parser::Statement<parser::FunctionStmt>>(x.t)};
   const auto &end{std::get<parser::Statement<parser::EndFunctionStmt>>(x.t)};
   const auto &name{std::get<parser::Name>(stmt.statement.t)};
-  return BuildSubprogramTree(name, x).set_stmt(stmt).set_endStmt(end);
+  const parser::LanguageBindingSpec *bindingSpec{};
+  if (const auto &suffix{
+          std::get<std::optional<parser::Suffix>>(stmt.statement.t)}) {
+    if (suffix->binding) {
+      bindingSpec = &*suffix->binding;
+    }
+  }
+  return BuildSubprogramTree(name, x)
+      .set_stmt(stmt)
+      .set_endStmt(end)
+      .set_bindingSpec(bindingSpec);
 }
 
 ProgramTree ProgramTree::Build(const parser::SubroutineSubprogram &x) {
   const auto &stmt{std::get<parser::Statement<parser::SubroutineStmt>>(x.t)};
   const auto &end{std::get<parser::Statement<parser::EndSubroutineStmt>>(x.t)};
   const auto &name{std::get<parser::Name>(stmt.statement.t)};
-  return BuildSubprogramTree(name, x).set_stmt(stmt).set_endStmt(end);
+  const parser::LanguageBindingSpec *bindingSpec{};
+  if (const auto &binding{std::get<std::optional<parser::LanguageBindingSpec>>(
+          stmt.statement.t)}) {
+    bindingSpec = &*binding;
+  }
+  return BuildSubprogramTree(name, x)
+      .set_stmt(stmt)
+      .set_endStmt(end)
+      .set_bindingSpec(bindingSpec);
 }
 
 ProgramTree ProgramTree::Build(const parser::SeparateModuleSubprogram &x) {

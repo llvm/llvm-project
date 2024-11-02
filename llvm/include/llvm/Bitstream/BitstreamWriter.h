@@ -74,16 +74,10 @@ class BitstreamWriter {
   };
   std::vector<BlockInfo> BlockInfoRecords;
 
-  void WriteByte(unsigned char Value) {
-    Out.push_back(Value);
-    FlushToFile();
-  }
-
   void WriteWord(unsigned Value) {
     Value = support::endian::byte_swap<uint32_t, support::little>(Value);
     Out.append(reinterpret_cast<const char *>(&Value),
                reinterpret_cast<const char *>(&Value + 1));
-    FlushToFile();
   }
 
   uint64_t GetNumOfFlushedBytes() const { return FS ? FS->tell() : 0; }
@@ -114,7 +108,7 @@ public:
   /// null, \p O does not flush incrementially, but writes to disk at the end.
   ///
   /// \p FlushThreshold is the threshold (unit M) to flush \p O if \p FS is
-  /// valid.
+  /// valid. Flushing only occurs at (sub)block boundaries.
   BitstreamWriter(SmallVectorImpl<char> &O, raw_fd_stream *FS = nullptr,
                   uint32_t FlushThreshold = 512)
       : Out(O), FS(FS), FlushThreshold(FlushThreshold << 20), CurBit(0),
@@ -249,8 +243,8 @@ public:
 
     // Emit the bits with VBR encoding, NumBits-1 bits at a time.
     while (Val >= Threshold) {
-      Emit(((uint32_t)Val & ((1 << (NumBits-1))-1)) |
-           (1 << (NumBits-1)), NumBits);
+      Emit(((uint32_t)Val & ((1 << (NumBits - 1)) - 1)) | (1 << (NumBits - 1)),
+           NumBits);
       Val >>= NumBits-1;
     }
 
@@ -327,6 +321,7 @@ public:
     CurCodeSize = B.PrevCodeSize;
     CurAbbrevs = std::move(B.PrevAbbrevs);
     BlockScope.pop_back();
+    FlushToFile();
   }
 
   //===--------------------------------------------------------------------===//
@@ -472,14 +467,12 @@ public:
     FlushToWord();
 
     // Emit literal bytes.
-    for (const auto &B : Bytes) {
-      assert(isUInt<8>(B) && "Value too large to emit as byte");
-      WriteByte((unsigned char)B);
-    }
+    assert(llvm::all_of(Bytes, [](UIntTy B) { return isUInt<8>(B); }));
+    Out.append(Bytes.begin(), Bytes.end());
 
     // Align end to 32-bits.
     while (GetBufferOffset() & 3)
-      WriteByte(0);
+      Out.push_back(0);
   }
   void emitBlob(StringRef Bytes, bool ShouldEmitSize = true) {
     emitBlob(makeArrayRef((const uint8_t *)Bytes.data(), Bytes.size()),

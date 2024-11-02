@@ -801,7 +801,7 @@ static const HexagonTargetLowering &getHexagonLowering(SelectionDAG &G) {
   return static_cast<const HexagonTargetLowering&>(G.getTargetLoweringInfo());
 }
 static const HexagonSubtarget &getHexagonSubtarget(SelectionDAG &G) {
-  return static_cast<const HexagonSubtarget&>(G.getSubtarget());
+  return G.getSubtarget<HexagonSubtarget>();
 }
 
 namespace llvm {

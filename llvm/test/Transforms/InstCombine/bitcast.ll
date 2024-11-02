@@ -4,6 +4,8 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-darwin10.0.0"
 
+declare void @use_vec(<2 x i64>)
+
 ; Bitcasts between vectors and scalars are valid.
 ; PR4487
 define i32 @test1(i64 %a) {
@@ -130,20 +132,62 @@ define <4 x i32> @bitcasts_and_bitcast(<4 x i32> %a, <8 x i16> %b) {
   ret <4 x i32> %bc3
 }
 
-; The destination must have an integer element type.
-; FIXME: We can still eliminate one bitcast in this test by doing the logic op
-; in the type of the input that has an integer element type.
-
 define <4 x float> @bitcasts_and_bitcast_to_fp(<4 x float> %a, <8 x i16> %b) {
 ; CHECK-LABEL: @bitcasts_and_bitcast_to_fp(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[A:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i16> [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[BC3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x float>
+; CHECK-NEXT:    ret <4 x float> [[BC3]]
+;
+  %bc1 = bitcast <4 x float> %a to <2 x i64>
+  %bc2 = bitcast <8 x i16> %b to <2 x i64>
+  %and = and <2 x i64> %bc2, %bc1
+  %bc3 = bitcast <2 x i64> %and to <4 x float>
+  ret <4 x float> %bc3
+}
+
+define <2 x double> @bitcasts_or_bitcast_to_fp(<4 x float> %a, <8 x i16> %b) {
+; CHECK-LABEL: @bitcasts_or_bitcast_to_fp(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[A:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = or <8 x i16> [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[BC3:%.*]] = bitcast <8 x i16> [[TMP2]] to <2 x double>
+; CHECK-NEXT:    ret <2 x double> [[BC3]]
+;
+  %bc1 = bitcast <4 x float> %a to <2 x i64>
+  %bc2 = bitcast <8 x i16> %b to <2 x i64>
+  %and = or <2 x i64> %bc1, %bc2
+  %bc3 = bitcast <2 x i64> %and to <2 x double>
+  ret <2 x double> %bc3
+}
+
+define <4 x float> @bitcasts_xor_bitcast_to_fp(<2 x double> %a, <8 x i16> %b) {
+; CHECK-LABEL: @bitcasts_xor_bitcast_to_fp(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x double> [[A:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <8 x i16> [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[BC3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x float>
+; CHECK-NEXT:    ret <4 x float> [[BC3]]
+;
+  %bc1 = bitcast <8 x i16> %b to <2 x i64>
+  %bc2 = bitcast <2 x double> %a to <2 x i64>
+  %xor = xor <2 x i64> %bc2, %bc1
+  %bc3 = bitcast <2 x i64> %xor to <4 x float>
+  ret <4 x float> %bc3
+}
+
+; Negative test
+
+define <4 x float> @bitcasts_and_bitcast_to_fp_multiuse(<4 x float> %a, <8 x i16> %b) {
+; CHECK-LABEL: @bitcasts_and_bitcast_to_fp_multiuse(
 ; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x float> [[A:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[BC2:%.*]] = bitcast <8 x i16> [[B:%.*]] to <2 x i64>
+; CHECK-NEXT:    call void @use_vec(<2 x i64> [[BC2]])
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[BC2]], [[BC1]]
 ; CHECK-NEXT:    [[BC3:%.*]] = bitcast <2 x i64> [[AND]] to <4 x float>
 ; CHECK-NEXT:    ret <4 x float> [[BC3]]
 ;
   %bc1 = bitcast <4 x float> %a to <2 x i64>
   %bc2 = bitcast <8 x i16> %b to <2 x i64>
+  call void @use_vec(<2 x i64> %bc2)
   %and = and <2 x i64> %bc2, %bc1
   %bc3 = bitcast <2 x i64> %and to <4 x float>
   ret <4 x float> %bc3
@@ -358,14 +402,9 @@ define i64 @bitcast_extelt2(<4 x float> %A) {
   ret i64 %bc2
 }
 
-; TODO: This should return %A.
-
 define <2 x i32> @bitcast_extelt3(<2 x i32> %A) {
 ; CHECK-LABEL: @bitcast_extelt3(
-; CHECK-NEXT:    [[BC1:%.*]] = bitcast <2 x i32> [[A:%.*]] to <1 x i64>
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <1 x i64> [[BC1]], i64 0
-; CHECK-NEXT:    [[BC2:%.*]] = bitcast i64 [[EXT]] to <2 x i32>
-; CHECK-NEXT:    ret <2 x i32> [[BC2]]
+; CHECK-NEXT:    ret <2 x i32> [[A:%.*]]
 ;
   %bc1 = bitcast <2 x i32> %A to <1 x i64>
   %ext = extractelement <1 x i64> %bc1, i32 0
@@ -385,6 +424,59 @@ define double @bitcast_extelt4(i128 %A) {
   %ext = extractelement <2 x i64> %bc1, i32 0
   %bc2 = bitcast i64 %ext to double
   ret double %bc2
+}
+
+define <2 x i32> @bitcast_extelt5(<1 x i64> %A) {
+; CHECK-LABEL: @bitcast_extelt5(
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <1 x i64> [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[BC]]
+;
+  %ext = extractelement <1 x i64> %A, i32 0
+  %bc = bitcast i64 %ext to <2 x i32>
+  ret <2 x i32> %bc
+}
+
+define <2 x i32> @bitcast_extelt5_scalable(<vscale x 1 x i64> %A) {
+; CHECK-LABEL: @bitcast_extelt5_scalable(
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <vscale x 1 x i64> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i64 [[EXT]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[BC]]
+;
+  %ext = extractelement <vscale x 1 x i64> %A, i32 0
+  %bc = bitcast i64 %ext to <2 x i32>
+  ret <2 x i32> %bc
+}
+
+define <2 x i32> @bitcast_extelt6(<2 x i64> %A) {
+; CHECK-LABEL: @bitcast_extelt6(
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i64> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i64 [[EXT]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[BC]]
+;
+  %ext = extractelement <2 x i64> %A, i32 0
+  %bc = bitcast i64 %ext to <2 x i32>
+  ret <2 x i32> %bc
+}
+
+define double @bitcast_extelt7(<1 x i64> %A) {
+; CHECK-LABEL: @bitcast_extelt7(
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <1 x i64> [[A:%.*]] to <1 x double>
+; CHECK-NEXT:    [[BC:%.*]] = extractelement <1 x double> [[BC1]], i64 0
+; CHECK-NEXT:    ret double [[BC]]
+;
+  %ext = extractelement <1 x i64> %A, i32 0
+  %bc = bitcast i64 %ext to double
+  ret double %bc
+}
+
+define double @bitcast_extelt8(<1 x i64> %A) {
+; CHECK-LABEL: @bitcast_extelt8(
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <1 x i64> [[A:%.*]] to <1 x double>
+; CHECK-NEXT:    [[BC:%.*]] = extractelement <1 x double> [[BC1]], i64 0
+; CHECK-NEXT:    ret double [[BC]]
+;
+  %bc = bitcast <1 x i64> %A to double
+  ret double %bc
 }
 
 define <2 x i32> @test4(i32 %A, i32 %B){
@@ -429,6 +521,22 @@ define <2 x float> @test6(float %A){
   %mask20 = or i64 %tmp25, 1109917696
   %tmp35 = bitcast i64 %mask20 to <2 x float>
   ret <2 x float> %tmp35
+}
+
+; This test should not be optimized by OptimizeIntegerToVectorInsertions.
+; The bitcast from vector previously confused it.
+define <2 x i64> @int2vec_insertion_bitcast_from_vec(i64 %x) {
+; CHECK-LABEL: @int2vec_insertion_bitcast_from_vec(
+; CHECK-NEXT:    [[A:%.*]] = bitcast i64 [[X:%.*]] to <8 x i8>
+; CHECK-NEXT:    [[B:%.*]] = zext <8 x i8> [[A]] to <8 x i16>
+; CHECK-NEXT:    [[D:%.*]] = bitcast <8 x i16> [[B]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[D]]
+;
+  %a = bitcast i64 %x to <8 x i8>
+  %b = zext <8 x i8> %a to <8 x i16>
+  %c = bitcast <8 x i16> %b to i128
+  %d = bitcast i128 %c to <2 x i64>
+  ret <2 x i64> %d
 }
 
 define i64 @ISPC0(i64 %in) {

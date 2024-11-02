@@ -138,6 +138,8 @@ enum UserModeKind {
   UMK_Deep = 2
 };
 
+enum class CTUPhase1InliningKind { None, Small, All };
+
 /// Stores options for the analyzer from the command line.
 ///
 /// Some options are frontend flags (e.g.: -analyzer-output), but some are
@@ -379,6 +381,7 @@ public:
   UserModeKind getUserMode() const;
 
   ExplorationStrategyKind getExplorationStrategy() const;
+  CTUPhase1InliningKind getCTUPhase1Inlining() const;
 
   /// Returns the inter-procedural analysis mode.
   IPAKind getIPAMode() const;

@@ -34,8 +34,7 @@ StringFindStartswithCheck::StringFindStartswithCheck(StringRef Name,
 
 void StringFindStartswithCheck::registerMatchers(MatchFinder *Finder) {
   auto ZeroLiteral = integerLiteral(equals(0));
-  auto StringClassMatcher = cxxRecordDecl(hasAnyName(SmallVector<StringRef, 4>(
-      StringLikeClasses.begin(), StringLikeClasses.end())));
+  auto StringClassMatcher = cxxRecordDecl(hasAnyName(StringLikeClasses));
   auto StringType = hasUnqualifiedDesugaredType(
       recordType(hasDeclaration(StringClassMatcher)));
 

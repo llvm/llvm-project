@@ -20,11 +20,11 @@ def testSymbolTableInsert():
   with Context() as ctx:
     ctx.allow_unregistered_dialects = True
     m1 = Module.parse("""
-      func private @foo()
-      func private @bar()""")
+      func.func private @foo()
+      func.func private @bar()""")
     m2 = Module.parse("""
-      func private @qux()
-      func private @foo()
+      func.func private @qux()
+      func.func private @foo()
       "foo.bar"() : () -> ()""")
 
     symbol_table = SymbolTable(m1.operation)
@@ -92,11 +92,11 @@ def testSymbolTableInsert():
 def testSymbolTableRAUW():
   with Context() as ctx:
     m = Module.parse("""
-      func private @foo() {
+      func.func private @foo() {
         call @bar() : () -> ()
         return
       }
-      func private @bar()
+      func.func private @bar()
       """)
     foo, bar = list(m.operation.regions[0].blocks[0].operations)[0:2]
     SymbolTable.set_symbol_name(bar, "bam")
@@ -117,7 +117,7 @@ def testSymbolTableRAUW():
 def testSymbolTableVisibility():
   with Context() as ctx:
     m = Module.parse("""
-      func private @foo() {
+      func.func private @foo() {
         return
       }
       """)

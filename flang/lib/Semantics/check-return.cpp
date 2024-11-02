@@ -36,7 +36,8 @@ void ReturnStmtChecker::Leave(const parser::ReturnStmt &returnStmt) {
             IsFunction(*subprogramScope->GetSymbol()))) {
       context_.Say(
           "RETURN with expression is only allowed in SUBROUTINE subprogram"_err_en_US);
-    } else if (context_.ShouldWarn(common::LanguageFeature::ProgramReturn)) {
+    } else if (subprogramScope->kind() == Scope::Kind::MainProgram &&
+        context_.ShouldWarn(common::LanguageFeature::ProgramReturn)) {
       context_.Say("RETURN should not appear in a main program"_port_en_US);
     }
   }

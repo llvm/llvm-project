@@ -62,6 +62,6 @@
 @end
 
 @protocol P
-- (int)test:(int)param, ..; // expected-warning{{type specifier missing}} \
+- (int)test:(int)param, ..; // expected-error{{type specifier missing}} \
                       // expected-error{{expected ';' after method prototype}}
 @end

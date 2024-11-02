@@ -4,17 +4,17 @@
 // CHECK-LABEL: func @empty() {
 // CHECK-NEXT:  llvm.return
 // CHECK-NEXT: }
-func @empty() {
+func.func @empty() {
 ^bb0:
   return
 }
 
 // CHECK-LABEL: llvm.func @body(i64)
-func private @body(index)
+func.func private @body(index)
 
 // CHECK-LABEL: func @simple_loop() {
 // CHECK32-LABEL: func @simple_loop() {
-func @simple_loop() {
+func.func @simple_loop() {
 ^bb0:
 // CHECK-NEXT:  llvm.br ^bb1
 // CHECK32-NEXT:  llvm.br ^bb1
@@ -69,7 +69,7 @@ func @simple_loop() {
 // CHECK-NEXT:  llvm.call @simple_loop() : () -> ()
 // CHECK-NEXT:  llvm.return
 // CHECK-NEXT: }
-func @simple_caller() {
+func.func @simple_caller() {
 ^bb0:
   call @simple_loop() : () -> ()
   return
@@ -77,7 +77,7 @@ func @simple_caller() {
 
 // Check that function call attributes persist during conversion.
 // CHECK-LABEL: @call_with_attributes
-func @call_with_attributes() {
+func.func @call_with_attributes() {
   // CHECK: llvm.call @simple_loop() {baz = [1, 2, 3, 4], foo = "bar"} : () -> ()
   call @simple_loop() {foo="bar", baz=[1,2,3,4]} : () -> ()
   return
@@ -88,7 +88,7 @@ func @call_with_attributes() {
 // CHECK-NEXT:  llvm.call @more_imperfectly_nested_loops() : () -> ()
 // CHECK-NEXT:  llvm.return
 // CHECK-NEXT: }
-func @ml_caller() {
+func.func @ml_caller() {
 ^bb0:
   call @simple_loop() : () -> ()
   call @more_imperfectly_nested_loops() : () -> ()
@@ -97,10 +97,10 @@ func @ml_caller() {
 
 // CHECK-LABEL: llvm.func @body_args(i64) -> i64
 // CHECK32-LABEL: llvm.func @body_args(i32) -> i32
-func private @body_args(index) -> index
+func.func private @body_args(index) -> index
 // CHECK-LABEL: llvm.func @other(i64, i32) -> i32
 // CHECK32-LABEL: llvm.func @other(i32, i32) -> i32
-func private @other(index, i32) -> i32
+func.func private @other(index, i32) -> i32
 
 // CHECK-LABEL: func @func_args(%arg0: i32, %arg1: i32) -> i32 {
 // CHECK-NEXT:  {{.*}} = llvm.mlir.constant(0 : i32) : i32
@@ -108,7 +108,7 @@ func private @other(index, i32) -> i32
 // CHECK32-LABEL: func @func_args(%arg0: i32, %arg1: i32) -> i32 {
 // CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(0 : i32) : i32
 // CHECK32-NEXT:  llvm.br ^bb1
-func @func_args(i32, i32) -> i32 {
+func.func @func_args(i32, i32) -> i32 {
 ^bb0(%arg0: i32, %arg1: i32):
   %c0_i32 = arith.constant 0 : i32
   cf.br ^bb1
@@ -177,19 +177,19 @@ func @func_args(i32, i32) -> i32 {
 
 // CHECK-LABEL: llvm.func @pre(i64)
 // CHECK32-LABEL: llvm.func @pre(i32)
-func private @pre(index)
+func.func private @pre(index)
 
 // CHECK-LABEL: llvm.func @body2(i64, i64)
 // CHECK32-LABEL: llvm.func @body2(i32, i32)
-func private @body2(index, index)
+func.func private @body2(index, index)
 
 // CHECK-LABEL: llvm.func @post(i64)
 // CHECK32-LABEL: llvm.func @post(i32)
-func private @post(index)
+func.func private @post(index)
 
 // CHECK-LABEL: func @imperfectly_nested_loops() {
 // CHECK-NEXT:  llvm.br ^bb1
-func @imperfectly_nested_loops() {
+func.func @imperfectly_nested_loops() {
 ^bb0:
   cf.br ^bb1
 
@@ -261,10 +261,10 @@ func @imperfectly_nested_loops() {
 }
 
 // CHECK-LABEL: llvm.func @mid(i64)
-func private @mid(index)
+func.func private @mid(index)
 
 // CHECK-LABEL: llvm.func @body3(i64, i64)
-func private @body3(index, index)
+func.func private @body3(index, index)
 
 // A complete function transformation check.
 // CHECK-LABEL: func @more_imperfectly_nested_loops() {
@@ -314,7 +314,7 @@ func private @body3(index, index)
 // CHECK-NEXT:^bb12:	// pred: ^bb2
 // CHECK-NEXT:  llvm.return
 // CHECK-NEXT: }
-func @more_imperfectly_nested_loops() {
+func.func @more_imperfectly_nested_loops() {
 ^bb0:
   cf.br ^bb1
 ^bb1:	// pred: ^bb0
@@ -364,22 +364,22 @@ func @more_imperfectly_nested_loops() {
 }
 
 // CHECK-LABEL: llvm.func @get_i64() -> i64
-func private @get_i64() -> (i64)
+func.func private @get_i64() -> (i64)
 // CHECK-LABEL: llvm.func @get_f32() -> f32
-func private @get_f32() -> (f32)
+func.func private @get_f32() -> (f32)
 // CHECK-LABEL: llvm.func @get_c16() -> !llvm.struct<(f16, f16)>
-func private @get_c16() -> (complex<f16>)
+func.func private @get_c16() -> (complex<f16>)
 // CHECK-LABEL: llvm.func @get_c32() -> !llvm.struct<(f32, f32)>
-func private @get_c32() -> (complex<f32>)
+func.func private @get_c32() -> (complex<f32>)
 // CHECK-LABEL: llvm.func @get_c64() -> !llvm.struct<(f64, f64)>
-func private @get_c64() -> (complex<f64>)
+func.func private @get_c64() -> (complex<f64>)
 // CHECK-LABEL: llvm.func @get_memref() -> !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<4 x i64>, array<4 x i64>)>
 // CHECK32-LABEL: llvm.func @get_memref() -> !llvm.struct<(ptr<f32>, ptr<f32>, i32, array<4 x i32>, array<4 x i32>)>
-func private @get_memref() -> (memref<42x?x10x?xf32>)
+func.func private @get_memref() -> (memref<42x?x10x?xf32>)
 
 // CHECK-LABEL: llvm.func @multireturn() -> !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i64, array<4 x i64>, array<4 x i64>)>)> {
 // CHECK32-LABEL: llvm.func @multireturn() -> !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i32, array<4 x i32>, array<4 x i32>)>)> {
-func @multireturn() -> (i64, f32, memref<42x?x10x?xf32>) {
+func.func @multireturn() -> (i64, f32, memref<42x?x10x?xf32>) {
 ^bb0:
 // CHECK-NEXT:  {{.*}} = llvm.call @get_i64() : () -> i64
 // CHECK-NEXT:  {{.*}} = llvm.call @get_f32() : () -> f32
@@ -406,7 +406,7 @@ func @multireturn() -> (i64, f32, memref<42x?x10x?xf32>) {
 
 // CHECK-LABEL: llvm.func @multireturn_caller() {
 // CHECK32-LABEL: llvm.func @multireturn_caller() {
-func @multireturn_caller() {
+func.func @multireturn_caller() {
 ^bb0:
 // CHECK-NEXT:  {{.*}} = llvm.call @multireturn() : () -> !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i64, array<4 x i64>, array<4 x i64>)>)>
 // CHECK-NEXT:  {{.*}} = llvm.extractvalue {{.*}}[0] : !llvm.struct<(i64, f32, struct<(ptr<f32>, ptr<f32>, i64, array<4 x i64>, array<4 x i64>)>)>
@@ -428,7 +428,7 @@ func @multireturn_caller() {
 }
 
 // CHECK-LABEL: @dfs_block_order
-func @dfs_block_order(%arg0: i32) -> (i32) {
+func.func @dfs_block_order(%arg0: i32) -> (i32) {
 // CHECK-NEXT:  %[[CST:.*]] = llvm.mlir.constant(42 : i32) : i32
   %0 = arith.constant 42 : i32
 // CHECK-NEXT:  llvm.br ^bb2
@@ -451,7 +451,7 @@ func @dfs_block_order(%arg0: i32) -> (i32) {
 
 // CHECK-LABEL: func @ceilf(
 // CHECK-SAME: f32
-func @ceilf(%arg0 : f32) {
+func.func @ceilf(%arg0 : f32) {
   // CHECK: "llvm.intr.ceil"(%arg0) : (f32) -> f32
   %0 = math.ceil %arg0 : f32
   func.return
@@ -461,7 +461,7 @@ func @ceilf(%arg0 : f32) {
 
 // CHECK-LABEL: func @floorf(
 // CHECK-SAME: f32
-func @floorf(%arg0 : f32) {
+func.func @floorf(%arg0 : f32) {
   // CHECK: "llvm.intr.floor"(%arg0) : (f32) -> f32
   %0 = math.floor %arg0 : f32
   func.return
@@ -473,7 +473,7 @@ func @floorf(%arg0 : f32) {
 // CHECK: llvm.func @abort()
 // CHECK-LABEL: @assert_test_function
 // CHECK-SAME:  (%[[ARG:.*]]: i1)
-func @assert_test_function(%arg : i1) {
+func.func @assert_test_function(%arg : i1) {
   // CHECK: llvm.cond_br %[[ARG]], ^[[CONTINUATION_BLOCK:.*]], ^[[FAILURE_BLOCK:.*]]
   // CHECK: ^[[CONTINUATION_BLOCK]]:
   // CHECK: llvm.return
@@ -490,19 +490,19 @@ func @assert_test_function(%arg : i1) {
 // nullptr result type.
 
 // CHECK-LABEL: @call_zero_result_func
-func @call_zero_result_func() {
+func.func @call_zero_result_func() {
   // CHECK: call @zero_result_func
   call @zero_result_func() : () -> ()
   return
 }
-func private @zero_result_func()
+func.func private @zero_result_func()
 
 // -----
 
 // CHECK-LABEL: func @fmaf(
 // CHECK-SAME: %[[ARG0:.*]]: f32
 // CHECK-SAME: %[[ARG1:.*]]: vector<4xf32>
-func @fmaf(%arg0: f32, %arg1: vector<4xf32>) {
+func.func @fmaf(%arg0: f32, %arg1: vector<4xf32>) {
   // CHECK: %[[S:.*]] = "llvm.intr.fma"(%[[ARG0]], %[[ARG0]], %[[ARG0]]) : (f32, f32, f32) -> f32
   %0 = math.fma %arg0, %arg0, %arg0 : f32
   // CHECK: %[[V:.*]] = "llvm.intr.fma"(%[[ARG1]], %[[ARG1]], %[[ARG1]]) : (vector<4xf32>, vector<4xf32>, vector<4xf32>) -> vector<4xf32>
@@ -513,7 +513,7 @@ func @fmaf(%arg0: f32, %arg1: vector<4xf32>) {
 // -----
 
 // CHECK-LABEL: func @switchi8(
-func @switchi8(%arg0 : i8) -> i32 {
+func.func @switchi8(%arg0 : i8) -> i32 {
   cf.switch %arg0 : i8, [
     default: ^bb1,
     42: ^bb1,

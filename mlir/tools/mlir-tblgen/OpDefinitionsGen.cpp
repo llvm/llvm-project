@@ -1631,7 +1631,7 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder() {
 
   // Result types
   body << formatv(R"(
-  ::mlir::SmallVector<::mlir::Type, 2> inferredReturnTypes;
+  ::llvm::SmallVector<::mlir::Type, 2> inferredReturnTypes;
   if (::mlir::succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
           {1}.location, operands,
           {1}.attributes.getDictionary({1}.getContext()),
@@ -1651,31 +1651,40 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder() {
 }
 
 void OpEmitter::genUseOperandAsResultTypeSeparateParamBuilder() {
-  SmallVector<MethodParameter> paramList;
-  SmallVector<std::string, 4> resultNames;
-  llvm::StringSet<> inferredAttributes;
-  buildParamList(paramList, inferredAttributes, resultNames,
-                 TypeParamKind::None);
+  auto emit = [&](AttrParamKind attrType) {
+    SmallVector<MethodParameter> paramList;
+    SmallVector<std::string, 4> resultNames;
+    llvm::StringSet<> inferredAttributes;
+    buildParamList(paramList, inferredAttributes, resultNames,
+                   TypeParamKind::None, attrType);
 
-  auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
-  // If the builder is redundant, skip generating the method
-  if (!m)
-    return;
-  auto &body = m->body();
-  genCodeForAddingArgAndRegionForBuilder(body, inferredAttributes);
+    auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
+    // If the builder is redundant, skip generating the method
+    if (!m)
+      return;
+    auto &body = m->body();
+    genCodeForAddingArgAndRegionForBuilder(body, inferredAttributes,
+                                           /*isRawValueAttr=*/attrType ==
+                                               AttrParamKind::UnwrappedValue);
 
-  auto numResults = op.getNumResults();
-  if (numResults == 0)
-    return;
+    auto numResults = op.getNumResults();
+    if (numResults == 0)
+      return;
 
-  // Push all result types to the operation state
-  const char *index = op.getOperand(0).isVariadic() ? ".front()" : "";
-  std::string resultType =
-      formatv("{0}{1}.getType()", getArgumentName(op, 0), index).str();
-  body << "  " << builderOpState << ".addTypes({" << resultType;
-  for (int i = 1; i != numResults; ++i)
-    body << ", " << resultType;
-  body << "});\n\n";
+    // Push all result types to the operation state
+    const char *index = op.getOperand(0).isVariadic() ? ".front()" : "";
+    std::string resultType =
+        formatv("{0}{1}.getType()", getArgumentName(op, 0), index).str();
+    body << "  " << builderOpState << ".addTypes({" << resultType;
+    for (int i = 1; i != numResults; ++i)
+      body << ", " << resultType;
+    body << "});\n\n";
+  };
+
+  emit(AttrParamKind::WrappedAttr);
+  // Generate additional builder(s) if any attributes can be "unwrapped"
+  if (canGenerateUnwrappedBuilder(op))
+    emit(AttrParamKind::UnwrappedValue);
 }
 
 void OpEmitter::genUseAttrAsResultTypeBuilder() {
@@ -2262,7 +2271,7 @@ void OpEmitter::genSideEffectInterfaceMethods() {
 
   for (auto &it : interfaceEffects) {
     // Generate the 'getEffects' method.
-    std::string type = llvm::formatv("::mlir::SmallVectorImpl<::mlir::"
+    std::string type = llvm::formatv("::llvm::SmallVectorImpl<::mlir::"
                                      "SideEffects::EffectInstance<{0}>> &",
                                      it.first())
                            .str();
@@ -2327,23 +2336,60 @@ void OpEmitter::genTypeInterfaceMethods() {
   fctx.withBuilder("odsBuilder");
   body << "  ::mlir::Builder odsBuilder(context);\n";
 
-  auto emitType = [&](const tblgen::Operator::ArgOrType &type) -> MethodBody & {
-    if (!type.isArg())
-      return body << tgfmt(*type.getType().getBuilderCall(), &fctx);
-    auto argIndex = type.getArg();
-    assert(!op.getArg(argIndex).is<NamedAttribute *>());
-    auto arg = op.getArgToOperandOrAttribute(argIndex);
-    if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand)
-      return body << "operands[" << arg.operandOrAttributeIndex()
-                  << "].getType()";
-    return body << "attributes[" << arg.operandOrAttributeIndex()
-                << "].getType()";
-  };
-
+  // Preprocess the result types and build all of the types used during
+  // inferrence. This limits the amount of duplicated work when a type is used
+  // to infer multiple others.
+  llvm::DenseMap<Constraint, int> constraintsTypes;
+  llvm::DenseMap<int, int> argumentsTypes;
+  int inferredTypeIdx = 0;
   for (int i = 0, e = op.getNumResults(); i != e; ++i) {
-    body << "  inferredReturnTypes[" << i << "] = ";
+    auto type = op.getSameTypeAsResult(i).front();
+
+    // If the type isn't an argument, it refers to a buildable type.
+    if (!type.isArg()) {
+      auto it = constraintsTypes.try_emplace(type.getType(), inferredTypeIdx);
+      if (!it.second)
+        continue;
+
+      // If we haven't seen this constraint, generate a variable for it.
+      body << "  ::mlir::Type odsInferredType" << inferredTypeIdx++ << " = "
+           << tgfmt(*type.getType().getBuilderCall(), &fctx) << ";\n";
+      continue;
+    }
+
+    // Otherwise, this is an argument.
+    int argIndex = type.getArg();
+    auto it = argumentsTypes.try_emplace(argIndex, inferredTypeIdx);
+    if (!it.second)
+      continue;
+    body << "  ::mlir::Type odsInferredType" << inferredTypeIdx++ << " = ";
+
+    // If this is an operand, just index into operand list to access the type.
+    auto arg = op.getArgToOperandOrAttribute(argIndex);
+    if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand) {
+      body << "operands[" << arg.operandOrAttributeIndex() << "].getType()";
+
+      // If this is an attribute, index into the attribute dictionary.
+    } else {
+      auto *attr =
+          op.getArg(arg.operandOrAttributeIndex()).get<NamedAttribute *>();
+      body << "attributes.get(\"" << attr->name << "\").getType()";
+    }
+    body << ";\n";
+  }
+
+  // Perform a second pass that handles assigning the inferred types to the
+  // results.
+  for (int i = 0, e = op.getNumResults(); i != e; ++i) {
     auto types = op.getSameTypeAsResult(i);
-    emitType(types[0]) << ";\n";
+
+    // Append the inferred type.
+    auto type = types.front();
+    body << "  inferredReturnTypes[" << i << "] = odsInferredType"
+         << (type.isArg() ? argumentsTypes[type.getArg()]
+                          : constraintsTypes[type.getType()])
+         << ";\n";
+
     if (types.size() == 1)
       continue;
     // TODO: We could verify equality here, but skipping that for verification.
@@ -2601,7 +2647,7 @@ static void addSizeCountTrait(OpClass &opClass, StringRef traitKind,
   }
   switch (numTotal) {
   case 0:
-    opClass.addTrait("::mlir::OpTrait::Zero" + traitKind);
+    opClass.addTrait("::mlir::OpTrait::Zero" + traitKind + "s");
     break;
   case 1:
     opClass.addTrait("::mlir::OpTrait::One" + traitKind);
@@ -2641,26 +2687,7 @@ void OpEmitter::genTraits() {
   int numVariadicOperands = op.getNumVariableLengthOperands();
 
   // Add operand size trait.
-  if (numVariadicOperands != 0) {
-    if (numOperands == numVariadicOperands)
-      opClass.addTrait("::mlir::OpTrait::VariadicOperands");
-    else
-      opClass.addTrait("::mlir::OpTrait::AtLeastNOperands<" +
-                       Twine(numOperands - numVariadicOperands) + ">::Impl");
-  } else {
-    switch (numOperands) {
-    case 0:
-      opClass.addTrait("::mlir::OpTrait::ZeroOperands");
-      break;
-    case 1:
-      opClass.addTrait("::mlir::OpTrait::OneOperand");
-      break;
-    default:
-      opClass.addTrait("::mlir::OpTrait::NOperands<" + Twine(numOperands) +
-                       ">::Impl");
-      break;
-    }
-  }
+  addSizeCountTrait(opClass, "Operand", numOperands, numVariadicOperands);
 
   // The op traits defined internal are ensured that they can be verified
   // earlier.

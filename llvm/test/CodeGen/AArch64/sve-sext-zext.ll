@@ -326,3 +326,24 @@ define <vscale x 16 x i64> @zext_b_to_d(<vscale x 16 x i8> %a) {
   %ext = zext <vscale x 16 x i8> %a to <vscale x 16 x i64>
   ret <vscale x 16 x i64> %ext
 }
+
+; Extending non power-of-two types
+
+define <vscale x 2 x i64> @sext_i18_i64(<vscale x 2 x i18> %a) {
+; CHECK-LABEL: sext_i18_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.d, z0.d, #46
+; CHECK-NEXT:    asr z0.d, z0.d, #46
+; CHECK-NEXT:    ret
+  %r = sext <vscale x 2 x i18> %a to <vscale x 2 x i64>
+  ret <vscale x 2 x i64> %r
+}
+
+define <vscale x 2 x i64> @zext_i18_i64(<vscale x 2 x i18> %a) {
+; CHECK-LABEL: zext_i18_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and z0.d, z0.d, #0x3ffff
+; CHECK-NEXT:    ret
+  %r = zext <vscale x 2 x i18> %a to <vscale x 2 x i64>
+  ret <vscale x 2 x i64> %r
+}

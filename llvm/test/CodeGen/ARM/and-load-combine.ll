@@ -414,35 +414,35 @@ entry:
 define arm_aapcscc zeroext i1 @cmp_and8_short_int(i16* nocapture readonly %a, i32* nocapture readonly %b) {
 ; ARM-LABEL: cmp_and8_short_int:
 ; ARM:       @ %bb.0: @ %entry
-; ARM-NEXT:    ldrb r1, [r1]
 ; ARM-NEXT:    ldrb r0, [r0]
-; ARM-NEXT:    and r0, r0, r1
+; ARM-NEXT:    ldr r1, [r1]
+; ARM-NEXT:    and r0, r1, r0
 ; ARM-NEXT:    clz r0, r0
 ; ARM-NEXT:    lsr r0, r0, #5
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: cmp_and8_short_int:
 ; ARMEB:       @ %bb.0: @ %entry
-; ARMEB-NEXT:    ldrb r1, [r1, #3]
 ; ARMEB-NEXT:    ldrb r0, [r0, #1]
-; ARMEB-NEXT:    and r0, r0, r1
+; ARMEB-NEXT:    ldr r1, [r1]
+; ARMEB-NEXT:    and r0, r1, r0
 ; ARMEB-NEXT:    clz r0, r0
 ; ARMEB-NEXT:    lsr r0, r0, #5
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: cmp_and8_short_int:
 ; THUMB1:       @ %bb.0: @ %entry
-; THUMB1-NEXT:    ldrb r1, [r1]
-; THUMB1-NEXT:    ldrb r2, [r0]
-; THUMB1-NEXT:    ands r2, r1
-; THUMB1-NEXT:    rsbs r0, r2, #0
-; THUMB1-NEXT:    adcs r0, r2
+; THUMB1-NEXT:    ldrb r0, [r0]
+; THUMB1-NEXT:    ldr r1, [r1]
+; THUMB1-NEXT:    ands r1, r0
+; THUMB1-NEXT:    rsbs r0, r1, #0
+; THUMB1-NEXT:    adcs r0, r1
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: cmp_and8_short_int:
 ; THUMB2:       @ %bb.0: @ %entry
-; THUMB2-NEXT:    ldrb r1, [r1]
 ; THUMB2-NEXT:    ldrb r0, [r0]
+; THUMB2-NEXT:    ldr r1, [r1]
 ; THUMB2-NEXT:    ands r0, r1
 ; THUMB2-NEXT:    clz r0, r0
 ; THUMB2-NEXT:    lsrs r0, r0, #5

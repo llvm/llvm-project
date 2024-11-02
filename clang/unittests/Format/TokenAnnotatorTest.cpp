@@ -78,6 +78,102 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_EQ(Tokens.size(), 21u) << Tokens;
   EXPECT_TOKEN(Tokens[10], tok::ampamp, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[11], tok::star, TT_UnaryOperator);
+
+  Tokens = annotate("case *x:");
+  EXPECT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::star, TT_UnaryOperator);
+  Tokens = annotate("case &x:");
+  EXPECT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::amp, TT_UnaryOperator);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
+  auto Tokens = annotate("x - 0");
+  ASSERT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::minus, TT_BinaryOperator);
+  Tokens = annotate("0 + 0");
+  ASSERT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::plus, TT_BinaryOperator);
+  Tokens = annotate("x + +0");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::plus, TT_UnaryOperator);
+  Tokens = annotate("x ? -0 : +0");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::minus, TT_UnaryOperator);
+  EXPECT_TOKEN(Tokens[5], tok::plus, TT_UnaryOperator);
+  Tokens = annotate("(-0)");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::minus, TT_UnaryOperator);
+  Tokens = annotate("0, -0");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::minus, TT_UnaryOperator);
+  Tokens = annotate("for (; -1;) {\n}");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::minus, TT_UnaryOperator);
+  Tokens = annotate("x = -1;");
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::minus, TT_UnaryOperator);
+  Tokens = annotate("x[-1]");
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::minus, TT_UnaryOperator);
+  Tokens = annotate("x = {-1};");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::minus, TT_UnaryOperator);
+  Tokens = annotate("case -x:");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::minus, TT_UnaryOperator);
+  Tokens = annotate("co_await -x;");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::minus, TT_UnaryOperator);
+  Tokens = annotate("co_return -x;");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::minus, TT_UnaryOperator);
+  Tokens = annotate("co_yield -x;");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::minus, TT_UnaryOperator);
+  Tokens = annotate("delete -x;");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::minus, TT_UnaryOperator);
+  Tokens = annotate("return -x;");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::minus, TT_UnaryOperator);
+  Tokens = annotate("throw -x;");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::minus, TT_UnaryOperator);
+  Tokens = annotate("sizeof -x");
+  ASSERT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::minus, TT_UnaryOperator);
+  Tokens = annotate("co_await +x;");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::plus, TT_UnaryOperator);
+  Tokens = annotate("co_return +x;");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::plus, TT_UnaryOperator);
+  Tokens = annotate("co_yield +x;");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::plus, TT_UnaryOperator);
+  Tokens = annotate("delete +x;");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::plus, TT_UnaryOperator);
+  Tokens = annotate("return +x;");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::plus, TT_UnaryOperator);
+  Tokens = annotate("throw +x;");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::plus, TT_UnaryOperator);
+  Tokens = annotate("sizeof +x");
+  ASSERT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::plus, TT_UnaryOperator);
+  Tokens = annotate("(int)-x");
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::minus, TT_UnaryOperator);
+  Tokens = annotate("(-x)");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::minus, TT_UnaryOperator);
+  Tokens = annotate("!+x");
+  ASSERT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::exclaim, TT_UnaryOperator);
+  EXPECT_TOKEN(Tokens[1], tok::plus, TT_UnaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsClasses) {
@@ -294,6 +390,18 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   EXPECT_TOKEN(Tokens[21], tok::r_brace, TT_Unknown);
   EXPECT_EQ(Tokens[21]->MatchingParen, Tokens[15]);
   EXPECT_TRUE(Tokens[21]->ClosesRequiresClause);
+
+  Tokens =
+      annotate("template <class A, class B> concept C ="
+               "std::same_as<std::iter_value_t<A>, std::iter_value_t<B>>;");
+  ASSERT_EQ(Tokens.size(), 31u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::kw_concept, TT_Unknown);
+  EXPECT_TOKEN(Tokens[14], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[18], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[20], tok::greater, TT_TemplateCloser);
+  EXPECT_TOKEN(Tokens[25], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[27], tok::greater, TT_TemplateCloser);
+  EXPECT_TOKEN(Tokens[28], tok::greater, TT_TemplateCloser);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
@@ -401,13 +509,15 @@ TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
             NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
       << ConstrainedTokens;
 
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I)
-    if (I < NumberOfTokensBeforeRequires)
+  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
+    if (I < NumberOfTokensBeforeRequires) {
       EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    else
+    } else {
       EXPECT_EQ(*BaseTokens[I],
                 *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
           << I;
+    }
+  }
 
   BaseTokens = annotate("template<typename T>\n"
                         "struct Bar;");
@@ -421,13 +531,15 @@ TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
             NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
       << ConstrainedTokens;
 
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I)
-    if (I < NumberOfTokensBeforeRequires)
+  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
+    if (I < NumberOfTokensBeforeRequires) {
       EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    else
+    } else {
       EXPECT_EQ(*BaseTokens[I],
                 *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
           << I;
+    }
+  }
 
   BaseTokens = annotate("template<typename T>\n"
                         "struct Bar {"
@@ -447,13 +559,15 @@ TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
             NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
       << ConstrainedTokens;
 
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I)
-    if (I < NumberOfTokensBeforeRequires)
+  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
+    if (I < NumberOfTokensBeforeRequires) {
       EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    else
+    } else {
       EXPECT_EQ(*BaseTokens[I],
                 *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
           << I;
+    }
+  }
 
   BaseTokens = annotate("template<typename T>\n"
                         "Bar(T) -> Bar<T>;");
@@ -467,13 +581,15 @@ TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
             NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
       << ConstrainedTokens;
 
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I)
-    if (I < NumberOfTokensBeforeRequires)
+  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
+    if (I < NumberOfTokensBeforeRequires) {
       EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    else
+    } else {
       EXPECT_EQ(*BaseTokens[I],
                 *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
           << I;
+    }
+  }
 
   BaseTokens = annotate("template<typename T>\n"
                         "T foo();");
@@ -487,13 +603,15 @@ TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
             NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
       << ConstrainedTokens;
 
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I)
-    if (I < NumberOfTokensBeforeRequires)
+  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
+    if (I < NumberOfTokensBeforeRequires) {
       EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    else
+    } else {
       EXPECT_EQ(*BaseTokens[I],
                 *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
           << I;
+    }
+  }
 
   BaseTokens = annotate("template<typename T>\n"
                         "T foo() {\n"
@@ -513,13 +631,15 @@ TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
             NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
       << ConstrainedTokens;
 
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I)
-    if (I < NumberOfTokensBeforeRequires)
+  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
+    if (I < NumberOfTokensBeforeRequires) {
       EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    else
+    } else {
       EXPECT_EQ(*BaseTokens[I],
                 *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
           << I;
+    }
+  }
 
   BaseTokens = annotate("template<typename T>\n"
                         "T foo();");
@@ -533,13 +653,15 @@ TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
             NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
       << ConstrainedTokens;
 
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I)
-    if (I < NumberOfTokensBeforeRequires)
+  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
+    if (I < NumberOfTokensBeforeRequires) {
       EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    else
+    } else {
       EXPECT_EQ(*BaseTokens[I],
                 *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
           << I;
+    }
+  }
 
   BaseTokens = annotate("template<typename T>\n"
                         "T foo() {\n"
@@ -558,13 +680,15 @@ TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
             NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
       << ConstrainedTokens;
 
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I)
-    if (I < NumberOfTokensBeforeRequires)
+  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
+    if (I < NumberOfTokensBeforeRequires) {
       EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    else
+    } else {
       EXPECT_EQ(*BaseTokens[I],
                 *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
           << I;
+    }
+  }
 
   BaseTokens = annotate("template<typename T>\n"
                         "Bar(T) -> Bar<typename T::I>;");
@@ -582,13 +706,15 @@ TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
             NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
       << ConstrainedTokens;
 
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I)
-    if (I < NumberOfTokensBeforeRequires)
+  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
+    if (I < NumberOfTokensBeforeRequires) {
       EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    else
+    } else {
       EXPECT_EQ(*BaseTokens[I],
                 *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
           << I;
+    }
+  }
 
   BaseTokens = annotate("struct [[nodiscard]] zero_t {\n"
                         "  template<class T>\n"
@@ -611,13 +737,15 @@ TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
             NumberOfBaseTokens + NumberOfAdditionalRequiresClauseTokens)
       << ConstrainedTokens;
 
-  for (auto I = 0u; I < NumberOfBaseTokens; ++I)
-    if (I < NumberOfTokensBeforeRequires)
+  for (auto I = 0u; I < NumberOfBaseTokens; ++I) {
+    if (I < NumberOfTokensBeforeRequires) {
       EXPECT_EQ(*BaseTokens[I], *ConstrainedTokens[I]) << I;
-    else
+    } else {
       EXPECT_EQ(*BaseTokens[I],
                 *ConstrainedTokens[I + NumberOfAdditionalRequiresClauseTokens])
           << I;
+    }
+  }
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsAsm) {

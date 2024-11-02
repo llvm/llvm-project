@@ -72,6 +72,16 @@ public:
     return SimplifySelectInst(C, True, False, SQ);
   }
 
+  Value *FoldExtractValue(Value *Agg,
+                          ArrayRef<unsigned> IdxList) const override {
+    return SimplifyExtractValueInst(Agg, IdxList, SQ);
+  };
+
+  Value *FoldInsertValue(Value *Agg, Value *Val,
+                         ArrayRef<unsigned> IdxList) const override {
+    return SimplifyInsertValueInst(Agg, Val, IdxList, SQ);
+  }
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -236,16 +246,6 @@ public:
   Value *CreateShuffleVector(Constant *V1, Constant *V2,
                              ArrayRef<int> Mask) const override {
     return ConstFolder.CreateShuffleVector(V1, V2, Mask);
-  }
-
-  Value *CreateExtractValue(Constant *Agg,
-                            ArrayRef<unsigned> IdxList) const override {
-    return ConstFolder.CreateExtractValue(Agg, IdxList);
-  }
-
-  Value *CreateInsertValue(Constant *Agg, Constant *Val,
-                           ArrayRef<unsigned> IdxList) const override {
-    return ConstFolder.CreateInsertValue(Agg, Val, IdxList);
   }
 };
 

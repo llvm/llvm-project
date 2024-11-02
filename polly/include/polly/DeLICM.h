@@ -31,14 +31,14 @@ namespace polly {
 llvm::Pass *createDeLICMWrapperPass();
 llvm::Pass *createDeLICMPrinterLegacyPass(llvm::raw_ostream &OS);
 
-struct DeLICMPass : llvm::PassInfoMixin<DeLICMPass> {
+struct DeLICMPass final : llvm::PassInfoMixin<DeLICMPass> {
   DeLICMPass() {}
 
   llvm::PreservedAnalyses run(Scop &S, ScopAnalysisManager &SAM,
                               ScopStandardAnalysisResults &SAR, SPMUpdater &U);
 };
 
-struct DeLICMPrinterPass : llvm::PassInfoMixin<DeLICMPrinterPass> {
+struct DeLICMPrinterPass final : llvm::PassInfoMixin<DeLICMPrinterPass> {
   DeLICMPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Scop &S, ScopAnalysisManager &,

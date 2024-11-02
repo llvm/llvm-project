@@ -6,9 +6,9 @@
 // RUN: fir-opt --array-value-copy %s | FileCheck %s
 
 
-!t_with_alloc_comp = type !fir.type<t{i:!fir.box<!fir.heap<!fir.array<?xi32>>>}>
-func private @custom_assign(!fir.ref<!t_with_alloc_comp>, !fir.ref<!t_with_alloc_comp>)
-func @test_overlap_with_alloc_components(%arg0: !fir.ref<!fir.array<10x!t_with_alloc_comp>>) {
+!t_with_alloc_comp = !fir.type<t{i:!fir.box<!fir.heap<!fir.array<?xi32>>>}>
+func.func private @custom_assign(!fir.ref<!t_with_alloc_comp>, !fir.ref<!t_with_alloc_comp>)
+func.func @test_overlap_with_alloc_components(%arg0: !fir.ref<!fir.array<10x!t_with_alloc_comp>>) {
   %0 = fir.alloca !fir.box<!t_with_alloc_comp>
   %c10 = arith.constant 10 : index
   %c9 = arith.constant 9 : index

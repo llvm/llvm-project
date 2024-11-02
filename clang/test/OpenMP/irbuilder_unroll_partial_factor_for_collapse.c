@@ -106,12 +106,12 @@
 // CHECK-NEXT:    %[[TMP15:.+]] = load i32, i32* %[[DOTUNROLL_INNER_IV_J]], align 4
 // CHECK-NEXT:    %[[TMP16:.+]] = load i32, i32* %[[DOTUNROLLED_IV_J7]], align 4
 // CHECK-NEXT:    %[[ADD21:.+]] = add nsw i32 %[[TMP16]], 4
-// CHECK-NEXT:    %[[CMP22:.+]] = icmp sle i32 %[[TMP15]], %[[ADD21]]
+// CHECK-NEXT:    %[[CMP22:.+]] = icmp slt i32 %[[TMP15]], %[[ADD21]]
 // CHECK-NEXT:    br i1 %[[CMP22]], label %[[LAND_RHS:.+]], label %[[LAND_END:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[LAND_RHS]]:
 // CHECK-NEXT:    %[[TMP17:.+]] = load i32, i32* %[[DOTUNROLL_INNER_IV_J]], align 4
-// CHECK-NEXT:    %[[CMP24:.+]] = icmp sle i32 %[[TMP17]], 8
+// CHECK-NEXT:    %[[CMP24:.+]] = icmp slt i32 %[[TMP17]], 8
 // CHECK-NEXT:    br label %[[LAND_END]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[LAND_END]]:

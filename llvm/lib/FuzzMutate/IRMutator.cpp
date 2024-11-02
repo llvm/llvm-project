@@ -9,6 +9,8 @@
 #include "llvm/FuzzMutate/IRMutator.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/FuzzMutate/Operations.h"
 #include "llvm/FuzzMutate/Random.h"
 #include "llvm/FuzzMutate/RandomIRBuilder.h"
@@ -17,6 +19,9 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Scalar/DCE.h"
 
 using namespace llvm;
@@ -242,4 +247,45 @@ void InstModificationIRStrategy::mutate(Instruction &Inst,
   auto RS = makeSampler(IB.Rand, Modifications);
   if (RS)
     RS.getSelection()();
+}
+
+std::unique_ptr<Module> llvm::parseModule(const uint8_t *Data, size_t Size,
+                                          LLVMContext &Context) {
+
+  if (Size <= 1)
+    // We get bogus data given an empty corpus - just create a new module.
+    return std::make_unique<Module>("M", Context);
+
+  auto Buffer = MemoryBuffer::getMemBuffer(
+      StringRef(reinterpret_cast<const char *>(Data), Size), "Fuzzer input",
+      /*RequiresNullTerminator=*/false);
+
+  SMDiagnostic Err;
+  auto M = parseBitcodeFile(Buffer->getMemBufferRef(), Context);
+  if (Error E = M.takeError()) {
+    errs() << toString(std::move(E)) << "\n";
+    return nullptr;
+  }
+  return std::move(M.get());
+}
+
+size_t llvm::writeModule(const Module &M, uint8_t *Dest, size_t MaxSize) {
+  std::string Buf;
+  {
+    raw_string_ostream OS(Buf);
+    WriteBitcodeToFile(M, OS);
+  }
+  if (Buf.size() > MaxSize)
+    return 0;
+  memcpy(Dest, Buf.data(), Buf.size());
+  return Buf.size();
+}
+
+std::unique_ptr<Module> llvm::parseAndVerify(const uint8_t *Data, size_t Size,
+                                             LLVMContext &Context) {
+  auto M = parseModule(Data, Size, Context);
+  if (!M || verifyModule(*M, &errs()))
+    return nullptr;
+
+  return M;
 }

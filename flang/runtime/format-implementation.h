@@ -207,6 +207,13 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
             maybeReversionPoint);
         return 0;
       }
+      if (height_ != 1) {
+        ReportBadFormat(context,
+            "Invalid FORMAT: '*' must be nested in exactly one set of "
+            "parentheses",
+            maybeReversionPoint);
+        return 0;
+      }
     }
     ch = Capitalize(ch);
     if (ch == '(') {
@@ -251,12 +258,20 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
         ++restart;
       }
       if (stack_[height_ - 1].remaining == Iteration::unlimited) {
-        offset_ = restart;
+        if (height_ > 1 && GetNextChar(context) != ')') {
+          ReportBadFormat(context,
+              "Unlimited repetition in FORMAT may not be followed by more "
+              "items",
+              restart);
+          return 0;
+        }
         if (offset_ == unlimitedLoopCheck) {
           ReportBadFormat(context,
               "Unlimited repetition in FORMAT lacks data edit descriptors",
               restart);
+          return 0;
         }
+        offset_ = restart;
       } else if (stack_[height_ - 1].remaining-- > 0) {
         offset_ = restart;
       } else {

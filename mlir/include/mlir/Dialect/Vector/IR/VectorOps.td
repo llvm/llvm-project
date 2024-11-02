@@ -23,6 +23,8 @@ include "mlir/Interfaces/ViewLikeInterface.td"
 def Vector_Dialect : Dialect {
   let name = "vector";
   let cppNamespace = "::mlir::vector";
+
+  let useDefaultAttributePrinterParser = 1;
   let hasConstantMaterializer = 1;
   let dependentDialects = ["arith::ArithmeticDialect"];
   let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
@@ -311,6 +313,7 @@ def Vector_ReductionOp :
   // TODO: Migrate to assemblyFormat once `AllTypesMatch` supports optional
   // operands.
   let hasCustomAssemblyFormat = 1;
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 

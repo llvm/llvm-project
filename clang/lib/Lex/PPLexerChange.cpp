@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/FileManager.h"
-#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/LexDiagnostic.h"
@@ -92,8 +91,19 @@ bool Preprocessor::EnterSourceFile(FileID FID, ConstSearchDirIterator CurDir,
         CodeCompletionFileLoc.getLocWithOffset(CodeCompletionOffset);
   }
 
-  EnterSourceFileWithLexer(
-      new Lexer(FID, *InputFile, *this, IsFirstIncludeOfFile), CurDir);
+  Lexer *TheLexer = new Lexer(FID, *InputFile, *this, IsFirstIncludeOfFile);
+  if (getPreprocessorOpts().DependencyDirectivesForFile &&
+      FID != PredefinesFileID) {
+    if (Optional<FileEntryRef> File = SourceMgr.getFileEntryRefForID(FID)) {
+      if (Optional<ArrayRef<dependency_directives_scan::Directive>>
+              DepDirectives =
+                  getPreprocessorOpts().DependencyDirectivesForFile(*File)) {
+        TheLexer->DepDirectives = *DepDirectives;
+      }
+    }
+  }
+
+  EnterSourceFileWithLexer(TheLexer, CurDir);
   return false;
 }
 
@@ -111,7 +121,9 @@ void Preprocessor::EnterSourceFileWithLexer(Lexer *TheLexer,
   CurDirLookup = CurDir;
   CurLexerSubmodule = nullptr;
   if (CurLexerKind != CLK_LexAfterModuleImport)
-    CurLexerKind = CLK_Lexer;
+    CurLexerKind = TheLexer->isDependencyDirectivesLexer()
+                       ? CLK_DependencyDirectivesLexer
+                       : CLK_Lexer;
 
   // Notify the client, if desired, that we are in a new source file.
   if (Callbacks && !CurLexer->Is_PragmaLexer) {
@@ -303,46 +315,10 @@ void Preprocessor::diagnoseMissingHeaderInUmbrellaDir(const Module &Mod) {
   }
 }
 
-void Preprocessor::ResolvePragmaIncludeInstead(
-    const SourceLocation Location) const {
-  assert(Location.isValid());
-  if (CurLexer == nullptr)
-    return;
-
-  if (SourceMgr.isInSystemHeader(Location))
-    return;
-
-  for (const auto &Include : CurLexer->getIncludeHistory()) {
-    StringRef Filename = Include.getKey();
-    const PreprocessorLexer::IncludeInfo &Info = Include.getValue();
-    ArrayRef<SmallString<32>> Aliases =
-        HeaderInfo.getFileInfo(Info.File).Aliases.getArrayRef();
-
-    if (Aliases.empty())
-      continue;
-
-    switch (Aliases.size()) {
-    case 1:
-      Diag(Info.Location, diag::err_pragma_include_instead_system_reserved)
-          << Filename << 0 << Aliases[0];
-      continue;
-    case 2:
-      Diag(Info.Location, diag::err_pragma_include_instead_system_reserved)
-          << Filename << 1 << Aliases[0] << Aliases[1];
-      continue;
-    default: {
-      Diag(Info.Location, diag::err_pragma_include_instead_system_reserved)
-          << Filename << 2 << ("{'" + llvm::join(Aliases, "', '") + "'}");
-    }
-    }
-  }
-}
-
 /// HandleEndOfFile - This callback is invoked when the lexer hits the end of
 /// the current file.  This either returns the EOF token or pops a level off
 /// the include stack and keeps going.
-bool Preprocessor::HandleEndOfFile(Token &Result, SourceLocation EndLoc,
-                                   bool isEndOfMacro) {
+bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
   assert(!CurTokenLexer &&
          "Ending a file when currently in a macro!");
 
@@ -411,9 +387,6 @@ bool Preprocessor::HandleEndOfFile(Token &Result, SourceLocation EndLoc,
       }
     }
   }
-
-  if (EndLoc.isValid())
-    ResolvePragmaIncludeInstead(EndLoc);
 
   // Complain about reaching a true EOF within arc_cf_code_audited.
   // We don't want to complain about reaching the end of a macro
@@ -612,7 +585,7 @@ bool Preprocessor::HandleEndOfTokenLexer(Token &Result) {
     TokenLexerCache[NumCachedTokenLexers++] = std::move(CurTokenLexer);
 
   // Handle this like a #include file being popped off the stack.
-  return HandleEndOfFile(Result, {}, true);
+  return HandleEndOfFile(Result, true);
 }
 
 /// RemoveTopOfLexerStack - Pop the current lexer/macro exp off the top of the

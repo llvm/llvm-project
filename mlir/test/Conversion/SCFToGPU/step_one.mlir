@@ -3,7 +3,7 @@
 
 // CHECK-11-LABEL: @step_1
 // CHECK-22-LABEL: @step_1
-func @step_1(%A : memref<?x?x?x?xf32>, %B : memref<?x?x?x?xf32>) {
+func.func @step_1(%A : memref<?x?x?x?xf32>, %B : memref<?x?x?x?xf32>) {
   // Bounds of the loop, its range and step.
   // CHECK-11-NEXT: %{{.*}} = arith.constant 0 : index
   // CHECK-11-NEXT: %{{.*}} = arith.constant 42 : index

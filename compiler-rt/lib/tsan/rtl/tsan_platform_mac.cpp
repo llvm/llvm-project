@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_platform.h"
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
@@ -316,4 +316,4 @@ int call_pthread_cancel_with_cleanup(int (*fn)(void *arg),
 
 }  // namespace __tsan
 
-#endif  // SANITIZER_MAC
+#endif  // SANITIZER_APPLE

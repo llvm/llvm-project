@@ -15,8 +15,8 @@
 
 ; CHECK-FINAL-NOT: ModuleID
 ; CHECK-FINAL-NOT: source_filename
-; CHECK-FINAL-NOT: datalayout
-; CHECK-FINAL-NOT: triple
+; CHECK-FINAL: datalayout
+; CHECK-FINAL: triple
 ; CHECK-FINAL-NOT: module asm
 ; CHECK-FINAL: declare void @g
 

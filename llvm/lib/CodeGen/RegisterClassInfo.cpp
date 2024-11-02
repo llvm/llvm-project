@@ -43,9 +43,11 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
   bool Update = false;
   MF = &mf;
 
+  auto &STI = MF->getSubtarget();
+
   // Allocate new array the first time we see a new target.
-  if (MF->getSubtarget().getRegisterInfo() != TRI) {
-    TRI = MF->getSubtarget().getRegisterInfo();
+  if (STI.getRegisterInfo() != TRI) {
+    TRI = STI.getRegisterInfo();
     RegClass.reset(new RCInfo[TRI->getNumRegClasses()]);
     Update = true;
   }
@@ -66,6 +68,18 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
     Update = true;
   }
   CalleeSavedRegs = CSR;
+
+  // Even if CSR list is same, we could have had a different allocation order
+  // if ignoreCSRForAllocationOrder is evaluated differently.
+  BitVector CSRHintsForAllocOrder(TRI->getNumRegs());
+  for (const MCPhysReg *I = CSR; *I; ++I)
+    for (MCRegAliasIterator AI(*I, TRI, true); AI.isValid(); ++AI)
+      CSRHintsForAllocOrder[*AI] = STI.ignoreCSRForAllocationOrder(mf, *AI);
+  if (IgnoreCSRForAllocOrder.size() != CSRHintsForAllocOrder.size() ||
+      IgnoreCSRForAllocOrder != CSRHintsForAllocOrder) {
+    Update = true;
+    IgnoreCSRForAllocOrder = CSRHintsForAllocOrder;
+  }
 
   RegCosts = TRI->getRegisterCosts(*MF);
 

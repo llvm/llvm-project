@@ -174,8 +174,10 @@ case #T[0]:                                                                     
   return result;
 }
 
-template <class CharT, class T, class TestFunction, class ExceptionTest>
-void format_test_string(T world, T universe, TestFunction check, ExceptionTest check_exception) {
+// Using a const ref for world and universe so a string literal will be a character array.
+// When passed as character array W and U have different types.
+template <class CharT, class W, class U, class TestFunction, class ExceptionTest>
+void format_test_string(const W& world, const U& universe, TestFunction check, ExceptionTest check_exception) {
 
   // *** Valid input tests ***
   // Unsed argument is ignored. TODO FMT what does the Standard mandate?
@@ -291,6 +293,44 @@ template <class CharT, class TestFunction>
 void format_test_string_unicode(TestFunction check) {
   (void)check;
 #ifndef TEST_HAS_NO_UNICODE
+  // Make sure all possible types are tested. For clarity don't use macros.
+  if constexpr (std::same_as<CharT, char>) {
+    const char* c_string = "aßc";
+    check.template operator()<"{:*^5}">(SV("*aßc*"), c_string);
+    check.template operator()<"{:*^4.2}">(SV("*aß*"), c_string);
+
+    check.template operator()<"{:*^5}">(SV("*aßc*"), const_cast<char*>(c_string));
+    check.template operator()<"{:*^4.2}">(SV("*aß*"), const_cast<char*>(c_string));
+
+    check.template operator()<"{:*^5}">(SV("*aßc*"), "aßc");
+    check.template operator()<"{:*^4.2}">(SV("*aß*"), "aßc");
+
+    check.template operator()<"{:*^5}">(SV("*aßc*"), std::string("aßc"));
+    check.template operator()<"{:*^4.2}">(SV("*aß*"), std::string("aßc"));
+
+    check.template operator()<"{:*^5}">(SV("*aßc*"), std::string_view("aßc"));
+    check.template operator()<"{:*^4.2}">(SV("*aß*"), std::string_view("aßc"));
+  }
+#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  else {
+    const wchar_t* c_string = L"aßc";
+    check.template operator()<"{:*^5}">(SV("*aßc*"), c_string);
+    check.template operator()<"{:*^4.2}">(SV("*aß*"), c_string);
+
+    check.template operator()<"{:*^5}">(SV("*aßc*"), const_cast<wchar_t*>(c_string));
+    check.template operator()<"{:*^4.2}">(SV("*aß*"), const_cast<wchar_t*>(c_string));
+
+    check.template operator()<"{:*^5}">(SV("*aßc*"), L"aßc");
+    check.template operator()<"{:*^4.2}">(SV("*aß*"), L"aßc");
+
+    check.template operator()<"{:*^5}">(SV("*aßc*"), std::wstring(L"aßc"));
+    check.template operator()<"{:*^4.2}">(SV("*aß*"), std::wstring(L"aßc"));
+
+    check.template operator()<"{:*^5}">(SV("*aßc*"), std::wstring_view(L"aßc"));
+    check.template operator()<"{:*^4.2}">(SV("*aß*"), std::wstring_view(L"aßc"));
+  }
+#  endif
+
   // ß requires one column
   check.template operator()<"{}">(SV("aßc"), STR("aßc"));
 
@@ -330,9 +370,14 @@ void format_string_tests(TestFunction check, ExceptionTest check_exception) {
   std::basic_string<CharT> world = STR("world");
   std::basic_string<CharT> universe = STR("universe");
 
-  // Testing the char const[] is a bit tricky due to array to pointer decay.
-  // Since there are separate tests in format.formatter.spec the array is not
-  // tested here.
+  // Test a string literal in a way it won't decay to a pointer.
+  if constexpr (std::same_as<CharT, char>)
+    format_test_string<CharT>("world", "universe", check, check_exception);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  else
+    format_test_string<CharT>(L"world", L"universe", check, check_exception);
+#endif
+
   format_test_string<CharT>(world.c_str(), universe.c_str(), check, check_exception);
   format_test_string<CharT>(const_cast<CharT*>(world.c_str()), const_cast<CharT*>(universe.c_str()), check,
                             check_exception);
@@ -2464,6 +2509,24 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   check.template operator()<"hello {0:} {1:}">(SV("hello false true"), false, true);
   check.template operator()<"hello {1:} {0:}">(SV("hello true false"), false, true);
 
+  // *** Test many arguments ***
+
+  // [format.args]/1
+  // An instance of basic_format_args provides access to formatting arguments.
+  // Implementations should optimize the representation of basic_format_args
+  // for a small number of formatting arguments.
+  //
+  // These's no guidances what "a small number of formatting arguments" is.
+  // - fmtlib uses a 15 elements
+  // - libc++ uses 12 elements
+  // - MSVC STL uses a different approach regardless of the number of arguments
+  // - libstdc++ has no implementation yet
+  // fmtlib and libc++ use a similar approach, this approach can support 16
+  // elements (based on design choices both support less elements). This test
+  // makes sure "the large number of formatting arguments" code path is tested.
+  check.template operator()<"{}{}{}{}{}{}{}{}{}{}\t{}{}{}{}{}{}{}{}{}{}">(SV("1234567890\t1234567890"), 1, 2, 3, 4, 5,
+                                                                          6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0);
+
   // ** Test invalid format strings ***
   check_exception("The format string terminates at a '{'", SV("{"));
   check_exception("The replacement field misses a terminating '}'", SV("{:"), 42);
@@ -2526,10 +2589,10 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
     // Note 128-bit support is only partly implemented test the range
     // conditions here.
     static constexpr auto fmt = string_literal("{}");
-    std::basic_string<CharT> min = std::format(fmt.sv<CharT>(), std::numeric_limits<long long>::min());
+    std::basic_string<CharT> min = std::format(fmt.template sv<CharT>(), std::numeric_limits<long long>::min());
     check.template operator()<"{}">(std::basic_string_view<CharT>(min),
                                     static_cast<__int128_t>(std::numeric_limits<long long>::min()));
-    std::basic_string<CharT> max = std::format(fmt.sv<CharT>(), std::numeric_limits<long long>::max());
+    std::basic_string<CharT> max = std::format(fmt.template sv<CharT>(), std::numeric_limits<long long>::max());
     check.template operator()<"{}">(std::basic_string_view<CharT>(max),
                                     static_cast<__int128_t>(std::numeric_limits<long long>::max()));
     check_exception("128-bit value is outside of implemented range", SV("{}"),
@@ -2552,7 +2615,7 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
     // Note 128-bit support is only partly implemented test the range
     // conditions here.
     static constexpr auto fmt = string_literal("{}");
-    std::basic_string<CharT> max = std::format(fmt.sv<CharT>(), std::numeric_limits<unsigned long long>::max());
+    std::basic_string<CharT> max = std::format(fmt.template sv<CharT>(), std::numeric_limits<unsigned long long>::max());
     check.template operator()<"{}">(std::basic_string_view<CharT>(max),
                                     static_cast<__uint128_t>(std::numeric_limits<unsigned long long>::max()));
     check_exception("128-bit value is outside of implemented range", SV("{}"),

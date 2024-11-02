@@ -121,7 +121,7 @@ module m01
   end subroutine
 
   subroutine ch2(x)
-    character(2), intent(in out) :: x
+    character(2), intent(in) :: x
   end subroutine
   subroutine pdtdefault (derivedArg)
     !ERROR: Type parameter 'n' lacks a value and has no default
@@ -151,8 +151,10 @@ module m01
     type(pdtWithDefault(3)) :: defaultVar3
     type(pdtWithDefault(4)) :: defaultVar4
     character :: ch1
-    !ERROR: Actual length '1' is less than expected length '2'
+    !ERROR: Actual argument variable length '1' is less than expected length '2'
     call ch2(ch1)
+    !WARN: Actual argument expression length '0' is less than expected length '2'
+    call ch2("")
     call pdtdefault(vardefault)
     call pdtdefault(var3)
     call pdtdefault(var4) ! error

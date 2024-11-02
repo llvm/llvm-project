@@ -1385,3 +1385,12 @@ def svcr_op : Operand<i32> {
     return AArch64SVCR::lookupSVCRByEncoding(MCOp.getImm()) != nullptr;
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// Register categories.
+//
+
+def GeneralPurposeRegisters : RegisterCategory<[GPR64, GPR32]>;
+
+def FIXED_REGS : RegisterClass<"AArch64", [i64], 64, (add FP, SP, VG, FFR)>;
+def FixedRegisters : RegisterCategory<[CCR, FIXED_REGS]>;

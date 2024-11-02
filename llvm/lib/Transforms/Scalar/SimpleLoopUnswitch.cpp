@@ -112,17 +112,27 @@ static cl::opt<unsigned>
                            "partial unswitching analysis"),
                   cl::init(100), cl::Hidden);
 static cl::opt<bool> FreezeLoopUnswitchCond(
-    "freeze-loop-unswitch-cond", cl::init(false), cl::Hidden,
+    "freeze-loop-unswitch-cond", cl::init(true), cl::Hidden,
     cl::desc("If enabled, the freeze instruction will be added to condition "
              "of loop unswitch to prevent miscompilation."));
+
+// Helper to skip (select x, true, false), which matches both a logical AND and
+// OR and can confuse code that tries to determine if \p Cond is either a
+// logical AND or OR but not both.
+static Value *skipTrivialSelect(Value *Cond) {
+  Value *CondNext;
+  while (match(Cond, m_Select(m_Value(CondNext), m_One(), m_Zero())))
+    Cond = CondNext;
+  return Cond;
+}
 
 /// Collect all of the loop invariant input values transitively used by the
 /// homogeneous instruction graph from a given root.
 ///
 /// This essentially walks from a root recursively through loop variant operands
-/// which have the exact same opcode and finds all inputs which are loop
-/// invariant. For some operations these can be re-associated and unswitched out
-/// of the loop entirely.
+/// which have perform the same logical operation (AND or OR) and finds all
+/// inputs which are loop invariant. For some operations these can be
+/// re-associated and unswitched out of the loop entirely.
 static TinyPtrVector<Value *>
 collectHomogenousInstGraphLoopInvariants(Loop &L, Instruction &Root,
                                          LoopInfo &LI) {
@@ -152,7 +162,7 @@ collectHomogenousInstGraphLoopInvariants(Loop &L, Instruction &Root,
       }
 
       // If not an instruction with the same opcode, nothing we can do.
-      Instruction *OpI = dyn_cast<Instruction>(OpV);
+      Instruction *OpI = dyn_cast<Instruction>(skipTrivialSelect(OpV));
 
       if (OpI && ((IsRootAnd && match(OpI, m_LogicalAnd())) ||
                   (IsRootOr  && match(OpI, m_LogicalOr())))) {
@@ -204,13 +214,19 @@ static bool areLoopExitPHIsLoopInvariant(Loop &L, BasicBlock &ExitingBB,
 /// branch on a single value.
 static void buildPartialUnswitchConditionalBranch(
     BasicBlock &BB, ArrayRef<Value *> Invariants, bool Direction,
-    BasicBlock &UnswitchedSucc, BasicBlock &NormalSucc, bool InsertFreeze) {
+    BasicBlock &UnswitchedSucc, BasicBlock &NormalSucc, bool InsertFreeze,
+    Instruction *I, AssumptionCache *AC, DominatorTree &DT) {
   IRBuilder<> IRB(&BB);
 
-  Value *Cond = Direction ? IRB.CreateOr(Invariants) :
-    IRB.CreateAnd(Invariants);
-  if (InsertFreeze)
-    Cond = IRB.CreateFreeze(Cond, Cond->getName() + ".fr");
+  SmallVector<Value *> FrozenInvariants;
+  for (Value *Inv : Invariants) {
+    if (InsertFreeze && !isGuaranteedNotToBeUndefOrPoison(Inv, AC, I, &DT))
+      Inv = IRB.CreateFreeze(Inv, Inv->getName() + ".fr");
+    FrozenInvariants.push_back(Inv);
+  }
+
+  Value *Cond = Direction ? IRB.CreateOr(FrozenInvariants)
+                          : IRB.CreateAnd(FrozenInvariants);
   IRB.CreateCondBr(Cond, Direction ? &UnswitchedSucc : &NormalSucc,
                    Direction ? &NormalSucc : &UnswitchedSucc);
 }
@@ -444,11 +460,12 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   // some input conditions to the branch.
   bool FullUnswitch = false;
 
-  if (L.isLoopInvariant(BI.getCondition())) {
-    Invariants.push_back(BI.getCondition());
+  Value *Cond = skipTrivialSelect(BI.getCondition());
+  if (L.isLoopInvariant(Cond)) {
+    Invariants.push_back(Cond);
     FullUnswitch = true;
   } else {
-    if (auto *CondInst = dyn_cast<Instruction>(BI.getCondition()))
+    if (auto *CondInst = dyn_cast<Instruction>(Cond))
       Invariants = collectHomogenousInstGraphLoopInvariants(L, *CondInst, LI);
     if (Invariants.empty()) {
       LLVM_DEBUG(dbgs() << "   Couldn't find invariant inputs!\n");
@@ -482,8 +499,8 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   // is a graph of `or` operations, or the exit block is along the false edge
   // and the condition is a graph of `and` operations.
   if (!FullUnswitch) {
-    if (ExitDirection ? !match(BI.getCondition(), m_LogicalOr())
-                      : !match(BI.getCondition(), m_LogicalAnd())) {
+    if (ExitDirection ? !match(Cond, m_LogicalOr())
+                      : !match(Cond, m_LogicalAnd())) {
       LLVM_DEBUG(dbgs() << "   Branch condition is in improper form for "
                            "non-full unswitch!\n");
       return false;
@@ -548,6 +565,7 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
     // its successors.
     OldPH->getInstList().splice(OldPH->end(), BI.getParent()->getInstList(),
                                 BI);
+    BI.setCondition(Cond);
     if (MSSAU) {
       // Temporarily clone the terminator, to make MSSA update cheaper by
       // separating "insert edge" updates from "remove edge" ones.
@@ -563,15 +581,16 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
     // Only unswitching a subset of inputs to the condition, so we will need to
     // build a new branch that merges the invariant inputs.
     if (ExitDirection)
-      assert(match(BI.getCondition(), m_LogicalOr()) &&
+      assert(match(skipTrivialSelect(BI.getCondition()), m_LogicalOr()) &&
              "Must have an `or` of `i1`s or `select i1 X, true, Y`s for the "
              "condition!");
     else
-      assert(match(BI.getCondition(), m_LogicalAnd()) &&
+      assert(match(skipTrivialSelect(BI.getCondition()), m_LogicalAnd()) &&
              "Must have an `and` of `i1`s or `select i1 X, Y, false`s for the"
              " condition!");
-    buildPartialUnswitchConditionalBranch(*OldPH, Invariants, ExitDirection,
-                                          *UnswitchedBB, *NewPH, false);
+    buildPartialUnswitchConditionalBranch(
+        *OldPH, Invariants, ExitDirection, *UnswitchedBB, *NewPH,
+        FreezeLoopUnswitchCond, OldPH->getTerminator(), nullptr, DT);
   }
 
   // Update the dominator tree with the added edge.
@@ -1021,7 +1040,8 @@ static bool unswitchAllTrivialConditions(Loop &L, DominatorTree &DT,
     // Don't bother trying to unswitch past an unconditional branch or a branch
     // with a constant value. These should be removed by simplifycfg prior to
     // running this pass.
-    if (!BI->isConditional() || isa<Constant>(BI->getCondition()))
+    if (!BI->isConditional() ||
+        isa<Constant>(skipTrivialSelect(BI->getCondition())))
       return Changed;
 
     // Found a trivial condition candidate: non-foldable conditional branch. If
@@ -2044,12 +2064,13 @@ static void unswitchNontrivialInvariants(
          "Can only unswitch switches and conditional branch!");
   bool PartiallyInvariant = !PartialIVInfo.InstToDuplicate.empty();
   bool FullUnswitch =
-      SI || (BI->getCondition() == Invariants[0] && !PartiallyInvariant);
+      SI || (skipTrivialSelect(BI->getCondition()) == Invariants[0] &&
+             !PartiallyInvariant);
   if (FullUnswitch)
     assert(Invariants.size() == 1 &&
            "Cannot have other invariants with full unswitching!");
   else
-    assert(isa<Instruction>(BI->getCondition()) &&
+    assert(isa<Instruction>(skipTrivialSelect(BI->getCondition())) &&
            "Partial unswitching requires an instruction as the condition!");
 
   if (MSSAU && VerifyMemorySSA)
@@ -2064,14 +2085,14 @@ static void unswitchNontrivialInvariants(
   bool Direction = true;
   int ClonedSucc = 0;
   if (!FullUnswitch) {
-    Value *Cond = BI->getCondition();
+    Value *Cond = skipTrivialSelect(BI->getCondition());
     (void)Cond;
     assert(((match(Cond, m_LogicalAnd()) ^ match(Cond, m_LogicalOr())) ||
             PartiallyInvariant) &&
            "Only `or`, `and`, an `select`, partially invariant instructions "
            "can combine invariants being unswitched.");
-    if (!match(BI->getCondition(), m_LogicalOr())) {
-      if (match(BI->getCondition(), m_LogicalAnd()) ||
+    if (!match(Cond, m_LogicalOr())) {
+      if (match(Cond, m_LogicalAnd()) ||
           (PartiallyInvariant && !PartialIVInfo.KnownValue->isOneValue())) {
         Direction = false;
         ClonedSucc = 1;
@@ -2211,11 +2232,12 @@ static void unswitchNontrivialInvariants(
       BasicBlock *ClonedPH = ClonedPHs.begin()->second;
       BI->setSuccessor(ClonedSucc, ClonedPH);
       BI->setSuccessor(1 - ClonedSucc, LoopPH);
+      Value *Cond = skipTrivialSelect(BI->getCondition());
       if (InsertFreeze) {
-        auto Cond = BI->getCondition();
         if (!isGuaranteedNotToBeUndefOrPoison(Cond, &AC, BI, &DT))
-          BI->setCondition(new FreezeInst(Cond, Cond->getName() + ".fr", BI));
+          Cond = new FreezeInst(Cond, Cond->getName() + ".fr", BI);
       }
+      BI->setCondition(Cond);
       DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
     } else {
       assert(SI && "Must either be a branch or switch!");
@@ -2313,9 +2335,11 @@ static void unswitchNontrivialInvariants(
     if (PartiallyInvariant)
       buildPartialInvariantUnswitchConditionalBranch(
           *SplitBB, Invariants, Direction, *ClonedPH, *LoopPH, L, MSSAU);
-    else
-      buildPartialUnswitchConditionalBranch(*SplitBB, Invariants, Direction,
-                                            *ClonedPH, *LoopPH, InsertFreeze);
+    else {
+      buildPartialUnswitchConditionalBranch(
+          *SplitBB, Invariants, Direction, *ClonedPH, *LoopPH,
+          FreezeLoopUnswitchCond, BI, &AC, DT);
+    }
     DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
 
     if (MSSAU) {
@@ -2747,22 +2771,16 @@ static bool unswitchBestCondition(
         BI->getSuccessor(0) == BI->getSuccessor(1))
       continue;
 
-    // If BI's condition is 'select _, true, false', simplify it to confuse
-    // matchers
-    Value *Cond = BI->getCondition(), *CondNext;
-    while (match(Cond, m_Select(m_Value(CondNext), m_One(), m_Zero())))
-      Cond = CondNext;
-    BI->setCondition(Cond);
-
+    Value *Cond = skipTrivialSelect(BI->getCondition());
     if (isa<Constant>(Cond))
       continue;
 
-    if (L.isLoopInvariant(BI->getCondition())) {
-      UnswitchCandidates.push_back({BI, {BI->getCondition()}});
+    if (L.isLoopInvariant(Cond)) {
+      UnswitchCandidates.push_back({BI, {Cond}});
       continue;
     }
 
-    Instruction &CondI = *cast<Instruction>(BI->getCondition());
+    Instruction &CondI = *cast<Instruction>(Cond);
     if (match(&CondI, m_CombineOr(m_LogicalAnd(), m_LogicalOr()))) {
       TinyPtrVector<Value *> Invariants =
           collectHomogenousInstGraphLoopInvariants(L, CondI, LI);
@@ -2904,10 +2922,11 @@ static bool unswitchBestCondition(
       // its cost.
       if (!FullUnswitch) {
         auto &BI = cast<BranchInst>(TI);
-        if (match(BI.getCondition(), m_LogicalAnd())) {
+        Value *Cond = skipTrivialSelect(BI.getCondition());
+        if (match(Cond, m_LogicalAnd())) {
           if (SuccBB == BI.getSuccessor(1))
             continue;
-        } else if (match(BI.getCondition(), m_LogicalOr())) {
+        } else if (match(Cond, m_LogicalOr())) {
           if (SuccBB == BI.getSuccessor(0))
             continue;
         } else if ((PartialIVInfo.KnownValue->isOneValue() &&
@@ -2949,8 +2968,9 @@ static bool unswitchBestCondition(
     ArrayRef<Value *> Invariants = TerminatorAndInvariants.second;
     BranchInst *BI = dyn_cast<BranchInst>(&TI);
     InstructionCost CandidateCost = ComputeUnswitchedCost(
-        TI, /*FullUnswitch*/ !BI || (Invariants.size() == 1 &&
-                                     Invariants[0] == BI->getCondition()));
+        TI, /*FullUnswitch*/ !BI ||
+                (Invariants.size() == 1 &&
+                 Invariants[0] == skipTrivialSelect(BI->getCondition())));
     // Calculate cost multiplier which is a tool to limit potentially
     // exponential behavior of loop-unswitch.
     if (EnableUnswitchCostMultiplier) {

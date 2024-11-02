@@ -206,13 +206,12 @@ define <4 x half> @v_constained_fsub_v4f16_fpexcept_strict(<4 x half> %x, <4 x h
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_mov_b32_e32 v4, 0xffff
-; GFX10-NEXT:    v_sub_f16_e32 v5, v0, v2
-; GFX10-NEXT:    v_sub_f16_e32 v6, v1, v3
+; GFX10-NEXT:    v_sub_f16_e32 v4, v0, v2
+; GFX10-NEXT:    v_sub_f16_e32 v5, v1, v3
 ; GFX10-NEXT:    v_sub_f16_sdwa v1, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX10-NEXT:    v_sub_f16_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX10-NEXT:    v_and_b32_e32 v2, v4, v5
-; GFX10-NEXT:    v_and_b32_e32 v3, v4, v6
+; GFX10-NEXT:    v_and_b32_e32 v2, 0xffff, v4
+; GFX10-NEXT:    v_and_b32_e32 v3, 0xffff, v5
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
 ; GFX10-NEXT:    v_lshl_or_b32 v1, v1, 16, v3
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]

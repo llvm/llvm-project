@@ -5,7 +5,7 @@
 // RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-!Filename = type !llvm.ptr<i8>
+!Filename = !llvm.ptr<i8>
 
 #DenseMatrix = #sparse_tensor.encoding<{
   dimLevelType = [ "dense", "dense" ],
@@ -41,12 +41,12 @@ module {
   //
   // A kernel that assigns elements from A to X.
   //
-  func @dense_output(%arga: tensor<?x?xf64, #SparseMatrix>) -> tensor<?x?xf64, #DenseMatrix> {
+  func.func @dense_output(%arga: tensor<?x?xf64, #SparseMatrix>) -> tensor<?x?xf64, #DenseMatrix> {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %d0 = tensor.dim %arga, %c0 : tensor<?x?xf64, #SparseMatrix>
     %d1 = tensor.dim %arga, %c1 : tensor<?x?xf64, #SparseMatrix>
-    %init = sparse_tensor.init [%d0, %d1] : tensor<?x?xf64, #DenseMatrix>
+    %init = bufferization.alloc_tensor(%d0, %d1) : tensor<?x?xf64, #DenseMatrix>
     %0 = linalg.generic #trait_assign
        ins(%arga: tensor<?x?xf64, #SparseMatrix>)
       outs(%init: tensor<?x?xf64, #DenseMatrix>) {
@@ -56,12 +56,12 @@ module {
     return %0 : tensor<?x?xf64, #DenseMatrix>
   }
 
-  func private @getTensorFilename(index) -> (!Filename)
+  func.func private @getTensorFilename(index) -> (!Filename)
 
   //
   // Main driver that reads matrix from file and calls the kernel.
   //
-  func @entry() {
+  func.func @entry() {
     %d0 = arith.constant 0.0 : f64
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index

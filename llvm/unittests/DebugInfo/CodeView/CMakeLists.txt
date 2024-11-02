@@ -10,3 +10,5 @@ add_llvm_unittest(DebugInfoCodeViewTests
   )
 
 target_link_libraries(DebugInfoCodeViewTests PRIVATE LLVMTestingSupport)
+
+set_property(TARGET DebugInfoCodeViewTests PROPERTY FOLDER "Tests/UnitTests/DebugInfoTests")

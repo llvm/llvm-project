@@ -341,12 +341,11 @@ define amdgpu_kernel void @commute_add_inline_imm_0.5_v2f16(<2 x half> addrspace
 ; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], [[K]] op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x8f,0xd3,0x00,0x01,0x00,0x08]
 ; GFX9: buffer_store_dword [[REG]]
 
-; VI-DAG: s_movk_i32 [[K:s[0-9]+]], 0x6400 ; encoding
 ; VI-DAG: buffer_load_dword
 ; VI-NOT: and
-; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, [[K]], v{{[0-9]+}}
+; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 0x6400, v{{[0-9]+}}
 ; gfx8 does not support sreg or imm in sdwa - this will be move then
-; VI-DAG: v_mov_b32_e32 [[VK:v[0-9]+]], [[K]]
+; VI-DAG: v_mov_b32_e32 [[VK:v[0-9]+]], 0x6400
 ; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, [[VK]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; VI: buffer_store_dword

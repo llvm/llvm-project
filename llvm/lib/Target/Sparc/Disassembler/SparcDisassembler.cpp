@@ -14,8 +14,8 @@
 #include "TargetInfo/SparcTargetInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
-#include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
 
@@ -509,7 +509,7 @@ static bool tryAddingSymbolicOperand(int64_t Value, bool isBranch,
                                      uint64_t Width, MCInst &MI,
                                      const MCDisassembler *Decoder) {
   return Decoder->tryAddingSymbolicOperand(MI, Value, Address, isBranch, Offset,
-                                           Width);
+                                           Width, /*InstSize=*/4);
 }
 
 static DecodeStatus DecodeCall(MCInst &MI, unsigned insn, uint64_t Address,

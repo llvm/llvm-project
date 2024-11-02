@@ -4,7 +4,7 @@
 #set0 = affine_set<(d0) : (1 == 0)>
 
 // CHECK-LABEL: func @inline_notation
-func @inline_notation() -> i32 {
+func.func @inline_notation() -> i32 {
   // CHECK: "foo"() : () -> i32 loc(unknown)
   %1 = "foo"() : () -> i32 loc("foo")
 

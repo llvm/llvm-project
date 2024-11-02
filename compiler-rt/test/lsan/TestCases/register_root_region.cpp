@@ -1,9 +1,8 @@
 // Test for __lsan_(un)register_root_region().
-// RUN: LSAN_BASE="use_stacks=0:use_registers=0"
 // RUN: %clangxx_lsan %s -o %t
-// RUN: %env_lsan_opts=$LSAN_BASE %run %t
-// RUN: %env_lsan_opts=$LSAN_BASE not %run %t foo 2>&1 | FileCheck %s
-// RUN: %env_lsan_opts=$LSAN_BASE:use_root_regions=0 not %run %t 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts=use_stacks=0:use_registers=0 %run %t
+// RUN: %env_lsan_opts=use_stacks=0:use_registers=0 not %run %t foo 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts=use_stacks=0:use_registers=0:use_root_regions=0 not %run %t 2>&1 | FileCheck %s
 
 #include <assert.h>
 #include <stdio.h>

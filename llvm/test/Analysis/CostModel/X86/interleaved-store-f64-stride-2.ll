@@ -22,10 +22,10 @@ define void @test() {
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store double %v1, ptr %out1, align 8
 ; AVX1:  LV: Found an estimated cost of 6 for VF 2 For instruction: store double %v1, ptr %out1, align 8
-; AVX1:  LV: Found an estimated cost of 16 for VF 4 For instruction: store double %v1, ptr %out1, align 8
-; AVX1:  LV: Found an estimated cost of 32 for VF 8 For instruction: store double %v1, ptr %out1, align 8
-; AVX1:  LV: Found an estimated cost of 64 for VF 16 For instruction: store double %v1, ptr %out1, align 8
-; AVX1:  LV: Found an estimated cost of 128 for VF 32 For instruction: store double %v1, ptr %out1, align 8
+; AVX1:  LV: Found an estimated cost of 14 for VF 4 For instruction: store double %v1, ptr %out1, align 8
+; AVX1:  LV: Found an estimated cost of 28 for VF 8 For instruction: store double %v1, ptr %out1, align 8
+; AVX1:  LV: Found an estimated cost of 56 for VF 16 For instruction: store double %v1, ptr %out1, align 8
+; AVX1:  LV: Found an estimated cost of 112 for VF 32 For instruction: store double %v1, ptr %out1, align 8
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store double %v1, ptr %out1, align 8

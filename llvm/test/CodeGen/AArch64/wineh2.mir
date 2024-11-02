@@ -6,8 +6,8 @@
 # CHECK-NEXT:      FunctionLength: 144
 # CHECK-NEXT:      Version: 0
 # CHECK-NEXT:      ExceptionData: No
-# CHECK-NEXT:      EpiloguePacked: No
-# CHECK-NEXT:      EpilogueScopes: 1
+# CHECK-NEXT:      EpiloguePacked: Yes
+# CHECK-NEXT:      EpilogueOffset: 19
 # CHECK-NEXT:      ByteCodeLength: 40
 # CHECK-NEXT:      Prologue [
 # CHECK-NEXT:        0xc80e              ; stp x19, x20, [sp, #112]
@@ -21,23 +21,17 @@
 # CHECK-NEXT:        0xde8f              ; str d12, [sp, #-128]!
 # CHECK-NEXT:        0xe4                ; end
 # CHECK-NEXT:      ]
-# CHECK-NEXT:      EpilogueScopes [
-# CHECK-NEXT:        EpilogueScope {
-# CHECK-NEXT:          StartOffset: 26
-# CHECK-NEXT:          EpilogueStartIndex: 19
-# CHECK-NEXT:          Opcodes [
-# CHECK-NEXT:            0xc80e              ; ldp x19, x20, [sp, #112]
-# CHECK-NEXT:            0xc88c              ; ldp x21, x22, [sp, #96]
-# CHECK-NEXT:            0xc90a              ; ldp x23, x24, [sp, #80]
-# CHECK-NEXT:            0xc988              ; ldp x25, x26, [sp, #64]
-# CHECK-NEXT:            0xca06              ; ldp x27, x28, [sp, #48]
-# CHECK-NEXT:            0xdc04              ; ldr d8, [sp, #32]
-# CHECK-NEXT:            0xdc45              ; ldr d9, [sp, #40]
-# CHECK-NEXT:            0xd882              ; ldp d10, d11, [sp, #16]
-# CHECK-NEXT:            0xde8f              ; ldr d12, [sp], #128
-# CHECK-NEXT:            0xe4                ; end
-# CHECK-NEXT:          ]
-# CHECK-NEXT:        }
+# CHECK-NEXT:      Epilogue [
+# CHECK-NEXT:        0xc80e              ; ldp x19, x20, [sp, #112]
+# CHECK-NEXT:        0xc88c              ; ldp x21, x22, [sp, #96]
+# CHECK-NEXT:        0xc90a              ; ldp x23, x24, [sp, #80]
+# CHECK-NEXT:        0xc988              ; ldp x25, x26, [sp, #64]
+# CHECK-NEXT:        0xca06              ; ldp x27, x28, [sp, #48]
+# CHECK-NEXT:        0xdc04              ; ldr d8, [sp, #32]
+# CHECK-NEXT:        0xdc45              ; ldr d9, [sp, #40]
+# CHECK-NEXT:        0xd882              ; ldp d10, d11, [sp, #16]
+# CHECK-NEXT:        0xde8f              ; ldr d12, [sp], #128
+# CHECK-NEXT:        0xe4                ; end
 # CHECK-NEXT:      ]
 # CHECK-NEXT:    }
 ...

@@ -15,6 +15,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/ASTUnresolvedSet.h"
 #include "clang/AST/AbstractTypeReader.h"
 #include "clang/AST/Decl.h"
@@ -42,6 +43,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticError.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
@@ -1587,14 +1589,13 @@ bool ASTReader::ReadSLocEntry(int ID) {
   }
 
   case SM_SLOC_EXPANSION_ENTRY: {
-    SourceLocation SpellingLoc = ReadSourceLocation(*F, Record[1]);
-    SourceMgr.createExpansionLoc(SpellingLoc,
-                                     ReadSourceLocation(*F, Record[2]),
-                                     ReadSourceLocation(*F, Record[3]),
-                                     Record[5],
-                                     Record[4],
-                                     ID,
-                                     BaseOffset + Record[0]);
+    LocSeq::State Seq;
+    SourceLocation SpellingLoc = ReadSourceLocation(*F, Record[1], Seq);
+    SourceLocation ExpansionBegin = ReadSourceLocation(*F, Record[2], Seq);
+    SourceLocation ExpansionEnd = ReadSourceLocation(*F, Record[3], Seq);
+    SourceMgr.createExpansionLoc(SpellingLoc, ExpansionBegin, ExpansionEnd,
+                                 Record[5], Record[4], ID,
+                                 BaseOffset + Record[0]);
     break;
   }
   }
@@ -2896,6 +2897,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
     case ORIGINAL_PCH_DIR:
       F.OriginalDir = std::string(Blob);
+      ResolveImportedPath(F, F.OriginalDir);
       break;
 
     case MODULE_NAME:
@@ -5071,7 +5073,8 @@ std::string ASTReader::getOriginalSourceFile(
     const std::string &ASTFileName, FileManager &FileMgr,
     const PCHContainerReader &PCHContainerRdr, DiagnosticsEngine &Diags) {
   // Open the AST file.
-  auto Buffer = FileMgr.getBufferForFile(ASTFileName);
+  auto Buffer = FileMgr.getBufferForFile(ASTFileName, /*IsVolatile=*/false,
+                                         /*RequiresNullTerminator=*/false);
   if (!Buffer) {
     Diags.Report(diag::err_fe_unable_to_read_pch_file)
         << ASTFileName << Buffer.getError().message();
@@ -5634,9 +5637,12 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       // them here.
       break;
 
-    case SUBMODULE_TOPHEADER:
-      CurrentModule->addTopHeaderFilename(Blob);
+    case SUBMODULE_TOPHEADER: {
+      std::string HeaderName(Blob);
+      ResolveImportedPath(F, HeaderName);
+      CurrentModule->addTopHeaderFilename(HeaderName);
       break;
+    }
 
     case SUBMODULE_UMBRELLA_DIR: {
       // See comments in SUBMODULE_UMBRELLA_HEADER
@@ -6459,11 +6465,13 @@ QualType ASTReader::readTypeRecord(unsigned Index) {
 namespace clang {
 
 class TypeLocReader : public TypeLocVisitor<TypeLocReader> {
-  ASTRecordReader &Reader;
+  using LocSeq = SourceLocationSequence;
 
-  SourceLocation readSourceLocation() {
-    return Reader.readSourceLocation();
-  }
+  ASTRecordReader &Reader;
+  LocSeq *Seq;
+
+  SourceLocation readSourceLocation() { return Reader.readSourceLocation(Seq); }
+  SourceRange readSourceRange() { return Reader.readSourceRange(Seq); }
 
   TypeSourceInfo *GetTypeSourceInfo() {
     return Reader.readTypeSourceInfo();
@@ -6478,7 +6486,8 @@ class TypeLocReader : public TypeLocVisitor<TypeLocReader> {
   }
 
 public:
-  TypeLocReader(ASTRecordReader &Reader) : Reader(Reader) {}
+  TypeLocReader(ASTRecordReader &Reader, LocSeq *Seq)
+      : Reader(Reader), Seq(Seq) {}
 
   // We want compile-time assurance that we've enumerated all of
   // these, so unfortunately we have to declare them first, then
@@ -6575,7 +6584,7 @@ void TypeLocReader::VisitDependentAddressSpaceTypeLoc(
     DependentAddressSpaceTypeLoc TL) {
 
     TL.setAttrNameLoc(readSourceLocation());
-    TL.setAttrOperandParensRange(Reader.readSourceRange());
+    TL.setAttrOperandParensRange(readSourceRange());
     TL.setAttrExprOperand(Reader.readExpr());
 }
 
@@ -6599,7 +6608,7 @@ void TypeLocReader::VisitExtVectorTypeLoc(ExtVectorTypeLoc TL) {
 
 void TypeLocReader::VisitConstantMatrixTypeLoc(ConstantMatrixTypeLoc TL) {
   TL.setAttrNameLoc(readSourceLocation());
-  TL.setAttrOperandParensRange(Reader.readSourceRange());
+  TL.setAttrOperandParensRange(readSourceRange());
   TL.setAttrRowOperand(Reader.readExpr());
   TL.setAttrColumnOperand(Reader.readExpr());
 }
@@ -6607,7 +6616,7 @@ void TypeLocReader::VisitConstantMatrixTypeLoc(ConstantMatrixTypeLoc TL) {
 void TypeLocReader::VisitDependentSizedMatrixTypeLoc(
     DependentSizedMatrixTypeLoc TL) {
   TL.setAttrNameLoc(readSourceLocation());
-  TL.setAttrOperandParensRange(Reader.readSourceRange());
+  TL.setAttrOperandParensRange(readSourceRange());
   TL.setAttrRowOperand(Reader.readExpr());
   TL.setAttrColumnOperand(Reader.readExpr());
 }
@@ -6616,7 +6625,7 @@ void TypeLocReader::VisitFunctionTypeLoc(FunctionTypeLoc TL) {
   TL.setLocalRangeBegin(readSourceLocation());
   TL.setLParenLoc(readSourceLocation());
   TL.setRParenLoc(readSourceLocation());
-  TL.setExceptionSpecRange(Reader.readSourceRange());
+  TL.setExceptionSpecRange(readSourceRange());
   TL.setLocalRangeEnd(readSourceLocation());
   for (unsigned i = 0, e = TL.getNumParams(); i != e; ++i) {
     TL.setParam(i, Reader.readDeclAs<ParmVarDecl>());
@@ -6819,9 +6828,9 @@ void TypeLocReader::VisitDependentBitIntTypeLoc(
   TL.setNameLoc(readSourceLocation());
 }
 
-
-void ASTRecordReader::readTypeLoc(TypeLoc TL) {
-  TypeLocReader TLR(*this);
+void ASTRecordReader::readTypeLoc(TypeLoc TL, LocSeq *ParentSeq) {
+  LocSeq::State Seq(ParentSeq);
+  TypeLocReader TLR(*this, Seq);
   for (; !TL.isNull(); TL = TL.getNextTypeLoc())
     TLR.Visit(TL);
 }
@@ -8988,11 +8997,10 @@ ASTRecordReader::readNestedNameSpecifierLoc() {
   return Builder.getWithLocInContext(Context);
 }
 
-SourceRange
-ASTReader::ReadSourceRange(ModuleFile &F, const RecordData &Record,
-                           unsigned &Idx) {
-  SourceLocation beg = ReadSourceLocation(F, Record, Idx);
-  SourceLocation end = ReadSourceLocation(F, Record, Idx);
+SourceRange ASTReader::ReadSourceRange(ModuleFile &F, const RecordData &Record,
+                                       unsigned &Idx, LocSeq *Seq) {
+  SourceLocation beg = ReadSourceLocation(F, Record, Idx, Seq);
+  SourceLocation end = ReadSourceLocation(F, Record, Idx, Seq);
   return SourceRange(beg, end);
 }
 
@@ -9192,7 +9200,8 @@ void ASTReader::finishPendingActions() {
   while (!PendingIdentifierInfos.empty() || !PendingFunctionTypes.empty() ||
          !PendingIncompleteDeclChains.empty() || !PendingDeclChains.empty() ||
          !PendingMacroIDs.empty() || !PendingDeclContextInfos.empty() ||
-         !PendingUpdateRecords.empty()) {
+         !PendingUpdateRecords.empty() ||
+         !PendingObjCExtensionIvarRedeclarations.empty()) {
     // If any identifiers with corresponding top-level declarations have
     // been loaded, load those declarations now.
     using TopLevelDeclsMap =
@@ -9282,6 +9291,43 @@ void ASTReader::finishPendingActions() {
       auto Update = PendingUpdateRecords.pop_back_val();
       ReadingKindTracker ReadingKind(Read_Decl, *this);
       loadDeclUpdateRecords(Update);
+    }
+
+    while (!PendingObjCExtensionIvarRedeclarations.empty()) {
+      auto ExtensionsPair = PendingObjCExtensionIvarRedeclarations.back().first;
+      auto DuplicateIvars =
+          PendingObjCExtensionIvarRedeclarations.back().second;
+      llvm::DenseSet<std::pair<Decl *, Decl *>> NonEquivalentDecls;
+      StructuralEquivalenceContext Ctx(
+          ExtensionsPair.first->getASTContext(),
+          ExtensionsPair.second->getASTContext(), NonEquivalentDecls,
+          StructuralEquivalenceKind::Default, /*StrictTypeSpelling =*/false,
+          /*Complain =*/false,
+          /*ErrorOnTagTypeMismatch =*/true);
+      if (Ctx.IsEquivalent(ExtensionsPair.first, ExtensionsPair.second)) {
+        // Merge redeclared ivars with their predecessors.
+        for (auto IvarPair : DuplicateIvars) {
+          ObjCIvarDecl *Ivar = IvarPair.first, *PrevIvar = IvarPair.second;
+          // Change semantic DeclContext but keep the lexical one.
+          Ivar->setDeclContextsImpl(PrevIvar->getDeclContext(),
+                                    Ivar->getLexicalDeclContext(),
+                                    getContext());
+          getContext().setPrimaryMergedDecl(Ivar, PrevIvar->getCanonicalDecl());
+        }
+        // Invalidate duplicate extension and the cached ivar list.
+        ExtensionsPair.first->setInvalidDecl();
+        ExtensionsPair.second->getClassInterface()
+            ->getDefinition()
+            ->setIvarList(nullptr);
+      } else {
+        for (auto IvarPair : DuplicateIvars) {
+          Diag(IvarPair.first->getLocation(),
+               diag::err_duplicate_ivar_declaration)
+              << IvarPair.first->getIdentifier();
+          Diag(IvarPair.second->getLocation(), diag::note_previous_definition);
+        }
+      }
+      PendingObjCExtensionIvarRedeclarations.pop_back();
     }
   }
 
@@ -12444,6 +12490,7 @@ void OMPClauseReader::VisitOMPDependClause(OMPDependClause *C) {
       static_cast<OpenMPDependClauseKind>(Record.readInt()));
   C->setDependencyLoc(Record.readSourceLocation());
   C->setColonLoc(Record.readSourceLocation());
+  C->setOmpAllMemoryLoc(Record.readSourceLocation());
   unsigned NumVars = C->varlist_size();
   SmallVector<Expr *, 16> Vars;
   Vars.reserve(NumVars);

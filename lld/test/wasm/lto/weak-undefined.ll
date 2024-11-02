@@ -11,6 +11,17 @@ target triple = "wasm32-unknown-unknown"
 
 declare extern_weak i32 @foo()
 
+declare extern_weak i32 @bar()
+
+; The reference to bar here will exist in the LTO file, but the LTO process will
+; remove it, so it will never be referenced by an normal object file, and
+; therefore never have a signature.
+define void @unused_function() #0 {
+entry:
+    %call2 = call i32 @bar()
+    ret void
+}
+
 define void @_start() #0 {
 entry:
     %call2 = call i32 @foo()

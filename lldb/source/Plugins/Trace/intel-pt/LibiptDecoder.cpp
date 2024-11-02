@@ -26,18 +26,6 @@ struct TscInfo {
   explicit operator bool() const { return has_tsc == eLazyBoolYes; }
 };
 
-static inline bool IsLibiptError(int libipt_status) {
-  return libipt_status < 0;
-}
-
-static inline bool IsEndOfStream(int libipt_status) {
-  return libipt_status == -pte_eos;
-}
-
-static inline bool IsTscUnavailable(int libipt_status) {
-  return libipt_status == -pte_no_time;
-}
-
 /// Class that decodes a raw buffer for a single thread using the low level
 /// libipt library.
 ///
@@ -75,20 +63,33 @@ public:
   }
 
 private:
+  /// Invoke the low level function \a pt_insn_next and store the decoded
+  /// instruction in the given \a DecodedInstruction.
+  ///
+  /// \param[out] insn
+  ///   The instruction builder where the pt_insn information will be stored.
+  ///
+  /// \return
+  ///   The status returned by pt_insn_next.
+  int DecodeNextInstruction(DecodedInstruction &insn) {
+    return pt_insn_next(&m_decoder, &insn.pt_insn, sizeof(insn.pt_insn));
+  }
+
   /// Decode all the instructions and events until an error is found or the end
   /// of the trace is reached.
   ///
   /// \param[in] status
   ///   The status that was result of synchronizing to the most recent PSB.
   void DecodeInstructionsAndEvents(int status) {
-    pt_insn insn;
-    while (ProcessPTEvents(status)) {
-      status = pt_insn_next(&m_decoder, &insn, sizeof(insn));
-      // The status returned by pt_insn_next will need to be processed by
-      // ProcessPTEvents in the next loop.
-      if (FoundErrors(status, insn.ip))
+    while (DecodedInstruction insn = ProcessPTEvents(status)) {
+      // The status returned by DecodeNextInstruction will need to be processed
+      // by ProcessPTEvents in the next loop if it is not an error.
+      if (IsLibiptError(status = DecodeNextInstruction(insn))) {
+        insn.libipt_error = status;
+        m_decoded_thread.Append(insn);
         break;
-      AppendInstruction(insn);
+      }
+      m_decoded_thread.Append(insn);
     }
   }
 
@@ -97,6 +98,8 @@ private:
   ///
   /// Once the decoder is at that synchronization point, it can start decoding
   /// instructions.
+  ///
+  /// If errors are found, they will be appended to the trace.
   ///
   /// \return
   ///   The libipt decoder status after moving to the next PSB. Negative if
@@ -135,7 +138,9 @@ private:
     }
 
     // We make this call to record any synchronization errors.
-    FoundErrors(status);
+    if (IsLibiptError(status))
+      m_decoded_thread.Append(DecodedInstruction(status));
+
     return status;
   }
 
@@ -143,21 +148,60 @@ private:
   /// instruction e.g. timing events like ptev_tick, or paging events like
   /// ptev_paging.
   ///
+  /// If an error is found, it will be appended to the trace.
+  ///
+  /// \param[in] status
+  ///   The status gotten from the previous instruction decoding or PSB
+  ///   synchronization.
+  ///
   /// \return
-  ///   \b true if we could process the events, \b false if errors were found.
-  bool ProcessPTEvents(int status) {
+  ///   A \a DecodedInstruction with event, tsc and error information.
+  DecodedInstruction ProcessPTEvents(int status) {
+    DecodedInstruction insn;
     while (status & pts_event_pending) {
       pt_event event;
       status = pt_insn_event(&m_decoder, &event, sizeof(event));
-      if (IsLibiptError(status))
+      if (IsLibiptError(status)) {
+        insn.libipt_error = status;
         break;
+      }
+
+      switch (event.type) {
+      case ptev_enabled:
+        // The kernel started or resumed tracing the program.
+        break;
+      case ptev_disabled:
+        // The CPU paused tracing the program, e.g. due to ip filtering.
+      case ptev_async_disabled:
+        // The kernel or user code paused tracing the program, e.g.
+        // a breakpoint or a ioctl invocation pausing the trace, or a
+        // context switch happened.
+
+        if (m_decoded_thread.GetInstructionsCount() > 0) {
+          // A paused event before the first instruction can be safely
+          // discarded.
+          insn.events |= eTraceEventPaused;
+        }
+        break;
+      case ptev_overflow:
+        // The CPU internal buffer had an overflow error and some instructions
+        // were lost.
+        insn.libipt_error = -pte_overflow;
+        break;
+      default:
+        break;
+      }
     }
 
     // We refresh the TSC that might have changed after processing the events.
     // See
     // https://github.com/intel/libipt/blob/master/doc/man/pt_evt_next.3.md
     RefreshTscInfo();
-    return !FoundErrors(status);
+    if (m_tsc_info)
+      insn.tsc = m_tsc_info.tsc;
+    if (!insn)
+      m_decoded_thread.Append(insn);
+    return insn;
   }
 
   /// Query the decoder for the most recent TSC timestamp and update
@@ -187,39 +231,6 @@ private:
       m_tsc_info.tsc = new_tsc;
       m_tsc_info.has_tsc = eLazyBoolYes;
     }
-  }
-
-  /// Check if the given libipt status signals any errors. If errors were found,
-  /// they will be recorded in the decoded trace.
-  ///
-  /// \param[in] ip
-  ///     An optional ip address can be passed if the error is associated with
-  ///     the decoding of a specific instruction.
-  ///
-  /// \return
-  ///     \b true if errors were found, \b false otherwise.
-  bool FoundErrors(int status, lldb::addr_t ip = LLDB_INVALID_ADDRESS) {
-    if (!IsLibiptError(status))
-      return false;
-
-    // We signal a gap only if it's not "end of stream", as that's not a proper
-    // error.
-    if (!IsEndOfStream(status)) {
-      if (m_tsc_info) {
-        m_decoded_thread.AppendError(make_error<IntelPTError>(status, ip),
-                                     m_tsc_info.tsc);
-      } else {
-        m_decoded_thread.AppendError(make_error<IntelPTError>(status, ip));
-      }
-    }
-    return true;
-  }
-
-  void AppendInstruction(const pt_insn &insn) {
-    if (m_tsc_info)
-      m_decoded_thread.AppendInstruction(insn, m_tsc_info.tsc);
-    else
-      m_decoded_thread.AppendInstruction(insn);
   }
 
 private:
@@ -293,7 +304,7 @@ void lldb_private::trace_intel_pt::DecodeTrace(DecodedThread &decoded_thread,
   Expected<PtInsnDecoderUP> decoder_up =
       CreateInstructionDecoder(decoded_thread, trace_intel_pt, buffer);
   if (!decoder_up)
-    return decoded_thread.AppendError(decoder_up.takeError());
+    return decoded_thread.SetAsFailed(decoder_up.takeError());
 
   LibiptDecoder libipt_decoder(*decoder_up.get(), decoded_thread);
   libipt_decoder.DecodeUntilEndOfTrace();

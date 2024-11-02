@@ -502,8 +502,6 @@ int main()
 // CHECK1-NEXT:    [[DOTTASK_RED_:%.*]] = alloca i8*, align 8
 // CHECK1-NEXT:    [[I:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [2 x i8*], align 8
-// CHECK1-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca double, align 8
-// CHECK1-NEXT:    [[_TMP30:%.*]] = alloca double, align 8
 // CHECK1-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK1-NEXT:    store [10 x [10 x [10 x double]]]* [[B]], [10 x [10 x [10 x double]]]** [[B_ADDR]], align 8
@@ -668,39 +666,21 @@ int main()
 // CHECK1:       .omp.reduction.case2:
 // CHECK1-NEXT:    [[TMP59:%.*]] = getelementptr double, double* [[ARRAYIDX3]], i64 [[TMP5]]
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY26:%.*]] = icmp eq double* [[ARRAYIDX3]], [[TMP59]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY26]], label [[OMP_ARRAYCPY_DONE35:%.*]], label [[OMP_ARRAYCPY_BODY27:%.*]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY26]], label [[OMP_ARRAYCPY_DONE33:%.*]], label [[OMP_ARRAYCPY_BODY27:%.*]]
 // CHECK1:       omp.arraycpy.body27:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST28:%.*]] = phi double* [ [[VLA]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT33:%.*]], [[ATOMIC_EXIT:%.*]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST29:%.*]] = phi double* [ [[ARRAYIDX3]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT32:%.*]], [[ATOMIC_EXIT]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST28:%.*]] = phi double* [ [[VLA]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT31:%.*]], [[OMP_ARRAYCPY_BODY27]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST29:%.*]] = phi double* [ [[ARRAYIDX3]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT30:%.*]], [[OMP_ARRAYCPY_BODY27]] ]
 // CHECK1-NEXT:    [[TMP60:%.*]] = load double, double* [[OMP_ARRAYCPY_SRCELEMENTPAST28]], align 8
-// CHECK1-NEXT:    [[TMP61:%.*]] = bitcast double* [[OMP_ARRAYCPY_DESTELEMENTPAST29]] to i64*
-// CHECK1-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i64, i64* [[TMP61]] monotonic, align 8
-// CHECK1-NEXT:    br label [[ATOMIC_CONT:%.*]]
-// CHECK1:       atomic_cont:
-// CHECK1-NEXT:    [[TMP62:%.*]] = phi i64 [ [[ATOMIC_LOAD]], [[OMP_ARRAYCPY_BODY27]] ], [ [[TMP70:%.*]], [[ATOMIC_CONT]] ]
-// CHECK1-NEXT:    [[TMP63:%.*]] = bitcast double* [[ATOMIC_TEMP]] to i64*
-// CHECK1-NEXT:    [[TMP64:%.*]] = bitcast i64 [[TMP62]] to double
-// CHECK1-NEXT:    store double [[TMP64]], double* [[_TMP30]], align 8
-// CHECK1-NEXT:    [[TMP65:%.*]] = load double, double* [[_TMP30]], align 8
-// CHECK1-NEXT:    [[TMP66:%.*]] = load double, double* [[OMP_ARRAYCPY_SRCELEMENTPAST28]], align 8
-// CHECK1-NEXT:    [[ADD31:%.*]] = fadd double [[TMP65]], [[TMP66]]
-// CHECK1-NEXT:    store double [[ADD31]], double* [[ATOMIC_TEMP]], align 8
-// CHECK1-NEXT:    [[TMP67:%.*]] = load i64, i64* [[TMP63]], align 8
-// CHECK1-NEXT:    [[TMP68:%.*]] = bitcast double* [[OMP_ARRAYCPY_DESTELEMENTPAST29]] to i64*
-// CHECK1-NEXT:    [[TMP69:%.*]] = cmpxchg i64* [[TMP68]], i64 [[TMP62]], i64 [[TMP67]] monotonic monotonic, align 8
-// CHECK1-NEXT:    [[TMP70]] = extractvalue { i64, i1 } [[TMP69]], 0
-// CHECK1-NEXT:    [[TMP71:%.*]] = extractvalue { i64, i1 } [[TMP69]], 1
-// CHECK1-NEXT:    br i1 [[TMP71]], label [[ATOMIC_EXIT]], label [[ATOMIC_CONT]]
-// CHECK1:       atomic_exit:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT32]] = getelementptr double, double* [[OMP_ARRAYCPY_DESTELEMENTPAST29]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT33]] = getelementptr double, double* [[OMP_ARRAYCPY_SRCELEMENTPAST28]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE34:%.*]] = icmp eq double* [[OMP_ARRAYCPY_DEST_ELEMENT32]], [[TMP59]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE34]], label [[OMP_ARRAYCPY_DONE35]], label [[OMP_ARRAYCPY_BODY27]]
-// CHECK1:       omp.arraycpy.done35:
+// CHECK1-NEXT:    [[TMP61:%.*]] = atomicrmw fadd double* [[OMP_ARRAYCPY_DESTELEMENTPAST29]], double [[TMP60]] monotonic, align 8
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT30]] = getelementptr double, double* [[OMP_ARRAYCPY_DESTELEMENTPAST29]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT31]] = getelementptr double, double* [[OMP_ARRAYCPY_SRCELEMENTPAST28]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE32:%.*]] = icmp eq double* [[OMP_ARRAYCPY_DEST_ELEMENT30]], [[TMP59]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE32]], label [[OMP_ARRAYCPY_DONE33]], label [[OMP_ARRAYCPY_BODY27]]
+// CHECK1:       omp.arraycpy.done33:
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.default:
-// CHECK1-NEXT:    [[TMP72:%.*]] = load i8*, i8** [[SAVED_STACK]], align 8
-// CHECK1-NEXT:    call void @llvm.stackrestore(i8* [[TMP72]])
+// CHECK1-NEXT:    [[TMP62:%.*]] = load i8*, i8** [[SAVED_STACK]], align 8
+// CHECK1-NEXT:    call void @llvm.stackrestore(i8* [[TMP62]])
 // CHECK1-NEXT:    ret void
 //
 //

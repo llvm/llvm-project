@@ -6,6 +6,9 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,host5 -fopenmp-simd -fopenmp-is-device -fopenmp-targets=x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp45 -fopenmp-version=45 -fopenmp-simd -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp -fopenmp-version=51 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp -fopenmp-version=51 -fnoopenmp-use-tls -ferror-limit 100 -DTESTEND=1 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp -fopenmp-version=51 -fnoopenmp-use-tls -ferror-limit 100 -I%S/Inputs -DTESTENDINC=1 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp-version=51 -fopenmp-simd -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp-version=51 -fopenmp-simd -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5 -fopenmp -fnoopenmp-use-tls -ferror-limit 100 -o - %s
@@ -228,5 +231,12 @@ int MultiDevTy;
 #pragma omp declare target to(MultiDevTy) device_type(host)   // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} omp5-error {{'device_type(host)' does not match previously specified 'device_type(any)' for the same declaration}} omp51-error {{'device_type(host)' does not match previously specified 'device_type(any)' for the same declaration}}
 #pragma omp declare target to(MultiDevTy) device_type(nohost) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} omp5-error {{'device_type(nohost)' does not match previously specified 'device_type(any)' for the same declaration}} // omp51-error {{'device_type(nohost)' does not match previously specified 'device_type(any)' for the same declaration}}
 
-// TODO: Issue an error message error {{expected '#pragma omp end declare target'}} note {{to match this '#pragma omp declare target'}}
+#if TESTENDINC
+#include "unterminated_declare_target_include.h"
+#elif TESTEND
+// expected-warning@+1 {{expected '#pragma omp end declare target' at end of file to match '#pragma omp declare target'}}
 #pragma omp declare target
+#else
+// expected-warning@+1 {{expected '#pragma omp end declare target' at end of file to match '#pragma omp begin declare target'}}
+#pragma omp begin declare target
+#endif

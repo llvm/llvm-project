@@ -16,6 +16,10 @@ static_library("Linux") {
   include_dirs = [ "//lldb/source" ]
   sources = [
     "IntelPTCollector.cpp",
+    "IntelPTMultiCoreTrace.cpp",
+    "IntelPTPerThreadProcessTrace.cpp",
+    "IntelPTSingleBufferTrace.cpp",
+    "IntelPTThreadTraceCollection.cpp",
     "NativeProcessLinux.cpp",
     "NativeRegisterContextLinux.cpp",
     "NativeRegisterContextLinux_arm.cpp",
@@ -25,6 +29,7 @@ static_library("Linux") {
     "NativeRegisterContextLinux_x86_64.cpp",
     "NativeThreadLinux.cpp",
     "Perf.cpp",
+    "Procfs.cpp",
     "SingleStepCheck.cpp",
   ]
 }

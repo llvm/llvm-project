@@ -43,7 +43,12 @@ public:
   bool hasFatalError() const { return hasFatalError_; }
   bool IsAtEnd() const { return at_ == end_; }
   const SomeExpr *operator*() const { return GetExpr(context_, GetConstant()); }
-  parser::CharBlock LocateSource() const { return GetConstant().source; }
+  std::optional<parser::CharBlock> LocateSource() const {
+    if (!hasFatalError_) {
+      return GetConstant().source;
+    }
+    return {};
+  }
   ValueListIterator &operator++() {
     if (repetitionsRemaining_ > 0) {
       --repetitionsRemaining_;
@@ -269,24 +274,11 @@ DataInitializationCompiler<DSV>::ConvertElement(
   if (auto converted{evaluate::ConvertToType(type, SomeExpr{expr})}) {
     return {std::make_pair(std::move(*converted), false)};
   }
-  if (std::optional<std::string> chValue{
-          evaluate::GetScalarConstantValue<evaluate::Ascii>(expr)}) {
-    // Allow DATA initialization with Hollerith and kind=1 CHARACTER like
-    // (most) other Fortran compilers do.  Pad on the right with spaces
-    // when short, truncate the right if long.
-    // TODO: big-endian targets
-    auto bytes{static_cast<std::size_t>(evaluate::ToInt64(
-        type.MeasureSizeInBytes(exprAnalyzer_.GetFoldingContext(), false))
-                                            .value())};
-    evaluate::BOZLiteralConstant bits{0};
-    for (std::size_t j{0}; j < bytes; ++j) {
-      char ch{j >= chValue->size() ? ' ' : chValue->at(j)};
-      evaluate::BOZLiteralConstant chBOZ{static_cast<unsigned char>(ch)};
-      bits = bits.IOR(chBOZ.SHIFTL(8 * j));
-    }
-    if (auto converted{evaluate::ConvertToType(type, SomeExpr{bits})}) {
-      return {std::make_pair(std::move(*converted), true)};
-    }
+  // Allow DATA initialization with Hollerith and kind=1 CHARACTER like
+  // (most) other Fortran compilers do.
+  if (auto converted{evaluate::HollerithToBOZ(
+          exprAnalyzer_.GetFoldingContext(), expr, type)}) {
+    return {std::make_pair(std::move(*converted), true)};
   }
   SemanticsContext &context{exprAnalyzer_.context()};
   if (context.IsEnabled(common::LanguageFeature::LogicalIntegerAssignment)) {
@@ -312,7 +304,9 @@ bool DataInitializationCompiler<DSV>::InitElement(
   bool isPointer{lastSymbol && IsPointer(*lastSymbol)};
   bool isProcPointer{lastSymbol && IsProcedurePointer(*lastSymbol)};
   evaluate::FoldingContext &context{exprAnalyzer_.GetFoldingContext()};
-  auto restorer{context.messages().SetLocation(values_.LocateSource())};
+  auto &messages{context.messages()};
+  auto restorer{
+      messages.SetLocation(values_.LocateSource().value_or(messages.at()))};
 
   const auto DescribeElement{[&]() {
     if (auto badDesignator{
@@ -368,8 +362,16 @@ bool DataInitializationCompiler<DSV>::InitElement(
     } else if (isProcPointer) {
       if (evaluate::IsProcedure(*expr)) {
         if (CheckPointerAssignment(context, designator, *expr)) {
-          GetImage().AddPointer(offsetSymbol.offset(), *expr);
-          return true;
+          if (lastSymbol->has<ProcEntityDetails>()) {
+            GetImage().AddPointer(offsetSymbol.offset(), *expr);
+            return true;
+          } else {
+            evaluate::AttachDeclaration(
+                exprAnalyzer_.context().Say(
+                    "DATA statement initialization of procedure pointer '%s' declared using a POINTER statement and an INTERFACE instead of a PROCEDURE statement"_todo_en_US,
+                    DescribeElement()),
+                *lastSymbol);
+          }
         }
       } else {
         exprAnalyzer_.Say(

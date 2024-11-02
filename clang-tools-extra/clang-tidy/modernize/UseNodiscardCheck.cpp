@@ -131,7 +131,7 @@ void UseNodiscardCheck::check(const MatchFinder::MatchResult &Result) {
   // 1. A const member function which returns a variable which is ignored
   // but performs some external I/O operation and the return value could be
   // ignored.
-  Diag << FixItHint::CreateInsertion(RetLoc, NoDiscardMacro + " ");
+  Diag << FixItHint::CreateInsertion(RetLoc, (NoDiscardMacro + " ").str());
 }
 
 bool UseNodiscardCheck::isLanguageVersionSupported(

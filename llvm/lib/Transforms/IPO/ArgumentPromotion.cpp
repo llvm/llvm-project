@@ -89,6 +89,8 @@ STATISTIC(NumArgumentsPromoted, "Number of pointer arguments promoted");
 STATISTIC(NumByValArgsPromoted, "Number of byval arguments promoted");
 STATISTIC(NumArgumentsDead, "Number of dead pointer args eliminated");
 
+namespace {
+
 struct ArgPart {
   Type *Ty;
   Align Alignment;
@@ -96,11 +98,14 @@ struct ArgPart {
   /// metadata transfer.
   LoadInst *MustExecLoad;
 };
+
 using OffsetAndArgPart = std::pair<int64_t, ArgPart>;
+
+} // end anonymous namespace
 
 static Value *createByteGEP(IRBuilderBase &IRB, const DataLayout &DL,
                             Value *Ptr, Type *ResElemTy, int64_t Offset) {
-  // For non-opaque pointers, try create a "nice" GEP if possible, otherwise
+  // For non-opaque pointers, try to create a "nice" GEP if possible, otherwise
   // fall back to an i8 GEP to a specific offset.
   unsigned AddrSpace = Ptr->getType()->getPointerAddressSpace();
   APInt OrigOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), Offset);
@@ -207,16 +212,23 @@ static Function *doPromotion(
 
   // The new function will have the !dbg metadata copied from the original
   // function. The original function may not be deleted, and dbg metadata need
-  // to be unique so we need to drop it.
+  // to be unique, so we need to drop it.
   F->setSubprogram(nullptr);
 
   LLVM_DEBUG(dbgs() << "ARG PROMOTION:  Promoting to:" << *NF << "\n"
                     << "From: " << *F);
 
+  uint64_t LargestVectorWidth = 0;
+  for (auto *I : Params)
+    if (auto *VT = dyn_cast<llvm::VectorType>(I))
+      LargestVectorWidth = std::max(
+          LargestVectorWidth, VT->getPrimitiveSizeInBits().getKnownMinSize());
+
   // Recompute the parameter attributes list based on the new arguments for
   // the function.
   NF->setAttributes(AttributeList::get(F->getContext(), PAL.getFnAttrs(),
                                        PAL.getRetAttrs(), ArgAttrVec));
+  AttributeFuncs::updateMinLegalVectorWidthAttr(*NF, LargestVectorWidth);
   ArgAttrVec.clear();
 
   F->getParent()->getFunctionList().insert(F->getIterator(), NF);
@@ -235,7 +247,7 @@ static Function *doPromotion(
 
     // Loop over the operands, inserting GEP and loads in the caller as
     // appropriate.
-    auto AI = CB.arg_begin();
+    auto *AI = CB.arg_begin();
     ArgNo = 0;
     for (Function::arg_iterator I = F->arg_begin(), E = F->arg_end(); I != E;
          ++I, ++AI, ++ArgNo)
@@ -250,15 +262,15 @@ static Function *doPromotion(
             ConstantInt::get(Type::getInt32Ty(F->getContext()), 0), nullptr};
         const StructLayout *SL = DL.getStructLayout(STy);
         Align StructAlign = *I->getParamAlign();
-        for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
-          Idxs[1] = ConstantInt::get(Type::getInt32Ty(F->getContext()), i);
+        for (unsigned J = 0, Elems = STy->getNumElements(); J != Elems; ++J) {
+          Idxs[1] = ConstantInt::get(Type::getInt32Ty(F->getContext()), J);
           auto *Idx =
-              IRB.CreateGEP(STy, *AI, Idxs, (*AI)->getName() + "." + Twine(i));
+              IRB.CreateGEP(STy, *AI, Idxs, (*AI)->getName() + "." + Twine(J));
           // TODO: Tell AA about the new values?
           Align Alignment =
-              commonAlignment(StructAlign, SL->getElementOffset(i));
+              commonAlignment(StructAlign, SL->getElementOffset(J));
           Args.push_back(IRB.CreateAlignedLoad(
-              STy->getElementType(i), Idx, Alignment, Idx->getName() + ".val"));
+              STy->getElementType(J), Idx, Alignment, Idx->getName() + ".val"));
           ArgAttrVec.push_back(AttributeSet());
         }
       } else if (!I->use_empty()) {
@@ -308,6 +320,9 @@ static Function *doPromotion(
     Args.clear();
     ArgAttrVec.clear();
 
+    AttributeFuncs::updateMinLegalVectorWidthAttr(*CB.getCaller(),
+                                                  LargestVectorWidth);
+
     // Update the callgraph to know that the callsite has been transformed.
     if (ReplaceCallSite)
       (*ReplaceCallSite)(CB, *NewCS);
@@ -355,13 +370,13 @@ static Function *doPromotion(
                         nullptr};
       const StructLayout *SL = DL.getStructLayout(STy);
 
-      for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
-        Idxs[1] = ConstantInt::get(Type::getInt32Ty(F->getContext()), i);
+      for (unsigned J = 0, Elems = STy->getNumElements(); J != Elems; ++J) {
+        Idxs[1] = ConstantInt::get(Type::getInt32Ty(F->getContext()), J);
         Value *Idx = GetElementPtrInst::Create(
-            AgTy, TheAlloca, Idxs, TheAlloca->getName() + "." + Twine(i),
+            AgTy, TheAlloca, Idxs, TheAlloca->getName() + "." + Twine(J),
             InsertPt);
-        I2->setName(Arg.getName() + "." + Twine(i));
-        Align Alignment = commonAlignment(StructAlign, SL->getElementOffset(i));
+        I2->setName(Arg.getName() + "." + Twine(J));
+        Align Alignment = commonAlignment(StructAlign, SL->getElementOffset(J));
         new StoreInst(&*I2++, Idx, false, Alignment, InsertPt);
       }
 
@@ -509,7 +524,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
 
     // We limit promotion to only promoting up to a fixed number of elements of
     // the aggregate.
-    if (MaxElements > 0 && ArgParts.size() >= MaxElements) {
+    if (MaxElements > 0 && ArgParts.size() > MaxElements) {
       LLVM_DEBUG(dbgs() << "ArgPromotion of " << *Arg << " failed: "
                         << "more than " << MaxElements << " parts\n");
       return false;
@@ -523,7 +538,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
       return false;
     }
 
-    // If this load is not guaranteed to execute and we haven't seen a load at
+    // If this load is not guaranteed to execute, and we haven't seen a load at
     // this offset before (or it had lower alignment), then we need to remember
     // that requirement.
     // Note that skipping loads of previously seen offsets is only correct
@@ -625,7 +640,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
     Offset = Pair.first + DL.getTypeStoreSize(Pair.second.Ty);
   }
 
-  // Okay, now we know that the argument is only used by load instructions and
+  // Okay, now we know that the argument is only used by load instructions, and
   // it is safe to unconditionally perform all of them. Use alias analysis to
   // check to see if the pointer is guaranteed to not be modified from entry of
   // the function to each of the load instructions.
@@ -659,37 +674,37 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   return true;
 }
 
-bool ArgumentPromotionPass::isDenselyPacked(Type *type, const DataLayout &DL) {
+bool ArgumentPromotionPass::isDenselyPacked(Type *Ty, const DataLayout &DL) {
   // There is no size information, so be conservative.
-  if (!type->isSized())
+  if (!Ty->isSized())
     return false;
 
   // If the alloc size is not equal to the storage size, then there are padding
   // bytes. For x86_fp80 on x86-64, size: 80 alloc size: 128.
-  if (DL.getTypeSizeInBits(type) != DL.getTypeAllocSizeInBits(type))
+  if (DL.getTypeSizeInBits(Ty) != DL.getTypeAllocSizeInBits(Ty))
     return false;
 
   // FIXME: This isn't the right way to check for padding in vectors with
   // non-byte-size elements.
-  if (VectorType *seqTy = dyn_cast<VectorType>(type))
-    return isDenselyPacked(seqTy->getElementType(), DL);
+  if (VectorType *SeqTy = dyn_cast<VectorType>(Ty))
+    return isDenselyPacked(SeqTy->getElementType(), DL);
 
   // For array types, check for padding within members.
-  if (ArrayType *seqTy = dyn_cast<ArrayType>(type))
-    return isDenselyPacked(seqTy->getElementType(), DL);
+  if (ArrayType *SeqTy = dyn_cast<ArrayType>(Ty))
+    return isDenselyPacked(SeqTy->getElementType(), DL);
 
-  if (!isa<StructType>(type))
+  if (!isa<StructType>(Ty))
     return true;
 
   // Check for padding within and between elements of a struct.
-  StructType *StructTy = cast<StructType>(type);
+  StructType *StructTy = cast<StructType>(Ty);
   const StructLayout *Layout = DL.getStructLayout(StructTy);
   uint64_t StartPos = 0;
-  for (unsigned i = 0, E = StructTy->getNumElements(); i < E; ++i) {
-    Type *ElTy = StructTy->getElementType(i);
+  for (unsigned I = 0, E = StructTy->getNumElements(); I < E; ++I) {
+    Type *ElTy = StructTy->getElementType(I);
     if (!isDenselyPacked(ElTy, DL))
       return false;
-    if (StartPos != Layout->getElementOffsetInBits(i))
+    if (StartPos != Layout->getElementOffsetInBits(I))
       return false;
     StartPos += DL.getTypeAllocSizeInBits(ElTy);
   }
@@ -698,24 +713,24 @@ bool ArgumentPromotionPass::isDenselyPacked(Type *type, const DataLayout &DL) {
 }
 
 /// Checks if the padding bytes of an argument could be accessed.
-static bool canPaddingBeAccessed(Argument *arg) {
-  assert(arg->hasByValAttr());
+static bool canPaddingBeAccessed(Argument *Arg) {
+  assert(Arg->hasByValAttr());
 
   // Track all the pointers to the argument to make sure they are not captured.
   SmallPtrSet<Value *, 16> PtrValues;
-  PtrValues.insert(arg);
+  PtrValues.insert(Arg);
 
   // Track all of the stores.
   SmallVector<StoreInst *, 16> Stores;
 
   // Scan through the uses recursively to make sure the pointer is always used
   // sanely.
-  SmallVector<Value *, 16> WorkList(arg->users());
+  SmallVector<Value *, 16> WorkList(Arg->users());
   while (!WorkList.empty()) {
     Value *V = WorkList.pop_back_val();
     if (isa<GetElementPtrInst>(V) || isa<PHINode>(V)) {
       if (PtrValues.insert(V).second)
-        llvm::append_range(WorkList, V->users());
+        append_range(WorkList, V->users());
     } else if (StoreInst *Store = dyn_cast<StoreInst>(V)) {
       Stores.push_back(Store);
     } else if (!isa<LoadInst>(V)) {
@@ -801,7 +816,7 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
     if (CB->isMustTailCall())
       return nullptr;
 
-    if (CB->getParent()->getParent() == F)
+    if (CB->getFunction() == F)
       IsRecursive = true;
   }
 
@@ -833,54 +848,57 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
       }
     }
 
-    // If this is a byval argument, and if the aggregate type is small, just
-    // pass the elements, which is always safe, if the passed value is densely
-    // packed or if we can prove the padding bytes are never accessed.
-    //
-    // Only handle arguments with specified alignment; if it's unspecified, the
-    // actual alignment of the argument is target-specific.
-    Type *ByValTy = PtrArg->getParamByValType();
-    bool isSafeToPromote =
-        ByValTy && PtrArg->getParamAlign() &&
-        (ArgumentPromotionPass::isDenselyPacked(ByValTy, DL) ||
-         !canPaddingBeAccessed(PtrArg));
-    if (isSafeToPromote) {
-      if (StructType *STy = dyn_cast<StructType>(ByValTy)) {
-        if (MaxElements > 0 && STy->getNumElements() > MaxElements) {
-          LLVM_DEBUG(dbgs() << "argpromotion disable promoting argument '"
-                            << PtrArg->getName()
-                            << "' because it would require adding more"
-                            << " than " << MaxElements
-                            << " arguments to the function.\n");
-          continue;
-        }
-
-        SmallVector<Type *, 4> Types;
-        append_range(Types, STy->elements());
-
-        // If all the elements are single-value types, we can promote it.
-        bool AllSimple =
-            all_of(Types, [](Type *Ty) { return Ty->isSingleValueType(); });
-
-        // Safe to transform, don't even bother trying to "promote" it.
-        // Passing the elements as a scalar will allow sroa to hack on
-        // the new alloca we introduce.
-        if (AllSimple && areTypesABICompatible(Types, *F, TTI)) {
-          ByValArgsToTransform.insert(PtrArg);
-          continue;
-        }
-      }
-    }
-
-    // Otherwise, see if we can promote the pointer to its value.
+    // If we can promote the pointer to its value.
     SmallVector<OffsetAndArgPart, 4> ArgParts;
     if (findArgParts(PtrArg, DL, AAR, MaxElements, IsRecursive, ArgParts)) {
       SmallVector<Type *, 4> Types;
       for (const auto &Pair : ArgParts)
         Types.push_back(Pair.second.Ty);
 
-      if (areTypesABICompatible(Types, *F, TTI))
+      if (areTypesABICompatible(Types, *F, TTI)) {
         ArgsToPromote.insert({PtrArg, std::move(ArgParts)});
+        continue;
+      }
+    }
+
+    // Otherwise, if this is a byval argument, and if the aggregate type is
+    // small, just pass the elements, which is always safe, if the passed value
+    // is densely packed or if we can prove the padding bytes are never
+    // accessed.
+    //
+    // Only handle arguments with specified alignment; if it's unspecified, the
+    // actual alignment of the argument is target-specific.
+    Type *ByValTy = PtrArg->getParamByValType();
+    bool IsSafeToPromote =
+        ByValTy && PtrArg->getParamAlign() &&
+        (ArgumentPromotionPass::isDenselyPacked(ByValTy, DL) ||
+         !canPaddingBeAccessed(PtrArg));
+    if (!IsSafeToPromote) {
+      LLVM_DEBUG(dbgs() << "ArgPromotion disables passing the elements of"
+                        << " the argument '" << PtrArg->getName()
+                        << "' because it is not safe.\n");
+      continue;
+    }
+    if (StructType *STy = dyn_cast<StructType>(ByValTy)) {
+      if (MaxElements > 0 && STy->getNumElements() > MaxElements) {
+        LLVM_DEBUG(dbgs() << "ArgPromotion disables passing the elements of"
+                          << " the argument '" << PtrArg->getName()
+                          << "' because it would require adding more"
+                          << " than " << MaxElements
+                          << " arguments to the function.\n");
+        continue;
+      }
+      SmallVector<Type *, 4> Types;
+      append_range(Types, STy->elements());
+
+      // If all the elements are single-value types, we can promote it.
+      bool AllSimple =
+          all_of(Types, [](Type *Ty) { return Ty->isSingleValueType(); });
+
+      // Safe to transform. Passing the elements as a scalar will allow sroa to
+      // hack on the new alloca we introduce.
+      if (AllSimple && areTypesABICompatible(Types, *F, TTI))
+        ByValArgsToTransform.insert(PtrArg);
     }
   }
 
@@ -1048,7 +1066,7 @@ bool ArgPromotion::runOnSCC(CallGraphSCC &SCC) {
         else
           OldF->setLinkage(Function::ExternalLinkage);
 
-        // And updat ethe SCC we're iterating as well.
+        // And update the SCC we're iterating as well.
         SCC.ReplaceNode(OldNode, NewNode);
       }
     }

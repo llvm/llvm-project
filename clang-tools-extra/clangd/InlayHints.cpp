@@ -10,6 +10,7 @@
 #include "Config.h"
 #include "HeuristicResolver.h"
 #include "ParsedAST.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -257,8 +258,10 @@ public:
   bool VisitFunctionDecl(FunctionDecl *D) {
     if (auto *FPT =
             llvm::dyn_cast<FunctionProtoType>(D->getType().getTypePtr())) {
-      if (!FPT->hasTrailingReturn())
-        addReturnTypeHint(D, D->getFunctionTypeLoc().getRParenLoc());
+      if (!FPT->hasTrailingReturn()) {
+        if (auto FTL = D->getFunctionTypeLoc())
+          addReturnTypeHint(D, FTL.getRParenLoc());
+      }
     }
     return true;
   }
@@ -392,6 +395,7 @@ private:
     // Don't show hints for variadic parameters.
     size_t FixedParamCount = getFixedParamCount(Callee);
     size_t ArgCount = std::min(FixedParamCount, Args.size());
+    auto Params = Callee->parameters();
 
     NameVec ParameterNames = chooseParameterNames(Callee, ArgCount);
 
@@ -402,12 +406,14 @@ private:
 
     for (size_t I = 0; I < ArgCount; ++I) {
       StringRef Name = ParameterNames[I];
-      if (!shouldHint(Args[I], Name))
-        continue;
+      bool NameHint = shouldHintName(Args[I], Name);
+      bool ReferenceHint = shouldHintReference(Params[I]);
 
-      addInlayHint(Args[I]->getSourceRange(), HintSide::Left,
-                   InlayHintKind::ParameterHint, /*Prefix=*/"", Name,
-                   /*Suffix=*/": ");
+      if (NameHint || ReferenceHint) {
+        addInlayHint(Args[I]->getSourceRange(), HintSide::Left,
+                     InlayHintKind::Parameter, ReferenceHint ? "&" : "",
+                     NameHint ? Name : "", ": ");
+      }
     }
   }
 
@@ -434,12 +440,12 @@ private:
     return WhatItIsSetting.equals_insensitive(ParamNames[0]);
   }
 
-  bool shouldHint(const Expr *Arg, StringRef ParamName) {
+  bool shouldHintName(const Expr *Arg, StringRef ParamName) {
     if (ParamName.empty())
       return false;
 
     // If the argument expression is a single name and it matches the
-    // parameter name exactly, omit the hint.
+    // parameter name exactly, omit the name hint.
     if (ParamName == getSpelledIdentifier(Arg))
       return false;
 
@@ -448,6 +454,13 @@ private:
       return false;
 
     return true;
+  }
+
+  bool shouldHintReference(const ParmVarDecl *Param) {
+    // If the parameter is a non-const reference type, print an inlay hint
+    auto Type = Param->getType();
+    return Type->isLValueReferenceType() &&
+           !Type.getNonReferenceType().isConstQualified();
   }
 
   // Checks if "E" is spelled in the main file and preceded by a C-style comment
@@ -563,7 +576,7 @@ private:
     return Result;
   }
 
-  // We pass HintSide rather than SourceLocation because we want to ensure 
+  // We pass HintSide rather than SourceLocation because we want to ensure
   // it is in the same file as the common file range.
   void addInlayHint(SourceRange R, HintSide Side, InlayHintKind Kind,
                     llvm::StringRef Prefix, llvm::StringRef Label,
@@ -580,9 +593,9 @@ private:
     if (!Cfg.InlayHints.ConfigProperty)                                        \
       return;                                                                  \
     break
-      CHECK_KIND(ParameterHint, Parameters);
-      CHECK_KIND(TypeHint, DeducedTypes);
-      CHECK_KIND(DesignatorHint, Designators);
+      CHECK_KIND(Parameter, Parameters);
+      CHECK_KIND(Type, DeducedTypes);
+      CHECK_KIND(Designator, Designators);
 #undef CHECK_KIND
     }
 
@@ -601,8 +614,10 @@ private:
     // file that was included after the preamble), do not show in that case.
     if (!AST.getSourceManager().isWrittenInMainFile(FileRange->getBegin()))
       return;
-    Results.push_back(
-        InlayHint{LSPPos, LSPRange, Kind, (Prefix + Label + Suffix).str()});
+    bool PadLeft = Prefix.consume_front(" ");
+    bool PadRight = Suffix.consume_back(" ");
+    Results.push_back(InlayHint{LSPPos, (Prefix + Label + Suffix).str(), Kind,
+                                PadLeft, PadRight, LSPRange});
   }
 
   void addTypeHint(SourceRange R, QualType T, llvm::StringRef Prefix) {
@@ -616,12 +631,12 @@ private:
 
     std::string TypeName = T.getAsString(Policy);
     if (TypeName.length() < TypeNameLimit)
-      addInlayHint(R, HintSide::Right, InlayHintKind::TypeHint, Prefix,
-                   TypeName, /*Suffix=*/"");
+      addInlayHint(R, HintSide::Right, InlayHintKind::Type, Prefix, TypeName,
+                   /*Suffix=*/"");
   }
 
   void addDesignatorHint(SourceRange R, llvm::StringRef Text) {
-    addInlayHint(R, HintSide::Left, InlayHintKind::DesignatorHint,
+    addInlayHint(R, HintSide::Left, InlayHintKind::Designator,
                  /*Prefix=*/"", Text, /*Suffix=*/"=");
   }
 

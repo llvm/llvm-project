@@ -519,13 +519,13 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__config>
 #include <__debug>
 #include <__functional/is_transparent.h>
+#include <__functional/operations.h>
 #include <__hash_table>
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
 #include <__node_handle>
 #include <__utility/forward.h>
 #include <compare>
-#include <functional>
 #include <iterator> // __libcpp_erase_if_container
 #include <stdexcept>
 #include <tuple>
@@ -1694,9 +1694,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
     : __table_(_VSTD::move(__u.__table_))
 {
     _VSTD::__debug_db_insert_c(this);
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->swap(this, _VSTD::addressof(__u));
-#endif
+    std::__debug_db_swap(this, std::addressof(__u));
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
@@ -1713,10 +1711,8 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
                 __u.__table_.remove((__i++).__i_)->__value_.__move());
         }
     }
-#if _LIBCPP_DEBUG_LEVEL == 2
     else
-        __get_db()->swap(this, _VSTD::addressof(__u));
-#endif
+        std::__debug_db_swap(this, std::addressof(__u));
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
@@ -2470,9 +2466,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
     : __table_(_VSTD::move(__u.__table_))
 {
     _VSTD::__debug_db_insert_c(this);
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->swap(this, _VSTD::addressof(__u));
-#endif
+    std::__debug_db_swap(this, std::addressof(__u));
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
@@ -2490,10 +2484,8 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
                 __u.__table_.remove((__i++).__i_)->__value_.__move());
         }
     }
-#if _LIBCPP_DEBUG_LEVEL == 2
     else
-        __get_db()->swap(this, _VSTD::addressof(__u));
-#endif
+        std::__debug_db_swap(this, std::addressof(__u));
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>

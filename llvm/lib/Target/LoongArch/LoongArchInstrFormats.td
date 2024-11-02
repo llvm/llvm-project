@@ -10,9 +10,9 @@
 //  Describe LoongArch instructions format
 //
 //  opcode       - operation code.
-//  {r/f}d       - destination operand.
-//  {r/f}{j/k/a} - source operand.
-//  immN         - immediate data.
+//  rd           - destination register operand.
+//  r{j/k}       - source register operand.
+//  immN         - immediate data operand.
 //
 //===----------------------------------------------------------------------===//
 
@@ -57,7 +57,6 @@ class Fmt2R<bits<22> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 3R-type
 // <opcode | rk | rj | rd>
-// <opcode | fk | fj | fd>
 class Fmt3R<bits<17> op, dag outs, dag ins, string opcstr, string opnstr,
             list<dag> pattern = []>
     : LAInst<outs, ins, opcstr, opnstr, pattern> {
@@ -66,36 +65,6 @@ class Fmt3R<bits<17> op, dag outs, dag ins, string opcstr, string opnstr,
   bits<5> rd;
 
   let Inst{31-15} = op;
-  let Inst{14-10} = rk;
-  let Inst{9-5} = rj;
-  let Inst{4-0} = rd;
-}
-
-class Fmt3FR<bits<17> op, dag outs, dag ins, string opcstr, string opnstr,
-             list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
-  bits<5> fk;
-  bits<5> fj;
-  bits<5> fd;
-
-  let Inst{31-15} = op;
-  let Inst{14-10} = fk;
-  let Inst{9-5} = fj;
-  let Inst{4-0} = fd;
-}
-
-// 4R-type
-// <opcode | ra | rk | rj | rd>
-class Fmt4R<bits<12> op, dag outs, dag ins, string opcstr, string opnstr,
-            list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
-  bits<5> ra;
-  bits<5> rk;
-  bits<5> rj;
-  bits<5> rd;
-
-  let Inst{31-20} = op;
-  let Inst{19-15} = ra;
   let Inst{14-10} = rk;
   let Inst{9-5} = rj;
   let Inst{4-0} = rd;
@@ -352,4 +321,84 @@ class FmtPRELDX<dag outs, dag ins, string opcstr, string opnstr,
   let Inst{14-10} = rk;
   let Inst{9-5} = rj;
   let Inst{4-0} = imm5;
+}
+
+// FmtCSR
+// <opcode[12:5] | csr_num | opcode[4:0] | rd>
+class FmtCSR<bits<13> op, dag outs, dag ins, string opcstr, string opnstr,
+             list<dag> pattern = []>
+    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+  bits<14> csr_num;
+  bits<5> rd;
+
+  let Inst{31-24} = op{12-5};
+  let Inst{23-10} = csr_num;
+  let Inst{9-5} = op{4-0};
+  let Inst{4-0} = rd;
+}
+
+// FmtCSRXCHG
+// <opcode | csr_num | rj | rd>
+class FmtCSRXCHG<bits<8> op, dag outs, dag ins, string opcstr, string opnstr,
+                 list<dag> pattern = []>
+    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+  bits<14> csr_num;
+  bits<5> rj;
+  bits<5> rd;
+
+  let Inst{31-24} = op;
+  let Inst{23-10} = csr_num;
+  let Inst{9-5} = rj;
+  let Inst{4-0} = rd;
+}
+
+// FmtCACOP
+// <0b0000011000 | I12 | rj | I5>
+class FmtCACOP<dag outs, dag ins, string opcstr, string opnstr,
+               list<dag> pattern = []>
+    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+  bits<12> imm12;
+  bits<5> rj;
+  bits<5> op;
+
+  let Inst{31-22} = 0b0000011000;
+  let Inst{21-10} = imm12;
+  let Inst{9-5} = rj;
+  let Inst{4-0} = op;
+}
+
+// FmtIMM32
+// <I32>
+class FmtI32<bits<32> op, string opstr, list<dag> pattern = []>
+    : LAInst<(outs), (ins), opstr, "", pattern> {
+  let Inst{31-0} = op;
+}
+
+// FmtINVTLB
+// <0b00000110010010011 | rk | rj | I5>
+class FmtINVTLB<dag outs, dag ins, string opcstr, string opnstr,
+                list<dag> pattern = []>
+    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+  bits<5> rk;
+  bits<5> rj;
+  bits<5> op;
+
+  let Inst{31-15} = 0b00000110010010011;
+  let Inst{14-10} = rk;
+  let Inst{9-5} = rj;
+  let Inst{4-0} = op;
+}
+
+// FmtLDPTE
+// <0b00000110010001 | seq | rj | 00000>
+class FmtLDPTE<dag outs, dag ins, string opcstr, string opnstr,
+               list<dag> pattern = []>
+    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+  bits<8> seq;
+  bits<5> rj;
+
+  let Inst{31-18} = 0b00000110010001;
+  let Inst{17-10} = seq;
+  let Inst{9-5} = rj;
+  let Inst{4-0} = 0b00000;
 }

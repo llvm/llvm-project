@@ -11,7 +11,6 @@
 
 #include "../ClangTidyCheck.h"
 #include "llvm/ADT/StringRef.h"
-#include <string>
 #include <vector>
 
 namespace clang {
@@ -34,7 +33,7 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Options) override;
 
 private:
-  const std::vector<std::string> ForbiddenSuperClassNames;
+  const std::vector<StringRef> ForbiddenSuperClassNames;
 };
 
 } // namespace objc

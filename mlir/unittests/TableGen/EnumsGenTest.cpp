@@ -28,7 +28,6 @@
 using Outer::Inner::ConvertToEnum;
 using Outer::Inner::ConvertToString;
 using Outer::Inner::FooEnum;
-using Outer::Inner::FooEnumAttr;
 
 TEST(EnumsGenTest, GeneratedStrEnumDefinition) {
   EXPECT_EQ(0u, static_cast<uint64_t>(FooEnum::CaseA));
@@ -70,6 +69,9 @@ TEST(EnumsGenTest, GeneratedBitEnumDefinition) {
   EXPECT_EQ(0u, static_cast<uint32_t>(BitEnumWithNone::None));
   EXPECT_EQ(1u, static_cast<uint32_t>(BitEnumWithNone::Bit0));
   EXPECT_EQ(8u, static_cast<uint32_t>(BitEnumWithNone::Bit3));
+
+  EXPECT_EQ(2u, static_cast<uint64_t>(BitEnum64_Test::Bit1));
+  EXPECT_EQ(144115188075855872u, static_cast<uint64_t>(BitEnum64_Test::Bit57));
 }
 
 TEST(EnumsGenTest, GeneratedSymbolToStringFnForBitEnum) {
@@ -78,9 +80,12 @@ TEST(EnumsGenTest, GeneratedSymbolToStringFnForBitEnum) {
   EXPECT_EQ(stringifyBitEnumWithNone(BitEnumWithNone::Bit3), "Bit3");
   EXPECT_EQ(
       stringifyBitEnumWithNone(BitEnumWithNone::Bit0 | BitEnumWithNone::Bit3),
-      "Bit0|Bit3");
-  EXPECT_EQ(2u, static_cast<uint64_t>(BitEnum64_Test::Bit1));
-  EXPECT_EQ(144115188075855872u, static_cast<uint64_t>(BitEnum64_Test::Bit57));
+      "Bit0 | Bit3");
+
+  EXPECT_EQ(stringifyBitEnum64_Test(BitEnum64_Test::Bit1), "Bit1");
+  EXPECT_EQ(
+      stringifyBitEnum64_Test(BitEnum64_Test::Bit1 | BitEnum64_Test::Bit57),
+      "Bit1|Bit57");
 }
 
 TEST(EnumsGenTest, GeneratedStringToSymbolForBitEnum) {
@@ -91,7 +96,7 @@ TEST(EnumsGenTest, GeneratedStringToSymbolForBitEnum) {
             BitEnumWithNone::Bit3 | BitEnumWithNone::Bit0);
 
   EXPECT_EQ(symbolizeBitEnumWithNone("Bit2"), llvm::None);
-  EXPECT_EQ(symbolizeBitEnumWithNone("Bit3|Bit4"), llvm::None);
+  EXPECT_EQ(symbolizeBitEnumWithNone("Bit3 | Bit4"), llvm::None);
 
   EXPECT_EQ(symbolizeBitEnumWithoutNone("None"), llvm::None);
 }
@@ -114,6 +119,26 @@ TEST(EnumsGenTest, GeneratedStringToSymbolForGroupedBitEnum) {
   EXPECT_EQ(symbolizeBitEnumWithGroup("Bit5"), llvm::None);
   EXPECT_EQ(symbolizeBitEnumWithGroup("Bit3|Bit0"),
             BitEnumWithGroup::Bit3 | BitEnumWithGroup::Bit0);
+}
+
+TEST(EnumsGenTest, GeneratedSymbolToStringFnForPrimaryGroupBitEnum) {
+  EXPECT_EQ(stringifyBitEnumPrimaryGroup(
+                BitEnumPrimaryGroup::Bit0 | BitEnumPrimaryGroup::Bit1 |
+                BitEnumPrimaryGroup::Bit2 | BitEnumPrimaryGroup::Bit3),
+            "Bits0To3");
+  EXPECT_EQ(stringifyBitEnumPrimaryGroup(BitEnumPrimaryGroup::Bit0 |
+                                         BitEnumPrimaryGroup::Bit2 |
+                                         BitEnumPrimaryGroup::Bit3),
+            "Bit0, Bit2, Bit3");
+  EXPECT_EQ(stringifyBitEnumPrimaryGroup(BitEnumPrimaryGroup::Bit0 |
+                                         BitEnumPrimaryGroup::Bit4 |
+                                         BitEnumPrimaryGroup::Bit5),
+            "Bits4And5, Bit0");
+  EXPECT_EQ(stringifyBitEnumPrimaryGroup(
+                BitEnumPrimaryGroup::Bit0 | BitEnumPrimaryGroup::Bit1 |
+                BitEnumPrimaryGroup::Bit2 | BitEnumPrimaryGroup::Bit3 |
+                BitEnumPrimaryGroup::Bit4 | BitEnumPrimaryGroup::Bit5),
+            "Bits0To5");
 }
 
 TEST(EnumsGenTest, GeneratedOperator) {

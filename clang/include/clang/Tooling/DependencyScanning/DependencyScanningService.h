@@ -19,15 +19,13 @@ namespace dependencies {
 /// dependencies.
 enum class ScanningMode {
   /// This mode is used to compute the dependencies by running the preprocessor
-  /// over
-  /// the unmodified source files.
+  /// over the source files.
   CanonicalPreprocessing,
 
   /// This mode is used to compute the dependencies by running the preprocessor
-  /// over
-  /// the source files that have been minimized to contents that might affect
-  /// the dependencies.
-  MinimizedSourcePreprocessing
+  /// with special kind of lexing after scanning header and source files to get
+  /// the minimum necessary preprocessor directives for evaluating includes.
+  DependencyDirectivesScan,
 };
 
 /// The format that is output by the dependency scanner.
@@ -48,7 +46,6 @@ class DependencyScanningService {
 public:
   DependencyScanningService(ScanningMode Mode, ScanningOutputFormat Format,
                             bool ReuseFileManager = true,
-                            bool SkipExcludedPPRanges = true,
                             bool OptimizeArgs = false);
 
   ScanningMode getMode() const { return Mode; }
@@ -56,8 +53,6 @@ public:
   ScanningOutputFormat getFormat() const { return Format; }
 
   bool canReuseFileManager() const { return ReuseFileManager; }
-
-  bool canSkipExcludedPPRanges() const { return SkipExcludedPPRanges; }
 
   bool canOptimizeArgs() const { return OptimizeArgs; }
 
@@ -69,10 +64,6 @@ private:
   const ScanningMode Mode;
   const ScanningOutputFormat Format;
   const bool ReuseFileManager;
-  /// Set to true to use the preprocessor optimization that skips excluded PP
-  /// ranges by bumping the buffer pointer in the lexer instead of lexing the
-  /// tokens in the range until reaching the corresponding directive.
-  const bool SkipExcludedPPRanges;
   /// Whether to optimize the modules' command-line arguments.
   const bool OptimizeArgs;
   /// The global file system cache.

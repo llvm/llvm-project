@@ -14,6 +14,8 @@
 
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -O0 -run-pass=legalizer  -global-isel-abort=0 %s -o - | FileCheck -check-prefixes=GFX9-HSA %s
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -O0 -run-pass=legalizer  -global-isel-abort=0 %s -o - | FileCheck -check-prefixes=GFX9-MESA %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -O0 -run-pass=legalizer  -global-isel-abort=0 %s -o - | FileCheck -check-prefixes=GFX9-HSA %s
+# RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -O0 -run-pass=legalizer  -global-isel-abort=0 %s -o - | FileCheck -check-prefixes=GFX9-MESA %s
 
 # ERR-NOT: remark
 # ERR: remark: <unknown>:0:0: unable to legalize instruction: %{{[0-9]+}}:_(<2 x s32>) = G_LOAD %{{[0-9]+}}:_(p1) :: (load (<2 x s16>), align 1, addrspace 1) (in function: test_extload_global_v2s32_from_v2s16_align1)

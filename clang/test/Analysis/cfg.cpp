@@ -593,6 +593,63 @@ void CommaTemp::f() {
   A(), B();
 }
 
+// CHECK-LABEL: int crash_with_thread_local(char *p, int *q)
+// CHECK:       [B7 (ENTRY)]
+// CHECK-NEXT:    Succs (1): B6
+// CHECK:       [B1]
+// CHECK-NEXT:   bail:
+// CHECK-NEXT:    1: 0
+// CHECK-NEXT:    2: return [B1.1];
+// CHECK-NEXT:    Preds (2): B2 B5
+// CHECK-NEXT:    Succs (1): B0
+// CHECK:       [B2]
+// CHECK-NEXT:    1: 0
+// CHECK-NEXT:    2: q
+// CHECK-NEXT:    3: [B2.2] (ImplicitCastExpr, LValueToRValue, int *)
+// CHECK-NEXT:    4: *[B2.3]
+// CHECK-NEXT:    5: [B2.4] = [B2.1]
+// CHECK-NEXT:    Preds (2): B3 B4
+// CHECK-NEXT:    Succs (1): B1
+// CHECK:       [B3]
+// WARNINGS-NEXT: 1:  (CXXConstructExpr, struct ClassWithDtor)
+// ANALYZER-NEXT: 1:  (CXXConstructExpr, [B3.2], struct ClassWithDtor)
+// CHECK-NEXT:    2: thread_local ClassWithDtor a;
+// CHECK-NEXT:    Preds (1): B4
+// CHECK-NEXT:    Succs (1): B2
+// CHECK:       [B4]
+// CHECK-NEXT:    T: static init a
+// CHECK-NEXT:    Preds (1): B6
+// CHECK-NEXT:    Succs (2): B2 B3
+// CHECK:       [B5]
+// CHECK-NEXT:    T: goto bail;
+// CHECK-NEXT:    Preds (1): B6
+// CHECK-NEXT:    Succs (1): B1
+// CHECK:       [B6]
+// CHECK-NEXT:    1: p
+// CHECK-NEXT:    2: [B6.1] (ImplicitCastExpr, LValueToRValue, char *)
+// CHECK-NEXT:    3: 0
+// CHECK-NEXT:    4: [B6.3] (ImplicitCastExpr, NullToPointer, char *)
+// CHECK-NEXT:    5: [B6.2] != [B6.4]
+// CHECK-NEXT:    T: if [B6.5]
+// CHECK-NEXT:    Preds (1): B7
+// CHECK-NEXT:    Succs (2): B5 B4
+// CHECK:       [B0 (EXIT)]
+// CHECK-NEXT:    Preds (1): B1
+
+struct ClassWithDtor {
+  ~ClassWithDtor() {}
+};
+
+int crash_with_thread_local(char *p, int *q) {
+  if (p != 0) {
+    goto bail;
+  }
+  thread_local ClassWithDtor a;
+  *q = 0;
+bail:
+  return 0;
+}
+
 // CHECK-LABEL: template<> int *PR18472<int>()
 // CHECK: [B2 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B1

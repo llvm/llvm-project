@@ -35,6 +35,12 @@ dummy_output = """\
 }"""
 
 if os.environ['GTEST_SHARD_INDEX'] == '0':
+    print("""\
+[----------] 4 test from FirstTest
+[ RUN      ] FirstTest.subTestA
+[       OK ] FirstTest.subTestA (18 ms)
+[ RUN      ] FirstTest.subTestB""", flush=True)
+    print('I am about to crash', file=sys.stderr, flush=True)
     exit_code = 1
 else:
     json_filename = os.environ['GTEST_OUTPUT'].split(':', 1)[1]

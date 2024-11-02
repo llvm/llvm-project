@@ -25,25 +25,25 @@ define void @test() {
 ; AVX1:  LV: Found an estimated cost of 27 for VF 2 For instruction: store i16 %v4, ptr %out4, align 2
 ; AVX1:  LV: Found an estimated cost of 45 for VF 4 For instruction: store i16 %v4, ptr %out4, align 2
 ; AVX1:  LV: Found an estimated cost of 88 for VF 8 For instruction: store i16 %v4, ptr %out4, align 2
-; AVX1:  LV: Found an estimated cost of 215 for VF 16 For instruction: store i16 %v4, ptr %out4, align 2
-; AVX1:  LV: Found an estimated cost of 430 for VF 32 For instruction: store i16 %v4, ptr %out4, align 2
+; AVX1:  LV: Found an estimated cost of 180 for VF 16 For instruction: store i16 %v4, ptr %out4, align 2
+; AVX1:  LV: Found an estimated cost of 360 for VF 32 For instruction: store i16 %v4, ptr %out4, align 2
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %v4, ptr %out4, align 2
 ; AVX2:  LV: Found an estimated cost of 27 for VF 2 For instruction: store i16 %v4, ptr %out4, align 2
 ; AVX2:  LV: Found an estimated cost of 45 for VF 4 For instruction: store i16 %v4, ptr %out4, align 2
 ; AVX2:  LV: Found an estimated cost of 88 for VF 8 For instruction: store i16 %v4, ptr %out4, align 2
-; AVX2:  LV: Found an estimated cost of 215 for VF 16 For instruction: store i16 %v4, ptr %out4, align 2
-; AVX2:  LV: Found an estimated cost of 430 for VF 32 For instruction: store i16 %v4, ptr %out4, align 2
+; AVX2:  LV: Found an estimated cost of 180 for VF 16 For instruction: store i16 %v4, ptr %out4, align 2
+; AVX2:  LV: Found an estimated cost of 360 for VF 32 For instruction: store i16 %v4, ptr %out4, align 2
 ;
 ; AVX512DQ-LABEL: 'test'
 ; AVX512DQ:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %v4, ptr %out4, align 2
 ; AVX512DQ:  LV: Found an estimated cost of 27 for VF 2 For instruction: store i16 %v4, ptr %out4, align 2
 ; AVX512DQ:  LV: Found an estimated cost of 47 for VF 4 For instruction: store i16 %v4, ptr %out4, align 2
 ; AVX512DQ:  LV: Found an estimated cost of 87 for VF 8 For instruction: store i16 %v4, ptr %out4, align 2
-; AVX512DQ:  LV: Found an estimated cost of 213 for VF 16 For instruction: store i16 %v4, ptr %out4, align 2
-; AVX512DQ:  LV: Found an estimated cost of 465 for VF 32 For instruction: store i16 %v4, ptr %out4, align 2
-; AVX512DQ:  LV: Found an estimated cost of 930 for VF 64 For instruction: store i16 %v4, ptr %out4, align 2
+; AVX512DQ:  LV: Found an estimated cost of 178 for VF 16 For instruction: store i16 %v4, ptr %out4, align 2
+; AVX512DQ:  LV: Found an estimated cost of 360 for VF 32 For instruction: store i16 %v4, ptr %out4, align 2
+; AVX512DQ:  LV: Found an estimated cost of 720 for VF 64 For instruction: store i16 %v4, ptr %out4, align 2
 ;
 ; AVX512BW-LABEL: 'test'
 ; AVX512BW:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %v4, ptr %out4, align 2

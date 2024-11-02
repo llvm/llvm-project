@@ -31,6 +31,8 @@ Symbol enm(llvm::StringRef Name);
 Symbol var(llvm::StringRef Name);
 // Creates a namespace symbol.
 Symbol ns(llvm::StringRef Name);
+// Create a C++20 concept symbol.
+Symbol conceptSym(llvm::StringRef Name);
 
 // Create a slab of symbols with the given qualified names as IDs and names.
 SymbolSlab generateSymbols(std::vector<std::string> QualifiedNames);

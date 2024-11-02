@@ -40,6 +40,16 @@ add_libc_unittest(
     libc.src.__support.arg_list
 )
 
+add_libc_unittest(
+  uint128_test
+  SUITE
+    libc_support_unittests
+  SRCS
+    uint128_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.uint
+)
+
 add_executable(
   libc_str_to_float_comparison_test
   str_to_float_comparison_test.cpp

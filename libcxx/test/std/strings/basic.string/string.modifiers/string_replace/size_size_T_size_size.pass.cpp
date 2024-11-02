@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // template <class T>
 //    basic_string& replace(size_type pos1, size_type n1, const T& t,
-//                          size_type pos2, size_type n=npos);
+//                          size_type pos2, size_type n=npos); // constexpr since C++20
 //
 //  Mostly we're testing string_view here
 
@@ -47,7 +49,7 @@ test(S s, typename S::size_type pos1, typename S::size_type n1,
         assert(s.size() == old_size - xlen + rlen);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -83,7 +85,7 @@ test_npos(S s, typename S::size_type pos1, typename S::size_type n1,
         assert(s.size() == old_size - xlen + rlen);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -5981,7 +5983,7 @@ TEST_CONSTEXPR_CXX20 bool test55()
     return true;
 }
 
-bool test56() {
+TEST_CONSTEXPR_CXX20 bool test56() {
     typedef std::string S;
     typedef std::string_view SV;
     S s0 = "ABCD";
@@ -6017,7 +6019,7 @@ bool test56() {
 }
 
 template <class S, class SV>
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   test0<S, SV>();
   test1<S, SV>();
   test2<S, SV>();
@@ -6076,62 +6078,62 @@ bool test() {
   test55<S, SV>();
 
 #if TEST_STD_VER > 17
-  // static_assert(test0<S, SV>());
-  // static_assert(test1<S, SV>());
-  // static_assert(test2<S, SV>());
-  // static_assert(test3<S, SV>());
-  // static_assert(test4<S, SV>());
-  // static_assert(test5<S, SV>());
-  // static_assert(test6<S, SV>());
-  // static_assert(test7<S, SV>());
-  // static_assert(test8<S, SV>());
-  // static_assert(test9<S, SV>());
-  // static_assert(test10<S, SV>());
-  // static_assert(test11<S, SV>());
-  // static_assert(test12<S, SV>());
-  // static_assert(test13<S, SV>());
-  // static_assert(test14<S, SV>());
-  // static_assert(test15<S, SV>());
-  // static_assert(test16<S, SV>());
-  // static_assert(test17<S, SV>());
-  // static_assert(test18<S, SV>());
-  // static_assert(test19<S, SV>());
-  // static_assert(test20<S, SV>());
-  // static_assert(test21<S, SV>());
-  // static_assert(test22<S, SV>());
-  // static_assert(test23<S, SV>());
-  // static_assert(test24<S, SV>());
-  // static_assert(test25<S, SV>());
-  // static_assert(test26<S, SV>());
-  // static_assert(test27<S, SV>());
-  // static_assert(test28<S, SV>());
-  // static_assert(test29<S, SV>());
-  // static_assert(test30<S, SV>());
-  // static_assert(test31<S, SV>());
-  // static_assert(test32<S, SV>());
-  // static_assert(test33<S, SV>());
-  // static_assert(test34<S, SV>());
-  // static_assert(test35<S, SV>());
-  // static_assert(test36<S, SV>());
-  // static_assert(test37<S, SV>());
-  // static_assert(test38<S, SV>());
-  // static_assert(test39<S, SV>());
-  // static_assert(test40<S, SV>());
-  // static_assert(test41<S, SV>());
-  // static_assert(test42<S, SV>());
-  // static_assert(test43<S, SV>());
-  // static_assert(test44<S, SV>());
-  // static_assert(test45<S, SV>());
-  // static_assert(test46<S, SV>());
-  // static_assert(test47<S, SV>());
-  // static_assert(test48<S, SV>());
-  // static_assert(test49<S, SV>());
-  // static_assert(test50<S, SV>());
-  // static_assert(test51<S, SV>());
-  // static_assert(test52<S, SV>());
-  // static_assert(test53<S, SV>());
-  // static_assert(test54<S, SV>());
-  // static_assert(test55<S, SV>());
+  static_assert(test0<S, SV>());
+  static_assert(test1<S, SV>());
+  static_assert(test2<S, SV>());
+  static_assert(test3<S, SV>());
+  static_assert(test4<S, SV>());
+  static_assert(test5<S, SV>());
+  static_assert(test6<S, SV>());
+  static_assert(test7<S, SV>());
+  static_assert(test8<S, SV>());
+  static_assert(test9<S, SV>());
+  static_assert(test10<S, SV>());
+  static_assert(test11<S, SV>());
+  static_assert(test12<S, SV>());
+  static_assert(test13<S, SV>());
+  static_assert(test14<S, SV>());
+  static_assert(test15<S, SV>());
+  static_assert(test16<S, SV>());
+  static_assert(test17<S, SV>());
+  static_assert(test18<S, SV>());
+  static_assert(test19<S, SV>());
+  static_assert(test20<S, SV>());
+  static_assert(test21<S, SV>());
+  static_assert(test22<S, SV>());
+  static_assert(test23<S, SV>());
+  static_assert(test24<S, SV>());
+  static_assert(test25<S, SV>());
+  static_assert(test26<S, SV>());
+  static_assert(test27<S, SV>());
+  static_assert(test28<S, SV>());
+  static_assert(test29<S, SV>());
+  static_assert(test30<S, SV>());
+  static_assert(test31<S, SV>());
+  static_assert(test32<S, SV>());
+  static_assert(test33<S, SV>());
+  static_assert(test34<S, SV>());
+  static_assert(test35<S, SV>());
+  static_assert(test36<S, SV>());
+  static_assert(test37<S, SV>());
+  static_assert(test38<S, SV>());
+  static_assert(test39<S, SV>());
+  static_assert(test40<S, SV>());
+  static_assert(test41<S, SV>());
+  static_assert(test42<S, SV>());
+  static_assert(test43<S, SV>());
+  static_assert(test44<S, SV>());
+  static_assert(test45<S, SV>());
+  static_assert(test46<S, SV>());
+  static_assert(test47<S, SV>());
+  static_assert(test48<S, SV>());
+  static_assert(test49<S, SV>());
+  static_assert(test50<S, SV>());
+  static_assert(test51<S, SV>());
+  static_assert(test52<S, SV>());
+  static_assert(test53<S, SV>());
+  static_assert(test54<S, SV>());
+  static_assert(test55<S, SV>());
 #endif
 
   return true;

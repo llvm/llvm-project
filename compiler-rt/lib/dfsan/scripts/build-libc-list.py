@@ -11,6 +11,30 @@
 # uninstrumented, thus allowing the instrumentation pass to treat calls to those
 # functions correctly.
 
+# Typical usage will list runtime libraries which are not instrumented by dfsan.
+# This would include libc, and compiler builtins.
+#
+# ./build-libc-list.py \
+#    --lib-file=/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 \
+#    --lib-file=/lib/x86_64-linux-gnu/libanl.so.1 \
+#    --lib-file=/lib/x86_64-linux-gnu/libBrokenLocale.so.1 \
+#    --lib-file=/lib/x86_64-linux-gnu/libcidn.so.1 \
+#    --lib-file=/lib/x86_64-linux-gnu/libcrypt.so.1 \
+#    --lib-file=/lib/x86_64-linux-gnu/libc.so.6 \
+#    --lib-file=/lib/x86_64-linux-gnu/libdl.so.2 \
+#    --lib-file=/lib/x86_64-linux-gnu/libm.so.6 \
+#    --lib-file=/lib/x86_64-linux-gnu/libnsl.so.1 \
+#    --lib-file=/lib/x86_64-linux-gnu/libpthread.so.0 \
+#    --lib-file=/lib/x86_64-linux-gnu/libresolv.so.2 \
+#    --lib-file=/lib/x86_64-linux-gnu/librt.so.1 \
+#    --lib-file=/lib/x86_64-linux-gnu/libthread_db.so.1 \
+#    --lib-file=/lib/x86_64-linux-gnu/libutil.so.1 \
+#    --lib-file=/usr/lib/x86_64-linux-gnu/libc_nonshared.a \
+#    --lib-file=/usr/lib/x86_64-linux-gnu/libpthread_nonshared.a \
+#    --lib-file=/lib/x86_64-linux-gnu/libgcc_s.so.1 \
+#    --lib-file=/usr/lib/gcc/x86_64-linux-gnu/4.6/libgcc.a \
+#    --error-missing-lib
+
 import os
 import subprocess
 import sys
@@ -33,60 +57,33 @@ def defined_function_list(object):
 
 p = OptionParser()
 
-p.add_option('--libc-dso-path', metavar='PATH',
-             help='path to libc DSO directory',
-             default='/lib/x86_64-linux-gnu')
-p.add_option('--libc-archive-path', metavar='PATH',
-             help='path to libc archive directory',
-             default='/usr/lib/x86_64-linux-gnu')
+p.add_option('--lib-file', action='append', metavar='PATH',
+             help='Specific library files to add.',
+             default=[])
 
-p.add_option('--libgcc-dso-path', metavar='PATH',
-             help='path to libgcc DSO directory',
-             default='/lib/x86_64-linux-gnu')
-p.add_option('--libgcc-archive-path', metavar='PATH',
-             help='path to libgcc archive directory',
-             default='/usr/lib/gcc/x86_64-linux-gnu/4.6')
-
-p.add_option('--with-libstdcxx', action='store_true',
-             dest='with_libstdcxx',
-             help='include libstdc++ in the list (inadvisable)')
-p.add_option('--libstdcxx-dso-path', metavar='PATH',
-             help='path to libstdc++ DSO directory',
-             default='/usr/lib/x86_64-linux-gnu')
+p.add_option('--error-missing-lib', action='store_true',
+             help='Make this script exit with an error code if any library is missing.',
+             dest='error_missing_lib', default=False)
 
 (options, args) = p.parse_args()
 
-libs = [os.path.join(options.libc_dso_path, name) for name in
-        ['ld-linux-x86-64.so.2',
-         'libanl.so.1',
-         'libBrokenLocale.so.1',
-         'libcidn.so.1',
-         'libcrypt.so.1',
-         'libc.so.6',
-         'libdl.so.2',
-         'libm.so.6',
-         'libnsl.so.1',
-         'libpthread.so.0',
-         'libresolv.so.2',
-         'librt.so.1',
-         'libthread_db.so.1',
-         'libutil.so.1']]
-libs += [os.path.join(options.libc_archive_path, name) for name in
-         ['libc_nonshared.a',
-          'libpthread_nonshared.a']]
+libs = options.lib_file
+if not libs:
+    print >> sys.stderr, 'No libraries provided.'
+    exit(1)
 
-libs.append(os.path.join(options.libgcc_dso_path, 'libgcc_s.so.1'))
-libs.append(os.path.join(options.libgcc_archive_path, 'libgcc.a'))
-
-if options.with_libstdcxx:
-  libs.append(os.path.join(options.libstdcxx_dso_path, 'libstdc++.so.6'))
-
+missing_lib = False
 functions = []
 for l in libs:
   if os.path.exists(l):
     functions += defined_function_list(l)
   else:
+    missing_lib = True
     print >> sys.stderr, 'warning: library %s not found' % l
+
+if options.error_missing_lib and missing_lib:
+    print >> sys.stderr, 'Exiting with failure code due to missing library.'
+    exit(1)
 
 functions = list(set(functions))
 functions.sort()

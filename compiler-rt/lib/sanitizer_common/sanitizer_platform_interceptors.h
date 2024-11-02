@@ -76,7 +76,7 @@
 #define SI_LINUX 0
 #endif
 
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
 #define SI_MAC 1
 #define SI_NOT_MAC 0
 #else
@@ -126,7 +126,7 @@
 #define SI_SOLARIS32 0
 #endif
 
-#if SANITIZER_POSIX && !SANITIZER_MAC
+#if SANITIZER_POSIX && !SANITIZER_APPLE
 #define SI_POSIX_NOT_MAC 1
 #else
 #define SI_POSIX_NOT_MAC 0
@@ -587,7 +587,7 @@
 // sigaltstack on i386 macOS cannot be intercepted due to setjmp()
 // calling it and assuming that it does not clobber registers.
 #define SANITIZER_INTERCEPT_SIGALTSTACK \
-  (SI_POSIX && !(SANITIZER_MAC && SANITIZER_I386))
+  (SI_POSIX && !(SANITIZER_APPLE && SANITIZER_I386))
 #define SANITIZER_INTERCEPT_UNAME (SI_POSIX && !SI_FREEBSD)
 #define SANITIZER_INTERCEPT___XUNAME SI_FREEBSD
 #define SANITIZER_INTERCEPT_FLOPEN SI_FREEBSD

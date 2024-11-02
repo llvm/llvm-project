@@ -228,7 +228,9 @@ define amdgpu_kernel void @s_test_umax_ugt_imm_v2i32(<2 x i32> addrspace(1)* %ou
 ; FUNC-LABEL: {{^}}simplify_demanded_bits_test_umax_ugt_i16:
 ; SI-DAG: s_load_dword [[A:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0x13
 ; SI-DAG: s_load_dword [[B:s[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 0x1c
-; SI: s_max_u32 [[MAX:s[0-9]+]], [[A]], [[B]]
+; SI-DAG: s_and_b32 [[A16:s[0-9]+]], [[A]], 0xffff
+; SI-DAG: s_and_b32 [[B16:s[0-9]+]], [[B]], 0xffff
+; SI: s_max_u32 [[MAX:s[0-9]+]], [[A16]], [[B16]]
 ; SI: v_mov_b32_e32 [[VMAX:v[0-9]+]], [[MAX]]
 ; SI: buffer_store_dword [[VMAX]]
 

@@ -5,7 +5,7 @@
 // CHECK:      func @f(%arg0: f32) {
 // CHECK-NEXT:   return
 
-func @f(%arg0: f32) {
+func.func @f(%arg0: f32) {
   %0 = "arith.addf"(%arg0, %arg0) : (f32, f32) -> f32
   return
 }
@@ -19,7 +19,7 @@ func @f(%arg0: f32) {
 // CHECK-NEXT: ^bb1:
 // CHECK-NEXT:   return
 
-func @f(%arg0: f32) {
+func.func @f(%arg0: f32) {
   "test.br"(%arg0)[^succ] : (f32) -> ()
 ^succ(%0: f32):
   return
@@ -35,7 +35,7 @@ func @f(%arg0: f32) {
 // CHECK-NEXT:   cf.br ^bb1
 
 
-func @f(%arg0: f32) {
+func.func @f(%arg0: f32) {
   cf.br ^loop(%arg0: f32)
 ^loop(%loop: f32):
   cf.br ^loop(%loop: f32)
@@ -50,7 +50,7 @@ func @f(%arg0: f32) {
 // CHECK-NEXT: ^bb1:
 // CHECK-NEXT:   cf.br ^bb1
 
-func @f(%arg0: f32) {
+func.func @f(%arg0: f32) {
   cf.br ^loop(%arg0: f32)
 ^loop(%0: f32):
   %1 = "math.exp"(%0) : (f32) -> f32
@@ -64,7 +64,7 @@ func @f(%arg0: f32) {
 // CHECK:      func @f(%arg0: f32, %arg1: i1)
 // CHECK-NEXT:   return
 
-func @f(%arg0: f32, %pred: i1) {
+func.func @f(%arg0: f32, %pred: i1) {
   %exp = "math.exp"(%arg0) : (f32) -> f32
   cf.cond_br %pred, ^true(%exp: f32), ^false(%exp: f32)
 ^true(%0: f32):
@@ -81,7 +81,7 @@ func @f(%arg0: f32, %pred: i1) {
 // CHECK-NEXT:   func @g(%arg1: f32)
 // CHECK-NEXT:     return
 
-func @f(%arg0: f32) {
+func.func @f(%arg0: f32) {
   func.func @g(%arg1: f32) {
     %0 = "arith.addf"(%arg1, %arg1) : (f32, f32) -> f32
     return
@@ -97,7 +97,7 @@ func @f(%arg0: f32) {
 // CHECK-NEXT:   [[VAL0:%.+]] = arith.addf %arg0, %arg0 : f32
 // CHECK-NEXT:   return [[VAL0]] : f32
 
-func @f(%arg0: f32) -> f32 {
+func.func @f(%arg0: f32) -> f32 {
   %0 = "arith.addf"(%arg0, %arg0) : (f32, f32) -> f32
   return %0 : f32
 }
@@ -110,7 +110,7 @@ func @f(%arg0: f32) -> f32 {
 // CHECK-NEXT:   "foo.print"(%arg0) : (f32) -> ()
 // CHECK-NEXT:   return
 
-func @f(%arg0: f32) {
+func.func @f(%arg0: f32) {
   "foo.print"(%arg0) : (f32) -> ()
   return
 }
@@ -123,7 +123,7 @@ func @f(%arg0: f32) {
 // CHECK-NEXT:   "foo.has_region"
 // CHECK-NEXT:     "foo.return"
 
-func @f(%arg0: f32) {
+func.func @f(%arg0: f32) {
   %0 = "math.exp"(%arg0) : (f32) -> f32
   "foo.has_region"() ({
     %1 = "math.exp"(%0) : (f32) -> f32
@@ -144,7 +144,7 @@ func @f(%arg0: f32) {
 // CHECK-NEXT:   return
 
 
-func @f(
+func.func @f(
   %arg0: tensor<1xf32>,
   %arg1: tensor<2xf32>,
   %arg2: tensor<3xf32>,
@@ -165,7 +165,7 @@ func @f(
 // CHECK-NEXT:   test.graph_region
 // CHECK-NEXT:     "test.terminator"() : () -> ()
 
-func @f() {
+func.func @f() {
   test.graph_region {
     %0 = "math.exp"(%1) : (f32) -> f32
     %1 = "math.exp"(%0) : (f32) -> f32

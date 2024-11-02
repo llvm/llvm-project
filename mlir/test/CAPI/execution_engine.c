@@ -9,8 +9,8 @@
 
 /* RUN: mlir-capi-execution-engine-test 2>&1 | FileCheck %s
  */
-/* REQUIRES: llvm_has_native_target
-*/
+/* REQUIRES: native
+ */
 
 #include "mlir-c/Conversion.h"
 #include "mlir-c/ExecutionEngine.h"
@@ -45,11 +45,11 @@ void testSimpleExecution() {
   MlirModule module = mlirModuleCreateParse(
       ctx, mlirStringRefCreateFromCString(
                // clang-format off
-"module {                                                                   \n"
-"  func @add(%arg0 : i32) -> i32 attributes { llvm.emit_c_interface } {     \n"
-"    %res = arith.addi %arg0, %arg0 : i32                                   \n"
-"    return %res : i32                                                      \n"
-"  }                                                                        \n"
+"module {                                                                    \n"
+"  func.func @add(%arg0 : i32) -> i32 attributes { llvm.emit_c_interface } {     \n"
+"    %res = arith.addi %arg0, %arg0 : i32                                        \n"
+"    return %res : i32                                                           \n"
+"  }                                                                             \n"
 "}"));
   // clang-format on
   lowerModuleToLLVM(ctx, module);

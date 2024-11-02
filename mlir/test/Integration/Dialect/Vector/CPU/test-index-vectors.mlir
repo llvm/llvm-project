@@ -3,7 +3,7 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-func @entry() {
+func.func @entry() {
   %c0 = arith.constant dense<[0, 1, 2, 3]>: vector<4xindex>
   %c1 = arith.constant dense<[0, 1]>: vector<2xindex>
   %c2 = arith.constant 2 : index

@@ -14,9 +14,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -768,7 +768,8 @@ static DecodeStatus brtargetDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
     Bits = 15;
   uint64_t FullValue = fullValue(Disassembler, MI, SignExtend64(tmp, Bits));
   uint32_t Extended = FullValue + Address;
-  if (!Disassembler.tryAddingSymbolicOperand(MI, Extended, Address, true, 0, 4))
+  if (!Disassembler.tryAddingSymbolicOperand(MI, Extended, Address, true, 0, 0,
+                                             4))
     HexagonMCInstrInfo::addConstant(MI, Extended, Disassembler.getContext());
   return MCDisassembler::Success;
 }

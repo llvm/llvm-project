@@ -1,4 +1,5 @@
 // RUN: %clang -target powerpc64-unknown-unknown -mcpu=pwr6 -S -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-PWR6
+// RUN: %clang -target powerpc64-unknown-unknown -mcpu=a2 -S -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-A2
 // RUN: %clang -target powerpc64-unknown-unknown -mcpu=pwr7 -S -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-PWR7
 // RUN: %clang -target powerpc64le-unknown-unknown -mcpu=pwr8 -S -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-PWR8
 // RUN: %clang -target powerpc64-unknown-aix -mcpu=pwr9 -S -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-PWR9
@@ -7,6 +8,10 @@
 // CHECK-PWR6: -isa-v206-instructions
 // CHECK-PWR6: -isa-v207-instructions
 // CHECK-PWR6: -isa-v30-instructions
+
+// CHECK-A2: +isa-v206-instructions
+// CHECK-A2: -isa-v207-instructions
+// CHECK-A2: -isa-v30-instructions
 
 // CHECK-PWR7: +isa-v206-instructions
 // CHECK-PWR7: -isa-v207-instructions

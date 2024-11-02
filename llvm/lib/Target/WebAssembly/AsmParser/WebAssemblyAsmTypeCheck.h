@@ -39,6 +39,7 @@ class WebAssemblyAsmTypeCheck final {
   void dumpTypeStack(Twine Msg);
   bool typeError(SMLoc ErrorLoc, const Twine &Msg);
   bool popType(SMLoc ErrorLoc, Optional<wasm::ValType> EVT);
+  bool popRefType(SMLoc ErrorLoc);
   bool getLocal(SMLoc ErrorLoc, const MCInst &Inst, wasm::ValType &Type);
   bool checkEnd(SMLoc ErrorLoc, bool PopVals = false);
   bool checkSig(SMLoc ErrorLoc, const wasm::WasmSignature &Sig);

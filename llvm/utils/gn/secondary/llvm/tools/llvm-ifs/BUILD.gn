@@ -1,8 +1,17 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("Opts") {
+  visibility = [ ":llvm-ifs" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 executable("llvm-ifs") {
   deps = [
+    ":Opts",
     "//llvm/lib/InterfaceStub",
     "//llvm/lib/Object",
     "//llvm/lib/ObjectYAML",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/TextAPI",
   ]

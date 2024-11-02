@@ -1,0 +1,86 @@
+# REQUIRES: amdgpu-registered-target
+# RUN: llvm-reduce -simplify-mir -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: FileCheck --check-prefix=RESULT %s < %t
+
+# CHECK-INTERESTINGNESS: G_LOAD
+# CHECK-INTERESTINGNESS: G_LOAD
+# CHECK-INTERESTINGNESS: G_LOAD
+# CHECK-INTERESTINGNESS: G_LOAD
+# CHECK-INTERESTINGNESS: G_STORE
+# CHECK-INTERESTINGNESS: G_STORE
+# CHECK-INTERESTINGNESS: G_STORE %{{[0-9]+}}(s32), %{{[0-9]+}}(p5) :: (store (s32) into %ir.keep.store, addrspace 5)
+
+# RESULT: name: func
+# RESULT: stack:
+# RESULT-NEXT: - { id: 0, size: 32, alignment: 8 }
+
+# RESULT: body:
+# RESULT-NEXT: bb.0:
+# RESULT: %{{[0-9]+}}:_(<2 x s16>) = G_LOAD %{{[0-9]+}}(p1) :: (load (<2 x s16>), align 32, addrspace 1)
+
+# RESULT: bb.1:
+# RESULT-NEXT: %{{[0-9]+}}:_(<2 x s32>) = G_LOAD %{{[0-9]+}}(p1) :: (load (<2 x s32>), addrspace 3)
+# RESULT-NEXT: %{{[0-9]+}}:_(<2 x s32>) = G_LOAD %{{[0-9]+}}(p1) :: (load (<2 x s32>) from unknown-address + 8, addrspace 3)
+# RESULT-NEXT: %{{[0-9]+}}:_(<2 x s32>) = G_LOAD %{{[0-9]+}}(p1) :: (load (<2 x s32>) from unknown-address + 12, align 4, basealign 8, addrspace 3)
+
+
+# RESULT: bb.2:
+# RESULT-NEXT: G_STORE %{{[0-9]+}}(<2 x s32>), %{{[0-9]+}}(p5) :: (store (<2 x s32>) into %fixed-stack.0, addrspace 5)
+# RESULT-NEXT: G_STORE %{{[0-9]+}}(<2 x s32>), %{{[0-9]+}}(p5) :: (store (<2 x s32>) into %stack.0, addrspace 5)
+
+# RESULT: bb.3:
+# RESULT-NEXT: G_STORE %{{[0-9]+}}(s32), %{{[0-9]+}}(p5) :: (store (s32) into %ir.keep.store, addrspace 5)
+# RESULT-NEXT: S_ENDPGM
+
+--- |
+  define void @func(<2 x i16> addrspace(1)* %argptr0, <2 x i32> addrspace(3)* %argptr1, i32 addrspace(5)* %keep.store) {
+  entry:
+    %alloca = alloca i32, addrspace(5)
+    br label %block.name.0
+
+  block.name.0:
+    br label %block.name.1
+
+  block.name.1:
+    br label %exit
+
+  exit:
+    ret void
+  }
+
+...
+---
+name: func
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, offset: 16, size: 8, alignment: 8 }
+stack:
+  - { id: 0, size: 32, alignment: 8, name: alloca }
+body:             |
+  bb.0.entry:
+    S_WAITCNT 0
+    S_NOP 0
+    %0:_(p1) = G_IMPLICIT_DEF
+    %1:_(<2 x s16>) = G_LOAD %0 :: (load (<2 x s16>) from %ir.argptr0, align 32, addrspace 1)
+    %2:_(<2 x s32>) = G_ZEXT %1
+
+  bb.1.block.name.0:
+    %3:_(<2 x s32>) = G_LOAD %0 :: (load (<2 x s32>) from %ir.argptr1, addrspace 3)
+    %4:_(<2 x s32>) = G_LOAD %0 :: (load (<2 x s32>) from %ir.argptr1 + 8, addrspace 3)
+    %5:_(<2 x s32>) = G_LOAD %0 :: (load (<2 x s32>) from %ir.argptr1 + 12, addrspace 3)
+
+  bb.2.block.name.0:
+    %6:_(<2 x s32>) = G_ADD %2, %3
+    %7:_(<2 x s32>) = G_ADD %6, %4
+    %8:_(<2 x s32>) = G_ADD %7, %5
+    %9:_(p5) = G_IMPLICIT_DEF
+    G_STORE %8, %9 :: (store (<2 x s32>) into %fixed-stack.0, addrspace 5)
+    G_STORE %8, %9 :: (store (<2 x s32>) into %stack.0.alloca, addrspace 5)
+
+  bb.3.exit:
+    %10:_(p5) = G_IMPLICIT_DEF
+    %11:_(s32) = G_IMPLICIT_DEF
+    G_STORE %11, %10 :: (store (s32) into %ir.keep.store, addrspace 5)
+    S_ENDPGM 0
+...
+

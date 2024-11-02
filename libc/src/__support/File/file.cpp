@@ -165,6 +165,7 @@ int File::flush() {
     pos = 0;
     return platform_flush(this);
   }
+  // TODO: Add POSIX behavior for input streams.
   return 0;
 }
 

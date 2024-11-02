@@ -1,5 +1,6 @@
 include "config/public_api.td"
 
+include "spec/bsd_ext.td"
 include "spec/gnu_ext.td"
 include "spec/linux.td"
 include "spec/llvm_libc_ext.td"
@@ -146,7 +147,11 @@ def StringAPI : PublicAPI<"string.h"> {
 }
 
 def StdIOAPI : PublicAPI<"stdio.h"> {
-  let Types = ["size_t", "FILE"];
+  let Macros = [
+    SimpleMacroDef<"stderr", "stderr">,
+    SimpleMacroDef<"stdout", "stdout">,
+  ];
+  let Types = ["size_t", "FILE", "cookie_io_functions_t"];
 }
 
 def StdlibAPI : PublicAPI<"stdlib.h"> {
@@ -239,8 +244,11 @@ def ThreadsAPI : PublicAPI<"threads.h"> {
 
 def PThreadAPI : PublicAPI<"pthread.h"> {
   let Types = [
+      "__pthread_start_t",
       "pthread_attr_t",
-      "pthread_mutexattr_t"
+      "pthread_mutex_t",
+      "pthread_mutexattr_t",
+      "pthread_t",
   ];
 }
 

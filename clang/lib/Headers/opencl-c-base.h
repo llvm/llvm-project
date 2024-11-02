@@ -21,6 +21,7 @@
 #define cl_khr_subgroup_shuffle 1
 #define cl_khr_subgroup_shuffle_relative 1
 #define cl_khr_subgroup_clustered_reduce 1
+#define cl_khr_subgroup_rotate 1
 #define cl_khr_extended_bit_ops 1
 #define cl_khr_integer_dot_product 1
 #define __opencl_c_integer_dot_product_input_4x8bit 1
@@ -67,6 +68,7 @@
 #if (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
 // For the SPIR and SPIR-V target all features are supported.
 #if defined(__SPIR__) || defined(__SPIRV__)
+#define __opencl_c_work_group_collective_functions 1
 #define __opencl_c_atomic_order_seq_cst 1
 #define __opencl_c_atomic_scope_device 1
 #define __opencl_c_atomic_scope_all_devices 1
@@ -201,6 +203,9 @@ typedef double double4 __attribute__((ext_vector_type(4)));
 typedef double double8 __attribute__((ext_vector_type(8)));
 typedef double double16 __attribute__((ext_vector_type(16)));
 #endif
+
+// An internal alias for half, for use by OpenCLBuiltins.td.
+#define __half half
 
 #if defined(__OPENCL_CPP_VERSION__)
 #define NULL nullptr

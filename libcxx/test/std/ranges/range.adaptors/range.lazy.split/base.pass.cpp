@@ -70,7 +70,7 @@ constexpr bool test() {
   {
     // Non-const lvalue.
     {
-      View str("abc def");
+      View str{"abc def"};
       std::ranges::lazy_split_view<View, std::string_view> v(str, " ");
 
       std::same_as<View> decltype(auto) result = v.base();
@@ -80,7 +80,7 @@ constexpr bool test() {
 
     // Const lvalue.
     {
-      View str("abc def");
+      View str{"abc def"};
       const std::ranges::lazy_split_view<View, std::string_view> v(str, " ");
 
       std::same_as<View> decltype(auto) result = v.base();
@@ -90,7 +90,7 @@ constexpr bool test() {
 
     // Non-const rvalue.
     {
-      View str("abc def");
+      View str{"abc def"};
       std::ranges::lazy_split_view<View, std::string_view> v(str, " ");
 
       std::same_as<View> decltype(auto) result = std::move(v).base();
@@ -100,7 +100,7 @@ constexpr bool test() {
 
     // Const rvalue.
     {
-      View str("abc def");
+      View str{"abc def"};
       const std::ranges::lazy_split_view<View, std::string_view> v(str, " ");
 
       std::same_as<View> decltype(auto) result = std::move(v).base();

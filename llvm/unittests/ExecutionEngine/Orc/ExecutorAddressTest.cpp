@@ -47,6 +47,17 @@ TEST(ExecutorAddrTest, PtrConversion) {
   EXPECT_EQ(XPtr, &X);
 }
 
+static void F() {}
+
+TEST(ExecutorAddrTest, PtrConversionWithFunctionType) {
+  // Test that function types (as opposed to function pointer types) can be
+  // used with toPtr.
+  auto FAddr = ExecutorAddr::fromPtr(F);
+  void (*FPtr)() = FAddr.toPtr<void()>();
+
+  EXPECT_EQ(FPtr, &F);
+}
+
 TEST(ExecutorAddrTest, AddrRanges) {
   ExecutorAddr A0(0), A1(1), A2(2), A3(3);
   ExecutorAddrRange R0(A0, A1), R1(A1, A2), R2(A2, A3), R3(A0, A2), R4(A1, A3);

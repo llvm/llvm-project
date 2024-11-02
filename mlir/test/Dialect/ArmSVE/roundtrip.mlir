@@ -1,6 +1,6 @@
 // RUN: mlir-opt -verify-diagnostics %s | mlir-opt | FileCheck %s
 
-func @arm_sve_sdot(%a: vector<[16]xi8>,
+func.func @arm_sve_sdot(%a: vector<[16]xi8>,
                    %b: vector<[16]xi8>,
                    %c: vector<[4]xi32>) -> vector<[4]xi32> {
   // CHECK: arm_sve.sdot {{.*}}: vector<[16]xi8> to vector<[4]xi32
@@ -9,7 +9,7 @@ func @arm_sve_sdot(%a: vector<[16]xi8>,
   return %0 : vector<[4]xi32>
 }
 
-func @arm_sve_smmla(%a: vector<[16]xi8>,
+func.func @arm_sve_smmla(%a: vector<[16]xi8>,
                     %b: vector<[16]xi8>,
                     %c: vector<[4]xi32>) -> vector<[4]xi32> {
   // CHECK: arm_sve.smmla {{.*}}: vector<[16]xi8> to vector<[4]xi3
@@ -18,7 +18,7 @@ func @arm_sve_smmla(%a: vector<[16]xi8>,
   return %0 : vector<[4]xi32>
 }
 
-func @arm_sve_udot(%a: vector<[16]xi8>,
+func.func @arm_sve_udot(%a: vector<[16]xi8>,
                    %b: vector<[16]xi8>,
                    %c: vector<[4]xi32>) -> vector<[4]xi32> {
   // CHECK: arm_sve.udot {{.*}}: vector<[16]xi8> to vector<[4]xi32
@@ -27,7 +27,7 @@ func @arm_sve_udot(%a: vector<[16]xi8>,
   return %0 : vector<[4]xi32>
 }
 
-func @arm_sve_ummla(%a: vector<[16]xi8>,
+func.func @arm_sve_ummla(%a: vector<[16]xi8>,
                     %b: vector<[16]xi8>,
                     %c: vector<[4]xi32>) -> vector<[4]xi32> {
   // CHECK: arm_sve.ummla {{.*}}: vector<[16]xi8> to vector<[4]xi3
@@ -36,7 +36,7 @@ func @arm_sve_ummla(%a: vector<[16]xi8>,
   return %0 : vector<[4]xi32>
 }
 
-func @arm_sve_masked_arithi(%a: vector<[4]xi32>,
+func.func @arm_sve_masked_arithi(%a: vector<[4]xi32>,
                             %b: vector<[4]xi32>,
                             %c: vector<[4]xi32>,
                             %d: vector<[4]xi32>,
@@ -61,7 +61,7 @@ func @arm_sve_masked_arithi(%a: vector<[4]xi32>,
   return %2 : vector<[4]xi32>
 }
 
-func @arm_sve_masked_arithf(%a: vector<[4]xf32>,
+func.func @arm_sve_masked_arithf(%a: vector<[4]xf32>,
                             %b: vector<[4]xf32>,
                             %c: vector<[4]xf32>,
                             %d: vector<[4]xf32>,

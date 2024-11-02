@@ -13,7 +13,6 @@ add_header_library(
     NormalFloat.h
     PlatformDefs.h
     UInt.h
-    XFloat.h
   DEPENDS
     libc.include.math
     libc.include.errno
@@ -22,6 +21,15 @@ add_header_library(
     libc.src.__support.CPP.type_traits
     libc.src.__support.CPP.bit
     libc.src.errno.errno
+)
+
+add_header_library(
+  xfloat
+  HDRS
+    XFloat.h
+  DEPENDS
+    .fputil #FPBits and NormalFloat
+    libc.src.__support.CPP.uint
 )
 
 add_header_library(

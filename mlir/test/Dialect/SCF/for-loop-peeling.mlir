@@ -22,7 +22,7 @@
 //      CHECK:   }
 //      CHECK:   return %[[RESULT]]
 #map = affine_map<(d0, d1)[s0] -> (s0, d0 - d1)>
-func @fully_dynamic_bounds(%lb : index, %ub: index, %step: index) -> i32 {
+func.func @fully_dynamic_bounds(%lb : index, %ub: index, %step: index) -> i32 {
   %c0 = arith.constant 0 : i32
   %r = scf.for %iv = %lb to %ub step %step iter_args(%arg = %c0) -> i32 {
     %s = affine.min #map(%ub, %iv)[%step]
@@ -50,7 +50,7 @@ func @fully_dynamic_bounds(%lb : index, %ub: index, %step: index) -> i32 {
 //      CHECK:   %[[RESULT:.*]] = arith.addi %[[LOOP]], %[[C1_I32]] : i32
 //      CHECK:   return %[[RESULT]]
 #map = affine_map<(d0, d1)[s0] -> (s0, d0 - d1)>
-func @fully_static_bounds() -> i32 {
+func.func @fully_static_bounds() -> i32 {
   %c0_i32 = arith.constant 0 : i32
   %lb = arith.constant 0 : index
   %step = arith.constant 4 : index
@@ -90,7 +90,7 @@ func @fully_static_bounds() -> i32 {
 //      CHECK:   }
 //      CHECK:   return %[[RESULT]]
 #map = affine_map<(d0, d1)[s0] -> (s0, d0 - d1)>
-func @dynamic_upper_bound(%ub : index) -> i32 {
+func.func @dynamic_upper_bound(%ub : index) -> i32 {
   %c0_i32 = arith.constant 0 : i32
   %lb = arith.constant 0 : index
   %step = arith.constant 4 : index
@@ -128,7 +128,7 @@ func @dynamic_upper_bound(%ub : index) -> i32 {
 //      CHECK:   }
 //      CHECK:   return
 #map = affine_map<(d0, d1)[s0] -> (s0, d0 - d1)>
-func @no_loop_results(%ub : index, %d : memref<i32>) {
+func.func @no_loop_results(%ub : index, %d : memref<i32>) {
   %c0_i32 = arith.constant 0 : i32
   %lb = arith.constant 0 : index
   %step = arith.constant 4 : index
@@ -192,7 +192,7 @@ func @no_loop_results(%ub : index, %d : memref<i32>) {
 #map3 = affine_map<(d0, d1)[s0] -> (s0, d0 - d1 - 1)>
 #map4 = affine_map<(d0, d1, d2)[s0] -> (s0, d0 - d1, d2)>
 #map5 = affine_map<(d0, d1)[s0] -> (-s0, -d0 + d1)>
-func @test_affine_op_rewrite(%lb : index, %ub: index,
+func.func @test_affine_op_rewrite(%lb : index, %ub: index,
                              %step: index, %d : memref<?xindex>,
                              %some_val: index) {
   %c0 = arith.constant 0 : index
@@ -260,7 +260,7 @@ func @test_affine_op_rewrite(%lb : index, %ub: index,
 //     CHECK-NO-SKIP:     }
 //     CHECK-NO-SKIP:   }
 #map = affine_map<(d0, d1)[s0] -> (s0, d0 - d1)>
-func @nested_loops(%lb0: index, %lb1 : index, %ub0: index, %ub1: index,
+func.func @nested_loops(%lb0: index, %lb1 : index, %ub0: index, %ub1: index,
                    %step: index) -> i32 {
   %c0 = arith.constant 0 : i32
   %r0 = scf.for %iv0 = %lb0 to %ub0 step %step iter_args(%arg0 = %c0) -> i32 {

@@ -256,7 +256,7 @@ define void @insert_v8i32_undef_v2i32_6(<8 x i32>* %vp, <2 x i32>* %svp) {
 ; LMULMAX2:       # %bb.0:
 ; LMULMAX2-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; LMULMAX2-NEXT:    vle32.v v8, (a1)
-; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, tu, mu
 ; LMULMAX2-NEXT:    vslideup.vi v10, v8, 6
 ; LMULMAX2-NEXT:    vse32.v v10, (a0)
 ; LMULMAX2-NEXT:    ret
@@ -265,7 +265,7 @@ define void @insert_v8i32_undef_v2i32_6(<8 x i32>* %vp, <2 x i32>* %svp) {
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; LMULMAX1-NEXT:    vle32.v v8, (a1)
-; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, tu, mu
 ; LMULMAX1-NEXT:    vslideup.vi v9, v8, 2
 ; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vse32.v v9, (a0)
@@ -544,7 +544,7 @@ define void @insert_v2i64_nxv16i64_lo2(<2 x i64>* %psv, <vscale x 16 x i64>* %ou
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 4, e64, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e64, m8, tu, mu
 ; CHECK-NEXT:    vslideup.vi v16, v8, 2
 ; CHECK-NEXT:    vs8r.v v16, (a1)
 ; CHECK-NEXT:    ret
@@ -559,29 +559,30 @@ define void @insert_v2i64_nxv16i64_lo2(<2 x i64>* %psv, <vscale x 16 x i64>* %ou
 define void @insert_v2i64_nxv16i64_hi(<2 x i64>* %psv, <vscale x 16 x i64>* %out) {
 ; CHECK-LABEL: insert_v2i64_nxv16i64_hi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    addi sp, sp, -64
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    addi s0, sp, 64
+; CHECK-NEXT:    .cfi_def_cfa s0, 0
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 4
 ; CHECK-NEXT:    sub sp, sp, a2
+; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    addi a0, sp, 80
+; CHECK-NEXT:    addi a0, sp, 128
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    addi a2, sp, 16
+; CHECK-NEXT:    addi a2, sp, 64
 ; CHECK-NEXT:    add a2, a2, a0
 ; CHECK-NEXT:    vl8re64.v v8, (a2)
-; CHECK-NEXT:    addi a2, sp, 16
+; CHECK-NEXT:    addi a2, sp, 64
 ; CHECK-NEXT:    vl8re64.v v16, (a2)
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vs8r.v v16, (a1)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 4
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    addi sp, s0, -64
+; CHECK-NEXT:    addi sp, sp, 64
 ; CHECK-NEXT:    ret
   %sv = load <2 x i64>, <2 x i64>* %psv
   %v = call <vscale x 16 x i64> @llvm.experimental.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 8)

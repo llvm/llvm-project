@@ -8,6 +8,7 @@
 
 #include "PassDetail.h"
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Arithmetic/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
@@ -31,9 +32,9 @@ struct ArithmeticBufferizePass
   void runOnOperation() override {
     BufferizationOptions options = getPartialBufferizationOptions();
     if (constantOpOnly) {
-      options.allowOperationInFilter<arith::ConstantOp>();
+      options.opFilter.allowOperation<arith::ConstantOp>();
     } else {
-      options.allowDialectInFilter<arith::ArithmeticDialect>();
+      options.opFilter.allowDialect<arith::ArithmeticDialect>();
     }
     options.bufferAlignment = alignment;
 

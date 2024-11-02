@@ -59,6 +59,9 @@ public:
     SmallSet<Register, 4> &SGPROperandRegs,
     MachineRegisterInfo &MRI) const;
 
+  Register buildReadFirstLane(MachineIRBuilder &B, MachineRegisterInfo &MRI,
+                              Register Src) const;
+
   bool executeInWaterfallLoop(MachineIRBuilder &B,
                               MachineInstr &MI,
                               MachineRegisterInfo &MRI,
@@ -82,6 +85,8 @@ public:
   bool applyMappingSBufferLoad(const OperandsMapper &OpdMapper) const;
 
   bool applyMappingBFE(const OperandsMapper &OpdMapper, bool Signed) const;
+
+  bool applyMappingMAD_64_32(const OperandsMapper &OpdMapper) const;
 
   Register handleD16VData(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                           Register Reg) const;

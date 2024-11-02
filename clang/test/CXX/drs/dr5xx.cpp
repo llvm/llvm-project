@@ -162,7 +162,7 @@ namespace dr522 { // dr522: yes
   template<typename T> void b3(Base<T> *);
 
   void test(int n, const int cn, int **p, int *S::*pm) {
-    int *a[3], *S::*am[3]; 
+    int *a[3], *S::*am[3];
     const Derived cd = Derived();
     Derived d[3];
 
@@ -413,20 +413,20 @@ namespace dr535 { // dr535: yes
 // dr538: na
 
 // dr539: yes
-const dr539( // expected-error {{requires a type specifier}}
+const dr539( // expected-error {{a type specifier is required}}
     const a) { // expected-error {{unknown type name 'a'}}
-  const b; // expected-error {{requires a type specifier}}
+  const b; // expected-error {{a type specifier is required}}
   new const; // expected-error {{expected a type}}
   try {} catch (const n) {} // expected-error {{unknown type name 'n'}}
   try {} catch (const) {} // expected-error {{expected a type}}
-  if (const n = 0) {} // expected-error {{requires a type specifier}}
-  switch (const n = 0) {} // expected-error {{requires a type specifier}}
-  while (const n = 0) {} // expected-error {{requires a type specifier}}
-  for (const n = 0; // expected-error {{requires a type specifier}}
-       const m = 0; ) {} // expected-error {{requires a type specifier}}
-  sizeof(const); // expected-error {{requires a type specifier}}
+  if (const n = 0) {} // expected-error {{a type specifier is required}}
+  switch (const n = 0) {} // expected-error {{a type specifier is required}}
+  while (const n = 0) {} // expected-error {{a type specifier is required}}
+  for (const n = 0; // expected-error {{a type specifier is required}}
+       const m = 0; ) {} // expected-error {{a type specifier is required}}
+  sizeof(const); // expected-error {{a type specifier is required}}
   struct S {
-    const n; // expected-error {{requires a type specifier}}
+    const n; // expected-error {{a type specifier is required}}
     operator const(); // expected-error {{expected a type}}
   };
 #if __cplusplus >= 201103L
@@ -435,7 +435,7 @@ const dr539( // expected-error {{requires a type specifier}}
   // badly confused when recovering here. We should fix this recovery.
   { for (const n // expected-error {{unknown type name 'n'}} expected-note {{}}
          : arr) ; {} } // expected-error +{{}}
-  (void) [](const) {}; // expected-error {{requires a type specifier}}
+  (void) [](const) {}; // expected-error {{a type specifier is required}}
   (void) [](const n) {}; // expected-error {{unknown type name 'n'}}
   enum E : const {}; // expected-error {{expected a type}}
   using T = const; // expected-error {{expected a type}}
@@ -879,7 +879,7 @@ namespace dr585 { // dr585: yes
   struct A {
     friend T;
 #if __cplusplus <= 201402L
-    // expected-error@-2 {{requires a type specifier}} expected-error@-2 {{can only be classes or functions}}
+    // expected-error@-2 {{a type specifier is required}} expected-error@-2 {{can only be classes or functions}}
 #else
     // expected-error@-4 {{use of class template 'T' requires template arguments; argument deduction not allowed in friend declaration}}
     // expected-note@-7 {{here}}
@@ -891,7 +891,7 @@ namespace dr585 { // dr585: yes
   template<template<typename> class T> struct B {
     friend T;
 #if __cplusplus <= 201402L
-    // expected-error@-2 {{requires a type specifier}} expected-error@-2 {{can only be classes or functions}}
+    // expected-error@-2 {{a type specifier is required}} expected-error@-2 {{can only be classes or functions}}
 #else
     // expected-error@-4 {{use of template template parameter 'T' requires template arguments; argument deduction not allowed in friend declaration}}
     // expected-note@-6 {{here}}

@@ -32,6 +32,13 @@ int Test_BlockCommandComment;
 // CHECK-NEXT:     ParagraphComment
 // CHECK-NEXT:       TextComment{{.*}} Text=" Aaa"
 
+/// \retval 42 Aaa
+int Test_BlockCommandComment_WithArgs();
+// CHECK:      FunctionDecl{{.*}}Test_BlockCommandComment_WithArgs
+// CHECK:        BlockCommandComment{{.*}} Name="retval" Arg[0]="42"
+// CHECK-NEXT:     ParagraphComment
+// CHECK-NEXT:       TextComment{{.*}} Text=" Aaa"
+
 /// \param Aaa xxx
 /// \param [in,out] Bbb yyy
 void Test_ParamCommandComment(int Aaa, int Bbb);
@@ -54,6 +61,12 @@ template <typename Aaa> class Test_TParamCommandComment;
 int Test_InlineCommandComment;
 // CHECK:      VarDecl{{.*}}Test_InlineCommandComment
 // CHECK:        InlineCommandComment{{.*}} Name="c" RenderMonospaced Arg[0]="Aaa"
+
+/// \n Aaa
+int Test_InlineCommandComment_NoArgs;
+// CHECK:      VarDecl{{.*}}Test_InlineCommandComment_NoArgs
+// CHECK:        InlineCommandComment{{.*}} Name="n" RenderNormal
+// CHECK-NEXT:   TextComment{{.*}} Text=" Aaa"
 
 /// \anchor Aaa
 int Test_InlineCommandCommentAnchor;

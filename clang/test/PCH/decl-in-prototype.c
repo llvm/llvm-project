@@ -14,7 +14,7 @@
 #ifndef HEADER
 #define HEADER
 
-static inline __attribute__((always_inline)) f(enum { x, y } p) {
+static inline __attribute__((always_inline)) int f(enum { x, y } p) {
   return y;
 }
 

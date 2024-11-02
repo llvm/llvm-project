@@ -13,7 +13,7 @@
 // CHECK:           "test.sink"(%[[TENSOR]]) : (tensor<2xf16>) -> ()
 // CHECK:           return
 // CHECK:         }
-func @shape_assuming() {
+func.func @shape_assuming() {
   %0 = shape.const_witness true
   %1 = shape.assuming %0 -> (tensor<2xf16>) {
     %2 = "test.source"() : () -> (tensor<2xf16>)

@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -emit-llvm -o - -x c++ %s  | \
-// RUN: FileCheck -check-prefix=NOVISIBILITY-IR %s
+// RUN: FileCheck -check-prefix=VISIBILITY-IR %s
 
 // RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -emit-llvm -round-trip-args -o - -x c++ %s  | \
-// RUN: FileCheck -check-prefix=NOVISIBILITY-IR %s
+// RUN: FileCheck -check-prefix=VISIBILITY-IR %s
 
 // RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -mignore-xcoff-visibility -fvisibility default -emit-llvm -o - -x c++ %s  | \
 // RUN: FileCheck -check-prefix=NOVISIBILITY-IR %s

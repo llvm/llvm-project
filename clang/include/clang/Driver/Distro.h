@@ -38,6 +38,7 @@ public:
     DebianBuster,
     DebianBullseye,
     DebianBookworm,
+    DebianTrixie,
     Exherbo,
     RHEL5,
     RHEL6,
@@ -74,6 +75,7 @@ public:
     UbuntuHirsute,
     UbuntuImpish,
     UbuntuJammy,
+    UbuntuKinetic,
     UnknownDistro
   };
 
@@ -121,11 +123,11 @@ public:
   bool IsOpenSUSE() const { return DistroVal == OpenSUSE; }
 
   bool IsDebian() const {
-    return DistroVal >= DebianLenny && DistroVal <= DebianBookworm;
+    return DistroVal >= DebianLenny && DistroVal <= DebianTrixie;
   }
 
   bool IsUbuntu() const {
-    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuJammy;
+    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuKinetic;
   }
 
   bool IsAlpineLinux() const { return DistroVal == AlpineLinux; }

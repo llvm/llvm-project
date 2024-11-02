@@ -10,10 +10,10 @@
 #define LLVM_DEBUGINFO_GSYM_FUNCTIONINFO_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/DebugInfo/GSYM/ExtractRanges.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
-#include "llvm/DebugInfo/GSYM/Range.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
 #include <cstdint>
 #include <tuple>
@@ -170,12 +170,9 @@ struct FunctionInfo {
                                              uint64_t FuncAddr,
                                              uint64_t Addr);
 
-  uint64_t startAddress() const { return Range.Start; }
-  uint64_t endAddress() const { return Range.End; }
+  uint64_t startAddress() const { return Range.start(); }
+  uint64_t endAddress() const { return Range.end(); }
   uint64_t size() const { return Range.size(); }
-  void setStartAddress(uint64_t Addr) { Range.Start = Addr; }
-  void setEndAddress(uint64_t Addr) { Range.End = Addr; }
-  void setSize(uint64_t Size) { Range.End = Range.Start + Size; }
 
   void clear() {
     Range = {0, 0};

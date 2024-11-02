@@ -1,9 +1,5 @@
 # See www/CMake.html for instructions on how to build libcxxabi with CMake.
 
-if (NOT IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../libcxx")
-  message(FATAL_ERROR "libc++abi now requires being built in a monorepo layout with libcxx available")
-endif()
-
 #===============================================================================
 # Setup Project
 #===============================================================================
@@ -27,48 +23,7 @@ set(LIBCXXABI_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 set(LIBCXXABI_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../libcxx" CACHE PATH
         "Specify path to libc++ source.")
 
-if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXXABI_STANDALONE_BUILD)
-  message(FATAL_ERROR "The Standalone build has been deprecated since LLVM 14, and it is not supported anymore. "
-                      "Please use one of the ways described at https://libcxx.llvm.org/BuildingLibcxx.html for "
-                      "building libc++abi.")
-
-  project(libcxxabi CXX C)
-
-  set(PACKAGE_NAME libcxxabi)
-  set(PACKAGE_VERSION 11.0.0git)
-  set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
-  set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
-
-  set(LIBCXXABI_STANDALONE_BUILD TRUE)
-
-  # In a standalone build, we don't have llvm to automatically generate the
-  # llvm-lit script for us.  So we need to provide an explicit directory that
-  # the configurator should write the script into.
-  set(LLVM_LIT_OUTPUT_DIR "${LIBCXXABI_BINARY_DIR}/bin")
-endif()
-
-# Must go below project(..)
 include(GNUInstallDirs)
-
-if (LIBCXXABI_STANDALONE_BUILD)
-  # Find the LLVM sources and simulate LLVM CMake options.
-  include(HandleOutOfTreeLLVM)
-
-  find_package(Python3 COMPONENTS Interpreter)
-  if(NOT Python3_Interpreter_FOUND)
-    message(WARNING "Python3 not found, using python2 as a fallback")
-    find_package(Python2 COMPONENTS Interpreter REQUIRED)
-    if(Python2_VERSION VERSION_LESS 2.7)
-      message(SEND_ERROR "Python 2.7 or newer is required")
-    endif()
-
-    # Treat python2 as python3
-    add_executable(Python3::Interpreter IMPORTED)
-    set_target_properties(Python3::Interpreter PROPERTIES
-      IMPORTED_LOCATION ${Python2_EXECUTABLE})
-    set(Python3_EXECUTABLE ${Python2_EXECUTABLE})
-  endif()
-endif()
 
 # Require out of source build.
 include(MacroEnsureOutOfSourceBuild)
@@ -123,7 +78,14 @@ set(LIBCXXABI_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")
 option(LIBCXXABI_INSTALL_HEADERS "Install the libc++abi headers." ON)
 option(LIBCXXABI_INSTALL_LIBRARY "Install the libc++abi library." ON)
-set(LIBCXXABI_INSTALL_INCLUDE_DIR "include/c++/v1" CACHE PATH "Path to install the libc++abi headers at.")
+
+set(LIBCXXABI_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/c++/v1" CACHE PATH "Path to install the libc++abi headers at.")
+
+if(LLVM_LIBRARY_OUTPUT_INTDIR)
+  set(LIBCXXABI_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
+else()
+  set(LIBCXXABI_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
+endif()
 
 # TODO: Remove this after branching for LLVM 15
 if(LIBCXXABI_SYSROOT OR LIBCXXABI_TARGET_TRIPLE OR LIBCXXABI_GCC_TOOLCHAIN)
@@ -138,11 +100,9 @@ result in the library being named libc++abi.x.y.dylib, along with the \
 usual symlinks pointing to that.")
 
 # Default to building a shared library so that the default options still test
-# the libc++abi that is being built. There are two problems with testing a
-# static libc++abi. In the case of a standalone build, the tests will link the
-# system's libc++, which might not have been built against our libc++abi. In the
-# case of an in tree build, libc++ will prefer a dynamic libc++abi from the
-# system over a static libc++abi from the output directory.
+# the libc++abi that is being built. The problem with testing a static libc++abi
+# is that libc++ will prefer a dynamic libc++abi from the system over a static
+# libc++abi from the output directory.
 option(LIBCXXABI_ENABLE_SHARED "Build libc++abi as a shared library." ON)
 option(LIBCXXABI_ENABLE_STATIC "Build libc++abi as a static library." ON)
 
@@ -155,10 +115,10 @@ cmake_dependent_option(LIBCXXABI_INSTALL_SHARED_LIBRARY
 
 cmake_dependent_option(LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY
   "Statically link the LLVM unwinder to static library" ON
-  "LIBCXXABI_ENABLE_STATIC_UNWINDER;LIBCXXABI_ENABLE_STATIC" OFF)
+  "LIBCXXABI_ENABLE_STATIC_UNWINDER" OFF)
 cmake_dependent_option(LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY
   "Statically link the LLVM unwinder to shared library" ON
-  "LIBCXXABI_ENABLE_STATIC_UNWINDER;LIBCXXABI_ENABLE_SHARED" OFF)
+  "LIBCXXABI_ENABLE_STATIC_UNWINDER" OFF)
 
 option(LIBCXXABI_BAREMETAL "Build libc++abi for baremetal targets." OFF)
 # The default terminate handler attempts to demangle uncaught exceptions, which
@@ -171,33 +131,42 @@ if (NOT LIBCXXABI_ENABLE_SHARED AND NOT LIBCXXABI_ENABLE_STATIC)
   message(FATAL_ERROR "libc++abi must be built as either a shared or static library.")
 endif()
 
-# TODO: This is a workaround for the fact that Standalone builds can't use
-# targets from the other runtimes (so the cxx-headers target doesn't exist).
+# TODO: Remove this, which shouldn't be necessary since we know we're being built
+#       side-by-side with libc++.
 set(LIBCXXABI_LIBCXX_INCLUDES "" CACHE PATH
     "Specify path to libc++ includes.")
-if (LIBCXXABI_STANDALONE_BUILD)
-  if (NOT IS_DIRECTORY ${LIBCXXABI_LIBCXX_INCLUDES})
-    message(FATAL_ERROR
-      "LIBCXXABI_LIBCXX_INCLUDES=${LIBCXXABI_LIBCXX_INCLUDES} is not a valid directory. "
-      "Please provide the path to where the libc++ headers have been installed.")
-  endif()
-  add_library(cxx-headers INTERFACE)
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
-    target_compile_options(cxx-headers INTERFACE /I "${LIBCXXABI_LIBCXX_INCLUDES}")
+
+set(LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT OFF)
+if (WIN32)
+  set(LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT ON)
+endif()
+option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
+  "Do not export any symbols from the static library." ${LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT})
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-shared-gcc.cfg.in")
+elseif(MINGW)
+  set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-mingw.cfg.in")
+elseif(WIN32) # clang-cl
+  if (LIBCXXABI_ENABLE_SHARED)
+    set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-shared-clangcl.cfg.in")
   else()
-    target_compile_options(cxx-headers INTERFACE -I "${LIBCXXABI_LIBCXX_INCLUDES}")
+    set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-static-clangcl.cfg.in")
+  endif()
+else()
+  if (LIBCXXABI_ENABLE_SHARED)
+    set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-shared.cfg.in")
+  else()
+    set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-static.cfg.in")
   endif()
 endif()
-
-option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
-  "Do not export any symbols from the static library." OFF)
-
-set(LIBCXXABI_TEST_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test/lit.site.cfg.in" CACHE STRING
+set(LIBCXXABI_TEST_CONFIG "${LIBCXXABI_DEFAULT_TEST_CONFIG}" CACHE STRING
   "The path to the Lit testing configuration to use when running the tests.
    If a relative path is provided, it is assumed to be relative to '<monorepo>/libcxxabi/test/configs'.")
 if (NOT IS_ABSOLUTE "${LIBCXXABI_TEST_CONFIG}")
   set(LIBCXXABI_TEST_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test/configs/${LIBCXXABI_TEST_CONFIG}")
 endif()
+message(STATUS "Using libc++abi testing configuration: ${LIBCXXABI_TEST_CONFIG}")
 set(LIBCXXABI_TEST_PARAMS "" CACHE STRING
     "A list of parameters to run the Lit test suite with.")
 
@@ -240,8 +209,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})
 
-# By default, for non-standalone builds, libcxx and libcxxabi share a library
-# directory.
+# By default, libcxx and libcxxabi share a library directory.
 if (NOT LIBCXXABI_LIBCXX_LIBRARY_PATH)
   set(LIBCXXABI_LIBCXX_LIBRARY_PATH "${LIBCXXABI_LIBRARY_DIR}" CACHE PATH
       "The path to libc++ library." FORCE)
@@ -276,7 +244,7 @@ endif()
 # Configure compiler. Must happen after setting the target flags.
 include(config-ix)
 
-if (LIBCXXABI_HAS_NOSTDINCXX_FLAG)
+if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
   list(APPEND LIBCXXABI_COMPILE_FLAGS -nostdinc++)
   # cmake 3.14 and above remove system include paths that are explicitly
   # passed on the command line.  We build with -nostdinc++ and explicitly add
@@ -299,25 +267,6 @@ add_definitions(-D_LIBCXXABI_BUILDING_LIBRARY)
 # libcxxabi needs to, for various reasons, include the libcpp headers as if
 # it is being built as part of libcxx.
 add_definitions(-D_LIBCPP_BUILDING_LIBRARY)
-
-# Disable DLL annotations on Windows for static builds.
-if (WIN32 AND LIBCXXABI_ENABLE_STATIC AND NOT LIBCXXABI_ENABLE_SHARED)
-  # If LIBCXX_ENABLE_SHARED isn't set (by the user on the cmake command
-  # line or via a cache file), use its expected default value (enabled).
-  if ((LIBCXX_ENABLE_SHARED OR NOT DEFINED LIBCXX_ENABLE_SHARED) AND LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
-    # Building libcxxabi statically, but intending for it to be statically
-    # linked into a shared libcxx; keep dllexport enabled within libcxxabi,
-    # as the symbols will need to be exported from libcxx.
-  else()
-    # Regular static build; disable dllexports.
-    add_definitions(-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS)
-    if (NOT LIBCXXABI_HERMETIC_STATIC_LIBRARY)
-      # TODO: Enable this warning message as soon as we're sure this is the solution.
-      # message(WARNING "Implicitly disabling dllexport on Win32 is not supported anymore. Please build with "
-      #                 "LIBCXXABI_HERMETIC_STATIC_LIBRARY=ON instead. This will become an error in LLVM 16.")
-    endif()
-  endif()
-endif()
 
 add_compile_flags_if_supported(-Werror=return-type)
 
@@ -497,7 +446,7 @@ if (LIBCXXABI_BAREMETAL)
     add_definitions(-DLIBCXXABI_BAREMETAL)
 endif()
 
-if (LIBCXXABI_HAS_COMMENT_LIB_PRAGMA)
+if (C_SUPPORTS_COMMENT_LIB_PRAGMA)
   if (LIBCXXABI_HAS_PTHREAD_LIB)
     add_definitions(-D_LIBCXXABI_LINK_PTHREAD_LIB)
   endif()

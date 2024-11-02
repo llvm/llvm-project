@@ -3,8 +3,8 @@
 
 ! CHECK-LABEL: test1
 ! CHECK-SAME: (%[[XREF:.*]]: !fir.ref<i32> {{.*}}, %[[CBOX:.*]]: !fir.boxchar<1> {{.*}})
-! CHECK: %[[C1:.*]] = arith.constant 1 : index
-! CHECK: %[[FALSE:.*]] = arith.constant false
+! CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+! CHECK-DAG: %[[FALSE:.*]] = arith.constant false
 ! CHECK: %[[TEMP:.*]] = fir.alloca !fir.char<1> {adapt.valuebyref}
 ! CHECK: %[[C:.*]]:2 = fir.unboxchar %[[CBOX]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK: %[[X:.*]] = fir.load %[[XREF]] : !fir.ref<i32>

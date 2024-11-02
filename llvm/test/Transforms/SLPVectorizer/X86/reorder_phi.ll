@@ -10,32 +10,32 @@ define  void @foo (%struct.complex* %A, %struct.complex* %B, %struct.complex* %R
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[TMP20:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[TMP19:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[TMP18:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX:%.*]], %struct.complex* [[A:%.*]], i64 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x float> [ zeroinitializer, [[ENTRY]] ], [ [[TMP19:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX:%.*]], %struct.complex* [[A:%.*]], i64 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[B:%.*]], i64 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[A]], i64 [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[B]], i64 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[B:%.*]], i64 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = load float, float* [[TMP8]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[B]], i64 [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP11:%.*]] = load float, float* [[TMP10]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = fmul float [[TMP5]], [[TMP9]]
-; CHECK-NEXT:    [[TMP13:%.*]] = fmul float [[TMP7]], [[TMP11]]
-; CHECK-NEXT:    [[TMP14:%.*]] = fsub float [[TMP12]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = fmul float [[TMP7]], [[TMP9]]
-; CHECK-NEXT:    [[TMP16:%.*]] = fmul float [[TMP5]], [[TMP11]]
-; CHECK-NEXT:    [[TMP17:%.*]] = fadd float [[TMP15]], [[TMP16]]
-; CHECK-NEXT:    [[TMP18]] = fadd float [[TMP3]], [[TMP14]]
-; CHECK-NEXT:    [[TMP19]] = fadd float [[TMP2]], [[TMP17]]
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float* [[TMP3]] to <2 x float>*
+; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x float>, <2 x float>* [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> poison, float [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x float> [[TMP10]], float [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = fmul <2 x float> [[TMP9]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> poison, float [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> [[TMP13]], float [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul <2 x float> [[TMP9]], [[TMP14]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP15]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP16:%.*]] = fsub <2 x float> [[TMP12]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP17:%.*]] = fadd <2 x float> [[TMP12]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x float> [[TMP16]], <2 x float> [[TMP17]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP19]] = fadd <2 x float> [[TMP2]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP20]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[TMP20]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[TMP21]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[RESULT:%.*]], i32 0, i32 0
-; CHECK-NEXT:    store float [[TMP18]], float* [[TMP22]], align 4
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_COMPLEX]], %struct.complex* [[RESULT]], i32 0, i32 1
-; CHECK-NEXT:    store float [[TMP19]], float* [[TMP23]], align 4
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast float* [[TMP22]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP19]], <2 x float>* [[TMP23]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

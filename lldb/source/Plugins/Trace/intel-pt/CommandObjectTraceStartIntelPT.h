@@ -31,7 +31,7 @@ public:
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
-    size_t m_thread_buffer_size;
+    size_t m_trace_buffer_size;
     bool m_enable_tsc;
     llvm::Optional<size_t> m_psb_period;
   };
@@ -74,10 +74,11 @@ public:
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
-    size_t m_thread_buffer_size;
+    size_t m_trace_buffer_size;
     size_t m_process_buffer_size_limit;
     bool m_enable_tsc;
     llvm::Optional<size_t> m_psb_period;
+    bool m_per_core_tracing;
   };
 
   CommandObjectProcessTraceStartIntelPT(TraceIntelPT &trace,
@@ -85,10 +86,14 @@ public:
       : CommandObjectParsed(
             interpreter, "process trace start",
             "Start tracing this process with intel-pt, including future "
-            "threads. "
-            "This is implemented by tracing each thread independently. "
+            "threads. If --per-core-tracing is not provided, this traces each "
+            "thread independently, thus using a trace buffer per thread. "
             "Threads traced with the \"thread trace start\" command are left "
-            "unaffected ant not retraced.",
+            "unaffected ant not retraced. This is the recommended option "
+            "unless the number of threads is huge. If --per-core-tracing is "
+            "passed, each cpu core is traced instead of each thread, which "
+            "uses a fixed number of trace buffers, but might result in less "
+            "data available for less frequent threads.",
             "process trace start [<intel-pt-options>]",
             lldb::eCommandRequiresProcess | lldb::eCommandTryTargetAPILock |
                 lldb::eCommandProcessMustBeLaunched |

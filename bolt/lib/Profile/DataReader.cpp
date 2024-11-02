@@ -47,6 +47,8 @@ Optional<StringRef> getLTOCommonName(const StringRef Name) {
     return Name.substr(0, LTOSuffixPos + 10);
   if ((LTOSuffixPos = Name.find(".constprop.")) != StringRef::npos)
     return Name.substr(0, LTOSuffixPos + 11);
+  if ((LTOSuffixPos = Name.find(".llvm.")) != StringRef::npos)
+    return Name.substr(0, LTOSuffixPos + 6);
   return NoneType();
 }
 
@@ -54,7 +56,7 @@ namespace {
 
 /// Return true if the function name can change across compilations.
 bool hasVolatileName(const BinaryFunction &BF) {
-  for (const StringRef Name : BF.getNames())
+  for (const StringRef &Name : BF.getNames())
     if (getLTOCommonName(Name))
       return true;
 
@@ -390,7 +392,6 @@ void DataReader::readProfile(BinaryFunction &BF) {
     }
   }
 
-  uint64_t MismatchedBranches = 0;
   for (const BranchInfo &BI : FBD->Data) {
     if (BI.From.Name != BI.To.Name)
       continue;
@@ -399,7 +400,6 @@ void DataReader::readProfile(BinaryFunction &BF) {
                       BI.Mispreds)) {
       LLVM_DEBUG(dbgs() << "bad branch : " << BI.From.Offset << " -> "
                         << BI.To.Offset << '\n');
-      ++MismatchedBranches;
     }
   }
 

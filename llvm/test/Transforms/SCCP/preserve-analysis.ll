@@ -5,10 +5,8 @@
 
 ; NEW-PM-DAG: Running analysis: LoopAnalysis on test
 ; NEW-PM-DAG: Running analysis: DominatorTreeAnalysis on test
-; NEW-PM-DAG: Running analysis: AssumptionAnalysis on test
-; NEW-PM-DAG: Running analysis: TargetLibraryAnalysis on test
-; NEW-PM-DAG: Running analysis: TargetIRAnalysis on test
 ; NEW-PM: Running pass: SCCPPass on test
+; NEW-PM: Running analysis: TargetLibraryAnalysis on test
 ; NEW-PM-NOT: Running analysis: LoopAnalysis on test
 ; NEW-PM-NOT: Running analysis: DominatorTreeAnalysis on test
 ; NEW-PM-NOT: Running analysis: AssumptionAnalysis on test

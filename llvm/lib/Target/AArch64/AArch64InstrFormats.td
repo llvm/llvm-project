@@ -1278,8 +1278,12 @@ def VectorIndexHOperand : AsmVectorIndex<0, 7>;
 def VectorIndexSOperand : AsmVectorIndex<0, 3>;
 def VectorIndexDOperand : AsmVectorIndex<0, 1>;
 
-defm VectorIndex0 : VectorIndex<i64, VectorIndex0Operand,
+let OperandNamespace = "AArch64" in {
+  let OperandType = "OPERAND_IMPLICIT_IMM_0" in {
+    defm VectorIndex0 : VectorIndex<i64, VectorIndex0Operand,
                                 [{ return ((uint64_t)Imm) == 0; }]>;
+  }
+}
 defm VectorIndex1 : VectorIndex<i64, VectorIndex1Operand,
                                 [{ return ((uint64_t)Imm) == 1; }]>;
 defm VectorIndexB : VectorIndex<i64, VectorIndexBOperand,
@@ -1329,6 +1333,8 @@ def sme_elm_idx0_0 : Operand<i64>, ImmLeaf<i64, [{
 }]> {
   let ParserMatchClass = Imm0_0Operand;
   let PrintMethod = "printMatrixIndex";
+  let OperandNamespace = "AArch64";
+  let OperandType = "OPERAND_IMPLICIT_IMM_0";
 }
 def sme_elm_idx0_1 : Operand<i64>, ImmLeaf<i64, [{
   return ((uint64_t)Imm) <= 1;
@@ -4529,8 +4535,9 @@ multiclass MemTagStore<bits<2> opc1, string insn> {
 //---
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in
-class ExceptionGeneration<bits<3> op1, bits<2> ll, string asm>
-    : I<(outs), (ins timm32_0_65535:$imm), asm, "\t$imm", "", []>,
+class ExceptionGeneration<bits<3> op1, bits<2> ll, string asm,
+                          list<dag> pattern = []>
+    : I<(outs), (ins timm32_0_65535:$imm), asm, "\t$imm", "", pattern>,
       Sched<[WriteSys]> {
   bits<16> imm;
   let Inst{31-24} = 0b11010100;
@@ -7403,7 +7410,7 @@ class SIMDMovAlias<string asm, string size, Instruction inst,
 multiclass SMov {
   // SMOV with vector index of 0 are legal in Scalable Matrix Extension (SME)
   // streaming mode.
-  let Predicates = [HasNEONorStreamingSVE] in {
+  let Predicates = [HasNEONorSME] in {
     def vi8to32_idx0 : SIMDSMov<0, ".b", GPR32, VectorIndex0> {
       let Inst{20-16} = 0b00001;
     }
@@ -7450,7 +7457,7 @@ multiclass SMov {
 multiclass UMov {
   // UMOV with vector index of 0 are legal in Scalable Matrix Extension (SME)
   // streaming mode.
-  let Predicates = [HasNEONorStreamingSVE] in {
+  let Predicates = [HasNEONorSME] in {
     def vi8_idx0 : SIMDUMov<0, ".b", v16i8, GPR32, VectorIndex0> {
       let Inst{20-16} = 0b00001;
     }

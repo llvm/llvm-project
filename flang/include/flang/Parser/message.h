@@ -32,13 +32,15 @@ namespace Fortran::parser {
 // Use "..."_err_en_US, "..."_warn_en_US, "..."_port_en_US, and "..."_en_US
 // string literals to define the static text and fatality of a message.
 //
-// Error: fatal error that prevents code and module file generation
-// Warning: likely problem,
-// Portability: nonstandard or obsolete features
-// Because: for AttachTo(), explanatory attachment in support of another message
-// Context (internal): attachment from SetContext()
-// None: everything else, common for attachments with source locations
-enum class Severity { Error, Warning, Portability, Because, Context, None };
+enum class Severity {
+  Error, // fatal error that prevents code and module file generation
+  Warning, // likely problem
+  Portability, // nonstandard or obsolete features
+  Because, // for AttachTo(), explanatory attachment to support another message
+  Context, // (internal): attachment from SetContext()
+  Todo, // a feature that's not yet implemented, a fatal error
+  None // everything else, common for attachments with source locations
+};
 
 class MessageFixedText {
 public:
@@ -57,7 +59,9 @@ public:
     severity_ = severity;
     return *this;
   }
-  bool isFatal() const { return severity_ == Severity::Error; }
+  bool isFatal() const {
+    return severity_ == Severity::Error || severity_ == Severity::Todo;
+  }
 
 private:
   CharBlock text_;
@@ -76,6 +80,10 @@ constexpr MessageFixedText operator""_warn_en_US(
 constexpr MessageFixedText operator""_port_en_US(
     const char str[], std::size_t n) {
   return MessageFixedText{str, n, Severity::Portability};
+}
+constexpr MessageFixedText operator""_todo_en_US(
+    const char str[], std::size_t n) {
+  return MessageFixedText{str, n, Severity::Todo};
 }
 constexpr MessageFixedText operator""_en_US(const char str[], std::size_t n) {
   return MessageFixedText{str, n, Severity::None};
@@ -99,7 +107,9 @@ public:
   MessageFormattedText &operator=(const MessageFormattedText &) = default;
   MessageFormattedText &operator=(MessageFormattedText &&) = default;
   const std::string &string() const { return string_; }
-  bool isFatal() const { return severity_ == Severity::Error; }
+  bool isFatal() const {
+    return severity_ == Severity::Error || severity_ == Severity::Todo;
+  }
   Severity severity() const { return severity_; }
   MessageFormattedText &set_severity(Severity severity) {
     severity_ = severity;

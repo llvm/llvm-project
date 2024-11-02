@@ -65,6 +65,16 @@ public:
     return nullptr;
   }
 
+  Value *FoldExtractValue(Value *Agg,
+                          ArrayRef<unsigned> IdxList) const override {
+    return nullptr;
+  }
+
+  Value *FoldInsertValue(Value *Agg, Value *Val,
+                         ArrayRef<unsigned> IdxList) const override {
+    return nullptr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -263,16 +273,6 @@ public:
   Instruction *CreateShuffleVector(Constant *V1, Constant *V2,
                                    ArrayRef<int> Mask) const override {
     return new ShuffleVectorInst(V1, V2, Mask);
-  }
-
-  Instruction *CreateExtractValue(Constant *Agg,
-                                  ArrayRef<unsigned> IdxList) const override {
-    return ExtractValueInst::Create(Agg, IdxList);
-  }
-
-  Instruction *CreateInsertValue(Constant *Agg, Constant *Val,
-                                 ArrayRef<unsigned> IdxList) const override {
-    return InsertValueInst::Create(Agg, Val, IdxList);
   }
 };
 

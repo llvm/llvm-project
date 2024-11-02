@@ -41,6 +41,6 @@ global_atomic_add v[3:4], v5, off slc noglc glc
 // CHECK-NEXT:{{^}}                                            ^
 
 s_load_dword s1, s[2:3], 0xfc glc slc
-// CHECK: error: invalid cache policy for SMRD instruction
+// CHECK: error: invalid cache policy for SMEM instruction
 // CHECK-NEXT:{{^}}s_load_dword s1, s[2:3], 0xfc glc slc
 // CHECK-NEXT:{{^}}^

@@ -237,12 +237,11 @@ shoes:
 
 ; FASTISEL-INSTRREF-LABEL: name: qux
 
-; FASTISEL-INSTRREF:      DBG_PHI $rdi, 2
-; FASTISEL-INSTRREF-NEXT: DBG_PHI $rdi, 1
+; FASTISEL-INSTRREF:      DBG_PHI $rdi, 1
 ; FASTISEL-INSTRREF:      DBG_INSTR_REF 1, 0, ![[SOCKS]], !DIExpression(DW_OP_deref),
 
 ; FASTISEL-INSTRREF-LABEL: bb.1.lala:
-; FASTISEL-INSTRREF:      DBG_INSTR_REF 2, 0, ![[KNEES]], !DIExpression(DW_OP_deref),
+; FASTISEL-INSTRREF:      DBG_INSTR_REF 1, 0, ![[KNEES]], !DIExpression(DW_OP_deref),
 declare i64 @cheddar(i32 *%arg)
 
 define void @qux(i32* noalias sret(i32) %agg.result) !dbg !40 {

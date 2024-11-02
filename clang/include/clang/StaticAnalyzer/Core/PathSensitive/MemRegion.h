@@ -74,6 +74,7 @@ public:
   RegionOffset() = default;
   RegionOffset(const MemRegion *r, int64_t off) : R(r), Offset(off) {}
 
+  /// It might return null.
   const MemRegion *getRegion() const { return R; }
 
   bool hasSymbolicOffset() const { return Offset == Symbolic; }
@@ -114,22 +115,25 @@ public:
 
   virtual MemRegionManager &getMemRegionManager() const = 0;
 
-  const MemSpaceRegion *getMemorySpace() const;
+  LLVM_ATTRIBUTE_RETURNS_NONNULL const MemSpaceRegion *getMemorySpace() const;
 
-  const MemRegion *getBaseRegion() const;
+  LLVM_ATTRIBUTE_RETURNS_NONNULL const MemRegion *getBaseRegion() const;
 
   /// Recursively retrieve the region of the most derived class instance of
   /// regions of C++ base class instances.
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const MemRegion *getMostDerivedObjectRegion() const;
 
   /// Check if the region is a subregion of the given region.
   /// Each region is a subregion of itself.
   virtual bool isSubRegionOf(const MemRegion *R) const;
 
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const MemRegion *StripCasts(bool StripBaseAndDerivedCasts = true) const;
 
   /// If this is a symbolic region, returns the region. Otherwise,
   /// goes up the base chain looking for the first symbolic base region.
+  /// It might return null.
   const SymbolicRegion *getSymbolicBase() const;
 
   bool hasGlobalsOrParametersStorage() const;
@@ -169,7 +173,8 @@ public:
   Kind getKind() const { return kind; }
 
   template<typename RegionTy> const RegionTy* getAs() const;
-  template<typename RegionTy> const RegionTy* castAs() const;
+  template <typename RegionTy>
+  LLVM_ATTRIBUTE_RETURNS_NONNULL const RegionTy *castAs() const;
 
   virtual bool isBoundable() const { return false; }
 
@@ -268,6 +273,7 @@ public:
 
   void dumpToStream(raw_ostream &os) const override;
 
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const CodeTextRegion *getCodeRegion() const { return CR; }
 
   static bool classof(const MemRegion *R) {
@@ -391,6 +397,7 @@ protected:
   }
 
 public:
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const StackFrameContext *getStackFrame() const { return SFC; }
 
   void Profile(llvm::FoldingSetNodeID &ID) const override;
@@ -444,6 +451,7 @@ protected:
   }
 
 public:
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const MemRegion* getSuperRegion() const {
     return superRegion;
   }
@@ -481,6 +489,7 @@ class AllocaRegion : public SubRegion {
                             unsigned Cnt, const MemRegion *superRegion);
 
 public:
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const Expr *getExpr() const { return Ex; }
 
   bool isBoundable() const override { return true; }
@@ -639,10 +648,12 @@ public:
     return locTy;
   }
 
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const BlockDecl *getDecl() const {
     return BD;
   }
 
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   AnalysisDeclContext *getAnalysisDeclContext() const { return AC; }
 
   void dumpToStream(raw_ostream &os) const override;
@@ -674,6 +685,7 @@ class BlockDataRegion : public TypedRegion {
       : TypedRegion(sreg, BlockDataRegionKind), BC(bc), LC(lc),
         BlockCount(count) {
     assert(bc);
+    assert(bc->getDecl());
     assert(lc);
     assert(isa<GlobalImmutableSpaceRegion>(sreg) ||
            isa<StackLocalsSpaceRegion>(sreg) ||
@@ -685,8 +697,10 @@ class BlockDataRegion : public TypedRegion {
                             const MemRegion *);
 
 public:
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const BlockCodeRegion *getCodeRegion() const { return BC; }
 
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const BlockDecl *getDecl() const { return BC->getDecl(); }
 
   QualType getLocationType() const override { return BC->getLocationType(); }
@@ -700,10 +714,12 @@ public:
                                       const MemRegion * const *originalR)
         : R(r), OriginalR(originalR) {}
 
+    LLVM_ATTRIBUTE_RETURNS_NONNULL
     const VarRegion *getCapturedRegion() const {
       return cast<VarRegion>(*R);
     }
 
+    LLVM_ATTRIBUTE_RETURNS_NONNULL
     const VarRegion *getOriginalRegion() const {
       return cast<VarRegion>(*OriginalR);
     }
@@ -726,7 +742,7 @@ public:
   };
 
   /// Return the original region for a captured region, if
-  /// one exists.
+  /// one exists. It might return null.
   const VarRegion *getOriginalRegion(const VarRegion *VR) const;
 
   referenced_vars_iterator referenced_vars_begin() const;
@@ -769,6 +785,7 @@ class SymbolicRegion : public SubRegion {
   }
 
 public:
+  /// It might return null.
   SymbolRef getSymbol() const { return sym; }
 
   bool isBoundable() const override { return true; }
@@ -802,6 +819,7 @@ class StringRegion : public TypedValueRegion {
                             const MemRegion *superRegion);
 
 public:
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const StringLiteral *getStringLiteral() const { return Str; }
 
   QualType getValueType() const override { return Str->getType(); }
@@ -836,6 +854,7 @@ class ObjCStringRegion : public TypedValueRegion {
                             const MemRegion *superRegion);
 
 public:
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const ObjCStringLiteral *getObjCStringLiteral() const { return Str; }
 
   QualType getValueType() const override { return Str->getType(); }
@@ -882,6 +901,7 @@ public:
 
   void dumpToStream(raw_ostream &os) const override;
 
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const CompoundLiteralExpr *getLiteralExpr() const { return CL; }
 
   static bool classof(const MemRegion* R) {
@@ -896,6 +916,7 @@ protected:
   }
 
 public:
+  // TODO what does this return?
   virtual const ValueDecl *getDecl() const = 0;
 
   static bool classof(const MemRegion* R) {
@@ -919,8 +940,10 @@ protected:
   }
 
 public:
+  // TODO what does this return?
   const VarDecl *getDecl() const override = 0;
 
+  /// It might return null.
   const StackFrameContext *getStackFrame() const;
 
   QualType getValueType() const override {
@@ -948,6 +971,7 @@ class NonParamVarRegion : public VarRegion {
     // which, unlike everything else on this list, are not memory spaces.
     assert(isa<GlobalsSpaceRegion>(sReg) || isa<StackSpaceRegion>(sReg) ||
            isa<BlockDataRegion>(sReg) || isa<UnknownSpaceRegion>(sReg));
+    assert(vd);
   }
 
   static void ProfileRegion(llvm::FoldingSetNodeID &ID, const VarDecl *VD,
@@ -956,6 +980,7 @@ class NonParamVarRegion : public VarRegion {
 public:
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const VarDecl *getDecl() const override { return VD; }
 
   QualType getValueType() const override {
@@ -993,12 +1018,14 @@ class ParamVarRegion : public VarRegion {
   ParamVarRegion(const Expr *OE, unsigned Idx, const MemRegion *SReg)
       : VarRegion(SReg, ParamVarRegionKind), OriginExpr(OE), Index(Idx) {
     assert(!cast<StackSpaceRegion>(SReg)->getStackFrame()->inTopFrame());
+    assert(OriginExpr);
   }
 
   static void ProfileRegion(llvm::FoldingSetNodeID &ID, const Expr *OE,
                             unsigned Idx, const MemRegion *SReg);
 
 public:
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const Expr *getOriginExpr() const { return OriginExpr; }
   unsigned getIndex() const { return Index; }
 
@@ -1007,6 +1034,8 @@ public:
   void dumpToStream(raw_ostream &os) const override;
 
   QualType getValueType() const override;
+
+  /// TODO: What does this return?
   const ParmVarDecl *getDecl() const override;
 
   bool canPrintPrettyAsExpr() const override;
@@ -1058,7 +1087,9 @@ class FieldRegion : public DeclRegion {
   const FieldDecl *FD;
 
   FieldRegion(const FieldDecl *fd, const SubRegion *sReg)
-      : DeclRegion(sReg, FieldRegionKind), FD(fd) {}
+      : DeclRegion(sReg, FieldRegionKind), FD(fd) {
+    assert(FD);
+  }
 
   static void ProfileRegion(llvm::FoldingSetNodeID &ID, const FieldDecl *FD,
                             const MemRegion* superRegion) {
@@ -1068,6 +1099,7 @@ class FieldRegion : public DeclRegion {
   }
 
 public:
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const FieldDecl *getDecl() const override { return FD; }
 
   void Profile(llvm::FoldingSetNodeID &ID) const override;
@@ -1100,6 +1132,7 @@ class ObjCIvarRegion : public DeclRegion {
                             const MemRegion* superRegion);
 
 public:
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const ObjCIvarDecl *getDecl() const override;
 
   void Profile(llvm::FoldingSetNodeID& ID) const override;
@@ -1132,6 +1165,8 @@ class RegionRawOffset {
 public:
   // FIXME: Eventually support symbolic offsets.
   CharUnits getOffset() const { return Offset; }
+
+  // It might return null.
   const MemRegion *getRegion() const { return Region; }
 
   void dumpToStream(raw_ostream &os) const;
@@ -1194,6 +1229,7 @@ class CXXTempObjectRegion : public TypedValueRegion {
                             Expr const *E, const MemRegion *sReg);
 
 public:
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const Expr *getExpr() const { return Ex; }
 
   QualType getValueType() const override { return Ex->getType(); }
@@ -1224,6 +1260,7 @@ class CXXBaseObjectRegion : public TypedValueRegion {
                             bool IsVirtual, const MemRegion *SReg);
 
 public:
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const CXXRecordDecl *getDecl() const { return Data.getPointer(); }
   bool isVirtual() const { return Data.getInt(); }
 
@@ -1266,6 +1303,7 @@ class CXXDerivedObjectRegion : public TypedValueRegion {
                             const MemRegion *SReg);
 
 public:
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const CXXRecordDecl *getDecl() const { return DerivedD; }
 
   QualType getValueType() const override;
@@ -1291,8 +1329,8 @@ const RegionTy* MemRegion::getAs() const {
   return nullptr;
 }
 
-template<typename RegionTy>
-const RegionTy* MemRegion::castAs() const {
+template <typename RegionTy>
+LLVM_ATTRIBUTE_RETURNS_NONNULL const RegionTy *MemRegion::castAs() const {
   return cast<RegionTy>(this);
 }
 

@@ -1,8 +1,11 @@
 
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o < %s
-; RUN: llvm-readobj --section-headers %t.o | FileCheck %s --check-prefix=SEC
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o < %s
+; RUN: llvm-readobj --section-headers %t.o | FileCheck %s --check-prefixes=SEC,SEC32
 ; RUN: llvm-objdump -r %t.o | FileCheck %s --check-prefix=RELO
+
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -filetype=obj -o %t64.o < %s
+; RUN: llvm-readobj --section-headers %t64.o | FileCheck %s --check-prefixes=SEC,SEC64
+; RUN: llvm-objdump -r %t64.o | FileCheck %s --check-prefix=RELO64
 
 ; This file is copied from test/DebugInfo/XCOFF/empty.ll.
 ; In this test, we focus on XCOFF related formats, like section headers,
@@ -37,15 +40,15 @@ entry:
 !11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !12 = !DILocation(line: 3, column: 3, scope: !8)
 
-; SEC:       AddressSize: 32bit
-; SEC-NEXT:  Sections [
+; SEC:       Sections [
 ; SEC-NEXT:    Section {
 ; SEC-NEXT:      Index: 1
 ; SEC-NEXT:      Name: .text
 ; SEC-NEXT:      PhysicalAddress: 0x0
 ; SEC-NEXT:      VirtualAddress: 0x0
 ; SEC-NEXT:      Size: 0x28
-; SEC-NEXT:      RawDataOffset: 0xDC
+; SEC32-NEXT:    RawDataOffset: 0xDC
+; SEC64-NEXT:    RawDataOffset: 0x180
 ; SEC-NEXT:      RelocationPointer: 0x0
 ; SEC-NEXT:      LineNumberPointer: 0x0
 ; SEC-NEXT:      NumberOfRelocations: 0
@@ -57,9 +60,12 @@ entry:
 ; SEC-NEXT:      Name: .data
 ; SEC-NEXT:      PhysicalAddress: 0x28
 ; SEC-NEXT:      VirtualAddress: 0x28
-; SEC-NEXT:      Size: 0xC
-; SEC-NEXT:      RawDataOffset: 0x104
-; SEC-NEXT:      RelocationPointer: 0x1D8
+; SEC32-NEXT:    Size: 0xC
+; SEC32-NEXT:    RawDataOffset: 0x104
+; SEC32-NEXT:    RelocationPointer: 0x1D8
+; SEC64-NEXT:    Size: 0x18
+; SEC64-NEXT:    RawDataOffset: 0x1A8
+; SEC64-NEXT:    RelocationPointer: 0x2B0
 ; SEC-NEXT:      LineNumberPointer: 0x0
 ; SEC-NEXT:      NumberOfRelocations: 2
 ; SEC-NEXT:      NumberOfLineNumbers: 0
@@ -71,7 +77,8 @@ entry:
 ; SEC-NEXT:      PhysicalAddress: 0x0
 ; SEC-NEXT:      VirtualAddress: 0x0
 ; SEC-NEXT:      Size: 0x36
-; SEC-NEXT:      RawDataOffset: 0x110
+; SEC32-NEXT:    RawDataOffset: 0x110
+; SEC64-NEXT:    RawDataOffset: 0x1C0
 ; SEC-NEXT:      RelocationPointer: 0x0
 ; SEC-NEXT:      LineNumberPointer: 0x0
 ; SEC-NEXT:      NumberOfRelocations: 0
@@ -83,9 +90,12 @@ entry:
 ; SEC-NEXT:      Name: .dwinfo
 ; SEC-NEXT:      PhysicalAddress: 0x0
 ; SEC-NEXT:      VirtualAddress: 0x0
-; SEC-NEXT:      Size: 0x57
-; SEC-NEXT:      RawDataOffset: 0x148
-; SEC-NEXT:      RelocationPointer: 0x1EC
+; SEC32-NEXT:    Size: 0x57
+; SEC32-NEXT:    RawDataOffset: 0x148
+; SEC32-NEXT:    RelocationPointer: 0x1EC
+; SEC64-NEXT:    Size: 0x6F
+; SEC64-NEXT:    RawDataOffset: 0x1F8
+; SEC64-NEXT:    RelocationPointer: 0x2CC
 ; SEC-NEXT:      LineNumberPointer: 0x0
 ; SEC-NEXT:      NumberOfRelocations: 4
 ; SEC-NEXT:      NumberOfLineNumbers: 0
@@ -96,9 +106,12 @@ entry:
 ; SEC-NEXT:      Name: .dwline
 ; SEC-NEXT:      PhysicalAddress: 0x0
 ; SEC-NEXT:      VirtualAddress: 0x0
-; SEC-NEXT:      Size: 0x36
-; SEC-NEXT:      RawDataOffset: 0x1A0
-; SEC-NEXT:      RelocationPointer: 0x214
+; SEC32-NEXT:    Size: 0x36
+; SEC32-NEXT:    RawDataOffset: 0x1A0
+; SEC32-NEXT:    RelocationPointer: 0x214
+; SEC64-NEXT:    Size: 0x46
+; SEC64-NEXT:    RawDataOffset: 0x268
+; SEC64-NEXT:    RelocationPointer: 0x304
 ; SEC-NEXT:      LineNumberPointer: 0x0
 ; SEC-NEXT:      NumberOfRelocations: 1
 ; SEC-NEXT:      NumberOfLineNumbers: 0
@@ -115,3 +128,13 @@ entry:
 ; RELO:       RELOCATION RECORDS FOR [.dwline]:
 ; RELO-NEXT:  OFFSET   TYPE                     VALUE
 ; RELO-NEXT:  00000000 R_POS                    .text
+
+; RELO64:      RELOCATION RECORDS FOR [.dwinfo]:
+; RELO64-NEXT: OFFSET           TYPE                     VALUE
+; RELO64-NEXT: 000000000000000e R_POS                    .dwabrev
+; RELO64-NEXT: 000000000000000b R_POS                    .dwline
+; RELO64-NEXT: 0000000000000041 R_POS                    .text
+; RELO64-NEXT: 000000000000004e R_POS                    .text
+; RELO64:      RELOCATION RECORDS FOR [.dwline]:
+; RELO64-NEXT: OFFSET           TYPE                     VALUE
+; RELO64-NEXT: 000000000000000c R_POS                    .text

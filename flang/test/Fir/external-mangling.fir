@@ -1,6 +1,6 @@
 // RUN: fir-opt --external-name-interop %s | FileCheck %s
 
-func @_QPfoo() {  
+func.func @_QPfoo() {  
   %c0 = arith.constant 0 : index
   %0 = fir.address_of(@_QBa) : !fir.ref<!fir.array<4xi8>>
   %1 = fir.convert %0 : (!fir.ref<!fir.array<4xi8>>) -> !fir.ref<!fir.array<?xi8>>
@@ -16,8 +16,8 @@ func @_QPfoo() {
 }
 fir.global common @_QBa(dense<0> : vector<4xi8>) : !fir.array<4xi8>
 fir.global common @_QB(dense<0> : vector<4xi8>) : !fir.array<4xi8>
-func private @_QPbar(!fir.ref<i32>)
-func private @_QPbar2(!fir.ref<f32>)
+func.func private @_QPbar(!fir.ref<i32>)
+func.func private @_QPbar2(!fir.ref<f32>)
 
 // CHECK: func @foo_
 // CHECK: %{{.*}} = fir.address_of(@a_) : !fir.ref<!fir.array<4xi8>>

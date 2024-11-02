@@ -7,6 +7,7 @@ unittest("SupportTests") {
   ]
   sources = [
     "ARMAttributeParser.cpp",
+    "AddressRangeTest.cpp",
     "AlignOfTest.cpp",
     "AlignmentTest.cpp",
     "AllocatorTest.cpp",

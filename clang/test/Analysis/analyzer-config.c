@@ -41,6 +41,7 @@
 // CHECK-NEXT: core.CallAndMessage:NilReceiver = true
 // CHECK-NEXT: core.CallAndMessage:ParameterCount = true
 // CHECK-NEXT: core.CallAndMessage:UndefReceiver = true
+// CHECK-NEXT: core.NullDereference:SuppressAddressSpaces = true
 // CHECK-NEXT: cplusplus.Move:WarnOn = KnownsAndLocals
 // CHECK-NEXT: cplusplus.SmartPtrModeling:ModelSmartPtrDereference = false
 // CHECK-NEXT: crosscheck-with-z3 = false
@@ -49,6 +50,9 @@
 // CHECK-NEXT: ctu-import-threshold = 24
 // CHECK-NEXT: ctu-index-name = externalDefMap.txt
 // CHECK-NEXT: ctu-invocation-list = invocations.yaml
+// CHECK-NEXT: ctu-max-nodes-min = 10000
+// CHECK-NEXT: ctu-max-nodes-pct = 50
+// CHECK-NEXT: ctu-phase1-inlining = small
 // CHECK-NEXT: deadcode.DeadStores:ShowFixIts = false
 // CHECK-NEXT: deadcode.DeadStores:WarnForDeadNestedAssignments = true
 // CHECK-NEXT: debug.AnalysisOrder:* = false

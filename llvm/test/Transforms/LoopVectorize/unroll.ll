@@ -1,6 +1,6 @@
 ; This test makes sure that loop will not be unrolled in vectorization if VF computed
 ; equals to 1.
-; RUN: opt < %s -loop-vectorize -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -S | FileCheck %s
 
 ; Make sure there are no geps being merged.
 ; CHECK-LABEL: @foo(

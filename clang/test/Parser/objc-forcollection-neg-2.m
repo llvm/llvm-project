@@ -24,7 +24,7 @@ typedef struct objc_object {
 
 @implementation MyList (BasicTest)
 - (void)compilerTestAgainst {
-    static i;// expected-warning {{type specifier missing, defaults to 'int'}}
+    static i;// expected-error {{type specifier missing, defaults to 'int'}}
         for (id el, elem in self)  // expected-error {{only one element declaration is allowed}}
            ++i;
         for (id el in self) 

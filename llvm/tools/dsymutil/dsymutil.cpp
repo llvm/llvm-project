@@ -206,23 +206,26 @@ static Error verifyOptions(const DsymutilOptions &Options) {
   return Error::success();
 }
 
-static Expected<AccelTableKind> getAccelTableKind(opt::InputArgList &Args) {
+static Expected<DwarfLinkerAccelTableKind>
+getAccelTableKind(opt::InputArgList &Args) {
   if (opt::Arg *Accelerator = Args.getLastArg(OPT_accelerator)) {
     StringRef S = Accelerator->getValue();
     if (S == "Apple")
-      return AccelTableKind::Apple;
+      return DwarfLinkerAccelTableKind::Apple;
     if (S == "Dwarf")
-      return AccelTableKind::Dwarf;
+      return DwarfLinkerAccelTableKind::Dwarf;
     if (S == "Pub")
-      return AccelTableKind::Pub;
+      return DwarfLinkerAccelTableKind::Pub;
     if (S == "Default")
-      return AccelTableKind::Default;
-    return make_error<StringError>(
-        "invalid accelerator type specified: '" + S +
-            "'. Support values are 'Apple', 'Dwarf', 'Pub' and 'Default'.",
-        inconvertibleErrorCode());
+      return DwarfLinkerAccelTableKind::Default;
+    if (S == "None")
+      return DwarfLinkerAccelTableKind::None;
+    return make_error<StringError>("invalid accelerator type specified: '" + S +
+                                       "'. Supported values are 'Apple', "
+                                       "'Dwarf', 'Pub', 'Default' and 'None'.",
+                                   inconvertibleErrorCode());
   }
-  return AccelTableKind::Default;
+  return DwarfLinkerAccelTableKind::Default;
 }
 
 static Expected<DWARFVerify> getVerifyKind(opt::InputArgList &Args) {
@@ -240,7 +243,7 @@ static Expected<DWARFVerify> getVerifyKind(opt::InputArgList &Args) {
       return DWARFVerify::None;
     return make_error<StringError>(
         "invalid verify type specified: '" + S +
-            "'. Support values are 'input', 'output', 'all' and 'none'.",
+            "'. Supported values are 'input', 'output', 'all' and 'none'.",
         inconvertibleErrorCode());
   }
   return DWARFVerify::None;
@@ -282,7 +285,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   if (Args.hasArg(OPT_gen_reproducer))
     Options.ReproMode = ReproducerMode::Generate;
 
-  if (Expected<AccelTableKind> AccelKind = getAccelTableKind(Args)) {
+  if (Expected<DwarfLinkerAccelTableKind> AccelKind = getAccelTableKind(Args)) {
     Options.LinkOpts.TheAccelTableKind = *AccelKind;
   } else {
     return AccelKind.takeError();

@@ -40,90 +40,110 @@ module __Fortran_ieee_exceptions
     private
   end type ieee_status_type
 
-  private :: ieee_support_flag_2, ieee_support_flag_3, &
-      ieee_support_flag_4, ieee_support_flag_8, ieee_support_flag_10, &
-      ieee_support_flag_16
-  interface ieee_support_flag
-    module procedure :: ieee_support_flag, &
-      ieee_support_flag_2, ieee_support_flag_3, &
-      ieee_support_flag_4, ieee_support_flag_8, ieee_support_flag_10, &
-      ieee_support_flag_16
+! Define specifics with 1 LOGICAL or REAL argument for generic G.
+#define SPECIFICS_L(G) \
+  G(1) G(2) G(4) G(8)
+#define SPECIFICS_R(G) \
+  G(2) G(3) G(4) G(8) G(10) G(16)
+
+! Set PRIVATE accessibility for specifics with 1 LOGICAL or REAL argument for
+! generic G.
+#define PRIVATE_L(G) private :: \
+  G##_l1, G##_l2, G##_l4, G##_l8
+#define PRIVATE_R(G) private :: \
+  G##_a2, G##_a3, G##_a4, G##_a8, G##_a10, G##_a16
+
+  interface
+    elemental subroutine ieee_get_flag(flag, flag_value)
+      import ieee_flag_type
+      type(ieee_flag_type), intent(in) :: flag
+      logical, intent(out) :: flag_value
+    end subroutine ieee_get_flag
   end interface
 
- contains
-  elemental subroutine ieee_get_flag(flag, flag_value)
-    type(ieee_flag_type), intent(in) :: flag
-    logical, intent(out) :: flag_value
-  end subroutine ieee_get_flag
+  interface
+    elemental subroutine ieee_get_halting_mode(flag, halting)
+      import ieee_flag_type
+      type(ieee_flag_type), intent(in) :: flag
+      logical, intent(out) :: halting
+    end subroutine ieee_get_halting_mode
+  end interface
 
-  elemental subroutine ieee_get_halting_mode(flag, halting)
-    type(ieee_flag_type), intent(in) :: flag
-    logical, intent(out) :: halting
-  end subroutine ieee_get_halting_mode
+  interface
+    subroutine ieee_get_modes(modes)
+      import ieee_modes_type
+      type(ieee_modes_type), intent(out) :: modes
+    end subroutine ieee_get_modes
+  end interface
 
-  subroutine ieee_get_modes(modes)
-    type(ieee_modes_type), intent(out) :: modes
-  end subroutine ieee_get_modes
+  interface
+    subroutine ieee_get_status(status)
+      import ieee_status_type
+      type(ieee_status_type), intent(out) :: status
+    end subroutine ieee_get_status
+  end interface
 
-  subroutine ieee_get_status(status)
-    type(ieee_status_type), intent(out) :: status
-  end subroutine ieee_get_status
+#define IEEE_SET_FLAG_L(FVKIND) \
+  pure subroutine ieee_set_flag_l##FVKIND(flag,flag_value); \
+    import ieee_flag_type; \
+    type(ieee_flag_type), intent(in) :: flag(..); \
+    logical(FVKIND), intent(in) :: flag_value(..); \
+  end subroutine ieee_set_flag_l##FVKIND;
+  interface ieee_set_flag
+    SPECIFICS_L(IEEE_SET_FLAG_L)
+  end interface ieee_set_flag
+  private :: ieee_set_flag_1
+  PRIVATE_L(IEEE_SET_FLAG)
+#undef IEEE_SET_FLAG_L
 
-  pure subroutine ieee_set_flag(flag, flag_value)
-    type(ieee_flag_type), intent(in) :: flag
-    logical, intent(in) :: flag_value
-  end subroutine ieee_set_flag
+#define IEEE_SET_HALTING_MODE_L(HKIND) \
+  pure subroutine ieee_set_halting_mode_l##HKIND(flag,halting); \
+    import ieee_flag_type; \
+    type(ieee_flag_type), intent(in) :: flag(..); \
+    logical(HKIND), intent(in) :: halting(..); \
+  end subroutine ieee_set_halting_mode_l##HKIND;
+  interface ieee_set_halting_mode
+    SPECIFICS_L(IEEE_SET_HALTING_MODE_L)
+  end interface ieee_set_halting_mode
+  private :: ieee_set_halting_mode_1
+  PRIVATE_L(IEEE_SET_HALTING_MODE)
+#undef IEEE_SET_HALTING_MODE_L
 
-  pure subroutine ieee_set_halting_mode(flag, halting)
-    type(ieee_flag_type), intent(in) :: flag
-    logical, intent(in) :: halting
-  end subroutine ieee_set_halting_mode
+  interface
+    subroutine ieee_set_modes(modes)
+      import ieee_modes_type
+      type(ieee_modes_type), intent(in) :: modes
+    end subroutine ieee_set_modes
+  end interface
+  
+  interface
+    subroutine ieee_set_status(status)
+      import ieee_status_type
+      type(ieee_status_type), intent(in) :: status
+    end subroutine ieee_set_status
+  end interface
 
-  subroutine ieee_set_modes(modes)
-    type(ieee_modes_type), intent(in) :: modes
-  end subroutine ieee_set_modes
+#define IEEE_SUPPORT_FLAG_R(XKIND) \
+  logical function ieee_support_flag_a##XKIND(flag, x); \
+    import ieee_flag_type; \
+    type(ieee_flag_type), intent(in) :: flag; \
+    real(XKIND), intent(in) :: x(..); \
+  end function ieee_support_flag_a##XKIND;
+  interface ieee_support_flag
+    logical function ieee_support_flag(flag)
+      import ieee_flag_type
+      type(ieee_flag_type), intent(in) :: flag
+    end function ieee_support_flag
+    SPECIFICS_R(IEEE_SUPPORT_FLAG_R)
+  end interface ieee_support_flag
+  PRIVATE_R(IEEE_SUPPORT_FLAG)
+#undef IEEE_SUPPORT_FLAG_R
 
-  subroutine ieee_set_status(status)
-    type(ieee_status_type), intent(in) :: status
-  end subroutine ieee_set_status
-
-  pure logical function ieee_support_flag(flag)
-    type(ieee_flag_type), intent(in) :: flag
-    ieee_support_flag = .true.
-  end function
-  pure logical function ieee_support_flag_2(flag, x)
-    type(ieee_flag_type), intent(in) :: flag
-    real(kind=2), intent(in) :: x(..)
-    ieee_support_flag_2 = .true.
-  end function
-  pure logical function ieee_support_flag_3(flag, x)
-    type(ieee_flag_type), intent(in) :: flag
-    real(kind=3), intent(in) :: x(..)
-    ieee_support_flag_3 = .true.
-  end function
-  pure logical function ieee_support_flag_4(flag, x)
-    type(ieee_flag_type), intent(in) :: flag
-    real(kind=4), intent(in) :: x(..)
-    ieee_support_flag_4 = .true.
-  end function
-  pure logical function ieee_support_flag_8(flag, x)
-    type(ieee_flag_type), intent(in) :: flag
-    real(kind=8), intent(in) :: x(..)
-    ieee_support_flag_8 = .true.
-  end function
-  pure logical function ieee_support_flag_10(flag, x)
-    type(ieee_flag_type), intent(in) :: flag
-    real(kind=10), intent(in) :: x(..)
-    ieee_support_flag_10 = .true.
-  end function
-  pure logical function ieee_support_flag_16(flag, x)
-    type(ieee_flag_type), intent(in) :: flag
-    real(kind=16), intent(in) :: x(..)
-    ieee_support_flag_16 = .true.
-  end function
-
-  pure logical function ieee_support_halting(flag)
-    type(ieee_flag_type), intent(in) :: flag
-  end function ieee_support_halting
+  interface
+    pure logical function ieee_support_halting(flag)
+      import ieee_flag_type
+      type(ieee_flag_type), intent(in) :: flag
+    end function ieee_support_halting
+  end interface
 
 end module __Fortran_ieee_exceptions

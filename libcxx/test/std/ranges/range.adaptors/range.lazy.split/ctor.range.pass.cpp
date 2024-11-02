@@ -125,7 +125,6 @@ constexpr bool test() {
   {
     using Range = RangeWithCounting;
     using Element = ElementWithCounting;
-    // TODO(varconst): use `views::single` once it's implemented.
     using Pattern = std::ranges::single_view<Element>;
 
     // Arguments are lvalues.

@@ -126,7 +126,7 @@ def testIntegerSetProperties():
       print(" == 0" if cstr.is_eq else " >= 0")
 
 
-# CHECK_LABEL: TEST: testHash
+# TODO-LABEL: TEST: testHash
 @run
 def testHash():
   with Context():

@@ -52,16 +52,12 @@ define { <2 x float>, <2 x float> } @test1(i32 %conv.i32.i.i.i) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP4]], <4 x float> zeroinitializer, <4 x float> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x float> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP6]], i32 0
-; CHECK-NEXT:    [[RETVAL_SROA_0_0_VEC_INSERT4:%.*]] = insertelement <2 x float> zeroinitializer, float [[TMP7]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[TMP6]], i32 1
-; CHECK-NEXT:    [[RETVAL_SROA_0_4_VEC_INSERT7:%.*]] = insertelement <2 x float> [[RETVAL_SROA_0_0_VEC_INSERT4]], float [[TMP8]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x float> [[TMP6]], i32 2
-; CHECK-NEXT:    [[RETVAL_SROA_7_8_VEC_INSERT11:%.*]] = insertelement <2 x float> zeroinitializer, float [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[TMP6]], i32 3
-; CHECK-NEXT:    [[RETVAL_SROA_7_12_VEC_INSERT13:%.*]] = insertelement <2 x float> [[RETVAL_SROA_7_8_VEC_INSERT11]], float [[TMP10]], i64 1
-; CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } zeroinitializer, <2 x float> [[RETVAL_SROA_0_4_VEC_INSERT7]], 0
-; CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } [[DOTFCA_0_INSERT]], <2 x float> [[RETVAL_SROA_7_12_VEC_INSERT13]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP6]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> zeroinitializer, <2 x float> [[TMP7]], <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP6]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> zeroinitializer, <2 x float> [[TMP9]], <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } zeroinitializer, <2 x float> [[TMP8]], 0
+; CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } [[DOTFCA_0_INSERT]], <2 x float> [[TMP10]], 1
 ; CHECK-NEXT:    ret { <2 x float>, <2 x float> } zeroinitializer
 ;
 entry:

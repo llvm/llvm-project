@@ -16,8 +16,8 @@
 # CHECK-NEXT:      FunctionLength: 96
 # CHECK-NEXT:      Version: 0
 # CHECK-NEXT:      ExceptionData: No
-# CHECK-NEXT:      EpiloguePacked: No
-# CHECK-NEXT:      EpilogueScopes: 1
+# CHECK-NEXT:      EpiloguePacked: Yes
+# CHECK-NEXT:      EpilogueOffset: 13
 # CHECK-NEXT:      ByteCodeLength: 28
 # CHECK-NEXT:      Prologue [
 # CHECK-NEXT:        0xc808              ; stp x19, x20, [sp, #64]
@@ -28,21 +28,15 @@
 # CHECK-NEXT:        0xce09              ; stp x27, x28, [sp, #-80]!
 # CHECK-NEXT:        0xe4                ; end
 # CHECK-NEXT:      ]
-# CHECK-NEXT:      EpilogueScopes [
-# CHECK-NEXT:        EpilogueScope {
-# CHECK-NEXT:          StartOffset: 16
-# CHECK-NEXT:          EpilogueStartIndex: 13
-# CHECK-NEXT:          Opcodes [
-# CHECK-NEXT:            0xc808              ; ldp x19, x20, [sp, #64]
-# CHECK-NEXT:            0xd086              ; ldr x21, [sp, #48]
-# CHECK-NEXT:            0xe3                ; nop
-# CHECK-NEXT:            0xd0c7              ; ldr x22, [sp, #56]
-# CHECK-NEXT:            0xc904              ; ldp x23, x24, [sp, #32]
-# CHECK-NEXT:            0xc982              ; ldp x25, x26, [sp, #16]
-# CHECK-NEXT:            0xce09              ; ldp x27, x28, [sp], #80
-# CHECK-NEXT:            0xe4                ; end
-# CHECK-NEXT:          ]
-# CHECK-NEXT:        }
+# CHECK-NEXT:      Epilogue [
+# CHECK-NEXT:        0xc808              ; ldp x19, x20, [sp, #64]
+# CHECK-NEXT:        0xd086              ; ldr x21, [sp, #48]
+# CHECK-NEXT:        0xe3                ; nop
+# CHECK-NEXT:        0xd0c7              ; ldr x22, [sp, #56]
+# CHECK-NEXT:        0xc904              ; ldp x23, x24, [sp, #32]
+# CHECK-NEXT:        0xc982              ; ldp x25, x26, [sp, #16]
+# CHECK-NEXT:        0xce09              ; ldp x27, x28, [sp], #80
+# CHECK-NEXT:        0xe4                ; end
 # CHECK-NEXT:      ]
 # CHECK-NEXT:    }
 

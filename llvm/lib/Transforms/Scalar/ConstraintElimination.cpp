@@ -21,6 +21,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
@@ -143,13 +144,15 @@ static SmallVector<std::pair<int64_t, Value *>, 4>
 decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
           bool IsSigned) {
 
+  auto CanUseSExt = [](ConstantInt *CI) {
+    const APInt &Val = CI->getValue();
+    return Val.sgt(MinSignedConstraintValue) && Val.slt(MaxConstraintValue);
+  };
   // Decompose \p V used with a signed predicate.
   if (IsSigned) {
     if (auto *CI = dyn_cast<ConstantInt>(V)) {
-      const APInt &Val = CI->getValue();
-      if (Val.sle(MinSignedConstraintValue) || Val.sge(MaxConstraintValue))
-        return {};
-      return {{CI->getSExtValue(), nullptr}};
+      if (CanUseSExt(CI))
+        return {{CI->getSExtValue(), nullptr}};
     }
 
     return {{0, nullptr}, {1, V}};
@@ -168,11 +171,13 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
     // If the index is zero-extended, it is guaranteed to be positive.
     if (match(GEP->getOperand(GEP->getNumOperands() - 1),
               m_ZExt(m_Value(Op0)))) {
-      if (match(Op0, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))))
+      if (match(Op0, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))) &&
+          CanUseSExt(CI))
         return {{0, nullptr},
                 {1, GEP->getPointerOperand()},
                 {std::pow(int64_t(2), CI->getSExtValue()), Op1}};
-      if (match(Op0, m_NSWAdd(m_Value(Op1), m_ConstantInt(CI))))
+      if (match(Op0, m_NSWAdd(m_Value(Op1), m_ConstantInt(CI))) &&
+          CanUseSExt(CI))
         return {{CI->getSExtValue(), nullptr},
                 {1, GEP->getPointerOperand()},
                 {1, Op1}};
@@ -180,17 +185,19 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
     }
 
     if (match(GEP->getOperand(GEP->getNumOperands() - 1), m_ConstantInt(CI)) &&
-        !CI->isNegative())
+        !CI->isNegative() && CanUseSExt(CI))
       return {{CI->getSExtValue(), nullptr}, {1, GEP->getPointerOperand()}};
 
     SmallVector<std::pair<int64_t, Value *>, 4> Result;
     if (match(GEP->getOperand(GEP->getNumOperands() - 1),
-              m_NUWShl(m_Value(Op0), m_ConstantInt(CI))))
+              m_NUWShl(m_Value(Op0), m_ConstantInt(CI))) &&
+        CanUseSExt(CI))
       Result = {{0, nullptr},
                 {1, GEP->getPointerOperand()},
                 {std::pow(int64_t(2), CI->getSExtValue()), Op0}};
     else if (match(GEP->getOperand(GEP->getNumOperands() - 1),
-                   m_NSWAdd(m_Value(Op0), m_ConstantInt(CI))))
+                   m_NSWAdd(m_Value(Op0), m_ConstantInt(CI))) &&
+             CanUseSExt(CI))
       Result = {{CI->getSExtValue(), nullptr},
                 {1, GEP->getPointerOperand()},
                 {1, Op0}};
@@ -214,7 +221,8 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
   if (match(V, m_NUWAdd(m_Value(Op0), m_ConstantInt(CI))) &&
       !CI->uge(MaxConstraintValue))
     return {{CI->getZExtValue(), nullptr}, {1, Op0}};
-  if (match(V, m_Add(m_Value(Op0), m_ConstantInt(CI))) && CI->isNegative()) {
+  if (match(V, m_Add(m_Value(Op0), m_ConstantInt(CI))) && CI->isNegative() &&
+      CanUseSExt(CI)) {
     Preconditions.emplace_back(
         CmpInst::ICMP_UGE, Op0,
         ConstantInt::get(Op0->getType(), CI->getSExtValue() * -1));
@@ -223,7 +231,7 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
   if (match(V, m_NUWAdd(m_Value(Op0), m_Value(Op1))))
     return {{0, nullptr}, {1, Op0}, {1, Op1}};
 
-  if (match(V, m_NUWSub(m_Value(Op0), m_ConstantInt(CI))))
+  if (match(V, m_NUWSub(m_Value(Op0), m_ConstantInt(CI))) && CanUseSExt(CI))
     return {{-1 * CI->getSExtValue(), nullptr}, {1, Op0}};
   if (match(V, m_NUWSub(m_Value(Op0), m_Value(Op1))))
     return {{0, nullptr}, {1, Op0}, {-1, Op1}};
@@ -510,6 +518,55 @@ void State::addInfoFor(BasicBlock &BB) {
     WorkList.emplace_back(DT.getNode(Br->getSuccessor(1)), CmpI, true);
 }
 
+static void
+tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
+                          SmallVectorImpl<Instruction *> &ToRemove) {
+  auto DoesConditionHold = [](CmpInst::Predicate Pred, Value *A, Value *B,
+                              ConstraintInfo &Info) {
+    DenseMap<Value *, unsigned> NewIndices;
+    auto R = getConstraint(
+        Pred, A, B, Info.getValue2Index(CmpInst::isSigned(Pred)), NewIndices);
+    if (R.size() < 2 || R.needsNewIndices(NewIndices) || !R.isValid(Info))
+      return false;
+
+    auto &CSToUse = Info.getCS(CmpInst::isSigned(Pred));
+    return CSToUse.isConditionImplied(R.Coefficients);
+  };
+
+  if (II->getIntrinsicID() == Intrinsic::ssub_with_overflow) {
+    // If A s>= B && B s>= 0, ssub.with.overflow(a, b) should not overflow and
+    // can be simplified to a regular sub.
+    Value *A = II->getArgOperand(0);
+    Value *B = II->getArgOperand(1);
+    if (!DoesConditionHold(CmpInst::ICMP_SGE, A, B, Info) ||
+        !DoesConditionHold(CmpInst::ICMP_SGE, B,
+                           ConstantInt::get(A->getType(), 0), Info))
+      return;
+
+    IRBuilder<> Builder(II->getParent(), II->getIterator());
+    Value *Sub = nullptr;
+    for (User *U : make_early_inc_range(II->users())) {
+      if (match(U, m_ExtractValue<0>(m_Value()))) {
+        if (!Sub)
+          Sub = Builder.CreateSub(A, B);
+        U->replaceAllUsesWith(Sub);
+      } else if (match(U, m_ExtractValue<1>(m_Value())))
+        U->replaceAllUsesWith(Builder.getFalse());
+      else
+        continue;
+
+      if (U->use_empty()) {
+        auto *I = cast<Instruction>(U);
+        ToRemove.push_back(I);
+        I->setOperand(0, PoisonValue::get(II->getType()));
+      }
+    }
+
+    if (II->use_empty())
+      II->eraseFromParent();
+  }
+}
+
 static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   bool Changed = false;
   DT.updateDFSNumbers();
@@ -532,6 +589,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   sort(S.WorkList, [](const ConstraintOrBlock &A, const ConstraintOrBlock &B) {
     return std::tie(A.NumIn, A.IsBlock) < std::tie(B.NumIn, B.IsBlock);
   });
+
+  SmallVector<Instruction *> ToRemove;
 
   // Finally, process ordered worklist and eliminate implied conditions.
   SmallVector<StackEntry, 16> DFSInStack;
@@ -569,7 +628,11 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     // For a block, check if any CmpInsts become known based on the current set
     // of constraints.
     if (CB.IsBlock) {
-      for (Instruction &I : *CB.BB) {
+      for (Instruction &I : make_early_inc_range(*CB.BB)) {
+        if (auto *II = dyn_cast<WithOverflowInst>(&I)) {
+          tryToSimplifyOverflowMath(II, Info, ToRemove);
+          continue;
+        }
         auto *Cmp = dyn_cast<ICmpInst>(&I);
         if (!Cmp)
           continue;
@@ -692,6 +755,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
          "updates to CS and DFSInStack are out of sync");
 #endif
 
+  for (Instruction *I : ToRemove)
+    I->eraseFromParent();
   return Changed;
 }
 

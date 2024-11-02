@@ -86,8 +86,8 @@ private:
   const bool IgnoreAllFloatingPointValues;
   const bool IgnoreBitFieldsWidths;
   const bool IgnorePowersOf2IntegerValues;
-  const std::string RawIgnoredIntegerValues;
-  const std::string RawIgnoredFloatingPointValues;
+  const StringRef RawIgnoredIntegerValues;
+  const StringRef RawIgnoredFloatingPointValues;
 
   constexpr static unsigned SensibleNumberOfMagicValueExceptions = 16;
 

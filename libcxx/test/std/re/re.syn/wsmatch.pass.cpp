@@ -10,7 +10,7 @@
 
 // typedef match_results<wstring::const_iterator>   wsmatch;
 
-// XFAIL: libcpp-has-no-wide-characters
+// XFAIL: no-wide-characters
 
 #include <regex>
 #include <type_traits>

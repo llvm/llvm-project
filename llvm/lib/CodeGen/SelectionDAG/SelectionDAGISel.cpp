@@ -706,6 +706,7 @@ static void reportFastISelFailure(MachineFunction &MF,
     report_fatal_error(Twine(R.getMsg()));
 
   ORE.emit(R);
+  LLVM_DEBUG(dbgs() << R.getMsg() << "\n");
 }
 
 void SelectionDAGISel::SelectBasicBlock(BasicBlock::const_iterator Begin,
@@ -1524,6 +1525,8 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
               BeforeInst->hasOneUse() &&
               FastIS->tryToFoldLoad(cast<LoadInst>(BeforeInst), Inst)) {
             // If we succeeded, don't re-select the load.
+            LLVM_DEBUG(dbgs()
+                       << "FastISel folded load: " << *BeforeInst << "\n");
             BI = std::next(BasicBlock::const_iterator(BeforeInst));
             --NumFastIselRemaining;
             ++NumFastIselSuccess;
@@ -3269,6 +3272,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       assert(RecNo < RecordedNodes.size() && "Invalid EmitMergeInputChains");
       ChainNodesMatched.push_back(RecordedNodes[RecNo].first.getNode());
 
+      // If the chained node is not the root, we can't fold it if it has
+      // multiple uses.
       // FIXME: What if other value results of the node have uses not matched
       // by this pattern?
       if (ChainNodesMatched.back() != NodeToMatch &&
@@ -3306,6 +3311,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         assert(RecNo < RecordedNodes.size() && "Invalid EmitMergeInputChains");
         ChainNodesMatched.push_back(RecordedNodes[RecNo].first.getNode());
 
+        // If the chained node is not the root, we can't fold it if it has
+        // multiple uses.
         // FIXME: What if other value results of the node have uses not matched
         // by this pattern?
         if (ChainNodesMatched.back() != NodeToMatch &&
@@ -3444,12 +3451,10 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       // such nodes must have a chain, it suffices to check ChainNodesMatched.
       // We need to perform this check before potentially modifying one of the
       // nodes via MorphNode.
-      bool MayRaiseFPException = false;
-      for (auto *N : ChainNodesMatched)
-        if (mayRaiseFPException(N) && !N->getFlags().hasNoFPExcept()) {
-          MayRaiseFPException = true;
-          break;
-        }
+      bool MayRaiseFPException =
+          llvm::any_of(ChainNodesMatched, [this](SDNode *N) {
+            return mayRaiseFPException(N) && !N->getFlags().hasNoFPExcept();
+          });
 
       // Create the node.
       MachineSDNode *Res = nullptr;

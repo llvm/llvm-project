@@ -23,17 +23,17 @@ endif ()
 # required for the link to go through. We remove sanitizers from the
 # configuration checks to avoid spurious link errors.
 
-check_c_compiler_flag(-nostdlib++ LIBCXXABI_SUPPORTS_NOSTDLIBXX_FLAG)
-if (LIBCXXABI_SUPPORTS_NOSTDLIBXX_FLAG)
+check_cxx_compiler_flag(-nostdlib++ CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
 else()
-  check_c_compiler_flag(-nodefaultlibs LIBCXXABI_SUPPORTS_NODEFAULTLIBS_FLAG)
-  if (LIBCXXABI_SUPPORTS_NODEFAULTLIBS_FLAG)
+  check_c_compiler_flag(-nodefaultlibs C_SUPPORTS_NODEFAULTLIBS_FLAG)
+  if (C_SUPPORTS_NODEFAULTLIBS_FLAG)
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nodefaultlibs")
   endif()
 endif()
 
-if (LIBCXXABI_SUPPORTS_NOSTDLIBXX_FLAG OR LIBCXXABI_SUPPORTS_NODEFAULTLIBS_FLAG)
+if (CXX_SUPPORTS_NOSTDLIBXX_FLAG OR C_SUPPORTS_NODEFAULTLIBS_FLAG)
   if (LIBCXXABI_HAS_C_LIB)
     list(APPEND CMAKE_REQUIRED_LIBRARIES c)
   endif ()
@@ -78,12 +78,12 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   check_c_source_compiles("
 #pragma comment(lib, \"c\")
 int main() { return 0; }
-" LIBCXXABI_HAS_COMMENT_LIB_PRAGMA)
+" C_SUPPORTS_COMMENT_LIB_PRAGMA)
   cmake_pop_check_state()
 endif()
 
 # Check compiler flags
-check_cxx_compiler_flag(-nostdinc++ LIBCXXABI_HAS_NOSTDINCXX_FLAG)
+check_cxx_compiler_flag(-nostdinc++ CXX_SUPPORTS_NOSTDINCXX_FLAG)
 
 # Check libraries
 if(FUCHSIA)

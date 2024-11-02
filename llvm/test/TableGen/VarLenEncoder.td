@@ -65,7 +65,7 @@ def FOO32 : MyVarInst<MemOp32<"src">>;
 // CHECK: UINT64_C(46848), // FOO32
 
 // CHECK-LABEL: case ::FOO16: {
-// CHECK: Scratch = Scratch.zextOrSelf(41);
+// CHECK: Scratch = Scratch.zext(41);
 // src.reg
 // CHECK: getMachineOpValue(MI, MI.getOperand(1), /*Pos=*/0, Scratch, Fixups, STI);
 // CHECK: Inst.insertBits(Scratch.extractBits(8, 0), 0);
@@ -83,7 +83,7 @@ def FOO32 : MyVarInst<MemOp32<"src">>;
 // CHECK: Inst.insertBits(Scratch.extractBits(2, 0), 39);
 
 // CHECK-LABEL: case ::FOO32: {
-// CHECK: Scratch = Scratch.zextOrSelf(57);
+// CHECK: Scratch = Scratch.zext(57);
 // src.reg
 // CHECK: getMachineOpValue(MI, MI.getOperand(1), /*Pos=*/0, Scratch, Fixups, STI);
 // CHECK: Inst.insertBits(Scratch.extractBits(8, 0), 0);

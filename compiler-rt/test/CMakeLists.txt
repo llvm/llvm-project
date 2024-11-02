@@ -44,6 +44,10 @@ if(NOT ANDROID)
   endif()
 endif()
 
+if(COMPILER_RT_STANDALONE_BUILD)
+  umbrella_lit_testsuite_begin(check-compiler-rt)
+endif()
+
 function(compiler_rt_test_runtime runtime)
   string(TOUPPER ${runtime} runtime_uppercase)
   if(COMPILER_RT_HAS_${runtime_uppercase})
@@ -103,15 +107,11 @@ endif()
 if(COMPILER_RT_STANDALONE_BUILD)
   # Now that we've traversed all the directories and know all the lit testsuites,
   # introduce a rule to run to run all of them.
-  get_property(LLVM_LIT_TESTSUITES GLOBAL PROPERTY LLVM_LIT_TESTSUITES)
-  get_property(LLVM_LIT_DEPENDS GLOBAL PROPERTY LLVM_LIT_DEPENDS)
-  add_lit_target(check-compiler-rt
-    "Running all regression tests"
-    ${LLVM_LIT_TESTSUITES}
-    DEPENDS ${LLVM_LIT_DEPENDS})
+  add_custom_target(compiler-rt-test-depends DEPENDS ${LLVM_COMPILER_RT_LIT_DEPENDS})
+  umbrella_lit_testsuite_end(check-compiler-rt)
+
   if(NOT TARGET check-all)
     add_custom_target(check-all)
   endif()
-  add_custom_target(compiler-rt-test-depends DEPENDS ${LLVM_LIT_DEPENDS})
   add_dependencies(check-all check-compiler-rt)
 endif()

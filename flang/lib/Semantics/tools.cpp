@@ -94,7 +94,7 @@ const Scope *FindPureProcedureContaining(const Scope &start) {
 static bool MightBeSameDerivedType(
     const std::optional<evaluate::DynamicType> &lhsType,
     const std::optional<evaluate::DynamicType> &rhsType) {
-  return lhsType && rhsType && rhsType->IsTkCompatibleWith(*lhsType);
+  return lhsType && rhsType && lhsType->IsTkCompatibleWith(*rhsType);
 }
 
 Tristate IsDefinedAssignment(
@@ -103,8 +103,11 @@ Tristate IsDefinedAssignment(
   if (!lhsType || !rhsType) {
     return Tristate::No; // error or rhs is untyped
   }
-  if (lhsType->IsUnlimitedPolymorphic() || rhsType->IsUnlimitedPolymorphic()) {
+  if (lhsType->IsUnlimitedPolymorphic()) {
     return Tristate::No;
+  }
+  if (rhsType->IsUnlimitedPolymorphic()) {
+    return Tristate::Maybe;
   }
   TypeCategory lhsCat{lhsType->category()};
   TypeCategory rhsCat{rhsType->category()};
@@ -248,11 +251,6 @@ bool IsStmtFunctionResult(const Symbol &symbol) {
 
 bool IsPointerDummy(const Symbol &symbol) {
   return IsPointer(symbol) && IsDummy(symbol);
-}
-
-// proc-name
-bool IsProcName(const Symbol &symbol) {
-  return symbol.GetUltimate().has<ProcEntityDetails>();
 }
 
 bool IsBindCProcedure(const Symbol &symbol) {
@@ -670,7 +668,7 @@ bool HasImpureFinal(const DerivedTypeSpec &derived) {
           derived.typeSymbol().detailsIf<DerivedTypeDetails>()}) {
     const auto &finals{details->finals()};
     return std::any_of(finals.begin(), finals.end(),
-        [](const auto &x) { return !x.second->attrs().test(Attr::PURE); });
+        [](const auto &x) { return !IsPureProcedure(*x.second); });
   } else {
     return false;
   }
@@ -1366,6 +1364,18 @@ const Symbol *IsFunctionResultWithSameNameAsFunction(const Symbol &symbol) {
     if (const Symbol * function{symbol.owner().symbol()}) {
       if (symbol.name() == function->name()) {
         return function;
+      }
+    }
+    // Check ENTRY result symbols too
+    const Scope &outer{symbol.owner().parent()};
+    auto iter{outer.find(symbol.name())};
+    if (iter != outer.end()) {
+      const Symbol &outerSym{*iter->second};
+      if (const auto *subp{outerSym.detailsIf<SubprogramDetails>()}) {
+        if (subp->entryScope() == &symbol.owner() &&
+            symbol.name() == outerSym.name()) {
+          return &outerSym;
+        }
       }
     }
   }

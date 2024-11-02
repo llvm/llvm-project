@@ -157,7 +157,6 @@ static llvm::FastMathFlags getFastmathFlags(FastmathFlagsInterface &op) {
       {FastmathFlags::contract, &llvmFMF::setAllowContract},
       {FastmathFlags::afn,      &llvmFMF::setApproxFunc},
       {FastmathFlags::reassoc,  &llvmFMF::setAllowReassoc},
-      {FastmathFlags::fast,     &llvmFMF::setFast},
       // clang-format on
   };
   llvm::FastMathFlags ret;

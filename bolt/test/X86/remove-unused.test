@@ -2,7 +2,7 @@
 # the BB reordering ignores dead BBs.
 
 RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %S/Inputs/entry.s -o %t.o
-RUN: link_fdata %S/Inputs/entry.s %t.o %t.fdata
+RUN: link_fdata %S/Inputs/entry.s %t.o %t.fdata --nmtool llvm-nm
 RUN: llvm-strip --strip-unneeded %t.o
 RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
 RUN: llvm-bolt %t.exe -data %t.fdata -o %t -funcs=_start \

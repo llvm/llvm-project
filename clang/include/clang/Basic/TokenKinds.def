@@ -511,6 +511,7 @@ TYPE_TRAIT_1(__has_unique_object_representations,
 KEYWORD(__underlying_type           , KEYCXX)
 
 // Clang-only C++ Type Traits
+TYPE_TRAIT_1(__is_trivially_relocatable, IsTriviallyRelocatable, KEYCXX)
 TYPE_TRAIT_2(__reference_binds_to_temporary, ReferenceBindsToTemporary, KEYCXX)
 
 // Embarcadero Expression Traits
@@ -597,6 +598,9 @@ UNARY_EXPR_OR_TYPE_TRAIT(vec_step, VecStep, KEYOPENCLC | KEYOPENCLCXX | KEYALTIV
 KEYWORD(pipe                        , KEYOPENCLC | KEYOPENCLCXX)
 // C++ for OpenCL s2.3.1: addrspace_cast operator
 KEYWORD(addrspace_cast              , KEYOPENCLCXX)
+
+// CUDA/HIP function attributes
+KEYWORD(__noinline__                , KEYCUDA)
 
 // OpenMP Type Traits
 UNARY_EXPR_OR_TYPE_TRAIT(__builtin_omp_required_simd_align, OpenMPRequiredSimdAlign, KEYALL)

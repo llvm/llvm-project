@@ -6,7 +6,7 @@
 // NOTE: This is similar to test-create-mask.mlir, but with a different length,
 //       because the v4i1 vector specifically exposed bugs in the LLVM backend.
 
-func @entry() {
+func.func @entry() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index

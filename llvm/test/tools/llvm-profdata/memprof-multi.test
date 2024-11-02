@@ -37,18 +37,18 @@ RUN: llvm-profdata show --memory %p/Inputs/multi.memprofraw --profiled-binary %p
 
 We expect 2 MIB entries, 1 each for the malloc calls in the program.
 
-CHECK: MemprofProfile:
-CHECK-NEXT:   -
-CHECK-NEXT:   Header:
-CHECK-NEXT:     Version: 1
-CHECK-NEXT:     TotalSizeBytes: 864
-CHECK-NEXT:     NumSegments: 9
-CHECK-NEXT:     NumMibInfo: 2
-CHECK-NEXT:     NumStackOffsets: 2
-CHECK-NEXT:   -
-CHECK-NEXT:   Header:
-CHECK-NEXT:     Version: 1
-CHECK-NEXT:     TotalSizeBytes: 864
-CHECK-NEXT:     NumSegments: 9
-CHECK-NEXT:     NumMibInfo: 2
-CHECK-NEXT:     NumStackOffsets: 2
+CHECK:  MemprofProfile:
+CHECK-NEXT:  Summary:
+CHECK-NEXT:    Version: 1
+CHECK-NEXT:    NumSegments: 9
+CHECK-NEXT:    NumMibInfo: 2
+CHECK-NEXT:    NumAllocFunctions: 1
+CHECK-NEXT:    NumStackOffsets: 2
+
+CHECK:        SymbolName: main
+CHECK-NEXT:     LineOffset: 1
+CHECK-NEXT:     Column: 21
+
+CHECK:        SymbolName: main
+CHECK-NEXT:     LineOffset: 5
+CHECK-NEXT:     Column: 15

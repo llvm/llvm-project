@@ -6,7 +6,7 @@
 //  CHECK-SAME: %[[A:.*]]: tensor<64xf32, #sparse_tensor.encoding<{{{.*}}}>>)
 //   CHECK-NOT: sparse_tensor.convert
 //       CHECK: return %[[A]] : tensor<64xf32, #sparse_tensor.encoding<{{{.*}}}>>
-func @sparse_nop_convert(%arg0: tensor<64xf32, #SparseVector>) -> tensor<64xf32, #SparseVector> {
+func.func @sparse_nop_convert(%arg0: tensor<64xf32, #SparseVector>) -> tensor<64xf32, #SparseVector> {
   %0 = sparse_tensor.convert %arg0 : tensor<64xf32, #SparseVector> to tensor<64xf32, #SparseVector>
   return %0 : tensor<64xf32, #SparseVector>
 }
@@ -15,7 +15,7 @@ func @sparse_nop_convert(%arg0: tensor<64xf32, #SparseVector>) -> tensor<64xf32,
 //  CHECK-SAME: %[[A:.*]]: tensor<64xf32>)
 //   CHECK-NOT: sparse_tensor.convert
 //       CHECK: return
-func @sparse_dce_convert(%arg0: tensor<64xf32>) {
+func.func @sparse_dce_convert(%arg0: tensor<64xf32>) {
   %0 = sparse_tensor.convert %arg0 : tensor<64xf32> to tensor<64xf32, #SparseVector>
   return
 }
@@ -26,7 +26,7 @@ func @sparse_dce_convert(%arg0: tensor<64xf32>) {
 //   CHECK-NOT: sparse_tensor.indices
 //   CHECK-NOT: sparse_tensor.values
 //       CHECK: return
-func @sparse_dce_getters(%arg0: tensor<64xf32, #SparseVector>) {
+func.func @sparse_dce_getters(%arg0: tensor<64xf32, #SparseVector>) {
   %c = arith.constant 0 : index
   %0 = sparse_tensor.pointers %arg0, %c : tensor<64xf32, #SparseVector> to memref<?xindex>
   %1 = sparse_tensor.indices %arg0, %c : tensor<64xf32, #SparseVector> to memref<?xindex>

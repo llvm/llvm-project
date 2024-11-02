@@ -246,7 +246,7 @@ void StackLayoutModifier::checkFramePointerInitialization(MCInst &Point) {
     SP = std::make_pair(0, 0);
 
   int64_t Output;
-  if (!BC.MIB->evaluateSimple(Point, Output, SP, FP))
+  if (!BC.MIB->evaluateStackOffsetExpr(Point, Output, SP, FP))
     return;
 
   // Not your regular frame pointer initialization... bail
@@ -294,7 +294,7 @@ void StackLayoutModifier::checkStackPointerRestore(MCInst &Point) {
     SP = std::make_pair(0, 0);
 
   int64_t Output;
-  if (!BC.MIB->evaluateSimple(Point, Output, SP, FP))
+  if (!BC.MIB->evaluateStackOffsetExpr(Point, Output, SP, FP))
     return;
 
   // If the value is the same of FP, no need to adjust it
@@ -729,7 +729,7 @@ void ShrinkWrapping::classifyCSRUses() {
       BitVector BV = BitVector(BC.MRI->getNumRegs(), false);
       BC.MIB->getTouchedRegs(Inst, BV);
       BV &= CSA.CalleeSaved;
-      for (int I = BV.find_first(); I != -1; I = BV.find_next(I)) {
+      for (int I : BV.set_bits()) {
         if (I == 0)
           continue;
         if (CSA.getSavedReg(Inst) != I && CSA.getRestoredReg(Inst) != I)
@@ -739,7 +739,7 @@ void ShrinkWrapping::classifyCSRUses() {
         continue;
       BV = CSA.CalleeSaved;
       BV &= FPAliases;
-      for (int I = BV.find_first(); I > 0; I = BV.find_next(I))
+      for (int I : BV.set_bits())
         UsesByReg[I].set(DA.ExprToIdx[&Inst]);
     }
   }
@@ -802,8 +802,7 @@ void ShrinkWrapping::computeSaveLocations() {
         continue;
 
       BitVector BBDominatedUses = BitVector(DA.NumInstrs, false);
-      for (int J = UsesByReg[I].find_first(); J > 0;
-           J = UsesByReg[I].find_next(J))
+      for (int J : UsesByReg[I].set_bits())
         if (DA.doesADominateB(*First, J))
           BBDominatedUses.set(J);
       LLVM_DEBUG(dbgs() << "\t\tBB " << BB.getName() << " dominates "
@@ -817,8 +816,7 @@ void ShrinkWrapping::computeSaveLocations() {
         SavePos[I].insert(First);
         LLVM_DEBUG({
           dbgs() << "Dominated uses are:\n";
-          for (int J = UsesByReg[I].find_first(); J > 0;
-               J = UsesByReg[I].find_next(J)) {
+          for (int J : UsesByReg[I].set_bits()) {
             dbgs() << "Idx " << J << ": ";
             DA.Expressions[J]->dump();
           }

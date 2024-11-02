@@ -74,8 +74,10 @@ DefinedOrUnknownSVal SValBuilder::makeZeroVal(QualType type) {
   return UnknownVal();
 }
 
-NonLoc SValBuilder::makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
-                                const llvm::APSInt& rhs, QualType type) {
+nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *lhs,
+                                          BinaryOperator::Opcode op,
+                                          const llvm::APSInt &rhs,
+                                          QualType type) {
   // The Environment ensures we always get a persistent APSInt in
   // BasicValueFactory, so we don't need to get the APSInt from
   // BasicValueFactory again.
@@ -84,23 +86,31 @@ NonLoc SValBuilder::makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
   return nonloc::SymbolVal(SymMgr.getSymIntExpr(lhs, op, rhs, type));
 }
 
-NonLoc SValBuilder::makeNonLoc(const llvm::APSInt& lhs,
-                               BinaryOperator::Opcode op, const SymExpr *rhs,
-                               QualType type) {
+nonloc::SymbolVal SValBuilder::makeNonLoc(const llvm::APSInt &lhs,
+                                          BinaryOperator::Opcode op,
+                                          const SymExpr *rhs, QualType type) {
   assert(rhs);
   assert(!Loc::isLocType(type));
   return nonloc::SymbolVal(SymMgr.getIntSymExpr(lhs, op, rhs, type));
 }
 
-NonLoc SValBuilder::makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
-                               const SymExpr *rhs, QualType type) {
+nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *lhs,
+                                          BinaryOperator::Opcode op,
+                                          const SymExpr *rhs, QualType type) {
   assert(lhs && rhs);
   assert(!Loc::isLocType(type));
   return nonloc::SymbolVal(SymMgr.getSymSymExpr(lhs, op, rhs, type));
 }
 
-NonLoc SValBuilder::makeNonLoc(const SymExpr *operand,
-                               QualType fromTy, QualType toTy) {
+NonLoc SValBuilder::makeNonLoc(const SymExpr *operand, UnaryOperator::Opcode op,
+                               QualType type) {
+  assert(operand);
+  assert(!Loc::isLocType(type));
+  return nonloc::SymbolVal(SymMgr.getUnarySymExpr(operand, op, type));
+}
+
+nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *operand,
+                                          QualType fromTy, QualType toTy) {
   assert(operand);
   assert(!Loc::isLocType(toTy));
   return nonloc::SymbolVal(SymMgr.getCastSymbol(operand, fromTy, toTy));
@@ -431,6 +441,19 @@ SVal SValBuilder::makeSymExprValNN(BinaryOperator::Opcode Op,
   return UnknownVal();
 }
 
+SVal SValBuilder::evalUnaryOp(ProgramStateRef state, UnaryOperator::Opcode opc,
+                 SVal operand, QualType type) {
+  auto OpN = operand.getAs<NonLoc>();
+  if (!OpN)
+    return UnknownVal();
+
+  if (opc == UO_Minus)
+    return evalMinus(*OpN);
+  if (opc == UO_Not)
+    return evalComplement(*OpN);
+  llvm_unreachable("Unexpected unary operator");
+}
+
 SVal SValBuilder::evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
                             SVal lhs, SVal rhs, QualType type) {
   if (lhs.isUndef() || rhs.isUndef())
@@ -563,8 +586,7 @@ SVal SValBuilder::evalIntegralCast(ProgramStateRef state, SVal val,
   std::tie(IsNotTruncated, IsTruncated) = state->assume(CompVal);
   if (!IsNotTruncated && IsTruncated) {
     // Symbol is truncated so we evaluate it as a cast.
-    NonLoc CastVal = makeNonLoc(se, originalTy, castTy);
-    return CastVal;
+    return makeNonLoc(se, originalTy, castTy);
   }
   return evalCast(val, castTy, originalTy);
 }
@@ -983,8 +1005,8 @@ SVal SValBuilder::evalCastSubKind(nonloc::SymbolVal V, QualType CastTy,
 
     // Produce SymbolCast if CastTy and T are different integers.
     // NOTE: In the end the type of SymbolCast shall be equal to CastTy.
-    if (T->isIntegralOrEnumerationType() &&
-        CastTy->isIntegralOrEnumerationType()) {
+    if (T->isIntegralOrUnscopedEnumerationType() &&
+        CastTy->isIntegralOrUnscopedEnumerationType()) {
       AnalyzerOptions &Opts =
           StateMgr.getOwningEngine().getAnalysisManager().getAnalyzerOptions();
       // If appropriate option is disabled, ignore the cast.
@@ -1009,7 +1031,7 @@ SVal SValBuilder::evalCastSubKind(nonloc::PointerToMember V, QualType CastTy,
   return V;
 }
 
-SVal clang::ento::SValBuilder::simplifySymbolCast(nonloc::SymbolVal V,
+nonloc::SymbolVal SValBuilder::simplifySymbolCast(nonloc::SymbolVal V,
                                                   QualType CastTy) {
   // We use seven conditions to recognize a simplification case.
   // For the clarity let `CastTy` be `C`, SE->getType() - `T`, root type - `R`,

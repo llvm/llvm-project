@@ -227,7 +227,7 @@ define i16 @phi_multiple_undefs(i16 zeroext %arg) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[INC2:%.*]], [[IF_END:%.*]] ]
+; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC2:%.*]], [[IF_END:%.*]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[VAL]], 128
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:

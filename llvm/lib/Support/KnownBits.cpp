@@ -417,9 +417,8 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
   unsigned BitWidth = LHS.getBitWidth();
   assert(BitWidth == RHS.getBitWidth() && !LHS.hasConflict() &&
          !RHS.hasConflict() && "Operand mismatch");
-  assert(
-      (!NoUndefSelfMultiply || (LHS.One == RHS.One && LHS.Zero == RHS.Zero)) &&
-      "Self multiplication knownbits mismatch");
+  assert((!NoUndefSelfMultiply || LHS == RHS) &&
+         "Self multiplication knownbits mismatch");
 
   // Compute the high known-0 bits by multiplying the unsigned max of each side.
   // Conservatively, M active bits * N active bits results in M + N bits in the

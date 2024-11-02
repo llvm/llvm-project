@@ -1480,7 +1480,7 @@ protected:
     std::string m_class_name;
     std::string m_funct_name;
     std::string m_short_help;
-    LazyBool m_overwrite_lazy;
+    LazyBool m_overwrite_lazy = eLazyBoolCalculate;
     ScriptedCommandSynchronicity m_synchronicity =
         eScriptedCommandSynchronicitySynchronous;
   };
@@ -1647,7 +1647,7 @@ protected:
   std::string m_cmd_name;
   CommandObjectMultiword *m_container = nullptr;
   std::string m_short_help;
-  bool m_overwrite = eLazyBoolCalculate;
+  bool m_overwrite = false;
   ScriptedCommandSynchronicity m_synchronicity =
       eScriptedCommandSynchronicitySynchronous;
 };
@@ -2099,8 +2099,8 @@ public:
       : CommandObjectMultiword(
             interpreter, "command container",
             "Commands for adding container commands to lldb.  "
-            "Container commands are containers for other commands.  You can"
-            "add nested container commands by specifying a command path, but "
+            "Container commands are containers for other commands.  You can "
+            "add nested container commands by specifying a command path, "
             "but you can't add commands into the built-in command hierarchy.",
             "command container <subcommand> [<subcommand-options>]") {
     LoadSubCommand("add", CommandObjectSP(new CommandObjectCommandsContainerAdd(

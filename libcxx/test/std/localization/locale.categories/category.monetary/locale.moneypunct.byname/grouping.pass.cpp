@@ -87,7 +87,7 @@ int main(int, char**)
     }
 #endif
 
-#ifdef _WIN32
+#if defined( _WIN32) || defined(_AIX)
     std::string us_grouping = "\3";
 #else
     std::string us_grouping = "\3\3";
@@ -130,7 +130,7 @@ int main(int, char**)
     }
 #endif
 
-#ifdef _WIN32
+#if defined( _WIN32) || defined(_AIX)
     std::string ru_grouping = "\3";
 #else
     std::string ru_grouping = "\3\3";

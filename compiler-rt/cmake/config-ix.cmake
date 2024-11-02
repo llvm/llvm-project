@@ -23,8 +23,8 @@ else()
   endif()
 endif()
 
-check_c_compiler_flag(-nodefaultlibs COMPILER_RT_HAS_NODEFAULTLIBS_FLAG)
-if (COMPILER_RT_HAS_NODEFAULTLIBS_FLAG)
+check_c_compiler_flag(-nodefaultlibs C_SUPPORTS_NODEFAULTLIBS_FLAG)
+if (C_SUPPORTS_NODEFAULTLIBS_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nodefaultlibs")
   if (COMPILER_RT_HAS_LIBC)
     list(APPEND CMAKE_REQUIRED_LIBRARIES c)
@@ -203,8 +203,10 @@ file(WRITE ${SIMPLE_SOURCE} "#include <stdlib.h>\n#include <stdio.h>\nint main()
 
 # Detect whether the current target platform is 32-bit or 64-bit, and setup
 # the correct commandline flags needed to attempt to target 32-bit and 64-bit.
+# AVR and MSP430 are omitted since they have 16-bit pointers.
 if (NOT CMAKE_SIZEOF_VOID_P EQUAL 4 AND
-    NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+    NOT CMAKE_SIZEOF_VOID_P EQUAL 8 AND
+    NOT ${arch} MATCHES "avr|msp430")
   message(FATAL_ERROR "Please use architecture with 4 or 8 byte pointers.")
 endif()
 

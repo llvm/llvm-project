@@ -4,7 +4,7 @@
 #map0 = affine_map<(d0, d1) -> (d0 * 1024 + d1 + 2304)>
 #map1 = affine_map<(d0, d1) -> (d0 * 1024 + d1 + 3456)>
 
-func @main(%input: memref<4x1024xf32>) -> memref<1x128xf32, #map1> {
+func.func @main(%input: memref<4x1024xf32>) -> memref<1x128xf32, #map1> {
   //      CHECK: subview %arg0[3, 384] [1, 128] [1, 1]
   // CHECK-SAME: memref<4x1024xf32> to memref<1x128xf32, [[MAP]]>
   %0 = memref.subview %input[2, 256] [2, 256] [1, 1] : memref<4x1024xf32> to memref<2x256xf32, #map0>
@@ -19,7 +19,7 @@ func @main(%input: memref<4x1024xf32>) -> memref<1x128xf32, #map1> {
 #map1 = affine_map<(d0, d1) -> (d0 * 1024 + d1 + 2688)>
 #map2 = affine_map<(d0, d1) -> (d0 * 1024 + d1 + 3745)>
 
-func @main(%input: memref<4x1024xf32>) -> memref<1x10xf32, #map2> {
+func.func @main(%input: memref<4x1024xf32>) -> memref<1x10xf32, #map2> {
   //      CHECK: subview %arg0[3, 673] [1, 10] [1, 1]
   // CHECK-SAME: memref<4x1024xf32> to memref<1x10xf32, [[MAP]]>
   %0 = memref.subview %input[1, 512] [3, 256] [1, 1] : memref<4x1024xf32> to memref<3x256xf32, #map0>
@@ -33,7 +33,7 @@ func @main(%input: memref<4x1024xf32>) -> memref<1x10xf32, #map2> {
 // CHECK: [[MAP:#.*]] = affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)
 #map = affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>
 
-func @main(%input: memref<4x1024xf32>) -> memref<1x128xf32, #map> {
+func.func @main(%input: memref<4x1024xf32>) -> memref<1x128xf32, #map> {
   // CHECK: [[CST_3:%.*]] = arith.constant 3 : index
   %cst_1 = arith.constant 1 : index
   %cst_2 = arith.constant 2 : index
@@ -49,7 +49,7 @@ func @main(%input: memref<4x1024xf32>) -> memref<1x128xf32, #map> {
 // CHECK: [[MAP:#.*]] = affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)
 #map = affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>
 
-func @main(%input: memref<4x1024xf32>) -> memref<1x128xf32, #map> {
+func.func @main(%input: memref<4x1024xf32>) -> memref<1x128xf32, #map> {
   // CHECK: [[CST_3:%.*]] = arith.constant 3 : index
   %cst_2 = arith.constant 2 : index
   // CHECK: [[CST_384:%.*]] = arith.constant 384 : index

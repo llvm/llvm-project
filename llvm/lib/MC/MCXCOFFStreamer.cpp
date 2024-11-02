@@ -56,6 +56,9 @@ bool MCXCOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
   case llvm::MCSA_Protected:
     Symbol->setVisibilityType(XCOFF::SYM_V_PROTECTED);
     break;
+  case llvm::MCSA_Exported:
+    Symbol->setVisibilityType(XCOFF::SYM_V_EXPORTED);
+    break;
   default:
     report_fatal_error("Not implemented yet.");
   }

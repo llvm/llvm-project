@@ -778,3 +778,65 @@ TEST_F(TestArm64InstEmulation, TestCFARegisterTrackedAcrossJumps) {
   EXPECT_EQ(32, row_sp->GetCFAValue().GetOffset());
 }
 
+TEST_F(TestArm64InstEmulation, TestCFAResetToSP) {
+  ArchSpec arch("arm64-apple-ios15");
+  std::unique_ptr<UnwindAssemblyInstEmulation> engine(
+      static_cast<UnwindAssemblyInstEmulation *>(
+          UnwindAssemblyInstEmulation::CreateInstance(arch)));
+  ASSERT_NE(nullptr, engine);
+
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  UnwindPlan::Row::RegisterLocation regloc;
+
+  // The called_from_nodebug() from TestStepNoDebug.py
+  // Most of the previous unit tests have $sp being set as
+  // $fp plus an offset, and the unwinder recognizes that
+  // as a CFA change.  This codegen overwrites $fp and we
+  // need to know that CFA is now in terms of $sp.
+  uint8_t data[] = {
+      // prologue
+      0xff, 0x83, 0x00, 0xd1, //  0: 0xd10083ff sub sp, sp, #0x20
+      0xfd, 0x7b, 0x01, 0xa9, //  4: 0xa9017bfd stp x29, x30, [sp, #0x10]
+      0xfd, 0x43, 0x00, 0x91, //  8: 0x910043fd add x29, sp, #0x10
+
+      // epilogue
+      0xfd, 0x7b, 0x41, 0xa9, // 12: 0xa9417bfd ldp x29, x30, [sp, #0x10]
+      0xff, 0x83, 0x00, 0x91, // 16: 0x910083ff add sp, sp, #0x20
+      0xc0, 0x03, 0x5f, 0xd6, // 20: 0xd65f03c0 ret
+  };
+
+  // UnwindPlan we expect:
+  // row[0]:    0: CFA=sp +0 =>
+  // row[1]:    4: CFA=sp+32 =>
+  // row[2]:    8: CFA=sp+32 => fp=[CFA-16] lr=[CFA-8]
+  // row[3]:   12: CFA=fp+16 => fp=[CFA-16] lr=[CFA-8]
+  // row[4]:   16: CFA=sp+32 => x0= <same> fp= <same> lr= <same>
+  // row[5]:   20: CFA=sp +0 => x0= <same> fp= <same> lr= <same>
+
+  // The specific issue we're testing for is after the
+  // ldp x29, x30, [sp, #0x10]
+  // when $fp and $lr have been restored to the original values,
+  // the CFA is now set in terms of the stack pointer.  If it is
+  // left as being in terms of the frame pointer, $fp now has the
+  // caller function's $fp value and our StackID will be wrong etc.
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      sample_range, data, sizeof(data), unwind_plan));
+
+  // Confirm CFA before epilogue instructions is in terms of $fp
+  row_sp = unwind_plan.GetRowForFunctionOffset(12);
+  EXPECT_EQ(12ull, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == gpr_fp_arm64);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+
+  // Confirm that after restoring $fp to caller's value, CFA is now in
+  // terms of $sp
+  row_sp = unwind_plan.GetRowForFunctionOffset(16);
+  EXPECT_EQ(16ull, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == gpr_sp_arm64);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+}

@@ -972,7 +972,7 @@ define dso_local x86_regcallcc i32 @testi32_inp(i32 %a1, i32 %a2, i32 %a3, i32 %
 ; X32-NEXT:    addl {{[0-9]+}}(%esp), %ebp
 ; X32-NEXT:    imull %ebp, %edi
 ; X32-NEXT:    addl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    imull {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    imull {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
 ; X32-NEXT:    addl %esi, %edi
 ; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    imull %eax, %edx
@@ -1063,7 +1063,7 @@ define dso_local x86_regcallcc i32 @testi32_inp(i32 %a1, i32 %a2, i32 %a3, i32 %
 ; LINUXOSX64-NEXT:    movl %r13d, %ebx
 ; LINUXOSX64-NEXT:    subl %r14d, %ebx
 ; LINUXOSX64-NEXT:    imull %ebp, %ebx
-; LINUXOSX64-NEXT:    movl 24(%rsp), %ebp
+; LINUXOSX64-NEXT:    movl {{[0-9]+}}(%rsp), %ebp
 ; LINUXOSX64-NEXT:    addl %edi, %ebx
 ; LINUXOSX64-NEXT:    movl %r15d, %edi
 ; LINUXOSX64-NEXT:    subl %ebp, %edi

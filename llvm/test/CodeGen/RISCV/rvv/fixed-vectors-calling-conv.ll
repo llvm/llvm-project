@@ -1138,10 +1138,10 @@ define <32 x i32> @call_split_vector_args(<2 x i32>* %pa, <32 x i32>* %pb) {
 ; LMULMAX1-NEXT:    vle32.v v8, (a0)
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; LMULMAX1-NEXT:    vle32.v v13, (a1)
-; LMULMAX1-NEXT:    addi a0, a1, 16
-; LMULMAX1-NEXT:    vle32.v v14, (a0)
 ; LMULMAX1-NEXT:    addi a0, a1, 32
 ; LMULMAX1-NEXT:    vle32.v v15, (a0)
+; LMULMAX1-NEXT:    addi a0, a1, 16
+; LMULMAX1-NEXT:    vle32.v v14, (a0)
 ; LMULMAX1-NEXT:    addi a0, a1, 48
 ; LMULMAX1-NEXT:    vle32.v v16, (a0)
 ; LMULMAX1-NEXT:    addi a0, a1, 64

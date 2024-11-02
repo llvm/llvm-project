@@ -409,6 +409,8 @@ public:
   bool handleFunctionTemplate(const FunctionTemplateDecl *D);
   bool handleTypeAliasTemplate(const TypeAliasTemplateDecl *D);
 
+  bool handleConcept(const ConceptDecl *D);
+
   bool handleReference(const NamedDecl *D, SourceLocation Loc, CXCursor Cursor,
                        const NamedDecl *Parent,
                        const DeclContext *DC,

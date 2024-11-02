@@ -1,4 +1,4 @@
-; Test basic address sanitizer instrumentation.
+; Test basic memory profiler instrumentation.
 ;
 ; RUN: opt < %s -memprof -memprof-module -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
 ; RUN: opt < %s -memprof -memprof-module -memprof-mapping-scale=5 -S | FileCheck --check-prefixes=CHECK,CHECK-S5 %s

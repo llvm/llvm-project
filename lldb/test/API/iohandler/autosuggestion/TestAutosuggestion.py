@@ -26,7 +26,8 @@ class TestCase(PExpectTest):
     @skipIfAsan
     @skipIfEditlineSupportMissing
     def test_autosuggestion_add_spaces(self):
-        self.launch(extra_args=["-o", "settings set show-autosuggestion true", "-o", "settings set use-color true"])
+        self.launch(use_colors=True,
+                    extra_args=["-o", "settings set show-autosuggestion true", "-o", "settings set use-color true"])
 
 
         # Check if spaces are added to hide the previous gray characters.
@@ -40,7 +41,8 @@ class TestCase(PExpectTest):
     @skipIfAsan
     @skipIfEditlineSupportMissing
     def test_autosuggestion(self):
-        self.launch(extra_args=["-o", "settings set show-autosuggestion true", "-o", "settings set use-color true"])
+        self.launch(use_colors=True,
+                    extra_args=["-o", "settings set show-autosuggestion true", "-o", "settings set use-color true"])
 
         # Common input codes.
         ctrl_f = "\x06"
@@ -107,7 +109,8 @@ class TestCase(PExpectTest):
     @skipIfAsan
     @skipIfEditlineSupportMissing
     def test_autosuggestion_custom_ansi_prefix_suffix(self):
-        self.launch(extra_args=["-o", "settings set show-autosuggestion true",
+        self.launch(use_colors=True,
+                    extra_args=["-o", "settings set show-autosuggestion true",
                                 "-o", "settings set use-color true",
                                 "-o", "settings set show-autosuggestion-ansi-prefix ${ansi.fg.red}",
                                 "-o", "setting set show-autosuggestion-ansi-suffix ${ansi.fg.cyan}"])

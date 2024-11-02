@@ -194,7 +194,7 @@ void test_atomics_without_scope_device(volatile __generic atomic_int *a_int) {
   int d;
 
   atomic_exchange(a_int, d);
-  // expected-error@-1{{implicit declaration of function 'atomic_exchange' is invalid in OpenCL}}
+  // expected-error@-1{{use of undeclared identifier 'atomic_exchange'}}
 
   atomic_exchange_explicit(a_int, d, memory_order_seq_cst);
   // expected-error@-1{{no matching function for call to 'atomic_exchange_explicit'}}
@@ -225,7 +225,7 @@ kernel void basic_conversion(void) {
 
 #ifdef NO_FP64
   (void)convert_double_rtp(f);
-  // expected-error@-1{{implicit declaration of function 'convert_double_rtp' is invalid in OpenCL}}
+  // expected-error@-1{{use of undeclared identifier 'convert_double_rtp'}}
 #else
   double d;
   f = convert_float(d);
@@ -240,11 +240,10 @@ kernel void basic_conversion_neg(void) {
 
   f = convert_float_sat(i);
 #if !defined(__OPENCL_CPP_VERSION__)
-  // expected-error@-2{{implicit declaration of function 'convert_float_sat' is invalid in OpenCL}}
-  // expected-error@-3{{implicit conversion from 'int' to 'float' may lose precision}}
+  // expected-error@-2{{use of undeclared identifier 'convert_float_sat'}}
 #else
-  // expected-error@-5{{use of undeclared identifier 'convert_float_sat'; did you mean 'convert_float'?}}
-  // expected-note@-6{{'convert_float' declared here}}
+  // expected-error@-4{{use of undeclared identifier 'convert_float_sat'; did you mean 'convert_float'?}}
+  // expected-note@-5{{'convert_float' declared here}}
 #endif
 }
 
@@ -312,8 +311,7 @@ kernel void basic_image_writeonly(write_only image1d_buffer_t image_write_only_i
 kernel void basic_subgroup(global uint *out) {
   out[0] = get_sub_group_size();
 #if __OPENCL_C_VERSION__ <= CL_VERSION_1_2 && !defined(__OPENCL_CPP_VERSION__)
-  // expected-error@-2{{implicit declaration of function 'get_sub_group_size' is invalid in OpenCL}}
-  // expected-error@-3{{implicit conversion changes signedness}}
+  // expected-error@-2{{use of undeclared identifier 'get_sub_group_size'}}
 #endif
 
 // Only test when the base header is included, because we need the enum declarations.
@@ -328,12 +326,10 @@ kernel void extended_subgroup(global uint4 *out, global int *scalar, global char
   scalar[1] = sub_group_clustered_reduce_logical_xor(2, 4);
   *c2 = sub_group_broadcast(*c2, 2);
 #if __OPENCL_C_VERSION__ < CL_VERSION_2_0 && !defined(__OPENCL_CPP_VERSION__)
-  // expected-error@-5{{implicit declaration of function 'get_sub_group_eq_mask' is invalid in OpenCL}}
-  // expected-error@-6{{implicit conversion changes signedness}}
-  // expected-error@-6{{implicit declaration of function 'sub_group_non_uniform_scan_inclusive_or' is invalid in OpenCL}}
-  // expected-error@-6{{implicit declaration of function 'sub_group_clustered_reduce_logical_xor' is invalid in OpenCL}}
-  // expected-error@-6{{implicit declaration of function 'sub_group_broadcast' is invalid in OpenCL}}
-  // expected-error@-7{{implicit conversion loses integer precision}}
+  // expected-error@-5{{use of undeclared identifier 'get_sub_group_eq_mask'}}
+  // expected-error@-5{{use of undeclared identifier 'sub_group_non_uniform_scan_inclusive_or'}}
+  // expected-error@-5{{use of undeclared identifier 'sub_group_clustered_reduce_logical_xor'}}
+  // expected-error@-5{{use of undeclared identifier 'sub_group_broadcast'}}
 #endif
 }
 
@@ -376,7 +372,7 @@ kernel void basic_work_item(void) {
 
   get_enqueued_local_size(ui);
 #if !defined(__OPENCL_CPP_VERSION__) && __OPENCL_C_VERSION__ < CL_VERSION_2_0
-// expected-error@-2{{implicit declaration of function 'get_enqueued_local_size' is invalid in OpenCL}}
+// expected-error@-2{{use of undeclared identifier 'get_enqueued_local_size'}}
 #endif
 }
 

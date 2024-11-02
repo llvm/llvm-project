@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
-// const charT* data() const;
-//       charT* data();   // C++17
+// const charT* data() const; // constexpr since C++20
+//       charT* data();   // C++17, constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -47,7 +49,7 @@ test_nonconst(S& s)
         assert(T::eq(str[0], typename S::value_type()));
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     test_const(S(""));
@@ -81,7 +83,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

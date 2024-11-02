@@ -25,8 +25,8 @@
 
 namespace fir {
 class FirOpBuilder;
+class ArrayLoadOp;
 
-class CharBoxValue;
 class ArrayBoxValue;
 class BoxValue;
 class CharBoxValue;
@@ -61,9 +61,9 @@ public:
   AbstractBox() = delete;
   AbstractBox(mlir::Value addr) : addr{addr} {}
 
-  /// FIXME: this comment is not true anymore since genLoad
-  /// is loading constant length characters. What is the impact  /// ?
-  /// An abstract box always contains a memory reference to a value.
+  /// An abstract box most often contains a memory reference to a value. Despite
+  /// the name here, it is possible that `addr` is a scalar value that is not a
+  /// memory reference.
   mlir::Value getAddr() const { return addr; }
 
 protected:
@@ -239,18 +239,20 @@ public:
       return seqTy.getDimension();
     return 0;
   }
-  /// Is this a character entity ?
-  bool isCharacter() const { return fir::isa_char(getEleTy()); };
-  /// Is this a derived type entity ?
-  bool isDerived() const { return getEleTy().isa<fir::RecordType>(); };
 
-  bool isDerivedWithLengthParameters() const {
-    auto record = getEleTy().dyn_cast<fir::RecordType>();
-    return record && record.getNumLenParams() != 0;
-  };
+  /// Is this a character entity ?
+  bool isCharacter() const { return fir::isa_char(getEleTy()); }
+
+  /// Is this a derived type entity ?
+  bool isDerived() const { return getEleTy().isa<fir::RecordType>(); }
+
+  bool isDerivedWithLenParameters() const {
+    return fir::isRecordWithTypeParameters(getEleTy());
+  }
+
   /// Is this a CLASS(*)/TYPE(*) ?
   bool isUnlimitedPolymorphic() const {
-    return getEleTy().isa<mlir::NoneType>();
+    return fir::isUnlimitedPolymorphicType(getBaseTy());
   }
 };
 
@@ -259,7 +261,7 @@ public:
 /// absent optional and we need to wait until the user is referencing it
 /// to read it, or because it contains important information that cannot
 /// be exposed in FIR (e.g. non contiguous byte stride).
-/// It may also store explicit bounds or length parameters that were specified
+/// It may also store explicit bounds or LEN parameters that were specified
 /// for the entity.
 class BoxValue : public AbstractIrBox {
 public:
@@ -287,7 +289,7 @@ public:
   // The extents member is not guaranteed to be field for arrays. It is only
   // guaranteed to be field for explicit shape arrays. In general,
   // explicit-shape will not come as descriptors, so this field will be empty in
-  // most cases. The exception are derived types with length parameters and
+  // most cases. The exception are derived types with LEN parameters and
   // polymorphic dummy argument arrays. It may be possible for the explicit
   // extents to conflict with the shape information that is in the box according
   // to 15.5.2.11 sequence association rules.
@@ -301,8 +303,8 @@ protected:
   // Verify constructor invariants.
   bool verify() const;
 
-  // Only field when the BoxValue has explicit length parameters.
-  // Otherwise, the length parameters are in the fir.box.
+  // Only field when the BoxValue has explicit LEN parameters.
+  // Otherwise, the LEN parameters are in the fir.box.
   llvm::SmallVector<mlir::Value, 2> explicitParams;
 };
 
@@ -318,7 +320,7 @@ public:
   mlir::Value addr;
   llvm::SmallVector<mlir::Value, 2> extents;
   llvm::SmallVector<mlir::Value, 2> lbounds;
-  /// Only keep track of the deferred length parameters through variables, since
+  /// Only keep track of the deferred LEN parameters through variables, since
   /// they are the only ones that can change as per the deferred type parameters
   /// definition in F2018 standard section 3.147.12.2.
   /// Non-deferred values are returned by
@@ -333,9 +335,9 @@ public:
 class MutableBoxValue : public AbstractIrBox {
 public:
   /// Create MutableBoxValue given the address \p addr of the box and the non
-  /// deferred length parameters \p lenParameters. The non deferred length
-  /// parameters must always be provided, even if they are constant and already
-  /// reflected in the address type.
+  /// deferred LEN parameters \p lenParameters. The non deferred LEN parameters
+  /// must always be provided, even if they are constant and already reflected
+  /// in the address type.
   MutableBoxValue(mlir::Value addr, mlir::ValueRange lenParameters,
                   MutableProperties mutableProperties)
       : AbstractIrBox(addr), lenParams{lenParameters.begin(),
@@ -343,7 +345,7 @@ public:
         mutableProperties{mutableProperties} {
     // Currently only accepts fir.(ref/ptr/heap)<fir.box<type>> mlir::Value for
     // the address. This may change if we accept
-    // fir.(ref/ptr/heap)<fir.heap<type>> for scalar without length parameters.
+    // fir.(ref/ptr/heap)<fir.heap<type>> for scalar without LEN parameters.
     assert(verify() &&
            "MutableBoxValue requires mem ref to fir.box<fir.[heap|ptr]<type>>");
   }
@@ -359,9 +361,9 @@ public:
   MutableBoxValue clone(mlir::Value newBox) const {
     return {newBox, lenParams, mutableProperties};
   }
-  /// Does this entity has any non deferred length parameters ?
+  /// Does this entity has any non deferred LEN parameters?
   bool hasNonDeferredLenParams() const { return !lenParams.empty(); }
-  /// Return the non deferred length parameters.
+  /// Return the non deferred LEN parameters.
   llvm::ArrayRef<mlir::Value> nonDeferredLenParams() const { return lenParams; }
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &,
                                        const MutableBoxValue &);
@@ -378,8 +380,8 @@ public:
 protected:
   /// Validate the address type form in the constructor.
   bool verify() const;
-  /// Hold the non-deferred length parameter values  (both for characters and
-  /// derived). Non-deferred length parameters cannot change dynamically, as
+  /// Hold the non-deferred LEN parameter values  (both for characters and
+  /// derived). Non-deferred LEN parameters cannot change dynamically, as
   /// opposed to deferred type parameters (3.147.12.2).
   llvm::SmallVector<mlir::Value, 2> lenParams;
   /// Set of variables holding the extents, lower bounds and
@@ -411,14 +413,36 @@ bool isArray(const ExtendedValue &exv);
 /// Get the type parameters for `exv`.
 llvm::SmallVector<mlir::Value> getTypeParams(const ExtendedValue &exv);
 
+//===----------------------------------------------------------------------===//
+// Functions that may generate IR to recover properties from extended values.
+//===----------------------------------------------------------------------===//
+namespace factory {
+
+/// Generalized function to recover dependent type parameters. This does away
+/// with the distinction between deferred and non-deferred LEN type parameters
+/// (Fortran definition), since that categorization is irrelevant when getting
+/// all type parameters for a value of dependent type.
+llvm::SmallVector<mlir::Value> getTypeParams(mlir::Location loc,
+                                             FirOpBuilder &builder,
+                                             const ExtendedValue &exv);
+
+/// Specialization of get type parameters for an ArrayLoadOp. An array load must
+/// either have all type parameters given as arguments or be a boxed value.
+llvm::SmallVector<mlir::Value>
+getTypeParams(mlir::Location loc, FirOpBuilder &builder, ArrayLoadOp load);
+
 // The generalized function to get a vector of extents is
-// fir::factory::getExtents(). See FIRBuilder.h.
+/// Get extents from \p box. For fir::BoxValue and
+/// fir::MutableBoxValue, this will generate code to read the extents.
+llvm::SmallVector<mlir::Value>
+getExtents(mlir::Location loc, FirOpBuilder &builder, const ExtendedValue &box);
 
 /// Get exactly one extent for any array-like extended value, \p exv. If \p exv
 /// is not an array or has rank less then \p dim, the result will be a nullptr.
-mlir::Value getExtentAtDimension(const ExtendedValue &exv,
-                                 FirOpBuilder &builder, mlir::Location loc,
-                                 unsigned dim);
+mlir::Value getExtentAtDimension(mlir::Location loc, FirOpBuilder &builder,
+                                 const ExtendedValue &exv, unsigned dim);
+
+} // namespace factory
 
 /// An extended value is a box of values pertaining to a discrete entity. It is
 /// used in lowering to track all the runtime values related to an entity. For
@@ -507,10 +531,9 @@ inline mlir::Type getElementTypeOf(const ExtendedValue &exv) {
   return fir::unwrapSequenceType(getBaseTypeOf(exv));
 }
 
-/// Is the extended value `exv` a derived type with length parameters ?
-inline bool isDerivedWithLengthParameters(const ExtendedValue &exv) {
-  auto record = getElementTypeOf(exv).dyn_cast<fir::RecordType>();
-  return record && record.getNumLenParams() != 0;
+/// Is the extended value `exv` a derived type with LEN parameters?
+inline bool isDerivedWithLenParameters(const ExtendedValue &exv) {
+  return fir::isRecordWithTypeParameters(getElementTypeOf(exv));
 }
 
 } // namespace fir

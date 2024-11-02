@@ -117,6 +117,8 @@ protected:
 
   bool PrintChildrenOneLiner(bool hide_names);
 
+  bool HasReachedMaximumDepth();
+
 private:
   ValueObject *m_orig_valobj;
   ValueObject *m_valobj;

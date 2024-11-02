@@ -336,6 +336,7 @@ def FMOVD_XCC : F4_3<0b110101, 0b000010, (outs DFPRegs:$rd),
                       "fmovd$cond %xcc, $rs2, $rd",
                       [(set f64:$rd,
                        (SPselectxcc f64:$rs2, f64:$f, imm:$cond))]>;
+let Predicates = [Is64Bit, HasHardQuad] in
 def FMOVQ_XCC : F4_3<0b110101, 0b000011, (outs QFPRegs:$rd),
                       (ins QFPRegs:$rs2, QFPRegs:$f, CCOp:$cond),
                       "fmovq$cond %xcc, $rs2, $rd",
@@ -436,11 +437,11 @@ def FXTOD : F3_3u<2, 0b110100, 0b010001000,
                  (outs DFPRegs:$rd), (ins DFPRegs:$rs2),
                  "fxtod $rs2, $rd",
                  [(set DFPRegs:$rd, (SPxtof DFPRegs:$rs2))]>;
+let Predicates = [Is64Bit, HasHardQuad] in
 def FXTOQ : F3_3u<2, 0b110100, 0b010001100,
                  (outs QFPRegs:$rd), (ins DFPRegs:$rs2),
                  "fxtoq $rs2, $rd",
-                 [(set QFPRegs:$rd, (SPxtof DFPRegs:$rs2))]>,
-                 Requires<[HasHardQuad]>;
+                 [(set QFPRegs:$rd, (SPxtof DFPRegs:$rs2))]>;
 
 def FSTOX : F3_3u<2, 0b110100, 0b010000001,
                  (outs DFPRegs:$rd), (ins FPRegs:$rs2),
@@ -450,11 +451,11 @@ def FDTOX : F3_3u<2, 0b110100, 0b010000010,
                  (outs DFPRegs:$rd), (ins DFPRegs:$rs2),
                  "fdtox $rs2, $rd",
                  [(set DFPRegs:$rd, (SPftox DFPRegs:$rs2))]>;
+let Predicates = [Is64Bit, HasHardQuad] in
 def FQTOX : F3_3u<2, 0b110100, 0b010000011,
                  (outs DFPRegs:$rd), (ins QFPRegs:$rs2),
                  "fqtox $rs2, $rd",
-                 [(set DFPRegs:$rd, (SPftox QFPRegs:$rs2))]>,
-                 Requires<[HasHardQuad]>;
+                 [(set DFPRegs:$rd, (SPftox QFPRegs:$rs2))]>;
 
 } // Predicates = [Is64Bit]
 

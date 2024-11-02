@@ -249,9 +249,10 @@ define void @load_i64_stride6_vf4(<24 x i64>* %in.vec, <4 x i64>* %out.vec0, <4 
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm4[6,7]
 ; AVX512-NEXT:    vmovdqa {{.*#+}} ymm5 = <10,0,6,u>
 ; AVX512-NEXT:    vpermi2q %zmm2, %zmm3, %zmm5
-; AVX512-NEXT:    vpbroadcastq 160(%rdi), %ymm6
-; AVX512-NEXT:    vpblendd {{.*#+}} ymm5 = ymm5[0,1,2,3,4,5],ymm6[6,7]
-; AVX512-NEXT:    vinserti128 $1, 160(%rdi), %ymm0, %ymm6
+; AVX512-NEXT:    vmovdqa 160(%rdi), %xmm6
+; AVX512-NEXT:    vpbroadcastq %xmm6, %ymm7
+; AVX512-NEXT:    vpblendd {{.*#+}} ymm5 = ymm5[0,1,2,3,4,5],ymm7[6,7]
+; AVX512-NEXT:    vinserti128 $1, %xmm6, %ymm0, %ymm6
 ; AVX512-NEXT:    vmovdqa {{.*#+}} ymm7 = <11,1,7,u>
 ; AVX512-NEXT:    vpermi2q %zmm2, %zmm3, %zmm7
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm6 = ymm7[0,1,2,3,4,5],ymm6[6,7]

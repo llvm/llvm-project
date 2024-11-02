@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <string>
 
 // template<class InputIterator>
 //   basic_string&
-//   replace(const_iterator i1, const_iterator i2, InputIterator j1, InputIterator j2);
+//   replace(const_iterator i1, const_iterator i2, InputIterator j1, InputIterator j2); // constexpr since C++20
 
 #include <string>
 #include <iterator>
@@ -63,7 +65,7 @@ test_exceptions(S s, typename S::size_type pos1, typename S::size_type n1, It f,
 }
 #endif
 
-const char* str = "12345678901234567890";
+TEST_CONSTEXPR const char* str = "12345678901234567890";
 
 template <class S>
 TEST_CONSTEXPR_CXX20 bool test0()
@@ -993,9 +995,9 @@ TEST_CONSTEXPR_CXX20 bool test8()
 }
 
 template <class S>
-bool test9() {
+TEST_CONSTEXPR_CXX20 bool test9() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
-  { // test iterator operations that throw
+  if (!TEST_IS_CONSTANT_EVALUATED) { // test iterator operations that throw
     typedef ThrowingIterator<char> TIter;
     typedef cpp17_input_iterator<TIter> IIter;
     const char* s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -1057,16 +1059,16 @@ void test() {
   test9<S>();
 
 #if TEST_STD_VER > 17
-  // static_assert(test0<S>());
-  // static_assert(test1<S>());
-  // static_assert(test2<S>());
-  // static_assert(test3<S>());
-  // static_assert(test4<S>());
-  // static_assert(test5<S>());
-  // static_assert(test6<S>());
-  // static_assert(test7<S>());
-  // static_assert(test8<S>());
-  // static_assert(test9<S>());
+  static_assert(test0<S>());
+  static_assert(test1<S>());
+  static_assert(test2<S>());
+  static_assert(test3<S>());
+  static_assert(test4<S>());
+  static_assert(test5<S>());
+  static_assert(test6<S>());
+  static_assert(test7<S>());
+  static_assert(test8<S>());
+  static_assert(test9<S>());
 #endif
 }
 

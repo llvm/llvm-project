@@ -430,6 +430,10 @@ protected:
   /// hidden visibility.  Defaults to MCSA_Hidden.
   MCSymbolAttr HiddenVisibilityAttr = MCSA_Hidden;
 
+  /// This attribute, if not MCSA_Invalid, is used to declare a symbol as having
+  /// exported visibility.  Defaults to MCSA_Exported.
+  MCSymbolAttr ExportedVisibilityAttr = MCSA_Exported;
+
   /// This attribute, if not MCSA_Invalid, is used to declare an undefined
   /// symbol as having hidden visibility. Defaults to MCSA_Hidden.
   MCSymbolAttr HiddenDeclarationVisibilityAttr = MCSA_Hidden;
@@ -465,6 +469,10 @@ protected:
   /// True if the target supports generating the DWARF line table through using
   /// the .loc/.file directives. Defaults to true.
   bool UsesDwarfFileAndLocDirectives = true;
+
+  /// True if DWARF `.file directory' directive syntax is used by
+  /// default.
+  bool EnableDwarfFileDirectoryDefault = true;
 
   /// True if the target needs the DWARF section length in the header (if any)
   /// of the DWARF section in the assembly file. Defaults to true.
@@ -754,6 +762,8 @@ public:
 
   MCSymbolAttr getHiddenVisibilityAttr() const { return HiddenVisibilityAttr; }
 
+  MCSymbolAttr getExportedVisibilityAttr() const { return ExportedVisibilityAttr; }
+
   MCSymbolAttr getHiddenDeclarationVisibilityAttr() const {
     return HiddenDeclarationVisibilityAttr;
   }
@@ -806,6 +816,10 @@ public:
 
   bool needsDwarfSectionSizeInHeader() const {
     return DwarfSectionSizeRequired;
+  }
+
+  bool enableDwarfFileDirectoryDefault() const {
+    return EnableDwarfFileDirectoryDefault;
   }
 
   void addInitialFrameState(const MCCFIInstruction &Inst);

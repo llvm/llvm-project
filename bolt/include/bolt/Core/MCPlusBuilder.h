@@ -21,6 +21,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCDisassembler/MCSymbolizer.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -44,6 +45,7 @@ class MCSymbol;
 class raw_ostream;
 
 namespace bolt {
+class BinaryFunction;
 
 /// Different types of indirect branches encountered during disassembly.
 enum class IndirectBranchType : char {
@@ -282,6 +284,14 @@ public:
     // Initialize the default annotation allocator with id 0
     AnnotationAllocators.emplace(0, AnnotationAllocator());
     MaxAllocatorId++;
+    // Build alias map
+    initAliases();
+  }
+
+  /// Create and return target-specific MC symbolizer for the \p Function.
+  virtual std::unique_ptr<MCSymbolizer>
+  createTargetSymbolizer(BinaryFunction &Function) const {
+    return nullptr;
   }
 
   /// Initialize a new annotation allocator and return its id
@@ -907,12 +917,22 @@ public:
     return false;
   }
 
-  /// Use \p Input1 or Input2 as the current value for the input register and
-  /// put in \p Output the changes incurred by executing \p Inst. Return false
-  /// if it was not possible to perform the evaluation.
-  virtual bool evaluateSimple(const MCInst &Inst, int64_t &Output,
-                              std::pair<MCPhysReg, int64_t> Input1,
-                              std::pair<MCPhysReg, int64_t> Input2) const {
+  /// Use \p Input1 or Input2 as the current value for the input
+  /// register and put in \p Output the changes incurred by executing
+  /// \p Inst. Return false if it was not possible to perform the
+  /// evaluation. evaluateStackOffsetExpr is restricted to operations
+  /// that have associativity with addition. Its intended usage is for
+  /// evaluating stack offset changes. In these cases, expressions
+  /// appear in the form of (x + offset) OP constant, where x is an
+  /// unknown base (such as stack base) but offset and constant are
+  /// known. In these cases, \p Output represents the new stack offset
+  /// after executing \p Inst. Because we don't know x, we can't
+  /// evaluate operations such as multiply or AND/OR, e.g. (x +
+  /// offset) OP constant is not the same as x + (offset OP constant).
+  virtual bool
+  evaluateStackOffsetExpr(const MCInst &Inst, int64_t &Output,
+                          std::pair<MCPhysReg, int64_t> Input1,
+                          std::pair<MCPhysReg, int64_t> Input2) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1134,6 +1154,9 @@ public:
   /// itself.
   virtual const BitVector &getAliases(MCPhysReg Reg,
                                       bool OnlySmaller = false) const;
+
+  /// Initialize aliases tables.
+  virtual void initAliases();
 
   /// Change \p Regs setting all registers used to pass parameters according
   /// to the host abi. Do nothing if not implemented.
@@ -1904,6 +1927,11 @@ public:
     llvm_unreachable("not implemented");
     return BlocksVectorTy();
   }
+
+  // AliasMap caches a mapping of registers to the set of registers that
+  // alias (are sub or superregs of itself, including itself).
+  std::vector<BitVector> AliasMap;
+  std::vector<BitVector> SmallerAliasMap;
 };
 
 MCPlusBuilder *createX86MCPlusBuilder(const MCInstrAnalysis *,

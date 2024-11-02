@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_35 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_35 | %ptxas-verify -arch=sm_35 %}
 
 ; Verify that we correctly emit code for extending ldg/ldu. We do not expose
 ; extending variants in the backend, but the ldg/ldu selection code may pick

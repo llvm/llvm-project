@@ -17,10 +17,6 @@ if(${LIBOMPTARGET_DEP_VEO_FOUND})
   set(tmachine_triple "ve-unknown-linux-unknown")
   set(elf_machine_id 251)
 
-  include_directories(${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIR})
-  include_directories(${LIBOMPTARGET_DEP_VEO_INCLUDE_DIR})
-
-
   # Define macro to be used as prefix of the runtime messages for this target.
   add_definitions("-DTARGET_NAME=${tmachine_name}")
 
@@ -33,6 +29,11 @@ if(${LIBOMPTARGET_DEP_VEO_FOUND})
   # Install plugin under the lib destination folder.
   install(TARGETS "omptarget.rtl.${tmachine_libname}"
     LIBRARY DESTINATION lib${OPENMP_LIBDIR_SUFFIX})
+
+  target_include_directories("omptarget.rtl.${tmachine_libname}" PRIVATE
+    ${LIBOMPTARGET_INCLUDE_DIR}
+    ${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIR}
+    ${LIBOMPTARGET_DEP_VEO_INCLUDE_DIR})
 
   target_link_libraries(
     "omptarget.rtl.${tmachine_libname}"

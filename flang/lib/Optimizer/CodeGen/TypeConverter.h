@@ -92,8 +92,8 @@ public:
     addConversion(
         [&](fir::PointerType pointer) { return convertPointerLike(pointer); });
     addConversion([&](fir::RecordType derived,
-                      SmallVectorImpl<mlir::Type> &results,
-                      ArrayRef<mlir::Type> callStack) {
+                      llvm::SmallVectorImpl<mlir::Type> &results,
+                      llvm::ArrayRef<mlir::Type> callStack) {
       return convertRecordType(derived, results, callStack);
     });
     addConversion(
@@ -138,15 +138,15 @@ public:
   mlir::Type indexType() { return mlir::IntegerType::get(&getContext(), 64); }
 
   // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
-  llvm::Optional<LogicalResult>
+  llvm::Optional<mlir::LogicalResult>
   convertRecordType(fir::RecordType derived,
-                    SmallVectorImpl<mlir::Type> &results,
-                    ArrayRef<mlir::Type> callStack) {
+                    llvm::SmallVectorImpl<mlir::Type> &results,
+                    llvm::ArrayRef<mlir::Type> callStack) {
     auto name = derived.getName();
     auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);
     if (llvm::count(callStack, derived) > 1) {
       results.push_back(st);
-      return success();
+      return mlir::success();
     }
     llvm::SmallVector<mlir::Type> members;
     for (auto mem : derived.getTypeList()) {
@@ -158,9 +158,9 @@ public:
         members.push_back(convertType(mem.second).cast<mlir::Type>());
     }
     if (mlir::failed(st.setBody(members, /*isPacked=*/false)))
-      return failure();
+      return mlir::failure();
     results.push_back(st);
-    return success();
+    return mlir::success();
   }
 
   // Is an extended descriptor needed given the element type of a fir.box type ?

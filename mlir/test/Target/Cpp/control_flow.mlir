@@ -2,7 +2,7 @@
 
 // simple(10, true)  -> 20
 // simple(10, false) -> 30
-func @simple(i64, i1) -> i64 {
+func.func @simple(i64, i1) -> i64 {
 ^bb0(%a: i64, %cond: i1):
   cf.cond_br %cond, ^bb1, ^bb2
 ^bb1:
@@ -43,7 +43,7 @@ func @simple(i64, i1) -> i64 {
     // CPP-DECLTOP-NEXT: return [[V0]];
 
 
-func @block_labels0() {
+func.func @block_labels0() {
 ^bb1:
     cf.br ^bb2
 ^bb2:
@@ -57,7 +57,7 @@ func @block_labels0() {
 
 
 // Repeat the same function to make sure the names of the block labels get reset.
-func @block_labels1() {
+func.func @block_labels1() {
 ^bb1:
     cf.br ^bb2
 ^bb2:

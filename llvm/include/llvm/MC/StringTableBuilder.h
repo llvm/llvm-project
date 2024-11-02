@@ -85,7 +85,6 @@ public:
   void write(raw_ostream &OS) const;
   void write(uint8_t *Buf) const;
 
-private:
   bool isFinalized() const { return Finalized; }
 };
 

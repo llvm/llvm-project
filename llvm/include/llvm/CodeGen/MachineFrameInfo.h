@@ -334,6 +334,9 @@ private:
   /// Not null, if shrink-wrapping found a better place for the epilogue.
   MachineBasicBlock *Restore = nullptr;
 
+  /// Size of the UnsafeStack Frame
+  uint64_t UnsafeStackSize = 0;
+
 public:
   explicit MachineFrameInfo(unsigned StackAlignment, bool StackRealignable,
                             bool ForcedRealign)
@@ -500,6 +503,14 @@ public:
     assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
     return Objects[ObjectIdx+NumFixedObjects].Alloca;
+  }
+
+  /// Remove the underlying Alloca of the specified stack object if it
+  /// exists. This generally should not be used and is for reduction tooling.
+  void clearObjectAllocation(int ObjectIdx) {
+    assert(unsigned(ObjectIdx + NumFixedObjects) < Objects.size() &&
+           "Invalid Object Idx!");
+    Objects[ObjectIdx + NumFixedObjects].Alloca = nullptr;
   }
 
   /// Return the assigned stack offset of the specified object
@@ -786,6 +797,9 @@ public:
   void setSavePoint(MachineBasicBlock *NewSave) { Save = NewSave; }
   MachineBasicBlock *getRestorePoint() const { return Restore; }
   void setRestorePoint(MachineBasicBlock *NewRestore) { Restore = NewRestore; }
+
+  uint64_t getUnsafeStackSize() const { return UnsafeStackSize; }
+  void setUnsafeStackSize(uint64_t Size) { UnsafeStackSize = Size; }
 
   /// Return a set of physical registers that are pristine.
   ///

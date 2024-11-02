@@ -1527,6 +1527,42 @@ def get_signal_number(signal_name):
     # No remote platform; fall back to using local python signals.
     return getattr(signal, signal_name)
 
+def get_actions_for_signal(testcase, signal_name, from_target=False, expected_absent=False):
+    """Returns a triple of (pass, stop, notify)"""
+    return_obj = lldb.SBCommandReturnObject()
+    command = "process handle {0}".format(signal_name)
+    if from_target:
+        command += " -t"
+    testcase.dbg.GetCommandInterpreter().HandleCommand(
+        command, return_obj)
+    match = re.match(
+        'NAME *PASS *STOP *NOTIFY.*(false|true|not set) *(false|true|not set) *(false|true|not set)',
+        return_obj.GetOutput(),
+        re.IGNORECASE | re.DOTALL)
+    if match and expected_absent:
+        testcase.fail('Signal "{0}" was supposed to be absent'.format(signal_name))
+    if not match:
+        if expected_absent:
+            return (None, None, None)
+        testcase.fail('Unable to retrieve default signal disposition.')
+    return (match.group(1), match.group(2), match.group(3))
+
+
+
+def set_actions_for_signal(testcase, signal_name, pass_action, stop_action, notify_action, expect_success=True):
+        return_obj = lldb.SBCommandReturnObject()
+        command = "process handle {0}".format(signal_name)
+        if pass_action != None:
+            command += " -p {0}".format(pass_action)
+        if stop_action != None:
+            command += " -s {0}".format(stop_action)
+        if notify_action != None:
+            command +=" -n {0}".format(notify_action)
+            
+        testcase.dbg.GetCommandInterpreter().HandleCommand(command, return_obj)
+        testcase.assertEqual(expect_success,
+            return_obj.Succeeded(), 
+            "Setting signal handling for {0} worked as expected".format(signal_name))
 
 class PrintableRegex(object):
 

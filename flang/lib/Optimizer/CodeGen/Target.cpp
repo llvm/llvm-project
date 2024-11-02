@@ -251,6 +251,7 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
       break;
     case llvm::Triple::OSType::Linux:
     case llvm::Triple::OSType::Darwin:
+    case llvm::Triple::OSType::MacOSX:
     case llvm::Triple::OSType::Win32:
       return std::make_unique<TargetI386>(ctx, std::move(trp),
                                           std::move(kindMap));
@@ -262,6 +263,7 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
       break;
     case llvm::Triple::OSType::Linux:
     case llvm::Triple::OSType::Darwin:
+    case llvm::Triple::OSType::MacOSX:
     case llvm::Triple::OSType::Win32:
       return std::make_unique<TargetX86_64>(ctx, std::move(trp),
                                             std::move(kindMap));
@@ -273,6 +275,7 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
       break;
     case llvm::Triple::OSType::Linux:
     case llvm::Triple::OSType::Darwin:
+    case llvm::Triple::OSType::MacOSX:
     case llvm::Triple::OSType::Win32:
       return std::make_unique<TargetAArch64>(ctx, std::move(trp),
                                              std::move(kindMap));

@@ -99,8 +99,8 @@ define arm_aapcs_vfpcc <8 x half> @cos_float16_t(<8 x half> %src) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov r0, s0
@@ -111,40 +111,40 @@ define arm_aapcs_vfpcc <8 x half> @cos_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s2, s16
-; CHECK-NEXT:    vcvtt.f16.f32 s16, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s20, s16
+; CHECK-NEXT:    vcvtt.f16.f32 s20, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s21, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s17, s0
+; CHECK-NEXT:    vcvtt.f16.f32 s21, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s22, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s18, s0
+; CHECK-NEXT:    vcvtt.f16.f32 s22, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s23, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s19, s0
-; CHECK-NEXT:    vmov q0, q4
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    vcvtt.f16.f32 s23, s0
+; CHECK-NEXT:    vmov q0, q5
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %0 = call fast <8 x half> @llvm.cos.v8f16(<8 x half> %src)
@@ -210,8 +210,8 @@ define arm_aapcs_vfpcc <8 x half> @sin_float16_t(<8 x half> %src) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov r0, s0
@@ -222,40 +222,40 @@ define arm_aapcs_vfpcc <8 x half> @sin_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s2, s16
-; CHECK-NEXT:    vcvtt.f16.f32 s16, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s20, s16
+; CHECK-NEXT:    vcvtt.f16.f32 s20, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s21, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s17, s0
+; CHECK-NEXT:    vcvtt.f16.f32 s21, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s22, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s18, s0
+; CHECK-NEXT:    vcvtt.f16.f32 s22, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s23, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s19, s0
-; CHECK-NEXT:    vmov q0, q4
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    vcvtt.f16.f32 s23, s0
+; CHECK-NEXT:    vmov q0, q5
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %0 = call fast <8 x half> @llvm.sin.v8f16(<8 x half> %src)
@@ -321,8 +321,8 @@ define arm_aapcs_vfpcc <8 x half> @exp_float16_t(<8 x half> %src) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov r0, s0
@@ -333,40 +333,40 @@ define arm_aapcs_vfpcc <8 x half> @exp_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl expf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s2, s16
-; CHECK-NEXT:    vcvtt.f16.f32 s16, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s20, s16
+; CHECK-NEXT:    vcvtt.f16.f32 s20, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl expf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s21, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl expf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s17, s0
+; CHECK-NEXT:    vcvtt.f16.f32 s21, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl expf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s22, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl expf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s18, s0
+; CHECK-NEXT:    vcvtt.f16.f32 s22, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl expf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s23, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl expf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s19, s0
-; CHECK-NEXT:    vmov q0, q4
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    vcvtt.f16.f32 s23, s0
+; CHECK-NEXT:    vmov q0, q5
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %0 = call fast <8 x half> @llvm.exp.v8f16(<8 x half> %src)
@@ -432,8 +432,8 @@ define arm_aapcs_vfpcc <8 x half> @exp2_float16_t(<8 x half> %src) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov r0, s0
@@ -444,40 +444,40 @@ define arm_aapcs_vfpcc <8 x half> @exp2_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl exp2f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s2, s16
-; CHECK-NEXT:    vcvtt.f16.f32 s16, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s20, s16
+; CHECK-NEXT:    vcvtt.f16.f32 s20, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl exp2f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s21, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl exp2f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s17, s0
+; CHECK-NEXT:    vcvtt.f16.f32 s21, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl exp2f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s22, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl exp2f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s18, s0
+; CHECK-NEXT:    vcvtt.f16.f32 s22, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl exp2f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s23, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl exp2f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s19, s0
-; CHECK-NEXT:    vmov q0, q4
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    vcvtt.f16.f32 s23, s0
+; CHECK-NEXT:    vmov q0, q5
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %0 = call fast <8 x half> @llvm.exp2.v8f16(<8 x half> %src)
@@ -543,8 +543,8 @@ define arm_aapcs_vfpcc <8 x half> @log_float16_t(<8 x half> %src) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov r0, s0
@@ -555,40 +555,40 @@ define arm_aapcs_vfpcc <8 x half> @log_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl logf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s2, s16
-; CHECK-NEXT:    vcvtt.f16.f32 s16, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s20, s16
+; CHECK-NEXT:    vcvtt.f16.f32 s20, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl logf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s21, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl logf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s17, s0
+; CHECK-NEXT:    vcvtt.f16.f32 s21, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl logf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s22, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl logf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s18, s0
+; CHECK-NEXT:    vcvtt.f16.f32 s22, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl logf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s23, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl logf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s19, s0
-; CHECK-NEXT:    vmov q0, q4
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    vcvtt.f16.f32 s23, s0
+; CHECK-NEXT:    vmov q0, q5
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %0 = call fast <8 x half> @llvm.log.v8f16(<8 x half> %src)
@@ -654,8 +654,8 @@ define arm_aapcs_vfpcc <8 x half> @log2_float16_t(<8 x half> %src) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov r0, s0
@@ -666,40 +666,40 @@ define arm_aapcs_vfpcc <8 x half> @log2_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl log2f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s2, s16
-; CHECK-NEXT:    vcvtt.f16.f32 s16, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s20, s16
+; CHECK-NEXT:    vcvtt.f16.f32 s20, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log2f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s21, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log2f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s17, s0
+; CHECK-NEXT:    vcvtt.f16.f32 s21, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log2f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s22, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log2f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s18, s0
+; CHECK-NEXT:    vcvtt.f16.f32 s22, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log2f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s23, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log2f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s19, s0
-; CHECK-NEXT:    vmov q0, q4
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    vcvtt.f16.f32 s23, s0
+; CHECK-NEXT:    vmov q0, q5
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %0 = call fast <8 x half> @llvm.log2.v8f16(<8 x half> %src)
@@ -765,8 +765,8 @@ define arm_aapcs_vfpcc <8 x half> @log10_float16_t(<8 x half> %src) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s16
 ; CHECK-NEXT:    vmov r0, s0
@@ -777,40 +777,40 @@ define arm_aapcs_vfpcc <8 x half> @log10_float16_t(<8 x half> %src) {
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl log10f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s2, s16
-; CHECK-NEXT:    vcvtt.f16.f32 s16, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s20, s16
+; CHECK-NEXT:    vcvtt.f16.f32 s20, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log10f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s21, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log10f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s17, s0
+; CHECK-NEXT:    vcvtt.f16.f32 s21, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log10f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s22, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log10f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s18, s0
+; CHECK-NEXT:    vcvtt.f16.f32 s22, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log10f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s23, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bl log10f
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s19, s0
-; CHECK-NEXT:    vmov q0, q4
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    vcvtt.f16.f32 s23, s0
+; CHECK-NEXT:    vmov q0, q5
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %0 = call fast <8 x half> @llvm.log10.v8f16(<8 x half> %src)
@@ -881,8 +881,8 @@ define arm_aapcs_vfpcc <8 x half> @pow_float16_t(<8 x half> %src1, <8 x half> %s
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    vmov q5, q0
 ; CHECK-NEXT:    vmov q4, q1
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s20
@@ -898,52 +898,52 @@ define arm_aapcs_vfpcc <8 x half> @pow_float16_t(<8 x half> %src1, <8 x half> %s
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s2, s16
-; CHECK-NEXT:    vcvtt.f16.f32 s16, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s24, s16
+; CHECK-NEXT:    vcvtt.f16.f32 s24, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s21
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s25, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s21
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s17
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s17, s0
+; CHECK-NEXT:    vcvtt.f16.f32 s25, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s22
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s26, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s22
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s18
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s18, s0
+; CHECK-NEXT:    vcvtt.f16.f32 s26, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s23
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vcvtb.f16.f32 s27, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s23
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s19
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    bl powf
 ; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vcvtt.f16.f32 s19, s0
-; CHECK-NEXT:    vmov q0, q4
-; CHECK-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-NEXT:    vcvtt.f16.f32 s27, s0
+; CHECK-NEXT:    vmov q0, q6
+; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %0 = call fast <8 x half> @llvm.pow.v8f16(<8 x half> %src1, <8 x half> %src2)

@@ -4,13 +4,13 @@
 ; multiple exiting branches.
 
 ; Multiple branches exiting the loop to a unique exit block. The loop should
-; be vectorized with versioning & noalias metadata should be added.
+; be vectorized with versioning.
 define void @multiple_exits_unique_exit_block(i32* %A, i32* %B, i64 %N) {
 ; CHECK-LABEL: @multiple_exits_unique_exit_block
 ; CHECK:       vector.memcheck:
 ; CHECK-LABEL: vector.body:
-; CHECK:         %wide.load = load <2 x i32>, <2 x i32>* {{.*}}, align 4, !alias.scope
-; CHECK:         store <2 x i32> %wide.load, <2 x i32>* {{.*}}, align 4, !alias.scope
+; CHECK:         %wide.load = load <2 x i32>, <2 x i32>* {{.*}}, align 4
+; CHECK:         store <2 x i32> %wide.load, <2 x i32>* {{.*}}, align 4
 ; CHECK:         br
 ;
 entry:

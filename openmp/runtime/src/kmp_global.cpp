@@ -154,6 +154,7 @@ int __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_LAST + 1];
 kmp_hier_sched_env_t __kmp_hier_scheds = {0, 0, NULL, NULL, NULL};
 #endif
 int __kmp_dflt_blocktime = KMP_DEFAULT_BLOCKTIME;
+bool __kmp_wpolicy_passive = false;
 #if KMP_USE_MONITOR
 int __kmp_monitor_wakeups = KMP_MIN_MONITOR_WAKEUPS;
 int __kmp_bt_intervals = KMP_INTERVALS_FROM_BLOCKTIME(KMP_DEFAULT_BLOCKTIME,

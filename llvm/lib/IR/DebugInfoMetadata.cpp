@@ -78,8 +78,8 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
   Ops.push_back(Scope);
   if (InlinedAt)
     Ops.push_back(InlinedAt);
-  return storeImpl(new (Ops.size()) DILocation(Context, Storage, Line, Column,
-                                               Ops, ImplicitCode),
+  return storeImpl(new (Ops.size(), Storage) DILocation(
+                       Context, Storage, Line, Column, Ops, ImplicitCode),
                    Storage, Context.pImpl->DILocations);
 }
 
@@ -304,7 +304,7 @@ GenericDINode *GenericDINode::getImpl(LLVMContext &Context, unsigned Tag,
   // Use a nullptr for empty headers.
   assert(isCanonical(Header) && "Expected canonical MDString");
   Metadata *PreOps[] = {Header};
-  return storeImpl(new (DwarfOps.size() + 1) GenericDINode(
+  return storeImpl(new (DwarfOps.size() + 1, Storage) GenericDINode(
                        Context, Storage, Hash, Tag, PreOps, DwarfOps),
                    Storage, Context.pImpl->GenericDINodes);
 }
@@ -329,17 +329,19 @@ void GenericDINode::recalculateHash() {
     }                                                                          \
   } while (false)
 #define DEFINE_GETIMPL_STORE(CLASS, ARGS, OPS)                                 \
-  return storeImpl(new (array_lengthof(OPS))                                   \
+  return storeImpl(new (array_lengthof(OPS), Storage)                          \
                        CLASS(Context, Storage, UNWRAP_ARGS(ARGS), OPS),        \
                    Storage, Context.pImpl->CLASS##s)
 #define DEFINE_GETIMPL_STORE_NO_OPS(CLASS, ARGS)                               \
-  return storeImpl(new (0u) CLASS(Context, Storage, UNWRAP_ARGS(ARGS)),        \
+  return storeImpl(new (0u, Storage)                                           \
+                       CLASS(Context, Storage, UNWRAP_ARGS(ARGS)),             \
                    Storage, Context.pImpl->CLASS##s)
 #define DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(CLASS, OPS)                   \
-  return storeImpl(new (array_lengthof(OPS)) CLASS(Context, Storage, OPS),     \
+  return storeImpl(new (array_lengthof(OPS), Storage)                          \
+                       CLASS(Context, Storage, OPS),                           \
                    Storage, Context.pImpl->CLASS##s)
 #define DEFINE_GETIMPL_STORE_N(CLASS, ARGS, OPS, NUM_OPS)                      \
-  return storeImpl(new (NUM_OPS)                                               \
+  return storeImpl(new (NUM_OPS, Storage)                                      \
                        CLASS(Context, Storage, UNWRAP_ARGS(ARGS), OPS),        \
                    Storage, Context.pImpl->CLASS##s)
 
@@ -848,7 +850,7 @@ DICompileUnit *DICompileUnit::getImpl(
                      Macros,
                      SysRoot,
                      SDK};
-  return storeImpl(new (array_lengthof(Ops)) DICompileUnit(
+  return storeImpl(new (array_lengthof(Ops), Storage) DICompileUnit(
                        Context, Storage, SourceLanguage, IsOptimized,
                        RuntimeVersion, EmissionKind, DWOId, SplitDebugInlining,
                        DebugInfoForProfiling, NameTableKind, RangesBaseAddress,

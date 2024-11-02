@@ -29,6 +29,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/SourceMgr.h"
 
@@ -36,6 +37,7 @@
 
 using namespace mlir;
 using namespace mlir::LLVM;
+using mlir::LLVM::cconv::getMaxEnumValForCConv;
 using mlir::LLVM::linkage::getMaxEnumValForLinkage;
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsDialect.cpp.inc"
@@ -332,7 +334,8 @@ static ParseResult parseSwitchOpCases(
     if (parser.parseColon() || parser.parseSuccessor(destination))
       return failure();
     if (!parser.parseOptionalLParen()) {
-      if (parser.parseRegionArgumentList(operands) ||
+      if (parser.parseOperandList(operands, OpAsmParser::Delimiter::None,
+                                  /*allowResultNumber=*/false) ||
           parser.parseColonTypeList(operandTypes) || parser.parseRParen())
         return failure();
     }
@@ -397,55 +400,139 @@ SuccessorOperands SwitchOp::getSuccessorOperands(unsigned index) {
 
 constexpr int GEPOp::kDynamicIndex;
 
-/// Populates `indices` with positions of GEP indices that would correspond to
-/// LLVMStructTypes potentially nested in the given type. The type currently
-/// visited gets `currentIndex` and LLVM container types are visited
-/// recursively. The recursion is bounded and takes care of recursive types by
-/// means of the `visited` set.
-static void recordStructIndices(Type type, unsigned currentIndex,
-                                SmallVectorImpl<unsigned> &indices,
-                                SmallVectorImpl<unsigned> *structSizes,
-                                SmallPtrSet<Type, 4> &visited) {
-  if (visited.contains(type))
-    return;
+namespace {
+/// Base class for llvm::Error related to GEP index.
+class GEPIndexError : public llvm::ErrorInfo<GEPIndexError> {
+protected:
+  unsigned indexPos;
 
-  visited.insert(type);
+public:
+  static char ID;
 
-  llvm::TypeSwitch<Type>(type)
-      .Case<LLVMStructType>([&](LLVMStructType structType) {
-        indices.push_back(currentIndex);
-        if (structSizes)
-          structSizes->push_back(structType.getBody().size());
-        for (Type elementType : structType.getBody())
-          recordStructIndices(elementType, currentIndex + 1, indices,
-                              structSizes, visited);
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+
+  explicit GEPIndexError(unsigned pos) : indexPos(pos) {}
+};
+
+/// llvm::Error for out-of-bound GEP index.
+struct GEPIndexOutOfBoundError
+    : public llvm::ErrorInfo<GEPIndexOutOfBoundError, GEPIndexError> {
+  static char ID;
+
+  using ErrorInfo::ErrorInfo;
+
+  void log(llvm::raw_ostream &os) const override {
+    os << "index " << indexPos << " indexing a struct is out of bounds";
+  }
+};
+
+/// llvm::Error for non-static GEP index indexing a struct.
+struct GEPStaticIndexError
+    : public llvm::ErrorInfo<GEPStaticIndexError, GEPIndexError> {
+  static char ID;
+
+  using ErrorInfo::ErrorInfo;
+
+  void log(llvm::raw_ostream &os) const override {
+    os << "expected index " << indexPos << " indexing a struct "
+       << "to be constant";
+  }
+};
+} // end anonymous namespace
+
+char GEPIndexError::ID = 0;
+char GEPIndexOutOfBoundError::ID = 0;
+char GEPStaticIndexError::ID = 0;
+
+/// For the given `structIndices` and `indices`, check if they're complied
+/// with `baseGEPType`, especially check against LLVMStructTypes nested within,
+/// and refine/promote struct index from `indices` to `updatedStructIndices`
+/// if the latter argument is not null.
+static llvm::Error
+recordStructIndices(Type baseGEPType, unsigned indexPos,
+                    ArrayRef<int32_t> structIndices, ValueRange indices,
+                    SmallVectorImpl<int32_t> *updatedStructIndices,
+                    SmallVectorImpl<Value> *remainingIndices) {
+  if (indexPos >= structIndices.size())
+    // Stop searching
+    return llvm::Error::success();
+
+  int32_t gepIndex = structIndices[indexPos];
+  bool isStaticIndex = gepIndex != GEPOp::kDynamicIndex;
+
+  unsigned dynamicIndexPos = indexPos;
+  if (!isStaticIndex)
+    dynamicIndexPos = llvm::count(structIndices.take_front(indexPos + 1),
+                                  LLVM::GEPOp::kDynamicIndex) - 1;
+
+  return llvm::TypeSwitch<Type, llvm::Error>(baseGEPType)
+      .Case<LLVMStructType>([&](LLVMStructType structType) -> llvm::Error {
+        // We don't always want to refine the index (e.g. when performing
+        // verification), so we only refine when updatedStructIndices is not
+        // null.
+        if (!isStaticIndex && updatedStructIndices) {
+          // Try to refine.
+          APInt staticIndexValue;
+          isStaticIndex = matchPattern(indices[dynamicIndexPos],
+                                       m_ConstantInt(&staticIndexValue));
+          if (isStaticIndex) {
+            assert(staticIndexValue.getBitWidth() <= 64 &&
+                   llvm::isInt<32>(staticIndexValue.getLimitedValue()) &&
+                   "struct index can't fit within int32_t");
+            gepIndex = static_cast<int32_t>(staticIndexValue.getSExtValue());
+          }
+        }
+        if (!isStaticIndex)
+          return llvm::make_error<GEPStaticIndexError>(indexPos);
+
+        ArrayRef<Type> elementTypes = structType.getBody();
+        if (gepIndex < 0 ||
+            static_cast<size_t>(gepIndex) >= elementTypes.size())
+          return llvm::make_error<GEPIndexOutOfBoundError>(indexPos);
+
+        if (updatedStructIndices)
+          (*updatedStructIndices)[indexPos] = gepIndex;
+
+        // Instead of recusively going into every children types, we only
+        // dive into the one indexed by gepIndex.
+        return recordStructIndices(elementTypes[gepIndex], indexPos + 1,
+                                   structIndices, indices, updatedStructIndices,
+                                   remainingIndices);
       })
       .Case<VectorType, LLVMScalableVectorType, LLVMFixedVectorType,
-            LLVMArrayType>([&](auto containerType) {
-        recordStructIndices(containerType.getElementType(), currentIndex + 1,
-                            indices, structSizes, visited);
-      });
+            LLVMArrayType>([&](auto containerType) -> llvm::Error {
+        // Currently we don't refine non-struct index even if it's static.
+        if (remainingIndices)
+          remainingIndices->push_back(indices[dynamicIndexPos]);
+        return recordStructIndices(containerType.getElementType(), indexPos + 1,
+                                   structIndices, indices, updatedStructIndices,
+                                   remainingIndices);
+      })
+      .Default(
+          [](auto otherType) -> llvm::Error { return llvm::Error::success(); });
 }
 
-/// Populates `indices` with positions of GEP indices that correspond to
-/// LLVMStructTypes potentially nested in the given `baseGEPType`, which must
-/// be either an LLVMPointer type or a vector thereof. If `structSizes` is
-/// provided, it is populated with sizes of the indexed structs for bounds
-/// verification purposes.
-void GEPOp::findKnownStructIndices(Type sourceElementType,
-                                   SmallVectorImpl<unsigned> &indices,
-                                   SmallVectorImpl<unsigned> *structSizes) {
-  SmallPtrSet<Type, 4> visited;
-  recordStructIndices(sourceElementType, /*currentIndex=*/1, indices,
-                      structSizes, visited);
+/// Driver function around `recordStructIndices`. Note that we always check
+/// from the second GEP index since the first one is always dynamic.
+static llvm::Error
+findStructIndices(Type baseGEPType, ArrayRef<int32_t> structIndices,
+                  ValueRange indices,
+                  SmallVectorImpl<int32_t> *updatedStructIndices = nullptr,
+                  SmallVectorImpl<Value> *remainingIndices = nullptr) {
+  if (remainingIndices)
+    // The first GEP index is always dynamic.
+    remainingIndices->push_back(indices[0]);
+  return recordStructIndices(baseGEPType, /*indexPos=*/1, structIndices,
+                             indices, updatedStructIndices, remainingIndices);
 }
 
 void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
                   Value basePtr, ValueRange operands,
                   ArrayRef<NamedAttribute> attributes) {
   build(builder, result, resultType, basePtr, operands,
-        SmallVector<int32_t>(operands.size(), LLVM::GEPOp::kDynamicIndex),
-        attributes);
+        SmallVector<int32_t>(operands.size(), kDynamicIndex), attributes);
 }
 
 /// Returns the elemental type of any LLVM-compatible vector type or self.
@@ -479,44 +566,10 @@ void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
   SmallVector<Value> remainingIndices;
   SmallVector<int32_t> updatedStructIndices(structIndices.begin(),
                                             structIndices.end());
-  SmallVector<unsigned> structRelatedPositions;
-  findKnownStructIndices(elementType, structRelatedPositions);
-
-  SmallVector<unsigned> operandsToErase;
-  for (unsigned pos : structRelatedPositions) {
-    // GEP may not be indexing as deep as some structs are located.
-    if (pos >= structIndices.size())
-      continue;
-
-    // If the index is already static, it's fine.
-    if (structIndices[pos] != kDynamicIndex)
-      continue;
-
-    // Find the corresponding operand.
-    unsigned operandPos =
-        std::count(structIndices.begin(), std::next(structIndices.begin(), pos),
-                   kDynamicIndex);
-
-    // Extract the constant value from the operand and put it into the attribute
-    // instead.
-    APInt staticIndexValue;
-    bool matched =
-        matchPattern(indices[operandPos], m_ConstantInt(&staticIndexValue));
-    (void)matched;
-    assert(matched && "index into a struct must be a constant");
-    assert(staticIndexValue.sge(APInt::getSignedMinValue(/*numBits=*/32)) &&
-           "struct index underflows 32-bit integer");
-    assert(staticIndexValue.sle(APInt::getSignedMaxValue(/*numBits=*/32)) &&
-           "struct index overflows 32-bit integer");
-    auto staticIndex = static_cast<int32_t>(staticIndexValue.getSExtValue());
-    updatedStructIndices[pos] = staticIndex;
-    operandsToErase.push_back(operandPos);
-  }
-
-  for (unsigned i = 0, e = indices.size(); i < e; ++i) {
-    if (!llvm::is_contained(operandsToErase, i))
-      remainingIndices.push_back(indices[i]);
-  }
+  if (llvm::Error err =
+          findStructIndices(elementType, structIndices, indices,
+                            &updatedStructIndices, &remainingIndices))
+    llvm::report_fatal_error(StringRef(llvm::toString(std::move(err))));
 
   assert(remainingIndices.size() == static_cast<size_t>(llvm::count(
                                         updatedStructIndices, kDynamicIndex)) &&
@@ -539,7 +592,8 @@ parseGEPIndices(OpAsmParser &parser,
                 SmallVectorImpl<OpAsmParser::UnresolvedOperand> &indices,
                 DenseIntElementsAttr &structIndices) {
   SmallVector<int32_t> constantIndices;
-  do {
+
+  auto idxParser = [&]() -> ParseResult {
     int32_t constantIndex;
     OptionalParseResult parsedInteger =
         parser.parseOptionalInteger(constantIndex);
@@ -547,13 +601,14 @@ parseGEPIndices(OpAsmParser &parser,
       if (failed(parsedInteger.getValue()))
         return failure();
       constantIndices.push_back(constantIndex);
-      continue;
+      return success();
     }
 
     constantIndices.push_back(LLVM::GEPOp::kDynamicIndex);
-    if (failed(parser.parseOperand(indices.emplace_back())))
-      return failure();
-  } while (succeeded(parser.parseOptionalComma()));
+    return parser.parseOperand(indices.emplace_back());
+  };
+  if (parser.parseCommaSeparatedList(idxParser))
+    return failure();
 
   structIndices = parser.getBuilder().getI32TensorAttr(constantIndices);
   return success();
@@ -579,24 +634,16 @@ LogicalResult LLVM::GEPOp::verify() {
           getElemType())))
     return failure();
 
-  SmallVector<unsigned> indices;
-  SmallVector<unsigned> structSizes;
-  findKnownStructIndices(getSourceElementType(), indices, &structSizes);
-  DenseIntElementsAttr structIndices = getStructIndices();
-  for (unsigned i : llvm::seq<unsigned>(0, indices.size())) {
-    unsigned index = indices[i];
-    // GEP may not be indexing as deep as some structs nested in the type.
-    if (index >= structIndices.getNumElements())
-      continue;
+  auto structIndexRange = getStructIndices().getValues<int32_t>();
+  // structIndexRange is a kind of iterator, which cannot be converted
+  // to ArrayRef directly.
+  SmallVector<int32_t> structIndices(structIndexRange.size());
+  for (unsigned i : llvm::seq<unsigned>(0, structIndexRange.size()))
+    structIndices[i] = structIndexRange[i];
+  if (llvm::Error err = findStructIndices(getSourceElementType(), structIndices,
+                                          getIndices()))
+    return emitOpError() << llvm::toString(std::move(err));
 
-    int32_t staticIndex = structIndices.getValues<int32_t>()[index];
-    if (staticIndex == LLVM::GEPOp::kDynamicIndex)
-      return emitOpError() << "expected index " << index
-                           << " indexing a struct to be constant";
-    if (staticIndex < 0 || static_cast<unsigned>(staticIndex) >= structSizes[i])
-      return emitOpError() << "index " << index
-                           << " indexing a struct is out of bounds";
-  }
   return success();
 }
 
@@ -1654,14 +1701,19 @@ LogicalResult AddressOfOp::verify() {
     return emitOpError(
         "must reference a global defined by 'llvm.mlir.global' or 'llvm.func'");
 
-  if (global &&
-      LLVM::LLVMPointerType::get(global.getType(), global.getAddrSpace()) !=
-          getResult().getType())
+  LLVMPointerType type = getType();
+  if (global && global.getAddrSpace() != type.getAddressSpace())
+    return emitOpError("pointer address space must match address space of the "
+                       "referenced global");
+
+  if (type.isOpaque())
+    return success();
+
+  if (global && type.getElementType() != global.getType())
     return emitOpError(
         "the type must be a pointer to the type of the referenced global");
 
-  if (function && LLVM::LLVMPointerType::get(function.getFunctionType()) !=
-                      getResult().getType())
+  if (function && type.getElementType() != function.getFunctionType())
     return emitOpError(
         "the type must be a pointer to the type of the referenced function");
 
@@ -1770,6 +1822,7 @@ struct EnumTraits {};
 
 REGISTER_ENUM_TYPE(Linkage);
 REGISTER_ENUM_TYPE(UnnamedAddr);
+REGISTER_ENUM_TYPE(CConv);
 } // namespace
 
 /// Parse an enum from the keyword, or default to the provided default value.
@@ -1998,9 +2051,9 @@ void LLVM::ShuffleVectorOp::build(OpBuilder &b, OperationState &result,
                                   Value v1, Value v2, ArrayAttr mask,
                                   ArrayRef<NamedAttribute> attrs) {
   auto containerType = v1.getType();
-  auto vType = LLVM::getVectorType(
-      LLVM::getVectorElementType(containerType), mask.size(),
-      containerType.cast<VectorType>().isScalable());
+  auto vType = LLVM::getVectorType(LLVM::getVectorElementType(containerType),
+                                   mask.size(),
+                                   LLVM::isScalableVectorType(containerType));
   build(b, result, vType, v1, v2, mask);
   result.addAttributes(attrs);
 }
@@ -2073,7 +2126,8 @@ Block *LLVMFuncOp::addEntryBlock() {
 
 void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
                        StringRef name, Type type, LLVM::Linkage linkage,
-                       bool dsoLocal, ArrayRef<NamedAttribute> attrs,
+                       bool dsoLocal, CConv cconv,
+                       ArrayRef<NamedAttribute> attrs,
                        ArrayRef<DictionaryAttr> argAttrs) {
   result.addRegion();
   result.addAttribute(SymbolTable::getSymbolAttrName(),
@@ -2082,6 +2136,8 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
                       TypeAttr::get(type));
   result.addAttribute(getLinkageAttrName(result.name),
                       LinkageAttr::get(builder.getContext(), linkage));
+  result.addAttribute(getCConvAttrName(result.name),
+                      CConvAttr::get(builder.getContext(), cconv));
   result.attributes.append(attrs.begin(), attrs.end());
   if (dsoLocal)
     result.addAttribute("dso_local", builder.getUnitAttr());
@@ -2134,7 +2190,8 @@ buildLLVMFunctionType(OpAsmParser &parser, SMLoc loc, ArrayRef<Type> inputs,
 
 // Parses an LLVM function.
 //
-// operation ::= `llvm.func` linkage? function-signature function-attributes?
+// operation ::= `llvm.func` linkage? cconv? function-signature
+// function-attributes?
 //               function-body
 //
 ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -2145,23 +2202,29 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
                        parseOptionalLLVMKeyword<Linkage>(
                            parser, result, LLVM::Linkage::External)));
 
+  // Default to C Calling Convention if no keyword is provided.
+  result.addAttribute(
+      getCConvAttrName(result.name),
+      CConvAttr::get(parser.getContext(), parseOptionalLLVMKeyword<CConv>(
+                                              parser, result, LLVM::CConv::C)));
+
   StringAttr nameAttr;
-  SmallVector<OpAsmParser::UnresolvedOperand> entryArgs;
-  SmallVector<NamedAttrList> argAttrs;
-  SmallVector<NamedAttrList> resultAttrs;
-  SmallVector<Type> argTypes;
+  SmallVector<OpAsmParser::Argument> entryArgs;
+  SmallVector<DictionaryAttr> resultAttrs;
   SmallVector<Type> resultTypes;
-  SmallVector<Location> argLocations;
   bool isVariadic;
 
   auto signatureLocation = parser.getCurrentLocation();
   if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
                              result.attributes) ||
       function_interface_impl::parseFunctionSignature(
-          parser, /*allowVariadic=*/true, entryArgs, argTypes, argAttrs,
-          argLocations, isVariadic, resultTypes, resultAttrs))
+          parser, /*allowVariadic=*/true, entryArgs, isVariadic, resultTypes,
+          resultAttrs))
     return failure();
 
+  SmallVector<Type> argTypes;
+  for (auto &arg : entryArgs)
+    argTypes.push_back(arg.type);
   auto type =
       buildLLVMFunctionType(parser, signatureLocation, argTypes, resultTypes,
                             function_interface_impl::VariadicFlag(isVariadic));
@@ -2173,11 +2236,11 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   if (failed(parser.parseOptionalAttrDictWithKeyword(result.attributes)))
     return failure();
   function_interface_impl::addArgAndResultAttrs(parser.getBuilder(), result,
-                                                argAttrs, resultAttrs);
+                                                entryArgs, resultAttrs);
 
   auto *body = result.addRegion();
-  OptionalParseResult parseResult = parser.parseOptionalRegion(
-      *body, entryArgs, entryArgs.empty() ? ArrayRef<Type>() : argTypes);
+  OptionalParseResult parseResult =
+      parser.parseOptionalRegion(*body, entryArgs);
   return failure(parseResult.hasValue() && failed(*parseResult));
 }
 
@@ -2188,6 +2251,9 @@ void LLVMFuncOp::print(OpAsmPrinter &p) {
   p << ' ';
   if (getLinkage() != LLVM::Linkage::External)
     p << stringifyLinkage(getLinkage()) << ' ';
+  if (getCConv() != LLVM::CConv::C)
+    p << stringifyCConv(getCConv()) << ' ';
+
   p.printSymbolName(getName());
 
   LLVMFunctionType fnType = getFunctionType();
@@ -2204,7 +2270,8 @@ void LLVMFuncOp::print(OpAsmPrinter &p) {
   function_interface_impl::printFunctionSignature(p, *this, argTypes,
                                                   isVarArg(), resTypes);
   function_interface_impl::printFunctionAttributes(
-      p, *this, argTypes.size(), resTypes.size(), {getLinkageAttrName()});
+      p, *this, argTypes.size(), resTypes.size(),
+      {getLinkageAttrName(), getCConvAttrName()});
 
   // Print the body if this is not an external function.
   Region &body = getBody();
@@ -2594,7 +2661,7 @@ OpFoldResult LLVM::GEPOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 void LLVMDialect::initialize() {
-  addAttributes<FMFAttr, LinkageAttr, LoopOptionsAttr>();
+  addAttributes<FMFAttr, LinkageAttr, CConvAttr, LoopOptionsAttr>();
 
   // clang-format off
   addTypes<LLVMVoidType,
@@ -2833,26 +2900,9 @@ bool mlir::LLVM::satisfiesLLVMModule(Operation *op) {
          op->hasTrait<OpTrait::IsIsolatedFromAbove>();
 }
 
-static constexpr const FastmathFlags fastmathFlagsList[] = {
-    // clang-format off
-    FastmathFlags::nnan,
-    FastmathFlags::ninf,
-    FastmathFlags::nsz,
-    FastmathFlags::arcp,
-    FastmathFlags::contract,
-    FastmathFlags::afn,
-    FastmathFlags::reassoc,
-    FastmathFlags::fast,
-    // clang-format on
-};
-
 void FMFAttr::print(AsmPrinter &printer) const {
   printer << "<";
-  auto flags = llvm::make_filter_range(fastmathFlagsList, [&](auto flag) {
-    return bitEnumContains(this->getFlags(), flag);
-  });
-  llvm::interleaveComma(flags, printer,
-                        [&](auto flag) { printer << stringifyEnum(flag); });
+  printer << stringifyFastmathFlags(this->getFlags());
   printer << ">";
 }
 
@@ -2862,22 +2912,21 @@ Attribute FMFAttr::parse(AsmParser &parser, Type type) {
 
   FastmathFlags flags = {};
   if (failed(parser.parseOptionalGreater())) {
-    do {
+    auto parseFlags = [&]() -> ParseResult {
       StringRef elemName;
       if (failed(parser.parseKeyword(&elemName)))
-        return {};
+        return failure();
 
       auto elem = symbolizeFastmathFlags(elemName);
-      if (!elem) {
-        parser.emitError(parser.getNameLoc(), "Unknown fastmath flag: ")
-            << elemName;
-        return {};
-      }
+      if (!elem)
+        return parser.emitError(parser.getNameLoc(), "Unknown fastmath flag: ")
+               << elemName;
 
       flags = flags | *elem;
-    } while (succeeded(parser.parseOptionalComma()));
-
-    if (failed(parser.parseGreater()))
+      return success();
+    };
+    if (failed(parser.parseCommaSeparatedList(parseFlags)) ||
+        parser.parseGreater())
       return {};
   }
 
@@ -2905,6 +2954,31 @@ Attribute LinkageAttr::parse(AsmParser &parser, Type type) {
   }
   Linkage linkage = *elem;
   return LinkageAttr::get(parser.getContext(), linkage);
+}
+
+void CConvAttr::print(AsmPrinter &printer) const {
+  printer << "<";
+  if (static_cast<uint64_t>(getCallingConv()) <= cconv::getMaxEnumValForCConv())
+    printer << stringifyEnum(getCallingConv());
+  else
+    printer << "INVALID_cc_" << static_cast<uint64_t>(getCallingConv());
+  printer << ">";
+}
+
+Attribute CConvAttr::parse(AsmParser &parser, Type type) {
+  StringRef convName;
+
+  if (parser.parseLess() || parser.parseKeyword(&convName) ||
+      parser.parseGreater())
+    return {};
+  auto cconv = cconv::symbolizeCConv(convName);
+  if (!cconv) {
+    parser.emitError(parser.getNameLoc(), "unknown calling convention: ")
+        << convName;
+    return {};
+  }
+  CConv cconvVal = *cconv;
+  return CConvAttr::get(parser.getContext(), cconvVal);
 }
 
 LoopOptionsAttrBuilder::LoopOptionsAttrBuilder(LoopOptionsAttr attr)
@@ -3025,23 +3099,19 @@ Attribute LoopOptionsAttr::parse(AsmParser &parser, Type type) {
 
   SmallVector<std::pair<LoopOptionCase, int64_t>> options;
   llvm::SmallDenseSet<LoopOptionCase> seenOptions;
-  do {
+  auto parseLoopOptions = [&]() -> ParseResult {
     StringRef optionName;
     if (parser.parseKeyword(&optionName))
-      return {};
+      return failure();
 
     auto option = symbolizeLoopOptionCase(optionName);
-    if (!option) {
-      parser.emitError(parser.getNameLoc(), "unknown loop option: ")
-          << optionName;
-      return {};
-    }
-    if (!seenOptions.insert(*option).second) {
-      parser.emitError(parser.getNameLoc(), "loop option present twice");
-      return {};
-    }
+    if (!option)
+      return parser.emitError(parser.getNameLoc(), "unknown loop option: ")
+             << optionName;
+    if (!seenOptions.insert(*option).second)
+      return parser.emitError(parser.getNameLoc(), "loop option present twice");
     if (failed(parser.parseEqual()))
-      return {};
+      return failure();
 
     int64_t value;
     switch (*option) {
@@ -3053,22 +3123,20 @@ Attribute LoopOptionsAttr::parse(AsmParser &parser, Type type) {
       else if (succeeded(parser.parseOptionalKeyword("false")))
         value = 0;
       else {
-        parser.emitError(parser.getNameLoc(),
-                         "expected boolean value 'true' or 'false'");
-        return {};
+        return parser.emitError(parser.getNameLoc(),
+                                "expected boolean value 'true' or 'false'");
       }
       break;
     case LoopOptionCase::interleave_count:
     case LoopOptionCase::pipeline_initiation_interval:
-      if (failed(parser.parseInteger(value))) {
-        parser.emitError(parser.getNameLoc(), "expected integer value");
-        return {};
-      }
+      if (failed(parser.parseInteger(value)))
+        return parser.emitError(parser.getNameLoc(), "expected integer value");
       break;
     }
     options.push_back(std::make_pair(*option, value));
-  } while (succeeded(parser.parseOptionalComma()));
-  if (failed(parser.parseGreater()))
+    return success();
+  };
+  if (parser.parseCommaSeparatedList(parseLoopOptions) || parser.parseGreater())
     return {};
 
   llvm::sort(options, llvm::less_first());

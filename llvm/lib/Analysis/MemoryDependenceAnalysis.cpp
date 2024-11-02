@@ -402,8 +402,8 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
   // forwarding, but any mayalias write can be assumed to be noalias.
   // Arguably, this logic should be pushed inside AliasAnalysis itself.
   if (isLoad && QueryInst) {
-    LoadInst *LI = dyn_cast<LoadInst>(QueryInst);
-    if (LI && LI->hasMetadata(LLVMContext::MD_invariant_load))
+    LoadInst *LI = cast<LoadInst>(QueryInst);
+    if (LI->hasMetadata(LLVMContext::MD_invariant_load))
       isInvariantLoad = true;
   }
 
@@ -502,10 +502,10 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       // If we found a pointer, check if it could be the same as our pointer.
       AliasResult R = BatchAA.alias(LoadLoc, MemLoc);
 
-      if (isLoad) {
-        if (R == AliasResult::NoAlias)
-          continue;
+      if (R == AliasResult::NoAlias)
+        continue;
 
+      if (isLoad) {
         // Must aliased loads are defs of each other.
         if (R == AliasResult::MustAlias)
           return MemDepResult::getDef(Inst);
@@ -521,10 +521,6 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
         // dependence.
         continue;
       }
-
-      // Stores don't depend on other no-aliased accesses.
-      if (R == AliasResult::NoAlias)
-        continue;
 
       // Stores don't alias loads from read-only memory.
       if (BatchAA.pointsToConstantMemory(LoadLoc))

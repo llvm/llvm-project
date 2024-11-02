@@ -25,7 +25,7 @@ def BufferDeallocation : Pass<"buffer-deallocation", "func::FuncOp"> {
     ```mlir
     #map0 = affine_map<(d0) -> (d0)>
     module {
-      func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+      func.func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
         cf.cond_br %arg0, ^bb1, ^bb2
       ^bb1:
         cf.br ^bb3(%arg1 : memref<2xf32>)
@@ -54,7 +54,7 @@ def BufferDeallocation : Pass<"buffer-deallocation", "func::FuncOp"> {
     ```mlir
     #map0 = affine_map<(d0) -> (d0)>
     module {
-      func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+      func.func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
         cf.cond_br %arg0, ^bb1, ^bb2
       ^bb1:  // pred: ^bb0
         %0 = memref.alloc() : memref<2xf32>
@@ -149,6 +149,11 @@ def FinalizingBufferize : Pass<"finalizing-bufferize", "func::FuncOp"> {
   let constructor = "mlir::bufferization::createFinalizingBufferizePass()";
 }
 
+def BufferizationBufferize : Pass<"bufferization-bufferize", "func::FuncOp"> {
+  let summary = "Bufferize the `bufferization` dialect";
+  let constructor = "mlir::bufferization::createBufferizationBufferizePass()";
+}
+
 def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
   let summary = "One-Shot Bufferize";
   let description = [{
@@ -170,11 +175,13 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     example, `tensor.generate` is not in destination-passing style and always
     results in a new buffer allocation.
 
-    One-Shot Bufferize deallocates all buffers that it allocates. Returning or
-    yielding newly allocated buffers from a block can lead to bad performance
-    because additional buffer copies would be inserted. By default, such IR is
-    rejected by One-Shot Bufferize. If performance is not important, such IR can
-    be allowed with `allow-return-allocs=1`.
+    One-Shot Bufferize deallocates all buffers that it allocates. Yielding newly
+    allocated buffers from a block can lead to bad performance because
+    additional buffer copies are often needed to make sure that every buffer
+    allocation is also deallocated again. By default, such IR is rejected by
+    One-Shot Bufferize. Such IR can be allowed with `allow-return-allocs`.
+    Note that new buffer allocations that are returned from a function can
+    currently not be deallocated and leak.
 
     One-Shot Bufferize will by default reject IR that contains non-bufferizable
     op, i.e., ops that do not implemement BufferizableOpInterface. Such IR can
@@ -196,29 +203,91 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     when encountering an op that is not included in the filter (even if it is
     bufferizable).
 
+    One-Shot Bufferize will by default assume memref types with fully dynamic
+    layout maps when a precise layout cannot be inferred. E.g., this is the case
+    when wrapping a non-bufferizable op in to_memref/to_tensor ops. This
+    behavior can be overridden with `unknown-type-conversion`. Valid values are
+    `fully-dynamic-layout-map` and `identity-layout-map`.
+
     For testing/debugging purposes, `test-analysis-only=1 print-conflicts=1`
     prints analysis results and explains why an OpOperand was decided to
     bufferize out-of-place. This is useful for understanding why One-Shot
     Bufferize chose to insert a certain buffer copy.
+
+    `bufferize-function-boundaries` is an experimental flag for bufferizing
+    `FuncOp`, `ReturnOp` and `CallOp`. This feature is still under development
+    and supports only simple cases at the moment. In particular:
+
+    * Recursive or circular function call graphs are not supported.
+    * When a returned tensor can be proven to be equivalent to a tensor function
+      argument, the return value disappears. Instead, the buffer of the tensor
+      argument is modified in-place.
+    * Returning non-equivalent tensors is forbidden by default and must be
+      explicitly activated with `allow-return-allocs`. If such a tensor happens
+      to bufferize to a new memory allocation, this buffer will never be
+      deallocated and leak. Such IR needs special handling, e.g., allocation
+      hoisting or reference counting.
+    * Non-equivalent returned tensors of fully static size can be promoted to
+      function arguments with `promote-buffer-results-to-out-params`. In that
+      case, buffers for such tensors are allocated at each call site. Instead of
+      returning a buffer, the buffer contents are copied into these allocations.
+    * External functions (without bodies) that return a tensor are not
+      supported.
+    * Function with multiple blocks or multiple ReturnOps are not supported.
+    * Layout maps on function signatures can be controlled with a separate
+      `function-boundary-type-conversion` option, which is similar to
+      `unknown-type-conversion` but supports an additional `infer-layout-map`
+      option. `fully-dynamic-layout-map` and `identity-layout-map` ensure that
+      function signatures bufferize to easily predictable types, potentially at
+      the cost of additional casts and copies, respectively. When layout maps
+      are inferred, function return types may be more precise, but less
+      predictable. Function argument types cannot be inferred and always have
+      fully dynamic layout maps with `infer-layout-map`.
+
+    One-Shot Bufferize implements the following contract around function calls:
+    The buffer of function arguments is always writable (unless annotated with
+    `bufferization.writable = false`). A buffer copy may be inserted at the call
+    site where necessary. Alias sets and equivalence info is propagated through
+    function calls. Whenever a function is bufferized, all other functions that
+    are being called were already analyzed and bufferized, so exact alias and
+    equivalence information is available. This is why recursive function calls
+    are not yet supported.
+
+    One-Shot Bufferize gathers additional information during the analysis phase
+    when function boundary bufferization is activated. E.g., whether a function
+    argument is read/written and which returned values are aliasing/equivalent.
+    For debugging purposes, such information can be printed with
+    `test-analysis-only`.
   }];
   let options = [
+    Option<"dropEquivalentFuncResults", "drop-equivalent-func-results", "bool",
+           /*default=*/"true",
+           "Drop buffer return values that are equivalent to a FuncOp arg.">,
     Option<"allowReturnAllocs", "allow-return-allocs", "bool",
             /*default=*/"false",
            "Allows returning/yielding new allocations from a block.">,
     Option<"allowUnknownOps", "allow-unknown-ops", "bool",
            /*default=*/"false",
            "Allows unknown (not bufferizable) ops in the input IR.">,
+    Option<"alwaysAliasingWithDest", "always-aliasing-with-dest", "bool",
+            /*default=*/"true",
+            "Tensor OpResult cannot bufferize inplace OpOperands other than "
+            "out/dest OpOperands (if the op has such operands; experimental)">,
     Option<"analysisFuzzerSeed", "analysis-fuzzer-seed", "unsigned",
            /*default=*/"0",
            "Test only: Analyze ops in random order with a given seed (fuzzer)">,
+    Option<"bufferizeFunctionBoundaries", "bufferize-function-boundaries",
+           "bool", /*default=*/"0",
+           "Bufferize function boundaries (experimental).">,
     Option<"createDeallocs", "create-deallocs", "bool", /*default=*/"true",
            "Specify if buffers should be deallocated. For compatibility with "
            "core bufferization passes.">,
     ListOption<"dialectFilter", "dialect-filter", "std::string",
                "Restrict bufferization to ops from these dialects.">,
-    Option<"fullyDynamicLayoutMaps", "fully-dynamic-layout-maps", "bool",
-           /*default=*/"true",
-           "Generate MemRef types with dynamic offset+strides by default.">,
+    Option<"functionBoundaryTypeConversion",
+           "function-boundary-type-conversion", "std::string",
+           /*default=*/"\"infer-layout-map\"",
+           "Controls layout maps when bufferizing function signatures.">,
     Option<"testAnalysisOnly", "test-analysis-only", "bool",
             /*default=*/"false",
            "Test only: Only run inplaceability analysis and annotate IR">,
@@ -226,6 +295,12 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
             /*default=*/"false",
            "Test only: Annotate IR with RaW conflicts. Requires "
            "test-analysis-only.">,
+    Option<"promoteBufferResultsToOutParams",
+           "promote-buffer-results-to-out-params", "bool", /*default=*/"false",
+           "Replace returned buffers (that were not dropped) with out params.">,
+    Option<"unknownTypeConversion", "unknown-type-conversion", "std::string",
+           /*default=*/"\"fully-dynamic-layout-map\"",
+           "Controls layout maps for non-inferrable memref types.">,
   ];
   let constructor = "mlir::bufferization::createOneShotBufferizePass()";
 }
@@ -249,6 +324,18 @@ def PromoteBuffersToStack : Pass<"promote-buffers-to-stack", "func::FuncOp"> {
            /*default=*/"1",
            "Maximal memref rank to promote dynamic buffers.">,
   ];
+}
+
+def AllocTensorElimination : Pass<"eliminate-alloc-tensors"> {
+  let summary = "Try to eliminate all alloc_tensor ops.";
+  let description = [{
+    This pass tries to eliminate all insert_slice op-anchored alloc_tensor ops.
+    I.e., when a value that is equivalent to an alloc_tensor op is inserted into
+    another tensor, this pass tries to rewrite the IR in such a way that the
+    destination tensor of the insert_slice op is used directly instead of the
+    alloc_tensor result.
+  }];
+  let constructor = "mlir::bufferization::createAllocTensorEliminationPass()";
 }
 
 #endif // MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_PASSES

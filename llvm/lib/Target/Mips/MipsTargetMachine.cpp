@@ -18,6 +18,7 @@
 #include "MipsSEISelDAGToDAG.h"
 #include "MipsSubtarget.h"
 #include "MipsTargetObjectFile.h"
+#include "MipsTargetTransformInfo.h"
 #include "TargetInfo/MipsTargetInfo.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -287,7 +288,7 @@ MipsTargetMachine::getTargetTransformInfo(const Function &F) const {
   }
 
   LLVM_DEBUG(errs() << "Target Transform Info Pass Added\n");
-  return TargetTransformInfo(BasicTTIImpl(this, F));
+  return TargetTransformInfo(MipsTTIImpl(this, F));
 }
 
 // Implemented by targets that want to run passes immediately before

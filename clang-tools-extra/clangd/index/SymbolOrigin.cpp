@@ -14,7 +14,7 @@ namespace clangd {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, SymbolOrigin O) {
   if (O == SymbolOrigin::Unknown)
     return OS << "unknown";
-  constexpr static char Sigils[] = "AOSMIRP7B9012345";
+  constexpr static char Sigils[] = "AOSMIRP7BL012345";
   for (unsigned I = 0; I < sizeof(Sigils); ++I)
     if (static_cast<uint16_t>(O) & 1u << I)
       OS << Sigils[I];

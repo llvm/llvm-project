@@ -258,6 +258,7 @@ struct GCPtrLivenessData {
 // base relation will remain.  Internally, we add a mixture of the two
 // types, then update all the second type to the first type
 using DefiningValueMapTy = MapVector<Value *, Value *>;
+using IsKnownBaseMapTy = MapVector<Value *, bool>;
 using PointerToBaseTy = MapVector<Value *, Value *>;
 using StatepointLiveSetTy = SetVector<Value *>;
 using RematerializedValueMapTy =
@@ -395,45 +396,16 @@ static void analyzeParsePointLiveness(
   Result.LiveSet = LiveSet;
 }
 
-// Returns true is V is a knownBaseResult.
-static bool isKnownBaseResult(Value *V);
+/// Returns true if V is a known base.
+static bool isKnownBase(Value *V, const IsKnownBaseMapTy &KnownBases);
 
-// Returns true if V is a BaseResult that already exists in the IR, i.e. it is
-// not created by the findBasePointers algorithm.
-static bool isOriginalBaseResult(Value *V);
+/// Caches the IsKnownBase flag for a value and asserts that it wasn't present
+/// in the cache before.
+static void setKnownBase(Value *V, bool IsKnownBase,
+                         IsKnownBaseMapTy &KnownBases);
 
-namespace {
-
-/// A single base defining value - An immediate base defining value for an
-/// instruction 'Def' is an input to 'Def' whose base is also a base of 'Def'.
-/// For instructions which have multiple pointer [vector] inputs or that
-/// transition between vector and scalar types, there is no immediate base
-/// defining value.  The 'base defining value' for 'Def' is the transitive
-/// closure of this relation stopping at the first instruction which has no
-/// immediate base defining value.  The b.d.v. might itself be a base pointer,
-/// but it can also be an arbitrary derived pointer.
-struct BaseDefiningValueResult {
-  /// Contains the value which is the base defining value.
-  Value * const BDV;
-
-  /// True if the base defining value is also known to be an actual base
-  /// pointer.
-  const bool IsKnownBase;
-
-  BaseDefiningValueResult(Value *BDV, bool IsKnownBase)
-    : BDV(BDV), IsKnownBase(IsKnownBase) {
-#ifndef NDEBUG
-    // Check consistency between new and old means of checking whether a BDV is
-    // a base.
-    bool MustBeBase = isKnownBaseResult(BDV);
-    assert(!MustBeBase || MustBeBase == IsKnownBase);
-#endif
-  }
-};
-
-} // end anonymous namespace
-
-static BaseDefiningValueResult findBaseDefiningValue(Value *I);
+static Value *findBaseDefiningValue(Value *I, DefiningValueMapTy &Cache,
+                                    IsKnownBaseMapTy &KnownBases);
 
 /// Return a base defining value for the 'Index' element of the given vector
 /// instruction 'I'.  If Index is null, returns a BDV for the entire vector
@@ -444,76 +416,114 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I);
 /// vector returned is a BDV (and possibly a base) of the entire vector 'I'.
 /// If the later, the return pointer is a BDV (or possibly a base) for the
 /// particular element in 'I'.
-static BaseDefiningValueResult
-findBaseDefiningValueOfVector(Value *I) {
+static Value *findBaseDefiningValueOfVector(Value *I, DefiningValueMapTy &Cache,
+                                            IsKnownBaseMapTy &KnownBases) {
   // Each case parallels findBaseDefiningValue below, see that code for
   // detailed motivation.
 
-  if (isa<Argument>(I))
-    // An incoming argument to the function is a base pointer
-    return BaseDefiningValueResult(I, true);
+  auto Cached = Cache.find(I);
+  if (Cached != Cache.end())
+    return Cached->second;
 
-  if (isa<Constant>(I))
+  if (isa<Argument>(I)) {
+    // An incoming argument to the function is a base pointer
+    Cache[I] = I;
+    setKnownBase(I, /* IsKnownBase */true, KnownBases);
+    return I;
+  }
+
+  if (isa<Constant>(I)) {
     // Base of constant vector consists only of constant null pointers.
     // For reasoning see similar case inside 'findBaseDefiningValue' function.
-    return BaseDefiningValueResult(ConstantAggregateZero::get(I->getType()),
-                                   true);
+    auto *CAZ = ConstantAggregateZero::get(I->getType());
+    Cache[I] = CAZ;
+    setKnownBase(CAZ, /* IsKnownBase */true, KnownBases);
+    return CAZ;
+  }
 
-  if (isa<LoadInst>(I))
-    return BaseDefiningValueResult(I, true);
+  if (isa<LoadInst>(I)) {
+    Cache[I] = I;
+    setKnownBase(I, /* IsKnownBase */true, KnownBases);
+    return I;
+  }
 
-  if (isa<InsertElementInst>(I))
+  if (isa<InsertElementInst>(I)) {
     // We don't know whether this vector contains entirely base pointers or
     // not.  To be conservatively correct, we treat it as a BDV and will
     // duplicate code as needed to construct a parallel vector of bases.
-    return BaseDefiningValueResult(I, false);
+    Cache[I] = I;
+    setKnownBase(I, /* IsKnownBase */false, KnownBases);
+    return I;
+  }
 
-  if (isa<ShuffleVectorInst>(I))
+  if (isa<ShuffleVectorInst>(I)) {
     // We don't know whether this vector contains entirely base pointers or
     // not.  To be conservatively correct, we treat it as a BDV and will
     // duplicate code as needed to construct a parallel vector of bases.
     // TODO: There a number of local optimizations which could be applied here
     // for particular sufflevector patterns.
-    return BaseDefiningValueResult(I, false);
+    Cache[I] = I;
+    setKnownBase(I, /* IsKnownBase */false, KnownBases);
+    return I;
+  }
 
   // The behavior of getelementptr instructions is the same for vector and
   // non-vector data types.
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
-    return findBaseDefiningValue(GEP->getPointerOperand());
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
+    auto *BDV =
+        findBaseDefiningValue(GEP->getPointerOperand(), Cache, KnownBases);
+    Cache[GEP] = BDV;
+    return BDV;
+  }
 
   // If the pointer comes through a bitcast of a vector of pointers to
   // a vector of another type of pointer, then look through the bitcast
-  if (auto *BC = dyn_cast<BitCastInst>(I))
-    return findBaseDefiningValue(BC->getOperand(0));
+  if (auto *BC = dyn_cast<BitCastInst>(I)) {
+    auto *BDV = findBaseDefiningValue(BC->getOperand(0), Cache, KnownBases);
+    Cache[BC] = BDV;
+    return BDV;
+  }
 
   // We assume that functions in the source language only return base
   // pointers.  This should probably be generalized via attributes to support
   // both source language and internal functions.
-  if (isa<CallInst>(I) || isa<InvokeInst>(I))
-    return BaseDefiningValueResult(I, true);
+  if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
+    Cache[I] = I;
+    setKnownBase(I, /* IsKnownBase */true, KnownBases);
+    return I;
+  }
 
   // A PHI or Select is a base defining value.  The outer findBasePointer
   // algorithm is responsible for constructing a base value for this BDV.
   assert((isa<SelectInst>(I) || isa<PHINode>(I)) &&
          "unknown vector instruction - no base found for vector element");
-  return BaseDefiningValueResult(I, false);
+  Cache[I] = I;
+  setKnownBase(I, /* IsKnownBase */false, KnownBases);
+  return I;
 }
 
 /// Helper function for findBasePointer - Will return a value which either a)
 /// defines the base pointer for the input, b) blocks the simple search
 /// (i.e. a PHI or Select of two derived pointers), or c) involves a change
 /// from pointer to vector type or back.
-static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
+static Value *findBaseDefiningValue(Value *I, DefiningValueMapTy &Cache,
+                                    IsKnownBaseMapTy &KnownBases) {
   assert(I->getType()->isPtrOrPtrVectorTy() &&
          "Illegal to ask for the base pointer of a non-pointer type");
+  auto Cached = Cache.find(I);
+  if (Cached != Cache.end())
+    return Cached->second;
 
   if (I->getType()->isVectorTy())
-    return findBaseDefiningValueOfVector(I);
+    return findBaseDefiningValueOfVector(I, Cache, KnownBases);
 
-  if (isa<Argument>(I))
+  if (isa<Argument>(I)) {
     // An incoming argument to the function is a base pointer
     // We should have never reached here if this argument isn't an gc value
-    return BaseDefiningValueResult(I, true);
+    Cache[I] = I;
+    setKnownBase(I, /* IsKnownBase */true, KnownBases);
+    return I;
+  }
 
   if (isa<Constant>(I)) {
     // We assume that objects with a constant base (e.g. a global) can't move
@@ -526,8 +536,10 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
     // "phi (const1, const2)" or "phi (const, regular gc ptr)".
     // See constant.ll file for relevant test cases.
 
-    return BaseDefiningValueResult(
-        ConstantPointerNull::get(cast<PointerType>(I->getType())), true);
+    auto *CPN = ConstantPointerNull::get(cast<PointerType>(I->getType()));
+    Cache[I] = CPN;
+    setKnownBase(CPN, /* IsKnownBase */true, KnownBases);
+    return CPN;
   }
 
   // inttoptrs in an integral address space are currently ill-defined.  We
@@ -535,8 +547,11 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
   // constant rule above and because we don't really have a better semantic
   // to give them.  Note that the optimizer is always free to insert undefined
   // behavior on dynamically dead paths as well.
-  if (isa<IntToPtrInst>(I))
-    return BaseDefiningValueResult(I, true);
+  if (isa<IntToPtrInst>(I)) {
+    Cache[I] = I;
+    setKnownBase(I, /* IsKnownBase */true, KnownBases);
+    return I;
+  }
 
   if (CastInst *CI = dyn_cast<CastInst>(I)) {
     Value *Def = CI->stripPointerCasts();
@@ -549,16 +564,31 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
     // not simply a pointer cast (i.e. an inttoptr).  We don't know how to
     // handle int->ptr conversion.
     assert(!isa<CastInst>(Def) && "shouldn't find another cast here");
-    return findBaseDefiningValue(Def);
+    auto *BDV = findBaseDefiningValue(Def, Cache, KnownBases);
+    Cache[CI] = BDV;
+    return BDV;
   }
 
-  if (isa<LoadInst>(I))
+  if (isa<LoadInst>(I)) {
     // The value loaded is an gc base itself
-    return BaseDefiningValueResult(I, true);
+    Cache[I] = I;
+    setKnownBase(I, /* IsKnownBase */true, KnownBases);
+    return I;
+  }
 
-  if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I))
+  if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I)) {
     // The base of this GEP is the base
-    return findBaseDefiningValue(GEP->getPointerOperand());
+    auto *BDV =
+        findBaseDefiningValue(GEP->getPointerOperand(), Cache, KnownBases);
+    Cache[GEP] = BDV;
+    return BDV;
+  }
+
+  if (auto *Freeze = dyn_cast<FreezeInst>(I)) {
+    auto *BDV = findBaseDefiningValue(Freeze->getOperand(0), Cache, KnownBases);
+    Cache[Freeze] = BDV;
+    return BDV;
+  }
 
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
@@ -579,24 +609,32 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
       llvm_unreachable(
           "interaction with the gcroot mechanism is not supported");
     case Intrinsic::experimental_gc_get_pointer_base:
-      return findBaseDefiningValue(II->getOperand(0));
+      auto *BDV = findBaseDefiningValue(II->getOperand(0), Cache, KnownBases);
+      Cache[II] = BDV;
+      return BDV;
     }
   }
   // We assume that functions in the source language only return base
   // pointers.  This should probably be generalized via attributes to support
   // both source language and internal functions.
-  if (isa<CallInst>(I) || isa<InvokeInst>(I))
-    return BaseDefiningValueResult(I, true);
+  if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
+    Cache[I] = I;
+    setKnownBase(I, /* IsKnownBase */true, KnownBases);
+    return I;
+  }
 
   // TODO: I have absolutely no idea how to implement this part yet.  It's not
   // necessarily hard, I just haven't really looked at it yet.
   assert(!isa<LandingPadInst>(I) && "Landing Pad is unimplemented");
 
-  if (isa<AtomicCmpXchgInst>(I))
+  if (isa<AtomicCmpXchgInst>(I)) {
     // A CAS is effectively a atomic store and load combined under a
     // predicate.  From the perspective of base pointers, we just treat it
     // like a load.
-    return BaseDefiningValueResult(I, true);
+    Cache[I] = I;
+    setKnownBase(I, /* IsKnownBase */true, KnownBases);
+    return I;
+  }
 
   assert(!isa<AtomicRMWInst>(I) && "Xchg handled above, all others are "
                                    "binary ops which don't apply to pointers");
@@ -604,8 +642,11 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
   // The aggregate ops.  Aggregates can either be in the heap or on the
   // stack, but in either case, this is simply a field load.  As a result,
   // this is a defining definition of the base just like a load is.
-  if (isa<ExtractValueInst>(I))
-    return BaseDefiningValueResult(I, true);
+  if (isa<ExtractValueInst>(I)) {
+    Cache[I] = I;
+    setKnownBase(I, /* IsKnownBase */true, KnownBases);
+    return I;
+  }
 
   // We should never see an insert vector since that would require we be
   // tracing back a struct value not a pointer value.
@@ -616,6 +657,8 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
   // substituting gc.get.pointer.base() intrinsic.
   bool IsKnownBase =
       isa<Instruction>(I) && cast<Instruction>(I)->getMetadata("is_base_value");
+  setKnownBase(I, /* IsKnownBase */IsKnownBase, KnownBases);
+  Cache[I] = I;
 
   // An extractelement produces a base result exactly when it's input does.
   // We may need to insert a parallel instruction to extract the appropriate
@@ -625,33 +668,38 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
     // Note: There a lot of obvious peephole cases here.  This are deliberately
     // handled after the main base pointer inference algorithm to make writing
     // test cases to exercise that code easier.
-    return BaseDefiningValueResult(I, IsKnownBase);
+    return I;
 
   // The last two cases here don't return a base pointer.  Instead, they
   // return a value which dynamically selects from among several base
   // derived pointers (each with it's own base potentially).  It's the job of
   // the caller to resolve these.
   assert((isa<SelectInst>(I) || isa<PHINode>(I)) &&
-         "missing instruction case in findBaseDefiningValing");
-  return BaseDefiningValueResult(I, IsKnownBase);
+         "missing instruction case in findBaseDefiningValue");
+  return I;
 }
 
 /// Returns the base defining value for this value.
-static Value *findBaseDefiningValueCached(Value *I, DefiningValueMapTy &Cache) {
-  Value *&Cached = Cache[I];
-  if (!Cached) {
-    Cached = findBaseDefiningValue(I).BDV;
+static Value *findBaseDefiningValueCached(Value *I, DefiningValueMapTy &Cache,
+                                          IsKnownBaseMapTy &KnownBases) {
+  if (Cache.find(I) == Cache.end()) {
+    auto *BDV = findBaseDefiningValue(I, Cache, KnownBases);
+    Cache[I] = BDV;
     LLVM_DEBUG(dbgs() << "fBDV-cached: " << I->getName() << " -> "
-                      << Cached->getName() << "\n");
+                      << Cache[I]->getName() << ", is known base = "
+                      << KnownBases[I] << "\n");
   }
   assert(Cache[I] != nullptr);
-  return Cached;
+  assert(KnownBases.find(Cache[I]) != KnownBases.end() &&
+         "Cached value must be present in known bases map");
+  return Cache[I];
 }
 
 /// Return a base pointer for this value if known.  Otherwise, return it's
 /// base defining value.
-static Value *findBaseOrBDV(Value *I, DefiningValueMapTy &Cache) {
-  Value *Def = findBaseDefiningValueCached(I, Cache);
+static Value *findBaseOrBDV(Value *I, DefiningValueMapTy &Cache,
+                            IsKnownBaseMapTy &KnownBases) {
+  Value *Def = findBaseDefiningValueCached(I, Cache, KnownBases);
   auto Found = Cache.find(Def);
   if (Found != Cache.end()) {
     // Either a base-of relation, or a self reference.  Caller must check.
@@ -661,6 +709,7 @@ static Value *findBaseOrBDV(Value *I, DefiningValueMapTy &Cache) {
   return Def;
 }
 
+#ifndef NDEBUG
 /// This value is a base pointer that is not generated by RS4GC, i.e. it already
 /// exists in the code.
 static bool isOriginalBaseResult(Value *V) {
@@ -669,21 +718,22 @@ static bool isOriginalBaseResult(Value *V) {
          !isa<ExtractElementInst>(V) && !isa<InsertElementInst>(V) &&
          !isa<ShuffleVectorInst>(V);
 }
+#endif
 
-/// Given the result of a call to findBaseDefiningValue, or findBaseOrBDV,
-/// is it known to be a base pointer?  Or do we need to continue searching.
-static bool isKnownBaseResult(Value *V) {
-  if (isOriginalBaseResult(V))
-    return true;
-  if (isa<Instruction>(V) &&
-      cast<Instruction>(V)->getMetadata("is_base_value")) {
-    // This is a previously inserted base phi or select.  We know
-    // that this is a base value.
-    return true;
-  }
+static bool isKnownBase(Value *V, const IsKnownBaseMapTy &KnownBases) {
+  auto It = KnownBases.find(V);
+  assert(It != KnownBases.end() && "Value not present in the map");
+  return It->second;
+}
 
-  // We need to keep searching
-  return false;
+static void setKnownBase(Value *V, bool IsKnownBase,
+                         IsKnownBaseMapTy &KnownBases) {
+#ifndef NDEBUG
+  auto It = KnownBases.find(V);
+  if (It != KnownBases.end())
+    assert(It->second == IsKnownBase && "Changing already present value");
+#endif
+  KnownBases[V] = IsKnownBase;
 }
 
 // Returns true if First and Second values are both scalar or both vector.
@@ -811,10 +861,11 @@ static raw_ostream &operator<<(raw_ostream &OS, const BDVState &State) {
 /// For gc objects, this is simply itself.  On success, returns a value which is
 /// the base pointer.  (This is reliable and can be used for relocation.)  On
 /// failure, returns nullptr.
-static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
-  Value *Def = findBaseOrBDV(I, Cache);
+static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
+                              IsKnownBaseMapTy &KnownBases) {
+  Value *Def = findBaseOrBDV(I, Cache, KnownBases);
 
-  if (isKnownBaseResult(Def) && areBothVectorOrScalar(Def, I))
+  if (isKnownBase(Def, KnownBases) && areBothVectorOrScalar(Def, I))
     return Def;
 
   // Here's the rough algorithm:
@@ -897,8 +948,8 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
       assert(!isOriginalBaseResult(Current) && "why did it get added?");
 
       auto visitIncomingValue = [&](Value *InVal) {
-        Value *Base = findBaseOrBDV(InVal, Cache);
-        if (isKnownBaseResult(Base) && areBothVectorOrScalar(Base, InVal))
+        Value *Base = findBaseOrBDV(InVal, Cache, KnownBases);
+        if (isKnownBase(Base, KnownBases) && areBothVectorOrScalar(Base, InVal))
           // Known bases won't need new instructions introduced and can be
           // ignored safely. However, this can only be done when InVal and Base
           // are both scalar or both vector. Otherwise, we need to find a
@@ -934,12 +985,16 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
     for (auto Pair : States) {
       Value *BDV = Pair.first;
       auto canPruneInput = [&](Value *V) {
-        Value *BDV = findBaseOrBDV(V, Cache);
-        if (V->stripPointerCasts() != BDV)
+        // If the input of the BDV is the BDV itself we can prune it. This is
+        // only possible if the BDV is a PHI node.
+        if (V->stripPointerCasts() == BDV)
+          return true;
+        Value *VBDV = findBaseOrBDV(V, Cache, KnownBases);
+        if (V->stripPointerCasts() != VBDV)
           return false;
         // The assumption is that anything not in the state list is
         // propagates a base pointer.
-        return States.count(BDV) == 0;
+        return States.count(VBDV) == 0;
       };
 
       bool CanPrune = true;
@@ -985,13 +1040,13 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
       // Only values that do not have known bases or those that have differing
       // type (scalar versus vector) from a possible known base should be in the
       // lattice.
-      assert((!isKnownBaseResult(BDV) ||
+      assert((!isKnownBase(BDV, KnownBases) ||
              !areBothVectorOrScalar(BDV, Pair.second.getBaseValue())) &&
                  "why did it get added?");
 
       BDVState NewState(BDV);
       visitBDVOperands(BDV, [&](Value *Op) {
-        Value *BDV = findBaseOrBDV(Op, Cache);
+        Value *BDV = findBaseOrBDV(Op, Cache, KnownBases);
         auto OpState = GetStateForBDV(BDV, Op);
         NewState.meet(OpState);
       });
@@ -1024,8 +1079,9 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
     // Only values that do not have known bases or those that have differing
     // type (scalar versus vector) from a possible known base should be in the
     // lattice.
-    assert((!isKnownBaseResult(I) || !areBothVectorOrScalar(I, BaseValue)) &&
-           "why did it get added?");
+    assert(
+        (!isKnownBase(I, KnownBases) || !areBothVectorOrScalar(I, BaseValue)) &&
+        "why did it get added?");
     assert(!State.isUnknown() && "Optimistic algorithm didn't complete!");
 
     if (!State.isBase() || !isa<VectorType>(BaseValue->getType()))
@@ -1043,6 +1099,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
           State.getBaseValue(), EE->getIndexOperand(), "base_ee", EE);
       BaseInst->setMetadata("is_base_value", MDNode::get(I->getContext(), {}));
       States[I] = BDVState(I, BDVState::Base, BaseInst);
+      setKnownBase(BaseInst, /* IsKnownBase */true, KnownBases);
     } else if (!isa<VectorType>(I->getType())) {
       // We need to handle cases that have a vector base but the instruction is
       // a scalar type (these could be phis or selects or any instruction that
@@ -1065,7 +1122,8 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
     // Only values that do not have known bases or those that have differing
     // type (scalar versus vector) from a possible known base should be in the
     // lattice.
-    assert((!isKnownBaseResult(I) || !areBothVectorOrScalar(I, State.getBaseValue())) &&
+    assert((!isKnownBase(I, KnownBases) ||
+            !areBothVectorOrScalar(I, State.getBaseValue())) &&
            "why did it get added?");
     assert(!State.isUnknown() && "Optimistic algorithm didn't complete!");
 
@@ -1097,6 +1155,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
     // Add metadata marking this as a base value
     BaseInst->setMetadata("is_base_value", MDNode::get(I->getContext(), {}));
     States[I] = BDVState(I, BDVState::Conflict, BaseInst);
+    setKnownBase(BaseInst, /* IsKnownBase */true, KnownBases);
   }
 
 #ifndef NDEBUG
@@ -1112,7 +1171,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
   // assured to be able to determine an instruction which produces it's base
   // pointer.
   auto getBaseForInput = [&](Value *Input, Instruction *InsertPt) {
-    Value *BDV = findBaseOrBDV(Input, Cache);
+    Value *BDV = findBaseOrBDV(Input, Cache, KnownBases);
     Value *Base = nullptr;
     if (!States.count(BDV)) {
       assert(areBothVectorOrScalar(BDV, Input));
@@ -1139,7 +1198,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
     // Only values that do not have known bases or those that have differing
     // type (scalar versus vector) from a possible known base should be in the
     // lattice.
-    assert((!isKnownBaseResult(BDV) ||
+    assert((!isKnownBase(BDV, KnownBases) ||
             !areBothVectorOrScalar(BDV, State.getBaseValue())) &&
            "why did it get added?");
     assert(!State.isUnknown() && "Optimistic algorithm didn't complete!");
@@ -1241,8 +1300,9 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
     // Only values that do not have known bases or those that have differing
     // type (scalar versus vector) from a possible known base should be in the
     // lattice.
-    assert((!isKnownBaseResult(BDV) || !areBothVectorOrScalar(BDV, Base)) &&
-           "why did it get added?");
+    assert(
+        (!isKnownBase(BDV, KnownBases) || !areBothVectorOrScalar(BDV, Base)) &&
+        "why did it get added?");
 
     LLVM_DEBUG(
         dbgs() << "Updating base value cache"
@@ -1273,9 +1333,10 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
 // pointer was a base pointer.
 static void findBasePointers(const StatepointLiveSetTy &live,
                              PointerToBaseTy &PointerToBase, DominatorTree *DT,
-                             DefiningValueMapTy &DVCache) {
+                             DefiningValueMapTy &DVCache,
+                             IsKnownBaseMapTy &KnownBases) {
   for (Value *ptr : live) {
-    Value *base = findBasePointer(ptr, DVCache);
+    Value *base = findBasePointer(ptr, DVCache, KnownBases);
     assert(base && "failed to find base pointer");
     PointerToBase[ptr] = base;
     assert((!isa<Instruction>(base) || !isa<Instruction>(ptr) ||
@@ -1290,7 +1351,8 @@ static void findBasePointers(const StatepointLiveSetTy &live,
 static void findBasePointers(DominatorTree &DT, DefiningValueMapTy &DVCache,
                              CallBase *Call,
                              PartiallyConstructedSafepointRecord &result,
-                             PointerToBaseTy &PointerToBase) {
+                             PointerToBaseTy &PointerToBase,
+                             IsKnownBaseMapTy &KnownBases) {
   StatepointLiveSetTy PotentiallyDerivedPointers = result.LiveSet;
   // We assume that all pointers passed to deopt are base pointers; as an
   // optimization, we can use this to avoid seperately materializing the base
@@ -1304,7 +1366,8 @@ static void findBasePointers(DominatorTree &DT, DefiningValueMapTy &DVCache,
       PotentiallyDerivedPointers.remove(V);
       PointerToBase[V] = V;
     }
-  findBasePointers(PotentiallyDerivedPointers, PointerToBase, &DT, DVCache);
+  findBasePointers(PotentiallyDerivedPointers, PointerToBase, &DT, DVCache,
+                   KnownBases);
 }
 
 /// Given an updated version of the dataflow liveness results, update the
@@ -2423,7 +2486,8 @@ static void rematerializeLiveValues(CallBase *Call,
 
 static bool inlineGetBaseAndOffset(Function &F,
                                    SmallVectorImpl<CallInst *> &Intrinsics,
-                                   DefiningValueMapTy &DVCache) {
+                                   DefiningValueMapTy &DVCache,
+                                   IsKnownBaseMapTy &KnownBases) {
   auto &Context = F.getContext();
   auto &DL = F.getParent()->getDataLayout();
   bool Changed = false;
@@ -2432,7 +2496,8 @@ static bool inlineGetBaseAndOffset(Function &F,
     switch (Callsite->getIntrinsicID()) {
     case Intrinsic::experimental_gc_get_pointer_base: {
       Changed = true;
-      Value *Base = findBasePointer(Callsite->getOperand(0), DVCache);
+      Value *Base =
+          findBasePointer(Callsite->getOperand(0), DVCache, KnownBases);
       assert(!DVCache.count(Callsite));
       auto *BaseBC = IRBuilder<>(Callsite).CreateBitCast(
           Base, Callsite->getType(), suffixed_name_or(Base, ".cast", ""));
@@ -2447,7 +2512,7 @@ static bool inlineGetBaseAndOffset(Function &F,
     case Intrinsic::experimental_gc_get_pointer_offset: {
       Changed = true;
       Value *Derived = Callsite->getOperand(0);
-      Value *Base = findBasePointer(Derived, DVCache);
+      Value *Base = findBasePointer(Derived, DVCache, KnownBases);
       assert(!DVCache.count(Callsite));
       unsigned AddressSpace = Derived->getType()->getPointerAddressSpace();
       unsigned IntPtrSize = DL.getPointerSizeInBits(AddressSpace);
@@ -2474,7 +2539,8 @@ static bool inlineGetBaseAndOffset(Function &F,
 static bool insertParsePoints(Function &F, DominatorTree &DT,
                               TargetTransformInfo &TTI,
                               SmallVectorImpl<CallBase *> &ToUpdate,
-                              DefiningValueMapTy &DVCache) {
+                              DefiningValueMapTy &DVCache,
+                              IsKnownBaseMapTy &KnownBases) {
 #ifndef NDEBUG
   // Validate the input
   std::set<CallBase *> Uniqued;
@@ -2530,7 +2596,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   // B) Find the base pointers for each live pointer
   for (size_t i = 0; i < Records.size(); i++) {
     PartiallyConstructedSafepointRecord &info = Records[i];
-    findBasePointers(DT, DVCache, ToUpdate[i], info, PointerToBase);
+    findBasePointers(DT, DVCache, ToUpdate[i], info, PointerToBase, KnownBases);
   }
   if (PrintBasePointers) {
     errs() << "Base Pairs (w/o Relocation):\n";
@@ -2978,13 +3044,18 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
   // inlineGetBaseAndOffset() and insertParsePoints().
   DefiningValueMapTy DVCache;
 
+  // Mapping between a base values and a flag indicating whether it's a known
+  // base or not.
+  IsKnownBaseMapTy KnownBases;
+
   if (!Intrinsics.empty())
     // Inline @gc.get.pointer.base() and @gc.get.pointer.offset() before finding
     // live references.
-    MadeChange |= inlineGetBaseAndOffset(F, Intrinsics, DVCache);
+    MadeChange |= inlineGetBaseAndOffset(F, Intrinsics, DVCache, KnownBases);
 
   if (!ParsePointNeeded.empty())
-    MadeChange |= insertParsePoints(F, DT, TTI, ParsePointNeeded, DVCache);
+    MadeChange |=
+        insertParsePoints(F, DT, TTI, ParsePointNeeded, DVCache, KnownBases);
 
   return MadeChange;
 }

@@ -22,9 +22,9 @@ class Module;
 
 /// Call "ShouldRemove" for every entry in M's global_ctor list and remove the
 /// entries for which it returns true.  Return true if anything changed.
-bool optimizeGlobalCtorsList(Module &M,
-                             function_ref<bool(Function *)> ShouldRemove);
+bool optimizeGlobalCtorsList(
+    Module &M, function_ref<bool(uint32_t, Function *)> ShouldRemove);
 
-} // End llvm namespace
+} // namespace llvm
 
 #endif

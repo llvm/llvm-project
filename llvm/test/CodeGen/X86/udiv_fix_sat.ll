@@ -285,15 +285,14 @@ define i16 @func7(i16 %x, i16 %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl %cx, %ecx
-; X86-NEXT:    addl %ecx, %ecx
 ; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    shrl $16, %edx
-; X86-NEXT:    shll $16, %ecx
+; X86-NEXT:    shll $17, %edx
+; X86-NEXT:    shrl $15, %ecx
+; X86-NEXT:    andl $1, %ecx
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    pushl %edx
 ; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %edx
 ; X86-NEXT:    calll __udivdi3
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    cmpl $131071, %eax # imm = 0x1FFFF

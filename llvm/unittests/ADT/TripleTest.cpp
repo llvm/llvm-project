@@ -243,11 +243,85 @@ TEST(TripleTest, ParsedIDs) {
 
   T = Triple("spirv32-unknown-unknown");
   EXPECT_EQ(Triple::spirv32, T.getArch());
+  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
+  T = Triple("spirv32v1.0-unknown-unknown");
+  EXPECT_EQ(Triple::spirv32, T.getArch());
+  EXPECT_EQ(Triple::SPIRVSubArch_v10, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
+  T = Triple("spirv32v1.1-unknown-unknown");
+  EXPECT_EQ(Triple::spirv32, T.getArch());
+  EXPECT_EQ(Triple::SPIRVSubArch_v11, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
+  T = Triple("spirv32v1.2-unknown-unknown");
+  EXPECT_EQ(Triple::spirv32, T.getArch());
+  EXPECT_EQ(Triple::SPIRVSubArch_v12, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
+  T = Triple("spirv32v1.3-unknown-unknown");
+  EXPECT_EQ(Triple::spirv32, T.getArch());
+  EXPECT_EQ(Triple::SPIRVSubArch_v13, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
+  T = Triple("spirv32v1.4-unknown-unknown");
+  EXPECT_EQ(Triple::spirv32, T.getArch());
+  EXPECT_EQ(Triple::SPIRVSubArch_v14, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
+  T = Triple("spirv32v1.5-unknown-unknown");
+  EXPECT_EQ(Triple::spirv32, T.getArch());
+  EXPECT_EQ(Triple::SPIRVSubArch_v15, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
 
   T = Triple("spirv64-unknown-unknown");
   EXPECT_EQ(Triple::spirv64, T.getArch());
+  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
+  T = Triple("spirv64v1.0-unknown-unknown");
+  EXPECT_EQ(Triple::spirv64, T.getArch());
+  EXPECT_EQ(Triple::SPIRVSubArch_v10, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
+  T = Triple("spirv64v1.1-unknown-unknown");
+  EXPECT_EQ(Triple::spirv64, T.getArch());
+  EXPECT_EQ(Triple::SPIRVSubArch_v11, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
+  T = Triple("spirv64v1.2-unknown-unknown");
+  EXPECT_EQ(Triple::spirv64, T.getArch());
+  EXPECT_EQ(Triple::SPIRVSubArch_v12, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
+  T = Triple("spirv64v1.3-unknown-unknown");
+  EXPECT_EQ(Triple::spirv64, T.getArch());
+  EXPECT_EQ(Triple::SPIRVSubArch_v13, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
+  T = Triple("spirv64v1.4-unknown-unknown");
+  EXPECT_EQ(Triple::spirv64, T.getArch());
+  EXPECT_EQ(Triple::SPIRVSubArch_v14, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
+  T = Triple("spirv64v1.5-unknown-unknown");
+  EXPECT_EQ(Triple::spirv64, T.getArch());
+  EXPECT_EQ(Triple::SPIRVSubArch_v15, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
 

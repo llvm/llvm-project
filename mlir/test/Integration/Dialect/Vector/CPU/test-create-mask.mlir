@@ -3,7 +3,7 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-func @entry() {
+func.func @entry() {
   %cneg1 = arith.constant -1 : index
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index

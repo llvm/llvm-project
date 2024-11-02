@@ -27,7 +27,7 @@ const char DefaultStringNames[] =
     "::std::basic_string;::std::basic_string_view";
 
 static std::vector<StringRef>
-removeNamespaces(const std::vector<std::string> &Names) {
+removeNamespaces(const std::vector<StringRef> &Names) {
   std::vector<StringRef> Result;
   Result.reserve(Names.size());
   for (StringRef Name : Names) {

@@ -9,7 +9,10 @@
 #ifndef CLANG_SUPPORT_RISCVVINTRINSICUTILS_H
 #define CLANG_SUPPORT_RISCVVINTRINSICUTILS_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <string>
@@ -18,8 +21,132 @@
 namespace clang {
 namespace RISCV {
 
-using BasicType = char;
 using VScaleVal = llvm::Optional<unsigned>;
+
+// Modifier for vector type.
+enum class VectorTypeModifier : uint8_t {
+  NoModifier,
+  Widening2XVector,
+  Widening4XVector,
+  Widening8XVector,
+  MaskVector,
+  Log2EEW3,
+  Log2EEW4,
+  Log2EEW5,
+  Log2EEW6,
+  FixedSEW8,
+  FixedSEW16,
+  FixedSEW32,
+  FixedSEW64,
+  LFixedLog2LMULN3,
+  LFixedLog2LMULN2,
+  LFixedLog2LMULN1,
+  LFixedLog2LMUL0,
+  LFixedLog2LMUL1,
+  LFixedLog2LMUL2,
+  LFixedLog2LMUL3,
+  SFixedLog2LMULN3,
+  SFixedLog2LMULN2,
+  SFixedLog2LMULN1,
+  SFixedLog2LMUL0,
+  SFixedLog2LMUL1,
+  SFixedLog2LMUL2,
+  SFixedLog2LMUL3,
+};
+
+// Similar to basic type but used to describe what's kind of type related to
+// basic vector type, used to compute type info of arguments.
+enum class BaseTypeModifier : uint8_t {
+  Invalid,
+  Scalar,
+  Vector,
+  Void,
+  SizeT,
+  Ptrdiff,
+  UnsignedLong,
+  SignedLong,
+};
+
+// Modifier for type, used for both scalar and vector types.
+enum class TypeModifier : uint8_t {
+  NoModifier = 0,
+  Pointer = 1 << 0,
+  Const = 1 << 1,
+  Immediate = 1 << 2,
+  UnsignedInteger = 1 << 3,
+  SignedInteger = 1 << 4,
+  Float = 1 << 5,
+  // LMUL1 should be kind of VectorTypeModifier, but that might come with
+  // Widening2XVector for widening reduction.
+  // However that might require VectorTypeModifier become bitmask rather than
+  // simple enum, so we decide keek LMUL1 in TypeModifier for code size
+  // optimization of clang binary size.
+  LMUL1 = 1 << 6,
+  MaxOffset = 6,
+  LLVM_MARK_AS_BITMASK_ENUM(LMUL1),
+};
+
+// PrototypeDescriptor is used to compute type info of arguments or return
+// value.
+struct PrototypeDescriptor {
+  constexpr PrototypeDescriptor() = default;
+  constexpr PrototypeDescriptor(
+      BaseTypeModifier PT,
+      VectorTypeModifier VTM = VectorTypeModifier::NoModifier,
+      TypeModifier TM = TypeModifier::NoModifier)
+      : PT(static_cast<uint8_t>(PT)), VTM(static_cast<uint8_t>(VTM)),
+        TM(static_cast<uint8_t>(TM)) {}
+  constexpr PrototypeDescriptor(uint8_t PT, uint8_t VTM, uint8_t TM)
+      : PT(PT), VTM(VTM), TM(TM) {}
+
+  uint8_t PT = static_cast<uint8_t>(BaseTypeModifier::Invalid);
+  uint8_t VTM = static_cast<uint8_t>(VectorTypeModifier::NoModifier);
+  uint8_t TM = static_cast<uint8_t>(TypeModifier::NoModifier);
+
+  bool operator!=(const PrototypeDescriptor &PD) const {
+    return PD.PT != PT || PD.VTM != VTM || PD.TM != TM;
+  }
+  bool operator>(const PrototypeDescriptor &PD) const {
+    return !(PD.PT <= PT && PD.VTM <= VTM && PD.TM <= TM);
+  }
+
+  static const PrototypeDescriptor Mask;
+  static const PrototypeDescriptor Vector;
+  static const PrototypeDescriptor VL;
+  static llvm::Optional<PrototypeDescriptor>
+  parsePrototypeDescriptor(llvm::StringRef PrototypeStr);
+};
+
+llvm::SmallVector<PrototypeDescriptor>
+parsePrototypes(llvm::StringRef Prototypes);
+
+// Basic type of vector type.
+enum class BasicType : uint8_t {
+  Unknown = 0,
+  Int8 = 1 << 0,
+  Int16 = 1 << 1,
+  Int32 = 1 << 2,
+  Int64 = 1 << 3,
+  Float16 = 1 << 4,
+  Float32 = 1 << 5,
+  Float64 = 1 << 6,
+  MaxOffset = 6,
+  LLVM_MARK_AS_BITMASK_ENUM(Float64),
+};
+
+// Type of vector type.
+enum ScalarTypeKind : uint8_t {
+  Void,
+  Size_t,
+  Ptrdiff_t,
+  UnsignedLong,
+  SignedLong,
+  Boolean,
+  SignedInteger,
+  UnsignedInteger,
+  Float,
+  Invalid,
+};
 
 // Exponential LMUL
 struct LMULType {
@@ -29,23 +156,14 @@ struct LMULType {
   std::string str() const;
   llvm::Optional<unsigned> getScale(unsigned ElementBitwidth) const;
   void MulLog2LMUL(int Log2LMUL);
-  LMULType &operator*=(uint32_t RHS);
 };
+
+class RVVType;
+using RVVTypePtr = RVVType *;
+using RVVTypes = std::vector<RVVTypePtr>;
 
 // This class is compact representation of a valid and invalid RVVType.
 class RVVType {
-  enum ScalarTypeKind : uint32_t {
-    Void,
-    Size_t,
-    Ptrdiff_t,
-    UnsignedLong,
-    SignedLong,
-    Boolean,
-    SignedInteger,
-    UnsignedInteger,
-    Float,
-    Invalid,
-  };
   BasicType BT;
   ScalarTypeKind ScalarType = Invalid;
   LMULType LMUL;
@@ -63,9 +181,11 @@ class RVVType {
   std::string Str;
   std::string ShortStr;
 
+  enum class FixedLMULType { LargerThan, SmallerThan };
+
 public:
-  RVVType() : RVVType(BasicType(), 0, llvm::StringRef()) {}
-  RVVType(BasicType BT, int Log2LMUL, llvm::StringRef prototype);
+  RVVType() : BT(BasicType::Unknown), LMUL(0), Valid(false) {}
+  RVVType(BasicType BT, int Log2LMUL, const PrototypeDescriptor &Profile);
 
   // Return the string representation of a type, which is an encoded string for
   // passing to the BUILTIN() macro in Builtins.def.
@@ -114,7 +234,11 @@ private:
 
   // Applies a prototype modifier to the current type. The result maybe an
   // invalid type.
-  void applyModifier(llvm::StringRef prototype);
+  void applyModifier(const PrototypeDescriptor &prototype);
+
+  void applyLog2EEW(unsigned Log2EEW);
+  void applyFixedSEW(unsigned NewSEW);
+  void applyFixedLog2LMUL(int Log2LMUL, enum FixedLMULType Type);
 
   // Compute and record a string for legal type.
   void initBuiltinStr();
@@ -124,10 +248,19 @@ private:
   void initTypeStr();
   // Compute and record a short name of a type for C/C++ name suffix.
   void initShortStr();
+
+public:
+  /// Compute output and input types by applying different config (basic type
+  /// and LMUL with type transformers). It also record result of type in legal
+  /// or illegal set to avoid compute the same config again. The result maybe
+  /// have illegal RVVType.
+  static llvm::Optional<RVVTypes>
+  computeTypes(BasicType BT, int Log2LMUL, unsigned NF,
+               llvm::ArrayRef<PrototypeDescriptor> Prototype);
+  static llvm::Optional<RVVTypePtr> computeType(BasicType BT, int Log2LMUL,
+                                                PrototypeDescriptor Proto);
 };
 
-using RVVTypePtr = RVVType *;
-using RVVTypes = std::vector<RVVTypePtr>;
 using RISCVPredefinedMacroT = uint8_t;
 
 enum RISCVPredefinedMacro : RISCVPredefinedMacroT {
@@ -154,7 +287,7 @@ class RVVIntrinsic {
 private:
   std::string BuiltinName; // Builtin name
   std::string Name;        // C intrinsic name.
-  std::string MangledName;
+  std::string OverloadedName;
   std::string IRName;
   bool IsMasked;
   bool HasVL;
@@ -171,20 +304,22 @@ private:
   unsigned NF = 1;
 
 public:
-  RVVIntrinsic(llvm::StringRef Name, llvm::StringRef Suffix, llvm::StringRef MangledName,
-               llvm::StringRef MangledSuffix, llvm::StringRef IRName, bool IsMasked,
-               bool HasMaskedOffOperand, bool HasVL, PolicyScheme Scheme,
-               bool HasUnMaskedOverloaded, bool HasBuiltinAlias,
-               llvm::StringRef ManualCodegen, const RVVTypes &Types,
+  RVVIntrinsic(llvm::StringRef Name, llvm::StringRef Suffix,
+               llvm::StringRef OverloadedName, llvm::StringRef OverloadedSuffix,
+               llvm::StringRef IRName, bool IsMasked, bool HasMaskedOffOperand,
+               bool HasVL, PolicyScheme Scheme, bool HasUnMaskedOverloaded,
+               bool HasBuiltinAlias, llvm::StringRef ManualCodegen,
+               const RVVTypes &Types,
                const std::vector<int64_t> &IntrinsicTypes,
-               const std::vector<llvm::StringRef> &RequiredFeatures, unsigned NF);
+               const std::vector<llvm::StringRef> &RequiredFeatures,
+               unsigned NF);
   ~RVVIntrinsic() = default;
 
   RVVTypePtr getOutputType() const { return OutputType; }
   const RVVTypes &getInputTypes() const { return InputTypes; }
   llvm::StringRef getBuiltinName() const { return BuiltinName; }
   llvm::StringRef getName() const { return Name; }
-  llvm::StringRef getMangledName() const { return MangledName; }
+  llvm::StringRef getOverloadedName() const { return OverloadedName; }
   bool hasVL() const { return HasVL; }
   bool hasPolicy() const { return Scheme != SchemeNone; }
   bool hasPassthruOperand() const { return Scheme == HasPassthruOperand; }
@@ -206,6 +341,10 @@ public:
 
   // Return the type string for a BUILTIN() macro in Builtins.def.
   std::string getBuiltinTypeStr() const;
+
+  static std::string
+  getSuffixStr(BasicType Type, int Log2LMUL,
+               llvm::ArrayRef<PrototypeDescriptor> PrototypeDescriptors);
 };
 
 } // end namespace RISCV

@@ -53,7 +53,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Transforms/Coroutines.h"
 #include "llvm/Transforms/Coroutines/CoroCleanup.h"
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
 #include "llvm/Transforms/Coroutines/CoroElide.h"
@@ -456,7 +455,10 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.MCOptions.SplitDwarfFile = CodeGenOpts.SplitDwarfFile;
   Options.MCOptions.MCRelaxAll = CodeGenOpts.RelaxAll;
   Options.MCOptions.MCSaveTempLabels = CodeGenOpts.SaveTempLabels;
-  Options.MCOptions.MCUseDwarfDirectory = !CodeGenOpts.NoDwarfDirectoryAsm;
+  Options.MCOptions.MCUseDwarfDirectory =
+      CodeGenOpts.NoDwarfDirectoryAsm
+          ? llvm::MCTargetOptions::DisableDwarfDirectory
+          : llvm::MCTargetOptions::EnableDwarfDirectory;
   Options.MCOptions.MCNoExecStack = CodeGenOpts.NoExecStack;
   Options.MCOptions.MCIncrementalLinkerCompatible =
       CodeGenOpts.IncrementalLinkerCompatible;
@@ -1209,33 +1211,16 @@ void clang::EmbedObject(llvm::Module *M, const CodeGenOptions &CGOpts,
     return;
 
   for (StringRef OffloadObject : CGOpts.OffloadObjects) {
-    SmallVector<StringRef, 4> ObjectFields;
-    OffloadObject.split(ObjectFields, ',');
-
-    if (ObjectFields.size() != 4) {
-      auto DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error, "Expected at least four arguments '%0'");
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ObjectOrErr =
+        llvm::MemoryBuffer::getFileOrSTDIN(OffloadObject);
+    if (std::error_code EC = ObjectOrErr.getError()) {
+      auto DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                          "could not open '%0' for embedding");
       Diags.Report(DiagID) << OffloadObject;
       return;
     }
 
-    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ObjectOrErr =
-        llvm::MemoryBuffer::getFileOrSTDIN(ObjectFields[0]);
-    if (std::error_code EC = ObjectOrErr.getError()) {
-      auto DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                          "could not open '%0' for embedding");
-      Diags.Report(DiagID) << ObjectFields[0];
-      return;
-    }
-
-    OffloadBinary::OffloadingImage Image{};
-    Image.TheImageKind = getImageKind(ObjectFields[0].rsplit(".").second);
-    Image.TheOffloadKind = getOffloadKind(ObjectFields[1]);
-    Image.StringData = {{"triple", ObjectFields[2]}, {"arch", ObjectFields[3]}};
-    Image.Image = **ObjectOrErr;
-
-    std::unique_ptr<MemoryBuffer> OffloadBuffer = OffloadBinary::write(Image);
-    llvm::embedBufferInModule(*M, *OffloadBuffer, ".llvm.offloading",
-                              Align(OffloadBinary::getAlignment()));
+    llvm::embedBufferInModule(*M, **ObjectOrErr, ".llvm.offloading",
+                              Align(object::OffloadBinary::getAlignment()));
   }
 }

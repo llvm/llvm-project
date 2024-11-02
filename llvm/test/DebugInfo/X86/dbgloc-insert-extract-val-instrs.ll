@@ -5,13 +5,13 @@
 
 ; CHECK-LABEL: fn
 ; CHECK: %oldret = extractvalue { i32, i32, i16 } %z, 0, !dbg ![[LOC:.*]]
-; CHECK: %newret = insertvalue { i32, i32 } undef, i32 %oldret, 0, !dbg ![[LOC:.*]]
+; CHECK: %newret = insertvalue { i32, i32 } poison, i32 %oldret, 0, !dbg ![[LOC:.*]]
 ; CHECK: %oldret1 = extractvalue { i32, i32, i16 } %z, 1, !dbg ![[LOC:.*]]
 ; CHECK: %newret2 = insertvalue { i32, i32 } %newret, i32 %oldret1, 1, !dbg ![[LOC:.*]]
 
 ; CHECK-LABEL: fn1
 ; CHECK: %newret = extractvalue { i32, i32 } %ret, 0, !dbg ![[LOC2:.*]]
-; CHECK: %oldret = insertvalue { i32, i32, i16 } undef, i32 %newret, 0, !dbg ![[LOC2:.*]]
+; CHECK: %oldret = insertvalue { i32, i32, i16 } poison, i32 %newret, 0, !dbg ![[LOC2:.*]]
 ; CHECK: %newret1 = extractvalue { i32, i32 } %ret, 1, !dbg ![[LOC2:.*]]
 ; CHECK: %oldret2 = insertvalue { i32, i32, i16 } %oldret, i32 %newret1, 1, !dbg ![[LOC2:.*]]
 
@@ -19,7 +19,7 @@
 source_filename = "test.ll"
 
 define internal { i32, i32, i16 } @fn() !dbg !6 {
-  %x = insertvalue { i32, i32, i16 } undef, i32 1, 0, !dbg !8
+  %x = insertvalue { i32, i32, i16 } poison, i32 1, 0, !dbg !8
   %y = insertvalue { i32, i32, i16 } %x, i32 2, 1, !dbg !9
   %z = insertvalue { i32, i32, i16 } %y, i16 3, 2, !dbg !10
   ret { i32, i32, i16 } %z, !dbg !11

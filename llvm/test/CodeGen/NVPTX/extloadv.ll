@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_35 | %ptxas-verify -arch=sm_35 %}
 
 define void @foo(float* nocapture readonly %x_value, double* nocapture %output) #0 {
   %1 = bitcast float* %x_value to <4 x float>*

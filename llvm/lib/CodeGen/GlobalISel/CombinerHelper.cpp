@@ -2945,7 +2945,7 @@ bool CombinerHelper::matchNotCmp(MachineInstr &MI,
   int64_t Cst;
   if (Ty.isVector()) {
     MachineInstr *CstDef = MRI.getVRegDef(CstReg);
-    auto MaybeCst = getBuildVectorConstantSplat(*CstDef, MRI);
+    auto MaybeCst = getIConstantSplatSExtVal(*CstDef, MRI);
     if (!MaybeCst)
       return false;
     if (!isConstValidTrue(TLI, Ty.getScalarSizeInBits(), *MaybeCst, true, IsFP))
@@ -4029,10 +4029,9 @@ bool CombinerHelper::matchOrShiftToFunnelShift(MachineInstr &MI,
 
   // Given constants C0 and C1 such that C0 + C1 is bit-width:
   // (or (shl x, C0), (lshr y, C1)) -> (fshl x, y, C0) or (fshr x, y, C1)
-  // TODO: Match constant splat.
   int64_t CstShlAmt, CstLShrAmt;
-  if (mi_match(ShlAmt, MRI, m_ICst(CstShlAmt)) &&
-      mi_match(LShrAmt, MRI, m_ICst(CstLShrAmt)) &&
+  if (mi_match(ShlAmt, MRI, m_ICstOrSplat(CstShlAmt)) &&
+      mi_match(LShrAmt, MRI, m_ICstOrSplat(CstLShrAmt)) &&
       CstShlAmt + CstLShrAmt == BitWidth) {
     FshOpc = TargetOpcode::G_FSHR;
     Amt = LShrAmt;
@@ -4225,18 +4224,23 @@ bool CombinerHelper::matchAndOrDisjointMask(
     return false;
 
   Register Src;
-  int64_t MaskAnd;
-  int64_t MaskOr;
+  Register AndMaskReg;
+  int64_t AndMaskBits;
+  int64_t OrMaskBits;
   if (!mi_match(MI, MRI,
-                m_GAnd(m_GOr(m_Reg(Src), m_ICst(MaskOr)), m_ICst(MaskAnd))))
+                m_GAnd(m_GOr(m_Reg(Src), m_ICst(OrMaskBits)),
+                       m_all_of(m_ICst(AndMaskBits), m_Reg(AndMaskReg)))))
     return false;
 
-  // Check if MaskOr could turn on any bits in Src.
-  if (MaskAnd & MaskOr)
+  // Check if OrMask could turn on any bits in Src.
+  if (AndMaskBits & OrMaskBits)
     return false;
 
   MatchInfo = [=, &MI](MachineIRBuilder &B) {
     Observer.changingInstr(MI);
+    // Canonicalize the result to have the constant on the RHS.
+    if (MI.getOperand(1).getReg() == AndMaskReg)
+      MI.getOperand(2).setReg(AndMaskReg);
     MI.getOperand(1).setReg(Src);
     Observer.changedInstr(MI);
   };
@@ -4383,6 +4387,14 @@ bool CombinerHelper::matchBitfieldExtractFromShrAnd(
   const unsigned Size = Ty.getScalarSizeInBits();
   if (ShrAmt < 0 || ShrAmt >= Size)
     return false;
+
+  // If the shift subsumes the mask, emit the 0 directly.
+  if (0 == (SMask >> ShrAmt)) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildConstant(Dst, 0);
+    };
+    return true;
+  }
 
   // Check that ubfx can do the extraction, with no holes in the mask.
   uint64_t UMask = SMask;
@@ -5593,6 +5605,33 @@ bool CombinerHelper::matchSelectToLogical(MachineInstr &MI,
   return false;
 }
 
+bool CombinerHelper::matchCombineFMinMaxNaN(MachineInstr &MI,
+                                            unsigned &IdxToPropagate) {
+  bool PropagateNaN;
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FMAXNUM:
+    PropagateNaN = false;
+    break;
+  case TargetOpcode::G_FMINIMUM:
+  case TargetOpcode::G_FMAXIMUM:
+    PropagateNaN = true;
+    break;
+  }
+
+  auto MatchNaN = [&](unsigned Idx) {
+    Register MaybeNaNReg = MI.getOperand(Idx).getReg();
+    const ConstantFP *MaybeCst = getConstantFPVRegVal(MaybeNaNReg, MRI);
+    if (!MaybeCst || !MaybeCst->getValueAPF().isNaN())
+      return false;
+    IdxToPropagate = PropagateNaN ? Idx : (Idx == 1 ? 2 : 1);
+    return true;
+  };
+
+  return MatchNaN(1) || MatchNaN(2);
+}
 
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))

@@ -338,8 +338,8 @@ for.end:                                          ; preds = %for.body, %entry
 
 ; CHECK-LABEL: vector.body:
 ; CHECK:          %wide.load = load <2 x i32>, <2 x i32>*
-; CHECK:          %wide.load16 = load <2 x i32>, <2 x i32>* 
-; CHECK:          [[ADD:%[a-zA-Z0-9.]+]] = add nsw <2 x i32> %wide.load, %wide.load16
+; CHECK:          %wide.load5 = load <2 x i32>, <2 x i32>* 
+; CHECK:          [[ADD:%[a-zA-Z0-9.]+]] = add nsw <2 x i32> %wide.load, %wide.load5
 ; CHECK:          store <2 x i32>
 
 ; CHECK-LABEL: middle.block:

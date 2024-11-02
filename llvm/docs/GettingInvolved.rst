@@ -172,7 +172,7 @@ writing, the following sync-ups are organized:
      - Monthly, every 3rd Tuesday
      - `ics <https://calendar.google.com/calendar/ical/eoh3m9k1l6vqbd1fkp94fv5q74%40group.calendar.google.com/public/basic.ics>`__
        `gcal <https://calendar.google.com/calendar/embed?src=eoh3m9k1l6vqbd1fkp94fv5q74%40group.calendar.google.com>`__
-     - `Minutes/docs <https://docs.google.com/document/d/1GLCE8cl7goCaLSiM9j1eIq5IqeXt6_YTY2UEcC4jmsg/edit?usp=sharing>`__
+     - `Minutes/docs <https://discourse.llvm.org/t/llvm-security-group-public-sync-ups/62735>`__
    * - `CIRCT <https://github.com/llvm/circt>`__
      - Weekly, on Wednesday
      -
@@ -204,7 +204,7 @@ writing, the following sync-ups are organized:
    * - LLVM Pointer Authentication
      - Every month on Mondays
      - `ics <https://calendar.google.com/calendar/ical/fr1qtmrmt2s9odufjvurkb6j70%40group.calendar.google.com/public/basic.ics>`__
-     - `Minutes/docs <https://docs.google.com/document/d/14IDnh3YY9m6Ej_PaRKOz8tTTZlObgtLl8mYeRbytAec/edit?usp=sharing>`__
+     - `Minutes/docs <https://discourse.llvm.org/t/llvm-pointer-authentication-sync-ups/62661>`__
    * - MemorySSA in LLVM
      - Every 8 weeks on Mondays
      - `ics <https://calendar.google.com/calendar/ical/c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com/public/basic.ics>`__
@@ -244,7 +244,7 @@ don't find anyone present, chances are they happen to be off that day.
   * - Kristof Beyls
     - General questions on how to contribute to LLVM; organizing meetups;
       submitting talks; and other general LLVM-related topics. Arm/AArch64
-      codegen. LLVM security group.
+      codegen. LLVM security group. LLVM Office Hours.
     - Every 2nd and 4th Wednesday of the month at 9.30am CET, for 30 minutes.
       `ics <https://calendar.google.com/calendar/ical/co0h4ndpvtfe64opn7eraiq3ac%40group.calendar.google.com/public/basic.ics>`__
     - `Jitsi <https://meet.jit.si/KristofBeylsLLVMOfficeHour>`__
@@ -270,6 +270,42 @@ don't find anyone present, chances are they happen to be off that day.
       `ics <https://outlook.office365.com/owa/calendar/5c93bae7d8fc48f5bd150f9efda8806f@anl.gov/4929bd0f955b4f9b82b7bc995cb3b1bf665030567582422766/S-1-8-2190330107-3188380388-3000953923-1819937831/reachcalendar.ics>`__
     - `MS Teams <https://teams.microsoft.com/l/meetup-join/19%3ameeting_MTM2ZDNkNGUtZjg3My00ZDFjLTk5NjctYTIwMmI3MWM4MjFj%40thread.v2/0?context=%7b%22Tid%22%3a%220cfca185-25f7-49e3-8ae7-704d5326e285%22%2c%22Oid%22%3a%220cacfb51-1523-4455-a443-adca936d1af0%22%7d>`__
     - English, German
+  * - Tobias Grosser
+    - General questions on how to contribute to LLVM/MLIR, Polly, Loop Optimization, FPL, Research in LLVM, PhD in CS, Summer of Code.
+    - Monthly, last Monday of the month at 18:00 London time (typically 9am PT), for 30 minutes.
+    - `Video Call <https://meet.grosser.science/LLVMOfficeHours>`__
+    - English, German, Spanish, French
+  * - Anastasia Stulova
+    - Clang internals for C/C++ language extensions and dialects, OpenCL, GPU, SPIR-V, how to contribute, women in compilers. 
+    - Monthly, 2nd Thursday of the month at 17:00 BST - London time (9:00am PT except for 2 weeks in spring), 1 hour slot.
+    - `GoogleMeet <https://meet.google.com/kdy-fdbv-nuk>`__
+    - English, Russian, German (not fluently)
+
+
+Guidance for office hours hosts
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* If you're interested in becoming an office hours host, please add your
+  information to the list above.
+* When starting an office hours session, consider typing something like "*Hi,
+  I'm available for chats in the next half hour at* video chat URL. *I'm
+  looking forward to having conversations on the video chat or here.*" on the
+  LLVM chat channels that you are already on. These could include:
+
+    * the `#office-hours Discord channel
+      <https://discord.com/channels/636084430946959380/976196303681896538>`__.
+    * :ref:`IRC`
+
+  Doing this can help:
+    * overcome potential anxiety to call in for a first time,
+    * people who prefer to first exchange a few messages through text chat
+      before dialing in, and
+    * remind the wider community that office hours do exist.
+* If you decide to no longer host office hours, please do remove your entry
+  from the list above.
+
+
+.. _IRC:
 
 IRC
 ---

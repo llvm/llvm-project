@@ -224,7 +224,7 @@ unsigned CodeViewDebug::maybeRecordFile(const DIFile *F) {
         break;
       }
     }
-    bool Success = OS.EmitCVFileDirective(NextId, FullPath, ChecksumAsBytes,
+    bool Success = OS.emitCVFileDirective(NextId, FullPath, ChecksumAsBytes,
                                           static_cast<unsigned>(CSKind));
     (void)Success;
     assert(Success && ".cv_file directive failed");
@@ -245,7 +245,7 @@ CodeViewDebug::getInlineSite(const DILocation *InlinedAt,
               .SiteFuncId;
 
     Site->SiteFuncId = NextFuncId++;
-    OS.EmitCVInlineSiteIdDirective(
+    OS.emitCVInlineSiteIdDirective(
         Site->SiteFuncId, ParentFuncId, maybeRecordFile(InlinedAt->getFile()),
         InlinedAt->getLine(), InlinedAt->getColumn(), SMLoc());
     Site->Inlinee = Inlinee;
@@ -1073,9 +1073,9 @@ void CodeViewDebug::emitDebugInfoForThunk(const Function *GV,
   OS.AddComment("PtrNext");
   OS.emitInt32(0);
   OS.AddComment("Thunk section relative address");
-  OS.EmitCOFFSecRel32(Fn, /*Offset=*/0);
+  OS.emitCOFFSecRel32(Fn, /*Offset=*/0);
   OS.AddComment("Thunk section index");
-  OS.EmitCOFFSectionIndex(Fn);
+  OS.emitCOFFSectionIndex(Fn);
   OS.AddComment("Code size");
   OS.emitAbsoluteSymbolDiff(FI.End, Fn, 2);
   OS.AddComment("Ordinal");
@@ -1125,7 +1125,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
 
   // Emit FPO data, but only on 32-bit x86. No other platforms use it.
   if (Triple(MMI->getModule()->getTargetTriple()).getArch() == Triple::x86)
-    OS.EmitCVFPOData(Fn);
+    OS.emitCVFPOData(Fn);
 
   // Emit a symbol subsection, required by VS2012+ to find function boundaries.
   OS.AddComment("Symbol subsection for " + Twine(FuncName));
@@ -1153,9 +1153,9 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     OS.AddComment("Function type index");
     OS.emitInt32(getFuncIdForSubprogram(GV->getSubprogram()).getIndex());
     OS.AddComment("Function section relative address");
-    OS.EmitCOFFSecRel32(Fn, /*Offset=*/0);
+    OS.emitCOFFSecRel32(Fn, /*Offset=*/0);
     OS.AddComment("Function section index");
-    OS.EmitCOFFSectionIndex(Fn);
+    OS.emitCOFFSectionIndex(Fn);
     OS.AddComment("Flags");
     OS.emitInt8(0);
     // Emit the function display name as a null-terminated string.
@@ -1200,9 +1200,9 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
       MCSymbol *Label = Annot.first;
       MDTuple *Strs = cast<MDTuple>(Annot.second);
       MCSymbol *AnnotEnd = beginSymbolRecord(SymbolKind::S_ANNOTATION);
-      OS.EmitCOFFSecRel32(Label, /*Offset=*/0);
+      OS.emitCOFFSecRel32(Label, /*Offset=*/0);
       // FIXME: Make sure we don't overflow the max record size.
-      OS.EmitCOFFSectionIndex(Label);
+      OS.emitCOFFSectionIndex(Label);
       OS.emitInt16(Strs->getNumOperands());
       for (Metadata *MD : Strs->operands()) {
         // MDStrings are null terminated, so we can do EmitBytes and get the
@@ -1220,9 +1220,9 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
       const DIType *DITy = std::get<2>(HeapAllocSite);
       MCSymbol *HeapAllocEnd = beginSymbolRecord(SymbolKind::S_HEAPALLOCSITE);
       OS.AddComment("Call site offset");
-      OS.EmitCOFFSecRel32(BeginLabel, /*Offset=*/0);
+      OS.emitCOFFSecRel32(BeginLabel, /*Offset=*/0);
       OS.AddComment("Call site section index");
-      OS.EmitCOFFSectionIndex(BeginLabel);
+      OS.emitCOFFSectionIndex(BeginLabel);
       OS.AddComment("Call instruction length");
       OS.emitAbsoluteSymbolDiff(EndLabel, BeginLabel, 2);
       OS.AddComment("Type index");
@@ -1242,9 +1242,9 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
   OS.emitCVLinetableDirective(FI.FuncId, Fn, FI.End);
 }
 
-CodeViewDebug::LocalVarDefRange
+CodeViewDebug::LocalVarDef
 CodeViewDebug::createDefRangeMem(uint16_t CVRegister, int Offset) {
-  LocalVarDefRange DR;
+  LocalVarDef DR;
   DR.InMemory = -1;
   DR.DataOffset = Offset;
   assert(DR.DataOffset == Offset && "truncation");
@@ -1296,19 +1296,19 @@ void CodeViewDebug::collectVariableInfoFromMFTable(
            "Frame offsets with a scalable component are not supported");
 
     // Calculate the label ranges.
-    LocalVarDefRange DefRange =
+    LocalVarDef DefRange =
         createDefRangeMem(CVReg, FrameOffset.getFixed() + ExprOffset);
+
+    LocalVariable Var;
+    Var.DIVar = VI.Var;
 
     for (const InsnRange &Range : Scope->getRanges()) {
       const MCSymbol *Begin = getLabelBeforeInsn(Range.first);
       const MCSymbol *End = getLabelAfterInsn(Range.second);
       End = End ? End : Asm->getFunctionEnd();
-      DefRange.Ranges.emplace_back(Begin, End);
+      Var.DefRanges[DefRange].emplace_back(Begin, End);
     }
 
-    LocalVariable Var;
-    Var.DIVar = VI.Var;
-    Var.DefRanges.emplace_back(std::move(DefRange));
     if (Deref)
       Var.UseReferenceType = true;
 
@@ -1367,24 +1367,18 @@ void CodeViewDebug::calculateRanges(
     // We can only handle a register or an offseted load of a register.
     if (Location->Register == 0 || Location->LoadChain.size() > 1)
       continue;
-    {
-      LocalVarDefRange DR;
-      DR.CVRegister = TRI->getCodeViewRegNum(Location->Register);
-      DR.InMemory = !Location->LoadChain.empty();
-      DR.DataOffset =
-          !Location->LoadChain.empty() ? Location->LoadChain.back() : 0;
-      if (Location->FragmentInfo) {
-        DR.IsSubfield = true;
-        DR.StructOffset = Location->FragmentInfo->OffsetInBits / 8;
-      } else {
-        DR.IsSubfield = false;
-        DR.StructOffset = 0;
-      }
 
-      if (Var.DefRanges.empty() ||
-          Var.DefRanges.back().isDifferentLocation(DR)) {
-        Var.DefRanges.emplace_back(std::move(DR));
-      }
+    LocalVarDef DR;
+    DR.CVRegister = TRI->getCodeViewRegNum(Location->Register);
+    DR.InMemory = !Location->LoadChain.empty();
+    DR.DataOffset =
+        !Location->LoadChain.empty() ? Location->LoadChain.back() : 0;
+    if (Location->FragmentInfo) {
+      DR.IsSubfield = true;
+      DR.StructOffset = Location->FragmentInfo->OffsetInBits / 8;
+    } else {
+      DR.IsSubfield = false;
+      DR.StructOffset = 0;
     }
 
     // Compute the label range.
@@ -1401,7 +1395,7 @@ void CodeViewDebug::calculateRanges(
     // If the last range end is our begin, just extend the last range.
     // Otherwise make a new range.
     SmallVectorImpl<std::pair<const MCSymbol *, const MCSymbol *>> &R =
-        Var.DefRanges.back().Ranges;
+        Var.DefRanges[DR];
     if (!R.empty() && R.back().second == Begin)
       R.back().second = End;
     else
@@ -1518,7 +1512,7 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
   // FIXME: Set GuardCfg when it is implemented.
   CurFn->FrameProcOpts = FPO;
 
-  OS.EmitCVFuncIdDirective(CurFn->FuncId);
+  OS.emitCVFuncIdDirective(CurFn->FuncId);
 
   // Find the end of the function prolog.  First known non-DBG_VALUE and
   // non-frame setup location marks the beginning of the function body.
@@ -2814,7 +2808,9 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
   // records and on disk formats are described in SymbolRecords.h. BytePrefix
   // should be big enough to hold all forms without memory allocation.
   SmallString<20> BytePrefix;
-  for (const LocalVarDefRange &DefRange : Var.DefRanges) {
+  for (const auto &Pair : Var.DefRanges) {
+    LocalVarDef DefRange = Pair.first;
+    const auto &Ranges = Pair.second;
     BytePrefix.clear();
     if (DefRange.InMemory) {
       int Offset = DefRange.DataOffset;
@@ -2838,7 +2834,7 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
                : (EncFP == FI.EncodedLocalFramePtrReg))) {
         DefRangeFramePointerRelHeader DRHdr;
         DRHdr.Offset = Offset;
-        OS.emitCVDefRangeDirective(DefRange.Ranges, DRHdr);
+        OS.emitCVDefRangeDirective(Ranges, DRHdr);
       } else {
         uint16_t RegRelFlags = 0;
         if (DefRange.IsSubfield) {
@@ -2850,7 +2846,7 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
         DRHdr.Register = Reg;
         DRHdr.Flags = RegRelFlags;
         DRHdr.BasePointerOffset = Offset;
-        OS.emitCVDefRangeDirective(DefRange.Ranges, DRHdr);
+        OS.emitCVDefRangeDirective(Ranges, DRHdr);
       }
     } else {
       assert(DefRange.DataOffset == 0 && "unexpected offset into register");
@@ -2859,12 +2855,12 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
         DRHdr.Register = DefRange.CVRegister;
         DRHdr.MayHaveNoName = 0;
         DRHdr.OffsetInParent = DefRange.StructOffset;
-        OS.emitCVDefRangeDirective(DefRange.Ranges, DRHdr);
+        OS.emitCVDefRangeDirective(Ranges, DRHdr);
       } else {
         DefRangeRegisterHeader DRHdr;
         DRHdr.Register = DefRange.CVRegister;
         DRHdr.MayHaveNoName = 0;
-        OS.emitCVDefRangeDirective(DefRange.Ranges, DRHdr);
+        OS.emitCVDefRangeDirective(Ranges, DRHdr);
       }
     }
   }
@@ -2888,9 +2884,9 @@ void CodeViewDebug::emitLexicalBlock(const LexicalBlock &Block,
   OS.AddComment("Code size");
   OS.emitAbsoluteSymbolDiff(Block.End, Block.Begin, 4);   // Code Size
   OS.AddComment("Function section relative address");
-  OS.EmitCOFFSecRel32(Block.Begin, /*Offset=*/0);         // Func Offset
+  OS.emitCOFFSecRel32(Block.Begin, /*Offset=*/0); // Func Offset
   OS.AddComment("Function section index");
-  OS.EmitCOFFSectionIndex(FI.Begin);                      // Func Symbol
+  OS.emitCOFFSectionIndex(FI.Begin); // Func Symbol
   OS.AddComment("Lexical block name");
   emitNullTerminatedSymbolName(OS, Block.Name);           // Name
   endSymbolRecord(RecordEnd);
@@ -3175,6 +3171,11 @@ void CodeViewDebug::collectGlobalVariableInfo() {
     for (const auto *GVE : CU->getGlobalVariables()) {
       const DIGlobalVariable *DIGV = GVE->getVariable();
       const DIExpression *DIE = GVE->getExpression();
+      // Don't emit string literals in CodeView, as the only useful parts are
+      // generally the filename and line number, which isn't possible to output
+      // in CodeView. String literals should be the only unnamed GlobalVariable
+      // with debug info.
+      if (DIGV->getName().empty()) continue;
 
       if ((DIE->getNumElements() == 2) &&
           (DIE->getElement(0) == dwarf::DW_OP_plus_uconst))
@@ -3374,10 +3375,10 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     if (CVGlobalVariableOffsets.find(DIGV) != CVGlobalVariableOffsets.end())
       // Use the offset seen while collecting info on globals.
       Offset = CVGlobalVariableOffsets[DIGV];
-    OS.EmitCOFFSecRel32(GVSym, Offset);
+    OS.emitCOFFSecRel32(GVSym, Offset);
 
     OS.AddComment("Segment");
-    OS.EmitCOFFSectionIndex(GVSym);
+    OS.emitCOFFSectionIndex(GVSym);
     OS.AddComment("Name");
     const unsigned LengthOfDataRecord = 12;
     emitNullTerminatedSymbolName(OS, QualifiedName, LengthOfDataRecord);

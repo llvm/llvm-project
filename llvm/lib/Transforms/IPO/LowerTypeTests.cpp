@@ -1223,6 +1223,7 @@ void LowerTypeTestsModule::verifyTypeMDNode(GlobalObject *GO, MDNode *Type) {
 static const unsigned kX86JumpTableEntrySize = 8;
 static const unsigned kARMJumpTableEntrySize = 4;
 static const unsigned kARMBTIJumpTableEntrySize = 8;
+static const unsigned kRISCVJumpTableEntrySize = 8;
 
 unsigned LowerTypeTestsModule::getJumpTableEntrySize() {
   switch (Arch) {
@@ -1238,6 +1239,9 @@ unsigned LowerTypeTestsModule::getJumpTableEntrySize() {
         if (BTE->getZExtValue())
           return kARMBTIJumpTableEntrySize;
       return kARMJumpTableEntrySize;
+    case Triple::riscv32:
+    case Triple::riscv64:
+      return kRISCVJumpTableEntrySize;
     default:
       report_fatal_error("Unsupported architecture for jump tables");
   }
@@ -1265,6 +1269,9 @@ void LowerTypeTestsModule::createJumpTableEntry(
     AsmOS << "b $" << ArgIndex << "\n";
   } else if (JumpTableArch == Triple::thumb) {
     AsmOS << "b.w $" << ArgIndex << "\n";
+  } else if (JumpTableArch == Triple::riscv32 ||
+             JumpTableArch == Triple::riscv64) {
+    AsmOS << "tail $" << ArgIndex << "@plt\n";
   } else {
     report_fatal_error("Unsupported architecture for jump tables");
   }
@@ -1282,7 +1289,8 @@ Type *LowerTypeTestsModule::getJumpTableEntryType() {
 void LowerTypeTestsModule::buildBitSetsFromFunctions(
     ArrayRef<Metadata *> TypeIds, ArrayRef<GlobalTypeMember *> Functions) {
   if (Arch == Triple::x86 || Arch == Triple::x86_64 || Arch == Triple::arm ||
-      Arch == Triple::thumb || Arch == Triple::aarch64)
+      Arch == Triple::thumb || Arch == Triple::aarch64 ||
+      Arch == Triple::riscv32 || Arch == Triple::riscv64)
     buildBitSetsFromFunctionsNative(TypeIds, Functions);
   else if (Arch == Triple::wasm32 || Arch == Triple::wasm64)
     buildBitSetsFromFunctionsWASM(TypeIds, Functions);
@@ -1426,6 +1434,11 @@ void LowerTypeTestsModule::createJumpTable(
   if (JumpTableArch == Triple::aarch64) {
     F->addFnAttr("branch-target-enforcement", "false");
     F->addFnAttr("sign-return-address", "none");
+  }
+  if (JumpTableArch == Triple::riscv32 || JumpTableArch == Triple::riscv64) {
+    // Make sure the jump table assembly is not modified by the assembler or
+    // the linker.
+    F->addFnAttr("target-features", "-c,-relax");
   }
   // Make sure we don't emit .eh_frame for this function.
   F->addFnAttr(Attribute::NoUnwind);

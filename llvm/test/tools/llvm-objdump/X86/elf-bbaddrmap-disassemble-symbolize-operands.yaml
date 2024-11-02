@@ -1,0 +1,172 @@
+## Test that in the presence of SHT_LLVM_BB_ADDR_MAP sections,
+## --symbolize-operands can display <BB*> labels.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-objdump %t1 -d --symbolize-operands -M intel --no-show-raw-insn --no-leading-addr | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=INTEL
+# RUN: llvm-objdump %t1 -d --symbolize-operands -M att --no-show-raw-insn --no-leading-addr | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=ATT
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-objdump %t2 -d --symbolize-operands -M intel --no-show-raw-insn --no-leading-addr | \
+# RUN:   FileCheck %s --match-full-lines --check-prefixes=INTEL,INTEL-MULTISECTION
+# RUN: llvm-objdump %t2 -d --symbolize-operands -M att --no-show-raw-insn --no-leading-addr | \
+# RUN:   FileCheck %s --match-full-lines --check-prefixes=ATT,ATT-MULTISECTION
+
+## Expect to find the branch and basic block labels and global variable name.
+# ATT:      <foo>:
+# ATT-NEXT: <BB0>:
+# ATT-NEXT:   pushq %rax
+# ATT-NEXT: <BB1>:
+# ATT-NEXT:   cmpl  , %eax <symbol>
+# ATT-NEXT:   nop
+# ATT-NEXT: <BB2>:
+# ATT-NEXT:   jge    <BB3>
+# ATT-NEXT:   jmp    <BB1>
+# ATT-NEXT: <BB3>:
+# ATT-NEXT:   retq
+# ATT-MULTISECTION:      <bar>:
+# ATT-MULTISECTION-NEXT: <BB0>:
+# ATT-MULTISECTION-NEXT:   pushq  %rax
+# ATT-MULTISECTION-NEXT:   movl   %edx, %eax
+# ATT-MULTISECTION-NEXT:   je     <BB2>
+# ATT-MULTISECTION-NEXT: <BB1>:
+# ATT-MULTISECTION-NEXT:   xorl   %esi, %esi
+# ATT-MULTISECTION-NEXT: <BB2>:
+# ATT-MULTISECTION-NEXT:   callq  <bar>
+# ATT-MULTISECTION-NEXT:   retq
+
+# INTEL:      <foo>:
+# INTEL-NEXT: <BB0>:
+# INTEL-NEXT:   push rax
+# INTEL-NEXT: <BB1>:
+# INTEL-NEXT:   cmp  eax, dword ptr <symbol>
+# INTEL-NEXT:   nop
+# INTEL-NEXT: <BB2>:
+# INTEL-NEXT:   jge   <BB3>
+# INTEL-NEXT:   jmp   <BB1>
+# INTEL-NEXT: <BB3>:
+# INTEL-NEXT:   ret
+# INTEL-MULTISECTION:      <bar>:
+# INTEL-MULTISECTION-NEXT: <BB0>:
+# INTEL-MULTISECTION-NEXT:   push  rax
+# INTEL-MULTISECTION-NEXT:   mov   eax, edx
+# INTEL-MULTISECTION-NEXT:   je    <BB2>
+# INTEL-MULTISECTION-NEXT: <BB1>:
+# INTEL-MULTISECTION-NEXT:   xor   esi, esi
+# INTEL-MULTISECTION-NEXT: <BB2>:
+# INTEL-MULTISECTION-NEXT:   call  <bar>
+# INTEL-MULTISECTION-NEXT:   ret
+
+## This object file contains a text section, a SHT_LLVM_BB_ADDR_MAP section
+## linked to it, and a data section.
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Address: 0x4000
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: '503b0505100000907d02ebf5c3'
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Address: 0x5000
+  - Name:   bb_addr_map_1
+    Type:   SHT_LLVM_BB_ADDR_MAP
+    Link:   .text
+    Entries:
+      - Address: 0x4000
+        BBEntries:
+          - AddressOffset: 0x0
+            Size:          0x1
+            Metadata:      0x1
+          - AddressOffset: 0x1
+            Size:          0x6
+            Metadata:      0x0
+          - AddressOffset: 0x8
+            Size:          0x3
+            Metadata:      0x0
+          - AddressOffset: 0xc
+            Size:          0x1
+            Metadata:      0x2
+Symbols:
+  - Name:    foo
+    Section: .text
+    Value:   0x4000
+  - Name:    symbol
+    Section: .data
+    Value:   0x500c
+
+## This object file contains a separate text section and SHT_LLVM_BB_ADDR_MAP
+## section for each of the two functions foo and bar. foo's section contents
+## are identical to the ones above.
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text.foo
+    Type:    SHT_PROGBITS
+    Address: 0x4000
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: '503b0505200000907d02ebf5c3'
+  - Name:    .text.bar
+    Type:    SHT_PROGBITS
+    Address: 0x5000
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: '5089d0740231f6e8f4ffffffc3'
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Address: 0x6000
+  - Name:   bb_addr_map.foo
+    Type:   SHT_LLVM_BB_ADDR_MAP
+    Link:   .text.foo
+    Entries:
+      - Address: 0x4000
+        BBEntries:
+          - AddressOffset: 0x0
+            Size:          0x1
+            Metadata:      0x1
+          - AddressOffset: 0x1
+            Size:          0x6
+            Metadata:      0x0
+          - AddressOffset: 0x8
+            Size:          0x3
+            Metadata:      0x0
+          - AddressOffset: 0xc
+            Size:          0x1
+            Metadata:      0x2
+  - Name:   bb_addr_map.bar
+    Type:   SHT_LLVM_BB_ADDR_MAP
+    Link:   .text.bar
+    Entries:
+      - Address: 0x5000
+        BBEntries:
+          - AddressOffset: 0x0
+            Size:          0x1
+            Metadata:      0x1
+          - AddressOffset: 0x5
+            Size:          0x2
+            Metadata:      0x0
+          - AddressOffset: 0x7
+            Size:          0x6
+            Metadata:      0x0
+
+Symbols:
+  - Name:    foo
+    Section: .text.foo
+    Value:   0x4000
+  - Name:    bar
+    Section: .text.bar
+    Value:   0x5000
+  - Name:    symbol
+    Section: .data
+    Value:   0x600c

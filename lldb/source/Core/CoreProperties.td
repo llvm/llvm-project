@@ -33,6 +33,10 @@ let Definition = "modulelist" in {
     Global,
     DefaultUnsignedValue<7>,
     Desc<"The expiration time in days for a file. When a file hasn't been accessed for the specified amount of days, it is removed from the cache. A value of 0 disables the expiration-based pruning.">;
+  def LoadSymbolOnDemand: Property<"load-on-demand", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"Enable on demand symbol loading in LLDB. LLDB will load debug info on demand for each module based on various conditions (e.g. matched breakpoint, resolved stack frame addresses and matched global variables/function symbols in symbol table) to improve performance. Please refer to docs/use/ondemand.rst for details.">;
 }
 
 let Definition = "debugger" in {

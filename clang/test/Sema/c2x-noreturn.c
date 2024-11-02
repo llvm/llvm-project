@@ -36,7 +36,7 @@ _Noreturn void func1(void); // ok, using the function specifier
 [[_Noreturn]] void func3(void); // all-warning {{the '[[_Noreturn]]' attribute spelling is deprecated in C2x; use '[[noreturn]]' instead}}
 
 // Test the behavior of including <stdnoreturn.h>
-#include <stdnoreturn.h> // c2x-warning@stdnoreturn.h:* {{the '<stdnoreturn.h>' header is deprecated in C2x; either use the '_Noreturn' keyword or the '[[noreturn]]' attribute}}
+#include <stdnoreturn.h>
 
 [[noreturn]] void func6(void);
 

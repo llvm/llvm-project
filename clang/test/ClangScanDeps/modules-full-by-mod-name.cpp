@@ -12,11 +12,11 @@
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/modules_cdb_clangcl_by_mod_name.json > %t_clangcl.cdb
 //
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 4 -format experimental-full \
-// RUN:   -mode preprocess-minimized-sources -module-name=header1 > %t.result
+// RUN:   -mode preprocess-dependency-directives -module-name=header1 > %t.result
 // RUN: cat %t.result | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t.dir --check-prefixes=CHECK %s
 //
 // RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 4 -format experimental-full \
-// RUN:   -mode preprocess-minimized-sources -module-name=header1 > %t_clangcl.result
+// RUN:   -mode preprocess-dependency-directives -module-name=header1 > %t_clangcl.result
 // RUN: cat %t_clangcl.result | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t.dir --check-prefixes=CHECK %s
 
 // CHECK:      {

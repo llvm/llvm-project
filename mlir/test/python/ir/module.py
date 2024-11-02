@@ -64,7 +64,7 @@ def testCreateEmpty():
 def testRoundtripUnicode():
   ctx = Context()
   module = Module.parse(r"""
-    func private @roundtripUnicode() attributes { foo = "😊" }
+    func.func private @roundtripUnicode() attributes { foo = "😊" }
   """, ctx)
   print(str(module))
 
@@ -79,7 +79,7 @@ def testRoundtripUnicode():
 def testRoundtripBinary():
   with Context():
     module = Module.parse(r"""
-      func private @roundtripUnicode() attributes { foo = "😊" }
+      func.func private @roundtripUnicode() attributes { foo = "😊" }
     """)
     binary_asm = module.operation.get_asm(binary=True)
     assert isinstance(binary_asm, bytes)

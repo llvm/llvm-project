@@ -1,4 +1,5 @@
 add_subdirectory(Affine)
+add_subdirectory(AMDGPU)
 add_subdirectory(Arithmetic)
 add_subdirectory(ArmNeon)
 add_subdirectory(ArmSVE)

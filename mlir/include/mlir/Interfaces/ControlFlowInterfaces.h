@@ -266,9 +266,9 @@ struct ReturnLike : public TraitBase<ConcreteType, ReturnLike> {
   static LogicalResult verifyTrait(Operation *op) {
     static_assert(ConcreteType::template hasTrait<IsTerminator>(),
                   "expected operation to be a terminator");
-    static_assert(ConcreteType::template hasTrait<ZeroResult>(),
+    static_assert(ConcreteType::template hasTrait<ZeroResults>(),
                   "expected operation to have zero results");
-    static_assert(ConcreteType::template hasTrait<ZeroSuccessor>(),
+    static_assert(ConcreteType::template hasTrait<ZeroSuccessors>(),
                   "expected operation to have zero successors");
     return success();
   }

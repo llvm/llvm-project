@@ -951,7 +951,7 @@ LLVMErrorRef LLVMOrcLLJITLookup(LLVMOrcLLJITRef J,
     return wrap(Sym.takeError());
   }
 
-  *Result = Sym->getAddress();
+  *Result = Sym->getValue();
   return LLVMErrorSuccess;
 }
 

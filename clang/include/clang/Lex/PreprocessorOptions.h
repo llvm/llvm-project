@@ -10,8 +10,9 @@
 #define LLVM_CLANG_LEX_PREPROCESSOROPTIONS_H_
 
 #include "clang/Basic/BitmaskEnum.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Lex/PreprocessorExcludedConditionalDirectiveSkipMapping.h"
+#include "clang/Lex/DependencyDirectivesScanner.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include <functional>
@@ -200,13 +201,18 @@ public:
   /// build it again.
   std::shared_ptr<FailedModulesSet> FailedModules;
 
-  /// Contains the currently active skipped range mappings for skipping excluded
-  /// conditional directives.
+  /// Function for getting the dependency preprocessor directives of a file.
   ///
-  /// The pointer is passed to the Preprocessor when it's constructed. The
-  /// pointer is unowned, the client is responsible for its lifetime.
-  ExcludedPreprocessorDirectiveSkipMapping
-      *ExcludedConditionalDirectiveSkipMappings = nullptr;
+  /// These are directives derived from a special form of lexing where the
+  /// source input is scanned for the preprocessor directives that might have an
+  /// effect on the dependencies for a compilation unit.
+  ///
+  /// Enables a client to cache the directives for a file and provide them
+  /// across multiple compiler invocations.
+  /// FIXME: Allow returning an error.
+  std::function<Optional<ArrayRef<dependency_directives_scan::Directive>>(
+      FileEntryRef)>
+      DependencyDirectivesForFile;
 
   /// Set up preprocessor for RunAnalysis action.
   bool SetUpStaticAnalyzer = false;

@@ -17,11 +17,14 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
+#include <cstring>
 
 namespace clang {
 namespace clangd {
 
 const char IWYUPragmaKeep[] = "// IWYU pragma: keep";
+const char IWYUPragmaExport[] = "// IWYU pragma: export";
+const char IWYUPragmaBeginExports[] = "// IWYU pragma: begin_exports";
 
 class IncludeStructure::RecordHeaders : public PPCallbacks,
                                         public CommentHandler {
@@ -106,10 +109,17 @@ public:
         InBuiltinFile = false;
       // At file exit time HeaderSearchInfo is valid and can be used to
       // determine whether the file was a self-contained header or not.
-      if (const FileEntry *FE = SM.getFileEntryForID(PrevFID))
-        if (!isSelfContainedHeader(FE, PrevFID, SM, HeaderInfo))
+      if (const FileEntry *FE = SM.getFileEntryForID(PrevFID)) {
+        // isSelfContainedHeader only returns true once the full header-guard
+        // structure has been seen, i.e. when exiting the *outer* copy of the
+        // file. So last result wins.
+        if (isSelfContainedHeader(FE, PrevFID, SM, HeaderInfo))
+          Out->NonSelfContained.erase(
+              *Out->getID(SM.getFileEntryForID(PrevFID)));
+        else
           Out->NonSelfContained.insert(
               *Out->getID(SM.getFileEntryForID(PrevFID)));
+      }
       break;
     }
     case PPCallbacks::RenameFile:
@@ -118,30 +128,45 @@ public:
     }
   }
 
-  // Given:
-  //
-  // #include "foo.h"
-  // #include "bar.h" // IWYU pragma: keep
-  //
-  // The order in which the callbacks will be triggered:
-  //
-  // 1. InclusionDirective("foo.h")
-  // 2. HandleComment("// IWYU pragma: keep")
-  // 3. InclusionDirective("bar.h")
-  //
-  // HandleComment will store the last location of "IWYU pragma: keep" comment
-  // in the main file, so that when InclusionDirective is called, it will know
-  // that the next inclusion is behind the IWYU pragma.
   bool HandleComment(Preprocessor &PP, SourceRange Range) override {
-    if (!inMainFile() || Range.getBegin().isMacroID())
-      return false;
     bool Err = false;
     llvm::StringRef Text = SM.getCharacterData(Range.getBegin(), &Err);
-    if (Err || !Text.consume_front(IWYUPragmaKeep))
+    if (Err)
       return false;
-    unsigned Offset = SM.getFileOffset(Range.getBegin());
-    LastPragmaKeepInMainFileLine =
-        SM.getLineNumber(SM.getFileID(Range.getBegin()), Offset) - 1;
+    if (inMainFile()) {
+      // Given:
+      //
+      // #include "foo.h"
+      // #include "bar.h" // IWYU pragma: keep
+      //
+      // The order in which the callbacks will be triggered:
+      //
+      // 1. InclusionDirective("foo.h")
+      // 2. handleCommentInMainFile("// IWYU pragma: keep")
+      // 3. InclusionDirective("bar.h")
+      //
+      // This code stores the last location of "IWYU pragma: keep" (or export)
+      // comment in the main file, so that when InclusionDirective is called, it
+      // will know that the next inclusion is behind the IWYU pragma.
+      // FIXME: Support "IWYU pragma: begin_exports" and "IWYU pragma:
+      // end_exports".
+      if (!Text.startswith(IWYUPragmaExport) &&
+          !Text.startswith(IWYUPragmaKeep))
+        return false;
+      unsigned Offset = SM.getFileOffset(Range.getBegin());
+      LastPragmaKeepInMainFileLine =
+          SM.getLineNumber(SM.getMainFileID(), Offset) - 1;
+    } else {
+      // Memorize headers that that have export pragmas in them. Include Cleaner
+      // does not support them properly yet, so they will be not marked as
+      // unused.
+      // FIXME: Once IncludeCleaner supports export pragmas, remove this.
+      if (!Text.startswith(IWYUPragmaExport) &&
+          !Text.startswith(IWYUPragmaBeginExports))
+        return false;
+      Out->HasIWYUExport.insert(
+          *Out->getID(SM.getFileEntryForID(SM.getFileID(Range.getBegin()))));
+    }
     return false;
   }
 
@@ -227,8 +252,7 @@ IncludeStructure::getID(const FileEntry *Entry) const {
   return It->second;
 }
 
-IncludeStructure::HeaderID
-IncludeStructure::getOrCreateID(FileEntryRef Entry) {
+IncludeStructure::HeaderID IncludeStructure::getOrCreateID(FileEntryRef Entry) {
   // Main file's FileEntry was not known at IncludeStructure creation time.
   if (&Entry.getFileEntry() == MainFileEntry) {
     if (RealPathNames.front().empty())

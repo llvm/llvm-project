@@ -109,7 +109,7 @@ private:
 /// swallowed up in boilerplate without this, so we provide this for narrow
 /// cases where it is important.
 ///
-class ParseResult : public LogicalResult {
+class LLVM_NODISCARD ParseResult : public LogicalResult {
 public:
   ParseResult(LogicalResult result = success()) : LogicalResult(result) {}
 

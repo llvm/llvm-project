@@ -62,7 +62,7 @@ define amdgpu_kernel void @soff1_voff2(i32 %soff) {
 ; GFX940-SDAG:       ; %bb.0: ; %bb
 ; GFX940-SDAG-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 1
-; GFX940-SDAG-NEXT:    v_mul_u32_u24_e32 v0, 2, v0
+; GFX940-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 2
 ; GFX940-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-SDAG-NEXT:    s_add_i32 s0, s0, 4
@@ -79,7 +79,7 @@ define amdgpu_kernel void @soff1_voff2(i32 %soff) {
 ; GFX940-GISEL:       ; %bb.0: ; %bb
 ; GFX940-GISEL-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX940-GISEL-NEXT:    v_mov_b32_e32 v1, 4
-; GFX940-GISEL-NEXT:    v_mul_u32_u24_e32 v0, 2, v0
+; GFX940-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX940-GISEL-NEXT:    v_mov_b32_e32 v2, 1
 ; GFX940-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-GISEL-NEXT:    v_add_u32_e32 v1, s0, v1
@@ -114,7 +114,7 @@ define amdgpu_kernel void @soff1_voff4(i32 %soff) {
 ; GFX940-SDAG:       ; %bb.0: ; %bb
 ; GFX940-SDAG-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 1
-; GFX940-SDAG-NEXT:    v_mul_u32_u24_e32 v0, 4, v0
+; GFX940-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 2
 ; GFX940-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-SDAG-NEXT:    s_add_i32 s0, s0, 4
@@ -131,7 +131,7 @@ define amdgpu_kernel void @soff1_voff4(i32 %soff) {
 ; GFX940-GISEL:       ; %bb.0: ; %bb
 ; GFX940-GISEL-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX940-GISEL-NEXT:    v_mov_b32_e32 v1, 4
-; GFX940-GISEL-NEXT:    v_mul_u32_u24_e32 v0, 4, v0
+; GFX940-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX940-GISEL-NEXT:    v_mov_b32_e32 v2, 1
 ; GFX940-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-GISEL-NEXT:    v_add_u32_e32 v1, s0, v1
@@ -218,7 +218,7 @@ define amdgpu_kernel void @soff2_voff2(i32 %soff) {
 ; GFX940-SDAG:       ; %bb.0: ; %bb
 ; GFX940-SDAG-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 1
-; GFX940-SDAG-NEXT:    v_mul_u32_u24_e32 v0, 2, v0
+; GFX940-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 2
 ; GFX940-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-SDAG-NEXT:    s_lshl_b32 s0, s0, 1
@@ -236,7 +236,7 @@ define amdgpu_kernel void @soff2_voff2(i32 %soff) {
 ; GFX940-GISEL:       ; %bb.0: ; %bb
 ; GFX940-GISEL-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX940-GISEL-NEXT:    v_mov_b32_e32 v1, 4
-; GFX940-GISEL-NEXT:    v_mul_u32_u24_e32 v0, 2, v0
+; GFX940-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX940-GISEL-NEXT:    v_mov_b32_e32 v2, 1
 ; GFX940-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-GISEL-NEXT:    s_lshl_b32 s0, s0, 1
@@ -272,7 +272,7 @@ define amdgpu_kernel void @soff2_voff4(i32 %soff) {
 ; GFX940-SDAG:       ; %bb.0: ; %bb
 ; GFX940-SDAG-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 1
-; GFX940-SDAG-NEXT:    v_mul_u32_u24_e32 v0, 4, v0
+; GFX940-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 2
 ; GFX940-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-SDAG-NEXT:    s_lshl_b32 s0, s0, 1
@@ -290,7 +290,7 @@ define amdgpu_kernel void @soff2_voff4(i32 %soff) {
 ; GFX940-GISEL:       ; %bb.0: ; %bb
 ; GFX940-GISEL-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX940-GISEL-NEXT:    v_mov_b32_e32 v1, 4
-; GFX940-GISEL-NEXT:    v_mul_u32_u24_e32 v0, 4, v0
+; GFX940-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX940-GISEL-NEXT:    v_mov_b32_e32 v2, 1
 ; GFX940-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-GISEL-NEXT:    s_lshl_b32 s0, s0, 1
@@ -378,7 +378,7 @@ define amdgpu_kernel void @soff4_voff2(i32 %soff) {
 ; GFX940-SDAG:       ; %bb.0: ; %bb
 ; GFX940-SDAG-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 1
-; GFX940-SDAG-NEXT:    v_mul_u32_u24_e32 v0, 2, v0
+; GFX940-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 2
 ; GFX940-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-SDAG-NEXT:    s_lshl_b32 s0, s0, 2
@@ -396,7 +396,7 @@ define amdgpu_kernel void @soff4_voff2(i32 %soff) {
 ; GFX940-GISEL:       ; %bb.0: ; %bb
 ; GFX940-GISEL-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX940-GISEL-NEXT:    v_mov_b32_e32 v1, 4
-; GFX940-GISEL-NEXT:    v_mul_u32_u24_e32 v0, 2, v0
+; GFX940-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX940-GISEL-NEXT:    v_mov_b32_e32 v2, 1
 ; GFX940-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-GISEL-NEXT:    s_lshl_b32 s0, s0, 2
@@ -432,7 +432,7 @@ define amdgpu_kernel void @soff4_voff4(i32 %soff) {
 ; GFX940-SDAG:       ; %bb.0: ; %bb
 ; GFX940-SDAG-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v1, 1
-; GFX940-SDAG-NEXT:    v_mul_u32_u24_e32 v0, 4, v0
+; GFX940-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX940-SDAG-NEXT:    v_mov_b32_e32 v2, 2
 ; GFX940-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-SDAG-NEXT:    s_lshl_b32 s0, s0, 2
@@ -450,7 +450,7 @@ define amdgpu_kernel void @soff4_voff4(i32 %soff) {
 ; GFX940-GISEL:       ; %bb.0: ; %bb
 ; GFX940-GISEL-NEXT:    s_load_dword s0, s[0:1], 0x24
 ; GFX940-GISEL-NEXT:    v_mov_b32_e32 v1, 4
-; GFX940-GISEL-NEXT:    v_mul_u32_u24_e32 v0, 4, v0
+; GFX940-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX940-GISEL-NEXT:    v_mov_b32_e32 v2, 1
 ; GFX940-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-GISEL-NEXT:    s_lshl_b32 s0, s0, 2

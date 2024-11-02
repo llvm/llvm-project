@@ -9,6 +9,7 @@
 #include "flang/Semantics/expression.h"
 #include "check-call.h"
 #include "pointer-assignment.h"
+#include "resolve-names-utils.h"
 #include "resolve-names.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
@@ -423,8 +424,21 @@ struct IntTypeVisitor {
   template <typename T> Result Test() {
     if (T::kind >= kind) {
       const char *p{digits.begin()};
-      auto value{T::Scalar::Read(p, 10, true /*signed*/)};
-      if (!value.overflow) {
+      using Int = typename T::Scalar;
+      typename Int::ValueWithOverflow num{0, false};
+      if (isNegated) {
+        auto unsignedNum{Int::Read(p, 10, false /*unsigned*/)};
+        num.value = unsignedNum.value.Negate().value;
+        num.overflow = unsignedNum.overflow || num.value > Int{0};
+        if (!num.overflow && num.value.Negate().overflow &&
+            !analyzer.context().IsInModuleFile(digits)) {
+          analyzer.Say(digits,
+              "negated maximum INTEGER(KIND=%d) literal"_port_en_US, T::kind);
+        }
+      } else {
+        num = Int::Read(p, 10, true /*signed*/);
+      }
+      if (!num.overflow) {
         if (T::kind > kind) {
           if (!isDefaultKind ||
               !analyzer.context().IsEnabled(LanguageFeature::BigIntLiterals)) {
@@ -438,7 +452,7 @@ struct IntTypeVisitor {
           }
         }
         return Expr<SomeType>{
-            Expr<SomeInteger>{Expr<T>{Constant<T>{std::move(value.value)}}}};
+            Expr<SomeInteger>{Expr<T>{Constant<T>{std::move(num.value)}}}};
       }
     }
     return std::nullopt;
@@ -447,17 +461,19 @@ struct IntTypeVisitor {
   parser::CharBlock digits;
   int kind;
   bool isDefaultKind;
+  bool isNegated;
 };
 
 template <typename PARSED>
-MaybeExpr ExpressionAnalyzer::IntLiteralConstant(const PARSED &x) {
+MaybeExpr ExpressionAnalyzer::IntLiteralConstant(
+    const PARSED &x, bool isNegated) {
   const auto &kindParam{std::get<std::optional<parser::KindParam>>(x.t)};
   bool isDefaultKind{!kindParam};
   int kind{AnalyzeKindParam(kindParam, GetDefaultKind(TypeCategory::Integer))};
   if (CheckIntrinsicKind(TypeCategory::Integer, kind)) {
     auto digits{std::get<parser::CharBlock>(x.t)};
     if (MaybeExpr result{common::SearchTypes(
-            IntTypeVisitor{*this, digits, kind, isDefaultKind})}) {
+            IntTypeVisitor{*this, digits, kind, isDefaultKind, isNegated})}) {
       return result;
     } else if (isDefaultKind) {
       Say(digits,
@@ -471,10 +487,11 @@ MaybeExpr ExpressionAnalyzer::IntLiteralConstant(const PARSED &x) {
   return std::nullopt;
 }
 
-MaybeExpr ExpressionAnalyzer::Analyze(const parser::IntLiteralConstant &x) {
+MaybeExpr ExpressionAnalyzer::Analyze(
+    const parser::IntLiteralConstant &x, bool isNegated) {
   auto restorer{
       GetContextualMessages().SetLocation(std::get<parser::CharBlock>(x.t))};
-  return IntLiteralConstant(x);
+  return IntLiteralConstant(x, isNegated);
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(
@@ -552,12 +569,20 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::RealLiteralConstant &x) {
   if (letterKind) {
     defaultKind = *letterKind;
   }
-  // C716 requires 'E' as an exponent, but this is more useful
+  // C716 requires 'E' as an exponent.
+  // Extension: allow exponent-letter matching the kind-param.
   auto kind{AnalyzeKindParam(x.kind, defaultKind)};
-  if (letterKind && kind != *letterKind && expoLetter != 'e') {
-    Say("Explicit kind parameter on real constant disagrees with "
-        "exponent letter '%c'"_port_en_US,
-        expoLetter);
+  if (letterKind && expoLetter != 'e') {
+    if (kind != *letterKind) {
+      Say("Explicit kind parameter on real constant disagrees with "
+          "exponent letter '%c'"_warn_en_US,
+          expoLetter);
+    } else if (x.kind &&
+        context_.ShouldWarn(
+            common::LanguageFeature::ExponentMatchingKindParam)) {
+      Say("Explicit kind parameter together with non-'E' exponent letter "
+          "is not standard"_port_en_US);
+    }
   }
   auto result{common::SearchTypes(
       RealTypeVisitor{kind, x.real.source, GetFoldingContext()})};
@@ -1073,7 +1098,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
     MiscKind kind{details->kind()};
     if (kind == MiscKind::ComplexPartRe || kind == MiscKind::ComplexPartIm) {
       if (auto *zExpr{std::get_if<Expr<SomeComplex>>(&base->u)}) {
-        if (std::optional<DataRef> dataRef{ExtractDataRef(std::move(*zExpr))}) {
+        if (std::optional<DataRef> dataRef{ExtractDataRef(*zExpr)}) {
+          // Represent %RE/%IM as a designator
           Expr<SomeReal> realExpr{common::visit(
               [&](const auto &z) {
                 using PartType = typename ResultType<decltype(z)>::Part;
@@ -1894,8 +1920,8 @@ static const Symbol *GetBindingResolution(
 }
 
 auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
-    const parser::ProcComponentRef &pcr, ActualArguments &&arguments)
-    -> std::optional<CalleeAndArguments> {
+    const parser::ProcComponentRef &pcr, ActualArguments &&arguments,
+    bool isSubroutine) -> std::optional<CalleeAndArguments> {
   const parser::StructureComponent &sc{pcr.v.thing};
   if (MaybeExpr base{Analyze(sc.base)}) {
     if (const Symbol * sym{sc.component.symbol}) {
@@ -1918,9 +1944,12 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
                 }
                 return true;
               }};
-          auto pair{ResolveGeneric(*sym, arguments, adjustment)};
+          auto pair{ResolveGeneric(*sym, arguments, adjustment, isSubroutine)};
           sym = pair.first;
-          if (!sym) {
+          if (sym) {
+            // re-resolve the name to the specific binding
+            sc.component.symbol = const_cast<Symbol *>(sym);
+          } else {
             EmitGenericResolutionError(*sc.component.symbol, pair.second);
             return std::nullopt;
           }
@@ -2040,67 +2069,94 @@ bool ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
 // adjustActuals is called on procedure bindings to handle pass arg.
 std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
     const Symbol &symbol, const ActualArguments &actuals,
-    const AdjustActuals &adjustActuals, bool mightBeStructureConstructor) {
+    const AdjustActuals &adjustActuals, bool isSubroutine,
+    bool mightBeStructureConstructor) {
   const Symbol *elemental{nullptr}; // matching elemental specific proc
   const Symbol *nonElemental{nullptr}; // matching non-elemental specific
-  const auto &details{symbol.GetUltimate().get<semantics::GenericDetails>()};
-  bool anyBareNullActual{
-      std::find_if(actuals.begin(), actuals.end(), [](auto iter) {
-        return IsBareNullPointer(iter->UnwrapExpr());
-      }) != actuals.end()};
-  for (const Symbol &specific : details.specificProcs()) {
-    if (!ResolveForward(specific)) {
-      continue;
+  const Symbol &ultimate{symbol.GetUltimate()};
+  // Check for a match with an explicit INTRINSIC
+  if (ultimate.attrs().test(semantics::Attr::INTRINSIC)) {
+    parser::Messages buffer;
+    auto restorer{foldingContext_.messages().SetMessages(buffer)};
+    ActualArguments localActuals{actuals};
+    if (context_.intrinsics().Probe(
+            CallCharacteristics{ultimate.name().ToString(), isSubroutine},
+            localActuals, foldingContext_) &&
+        !buffer.AnyFatalError()) {
+      return {&ultimate, false};
     }
-    if (std::optional<characteristics::Procedure> procedure{
-            characteristics::Procedure::Characterize(
-                ProcedureDesignator{specific}, context_.foldingContext())}) {
-      ActualArguments localActuals{actuals};
-      if (specific.has<semantics::ProcBindingDetails>()) {
-        if (!adjustActuals.value()(specific, localActuals)) {
-          continue;
-        }
+  }
+  if (const auto *details{ultimate.detailsIf<semantics::GenericDetails>()}) {
+    bool anyBareNullActual{
+        std::find_if(actuals.begin(), actuals.end(), [](auto iter) {
+          return IsBareNullPointer(iter->UnwrapExpr());
+        }) != actuals.end()};
+    for (const Symbol &specific : details->specificProcs()) {
+      if (!ResolveForward(specific)) {
+        continue;
       }
-      if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
-              GetFoldingContext(), false /* no integer conversions */) &&
-          CheckCompatibleArguments(*procedure, localActuals)) {
-        if ((procedure->IsElemental() && elemental) ||
-            (!procedure->IsElemental() && nonElemental)) {
-          // 16.9.144(6): a bare NULL() is not allowed as an actual
-          // argument to a generic procedure if the specific procedure
-          // cannot be unambiguously distinguished
-          return {nullptr, true /* due to NULL actuals */};
-        }
-        if (!procedure->IsElemental()) {
-          // takes priority over elemental match
-          nonElemental = &specific;
-          if (!anyBareNullActual) {
-            break; // unambiguous case
+      if (std::optional<characteristics::Procedure> procedure{
+              characteristics::Procedure::Characterize(
+                  ProcedureDesignator{specific}, context_.foldingContext())}) {
+        ActualArguments localActuals{actuals};
+        if (specific.has<semantics::ProcBindingDetails>()) {
+          if (!adjustActuals.value()(specific, localActuals)) {
+            continue;
           }
-        } else {
-          elemental = &specific;
+        }
+        if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
+                GetFoldingContext(), false /* no integer conversions */) &&
+            CheckCompatibleArguments(*procedure, localActuals)) {
+          if ((procedure->IsElemental() && elemental) ||
+              (!procedure->IsElemental() && nonElemental)) {
+            // 16.9.144(6): a bare NULL() is not allowed as an actual
+            // argument to a generic procedure if the specific procedure
+            // cannot be unambiguously distinguished
+            return {nullptr, true /* due to NULL actuals */};
+          }
+          if (!procedure->IsElemental()) {
+            // takes priority over elemental match
+            nonElemental = &specific;
+            if (!anyBareNullActual) {
+              break; // unambiguous case
+            }
+          } else {
+            elemental = &specific;
+          }
         }
       }
     }
-  }
-  if (nonElemental) {
-    return {&AccessSpecific(symbol, *nonElemental), false};
-  } else if (elemental) {
-    return {&AccessSpecific(symbol, *elemental), false};
-  }
-  // Check parent derived type
-  if (const auto *parentScope{symbol.owner().GetDerivedTypeParent()}) {
-    if (const Symbol * extended{parentScope->FindComponent(symbol.name())}) {
-      if (extended->GetUltimate().has<semantics::GenericDetails>()) {
-        auto pair{ResolveGeneric(*extended, actuals, adjustActuals, false)};
+    if (nonElemental) {
+      return {&AccessSpecific(symbol, *nonElemental), false};
+    } else if (elemental) {
+      return {&AccessSpecific(symbol, *elemental), false};
+    }
+    // Check parent derived type
+    if (const auto *parentScope{symbol.owner().GetDerivedTypeParent()}) {
+      if (const Symbol * extended{parentScope->FindComponent(symbol.name())}) {
+        auto pair{ResolveGeneric(
+            *extended, actuals, adjustActuals, isSubroutine, false)};
         if (pair.first) {
           return pair;
         }
       }
     }
+    if (mightBeStructureConstructor && details->derivedType()) {
+      return {details->derivedType(), false};
+    }
   }
-  if (mightBeStructureConstructor && details.derivedType()) {
-    return {details.derivedType(), false};
+  // Check for generic or explicit INTRINSIC of the same name in outer scopes.
+  // See 15.5.5.2 for details.
+  if (!symbol.owner().IsGlobal() && !symbol.owner().IsDerivedType()) {
+    for (const std::string &n : GetAllNames(context_, symbol.name())) {
+      if (const Symbol * outer{symbol.owner().parent().FindSymbol(n)}) {
+        auto pair{ResolveGeneric(*outer, actuals, adjustActuals, isSubroutine,
+            mightBeStructureConstructor)};
+        if (pair.first) {
+          return pair;
+        }
+      }
+    }
   }
   return {nullptr, false};
 }
@@ -2159,7 +2215,8 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(
                 isSubroutine, mightBeStructureConstructor);
           },
           [&](const parser::ProcComponentRef &pcr) {
-            return AnalyzeProcedureComponentRef(pcr, std::move(arguments));
+            return AnalyzeProcedureComponentRef(
+                pcr, std::move(arguments), isSubroutine);
           },
       },
       pd.u);
@@ -2176,24 +2233,26 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
   CheckForBadRecursion(name.source, ultimate);
   bool dueToNullActual{false};
   bool isGenericInterface{ultimate.has<semantics::GenericDetails>()};
+  bool isExplicitIntrinsic{ultimate.attrs().test(semantics::Attr::INTRINSIC)};
   const Symbol *resolution{nullptr};
-  if (isGenericInterface) {
+  if (isGenericInterface || isExplicitIntrinsic) {
     ExpressionAnalyzer::AdjustActuals noAdjustment;
-    auto pair{ResolveGeneric(
-        *symbol, arguments, noAdjustment, mightBeStructureConstructor)};
+    auto pair{ResolveGeneric(*symbol, arguments, noAdjustment, isSubroutine,
+        mightBeStructureConstructor)};
     resolution = pair.first;
     dueToNullActual = pair.second;
+    if (resolution) {
+      // re-resolve name to the specific procedure
+      name.symbol = const_cast<Symbol *>(resolution);
+    }
+  } else {
+    resolution = symbol;
   }
-  if (!resolution) {
+  if (!resolution || resolution->attrs().test(semantics::Attr::INTRINSIC)) {
     // Not generic, or no resolution; may be intrinsic
-    bool isIntrinsic{symbol->attrs().test(semantics::Attr::INTRINSIC)};
-    if (!isIntrinsic && !isGenericInterface) {
-      resolution = symbol;
-    } else if (std::optional<SpecificCall> specificCall{
-                   context_.intrinsics().Probe(
-                       CallCharacteristics{
-                           ultimate.name().ToString(), isSubroutine},
-                       arguments, GetFoldingContext())}) {
+    if (std::optional<SpecificCall> specificCall{context_.intrinsics().Probe(
+            CallCharacteristics{ultimate.name().ToString(), isSubroutine},
+            arguments, GetFoldingContext())}) {
       CheckBadExplicitType(*specificCall, *symbol);
       return CalleeAndArguments{
           ProcedureDesignator{std::move(specificCall->specificIntrinsic)},
@@ -2265,6 +2324,7 @@ void ExpressionAnalyzer::CheckForBadRecursion(
         msg = Say("NON_RECURSIVE procedure '%s' cannot call itself"_err_en_US,
             callSite);
       } else if (IsAssumedLengthCharacter(proc) && IsExternal(proc)) {
+        // TODO: Also catch assumed PDT type parameters
         msg = Say( // 15.6.2.1(3)
             "Assumed-length CHARACTER(*) function '%s' cannot call itself"_err_en_US,
             callSite);
@@ -2515,18 +2575,21 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
           DEREF(proc.GetSymbol()).name());
     }
     // Checks for ASSOCIATED() are done in intrinsic table processing
-    bool procIsAssociated{false};
-    if (const SpecificIntrinsic *
-        specificIntrinsic{proc.GetSpecificIntrinsic()}) {
-      if (specificIntrinsic->name == "associated") {
-        procIsAssociated = true;
-      }
-    }
+    const SpecificIntrinsic *specificIntrinsic{proc.GetSpecificIntrinsic()};
+    bool procIsAssociated{
+        specificIntrinsic && specificIntrinsic->name == "associated"};
     if (!procIsAssociated) {
+      const Symbol *procSymbol{proc.GetSymbol()};
+      bool procIsDummy{procSymbol && IsDummy(*procSymbol)};
+      if (chars->functionResult &&
+          chars->functionResult->IsAssumedLengthCharacter() &&
+          !specificIntrinsic && !procIsDummy) {
+        Say(callSite,
+            "Assumed-length character function must be defined with a length to be called"_err_en_US);
+      }
       semantics::CheckArguments(*chars, arguments, GetFoldingContext(),
           context_.FindScope(callSite), treatExternalAsImplicit,
-          proc.GetSpecificIntrinsic());
-      const Symbol *procSymbol{proc.GetSymbol()};
+          specificIntrinsic);
       if (procSymbol && !IsPureProcedure(*procSymbol)) {
         if (const semantics::Scope *
             pure{semantics::FindPureProcedureContaining(
@@ -2583,6 +2646,13 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::UnaryPlus &x) {
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Negate &x) {
+  if (const auto *litConst{
+          std::get_if<parser::LiteralConstant>(&x.v.value().u)}) {
+    if (const auto *intConst{
+            std::get_if<parser::IntLiteralConstant>(&litConst->u)}) {
+      return Analyze(*intConst, true);
+    }
+  }
   return NumericUnaryHelper(*this, NumericOperator::Subtract, x);
 }
 
@@ -3227,12 +3297,10 @@ void ArgumentAnalyzer::Analyze(
             actual = ActualArgument(label.v);
           },
           [&](const parser::ActualArg::PercentRef &) {
-            context_.Say(
-                "not yet implemented: %REF() intrinsic for arguments"_err_en_US);
+            context_.Say("%REF() intrinsic for arguments"_todo_en_US);
           },
           [&](const parser::ActualArg::PercentVal &) {
-            context_.Say(
-                "not yet implemetned: %VAL() intrinsic for arguments"_err_en_US);
+            context_.Say("%VAL() intrinsic for arguments"_todo_en_US);
           },
       },
       std::get<parser::ActualArg>(arg.t).u);
@@ -3452,10 +3520,10 @@ bool ArgumentAnalyzer::OkLogicalIntegerAssignment(
   std::optional<parser::MessageFixedText> msg;
   if (lhs == TypeCategory::Integer && rhs == TypeCategory::Logical) {
     // allow assignment to LOGICAL from INTEGER as a legacy extension
-    msg = "nonstandard usage: assignment of LOGICAL to INTEGER"_port_en_US;
+    msg = "assignment of LOGICAL to INTEGER"_port_en_US;
   } else if (lhs == TypeCategory::Logical && rhs == TypeCategory::Integer) {
     // ... and assignment to LOGICAL from INTEGER
-    msg = "nonstandard usage: assignment of INTEGER to LOGICAL"_port_en_US;
+    msg = "assignment of INTEGER to LOGICAL"_port_en_US;
   } else {
     return false;
   }
@@ -3474,7 +3542,7 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
   const auto &scope{context_.context().FindScope(source_)};
   if (const Symbol * symbol{scope.FindSymbol(oprName)}) {
     ExpressionAnalyzer::AdjustActuals noAdjustment;
-    auto pair{context_.ResolveGeneric(*symbol, actuals_, noAdjustment)};
+    auto pair{context_.ResolveGeneric(*symbol, actuals_, noAdjustment, true)};
     if (pair.first) {
       proc = pair.first;
     } else {
@@ -3582,7 +3650,7 @@ const Symbol *ArgumentAnalyzer::FindBoundOp(
       [&](const Symbol &proc, ActualArguments &) {
         return passIndex == GetPassIndex(proc);
       }};
-  auto pair{context_.ResolveGeneric(*symbol, actuals_, adjustment)};
+  auto pair{context_.ResolveGeneric(*symbol, actuals_, adjustment, false)};
   if (!pair.first) {
     context_.EmitGenericResolutionError(*symbol, pair.second);
   }

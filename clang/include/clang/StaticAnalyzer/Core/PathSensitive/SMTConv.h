@@ -446,6 +446,28 @@ public:
       return getCastExpr(Solver, Ctx, Exp, FromTy, Sym->getType());
     }
 
+    if (const UnarySymExpr *USE = dyn_cast<UnarySymExpr>(Sym)) {
+      if (RetTy)
+        *RetTy = Sym->getType();
+
+      QualType OperandTy;
+      llvm::SMTExprRef OperandExp =
+          getSymExpr(Solver, Ctx, USE->getOperand(), &OperandTy, hasComparison);
+      llvm::SMTExprRef UnaryExp =
+          fromUnOp(Solver, USE->getOpcode(), OperandExp);
+
+      // Currently, without the `support-symbolic-integer-casts=true` option,
+      // we do not emit `SymbolCast`s for implicit casts.
+      // One such implicit cast is missing if the operand of the unary operator
+      // has a different type than the unary itself.
+      if (Ctx.getTypeSize(OperandTy) != Ctx.getTypeSize(Sym->getType())) {
+        if (hasComparison)
+          *hasComparison = false;
+        return getCastExpr(Solver, Ctx, UnaryExp, OperandTy, Sym->getType());
+      }
+      return UnaryExp;
+    }
+
     if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
       llvm::SMTExprRef Exp =
           getSymBinExpr(Solver, Ctx, BSE, hasComparison, RetTy);

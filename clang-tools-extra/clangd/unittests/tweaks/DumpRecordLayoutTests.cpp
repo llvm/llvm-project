@@ -22,10 +22,10 @@ TWEAK_TEST(DumpRecordLayout);
 
 TEST_F(DumpRecordLayoutTest, Test) {
   EXPECT_AVAILABLE("^s^truct ^X ^{ int x; ^};");
-  EXPECT_THAT("struct X { int ^a; };", Not(isAvailable()));
-  EXPECT_THAT("struct ^X;", Not(isAvailable()));
-  EXPECT_THAT("template <typename T> struct ^X { T t; };", Not(isAvailable()));
-  EXPECT_THAT("enum ^X {};", Not(isAvailable()));
+  EXPECT_UNAVAILABLE("struct X { int ^a; };");
+  EXPECT_UNAVAILABLE("struct ^X;");
+  EXPECT_UNAVAILABLE("template <typename T> struct ^X { T t; };");
+  EXPECT_UNAVAILABLE("enum ^X {};");
 
   EXPECT_THAT(apply("struct ^X { int x; int y; };"),
               AllOf(StartsWith("message:"), HasSubstr("0 |   int x")));

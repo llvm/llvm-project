@@ -29,7 +29,7 @@ public:
 private:
   const bool WarnOnImplicitComparison;
   const bool WarnOnLogicalNotComparison;
-  const std::string StringCompareLikeFunctions;
+  const StringRef StringCompareLikeFunctions;
 };
 
 } // namespace bugprone

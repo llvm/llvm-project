@@ -549,7 +549,6 @@ if.then:
 }
 
 define void @br_fcmp_uno(float %a, float %b) nounwind {
-; TODO: sltiu+bne -> beq
 ; RV32IF-LABEL: br_fcmp_uno:
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    addi sp, sp, -16
@@ -626,7 +625,6 @@ if.then:
 ; This test exists primarily to trigger RISCVInstrInfo::storeRegToStackSlot
 ; and RISCVInstrInfo::loadRegFromStackSlot
 define i32 @br_fcmp_store_load_stack_slot(float %a, float %b) nounwind {
-; TODO: addi %lo(.LCPI17_0) should be merged in to the following flw
 ; RV32IF-LABEL: br_fcmp_store_load_stack_slot:
 ; RV32IF:       # %bb.0: # %entry
 ; RV32IF-NEXT:    addi sp, sp, -16

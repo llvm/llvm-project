@@ -3,8 +3,6 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify -verify-ignore-unexpected=error %s
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify=overload -verify-ignore-unexpected=error %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -29,8 +27,6 @@
 //
 svuint8_t test_svqrshrunb_n_s16(svint16_t op1)
 {
-  // overload-warning@+2 {{call to undeclared function 'svqrshrunb'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svqrshrunb_n_s16'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svqrshrunb,_n_s16,,)(op1, 1);
 }
 
@@ -46,8 +42,6 @@ svuint8_t test_svqrshrunb_n_s16(svint16_t op1)
 //
 svuint8_t test_svqrshrunb_n_s16_1(svint16_t op1)
 {
-  // overload-warning@+2 {{call to undeclared function 'svqrshrunb'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svqrshrunb_n_s16'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svqrshrunb,_n_s16,,)(op1, 8);
 }
 
@@ -63,8 +57,6 @@ svuint8_t test_svqrshrunb_n_s16_1(svint16_t op1)
 //
 svuint16_t test_svqrshrunb_n_s32(svint32_t op1)
 {
-  // overload-warning@+2 {{call to undeclared function 'svqrshrunb'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svqrshrunb_n_s32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svqrshrunb,_n_s32,,)(op1, 1);
 }
 
@@ -80,8 +72,6 @@ svuint16_t test_svqrshrunb_n_s32(svint32_t op1)
 //
 svuint16_t test_svqrshrunb_n_s32_1(svint32_t op1)
 {
-  // overload-warning@+2 {{call to undeclared function 'svqrshrunb'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svqrshrunb_n_s32'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svqrshrunb,_n_s32,,)(op1, 16);
 }
 
@@ -97,8 +87,6 @@ svuint16_t test_svqrshrunb_n_s32_1(svint32_t op1)
 //
 svuint32_t test_svqrshrunb_n_s64(svint64_t op1)
 {
-  // overload-warning@+2 {{call to undeclared function 'svqrshrunb'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svqrshrunb_n_s64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svqrshrunb,_n_s64,,)(op1, 1);
 }
 
@@ -114,7 +102,5 @@ svuint32_t test_svqrshrunb_n_s64(svint64_t op1)
 //
 svuint32_t test_svqrshrunb_n_s64_1(svint64_t op1)
 {
-  // overload-warning@+2 {{call to undeclared function 'svqrshrunb'; ISO C99 and later do not support implicit function declarations}}
-  // expected-warning@+1 {{call to undeclared function 'svqrshrunb_n_s64'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svqrshrunb,_n_s64,,)(op1, 32);
 }

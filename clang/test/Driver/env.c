@@ -5,20 +5,16 @@
 // REQUIRES: shell
 // The PATH variable is heavily used when trying to find a linker.
 // RUN: env -i LC_ALL=C LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
-// RUN:   %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i386-unknown-linux \
+// RUN:   %clang %s -### -o %t.o --target=i386-unknown-linux \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:     --rtlib=platform -no-pie \
-// RUN:     --gcc-toolchain="" \
-// RUN:   | FileCheck --check-prefix=CHECK-LD-32 %s
+// RUN:     --gcc-toolchain="" 2>&1 | FileCheck --check-prefix=CHECK-LD-32 %s
 //
 // RUN: env -i LC_ALL=C PATH="" LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
-// RUN:   %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i386-unknown-linux \
+// RUN:   %clang %s -### -o %t.o --target=i386-unknown-linux \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:     --rtlib=platform -no-pie \
-// RUN:     --gcc-toolchain="" \
-// RUN:   | FileCheck --check-prefix=CHECK-LD-32 %s
+// RUN:     --gcc-toolchain="" 2>&1 | FileCheck --check-prefix=CHECK-LD-32 %s
 //
 // CHECK-LD-32-NOT: warning:
 // CHECK-LD-32: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"

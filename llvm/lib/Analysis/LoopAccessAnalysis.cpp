@@ -233,8 +233,92 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, Type *AccessTy,
   Pointers.emplace_back(Ptr, ScStart, ScEnd, WritePtr, DepSetId, ASId, Sc);
 }
 
-SmallVector<RuntimePointerCheck, 4>
-RuntimePointerChecking::generateChecks() const {
+void RuntimePointerChecking::tryToCreateDiffCheck(
+    const RuntimeCheckingPtrGroup &CGI, const RuntimeCheckingPtrGroup &CGJ) {
+  if (!CanUseDiffCheck)
+    return;
+
+  // If either group contains multiple different pointers, bail out.
+  // TODO: Support multiple pointers by using the minimum or maximum pointer,
+  // depending on src & sink.
+  if (CGI.Members.size() != 1 || CGJ.Members.size() != 1) {
+    CanUseDiffCheck = false;
+    return;
+  }
+
+  PointerInfo *Src = &Pointers[CGI.Members[0]];
+  PointerInfo *Sink = &Pointers[CGJ.Members[0]];
+
+  // If either pointer is read and written, multiple checks may be needed. Bail
+  // out.
+  if (!DC.getOrderForAccess(Src->PointerValue, !Src->IsWritePtr).empty() ||
+      !DC.getOrderForAccess(Sink->PointerValue, !Sink->IsWritePtr).empty()) {
+    CanUseDiffCheck = false;
+    return;
+  }
+
+  ArrayRef<unsigned> AccSrc =
+      DC.getOrderForAccess(Src->PointerValue, Src->IsWritePtr);
+  ArrayRef<unsigned> AccSink =
+      DC.getOrderForAccess(Sink->PointerValue, Sink->IsWritePtr);
+  // If either pointer is accessed multiple times, there may not be a clear
+  // src/sink relation. Bail out for now.
+  if (AccSrc.size() != 1 || AccSink.size() != 1) {
+    CanUseDiffCheck = false;
+    return;
+  }
+  // If the sink is accessed before src, swap src/sink.
+  if (AccSink[0] < AccSrc[0])
+    std::swap(Src, Sink);
+
+  auto *SrcAR = dyn_cast<SCEVAddRecExpr>(Src->Expr);
+  auto *SinkAR = dyn_cast<SCEVAddRecExpr>(Sink->Expr);
+  if (!SrcAR || !SinkAR) {
+    CanUseDiffCheck = false;
+    return;
+  }
+
+  const DataLayout &DL =
+      SinkAR->getLoop()->getHeader()->getModule()->getDataLayout();
+  SmallVector<Instruction *, 4> SrcInsts =
+      DC.getInstructionsForAccess(Src->PointerValue, Src->IsWritePtr);
+  SmallVector<Instruction *, 4> SinkInsts =
+      DC.getInstructionsForAccess(Sink->PointerValue, Sink->IsWritePtr);
+  Type *SrcTy = getLoadStoreType(SrcInsts[0]);
+  Type *DstTy = getLoadStoreType(SinkInsts[0]);
+  if (isa<ScalableVectorType>(SrcTy) || isa<ScalableVectorType>(DstTy))
+    return;
+  unsigned AllocSize =
+      std::max(DL.getTypeAllocSize(SrcTy), DL.getTypeAllocSize(DstTy));
+  IntegerType *IntTy =
+      IntegerType::get(Src->PointerValue->getContext(),
+                       DL.getPointerSizeInBits(CGI.AddressSpace));
+
+  // Only matching constant steps matching the AllocSize are supported at the
+  // moment. This simplifies the difference computation. Can be extended in the
+  // future.
+  auto *Step = dyn_cast<SCEVConstant>(SinkAR->getStepRecurrence(*SE));
+  if (!Step || Step != SrcAR->getStepRecurrence(*SE) ||
+      Step->getAPInt().abs() != AllocSize) {
+    CanUseDiffCheck = false;
+    return;
+  }
+
+  // When counting down, the dependence distance needs to be swapped.
+  if (Step->getValue()->isNegative())
+    std::swap(SinkAR, SrcAR);
+
+  const SCEV *SinkStartInt = SE->getPtrToIntExpr(SinkAR->getStart(), IntTy);
+  const SCEV *SrcStartInt = SE->getPtrToIntExpr(SrcAR->getStart(), IntTy);
+  if (isa<SCEVCouldNotCompute>(SinkStartInt) ||
+      isa<SCEVCouldNotCompute>(SrcStartInt)) {
+    CanUseDiffCheck = false;
+    return;
+  }
+  DiffChecks.emplace_back(SrcStartInt, SinkStartInt, AllocSize);
+}
+
+SmallVector<RuntimePointerCheck, 4> RuntimePointerChecking::generateChecks() {
   SmallVector<RuntimePointerCheck, 4> Checks;
 
   for (unsigned I = 0; I < CheckingGroups.size(); ++I) {
@@ -242,8 +326,10 @@ RuntimePointerChecking::generateChecks() const {
       const RuntimeCheckingPtrGroup &CGI = CheckingGroups[I];
       const RuntimeCheckingPtrGroup &CGJ = CheckingGroups[J];
 
-      if (needsChecking(CGI, CGJ))
+      if (needsChecking(CGI, CGJ)) {
+        tryToCreateDiffCheck(CGI, CGJ);
         Checks.push_back(std::make_pair(&CGI, &CGJ));
+      }
     }
   }
   return Checks;
@@ -1456,13 +1542,13 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
 
   const SCEV *CastedDist = &Dist;
   const SCEV *CastedProduct = Product;
-  uint64_t DistTypeSize = DL.getTypeAllocSize(Dist.getType());
-  uint64_t ProductTypeSize = DL.getTypeAllocSize(Product->getType());
+  uint64_t DistTypeSizeBits = DL.getTypeSizeInBits(Dist.getType());
+  uint64_t ProductTypeSizeBits = DL.getTypeSizeInBits(Product->getType());
 
   // The dependence distance can be positive/negative, so we sign extend Dist;
   // The multiplication of the absolute stride in bytes and the
   // backedgeTakenCount is non-negative, so we zero extend Product.
-  if (DistTypeSize > ProductTypeSize)
+  if (DistTypeSizeBits > ProductTypeSizeBits)
     CastedProduct = SE.getZeroExtendExpr(Product, Dist.getType());
   else
     CastedDist = SE.getNoopOrSignExtend(&Dist, Product->getType());
@@ -1993,9 +2079,12 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   for (StoreInst *ST : Stores) {
     Value *Ptr = ST->getPointerOperand();
 
-    if (isUniform(Ptr))
+    if (isUniform(Ptr)) {
+      // Record store instructions to loop invariant addresses
+      StoresToInvariantAddresses.push_back(ST);
       HasDependenceInvolvingLoopInvariantAddress |=
           !UniformStores.insert(Ptr).second;
+    }
 
     // If we did *not* see this pointer before, insert it to  the read-write
     // list. At this phase it is only a 'write' list.
@@ -2277,12 +2366,12 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   // The Stride can be positive/negative, so we sign extend Stride;
   // The backedgeTakenCount is non-negative, so we zero extend BETakenCount.
   const DataLayout &DL = TheLoop->getHeader()->getModule()->getDataLayout();
-  uint64_t StrideTypeSize = DL.getTypeAllocSize(StrideExpr->getType());
-  uint64_t BETypeSize = DL.getTypeAllocSize(BETakenCount->getType());
+  uint64_t StrideTypeSizeBits = DL.getTypeSizeInBits(StrideExpr->getType());
+  uint64_t BETypeSizeBits = DL.getTypeSizeInBits(BETakenCount->getType());
   const SCEV *CastedStride = StrideExpr;
   const SCEV *CastedBECount = BETakenCount;
   ScalarEvolution *SE = PSE->getSE();
-  if (BETypeSize >= StrideTypeSize)
+  if (BETypeSizeBits >= StrideTypeSizeBits)
     CastedStride = SE->getNoopOrSignExtend(StrideExpr, BETakenCount->getType());
   else
     CastedBECount = SE->getZeroExtendExpr(BETakenCount, StrideExpr->getType());
@@ -2307,10 +2396,12 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
                                const TargetLibraryInfo *TLI, AAResults *AA,
                                DominatorTree *DT, LoopInfo *LI)
     : PSE(std::make_unique<PredicatedScalarEvolution>(*SE, *L)),
-      PtrRtChecking(std::make_unique<RuntimePointerChecking>(SE)),
+      PtrRtChecking(nullptr),
       DepChecker(std::make_unique<MemoryDepChecker>(*PSE, L)), TheLoop(L) {
-  if (canAnalyzeLoop())
+  PtrRtChecking = std::make_unique<RuntimePointerChecking>(*DepChecker, SE);
+  if (canAnalyzeLoop()) {
     analyzeLoop(AA, LI, TLI, DT);
+  }
 }
 
 void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {

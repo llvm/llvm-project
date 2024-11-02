@@ -148,6 +148,7 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::amdgcn_s_barrier:
     case Intrinsic::amdgcn_wave_barrier:
+    case Intrinsic::amdgcn_sched_barrier:
       return false;
     default:
       break;

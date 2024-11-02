@@ -155,7 +155,9 @@ bool Message::SortBefore(const Message &that) const {
       location_, that.location_);
 }
 
-bool Message::IsFatal() const { return severity() == Severity::Error; }
+bool Message::IsFatal() const {
+  return severity() == Severity::Error || severity() == Severity::Todo;
+}
 
 Severity Message::severity() const {
   return common::visit(
@@ -224,6 +226,8 @@ static std::string Prefix(Severity severity) {
     return "because: ";
   case Severity::Context:
     return "in the context: ";
+  case Severity::Todo:
+    return "error: not yet implemented: ";
   case Severity::None:
     break;
   }

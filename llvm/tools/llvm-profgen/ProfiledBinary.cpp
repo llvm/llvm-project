@@ -256,6 +256,8 @@ SampleContextFrameVector
 ProfiledBinary::getExpandedContext(const SmallVectorImpl<uint64_t> &Stack,
                                    bool &WasLeafInlined) {
   SampleContextFrameVector ContextVec;
+  if (Stack.empty())
+    return ContextVec;
   // Process from frame root to leaf
   for (auto Address : Stack) {
     uint64_t Offset = virtualAddrToOffset(Address);
@@ -493,12 +495,17 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
 
       // Populate address maps.
       CodeAddrOffsets.push_back(Offset);
-      if (MCDesc.isCall())
+      if (MCDesc.isCall()) {
         CallOffsets.insert(Offset);
-      else if (MCDesc.isReturn())
+        UncondBranchOffsets.insert(Offset);
+      } else if (MCDesc.isReturn()) {
         RetOffsets.insert(Offset);
-      else if (MCDesc.isBranch())
+        UncondBranchOffsets.insert(Offset);
+      } else if (MCDesc.isBranch()) {
+        if (MCDesc.isUnconditionalBranch())
+          UncondBranchOffsets.insert(Offset);
         BranchOffsets.insert(Offset);
+      }
 
       if (InvalidInstLength) {
         WarnInvalidInsts(Offset - InvalidInstLength, Offset - 1);

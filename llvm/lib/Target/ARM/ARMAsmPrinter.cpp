@@ -24,7 +24,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/COFF.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
@@ -163,8 +162,8 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     int Type = COFF::IMAGE_SYM_DTYPE_FUNCTION << COFF::SCT_COMPLEX_TYPE_SHIFT;
 
     OutStreamer->BeginCOFFSymbolDef(CurrentFnSym);
-    OutStreamer->EmitCOFFSymbolStorageClass(Scl);
-    OutStreamer->EmitCOFFSymbolType(Type);
+    OutStreamer->emitCOFFSymbolStorageClass(Scl);
+    OutStreamer->emitCOFFSymbolType(Type);
     OutStreamer->EndCOFFSymbolDef();
   }
 

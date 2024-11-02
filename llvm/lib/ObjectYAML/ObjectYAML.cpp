@@ -62,6 +62,10 @@ void MappingTraits<YamlObjectFile>::mapping(IO &IO,
     } else if (IO.mapTag("!XCOFF")) {
       ObjectFile.Xcoff.reset(new XCOFFYAML::Object());
       MappingTraits<XCOFFYAML::Object>::mapping(IO, *ObjectFile.Xcoff);
+    } else if (IO.mapTag("!dxcontainer")) {
+      ObjectFile.DXContainer.reset(new DXContainerYAML::Object());
+      MappingTraits<DXContainerYAML::Object>::mapping(IO,
+                                                      *ObjectFile.DXContainer);
     } else if (const Node *N = In.getCurrentNode()) {
       if (N->getRawTag().empty())
         IO.setError("YAML Object File missing document type tag!");

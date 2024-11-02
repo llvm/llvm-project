@@ -52,6 +52,19 @@ public:
       Texture,  // Builtin texture
     };
 
+    /// The kind flag for an offloading entry.
+    enum OffloadEntryKindFlag : uint32_t {
+      /// Mark the entry as a global entry. This indicates the presense of a
+      /// kernel if the size size field is zero and a variable otherwise.
+      OffloadGlobalEntry = 0x0,
+      /// Mark the entry as a managed global variable.
+      OffloadGlobalManagedEntry = 0x1,
+      /// Mark the entry as a surface variable.
+      OffloadGlobalSurfaceEntry = 0x2,
+      /// Mark the entry as a texture variable.
+      OffloadGlobalTextureEntry = 0x3,
+    };
+
   private:
     unsigned Kind : 2;
     unsigned Extern : 1;

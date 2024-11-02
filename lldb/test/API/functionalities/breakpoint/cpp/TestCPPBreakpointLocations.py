@@ -28,7 +28,7 @@ class TestCPPBreakpointLocations(TestBase):
         self.assertEquals(
             bp.GetNumLocations(),
             len(names),
-            "Make sure we find the right number of breakpoint locations")
+            "Make sure we find the right number of breakpoint locations for {}".format(name))
 
         bp_loc_names = list()
         for bp_loc in bp:
@@ -47,9 +47,9 @@ class TestCPPBreakpointLocations(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
         bp_dicts = [
-            {'name': 'func1', 'loc_names': ['a::c::func1()', 'b::c::func1()']},
-            {'name': 'func2', 'loc_names': ['a::c::func2()', 'c::d::func2()']},
-            {'name': 'func3', 'loc_names': ['a::c::func3()', 'b::c::func3()', 'c::d::func3()']},
+            {'name': 'func1', 'loc_names': ['a::c::func1()', 'aa::cc::func1()', 'b::c::func1()']},
+            {'name': 'func2', 'loc_names': ['a::c::func2()', 'aa::cc::func2()', 'c::d::func2()']},
+            {'name': 'func3', 'loc_names': ['a::c::func3()', 'aa::cc::func3()', 'b::c::func3()', 'c::d::func3()']},
             {'name': 'c::func1', 'loc_names': ['a::c::func1()', 'b::c::func1()']},
             {'name': 'c::func2', 'loc_names': ['a::c::func2()']},
             {'name': 'c::func3', 'loc_names': ['a::c::func3()', 'b::c::func3()']},

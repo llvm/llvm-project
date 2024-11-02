@@ -88,7 +88,6 @@ EPCTrampolinePool::EPCTrampolinePool(EPCIndirectionUtils &EPCIU)
 }
 
 Error EPCTrampolinePool::deallocatePool() {
-  Error Err = Error::success();
   std::promise<MSVCPError> DeallocResultP;
   auto DeallocResultF = DeallocResultP.get_future();
 

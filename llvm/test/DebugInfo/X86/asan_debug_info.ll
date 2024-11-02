@@ -1,6 +1,3 @@
-; RUN: opt < %s -asan -asan-module -asan-use-after-return=never -S -enable-new-pm=0 | \
-; RUN:   llc -O0 -filetype=obj - -o - | \
-; RUN:   llvm-dwarfdump - | FileCheck %s
 ; RUN: opt < %s -passes=asan-pipeline -asan-use-after-return=never -S | \
 ; RUN:   llc -O0 -filetype=obj - -o - | \
 ; RUN:   llvm-dwarfdump - | FileCheck %s

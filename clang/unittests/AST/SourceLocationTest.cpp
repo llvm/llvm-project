@@ -135,13 +135,19 @@ TEST(LabelStmt, Range) {
 TEST(ParmVarDecl, KNRLocation) {
   LocationVerifier<ParmVarDecl> Verifier;
   Verifier.expectLocation(1, 8);
-  EXPECT_TRUE(Verifier.match("void f(i) {}", varDecl(), Lang_C99));
+  EXPECT_TRUE(Verifier.match("void f(i) {}", varDecl(), Lang_C89));
+
+  Verifier.expectLocation(1, 15);
+  EXPECT_TRUE(Verifier.match("void f(i) int i; {}", varDecl(), Lang_C99));
 }
 
 TEST(ParmVarDecl, KNRRange) {
   RangeVerifier<ParmVarDecl> Verifier;
   Verifier.expectRange(1, 8, 1, 8);
-  EXPECT_TRUE(Verifier.match("void f(i) {}", varDecl(), Lang_C99));
+  EXPECT_TRUE(Verifier.match("void f(i) {}", varDecl(), Lang_C89));
+
+  Verifier.expectRange(1, 11, 1, 15);
+  EXPECT_TRUE(Verifier.match("void f(i) int i; {}", varDecl(), Lang_C99));
 }
 
 TEST(CXXNewExpr, ArrayRange) {

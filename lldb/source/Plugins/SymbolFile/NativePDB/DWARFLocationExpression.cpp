@@ -252,11 +252,12 @@ DWARFExpression lldb_private::npdb::MakeConstantLocationExpression(
 }
 
 DWARFExpression lldb_private::npdb::MakeEnregisteredLocationExpressionForClass(
-    llvm::ArrayRef<std::pair<RegisterId, uint32_t>> &members_info,
+    std::map<uint64_t, std::pair<RegisterId, uint32_t>> &members_info,
     lldb::ModuleSP module) {
   return MakeLocationExpressionInternal(
       module, [&](Stream &stream, RegisterKind &register_kind) -> bool {
-        for (auto member_info : members_info) {
+        for (auto pair : members_info) {
+          std::pair<RegisterId, uint32_t> member_info = pair.second;
           if (member_info.first != llvm::codeview::RegisterId::NONE) {
             uint32_t reg_num =
                 GetRegisterNumber(module->GetArchitecture().GetMachine(),

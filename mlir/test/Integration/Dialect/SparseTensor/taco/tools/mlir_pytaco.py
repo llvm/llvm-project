@@ -34,6 +34,7 @@ from mlir import execution_engine
 from mlir import ir
 from mlir import runtime
 from mlir.dialects import arith
+from mlir.dialects import bufferization
 from mlir.dialects import builtin
 from mlir.dialects import func
 from mlir.dialects import linalg
@@ -67,6 +68,7 @@ class Type(enum.Enum):
 
   We use numpy data types to implement the enum data types.
   """
+  INT8 = np.int8
   INT16 = np.int16
   INT32 = np.int32
   INT64 = np.int64
@@ -78,10 +80,11 @@ class Type(enum.Enum):
 # All floating point type enums.
 _FLOAT_TYPES = (Type.FLOAT32, Type.FLOAT64)
 # All integral type enums.
-_INT_TYPES = (Type.INT16, Type.INT32, Type.INT64)
+_INT_TYPES = (Type.INT8, Type.INT16, Type.INT32, Type.INT64)
 # Type alias for any numpy type used to implement the runtime support for the
 # enum data types.
-_AnyRuntimeType = Union[np.int16, np.int32, np.int64, np.float32, np.float64]
+_AnyRuntimeType = Union[np.int8, np.int16, np.int32, np.int64, np.float32,
+                        np.float64]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -117,6 +120,7 @@ class DType:
 def _dtype_to_mlir_str(dtype: DType) -> str:
   """Returns the MLIR string for the given dtype."""
   dtype_to_str = {
+      Type.INT16: "i8",
       Type.INT16: "i16",
       Type.INT32: "i32",
       Type.INT64: "i64",
@@ -129,6 +133,7 @@ def _dtype_to_mlir_str(dtype: DType) -> str:
 def _nptype_to_taco_type(ty: np.dtype) -> DType:
   """Returns the TACO type for the given numpy type."""
   nptype_to_dtype = {
+      np.int8: Type.INT8,
       np.int16: Type.INT16,
       np.int32: Type.INT32,
       np.int64: Type.INT64,
@@ -141,6 +146,7 @@ def _nptype_to_taco_type(ty: np.dtype) -> DType:
 def _mlir_type_from_taco_type(dtype: DType) -> ir.Type:
   """Returns the MLIR type corresponding to the given TACO type."""
   dtype_to_irtype = {
+      Type.INT8: ir.IntegerType.get_signless(8),
       Type.INT16: ir.IntegerType.get_signless(16),
       Type.INT32: ir.IntegerType.get_signless(32),
       Type.INT64: ir.IntegerType.get_signless(64),
@@ -884,8 +890,7 @@ class _StructOpInfo:
     mlir_type = _mlir_tensor_type(self.dst_dtype, self.dst_dims,
                                   self.dst_format.mlir_tensor_attr())
     index_type = ir.IndexType.get()
-    dims = [arith.ConstantOp(index_type, d).result for d in mlir_type.shape]
-    return sparse_tensor.InitOp(mlir_type, dims)
+    return bufferization.AllocTensorOp(mlir_type, [])
 
 
 class _Stats:

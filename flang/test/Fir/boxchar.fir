@@ -2,10 +2,10 @@
 
 // Test of building and passing boxchar.
 
-func private @callee(%x : !fir.boxchar<1>)
+func.func private @callee(%x : !fir.boxchar<1>)
 
 // CHECK-LABEL: define void @get_name
-func @get_name() {
+func.func @get_name() {
   %1 = fir.address_of (@name) : !fir.ref<!fir.char<1,9>>
   %2 = arith.constant 9 : i64
   %3 = fir.convert %1 : (!fir.ref<!fir.char<1,9>>) -> !fir.ref<!fir.char<1,?>>

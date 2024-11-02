@@ -10,27 +10,24 @@
 //  which were split from Frontend to minimise Frontend's dependencies.
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
-#ifndef LLVM_FLANG_FRONTENDTOOL_UTILS_H
-#define LLVM_FLANG_FRONTENDTOOL_UTILS_H
+#ifndef FORTRAN_FRONTEND_FRONTENDTOOL_UTILS_H
+#define FORTRAN_FRONTEND_FRONTENDTOOL_UTILS_H
 
 namespace Fortran::frontend {
 
 class CompilerInstance;
-class FrontendAction;
-
-/// Construct the FrontendAction of a compiler invocation based on the
-/// options specified for the compiler invocation.
-///
-/// \return - The created FrontendAction object
-std::unique_ptr<FrontendAction> CreateFrontendAction(CompilerInstance &ci);
 
 /// ExecuteCompilerInvocation - Execute the given actions described by the
 /// compiler invocation object in the given compiler instance.
 ///
 /// \return - True on success.
-bool ExecuteCompilerInvocation(CompilerInstance *flang);
+bool executeCompilerInvocation(CompilerInstance *flang);
 
 } // end namespace Fortran::frontend
 
-#endif // LLVM_FLANG_FRONTENDTOOL_UTILS_H
+#endif // FORTRAN_FRONTEND_FRONTENDTOOL_UTILS_H

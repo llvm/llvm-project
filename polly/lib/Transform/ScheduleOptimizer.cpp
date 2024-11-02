@@ -237,7 +237,7 @@ struct OptimizerAdditionalInfoTy {
   bool Prevect;
 };
 
-class ScheduleTreeOptimizer {
+class ScheduleTreeOptimizer final {
 public:
   /// Apply schedule tree transformations.
   ///
@@ -384,7 +384,7 @@ ScheduleTreeOptimizer::isolateFullPartialTiles(isl::schedule_node Node,
   return Result;
 }
 
-struct InsertSimdMarkers : public ScheduleNodeRewriter<InsertSimdMarkers> {
+struct InsertSimdMarkers final : ScheduleNodeRewriter<InsertSimdMarkers> {
   isl::schedule_node visitBand(isl::schedule_node_band Band) {
     isl::schedule_node Node = visitChildren(Band);
 
@@ -588,7 +588,7 @@ bool ScheduleTreeOptimizer::isProfitableSchedule(Scop &S,
   return changed;
 }
 
-class IslScheduleOptimizerWrapperPass : public ScopPass {
+class IslScheduleOptimizerWrapperPass final : public ScopPass {
 public:
   static char ID;
 
@@ -1013,7 +1013,7 @@ IslScheduleOptimizerPrinterPass::run(Scop &S, ScopAnalysisManager &SAM,
 
 namespace {
 /// Print result from IslScheduleOptimizerWrapperPass.
-class IslScheduleOptimizerPrinterLegacyPass : public ScopPass {
+class IslScheduleOptimizerPrinterLegacyPass final : public ScopPass {
 public:
   static char ID;
 

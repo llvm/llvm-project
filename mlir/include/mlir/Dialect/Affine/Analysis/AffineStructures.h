@@ -33,7 +33,7 @@ class MemRefType;
 struct MutableAffineMap;
 
 /// FlatAffineValueConstraints represents an extension of IntegerPolyhedron
-/// where each identifier can have an SSA Value attached to it.
+/// where each non-local identifier can have an SSA Value attached to it.
 class FlatAffineValueConstraints : public presburger::IntegerPolyhedron {
 public:
   /// Constructs a constraint system reserving memory for the specified number
@@ -48,10 +48,10 @@ public:
                           presburger::PresburgerSpace::getSetSpace(
                               numDims, numSymbols, numLocals)) {
     assert(numReservedCols >= getNumIds() + 1);
-    assert(valArgs.empty() || valArgs.size() == getNumIds());
+    assert(valArgs.empty() || valArgs.size() == getNumDimAndSymbolIds());
     values.reserve(numReservedCols);
     if (valArgs.empty())
-      values.resize(getNumIds(), None);
+      values.resize(getNumDimAndSymbolIds(), None);
     else
       values.append(valArgs.begin(), valArgs.end());
   }
@@ -70,9 +70,9 @@ public:
   FlatAffineValueConstraints(const IntegerPolyhedron &fac,
                              ArrayRef<Optional<Value>> valArgs = {})
       : IntegerPolyhedron(fac) {
-    assert(valArgs.empty() || valArgs.size() == getNumIds());
+    assert(valArgs.empty() || valArgs.size() == getNumDimAndSymbolIds());
     if (valArgs.empty())
-      values.resize(getNumIds(), None);
+      values.resize(getNumDimAndSymbolIds(), None);
     else
       values.append(valArgs.begin(), valArgs.end());
   }
@@ -166,8 +166,25 @@ public:
   /// bound map is expected to have exactly one result. In case of a LB/UB, the
   /// bound map may have more than one result, for each of which an inequality
   /// is added.
+  ///
+  /// The bound can be added as open or closed by specifying isClosedBound. In
+  /// case of a LB/UB, isClosedBound = false means the bound is added internally
+  /// as a closed bound by +1/-1 respectively. In case of an EQ bound, it can
+  /// only be added as a closed bound.
+  ///
   /// Note: The dimensions/symbols of this FlatAffineConstraints must match the
   /// dimensions/symbols of the affine map.
+  LogicalResult addBound(BoundType type, unsigned pos, AffineMap boundMap,
+                         bool isClosedBound);
+
+  /// Adds a bound for the identifier at the specified position with constraints
+  /// being drawn from the specified bound map. In case of an EQ bound, the
+  /// bound map is expected to have exactly one result. In case of a LB/UB, the
+  /// bound map may have more than one result, for each of which an inequality
+  /// is added.
+  /// Note: The dimensions/symbols of this FlatAffineConstraints must match the
+  /// dimensions/symbols of the affine map. By default the lower bound is closed
+  /// and the upper bound is open.
   LogicalResult addBound(BoundType type, unsigned pos, AffineMap boundMap);
 
   /// Adds a bound for the identifier at the specified position with constraints
@@ -197,9 +214,13 @@ public:
   /// identifiers as floordiv's and mod's of affine expressions of other
   /// identifiers with respect to (positive) constants. Sets bound map to a
   /// null AffineMap if such a bound can't be found (or yet unimplemented).
+  ///
+  /// By default the returned lower bounds are closed and upper bounds are open.
+  /// This can be changed by getClosedUB.
   void getSliceBounds(unsigned offset, unsigned num, MLIRContext *context,
                       SmallVectorImpl<AffineMap> *lbMaps,
-                      SmallVectorImpl<AffineMap> *ubMaps);
+                      SmallVectorImpl<AffineMap> *ubMaps,
+                      bool getClosedUB = false);
 
   /// Composes an affine map whose dimensions and symbols match one to one with
   /// the dimensions and symbols of this FlatAffineConstraints. The results of
@@ -254,9 +275,10 @@ public:
   /// Insert identifiers of the specified kind at position `pos`. Positions are
   /// relative to the kind of identifier. The coefficient columns corresponding
   /// to the added identifiers are initialized to zero. `vals` are the Values
-  /// corresponding to the identifiers. Return the absolute column position
-  /// (i.e., not relative to the kind of identifier) of the first added
-  /// identifier.
+  /// corresponding to the identifiers. Values should not be used with
+  /// IdKind::Local since values can only be attached to non-local identifiers.
+  /// Return the absolute column position (i.e., not relative to the kind of
+  /// identifier) of the first added identifier.
   ///
   /// Note: Empty Values are allowed in `vals`.
   unsigned insertDimId(unsigned pos, unsigned num = 1) {
@@ -376,12 +398,16 @@ public:
   /// Returns the Value associated with the pos^th identifier. Asserts if
   /// no Value identifier was associated.
   inline Value getValue(unsigned pos) const {
+    assert(pos < getNumDimAndSymbolIds() && "Invalid position");
     assert(hasValue(pos) && "identifier's Value not set");
     return values[pos].getValue();
   }
 
   /// Returns true if the pos^th identifier has an associated Value.
-  inline bool hasValue(unsigned pos) const { return values[pos].hasValue(); }
+  inline bool hasValue(unsigned pos) const {
+    assert(pos < getNumDimAndSymbolIds() && "Invalid position");
+    return values[pos].hasValue();
+  }
 
   /// Returns true if at least one identifier has an associated Value.
   bool hasValues() const;
@@ -390,44 +416,41 @@ public:
   /// Asserts if no Value was associated with one of these identifiers.
   inline void getValues(unsigned start, unsigned end,
                         SmallVectorImpl<Value> *values) const {
-    assert((start < getNumIds() || start == end) && "invalid start position");
-    assert(end <= getNumIds() && "invalid end position");
+    assert(end <= getNumDimAndSymbolIds() && "invalid end position");
+    assert(start <= end && "invalid start position");
     values->clear();
     values->reserve(end - start);
     for (unsigned i = start; i < end; i++)
       values->push_back(getValue(i));
   }
   inline void getAllValues(SmallVectorImpl<Value> *values) const {
-    getValues(0, getNumIds(), values);
+    getValues(0, getNumDimAndSymbolIds(), values);
   }
 
   inline ArrayRef<Optional<Value>> getMaybeValues() const {
     return {values.data(), values.size()};
   }
 
-  inline ArrayRef<Optional<Value>> getMaybeDimValues() const {
-    return {values.data(), getNumDimIds()};
-  }
-
-  inline ArrayRef<Optional<Value>> getMaybeSymbolValues() const {
-    return {values.data() + getNumDimIds(), getNumSymbolIds()};
-  }
-
-  inline ArrayRef<Optional<Value>> getMaybeDimAndSymbolValues() const {
-    return {values.data(), getNumDimIds() + getNumSymbolIds()};
+  inline ArrayRef<Optional<Value>>
+  getMaybeValues(presburger::IdKind kind) const {
+    assert(kind != IdKind::Local &&
+           "Local identifiers do not have any value attached to them.");
+    return {values.data() + getIdKindOffset(kind), getNumIdKind(kind)};
   }
 
   /// Sets the Value associated with the pos^th identifier.
   inline void setValue(unsigned pos, Value val) {
-    assert(pos < getNumIds() && "invalid id position");
+    assert(pos < getNumDimAndSymbolIds() && "invalid id position");
     values[pos] = val;
   }
 
   /// Sets the Values associated with the identifiers in the range [start, end).
+  /// The range must contain only dim and symbol identifiers.
   void setValues(unsigned start, unsigned end, ArrayRef<Value> values) {
-    assert((start < getNumIds() || end == start) && "invalid start position");
     assert(end <= getNumIds() && "invalid end position");
-    assert(values.size() == end - start);
+    assert(start <= end && "invalid start position");
+    assert(values.size() == end - start &&
+           "value should be provided for each identifier in the range.");
     for (unsigned i = start; i < end; ++i)
       setValue(i, values[i - start]);
   }
@@ -474,9 +497,9 @@ protected:
   /// an SSA Value attached to it.
   void printSpace(raw_ostream &os) const override;
 
-  /// Values corresponding to the (column) identifiers of this constraint
-  /// system appearing in the order the identifiers correspond to columns.
-  /// Temporary ones or those that aren't associated with any Value are set to
+  /// Values corresponding to the (column) non-local identifiers of this
+  /// constraint system appearing in the order the identifiers correspond to
+  /// columns. Identifiers that aren't associated with any Value are set to
   /// None.
   SmallVector<Optional<Value>, 8> values;
 };

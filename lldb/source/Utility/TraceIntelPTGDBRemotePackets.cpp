@@ -13,33 +13,38 @@ using namespace llvm::json;
 
 namespace lldb_private {
 
+const char *IntelPTDataKinds::kProcFsCpuInfo = "procfsCpuInfo";
+const char *IntelPTDataKinds::kTraceBuffer = "traceBuffer";
+
+bool TraceIntelPTStartRequest::IsPerCoreTracing() const {
+  return per_core_tracing.getValueOr(false);
+}
+
 bool fromJSON(const json::Value &value, TraceIntelPTStartRequest &packet,
               Path path) {
   ObjectMapper o(value, path);
   if (!o || !fromJSON(value, (TraceStartRequest &)packet, path) ||
-      !o.map("enableTsc", packet.enableTsc) ||
-      !o.map("psbPeriod", packet.psbPeriod) ||
-      !o.map("threadBufferSize", packet.threadBufferSize) ||
-      !o.map("processBufferSizeLimit", packet.processBufferSizeLimit))
+      !o.map("enableTsc", packet.enable_tsc) ||
+      !o.map("psbPeriod", packet.psb_period) ||
+      !o.map("traceBufferSize", packet.trace_buffer_size))
     return false;
-  if (packet.tids && packet.processBufferSizeLimit) {
-    path.report("processBufferSizeLimit must be provided");
-    return false;
-  }
-  if (!packet.tids && !packet.processBufferSizeLimit) {
-    path.report("processBufferSizeLimit must not be provided");
-    return false;
+
+  if (packet.IsProcessTracing()) {
+    if (!o.map("processBufferSizeLimit", packet.process_buffer_size_limit) ||
+        !o.map("perCoreTracing", packet.per_core_tracing))
+      return false;
   }
   return true;
 }
 
 json::Value toJSON(const TraceIntelPTStartRequest &packet) {
   json::Value base = toJSON((const TraceStartRequest &)packet);
-  base.getAsObject()->try_emplace("threadBufferSize", packet.threadBufferSize);
-  base.getAsObject()->try_emplace("processBufferSizeLimit",
-                                  packet.processBufferSizeLimit);
-  base.getAsObject()->try_emplace("psbPeriod", packet.psbPeriod);
-  base.getAsObject()->try_emplace("enableTsc", packet.enableTsc);
+  json::Object &obj = *base.getAsObject();
+  obj.try_emplace("traceBufferSize", packet.trace_buffer_size);
+  obj.try_emplace("processBufferSizeLimit", packet.process_buffer_size_limit);
+  obj.try_emplace("psbPeriod", packet.psb_period);
+  obj.try_emplace("enableTsc", packet.enable_tsc);
+  obj.try_emplace("perCoreTracing", packet.per_core_tracing);
   return base;
 }
 
@@ -55,9 +60,9 @@ LinuxPerfZeroTscConversion::Convert(uint64_t raw_counter_value) {
 json::Value LinuxPerfZeroTscConversion::toJSON() {
   return json::Value(json::Object{
       {"kind", "tsc-perf-zero-conversion"},
-      {"time_mult", static_cast<int64_t>(m_time_mult)},
-      {"time_shift", static_cast<int64_t>(m_time_shift)},
-      {"time_zero", static_cast<int64_t>(m_time_zero)},
+      {"time_mult", m_time_mult},
+      {"time_shift", m_time_shift},
+      {"time_zero", m_time_zero},
   });
 }
 
@@ -65,14 +70,14 @@ bool fromJSON(const json::Value &value, TraceTscConversionUP &tsc_conversion,
               json::Path path) {
   ObjectMapper o(value, path);
 
-  int64_t time_mult, time_shift, time_zero;
+  uint64_t time_mult, time_shift, time_zero;
   if (!o || !o.map("time_mult", time_mult) ||
       !o.map("time_shift", time_shift) || !o.map("time_zero", time_zero))
     return false;
 
   tsc_conversion = std::make_unique<LinuxPerfZeroTscConversion>(
       static_cast<uint32_t>(time_mult), static_cast<uint16_t>(time_shift),
-      static_cast<uint64_t>(time_zero));
+      time_zero);
 
   return true;
 }

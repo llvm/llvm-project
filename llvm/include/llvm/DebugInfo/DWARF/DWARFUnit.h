@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFUNIT_H
 #define LLVM_DEBUGINFO_DWARF_DWARFUNIT_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -27,6 +28,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -240,6 +242,11 @@ class DWARFUnit {
   /// std::map::upper_bound for address range lookup.
   std::map<uint64_t, std::pair<uint64_t, DWARFDie>> AddrDieMap;
 
+  /// Map from the location (interpreted DW_AT_location) of a DW_TAG_variable,
+  /// to the end address and the corresponding DIE.
+  std::map<uint64_t, std::pair<uint64_t, DWARFDie>> VariableDieMap;
+  DenseSet<uint64_t> RootsParsedForVariables;
+
   using die_iterator_range =
       iterator_range<std::vector<DWARFDebugInfoEntry>::iterator>;
 
@@ -321,6 +328,9 @@ public:
 
   /// Recursively update address to Die map.
   void updateAddressDieMap(DWARFDie Die);
+
+  /// Recursively update address to variable Die map.
+  void updateVariableDieMap(DWARFDie Die);
 
   void setRangesSection(const DWARFSection *RS, uint64_t Base) {
     RangeSection = RS;
@@ -435,6 +445,10 @@ public:
   /// address. The pointer is alive as long as parsed compile unit DIEs are not
   /// cleared.
   DWARFDie getSubroutineForAddress(uint64_t Address);
+
+  /// Returns variable DIE for the address provided. The pointer is alive as
+  /// long as parsed compile unit DIEs are not cleared.
+  DWARFDie getVariableForAddress(uint64_t Address);
 
   /// getInlinedChainForAddress - fetches inlined chain for a given address.
   /// Returns empty chain if there is no subprogram containing address. The

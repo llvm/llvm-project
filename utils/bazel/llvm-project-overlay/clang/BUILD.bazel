@@ -344,11 +344,11 @@ genrule(
     name = "basic_version_gen",
     outs = ["include/clang/Basic/Version.inc"],
     cmd = (
-        "echo '#define CLANG_VERSION 14.0.0' >> $@\n" +
-        "echo '#define CLANG_VERSION_MAJOR 14' >> $@\n" +
+        "echo '#define CLANG_VERSION 15.0.0' >> $@\n" +
+        "echo '#define CLANG_VERSION_MAJOR 15' >> $@\n" +
         "echo '#define CLANG_VERSION_MINOR 0' >> $@\n" +
         "echo '#define CLANG_VERSION_PATCHLEVEL 0' >> $@\n" +
-        "echo '#define CLANG_VERSION_STRING \"14.0.0\"' >> $@\n"
+        "echo '#define CLANG_VERSION_STRING \"15.0.0\"' >> $@\n"
     ),
 )
 
@@ -373,7 +373,7 @@ genrule(
     # are passed through bazel, it's easier to drop generated files next to
     # the other includes.
     outs = ["include/VCSVersion.inc"],
-    cmd = "echo '#define CLANG_REVISION \"git\"' > $@",
+    cmd = "echo '#undef CLANG_REVISION' > $@",
 )
 
 # A hacky library to expose some internal headers of the `basic` library to its
@@ -781,6 +781,8 @@ cc_library(
 cc_library(
     name = "analysis",
     srcs = glob([
+        "lib/Analysis/FlowSensitive/Models/*.cpp",
+        "lib/Analysis/FlowSensitive/*.cpp",
         "lib/Analysis/*.cpp",
         "lib/Analysis/*.h",
     ]),
@@ -979,6 +981,7 @@ cc_library(
 
 cc_library(
     name = "testing",
+    testonly = 1,
     srcs = glob([
         "lib/Testing/*.cpp",
     ]),
@@ -986,7 +989,9 @@ cc_library(
     includes = ["include"],
     deps = [
         ":basic",
+        ":frontend",
         "//llvm:Support",
+        "//llvm:gtest",
     ],
 )
 

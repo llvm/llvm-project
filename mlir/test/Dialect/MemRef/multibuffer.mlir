@@ -4,7 +4,7 @@
 // CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1, d2) -> (((d0 - d1) floordiv d2) mod 5)>
 
 // CHECK-LABEL: func @multi_buffer
-func @multi_buffer(%a: memref<1024x1024xf32>) {
+func.func @multi_buffer(%a: memref<1024x1024xf32>) {
 // CHECK-DAG: %[[A:.*]] = memref.alloc() : memref<5x4x128xf32>
 // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
 // CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
@@ -31,7 +31,7 @@ func @multi_buffer(%a: memref<1024x1024xf32>) {
 // -----
 
 // CHECK-LABEL: func @multi_buffer_affine
-func @multi_buffer_affine(%a: memref<1024x1024xf32>) {
+func.func @multi_buffer_affine(%a: memref<1024x1024xf32>) {
 // CHECK-DAG: %[[A:.*]] = memref.alloc() : memref<5x4x128xf32>
 // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
 // CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
@@ -61,7 +61,7 @@ func @multi_buffer_affine(%a: memref<1024x1024xf32>) {
 // CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1, d2) -> (((d0 - d1) floordiv d2) mod 5)>
 
 // CHECK-LABEL: func @multi_buffer_subview_use
-func @multi_buffer_subview_use(%a: memref<1024x1024xf32>) {
+func.func @multi_buffer_subview_use(%a: memref<1024x1024xf32>) {
 // CHECK-DAG: %[[A:.*]] = memref.alloc() : memref<5x4x128xf32>
 // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
 // CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
@@ -91,7 +91,7 @@ func @multi_buffer_subview_use(%a: memref<1024x1024xf32>) {
 // -----
 
 // CHECK-LABEL: func @multi_buffer_negative
-func @multi_buffer_negative(%a: memref<1024x1024xf32>) {
+func.func @multi_buffer_negative(%a: memref<1024x1024xf32>) {
 // CHECK-NOT: %{{.*}} = memref.alloc() : memref<5x4x128xf32>
 //     CHECK: %{{.*}} = memref.alloc() : memref<4x128xf32>
   %0 = memref.alloc() : memref<4x128xf32>

@@ -15,7 +15,7 @@
 #pragma include_alias(<string>,   "mystring.h")
 
 // CHECK:      #pragma once
-// CHECK-NEXT: #pragma push_macro( "MYMACRO" )
+// CHECK-NEXT: #pragma push_macro("MYMACRO")
 // CHECK-NEXT: #pragma pop_macro("MYMACRO")
 // CHECK-NEXT: #pragma clang module import mymodule
 // CHECK-NEXT: #pragma include_alias(<string>, "mystring.h")

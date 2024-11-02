@@ -7,7 +7,7 @@
 // CHECK-NEXT: %[[VAL:.*]] = "test.one_variadic_out_one_variadic_in1"(%[[ARG]], %[[ARG]])
 // CHECK-NEXT: "test.one_variadic_out_one_variadic_in1"(%[[VAL]], %[[VAL]])
 
-func @remap_input_1_to_1(%arg0: i32) {
+func.func @remap_input_1_to_1(%arg0: i32) {
   %0 = "test.one_variadic_out_one_variadic_in1"(%arg0) : (i32) -> i32
   %1 = "test.one_variadic_out_one_variadic_in1"(%0) : (i32) -> i32
   "test.return"() : () -> ()
@@ -18,7 +18,7 @@ func @remap_input_1_to_1(%arg0: i32) {
 // CHECK-LABEL: func @remap_unconverted
 // CHECK-NEXT: %[[VAL:.*]] = "test.type_producer"() : () -> f64
 // CHECK-NEXT: "test.type_consumer"(%[[VAL]]) : (f64)
-func @remap_unconverted() {
+func.func @remap_unconverted() {
   %region_result = "test.remapped_value_region"() ({
     %result = "test.type_producer"() : () -> f32
     "test.return"(%result) : (f32) -> ()

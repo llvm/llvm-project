@@ -124,7 +124,7 @@ operation. For example, we could place our Toy operation from above into an
 related dialect:
 
 ```mlir
-func @toy_func(%tensor: tensor<2x3xf64>) -> tensor<3x2xf64> {
+func.func @toy_func(%tensor: tensor<2x3xf64>) -> tensor<3x2xf64> {
   %t_tensor = "toy.transpose"(%tensor) { inplace = true } : (tensor<2x3xf64>) -> tensor<3x2xf64>
   return %t_tensor : tensor<3x2xf64>
 }
@@ -144,7 +144,7 @@ This handling can be observed by crafting what should be an invalid IR for Toy
 and seeing it round-trip without tripping the verifier:
 
 ```mlir
-func @main() {
+func.func @main() {
   %0 = "toy.print"() : () -> tensor<2x3xf64>
 }
 ```

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <array>
 
 // An string is a contiguous container
@@ -19,13 +21,13 @@
 
 
 template <class C>
-void test_contiguous ( const C &c )
+TEST_CONSTEXPR_CXX20 void test_contiguous ( const C &c )
 {
     for ( size_t i = 0; i < c.size(); ++i )
         assert ( *(c.begin() + static_cast<typename C::difference_type>(i)) == *(std::addressof(*c.begin()) + i));
 }
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef std::string S;
     test_contiguous(S());
@@ -57,7 +59,7 @@ int main(int, char**)
 {
   test();
 #if TEST_STD_VER > 17
-  // static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

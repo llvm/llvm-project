@@ -301,6 +301,15 @@ Value *SimplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS, FastMathFlags FMF,
 /// Given a callsite, fold the result or return null.
 Value *SimplifyCall(CallBase *Call, const SimplifyQuery &Q);
 
+/// Given a constrained FP intrinsic call, tries to compute its simplified
+/// version. Returns a simplified result or null.
+///
+/// This function provides an additional contract: it guarantees that if
+/// simplification succeeds that the intrinsic is side effect free. As a result,
+/// successful simplification can be used to delete the intrinsic not just
+/// replace its result.
+Value *SimplifyConstrainedFPCall(CallBase *Call, const SimplifyQuery &Q);
+
 /// Given an operand for a Freeze, see if we can fold the result.
 /// If not, this returns null.
 Value *SimplifyFreezeInst(Value *Op, const SimplifyQuery &Q);

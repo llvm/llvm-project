@@ -8,7 +8,7 @@
 
 #include "FPBits.h"
 #include "NormalFloat.h"
-#include "UInt.h"
+#include "src/__support/CPP/UInt.h"
 
 #include <stdint.h>
 

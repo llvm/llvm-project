@@ -5,7 +5,7 @@
 // Check that cstr_broadcastable is removed.
 //
 // CHECK-BOTH: func @f
-func @f(%arg0 : !shape.shape, %arg1 : !shape.shape) -> index {
+func.func @f(%arg0 : !shape.shape, %arg1 : !shape.shape) -> index {
   // REPLACE-NEXT: %[[WITNESS:.+]] = shape.const_witness true
   // REPLACE-NOT: shape.cstr_eq
   // REPLACE: shape.assuming %[[WITNESS]]
@@ -23,7 +23,7 @@ func @f(%arg0 : !shape.shape, %arg1 : !shape.shape) -> index {
 // Check that cstr_eq is removed.
 //
 // CHECK-BOTH: func @f
-func @f(%arg0 : !shape.shape, %arg1 : !shape.shape) -> index {
+func.func @f(%arg0 : !shape.shape, %arg1 : !shape.shape) -> index {
   // REPLACE-NEXT: %[[WITNESS:.+]] = shape.const_witness true
   // REPLACE-NOT: shape.cstr_eq
   // REPLACE: shape.assuming %[[WITNESS]]
@@ -42,7 +42,7 @@ func @f(%arg0 : !shape.shape, %arg1 : !shape.shape) -> index {
 // should be removed still.
 //
 // CHECK-BOTH: func @f
-func @f(%arg0 : !shape.shape, %arg1 : !shape.shape) -> index {
+func.func @f(%arg0 : !shape.shape, %arg1 : !shape.shape) -> index {
   // CANON-NEXT: test.source
   // CANON-NEXT: return
   %0 = shape.cstr_broadcastable %arg0, %arg1 : !shape.shape, !shape.shape

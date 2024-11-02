@@ -15,7 +15,7 @@
 // wstring_convert() : wstring_convert(new Codecvt) {}    // C++20
 // explicit wstring_convert(Codecvt* pcvt);               // C++20
 
-// XFAIL: libcpp-has-no-wide-characters
+// XFAIL: no-wide-characters
 
 #include <locale>
 #include <codecvt>

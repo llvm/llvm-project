@@ -1,5 +1,12 @@
-// RUN: %clang_cc1 -triple=x86_64-unknown-linux -frandomize-layout-seed=1234567890abcdef \
+// RUN: %clang_cc1 -triple=x86_64-unknown-linux -frandomize-layout-seed=1234567890abcded \
 // RUN:  -verify -fsyntax-only -Werror %s
+
+// NOTE: The current seed (1234567890abcded) is specifically chosen because it
+// uncovered a bug in diagnostics. With it the randomization of "t9" places the
+// "a" element at the end of the record. When that happens, the clang complains
+// about excessive initializers, which is confusing, because there aren't
+// excessive initializers. It should instead complain about using a
+// non-designated initializer on a raqndomized struct.
 
 // Initializing a randomized structure requires a designated initializer,
 // otherwise the element ordering will be off. The only exceptions to this rule
@@ -55,3 +62,16 @@ struct degen_test {
 } __attribute__((randomize_layout));
 
 struct degen_test t11 = { foo }; // Okay
+
+struct static_assert_test {
+  int f;
+  _Static_assert(sizeof(int) == 4, "oh no!");
+} __attribute__((randomize_layout));
+
+struct static_assert_test t12 = { 42 }; // Okay
+
+struct enum_decl_test {
+  enum e { BORK = 42, FORK = 9 } f;
+} __attribute__((randomize_layout));
+
+struct enum_decl_test t13 = { BORK }; // Okay

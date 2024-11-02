@@ -1898,10 +1898,15 @@ void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
 
   MCSymbolAttr VisibilityAttr = MCSA_Invalid;
   if (!TM.getIgnoreXCOFFVisibility()) {
+    if (GV->hasDLLExportStorageClass() && !GV->hasDefaultVisibility())
+      report_fatal_error(
+          "Cannot not be both dllexport and non-default visibility");
     switch (GV->getVisibility()) {
 
-    // TODO: "exported" and "internal" Visibility needs to go here.
+    // TODO: "internal" Visibility needs to go here.
     case GlobalValue::DefaultVisibility:
+      if (GV->hasDLLExportStorageClass())
+        VisibilityAttr = MAI->getExportedVisibilityAttr();
       break;
     case GlobalValue::HiddenVisibility:
       VisibilityAttr = MAI->getHiddenVisibilityAttr();

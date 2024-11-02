@@ -8,7 +8,7 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-func @transfer_read_1d(%A : memref<?xf32>, %base: index) {
+func.func @transfer_read_1d(%A : memref<?xf32>, %base: index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base], %fm42
       {permutation_map = affine_map<(d0) -> (d0)>} :
@@ -17,7 +17,7 @@ func @transfer_read_1d(%A : memref<?xf32>, %base: index) {
   return
 }
 
-func @transfer_read_mask_1d(%A : memref<?xf32>, %base: index) {
+func.func @transfer_read_mask_1d(%A : memref<?xf32>, %base: index) {
   %fm42 = arith.constant -42.0: f32
   %m = arith.constant dense<[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]> : vector<13xi1>
   %f = vector.transfer_read %A[%base], %fm42, %m : memref<?xf32>, vector<13xf32>
@@ -25,7 +25,7 @@ func @transfer_read_mask_1d(%A : memref<?xf32>, %base: index) {
   return
 }
 
-func @transfer_read_inbounds_4(%A : memref<?xf32>, %base: index) {
+func.func @transfer_read_inbounds_4(%A : memref<?xf32>, %base: index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base], %fm42
       {permutation_map = affine_map<(d0) -> (d0)>, in_bounds = [true]} :
@@ -34,7 +34,7 @@ func @transfer_read_inbounds_4(%A : memref<?xf32>, %base: index) {
   return
 }
 
-func @transfer_read_mask_inbounds_4(%A : memref<?xf32>, %base: index) {
+func.func @transfer_read_mask_inbounds_4(%A : memref<?xf32>, %base: index) {
   %fm42 = arith.constant -42.0: f32
   %m = arith.constant dense<[0, 1, 0, 1]> : vector<4xi1>
   %f = vector.transfer_read %A[%base], %fm42, %m {in_bounds = [true]}
@@ -43,7 +43,7 @@ func @transfer_read_mask_inbounds_4(%A : memref<?xf32>, %base: index) {
   return
 }
 
-func @transfer_write_1d(%A : memref<?xf32>, %base: index) {
+func.func @transfer_write_1d(%A : memref<?xf32>, %base: index) {
   %f0 = arith.constant 0.0 : f32
   %vf0 = vector.splat %f0 : vector<4xf32>
   vector.transfer_write %vf0, %A[%base]
@@ -52,7 +52,7 @@ func @transfer_write_1d(%A : memref<?xf32>, %base: index) {
   return
 }
 
-func @entry() {
+func.func @entry() {
   %c0 = arith.constant 0: index
   %c1 = arith.constant 1: index
   %c2 = arith.constant 2: index

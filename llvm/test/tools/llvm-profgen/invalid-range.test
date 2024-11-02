@@ -8,39 +8,40 @@
 ; RUN: FileCheck %s --input-file %t2 --check-prefix=CS
 
 
-; NOCS:      4
-; NOCS-NEXT: 201760-20177f:2
-; NOCS-NEXT: 20179e-2017bf:1
-; NOCS-NEXT: 2017c4-2017cf:1
+; NOCS: 4
+; NOCS-NEXT: 201760-20177f:7
+; NOCS-NEXT: 20179e-2017bf:5
+; NOCS-NEXT: 2017c4-2017cf:6
 ; NOCS-NEXT: 2017c4-2017d8:1
 ; NOCS-NEXT: 4
-; NOCS-NEXT: 20177f->2017c4:2
-; NOCS-NEXT: 2017bf->201760:2
-; NOCS-NEXT: 2017cf->20179e:2
+; NOCS-NEXT: 20177f->2017c4:7
+; NOCS-NEXT: 2017bf->201760:7
+; NOCS-NEXT: 2017cf->20179e:8
 ; NOCS-NEXT: 2017d8->2017e3:1
 
 
 ; CS:      []
-; CS-NEXT:  3
-; CS-NEXT:  201760-20177f:1
-; CS-NEXT:  20179e-2017bf:1
-; CS-NEXT:  2017c4-2017d8:1
-; CS-NEXT:  4
-; CS-NEXT:  20177f->2017c4:1
-; CS-NEXT:  2017bf->201760:1
-; CS-NEXT:  2017cf->20179e:1
-; CS-NEXT:  2017d8->2017e3:1
+; CS-NEXT:   4
+; CS-NEXT:   201760-20177f:6
+; CS-NEXT:   20179e-2017bf:5
+; CS-NEXT:   2017c4-2017cf:5
+; CS-NEXT:   2017c4-2017d8:1
+; CS-NEXT:   4
+; CS-NEXT:   20177f->2017c4:6
+; CS-NEXT:   2017bf->201760:6
+; CS-NEXT:   2017cf->20179e:6
+; CS-NEXT:   2017d8->2017e3:1
 ; CS-NEXT: [0x7f4]
-; CS-NEXT:  1
-; CS-NEXT:  2017c4-2017cf:1
-; CS-NEXT:  2
-; CS-NEXT:  2017bf->201760:1
-; CS-NEXT:  2017cf->20179e:1
+; CS-NEXT:   1
+; CS-NEXT:   2017c4-2017cf:1
+; CS-NEXT:   2
+; CS-NEXT:   2017bf->201760:1
+; CS-NEXT:   2017cf->20179e:2
 ; CS-NEXT: [0x7f4 @ 0x7bf]
-; CS-NEXT:  1
-; CS-NEXT:  201760-20177f:1
-; CS-NEXT:  1
-; CS-NEXT:  20177f->2017c4:1
+; CS-NEXT:   1
+; CS-NEXT:   201760-20177f:1
+; CS-NEXT:   1
+; CS-NEXT:   20177f->2017c4:1
 
 ; clang -O3 -fuse-ld=lld -fpseudo-probe-for-profiling
 ; -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -Xclang -mdisable-tail-calls

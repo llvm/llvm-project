@@ -83,11 +83,6 @@ llvm_config.use_lld(required=('lld' in config.llvm_enabled_projects))
 if 'compiler-rt' in config.llvm_enabled_projects:
   config.available_features.add('compiler-rt')
 
-if config.llvm_use_sanitizer:
-    # Propagate path to symbolizer for ASan/MSan.
-    llvm_config.with_system_environment(
-        ['ASAN_SYMBOLIZER_PATH', 'MSAN_SYMBOLIZER_PATH'])
-
 # Check which debuggers are available:
 lldb_path = llvm_config.use_llvm_tool('lldb', search_env='LLDB')
 

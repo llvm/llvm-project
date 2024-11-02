@@ -8,8 +8,8 @@ define dso_local void @test_api(i32 %0, i16 signext %1, i16 signext %2) nounwind
 ; CHECK-LABEL: test_api:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $968, %rsp # imm = 0x3C8
-; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; CHECK-NEXT:    vmovdqu64 %zmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %sil, -{{[0-9]+}}(%rsp)

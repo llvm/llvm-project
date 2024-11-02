@@ -1,4 +1,4 @@
-; RUN: llc -arm-global-merge -global-merge-group-by-use=false -filetype=obj < %s | llvm-dwarfdump -debug-info -v - | FileCheck %s
+; RUN: llc -arm-global-merge -global-merge-group-by-use=false -filetype=obj < %s | llvm-dwarfdump -debug-info --name=x1 --name=x2 -v - | FileCheck %s
 
 source_filename = "test/CodeGen/ARM/2011-01-19-MergedGlobalDbg.ll"
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:32:64-v128:32:128-a0:0:32-n32"
@@ -11,14 +11,11 @@ target triple = "thumbv7-apple-darwin10"
 @x5 = global i8 1, align 1, !dbg !10
 
 ; CHECK: DW_TAG_variable
-; CHECK-NOT: DW_TAG
 ; CHECK:    DW_AT_name {{.*}} "x1"
-; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:    DW_AT_location [DW_FORM_exprloc]        (DW_OP_addr [[ADDR:0x[0-9a-fA-F]+]])
+
 ; CHECK: DW_TAG_variable
-; CHECK-NOT: DW_TAG
 ; CHECK:    DW_AT_name {{.*}} "x2"
-; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:    DW_AT_location [DW_FORM_exprloc]        (DW_OP_addr [[ADDR]], DW_OP_plus_uconst 0x1)
 
 ; Function Attrs: nounwind optsize

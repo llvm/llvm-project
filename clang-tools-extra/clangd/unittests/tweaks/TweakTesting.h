@@ -9,9 +9,11 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_TWEAKS_TWEAKTESTING_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_TWEAKS_TWEAKTESTING_H
 
+#include "ParsedAST.h"
 #include "index/Index.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Testing/Support/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -89,14 +91,13 @@ protected:
   std::string apply(llvm::StringRef MarkedCode,
                     llvm::StringMap<std::string> *EditedFiles = nullptr) const;
 
-  // Accepts a code snippet with many ranges (or points) marked, and returns a
-  // list of snippets with one range marked each.
-  // Primarily used from EXPECT_AVAILABLE/EXPECT_UNAVAILABLE macro.
-  static std::vector<std::string> expandCases(llvm::StringRef MarkedCode);
-
-  // Returns a matcher that accepts marked code snippets where the tweak is
-  // available at the marked range.
-  ::testing::Matcher<llvm::StringRef> isAvailable() const;
+  // Helpers for EXPECT_AVAILABLE/EXPECT_UNAVAILABLE macros.
+  using WrappedAST = std::pair<ParsedAST, /*WrappingOffset*/ unsigned>;
+  WrappedAST build(llvm::StringRef) const;
+  bool isAvailable(WrappedAST &, llvm::Annotations::Range) const;
+  // Return code re-decorated with a single point/range.
+  static std::string decorate(llvm::StringRef, unsigned);
+  static std::string decorate(llvm::StringRef, llvm::Annotations::Range);
 };
 
 MATCHER_P2(FileWithContents, FileName, Contents, "") {
@@ -109,18 +110,18 @@ MATCHER_P2(FileWithContents, FileName, Contents, "") {
     TweakID##Test() : TweakTest(#TweakID) {}                                   \
   }
 
-#define EXPECT_AVAILABLE(MarkedCode)                                           \
+#define EXPECT_AVAILABLE_(MarkedCode, Available)                               \
   do {                                                                         \
-    for (const auto &Case : expandCases(MarkedCode))                           \
-      EXPECT_THAT(Case, ::clang::clangd::TweakTest::isAvailable());            \
+    llvm::Annotations A{llvm::StringRef(MarkedCode)};                          \
+    auto AST = build(A.code());                                                \
+    assert(!A.points().empty() || !A.ranges().empty());                        \
+    for (const auto &P : A.points())                                           \
+      EXPECT_EQ(Available, isAvailable(AST, {P, P})) << decorate(A.code(), P); \
+    for (const auto &R : A.ranges())                                           \
+      EXPECT_EQ(Available, isAvailable(AST, R)) << decorate(A.code(), R);      \
   } while (0)
-
-#define EXPECT_UNAVAILABLE(MarkedCode)                                         \
-  do {                                                                         \
-    for (const auto &Case : expandCases(MarkedCode))                           \
-      EXPECT_THAT(Case,                                                        \
-                  ::testing::Not(::clang::clangd::TweakTest::isAvailable()));  \
-  } while (0)
+#define EXPECT_AVAILABLE(MarkedCode) EXPECT_AVAILABLE_(MarkedCode, true)
+#define EXPECT_UNAVAILABLE(MarkedCode) EXPECT_AVAILABLE_(MarkedCode, false)
 
 } // namespace clangd
 } // namespace clang

@@ -2486,6 +2486,12 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
       }
     }
 
+    uint64_t LargestVectorWidth = 0;
+    for (auto *I : NewArgumentTypes)
+      if (auto *VT = dyn_cast<llvm::VectorType>(I))
+        LargestVectorWidth = std::max(
+            LargestVectorWidth, VT->getPrimitiveSizeInBits().getKnownMinSize());
+
     FunctionType *OldFnTy = OldFn->getFunctionType();
     Type *RetTy = OldFnTy->getReturnType();
 
@@ -2515,6 +2521,7 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     NewFn->setAttributes(AttributeList::get(
         Ctx, OldFnAttributeList.getFnAttrs(), OldFnAttributeList.getRetAttrs(),
         NewArgumentAttributes));
+    AttributeFuncs::updateMinLegalVectorWidthAttr(*NewFn, LargestVectorWidth);
 
     // Since we have now created the new function, splice the body of the old
     // function right into the new function, leaving the old rotting hulk of the
@@ -2591,6 +2598,9 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
       NewCB->setAttributes(AttributeList::get(
           Ctx, OldCallAttributeList.getFnAttrs(),
           OldCallAttributeList.getRetAttrs(), NewArgOperandAttributes));
+
+      AttributeFuncs::updateMinLegalVectorWidthAttr(*NewCB->getCaller(),
+                                                    LargestVectorWidth);
 
       CallSitePairs.push_back({OldCB, NewCB});
       return true;

@@ -18,21 +18,16 @@
 #include <vector>
 
 namespace llvm {
-class MemoryBuffer;
 class RecordKeeper;
+class SourceMgr;
 
-/// Peform the tablegen action using the given set of parsed records. Returns
-/// true on error, false otherwise.
-using TableGenParserFn = function_ref<bool(RecordKeeper &)>;
-
-/// Parse the given input buffer containing a tablegen file, invoking the
-/// provided parser function with the set of parsed records. All tablegen state
-/// is reset after the provided parser function is invoked, i.e., the provided
-/// parser function should not maintain references to any tablegen constructs
-/// after executing. Returns true on failure, false otherwise.
-bool TableGenParseFile(std::unique_ptr<MemoryBuffer> Buffer,
-                       std::vector<std::string> IncludeDirs,
-                       TableGenParserFn ParserFn);
+/// Parse the TableGen file defined within the main buffer of the given
+/// SourceMgr. On success, populates the provided RecordKeeper with the parsed
+/// records and returns false. On failure, returns true.
+///
+/// NOTE: TableGen currently relies on global state within a given parser
+///       invocation, so this function is not thread-safe.
+bool TableGenParseFile(SourceMgr &InputSrcMgr, RecordKeeper &Records);
 
 } // end namespace llvm
 

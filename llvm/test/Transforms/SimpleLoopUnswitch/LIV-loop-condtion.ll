@@ -8,7 +8,8 @@ define i32 @test(i1 %cond1, i32 %var1) {
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond1, label %entry.split, label %loop_exit.split
+; CHECK-NEXT:    [[FROZEN:%.+]] = freeze i1 %cond1
+; CHECK-NEXT:    br i1 [[FROZEN]], label %entry.split, label %loop_exit.split
 ;
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label %loop_begin

@@ -1377,8 +1377,6 @@ define i32 @irreducibleCFG() #4 {
 ; ENABLE-NEXT:    pushq %rbx
 ; ENABLE-NEXT:    pushq %rax
 ; ENABLE-NEXT:    .cfi_offset %rbx, -24
-; ENABLE-NEXT:    movq _irreducibleCFGa@GOTPCREL(%rip), %rax
-; ENABLE-NEXT:    movl (%rax), %edi
 ; ENABLE-NEXT:    movq _irreducibleCFGf@GOTPCREL(%rip), %rax
 ; ENABLE-NEXT:    cmpb $0, (%rax)
 ; ENABLE-NEXT:    je LBB16_2
@@ -1388,20 +1386,24 @@ define i32 @irreducibleCFG() #4 {
 ; ENABLE-NEXT:    jmp LBB16_1
 ; ENABLE-NEXT:  LBB16_2: ## %split
 ; ENABLE-NEXT:    movq _irreducibleCFGb@GOTPCREL(%rip), %rax
-; ENABLE-NEXT:    xorl %ebx, %ebx
 ; ENABLE-NEXT:    cmpl $0, (%rax)
-; ENABLE-NEXT:    je LBB16_4
-; ENABLE-NEXT:  ## %bb.3: ## %for.body4.i
+; ENABLE-NEXT:    je LBB16_3
+; ENABLE-NEXT:  ## %bb.4: ## %for.body4.i
+; ENABLE-NEXT:    movq _irreducibleCFGa@GOTPCREL(%rip), %rax
+; ENABLE-NEXT:    movl (%rax), %edi
 ; ENABLE-NEXT:    xorl %ebx, %ebx
 ; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    callq _something
+; ENABLE-NEXT:    jmp LBB16_5
+; ENABLE-NEXT:  LBB16_3:
+; ENABLE-NEXT:    xorl %ebx, %ebx
 ; ENABLE-NEXT:    .p2align 4, 0x90
-; ENABLE-NEXT:  LBB16_4: ## %for.inc
+; ENABLE-NEXT:  LBB16_5: ## %for.inc
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    incl %ebx
 ; ENABLE-NEXT:    cmpl $7, %ebx
-; ENABLE-NEXT:    jl LBB16_4
-; ENABLE-NEXT:  ## %bb.5: ## %fn1.exit
+; ENABLE-NEXT:    jl LBB16_5
+; ENABLE-NEXT:  ## %bb.6: ## %fn1.exit
 ; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    addq $8, %rsp
 ; ENABLE-NEXT:    popq %rbx
@@ -1418,8 +1420,6 @@ define i32 @irreducibleCFG() #4 {
 ; DISABLE-NEXT:    pushq %rbx
 ; DISABLE-NEXT:    pushq %rax
 ; DISABLE-NEXT:    .cfi_offset %rbx, -24
-; DISABLE-NEXT:    movq _irreducibleCFGa@GOTPCREL(%rip), %rax
-; DISABLE-NEXT:    movl (%rax), %edi
 ; DISABLE-NEXT:    movq _irreducibleCFGf@GOTPCREL(%rip), %rax
 ; DISABLE-NEXT:    cmpb $0, (%rax)
 ; DISABLE-NEXT:    je LBB16_2
@@ -1429,20 +1429,24 @@ define i32 @irreducibleCFG() #4 {
 ; DISABLE-NEXT:    jmp LBB16_1
 ; DISABLE-NEXT:  LBB16_2: ## %split
 ; DISABLE-NEXT:    movq _irreducibleCFGb@GOTPCREL(%rip), %rax
-; DISABLE-NEXT:    xorl %ebx, %ebx
 ; DISABLE-NEXT:    cmpl $0, (%rax)
-; DISABLE-NEXT:    je LBB16_4
-; DISABLE-NEXT:  ## %bb.3: ## %for.body4.i
+; DISABLE-NEXT:    je LBB16_3
+; DISABLE-NEXT:  ## %bb.4: ## %for.body4.i
+; DISABLE-NEXT:    movq _irreducibleCFGa@GOTPCREL(%rip), %rax
+; DISABLE-NEXT:    movl (%rax), %edi
 ; DISABLE-NEXT:    xorl %ebx, %ebx
 ; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    callq _something
+; DISABLE-NEXT:    jmp LBB16_5
+; DISABLE-NEXT:  LBB16_3:
+; DISABLE-NEXT:    xorl %ebx, %ebx
 ; DISABLE-NEXT:    .p2align 4, 0x90
-; DISABLE-NEXT:  LBB16_4: ## %for.inc
+; DISABLE-NEXT:  LBB16_5: ## %for.inc
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    incl %ebx
 ; DISABLE-NEXT:    cmpl $7, %ebx
-; DISABLE-NEXT:    jl LBB16_4
-; DISABLE-NEXT:  ## %bb.5: ## %fn1.exit
+; DISABLE-NEXT:    jl LBB16_5
+; DISABLE-NEXT:  ## %bb.6: ## %fn1.exit
 ; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    addq $8, %rsp
 ; DISABLE-NEXT:    popq %rbx

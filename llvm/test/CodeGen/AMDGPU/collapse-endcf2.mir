@@ -59,7 +59,7 @@ body:             |
   ; GCN:   successors: %bb.4(0x80000000)
   ; GCN:   $exec = S_OR_B64 $exec, [[COPY4]], implicit-def $scc
   ; GCN:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; GCN:   dead %16:sreg_64 = SI_CALL [[DEF]], @func, csr_amdgpu_highregs
+  ; GCN:   dead %16:sreg_64 = SI_CALL [[DEF]], @func, csr_amdgpu
   ; GCN: bb.4:
   ; GCN:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
   ; GCN:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 3, implicit $exec
@@ -108,7 +108,7 @@ body:             |
   bb.3:
     $exec = S_OR_B64 $exec, %12,  implicit-def $scc
     %20:sreg_64 = IMPLICIT_DEF
-    %21:sreg_64 = SI_CALL %20, @func, csr_amdgpu_highregs
+    %21:sreg_64 = SI_CALL %20, @func, csr_amdgpu
 
   bb.4:
     $exec = S_OR_B64 $exec, %3, implicit-def $scc

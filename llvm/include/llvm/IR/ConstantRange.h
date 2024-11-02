@@ -553,6 +553,9 @@ public:
   /// Return whether unsigned mul of the two ranges always/never overflows.
   OverflowResult unsignedMulMayOverflow(const ConstantRange &Other) const;
 
+  /// Return known bits for values in this range.
+  KnownBits toKnownBits() const;
+
   /// Print out the bounds to a stream.
   void print(raw_ostream &OS) const;
 

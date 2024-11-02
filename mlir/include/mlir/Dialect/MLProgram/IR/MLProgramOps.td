@@ -10,6 +10,7 @@
 #define MLPROGRAM_OPS
 
 include "mlir/Dialect/MLProgram/IR/MLProgramBase.td"
+include "mlir/Dialect/MLProgram/IR/MLProgramTypes.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -94,6 +95,191 @@ def MLProgram_FuncOp : MLProgram_Op<"func", [
   }];
 
   let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalOp
+//===----------------------------------------------------------------------===//
+
+def MLProgram_GlobalOp : MLProgram_Op<"global", [
+    Symbol
+  ]> {
+  let summary = "Module level declaration of a global variable";
+  let description = [{
+    Declares a named global variable (or constant).
+
+    A global contains a value of a specified type which can be accessed at
+    runtime via appropriate load/store operations. It can be mutable or
+    constant, optionally taking an initial value or declared as
+    extern (in which case, the initial value is found in external storage
+    by symbol name).
+
+    Generally, the type of the global and the type of the initial value
+    will be the same. However, for type hierarchies which can have a more
+    generalized bounding type that can be assigned from a narrow type, this
+    is allowed (but not verified).
+
+    Examples:
+
+    ```mlir
+    // Constant global.
+    ml_program.global @foobar(dense<4> : tensor<4xi32>) : tensor<?xi32>
+
+    // Constant with external linkage.
+    ml_program.global mutable @foobar(#ml_program.extern<tensor<4xi32>>)
+      : tensor<?xi32>
+
+    // Mutable global with an undefined initial value.
+    ml_program.global mutable @foobar : tensor<?xi32>
+    ```
+  }];
+
+  let arguments = (ins
+    SymbolNameAttr:$sym_name,
+    TypeAttr:$type,
+    UnitAttr:$is_mutable,
+    OptionalAttr<AnyAttr>:$value,
+    OptionalAttr<StrAttr>:$sym_visibility
+  );
+
+  let assemblyFormat = [{
+    custom<SymbolVisibility>($sym_visibility)
+    (`mutable` $is_mutable^)?
+    $sym_name ``
+    custom<TypedInitialValue>($type, $value)
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalLoadOp
+//===----------------------------------------------------------------------===//
+
+def MLProgram_GlobalLoadOp : MLProgram_Op<"global_load", [
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>
+  ]> {
+  let summary = "Direct load of a mutable value from a global";
+  let description = [{
+    Performs a non-atomic, non-volatile, non-synchronized load from a global
+    that may be mutable.
+
+    It is fully expected that these constraints are not suitable for
+    all situations, and alternative ops should be defined and used for more
+    advanced cases.
+
+    This op is side effecting and may not be valid to use in graph regions
+    without additional consideration to evaluation order constraints.
+
+    Example:
+
+    ```mlir
+    %0 = ml_program.global_load @foobar : tensor<?xi32>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<SymbolRefAttr, "", [MemRead]>:$global,
+    Variadic<MLProgram_TokenType>:$consumeTokens
+  );
+  let results = (outs
+    AnyType:$result,
+    Optional<MLProgram_TokenType>:$produceToken
+  );
+
+  let assemblyFormat = [{
+    $global `` custom<TokenOrdering>($consumeTokens, type($produceToken)) `:` type($result) attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Gets the corresponding GlobalOp (or nullptr).
+    GlobalOp getGlobalOp(SymbolTableCollection &symbolTable);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalLoadConstOp
+//===----------------------------------------------------------------------===//
+
+def MLProgram_GlobalLoadConstOp : MLProgram_Op<"global_load_const", [
+    NoSideEffect,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>
+  ]> {
+  let summary = "Direct load a constant value from a global";
+  let description = [{
+    Loads a constant (immutable) value from a global directly by symbol.
+
+    This op is only legal for globals that are not mutable and exists because
+    such a load can be considered to have no side effects.
+
+    Example:
+
+    ```mlir
+    %0 = ml_program.global_load_const @foobar : tensor<?xi32>
+    ```
+  }];
+
+  let arguments = (ins
+    SymbolRefAttr:$global
+  );
+  let results = (outs
+    AnyType:$result
+  );
+
+  let assemblyFormat = [{
+    $global `:` type($result) attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Gets the corresponding GlobalOp (or nullptr).
+    GlobalOp getGlobalOp(SymbolTableCollection &symbolTable);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalStoreOp
+//===----------------------------------------------------------------------===//
+
+def MLProgram_GlobalStoreOp : MLProgram_Op<"global_store", [
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>
+  ]> {
+  let summary = "Direct store of a value into a mutable global";
+  let description = [{
+    Performs a non-atomic, non-volatile, non-synchronized store to a mutable
+    global.
+
+    It is fully expected that these constraints are not suitable for
+    all situations, and alternative ops should be defined and used for more
+    advanced cases.
+
+    This op is side effecting and may not be valid to use in graph regions
+    without additional consideration to evaluation order constraints.
+
+    Example:
+
+    ```mlir
+    ml_program.global_store @foobar = %0 : tensor<?xi32>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<SymbolRefAttr, "", [MemWrite]>:$global,
+    AnyType:$value,
+    Variadic<MLProgram_TokenType>:$consumeTokens
+  );
+  let results = (outs
+    Optional<MLProgram_TokenType>:$produceToken
+  );
+
+  let assemblyFormat = [{
+    $global `=` $value `` custom<TokenOrdering>($consumeTokens, type($produceToken)) `:` type($value) attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Gets the corresponding GlobalOp (or nullptr).
+    GlobalOp getGlobalOp(SymbolTableCollection &symbolTable);
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -213,6 +399,26 @@ def MLProgram_ReturnOp : MLProgram_Op<"return", [
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// TokenOp
+//===----------------------------------------------------------------------===//
+
+def MLProgram_TokenOp : MLProgram_Op<"token", [
+    NoSideEffect
+  ]> {
+  let summary = "Produces a new token value";
+  let description = [{
+    Token values are used to chain side effecting ops in a graph so as to
+    establish an execution order. This op produces a token.
+  }];
+
+  let results = (outs
+    MLProgram_TokenType:$token
+  );
+
+  let assemblyFormat = "attr-dict";
 }
 
 #endif // MLPROGRAM_OPS

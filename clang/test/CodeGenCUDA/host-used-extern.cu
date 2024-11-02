@@ -11,7 +11,7 @@
 
 #include "Inputs/cuda.h"
 
-// CHECK-LABEL: @__clang_gpu_used_external = appending {{.*}}global
+// CHECK-LABEL: @__clang_gpu_used_external = internal {{.*}}global
 // CHECK-DAG: @_Z7kernel1v
 // CHECK-DAG: @_Z7kernel4v
 // CHECK-DAG: @var1

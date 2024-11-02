@@ -11,7 +11,7 @@ module attributes {
 
 // Check integer operation conversions.
 // CHECK-LABEL: @int32_scalar
-func @int32_scalar(%lhs: i32, %rhs: i32) {
+func.func @int32_scalar(%lhs: i32, %rhs: i32) {
   // CHECK: spv.IAdd %{{.*}}, %{{.*}}: i32
   %0 = arith.addi %lhs, %rhs: i32
   // CHECK: spv.ISub %{{.*}}, %{{.*}}: i32
@@ -27,9 +27,9 @@ func @int32_scalar(%lhs: i32, %rhs: i32) {
   return
 }
 
-// CHECK-LABEL: @scalar_srem
+// CHECK-LABEL: @int32_scalar_srem
 // CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
-func @scalar_srem(%lhs: i32, %rhs: i32) {
+func.func @int32_scalar_srem(%lhs: i32, %rhs: i32) {
   // CHECK: %[[LABS:.+]] = spv.GLSL.SAbs %[[LHS]] : i32
   // CHECK: %[[RABS:.+]] = spv.GLSL.SAbs %[[RHS]] : i32
   // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : i32
@@ -40,9 +40,39 @@ func @scalar_srem(%lhs: i32, %rhs: i32) {
   return
 }
 
+// CHECK-LABEL: @index_scalar
+func.func @index_scalar(%lhs: index, %rhs: index) {
+  // CHECK: spv.IAdd %{{.*}}, %{{.*}}: i32
+  %0 = arith.addi %lhs, %rhs: index
+  // CHECK: spv.ISub %{{.*}}, %{{.*}}: i32
+  %1 = arith.subi %lhs, %rhs: index
+  // CHECK: spv.IMul %{{.*}}, %{{.*}}: i32
+  %2 = arith.muli %lhs, %rhs: index
+  // CHECK: spv.SDiv %{{.*}}, %{{.*}}: i32
+  %3 = arith.divsi %lhs, %rhs: index
+  // CHECK: spv.UDiv %{{.*}}, %{{.*}}: i32
+  %4 = arith.divui %lhs, %rhs: index
+  // CHECK: spv.UMod %{{.*}}, %{{.*}}: i32
+  %5 = arith.remui %lhs, %rhs: index
+  return
+}
+
+// CHECK-LABEL: @index_scalar_srem
+// CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
+func.func @index_scalar_srem(%lhs: index, %rhs: index) {
+  // CHECK: %[[LABS:.+]] = spv.GLSL.SAbs %[[LHS]] : i32
+  // CHECK: %[[RABS:.+]] = spv.GLSL.SAbs %[[RHS]] : i32
+  // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : i32
+  // CHECK:  %[[POS:.+]] = spv.IEqual %[[LHS]], %[[LABS]] : i32
+  // CHECK:  %[[NEG:.+]] = spv.SNegate %[[ABS]] : i32
+  // CHECK:      %{{.+}} = spv.Select %[[POS]], %[[ABS]], %[[NEG]] : i1, i32
+  %0 = arith.remsi %lhs, %rhs: index
+  return
+}
+
 // Check float unary operation conversions.
 // CHECK-LABEL: @float32_unary_scalar
-func @float32_unary_scalar(%arg0: f32) {
+func.func @float32_unary_scalar(%arg0: f32) {
   // CHECK: spv.FNegate %{{.*}}: f32
   %0 = arith.negf %arg0 : f32
   return
@@ -50,7 +80,7 @@ func @float32_unary_scalar(%arg0: f32) {
 
 // Check float binary operation conversions.
 // CHECK-LABEL: @float32_binary_scalar
-func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
+func.func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
   // CHECK: spv.FAdd %{{.*}}, %{{.*}}: f32
   %0 = arith.addf %lhs, %rhs: f32
   // CHECK: spv.FSub %{{.*}}, %{{.*}}: f32
@@ -66,7 +96,7 @@ func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
 
 // Check int vector types.
 // CHECK-LABEL: @int_vector234
-func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<4xi64>) {
+func.func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<4xi64>) {
   // CHECK: spv.SDiv %{{.*}}, %{{.*}}: vector<2xi8>
   %0 = arith.divsi %arg0, %arg0: vector<2xi8>
   // CHECK: spv.UDiv %{{.*}}, %{{.*}}: vector<4xi64>
@@ -76,7 +106,7 @@ func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<4xi64>) {
 
 // CHECK-LABEL: @vector_srem
 // CHECK-SAME: (%[[LHS:.+]]: vector<3xi16>, %[[RHS:.+]]: vector<3xi16>)
-func @vector_srem(%arg0: vector<3xi16>, %arg1: vector<3xi16>) {
+func.func @vector_srem(%arg0: vector<3xi16>, %arg1: vector<3xi16>) {
   // CHECK: %[[LABS:.+]] = spv.GLSL.SAbs %[[LHS]] : vector<3xi16>
   // CHECK: %[[RABS:.+]] = spv.GLSL.SAbs %[[RHS]] : vector<3xi16>
   // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : vector<3xi16>
@@ -89,7 +119,7 @@ func @vector_srem(%arg0: vector<3xi16>, %arg1: vector<3xi16>) {
 
 // Check float vector types.
 // CHECK-LABEL: @float_vector234
-func @float_vector234(%arg0: vector<2xf16>, %arg1: vector<3xf64>) {
+func.func @float_vector234(%arg0: vector<2xf16>, %arg1: vector<3xf64>) {
   // CHECK: spv.FAdd %{{.*}}, %{{.*}}: vector<2xf16>
   %0 = arith.addf %arg0, %arg0: vector<2xf16>
   // CHECK: spv.FMul %{{.*}}, %{{.*}}: vector<3xf64>
@@ -98,21 +128,21 @@ func @float_vector234(%arg0: vector<2xf16>, %arg1: vector<3xf64>) {
 }
 
 // CHECK-LABEL: @one_elem_vector
-func @one_elem_vector(%arg0: vector<1xi32>) {
+func.func @one_elem_vector(%arg0: vector<1xi32>) {
   // CHECK: spv.IAdd %{{.+}}, %{{.+}}: i32
   %0 = arith.addi %arg0, %arg0: vector<1xi32>
   return
 }
 
 // CHECK-LABEL: @unsupported_5elem_vector
-func @unsupported_5elem_vector(%arg0: vector<5xi32>) {
+func.func @unsupported_5elem_vector(%arg0: vector<5xi32>) {
   // CHECK: arith.subi
   %1 = arith.subi %arg0, %arg0: vector<5xi32>
   return
 }
 
 // CHECK-LABEL: @unsupported_2x2elem_vector
-func @unsupported_2x2elem_vector(%arg0: vector<2x2xi32>) {
+func.func @unsupported_2x2elem_vector(%arg0: vector<2x2xi32>) {
   // CHECK: arith.muli
   %2 = arith.muli %arg0, %arg0: vector<2x2xi32>
   return
@@ -128,7 +158,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: @int_vector23
-func @int_vector23(%arg0: vector<2xi8>, %arg1: vector<3xi16>) {
+func.func @int_vector23(%arg0: vector<2xi8>, %arg1: vector<3xi16>) {
   // CHECK: spv.SDiv %{{.*}}, %{{.*}}: vector<2xi32>
   %0 = arith.divsi %arg0, %arg0: vector<2xi8>
   // CHECK: spv.SDiv %{{.*}}, %{{.*}}: vector<3xi32>
@@ -137,7 +167,7 @@ func @int_vector23(%arg0: vector<2xi8>, %arg1: vector<3xi16>) {
 }
 
 // CHECK-LABEL: @float_scalar
-func @float_scalar(%arg0: f16, %arg1: f64) {
+func.func @float_scalar(%arg0: f16, %arg1: f64) {
   // CHECK: spv.FAdd %{{.*}}, %{{.*}}: f32
   %0 = arith.addf %arg0, %arg0: f16
   // CHECK: spv.FMul %{{.*}}, %{{.*}}: f32
@@ -156,7 +186,7 @@ module attributes {
 } {
 
 // expected-error @+1 {{failed to materialize conversion for block argument #0 that remained live after conversion, type was 'vector<4xi64>', with target type 'vector<4xi32>'}}
-func @int_vector4_invalid(%arg0: vector<4xi64>) {
+func.func @int_vector4_invalid(%arg0: vector<4xi64>) {
   // expected-error @+2 {{bitwidth emulation is not implemented yet on unsigned op}}
   // expected-note @+1 {{see existing live user here}}
   %0 = arith.divui %arg0, %arg0: vector<4xi64>
@@ -176,7 +206,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: @bitwise_scalar
-func @bitwise_scalar(%arg0 : i32, %arg1 : i32) {
+func.func @bitwise_scalar(%arg0 : i32, %arg1 : i32) {
   // CHECK: spv.BitwiseAnd
   %0 = arith.andi %arg0, %arg1 : i32
   // CHECK: spv.BitwiseOr
@@ -187,7 +217,7 @@ func @bitwise_scalar(%arg0 : i32, %arg1 : i32) {
 }
 
 // CHECK-LABEL: @bitwise_vector
-func @bitwise_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
+func.func @bitwise_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
   // CHECK: spv.BitwiseAnd
   %0 = arith.andi %arg0, %arg1 : vector<4xi32>
   // CHECK: spv.BitwiseOr
@@ -198,7 +228,7 @@ func @bitwise_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
 }
 
 // CHECK-LABEL: @logical_scalar
-func @logical_scalar(%arg0 : i1, %arg1 : i1) {
+func.func @logical_scalar(%arg0 : i1, %arg1 : i1) {
   // CHECK: spv.LogicalAnd
   %0 = arith.andi %arg0, %arg1 : i1
   // CHECK: spv.LogicalOr
@@ -209,7 +239,7 @@ func @logical_scalar(%arg0 : i1, %arg1 : i1) {
 }
 
 // CHECK-LABEL: @logical_vector
-func @logical_vector(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
+func.func @logical_vector(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
   // CHECK: spv.LogicalAnd
   %0 = arith.andi %arg0, %arg1 : vector<4xi1>
   // CHECK: spv.LogicalOr
@@ -220,7 +250,7 @@ func @logical_vector(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
 }
 
 // CHECK-LABEL: @shift_scalar
-func @shift_scalar(%arg0 : i32, %arg1 : i32) {
+func.func @shift_scalar(%arg0 : i32, %arg1 : i32) {
   // CHECK: spv.ShiftLeftLogical
   %0 = arith.shli %arg0, %arg1 : i32
   // CHECK: spv.ShiftRightArithmetic
@@ -231,7 +261,7 @@ func @shift_scalar(%arg0 : i32, %arg1 : i32) {
 }
 
 // CHECK-LABEL: @shift_vector
-func @shift_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
+func.func @shift_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
   // CHECK: spv.ShiftLeftLogical
   %0 = arith.shli %arg0, %arg1 : vector<4xi32>
   // CHECK: spv.ShiftRightArithmetic
@@ -254,7 +284,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: @cmpf
-func @cmpf(%arg0 : f32, %arg1 : f32) {
+func.func @cmpf(%arg0 : f32, %arg1 : f32) {
   // CHECK: spv.FOrdEqual
   %1 = arith.cmpf oeq, %arg0, %arg1 : f32
   // CHECK: spv.FOrdGreaterThan
@@ -292,7 +322,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: @cmpf
-func @cmpf(%arg0 : f32, %arg1 : f32) {
+func.func @cmpf(%arg0 : f32, %arg1 : f32) {
   // CHECK: spv.Ordered
   %0 = arith.cmpf ord, %arg0, %arg1 : f32
   // CHECK: spv.Unordered
@@ -311,7 +341,7 @@ module attributes {
 
 // CHECK-LABEL: @cmpf
 // CHECK-SAME: %[[LHS:.+]]: f32, %[[RHS:.+]]: f32
-func @cmpf(%arg0 : f32, %arg1 : f32) {
+func.func @cmpf(%arg0 : f32, %arg1 : f32) {
   // CHECK:      %[[LHS_NAN:.+]] = spv.IsNan %[[LHS]] : f32
   // CHECK-NEXT: %[[RHS_NAN:.+]] = spv.IsNan %[[RHS]] : f32
   // CHECK-NEXT: %[[OR:.+]] = spv.LogicalOr %[[LHS_NAN]], %[[RHS_NAN]] : i1
@@ -338,7 +368,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: @cmpi
-func @cmpi(%arg0 : i32, %arg1 : i32) {
+func.func @cmpi(%arg0 : i32, %arg1 : i32) {
   // CHECK: spv.IEqual
   %0 = arith.cmpi eq, %arg0, %arg1 : i32
   // CHECK: spv.INotEqual
@@ -363,7 +393,7 @@ func @cmpi(%arg0 : i32, %arg1 : i32) {
 }
 
 // CHECK-LABEL: @boolcmpi
-func @boolcmpi(%arg0 : i1, %arg1 : i1) {
+func.func @boolcmpi(%arg0 : i1, %arg1 : i1) {
   // CHECK: spv.LogicalEqual
   %0 = arith.cmpi eq, %arg0, %arg1 : i1
   // CHECK: spv.LogicalNotEqual
@@ -372,7 +402,7 @@ func @boolcmpi(%arg0 : i1, %arg1 : i1) {
 }
 
 // CHECK-LABEL: @vecboolcmpi
-func @vecboolcmpi(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
+func.func @vecboolcmpi(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
   // CHECK: spv.LogicalEqual
   %0 = arith.cmpi eq, %arg0, %arg1 : vector<4xi1>
   // CHECK: spv.LogicalNotEqual
@@ -394,7 +424,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: @constant
-func @constant() {
+func.func @constant() {
   // CHECK: spv.Constant true
   %0 = arith.constant true
   // CHECK: spv.Constant 42 : i32
@@ -405,49 +435,49 @@ func @constant() {
   %3 = arith.constant dense<[2, 3]> : vector<2xi32>
   // CHECK: spv.Constant 1 : i32
   %4 = arith.constant 1 : index
-  // CHECK: spv.Constant dense<1> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<1> : tensor<6xi32> : !spv.array<6 x i32>
   %5 = arith.constant dense<1> : tensor<2x3xi32>
-  // CHECK: spv.Constant dense<1.000000e+00> : tensor<6xf32> : !spv.array<6 x f32, stride=4>
+  // CHECK: spv.Constant dense<1.000000e+00> : tensor<6xf32> : !spv.array<6 x f32>
   %6 = arith.constant dense<1.0> : tensor<2x3xf32>
-  // CHECK: spv.Constant dense<{{\[}}1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf32> : !spv.array<6 x f32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf32> : !spv.array<6 x f32>
   %7 = arith.constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf32>
-  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32>
   %8 = arith.constant dense<[[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32>
-  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32>
   %9 =  arith.constant dense<[[1, 2], [3, 4], [5, 6]]> : tensor<3x2xi32>
-  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32>
   %10 =  arith.constant dense<[1, 2, 3, 4, 5, 6]> : tensor<6xi32>
   return
 }
 
 // CHECK-LABEL: @constant_16bit
-func @constant_16bit() {
+func.func @constant_16bit() {
   // CHECK: spv.Constant 4 : i16
   %0 = arith.constant 4 : i16
   // CHECK: spv.Constant 5.000000e+00 : f16
   %1 = arith.constant 5.0 : f16
   // CHECK: spv.Constant dense<[2, 3]> : vector<2xi16>
   %2 = arith.constant dense<[2, 3]> : vector<2xi16>
-  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf16> : !spv.array<5 x f16, stride=2>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf16> : !spv.array<5 x f16>
   %3 = arith.constant dense<4.0> : tensor<5xf16>
   return
 }
 
 // CHECK-LABEL: @constant_64bit
-func @constant_64bit() {
+func.func @constant_64bit() {
   // CHECK: spv.Constant 4 : i64
   %0 = arith.constant 4 : i64
   // CHECK: spv.Constant 5.000000e+00 : f64
   %1 = arith.constant 5.0 : f64
   // CHECK: spv.Constant dense<[2, 3]> : vector<2xi64>
   %2 = arith.constant dense<[2, 3]> : vector<2xi64>
-  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf64> : !spv.array<5 x f64, stride=8>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf64> : !spv.array<5 x f64>
   %3 = arith.constant dense<4.0> : tensor<5xf64>
   return
 }
 
 // CHECK-LABEL: @constant_size1
-func @constant_size1() {
+func.func @constant_size1() {
   // CHECK: spv.Constant true
   %0 = arith.constant dense<true> : tensor<1xi1>
   // CHECK: spv.Constant 4 : i64
@@ -467,37 +497,37 @@ module attributes {
 } {
 
 // CHECK-LABEL: @constant_16bit
-func @constant_16bit() {
+func.func @constant_16bit() {
   // CHECK: spv.Constant 4 : i32
   %0 = arith.constant 4 : i16
   // CHECK: spv.Constant 5.000000e+00 : f32
   %1 = arith.constant 5.0 : f16
   // CHECK: spv.Constant dense<[2, 3]> : vector<2xi32>
   %2 = arith.constant dense<[2, 3]> : vector<2xi16>
-  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32, stride=4>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32>
   %3 = arith.constant dense<4.0> : tensor<5xf16>
-  // CHECK: spv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32, stride=4>
+  // CHECK: spv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32>
   %4 = arith.constant dense<[[1.0, 2.0], [3.0, 4.0]]> : tensor<2x2xf16>
   return
 }
 
 // CHECK-LABEL: @constant_64bit
-func @constant_64bit() {
+func.func @constant_64bit() {
   // CHECK: spv.Constant 4 : i32
   %0 = arith.constant 4 : i64
   // CHECK: spv.Constant 5.000000e+00 : f32
   %1 = arith.constant 5.0 : f64
   // CHECK: spv.Constant dense<[2, 3]> : vector<2xi32>
   %2 = arith.constant dense<[2, 3]> : vector<2xi64>
-  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32, stride=4>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32>
   %3 = arith.constant dense<4.0> : tensor<5xf64>
-  // CHECK: spv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32, stride=4>
+  // CHECK: spv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32>
   %4 = arith.constant dense<[[1.0, 2.0], [3.0, 4.0]]> : tensor<2x2xf16>
   return
 }
 
 // CHECK-LABEL: @constant_size1
-func @constant_size1() {
+func.func @constant_size1() {
   // CHECK: spv.Constant 4 : i32
   %0 = arith.constant dense<4> : vector<1xi64>
   // CHECK: spv.Constant 5.000000e+00 : f32
@@ -506,7 +536,7 @@ func @constant_size1() {
 }
 
 // CHECK-LABEL: @corner_cases
-func @corner_cases() {
+func.func @corner_cases() {
   // CHECK: %{{.*}} = spv.Constant -1 : i32
   %0 = arith.constant 4294967295  : i64 // 2^32 - 1
   // CHECK: %{{.*}} = spv.Constant 2147483647 : i32
@@ -535,7 +565,7 @@ func @corner_cases() {
 }
 
 // CHECK-LABEL: @unsupported_cases
-func @unsupported_cases() {
+func.func @unsupported_cases() {
   // CHECK: %{{.*}} = arith.constant 4294967296 : i64
   %0 = arith.constant 4294967296 : i64 // 2^32
   // CHECK: %{{.*}} = arith.constant -2147483649 : i64
@@ -559,35 +589,35 @@ module attributes {
 } {
 
 // CHECK-LABEL: index_cast1
-func @index_cast1(%arg0: i16) {
+func.func @index_cast1(%arg0: i16) {
   // CHECK: spv.SConvert %{{.+}} : i16 to i32
   %0 = arith.index_cast %arg0 : i16 to index
   return
 }
 
 // CHECK-LABEL: index_cast2
-func @index_cast2(%arg0: index) {
+func.func @index_cast2(%arg0: index) {
   // CHECK: spv.SConvert %{{.+}} : i32 to i16
   %0 = arith.index_cast %arg0 : index to i16
   return
 }
 
 // CHECK-LABEL: index_cast3
-func @index_cast3(%arg0: i32) {
+func.func @index_cast3(%arg0: i32) {
   // CHECK-NOT: spv.SConvert
   %0 = arith.index_cast %arg0 : i32 to index
   return
 }
 
 // CHECK-LABEL: index_cast4
-func @index_cast4(%arg0: index) {
+func.func @index_cast4(%arg0: index) {
   // CHECK-NOT: spv.SConvert
   %0 = arith.index_cast %arg0 : index to i32
   return
 }
 
 // CHECK-LABEL: @bit_cast
-func @bit_cast(%arg0: vector<2xf32>, %arg1: i64) {
+func.func @bit_cast(%arg0: vector<2xf32>, %arg1: i64) {
   // CHECK: spv.Bitcast %{{.+}} : vector<2xf32> to vector<2xi32>
   %0 = arith.bitcast %arg0 : vector<2xf32> to vector<2xi32>
   // CHECK: spv.Bitcast %{{.+}} : i64 to f64
@@ -596,63 +626,63 @@ func @bit_cast(%arg0: vector<2xf32>, %arg1: i64) {
 }
 
 // CHECK-LABEL: @fpext1
-func @fpext1(%arg0: f16) -> f64 {
+func.func @fpext1(%arg0: f16) -> f64 {
   // CHECK: spv.FConvert %{{.*}} : f16 to f64
   %0 = arith.extf %arg0 : f16 to f64
   return %0 : f64
 }
 
 // CHECK-LABEL: @fpext2
-func @fpext2(%arg0 : f32) -> f64 {
+func.func @fpext2(%arg0 : f32) -> f64 {
   // CHECK: spv.FConvert %{{.*}} : f32 to f64
   %0 = arith.extf %arg0 : f32 to f64
   return %0 : f64
 }
 
 // CHECK-LABEL: @fptrunc1
-func @fptrunc1(%arg0 : f64) -> f16 {
+func.func @fptrunc1(%arg0 : f64) -> f16 {
   // CHECK: spv.FConvert %{{.*}} : f64 to f16
   %0 = arith.truncf %arg0 : f64 to f16
   return %0 : f16
 }
 
 // CHECK-LABEL: @fptrunc2
-func @fptrunc2(%arg0: f32) -> f16 {
+func.func @fptrunc2(%arg0: f32) -> f16 {
   // CHECK: spv.FConvert %{{.*}} : f32 to f16
   %0 = arith.truncf %arg0 : f32 to f16
   return %0 : f16
 }
 
 // CHECK-LABEL: @sitofp1
-func @sitofp1(%arg0 : i32) -> f32 {
+func.func @sitofp1(%arg0 : i32) -> f32 {
   // CHECK: spv.ConvertSToF %{{.*}} : i32 to f32
   %0 = arith.sitofp %arg0 : i32 to f32
   return %0 : f32
 }
 
 // CHECK-LABEL: @sitofp2
-func @sitofp2(%arg0 : i64) -> f64 {
+func.func @sitofp2(%arg0 : i64) -> f64 {
   // CHECK: spv.ConvertSToF %{{.*}} : i64 to f64
   %0 = arith.sitofp %arg0 : i64 to f64
   return %0 : f64
 }
 
 // CHECK-LABEL: @uitofp_i16_f32
-func @uitofp_i16_f32(%arg0: i16) -> f32 {
+func.func @uitofp_i16_f32(%arg0: i16) -> f32 {
   // CHECK: spv.ConvertUToF %{{.*}} : i16 to f32
   %0 = arith.uitofp %arg0 : i16 to f32
   return %0 : f32
 }
 
 // CHECK-LABEL: @uitofp_i32_f32
-func @uitofp_i32_f32(%arg0 : i32) -> f32 {
+func.func @uitofp_i32_f32(%arg0 : i32) -> f32 {
   // CHECK: spv.ConvertUToF %{{.*}} : i32 to f32
   %0 = arith.uitofp %arg0 : i32 to f32
   return %0 : f32
 }
 
 // CHECK-LABEL: @uitofp_i1_f32
-func @uitofp_i1_f32(%arg0 : i1) -> f32 {
+func.func @uitofp_i1_f32(%arg0 : i1) -> f32 {
   // CHECK: %[[ZERO:.+]] = spv.Constant 0.000000e+00 : f32
   // CHECK: %[[ONE:.+]] = spv.Constant 1.000000e+00 : f32
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : i1, f32
@@ -661,7 +691,7 @@ func @uitofp_i1_f32(%arg0 : i1) -> f32 {
 }
 
 // CHECK-LABEL: @uitofp_i1_f64
-func @uitofp_i1_f64(%arg0 : i1) -> f64 {
+func.func @uitofp_i1_f64(%arg0 : i1) -> f64 {
   // CHECK: %[[ZERO:.+]] = spv.Constant 0.000000e+00 : f64
   // CHECK: %[[ONE:.+]] = spv.Constant 1.000000e+00 : f64
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : i1, f64
@@ -670,7 +700,7 @@ func @uitofp_i1_f64(%arg0 : i1) -> f64 {
 }
 
 // CHECK-LABEL: @uitofp_vec_i1_f32
-func @uitofp_vec_i1_f32(%arg0 : vector<4xi1>) -> vector<4xf32> {
+func.func @uitofp_vec_i1_f32(%arg0 : vector<4xi1>) -> vector<4xf32> {
   // CHECK: %[[ZERO:.+]] = spv.Constant dense<0.000000e+00> : vector<4xf32>
   // CHECK: %[[ONE:.+]] = spv.Constant dense<1.000000e+00> : vector<4xf32>
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : vector<4xi1>, vector<4xf32>
@@ -690,35 +720,35 @@ spv.func @uitofp_vec_i1_f64(%arg0: vector<4xi1>) -> vector<4xf64> "None" {
 }
 
 // CHECK-LABEL: @sexti1
-func @sexti1(%arg0: i16) -> i64 {
+func.func @sexti1(%arg0: i16) -> i64 {
   // CHECK: spv.SConvert %{{.*}} : i16 to i64
   %0 = arith.extsi %arg0 : i16 to i64
   return %0 : i64
 }
 
 // CHECK-LABEL: @sexti2
-func @sexti2(%arg0 : i32) -> i64 {
+func.func @sexti2(%arg0 : i32) -> i64 {
   // CHECK: spv.SConvert %{{.*}} : i32 to i64
   %0 = arith.extsi %arg0 : i32 to i64
   return %0 : i64
 }
 
 // CHECK-LABEL: @zexti1
-func @zexti1(%arg0: i16) -> i64 {
+func.func @zexti1(%arg0: i16) -> i64 {
   // CHECK: spv.UConvert %{{.*}} : i16 to i64
   %0 = arith.extui %arg0 : i16 to i64
   return %0 : i64
 }
 
 // CHECK-LABEL: @zexti2
-func @zexti2(%arg0 : i32) -> i64 {
+func.func @zexti2(%arg0 : i32) -> i64 {
   // CHECK: spv.UConvert %{{.*}} : i32 to i64
   %0 = arith.extui %arg0 : i32 to i64
   return %0 : i64
 }
 
 // CHECK-LABEL: @zexti3
-func @zexti3(%arg0 : i1) -> i32 {
+func.func @zexti3(%arg0 : i1) -> i32 {
   // CHECK: %[[ZERO:.+]] = spv.Constant 0 : i32
   // CHECK: %[[ONE:.+]] = spv.Constant 1 : i32
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : i1, i32
@@ -727,7 +757,7 @@ func @zexti3(%arg0 : i1) -> i32 {
 }
 
 // CHECK-LABEL: @zexti4
-func @zexti4(%arg0 : vector<4xi1>) -> vector<4xi32> {
+func.func @zexti4(%arg0 : vector<4xi1>) -> vector<4xi32> {
   // CHECK: %[[ZERO:.+]] = spv.Constant dense<0> : vector<4xi32>
   // CHECK: %[[ONE:.+]] = spv.Constant dense<1> : vector<4xi32>
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : vector<4xi1>, vector<4xi32>
@@ -736,7 +766,7 @@ func @zexti4(%arg0 : vector<4xi1>) -> vector<4xi32> {
 }
 
 // CHECK-LABEL: @zexti5
-func @zexti5(%arg0 : vector<4xi1>) -> vector<4xi64> {
+func.func @zexti5(%arg0 : vector<4xi1>) -> vector<4xi64> {
   // CHECK: %[[ZERO:.+]] = spv.Constant dense<0> : vector<4xi64>
   // CHECK: %[[ONE:.+]] = spv.Constant dense<1> : vector<4xi64>
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : vector<4xi1>, vector<4xi64>
@@ -745,21 +775,21 @@ func @zexti5(%arg0 : vector<4xi1>) -> vector<4xi64> {
 }
 
 // CHECK-LABEL: @trunci1
-func @trunci1(%arg0 : i64) -> i16 {
+func.func @trunci1(%arg0 : i64) -> i16 {
   // CHECK: spv.SConvert %{{.*}} : i64 to i16
   %0 = arith.trunci %arg0 : i64 to i16
   return %0 : i16
 }
 
 // CHECK-LABEL: @trunci2
-func @trunci2(%arg0: i32) -> i16 {
+func.func @trunci2(%arg0: i32) -> i16 {
   // CHECK: spv.SConvert %{{.*}} : i32 to i16
   %0 = arith.trunci %arg0 : i32 to i16
   return %0 : i16
 }
 
 // CHECK-LABEL: @trunc_to_i1
-func @trunc_to_i1(%arg0: i32) -> i1 {
+func.func @trunc_to_i1(%arg0: i32) -> i1 {
   // CHECK: %[[MASK:.*]] = spv.Constant 1 : i32
   // CHECK: %[[MASKED_SRC:.*]] = spv.BitwiseAnd %{{.*}}, %[[MASK]] : i32
   // CHECK: %[[IS_ONE:.*]] = spv.IEqual %[[MASKED_SRC]], %[[MASK]] : i32
@@ -771,7 +801,7 @@ func @trunc_to_i1(%arg0: i32) -> i1 {
 }
 
 // CHECK-LABEL: @trunc_to_veci1
-func @trunc_to_veci1(%arg0: vector<4xi32>) -> vector<4xi1> {
+func.func @trunc_to_veci1(%arg0: vector<4xi32>) -> vector<4xi1> {
   // CHECK: %[[MASK:.*]] = spv.Constant dense<1> : vector<4xi32>
   // CHECK: %[[MASKED_SRC:.*]] = spv.BitwiseAnd %{{.*}}, %[[MASK]] : vector<4xi32>
   // CHECK: %[[IS_ONE:.*]] = spv.IEqual %[[MASKED_SRC]], %[[MASK]] : vector<4xi32>
@@ -783,14 +813,14 @@ func @trunc_to_veci1(%arg0: vector<4xi32>) -> vector<4xi1> {
 }
 
 // CHECK-LABEL: @fptosi1
-func @fptosi1(%arg0 : f32) -> i32 {
+func.func @fptosi1(%arg0 : f32) -> i32 {
   // CHECK: spv.ConvertFToS %{{.*}} : f32 to i32
   %0 = arith.fptosi %arg0 : f32 to i32
   return %0 : i32
 }
 
 // CHECK-LABEL: @fptosi2
-func @fptosi2(%arg0 : f16) -> i16 {
+func.func @fptosi2(%arg0 : f16) -> i16 {
   // CHECK: spv.ConvertFToS %{{.*}} : f16 to i16
   %0 = arith.fptosi %arg0 : f16 to i16
   return %0 : i16
@@ -808,7 +838,7 @@ module attributes {
 
 // CHECK-LABEL: @fpext1
 // CHECK-SAME: %[[ARG:.*]]: f32
-func @fpext1(%arg0: f16) -> f64 {
+func.func @fpext1(%arg0: f16) -> f64 {
   // CHECK-NEXT: spv.FConvert %[[ARG]] : f32 to f64
   %0 = arith.extf %arg0 : f16 to f64
   return %0: f64
@@ -816,7 +846,7 @@ func @fpext1(%arg0: f16) -> f64 {
 
 // CHECK-LABEL: @fpext2
 // CHECK-SAME: %[[ARG:.*]]: f32
-func @fpext2(%arg0 : f32) -> f64 {
+func.func @fpext2(%arg0 : f32) -> f64 {
   // CHECK-NEXT: spv.FConvert %[[ARG]] : f32 to f64
   %0 = arith.extf %arg0 : f32 to f64
   return %0: f64
@@ -834,7 +864,7 @@ module attributes {
 
 // CHECK-LABEL: @fptrunc1
 // CHECK-SAME: %[[ARG:.*]]: f32
-func @fptrunc1(%arg0 : f64) -> f16 {
+func.func @fptrunc1(%arg0 : f64) -> f16 {
   // CHECK-NEXT: spv.FConvert %[[ARG]] : f32 to f16
   %0 = arith.truncf %arg0 : f64 to f16
   return %0: f16
@@ -842,14 +872,14 @@ func @fptrunc1(%arg0 : f64) -> f16 {
 
 // CHECK-LABEL: @fptrunc2
 // CHECK-SAME: %[[ARG:.*]]: f32
-func @fptrunc2(%arg0: f32) -> f16 {
+func.func @fptrunc2(%arg0: f32) -> f16 {
   // CHECK-NEXT: spv.FConvert %[[ARG]] : f32 to f16
   %0 = arith.truncf %arg0 : f32 to f16
   return %0: f16
 }
 
 // CHECK-LABEL: @sitofp
-func @sitofp(%arg0 : i64) -> f64 {
+func.func @sitofp(%arg0 : i64) -> f64 {
   // CHECK: spv.ConvertSToF %{{.*}} : i32 to f32
   %0 = arith.sitofp %arg0 : i64 to f64
   return %0: f64
@@ -867,7 +897,7 @@ module attributes {
 
 // CHECK-LABEL: @scalar_srem
 // CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
-func @scalar_srem(%lhs: i32, %rhs: i32) {
+func.func @scalar_srem(%lhs: i32, %rhs: i32) {
   // CHECK: %[[LABS:.+]] = spv.OCL.s_abs %[[LHS]] : i32
   // CHECK: %[[RABS:.+]] = spv.OCL.s_abs %[[RHS]] : i32
   // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : i32
@@ -880,7 +910,7 @@ func @scalar_srem(%lhs: i32, %rhs: i32) {
 
 // CHECK-LABEL: @vector_srem
 // CHECK-SAME: (%[[LHS:.+]]: vector<3xi16>, %[[RHS:.+]]: vector<3xi16>)
-func @vector_srem(%arg0: vector<3xi16>, %arg1: vector<3xi16>) {
+func.func @vector_srem(%arg0: vector<3xi16>, %arg1: vector<3xi16>) {
   // CHECK: %[[LABS:.+]] = spv.OCL.s_abs %[[LHS]] : vector<3xi16>
   // CHECK: %[[RABS:.+]] = spv.OCL.s_abs %[[RHS]] : vector<3xi16>
   // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : vector<3xi16>
@@ -902,7 +932,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: @select
-func @select(%arg0 : i32, %arg1 : i32) {
+func.func @select(%arg0 : i32, %arg1 : i32) {
   %0 = arith.cmpi sle, %arg0, %arg1 : i32
   // CHECK: spv.Select
   %1 = arith.select %0, %arg0, %arg1 : i32
@@ -924,7 +954,7 @@ module attributes {
 
 // Check integer operation conversions.
 // CHECK-LABEL: @int32_scalar
-func @int32_scalar(%lhs: i32, %rhs: i32) {
+func.func @int32_scalar(%lhs: i32, %rhs: i32) {
   // CHECK: spv.IAdd %{{.*}}, %{{.*}}: i32
   %0 = arith.addi %lhs, %rhs: i32
   // CHECK: spv.ISub %{{.*}}, %{{.*}}: i32
@@ -950,7 +980,7 @@ func @int32_scalar(%lhs: i32, %rhs: i32) {
 
 // CHECK-LABEL: @scalar_srem
 // CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
-func @scalar_srem(%lhs: i32, %rhs: i32) {
+func.func @scalar_srem(%lhs: i32, %rhs: i32) {
   // CHECK: %[[LABS:.+]] = spv.GLSL.SAbs %[[LHS]] : i32
   // CHECK: %[[RABS:.+]] = spv.GLSL.SAbs %[[RHS]] : i32
   // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : i32
@@ -963,7 +993,7 @@ func @scalar_srem(%lhs: i32, %rhs: i32) {
 
 // Check float unary operation conversions.
 // CHECK-LABEL: @float32_unary_scalar
-func @float32_unary_scalar(%arg0: f32) {
+func.func @float32_unary_scalar(%arg0: f32) {
   // CHECK: spv.FNegate %{{.*}}: f32
   %5 = arith.negf %arg0 : f32
   return
@@ -971,7 +1001,7 @@ func @float32_unary_scalar(%arg0: f32) {
 
 // Check float binary operation conversions.
 // CHECK-LABEL: @float32_binary_scalar
-func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
+func.func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
   // CHECK: spv.FAdd %{{.*}}, %{{.*}}: f32
   %0 = arith.addf %lhs, %rhs: f32
   // CHECK: spv.FSub %{{.*}}, %{{.*}}: f32
@@ -991,7 +1021,7 @@ func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
 
 // Check int vector types.
 // CHECK-LABEL: @int_vector234
-func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<4xi64>) {
+func.func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<4xi64>) {
   // CHECK: spv.SDiv %{{.*}}, %{{.*}}: vector<2xi8>
   %0 = arith.divsi %arg0, %arg0: vector<2xi8>
   // CHECK: spv.UDiv %{{.*}}, %{{.*}}: vector<4xi64>
@@ -1001,7 +1031,7 @@ func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<4xi64>) {
 
 // CHECK-LABEL: @vector_srem
 // CHECK-SAME: (%[[LHS:.+]]: vector<3xi16>, %[[RHS:.+]]: vector<3xi16>)
-func @vector_srem(%arg0: vector<3xi16>, %arg1: vector<3xi16>) {
+func.func @vector_srem(%arg0: vector<3xi16>, %arg1: vector<3xi16>) {
   // CHECK: %[[LABS:.+]] = spv.GLSL.SAbs %[[LHS]] : vector<3xi16>
   // CHECK: %[[RABS:.+]] = spv.GLSL.SAbs %[[RHS]] : vector<3xi16>
   // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : vector<3xi16>
@@ -1014,7 +1044,7 @@ func @vector_srem(%arg0: vector<3xi16>, %arg1: vector<3xi16>) {
 
 // Check float vector types.
 // CHECK-LABEL: @float_vector234
-func @float_vector234(%arg0: vector<2xf16>, %arg1: vector<3xf64>) {
+func.func @float_vector234(%arg0: vector<2xf16>, %arg1: vector<3xf64>) {
   // CHECK: spv.FAdd %{{.*}}, %{{.*}}: vector<2xf16>
   %0 = arith.addf %arg0, %arg0: vector<2xf16>
   // CHECK: spv.FMul %{{.*}}, %{{.*}}: vector<3xf64>
@@ -1023,21 +1053,21 @@ func @float_vector234(%arg0: vector<2xf16>, %arg1: vector<3xf64>) {
 }
 
 // CHECK-LABEL: @one_elem_vector
-func @one_elem_vector(%arg0: vector<1xi32>) {
+func.func @one_elem_vector(%arg0: vector<1xi32>) {
   // CHECK: spv.IAdd %{{.+}}, %{{.+}}: i32
   %0 = arith.addi %arg0, %arg0: vector<1xi32>
   return
 }
 
 // CHECK-LABEL: @unsupported_5elem_vector
-func @unsupported_5elem_vector(%arg0: vector<5xi32>) {
+func.func @unsupported_5elem_vector(%arg0: vector<5xi32>) {
   // CHECK: subi
   %1 = arith.subi %arg0, %arg0: vector<5xi32>
   return
 }
 
 // CHECK-LABEL: @unsupported_2x2elem_vector
-func @unsupported_2x2elem_vector(%arg0: vector<2x2xi32>) {
+func.func @unsupported_2x2elem_vector(%arg0: vector<2x2xi32>) {
   // CHECK: muli
   %2 = arith.muli %arg0, %arg0: vector<2x2xi32>
   return
@@ -1053,7 +1083,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: @int_vector23
-func @int_vector23(%arg0: vector<2xi8>, %arg1: vector<3xi16>) {
+func.func @int_vector23(%arg0: vector<2xi8>, %arg1: vector<3xi16>) {
   // CHECK: spv.SDiv %{{.*}}, %{{.*}}: vector<2xi32>
   %0 = arith.divsi %arg0, %arg0: vector<2xi8>
   // CHECK: spv.SDiv %{{.*}}, %{{.*}}: vector<3xi32>
@@ -1062,7 +1092,7 @@ func @int_vector23(%arg0: vector<2xi8>, %arg1: vector<3xi16>) {
 }
 
 // CHECK-LABEL: @float_scalar
-func @float_scalar(%arg0: f16, %arg1: f64) {
+func.func @float_scalar(%arg0: f16, %arg1: f64) {
   // CHECK: spv.FAdd %{{.*}}, %{{.*}}: f32
   %0 = arith.addf %arg0, %arg0: f16
   // CHECK: spv.FMul %{{.*}}, %{{.*}}: f32
@@ -1081,7 +1111,7 @@ module attributes {
 } {
 
 // expected-error@below {{failed to materialize conversion for block argument #0 that remained live after conversion}}
-func @int_vector4_invalid(%arg0: vector<4xi64>) {
+func.func @int_vector4_invalid(%arg0: vector<4xi64>) {
   // expected-error@below {{bitwidth emulation is not implemented yet on unsigned op}}
   // expected-note@below {{see existing live user here}}
   %0 = arith.divui %arg0, %arg0: vector<4xi64>
@@ -1101,7 +1131,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: @bitwise_scalar
-func @bitwise_scalar(%arg0 : i32, %arg1 : i32) {
+func.func @bitwise_scalar(%arg0 : i32, %arg1 : i32) {
   // CHECK: spv.BitwiseAnd
   %0 = arith.andi %arg0, %arg1 : i32
   // CHECK: spv.BitwiseOr
@@ -1112,7 +1142,7 @@ func @bitwise_scalar(%arg0 : i32, %arg1 : i32) {
 }
 
 // CHECK-LABEL: @bitwise_vector
-func @bitwise_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
+func.func @bitwise_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
   // CHECK: spv.BitwiseAnd
   %0 = arith.andi %arg0, %arg1 : vector<4xi32>
   // CHECK: spv.BitwiseOr
@@ -1123,7 +1153,7 @@ func @bitwise_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
 }
 
 // CHECK-LABEL: @logical_scalar
-func @logical_scalar(%arg0 : i1, %arg1 : i1) {
+func.func @logical_scalar(%arg0 : i1, %arg1 : i1) {
   // CHECK: spv.LogicalAnd
   %0 = arith.andi %arg0, %arg1 : i1
   // CHECK: spv.LogicalOr
@@ -1134,7 +1164,7 @@ func @logical_scalar(%arg0 : i1, %arg1 : i1) {
 }
 
 // CHECK-LABEL: @logical_vector
-func @logical_vector(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
+func.func @logical_vector(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
   // CHECK: spv.LogicalAnd
   %0 = arith.andi %arg0, %arg1 : vector<4xi1>
   // CHECK: spv.LogicalOr
@@ -1145,7 +1175,7 @@ func @logical_vector(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
 }
 
 // CHECK-LABEL: @shift_scalar
-func @shift_scalar(%arg0 : i32, %arg1 : i32) {
+func.func @shift_scalar(%arg0 : i32, %arg1 : i32) {
   // CHECK: spv.ShiftLeftLogical
   %0 = arith.shli %arg0, %arg1 : i32
   // CHECK: spv.ShiftRightArithmetic
@@ -1156,7 +1186,7 @@ func @shift_scalar(%arg0 : i32, %arg1 : i32) {
 }
 
 // CHECK-LABEL: @shift_vector
-func @shift_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
+func.func @shift_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
   // CHECK: spv.ShiftLeftLogical
   %0 = arith.shli %arg0, %arg1 : vector<4xi32>
   // CHECK: spv.ShiftRightArithmetic
@@ -1179,7 +1209,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: @cmpf
-func @cmpf(%arg0 : f32, %arg1 : f32) {
+func.func @cmpf(%arg0 : f32, %arg1 : f32) {
   // CHECK: spv.FOrdEqual
   %1 = arith.cmpf oeq, %arg0, %arg1 : f32
   // CHECK: spv.FOrdGreaterThan
@@ -1217,7 +1247,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: @cmpf
-func @cmpf(%arg0 : f32, %arg1 : f32) {
+func.func @cmpf(%arg0 : f32, %arg1 : f32) {
   // CHECK: spv.Ordered
   %0 = arith.cmpf ord, %arg0, %arg1 : f32
   // CHECK: spv.Unordered
@@ -1236,7 +1266,7 @@ module attributes {
 
 // CHECK-LABEL: @cmpf
 // CHECK-SAME: %[[LHS:.+]]: f32, %[[RHS:.+]]: f32
-func @cmpf(%arg0 : f32, %arg1 : f32) {
+func.func @cmpf(%arg0 : f32, %arg1 : f32) {
   // CHECK:      %[[LHS_NAN:.+]] = spv.IsNan %[[LHS]] : f32
   // CHECK-NEXT: %[[RHS_NAN:.+]] = spv.IsNan %[[RHS]] : f32
   // CHECK-NEXT: %[[OR:.+]] = spv.LogicalOr %[[LHS_NAN]], %[[RHS_NAN]] : i1
@@ -1263,7 +1293,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: @cmpi
-func @cmpi(%arg0 : i32, %arg1 : i32) {
+func.func @cmpi(%arg0 : i32, %arg1 : i32) {
   // CHECK: spv.IEqual
   %0 = arith.cmpi eq, %arg0, %arg1 : i32
   // CHECK: spv.INotEqual
@@ -1288,7 +1318,7 @@ func @cmpi(%arg0 : i32, %arg1 : i32) {
 }
 
 // CHECK-LABEL: @boolcmpi
-func @boolcmpi(%arg0 : i1, %arg1 : i1) {
+func.func @boolcmpi(%arg0 : i1, %arg1 : i1) {
   // CHECK: spv.LogicalEqual
   %0 = arith.cmpi eq, %arg0, %arg1 : i1
   // CHECK: spv.LogicalNotEqual
@@ -1297,7 +1327,7 @@ func @boolcmpi(%arg0 : i1, %arg1 : i1) {
 }
 
 // CHECK-LABEL: @vecboolcmpi
-func @vecboolcmpi(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
+func.func @vecboolcmpi(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
   // CHECK: spv.LogicalEqual
   %0 = arith.cmpi eq, %arg0, %arg1 : vector<4xi1>
   // CHECK: spv.LogicalNotEqual
@@ -1319,7 +1349,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: @constant
-func @constant() {
+func.func @constant() {
   // CHECK: spv.Constant true
   %0 = arith.constant true
   // CHECK: spv.Constant 42 : i32
@@ -1330,43 +1360,43 @@ func @constant() {
   %3 = arith.constant dense<[2, 3]> : vector<2xi32>
   // CHECK: spv.Constant 1 : i32
   %4 = arith.constant 1 : index
-  // CHECK: spv.Constant dense<1> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<1> : tensor<6xi32> : !spv.array<6 x i32>
   %5 = arith.constant dense<1> : tensor<2x3xi32>
-  // CHECK: spv.Constant dense<1.000000e+00> : tensor<6xf32> : !spv.array<6 x f32, stride=4>
+  // CHECK: spv.Constant dense<1.000000e+00> : tensor<6xf32> : !spv.array<6 x f32>
   %6 = arith.constant dense<1.0> : tensor<2x3xf32>
-  // CHECK: spv.Constant dense<{{\[}}1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf32> : !spv.array<6 x f32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf32> : !spv.array<6 x f32>
   %7 = arith.constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf32>
-  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32>
   %8 = arith.constant dense<[[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32>
-  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32>
   %9 = arith.constant dense<[[1, 2], [3, 4], [5, 6]]> : tensor<3x2xi32>
-  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32, stride=4>
+  // CHECK: spv.Constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32>
   %10 = arith.constant dense<[1, 2, 3, 4, 5, 6]> : tensor<6xi32>
   return
 }
 
 // CHECK-LABEL: @constant_16bit
-func @constant_16bit() {
+func.func @constant_16bit() {
   // CHECK: spv.Constant 4 : i16
   %0 = arith.constant 4 : i16
   // CHECK: spv.Constant 5.000000e+00 : f16
   %1 = arith.constant 5.0 : f16
   // CHECK: spv.Constant dense<[2, 3]> : vector<2xi16>
   %2 = arith.constant dense<[2, 3]> : vector<2xi16>
-  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf16> : !spv.array<5 x f16, stride=2>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf16> : !spv.array<5 x f16>
   %3 = arith.constant dense<4.0> : tensor<5xf16>
   return
 }
 
 // CHECK-LABEL: @constant_64bit
-func @constant_64bit() {
+func.func @constant_64bit() {
   // CHECK: spv.Constant 4 : i64
   %0 = arith.constant 4 : i64
   // CHECK: spv.Constant 5.000000e+00 : f64
   %1 = arith.constant 5.0 : f64
   // CHECK: spv.Constant dense<[2, 3]> : vector<2xi64>
   %2 = arith.constant dense<[2, 3]> : vector<2xi64>
-  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf64> : !spv.array<5 x f64, stride=8>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf64> : !spv.array<5 x f64>
   %3 = arith.constant dense<4.0> : tensor<5xf64>
   return
 }
@@ -1381,37 +1411,37 @@ module attributes {
 } {
 
 // CHECK-LABEL: @constant_16bit
-func @constant_16bit() {
+func.func @constant_16bit() {
   // CHECK: spv.Constant 4 : i32
   %0 = arith.constant 4 : i16
   // CHECK: spv.Constant 5.000000e+00 : f32
   %1 = arith.constant 5.0 : f16
   // CHECK: spv.Constant dense<[2, 3]> : vector<2xi32>
   %2 = arith.constant dense<[2, 3]> : vector<2xi16>
-  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32, stride=4>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32>
   %3 = arith.constant dense<4.0> : tensor<5xf16>
-  // CHECK: spv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32, stride=4>
+  // CHECK: spv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32>
   %4 = arith.constant dense<[[1.0, 2.0], [3.0, 4.0]]> : tensor<2x2xf16>
   return
 }
 
 // CHECK-LABEL: @constant_64bit
-func @constant_64bit() {
+func.func @constant_64bit() {
   // CHECK: spv.Constant 4 : i32
   %0 = arith.constant 4 : i64
   // CHECK: spv.Constant 5.000000e+00 : f32
   %1 = arith.constant 5.0 : f64
   // CHECK: spv.Constant dense<[2, 3]> : vector<2xi32>
   %2 = arith.constant dense<[2, 3]> : vector<2xi64>
-  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32, stride=4>
+  // CHECK: spv.Constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32>
   %3 = arith.constant dense<4.0> : tensor<5xf64>
-  // CHECK: spv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32, stride=4>
+  // CHECK: spv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32>
   %4 = arith.constant dense<[[1.0, 2.0], [3.0, 4.0]]> : tensor<2x2xf16>
   return
 }
 
 // CHECK-LABEL: @corner_cases
-func @corner_cases() {
+func.func @corner_cases() {
   // CHECK: %{{.*}} = spv.Constant -1 : i32
   %0 = arith.constant 4294967295  : i64 // 2^32 - 1
   // CHECK: %{{.*}} = spv.Constant 2147483647 : i32
@@ -1440,7 +1470,7 @@ func @corner_cases() {
 }
 
 // CHECK-LABEL: @unsupported_cases
-func @unsupported_cases() {
+func.func @unsupported_cases() {
   // CHECK: %{{.*}} = arith.constant 4294967296 : i64
   %0 = arith.constant 4294967296 : i64 // 2^32
   // CHECK: %{{.*}} = arith.constant -2147483649 : i64
@@ -1464,91 +1494,91 @@ module attributes {
 } {
 
 // CHECK-LABEL: index_cast1
-func @index_cast1(%arg0: i16) {
+func.func @index_cast1(%arg0: i16) {
   // CHECK: spv.SConvert %{{.+}} : i16 to i32
   %0 = arith.index_cast %arg0 : i16 to index
   return
 }
 
 // CHECK-LABEL: index_cast2
-func @index_cast2(%arg0: index) {
+func.func @index_cast2(%arg0: index) {
   // CHECK: spv.SConvert %{{.+}} : i32 to i16
   %0 = arith.index_cast %arg0 : index to i16
   return
 }
 
 // CHECK-LABEL: index_cast3
-func @index_cast3(%arg0: i32) {
+func.func @index_cast3(%arg0: i32) {
   // CHECK-NOT: spv.SConvert
   %0 = arith.index_cast %arg0 : i32 to index
   return
 }
 
 // CHECK-LABEL: index_cast4
-func @index_cast4(%arg0: index) {
+func.func @index_cast4(%arg0: index) {
   // CHECK-NOT: spv.SConvert
   %0 = arith.index_cast %arg0 : index to i32
   return
 }
 
 // CHECK-LABEL: @fpext1
-func @fpext1(%arg0: f16) -> f64 {
+func.func @fpext1(%arg0: f16) -> f64 {
   // CHECK: spv.FConvert %{{.*}} : f16 to f64
   %0 = arith.extf %arg0 : f16 to f64
   return %0 : f64
 }
 
 // CHECK-LABEL: @fpext2
-func @fpext2(%arg0 : f32) -> f64 {
+func.func @fpext2(%arg0 : f32) -> f64 {
   // CHECK: spv.FConvert %{{.*}} : f32 to f64
   %0 = arith.extf %arg0 : f32 to f64
   return %0 : f64
 }
 
 // CHECK-LABEL: @fptrunc1
-func @fptrunc1(%arg0 : f64) -> f16 {
+func.func @fptrunc1(%arg0 : f64) -> f16 {
   // CHECK: spv.FConvert %{{.*}} : f64 to f16
   %0 = arith.truncf %arg0 : f64 to f16
   return %0 : f16
 }
 
 // CHECK-LABEL: @fptrunc2
-func @fptrunc2(%arg0: f32) -> f16 {
+func.func @fptrunc2(%arg0: f32) -> f16 {
   // CHECK: spv.FConvert %{{.*}} : f32 to f16
   %0 = arith.truncf %arg0 : f32 to f16
   return %0 : f16
 }
 
 // CHECK-LABEL: @sitofp1
-func @sitofp1(%arg0 : i32) -> f32 {
+func.func @sitofp1(%arg0 : i32) -> f32 {
   // CHECK: spv.ConvertSToF %{{.*}} : i32 to f32
   %0 = arith.sitofp %arg0 : i32 to f32
   return %0 : f32
 }
 
 // CHECK-LABEL: @sitofp2
-func @sitofp2(%arg0 : i64) -> f64 {
+func.func @sitofp2(%arg0 : i64) -> f64 {
   // CHECK: spv.ConvertSToF %{{.*}} : i64 to f64
   %0 = arith.sitofp %arg0 : i64 to f64
   return %0 : f64
 }
 
 // CHECK-LABEL: @uitofp_i16_f32
-func @uitofp_i16_f32(%arg0: i16) -> f32 {
+func.func @uitofp_i16_f32(%arg0: i16) -> f32 {
   // CHECK: spv.ConvertUToF %{{.*}} : i16 to f32
   %0 = arith.uitofp %arg0 : i16 to f32
   return %0 : f32
 }
 
 // CHECK-LABEL: @uitofp_i32_f32
-func @uitofp_i32_f32(%arg0 : i32) -> f32 {
+func.func @uitofp_i32_f32(%arg0 : i32) -> f32 {
   // CHECK: spv.ConvertUToF %{{.*}} : i32 to f32
   %0 = arith.uitofp %arg0 : i32 to f32
   return %0 : f32
 }
 
 // CHECK-LABEL: @uitofp_i1_f32
-func @uitofp_i1_f32(%arg0 : i1) -> f32 {
+func.func @uitofp_i1_f32(%arg0 : i1) -> f32 {
   // CHECK: %[[ZERO:.+]] = spv.Constant 0.000000e+00 : f32
   // CHECK: %[[ONE:.+]] = spv.Constant 1.000000e+00 : f32
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : i1, f32
@@ -1557,7 +1587,7 @@ func @uitofp_i1_f32(%arg0 : i1) -> f32 {
 }
 
 // CHECK-LABEL: @uitofp_i1_f64
-func @uitofp_i1_f64(%arg0 : i1) -> f64 {
+func.func @uitofp_i1_f64(%arg0 : i1) -> f64 {
   // CHECK: %[[ZERO:.+]] = spv.Constant 0.000000e+00 : f64
   // CHECK: %[[ONE:.+]] = spv.Constant 1.000000e+00 : f64
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : i1, f64
@@ -1566,7 +1596,7 @@ func @uitofp_i1_f64(%arg0 : i1) -> f64 {
 }
 
 // CHECK-LABEL: @uitofp_vec_i1_f32
-func @uitofp_vec_i1_f32(%arg0 : vector<4xi1>) -> vector<4xf32> {
+func.func @uitofp_vec_i1_f32(%arg0 : vector<4xi1>) -> vector<4xf32> {
   // CHECK: %[[ZERO:.+]] = spv.Constant dense<0.000000e+00> : vector<4xf32>
   // CHECK: %[[ONE:.+]] = spv.Constant dense<1.000000e+00> : vector<4xf32>
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : vector<4xi1>, vector<4xf32>
@@ -1586,35 +1616,35 @@ spv.func @uitofp_vec_i1_f64(%arg0: vector<4xi1>) -> vector<4xf64> "None" {
 }
 
 // CHECK-LABEL: @sexti1
-func @sexti1(%arg0: i16) -> i64 {
+func.func @sexti1(%arg0: i16) -> i64 {
   // CHECK: spv.SConvert %{{.*}} : i16 to i64
   %0 = arith.extsi %arg0 : i16 to i64
   return %0 : i64
 }
 
 // CHECK-LABEL: @sexti2
-func @sexti2(%arg0 : i32) -> i64 {
+func.func @sexti2(%arg0 : i32) -> i64 {
   // CHECK: spv.SConvert %{{.*}} : i32 to i64
   %0 = arith.extsi %arg0 : i32 to i64
   return %0 : i64
 }
 
 // CHECK-LABEL: @zexti1
-func @zexti1(%arg0: i16) -> i64 {
+func.func @zexti1(%arg0: i16) -> i64 {
   // CHECK: spv.UConvert %{{.*}} : i16 to i64
   %0 = arith.extui %arg0 : i16 to i64
   return %0 : i64
 }
 
 // CHECK-LABEL: @zexti2
-func @zexti2(%arg0 : i32) -> i64 {
+func.func @zexti2(%arg0 : i32) -> i64 {
   // CHECK: spv.UConvert %{{.*}} : i32 to i64
   %0 = arith.extui %arg0 : i32 to i64
   return %0 : i64
 }
 
 // CHECK-LABEL: @zexti3
-func @zexti3(%arg0 : i1) -> i32 {
+func.func @zexti3(%arg0 : i1) -> i32 {
   // CHECK: %[[ZERO:.+]] = spv.Constant 0 : i32
   // CHECK: %[[ONE:.+]] = spv.Constant 1 : i32
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : i1, i32
@@ -1623,7 +1653,7 @@ func @zexti3(%arg0 : i1) -> i32 {
 }
 
 // CHECK-LABEL: @zexti4
-func @zexti4(%arg0 : vector<4xi1>) -> vector<4xi32> {
+func.func @zexti4(%arg0 : vector<4xi1>) -> vector<4xi32> {
   // CHECK: %[[ZERO:.+]] = spv.Constant dense<0> : vector<4xi32>
   // CHECK: %[[ONE:.+]] = spv.Constant dense<1> : vector<4xi32>
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : vector<4xi1>, vector<4xi32>
@@ -1632,7 +1662,7 @@ func @zexti4(%arg0 : vector<4xi1>) -> vector<4xi32> {
 }
 
 // CHECK-LABEL: @zexti5
-func @zexti5(%arg0 : vector<4xi1>) -> vector<4xi64> {
+func.func @zexti5(%arg0 : vector<4xi1>) -> vector<4xi64> {
   // CHECK: %[[ZERO:.+]] = spv.Constant dense<0> : vector<4xi64>
   // CHECK: %[[ONE:.+]] = spv.Constant dense<1> : vector<4xi64>
   // CHECK: spv.Select %{{.*}}, %[[ONE]], %[[ZERO]] : vector<4xi1>, vector<4xi64>
@@ -1641,21 +1671,21 @@ func @zexti5(%arg0 : vector<4xi1>) -> vector<4xi64> {
 }
 
 // CHECK-LABEL: @trunci1
-func @trunci1(%arg0 : i64) -> i16 {
+func.func @trunci1(%arg0 : i64) -> i16 {
   // CHECK: spv.SConvert %{{.*}} : i64 to i16
   %0 = arith.trunci %arg0 : i64 to i16
   return %0 : i16
 }
 
 // CHECK-LABEL: @trunci2
-func @trunci2(%arg0: i32) -> i16 {
+func.func @trunci2(%arg0: i32) -> i16 {
   // CHECK: spv.SConvert %{{.*}} : i32 to i16
   %0 = arith.trunci %arg0 : i32 to i16
   return %0 : i16
 }
 
 // CHECK-LABEL: @trunc_to_i1
-func @trunc_to_i1(%arg0: i32) -> i1 {
+func.func @trunc_to_i1(%arg0: i32) -> i1 {
   // CHECK: %[[MASK:.*]] = spv.Constant 1 : i32
   // CHECK: %[[MASKED_SRC:.*]] = spv.BitwiseAnd %{{.*}}, %[[MASK]] : i32
   // CHECK: %[[IS_ONE:.*]] = spv.IEqual %[[MASKED_SRC]], %[[MASK]] : i32
@@ -1667,7 +1697,7 @@ func @trunc_to_i1(%arg0: i32) -> i1 {
 }
 
 // CHECK-LABEL: @trunc_to_veci1
-func @trunc_to_veci1(%arg0: vector<4xi32>) -> vector<4xi1> {
+func.func @trunc_to_veci1(%arg0: vector<4xi32>) -> vector<4xi1> {
   // CHECK: %[[MASK:.*]] = spv.Constant dense<1> : vector<4xi32>
   // CHECK: %[[MASKED_SRC:.*]] = spv.BitwiseAnd %{{.*}}, %[[MASK]] : vector<4xi32>
   // CHECK: %[[IS_ONE:.*]] = spv.IEqual %[[MASKED_SRC]], %[[MASK]] : vector<4xi32>
@@ -1679,14 +1709,14 @@ func @trunc_to_veci1(%arg0: vector<4xi32>) -> vector<4xi1> {
 }
 
 // CHECK-LABEL: @fptosi1
-func @fptosi1(%arg0 : f32) -> i32 {
+func.func @fptosi1(%arg0 : f32) -> i32 {
   // CHECK: spv.ConvertFToS %{{.*}} : f32 to i32
   %0 = arith.fptosi %arg0 : f32 to i32
   return %0 : i32
 }
 
 // CHECK-LABEL: @fptosi2
-func @fptosi2(%arg0 : f16) -> i16 {
+func.func @fptosi2(%arg0 : f16) -> i16 {
   // CHECK: spv.ConvertFToS %{{.*}} : f16 to i16
   %0 = arith.fptosi %arg0 : f16 to i16
   return %0 : i16
@@ -1704,7 +1734,7 @@ module attributes {
 
 // CHECK-LABEL: @fpext1
 // CHECK-SAME: %[[ARG:.*]]: f32
-func @fpext1(%arg0: f16) -> f64 {
+func.func @fpext1(%arg0: f16) -> f64 {
   // CHECK-NEXT: spv.FConvert %[[ARG]] : f32 to f64
   %0 = arith.extf %arg0 : f16 to f64
   return %0: f64
@@ -1712,7 +1742,7 @@ func @fpext1(%arg0: f16) -> f64 {
 
 // CHECK-LABEL: @fpext2
 // CHECK-SAME: %[[ARG:.*]]: f32
-func @fpext2(%arg0 : f32) -> f64 {
+func.func @fpext2(%arg0 : f32) -> f64 {
   // CHECK-NEXT: spv.FConvert %[[ARG]] : f32 to f64
   %0 = arith.extf %arg0 : f32 to f64
   return %0: f64
@@ -1730,7 +1760,7 @@ module attributes {
 
 // CHECK-LABEL: @fptrunc1
 // CHECK-SAME: %[[ARG:.*]]: f32
-func @fptrunc1(%arg0 : f64) -> f16 {
+func.func @fptrunc1(%arg0 : f64) -> f16 {
   // CHECK-NEXT: spv.FConvert %[[ARG]] : f32 to f16
   %0 = arith.truncf %arg0 : f64 to f16
   return %0: f16
@@ -1738,14 +1768,14 @@ func @fptrunc1(%arg0 : f64) -> f16 {
 
 // CHECK-LABEL: @fptrunc2
 // CHECK-SAME: %[[ARG:.*]]: f32
-func @fptrunc2(%arg0: f32) -> f16 {
+func.func @fptrunc2(%arg0: f32) -> f16 {
   // CHECK-NEXT: spv.FConvert %[[ARG]] : f32 to f16
   %0 = arith.truncf %arg0 : f32 to f16
   return %0: f16
 }
 
 // CHECK-LABEL: @sitofp
-func @sitofp(%arg0 : i64) -> f64 {
+func.func @sitofp(%arg0 : i64) -> f64 {
   // CHECK: spv.ConvertSToF %{{.*}} : i32 to f32
   %0 = arith.sitofp %arg0 : i64 to f64
   return %0: f64

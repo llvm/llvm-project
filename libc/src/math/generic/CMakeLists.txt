@@ -1091,7 +1091,9 @@ add_object_library(
   HDRS
     dp_trig.h
   DEPENDS
-    libc.src.__support.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil #FPBits and ManipulationFunction
+    libc.src.__support.FPUtil.xfloat
+    libc.src.__support.CPP.uint
   COMPILE_OPTIONS
    -O3
 )

@@ -4,7 +4,7 @@
 //       CHECK:   %[[C2:.*]] = arith.constant 2 : i64
 //       CHECK:   scf.for
 //       CHECK:     memref.store %[[C2]], %{{.*}}[] : memref<i64>
-func @scf_for_canonicalize_min(%A : memref<i64>) {
+func.func @scf_for_canonicalize_min(%A : memref<i64>) {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %c4 = arith.constant 4 : index
@@ -23,7 +23,7 @@ func @scf_for_canonicalize_min(%A : memref<i64>) {
 //       CHECK:   %[[Cneg2:.*]] = arith.constant -2 : i64
 //       CHECK:   scf.for
 //       CHECK:     memref.store %[[Cneg2]], %{{.*}}[] : memref<i64>
-func @scf_for_canonicalize_max(%A : memref<i64>) {
+func.func @scf_for_canonicalize_max(%A : memref<i64>) {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %c4 = arith.constant 4 : index
@@ -42,7 +42,7 @@ func @scf_for_canonicalize_max(%A : memref<i64>) {
 //       CHECK:   scf.for
 //       CHECK:     affine.max
 //       CHECK:     arith.index_cast
-func @scf_for_max_not_canonicalizable(%A : memref<i64>) {
+func.func @scf_for_max_not_canonicalizable(%A : memref<i64>) {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %c3 = arith.constant 3 : index
@@ -63,7 +63,7 @@ func @scf_for_max_not_canonicalizable(%A : memref<i64>) {
 //       CHECK:   scf.for
 //       CHECK:     scf.for
 //       CHECK:       memref.store %[[C5]], %{{.*}}[] : memref<i64>
-func @scf_for_loop_nest_canonicalize_min(%A : memref<i64>) {
+func.func @scf_for_loop_nest_canonicalize_min(%A : memref<i64>) {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %c3 = arith.constant 3 : index
@@ -86,7 +86,7 @@ func @scf_for_loop_nest_canonicalize_min(%A : memref<i64>) {
 //       CHECK:   scf.for
 //       CHECK:     affine.min
 //       CHECK:     arith.index_cast
-func @scf_for_not_canonicalizable_1(%A : memref<i64>) {
+func.func @scf_for_not_canonicalizable_1(%A : memref<i64>) {
   // This should not canonicalize because: 4 - %i may take the value 1 < 2.
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -106,7 +106,7 @@ func @scf_for_not_canonicalizable_1(%A : memref<i64>) {
 //       CHECK:   scf.for
 //       CHECK:     affine.apply
 //       CHECK:     arith.index_cast
-func @scf_for_canonicalize_partly(%A : memref<i64>) {
+func.func @scf_for_canonicalize_partly(%A : memref<i64>) {
   // This should canonicalize only partly: 256 - %i <= 256.
   %c1 = arith.constant 1 : index
   %c16 = arith.constant 16 : index
@@ -126,7 +126,7 @@ func @scf_for_canonicalize_partly(%A : memref<i64>) {
 //       CHECK: scf.for
 //       CHECK:   affine.min
 //       CHECK:   arith.index_cast
-func @scf_for_not_canonicalizable_2(%A : memref<i64>, %step : index) {
+func.func @scf_for_not_canonicalizable_2(%A : memref<i64>, %step : index) {
   // This example should simplify but affine_map is currently missing
   // semi-affine canonicalizations: `((s0 * 42 - 1) floordiv s0) * s0`
   // should evaluate to 41 * s0.
@@ -149,7 +149,7 @@ func @scf_for_not_canonicalizable_2(%A : memref<i64>, %step : index) {
 //       CHECK: scf.for
 //       CHECK:   affine.min
 //       CHECK:   arith.index_cast
-func @scf_for_not_canonicalizable_3(%A : memref<i64>, %step : index) {
+func.func @scf_for_not_canonicalizable_3(%A : memref<i64>, %step : index) {
   // This example should simplify but affine_map is currently missing
   // semi-affine canonicalizations: `-(((s0 * s0 - 1) floordiv s0) * s0)`
   // should evaluate to (s0 - 1) * s0.
@@ -172,7 +172,7 @@ func @scf_for_not_canonicalizable_3(%A : memref<i64>, %step : index) {
 //       CHECK: scf.for
 //       CHECK:   affine.min
 //       CHECK:   arith.index_cast
-func @scf_for_invalid_loop(%A : memref<i64>, %step : index) {
+func.func @scf_for_invalid_loop(%A : memref<i64>, %step : index) {
   // This is an invalid loop. It should not be touched by the canonicalization
   // pattern.
   %c1 = arith.constant 1 : index
@@ -193,7 +193,7 @@ func @scf_for_invalid_loop(%A : memref<i64>, %step : index) {
 //       CHECK:   %[[C2:.*]] = arith.constant 2 : i64
 //       CHECK:   scf.parallel
 //  CHECK-NEXT:     memref.store %[[C2]], %{{.*}}[] : memref<i64>
-func @scf_parallel_canonicalize_min_1(%A : memref<i64>) {
+func.func @scf_parallel_canonicalize_min_1(%A : memref<i64>) {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %c4 = arith.constant 4 : index
@@ -212,7 +212,7 @@ func @scf_parallel_canonicalize_min_1(%A : memref<i64>) {
 //       CHECK:   %[[C2:.*]] = arith.constant 2 : i64
 //       CHECK:   scf.parallel
 //  CHECK-NEXT:     memref.store %[[C2]], %{{.*}}[] : memref<i64>
-func @scf_parallel_canonicalize_min_2(%A : memref<i64>) {
+func.func @scf_parallel_canonicalize_min_2(%A : memref<i64>) {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
   %c7 = arith.constant 7 : index
@@ -231,7 +231,7 @@ func @scf_parallel_canonicalize_min_2(%A : memref<i64>) {
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>
 //       CHECK:   scf.for
 //       CHECK:     tensor.dim %[[t]]
-func @tensor_dim_of_iter_arg(%t : tensor<?x?xf32>) -> index {
+func.func @tensor_dim_of_iter_arg(%t : tensor<?x?xf32>) -> index {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
@@ -249,7 +249,7 @@ func @tensor_dim_of_iter_arg(%t : tensor<?x?xf32>) -> index {
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>,
 //       CHECK:   scf.for
 //       CHECK:     tensor.dim %[[t]]
-func @tensor_dim_of_iter_arg_insertslice(%t : tensor<?x?xf32>,
+func.func @tensor_dim_of_iter_arg_insertslice(%t : tensor<?x?xf32>,
                                          %t2 : tensor<10x10xf32>) -> index {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -273,7 +273,7 @@ func @tensor_dim_of_iter_arg_insertslice(%t : tensor<?x?xf32>,
 //       CHECK:   scf.for
 //       CHECK:     scf.for
 //       CHECK:       tensor.dim %[[t]]
-func @tensor_dim_of_iter_arg_nested_for(%t : tensor<?x?xf32>,
+func.func @tensor_dim_of_iter_arg_nested_for(%t : tensor<?x?xf32>,
                                         %t2 : tensor<10x10xf32>) -> index {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -302,7 +302,7 @@ func @tensor_dim_of_iter_arg_nested_for(%t : tensor<?x?xf32>,
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>,
 //       CHECK:   scf.for {{.*}} iter_args(%[[arg0:.*]] = %[[t]]
 //       CHECK:     tensor.dim %[[arg0]]
-func @tensor_dim_of_iter_arg_no_canonicalize(%t : tensor<?x?xf32>,
+func.func @tensor_dim_of_iter_arg_no_canonicalize(%t : tensor<?x?xf32>,
                                              %t2 : tensor<?x?xf32>) -> index {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -320,7 +320,7 @@ func @tensor_dim_of_iter_arg_no_canonicalize(%t : tensor<?x?xf32>,
 // CHECK-LABEL: func @tensor_dim_of_loop_result(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>
 //       CHECK:   tensor.dim %[[t]]
-func @tensor_dim_of_loop_result(%t : tensor<?x?xf32>) -> index {
+func.func @tensor_dim_of_loop_result(%t : tensor<?x?xf32>) -> index {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
@@ -337,7 +337,7 @@ func @tensor_dim_of_loop_result(%t : tensor<?x?xf32>) -> index {
 // CHECK-LABEL: func @tensor_dim_of_loop_result_no_canonicalize(
 //       CHECK:   %[[loop:.*]]:2 = scf.for
 //       CHECK:   tensor.dim %[[loop]]#1
-func @tensor_dim_of_loop_result_no_canonicalize(%t : tensor<?x?xf32>,
+func.func @tensor_dim_of_loop_result_no_canonicalize(%t : tensor<?x?xf32>,
                                                 %u : tensor<?x?xf32>) -> index {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -356,7 +356,7 @@ func @tensor_dim_of_loop_result_no_canonicalize(%t : tensor<?x?xf32>,
 //       CHECK:   %[[C4:.*]] = arith.constant 4 : i64
 //       CHECK:   scf.for
 //       CHECK:     memref.store %[[C4]], %{{.*}}[] : memref<i64>
-func @one_trip_scf_for_canonicalize_min(%A : memref<i64>) {
+func.func @one_trip_scf_for_canonicalize_min(%A : memref<i64>) {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %c4 = arith.constant 4 : index

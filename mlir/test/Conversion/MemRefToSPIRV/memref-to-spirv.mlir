@@ -15,7 +15,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: @load_store_zero_rank_float
-func @load_store_zero_rank_float(%arg0: memref<f32>, %arg1: memref<f32>) {
+func.func @load_store_zero_rank_float(%arg0: memref<f32>, %arg1: memref<f32>) {
   //      CHECK: [[ARG0:%.*]] = builtin.unrealized_conversion_cast {{.+}} : memref<f32> to !spv.ptr<!spv.struct<(!spv.array<1 x f32, stride=4> [0])>, StorageBuffer>
   //      CHECK: [[ARG1:%.*]] = builtin.unrealized_conversion_cast {{.+}} : memref<f32> to !spv.ptr<!spv.struct<(!spv.array<1 x f32, stride=4> [0])>, StorageBuffer>
   //      CHECK: [[ZERO1:%.*]] = spv.Constant 0 : i32
@@ -34,7 +34,7 @@ func @load_store_zero_rank_float(%arg0: memref<f32>, %arg1: memref<f32>) {
 }
 
 // CHECK-LABEL: @load_store_zero_rank_int
-func @load_store_zero_rank_int(%arg0: memref<i32>, %arg1: memref<i32>) {
+func.func @load_store_zero_rank_int(%arg0: memref<i32>, %arg1: memref<i32>) {
   //      CHECK: [[ARG0:%.*]] = builtin.unrealized_conversion_cast {{.+}} : memref<i32> to !spv.ptr<!spv.struct<(!spv.array<1 x i32, stride=4> [0])>, StorageBuffer>
   //      CHECK: [[ARG1:%.*]] = builtin.unrealized_conversion_cast {{.+}} : memref<i32> to !spv.ptr<!spv.struct<(!spv.array<1 x i32, stride=4> [0])>, StorageBuffer>
   //      CHECK: [[ZERO1:%.*]] = spv.Constant 0 : i32
@@ -53,7 +53,7 @@ func @load_store_zero_rank_int(%arg0: memref<i32>, %arg1: memref<i32>) {
 }
 
 // CHECK-LABEL: func @load_store_unknown_dim
-func @load_store_unknown_dim(%i: index, %source: memref<?xi32>, %dest: memref<?xi32>) {
+func.func @load_store_unknown_dim(%i: index, %source: memref<?xi32>, %dest: memref<?xi32>) {
   // CHECK: %[[SRC:.+]] = builtin.unrealized_conversion_cast {{.+}} : memref<?xi32> to !spv.ptr<!spv.struct<(!spv.rtarray<i32, stride=4> [0])>, StorageBuffer>
   // CHECK: %[[DST:.+]] = builtin.unrealized_conversion_cast {{.+}} : memref<?xi32> to !spv.ptr<!spv.struct<(!spv.rtarray<i32, stride=4> [0])>, StorageBuffer>
   // CHECK: %[[AC0:.+]] = spv.AccessChain %[[SRC]]
@@ -67,7 +67,7 @@ func @load_store_unknown_dim(%i: index, %source: memref<?xi32>, %dest: memref<?x
 
 // CHECK-LABEL: func @load_i1
 //  CHECK-SAME: (%[[SRC:.+]]: memref<4xi1>, %[[IDX:.+]]: index)
-func @load_i1(%src: memref<4xi1>, %i : index) -> i1 {
+func.func @load_i1(%src: memref<4xi1>, %i : index) -> i1 {
   // CHECK-DAG: %[[SRC_CAST:.+]] = builtin.unrealized_conversion_cast %[[SRC]] : memref<4xi1> to !spv.ptr<!spv.struct<(!spv.array<4 x i8, stride=1> [0])>, StorageBuffer>
   // CHECK-DAG: %[[IDX_CAST:.+]] = builtin.unrealized_conversion_cast %[[IDX]]
   // CHECK: %[[ZERO_0:.+]] = spv.Constant 0 : i32
@@ -87,7 +87,7 @@ func @load_i1(%src: memref<4xi1>, %i : index) -> i1 {
 // CHECK-LABEL: func @store_i1
 //  CHECK-SAME: %[[DST:.+]]: memref<4xi1>,
 //  CHECK-SAME: %[[IDX:.+]]: index
-func @store_i1(%dst: memref<4xi1>, %i: index) {
+func.func @store_i1(%dst: memref<4xi1>, %i: index) {
   %true = arith.constant true
   // CHECK-DAG: %[[DST_CAST:.+]] = builtin.unrealized_conversion_cast %[[DST]] : memref<4xi1> to !spv.ptr<!spv.struct<(!spv.array<4 x i8, stride=1> [0])>, StorageBuffer>
   // CHECK-DAG: %[[IDX_CAST:.+]] = builtin.unrealized_conversion_cast %[[IDX]]
@@ -118,7 +118,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: @load_i1
-func @load_i1(%arg0: memref<i1>) -> i1 {
+func.func @load_i1(%arg0: memref<i1>) -> i1 {
   //     CHECK: %[[ZERO:.+]] = spv.Constant 0 : i32
   //     CHECK: %[[FOUR1:.+]] = spv.Constant 4 : i32
   //     CHECK: %[[QUOTIENT:.+]] = spv.SDiv %[[ZERO]], %[[FOUR1]] : i32
@@ -143,7 +143,7 @@ func @load_i1(%arg0: memref<i1>) -> i1 {
 }
 
 // CHECK-LABEL: @load_i8
-func @load_i8(%arg0: memref<i8>) {
+func.func @load_i8(%arg0: memref<i8>) {
   //     CHECK: %[[ZERO:.+]] = spv.Constant 0 : i32
   //     CHECK: %[[FOUR1:.+]] = spv.Constant 4 : i32
   //     CHECK: %[[QUOTIENT:.+]] = spv.SDiv %[[ZERO]], %[[FOUR1]] : i32
@@ -165,7 +165,7 @@ func @load_i8(%arg0: memref<i8>) {
 
 // CHECK-LABEL: @load_i16
 //       CHECK: (%[[ARG0:.+]]: {{.*}}, %[[ARG1:.+]]: index)
-func @load_i16(%arg0: memref<10xi16>, %index : index) {
+func.func @load_i16(%arg0: memref<10xi16>, %index : index) {
   //     CHECK: %[[ARG1_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG1]] : index to i32
   //     CHECK: %[[ZERO:.+]] = spv.Constant 0 : i32
   //     CHECK: %[[OFFSET:.+]] = spv.Constant 0 : i32
@@ -191,7 +191,7 @@ func @load_i16(%arg0: memref<10xi16>, %index : index) {
 }
 
 // CHECK-LABEL: @load_i32
-func @load_i32(%arg0: memref<i32>) {
+func.func @load_i32(%arg0: memref<i32>) {
   // CHECK-NOT: spv.SDiv
   //     CHECK: spv.Load
   // CHECK-NOT: spv.ShiftRightArithmetic
@@ -200,7 +200,7 @@ func @load_i32(%arg0: memref<i32>) {
 }
 
 // CHECK-LABEL: @load_f32
-func @load_f32(%arg0: memref<f32>) {
+func.func @load_f32(%arg0: memref<f32>) {
   // CHECK-NOT: spv.SDiv
   //     CHECK: spv.Load
   // CHECK-NOT: spv.ShiftRightArithmetic
@@ -210,7 +210,7 @@ func @load_f32(%arg0: memref<f32>) {
 
 // CHECK-LABEL: @store_i1
 //       CHECK: (%[[ARG0:.+]]: {{.*}}, %[[ARG1:.+]]: i1)
-func @store_i1(%arg0: memref<i1>, %value: i1) {
+func.func @store_i1(%arg0: memref<i1>, %value: i1) {
   //     CHECK: %[[ARG0_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
   //     CHECK: %[[ZERO:.+]] = spv.Constant 0 : i32
   //     CHECK: %[[FOUR:.+]] = spv.Constant 4 : i32
@@ -236,7 +236,7 @@ func @store_i1(%arg0: memref<i1>, %value: i1) {
 
 // CHECK-LABEL: @store_i8
 //       CHECK: (%[[ARG0:.+]]: {{.*}}, %[[ARG1:.+]]: i8)
-func @store_i8(%arg0: memref<i8>, %value: i8) {
+func.func @store_i8(%arg0: memref<i8>, %value: i8) {
   //     CHECK-DAG: %[[ARG1_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG1]] : i8 to i32
   //     CHECK-DAG: %[[ARG0_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
   //     CHECK: %[[ZERO:.+]] = spv.Constant 0 : i32
@@ -260,7 +260,7 @@ func @store_i8(%arg0: memref<i8>, %value: i8) {
 
 // CHECK-LABEL: @store_i16
 //       CHECK: (%[[ARG0:.+]]: memref<10xi16>, %[[ARG1:.+]]: index, %[[ARG2:.+]]: i16)
-func @store_i16(%arg0: memref<10xi16>, %index: index, %value: i16) {
+func.func @store_i16(%arg0: memref<10xi16>, %index: index, %value: i16) {
   //     CHECK-DAG: %[[ARG2_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG2]] : i16 to i32
   //     CHECK-DAG: %[[ARG0_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
   //     CHECK-DAG: %[[ARG1_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG1]] : index to i32
@@ -288,7 +288,7 @@ func @store_i16(%arg0: memref<10xi16>, %index: index, %value: i16) {
 }
 
 // CHECK-LABEL: @store_i32
-func @store_i32(%arg0: memref<i32>, %value: i32) {
+func.func @store_i32(%arg0: memref<i32>, %value: i32) {
   //     CHECK: spv.Store
   // CHECK-NOT: spv.AtomicAnd
   // CHECK-NOT: spv.AtomicOr
@@ -297,7 +297,7 @@ func @store_i32(%arg0: memref<i32>, %value: i32) {
 }
 
 // CHECK-LABEL: @store_f32
-func @store_f32(%arg0: memref<f32>, %value: f32) {
+func.func @store_f32(%arg0: memref<f32>, %value: f32) {
   //     CHECK: spv.Store
   // CHECK-NOT: spv.AtomicAnd
   // CHECK-NOT: spv.AtomicOr
@@ -318,7 +318,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: @load_i8
-func @load_i8(%arg0: memref<i8>) {
+func.func @load_i8(%arg0: memref<i8>) {
   //     CHECK: %[[ZERO:.+]] = spv.Constant 0 : i32
   //     CHECK: %[[FOUR1:.+]] = spv.Constant 4 : i32
   //     CHECK: %[[QUOTIENT:.+]] = spv.SDiv %[[ZERO]], %[[FOUR1]] : i32
@@ -339,7 +339,7 @@ func @load_i8(%arg0: memref<i8>) {
 }
 
 // CHECK-LABEL: @load_i16
-func @load_i16(%arg0: memref<i16>) {
+func.func @load_i16(%arg0: memref<i16>) {
   // CHECK-NOT: spv.SDiv
   //     CHECK: spv.Load
   // CHECK-NOT: spv.ShiftRightArithmetic
@@ -349,7 +349,7 @@ func @load_i16(%arg0: memref<i16>) {
 
 // CHECK-LABEL: @store_i8
 //       CHECK: (%[[ARG0:.+]]: {{.*}}, %[[ARG1:.+]]: i8)
-func @store_i8(%arg0: memref<i8>, %value: i8) {
+func.func @store_i8(%arg0: memref<i8>, %value: i8) {
   //     CHECK-DAG: %[[ARG1_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG1]] : i8 to i32
   //     CHECK-DAG: %[[ARG0_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
   //     CHECK: %[[ZERO:.+]] = spv.Constant 0 : i32
@@ -372,7 +372,7 @@ func @store_i8(%arg0: memref<i8>, %value: i8) {
 }
 
 // CHECK-LABEL: @store_i16
-func @store_i16(%arg0: memref<10xi16>, %index: index, %value: i16) {
+func.func @store_i16(%arg0: memref<10xi16>, %index: index, %value: i16) {
   //     CHECK: spv.Store
   // CHECK-NOT: spv.AtomicAnd
   // CHECK-NOT: spv.AtomicOr

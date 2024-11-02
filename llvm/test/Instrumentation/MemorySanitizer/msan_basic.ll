@@ -248,7 +248,7 @@ declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) 
 ; CHECK: ret void
 
 ;; ------------
-;; Placeholder tests that will fail once element atomic @llvm.mem[cpy|move|set] instrinsics have
+;; Placeholder tests that will fail once element atomic @llvm.mem[cpy|move|set] intrinsics have
 ;; been added to the MemIntrinsic class hierarchy. These will act as a reminder to
 ;; verify that MSAN handles these intrinsics properly once they have been
 ;; added to that class hierarchy.

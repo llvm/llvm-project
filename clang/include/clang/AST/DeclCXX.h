@@ -1799,20 +1799,6 @@ public:
     return getLambdaData().MethodTyInfo;
   }
 
-  void setLambdaTypeInfo(TypeSourceInfo *TS) {
-    auto *DD = DefinitionData;
-    assert(DD && DD->IsLambda && "setting lambda property of non-lambda class");
-    auto &DL = static_cast<LambdaDefinitionData &>(*DD);
-    DL.MethodTyInfo = TS;
-  }
-
-  void setLambdaIsGeneric(bool IsGeneric) {
-    auto *DD = DefinitionData;
-    assert(DD && DD->IsLambda && "setting lambda property of non-lambda class");
-    auto &DL = static_cast<LambdaDefinitionData &>(*DD);
-    DL.IsGenericLambda = IsGeneric;
-  }
-
   // Determine whether this type is an Interface Like type for
   // __interface inheritance purposes.
   bool isInterfaceLike() const;

@@ -83,7 +83,7 @@
 // CHECK-MIR:           %[[VAL_30:.*]] = bufferization.to_tensor %[[VAL_10]] : memref<f32>
 // CHECK-MIR:           return %[[VAL_30]] : tensor<f32>
 // CHECK-MIR:         }
-func @sparse_dynamic_dims(%arga: tensor<?x?x?xf32, #X>,
+func.func @sparse_dynamic_dims(%arga: tensor<?x?x?xf32, #X>,
                           %argx: tensor<f32>) -> tensor<f32> {
   %0 = linalg.generic #trait
     ins(%arga: tensor<?x?x?xf32, #X>)

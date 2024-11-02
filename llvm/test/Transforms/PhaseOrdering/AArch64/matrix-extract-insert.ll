@@ -308,16 +308,10 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
 
 define <4 x float> @reverse_hadd_v4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @reverse_hadd_v4f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> undef, <2 x i32> <i32 2, i32 0>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[A]], <4 x float> undef, <2 x i32> <i32 3, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> undef, <2 x i32> <i32 2, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[B]], <4 x float> undef, <2 x i32> <i32 3, i32 1>
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x float> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP7]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    ret <4 x float> [[TMP9]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> [[A:%.*]], <4 x i32> <i32 2, i32 0, i32 6, i32 4>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[B]], <4 x float> [[A]], <4 x i32> <i32 3, i32 1, i32 7, i32 5>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <4 x float> [[TMP3]]
 ;
   %vecext = extractelement <4 x float> %a, i32 0
   %vecext1 = extractelement <4 x float> %a, i32 1

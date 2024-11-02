@@ -72,11 +72,11 @@ body:             |
   ; CHECK:     $v0_64 = DADDiu $v0_64, 1
   ; CHECK:   }
   ; CHECK:   BNE killed renamable $at, $zero, %bb.2, implicit-def $at {
-  ; CHECK:     NOP
+  ; CHECK:     $zero = SLL $zero, 0
   ; CHECK:   }
   ; CHECK: bb.1.return:
   ; CHECK:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
-  ; CHECK:     NOP
+  ; CHECK:     $zero = SLL $zero, 0
   ; CHECK:   }
   ; CHECK: bb.2.err:
   bb.0.entry:

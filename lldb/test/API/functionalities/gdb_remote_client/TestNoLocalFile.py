@@ -12,7 +12,13 @@ class TestNoLocalFile(GDBRemoteTestBase):
     mydir = TestBase.compute_mydir(__file__)
     
     @skipIfXmlSupportMissing
-    def test(self):
+    def test_with_python(self):
+        self.do_test(False)
+    @skipIfXmlSupportMissing
+    def test_with_target_ceate(self):
+        self.do_test(True)
+
+    def do_test(self, use_target_create):
         self.absent_file = '/nosuch_dir/nosuch_subdir/nosuch_executable'
         self.a_packet_file = None
         class MyResponder(MockGDBServerResponder):
@@ -67,10 +73,19 @@ class TestNoLocalFile(GDBRemoteTestBase):
             
         error = lldb.SBError()
         self.server.responder = MyResponder(self)
-        target = self.dbg.CreateTarget(None, "x86_64-apple-macosx", "remote-macosx", False, error)
-        self.assertSuccess(error, "Made a valid target")
+        target = lldb.SBTarget()
+        if (use_target_create):
+            create_cmd = "target create --arch x86_64-apple-macosx --platform remote-macosx --remote-file {0}".format(self.absent_file)
+            self.runCmd(create_cmd)
+            target = self.dbg.GetSelectedTarget()
+            self.assertTrue(target.IsValid(), "Made a valid target")
+        else:
+            target = self.dbg.CreateTarget(None, "x86_64-apple-macosx", "remote-macosx", False, error)
+            self.assertSuccess(error, "Made a valid target")
+
         launch_info = target.GetLaunchInfo()
-        launch_info.SetExecutableFile(lldb.SBFileSpec(self.absent_file), True)
+        if (not use_target_create):
+            launch_info.SetExecutableFile(lldb.SBFileSpec(self.absent_file), True)
         flags = launch_info.GetLaunchFlags()
         flags |= lldb.eLaunchFlagStopAtEntry
         launch_info.SetLaunchFlags(flags)

@@ -3,7 +3,6 @@
 // RUN: %clang_cc1 -target-feature +f64mm -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -target-feature +f64mm -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -target-feature +f64mm -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fallow-half-arguments-and-returns -fsyntax-only -Wno-error=implicit-function-declaration -verify -verify-ignore-unexpected=error -verify-ignore-unexpected=note %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -27,6 +26,5 @@
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 svbfloat16_t test_svuzp2_bf16(svbfloat16_t op1, svbfloat16_t op2) {
-  // expected-warning@+1 {{call to undeclared function 'svuzp2q_bf16'; ISO C99 and later do not support implicit function declarations}}
   return SVE_ACLE_FUNC(svuzp2q, _bf16, , )(op1, op2);
 }

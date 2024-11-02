@@ -320,16 +320,12 @@ define void @vld2_v2i64(<4 x i64> *%src, <2 x i64> *%dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
+; CHECK-NEXT:    vmov lr, r12, d1
+; CHECK-NEXT:    vmov r3, r2, d0
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
-; CHECK-NEXT:    vmov.f32 s8, s2
-; CHECK-NEXT:    vmov.f32 s9, s3
-; CHECK-NEXT:    vmov.f32 s2, s4
-; CHECK-NEXT:    vmov.f32 s3, s5
-; CHECK-NEXT:    vmov lr, r12, d3
+; CHECK-NEXT:    vmov r0, r4, d1
 ; CHECK-NEXT:    vmov r5, r6, d0
-; CHECK-NEXT:    vmov r0, r4, d4
-; CHECK-NEXT:    vmov r3, r2, d1
 ; CHECK-NEXT:    adds.w r3, r3, lr
 ; CHECK-NEXT:    adc.w r2, r2, r12
 ; CHECK-NEXT:    adds r0, r0, r5

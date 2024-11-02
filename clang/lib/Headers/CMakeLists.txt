@@ -62,6 +62,11 @@ set(hip_files
   __clang_hip_runtime_wrapper.h
   )
 
+set(hlsl_files
+  hlsl.h
+  hlsl/hlsl_basic_types.h
+  )
+
 set(mips_msa_files
   msa.h
   )
@@ -73,6 +78,9 @@ set(opencl_files
 
 set(ppc_files
   altivec.h
+  )
+
+set(ppc_htm_files
   htmintrin.h
   htmxlintrin.h
   )
@@ -209,9 +217,11 @@ set(files
   ${cuda_files}
   ${hexagon_files}
   ${hip_files}
+  ${hlsl_files}
   ${mips_msa_files}
   ${opencl_files}
   ${ppc_files}
+  ${ppc_htm_files}
   ${systemz_files}
   ${ve_files}
   ${x86_files}
@@ -348,33 +358,69 @@ foreach( f ${generated_files} )
   endif()
 endforeach( f )
 
-function(add_header_target target_name)
-  add_custom_target(${target_name} ALL DEPENDS ${out_files})
+function(add_header_target target_name file_list)
+  add_custom_target(${target_name} DEPENDS ${file_list})
   set_target_properties(${target_name} PROPERTIES
     FOLDER "Misc"
     RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
 endfunction()
 
-add_header_target("clang-resource-headers")
+# The catch-all clang-resource-headers target
+add_custom_target("clang-resource-headers" ALL DEPENDS ${out_files})
+set_target_properties("clang-resource-headers" PROPERTIES
+  FOLDER "Misc"
+  RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
+add_dependencies("clang-resource-headers"
+                 "core-resource-headers"
+                 "arm-common-resource-headers"
+                 "arm-resource-headers"
+                 "aarch64-resource-headers"
+                 "cuda-resource-headers"
+                 "hexagon-resource-headers"
+                 "hip-resource-headers"
+                 "mips-resource-headers"
+                 "ppc-resource-headers"
+                 "ppc-htm-resource-headers"
+                 "riscv-resource-headers"
+                 "systemz-resource-headers"
+                 "ve-resource-headers"
+                 "webassembly-resource-headers"
+                 "x86-resource-headers"
+                 "opencl-resource-headers"
+                 "openmp-resource-headers"
+                 "windows-resource-headers"
+                 "utility-resource-headers")
+
+# Core/common headers
+add_header_target("core-resource-headers" ${core_files})
+add_header_target("arm-common-resource-headers" "${arm_common_files};${arm_common_generated_files}")
 
 # Architecture/platform specific targets
-add_header_target("arm-resource-headers")
-add_header_target("aarch64-resource-headers")
-add_header_target("cuda-resource-headers")
-add_header_target("hexagon-resource-headers")
-add_header_target("hip-resource-headers")
-add_header_target("mips-resource-headers")
-add_header_target("opencl-resource-headers")
-add_header_target("ppc-resource-headers")
-add_header_target("riscv-resource-headers")
-add_header_target("systemz-resource-headers")
-add_header_target("ve-resource-headers")
-add_header_target("webassembly-resource-headers")
-add_header_target("windows-resource-headers")
-add_header_target("x86-resource-headers")
+add_header_target("arm-resource-headers" "${arm_only_files};${arm_only_generated_files}")
+add_header_target("aarch64-resource-headers" "${aarch64_only_files};${aarch64_only_generated_files}")
+add_header_target("cuda-resource-headers" "${cuda_files};${cuda_wrapper_files}")
+add_header_target("hexagon-resource-headers" "${hexagon_files}")
+add_header_target("hip-resource-headers" "${hip_files}")
+add_header_target("mips-resource-headers" "${mips_msa_files}")
+add_header_target("ppc-resource-headers" "${ppc_files};${ppc_wrapper_files}")
+add_header_target("ppc-htm-resource-headers" "${ppc_htm_files}")
+add_header_target("riscv-resource-headers" "${riscv_generated_files}")
+add_header_target("systemz-resource-headers" "${systemz_files}")
+add_header_target("ve-resource-headers" "${ve_files}")
+add_header_target("webassembly-resource-headers" "${webassembly_files}")
+add_header_target("x86-resource-headers" "${x86_files}")
+
+# Other header groupings
+add_header_target("hlsl-resource-headers" ${hlsl_files})
+add_header_target("opencl-resource-headers" ${opencl_files})
+add_header_target("openmp-resource-headers" ${openmp_wrapper_files})
+add_header_target("windows-resource-headers" ${windows_only_files})
+add_header_target("utility-resource-headers" ${utility_files})
 
 set(header_install_dir lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION}/include)
 
+#############################################################
+# Install rules for the catch-all clang-resource-headers target
 install(
   FILES ${files} ${generated_files}
   DESTINATION ${header_install_dir}
@@ -396,20 +442,27 @@ install(
   COMPONENT clang-resource-headers)
 
 #############################################################
-# Install rules for architecture/platform specific headers
-# All the targets are subsets of the clang-resource-headers list.
+# Install rules for separate header lists
 install(
   FILES ${core_files}
-        ${arm_common_files} ${arm_only_files}
-        ${arm_common_generated_files} ${arm_only_generated_files}
+  DESTINATION ${header_install_dir}
+  EXCLUDE_FROM_ALL
+  COMPONENT core-resource-headers)
+
+install(
+  FILES ${arm_common_files} ${arm_common_generated_files}
+  DESTINATION ${header_install_dir}
+  EXCLUDE_FROM_ALL
+  COMPONENT arm-common-resource-headers)
+
+install(
+  FILES ${arm_only_files} ${arm_only_generated_files}
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT arm-resource-headers)
 
 install(
-  FILES ${core_files}
-        ${arm_common_files} ${aarch64_only_files}
-        ${arm_common_generated_files} ${aarch64_only_generated_files}
+  FILES ${aarch64_only_files} ${aarch64_only_generated_files}
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT aarch64-resource-headers)
@@ -421,34 +474,28 @@ install(
   COMPONENT cuda-resource-headers)
 
 install(
-  FILES ${core_files} ${cuda_files}
+  FILES ${cuda_files}
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT cuda-resource-headers)
 
 install(
-  FILES ${core_files} ${hexagon_files}
+  FILES ${hexagon_files}
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT hexagon-resource-headers)
 
 install(
-  FILES ${core_files} ${hip_files}
+  FILES ${hip_files}
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT hip-resource-headers)
 
 install(
-  FILES ${core_files} ${mips_msa_files}
+  FILES ${mips_msa_files}
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT mips-resource-headers)
-
-install(
-  FILES ${core_files} ${opencl_files}
-  DESTINATION ${header_install_dir}
-  EXCLUDE_FROM_ALL
-  COMPONENT opencl-resource-headers)
 
 install(
   FILES ${ppc_wrapper_files}
@@ -457,52 +504,89 @@ install(
   COMPONENT ppc-resource-headers)
 
 install(
-  FILES ${core_files} ${ppc_files} ${utility_files}
+  FILES ${ppc_files}
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT ppc-resource-headers)
 
 install(
-  FILES ${core_files} ${riscv_generated_files}
+  FILES ${ppc_htm_files}
+  DESTINATION ${header_install_dir}
+  EXCLUDE_FROM_ALL
+  COMPONENT ppc-htm-resource-headers)
+
+install(
+  FILES ${riscv_generated_files}
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT riscv-resource-headers)
 
 install(
-  FILES ${core_files} ${systemz_files}
+  FILES ${systemz_files}
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT systemz-resource-headers)
 
 install(
-  FILES ${core_files} ${ve_files}
+  FILES ${ve_files}
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT ve-resource-headers)
 
 install(
-  FILES ${core_files} ${webassembly_files}
+  FILES ${webassembly_files}
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT webassembly-resource-headers)
 
 install(
-  FILES ${core_files} ${windows_files}
-  DESTINATION ${header_install_dir}
-  EXCLUDE_FROM_ALL
-  COMPONENT windows-resource-headers)
-
-install(
-  FILES ${core_files} ${x86_files} ${utility_files}
+  FILES ${x86_files}
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT x86-resource-headers)
+
+install(
+  FILES ${hlsl_files}
+  DESTINATION ${header_install_dir}
+  EXCLUDE_FROM_ALL
+  COMPONENT hlsl-resource-headers)
+
+install(
+  FILES ${opencl_files}
+  DESTINATION ${header_install_dir}
+  EXCLUDE_FROM_ALL
+  COMPONENT opencl-resource-headers)
+
+install(
+  FILES ${openmp_wrapper_files}
+  DESTINATION ${header_install_dir}/openmp_wrappers
+  EXCLUDE_FROM_ALL
+  COMPONENT openmp-resource-headers)
+
+install(
+  FILES ${utility_files}
+  DESTINATION ${header_install_dir}
+  EXCLUDE_FROM_ALL
+  COMPONENT utility-resource-headers)
+
+install(
+  FILES ${windows_only_files}
+  DESTINATION ${header_install_dir}
+  EXCLUDE_FROM_ALL
+  COMPONENT windows-resource-headers)
 #############################################################
 
 if (NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-clang-resource-headers
                            DEPENDS clang-resource-headers
                            COMPONENT clang-resource-headers)
+
+  add_llvm_install_targets(install-core-resource-headers
+                           DEPENDS core-resource-headers
+                           COMPONENT core-resource-headers)
+  add_llvm_install_targets(install-arm-common-resource-headers
+                           DEPENDS arm-common-resource-headers
+                           COMPONENT arm-common-resource-headers)
   add_llvm_install_targets(install-arm-resource-headers
                            DEPENDS arm-resource-headers
                            COMPONENT arm-resource-headers)
@@ -521,12 +605,12 @@ if (NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-mips-resource-headers
                            DEPENDS mips-resource-headers
                            COMPONENT mips-resource-headers)
-  add_llvm_install_targets(install-opencl-resource-headers
-                           DEPENDS opencl-resource-headers
-                           COMPONENT opencl-resource-headers)
   add_llvm_install_targets(install-ppc-resource-headers
                            DEPENDS ppc-resource-headers
                            COMPONENT ppc-resource-headers)
+  add_llvm_install_targets(install-ppc-htm-resource-headers
+                           DEPENDS ppc-htm-resource-headers
+                           COMPONENT ppc-htm-resource-headers)
   add_llvm_install_targets(install-riscv-resource-headers
                            DEPENDS riscv-resource-headers
                            COMPONENT riscv-resource-headers)
@@ -542,7 +626,20 @@ if (NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-webassembly-resource-headers
                            DEPENDS webassembly-resource-headers
                            COMPONENT webassembly-resource-headers)
+
+  add_llvm_install_targets(install-hlsl-resource-headers
+                           DEPENDS hlsl-resource-headers
+                           COMPONENT hlsl-resource-headers)
+  add_llvm_install_targets(install-opencl-resource-headers
+                           DEPENDS opencl-resource-headers
+                           COMPONENT opencl-resource-headers)
+  add_llvm_install_targets(install-openmp-resource-headers
+                           DEPENDS openmp-resource-headers
+                           COMPONENT openmp-resource-headers)
   add_llvm_install_targets(install-windows-resource-headers
-                           DEPENDS window-resource-headers
+                           DEPENDS windows-resource-headers
                            COMPONENT windows-resource-headers)
+  add_llvm_install_targets(install-utility-resource-headers
+                           DEPENDS utility-resource-headers
+                           COMPONENT utility-resource-headers)
 endif()

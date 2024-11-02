@@ -18,7 +18,7 @@
 // explicit wbuffer_convert(streambuf* bytebuf, Codecvt* pcvt = new Codecvt,
 //                          state_type state = state_type()); // C++20
 
-// XFAIL: libcpp-has-no-wide-characters
+// XFAIL: no-wide-characters
 
 #include <locale>
 #include <codecvt>

@@ -1026,7 +1026,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::LOAD, MVT::v2f64, Legal);
       setOperationAction(ISD::STORE, MVT::v2f64, Legal);
 
-      setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2f64, Legal);
+      setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2f64, Custom);
 
       if (Subtarget.hasP8Vector())
         addRegisterClass(MVT::f32, &PPC::VSSRCRegClass);
@@ -1074,7 +1074,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::STORE, MVT::v2i64, Promote);
       AddPromotedToType (ISD::STORE, MVT::v2i64, MVT::v2f64);
 
-      setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2i64, Legal);
+      setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2i64, Custom);
 
       setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v2i64, Legal);
       setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v2i64, Legal);
@@ -1883,8 +1883,7 @@ bool PPC::isVPKUWUMShuffleMask(ShuffleVectorSDNode *N, unsigned ShuffleKind,
 /// For the latter, the input operands are swapped (see PPCInstrAltivec.td).
 bool PPC::isVPKUDUMShuffleMask(ShuffleVectorSDNode *N, unsigned ShuffleKind,
                                SelectionDAG &DAG) {
-  const PPCSubtarget& Subtarget =
-      static_cast<const PPCSubtarget&>(DAG.getSubtarget());
+  const PPCSubtarget &Subtarget = DAG.getSubtarget<PPCSubtarget>();
   if (!Subtarget.hasP8Vector())
     return false;
 
@@ -2138,7 +2137,11 @@ int PPC::isVSLDOIShuffleMask(SDNode *N, unsigned ShuffleKind,
 /// specifies a splat of a single element that is suitable for input to
 /// one of the splat operations (VSPLTB/VSPLTH/VSPLTW/XXSPLTW/LXVDSX/etc.).
 bool PPC::isSplatShuffleMask(ShuffleVectorSDNode *N, unsigned EltSize) {
-  assert(N->getValueType(0) == MVT::v16i8 && isPowerOf2_32(EltSize) &&
+  EVT VT = N->getValueType(0);
+  if (VT == MVT::v2i64 || VT == MVT::v2f64)
+    return EltSize == 8 && N->getMaskElt(0) == N->getMaskElt(1);
+
+  assert(VT == MVT::v16i8 && isPowerOf2_32(EltSize) &&
          EltSize <= 8 && "Can only handle 1,2,4,8 byte element sizes");
 
   // The consecutive indices need to specify an element, not part of two
@@ -2439,6 +2442,12 @@ unsigned PPC::getSplatIdxForPPCMnemonics(SDNode *N, unsigned EltSize,
                                          SelectionDAG &DAG) {
   ShuffleVectorSDNode *SVOp = cast<ShuffleVectorSDNode>(N);
   assert(isSplatShuffleMask(SVOp, EltSize));
+  EVT VT = SVOp->getValueType(0);
+
+  if (VT == MVT::v2i64 || VT == MVT::v2f64)
+    return DAG.getDataLayout().isLittleEndian() ? 1 - SVOp->getMaskElt(0)
+                                                : SVOp->getMaskElt(0);
+
   if (DAG.getDataLayout().isLittleEndian())
     return (16 / EltSize) - 1 - (SVOp->getMaskElt(0) / EltSize);
   else
@@ -6912,8 +6921,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
   if (useSoftFloat())
     report_fatal_error("Soft float support is unimplemented on AIX.");
 
-  const PPCSubtarget &Subtarget =
-      static_cast<const PPCSubtarget &>(DAG.getSubtarget());
+  const PPCSubtarget &Subtarget = DAG.getSubtarget<PPCSubtarget>();
 
   const bool IsPPC64 = Subtarget.isPPC64();
   const unsigned PtrByteSize = IsPPC64 ? 8 : 4;
@@ -7218,8 +7226,7 @@ SDValue PPCTargetLowering::LowerCall_AIX(
   if (CFlags.IsPatchPoint)
     report_fatal_error("This call type is unimplemented on AIX.");
 
-  const PPCSubtarget& Subtarget =
-      static_cast<const PPCSubtarget&>(DAG.getSubtarget());
+  const PPCSubtarget &Subtarget = DAG.getSubtarget<PPCSubtarget>();
 
   MachineFunction &MF = DAG.getMachineFunction();
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -9927,6 +9934,11 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
       return LdSplt;
     }
   }
+
+  // All v2i64 and v2f64 shuffles are legal
+  if (VT == MVT::v2i64 || VT == MVT::v2f64)
+    return Op;
+
   if (Subtarget.hasP9Vector() &&
       PPC::isXXINSERTWMask(SVOp, ShiftElts, InsertAtByte, Swap,
                            isLittleEndian)) {

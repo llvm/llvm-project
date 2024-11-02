@@ -655,6 +655,15 @@ static bool isValidReservedSectionIndex(uint16_t Index, uint16_t Machine) {
     return Index == SHN_AMDGPU_LDS;
   }
 
+  if (Machine == EM_MIPS) {
+    switch (Index) {
+    case SHN_MIPS_ACOMMON:
+    case SHN_MIPS_SCOMMON:
+    case SHN_MIPS_SUNDEFINED:
+      return true;
+    }
+  }
+
   if (Machine == EM_HEXAGON) {
     switch (Index) {
     case SHN_HEXAGON_SCOMMON:

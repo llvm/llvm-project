@@ -134,7 +134,8 @@ static Symbol parseExtendedSymbol(Parser &p, Token::Kind identifierTok,
     // Check for an alias for this type.
     auto aliasIt = aliases.find(identifier);
     if (aliasIt == aliases.end())
-      return (p.emitError("undefined symbol alias id '" + identifier + "'"),
+      return (p.emitWrongTokenError("undefined symbol alias id '" + identifier +
+                                    "'"),
               nullptr);
     return aliasIt->second;
   }
@@ -153,7 +154,8 @@ static Symbol parseExtendedSymbol(Parser &p, Token::Kind identifierTok,
 
     // Parse the symbol specific data.
     if (p.getToken().isNot(Token::string))
-      return (p.emitError("expected string literal data in dialect symbol"),
+      return (p.emitWrongTokenError(
+                  "expected string literal data in dialect symbol"),
               nullptr);
     symbolData = p.getToken().getStringValue();
     loc = SMLoc::getFromPointer(p.getToken().getLoc().getPointer() + 1);

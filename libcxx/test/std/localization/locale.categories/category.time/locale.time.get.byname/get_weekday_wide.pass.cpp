@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-has-no-wide-characters
+// XFAIL: no-wide-characters
 
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
@@ -20,9 +20,6 @@
 // iter_type
 // get_weekday(iter_type s, iter_type end, ios_base& str,
 //             ios_base::iostate& err, tm* t) const;
-
-// TODO: investigation needed
-// XFAIL: target={{.*}}-linux-gnu{{.*}}
 
 #include <locale>
 #include <cassert>
@@ -70,7 +67,11 @@ int main(int, char**)
     }
     {
         const my_facet f(LOCALE_ru_RU_UTF_8, 1);
+#if defined(TEST_HAS_GLIBC)
+        const wchar_t in[] = L"\x41F\x43E\x43D\x435\x434\x435\x43B\x44C\x43D\x438\x43A";
+#else
         const wchar_t in[] = L"\x43F\x43E\x43D\x435\x434\x435\x43B\x44C\x43D\x438\x43A";
+#endif
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get_weekday(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t);

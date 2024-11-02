@@ -40,7 +40,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  const std::string NoDiscardMacro;
+  const StringRef NoDiscardMacro;
 };
 
 } // namespace modernize

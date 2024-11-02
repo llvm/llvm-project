@@ -23,7 +23,7 @@ define void @foo() {
 }
 declare void @bar()
 
-; PASS1: @bar = alias void (), void ()* @zed
+; PASS1: @bar = alias void (), ptr @zed
 
 ; PASS1:      define void @foo() {
 ; PASS1-NEXT:   call void @bar()

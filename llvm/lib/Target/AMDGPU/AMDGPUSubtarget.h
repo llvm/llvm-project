@@ -38,7 +38,8 @@ public:
     SEA_ISLANDS = 6,
     VOLCANIC_ISLANDS = 7,
     GFX9 = 8,
-    GFX10 = 9
+    GFX10 = 9,
+    GFX11 = 10
   };
 
 private:
@@ -47,6 +48,7 @@ private:
 protected:
   bool GCN3Encoding = false;
   bool Has16BitInsts = false;
+  bool HasTrue16BitInsts = false;
   bool HasMadMixInsts = false;
   bool HasMadMacF32Insts = false;
   bool HasDsSrc2Insts = false;
@@ -144,6 +146,8 @@ public:
   bool has16BitInsts() const {
     return Has16BitInsts;
   }
+
+  bool hasTrue16BitInsts() const { return HasTrue16BitInsts; }
 
   bool hasMadMixInsts() const {
     return HasMadMixInsts;

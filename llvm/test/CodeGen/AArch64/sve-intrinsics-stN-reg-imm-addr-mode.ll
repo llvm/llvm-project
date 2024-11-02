@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -asm-verbose=0 < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+streaming-sve -asm-verbose=0 < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme -asm-verbose=0 < %s | FileCheck %s
 
 ; NOTE: invalid, upper and lower bound immediate values of the reg+imm
 ; addressing mode are checked only for the byte version of each

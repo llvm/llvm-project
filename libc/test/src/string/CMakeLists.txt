@@ -124,6 +124,26 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  strlcat_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strlcat_test.cpp
+  DEPENDS
+    libc.src.string.strlcat
+)
+
+add_libc_unittest(
+  strlcpy_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strlcpy_test.cpp
+  DEPENDS
+    libc.src.string.strlcpy
+)
+
+add_libc_unittest(
   strlen_test
   SUITE
     libc_string_unittests
@@ -255,14 +275,15 @@ function(add_libc_multi_impl_test name)
         ${fq_config_name}_test
         SUITE
           libc_string_unittests
-        DEPENDS
-          ${fq_config_name}
         COMPILE_OPTIONS
           ${LIBC_COMPILE_OPTIONS_NATIVE}
+        LINK_LIBRARIES
+          LibcMemoryHelpers
         ${ARGN}
+        DEPENDS
+          ${fq_config_name}
       )
       get_fq_target_name(${fq_config_name}_test fq_target_name)
-      target_link_libraries(${fq_target_name} PRIVATE LibcMemoryHelpers)
     else()
       message(STATUS "Skipping test for '${fq_config_name}' insufficient host cpu features '${required_cpu_features}'")
     endif()

@@ -144,6 +144,19 @@ static SmallVector<Value> inferDynamicDimsForConv(
   return filteredDims;
 }
 
+// Creates a map to collapse the last dimension of the Depthwise convolution op
+// due to a shape mismatch
+static void createDepthwiseConvCollapseMap(
+    int64_t outputRank, SmallVector<ReassociationExprs, 4> &reassociationMap,
+    OpBuilder &rewriter) {
+  reassociationMap.resize(outputRank);
+  for (int i = 0; i < outputRank; i++) {
+    reassociationMap[i].push_back(rewriter.getAffineDimExpr(i));
+  }
+  reassociationMap[outputRank - 1].push_back(
+      rewriter.getAffineDimExpr(outputRank));
+}
+
 namespace {
 
 class ConvConverter : public OpConversionPattern<tosa::Conv2DOp> {
@@ -331,6 +344,7 @@ public:
     ShapedType weightTy = weight.getType().cast<ShapedType>();
     ShapedType biasTy = bias.getType().cast<ShapedType>();
     ShapedType resultTy = op->getResult(0).getType().cast<ShapedType>();
+    int64_t resultRank = resultTy.getRank();
 
     Type inputETy = inputTy.getElementType();
     Type resultETy = resultTy.getElementType();
@@ -410,10 +424,10 @@ public:
     // Broadcast the initial value to the output tensor before convolving.
     SmallVector<AffineMap, 4> indexingMaps;
     indexingMaps.push_back(AffineMap::get(
-        /*dimCount=*/resultTy.getRank(), /*symbolCount=*/0,
+        /*dimCount=*/resultRank, /*symbolCount=*/0,
         {rewriter.getAffineDimExpr(3)}, rewriter.getContext()));
-    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
-    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
+    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultRank));
+    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultRank));
 
     Attribute resultZeroAttr = rewriter.getZeroAttr(resultETy);
     Value initTensor = rewriter.create<linalg::InitTensorOp>(
@@ -432,14 +446,18 @@ public:
                            loc, linalgConvTy, ValueRange{input, weight},
                            ValueRange{zeroTensor}, strideAttr, dilationAttr)
                        .getResult(0);
-      Value convReshape = rewriter.create<tosa::ReshapeOp>(
-          loc, resultTy, conv, rewriter.getI64ArrayAttr(resultTy.getShape()));
+
+      SmallVector<ReassociationExprs, 4> reassociationMap;
+      createDepthwiseConvCollapseMap(resultRank, reassociationMap, rewriter);
+      Value convReshape = rewriter.create<tensor::CollapseShapeOp>(
+          loc, resultTy, conv, reassociationMap);
+
       Value result =
           rewriter
               .create<linalg::GenericOp>(
                   loc, resultTy, ValueRange({bias, convReshape}),
                   biasInitTensor, indexingMaps,
-                  getNParallelLoopsAttrs(resultTy.getRank()),
+                  getNParallelLoopsAttrs(resultRank),
                   [&](OpBuilder &nestedBuilder, Location nestedLoc,
                       ValueRange args) {
                     Value added = nestedBuilder.create<arith::AddFOp>(
@@ -457,14 +475,16 @@ public:
                   loc, linalgConvTy, ValueRange{input, weight, iZpVal, kZpVal},
                   ValueRange{zeroTensor}, strideAttr, dilationAttr)
               .getResult(0);
-      Value convReshape = rewriter.create<tosa::ReshapeOp>(
-          loc, resultTy, conv, rewriter.getI64ArrayAttr(resultTy.getShape()));
+      SmallVector<ReassociationExprs, 4> reassociationMap;
+      createDepthwiseConvCollapseMap(resultRank, reassociationMap, rewriter);
+      Value convReshape = rewriter.create<tensor::CollapseShapeOp>(
+          loc, resultTy, conv, reassociationMap);
       Value result =
           rewriter
               .create<linalg::GenericOp>(
                   loc, resultTy, ValueRange({bias, convReshape}),
                   biasInitTensor, indexingMaps,
-                  getNParallelLoopsAttrs(resultTy.getRank()),
+                  getNParallelLoopsAttrs(resultRank),
                   [&](OpBuilder &nestedBuilder, Location nestedLoc,
                       ValueRange args) {
                     Value added = nestedBuilder.create<arith::AddIOp>(

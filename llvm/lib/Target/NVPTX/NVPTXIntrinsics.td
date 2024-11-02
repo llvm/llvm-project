@@ -1034,6 +1034,8 @@ def INT_NVVM_RCP_RM_D : F_MATH_1<"rcp.rm.f64 \t$dst, $src0;", Float64Regs,
 def INT_NVVM_RCP_RP_D : F_MATH_1<"rcp.rp.f64 \t$dst, $src0;", Float64Regs,
   Float64Regs, int_nvvm_rcp_rp_d>;
 
+def INT_NVVM_RCP_APPROX_FTZ_F : F_MATH_1<"rcp.approx.ftz.f32 \t$dst, $src0;",
+  Float32Regs, Float32Regs, int_nvvm_rcp_approx_ftz_f>;
 def INT_NVVM_RCP_APPROX_FTZ_D : F_MATH_1<"rcp.approx.ftz.f64 \t$dst, $src0;",
   Float64Regs, Float64Regs, int_nvvm_rcp_approx_ftz_d>;
 
@@ -1974,7 +1976,7 @@ multiclass ATOM3P_impl<string AsmStr,  Intrinsic Intr,
                     (Intr Int64Regs:$src, (ImmTy Imm:$b), (ImmTy Imm:$c))>;
 }
 
-// Constructs instrinsic name and instruction asm strings.
+// Constructs intrinsic name and instruction asm strings.
 multiclass ATOM2N_impl<string OpStr, string IntTypeStr, string TypeStr,
                        string ScopeStr, string SpaceStr,
                        NVPTXRegClass regclass, Operand ImmType, SDNode Imm,

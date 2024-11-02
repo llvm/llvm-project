@@ -95,17 +95,36 @@ void CSKYTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
+bool CSKYTargetInfo::hasFeature(StringRef Feature) const {
+  return llvm::StringSwitch<bool>(Feature)
+      .Case("hard-float", HardFloat)
+      .Case("hard-float-abi", HardFloatABI)
+      .Case("fpuv2_sf", FPUV2_SF)
+      .Case("fpuv2_df", FPUV2_DF)
+      .Case("fpuv3_sf", FPUV3_SF)
+      .Case("fpuv3_df", FPUV3_DF)
+      .Case("vdspv2", VDSPV2)
+      .Case("dspv2", DSPV2)
+      .Case("vdspv1", VDSPV1)
+      .Case("3e3r1", is3E3R1)
+      .Default(false);
+}
+
 bool CSKYTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
                                           DiagnosticsEngine &Diags) {
-  HardFloat = false;
-  VDSPV2 = false;
-  VDSPV1 = false;
-  DSPV2 = false;
-  is3E3R1 = false;
-
   for (const auto &Feature : Features) {
     if (Feature == "+hard-float")
       HardFloat = true;
+    if (Feature == "+hard-float-abi")
+      HardFloatABI = true;
+    if (Feature == "+fpuv2_sf")
+      FPUV2_SF = true;
+    if (Feature == "+fpuv2_df")
+      FPUV2_DF = true;
+    if (Feature == "+fpuv3_sf")
+      FPUV3_SF = true;
+    if (Feature == "+fpuv3_df")
+      FPUV3_DF = true;
     if (Feature == "+vdspv2")
       VDSPV2 = true;
     if (Feature == "+dspv2")

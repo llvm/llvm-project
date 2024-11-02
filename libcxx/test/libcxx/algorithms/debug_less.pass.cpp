@@ -12,12 +12,14 @@
 
 // __debug_less checks that a comparator actually provides a strict-weak ordering.
 
-// UNSUPPORTED: libcxx-no-debug-mode, c++03, windows
+// REQUIRES: has-unix-headers
+// UNSUPPORTED: libcxx-no-debug-mode, c++03
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
 
 #include <algorithm>
-#include <iterator>
 #include <cassert>
+#include <functional>
+#include <iterator>
 
 #include "test_macros.h"
 #include "check_assertion.h"

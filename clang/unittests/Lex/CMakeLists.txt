@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_unittest(LexTests
-  DependencyDirectivesSourceMinimizerTest.cpp
+  DependencyDirectivesScannerTest.cpp
   HeaderMapTest.cpp
   HeaderSearchTest.cpp
   LexerTest.cpp

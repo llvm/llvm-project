@@ -184,13 +184,11 @@ int test_mm_extract_epi32(__m128i x) {
   return _mm_extract_epi32(x, 1);
 }
 
-#ifdef __x86_64__
 long long test_mm_extract_epi64(__m128i x) {
-  // X64-LABEL: test_mm_extract_epi64
-  // X64: extractelement <2 x i64> %{{.*}}, {{i32|i64}} 1
+  // CHECK-LABEL: test_mm_extract_epi64
+  // CHECK: extractelement <2 x i64> %{{.*}}, {{i32|i64}} 1
   return _mm_extract_epi64(x, 1);
 }
-#endif
 
 int test_mm_extract_ps(__m128 x) {
   // CHECK-LABEL: test_mm_extract_ps

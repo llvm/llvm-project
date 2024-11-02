@@ -103,7 +103,7 @@ if(TARGET clang)
     add_lldb_test_dependency(tsan)
   endif()
 
-  if(APPLE)
+  if(APPLE AND NOT LLVM_TARGET_IS_CROSSCOMPILE_HOST)
     # FIXME: Standalone builds should import the cxx target as well.
     if(LLDB_BUILT_STANDALONE)
       # For now check that the include directory exists.

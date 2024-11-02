@@ -13,8 +13,8 @@ include "mlir/IR/OpBase.td"
 
 def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
   let description = [{
-    An op interface for Comprehensive Bufferization. Ops that implement this
-    interface can be bufferized using Comprehensive Bufferization.
+    An op interface for One-Shot Bufferize. Ops that implement this interface
+    interface can be analyzed and bufferized using One-Shot Bufferize.
   }];
   let cppNamespace = "::mlir::bufferization";
   let methods = [
@@ -26,9 +26,9 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
 
           Note: It is always safe to consider an OpOperand as a memory read,
           even if it does actually not read; however, this can introduce
-          unnecessary out-of-place bufferization decisions. The analysis of
-          Comprehensive Bufferize considers OpOperands of unknown ops (that do
-          not implement this interface) as reading OpOperands.
+          unnecessary out-of-place bufferization decisions. One-Shot Analysis
+          considers OpOperands of unknown ops (that do not implement this
+          interface) as reading OpOperands.
         }],
         /*retType=*/"bool",
         /*methodName=*/"bufferizesToMemoryRead",
@@ -55,9 +55,9 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
 
           Note: It is always safe to consider an OpOperand as a memory write,
           even if it does actually not write; however, this can introduce
-          unnecessary out-of-place bufferization decisions. The analysis of
-          Comprehensive Bufferize considers OpOperands of unknown ops (that do
-          not implement this interface) as writing OpOperands.
+          unnecessary out-of-place bufferization decisions. One-Shot Analysis
+          considers OpOperands of unknown ops (that do not implement this
+          interface) as writing OpOperands.
         }],
         /*retType=*/"bool",
         /*methodName=*/"bufferizesToMemoryWrite",
@@ -216,6 +216,13 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
 
           This method will never be called on ops that do not have at least one
           tensor operand/result.
+
+          The return value of this method indicates whether there was an error
+          while bufferizing this op (such as failing to create a new buffer
+          allocation op). The bufferization driver immediately stops bufferizing
+          the input IR and returns `failure` in that case. If this op is
+          expected to survive bufferization, `success` should be returned
+          (together with `allow-unknown-ops` enabled).
         }],
         /*retType=*/"LogicalResult",
         /*methodName=*/"bufferize",
@@ -250,22 +257,6 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return value.isa<OpResult>();
-        }]
-      >,
-      InterfaceMethod<
-        /*desc=*/[{
-          Return `true` if the op is an allocation hoisting barrier. Buffer
-          allocations will never be beyond such ops. E.g., ops with certain
-          parallel semantics may be allocation hoisting barriers. The majority
-          of ops, however, is not a barrier. Therefore, this method returns
-          `false` by default.
-        }],
-        /*retType=*/"bool",
-        /*methodName=*/"isAllocationHoistingBarrier",
-        /*args=*/(ins),
-        /*methodBody=*/"",
-        /*defaultImplementation=*/[{
-          return false;
         }]
       >,
       InterfaceMethod<
@@ -326,17 +317,12 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           && !bufferizableOp.getAliasingOpResult(opOperand, state).empty();
     }
 
-    // TODO: The following two attributes should belong to the tensor dialect.
-    // The corresponding verifier should also be in the tensor dialect.
+    // TODO: This attribute is deprecated. Use `bufferization.writable` or add
+    // a new attribute in a different dialect.
     /// Attribute name used to mark region arguments that can be bufferized
     /// in-place during one-shot bufferization.
     constexpr const static ::llvm::StringLiteral
-      kInplaceableAttrName = "linalg.inplaceable";
-
-    /// Attribute name used to mark the bufferization layout for region
-    /// arguments during one-shot bufferization.
-    constexpr const static ::llvm::StringLiteral
-      kBufferLayoutAttrName = "linalg.buffer_layout";
+        kInplaceableAttrName = "linalg.inplaceable";
   }];
 }
 

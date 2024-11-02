@@ -183,6 +183,7 @@ fxch %st(0)
 # CHECK-NEXT: [8,5]     .    .    . D================================================================eER   fxch	%st(5)
 # CHECK-NEXT: [8,6]     .    .    .  D===============================================================eER   fxch	%st(6)
 # CHECK-NEXT: [8,7]     .    .    .  D===============================================================eER   fxch	%st(7)
+# CHECK-NEXT: Truncated display due to cycle limit
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

@@ -22,4 +22,5 @@ class PublicAPI<string name> {
   list<string> Enumerations = [];
   list<string> Structs = [];
   list<string> Functions = [];
+  list<string> Objects = [];
 }

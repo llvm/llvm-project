@@ -78,7 +78,7 @@ static bool runPruneUnprofitable(Scop &S) {
   return false;
 }
 
-class PruneUnprofitableWrapperPass : public ScopPass {
+class PruneUnprofitableWrapperPass final : public ScopPass {
 public:
   static char ID;
 

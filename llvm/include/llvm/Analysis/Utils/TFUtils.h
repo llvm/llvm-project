@@ -13,6 +13,7 @@
 
 #ifdef LLVM_HAVE_TF_API
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Analysis/TensorSpec.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/JSON.h"
 
@@ -37,86 +38,6 @@ namespace llvm {
 /// - use the outputs in the output vector
 class TFModelEvaluatorImpl;
 class EvaluationResultImpl;
-
-/// TensorSpec encapsulates the specification of a tensor: its dimensions, or
-/// "shape" (row-major), its type (see TensorSpec::getDataType specializations
-/// for supported types), its name and port (see "TensorFlow: Large-Scale
-/// Machine Learning on Heterogeneous Distributed Systems", section 4.2, para 2:
-/// https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/45166.pdf)
-///
-/// TensorSpec is used to set up a TFModelEvaluator by describing the expected
-/// inputs and outputs.
-class TensorSpec final {
-public:
-  template <typename T>
-  static TensorSpec createSpec(const std::string &Name,
-                               const std::vector<int64_t> &Shape,
-                               int Port = 0) {
-    return TensorSpec(Name, Port, getDataType<T>(), Shape);
-  }
-
-  const std::string &name() const { return Name; }
-  int port() const { return Port; }
-  int typeIndex() const { return TypeIndex; }
-  const std::vector<int64_t> &shape() const { return Shape; }
-
-  bool operator==(const TensorSpec &Other) const {
-    return Name == Other.Name && Port == Other.Port &&
-           TypeIndex == Other.TypeIndex && Shape == Other.Shape;
-  }
-
-  bool operator!=(const TensorSpec &Other) const { return !(*this == Other); }
-
-  /// Get the number of elements in a tensor with this shape.
-  size_t getElementCount() const { return ElementCount; }
-  /// Get the size, in bytes, of one element.
-  size_t getElementByteSize() const;
-
-  template <typename T> bool isElementType() const {
-    return getDataType<T>() == TypeIndex;
-  }
-
-private:
-  TensorSpec(const std::string &Name, int Port, int TypeIndex,
-             const std::vector<int64_t> &Shape);
-
-  template <typename T> static int getDataType() {
-    llvm_unreachable("Undefined tensor type");
-  }
-
-  std::string Name;
-  int Port = 0;
-  int TypeIndex = 0;
-  std::vector<int64_t> Shape;
-  size_t ElementCount = 0;
-};
-
-/// Construct a TensorSpec from a JSON dictionary of the form:
-/// { "name": <string>,
-///   "port": <int>,
-///   "type": <string. Use LLVM's types, e.g. float, double, int64_t>,
-///   "shape": <array of ints> }
-/// For the "type" field, see the C++ primitive types used in
-/// TFUTILS_SUPPORTED_TYPES.
-Optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
-                                           const json::Value &Value);
-
-struct LoggedFeatureSpec {
-  TensorSpec Spec;
-  Optional<std::string> LoggingName;
-  const std::string &getLoggingName() const {
-    return LoggingName ? *LoggingName : Spec.name();
-  }
-};
-
-/// Load the output specs. If SpecFileOverride is not empty, that path is used.
-/// Otherwise, the file is assumed to be called 'output_spec.json' and be found
-/// under ModelPath (the model directory).
-/// The first output tensor name must match ExpectedDecisionName.
-/// In case of error, the return is None and the error is logged.
-Optional<std::vector<LoggedFeatureSpec>>
-loadOutputSpecs(LLVMContext &Ctx, StringRef ExpectedDecisionName,
-                StringRef ModelPath, StringRef SpecFileOverride = StringRef());
 
 /// Logging utility - given an ordered specification of features, and assuming
 /// a scalar reward, allow logging feature values and rewards, and then print
@@ -262,27 +183,6 @@ private:
   std::unique_ptr<TFModelEvaluatorImpl> Impl;
 };
 
-/// List of supported types, as a pair:
-/// - C++ type
-/// - enum name (implementation-specific)
-#define TFUTILS_SUPPORTED_TYPES(M)                                             \
-  M(float, TF_FLOAT)                                                           \
-  M(double, TF_DOUBLE)                                                         \
-  M(int8_t, TF_INT8)                                                           \
-  M(uint8_t, TF_UINT8)                                                         \
-  M(int16_t, TF_INT16)                                                         \
-  M(uint16_t, TF_UINT16)                                                       \
-  M(int32_t, TF_INT32)                                                         \
-  M(uint32_t, TF_UINT32)                                                       \
-  M(int64_t, TF_INT64)                                                         \
-  M(uint64_t, TF_UINT64)
-
-#define TFUTILS_GETDATATYPE_DEF(T, E)                                          \
-  template <> int TensorSpec::getDataType<T>();
-
-TFUTILS_SUPPORTED_TYPES(TFUTILS_GETDATATYPE_DEF)
-
-#undef TFUTILS_GETDATATYPE_DEF
 } // namespace llvm
 
 #endif // LLVM_HAVE_TF_API
