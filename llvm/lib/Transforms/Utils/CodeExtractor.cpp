@@ -996,6 +996,18 @@ Function *CodeExtractor::constructFunctionDeclaration(
     newFunction->addFnAttr(Attr);
   }
 
+  if (NumExitBlocks == 0) {
+    // Mark the new function `noreturn` if applicable. Terminators which resume
+    // exception propagation are treated as returning instructions. This is to
+    // avoid inserting traps after calls to outlined functions which unwind.
+    if (none_of(Blocks, [](const BasicBlock *BB) {
+          const Instruction *Term = BB->getTerminator();
+          return isa<ReturnInst>(Term) || isa<ResumeInst>(Term);
+        }))
+      newFunction->setDoesNotReturn();
+  }
+
+
   // Create scalar and aggregate iterators to name all of the arguments we
   // inserted.
   Function::arg_iterator ScalarAI = newFunction->arg_begin();
