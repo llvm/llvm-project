@@ -616,6 +616,10 @@ public:
     return true;
   }
 
+  bool isTruncateFree(EVT FromVT, EVT ToVT) const override;
+  bool isZExtFree(EVT FromVT, EVT ToVT) const override;
+  bool isZExtFree(Type *SrcTy, Type *DstTy) const override;
+
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here
   SDValue getParamSymbol(SelectionDAG &DAG, int idx, EVT) const;
