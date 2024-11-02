@@ -103,11 +103,12 @@ Improvements to clang-tidy
   the configuration options of the `Clang Static Analyzer Checks
   <https://clang.llvm.org/docs/analyzer/checkers.html>`_.
 
+- Improved :program:`clang-tidy` by adding the option 
+  :option:`CompilationArgsToRemoveRegex` to remove arguments sent to the 
+  compiler when invoking clang-tidy.
+
 - Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
   happening on certain platforms when interrupting the script.
-
-- Improved :program:`clang-tidy` by adding the option `CompilationArgsToRemoveRegex`
-  to remove arguments sent to the compiler when invoking clang-tidy.
 
 New checks
 ^^^^^^^^^^
