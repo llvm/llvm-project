@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
@@ -854,7 +853,7 @@ private:
 
 class LinkGraph {
 private:
-  using SectionMap = MapVector<StringRef, std::unique_ptr<Section>>;
+  using SectionMap = DenseMap<StringRef, std::unique_ptr<Section>>;
   using ExternalSymbolMap = StringMap<Symbol *>;
   using AbsoluteSymbolSet = DenseSet<Symbol *>;
   using BlockSet = DenseSet<Block *>;
@@ -1596,7 +1595,7 @@ private:
   unsigned PointerSize;
   llvm::endianness Endianness;
   GetEdgeKindNameFunction GetEdgeKindName = nullptr;
-  MapVector<StringRef, std::unique_ptr<Section>> Sections;
+  DenseMap<StringRef, std::unique_ptr<Section>> Sections;
   ExternalSymbolMap ExternalSymbols;
   AbsoluteSymbolSet AbsoluteSymbols;
   orc::shared::AllocActions AAs;
@@ -1932,9 +1931,9 @@ Error makeAlignmentError(llvm::orc::ExecutorAddr Loc, uint64_t Value, int N,
 ///   alignment: PointerSize
 ///   alignment-offset: 0
 ///   address: highest allowable
-using AnonymousPointerCreator = unique_function<Expected<Symbol &>(
-    LinkGraph &G, Section &PointerSection, Symbol *InitialTarget,
-    uint64_t InitialAddend)>;
+using AnonymousPointerCreator =
+    unique_function<Symbol &(LinkGraph &G, Section &PointerSection,
+                             Symbol *InitialTarget, uint64_t InitialAddend)>;
 
 /// Get target-specific AnonymousPointerCreator
 AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT);
@@ -1943,7 +1942,7 @@ AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT);
 /// an anonymous symbol pointing to it. Return the anonymous symbol.
 ///
 /// The stub block will be created by createPointerJumpStubBlock.
-using PointerJumpStubCreator = unique_function<Expected<Symbol &>(
+using PointerJumpStubCreator = unique_function<Symbol &(
     LinkGraph &G, Section &StubSection, Symbol &PointerSymbol)>;
 
 /// Get target-specific PointerJumpStubCreator
