@@ -183,4 +183,28 @@ define i32 @promote_with_objectsize_nullunknown_true() {
   ret i32 %size
 }
 
+define i64 @out_of_bound_gep() {
+; CHECK-LABEL: @out_of_bound_gep(
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca i8, i32 4, align 1
+; CHECK-NEXT:    [[SLIDE:%.*]] = getelementptr i8, ptr [[OBJ]], i8 8
+; CHECK-NEXT:    ret i64 0
+;
+  %obj = alloca i8, i32 4
+  %slide = getelementptr i8, ptr %obj, i8 8
+  %objsize = call i64 @llvm.objectsize.i64(ptr %slide, i1 false, i1 false, i1 false)
+  ret i64 %objsize
+}
+
+define i64 @out_of_bound_negative_gep() {
+; CHECK-LABEL: @out_of_bound_negative_gep(
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca i8, i32 4, align 1
+; CHECK-NEXT:    [[SLIDE:%.*]] = getelementptr i8, ptr [[OBJ]], i8 -8
+; CHECK-NEXT:    ret i64 0
+;
+  %obj = alloca i8, i32 4
+  %slide = getelementptr i8, ptr %obj, i8 -8
+  %objsize = call i64 @llvm.objectsize.i64(ptr %slide, i1 false, i1 false, i1 false)
+  ret i64 %objsize
+}
+
 declare i32 @llvm.objectsize.i32.p0(ptr, i1, i1, i1)
