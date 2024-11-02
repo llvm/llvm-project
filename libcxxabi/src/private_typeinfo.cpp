@@ -41,9 +41,11 @@
 // Defining _LIBCXXABI_FORGIVING_DYNAMIC_CAST does not help since can_catch() calls
 // is_equal() with use_strcmp=false so the string names are not compared.
 
-#include <cstdint>
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <string.h>
+
 #include "abort_message.h"
 
 #ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST

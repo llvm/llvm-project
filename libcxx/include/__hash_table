@@ -15,6 +15,7 @@
 #include <__assert>
 #include <__bit/countl.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__functional/hash.h>
 #include <__iterator/iterator_traits.h>
 #include <__math/rounding_functions.h>

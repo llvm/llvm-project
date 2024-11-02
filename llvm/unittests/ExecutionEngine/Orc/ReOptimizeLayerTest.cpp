@@ -47,6 +47,10 @@ protected:
     if (Triple.isSystemZ())
       GTEST_SKIP();
 
+    // 32-bit X86 is not supported yet.
+    if (Triple.isX86() && Triple.isArch32Bit())
+      GTEST_SKIP();
+
     if (Triple.isPPC())
       GTEST_SKIP();
 

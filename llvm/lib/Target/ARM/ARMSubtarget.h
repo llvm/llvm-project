@@ -95,6 +95,10 @@ public:
     /// push {r0-r7, lr}
     /// push {r8-r12}
     /// vpush {d8-d15}
+    /// Note that Thumb1 changes this layout when the frame pointer is R11,
+    /// using a longer sequence of instructions because R11 can't be used by a
+    /// Thumb1 push instruction. This doesn't currently have a separate enum
+    /// value, and is handled entriely within Thumb1FrameLowering::emitPrologue.
     SplitR7,
 
     /// When the stack frame size is not known (because of variable-sized

@@ -132,9 +132,7 @@ bool PadShortFunc::runOnMachineFunction(MachineFunction &MF) {
     MachineBasicBlock *MBB = ReturnBB.first;
     unsigned Cycles = ReturnBB.second;
 
-    // Function::hasOptSize is already checked above.
-    bool OptForSize = llvm::shouldOptimizeForSize(MBB, PSI, MBFI);
-    if (OptForSize)
+    if (llvm::shouldOptimizeForSize(MBB, PSI, MBFI))
       continue;
 
     if (Cycles < Threshold) {

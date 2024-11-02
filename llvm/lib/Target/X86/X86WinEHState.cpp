@@ -210,13 +210,11 @@ Type *WinEHStatePass::getEHLinkRegistrationType() {
   if (EHLinkRegistrationTy)
     return EHLinkRegistrationTy;
   LLVMContext &Context = TheModule->getContext();
-  EHLinkRegistrationTy = StructType::create(Context, "EHRegistrationNode");
   Type *FieldTys[] = {
-      PointerType::getUnqual(
-          EHLinkRegistrationTy->getContext()), // EHRegistrationNode *Next
-      PointerType::getUnqual(Context) // EXCEPTION_DISPOSITION (*Handler)(...)
+      PointerType::getUnqual(Context), // EHRegistrationNode *Next
+      PointerType::getUnqual(Context)  // EXCEPTION_DISPOSITION (*Handler)(...)
   };
-  EHLinkRegistrationTy->setBody(FieldTys, false);
+  EHLinkRegistrationTy = StructType::create(FieldTys, "EHRegistrationNode");
   return EHLinkRegistrationTy;
 }
 
