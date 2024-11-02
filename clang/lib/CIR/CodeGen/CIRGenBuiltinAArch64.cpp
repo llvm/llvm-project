@@ -2392,6 +2392,16 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
     ops[0] = builder.createIntCast(ops[0], vTy);
     return buildCommonNeonShift(builder, loc, vTy, ops[0], ops[1], true);
   }
+  case NEON::BI__builtin_neon_vshrn_n_v: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    mlir::cir::VectorType srcTy =
+        builder.getExtendedOrTruncatedElementVectorType(
+            vTy, true /* extended */,
+            mlir::cast<mlir::cir::IntType>(vTy.getEltType()).isSigned());
+    ops[0] = builder.createBitcast(ops[0], srcTy);
+    ops[0] = buildCommonNeonShift(builder, loc, srcTy, ops[0], ops[1], false);
+    return builder.createIntCast(ops[0], vTy);
+  }
   case NEON::BI__builtin_neon_vtst_v:
   case NEON::BI__builtin_neon_vtstq_v: {
     mlir::Location loc = getLoc(e->getExprLoc());
