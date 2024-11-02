@@ -1584,7 +1584,7 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
   def BCTRL_LWZinto_toc:
     XLForm_2_ext_and_DForm_1<19, 528, 20, 0, 1, 32, (outs),
      (ins (memri $D, $RA):$addr), "bctrl\n\tlwz 2, $addr", IIC_BrB,
-     [(PPCbctrl_load_toc iaddr:$addr)]>, Requires<[In32BitMode]>, MemOp;
+     [(PPCbctrl_load_toc iaddr:$addr)]>, Requires<[In32BitMode]>;
 
 }
 
@@ -1593,7 +1593,7 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
   def BCTRL_LWZinto_toc_RM:
     XLForm_2_ext_and_DForm_1<19, 528, 20, 0, 1, 32, (outs),
      (ins (memri $D, $RA):$addr), "bctrl\n\tlwz 2, $addr", IIC_BrB,
-     [(PPCbctrl_load_toc_rm iaddr:$addr)]>, Requires<[In32BitMode]>, MemOp;
+     [(PPCbctrl_load_toc_rm iaddr:$addr)]>, Requires<[In32BitMode]>;
 
 }
 

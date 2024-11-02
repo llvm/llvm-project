@@ -120,6 +120,10 @@ class I2<bits<6> opcode1, bits<6> opcode2, dag OOL, dag IOL, string asmstr,
   let TSFlags{2}   = PPC970_Cracked;
   let TSFlags{5-3} = PPC970_Unit;
 
+  // Indicate that this instruction uses a memory operand.
+  bits<1> MemOp = 0;
+  let TSFlags{10} = MemOp;
+
   // Fields used for relation models.
   string BaseName = "";
   bit Interpretation64Bit = 0;
@@ -427,7 +431,7 @@ class DQ_RD6_RS5_DQ12<bits<6> opcode, bits<3> xo, dag OOL, dag IOL,
 class DQForm_RTp5_RA17_MEM<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
                            string asmstr, InstrItinClass itin,
                            list<dag> pattern>
-  : I<opcode, OOL, IOL, asmstr, itin> {
+  : I<opcode, OOL, IOL, asmstr, itin>, MemOp {
   bits<5> RTp;
   bits<5> RA;
   bits<12> DQ;
@@ -1661,7 +1665,7 @@ class XLForm_2_ext_and_DSForm_1<bits<6> opcode1, bits<10> xo1,
                                 dag OOL, dag IOL, string asmstr,
                                 InstrItinClass itin, list<dag> pattern>
   : XLForm_2_and_DSForm_1<opcode1, xo1, lk, opcode2, xo2,
-                          OOL, IOL, asmstr, itin, pattern> {
+                          OOL, IOL, asmstr, itin, pattern>, MemOp {
   let BO = bo;
   let BI = bi;
   let BH = 0;
@@ -1671,7 +1675,7 @@ class XLForm_2_ext_and_DForm_1<bits<6> opcode1, bits<10> xo1, bits<5> bo,
                                bits<5> bi, bit lk, bits<6> opcode2, dag OOL,
                                dag IOL, string asmstr, InstrItinClass itin,
                                list<dag> pattern>
-  : I2<opcode1, opcode2, OOL, IOL, asmstr, itin> {
+  : I2<opcode1, opcode2, OOL, IOL, asmstr, itin>, MemOp {
 
   bits<5>  RST;
   bits<5>  RA;

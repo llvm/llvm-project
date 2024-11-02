@@ -2518,10 +2518,10 @@ let Predicates = [IsISA3_1, PrefixInstrs], isAsmParserOnly = 1, hasNoSchedulingI
 
   def PSUBI : PPCAsmPseudo<"psubi $RT, $RA, $SI",
                            (ins g8rc:$RT, g8rc_nox0:$RA, s34imm:$SI)>;
+
   def PLA : MLS_DForm_SI34_RT5<14, (outs gprc:$RT),
                                (ins gprc_nor0:$RA, s34imm:$SI),
-                               "pla $RT, ${SI} ${RA}", IIC_IntSimple, []>, MemOp;
-  
+                               "pla $RT, ${SI} ${RA}", IIC_IntSimple, []>, MemOp; 
   def PLApc : MLS_DForm_SI34_RT5<14, (outs gprc:$RT),
                                  (ins s34imm_pcrel:$SI),
                                  "pla $RT, $SI", IIC_IntSimple, []>, isPCRel;

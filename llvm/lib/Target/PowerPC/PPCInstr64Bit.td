@@ -218,7 +218,7 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
                               (ins (memrix $D, $RA):$src),
                               "bctrl\n\tld 2, $src", IIC_BrB,
                               [(PPCbctrl_load_toc iaddrX4:$src)]>,
-    Requires<[In64BitMode]>, MemOp;
+    Requires<[In64BitMode]>;
 }
 
 let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
@@ -228,7 +228,7 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
                               (ins (memrix $D, $RA):$src),
                               "bctrl\n\tld 2, $src", IIC_BrB,
                               [(PPCbctrl_load_toc_rm iaddrX4:$src)]>,
-    Requires<[In64BitMode]>, MemOp;
+    Requires<[In64BitMode]>;
 }
 
 } // Interpretation64Bit
@@ -1457,7 +1457,7 @@ def LQ   : DQForm_RTp5_RA17_MEM<56, 0,
                                 "lq $RTp, $addr", IIC_LdStLQ,
                                 []>,
                                 RegConstraint<"@earlyclobber $RTp">,
-                                isPPC64, MemOp;
+                                isPPC64;
 // We don't really have LQX in the ISA, make a pseudo one so that we can
 // handle x-form during isel. Make it pre-ra may expose
 // oppotunities to some opts(CSE, LICM and etc.) for the result of adding
