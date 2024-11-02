@@ -1496,7 +1496,7 @@ void CodeExtractor::normalizeCFGForExtraction(BasicBlock *&header) {
     }
 
     // Exit nodes may have changed by SplitEdge.
-    recomputeExitBlocks();
+    recomputeSwitchCases();
   }
 }
 
