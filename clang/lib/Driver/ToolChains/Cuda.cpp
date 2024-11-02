@@ -848,6 +848,10 @@ void CudaToolChain::addClangTargetOptions(
   if (CudaInstallation.version() >= CudaVersion::CUDA_90)
     CC1Args.push_back("-fcuda-allow-variadic-functions");
 
+  if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
+                         options::OPT_fno_cuda_short_ptr, false))
+    CC1Args.append({"-mllvm", "--nvptx-short-ptr"});
+
   if (DriverArgs.hasArg(options::OPT_nogpulib))
     return;
 
@@ -872,10 +876,6 @@ void CudaToolChain::addClangTargetOptions(
     return;
 
   clang::CudaVersion CudaInstallationVersion = CudaInstallation.version();
-
-  if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
-                         options::OPT_fno_cuda_short_ptr, false))
-    CC1Args.append({"-mllvm", "--nvptx-short-ptr"});
 
   if (CudaInstallationVersion >= CudaVersion::UNKNOWN)
     CC1Args.push_back(

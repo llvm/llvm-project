@@ -338,8 +338,8 @@ struct ConvertIndexSizeOf final : OpConversionPattern<SizeOfOp> {
 // Pattern Population
 //===----------------------------------------------------------------------===//
 
-void index::populateIndexToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
-                                         RewritePatternSet &patterns) {
+void index::populateIndexToSPIRVPatterns(
+    const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<
       // clang-format off
     ConvertIndexAdd,

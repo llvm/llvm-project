@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Common/Fortran-features.h"
+#include "flang/Common/LangOptions.h"
 #include "flang/Common/OpenMP-features.h"
 #include "flang/Common/Version.h"
 #include "flang/Common/default-kinds.h"
@@ -227,13 +228,20 @@ static llvm::cl::opt<std::string>
                          llvm::cl::desc("Override host target triple"),
                          llvm::cl::init(""));
 
+static llvm::cl::opt<bool> integerWrapAround(
+    "fwrapv",
+    llvm::cl::desc("Treat signed integer overflow as two's complement"),
+    llvm::cl::init(false));
+
+// TODO: integrate this option with the above
 static llvm::cl::opt<bool>
     setNSW("integer-overflow",
            llvm::cl::desc("add nsw flag to internal operations"),
            llvm::cl::init(false));
 
 #define FLANG_EXCLUDE_CODEGEN
-#include "flang/Tools/CLOptions.inc"
+#include "flang/Optimizer/Passes/CommandLineOpts.h"
+#include "flang/Optimizer/Passes/Pipelines.h"
 
 //===----------------------------------------------------------------------===//
 
@@ -371,6 +379,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   Fortran::lower::LoweringOptions loweringOptions{};
   loweringOptions.setNoPPCNativeVecElemOrder(enableNoPPCNativeVecElemOrder);
   loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
+  loweringOptions.setIntegerWrapAround(integerWrapAround);
   loweringOptions.setNSWOnLoopVarInc(setNSW);
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
   constexpr const char *tuneCPU = "";
@@ -507,6 +516,21 @@ int main(int argc, char **argv) {
   options.predefinitions.emplace_back(
       "__flang_patchlevel__"s, std::string{FLANG_VERSION_PATCHLEVEL_STRING});
 
+  Fortran::common::LangOptions langOpts;
+  langOpts.NoGPULib = setNoGPULib;
+  langOpts.OpenMPVersion = setOpenMPVersion;
+  langOpts.OpenMPIsTargetDevice = enableOpenMPDevice;
+  langOpts.OpenMPIsGPU = enableOpenMPGPU;
+  langOpts.OpenMPForceUSM = enableOpenMPForceUSM;
+  langOpts.OpenMPTargetDebug = setOpenMPTargetDebug;
+  langOpts.OpenMPThreadSubscription = setOpenMPThreadSubscription;
+  langOpts.OpenMPTeamSubscription = setOpenMPTeamSubscription;
+  langOpts.OpenMPNoThreadState = setOpenMPNoThreadState;
+  langOpts.OpenMPNoNestedParallelism = setOpenMPNoNestedParallelism;
+  std::transform(targetTriplesOpenMP.begin(), targetTriplesOpenMP.end(),
+                 std::back_inserter(langOpts.OMPTargetTriples),
+                 [](const std::string &str) { return llvm::Triple(str); });
+
   // enable parsing of OpenMP
   if (enableOpenMP) {
     options.features.Enable(Fortran::common::LanguageFeature::OpenMP);
@@ -538,7 +562,7 @@ int main(int argc, char **argv) {
   Fortran::parser::AllSources allSources;
   Fortran::parser::AllCookedSources allCookedSources(allSources);
   Fortran::semantics::SemanticsContext semanticsContext{
-      defaultKinds, options.features, allCookedSources};
+      defaultKinds, options.features, langOpts, allCookedSources};
   semanticsContext.set_moduleDirectory(moduleDir)
       .set_moduleFileSuffix(moduleSuffix)
       .set_searchDirectories(includeDirs)

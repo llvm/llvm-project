@@ -2118,6 +2118,31 @@ cond.end:                                         ; preds = %entry, %cond.false
   ret i8 %conv
 }
 
+define i1 @linearmap_trunc_smaller_table_size(i8 %arg) {
+; CHECK-LABEL: @linearmap_trunc_smaller_table_size(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i8 [[ARG:%.*]], 10
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = trunc i8 [[ARG]] to i1
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_IDX_CAST]], i1 false
+; CHECK-NEXT:    ret i1 [[SPEC_SELECT]]
+;
+entry:
+  switch i8 %arg, label %exit [
+  i8 1, label %sw
+  i8 3, label %sw
+  i8 5, label %sw
+  i8 7, label %sw
+  i8 9, label %sw
+  ]
+
+sw:
+  br label %exit
+
+exit:
+  %phi = phi i1 [ true, %sw ], [ false, %entry ]
+  ret i1 %phi
+}
+
 ; Don't create a table with an unknown type
 define { i8, i8 } @test_unknown_result_type(i8 %n) {
 ; CHECK-LABEL: @test_unknown_result_type(

@@ -192,7 +192,7 @@ private:
       case PrintStyle::Changes:
         for (const Include *I : Results.Unused)
           llvm::outs() << "- " << I->quote() << " @Line:" << I->Line << "\n";
-        for (const auto &I : Results.Missing)
+        for (const auto &[I, _] : Results.Missing)
           llvm::outs() << "+ " << I << "\n";
         break;
       case PrintStyle::Final:

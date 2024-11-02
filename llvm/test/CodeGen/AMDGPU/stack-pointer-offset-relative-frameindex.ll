@@ -34,7 +34,7 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; MUBUF-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; MUBUF-NEXT:    s_cbranch_execz .LBB0_2
 ; MUBUF-NEXT:  ; %bb.1: ; %if.then4.i
-; MUBUF-NEXT:    v_add_nc_u32_e64 v0, 4, 0x4000
+; MUBUF-NEXT:    v_mov_b32_e32 v0, 0x4004
 ; MUBUF-NEXT:    s_mov_b32 s0, 0x41c64e6d
 ; MUBUF-NEXT:    s_clause 0x1
 ; MUBUF-NEXT:    buffer_load_dword v1, v0, s[36:39], 0 offen

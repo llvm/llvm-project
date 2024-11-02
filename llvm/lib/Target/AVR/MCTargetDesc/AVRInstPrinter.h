@@ -26,7 +26,7 @@ public:
                  const MCRegisterInfo &MRI)
       : MCInstPrinter(MAI, MII, MRI) {}
 
-  static const char *getPrettyRegisterName(unsigned RegNo,
+  static const char *getPrettyRegisterName(MCRegister Reg,
                                            MCRegisterInfo const &MRI);
 
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,

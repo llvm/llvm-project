@@ -177,7 +177,7 @@ define dso_local i32 @_Z9test_charPcS_i_256(ptr nocapture readonly, ptr nocaptur
 ; CHECK-SKX-NEXT:    xorl %ecx, %ecx
 ; CHECK-SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-SKX-NEXT:    .p2align 4, 0x90
+; CHECK-SKX-NEXT:    .p2align 4
 ; CHECK-SKX-NEXT:  .LBB8_1: # %vector.body
 ; CHECK-SKX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-SKX-NEXT:    vpmovsxbw 16(%rdi,%rcx), %ymm3
@@ -212,7 +212,7 @@ define dso_local i32 @_Z9test_charPcS_i_256(ptr nocapture readonly, ptr nocaptur
 ; CHECK-AVX512-NEXT:    xorl %ecx, %ecx
 ; CHECK-AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-AVX512-NEXT:    .p2align 4, 0x90
+; CHECK-AVX512-NEXT:    .p2align 4
 ; CHECK-AVX512-NEXT:  .LBB8_1: # %vector.body
 ; CHECK-AVX512-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-AVX512-NEXT:    vpmovsxbw 16(%rdi,%rcx), %ymm3
@@ -247,7 +247,7 @@ define dso_local i32 @_Z9test_charPcS_i_256(ptr nocapture readonly, ptr nocaptur
 ; CHECK-VBMI-NEXT:    xorl %ecx, %ecx
 ; CHECK-VBMI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-VBMI-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-VBMI-NEXT:    .p2align 4, 0x90
+; CHECK-VBMI-NEXT:    .p2align 4
 ; CHECK-VBMI-NEXT:  .LBB8_1: # %vector.body
 ; CHECK-VBMI-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-VBMI-NEXT:    vpmovsxbw 16(%rdi,%rcx), %ymm3
@@ -317,7 +317,7 @@ define dso_local i32 @_Z9test_charPcS_i_512(ptr nocapture readonly, ptr nocaptur
 ; CHECK-SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-SKX-NEXT:    xorl %ecx, %ecx
 ; CHECK-SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-SKX-NEXT:    .p2align 4, 0x90
+; CHECK-SKX-NEXT:    .p2align 4
 ; CHECK-SKX-NEXT:  .LBB9_1: # %vector.body
 ; CHECK-SKX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-SKX-NEXT:    vpmovsxbw (%rdi,%rcx), %zmm2
@@ -347,7 +347,7 @@ define dso_local i32 @_Z9test_charPcS_i_512(ptr nocapture readonly, ptr nocaptur
 ; CHECK-AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    xorl %ecx, %ecx
 ; CHECK-AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-AVX512-NEXT:    .p2align 4, 0x90
+; CHECK-AVX512-NEXT:    .p2align 4
 ; CHECK-AVX512-NEXT:  .LBB9_1: # %vector.body
 ; CHECK-AVX512-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-AVX512-NEXT:    vpmovsxbw (%rdi,%rcx), %zmm2
@@ -377,7 +377,7 @@ define dso_local i32 @_Z9test_charPcS_i_512(ptr nocapture readonly, ptr nocaptur
 ; CHECK-VBMI-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-VBMI-NEXT:    xorl %ecx, %ecx
 ; CHECK-VBMI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-VBMI-NEXT:    .p2align 4, 0x90
+; CHECK-VBMI-NEXT:    .p2align 4
 ; CHECK-VBMI-NEXT:  .LBB9_1: # %vector.body
 ; CHECK-VBMI-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-VBMI-NEXT:    vpmovsxbw (%rdi,%rcx), %zmm2
@@ -445,7 +445,7 @@ define dso_local i32 @sad_16i8_256() "min-legal-vector-width"="256" {
 ; CHECK-SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-SKX-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; CHECK-SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-SKX-NEXT:    .p2align 4, 0x90
+; CHECK-SKX-NEXT:    .p2align 4
 ; CHECK-SKX-NEXT:  .LBB10_1: # %vector.body
 ; CHECK-SKX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-SKX-NEXT:    vmovdqu a+1024(%rax), %xmm2
@@ -470,7 +470,7 @@ define dso_local i32 @sad_16i8_256() "min-legal-vector-width"="256" {
 ; CHECK-AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; CHECK-AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-AVX512-NEXT:    .p2align 4, 0x90
+; CHECK-AVX512-NEXT:    .p2align 4
 ; CHECK-AVX512-NEXT:  .LBB10_1: # %vector.body
 ; CHECK-AVX512-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-AVX512-NEXT:    vmovdqu a+1024(%rax), %xmm2
@@ -495,7 +495,7 @@ define dso_local i32 @sad_16i8_256() "min-legal-vector-width"="256" {
 ; CHECK-VBMI-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-VBMI-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; CHECK-VBMI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-VBMI-NEXT:    .p2align 4, 0x90
+; CHECK-VBMI-NEXT:    .p2align 4
 ; CHECK-VBMI-NEXT:  .LBB10_1: # %vector.body
 ; CHECK-VBMI-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-VBMI-NEXT:    vmovdqu a+1024(%rax), %xmm2
@@ -555,7 +555,7 @@ define dso_local i32 @sad_16i8_512() "min-legal-vector-width"="512" {
 ; CHECK-SKX:       # %bb.0: # %entry
 ; CHECK-SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-SKX-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; CHECK-SKX-NEXT:    .p2align 4, 0x90
+; CHECK-SKX-NEXT:    .p2align 4
 ; CHECK-SKX-NEXT:  .LBB11_1: # %vector.body
 ; CHECK-SKX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-SKX-NEXT:    vmovdqu a+1024(%rax), %xmm1
@@ -580,7 +580,7 @@ define dso_local i32 @sad_16i8_512() "min-legal-vector-width"="512" {
 ; CHECK-AVX512:       # %bb.0: # %entry
 ; CHECK-AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; CHECK-AVX512-NEXT:    .p2align 4, 0x90
+; CHECK-AVX512-NEXT:    .p2align 4
 ; CHECK-AVX512-NEXT:  .LBB11_1: # %vector.body
 ; CHECK-AVX512-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-AVX512-NEXT:    vmovdqu a+1024(%rax), %xmm1
@@ -605,7 +605,7 @@ define dso_local i32 @sad_16i8_512() "min-legal-vector-width"="512" {
 ; CHECK-VBMI:       # %bb.0: # %entry
 ; CHECK-VBMI-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-VBMI-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; CHECK-VBMI-NEXT:    .p2align 4, 0x90
+; CHECK-VBMI-NEXT:    .p2align 4
 ; CHECK-VBMI-NEXT:  .LBB11_1: # %vector.body
 ; CHECK-VBMI-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-VBMI-NEXT:    vmovdqu a+1024(%rax), %xmm1

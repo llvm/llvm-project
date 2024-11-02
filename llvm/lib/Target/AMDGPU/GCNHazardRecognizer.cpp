@@ -59,10 +59,10 @@ static bool shouldRunLdsBranchVmemWARHazardFixup(const MachineFunction &MF,
 GCNHazardRecognizer::GCNHazardRecognizer(const MachineFunction &MF)
     : IsHazardRecognizerMode(false), CurrCycleInstr(nullptr), MF(MF),
       ST(MF.getSubtarget<GCNSubtarget>()), TII(*ST.getInstrInfo()),
-      TRI(TII.getRegisterInfo()), UseVALUReadHazardExhaustiveSearch(false),
+      TRI(TII.getRegisterInfo()), TSchedModel(TII.getSchedModel()),
+      UseVALUReadHazardExhaustiveSearch(false),
       ClauseUses(TRI.getNumRegUnits()), ClauseDefs(TRI.getNumRegUnits()) {
   MaxLookAhead = MF.getRegInfo().isPhysRegUsed(AMDGPU::AGPR0) ? 19 : 5;
-  TSchedModel.init(&ST);
   RunLdsBranchVmemWARHazardFixup = shouldRunLdsBranchVmemWARHazardFixup(MF, ST);
 }
 

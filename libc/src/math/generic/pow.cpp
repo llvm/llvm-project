@@ -231,9 +231,16 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
     switch (y_a) {
     case 0: // y = +-0.0
       return 1.0;
-    case 0x3fe0'0000'0000'0000: // y = +-0.5
+    case 0x3fe0'0000'0000'0000: { // y = +-0.5
       // TODO: speed up x^(-1/2) with rsqrt(x) when available.
+      if (LIBC_UNLIKELY(!y_sign && (x_u == FPBits::zero(Sign::NEG).uintval() ||
+                                    x_u == FPBits::inf(Sign::NEG).uintval()))) {
+        // pow(-0, 1/2) = +0
+        // pow(-inf, 1/2) = +inf
+        return FPBits(x_abs).get_val();
+      }
       return y_sign ? (1.0 / fputil::sqrt<double>(x)) : fputil::sqrt<double>(x);
+    }
     case 0x3ff0'0000'0000'0000: // y = +-1.0
       return y_sign ? (1.0 / x) : x;
     case 0x4000'0000'0000'0000: // y = +-2.0;
@@ -391,7 +398,7 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
 #else
   double c = FPBits(m_x.uintval() & 0x3fff'e000'0000'0000).get_val();
   dx = fputil::multiply_add(RD[idx_x], m_x.get_val() - c, CD[idx_x]); // Exact
-  dx_c0 = fputil::exact_mult<true>(COEFFS[0], dx);
+  dx_c0 = fputil::exact_mult<28>(dx, COEFFS[0]);                      // Exact
 #endif // LIBC_TARGET_CPU_HAS_FMA
 
   double dx2 = dx * dx;

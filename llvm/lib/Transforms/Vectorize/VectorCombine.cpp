@@ -1038,23 +1038,20 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
 
   // The compare predicates should match, and each compare should have a
   // constant operand.
-  // TODO: Relax the one-use constraints.
   Value *B0 = I.getOperand(0), *B1 = I.getOperand(1);
   Instruction *I0, *I1;
   Constant *C0, *C1;
   CmpInst::Predicate P0, P1;
-  if (!match(B0, m_OneUse(m_Cmp(P0, m_Instruction(I0), m_Constant(C0)))) ||
-      !match(B1, m_OneUse(m_Cmp(P1, m_Instruction(I1), m_Constant(C1)))) ||
-      P0 != P1)
+  if (!match(B0, m_Cmp(P0, m_Instruction(I0), m_Constant(C0))) ||
+      !match(B1, m_Cmp(P1, m_Instruction(I1), m_Constant(C1))) || P0 != P1)
     return false;
 
   // The compare operands must be extracts of the same vector with constant
   // extract indexes.
-  // TODO: Relax the one-use constraints.
   Value *X;
   uint64_t Index0, Index1;
-  if (!match(I0, m_OneUse(m_ExtractElt(m_Value(X), m_ConstantInt(Index0)))) ||
-      !match(I1, m_OneUse(m_ExtractElt(m_Specific(X), m_ConstantInt(Index1)))))
+  if (!match(I0, m_ExtractElt(m_Value(X), m_ConstantInt(Index0))) ||
+      !match(I1, m_ExtractElt(m_Specific(X), m_ConstantInt(Index1))))
     return false;
 
   auto *Ext0 = cast<ExtractElementInst>(I0);
@@ -1073,14 +1070,16 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
     return false;
 
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  InstructionCost Ext0Cost =
+                      TTI.getVectorInstrCost(*Ext0, VecTy, CostKind, Index0),
+                  Ext1Cost =
+                      TTI.getVectorInstrCost(*Ext1, VecTy, CostKind, Index1);
   InstructionCost OldCost =
-      TTI.getVectorInstrCost(*Ext0, VecTy, CostKind, Index0);
-  OldCost += TTI.getVectorInstrCost(*Ext1, VecTy, CostKind, Index1);
-  OldCost +=
+      Ext0Cost + Ext1Cost +
       TTI.getCmpSelInstrCost(CmpOpcode, I0->getType(),
                              CmpInst::makeCmpResultType(I0->getType()), Pred) *
-      2;
-  OldCost += TTI.getArithmeticInstrCost(I.getOpcode(), I.getType());
+          2 +
+      TTI.getArithmeticInstrCost(I.getOpcode(), I.getType());
 
   // The proposed vector pattern is:
   // vcmp = cmp Pred X, VecC
@@ -1096,6 +1095,8 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
                                 ShufMask);
   NewCost += TTI.getArithmeticInstrCost(I.getOpcode(), CmpTy);
   NewCost += TTI.getVectorInstrCost(*Ext0, CmpTy, CostKind, CheapIndex);
+  NewCost += Ext0->hasOneUse() ? 0 : Ext0Cost;
+  NewCost += Ext1->hasOneUse() ? 0 : Ext1Cost;
 
   // Aggressively form vector ops if the cost is equal because the transform
   // may enable further optimization.
@@ -1984,33 +1985,35 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
 
     // We need each element to be the same type of value, and check that each
     // element has a single use.
-    if (all_of(drop_begin(Item), [Item](InstLane IL) {
-          Value *FrontV = Item.front().first->get();
-          if (!IL.first)
-            return true;
-          Value *V = IL.first->get();
-          if (auto *I = dyn_cast<Instruction>(V); I && !I->hasOneUse())
-            return false;
-          if (V->getValueID() != FrontV->getValueID())
-            return false;
-          if (auto *CI = dyn_cast<CmpInst>(V))
-            if (CI->getPredicate() != cast<CmpInst>(FrontV)->getPredicate())
-              return false;
-          if (auto *CI = dyn_cast<CastInst>(V))
-            if (CI->getSrcTy() != cast<CastInst>(FrontV)->getSrcTy())
-              return false;
-          if (auto *SI = dyn_cast<SelectInst>(V))
-            if (!isa<VectorType>(SI->getOperand(0)->getType()) ||
-                SI->getOperand(0)->getType() !=
-                    cast<SelectInst>(FrontV)->getOperand(0)->getType())
-              return false;
-          if (isa<CallInst>(V) && !isa<IntrinsicInst>(V))
-            return false;
-          auto *II = dyn_cast<IntrinsicInst>(V);
-          return !II || (isa<IntrinsicInst>(FrontV) &&
-                         II->getIntrinsicID() ==
-                             cast<IntrinsicInst>(FrontV)->getIntrinsicID());
-        })) {
+    auto CheckLaneIsEquivalentToFirst = [Item](InstLane IL) {
+      Value *FrontV = Item.front().first->get();
+      if (!IL.first)
+        return true;
+      Value *V = IL.first->get();
+      if (auto *I = dyn_cast<Instruction>(V); I && !I->hasOneUse())
+        return false;
+      if (V->getValueID() != FrontV->getValueID())
+        return false;
+      if (auto *CI = dyn_cast<CmpInst>(V))
+        if (CI->getPredicate() != cast<CmpInst>(FrontV)->getPredicate())
+          return false;
+      if (auto *CI = dyn_cast<CastInst>(V))
+        if (CI->getSrcTy() != cast<CastInst>(FrontV)->getSrcTy())
+          return false;
+      if (auto *SI = dyn_cast<SelectInst>(V))
+        if (!isa<VectorType>(SI->getOperand(0)->getType()) ||
+            SI->getOperand(0)->getType() !=
+                cast<SelectInst>(FrontV)->getOperand(0)->getType())
+          return false;
+      if (isa<CallInst>(V) && !isa<IntrinsicInst>(V))
+        return false;
+      auto *II = dyn_cast<IntrinsicInst>(V);
+      return !II || (isa<IntrinsicInst>(FrontV) &&
+                     II->getIntrinsicID() ==
+                         cast<IntrinsicInst>(FrontV)->getIntrinsicID() &&
+                     !II->hasOperandBundles());
+    };
+    if (all_of(drop_begin(Item), CheckLaneIsEquivalentToFirst)) {
       // Check the operator is one that we support.
       if (isa<BinaryOperator, CmpInst>(FrontU)) {
         //  We exclude div/rem in case they hit UB from poison lanes.
@@ -2038,7 +2041,8 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
         Worklist.push_back(generateInstLaneVectorFromOperand(Item, 2));
         continue;
       } else if (auto *II = dyn_cast<IntrinsicInst>(FrontU);
-                 II && isTriviallyVectorizable(II->getIntrinsicID())) {
+                 II && isTriviallyVectorizable(II->getIntrinsicID()) &&
+                 !II->hasOperandBundles()) {
         for (unsigned Op = 0, E = II->getNumOperands() - 1; Op < E; Op++) {
           if (isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(), Op)) {
             if (!all_of(drop_begin(Item), [Item, Op](InstLane &IL) {

@@ -747,7 +747,7 @@ define %struct.large2 @callee_large_struct_ret2() nounwind {
   ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
   ; RV64I-NEXT:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
   ; RV64I-NEXT:   [[DEF1:%[0-9]+]]:_(s128) = G_IMPLICIT_DEF
-  ; RV64I-NEXT:   [[DEF2:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+  ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY [[DEF]](s64)
   ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; RV64I-NEXT:   [[C1:%[0-9]+]]:_(s128) = G_CONSTANT i128 2
   ; RV64I-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_FCONSTANT double 3.000000e+00

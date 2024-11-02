@@ -16,7 +16,7 @@ define void @update(ptr %dst, ptr %src, i32 %n) nounwind {
 ; SSE2-NEXT:    movl $0, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [271,271,271,271,271,u,u,u]
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2,4,2,2,2,u,u,u]
-; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  .LBB0_1: # %forcond
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
@@ -49,7 +49,7 @@ define void @update(ptr %dst, ptr %src, i32 %n) nounwind {
 ; SSE41-NEXT:    movw $0, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movl $0, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [271,271,271,271,271,u,u,u]
-; SSE41-NEXT:    .p2align 4, 0x90
+; SSE41-NEXT:    .p2align 4
 ; SSE41-NEXT:  .LBB0_1: # %forcond
 ; SSE41-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE41-NEXT:    movl -{{[0-9]+}}(%rsp), %eax

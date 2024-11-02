@@ -92,6 +92,7 @@ DEFINE_FALLBACK_I64(Llround)
 DEFINE_FALLBACK_F128(Log)
 DEFINE_FALLBACK_F128(Log10)
 DEFINE_FALLBACK_I32(Lround)
+DEFINE_FALLBACK_F128(Nearbyint)
 DEFINE_FALLBACK_F128(Nextafter)
 DEFINE_FALLBACK_F128(Pow)
 DEFINE_FALLBACK_F128(Qnan)
@@ -140,6 +141,7 @@ DEFINE_SIMPLE_ALIAS(Llround, llroundq)
 DEFINE_SIMPLE_ALIAS(Log, logq)
 DEFINE_SIMPLE_ALIAS(Log10, log10q)
 DEFINE_SIMPLE_ALIAS(Lround, lroundq)
+DEFINE_SIMPLE_ALIAS(Nearbyint, nearbyintq)
 DEFINE_SIMPLE_ALIAS(Nextafter, nextafterq)
 DEFINE_SIMPLE_ALIAS(Pow, powq)
 DEFINE_SIMPLE_ALIAS(Round, roundq)
@@ -157,7 +159,7 @@ DEFINE_SIMPLE_ALIAS(Yn, ynq)
 // Use cmath INFINITY/NAN definition. Rely on C implicit conversions.
 #define F128_RT_INFINITY (INFINITY)
 #define F128_RT_QNAN (NAN)
-#elif LDBL_MANT_DIG == 113
+#elif HAS_LDBL128
 // Define wrapper callers for libm.
 #include <limits>
 
@@ -194,6 +196,7 @@ DEFINE_SIMPLE_ALIAS(Llround, std::llround)
 DEFINE_SIMPLE_ALIAS(Log, std::log)
 DEFINE_SIMPLE_ALIAS(Log10, std::log10)
 DEFINE_SIMPLE_ALIAS(Lround, std::lround)
+DEFINE_SIMPLE_ALIAS(Nearbyint, std::nearbyint)
 DEFINE_SIMPLE_ALIAS(Nextafter, std::nextafter)
 DEFINE_SIMPLE_ALIAS(Pow, std::pow)
 DEFINE_SIMPLE_ALIAS(Round, std::round)

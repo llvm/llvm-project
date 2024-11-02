@@ -1522,3 +1522,35 @@ define <2 x i1> @not_pow2_or_z_known_bits_fail_wrong_cmp(<2 x i32> %xin) {
   %r = icmp ugt <2 x i32> %cnt, <i32 2, i32 2>
   ret <2 x i1> %r
 }
+
+; Make sure that range attributes on return values are dropped after merging these two icmps
+
+define i1 @has_single_bit(i32 %x) {
+; CHECK-LABEL: @has_single_bit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[POPCNT:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = icmp eq i32 [[POPCNT]], 1
+; CHECK-NEXT:    ret i1 [[SEL]]
+;
+entry:
+  %cmp1 = icmp ne i32 %x, 0
+  %popcnt = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %cmp2 = icmp ult i32 %popcnt, 2
+  %sel = select i1 %cmp1, i1 %cmp2, i1 false
+  ret i1 %sel
+}
+
+define i1 @has_single_bit_inv(i32 %x) {
+; CHECK-LABEL: @has_single_bit_inv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[POPCNT:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = icmp ne i32 [[POPCNT]], 1
+; CHECK-NEXT:    ret i1 [[SEL]]
+;
+entry:
+  %cmp1 = icmp eq i32 %x, 0
+  %popcnt = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %cmp2 = icmp ugt i32 %popcnt, 1
+  %sel = select i1 %cmp1, i1 true, i1 %cmp2
+  ret i1 %sel
+}

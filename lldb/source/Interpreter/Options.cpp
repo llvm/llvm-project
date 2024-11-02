@@ -661,7 +661,9 @@ bool Options::HandleOptionCompletion(CompletionRequest &request,
 
     } else if (opt_arg_pos == request.GetCursorIndex()) {
       // Okay the cursor is on the completion of an argument. See if it has a
-      // completion, otherwise return no matches.
+      // completion, otherwise return no matches.  Note, opt_defs_index == -1
+      // means we're after an option, but that option doesn't exist.  We'll
+      // end up treating that as an argument.  Not sure we can do much better.
       if (opt_defs_index != -1) {
         HandleOptionArgumentCompletion(request, opt_element_vector, i,
                                        interpreter);
@@ -688,7 +690,6 @@ void Options::HandleOptionArgumentCompletion(
   int opt_defs_index = opt_element_vector[opt_element_index].opt_defs_index;
 
   // See if this is an enumeration type option, and if so complete it here:
-
   const auto &enum_values = opt_defs[opt_defs_index].enum_values;
   if (!enum_values.empty())
     for (const auto &enum_value : enum_values)

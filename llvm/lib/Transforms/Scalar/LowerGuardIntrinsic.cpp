@@ -44,7 +44,7 @@ static bool lowerGuardIntrinsic(Function &F) {
   if (ToLower.empty())
     return false;
 
-  auto *DeoptIntrinsic = Intrinsic::getDeclaration(
+  auto *DeoptIntrinsic = Intrinsic::getOrInsertDeclaration(
       F.getParent(), Intrinsic::experimental_deoptimize, {F.getReturnType()});
   DeoptIntrinsic->setCallingConv(GuardDecl->getCallingConv());
 

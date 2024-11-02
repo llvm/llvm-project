@@ -37,7 +37,6 @@ meet the criteria for inclusion below. The list is in the format
 username for an individual isn't available, the brackets will be empty.
 
 * Ahmed Bougacha (Apple) [@ahmedbougacha]
-* Andy Kaylor (Intel) [@andykaylor]
 * Artur Pilipenko (Azul Systems Inc) []
 * Boovaragavan Dasarathan (Nvidia) [@mrragava]
 * Dimitry Andric (individual; FreeBSD) [@DimitryAndric]
@@ -52,6 +51,7 @@ username for an individual isn't available, the brackets will be empty.
 * Peter Smith (ARM) [@smithp35]
 * Pietro Albini (Ferrous Systems; Rust) [@pietroalbini]
 * Serge Guelton (Mozilla) [@serge-sans-paille]
+* Sergey Zverev (Intel) [@offsake]
 * Shayne Hiet-Block (Microsoft) [@GreatKeeper]
 * Tim Penge (Sony) [@tpenge]
 * Tulio Magno Quites Machado Filho (Red Hat) [@tuliom]

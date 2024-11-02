@@ -14,6 +14,7 @@
 #include "clang/AST/OSLog.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/Support/SipHash.h"
 
@@ -35,6 +36,14 @@ static T getParam(const InterpFrame *Frame, unsigned Index) {
   assert(Frame->getFunction()->getNumParams() > Index);
   unsigned Offset = Frame->getFunction()->getParamOffset(Index);
   return Frame->getParam<T>(Offset);
+}
+
+static APSInt getAPSIntParam(const InterpFrame *Frame, unsigned Index) {
+  APSInt R;
+  unsigned Offset = Frame->getFunction()->getParamOffset(Index);
+  INT_TYPE_SWITCH(Frame->getFunction()->getParamType(Index),
+                  R = Frame->getParam<T>(Offset).toAPSInt());
+  return R;
 }
 
 PrimType getIntPrimType(const InterpState &S) {
@@ -136,16 +145,17 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC, APValue &Result,
 static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
                                                   const InterpFrame *Frame,
                                                   const CallExpr *Call) {
+  unsigned Depth = S.Current->getDepth();
+  auto isStdCall = [](const FunctionDecl *F) -> bool {
+    return F && F->isInStdNamespace() && F->getIdentifier() &&
+           F->getIdentifier()->isStr("is_constant_evaluated");
+  };
+  const InterpFrame *Caller = Frame->Caller;
   // The current frame is the one for __builtin_is_constant_evaluated.
   // The one above that, potentially the one for std::is_constant_evaluated().
   if (S.inConstantContext() && !S.checkingPotentialConstantExpression() &&
-      Frame->Caller && S.getEvalStatus().Diag) {
-    auto isStdCall = [](const FunctionDecl *F) -> bool {
-      return F && F->isInStdNamespace() && F->getIdentifier() &&
-             F->getIdentifier()->isStr("is_constant_evaluated");
-    };
-    const InterpFrame *Caller = Frame->Caller;
-
+      S.getEvalStatus().Diag &&
+      (Depth == 1 || (Depth == 2 && isStdCall(Caller->getCallee())))) {
     if (Caller->Caller && isStdCall(Caller->getCallee())) {
       const Expr *E = Caller->Caller->getExpr(Caller->getRetPC());
       S.report(E->getExprLoc(),
@@ -1151,6 +1161,229 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   return false;
 }
 
+/// __builtin_assume_aligned(Ptr, Alignment[, ExtraOffset])
+static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
+                                           const InterpFrame *Frame,
+                                           const Function *Func,
+                                           const CallExpr *Call) {
+  assert(Call->getNumArgs() == 2 || Call->getNumArgs() == 3);
+
+  // Might be called with function pointers in C.
+  std::optional<PrimType> PtrT = S.Ctx.classify(Call->getArg(0));
+  if (PtrT != PT_Ptr)
+    return false;
+
+  unsigned ArgSize = callArgSize(S, Call);
+  const Pointer &Ptr = S.Stk.peek<Pointer>(ArgSize);
+  std::optional<APSInt> ExtraOffset;
+  APSInt Alignment;
+  if (Call->getNumArgs() == 2) {
+    Alignment = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(1)));
+  } else {
+    PrimType AlignmentT = *S.Ctx.classify(Call->getArg(1));
+    PrimType ExtraOffsetT = *S.Ctx.classify(Call->getArg(2));
+    Alignment = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(1)),
+                             align(primSize(AlignmentT)) +
+                                 align(primSize(ExtraOffsetT)));
+    ExtraOffset = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(2)));
+  }
+
+  CharUnits Align = CharUnits::fromQuantity(Alignment.getZExtValue());
+
+  // If there is a base object, then it must have the correct alignment.
+  if (Ptr.isBlockPointer()) {
+    CharUnits BaseAlignment;
+    if (const auto *VD = Ptr.getDeclDesc()->asValueDecl())
+      BaseAlignment = S.getASTContext().getDeclAlign(VD);
+    else if (const auto *E = Ptr.getDeclDesc()->asExpr())
+      BaseAlignment = GetAlignOfExpr(S.getASTContext(), E, UETT_AlignOf);
+
+    if (BaseAlignment < Align) {
+      S.CCEDiag(Call->getArg(0),
+                diag::note_constexpr_baa_insufficient_alignment)
+          << 0 << BaseAlignment.getQuantity() << Align.getQuantity();
+      return false;
+    }
+  }
+
+  APValue AV = Ptr.toAPValue(S.getASTContext());
+  CharUnits AVOffset = AV.getLValueOffset();
+  if (ExtraOffset)
+    AVOffset -= CharUnits::fromQuantity(ExtraOffset->getZExtValue());
+  if (AVOffset.alignTo(Align) != AVOffset) {
+    if (Ptr.isBlockPointer())
+      S.CCEDiag(Call->getArg(0),
+                diag::note_constexpr_baa_insufficient_alignment)
+          << 1 << AVOffset.getQuantity() << Align.getQuantity();
+    else
+      S.CCEDiag(Call->getArg(0),
+                diag::note_constexpr_baa_value_insufficient_alignment)
+          << AVOffset.getQuantity() << Align.getQuantity();
+    return false;
+  }
+
+  S.Stk.push<Pointer>(Ptr);
+  return true;
+}
+
+static bool interp__builtin_ia32_bextr(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const Function *Func,
+                                       const CallExpr *Call) {
+  PrimType ValT = *S.Ctx.classify(Call->getArg(0));
+  PrimType IndexT = *S.Ctx.classify(Call->getArg(1));
+  APSInt Val = peekToAPSInt(S.Stk, ValT,
+                            align(primSize(ValT)) + align(primSize(IndexT)));
+  APSInt Index = peekToAPSInt(S.Stk, IndexT);
+
+  unsigned BitWidth = Val.getBitWidth();
+  uint64_t Shift = Index.extractBitsAsZExtValue(8, 0);
+  uint64_t Length = Index.extractBitsAsZExtValue(8, 8);
+  Length = Length > BitWidth ? BitWidth : Length;
+
+  // Handle out of bounds cases.
+  if (Length == 0 || Shift >= BitWidth) {
+    pushInteger(S, 0, Call->getType());
+    return true;
+  }
+
+  uint64_t Result = Val.getZExtValue() >> Shift;
+  Result &= llvm::maskTrailingOnes<uint64_t>(Length);
+  pushInteger(S, Result, Call->getType());
+  return true;
+}
+
+static bool interp__builtin_ia32_bzhi(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const Function *Func,
+                                      const CallExpr *Call) {
+  QualType CallType = Call->getType();
+  if (!CallType->isIntegerType())
+    return false;
+
+  PrimType ValT = *S.Ctx.classify(Call->getArg(0));
+  PrimType IndexT = *S.Ctx.classify(Call->getArg(1));
+
+  APSInt Val = peekToAPSInt(S.Stk, ValT,
+                            align(primSize(ValT)) + align(primSize(IndexT)));
+  APSInt Idx = peekToAPSInt(S.Stk, IndexT);
+
+  unsigned BitWidth = Val.getBitWidth();
+  uint64_t Index = Idx.extractBitsAsZExtValue(8, 0);
+
+  if (Index < BitWidth)
+    Val.clearHighBits(BitWidth - Index);
+
+  pushInteger(S, Val, CallType);
+  return true;
+}
+
+static bool interp__builtin_ia32_lzcnt(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const Function *Func,
+                                       const CallExpr *Call) {
+  QualType CallType = Call->getType();
+  if (!CallType->isIntegerType())
+    return false;
+
+  APSInt Val = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
+  pushInteger(S, Val.countLeadingZeros(), CallType);
+  return true;
+}
+
+static bool interp__builtin_ia32_tzcnt(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const Function *Func,
+                                       const CallExpr *Call) {
+  QualType CallType = Call->getType();
+  if (!CallType->isIntegerType())
+    return false;
+
+  APSInt Val = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
+  pushInteger(S, Val.countTrailingZeros(), CallType);
+  return true;
+}
+
+static bool interp__builtin_ia32_pdep(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const Function *Func,
+                                      const CallExpr *Call) {
+  PrimType ValT = *S.Ctx.classify(Call->getArg(0));
+  PrimType MaskT = *S.Ctx.classify(Call->getArg(1));
+
+  APSInt Val =
+      peekToAPSInt(S.Stk, ValT, align(primSize(ValT)) + align(primSize(MaskT)));
+  APSInt Mask = peekToAPSInt(S.Stk, MaskT);
+
+  unsigned BitWidth = Val.getBitWidth();
+  APInt Result = APInt::getZero(BitWidth);
+  for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
+    if (Mask[I])
+      Result.setBitVal(I, Val[P++]);
+  }
+  pushInteger(S, Result, Call->getType());
+  return true;
+}
+
+static bool interp__builtin_ia32_pext(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const Function *Func,
+                                      const CallExpr *Call) {
+  PrimType ValT = *S.Ctx.classify(Call->getArg(0));
+  PrimType MaskT = *S.Ctx.classify(Call->getArg(1));
+
+  APSInt Val =
+      peekToAPSInt(S.Stk, ValT, align(primSize(ValT)) + align(primSize(MaskT)));
+  APSInt Mask = peekToAPSInt(S.Stk, MaskT);
+
+  unsigned BitWidth = Val.getBitWidth();
+  APInt Result = APInt::getZero(BitWidth);
+  for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
+    if (Mask[I])
+      Result.setBitVal(P++, Val[I]);
+  }
+  pushInteger(S, Result, Call->getType());
+  return true;
+}
+
+static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
+                                                    CodePtr OpPC,
+                                                    const InterpFrame *Frame,
+                                                    const Function *Func,
+                                                    const CallExpr *Call) {
+  if (Call->getNumArgs() != 4 || !Call->getArg(0)->getType()->isIntegerType() ||
+      !Call->getArg(1)->getType()->isIntegerType() ||
+      !Call->getArg(2)->getType()->isIntegerType())
+    return false;
+
+  unsigned BuiltinOp = Func->getBuiltinID();
+  APSInt CarryIn = getAPSIntParam(Frame, 0);
+  APSInt LHS = getAPSIntParam(Frame, 1);
+  APSInt RHS = getAPSIntParam(Frame, 2);
+
+  bool IsAdd = BuiltinOp == clang::X86::BI__builtin_ia32_addcarryx_u32 ||
+               BuiltinOp == clang::X86::BI__builtin_ia32_addcarryx_u64;
+
+  unsigned BitWidth = LHS.getBitWidth();
+  unsigned CarryInBit = CarryIn.ugt(0) ? 1 : 0;
+  APInt ExResult =
+      IsAdd ? (LHS.zext(BitWidth + 1) + (RHS.zext(BitWidth + 1) + CarryInBit))
+            : (LHS.zext(BitWidth + 1) - (RHS.zext(BitWidth + 1) + CarryInBit));
+
+  APInt Result = ExResult.extractBits(BitWidth, 0);
+  APSInt CarryOut =
+      APSInt(ExResult.extractBits(1, BitWidth), /*IsUnsigned=*/true);
+
+  Pointer &CarryOutPtr = S.Stk.peek<Pointer>();
+  QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
+  PrimType CarryOutT = *S.getContext().classify(CarryOutType);
+  assignInteger(CarryOutPtr, CarryOutT, APSInt(Result, true));
+
+  pushInteger(S, CarryOut, Call->getType());
+
+  return true;
+}
+
 static bool interp__builtin_os_log_format_buffer_size(InterpState &S,
                                                       CodePtr OpPC,
                                                       const InterpFrame *Frame,
@@ -1306,7 +1539,16 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  // FIXME: CheckArraySize for NumElems?
+  // NB: The same check we're using in CheckArraySize()
+  if (NumElems.getActiveBits() >
+          ConstantArrayType::getMaxSizeBits(S.getASTContext()) ||
+      NumElems.ugt(Descriptor::MaxArrayElemBytes / ElemSize.getQuantity())) {
+    // FIXME: NoThrow check?
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_new_too_large)
+        << NumElems.getZExtValue();
+    return false;
+  }
 
   std::optional<PrimType> ElemT = S.getContext().classify(ElemType);
   DynamicAllocator &Allocator = S.getAllocator();
@@ -1336,8 +1578,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   assert(!ElemT);
   // Structs etc.
   const Descriptor *Desc = S.P.createDescriptor(
-      Call, ElemType.getTypePtr(),
-      NumElems.ule(1) ? std::nullopt : Descriptor::InlineDescMD,
+      Call, ElemType.getTypePtr(), Descriptor::InlineDescMD,
       /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false,
       /*Init=*/nullptr);
 
@@ -1725,6 +1966,59 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_align_up:
   case Builtin::BI__builtin_align_down:
     if (!interp__builtin_is_aligned_up_down(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_assume_aligned:
+    if (!interp__builtin_assume_aligned(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_bextr_u32:
+  case clang::X86::BI__builtin_ia32_bextr_u64:
+  case clang::X86::BI__builtin_ia32_bextri_u32:
+  case clang::X86::BI__builtin_ia32_bextri_u64:
+    if (!interp__builtin_ia32_bextr(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_bzhi_si:
+  case clang::X86::BI__builtin_ia32_bzhi_di:
+    if (!interp__builtin_ia32_bzhi(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_lzcnt_u16:
+  case clang::X86::BI__builtin_ia32_lzcnt_u32:
+  case clang::X86::BI__builtin_ia32_lzcnt_u64:
+    if (!interp__builtin_ia32_lzcnt(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_tzcnt_u16:
+  case clang::X86::BI__builtin_ia32_tzcnt_u32:
+  case clang::X86::BI__builtin_ia32_tzcnt_u64:
+    if (!interp__builtin_ia32_tzcnt(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_pdep_si:
+  case clang::X86::BI__builtin_ia32_pdep_di:
+    if (!interp__builtin_ia32_pdep(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_pext_si:
+  case clang::X86::BI__builtin_ia32_pext_di:
+    if (!interp__builtin_ia32_pext(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_addcarryx_u32:
+  case clang::X86::BI__builtin_ia32_addcarryx_u64:
+  case clang::X86::BI__builtin_ia32_subborrow_u32:
+  case clang::X86::BI__builtin_ia32_subborrow_u64:
+    if (!interp__builtin_ia32_addcarry_subborrow(S, OpPC, Frame, F, Call))
       return false;
     break;
 

@@ -709,7 +709,7 @@ TEST_F(AArch64SelectionDAGTest, ReplaceAllUsesWith) {
   EXPECT_FALSE(DAG->getHeapAllocSite(N2.getNode()));
   EXPECT_FALSE(DAG->getNoMergeSiteInfo(N2.getNode()));
   EXPECT_FALSE(DAG->getPCSections(N2.getNode()));
-  MDNode *MD = MDNode::get(Context, std::nullopt);
+  MDNode *MD = MDNode::get(Context, {});
   DAG->addHeapAllocSite(N2.getNode(), MD);
   DAG->addNoMergeSiteInfo(N2.getNode(), true);
   DAG->addPCSections(N2.getNode(), MD);

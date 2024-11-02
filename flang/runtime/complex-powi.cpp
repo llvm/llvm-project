@@ -83,12 +83,12 @@ extern "C" double _Complex RTNAME(zpowk)(
   return tgpowi(base, exp);
 }
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 // Duplicate CFloat128ComplexType definition from flang/Common/float128.h.
 // float128.h does not define it for C++, because _Complex triggers
 // c99-extension warnings. We decided to disable warnings for this
 // particular file, so we can use _Complex here.
-#if LDBL_MANT_DIG == 113
+#if HAS_LDBL128
 typedef long double _Complex Qcomplex;
 #elif HAS_FLOAT128
 #if !defined(_ARCH_PPC) || defined(__LONG_DOUBLE_IEEE128__)
@@ -149,7 +149,7 @@ extern "C" Dcomplex RTNAME(zpowk)(Dcomplex base, std::int64_t exp) {
   return *(Dcomplex *)(&cppres);
 }
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 struct Qcomplex {
   CFloat128Type re;
   CFloat128Type im;

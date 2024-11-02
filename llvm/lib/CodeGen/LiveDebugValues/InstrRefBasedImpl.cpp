@@ -3958,12 +3958,10 @@ public:
   /// For a given MBB, create a wrapper block for it. Stores it in the
   /// LDVSSAUpdater block map.
   LDVSSABlock *getSSALDVBlock(MachineBasicBlock *BB) {
-    auto it = BlockMap.find(BB);
-    if (it == BlockMap.end()) {
-      BlockMap[BB] = new LDVSSABlock(*BB, *this);
-      it = BlockMap.find(BB);
-    }
-    return it->second;
+    auto [It, Inserted] = BlockMap.try_emplace(BB);
+    if (Inserted)
+      It->second = new LDVSSABlock(*BB, *this);
+    return It->second;
   }
 
   /// Find the live-in value number for the given block. Looks up the value at

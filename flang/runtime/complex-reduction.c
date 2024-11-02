@@ -19,7 +19,7 @@ struct CppComplexDouble {
 struct CppComplexLongDouble {
   long double r, i;
 };
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 struct CppComplexFloat128 {
   CFloat128Type r, i;
 };
@@ -75,7 +75,7 @@ static long_double_Complex_t CMPLXL(long double r, long double i) {
 #endif
 #endif
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 #ifndef CMPLXF128
 /*
  * GCC 7.4.0 (currently minimum GCC version for llvm builds)
@@ -123,7 +123,7 @@ ADAPT_REDUCTION(SumComplex8, double_Complex_t, CppComplexDouble, CMPLX,
 ADAPT_REDUCTION(SumComplex10, long_double_Complex_t, CppComplexLongDouble,
     CMPLXL, REDUCTION_ARGS, REDUCTION_ARG_NAMES)
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 ADAPT_REDUCTION(SumComplex16, CFloat128ComplexType, CppComplexFloat128,
     CMPLXF128, REDUCTION_ARGS, REDUCTION_ARG_NAMES)
 #endif
@@ -137,7 +137,7 @@ ADAPT_REDUCTION(ProductComplex8, double_Complex_t, CppComplexDouble, CMPLX,
 ADAPT_REDUCTION(ProductComplex10, long_double_Complex_t, CppComplexLongDouble,
     CMPLXL, REDUCTION_ARGS, REDUCTION_ARG_NAMES)
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 ADAPT_REDUCTION(ProductComplex16, CFloat128ComplexType, CppComplexFloat128,
     CMPLXF128, REDUCTION_ARGS, REDUCTION_ARG_NAMES)
 #endif
@@ -151,7 +151,7 @@ ADAPT_REDUCTION(DotProductComplex8, double_Complex_t, CppComplexDouble, CMPLX,
 ADAPT_REDUCTION(DotProductComplex10, long_double_Complex_t,
     CppComplexLongDouble, CMPLXL, DOT_PRODUCT_ARGS, DOT_PRODUCT_ARG_NAMES)
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 ADAPT_REDUCTION(DotProductComplex16, CFloat128ComplexType, CppComplexFloat128,
     CMPLXF128, DOT_PRODUCT_ARGS, DOT_PRODUCT_ARG_NAMES)
 #endif
@@ -183,7 +183,7 @@ ADAPT_REDUCTION(ReduceComplex10Value, long_double_Complex_t,
     CppComplexLongDouble, CMPLXL, RARGS, REDUCE_ARG_NAMES)
 #undef RARGS
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 #define RARGS REDUCE_ARGS(CFloat128ComplexType, CFloat128ComplexType_ref_op)
 ADAPT_REDUCTION(ReduceComplex16Ref, CFloat128ComplexType, CppComplexFloat128,
     CMPLXF128, RARGS, REDUCE_ARG_NAMES)

@@ -11,3 +11,7 @@ __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::raw_buffer(gibberish)]] 
 
 // expected-warning@+1{{attribute 'raw_buffer' is already applied}}
 __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::raw_buffer]] [[hlsl::raw_buffer]] res4;
+
+// expected-error@+2{{attribute 'resource_class' can be used only on HLSL intangible type '__hlsl_resource_t'}}
+// expected-error@+1{{attribute 'raw_buffer' can be used only on HLSL intangible type '__hlsl_resource_t'}}
+float [[hlsl::resource_class(UAV)]] [[hlsl::raw_buffer]] res5;

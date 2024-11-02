@@ -2873,6 +2873,40 @@ TEST_P(UncheckedOptionalAccessTest, OptionalValueStruct) {
   )");
 }
 
+// FIXME: A case that we should handle but currently don't.
+// When there is a field of type reference to non-optional, we may
+// stop recursively creating storage locations.
+// E.g., the field `second` below in `pair` should eventually lead to
+// the optional `x` in `A`.
+TEST_P(UncheckedOptionalAccessTest, NestedOptionalThroughNonOptionalRefField) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      $ns::$optional<int> x;
+    };
+
+    struct pair {
+      int first;
+      const A &second;
+    };
+
+    struct B {
+      $ns::$optional<pair>& nonConstGetRef();
+    };
+
+    void target(B b) {
+      const auto& maybe_pair = b.nonConstGetRef();
+      if (!maybe_pair.has_value())
+        return;
+
+      if(!maybe_pair->second.x.has_value())
+        return;
+      maybe_pair->second.x.value();  // [[unsafe]]
+    }
+  )");
+}
+
 TEST_P(UncheckedOptionalAccessTest, OptionalValueInitialization) {
   ExpectDiagnosticsFor(
       R"(

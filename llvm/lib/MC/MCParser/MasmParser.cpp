@@ -479,9 +479,7 @@ public:
   void addDirectiveHandler(StringRef Directive,
                            ExtensionDirectiveHandler Handler) override {
     ExtensionDirectiveMap[Directive] = Handler;
-    if (!DirectiveKindMap.contains(Directive)) {
-      DirectiveKindMap[Directive] = DK_HANDLER_DIRECTIVE;
-    }
+    DirectiveKindMap.try_emplace(Directive, DK_HANDLER_DIRECTIVE);
   }
 
   void addAliasForDirective(StringRef Directive, StringRef Alias) override {
@@ -7349,7 +7347,7 @@ bool MasmParser::parseMSInlineAsm(
   SmallVector<bool, 4> OutputDeclsAddressOf;
   SmallVector<std::string, 4> InputConstraints;
   SmallVector<std::string, 4> OutputConstraints;
-  SmallVector<unsigned, 4> ClobberRegs;
+  SmallVector<MCRegister, 4> ClobberRegs;
 
   SmallVector<AsmRewrite, 4> AsmStrRewrites;
 

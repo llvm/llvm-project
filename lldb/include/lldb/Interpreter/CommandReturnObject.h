@@ -131,7 +131,7 @@ public:
     AppendError(llvm::formatv(format, std::forward<Args>(args)...).str());
   }
 
-  void SetError(const Status &error, const char *fallback_error_cstr = nullptr);
+  void SetError(Status error);
 
   void SetError(llvm::Error error);
 

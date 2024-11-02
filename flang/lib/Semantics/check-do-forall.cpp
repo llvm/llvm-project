@@ -495,10 +495,8 @@ private:
 
   void CheckDoControl(const parser::CharBlock &sourceLocation, bool isReal) {
     if (isReal) {
-      if (context_.ShouldWarn(common::LanguageFeature::RealDoControls)) {
-        context_.Say(
-            sourceLocation, "DO controls should be INTEGER"_port_en_US);
-      }
+      context_.Warn(common::LanguageFeature::RealDoControls, sourceLocation,
+          "DO controls should be INTEGER"_port_en_US);
     } else {
       SayBadDoControl(sourceLocation);
     }
@@ -552,9 +550,9 @@ private:
     CheckDoExpression(bounds.upper);
     if (bounds.step) {
       CheckDoExpression(*bounds.step);
-      if (IsZero(*bounds.step) &&
-          context_.ShouldWarn(common::UsageWarning::ZeroDoStep)) {
-        context_.Say(bounds.step->thing.value().source,
+      if (IsZero(*bounds.step)) {
+        context_.Warn(common::UsageWarning::ZeroDoStep,
+            bounds.step->thing.value().source,
             "DO step expression should not be zero"_warn_en_US);
       }
     }
@@ -679,10 +677,9 @@ private:
       if (std::holds_alternative<parser::LocalitySpec::DefaultNone>(ls.u)) {
         if (hasDefaultNone) {
           // F'2023 C1129, you can only have one DEFAULT(NONE)
-          if (context_.ShouldWarn(common::LanguageFeature::BenignRedundancy)) {
-            context_.Say(currentStatementSourcePosition_,
-                "Only one DEFAULT(NONE) may appear"_port_en_US);
-          }
+          context_.Warn(common::LanguageFeature::BenignRedundancy,
+              currentStatementSourcePosition_,
+              "Only one DEFAULT(NONE) may appear"_port_en_US);
           break;
         }
         hasDefaultNone = true;
@@ -890,10 +887,9 @@ private:
           },
           assignment.u);
       for (const Symbol &index : indexVars) {
-        if (symbols.count(index) == 0 &&
-            context_.ShouldWarn(common::UsageWarning::UnusedForallIndex)) {
-          context_.Say("FORALL index variable '%s' not used on left-hand side"
-                       " of assignment"_warn_en_US,
+        if (symbols.count(index) == 0) {
+          context_.Warn(common::UsageWarning::UnusedForallIndex,
+              "FORALL index variable '%s' not used on left-hand side of assignment"_warn_en_US,
               index.name());
         }
       }

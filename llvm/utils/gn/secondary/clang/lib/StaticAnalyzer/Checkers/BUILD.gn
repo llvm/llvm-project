@@ -141,7 +141,7 @@ static_library("Checkers") {
     "VforkChecker.cpp",
     "VirtualCallChecker.cpp",
     "WebKit/ASTUtils.cpp",
-    "WebKit/NoUncountedMembersChecker.cpp",
+    "WebKit/RawPtrRefMemberChecker.cpp",
     "WebKit/PtrTypesSemantics.cpp",
     "WebKit/RefCntblBaseVirtualDtorChecker.cpp",
     "WebKit/UncountedCallArgsChecker.cpp",

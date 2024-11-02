@@ -53,6 +53,7 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
+#include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cstdint>
 
@@ -461,9 +462,10 @@ std::vector<std::string> CombineRuleOperandTypeChecker::getMCOIOperandTypes(
 
   std::vector<std::string> OpTypes;
   auto &CGI = CGP.getInst();
-  Record *VarArgsTy = CGI.TheDef->isSubClassOf("GenericInstruction")
-                          ? CGI.TheDef->getValueAsOptionalDef("variadicOpsType")
-                          : nullptr;
+  const Record *VarArgsTy =
+      CGI.TheDef->isSubClassOf("GenericInstruction")
+          ? CGI.TheDef->getValueAsOptionalDef("variadicOpsType")
+          : nullptr;
   std::string VarArgsTyName =
       VarArgsTy ? ("MCOI::" + VarArgsTy->getValueAsString("OperandType")).str()
                 : ("unknown_type_" + Twine(UnknownTypeIdx++)).str();
@@ -636,7 +638,7 @@ public:
 
   CombineRuleBuilder(const CodeGenTarget &CGT,
                      SubtargetFeatureInfoMap &SubtargetFeatures,
-                     Record &RuleDef, unsigned ID,
+                     const Record &RuleDef, unsigned ID,
                      std::vector<RuleMatcher> &OutRMs)
       : Parser(CGT, RuleDef.getLoc()), CGT(CGT),
         SubtargetFeatures(SubtargetFeatures), RuleDef(RuleDef), RuleID(ID),
@@ -765,7 +767,7 @@ private:
   PatternParser Parser;
   const CodeGenTarget &CGT;
   SubtargetFeatureInfoMap &SubtargetFeatures;
-  Record &RuleDef;
+  const Record &RuleDef;
   const unsigned RuleID;
   std::vector<RuleMatcher> &OutRMs;
 
@@ -1374,12 +1376,12 @@ bool CombineRuleBuilder::addFeaturePredicates(RuleMatcher &M) {
     return true;
 
   ListInit *Preds = RuleDef.getValueAsListInit("Predicates");
-  for (Init *PI : Preds->getValues()) {
-    DefInit *Pred = dyn_cast<DefInit>(PI);
+  for (const Init *PI : Preds->getValues()) {
+    const DefInit *Pred = dyn_cast<DefInit>(PI);
     if (!Pred)
       continue;
 
-    Record *Def = Pred->getDef();
+    const Record *Def = Pred->getDef();
     if (!Def->isSubClassOf("Predicate")) {
       ::PrintError(Def, "Unknown 'Predicate' Type");
       return false;
@@ -1525,7 +1527,7 @@ bool CombineRuleBuilder::parseDefs(const DagInit &Def) {
     // Subclasses of GIDefMatchData should declare that this rule needs to pass
     // data from the match stage to the apply stage, and ensure that the
     // generated matcher has a suitable variable for it to do so.
-    if (Record *MatchDataRec =
+    if (const Record *MatchDataRec =
             getDefOfSubClass(*Def.getArg(I), MatchDataClassName)) {
       MatchDatas.emplace_back(Def.getArgNameStr(I),
                               MatchDataRec->getValueAsString("Type"));
@@ -2360,10 +2362,10 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
 /// static storage pools and wires them together to emit the match table &
 /// associated function/data structures.
 class GICombinerEmitter final : public GlobalISelMatchTableExecutorEmitter {
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
   StringRef Name;
   const CodeGenTarget &Target;
-  Record *Combiner;
+  const Record *Combiner;
   unsigned NextRuleID = 0;
 
   // List all combine rules (ID, name) imported.
@@ -2403,11 +2405,12 @@ class GICombinerEmitter final : public GlobalISelMatchTableExecutorEmitter {
   }
 
   void gatherRules(std::vector<RuleMatcher> &Rules,
-                   const std::vector<Record *> &&RulesAndGroups);
+                   ArrayRef<const Record *> RulesAndGroups);
 
 public:
-  explicit GICombinerEmitter(RecordKeeper &RK, const CodeGenTarget &Target,
-                             StringRef Name, Record *Combiner);
+  explicit GICombinerEmitter(const RecordKeeper &RK,
+                             const CodeGenTarget &Target, StringRef Name,
+                             const Record *Combiner);
   ~GICombinerEmitter() {}
 
   void run(raw_ostream &OS);
@@ -2628,9 +2631,9 @@ void GICombinerEmitter::emitRunCustomAction(raw_ostream &OS) {
      << "}\n";
 }
 
-GICombinerEmitter::GICombinerEmitter(RecordKeeper &RK,
+GICombinerEmitter::GICombinerEmitter(const RecordKeeper &RK,
                                      const CodeGenTarget &Target,
-                                     StringRef Name, Record *Combiner)
+                                     StringRef Name, const Record *Combiner)
     : Records(RK), Name(Name), Target(Target), Combiner(Combiner) {}
 
 MatchTable
@@ -2675,10 +2678,9 @@ GICombinerEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules) {
 }
 
 /// Recurse into GICombineGroup's and flatten the ruleset into a simple list.
-void GICombinerEmitter::gatherRules(
-    std::vector<RuleMatcher> &ActiveRules,
-    const std::vector<Record *> &&RulesAndGroups) {
-  for (Record *Rec : RulesAndGroups) {
+void GICombinerEmitter::gatherRules(std::vector<RuleMatcher> &ActiveRules,
+                                    ArrayRef<const Record *> RulesAndGroups) {
+  for (const Record *Rec : RulesAndGroups) {
     if (!Rec->isValueUnset("Rules")) {
       gatherRules(ActiveRules, Rec->getValueAsListOfDefs("Rules"));
       continue;
@@ -2717,7 +2719,8 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   InstructionOpcodeMatcher::initOpcodeValuesMap(Target);
   LLTOperandMatcher::initTypeIDValuesMap();
 
-  Records.startTimer("Gather rules");
+  TGTimer &Timer = Records.getTimer();
+  Timer.startTimer("Gather rules");
   std::vector<RuleMatcher> Rules;
   gatherRules(Rules, Combiner->getValueAsListOfDefs("Rules"));
   if (ErrorsPrinted)
@@ -2726,7 +2729,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   if (StopAfterParse)
     return;
 
-  Records.startTimer("Creating Match Table");
+  Timer.startTimer("Creating Match Table");
   unsigned MaxTemporaries = 0;
   for (const auto &Rule : Rules)
     MaxTemporaries = std::max(MaxTemporaries, Rule.countRendererFns());
@@ -2743,14 +2746,9 @@ void GICombinerEmitter::run(raw_ostream &OS) {
 
   const MatchTable Table = buildMatchTable(Rules);
 
-  Records.startTimer("Emit combiner");
+  Timer.startTimer("Emit combiner");
 
   emitSourceFileHeader(getClassName().str() + " Combiner Match Table", OS);
-
-  // Unused
-  std::vector<StringRef> CustomRendererFns;
-  // Unused
-  std::vector<Record *> ComplexPredicates;
 
   SmallVector<LLTCodeGen, 16> TypeObjects;
   append_range(TypeObjects, KnownTypes);
@@ -2780,8 +2778,8 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   emitTemporariesDecl(OS, "GET_GICOMBINER_CLASS_MEMBERS");
 
   // GET_GICOMBINER_IMPL, which needs to be included outside the class.
-  emitExecutorImpl(OS, Table, TypeObjects, Rules, ComplexPredicates,
-                   CustomRendererFns, "GET_GICOMBINER_IMPL");
+  emitExecutorImpl(OS, Table, TypeObjects, Rules, {}, {},
+                   "GET_GICOMBINER_IMPL");
 
   // GET_GICOMBINER_CONSTRUCTOR_INITS, which are in the constructor's
   // initializer list.
@@ -2793,14 +2791,14 @@ void GICombinerEmitter::run(raw_ostream &OS) {
 
 //===----------------------------------------------------------------------===//
 
-static void EmitGICombiner(RecordKeeper &RK, raw_ostream &OS) {
+static void EmitGICombiner(const RecordKeeper &RK, raw_ostream &OS) {
   EnablePrettyStackTrace();
-  CodeGenTarget Target(RK);
+  const CodeGenTarget Target(RK);
 
   if (SelectedCombiners.empty())
     PrintFatalError("No combiners selected with -combiners");
   for (const auto &Combiner : SelectedCombiners) {
-    Record *CombinerDef = RK.getDef(Combiner);
+    const Record *CombinerDef = RK.getDef(Combiner);
     if (!CombinerDef)
       PrintFatalError("Could not find " + Combiner);
     GICombinerEmitter(RK, Target, Combiner, CombinerDef).run(OS);

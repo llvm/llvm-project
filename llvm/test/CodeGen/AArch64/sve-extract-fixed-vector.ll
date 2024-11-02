@@ -392,9 +392,7 @@ define <2 x float> @extract_v2f32_nxv4f32_splat_const() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov v0.2s, #1.00000000
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 4 x float> poison, float 1.0, i32 0
-  %splat = shufflevector <vscale x 4 x float> %ins, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
-  %ext = call <2 x float> @llvm.vector.extract.v2f32.nxv4f32(<vscale x 4 x float> %splat, i64 0)
+  %ext = call <2 x float> @llvm.vector.extract.v2f32.nxv4f32(<vscale x 4 x float> splat(float 1.0), i64 0)
   ret <2 x float> %ext
 }
 
@@ -403,9 +401,7 @@ define <4 x i32> @extract_v4i32_nxv8i32_splat_const() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.4s, #1
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 8 x i32> poison, i32 1, i32 0
-  %splat = shufflevector <vscale x 8 x i32> %ins, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
-  %ext = call <4 x i32> @llvm.vector.extract.v4i32.nxv8i32(<vscale x 8 x i32> %splat, i64 0)
+  %ext = call <4 x i32> @llvm.vector.extract.v4i32.nxv8i32(<vscale x 8 x i32> splat(i32 1), i64 0)
   ret <4 x i32> %ext
 }
 

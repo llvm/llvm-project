@@ -19,7 +19,7 @@ namespace scudo {
 
 TEST(MemtagBasicDeathTest, Unsupported) {
   if (archSupportsMemoryTagging())
-    TEST_SKIP("Memory tagging is not supported");
+    TEST_SKIP("Memory tagging is not unsupported");
   // Skip when running with HWASan.
   if (&__hwasan_init != 0)
     TEST_SKIP("Incompatible with HWASan");

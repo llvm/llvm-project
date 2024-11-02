@@ -28,10 +28,6 @@ ${PROGNAME} [options] <BUILDER>
 --build-dir <DIR>   The directory to use for building the library. By default,
                     this is '<llvm-root>/build/<builder>'.
 
---osx-roots <DIR>   Path to pre-downloaded macOS dylibs. By default, we download
-                    them from Green Dragon. This is only relevant at all when
-                    running back-deployment testing if one wants to override
-                    the old dylibs we use to run the tests with different ones.
 Environment variables
 CC                  The C compiler to use, this value is used by CMake. This
                     variable is optional.
@@ -64,10 +60,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --build-dir)
             BUILD_DIR="${2}"
-            shift; shift
-            ;;
-        --osx-roots)
-            OSX_ROOTS="${2}"
             shift; shift
             ;;
         *)
@@ -246,7 +238,7 @@ check-generated-output)
     # Reject patches that introduce non-ASCII characters or hard tabs.
     # Depends on LC_COLLATE set at the top of this script.
     set -x
-    ! grep -rn '[^ -~]' libcxx/include libcxx/src libcxx/test libcxx/benchmarks \
+    ! grep -rn '[^ -~]' libcxx/include libcxx/src libcxx/test \
            --exclude '*.dat' \
            --exclude '*unicode*.cpp' \
            --exclude '*print*.sh.cpp' \
@@ -371,7 +363,8 @@ bootstrapping-build)
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
 
     echo "+++ Running the LLDB libc++ data formatter tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-lldb-api-functionalities-data-formatter-data-formatter-stl-libcxx
+    ${NINJA} -vC "${BUILD_DIR}" lldb-api-test-deps
+    ${BUILD_DIR}/bin/llvm-lit -sv --param dotest-args='--category libc++' "${MONOREPO_ROOT}/lldb/test/API"
 
     echo "--- Running the libc++ and libc++abi tests"
     ${NINJA} -vC "${BUILD_DIR}" check-runtimes
@@ -522,80 +515,94 @@ apple-configuration)
     # TODO: It would be better to run the tests against the fake-installed version of libc++ instead
     xcrun --sdk macosx ninja -vC "${BUILD_DIR}/${arch}" check-cxx check-cxxabi check-cxx-abilist
 ;;
-apple-system-backdeployment-hardened-*)
+apple-system-hardened)
     clean
 
-    if [[ "${OSX_ROOTS}" == "" ]]; then
-        echo "--- Downloading previous macOS dylibs"
-        PREVIOUS_DYLIBS_URL="https://dl.dropboxusercontent.com/s/gmcfxwgl9f9n6pu/libcxx-roots.tar.gz"
-        OSX_ROOTS="${BUILD_DIR}/macos-roots"
-        mkdir -p "${OSX_ROOTS}"
-        curl "${PREVIOUS_DYLIBS_URL}" | tar -xz --strip-components=1 -C "${OSX_ROOTS}"
-    fi
-
-    DEPLOYMENT_TARGET="${BUILDER#apple-system-backdeployment-hardened-}"
-
-    # TODO: On Apple platforms, we never produce libc++abi.1.dylib or libunwind.1.dylib,
-    #       only libc++abi.dylib and libunwind.dylib. Fix that in the build so that the
-    #       tests stop searching for @rpath/libc++abi.1.dylib and @rpath/libunwind.1.dylib.
-    cp "${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}/libc++abi.dylib" \
-       "${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}/libc++abi.1.dylib"
-    cp "${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}/libunwind.dylib" \
-       "${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}/libunwind.1.dylib"
-
     arch="$(uname -m)"
-    PARAMS="target_triple=${arch}-apple-macosx${DEPLOYMENT_TARGET}"
-    PARAMS+=";cxx_runtime_root=${OSX_ROOTS}/macOS/libc++/${DEPLOYMENT_TARGET}"
-    PARAMS+=";abi_runtime_root=${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
-    PARAMS+=";unwind_runtime_root=${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}"
-    PARAMS+=";hardening_mode=fast"
+    version="$(sw_vers --productVersion)"
+    params="target_triple=${arch}-apple-macosx${version}"
+    params+=";hardening_mode=fast"
 
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
-                   -DLIBCXX_TEST_CONFIG="apple-libc++-backdeployment.cfg.in" \
-                   -DLIBCXXABI_TEST_CONFIG="apple-libc++abi-backdeployment.cfg.in" \
-                   -DLIBUNWIND_TEST_CONFIG="apple-libunwind-backdeployment.cfg.in" \
-                   -DLIBCXX_TEST_PARAMS="${PARAMS}" \
-                   -DLIBCXXABI_TEST_PARAMS="${PARAMS}" \
-                   -DLIBUNWIND_TEST_PARAMS="${PARAMS}"
+    # In the Apple system configuration, we build libc++ and libunwind separately.
+    ${CMAKE} \
+        -S "${MONOREPO_ROOT}/runtimes" \
+        -B "${BUILD_DIR}/cxx" \
+        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/cxx" \
+        -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
+        -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
+        -DLIBCXX_CXX_ABI=libcxxabi \
+        -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
+        -DLIBCXX_TEST_CONFIG="apple-libc++-system.cfg.in" \
+        -DLIBCXXABI_TEST_CONFIG="apple-libc++abi-system.cfg.in" \
+        -DLIBCXX_TEST_PARAMS="${params}" \
+        -DLIBCXXABI_TEST_PARAMS="${params}"
 
-    check-runtimes
+    ${CMAKE} \
+        -S "${MONOREPO_ROOT}/runtimes" \
+        -B "${BUILD_DIR}/unwind" \
+        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/unwind" \
+        -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
+        -DLLVM_ENABLE_RUNTIMES="libunwind" \
+        -DLIBUNWIND_TEST_CONFIG="apple-libunwind-system.cfg.in" \
+        -DLIBUNWIND_TEST_PARAMS="${params}" \
+        -DCMAKE_INSTALL_NAME_DIR="/usr/lib/system"
+
+    echo "+++ Running the libc++ tests"
+    ${NINJA} -vC "${BUILD_DIR}/cxx" check-cxx
+
+    echo "+++ Running the libc++abi tests"
+    ${NINJA} -vC "${BUILD_DIR}/cxx" check-cxxabi
+
+    echo "+++ Running the libunwind tests"
+    ${NINJA} -vC "${BUILD_DIR}/unwind" check-unwind
 ;;
-apple-system-backdeployment-*)
+apple-system)
     clean
 
-    if [[ "${OSX_ROOTS}" == "" ]]; then
-        echo "--- Downloading previous macOS dylibs"
-        PREVIOUS_DYLIBS_URL="https://dl.dropboxusercontent.com/s/gmcfxwgl9f9n6pu/libcxx-roots.tar.gz"
-        OSX_ROOTS="${BUILD_DIR}/macos-roots"
-        mkdir -p "${OSX_ROOTS}"
-        curl "${PREVIOUS_DYLIBS_URL}" | tar -xz --strip-components=1 -C "${OSX_ROOTS}"
-    fi
-
-    DEPLOYMENT_TARGET="${BUILDER#apple-system-backdeployment-}"
-
-    # TODO: On Apple platforms, we never produce libc++abi.1.dylib or libunwind.1.dylib,
-    #       only libc++abi.dylib and libunwind.dylib. Fix that in the build so that the
-    #       tests stop searching for @rpath/libc++abi.1.dylib and @rpath/libunwind.1.dylib.
-    cp "${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}/libc++abi.dylib" \
-       "${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}/libc++abi.1.dylib"
-    cp "${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}/libunwind.dylib" \
-       "${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}/libunwind.1.dylib"
-
     arch="$(uname -m)"
-    PARAMS="target_triple=${arch}-apple-macosx${DEPLOYMENT_TARGET}"
-    PARAMS+=";cxx_runtime_root=${OSX_ROOTS}/macOS/libc++/${DEPLOYMENT_TARGET}"
-    PARAMS+=";abi_runtime_root=${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
-    PARAMS+=";unwind_runtime_root=${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}"
+    version="$(sw_vers --productVersion)"
+    params="target_triple=${arch}-apple-macosx${version}"
 
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
-                   -DLIBCXX_TEST_CONFIG="apple-libc++-backdeployment.cfg.in" \
-                   -DLIBCXXABI_TEST_CONFIG="apple-libc++abi-backdeployment.cfg.in" \
-                   -DLIBUNWIND_TEST_CONFIG="apple-libunwind-backdeployment.cfg.in" \
-                   -DLIBCXX_TEST_PARAMS="${PARAMS}" \
-                   -DLIBCXXABI_TEST_PARAMS="${PARAMS}" \
-                   -DLIBUNWIND_TEST_PARAMS="${PARAMS}"
+    # In the Apple system configuration, we build libc++ and libunwind separately.
+    ${CMAKE} \
+        -S "${MONOREPO_ROOT}/runtimes" \
+        -B "${BUILD_DIR}/cxx" \
+        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/cxx" \
+        -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
+        -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
+        -DLIBCXX_CXX_ABI=libcxxabi \
+        -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
+        -DLIBCXX_TEST_CONFIG="apple-libc++-system.cfg.in" \
+        -DLIBCXXABI_TEST_CONFIG="apple-libc++abi-system.cfg.in" \
+        -DLIBCXX_TEST_PARAMS="${params}" \
+        -DLIBCXXABI_TEST_PARAMS="${params}"
 
-    check-runtimes
+    ${CMAKE} \
+        -S "${MONOREPO_ROOT}/runtimes" \
+        -B "${BUILD_DIR}/unwind" \
+        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/unwind" \
+        -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
+        -DLLVM_ENABLE_RUNTIMES="libunwind" \
+        -DLIBUNWIND_TEST_CONFIG="apple-libunwind-system.cfg.in" \
+        -DLIBUNWIND_TEST_PARAMS="${params}" \
+        -DCMAKE_INSTALL_NAME_DIR="/usr/lib/system"
+
+    echo "+++ Running the libc++ tests"
+    ${NINJA} -vC "${BUILD_DIR}/cxx" check-cxx
+
+    echo "+++ Running the libc++abi tests"
+    ${NINJA} -vC "${BUILD_DIR}/cxx" check-cxxabi
+
+    echo "+++ Running the libunwind tests"
+    ${NINJA} -vC "${BUILD_DIR}/unwind" check-unwind
 ;;
 benchmarks)
     clean

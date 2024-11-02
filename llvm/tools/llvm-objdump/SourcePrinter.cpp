@@ -344,7 +344,8 @@ bool SourcePrinter::cacheSource(const DILineInfo &LineInfo) {
   if (LineInfo.Source) {
     Buffer = MemoryBuffer::getMemBuffer(*LineInfo.Source);
   } else {
-    auto BufferOrError = MemoryBuffer::getFile(LineInfo.FileName);
+    auto BufferOrError =
+        MemoryBuffer::getFile(LineInfo.FileName, /*IsText=*/true);
     if (!BufferOrError) {
       if (MissingSources.insert(LineInfo.FileName).second)
         reportWarning("failed to find source " + LineInfo.FileName,

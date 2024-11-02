@@ -637,6 +637,12 @@ return value must be trivially destructible. The calling convention of the
 caller and callee must match, and they must not be variadic functions or have
 old style K&R C function declarations.
 
+The lifetimes of all local variables and function parameters end immediately
+before the call to the function. This means that it is undefined behaviour to
+pass a pointer or reference to a local variable to the called function, which
+is not the case without the attribute. Clang will emit a warning in common
+cases where this happens.
+
 ``clang::musttail`` provides assurances that the tail call can be optimized on
 all targets, not just one.
   }];
@@ -6690,6 +6696,20 @@ When the Owner's lifetime ends, it will consider the Pointer to be dangling.
     P.getInt(); // P is dangling
   }
 
+If a template class is annotated with ``[[gsl::Owner]]``, and the first
+instantiated template argument is a pointer type (raw pointer, or ``[[gsl::Pointer]]``),
+the analysis will consider the instantiated class as a container of the pointer.
+When constructing such an object from a GSL owner object, the analysis will
+assume that the container holds a pointer to the owner object. Consequently,
+when the owner object is destroyed, the pointer will be considered dangling.
+
+.. code-block:: c++
+
+   int f() {
+     std::vector<std::string_view> v = {std::string()}; // v holds a dangling pointer.
+     std::optional<std::string_view> o = std::string(); // o holds a dangling pointer.
+   }
+
 }];
 }
 
@@ -8462,9 +8482,9 @@ compiler warnings:
 - A redeclaration of a ``nonblocking`` or ``nonallocating`` function must also be declared with
   the same attribute (or a stronger one). A redeclaration may add an attribute.
 
-The warnings are controlled by ``-Wfunction-effects``, which is enabled by default.
+The warnings are controlled by ``-Wfunction-effects``, which is disabled by default.
 
-In a future commit, the compiler will diagnose function calls from ``nonblocking`` and ``nonallocating``
+The compiler also diagnoses function calls from ``nonblocking`` and ``nonallocating``
 functions to other functions which lack the appropriate attribute.
   }];
 }

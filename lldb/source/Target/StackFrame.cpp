@@ -1079,12 +1079,12 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
   return valobj_sp;
 }
 
-bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
+llvm::Error StackFrame::GetFrameBaseValue(Scalar &frame_base) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_cfa_is_valid) {
     m_frame_base_error = Status::FromErrorString(
         "No frame base available for this historical stack frame.");
-    return false;
+    return m_frame_base_error.ToError();
   }
 
   if (m_flags.IsClear(GOT_FRAME_BASE)) {
@@ -1113,12 +1113,11 @@ bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
     }
   }
 
-  if (m_frame_base_error.Success())
-    frame_base = m_frame_base;
+  if (m_frame_base_error.Fail())
+    return m_frame_base_error.ToError();
 
-  if (error_ptr)
-    *error_ptr = m_frame_base_error.Clone();
-  return m_frame_base_error.Success();
+  frame_base = m_frame_base;
+  return llvm::Error::success();
 }
 
 DWARFExpressionList *StackFrame::GetFrameBaseExpression(Status *error_ptr) {

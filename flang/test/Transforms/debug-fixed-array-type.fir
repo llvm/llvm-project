@@ -31,9 +31,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 
 // CHECK-DAG: #[[INT:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 32, encoding = DW_ATE_signed>
 // CHECK-DAG: #[[REAL:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real", sizeInBits = 32, encoding = DW_ATE_float>
-// CHECK-DAG: #[[D1TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}baseType = #[[INT]], elements = #llvm.di_subrange<count = 3 : i64, lowerBound = 1 : i64>>
-// CHECK-DAG: #[[D2TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}baseType = #[[INT]], elements = #llvm.di_subrange<count = 2 : i64, lowerBound = 1 : i64>, #llvm.di_subrange<count = 5 : i64, lowerBound = 1 : i64>>
-// CHECK-DAG: #[[D3TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}baseType = #[[REAL]], elements = #llvm.di_subrange<count = 6 : i64, lowerBound = 1 : i64>, #llvm.di_subrange<count = 8 : i64, lowerBound = 1 : i64>, #llvm.di_subrange<count = 7 : i64, lowerBound = 1 : i64>>
+// CHECK-DAG: #[[D1TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}baseType = #[[INT]], elements = #llvm.di_subrange<count = 3 : i64>>
+// CHECK-DAG: #[[D2TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}baseType = #[[INT]], elements = #llvm.di_subrange<count = 2 : i64>, #llvm.di_subrange<count = 5 : i64>>
+// CHECK-DAG: #[[D3TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}baseType = #[[REAL]], elements = #llvm.di_subrange<count = 6 : i64>, #llvm.di_subrange<count = 8 : i64>, #llvm.di_subrange<count = 7 : i64>>
 // CHECK-DAG: #[[D4TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, baseType = #di_basic_type, elements = #llvm.di_subrange<count = 6 : i64, lowerBound = -2 : i64>, #llvm.di_subrange<count = 7 : i64, lowerBound = 4 : i64>>
 // CHECK-DAG: #llvm.di_local_variable<{{.*}}name = "d1"{{.*}}type = #[[D1TY]]>
 // CHECK-DAG: #llvm.di_local_variable<{{.*}}name = "d2"{{.*}}type = #[[D2TY]]>

@@ -63,7 +63,7 @@ for.end:
 
 ; CHECK-LABEL: @geppre
 ; CHECK-LABEL: middle.block:
-; CHECK: %ind.escape = getelementptr i8, ptr %ptr, i64 496
+; CHECK: %ind.escape = getelementptr i8, ptr %ind.end, i64 -16
 ; CHECK-LABEL: for.end:
 ; CHECK: %[[RET:.*]] = phi ptr [ {{.*}}, %for.body ], [ %ind.escape, %middle.block ]
 ; CHECK: ret ptr %[[RET]]
@@ -85,9 +85,7 @@ for.end:
 
 ; CHECK-LABEL: @both
 ; CHECK-LABEL: middle.block:
-; CHECK: %[[END:.*]] = sub i64 %n.vec, 1
-; CHECK: %[[END_OFFSET:.*]] = mul i64 %[[END]], 4
-; CHECK: %ind.escape = getelementptr i8, ptr %base, i64 %[[END_OFFSET]]
+; CHECK: %ind.escape = getelementptr i8, ptr %ind.end1, i64 -4
 ; CHECK-LABEL: for.end:
 ; CHECK: %[[RET:.*]] = phi ptr [ %inc.lag1, %for.body ], [ %ind.escape, %middle.block ]
 ; CHECK: ret ptr %[[RET]]
@@ -142,7 +140,7 @@ for.end:
 ; CHECK:   %[[N_VEC:.+]] = sub i32 %[[T5]], %[[N_MOD_VF]]
 ; CHECK: middle.block
 ; CHECK:   %[[CMP:.+]] = icmp eq i32 %[[T5]], %[[N_VEC]]
-; CHECK:   %ind.escape = add i32 %[[T15]],
+; CHECK:   %ind.escape = sub i32 %ind.end8, -8
 ; CHECK:   br i1 %[[CMP]], label %BB3, label %scalar.ph
 define void @PR30742() {
 BB0:

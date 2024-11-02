@@ -87,7 +87,7 @@ Function *getBasePtrIntrinsic(Module &M, bool IsV5OrAbove) {
 static bool processUse(CallInst *CI, bool IsV5OrAbove) {
   Function *F = CI->getParent()->getParent();
 
-  auto MD = F->getMetadata("reqd_work_group_size");
+  auto *MD = F->getMetadata("reqd_work_group_size");
   const bool HasReqdWorkGroupSize = MD && MD->getNumOperands() == 3;
 
   const bool HasUniformWorkGroupSize =

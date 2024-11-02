@@ -930,6 +930,105 @@ public:
   }
 };
 
+/// This class represents the 'permutation' clause in the
+/// '#pragma omp interchange' directive.
+///
+/// \code{.c}
+///   #pragma omp interchange permutation(2,1)
+///   for (int i = 0; i < 64; ++i)
+///     for (int j = 0; j < 64; ++j)
+/// \endcode
+class OMPPermutationClause final
+    : public OMPClause,
+      private llvm::TrailingObjects<OMPSizesClause, Expr *> {
+  friend class OMPClauseReader;
+  friend class llvm::TrailingObjects<OMPSizesClause, Expr *>;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Number of arguments in the clause, and hence also the number of loops to
+  /// be permuted.
+  unsigned NumLoops;
+
+  /// Sets the permutation index expressions.
+  void setArgRefs(ArrayRef<Expr *> VL) {
+    assert(VL.size() == NumLoops && "Expecting one expression per loop");
+    llvm::copy(VL, static_cast<OMPPermutationClause *>(this)
+                       ->template getTrailingObjects<Expr *>());
+  }
+
+  /// Build an empty clause.
+  explicit OMPPermutationClause(int NumLoops)
+      : OMPClause(llvm::omp::OMPC_permutation, SourceLocation(),
+                  SourceLocation()),
+        NumLoops(NumLoops) {}
+
+public:
+  /// Build a 'permutation' clause AST node.
+  ///
+  /// \param C         Context of the AST.
+  /// \param StartLoc  Location of the 'permutation' identifier.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc    Location of ')'.
+  /// \param Args      Content of the clause.
+  static OMPPermutationClause *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+         SourceLocation EndLoc, ArrayRef<Expr *> Args);
+
+  /// Build an empty 'permutation' AST node for deserialization.
+  ///
+  /// \param C        Context of the AST.
+  /// \param NumLoops Number of arguments in the clause.
+  static OMPPermutationClause *CreateEmpty(const ASTContext &C,
+                                           unsigned NumLoops);
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns the number of list items.
+  unsigned getNumLoops() const { return NumLoops; }
+
+  /// Returns the permutation index expressions.
+  ///@{
+  MutableArrayRef<Expr *> getArgsRefs() {
+    return MutableArrayRef<Expr *>(static_cast<OMPPermutationClause *>(this)
+                                       ->template getTrailingObjects<Expr *>(),
+                                   NumLoops);
+  }
+  ArrayRef<Expr *> getArgsRefs() const {
+    return ArrayRef<Expr *>(static_cast<const OMPPermutationClause *>(this)
+                                ->template getTrailingObjects<Expr *>(),
+                            NumLoops);
+  }
+  ///@}
+
+  child_range children() {
+    MutableArrayRef<Expr *> Args = getArgsRefs();
+    return child_range(reinterpret_cast<Stmt **>(Args.begin()),
+                       reinterpret_cast<Stmt **>(Args.end()));
+  }
+  const_child_range children() const {
+    ArrayRef<Expr *> Args = getArgsRefs();
+    return const_child_range(reinterpret_cast<Stmt *const *>(Args.begin()),
+                             reinterpret_cast<Stmt *const *>(Args.end()));
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_permutation;
+  }
+};
+
 /// Representation of the 'full' clause of the '#pragma omp unroll' directive.
 ///
 /// \code

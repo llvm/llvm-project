@@ -266,8 +266,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       }
     }
     // Avoid AsanInitInternal cycle, Issue #64126.
-    if (ToolChain.getTriple().isX86() && SA.needsSharedRt() &&
-        SA.needsAsanRt()) {
+    if (SA.needsSharedRt() && SA.needsAsanRt()) {
       CmdArgs.push_back("-z");
       CmdArgs.push_back("now");
     }
@@ -334,10 +333,11 @@ Solaris::Solaris(const Driver &D, const llvm::Triple &Triple,
 }
 
 SanitizerMask Solaris::getSupportedSanitizers() const {
+  const bool IsSparc = getTriple().getArch() == llvm::Triple::sparc;
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
-  // FIXME: Omit X86_64 until 64-bit support is figured out.
-  if (IsX86) {
+  // FIXME: Omit SparcV9 and X86_64 until 64-bit support is figured out.
+  if (IsSparc || IsX86) {
     Res |= SanitizerKind::Address;
     Res |= SanitizerKind::PointerCompare;
     Res |= SanitizerKind::PointerSubtract;

@@ -479,7 +479,7 @@ void CompressInstEmitter::evaluateCompressPat(const Record *Rec) {
 
   // Get the target features for the CompressPat.
   std::vector<const Record *> PatReqFeatures;
-  std::vector<const Record *> RF = Rec->getValueAsListOfConstDefs("Predicates");
+  std::vector<const Record *> RF = Rec->getValueAsListOfDefs("Predicates");
   copy_if(RF, std::back_inserter(PatReqFeatures), [](const Record *R) {
     return R->getValueAsBit("AssemblerMatcherPredicate");
   });
@@ -688,7 +688,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     // Add Dest instruction required features.
     std::vector<const Record *> ReqFeatures;
     std::vector<const Record *> RF =
-        Dest.TheDef->getValueAsListOfConstDefs("Predicates");
+        Dest.TheDef->getValueAsListOfDefs("Predicates");
     copy_if(RF, std::back_inserter(ReqFeatures), [](const Record *R) {
       return R->getValueAsBit("AssemblerMatcherPredicate");
     });

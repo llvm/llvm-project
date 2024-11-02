@@ -143,6 +143,9 @@ TEST_F(ThreadListerTest, ThreadListerSeesAllSpawnedThreads) {
   std::vector<tid_t> listed_tids = ReadTidsToVector(&thread_lister);
   ASSERT_TRUE(HasElement(listed_tids, self_tid));
   ASSERT_TRUE(Includes(listed_tids, tids_));
+
+  ASSERT_NE(nullptr, thread_lister.LoadStatus(self_tid));
+  for (auto tid : tids_) ASSERT_NE(nullptr, thread_lister.LoadStatus(tid));
 }
 
 TEST_F(ThreadListerTest, DoNotForgetThreads) {

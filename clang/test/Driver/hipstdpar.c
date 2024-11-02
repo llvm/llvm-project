@@ -1,6 +1,7 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 // REQUIRES: system-linux
+// UNSUPPORTED: target={{.*}}-zos{{.*}}
 // XFAIL: target={{.*}}hexagon{{.*}}
 // XFAIL: target={{.*}}-scei{{.*}}
 // XFAIL: target={{.*}}-sie{{.*}}

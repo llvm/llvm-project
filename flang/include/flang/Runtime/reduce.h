@@ -210,7 +210,7 @@ void RTDECL(ReduceReal10DimValue)(Descriptor &result, const Descriptor &array,
     const CppTypeFor<TypeCategory::Real, 10> *identity = nullptr,
     bool ordered = true);
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppFloat128Type RTDECL(ReduceReal16Ref)(const Descriptor &,
     ReferenceReductionOperation<CppFloat128Type>, const char *source, int line,
     int dim = 0, const Descriptor *mask = nullptr,
@@ -351,7 +351,7 @@ void RTDECL(CppReduceComplex10DimValue)(Descriptor &result,
     const CppTypeFor<TypeCategory::Complex, 10> *identity = nullptr,
     bool ordered = true);
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 void RTDECL(CppReduceComplex16Ref)(CppTypeFor<TypeCategory::Complex, 16> &,
     const Descriptor &,
     ReferenceReductionOperation<CppTypeFor<TypeCategory::Complex, 16>>,

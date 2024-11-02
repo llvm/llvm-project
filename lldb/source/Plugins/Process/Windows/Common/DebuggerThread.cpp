@@ -374,7 +374,6 @@ DebuggerThread::HandleCreateProcessEvent(const CREATE_PROCESS_DEBUG_INFO &info,
   std::string thread_name;
   llvm::raw_string_ostream name_stream(thread_name);
   name_stream << "lldb.plugin.process-windows.secondary[" << process_id << "]";
-  name_stream.flush();
   llvm::set_thread_name(thread_name);
 
   // info.hProcess and info.hThread are closed automatically by Windows when

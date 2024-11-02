@@ -221,9 +221,11 @@
 #endif
 
 #if TEST_STD_VER > 17
-#define TEST_CONSTINIT constinit
+#  define TEST_CONSTINIT constinit
+#elif __has_cpp_attribute(clang::require_constant_initialization)
+#  define TEST_CONSTINIT [[clang::require_constant_initialization]]
 #else
-#define TEST_CONSTINIT
+#  define TEST_CONSTINIT
 #endif
 
 #if TEST_STD_VER < 11

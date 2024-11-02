@@ -401,6 +401,194 @@ void SemaHLSL::DiagnoseAttrStageMismatch(
       << (AllowedStages.size() != 1) << join(StageStrings, ", ");
 }
 
+template <CastKind Kind>
+static void castVector(Sema &S, ExprResult &E, QualType &Ty, unsigned Sz) {
+  if (const auto *VTy = Ty->getAs<VectorType>())
+    Ty = VTy->getElementType();
+  Ty = S.getASTContext().getExtVectorType(Ty, Sz);
+  E = S.ImpCastExprToType(E.get(), Ty, Kind);
+}
+
+template <CastKind Kind>
+static QualType castElement(Sema &S, ExprResult &E, QualType Ty) {
+  E = S.ImpCastExprToType(E.get(), Ty, Kind);
+  return Ty;
+}
+
+static QualType handleFloatVectorBinOpConversion(
+    Sema &SemaRef, ExprResult &LHS, ExprResult &RHS, QualType LHSType,
+    QualType RHSType, QualType LElTy, QualType RElTy, bool IsCompAssign) {
+  bool LHSFloat = LElTy->isRealFloatingType();
+  bool RHSFloat = RElTy->isRealFloatingType();
+
+  if (LHSFloat && RHSFloat) {
+    if (IsCompAssign ||
+        SemaRef.getASTContext().getFloatingTypeOrder(LElTy, RElTy) > 0)
+      return castElement<CK_FloatingCast>(SemaRef, RHS, LHSType);
+
+    return castElement<CK_FloatingCast>(SemaRef, LHS, RHSType);
+  }
+
+  if (LHSFloat)
+    return castElement<CK_IntegralToFloating>(SemaRef, RHS, LHSType);
+
+  assert(RHSFloat);
+  if (IsCompAssign)
+    return castElement<clang::CK_FloatingToIntegral>(SemaRef, RHS, LHSType);
+
+  return castElement<CK_IntegralToFloating>(SemaRef, LHS, RHSType);
+}
+
+static QualType handleIntegerVectorBinOpConversion(
+    Sema &SemaRef, ExprResult &LHS, ExprResult &RHS, QualType LHSType,
+    QualType RHSType, QualType LElTy, QualType RElTy, bool IsCompAssign) {
+
+  int IntOrder = SemaRef.Context.getIntegerTypeOrder(LElTy, RElTy);
+  bool LHSSigned = LElTy->hasSignedIntegerRepresentation();
+  bool RHSSigned = RElTy->hasSignedIntegerRepresentation();
+  auto &Ctx = SemaRef.getASTContext();
+
+  // If both types have the same signedness, use the higher ranked type.
+  if (LHSSigned == RHSSigned) {
+    if (IsCompAssign || IntOrder >= 0)
+      return castElement<CK_IntegralCast>(SemaRef, RHS, LHSType);
+
+    return castElement<CK_IntegralCast>(SemaRef, LHS, RHSType);
+  }
+
+  // If the unsigned type has greater than or equal rank of the signed type, use
+  // the unsigned type.
+  if (IntOrder != (LHSSigned ? 1 : -1)) {
+    if (IsCompAssign || RHSSigned)
+      return castElement<CK_IntegralCast>(SemaRef, RHS, LHSType);
+    return castElement<CK_IntegralCast>(SemaRef, LHS, RHSType);
+  }
+
+  // At this point the signed type has higher rank than the unsigned type, which
+  // means it will be the same size or bigger. If the signed type is bigger, it
+  // can represent all the values of the unsigned type, so select it.
+  if (Ctx.getIntWidth(LElTy) != Ctx.getIntWidth(RElTy)) {
+    if (IsCompAssign || LHSSigned)
+      return castElement<CK_IntegralCast>(SemaRef, RHS, LHSType);
+    return castElement<CK_IntegralCast>(SemaRef, LHS, RHSType);
+  }
+
+  // This is a bit of an odd duck case in HLSL. It shouldn't happen, but can due
+  // to C/C++ leaking through. The place this happens today is long vs long
+  // long. When arguments are vector<unsigned long, N> and vector<long long, N>,
+  // the long long has higher rank than long even though they are the same size.
+
+  // If this is a compound assignment cast the right hand side to the left hand
+  // side's type.
+  if (IsCompAssign)
+    return castElement<CK_IntegralCast>(SemaRef, RHS, LHSType);
+
+  // If this isn't a compound assignment we convert to unsigned long long.
+  QualType ElTy = Ctx.getCorrespondingUnsignedType(LHSSigned ? LElTy : RElTy);
+  QualType NewTy = Ctx.getExtVectorType(
+      ElTy, RHSType->castAs<VectorType>()->getNumElements());
+  (void)castElement<CK_IntegralCast>(SemaRef, RHS, NewTy);
+
+  return castElement<CK_IntegralCast>(SemaRef, LHS, NewTy);
+}
+
+static CastKind getScalarCastKind(ASTContext &Ctx, QualType DestTy,
+                                  QualType SrcTy) {
+  if (DestTy->isRealFloatingType() && SrcTy->isRealFloatingType())
+    return CK_FloatingCast;
+  if (DestTy->isIntegralType(Ctx) && SrcTy->isIntegralType(Ctx))
+    return CK_IntegralCast;
+  if (DestTy->isRealFloatingType())
+    return CK_IntegralToFloating;
+  assert(SrcTy->isRealFloatingType() && DestTy->isIntegralType(Ctx));
+  return CK_FloatingToIntegral;
+}
+
+QualType SemaHLSL::handleVectorBinOpConversion(ExprResult &LHS, ExprResult &RHS,
+                                               QualType LHSType,
+                                               QualType RHSType,
+                                               bool IsCompAssign) {
+  const auto *LVecTy = LHSType->getAs<VectorType>();
+  const auto *RVecTy = RHSType->getAs<VectorType>();
+  auto &Ctx = getASTContext();
+
+  // If the LHS is not a vector and this is a compound assignment, we truncate
+  // the argument to a scalar then convert it to the LHS's type.
+  if (!LVecTy && IsCompAssign) {
+    QualType RElTy = RHSType->castAs<VectorType>()->getElementType();
+    RHS = SemaRef.ImpCastExprToType(RHS.get(), RElTy, CK_HLSLVectorTruncation);
+    RHSType = RHS.get()->getType();
+    if (Ctx.hasSameUnqualifiedType(LHSType, RHSType))
+      return LHSType;
+    RHS = SemaRef.ImpCastExprToType(RHS.get(), LHSType,
+                                    getScalarCastKind(Ctx, LHSType, RHSType));
+    return LHSType;
+  }
+
+  unsigned EndSz = std::numeric_limits<unsigned>::max();
+  unsigned LSz = 0;
+  if (LVecTy)
+    LSz = EndSz = LVecTy->getNumElements();
+  if (RVecTy)
+    EndSz = std::min(RVecTy->getNumElements(), EndSz);
+  assert(EndSz != std::numeric_limits<unsigned>::max() &&
+         "one of the above should have had a value");
+
+  // In a compound assignment, the left operand does not change type, the right
+  // operand is converted to the type of the left operand.
+  if (IsCompAssign && LSz != EndSz) {
+    Diag(LHS.get()->getBeginLoc(),
+         diag::err_hlsl_vector_compound_assignment_truncation)
+        << LHSType << RHSType;
+    return QualType();
+  }
+
+  if (RVecTy && RVecTy->getNumElements() > EndSz)
+    castVector<CK_HLSLVectorTruncation>(SemaRef, RHS, RHSType, EndSz);
+  if (!IsCompAssign && LVecTy && LVecTy->getNumElements() > EndSz)
+    castVector<CK_HLSLVectorTruncation>(SemaRef, LHS, LHSType, EndSz);
+
+  if (!RVecTy)
+    castVector<CK_VectorSplat>(SemaRef, RHS, RHSType, EndSz);
+  if (!IsCompAssign && !LVecTy)
+    castVector<CK_VectorSplat>(SemaRef, LHS, LHSType, EndSz);
+
+  // If we're at the same type after resizing we can stop here.
+  if (Ctx.hasSameUnqualifiedType(LHSType, RHSType))
+    return Ctx.getCommonSugaredType(LHSType, RHSType);
+
+  QualType LElTy = LHSType->castAs<VectorType>()->getElementType();
+  QualType RElTy = RHSType->castAs<VectorType>()->getElementType();
+
+  // Handle conversion for floating point vectors.
+  if (LElTy->isRealFloatingType() || RElTy->isRealFloatingType())
+    return handleFloatVectorBinOpConversion(SemaRef, LHS, RHS, LHSType, RHSType,
+                                            LElTy, RElTy, IsCompAssign);
+
+  assert(LElTy->isIntegralType(Ctx) && RElTy->isIntegralType(Ctx) &&
+         "HLSL Vectors can only contain integer or floating point types");
+  return handleIntegerVectorBinOpConversion(SemaRef, LHS, RHS, LHSType, RHSType,
+                                            LElTy, RElTy, IsCompAssign);
+}
+
+void SemaHLSL::emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS,
+                                        BinaryOperatorKind Opc) {
+  assert((Opc == BO_LOr || Opc == BO_LAnd) &&
+         "Called with non-logical operator");
+  llvm::SmallVector<char, 256> Buff;
+  llvm::raw_svector_ostream OS(Buff);
+  PrintingPolicy PP(SemaRef.getLangOpts());
+  StringRef NewFnName = Opc == BO_LOr ? "or" : "and";
+  OS << NewFnName << "(";
+  LHS->printPretty(OS, nullptr, PP);
+  OS << ", ";
+  RHS->printPretty(OS, nullptr, PP);
+  OS << ")";
+  SourceRange FullRange = SourceRange(LHS->getBeginLoc(), RHS->getEndLoc());
+  SemaRef.Diag(LHS->getBeginLoc(), diag::note_function_suggestion)
+      << NewFnName << FixItHint::CreateReplacement(FullRange, OS.str());
+}
+
 void SemaHLSL::handleNumThreadsAttr(Decl *D, const ParsedAttr &AL) {
   llvm::VersionTuple SMVersion =
       getASTContext().getTargetInfo().getTriple().getOSVersion();
@@ -693,13 +881,19 @@ bool clang::CreateHLSLAttributedResourceType(
 // HLSL resource. The attributes are collected in HLSLResourcesTypeAttrs and at
 // the end of the declaration they are applied to the declaration type by
 // wrapping it in HLSLAttributedResourceType.
-bool SemaHLSL::handleResourceTypeAttr(const ParsedAttr &AL) {
-  Attr *A = nullptr;
+bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
+  // only allow resource type attributes on intangible types
+  if (!T->isHLSLResourceType()) {
+    Diag(AL.getLoc(), diag::err_hlsl_attribute_needs_intangible_type)
+        << AL << getASTContext().HLSLResourceTy;
+    return false;
+  }
 
   // validate number of arguments
   if (!AL.checkExactlyNumArgs(SemaRef, AL.getMinArgs()))
     return false;
 
+  Attr *A = nullptr;
   switch (AL.getKind()) {
   case ParsedAttr::AT_HLSLResourceClass: {
     if (!AL.isArgIdent(0)) {
@@ -805,7 +999,7 @@ static CXXRecordDecl *getRecordDeclFromVarDecl(VarDecl *VD) {
   return TheRecordDecl;
 }
 
-const HLSLAttributedResourceType *
+static const HLSLAttributedResourceType *
 findAttributedResourceTypeOnField(VarDecl *VD) {
   assert(VD != nullptr && "expected VarDecl");
   if (RecordDecl *RD = getRecordDeclFromVarDecl(VD)) {
@@ -1417,7 +1611,7 @@ void SemaHLSL::DiagnoseAvailabilityViolations(TranslationUnitDecl *TU) {
 }
 
 // Helper function for CheckHLSLBuiltinFunctionCall
-bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
+static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   assert(TheCall->getNumArgs() > 1);
   ExprResult A = TheCall->getArg(0);
 
@@ -1467,7 +1661,7 @@ bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   return true;
 }
 
-bool CheckArgsTypesAreCorrect(
+static bool CheckArgsTypesAreCorrect(
     Sema *S, CallExpr *TheCall, QualType ExpectedType,
     llvm::function_ref<bool(clang::QualType PassedType)> Check) {
   for (unsigned i = 0; i < TheCall->getNumArgs(); ++i) {
@@ -1485,7 +1679,7 @@ bool CheckArgsTypesAreCorrect(
   return false;
 }
 
-bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
+static bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
   auto checkAllFloatTypes = [](clang::QualType PassedType) -> bool {
     return !PassedType->hasFloatingRepresentation();
   };
@@ -1493,7 +1687,7 @@ bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
                                   checkAllFloatTypes);
 }
 
-bool CheckFloatOrHalfRepresentations(Sema *S, CallExpr *TheCall) {
+static bool CheckFloatOrHalfRepresentations(Sema *S, CallExpr *TheCall) {
   auto checkFloatorHalf = [](clang::QualType PassedType) -> bool {
     clang::QualType BaseType =
         PassedType->isVectorType()
@@ -1505,7 +1699,7 @@ bool CheckFloatOrHalfRepresentations(Sema *S, CallExpr *TheCall) {
                                   checkFloatorHalf);
 }
 
-bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall) {
+static bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall) {
   auto checkDoubleVector = [](clang::QualType PassedType) -> bool {
     if (const auto *VecTy = PassedType->getAs<VectorType>())
       return VecTy->getElementType()->isDoubleType();
@@ -1514,16 +1708,16 @@ bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall) {
   return CheckArgsTypesAreCorrect(S, TheCall, S->Context.FloatTy,
                                   checkDoubleVector);
 }
-bool CheckFloatingOrSignedIntRepresentation(Sema *S, CallExpr *TheCall) {
+static bool CheckFloatingOrIntRepresentation(Sema *S, CallExpr *TheCall) {
   auto checkAllSignedTypes = [](clang::QualType PassedType) -> bool {
-    return !PassedType->hasSignedIntegerRepresentation() &&
+    return !PassedType->hasIntegerRepresentation() &&
            !PassedType->hasFloatingRepresentation();
   };
   return CheckArgsTypesAreCorrect(S, TheCall, S->Context.IntTy,
                                   checkAllSignedTypes);
 }
 
-bool CheckUnsignedIntRepresentation(Sema *S, CallExpr *TheCall) {
+static bool CheckUnsignedIntRepresentation(Sema *S, CallExpr *TheCall) {
   auto checkAllUnsignedTypes = [](clang::QualType PassedType) -> bool {
     return !PassedType->hasUnsignedIntegerRepresentation();
   };
@@ -1531,8 +1725,8 @@ bool CheckUnsignedIntRepresentation(Sema *S, CallExpr *TheCall) {
                                   checkAllUnsignedTypes);
 }
 
-void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
-                                QualType ReturnType) {
+static void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
+                                       QualType ReturnType) {
   auto *VecTyA = TheCall->getArg(0)->getType()->getAs<VectorType>();
   if (VecTyA)
     ReturnType = S->Context.getVectorType(ReturnType, VecTyA->getNumElements(),
@@ -1634,6 +1828,41 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_cross: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+    if (CheckVectorElementCallArgs(&SemaRef, TheCall))
+      return true;
+    if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
+      return true;
+    // ensure both args have 3 elements
+    int NumElementsArg1 =
+        TheCall->getArg(0)->getType()->getAs<VectorType>()->getNumElements();
+    int NumElementsArg2 =
+        TheCall->getArg(1)->getType()->getAs<VectorType>()->getNumElements();
+
+    if (NumElementsArg1 != 3) {
+      int LessOrMore = NumElementsArg1 > 3 ? 1 : 0;
+      SemaRef.Diag(TheCall->getBeginLoc(),
+                   diag::err_vector_incorrect_num_elements)
+          << LessOrMore << 3 << NumElementsArg1 << /*operand*/ 1;
+      return true;
+    }
+    if (NumElementsArg2 != 3) {
+      int LessOrMore = NumElementsArg2 > 3 ? 1 : 0;
+
+      SemaRef.Diag(TheCall->getBeginLoc(),
+                   diag::err_vector_incorrect_num_elements)
+          << LessOrMore << 3 << NumElementsArg2 << /*operand*/ 1;
+      return true;
+    }
+
+    ExprResult A = TheCall->getArg(0);
+    QualType ArgTyA = A.get()->getType();
+    // return type is the same as the input type
+    TheCall->setType(ArgTyA);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_dot: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
@@ -1667,6 +1896,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_elementwise_degrees:
+  case Builtin::BI__builtin_hlsl_elementwise_radians:
   case Builtin::BI__builtin_hlsl_elementwise_rsqrt:
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
@@ -1736,7 +1967,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
-    if (CheckFloatingOrSignedIntRepresentation(&SemaRef, TheCall))
+    if (CheckFloatingOrIntRepresentation(&SemaRef, TheCall))
       return true;
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
@@ -1762,15 +1993,22 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
+    if (SemaRef.checkArgCount(TheCall, 0))
+      return true;
+    break;
+  }
   case Builtin::BI__builtin_elementwise_acos:
   case Builtin::BI__builtin_elementwise_asin:
   case Builtin::BI__builtin_elementwise_atan:
+  case Builtin::BI__builtin_elementwise_atan2:
   case Builtin::BI__builtin_elementwise_ceil:
   case Builtin::BI__builtin_elementwise_cos:
   case Builtin::BI__builtin_elementwise_cosh:
   case Builtin::BI__builtin_elementwise_exp:
   case Builtin::BI__builtin_elementwise_exp2:
   case Builtin::BI__builtin_elementwise_floor:
+  case Builtin::BI__builtin_elementwise_fmod:
   case Builtin::BI__builtin_elementwise_log:
   case Builtin::BI__builtin_elementwise_log2:
   case Builtin::BI__builtin_elementwise_log10:

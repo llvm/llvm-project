@@ -117,10 +117,10 @@ int ShowEnabledWarnings::run(unsigned int argc, char **argv, raw_ostream &Out) {
   for (const DiagnosticRecord &DR : getBuiltinDiagnosticsByName()) {
     unsigned DiagID = DR.DiagID;
 
-    if (DiagnosticIDs{}.isNote(DiagID))
+    if (DiagnosticIDs::isBuiltinNote(DiagID))
       continue;
 
-    if (!DiagnosticIDs{}.isWarningOrExtension(DiagID))
+    if (!DiagnosticIDs::isBuiltinWarningOrExtension(DiagID))
       continue;
 
     DiagnosticsEngine::Level DiagLevel =
@@ -128,7 +128,7 @@ int ShowEnabledWarnings::run(unsigned int argc, char **argv, raw_ostream &Out) {
     if (DiagLevel == DiagnosticsEngine::Ignored)
       continue;
 
-    StringRef WarningOpt = DiagnosticIDs{}.getWarningOptionForDiag(DiagID);
+    StringRef WarningOpt = DiagnosticIDs::getWarningOptionForDiag(DiagID);
     Active.push_back(PrettyDiag(DR.getName(), WarningOpt, DiagLevel));
   }
 

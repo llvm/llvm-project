@@ -215,7 +215,7 @@ void X86InstrMappingEmitter::emitCompressEVEXTable(
     StringRef Name = Rec->getName();
     const CodeGenInstruction *NewInst = nullptr;
     if (ManualMap.find(Name) != ManualMap.end()) {
-      Record *NewRec = Records.getDef(ManualMap.at(Rec->getName()));
+      const Record *NewRec = Records.getDef(ManualMap.at(Rec->getName()));
       assert(NewRec && "Instruction not found!");
       NewInst = &Target.getInstruction(NewRec);
     } else if (Name.ends_with("_EVEX")) {

@@ -125,6 +125,22 @@ void Host::SystemLog(Severity severity, llvm::StringRef message) {
 #endif
 #endif
 
+static constexpr Log::Category g_categories[] = {
+    {{"system"}, {"system log"}, SystemLog::System}};
+
+static Log::Channel g_system_channel(g_categories, SystemLog::System);
+static Log g_system_log(g_system_channel);
+
+template <> Log::Channel &lldb_private::LogChannelFor<SystemLog>() {
+  return g_system_channel;
+}
+
+void LogChannelSystem::Initialize() {
+  g_system_log.Enable(std::make_shared<SystemLogHandler>());
+}
+
+void LogChannelSystem::Terminate() { g_system_log.Disable(); }
+
 #if !defined(__APPLE__) && !defined(_WIN32)
 static thread_result_t
 MonitorChildProcessThreadFunction(::pid_t pid,

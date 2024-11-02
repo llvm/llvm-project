@@ -1493,8 +1493,6 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(expected&&) = delete;
-
   _LIBCPP_HIDE_FROM_ABI constexpr expected&
   operator=(expected&& __rhs) noexcept(is_nothrow_move_assignable_v<_Err> && is_nothrow_move_constructible_v<_Err>)
     requires(is_move_assignable_v<_Err> && is_move_constructible_v<_Err>)

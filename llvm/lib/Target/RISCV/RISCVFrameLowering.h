@@ -91,6 +91,10 @@ private:
   void emitCalleeSavedRVVPrologCFI(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MI,
                                    bool HasFP) const;
+  void deallocateStack(MachineFunction &MF, MachineBasicBlock &MBB,
+                       MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
+                       uint64_t StackSize, int64_t CFAOffset) const;
+
   std::pair<int64_t, Align>
   assignRVVStackObjectOffsets(MachineFunction &MF) const;
 };
