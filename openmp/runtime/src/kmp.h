@@ -3912,7 +3912,7 @@ extern void __kmp_balanced_affinity(kmp_info_t *th, int team_size);
 #if KMP_WEIGHTED_ITERATIONS_SUPPORTED
 extern int __kmp_get_first_osid_with_ecore(void);
 #endif
-#if KMP_OS_LINUX || KMP_OS_FREEBSD
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD
 extern int kmp_set_thread_affinity_mask_initial(void);
 #endif
 static inline void __kmp_assign_root_init_mask() {

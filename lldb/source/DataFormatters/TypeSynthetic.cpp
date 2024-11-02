@@ -120,9 +120,8 @@ SyntheticChildrenFrontEnd::CalculateNumChildrenIgnoringErrors(uint32_t max) {
   auto value_or_err = CalculateNumChildren(max);
   if (value_or_err)
     return *value_or_err;
-  Log *log = GetLog(LLDBLog::DataFormatters);
-  if (log && log->GetVerbose())
-    LLDB_LOG_ERROR(log, value_or_err.takeError(), "{0}");
+  LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), value_or_err.takeError(),
+                  "{0}");
   return 0;
 }
 

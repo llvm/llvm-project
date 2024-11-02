@@ -1931,6 +1931,27 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "ArmNeonTransforms",
+    srcs = glob(["lib/Dialect/ArmNeon/Transforms/*.cpp"]),
+    hdrs = ["include/mlir/Dialect/ArmNeon/Transforms.h"],
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":ArmNeonIncGen",
+        ":ArmNeonDialect",
+        ":FuncDialect",
+        ":IR",
+        ":LLVMDialect",
+        ":SideEffectInterfaces",
+        ":Support",
+        ":VectorDialect",
+        ":Transforms",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
 gentbl_cc_library(
     name = "ArmNeonConversionIncGen",
     tbl_outs = [
@@ -3410,8 +3431,10 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":ControlFlowDialect",
+        ":ControlFlowInterfaces",
         ":DialectUtils",
         ":FuncDialect",
+        ":FunctionInterfaces",
         ":IR",
         ":MeshDialect",
         ":MeshShardingInterface",
@@ -9311,6 +9334,7 @@ cc_binary(
         "//mlir/test:TestAffine",
         "//mlir/test:TestAnalysis",
         "//mlir/test:TestArith",
+        "//mlir/test:TestArmNeon",
         "//mlir/test:TestArmSME",
         "//mlir/test:TestBufferization",
         "//mlir/test:TestControlFlow",
