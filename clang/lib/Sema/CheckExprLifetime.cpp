@@ -1132,7 +1132,6 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
     auto *MTE = dyn_cast<MaterializeTemporaryExpr>(L);
 
     bool IsGslPtrValueFromGslTempOwner = false;
-    bool IsLocalGslOwner = false;
     if (pathOnlyHandlesGslPointer(Path)) {
       if (isa<DeclRefExpr>(L)) {
         // We do not want to follow the references when returning a pointer
@@ -1140,8 +1139,8 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
         //   int &p = *localUniquePtr;
         //   someContainer.add(std::move(localUniquePtr));
         //   return p;
-        IsLocalGslOwner = isRecordWithAttr<OwnerAttr>(L->getType());
-        if (pathContainsInit(Path) || !IsLocalGslOwner)
+        if (pathContainsInit(Path) ||
+            !isRecordWithAttr<OwnerAttr>(L->getType()))
           return false;
       } else {
         IsGslPtrValueFromGslTempOwner =
