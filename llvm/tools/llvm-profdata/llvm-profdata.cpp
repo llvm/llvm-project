@@ -128,7 +128,7 @@ cl::opt<std::string> DebugInfoFilename(
     cl::sub(ShowSubcommand), cl::sub(MergeSubcommand));
 cl::opt<std::string>
     BinaryFilename("binary-file", cl::init(""),
-                   cl::desc("For merge, use the provided unstripped bianry to "
+                   cl::desc("For merge, use the provided unstripped binary to "
                             "correlate the raw profile."),
                    cl::sub(MergeSubcommand));
 cl::list<std::string> DebugFileDirectory(
