@@ -281,25 +281,6 @@ struct TestDecode {
   RISCVInst inst_type;
 };
 
-static bool compareInst(const RISCVInst &lhs, const RISCVInst &rhs) {
-  if (lhs.index() != rhs.index())
-    return false;
-  return std::visit(
-      [&](auto &&L) {
-        return std::visit(
-            [&](auto &&R) {
-              // guaranteed by
-              // 1. lhs.index() == rhs.index()
-              // (they are the same instruction type)
-              // 2. all instruction representations are plain data objects
-              // consisting of primitive types.
-              return std::memcmp(&L, &R, sizeof(L)) == 0;
-            },
-            rhs);
-      },
-      lhs);
-}
-
 TEST_F(RISCVEmulatorTester, TestCDecode) {
   std::vector<TestDecode> tests = {
       {0x0000, INVALID{0x0000}},
@@ -354,7 +335,7 @@ TEST_F(RISCVEmulatorTester, TestCDecode) {
   for (auto i : tests) {
     auto decode = this->Decode(i.inst);
     ASSERT_TRUE(decode.has_value());
-    ASSERT_TRUE(compareInst(decode->decoded, i.inst_type));
+    ASSERT_EQ(decode->decoded, i.inst_type);
   }
 }
 
@@ -374,7 +355,7 @@ TEST_F(RISCVEmulatorTester32, TestCDecodeRV32) {
   for (auto i : tests) {
     auto decode = this->Decode(i.inst);
     ASSERT_TRUE(decode.has_value());
-    ASSERT_TRUE(compareInst(decode->decoded, i.inst_type));
+    ASSERT_EQ(decode->decoded, i.inst_type);
   }
 }
 

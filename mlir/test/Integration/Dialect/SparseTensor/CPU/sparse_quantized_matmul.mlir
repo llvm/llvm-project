@@ -59,7 +59,7 @@ module {
     %0 = call @quantized_matmul(%input1, %sparse_input2, %output)
        : (tensor<5x3xi8>,
           tensor<3x6xi8, #DCSR>,
-	  tensor<5x6xi32>) -> tensor<5x6xi32>
+          tensor<5x6xi32>) -> tensor<5x6xi32>
 
     //
     // Verify the output.

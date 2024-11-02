@@ -83,8 +83,8 @@ module {
     %v2 = arith.constant sparse<
        [ [0], [3], [5], [11], [13], [17], [18], [21], [31] ],
          [ -2147483648, -2147483647, -1000, -1, 0,
-	   1, 1000, 2147483646, 2147483647
-	 ]
+           1, 1000, 2147483646, 2147483647
+         ]
     > : tensor<32xi32>
     %sv1 = sparse_tensor.convert %v1
          : tensor<32xf64> to tensor<?xf64, #SparseVector>

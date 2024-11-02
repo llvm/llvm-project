@@ -430,8 +430,8 @@ class SampleProfileMatcher {
   const PseudoProbeManager *ProbeManager;
 
   // Profile mismatching statstics.
-  uint64_t TotalProfiledCallsite = 0;
-  uint64_t NumMismatchedCallsite = 0;
+  uint64_t TotalProfiledCallsites = 0;
+  uint64_t NumMismatchedCallsites = 0;
   uint64_t MismatchedCallsiteSamples = 0;
   uint64_t TotalCallsiteSamples = 0;
   uint64_t TotalProfiledFunc = 0;
@@ -2119,10 +2119,10 @@ void SampleProfileMatcher::detectProfileMismatch(const Function &F,
     uint64_t Count = I.second.getSamples();
     if (!I.second.getCallTargets().empty()) {
       TotalCallsiteSamples += Count;
-      TotalProfiledCallsite++;
+      TotalProfiledCallsites++;
       if (!MatchedCallsiteLocs.count(Loc)) {
         MismatchedCallsiteSamples += Count;
-        NumMismatchedCallsite++;
+        NumMismatchedCallsites++;
       }
     }
   }
@@ -2134,13 +2134,13 @@ void SampleProfileMatcher::detectProfileMismatch(const Function &F,
 
     uint64_t Count = 0;
     for (auto &FM : I.second) {
-      Count += FM.second.getTotalSamples();
+      Count += FM.second.getHeadSamplesEstimate();
     }
     TotalCallsiteSamples += Count;
-    TotalProfiledCallsite++;
+    TotalProfiledCallsites++;
     if (!MatchedCallsiteLocs.count(Loc)) {
       MismatchedCallsiteSamples += Count;
-      NumMismatchedCallsite++;
+      NumMismatchedCallsites++;
     }
   }
 }
@@ -2163,7 +2163,7 @@ void SampleProfileMatcher::detectProfileMismatch() {
              << ")"
              << " of samples are discarded due to function hash mismatch.\n";
     }
-    errs() << "(" << NumMismatchedCallsite << "/" << TotalProfiledCallsite
+    errs() << "(" << NumMismatchedCallsites << "/" << TotalProfiledCallsites
            << ")"
            << " of callsites' profile are invalid and "
            << "(" << MismatchedCallsiteSamples << "/" << TotalCallsiteSamples
@@ -2183,6 +2183,9 @@ void SampleProfileMatcher::detectProfileMismatch() {
                                 MismatchedFuncHashSamples);
       ProfStatsVec.emplace_back("TotalFuncHashSamples", TotalFuncHashSamples);
     }
+
+    ProfStatsVec.emplace_back("NumMismatchedCallsites", NumMismatchedCallsites);
+    ProfStatsVec.emplace_back("TotalProfiledCallsites", TotalProfiledCallsites);
     ProfStatsVec.emplace_back("MismatchedCallsiteSamples",
                               MismatchedCallsiteSamples);
     ProfStatsVec.emplace_back("TotalCallsiteSamples", TotalCallsiteSamples);
