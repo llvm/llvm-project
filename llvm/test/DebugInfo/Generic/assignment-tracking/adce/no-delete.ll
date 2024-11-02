@@ -1,5 +1,7 @@
 ; RUN: opt %s -passes=adce -S -o - \
 ; RUN: | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -passes=adce -S -o - \
+; RUN: | FileCheck %s
 
 ;; $ cat test.c
 ;; void fun(int local) {}

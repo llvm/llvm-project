@@ -1789,13 +1789,15 @@ static at::StorageToVarsMap collectEscapedLocals(const DataLayout &DL,
       continue;
 
     // Find all local variables associated with the backing storage.
-    for (auto *DAI : at::getAssignmentMarkers(Base)) {
+    auto CollectAssignsForStorage = [&](auto *DbgAssign) {
       // Skip variables from inlined functions - they are not local variables.
-      if (DAI->getDebugLoc().getInlinedAt())
-        continue;
-      LLVM_DEBUG(errs() << " > DEF : " << *DAI << "\n");
-      EscapedLocals[Base].insert(at::VarRecord(DAI));
-    }
+      if (DbgAssign->getDebugLoc().getInlinedAt())
+        return;
+      LLVM_DEBUG(errs() << " > DEF : " << *DbgAssign << "\n");
+      EscapedLocals[Base].insert(at::VarRecord(DbgAssign));
+    };
+    for_each(at::getAssignmentMarkers(Base), CollectAssignsForStorage);
+    for_each(at::getDPVAssignmentMarkers(Base), CollectAssignsForStorage);
   }
   return EscapedLocals;
 }
@@ -1827,6 +1829,10 @@ static void fixupAssignments(Function::iterator Start, Function::iterator End) {
   // attachment or use, replace it with a new version.
   for (auto BBI = Start; BBI != End; ++BBI) {
     for (Instruction &I : *BBI) {
+      for (DPValue &DPV : I.getDbgValueRange()) {
+        if (DPV.isDbgAssign())
+          DPV.setAssignId(GetNewID(DPV.getAssignID()));
+      }
       if (auto *ID = I.getMetadata(LLVMContext::MD_DIAssignID))
         I.setMetadata(LLVMContext::MD_DIAssignID, GetNewID(ID));
       else if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))

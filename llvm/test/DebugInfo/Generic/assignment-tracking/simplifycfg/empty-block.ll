@@ -1,5 +1,7 @@
 ; RUN: opt -S %s -passes=simplifycfg -o - \
 ; RUN: | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S %s -passes=simplifycfg -o - \
+; RUN: | FileCheck %s
 
 ;; $ cat test.cpp
 ;; class a {};

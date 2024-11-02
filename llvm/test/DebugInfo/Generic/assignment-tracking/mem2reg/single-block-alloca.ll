@@ -1,5 +1,7 @@
 ; RUN: opt -passes=mem2reg -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -passes=mem2reg -S %s -o - \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; Test assignment tracking debug info when mem2reg promotes a single-block
 ;; alloca. Check the output when the stores are tagged and also untagged (test
