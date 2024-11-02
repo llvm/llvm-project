@@ -2695,7 +2695,7 @@ StringRef Record::getValueAsString(StringRef FieldName) const {
   if (!S)
     PrintFatalError(getLoc(), "Record `" + getName() +
       "' does not have a field named `" + FieldName + "'!\n");
-  return S.value();
+  return *S;
 }
 
 std::optional<StringRef>

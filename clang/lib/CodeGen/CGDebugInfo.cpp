@@ -1999,35 +1999,23 @@ CGDebugInfo::CollectTemplateParams(Optional<TemplateArgs> OArgs,
     const TemplateArgument &TA = Args.Args[i];
     StringRef Name;
     bool defaultParameter = false;
-    if (Args.TList)
+    if (Args.TList) {
       Name = Args.TList->getParam(i)->getName();
+
+      NamedDecl const *ND = Args.TList->getParam(i);
+      defaultParameter = clang::isSubstitutedDefaultArgument(
+          CGM.getContext(), TA, ND, Args.Args, Args.TList->getDepth());
+    }
+
     switch (TA.getKind()) {
     case TemplateArgument::Type: {
       llvm::DIType *TTy = getOrCreateType(TA.getAsType(), Unit);
-
-      if (Args.TList)
-        if (auto *templateType =
-                dyn_cast_or_null<TemplateTypeParmDecl>(Args.TList->getParam(i)))
-          if (templateType->hasDefaultArgument())
-            defaultParameter =
-                templateType->getDefaultArgument() == TA.getAsType();
-
       TemplateParams.push_back(DBuilder.createTemplateTypeParameter(
           TheCU, Name, TTy, defaultParameter));
 
     } break;
     case TemplateArgument::Integral: {
       llvm::DIType *TTy = getOrCreateType(TA.getIntegralType(), Unit);
-      if (Args.TList)
-        if (auto *templateType = dyn_cast_or_null<NonTypeTemplateParmDecl>(
-                Args.TList->getParam(i)))
-          if (templateType->hasDefaultArgument() &&
-              !templateType->getDefaultArgument()->isValueDependent())
-            defaultParameter = llvm::APSInt::isSameValue(
-                templateType->getDefaultArgument()->EvaluateKnownConstInt(
-                    CGM.getContext()),
-                TA.getAsIntegral());
-
       TemplateParams.push_back(DBuilder.createTemplateValueParameter(
           TheCU, Name, TTy, defaultParameter,
           llvm::ConstantInt::get(CGM.getLLVMContext(), TA.getAsIntegral())));
@@ -2103,7 +2091,7 @@ CGDebugInfo::CollectTemplateParams(Optional<TemplateArgs> OArgs,
       TA.getAsTemplate().getAsTemplateDecl()->printQualifiedName(
           OS, getPrintingPolicy());
       TemplateParams.push_back(DBuilder.createTemplateTemplateParameter(
-          TheCU, Name, nullptr, OS.str()));
+          TheCU, Name, nullptr, OS.str(), defaultParameter));
       break;
     }
     case TemplateArgument::Pack:

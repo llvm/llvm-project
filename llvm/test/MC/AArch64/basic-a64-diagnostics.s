@@ -3607,6 +3607,7 @@
         msr ID_AA64MMFR1_EL1, x12
         msr ID_AA64MMFR2_EL1, x12
         msr ID_AA64MMFR3_EL1, x12
+        msr ID_AA64MMFR4_EL1, x12
         msr PMCEID0_EL0, x12
         msr PMCEID1_EL0, x12
         msr PMMIR_EL1, x12
@@ -3758,6 +3759,9 @@
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: expected writable system register or pstate
 // CHECK-ERROR-NEXT:         msr ID_AA64MMFR3_EL1, x12
+// CHECK-ERROR-NEXT:             ^
+// CHECK-ERROR-NEXT: error: expected writable system register or pstate
+// CHECK-ERROR-NEXT:         msr ID_AA64MMFR4_EL1, x12
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: expected writable system register or pstate
 // CHECK-ERROR-NEXT:         msr PMCEID0_EL0, x12

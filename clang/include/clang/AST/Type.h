@@ -2547,7 +2547,9 @@ public:
   /// Note that nullability is only captured as sugar within the type
   /// system, not as part of the canonical type, so nullability will
   /// be lost by canonicalization and desugaring.
-  Optional<NullabilityKind> getNullability(const ASTContext &context) const;
+  Optional<NullabilityKind> getNullability() const;
+  // TODO: Remove overload.
+  Optional<NullabilityKind> getNullability(const ASTContext &) const;
 
   /// Determine whether the given type can have a nullability
   /// specifier applied to it, i.e., if it is any kind of pointer type.
@@ -5459,6 +5461,13 @@ void printTemplateArgumentList(raw_ostream &OS,
                                const TemplateArgumentListInfo &Args,
                                const PrintingPolicy &Policy,
                                const TemplateParameterList *TPL = nullptr);
+
+/// Make a best-effort determination of whether the type T can be produced by
+/// substituting Args into the default argument of Param.
+bool isSubstitutedDefaultArgument(ASTContext &Ctx, TemplateArgument Arg,
+                                  const NamedDecl *Param,
+                                  ArrayRef<TemplateArgument> Args,
+                                  unsigned Depth);
 
 /// The injected class name of a C++ class template or class
 /// template partial specialization.  Used to record that a type was

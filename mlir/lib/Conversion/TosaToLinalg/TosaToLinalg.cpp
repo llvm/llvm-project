@@ -1468,7 +1468,10 @@ public:
       Value x = b.create<linalg::IndexOp>(2);
       Value channel = b.create<linalg::IndexOp>(3);
 
-      Value zeroI32 = b.create<arith::ConstantOp>(b.getI32IntegerAttr(0));
+      Value zeroI32 =
+          b.create<arith::ConstantOp>(b.getZeroAttr(b.getI32Type()));
+      Value zeroFp32 =
+          b.create<arith::ConstantOp>(b.getZeroAttr(b.getF32Type()));
       Value hMax = b.create<arith::ConstantOp>(b.getI32IntegerAttr(imageH - 1));
       Value wMax = b.create<arith::ConstantOp>(b.getI32IntegerAttr(imageW - 1));
 
@@ -1498,6 +1501,11 @@ public:
       auto getIndexAndDeltaFp = [&](Value &index, Value &delta, Value in,
                                     Value scaleN, Value scaleD, Value offset,
                                     int size, ImplicitLocOpBuilder &b) {
+        if (size == 1) {
+          index = zeroI32;
+          delta = zeroFp32;
+          return;
+        }
         // x = x * scale_d + offset;
         // ix = floor(x / scale_n)
         // dx = x / scale_n - ix
@@ -1517,6 +1525,11 @@ public:
       auto getIndexAndDeltaInt = [&](Value &index, Value &delta, Value in,
                                      Value scaleN, Value scaleD, Value offset,
                                      int size, ImplicitLocOpBuilder &b) {
+        if (size == 1) {
+          index = zeroI32;
+          delta = zeroI32;
+          return;
+        }
         // x = x * scale_d + offset;
         // ix = floor(x / scale_n)
         //  dx = x - ix * scale_n;
@@ -1606,7 +1619,10 @@ public:
         if (floatingPointMode) {
           auto oneVal = b.create<arith::ConstantOp>(b.getF32FloatAttr(1.0f));
           auto interpolate = [&](Value val0, Value val1, Value delta,
+                                 int inputSize,
                                  ImplicitLocOpBuilder &b) -> Value {
+            if (inputSize == 1)
+              return val0;
             Value oneMinusDelta = b.create<arith::SubFOp>(oneVal, delta);
             Value mul0 = b.create<arith::MulFOp>(val0, oneMinusDelta);
             Value mul1 = b.create<arith::MulFOp>(val1, delta);
@@ -1616,16 +1632,16 @@ public:
           // Linalg equivalent to the section below:
           //   topAcc = v00 * (unit_x - dx);
           //   topAcc += v01 * dx;
-          Value topAcc = interpolate(y0x0, y0x1, dx, b);
+          Value topAcc = interpolate(y0x0, y0x1, dx, imageW, b);
 
           // Linalg equivalent to the section below:
           //   bottomAcc = v10 * (unit_x - dx);
           //   bottomAcc += v11 * dx;
-          Value bottomAcc = interpolate(y1x0, y1x1, dx, b);
+          Value bottomAcc = interpolate(y1x0, y1x1, dx, imageW, b);
 
           // Linalg equivalent to the section below:
           //   result = topAcc * (unit_y - dy) + bottomAcc * dy
-          Value result = interpolate(topAcc, bottomAcc, dy, b);
+          Value result = interpolate(topAcc, bottomAcc, dy, imageH, b);
           b.create<linalg::YieldOp>(result);
         } else {
           // Perform in quantized space.
@@ -1650,22 +1666,21 @@ public:
             xScaleNExt = b.create<arith::ExtSIOp>(resultETy, xScaleN);
           }
 
-          auto interpolate = [](Value val0, Value val1, Value weight0,
-                                Value weight1,
+          auto interpolate = [](Value val0, Value val1, Value weight1,
+                                Value scale, int inputSize,
                                 ImplicitLocOpBuilder &b) -> Value {
+            if (inputSize == 1)
+              return b.create<arith::MulIOp>(val0, scale);
+            Value weight0 = b.create<arith::SubIOp>(scale, weight1);
             Value mul0 = b.create<arith::MulIOp>(val0, weight0);
             Value mul1 = b.create<arith::MulIOp>(val1, weight1);
             return b.create<arith::AddIOp>(mul0, mul1);
           };
 
-          Value weight0 = b.create<arith::SubIOp>(xScaleNExt, dx);
-          Value weight1 = dx;
-          Value topAcc = interpolate(y0x0, y0x1, weight0, weight1, b);
-          Value bottomAcc = interpolate(y1x0, y1x1, weight0, weight1, b);
-
-          weight0 = b.create<arith::SubIOp>(yScaleNExt, dy);
-          weight1 = dy;
-          Value result = interpolate(topAcc, bottomAcc, weight0, weight1, b);
+          Value topAcc = interpolate(y0x0, y0x1, dx, xScaleNExt, imageW, b);
+          Value bottomAcc = interpolate(y1x0, y1x1, dx, xScaleNExt, imageW, b);
+          Value result =
+              interpolate(topAcc, bottomAcc, dy, yScaleNExt, imageH, b);
           b.create<linalg::YieldOp>(result);
         }
       }

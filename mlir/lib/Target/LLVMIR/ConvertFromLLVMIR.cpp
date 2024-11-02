@@ -38,6 +38,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/Error.h"
@@ -326,8 +327,13 @@ getTopologicallySortedBlocks(llvm::Function *func) {
   return blocks;
 }
 
-// Handles importing globals and functions from an LLVM module.
 namespace {
+/// Module import implementation class that provides methods to import globals
+/// and functions from an LLVM module into an MLIR module. It holds mappings
+/// between the original and translated globals, basic blocks, and values used
+/// during the translation. Additionally, it keeps track of the current constant
+/// insertion point since LLVM immediate values translate to MLIR operations
+/// that are introduced at the beginning of the region.
 class Importer {
 public:
   Importer(MLIRContext *context, ModuleOp module)
@@ -421,6 +427,10 @@ private:
     constantInsertionOp = nullptr;
   }
 
+  /// Sets the fastmath flags attribute for the imported operation `op` given
+  /// the original instruction `inst`. Asserts if the operation does not
+  /// implement the fastmath interface.
+  void setFastmathFlagsAttr(llvm::Instruction *inst, Operation *op) const;
   /// Returns personality of `func` as a FlatSymbolRefAttr.
   FlatSymbolRefAttr getPersonalityAsAttr(llvm::Function *func);
   /// Imports `bb` into `block`, which must be initially empty.
@@ -486,6 +496,31 @@ private:
   DebugImporter debugImporter;
 };
 } // namespace
+
+void Importer::setFastmathFlagsAttr(llvm::Instruction *inst,
+                                    Operation *op) const {
+  auto iface = cast<FastmathFlagsInterface>(op);
+
+  // Even if the imported operation implements the fastmath interface, the
+  // original instruction may not have fastmath flags set. Exit if an
+  // instruction, such as a non floating-point function call, does not have
+  // fastmath flags.
+  if (!isa<llvm::FPMathOperator>(inst))
+    return;
+  llvm::FastMathFlags flags = inst->getFastMathFlags();
+
+  // Set the fastmath bits flag-by-flag.
+  FastmathFlags value = {};
+  value = bitEnumSet(value, FastmathFlags::nnan, flags.noNaNs());
+  value = bitEnumSet(value, FastmathFlags::ninf, flags.noInfs());
+  value = bitEnumSet(value, FastmathFlags::nsz, flags.noSignedZeros());
+  value = bitEnumSet(value, FastmathFlags::arcp, flags.allowReciprocal());
+  value = bitEnumSet(value, FastmathFlags::contract, flags.allowContract());
+  value = bitEnumSet(value, FastmathFlags::afn, flags.approxFunc());
+  value = bitEnumSet(value, FastmathFlags::reassoc, flags.allowReassoc());
+  FastmathFlagsAttr attr = FastmathFlagsAttr::get(builder.getContext(), value);
+  iface->setAttr(iface.getFastmathAttrName(), attr);
+}
 
 // We only need integers, floats, doubles, and vectors and tensors thereof for
 // attributes. Scalar and vector types are converted to the standard
@@ -1032,6 +1067,7 @@ LogicalResult Importer::convertOperation(OpBuilder &odsBuilder,
     } else {
       callOp = builder.create<CallOp>(loc, types, operands);
     }
+    setFastmathFlagsAttr(inst, callOp);
     if (!callInst->getType()->isVoidTy())
       mapValue(inst, callOp.getResult());
     return success();
@@ -1116,7 +1152,7 @@ LogicalResult Importer::convertOperation(OpBuilder &odsBuilder,
 
 LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
   // FIXME: Support uses of SubtargetData.
-  // FIXME: Add support for fast-math flags and call / operand attributes.
+  // FIXME: Add support for call / operand attributes.
   // FIXME: Add support for the indirectbr, cleanupret, catchret, catchswitch,
   // callbr, vaarg, landingpad, catchpad, cleanuppad instructions.
 

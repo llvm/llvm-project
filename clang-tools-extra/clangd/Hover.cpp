@@ -642,7 +642,7 @@ HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
 }
 
 /// The standard defines __func__ as a "predefined variable".
-llvm::Optional<HoverInfo>
+std::optional<HoverInfo>
 getPredefinedExprHoverContents(const PredefinedExpr &PE, ASTContext &Ctx,
                                const PrintingPolicy &PP) {
   HoverInfo HI;
@@ -733,9 +733,9 @@ std::string typeAsDefinition(const HoverInfo::PrintedType &PType) {
   return Result;
 }
 
-llvm::Optional<HoverInfo> getThisExprHoverContents(const CXXThisExpr *CTE,
-                                                   ASTContext &ASTCtx,
-                                                   const PrintingPolicy &PP) {
+std::optional<HoverInfo> getThisExprHoverContents(const CXXThisExpr *CTE,
+                                                  ASTContext &ASTCtx,
+                                                  const PrintingPolicy &PP) {
   QualType OriginThisType = CTE->getType()->getPointeeType();
   QualType ClassType = declaredType(OriginThisType->getAsTagDecl());
   // For partial specialization class, origin `this` pointee type will be
@@ -811,9 +811,9 @@ llvm::StringLiteral getNameForExpr(const Expr *E) {
 
 // Generates hover info for `this` and evaluatable expressions.
 // FIXME: Support hover for literals (esp user-defined)
-llvm::Optional<HoverInfo> getHoverContents(const Expr *E, ParsedAST &AST,
-                                           const PrintingPolicy &PP,
-                                           const SymbolIndex *Index) {
+std::optional<HoverInfo> getHoverContents(const Expr *E, ParsedAST &AST,
+                                          const PrintingPolicy &PP,
+                                          const SymbolIndex *Index) {
   // There's not much value in hovering over "42" and getting a hover card
   // saying "42 is an int", similar for other literals.
   if (isLiteral(E))
@@ -840,7 +840,7 @@ llvm::Optional<HoverInfo> getHoverContents(const Expr *E, ParsedAST &AST,
 }
 
 // Generates hover info for attributes.
-llvm::Optional<HoverInfo> getHoverContents(const Attr *A, ParsedAST &AST) {
+std::optional<HoverInfo> getHoverContents(const Attr *A, ParsedAST &AST) {
   HoverInfo HI;
   HI.Name = A->getSpelling();
   if (A->hasScope())
@@ -1052,9 +1052,9 @@ const NamedDecl *pickDeclToUse(llvm::ArrayRef<const NamedDecl *> Candidates) {
 
 } // namespace
 
-llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
-                                   const format::FormatStyle &Style,
-                                   const SymbolIndex *Index) {
+std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
+                                  const format::FormatStyle &Style,
+                                  const SymbolIndex *Index) {
   PrintingPolicy PP =
       getPrintingPolicy(AST.getASTContext().getPrintingPolicy());
   const SourceManager &SM = AST.getSourceManager();
@@ -1087,7 +1087,7 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
   // for the left of the hovered token).
   CharSourceRange HighlightRange =
       TokensTouchingCursor.back().range(SM).toCharRange(SM);
-  llvm::Optional<HoverInfo> HI;
+  std::optional<HoverInfo> HI;
   // Macros and deducedtype only works on identifiers and auto/decltype keywords
   // respectively. Therefore they are only trggered on whichever works for them,
   // similar to SelectionTree::create().

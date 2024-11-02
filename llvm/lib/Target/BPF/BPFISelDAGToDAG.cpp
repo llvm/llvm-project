@@ -45,8 +45,10 @@ class BPFDAGToDAGISel : public SelectionDAGISel {
   const BPFSubtarget *Subtarget;
 
 public:
+  static char ID;
+
   explicit BPFDAGToDAGISel(BPFTargetMachine &TM)
-      : SelectionDAGISel(TM), Subtarget(nullptr) {}
+      : SelectionDAGISel(ID, TM), Subtarget(nullptr) {}
 
   StringRef getPassName() const override {
     return "BPF DAG->DAG Pattern Instruction Selection";
@@ -95,6 +97,8 @@ private:
   std::map<const void *, val_vec_type> cs_vals_;
 };
 } // namespace
+
+char BPFDAGToDAGISel::ID = 0;
 
 // ComplexPattern used on BPF Load/Store instructions
 bool BPFDAGToDAGISel::SelectAddr(SDValue Addr, SDValue &Base, SDValue &Offset) {

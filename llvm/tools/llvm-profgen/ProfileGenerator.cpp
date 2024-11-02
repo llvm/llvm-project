@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "ProfileGenerator.h"
 #include "ErrorHandling.h"
+#include "MissingFrameInferrer.h"
 #include "PerfReader.h"
 #include "ProfiledBinary.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
@@ -93,6 +94,12 @@ static cl::opt<bool> UpdateTotalSamples(
 static cl::opt<bool> GenCSNestedProfile(
     "gen-cs-nested-profile", cl::Hidden, cl::init(true),
     cl::desc("Generate nested function profiles for CSSPGO"));
+
+cl::opt<bool> InferMissingFrames(
+    "infer-missing-frames", llvm::cl::init(true),
+    llvm::cl::desc(
+        "Infer missing call frames due to compiler tail call elimination."),
+    llvm::cl::Optional);
 
 using namespace llvm;
 using namespace sampleprof;
@@ -769,8 +776,11 @@ void CSProfileGenerator::generateProfile() {
 
   collectProfiledFunctions();
 
-  if (Binary->usePseudoProbes())
+  if (Binary->usePseudoProbes()) {
     Binary->decodePseudoProbe();
+    if (InferMissingFrames)
+      initializeMissingFrameInferrer();
+  }
 
   if (SampleCounters) {
     if (Binary->usePseudoProbes()) {
@@ -784,6 +794,16 @@ void CSProfileGenerator::generateProfile() {
     computeSizeForProfiledFunctions();
 
   postProcessProfiles();
+}
+
+void CSProfileGenerator::initializeMissingFrameInferrer() {
+  Binary->getMissingContextInferrer()->initialize(SampleCounters);
+}
+
+void CSProfileGenerator::inferMissingFrames(
+    const SmallVectorImpl<uint64_t> &Context,
+    SmallVectorImpl<uint64_t> &NewContext) {
+  Binary->inferMissingFrames(Context, NewContext);
 }
 
 void CSProfileGenerator::computeSizeForProfiledFunctions() {
@@ -1109,18 +1129,16 @@ void CSProfileGenerator::generateProbeBasedProfile() {
   for (const auto &CI : *SampleCounters) {
     const AddrBasedCtxKey *CtxKey =
         dyn_cast<AddrBasedCtxKey>(CI.first.getPtr());
-    SampleContextFrameVector ContextStack;
-    extractPrefixContextStack(ContextStack, CtxKey->Context, Binary);
     // Fill in function body samples from probes, also infer caller's samples
     // from callee's probe
-    populateBodySamplesWithProbes(CI.second.RangeCounter, ContextStack);
+    populateBodySamplesWithProbes(CI.second.RangeCounter, CtxKey);
     // Fill in boundary samples for a call probe
-    populateBoundarySamplesWithProbes(CI.second.BranchCounter, ContextStack);
+    populateBoundarySamplesWithProbes(CI.second.BranchCounter, CtxKey);
   }
 }
 
 void CSProfileGenerator::populateBodySamplesWithProbes(
-    const RangeSample &RangeCounter, SampleContextFrames ContextStack) {
+    const RangeSample &RangeCounter, const AddrBasedCtxKey *CtxKey) {
   ProbeCounterMap ProbeCounter;
   // Extract the top frame probes by looking up each address among the range in
   // the Address2ProbeMap
@@ -1136,8 +1154,7 @@ void CSProfileGenerator::populateBodySamplesWithProbes(
     if (!Probe->isBlock() || Count == 0)
       continue;
 
-    ContextTrieNode *ContextNode =
-        getContextNodeForLeafProbe(ContextStack, Probe);
+    ContextTrieNode *ContextNode = getContextNodeForLeafProbe(CtxKey, Probe);
     FunctionSamples &FunctionProfile = *ContextNode->getFunctionSamples();
     // Record the current frame and FunctionProfile whenever samples are
     // collected for non-danglie probes. This is for reporting all of the
@@ -1181,7 +1198,7 @@ void CSProfileGenerator::populateBodySamplesWithProbes(
 }
 
 void CSProfileGenerator::populateBoundarySamplesWithProbes(
-    const BranchSample &BranchCounter, SampleContextFrames ContextStack) {
+    const BranchSample &BranchCounter, const AddrBasedCtxKey *CtxKey) {
   for (const auto &BI : BranchCounter) {
     uint64_t SourceAddress = BI.first.first;
     uint64_t TargetAddress = BI.first.second;
@@ -1191,7 +1208,7 @@ void CSProfileGenerator::populateBoundarySamplesWithProbes(
     if (CallProbe == nullptr)
       continue;
     FunctionSamples &FunctionProfile =
-        getFunctionProfileForLeafProbe(ContextStack, CallProbe);
+        getFunctionProfileForLeafProbe(CtxKey, CallProbe);
     FunctionProfile.addBodySamples(CallProbe->getIndex(), 0, Count);
     FunctionProfile.addTotalSamples(Count);
     StringRef CalleeName = getCalleeNameForAddress(TargetAddress);
@@ -1203,7 +1220,23 @@ void CSProfileGenerator::populateBoundarySamplesWithProbes(
 }
 
 ContextTrieNode *CSProfileGenerator::getContextNodeForLeafProbe(
-    SampleContextFrames ContextStack, const MCDecodedPseudoProbe *LeafProbe) {
+    const AddrBasedCtxKey *CtxKey, const MCDecodedPseudoProbe *LeafProbe) {
+
+  const SmallVectorImpl<uint64_t> *PContext = &CtxKey->Context;
+  SmallVector<uint64_t, 16> NewContext;
+
+  if (InferMissingFrames) {
+    SmallVector<uint64_t, 16> Context = CtxKey->Context;
+    // Append leaf frame for a complete inference.
+    Context.push_back(LeafProbe->getAddress());
+    inferMissingFrames(Context, NewContext);
+    // Pop out the leaf probe that was pushed in above.
+    NewContext.pop_back();
+    PContext = &NewContext;
+  }
+
+  SampleContextFrameVector ContextStack;
+  extractPrefixContextStack(ContextStack, *PContext, Binary);
 
   // Explicitly copy the context for appending the leaf context
   SampleContextFrameVector NewContextStack(ContextStack.begin(),
@@ -1229,9 +1262,8 @@ ContextTrieNode *CSProfileGenerator::getContextNodeForLeafProbe(
 }
 
 FunctionSamples &CSProfileGenerator::getFunctionProfileForLeafProbe(
-    SampleContextFrames ContextStack, const MCDecodedPseudoProbe *LeafProbe) {
-  return *getContextNodeForLeafProbe(ContextStack, LeafProbe)
-              ->getFunctionSamples();
+    const AddrBasedCtxKey *CtxKey, const MCDecodedPseudoProbe *LeafProbe) {
+  return *getContextNodeForLeafProbe(CtxKey, LeafProbe)->getFunctionSamples();
 }
 
 } // end namespace sampleprof

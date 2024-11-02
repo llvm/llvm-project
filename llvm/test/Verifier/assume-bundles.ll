@@ -24,5 +24,9 @@ define void @func(i32* %P, i32 %P1, i32* %P2, i32* %P3) {
   call void @llvm.assume(i1 true) ["align"(i32* %P, i32* %P2)]
 ; CHECK: third argument should be an integer if present
   call void @llvm.assume(i1 true) ["align"(i32* %P, i32 %P1, i32* %P2)]
+; CHECK: separate_storage assumptions should have 2 arguments
+  call void @llvm.assume(i1 true) ["separate_storage"(i32* %P)]
+; CHECK: arguments to separate_storage assumptions should be pointers
+  call void @llvm.assume(i1 true) ["separate_storage"(i32* %P, i32 123)]
   ret void
 }

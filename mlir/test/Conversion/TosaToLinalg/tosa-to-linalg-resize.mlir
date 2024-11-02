@@ -278,6 +278,7 @@ func.func @resize_bilinear_int(%arg0: tensor<1x19x20x1xi8>) {
   // CHECK: %[[WLOLO:.+]] = arith.muli %[[XLOLO]], %[[NDX]]
   // CHECK: %[[WLOHI:.+]] = arith.muli %[[XLOHI]], %[[D_X_EXT]]
   // CHECK: %[[LO:.+]] = arith.addi %[[WLOLO]], %[[WLOHI]]
+  // CHECK: %[[NDX:.+]] = arith.subi %[[X_N_EXT]], %[[D_X_EXT]]
   // CHECK: %[[WHILO:.+]] = arith.muli %[[XHILO]], %[[NDX]]
   // CHECK: %[[WHIHI:.+]] = arith.muli %[[XHIHI]], %[[D_X_EXT]]
   // CHECK: %[[HI:.+]] = arith.addi %[[WHILO]], %[[WHIHI]]
@@ -491,4 +492,48 @@ func.func @resize_dyn(%input: tensor<?x2x2x1xi8>) -> () {
 func.func @resize_bilinear_int48(%arg0: tensor<1x19x19x1xi16>) {
   %0 = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [16, 1, 16, 1], offset = [0, 0], border = [0, 0]} : (tensor<1x19x19x1xi16>) -> tensor<1x289x289x1xi48>
            return
+}
+
+// -----
+
+// CHECK-LABEL: skip_interpolate_bilinear_i8
+func.func @skip_interpolate_bilinear_i8(%arg0 : tensor<3x1x2x7xi8>) -> tensor<3x1x5x7xi32> {
+  // CHECK:  %[[GENERIC:.+]] = linalg.generic
+  // CHECK:    %[[BATCH:.+]] = linalg.index 0
+  // CHECK:    %[[CHANNEL:.+]] = linalg.index 3
+  // CHECK-DAG:    %[[C3:.+]] = arith.constant 3
+  // CHECK-DAG:    %[[C2:.+]] = arith.constant 2
+  // CHECK:    %[[EXTRACT0:.+]] = tensor.extract %arg0[%[[BATCH]], %{{.+}}, %{{.+}}, %[[CHANNEL]]] : tensor<3x1x2x7xi8>
+  // CHECK:    %[[EXTRACT1:.+]] = tensor.extract %arg0[%[[BATCH]], %{{.+}}, %{{.+}}, %[[CHANNEL]]] : tensor<3x1x2x7xi8>
+  // CHECK:    %[[EXT0:.+]] = arith.extsi %[[EXTRACT0]] : i8 to i32
+  // CHECK:    %[[EXT1:.+]] = arith.extsi %[[EXTRACT1]] : i8 to i32
+  // CHECK:    %[[SUB:.+]] = arith.subi %[[C3]], %[[DX:.+]]
+  // CHECK:    %[[MUL0:.+]] = arith.muli %[[EXT0]], %[[SUB]]
+  // CHECK:    %[[MUL1:.+]] = arith.muli %[[EXT1]], %[[DX]]
+  // CHECK:    %[[ADD:.+]] = arith.addi %[[MUL0]], %[[MUL1]]
+  // CHECK:    %[[RES:.+]] = arith.muli %[[ADD]], %[[C2]]
+  // CHECK:    linalg.yield %[[RES]]
+  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [2, 1, 3, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x2x7xi8>) -> tensor<3x1x5x7xi32>
+
+  // CHECK:  return %[[GENERIC]]
+  return %resize : tensor<3x1x5x7xi32>
+}
+
+// CHECK-LABEL: skip_interpolate_bilinear_f32
+func.func @skip_interpolate_bilinear_f32(%arg0 : tensor<3x1x2x7xf32>) -> tensor<3x1x5x7xf32> {
+  // CHECK:  %[[GENERIC:.+]] = linalg.generic
+  // CHECK:    %[[BATCH:.+]] = linalg.index 0 : index
+  // CHECK:    %[[CHANNEL:.+]] = linalg.index 3 : index
+  // CHECK:    %[[EXTRACT0:.+]] = tensor.extract %arg0[%[[BATCH]], %{{.+}}, %{{.+}}, %[[CHANNEL]]] : tensor<3x1x2x7xf32>
+  // CHECK:    %[[EXTRACT1:.+]] = tensor.extract %arg0[%[[BATCH]], %{{.+}}, %{{.+}}, %[[CHANNEL]]] : tensor<3x1x2x7xf32>
+  // CHECK:    %[[C1:.+]] = arith.constant 1.000000e+00
+  // CHECK:    %[[SUB:.+]] = arith.subf %[[C1]], %[[DX:.+]]
+  // CHECK:    %[[MUL0:.+]] = arith.mulf %[[EXTRACT0]], %[[SUB]]
+  // CHECK:    %[[MUL1:.+]] = arith.mulf %[[EXTRACT1]], %[[DX]]
+  // CHECK:    %[[ADD:.+]] = arith.addf %[[MUL0]], %[[MUL1]]
+  // CHECK:    linalg.yield %[[ADD]]
+  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [2, 1, 3, 1], offset = [0, 0], border = [0, 0]} : (tensor<3x1x2x7xf32>) -> tensor<3x1x5x7xf32>
+
+  // CHECK:  return %[[GENERIC]]
+  return %resize : tensor<3x1x5x7xf32>
 }

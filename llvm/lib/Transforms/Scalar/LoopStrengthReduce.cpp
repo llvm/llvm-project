@@ -1268,7 +1268,7 @@ static unsigned getSetupCost(const SCEV *Reg, unsigned Depth) {
   if (auto S = dyn_cast<SCEVIntegralCastExpr>(Reg))
     return getSetupCost(S->getOperand(), Depth - 1);
   if (auto S = dyn_cast<SCEVNAryExpr>(Reg))
-    return std::accumulate(S->op_begin(), S->op_end(), 0,
+    return std::accumulate(S->operands().begin(), S->operands().end(), 0,
                            [&](unsigned i, const SCEV *Reg) {
                              return i + getSetupCost(Reg, Depth - 1);
                            });
@@ -2723,7 +2723,7 @@ void LSRInstance::CollectInterestingTypesAndFactors() {
           Strides.insert(AR->getStepRecurrence(SE));
         Worklist.push_back(AR->getStart());
       } else if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(S)) {
-        Worklist.append(Add->op_begin(), Add->op_end());
+        append_range(Worklist, Add->operands());
       }
     } while (!Worklist.empty());
   }
@@ -3490,7 +3490,7 @@ LSRInstance::CollectLoopInvariantFixupsAndFormulae() {
       continue;
 
     if (const SCEVNAryExpr *N = dyn_cast<SCEVNAryExpr>(S))
-      Worklist.append(N->op_begin(), N->op_end());
+      append_range(Worklist, N->operands());
     else if (const SCEVIntegralCastExpr *C = dyn_cast<SCEVIntegralCastExpr>(S))
       Worklist.push_back(C->getOperand());
     else if (const SCEVUDivExpr *D = dyn_cast<SCEVUDivExpr>(S)) {

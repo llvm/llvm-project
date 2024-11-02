@@ -104,7 +104,7 @@ void AsyncTaskRunner::runAsync(const llvm::Twine &Name,
 
   // Ensure our worker threads have big enough stacks to run clang.
   llvm::thread Thread(
-      /*clang::DesiredStackSize*/ llvm::Optional<unsigned>(8 << 20),
+      /*clang::DesiredStackSize*/ std::optional<unsigned>(8 << 20),
       std::move(Task));
   Thread.detach();
 }

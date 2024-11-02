@@ -89,32 +89,38 @@ INITIALIZE_PASS(RISCVMergeBaseOffsetOpt, DEBUG_TYPE,
 bool RISCVMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi,
                                              MachineInstr *&Lo) {
   if (Hi.getOpcode() == RISCV::LUI) {
-    if (Hi.getOperand(1).getTargetFlags() != RISCVII::MO_HI ||
-        !Hi.getOperand(1).isGlobal() || Hi.getOperand(1).getOffset() != 0 ||
-        !MRI->hasOneUse(Hi.getOperand(0).getReg()))
-      return false;
     Register HiDestReg = Hi.getOperand(0).getReg();
+    const MachineOperand &HiOp1 = Hi.getOperand(1);
+    if (HiOp1.getTargetFlags() != RISCVII::MO_HI || !HiOp1.isGlobal() ||
+        HiOp1.getOffset() != 0 || !MRI->hasOneUse(HiDestReg))
+      return false;
     Lo = &*MRI->use_instr_begin(HiDestReg);
-    if (Lo->getOpcode() != RISCV::ADDI ||
-        Lo->getOperand(2).getTargetFlags() != RISCVII::MO_LO ||
-        !Lo->getOperand(2).isGlobal() || Lo->getOperand(2).getOffset() != 0)
+    if (Lo->getOpcode() != RISCV::ADDI)
+      return false;
+    const MachineOperand &LoOp2 = Lo->getOperand(2);
+    if (LoOp2.getTargetFlags() != RISCVII::MO_LO || !LoOp2.isGlobal() ||
+        LoOp2.getOffset() != 0)
       return false;
     return true;
-  } else if (Hi.getOpcode() == RISCV::AUIPC) {
-    if (Hi.getOperand(1).getTargetFlags() != RISCVII::MO_PCREL_HI ||
-        !Hi.getOperand(1).isGlobal() || Hi.getOperand(1).getOffset() != 0 ||
-        !MRI->hasOneUse(Hi.getOperand(0).getReg()))
-      return false;
-    Register HiDestReg = Hi.getOperand(0).getReg();
-    Lo = &*MRI->use_instr_begin(HiDestReg);
-    if (Lo->getOpcode() != RISCV::ADDI ||
-        Lo->getOperand(2).getTargetFlags() != RISCVII::MO_PCREL_LO ||
-        Lo->getOperand(2).getType() != MachineOperand::MO_MCSymbol)
-      return false;
-    return true;
-  } else {
-    return false;
   }
+
+  if (Hi.getOpcode() == RISCV::AUIPC) {
+    Register HiDestReg = Hi.getOperand(0).getReg();
+    const MachineOperand &HiOp1 = Hi.getOperand(1);
+    if (HiOp1.getTargetFlags() != RISCVII::MO_PCREL_HI || !HiOp1.isGlobal() ||
+        HiOp1.getOffset() != 0 || !MRI->hasOneUse(HiDestReg))
+      return false;
+    Lo = &*MRI->use_instr_begin(HiDestReg);
+    if (Lo->getOpcode() != RISCV::ADDI)
+      return false;
+    const MachineOperand &LoOp2 = Lo->getOperand(2);
+    if (LoOp2.getTargetFlags() != RISCVII::MO_PCREL_LO ||
+        LoOp2.getType() != MachineOperand::MO_MCSymbol)
+      return false;
+    return true;
+  }
+
+  return false;
 }
 
 // Update the offset in Hi and Lo instructions.

@@ -2451,6 +2451,10 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     return LT.first * 2 * AmortizationCost;
   }
 
+  // Opaque ptr or ptr vector types are i64s and can be lowered to STP/LDPs.
+  if (Ty->isPtrOrPtrVectorTy())
+    return LT.first;
+
   // Check truncating stores and extending loads.
   if (useNeonVector(Ty) &&
       Ty->getScalarSizeInBits() != LT.second.getScalarSizeInBits()) {

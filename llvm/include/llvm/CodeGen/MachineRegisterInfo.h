@@ -900,6 +900,18 @@ public:
   /// of reserved registers before allocation begins.
   void freezeReservedRegs(const MachineFunction&);
 
+  /// reserveReg -- Mark a register as reserved so checks like isAllocatable 
+  /// will not suggest using it. This should not be used during the middle
+  /// of a function walk, or when liveness info is available.
+  void reserveReg(MCRegister PhysReg, const TargetRegisterInfo *TRI) {
+    assert(reservedRegsFrozen() &&
+           "Reserved registers haven't been frozen yet. ");
+    MCRegAliasIterator R(PhysReg, TRI, true);
+
+    for (; R.isValid(); ++R)
+      ReservedRegs.set(*R);
+  }
+
   /// reservedRegsFrozen - Returns true after freezeReservedRegs() was called
   /// to ensure the set of reserved registers stays constant.
   bool reservedRegsFrozen() const {

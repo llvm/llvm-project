@@ -100,3 +100,11 @@ add_header_library(
   HDRS
     expected.h
 )
+
+add_object_library(
+  new
+  SRCS
+    new.cpp
+  HDRS
+    new.h
+)

@@ -312,7 +312,7 @@ protected:
   NotifyStubEmittedFunction NotifyStubEmitted;
 
   virtual unsigned getMaxStubSize() const = 0;
-  virtual unsigned getStubAlignment() = 0;
+  virtual Align getStubAlignment() = 0;
 
   bool HasError;
   std::string ErrorStr;
@@ -417,10 +417,10 @@ protected:
 
   // Compute an upper bound of the memory that is required to load all
   // sections
-  Error computeTotalAllocSize(const ObjectFile &Obj,
-                              uint64_t &CodeSize, uint32_t &CodeAlign,
-                              uint64_t &RODataSize, uint32_t &RODataAlign,
-                              uint64_t &RWDataSize, uint32_t &RWDataAlign);
+  Error computeTotalAllocSize(const ObjectFile &Obj, uint64_t &CodeSize,
+                              Align &CodeAlign, uint64_t &RODataSize,
+                              Align &RODataAlign, uint64_t &RWDataSize,
+                              Align &RWDataAlign);
 
   // Compute GOT size
   unsigned computeGOTSize(const ObjectFile &Obj);

@@ -69,4 +69,29 @@ inline void *operator new[](size_t size, std::align_val_t align,
   return __llvm_libc::AllocChecker::aligned_alloc(size, align, ac);
 }
 
+// The ideal situation would be to define the various flavors of operator delete
+// inline like we do with operator new above. However, since we need operator
+// delete prototypes to match those specified by the C++ standard, we cannot
+// define them inline as the C++ standard does not allow inline definitions of
+// replacement operator delete implementations. Note also that we assign a
+// special linkage name to each of these replacement operator delete functions.
+// This is because, if we do not give them a special libc internal linkage name,
+// they will replace operator delete for the entire application. Including this
+// header file in all libc source files where operator delete is called ensures
+// that only libc call sites use these replacement operator delete functions.
+void operator delete(void *) noexcept __asm__("__llvm_libc_delete");
+void operator delete(void *, std::align_val_t) noexcept
+    __asm__("__llvm_libc_delete_aligned");
+void operator delete(void *, size_t) noexcept
+    __asm__("__llvm_libc_delete_sized");
+void operator delete(void *, size_t, std::align_val_t) noexcept
+    __asm__("__llvm_libc_delete_sized_aligned");
+void operator delete[](void *) noexcept __asm__("__llvm_libc_delete_array");
+void operator delete[](void *, std::align_val_t) noexcept
+    __asm__("__llvm_libc_delete_array_aligned");
+void operator delete[](void *, size_t) noexcept
+    __asm__("__llvm_libc_delete_array_sized");
+void operator delete[](void *, size_t, std::align_val_t) noexcept
+    __asm__("__llvm_libc_delete_array_sized_aligned");
+
 #endif // LLVM_LIBC_SRC_SUPPORT_CPP_NEW_H

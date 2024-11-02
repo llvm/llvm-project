@@ -15,13 +15,13 @@ define i32 @test1() nounwind readnone {
 ; CHECK-NEXT:    --> %sum.04 U: full-set S: full-set Exits: 2450 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %i.03 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,50) S: [0,50) Exits: 49 LoopDispositions: { %for.body: Computable }
-; CHECK-NEXT:    %arrayidx = getelementptr inbounds [50 x i32], [50 x i32]* @arr1, i32 0, i32 %i.03
+; CHECK-NEXT:    %arrayidx = getelementptr inbounds [50 x i32], ptr @arr1, i32 0, i32 %i.03
 ; CHECK-NEXT:    --> {@arr1,+,4}<nuw><%for.body> U: [0,-3) S: [-2147483648,2147483645) Exits: (196 + @arr1) LoopDispositions: { %for.body: Computable }
-; CHECK-NEXT:    %0 = load i32, i32* %arrayidx, align 4
+; CHECK-NEXT:    %0 = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:    --> %0 U: full-set S: full-set Exits: 50 LoopDispositions: { %for.body: Variant }
-; CHECK-NEXT:    %arrayidx1 = getelementptr inbounds [50 x i32], [50 x i32]* @arr2, i32 0, i32 %i.03
+; CHECK-NEXT:    %arrayidx1 = getelementptr inbounds [50 x i32], ptr @arr2, i32 0, i32 %i.03
 ; CHECK-NEXT:    --> {@arr2,+,4}<nuw><%for.body> U: [0,-3) S: [-2147483648,2147483645) Exits: (196 + @arr2) LoopDispositions: { %for.body: Computable }
-; CHECK-NEXT:    %1 = load i32, i32* %arrayidx1, align 4
+; CHECK-NEXT:    %1 = load i32, ptr %arrayidx1, align 4
 ; CHECK-NEXT:    --> %1 U: full-set S: full-set Exits: 0 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %add = add i32 %0, %sum.04
 ; CHECK-NEXT:    --> (%0 + %sum.04) U: full-set S: full-set Exits: 2500 LoopDispositions: { %for.body: Variant }
@@ -43,10 +43,10 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %sum.04 = phi i32 [ 0, %entry ], [ %add2, %for.body ]
   %i.03 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds [50 x i32], [50 x i32]* @arr1, i32 0, i32 %i.03
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds [50 x i32], [50 x i32]* @arr2, i32 0, i32 %i.03
-  %1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx = getelementptr inbounds [50 x i32], ptr @arr1, i32 0, i32 %i.03
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds [50 x i32], ptr @arr2, i32 0, i32 %i.03
+  %1 = load i32, ptr %arrayidx1, align 4
   %add = add i32 %0, %sum.04
   %add2 = add i32 %add, %1
   %inc = add nsw i32 %i.03, 1
@@ -58,30 +58,30 @@ for.end:                                          ; preds = %for.body
 }
 
 
-%struct.ListNode = type { %struct.ListNode*, i32 }
+%struct.ListNode = type { ptr, i32 }
 
-@node5 = internal constant { %struct.ListNode*, i32, [4 x i8] } { %struct.ListNode* bitcast ({ %struct.ListNode*, i32, [4 x i8] }* @node4 to %struct.ListNode*), i32 4, [4 x i8] undef }, align 8
-@node4 = internal constant { %struct.ListNode*, i32, [4 x i8] } { %struct.ListNode* bitcast ({ %struct.ListNode*, i32, [4 x i8] }* @node3 to %struct.ListNode*), i32 3, [4 x i8] undef }, align 8
-@node3 = internal constant { %struct.ListNode*, i32, [4 x i8] } { %struct.ListNode* bitcast ({ %struct.ListNode*, i32, [4 x i8] }* @node2 to %struct.ListNode*), i32 2, [4 x i8] undef }, align 8
-@node2 = internal constant { %struct.ListNode*, i32, [4 x i8] } { %struct.ListNode* bitcast ({ %struct.ListNode*, i32, [4 x i8] }* @node1 to %struct.ListNode*), i32 1, [4 x i8] undef }, align 8
-@node1 = internal constant { %struct.ListNode*, i32, [4 x i8] } { %struct.ListNode* null, i32 0, [4 x i8] undef }, align 8
+@node5 = internal constant { ptr, i32, [4 x i8] } { ptr @node4, i32 4, [4 x i8] undef }, align 8
+@node4 = internal constant { ptr, i32, [4 x i8] } { ptr @node3, i32 3, [4 x i8] undef }, align 8
+@node3 = internal constant { ptr, i32, [4 x i8] } { ptr @node2, i32 2, [4 x i8] undef }, align 8
+@node2 = internal constant { ptr, i32, [4 x i8] } { ptr @node1, i32 1, [4 x i8] undef }, align 8
+@node1 = internal constant { ptr, i32, [4 x i8] } { ptr null, i32 0, [4 x i8] undef }, align 8
 
 define i32 @test2() nounwind uwtable readonly {
 ; CHECK-LABEL: 'test2'
 ; CHECK-NEXT:  Classifying expressions for: @test2
 ; CHECK-NEXT:    %sum.02 = phi i32 [ 0, %entry ], [ %add, %for.body ]
 ; CHECK-NEXT:    --> %sum.02 U: full-set S: full-set Exits: 10 LoopDispositions: { %for.body: Variant }
-; CHECK-NEXT:    %n.01 = phi %struct.ListNode* [ bitcast ({ %struct.ListNode*, i32, [4 x i8] }* @node5 to %struct.ListNode*), %entry ], [ %1, %for.body ]
+; CHECK-NEXT:    %n.01 = phi ptr [ @node5, %entry ], [ %1, %for.body ]
 ; CHECK-NEXT:    --> %n.01 U: full-set S: full-set Exits: @node1 LoopDispositions: { %for.body: Variant }
-; CHECK-NEXT:    %i = getelementptr inbounds %struct.ListNode, %struct.ListNode* %n.01, i64 0, i32 1
+; CHECK-NEXT:    %i = getelementptr inbounds %struct.ListNode, ptr %n.01, i64 0, i32 1
 ; CHECK-NEXT:    --> (4 + %n.01)<nuw> U: [4,0) S: [4,0) Exits: (4 + @node1)<nuw><nsw> LoopDispositions: { %for.body: Variant }
-; CHECK-NEXT:    %0 = load i32, i32* %i, align 4
+; CHECK-NEXT:    %0 = load i32, ptr %i, align 4
 ; CHECK-NEXT:    --> %0 U: full-set S: full-set Exits: 0 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %add = add nsw i32 %0, %sum.02
 ; CHECK-NEXT:    --> (%0 + %sum.02) U: full-set S: full-set Exits: 10 LoopDispositions: { %for.body: Variant }
-; CHECK-NEXT:    %next = getelementptr inbounds %struct.ListNode, %struct.ListNode* %n.01, i64 0, i32 0
+; CHECK-NEXT:    %next = getelementptr inbounds %struct.ListNode, ptr %n.01, i64 0, i32 0
 ; CHECK-NEXT:    --> %n.01 U: full-set S: full-set Exits: @node1 LoopDispositions: { %for.body: Variant }
-; CHECK-NEXT:    %1 = load %struct.ListNode*, %struct.ListNode** %next, align 8
+; CHECK-NEXT:    %1 = load ptr, ptr %next, align 8
 ; CHECK-NEXT:    --> %1 U: full-set S: full-set Exits: null LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test2
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is 4
@@ -96,13 +96,13 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %sum.02 = phi i32 [ 0, %entry ], [ %add, %for.body ]
-  %n.01 = phi %struct.ListNode* [ bitcast ({ %struct.ListNode*, i32, [4 x i8] }* @node5 to %struct.ListNode*), %entry ], [ %1, %for.body ]
-  %i = getelementptr inbounds %struct.ListNode, %struct.ListNode* %n.01, i64 0, i32 1
-  %0 = load i32, i32* %i, align 4
+  %n.01 = phi ptr [ @node5, %entry ], [ %1, %for.body ]
+  %i = getelementptr inbounds %struct.ListNode, ptr %n.01, i64 0, i32 1
+  %0 = load i32, ptr %i, align 4
   %add = add nsw i32 %0, %sum.02
-  %next = getelementptr inbounds %struct.ListNode, %struct.ListNode* %n.01, i64 0, i32 0
-  %1 = load %struct.ListNode*, %struct.ListNode** %next, align 8
-  %cmp = icmp eq %struct.ListNode* %1, null
+  %next = getelementptr inbounds %struct.ListNode, ptr %n.01, i64 0, i32 0
+  %1 = load ptr, ptr %next, align 8
+  %cmp = icmp eq ptr %1, null
   br i1 %cmp, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body

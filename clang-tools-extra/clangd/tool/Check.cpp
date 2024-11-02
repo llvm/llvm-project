@@ -333,7 +333,7 @@ public:
   }
 
   // Build Inlay Hints for the entire AST or the specified range
-  void buildInlayHints(llvm::Optional<Range> LineRange) {
+  void buildInlayHints(std::optional<Range> LineRange) {
     log("Building inlay hints");
     auto Hints = inlayHints(*AST, LineRange);
 
@@ -342,7 +342,7 @@ public:
     }
   }
 
-  void buildSemanticHighlighting(llvm::Optional<Range> LineRange) {
+  void buildSemanticHighlighting(std::optional<Range> LineRange) {
     log("Building semantic highlighting");
     auto Highlights = getSemanticHighlightings(*AST);
     for (const auto HL : Highlights)
@@ -351,7 +351,7 @@ public:
   }
 
   // Run AST-based features at each token in the file.
-  void testLocationFeatures(llvm::Optional<Range> LineRange) {
+  void testLocationFeatures(std::optional<Range> LineRange) {
     trace::Span Trace("testLocationFeatures");
     log("Testing features at each token (may be slow in large files)");
     auto &SM = AST->getSourceManager();
@@ -417,7 +417,7 @@ public:
 
 bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
            const ClangdLSPServer::Options &Opts) {
-  llvm::Optional<Range> LineRange;
+  std::optional<Range> LineRange;
   if (!CheckFileLines.empty()) {
     uint32_t Begin = 0, End = std::numeric_limits<uint32_t>::max();
     StringRef RangeStr(CheckFileLines);

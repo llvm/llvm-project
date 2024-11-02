@@ -4466,11 +4466,11 @@ void ASTWriter::EmitRecordWithPath(unsigned Abbrev, RecordDataRef Record,
 void ASTWriter::AddVersionTuple(const VersionTuple &Version,
                                 RecordDataImpl &Record) {
   Record.push_back(Version.getMajor());
-  if (Optional<unsigned> Minor = Version.getMinor())
+  if (std::optional<unsigned> Minor = Version.getMinor())
     Record.push_back(*Minor + 1);
   else
     Record.push_back(0);
-  if (Optional<unsigned> Subminor = Version.getSubminor())
+  if (std::optional<unsigned> Subminor = Version.getSubminor())
     Record.push_back(*Subminor + 1);
   else
     Record.push_back(0);

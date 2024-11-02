@@ -1886,7 +1886,7 @@ CallInst *CodeExtractor::emitReplacerCall(
       Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), AggIdx);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, Struct, Idx, "gep_" + input->getName());
-      GEP->insertAt(codeReplacer, codeReplacer->end());
+      GEP->insertInto(codeReplacer, codeReplacer->end());
       new StoreInst(input, GEP, codeReplacer);
 
       ++AggIdx;
@@ -1930,7 +1930,7 @@ CallInst *CodeExtractor::emitReplacerCall(
       Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), AggIdx);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
-      GEP->insertAt(codeReplacer, codeReplacer->end());
+      GEP->insertInto(codeReplacer, codeReplacer->end());
       Output = GEP;
       ++AggIdx;
     } else {

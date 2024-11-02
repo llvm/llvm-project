@@ -338,6 +338,7 @@ foo:
   mrs x3, ID_AA64MMFR1_EL1
   mrs x3, ID_AA64MMFR2_EL1
   mrs x3, ID_AA64MMFR3_EL1
+  mrs x3, ID_AA64MMFR4_EL1
   mrs x3, ID_AA64PFR0_EL1
   mrs x3, ID_AA64PFR1_EL1
   mrs x3, ID_AA64PFR2_EL1
@@ -556,6 +557,7 @@ foo:
 ; CHECK: mrs x3, ID_AA64MMFR1_EL1       ; encoding: [0x23,0x07,0x38,0xd5]
 ; CHECK: mrs x3, ID_AA64MMFR2_EL1       ; encoding: [0x43,0x07,0x38,0xd5]
 ; CHECK: mrs x3, ID_AA64MMFR3_EL1       ; encoding: [0x63,0x07,0x38,0xd5]
+; CHECK: mrs x3, ID_AA64MMFR4_EL1       ; encoding: [0x83,0x07,0x38,0xd5]
 ; CHECK: mrs x3, ID_AA64PFR0_EL1        ; encoding: [0x03,0x04,0x38,0xd5]
 ; CHECK: mrs x3, ID_AA64PFR1_EL1        ; encoding: [0x23,0x04,0x38,0xd5]
 ; CHECK: mrs x3, ID_AA64PFR2_EL1        ; encoding: [0x43,0x04,0x38,0xd5]

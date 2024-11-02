@@ -47,7 +47,7 @@ llvm::StringRef GetAsString(const llvm::json::Value &value) {
 
 // Gets a string from a JSON object using the key, or returns an empty string.
 llvm::StringRef GetString(const llvm::json::Object &obj, llvm::StringRef key) {
-  if (llvm::Optional<llvm::StringRef> value = obj.getString(key))
+  if (std::optional<llvm::StringRef> value = obj.getString(key))
     return *value;
   return llvm::StringRef();
 }

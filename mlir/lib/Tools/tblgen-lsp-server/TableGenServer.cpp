@@ -354,8 +354,8 @@ public:
   // Hover
   //===--------------------------------------------------------------------===//
 
-  Optional<lsp::Hover> findHover(const lsp::URIForFile &uri,
-                                 const lsp::Position &hoverPos);
+  std::optional<lsp::Hover> findHover(const lsp::URIForFile &uri,
+                                      const lsp::Position &hoverPos);
   lsp::Hover buildHoverForRecord(const llvm::Record *record,
                                  const SMRange &hoverRange);
   lsp::Hover buildHoverForTemplateArg(const llvm::Record *record,
@@ -518,7 +518,7 @@ void TableGenTextFile::getDocumentLinks(const lsp::URIForFile &uri,
 // TableGenTextFile: Hover
 //===----------------------------------------------------------------------===//
 
-Optional<lsp::Hover>
+std::optional<lsp::Hover>
 TableGenTextFile::findHover(const lsp::URIForFile &uri,
                             const lsp::Position &hoverPos) {
   // Check for a reference to an include.
@@ -723,8 +723,9 @@ void lsp::TableGenServer::getDocumentLinks(
     return fileIt->second->getDocumentLinks(uri, documentLinks);
 }
 
-Optional<lsp::Hover> lsp::TableGenServer::findHover(const URIForFile &uri,
-                                                    const Position &hoverPos) {
+std::optional<lsp::Hover>
+lsp::TableGenServer::findHover(const URIForFile &uri,
+                               const Position &hoverPos) {
   auto fileIt = impl->files.find(uri.file());
   if (fileIt != impl->files.end())
     return fileIt->second->findHover(uri, hoverPos);

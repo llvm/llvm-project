@@ -134,11 +134,10 @@ public:
     ///
     /// Note that by default the callback is disabled. To enable it
     /// redefine the method needsToReserveAllocationSpace to return true.
-    virtual void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign,
-                                        uintptr_t RODataSize,
-                                        uint32_t RODataAlign,
+    virtual void reserveAllocationSpace(uintptr_t CodeSize, Align CodeAlign,
+                                        uintptr_t RODataSize, Align RODataAlign,
                                         uintptr_t RWDataSize,
-                                        uint32_t RWDataAlign) {}
+                                        Align RWDataAlign) {}
 
     /// Override to return true to enable the reserveAllocationSpace callback.
     virtual bool needsToReserveAllocationSpace() { return false; }

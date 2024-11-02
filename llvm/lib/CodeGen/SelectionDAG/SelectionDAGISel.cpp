@@ -313,7 +313,8 @@ void TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 // SelectionDAGISel code
 //===----------------------------------------------------------------------===//
 
-SelectionDAGISel::SelectionDAGISel(TargetMachine &tm, CodeGenOpt::Level OL)
+SelectionDAGISel::SelectionDAGISel(char &ID, TargetMachine &tm,
+                                   CodeGenOpt::Level OL)
     : MachineFunctionPass(ID), TM(tm), FuncInfo(new FunctionLoweringInfo()),
       SwiftError(new SwiftErrorValueTracking()),
       CurDAG(new SelectionDAG(tm, OL)),
@@ -3815,5 +3816,3 @@ void SelectionDAGISel::CannotYetSelect(SDNode *N) {
   }
   report_fatal_error(Twine(Msg.str()));
 }
-
-char SelectionDAGISel::ID = 0;

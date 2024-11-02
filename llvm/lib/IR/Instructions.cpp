@@ -106,7 +106,7 @@ PHINode::PHINode(const PHINode &PN)
       ReservedSpace(PN.getNumOperands()) {
   allocHungoffUses(PN.getNumOperands());
   std::copy(PN.op_begin(), PN.op_end(), op_begin());
-  std::copy(PN.block_begin(), PN.block_end(), block_begin());
+  copyIncomingBlocks(make_range(PN.block_begin(), PN.block_end()));
   SubclassOptionalData = PN.SubclassOptionalData;
 }
 
@@ -121,7 +121,7 @@ Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
   // clients might not expect this to happen.  The code as it is thrashes the
   // use/def lists, which is kinda lame.
   std::copy(op_begin() + Idx + 1, op_end(), op_begin() + Idx);
-  std::copy(block_begin() + Idx + 1, block_end(), block_begin() + Idx);
+  copyIncomingBlocks(make_range(block_begin() + Idx + 1, block_end()), Idx);
 
   // Nuke the last value.
   Op<-1>().set(nullptr);
@@ -4582,9 +4582,9 @@ MDNode *SwitchInstProfUpdateWrapper::buildProfBranchWeightsMD() {
   assert(SI.getNumSuccessors() == Weights->size() &&
          "num of prof branch_weights must accord with num of successors");
 
-  bool AllZeroes = all_of(Weights.value(), [](uint32_t W) { return W == 0; });
+  bool AllZeroes = all_of(*Weights, [](uint32_t W) { return W == 0; });
 
-  if (AllZeroes || Weights.value().size() < 2)
+  if (AllZeroes || Weights->size() < 2)
     return nullptr;
 
   return MDBuilder(SI.getParent()->getContext()).createBranchWeights(*Weights);
@@ -4618,8 +4618,8 @@ SwitchInstProfUpdateWrapper::removeCase(SwitchInst::CaseIt I) {
     // Copy the last case to the place of the removed one and shrink.
     // This is tightly coupled with the way SwitchInst::removeCase() removes
     // the cases in SwitchInst::removeCase(CaseIt).
-    Weights.value()[I->getCaseIndex() + 1] = Weights.value().back();
-    Weights.value().pop_back();
+    (*Weights)[I->getCaseIndex() + 1] = Weights->back();
+    Weights->pop_back();
   }
   return SI.removeCase(I);
 }
@@ -4632,10 +4632,10 @@ void SwitchInstProfUpdateWrapper::addCase(
   if (!Weights && W && *W) {
     Changed = true;
     Weights = SmallVector<uint32_t, 8>(SI.getNumSuccessors(), 0);
-    Weights.value()[SI.getNumSuccessors() - 1] = *W;
+    (*Weights)[SI.getNumSuccessors() - 1] = *W;
   } else if (Weights) {
     Changed = true;
-    Weights.value().push_back(W.value_or(0));
+    Weights->push_back(W.value_or(0));
   }
   if (Weights)
     assert(SI.getNumSuccessors() == Weights->size() &&

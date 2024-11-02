@@ -1907,9 +1907,7 @@ namespace {
 class BracesInserter : public TokenAnalyzer {
 public:
   BracesInserter(const Environment &Env, const FormatStyle &Style)
-      : TokenAnalyzer(Env, Style) {
-    this->Style.RemoveBracesLLVM = false;
-  }
+      : TokenAnalyzer(Env, Style) {}
 
   std::pair<tooling::Replacements, unsigned>
   analyze(TokenAnnotator &Annotator,
@@ -1962,9 +1960,7 @@ private:
 class BracesRemover : public TokenAnalyzer {
 public:
   BracesRemover(const Environment &Env, const FormatStyle &Style)
-      : TokenAnalyzer(Env, Style) {
-    this->Style.InsertBraces = false;
-  }
+      : TokenAnalyzer(Env, Style) {}
 
   std::pair<tooling::Replacements, unsigned>
   analyze(TokenAnnotator &Annotator,
@@ -3347,6 +3343,9 @@ reformat(const FormatStyle &Style, StringRef Code,
   FormatStyle Expanded = Style;
   expandPresetsBraceWrapping(Expanded);
   expandPresetsSpaceBeforeParens(Expanded);
+  Expanded.InsertBraces = false;
+  Expanded.RemoveBracesLLVM = false;
+  Expanded.RemoveSemicolon = false;
   switch (Expanded.RequiresClausePosition) {
   case FormatStyle::RCPS_SingleLine:
   case FormatStyle::RCPS_WithPreceding:
@@ -3403,20 +3402,26 @@ reformat(const FormatStyle &Style, StringRef Code,
     }
 
     if (Style.InsertBraces) {
-      Passes.emplace_back([&](const Environment &Env) {
-        return BracesInserter(Env, Expanded).process(/*SkipAnnotation=*/true);
+      FormatStyle S = Expanded;
+      S.InsertBraces = true;
+      Passes.emplace_back([&, S](const Environment &Env) {
+        return BracesInserter(Env, S).process(/*SkipAnnotation=*/true);
       });
     }
 
     if (Style.RemoveBracesLLVM) {
-      Passes.emplace_back([&](const Environment &Env) {
-        return BracesRemover(Env, Expanded).process(/*SkipAnnotation=*/true);
+      FormatStyle S = Expanded;
+      S.RemoveBracesLLVM = true;
+      Passes.emplace_back([&, S](const Environment &Env) {
+        return BracesRemover(Env, S).process(/*SkipAnnotation=*/true);
       });
     }
 
     if (Style.RemoveSemicolon) {
-      Passes.emplace_back([&](const Environment &Env) {
-        return SemiRemover(Env, Expanded).process(/*SkipAnnotation=*/true);
+      FormatStyle S = Expanded;
+      S.RemoveSemicolon = true;
+      Passes.emplace_back([&, S](const Environment &Env) {
+        return SemiRemover(Env, S).process(/*SkipAnnotation=*/true);
       });
     }
 

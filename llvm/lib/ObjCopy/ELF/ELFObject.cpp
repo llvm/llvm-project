@@ -2115,7 +2115,7 @@ Error Object::updateSection(StringRef Name, ArrayRef<uint8_t> Data) {
   if (Data.size() > OldSec->Size && OldSec->ParentSegment)
     return createStringError(errc::invalid_argument,
                              "cannot fit data of size %zu into section '%s' "
-                             "with size %zu that is part of a segment",
+                             "with size %" PRIu64 " that is part of a segment",
                              Data.size(), Name.str().c_str(), OldSec->Size);
 
   if (!OldSec->ParentSegment) {

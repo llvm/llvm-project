@@ -75,7 +75,8 @@ public:
 
   /// Find a hover description for the given hover position, or std::nullopt if
   /// one couldn't be found.
-  Optional<Hover> findHover(const URIForFile &uri, const Position &hoverPos);
+  std::optional<Hover> findHover(const URIForFile &uri,
+                                 const Position &hoverPos);
 
 private:
   struct Impl;

@@ -90,8 +90,10 @@ namespace {
 namespace {
   class MSP430DAGToDAGISel : public SelectionDAGISel {
   public:
+    static char ID;
+
     MSP430DAGToDAGISel(MSP430TargetMachine &TM, CodeGenOpt::Level OptLevel)
-        : SelectionDAGISel(TM, OptLevel) {}
+        : SelectionDAGISel(ID, TM, OptLevel) {}
 
   private:
     StringRef getPassName() const override {
@@ -118,6 +120,8 @@ namespace {
     bool SelectAddr(SDValue Addr, SDValue &Base, SDValue &Disp);
   };
 }  // end anonymous namespace
+
+char MSP430DAGToDAGISel::ID;
 
 /// createMSP430ISelDag - This pass converts a legalized DAG into a
 /// MSP430-specific DAG, ready for instruction scheduling.

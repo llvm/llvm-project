@@ -257,7 +257,7 @@ LogicalResult transform::AlternativesOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// ForeachOp
+// CastOp
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure

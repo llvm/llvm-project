@@ -151,7 +151,7 @@ template <class T>
 ForLoopAwaiterCoawaitLookup test_coawait_lookup(T) {
   Range<T> R;
   for co_await (auto i : R) {}
-  // expected-error@-1 {{no member named 'await_ready' in 'CoawaitTag<Iter<int>, false>'}}
+  // expected-error@-1 {{no member named 'await_ready' in 'CoawaitTag<Iter<int>>'}}
 }
 template ForLoopAwaiterCoawaitLookup test_coawait_lookup(int); // expected-note {{requested here}}
 

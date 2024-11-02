@@ -534,17 +534,24 @@ define i32 @test14(i32 %N, i32 %N2, i1 %C) {
 ; CHECK-NEXT:  Entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       Loop:
-; CHECK-NEXT:    [[N_ADDR_0_PN:%.*]] = phi i32 [ [[N:%.*]], [[ENTRY:%.*]] ], [ [[DEC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[N_ADDR_0_PN:%.*]] = phi i32 [ [[DEC:%.*]], [[CONTLOOP:%.*]] ], [ [[N:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[DEC]] = add i32 [[N_ADDR_0_PN]], -1
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[CONTLOOP]], label [[OUT12_SPLIT_LOOP_EXIT1:%.*]]
+; CHECK:       ContLoop:
 ; CHECK-NEXT:    [[TMP_1:%.*]] = icmp ne i32 [[N_ADDR_0_PN]], 1
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[C:%.*]], i1 [[TMP_1]], i1 false
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[LOOP]], label [[OUT12:%.*]]
-; CHECK:       Out12:
+; CHECK-NEXT:    br i1 [[TMP_1]], label [[LOOP]], label [[OUT12_SPLIT_LOOP_EXIT:%.*]]
+; CHECK:       Out12.split.loop.exit:
+; CHECK-NEXT:    [[N_ADDR_0_PN_LCSSA4:%.*]] = phi i32 [ [[N_ADDR_0_PN]], [[CONTLOOP]] ]
+; CHECK-NEXT:    [[SINK_MUL_LE3:%.*]] = mul i32 [[N]], [[N_ADDR_0_PN_LCSSA4]]
+; CHECK-NEXT:    br label [[OUT12:%.*]]
+; CHECK:       Out12.split.loop.exit1:
 ; CHECK-NEXT:    [[N_ADDR_0_PN_LCSSA:%.*]] = phi i32 [ [[N_ADDR_0_PN]], [[LOOP]] ]
 ; CHECK-NEXT:    [[SINK_MUL_LE:%.*]] = mul i32 [[N]], [[N_ADDR_0_PN_LCSSA]]
 ; CHECK-NEXT:    [[SINK_SUB_LE:%.*]] = sub i32 [[SINK_MUL_LE]], [[N]]
-; CHECK-NEXT:    [[TMP_SEL_LE:%.*]] = select i1 [[C]], i32 [[SINK_MUL_LE]], i32 [[SINK_SUB_LE]]
-; CHECK-NEXT:    ret i32 [[TMP_SEL_LE]]
+; CHECK-NEXT:    br label [[OUT12]]
+; CHECK:       Out12:
+; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ [[SINK_MUL_LE3]], [[OUT12_SPLIT_LOOP_EXIT]] ], [ [[SINK_SUB_LE]], [[OUT12_SPLIT_LOOP_EXIT1]] ]
+; CHECK-NEXT:    ret i32 [[TMP]]
 ;
 Entry:
   br label %Loop
@@ -573,18 +580,25 @@ define i32 @test15(i32 %N, i32 %N2, i1 %C) {
 ; CHECK-NEXT:  Entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       Loop:
-; CHECK-NEXT:    [[N_ADDR_0_PN:%.*]] = phi i32 [ [[N:%.*]], [[ENTRY:%.*]] ], [ [[DEC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[N_ADDR_0_PN:%.*]] = phi i32 [ [[DEC:%.*]], [[CONTLOOP:%.*]] ], [ [[N:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[DEC]] = add i32 [[N_ADDR_0_PN]], -1
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[CONTLOOP]], label [[OUT12_SPLIT_LOOP_EXIT1:%.*]]
+; CHECK:       ContLoop:
 ; CHECK-NEXT:    [[TMP_1:%.*]] = icmp ne i32 [[N_ADDR_0_PN]], 1
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[C:%.*]], i1 [[TMP_1]], i1 false
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[LOOP]], label [[OUT12:%.*]]
-; CHECK:       Out12:
+; CHECK-NEXT:    br i1 [[TMP_1]], label [[LOOP]], label [[OUT12_SPLIT_LOOP_EXIT:%.*]]
+; CHECK:       Out12.split.loop.exit:
+; CHECK-NEXT:    [[N_ADDR_0_PN_LCSSA5:%.*]] = phi i32 [ [[N_ADDR_0_PN]], [[CONTLOOP]] ]
+; CHECK-NEXT:    [[SINK_MUL_LE4:%.*]] = mul i32 [[N]], [[N_ADDR_0_PN_LCSSA5]]
+; CHECK-NEXT:    [[SINK_SUB2_LE:%.*]] = sub i32 [[SINK_MUL_LE4]], [[N2:%.*]]
+; CHECK-NEXT:    br label [[OUT12:%.*]]
+; CHECK:       Out12.split.loop.exit1:
 ; CHECK-NEXT:    [[N_ADDR_0_PN_LCSSA:%.*]] = phi i32 [ [[N_ADDR_0_PN]], [[LOOP]] ]
 ; CHECK-NEXT:    [[SINK_MUL_LE:%.*]] = mul i32 [[N]], [[N_ADDR_0_PN_LCSSA]]
 ; CHECK-NEXT:    [[SINK_SUB_LE:%.*]] = sub i32 [[SINK_MUL_LE]], [[N]]
-; CHECK-NEXT:    [[SINK_SUB2_LE:%.*]] = sub i32 [[SINK_MUL_LE]], [[N2:%.*]]
-; CHECK-NEXT:    [[TMP_SEL_LE:%.*]] = select i1 [[C]], i32 [[SINK_SUB2_LE]], i32 [[SINK_SUB_LE]]
-; CHECK-NEXT:    ret i32 [[TMP_SEL_LE]]
+; CHECK-NEXT:    br label [[OUT12]]
+; CHECK:       Out12:
+; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ [[SINK_SUB2_LE]], [[OUT12_SPLIT_LOOP_EXIT]] ], [ [[SINK_SUB_LE]], [[OUT12_SPLIT_LOOP_EXIT1]] ]
+; CHECK-NEXT:    ret i32 [[TMP]]
 ;
 Entry:
   br label %Loop

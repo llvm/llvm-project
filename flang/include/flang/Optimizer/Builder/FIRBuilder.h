@@ -182,6 +182,13 @@ public:
     return createTemporary(loc, type, name, {}, {}, attrs);
   }
 
+  /// Create a temporary on the heap.
+  mlir::Value
+  createHeapTemporary(mlir::Location loc, mlir::Type type,
+                      llvm::StringRef name = {}, mlir::ValueRange shape = {},
+                      mlir::ValueRange lenParams = {},
+                      llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
+
   /// Create a global value.
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
                              llvm::StringRef name,
@@ -425,15 +432,15 @@ public:
   /// Dump the current function. (debug)
   LLVM_DUMP_METHOD void dumpFunc();
 
-private:
-  /// Set attributes (e.g. FastMathAttr) to \p op operation
-  /// based on the current attributes setting.
-  void setCommonAttributes(mlir::Operation *op) const;
-
   /// FirOpBuilder hook for creating new operation.
   void notifyOperationInserted(mlir::Operation *op) override {
     setCommonAttributes(op);
   }
+
+private:
+  /// Set attributes (e.g. FastMathAttr) to \p op operation
+  /// based on the current attributes setting.
+  void setCommonAttributes(mlir::Operation *op) const;
 
   const KindMapping &kindMap;
 

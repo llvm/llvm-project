@@ -2751,28 +2751,18 @@ public:
 
   // Block iterator interface. This provides access to the list of incoming
   // basic blocks, which parallels the list of incoming values.
+  // Please note that we are not providing non-const iterators for blocks to
+  // force all updates go through an interface function.
 
   using block_iterator = BasicBlock **;
   using const_block_iterator = BasicBlock * const *;
-
-  block_iterator block_begin() {
-    return reinterpret_cast<block_iterator>(op_begin() + ReservedSpace);
-  }
 
   const_block_iterator block_begin() const {
     return reinterpret_cast<const_block_iterator>(op_begin() + ReservedSpace);
   }
 
-  block_iterator block_end() {
-    return block_begin() + getNumOperands();
-  }
-
   const_block_iterator block_end() const {
     return block_begin() + getNumOperands();
-  }
-
-  iterator_range<block_iterator> blocks() {
-    return make_range(block_begin(), block_end());
   }
 
   iterator_range<const_block_iterator> blocks() const {
@@ -2829,8 +2819,14 @@ public:
   }
 
   void setIncomingBlock(unsigned i, BasicBlock *BB) {
-    assert(BB && "PHI node got a null basic block!");
-    block_begin()[i] = BB;
+    const_cast<block_iterator>(block_begin())[i] = BB;
+  }
+
+  /// Copies the basic blocks from \p BBRange to the incoming basic block list
+  /// of this PHINode, starting at \p ToIdx.
+  void copyIncomingBlocks(iterator_range<const_block_iterator> BBRange,
+                          uint32_t ToIdx = 0) {
+    copy(BBRange, const_cast<block_iterator>(block_begin()) + ToIdx);
   }
 
   /// Replace every incoming basic block \p Old to basic block \p New.

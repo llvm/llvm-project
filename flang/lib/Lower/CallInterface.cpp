@@ -1110,7 +1110,14 @@ bool Fortran::lower::CallInterface<T>::PassedEntity::mayBeModifiedByCall()
     const {
   if (!characteristics)
     return true;
-  return characteristics->GetIntent() != Fortran::common::Intent::In;
+  if (characteristics->GetIntent() == Fortran::common::Intent::In)
+    return false;
+  const auto *dummy =
+      std::get_if<Fortran::evaluate::characteristics::DummyDataObject>(
+          &characteristics->u);
+  return !dummy ||
+         !dummy->attrs.test(
+             Fortran::evaluate::characteristics::DummyDataObject::Attr::Value);
 }
 template <typename T>
 bool Fortran::lower::CallInterface<T>::PassedEntity::mayBeReadByCall() const {

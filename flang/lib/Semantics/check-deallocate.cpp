@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-deallocate.h"
+#include "flang/Evaluate/type.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
@@ -30,7 +31,7 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
                              symbol->GetUltimate())) { // C932
                 context_.Say(name.source,
                     "name in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute"_err_en_US);
-              } else {
+              } else if (CheckPolymorphism(name.source, *symbol)) {
                 context_.CheckIndexVarRedefine(name);
               }
             },
@@ -38,10 +39,14 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
               // Only perform structureComponent checks it was successfully
               // analyzed in expression analysis.
               if (GetExpr(context_, allocateObject)) {
-                if (!IsAllocatableOrPointer(
-                        *structureComponent.component.symbol)) { // C932
-                  context_.Say(structureComponent.component.source,
-                      "component in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute"_err_en_US);
+                if (const Symbol *symbol{structureComponent.component.symbol}) {
+                  if (!IsAllocatableOrPointer(*symbol)) { // C932
+                    context_.Say(structureComponent.component.source,
+                        "component in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute"_err_en_US);
+                  } else {
+                    CheckPolymorphism(
+                        structureComponent.component.source, *symbol);
+                  }
                 }
               }
             },
@@ -70,5 +75,30 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
         },
         deallocOpt.u);
   }
+}
+
+bool DeallocateChecker::CheckPolymorphism(
+    parser::CharBlock source, const Symbol &symbol) {
+  if (FindPureProcedureContaining(context_.FindScope(source))) {
+    if (auto type{evaluate::DynamicType::From(symbol)}) {
+      if (type->IsPolymorphic()) {
+        context_.Say(source,
+            "'%s' may not be deallocated in a pure procedure because it is polymorphic"_err_en_US,
+            source);
+        return false;
+      }
+      if (!type->IsUnlimitedPolymorphic() &&
+          type->category() == TypeCategory::Derived) {
+        if (auto iter{FindPolymorphicAllocatableUltimateComponent(
+                type->GetDerivedTypeSpec())}) {
+          context_.Say(source,
+              "'%s' may not be deallocated in a pure procedure because its type has a polymorphic allocatable ultimate component '%s'"_err_en_US,
+              source, iter->name());
+          return false;
+        }
+      }
+    }
+  }
+  return true;
 }
 } // namespace Fortran::semantics

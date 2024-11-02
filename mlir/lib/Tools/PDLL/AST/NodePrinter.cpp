@@ -330,7 +330,7 @@ void NodePrinter::printImpl(const NamedAttributeDecl *decl) {
 void NodePrinter::printImpl(const OpNameDecl *decl) {
   os << "OpNameDecl " << decl;
   if (Optional<StringRef> name = decl->getName())
-    os << " Name<" << name << ">";
+    os << " Name<" << *name << ">";
   os << "\n";
 }
 

@@ -14,6 +14,7 @@ executable("llvm-profgen") {
   ]
   sources = [
     "CSPreInliner.cpp",
+    "MissingFrameInferrer.cpp",
     "PerfReader.cpp",
     "ProfileGenerator.cpp",
     "ProfiledBinary.cpp",

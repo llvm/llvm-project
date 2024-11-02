@@ -2146,7 +2146,7 @@ void OperationLegalizer::buildLegalizationGraph(
 
   // Build the mapping from operations to the parent ops that may generate them.
   applicator.walkAllPatterns([&](const Pattern &pattern) {
-    Optional<OperationName> root = pattern.getRootKind();
+    std::optional<OperationName> root = pattern.getRootKind();
 
     // If the pattern has no specific root, we can't analyze the relationship
     // between the root op and generated operations. Given that, add all such
@@ -2228,7 +2228,7 @@ void OperationLegalizer::computeLegalizationGraphBenefit(
   // decreasing benefit.
   applicator.applyCostModel([&](const Pattern &pattern) {
     ArrayRef<const Pattern *> orderedPatternList;
-    if (Optional<OperationName> rootName = pattern.getRootKind())
+    if (std::optional<OperationName> rootName = pattern.getRootKind())
       orderedPatternList = legalizerPatterns[*rootName];
     else
       orderedPatternList = anyOpLegalizerPatterns;

@@ -778,9 +778,8 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
 
   // Do the lookup. If we have a hit, return it.
   auto IterBool = XCOFFUniquingMap.insert(std::make_pair(
-      IsDwarfSec
-          ? XCOFFSectionKey(Section.str(), DwarfSectionSubtypeFlags.value())
-          : XCOFFSectionKey(Section.str(), CsectProp->MappingClass),
+      IsDwarfSec ? XCOFFSectionKey(Section.str(), *DwarfSectionSubtypeFlags)
+                 : XCOFFSectionKey(Section.str(), CsectProp->MappingClass),
       nullptr));
   auto &Entry = *IterBool.first;
   if (!IterBool.second) {
@@ -810,10 +809,9 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
   // CachedName contains invalid character(s) such as '$' for an XCOFF symbol.
   MCSectionXCOFF *Result = nullptr;
   if (IsDwarfSec)
-    Result = new (XCOFFAllocator.Allocate())
-        MCSectionXCOFF(QualName->getUnqualifiedName(), Kind, QualName,
-                       DwarfSectionSubtypeFlags.value(), Begin, CachedName,
-                       MultiSymbolsAllowed);
+    Result = new (XCOFFAllocator.Allocate()) MCSectionXCOFF(
+        QualName->getUnqualifiedName(), Kind, QualName,
+        *DwarfSectionSubtypeFlags, Begin, CachedName, MultiSymbolsAllowed);
   else
     Result = new (XCOFFAllocator.Allocate())
         MCSectionXCOFF(QualName->getUnqualifiedName(), CsectProp->MappingClass,

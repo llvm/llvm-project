@@ -14245,17 +14245,23 @@ static SDValue combineBVOfConsecutiveLoads(SDNode *N, SelectionDAG &DAG) {
   unsigned ElemSize = N->getValueType(0).getScalarType().getStoreSize();
   SDValue FirstInput = N->getOperand(0);
   bool IsRoundOfExtLoad = false;
+  LoadSDNode *FirstLoad = nullptr;
 
   if (FirstInput.getOpcode() == ISD::FP_ROUND &&
       FirstInput.getOperand(0).getOpcode() == ISD::LOAD) {
-    LoadSDNode *LD = dyn_cast<LoadSDNode>(FirstInput.getOperand(0));
-    IsRoundOfExtLoad = LD->getExtensionType() == ISD::EXTLOAD;
+    FirstLoad = cast<LoadSDNode>(FirstInput.getOperand(0));
+    IsRoundOfExtLoad = FirstLoad->getExtensionType() == ISD::EXTLOAD;
   }
   // Not a build vector of (possibly fp_rounded) loads.
   if ((!IsRoundOfExtLoad && FirstInput.getOpcode() != ISD::LOAD) ||
       N->getNumOperands() == 1)
     return SDValue();
 
+  if (!IsRoundOfExtLoad)
+    FirstLoad = cast<LoadSDNode>(FirstInput);
+
+  SmallVector<LoadSDNode *, 4> InputLoads;
+  InputLoads.push_back(FirstLoad);
   for (int i = 1, e = N->getNumOperands(); i < e; ++i) {
     // If any inputs are fp_round(extload), they all must be.
     if (IsRoundOfExtLoad && N->getOperand(i).getOpcode() != ISD::FP_ROUND)
@@ -14268,53 +14274,55 @@ static SDValue combineBVOfConsecutiveLoads(SDNode *N, SelectionDAG &DAG) {
 
     SDValue PreviousInput =
       IsRoundOfExtLoad ? N->getOperand(i-1).getOperand(0) : N->getOperand(i-1);
-    LoadSDNode *LD1 = dyn_cast<LoadSDNode>(PreviousInput);
-    LoadSDNode *LD2 = dyn_cast<LoadSDNode>(NextInput);
+    LoadSDNode *LD1 = cast<LoadSDNode>(PreviousInput);
+    LoadSDNode *LD2 = cast<LoadSDNode>(NextInput);
 
     // If any inputs are fp_round(extload), they all must be.
     if (IsRoundOfExtLoad && LD2->getExtensionType() != ISD::EXTLOAD)
       return SDValue();
 
-    if (!isConsecutiveLS(LD2, LD1, ElemSize, 1, DAG))
+    // We only care about regular loads. The PPC-specific load intrinsics
+    // will not lead to a merge opportunity.
+    if (!DAG.areNonVolatileConsecutiveLoads(LD2, LD1, ElemSize, 1))
       InputsAreConsecutiveLoads = false;
-    if (!isConsecutiveLS(LD1, LD2, ElemSize, 1, DAG))
+    if (!DAG.areNonVolatileConsecutiveLoads(LD1, LD2, ElemSize, 1))
       InputsAreReverseConsecutive = false;
 
     // Exit early if the loads are neither consecutive nor reverse consecutive.
     if (!InputsAreConsecutiveLoads && !InputsAreReverseConsecutive)
       return SDValue();
+    InputLoads.push_back(LD2);
   }
 
   assert(!(InputsAreConsecutiveLoads && InputsAreReverseConsecutive) &&
          "The loads cannot be both consecutive and reverse consecutive.");
 
-  SDValue FirstLoadOp =
-    IsRoundOfExtLoad ? FirstInput.getOperand(0) : FirstInput;
-  SDValue LastLoadOp =
-    IsRoundOfExtLoad ? N->getOperand(N->getNumOperands()-1).getOperand(0) :
-                       N->getOperand(N->getNumOperands()-1);
-
-  LoadSDNode *LD1 = dyn_cast<LoadSDNode>(FirstLoadOp);
-  LoadSDNode *LDL = dyn_cast<LoadSDNode>(LastLoadOp);
+  SDValue WideLoad;
+  SDValue ReturnSDVal;
   if (InputsAreConsecutiveLoads) {
-    assert(LD1 && "Input needs to be a LoadSDNode.");
-    return DAG.getLoad(N->getValueType(0), dl, LD1->getChain(),
-                       LD1->getBasePtr(), LD1->getPointerInfo(),
-                       LD1->getAlign());
-  }
-  if (InputsAreReverseConsecutive) {
-    assert(LDL && "Input needs to be a LoadSDNode.");
-    SDValue Load =
-        DAG.getLoad(N->getValueType(0), dl, LDL->getChain(), LDL->getBasePtr(),
-                    LDL->getPointerInfo(), LDL->getAlign());
+    assert(FirstLoad && "Input needs to be a LoadSDNode.");
+    WideLoad = DAG.getLoad(N->getValueType(0), dl, FirstLoad->getChain(),
+                           FirstLoad->getBasePtr(), FirstLoad->getPointerInfo(),
+                           FirstLoad->getAlign());
+    ReturnSDVal = WideLoad;
+  } else if (InputsAreReverseConsecutive) {
+    LoadSDNode *LastLoad = InputLoads.back();
+    assert(LastLoad && "Input needs to be a LoadSDNode.");
+    WideLoad = DAG.getLoad(N->getValueType(0), dl, LastLoad->getChain(),
+                           LastLoad->getBasePtr(), LastLoad->getPointerInfo(),
+                           LastLoad->getAlign());
     SmallVector<int, 16> Ops;
     for (int i = N->getNumOperands() - 1; i >= 0; i--)
       Ops.push_back(i);
 
-    return DAG.getVectorShuffle(N->getValueType(0), dl, Load,
-                                DAG.getUNDEF(N->getValueType(0)), Ops);
-  }
-  return SDValue();
+    ReturnSDVal = DAG.getVectorShuffle(N->getValueType(0), dl, WideLoad,
+                                       DAG.getUNDEF(N->getValueType(0)), Ops);
+  } else
+    return SDValue();
+
+  for (auto *LD : InputLoads)
+    DAG.makeEquivalentMemoryOrdering(LD, WideLoad);
+  return ReturnSDVal;
 }
 
 // This function adds the required vector_shuffle needed to get

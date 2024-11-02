@@ -70,6 +70,18 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     const SIRegisterInfo *TRI
       = static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
     if (TRI->isSGPRReg(MRI, PhysReg)) {
+      LLT Ty = MRI.getType(ExtReg);
+      LLT S32 = LLT::scalar(32);
+      if (Ty != S32) {
+        // FIXME: We should probably support readfirstlane intrinsics with all
+        // legal 32-bit types.
+        assert(Ty.getSizeInBits() == 32);
+        if (Ty.isPointer())
+          ExtReg = MIRBuilder.buildPtrToInt(S32, ExtReg).getReg(0);
+        else
+          ExtReg = MIRBuilder.buildBitcast(S32, ExtReg).getReg(0);
+      }
+
       auto ToSGPR = MIRBuilder.buildIntrinsic(Intrinsic::amdgcn_readfirstlane,
                                               {MRI.getType(ExtReg)}, false)
         .addReg(ExtReg);

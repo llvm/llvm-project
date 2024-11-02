@@ -345,6 +345,38 @@ contains
 ! CHECK: %[[C4_CAST:.*]] = fir.convert %[[C4]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableDeallocate(%[[C4_CAST]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
+  subroutine test_unlimited_polymorphic_with_intrinsic_type_spec()
+    class(*), allocatable :: p
+    class(*), pointer :: ptr
+    allocate(integer::p)
+    deallocate(p)
+
+    allocate(real::ptr)
+    deallocate(ptr)
+
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolyPtest_unlimited_polymorphic_with_intrinsic_type_spec() {
+! CHECK: %[[P:.*]] = fir.alloca !fir.class<!fir.heap<none>> {bindc_name = "p", uniq_name = "_QMpolyFtest_unlimited_polymorphic_with_intrinsic_type_specEp"}
+! CHECK: %[[PTR:.*]] = fir.alloca !fir.class<!fir.ptr<none>> {bindc_name = "ptr", uniq_name = "_QMpolyFtest_unlimited_polymorphic_with_intrinsic_type_specEptr"}
+! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[P]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[CAT:.*]] = arith.constant 0 : i32
+! CHECK: %[[KIND:.*]] = arith.constant 4 : i32
+! CHECK: %[[RANK:.*]] = arith.constant 0 : i32
+! CHECK: %[[CORANK:.*]] = arith.constant 0 : i32
+! CHECK: %{{.*}} = fir.call @_FortranAAllocatableInitIntrinsic(%[[BOX_NONE]], %[[CAT]], %[[KIND]], %[[RANK]], %[[CORANK]]) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, i32, i32) -> none
+! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[P]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %{{.*}} = fir.call @_FortranAAllocatableAllocate(%[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+
+! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[PTR]] : (!fir.ref<!fir.class<!fir.ptr<none>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[CAT:.*]] = arith.constant 1 : i32
+! CHECK: %[[KIND:.*]] = arith.constant 4 : i32
+! CHECK: %[[RANK:.*]] = arith.constant 0 : i32
+! CHECK: %[[CORANK:.*]] = arith.constant 0 : i32
+! CHECK: %{{.*}} = fir.call @_FortranAPointerNullifyIntrinsic(%[[BOX_NONE]], %[[CAT]], %[[KIND]], %[[RANK]], %[[CORANK]]) {{.*}} : (!fir.ref<!fir.box<none>>, i32, i32, i32, i32) -> none
+! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[PTR]] : (!fir.ref<!fir.class<!fir.ptr<none>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %{{.*}} = fir.call @_FortranAPointerAllocate(%[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+
   ! Test code generation of deallocate
   subroutine test_deallocate()
     class(p1), allocatable :: p

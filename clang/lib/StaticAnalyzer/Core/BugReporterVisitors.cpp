@@ -3449,7 +3449,7 @@ void FalsePositiveRefutationBRVisitor::finalizeVisitor(
   }
 
   // And check for satisfiability
-  Optional<bool> IsSAT = RefutationSolver->check();
+  std::optional<bool> IsSAT = RefutationSolver->check();
   if (!IsSAT)
     return;
 

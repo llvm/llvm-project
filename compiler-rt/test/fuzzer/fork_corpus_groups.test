@@ -1,4 +1,4 @@
-# UNSUPPORTED: darwin, freebsd, aarch64
+# UNSUPPORTED: darwin, target={{.*freebsd.*}}, target=aarch64{{.*}}
 BINGO: BINGO
 RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest
 RUN: not %run %t-SimpleTest -fork=1 -fork_corpus_groups=1 2>&1 | FileCheck %s --check-prefix=BINGO

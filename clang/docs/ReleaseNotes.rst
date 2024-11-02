@@ -199,6 +199,8 @@ Major New Features
 
 Bug Fixes
 ---------
+- ``stdatomic.h`` will use the internal declarations when targeting pre-C++-23
+  on Windows platforms as the MSVC support requires newer C++ standard.
 - Correct ``_Static_assert`` to accept the same set of extended integer
   constant expressions as is accpted in other contexts that accept them.
   This fixes `Issue 57687 <https://github.com/llvm/llvm-project/issues/57687>`_.
@@ -439,6 +441,11 @@ Non-comprehensive list of changes in this release
 - Unicode support has been updated to support Unicode 15.0.
   New unicode codepoints are supported as appropriate in diagnostics,
   C and C++ identifiers, and escape sequences.
+- In identifiers, Clang allows a restricted set of additional mathematical symbols
+  as an extension. These symbols correspond to a proposed Unicode
+  `Mathematical notation profile for default identifiers
+  <https://www.unicode.org/L2/L2022/22230-math-profile.pdf>`_.
+  This resolves `Issue 54732 <https://github.com/llvm/llvm-project/issues/54732>`_.
 - Clang now supports loading multiple configuration files. The files from
   default configuration paths are loaded first, unless ``--no-default-config``
   option is used. All files explicitly specified using ``--config=`` option

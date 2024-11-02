@@ -168,8 +168,10 @@ namespace {
     bool IndirectTlsSegRefs;
 
   public:
+    static char ID;
+
     explicit X86DAGToDAGISel(X86TargetMachine &tm, CodeGenOpt::Level OptLevel)
-        : SelectionDAGISel(tm, OptLevel), Subtarget(nullptr),
+        : SelectionDAGISel(ID, tm, OptLevel), Subtarget(nullptr),
           OptForMinSize(false), IndirectTlsSegRefs(false) {}
 
     StringRef getPassName() const override {
@@ -574,6 +576,7 @@ namespace {
   };
 }
 
+char X86DAGToDAGISel::ID = 0;
 
 // Returns true if this masked compare can be implemented legally with this
 // type.

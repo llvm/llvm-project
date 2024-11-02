@@ -1,6 +1,6 @@
 ; RUN: %lli -jit-kind=mcjit -remote-mcjit -mcjit-remote-process=lli-child-target%exeext %s > /dev/null
 ; XFAIL: target={{.*-windows-(gnu|msvc)}}
-; UNSUPPORTED: powerpc64-unknown-linux-gnu
+; UNSUPPORTED: target=powerpc64-unknown-linux-gnu
 ; Remove UNSUPPORTED for powerpc64-unknown-linux-gnu if problem caused by r266663 is fixed
 
 @count = global i32 1, align 4

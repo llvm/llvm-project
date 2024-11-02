@@ -1546,7 +1546,7 @@ void VFABI::getVectorVariantNames(
     std::optional<VFInfo> Info =
         VFABI::tryDemangleForVFABI(S, *(CI.getModule()));
     assert(Info && "Invalid name for a VFABI variant.");
-    assert(CI.getModule()->getFunction(Info.value().VectorName) &&
+    assert(CI.getModule()->getFunction(Info->VectorName) &&
            "Vector function is missing.");
 #endif
     VariantMappings.push_back(std::string(S));
