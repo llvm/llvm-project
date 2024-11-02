@@ -1077,6 +1077,16 @@ public:
     return MutableArrayRef<char>(AllocatedBuffer, SourceStr.size());
   }
 
+  /// Allocate a copy of the given string using the LinkGraph's allocator
+  /// and return it as a StringRef.
+  ///
+  /// This is a convenience wrapper around allocateContent(Twine) that is
+  /// handy when creating new symbol names within the graph.
+  StringRef allocateName(Twine Source) {
+    auto Buf = allocateContent(Source);
+    return {Buf.data(), Buf.size()};
+  }
+
   /// Allocate a copy of the given string using the LinkGraph's allocator.
   ///
   /// The allocated string will be terminated with a null character, and the
