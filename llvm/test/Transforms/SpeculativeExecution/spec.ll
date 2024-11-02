@@ -108,7 +108,7 @@ define void @doNotHoistPastDef() {
 ; CHECK: a:
 a:
 ; CHECK: %def = load
-  %def = load i32, i32* null
+  %def = load i32, ptr null
 ; CHECK: %use = add
   %use = add i32 %def, 0
   br label %b
@@ -124,7 +124,7 @@ define void @nothingToSpeculate() {
 ; CHECK: a:
 a:
 ; CHECK: %def = load
-  %def = load i32, i32* null
+  %def = load i32, ptr null
   br label %b
 ; CHECK: b:
 b:
@@ -135,7 +135,7 @@ b:
 define void @hoistIfNotPastDef() {
 ; CHECK-LABEL: @hoistIfNotPastDef(
 ; CHECK: %x = load
-  %x = load i32, i32* null
+  %x = load i32, ptr null
 ; CHECK: %y = add i32 %x, 1
 ; CHECK: %z = add i32 %y, 1
 ; CHECK: br
@@ -181,7 +181,7 @@ define void @tooMuchLeftBehind() {
 ; CHECK: a:
 a:
 ; CHECK: %x = load
-  %x = load i32, i32* null
+  %x = load i32, ptr null
 ; CHECK: %r1 = add
   %r1 = add i32 %x, 1
 ; CHECK: %r2 = add

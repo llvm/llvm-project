@@ -207,6 +207,7 @@ public:
 
   /// Cached Type Instances.
   Float8E5M2Type f8E5M2Ty;
+  Float8E4M3FNType f8E4M3FNTy;
   BFloat16Type bf16Ty;
   Float16Type f16Ty;
   Float32Type f32Ty;
@@ -278,6 +279,7 @@ MLIRContext::MLIRContext(const DialectRegistry &registry, Threading setting)
   //// Types.
   /// Floating-point Types.
   impl->f8E5M2Ty = TypeUniquer::get<Float8E5M2Type>(this);
+  impl->f8E4M3FNTy = TypeUniquer::get<Float8E4M3FNType>(this);
   impl->bf16Ty = TypeUniquer::get<BFloat16Type>(this);
   impl->f16Ty = TypeUniquer::get<Float16Type>(this);
   impl->f32Ty = TypeUniquer::get<Float32Type>(this);
@@ -481,7 +483,7 @@ DynamicDialect *MLIRContext::getOrLoadDynamicDialect(
   auto dialectIt = impl.loadedDialects.find(dialectNamespace);
 
   if (dialectIt != impl.loadedDialects.end()) {
-    if (auto dynDialect = dyn_cast<DynamicDialect>(dialectIt->second.get()))
+    if (auto *dynDialect = dyn_cast<DynamicDialect>(dialectIt->second.get()))
       return dynDialect;
     llvm::report_fatal_error("a dialect with namespace '" + dialectNamespace +
                              "' has already been registered");
@@ -860,6 +862,9 @@ StorageUniquer &MLIRContext::getTypeUniquer() { return getImpl().typeUniquer; }
 
 Float8E5M2Type Float8E5M2Type::get(MLIRContext *context) {
   return context->getImpl().f8E5M2Ty;
+}
+Float8E4M3FNType Float8E4M3FNType::get(MLIRContext *context) {
+  return context->getImpl().f8E4M3FNTy;
 }
 BFloat16Type BFloat16Type::get(MLIRContext *context) {
   return context->getImpl().bf16Ty;

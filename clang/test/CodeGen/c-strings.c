@@ -16,7 +16,7 @@
 // MSABI: @f4.x = internal global %struct.s { ptr @"??_C@_05CJBACGMB@hello?$AA@" }
 // CHECK: @x = {{(dso_local )?}}global [3 x i8] c"ola", align [[ALIGN]]
 
-// XFAIL: hexagon
+// XFAIL: target=hexagon-{{.*}}
 // Hexagon aligns arrays of size 8+ bytes to a 64-bit boundary, which
 // fails the check for "@f3.x = ... align [ALIGN]", since ALIGN is derived
 // from the alignment of a single i8, which is still 1.

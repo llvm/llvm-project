@@ -16,6 +16,7 @@
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/IR/RegionKindInterface.td"
+include "mlir/Dialect/SCF/IR/DeviceMappingInterface.td"
 include "mlir/Interfaces/ParallelCombiningOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
@@ -378,14 +379,14 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     application per thread. Further lowerings are responsible for specifying
     how this is materialized on concrete hardware resources.
 
-    An optional thread_dim_mapping index array attribute specifies for each
-    virtual thread dimension, how it remaps 1-1 to a set of concrete processing
+    An optional `mapping` is an attribute array that specifies processing units
+    with their dimension, how it remaps 1-1 to a set of concrete processing
     element resources (e.g. a CUDA grid dimension or a level of concrete nested
-    async parallelism). At this time, the specification is backend-dependent and
-    is not verified by the op, beyond being an index array attribute.
-    It is the reponsibility of the lowering to interpret the index array in the
-    context of the concrete target the op is lowered to, or to ignore it when
-    the specification is ill-formed or unsupported for a particular target.
+    async parallelism). It is expressed via any attribute that implements the
+    device mapping interface. It is the reponsibility of the lowering mechanism
+    to interpret the `mapping` attributes in the context of the concrete target
+    the op is lowered to, or to ignore it when the specification is ill-formed
+    or unsupported for a particular target.
 
     The only allowed terminator is `scf.foreach_thread.perform_concurrently`.
     `scf.foreach_thread` returns one value per `shared_out` operand. The
@@ -440,11 +441,12 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     //
     ```
 
-    Example with thread_dim_mapping attribute:
+    Example with mapping attribute:
 
     ```mlir
     //
-    // Sequential context.
+    // Sequential context. Here `mapping` is expressed as GPU thread mapping
+    // attributes
     //
     %matmul_and_pointwise:2 = scf.foreach_thread (%thread_id_1, %thread_id_2) in
         (%num_threads_1, %numthread_id_2) shared_outs(...)
@@ -456,7 +458,7 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
        scf.foreach_thread.perform_concurrently {
          ...
       }
-    } { thread_dim_mapping = [1, 0] }
+    } { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
     // Implicit synchronization point.
     // Sequential context.
     //
@@ -480,11 +482,12 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
   }];
   let arguments = (ins Variadic<Index>:$num_threads,
                        Variadic<AnyRankedTensor>:$outputs,
-                       DefaultValuedAttr<I64ArrayAttr, "{}">:$thread_dim_mapping);
+                       OptionalAttr<DeviceMappingArrayAttr>:$mapping);
 
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
 
+  let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 
@@ -493,10 +496,10 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
   let builders = [
     // Bodyless builder, outputs must be specified.
     OpBuilder<(ins "ValueRange":$outputs, "ValueRange":$num_threads,
-                   CArg<"ArrayRef<int64_t>", "{}">:$thread_dim_mapping)>,
+                   "Optional<ArrayAttr>":$mapping)>,
     // Builder that takes a bodyBuilder lambda.
     OpBuilder<(ins "ValueRange":$outputs, "ValueRange":$num_threads,
-                   "ArrayRef<int64_t>":$thread_dim_mapping,
+                   "ArrayRef<Attribute>":$mapping,
                    "function_ref<void(OpBuilder &, Location, ValueRange)>":$bodyBuilder)>
   ];
   let extraClassDeclaration = [{
@@ -508,9 +511,18 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
           opOperand->getOperandNumber() - getRank());
     }
 
+    /// Return the num_threads operand that is tied to the given thread id
+    /// block argument.
     OpOperand *getTiedOpOperand(BlockArgument bbArg) {
       assert(bbArg.getArgNumber() >= getRank() && "invalid bbArg");
       return &getOperation()->getOpOperand(bbArg.getArgNumber());
+    }
+
+    /// Return the shared_outs operand that is tied to the given OpResult.
+    OpOperand *getTiedOpOperand(OpResult opResult) {
+      assert(opResult.getDefiningOp() == getOperation() && "invalid OpResult");
+      return &getOperation()->getOpOperand(
+          opResult.getResultNumber() + getRank());
     }
 
     BlockArgument getTiedBlockArgument(OpOperand *opOperand) {
@@ -534,15 +546,14 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
       return getBody()->getArguments().drop_front(getRank());
     }
 
-    /// Return the thread indices in the order specified by the
-    /// thread_dim_mapping attribute. Return failure is
-    /// thread_dim_mapping is not a valid permutation.
-    FailureOr<SmallVector<Value>> getPermutedThreadIndices();
-
-    /// Return the number of threads in the order specified by the
-    /// thread_dim_mapping attribute.
-    /// Return failure is thread_dim_mapping is not a valid permutation.
-    FailureOr<SmallVector<OpFoldResult>> getPermutedNumThreads(OpBuilder &b);
+    /// Helper to sort `values` according to matching `keys`.
+    /// Take a custom `compare` binary comparator which returns true if the first
+    /// element is smaller than the second (i.e. compatible with std::sort).
+    /// This is a helper typically used to sort numThreads values before they are
+    /// mapped to concrete physical dimensions of hardware.
+    static SmallVector<Value> getValuesSortedByKey(
+      ArrayRef<Attribute> keys, ValueRange values,
+      llvm::function_ref<bool(Attribute, Attribute)> compare);
 
     // The ensureTerminator method generated by SingleBlockImplicitTerminator is
     // unaware of the fact that our terminator also needs a region to be
@@ -934,7 +945,7 @@ def WhileOp : SCF_Op<"while",
 
     Note that the types of region arguments need not to match with each other.
     The op expects the operand types to match with argument types of the
-    "before" region"; the result types to match with the trailing operand types
+    "before" region; the result types to match with the trailing operand types
     of the terminator of the "before" region, and with the argument types of the
     "after" region. The following scheme can be used to share the results of
     some operations executed in the "before" region with the "after" region,
@@ -982,7 +993,16 @@ def WhileOp : SCF_Op<"while",
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$before, SizedRegion<1>:$after);
 
+  let builders = [
+    OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$operands,
+      "function_ref<void(OpBuilder &, Location, ValueRange)>":$beforeBuilder,
+      "function_ref<void(OpBuilder &, Location, ValueRange)>":$afterBuilder)>
+  ];
+
   let extraClassDeclaration = [{
+    using BodyBuilderFn =
+        function_ref<void(OpBuilder &, Location, ValueRange)>;
+
     OperandRange getSuccessorEntryOperands(Optional<unsigned> index);
     ConditionOp getConditionOp();
     YieldOp getYieldOp();

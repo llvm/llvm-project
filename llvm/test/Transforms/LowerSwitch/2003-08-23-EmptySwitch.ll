@@ -1,4 +1,4 @@
-; RUN: opt < %s -lowerswitch
+; RUN: opt < %s -passes=lowerswitch
 
 define void @test() {
 	switch i32 0, label %Next [

@@ -49,7 +49,7 @@ public:
   bool Update() override {
     m_impl.Clear();
 
-    TypeSystem *type_system = m_backend.GetCompilerType().GetTypeSystem();
+    auto type_system = m_backend.GetCompilerType().GetTypeSystem();
     if (!type_system)
       return false;
 

@@ -13,7 +13,7 @@ subroutine spread_test(s,d,n,r)
   ! CHECK-DAG:  %[[a9:.*]] = fir.convert %[[a3]] : (!fir.box<i32>) -> !fir.box<none>
   ! CHECK-DAG:  %[[a10:.*]] = fir.convert %[[a2]] : (i32) -> i64
     r = spread(s,d,n)
-  ! CHECK:  %{{.*}} = fir.call @_FortranASpread(%[[a8]], %[[a9]], %[[a1]], %[[a10]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i64, !fir.ref<i8>, i32) -> none
+  ! CHECK:  %{{.*}} = fir.call @_FortranASpread(%[[a8]], %[[a9]], %[[a1]], %[[a10]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i64, !fir.ref<i8>, i32) -> none
   ! CHECK-DAG:  %[[a13:.*]] = fir.load %[[a0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   ! CHECK-DAG:  %[[a15:.*]] = fir.box_addr %[[a13]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   ! CHECK:  fir.freemem %[[a15]]
@@ -31,7 +31,7 @@ subroutine spread_test(s,d,n,r)
   ! CHECK-DAG:  %[[a8:.*]] = fir.convert %[[arg0]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
   ! CHECK-DAG:  %[[a9:.*]] = fir.convert %[[a2]] : (i32) -> i64
     r = spread(s,d,n)
-  ! CHECK:  %{{.*}} = fir.call @_FortranASpread(%[[a7]], %[[a8]], %[[a1]], %[[a9]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i64, !fir.ref<i8>, i32) -> none
+  ! CHECK:  %{{.*}} = fir.call @_FortranASpread(%[[a7]], %[[a8]], %[[a1]], %[[a9]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i64, !fir.ref<i8>, i32) -> none
   ! CHECK-DAG:  %[[a12:.*]] = fir.load %[[a0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
   ! CHECK-DAG:  %[[a15:.*]] = fir.box_addr %[[a12]] : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !fir.heap<!fir.array<?x?xi32>>
   ! CHECK:  fir.freemem %[[a15:.*]]

@@ -16,7 +16,6 @@
 #include "OSTargets.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/Support/AArch64TargetParser.h"
-#include "llvm/Support/TargetParser.h"
 
 namespace clang {
 namespace targets {
@@ -54,14 +53,14 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasLSE;
   bool HasFlagM;
   bool HasMOPS;
+  bool HasD128;
   bool HasRCPC;
 
-  llvm::AArch64::ArchKind ArchKind;
+  const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
 
   static const Builtin::Info BuiltinInfo[];
 
   std::string ABI;
-  StringRef getArchProfile() const;
 
 public:
   AArch64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
@@ -97,6 +96,8 @@ public:
                                MacroBuilder &Builder) const;
   void getTargetDefinesARMV88A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
+  void getTargetDefinesARMV89A(const LangOptions &Opts,
+                               MacroBuilder &Builder) const;
   void getTargetDefinesARMV9A(const LangOptions &Opts,
                               MacroBuilder &Builder) const;
   void getTargetDefinesARMV91A(const LangOptions &Opts,
@@ -104,6 +105,8 @@ public:
   void getTargetDefinesARMV92A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
   void getTargetDefinesARMV93A(const LangOptions &Opts,
+                               MacroBuilder &Builder) const;
+  void getTargetDefinesARMV94A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;

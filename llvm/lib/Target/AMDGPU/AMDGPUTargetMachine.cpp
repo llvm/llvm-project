@@ -51,7 +51,6 @@
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/IPO/Internalize.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/InferAddressSpaces.h"
@@ -576,80 +575,6 @@ static bool mustPreserveGV(const GlobalValue &GV) {
   return !GV.use_empty();
 }
 
-void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
-  Builder.DivergentTarget = true;
-
-  bool EnableOpt = getOptLevel() > CodeGenOpt::None;
-  bool Internalize = InternalizeSymbols;
-  bool EarlyInline = EarlyInlineAll && EnableOpt && !EnableFunctionCalls;
-  bool AMDGPUAA = EnableAMDGPUAliasAnalysis && EnableOpt;
-  bool LibCallSimplify = EnableLibCallSimplify && EnableOpt;
-  bool PromoteKernelArguments =
-      EnablePromoteKernelArguments && getOptLevel() > CodeGenOpt::Less;
-
-  if (EnableFunctionCalls) {
-    delete Builder.Inliner;
-    Builder.Inliner = createFunctionInliningPass();
-  }
-
-  Builder.addExtension(
-    PassManagerBuilder::EP_ModuleOptimizerEarly,
-    [Internalize, EarlyInline, AMDGPUAA, this](const PassManagerBuilder &,
-                                               legacy::PassManagerBase &PM) {
-      if (AMDGPUAA) {
-        PM.add(createAMDGPUAAWrapperPass());
-        PM.add(createAMDGPUExternalAAWrapperPass());
-      }
-      PM.add(createAMDGPUUnifyMetadataPass());
-      PM.add(createAMDGPUPrintfRuntimeBinding());
-      if (Internalize)
-        PM.add(createInternalizePass(mustPreserveGV));
-      PM.add(createAMDGPUPropagateAttributesLatePass(this));
-      if (Internalize)
-        PM.add(createGlobalDCEPass());
-      if (EarlyInline)
-        PM.add(createAMDGPUAlwaysInlinePass(false));
-  });
-
-  Builder.addExtension(
-    PassManagerBuilder::EP_EarlyAsPossible,
-    [AMDGPUAA, LibCallSimplify, this](const PassManagerBuilder &,
-                                      legacy::PassManagerBase &PM) {
-      if (AMDGPUAA) {
-        PM.add(createAMDGPUAAWrapperPass());
-        PM.add(createAMDGPUExternalAAWrapperPass());
-      }
-      PM.add(llvm::createAMDGPUPropagateAttributesEarlyPass(this));
-      PM.add(llvm::createAMDGPUUseNativeCallsPass());
-      if (LibCallSimplify)
-        PM.add(llvm::createAMDGPUSimplifyLibCallsPass(this));
-  });
-
-  Builder.addExtension(
-    PassManagerBuilder::EP_CGSCCOptimizerLate,
-    [EnableOpt, PromoteKernelArguments](const PassManagerBuilder &,
-                                        legacy::PassManagerBase &PM) {
-      // Add promote kernel arguments pass to the opt pipeline right before
-      // infer address spaces which is needed to do actual address space
-      // rewriting.
-      if (PromoteKernelArguments)
-        PM.add(createAMDGPUPromoteKernelArgumentsPass());
-
-      // Add infer address spaces pass to the opt pipeline after inlining
-      // but before SROA to increase SROA opportunities.
-      PM.add(createInferAddressSpacesPass());
-
-      // This should run after inlining to have any chance of doing anything,
-      // and before other cleanup optimizations.
-      PM.add(createAMDGPULowerKernelAttributesPass());
-
-      // Promote alloca to vector before SROA and loop unroll. If we manage
-      // to eliminate allocas before unroll we may choose to unroll less.
-      if (EnableOpt)
-        PM.add(createAMDGPUPromoteAllocaToVector());
-  });
-}
-
 void AMDGPUTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
   AAM.registerFunctionAnalysis<AMDGPUAA>();
 }
@@ -863,7 +788,6 @@ AMDGPUTargetMachine::getAddressSpaceForPseudoSourceKind(unsigned Kind) const {
   case PseudoSourceValue::JumpTable:
   case PseudoSourceValue::GlobalValueCallEntry:
   case PseudoSourceValue::ExternalSymbolCallEntry:
-  case PseudoSourceValue::TargetCustom:
     return AMDGPUAS::CONSTANT_ADDRESS;
   }
   return AMDGPUAS::FLAT_ADDRESS;
@@ -1527,7 +1451,7 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
     Error = SMDiagnostic(*PFS.SM, SMLoc(), Buffer.getBufferIdentifier(), 1,
                          RegName.Value.size(), SourceMgr::DK_Error,
                          "incorrect register class for field", RegName.Value,
-                         None, None);
+                         std::nullopt, std::nullopt);
     SourceRange = RegName.SourceRange;
     return true;
   };

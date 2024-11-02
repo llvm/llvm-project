@@ -70,38 +70,33 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"
 
-%class.A = type { i32 (...)** }
+%class.A = type { ptr }
 %class.B = type { %class.A }
 
-@_ZTV1A = linkonce_odr hidden unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%class.A*)* @_ZN1A3fooEv to i8*), i8* bitcast (i32 (%class.A*)* @_ZN1A3barEv to i8*)] }, align 8, !type !0
-@_ZTV1B = hidden unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%class.B*)* @_ZN1B3fooEv to i8*), i8* bitcast (i32 (%class.B*)* @_ZN1B3barEv to i8*)] }, align 8, !type !0, !type !1
+@_ZTV1A = linkonce_odr hidden unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr undef, ptr @_ZN1A3fooEv, ptr @_ZN1A3barEv] }, align 8, !type !0
+@_ZTV1B = hidden unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr undef, ptr @_ZN1B3fooEv, ptr @_ZN1B3barEv] }, align 8, !type !0, !type !1
 
-define hidden i32 @_Z3bazP1A(%class.A* %a) local_unnamed_addr {
+define hidden i32 @_Z3bazP1A(ptr %a) local_unnamed_addr {
 entry:
-  %0 = bitcast %class.A* %a to i32 (%class.A*)***
-  %vtable = load i32 (%class.A*)**, i32 (%class.A*)*** %0, align 8
-  %1 = bitcast i32 (%class.A*)** %vtable to i8*
-  %2 = tail call i1 @llvm.type.test(i8* %1, metadata !"_ZTS1A")
-  tail call void @llvm.assume(i1 %2)
-  %3 = load i32 (%class.A*)*, i32 (%class.A*)** %vtable, align 8
+  %vtable = load ptr, ptr %a, align 8
+  %0 = tail call i1 @llvm.type.test(ptr %vtable, metadata !"_ZTS1A")
+  tail call void @llvm.assume(i1 %0)
+  %1 = load ptr, ptr %vtable, align 8
   ; This is the compare instruction inserted by ICP
-  %4 = icmp eq i32 (%class.A*)* %3, bitcast (i32 (%class.B*)* @_ZN1B3fooEv to i32 (%class.A*)*)
-  br i1 %4, label %if.true.direct_targ, label %if.false.orig_indirect
+  %2 = icmp eq ptr %1, @_ZN1B3fooEv
+  br i1 %2, label %if.true.direct_targ, label %if.false.orig_indirect
 
 ; This block contains the promoted and inlined call to B::foo();
 ; CHECK-IR: if.true.direct_targ:                              ; preds = %entry
 if.true.direct_targ:                              ; preds = %entry
-  %5 = bitcast %class.A* %a to %class.B*
-  %6 = bitcast i32 (%class.A*)** %vtable to i8*
-  %7 = tail call i1 @llvm.type.test(i8* %6, metadata !"_ZTS1B")
-  tail call void @llvm.assume(i1 %7)
-  %vfn.i1 = getelementptr inbounds i32 (%class.A*)*, i32 (%class.A*)** %vtable, i64 1
-  %vfn.i = bitcast i32 (%class.A*)** %vfn.i1 to i32 (%class.B*)**
-  %8 = load i32 (%class.B*)*, i32 (%class.B*)** %vfn.i, align 8
+  %3 = tail call i1 @llvm.type.test(ptr %vtable, metadata !"_ZTS1B")
+  tail call void @llvm.assume(i1 %3)
+  %vfn.i1 = getelementptr inbounds ptr, ptr %vtable, i64 1
+  %4 = load ptr, ptr %vfn.i1, align 8
 ; Call to bar() can be devirtualized to call to B::bar(), since it was
 ; inlined from B::foo() after ICP introduced the guarded promotion.
 ; CHECK-IR: %call.i = tail call i32 @_ZN1B3barEv(ptr nonnull %a)
-  %call.i = tail call i32 %8(%class.B* %5)
+  %call.i = tail call i32 %4(ptr %a)
   br label %if.end.icp
 
 ; This block contains the fallback indirect call a->foo()
@@ -109,22 +104,22 @@ if.true.direct_targ:                              ; preds = %entry
 if.false.orig_indirect:                           ; preds = %entry
 ; Fallback indirect call to foo() cannot be devirtualized.
 ; CHECK-IR: %call = tail call i32 %
-  %call = tail call i32 %3(%class.A* nonnull %a)
+  %call = tail call i32 %1(ptr nonnull %a)
   br label %if.end.icp
 
 if.end.icp:                                       ; preds = %if.false.orig_indirect, %if.true.direct_targ
-  %9 = phi i32 [ %call, %if.false.orig_indirect ], [ %call.i, %if.true.direct_targ ]
-  ret i32 %9
+  %5 = phi i32 [ %call, %if.false.orig_indirect ], [ %call.i, %if.true.direct_targ ]
+  ret i32 %5
 }
 
-declare i1 @llvm.type.test(i8*, metadata)
+declare i1 @llvm.type.test(ptr, metadata)
 
 declare void @llvm.assume(i1)
 
-declare dso_local i32 @_ZN1B3fooEv(%class.B* %this) unnamed_addr
-declare dso_local i32 @_ZN1B3barEv(%class.B*) unnamed_addr
-declare dso_local i32 @_ZN1A3barEv(%class.A* %this) unnamed_addr
-declare dso_local i32 @_ZN1A3fooEv(%class.A* %this) unnamed_addr
+declare dso_local i32 @_ZN1B3fooEv(ptr %this) unnamed_addr
+declare dso_local i32 @_ZN1B3barEv(ptr) unnamed_addr
+declare dso_local i32 @_ZN1A3barEv(ptr %this) unnamed_addr
+declare dso_local i32 @_ZN1A3fooEv(ptr %this) unnamed_addr
 
 !0 = !{i64 16, !"_ZTS1A"}
 !1 = !{i64 16, !"_ZTS1B"}

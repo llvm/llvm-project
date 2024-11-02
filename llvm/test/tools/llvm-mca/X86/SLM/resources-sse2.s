@@ -560,7 +560,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      4     1.00    *                   pcmpgtd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        pcmpgtw	%xmm0, %xmm2
 # CHECK-NEXT:  1      4     1.00    *                   pcmpgtw	(%rax), %xmm2
-# CHECK-NEXT:  1      1     1.00                        pextrw	$1, %xmm0, %ecx
+# CHECK-NEXT:  2      1     1.00                        pextrw	$1, %xmm0, %ecx
 # CHECK-NEXT:  1      1     1.00                        pinsrw	$1, %eax, %xmm0
 # CHECK-NEXT:  1      4     1.00    *                   pinsrw	$1, (%rax), %xmm0
 # CHECK-NEXT:  1      5     2.00                        pmaddwd	%xmm0, %xmm2

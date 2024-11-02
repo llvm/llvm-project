@@ -870,9 +870,7 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
   AlignTokens(
       Style,
       [](Change const &C) {
-        // tok::kw_operator is necessary for aligning operator overload
-        // definitions.
-        if (C.Tok->isOneOf(TT_FunctionDeclarationName, tok::kw_operator))
+        if (C.Tok->is(TT_FunctionDeclarationName))
           return true;
         if (C.Tok->isNot(TT_StartOfName))
           return false;
@@ -959,7 +957,8 @@ void WhitespaceManager::alignTrailingComments() {
     if (Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Leave) {
       auto OriginalSpaces =
           Changes[i].OriginalWhitespaceRange.getEnd().getRawEncoding() -
-          Changes[i].OriginalWhitespaceRange.getBegin().getRawEncoding();
+          Changes[i].OriginalWhitespaceRange.getBegin().getRawEncoding() -
+          Changes[i].Tok->NewlinesBefore;
       unsigned RestoredLineLength = Changes[i].StartOfTokenColumn +
                                     Changes[i].TokenLength + OriginalSpaces;
       // If leaving comments makes the line exceed the column limit, give up to
@@ -1051,7 +1050,7 @@ void WhitespaceManager::alignTrailingComments(unsigned Start, unsigned End,
               Changes[i].StartOfBlockComment->StartOfTokenColumn -
               Changes[i].StartOfTokenColumn;
     }
-    if (Shift < 0)
+    if (Shift <= 0)
       continue;
     Changes[i].Spaces += Shift;
     if (i + 1 != Changes.size())

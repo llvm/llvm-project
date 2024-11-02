@@ -15,8 +15,8 @@ define dso_local i32 @bar() {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -80(1)
+; CHECK-NEXT:    std 0, 96(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addi 3, 1, 40

@@ -16,11 +16,11 @@ declare <4 x i32> @llvm.amdgcn.mfma.i32.16x16x16i8(i32, i32, <4 x i32>, i32, i32
 ; GFX908:          global_store_dwordx4
 ; GFX90A-NOT:      v_accvgpr_read_b32
 ; GFX90A-COUNT-4:  global_store_dwordx4 v{{[0-9]+}}, a[{{[0-9:]+}}]
-define amdgpu_kernel void @test_mfma_i32_32x32x8i8(<16 x i32> addrspace(1)* %arg) #0 {
+define amdgpu_kernel void @test_mfma_i32_32x32x8i8(ptr addrspace(1) %arg) #0 {
 bb:
-  %in.1 = load <16 x i32>, <16 x i32> addrspace(1)* %arg
+  %in.1 = load <16 x i32>, ptr addrspace(1) %arg
   %mai.1 = tail call <16 x i32> @llvm.amdgcn.mfma.i32.32x32x8i8(i32 1, i32 2, <16 x i32> %in.1, i32 1, i32 2, i32 3)
-  store <16 x i32> %mai.1, <16 x i32> addrspace(1)* %arg
+  store <16 x i32> %mai.1, ptr addrspace(1) %arg
   ret void
 }
 
@@ -35,11 +35,11 @@ bb:
 ; GFX908:         global_store_dwordx4
 ; GFX90A-NOT:     v_accvgpr_read_b32
 ; GFX90A:         global_store_dwordx4 v{{[0-9]+}}, [[RES]]
-define amdgpu_kernel void @test_mfma_i32_16x16x16i8(<4 x i32> addrspace(1)* %arg) #0 {
+define amdgpu_kernel void @test_mfma_i32_16x16x16i8(ptr addrspace(1) %arg) #0 {
 bb:
-  %in.1 = load <4 x i32>, <4 x i32> addrspace(1)* %arg
+  %in.1 = load <4 x i32>, ptr addrspace(1) %arg
   %mai.1 = tail call <4 x i32> @llvm.amdgcn.mfma.i32.16x16x16i8(i32 1, i32 2, <4 x i32> %in.1, i32 1, i32 2, i32 3)
-  store <4 x i32> %mai.1, <4 x i32> addrspace(1)* %arg
+  store <4 x i32> %mai.1, ptr addrspace(1) %arg
   ret void
 }
 

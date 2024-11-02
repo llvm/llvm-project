@@ -11,38 +11,35 @@ declare void @use(...)
 define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[X:%.*]] = alloca [0 x i32], align 4
-; CHECK-NEXT:    call void (...) @use([0 x i32]* nonnull [[X]])
-; CHECK-NEXT:    [[Y1_SUB:%.*]] = getelementptr inbounds [0 x i32], [0 x i32]* [[X]], i64 0, i64 0
-; CHECK-NEXT:    call void (...) @use(i32* nonnull [[Y1_SUB]])
-; CHECK-NEXT:    call void (...) @use([0 x i32]* nonnull [[X]])
-; CHECK-NEXT:    call void (...) @use([0 x i32]* nonnull [[X]])
+; CHECK-NEXT:    call void (...) @use(ptr nonnull [[X]])
+; CHECK-NEXT:    call void (...) @use(ptr nonnull [[X]])
+; CHECK-NEXT:    call void (...) @use(ptr nonnull [[X]])
+; CHECK-NEXT:    call void (...) @use(ptr nonnull [[X]])
 ; CHECK-NEXT:    ret void
 ;
 ; P32-LABEL: @test(
 ; P32-NEXT:    [[X:%.*]] = alloca [0 x i32], align 4
-; P32-NEXT:    call void (...) @use([0 x i32]* nonnull [[X]])
-; P32-NEXT:    [[Y1_SUB:%.*]] = getelementptr inbounds [0 x i32], [0 x i32]* [[X]], i32 0, i32 0
-; P32-NEXT:    call void (...) @use(i32* nonnull [[Y1_SUB]])
-; P32-NEXT:    call void (...) @use([0 x i32]* nonnull [[X]])
-; P32-NEXT:    call void (...) @use([0 x i32]* nonnull [[X]])
+; P32-NEXT:    call void (...) @use(ptr nonnull [[X]])
+; P32-NEXT:    call void (...) @use(ptr nonnull [[X]])
+; P32-NEXT:    call void (...) @use(ptr nonnull [[X]])
+; P32-NEXT:    call void (...) @use(ptr nonnull [[X]])
 ; P32-NEXT:    ret void
 ;
 ; NODL-LABEL: @test(
 ; NODL-NEXT:    [[X:%.*]] = alloca [0 x i32], align 8
-; NODL-NEXT:    call void (...) @use([0 x i32]* nonnull [[X]])
-; NODL-NEXT:    [[Y1_SUB:%.*]] = getelementptr inbounds [0 x i32], [0 x i32]* [[X]], i64 0, i64 0
-; NODL-NEXT:    call void (...) @use(i32* nonnull [[Y1_SUB]])
-; NODL-NEXT:    call void (...) @use([0 x i32]* nonnull [[X]])
-; NODL-NEXT:    call void (...) @use([0 x i32]* nonnull [[X]])
+; NODL-NEXT:    call void (...) @use(ptr nonnull [[X]])
+; NODL-NEXT:    call void (...) @use(ptr nonnull [[X]])
+; NODL-NEXT:    call void (...) @use(ptr nonnull [[X]])
+; NODL-NEXT:    call void (...) @use(ptr nonnull [[X]])
 ; NODL-NEXT:    ret void
 ;
-  %X = alloca [0 x i32]           ; <[0 x i32]*> [#uses=1]
-  call void (...) @use( [0 x i32]* %X )
-  %Y = alloca i32, i32 0          ; <i32*> [#uses=1]
-  call void (...) @use( i32* %Y )
-  %Z = alloca {  }                ; <{  }*> [#uses=1]
-  call void (...) @use( {  }* %Z )
-  %size = load i32, i32* @int
+  %X = alloca [0 x i32]           ; <ptr> [#uses=1]
+  call void (...) @use( ptr %X )
+  %Y = alloca i32, i32 0          ; <ptr> [#uses=1]
+  call void (...) @use( ptr %Y )
+  %Z = alloca {  }                ; <ptr> [#uses=1]
+  call void (...) @use( ptr %Z )
+  %size = load i32, ptr @int
   %A = alloca {{}}, i32 %size
   call void (...) @use( {{}}* %A )
   ret void
@@ -53,8 +50,8 @@ define void @test2() {
 ; ALL-LABEL: @test2(
 ; ALL-NEXT:    ret void
 ;
-  %A = alloca i32         ; <i32*> [#uses=1]
-  store i32 123, i32* %A
+  %A = alloca i32         ; <ptr> [#uses=1]
+  store i32 123, ptr %A
   ret void
 }
 
@@ -63,29 +60,29 @@ define void @test3() {
 ; ALL-LABEL: @test3(
 ; ALL-NEXT:    ret void
 ;
-  %A = alloca { i32 }             ; <{ i32 }*> [#uses=1]
-  %B = getelementptr { i32 }, { i32 }* %A, i32 0, i32 0            ; <i32*> [#uses=1]
-  store i32 123, i32* %B
+  %A = alloca { i32 }             ; <ptr> [#uses=1]
+  %B = getelementptr { i32 }, ptr %A, i32 0, i32 0            ; <ptr> [#uses=1]
+  store i32 123, ptr %B
   ret void
 }
 
-define i32* @test4(i32 %n) {
+define ptr @test4(i32 %n) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[N:%.*]] to i64
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, i64 [[TMP1]], align 4
-; CHECK-NEXT:    ret i32* [[A]]
+; CHECK-NEXT:    ret ptr [[A]]
 ;
 ; P32-LABEL: @test4(
 ; P32-NEXT:    [[A:%.*]] = alloca i32, i32 [[N:%.*]], align 4
-; P32-NEXT:    ret i32* [[A]]
+; P32-NEXT:    ret ptr [[A]]
 ;
 ; NODL-LABEL: @test4(
 ; NODL-NEXT:    [[TMP1:%.*]] = zext i32 [[N:%.*]] to i64
 ; NODL-NEXT:    [[A:%.*]] = alloca i32, i64 [[TMP1]], align 4
-; NODL-NEXT:    ret i32* [[A]]
+; NODL-NEXT:    ret ptr [[A]]
 ;
   %A = alloca i32, i32 %n
-  ret i32* %A
+  ret ptr %A
 }
 
 ; Allocas which are only used by GEPs, bitcasts, addrspacecasts, and stores
@@ -98,25 +95,20 @@ define void @test5() {
 
 entry:
   %a = alloca { i32 }
-  %b = alloca i32*
+  %b = alloca ptr
   %c = alloca i32
-  %a.1 = getelementptr { i32 }, { i32 }* %a, i32 0, i32 0
-  store i32 123, i32* %a.1
-  store i32* %a.1, i32** %b
-  %b.1 = bitcast i32** %b to i32*
-  store i32 123, i32* %b.1
-  %a.2 = getelementptr { i32 }, { i32 }* %a, i32 0, i32 0
-  store atomic i32 2, i32* %a.2 unordered, align 4
-  %a.3 = getelementptr { i32 }, { i32 }* %a, i32 0, i32 0
-  store atomic i32 3, i32* %a.3 release, align 4
-  %a.4 = getelementptr { i32 }, { i32 }* %a, i32 0, i32 0
-  store atomic i32 4, i32* %a.4 seq_cst, align 4
-  %c.1 = addrspacecast i32* %c to i32 addrspace(1)*
-  store i32 123, i32 addrspace(1)* %c.1
+  store i32 123, ptr %a
+  store ptr %a, ptr %b
+  store i32 123, ptr %b
+  store atomic i32 2, ptr %a unordered, align 4
+  store atomic i32 3, ptr %a release, align 4
+  store atomic i32 4, ptr %a seq_cst, align 4
+  %c.1 = addrspacecast ptr %c to ptr addrspace(1)
+  store i32 123, ptr addrspace(1) %c.1
   ret void
 }
 
-declare void @f(i32* %p)
+declare void @f(ptr %p)
 
 ; Check that we don't delete allocas in some erroneous cases.
 define void @test6() {
@@ -124,42 +116,38 @@ define void @test6() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca { i32 }, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[A_1:%.*]] = getelementptr inbounds { i32 }, { i32 }* [[A]], i64 0, i32 0
-; CHECK-NEXT:    store volatile i32 123, i32* [[A_1]], align 4
-; CHECK-NEXT:    tail call void @f(i32* nonnull [[B]])
+; CHECK-NEXT:    store volatile i32 123, ptr [[A]], align 4
+; CHECK-NEXT:    tail call void @f(ptr nonnull [[B]])
 ; CHECK-NEXT:    ret void
 ;
 ; P32-LABEL: @test6(
 ; P32-NEXT:  entry:
 ; P32-NEXT:    [[A:%.*]] = alloca { i32 }, align 4
 ; P32-NEXT:    [[B:%.*]] = alloca i32, align 4
-; P32-NEXT:    [[A_1:%.*]] = getelementptr inbounds { i32 }, { i32 }* [[A]], i32 0, i32 0
-; P32-NEXT:    store volatile i32 123, i32* [[A_1]], align 4
-; P32-NEXT:    tail call void @f(i32* nonnull [[B]])
+; P32-NEXT:    store volatile i32 123, ptr [[A]], align 4
+; P32-NEXT:    tail call void @f(ptr nonnull [[B]])
 ; P32-NEXT:    ret void
 ;
 ; NODL-LABEL: @test6(
 ; NODL-NEXT:  entry:
 ; NODL-NEXT:    [[A:%.*]] = alloca { i32 }, align 8
 ; NODL-NEXT:    [[B:%.*]] = alloca i32, align 4
-; NODL-NEXT:    [[A_1:%.*]] = getelementptr inbounds { i32 }, { i32 }* [[A]], i64 0, i32 0
-; NODL-NEXT:    store volatile i32 123, i32* [[A_1]], align 8
-; NODL-NEXT:    tail call void @f(i32* nonnull [[B]])
+; NODL-NEXT:    store volatile i32 123, ptr [[A]], align 8
+; NODL-NEXT:    tail call void @f(ptr nonnull [[B]])
 ; NODL-NEXT:    ret void
 ;
 
 entry:
   %a = alloca { i32 }
   %b = alloca i32
-  %a.1 = getelementptr { i32 }, { i32 }* %a, i32 0, i32 0
-  store volatile i32 123, i32* %a.1
-  tail call void @f(i32* %b)
+  store volatile i32 123, ptr %a
+  tail call void @f(ptr %b)
   ret void
 }
 
 ; PR14371
 %opaque_type = type opaque
-%real_type = type { { i32, i32* } }
+%real_type = type { { i32, ptr } }
 
 @opaque_global = external constant %opaque_type, align 4
 
@@ -170,67 +158,48 @@ define void @test7() {
 ;
 entry:
   %0 = alloca %real_type, align 4
-  %1 = bitcast %real_type* %0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* bitcast (%opaque_type* @opaque_global to i8*), i32 8, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr %0, ptr @opaque_global, i32 8, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
 
 
 ; Check that the GEP indices use the pointer size, or 64 if unknown
 define void @test8() {
-; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[X1:%.*]] = alloca [100 x i32], align 4
-; CHECK-NEXT:    [[X1_SUB:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[X1]], i64 0, i64 0
-; CHECK-NEXT:    call void (...) @use(i32* nonnull [[X1_SUB]])
-; CHECK-NEXT:    ret void
-;
-; P32-LABEL: @test8(
-; P32-NEXT:    [[X1:%.*]] = alloca [100 x i32], align 4
-; P32-NEXT:    [[X1_SUB:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[X1]], i32 0, i32 0
-; P32-NEXT:    call void (...) @use(i32* nonnull [[X1_SUB]])
-; P32-NEXT:    ret void
-;
-; NODL-LABEL: @test8(
-; NODL-NEXT:    [[X1:%.*]] = alloca [100 x i32], align 4
-; NODL-NEXT:    [[X1_SUB:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[X1]], i64 0, i64 0
-; NODL-NEXT:    call void (...) @use(i32* nonnull [[X1_SUB]])
-; NODL-NEXT:    ret void
+; ALL-LABEL: @test8(
+; ALL-NEXT:    [[X1:%.*]] = alloca [100 x i32], align 4
+; ALL-NEXT:    call void (...) @use(ptr nonnull [[X1]])
+; ALL-NEXT:    ret void
 ;
 
 
   %x = alloca i32, i32 100
-  call void (...) @use(i32* %x)
+  call void (...) @use(ptr %x)
   ret void
 }
 
 ; PR19569
 %struct_type = type { i32, i32 }
-declare void @test9_aux(<{ %struct_type }>* inalloca(<{ %struct_type }>))
-declare i8* @llvm.stacksave()
-declare void @llvm.stackrestore(i8*)
+declare void @test9_aux(ptr inalloca(<{ %struct_type }>))
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr)
 
-define void @test9(%struct_type* %a) {
+define void @test9(ptr %a) {
 ; ALL-LABEL: @test9(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    [[ARGMEM:%.*]] = alloca inalloca i64, align 8
-; ALL-NEXT:    [[TMPCAST:%.*]] = bitcast i64* [[ARGMEM]] to <{ [[STRUCT_TYPE:%.*]] }>*
-; ALL-NEXT:    [[TMP0:%.*]] = bitcast %struct_type* [[A:%.*]] to i64*
-; ALL-NEXT:    [[TMP1:%.*]] = load i64, i64* [[TMP0]], align 4
-; ALL-NEXT:    store i64 [[TMP1]], i64* [[ARGMEM]], align 8
-; ALL-NEXT:    call void @test9_aux(<{ [[STRUCT_TYPE]] }>* nonnull inalloca(<{ [[STRUCT_TYPE]] }>) [[TMPCAST]])
+; ALL-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_TYPE:%.*]] }>, align 8
+; ALL-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A:%.*]], align 4
+; ALL-NEXT:    store i64 [[TMP0]], ptr [[ARGMEM]], align 8
+; ALL-NEXT:    call void @test9_aux(ptr nonnull inalloca(<{ [[STRUCT_TYPE]] }>) [[ARGMEM]])
 ; ALL-NEXT:    ret void
 ;
 entry:
-  %inalloca.save = call i8* @llvm.stacksave()
+  %inalloca.save = call ptr @llvm.stacksave()
   %argmem = alloca inalloca <{ %struct_type }>
-  %0 = getelementptr inbounds <{ %struct_type }>, <{ %struct_type }>* %argmem, i32 0, i32 0
-  %1 = bitcast %struct_type* %0 to i8*
-  %2 = bitcast %struct_type* %a to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %1, i8* align 4 %2, i32 8, i1 false)
-  call void @test9_aux(<{ %struct_type }>* inalloca(<{ %struct_type }>) %argmem)
-  call void @llvm.stackrestore(i8* %inalloca.save)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %argmem, ptr align 4 %a, i32 8, i1 false)
+  call void @test9_aux(ptr inalloca(<{ %struct_type }>) %argmem)
+  call void @llvm.stackrestore(ptr %inalloca.save)
   ret void
 }
 
@@ -240,14 +209,14 @@ define void @test10() {
 ; ALL-NEXT:    [[V32:%.*]] = alloca i1, align 8
 ; ALL-NEXT:    [[V64:%.*]] = alloca i1, align 8
 ; ALL-NEXT:    [[V33:%.*]] = alloca i1, align 8
-; ALL-NEXT:    call void (...) @use(i1* nonnull [[V32]], i1* nonnull [[V64]], i1* nonnull [[V33]])
+; ALL-NEXT:    call void (...) @use(ptr nonnull [[V32]], ptr nonnull [[V64]], ptr nonnull [[V33]])
 ; ALL-NEXT:    ret void
 ;
 entry:
   %v32 = alloca i1, align 8
   %v64 = alloca i1, i64 1, align 8
   %v33 = alloca i1, i33 1, align 8
-  call void (...) @use(i1* %v32, i1* %v64, i1* %v33)
+  call void (...) @use(ptr %v32, ptr %v64, ptr %v33)
   ret void
 }
 
@@ -255,11 +224,11 @@ define void @test11() {
 ; ALL-LABEL: @test11(
 ; ALL-NEXT:  entry:
 ; ALL-NEXT:    [[Y:%.*]] = alloca i32, align 4
-; ALL-NEXT:    call void (...) @use(i32* nonnull @int) [ "blah"(i32* [[Y]]) ]
+; ALL-NEXT:    call void (...) @use(ptr nonnull @int) [ "blah"(ptr [[Y]]) ]
 ; ALL-NEXT:    ret void
 ;
 entry:
   %y = alloca i32
-  call void (...) @use(i32* nonnull @int) [ "blah"(i32* %y) ]
+  call void (...) @use(ptr nonnull @int) [ "blah"(ptr %y) ]
   ret void
 }

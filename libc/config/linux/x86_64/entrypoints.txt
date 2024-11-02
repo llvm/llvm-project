@@ -28,6 +28,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # string.h entrypoints
     libc.src.string.bcmp
+    libc.src.string.bcopy
     libc.src.string.bzero
     libc.src.string.memccpy
     libc.src.string.memchr
@@ -313,7 +314,7 @@ set(TARGET_LIBM_ENTRYPOINTS
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
     # assert.h entrypoints
-    # libc.src.assert.__assert_fail
+    libc.src.assert.__assert_fail
 
     # dirent.h entrypoints
     libc.src.dirent.closedir
@@ -394,6 +395,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.getc
     libc.src.stdio.getc_unlocked
     libc.src.stdio.printf
+    libc.src.stdio.sscanf
+    libc.src.stdio.scanf
+    libc.src.stdio.fscanf
     libc.src.stdio.putc
     libc.src.stdio.putchar
     libc.src.stdio.puts
@@ -459,6 +463,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.clock_gettime
     libc.src.time.clock
     libc.src.time.difftime
+    libc.src.time.gettimeofday
     libc.src.time.gmtime
     libc.src.time.gmtime_r
     libc.src.time.mktime

@@ -28,6 +28,12 @@
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv69 \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv71 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv71t \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv73 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
 
 // Infer HVX version from flag:
 
@@ -38,6 +44,8 @@
 // CHECK-HVX-V67: "-target-feature" "+hvxv67"
 // CHECK-HVX-V68: "-target-feature" "+hvxv68"
 // CHECK-HVX-V69: "-target-feature" "+hvxv69"
+// CHECK-HVX-V71: "-target-feature" "+hvxv71"
+// CHECK-HVX-V73: "-target-feature" "+hvxv73"
 
 // Direct version flag:
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v60 \
@@ -54,6 +62,10 @@
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V68 %s
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v69 \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V69 %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v71 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V71 %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v73 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V73 %s
 // Infer HVX version from CPU version:
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv60 -mhvx \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V60 %s
@@ -71,6 +83,10 @@
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V68 %s
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv69 -mhvx \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V69 %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv71 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V71 %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv73 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V73 %s
 
 // Direct version flag with different CPU version:
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v60 -mv62 \
@@ -85,8 +101,12 @@
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V67 %s
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v68 -mv69 \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V68 %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v69 -mv60 \
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v69 -mv71 \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V69 %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v71 -mv73 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V71 %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v73 -mv60 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V73 %s
 
 // Direct version flag with different CPU version and versionless -mhvx:
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v60 -mv62 -mhvx \
@@ -101,7 +121,11 @@
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V68 %s
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v68 -mv69 -mhvx \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V69 %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v69 -mv60 -mhvx \
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v69 -mv71 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V71 %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v71 -mv73 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V73 %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v73 -mv60 -mhvx \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V60 %s
 
 // Direct version flag with different CPU version, versionless -mhvx
@@ -118,7 +142,11 @@
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V68 %s
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v68 -mno-hvx -mv69 -mhvx \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V69 %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v69 -mno-hvx -mv60 -mhvx \
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v69 -mno-hvx -mv71 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V71 %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v71 -mno-hvx -mv73 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V73 %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v73 -mno-hvx -mv60 -mhvx \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V60 %s
 
 // Direct version flag with different CPU version, versionless -mhvx
@@ -135,8 +163,12 @@
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V67 %s
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv69 -mhvx -mno-hvx -mhvx=v68 \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V68 %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv60 -mhvx -mno-hvx -mhvx=v69 \
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv71 -mhvx -mno-hvx -mhvx=v69 \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V69 %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv73 -mhvx -mno-hvx -mhvx=v71 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V71 %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv60 -mhvx -mno-hvx -mhvx=v73 \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-V73 %s
 
 // Infer HVX length from flag:
 

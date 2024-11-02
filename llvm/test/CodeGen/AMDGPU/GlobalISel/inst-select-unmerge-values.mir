@@ -296,7 +296,7 @@ body: |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sgpr_96 = COPY $sgpr3_sgpr4_sgpr5
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sgpr_96 = COPY $sgpr6_sgpr7_sgpr8
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sgpr_96 = COPY $sgpr9_sgpr10_sgpr11
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_512_with_sub0_sub1_sub2 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1_sub2, [[COPY1]], %subreg.sub3_sub4_sub5, [[COPY2]], %subreg.sub6_sub7_sub8, [[COPY3]], %subreg.sub9_sub10_sub11
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_384_with_sub0_sub1_sub2 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1_sub2, [[COPY1]], %subreg.sub3_sub4_sub5, [[COPY2]], %subreg.sub6_sub7_sub8, [[COPY3]], %subreg.sub9_sub10_sub11
     ; GCN-NEXT: [[COPY4:%[0-9]+]]:sgpr_96 = COPY [[REG_SEQUENCE]].sub0_sub1_sub2
     ; GCN-NEXT: [[COPY5:%[0-9]+]]:sgpr_96 = COPY [[REG_SEQUENCE]].sub3_sub4_sub5
     ; GCN-NEXT: [[COPY6:%[0-9]+]]:sgpr_96 = COPY [[REG_SEQUENCE]].sub6_sub7_sub8
@@ -332,7 +332,7 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_192 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_192 = COPY $vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_512 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1_sub2_sub3_sub4_sub5, [[COPY1]], %subreg.sub6_sub7_sub8_sub9_sub10_sub11
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_384 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1_sub2_sub3_sub4_sub5, [[COPY1]], %subreg.sub6_sub7_sub8_sub9_sub10_sub11
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vreg_96 = COPY [[REG_SEQUENCE]].sub0_sub1_sub2
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:vreg_96 = COPY [[REG_SEQUENCE]].sub3_sub4_sub5
     ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_96 = COPY [[REG_SEQUENCE]].sub6_sub7_sub8

@@ -22,7 +22,7 @@ define amdgpu_kernel void @test_s_dcache_wb_vol_insert_wait() #0 {
   br label %end
 
 end:
-  store volatile i32 3, i32 addrspace(1)* undef
+  store volatile i32 3, ptr addrspace(1) undef
   ret void
 }
 

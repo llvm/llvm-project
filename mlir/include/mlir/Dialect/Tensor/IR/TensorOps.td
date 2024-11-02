@@ -48,7 +48,7 @@ class Tensor_OpWithOffsetSizesAndStrides<string mnemonic,
 //===----------------------------------------------------------------------===//
 
 def Tensor_CastOp : Tensor_Op<"cast", [
-    DeclareOpInterfaceMethods<CastOpInterface>, 
+    DeclareOpInterfaceMethods<CastOpInterface>,
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     Pure
   ]> {
@@ -257,7 +257,7 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
     AttrSizedOperandSegments,
-    Pure, 
+    Pure,
     OffsetSizeAndStrideOpInterface
   ]> {
   let summary = "extract slice operation";
@@ -278,8 +278,8 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     The representation based on offsets, sizes and strides support a
     partially-static specification via attributes specified through the
     `static_offsets`, `static_sizes` and `static_strides` arguments. A special
-    sentinel value ShapedType::kDynamicSize and
-    ShapedType::kDynamicStrideOrOffset encodes that the corresponding entry has
+    sentinel value ShapedType::kDynamic and
+    ShapedType::kDynamic encodes that the corresponding entry has
     a dynamic value.
 
     After buffer allocation, the "extract_slice" op is expected to lower into a
@@ -291,8 +291,8 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     flexibility allows to progressively drop unit dimensions while lowering
     between different flavors of ops on that operate on tensors.
 
-    Verification vs Inference in the rank-reduced case:
-    ===================================================
+    #### Verification vs Inference in the rank-reduced case
+    
     Note that there may be multiple ways to infer a resulting rank-reduced type.
       e.g. 1x6x1 could potentially rank-reduce to either 1x6 or 6x1 2-D shapes.
 
@@ -326,20 +326,17 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     Variadic<Index>:$offsets,
     Variadic<Index>:$sizes,
     Variadic<Index>:$strides,
-    I64ArrayAttr:$static_offsets,
-    I64ArrayAttr:$static_sizes,
-    I64ArrayAttr:$static_strides
+    DenseI64ArrayAttr:$static_offsets,
+    DenseI64ArrayAttr:$static_sizes,
+    DenseI64ArrayAttr:$static_strides
   );
   let results = (outs AnyRankedTensor:$result);
 
   let assemblyFormat = [{
     $source ``
-    custom<DynamicIndexList>($offsets, $static_offsets,
-                               "ShapedType::kDynamicStrideOrOffset")
-    custom<DynamicIndexList>($sizes, $static_sizes,
-                               "ShapedType::kDynamicSize")
-    custom<DynamicIndexList>($strides, $static_strides,
-                               "ShapedType::kDynamicStrideOrOffset")
+    custom<DynamicIndexList>($offsets, $static_offsets)
+    custom<DynamicIndexList>($sizes, $static_sizes)
+    custom<DynamicIndexList>($strides, $static_strides)
     attr-dict `:` type($source) `to` type($result)
   }];
 
@@ -367,7 +364,7 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     // Build an ExtractSliceOp with mixed static and dynamic entries packed in
     // a Range vector.
     OpBuilder<(ins "Value":$source, "ArrayRef<Range>":$ranges,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,    
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
   ];
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
@@ -505,19 +502,19 @@ def Tensor_GatherOp : Tensor_Op<"gather", [
     tensor at the given indices.
 
     In its most general form, the tensor of indices specifies all the coordinates
-    of every element to extract (i.e. COO format, without the payload). 
+    of every element to extract (i.e. COO format, without the payload).
     The indices are expected to be confined to coordinate values that fit the
     range of the `source` tensor, otherwise the behavior is undefined.
 
     The leading dimensions of the index tensor give the result tensor its leading
-    dimensions. The trailing dimensions of the result tensor are obtained from 
-    the source tensor by omitting the dimensions specified in `gather_dims` 
+    dimensions. The trailing dimensions of the result tensor are obtained from
+    the source tensor by omitting the dimensions specified in `gather_dims`
     (rank-reducing semantics) or setting them to `1` (rank-preserving semantics)
     (see examples).
     The trailing dimension of the index tensor contains the coordinates and is
     expected to have its size equal to the number of dimensions being gathered.
     This convention allows an idiomatic specification and lowering of "gathering
-    multiple N-D slices from the source tensor". 
+    multiple N-D slices from the source tensor".
 
     Note: in the examples below, we separate out the indexing part of the tensor
     type by a whitespace for readability purposes.
@@ -525,7 +522,7 @@ def Tensor_GatherOp : Tensor_Op<"gather", [
     Example:
 
     ```mlir
-        // For each 1x2 triple of coordinates in %indices, extract the 
+        // For each 1x2 triple of coordinates in %indices, extract the
         // element (i.e. 0-D subset) at the coordinates triple in %source.
         //
         %out = tensor.gather %source[%indices] gather_dims([0, 1, 2]) :
@@ -544,20 +541,20 @@ def Tensor_GatherOp : Tensor_Op<"gather", [
         // slice %source[*, %indices[...]:%indices[...] + 1, *] with the indices
         // corresponding to the `gather_dims` attribute specified by %indices.
         //
-        %out = tensor.gather %source[%indices] gather_dims([1]) : 
+        %out = tensor.gather %source[%indices] gather_dims([1]) :
           (tensor<3x4x5xf32>, tensor<6x7x 1xindex>) -> tensor<6x7x 3x1x5xf32>
 
         // Note: result type may be further rank-reduced to tensor<6x7x 3x5xf32>.
     ```
 
     The dimensions specified in the gather_dims attribute are ones for which the
-    result tensor has size `1`. 
+    result tensor has size `1`.
     I.e. if the source type is `axbxcxd` and the coordinates are [1, 3], then
     the shape suffix is `ax1xcx1`.
     Gather also allows rank-reducing semantics where the shape `ax1xcx1` can be
     further simplified to `axc`.
 
-    The elemental type of the indices tensor can be any integer type. 
+    The elemental type of the indices tensor can be any integer type.
     In the absence of target-specific or problem specific information the default
     type one should use is `index`.
 
@@ -568,50 +565,50 @@ def Tensor_GatherOp : Tensor_Op<"gather", [
     Incorrectly setting the `unique` attribute when the coordinates are not truly
     unique is undefined behavior.
 
-    Only full slices are meant to be supported by this op, if one desires 
+    Only full slices are meant to be supported by this op, if one desires
     partial slices (e.g. strided windows) one should compose this op with other
     tensor ops (e.g. tensor.extract_slice). This is to avoid a slippery slope of
     complexity that would make the op unusable in practice.
 
-    At the tensor-level, the index tensor is specified in an AoS form (i.e. 
-    coordinate tuple is the most minor). It is the responsibility of further 
+    At the tensor-level, the index tensor is specified in an AoS form (i.e.
+    coordinate tuple is the most minor). It is the responsibility of further
     lowerings and bufferiation to implement various concrete layouts.
 
     Note: As currently specified, the operation must lower to an abstraction that
     performs copies to the output tensor. This is because the buffer type system
-    is currently not rich enough to allow multiple non-contiguous views in the 
+    is currently not rich enough to allow multiple non-contiguous views in the
     same type. This is visible more clearly in a notional buffer version of the
     op:
 
     ```mlir
         // memref<?x4x1xf32> is a contiguous buffer of ?x4x1 elements.
         // gather from random source slices must copy to the contiguous output.
-        %out = memref.gather %source[%indices] gather_dims([1]) : 
+        %out = memref.gather %source[%indices] gather_dims([1]) :
           (memref<4x4xf32>, memref<?x 1xindex>) -> memref<?x 4x1xf32>
 
-        // Nested buffer support would allow gather to directly index into the 
+        // Nested buffer support would allow gather to directly index into the
         // source buffer (i.e. represent a jagged view into the source).
-        %out = memref.gather %source[%indices] gather_dims([1]) : 
+        %out = memref.gather %source[%indices] gather_dims([1]) :
           (memref<4x4xf32>, memref<?x 1xindex>) -> memref<? x memref<4x1xf32>>
     ```
   }];
 
-  let arguments = (ins AnyRankedTensor:$source, 
+  let arguments = (ins AnyRankedTensor:$source,
                        RankedTensorOf<[AnySignlessIntegerOrIndex]>:$indices,
                        DenseI64ArrayAttr:$gather_dims,
                        UnitAttr:$unique);
   let results = (outs AnyRankedTensor:$result);
 
   let assemblyFormat = [{
-    $source `[` $indices `]` 
+    $source `[` $indices `]`
       `gather_dims` `(` $gather_dims `)`
-      (`unique` $unique^)?  
+      (`unique` $unique^)?
       attr-dict
     `:` functional-type(operands, results)
   }];
 
   let extraClassDeclaration = [{
-    // TODO: InferTypeOpInterface once enough confidence is built with 
+    // TODO: InferTypeOpInterface once enough confidence is built with
     // tensor<tensor> and its lwoering to memref<memref>.
     static RankedTensorType inferResultType(RankedTensorType sourceType,
                                             RankedTensorType indicesType,
@@ -742,9 +739,9 @@ def Tensor_InsertOp : Tensor_Op<"insert", [
 def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
-    AttrSizedOperandSegments, 
+    AttrSizedOperandSegments,
     DestinationStyleOpInterface,
-    Pure, 
+    Pure,
     OffsetSizeAndStrideOpInterface,
     TypesMatchWith<"expected result type to match dest type",
                    "dest", "result", "$_self">
@@ -772,8 +769,8 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     The representation based on offsets, sizes and strides support a
     partially-static specification via attributes specified through the
     `static_offsets`, `static_sizes` and `static_strides` arguments. A special
-    sentinel value ShapedType::kDynamicSize and
-    ShapedType::kDynamicStrideOrOffset encodes that the corresponding entry has
+    sentinel value ShapedType::kDynamic and
+    ShapedType::kDynamic encodes that the corresponding entry has
     a dynamic value.
 
     After buffer allocation, the "insert_slice" op is expected to lower into a
@@ -788,8 +785,8 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     The rank-altering behavior of tensor.insert_slice matches the rank-reducing
     behavior of tensor.extract_slice.
 
-    Verification in the rank-reduced case:
-    ======================================
+    #### Verification in the rank-reduced case
+    
     The same verification discussion and mechanisms apply as for ExtractSliceOp.
     Unlike ExtractSliceOp however, there is no need for a specific inference.
 
@@ -810,20 +807,17 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     Variadic<Index>:$offsets,
     Variadic<Index>:$sizes,
     Variadic<Index>:$strides,
-    I64ArrayAttr:$static_offsets,
-    I64ArrayAttr:$static_sizes,
-    I64ArrayAttr:$static_strides
+    DenseI64ArrayAttr:$static_offsets,
+    DenseI64ArrayAttr:$static_sizes,
+    DenseI64ArrayAttr:$static_strides
   );
   let results = (outs AnyRankedTensor:$result);
 
   let assemblyFormat = [{
     $source `into` $dest ``
-    custom<DynamicIndexList>($offsets, $static_offsets,
-                               "ShapedType::kDynamicStrideOrOffset")
-    custom<DynamicIndexList>($sizes, $static_sizes,
-                               "ShapedType::kDynamicSize")
-    custom<DynamicIndexList>($strides, $static_strides,
-                               "ShapedType::kDynamicStrideOrOffset")
+    custom<DynamicIndexList>($offsets, $static_offsets)
+    custom<DynamicIndexList>($sizes, $static_sizes)
+    custom<DynamicIndexList>($strides, $static_strides)
     attr-dict `:` type($source) `into` type($dest)
   }];
 
@@ -1019,7 +1013,7 @@ def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
     rank whose sizes are a reassociation of the original `src`.
 
     A reassociation is defined as a continuous grouping of dimensions and is
-    represented with an array of I64ArrayAttr attribute.
+    represented with an array of DenseI64ArrayAttr attribute.
 
     The verification rule is that the reassociation maps are applied to the
     result tensor with the higher rank to obtain the operand tensor with the
@@ -1057,7 +1051,10 @@ def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
     }]>
   ];
 
-  let extraClassDeclaration = commonExtraClassDeclaration;
+  let extraClassDeclaration = commonExtraClassDeclaration # [{
+    int64_t getCorrespondingSourceDim(int64_t resultDim);
+  }];
+
   let hasVerifier = 1;
 }
 
@@ -1068,7 +1065,7 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
     rank whose sizes are a reassociation of the original `src`.
 
     A reassociation is defined as a continuous grouping of dimensions and is
-    represented with an array of I64ArrayAttr attribute.
+    represented with an array of DenseI64ArrayAttr attribute.
 
     The verification rule is that the reassociation maps are applied to the
     operand tensor with the higher rank to obtain the result tensor with the
@@ -1130,7 +1127,7 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
 
 def Tensor_PadOp : Tensor_Op<"pad", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    AttrSizedOperandSegments, 
+    AttrSizedOperandSegments,
     Pure,
     SingleBlockImplicitTerminator<"mlir::tensor::YieldOp">]> {
   let summary = "tensor pad operation";
@@ -1209,8 +1206,8 @@ def Tensor_PadOp : Tensor_Op<"pad", [
     AnyTensor:$source,
     Variadic<Index>:$low,
     Variadic<Index>:$high,
-    I64ArrayAttr:$static_low,
-    I64ArrayAttr:$static_high,
+    DenseI64ArrayAttr:$static_low,
+    DenseI64ArrayAttr:$static_high,
     UnitAttr:$nofold);
 
   let regions = (region SizedRegion<1>:$region);
@@ -1221,10 +1218,8 @@ def Tensor_PadOp : Tensor_Op<"pad", [
   let assemblyFormat = [{
     $source
     (`nofold` $nofold^)?
-    `low` `` custom<DynamicIndexList>($low, $static_low,
-                                        "ShapedType::kDynamicSize")
-    `high` `` custom<DynamicIndexList>($high, $static_high,
-                                         "ShapedType::kDynamicSize")
+    `low` `` custom<DynamicIndexList>($low, $static_low)
+    `high` `` custom<DynamicIndexList>($high, $static_high)
     $region attr-dict `:` type($source) `to` type($result)
   }];
 
@@ -1259,16 +1254,17 @@ def Tensor_PadOp : Tensor_Op<"pad", [
 
     // Return a vector of all the static or dynamic values (low/high padding) of
     // the op.
-    inline SmallVector<OpFoldResult> getMixedPadImpl(ArrayAttr staticAttrs,
+    inline SmallVector<OpFoldResult> getMixedPadImpl(ArrayRef<int64_t> staticAttrs,
                                                      ValueRange values) {
+      Builder builder(*this);
       SmallVector<OpFoldResult> res;
       unsigned numDynamic = 0;
       unsigned count = staticAttrs.size();
       for (unsigned idx = 0; idx < count; ++idx) {
-        if (ShapedType::isDynamic(staticAttrs[idx].cast<IntegerAttr>().getInt()))
+        if (ShapedType::isDynamic(staticAttrs[idx]))
           res.push_back(values[numDynamic++]);
         else
-          res.push_back(staticAttrs[idx]);
+          res.push_back(builder.getI64IntegerAttr(staticAttrs[idx]));
       }
       return res;
     }
@@ -1377,8 +1373,8 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
     The representation based on offsets, sizes and strides support a
     partially-static specification via attributes specified through the
     `static_offsets`, `static_sizes` and `static_strides` arguments. A special
-    sentinel value ShapedType::kDynamicSize and
-    ShapedType::kDynamicStrideOrOffset encodes that the corresponding entry has
+    sentinel value ShapedType::kDynamic and
+    ShapedType::kDynamic encodes that the corresponding entry has
     a dynamic value.
 
     After buffer allocation, the "parallel_insert_slice" op is expected to lower
@@ -1393,8 +1389,8 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
     The rank-altering behavior of tensor.parallel_insert_slice matches the
     rank-reducing behavior of tensor.insert_slice and tensor.extract_slice.
 
-    Verification in the rank-reduced case:
-    ======================================
+    #### Verification in the rank-reduced case
+    
     The same verification discussion and mechanisms apply as for ExtractSliceOp.
     Unlike ExtractSliceOp however, there is no need for a specific inference.
   }];
@@ -1405,18 +1401,15 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
     Variadic<Index>:$offsets,
     Variadic<Index>:$sizes,
     Variadic<Index>:$strides,
-    I64ArrayAttr:$static_offsets,
-    I64ArrayAttr:$static_sizes,
-    I64ArrayAttr:$static_strides
+    DenseI64ArrayAttr:$static_offsets,
+    DenseI64ArrayAttr:$static_sizes,
+    DenseI64ArrayAttr:$static_strides
   );
   let assemblyFormat = [{
     $source `into` $dest ``
-    custom<DynamicIndexList>($offsets, $static_offsets,
-                               "ShapedType::kDynamicStrideOrOffset")
-    custom<DynamicIndexList>($sizes, $static_sizes,
-                               "ShapedType::kDynamicSize")
-    custom<DynamicIndexList>($strides, $static_strides,
-                               "ShapedType::kDynamicStrideOrOffset")
+    custom<DynamicIndexList>($offsets, $static_offsets)
+    custom<DynamicIndexList>($sizes, $static_sizes)
+    custom<DynamicIndexList>($strides, $static_strides)
     attr-dict `:` type($source) `into` type($dest)
   }];
 
@@ -1482,7 +1475,7 @@ def Tensor_ScatterOp : Tensor_Op<"scatter", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     Pure
   ]> {
-  let summary = 
+  let summary =
     "scatter a tensor into a destination tensor at specified indices";
   let description = [{
     The `scatter` operation inserts a `source` tensor into a `dest` tensor at
@@ -1493,13 +1486,13 @@ def Tensor_ScatterOp : Tensor_Op<"scatter", [
     The indices are expected to be confined to coordinate values that fit the
     range of the `dest` tensor, otherwise the behavior is undefined.
 
-    The leading dimensions of the index tensor must match that of the dest 
+    The leading dimensions of the index tensor must match that of the dest
     tensor. The trailing dimensions of the dest tensor must match those of the
-    source tensor by omitting the dimensions specified in scatter_dims 
+    source tensor by omitting the dimensions specified in scatter_dims
     (rank-reducing semantics) or setting them to `1` (rank-preserving semantics)
-    (see examples). 
-    This convention allows an idiomatic specification and lowering of 
-    "scattering multiple N-D slices into the dest tensor". 
+    (see examples).
+    This convention allows an idiomatic specification and lowering of
+    "scattering multiple N-D slices into the dest tensor".
     The result type must match the type of the dest tensor.
 
     Note: in the examples below, we separate out the indexing part of the tensor
@@ -1508,7 +1501,7 @@ def Tensor_ScatterOp : Tensor_Op<"scatter", [
     Example:
 
     ```mlir
-        // For each 1x2 triple of coordinates in %indices, insert the 
+        // For each 1x2 triple of coordinates in %indices, insert the
         // element (i.e. 0-D subset) at the coordinates triple in %dest.
         //
         %out = tensor.scatter %source into %dest[%indices]
@@ -1530,19 +1523,19 @@ def Tensor_ScatterOp : Tensor_Op<"scatter", [
         // indices corresponding to the scatter_dims attribute specified by
         // %indices.
         //
-        %out = tensor.scatter %source into %dest[%indices] scatter_dims([1]) unique : 
+        %out = tensor.scatter %source into %dest[%indices] scatter_dims([1]) unique :
           (tensor<3x 4x1x6xf32>, tensor<4x5x6xf32>, tensor<3x 1xindex>)
             -> tensor<4x5x6xf32>
     ```
 
     The dimensions specified in the scatter_dims attribute are ones for which the
-    source tensor has size `1`. 
+    source tensor has size `1`.
     I.e. if the dest type is `axbxcxd` and the coordinates are [1, 3], then
     the source type suffix is `ax1xcx1`.
     Sactter also allows rank-reducing semantics where the shape `ax1xcx1` can be
     further simplified to `axc`.
 
-    The elemental type of the indices tensor can be any integer type. 
+    The elemental type of the indices tensor can be any integer type.
     In the absence of target-specific or problem specific information the default
     type one should use is `index`.
 
@@ -1552,18 +1545,18 @@ def Tensor_ScatterOp : Tensor_Op<"scatter", [
     coordinates are statically guaranteed to be unique at runtime. If coordinates
     are not truly unique at runtime, the behavior is undefined.
 
-    Only full slices are meant to be supported by this op, if one desires 
+    Only full slices are meant to be supported by this op, if one desires
     partial slices (e.g. strided windows) one should compose this op with other
     tensor ops (e.g. tensor.insert_slice). This is to avoid a slippery slope of
     complexity that would make the op unusable in practice.
 
-    At the tensor-level, the index tensor is specified in an AoS form (i.e. 
-    coordinate tuple is the most minor). It is the responsibility of further 
+    At the tensor-level, the index tensor is specified in an AoS form (i.e.
+    coordinate tuple is the most minor). It is the responsibility of further
     lowerings and bufferiation to implement various concrete layouts.
 
     Note: As currently specified, the operation must lower to an abstraction that
     performs copies to the output tensor. This is because the buffer type system
-    is currently not rich enough to allow multiple non-contiguous views in the 
+    is currently not rich enough to allow multiple non-contiguous views in the
     same type. This is visible more clearly in a notional buffer version of the
     op:
 
@@ -1572,26 +1565,26 @@ def Tensor_ScatterOp : Tensor_Op<"scatter", [
         // random dest slices must copy to the contiguous dest.
         //
         some_side_effecting_op_writing_into %source, ...: memref<3x 4xf32>
-        memref.scatter %source into %dest[%indices] scatter_dims([1]) unique : 
+        memref.scatter %source into %dest[%indices] scatter_dims([1]) unique :
           (memref<3x 4xf32>, memref<?x 4xf32>, memref<?x 1xindex>)
 
         // Nested buffer support in the producing op would allow writing directly
         // into the dest buffer.
-        %v = some_nested_buffer_view_op %dest[%indices] scatter_dims([1]) unique : 
+        %v = some_nested_buffer_view_op %dest[%indices] scatter_dims([1]) unique :
           memref<? x memref<4xf32>>
         some_side_effecting_op_writing_into %v, ...: memref<? x memref<4xf32>>
     ```
   }];
 
-  let arguments = (ins AnyRankedTensor:$source, 
-                       AnyRankedTensor:$dest, 
+  let arguments = (ins AnyRankedTensor:$source,
+                       AnyRankedTensor:$dest,
                        RankedTensorOf<[AnySignlessIntegerOrIndex]>:$indices,
                        DenseI64ArrayAttr:$scatter_dims,
                        UnitAttr:$unique);
   let results = (outs AnyRankedTensor:$result);
 
   let assemblyFormat = [{
-    $source `into` $dest `[` $indices `]` 
+    $source `into` $dest `[` $indices `]`
       `scatter_dims` `(` $scatter_dims `)`
       (`unique` $unique^)?
       attr-dict
@@ -1661,6 +1654,177 @@ def Tensor_SplatOp : Tensor_Op<"splat", [
   let assemblyFormat = "$input attr-dict `:` type($aggregate)";
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// PackOp
+//===----------------------------------------------------------------------===//
+
+class Tensor_RelayoutOp<string mnemonic, list<Trait> traits = []> :
+      Tensor_Op<mnemonic, !listconcat(traits, [
+        DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+        DestinationStyleOpInterface,
+        ConditionallySpeculatable, NoMemoryEffect,
+        DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+        TypesMatchWith<"result type matches type of dest",
+                   "dest", "result",
+                   "$_self">])> {
+
+  code commonExtraClassDeclaration = [{
+    int64_t getSourceRank() { return getSource().getType().getRank(); };
+    int64_t getDestRank() { return getDest().getType().getRank(); };
+    RankedTensorType getSourceType() {
+      return getSource().getType().cast<RankedTensorType>(); };
+    RankedTensorType getDestType() {
+      return getDest().getType().cast<RankedTensorType>(); };
+
+    /// Return position for init operand. Init operand is `dest`.
+    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
+      return {1, 2}; // `dest` operand
+    }
+
+    /// Interface method for ConditionallySpeculatable.
+    Speculation::Speculatability getSpeculatability();
+
+    /// Return a mapping from positions `inner_dims_pos` to their
+    /// tile factors.
+    DenseMap<int64_t, OpFoldResult> getDimAndTileMapping();
+
+    /// Return the tile sizes as OpFoldResult.
+    SmallVector<OpFoldResult> getMixedTiles();
+
+    /// Return the tile sizes as `int64_t`. If a tile size is dynamic
+    /// a sentinel `kDynamic` is introduced at that position in
+    /// the returned vector.
+    SmallVector<int64_t> getStaticTiles();
+  }];
+
+  let hasVerifier = 1;
+}
+
+def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
+    AttrSizedOperandSegments]> {
+  let summary = "tensor pack operation";
+  let description = [{
+    The pack operation converts an input tensor to a higher-dimensional tensor
+    with a tiled and packed layout. The mandatory `inner_dims_pos` attribute
+    specifies a permutation for the original dimensions, while `inner_tiles` is the
+    tiling factor for each dimension. The optional attribute `outer_dims_perm`
+    specifies the order for the tiled data dimension, while the attribute
+    `padding_value` specifies a padding value at the boundary on non-perfectly
+    divisible dimensions. Padding is optional:
+    - If absent, it is UB if the tile does not perfectly divide the dimension.
+    - If present, it will pad along high dimensions (high-padding) to make the
+      tile complete.
+
+    Example NC_to_NCnc:
+
+    ```mlir
+    tensor.pack %source inner_dims_pos = [0, 1]
+      inner_tiles = [8, 32] into %dest : tensor<128x256xf32> -> tensor<16x8x8x32xf32>
+    ```
+    Example CK to KCck
+
+    ```mlir
+    tensor.pack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
+      inner_tiles = [8, 32] into %dest : tensor<128x256xf32> -> tensor<8x16x8x32xf32>
+    ```
+
+    In all cases, dimension at position 0 in the input tensor (128) is tiled
+    with a factor of 8, while dimension at position 1 (256) is tiled with a factor
+    of 32. In the second example, the outer data dimensions are interchanged
+    according to `outer_dims_perm`.
+
+    Example NC_to_NCnc with padding:
+
+    ```mlir
+    tensor.pack %arg padding_value(%pad : f32) inner_dims_pos = [0, 1]
+      inner_tiles = [8, 2] into %arg1 : tensor<13x15xf32> -> tensor<2x8x8x2xf32>
+    ```
+
+  }];
+  let arguments = (ins AnyRankedTensor:$source,
+                       AnyRankedTensor:$dest,
+                       Optional<AnyType>:$padding_value,
+                       DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$outer_dims_perm,
+                       DenseI64ArrayAttr:$inner_dims_pos,
+                       Variadic<Index>:$inner_tiles,
+                       DenseI64ArrayAttr:$static_inner_tiles);
+  let results = (outs AnyRankedTensor:$result);
+  let assemblyFormat = [{
+    $source
+    (`padding_value` `(` $padding_value^ `:` type($padding_value) `)`)?
+    (`outer_dims_perm` `=` $outer_dims_perm^)?
+    `inner_dims_pos` `=` $inner_dims_pos
+    `inner_tiles` `=`
+    custom<DynamicIndexList>($inner_tiles, $static_inner_tiles)
+    `into` $dest attr-dict `:` type($source) `->` type($dest)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$source, "Value":$dest,
+      "ArrayRef<int64_t>":$innerDimsPos,
+      "ArrayRef<OpFoldResult>":$innerTiles,
+      CArg<"Optional<Value>", "llvm::None">:$paddingValue,
+      CArg<"ArrayRef<int64_t>", "{}">:$outerDimsPerm)>
+  ];
+
+  let extraClassDeclaration = commonExtraClassDeclaration # [{
+    // Method to get the `ShapedType` of the result based on the inner tiles,
+    // position of the inner tiles (innerDimsPos)  and interchange vector of
+    // outer loops (outerDimsPerm).
+    static ShapedType inferPackedType(ShapedType sourceType,
+        ArrayRef<int64_t> innerTileSizes, ArrayRef<int64_t> innerDimsPos,
+        ArrayRef<int64_t> outerDimsPerm = {});
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// UnPackOp
+//===----------------------------------------------------------------------===//
+
+def Tensor_UnPackOp : Tensor_RelayoutOp<"unpack"> {
+  let summary = "tensor unpack operation";
+  let description = [{
+    The unpack operation converts a tensor with a tiled and packed layout to a
+    lower-dimensional tensor. Similar to `pack`,  the mandatory attributes
+    `inner_dims_pos` specifies a permutation for the inner data dimensions, while
+    `inner_tiles` is the tiling factor. The attribute `outer_dims_perm` has the
+    exact behavior as the one described in `pack`. In `unpack`, it is UB if the
+    tile does not perfectly divide the dimension.
+
+    Example NCnc_to_NC:
+
+    ```mlir
+    tensor.unpack %source inner_dims_pos = [0, 1]
+      inner_tiles = [8, 32] into %dest : tensor<16x8x8x32xf32> -> tensor<128x256xf32>
+    ```
+
+    Example CK to KCck:
+
+    ```mlir
+    tensor.unapck %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
+      inner_tiles = [8, 32] into %dest : tensor<8x16x8x32xf32> -> tensor<128x256xf32>
+    ```
+  }];
+  let arguments = (ins AnyRankedTensor:$source,
+                       AnyRankedTensor:$dest,
+                       DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$outer_dims_perm,
+                       DenseI64ArrayAttr:$inner_dims_pos,
+                       Variadic<Index>:$inner_tiles,
+                       DenseI64ArrayAttr:$static_inner_tiles);
+  let results = (outs AnyRankedTensor:$result);
+  let assemblyFormat = [{
+    $source
+    (`outer_dims_perm` `=` $outer_dims_perm^)?
+    `inner_dims_pos` `=` $inner_dims_pos
+    `inner_tiles` `=`
+    custom<DynamicIndexList>($inner_tiles, $static_inner_tiles)
+    `into` $dest attr-dict `:` type($source) `->` type($dest)
+  }];
+
+  let extraClassDeclaration = commonExtraClassDeclaration;
+  let hasCanonicalizeMethod = 1;
 }
 
 //===----------------------------------------------------------------------===//

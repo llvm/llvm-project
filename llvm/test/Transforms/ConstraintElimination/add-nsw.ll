@@ -767,3 +767,156 @@ entry:
   %c = icmp ult i8 %add.off.2, %high
   ret i1 %c
 }
+
+define i1 @add_neg_1_known_sge_ult_1(i32 %a) {
+; CHECK-LABEL: @add_neg_1_known_sge_ult_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_SGE:%.*]] = icmp sge i32 [[A:%.*]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_SGE]])
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[A]], -1
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[SUB]], [[A]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %a.sge = icmp sge i32 %a, 1
+  call void @llvm.assume(i1 %a.sge)
+  %sub = add nsw i32 %a, -1
+  %c = icmp ult i32 %sub, %a
+  ret i1 %c
+}
+
+define i1 @add_neg_1_known_sge_uge_1(i32 %a) {
+; CHECK-LABEL: @add_neg_1_known_sge_uge_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_SGE:%.*]] = icmp sge i32 [[A:%.*]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_SGE]])
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[A]], -1
+; CHECK-NEXT:    [[C:%.*]] = icmp uge i32 [[SUB]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %a.sge = icmp sge i32 %a, 1
+  call void @llvm.assume(i1 %a.sge)
+  %sub = add nsw i32 %a, -1
+  %c = icmp uge i32 %sub, 0
+  ret i1 %c
+}
+
+define i1 @add_neg_1_not_known_sge_ult_1(i32 %a) {
+; CHECK-LABEL: @add_neg_1_not_known_sge_ult_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_SGE:%.*]] = icmp sge i32 [[A:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_SGE]])
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[A]], -1
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[SUB]], [[A]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %a.sge = icmp sge i32 %a, 0
+  call void @llvm.assume(i1 %a.sge)
+  %sub = add nsw i32 %a, -1
+  %c = icmp ult i32 %sub, %a
+  ret i1 %c
+}
+
+define i1 @add_neg_1_not_known_sge_uge_1(i32 %a) {
+; CHECK-LABEL: @add_neg_1_not_known_sge_uge_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_SGE:%.*]] = icmp sge i32 [[A:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_SGE]])
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[A]], -1
+; CHECK-NEXT:    [[C:%.*]] = icmp uge i32 [[SUB]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %a.sge = icmp sge i32 %a, 0
+  call void @llvm.assume(i1 %a.sge)
+  %sub = add nsw i32 %a, -1
+  %c = icmp uge i32 %sub, 0
+  ret i1 %c
+}
+
+define i1 @add_neg_3_known_sge_ult_1(i32 %a) {
+; CHECK-LABEL: @add_neg_3_known_sge_ult_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_SGE:%.*]] = icmp sge i32 [[A:%.*]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_SGE]])
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[A]], -3
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[SUB]], [[A]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %a.sge = icmp sge i32 %a, 3
+  call void @llvm.assume(i1 %a.sge)
+  %sub = add nsw i32 %a, -3
+  %c = icmp ult i32 %sub, %a
+  ret i1 %c
+}
+
+define i1 @add_neg_3_known_sge_uge_1(i32 %a) {
+; CHECK-LABEL: @add_neg_3_known_sge_uge_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_SGE:%.*]] = icmp sge i32 [[A:%.*]], 4
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_SGE]])
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[A]], -3
+; CHECK-NEXT:    [[C:%.*]] = icmp uge i32 [[SUB]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %a.sge = icmp sge i32 %a, 4
+  call void @llvm.assume(i1 %a.sge)
+  %sub = add nsw i32 %a, -3
+  %c = icmp uge i32 %sub, 0
+  ret i1 %c
+}
+
+define i1 @add_neg_3_not_known_sge_ult_1(i32 %a) {
+; CHECK-LABEL: @add_neg_3_not_known_sge_ult_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_SGE:%.*]] = icmp sge i32 [[A:%.*]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_SGE]])
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[A]], -3
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[SUB]], [[A]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %a.sge = icmp sge i32 %a, 2
+  call void @llvm.assume(i1 %a.sge)
+  %sub = add nsw i32 %a, -3
+  %c = icmp ult i32 %sub, %a
+  ret i1 %c
+}
+
+define i1 @add_neg_3_not_known_sge_uge_1(i32 %a) {
+; CHECK-LABEL: @add_neg_3_not_known_sge_uge_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_SGE:%.*]] = icmp sge i32 [[A:%.*]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_SGE]])
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[A]], -3
+; CHECK-NEXT:    [[C:%.*]] = icmp uge i32 [[SUB]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %a.sge = icmp sge i32 %a, 2
+  call void @llvm.assume(i1 %a.sge)
+  %sub = add nsw i32 %a, -3
+  %c = icmp uge i32 %sub, 0
+  ret i1 %c
+}
+
+define i1 @add_neg_3_not_known_sge_ult_2(i32 %a, i32 %b) {
+; CHECK-LABEL: @add_neg_3_not_known_sge_ult_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_SGE:%.*]] = icmp sge i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_SGE]])
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[A]], -3
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[SUB]], [[A]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %a.sge = icmp sge i32 %a, %b
+  call void @llvm.assume(i1 %a.sge)
+  %sub = add nsw i32 %a, -3
+  %c = icmp ult i32 %sub, %a
+  ret i1 %c
+}

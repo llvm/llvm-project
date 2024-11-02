@@ -30,6 +30,6 @@ def OpMultipleSingleResult : Op<Test_Dialect, "multiple_single_result"> {
 }
 
 def OpMultiVariadic : Op<Test_Dialect, "multi_variadic"> {
-  let arguments = (ins Variadic<I64>:$operands, Variadic<I64>:$operand2);
-  let results = (outs Variadic<I64>:$results, Variadic<I64>:$results2);
+  let arguments = (ins Variadic<I64>:$operands1, Variadic<I64>:$operand2);
+  let results = (outs Variadic<I64>:$results1, Variadic<I64>:$results2);
 }

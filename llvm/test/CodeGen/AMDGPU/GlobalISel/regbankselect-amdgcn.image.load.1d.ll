@@ -19,9 +19,9 @@ define amdgpu_ps void @load_1d_vgpr_vaddr__sgpr_srsrc(<8 x i32> inreg %rsrc, i32
   ; FAST-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; FAST-NEXT:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
   ; FAST-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
-  ; FAST-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY8]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; FAST-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY8]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>), addrspace 7)
   ; FAST-NEXT:   [[COPY9:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; FAST-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY9]](p1) :: (store (<4 x s32>) into `<4 x float> addrspace(1)* undef`, addrspace 1)
+  ; FAST-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY9]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
   ; FAST-NEXT:   S_ENDPGM 0
   ; GREEDY-LABEL: name: load_1d_vgpr_vaddr__sgpr_srsrc
   ; GREEDY: bb.1 (%ir-block.0):
@@ -38,12 +38,12 @@ define amdgpu_ps void @load_1d_vgpr_vaddr__sgpr_srsrc(<8 x i32> inreg %rsrc, i32
   ; GREEDY-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; GREEDY-NEXT:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
   ; GREEDY-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
-  ; GREEDY-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY8]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GREEDY-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY8]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>), addrspace 7)
   ; GREEDY-NEXT:   [[COPY9:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; GREEDY-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY9]](p1) :: (store (<4 x s32>) into `<4 x float> addrspace(1)* undef`, addrspace 1)
+  ; GREEDY-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY9]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
   ; GREEDY-NEXT:   S_ENDPGM 0
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
-  store <4 x float> %v, <4 x float> addrspace(1)* undef
+  store <4 x float> %v, ptr addrspace(1) undef
   ret void
 }
 
@@ -65,9 +65,9 @@ define amdgpu_ps void @load_1d_sgpr_vaddr__sgpr_srsrc(<8 x i32> inreg %rsrc, i32
   ; FAST-NEXT:   [[COPY8:%[0-9]+]]:sgpr(s32) = COPY $sgpr10
   ; FAST-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
   ; FAST-NEXT:   [[COPY9:%[0-9]+]]:vgpr(s32) = COPY [[COPY8]](s32)
-  ; FAST-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; FAST-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>), addrspace 7)
   ; FAST-NEXT:   [[COPY10:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; FAST-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY10]](p1) :: (store (<4 x s32>) into `<4 x float> addrspace(1)* undef`, addrspace 1)
+  ; FAST-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY10]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
   ; FAST-NEXT:   S_ENDPGM 0
   ; GREEDY-LABEL: name: load_1d_sgpr_vaddr__sgpr_srsrc
   ; GREEDY: bb.1 (%ir-block.0):
@@ -85,12 +85,12 @@ define amdgpu_ps void @load_1d_sgpr_vaddr__sgpr_srsrc(<8 x i32> inreg %rsrc, i32
   ; GREEDY-NEXT:   [[COPY8:%[0-9]+]]:sgpr(s32) = COPY $sgpr10
   ; GREEDY-NEXT:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
   ; GREEDY-NEXT:   [[COPY9:%[0-9]+]]:vgpr(s32) = COPY [[COPY8]](s32)
-  ; GREEDY-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GREEDY-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>), addrspace 7)
   ; GREEDY-NEXT:   [[COPY10:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; GREEDY-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY10]](p1) :: (store (<4 x s32>) into `<4 x float> addrspace(1)* undef`, addrspace 1)
+  ; GREEDY-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY10]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
   ; GREEDY-NEXT:   S_ENDPGM 0
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
-  store <4 x float> %v, <4 x float> addrspace(1)* undef
+  store <4 x float> %v, ptr addrspace(1) undef
   ret void
 }
 
@@ -144,7 +144,7 @@ define amdgpu_ps void @load_1d_vgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 %s) {
   ; FAST-NEXT: bb.3:
   ; FAST-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; FAST-NEXT: {{  $}}
-  ; FAST-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY8]](s32), [[BUILD_VECTOR1]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; FAST-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY8]](s32), [[BUILD_VECTOR1]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>), addrspace 7)
   ; FAST-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; FAST-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; FAST-NEXT: {{  $}}
@@ -155,7 +155,7 @@ define amdgpu_ps void @load_1d_vgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 %s) {
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT: bb.5:
   ; FAST-NEXT:   [[COPY9:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; FAST-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY9]](p1) :: (store (<4 x s32>) into `<4 x float> addrspace(1)* undef`, addrspace 1)
+  ; FAST-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY9]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
   ; FAST-NEXT:   S_ENDPGM 0
   ; GREEDY-LABEL: name: load_1d_vgpr_vaddr__vgpr_srsrc
   ; GREEDY: bb.1 (%ir-block.0):
@@ -205,7 +205,7 @@ define amdgpu_ps void @load_1d_vgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 %s) {
   ; GREEDY-NEXT: bb.3:
   ; GREEDY-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GREEDY-NEXT: {{  $}}
-  ; GREEDY-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY8]](s32), [[BUILD_VECTOR1]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GREEDY-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY8]](s32), [[BUILD_VECTOR1]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>), addrspace 7)
   ; GREEDY-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GREEDY-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GREEDY-NEXT: {{  $}}
@@ -216,10 +216,10 @@ define amdgpu_ps void @load_1d_vgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 %s) {
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT: bb.5:
   ; GREEDY-NEXT:   [[COPY9:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; GREEDY-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY9]](p1) :: (store (<4 x s32>) into `<4 x float> addrspace(1)* undef`, addrspace 1)
+  ; GREEDY-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY9]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
   ; GREEDY-NEXT:   S_ENDPGM 0
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
-  store <4 x float> %v, <4 x float> addrspace(1)* undef
+  store <4 x float> %v, ptr addrspace(1) undef
   ret void
 }
 
@@ -274,7 +274,7 @@ define amdgpu_ps void @load_1d_sgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 inreg
   ; FAST-NEXT: bb.3:
   ; FAST-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; FAST-NEXT: {{  $}}
-  ; FAST-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY9]](s32), [[BUILD_VECTOR1]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; FAST-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY9]](s32), [[BUILD_VECTOR1]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>), addrspace 7)
   ; FAST-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; FAST-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; FAST-NEXT: {{  $}}
@@ -285,7 +285,7 @@ define amdgpu_ps void @load_1d_sgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 inreg
   ; FAST-NEXT: {{  $}}
   ; FAST-NEXT: bb.5:
   ; FAST-NEXT:   [[COPY10:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; FAST-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY10]](p1) :: (store (<4 x s32>) into `<4 x float> addrspace(1)* undef`, addrspace 1)
+  ; FAST-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY10]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
   ; FAST-NEXT:   S_ENDPGM 0
   ; GREEDY-LABEL: name: load_1d_sgpr_vaddr__vgpr_srsrc
   ; GREEDY: bb.1 (%ir-block.0):
@@ -336,7 +336,7 @@ define amdgpu_ps void @load_1d_sgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 inreg
   ; GREEDY-NEXT: bb.3:
   ; GREEDY-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GREEDY-NEXT: {{  $}}
-  ; GREEDY-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY9]](s32), [[BUILD_VECTOR1]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GREEDY-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY9]](s32), [[BUILD_VECTOR1]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>), addrspace 7)
   ; GREEDY-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GREEDY-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GREEDY-NEXT: {{  $}}
@@ -347,10 +347,10 @@ define amdgpu_ps void @load_1d_sgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 inreg
   ; GREEDY-NEXT: {{  $}}
   ; GREEDY-NEXT: bb.5:
   ; GREEDY-NEXT:   [[COPY10:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; GREEDY-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY10]](p1) :: (store (<4 x s32>) into `<4 x float> addrspace(1)* undef`, addrspace 1)
+  ; GREEDY-NEXT:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY10]](p1) :: (store (<4 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
   ; GREEDY-NEXT:   S_ENDPGM 0
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
-  store <4 x float> %v, <4 x float> addrspace(1)* undef
+  store <4 x float> %v, ptr addrspace(1) undef
   ret void
 }
 

@@ -26,7 +26,10 @@ define i32 @test_01(i32 %start, i32* %p, i32* %q) {
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: (zext i32 %start to i64)
 ; CHECK-NEXT:    exit count for backedge: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4294967295
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 4294967295
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i32 %start to i64)
+; CHECK-NEXT:    symbolic max exit count for loop: (zext i32 %start to i64)
+; CHECK-NEXT:    symbolic max exit count for backedge: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -71,7 +74,8 @@ define i32 @test_02(i32 %start, i32* %p, i32* %q) {
 ; CHECK-NEXT:    --> {(-1 + (2147483648 * (zext i32 %start to i64))<nuw><nsw>)<nsw>,+,-1}<nw><%loop> U: full-set S: full-set Exits: -9223372036854775807 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_02
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (9223372036854775806 + (2147483648 * (zext i32 %start to i64))<nuw><nsw>)<nuw>
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is -2147483650
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -2147483650
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (9223372036854775806 + (2147483648 * (zext i32 %start to i64))<nuw><nsw>)<nuw>
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (9223372036854775806 + (2147483648 * (zext i32 %start to i64))<nuw><nsw>)<nuw>
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
@@ -102,7 +106,8 @@ define void @pointer_iv_nowrap(i8* %startptr, i8* %endptr) local_unnamed_addr {
 ; CHECK-NEXT:    --> {(2001 + %startptr),+,1}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @pointer_iv_nowrap
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -130,7 +135,8 @@ define void @pointer_iv_nowrap_guard(i32* %startptr, i32* %endptr) local_unnamed
 ; CHECK-NEXT:    --> {(8004 + %startptr),+,4}<nuw><%loop> U: full-set S: full-set Exits: (8004 + (4 * ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + ((8004 + (ptrtoint i32* %startptr to i64)) umax (ptrtoint i32* %endptr to i64))) /u 4))<nuw> + %startptr) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @pointer_iv_nowrap_guard
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + ((8004 + (ptrtoint i32* %startptr to i64)) umax (ptrtoint i32* %endptr to i64))) /u 4)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4611686018427387903
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 4611686018427387903
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + ((8004 + (ptrtoint i32* %startptr to i64)) umax (ptrtoint i32* %endptr to i64))) /u 4)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-8001 + (-1 * (ptrtoint i32* %startptr to i64)) + ((8004 + (ptrtoint i32* %startptr to i64)) umax (ptrtoint i32* %endptr to i64))) /u 4)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1

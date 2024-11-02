@@ -8,14 +8,14 @@
 ; node produced.
 
 ; GCN: v_mul_u32_u24
-define amdgpu_kernel void @test(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @test(ptr addrspace(1) nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %bb4
 
 bb1:                                              ; preds = %bb4
-  %tmp3 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %tmp46
-  store i32 %tmp46, i32 addrspace(1)* %tmp3, align 4
+  %tmp3 = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %tmp46
+  store i32 %tmp46, ptr addrspace(1) %tmp3, align 4
   ret void
 
 bb4:                                              ; preds = %bb4, %bb

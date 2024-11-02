@@ -28,10 +28,10 @@ def NVGPU_Dialect : Dialect {
   let name = "nvgpu";
   let cppNamespace = "::mlir::nvgpu";
   let description = [{
-    The `NVGPU` dialect provides a bridge between higher-level target-agnostic 
-    dialects (GPU and Vector) and the lower-level target-specific dialect 
-    (LLVM IR based NVVM dialect) for NVIDIA GPUs. This allow representing PTX 
-    specific operations while using MLIR high level dialects such as Memref 
+    The `NVGPU` dialect provides a bridge between higher-level target-agnostic
+    dialects (GPU and Vector) and the lower-level target-specific dialect
+    (LLVM IR based NVVM dialect) for NVIDIA GPUs. This allow representing PTX
+    specific operations while using MLIR high level dialects such as Memref
     and Vector for memory and target-specific register operands, respectively.
   }];
 
@@ -47,7 +47,7 @@ class NVGPU_Type<string name, string typeMnemonic,
   let mnemonic = typeMnemonic;
 }
 
-def NVGPU_DeviceAsyncToken : NVGPU_Type<"DeviceAsyncToken",  
+def NVGPU_DeviceAsyncToken : NVGPU_Type<"DeviceAsyncToken",
                                         "device.async.token", []> {
   let summary = "device async token type";
   let description = [{
@@ -68,11 +68,11 @@ class NVGPU_Op<string mnemonic, list<Trait> traits = []> :
 
 def NVGPU_LdMatrixOp : NVGPU_Op<"ldmatrix", [
                                 MemoryEffects<[MemRead]>,
-                                PredOpTrait<"srcMemref and res have same element type", 
+                                PredOpTrait<"srcMemref and res have same element type",
                                             TCresVTEtIsSameAsOp<0, 0>>]> {
   let description = [{
     The `nvgpu.ldmatrix` op represents loading a matrix fragment from
-    memory to registers. The source and result type must be compatible 
+    memory to registers. The source and result type must be compatible
     with lowering to the `nvvm.ldmatrix` instruction. This op represents
     the distributed version of a `vector.transfer_read` as an intermediate
     step between lowering from `vector.transfer_read` to `nvvm.ldmatrix`.
@@ -100,10 +100,10 @@ def NVGPU_LdMatrixOp : NVGPU_Op<"ldmatrix", [
 
 class NVGPU_MmaSyncOp<string mnemonic> :
         NVGPU_Op<mnemonic,  [Pure,
-                             PredOpTrait<"matrixA and matrixB have same element type", 
+                             PredOpTrait<"matrixA and matrixB have same element type",
                                          TCopVTEtIsSameAs<0, 1>>]> {
   code extraBaseClassDeclaration = [{
-    std::array<int64_t, 3> getMmaShapeAsArray() {      
+    std::array<int64_t, 3> getMmaShapeAsArray() {
       ArrayAttr mmaShape = this->getMmaShape();
       assert(mmaShape.size() == 3 && "mmaShape should be three integers");
       return {mmaShape[0].cast<IntegerAttr>().getInt(),
@@ -118,12 +118,12 @@ class NVGPU_MmaSyncOp<string mnemonic> :
 def NVGPU_MmaSyncOp : NVGPU_MmaSyncOp<"mma.sync"> {
   let description = [{
     The `nvgpu.mma.sync` op represents the warp-level matrix-multiply-and-
-    accumulate (mma) operation that is compatible with `nvvm.mma.sync`. 
-    The operands and results vector sizes are thread-level onwership to 
-    the warp-level mma operation shape. `mmaShape` attribute holds the 
+    accumulate (mma) operation that is compatible with `nvvm.mma.sync`.
+    The operands and results vector sizes are thread-level onwership to
+    the warp-level mma operation shape. `mmaShape` attribute holds the
     warp-level matrix-multiply shape.
-    
-    The `nvgpu.mma.sync` op serves as an intermediate point between lowering from 
+
+    The `nvgpu.mma.sync` op serves as an intermediate point between lowering from
     `vector.contract` to `nvvm.mma.sync`.
 
     This operation is meant to follow the semantic of described here:
@@ -132,13 +132,13 @@ def NVGPU_MmaSyncOp : NVGPU_MmaSyncOp<"mma.sync"> {
     Example:
 
     ```mlir
-    %res = nvgpu.mma.sync (%matrixA, %matrixB, %matrixC) {mmaShape = [16, 8, 16]} : 
+    %res = nvgpu.mma.sync (%matrixA, %matrixB, %matrixC) {mmaShape = [16, 8, 16]} :
         (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf32>) -> vector<2x2xf32>
     ```
   }];
-  let arguments = (ins AnyVector:$matrixA, 
+  let arguments = (ins AnyVector:$matrixA,
                        AnyVector:$matrixB,
-                       AnyVector:$matrixC, 
+                       AnyVector:$matrixC,
                        I64ArrayAttr:$mmaShape,
                        OptionalAttr<UnitAttr>:$tf32Enabled
                        );
@@ -146,9 +146,9 @@ def NVGPU_MmaSyncOp : NVGPU_MmaSyncOp<"mma.sync"> {
   let results = (outs AnyVector:$res);
 
   let builders = [
-    OpBuilder<(ins "Value":$matrixA, 
-                   "Value":$matrixB, 
-                   "Value":$matrixC, 
+    OpBuilder<(ins "Value":$matrixA,
+                   "Value":$matrixB,
+                   "Value":$matrixC,
                    "ArrayAttr":$mmaShape)>
   ];
 
@@ -182,13 +182,13 @@ def NVGPU_MmaSparseSyncOp : NVGPU_MmaSyncOp<"mma.sp.sync"> {
 
   Example (targetingthe f16 16x8x32 `mma.sp` PTX instruction):
 
-  ```mlir  
+  ```mlir
   nvgpu.mma.sp.sync (%a, %b, %c) metadata (%meta) {mmaShape = [16, 8, 32]} :
-    (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>    
-  ```  
+    (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+  ```
   }];
 
-  let arguments = (ins AnyVector:$matrixA,                       
+  let arguments = (ins AnyVector:$matrixA,
                        AnyVector:$matrixB,
                        AnyVector:$matrixC,
                        NVGPU_MmaSparseSyncMetadataType:$sparseMetadata,
@@ -220,24 +220,24 @@ def NVGPU_DeviceAsyncCopyOp : NVGPU_Op<"device_async_copy", [
   let summary = "device-side asynchronous copy";
   let description = [{
     The `nvgpu.device_async_copy` op initiates an asynchronous copy operation of
-    elements from source (global memory) to the destination (shared memory) 
+    elements from source (global memory) to the destination (shared memory)
     without blocking the thread. The async copy is added to a group.
 
     This op is meant to be used with `nvgpu.device_async_create_group` and
     `nvgpu.device_async_wait` to synchronize copies as explained in those ops
-    descriptions. 
-    
-    `bypassL1` attribute is hint to the hardware to bypass the L1 cache during 
-    async copy, this hint may be ignored by the hardware. 
-    
-    `dstElements` attribute is the total number of elements written to 
+    descriptions.
+
+    `bypassL1` attribute is hint to the hardware to bypass the L1 cache during
+    async copy, this hint may be ignored by the hardware.
+
+    `dstElements` attribute is the total number of elements written to
     destination (shared memory).
 
-    `srcElements` argument is the total number of elements read from 
+    `srcElements` argument is the total number of elements read from
     source (global memory).
-    
-    `srcElements` is an optional argument and when present the op only reads 
-    `srcElements` number of elements from the source (global memory) and zero fills 
+
+    `srcElements` is an optional argument and when present the op only reads
+    `srcElements` number of elements from the source (global memory) and zero fills
     the rest of the elements in the destination (shared memory).
 
     In order to do a copy and wait for the result we need the following

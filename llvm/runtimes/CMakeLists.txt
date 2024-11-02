@@ -74,7 +74,7 @@ function(builtin_default_target compiler_rt_path)
                            DEPENDS ${ARG_DEPENDS}
                            CMAKE_ARGS -DLLVM_LIBRARY_OUTPUT_INTDIR=${LLVM_LIBRARY_DIR}
                                       -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
-                                      -DLLVM_DEFAULT_TARGET_TRIPLE=${LLVM_TARGET_TRIPLE}
+                                      -DLLVM_TARGET_TRIPLE=${LLVM_TARGET_TRIPLE}
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
@@ -108,7 +108,7 @@ function(builtin_register_target compiler_rt_path target)
                            DEPENDS ${ARG_DEPENDS}
                            CMAKE_ARGS -DLLVM_LIBRARY_OUTPUT_INTDIR=${LLVM_LIBRARY_DIR}
                                       -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
-                                      -DLLVM_DEFAULT_TARGET_TRIPLE=${target}
+                                      -DLLVM_TARGET_TRIPLE=${target}
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
@@ -178,6 +178,9 @@ foreach(entry ${runtimes})
   if(canon_name STREQUAL "COMPILER_RT")
     list(APPEND prefixes SANITIZER DARWIN)
   endif()
+  if(canon_name STREQUAL "LLVMLIBC")
+    list(APPEND prefixes "LLVM_LIBC")
+  endif()
 
   string(FIND ${projName} "lib" LIB_IDX)
   if(LIB_IDX EQUAL 0)
@@ -225,7 +228,7 @@ function(runtime_default_target)
                            # Builtins were built separately above
                            CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                       -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
-                                      -DLLVM_DEFAULT_TARGET_TRIPLE=${LLVM_TARGET_TRIPLE}
+                                      -DLLVM_TARGET_TRIPLE=${LLVM_TARGET_TRIPLE}
                                       -DLLVM_ENABLE_PROJECTS_USED=${LLVM_ENABLE_PROJECTS_USED}
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default}
                                       -DLLVM_BUILD_TOOLS=${LLVM_BUILD_TOOLS}
@@ -272,16 +275,24 @@ function(runtime_register_target name target)
     endif()
   endforeach()
 
-  foreach(target_name IN LISTS SUB_COMPONENTS SUB_INSTALL_TARGETS)
+  foreach(target_name IN LISTS SUB_COMPONENTS)
     set(${target_name}-${name} ${target_name})
     list(APPEND ${name}_extra_targets ${target_name}-${name})
   endforeach()
 
+  foreach(target_name IN LISTS SUB_INSTALL_TARGETS)
+    set(${target_name}-${name} ${target_name})
+    set(${target_name}-${name}-stripped ${target_name}-stripped)
+    list(APPEND ${name}_extra_targets ${target_name}-${name} ${target_name}-${name}-stripped)
+  endforeach()
+
   foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
-    set(${component}-${name} ${component})
-    set(install-${component}-${name} install-${component})
-    set(install-${component}-${name}-stripped install-${component}-stripped)
-    list(APPEND ${name}_extra_targets ${component}-${name} install-${component}-${name} install-${component}-${name}-stripped)
+    if(NOT component IN_LIST SUB_COMPONENTS)
+      set(${component}-${name} ${component})
+      set(install-${component}-${name} install-${component})
+      set(install-${component}-${name}-stripped install-${component}-stripped)
+      list(APPEND ${name}_extra_targets ${component}-${name} install-${component}-${name} install-${component}-${name}-stripped)
+    endif()
   endforeach()
 
   if(LLVM_INCLUDE_TESTS)
@@ -290,7 +301,15 @@ function(runtime_register_target name target)
     set(check-runtimes-${name} check-runtimes)
     list(APPEND ${name}_test_targets runtimes-test-depends-${name} check-runtimes-${name})
     list(APPEND test_targets ${${name}_test_targets})
-    foreach(target_name IN LISTS SUB_CHECK_TARGETS)
+
+    set(component_check_targets)
+    foreach(component IN LISTS LLVM_RUNTIME_DISTRIBUTION_COMPONENTS)
+      if(NOT "check-${component}" IN_LIST SUB_CHECK_TARGETS)
+        list(APPEND component_check_targets "check-${component}")
+      endif()
+    endforeach()
+
+    foreach(target_name IN LISTS SUB_CHECK_TARGETS component_check_targets)
       set(${target_name}-${name} ${target_name})
       list(APPEND ${name}_test_targets ${target_name}-${name})
       list(APPEND test_targets ${target_name}-${name})
@@ -334,7 +353,7 @@ function(runtime_register_target name target)
                            # Builtins were built separately above
                            CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                       -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
-                                      -DLLVM_DEFAULT_TARGET_TRIPLE=${target}
+                                      -DLLVM_TARGET_TRIPLE=${target}
                                       -DLLVM_ENABLE_PROJECTS_USED=${LLVM_ENABLE_PROJECTS_USED}
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                       -DCMAKE_C_COMPILER_WORKS=ON
@@ -465,8 +484,10 @@ if(runtimes)
     set(RUNTIMES_TEST_DEPENDS
         FileCheck
         count
+        llvm-cov
         llvm-nm
         llvm-objdump
+        llvm-profdata
         llvm-xray
         not
         obj2yaml

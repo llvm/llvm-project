@@ -207,7 +207,7 @@ public:
 
   template <typename STREAM>
   STREAM &Dump(
-      STREAM &o, const std::string &EnumToString(enumerationType)) const {
+      STREAM &o, std::string_view EnumToString(enumerationType)) const {
     char sep{'{'};
     IterateOverMembers([&](auto e) {
       o << sep << EnumToString(e);

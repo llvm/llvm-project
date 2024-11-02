@@ -13,7 +13,7 @@ entry:
 ; CHECK: call void @llvm.dbg.assign(metadata i32 %x,{{.+}}metadata !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value),{{.+}}, metadata ptr %p, metadata !DIExpression())
 
  %add1 = add nsw i32 %x, %y, !dbg !29
- call void @llvm.dbg.assign(metadata i32 %add1, metadata !14, metadata !DIExpression(), metadata !31, metadata ptr %p, metadata !DIExpression()), !dbg !16
+ call void @llvm.dbg.assign(metadata i32 %add1, metadata !32, metadata !DIExpression(), metadata !31, metadata ptr %p, metadata !DIExpression()), !dbg !16
 ;; %add1 is not salvaged as it requires two values and DIArgList is
 ;; not (yet) supported for dbg.assigns.
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 undef,{{.+}}, metadata !DIExpression(),{{.+}}, metadata ptr %p, metadata !DIExpression())
@@ -24,12 +24,12 @@ entry:
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %x,{{.+}}, metadata !DIExpression(),{{.+}}, metadata ptr %p, metadata !DIExpression())
 
   %arrayidx1 = getelementptr inbounds i32, ptr %p, i32 1
-  call void @llvm.dbg.assign(metadata i32 %x, metadata !14, metadata !DIExpression(), metadata !18, metadata ptr %arrayidx1, metadata !DIExpression()), !dbg !16
+  call void @llvm.dbg.assign(metadata i32 %x, metadata !33, metadata !DIExpression(), metadata !18, metadata ptr %arrayidx1, metadata !DIExpression()), !dbg !16
 ;; %arrayidx1 is salvaged.
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %x,{{.+}}, metadata !DIExpression(),{{.+}}, metadata ptr %p, metadata !DIExpression(DW_OP_plus_uconst, 4))
 
   %arrayidx2 = getelementptr inbounds i32, ptr %p, i32 %x
-  call void @llvm.dbg.assign(metadata i32 %x, metadata !14, metadata !DIExpression(), metadata !19, metadata ptr %arrayidx2, metadata !DIExpression()), !dbg !16
+  call void @llvm.dbg.assign(metadata i32 %x, metadata !34, metadata !DIExpression(), metadata !19, metadata ptr %arrayidx2, metadata !DIExpression()), !dbg !16
 ;; Variadic DIExpressions for dbg.assign address component is not supported -
 ;; set undef.
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %x,{{.+}}, metadata !DIExpression(),{{.+}}, metadata ptr undef, metadata !DIExpression())
@@ -67,3 +67,7 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !28 = distinct !DIAssignID()
 !29 = !DILocation(line: 4, column: 13, scope: !7)
 !31 = distinct !DIAssignID()
+!32 = !DILocalVariable(name: "Local1", scope: !7, file: !1, line: 3, type: !10)
+!33 = !DILocalVariable(name: "Local2", scope: !7, file: !1, line: 3, type: !10)
+!34 = !DILocalVariable(name: "Local3", scope: !7, file: !1, line: 3, type: !10)
+!35 = !DILocalVariable(name: "Local4", scope: !7, file: !1, line: 3, type: !10)

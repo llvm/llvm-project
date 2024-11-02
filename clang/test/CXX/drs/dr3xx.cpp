@@ -890,6 +890,33 @@ namespace dr359 { // dr359: yes
   };
 }
 
+namespace dr360 { // dr360: yes
+struct A {
+  int foo();
+  int bar();
+
+protected:
+  int baz();
+};
+
+struct B : A {
+private:
+  using A::foo; // #dr360-foo-using-decl
+protected:
+  using A::bar; // #dr360-bar-using-decl
+public:
+  using A::baz;
+};
+
+int main() {
+  int foo = B().foo(); // expected-error {{is a private member}}
+  // expected-note@#dr360-foo-using-decl {{declared private here}}
+  int bar = B().bar(); // expected-error {{is a protected member}}
+  // expected-note@#dr360-bar-using-decl {{declared protected here}}
+  int baz = B().baz();
+}
+} // namespace dr360
+
 // dr362: na
 // dr363: na
 

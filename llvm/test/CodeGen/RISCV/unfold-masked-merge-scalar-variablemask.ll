@@ -478,18 +478,18 @@ define i32 @in_complex_y0_m0(i32 %x, i32 %y_hi, i32 %y_low, i32 %m_a, i32 %m_b) 
 ; CHECK-I-LABEL: in_complex_y0_m0:
 ; CHECK-I:       # %bb.0:
 ; CHECK-I-NEXT:    and a1, a1, a2
-; CHECK-I-NEXT:    xor a2, a3, a4
+; CHECK-I-NEXT:    xor a3, a3, a4
 ; CHECK-I-NEXT:    xor a0, a0, a1
-; CHECK-I-NEXT:    and a0, a0, a2
+; CHECK-I-NEXT:    and a0, a0, a3
 ; CHECK-I-NEXT:    xor a0, a0, a1
 ; CHECK-I-NEXT:    ret
 ;
 ; CHECK-ZBB-LABEL: in_complex_y0_m0:
 ; CHECK-ZBB:       # %bb.0:
 ; CHECK-ZBB-NEXT:    and a1, a1, a2
-; CHECK-ZBB-NEXT:    xor a2, a3, a4
-; CHECK-ZBB-NEXT:    andn a1, a1, a2
-; CHECK-ZBB-NEXT:    and a0, a0, a2
+; CHECK-ZBB-NEXT:    xor a3, a3, a4
+; CHECK-ZBB-NEXT:    andn a1, a1, a3
+; CHECK-ZBB-NEXT:    and a0, a0, a3
 ; CHECK-ZBB-NEXT:    or a0, a0, a1
 ; CHECK-ZBB-NEXT:    ret
   %y = and i32 %y_hi, %y_low
@@ -504,18 +504,18 @@ define i32 @in_complex_y1_m0(i32 %x, i32 %y_hi, i32 %y_low, i32 %m_a, i32 %m_b) 
 ; CHECK-I-LABEL: in_complex_y1_m0:
 ; CHECK-I:       # %bb.0:
 ; CHECK-I-NEXT:    and a1, a1, a2
-; CHECK-I-NEXT:    xor a2, a3, a4
+; CHECK-I-NEXT:    xor a3, a3, a4
 ; CHECK-I-NEXT:    xor a0, a0, a1
-; CHECK-I-NEXT:    and a0, a0, a2
+; CHECK-I-NEXT:    and a0, a0, a3
 ; CHECK-I-NEXT:    xor a0, a1, a0
 ; CHECK-I-NEXT:    ret
 ;
 ; CHECK-ZBB-LABEL: in_complex_y1_m0:
 ; CHECK-ZBB:       # %bb.0:
 ; CHECK-ZBB-NEXT:    and a1, a1, a2
-; CHECK-ZBB-NEXT:    xor a2, a3, a4
-; CHECK-ZBB-NEXT:    andn a1, a1, a2
-; CHECK-ZBB-NEXT:    and a0, a0, a2
+; CHECK-ZBB-NEXT:    xor a3, a3, a4
+; CHECK-ZBB-NEXT:    andn a1, a1, a3
+; CHECK-ZBB-NEXT:    and a0, a0, a3
 ; CHECK-ZBB-NEXT:    or a0, a0, a1
 ; CHECK-ZBB-NEXT:    ret
   %y = and i32 %y_hi, %y_low
@@ -530,18 +530,18 @@ define i32 @in_complex_y0_m1(i32 %x, i32 %y_hi, i32 %y_low, i32 %m_a, i32 %m_b) 
 ; CHECK-I-LABEL: in_complex_y0_m1:
 ; CHECK-I:       # %bb.0:
 ; CHECK-I-NEXT:    and a1, a1, a2
-; CHECK-I-NEXT:    xor a2, a3, a4
+; CHECK-I-NEXT:    xor a3, a3, a4
 ; CHECK-I-NEXT:    xor a0, a0, a1
-; CHECK-I-NEXT:    and a0, a2, a0
+; CHECK-I-NEXT:    and a0, a3, a0
 ; CHECK-I-NEXT:    xor a0, a0, a1
 ; CHECK-I-NEXT:    ret
 ;
 ; CHECK-ZBB-LABEL: in_complex_y0_m1:
 ; CHECK-ZBB:       # %bb.0:
 ; CHECK-ZBB-NEXT:    and a1, a1, a2
-; CHECK-ZBB-NEXT:    xor a2, a3, a4
-; CHECK-ZBB-NEXT:    andn a1, a1, a2
-; CHECK-ZBB-NEXT:    and a0, a0, a2
+; CHECK-ZBB-NEXT:    xor a3, a3, a4
+; CHECK-ZBB-NEXT:    andn a1, a1, a3
+; CHECK-ZBB-NEXT:    and a0, a0, a3
 ; CHECK-ZBB-NEXT:    or a0, a0, a1
 ; CHECK-ZBB-NEXT:    ret
   %y = and i32 %y_hi, %y_low
@@ -556,18 +556,18 @@ define i32 @in_complex_y1_m1(i32 %x, i32 %y_hi, i32 %y_low, i32 %m_a, i32 %m_b) 
 ; CHECK-I-LABEL: in_complex_y1_m1:
 ; CHECK-I:       # %bb.0:
 ; CHECK-I-NEXT:    and a1, a1, a2
-; CHECK-I-NEXT:    xor a2, a3, a4
+; CHECK-I-NEXT:    xor a3, a3, a4
 ; CHECK-I-NEXT:    xor a0, a0, a1
-; CHECK-I-NEXT:    and a0, a2, a0
+; CHECK-I-NEXT:    and a0, a3, a0
 ; CHECK-I-NEXT:    xor a0, a1, a0
 ; CHECK-I-NEXT:    ret
 ;
 ; CHECK-ZBB-LABEL: in_complex_y1_m1:
 ; CHECK-ZBB:       # %bb.0:
 ; CHECK-ZBB-NEXT:    and a1, a1, a2
-; CHECK-ZBB-NEXT:    xor a2, a3, a4
-; CHECK-ZBB-NEXT:    andn a1, a1, a2
-; CHECK-ZBB-NEXT:    and a0, a0, a2
+; CHECK-ZBB-NEXT:    xor a3, a3, a4
+; CHECK-ZBB-NEXT:    andn a1, a1, a3
+; CHECK-ZBB-NEXT:    and a0, a0, a3
 ; CHECK-ZBB-NEXT:    or a0, a0, a1
 ; CHECK-ZBB-NEXT:    ret
   %y = and i32 %y_hi, %y_low
@@ -780,8 +780,8 @@ define i32 @out_constant_mone_vary_invmask(i32 %x, i32 %y, i32 %mask) {
 ;
 ; CHECK-ZBB-LABEL: out_constant_mone_vary_invmask:
 ; CHECK-ZBB:       # %bb.0:
-; CHECK-ZBB-NEXT:    and a0, a2, a1
-; CHECK-ZBB-NEXT:    orn a0, a0, a2
+; CHECK-ZBB-NEXT:    and a1, a2, a1
+; CHECK-ZBB-NEXT:    orn a0, a1, a2
 ; CHECK-ZBB-NEXT:    ret
   %notmask = xor i32 %mask, -1
   %mx = and i32 %notmask, -1

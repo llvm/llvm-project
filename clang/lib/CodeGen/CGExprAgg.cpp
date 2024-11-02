@@ -1926,7 +1926,7 @@ static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CodeGenFunction &CGF) {
         // Reference values are always non-null and have the width of a pointer.
         if (Field->getType()->isReferenceType())
           NumNonZeroBytes += CGF.getContext().toCharUnitsFromBits(
-              CGF.getTarget().getPointerWidth(0));
+              CGF.getTarget().getPointerWidth(LangAS::Default));
         else
           NumNonZeroBytes += GetNumNonZeroBytesInInit(E, CGF);
       }

@@ -119,6 +119,7 @@ protected:
     ARMv86a,
     ARMv87a,
     ARMv88a,
+    ARMv89a,
     ARMv8a,
     ARMv8mBaseline,
     ARMv8mMainline,
@@ -128,6 +129,7 @@ protected:
     ARMv91a,
     ARMv92a,
     ARMv93a,
+    ARMv94a,
   };
 
 public:

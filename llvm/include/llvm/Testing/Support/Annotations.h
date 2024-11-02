@@ -8,6 +8,7 @@
 #ifndef LLVM_TESTING_SUPPORT_ANNOTATIONS_H
 #define LLVM_TESTING_SUPPORT_ANNOTATIONS_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -24,7 +25,9 @@ class raw_ostream;
 ///       int complete() { x.pri^ }         // ^ indicates a point
 ///       void err() { [["hello" == 42]]; } // [[this is a range]]
 ///       $definition^class Foo{};          // points can be named: "definition"
-///       $fail[[static_assert(false, "")]] // ranges can be named too: "fail"
+///       $(foo)^class Foo{};               // ...or have a payload: "foo"
+///       $definition(foo)^class Foo{};     // ...or both
+///       $fail(runtime)[[assert(false)]]   // ranges can have names/payloads too
 ///    )cpp");
 ///
 ///    StringRef Code = Example.code();             // annotations stripped.
@@ -34,6 +37,9 @@ class raw_ostream;
 ///
 /// Points/ranges are coordinated into `code()` which is stripped of
 /// annotations.
+///
+/// Names consist of only alphanumeric characters or '_'.
+/// Payloads can contain any character expect '(' and ')'.
 ///
 /// Ranges may be nested (and points can be inside ranges), but there's no way
 /// to define general overlapping ranges.
@@ -69,29 +75,55 @@ public:
   /// Returns the position of the point marked by ^ (or $name^) in the text.
   /// Crashes if there isn't exactly one.
   size_t point(llvm::StringRef Name = "") const;
+  /// Returns the position of the point with \p Name and its payload (if any).
+  std::pair<size_t, llvm::StringRef>
+  pointWithPayload(llvm::StringRef Name = "") const;
   /// Returns the position of all points marked by ^ (or $name^) in the text.
   /// Order matches the order within the text.
   std::vector<size_t> points(llvm::StringRef Name = "") const;
+  /// Returns the positions and payloads (if any) of all points named \p Name
+  std::vector<std::pair<size_t, llvm::StringRef>>
+  pointsWithPayload(llvm::StringRef Name = "") const;
   /// Returns the mapping of all names of points marked in the text to their
   /// position. Unnamed points are mapped to the empty string. The positions are
   /// sorted.
-  const llvm::StringMap<llvm::SmallVector<size_t, 1>> &all_points() const;
+  /// FIXME Remove this and expose `All` directly (currently used out-of-tree)
+  llvm::StringMap<llvm::SmallVector<size_t, 1>> all_points() const;
 
   /// Returns the location of the range marked by [[ ]] (or $name[[ ]]).
   /// Crashes if there isn't exactly one.
   Range range(llvm::StringRef Name = "") const;
+  /// Returns the location and payload of the range marked by [[ ]]
+  /// (or $name(payload)[[ ]]). Crashes if there isn't exactly one.
+  std::pair<Range, llvm::StringRef>
+  rangeWithPayload(llvm::StringRef Name = "") const;
   /// Returns the location of all ranges marked by [[ ]] (or $name[[ ]]).
   /// They are ordered by start position within the text.
   std::vector<Range> ranges(llvm::StringRef Name = "") const;
+  /// Returns the location of all ranges marked by [[ ]]
+  /// (or $name(payload)[[ ]]).
+  /// They are ordered by start position within the text.
+  std::vector<std::pair<Range, llvm::StringRef>>
+  rangesWithPayload(llvm::StringRef Name = "") const;
   /// Returns the mapping of all names of ranges marked in the text to their
   /// location. Unnamed ranges are mapped to the empty string. The ranges are
   /// sorted by their start position.
-  const llvm::StringMap<llvm::SmallVector<Range, 1>> &all_ranges() const;
+  llvm::StringMap<llvm::SmallVector<Range, 1>> all_ranges() const;
 
 private:
   std::string Code;
+  /// Either a Point (Only Start) or a Range (Start and End)
+  struct Annotation {
+    size_t Begin;
+    size_t End = -1;
+    bool isPoint() const { return End == size_t(-1); }
+    llvm::StringRef Name;
+    llvm::StringRef Payload;
+  };
+  std::vector<Annotation> All;
+  // Values are the indices into All
   llvm::StringMap<llvm::SmallVector<size_t, 1>> Points;
-  llvm::StringMap<llvm::SmallVector<Range, 1>> Ranges;
+  llvm::StringMap<llvm::SmallVector<size_t, 1>> Ranges;
 };
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &O,

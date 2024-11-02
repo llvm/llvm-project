@@ -8,9 +8,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; module ctor/dtor
 
 ; CHECK: @___asan_gen_ = private constant [8 x i8] c"<stdin>\00", align 1
-; CHECK: @llvm.used = appending global [2 x i8*] [i8* bitcast (void ()* @asan.module_ctor to i8*), i8* bitcast (void ()* @asan.module_dtor to i8*)], section "llvm.metadata"
-; CHECK: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* @asan.module_ctor, i8* bitcast (void ()* @asan.module_ctor to i8*) }]
-; CHECK: @llvm.global_dtors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* @asan.module_dtor, i8* bitcast (void ()* @asan.module_dtor to i8*) }]
+; CHECK: @llvm.used = appending global [2 x ptr] [ptr @asan.module_ctor, ptr @asan.module_dtor], section "llvm.metadata"
+; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @asan.module_ctor, ptr @asan.module_ctor }]
+; CHECK: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @asan.module_dtor, ptr @asan.module_dtor }]
 
 ; Test that we don't instrument global arrays with static initializer
 ; indexed with constants in-bounds. But instrument all other cases.
@@ -22,7 +22,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; GlobSt is declared here, and has static initializer -- ok to optimize.
 define i32 @AccessGlobSt_0_2() sanitize_address {
 entry:
-    %0 = load i32, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @GlobSt, i64 0, i64 2), align 8
+    %0 = load i32, ptr getelementptr inbounds ([10 x i32], ptr @GlobSt, i64 0, i64 2), align 8
     ret i32 %0
 ; CHECK-LABEL: define i32 @AccessGlobSt_0_2
 ; CHECK-NOT: __asan_report
@@ -32,7 +32,7 @@ entry:
 ; GlobSt is accessed out of bounds -- can't optimize
 define i32 @AccessGlobSt_0_12() sanitize_address {
 entry:
-    %0 = load i32, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @GlobSt, i64 0, i64 12), align 8
+    %0 = load i32, ptr getelementptr inbounds ([10 x i32], ptr @GlobSt, i64 0, i64 12), align 8
     ret i32 %0
 ; CHECK-LABEL: define i32 @AccessGlobSt_0_12
 ; CHECK: __asan_report
@@ -42,7 +42,7 @@ entry:
 ; GlobSt is accessed with Gep that has non-0 first index -- can't optimize.
 define i32 @AccessGlobSt_1_2() sanitize_address {
 entry:
-    %0 = load i32, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @GlobSt, i64 1, i64 2), align 8
+    %0 = load i32, ptr getelementptr inbounds ([10 x i32], ptr @GlobSt, i64 1, i64 2), align 8
     ret i32 %0
 ; CHECK-LABEL: define i32 @AccessGlobSt_1_2
 ; CHECK: __asan_report
@@ -52,7 +52,7 @@ entry:
 ; GlobDy is declared with dynamic initializer -- can't optimize.
 define i32 @AccessGlobDy_0_2() sanitize_address {
 entry:
-    %0 = load i32, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @GlobDy, i64 0, i64 2), align 8
+    %0 = load i32, ptr getelementptr inbounds ([10 x i32], ptr @GlobDy, i64 0, i64 2), align 8
     ret i32 %0
 ; CHECK-LABEL: define i32 @AccessGlobDy_0_2
 ; CHECK: __asan_report
@@ -62,7 +62,7 @@ entry:
 ; GlobEx is an external global -- can't optimize.
 define i32 @AccessGlobEx_0_2() sanitize_address {
 entry:
-    %0 = load i32, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @GlobEx, i64 0, i64 2), align 8
+    %0 = load i32, ptr getelementptr inbounds ([10 x i32], ptr @GlobEx, i64 0, i64 2), align 8
     ret i32 %0
 ; CHECK-LABEL: define i32 @AccessGlobEx_0_2
 ; CHECK: __asan_report

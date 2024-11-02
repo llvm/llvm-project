@@ -3,7 +3,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1031 -verify-machineinstrs < %s | FileCheck %s -check-prefix=GFX10
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefix=GFX11
 
-define i32 @global_atomic_csub(i32 addrspace(1)* %ptr, i32 %data) {
+define i32 @global_atomic_csub(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX10-LABEL: global_atomic_csub:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -19,11 +19,11 @@ define i32 @global_atomic_csub(i32 addrspace(1)* %ptr, i32 %data) {
 ; GFX11-NEXT:    global_atomic_csub_u32 v0, v[0:1], v2, off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* %ptr, i32 %data)
+  %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %ptr, i32 %data)
   ret i32 %ret
 }
 
-define i32 @global_atomic_csub_offset(i32 addrspace(1)* %ptr, i32 %data) {
+define i32 @global_atomic_csub_offset(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX10-LABEL: global_atomic_csub_offset:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -50,12 +50,12 @@ define i32 @global_atomic_csub_offset(i32 addrspace(1)* %ptr, i32 %data) {
 ; GFX11-NEXT:    global_atomic_csub_u32 v0, v[0:1], v2, off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 1024
-  %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* %gep, i32 %data)
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 1024
+  %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %gep, i32 %data)
   ret i32 %ret
 }
 
-define void @global_atomic_csub_nortn(i32 addrspace(1)* %ptr, i32 %data) {
+define void @global_atomic_csub_nortn(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX10-LABEL: global_atomic_csub_nortn:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -71,11 +71,11 @@ define void @global_atomic_csub_nortn(i32 addrspace(1)* %ptr, i32 %data) {
 ; GFX11-NEXT:    global_atomic_csub_u32 v0, v[0:1], v2, off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* %ptr, i32 %data)
+  %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %ptr, i32 %data)
   ret void
 }
 
-define void @global_atomic_csub_offset_nortn(i32 addrspace(1)* %ptr, i32 %data) {
+define void @global_atomic_csub_offset_nortn(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX10-LABEL: global_atomic_csub_offset_nortn:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -102,12 +102,12 @@ define void @global_atomic_csub_offset_nortn(i32 addrspace(1)* %ptr, i32 %data) 
 ; GFX11-NEXT:    global_atomic_csub_u32 v0, v[0:1], v2, off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 1024
-  %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* %gep, i32 %data)
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 1024
+  %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %gep, i32 %data)
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset(i32 addrspace(1)* %ptr, i32 %data) {
+define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX10-LABEL: global_atomic_csub_sgpr_base_offset:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1
@@ -133,13 +133,13 @@ define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset(i32 addrspace(1)*
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 1024
-  %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* %gep, i32 %data)
-  store i32 %ret, i32 addrspace(1)* undef
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 1024
+  %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %gep, i32 %data)
+  store i32 %ret, ptr addrspace(1) undef
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset_nortn(i32 addrspace(1)* %ptr, i32 %data) {
+define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset_nortn(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX10-LABEL: global_atomic_csub_sgpr_base_offset_nortn:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1
@@ -161,12 +161,12 @@ define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset_nortn(i32 addrspa
 ; GFX11-NEXT:    global_atomic_csub_u32 v0, v1, v0, s[0:1] glc
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 1024
-  %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* %gep, i32 %data)
+  %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 1024
+  %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %gep, i32 %data)
   ret void
 }
 
-declare i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* nocapture, i32) #1
+declare i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) nocapture, i32) #1
 
 attributes #0 = { nounwind willreturn }
 attributes #1 = { argmemonly nounwind }

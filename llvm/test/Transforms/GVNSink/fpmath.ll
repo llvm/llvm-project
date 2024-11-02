@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -gvn-sink | FileCheck %s
+; RUN: opt -S < %s -passes=gvn-sink | FileCheck %s
 
 ; CHECK-LABEL: sink
 ; CHECK-NOT: fneg

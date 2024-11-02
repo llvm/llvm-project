@@ -34,7 +34,7 @@
 ; CHECK-DAG: ![[DOUBLE_1]] = !DIDerivedType(tag: DW_TAG_member, name: "__double__2", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[DOUBLE_BASE:[0-9]+]]{{.*}}, flags: DIFlagArtificial
 ; CHECK-DAG: ![[DOUBLE_BASE]] = !DIBasicType(name: "__double_", size: 64, encoding: DW_ATE_float, flags: DIFlagArtificial)
 ; CHECK-DAG: ![[INT64_PTR]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_64_Ptr_3",{{.*}} baseType: ![[INT64_PTR_BASE:[0-9]+]]
-; CHECK-DAG: ![[INT64_PTR_BASE]] = !DIDerivedType(tag: DW_TAG_pointer_type, name: "__int_64_Ptr", baseType: null, size: 64
+; CHECK-DAG: ![[INT64_PTR_BASE]] = !DIDerivedType(tag: DW_TAG_pointer_type, name: "__int_64_Ptr", baseType: null, size: 64, align: 64
 ; CHECK-DAG: ![[INT32_2]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_32_4", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[I32_BASE:[0-9]+]]{{.*}}, flags: DIFlagArtificial
 ; CHECK-DAG: ![[I32_BASE]] = !DIBasicType(name: "__int_32", size: 32, encoding: DW_ATE_signed, flags: DIFlagArtificial)
 ; CHECK-DAG: ![[INT32_3]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_32_5", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[I32_BASE]]
@@ -43,7 +43,7 @@
 ; CHECK-DAG: ![[UNALIGNED_UNKNOWN_ELEMENTS]] = !{![[UNALIGNED_UNKNOWN_SUBRANGE:[0-9]+]]}
 ; CHECk-DAG: ![[UNALIGNED_UNKNOWN_SUBRANGE]] = !DISubrange(count: 2, lowerBound: 0)
 ; CHECK-DAG: ![[STRUCT]] = !DIDerivedType(tag: DW_TAG_member, name: "struct_big_structure_7", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[STRUCT_BASE:[0-9]+]]
-; CHECK-DAG: ![[STRUCT_BASE]] = !DICompositeType(tag: DW_TAG_structure_type, name: "struct_big_structure"{{.*}}elements: ![[STRUCT_ELEMENTS:[0-9]+]]
+; CHECK-DAG: ![[STRUCT_BASE]] = !DICompositeType(tag: DW_TAG_structure_type, name: "struct_big_structure"{{.*}}, align: 64, flags: DIFlagArtificial, elements: ![[STRUCT_ELEMENTS:[0-9]+]]
 ; CHECK-DAG: ![[STRUCT_ELEMENTS]] = !{![[MEM_TYPE:[0-9]+]]}
 ; CHECK-DAG: ![[MEM_TYPE]] = !DIDerivedType(tag: DW_TAG_member,{{.*}} baseType: ![[MEM_TYPE_BASE:[0-9]+]], size: 4000
 ; CHECK-DAG: ![[MEM_TYPE_BASE]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[UNKNOWN_TYPE_BASE]], size: 4000,
@@ -61,7 +61,7 @@
 ; CHECK-DAG: ![[INT64_PTR_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_64_Ptr_3", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[INT64_PTR_BASE]]
 ; CHECK-DAG: ![[INT32_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_32_4", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[I32_BASE]]
 ; CHECK-DAG: ![[STRUCT_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "struct_big_structure_5", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[STRUCT_BASE_IN_BAR:[0-9]+]]
-; CHECK-DAG: ![[STRUCT_BASE_IN_BAR]] = !DICompositeType(tag: DW_TAG_structure_type, name: "struct_big_structure", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]],{{.*}}
+; CHECK-DAG: ![[STRUCT_BASE_IN_BAR]] = !DICompositeType(tag: DW_TAG_structure_type, name: "struct_big_structure", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]],{{.*}}, align: 64
 ; CHECK-DAG: ![[CORO_FRAME_IN_RESUME]] = !DILocalVariable(name: "__coro_frame",{{.*}}type: ![[FRAME_TYPE]]
 
 

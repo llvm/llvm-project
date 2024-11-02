@@ -223,7 +223,7 @@ namespace clang {
     template<typename T>
     Expected<Optional<T>> import(Optional<T> From) {
       if (!From)
-        return Optional<T>();
+        return None;
       return import(*From);
     }
 
@@ -2412,10 +2412,10 @@ ExpectedDecl ASTNodeImporter::VisitNamespaceDecl(NamespaceDecl *D) {
   // Create the "to" namespace, if needed.
   NamespaceDecl *ToNamespace = MergeWithNamespace;
   if (!ToNamespace) {
-    if (GetImportedOrCreateDecl(
-            ToNamespace, D, Importer.getToContext(), DC, D->isInline(),
-            *BeginLocOrErr, Loc, Name.getAsIdentifierInfo(),
-            /*PrevDecl=*/nullptr))
+    if (GetImportedOrCreateDecl(ToNamespace, D, Importer.getToContext(), DC,
+                                D->isInline(), *BeginLocOrErr, Loc,
+                                Name.getAsIdentifierInfo(),
+                                /*PrevDecl=*/nullptr, D->isNested()))
       return ToNamespace;
     ToNamespace->setRBraceLoc(*RBraceLocOrErr);
     ToNamespace->setLexicalDeclContext(LexicalDC);
@@ -10022,7 +10022,7 @@ ASTImporter::getImportDeclErrorIfAny(Decl *FromD) const {
   if (Pos != ImportDeclErrors.end())
     return Pos->second;
   else
-    return Optional<ASTImportError>();
+    return None;
 }
 
 void ASTImporter::setImportDeclError(Decl *From, ASTImportError Error) {

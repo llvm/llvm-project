@@ -21,6 +21,7 @@ define i32 @alloca_used_in_call(ptr %data, i64 %n) {
 ; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca(ptr [[RETVAL]])
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    ret i32 [[I1]]
+;
 entry:
   %retval = alloca i32, align 4
   store i32 0, ptr %retval, align 4
@@ -63,6 +64,7 @@ define i32 @alloca_captured_in_call(ptr %data, i64 %n) {
 ; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(ptr [[RETVAL]])
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    ret i32 [[I1]]
+;
 entry:
   %retval = alloca i32, align 4
   store i32 0, ptr %retval, align 4
@@ -105,6 +107,7 @@ define i32 @alloca_not_captured_as_per_operand_attr(ptr %data, i64 %n) {
 ; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(ptr nocapture [[RETVAL]])
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    ret i32 [[I1]]
+;
 entry:
   %retval = alloca i32, align 4
   store i32 0, ptr %retval, align 4
@@ -147,6 +150,7 @@ define i32 @alloca_not_captured_and_readonly_as_per_operand_attr(ptr %data, i64 
 ; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(ptr nocapture readonly [[RETVAL]])
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    ret i32 [[I1]]
+;
 entry:
   %retval = alloca i32, align 4
   store i32 0, ptr %retval, align 4
@@ -189,6 +193,7 @@ define i32 @alloca_not_captured_as_per_operand_attr_and_readonly_as_per_callbase
 ; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(ptr nocapture [[RETVAL]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    ret i32 [[I1]]
+;
 entry:
   %retval = alloca i32, align 4
   store i32 0, ptr %retval, align 4
@@ -231,6 +236,7 @@ define i32 @alloca_not_readonly_as_per_operand_attr(ptr %data, i64 %n) {
 ; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(ptr readonly [[RETVAL]])
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    ret i32 [[I1]]
+;
 entry:
   %retval = alloca i32, align 4
   store i32 0, ptr %retval, align 4
@@ -273,6 +279,7 @@ define i32 @alloca_with_gep_used_in_call(ptr %data, i64 %n) {
 ; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca(ptr [[RETVAL]])
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    ret i32 [[I1]]
+;
 entry:
   %retval = alloca i32, align 4
   store i32 0, ptr %retval, align 4
@@ -315,6 +322,7 @@ define i32 @alloca_captured_second_arg(ptr %data, i64 %n) {
 ; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_with_multiple_args(ptr [[RETVAL]], ptr [[RETVAL]])
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    ret i32 [[I1]]
+;
 entry:
   %retval = alloca i32, align 4
   store i32 0, ptr %retval, align 4
@@ -365,6 +373,7 @@ define i32 @alloca_used_in_maybe_throwing_call(ptr %data, i64 %n) personality pt
 ; CHECK:       end:
 ; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    ret i32 [[I2]]
+;
 entry:
   %retval = alloca i32, align 4
   store i32 0, ptr %retval, align 4
@@ -422,6 +431,7 @@ define i32 @alloca_used_in_maybe_throwing_call_with_same_dests(ptr %data, i64 %n
 ; CHECK:       end:
 ; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    ret i32 [[I2]]
+;
 entry:
   %retval = alloca i32, align 4
   store i32 0, ptr %retval, align 4
@@ -479,6 +489,7 @@ define [2 x i32] @part_of_alloca_used_in_call(ptr %data, i64 %n) {
 ; CHECK-NEXT:    [[I1_FCA_1_LOAD:%.*]] = load i32, ptr [[I1_FCA_1_GEP]], align 4
 ; CHECK-NEXT:    [[I1_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I1_FCA_0_INSERT]], i32 [[I1_FCA_1_LOAD]], 1
 ; CHECK-NEXT:    ret [2 x i32] [[I1_FCA_1_INSERT]]
+;
 entry:
   %retval.full = alloca [2 x i32], align 4
   store [2 x i32] zeroinitializer, ptr %retval.full, align 4
@@ -531,6 +542,7 @@ define [2 x i32] @all_parts_of_alloca_used_in_call_with_multiple_args(ptr %data,
 ; CHECK-NEXT:    [[I1_FCA_1_LOAD:%.*]] = load i32, ptr [[I1_FCA_1_GEP]], align 4
 ; CHECK-NEXT:    [[I1_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I1_FCA_0_INSERT]], i32 [[I1_FCA_1_LOAD]], 1
 ; CHECK-NEXT:    ret [2 x i32] [[I1_FCA_1_INSERT]]
+;
 entry:
   %retval.full = alloca [2 x i32], align 4
   store [2 x i32] zeroinitializer, ptr %retval.full, align 4
@@ -584,6 +596,7 @@ define [2 x i32] @all_parts_of_alloca_used_in_call_with_multiple_args_with_memcp
 ; CHECK-NEXT:    [[I1_FCA_1_LOAD:%.*]] = load i32, ptr [[I1_FCA_1_GEP]], align 4
 ; CHECK-NEXT:    [[I1_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I1_FCA_0_INSERT]], i32 [[I1_FCA_1_LOAD]], 1
 ; CHECK-NEXT:    ret [2 x i32] [[I1_FCA_1_INSERT]]
+;
 entry:
   %retval.full = alloca [2 x i32], align 4
   store [2 x i32] zeroinitializer, ptr %retval.full, align 4
@@ -638,6 +651,7 @@ define [2 x i32] @all_parts_of_alloca_used_in_call_with_multiple_args_with_memcp
 ; CHECK-NEXT:    [[I1_FCA_1_LOAD:%.*]] = load i32, ptr [[I1_FCA_1_GEP]], align 4
 ; CHECK-NEXT:    [[I1_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I1_FCA_0_INSERT]], i32 [[I1_FCA_1_LOAD]], 1
 ; CHECK-NEXT:    ret [2 x i32] [[I1_FCA_1_INSERT]]
+;
 entry:
   %retval.full = alloca [2 x i32], align 4
   store [2 x i32] zeroinitializer, ptr %retval.full, align 4
@@ -691,6 +705,7 @@ define [2 x i32] @part_of_alloca_used_in_call_with_multiple_args(ptr %data, i64 
 ; CHECK-NEXT:    [[I1_FCA_1_LOAD:%.*]] = load i32, ptr [[I1_FCA_1_GEP]], align 4
 ; CHECK-NEXT:    [[I1_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I1_FCA_0_INSERT]], i32 [[I1_FCA_1_LOAD]], 1
 ; CHECK-NEXT:    ret [2 x i32] [[I1_FCA_1_INSERT]]
+;
 entry:
   %retval.full = alloca [2 x i32], align 4
   store [2 x i32] zeroinitializer, ptr %retval.full, align 4
@@ -746,6 +761,7 @@ define [2 x i32] @all_parts_of_alloca_used_in_calls_with_multiple_args(ptr %data
 ; CHECK-NEXT:    [[I3_FCA_1_LOAD:%.*]] = load i32, ptr [[I3_FCA_1_GEP]], align 4
 ; CHECK-NEXT:    [[I3_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I3_FCA_0_INSERT]], i32 [[I3_FCA_1_LOAD]], 1
 ; CHECK-NEXT:    ret [2 x i32] [[I3_FCA_1_INSERT]]
+;
 entry:
   %retval.full = alloca [2 x i32], align 4
   %some.another.alloca.full = alloca [42 x i32], align 4
@@ -779,6 +795,7 @@ define i32 @all_uses_of_alloca_are_calls(ptr %data, i64 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @user_of_alloca(ptr [[RETVAL]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @user_of_alloca(ptr [[RETVAL]])
 ; CHECK-NEXT:    ret i32 0
+;
 entry:
   %retval = alloca i32, align 4
   call i32 @user_of_alloca(ptr %retval)
@@ -800,6 +817,7 @@ define i64 @do_schedule_instrs_for_dce_after_fixups() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @user_of_alloca(ptr [[ADD_PTR]])
 ; CHECK-NEXT:    [[LD:%.*]] = load i64, ptr [[C]], align 4
 ; CHECK-NEXT:    ret i64 [[LD]]
+;
 entry:
   %c = alloca i64, align 2
   call void @llvm.lifetime.start.p0(i64 1, ptr %c)
@@ -820,6 +838,7 @@ define void @dont_transform_store_only() {
 ; CHECK-NEXT:    store i8 0, ptr [[A]], align 1
 ; CHECK-NEXT:    call void @byte_user_of_alloca(ptr [[A]])
 ; CHECK-NEXT:    ret void
+;
 entry:
   %a = alloca i8
   store i8 0, ptr %a
@@ -833,6 +852,7 @@ define i8 @dont_transform_load_only() {
 ; CHECK-NEXT:    call void @byte_user_of_alloca(ptr [[A]])
 ; CHECK-NEXT:    [[R:%.*]] = load i8, ptr [[A]], align 1
 ; CHECK-NEXT:    ret i8 [[R]]
+;
 entry:
   %a = alloca i8
   call void @byte_user_of_alloca(ptr %a)
@@ -847,6 +867,7 @@ define i8 @transform_load_and_store() {
 ; CHECK-NEXT:    call void @byte_user_of_alloca(ptr [[A]])
 ; CHECK-NEXT:    [[R:%.*]] = load i8, ptr [[A]], align 1
 ; CHECK-NEXT:    ret i8 [[R]]
+;
 entry:
   %a = alloca i8
   store i8 0, ptr %a
@@ -874,6 +895,7 @@ define [2 x i32] @select_of_ptrs(ptr %data, i1 %c, i32 %v) {
 ; CHECK-NEXT:    [[I1_FCA_1_LOAD:%.*]] = load i32, ptr [[I1_FCA_1_GEP]], align 4
 ; CHECK-NEXT:    [[I1_FCA_1_INSERT:%.*]] = insertvalue [2 x i32] [[I1_FCA_0_INSERT]], i32 [[I1_FCA_1_LOAD]], 1
 ; CHECK-NEXT:    ret [2 x i32] [[I1_FCA_1_INSERT]]
+;
 entry:
   %retval.full = alloca [2 x i32], align 4
   store [2 x i32] zeroinitializer, ptr %retval.full, align 4

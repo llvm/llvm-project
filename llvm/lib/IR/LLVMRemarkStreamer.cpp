@@ -48,7 +48,7 @@ static remarks::Type toRemarkType(enum DiagnosticKind Kind) {
 static Optional<remarks::RemarkLocation>
 toRemarkLocation(const DiagnosticLocation &DL) {
   if (!DL.isValid())
-    return None;
+    return std::nullopt;
   StringRef File = DL.getRelativePath();
   unsigned Line = DL.getLine();
   unsigned Col = DL.getColumn();

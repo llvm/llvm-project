@@ -380,7 +380,7 @@ public:
   PPC64PILongBranchThunk(Symbol &dest, int64_t addend)
       : PPC64LongBranchThunk(dest, addend) {
     assert(!dest.isPreemptible);
-    if (Optional<uint32_t> index =
+    if (std::optional<uint32_t> index =
             in.ppc64LongBranchTarget->addEntry(&dest, addend)) {
       mainPart->relaDyn->addRelativeReloc(
           target->relativeRel, *in.ppc64LongBranchTarget, *index * UINT64_C(8),

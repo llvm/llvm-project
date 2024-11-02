@@ -8,8 +8,8 @@ define dso_local zeroext i8 @test1(ptr noundef %addr, i8 noundef zeroext %newval
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    stbcx. 4, 0, 3
@@ -27,8 +27,8 @@ define dso_local zeroext i8 @test1(ptr noundef %addr, i8 noundef zeroext %newval
 ; CHECK-AIX-LABEL: test1:
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    std 0, 16(1)
 ; CHECK-AIX-NEXT:    stdu 1, -112(1)
+; CHECK-AIX-NEXT:    std 0, 128(1)
 ; CHECK-AIX-NEXT:    stbcx. 4, 0, 3
 ; CHECK-AIX-NEXT:    bne 0, L..BB0_2
 ; CHECK-AIX-NEXT:  # %bb.1: # %if.then
@@ -58,8 +58,8 @@ define dso_local signext i16 @test2(ptr noundef %addr, i16 noundef signext %newv
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    sthcx. 4, 0, 3
@@ -77,8 +77,8 @@ define dso_local signext i16 @test2(ptr noundef %addr, i16 noundef signext %newv
 ; CHECK-AIX-LABEL: test2:
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    std 0, 16(1)
 ; CHECK-AIX-NEXT:    stdu 1, -112(1)
+; CHECK-AIX-NEXT:    std 0, 128(1)
 ; CHECK-AIX-NEXT:    sthcx. 4, 0, 3
 ; CHECK-AIX-NEXT:    bne 0, L..BB1_2
 ; CHECK-AIX-NEXT:  # %bb.1: # %if.then
@@ -108,8 +108,8 @@ define dso_local signext i32 @test3(ptr noundef %addr, i32 noundef signext %newv
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    stwcx. 4, 0, 3
@@ -127,8 +127,8 @@ define dso_local signext i32 @test3(ptr noundef %addr, i32 noundef signext %newv
 ; CHECK-AIX-LABEL: test3:
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    std 0, 16(1)
 ; CHECK-AIX-NEXT:    stdu 1, -112(1)
+; CHECK-AIX-NEXT:    std 0, 128(1)
 ; CHECK-AIX-NEXT:    stwcx. 4, 0, 3
 ; CHECK-AIX-NEXT:    bne 0, L..BB2_2
 ; CHECK-AIX-NEXT:  # %bb.1: # %if.then
@@ -157,8 +157,8 @@ define dso_local i64 @test4(ptr noundef %addr, i64 noundef %newval) local_unname
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    stdcx. 4, 0, 3
@@ -176,8 +176,8 @@ define dso_local i64 @test4(ptr noundef %addr, i64 noundef %newval) local_unname
 ; CHECK-AIX-LABEL: test4:
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    std 0, 16(1)
 ; CHECK-AIX-NEXT:    stdu 1, -112(1)
+; CHECK-AIX-NEXT:    std 0, 128(1)
 ; CHECK-AIX-NEXT:    stdcx. 4, 0, 3
 ; CHECK-AIX-NEXT:    bne 0, L..BB3_2
 ; CHECK-AIX-NEXT:  # %bb.1: # %if.then

@@ -381,7 +381,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__clang_call_terminate
-// CHECK1-SAME: (ptr [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] comdat {
+// CHECK1-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] comdat {
 // CHECK1-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR6]]
 // CHECK1-NEXT:    call void @_ZSt9terminatev() #[[ATTR10]]
 // CHECK1-NEXT:    unreachable
@@ -1592,7 +1592,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@__clang_call_terminate
-// CHECK5-SAME: (ptr [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] comdat {
+// CHECK5-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] comdat {
 // CHECK5-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR6]]
 // CHECK5-NEXT:    call void @_ZSt9terminatev() #[[ATTR10]]
 // CHECK5-NEXT:    unreachable
@@ -2803,7 +2803,7 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@__clang_call_terminate
-// CHECK9-SAME: (ptr [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] comdat {
+// CHECK9-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] comdat {
 // CHECK9-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR6]]
 // CHECK9-NEXT:    call void @_ZSt9terminatev() #[[ATTR10]]
 // CHECK9-NEXT:    unreachable
@@ -4014,7 +4014,7 @@ int main() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@__clang_call_terminate
-// CHECK13-SAME: (ptr [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] comdat {
+// CHECK13-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] comdat {
 // CHECK13-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR6]]
 // CHECK13-NEXT:    call void @_ZSt9terminatev() #[[ATTR10]]
 // CHECK13-NEXT:    unreachable

@@ -9,10 +9,10 @@
 #ifndef LLVM_SUPPORT_INITLLVM_H
 #define LLVM_SUPPORT_INITLLVM_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include <optional>
 
 // The main() functions in typical LLVM tools start with InitLLVM which does
 // the following one-time initializations:
@@ -45,7 +45,7 @@ public:
 private:
   BumpPtrAllocator Alloc;
   SmallVector<const char *, 0> Args;
-  Optional<PrettyStackTraceProgram> StackPrinter;
+  std::optional<PrettyStackTraceProgram> StackPrinter;
 };
 } // namespace llvm
 

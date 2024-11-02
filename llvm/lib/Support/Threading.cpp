@@ -14,7 +14,7 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Config/config.h"
-#include "llvm/Support/Host.h"
+#include "llvm/Config/llvm-config.h"
 
 #include <cassert>
 #include <errno.h>
@@ -45,13 +45,16 @@ unsigned llvm::ThreadPoolStrategy::compute_thread_count() const {
   return 1;
 }
 
+// Unknown if threading turned off
+int llvm::get_physical_cores() { return -1; }
+
 #else
 
-int computeHostNumHardwareThreads();
+static int computeHostNumHardwareThreads();
 
 unsigned llvm::ThreadPoolStrategy::compute_thread_count() const {
-  int MaxThreadCount = UseHyperThreads ? computeHostNumHardwareThreads()
-                                       : sys::getHostNumPhysicalCores();
+  int MaxThreadCount =
+      UseHyperThreads ? computeHostNumHardwareThreads() : get_physical_cores();
   if (MaxThreadCount <= 0)
     MaxThreadCount = 1;
   if (ThreadsRequested == 0)
@@ -87,7 +90,7 @@ const llvm::Optional<unsigned> llvm::thread::DefaultStackSize;
 
 #endif
 
-Optional<ThreadPoolStrategy>
+std::optional<ThreadPoolStrategy>
 llvm::get_threadpool_strategy(StringRef Num, ThreadPoolStrategy Default) {
   if (Num == "all")
     return llvm::hardware_concurrency();
@@ -95,7 +98,7 @@ llvm::get_threadpool_strategy(StringRef Num, ThreadPoolStrategy Default) {
     return Default;
   unsigned V;
   if (Num.getAsInteger(10, V))
-    return None; // malformed 'Num' value
+    return std::nullopt; // malformed 'Num' value
   if (V == 0)
     return Default;
 

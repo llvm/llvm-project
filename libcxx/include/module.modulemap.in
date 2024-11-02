@@ -672,6 +672,7 @@ module std [system] {
         private header "__chrono/high_resolution_clock.h"
         export steady_clock
         export system_clock
+        export time_point
       }
       module literals               { private header "__chrono/literals.h" }
       module month                  { private header "__chrono/month.h" }
@@ -855,6 +856,7 @@ module std [system] {
   }
   module fstream {
     @requires_LIBCXX_ENABLE_LOCALIZATION@
+    @requires_LIBCXX_ENABLE_FSTREAM@
     header "fstream"
     export *
   }

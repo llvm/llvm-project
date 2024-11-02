@@ -57,8 +57,7 @@ static constexpr const FeatureBitset TargetFeatures = {
 // TODO: Support conservative min/max merging instead of cloning.
 static constexpr const char *AttributeNames[] = {"amdgpu-waves-per-eu"};
 
-static constexpr unsigned NumAttr =
-  sizeof(AttributeNames) / sizeof(AttributeNames[0]);
+static constexpr unsigned NumAttr = std::size(AttributeNames);
 
 class AMDGPUPropagateAttributes {
 

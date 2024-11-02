@@ -158,7 +158,7 @@ public:
     virtual CompilerType RealizeType(const char *name, bool for_expression);
 
   protected:
-    std::unique_ptr<TypeSystemClang> m_scratch_ast_ctx_up;
+    std::shared_ptr<TypeSystemClang> m_scratch_ast_ctx_sp;
   };
 
   class ObjCExceptionPrecondition : public BreakpointPrecondition {

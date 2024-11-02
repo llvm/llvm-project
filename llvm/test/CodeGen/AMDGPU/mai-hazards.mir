@@ -406,7 +406,7 @@ name:            accvgpr_read_write_vgpr_buffer_store
 body:             |
   bb.0:
     $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
 ...
 ---
 

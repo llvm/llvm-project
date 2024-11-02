@@ -14,8 +14,8 @@ define dso_local double @loadd(ptr nocapture readonly %a) local_unnamed_addr #0 
 ; P8-LABEL: loadd:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -32(r1)
+; P8-NEXT:    std r0, 48(r1)
 ; P8-NEXT:    lhz r3, 2(r3)
 ; P8-NEXT:    bl __gnu_h2f_ieee
 ; P8-NEXT:    nop
@@ -34,8 +34,8 @@ define dso_local double @loadd(ptr nocapture readonly %a) local_unnamed_addr #0 
 ; SOFT-LABEL: loadd:
 ; SOFT:       # %bb.0: # %entry
 ; SOFT-NEXT:    mflr r0
-; SOFT-NEXT:    std r0, 16(r1)
 ; SOFT-NEXT:    stdu r1, -32(r1)
+; SOFT-NEXT:    std r0, 48(r1)
 ; SOFT-NEXT:    lhz r3, 2(r3)
 ; SOFT-NEXT:    bl __gnu_h2f_ieee
 ; SOFT-NEXT:    nop
@@ -58,8 +58,8 @@ define dso_local float @loadf(ptr nocapture readonly %a) local_unnamed_addr #0 {
 ; P8-LABEL: loadf:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -32(r1)
+; P8-NEXT:    std r0, 48(r1)
 ; P8-NEXT:    lhz r3, 2(r3)
 ; P8-NEXT:    bl __gnu_h2f_ieee
 ; P8-NEXT:    nop
@@ -78,8 +78,8 @@ define dso_local float @loadf(ptr nocapture readonly %a) local_unnamed_addr #0 {
 ; SOFT-LABEL: loadf:
 ; SOFT:       # %bb.0: # %entry
 ; SOFT-NEXT:    mflr r0
-; SOFT-NEXT:    std r0, 16(r1)
 ; SOFT-NEXT:    stdu r1, -32(r1)
+; SOFT-NEXT:    std r0, 48(r1)
 ; SOFT-NEXT:    lhz r3, 2(r3)
 ; SOFT-NEXT:    bl __gnu_h2f_ieee
 ; SOFT-NEXT:    nop
@@ -101,8 +101,8 @@ define dso_local void @stored(ptr nocapture %a, double %b) local_unnamed_addr #0
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    mflr r0
 ; P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -48(r1)
+; P8-NEXT:    std r0, 64(r1)
 ; P8-NEXT:    mr r30, r3
 ; P8-NEXT:    bl __truncdfhf2
 ; P8-NEXT:    nop
@@ -123,10 +123,10 @@ define dso_local void @stored(ptr nocapture %a, double %b) local_unnamed_addr #0
 ; SOFT:       # %bb.0: # %entry
 ; SOFT-NEXT:    mflr r0
 ; SOFT-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; SOFT-NEXT:    std r0, 16(r1)
 ; SOFT-NEXT:    stdu r1, -48(r1)
 ; SOFT-NEXT:    mr r30, r3
 ; SOFT-NEXT:    mr r3, r4
+; SOFT-NEXT:    std r0, 64(r1)
 ; SOFT-NEXT:    bl __truncdfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    clrldi r3, r3, 48
@@ -153,8 +153,8 @@ define dso_local void @storef(ptr nocapture %a, float %b) local_unnamed_addr #0 
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    mflr r0
 ; P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -48(r1)
+; P8-NEXT:    std r0, 64(r1)
 ; P8-NEXT:    mr r30, r3
 ; P8-NEXT:    bl __gnu_f2h_ieee
 ; P8-NEXT:    nop
@@ -175,10 +175,10 @@ define dso_local void @storef(ptr nocapture %a, float %b) local_unnamed_addr #0 
 ; SOFT:       # %bb.0: # %entry
 ; SOFT-NEXT:    mflr r0
 ; SOFT-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; SOFT-NEXT:    std r0, 16(r1)
 ; SOFT-NEXT:    stdu r1, -48(r1)
 ; SOFT-NEXT:    mr r30, r3
 ; SOFT-NEXT:    clrldi r3, r4, 32
+; SOFT-NEXT:    std r0, 64(r1)
 ; SOFT-NEXT:    bl __gnu_f2h_ieee
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    clrldi r3, r3, 48
@@ -216,10 +216,10 @@ define void @test_load_store(ptr %in, ptr %out) #0 {
 ; SOFT:       # %bb.0:
 ; SOFT-NEXT:    mflr r0
 ; SOFT-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; SOFT-NEXT:    std r0, 16(r1)
 ; SOFT-NEXT:    stdu r1, -48(r1)
-; SOFT-NEXT:    lhz r3, 0(r3)
+; SOFT-NEXT:    std r0, 64(r1)
 ; SOFT-NEXT:    mr r30, r4
+; SOFT-NEXT:    lhz r3, 0(r3)
 ; SOFT-NEXT:    bl __gnu_h2f_ieee
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    bl __gnu_f2h_ieee
@@ -276,8 +276,8 @@ define float @test_extend32(ptr %addr) #0 {
 ; P8-LABEL: test_extend32:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -32(r1)
+; P8-NEXT:    std r0, 48(r1)
 ; P8-NEXT:    lhz r3, 0(r3)
 ; P8-NEXT:    bl __gnu_h2f_ieee
 ; P8-NEXT:    nop
@@ -295,8 +295,8 @@ define float @test_extend32(ptr %addr) #0 {
 ; SOFT-LABEL: test_extend32:
 ; SOFT:       # %bb.0:
 ; SOFT-NEXT:    mflr r0
-; SOFT-NEXT:    std r0, 16(r1)
 ; SOFT-NEXT:    stdu r1, -32(r1)
+; SOFT-NEXT:    std r0, 48(r1)
 ; SOFT-NEXT:    lhz r3, 0(r3)
 ; SOFT-NEXT:    bl __gnu_h2f_ieee
 ; SOFT-NEXT:    nop
@@ -312,8 +312,8 @@ define double @test_extend64(ptr %addr) #0 {
 ; P8-LABEL: test_extend64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -32(r1)
+; P8-NEXT:    std r0, 48(r1)
 ; P8-NEXT:    lhz r3, 0(r3)
 ; P8-NEXT:    bl __gnu_h2f_ieee
 ; P8-NEXT:    nop
@@ -331,8 +331,8 @@ define double @test_extend64(ptr %addr) #0 {
 ; SOFT-LABEL: test_extend64:
 ; SOFT:       # %bb.0:
 ; SOFT-NEXT:    mflr r0
-; SOFT-NEXT:    std r0, 16(r1)
 ; SOFT-NEXT:    stdu r1, -32(r1)
+; SOFT-NEXT:    std r0, 48(r1)
 ; SOFT-NEXT:    lhz r3, 0(r3)
 ; SOFT-NEXT:    bl __gnu_h2f_ieee
 ; SOFT-NEXT:    nop
@@ -351,8 +351,8 @@ define void @test_trunc32(float %in, ptr %addr) #0 {
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
 ; P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -48(r1)
+; P8-NEXT:    std r0, 64(r1)
 ; P8-NEXT:    mr r30, r4
 ; P8-NEXT:    bl __gnu_f2h_ieee
 ; P8-NEXT:    nop
@@ -373,9 +373,9 @@ define void @test_trunc32(float %in, ptr %addr) #0 {
 ; SOFT:       # %bb.0:
 ; SOFT-NEXT:    mflr r0
 ; SOFT-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; SOFT-NEXT:    std r0, 16(r1)
 ; SOFT-NEXT:    stdu r1, -48(r1)
 ; SOFT-NEXT:    clrldi r3, r3, 32
+; SOFT-NEXT:    std r0, 64(r1)
 ; SOFT-NEXT:    mr r30, r4
 ; SOFT-NEXT:    bl __gnu_f2h_ieee
 ; SOFT-NEXT:    nop
@@ -399,8 +399,8 @@ define void @test_trunc64(double %in, ptr %addr) #0 {
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
 ; P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -48(r1)
+; P8-NEXT:    std r0, 64(r1)
 ; P8-NEXT:    mr r30, r4
 ; P8-NEXT:    bl __truncdfhf2
 ; P8-NEXT:    nop
@@ -421,8 +421,8 @@ define void @test_trunc64(double %in, ptr %addr) #0 {
 ; SOFT:       # %bb.0:
 ; SOFT-NEXT:    mflr r0
 ; SOFT-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; SOFT-NEXT:    std r0, 16(r1)
 ; SOFT-NEXT:    stdu r1, -48(r1)
+; SOFT-NEXT:    std r0, 64(r1)
 ; SOFT-NEXT:    mr r30, r4
 ; SOFT-NEXT:    bl __truncdfhf2
 ; SOFT-NEXT:    nop
@@ -445,8 +445,8 @@ define i64 @test_fptosi_i64(ptr %p) #0 {
 ; P8-LABEL: test_fptosi_i64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -32(r1)
+; P8-NEXT:    std r0, 48(r1)
 ; P8-NEXT:    lhz r3, 0(r3)
 ; P8-NEXT:    bl __gnu_h2f_ieee
 ; P8-NEXT:    nop
@@ -469,8 +469,8 @@ define i64 @test_fptosi_i64(ptr %p) #0 {
 ; SOFT-LABEL: test_fptosi_i64:
 ; SOFT:       # %bb.0:
 ; SOFT-NEXT:    mflr r0
-; SOFT-NEXT:    std r0, 16(r1)
 ; SOFT-NEXT:    stdu r1, -32(r1)
+; SOFT-NEXT:    std r0, 48(r1)
 ; SOFT-NEXT:    lhz r3, 0(r3)
 ; SOFT-NEXT:    bl __gnu_h2f_ieee
 ; SOFT-NEXT:    nop
@@ -489,9 +489,9 @@ define void @test_sitofp_i64(i64 %a, ptr %p) #0 {
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
 ; P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -48(r1)
 ; P8-NEXT:    mtfprd f0, r3
+; P8-NEXT:    std r0, 64(r1)
 ; P8-NEXT:    mr r30, r4
 ; P8-NEXT:    xscvsxdsp f1, f0
 ; P8-NEXT:    bl __gnu_f2h_ieee
@@ -516,8 +516,8 @@ define void @test_sitofp_i64(i64 %a, ptr %p) #0 {
 ; SOFT:       # %bb.0:
 ; SOFT-NEXT:    mflr r0
 ; SOFT-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; SOFT-NEXT:    std r0, 16(r1)
 ; SOFT-NEXT:    stdu r1, -48(r1)
+; SOFT-NEXT:    std r0, 64(r1)
 ; SOFT-NEXT:    mr r30, r4
 ; SOFT-NEXT:    bl __floatdisf
 ; SOFT-NEXT:    nop
@@ -543,8 +543,8 @@ define i64 @test_fptoui_i64(ptr %p) #0 {
 ; P8-LABEL: test_fptoui_i64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -32(r1)
+; P8-NEXT:    std r0, 48(r1)
 ; P8-NEXT:    lhz r3, 0(r3)
 ; P8-NEXT:    bl __gnu_h2f_ieee
 ; P8-NEXT:    nop
@@ -567,8 +567,8 @@ define i64 @test_fptoui_i64(ptr %p) #0 {
 ; SOFT-LABEL: test_fptoui_i64:
 ; SOFT:       # %bb.0:
 ; SOFT-NEXT:    mflr r0
-; SOFT-NEXT:    std r0, 16(r1)
 ; SOFT-NEXT:    stdu r1, -32(r1)
+; SOFT-NEXT:    std r0, 48(r1)
 ; SOFT-NEXT:    lhz r3, 0(r3)
 ; SOFT-NEXT:    bl __gnu_h2f_ieee
 ; SOFT-NEXT:    nop
@@ -587,9 +587,9 @@ define void @test_uitofp_i64(i64 %a, ptr %p) #0 {
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
 ; P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -48(r1)
 ; P8-NEXT:    mtfprd f0, r3
+; P8-NEXT:    std r0, 64(r1)
 ; P8-NEXT:    mr r30, r4
 ; P8-NEXT:    xscvuxdsp f1, f0
 ; P8-NEXT:    bl __gnu_f2h_ieee
@@ -614,8 +614,8 @@ define void @test_uitofp_i64(i64 %a, ptr %p) #0 {
 ; SOFT:       # %bb.0:
 ; SOFT-NEXT:    mflr r0
 ; SOFT-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; SOFT-NEXT:    std r0, 16(r1)
 ; SOFT-NEXT:    stdu r1, -48(r1)
+; SOFT-NEXT:    std r0, 64(r1)
 ; SOFT-NEXT:    mr r30, r4
 ; SOFT-NEXT:    bl __floatundisf
 ; SOFT-NEXT:    nop
@@ -640,8 +640,8 @@ define <4 x float> @test_extend32_vec4(ptr %p) #0 {
 ; P8-LABEL: test_extend32_vec4:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    li r4, 48
 ; P8-NEXT:    std r30, 96(r1) # 8-byte Folded Spill
 ; P8-NEXT:    mr r30, r3
@@ -711,8 +711,8 @@ define <4 x float> @test_extend32_vec4(ptr %p) #0 {
 ; SOFT-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; SOFT-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; SOFT-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; SOFT-NEXT:    std r0, 16(r1)
 ; SOFT-NEXT:    stdu r1, -80(r1)
+; SOFT-NEXT:    std r0, 96(r1)
 ; SOFT-NEXT:    mr r30, r3
 ; SOFT-NEXT:    lhz r3, 0(r3)
 ; SOFT-NEXT:    bl __gnu_h2f_ieee
@@ -749,8 +749,8 @@ define <4 x double> @test_extend64_vec4(ptr %p) #0 {
 ; P8-LABEL: test_extend64_vec4:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    li r4, 48
 ; P8-NEXT:    std r30, 96(r1) # 8-byte Folded Spill
 ; P8-NEXT:    mr r30, r3
@@ -814,8 +814,8 @@ define <4 x double> @test_extend64_vec4(ptr %p) #0 {
 ; SOFT-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; SOFT-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; SOFT-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; SOFT-NEXT:    std r0, 16(r1)
 ; SOFT-NEXT:    stdu r1, -80(r1)
+; SOFT-NEXT:    std r0, 96(r1)
 ; SOFT-NEXT:    mr r30, r3
 ; SOFT-NEXT:    lhz r3, 0(r3)
 ; SOFT-NEXT:    bl __gnu_h2f_ieee
@@ -860,17 +860,17 @@ define void @test_trunc32_vec4(<4 x float> %a, ptr %p) #0 {
 ; P8-LABEL: test_trunc32_vec4:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
 ; P8-NEXT:    xxsldwi vs0, vs34, vs34, 3
 ; P8-NEXT:    li r3, 48
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    std r27, 72(r1) # 8-byte Folded Spill
 ; P8-NEXT:    std r28, 80(r1) # 8-byte Folded Spill
 ; P8-NEXT:    std r29, 88(r1) # 8-byte Folded Spill
-; P8-NEXT:    std r30, 96(r1) # 8-byte Folded Spill
-; P8-NEXT:    mr r30, r5
 ; P8-NEXT:    xscvspdpn f1, vs0
+; P8-NEXT:    std r30, 96(r1) # 8-byte Folded Spill
 ; P8-NEXT:    stxvd2x vs63, r1, r3 # 16-byte Folded Spill
+; P8-NEXT:    mr r30, r5
 ; P8-NEXT:    vmr v31, v2
 ; P8-NEXT:    bl __gnu_f2h_ieee
 ; P8-NEXT:    nop
@@ -934,10 +934,10 @@ define void @test_trunc32_vec4(<4 x float> %a, ptr %p) #0 {
 ; SOFT-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; SOFT-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; SOFT-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; SOFT-NEXT:    std r0, 16(r1)
 ; SOFT-NEXT:    stdu r1, -80(r1)
 ; SOFT-NEXT:    mr r27, r3
 ; SOFT-NEXT:    clrldi r3, r6, 32
+; SOFT-NEXT:    std r0, 96(r1)
 ; SOFT-NEXT:    mr r30, r7
 ; SOFT-NEXT:    mr r29, r5
 ; SOFT-NEXT:    mr r28, r4
@@ -1002,18 +1002,18 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) #0 {
 ; P8-LABEL: test_trunc64_vec4:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -128(r1)
 ; P8-NEXT:    li r3, 48
+; P8-NEXT:    std r0, 144(r1)
 ; P8-NEXT:    xxswapd vs1, vs34
 ; P8-NEXT:    std r27, 88(r1) # 8-byte Folded Spill
 ; P8-NEXT:    std r28, 96(r1) # 8-byte Folded Spill
 ; P8-NEXT:    std r29, 104(r1) # 8-byte Folded Spill
-; P8-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
-; P8-NEXT:    mr r30, r7
 ; P8-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; P8-NEXT:    stxvd2x vs62, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    li r3, 64
+; P8-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
+; P8-NEXT:    mr r30, r7
 ; P8-NEXT:    vmr v30, v2
 ; P8-NEXT:    stxvd2x vs63, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    vmr v31, v3
@@ -1075,10 +1075,10 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) #0 {
 ; SOFT-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; SOFT-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; SOFT-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; SOFT-NEXT:    std r0, 16(r1)
 ; SOFT-NEXT:    stdu r1, -80(r1)
 ; SOFT-NEXT:    mr r27, r3
 ; SOFT-NEXT:    mr r3, r6
+; SOFT-NEXT:    std r0, 96(r1)
 ; SOFT-NEXT:    mr r30, r7
 ; SOFT-NEXT:    mr r29, r5
 ; SOFT-NEXT:    mr r28, r4
@@ -1145,8 +1145,8 @@ define float @test_sitofp_fadd_i32(i32 %a, ptr %b) #0 {
 ; P8-NEXT:    mflr r0
 ; P8-NEXT:    std r30, -24(r1) # 8-byte Folded Spill
 ; P8-NEXT:    stfd f31, -8(r1) # 8-byte Folded Spill
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -64(r1)
+; P8-NEXT:    std r0, 80(r1)
 ; P8-NEXT:    mr r30, r3
 ; P8-NEXT:    lhz r3, 0(r4)
 ; P8-NEXT:    bl __gnu_h2f_ieee
@@ -1187,8 +1187,8 @@ define float @test_sitofp_fadd_i32(i32 %a, ptr %b) #0 {
 ; SOFT-NEXT:    mflr r0
 ; SOFT-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; SOFT-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; SOFT-NEXT:    std r0, 16(r1)
 ; SOFT-NEXT:    stdu r1, -64(r1)
+; SOFT-NEXT:    std r0, 80(r1)
 ; SOFT-NEXT:    mr r30, r3
 ; SOFT-NEXT:    lhz r3, 0(r4)
 ; SOFT-NEXT:    bl __gnu_h2f_ieee
@@ -1223,8 +1223,8 @@ define half @PR40273(half) #0 {
 ; P8-LABEL: PR40273:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -32(r1)
+; P8-NEXT:    std r0, 48(r1)
 ; P8-NEXT:    bl __gnu_f2h_ieee
 ; P8-NEXT:    nop
 ; P8-NEXT:    clrldi r3, r3, 48
@@ -1261,9 +1261,9 @@ define half @PR40273(half) #0 {
 ; SOFT-LABEL: PR40273:
 ; SOFT:       # %bb.0:
 ; SOFT-NEXT:    mflr r0
-; SOFT-NEXT:    std r0, 16(r1)
 ; SOFT-NEXT:    stdu r1, -32(r1)
 ; SOFT-NEXT:    clrldi r3, r3, 48
+; SOFT-NEXT:    std r0, 48(r1)
 ; SOFT-NEXT:    bl __gnu_h2f_ieee
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    li r4, 0

@@ -257,8 +257,53 @@ module {
 
 module {
   // expected-error@+1 {{cannot attach result attributes to functions with a void return}}
-  llvm.func @variadic_def() -> (!llvm.void {llvm.noalias})
+  llvm.func @variadic_def() -> (!llvm.void {llvm.noundef})
 }
+
+// -----
+
+// expected-error @below{{expected llvm.align result attribute to be an integer attribute}}
+llvm.func @alignattr_ret() -> (!llvm.ptr {llvm.align = 1.0 : f32})
+
+// -----
+
+// expected-error @below{{llvm.align attribute attached to non-pointer result}}
+llvm.func @alignattr_ret() -> (i32 {llvm.align = 4})
+
+// -----
+
+// expected-error @below{{expected llvm.noalias result attribute to be a unit attribute}}
+llvm.func @noaliasattr_ret() -> (!llvm.ptr {llvm.noalias = 1})
+
+// -----
+
+// expected-error @below{{llvm.noalias attribute attached to non-pointer result}}
+llvm.func @noaliasattr_ret() -> (i32 {llvm.noalias})
+
+// -----
+
+// expected-error @below{{expected llvm.noundef result attribute to be a unit attribute}}
+llvm.func @noundefattr_ret() -> (!llvm.ptr {llvm.noundef = 1})
+
+// -----
+
+// expected-error @below{{expected llvm.signext result attribute to be a unit attribute}}
+llvm.func @signextattr_ret() -> (i32 {llvm.signext = 1})
+
+// -----
+
+// expected-error @below{{llvm.signext attribute attached to non-integer result}}
+llvm.func @signextattr_ret() -> (f32 {llvm.signext})
+
+// -----
+
+// expected-error @below{{expected llvm.zeroext result attribute to be a unit attribute}}
+llvm.func @zeroextattr_ret() -> (i32 {llvm.zeroext = 1})
+
+// -----
+
+// expected-error @below{{llvm.zeroext attribute attached to non-integer result}}
+llvm.func @zeroextattr_ret() -> (f32 {llvm.zeroext})
 
 // -----
 

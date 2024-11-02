@@ -12,10 +12,10 @@ define void @test(ptr %cast) {
 ; CHECK-NEXT:    .cfi_offset r30, -16
 ; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -64(1)
 ; CHECK-NEXT:    li 30, 0
 ; CHECK-NEXT:    addi 29, 3, -8
+; CHECK-NEXT:    std 0, 80(1)
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    #

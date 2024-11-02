@@ -35,7 +35,7 @@ subroutine check_binary_ops()
 ! CHECK:  %[[VAL_26:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10xi32>, index) -> i32
 ! CHECK:  %[[VAL_27:.*]] = arith.addi %[[VAL_25]], %[[VAL_26]] : i32
 ! CHECK:  fir.store %[[VAL_27]] to %[[VAL_0]] : !fir.ref<i32>
-! CHECK:  fir.call @_QPelem_func(%[[VAL_0]]) : (!fir.ref<i32>) -> i32
+! CHECK:  fir.call @_QPelem_func(%[[VAL_0]]) {{.*}}: (!fir.ref<i32>) -> i32
 end subroutine
 
 ! CHECK-LABEL: func @_QMtest_opsPcheck_binary_ops_2() {
@@ -47,7 +47,7 @@ subroutine check_binary_ops_2()
 ! CHECK:  %[[VAL_25:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10xi32>, index) -> i32
 ! CHECK:  %[[VAL_27:.*]] = arith.muli %[[VAL_25]], %[[VAL_13]] : i32
 ! CHECK:  fir.store %[[VAL_27]] to %[[VAL_0]] : !fir.ref<i32>
-! CHECK:  fir.call @_QPelem_func(%[[VAL_0]]) : (!fir.ref<i32>) -> i32
+! CHECK:  fir.call @_QPelem_func(%[[VAL_0]]) {{.*}}: (!fir.ref<i32>) -> i32
 end subroutine
 
 ! CHECK-LABEL: func @_QMtest_opsPcheck_negate() {
@@ -59,7 +59,7 @@ subroutine check_negate()
 ! CHECK:  %[[VAL_22:.*]] = arith.constant 0 : i32
 ! CHECK:  %[[VAL_23:.*]] = arith.subi %[[VAL_22]], %[[VAL_21]] : i32
 ! CHECK:  fir.store %[[VAL_23]] to %[[VAL_0]] : !fir.ref<i32>
-! CHECK:  fir.call @_QPelem_func(%[[VAL_0]]) : (!fir.ref<i32>) -> i32
+! CHECK:  fir.call @_QPelem_func(%[[VAL_0]]) {{.*}}: (!fir.ref<i32>) -> i32
 end subroutine
 
 ! CHECK-LABEL: func @_QMtest_opsPcheck_convert() {
@@ -70,7 +70,7 @@ subroutine check_convert()
 ! CHECK:  %[[VAL_21:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10xf64>, index) -> f64
 ! CHECK:  %[[VAL_22:.*]] = fir.convert %[[VAL_21]] : (f64) -> i32
 ! CHECK:  fir.store %[[VAL_22]] to %[[VAL_0]] : !fir.ref<i32>
-! CHECK:  fir.call @_QPelem_func(%[[VAL_0]]) : (!fir.ref<i32>) -> i32
+! CHECK:  fir.call @_QPelem_func(%[[VAL_0]]) {{.*}}: (!fir.ref<i32>) -> i32
 end subroutine
 
 ! CHECK-LABEL: func @_QMtest_opsPcheck_exteremum() {
@@ -83,7 +83,7 @@ subroutine check_exteremum()
 ! CHECK:  %[[VAL_27:.*]] = arith.cmpi slt, %[[VAL_25]], %[[VAL_26]] : i32
 ! CHECK:  %[[VAL_28:.*]] = arith.select %[[VAL_27]], %[[VAL_25]], %[[VAL_26]] : i32
 ! CHECK:  fir.store %[[VAL_28]] to %[[VAL_0]] : !fir.ref<i32>
-! CHECK:  fir.call @_QPelem_func(%[[VAL_0]]) : (!fir.ref<i32>) -> i32
+! CHECK:  fir.call @_QPelem_func(%[[VAL_0]]) {{.*}}: (!fir.ref<i32>) -> i32
 end subroutine
 
 ! CHECK-LABEL: func @_QMtest_opsPcheck_logical_unary_ops() {
@@ -97,7 +97,7 @@ subroutine check_logical_unary_ops()
 ! CHECK:  %[[VAL_24:.*]] = arith.xori %[[VAL_23]], %[[VAL_12]] : i1
 ! CHECK:  %[[VAL_25:.*]] = fir.convert %[[VAL_24]] : (i1) -> !fir.logical<8>
 ! CHECK:  fir.store %[[VAL_25]] to %[[VAL_0]] : !fir.ref<!fir.logical<8>>
-! CHECK:  fir.call @_QPelem_func_logical(%[[VAL_0]]) : (!fir.ref<!fir.logical<8>>) -> i32
+! CHECK:  fir.call @_QPelem_func_logical(%[[VAL_0]]) {{.*}}: (!fir.ref<!fir.logical<8>>) -> i32
 end subroutine
 
 ! CHECK-LABEL: func @_QMtest_opsPcheck_logical_binary_ops() {
@@ -112,7 +112,7 @@ subroutine check_logical_binary_ops()
 ! CHECK:  %[[VAL_29:.*]] = arith.cmpi eq, %[[VAL_27]], %[[VAL_28]] : i1
 ! CHECK:  %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (i1) -> !fir.logical<8>
 ! CHECK:  fir.store %[[VAL_30]] to %[[VAL_0]] : !fir.ref<!fir.logical<8>>
-! CHECK:  fir.call @_QPelem_func_logical(%[[VAL_0]]) : (!fir.ref<!fir.logical<8>>) -> i32
+! CHECK:  fir.call @_QPelem_func_logical(%[[VAL_0]]) {{.*}}: (!fir.ref<!fir.logical<8>>) -> i32
 end subroutine
 
 ! CHECK-LABEL: func @_QMtest_opsPcheck_compare() {
@@ -125,7 +125,7 @@ subroutine check_compare()
 ! CHECK:  %[[VAL_27:.*]] = arith.cmpf olt, %[[VAL_25]], %[[VAL_26]] : f64
 ! CHECK:  %[[VAL_28:.*]] = fir.convert %[[VAL_27]] : (i1) -> !fir.logical<4>
 ! CHECK:  fir.store %[[VAL_28]] to %[[VAL_0]] : !fir.ref<!fir.logical<4>>
-! CHECK:  fir.call @_QPelem_func_logical4(%[[VAL_0]]) : (!fir.ref<!fir.logical<4>>) -> i32
+! CHECK:  fir.call @_QPelem_func_logical4(%[[VAL_0]]) {{.*}}: (!fir.ref<!fir.logical<4>>) -> i32
 end subroutine
 
 ! CHECK-LABEL: func @_QMtest_opsPcheck_pow() {
@@ -134,8 +134,8 @@ subroutine check_pow()
 ! CHECK:  fir.do_loop
 ! CHECK:  %[[VAL_25:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10xf64>, index) -> f64
 ! CHECK:  %[[VAL_26:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10xf64>, index) -> f64
-! CHECK:  %[[VAL_27:.*]] = math.powf %[[VAL_25]], %[[VAL_26]] : f64
-! CHECK:  %[[VAL_28:.*]] = fir.call @_QPelem_func_real(%[[VAL_27]]) : (f64) -> i32
+! CHECK:  %[[VAL_27:.*]] = math.powf %[[VAL_25]], %[[VAL_26]] {{.*}}: f64
+! CHECK:  %[[VAL_28:.*]] = fir.call @_QPelem_func_real(%[[VAL_27]]) {{.*}}: (f64) -> i32
 end subroutine
 
 ! CHECK-LABEL: func @_QMtest_opsPcheck_cmplx_part() {
@@ -146,7 +146,7 @@ subroutine check_cmplx_part()
 ! CHECK:  %[[VAL_23:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10x!fir.complex<8>>, index) -> !fir.complex<8>
 ! CHECK:  %[[VAL_24:.*]] = fir.addc %[[VAL_23]], %[[VAL_13]] : !fir.complex<8>
 ! CHECK:  %[[VAL_25:.*]] = fir.extract_value %[[VAL_24]], [1 : index] : (!fir.complex<8>) -> f64
-! CHECK:  fir.call @_QPelem_func_real(%[[VAL_25]]) : (f64) -> i32
+! CHECK:  fir.call @_QPelem_func_real(%[[VAL_25]]) {{.*}}: (f64) -> i32
 end subroutine
 
 ! CHECK-LABEL: func @_QMtest_opsPcheck_parentheses() {
@@ -155,7 +155,7 @@ subroutine check_parentheses()
 ! CHECK:  fir.do_loop
 ! CHECK:  %[[VAL_21:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10xf64>, index) -> f64
 ! CHECK:  %[[VAL_22:.*]] = fir.no_reassoc %[[VAL_21]] : f64
-! CHECK:  fir.call @_QPelem_func_real(%[[VAL_22]]) : (f64) -> i32
+! CHECK:  fir.call @_QPelem_func_real(%[[VAL_22]]) {{.*}}: (f64) -> i32
 end subroutine
 
 ! CHECK-LABEL: func @_QMtest_opsPcheck_parentheses_logical() {
@@ -166,7 +166,7 @@ subroutine check_parentheses_logical()
 ! CHECK:  %[[VAL_21:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10x!fir.logical<8>>, index) -> !fir.logical<8>
 ! CHECK:  %[[VAL_22:.*]] = fir.no_reassoc %[[VAL_21]] : !fir.logical<8>
 ! CHECK:  fir.store %[[VAL_22]] to %[[VAL_0]] : !fir.ref<!fir.logical<8>>
-! CHECK:  fir.call @_QPelem_func_logical(%[[VAL_0]]) : (!fir.ref<!fir.logical<8>>) -> i32
+! CHECK:  fir.call @_QPelem_func_logical(%[[VAL_0]]) {{.*}}: (!fir.ref<!fir.logical<8>>) -> i32
 end subroutine
 
 subroutine check_parentheses_derived(a)
@@ -191,6 +191,6 @@ subroutine check_parentheses_derived(a)
 ! CHECK: %[[TO:.*]] = fir.coordinate_of %[[VAL_0]], %[[FIELD2]] : (!fir.ref<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>, !fir.field) -> !fir.ref<i32>
 ! CHECK: %[[VAL:.*]] = fir.load %[[FROM]] : !fir.ref<i32>
 ! CHECK: fir.store %[[VAL]] to %[[TO]] : !fir.ref<i32>
-! CHECK: %{{.*}} = fir.call @_QPelem_func_derived(%[[VAL_0]]) : (!fir.ref<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>) -> i32
+! CHECK: %{{.*}} = fir.call @_QPelem_func_derived(%[[VAL_0]]) {{.*}}: (!fir.ref<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>) -> i32
 end subroutine
 end module

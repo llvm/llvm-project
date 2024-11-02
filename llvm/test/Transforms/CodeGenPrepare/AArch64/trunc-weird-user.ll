@@ -16,7 +16,7 @@ define %foo @test_merge(i32 %in) {
   ret %"foo" %struct
 }
 
-define i64* @test_merge_PR21548(i32 %a, i64* %p1, i64* %p2, i64* %p3) {
+define ptr @test_merge_PR21548(i32 %a, ptr %p1, ptr %p2, ptr %p3) {
 ; CHECK-LABEL: @test_merge_PR21548
   %as = lshr i32 %a, 3
   %Tr = trunc i32 %as to i1
@@ -24,13 +24,13 @@ define i64* @test_merge_PR21548(i32 %a, i64* %p1, i64* %p2, i64* %p3) {
 
 BB2:
   ; Similarly to above:
-  ; CodeGenPrepare was requesting the EVT for i8* to determine
+  ; CodeGenPrepare was requesting the EVT for ptr to determine
   ; whether the select user of the trunc was legal. This asserted.
 
-; CHECK: select i1 {{%.*}}, i64* %p1, i64* %p2
-  %p = select i1 %Tr, i64* %p1, i64* %p2
-  ret i64* %p
+; CHECK: select i1 {{%.*}}, ptr %p1, ptr %p2
+  %p = select i1 %Tr, ptr %p1, ptr %p2
+  ret ptr %p
 
 BB3:
-  ret i64* %p3
+  ret ptr %p3
 }

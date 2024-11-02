@@ -52,7 +52,7 @@ public:
   bool allowsMisalignedMemoryAccesses(
       EVT VT, unsigned AS, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
-      bool *IsFast = nullptr) const override;
+      unsigned *IsFast = nullptr) const override;
 
   bool canCombineTruncStore(EVT ValVT, EVT MemVT,
                             bool LegalOperations) const override {

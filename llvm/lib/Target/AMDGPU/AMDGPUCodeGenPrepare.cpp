@@ -473,7 +473,7 @@ static Value *insertValues(IRBuilder<> &Builder,
     return Values[0];
   }
 
-  Value *NewVal = UndefValue::get(Ty);
+  Value *NewVal = PoisonValue::get(Ty);
   for (int I = 0, E = Values.size(); I != E; ++I)
     NewVal = Builder.CreateInsertElement(NewVal, Values[I], I);
 
@@ -794,7 +794,7 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
 
   Value *NewFDiv = nullptr;
   if (auto *VT = dyn_cast<FixedVectorType>(FDiv.getType())) {
-    NewFDiv = UndefValue::get(VT);
+    NewFDiv = PoisonValue::get(VT);
 
     // FIXME: Doesn't do the right thing for cases where the vector is partially
     // constant. This works when the scalarizer pass is run first.
@@ -1260,7 +1260,7 @@ bool AMDGPUCodeGenPrepare::visitBinaryOperator(BinaryOperator &I) {
     Builder.SetCurrentDebugLocation(I.getDebugLoc());
 
     if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
-      NewDiv = UndefValue::get(VT);
+      NewDiv = PoisonValue::get(VT);
 
       for (unsigned N = 0, E = VT->getNumElements(); N != E; ++N) {
         Value *NumEltN = Builder.CreateExtractElement(Num, N);

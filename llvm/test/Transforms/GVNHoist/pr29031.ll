@@ -1,4 +1,4 @@
-; RUN: opt -S -gvn-hoist < %s | FileCheck %s
+; RUN: opt -S -passes=gvn-hoist < %s | FileCheck %s
 
 ; Check that the stores are not hoisted: it is invalid to hoist stores if they
 ; are not executed on all paths. In this testcase, there are paths in the loop

@@ -64,9 +64,12 @@ public:
   Register getFrameRegister(const MachineFunction &MF) const override {
     return 0;
   }
-  void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
+  bool eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,
-                           RegScavenger *RS = nullptr) const override {}
+                           RegScavenger *RS = nullptr) const override {
+    return false;
+
+  }
 };
 
 class BogusSubtarget : public TargetSubtargetInfo {

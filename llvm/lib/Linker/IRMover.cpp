@@ -27,6 +27,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+#include <optional>
 #include <utility>
 using namespace llvm;
 
@@ -425,7 +426,7 @@ class IRLinker {
 
   /// The Error encountered during materialization. We use an Optional here to
   /// avoid needing to manage an unconsumed success value.
-  Optional<Error> FoundError;
+  std::optional<Error> FoundError;
   void setError(Error E) {
     if (E)
       FoundError = std::move(E);
@@ -1243,6 +1244,11 @@ void IRLinker::linkNamedMDNodes() {
                     DstM.getModuleIdentifier() + "' is not\n");
       continue;
     }
+    // The stats are computed per module and will all be merged in the binary.
+    // Importing the metadata will cause duplication of the stats.
+    if (IsPerformingImport && NMD.getName() == "llvm.stats")
+      continue;
+
     NamedMDNode *DestNMD = DstM.getOrInsertNamedMetadata(NMD.getName());
     // Add Src elements into Dest node.
     for (const MDNode *Op : NMD.operands())

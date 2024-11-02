@@ -151,7 +151,7 @@ TEST_MACROS();
 TEST_MACROS();
 #include <forward_list>
 TEST_MACROS();
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION) && !defined(_LIBCPP_HAS_NO_FSTREAM)
 #   include <fstream>
 TEST_MACROS();
 #endif

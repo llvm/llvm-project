@@ -7,21 +7,27 @@ define protected amdgpu_kernel void @sccClobber(ptr addrspace(1) %a, ptr addrspa
 ; RRLIST-LABEL: sccClobber:
 ; RRLIST:       ; %bb.0: ; %entry
 ; RRLIST-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x24
-; RRLIST-NEXT:    v_mov_b32_e32 v2, 0
+; RRLIST-NEXT:    s_mov_b32 s20, SCRATCH_RSRC_DWORD0
+; RRLIST-NEXT:    s_mov_b32 s21, SCRATCH_RSRC_DWORD1
+; RRLIST-NEXT:    s_mov_b32 s22, -1
+; RRLIST-NEXT:    s_mov_b32 s23, 0xe00000
+; RRLIST-NEXT:    s_add_u32 s20, s20, s3
 ; RRLIST-NEXT:    s_waitcnt lgkmcnt(0)
 ; RRLIST-NEXT:    s_load_dword s16, s[8:9], 0x0
 ; RRLIST-NEXT:    s_load_dwordx2 s[2:3], s[6:7], 0x0
 ; RRLIST-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x0
 ; RRLIST-NEXT:    s_load_dwordx2 s[14:15], s[0:1], 0x44
 ; RRLIST-NEXT:    s_load_dword s17, s[10:11], 0x0
+; RRLIST-NEXT:    s_addc_u32 s21, s21, 0
 ; RRLIST-NEXT:    s_waitcnt lgkmcnt(0)
-; RRLIST-NEXT:    s_min_i32 s4, s16, 0
 ; RRLIST-NEXT:    v_pk_mov_b32 v[0:1], s[2:3], s[2:3] op_sel:[0,1]
+; RRLIST-NEXT:    s_min_i32 s4, s16, 0
 ; RRLIST-NEXT:    v_cmp_lt_i64_e32 vcc, s[12:13], v[0:1]
 ; RRLIST-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; RRLIST-NEXT:    s_cselect_b32 s0, s16, s17
 ; RRLIST-NEXT:    s_cmp_eq_u64 s[12:13], s[2:3]
 ; RRLIST-NEXT:    s_cselect_b32 s0, s4, s0
+; RRLIST-NEXT:    v_mov_b32_e32 v2, 0
 ; RRLIST-NEXT:    v_mov_b32_e32 v0, s0
 ; RRLIST-NEXT:    global_store_dword v2, v0, s[14:15]
 ; RRLIST-NEXT:    s_endpgm
@@ -29,21 +35,27 @@ define protected amdgpu_kernel void @sccClobber(ptr addrspace(1) %a, ptr addrspa
 ; FAST-LABEL: sccClobber:
 ; FAST:       ; %bb.0: ; %entry
 ; FAST-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x24
-; FAST-NEXT:    v_mov_b32_e32 v2, 0
+; FAST-NEXT:    s_mov_b32 s20, SCRATCH_RSRC_DWORD0
+; FAST-NEXT:    s_mov_b32 s21, SCRATCH_RSRC_DWORD1
+; FAST-NEXT:    s_mov_b32 s22, -1
+; FAST-NEXT:    s_mov_b32 s23, 0xe00000
+; FAST-NEXT:    s_add_u32 s20, s20, s3
 ; FAST-NEXT:    s_waitcnt lgkmcnt(0)
 ; FAST-NEXT:    s_load_dword s16, s[8:9], 0x0
 ; FAST-NEXT:    s_load_dwordx2 s[2:3], s[6:7], 0x0
 ; FAST-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x0
 ; FAST-NEXT:    s_load_dwordx2 s[14:15], s[0:1], 0x44
 ; FAST-NEXT:    s_load_dword s17, s[10:11], 0x0
+; FAST-NEXT:    s_addc_u32 s21, s21, 0
 ; FAST-NEXT:    s_waitcnt lgkmcnt(0)
-; FAST-NEXT:    s_min_i32 s4, s16, 0
 ; FAST-NEXT:    v_pk_mov_b32 v[0:1], s[2:3], s[2:3] op_sel:[0,1]
+; FAST-NEXT:    s_min_i32 s4, s16, 0
 ; FAST-NEXT:    v_cmp_lt_i64_e32 vcc, s[12:13], v[0:1]
 ; FAST-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; FAST-NEXT:    s_cselect_b32 s0, s16, s17
 ; FAST-NEXT:    s_cmp_eq_u64 s[12:13], s[2:3]
 ; FAST-NEXT:    s_cselect_b32 s0, s4, s0
+; FAST-NEXT:    v_mov_b32_e32 v2, 0
 ; FAST-NEXT:    v_mov_b32_e32 v0, s0
 ; FAST-NEXT:    global_store_dword v2, v0, s[14:15]
 ; FAST-NEXT:    s_endpgm

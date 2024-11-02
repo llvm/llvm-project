@@ -22,7 +22,6 @@ config.ocamlfind_executable = "@OCAMLFIND@"
 config.have_ocamlopt = @HAVE_OCAMLOPT@
 config.ocaml_flags = "@OCAMLFLAGS@"
 config.ptxas_executable = "@PTXAS_EXECUTABLE@"
-config.enable_shared = @ENABLE_SHARED@
 config.enable_assertions = @ENABLE_ASSERTIONS@
 config.targets_to_build = "@TARGETS_TO_BUILD@"
 config.native_target = "@LLVM_NATIVE_ARCH@"

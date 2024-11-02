@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn | llvm-dis
+; RUN: opt < %s -passes=gvn | llvm-dis
 ; Cached results must be added to and verified against the visited sets.
 ; PR3217
 

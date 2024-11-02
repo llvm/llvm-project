@@ -958,7 +958,11 @@ class MIMGAddrSize<int dw, bit enable_disasm> {
                            !if(!eq(NumWords, 6), VReg_192,
                            !if(!eq(NumWords, 7), VReg_224,
                            !if(!le(NumWords, 8), VReg_256,
-                           !if(!le(NumWords, 16), VReg_512, ?))))))))));
+                           !if(!le(NumWords, 9), VReg_288,
+                           !if(!le(NumWords, 10), VReg_320,
+                           !if(!le(NumWords, 11), VReg_352,
+                           !if(!le(NumWords, 12), VReg_384,
+                           !if(!le(NumWords, 16), VReg_512, ?))))))))))))));
 
   // Whether the instruction variant with this vaddr size should be enabled for
   // the auto-generated disassembler.
@@ -1007,8 +1011,8 @@ class MIMG_Sampler_AddrSizes<AMDGPUSampleVariant sample, bit isG16> {
            !foreach(range,
                     // V4 is generated for V3 and V4
                     // V8 is generated for V5 through V8
-                    // V16 is generated for V9 through V16
-                    [[1],[2],[3],[3,4],[5],[6],[7],[5,8],[9,16]],
+                    // V16 is generated for V13 through V16
+                    [[1],[2],[3],[3,4],[5],[6],[7],[5,8],[9],[10],[11],[12],[13,16]],
                     MIMGAddrSizes_dw_range<range>),
            lhs, dw,
            !if(isRangeInList<dw.Min, dw.Max, AllNumAddrWords>.ret,
@@ -1129,8 +1133,6 @@ multiclass MIMG_Gather_WQM <mimgopc op, AMDGPUSampleVariant sample>
 
 class MIMG_IntersectRay_Helper<bit Is64, bit A16> {
   int num_addrs = !if(Is64, !if(A16, 9, 12), !if(A16, 8, 11));
-  // TODO: MIMGAddrSize will choose VReg_512 which is a 16 register tuple,
-  // when we only need 9, 11 or 12 depending on A16 field and ptr size.
   RegisterClass RegClass = MIMGAddrSize<num_addrs, 0>.RegClass;
   int VAddrDwords = !srl(RegClass.Size, 5);
 

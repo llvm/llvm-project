@@ -1,4 +1,4 @@
-; RUN: opt < %s -lowerswitch
+; RUN: opt < %s -passes=lowerswitch
 
 define void @child(i32 %ct.1) {
 entry:

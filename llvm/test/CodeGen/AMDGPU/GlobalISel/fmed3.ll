@@ -5,7 +5,7 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX10 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX11 %s
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
 ; SI-LABEL: v_test_global_nnans_med3_f32_pat0_srcmod0:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -111,23 +111,23 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0(float addrs
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
-  %gep2 = getelementptr float, float addrspace(1)* %cptr, i32 %tid
-  %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load volatile float, float addrspace(1)* %gep0
-  %b = load volatile float, float addrspace(1)* %gep1
-  %c = load volatile float, float addrspace(1)* %gep2
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %gep1 = getelementptr float, ptr addrspace(1) %bptr, i32 %tid
+  %gep2 = getelementptr float, ptr addrspace(1) %cptr, i32 %tid
+  %outgep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load volatile float, ptr addrspace(1) %gep0
+  %b = load volatile float, ptr addrspace(1) %gep1
+  %c = load volatile float, ptr addrspace(1) %gep2
   %a.fneg = fsub float -0.0, %a
   %tmp0 = call float @llvm.minnum.f32(float %a.fneg, float %b)
   %tmp1 = call float @llvm.maxnum.f32(float %a.fneg, float %b)
   %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c)
   %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
-  store float %med3, float addrspace(1)* %outgep
+  store float %med3, ptr addrspace(1) %outgep
   ret void
 }
 
-define amdgpu_kernel void @v_test_no_global_nnans_med3_f32_pat0_srcmod0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #1 {
+define amdgpu_kernel void @v_test_no_global_nnans_med3_f32_pat0_srcmod0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
 ; SI-LABEL: v_test_no_global_nnans_med3_f32_pat0_srcmod0:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -256,23 +256,23 @@ define amdgpu_kernel void @v_test_no_global_nnans_med3_f32_pat0_srcmod0(float ad
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
-  %gep2 = getelementptr float, float addrspace(1)* %cptr, i32 %tid
-  %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load volatile float, float addrspace(1)* %gep0
-  %b = load volatile float, float addrspace(1)* %gep1
-  %c = load volatile float, float addrspace(1)* %gep2
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %gep1 = getelementptr float, ptr addrspace(1) %bptr, i32 %tid
+  %gep2 = getelementptr float, ptr addrspace(1) %cptr, i32 %tid
+  %outgep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load volatile float, ptr addrspace(1) %gep0
+  %b = load volatile float, ptr addrspace(1) %gep1
+  %c = load volatile float, ptr addrspace(1) %gep2
   %a.fneg = fsub float -0.0, %a
   %tmp0 = call float @llvm.minnum.f32(float %a.fneg, float %b)
   %tmp1 = call float @llvm.maxnum.f32(float %a.fneg, float %b)
   %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c)
   %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
-  store float %med3, float addrspace(1)* %outgep
+  store float %med3, ptr addrspace(1) %outgep
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod012(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod012(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
 ; SI-LABEL: v_test_global_nnans_med3_f32_pat0_srcmod012:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -383,13 +383,13 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod012(float add
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
-  %gep2 = getelementptr float, float addrspace(1)* %cptr, i32 %tid
-  %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load volatile float, float addrspace(1)* %gep0
-  %b = load volatile float, float addrspace(1)* %gep1
-  %c = load volatile float, float addrspace(1)* %gep2
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %gep1 = getelementptr float, ptr addrspace(1) %bptr, i32 %tid
+  %gep2 = getelementptr float, ptr addrspace(1) %cptr, i32 %tid
+  %outgep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load volatile float, ptr addrspace(1) %gep0
+  %b = load volatile float, ptr addrspace(1) %gep1
+  %c = load volatile float, ptr addrspace(1) %gep2
 
   %a.fneg = fsub float -0.0, %a
   %b.fabs = call float @llvm.fabs.f32(float %b)
@@ -401,11 +401,11 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod012(float add
   %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c.fabs.fneg)
   %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
 
-  store float %med3, float addrspace(1)* %outgep
+  store float %med3, ptr addrspace(1) %outgep
   ret void
 }
 
-define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_negabs012(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #2 {
+define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_negabs012(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #2 {
 ; SI-LABEL: v_test_global_nnans_med3_f32_pat0_negabs012:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -521,13 +521,13 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_negabs012(float add
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
-  %gep2 = getelementptr float, float addrspace(1)* %cptr, i32 %tid
-  %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load volatile float, float addrspace(1)* %gep0
-  %b = load volatile float, float addrspace(1)* %gep1
-  %c = load volatile float, float addrspace(1)* %gep2
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %gep1 = getelementptr float, ptr addrspace(1) %bptr, i32 %tid
+  %gep2 = getelementptr float, ptr addrspace(1) %cptr, i32 %tid
+  %outgep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load volatile float, ptr addrspace(1) %gep0
+  %b = load volatile float, ptr addrspace(1) %gep1
+  %c = load volatile float, ptr addrspace(1) %gep2
 
   %a.fabs = call float @llvm.fabs.f32(float %a)
   %a.fabs.fneg = fsub float -0.0, %a.fabs
@@ -541,11 +541,11 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_negabs012(float add
   %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c.fabs.fneg)
   %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
 
-  store float %med3, float addrspace(1)* %outgep
+  store float %med3, ptr addrspace(1) %outgep
   ret void
 }
 
-define amdgpu_kernel void @v_nnan_inputs_med3_f32_pat0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #1 {
+define amdgpu_kernel void @v_nnan_inputs_med3_f32_pat0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
 ; SI-LABEL: v_nnan_inputs_med3_f32_pat0:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -660,13 +660,13 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f32_pat0(float addrspace(1)* %out,
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
-  %gep2 = getelementptr float, float addrspace(1)* %cptr, i32 %tid
-  %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load volatile float, float addrspace(1)* %gep0
-  %b = load volatile float, float addrspace(1)* %gep1
-  %c = load volatile float, float addrspace(1)* %gep2
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %gep1 = getelementptr float, ptr addrspace(1) %bptr, i32 %tid
+  %gep2 = getelementptr float, ptr addrspace(1) %cptr, i32 %tid
+  %outgep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load volatile float, ptr addrspace(1) %gep0
+  %b = load volatile float, ptr addrspace(1) %gep1
+  %c = load volatile float, ptr addrspace(1) %gep2
 
   %a.nnan = fadd nnan float %a, 1.0
   %b.nnan = fadd nnan float %b, 2.0
@@ -676,7 +676,7 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f32_pat0(float addrspace(1)* %out,
   %tmp1 = call float @llvm.maxnum.f32(float %a.nnan, float %b.nnan)
   %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c.nnan)
   %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
-  store float %med3, float addrspace(1)* %outgep
+  store float %med3, ptr addrspace(1) %outgep
   ret void
 }
 
@@ -685,7 +685,7 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f32_pat0(float addrspace(1)* %out,
 ; Negative patterns
 ; ---------------------------------------------------------------------
 
-define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr, float addrspace(1)* %cptr) #1 {
+define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #1 {
 ; SI-LABEL: v_test_safe_med3_f32_pat0_multi_use0:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -825,19 +825,19 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(float addrspace(
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %gep1 = getelementptr float, float addrspace(1)* %bptr, i32 %tid
-  %gep2 = getelementptr float, float addrspace(1)* %cptr, i32 %tid
-  %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %a = load volatile float, float addrspace(1)* %gep0
-  %b = load volatile float, float addrspace(1)* %gep1
-  %c = load volatile float, float addrspace(1)* %gep2
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %gep1 = getelementptr float, ptr addrspace(1) %bptr, i32 %tid
+  %gep2 = getelementptr float, ptr addrspace(1) %cptr, i32 %tid
+  %outgep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %a = load volatile float, ptr addrspace(1) %gep0
+  %b = load volatile float, ptr addrspace(1) %gep1
+  %c = load volatile float, ptr addrspace(1) %gep2
   %tmp0 = call float @llvm.minnum.f32(float %a, float %b)
-  store volatile float %tmp0, float addrspace(1)* undef
+  store volatile float %tmp0, ptr addrspace(1) undef
   %tmp1 = call float @llvm.maxnum.f32(float %a, float %b)
   %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c)
   %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
-  store float %med3, float addrspace(1)* %outgep
+  store float %med3, ptr addrspace(1) %outgep
   ret void
 }
 

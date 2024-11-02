@@ -530,7 +530,7 @@ public:
     return *Base;
   }
 
-  /// Return the addressable that thsi symbol points to.
+  /// Return the addressable that this symbol points to.
   const Addressable &getAddressable() const {
     assert(Base && "Cannot get underlying addressable for null symbol");
     return *Base;

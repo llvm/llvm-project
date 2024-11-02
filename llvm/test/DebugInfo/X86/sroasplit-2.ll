@@ -1,4 +1,4 @@
-; RUN: opt %s -sroa -verify -S -o - | FileCheck %s
+; RUN: opt %s -passes='sroa,verify' -S -o - | FileCheck %s
 ;
 ; Test that we can partial emit debug info for aggregates repeatedly
 ; split up by SROA.

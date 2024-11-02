@@ -9,14 +9,14 @@
 ; CHECK-NOT: v_lshl
 ; CHECK: v_add_u32_e32 v[[ADDRLO:[0-9]+]], vcc, s{{[0-9]+}}, v[[ADD]]
 ; CHECK: load_dword v{{[0-9]+}}, v[[[ADDRLO]]:
-define amdgpu_kernel void @add_const_offset(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @add_const_offset(ptr addrspace(1) nocapture %arg) {
 bb:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %add = add i32 %id, 200
   %shl = shl i32 %add, 2
-  %ptr = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %shl
-  %val = load i32, i32 addrspace(1)* %ptr, align 4
-  store i32 %val, i32 addrspace(1)* %arg, align 4
+  %ptr = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %shl
+  %val = load i32, ptr addrspace(1) %ptr, align 4
+  store i32 %val, ptr addrspace(1) %arg, align 4
   ret void
 }
 
@@ -26,14 +26,14 @@ bb:
 ; CHECK-NOT: v_lshl
 ; CHECK: v_add_u32_e32 v[[ADDRLO:[0-9]+]], vcc, s{{[0-9]+}}, v[[OR]]
 ; CHECK: load_dword v{{[0-9]+}}, v[[[ADDRLO]]:
-define amdgpu_kernel void @or_const_offset(i32 addrspace(1)* nocapture %arg) {
+define amdgpu_kernel void @or_const_offset(ptr addrspace(1) nocapture %arg) {
 bb:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %add = or i32 %id, 256
   %shl = shl i32 %add, 2
-  %ptr = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %shl
-  %val = load i32, i32 addrspace(1)* %ptr, align 4
-  store i32 %val, i32 addrspace(1)* %arg, align 4
+  %ptr = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %shl
+  %val = load i32, ptr addrspace(1) %ptr, align 4
+  store i32 %val, ptr addrspace(1) %arg, align 4
   ret void
 }
 

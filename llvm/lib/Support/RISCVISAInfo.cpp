@@ -17,6 +17,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <array>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -104,12 +105,15 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
 
     {"svnapot", RISCVExtensionVersion{1, 0}},
     {"svinval", RISCVExtensionVersion{1, 0}},
+    {"xventanacondops", RISCVExtensionVersion{1, 0}},
 };
 
 static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zihintntl", RISCVExtensionVersion{0, 2}},
 
     {"zca", RISCVExtensionVersion{0, 70}},
+    {"zcd", RISCVExtensionVersion{0, 70}},
+    {"zcf", RISCVExtensionVersion{0, 70}},
     {"zvfh", RISCVExtensionVersion{0, 1}},
     {"zawrs", RISCVExtensionVersion{1, 0}},
     {"ztso", RISCVExtensionVersion{0, 1}},
@@ -141,6 +145,7 @@ static size_t findFirstNonVersionCharacter(StringRef Ext) {
   return Pos;
 }
 
+namespace {
 struct FindByName {
   FindByName(StringRef Ext) : Ext(Ext){};
   StringRef Ext;
@@ -148,8 +153,10 @@ struct FindByName {
     return ExtInfo.Name == Ext;
   }
 };
+} // namespace
 
-static Optional<RISCVExtensionVersion> findDefaultVersion(StringRef ExtName) {
+static std::optional<RISCVExtensionVersion>
+findDefaultVersion(StringRef ExtName) {
   // Find default version of an extension.
   // TODO: We might set default version based on profile or ISA spec.
   for (auto &ExtInfo : {makeArrayRef(SupportedExtensions),
@@ -197,7 +204,8 @@ static StringRef getExtensionType(StringRef Ext) {
   return StringRef();
 }
 
-static Optional<RISCVExtensionVersion> isExperimentalExtension(StringRef Ext) {
+static std::optional<RISCVExtensionVersion>
+isExperimentalExtension(StringRef Ext) {
   auto ExtIterator =
       llvm::find_if(SupportedExperimentalExtensions, FindByName(Ext));
   if (ExtIterator == std::end(SupportedExperimentalExtensions))

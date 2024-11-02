@@ -475,6 +475,58 @@ define <2 x i1> @lane_mask_v2i1_i8(i8 %index, i8 %TC) {
   ret <2 x i1> %active.lane.mask
 }
 
+define <vscale x 4 x i1> @lane_mask_nxv4i1_imm3() {
+; CHECK-LABEL: lane_mask_nxv4i1_imm3:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s, vl3
+; CHECK-NEXT:    ret
+entry:
+  %active.lane.mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 3)
+  ret <vscale x 4 x i1> %active.lane.mask
+}
+
+define <vscale x 4 x i1> @lane_mask_nxv4i1_imm5() {
+; CHECK-LABEL: lane_mask_nxv4i1_imm5:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #5
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    ret
+entry:
+  %active.lane.mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 5)
+  ret <vscale x 4 x i1> %active.lane.mask
+}
+
+define <vscale x 4 x i1> @lane_mask_nxv4i1_imm4() {
+; CHECK-LABEL: lane_mask_nxv4i1_imm4:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ret
+entry:
+  %active.lane.mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 10, i64 14)
+  ret <vscale x 4 x i1> %active.lane.mask
+}
+
+define <vscale x 16 x i1> @lane_mask_nxv16i1_imm10() {
+; CHECK-LABEL: lane_mask_nxv16i1_imm10:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #10
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    ret
+entry:
+  %active.lane.mask = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 10)
+  ret <vscale x 16 x i1> %active.lane.mask
+}
+
+define <vscale x 16 x i1> @lane_mask_nxv16i1_imm256() vscale_range(16, 16) {
+; CHECK-LABEL: lane_mask_nxv16i1_imm256:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.b, vl256
+; CHECK-NEXT:    ret
+entry:
+  %active.lane.mask = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 256)
+  ret <vscale x 16 x i1> %active.lane.mask
+}
+
 
 declare <vscale x 32 x i1> @llvm.get.active.lane.mask.nxv32i1.i32(i32, i32)
 declare <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32, i32)

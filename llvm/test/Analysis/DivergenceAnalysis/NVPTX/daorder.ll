@@ -44,4 +44,4 @@ declare i32 @llvm.nvvm.read.ptx.sreg.tid.z()
 declare i32 @llvm.nvvm.read.ptx.sreg.laneid()
 
 !nvvm.annotations = !{!0}
-!0 = !{i32 (i32)* @daorder, !"kernel", i32 1}
+!0 = !{ptr @daorder, !"kernel", i32 1}

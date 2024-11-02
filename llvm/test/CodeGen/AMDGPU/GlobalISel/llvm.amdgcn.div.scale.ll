@@ -5,7 +5,7 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
 
 
-define amdgpu_kernel void @test_div_scale_f32_1(float addrspace(1)* %out, float addrspace(1)* %in) {
+define amdgpu_kernel void @test_div_scale_f32_1(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX7-LABEL: test_div_scale_f32_1:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -75,19 +75,19 @@ define amdgpu_kernel void @test_div_scale_f32_1(float addrspace(1)* %out, float 
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
 
-  %a = load volatile float, float addrspace(1)* %gep.0, align 4
-  %b = load volatile float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, ptr addrspace(1) %gep.0, align 4
+  %b = load volatile float, ptr addrspace(1) %gep.1, align 4
 
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float %a, float %b, i1 false)
   %result0 = extractvalue { float, i1 } %result, 0
-  store float %result0, float addrspace(1)* %out, align 4
+  store float %result0, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f32_2(float addrspace(1)* %out, float addrspace(1)* %in) {
+define amdgpu_kernel void @test_div_scale_f32_2(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX7-LABEL: test_div_scale_f32_2:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -157,19 +157,19 @@ define amdgpu_kernel void @test_div_scale_f32_2(float addrspace(1)* %out, float 
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
 
-  %a = load volatile float, float addrspace(1)* %gep.0, align 4
-  %b = load volatile float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, ptr addrspace(1) %gep.0, align 4
+  %b = load volatile float, ptr addrspace(1) %gep.1, align 4
 
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float %a, float %b, i1 true)
   %result0 = extractvalue { float, i1 } %result, 0
-  store float %result0, float addrspace(1)* %out, align 4
+  store float %result0, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f64_1(double addrspace(1)* %out, double addrspace(1)* %aptr, double addrspace(1)* %in) {
+define amdgpu_kernel void @test_div_scale_f64_1(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %in) {
 ; GFX7-LABEL: test_div_scale_f64_1:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xd
@@ -245,19 +245,19 @@ define amdgpu_kernel void @test_div_scale_f64_1(double addrspace(1)* %out, doubl
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
+  %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
 
-  %a = load volatile double, double addrspace(1)* %gep.0, align 8
-  %b = load volatile double, double addrspace(1)* %gep.1, align 8
+  %a = load volatile double, ptr addrspace(1) %gep.0, align 8
+  %b = load volatile double, ptr addrspace(1) %gep.1, align 8
 
   %result = call { double, i1 } @llvm.amdgcn.div.scale.f64(double %a, double %b, i1 false)
   %result0 = extractvalue { double, i1 } %result, 0
-  store double %result0, double addrspace(1)* %out, align 8
+  store double %result0, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f64_2(double addrspace(1)* %out, double addrspace(1)* %aptr, double addrspace(1)* %in) {
+define amdgpu_kernel void @test_div_scale_f64_2(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %in) {
 ; GFX7-LABEL: test_div_scale_f64_2:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xd
@@ -333,19 +333,19 @@ define amdgpu_kernel void @test_div_scale_f64_2(double addrspace(1)* %out, doubl
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
+  %gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr double, ptr addrspace(1) %gep.0, i32 1
 
-  %a = load volatile double, double addrspace(1)* %gep.0, align 8
-  %b = load volatile double, double addrspace(1)* %gep.1, align 8
+  %a = load volatile double, ptr addrspace(1) %gep.0, align 8
+  %b = load volatile double, ptr addrspace(1) %gep.1, align 8
 
   %result = call { double, i1 } @llvm.amdgcn.div.scale.f64(double %a, double %b, i1 true)
   %result0 = extractvalue { double, i1 } %result, 0
-  store double %result0, double addrspace(1)* %out, align 8
+  store double %result0, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f32_scalar_num_1(float addrspace(1)* %out, float addrspace(1)* %in, [8 x i32], float %a) {
+define amdgpu_kernel void @test_div_scale_f32_scalar_num_1(ptr addrspace(1) %out, ptr addrspace(1) %in, [8 x i32], float %a) {
 ; GFX7-LABEL: test_div_scale_f32_scalar_num_1:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -408,17 +408,17 @@ define amdgpu_kernel void @test_div_scale_f32_scalar_num_1(float addrspace(1)* %
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr float, float addrspace(1)* %in, i32 %tid
+  %gep = getelementptr float, ptr addrspace(1) %in, i32 %tid
 
-  %b = load float, float addrspace(1)* %gep, align 4
+  %b = load float, ptr addrspace(1) %gep, align 4
 
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float %a, float %b, i1 false)
   %result0 = extractvalue { float, i1 } %result, 0
-  store float %result0, float addrspace(1)* %out, align 4
+  store float %result0, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f32_scalar_num_2(float addrspace(1)* %out, float addrspace(1)* %in, float %a) {
+define amdgpu_kernel void @test_div_scale_f32_scalar_num_2(ptr addrspace(1) %out, ptr addrspace(1) %in, float %a) {
 ; GFX7-LABEL: test_div_scale_f32_scalar_num_2:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -481,17 +481,17 @@ define amdgpu_kernel void @test_div_scale_f32_scalar_num_2(float addrspace(1)* %
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr float, float addrspace(1)* %in, i32 %tid
+  %gep = getelementptr float, ptr addrspace(1) %in, i32 %tid
 
-  %b = load float, float addrspace(1)* %gep, align 4
+  %b = load float, ptr addrspace(1) %gep, align 4
 
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float %a, float %b, i1 true)
   %result0 = extractvalue { float, i1 } %result, 0
-  store float %result0, float addrspace(1)* %out, align 4
+  store float %result0, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f32_scalar_den_1(float addrspace(1)* %out, float addrspace(1)* %in, float %b) {
+define amdgpu_kernel void @test_div_scale_f32_scalar_den_1(ptr addrspace(1) %out, ptr addrspace(1) %in, float %b) {
 ; GFX7-LABEL: test_div_scale_f32_scalar_den_1:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -554,17 +554,17 @@ define amdgpu_kernel void @test_div_scale_f32_scalar_den_1(float addrspace(1)* %
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr float, float addrspace(1)* %in, i32 %tid
+  %gep = getelementptr float, ptr addrspace(1) %in, i32 %tid
 
-  %a = load float, float addrspace(1)* %gep, align 4
+  %a = load float, ptr addrspace(1) %gep, align 4
 
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float %a, float %b, i1 false)
   %result0 = extractvalue { float, i1 } %result, 0
-  store float %result0, float addrspace(1)* %out, align 4
+  store float %result0, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f32_scalar_den_2(float addrspace(1)* %out, float addrspace(1)* %in, float %b) {
+define amdgpu_kernel void @test_div_scale_f32_scalar_den_2(ptr addrspace(1) %out, ptr addrspace(1) %in, float %b) {
 ; GFX7-LABEL: test_div_scale_f32_scalar_den_2:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -627,17 +627,17 @@ define amdgpu_kernel void @test_div_scale_f32_scalar_den_2(float addrspace(1)* %
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr float, float addrspace(1)* %in, i32 %tid
+  %gep = getelementptr float, ptr addrspace(1) %in, i32 %tid
 
-  %a = load float, float addrspace(1)* %gep, align 4
+  %a = load float, ptr addrspace(1) %gep, align 4
 
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float %a, float %b, i1 true)
   %result0 = extractvalue { float, i1 } %result, 0
-  store float %result0, float addrspace(1)* %out, align 4
+  store float %result0, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f64_scalar_num_1(double addrspace(1)* %out, double addrspace(1)* %in, [8 x i32], double %a) {
+define amdgpu_kernel void @test_div_scale_f64_scalar_num_1(ptr addrspace(1) %out, ptr addrspace(1) %in, [8 x i32], double %a) {
 ; GFX7-LABEL: test_div_scale_f64_scalar_num_1:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -701,17 +701,17 @@ define amdgpu_kernel void @test_div_scale_f64_scalar_num_1(double addrspace(1)* 
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr double, double addrspace(1)* %in, i32 %tid
+  %gep = getelementptr double, ptr addrspace(1) %in, i32 %tid
 
-  %b = load double, double addrspace(1)* %gep, align 8
+  %b = load double, ptr addrspace(1) %gep, align 8
 
   %result = call { double, i1 } @llvm.amdgcn.div.scale.f64(double %a, double %b, i1 false)
   %result0 = extractvalue { double, i1 } %result, 0
-  store double %result0, double addrspace(1)* %out, align 8
+  store double %result0, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f64_scalar_num_2(double addrspace(1)* %out, double addrspace(1)* %in, [8 x i32],  double %a) {
+define amdgpu_kernel void @test_div_scale_f64_scalar_num_2(ptr addrspace(1) %out, ptr addrspace(1) %in, [8 x i32],  double %a) {
 ; GFX7-LABEL: test_div_scale_f64_scalar_num_2:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -775,17 +775,17 @@ define amdgpu_kernel void @test_div_scale_f64_scalar_num_2(double addrspace(1)* 
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr double, double addrspace(1)* %in, i32 %tid
+  %gep = getelementptr double, ptr addrspace(1) %in, i32 %tid
 
-  %b = load double, double addrspace(1)* %gep, align 8
+  %b = load double, ptr addrspace(1) %gep, align 8
 
   %result = call { double, i1 } @llvm.amdgcn.div.scale.f64(double %a, double %b, i1 true)
   %result0 = extractvalue { double, i1 } %result, 0
-  store double %result0, double addrspace(1)* %out, align 8
+  store double %result0, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f64_scalar_den_1(double addrspace(1)* %out, double addrspace(1)* %in, [8 x i32], double %b) {
+define amdgpu_kernel void @test_div_scale_f64_scalar_den_1(ptr addrspace(1) %out, ptr addrspace(1) %in, [8 x i32], double %b) {
 ; GFX7-LABEL: test_div_scale_f64_scalar_den_1:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -849,17 +849,17 @@ define amdgpu_kernel void @test_div_scale_f64_scalar_den_1(double addrspace(1)* 
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr double, double addrspace(1)* %in, i32 %tid
+  %gep = getelementptr double, ptr addrspace(1) %in, i32 %tid
 
-  %a = load double, double addrspace(1)* %gep, align 8
+  %a = load double, ptr addrspace(1) %gep, align 8
 
   %result = call { double, i1 } @llvm.amdgcn.div.scale.f64(double %a, double %b, i1 false)
   %result0 = extractvalue { double, i1 } %result, 0
-  store double %result0, double addrspace(1)* %out, align 8
+  store double %result0, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f64_scalar_den_2(double addrspace(1)* %out, double addrspace(1)* %in, [8 x i32], double %b) {
+define amdgpu_kernel void @test_div_scale_f64_scalar_den_2(ptr addrspace(1) %out, ptr addrspace(1) %in, [8 x i32], double %b) {
 ; GFX7-LABEL: test_div_scale_f64_scalar_den_2:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -923,17 +923,17 @@ define amdgpu_kernel void @test_div_scale_f64_scalar_den_2(double addrspace(1)* 
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr double, double addrspace(1)* %in, i32 %tid
+  %gep = getelementptr double, ptr addrspace(1) %in, i32 %tid
 
-  %a = load double, double addrspace(1)* %gep, align 8
+  %a = load double, ptr addrspace(1) %gep, align 8
 
   %result = call { double, i1 } @llvm.amdgcn.div.scale.f64(double %a, double %b, i1 true)
   %result0 = extractvalue { double, i1 } %result, 0
-  store double %result0, double addrspace(1)* %out, align 8
+  store double %result0, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f32_all_scalar_1(float addrspace(1)* %out, [8 x i32], float %a, [8 x i32], float %b) {
+define amdgpu_kernel void @test_div_scale_f32_all_scalar_1(ptr addrspace(1) %out, [8 x i32], float %a, [8 x i32], float %b) {
 ; GFX7-LABEL: test_div_scale_f32_all_scalar_1:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dword s3, s[0:1], 0x1c
@@ -986,11 +986,11 @@ define amdgpu_kernel void @test_div_scale_f32_all_scalar_1(float addrspace(1)* %
 ; GFX11-NEXT:    s_endpgm
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float %a, float %b, i1 false)
   %result0 = extractvalue { float, i1 } %result, 0
-  store float %result0, float addrspace(1)* %out, align 4
+  store float %result0, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f32_all_scalar_2(float addrspace(1)* %out, [8 x i32], float %a, [8 x i32], float %b) {
+define amdgpu_kernel void @test_div_scale_f32_all_scalar_2(ptr addrspace(1) %out, [8 x i32], float %a, [8 x i32], float %b) {
 ; GFX7-LABEL: test_div_scale_f32_all_scalar_2:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dword s3, s[0:1], 0x1c
@@ -1043,11 +1043,11 @@ define amdgpu_kernel void @test_div_scale_f32_all_scalar_2(float addrspace(1)* %
 ; GFX11-NEXT:    s_endpgm
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float %a, float %b, i1 true)
   %result0 = extractvalue { float, i1 } %result, 0
-  store float %result0, float addrspace(1)* %out, align 4
+  store float %result0, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f64_all_scalar_1(double addrspace(1)* %out, [8 x i32], double %a, [8 x i32], double %b) {
+define amdgpu_kernel void @test_div_scale_f64_all_scalar_1(ptr addrspace(1) %out, [8 x i32], double %a, [8 x i32], double %b) {
 ; GFX7-LABEL: test_div_scale_f64_all_scalar_1:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x1d
@@ -1102,11 +1102,11 @@ define amdgpu_kernel void @test_div_scale_f64_all_scalar_1(double addrspace(1)* 
 ; GFX11-NEXT:    s_endpgm
   %result = call { double, i1 } @llvm.amdgcn.div.scale.f64(double %a, double %b, i1 false)
   %result0 = extractvalue { double, i1 } %result, 0
-  store double %result0, double addrspace(1)* %out, align 8
+  store double %result0, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f64_all_scalar_2(double addrspace(1)* %out, [8 x i32], double %a, [8 x i32], double %b) {
+define amdgpu_kernel void @test_div_scale_f64_all_scalar_2(ptr addrspace(1) %out, [8 x i32], double %a, [8 x i32], double %b) {
 ; GFX7-LABEL: test_div_scale_f64_all_scalar_2:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x1d
@@ -1161,11 +1161,11 @@ define amdgpu_kernel void @test_div_scale_f64_all_scalar_2(double addrspace(1)* 
 ; GFX11-NEXT:    s_endpgm
   %result = call { double, i1 } @llvm.amdgcn.div.scale.f64(double %a, double %b, i1 true)
   %result0 = extractvalue { double, i1 } %result, 0
-  store double %result0, double addrspace(1)* %out, align 8
+  store double %result0, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f32_inline_imm_num(float addrspace(1)* %out, float addrspace(1)* %in) {
+define amdgpu_kernel void @test_div_scale_f32_inline_imm_num(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX7-LABEL: test_div_scale_f32_inline_imm_num:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1224,16 +1224,16 @@ define amdgpu_kernel void @test_div_scale_f32_inline_imm_num(float addrspace(1)*
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %a = load float, float addrspace(1)* %gep.0, align 4
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %a = load float, ptr addrspace(1) %gep.0, align 4
 
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float 1.0, float %a, i1 false)
   %result0 = extractvalue { float, i1 } %result, 0
-  store float %result0, float addrspace(1)* %out, align 4
+  store float %result0, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f32_inline_imm_den(float addrspace(1)* %out, float addrspace(1)* %in) {
+define amdgpu_kernel void @test_div_scale_f32_inline_imm_den(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX7-LABEL: test_div_scale_f32_inline_imm_den:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1292,16 +1292,16 @@ define amdgpu_kernel void @test_div_scale_f32_inline_imm_den(float addrspace(1)*
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %a = load float, float addrspace(1)* %gep.0, align 4
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %a = load float, ptr addrspace(1) %gep.0, align 4
 
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float %a, float 2.0, i1 false)
   %result0 = extractvalue { float, i1 } %result, 0
-  store float %result0, float addrspace(1)* %out, align 4
+  store float %result0, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f32_fabs_num(float addrspace(1)* %out, float addrspace(1)* %in) {
+define amdgpu_kernel void @test_div_scale_f32_fabs_num(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX7-LABEL: test_div_scale_f32_fabs_num:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1376,21 +1376,21 @@ define amdgpu_kernel void @test_div_scale_f32_fabs_num(float addrspace(1)* %out,
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
 
-  %a = load volatile float, float addrspace(1)* %gep.0, align 4
-  %b = load volatile float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, ptr addrspace(1) %gep.0, align 4
+  %b = load volatile float, ptr addrspace(1) %gep.1, align 4
 
   %a.fabs = call float @llvm.fabs.f32(float %a)
 
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float %a.fabs, float %b, i1 false)
   %result0 = extractvalue { float, i1 } %result, 0
-  store float %result0, float addrspace(1)* %out, align 4
+  store float %result0, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f32_fabs_den(float addrspace(1)* %out, float addrspace(1)* %in) {
+define amdgpu_kernel void @test_div_scale_f32_fabs_den(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX7-LABEL: test_div_scale_f32_fabs_den:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -1465,21 +1465,21 @@ define amdgpu_kernel void @test_div_scale_f32_fabs_den(float addrspace(1)* %out,
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
-  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
+  %gep.0 = getelementptr float, ptr addrspace(1) %in, i32 %tid
+  %gep.1 = getelementptr float, ptr addrspace(1) %gep.0, i32 1
 
-  %a = load volatile float, float addrspace(1)* %gep.0, align 4
-  %b = load volatile float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, ptr addrspace(1) %gep.0, align 4
+  %b = load volatile float, ptr addrspace(1) %gep.1, align 4
 
   %b.fabs = call float @llvm.fabs.f32(float %b)
 
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float %a, float %b.fabs, i1 false)
   %result0 = extractvalue { float, i1 } %result, 0
-  store float %result0, float addrspace(1)* %out, align 4
+  store float %result0, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f32_val_undef_val(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test_div_scale_f32_val_undef_val(ptr addrspace(1) %out) #0 {
 ; GFX7-LABEL: test_div_scale_f32_val_undef_val:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1522,11 +1522,11 @@ define amdgpu_kernel void @test_div_scale_f32_val_undef_val(float addrspace(1)* 
 ; GFX11-NEXT:    s_endpgm
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float 8.0, float undef, i1 false)
   %result0 = extractvalue { float, i1 } %result, 0
-  store float %result0, float addrspace(1)* %out, align 4
+  store float %result0, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f32_undef_val_val(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test_div_scale_f32_undef_val_val(ptr addrspace(1) %out) #0 {
 ; GFX7-LABEL: test_div_scale_f32_undef_val_val:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1569,11 +1569,11 @@ define amdgpu_kernel void @test_div_scale_f32_undef_val_val(float addrspace(1)* 
 ; GFX11-NEXT:    s_endpgm
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float undef, float 8.0, i1 false)
   %result0 = extractvalue { float, i1 } %result, 0
-  store float %result0, float addrspace(1)* %out, align 4
+  store float %result0, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f32_undef_undef_val(float addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test_div_scale_f32_undef_undef_val(ptr addrspace(1) %out) #0 {
 ; GFX7-LABEL: test_div_scale_f32_undef_undef_val:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1614,11 +1614,11 @@ define amdgpu_kernel void @test_div_scale_f32_undef_undef_val(float addrspace(1)
 ; GFX11-NEXT:    s_endpgm
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float undef, float undef, i1 false)
   %result0 = extractvalue { float, i1 } %result, 0
-  store float %result0, float addrspace(1)* %out, align 4
+  store float %result0, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_div_scale_f64_val_undef_val(double addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test_div_scale_f64_val_undef_val(ptr addrspace(1) %out) #0 {
 ; GFX7-LABEL: test_div_scale_f64_val_undef_val:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -1667,7 +1667,7 @@ define amdgpu_kernel void @test_div_scale_f64_val_undef_val(double addrspace(1)*
 ; GFX11-NEXT:    s_endpgm
   %result = call { double, i1 } @llvm.amdgcn.div.scale.f64(double 8.0, double undef, i1 false)
   %result0 = extractvalue { double, i1 } %result, 0
-  store double %result0, double addrspace(1)* %out, align 8
+  store double %result0, ptr addrspace(1) %out, align 8
   ret void
 }
 

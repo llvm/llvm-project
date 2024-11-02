@@ -1,4 +1,4 @@
-; RUN: opt -jump-threading -S -verify < %s | FileCheck %s
+; RUN: opt -S -passes=jump-threading,verify < %s | FileCheck %s
 
 declare i32 @f1()
 declare i32 @f2()
@@ -56,7 +56,7 @@ L2:
 ; CHECK: L3:
 define void @test_br_folding_not_threading(i1 %cond) nounwind {
 entry:
-  br i1 %cond, label %L0, label %L3 
+  br i1 %cond, label %L0, label %L3
 L0:
   call i32 @f2()
   call i32 @f2()
@@ -71,7 +71,7 @@ L0:
   call i32 @f2()
   call i32 @f2()
   call i32 @f2()
-  br i1 %cond, label %L1, label %L2 
+  br i1 %cond, label %L1, label %L2
 
 L1:
   call void @f3()
@@ -101,10 +101,10 @@ entry:
   br i1 %condx, label %X0, label %X1
 
 X0:
-  br i1 %cond, label %L0, label %L3 
+  br i1 %cond, label %L0, label %L3
 
 X1:
-  br i1 %cond, label %L0, label %L3 
+  br i1 %cond, label %L0, label %L3
 
 L0:
   call i32 @f2()
@@ -120,7 +120,7 @@ L0:
   call i32 @f2()
   call i32 @f2()
   call i32 @f2()
-  br i1 %cond, label %L1, label %L2 
+  br i1 %cond, label %L1, label %L2
 
 L1:
   call void @f3()
@@ -140,7 +140,7 @@ L3:
 define void @rauw_if_possible(i32 %value) nounwind {
 entry:
   %cmp = icmp eq i32 %value, 32
-  br i1 %cmp, label %L0, label %L3 
+  br i1 %cmp, label %L0, label %L3
 L0:
   call i32 @f2()
   call i32 @f2()
@@ -164,12 +164,12 @@ L3:
 ; Make sure we can NOT do the RAUW for %add...
 ;
 ; CHECK-LABEL: @rauw_if_possible2(
-; CHECK: call void @f4(i32 %add) 
+; CHECK: call void @f4(i32 %add)
 define void @rauw_if_possible2(i32 %value) nounwind {
 entry:
   %cmp = icmp eq i32 %value, 32
   %add = add i32 %value, 64
-  br i1 %cmp, label %L0, label %L2 
+  br i1 %cmp, label %L0, label %L2
 L0:
   call i32 @f2()
   call i32 @f2()
@@ -195,7 +195,7 @@ L3:
 ; its target after L0 into account and that enables us to fold.
 ;
 ; L2 is the unreachable block here.
-; 
+;
 ; CHECK-LABEL: @test_br_folding_not_threading_indirect_branch(
 ; CHECK: L1:
 ; CHECK: call i32 @f2()
@@ -214,7 +214,7 @@ X1:
   br i1 %cond, label %XX1, label %L3
 
 XX1:
-  indirectbr i8* blockaddress(@test_br_folding_not_threading_indirect_branch, %L0), [label %L0]
+  indirectbr ptr blockaddress(@test_br_folding_not_threading_indirect_branch, %L0), [label %L0]
 
 L0:
   call i32 @f2()

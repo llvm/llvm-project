@@ -19,6 +19,7 @@
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/Pass.h"
 #include <memory>
+#include <optional>
 
 namespace llvm {
 class BasicBlock;
@@ -42,15 +43,15 @@ private:
   std::unique_ptr<ProfileSummary> Summary;
   void computeThresholds();
   // Count thresholds to answer isHotCount and isColdCount queries.
-  Optional<uint64_t> HotCountThreshold, ColdCountThreshold;
+  std::optional<uint64_t> HotCountThreshold, ColdCountThreshold;
   // True if the working set size of the code is considered huge,
   // because the number of profile counts required to reach the hot
   // percentile is above a huge threshold.
-  Optional<bool> HasHugeWorkingSetSize;
+  std::optional<bool> HasHugeWorkingSetSize;
   // True if the working set size of the code is considered large,
   // because the number of profile counts required to reach the hot
   // percentile is above a large threshold.
-  Optional<bool> HasLargeWorkingSetSize;
+  std::optional<bool> HasLargeWorkingSetSize;
   // Compute the threshold for a given cutoff.
   Optional<uint64_t> computeThreshold(int PercentileCutoff) const;
   // The map that caches the threshold values. The keys are the percentile

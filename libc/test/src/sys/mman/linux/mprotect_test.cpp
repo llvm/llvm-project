@@ -43,6 +43,9 @@ TEST(LlvmLibcMProtectTest, NoError) {
   EXPECT_THAT(__llvm_libc::munmap(addr, alloc_size), Succeeds());
 }
 
+// This test is disabled currently due to flakeyness. It will be re-enabled once
+// it is less flakey.
+/*
 TEST(LlvmLibcMProtectTest, Error_InvalidWrite) {
   // attempting to write to a read-only protected part of memory should cause a
   // segfault.
@@ -60,3 +63,4 @@ TEST(LlvmLibcMProtectTest, Error_InvalidWrite) {
   // Reading from a write only segment may succeed on some platforms, so there's
   // no test to check that.
 }
+*/

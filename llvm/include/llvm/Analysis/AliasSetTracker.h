@@ -11,6 +11,8 @@
 // of disjoint sets. Each AliasSet object constructed by the AliasSetTracker
 // object refers to memory disjoint from the other sets.
 //
+// An AliasSetTracker can only be used on immutable IR.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ANALYSIS_ALIASSETTRACKER_H
@@ -141,10 +143,7 @@ class AliasSet : public ilist_node<AliasSet> {
   AliasSet *Forward = nullptr;
 
   /// All instructions without a specific address in this alias set.
-  /// In rare cases this vector can have a null'ed out WeakVH
-  /// instances (can happen if some other loop pass deletes an
-  /// instruction in this list).
-  std::vector<WeakVH> UnknownInsts;
+  std::vector<AssertingVH<Instruction>> UnknownInsts;
 
   /// Number of nodes pointing to this AliasSet plus the number of AliasSets
   /// forwarding to it.
@@ -187,11 +186,6 @@ class AliasSet : public ilist_node<AliasSet> {
     assert(RefCount >= 1 && "Invalid reference count detected!");
     if (--RefCount == 0)
       removeFromTracker(AST);
-  }
-
-  Instruction *getUnknownInst(unsigned i) const {
-    assert(i < UnknownInsts.size());
-    return cast_or_null<Instruction>(UnknownInsts[i]);
   }
 
 public:
@@ -295,18 +289,6 @@ private:
                   bool SkipSizeUpdate = false);
   void addUnknownInst(Instruction *I, AAResults &AA);
 
-  void removeUnknownInst(AliasSetTracker &AST, Instruction *I) {
-    bool WasEmpty = UnknownInsts.empty();
-    for (size_t i = 0, e = UnknownInsts.size(); i != e; ++i)
-      if (UnknownInsts[i] == I) {
-        UnknownInsts[i] = UnknownInsts.back();
-        UnknownInsts.pop_back();
-        --i; --e;  // Revisit the moved entry.
-      }
-    if (!WasEmpty && UnknownInsts.empty())
-      dropRef(AST);
-  }
-
 public:
   /// If the specified pointer "may" (or must) alias one of the members in the
   /// set return the appropriate AliasResult. Otherwise return NoAlias.
@@ -321,28 +303,10 @@ inline raw_ostream& operator<<(raw_ostream &OS, const AliasSet &AS) {
 }
 
 class AliasSetTracker {
-  /// A CallbackVH to arrange for AliasSetTracker to be notified whenever a
-  /// Value is deleted.
-  class ASTCallbackVH final : public CallbackVH {
-    AliasSetTracker *AST;
-
-    void deleted() override;
-    void allUsesReplacedWith(Value *) override;
-
-  public:
-    ASTCallbackVH(Value *V, AliasSetTracker *AST = nullptr);
-
-    ASTCallbackVH &operator=(Value *V);
-  };
-  /// Traits to tell DenseMap that tell us how to compare and hash the value
-  /// handle.
-  struct ASTCallbackVHDenseMapInfo : public DenseMapInfo<Value *> {};
-
   AAResults &AA;
   ilist<AliasSet> AliasSets;
 
-  using PointerMapType = DenseMap<ASTCallbackVH, AliasSet::PointerRec *,
-                                  ASTCallbackVHDenseMapInfo>;
+  using PointerMapType = DenseMap<AssertingVH<Value>, AliasSet::PointerRec *>;
 
   // Map from pointers to their node
   PointerMapType PointerMap;
@@ -390,18 +354,6 @@ public:
   /// Return the underlying alias analysis object used by this tracker.
   AAResults &getAliasAnalysis() const { return AA; }
 
-  /// This method is used to remove a pointer value from the AliasSetTracker
-  /// entirely. It should be used when an instruction is deleted from the
-  /// program to update the AST. If you don't use this, you would have dangling
-  /// pointers to deleted instructions.
-  void deleteValue(Value *PtrVal);
-
-  /// This method should be used whenever a preexisting value in the program is
-  /// copied or cloned, introducing a new value.  Note that it is ok for clients
-  /// that use this method to introduce the same value multiple times: if the
-  /// tracker already knows about a value, it will ignore the request.
-  void copyValue(Value *From, Value *To);
-
   using iterator = ilist<AliasSet>::iterator;
   using const_iterator = ilist<AliasSet>::const_iterator;
 
@@ -429,7 +381,7 @@ private:
   /// Just like operator[] on the map, except that it creates an entry for the
   /// pointer if it doesn't already exist.
   AliasSet::PointerRec &getEntryFor(Value *V) {
-    AliasSet::PointerRec *&Entry = PointerMap[ASTCallbackVH(V, this)];
+    AliasSet::PointerRec *&Entry = PointerMap[V];
     if (!Entry)
       Entry = new AliasSet::PointerRec(V);
     return *Entry;

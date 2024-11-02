@@ -1063,7 +1063,7 @@ public:
     __remove_return_type remove(const value_type& __x);
     template <class _Pred> __remove_return_type remove_if(_Pred __pred);
     _LIBCPP_INLINE_VISIBILITY
-    __remove_return_type unique() { return unique(__equal_to<value_type>()); }
+    __remove_return_type unique() { return unique(__equal_to()); }
     template <class _BinaryPred>
         __remove_return_type unique(_BinaryPred __binary_pred);
     _LIBCPP_INLINE_VISIBILITY

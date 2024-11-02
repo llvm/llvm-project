@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
@@ -325,6 +326,81 @@ struct ConvertBitwiseBinary final : OpConversionPattern<BinaryOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertCmpI
+//===----------------------------------------------------------------------===//
+
+/// Returns the matching unsigned version of the given predicate `pred`, or the
+/// same predicate if `pred` is not a signed.
+static arith::CmpIPredicate toUnsignedPredicate(arith::CmpIPredicate pred) {
+  using P = arith::CmpIPredicate;
+  switch (pred) {
+  case P::sge:
+    return P::uge;
+  case P::sgt:
+    return P::ugt;
+  case P::sle:
+    return P::ule;
+  case P::slt:
+    return P::ult;
+  default:
+    return pred;
+  }
+}
+
+struct ConvertCmpI final : OpConversionPattern<arith::CmpIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::CmpIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    auto inputTy = getTypeConverter()
+                       ->convertType(op.getLhs().getType())
+                       .dyn_cast_or_null<VectorType>();
+    if (!inputTy)
+      return rewriter.notifyMatchFailure(
+          loc, llvm::formatv("unsupported type: {0}", op.getType()));
+
+    arith::CmpIPredicate highPred = adaptor.getPredicate();
+    arith::CmpIPredicate lowPred = toUnsignedPredicate(highPred);
+
+    auto [lhsElem0, lhsElem1] =
+        extractLastDimHalves(rewriter, loc, adaptor.getLhs());
+    auto [rhsElem0, rhsElem1] =
+        extractLastDimHalves(rewriter, loc, adaptor.getRhs());
+
+    Value lowCmp =
+        rewriter.create<arith::CmpIOp>(loc, lowPred, lhsElem0, rhsElem0);
+    Value highCmp =
+        rewriter.create<arith::CmpIOp>(loc, highPred, lhsElem1, rhsElem1);
+
+    Value cmpResult{};
+    switch (highPred) {
+    case arith::CmpIPredicate::eq: {
+      cmpResult = rewriter.create<arith::AndIOp>(loc, lowCmp, highCmp);
+      break;
+    }
+    case arith::CmpIPredicate::ne: {
+      cmpResult = rewriter.create<arith::OrIOp>(loc, lowCmp, highCmp);
+      break;
+    }
+    default: {
+      // Handle inequality checks.
+      Value highEq = rewriter.create<arith::CmpIOp>(
+          loc, arith::CmpIPredicate::eq, lhsElem1, rhsElem1);
+      cmpResult =
+          rewriter.create<arith::SelectOp>(loc, highEq, lowCmp, highCmp);
+      break;
+    }
+    }
+
+    assert(cmpResult && "Unhandled case");
+    rewriter.replaceOp(op, dropTrailingX1Dim(rewriter, loc, cmpResult));
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ConvertMulI
 //===----------------------------------------------------------------------===//
 
@@ -487,6 +563,117 @@ struct ConvertExtUI final : OpConversionPattern<arith::ExtUIOp> {
     Value zeroCst = createScalarOrSplatConstant(rewriter, loc, newTy, 0);
     Value newRes = insertLastDimSlice(rewriter, loc, extended, zeroCst, 0);
     rewriter.replaceOp(op, newRes);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// ConvertMaxMin
+//===----------------------------------------------------------------------===//
+
+template <typename SourceOp, arith::CmpIPredicate CmpPred>
+struct ConvertMaxMin final : OpConversionPattern<SourceOp> {
+  using OpConversionPattern<SourceOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+
+    Type oldTy = op.getType();
+    auto newTy = this->getTypeConverter()
+                     ->convertType(oldTy)
+                     .template dyn_cast_or_null<VectorType>();
+    if (!newTy)
+      return rewriter.notifyMatchFailure(
+          loc, llvm::formatv("unsupported type: {0}", op.getType()));
+
+    // Rewrite Max*I/Min*I as compare and select over original operands. Let
+    // the CmpI and Select emulation patterns handle the final legalization.
+    Value cmp =
+        rewriter.create<arith::CmpIOp>(loc, CmpPred, op.getLhs(), op.getRhs());
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, cmp, op.getLhs(),
+                                                 op.getRhs());
+    return success();
+  }
+};
+
+// Convert IndexCast ops
+//===----------------------------------------------------------------------===//
+
+/// Returns true iff the type is `index` or `vector<...index>`.
+static bool isIndexOrIndexVector(Type type) {
+  if (type.isa<IndexType>())
+    return true;
+
+  if (auto vectorTy = type.dyn_cast<VectorType>())
+    if (vectorTy.getElementType().isa<IndexType>())
+      return true;
+
+  return false;
+}
+
+template <typename CastOp>
+struct ConvertIndexCastIntToIndex final : OpConversionPattern<CastOp> {
+  using OpConversionPattern<CastOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(CastOp op, typename CastOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type resultType = op.getType();
+    if (!isIndexOrIndexVector(resultType))
+      return failure();
+
+    Location loc = op.getLoc();
+    Type inType = op.getIn().getType();
+    auto newInTy = this->getTypeConverter()
+                       ->convertType(inType)
+                       .template dyn_cast_or_null<VectorType>();
+    if (!newInTy)
+      return rewriter.notifyMatchFailure(
+          loc, llvm::formatv("unsupported type: {0}", inType));
+
+    // Discard the high half of the input truncating the original value.
+    Value extracted = extractLastDimSlice(rewriter, loc, adaptor.getIn(), 0);
+    extracted = dropTrailingX1Dim(rewriter, loc, extracted);
+    rewriter.replaceOpWithNewOp<CastOp>(op, resultType, extracted);
+    return success();
+  }
+};
+
+template <typename CastOp, typename ExtensionOp>
+struct ConvertIndexCastIndexToInt final : OpConversionPattern<CastOp> {
+  using OpConversionPattern<CastOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(CastOp op, typename CastOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type inType = op.getIn().getType();
+    if (!isIndexOrIndexVector(inType))
+      return failure();
+
+    Location loc = op.getLoc();
+    auto *typeConverter =
+        this->template getTypeConverter<arith::WideIntEmulationConverter>();
+
+    Type resultType = op.getType();
+    auto newTy = typeConverter->convertType(resultType)
+                     .template dyn_cast_or_null<VectorType>();
+    if (!newTy)
+      return rewriter.notifyMatchFailure(
+          loc, llvm::formatv("unsupported type: {0}", resultType));
+
+    // Emit an index cast over the matching narrow type.
+    Type narrowTy =
+        rewriter.getIntegerType(typeConverter->getMaxTargetIntBitWidth());
+    if (auto vecTy = resultType.dyn_cast<VectorType>())
+      narrowTy = VectorType::get(vecTy.getShape(), narrowTy);
+
+    // Sign or zero-extend the result. Let the matching conversion pattern
+    // legalize the extension op.
+    Value underlyingVal =
+        rewriter.create<CastOp>(loc, narrowTy, adaptor.getIn());
+    rewriter.replaceOpWithNewOp<ExtensionOp>(op, resultType, underlyingVal);
     return success();
   }
 };
@@ -707,6 +894,70 @@ struct ConvertShRUI final : OpConversionPattern<arith::ShRUIOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertShRSI
+//===----------------------------------------------------------------------===//
+
+struct ConvertShRSI final : OpConversionPattern<arith::ShRSIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::ShRSIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+
+    Type oldTy = op.getType();
+    auto newTy =
+        getTypeConverter()->convertType(oldTy).dyn_cast_or_null<VectorType>();
+    if (!newTy)
+      return rewriter.notifyMatchFailure(
+          loc, llvm::formatv("unsupported type: {0}", op.getType()));
+
+    Value lhsElem1 = extractLastDimSlice(rewriter, loc, adaptor.getLhs(), 1);
+    Value rhsElem0 = extractLastDimSlice(rewriter, loc, adaptor.getRhs(), 0);
+
+    Type narrowTy = rhsElem0.getType();
+    int64_t origBitwidth = newTy.getElementTypeBitWidth() * 2;
+
+    // Rewrite this as an bitwise or of `arith.shrui` and sign extension bits.
+    // Perform as many ops over the narrow integer type as possible and let the
+    // other emulation patterns convert the rest.
+    Value elemZero = createScalarOrSplatConstant(rewriter, loc, narrowTy, 0);
+    Value signBit = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::slt, lhsElem1, elemZero);
+    signBit = dropTrailingX1Dim(rewriter, loc, signBit);
+
+    // Create a bit pattern of either all ones or all zeros. Then shift it left
+    // to calculate the sign extension bits created by shifting the original
+    // sign bit right.
+    Value allSign = rewriter.create<arith::ExtSIOp>(loc, oldTy, signBit);
+    Value maxShift =
+        createScalarOrSplatConstant(rewriter, loc, narrowTy, origBitwidth);
+    Value numNonSignExtBits =
+        rewriter.create<arith::SubIOp>(loc, maxShift, rhsElem0);
+    numNonSignExtBits = dropTrailingX1Dim(rewriter, loc, numNonSignExtBits);
+    numNonSignExtBits =
+        rewriter.create<arith::ExtUIOp>(loc, oldTy, numNonSignExtBits);
+    Value signBits =
+        rewriter.create<arith::ShLIOp>(loc, allSign, numNonSignExtBits);
+
+    // Use original arguments to create the right shift.
+    Value shrui =
+        rewriter.create<arith::ShRUIOp>(loc, op.getLhs(), op.getRhs());
+    Value shrsi = rewriter.create<arith::OrIOp>(loc, shrui, signBits);
+
+    // Handle shifting by zero. This is necessary when the `signBits` shift is
+    // invalid.
+    Value isNoop = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
+                                                  rhsElem0, elemZero);
+    isNoop = dropTrailingX1Dim(rewriter, loc, isNoop);
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, isNoop, op.getLhs(),
+                                                 shrsi);
+
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ConvertTruncI
 //===----------------------------------------------------------------------===//
 
@@ -724,7 +975,8 @@ struct ConvertTruncI final : OpConversionPattern<arith::TruncIOp> {
           loc, llvm::formatv("unsupported truncation result type: {0}",
                              op.getType()));
 
-    // Discard the high half of the input. Truncate the low half, if necessary.
+    // Discard the high half of the input. Truncate the low half, if
+    // necessary.
     Value extracted = extractLastDimSlice(rewriter, loc, adaptor.getIn(), 0);
     extracted = dropTrailingX1Dim(rewriter, loc, extracted);
     Value truncated =
@@ -863,13 +1115,22 @@ void arith::populateArithWideIntEmulationPatterns(
   // Populate `arith.*` conversion patterns.
   patterns.add<
       // Misc ops.
-      ConvertConstant, ConvertVectorPrint, ConvertSelect,
+      ConvertConstant, ConvertCmpI, ConvertSelect, ConvertVectorPrint,
       // Binary ops.
-      ConvertAddI, ConvertMulI, ConvertShLI, ConvertShRUI,
+      ConvertAddI, ConvertMulI, ConvertShLI, ConvertShRSI, ConvertShRUI,
+      ConvertMaxMin<arith::MaxUIOp, arith::CmpIPredicate::ugt>,
+      ConvertMaxMin<arith::MaxSIOp, arith::CmpIPredicate::sgt>,
+      ConvertMaxMin<arith::MinUIOp, arith::CmpIPredicate::ult>,
+      ConvertMaxMin<arith::MinSIOp, arith::CmpIPredicate::slt>,
       // Bitwise binary ops.
       ConvertBitwiseBinary<arith::AndIOp>, ConvertBitwiseBinary<arith::OrIOp>,
       ConvertBitwiseBinary<arith::XOrIOp>,
       // Extension and truncation ops.
-      ConvertExtSI, ConvertExtUI, ConvertTruncI>(typeConverter,
-                                                 patterns.getContext());
+      ConvertExtSI, ConvertExtUI, ConvertTruncI,
+      // Cast ops.
+      ConvertIndexCastIntToIndex<arith::IndexCastOp>,
+      ConvertIndexCastIntToIndex<arith::IndexCastUIOp>,
+      ConvertIndexCastIndexToInt<arith::IndexCastOp, arith::ExtSIOp>,
+      ConvertIndexCastIndexToInt<arith::IndexCastUIOp, arith::ExtUIOp>>(
+      typeConverter, patterns.getContext());
 }

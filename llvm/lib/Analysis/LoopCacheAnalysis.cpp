@@ -196,7 +196,7 @@ Optional<bool> IndexedReference::hasSpacialReuse(const IndexedReference &Other,
                << "No spacial reuse, difference between subscript:\n\t"
                << *LastSubscript << "\n\t" << OtherLastSubscript
                << "\nis not constant.\n");
-    return None;
+    return std::nullopt;
   }
 
   bool InSameCacheLine = (Diff->getValue()->getSExtValue() < CLS);
@@ -248,7 +248,7 @@ Optional<bool> IndexedReference::hasTemporalReuse(const IndexedReference &Other,
 
     if (SCEVConst == nullptr) {
       LLVM_DEBUG(dbgs().indent(2) << "No temporal reuse: distance unknown\n");
-      return None;
+      return std::nullopt;
     }
 
     const ConstantInt &CI = *SCEVConst->getValue();
@@ -558,9 +558,8 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const CacheCost &CC) {
 CacheCost::CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
                      ScalarEvolution &SE, TargetTransformInfo &TTI,
                      AAResults &AA, DependenceInfo &DI, Optional<unsigned> TRT)
-    : Loops(Loops),
-      TRT((TRT == None) ? Optional<unsigned>(TemporalReuseThreshold) : TRT),
-      LI(LI), SE(SE), TTI(TTI), AA(AA), DI(DI) {
+    : Loops(Loops), TRT(TRT.value_or(TemporalReuseThreshold)), LI(LI), SE(SE),
+      TTI(TTI), AA(AA), DI(DI) {
   assert(!Loops.empty() && "Expecting a non-empty loop vector.");
 
   for (const Loop *L : Loops) {

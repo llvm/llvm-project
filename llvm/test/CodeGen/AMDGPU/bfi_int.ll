@@ -8,7 +8,7 @@
 ; BFI_INT Definition pattern from ISA docs
 ; (y & x) | (z & ~x)
 ;
-define amdgpu_kernel void @s_bfi_def_i32(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %z) {
+define amdgpu_kernel void @s_bfi_def_i32(ptr addrspace(1) %out, i32 %x, i32 %y, i32 %z) {
 ; GFX7-LABEL: s_bfi_def_i32:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -85,7 +85,7 @@ entry:
   %1 = and i32 %z, %0
   %2 = and i32 %y, %x
   %3 = or i32 %1, %2
-  store i32 %3, i32 addrspace(1)* %out
+  store i32 %3, ptr addrspace(1) %out
   ret void
 }
 
@@ -131,7 +131,7 @@ entry:
 
 ; SHA-256 Ch function
 ; z ^ (x & (y ^ z))
-define amdgpu_kernel void @s_bfi_sha256_ch(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %z) {
+define amdgpu_kernel void @s_bfi_sha256_ch(ptr addrspace(1) %out, i32 %x, i32 %y, i32 %z) {
 ; GFX7-LABEL: s_bfi_sha256_ch:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -207,7 +207,7 @@ entry:
   %0 = xor i32 %y, %z
   %1 = and i32 %x, %0
   %2 = xor i32 %z, %1
-  store i32 %2, i32 addrspace(1)* %out
+  store i32 %2, ptr addrspace(1) %out
   ret void
 }
 
@@ -469,7 +469,7 @@ entry:
 
 ; SHA-256 Ma function
 ; ((x & z) | (y & (x | z)))
-define amdgpu_kernel void @s_bfi_sha256_ma(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %z) {
+define amdgpu_kernel void @s_bfi_sha256_ma(ptr addrspace(1) %out, i32 %x, i32 %y, i32 %z) {
 ; GFX7-LABEL: s_bfi_sha256_ma:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -551,7 +551,7 @@ entry:
   %1 = or i32 %x, %z
   %2 = and i32 %y, %1
   %3 = or i32 %0, %2
-  store i32 %3, i32 addrspace(1)* %out
+  store i32 %3, ptr addrspace(1) %out
   ret void
 }
 
@@ -1633,7 +1633,7 @@ define amdgpu_kernel void @s_bitselect_i64_pat_0(i64 %a, i64 %b, i64 %mask) {
   %and1 = and i64 %not.a, %mask
   %bitselect = or i64 %and0, %and1
   %scalar.use = add i64 %bitselect, 10
-  store i64 %scalar.use, i64 addrspace(1)* undef
+  store i64 %scalar.use, ptr addrspace(1) undef
   ret void
 }
 
@@ -1721,7 +1721,7 @@ define amdgpu_kernel void @s_bitselect_i64_pat_1(i64 %a, i64 %b, i64 %mask) {
   %bitselect = xor i64 %and, %mask
 
   %scalar.use = add i64 %bitselect, 10
-  store i64 %scalar.use, i64 addrspace(1)* undef
+  store i64 %scalar.use, ptr addrspace(1) undef
   ret void
 }
 
@@ -1809,7 +1809,7 @@ define amdgpu_kernel void @s_bitselect_i64_pat_2(i64 %a, i64 %b, i64 %mask) {
   %bitselect = xor i64 %and, %mask
 
   %scalar.use = add i64 %bitselect, 10
-  store i64 %scalar.use, i64 addrspace(1)* undef
+  store i64 %scalar.use, ptr addrspace(1) undef
   ret void
 }
 
@@ -1904,6 +1904,6 @@ entry:
   %or1 = or i64 %and0, %and1
 
   %scalar.use = add i64 %or1, 10
-  store i64 %scalar.use, i64 addrspace(1)* undef
+  store i64 %scalar.use, ptr addrspace(1) undef
   ret void
 }

@@ -241,9 +241,12 @@ SDTypeProfile<1, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 
 def SPcmpicc : SDNode<"SPISD::CMPICC", SDTSPcmpicc, [SDNPOutGlue]>;
 def SPcmpfcc : SDNode<"SPISD::CMPFCC", SDTSPcmpfcc, [SDNPOutGlue]>;
+def SPcmpfccv9 : SDNode<"SPISD::CMPFCC_V9", SDTSPcmpfcc, [SDNPOutGlue]>;
 def SPbricc : SDNode<"SPISD::BRICC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
-def SPbrxcc : SDNode<"SPISD::BRXCC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
+def SPbpicc : SDNode<"SPISD::BPICC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
+def SPbpxcc : SDNode<"SPISD::BPXCC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
 def SPbrfcc : SDNode<"SPISD::BRFCC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
+def SPbrfccv9 : SDNode<"SPISD::BRFCC_V9", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
 
 def SPhi    : SDNode<"SPISD::Hi", SDTIntUnaryOp>;
 def SPlo    : SDNode<"SPISD::Lo", SDTIntUnaryOp>;
@@ -845,19 +848,27 @@ defm SAVE    : F3_12np<"save"   , 0b111100>;
 defm RESTORE : F3_12np<"restore", 0b111101>;
 
 // Section B.21 - Branch on Integer Condition Codes Instructions, p. 119
+// Section A.7 - Branch on Integer Condition Codes with Prediction (SPARC v9)
 
+let isBranch = 1, isTerminator = 1, hasDelaySlot = 1, isBarrier = 1 in {
 // unconditional branch class.
 class BranchAlways<dag ins, string asmstr, list<dag> pattern>
-  : F2_2<0b010, 0, (outs), ins, asmstr, pattern> {
-  let isBranch     = 1;
-  let isTerminator = 1;
-  let hasDelaySlot = 1;
-  let isBarrier    = 1;
+  : F2_2<0b010, 0, (outs), ins, asmstr, pattern>;
+
+// Same as BranchAlways but uses the new v9 encoding
+class BranchPredictAlways<dag ins, string asmstr, list<dag> pattern>
+  : F2_3<0b001, 0, 1, (outs), ins, asmstr, pattern>;
 }
 
-let cond = 8 in
-  def BA : BranchAlways<(ins brtarget:$imm22), "ba $imm22", [(br bb:$imm22)]>;
+let cond = 8 in {
+  // If we're compiling for v9, prefer BPA rather than BA
+  // TODO: Disallow BA emission when FeatureV8Deprecated isn't enabled
+  let Predicates = [HasV9], cc = 0b00 in
+    def BPA : BranchPredictAlways<(ins bprtarget:$imm19),
+      "ba %icc, $imm19", [(br bb:$imm19)]>;
 
+  def BA : BranchAlways<(ins brtarget:$imm22), "ba $imm22", [(br bb:$imm22)]>;
+}
 
 let isBranch = 1, isTerminator = 1, hasDelaySlot = 1 in {
 
@@ -913,7 +924,7 @@ let Uses = [ICC] in {
                          "b$cond,a $imm22", []>;
 
   let Predicates = [HasV9], cc = 0b00 in
-    defm BPI : IPredBranch<"%icc", []>;
+    defm BPI : IPredBranch<"%icc", [(SPbpicc bb:$imm19, imm:$cond)]>;
 }
 
 // Section B.22 - Branch on Floating-point Condition Codes Instructions, p. 121
@@ -951,6 +962,19 @@ let Uses = [FCC0] in {
                               [(SPbrfcc bb:$imm22, imm:$cond)]>;
   def FBCONDA : FPBranchSPA<(ins brtarget:$imm22, CCOp:$cond),
                              "fb$cond,a $imm22", []>;
+}
+
+// Variants of FBCOND that uses V9 opcode
+let Predicates = [HasV9], Uses = [FCC0], cc = 0,
+    isBranch = 1, isTerminator = 1, hasDelaySlot = 1 in {
+  def FBCOND_V9  : F2_3<0b101, 0, 1, (outs),
+                    (ins bprtarget:$imm19, CCOp:$cond),
+                    "fb$cond %fcc0, $imm19",
+                    [(SPbrfccv9 bb:$imm19, imm:$cond)], IIC_fpu_normal_instr>;
+  def FBCONDA_V9 : F2_3<0b101, 1, 1, (outs),
+                    (ins bprtarget:$imm19, CCOp:$cond),
+                    "fb$cond,a %fcc0, $imm19",
+                    [(SPbrfccv9 bb:$imm19, imm:$cond)], IIC_fpu_normal_instr>;
 }
 
 let Predicates = [HasV9] in
@@ -1396,6 +1420,31 @@ let Defs = [FCC0], rd = 0, isCodeGenOnly = 1 in {
                    (outs), (ins QFPRegs:$rs1, QFPRegs:$rs2),
                    "fcmpq $rs1, $rs2",
                    [(SPcmpfcc f128:$rs1, f128:$rs2)]>,
+                   Requires<[HasHardQuad]>;
+}
+
+// A.13 Floating-Point Compare (SPARC v9)
+// Note that these always write to %fcc0 instead of having its destination
+// allocated automatically.
+// This avoids complications with the scheduler sometimes wanting to spill
+// the contents of an FCC, since SPARC v9 doesn't have facilities to spill
+// an individual FCC.
+
+let Predicates = [HasV9], Defs = [FCC0], rd = 0, isCodeGenOnly = 1 in {
+  def FCMPS_V9  : F3_3c<2, 0b110101, 0b001010001,
+                   (outs), (ins FPRegs:$rs1, FPRegs:$rs2),
+                   "fcmps %fcc0, $rs1, $rs2",
+                   [(SPcmpfccv9 f32:$rs1, f32:$rs2)],
+                   IIC_fpu_fast_instr>;
+  def FCMPD_V9  : F3_3c<2, 0b110101, 0b001010010,
+                   (outs), (ins DFPRegs:$rs1, DFPRegs:$rs2),
+                   "fcmpd %fcc0, $rs1, $rs2",
+                   [(SPcmpfccv9 f64:$rs1, f64:$rs2)],
+                   IIC_fpu_fast_instr>;
+  def FCMPQ_V9  : F3_3c<2, 0b110101, 0b001010011,
+                   (outs), (ins QFPRegs:$rs1, QFPRegs:$rs2),
+                   "fcmpq %fcc0, $rs1, $rs2",
+                   [(SPcmpfccv9 f128:$rs1, f128:$rs2)]>,
                    Requires<[HasHardQuad]>;
 }
 

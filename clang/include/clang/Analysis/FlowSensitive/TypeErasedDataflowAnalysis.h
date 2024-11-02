@@ -74,6 +74,20 @@ public:
   virtual LatticeJoinEffect joinTypeErased(TypeErasedLattice &,
                                            const TypeErasedLattice &) = 0;
 
+  /// Chooses a lattice element that approximates the current element at a
+  /// program point, given the previous element at that point. Places the
+  /// widened result in the current element (`Current`). Widening is optional --
+  /// it is only needed to either accelerate convergence (for lattices with
+  /// non-trivial height) or guarantee convergence (for lattices with infinite
+  /// height).
+  ///
+  /// Returns an indication of whether any changes were made to `Current` in
+  /// order to widen. This saves a separate call to `isEqualTypeErased` after
+  /// the widening.
+  virtual LatticeJoinEffect
+  widenTypeErased(TypeErasedLattice &Current,
+                  const TypeErasedLattice &Previous) = 0;
+
   /// Returns true if and only if the two given type-erased lattice elements are
   /// equal.
   virtual bool isEqualTypeErased(const TypeErasedLattice &,

@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef SUPPORT_POISONED_HASH_HELPER_H
 #define SUPPORT_POISONED_HASH_HELPER_H
 

@@ -11,18 +11,18 @@ declare i32 @llvm.amdgcn.workitem.id.y()
 ; GCN-LABEL: {{^}}v_permlane16_b32_vss:
 ; GFX10PLUS-NOT: v_readfirstlane_b32
 ; GFX10PLUS: v_permlane16_b32 v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}{{$}}
-define amdgpu_kernel void @v_permlane16_b32_vss(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlane16_b32_vss(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 0, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlane16_b32_vii:
 ; GFX10PLUS-NOT: v_readfirstlane_b32
 ; GFX10PLUS: v_permlane16_b32 v{{[0-9]+}}, v{{[0-9]+}}, 1, 2{{$}}
-define amdgpu_kernel void @v_permlane16_b32_vii(i32 addrspace(1)* %out, i32 %src0) #1 {
+define amdgpu_kernel void @v_permlane16_b32_vii(ptr addrspace(1) %out, i32 %src0) #1 {
   %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 1, i32 2, i1 0, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
@@ -31,9 +31,9 @@ define amdgpu_kernel void @v_permlane16_b32_vii(i32 addrspace(1)* %out, i32 %src
 ; GFX10PLUS-DAG: s_movk_i32 [[SRC1:s[0-9]+]], 0x1234
 ; GFX10PLUS-NOT: v_readfirstlane_b32
 ; GFX10PLUS: v_permlane16_b32 v{{[0-9]+}}, v{{[0-9]+}}, [[SRC1]], 0xc1d1{{$}}
-define amdgpu_kernel void @v_permlane16_b32_vll(i32 addrspace(1)* %out, i32 %src0) #1 {
+define amdgpu_kernel void @v_permlane16_b32_vll(ptr addrspace(1) %out, i32 %src0) #1 {
   %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 4660, i32 49617, i1 0, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
@@ -45,11 +45,11 @@ define amdgpu_kernel void @v_permlane16_b32_vll(i32 addrspace(1)* %out, i32 %src
 ; GFX11-DAG: v_readfirstlane_b32 [[SRC1:s[0-9]+]], [[VSRC1]]
 ; GFX11-DAG: v_readfirstlane_b32 [[SRC2:s[0-9]+]], [[VSRC2]]
 ; GFX10PLUS: v_permlane16_b32 v{{[0-9]+}}, v{{[0-9]+}}, [[SRC1]], [[SRC2]]{{$}}
-define amdgpu_kernel void @v_permlane16_b32_vvv(i32 addrspace(1)* %out, i32 %src0) #1 {
+define amdgpu_kernel void @v_permlane16_b32_vvv(ptr addrspace(1) %out, i32 %src0) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
   %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %tidx, i32 %tidy, i1 0, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
@@ -58,10 +58,10 @@ define amdgpu_kernel void @v_permlane16_b32_vvv(i32 addrspace(1)* %out, i32 %src
 ; GFX10PLUS: v_readfirstlane_b32 [[SRC1:s[0-9]+]], v0
 ; GFX10PLUS-NOT: v_readfirstlane_b32
 ; GFX10PLUS: v_permlane16_b32 v{{[0-9]+}}, v{{[0-9]+}}, [[SRC1]], s{{[0-9]+}}{{$}}
-define amdgpu_kernel void @v_permlane16_b32_vvs(i32 addrspace(1)* %out, i32 %src0, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlane16_b32_vvs(ptr addrspace(1) %out, i32 %src0, i32 %src2) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %tidx, i32 %src2, i1 0, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
@@ -70,55 +70,55 @@ define amdgpu_kernel void @v_permlane16_b32_vvs(i32 addrspace(1)* %out, i32 %src
 ; GFX10PLUS: v_readfirstlane_b32 [[SRC2:s[0-9]+]], v{{[0-9]+}}
 ; GFX10PLUS-NOT: v_readfirstlane_b32
 ; GFX10PLUS: v_permlane16_b32 v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}, [[SRC2]]{{$}}
-define amdgpu_kernel void @v_permlane16_b32_vsv(i32 addrspace(1)* %out, i32 %src0, i32 %src1) #1 {
+define amdgpu_kernel void @v_permlane16_b32_vsv(ptr addrspace(1) %out, i32 %src0, i32 %src1) #1 {
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
   %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %src1, i32 %tidy, i1 0, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlane16_b32_vss_fi:
 ; GFX10PLUS-NOT: v_readfirstlane_b32
 ; GFX10PLUS: v_permlane16_b32 v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}} op_sel:[{{1,0|1,0,0,1}}]{{$}}
-define amdgpu_kernel void @v_permlane16_b32_vss_fi(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlane16_b32_vss_fi(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 1, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlane16_b32_vss_bc:
 ; GFX10PLUS-NOT: v_readfirstlane_b32
 ; GFX10PLUS: v_permlane16_b32 v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}} op_sel:[{{0,1|0,1,0,0}}]{{$}}
-define amdgpu_kernel void @v_permlane16_b32_vss_bc(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlane16_b32_vss_bc(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 0, i1 1)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlane16_b32_vss_fi_bc:
 ; GFX10PLUS-NOT: v_readfirstlane_b32
 ; GFX10PLUS: v_permlane16_b32 v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}} op_sel:[{{1,1|1,1,0,1}}]{{$}}
-define amdgpu_kernel void @v_permlane16_b32_vss_fi_bc(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlane16_b32_vss_fi_bc(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 1, i1 1)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlanex16_b32_vss:
 ; GFX10PLUS-NOT: v_readfirstlane_b32
 ; GFX10PLUS: v_permlanex16_b32 v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}{{$}}
-define amdgpu_kernel void @v_permlanex16_b32_vss(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlanex16_b32_vss(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 0, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlanex16_b32_vii:
 ; GFX10PLUS-NOT: v_readfirstlane_b32
 ; GFX10PLUS: v_permlanex16_b32 v{{[0-9]+}}, v{{[0-9]+}}, 1, 2{{$}}
-define amdgpu_kernel void @v_permlanex16_b32_vii(i32 addrspace(1)* %out, i32 %src0) #1 {
+define amdgpu_kernel void @v_permlanex16_b32_vii(ptr addrspace(1) %out, i32 %src0) #1 {
   %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 1, i32 2, i1 0, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
@@ -127,9 +127,9 @@ define amdgpu_kernel void @v_permlanex16_b32_vii(i32 addrspace(1)* %out, i32 %sr
 ; GFX10PLUS-DAG: s_movk_i32 [[SRC1:s[0-9]+]], 0x1234
 ; GFX10PLUS-NOT: v_readfirstlane_b32
 ; GFX10PLUS: v_permlanex16_b32 v{{[0-9]+}}, v{{[0-9]+}}, [[SRC1]], 0xc1d1{{$}}
-define amdgpu_kernel void @v_permlanex16_b32_vll(i32 addrspace(1)* %out, i32 %src0) #1 {
+define amdgpu_kernel void @v_permlanex16_b32_vll(ptr addrspace(1) %out, i32 %src0) #1 {
   %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 4660, i32 49617, i1 0, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
@@ -141,11 +141,11 @@ define amdgpu_kernel void @v_permlanex16_b32_vll(i32 addrspace(1)* %out, i32 %sr
 ; GFX11-DAG: v_readfirstlane_b32 [[SRC1:s[0-9]+]], [[VSRC1]]
 ; GFX11-DAG: v_readfirstlane_b32 [[SRC2:s[0-9]+]], [[VSRC2]]
 ; GFX10PLUS: v_permlanex16_b32 v{{[0-9]+}}, v{{[0-9]+}}, [[SRC1]], [[SRC2]]{{$}}
-define amdgpu_kernel void @v_permlanex16_b32_vvv(i32 addrspace(1)* %out, i32 %src0) #1 {
+define amdgpu_kernel void @v_permlanex16_b32_vvv(ptr addrspace(1) %out, i32 %src0) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
   %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %tidx, i32 %tidy, i1 0, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
@@ -154,10 +154,10 @@ define amdgpu_kernel void @v_permlanex16_b32_vvv(i32 addrspace(1)* %out, i32 %sr
 ; GFX10PLUS: v_readfirstlane_b32 [[SRC1:s[0-9]+]], v0
 ; GFX10PLUS-NOT: v_readfirstlane_b32
 ; GFX10PLUS: v_permlanex16_b32 v{{[0-9]+}}, v{{[0-9]+}}, [[SRC1]], s{{[0-9]+}}{{$}}
-define amdgpu_kernel void @v_permlanex16_b32_vvs(i32 addrspace(1)* %out, i32 %src0, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlanex16_b32_vvs(ptr addrspace(1) %out, i32 %src0, i32 %src2) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %tidx, i32 %src2, i1 0, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
@@ -166,153 +166,153 @@ define amdgpu_kernel void @v_permlanex16_b32_vvs(i32 addrspace(1)* %out, i32 %sr
 ; GFX10PLUS: v_readfirstlane_b32 [[SRC2:s[0-9]+]], v{{[0-9]+}}
 ; GFX10PLUS-NOT: v_readfirstlane_b32
 ; GFX10PLUS: v_permlanex16_b32 v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}, [[SRC2]]{{$}}
-define amdgpu_kernel void @v_permlanex16_b32_vsv(i32 addrspace(1)* %out, i32 %src0, i32 %src1) #1 {
+define amdgpu_kernel void @v_permlanex16_b32_vsv(ptr addrspace(1) %out, i32 %src0, i32 %src1) #1 {
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
   %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %src1, i32 %tidy, i1 0, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlanex16_b32_vss_fi:
 ; GFX10PLUS-NOT: v_readfirstlane_b32
 ; GFX10PLUS: v_permlanex16_b32 v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}} op_sel:[{{1,0|1,0,0,1}}]{{$}}
-define amdgpu_kernel void @v_permlanex16_b32_vss_fi(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlanex16_b32_vss_fi(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 1, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlanex16_b32_vss_bc:
 ; GFX10PLUS-NOT: v_readfirstlane_b32
 ; GFX10PLUS: v_permlanex16_b32 v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}} op_sel:[{{0,1|0,1,0,0}}]{{$}}
-define amdgpu_kernel void @v_permlanex16_b32_vss_bc(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlanex16_b32_vss_bc(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 0, i1 1)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlanex16_b32_vss_fi_bc:
 ; GFX10PLUS-NOT: v_readfirstlane_b32
 ; GFX10PLUS: v_permlanex16_b32 v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}} op_sel:[{{1,1|1,1,0,1}}]{{$}}
-define amdgpu_kernel void @v_permlanex16_b32_vss_fi_bc(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlanex16_b32_vss_fi_bc(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 %src1, i32 %src2, i1 1, i1 1)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlane16_b32_tid_tid:
 ; GFX10PLUS: v_permlane16_b32 v0, v0, s{{[0-9]+}}, s{{[0-9]+}}{{$}}
-define amdgpu_kernel void @v_permlane16_b32_tid_tid(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlane16_b32_tid_tid(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlane16(i32 %tidx, i32 %tidx, i32 %src1, i32 %src2, i1 0, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlane16_b32_undef_tid:
 ; GFX10PLUS: v_permlane16_b32 v{{[0-9]+}}, v0, s{{[0-9]+}}, s{{[0-9]+}}{{$}}
-define amdgpu_kernel void @v_permlane16_b32_undef_tid(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlane16_b32_undef_tid(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlane16(i32 undef, i32 %tidx, i32 %src1, i32 %src2, i1 0, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlane16_b32_i_tid:
 ; GFX10PLUS: v_{{(dual_)?}}mov_b32{{(_e32)?}} [[OLD:v[0-9]+]], 0x3039
 ; GFX10PLUS: v_permlane16_b32 [[OLD]], v0, s{{[0-9]+}}, s{{[0-9]+}}{{$}}
-define amdgpu_kernel void @v_permlane16_b32_i_tid(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlane16_b32_i_tid(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %tidx, i32 %src1, i32 %src2, i1 0, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlane16_b32_i_tid_fi:
 ; GFX10PLUS-NOT: 0x3039
 ; GFX10PLUS: v_permlane16_b32 v{{[0-9]+}}, v0, s{{[0-9]+}}, s{{[0-9]+}} op_sel:[{{1,0|1,0,0,1}}]{{$}}
-define amdgpu_kernel void @v_permlane16_b32_i_tid_fi(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlane16_b32_i_tid_fi(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %tidx, i32 %src1, i32 %src2, i1 1, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlane16_b32_i_tid_bc:
 ; GFX10PLUS-NOT: 0x3039
 ; GFX10PLUS: v_permlane16_b32 v{{[0-9]+}}, v0, s{{[0-9]+}}, s{{[0-9]+}} op_sel:[{{0,1|0,1,0,0}}]{{$}}
-define amdgpu_kernel void @v_permlane16_b32_i_tid_bc(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlane16_b32_i_tid_bc(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %tidx, i32 %src1, i32 %src2, i1 0, i1 1)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlane16_b32_i_tid_fi_bc:
 ; GFX10PLUS-NOT: 0x3039
 ; GFX10PLUS: v_permlane16_b32 v{{[0-9]+}}, v0, s{{[0-9]+}}, s{{[0-9]+}} op_sel:[{{1,1|1,1,0,1}}]{{$}}
-define amdgpu_kernel void @v_permlane16_b32_i_tid_fi_bc(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlane16_b32_i_tid_fi_bc(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %tidx, i32 %src1, i32 %src2, i1 1, i1 1)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlanex16_b32_tid_tid:
 ; GFX10PLUS: v_permlanex16_b32 v0, v0, s{{[0-9]+}}, s{{[0-9]+}}{{$}}
-define amdgpu_kernel void @v_permlanex16_b32_tid_tid(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlanex16_b32_tid_tid(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlanex16(i32 %tidx, i32 %tidx, i32 %src1, i32 %src2, i1 0, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlanex16_b32_undef_tid:
 ; GFX10PLUS: v_permlanex16_b32 v{{[0-9]+}}, v0, s{{[0-9]+}}, s{{[0-9]+}}{{$}}
-define amdgpu_kernel void @v_permlanex16_b32_undef_tid(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlanex16_b32_undef_tid(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlanex16(i32 undef, i32 %tidx, i32 %src1, i32 %src2, i1 0, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlanex16_b32_i_tid:
 ; GFX10PLUS: v_{{(dual_)?}}mov_b32{{(_e32)?}} [[OLD:v[0-9]+]], 0x3039
 ; GFX10PLUS: v_permlanex16_b32 [[OLD]], v0, s{{[0-9]+}}, s{{[0-9]+}}{{$}}
-define amdgpu_kernel void @v_permlanex16_b32_i_tid(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlanex16_b32_i_tid(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %tidx, i32 %src1, i32 %src2, i1 0, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlanex16_b32_i_tid_fi:
 ; GFX10PLUS-NOT: 0x3039
 ; GFX10PLUS: v_permlanex16_b32 v{{[0-9]+}}, v0, s{{[0-9]+}}, s{{[0-9]+}} op_sel:[{{1,0|1,0,0,1}}]{{$}}
-define amdgpu_kernel void @v_permlanex16_b32_i_tid_fi(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlanex16_b32_i_tid_fi(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %tidx, i32 %src1, i32 %src2, i1 1, i1 0)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlanex16_b32_i_tid_bc:
 ; GFX10PLUS-NOT: 0x3039
 ; GFX10PLUS: v_permlanex16_b32 v{{[0-9]+}}, v0, s{{[0-9]+}}, s{{[0-9]+}} op_sel:[{{0,1|0,1,0,0}}]{{$}}
-define amdgpu_kernel void @v_permlanex16_b32_i_tid_bc(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlanex16_b32_i_tid_bc(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %tidx, i32 %src1, i32 %src2, i1 0, i1 1)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_permlanex16_b32_i_tid_fi_bc:
 ; GFX10PLUS-NOT: 0x3039
 ; GFX10PLUS: v_permlanex16_b32 v{{[0-9]+}}, v0, s{{[0-9]+}}, s{{[0-9]+}} op_sel:[{{1,1|1,1,0,1}}]{{$}}
-define amdgpu_kernel void @v_permlanex16_b32_i_tid_fi_bc(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) #1 {
+define amdgpu_kernel void @v_permlanex16_b32_i_tid_fi_bc(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) #1 {
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %tidx, i32 %src1, i32 %src2, i1 1, i1 1)
-  store i32 %v, i32 addrspace(1)* %out
+  store i32 %v, ptr addrspace(1) %out
   ret void
 }
 

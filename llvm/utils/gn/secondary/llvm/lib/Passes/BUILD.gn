@@ -4,6 +4,7 @@ static_library("Passes") {
     "//llvm/lib/Analysis",
     "//llvm/lib/CodeGen",
     "//llvm/lib/IR",
+    "//llvm/lib/IRPrinter",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Transforms/AggressiveInstCombine",

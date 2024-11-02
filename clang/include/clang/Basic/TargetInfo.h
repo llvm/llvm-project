@@ -232,7 +232,6 @@ protected:
   unsigned char RegParmMax, SSERegParmMax;
   TargetCXXABI TheCXXABI;
   const LangASMap *AddrSpaceMap;
-  unsigned ProgramAddrSpace;
 
   mutable StringRef PlatformName;
   mutable VersionTuple PlatformMinVersion;
@@ -357,10 +356,11 @@ public:
   IntType getUIntMaxType() const {
     return getCorrespondingUnsignedType(IntMaxType);
   }
-  IntType getPtrDiffType(unsigned AddrSpace) const {
-    return AddrSpace == 0 ? PtrDiffType : getPtrDiffTypeV(AddrSpace);
+  IntType getPtrDiffType(LangAS AddrSpace) const {
+    return AddrSpace == LangAS::Default ? PtrDiffType
+                                        : getPtrDiffTypeV(AddrSpace);
   }
-  IntType getUnsignedPtrDiffType(unsigned AddrSpace) const {
+  IntType getUnsignedPtrDiffType(LangAS AddrSpace) const {
     return getCorrespondingUnsignedType(getPtrDiffType(AddrSpace));
   }
   IntType getIntPtrType() const { return IntPtrType; }
@@ -438,11 +438,13 @@ public:
 
   /// Return the width of pointers on this target, for the
   /// specified address space.
-  uint64_t getPointerWidth(unsigned AddrSpace) const {
-    return AddrSpace == 0 ? PointerWidth : getPointerWidthV(AddrSpace);
+  uint64_t getPointerWidth(LangAS AddrSpace) const {
+    return AddrSpace == LangAS::Default ? PointerWidth
+                                        : getPointerWidthV(AddrSpace);
   }
-  uint64_t getPointerAlign(unsigned AddrSpace) const {
-    return AddrSpace == 0 ? PointerAlign : getPointerAlignV(AddrSpace);
+  uint64_t getPointerAlign(LangAS AddrSpace) const {
+    return AddrSpace == LangAS::Default ? PointerAlign
+                                        : getPointerAlignV(AddrSpace);
   }
 
   /// Return the maximum width of pointers on this target.
@@ -604,7 +606,8 @@ public:
 
   /// Determine whether the __int128 type is supported on this target.
   virtual bool hasInt128Type() const {
-    return (getPointerWidth(0) >= 64) || getTargetOpts().ForceEnableInt128;
+    return (getPointerWidth(LangAS::Default) >= 64) ||
+           getTargetOpts().ForceEnableInt128;
   } // FIXME
 
   /// Determine whether the _BitInt type is supported on this target. This
@@ -818,11 +821,10 @@ public:
     return getTypeWidth(IntMaxType);
   }
 
-  /// Return the address space for functions for the given target.
-  unsigned getProgramAddressSpace() const { return ProgramAddrSpace; }
-
   // Return the size of unwind_word for this target.
-  virtual unsigned getUnwindWordWidth() const { return getPointerWidth(0); }
+  virtual unsigned getUnwindWordWidth() const {
+    return getPointerWidth(LangAS::Default);
+  }
 
   /// Return the "preferred" register width on this target.
   virtual unsigned getRegisterWidth() const {
@@ -1485,6 +1487,11 @@ public:
   }
 
   const LangASMap &getAddressSpaceMap() const { return *AddrSpaceMap; }
+  unsigned getTargetAddressSpace(LangAS AS) const {
+    if (isTargetAddressSpace(AS))
+      return toTargetAddressSpace(AS);
+    return getAddressSpaceMap()[(unsigned)AS];
+  }
 
   /// Map from the address space field in builtin description strings to the
   /// language address space.
@@ -1584,7 +1591,7 @@ public:
   virtual bool
   checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const;
 
-  /// Check if the target supports CFProtection branch.
+  /// Check if the target supports CFProtection return.
   virtual bool
   checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const;
 
@@ -1671,8 +1678,7 @@ public:
   /// Returns the darwin target variant triple, the variant of the deployment
   /// target for which the code is being compiled.
   const llvm::Triple *getDarwinTargetVariantTriple() const {
-    return DarwinTargetVariantTriple ? DarwinTargetVariantTriple.getPointer()
-                                     : nullptr;
+    return DarwinTargetVariantTriple ? &*DarwinTargetVariantTriple : nullptr;
   }
 
   /// Returns the version of the darwin target variant SDK which was used during
@@ -1686,13 +1692,13 @@ public:
 protected:
   /// Copy type and layout related info.
   void copyAuxTarget(const TargetInfo *Aux);
-  virtual uint64_t getPointerWidthV(unsigned AddrSpace) const {
+  virtual uint64_t getPointerWidthV(LangAS AddrSpace) const {
     return PointerWidth;
   }
-  virtual uint64_t getPointerAlignV(unsigned AddrSpace) const {
+  virtual uint64_t getPointerAlignV(LangAS AddrSpace) const {
     return PointerAlign;
   }
-  virtual enum IntType getPtrDiffTypeV(unsigned AddrSpace) const {
+  virtual enum IntType getPtrDiffTypeV(LangAS AddrSpace) const {
     return PtrDiffType;
   }
   virtual ArrayRef<const char *> getGCCRegNames() const = 0;

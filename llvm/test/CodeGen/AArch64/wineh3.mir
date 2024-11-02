@@ -119,10 +119,10 @@ body:             |
     frame-setup SEH_SaveRegP 19, 20, 96
     frame-setup SEH_PrologEnd
     $x19 = ADDXrr $x0, killed $x1
-    $d8 = FADDDrr killed $d0, $d1
-    $d9 = FADDDrr $d8, $d1
-    $d10 = FADDDrr $d9, $d8
-    $d11 = FADDDrr killed $d9, $d10
+    $d8 = FADDDrr killed $d0, $d1, implicit $fpcr
+    $d9 = FADDDrr $d8, $d1, implicit $fpcr
+    $d10 = FADDDrr $d9, $d8, implicit $fpcr
+    $d11 = FADDDrr killed $d9, $d10, implicit $fpcr
     $x20 = ADDXrr $x19, killed $x0
     $x21 = ADDXrr $x20, killed $x19
     $x22 = ADDXrr $x21, killed $x20

@@ -711,6 +711,8 @@ public:
   ArrayRef<uint8_t> getDyldInfoBindOpcodes() const;
   ArrayRef<uint8_t> getDyldInfoWeakBindOpcodes() const;
   ArrayRef<uint8_t> getDyldInfoLazyBindOpcodes() const;
+  ArrayRef<uint8_t> getDyldInfoExportsTrie() const;
+
   /// If the optional is None, no header was found, but the object was
   /// well-formed.
   Expected<Optional<MachO::dyld_chained_fixups_header>>
@@ -725,8 +727,8 @@ public:
   // a ChainedFixupsSegment for each segment that has fixups.
   Expected<std::pair<size_t, std::vector<ChainedFixupsSegment>>>
   getChainedFixupsSegments() const;
+  ArrayRef<uint8_t> getDyldExportsTrie() const;
 
-  ArrayRef<uint8_t> getDyldInfoExportsTrie() const;
   SmallVector<uint64_t> getFunctionStarts() const;
   ArrayRef<uint8_t> getUuid() const;
 
@@ -856,6 +858,7 @@ private:
   const char *DyldInfoLoadCmd = nullptr;
   const char *FuncStartsLoadCmd = nullptr;
   const char *DyldChainedFixupsLoadCmd = nullptr;
+  const char *DyldExportsTrieLoadCmd = nullptr;
   const char *UuidLoadCmd = nullptr;
   bool HasPageZeroSegment = false;
 };

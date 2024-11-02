@@ -13,7 +13,7 @@
 @internal_other = internal addrspace(999) global i32 9, align 4
 
 
-define i32 addrspace(4)* @external_constant_got() {
+define ptr addrspace(4) @external_constant_got() {
   ; GCN-LABEL: name: external_constant_got
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @external_constant + 4, target-flags(amdgpu-gotprel32-hi) @external_constant + 12, implicit-def $scc
@@ -22,10 +22,10 @@ define i32 addrspace(4)* @external_constant_got() {
   ; GCN-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GCN-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GCN-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
-  ret i32 addrspace(4)* @external_constant
+  ret ptr addrspace(4) @external_constant
 }
 
-define i32 addrspace(1)* @external_global_got() {
+define ptr addrspace(1) @external_global_got() {
   ; GCN-LABEL: name: external_global_got
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @external_global + 4, target-flags(amdgpu-gotprel32-hi) @external_global + 12, implicit-def $scc
@@ -34,10 +34,10 @@ define i32 addrspace(1)* @external_global_got() {
   ; GCN-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GCN-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GCN-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
-  ret i32 addrspace(1)* @external_global
+  ret ptr addrspace(1) @external_global
 }
 
-define i32 addrspace(999)* @external_other_got() {
+define ptr addrspace(999) @external_other_got() {
   ; GCN-LABEL: name: external_other_got
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @external_other + 4, target-flags(amdgpu-gotprel32-hi) @external_other + 12, implicit-def $scc
@@ -46,10 +46,10 @@ define i32 addrspace(999)* @external_other_got() {
   ; GCN-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GCN-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GCN-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
-  ret i32 addrspace(999)* @external_other
+  ret ptr addrspace(999) @external_other
 }
 
-define i32 addrspace(4)* @internal_constant_pcrel() {
+define ptr addrspace(4) @internal_constant_pcrel() {
   ; GCN-LABEL: name: internal_constant_pcrel
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @internal_constant + 4, target-flags(amdgpu-rel32-hi) @internal_constant + 12, implicit-def $scc
@@ -57,10 +57,10 @@ define i32 addrspace(4)* @internal_constant_pcrel() {
   ; GCN-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GCN-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GCN-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
-  ret i32 addrspace(4)* @internal_constant
+  ret ptr addrspace(4) @internal_constant
 }
 
-define i32 addrspace(1)* @internal_global_pcrel() {
+define ptr addrspace(1) @internal_global_pcrel() {
   ; GCN-LABEL: name: internal_global_pcrel
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p1) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @internal_global + 4, target-flags(amdgpu-rel32-hi) @internal_global + 12, implicit-def $scc
@@ -68,10 +68,10 @@ define i32 addrspace(1)* @internal_global_pcrel() {
   ; GCN-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GCN-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GCN-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
-  ret i32 addrspace(1)* @internal_global
+  ret ptr addrspace(1) @internal_global
 }
 
-define i32 addrspace(999)* @internal_other_pcrel() {
+define ptr addrspace(999) @internal_other_pcrel() {
   ; GCN-LABEL: name: internal_other_pcrel
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p999) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @internal_other + 4, target-flags(amdgpu-rel32-hi) @internal_other + 12, implicit-def $scc
@@ -79,10 +79,10 @@ define i32 addrspace(999)* @internal_other_pcrel() {
   ; GCN-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; GCN-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; GCN-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
-  ret i32 addrspace(999)* @internal_other
+  ret ptr addrspace(999) @internal_other
 }
 
-define i32 addrspace(6)* @external_constant32_got() {
+define ptr addrspace(6) @external_constant32_got() {
   ; GCN-LABEL: name: external_constant32_got
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @external_constant32 + 4, target-flags(amdgpu-gotprel32-hi) @external_constant32 + 12, implicit-def $scc
@@ -90,15 +90,15 @@ define i32 addrspace(6)* @external_constant32_got() {
   ; GCN-NEXT:   [[EXTRACT:%[0-9]+]]:_(p6) = G_EXTRACT [[LOAD]](p4), 0
   ; GCN-NEXT:   $vgpr0 = COPY [[EXTRACT]](p6)
   ; GCN-NEXT:   SI_RETURN implicit $vgpr0
-  ret i32 addrspace(6)* @external_constant32
+  ret ptr addrspace(6) @external_constant32
 }
 
-define i32 addrspace(6)* @internal_constant32_pcrel() {
+define ptr addrspace(6) @internal_constant32_pcrel() {
   ; GCN-LABEL: name: internal_constant32_pcrel
   ; GCN: bb.1 (%ir-block.0):
   ; GCN-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @internal_constant32 + 4, target-flags(amdgpu-rel32-hi) @internal_constant32 + 12, implicit-def $scc
   ; GCN-NEXT:   [[EXTRACT:%[0-9]+]]:_(p6) = G_EXTRACT [[SI_PC_ADD_REL_OFFSET]](p4), 0
   ; GCN-NEXT:   $vgpr0 = COPY [[EXTRACT]](p6)
   ; GCN-NEXT:   SI_RETURN implicit $vgpr0
-  ret i32 addrspace(6)* @internal_constant32
+  ret ptr addrspace(6) @internal_constant32
 }

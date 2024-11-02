@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// Older Clangs don't properly deduce decltype(auto) with a concept constraint
-// XFAIL: apple-clang-13.0
-
 // constexpr Pred const& pred() const;
 
 #include <ranges>

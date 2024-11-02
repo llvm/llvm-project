@@ -20,7 +20,7 @@ declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64, float, <3 
 define amdgpu_ps <4 x float> @image_bvh_intersect_ray(i32 %node_ptr, float %ray_extent, float %ray_origin_x, float %ray_origin_y, float %ray_origin_z, float %ray_dir_x, float %ray_dir_y, float %ray_dir_z, float %ray_inv_dir_x, float %ray_inv_dir_y, float %ray_inv_dir_z, <4 x i32> inreg %tdescr) {
 ; GCN-LABEL: image_bvh_intersect_ray:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    image_bvh_intersect_ray v[0:3], v[0:15], s[0:3]
+; GCN-NEXT:    image_bvh_intersect_ray v[0:3], v[0:10], s[0:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -90,7 +90,7 @@ main_body:
 define amdgpu_ps <4 x float> @image_bvh64_intersect_ray(<2 x i32> %node_ptr_vec, float %ray_extent, float %ray_origin_x, float %ray_origin_y, float %ray_origin_z, float %ray_dir_x, float %ray_dir_y, float %ray_dir_z, float %ray_inv_dir_x, float %ray_inv_dir_y, float %ray_inv_dir_z, <4 x i32> inreg %tdescr) {
 ; GCN-LABEL: image_bvh64_intersect_ray:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    image_bvh64_intersect_ray v[0:3], v[0:15], s[0:3]
+; GCN-NEXT:    image_bvh64_intersect_ray v[0:3], v[0:11], s[0:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:
@@ -128,7 +128,7 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16(i64 inreg %node_ptr,
 ; GFX10-NEXT:    v_mov_b32_e32 v8, s8
 ; GFX10-NEXT:    s_mov_b32 s15, s13
 ; GFX10-NEXT:    s_mov_b32 s13, s11
-; GFX10-NEXT:    image_bvh64_intersect_ray v[0:3], v[0:15], s[12:15] a16
+; GFX10-NEXT:    image_bvh64_intersect_ray v[0:3], v[0:8], s[12:15] a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -160,7 +160,7 @@ main_body:
 
 ; TODO: NSA reassign is very limited and cannot work with VGPR tuples and subregs.
 
-define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(i32* %p_node_ptr, float* %p_ray, <4 x i32> inreg %tdescr) {
+define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(ptr %p_node_ptr, ptr %p_ray, <4 x i32> inreg %tdescr) {
 ; GFX1013-LABEL: image_bvh_intersect_ray_nsa_reassign:
 ; GFX1013:       ; %bb.0: ; %main_body
 ; GFX1013-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
@@ -182,7 +182,7 @@ define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(i32* %p_node_ptr
 ; GFX1013-NEXT:    v_mov_b32_e32 v4, 2.0
 ; GFX1013-NEXT:    v_mov_b32_e32 v5, 0x40400000
 ; GFX1013-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX1013-NEXT:    image_bvh_intersect_ray v[0:3], v[0:15], s[4:7]
+; GFX1013-NEXT:    image_bvh_intersect_ray v[0:3], v[0:10], s[4:7]
 ; GFX1013-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1013-NEXT:    flat_store_dwordx4 v[0:1], v[0:3]
 ; GFX1013-NEXT:    s_endpgm
@@ -208,7 +208,7 @@ define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(i32* %p_node_ptr
 ; GFX1030-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1030-NEXT:    v_mov_b32_e32 v3, 1.0
 ; GFX1030-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX1030-NEXT:    image_bvh_intersect_ray v[0:3], v[0:15], s[4:7]
+; GFX1030-NEXT:    image_bvh_intersect_ray v[0:3], v[0:10], s[4:7]
 ; GFX1030-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1030-NEXT:    flat_store_dwordx4 v[0:1], v[0:3]
 ; GFX1030-NEXT:    s_endpgm
@@ -240,10 +240,10 @@ define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(i32* %p_node_ptr
 ; GFX11-NEXT:    s_endpgm
 main_body:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %gep_node_ptr = getelementptr inbounds i32, i32* %p_node_ptr, i32 %lid
-  %node_ptr = load i32, i32* %gep_node_ptr, align 4
-  %gep_ray = getelementptr inbounds float, float* %p_ray, i32 %lid
-  %ray_extent = load float, float* %gep_ray, align 4
+  %gep_node_ptr = getelementptr inbounds i32, ptr %p_node_ptr, i32 %lid
+  %node_ptr = load i32, ptr %gep_node_ptr, align 4
+  %gep_ray = getelementptr inbounds float, ptr %p_ray, i32 %lid
+  %ray_extent = load float, ptr %gep_ray, align 4
   %ray_origin0 = insertelement <3 x float> undef, float 0.0, i32 0
   %ray_origin1 = insertelement <3 x float> %ray_origin0, float 1.0, i32 1
   %ray_origin = insertelement <3 x float> %ray_origin1, float 2.0, i32 2
@@ -254,11 +254,11 @@ main_body:
   %ray_inv_dir1 = insertelement <3 x float> %ray_inv_dir0, float 7.0, i32 1
   %ray_inv_dir = insertelement <3 x float> %ray_inv_dir1, float 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <3 x float> %ray_inv_dir, <4 x i32> %tdescr)
-  store <4 x i32> %v, <4 x i32>* undef
+  store <4 x i32> %v, ptr undef
   ret void
 }
 
-define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(i32* %p_node_ptr, float* %p_ray, <4 x i32> inreg %tdescr) {
+define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(ptr %p_node_ptr, ptr %p_ray, <4 x i32> inreg %tdescr) {
 ; GFX1013-LABEL: image_bvh_intersect_ray_a16_nsa_reassign:
 ; GFX1013:       ; %bb.0: ; %main_body
 ; GFX1013-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
@@ -330,10 +330,10 @@ define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(i32* %p_node
 ; GFX11-NEXT:    s_endpgm
 main_body:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %gep_node_ptr = getelementptr inbounds i32, i32* %p_node_ptr, i32 %lid
-  %node_ptr = load i32, i32* %gep_node_ptr, align 4
-  %gep_ray = getelementptr inbounds float, float* %p_ray, i32 %lid
-  %ray_extent = load float, float* %gep_ray, align 4
+  %gep_node_ptr = getelementptr inbounds i32, ptr %p_node_ptr, i32 %lid
+  %node_ptr = load i32, ptr %gep_node_ptr, align 4
+  %gep_ray = getelementptr inbounds float, ptr %p_ray, i32 %lid
+  %ray_extent = load float, ptr %gep_ray, align 4
   %ray_origin0 = insertelement <3 x float> undef, float 0.0, i32 0
   %ray_origin1 = insertelement <3 x float> %ray_origin0, float 1.0, i32 1
   %ray_origin = insertelement <3 x float> %ray_origin1, float 2.0, i32 2
@@ -344,11 +344,11 @@ main_body:
   %ray_inv_dir1 = insertelement <3 x half> %ray_inv_dir0, half 7.0, i32 1
   %ray_inv_dir = insertelement <3 x half> %ray_inv_dir1, half 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)
-  store <4 x i32> %v, <4 x i32>* undef
+  store <4 x i32> %v, ptr undef
   ret void
 }
 
-define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(float* %p_ray, <4 x i32> inreg %tdescr) {
+define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(ptr %p_ray, <4 x i32> inreg %tdescr) {
 ; GFX1013-LABEL: image_bvh64_intersect_ray_nsa_reassign:
 ; GFX1013:       ; %bb.0: ; %main_body
 ; GFX1013-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
@@ -370,7 +370,7 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(float* %p_ray,
 ; GFX1013-NEXT:    v_mov_b32_e32 v0, 0xb36211c7
 ; GFX1013-NEXT:    v_mov_b32_e32 v1, 0x102
 ; GFX1013-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX1013-NEXT:    image_bvh64_intersect_ray v[0:3], v[0:15], s[0:3]
+; GFX1013-NEXT:    image_bvh64_intersect_ray v[0:3], v[0:11], s[0:3]
 ; GFX1013-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1013-NEXT:    flat_store_dwordx4 v[0:1], v[0:3]
 ; GFX1013-NEXT:    s_endpgm
@@ -396,7 +396,7 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(float* %p_ray,
 ; GFX1030-NEXT:    v_mov_b32_e32 v1, 0x102
 ; GFX1030-NEXT:    v_mov_b32_e32 v0, 0xb36211c7
 ; GFX1030-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX1030-NEXT:    image_bvh64_intersect_ray v[0:3], v[0:15], s[0:3]
+; GFX1030-NEXT:    image_bvh64_intersect_ray v[0:3], v[0:11], s[0:3]
 ; GFX1030-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1030-NEXT:    flat_store_dwordx4 v[0:1], v[0:3]
 ; GFX1030-NEXT:    s_endpgm
@@ -426,8 +426,8 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(float* %p_ray,
 ; GFX11-NEXT:    s_endpgm
 main_body:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %gep_ray = getelementptr inbounds float, float* %p_ray, i32 %lid
-  %ray_extent = load float, float* %gep_ray, align 4
+  %gep_ray = getelementptr inbounds float, ptr %p_ray, i32 %lid
+  %ray_extent = load float, ptr %gep_ray, align 4
   %ray_origin0 = insertelement <3 x float> undef, float 0.0, i32 0
   %ray_origin1 = insertelement <3 x float> %ray_origin0, float 1.0, i32 1
   %ray_origin = insertelement <3 x float> %ray_origin1, float 2.0, i32 2
@@ -438,11 +438,11 @@ main_body:
   %ray_inv_dir1 = insertelement <3 x float> %ray_inv_dir0, float 7.0, i32 1
   %ray_inv_dir = insertelement <3 x float> %ray_inv_dir1, float 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(i64 1111111111111, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <3 x float> %ray_inv_dir, <4 x i32> %tdescr)
-  store <4 x i32> %v, <4 x i32>* undef
+  store <4 x i32> %v, ptr undef
   ret void
 }
 
-define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(float* %p_ray, <4 x i32> inreg %tdescr) {
+define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(ptr %p_ray, <4 x i32> inreg %tdescr) {
 ; GFX1013-LABEL: image_bvh64_intersect_ray_a16_nsa_reassign:
 ; GFX1013:       ; %bb.0: ; %main_body
 ; GFX1013-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
@@ -461,7 +461,7 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(float* %p_
 ; GFX1013-NEXT:    v_mov_b32_e32 v0, 0xb36211c6
 ; GFX1013-NEXT:    v_mov_b32_e32 v1, 0x102
 ; GFX1013-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX1013-NEXT:    image_bvh64_intersect_ray v[0:3], v[0:15], s[0:3] a16
+; GFX1013-NEXT:    image_bvh64_intersect_ray v[0:3], v[0:8], s[0:3] a16
 ; GFX1013-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1013-NEXT:    flat_store_dwordx4 v[0:1], v[0:3]
 ; GFX1013-NEXT:    s_endpgm
@@ -484,7 +484,7 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(float* %p_
 ; GFX1030-NEXT:    v_mov_b32_e32 v1, 0x102
 ; GFX1030-NEXT:    v_mov_b32_e32 v0, 0xb36211c6
 ; GFX1030-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX1030-NEXT:    image_bvh64_intersect_ray v[0:3], v[0:15], s[0:3] a16
+; GFX1030-NEXT:    image_bvh64_intersect_ray v[0:3], v[0:8], s[0:3] a16
 ; GFX1030-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1030-NEXT:    flat_store_dwordx4 v[0:1], v[0:3]
 ; GFX1030-NEXT:    s_endpgm
@@ -512,8 +512,8 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(float* %p_
 ; GFX11-NEXT:    s_endpgm
 main_body:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %gep_ray = getelementptr inbounds float, float* %p_ray, i32 %lid
-  %ray_extent = load float, float* %gep_ray, align 4
+  %gep_ray = getelementptr inbounds float, ptr %p_ray, i32 %lid
+  %ray_extent = load float, ptr %gep_ray, align 4
   %ray_origin0 = insertelement <3 x float> undef, float 0.0, i32 0
   %ray_origin1 = insertelement <3 x float> %ray_origin0, float 1.0, i32 1
   %ray_origin = insertelement <3 x float> %ray_origin1, float 2.0, i32 2
@@ -524,7 +524,7 @@ main_body:
   %ray_inv_dir1 = insertelement <3 x half> %ray_inv_dir0, half 7.0, i32 1
   %ray_inv_dir = insertelement <3 x half> %ray_inv_dir1, half 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64 1111111111110, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)
-  store <4 x i32> %v, <4 x i32>* undef
+  store <4 x i32> %v, ptr undef
   ret void
 }
 

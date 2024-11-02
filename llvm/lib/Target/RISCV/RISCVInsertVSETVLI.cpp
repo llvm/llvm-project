@@ -90,7 +90,7 @@ static bool isScalarMoveInstr(const MachineInstr &MI) {
 static Optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
   switch (getRVVMCOpcode(MI.getOpcode())) {
   default:
-    return None;
+    return std::nullopt;
   case RISCV::VLE8_V:
   case RISCV::VLSE8_V:
   case RISCV::VSE8_V:

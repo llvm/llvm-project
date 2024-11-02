@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple armv8.6a-arm-none-eabi -target-feature +neon -target-feature +fullfp16 -target-feature +i8mm \
 // RUN: -S -disable-O0-optnone -emit-llvm -o - %s \
-// RUN: | opt -S -mem2reg -sroa \
+// RUN: | opt -S -passes=mem2reg,sroa \
 // RUN: | FileCheck %s
 
 // REQUIRES: arm-registered-target

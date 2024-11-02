@@ -6,6 +6,7 @@ add_entrypoint_object(
     __assert_fail.h
     assert.h
   DEPENDS
+    libc.include.assert
     libc.src.__support.OSUtil.osutil
     libc.src.stdlib.abort
 )

@@ -49,6 +49,7 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -619,7 +620,7 @@ Optional<CodeModel::Model> Module::getCodeModel() const {
   auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("Code Model"));
 
   if (!Val)
-    return None;
+    return std::nullopt;
 
   return static_cast<CodeModel::Model>(
       cast<ConstantInt>(Val->getValue())->getZExtValue());
@@ -775,9 +776,9 @@ static VersionTuple getSDKVersionMD(Metadata *MD) {
   auto *Arr = dyn_cast_or_null<ConstantDataArray>(CM->getValue());
   if (!Arr)
     return {};
-  auto getVersionComponent = [&](unsigned Index) -> Optional<unsigned> {
+  auto getVersionComponent = [&](unsigned Index) -> std::optional<unsigned> {
     if (Index >= Arr->getNumElements())
-      return None;
+      return std::nullopt;
     return (unsigned)Arr->getElementAsInteger(Index);
   };
   auto Major = getVersionComponent(0);

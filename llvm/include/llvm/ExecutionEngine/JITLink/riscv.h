@@ -57,6 +57,13 @@ enum EdgeKind_riscv : Edge::Kind {
   ///   Fixup <- (Target + Addend + 0x800) >> 12
   R_RISCV_HI20,
 
+  /// Low 12 bits of 32-bit pointer value relocation, used by S type instruction
+  /// format
+  ///
+  /// Fixup expression
+  ///   Fixup <- (Target + Addend) & 0xFFF
+  R_RISCV_LO12_S,
+
   /// Low 12 bits of 32-bit pointer value relocation
   ///
   /// Fixup expression

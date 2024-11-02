@@ -591,7 +591,8 @@ getCGOptLevel(const Fortran::frontend::CodeGenOptions &opts) {
 void CodeGenAction::setUpTargetMachine() {
   CompilerInstance &ci = this->getInstance();
 
-  const std::string &theTriple = ci.getInvocation().getTargetOpts().triple;
+  const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
+  const std::string &theTriple = targetOpts.triple;
 
   // Create `Target`
   std::string error;
@@ -602,9 +603,11 @@ void CodeGenAction::setUpTargetMachine() {
   // Create `TargetMachine`
   const auto &CGOpts = ci.getInvocation().getCodeGenOpts();
   llvm::CodeGenOpt::Level OptLevel = getCGOptLevel(CGOpts);
+  std::string featuresStr = llvm::join(targetOpts.featuresAsWritten.begin(),
+                                       targetOpts.featuresAsWritten.end(), ",");
   tm.reset(theTarget->createTargetMachine(
-      theTriple, /*CPU=*/"",
-      /*Features=*/"", llvm::TargetOptions(),
+      theTriple, /*CPU=*/targetOpts.cpu,
+      /*Features=*/featuresStr, llvm::TargetOptions(),
       /*Reloc::Model=*/CGOpts.getRelocationModel(),
       /*CodeModel::Model=*/llvm::None, OptLevel));
   assert(tm && "Failed to create TargetMachine");
@@ -694,7 +697,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::PassInstrumentationCallbacks pic;
   llvm::PipelineTuningOptions pto;
   llvm::Optional<llvm::PGOOptions> pgoOpt;
-  llvm::StandardInstrumentations si(opts.DebugPassManager);
+  llvm::StandardInstrumentations si(
+      llvmModule->getContext(), opts.DebugPassManager);
   si.registerCallbacks(pic, &fam);
   llvm::PassBuilder pb(tm.get(), pto, pgoOpt, &pic);
 

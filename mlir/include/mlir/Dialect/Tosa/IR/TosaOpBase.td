@@ -73,7 +73,7 @@ class Tosa_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
 // This quantization attribute expresses numerical behavior of operators where
 // the operator has a numerical relationship between a single input and output.
 // For example: tosa.negate.
-def Tosa_UnaryOpQuantizationAttr 
+def Tosa_UnaryOpQuantizationAttr
     : Tosa_Attr<"UnaryOpQuantization", "unary_quant"> {
   let summary = "Attribute for UnaryOp quantization information.";
   let parameters = (ins "int64_t":$input_zp, "int64_t":$output_zp);
@@ -91,14 +91,14 @@ def Tosa_UnaryOpQuantizationAttr
 // the inputs.
 // The scaling of their accumulator output is done using an explicit
 // tosa.rescale operator that scales the accumulator result to output scale.
-def Tosa_ConvOpQuantizationAttr 
-    : Tosa_Attr<"ConvOpQuantization", "conv_quant"> { 
+def Tosa_ConvOpQuantizationAttr
+    : Tosa_Attr<"ConvOpQuantization", "conv_quant"> {
   let summary = "Attribute for Conv type op quantization information.";
   let parameters = (ins "int64_t":$input_zp, "int64_t":$weight_zp);
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
-def Tosa_MatMulOpQuantizationAttr 
+def Tosa_MatMulOpQuantizationAttr
     : Tosa_Attr< "MatMulOpQuantization", "matmul_quant"> {
   let summary = "Attribute for MatMulOp quantization information.";
   let parameters = (ins "int64_t":$a_zp, "int64_t":$b_zp);

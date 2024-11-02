@@ -22,6 +22,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include <optional>
 #include <utility>
 
 namespace llvm {
@@ -174,24 +175,24 @@ public:
     return PredicationStyle::None;
   }
 
-  Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
-                                               IntrinsicInst &II) const {
-    return None;
+  std::optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
+                                                    IntrinsicInst &II) const {
+    return std::nullopt;
   }
 
-  Optional<Value *>
+  std::optional<Value *>
   simplifyDemandedUseBitsIntrinsic(InstCombiner &IC, IntrinsicInst &II,
                                    APInt DemandedMask, KnownBits &Known,
                                    bool &KnownBitsComputed) const {
-    return None;
+    return std::nullopt;
   }
 
-  Optional<Value *> simplifyDemandedVectorEltsIntrinsic(
+  std::optional<Value *> simplifyDemandedVectorEltsIntrinsic(
       InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
       APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp) const {
-    return None;
+    return std::nullopt;
   }
 
   void getUnrollingPreferences(Loop *, ScalarEvolution &,
@@ -366,7 +367,7 @@ public:
 
   bool allowsMisalignedMemoryAccesses(LLVMContext &Context, unsigned BitWidth,
                                       unsigned AddressSpace, Align Alignment,
-                                      bool *Fast) const {
+                                      unsigned *Fast) const {
     return false;
   }
 
@@ -430,8 +431,8 @@ public:
 
   unsigned getMinVectorRegisterBitWidth() const { return 128; }
 
-  Optional<unsigned> getMaxVScale() const { return None; }
-  Optional<unsigned> getVScaleForTuning() const { return None; }
+  std::optional<unsigned> getMaxVScale() const { return std::nullopt; }
+  std::optional<unsigned> getVScaleForTuning() const { return std::nullopt; }
 
   bool
   shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const {
@@ -452,25 +453,24 @@ public:
   }
 
   unsigned getCacheLineSize() const { return 0; }
-
-  llvm::Optional<unsigned>
+  std::optional<unsigned>
   getCacheSize(TargetTransformInfo::CacheLevel Level) const {
     switch (Level) {
     case TargetTransformInfo::CacheLevel::L1D:
       [[fallthrough]];
     case TargetTransformInfo::CacheLevel::L2D:
-      return llvm::Optional<unsigned>();
+      return std::nullopt;
     }
     llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");
   }
 
-  llvm::Optional<unsigned>
+  std::optional<unsigned>
   getCacheAssociativity(TargetTransformInfo::CacheLevel Level) const {
     switch (Level) {
     case TargetTransformInfo::CacheLevel::L1D:
       [[fallthrough]];
     case TargetTransformInfo::CacheLevel::L2D:
-      return llvm::Optional<unsigned>();
+      return std::nullopt;
     }
 
     llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");
@@ -516,11 +516,10 @@ public:
     return 1;
   }
 
-  InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Ty,
-                                 ArrayRef<int> Mask,
-                                 TTI::TargetCostKind CostKind, int Index,
-                                 VectorType *SubTp,
-                                 ArrayRef<const Value *> Args = None) const {
+  InstructionCost
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *Ty, ArrayRef<int> Mask,
+                 TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
+                 ArrayRef<const Value *> Args = std::nullopt) const {
     return 1;
   }
 
@@ -693,7 +692,7 @@ public:
   }
 
   InstructionCost getArithmeticReductionCost(unsigned, VectorType *,
-                                             Optional<FastMathFlags> FMF,
+                                             std::optional<FastMathFlags> FMF,
                                              TTI::TargetCostKind) const {
     return 1;
   }
@@ -705,7 +704,7 @@ public:
 
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
                                            Type *ResTy, VectorType *Ty,
-                                           Optional<FastMathFlags> FMF,
+                                           std::optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind) const {
     return 1;
   }
@@ -738,10 +737,11 @@ public:
     return nullptr;
   }
 
-  Type *getMemcpyLoopLoweringType(LLVMContext &Context, Value *Length,
-                                  unsigned SrcAddrSpace, unsigned DestAddrSpace,
-                                  unsigned SrcAlign, unsigned DestAlign,
-                                  Optional<uint32_t> AtomicElementSize) const {
+  Type *
+  getMemcpyLoopLoweringType(LLVMContext &Context, Value *Length,
+                            unsigned SrcAddrSpace, unsigned DestAddrSpace,
+                            unsigned SrcAlign, unsigned DestAlign,
+                            std::optional<uint32_t> AtomicElementSize) const {
     return AtomicElementSize ? Type::getIntNTy(Context, *AtomicElementSize * 8)
                              : Type::getInt8Ty(Context);
   }
@@ -750,7 +750,7 @@ public:
       SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
       unsigned SrcAlign, unsigned DestAlign,
-      Optional<uint32_t> AtomicCpySize) const {
+      std::optional<uint32_t> AtomicCpySize) const {
     unsigned OpSizeInBytes = AtomicCpySize ? *AtomicCpySize : 1;
     Type *OpType = Type::getIntNTy(Context, OpSizeInBytes * 8);
     for (unsigned i = 0; i != RemainingBytes; i += OpSizeInBytes)

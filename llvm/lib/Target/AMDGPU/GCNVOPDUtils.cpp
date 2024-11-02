@@ -91,8 +91,10 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
         addLiteral(Src0);
     }
 
-    if (InstInfo[CompIdx].hasMandatoryLiteral())
-      addLiteral(MI.getOperand(InstInfo[CompIdx].getMandatoryLiteralIndex()));
+    if (InstInfo[CompIdx].hasMandatoryLiteral()) {
+      auto CompOprIdx = InstInfo[CompIdx].getMandatoryLiteralCompOperandIndex();
+      addLiteral(MI.getOperand(CompOprIdx));
+    }
     if (MI.getDesc().hasImplicitUseOfPhysReg(AMDGPU::VCC))
       UniqueScalarRegs.push_back(AMDGPU::VCC_LO);
   }

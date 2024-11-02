@@ -251,7 +251,7 @@ END-SCRIPT
 #include <forward_list>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_51
-#if defined(TEST_51) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if defined(TEST_51) && !defined(_LIBCPP_HAS_NO_LOCALIZATION) && !defined(_LIBCPP_HAS_NO_FSTREAM)
 #include <fstream>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_52

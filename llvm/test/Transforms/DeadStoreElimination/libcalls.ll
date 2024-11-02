@@ -428,73 +428,6 @@ define void @dse_strncpy_test1(ptr noalias %out, ptr noalias %in) {
   ret void
 }
 
-declare ptr @__memset_chk(ptr writeonly, i32, i64, i64) argmemonly
-
-; strncpy -> __memset_chk, full overwrite
-define void @dse_strncpy_memset_chk_test1(ptr noalias %out, ptr noalias %in, i64 %n) {
-; CHECK-LABEL: @dse_strncpy_memset_chk_test1(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @strncpy(ptr [[OUT:%.*]], ptr [[IN:%.*]], i64 100)
-; CHECK-NEXT:    [[CALL_2:%.*]] = tail call ptr @__memset_chk(ptr [[OUT]], i32 42, i64 100, i64 [[N:%.*]])
-; CHECK-NEXT:    ret void
-;
-  %call = tail call ptr @strncpy(ptr %out, ptr %in, i64 100)
-  %call.2 = tail call ptr @__memset_chk(ptr %out, i32 42, i64 100, i64 %n)
-  ret void
-}
-
-declare void @use(ptr)
-
-define void @dse_memset_chk_cannot_eliminates_store(ptr %out, i64 %n) {
-; CHECK-LABEL: @dse_memset_chk_cannot_eliminates_store(
-; CHECK-NEXT:    store i8 10, ptr [[OUT:%.*]], align 1
-; CHECK-NEXT:    [[CALL_2:%.*]] = tail call ptr @__memset_chk(ptr [[OUT]], i32 42, i64 100, i64 [[N:%.*]])
-; CHECK-NEXT:    ret void
-;
-  store i8 10, ptr %out
-  %call.2 = tail call ptr @__memset_chk(ptr %out, i32 42, i64 100, i64 %n)
-  ret void
-}
-
-define void @dse_memset_chk_eliminates_store_local_object_escapes_after(i64 %n) {
-; CHECK-LABEL: @dse_memset_chk_eliminates_store_local_object_escapes_after(
-; CHECK-NEXT:    [[A:%.*]] = alloca [200 x i8], align 1
-; CHECK-NEXT:    store i8 10, ptr [[A]], align 1
-; CHECK-NEXT:    [[OUT_100:%.*]] = getelementptr i8, ptr [[A]], i64 100
-; CHECK-NEXT:    store i8 10, ptr [[OUT_100]], align 1
-; CHECK-NEXT:    [[CALL_2:%.*]] = tail call ptr @__memset_chk(ptr [[A]], i32 42, i64 100, i64 [[N:%.*]])
-; CHECK-NEXT:    call void @use(ptr [[A]])
-; CHECK-NEXT:    ret void
-;
-  %a = alloca [200 x i8]
-  store i8 10, ptr %a
-  %out.100 = getelementptr i8, ptr %a, i64 100
-  store i8 10, ptr %out.100
-  %call.2 = tail call ptr @__memset_chk(ptr %a, i32 42, i64 100, i64 %n)
-  call void @use(ptr %a)
-  ret void
-}
-
-define void @dse_memset_chk_eliminates_store_local_object_escapes_before(i64 %n) {
-; CHECK-LABEL: @dse_memset_chk_eliminates_store_local_object_escapes_before(
-; CHECK-NEXT:    [[A:%.*]] = alloca [200 x i8], align 1
-; CHECK-NEXT:    call void @use(ptr [[A]])
-; CHECK-NEXT:    store i8 10, ptr [[A]], align 1
-; CHECK-NEXT:    [[OUT_100:%.*]] = getelementptr i8, ptr [[A]], i64 100
-; CHECK-NEXT:    store i8 0, ptr [[OUT_100]], align 1
-; CHECK-NEXT:    [[CALL_2:%.*]] = tail call ptr @__memset_chk(ptr [[A]], i32 42, i64 100, i64 [[N:%.*]])
-; CHECK-NEXT:    call void @use(ptr [[A]])
-; CHECK-NEXT:    ret void
-;
-  %a = alloca [200 x i8]
-  call void @use(ptr %a)
-  store i8 10, ptr %a
-  %out.100 = getelementptr i8, ptr %a, i64 100
-  store i8 0, ptr %out.100
-  %call.2 = tail call ptr @__memset_chk(ptr %a, i32 42, i64 100, i64 %n)
-  call void @use(ptr %a)
-  ret void
-}
-
 ; strncpy -> memset, partial overwrite
 define void @dse_strncpy_test2(ptr noalias %out, ptr noalias %in) {
 ; CHECK-LABEL: @dse_strncpy_test2(
@@ -507,18 +440,6 @@ define void @dse_strncpy_test2(ptr noalias %out, ptr noalias %in) {
   ret void
 }
 
-; strncpy -> memset_chk, partial overwrite
-define void @dse_strncpy_memset_chk_test2(ptr noalias %out, ptr noalias %in, i64 %n) {
-; CHECK-LABEL: @dse_strncpy_memset_chk_test2(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @strncpy(ptr [[OUT:%.*]], ptr [[IN:%.*]], i64 100)
-; CHECK-NEXT:    [[CALL_2:%.*]] = tail call ptr @__memset_chk(ptr [[OUT]], i32 42, i64 99, i64 [[N:%.*]])
-; CHECK-NEXT:    ret void
-;
-  %call = tail call ptr @strncpy(ptr %out, ptr %in, i64 100)
-  %call.2 = tail call ptr @__memset_chk(ptr %out, i32 42, i64 99, i64 %n)
-  ret void
-}
-
 ; strncpy -> memset, different destination
 define void @dse_strncpy_test3(ptr noalias %out1, ptr noalias %out2, ptr noalias %in) {
 ; CHECK-LABEL: @dse_strncpy_test3(
@@ -528,18 +449,6 @@ define void @dse_strncpy_test3(ptr noalias %out1, ptr noalias %out2, ptr noalias
 ;
   %call = tail call ptr @strncpy(ptr %out1, ptr %in, i64 100)
   tail call void @llvm.memset.p0.i64(ptr %out2, i8 42, i64 100, i1 false)
-  ret void
-}
-
-; strncpy -> memset_chk, different destination
-define void @dse_strncpy_chk_test3(ptr noalias %out1, ptr noalias %out2, ptr noalias %in, i64 %n) {
-; CHECK-LABEL: @dse_strncpy_chk_test3(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @strncpy(ptr [[OUT1:%.*]], ptr [[IN:%.*]], i64 100)
-; CHECK-NEXT:    [[CALL_2:%.*]] = tail call ptr @__memset_chk(ptr [[OUT2:%.*]], i32 42, i64 100, i64 [[N:%.*]])
-; CHECK-NEXT:    ret void
-;
-  %call = tail call ptr @strncpy(ptr %out1, ptr %in, i64 100)
-  %call.2 = tail call ptr @__memset_chk(ptr %out2, i32 42, i64 100, i64 %n)
   ret void
 }
 

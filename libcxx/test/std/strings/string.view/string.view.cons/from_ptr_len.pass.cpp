@@ -45,6 +45,7 @@ int main(int, char**) {
     }
 #endif
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test ( L"QBCDE", 5 );
     test ( L"QBCDE", 2 );
     test ( L"", 0 );
@@ -56,6 +57,7 @@ int main(int, char**) {
     static_assert ( sv1.data() == s, "" );
     }
 #endif
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
 #if TEST_STD_VER >= 11
     test ( u"QBCDE", 5 );

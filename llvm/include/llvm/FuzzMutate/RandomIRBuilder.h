@@ -61,8 +61,10 @@ struct RandomIRBuilder {
                      ArrayRef<Value *> Srcs, fuzzerop::SourcePred Pred);
   Type *chooseType(LLVMContext &Context, ArrayRef<Value *> Srcs,
                    fuzzerop::SourcePred Pred);
+  /// Return a uniformly choosen type from \c AllowedTypes
+  Type *randomType();
 };
 
-} // end llvm namespace
+} // namespace llvm
 
 #endif // LLVM_FUZZMUTATE_RANDOMIRBUILDER_H

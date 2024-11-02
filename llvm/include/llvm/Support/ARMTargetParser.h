@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/ARMTargetParserCommon.h"
 #include <vector>
 
 namespace llvm {
@@ -68,40 +69,34 @@ enum ArchExtKind : uint64_t {
 };
 
 // List of Arch Extension names.
-// FIXME: TableGen this.
 struct ExtName {
-  const char *NameCStr;
-  size_t NameLength;
+  StringRef Name;
   uint64_t ID;
-  const char *Feature;
-  const char *NegFeature;
-
-  StringRef getName() const { return StringRef(NameCStr, NameLength); }
+  StringRef Feature;
+  StringRef NegFeature;
 };
 
 const ExtName ARCHExtNames[] = {
 #define ARM_ARCH_EXT_NAME(NAME, ID, FEATURE, NEGFEATURE)                       \
-  {NAME, sizeof(NAME) - 1, ID, FEATURE, NEGFEATURE},
+  {NAME, ID, FEATURE, NEGFEATURE},
 #include "ARMTargetParser.def"
 };
 
 // List of HWDiv names (use getHWDivSynonym) and which architectural
 // features they correspond to (use getHWDivFeatures).
-// FIXME: TableGen this.
 const struct {
-  const char *NameCStr;
-  size_t NameLength;
+  StringRef Name;
   uint64_t ID;
-
-  StringRef getName() const { return StringRef(NameCStr, NameLength); }
 } HWDivNames[] = {
-#define ARM_HW_DIV_NAME(NAME, ID) {NAME, sizeof(NAME) - 1, ID},
+#define ARM_HW_DIV_NAME(NAME, ID) {NAME, ID},
 #include "ARMTargetParser.def"
 };
 
 // Arch names.
 enum class ArchKind {
-#define ARM_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU, ARCH_BASE_EXT) ID,
+#define ARM_ARCH(NAME, ID, CPU_ATTR, ARCH_FEATURE, ARCH_ATTR, ARCH_FPU,        \
+                 ARCH_BASE_EXT)                                                \
+  ID,
 #include "ARMTargetParser.def"
 };
 
@@ -109,20 +104,16 @@ enum class ArchKind {
 // The same CPU can have multiple arches and can be default on multiple arches.
 // When finding the Arch for a CPU, first-found prevails. Sort them accordingly.
 // When this becomes table-generated, we'd probably need two tables.
-// FIXME: TableGen this.
-template <typename T> struct CpuNames {
-  const char *NameCStr;
-  size_t NameLength;
-  T ArchID;
+struct CpuNames {
+  StringRef Name;
+  ArchKind ArchID;
   bool Default; // is $Name the default CPU for $ArchID ?
   uint64_t DefaultExtensions;
-
-  StringRef getName() const { return StringRef(NameCStr, NameLength); }
 };
 
-const CpuNames<ArchKind> CPUNames[] = {
+const CpuNames CPUNames[] = {
 #define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)           \
-  {NAME, sizeof(NAME) - 1, ARM::ArchKind::ID, IS_DEFAULT, DEFAULT_EXT},
+  {NAME, ARM::ArchKind::ID, IS_DEFAULT, DEFAULT_EXT},
 #include "ARMTargetParser.def"
 };
 
@@ -158,35 +149,24 @@ enum class NeonSupportLevel {
   Crypto    ///< Neon with Crypto
 };
 
-// ISA kinds.
-enum class ISAKind { INVALID = 0, ARM, THUMB, AARCH64 };
-
-// Endianness
-// FIXME: BE8 vs. BE32?
-enum class EndianKind { INVALID = 0, LITTLE, BIG };
-
 // v6/v7/v8 Profile
 enum class ProfileKind { INVALID = 0, A, R, M };
 
 // List of canonical FPU names (use getFPUSynonym) and which architectural
 // features they correspond to (use getFPUFeatures).
-// FIXME: TableGen this.
 // The entries must appear in the order listed in ARM::FPUKind for correct
 // indexing
 struct FPUName {
-  const char *NameCStr;
-  size_t NameLength;
+  StringRef Name;
   FPUKind ID;
   FPUVersion FPUVer;
   NeonSupportLevel NeonSupport;
   FPURestriction Restriction;
-
-  StringRef getName() const { return StringRef(NameCStr, NameLength); }
 };
 
 static const FPUName FPUNames[] = {
 #define ARM_FPU(NAME, KIND, VERSION, NEON_SUPPORT, RESTRICTION)                \
-  {NAME, sizeof(NAME) - 1, KIND, VERSION, NEON_SUPPORT, RESTRICTION},
+  {NAME, KIND, VERSION, NEON_SUPPORT, RESTRICTION},
 #include "llvm/Support/ARMTargetParser.def"
 };
 
@@ -197,43 +177,24 @@ static const FPUName FPUNames[] = {
 // FIXME: SubArch values were simplified to fit into the expectations
 // of the triples and are not conforming with their official names.
 // Check to see if the expectation should be changed.
-// FIXME: TableGen this.
-template <typename T> struct ArchNames {
-  const char *NameCStr;
-  size_t NameLength;
-  const char *CPUAttrCStr;
-  size_t CPUAttrLength;
-  const char *SubArchCStr;
-  size_t SubArchLength;
+struct ArchNames {
+  StringRef Name;
+  StringRef CPUAttr; // CPU class in build attributes.
+  StringRef ArchFeature;
   unsigned DefaultFPU;
   uint64_t ArchBaseExtensions;
-  T ID;
+  ArchKind ID;
   ARMBuildAttrs::CPUArch ArchAttr; // Arch ID in build attributes.
 
-  StringRef getName() const { return StringRef(NameCStr, NameLength); }
-
-  // CPU class in build attributes.
-  StringRef getCPUAttr() const { return StringRef(CPUAttrCStr, CPUAttrLength); }
-
-  // Sub-Arch name.
-  StringRef getSubArch() const {
-    return getArchFeature().substr(1, SubArchLength);
-  }
-
-  // Arch Feature name.
-  StringRef getArchFeature() const {
-    return StringRef(SubArchCStr, SubArchLength);
-  }
+  // Return ArchFeature without the leading "+".
+  StringRef getSubArch() const { return ArchFeature.substr(1); }
 };
 
-static const ArchNames<ArchKind> ARCHNames[] = {
-#define ARM_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU,            \
+static const ArchNames ARMArchNames[] = {
+#define ARM_ARCH(NAME, ID, CPU_ATTR, ARCH_FEATURE, ARCH_ATTR, ARCH_FPU,        \
                  ARCH_BASE_EXT)                                                \
-  {NAME,         sizeof(NAME) - 1,                                             \
-   CPU_ATTR,     sizeof(CPU_ATTR) - 1,                                         \
-   "+" SUB_ARCH, sizeof(SUB_ARCH),                                             \
-   ARCH_FPU,     ARCH_BASE_EXT,                                                \
-   ArchKind::ID, ARCH_ATTR},
+  {NAME,          CPU_ATTR,     ARCH_FEATURE, ARCH_FPU,                        \
+   ARCH_BASE_EXT, ArchKind::ID, ARCH_ATTR},
 #include "llvm/Support/ARMTargetParser.def"
 };
 
@@ -257,7 +218,6 @@ FPUVersion getFPUVersion(unsigned FPUKind);
 NeonSupportLevel getFPUNeonSupportLevel(unsigned FPUKind);
 FPURestriction getFPURestriction(unsigned FPUKind);
 
-// FIXME: These should be moved to TargetTuple once it exists
 bool getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features);
 bool getHWDivFeatures(uint64_t HWDivKind, std::vector<StringRef> &Features);
 bool getExtensionFeatures(uint64_t Extensions,
@@ -280,7 +240,6 @@ uint64_t getDefaultExtensions(StringRef CPU, ArchKind AK);
 StringRef getDefaultCPU(StringRef Arch);
 StringRef getCanonicalArchName(StringRef Arch);
 StringRef getFPUSynonym(StringRef FPU);
-StringRef getArchSynonym(StringRef Arch);
 
 // Parser
 uint64_t parseHWDiv(StringRef HWDiv);
@@ -288,8 +247,6 @@ unsigned parseFPU(StringRef FPU);
 ArchKind parseArch(StringRef Arch);
 uint64_t parseArchExt(StringRef ArchExt);
 ArchKind parseCPUArch(StringRef CPU);
-ISAKind parseArchISA(StringRef Arch);
-EndianKind parseArchEndian(StringRef Arch);
 ProfileKind parseArchProfile(StringRef Arch);
 unsigned parseArchVersion(StringRef Arch);
 

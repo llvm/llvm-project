@@ -5,7 +5,7 @@
 ; CHECK: ScratchSize: 16
 define void @recursive() {
   call void @recursive()
-  store volatile i32 0, i32 addrspace(1)* undef
+  store volatile i32 0, ptr addrspace(1) undef
   ret void
 }
 
@@ -24,7 +24,7 @@ define void @calls_tail_recursive() norecurse {
 ; CHECK-LABEL: {{^}}tail_recursive_with_stack:
 define void @tail_recursive_with_stack() {
   %alloca = alloca i32, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
   tail call void @tail_recursive_with_stack()
   ret void
 }

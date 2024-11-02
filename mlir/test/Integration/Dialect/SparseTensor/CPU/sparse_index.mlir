@@ -1,7 +1,15 @@
-// RUN: mlir-opt %s --sparse-compiler | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void \
-// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
+// DEFINE: mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// DEFINE: FileCheck %s
+//
+// RUN: %{command}
+//
+// Do the same run, but now with direct IR generation.
+// REDEFINE: %{option} = enable-runtime-library=false
+// RUN: %{command}
 
 #SparseVector = #sparse_tensor.encoding<{
   dimLevelType = ["compressed"]
@@ -180,15 +188,31 @@ module {
     //
     // Verify result.
     //
-    // CHECK:      ( 20, 80, -1, -1, -1, -1, -1, -1 )
+    // CHECK:      2
+    // CHECK-NEXT: 8
+    // CHECK-NEXT: 8
+    // CHECK-NEXT: 8
+    // CHECK-NEXT: 2
+    // CHECK-NEXT: 12
+    // CHECK-NEXT: 12
+    // CHECK-NEXT: 12
+    // CHECK-NEXT: ( 20, 80 )
     // CHECK-NEXT: ( 0, 1, 12, 3, 24, 5, 6, 7 )
     // CHECK-NEXT: ( 0, 2, 8, 24, 64, 160, 384, 896 )
     // CHECK-NEXT: ( 1, 3, 6, 11, 20, 37, 70, 135 )
-    // CHECK-NEXT: ( 10, 120, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 )
+    // CHECK-NEXT: ( 10, 120 )
     // CHECK-NEXT: ( 0, 1, 2, 3, 1, 12, 3, 4, 2, 3, 4, 25 )
     // CHECK-NEXT: ( 0, 0, 0, 0, 0, 2, 2, 3, 0, 2, 12, 24 )
     // CHECK-NEXT: ( 1, 2, 3, 4, 2, 4, 4, 5, 3, 4, 7, 9 )
     //
+    %n0 = sparse_tensor.number_of_entries %0 : tensor<8xi64, #SparseVector>
+    %n1 = sparse_tensor.number_of_entries %1 : tensor<8xi64, #SparseVector>
+    %n2 = sparse_tensor.number_of_entries %2 : tensor<8xi64, #SparseVector>
+    %n3 = sparse_tensor.number_of_entries %3 : tensor<8xi64, #SparseVector>
+    %n4 = sparse_tensor.number_of_entries %4 : tensor<3x4xi64, #SparseMatrix>
+    %n5 = sparse_tensor.number_of_entries %5 : tensor<3x4xi64, #SparseMatrix>
+    %n6 = sparse_tensor.number_of_entries %6 : tensor<3x4xi64, #SparseMatrix>
+    %n7 = sparse_tensor.number_of_entries %7 : tensor<3x4xi64, #SparseMatrix>
     %8 = sparse_tensor.values %0 : tensor<8xi64, #SparseVector> to memref<?xi64>
     %9 = sparse_tensor.values %1 : tensor<8xi64, #SparseVector> to memref<?xi64>
     %10 = sparse_tensor.values %2 : tensor<8xi64, #SparseVector> to memref<?xi64>
@@ -197,19 +221,27 @@ module {
     %13 = sparse_tensor.values %5 : tensor<3x4xi64, #SparseMatrix> to memref<?xi64>
     %14 = sparse_tensor.values %6 : tensor<3x4xi64, #SparseMatrix> to memref<?xi64>
     %15 = sparse_tensor.values %7 : tensor<3x4xi64, #SparseMatrix> to memref<?xi64>
-    %16 = vector.transfer_read %8[%c0], %du: memref<?xi64>, vector<8xi64>
+    %16 = vector.transfer_read %8[%c0], %du: memref<?xi64>, vector<2xi64>
     %17 = vector.transfer_read %9[%c0], %du: memref<?xi64>, vector<8xi64>
     %18 = vector.transfer_read %10[%c0], %du: memref<?xi64>, vector<8xi64>
     %19 = vector.transfer_read %11[%c0], %du: memref<?xi64>, vector<8xi64>
-    %20 = vector.transfer_read %12[%c0], %du: memref<?xi64>, vector<12xi64>
+    %20 = vector.transfer_read %12[%c0], %du: memref<?xi64>, vector<2xi64>
     %21 = vector.transfer_read %13[%c0], %du: memref<?xi64>, vector<12xi64>
     %22 = vector.transfer_read %14[%c0], %du: memref<?xi64>, vector<12xi64>
     %23 = vector.transfer_read %15[%c0], %du: memref<?xi64>, vector<12xi64>
-    vector.print %16 : vector<8xi64>
+    vector.print %n0 : index
+    vector.print %n1 : index
+    vector.print %n2 : index
+    vector.print %n3 : index
+    vector.print %n4 : index
+    vector.print %n5 : index
+    vector.print %n6 : index
+    vector.print %n7 : index
+    vector.print %16 : vector<2xi64>
     vector.print %17 : vector<8xi64>
     vector.print %18 : vector<8xi64>
     vector.print %19 : vector<8xi64>
-    vector.print %20 : vector<12xi64>
+    vector.print %20 : vector<2xi64>
     vector.print %21 : vector<12xi64>
     vector.print %22 : vector<12xi64>
     vector.print %23 : vector<12xi64>

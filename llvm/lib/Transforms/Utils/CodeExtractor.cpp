@@ -828,22 +828,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
   LLVM_DEBUG(dbgs() << "outputs: " << outputs.size() << "\n");
 
   Function *oldFunction = Blocks.front()->getParent();
-  LLVMContext &Context = oldFunction->getContext();
   Module *M = Blocks.front()->getModule();
-
-  // This function returns unsigned, outputs will go back by reference.
-  switch (SwitchCases.size()) {
-  case 0:
-  case 1:
-    RetTy = Type::getVoidTy(Context);
-    break;
-  case 2:
-    RetTy = Type::getInt1Ty(Context);
-    break;
-  default:
-    RetTy = Type::getInt16Ty(Context);
-    break;
-  }
 
   // Assemble the function's parameter lists.
   std::vector<Type *> ParamTy;
@@ -884,6 +869,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
     ParamTy.push_back(PointerType::get(StructTy, DL.getAllocaAddrSpace()));
   }
 
+  Type *RetTy = getSwitchType();
   LLVM_DEBUG({
     dbgs() << "Function type: " << *RetTy << " f(";
     for (Type *i : ParamTy)
@@ -1389,7 +1375,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     Instruction *TI = HoistToBlock->getTerminator();
     for (auto *II : HoistingCands)
       cast<Instruction>(II)->moveBefore(TI);
-    recomputeExitBlocks();
+    recomputeSwitchCases();
   }
 
   // CFG/ExitBlocks must not change hereafter
@@ -1485,7 +1471,7 @@ void CodeExtractor::normalizeCFGForExtraction(BasicBlock *&header) {
   // region, create a new PHI for those values within the region such that only
   // PHI itself becomes an output value, not each of its incoming values
   // individually.
-  recomputeExitBlocks();
+  recomputeSwitchCases();
   severSplitPHINodesOfExits();
 
   // If the option was given, ensure there are no PHI nodes at all in the exit
@@ -1514,7 +1500,7 @@ void CodeExtractor::normalizeCFGForExtraction(BasicBlock *&header) {
   }
 }
 
-void CodeExtractor::recomputeExitBlocks() {
+void CodeExtractor::recomputeSwitchCases() {
   SwitchCases.clear();
 
   SmallPtrSet<BasicBlock *, 2> ExitBlocks;
@@ -1527,6 +1513,22 @@ void CodeExtractor::recomputeExitBlocks() {
       if (IsNew)
         SwitchCases.push_back(Succ);
     }
+  }
+}
+
+Type *CodeExtractor::getSwitchType() {
+  LLVMContext &Context = Blocks.front()->getContext();
+
+  assert(SwitchCases.size() < 0xffff && "too many exit blocks for switch");
+  switch (SwitchCases.size()) {
+  case 0:
+  case 1:
+    return Type::getVoidTy(Context);
+  case 2:
+    // Conditional branch, return a bool
+    return Type::getInt1Ty(Context);
+  default:
+    return Type::getInt16Ty(Context);
   }
 }
 
@@ -1681,16 +1683,18 @@ void CodeExtractor::emitFunctionBody(
       VMap[OldTarget] = NewTarget;
 
     Value *brVal = nullptr;
+    Type *RetTy = getSwitchType();
     assert(SwitchCases.size() < 0xffff && "too many exit blocks for switch");
     switch (SwitchCases.size()) {
     case 0:
     case 1:
-      break; // No value needed.
-    case 2:  // Conditional branch, return a bool
-      brVal = ConstantInt::get(Type::getInt1Ty(Context), !SuccNum);
+      // No value needed.
+      break;
+    case 2: // Conditional branch, return a bool
+      brVal = ConstantInt::get(RetTy, !SuccNum);
       break;
     default:
-      brVal = ConstantInt::get(Type::getInt16Ty(Context), SuccNum);
+      brVal = ConstantInt::get(RetTy, SuccNum);
       break;
     }
 
@@ -1880,9 +1884,9 @@ CallInst *CodeExtractor::emitReplacerCall(
   }
 
   // Emit the call to the function
-  CallInst *call =
-      CallInst::Create(newFunction, params,
-          SwitchCases.size() > 1 ? "targetBlock" : "", codeReplacer);
+  CallInst *call = CallInst::Create(newFunction, params,
+                                    SwitchCases.size() > 1 ? "targetBlock" : "",
+                                    codeReplacer);
 
   // Set swifterror parameter attributes.
   unsigned ParamIdx = 0;
@@ -1984,7 +1988,8 @@ CallInst *CodeExtractor::emitReplacerCall(
     TheSwitch->setCondition(call);
     TheSwitch->setDefaultDest(TheSwitch->getSuccessor(SwitchCases.size()));
     // Remove redundant case
-    TheSwitch->removeCase(SwitchInst::CaseIt(TheSwitch, SwitchCases.size() - 1));
+    TheSwitch->removeCase(
+        SwitchInst::CaseIt(TheSwitch, SwitchCases.size() - 1));
     break;
   }
 

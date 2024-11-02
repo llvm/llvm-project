@@ -49,10 +49,10 @@ body:             |
   bb.0 (%ir-block.2):
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
-    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `float addrspace(1)* undef`)
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `float addrspace(1)* undef`)
-    $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `float addrspace(1)* undef`)
-    $vgpr3 = BUFFER_LOAD_DWORD_OFFSET killed $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `float addrspace(1)* undef`)
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `float addrspace(1)* undef`)
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `float addrspace(1)* undef`)
+    $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `float addrspace(1)* undef`)
+    $vgpr3 = BUFFER_LOAD_DWORD_OFFSET killed $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `float addrspace(1)* undef`)
     EXP_DONE 0, killed $vgpr0, killed $vgpr1, killed $vgpr2, killed $vgpr3, -1, -1, 15, implicit $exec
     $vgpr0 = V_MOV_B32_e32 1056964608, implicit $exec
     $vgpr1 = V_MOV_B32_e32 1065353216, implicit $exec

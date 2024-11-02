@@ -3,7 +3,7 @@
 
 ; Loads marked invariant can be sunk across critical edges
 
-define <4 x float> @invariant_load(<4 x float> *%in, i32 %s) {
+define <4 x float> @invariant_load(ptr %in, i32 %s) {
 ; CHECK-LABEL: @invariant_load(
 ; CHECK-NEXT:  main_body:
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[S:%.*]], 0
@@ -12,11 +12,11 @@ define <4 x float> @invariant_load(<4 x float> *%in, i32 %s) {
 ; CHECK-NEXT:    [[Z:%.*]] = add i32 [[S]], 1
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[V:%.*]] = load <4 x float>, <4 x float>* [[IN:%.*]], align 16, !invariant.load !0
+; CHECK-NEXT:    [[V:%.*]] = load <4 x float>, ptr [[IN:%.*]], align 16, !invariant.load !0
 ; CHECK-NEXT:    ret <4 x float> [[V]]
 ;
 main_body:
-  %v = load <4 x float>, <4 x float> *%in, !invariant.load !0
+  %v = load <4 x float>, ptr %in, !invariant.load !0
   %c = icmp eq i32 %s, 0
   br i1 %c, label %block, label %end
 block:

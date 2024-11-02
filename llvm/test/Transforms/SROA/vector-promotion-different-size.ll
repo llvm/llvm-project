@@ -9,7 +9,6 @@ define <4 x i1> @vector_bitcast() {
 ; CHECK-NEXT:    [[A_0_VEC:%.*]] = load <4 x i1>, ptr [[A]], align 1
 ; CHECK-NEXT:    ret <4 x i1> [[A_0_VEC]]
 ;
-
   %a = alloca <3 x i1>
   store <3 x i1> <i1 1,i1 0,i1 1>, ptr %a
   %vec = load <4 x i1>, ptr %a
@@ -23,7 +22,6 @@ define <64 x i16> @vector_bitcast_2(<32 x i16> %v) {
 ; CHECK-NEXT:    [[P_0_LOAD:%.*]] = load <64 x i16>, ptr [[P]], align 64
 ; CHECK-NEXT:    ret <64 x i16> [[P_0_LOAD]]
 ;
-
   %p = alloca <32 x i16>
   store <32 x i16> %v, ptr %p
   %load = load <64 x i16>, ptr %p

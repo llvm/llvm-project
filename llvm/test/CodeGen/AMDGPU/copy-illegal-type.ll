@@ -171,14 +171,20 @@ define amdgpu_kernel void @test_copy_v4i8_x4(<4 x i8> addrspace(1)* %out0, <4 x 
 ; SI-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_load_dword v0, v[0:1], s[4:7], 0 addr64
+; SI-NEXT:    s_mov_b32 s24, SCRATCH_RSRC_DWORD0
+; SI-NEXT:    s_mov_b32 s25, SCRATCH_RSRC_DWORD1
+; SI-NEXT:    s_mov_b32 s26, -1
+; SI-NEXT:    s_mov_b32 s27, 0xe8f000
+; SI-NEXT:    s_add_u32 s24, s24, s3
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
 ; SI-NEXT:    s_mov_b32 s10, -1
+; SI-NEXT:    s_addc_u32 s25, s25, 0
 ; SI-NEXT:    s_mov_b32 s14, s10
 ; SI-NEXT:    s_mov_b32 s15, s11
-; SI-NEXT:    s_mov_b32 s18, s10
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s8, s0
 ; SI-NEXT:    s_mov_b32 s9, s1
+; SI-NEXT:    s_mov_b32 s18, s10
 ; SI-NEXT:    s_mov_b32 s19, s11
 ; SI-NEXT:    s_mov_b32 s22, s10
 ; SI-NEXT:    s_mov_b32 s23, s11
@@ -197,24 +203,30 @@ define amdgpu_kernel void @test_copy_v4i8_x4(<4 x i8> addrspace(1)* %out0, <4 x 
 ;
 ; VI-LABEL: test_copy_v4i8_x4:
 ; VI:       ; %bb.0:
+; VI-NEXT:    s_mov_b32 s88, SCRATCH_RSRC_DWORD0
+; VI-NEXT:    s_mov_b32 s89, SCRATCH_RSRC_DWORD1
+; VI-NEXT:    s_mov_b32 s90, -1
+; VI-NEXT:    s_mov_b32 s91, 0xe80000
+; VI-NEXT:    s_add_u32 s88, s88, s3
 ; VI-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x44
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    s_mov_b32 s11, 0xf000
 ; VI-NEXT:    s_mov_b32 s10, -1
-; VI-NEXT:    s_mov_b32 s14, s10
+; VI-NEXT:    s_addc_u32 s89, s89, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_dword v0, v[0:1]
 ; VI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; VI-NEXT:    s_mov_b32 s14, s10
 ; VI-NEXT:    s_mov_b32 s15, s11
 ; VI-NEXT:    s_mov_b32 s18, s10
 ; VI-NEXT:    s_mov_b32 s19, s11
-; VI-NEXT:    s_mov_b32 s22, s10
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s8, s0
 ; VI-NEXT:    s_mov_b32 s9, s1
+; VI-NEXT:    s_mov_b32 s22, s10
 ; VI-NEXT:    s_mov_b32 s23, s11
 ; VI-NEXT:    s_mov_b32 s12, s2
 ; VI-NEXT:    s_mov_b32 s13, s3

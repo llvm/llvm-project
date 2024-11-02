@@ -513,4 +513,4 @@ module {
 You can build `toyc-ch7` and try yourself: `toyc-ch7
 test/Examples/Toy/Ch7/struct-codegen.toy -emit=mlir`. More details on defining
 custom types can be found in
-[DefiningAttributesAndTypes](../DefiningAttributesAndTypes.md).
+[DefiningAttributesAndTypes](../../DefiningDialects/AttributesAndTypes.md).

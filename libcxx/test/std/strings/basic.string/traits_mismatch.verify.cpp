@@ -9,6 +9,8 @@
 // <string>
 //   The strings's value type must be the same as the traits's char_type
 
+// UNSUPPORTED: no-wide-characters
+
 #include <string>
 
 std::basic_string<char, std::char_traits<wchar_t> > s; // expected-error@*:* {{traits_type::char_type must be the same type as CharT}}

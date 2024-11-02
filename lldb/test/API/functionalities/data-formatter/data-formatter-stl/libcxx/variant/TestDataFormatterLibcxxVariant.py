@@ -76,3 +76,6 @@ class LibcxxVariantDataFormatterTestCase(TestBase):
 
         self.expect("frame variable v_no_value",
                     substrs=['v_no_value =  No Value'])
+
+        self.expect("frame variable v_300_types_no_value",
+                    substrs=['v_300_types_no_value =  No Value'])

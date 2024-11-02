@@ -1057,6 +1057,8 @@ def : Pat<(int_ppc_altivec_vnmsubfp v4f32:$A, v4f32:$B, v4f32:$C),
 
 def : Pat<(PPCvperm v16i8:$vA, v16i8:$vB, v16i8:$vC),
           (VPERM $vA, $vB, $vC)>;
+def : Pat<(PPCvperm v2f64:$vA, v2f64:$vB, v16i8:$vC),
+          (VPERM $vA, $vB, $vC)>;
 
 def : Pat<(PPCfre v4f32:$A), (VREFP $A)>;
 def : Pat<(PPCfrsqrte v4f32:$A), (VRSQRTEFP $A)>;

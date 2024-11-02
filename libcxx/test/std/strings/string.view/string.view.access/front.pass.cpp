@@ -32,8 +32,10 @@ int main(int, char**) {
     assert ( test ( "ABCDE", 5 ));
     assert ( test ( "a", 1 ));
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     assert ( test ( L"ABCDE", 5 ));
     assert ( test ( L"a", 1 ));
+#endif
 
 #if TEST_STD_VER >= 11
     assert ( test ( u"ABCDE", 5 ));

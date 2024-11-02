@@ -48,6 +48,20 @@ DEBUG_COUNTER(EliminatedCounter, "conds-eliminated",
 static int64_t MaxConstraintValue = std::numeric_limits<int64_t>::max();
 static int64_t MinSignedConstraintValue = std::numeric_limits<int64_t>::min();
 
+// A helper to multiply 2 signed integers where overflowing is allowed.
+static int64_t multiplyWithOverflow(int64_t A, int64_t B) {
+  int64_t Result;
+  MulOverflow(A, B, Result);
+  return Result;
+}
+
+// A helper to add 2 signed integers where overflowing is allowed.
+static int64_t addWithOverflow(int64_t A, int64_t B) {
+  int64_t Result;
+  AddOverflow(A, B, Result);
+  return Result;
+}
+
 namespace {
 
 class ConstraintInfo;
@@ -178,110 +192,94 @@ struct DecompEntry {
         IsKnownPositive(IsKnownPositive) {}
 };
 
+/// Represents an Offset + Coefficient1 * Variable1 + ... decomposition.
+struct Decomposition {
+  int64_t Offset = 0;
+  SmallVector<DecompEntry, 3> Vars;
+
+  Decomposition(int64_t Offset) : Offset(Offset) {}
+  Decomposition(Value *V, bool IsKnownPositive = false) {
+    Vars.emplace_back(1, V, IsKnownPositive);
+  }
+  Decomposition(int64_t Offset, ArrayRef<DecompEntry> Vars)
+      : Offset(Offset), Vars(Vars) {}
+
+  void add(int64_t OtherOffset) {
+    Offset = addWithOverflow(Offset, OtherOffset);
+  }
+
+  void add(const Decomposition &Other) {
+    add(Other.Offset);
+    append_range(Vars, Other.Vars);
+  }
+
+  void mul(int64_t Factor) {
+    Offset = multiplyWithOverflow(Offset, Factor);
+    for (auto &Var : Vars)
+      Var.Coefficient = multiplyWithOverflow(Var.Coefficient, Factor);
+  }
+};
+
 } // namespace
 
-static SmallVector<DecompEntry, 4>
-decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
-          bool IsSigned, const DataLayout &DL);
+static Decomposition decompose(Value *V,
+                               SmallVectorImpl<PreconditionTy> &Preconditions,
+                               bool IsSigned, const DataLayout &DL);
 
 static bool canUseSExt(ConstantInt *CI) {
   const APInt &Val = CI->getValue();
   return Val.sgt(MinSignedConstraintValue) && Val.slt(MaxConstraintValue);
 }
 
-// A helper to multiply 2 signed integers where overflowing is allowed.
-static int64_t multiplyWithOverflow(int64_t A, int64_t B) {
-  int64_t Result;
-  MulOverflow(A, B, Result);
-  return Result;
-}
-
-// A helper to add 2 signed integers where overflowing is allowed.
-static int64_t addWithOverflow(int64_t A, int64_t B) {
-  int64_t Result;
-  AddOverflow(A, B, Result);
-  return Result;
-}
-
-static SmallVector<DecompEntry, 4>
+static Decomposition
 decomposeGEP(GetElementPtrInst &GEP,
-             SmallVector<PreconditionTy, 4> &Preconditions, bool IsSigned,
+             SmallVectorImpl<PreconditionTy> &Preconditions, bool IsSigned,
              const DataLayout &DL) {
   // Do not reason about pointers where the index size is larger than 64 bits,
   // as the coefficients used to encode constraints are 64 bit integers.
   if (DL.getIndexTypeSizeInBits(GEP.getPointerOperand()->getType()) > 64)
-    return {};
+    return &GEP;
 
   if (!GEP.isInBounds())
-    return {{0, nullptr}, {1, &GEP}};
+    return &GEP;
+
+  Type *PtrTy = GEP.getType()->getScalarType();
+  unsigned BitWidth = DL.getIndexTypeSizeInBits(PtrTy);
+  MapVector<Value *, APInt> VariableOffsets;
+  APInt ConstantOffset(BitWidth, 0);
+  if (!GEP.collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset))
+    return &GEP;
 
   // Handle the (gep (gep ....), C) case by incrementing the constant
   // coefficient of the inner GEP, if C is a constant.
   auto *InnerGEP = dyn_cast<GetElementPtrInst>(GEP.getPointerOperand());
-  if (InnerGEP && GEP.getNumOperands() == 2 &&
-      isa<ConstantInt>(GEP.getOperand(1))) {
-    APInt Offset = cast<ConstantInt>(GEP.getOperand(1))->getValue();
+  if (VariableOffsets.empty() && InnerGEP && InnerGEP->getNumOperands() == 2) {
     auto Result = decompose(InnerGEP, Preconditions, IsSigned, DL);
+    Result.add(ConstantOffset.getSExtValue());
 
-    auto GTI = gep_type_begin(GEP);
-    // Bail out for scalable vectors for now.
-    if (isa<ScalableVectorType>(GTI.getIndexedType()))
-      return {};
-    int64_t Scale = static_cast<int64_t>(
-        DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize());
-
-    Result[0].Coefficient =
-        addWithOverflow(Result[0].Coefficient,
-                        multiplyWithOverflow(Scale, Offset.getSExtValue()));
-    if (Offset.isNegative()) {
+    if (ConstantOffset.isNegative()) {
+      unsigned Scale = DL.getTypeAllocSize(InnerGEP->getResultElementType());
+      int64_t ConstantOffsetI = ConstantOffset.getSExtValue();
+      if (ConstantOffsetI % Scale != 0)
+        return &GEP;
       // Add pre-condition ensuring the GEP is increasing monotonically and
       // can be de-composed.
+      // Both sides are normalized by being divided by Scale.
       Preconditions.emplace_back(
           CmpInst::ICMP_SGE, InnerGEP->getOperand(1),
           ConstantInt::get(InnerGEP->getOperand(1)->getType(),
-                           -1 * Offset.getSExtValue()));
+                           -1 * (ConstantOffsetI / Scale)));
     }
     return Result;
   }
 
-  SmallVector<DecompEntry, 4> Result = {{0, nullptr},
-                                        {1, GEP.getPointerOperand()}};
-  gep_type_iterator GTI = gep_type_begin(GEP);
-  for (User::const_op_iterator I = GEP.op_begin() + 1, E = GEP.op_end(); I != E;
-       ++I, ++GTI) {
-    Value *Index = *I;
-
-    // Bail out for scalable vectors for now.
-    if (isa<ScalableVectorType>(GTI.getIndexedType()))
-      return {};
-
-    // Struct indices must be constants (and reference an existing field). Add
-    // them to the constant factor.
-    if (StructType *STy = GTI.getStructTypeOrNull()) {
-      // For a struct, add the member offset.
-      unsigned FieldNo = cast<ConstantInt>(Index)->getZExtValue();
-      if (FieldNo == 0)
-        continue;
-
-      // Add offset to constant factor.
-      Result[0].Coefficient = addWithOverflow(
-          Result[0].Coefficient,
-          int64_t(DL.getStructLayout(STy)->getElementOffset(FieldNo)));
-      continue;
-    }
-
-    // For an array/pointer, add the element offset, explicitly scaled.
-    unsigned Scale = DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize();
-
+  Decomposition Result(ConstantOffset.getSExtValue(),
+                       DecompEntry(1, GEP.getPointerOperand()));
+  for (auto [Index, Scale] : VariableOffsets) {
     auto IdxResult = decompose(Index, Preconditions, IsSigned, DL);
-    if (IdxResult.empty()) {
-      Result.emplace_back(Scale, Index);
-    } else {
-      for (auto &KV : IdxResult)
-        KV.Coefficient = multiplyWithOverflow(KV.Coefficient, Scale);
-      Result[0].Coefficient += IdxResult[0].Coefficient;
-      append_range(Result, ArrayRef<DecompEntry>(IdxResult).drop_front());
-    }
+    IdxResult.mul(Scale.getSExtValue());
+    Result.add(IdxResult);
+
     // If Op0 is signed non-negative, the GEP is increasing monotonically and
     // can be de-composed.
     if (!isKnownNonNegative(Index, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1))
@@ -295,19 +293,15 @@ decomposeGEP(GetElementPtrInst &GEP,
 // } where Coefficient * Variable. The sum of the pairs equals \p V.  The first
 // pair is the constant-factor and X must be nullptr. If the expression cannot
 // be decomposed, returns an empty vector.
-static SmallVector<DecompEntry, 4>
-decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
-          bool IsSigned, const DataLayout &DL) {
+static Decomposition decompose(Value *V,
+                               SmallVectorImpl<PreconditionTy> &Preconditions,
+                               bool IsSigned, const DataLayout &DL) {
 
-  auto MergeResults = [&Preconditions, IsSigned,
-                       &DL](Value *A, Value *B,
-                            bool IsSignedB) -> SmallVector<DecompEntry, 4> {
+  auto MergeResults = [&Preconditions, IsSigned, &DL](Value *A, Value *B,
+                                                      bool IsSignedB) {
     auto ResA = decompose(A, Preconditions, IsSigned, DL);
     auto ResB = decompose(B, Preconditions, IsSignedB, DL);
-    if (ResA.empty() || ResB.empty())
-      return {};
-    ResA[0].Coefficient += ResB[0].Coefficient;
-    append_range(ResA, drop_begin(ResB));
+    ResA.add(ResB);
     return ResA;
   };
 
@@ -315,20 +309,20 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
   if (IsSigned) {
     if (auto *CI = dyn_cast<ConstantInt>(V)) {
       if (canUseSExt(CI))
-        return {{CI->getSExtValue(), nullptr}};
+        return CI->getSExtValue();
     }
     Value *Op0;
     Value *Op1;
     if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1))))
       return MergeResults(Op0, Op1, IsSigned);
 
-    return {{0, nullptr}, {1, V}};
+    return V;
   }
 
   if (auto *CI = dyn_cast<ConstantInt>(V)) {
     if (CI->uge(MaxConstraintValue))
-      return {};
-    return {{int64_t(CI->getZExtValue()), nullptr}};
+      return V;
+    return int64_t(CI->getZExtValue());
   }
 
   if (auto *GEP = dyn_cast<GetElementPtrInst>(V))
@@ -368,25 +362,23 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
   if (match(V, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI)) {
     int64_t Mult = int64_t(std::pow(int64_t(2), CI->getSExtValue()));
     auto Result = decompose(Op1, Preconditions, IsSigned, DL);
-    for (auto &KV : Result)
-      KV.Coefficient *= Mult;
+    Result.mul(Mult);
     return Result;
   }
 
   if (match(V, m_NUWMul(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI) &&
       (!CI->isNegative())) {
     auto Result = decompose(Op1, Preconditions, IsSigned, DL);
-    for (auto &KV : Result)
-      KV.Coefficient *= CI->getSExtValue();
+    Result.mul(CI->getSExtValue());
     return Result;
   }
 
   if (match(V, m_NUWSub(m_Value(Op0), m_ConstantInt(CI))) && canUseSExt(CI))
-    return {{-1 * CI->getSExtValue(), nullptr}, {1, Op0}};
+    return {-1 * CI->getSExtValue(), {{1, Op0}}};
   if (match(V, m_NUWSub(m_Value(Op0), m_Value(Op1))))
-    return {{0, nullptr}, {1, Op0}, {-1, Op1}};
+    return {0, {{1, Op0}, {-1, Op1}}};
 
-  return {{0, nullptr}, {1, V, IsKnownPositive}};
+  return {V, IsKnownPositive};
 }
 
 ConstraintTy
@@ -434,17 +426,12 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
                         Preconditions, IsSigned, DL);
   auto BDec = decompose(Op1->stripPointerCastsSameRepresentation(),
                         Preconditions, IsSigned, DL);
-  // Skip if decomposing either of the values failed.
-  if (ADec.empty() || BDec.empty())
-    return {};
-
-  int64_t Offset1 = ADec[0].Coefficient;
-  int64_t Offset2 = BDec[0].Coefficient;
+  int64_t Offset1 = ADec.Offset;
+  int64_t Offset2 = BDec.Offset;
   Offset1 *= -1;
 
-  // Create iterator ranges that skip the constant-factor.
-  auto VariablesA = llvm::drop_begin(ADec);
-  auto VariablesB = llvm::drop_begin(BDec);
+  auto &VariablesA = ADec.Vars;
+  auto &VariablesB = BDec.Vars;
 
   // First try to look up \p V in Value2Index and NewVariables. Otherwise add a
   // new entry to NewVariables.

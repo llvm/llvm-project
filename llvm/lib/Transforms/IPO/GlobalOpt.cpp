@@ -68,6 +68,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -2468,7 +2469,7 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
   SmallPtrSet<const Comdat *, 8> NotDiscardableComdats;
   bool Changed = false;
   bool LocalChange = true;
-  Optional<uint32_t> FirstNotFullyEvaluatedPriority;
+  std::optional<uint32_t> FirstNotFullyEvaluatedPriority;
 
   while (LocalChange) {
     LocalChange = false;

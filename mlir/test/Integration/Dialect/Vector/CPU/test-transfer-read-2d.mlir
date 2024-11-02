@@ -3,17 +3,7 @@
 // RUN:   -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-vector-to-scf{lower-permutation-maps=true},lower-affine,convert-scf-to-cf),convert-vector-to-llvm,convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)" | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
-// RUN:   -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
-
 // RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-vector-to-scf{full-unroll=true},lower-affine,convert-scf-to-cf),convert-vector-to-llvm,convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)" | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
-// RUN:   -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
-
-// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-vector-to-scf{full-unroll=true lower-permutation-maps=true},lower-affine,convert-scf-to-cf),convert-vector-to-llvm,convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)" | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
@@ -50,11 +40,10 @@ func.func @transfer_read_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: in
 func.func @transfer_read_2d_mask_transposed(
     %A : memref<?x?xf32>, %base1: index, %base2: index) {
   %fm42 = arith.constant -42.0: f32
-  %mask = arith.constant dense<[[1, 0, 1, 0], [0, 0, 1, 0],
-                          [1, 1, 1, 1], [0, 1, 1, 0],
-                          [1, 1, 1, 1], [1, 1, 1, 1],
-                          [1, 1, 1, 1], [0, 0, 0, 0],
-                          [1, 1, 1, 1]]> : vector<9x4xi1>
+  %mask = arith.constant dense<[[1, 0, 1, 0, 1, 1, 1, 0, 1],
+                          [0, 0, 1, 1, 1, 1, 1, 0, 1],
+                          [1, 1, 1, 1, 1, 1, 1, 0, 1],
+                          [0, 0, 1, 0, 1, 1, 1, 0, 1]]> : vector<4x9xi1>
   %f = vector.transfer_read %A[%base1, %base2], %fm42, %mask
       {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} :
     memref<?x?xf32>, vector<9x4xf32>

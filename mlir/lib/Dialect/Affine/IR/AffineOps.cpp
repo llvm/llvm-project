@@ -679,8 +679,8 @@ static void simplifyExprAndOperands(AffineExpr &expr,
     return;
 
   // Simplify the child expressions first.
-  auto lhs = binExpr.getLHS();
-  auto rhs = binExpr.getRHS();
+  AffineExpr lhs = binExpr.getLHS();
+  AffineExpr rhs = binExpr.getRHS();
   simplifyExprAndOperands(lhs, operands);
   simplifyExprAndOperands(rhs, operands);
   expr = getAffineBinaryOpExpr(binExpr.getKind(), lhs, rhs);
@@ -691,11 +691,18 @@ static void simplifyExprAndOperands(AffineExpr &expr,
     return;
   }
 
+  // The `lhs` and `rhs` may be different post construction of simplified expr.
+  lhs = binExpr.getLHS();
+  rhs = binExpr.getRHS();
   auto rhsConst = rhs.dyn_cast<AffineConstantExpr>();
   if (!rhsConst)
     return;
 
   int64_t rhsConstVal = rhsConst.getValue();
+  // Undefined exprsessions aren't touched; IR can still be valid with them.
+  if (rhsConstVal == 0)
+    return;
+
   AffineExpr quotientTimesDiv, rem;
   int64_t divisor;
 
@@ -911,7 +918,7 @@ template <typename OpTy, typename... Args>
 static std::enable_if_t<OpTy::template hasTrait<OpTrait::OneResult>(),
                         OpFoldResult>
 createOrFold(OpBuilder &b, Location loc, ValueRange operands,
-             Args &&...leadingArguments) {
+             Args &&... leadingArguments) {
   // Identify the constant operands and extract their values as attributes.
   // Note that we cannot use the original values directly because the list of
   // operands may have changed due to canonicalization and composition.
@@ -2512,6 +2519,29 @@ struct AlwaysTrueOrFalseIf : public OpRewritePattern<AffineIfOp> {
   }
 };
 } // namespace
+
+/// AffineIfOp has two regions -- `then` and `else`. The flow of data should be
+/// as follows: AffineIfOp -> `then`/`else` -> AffineIfOp
+void AffineIfOp::getSuccessorRegions(
+    Optional<unsigned> index, ArrayRef<Attribute> operands,
+    SmallVectorImpl<RegionSuccessor> &regions) {
+  // If the predecessor is an AffineIfOp, then branching into both `then` and
+  // `else` region is valid.
+  if (!index.has_value()) {
+    regions.reserve(2);
+    regions.push_back(
+        RegionSuccessor(&getThenRegion(), getThenRegion().getArguments()));
+    // Don't consider the else region if it is empty.
+    if (!getElseRegion().empty())
+      regions.push_back(
+          RegionSuccessor(&getElseRegion(), getElseRegion().getArguments()));
+    return;
+  }
+
+  // If the predecessor is the `else`/`then` region, then branching into parent
+  // op is valid.
+  regions.push_back(RegionSuccessor(getResults()));
+}
 
 LogicalResult AffineIfOp::verify() {
   // Verify that we have a condition attribute.

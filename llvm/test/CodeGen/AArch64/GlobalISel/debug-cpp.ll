@@ -20,11 +20,10 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-LABEL: name: _Z3foo6NTCopy
 ; CHECK: DBG_VALUE %{{[0-9]+}}(p0), 0, !23, !DIExpression(), debug-location !24
 ; Function Attrs: noinline nounwind optnone
-define dso_local i32 @_Z3foo6NTCopy(%struct.NTCopy* %o) #0 !dbg !7 {
+define dso_local i32 @_Z3foo6NTCopy(ptr %o) #0 !dbg !7 {
 entry:
-  call void @llvm.dbg.declare(metadata %struct.NTCopy* %o, metadata !23, metadata !DIExpression()), !dbg !24
-  %x = getelementptr inbounds %struct.NTCopy, %struct.NTCopy* %o, i32 0, i32 0, !dbg !25
-  %0 = load i32, i32* %x, align 4, !dbg !25
+  call void @llvm.dbg.declare(metadata ptr %o, metadata !23, metadata !DIExpression()), !dbg !24
+  %0 = load i32, ptr %o, align 4, !dbg !25
   ret i32 %0, !dbg !26
 }
 

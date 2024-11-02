@@ -32,7 +32,6 @@
 
 namespace llvm {
 
-class AAResults;
 class LiveInterval;
 class LiveRange;
 class LiveIntervals;

@@ -6,7 +6,7 @@
 ; scenario independent of any particular backend options that may exist now or
 ; in the future.
 
-; XFAIL: aix
+; XFAIL: target={{.*}}-aix{{.*}}
 
 ; RUN: %clang -flto=thin -c -o %t.o %s
 ; RUN: llvm-lto -thinlto -o %t %t.o

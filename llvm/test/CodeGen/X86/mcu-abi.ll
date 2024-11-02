@@ -64,13 +64,14 @@ entry:
 define void @ret_large_struct(ptr noalias nocapture sret(%struct.st12_t) %agg.result, ptr byval(%struct.st12_t) nocapture readonly align 4 %r) #0 {
 ; CHECK-LABEL: ret_large_struct:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    leal {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movl $48, %ecx
-; CHECK-NEXT:    calll memcpy
-; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    leal {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movl $12, %ecx
+; CHECK-NEXT:    movl %eax, %edi
+; CHECK-NEXT:    rep;movsl (%esi), %es:(%edi)
 ; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    retl
 entry:
   call void @llvm.memcpy.p0.p0.i32(ptr %agg.result, ptr %r, i32 48, i1 false)

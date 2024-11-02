@@ -502,6 +502,11 @@ public:
     finalizeRootUpdate(root);
   }
 
+  /// Find uses of `from` and replace it with `to`. It also marks every modified
+  /// uses and notifies the rewriter that an in-place operation modification is
+  /// about to happen.
+  void replaceAllUsesWith(Value from, Value to);
+
   /// Used to notify the rewriter that the IR failed to be rewritten because of
   /// a match failure, and provide a callback to populate a diagnostic with the
   /// reason why the failure occurred. This method allows for derived rewriters

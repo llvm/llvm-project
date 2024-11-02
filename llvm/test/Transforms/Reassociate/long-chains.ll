@@ -1,4 +1,4 @@
-; RUN: opt < %s -reassociate -stats -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=reassociate -stats -S 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 define i8 @longchain(i8 %in1, i8 %in2, i8 %in3, i8 %in4, i8 %in5, i8 %in6, i8 %in7, i8 %in8, i8 %in9, i8 %in10, i8 %in11, i8 %in12, i8 %in13, i8 %in14, i8 %in15, i8 %in16, i8 %in17, i8 %in18, i8 %in19, i8 %in20) {

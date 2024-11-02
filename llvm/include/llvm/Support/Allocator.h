@@ -248,7 +248,7 @@ public:
         return InCustomSizedSlabIdx - static_cast<int64_t>(P - S);
       InCustomSizedSlabIdx -= static_cast<int64_t>(Size);
     }
-    return None;
+    return std::nullopt;
   }
 
   /// A wrapper around identifyObject that additionally asserts that

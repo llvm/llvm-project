@@ -396,7 +396,7 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxnreg = 16} {
 // CHECK:     {ptr @kernel_func, !"maxnreg", i32 16}
 // -----
 
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [1,23,32], 
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [1,23,32],
                                      nvvm.minctasm = 16, nvvm.maxnreg = 32} {
   llvm.return
 }
@@ -411,27 +411,27 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [1,23,32],
 // CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
 
 // -----
-// expected-error @below {{'"nvvm.minctasm"' attribute must be integer constant}}  
-llvm.func @kernel_func() attributes {nvvm.kernel, 
+// expected-error @below {{'"nvvm.minctasm"' attribute must be integer constant}}
+llvm.func @kernel_func() attributes {nvvm.kernel,
 nvvm.minctasm = "foo"} {
   llvm.return
 }
 
 
 // -----
-// expected-error @below {{'"nvvm.maxnreg"' attribute must be integer constant}}  
-llvm.func @kernel_func() attributes {nvvm.kernel, 
+// expected-error @below {{'"nvvm.maxnreg"' attribute must be integer constant}}
+llvm.func @kernel_func() attributes {nvvm.kernel,
 nvvm.maxnreg = "boo"} {
   llvm.return
 }
 // -----
-// expected-error @below {{'"nvvm.reqntid"' attribute must be integer array with maximum 3 index}}  
+// expected-error @below {{'"nvvm.reqntid"' attribute must be integer array with maximum 3 index}}
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = [3,4,5,6]} {
   llvm.return
 }
 
 // -----
-// expected-error @below {{'"nvvm.maxntid"' attribute must be integer array with maximum 3 index}}  
+// expected-error @below {{'"nvvm.maxntid"' attribute must be integer array with maximum 3 index}}
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [3,4,5,6]} {
   llvm.return
 }

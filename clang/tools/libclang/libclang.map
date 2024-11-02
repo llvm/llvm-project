@@ -4,11 +4,6 @@
 # On platforms where versions scripts are not used, this file will be used to
 # generate a list of exports for libclang.so
 
-LLVM_15 {
-  global:
-    clang_getCompletionResultKindSpelling;
-};
-
 LLVM_13 {
   global:
     clang_BlockCommandComment_getArgText;
@@ -416,6 +411,7 @@ LLVM_16 {
     clang_getNonReferenceType;
     clang_CXXMethod_isDeleted;
     clang_CXXMethod_isCopyAssignmentOperator;
+    clang_CXXMethod_isMoveAssignmentOperator;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol

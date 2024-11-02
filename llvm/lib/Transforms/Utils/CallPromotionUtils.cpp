@@ -415,18 +415,8 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
   // site.
   unsigned I = 0;
   for (; I < NumParams; ++I) {
-    Type *FormalTy = Callee->getFunctionType()->getFunctionParamType(I);
-    Type *ActualTy = CB.getArgOperand(I)->getType();
-    if (FormalTy == ActualTy)
-      continue;
-    if (!CastInst::isBitOrNoopPointerCastable(ActualTy, FormalTy, DL)) {
-      if (FailureReason)
-        *FailureReason = "Argument type mismatch";
-      return false;
-    }
     // Make sure that the callee and call agree on byval/inalloca. The types do
     // not have to match.
-
     if (Callee->hasParamAttribute(I, Attribute::ByVal) !=
         CB.getAttributes().hasParamAttr(I, Attribute::ByVal)) {
       if (FailureReason)
@@ -438,6 +428,28 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
       if (FailureReason)
         *FailureReason = "inalloca mismatch";
       return false;
+    }
+
+    Type *FormalTy = Callee->getFunctionType()->getFunctionParamType(I);
+    Type *ActualTy = CB.getArgOperand(I)->getType();
+    if (FormalTy == ActualTy)
+      continue;
+    if (!CastInst::isBitOrNoopPointerCastable(ActualTy, FormalTy, DL)) {
+      if (FailureReason)
+        *FailureReason = "Argument type mismatch";
+      return false;
+    }
+
+    // MustTail call needs stricter type match. See
+    // Verifier::verifyMustTailCall().
+    if (CB.isMustTailCall()) {
+      PointerType *PF = dyn_cast<PointerType>(FormalTy);
+      PointerType *PA = dyn_cast<PointerType>(ActualTy);
+      if (!PF || !PA || PF->getAddressSpace() != PA->getAddressSpace()) {
+        if (FailureReason)
+          *FailureReason = "Musttail call Argument type mismatch";
+        return false;
+      }
     }
   }
   for (; I < NumArgs; I++) {

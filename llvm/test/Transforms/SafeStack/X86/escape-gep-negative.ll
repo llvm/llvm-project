@@ -10,9 +10,9 @@ define void @foo() nounwind uwtable safestack {
 entry:
   ; CHECK: __safestack_unsafe_stack_ptr
   %a = alloca i32, align 4
-  %add.ptr5 = getelementptr inbounds i32, i32* %a, i64 -12
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32* %add.ptr5) nounwind
+  %add.ptr5 = getelementptr inbounds i32, ptr %a, i64 -12
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %add.ptr5) nounwind
   ret void
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)

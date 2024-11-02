@@ -391,7 +391,7 @@ TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
   ASSERT_THAT_EXPECTED(clang_ast_ctx_or_err, llvm::Succeeded());
 
   auto clang_ast_ctx =
-      llvm::dyn_cast_or_null<TypeSystemClang>(&clang_ast_ctx_or_err.get());
+      llvm::dyn_cast_or_null<TypeSystemClang>(clang_ast_ctx_or_err->get());
   EXPECT_NE(nullptr, clang_ast_ctx);
 
   symfile->FindTypes(ConstString("Class"), CompilerDeclContext(), 0,
@@ -445,7 +445,7 @@ TEST_F(SymbolFilePDBTests, TestClassInNamespace) {
   ASSERT_THAT_EXPECTED(clang_ast_ctx_or_err, llvm::Succeeded());
 
   auto clang_ast_ctx =
-      llvm::dyn_cast_or_null<TypeSystemClang>(&clang_ast_ctx_or_err.get());
+      llvm::dyn_cast_or_null<TypeSystemClang>(clang_ast_ctx_or_err->get());
   EXPECT_NE(nullptr, clang_ast_ctx);
 
   clang::ASTContext &ast_ctx = clang_ast_ctx->getASTContext();
@@ -540,8 +540,8 @@ TEST_F(SymbolFilePDBTests, TestTypedefs) {
     lldb::TypeSP typedef_type = results.GetTypeAtIndex(0);
     EXPECT_EQ(ConstString(Typedef), typedef_type->GetName());
     CompilerType compiler_type = typedef_type->GetFullCompilerType();
-    TypeSystemClang *clang_type_system =
-        llvm::dyn_cast_or_null<TypeSystemClang>(compiler_type.GetTypeSystem());
+    auto clang_type_system =
+        compiler_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
     EXPECT_TRUE(
         clang_type_system->IsTypedefType(compiler_type.GetOpaqueQualType()));
 

@@ -404,6 +404,41 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sscanf
+  SRCS
+    sscanf.cpp
+  HDRS
+    sscanf.h
+  DEPENDS
+    libc.src.__support.arg_list
+    libc.src.stdio.scanf_core.string_reader
+    libc.src.stdio.scanf_core.reader
+    libc.src.stdio.scanf_core.scanf_main
+)
+
+add_entrypoint_object(
+  fscanf
+  SRCS
+    fscanf.cpp
+  HDRS
+    fscanf.h
+  DEPENDS
+    libc.src.__support.arg_list
+    libc.src.stdio.scanf_core.vfscanf_internal
+)
+
+add_entrypoint_object(
+  scanf
+  SRCS
+    scanf.cpp
+  HDRS
+    scanf.h
+  DEPENDS
+    libc.src.__support.arg_list
+    libc.src.stdio.scanf_core.vfscanf_internal
+)
+
+add_entrypoint_object(
   sprintf
   SRCS
     sprintf.cpp

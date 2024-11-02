@@ -1068,11 +1068,7 @@ bool PPCInstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
 
 unsigned PPCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
-  unsigned Opcode = MI.getOpcode();
-  const unsigned *OpcodesForSpill = getLoadOpcodesForSpillArray();
-  const unsigned *End = OpcodesForSpill + SOK_LastOpcodeSpill;
-
-  if (End != std::find(OpcodesForSpill, End, Opcode)) {
+  if (llvm::is_contained(getLoadOpcodesForSpillArray(), MI.getOpcode())) {
     // Check for the operands added by addFrameReference (the immediate is the
     // offset which defaults to 0).
     if (MI.getOperand(1).isImm() && !MI.getOperand(1).getImm() &&
@@ -1120,6 +1116,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
   case PPC::CRSET:
   case PPC::CRUNSET:
   case PPC::XXSETACCZ:
+  case PPC::XXSETACCZW:
     return true;
   }
   return false;
@@ -1127,11 +1124,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
 
 unsigned PPCInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
-  unsigned Opcode = MI.getOpcode();
-  const unsigned *OpcodesForSpill = getStoreOpcodesForSpillArray();
-  const unsigned *End = OpcodesForSpill + SOK_LastOpcodeSpill;
-
-  if (End != std::find(OpcodesForSpill, End, Opcode)) {
+  if (llvm::is_contained(getStoreOpcodesForSpillArray(), MI.getOpcode())) {
     if (MI.getOperand(1).isImm() && !MI.getOperand(1).getImm() &&
         MI.getOperand(2).isFI()) {
       FrameIndex = MI.getOperand(2).getIndex();
@@ -1905,6 +1898,10 @@ unsigned PPCInstrInfo::getSpillIndex(const TargetRegisterClass *RC) const {
     assert(Subtarget.pairedVectorMemops() &&
            "Register unexpected when paired memops are disabled.");
     OpcodeIndex = SOK_UAccumulatorSpill;
+  } else if (PPC::WACCRCRegClass.hasSubClassEq(RC)) {
+    assert(Subtarget.pairedVectorMemops() &&
+           "Register unexpected when paired memops are disabled.");
+    OpcodeIndex = SOK_WAccumulatorSpill;
   } else if (PPC::VSRpRCRegClass.hasSubClassEq(RC)) {
     assert(Subtarget.pairedVectorMemops() &&
            "Register unexpected when paired memops are disabled.");
@@ -1919,13 +1916,13 @@ unsigned PPCInstrInfo::getSpillIndex(const TargetRegisterClass *RC) const {
 
 unsigned
 PPCInstrInfo::getStoreOpcodeForSpill(const TargetRegisterClass *RC) const {
-  const unsigned *OpcodesForSpill = getStoreOpcodesForSpillArray();
+  ArrayRef<unsigned> OpcodesForSpill = getStoreOpcodesForSpillArray();
   return OpcodesForSpill[getSpillIndex(RC)];
 }
 
 unsigned
 PPCInstrInfo::getLoadOpcodeForSpill(const TargetRegisterClass *RC) const {
-  const unsigned *OpcodesForSpill = getLoadOpcodesForSpillArray();
+  ArrayRef<unsigned> OpcodesForSpill = getLoadOpcodesForSpillArray();
   return OpcodesForSpill[getSpillIndex(RC)];
 }
 
@@ -2122,7 +2119,11 @@ bool PPCInstrInfo::onlyFoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
               PPC::ZERO8 : PPC::ZERO;
   }
 
+  LLVM_DEBUG(dbgs() << "Folded immediate zero for: ");
+  LLVM_DEBUG(UseMI.dump());
   UseMI.getOperand(UseIdx).setReg(ZeroReg);
+  LLVM_DEBUG(dbgs() << "Into: ");
+  LLVM_DEBUG(UseMI.dump());
   return true;
 }
 
@@ -3450,15 +3451,17 @@ unsigned PPCInstrInfo::getSpillTarget() const {
   // With P10, we may need to spill paired vector registers or accumulator
   // registers. MMA implies paired vectors, so we can just check that.
   bool IsP10Variant = Subtarget.isISA3_1() || Subtarget.pairedVectorMemops();
-  return IsP10Variant ? 2 : Subtarget.hasP9Vector() ? 1 : 0;
+  return Subtarget.isISAFuture() ? 3 : IsP10Variant ?
+                                   2 : Subtarget.hasP9Vector() ?
+                                   1 : 0;
 }
 
-const unsigned *PPCInstrInfo::getStoreOpcodesForSpillArray() const {
-  return StoreSpillOpcodesArray[getSpillTarget()];
+ArrayRef<unsigned> PPCInstrInfo::getStoreOpcodesForSpillArray() const {
+  return {StoreSpillOpcodesArray[getSpillTarget()], SOK_LastOpcodeSpill};
 }
 
-const unsigned *PPCInstrInfo::getLoadOpcodesForSpillArray() const {
-  return LoadSpillOpcodesArray[getSpillTarget()];
+ArrayRef<unsigned> PPCInstrInfo::getLoadOpcodesForSpillArray() const {
+  return {LoadSpillOpcodesArray[getSpillTarget()], SOK_LastOpcodeSpill};
 }
 
 void PPCInstrInfo::fixupIsDeadOrKill(MachineInstr *StartMI, MachineInstr *EndMI,
@@ -4809,7 +4812,7 @@ bool PPCInstrInfo::simplifyToLI(MachineInstr &MI, MachineInstr &DefMI,
       }
     }
 
-    LLVM_DEBUG(dbgs() << "Replacing instruction:\n");
+    LLVM_DEBUG(dbgs() << "Replacing constant instruction:\n");
     LLVM_DEBUG(MI.dump());
     LLVM_DEBUG(dbgs() << "Fed by:\n");
     LLVM_DEBUG(DefMI.dump());
@@ -4895,7 +4898,7 @@ bool PPCInstrInfo::transformToNewImmFormFedByAdd(
     ForwardKilledOperandReg = MI.getOperand(III.OpNoForForwarding).getReg();
 
   // Do the transform
-  LLVM_DEBUG(dbgs() << "Replacing instruction:\n");
+  LLVM_DEBUG(dbgs() << "Replacing existing reg+imm instruction:\n");
   LLVM_DEBUG(MI.dump());
   LLVM_DEBUG(dbgs() << "Fed by:\n");
   LLVM_DEBUG(DefMI.dump());
@@ -4983,7 +4986,7 @@ bool PPCInstrInfo::transformToImmFormFedByAdd(
   // We know that, the MI and DefMI both meet the pattern, and
   // the Imm also meet the requirement with the new Imm-form.
   // It is safe to do the transformation now.
-  LLVM_DEBUG(dbgs() << "Replacing instruction:\n");
+  LLVM_DEBUG(dbgs() << "Replacing indexed instruction:\n");
   LLVM_DEBUG(MI.dump());
   LLVM_DEBUG(dbgs() << "Fed by:\n");
   LLVM_DEBUG(DefMI.dump());
@@ -5118,6 +5121,10 @@ bool PPCInstrInfo::transformToImmFormFedByLI(MachineInstr &MI,
   bool RightShift = Opc == PPC::SRW || Opc == PPC::SRW_rec || Opc == PPC::SRD ||
                     Opc == PPC::SRD_rec;
 
+  LLVM_DEBUG(dbgs() << "Replacing reg+reg instruction: ");
+  LLVM_DEBUG(MI.dump());
+  LLVM_DEBUG(dbgs() << "Fed by load-immediate: ");
+  LLVM_DEBUG(DefMI.dump());
   MI.setDesc(get(III.ImmOpcode));
   if (ConstantOpNo == III.OpNoForForwarding) {
     // Converting shifts to immediate form is a bit tricky since they may do
@@ -5201,6 +5208,10 @@ bool PPCInstrInfo::transformToImmFormFedByLI(MachineInstr &MI,
   // y = XOP reg, ForwardKilledOperandReg(killed)
   if (ForwardKilledOperandReg != ~0U)
     fixupIsDeadOrKill(&DefMI, &MI, ForwardKilledOperandReg);
+
+  LLVM_DEBUG(dbgs() << "With: ");
+  LLVM_DEBUG(MI.dump());
+  LLVM_DEBUG(dbgs() << "\n");
   return true;
 }
 

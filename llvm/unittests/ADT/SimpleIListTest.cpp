@@ -634,7 +634,7 @@ TEST(SimpleIListTest, TaggedLists) {
     L2.push_back(Ns[I]);
 
   // Check that each list is correct.
-  EXPECT_EQ(sizeof(Order1) / sizeof(int), L1.size());
+  EXPECT_EQ(std::size(Order1), L1.size());
   auto I1 = L1.begin();
   for (int I : Order1) {
     EXPECT_EQ(Ns[I].getIterator1(), I1);
@@ -642,7 +642,7 @@ TEST(SimpleIListTest, TaggedLists) {
   }
   EXPECT_EQ(L1.end(), I1);
 
-  EXPECT_EQ(sizeof(Order2) / sizeof(int), L2.size());
+  EXPECT_EQ(std::size(Order2), L2.size());
   auto I2 = L2.begin();
   for (int I : Order2) {
     EXPECT_EQ(Ns[I].getIterator2(), I2);

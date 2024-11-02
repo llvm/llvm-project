@@ -3,24 +3,22 @@ source_filename = "foo.cpp"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-%struct.A = type { i32 (...)** }
+%struct.A = type { ptr }
 
 ; Function Attrs: uwtable
-define hidden i32 @_Z3fooP1A(%struct.A* %pA) local_unnamed_addr {
+define hidden i32 @_Z3fooP1A(ptr %pA) local_unnamed_addr {
 entry:
-  %0 = bitcast %struct.A* %pA to i32 (%struct.A*)***
-  %vtable = load i32 (%struct.A*)**, i32 (%struct.A*)*** %0, align 8, !tbaa !2
-  %1 = bitcast i32 (%struct.A*)** %vtable to i8*
-  %2 = tail call i1 @llvm.type.test(i8* %1, metadata !"_ZTS1A")
-  tail call void @llvm.assume(i1 %2)
-  %3 = load i32 (%struct.A*)*, i32 (%struct.A*)** %vtable, align 8
-  %call = tail call i32 %3(%struct.A* %pA)
+  %vtable = load ptr, ptr %pA, align 8, !tbaa !2
+  %0 = tail call i1 @llvm.type.test(ptr %vtable, metadata !"_ZTS1A")
+  tail call void @llvm.assume(i1 %0)
+  %1 = load ptr, ptr %vtable, align 8
+  %call = tail call i32 %1(ptr %pA)
   %add = add nsw i32 %call, 10
   ret i32 %add
 }
 
 ; Function Attrs: nounwind readnone willreturn
-declare i1 @llvm.type.test(i8*, metadata)
+declare i1 @llvm.type.test(ptr, metadata)
 
 ; Function Attrs: nounwind willreturn
 declare void @llvm.assume(i1)

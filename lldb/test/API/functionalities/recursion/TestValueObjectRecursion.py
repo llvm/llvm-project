@@ -56,9 +56,9 @@ class ValueObjectRecursionTestCase(TestBase):
         self.assertTrue(
             child.GetChildAtIndex(0).IsValid(),
             "the deep ValueObject has no value")
-        self.assertTrue(
-            child.GetChildAtIndex(0).GetValueAsUnsigned() != 0,
+        self.assertNotEqual(
+            child.GetChildAtIndex(0).GetValueAsUnsigned(), 0,
             "the deep ValueObject has a zero value")
-        self.assertTrue(
-            child.GetChildAtIndex(1).GetValueAsUnsigned() != 0,
+        self.assertNotEqual(
+            child.GetChildAtIndex(1).GetValueAsUnsigned(), 0,
             "the deep ValueObject has no next")

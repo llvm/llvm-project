@@ -50,7 +50,7 @@ subroutine test_simple_copy(t1, t2)
   ! CHECK:         %[[VAL_26:.*]] = fir.convert %[[VAL_3]] : (index) -> i64
   ! CHECK:         %[[VAL_27:.*]] = fir.convert %[[VAL_24]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
   ! CHECK:         %[[VAL_28:.*]] = fir.convert %[[VAL_25]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
-  ! CHECK:         fir.call @llvm.memmove.p0.p0.i64(%[[VAL_27]], %[[VAL_28]], %[[VAL_26]], %[[VAL_4]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK:         fir.call @llvm.memmove.p0.p0.i64(%[[VAL_27]], %[[VAL_28]], %[[VAL_26]], %[[VAL_4]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
   ! CHECK:         %[[VAL_29:.*]] = arith.addi %[[VAL_21]], %[[VAL_6]] : index
   ! CHECK:         %[[VAL_30:.*]] = arith.subi %[[VAL_22]], %[[VAL_6]] : index
   ! CHECK:         br ^bb3(%[[VAL_29]], %[[VAL_30]] : index, index)
@@ -92,7 +92,7 @@ subroutine test_deep_copy(t1, t2)
   ! CHECK:         %[[VAL_17:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.box<!fir.type<_QMarray_derived_assignTdeep_copy{i:i32,a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK:         %[[VAL_18:.*]] = fir.convert %[[VAL_15]] : (!fir.box<!fir.type<_QMarray_derived_assignTdeep_copy{i:i32,a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.box<none>
   ! CHECK:         %[[VAL_19:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-  ! CHECK:         %[[VAL_20:.*]] = fir.call @_FortranAAssign(%[[VAL_17]], %[[VAL_18]], %[[VAL_19]], %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+  ! CHECK:         %[[VAL_20:.*]] = fir.call @_FortranAAssign(%[[VAL_17]], %[[VAL_18]], %[[VAL_19]], %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
   ! CHECK:         %[[VAL_21:.*]] = arith.subi %[[VAL_9]], %[[VAL_5]] : index
   ! CHECK:         br ^bb1(%[[VAL_11]], %[[VAL_21]] : index, index)
   type(deep_copy) :: t1(10), t2(10)

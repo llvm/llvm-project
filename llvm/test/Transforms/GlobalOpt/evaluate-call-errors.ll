@@ -1,7 +1,7 @@
 ; Checks for few bitcasted call evaluation errors
 
 ; REQUIRES: asserts
-; RUN: opt -globalopt -instcombine -S -debug-only=evaluator %s -o %t 2>&1 | FileCheck %s
+; RUN: opt -passes=globalopt,instcombine -S -debug-only=evaluator %s -o %t 2>&1 | FileCheck %s
 
 ; CHECK: Failed to fold bitcast call expr
 ; CHECK: Can not convert function argument

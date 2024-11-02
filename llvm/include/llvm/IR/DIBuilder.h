@@ -173,10 +173,10 @@ namespace llvm {
     /// \param Checksum  Optional checksum kind (e.g. CSK_MD5, CSK_SHA1, etc.)
     ///                  and value.
     /// \param Source    Optional source text.
-    DIFile *
-    createFile(StringRef Filename, StringRef Directory,
-               Optional<DIFile::ChecksumInfo<StringRef>> Checksum = None,
-               Optional<StringRef> Source = None);
+    DIFile *createFile(
+        StringRef Filename, StringRef Directory,
+        Optional<DIFile::ChecksumInfo<StringRef>> Checksum = std::nullopt,
+        Optional<StringRef> Source = std::nullopt);
 
     /// Create debugging information entry for a macro.
     /// \param Parent     Macro parent (could be nullptr).
@@ -256,7 +256,7 @@ namespace llvm {
     DIDerivedType *
     createPointerType(DIType *PointeeTy, uint64_t SizeInBits,
                       uint32_t AlignInBits = 0,
-                      Optional<unsigned> DWARFAddressSpace = None,
+                      Optional<unsigned> DWARFAddressSpace = std::nullopt,
                       StringRef Name = "", DINodeArray Annotations = nullptr);
 
     /// Create debugging information entry for a pointer to member.
@@ -271,11 +271,10 @@ namespace llvm {
 
     /// Create debugging information entry for a c++
     /// style reference or rvalue reference type.
-    DIDerivedType *createReferenceType(unsigned Tag, DIType *RTy,
-                                       uint64_t SizeInBits = 0,
-                                       uint32_t AlignInBits = 0,
-                                       Optional<unsigned> DWARFAddressSpace =
-                                           None);
+    DIDerivedType *
+    createReferenceType(unsigned Tag, DIType *RTy, uint64_t SizeInBits = 0,
+                        uint32_t AlignInBits = 0,
+                        Optional<unsigned> DWARFAddressSpace = std::nullopt);
 
     /// Create debugging information entry for a typedef.
     /// \param Ty          Original type.
@@ -732,7 +731,7 @@ namespace llvm {
     /// Create a new descriptor for the specified
     /// variable which has a complex address expression for its address.
     /// \param Addr        An array of complex address operations.
-    DIExpression *createExpression(ArrayRef<uint64_t> Addr = None);
+    DIExpression *createExpression(ArrayRef<uint64_t> Addr = std::nullopt);
 
     /// Create an expression for a variable that does not have an address, but
     /// does have a constant value.

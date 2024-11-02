@@ -33,7 +33,7 @@ TestRunner::TestRunner(StringRef TestName,
 
 /// Runs the interestingness test, passes file to be tested as first argument
 /// and other specified test arguments after that.
-int TestRunner::run(StringRef Filename) {
+int TestRunner::run(StringRef Filename) const {
   std::vector<StringRef> ProgramArgs;
   ProgramArgs.push_back(TestName);
 
@@ -43,8 +43,8 @@ int TestRunner::run(StringRef Filename) {
   ProgramArgs.push_back(Filename);
 
   std::string ErrMsg;
-  SmallVector<Optional<StringRef>, 3> Redirects;
-  Optional<StringRef> Empty = StringRef();
+  SmallVector<std::optional<StringRef>, 3> Redirects;
+  std::optional<StringRef> Empty = StringRef();
   if (!Verbose) {
     for (int i = 0; i < 3; ++i)
       Redirects.push_back(Empty);
@@ -97,7 +97,9 @@ void writeBitcode(ReducerWorkItem &M, raw_ostream &OutStream) {
 
 void TestRunner::writeOutput(StringRef Message) {
   std::error_code EC;
-  raw_fd_ostream Out(OutputFilename, EC);
+  raw_fd_ostream Out(OutputFilename, EC,
+                     EmitBitcode && !Program->isMIR() ? sys::fs::OF_None
+                                                      : sys::fs::OF_Text);
   if (EC) {
     errs() << "Error opening output file: " << EC.message() << "!\n";
     exit(1);

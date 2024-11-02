@@ -36,6 +36,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <iterator>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -121,8 +122,8 @@ unsigned DwarfCompileUnit::getOrCreateSourceID(const DIFile *File) {
   // extend .file to support this.
   unsigned CUID = Asm->OutStreamer->hasRawTextSupport() ? 0 : getUniqueID();
   if (!File)
-    return Asm->OutStreamer->emitDwarfFileDirective(0, "", "", None, None,
-                                                    CUID);
+    return Asm->OutStreamer->emitDwarfFileDirective(0, "", "", std::nullopt,
+                                                    std::nullopt, CUID);
 
   if (LastFile != File) {
     LastFile = File;
@@ -203,7 +204,7 @@ void DwarfCompileUnit::addLocationAttribute(
     DIE *VariableDIE, const DIGlobalVariable *GV, ArrayRef<GlobalExpr> GlobalExprs) {
   bool addToAccelTable = false;
   DIELoc *Loc = nullptr;
-  Optional<unsigned> NVPTXAddressSpace;
+  std::optional<unsigned> NVPTXAddressSpace;
   std::unique_ptr<DIEDwarfExpression> DwarfExpr;
   for (const auto &GE : GlobalExprs) {
     const GlobalVariable *Global = GE.Var;
@@ -340,7 +341,7 @@ void DwarfCompileUnit::addLocationAttribute(
     // correctly interpret address space of the variable address.
     const unsigned NVPTX_ADDR_global_space = 5;
     addUInt(*VariableDIE, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
-            NVPTXAddressSpace ? *NVPTXAddressSpace : NVPTX_ADDR_global_space);
+            NVPTXAddressSpace.value_or(NVPTX_ADDR_global_space));
   }
   if (Loc)
     addBlock(*VariableDIE, dwarf::DW_AT_location, DwarfExpr->finalize());
@@ -670,13 +671,13 @@ DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope,
 
   // Add the call site information to the DIE.
   const DILocation *IA = Scope->getInlinedAt();
-  addUInt(*ScopeDIE, dwarf::DW_AT_call_file, None,
+  addUInt(*ScopeDIE, dwarf::DW_AT_call_file, std::nullopt,
           getOrCreateSourceID(IA->getFile()));
-  addUInt(*ScopeDIE, dwarf::DW_AT_call_line, None, IA->getLine());
+  addUInt(*ScopeDIE, dwarf::DW_AT_call_line, std::nullopt, IA->getLine());
   if (IA->getColumn())
-    addUInt(*ScopeDIE, dwarf::DW_AT_call_column, None, IA->getColumn());
+    addUInt(*ScopeDIE, dwarf::DW_AT_call_column, std::nullopt, IA->getColumn());
   if (IA->getDiscriminator() && DD->getDwarfVersion() >= 4)
-    addUInt(*ScopeDIE, dwarf::DW_AT_GNU_discriminator, None,
+    addUInt(*ScopeDIE, dwarf::DW_AT_GNU_discriminator, std::nullopt,
             IA->getDiscriminator());
 
   // Add name to the name table, we do this here because we're guaranteed
@@ -847,7 +848,7 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
   if (!DV.hasFrameIndexExprs())
     return VariableDie;
 
-  Optional<unsigned> NVPTXAddressSpace;
+  std::optional<unsigned> NVPTXAddressSpace;
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
   for (const auto &Fragment : DV.getFrameIndexExprs()) {
@@ -895,7 +896,7 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
     // correctly interpret address space of the variable address.
     const unsigned NVPTX_ADDR_local_space = 6;
     addUInt(*VariableDie, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
-            NVPTXAddressSpace ? *NVPTXAddressSpace : NVPTX_ADDR_local_space);
+            NVPTXAddressSpace.value_or(NVPTX_ADDR_local_space));
   }
   addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
   if (DwarfExpr.TagOffset)
@@ -1593,7 +1594,8 @@ void DwarfCompileUnit::createBaseTypeDIEs() {
                     "_" + Twine(Btr.BitSize)).toStringRef(Str));
     addUInt(Die, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1, Btr.Encoding);
     // Round up to smallest number of bytes that contains this number of bits.
-    addUInt(Die, dwarf::DW_AT_byte_size, None, divideCeil(Btr.BitSize, 8));
+    addUInt(Die, dwarf::DW_AT_byte_size, std::nullopt,
+            divideCeil(Btr.BitSize, 8));
 
     Btr.Die = &Die;
   }

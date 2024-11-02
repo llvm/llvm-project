@@ -122,10 +122,10 @@ public:
   /// Get the mapped metadata, if it's in the map.
   Optional<Metadata *> getMappedMD(const Metadata *MD) const {
     if (!MDMap)
-      return None;
+      return std::nullopt;
     auto Where = MDMap->find(MD);
     if (Where == MDMap->end())
-      return None;
+      return std::nullopt;
     return Where->second.get();
   }
 

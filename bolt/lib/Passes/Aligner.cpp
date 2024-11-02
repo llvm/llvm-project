@@ -143,7 +143,7 @@ void AlignerPass::alignBlocks(BinaryFunction &Function,
 
     // Update stats.
     LLVM_DEBUG(
-      std::unique_lock<std::shared_timed_mutex> Lock(AlignHistogramMtx);
+      std::unique_lock<llvm::sys::RWMutex> Lock(AlignHistogramMtx);
       AlignHistogram[BytesToUse]++;
       AlignedBlocksCount += BB->getKnownExecutionCount();
     );

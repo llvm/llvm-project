@@ -43,12 +43,6 @@ public:
   // getNextToken().
   virtual FormatToken *peekNextToken() = 0;
 
-  // Returns the token that would be returned after the next N calls to
-  // getNextToken(). N needs to be greater than zero, and small enough that
-  // there are still tokens. Check for tok::eof with N-1 before calling it with
-  // N.
-  virtual FormatToken *peekNextToken(int N) = 0;
-
   // Returns whether we are at the end of the file.
   // This can be different from whether getNextToken() returned an eof token
   // when the FormatTokenSource is a view on a part of the token stream.
@@ -63,6 +57,39 @@ public:
 };
 
 namespace {
+
+void printLine(llvm::raw_ostream &OS, const UnwrappedLine &Line,
+               StringRef Prefix = "", bool PrintText = false) {
+  OS << Prefix << "Line(" << Line.Level << ", FSC=" << Line.FirstStartColumn
+     << ")" << (Line.InPPDirective ? " MACRO" : "") << ": ";
+  bool NewLine = false;
+  for (std::list<UnwrappedLineNode>::const_iterator I = Line.Tokens.begin(),
+                                                    E = Line.Tokens.end();
+       I != E; ++I) {
+    if (NewLine) {
+      OS << Prefix;
+      NewLine = false;
+    }
+    OS << I->Tok->Tok.getName() << "["
+       << "T=" << (unsigned)I->Tok->getType()
+       << ", OC=" << I->Tok->OriginalColumn << ", \"" << I->Tok->TokenText
+       << "\"] ";
+    for (SmallVectorImpl<UnwrappedLine>::const_iterator
+             CI = I->Children.begin(),
+             CE = I->Children.end();
+         CI != CE; ++CI) {
+      OS << "\n";
+      printLine(OS, *CI, (Prefix + "  ").str());
+      NewLine = true;
+    }
+  }
+  if (!NewLine)
+    OS << "\n";
+}
+
+LLVM_ATTRIBUTE_UNUSED static void printDebugInfo(const UnwrappedLine &Line) {
+  printLine(llvm::dbgs(), Line);
+}
 
 class ScopedDeclarationState {
 public:
@@ -148,13 +175,6 @@ public:
     return PreviousTokenSource->peekNextToken();
   }
 
-  FormatToken *peekNextToken(int N) override {
-    assert(N > 0);
-    if (eof())
-      return &FakeEOF;
-    return PreviousTokenSource->peekNextToken(N);
-  }
-
   bool isEOF() override { return PreviousTokenSource->isEOF(); }
 
   unsigned getPosition() override { return PreviousTokenSource->getPosition(); }
@@ -197,6 +217,7 @@ public:
     PreBlockLine = std::move(Parser.Line);
     Parser.Line = std::make_unique<UnwrappedLine>();
     Parser.Line->Level = PreBlockLine->Level;
+    Parser.Line->PPLevel = PreBlockLine->PPLevel;
     Parser.Line->InPPDirective = PreBlockLine->InPPDirective;
     Parser.Line->InMacroBody = PreBlockLine->InMacroBody;
   }
@@ -271,16 +292,6 @@ public:
     int Next = Position + 1;
     LLVM_DEBUG({
       llvm::dbgs() << "Peeking ";
-      dbgToken(Next);
-    });
-    return Tokens[Next];
-  }
-
-  FormatToken *peekNextToken(int N) override {
-    assert(N > 0);
-    int Next = Position + N;
-    LLVM_DEBUG({
-      llvm::dbgs() << "Peeking (+" << (N - 1) << ") ";
       dbgToken(Next);
     });
     return Tokens[Next];
@@ -833,6 +844,9 @@ bool UnwrappedLineParser::mightFitOnOneLine(
     delete SavedToken.Tok;
   }
 
+  // If these change PPLevel needs to be used for get correct indentation.
+  assert(!Line.InMacroBody);
+  assert(!Line.InPPDirective);
   return Line.Level * Style.IndentWidth + Length <= ColumnLimit;
 }
 
@@ -1270,6 +1284,9 @@ void UnwrappedLineParser::parsePPDefine() {
     Line->Level += PPBranchLevel + 1;
   addUnwrappedLine();
   ++Line->Level;
+
+  Line->PPLevel = PPBranchLevel + (IncludeGuard == IG_Defined ? 0 : 1);
+  assert((int)Line->PPLevel >= 0);
   Line->InMacroBody = true;
 
   // Errors during a preprocessor directive can only affect the layout of the
@@ -3349,37 +3366,41 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
   // So we want basically to check for TYPE NAME, but TYPE can contain all kinds
   // of stuff: typename, const, *, &, &&, ::, identifiers.
 
-  int NextTokenOffset = 1;
-  auto NextToken = Tokens->peekNextToken(NextTokenOffset);
-  auto PeekNext = [&NextTokenOffset, &NextToken, this] {
-    ++NextTokenOffset;
-    NextToken = Tokens->peekNextToken(NextTokenOffset);
+  unsigned StoredPosition = Tokens->getPosition();
+  FormatToken *NextToken = Tokens->getNextToken();
+  int Lookahead = 0;
+  auto PeekNext = [&Lookahead, &NextToken, this] {
+    ++Lookahead;
+    NextToken = Tokens->getNextToken();
   };
 
   bool FoundType = false;
   bool LastWasColonColon = false;
   int OpenAngles = 0;
 
-  for (; NextTokenOffset < 50; PeekNext()) {
+  for (; Lookahead < 50; PeekNext()) {
     switch (NextToken->Tok.getKind()) {
     case tok::kw_volatile:
     case tok::kw_const:
     case tok::comma:
+      FormatTok = Tokens->setPosition(StoredPosition);
       parseRequiresExpression(RequiresToken);
       return false;
     case tok::r_paren:
     case tok::pipepipe:
+      FormatTok = Tokens->setPosition(StoredPosition);
       parseRequiresClause(RequiresToken);
       return true;
     case tok::eof:
       // Break out of the loop.
-      NextTokenOffset = 50;
+      Lookahead = 50;
       break;
     case tok::coloncolon:
       LastWasColonColon = true;
       break;
     case tok::identifier:
       if (FoundType && !LastWasColonColon && OpenAngles == 0) {
+        FormatTok = Tokens->setPosition(StoredPosition);
         parseRequiresExpression(RequiresToken);
         return false;
       }
@@ -3394,14 +3415,15 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
       break;
     default:
       if (NextToken->isSimpleTypeSpecifier()) {
+        FormatTok = Tokens->setPosition(StoredPosition);
         parseRequiresExpression(RequiresToken);
         return false;
       }
       break;
     }
   }
-
   // This seems to be a complicated expression, just assume it's a clause.
+  FormatTok = Tokens->setPosition(StoredPosition);
   parseRequiresClause(RequiresToken);
   return true;
 }
@@ -4305,23 +4327,6 @@ void UnwrappedLineParser::parseVerilogCaseLabel() {
   if (CurrentLines->size() > FirstLine)
     (*CurrentLines)[FirstLine].Level = OrigLevel;
   Line->Level = OrigLevel;
-}
-
-LLVM_ATTRIBUTE_UNUSED static void printDebugInfo(const UnwrappedLine &Line,
-                                                 StringRef Prefix = "") {
-  llvm::dbgs() << Prefix << "Line(" << Line.Level
-               << ", FSC=" << Line.FirstStartColumn << ")"
-               << (Line.InPPDirective ? " MACRO" : "") << ": ";
-  for (const auto &Node : Line.Tokens) {
-    llvm::dbgs() << Node.Tok->Tok.getName() << "["
-                 << "T=" << static_cast<unsigned>(Node.Tok->getType())
-                 << ", OC=" << Node.Tok->OriginalColumn << "] ";
-  }
-  for (const auto &Node : Line.Tokens)
-    for (const auto &ChildNode : Node.Children)
-      printDebugInfo(ChildNode, "\nChild: ");
-
-  llvm::dbgs() << "\n";
 }
 
 void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {

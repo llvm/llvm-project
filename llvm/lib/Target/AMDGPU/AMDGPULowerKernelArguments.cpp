@@ -92,7 +92,7 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   for (Argument &Arg : F.args()) {
     const bool IsByRef = Arg.hasByRefAttr();
     Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
-    MaybeAlign ParamAlign = IsByRef ? Arg.getParamAlign() : None;
+    MaybeAlign ParamAlign = IsByRef ? Arg.getParamAlign() : std::nullopt;
     Align ABITypeAlign = DL.getValueOrABITypeAlignment(ParamAlign, ArgTy);
 
     uint64_t Size = DL.getTypeSizeInBits(ArgTy);

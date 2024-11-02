@@ -94,7 +94,7 @@ public:
   Optional<StratifiedInfo> find(const T &Elem) const {
     auto Iter = Values.find(Elem);
     if (Iter == Values.end())
-      return None;
+      return std::nullopt;
     return Iter->second;
   }
 
@@ -547,21 +547,21 @@ private:
   Optional<const StratifiedInfo *> get(const T &Val) const {
     auto Result = Values.find(Val);
     if (Result == Values.end())
-      return None;
+      return std::nullopt;
     return &Result->second;
   }
 
   Optional<StratifiedInfo *> get(const T &Val) {
     auto Result = Values.find(Val);
     if (Result == Values.end())
-      return None;
+      return std::nullopt;
     return &Result->second;
   }
 
   Optional<StratifiedIndex> indexOf(const T &Val) {
     auto MaybeVal = get(Val);
     if (!MaybeVal)
-      return None;
+      return std::nullopt;
     auto *Info = *MaybeVal;
     auto &Link = linksAt(Info->Index);
     return Link.Number;

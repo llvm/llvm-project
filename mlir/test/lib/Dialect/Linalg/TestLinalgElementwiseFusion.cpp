@@ -75,6 +75,12 @@ struct TestLinalgElementwiseFusion
       llvm::cl::desc("Test fusion of generic operations."),
       llvm::cl::init(false)};
 
+  Option<bool> fuseGenericOpsControl{
+      *this, "fuse-generic-ops-control",
+      llvm::cl::desc(
+          "Test fusion of generic operations with a control function."),
+      llvm::cl::init(false)};
+
   Option<bool> fuseWithReshapeByExpansion{
       *this, "fuse-with-reshape-by-expansion",
       llvm::cl::desc(
@@ -108,6 +114,15 @@ struct TestLinalgElementwiseFusion
     func::FuncOp funcOp = this->getOperation();
 
     if (fuseGenericOps) {
+      RewritePatternSet fusionPatterns(context);
+      auto controlFn = [](OpOperand *operand) { return true; };
+      linalg::populateElementwiseOpsFusionPatterns(fusionPatterns, controlFn);
+      (void)applyPatternsAndFoldGreedily(funcOp.getBody(),
+                                         std::move(fusionPatterns));
+      return;
+    }
+
+    if (fuseGenericOpsControl) {
       RewritePatternSet fusionPatterns(context);
       linalg::populateElementwiseOpsFusionPatterns(fusionPatterns,
                                                    setFusedOpOperandLimit<4>);

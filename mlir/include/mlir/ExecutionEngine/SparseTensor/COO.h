@@ -102,32 +102,38 @@ public:
   using difference_type = typename vector_type::difference_type;
   using size_type = typename vector_type::size_type;
 
-  SparseTensorCOO(const std::vector<uint64_t> &dimSizes, uint64_t capacity)
-      : dimSizes(dimSizes), isSorted(true) {
+  /// Constructs a new coordinate-scheme sparse tensor with the given
+  /// sizes and initial storage capacity.
+  ///
+  /// Asserts:
+  /// * `dimSizes` has nonzero size.
+  /// * the elements of `dimSizes` are nonzero.
+  explicit SparseTensorCOO(const std::vector<uint64_t> &dimSizes,
+                           uint64_t capacity = 0)
+      : SparseTensorCOO(dimSizes.size(), dimSizes.data(), capacity) {}
+
+  // TODO: make a class for capturing known-valid sizes (a la PermutationRef),
+  // so that `SparseTensorStorage::toCOO` can avoid redoing these assertions.
+  // Also so that we can enforce the asserts *before* copying into `dimSizes`.
+  //
+  /// Constructs a new coordinate-scheme sparse tensor with the given
+  /// sizes and initial storage capacity.
+  ///
+  /// Precondition: `dimSizes` must be valid for `dimRank`.
+  ///
+  /// Asserts:
+  /// * `dimRank` is nonzero.
+  /// * the elements of `dimSizes` are nonzero.
+  explicit SparseTensorCOO(uint64_t dimRank, const uint64_t *dimSizes,
+                           uint64_t capacity = 0)
+      : dimSizes(dimSizes, dimSizes + dimRank), isSorted(true) {
+    assert(dimRank > 0 && "Trivial shape is not supported");
+    for (uint64_t d = 0; d < dimRank; ++d)
+      assert(dimSizes[d] > 0 && "Dimension size zero has trivial storage");
     if (capacity) {
       elements.reserve(capacity);
-      indices.reserve(capacity * getRank());
+      indices.reserve(capacity * dimRank);
     }
-  }
-
-  /// Factory method. Permutes the original dimensions according to
-  /// the given ordering and expects subsequent add() calls to honor
-  /// that same ordering for the given indices. The result is a
-  /// fully permuted coordinate scheme.
-  ///
-  /// Precondition: `dimSizes` and `perm` must be valid for `rank`.
-  ///
-  /// Asserts: the elements of `dimSizes` are non-zero.
-  static SparseTensorCOO<V> *newSparseTensorCOO(uint64_t rank,
-                                                const uint64_t *dimSizes,
-                                                const uint64_t *perm,
-                                                uint64_t capacity = 0) {
-    std::vector<uint64_t> permsz(rank);
-    for (uint64_t r = 0; r < rank; ++r) {
-      assert(dimSizes[r] > 0 && "Dimension size zero has trivial storage");
-      permsz[perm[r]] = dimSizes[r];
-    }
-    return new SparseTensorCOO<V>(permsz, capacity);
   }
 
   /// Gets the rank of the tensor.

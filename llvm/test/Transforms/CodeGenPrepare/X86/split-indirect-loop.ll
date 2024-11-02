@@ -25,13 +25,13 @@ if.then:
 
 while.body:
   %dest.sroa = phi i32 [ %1, %while.body ], [ undef, %if.else1 ], [ undef, %if.else ]
-  %0 = inttoptr i32 %dest.sroa to i8*
-  %incdec.ptr = getelementptr inbounds i8, i8* %0, i32 -1
-  %1 = ptrtoint i8* %incdec.ptr to i32
-  store i8 undef, i8* %incdec.ptr, align 1
+  %0 = inttoptr i32 %dest.sroa to ptr
+  %incdec.ptr = getelementptr inbounds i8, ptr %0, i32 -1
+  %1 = ptrtoint ptr %incdec.ptr to i32
+  store i8 undef, ptr %incdec.ptr, align 1
   br label %while.body
 
 if.else1:
-  indirectbr i8* undef, [label %if.then, label %while.body, label %if.else, label %if.else1]
+  indirectbr ptr undef, [label %if.then, label %while.body, label %if.else, label %if.else1]
 }
 

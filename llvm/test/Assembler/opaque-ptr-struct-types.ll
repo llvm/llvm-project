@@ -20,9 +20,17 @@
 
 @g = external global %T1
 
-@g.ifunc = ifunc %T8 (), ptr @f
+@g.ifunc = ifunc %T8 (), ptr @f.resolver
 
 define %T2 @f(ptr %p) {
+  alloca %T3
+  getelementptr %T4, ptr %p, i64 1
+  call void @f(ptr sret(%T5) %p)
+  store ptr getelementptr (%T6, ptr @g, i64 1), ptr %p
+  unreachable
+}
+
+define %T2* @f.resolver(ptr %p) {
   alloca %T3
   getelementptr %T4, ptr %p, i64 1
   call void @f(ptr sret(%T5) %p)

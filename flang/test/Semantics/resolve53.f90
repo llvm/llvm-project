@@ -97,7 +97,6 @@ module m7
     end subroutine
   end interface
 end
-    
 
 ! Two procedures that differ only by attributes are not distinguishable
 module m8
@@ -468,7 +467,7 @@ module m20
   end interface
 end module
 
-subroutine s1()
+subroutine subr1()
   use m20
   interface operator(.not.)
     !ERROR: Procedure 'f' from module 'm20' is already specified in generic 'OPERATOR(.NOT.)'
@@ -478,7 +477,7 @@ subroutine s1()
     !ERROR: Procedure 'f' from module 'm20' is already specified in generic 'OPERATOR(+)'
     procedure f
   end interface
-end subroutine s1
+end subroutine subr1
 
 ! Extensions for distinguishable allocatable arguments; these should not
 ! elicit errors from f18

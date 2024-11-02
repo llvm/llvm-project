@@ -107,7 +107,19 @@
 
 // CUDA: nvlink{{.*}}-m64 -o {{.*}}.out -arch sm_52 {{.*}}.o
 // CUDA: nvlink{{.*}}-m64 -o {{.*}}.out -arch sm_70 {{.*}}.o {{.*}}.o
-// CUDA: fatbinary{{.*}}-64 --create {{.*}}.fatbin --image=profile=sm_52,file={{.*}}.out --image=profile=sm_70,file={{.*}}.out
+// CUDA: fatbinary{{.*}}-64 --create {{.*}}.fatbin --image=profile=sm_70,file={{.*}}.out --image=profile=sm_52,file={{.*}}.out 
+
+// RUN: clang-offload-packager -o %t.out \
+// RUN:   --image=file=%S/Inputs/dummy-elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_80 \
+// RUN:   --image=file=%S/Inputs/dummy-elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_75 \
+// RUN:   --image=file=%S/Inputs/dummy-elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_70 \
+// RUN:   --image=file=%S/Inputs/dummy-elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_52
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
+// RUN:   -fembed-offload-object=%t.out
+// RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu --wrapper-jobs=4 \
+// RUN: --linker-path=/usr/bin/ld -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=CUDA-PAR
+
+// CUDA-PAR: fatbinary{{.*}}-64 --create {{.*}}.fatbin
 
 // RUN: clang-offload-packager -o %t.out \
 // RUN:   --image=file=%S/Inputs/dummy-elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx90a \
@@ -120,7 +132,7 @@
 
 // HIP: lld{{.*}}-flavor gnu --no-undefined -shared -plugin-opt=-amdgpu-internalize-symbols -plugin-opt=mcpu=gfx908 -o {{.*}}.out {{.*}}.o
 // HIP: lld{{.*}}-flavor gnu --no-undefined -shared -plugin-opt=-amdgpu-internalize-symbols -plugin-opt=mcpu=gfx90a -o {{.*}}.out {{.*}}.o
-// HIP: clang-offload-bundler{{.*}}-type=o -bundle-align=4096 -targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx908,hipv4-amdgcn-amd-amdhsa--gfx90a -input=/dev/null -input={{.*}}.out -input={{.*}}out -output={{.*}}.hipfb
+// HIP: clang-offload-bundler{{.*}}-type=o -bundle-align=4096 -targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx90a,hipv4-amdgcn-amd-amdhsa--gfx908 -input=/dev/null -input={{.*}}.out -input={{.*}}out -output={{.*}}.hipfb
 
 // RUN: clang-offload-packager -o %t.out \
 // RUN:   --image=file=%S/Inputs/dummy-elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908 \

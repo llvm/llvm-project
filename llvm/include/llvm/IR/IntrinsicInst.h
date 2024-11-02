@@ -123,6 +123,31 @@ public:
   }
 };
 
+/// Check if \p ID corresponds to a lifetime intrinsic.
+static inline bool isLifetimeIntrinsic(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::lifetime_start:
+  case Intrinsic::lifetime_end:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// This is the common base class for lifetime intrinsics.
+class LifetimeIntrinsic : public IntrinsicInst {
+public:
+  /// \name Casting methods
+  /// @{
+  static bool classof(const IntrinsicInst *I) {
+    return isLifetimeIntrinsic(I->getIntrinsicID());
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+  /// @}
+};
+
 /// Check if \p ID corresponds to a debug info intrinsic.
 static inline bool isDbgInfoIntrinsic(Intrinsic::ID ID) {
   switch (ID) {

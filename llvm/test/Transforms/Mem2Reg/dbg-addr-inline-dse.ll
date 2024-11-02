@@ -33,18 +33,18 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 define void @f(i32 %x) #0 !dbg !8 {
 entry:
   %x.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  call void @llvm.dbg.addr(metadata i32* %x.addr, metadata !13, metadata !DIExpression()), !dbg !18
-  %ld.1 = load i32, i32* %x.addr, align 4, !dbg !19
+  store i32 %x, ptr %x.addr, align 4
+  call void @llvm.dbg.addr(metadata ptr %x.addr, metadata !13, metadata !DIExpression()), !dbg !18
+  %ld.1 = load i32, ptr %x.addr, align 4, !dbg !19
   %inc.1 = add nsw i32 %ld.1, 1, !dbg !19
-  store i32 %inc.1, i32* %x.addr, align 4, !dbg !19
+  store i32 %inc.1, ptr %x.addr, align 4, !dbg !19
   call void @llvm.dbg.value(metadata i32 1, metadata !13, metadata !DIExpression()), !dbg !20
-  store i32 1, i32* @global, align 4, !dbg !22
-  call void @llvm.dbg.addr(metadata i32* %x.addr, metadata !13, metadata !DIExpression()), !dbg !23
-  store i32 2, i32* %x.addr, align 4, !dbg !23
-  %ld.2 = load i32, i32* %x.addr, align 4, !dbg !19
+  store i32 1, ptr @global, align 4, !dbg !22
+  call void @llvm.dbg.addr(metadata ptr %x.addr, metadata !13, metadata !DIExpression()), !dbg !23
+  store i32 2, ptr %x.addr, align 4, !dbg !23
+  %ld.2 = load i32, ptr %x.addr, align 4, !dbg !19
   %inc.2 = add nsw i32 %ld.2, 1, !dbg !19
-  store i32 %inc.2, i32* %x.addr, align 4, !dbg !19
+  store i32 %inc.2, ptr %x.addr, align 4, !dbg !19
   ret void, !dbg !25
 }
 
@@ -53,7 +53,7 @@ entry:
 ; CHECK: %inc.1 = add nsw i32 %x, 1
 ; CHECK: call void @llvm.dbg.value(metadata i32 %inc.1, metadata !13, metadata !DIExpression())
 ; CHECK: call void @llvm.dbg.value(metadata i32 1, metadata !13, metadata !DIExpression())
-; CHECK: store i32 1, i32* @global, align 4
+; CHECK: store i32 1, ptr @global, align 4
 ; CHECK: call void @llvm.dbg.value(metadata i32 2, metadata !13, metadata !DIExpression())
 ; CHECK: %inc.2 = add nsw i32 2, 1
 ; CHECK: call void @llvm.dbg.value(metadata i32 %inc.2, metadata !13, metadata !DIExpression())

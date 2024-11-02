@@ -778,10 +778,6 @@ private:
     if (!IsOffsetKnown)
       return PI.setAborted(&LI);
 
-    if (LI.isVolatile() &&
-        LI.getPointerAddressSpace() != DL.getAllocaAddrSpace())
-      return PI.setAborted(&LI);
-
     if (isa<ScalableVectorType>(LI.getType()))
       return PI.setAborted(&LI);
 
@@ -794,10 +790,6 @@ private:
     if (ValOp == *U)
       return PI.setEscapedAndAborted(&SI);
     if (!IsOffsetKnown)
-      return PI.setAborted(&SI);
-
-    if (SI.isVolatile() &&
-        SI.getPointerAddressSpace() != DL.getAllocaAddrSpace())
       return PI.setAborted(&SI);
 
     if (isa<ScalableVectorType>(ValOp->getType()))
@@ -837,11 +829,6 @@ private:
     if (!IsOffsetKnown)
       return PI.setAborted(&II);
 
-    // Don't replace this with a store with a different address space.  TODO:
-    // Use a store with the casted new alloca?
-    if (II.isVolatile() && II.getDestAddressSpace() != DL.getAllocaAddrSpace())
-      return PI.setAborted(&II);
-
     insertUse(II, Offset, Length ? Length->getLimitedValue()
                                  : AllocSize - Offset.getLimitedValue(),
               (bool)Length);
@@ -859,13 +846,6 @@ private:
       return;
 
     if (!IsOffsetKnown)
-      return PI.setAborted(&II);
-
-    // Don't replace this with a load/store with a different address space.
-    // TODO: Use a store with the casted new alloca?
-    if (II.isVolatile() &&
-        (II.getDestAddressSpace() != DL.getAllocaAddrSpace() ||
-         II.getSourceAddressSpace() != DL.getAllocaAddrSpace()))
       return PI.setAborted(&II);
 
     // This side of the transfer is completely out-of-bounds, and so we can
@@ -1894,7 +1874,10 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
   // we have different element types.
   SmallVector<VectorType *, 4> CandidateTys;
   Type *CommonEltTy = nullptr;
+  VectorType *CommonVecPtrTy = nullptr;
+  bool HaveVecPtrTy = false;
   bool HaveCommonEltTy = true;
+  bool HaveCommonVecPtrTy = true;
   auto CheckCandidateType = [&](Type *Ty) {
     if (auto *VTy = dyn_cast<VectorType>(Ty)) {
       // Return if bitcast to vectors is different for total size in bits.
@@ -1907,10 +1890,20 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
         }
       }
       CandidateTys.push_back(VTy);
+      Type *EltTy = VTy->getElementType();
+
       if (!CommonEltTy)
-        CommonEltTy = VTy->getElementType();
-      else if (CommonEltTy != VTy->getElementType())
+        CommonEltTy = EltTy;
+      else if (CommonEltTy != EltTy)
         HaveCommonEltTy = false;
+
+      if (EltTy->isPointerTy()) {
+        HaveVecPtrTy = true;
+        if (!CommonVecPtrTy)
+          CommonVecPtrTy = VTy;
+        else if (CommonVecPtrTy != VTy)
+          HaveCommonVecPtrTy = false;
+      }
     }
   };
   // Consider any loads or stores that are the exact size of the slice.
@@ -1927,18 +1920,25 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
   if (CandidateTys.empty())
     return nullptr;
 
-  // Remove non-integer vector types if we had multiple common element types.
-  // FIXME: It'd be nice to replace them with integer vector types, but we can't
-  // do that until all the backends are known to produce good code for all
-  // integer vector types.
-  if (!HaveCommonEltTy) {
-    llvm::erase_if(CandidateTys, [](VectorType *VTy) {
-      return !VTy->getElementType()->isIntegerTy();
-    });
+  // Pointer-ness is sticky, if we had a vector-of-pointers candidate type,
+  // then we should choose it, not some other alternative.
+  // But, we can't perform a no-op pointer address space change via bitcast,
+  // so if we didn't have a common pointer element type, bail.
+  if (HaveVecPtrTy && !HaveCommonVecPtrTy)
+    return nullptr;
 
-    // If there were no integer vector types, give up.
-    if (CandidateTys.empty())
-      return nullptr;
+  // Try to pick the "best" element type out of the choices.
+  if (!HaveCommonEltTy && HaveVecPtrTy) {
+    // If there was a pointer element type, there's really only one choice.
+    CandidateTys.clear();
+    CandidateTys.push_back(CommonVecPtrTy);
+  } else if (!HaveCommonEltTy && !HaveVecPtrTy) {
+    // Integer-ify vector types.
+    for (VectorType *&VTy : CandidateTys) {
+      if (!VTy->getElementType()->isIntegerTy())
+        VTy = cast<VectorType>(VTy->getWithNewType(IntegerType::getIntNTy(
+            VTy->getContext(), VTy->getScalarSizeInBits())));
+    }
 
     // Rank the remaining candidate vector types. This is easy because we know
     // they're all integer vectors. We sort by ascending number of elements.
@@ -1971,6 +1971,13 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
 #endif
     CandidateTys.resize(1);
   }
+
+  // FIXME: hack. Do we have a named constant for this?
+  // SDAG SDNode can't have more than 65535 operands.
+  llvm::erase_if(CandidateTys, [](VectorType *VTy) {
+    return cast<FixedVectorType>(VTy)->getNumElements() >
+           std::numeric_limits<unsigned short>::max();
+  });
 
   for (VectorType *VTy : CandidateTys)
     if (checkVectorTypeForPromotion(P, VTy, DL))
@@ -2308,6 +2315,16 @@ class llvm::sroa::AllocaSliceRewriter
   // the insertion point is set to point to the user.
   IRBuilderTy IRB;
 
+  // Return the new alloca, addrspacecasted if required to avoid changing the
+  // addrspace of a volatile access.
+  Value *getPtrToNewAI(unsigned AddrSpace, bool IsVolatile) {
+    if (!IsVolatile || AddrSpace == NewAI.getType()->getPointerAddressSpace())
+      return &NewAI;
+
+    Type *AccessTy = NewAI.getAllocatedType()->getPointerTo(AddrSpace);
+    return IRB.CreateAddrSpaceCast(&NewAI, AccessTy);
+  }
+
 public:
   AllocaSliceRewriter(const DataLayout &DL, AllocaSlices &AS, SROAPass &Pass,
                       AllocaInst &OldAI, AllocaInst &NewAI,
@@ -2508,7 +2525,9 @@ private:
                (canConvertValue(DL, NewAllocaTy, TargetTy) ||
                 (IsLoadPastEnd && NewAllocaTy->isIntegerTy() &&
                  TargetTy->isIntegerTy()))) {
-      LoadInst *NewLI = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
+      Value *NewPtr =
+          getPtrToNewAI(LI.getPointerAddressSpace(), LI.isVolatile());
+      LoadInst *NewLI = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), NewPtr,
                                               NewAI.getAlign(), LI.isVolatile(),
                                               LI.getName());
       if (AATags)
@@ -2699,8 +2718,11 @@ private:
           }
 
       V = convertValue(DL, IRB, V, NewAllocaTy);
+      Value *NewPtr =
+          getPtrToNewAI(SI.getPointerAddressSpace(), SI.isVolatile());
+
       NewSI =
-          IRB.CreateAlignedStore(V, &NewAI, NewAI.getAlign(), SI.isVolatile());
+          IRB.CreateAlignedStore(V, NewPtr, NewAI.getAlign(), SI.isVolatile());
     } else {
       unsigned AS = SI.getPointerAddressSpace();
       Value *NewPtr = getNewAllocaSlicePtr(IRB, V->getType()->getPointerTo(AS));
@@ -2873,8 +2895,9 @@ private:
       V = convertValue(DL, IRB, V, AllocaTy);
     }
 
+    Value *NewPtr = getPtrToNewAI(II.getDestAddressSpace(), II.isVolatile());
     StoreInst *New =
-        IRB.CreateAlignedStore(V, &NewAI, NewAI.getAlign(), II.isVolatile());
+        IRB.CreateAlignedStore(V, NewPtr, NewAI.getAlign(), II.isVolatile());
     New->copyMetadata(II, {LLVMContext::MD_mem_parallel_loop_access,
                            LLVMContext::MD_access_group});
     if (AATags)
@@ -3027,14 +3050,22 @@ private:
     }
     OtherPtrTy = OtherTy->getPointerTo(OtherAS);
 
-    Value *SrcPtr = getAdjustedPtr(IRB, DL, OtherPtr, OtherOffset, OtherPtrTy,
+    Value *AdjPtr = getAdjustedPtr(IRB, DL, OtherPtr, OtherOffset, OtherPtrTy,
                                    OtherPtr->getName() + ".");
     MaybeAlign SrcAlign = OtherAlign;
-    Value *DstPtr = &NewAI;
     MaybeAlign DstAlign = SliceAlign;
-    if (!IsDest) {
-      std::swap(SrcPtr, DstPtr);
+    if (!IsDest)
       std::swap(SrcAlign, DstAlign);
+
+    Value *SrcPtr;
+    Value *DstPtr;
+
+    if (IsDest) {
+      DstPtr = getPtrToNewAI(II.getDestAddressSpace(), II.isVolatile());
+      SrcPtr = AdjPtr;
+    } else {
+      DstPtr = AdjPtr;
+      SrcPtr = getPtrToNewAI(II.getSourceAddressSpace(), II.isVolatile());
     }
 
     Value *Src;
@@ -4686,7 +4717,8 @@ bool SROAPass::deleteDeadInstructions(
   bool Changed = false;
   while (!DeadInsts.empty()) {
     Instruction *I = dyn_cast_or_null<Instruction>(DeadInsts.pop_back_val());
-    if (!I) continue; 
+    if (!I)
+      continue;
     LLVM_DEBUG(dbgs() << "Deleting dead instruction: " << *I << "\n");
 
     // If the instruction is an alloca, find the possible dbg.declare connected

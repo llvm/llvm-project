@@ -12,12 +12,12 @@ define void @foo() nounwind uwtable safestack {
 entry:
   ; CHECK: __safestack_unsafe_stack_ptr
   %c = alloca %struct.pair, align 4
-  %b = alloca i32*, align 8
-  %y = getelementptr inbounds %struct.pair, %struct.pair* %c, i32 0, i32 1
-  store i32* %y, i32** %b, align 8
-  %0 = load i32*, i32** %b, align 8
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32* %0)
+  %b = alloca ptr, align 8
+  %y = getelementptr inbounds %struct.pair, ptr %c, i32 0, i32 1
+  store ptr %y, ptr %b, align 8
+  %0 = load ptr, ptr %b, align 8
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %0)
   ret void
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)

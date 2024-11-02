@@ -87,8 +87,8 @@ target triple = "x86_64-pc-linux-gnu"
 @gBar = external global i32
 
 define i32 @main() local_unnamed_addr {
-  %call = tail call i32 bitcast (i32 (...)* @foo to i32 ()*)()
-  %call1 = tail call i32 bitcast (i32 (...)* @bar to i32 ()*)()
+  %call = tail call i32 @foo()
+  %call1 = tail call i32 @bar()
   %add = add nsw i32 %call1, %call
   ret i32 %add
 }

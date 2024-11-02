@@ -4,7 +4,7 @@
 ; Check lowering of some large extractelement that use the stack
 ; instead of register indexing.
 
-define i32 @v_extract_v64i32_varidx(<64 x i32> addrspace(1)* %ptr, i32 %idx) {
+define i32 @v_extract_v64i32_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ; GCN-LABEL: v_extract_v64i32_varidx:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -174,12 +174,12 @@ define i32 @v_extract_v64i32_varidx(<64 x i32> addrspace(1)* %ptr, i32 %idx) {
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %vec = load <64 x i32>, <64 x i32> addrspace(1)* %ptr
+  %vec = load <64 x i32>, ptr addrspace(1) %ptr
   %elt = extractelement <64 x i32> %vec, i32 %idx
   ret i32 %elt
 }
 
-define i16 @v_extract_v128i16_varidx(<128 x i16> addrspace(1)* %ptr, i32 %idx) {
+define i16 @v_extract_v128i16_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ; GCN-LABEL: v_extract_v128i16_varidx:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -308,10 +308,10 @@ define i16 @v_extract_v128i16_varidx(<128 x i16> addrspace(1)* %ptr, i32 %idx) {
 ; GCN-NEXT:    buffer_load_dword v30, off, s[0:3], s33 offset:568 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:572 ; 4-byte Folded Reload
 ; GCN-NEXT:    v_bfe_u32 v0, v6, 1, 6
-; GCN-NEXT:    v_lshrrev_b32_e64 v5, 6, s33
+; GCN-NEXT:    v_lshrrev_b32_e64 v2, 6, s33
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GCN-NEXT:    v_add_u32_e32 v5, 0x100, v5
-; GCN-NEXT:    v_add_u32_e32 v0, v5, v0
+; GCN-NEXT:    v_add_u32_e32 v2, 0x100, v2
+; GCN-NEXT:    v_add_u32_e32 v0, v2, v0
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v6
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 4, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -353,12 +353,12 @@ define i16 @v_extract_v128i16_varidx(<128 x i16> addrspace(1)* %ptr, i32 %idx) {
 ; GCN-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %vec = load <128 x i16>, <128 x i16> addrspace(1)* %ptr
+  %vec = load <128 x i16>, ptr addrspace(1) %ptr
   %elt = extractelement <128 x i16> %vec, i32 %idx
   ret i16 %elt
 }
 
-define i64 @v_extract_v32i64_varidx(<32 x i64> addrspace(1)* %ptr, i32 %idx) {
+define i64 @v_extract_v32i64_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ; GCN-LABEL: v_extract_v32i64_varidx:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -487,10 +487,10 @@ define i64 @v_extract_v32i64_varidx(<32 x i64> addrspace(1)* %ptr, i32 %idx) {
 ; GCN-NEXT:    buffer_load_dword v30, off, s[0:3], s33 offset:568 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:572 ; 4-byte Folded Reload
 ; GCN-NEXT:    v_and_b32_e32 v0, 31, v6
-; GCN-NEXT:    v_lshrrev_b32_e64 v5, 6, s33
+; GCN-NEXT:    v_lshrrev_b32_e64 v2, 6, s33
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; GCN-NEXT:    v_add_u32_e32 v5, 0x100, v5
-; GCN-NEXT:    v_add_u32_e32 v1, v5, v0
+; GCN-NEXT:    v_add_u32_e32 v2, 0x100, v2
+; GCN-NEXT:    v_add_u32_e32 v1, v2, v0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v16, v20
 ; GCN-NEXT:    v_mov_b32_e32 v17, v21
@@ -529,7 +529,7 @@ define i64 @v_extract_v32i64_varidx(<32 x i64> addrspace(1)* %ptr, i32 %idx) {
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %vec = load <32 x i64>, <32 x i64> addrspace(1)* %ptr
+  %vec = load <32 x i64>, ptr addrspace(1) %ptr
   %elt = extractelement <32 x i64> %vec, i32 %idx
   ret i64 %elt
 }

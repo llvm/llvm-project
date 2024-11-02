@@ -29,9 +29,9 @@ define dso_local signext i32 @test() nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -192(1)
 ; CHECK-NEXT:    addis 3, 2, a1@toc@ha
+; CHECK-NEXT:    std 0, 208(1)
 ; CHECK-NEXT:    addis 5, 2, a16@toc@ha
 ; CHECK-NEXT:    addis 6, 2, a17@toc@ha
 ; CHECK-NEXT:    addis 4, 2, a15@toc@ha

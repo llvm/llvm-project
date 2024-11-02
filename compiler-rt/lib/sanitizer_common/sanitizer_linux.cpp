@@ -440,7 +440,7 @@ uptr internal_fstat(fd_t fd, void *buf) {
   return res;
 #      elif SANITIZER_LINUX && defined(__loongarch__)
   struct statx bufx;
-  int res = internal_syscall(SYSCALL(statx), fd, 0, AT_EMPTY_PATH,
+  int res = internal_syscall(SYSCALL(statx), fd, "", AT_EMPTY_PATH,
                              STATX_BASIC_STATS, (uptr)&bufx);
   statx_to_stat(&bufx, (struct stat *)buf);
   return res;

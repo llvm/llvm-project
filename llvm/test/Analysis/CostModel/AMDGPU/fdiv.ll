@@ -20,7 +20,7 @@ define amdgpu_kernel void @fdiv_f32_ieee() #0 {
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f32 = fdiv <4 x float> undef, undef
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v5f32 = fdiv <5 x float> undef, undef
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %v8f32 = fdiv <8 x float> undef, undef
-; ALL-NEXT:  Cost Model: Found an estimated cost of 672 for instruction: %v9f32 = fdiv <9 x float> undef, undef
+; ALL-NEXT:  Cost Model: Found an estimated cost of 378 for instruction: %v9f32 = fdiv <9 x float> undef, undef
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'fdiv_f32_ieee'
@@ -30,7 +30,7 @@ define amdgpu_kernel void @fdiv_f32_ieee() #0 {
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v4f32 = fdiv <4 x float> undef, undef
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %v5f32 = fdiv <5 x float> undef, undef
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v8f32 = fdiv <8 x float> undef, undef
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 576 for instruction: %v9f32 = fdiv <9 x float> undef, undef
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 324 for instruction: %v9f32 = fdiv <9 x float> undef, undef
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f32 = fdiv float undef, undef
@@ -51,7 +51,7 @@ define amdgpu_kernel void @fdiv_f32_ftzdaz() #1 {
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v4f32 = fdiv <4 x float> undef, undef
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %v5f32 = fdiv <5 x float> undef, undef
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v8f32 = fdiv <8 x float> undef, undef
-; ALL-NEXT:  Cost Model: Found an estimated cost of 768 for instruction: %v9f32 = fdiv <9 x float> undef, undef
+; ALL-NEXT:  Cost Model: Found an estimated cost of 432 for instruction: %v9f32 = fdiv <9 x float> undef, undef
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'fdiv_f32_ftzdaz'
@@ -61,7 +61,7 @@ define amdgpu_kernel void @fdiv_f32_ftzdaz() #1 {
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v4f32 = fdiv <4 x float> undef, undef
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %v5f32 = fdiv <5 x float> undef, undef
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %v8f32 = fdiv <8 x float> undef, undef
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 672 for instruction: %v9f32 = fdiv <9 x float> undef, undef
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 378 for instruction: %v9f32 = fdiv <9 x float> undef, undef
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f32 = fdiv float undef, undef

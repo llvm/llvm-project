@@ -753,6 +753,18 @@ SaturatingAdd(T X, T Y, bool *ResultOverflowed = nullptr) {
     return Z;
 }
 
+/// Add multiple unsigned integers of type T.  Clamp the result to the
+/// maximum representable value of T on overflow.
+template <class T, class... Ts>
+std::enable_if_t<std::is_unsigned_v<T>, T> SaturatingAdd(T X, T Y, T Z,
+                                                         Ts... Args) {
+  bool Overflowed = false;
+  T XY = SaturatingAdd(X, Y, &Overflowed);
+  if (Overflowed)
+    return SaturatingAdd(std::numeric_limits<T>::max(), T(1), Args...);
+  return SaturatingAdd(XY, Z, Args...);
+}
+
 /// Multiply two unsigned integers, X and Y, of type T.  Clamp the result to the
 /// maximum representable value of T on overflow.  ResultOverflowed indicates if
 /// the result is larger than the maximum representable value of type T.

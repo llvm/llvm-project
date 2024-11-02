@@ -54,7 +54,7 @@ def NVVM_Dialect : Dialect {
     /// per SM for kernel functions.
     static StringRef getMinctasmAttrName() { return "nvvm.minctasm"; }
 
-    /// Get the name of the attribute used to annotate max number of 
+    /// Get the name of the attribute used to annotate max number of
     /// registers that can be allocated per thread.
     static StringRef getMaxnregAttrName() { return "nvvm.maxnreg"; }
   }];

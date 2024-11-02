@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/Support/CodeGen.h"
 
 using namespace llvm;
 
@@ -74,6 +75,10 @@ private:
   bool expandLoadAddressTLSGD(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MBBI,
                               MachineBasicBlock::iterator &NextMBBI);
+  bool expandFunctionCALL(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator MBBI,
+                          MachineBasicBlock::iterator &NextMBBI,
+                          bool IsTailCall);
 };
 
 char LoongArchPreRAExpandPseudo::ID = 0;
@@ -116,6 +121,10 @@ bool LoongArchPreRAExpandPseudo::expandMI(
     return expandLoadAddressTLSLD(MBB, MBBI, NextMBBI);
   case LoongArch::PseudoLA_TLS_GD:
     return expandLoadAddressTLSGD(MBB, MBBI, NextMBBI);
+  case LoongArch::PseudoCALL:
+    return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/false);
+  case LoongArch::PseudoTAIL:
+    return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/true);
   }
   return false;
 }
@@ -237,6 +246,69 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSGD(
   unsigned SecondOpcode = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
   return expandPcalau12iInstPair(MBB, MBBI, NextMBBI, LoongArchII::MO_GD_PC_HI,
                                  SecondOpcode, LoongArchII::MO_GOT_PC_LO);
+}
+
+bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI, bool IsTailCall) {
+  MachineFunction *MF = MBB.getParent();
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+  const MachineOperand &Func = MI.getOperand(0);
+  MachineInstrBuilder CALL;
+  unsigned Opcode;
+
+  switch (MF->getTarget().getCodeModel()) {
+  default:
+    report_fatal_error("Unsupported code model");
+    break;
+  case CodeModel::Small: {
+    // CALL:
+    // bl func
+    // TAIL:
+    // b func
+    Opcode = IsTailCall ? LoongArch::PseudoB_TAIL : LoongArch::BL;
+    CALL = BuildMI(MBB, MBBI, DL, TII->get(Opcode)).add(Func);
+    break;
+  }
+  case CodeModel::Medium: {
+    // CALL:
+    // pcalau12i  $ra, %pc_hi20(func)
+    // jirl       $ra, $ra, %pc_lo12(func)
+    // TAIL:
+    // pcalau12i  $scratch, %pc_hi20(func)
+    // jirl       $r0, $scratch, %pc_lo12(func)
+    Opcode =
+        IsTailCall ? LoongArch::PseudoJIRL_TAIL : LoongArch::PseudoJIRL_CALL;
+    Register ScratchReg =
+        IsTailCall
+            ? MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass)
+            : LoongArch::R1;
+    MachineInstrBuilder MIB =
+        BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCALAU12I), ScratchReg);
+    CALL = BuildMI(MBB, MBBI, DL, TII->get(Opcode)).addReg(ScratchReg);
+    if (Func.isSymbol()) {
+      const char *FnName = Func.getSymbolName();
+      MIB.addExternalSymbol(FnName, LoongArchII::MO_PCREL_HI);
+      CALL.addExternalSymbol(FnName, LoongArchII::MO_PCREL_LO);
+      break;
+    }
+    assert(Func.isGlobal() && "Expected a GlobalValue at this time");
+    const GlobalValue *GV = Func.getGlobal();
+    MIB.addGlobalAddress(GV, 0, LoongArchII::MO_PCREL_HI);
+    CALL.addGlobalAddress(GV, 0, LoongArchII::MO_PCREL_LO);
+    break;
+  }
+  }
+
+  // Transfer implicit operands.
+  CALL.copyImplicitOps(MI);
+
+  // Transfer MI flags.
+  CALL.setMIFlags(MI.getFlags());
+
+  MI.eraseFromParent();
+  return true;
 }
 
 } // end namespace

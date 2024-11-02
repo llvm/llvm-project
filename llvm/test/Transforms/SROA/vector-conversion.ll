@@ -68,9 +68,9 @@ define <2 x i64> @vector_ptrtointbitcast({<1 x ptr>, <1 x ptr>} %x) {
 define <2 x ptr> @vector_inttoptrbitcast_vector({<16 x i8>, <16 x i8>} %x) {
 ; CHECK-LABEL: @vector_inttoptrbitcast_vector(
 ; CHECK-NEXT:    [[X_FCA_0_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[X:%.*]], 0
-; CHECK-NEXT:    [[X_FCA_1_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[X]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[X_FCA_0_EXTRACT]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr <2 x i64> [[TMP1]] to <2 x ptr>
+; CHECK-NEXT:    [[X_FCA_1_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[X]], 1
 ; CHECK-NEXT:    ret <2 x ptr> [[TMP2]]
 ;
   %a = alloca {<16 x i8>, <16 x i8>}
@@ -85,9 +85,9 @@ define <2 x ptr> @vector_inttoptrbitcast_vector({<16 x i8>, <16 x i8>} %x) {
 define <16 x i8> @vector_ptrtointbitcast_vector({<2 x ptr>, <2 x ptr>} %x) {
 ; CHECK-LABEL: @vector_ptrtointbitcast_vector(
 ; CHECK-NEXT:    [[X_FCA_0_EXTRACT:%.*]] = extractvalue { <2 x ptr>, <2 x ptr> } [[X:%.*]], 0
+; CHECK-NEXT:    [[X_FCA_1_EXTRACT:%.*]] = extractvalue { <2 x ptr>, <2 x ptr> } [[X]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <2 x ptr> [[X_FCA_0_EXTRACT]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to <16 x i8>
-; CHECK-NEXT:    [[X_FCA_1_EXTRACT:%.*]] = extractvalue { <2 x ptr>, <2 x ptr> } [[X]], 1
 ; CHECK-NEXT:    ret <16 x i8> [[TMP2]]
 ;
   %a = alloca {<2 x ptr>, <2 x ptr>}

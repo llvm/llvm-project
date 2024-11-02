@@ -122,12 +122,12 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; W32-DAG: global_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[RES0]], off
 ; W32-DAG: global_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[RES1]], off
 
-define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, float addrspace(1)* %out0, float addrspace(1)* %out1) #0 {
+define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr addrspace(1) %out0, ptr addrspace(1) %out1) #0 {
 entry:
   %val0 = call float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32> %i, i32 %c, i32 0, i32 0, i32 0) #1
   %val1 = call float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32> %j, i32 %c, i32 0, i32 0, i32 0) #1
-  store volatile float %val0, float addrspace(1)* %out0
-  store volatile float %val1, float addrspace(1)* %out1
+  store volatile float %val0, ptr addrspace(1) %out0
+  store volatile float %val1, ptr addrspace(1) %out1
   ret void
 }
 
@@ -307,7 +307,7 @@ entry:
 ; W64-O0: buffer_load_dword [[RES:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:[[RES_OFF]] ; 4-byte Folded Reload
 ; W64-O0: global_store_dword v[{{[0-9]+:[0-9]+}}], [[RES]], off
 
-define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, float addrspace(1)* %in, float addrspace(1)* %out) #0 {
+define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 entry:
   %live.out.reg = call i32 asm sideeffect "s_mov_b32 $0, 17", "={s4}" ()
   %val0 = call float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32> %i, i32 %live.out.reg, i32 0, i32 0, i32 0) #1
@@ -321,7 +321,7 @@ bb1:
 
 bb2:
   %val = phi float [ %val0, %entry ], [ %val1, %bb1 ]
-  store volatile float %val, float addrspace(1)* %out
+  store volatile float %val, ptr addrspace(1) %out
   ret void
 }
 

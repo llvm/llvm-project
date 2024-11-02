@@ -30,29 +30,29 @@ public:
                                 PatternRewriter &rewriter) const final {
     Location loc = sliceOp.getLoc();
     Value input = sliceOp.getInput();
-    SmallVector<int64_t> strides, sizes;
-    auto starts = sliceOp.getStart();
+    SmallVector<int64_t> strides, sizes, starts;
+    starts = extractFromI64ArrayAttr(sliceOp.getStart());
     strides.resize(sliceOp.getType().template cast<ShapedType>().getRank(), 1);
 
     SmallVector<Value> dynSizes;
     for (const auto &i : llvm::enumerate(sliceOp.getSize())) {
       int64_t size = i.value().cast<IntegerAttr>().getInt();
       size_t index = i.index();
-      sizes.push_back(size == -1 ? ShapedType::kDynamicSize : size);
+      sizes.push_back(size == -1 ? ShapedType::kDynamic : size);
       if (!ShapedType::isDynamic(sizes.back()))
         continue;
 
       auto dim = rewriter.create<tensor::DimOp>(loc, input, index);
       auto offset = rewriter.create<arith::ConstantOp>(
-          loc,
-          rewriter.getIndexAttr(starts[index].cast<IntegerAttr>().getInt()));
+          loc, rewriter.getIndexAttr(starts[index]));
       dynSizes.push_back(rewriter.create<arith::SubIOp>(loc, dim, offset));
     }
 
     auto newSliceOp = rewriter.create<tensor::ExtractSliceOp>(
         sliceOp.getLoc(), sliceOp.getType(), input, ValueRange({}), dynSizes,
-        ValueRange({}), starts, rewriter.getI64ArrayAttr(sizes),
-        rewriter.getI64ArrayAttr(strides));
+        ValueRange({}), rewriter.getDenseI64ArrayAttr(starts),
+        rewriter.getDenseI64ArrayAttr(sizes),
+        rewriter.getDenseI64ArrayAttr(strides));
 
     rewriter.replaceOp(sliceOp, newSliceOp.getResult());
     return success();

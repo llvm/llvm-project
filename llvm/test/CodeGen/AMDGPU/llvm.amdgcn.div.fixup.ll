@@ -18,16 +18,16 @@ declare double @llvm.amdgcn.div.fixup.f64(double, double, double) nounwind readn
 ; GCN: v_div_fixup_f32 [[RESULT:v[0-9]+]], [[SA]], [[VB]], [[VC]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
-define amdgpu_kernel void @test_div_fixup_f32(float addrspace(1)* %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c) nounwind {
+define amdgpu_kernel void @test_div_fixup_f32(ptr addrspace(1) %out, [8 x i32], float %a, [8 x i32], float %b, [8 x i32], float %c) nounwind {
   %result = call float @llvm.amdgcn.div.fixup.f32(float %a, float %b, float %c) nounwind readnone
-  store float %result, float addrspace(1)* %out, align 4
+  store float %result, ptr addrspace(1) %out, align 4
   ret void
 }
 
 ; GCN-LABEL: {{^}}test_div_fixup_f64:
 ; GCN: v_div_fixup_f64
-define amdgpu_kernel void @test_div_fixup_f64(double addrspace(1)* %out, double %a, double %b, double %c) nounwind {
+define amdgpu_kernel void @test_div_fixup_f64(ptr addrspace(1) %out, double %a, double %b, double %c) nounwind {
   %result = call double @llvm.amdgcn.div.fixup.f64(double %a, double %b, double %c) nounwind readnone
-  store double %result, double addrspace(1)* %out, align 8
+  store double %result, ptr addrspace(1) %out, align 8
   ret void
 }

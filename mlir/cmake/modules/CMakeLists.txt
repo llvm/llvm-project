@@ -41,6 +41,10 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfig.cmake.in
   ${mlir_cmake_builddir}/MLIRConfig.cmake
   @ONLY)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfigVersion.cmake.in
+  ${mlir_cmake_builddir}/MLIRConfigVersion.cmake
+  @ONLY)
 set(MLIR_CONFIG_CMAKE_DIR)
 set(MLIR_CONFIG_LLVM_CMAKE_DIR)
 set(MLIR_CONFIG_INCLUDE_DIRS)
@@ -75,6 +79,10 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/MLIRConfig.cmake
   @ONLY)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfigVersion.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/MLIRConfigVersion.cmake
+  @ONLY)
 set(MLIR_CONFIG_CODE)
 set(MLIR_CONFIG_CMAKE_DIR)
 set(MLIR_CONFIG_LLVM_CMAKE_DIR)
@@ -87,6 +95,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/MLIRConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/MLIRConfigVersion.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/AddMLIR.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/AddMLIRPython.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/MLIRDetectPythonEnv.cmake

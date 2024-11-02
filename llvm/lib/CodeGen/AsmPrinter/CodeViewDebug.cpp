@@ -560,7 +560,7 @@ void CodeViewDebug::maybeRecordLocation(const DebugLoc &DL,
 }
 
 void CodeViewDebug::emitCodeViewMagicVersion() {
-  OS.emitValueToAlignment(4);
+  OS.emitValueToAlignment(Align(4));
   OS.AddComment("Debug section magic");
   OS.emitInt32(COFF::DEBUG_SECTION_MAGIC);
 }
@@ -754,13 +754,13 @@ void CodeViewDebug::emitTypeGlobalHashes() {
   // hardcoded to version 0, SHA1.
   OS.switchSection(Asm->getObjFileLowering().getCOFFGlobalTypeHashesSection());
 
-  OS.emitValueToAlignment(4);
+  OS.emitValueToAlignment(Align(4));
   OS.AddComment("Magic");
   OS.emitInt32(COFF::DEBUG_HASHES_SECTION_MAGIC);
   OS.AddComment("Section Version");
   OS.emitInt16(0);
   OS.AddComment("Hash Algorithm");
-  OS.emitInt16(uint16_t(GlobalTypeHashAlg::SHA1_8));
+  OS.emitInt16(uint16_t(GlobalTypeHashAlg::BLAKE3));
 
   TypeIndex TI(TypeIndex::FirstNonSimpleIndex);
   for (const auto &GHR : TypeTable.hashes()) {
@@ -2034,7 +2034,7 @@ TypeIndex CodeViewDebug::lowerTypeFunction(const DISubroutineType *Ty) {
     ReturnAndArgTypeIndices.back() = TypeIndex::None();
   }
   TypeIndex ReturnTypeIndex = TypeIndex::Void();
-  ArrayRef<TypeIndex> ArgTypeIndices = None;
+  ArrayRef<TypeIndex> ArgTypeIndices = std::nullopt;
   if (!ReturnAndArgTypeIndices.empty()) {
     auto ReturnAndArgTypesRef = makeArrayRef(ReturnAndArgTypeIndices);
     ReturnTypeIndex = ReturnAndArgTypesRef.front();
@@ -3109,7 +3109,7 @@ MCSymbol *CodeViewDebug::beginCVSubsection(DebugSubsectionKind Kind) {
 void CodeViewDebug::endCVSubsection(MCSymbol *EndLabel) {
   OS.emitLabel(EndLabel);
   // Every subsection must be aligned to a 4-byte boundary.
-  OS.emitValueToAlignment(4);
+  OS.emitValueToAlignment(Align(4));
 }
 
 static StringRef getSymbolName(SymbolKind SymKind) {
@@ -3136,7 +3136,7 @@ void CodeViewDebug::endSymbolRecord(MCSymbol *SymEnd) {
   // an extra copy of every symbol record in LLD. This increases object file
   // size by less than 1% in the clang build, and is compatible with the Visual
   // C++ linker.
-  OS.emitValueToAlignment(4);
+  OS.emitValueToAlignment(Align(4));
   OS.emitLabel(SymEnd);
 }
 

@@ -13,16 +13,15 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include <optional>
 
 using namespace llvm;
 
-void llvm::createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
-                                     Value *DstAddr, ConstantInt *CopyLen,
-                                     Align SrcAlign, Align DstAlign,
-                                     bool SrcIsVolatile, bool DstIsVolatile,
-                                     bool CanOverlap,
-                                     const TargetTransformInfo &TTI,
-                                     Optional<uint32_t> AtomicElementSize) {
+void llvm::createMemCpyLoopKnownSize(
+    Instruction *InsertBefore, Value *SrcAddr, Value *DstAddr,
+    ConstantInt *CopyLen, Align SrcAlign, Align DstAlign, bool SrcIsVolatile,
+    bool DstIsVolatile, bool CanOverlap, const TargetTransformInfo &TTI,
+    std::optional<uint32_t> AtomicElementSize) {
   // No need to expand zero length copies.
   if (CopyLen->isZero())
     return;
@@ -173,13 +172,11 @@ void llvm::createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
          "Bytes copied should match size in the call!");
 }
 
-void llvm::createMemCpyLoopUnknownSize(Instruction *InsertBefore,
-                                       Value *SrcAddr, Value *DstAddr,
-                                       Value *CopyLen, Align SrcAlign,
-                                       Align DstAlign, bool SrcIsVolatile,
-                                       bool DstIsVolatile, bool CanOverlap,
-                                       const TargetTransformInfo &TTI,
-                                       Optional<uint32_t> AtomicElementSize) {
+void llvm::createMemCpyLoopUnknownSize(
+    Instruction *InsertBefore, Value *SrcAddr, Value *DstAddr, Value *CopyLen,
+    Align SrcAlign, Align DstAlign, bool SrcIsVolatile, bool DstIsVolatile,
+    bool CanOverlap, const TargetTransformInfo &TTI,
+    std::optional<uint32_t> AtomicElementSize) {
   BasicBlock *PreLoopBB = InsertBefore->getParent();
   BasicBlock *PostLoopBB =
       PreLoopBB->splitBasicBlock(InsertBefore, "post-loop-memcpy-expansion");

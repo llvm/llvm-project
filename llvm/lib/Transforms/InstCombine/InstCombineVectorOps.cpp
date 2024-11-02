@@ -39,6 +39,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <numeric>
 #include <utility>
 
 #define DEBUG_TYPE "instcombine"
@@ -187,12 +188,12 @@ Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
   ElementCount NumElts =
       cast<VectorType>(Ext.getVectorOperandType())->getElementCount();
   Type *DestTy = Ext.getType();
+  unsigned DestWidth = DestTy->getPrimitiveSizeInBits();
   bool IsBigEndian = DL.isBigEndian();
 
   // If we are casting an integer to vector and extracting a portion, that is
   // a shift-right and truncate.
-  if (X->getType()->isIntegerTy() &&
-      isDesirableIntType(X->getType()->getPrimitiveSizeInBits())) {
+  if (X->getType()->isIntegerTy()) {
     assert(isa<FixedVectorType>(Ext.getVectorOperand()->getType()) &&
            "Expected fixed vector type for bitcast from scalar integer");
 
@@ -201,16 +202,18 @@ Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
     // BigEndian: extelt (bitcast i32 X to v4i8), 0 -> trunc i32 (X >> 24) to i8
     if (IsBigEndian)
       ExtIndexC = NumElts.getKnownMinValue() - 1 - ExtIndexC;
-    unsigned ShiftAmountC = ExtIndexC * DestTy->getPrimitiveSizeInBits();
-    if (!ShiftAmountC || Ext.getVectorOperand()->hasOneUse()) {
-      Value *Lshr = Builder.CreateLShr(X, ShiftAmountC, "extelt.offset");
+    unsigned ShiftAmountC = ExtIndexC * DestWidth;
+    if (!ShiftAmountC ||
+        (isDesirableIntType(X->getType()->getPrimitiveSizeInBits()) &&
+        Ext.getVectorOperand()->hasOneUse())) {
+      if (ShiftAmountC)
+        X = Builder.CreateLShr(X, ShiftAmountC, "extelt.offset");
       if (DestTy->isFloatingPointTy()) {
-        Type *DstIntTy = IntegerType::getIntNTy(
-            Lshr->getContext(), DestTy->getPrimitiveSizeInBits());
-        Value *Trunc = Builder.CreateTrunc(Lshr, DstIntTy);
+        Type *DstIntTy = IntegerType::getIntNTy(X->getContext(), DestWidth);
+        Value *Trunc = Builder.CreateTrunc(X, DstIntTy);
         return new BitCastInst(Trunc, DestTy);
       }
-      return new TruncInst(Lshr, DestTy);
+      return new TruncInst(X, DestTy);
     }
   }
 
@@ -283,7 +286,6 @@ Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
       return nullptr;
 
     unsigned SrcWidth = SrcTy->getScalarSizeInBits();
-    unsigned DestWidth = DestTy->getPrimitiveSizeInBits();
     unsigned ShAmt = Chunk * DestWidth;
 
     // TODO: This limitation is more strict than necessary. We could sum the
@@ -397,6 +399,20 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   if (Value *V = simplifyExtractElementInst(SrcVec, Index,
                                             SQ.getWithInstruction(&EI)))
     return replaceInstUsesWith(EI, V);
+
+  // extractelt (select %x, %vec1, %vec2), %const ->
+  // select %x, %vec1[%const], %vec2[%const]
+  // TODO: Support constant folding of multiple select operands:
+  // extractelt (select %x, %vec1, %vec2), (select %x, %c1, %c2)
+  // If the extractelement will for instance try to do out of bounds accesses
+  // because of the values of %c1 and/or %c2, the sequence could be optimized
+  // early. This is currently not possible because constant folding will reach
+  // an unreachable assertion if it doesn't find a constant operand.
+  if (SelectInst *SI = dyn_cast<SelectInst>(EI.getVectorOperand()))
+    if (SI->getCondition()->getType()->isIntegerTy() &&
+        isa<Constant>(EI.getIndexOperand()))
+      if (Instruction *R = FoldOpIntoSelect(EI, SI))
+        return R;
 
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
@@ -1499,6 +1515,74 @@ static Instruction *narrowInsElt(InsertElementInst &InsElt,
   return CastInst::Create(CastOpcode, NewInsElt, InsElt.getType());
 }
 
+/// Try to convert scalar extraction ops (shift+trunc) with insertelt to
+/// bitcast and shuffle:
+/// inselt V, (lshr (trunc X)), IndexC --> shuffle (bitcast X), V, Mask
+static Instruction *foldTruncInsElt(InsertElementInst &InsElt, bool IsBigEndian,
+                                    InstCombiner::BuilderTy &Builder) {
+  // inselt undef, (trunc T), IndexC
+  // TODO: Allow any base vector value.
+  // TODO: The one-use limitation could be removed for some cases (eg, no
+  //       extra shuffle is needed and a shift is eliminated).
+  auto *VTy = dyn_cast<FixedVectorType>(InsElt.getType());
+  Value *T, *V = InsElt.getOperand(0);
+  uint64_t IndexC;
+  if (!VTy || !match(InsElt.getOperand(1), m_OneUse(m_Trunc(m_Value(T)))) ||
+      !match(InsElt.getOperand(2), m_ConstantInt(IndexC)) ||
+      !match(V, m_Undef()))
+    return nullptr;
+
+  Type *SrcTy = T->getType();
+  unsigned ScalarWidth = SrcTy->getScalarSizeInBits();
+  unsigned VecEltWidth = VTy->getScalarSizeInBits();
+  if (ScalarWidth % VecEltWidth != 0)
+    return nullptr;
+
+  unsigned NumEltsInScalar = ScalarWidth / VecEltWidth;
+  Value *X = T;
+  if (IndexC == (IsBigEndian ? NumEltsInScalar - 1 : 0)) {
+    // The insert is to the LSB end of the vector (depends on endian).
+    // That's all we need.
+  } else {
+    // If not, we must match a right-shift to translate the insert index.
+    uint64_t ShiftC;
+    if (!match(T, m_OneUse(m_LShr(m_Value(X), m_ConstantInt(ShiftC)))))
+      return nullptr;
+
+    // Check the shift amount to see if this can be folded to an identity
+    // shuffle (assuming we are shuffling with an undef base vector).
+    // Big endian has MSB at vector index 0, so the insert index is flipped.
+    if (ShiftC != (IsBigEndian ? (NumEltsInScalar - 1 - IndexC) * VecEltWidth
+                               : IndexC * VecEltWidth))
+      return nullptr;
+  }
+
+  // Bitcast the scalar to a vector type with the destination element type.
+  Type *CastTy = FixedVectorType::get(VTy->getElementType(), NumEltsInScalar);
+  Value *VecX = Builder.CreateBitCast(X, CastTy, "vec." + X->getName());
+
+  unsigned NumElts = VTy->getNumElements();
+  if (NumElts > NumEltsInScalar) {
+    // Pad the source vector with undef elements, so it matches the dest type.
+    SmallVector<int> IdentityPaddedMask(NumElts, UndefMaskElem);
+    for (unsigned i = 0; i != NumEltsInScalar; ++i)
+      IdentityPaddedMask[i] = i;
+    VecX = Builder.CreateShuffleVector(VecX, IdentityPaddedMask);
+  } else if (NumElts < NumEltsInScalar) {
+    // Narrow the source vector, so it matches the dest type.
+    SmallVector<int> IdentityExtractMask(NumElts);
+    std::iota(IdentityExtractMask.begin(), IdentityExtractMask.end(), 0);
+    VecX = Builder.CreateShuffleVector(VecX, IdentityExtractMask);
+  }
+
+  // Insert the truncated element using a select-shuffle. All lanes but one are
+  // from the base vector V.
+  SmallVector<int> SelectMask(NumElts);
+  std::iota(SelectMask.begin(), SelectMask.end(), 0);
+  SelectMask[IndexC] = (int)IndexC + NumElts;
+  return new ShuffleVectorInst(V, VecX, SelectMask);
+}
+
 Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
   Value *VecOp    = IE.getOperand(0);
   Value *ScalarOp = IE.getOperand(1);
@@ -1625,6 +1709,9 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
 
   if (Instruction *Ext = narrowInsElt(IE, Builder))
     return Ext;
+
+  if (Instruction *Shuf = foldTruncInsElt(IE, DL.isBigEndian(), Builder))
+    return Shuf;
 
   return nullptr;
 }

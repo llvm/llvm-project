@@ -44,27 +44,27 @@ class MiniDumpTestCase(TestBase):
         self.assertTrue(self.process, PROCESS_IS_VALID)
         expected_modules = [
             {
-                'filename' : r"C:\Users\amccarth\Documents\Visual Studio 2013\Projects\fizzbuzz\Debug/fizzbuzz.exe",
+                'filename' : r"C:\Users\amccarth\Documents\Visual Studio 2013\Projects\fizzbuzz\Debug\fizzbuzz.exe",
                 'uuid' : '0F45B791-9A96-46F9-BF8F-2D6076EA421A-00000011',
             },
             {
-                'filename' : r"C:\Windows\SysWOW64/ntdll.dll",
+                'filename' : r"C:\Windows\SysWOW64\ntdll.dll",
                 'uuid' : 'BBB0846A-402C-4052-A16B-67650BBFE6B0-00000002',
             },
             {
-                'filename' : r"C:\Windows\SysWOW64/kernel32.dll",
+                'filename' : r"C:\Windows\SysWOW64\kernel32.dll",
                 'uuid' : 'E5CB7E1B-005E-4113-AB98-98D6913B52D8-00000002',
             },
             {
-                'filename' : r"C:\Windows\SysWOW64/KERNELBASE.dll",
+                'filename' : r"C:\Windows\SysWOW64\KERNELBASE.dll",
                 'uuid' : '0BF95241-CB0D-4BD4-AC5D-186A6452E522-00000001',
             },
             {
-                'filename' : r"C:\Windows\System32/MSVCP120D.dll",
+                'filename' : r"C:\Windows\System32\MSVCP120D.dll",
                 'uuid' : '3C05516E-57E7-40EB-8D3F-9722C5BD80DD-00000001',
             },
             {
-                'filename' : r"C:\Windows\System32/MSVCR120D.dll",
+                'filename' : r"C:\Windows\System32\MSVCR120D.dll",
                 'uuid' : '6382FB86-46C4-4046-AE42-8D97B3F91FF2-00000001',
             },
         ]

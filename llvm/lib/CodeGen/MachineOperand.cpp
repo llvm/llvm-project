@@ -29,6 +29,7 @@
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -470,7 +471,7 @@ static void printIRBlockReference(raw_ostream &OS, const BasicBlock &BB,
     printLLVMNameWithoutPrefix(OS, BB.getName());
     return;
   }
-  Optional<int> Slot;
+  std::optional<int> Slot;
   if (const Function *F = BB.getParent()) {
     if (F == MST.getCurrentFunction()) {
       Slot = MST.getLocalSlot(&BB);
@@ -748,7 +749,7 @@ void MachineOperand::print(raw_ostream &OS, LLT TypeToPrint,
                            const TargetIntrinsicInfo *IntrinsicInfo) const {
   tryToGetTargetInfo(*this, TRI, IntrinsicInfo);
   ModuleSlotTracker DummyMST(nullptr);
-  print(OS, DummyMST, TypeToPrint, None, /*PrintDef=*/false,
+  print(OS, DummyMST, TypeToPrint, std::nullopt, /*PrintDef=*/false,
         /*IsStandalone=*/true,
         /*ShouldPrintRegisterTies=*/true,
         /*TiedOperandIdx=*/0, TRI, IntrinsicInfo);

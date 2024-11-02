@@ -16,7 +16,6 @@
 #include "CodeRegionGenerator.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptions.h"
@@ -29,15 +28,6 @@ namespace mca {
 
 // This virtual dtor serves as the anchor for the CodeRegionGenerator class.
 CodeRegionGenerator::~CodeRegionGenerator() {}
-
-// A comment consumer that parses strings.  The only valid tokens are strings.
-class MCACommentConsumer : public AsmCommentConsumer {
-public:
-  CodeRegions &Regions;
-
-  MCACommentConsumer(CodeRegions &R) : Regions(R) {}
-  void HandleComment(SMLoc Loc, StringRef CommentText) override;
-};
 
 // This class provides the callbacks that occur when parsing input assembly.
 class MCStreamerWrapper final : public MCStreamer {
@@ -73,7 +63,53 @@ public:
   }
 };
 
-void MCACommentConsumer::HandleComment(SMLoc Loc, StringRef CommentText) {
+Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
+    const std::unique_ptr<MCInstPrinter> &IP) {
+  MCTargetOptions Opts;
+  Opts.PreserveAsmComments = false;
+  CodeRegions &Regions = getRegions();
+  MCStreamerWrapper Str(Ctx, Regions);
+
+  // Need to initialize an MCTargetStreamer otherwise
+  // certain asm directives will cause a segfault.
+  // Using nulls() so that anything emitted by the MCTargetStreamer
+  // doesn't show up in the llvm-mca output.
+  raw_ostream &OSRef = nulls();
+  formatted_raw_ostream FOSRef(OSRef);
+  TheTarget.createAsmTargetStreamer(Str, FOSRef, IP.get(),
+                                    /*IsVerboseAsm=*/true);
+
+  // Create a MCAsmParser and setup the lexer to recognize llvm-mca ASM
+  // comments.
+  std::unique_ptr<MCAsmParser> Parser(
+      createMCAsmParser(Regions.getSourceMgr(), Ctx, Str, MAI));
+  MCAsmLexer &Lexer = Parser->getLexer();
+  MCACommentConsumer *CCP = getCommentConsumer();
+  Lexer.setCommentConsumer(CCP);
+  // Enable support for MASM literal numbers (example: 05h, 101b).
+  Lexer.setLexMasmIntegers(true);
+
+  std::unique_ptr<MCTargetAsmParser> TAP(
+      TheTarget.createMCAsmParser(STI, *Parser, MCII, Opts));
+  if (!TAP)
+    return make_error<StringError>(
+        "This target does not support assembly parsing.",
+        inconvertibleErrorCode());
+  Parser->setTargetParser(*TAP);
+  Parser->Run(false);
+
+  if (CCP->hadErr())
+    return make_error<StringError>("There was an error parsing comments.",
+                                   inconvertibleErrorCode());
+
+  // Set the assembler dialect from the input. llvm-mca will use this as the
+  // default dialect when printing reports.
+  AssemblerDialect = Parser->getAssemblerDialect();
+  return Regions;
+}
+
+void AnalysisRegionCommentConsumer::HandleComment(SMLoc Loc,
+                                                  StringRef CommentText) {
   // Skip empty comments.
   StringRef Comment(CommentText);
   if (Comment.empty())
@@ -107,44 +143,66 @@ void MCACommentConsumer::HandleComment(SMLoc Loc, StringRef CommentText) {
   Regions.beginRegion(Comment, Loc);
 }
 
-Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
-    const std::unique_ptr<MCInstPrinter> &IP) {
-  MCTargetOptions Opts;
-  Opts.PreserveAsmComments = false;
-  MCStreamerWrapper Str(Ctx, Regions);
+void InstrumentRegionCommentConsumer::HandleComment(SMLoc Loc,
+                                                    StringRef CommentText) {
+  // Skip empty comments.
+  StringRef Comment(CommentText);
+  if (Comment.empty())
+    return;
 
-  // Need to initialize an MCTargetStreamer otherwise
-  // certain asm directives will cause a segfault.
-  // Using nulls() so that anything emitted by the MCTargetStreamer
-  // doesn't show up in the llvm-mca output.
-  raw_ostream &OSRef = nulls();
-  formatted_raw_ostream FOSRef(OSRef);
-  TheTarget.createAsmTargetStreamer(Str, FOSRef, IP.get(),
-                                    /*IsVerboseAsm=*/true);
+  // Skip spaces and tabs.
+  unsigned Position = Comment.find_first_not_of(" \t");
+  if (Position >= Comment.size())
+    // We reached the end of the comment. Bail out.
+    return;
+  Comment = Comment.drop_front(Position);
 
-  // Create a MCAsmParser and setup the lexer to recognize llvm-mca ASM
-  // comments.
-  std::unique_ptr<MCAsmParser> Parser(
-      createMCAsmParser(Regions.getSourceMgr(), Ctx, Str, MAI));
-  MCAsmLexer &Lexer = Parser->getLexer();
-  MCACommentConsumer CC(Regions);
-  Lexer.setCommentConsumer(&CC);
-  // Enable support for MASM literal numbers (example: 05h, 101b).
-  Lexer.setLexMasmIntegers(true);
+  // Bail out if not an MCA style comment
+  if (!Comment.consume_front("LLVM-MCA-"))
+    return;
 
-  std::unique_ptr<MCTargetAsmParser> TAP(
-      TheTarget.createMCAsmParser(STI, *Parser, MCII, Opts));
-  if (!TAP)
-    return make_error<StringError>(
-        "This target does not support assembly parsing.",
-        inconvertibleErrorCode());
-  Parser->setTargetParser(*TAP);
-  Parser->Run(false);
+  // Skip AnalysisRegion comments
+  if (Comment.consume_front("BEGIN") || Comment.consume_front("END"))
+    return;
 
-  // Set the assembler dialect from the input. llvm-mca will use this as the
-  // default dialect when printing reports.
-  AssemblerDialect = Parser->getAssemblerDialect();
-  return Regions;
+  if (IM.shouldIgnoreInstruments())
+    return;
+
+  auto [InstrumentKind, Data] = Comment.split(" ");
+
+  // An error if not of the form LLVM-MCA-TARGET-KIND
+  if (!IM.supportsInstrumentType(InstrumentKind)) {
+    if (InstrumentKind.empty())
+      SM.PrintMessage(
+          Loc, llvm::SourceMgr::DK_Error,
+          "No instrumentation kind was provided in LLVM-MCA comment");
+    else
+      SM.PrintMessage(Loc, llvm::SourceMgr::DK_Error,
+                      "Unknown instrumentation type in LLVM-MCA comment: " +
+                          InstrumentKind);
+    FoundError = true;
+    return;
+  }
+
+  SharedInstrument I = IM.createInstrument(InstrumentKind, Data);
+  if (!I) {
+    if (Data.empty())
+      SM.PrintMessage(Loc, llvm::SourceMgr::DK_Error,
+                      "Failed to create " + InstrumentKind +
+                          " instrument with no data");
+    else
+      SM.PrintMessage(Loc, llvm::SourceMgr::DK_Error,
+                      "Failed to create " + InstrumentKind +
+                          " instrument with data: " + Data);
+    FoundError = true;
+    return;
+  }
+
+  // End InstrumentType region if one is open
+  if (Regions.isRegionActive(InstrumentKind))
+    Regions.endRegion(InstrumentKind, Loc);
+  // Start new instrumentation region
+  Regions.beginRegion(InstrumentKind, Loc, I);
 }
 
 } // namespace mca

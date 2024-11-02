@@ -28,23 +28,13 @@
 
 #include "test_basic_format_arg.h"
 #include "test_format_context.h"
+#include "test_iterators.h"
 #include "make_string.h"
 #include "platform_support.h" // locale name macros
 #include "test_macros.h"
 
 template <class OutIt, class CharT>
 void test() {
-  static_assert(
-      !std::is_copy_constructible_v<std::basic_format_context<OutIt, CharT>>);
-  static_assert(
-      !std::is_copy_assignable_v<std::basic_format_context<OutIt, CharT>>);
-  // The move operations are implicitly deleted due to the
-  // deleted copy operations.
-  static_assert(
-      !std::is_move_constructible_v<std::basic_format_context<OutIt, CharT>>);
-  static_assert(
-      !std::is_move_assignable_v<std::basic_format_context<OutIt, CharT>>);
-
   std::basic_string<CharT> string = MAKE_STRING(CharT, "string");
   // The type of the object is an exposition only type. The temporary is needed
   // to extend the lifetype of the object since args stores a pointer to the
@@ -117,6 +107,20 @@ void test() {
   }
 #endif
 }
+
+// std::back_insert_iterator<std::string>, copyable
+static_assert(std::is_copy_constructible_v<std::basic_format_context<std::back_insert_iterator<std::string>, char>>);
+static_assert(std::is_copy_assignable_v<std::basic_format_context<std::back_insert_iterator<std::string>, char>>);
+
+static_assert(std::is_move_constructible_v<std::basic_format_context<std::back_insert_iterator<std::string>, char>>);
+static_assert(std::is_move_assignable_v<std::basic_format_context<std::back_insert_iterator<std::string>, char>>);
+
+// cpp20_output_iterator, move only
+static_assert(!std::is_copy_constructible_v<std::basic_format_context<cpp20_output_iterator<int*>, char>>);
+static_assert(!std::is_copy_assignable_v<std::basic_format_context<cpp20_output_iterator<int*>, char>>);
+
+static_assert(std::is_move_constructible_v<std::basic_format_context<cpp20_output_iterator<int*>, char>>);
+static_assert(std::is_move_assignable_v<std::basic_format_context<cpp20_output_iterator<int*>, char>>);
 
 int main(int, char**) {
   test<std::back_insert_iterator<std::basic_string<char>>, char>();

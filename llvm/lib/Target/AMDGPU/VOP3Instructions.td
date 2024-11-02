@@ -59,6 +59,7 @@ class VOP3Interp<string OpName, VOPProfile P, list<dag> pattern = []> :
 }
 
 def VOP3_INTERP : VOPProfile<[f32, f32, i32, untyped]> {
+  let Src0Mod = FPVRegInputMods;
   let Ins64 = (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
                    Attr:$attr, AttrChan:$attrchan,
                    clampmod0:$clamp, omod0:$omod);
@@ -108,6 +109,9 @@ class VOP3_INTERP16 <list<ValueType> ArgVT> : VOPProfile<ArgVT> {
   let HasOMod = !ne(DstVT.Value, f16.Value);
   let HasHigh = 1;
 
+  let Src0Mod = FPVRegInputMods;
+  let Src2Mod = FPVRegInputMods;
+
   let Outs64 = (outs DstRC.RegClass:$vdst);
   let Ins64 = getInterp16Ins<HasSrc2, HasOMod, Src0Mod, Src2Mod>.ret;
   let Asm64 = getInterp16Asm<HasSrc2, HasOMod>.ret;
@@ -141,7 +145,7 @@ let SchedRW = [WriteDoubleAdd] in {
 let FPDPRounding = 1 in {
 defm V_FMA_F64 : VOP3Inst <"v_fma_f64", VOP3_Profile<VOP_F64_F64_F64_F64>, any_fma>;
 defm V_ADD_F64 : VOP3Inst <"v_add_f64", VOP3_Profile<VOP_F64_F64_F64>, any_fadd>;
-defm V_MUL_F64 : VOP3Inst <"v_mul_f64", VOP3_Profile<VOP_F64_F64_F64>, fmul>;
+defm V_MUL_F64 : VOP3Inst <"v_mul_f64", VOP3_Profile<VOP_F64_F64_F64>, any_fmul>;
 } // End FPDPRounding = 1
 defm V_MIN_F64 : VOP3Inst <"v_min_f64", VOP3_Profile<VOP_F64_F64_F64>, fminnum_like>;
 defm V_MAX_F64 : VOP3Inst <"v_max_f64", VOP3_Profile<VOP_F64_F64_F64>, fmaxnum_like>;
@@ -258,7 +262,7 @@ let SchedRW = [Write64Bit] in {
 } // End isReMaterializable = 1
 
 def : GCNPat<
-  (i32 (getDivergentFrag<sext>.ret i16:$src)),
+  (i32 (DivergentUnaryFrag<sext> i16:$src)),
   (i32 (V_BFE_I32_e64 $src, (S_MOV_B32 (i32 0)), (S_MOV_B32 (i32 0x10))))
 >;
 
@@ -285,18 +289,17 @@ defm V_MQSAD_U32_U8 : VOP3Inst <"v_mqsad_u32_u8", VOPProfileMQSAD>;
 } // End Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32]
 } // End SubtargetPredicate = isGFX7Plus
 
-let isCommutable = 1 in {
-let SchedRW = [WriteIntMul, WriteSALU] in {
-let SubtargetPredicate = isGFX7GFX8GFX9GFX10 in {
-defm V_MAD_U64_U32 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64>;
-defm V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
-}
-let SubtargetPredicate = isGFX11Only, Constraints = "@earlyclobber $vdst" in {
-defm V_MAD_U64_U32_gfx11 : VOP3Inst <"v_mad_u64_u32_gfx11", VOP3b_I64_I1_I32_I32_I64>;
-defm V_MAD_I64_I32_gfx11 : VOP3Inst <"v_mad_i64_i32_gfx11", VOP3b_I64_I1_I32_I32_I64>;
-} // End SubtargetPredicate = isGFX11Only, Constraints = "@earlyclobber $vdst"
-} // End SchedRW = [WriteIntMul, WriteSALU]
-} // End isCommutable = 1
+let isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU] in {
+  let SubtargetPredicate = isGFX7Plus, OtherPredicates = [HasNotMADIntraFwdBug] in {
+    defm V_MAD_U64_U32 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64>;
+    defm V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
+  }
+  let SubtargetPredicate = isGFX11Only, OtherPredicates = [HasMADIntraFwdBug],
+      Constraints = "@earlyclobber $vdst" in {
+    defm V_MAD_U64_U32_gfx11 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64>;
+    defm V_MAD_I64_I32_gfx11 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
+  }
+} // End isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU]
 
 
 let FPDPRounding = 1 in {
@@ -364,7 +367,7 @@ def V_INTERP_P1LV_F16 : VOP3Interp <"v_interp_p1lv_f16", VOP3_INTERP16<[f32, f32
 } // End SubtargetPredicate = Has16BitInsts, isCommutable = 1
 
 def : GCNPat<
-  (i64 (getDivergentFrag<sext>.ret i16:$src)),
+  (i64 (DivergentUnaryFrag<sext> i16:$src)),
     (REG_SEQUENCE VReg_64,
       (i32 (V_BFE_I32_e64 $src, (S_MOV_B32 (i32 0)), (S_MOV_B32 (i32 0x10)))), sub0,
       (i32 (COPY_TO_REGCLASS
@@ -611,7 +614,7 @@ def : GCNPat<
 def : VOPBinOpClampPat<saddsat, V_ADD_I32_e64, i32>;
 def : VOPBinOpClampPat<ssubsat, V_SUB_I32_e64, i32>;
 
-def : GCNPat<(getDivergentFrag<or>.ret (or_oneuse i64:$src0, i64:$src1), i64:$src2),
+def : GCNPat<(DivergentBinFrag<or> (or_oneuse i64:$src0, i64:$src1), i64:$src2),
              (REG_SEQUENCE VReg_64,
                (V_OR3_B32_e64 (i32 (EXTRACT_SUBREG $src0, sub0)),
                               (i32 (EXTRACT_SUBREG $src1, sub0)),
@@ -654,10 +657,11 @@ multiclass IMAD32_Pats <VOP3_Pseudo inst> {
         >;
 }
 
-let SubtargetPredicate = isGFX9GFX10 in // exclude pre-GFX9 where it was slow
-defm : IMAD32_Pats<V_MAD_U64_U32_e64>;
-let SubtargetPredicate = isGFX11Only in
-defm : IMAD32_Pats<V_MAD_U64_U32_gfx11_e64>;
+// exclude pre-GFX9 where it was slow
+let OtherPredicates = [HasNotMADIntraFwdBug], SubtargetPredicate = isGFX9Plus in
+  defm : IMAD32_Pats<V_MAD_U64_U32_e64>;
+let OtherPredicates = [HasMADIntraFwdBug], SubtargetPredicate = isGFX11Only in
+  defm : IMAD32_Pats<V_MAD_U64_U32_gfx11_e64>;
 
 def VOP3_PERMLANE_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>, VOP3_OPSEL> {
   let InsVOP3OpSel = (ins IntOpSelMods:$src0_modifiers, VRegSrc_32:$src0,

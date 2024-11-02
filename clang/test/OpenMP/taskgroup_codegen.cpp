@@ -66,7 +66,7 @@ void parallel_taskgroup() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__clang_call_terminate
-// CHECK1-SAME: (ptr [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] comdat {
+// CHECK1-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] comdat {
 // CHECK1-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR3:[0-9]+]]
 // CHECK1-NEXT:    call void @_ZSt9terminatev() #[[ATTR8]]
 // CHECK1-NEXT:    unreachable
@@ -136,7 +136,7 @@ void parallel_taskgroup() {
 //
 //
 // DEBUG1-LABEL: define {{[^@]+}}@__clang_call_terminate
-// DEBUG1-SAME: (ptr [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] {
+// DEBUG1-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] {
 // DEBUG1-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR3:[0-9]+]]
 // DEBUG1-NEXT:    call void @_ZSt9terminatev() #[[ATTR8]]
 // DEBUG1-NEXT:    unreachable

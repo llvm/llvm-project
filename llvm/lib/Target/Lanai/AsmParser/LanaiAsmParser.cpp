@@ -35,6 +35,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 
 using namespace llvm;
 
@@ -693,7 +694,7 @@ std::unique_ptr<LanaiOperand>
 LanaiAsmParser::parseRegister(bool RestoreOnFailure) {
   SMLoc Start = Parser.getTok().getLoc();
   SMLoc End = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-  Optional<AsmToken> PercentTok;
+  std::optional<AsmToken> PercentTok;
 
   unsigned RegNum;
   // Eat the '%'.

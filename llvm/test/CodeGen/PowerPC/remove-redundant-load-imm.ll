@@ -12,12 +12,12 @@ declare void @barney.94(ptr, i32)
 define void @redundancy_on_ppc_only(i1 %arg7) nounwind {
 ; PPC64LE-LABEL: redundancy_on_ppc_only:
 ; PPC64LE:       # %bb.0: # %bb
-; PPC64LE-NEXT:    mflr 0
 ; PPC64LE-NEXT:    andi. 3, 3, 1
-; PPC64LE-NEXT:    std 0, 16(1)
+; PPC64LE-NEXT:    mflr 0
 ; PPC64LE-NEXT:    stdu 1, -32(1)
 ; PPC64LE-NEXT:    li 3, 1
 ; PPC64LE-NEXT:    li 4, 0
+; PPC64LE-NEXT:    std 0, 48(1)
 ; PPC64LE-NEXT:    iselgt 3, 3, 4
 ; PPC64LE-NEXT:    bl barney.88
 ; PPC64LE-NEXT:    nop
@@ -37,10 +37,10 @@ define void @redundancy_on_ppc_and_other_targets() nounwind {
 ; PPC64LE-LABEL: redundancy_on_ppc_and_other_targets:
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    mflr 0
-; PPC64LE-NEXT:    std 0, 16(1)
 ; PPC64LE-NEXT:    stdu 1, -32(1)
 ; PPC64LE-NEXT:    addis 3, 2, .LC0@toc@ha
 ; PPC64LE-NEXT:    li 4, 0
+; PPC64LE-NEXT:    std 0, 48(1)
 ; PPC64LE-NEXT:    ld 3, .LC0@toc@l(3)
 ; PPC64LE-NEXT:    std 4, 0(3)
 ; PPC64LE-NEXT:    bl barney.94

@@ -15,7 +15,6 @@ define i32 @table_grow(i32 %sz) {
 ; CHECK-NEXT:  table.grow	externref_table
 ; CHECK-NEXT:  end_function
   %null = call %externref @llvm.wasm.ref.null.extern()
-  %tableptr = getelementptr [0 x %externref], ptr addrspace(1) @externref_table, i32 0, i32 0
-  %newsz = call i32 @llvm.wasm.table.grow.externref(ptr addrspace(1) %tableptr, %externref %null, i32 %sz)
+  %newsz = call i32 @llvm.wasm.table.grow.externref(ptr addrspace(1) @externref_table, %externref %null, i32 %sz)
   ret i32 %newsz
 }

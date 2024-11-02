@@ -47,6 +47,8 @@ Non-comprehensive list of changes in this release
    is not a constant in coroutines. This decision may cause unnecessary
    performance regressions and we plan to fix it in later versions.
 
+* The LoopFlatten pass is now enabled by default.
+
 * ...
 
 Update on required toolchains to build LLVM

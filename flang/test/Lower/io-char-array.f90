@@ -24,4 +24,4 @@ end subroutine
 ! CHECK: %[[BOX_R_NONE:.*]] = fir.convert %[[BOX_R]] : (!fir.box<!fir.array<2x!fir.char<1,12>>>) -> !fir.box<none>
 ! CHECK: %[[DATA:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,14>>
 ! CHECK: %[[DATA_PTR:.*]] = fir.convert %8 : (!fir.ref<!fir.char<1,14>>) -> !fir.ref<i8>
-! CHECK: %{{.*}} = fir.call @_FortranAioBeginInternalArrayFormattedOutput(%[[BOX_R_NONE]], %[[DATA_PTR]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.box<none>, !fir.ref<i8>, i64, !fir.box<none>, !fir.ref<!fir.llvm_ptr<i8>>, i64, !fir.ref<i8>, i32) -> !fir.ref<i8>
+! CHECK: %{{.*}} = fir.call @_FortranAioBeginInternalArrayFormattedOutput(%[[BOX_R_NONE]], %[[DATA_PTR]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i64, !fir.box<none>, !fir.ref<!fir.llvm_ptr<i8>>, i64, !fir.ref<i8>, i32) -> !fir.ref<i8>

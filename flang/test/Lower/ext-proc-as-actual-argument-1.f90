@@ -9,7 +9,7 @@
 ! CHECK:  %[[VAL_3:.*]] = fir.undefined tuple<!fir.boxproc<() -> ()>, i64>
 ! CHECK:  %[[VAL_4:.*]] = fir.insert_value %[[VAL_3]], %[[VAL_1]], [0 : index] : (tuple<!fir.boxproc<() -> ()>, i64>, !fir.boxproc<() -> ()>) -> tuple<!fir.boxproc<() -> ()>, i64>
 ! CHECK:  %[[VAL_5:.*]] = fir.insert_value %[[VAL_4]], %[[VAL_2]], [1 : index] : (tuple<!fir.boxproc<() -> ()>, i64>, i64) -> tuple<!fir.boxproc<() -> ()>, i64>
-! CHECK:  fir.call @_QFPsub(%[[VAL_5]]) : (tuple<!fir.boxproc<() -> ()>, i64>) -> ()
+! CHECK:  fir.call @_QFPsub(%[[VAL_5]]) {{.*}}: (tuple<!fir.boxproc<() -> ()>, i64>) -> ()
 ! CHECK:  return
 
 ! CHECK-LABEL: func @_QPext_func(

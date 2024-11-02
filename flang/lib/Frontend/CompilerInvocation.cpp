@@ -171,6 +171,14 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_triple))
     opts.triple = a->getValue();
+
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_target_cpu))
+    opts.cpu = a->getValue();
+
+  for (const llvm::opt::Arg *currentArg :
+       args.filtered(clang::driver::options::OPT_target_feature))
+    opts.featuresAsWritten.emplace_back(currentArg->getValue());
 }
 
 // Tweak the frontend configuration based on the frontend action
@@ -677,8 +685,6 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
                                    llvm::opt::ArgList &args,
                                    clang::DiagnosticsEngine &diags) {
   LangOptions &opts = invoc.getLangOpts();
-  const unsigned diagUnimplemented = diags.getCustomDiagID(
-      clang::DiagnosticsEngine::Warning, "%0 is not currently implemented");
 
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_ffp_contract)) {
@@ -695,43 +701,30 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
       return false;
     }
 
-    diags.Report(diagUnimplemented) << a->getOption().getName();
     opts.setFPContractMode(fpContractMode);
   }
 
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_menable_no_infinities)) {
-    diags.Report(diagUnimplemented) << a->getOption().getName();
+  if (args.getLastArg(clang::driver::options::OPT_menable_no_infinities)) {
     opts.NoHonorInfs = true;
   }
 
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_menable_no_nans)) {
-    diags.Report(diagUnimplemented) << a->getOption().getName();
+  if (args.getLastArg(clang::driver::options::OPT_menable_no_nans)) {
     opts.NoHonorNaNs = true;
   }
 
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_fapprox_func)) {
-    diags.Report(diagUnimplemented) << a->getOption().getName();
+  if (args.getLastArg(clang::driver::options::OPT_fapprox_func)) {
     opts.ApproxFunc = true;
   }
 
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_fno_signed_zeros)) {
-    diags.Report(diagUnimplemented) << a->getOption().getName();
+  if (args.getLastArg(clang::driver::options::OPT_fno_signed_zeros)) {
     opts.NoSignedZeros = true;
   }
 
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_mreassociate)) {
-    diags.Report(diagUnimplemented) << a->getOption().getName();
+  if (args.getLastArg(clang::driver::options::OPT_mreassociate)) {
     opts.AssociativeMath = true;
   }
 
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::driver::options::OPT_freciprocal_math)) {
-    diags.Report(diagUnimplemented) << a->getOption().getName();
+  if (args.getLastArg(clang::driver::options::OPT_freciprocal_math)) {
     opts.ReciprocalMath = true;
   }
 

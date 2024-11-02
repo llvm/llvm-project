@@ -168,8 +168,8 @@ declare i32 @llvm.nvvm.read.ptx.sreg.tid.z()
 declare i32 @llvm.nvvm.read.ptx.sreg.laneid()
 
 !nvvm.annotations = !{!0, !1, !2, !3, !4}
-!0 = !{i32 (i32, i32, i32)* @no_diverge, !"kernel", i32 1}
-!1 = !{i32 (i32, i32)* @sync, !"kernel", i32 1}
-!2 = !{i32 (i32, i32, i32)* @mixed, !"kernel", i32 1}
-!3 = !{i32 ()* @loop, !"kernel", i32 1}
-!4 = !{i32 (i32)* @sync_no_loop, !"kernel", i32 1}
+!0 = !{ptr @no_diverge, !"kernel", i32 1}
+!1 = !{ptr @sync, !"kernel", i32 1}
+!2 = !{ptr @mixed, !"kernel", i32 1}
+!3 = !{ptr @loop, !"kernel", i32 1}
+!4 = !{ptr @sync_no_loop, !"kernel", i32 1}

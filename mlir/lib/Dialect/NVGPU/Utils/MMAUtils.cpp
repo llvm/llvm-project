@@ -238,7 +238,6 @@ FailureOr<AffineMap>
 nvgpu::getLaneIdToLdMatrixMatrixCoord(Location loc, OpBuilder &builder,
                                       const LdMatrixParams &params) {
   // One thread per 128b row.
-  const int64_t kNumThreadsPerTile = kNumRowsPerTile;
   const int bitsPerElement = static_cast<int>(
       params.fragmentType.getElementType().getIntOrFloatBitWidth());
   const int kElementsPer128b = (128 / bitsPerElement);
@@ -249,27 +248,28 @@ nvgpu::getLaneIdToLdMatrixMatrixCoord(Location loc, OpBuilder &builder,
     return AffineMap::get(1, 0, dimExprs, builder.getContext());
   };
 
-  // This case corresponds to row-major A|C or col-major B operands.
-  if (params.contiguousDimType == vector::IteratorType::reduction) {
-    AffineExpr row = d0 % (operandShape[0]);
-    AffineExpr col = d0.floorDiv(operandShape[0]) * (kElementsPer128b);
-    return makeMap({row, col});
-  }
+  // Index `idx` in vectorType `operandShape` maps to the strided dimension of
+  // the `srcMemref` memory of the LdMatrixOp.
+  int idx =
+      (params.contiguousDimType == vector::IteratorType::reduction) ? 0 : 1;
 
-  // This case Corresponds to col-major A|C or row-major B operands. The
-  // operandShape given is already pre-transposed (e.g. 8x16 = KxN).
-  if (params.contiguousDimType == vector::IteratorType::parallel) {
-    const int64_t num8x128bCols = (operandShape[0] * bitsPerElement) / 128;
-    // Threads are assigned in groups of 8 first across columns, then to
-    // rows. This is transpose of what `ldmatrix` expects, but when
-    // `ldmatrix` gets the `.trans` qualifier, final the effect will be to
-    // transpose just the blocks.
-    auto groupIdx = d0.floorDiv(kNumThreadsPerTile);
-    auto tileCol = (groupIdx % num8x128bCols);
-    auto tileRow = groupIdx.floorDiv(num8x128bCols);
-    return makeMap({tileCol * kElementsPer128b,
-                    tileRow * kNumRowsPerTile + (d0 % kNumRowsPerTile)});
-  }
+  // Affine expr in strided and contiguous dimension encodes the coordinate
+  // mapping for the element a thread points to for warp-wide LdMatrixOp.
+  AffineExpr strided = d0 % (operandShape[idx]);
+  AffineExpr contiguous = d0.floorDiv(operandShape[idx]) * (kElementsPer128b);
+
+  // This case corresponds to row-major matrixA or col-major matrixB or
+  // row-major matrixC. This is when the memory layout in `srcMemref`
+  // match mma.sync hardware vector register operand layout.
+  if (params.contiguousDimType == vector::IteratorType::reduction)
+    return makeMap({strided, contiguous});
+
+  // This case corresponds to col-major matrixA or row-major matrixB or
+  // col-major matrixC. This is when the memory layout in `srcMemref` does not
+  // match mma.sync hardware vector register operand layout.
+  if (params.contiguousDimType == vector::IteratorType::parallel)
+    return makeMap({contiguous, strided});
+
   return failure();
 }
 

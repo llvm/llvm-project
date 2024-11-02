@@ -1100,6 +1100,12 @@ let Predicates = [PairedVectorMemops] in {
   }
 }
 
+let Predicates = [IsISA3_1] in {
+  def XSCMPEQQP : X_VT5_VA5_VB5<63, 68, "xscmpeqqp", []>;
+  def XSCMPGEQP : X_VT5_VA5_VB5<63, 196, "xscmpgeqp", []>;
+  def XSCMPGTQP : X_VT5_VA5_VB5<63, 228, "xscmpgtqp", []>;
+}
+
 let Predicates = [PCRelativeMemops] in {
   // Load i32
   def : Pat<(i32 (zextloadi1  (PPCmatpcreladdr PCRelForm:$ga))),

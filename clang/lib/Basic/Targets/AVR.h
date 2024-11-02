@@ -55,7 +55,6 @@ public:
     Int16Type = SignedInt;
     Char32Type = UnsignedLong;
     SigAtomicType = SignedChar;
-    ProgramAddrSpace = 1;
     resetDataLayout("e-P1-p:16:8-i8:8-i16:8-i32:8-i64:8-f32:8-f64:8-n8-a:8");
   }
 
@@ -174,6 +173,9 @@ public:
 protected:
   std::string CPU;
   StringRef ABI;
+  StringRef DefineName;
+  StringRef Arch;
+  int NumFlashBanks = 0;
 };
 
 } // namespace targets

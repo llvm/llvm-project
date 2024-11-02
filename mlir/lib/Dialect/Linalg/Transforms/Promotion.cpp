@@ -65,7 +65,7 @@ static Value allocBuffer(ImplicitLocOpBuilder &b,
 
   // Fallback dynamic buffer.
   auto dynamicBufferType =
-      MemRefType::get(ShapedType::kDynamicSize, b.getIntegerType(8));
+      MemRefType::get(ShapedType::kDynamic, b.getIntegerType(8));
   Value mul = b.createOrFold<arith::MulIOp>(
       b.create<arith::ConstantIndexOp>(width), allocSize);
   if (options.useAlloca)
@@ -93,7 +93,7 @@ defaultAllocBufferCallBack(const LinalgPromotionOptions &options,
   Value buffer = allocBuffer(b, options, viewType.getElementType(), allocSize,
                              layout, alignment);
   SmallVector<int64_t, 4> dynSizes(boundingSubViewSize.size(),
-                                   ShapedType::kDynamicSize);
+                                   ShapedType::kDynamic);
   Value view = b.createOrFold<memref::ViewOp>(
       MemRefType::get(dynSizes, viewType.getElementType()), buffer, zero,
       boundingSubViewSize);
@@ -243,7 +243,7 @@ FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
     partialSizes.push_back(
         b.createOrFold<memref::DimOp>(loc, subView, resultDimIdx++));
   }
-  SmallVector<int64_t, 4> dynSizes(fullSizes.size(), ShapedType::kDynamicSize);
+  SmallVector<int64_t, 4> dynSizes(fullSizes.size(), ShapedType::kDynamic);
   // If a callback is not specified, then use the default implementation for
   // allocating the promoted buffer.
   Optional<Value> fullLocalView = allocationFn(b, subView, fullSizes, layout);

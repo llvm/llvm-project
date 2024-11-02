@@ -111,8 +111,8 @@ define i32 @fcmp_ueq(half %a, half %b) nounwind strictfp {
 ; CHECK-NEXT:    frflags a0
 ; CHECK-NEXT:    flt.h a2, fa1, fa0
 ; CHECK-NEXT:    fsflags a0
-; CHECK-NEXT:    or a0, a2, a1
-; CHECK-NEXT:    xori a0, a0, 1
+; CHECK-NEXT:    or a1, a2, a1
+; CHECK-NEXT:    xori a0, a1, 1
 ; CHECK-NEXT:    feq.h zero, fa1, fa0
 ; CHECK-NEXT:    ret
   %1 = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"ueq", metadata !"fpexcept.strict") strictfp

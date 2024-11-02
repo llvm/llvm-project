@@ -864,6 +864,12 @@ sizeof...($TemplateParameter[[Elements]]);
             const char *$LocalVariable_def_readonly[[s]] = $LocalVariable_readonly_static[[__func__]];
         }
       )cpp",
+      // override and final
+      R"cpp(
+        class $Class_def_abstract[[Base]] { virtual void $Method_decl_abstract_virtual[[m]]() = 0; };
+        class $Class_def[[override]] : public $Class_abstract[[Base]] { void $Method_decl_virtual[[m]]() $Modifier[[override]]; };
+        class $Class_def[[final]] : public $Class[[override]] { void $Method_decl_virtual[[m]]() $Modifier[[override]] $Modifier[[final]]; };
+      )cpp",
       // Issue 1222: readonly modifier for generic parameter
       R"cpp(
         template <typename $TemplateParameter_def[[T]]>

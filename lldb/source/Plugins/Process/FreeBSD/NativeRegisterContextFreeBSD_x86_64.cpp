@@ -434,7 +434,7 @@ NativeRegisterContextFreeBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
     return error;
   }
 
-  RegSetKind set = opt_set.getValue();
+  RegSetKind set = opt_set.value();
   error = ReadRegisterSet(set);
   if (error.Fail())
     return error;
@@ -500,7 +500,7 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegister(
     return error;
   }
 
-  RegSetKind set = opt_set.getValue();
+  RegSetKind set = opt_set.value();
   error = ReadRegisterSet(set);
   if (error.Fail())
     return error;

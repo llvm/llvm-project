@@ -177,6 +177,12 @@ llvm::parseSummaryIndexAssemblyFile(StringRef Filename, SMDiagnostic &Err) {
   return parseSummaryIndexAssembly(FileOrErr.get()->getMemBufferRef(), Err);
 }
 
+std::unique_ptr<ModuleSummaryIndex>
+llvm::parseSummaryIndexAssemblyString(StringRef AsmString, SMDiagnostic &Err) {
+  MemoryBufferRef F(AsmString, "<string>");
+  return parseSummaryIndexAssembly(F, Err);
+}
+
 Constant *llvm::parseConstantValue(StringRef Asm, SMDiagnostic &Err,
                                    const Module &M, const SlotMapping *Slots) {
   SourceMgr SM;

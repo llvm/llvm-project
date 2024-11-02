@@ -31,6 +31,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::symbolize;
@@ -411,7 +412,7 @@ bool MarkupFilter::trySGR(const MarkupNode &Node) {
       OS.changeColor(raw_ostream::Colors::SAVEDCOLOR, Bold);
     return true;
   }
-  auto SGRColor = StringSwitch<Optional<raw_ostream::Colors>>(Node.Text)
+  auto SGRColor = StringSwitch<std::optional<raw_ostream::Colors>>(Node.Text)
                       .Case("\033[30m", raw_ostream::Colors::BLACK)
                       .Case("\033[31m", raw_ostream::Colors::RED)
                       .Case("\033[32m", raw_ostream::Colors::GREEN)

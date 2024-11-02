@@ -196,6 +196,17 @@ public:
   finalizeInsInstrs(MachineInstr &Root, MachineCombinerPattern &P,
                     SmallVectorImpl<MachineInstr *> &InsInstrs) const override;
 
+  void genAlternativeCodeSequence(
+      MachineInstr &Root, MachineCombinerPattern Pattern,
+      SmallVectorImpl<MachineInstr *> &InsInstrs,
+      SmallVectorImpl<MachineInstr *> &DelInstrs,
+      DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;
+
+  bool hasReassociableSibling(const MachineInstr &Inst,
+                              bool &Commuted) const override;
+
+  bool isAssociativeAndCommutative(const MachineInstr &Inst) const override;
+
 protected:
   const RISCVSubtarget &STI;
 };

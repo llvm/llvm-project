@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 declare void @a_() sanitize_memory readnone
 declare void @b_() sanitize_memory readonly
 declare void @c_() sanitize_memory writeonly
-declare void @d_(i32* %p) sanitize_memory writeonly argmemonly
+declare void @d_(ptr %p) sanitize_memory writeonly argmemonly
 declare void @e_() sanitize_memory speculatable
 
 define void @a() sanitize_memory readnone {
@@ -31,10 +31,10 @@ entry:
   ret void
 }
 
-define void @d(i32* %p) sanitize_memory writeonly argmemonly {
+define void @d(ptr %p) sanitize_memory writeonly argmemonly {
 entry:
-  call void @d_(i32* %p)
-  call void @d_(i32* %p) writeonly argmemonly
+  call void @d_(ptr %p)
+  call void @d_(ptr %p) writeonly argmemonly
   ret void
 }
 

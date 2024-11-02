@@ -10,3 +10,180 @@ define i1 @f(i1 %cond, i32 %x, i32 %x2) {
   %c = icmp eq i32 %y, %x2
   ret i1 %c
 }
+
+define i1 @icmp_ne_common_op00(i1 %c, i6 %x, i6 %y, i6 %z) {
+; CHECK-LABEL: @icmp_ne_common_op00(
+; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i6 [[Y:%.*]], i6 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i6 [[R_V]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp1 = icmp ne i6 %x, %y
+  %cmp2 = icmp ne i6 %x, %z
+  %r = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %r
+}
+
+define i1 @icmp_ne_common_op01(i1 %c, i3 %x, i3 %y, i3 %z) {
+; CHECK-LABEL: @icmp_ne_common_op01(
+; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i3 [[Y:%.*]], i3 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i3 [[R_V]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp1 = icmp ne i3 %x, %y
+  %cmp2 = icmp ne i3 %z, %x
+  %r = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %r
+}
+
+define i1 @icmp_ne_common_op10(i1 %c, i4 %x, i4 %y, i4 %z) {
+; CHECK-LABEL: @icmp_ne_common_op10(
+; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i4 [[Y:%.*]], i4 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i4 [[R_V]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp1 = icmp ne i4 %y, %x
+  %cmp2 = icmp ne i4 %x, %z
+  %r = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %r
+}
+
+define <3 x i1> @icmp_ne_common_op11(<3 x i1> %c, <3 x i17> %x, <3 x i17> %y, <3 x i17> %z) {
+; CHECK-LABEL: @icmp_ne_common_op11(
+; CHECK-NEXT:    [[R_V:%.*]] = select <3 x i1> [[C:%.*]], <3 x i17> [[Y:%.*]], <3 x i17> [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <3 x i17> [[R_V]], [[X:%.*]]
+; CHECK-NEXT:    ret <3 x i1> [[R]]
+;
+  %cmp1 = icmp ne <3 x i17> %y, %x
+  %cmp2 = icmp ne <3 x i17> %z, %x
+  %r = select <3 x i1> %c, <3 x i1> %cmp1, <3 x i1> %cmp2
+  ret <3 x i1> %r
+}
+
+define i1 @icmp_eq_common_op00(i1 %c, i5 %x, i5 %y, i5 %z) {
+; CHECK-LABEL: @icmp_eq_common_op00(
+; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i5 [[Y:%.*]], i5 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i5 [[R_V]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp1 = icmp eq i5 %x, %y
+  %cmp2 = icmp eq i5 %x, %z
+  %r = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %r
+}
+
+define <5 x i1> @icmp_eq_common_op01(<5 x i1> %c, <5 x i7> %x, <5 x i7> %y, <5 x i7> %z) {
+; CHECK-LABEL: @icmp_eq_common_op01(
+; CHECK-NEXT:    [[R_V:%.*]] = select <5 x i1> [[C:%.*]], <5 x i7> [[Y:%.*]], <5 x i7> [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <5 x i7> [[R_V]], [[X:%.*]]
+; CHECK-NEXT:    ret <5 x i1> [[R]]
+;
+  %cmp1 = icmp eq <5 x i7> %x, %y
+  %cmp2 = icmp eq <5 x i7> %z, %x
+  %r = select <5 x i1> %c, <5 x i1> %cmp1, <5 x i1> %cmp2
+  ret <5 x i1> %r
+}
+
+define i1 @icmp_eq_common_op10(i1 %c, i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @icmp_eq_common_op10(
+; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[R_V]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp1 = icmp eq i32 %y, %x
+  %cmp2 = icmp eq i32 %x, %z
+  %r = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %r
+}
+
+define i1 @icmp_eq_common_op11(i1 %c, i64 %x, i64 %y, i64 %z) {
+; CHECK-LABEL: @icmp_eq_common_op11(
+; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i64 [[R_V]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp1 = icmp eq i64 %y, %x
+  %cmp2 = icmp eq i64 %z, %x
+  %r = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %r
+}
+
+define i1 @icmp_common_one_use_1(i1 %c, i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @icmp_common_one_use_1(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    call void @use(i1 [[CMP1]])
+; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i8 [[Y]], i8 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[R_V]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp1 = icmp eq i8 %y, %x
+  call void @use(i1 %cmp1)
+  %cmp2 = icmp eq i8 %z, %x
+  %r = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %r
+}
+
+; negative test: pred is not eq/ne
+
+define i1 @icmp_common_pred_not_eqne(i1 %c, i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @icmp_common_pred_not_eqne(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i8 [[Z:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp1 = icmp ugt i8 %y, %x
+  %cmp2 = icmp ugt i8 %z, %x
+  %r = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %r
+}
+
+; negative test: pred is not the same
+
+define i1 @icmp_common_pred_different(i1 %c, i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @icmp_common_pred_different(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[Z:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp1 = icmp eq i8 %y, %x
+  %cmp2 = icmp ne i8 %z, %x
+  %r = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %r
+}
+
+; negative test: both icmp is not one-use
+
+define i1 @icmp_common_one_use_0(i1 %c, i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @icmp_common_one_use_0(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    call void @use(i1 [[CMP1]])
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[Z:%.*]], [[X]]
+; CHECK-NEXT:    call void @use(i1 [[CMP2]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp1 = icmp eq i8 %y, %x
+  call void @use(i1 %cmp1)
+  %cmp2 = icmp eq i8 %z, %x
+  call void @use(i1 %cmp2)
+  %r = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %r
+}
+
+; negative test: no common op
+
+define i1 @icmp_no_common(i1 %c, i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @icmp_no_common(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[Y:%.*]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[Z:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[CMP1]], i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp1 = icmp eq i8 %y, 0
+  %cmp2 = icmp eq i8 %z, %x
+  %r = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %r
+}
+
+declare void @use(i1)

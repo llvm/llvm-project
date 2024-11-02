@@ -16,6 +16,7 @@ add_clang_unittest(ToolingTests
   DiagnosticsYamlTest.cpp
   ExecutionTest.cpp
   FixItTest.cpp
+  HeaderAnalysisTest.cpp
   HeaderIncludesTest.cpp
   StandardLibraryTest.cpp
   LexicallyOrderedRecursiveASTVisitorTest.cpp

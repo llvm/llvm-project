@@ -40,7 +40,7 @@ public:
   void printNeededLibraries() override;
   void printStringTable() override;
   void printExceptionSection() override;
-  void printLoaderSection(bool PrintHeader) override;
+  void printLoaderSection(bool PrintHeader, bool PrintSymbolTable) override;
 
   ScopedPrinter &getScopedPrinter() const { return W; }
 
@@ -68,6 +68,9 @@ private:
   void printAuxiliaryHeader(const XCOFFAuxiliaryHeader32 *AuxHeader);
   void printAuxiliaryHeader(const XCOFFAuxiliaryHeader64 *AuxHeader);
   void printLoaderSectionHeader(uintptr_t LoaderSectAddr);
+  void printLoaderSectionSymbols(uintptr_t LoaderSectAddr);
+  template <typename LoaderSectionSymbolEntry, typename LoaderSectionHeader>
+  void printLoaderSectionSymbolsHelper(uintptr_t LoaderSectAddr);
   const XCOFFObjectFile &Obj;
 };
 } // anonymous namespace
@@ -135,7 +138,7 @@ void XCOFFDumper::printSectionHeaders() {
     printSectionHeaders(Obj.sections32());
 }
 
-void XCOFFDumper::printLoaderSection(bool PrintHeader) {
+void XCOFFDumper::printLoaderSection(bool PrintHeader, bool PrintSymbolTable) {
   DictScope DS(W, "Loader Section");
   Expected<uintptr_t> LoaderSectionAddrOrError =
       Obj.getSectionFileOffsetToRawData(XCOFF::STYP_LOADER);
@@ -145,13 +148,18 @@ void XCOFFDumper::printLoaderSection(bool PrintHeader) {
   }
   uintptr_t LoaderSectionAddr = LoaderSectionAddrOrError.get();
 
+  if (LoaderSectionAddr == 0)
+    return;
+
   W.indent();
   if (PrintHeader)
     printLoaderSectionHeader(LoaderSectionAddr);
-  // TODO: Need to print symbol table, relocation entry of loader section later.
+
+  if (PrintSymbolTable)
+    printLoaderSectionSymbols(LoaderSectionAddr);
+
+  // TODO: Need to add printing of relocation entry of loader section later.
   // For example:
-  //           if (PrintSymbolTable)
-  //             printLoaderSectionSymbolTable();
   //           if (PrintRelocation)
   //             printLoaderSectionRelocationEntry();
   W.unindent();
@@ -183,6 +191,74 @@ void XCOFFDumper::printLoaderSectionHeader(uintptr_t LoaderSectionAddr) {
         reinterpret_cast<const LoaderSectionHeader32 *>(LoaderSectionAddr);
     PrintLoadSecHeaderCommon(LoaderSec32);
   }
+}
+
+const EnumEntry<XCOFF::StorageClass> SymStorageClass[] = {
+#define ECase(X)                                                               \
+  { #X, XCOFF::X }
+    ECase(C_NULL),  ECase(C_AUTO),    ECase(C_EXT),     ECase(C_STAT),
+    ECase(C_REG),   ECase(C_EXTDEF),  ECase(C_LABEL),   ECase(C_ULABEL),
+    ECase(C_MOS),   ECase(C_ARG),     ECase(C_STRTAG),  ECase(C_MOU),
+    ECase(C_UNTAG), ECase(C_TPDEF),   ECase(C_USTATIC), ECase(C_ENTAG),
+    ECase(C_MOE),   ECase(C_REGPARM), ECase(C_FIELD),   ECase(C_BLOCK),
+    ECase(C_FCN),   ECase(C_EOS),     ECase(C_FILE),    ECase(C_LINE),
+    ECase(C_ALIAS), ECase(C_HIDDEN),  ECase(C_HIDEXT),  ECase(C_BINCL),
+    ECase(C_EINCL), ECase(C_INFO),    ECase(C_WEAKEXT), ECase(C_DWARF),
+    ECase(C_GSYM),  ECase(C_LSYM),    ECase(C_PSYM),    ECase(C_RSYM),
+    ECase(C_RPSYM), ECase(C_STSYM),   ECase(C_TCSYM),   ECase(C_BCOMM),
+    ECase(C_ECOML), ECase(C_ECOMM),   ECase(C_DECL),    ECase(C_ENTRY),
+    ECase(C_FUN),   ECase(C_BSTAT),   ECase(C_ESTAT),   ECase(C_GTLS),
+    ECase(C_STTLS), ECase(C_EFCN)
+#undef ECase
+};
+
+template <typename LoaderSectionSymbolEntry, typename LoaderSectionHeader>
+void XCOFFDumper::printLoaderSectionSymbolsHelper(uintptr_t LoaderSectionAddr) {
+  const LoaderSectionHeader *LoadSecHeader =
+      reinterpret_cast<const LoaderSectionHeader *>(LoaderSectionAddr);
+  const LoaderSectionSymbolEntry *LoadSecSymEntPtr =
+      reinterpret_cast<LoaderSectionSymbolEntry *>(
+          LoaderSectionAddr + uintptr_t(LoadSecHeader->getOffsetToSymTbl()));
+
+  for (uint32_t i = 0; i < LoadSecHeader->NumberOfSymTabEnt;
+       ++i, ++LoadSecSymEntPtr) {
+    if (Error E = Binary::checkOffset(
+            Obj.getMemoryBufferRef(),
+            LoaderSectionAddr + uintptr_t(LoadSecHeader->getOffsetToSymTbl()) +
+                (i * sizeof(LoaderSectionSymbolEntry)),
+            sizeof(LoaderSectionSymbolEntry))) {
+      reportUniqueWarning(std::move(E));
+      return;
+    }
+
+    Expected<StringRef> SymbolNameOrErr =
+        LoadSecSymEntPtr->getSymbolName(LoadSecHeader);
+    if (!SymbolNameOrErr) {
+      reportUniqueWarning(SymbolNameOrErr.takeError());
+      return;
+    }
+
+    DictScope DS(W, "Symbol");
+    W.printString("Name", SymbolNameOrErr.get());
+    W.printHex("Virtual Address", LoadSecSymEntPtr->Value);
+    W.printNumber("SectionNum", LoadSecSymEntPtr->SectionNumber);
+    W.printHex("SymbolType", LoadSecSymEntPtr->SymbolType);
+    W.printEnum("StorageClass",
+                static_cast<uint8_t>(LoadSecSymEntPtr->StorageClass),
+                makeArrayRef(SymStorageClass));
+    W.printHex("ImportFileID", LoadSecSymEntPtr->ImportFileID);
+    W.printNumber("ParameterTypeCheck", LoadSecSymEntPtr->ParameterTypeCheck);
+  }
+}
+
+void XCOFFDumper::printLoaderSectionSymbols(uintptr_t LoaderSectionAddr) {
+  DictScope DS(W, "Loader Section Symbols");
+  if (Obj.is64Bit())
+    printLoaderSectionSymbolsHelper<LoaderSectionSymbolEntry64,
+                                    LoaderSectionHeader64>(LoaderSectionAddr);
+  else
+    printLoaderSectionSymbolsHelper<LoaderSectionSymbolEntry32,
+                                    LoaderSectionHeader32>(LoaderSectionAddr);
 }
 
 template <typename T>
@@ -467,25 +543,6 @@ void XCOFFDumper::printSectAuxEntForDWARF(const T *AuxEntPtr) {
     W.printEnum("Auxiliary Type", static_cast<uint8_t>(XCOFF::AUX_SECT),
                 makeArrayRef(SymAuxType));
 }
-
-const EnumEntry<XCOFF::StorageClass> SymStorageClass[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
-    ECase(C_NULL),  ECase(C_AUTO),    ECase(C_EXT),     ECase(C_STAT),
-    ECase(C_REG),   ECase(C_EXTDEF),  ECase(C_LABEL),   ECase(C_ULABEL),
-    ECase(C_MOS),   ECase(C_ARG),     ECase(C_STRTAG),  ECase(C_MOU),
-    ECase(C_UNTAG), ECase(C_TPDEF),   ECase(C_USTATIC), ECase(C_ENTAG),
-    ECase(C_MOE),   ECase(C_REGPARM), ECase(C_FIELD),   ECase(C_BLOCK),
-    ECase(C_FCN),   ECase(C_EOS),     ECase(C_FILE),    ECase(C_LINE),
-    ECase(C_ALIAS), ECase(C_HIDDEN),  ECase(C_HIDEXT),  ECase(C_BINCL),
-    ECase(C_EINCL), ECase(C_INFO),    ECase(C_WEAKEXT), ECase(C_DWARF),
-    ECase(C_GSYM),  ECase(C_LSYM),    ECase(C_PSYM),    ECase(C_RSYM),
-    ECase(C_RPSYM), ECase(C_STSYM),   ECase(C_TCSYM),   ECase(C_BCOMM),
-    ECase(C_ECOML), ECase(C_ECOMM),   ECase(C_DECL),    ECase(C_ENTRY),
-    ECase(C_FUN),   ECase(C_BSTAT),   ECase(C_ESTAT),   ECase(C_GTLS),
-    ECase(C_STTLS), ECase(C_EFCN)
-#undef ECase
-};
 
 static StringRef GetSymbolValueName(XCOFF::StorageClass SC) {
   switch (SC) {

@@ -22,7 +22,7 @@ end:
   ret void
 }
 
-define amdgpu_cs void @nonuniform(i32 addrspace(4)* %ptr) {
+define amdgpu_cs void @nonuniform(ptr addrspace(4) %ptr) {
 ; CHECK-LABEL: @nonuniform(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -79,7 +79,7 @@ end:
   ret void
 }
 
-define amdgpu_cs void @uniform_branch_to_nonuniform_subregions(i32 addrspace(4)* %ptr, i32 inreg %data) {
+define amdgpu_cs void @uniform_branch_to_nonuniform_subregions(ptr addrspace(4) %ptr, i32 inreg %data) {
 ; CHECK-LABEL: @uniform_branch_to_nonuniform_subregions(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[DATA:%.*]], 42

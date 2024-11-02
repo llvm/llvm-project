@@ -16,16 +16,16 @@ func.func @reduce() {
 
     // CHECK: memref.subview %{{.*}}[%{{.*}}, 0] [%[[C64]], 384] [1, 1] : memref<128x384xf32> to memref<?x384xf32, {{.*}}>
     // CHECK: memref.subview %{{.*}}[%{{.*}}] [%[[C64]]] [1] : memref<128xf32> to memref<?xf32, {{.*}}>
-    %11 = memref.subview %0[%9, 0] [%10, 384] [1, 1] : 
+    %11 = memref.subview %0[%9, 0] [%10, 384] [1, 1] :
       memref<128x384xf32> to memref<?x384xf32, affine_map<(d0, d1)[s0] -> (d0 * 384 + s0 + d1)>>
-    %12 = memref.subview %2[%9] [%10] [1] : 
+    %12 = memref.subview %2[%9] [%10] [1] :
       memref<128xf32> to memref<?xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
 
     // CHECK: linalg.generic {{.*}} ins(%{{.*}} : memref<?x384xf32, {{.*}}>) outs(%{{.*}} : memref<?xf32, {{.*}}>)
-    linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, 
-                                      affine_map<(d0, d1) -> (d0)>], 
-                     iterator_types = ["parallel", "reduction"]} 
-      ins(%11 : memref<?x384xf32, affine_map<(d0, d1)[s0] -> (d0 * 384 + s0 + d1)>>) 
+    linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                      affine_map<(d0, d1) -> (d0)>],
+                     iterator_types = ["parallel", "reduction"]}
+      ins(%11 : memref<?x384xf32, affine_map<(d0, d1)[s0] -> (d0 * 384 + s0 + d1)>>)
       outs(%12 : memref<?xf32, affine_map<(d0)[s0] -> (d0 + s0)>>) {
         ^bb0(%arg1: f32, %arg2: f32):
           %14 = arith.addf %arg1, %arg2 : f32

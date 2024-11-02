@@ -21,6 +21,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include <map>
+#include <optional>
 
 namespace llvm {
   class Module;
@@ -301,7 +302,7 @@ namespace llvm {
     bool parseOptionalCommaAddrSpace(unsigned &AddrSpace, LocTy &Loc,
                                      bool &AteExtraComma);
     bool parseAllocSizeArguments(unsigned &BaseSizeArg,
-                                 Optional<unsigned> &HowManyArg);
+                                 std::optional<unsigned> &HowManyArg);
     bool parseVScaleRangeArguments(unsigned &MinValue, unsigned &MaxValue);
     bool parseIndexList(SmallVectorImpl<unsigned> &Indices,
                         bool &AteExtraComma);
@@ -406,6 +407,10 @@ namespace llvm {
     void addGlobalValueToIndex(std::string Name, GlobalValue::GUID,
                                GlobalValue::LinkageTypes Linkage, unsigned ID,
                                std::unique_ptr<GlobalValueSummary> Summary);
+    bool parseOptionalAllocs(std::vector<AllocInfo> &Allocs);
+    bool parseMemProfs(std::vector<MIBInfo> &MIBs);
+    bool parseAllocType(uint8_t &AllocType);
+    bool parseOptionalCallsites(std::vector<CallsiteInfo> &Callsites);
 
     // Type Parsing.
     bool parseType(Type *&Result, const Twine &Msg, bool AllowVoid = false);

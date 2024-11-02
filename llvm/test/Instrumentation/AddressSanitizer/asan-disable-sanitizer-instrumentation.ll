@@ -6,11 +6,11 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Function with sanitize_address is instrumented.
 ; Function Attrs: nounwind uwtable
-define void @instr_sa(i32* %a) sanitize_address {
+define void @instr_sa(ptr %a) sanitize_address {
 entry:
-  %tmp1 = load i32, i32* %a, align 4
+  %tmp1 = load i32, ptr %a, align 4
   %tmp2 = add i32 %tmp1,  1
-  store i32 %tmp2, i32* %a, align 4
+  store i32 %tmp2, ptr %a, align 4
   ret void
 }
 
@@ -20,11 +20,11 @@ entry:
 
 ; Function with disable_sanitizer_instrumentation is not instrumented.
 ; Function Attrs: nounwind uwtable
-define void @noinstr_dsi(i32* %a) disable_sanitizer_instrumentation {
+define void @noinstr_dsi(ptr %a) disable_sanitizer_instrumentation {
 entry:
-  %tmp1 = load i32, i32* %a, align 4
+  %tmp1 = load i32, ptr %a, align 4
   %tmp2 = add i32 %tmp1,  1
-  store i32 %tmp2, i32* %a, align 4
+  store i32 %tmp2, ptr %a, align 4
   ret void
 }
 
@@ -34,11 +34,11 @@ entry:
 
 ; disable_sanitizer_instrumentation takes precedence over sanitize_address.
 ; Function Attrs: nounwind uwtable
-define void @noinstr_dsi_sa(i32* %a) disable_sanitizer_instrumentation sanitize_address {
+define void @noinstr_dsi_sa(ptr %a) disable_sanitizer_instrumentation sanitize_address {
 entry:
-  %tmp1 = load i32, i32* %a, align 4
+  %tmp1 = load i32, ptr %a, align 4
   %tmp2 = add i32 %tmp1,  1
-  store i32 %tmp2, i32* %a, align 4
+  store i32 %tmp2, ptr %a, align 4
   ret void
 }
 

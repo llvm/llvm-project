@@ -1,4 +1,4 @@
-// UNSUPPORTED: ps4, ps5
+// UNSUPPORTED: target={{.*-(ps4|ps5)}}
 /// Test default standards.
 /// PS4/PS5 default to gnu++14.
 

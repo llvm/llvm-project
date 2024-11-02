@@ -73,7 +73,7 @@ program nested_where
   ! CHECK:      fir.store %[[VAL_49]] to %[[VAL_60]] : !fir.ref<i64>
   ! CHECK:      %[[VAL_61:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<tuple<i64, !fir.heap<!fir.array<?xi8>>, !fir.heap<!fir.array<?xi64>>>>) -> !fir.llvm_ptr<i8>
   ! CHECK:      %[[VAL_62:.*]] = fir.convert %[[VAL_58]] : (!fir.heap<!fir.array<1xi64>>) -> !fir.ref<i64>
-  ! CHECK:      %[[VAL_63:.*]] = fir.call @_FortranARaggedArrayAllocate(%[[VAL_61]], %[[VAL_56]], %[[VAL_57]], %[[VAL_40]], %[[VAL_62]]) : (!fir.llvm_ptr<i8>, i1, i64, i64, !fir.ref<i64>) -> !fir.llvm_ptr<i8>
+  ! CHECK:      %[[VAL_63:.*]] = fir.call @_FortranARaggedArrayAllocate(%[[VAL_61]], %[[VAL_56]], %[[VAL_57]], %[[VAL_40]], %[[VAL_62]]) {{.*}}: (!fir.llvm_ptr<i8>, i1, i64, i64, !fir.ref<i64>) -> !fir.llvm_ptr<i8>
   ! CHECK:    }
   ! CHECK:    %[[VAL_64:.*]] = arith.subi %[[VAL_37]], %[[VAL_30]] : index
   ! CHECK:    %[[VAL_65:.*]] = arith.divsi %[[VAL_64]], %[[VAL_33]] : index
@@ -109,7 +109,7 @@ program nested_where
   ! CHECK:      fir.store %[[VAL_93]] to %[[VAL_92]] : !fir.ref<i64>
   ! CHECK:      %[[VAL_94:.*]] = fir.convert %[[VAL_73]] : (!fir.ref<tuple<i64, !fir.heap<!fir.array<?xi8>>, !fir.heap<!fir.array<?xi64>>>>) -> !fir.llvm_ptr<i8>
   ! CHECK:      %[[VAL_95:.*]] = fir.convert %[[VAL_90]] : (!fir.heap<!fir.array<1xi64>>) -> !fir.ref<i64>
-  ! CHECK:      %[[VAL_96:.*]] = fir.call @_FortranARaggedArrayAllocate(%[[VAL_94]], %[[VAL_88]], %[[VAL_89]], %[[VAL_81]], %[[VAL_95]]) : (!fir.llvm_ptr<i8>, i1, i64, i64, !fir.ref<i64>) -> !fir.llvm_ptr<i8>
+  ! CHECK:      %[[VAL_96:.*]] = fir.call @_FortranARaggedArrayAllocate(%[[VAL_94]], %[[VAL_88]], %[[VAL_89]], %[[VAL_81]], %[[VAL_95]]) {{.*}}: (!fir.llvm_ptr<i8>, i1, i64, i64, !fir.ref<i64>) -> !fir.llvm_ptr<i8>
   ! CHECK:    }
   ! CHECK:    %[[VAL_97:.*]] = arith.constant 1 : index
   ! CHECK:    %[[VAL_98:.*]] = arith.constant 0 : index
@@ -157,7 +157,7 @@ program nested_where
   ! CHECK:      fir.store %[[VAL_125]] to %[[VAL_136]] : !fir.ref<i64>
   ! CHECK:      %[[VAL_137:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<tuple<i64, !fir.heap<!fir.array<?xi8>>, !fir.heap<!fir.array<?xi64>>>>) -> !fir.llvm_ptr<i8>
   ! CHECK:      %[[VAL_138:.*]] = fir.convert %[[VAL_134]] : (!fir.heap<!fir.array<1xi64>>) -> !fir.ref<i64>
-  ! CHECK:      %[[VAL_139:.*]] = fir.call @_FortranARaggedArrayAllocate(%[[VAL_137]], %[[VAL_132]], %[[VAL_133]], %[[VAL_116]], %[[VAL_138]]) : (!fir.llvm_ptr<i8>, i1, i64, i64, !fir.ref<i64>) -> !fir.llvm_ptr<i8>
+  ! CHECK:      %[[VAL_139:.*]] = fir.call @_FortranARaggedArrayAllocate(%[[VAL_137]], %[[VAL_132]], %[[VAL_133]], %[[VAL_116]], %[[VAL_138]]) {{.*}}: (!fir.llvm_ptr<i8>, i1, i64, i64, !fir.ref<i64>) -> !fir.llvm_ptr<i8>
   ! CHECK:    }
   ! CHECK:    %[[VAL_140:.*]] = arith.subi %[[VAL_113]], %[[VAL_30]] : index
   ! CHECK:    %[[VAL_141:.*]] = arith.divsi %[[VAL_140]], %[[VAL_33]] : index
@@ -193,7 +193,7 @@ program nested_where
   ! CHECK:      fir.store %[[VAL_169]] to %[[VAL_168]] : !fir.ref<i64>
   ! CHECK:      %[[VAL_170:.*]] = fir.convert %[[VAL_149]] : (!fir.ref<tuple<i64, !fir.heap<!fir.array<?xi8>>, !fir.heap<!fir.array<?xi64>>>>) -> !fir.llvm_ptr<i8>
   ! CHECK:      %[[VAL_171:.*]] = fir.convert %[[VAL_166]] : (!fir.heap<!fir.array<1xi64>>) -> !fir.ref<i64>
-  ! CHECK:      %[[VAL_172:.*]] = fir.call @_FortranARaggedArrayAllocate(%[[VAL_170]], %[[VAL_164]], %[[VAL_165]], %[[VAL_157]], %[[VAL_171]]) : (!fir.llvm_ptr<i8>, i1, i64, i64, !fir.ref<i64>) -> !fir.llvm_ptr<i8>
+  ! CHECK:      %[[VAL_172:.*]] = fir.call @_FortranARaggedArrayAllocate(%[[VAL_170]], %[[VAL_164]], %[[VAL_165]], %[[VAL_157]], %[[VAL_171]]) {{.*}}: (!fir.llvm_ptr<i8>, i1, i64, i64, !fir.ref<i64>) -> !fir.llvm_ptr<i8>
   ! CHECK:    }
   ! CHECK:    %[[VAL_173:.*]] = arith.constant 1 : index
   ! CHECK:    %[[VAL_174:.*]] = arith.constant 0 : index
@@ -310,9 +310,9 @@ program nested_where
   ! CHECK:  }
   ! CHECK:  fir.array_merge_store %[[VAL_35]], %[[VAL_277:.*]] to %[[VAL_5]] : !fir.array<3xi32>, !fir.array<3xi32>, !fir.ref<!fir.array<3xi32>>
   ! CHECK:  %[[VAL_278:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<tuple<i64, !fir.heap<!fir.array<?xi8>>, !fir.heap<!fir.array<?xi64>>>>) -> !fir.llvm_ptr<i8>
-  ! CHECK:  %[[VAL_279:.*]] = fir.call @_FortranARaggedArrayDeallocate(%[[VAL_278]]) : (!fir.llvm_ptr<i8>) -> none
+  ! CHECK:  %[[VAL_279:.*]] = fir.call @_FortranARaggedArrayDeallocate(%[[VAL_278]]) {{.*}}: (!fir.llvm_ptr<i8>) -> none
   ! CHECK:  %[[VAL_280:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<tuple<i64, !fir.heap<!fir.array<?xi8>>, !fir.heap<!fir.array<?xi64>>>>) -> !fir.llvm_ptr<i8>
-  ! CHECK:  %[[VAL_281:.*]] = fir.call @_FortranARaggedArrayDeallocate(%[[VAL_280]]) : (!fir.llvm_ptr<i8>) -> none
+  ! CHECK:  %[[VAL_281:.*]] = fir.call @_FortranARaggedArrayDeallocate(%[[VAL_280]]) {{.*}}: (!fir.llvm_ptr<i8>) -> none
   
   integer :: a(3) = 0
   logical :: mask1(3) = (/ .true.,.false.,.true. /)

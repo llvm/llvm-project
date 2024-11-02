@@ -234,6 +234,7 @@ class LLVM_OpBase<Dialect dialect, string mnemonic, list<Trait> traits = []> :
   //             name matches the result name, by a reference to store the
   //             result of the newly created MLIR operation to;
   //   - $_int_attr - substituted by a call to an integer attribute matcher;
+  //   - $_var_attr - substituted by a call to a variable attribute matcher;
   //   - $_resultType - substituted with the MLIR result type;
   //   - $_location - substituted with the MLIR location;
   //   - $_builder - substituted with the MLIR builder;
@@ -376,7 +377,7 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
     Operation *op = $_builder.create<$_qualCppClassName>(
       $_location,
       resultTypes,
-      processValues(llvmOperands));
+      convertValues(llvmOperands));
     }] # !if(!gt(numResults, 0), "$res = op->getResult(0);", "(void)op;");
 }
 

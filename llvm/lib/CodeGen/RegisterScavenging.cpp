@@ -394,6 +394,13 @@ findSurvivorBackwards(const MachineRegisterInfo &MRI,
         Used.accumulate(*std::next(From));
     }
     if (FoundTo) {
+      // Don't search to FrameSetup instructions if we were searching from
+      // Non-FrameSetup instructions. Otherwise, the spill position may point
+      // before FrameSetup instructions.
+      if (!From->getFlag(MachineInstr::FrameSetup) &&
+          MI.getFlag(MachineInstr::FrameSetup))
+        break;
+
       if (Survivor == 0 || !Used.available(Survivor)) {
         MCPhysReg AvilableReg = 0;
         for (MCPhysReg Reg : AllocationOrder) {

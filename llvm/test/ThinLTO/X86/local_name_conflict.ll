@@ -35,7 +35,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @main() {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   %call = call i32 (...) @b()
   ret i32 %call
 }

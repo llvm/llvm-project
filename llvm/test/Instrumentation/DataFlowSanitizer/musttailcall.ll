@@ -45,15 +45,13 @@ define i32 @outer_caller() {
   ret i32 %r
 }
 
-declare i32* @mismatching_callee(i32)
+declare ptr @mismatching_callee(i32)
 
-; CHECK-LABEL: define i8* @mismatching_musttail_call.dfsan
-define i8* @mismatching_musttail_call(i32) {
-  %r = musttail call i32* @mismatching_callee(i32 %0)
-  ; CHECK: musttail call i32* @mismatching_callee.dfsan
+; CHECK-LABEL: define ptr @mismatching_musttail_call.dfsan
+define ptr @mismatching_musttail_call(i32) {
+  %r = musttail call ptr @mismatching_callee(i32 %0)
+  ; CHECK: musttail call ptr @mismatching_callee.dfsan
   ; COMM: No instrumentation between call and ret.
-  ; CHECK-NEXT: bitcast i32* {{.*}} to i8*
-  %c = bitcast i32* %r to i8*
-  ; CHECK-NEXT: ret i8*
-  ret i8* %c
+  ; CHECK-NEXT: ret ptr
+  ret ptr %r
 }

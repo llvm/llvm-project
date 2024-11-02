@@ -954,6 +954,44 @@ TEST(ApplyEditsTest, WrongRangeLength) {
                                       "the computed range length (2)."));
 }
 
+// Test that we correct observed buggy edits from Neovim.
+TEST(ApplyEditsTets, BuggyNeovimEdits) {
+  TextDocumentContentChangeEvent Change;
+  Change.range.emplace();
+
+  // https://github.com/neovim/neovim/issues/17085
+  // Adding a blank line after a (missing) newline
+  std::string Code = "a";
+  Change.range->start.line = 1;
+  Change.range->start.character = 0;
+  Change.range->end.line = 1;
+  Change.range->start.character = 0;
+  Change.rangeLength = 0;
+  Change.text = "\n";
+  EXPECT_THAT_ERROR(applyChange(Code, Change), llvm::Succeeded());
+  EXPECT_EQ(Code, "a\n\n");
+
+  // https://github.com/neovim/neovim/issues/17085#issuecomment-1269162264
+  // Replacing the (missing) newline with \n\n in an empty file.
+  Code = "";
+  Change.range->start.line = 0;
+  Change.range->start.character = 0;
+  Change.range->end.line = 1;
+  Change.range->end.character = 0;
+  Change.rangeLength = 1;
+  Change.text = "\n\n";
+
+  EXPECT_THAT_ERROR(applyChange(Code, Change), llvm::Succeeded());
+  EXPECT_EQ(Code, "\n\n");
+
+  // We do not apply the heuristic fixes if the rangeLength doesn't match.
+  Code = "";
+  Change.rangeLength = 0;
+  EXPECT_THAT_ERROR(applyChange(Code, Change),
+                    FailedWithMessage("Change's rangeLength (0) doesn't match "
+                                      "the computed range length (1)."));
+}
+
 TEST(ApplyEditsTest, EndBeforeStart) {
   std::string Code = "int main() {}\n";
 

@@ -74,10 +74,12 @@ class ObjCDynamicSBTypeTestCase(TestBase):
             base_pointee_type.GetDirectBaseClassAtIndex(0).GetName(), "MyBaseClass",
             "The dynamic type for Base can go back to its base class")
 
-        self.assertTrue(object_pointee_type.GetDirectBaseClassAtIndex(0).GetType().GetDirectBaseClassAtIndex(
-            0).GetName() == "NSObject", "The dynamic type for NSObject can go up the hierarchy")
-        self.assertTrue(base_pointee_type.GetDirectBaseClassAtIndex(0).GetType().GetDirectBaseClassAtIndex(
-            0).GetName() == "NSObject", "The dynamic type for Base can go up the hierarchy")
+        self.assertEqual(
+            object_pointee_type.GetDirectBaseClassAtIndex(0).GetType().GetDirectBaseClassAtIndex(0).GetName(),
+            "NSObject", "The dynamic type for NSObject can go up the hierarchy")
+        self.assertEqual(
+            base_pointee_type.GetDirectBaseClassAtIndex(0).GetType().GetDirectBaseClassAtIndex(0).GetName(),
+            "NSObject", "The dynamic type for Base can go up the hierarchy")
 
         self.assertEqual(
             object_pointee_type.GetNumberOfFields(), 2,

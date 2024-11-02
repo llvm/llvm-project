@@ -54,7 +54,7 @@ public:
   /// NOTE: the FeatureSpecs are expected to be in the same order (i.e. have
   /// corresponding indices) with any MLModelRunner implementations
   /// corresponding to the model being trained/logged.
-  Logger(const std::vector<LoggedFeatureSpec> &FeatureSpecs,
+  Logger(const std::vector<TensorSpec> &FeatureSpecs,
          const TensorSpec &RewardSpec, bool IncludeReward);
 
   ~Logger();
@@ -91,7 +91,7 @@ public:
                         const StringMap<std::unique_ptr<Logger>> &Loggers);
 
 private:
-  std::vector<LoggedFeatureSpec> FeatureSpecs;
+  std::vector<TensorSpec> FeatureSpecs;
   TensorSpec RewardSpec;
   const bool IncludeReward;
   std::unique_ptr<LoggerDataImpl> LoggerData;

@@ -204,6 +204,53 @@ func.func @test_shli() -> () {
 }
 
 //===----------------------------------------------------------------------===//
+// Test arith.shrsi
+//===----------------------------------------------------------------------===//
+
+// Ops in this function will be emulated using i8 ops.
+func.func @emulate_shrsi(%lhs : i16, %rhs : i16) -> (i16) {
+  %res = arith.shrsi %lhs, %rhs : i16
+  return %res : i16
+}
+
+// Performs both wide and emulated `arith.shrsi`, and checks that the results
+// match.
+func.func @check_shrsi(%lhs : i16, %rhs : i16) -> () {
+  %wide = arith.shrsi %lhs, %rhs : i16
+  %emulated = func.call @emulate_shrsi(%lhs, %rhs) : (i16, i16) -> (i16)
+  func.call @check_results(%lhs, %rhs, %wide, %emulated) : (i16, i16, i16, i16) -> ()
+  return
+}
+
+// Checks that `arith.shrus` is emulated properly by sampling the input space.
+// Checks all valid shift amounts for i16: 0 to 15.
+// In total, this test function checks 100 * 16 = 1.6k input pairs.
+func.func @test_shrsi() -> () {
+  %idx0 = arith.constant 0 : index
+  %idx1 = arith.constant 1 : index
+  %idx16 = arith.constant 16 : index
+  %idx100 = arith.constant 100 : index
+
+  %cst0 = arith.constant 0 : i16
+  %cst1 = arith.constant 1 : i16
+
+  scf.for %lhs_idx = %idx0 to %idx100 step %idx1 iter_args(%lhs = %cst0) -> (i16) {
+    %arg_lhs = func.call @xhash(%lhs) : (i16) -> (i16)
+
+    scf.for %rhs_idx = %idx0 to %idx16 step %idx1 iter_args(%rhs = %cst0) -> (i16) {
+        func.call @check_shrsi(%arg_lhs, %rhs) : (i16, i16) -> ()
+        %rhs_next = arith.addi %rhs, %cst1 : i16
+        scf.yield %rhs_next : i16
+    }
+
+    %lhs_next = arith.addi %lhs, %cst1 : i16
+    scf.yield %lhs_next : i16
+  }
+
+  return
+}
+
+//===----------------------------------------------------------------------===//
 // Test arith.shrui
 //===----------------------------------------------------------------------===//
 
@@ -258,6 +305,7 @@ func.func @entry() {
   func.call @test_addi() : () -> ()
   func.call @test_muli() : () -> ()
   func.call @test_shli() : () -> ()
+  func.call @test_shrsi() : () -> ()
   func.call @test_shrui() : () -> ()
   return
 }

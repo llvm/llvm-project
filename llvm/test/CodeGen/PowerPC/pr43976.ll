@@ -7,8 +7,8 @@ define dso_local signext i32 @b() local_unnamed_addr #0 {
 ; CHECK-LABEL: b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -144(r1)
+; CHECK-NEXT:    std r0, 160(r1)
 ; CHECK-NEXT:    addis r3, r2, a@toc@ha
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    lfd f0, a@toc@l(r3)

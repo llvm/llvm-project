@@ -9,7 +9,7 @@
 ; RUN: FileCheck %s -input-file=%t -check-prefix=MODULE-PASS
 ; RUN: FileCheck %s -input-file=%t -check-prefix=FUNCTION-PASS
 
-; RUN: opt -debugify-each -passes=instrprof,instrprof,sroa,sccp -S -o /dev/null < %s 2> %t
+; RUN: opt -debugify-each -passes='instrprof,instrprof,sroa,sccp' -S -o /dev/null < %s 2> %t
 ; RUN: FileCheck %s -input-file=%t -check-prefix=MODULE-PASS
 ; RUN: FileCheck %s -input-file=%t -check-prefix=FUNCTION-PASS
 

@@ -979,6 +979,9 @@ buffer_load_format_xy v[5:6], off, s[8:11], s3 offset:4095 dlc
 buffer_load_format_xy v[5:6], off, s[8:11], s3 offset:4095 glc slc dlc
 // GFX11: encoding: [0xff,0x7f,0x04,0xe0,0x00,0x05,0x02,0x03]
 
+buffer_load_format_xy v[5:7], off, s[8:11], s3 offset:4095 glc slc dlc tfe
+// GFX11: encoding: [0xff,0x7f,0x04,0xe0,0x00,0x05,0x22,0x03]
+
 buffer_load_format_xyz v[5:7], off, s[8:11], s3 offset:4095
 // GFX11: encoding: [0xff,0x0f,0x08,0xe0,0x00,0x05,0x02,0x03]
 

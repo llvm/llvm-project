@@ -46,6 +46,9 @@ it's possible to reproduce CI issues locally with ease, understanding of
 course that some setups may require access to special hardware that is not
 available.
 
+Finally, add your contact info to ``libcxx/utils/ci/BOT_OWNERS.txt``. This will
+be used to contact you when there are issues with the bot.
+
 Testing Your New Job
 ====================
 

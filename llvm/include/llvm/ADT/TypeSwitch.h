@@ -18,6 +18,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
+#include <optional>
 
 namespace llvm {
 namespace detail {
@@ -70,8 +71,8 @@ protected:
   /// Attempt to dyn_cast the given `value` to `CastT`. This overload is
   /// selected if `value` already has a suitable dyn_cast method.
   template <typename CastT, typename ValueT>
-  static auto castValue(
-      ValueT value,
+  static decltype(auto) castValue(
+      ValueT &&value,
       std::enable_if_t<is_detected<has_dyn_cast_t, ValueT, CastT>::value> * =
           nullptr) {
     return value.template dyn_cast<CastT>();
@@ -80,8 +81,8 @@ protected:
   /// Attempt to dyn_cast the given `value` to `CastT`. This overload is
   /// selected if llvm::dyn_cast should be used.
   template <typename CastT, typename ValueT>
-  static auto castValue(
-      ValueT value,
+  static decltype(auto) castValue(
+      ValueT &&value,
       std::enable_if_t<!is_detected<has_dyn_cast_t, ValueT, CastT>::value> * =
           nullptr) {
     return dyn_cast<CastT>(value);
@@ -145,7 +146,7 @@ public:
 private:
   /// The pointer to the result of this switch statement, once known,
   /// null before that.
-  Optional<ResultT> result;
+  std::optional<ResultT> result;
 };
 
 /// Specialization of TypeSwitch for void returning callables.

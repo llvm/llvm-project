@@ -99,20 +99,20 @@ main_body:
   %array1 = alloca [20 x i32], align 16, addrspace(5)
   call void @llvm.amdgcn.init.exec(i64 -1)
 
-  %ptr0 = getelementptr inbounds [1024 x i32], [1024 x i32] addrspace(5)* %array0, i32 0, i32 1
-  store i32 %a, i32 addrspace(5)* %ptr0, align 4
+  %ptr0 = getelementptr inbounds [1024 x i32], ptr addrspace(5) %array0, i32 0, i32 1
+  store i32 %a, ptr addrspace(5) %ptr0, align 4
 
-  %ptr1 = getelementptr inbounds [20 x i32], [20 x i32] addrspace(5)* %array1, i32 0, i32 1
-  store i32 %a, i32 addrspace(5)* %ptr1, align 4
+  %ptr1 = getelementptr inbounds [20 x i32], ptr addrspace(5) %array1, i32 0, i32 1
+  store i32 %a, ptr addrspace(5) %ptr1, align 4
 
-  %ptr2 = getelementptr inbounds [20 x i32], [20 x i32] addrspace(5)* %array1, i32 0, i32 2
-  store i32 %b, i32 addrspace(5)* %ptr2, align 4
+  %ptr2 = getelementptr inbounds [20 x i32], ptr addrspace(5) %array1, i32 0, i32 2
+  store i32 %b, ptr addrspace(5) %ptr2, align 4
 
-  %ptr3 = getelementptr inbounds [20 x i32], [20 x i32] addrspace(5)* %array1, i32 0, i32 %b
-  %v3 = load i32, i32 addrspace(5)* %ptr3, align 4
+  %ptr3 = getelementptr inbounds [20 x i32], ptr addrspace(5) %array1, i32 0, i32 %b
+  %v3 = load i32, ptr addrspace(5) %ptr3, align 4
 
-  %ptr4 = getelementptr inbounds [1024 x i32], [1024 x i32] addrspace(5)* %array0, i32 0, i32 %b
-  %v4 = load i32, i32 addrspace(5)* %ptr4, align 4
+  %ptr4 = getelementptr inbounds [1024 x i32], ptr addrspace(5) %array0, i32 0, i32 %b
+  %v4 = load i32, ptr addrspace(5) %ptr4, align 4
 
   %v5 = add i32 %v3, %v4
   %v = bitcast i32 %v5 to float
@@ -133,20 +133,20 @@ main_body:
   %array1 = alloca [20 x i32], align 16, addrspace(5)
   call void @llvm.amdgcn.init.exec.from.input(i32 %count, i32 8)
 
-  %ptr0 = getelementptr inbounds [1024 x i32], [1024 x i32] addrspace(5)* %array0, i32 0, i32 1
-  store i32 %a, i32 addrspace(5)* %ptr0, align 4
+  %ptr0 = getelementptr inbounds [1024 x i32], ptr addrspace(5) %array0, i32 0, i32 1
+  store i32 %a, ptr addrspace(5) %ptr0, align 4
 
-  %ptr1 = getelementptr inbounds [20 x i32], [20 x i32] addrspace(5)* %array1, i32 0, i32 1
-  store i32 %a, i32 addrspace(5)* %ptr1, align 4
+  %ptr1 = getelementptr inbounds [20 x i32], ptr addrspace(5) %array1, i32 0, i32 1
+  store i32 %a, ptr addrspace(5) %ptr1, align 4
 
-  %ptr2 = getelementptr inbounds [20 x i32], [20 x i32] addrspace(5)* %array1, i32 0, i32 2
-  store i32 %b, i32 addrspace(5)* %ptr2, align 4
+  %ptr2 = getelementptr inbounds [20 x i32], ptr addrspace(5) %array1, i32 0, i32 2
+  store i32 %b, ptr addrspace(5) %ptr2, align 4
 
-  %ptr3 = getelementptr inbounds [20 x i32], [20 x i32] addrspace(5)* %array1, i32 0, i32 %b
-  %v3 = load i32, i32 addrspace(5)* %ptr3, align 4
+  %ptr3 = getelementptr inbounds [20 x i32], ptr addrspace(5) %array1, i32 0, i32 %b
+  %v3 = load i32, ptr addrspace(5) %ptr3, align 4
 
-  %ptr4 = getelementptr inbounds [1024 x i32], [1024 x i32] addrspace(5)* %array0, i32 0, i32 %b
-  %v4 = load i32, i32 addrspace(5)* %ptr4, align 4
+  %ptr4 = getelementptr inbounds [1024 x i32], ptr addrspace(5) %array0, i32 0, i32 %b
+  %v4 = load i32, ptr addrspace(5) %ptr4, align 4
 
   %v5 = add i32 %v3, %v4
   %v = bitcast i32 %v5 to float
@@ -178,20 +178,20 @@ if:
 endif:
   call void @llvm.amdgcn.init.exec.from.input(i32 %count, i32 8)
 
-  %ptr0 = getelementptr inbounds [1024 x i32], [1024 x i32] addrspace(5)* %array0, i32 0, i32 1
-  store i32 %a, i32 addrspace(5)* %ptr0, align 4
+  %ptr0 = getelementptr inbounds [1024 x i32], ptr addrspace(5) %array0, i32 0, i32 1
+  store i32 %a, ptr addrspace(5) %ptr0, align 4
 
-  %ptr1 = getelementptr inbounds [20 x i32], [20 x i32] addrspace(5)* %array1, i32 0, i32 1
-  store i32 %a, i32 addrspace(5)* %ptr1, align 4
+  %ptr1 = getelementptr inbounds [20 x i32], ptr addrspace(5) %array1, i32 0, i32 1
+  store i32 %a, ptr addrspace(5) %ptr1, align 4
 
-  %ptr2 = getelementptr inbounds [20 x i32], [20 x i32] addrspace(5)* %array1, i32 0, i32 2
-  store i32 %b, i32 addrspace(5)* %ptr2, align 4
+  %ptr2 = getelementptr inbounds [20 x i32], ptr addrspace(5) %array1, i32 0, i32 2
+  store i32 %b, ptr addrspace(5) %ptr2, align 4
 
-  %ptr3 = getelementptr inbounds [20 x i32], [20 x i32] addrspace(5)* %array1, i32 0, i32 %b
-  %v3 = load i32, i32 addrspace(5)* %ptr3, align 4
+  %ptr3 = getelementptr inbounds [20 x i32], ptr addrspace(5) %array1, i32 0, i32 %b
+  %v3 = load i32, ptr addrspace(5) %ptr3, align 4
 
-  %ptr4 = getelementptr inbounds [1024 x i32], [1024 x i32] addrspace(5)* %array0, i32 0, i32 %b
-  %v4 = load i32, i32 addrspace(5)* %ptr4, align 4
+  %ptr4 = getelementptr inbounds [1024 x i32], ptr addrspace(5) %array0, i32 0, i32 %b
+  %v4 = load i32, ptr addrspace(5) %ptr4, align 4
 
   %v5 = add i32 %v3, %v4
   %v6 = add i32 %v5, %count

@@ -10,36 +10,22 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x i8> @srem_v4i8(<4 x i8> %op1, <4 x i8> %op2) #0 {
 ; CHECK-LABEL: srem_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    ptrue p1.s, vl4
 ; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI0_0]
-; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, z2.h
 ; CHECK-NEXT:    lsl z1.h, p0/m, z1.h, z2.h
-; CHECK-NEXT:    asr z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, z2.h
 ; CHECK-NEXT:    asr z1.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    asr z0.h, p0/m, z0.h, z2.h
 ; CHECK-NEXT:    sunpklo z2.s, z1.h
 ; CHECK-NEXT:    sunpklo z3.s, z0.h
 ; CHECK-NEXT:    sdivr z2.s, p1/m, z2.s, z3.s
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    mov z3.s, z2.s[3]
-; CHECK-NEXT:    mov z4.s, z2.s[2]
-; CHECK-NEXT:    mov z2.s, z2.s[1]
-; CHECK-NEXT:    fmov w9, s3
-; CHECK-NEXT:    fmov w10, s4
-; CHECK-NEXT:    strh w8, [sp, #8]
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    strh w9, [sp, #14]
-; CHECK-NEXT:    strh w10, [sp, #12]
-; CHECK-NEXT:    strh w8, [sp, #10]
-; CHECK-NEXT:    ldr d2, [sp, #8]
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; CHECK-NEXT:    mls z0.h, p0/m, z2.h, z1.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %res = srem <4 x i8> %op1, %op2
   ret <4 x i8> %res
@@ -48,8 +34,6 @@ define <4 x i8> @srem_v4i8(<4 x i8> %op1, <4 x i8> %op2) #0 {
 define <8 x i8> @srem_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; CHECK-LABEL: srem_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    sunpklo z2.h, z1.b
@@ -63,33 +47,9 @@ define <8 x i8> @srem_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; CHECK-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    ptrue p0.b, vl8
 ; CHECK-NEXT:    uzp1 z2.h, z2.h, z4.h
-; CHECK-NEXT:    mov z3.h, z2.h[7]
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    fmov w9, s3
-; CHECK-NEXT:    mov z4.h, z2.h[6]
-; CHECK-NEXT:    mov z5.h, z2.h[5]
-; CHECK-NEXT:    mov z6.h, z2.h[4]
-; CHECK-NEXT:    fmov w10, s4
-; CHECK-NEXT:    strb w8, [sp, #8]
-; CHECK-NEXT:    fmov w8, s5
-; CHECK-NEXT:    strb w9, [sp, #15]
-; CHECK-NEXT:    fmov w9, s6
-; CHECK-NEXT:    mov z7.h, z2.h[3]
-; CHECK-NEXT:    mov z16.h, z2.h[2]
-; CHECK-NEXT:    mov z2.h, z2.h[1]
-; CHECK-NEXT:    strb w10, [sp, #14]
-; CHECK-NEXT:    fmov w10, s7
-; CHECK-NEXT:    strb w8, [sp, #13]
-; CHECK-NEXT:    fmov w8, s16
-; CHECK-NEXT:    strb w9, [sp, #12]
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    strb w10, [sp, #11]
-; CHECK-NEXT:    strb w8, [sp, #10]
-; CHECK-NEXT:    strb w9, [sp, #9]
-; CHECK-NEXT:    ldr d2, [sp, #8]
+; CHECK-NEXT:    uzp1 z2.b, z2.b, z2.b
 ; CHECK-NEXT:    mls z0.b, p0/m, z2.b, z1.b
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %res = srem <8 x i8> %op1, %op2
   ret <8 x i8> %res
@@ -187,8 +147,6 @@ define void @srem_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 define <4 x i16> @srem_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 ; CHECK-LABEL: srem_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
@@ -196,21 +154,9 @@ define <4 x i16> @srem_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 ; CHECK-NEXT:    sunpklo z3.s, z0.h
 ; CHECK-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    mov z3.s, z2.s[3]
-; CHECK-NEXT:    mov z4.s, z2.s[2]
-; CHECK-NEXT:    mov z2.s, z2.s[1]
-; CHECK-NEXT:    fmov w9, s3
-; CHECK-NEXT:    fmov w10, s4
-; CHECK-NEXT:    strh w8, [sp, #8]
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    strh w9, [sp, #14]
-; CHECK-NEXT:    strh w10, [sp, #12]
-; CHECK-NEXT:    strh w8, [sp, #10]
-; CHECK-NEXT:    ldr d2, [sp, #8]
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; CHECK-NEXT:    mls z0.h, p0/m, z2.h, z1.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %res = srem <4 x i16> %op1, %op2
   ret <4 x i16> %res
@@ -379,34 +325,20 @@ define void @srem_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 define <4 x i8> @urem_v4i8(<4 x i8> %op1, <4 x i8> %op2) #0 {
 ; CHECK-LABEL: urem_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    adrp x8, .LCPI13_0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI13_0]
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
 ; CHECK-NEXT:    and z1.d, z1.d, z2.d
+; CHECK-NEXT:    and z0.d, z0.d, z2.d
 ; CHECK-NEXT:    uunpklo z2.s, z1.h
 ; CHECK-NEXT:    uunpklo z3.s, z0.h
 ; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    mov z3.s, z2.s[3]
-; CHECK-NEXT:    mov z4.s, z2.s[2]
-; CHECK-NEXT:    mov z2.s, z2.s[1]
-; CHECK-NEXT:    fmov w9, s3
-; CHECK-NEXT:    fmov w10, s4
-; CHECK-NEXT:    strh w8, [sp, #8]
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    strh w9, [sp, #14]
-; CHECK-NEXT:    strh w10, [sp, #12]
-; CHECK-NEXT:    strh w8, [sp, #10]
-; CHECK-NEXT:    ldr d2, [sp, #8]
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; CHECK-NEXT:    mls z0.h, p0/m, z2.h, z1.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %res = urem <4 x i8> %op1, %op2
   ret <4 x i8> %res
@@ -415,8 +347,6 @@ define <4 x i8> @urem_v4i8(<4 x i8> %op1, <4 x i8> %op2) #0 {
 define <8 x i8> @urem_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; CHECK-LABEL: urem_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    uunpklo z2.h, z1.b
@@ -430,33 +360,9 @@ define <8 x i8> @urem_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    ptrue p0.b, vl8
 ; CHECK-NEXT:    uzp1 z2.h, z2.h, z4.h
-; CHECK-NEXT:    mov z3.h, z2.h[7]
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    fmov w9, s3
-; CHECK-NEXT:    mov z4.h, z2.h[6]
-; CHECK-NEXT:    mov z5.h, z2.h[5]
-; CHECK-NEXT:    mov z6.h, z2.h[4]
-; CHECK-NEXT:    fmov w10, s4
-; CHECK-NEXT:    strb w8, [sp, #8]
-; CHECK-NEXT:    fmov w8, s5
-; CHECK-NEXT:    strb w9, [sp, #15]
-; CHECK-NEXT:    fmov w9, s6
-; CHECK-NEXT:    mov z7.h, z2.h[3]
-; CHECK-NEXT:    mov z16.h, z2.h[2]
-; CHECK-NEXT:    mov z2.h, z2.h[1]
-; CHECK-NEXT:    strb w10, [sp, #14]
-; CHECK-NEXT:    fmov w10, s7
-; CHECK-NEXT:    strb w8, [sp, #13]
-; CHECK-NEXT:    fmov w8, s16
-; CHECK-NEXT:    strb w9, [sp, #12]
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    strb w10, [sp, #11]
-; CHECK-NEXT:    strb w8, [sp, #10]
-; CHECK-NEXT:    strb w9, [sp, #9]
-; CHECK-NEXT:    ldr d2, [sp, #8]
+; CHECK-NEXT:    uzp1 z2.b, z2.b, z2.b
 ; CHECK-NEXT:    mls z0.b, p0/m, z2.b, z1.b
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %res = urem <8 x i8> %op1, %op2
   ret <8 x i8> %res
@@ -554,8 +460,6 @@ define void @urem_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 define <4 x i16> @urem_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 ; CHECK-LABEL: urem_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
@@ -563,21 +467,9 @@ define <4 x i16> @urem_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
 ; CHECK-NEXT:    uunpklo z3.s, z0.h
 ; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    mov z3.s, z2.s[3]
-; CHECK-NEXT:    mov z4.s, z2.s[2]
-; CHECK-NEXT:    mov z2.s, z2.s[1]
-; CHECK-NEXT:    fmov w9, s3
-; CHECK-NEXT:    fmov w10, s4
-; CHECK-NEXT:    strh w8, [sp, #8]
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    strh w9, [sp, #14]
-; CHECK-NEXT:    strh w10, [sp, #12]
-; CHECK-NEXT:    strh w8, [sp, #10]
-; CHECK-NEXT:    ldr d2, [sp, #8]
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; CHECK-NEXT:    mls z0.h, p0/m, z2.h, z1.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %res = urem <4 x i16> %op1, %op2
   ret <4 x i16> %res

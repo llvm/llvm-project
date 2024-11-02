@@ -6,38 +6,38 @@ define i64 @main(i64 %x, i64 %y, i1 %flag) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[PLUS:%.*]], label [[MINUS:%.*]]
 ; CHECK:       plus:
-; CHECK-NEXT:    [[CMP0:%.*]] = call i64 @compute.1(i64 [[X:%.*]], i64 [[Y:%.*]], i64 (i64, i64)* @plus, i64 (i64, i64)* @minus)
+; CHECK-NEXT:    [[CMP0:%.*]] = call i64 @compute.1(i64 [[X:%.*]], i64 [[Y:%.*]], ptr @plus, ptr @minus)
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       minus:
-; CHECK-NEXT:    [[CMP1:%.*]] = call i64 @compute.2(i64 [[X]], i64 [[Y]], i64 (i64, i64)* @minus, i64 (i64, i64)* @plus)
+; CHECK-NEXT:    [[CMP1:%.*]] = call i64 @compute.2(i64 [[X]], i64 [[Y]], ptr @minus, ptr @plus)
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[PH:%.*]] = phi i64 [ [[CMP0]], [[PLUS]] ], [ [[CMP1]], [[MINUS]] ]
-; CHECK-NEXT:    [[CMP2:%.*]] = call i64 @compute.1(i64 [[PH]], i64 42, i64 (i64, i64)* @plus, i64 (i64, i64)* @minus)
+; CHECK-NEXT:    [[CMP2:%.*]] = call i64 @compute.1(i64 [[PH]], i64 42, ptr @plus, ptr @minus)
 ; CHECK-NEXT:    ret i64 [[CMP2]]
 ;
 entry:
   br i1 %flag, label %plus, label %minus
 
 plus:
-  %cmp0 = call i64 @compute(i64 %x, i64 %y, i64 (i64, i64)* @plus, i64 (i64, i64)* @minus)
+  %cmp0 = call i64 @compute(i64 %x, i64 %y, ptr @plus, ptr @minus)
   br label %merge
 
 minus:
-  %cmp1 = call i64 @compute(i64 %x, i64 %y, i64 (i64, i64)* @minus, i64 (i64, i64)* @plus)
+  %cmp1 = call i64 @compute(i64 %x, i64 %y, ptr @minus, ptr @plus)
   br label %merge
 
 merge:
   %ph = phi i64 [ %cmp0, %plus ], [ %cmp1, %minus]
-  %cmp2 = call i64 @compute(i64 %ph, i64 42, i64 (i64, i64)* @plus, i64 (i64, i64)* @minus)
+  %cmp2 = call i64 @compute(i64 %ph, i64 42, ptr @plus, ptr @minus)
   ret i64 %cmp2
 }
 
-define internal i64 @compute(i64 %x, i64 %y, i64 (i64, i64)* %binop1, i64 (i64, i64)* %binop2) {
+define internal i64 @compute(i64 %x, i64 %y, ptr %binop1, ptr %binop2) {
 entry:
   %op0 = call i64 %binop1(i64 %x, i64 %y)
   %op1 = call i64 %binop2(i64 %x, i64 %y)
-  %op2 = call i64 @compute(i64 %x, i64 %y, i64 (i64, i64)* %binop1, i64 (i64, i64)* @plus)
+  %op2 = call i64 @compute(i64 %x, i64 %y, ptr %binop1, ptr @plus)
   %add0 = add i64 %op0, %op1
   %add1 = add i64 %add0, %op2
   %div = sdiv i64 %add1, %x
@@ -64,16 +64,16 @@ entry:
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP0:%.*]] = call i64 @plus(i64 [[X:%.*]], i64 [[Y:%.*]])
 ; CHECK-NEXT:    [[CMP1:%.*]] = call i64 @minus(i64 [[X]], i64 [[Y]])
-; CHECK-NEXT:    [[CMP2:%.*]] = call i64 @compute(i64 [[X]], i64 [[Y]], i64 (i64, i64)* @plus, i64 (i64, i64)* @plus)
+; CHECK-NEXT:    [[CMP2:%.*]] = call i64 @compute(i64 [[X]], i64 [[Y]], ptr @plus, ptr @plus)
 
 ; CHECK-LABEL: @compute.2
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP0:%.*]] = call i64 @minus(i64 [[X:%.*]], i64 [[Y:%.*]])
 ; CHECK-NEXT:    [[CMP1:%.*]] = call i64 @plus(i64 [[X]], i64 [[Y]])
-; CHECK-NEXT:    [[CMP2:%.*]] = call i64 @compute(i64 [[X]], i64 [[Y]], i64 (i64, i64)* @minus, i64 (i64, i64)* @plus)
+; CHECK-NEXT:    [[CMP2:%.*]] = call i64 @compute(i64 [[X]], i64 [[Y]], ptr @minus, ptr @plus)
 
 ; CHECK-LABEL: @compute.3
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP0:%.*]] = call i64 @plus(i64 [[X:%.*]], i64 [[Y:%.*]])
 ; CHECK-NEXT:    [[CMP1:%.*]] = call i64 @minus(i64 [[X]], i64 [[Y]])
-; CHECK-NEXT:    [[CMP2:%.*]] = call i64 @compute(i64 [[X]], i64 [[Y]], i64 (i64, i64)* @plus, i64 (i64, i64)* @plus)
+; CHECK-NEXT:    [[CMP2:%.*]] = call i64 @compute(i64 [[X]], i64 [[Y]], ptr @plus, ptr @plus)

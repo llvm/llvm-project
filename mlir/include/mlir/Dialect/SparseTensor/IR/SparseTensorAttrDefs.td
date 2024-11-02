@@ -158,6 +158,14 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     "unsigned":$indexBitWidth
   );
 
+  let extraClassDeclaration = [{
+    /// Returns the type for pointer storage based on pointerBitWidth
+    Type getPointerType() const;
+
+    /// Returns the type for index storage based on indexBitWidth
+    Type getIndexType() const;
+  }];
+
   let genVerifyDecl = 1;
   let hasCustomAssemblyFormat = 1;
 }

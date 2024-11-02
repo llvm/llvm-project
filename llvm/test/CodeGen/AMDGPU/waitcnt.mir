@@ -354,7 +354,7 @@ body: |
 
   bb.4:
     renamable $sgpr10_sgpr11 = S_CSELECT_B64 -1, 0, implicit killed $scc
-    renamable $vgpr1 = BUFFER_LOAD_DWORD_OFFEN killed renamable $vgpr5, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 1, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    renamable $vgpr1 = BUFFER_LOAD_DWORD_OFFEN killed renamable $vgpr5, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 1, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     renamable $sgpr10_sgpr11 = S_LOAD_DWORDX2_IMM killed renamable $sgpr0_sgpr1, 0, 0 :: (load (s64) from `i32 addrspace(4)* undef`, align 4, addrspace 4)
     S_CBRANCH_SCC0 %bb.9, implicit killed $scc
 

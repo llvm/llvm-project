@@ -1,4 +1,4 @@
-; RUN: opt -data-layout=A5 -S -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca < %s | FileCheck -check-prefix=IR %s
+; RUN: opt -data-layout=A5 -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca < %s | FileCheck -check-prefix=IR %s
 ; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=ASM %s
 
 

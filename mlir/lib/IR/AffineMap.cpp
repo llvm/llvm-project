@@ -328,12 +328,16 @@ unsigned AffineMap::getDimPosition(unsigned idx) const {
   return getResult(idx).cast<AffineDimExpr>().getPosition();
 }
 
-unsigned AffineMap::getPermutedPosition(unsigned input) const {
-  assert(isPermutation() && "invalid permutation request");
-  for (unsigned i = 0, numResults = getNumResults(); i < numResults; i++)
-    if (getDimPosition(i) == input)
+Optional<unsigned> AffineMap::getResultPosition(AffineExpr input) const {
+  if (!input.isa<AffineDimExpr>())
+    return llvm::None;
+
+  for (unsigned i = 0, numResults = getNumResults(); i < numResults; i++) {
+    if (getResult(i) == input)
       return i;
-  llvm_unreachable("incorrect permutation request");
+  }
+
+  return llvm::None;
 }
 
 /// Folds the results of the application of an affine map on the provided

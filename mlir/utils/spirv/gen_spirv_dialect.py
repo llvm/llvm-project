@@ -568,7 +568,8 @@ def update_td_opcodes(path, instructions, filter_list):
   assert len(content) == 3
 
   # Extend opcode list with existing list
-  existing_opcodes = [k[11:] for k in re.findall('def SPIRV_OC_\w+', content[1])]
+  prefix = 'def SPIRV_OC_'
+  existing_opcodes = [k[len(prefix):] for k in re.findall(prefix + '\w+', content[1])]
   filter_list.extend(existing_opcodes)
   filter_list = list(set(filter_list))
 

@@ -103,6 +103,7 @@ public:
   bool isNeeded() const override;
   void writeTo(uint8_t *buf) override;
 
+  void addConstant(const Relocation &r);
   void addEntry(Symbol &sym);
   bool addTlsDescEntry(Symbol &sym);
   bool addDynTlsEntry(Symbol &sym);
@@ -163,7 +164,7 @@ private:
 // respectively.
 class BssSection final : public SyntheticSection {
 public:
-  BssSection(StringRef name, uint64_t size, uint32_t alignment);
+  BssSection(StringRef name, uint64_t size, uint32_t addralign);
   void writeTo(uint8_t *) override {}
   bool isNeeded() const override { return size != 0; }
   size_t getSize() const override { return size; }
@@ -499,7 +500,7 @@ public:
   /// Add a dynamic relocation against \p sym with an optional addend.
   void addSymbolReloc(RelType dynType, InputSectionBase &isec,
                       uint64_t offsetInSec, Symbol &sym, int64_t addend = 0,
-                      llvm::Optional<RelType> addendRelType = llvm::None);
+                      std::optional<RelType> addendRelType = {});
   /// Add a relative dynamic relocation that uses the target address of \p sym
   /// (i.e. InputSection::getRelocTargetVA()) + \p addend as the addend.
   /// This function should only be called for non-preemptible symbols or
@@ -515,8 +516,7 @@ public:
   }
   /// Add a dynamic relocation using the target address of \p sym as the addend
   /// if \p sym is non-preemptible. Otherwise add a relocation against \p sym.
-  void addAddendOnlyRelocIfNonPreemptible(RelType dynType,
-                                          InputSectionBase &isec,
+  void addAddendOnlyRelocIfNonPreemptible(RelType dynType, GotSection &sec,
                                           uint64_t offsetInSec, Symbol &sym,
                                           RelType addendRelType);
   template <bool shard = false>
@@ -526,8 +526,7 @@ public:
     // Write the addends to the relocated address if required. We skip
     // it if the written value would be zero.
     if (config->writeAddends && (expr != R_ADDEND || addend != 0))
-      sec.relocations.push_back(
-          {expr, addendRelType, offsetInSec, addend, &sym});
+      sec.addReloc({expr, addendRelType, offsetInSec, addend, &sym});
     addReloc<shard>({dynType, &sec, offsetInSec, kind, sym, addend, expr});
   }
   bool isNeeded() const override {
@@ -936,14 +935,14 @@ public:
 
 protected:
   MergeSyntheticSection(StringRef name, uint32_t type, uint64_t flags,
-                        uint32_t alignment)
-      : SyntheticSection(flags, type, alignment, name) {}
+                        uint32_t addralign)
+      : SyntheticSection(flags, type, addralign, name) {}
 };
 
 class MergeTailSection final : public MergeSyntheticSection {
 public:
   MergeTailSection(StringRef name, uint32_t type, uint64_t flags,
-                   uint32_t alignment);
+                   uint32_t addralign);
 
   size_t getSize() const override;
   void writeTo(uint8_t *buf) override;
@@ -956,8 +955,8 @@ private:
 class MergeNoTailSection final : public MergeSyntheticSection {
 public:
   MergeNoTailSection(StringRef name, uint32_t type, uint64_t flags,
-                     uint32_t alignment)
-      : MergeSyntheticSection(name, type, flags, alignment) {}
+                     uint32_t addralign)
+      : MergeSyntheticSection(name, type, flags, addralign) {}
 
   size_t getSize() const override { return size; }
   void writeTo(uint8_t *buf) override;
@@ -1164,7 +1163,7 @@ class PPC64LongBranchTargetSection final : public SyntheticSection {
 public:
   PPC64LongBranchTargetSection();
   uint64_t getEntryVA(const Symbol *sym, int64_t addend);
-  llvm::Optional<uint32_t> addEntry(const Symbol *sym, int64_t addend);
+  std::optional<uint32_t> addEntry(const Symbol *sym, int64_t addend);
   size_t getSize() const override;
   void writeTo(uint8_t *buf) override;
   bool isNeeded() const override;

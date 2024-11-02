@@ -63,6 +63,7 @@
 #include <cassert>
 #include <iterator>
 #include <map>
+#include <optional>
 #include <vector>
 
 using namespace llvm;
@@ -211,7 +212,7 @@ static MemoryEffects checkFunctionMemoryAccess(Function &F, bool ThisBody,
     if (MR == ModRefInfo::NoModRef)
       continue;
 
-    Optional<MemoryLocation> Loc = MemoryLocation::getOrNone(&I);
+    std::optional<MemoryLocation> Loc = MemoryLocation::getOrNone(&I);
     if (!Loc) {
       // If no location is known, conservatively assume anything can be
       // accessed.

@@ -546,15 +546,8 @@ void mlir::normalizeAffineParallel(AffineParallelOp op) {
                                     ubExprs, op.getContext());
   op.setUpperBounds(ranges.getOperands(), newUpperMap);
 }
-
-/// Normalizes affine.for ops. If the affine.for op has only a single iteration
-/// only then it is simply promoted, else it is normalized in the traditional
-/// way, by converting the lower bound to zero and loop step to one. The upper
-/// bound is set to the trip count of the loop. For now, original loops must
-/// have lower bound with a single result only. There is no such restriction on
-/// upper bounds.
-LogicalResult mlir::normalizeAffineFor(AffineForOp op) {
-  if (succeeded(promoteIfSingleIteration(op)))
+LogicalResult mlir::normalizeAffineFor(AffineForOp op, bool promoteSingleIter) {
+  if (promoteSingleIter && succeeded(promoteIfSingleIteration(op)))
     return success();
 
   // Check if the forop is already normalized.
@@ -1199,8 +1192,6 @@ LogicalResult mlir::replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
 
   // Prepend 'extraIndices' in 'newMapOperands'.
   for (Value extraIndex : extraIndices) {
-    assert(extraIndex.getDefiningOp()->getNumResults() == 1 &&
-           "single result op's expected to generate these indices");
     assert((isValidDim(extraIndex) || isValidSymbol(extraIndex)) &&
            "invalid memory op index");
     newMapOperands.push_back(extraIndex);
@@ -1796,7 +1787,7 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType,
     bool isDynDim =
         isNormalizedMemRefDynamicDim(d, layoutMap, memrefTypeDynDims, context);
     if (isDynDim) {
-      newShape[d] = ShapedType::kDynamicSize;
+      newShape[d] = ShapedType::kDynamic;
     } else {
       // The lower bound for the shape is always zero.
       Optional<int64_t> ubConst =

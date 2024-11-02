@@ -14,6 +14,7 @@
 #include "LoongArchMachineFunctionInfo.h"
 #include "LoongArchSubtarget.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
+#include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -118,24 +119,61 @@ void LoongArchFrameLowering::determineFrameLayout(MachineFunction &MF) const {
   MFI.setStackSize(FrameSize);
 }
 
+static uint64_t estimateFunctionSizeInBytes(const LoongArchInstrInfo *TII,
+                                            const MachineFunction &MF) {
+  uint64_t FuncSize = 0;
+  for (auto &MBB : MF)
+    for (auto &MI : MBB)
+      FuncSize += TII->getInstSizeInBytes(MI);
+  return FuncSize;
+}
+
+static bool needScavSlotForCFR(MachineFunction &MF) {
+  if (!MF.getSubtarget<LoongArchSubtarget>().hasBasicF())
+    return false;
+  for (auto &MBB : MF)
+    for (auto &MI : MBB)
+      if (MI.getOpcode() == LoongArch::PseudoST_CFR)
+        return true;
+  return false;
+}
+
 void LoongArchFrameLowering::processFunctionBeforeFrameFinalized(
     MachineFunction &MF, RegScavenger *RS) const {
   const LoongArchRegisterInfo *RI = STI.getRegisterInfo();
   const TargetRegisterClass &RC = LoongArch::GPRRegClass;
+  const LoongArchInstrInfo *TII = STI.getInstrInfo();
+  LoongArchMachineFunctionInfo *LAFI =
+      MF.getInfo<LoongArchMachineFunctionInfo>();
   MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  unsigned ScavSlotsNum = 0;
+
+  // Far branches beyond 27-bit offset require a spill slot for scratch register.
+  bool IsLargeFunction = !isInt<27>(estimateFunctionSizeInBytes(TII, MF));
+  if (IsLargeFunction)
+    ScavSlotsNum = 1;
 
   // estimateStackSize has been observed to under-estimate the final stack
   // size, so give ourselves wiggle-room by checking for stack size
   // representable an 11-bit signed field rather than 12-bits.
-  if (isInt<11>(MFI.estimateStackSize(MF)))
-    return;
+  if (!isInt<11>(MFI.estimateStackSize(MF)))
+    ScavSlotsNum = std::max(ScavSlotsNum, 1u);
 
-  // Create an emergency spill slot.
-  int FI =
-      MFI.CreateStackObject(RI->getSpillSize(RC), RI->getSpillAlign(RC), false);
-  RS->addScavengingFrameIndex(FI);
-  LLVM_DEBUG(dbgs() << "Allocated FI(" << FI
-                    << ") as the emergency spill slot.\n");
+  // For CFR spill.
+  if (needScavSlotForCFR(MF))
+    ++ScavSlotsNum;
+
+  // Create emergency spill slots.
+  for (unsigned i = 0; i < ScavSlotsNum; ++i) {
+    int FI = MFI.CreateStackObject(RI->getSpillSize(RC), RI->getSpillAlign(RC),
+                                   false);
+    RS->addScavengingFrameIndex(FI);
+    if (IsLargeFunction && LAFI->getBranchRelaxationSpillFrameIndex() == -1)
+      LAFI->setBranchRelaxationSpillFrameIndex(FI);
+    LLVM_DEBUG(dbgs() << "Allocated FI(" << FI
+                      << ") as the emergency spill slot.\n");
+  }
 }
 
 void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,

@@ -10,15 +10,13 @@
 
 ; CHECK-LABEL: define amdgpu_kernel void @non_caller
 ; CHECK-NOT: #{{[0-9]+}}
-define amdgpu_kernel void @non_caller(i8 addrspace(1)* %a, i8 %b, i64 addrspace(1)* %c, i64 %d) local_unnamed_addr
-  !kernel_arg_addr_space !3 !kernel_arg_access_qual !4 !kernel_arg_type !5 !kernel_arg_base_type !5 !kernel_arg_type_qual !6 {
+define amdgpu_kernel void @non_caller(i8 addrspace(1)* %a, i8 %b, i64 addrspace(1)* %c, i64 %d) {
   ret void
 }
 
 ; CHECK-LABEL: define amdgpu_kernel void @caller_indirect
 ; CHECK-SAME: #[[AT_CALLER:[0-9]+]]
-define amdgpu_kernel void @caller_indirect(i8 addrspace(1)* %a, i8 %b, i64 addrspace(1)* %c, i64 %d) local_unnamed_addr
-  !kernel_arg_addr_space !3 !kernel_arg_access_qual !4 !kernel_arg_type !5 !kernel_arg_base_type !5 !kernel_arg_type_qual !6 {
+define amdgpu_kernel void @caller_indirect(i8 addrspace(1)* %a, i8 %b, i64 addrspace(1)* %c, i64 %d) {
   call void @caller(i8 addrspace(1)* %a, i8 %b, i64 addrspace(1)* %c, i64 %d)
   ret void
 }
@@ -36,8 +34,7 @@ define amdgpu_kernel void @caller_indirect(i8 addrspace(1)* %a, i8 %b, i64 addrs
 ; CHECK: call i32 @__enqueue_kernel_basic({{.*}}@__amdgpu_enqueued_kernel.runtime_handle
 ; CHECK: call i32 @__enqueue_kernel_basic({{.*}}@__amdgpu_enqueued_kernel.1.runtime_handle
 ; CHECK: call i32 @__enqueue_kernel_basic({{.*}}@__test_block_invoke_2_kernel.runtime_handle
-define amdgpu_kernel void @caller(i8 addrspace(1)* %a, i8 %b, i64 addrspace(1)* %c, i64 %d) local_unnamed_addr
-  !kernel_arg_addr_space !3 !kernel_arg_access_qual !4 !kernel_arg_type !5 !kernel_arg_base_type !5 !kernel_arg_type_qual !6 {
+define amdgpu_kernel void @caller(i8 addrspace(1)* %a, i8 %b, i64 addrspace(1)* %c, i64 %d) {
 entry:
   %block = alloca <{ i32, i32, i8 addrspace(1)*, i8 }>, align 8, addrspace(5)
   %tmp = alloca %struct.ndrange_t, align 4, addrspace(5)
@@ -85,8 +82,7 @@ entry:
 ; CHECK-SAME: #[[AT_CALLER]]
 ; CHECK-NOT: @__test_block_invoke_kernel
 ; CHECK: load i64, i64 addrspace(1)* getelementptr inbounds ([2 x i64], [2 x i64] addrspace(1)* @__test_block_invoke_kernel.runtime_handle, i32 0, i32 0)
-define amdgpu_kernel void @inlined_caller(i8 addrspace(1)* %a, i8 %b, i64 addrspace(1)* %c, i64 %d) local_unnamed_addr
-  !kernel_arg_addr_space !3 !kernel_arg_access_qual !4 !kernel_arg_type !5 !kernel_arg_base_type !5 !kernel_arg_type_qual !6 {
+define amdgpu_kernel void @inlined_caller(i8 addrspace(1)* %a, i8 %b, i64 addrspace(1)* %c, i64 %d) {
 entry:
   %tmp = load i64, i64 addrspace(1)* addrspacecast (i64* bitcast (void (<{ i32, i32, i8 addrspace(1)*, i8 }>)* @__test_block_invoke_kernel to i64*) to i64 addrspace(1)*)
   store i64 %tmp, i64 addrspace(1)* %c
@@ -95,8 +91,7 @@ entry:
 
 ; CHECK-LABEL: define dso_local amdgpu_kernel void @__test_block_invoke_kernel
 ; CHECK-SAME: #[[AT1:[0-9]+]]
-define internal amdgpu_kernel void @__test_block_invoke_kernel(<{ i32, i32, i8 addrspace(1)*, i8 }> %arg) #0
-  !kernel_arg_addr_space !14 !kernel_arg_access_qual !15 !kernel_arg_type !16 !kernel_arg_base_type !16 !kernel_arg_type_qual !17 {
+define internal amdgpu_kernel void @__test_block_invoke_kernel(<{ i32, i32, i8 addrspace(1)*, i8 }> %arg) #0 {
 entry:
   %.fca.3.extract = extractvalue <{ i32, i32, i8 addrspace(1)*, i8 }> %arg, 2
   %.fca.4.extract = extractvalue <{ i32, i32, i8 addrspace(1)*, i8 }> %arg, 3
@@ -108,9 +103,7 @@ declare i32 @__enqueue_kernel_basic(%opencl.queue_t addrspace(1)*, i32, %struct.
 
 ; CHECK-LABEL: define dso_local amdgpu_kernel void @__test_block_invoke_2_kernel
 ; CHECK-SAME: #[[AT2:[0-9]+]]
-define internal amdgpu_kernel void @__test_block_invoke_2_kernel(<{ i32, i32, i8 addrspace(1)*,
-  i64 addrspace(1)*, i64, i8 }> %arg) #0 !kernel_arg_addr_space !14 !kernel_arg_access_qual !15
-  !kernel_arg_type !16 !kernel_arg_base_type !16 !kernel_arg_type_qual !17 {
+define internal amdgpu_kernel void @__test_block_invoke_2_kernel(<{ i32, i32, i8 addrspace(1)*, i64 addrspace(1)*, i64, i8 }> %arg) #0 {
 entry:
   %.fca.3.extract = extractvalue <{ i32, i32, i8 addrspace(1)*, i64 addrspace(1)*, i64, i8 }> %arg, 2
   %.fca.4.extract = extractvalue <{ i32, i32, i8 addrspace(1)*, i64 addrspace(1)*, i64, i8 }> %arg, 3
@@ -123,15 +116,13 @@ entry:
 
 ; CHECK-LABEL: define dso_local amdgpu_kernel void @__amdgpu_enqueued_kernel
 ; CHECK-SAME: #[[AT3:[0-9]+]]
-define internal amdgpu_kernel void @0(<{ i32, i32, i8 addrspace(1)*, i8 }> %arg) #0
-  !kernel_arg_addr_space !14 !kernel_arg_access_qual !15 !kernel_arg_type !16 !kernel_arg_base_type !16 !kernel_arg_type_qual !17 {
+define internal amdgpu_kernel void @0(<{ i32, i32, i8 addrspace(1)*, i8 }> %arg) #0 {
   ret void
 }
 
 ; CHECK-LABEL: define dso_local amdgpu_kernel void @__amdgpu_enqueued_kernel.1
 ; CHECK-SAME: #[[AT4:[0-9]+]]
-define internal amdgpu_kernel void @1(<{ i32, i32, i8 addrspace(1)*, i8 }> %arg) #0
-  !kernel_arg_addr_space !14 !kernel_arg_access_qual !15 !kernel_arg_type !16 !kernel_arg_base_type !16 !kernel_arg_type_qual !17 {
+define internal amdgpu_kernel void @1(<{ i32, i32, i8 addrspace(1)*, i8 }> %arg) #0 {
   ret void
 }
 
@@ -142,12 +133,3 @@ define internal amdgpu_kernel void @1(<{ i32, i32, i8 addrspace(1)*, i8 }> %arg)
 ; CHECK: attributes #[[AT4]] = {{.*}}"runtime-handle"="__amdgpu_enqueued_kernel.1.runtime_handle"
 
 attributes #0 = { "enqueued-block" }
-
-!3 = !{i32 1, i32 0, i32 1, i32 0}
-!4 = !{!"none", !"none", !"none", !"none"}
-!5 = !{!"char*", !"char", !"long*", !"long"}
-!6 = !{!"", !"", !"", !""}
-!14 = !{i32 0}
-!15 = !{!"none"}
-!16 = !{!"__block_literal"}
-!17 = !{!""}

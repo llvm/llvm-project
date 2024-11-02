@@ -314,7 +314,7 @@ body:             |
 # GCN-LABEL: {{^}}name: mixed_clause{{$}}
 # GCN:      dead %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, %2, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 # GCN-NEXT: dead %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
-# GCN-NEXT: dead %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, 0, implicit $exec
+# GCN-NEXT: dead %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, implicit $exec
 # GCN-NEXT: KILL %1{{$}}
 # GCN-NEXT: KILL %2{{$}}
 # GCN-NEXT: KILL %0{{$}}
@@ -336,7 +336,7 @@ body:             |
     %2 = IMPLICIT_DEF
     %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, %2, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
     %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
-    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, 0, implicit $exec
+    %5:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %2, 0, 0, 0, 0, implicit $exec
 ...
 
 # GCN-LABEL: {{^}}name: atomic{{$}}

@@ -64,7 +64,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/FuncBufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
-#include "mlir/Dialect/Bufferization/Transforms/TensorCopyInsertion.h"
+#include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Operation.h"
@@ -76,32 +76,13 @@ using namespace mlir::bufferization::func_ext;
 /// A mapping of FuncOps to their callers.
 using FuncCallerMap = DenseMap<func::FuncOp, DenseSet<Operation *>>;
 
-/// Get FuncAnalysisState.
-static const FuncAnalysisState &
-getFuncAnalysisState(const AnalysisState &state) {
-  Optional<const FuncAnalysisState *> maybeState =
-      state.getDialectState<FuncAnalysisState>(
-          func::FuncDialect::getDialectNamespace());
-  assert(maybeState && "FuncAnalysisState does not exist");
-  return **maybeState;
-}
-
 /// Get or create FuncAnalysisState.
-static FuncAnalysisState &getFuncAnalysisState(AnalysisState &state) {
-  return state.getOrCreateDialectState<FuncAnalysisState>(
-      func::FuncDialect::getDialectNamespace());
-}
-
-/// Return the state (phase) of analysis of the FuncOp.
-/// Used for debug modes.
-LLVM_ATTRIBUTE_UNUSED
-static FuncOpAnalysisState getFuncOpAnalysisState(const AnalysisState &state,
-                                                  func::FuncOp funcOp) {
-  const FuncAnalysisState &funcState = getFuncAnalysisState(state);
-  auto it = funcState.analyzedFuncOps.find(funcOp);
-  if (it == funcState.analyzedFuncOps.end())
-    return FuncOpAnalysisState::NotAnalyzed;
-  return it->second;
+static FuncAnalysisState &
+getOrCreateFuncAnalysisState(OneShotAnalysisState &state) {
+  auto *result = state.getExtension<FuncAnalysisState>();
+  if (result)
+    return *result;
+  return state.addExtension<FuncAnalysisState>();
 }
 
 /// Return the unique ReturnOp that terminates `funcOp`.
@@ -143,10 +124,9 @@ static void annotateEquivalentReturnBbArg(OpOperand &returnVal,
 
 /// Store function BlockArguments that are equivalent to/aliasing a returned
 /// value in FuncAnalysisState.
-static LogicalResult aliasingFuncOpBBArgsAnalysis(FuncOp funcOp,
-                                                  OneShotAnalysisState &state) {
-  FuncAnalysisState &funcState = getFuncAnalysisState(state);
-
+static LogicalResult
+aliasingFuncOpBBArgsAnalysis(FuncOp funcOp, OneShotAnalysisState &state,
+                             FuncAnalysisState &funcState) {
   // Support only single return-terminated block in the function.
   func::ReturnOp returnOp = getAssumedUniqueReturnOp(funcOp);
   assert(returnOp && "expected func with single return op");
@@ -190,10 +170,9 @@ static void annotateFuncArgAccess(func::FuncOp funcOp, BlockArgument bbArg,
 /// Determine which FuncOp bbArgs are read and which are written. When run on a
 /// function with unknown ops, we conservatively assume that such ops bufferize
 /// to a read + write.
-static LogicalResult funcOpBbArgReadWriteAnalysis(FuncOp funcOp,
-                                                  OneShotAnalysisState &state) {
-  FuncAnalysisState &funcState = getFuncAnalysisState(state);
-
+static LogicalResult
+funcOpBbArgReadWriteAnalysis(FuncOp funcOp, OneShotAnalysisState &state,
+                             FuncAnalysisState &funcState) {
   // If the function has no body, conservatively assume that all args are
   // read + written.
   if (funcOp.getBody().empty()) {
@@ -246,8 +225,8 @@ static func::FuncOp getCalledFunction(CallOpInterface callOp) {
 // TODO: This does not handle cyclic function call graphs etc.
 static void equivalenceAnalysis(func::FuncOp funcOp,
                                 BufferizationAliasInfo &aliasInfo,
-                                OneShotAnalysisState &state) {
-  FuncAnalysisState &funcState = getFuncAnalysisState(state);
+                                OneShotAnalysisState &state,
+                                FuncAnalysisState &funcState) {
   funcOp->walk([&](func::CallOp callOp) {
     func::FuncOp calledFunction = getCalledFunction(callOp);
     assert(calledFunction && "could not retrieved called func::FuncOp");
@@ -356,11 +335,9 @@ static void foldMemRefCasts(func::FuncOp funcOp) {
 LogicalResult
 mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
                                      OneShotAnalysisState &state) {
-  OneShotBufferizationOptions options =
-      static_cast<const OneShotBufferizationOptions &>(state.getOptions());
-  assert(options.bufferizeFunctionBoundaries &&
+  assert(state.getOptions().bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
-  FuncAnalysisState &funcState = getFuncAnalysisState(state);
+  FuncAnalysisState &funcState = getOrCreateFuncAnalysisState(state);
   BufferizationAliasInfo &aliasInfo = state.getAliasInfo();
 
   // A list of functions in the order in which they are analyzed + bufferized.
@@ -382,15 +359,15 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
     funcState.startFunctionAnalysis(funcOp);
 
     // Gather equivalence info for CallOps.
-    equivalenceAnalysis(funcOp, aliasInfo, state);
+    equivalenceAnalysis(funcOp, aliasInfo, state, funcState);
 
     // Analyze funcOp.
     if (failed(analyzeOp(funcOp, state)))
       return failure();
 
     // Run some extra function analyses.
-    if (failed(aliasingFuncOpBBArgsAnalysis(funcOp, state)) ||
-        failed(funcOpBbArgReadWriteAnalysis(funcOp, state)))
+    if (failed(aliasingFuncOpBBArgsAnalysis(funcOp, state, funcState)) ||
+        failed(funcOpBbArgReadWriteAnalysis(funcOp, state, funcState)))
       return failure();
 
     // Mark op as fully analyzed.
@@ -398,6 +375,14 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
   }
 
   return success();
+}
+
+void mlir::bufferization::removeBufferizationAttributesInModule(
+    ModuleOp moduleOp) {
+  moduleOp.walk([&](func::FuncOp op) {
+    for (BlockArgument bbArg : op.getArguments())
+      removeBufferizationAttributes(bbArg);
+  });
 }
 
 LogicalResult mlir::bufferization::bufferizeModuleOp(
@@ -423,15 +408,12 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
       return failure();
     // Change buffer return types to more precise layout maps.
     if (options.functionBoundaryTypeConversion ==
-        BufferizationOptions::LayoutMapOption::InferLayoutMap)
+        LayoutMapOption::InferLayoutMap)
       foldMemRefCasts(funcOp);
   }
 
   // Post-pass cleanup of function argument attributes.
-  moduleOp.walk([&](func::FuncOp op) {
-    for (BlockArgument bbArg : op.getArguments())
-      removeBufferizationAttributes(bbArg);
-  });
+  removeBufferizationAttributesInModule(moduleOp);
 
   return success();
 }

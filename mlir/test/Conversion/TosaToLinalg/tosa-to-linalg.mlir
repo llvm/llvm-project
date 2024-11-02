@@ -929,9 +929,7 @@ func.func @concat(%arg0: tensor<5x1xf32>, %arg1: tensor<6x1xf32>) -> () {
   // CHECK: [[IDX0:%.+]] = arith.constant 0 : index
   // CHECK: [[IDX1:%.+]] = arith.constant 1 : index
   // CHECK: [[INIT:%.+]] = tensor.empty() : tensor<11x1xf32>
-  // CHECK: [[CST:%.+]] = arith.constant 0.0
-  // CHECK: [[FILL:%.+]] = linalg.fill ins([[CST]]{{.*}}outs([[INIT]]
-  // CHECK: [[INSERT0:%.+]] = tensor.insert_slice %[[ARG0]] into [[FILL]][0, 0] [5, 1] [1, 1]
+  // CHECK: [[INSERT0:%.+]] = tensor.insert_slice %[[ARG0]] into [[INIT]][0, 0] [5, 1] [1, 1]
   // CHECK: [[INSERT1:%.+]] = tensor.insert_slice %[[ARG1]] into [[INSERT0]][5, 0] [6, 1] [1, 1]
   %0 = "tosa.concat"(%arg0, %arg1) { axis = 0 : i64} : (tensor<5x1xf32>, tensor<6x1xf32>)  -> (tensor<11x1xf32>)
 
@@ -941,9 +939,7 @@ func.func @concat(%arg0: tensor<5x1xf32>, %arg1: tensor<6x1xf32>) -> () {
   // CHECK: [[IDX0:%.+]] = arith.constant 0 : index
   // CHECK: [[IDX1:%.+]] = arith.constant 1 : index
   // CHECK: [[INIT:%.+]] = tensor.empty() : tensor<5x2xf32>
-  // CHECK: [[CST:%.+]] = arith.constant 0.0
-  // CHECK: [[FILL:%.+]] = linalg.fill ins([[CST]]{{.*}}outs([[INIT]]
-  // CHECK: [[INSERT0:%.+]] = tensor.insert_slice %[[ARG0]] into [[FILL]][0, 0] [5, 1] [1, 1]
+  // CHECK: [[INSERT0:%.+]] = tensor.insert_slice %[[ARG0]] into [[INIT]][0, 0] [5, 1] [1, 1]
   // CHECK: [[INSERT1:%.+]] = tensor.insert_slice %[[ARG0]] into [[INSERT0]][0, 1] [5, 1] [1, 1]
   %1 = "tosa.concat"(%arg0, %arg0) { axis = 1 : i64} : (tensor<5x1xf32>, tensor<5x1xf32>)  -> (tensor<5x2xf32>)
   return
@@ -952,7 +948,7 @@ func.func @concat(%arg0: tensor<5x1xf32>, %arg1: tensor<6x1xf32>) -> () {
 // -----
 
 // CHECK-LABEL: @concat_non_axis_dyn
-// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]: 
+// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
 // CHECK-SAME:  %[[ARG1:[0-9a-zA-Z_]*]]
 func.func @concat_non_axis_dyn(%arg0: tensor<5x?xf32>, %arg1: tensor<6x?xf32>) -> () {
   // CHECK: %[[AXIS:.+]] = arith.constant 0
@@ -964,9 +960,7 @@ func.func @concat_non_axis_dyn(%arg0: tensor<5x?xf32>, %arg1: tensor<6x?xf32>) -
   // CHECK: %[[IDX1_2:.+]] = arith.constant 1 : index
   // CHECK: %[[DYN:.+]] = tensor.dim %[[ARG0]], %[[IDX1_2]]
   // CHECK: %[[INIT:.+]] = tensor.empty(%[[DYN]]) : tensor<11x?xf32>
-  // CHECK: %[[CST:.+]] = arith.constant 0.0
-  // CHECK: %[[FILL:.+]] = linalg.fill ins(%[[CST]]{{.*}}outs(%[[INIT]]
-  // CHECK: %[[INSERT0:.+]] = tensor.insert_slice %[[ARG0]] into %[[FILL]][0, 0] [5, %[[SIZE]]] [1, 1]
+  // CHECK: %[[INSERT0:.+]] = tensor.insert_slice %[[ARG0]] into %[[INIT]][0, 0] [5, %[[SIZE]]] [1, 1]
   // CHECK: %[[INSERT1:.+]] = tensor.insert_slice %[[ARG1]] into %[[INSERT0]][5, 0] [6, %[[SIZE]]] [1, 1]
   %0 = "tosa.concat"(%arg0, %arg1) { axis = 0 : i64} : (tensor<5x?xf32>, tensor<6x?xf32>)  -> (tensor<11x?xf32>)
   return
@@ -975,8 +969,8 @@ func.func @concat_non_axis_dyn(%arg0: tensor<5x?xf32>, %arg1: tensor<6x?xf32>) -
 // -----
 
 // CHECK-LABEL: @concat_axis_dyn
-// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]: 
-// CHECK-SAME:  %[[ARG1:[0-9a-zA-Z_]*]]: 
+// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
+// CHECK-SAME:  %[[ARG1:[0-9a-zA-Z_]*]]:
 func.func @concat_axis_dyn(%arg0: tensor<?x3xf32>, %arg1: tensor<?x3xf32>) -> () {
   // CHECK: %[[AXIS:.+]] = arith.constant 0
   // CHECK: %[[STRIDE:.+]]   = arith.constant 1
@@ -987,10 +981,8 @@ func.func @concat_axis_dyn(%arg0: tensor<?x3xf32>, %arg1: tensor<?x3xf32>) -> ()
   // CHECK: %[[DYN:.+]] = tensor.dim %[[ARG0]], %[[IDX0_2]]
   // CHECK: %[[IDX1:.+]] = arith.constant 1 : index
   // CHECK: %[[INIT:.+]] = tensor.empty(%[[DYN]]) : tensor<?x3xf32>
-  // CHECK: %[[CST:.+]] = arith.constant 0.0
-  // CHECK: %[[FILL:.+]] = linalg.fill ins(%[[CST]]{{.*}}outs(%[[INIT]]
   // CHECK: %[[DYN1:.+]] = tensor.dim %[[ARG0]], %[[AXIS]]
-  // CHECK: %[[INSERT0:.+]] = tensor.insert_slice %[[ARG0]] into %[[FILL]][0, 0] [%[[DYN1]], 3] [1, 1]
+  // CHECK: %[[INSERT0:.+]] = tensor.insert_slice %[[ARG0]] into %[[INIT]][0, 0] [%[[DYN1]], 3] [1, 1]
   // CHECK: %[[SUM:.+]]  = arith.addi %[[OFFSET]], %[[DYN1]]
   // CHECK: %[[DYN2:.+]] = tensor.dim %[[ARG1]], %[[AXIS]]
   // CHECK: %[[INSERT1:.+]] = tensor.insert_slice %[[ARG1]] into %[[INSERT0]][%[[SUM]], 0] [%[[DYN2]], 3] [1, 1]
@@ -1002,7 +994,7 @@ func.func @concat_axis_dyn(%arg0: tensor<?x3xf32>, %arg1: tensor<?x3xf32>) -> ()
 // CHECK: #[[$MAP0:.*]] = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: @rescale_i8
-// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]: 
+// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
 func.func @rescale_i8(%arg0 : tensor<2xi8>) -> () {
   // CHECK: [[C0:%.+]] = arith.constant 19689
   // CHECK: [[C1:%.+]] = arith.constant 15
@@ -1056,7 +1048,7 @@ func.func @rescale_i8(%arg0 : tensor<2xi8>) -> () {
 // CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 
 // CHECK-LABEL: @rescale_i8_dyn_batch
-// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]: 
+// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
 func.func @rescale_i8_dyn_batch(%arg0 : tensor<?x2xi8>) -> () {
   // CHECK: %[[C0:.+]] = arith.constant 0
   // CHECK: %[[BATCH:.+]] = tensor.dim %[[ARG0]], %[[C0]]
@@ -1078,7 +1070,7 @@ func.func @rescale_i8_dyn_batch(%arg0 : tensor<?x2xi8>) -> () {
 // CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
 
 // CHECK-LABEL: @rescale_dyn
-// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]: 
+// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
 func.func @rescale_dyn(%arg0 : tensor<1x?x?x32xi32>) -> () {
   // CHECK: %[[C1:.+]] = arith.constant 1
   // CHECK: %[[DIM1:.+]] = tensor.dim %[[ARG0]], %[[C1]]
@@ -1095,7 +1087,7 @@ func.func @rescale_dyn(%arg0 : tensor<1x?x?x32xi32>) -> () {
 // CHECK: #[[$MAP0:.*]] = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: @rescale_ui8
-// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]: 
+// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
 func.func @rescale_ui8(%arg0 : tensor<2xui8>) -> () {
   // CHECK: [[C0:%.+]] = arith.constant 19689
   // CHECK: [[C1:%.+]] = arith.constant 15
@@ -1127,7 +1119,7 @@ func.func @rescale_ui8(%arg0 : tensor<2xui8>) -> () {
 // CHECK: #[[$MAP0:.*]] = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: @rescale_per_channel
-// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]: 
+// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
 func.func @rescale_per_channel(%arg0 : tensor<3xi8>) -> (tensor<3xi8>) {
   // CHECK: [[MULTIPLIERS:%.+]] = arith.constant dense<[42, 43, 0]>
   // CHECK: [[SHIFTS:%.+]] = arith.constant dense<[14, 15, 0]>
@@ -1180,7 +1172,7 @@ func.func @rescaleUnnecessaryDoubleRound(%arg0 : tensor<2xi8>) -> (tensor<2xi8>)
 // CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 
 // CHECK-LABEL: @reverse
-// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]: 
+// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
 func.func @reverse(%arg0: tensor<5x4xi32>) -> () {
   // CHECK: %[[C0:.+]] = arith.constant 0
   // CHECK: %[[RDIM:.+]] = tensor.dim %[[ARG0]], %[[C0]]
@@ -1215,7 +1207,7 @@ func.func @reverse(%arg0: tensor<5x4xi32>) -> () {
 // CHECK: #[[$MAP0:.*]] = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: @reverse_dyn
-// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]: 
+// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
 func.func @reverse_dyn(%arg0: tensor<?xi32>) -> () {
   // CHECK: %[[C0_1:.+]] = arith.constant 0
   // CHECK: %[[D0_1:.+]] = tensor.dim %[[ARG0]], %[[C0_1]]
@@ -1271,7 +1263,7 @@ func.func @tile(%arg0 : tensor<2x3xi8>) -> () {
 // CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
 
 // CHECK-LABEL: @tile_dyn_input
-// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]: 
+// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
 func.func @tile_dyn_input(%arg0 : tensor<?x3xi8>) -> () {
   // CHECK: %[[CST0:.+]] = arith.constant 0
   // CHECK: %[[DYN:.+]] = tensor.dim %[[ARG0]], %[[CST0]] : tensor<?x3xi8>
@@ -1292,7 +1284,7 @@ func.func @tile_dyn_input(%arg0 : tensor<?x3xi8>) -> () {
 // CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
 
 // CHECK-LABEL: @tile_dyn_multiples
-// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]: 
+// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
 func.func @tile_dyn_multiples(%arg0 : tensor<2x3xi8>) -> () {
   // CHECK: %[[CST1:.+]] = arith.constant 1
   // CHECK: %[[DYN:.+]] = tensor.dim %[[ARG0]], %[[CST1]] : tensor<2x3xi8>
@@ -1310,7 +1302,7 @@ func.func @tile_dyn_multiples(%arg0 : tensor<2x3xi8>) -> () {
 // -----
 
 // CHECK-LABEL: @pad_float
-// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]: 
+// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
 func.func @pad_float(%arg0 : tensor<1x2xf32>) -> (tensor<4x9xf32>) {
   %0 = arith.constant dense<[[1, 2], [3, 4]]> : tensor<2x2xi32>
   // TODO: Output contains multiple "arith.constant 1 : index".

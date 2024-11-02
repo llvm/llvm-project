@@ -28,8 +28,14 @@ func.func @trivial_ops(%a: index, %b: index) {
   %10 = index.shrs %a, %b
   // CHECK: llvm.lshr
   %11 = index.shru %a, %b
+  // CHECK: llvm.add
+  %12 = index.add %a, %b
+  // CHECK: llvm.or
+  %13 = index.or %a, %b
+  // CHECK: llvm.xor
+  %14 = index.xor %a, %b
   // CHECK: llvm.mlir.constant(true
-  %12 = index.bool.constant true
+  %15 = index.bool.constant true
   return
 }
 

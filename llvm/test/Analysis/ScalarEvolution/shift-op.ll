@@ -2,7 +2,7 @@
 
 define void @test0(i32 %init) {
 ; CHECK-LABEL: Classifying expressions for: @test0
-; CHECK: Loop %loop: max backedge-taken count is 32
+; CHECK: Loop %loop: constant max backedge-taken count is 32
  entry:
   br label %loop
 
@@ -18,7 +18,7 @@ define void @test0(i32 %init) {
 
 define void @test1(i32 %init) {
 ; CHECK-LABEL: Classifying expressions for: @test1
-; CHECK: Loop %loop: max backedge-taken count is 32
+; CHECK: Loop %loop: constant max backedge-taken count is 32
  entry:
   br label %loop
 
@@ -34,7 +34,7 @@ define void @test1(i32 %init) {
 
 define void @test2(i32 %init) {
 ; CHECK-LABEL: Determining loop execution counts for: @test2
-; CHECK: Loop %loop: Unpredictable max backedge-taken count.
+; CHECK: Loop %loop: Unpredictable constant max backedge-taken count.
 
 ; Unpredictable because %iv could "stabilize" to either -1 or 0,
 ; depending on %init.
@@ -53,7 +53,7 @@ define void @test2(i32 %init) {
 
 define void @test3(i32* %init.ptr) {
 ; CHECK-LABEL: Determining loop execution counts for: @test3
-; CHECK: Loop %loop: max backedge-taken count is 32
+; CHECK: Loop %loop: constant max backedge-taken count is 32
  entry:
   %init = load i32, i32* %init.ptr, !range !0
   br label %loop
@@ -70,7 +70,7 @@ define void @test3(i32* %init.ptr) {
 
 define void @test4(i32* %init.ptr) {
 ; CHECK-LABEL: Classifying expressions for: @test4
-; CHECK-LABEL: Loop %loop: max backedge-taken count is 32
+; CHECK-LABEL: Loop %loop: constant max backedge-taken count is 32
  entry:
   %init = load i32, i32* %init.ptr, !range !1
   br label %loop
@@ -87,7 +87,7 @@ define void @test4(i32* %init.ptr) {
 
 define void @test5(i32* %init.ptr) {
 ; CHECK-LABEL: Determining loop execution counts for: @test5
-; CHECK: Loop %loop: Unpredictable max backedge-taken count.
+; CHECK: Loop %loop: Unpredictable constant max backedge-taken count.
 
 ; %iv will "stabilize" to -1, so this is an infinite loop
  entry:
@@ -106,7 +106,7 @@ define void @test5(i32* %init.ptr) {
 
 define void @test6(i32 %init, i32 %shift.amt) {
 ; CHECK-LABEL: Determining loop execution counts for: @test6
-; CHECK: Loop %loop: Unpredictable max backedge-taken count.
+; CHECK: Loop %loop: Unpredictable constant max backedge-taken count.
 
 ; Potentially infinite loop, since %shift.amt could be 0
  entry:
@@ -124,7 +124,7 @@ define void @test6(i32 %init, i32 %shift.amt) {
 
 define void @test7(i32 %init) {
 ; CHECK-LABEL: Classifying expressions for: @test7
-; CHECK: Loop %loop: max backedge-taken count is 32
+; CHECK: Loop %loop: constant max backedge-taken count is 32
 
  entry:
   br label %loop
@@ -141,7 +141,7 @@ define void @test7(i32 %init) {
 
 define void @test8(i32 %init) {
 ; CHECK-LABEL: Classifying expressions for: @test8
-; CHECK: Loop %loop: Unpredictable max backedge-taken count.
+; CHECK: Loop %loop: Unpredictable constant max backedge-taken count.
 
 ; In this test case, %iv.test stabilizes to 127, not -1, so the loop
 ; is infinite.
@@ -162,7 +162,7 @@ define void @test8(i32 %init) {
 
 define void @test9() {
 ; CHECK-LABEL: Determining loop execution counts for: @test9
-; CHECK: Loop %loop: Unpredictable max backedge-taken count.
+; CHECK: Loop %loop: Unpredictable constant max backedge-taken count.
 
 ; This is an infinite loop, make sure that it recognized as such.
 

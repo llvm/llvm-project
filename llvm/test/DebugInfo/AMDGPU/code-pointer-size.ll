@@ -18,23 +18,23 @@
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
-define amdgpu_kernel void @kernel1(i32 addrspace(1)* %A) !dbg !7 {
+define amdgpu_kernel void @kernel1(ptr addrspace(1) %A) !dbg !7 {
 entry:
-  %A.addr = alloca i32 addrspace(1)*, align 4, addrspace(5)
-  store i32 addrspace(1)* %A, i32 addrspace(1)* addrspace(5)* %A.addr, align 4
-  call void @llvm.dbg.declare(metadata i32 addrspace(1)* addrspace(5)* %A.addr, metadata !16, metadata !17), !dbg !18
-  %0 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(5)* %A.addr, align 4, !dbg !19
-  store i32 11, i32 addrspace(1)* %0, align 4, !dbg !20
+  %A.addr = alloca ptr addrspace(1), align 4, addrspace(5)
+  store ptr addrspace(1) %A, ptr addrspace(5) %A.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr addrspace(5) %A.addr, metadata !16, metadata !17), !dbg !18
+  %0 = load ptr addrspace(1), ptr addrspace(5) %A.addr, align 4, !dbg !19
+  store i32 11, ptr addrspace(1) %0, align 4, !dbg !20
   ret void, !dbg !21
 }
 
-define amdgpu_kernel void @kernel2(i32 addrspace(1)* %B) !dbg !22 {
+define amdgpu_kernel void @kernel2(ptr addrspace(1) %B) !dbg !22 {
 entry:
-  %B.addr = alloca i32 addrspace(1)*, align 4, addrspace(5)
-  store i32 addrspace(1)* %B, i32 addrspace(1)* addrspace(5)* %B.addr, align 4
-  call void @llvm.dbg.declare(metadata i32 addrspace(1)* addrspace(5)* %B.addr, metadata !23, metadata !17), !dbg !24
-  %0 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(5)* %B.addr, align 4, !dbg !25
-  store i32 12, i32 addrspace(1)* %0, align 4, !dbg !26
+  %B.addr = alloca ptr addrspace(1), align 4, addrspace(5)
+  store ptr addrspace(1) %B, ptr addrspace(5) %B.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr addrspace(5) %B.addr, metadata !23, metadata !17), !dbg !24
+  %0 = load ptr addrspace(1), ptr addrspace(5) %B.addr, align 4, !dbg !25
+  store i32 12, ptr addrspace(1) %0, align 4, !dbg !26
   ret void, !dbg !27
 }
 

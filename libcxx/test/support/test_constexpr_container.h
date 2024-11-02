@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef SUPPORT_TEST_CONSTEXPR_CONTAINER_H
 #define SUPPORT_TEST_CONSTEXPR_CONTAINER_H
 

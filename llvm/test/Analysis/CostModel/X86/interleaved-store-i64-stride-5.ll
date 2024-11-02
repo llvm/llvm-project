@@ -19,15 +19,15 @@ define void @test() {
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %v4, ptr %out4, align 8
-; AVX1:  LV: Found an estimated cost of 28 for VF 2 For instruction: store i64 %v4, ptr %out4, align 8
-; AVX1:  LV: Found an estimated cost of 60 for VF 4 For instruction: store i64 %v4, ptr %out4, align 8
-; AVX1:  LV: Found an estimated cost of 120 for VF 8 For instruction: store i64 %v4, ptr %out4, align 8
+; AVX1:  LV: Found an estimated cost of 26 for VF 2 For instruction: store i64 %v4, ptr %out4, align 8
+; AVX1:  LV: Found an estimated cost of 55 for VF 4 For instruction: store i64 %v4, ptr %out4, align 8
+; AVX1:  LV: Found an estimated cost of 110 for VF 8 For instruction: store i64 %v4, ptr %out4, align 8
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %v4, ptr %out4, align 8
-; AVX2:  LV: Found an estimated cost of 28 for VF 2 For instruction: store i64 %v4, ptr %out4, align 8
-; AVX2:  LV: Found an estimated cost of 60 for VF 4 For instruction: store i64 %v4, ptr %out4, align 8
-; AVX2:  LV: Found an estimated cost of 120 for VF 8 For instruction: store i64 %v4, ptr %out4, align 8
+; AVX2:  LV: Found an estimated cost of 26 for VF 2 For instruction: store i64 %v4, ptr %out4, align 8
+; AVX2:  LV: Found an estimated cost of 55 for VF 4 For instruction: store i64 %v4, ptr %out4, align 8
+; AVX2:  LV: Found an estimated cost of 110 for VF 8 For instruction: store i64 %v4, ptr %out4, align 8
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %v4, ptr %out4, align 8

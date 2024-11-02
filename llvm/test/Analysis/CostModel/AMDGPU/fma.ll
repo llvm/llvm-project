@@ -17,7 +17,7 @@ define amdgpu_kernel void @fma_f32() #0 {
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = call <4 x float> @llvm.fma.v4f32(<4 x float> undef, <4 x float> undef, <4 x float> undef) #2
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f32 = call <5 x float> @llvm.fma.v5f32(<5 x float> undef, <5 x float> undef, <5 x float> undef) #2
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = call <8 x float> @llvm.fma.v8f32(<8 x float> undef, <8 x float> undef, <8 x float> undef) #2
-; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v9f32 = call <9 x float> @llvm.fma.v9f32(<9 x float> undef, <9 x float> undef, <9 x float> undef) #2
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %v9f32 = call <9 x float> @llvm.fma.v9f32(<9 x float> undef, <9 x float> undef, <9 x float> undef) #2
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; FASTF64-LABEL: 'fma_f32'
@@ -27,7 +27,7 @@ define amdgpu_kernel void @fma_f32() #0 {
 ; FASTF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f32 = call <4 x float> @llvm.fma.v4f32(<4 x float> undef, <4 x float> undef, <4 x float> undef) #2
 ; FASTF64-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v5f32 = call <5 x float> @llvm.fma.v5f32(<5 x float> undef, <5 x float> undef, <5 x float> undef) #2
 ; FASTF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8f32 = call <8 x float> @llvm.fma.v8f32(<8 x float> undef, <8 x float> undef, <8 x float> undef) #2
-; FASTF64-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v9f32 = call <9 x float> @llvm.fma.v9f32(<9 x float> undef, <9 x float> undef, <9 x float> undef) #2
+; FASTF64-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %v9f32 = call <9 x float> @llvm.fma.v9f32(<9 x float> undef, <9 x float> undef, <9 x float> undef) #2
 ; FASTF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SLOW-LABEL: 'fma_f32'
@@ -37,7 +37,7 @@ define amdgpu_kernel void @fma_f32() #0 {
 ; SLOW-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f32 = call <4 x float> @llvm.fma.v4f32(<4 x float> undef, <4 x float> undef, <4 x float> undef) #2
 ; SLOW-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5f32 = call <5 x float> @llvm.fma.v5f32(<5 x float> undef, <5 x float> undef, <5 x float> undef) #2
 ; SLOW-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v8f32 = call <8 x float> @llvm.fma.v8f32(<8 x float> undef, <8 x float> undef, <8 x float> undef) #2
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %v9f32 = call <9 x float> @llvm.fma.v9f32(<9 x float> undef, <9 x float> undef, <9 x float> undef) #2
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %v9f32 = call <9 x float> @llvm.fma.v9f32(<9 x float> undef, <9 x float> undef, <9 x float> undef) #2
 ; SLOW-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SLOWF64-SIZE-LABEL: 'fma_f32'
@@ -47,7 +47,7 @@ define amdgpu_kernel void @fma_f32() #0 {
 ; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = call <4 x float> @llvm.fma.v4f32(<4 x float> undef, <4 x float> undef, <4 x float> undef) #2
 ; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f32 = call <5 x float> @llvm.fma.v5f32(<5 x float> undef, <5 x float> undef, <5 x float> undef) #2
 ; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = call <8 x float> @llvm.fma.v8f32(<8 x float> undef, <8 x float> undef, <8 x float> undef) #2
-; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v9f32 = call <9 x float> @llvm.fma.v9f32(<9 x float> undef, <9 x float> undef, <9 x float> undef) #2
+; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %v9f32 = call <9 x float> @llvm.fma.v9f32(<9 x float> undef, <9 x float> undef, <9 x float> undef) #2
 ; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; FASTF64-SIZE-LABEL: 'fma_f32'
@@ -57,7 +57,7 @@ define amdgpu_kernel void @fma_f32() #0 {
 ; FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f32 = call <4 x float> @llvm.fma.v4f32(<4 x float> undef, <4 x float> undef, <4 x float> undef) #2
 ; FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v5f32 = call <5 x float> @llvm.fma.v5f32(<5 x float> undef, <5 x float> undef, <5 x float> undef) #2
 ; FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8f32 = call <8 x float> @llvm.fma.v8f32(<8 x float> undef, <8 x float> undef, <8 x float> undef) #2
-; FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v9f32 = call <9 x float> @llvm.fma.v9f32(<9 x float> undef, <9 x float> undef, <9 x float> undef) #2
+; FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %v9f32 = call <9 x float> @llvm.fma.v9f32(<9 x float> undef, <9 x float> undef, <9 x float> undef) #2
 ; FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLOW-SIZE-LABEL: 'fma_f32'
@@ -67,7 +67,7 @@ define amdgpu_kernel void @fma_f32() #0 {
 ; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = call <4 x float> @llvm.fma.v4f32(<4 x float> undef, <4 x float> undef, <4 x float> undef) #2
 ; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f32 = call <5 x float> @llvm.fma.v5f32(<5 x float> undef, <5 x float> undef, <5 x float> undef) #2
 ; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = call <8 x float> @llvm.fma.v8f32(<8 x float> undef, <8 x float> undef, <8 x float> undef) #2
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v9f32 = call <9 x float> @llvm.fma.v9f32(<9 x float> undef, <9 x float> undef, <9 x float> undef) #2
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %v9f32 = call <9 x float> @llvm.fma.v9f32(<9 x float> undef, <9 x float> undef, <9 x float> undef) #2
 ; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f32 = call float @llvm.fma.f32(float undef, float undef, float undef) #1

@@ -1,20 +1,20 @@
 ; Reassociate used to move the negation of $time_1_P14.0 above the
 ; landingpad.
 ;
-; RUN: opt -reassociate -disable-output < %s
+; RUN: opt -passes=reassociate -disable-output < %s
 ;
 ; ModuleID = 'bugpoint-reduced-simplified.bc'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-%"lp.2234.4378.7378.12512.15079.17646.20213.22780.25347.27914.40747.53580.74113.76680.86947.89514.92081.94648.115163.130561" = type { i8*, i32 }
-%__type_info.2235.4379.7379.12513.15080.17647.20214.22781.25348.27915.40748.53581.74114.76681.86948.89515.92082.94649.115162.130560 = type { i64*, i8* }
+%"lp.2234.4378.7378.12512.15079.17646.20213.22780.25347.27914.40747.53580.74113.76680.86947.89514.92081.94648.115163.130561" = type { ptr, i32 }
+%__type_info.2235.4379.7379.12513.15080.17647.20214.22781.25348.27915.40748.53581.74114.76681.86948.89515.92082.94649.115162.130560 = type { ptr, ptr }
 
 declare i32 @__gxx_personality_v0(...)
 
 declare void @b() #0
 
-define void @a() #0 personality i32 (...)* @__gxx_personality_v0 {
+define void @a() #0 personality ptr @__gxx_personality_v0 {
 ", bb1":
   invoke void @b()
           to label %invoke.cont unwind label %"bb22"
@@ -30,7 +30,7 @@ define void @a() #0 personality i32 (...)* @__gxx_personality_v0 {
   %"$time_1_P14.0" = phi i64 [ undef, %", bb8" ], [ undef, %", bb1" ]
   %0 = landingpad %"lp.2234.4378.7378.12512.15079.17646.20213.22780.25347.27914.40747.53580.74113.76680.86947.89514.92081.94648.115163.130561"
           cleanup
-          catch %__type_info.2235.4379.7379.12513.15080.17647.20214.22781.25348.27915.40748.53581.74114.76681.86948.89515.92082.94649.115162.130560* null
+          catch ptr null
   %r79 = sub i64 0, %"$time_1_P14.0"
   %r81 = add i64 %r79, undef
   %r93 = add i64 %r81, undef

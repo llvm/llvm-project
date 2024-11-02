@@ -861,8 +861,6 @@ Current list of TODOs in lowering:
 
 Current list of TODOs in code generation:
 
-- `flang/lib/Optimizer/CodeGen/CodeGen.cpp:911` not yet implemented: fir.dispatch_table codegen
-- `flang/lib/Optimizer/CodeGen/CodeGen.cpp:924` not yet implemented: fir.dt_entry codegen
 - `flang/lib/Optimizer/CodeGen/CodeGen.cpp:2651` not yet implemented: fir.gentypedesc codegen
 
 ---

@@ -1,4 +1,4 @@
-; RUN: opt -lowerswitch -S < %s | FileCheck %s
+; RUN: opt -passes=lowerswitch -S < %s | FileCheck %s
 
 ; Test that we don't crash and have a different basic block for each incoming edge.
 define void @test0(i32 %mode) {

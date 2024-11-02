@@ -12,14 +12,14 @@
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fadd_f16(
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %b) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) {
 entry:
-  %a.val = load volatile half, half addrspace(1)* %a
-  %b.val = load volatile half, half addrspace(1)* %b
+  %a.val = load volatile half, ptr addrspace(1) %a
+  %b.val = load volatile half, ptr addrspace(1) %b
   %r.val = fadd half %a.val, %b.val
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -32,12 +32,12 @@ entry:
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fadd_f16_imm_a(
-    half addrspace(1)* %r,
-    half addrspace(1)* %b) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %b) {
 entry:
-  %b.val = load half, half addrspace(1)* %b
+  %b.val = load half, ptr addrspace(1) %b
   %r.val = fadd half 1.0, %b.val
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -50,12 +50,12 @@ entry:
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fadd_f16_imm_b(
-    half addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %r.val = fadd half %a.val, 2.0
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -86,17 +86,17 @@ entry:
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fadd_v2f16(
-    <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a,
-    <2 x half> addrspace(1)* %b) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.a = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %a, i32 %tid
-  %gep.b = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %b, i32 %tid
-  %a.val = load <2 x half>, <2 x half> addrspace(1)* %gep.a
-  %b.val = load <2 x half>, <2 x half> addrspace(1)* %gep.b
+  %gep.a = getelementptr inbounds <2 x half>, ptr addrspace(1) %a, i32 %tid
+  %gep.b = getelementptr inbounds <2 x half>, ptr addrspace(1) %b, i32 %tid
+  %a.val = load <2 x half>, ptr addrspace(1) %gep.a
+  %b.val = load <2 x half>, ptr addrspace(1) %gep.b
   %r.val = fadd <2 x half> %a.val, %b.val
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -120,14 +120,14 @@ entry:
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fadd_v2f16_imm_a(
-    <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %b) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %b) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.b = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %b, i32 %tid
-  %b.val = load <2 x half>, <2 x half> addrspace(1)* %gep.b
+  %gep.b = getelementptr inbounds <2 x half>, ptr addrspace(1) %b, i32 %tid
+  %b.val = load <2 x half>, ptr addrspace(1) %gep.b
   %r.val = fadd <2 x half> <half 1.0, half 2.0>, %b.val
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -151,14 +151,14 @@ entry:
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fadd_v2f16_imm_b(
-    <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.a = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %a, i32 %tid
-  %a.val = load <2 x half>, <2 x half> addrspace(1)* %gep.a
+  %gep.a = getelementptr inbounds <2 x half>, ptr addrspace(1) %a, i32 %tid
+  %a.val = load <2 x half>, ptr addrspace(1) %gep.a
   %r.val = fadd <2 x half> %a.val, <half 2.0, half 1.0>
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 

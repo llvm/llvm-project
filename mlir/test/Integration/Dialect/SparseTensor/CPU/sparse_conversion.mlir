@@ -1,8 +1,15 @@
-// RUN: mlir-opt %s --sparse-compiler | \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
+// DEFINE: mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// DEFINE: FileCheck %s
+//
+// RUN: %{command}
+//
+// Do the same run, but now with direct IR generation.
+// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true"
+// RUN: %{command}
 
 #Tensor1  = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed", "compressed", "compressed" ],
@@ -29,8 +36,8 @@ module {
   func.func @dumpf64(%arg0: memref<?xf64>) {
     %c0 = arith.constant 0 : index
     %d0 = arith.constant -1.0 : f64
-    %0 = vector.transfer_read %arg0[%c0], %d0: memref<?xf64>, vector<25xf64>
-    vector.print %0 : vector<25xf64>
+    %0 = vector.transfer_read %arg0[%c0], %d0: memref<?xf64>, vector<24xf64>
+    vector.print %0 : vector<24xf64>
     return
   }
   func.func @dumpidx(%arg0: memref<?xindex>) {
@@ -87,20 +94,49 @@ module {
     %i = sparse_tensor.convert %3 : tensor<2x3x4xf64, #Tensor3> to tensor<2x3x4xf64, #Tensor3>
 
     //
+    // Check number_of_entries.
+    //
+    // CHECK-COUNT-12: 24
+    %nv1 = sparse_tensor.number_of_entries %1 : tensor<2x3x4xf64, #Tensor1>
+    %nv2 = sparse_tensor.number_of_entries %2 : tensor<2x3x4xf64, #Tensor2>
+    %nv3 = sparse_tensor.number_of_entries %3 : tensor<2x3x4xf64, #Tensor3>
+    %nav = sparse_tensor.number_of_entries %a : tensor<2x3x4xf64, #Tensor1>
+    %nbv = sparse_tensor.number_of_entries %b : tensor<2x3x4xf64, #Tensor1>
+    %ncv = sparse_tensor.number_of_entries %c : tensor<2x3x4xf64, #Tensor1>
+    %ndv = sparse_tensor.number_of_entries %d : tensor<2x3x4xf64, #Tensor2>
+    %nev = sparse_tensor.number_of_entries %e : tensor<2x3x4xf64, #Tensor2>
+    %nfv = sparse_tensor.number_of_entries %f : tensor<2x3x4xf64, #Tensor2>
+    %ngv = sparse_tensor.number_of_entries %g : tensor<2x3x4xf64, #Tensor3>
+    %nhv = sparse_tensor.number_of_entries %h : tensor<2x3x4xf64, #Tensor3>
+    %niv = sparse_tensor.number_of_entries %i : tensor<2x3x4xf64, #Tensor3>
+    vector.print %nv1 : index
+    vector.print %nv2 : index
+    vector.print %nv3 : index
+    vector.print %nav : index
+    vector.print %nbv : index
+    vector.print %ncv : index
+    vector.print %ndv : index
+    vector.print %nev : index
+    vector.print %nfv : index
+    vector.print %ngv : index
+    vector.print %nhv : index
+    vector.print %niv : index
+
+    //
     // Check values.
     //
-    // CHECK:      ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, -1 )
-    // CHECK-NEXT: ( 1, 13, 2, 14, 3, 15, 4, 16, 5, 17, 6, 18, 7, 19, 8, 20, 9, 21, 10, 22, 11, 23, 12, 24, -1 )
-    // CHECK-NEXT: ( 1, 5, 9, 13, 17, 21, 2, 6, 10, 14, 18, 22, 3, 7, 11, 15, 19, 23, 4, 8, 12, 16, 20, 24, -1 )
-    // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, -1 )
-    // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, -1 )
-    // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, -1 )
-    // CHECK-NEXT: ( 1, 13, 2, 14, 3, 15, 4, 16, 5, 17, 6, 18, 7, 19, 8, 20, 9, 21, 10, 22, 11, 23, 12, 24, -1 )
-    // CHECK-NEXT: ( 1, 13, 2, 14, 3, 15, 4, 16, 5, 17, 6, 18, 7, 19, 8, 20, 9, 21, 10, 22, 11, 23, 12, 24, -1 )
-    // CHECK-NEXT: ( 1, 13, 2, 14, 3, 15, 4, 16, 5, 17, 6, 18, 7, 19, 8, 20, 9, 21, 10, 22, 11, 23, 12, 24, -1 )
-    // CHECK-NEXT: ( 1, 5, 9, 13, 17, 21, 2, 6, 10, 14, 18, 22, 3, 7, 11, 15, 19, 23, 4, 8, 12, 16, 20, 24, -1 )
-    // CHECK-NEXT: ( 1, 5, 9, 13, 17, 21, 2, 6, 10, 14, 18, 22, 3, 7, 11, 15, 19, 23, 4, 8, 12, 16, 20, 24, -1 )
-    // CHECK-NEXT: ( 1, 5, 9, 13, 17, 21, 2, 6, 10, 14, 18, 22, 3, 7, 11, 15, 19, 23, 4, 8, 12, 16, 20, 24, -1 )
+    // CHECK:      ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 )
+    // CHECK-NEXT: ( 1, 13, 2, 14, 3, 15, 4, 16, 5, 17, 6, 18, 7, 19, 8, 20, 9, 21, 10, 22, 11, 23, 12, 24 )
+    // CHECK-NEXT: ( 1, 5, 9, 13, 17, 21, 2, 6, 10, 14, 18, 22, 3, 7, 11, 15, 19, 23, 4, 8, 12, 16, 20, 24 )
+    // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 )
+    // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 )
+    // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 )
+    // CHECK-NEXT: ( 1, 13, 2, 14, 3, 15, 4, 16, 5, 17, 6, 18, 7, 19, 8, 20, 9, 21, 10, 22, 11, 23, 12, 24 )
+    // CHECK-NEXT: ( 1, 13, 2, 14, 3, 15, 4, 16, 5, 17, 6, 18, 7, 19, 8, 20, 9, 21, 10, 22, 11, 23, 12, 24 )
+    // CHECK-NEXT: ( 1, 13, 2, 14, 3, 15, 4, 16, 5, 17, 6, 18, 7, 19, 8, 20, 9, 21, 10, 22, 11, 23, 12, 24 )
+    // CHECK-NEXT: ( 1, 5, 9, 13, 17, 21, 2, 6, 10, 14, 18, 22, 3, 7, 11, 15, 19, 23, 4, 8, 12, 16, 20, 24 )
+    // CHECK-NEXT: ( 1, 5, 9, 13, 17, 21, 2, 6, 10, 14, 18, 22, 3, 7, 11, 15, 19, 23, 4, 8, 12, 16, 20, 24 )
+    // CHECK-NEXT: ( 1, 5, 9, 13, 17, 21, 2, 6, 10, 14, 18, 22, 3, 7, 11, 15, 19, 23, 4, 8, 12, 16, 20, 24 )
     //
     %v1 = sparse_tensor.values %1 : tensor<2x3x4xf64, #Tensor1> to memref<?xf64>
     %v2 = sparse_tensor.values %2 : tensor<2x3x4xf64, #Tensor2> to memref<?xf64>

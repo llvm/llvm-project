@@ -1572,7 +1572,7 @@ Instruction *AddressSanitizer::instrumentAMDGPUAddress(
   Value *IsShared = IRB.CreateCall(AMDGPUAddressShared, {AddrLong});
   Value *IsPrivate = IRB.CreateCall(AMDGPUAddressPrivate, {AddrLong});
   Value *IsSharedOrPrivate = IRB.CreateOr(IsShared, IsPrivate);
-  Value *Cmp = IRB.CreateICmpNE(IRB.getTrue(), IsSharedOrPrivate);
+  Value *Cmp = IRB.CreateNot(IsSharedOrPrivate);
   Value *AddrSpaceZeroLanding =
       SplitBlockAndInsertIfThen(Cmp, InsertBefore, false);
   InsertBefore = cast<Instruction>(AddrSpaceZeroLanding);
@@ -1620,11 +1620,10 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
       IntegerType::get(*C, std::max(8U, TypeSize >> Mapping.Scale));
   Type *ShadowPtrTy = PointerType::get(ShadowTy, 0);
   Value *ShadowPtr = memToShadow(AddrLong, IRB);
-  Value *CmpVal = Constant::getNullValue(ShadowTy);
   Value *ShadowValue =
       IRB.CreateLoad(ShadowTy, IRB.CreateIntToPtr(ShadowPtr, ShadowPtrTy));
 
-  Value *Cmp = IRB.CreateICmpNE(ShadowValue, CmpVal);
+  Value *Cmp = IRB.CreateIsNotNull(ShadowValue);
   size_t Granularity = 1ULL << Mapping.Scale;
   Instruction *CrashTerm = nullptr;
 
@@ -2264,11 +2263,12 @@ bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
     if (G->hasSanitizerMetadata())
       MD = G->getSanitizerMetadata();
 
-    // TODO: Symbol names in the descriptor can be demangled by the runtime
-    // library. This could save ~0.4% of VM size for a private large binary.
-    std::string NameForGlobal = llvm::demangle(G->getName().str());
+    // The runtime library tries demangling symbol names in the descriptor but
+    // functionality like __cxa_demangle may be unavailable (e.g.
+    // -static-libstdc++). So we demangle the symbol names here.
+    std::string NameForGlobal = G->getName().str();
     GlobalVariable *Name =
-        createPrivateGlobalForString(M, NameForGlobal,
+        createPrivateGlobalForString(M, llvm::demangle(NameForGlobal),
                                      /*AllowMerging*/ true, kAsanGenPrefix);
 
     Type *Ty = G->getValueType();

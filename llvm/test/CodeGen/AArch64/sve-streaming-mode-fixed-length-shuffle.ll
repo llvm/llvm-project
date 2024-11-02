@@ -10,15 +10,9 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @hang_when_merging_stores_after_legalisation(<8 x i32>* %a, <2 x i32> %b) #0 {
 ; CHECK-LABEL: hang_when_merging_stores_after_legalisation:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    stp w8, w8, [sp, #8]
-; CHECK-NEXT:    stp w8, w8, [sp]
-; CHECK-NEXT:    ldr q0, [sp]
+; CHECK-NEXT:    mov z0.s, s0
 ; CHECK-NEXT:    stp q0, q0, [x0]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %splat = shufflevector <2 x i32> %b, <2 x i32> undef, <8 x i32> zeroinitializer
   %interleaved.vec = shufflevector <8 x i32> %splat, <8 x i32> undef, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>

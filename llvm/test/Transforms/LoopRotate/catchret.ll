@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-rotate -verify-memoryssa -S | FileCheck %s
+; RUN: opt < %s -passes=loop-rotate -verify-memoryssa -S | FileCheck %s
 
 target triple = "x86_64-pc-windows-msvc"
 

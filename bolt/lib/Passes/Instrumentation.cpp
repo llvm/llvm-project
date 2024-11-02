@@ -15,6 +15,7 @@
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/RWMutex.h"
 #include <stack>
 
 #define DEBUG_TYPE "bolt-instrumentation"
@@ -298,7 +299,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
 
   FunctionDescription *FuncDesc = nullptr;
   {
-    std::unique_lock<std::shared_timed_mutex> L(FDMutex);
+    std::unique_lock<llvm::sys::RWMutex> L(FDMutex);
     Summary->FunctionDescriptions.emplace_back();
     FuncDesc = &Summary->FunctionDescriptions.back();
   }

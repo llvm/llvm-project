@@ -13,7 +13,7 @@ define amdgpu_kernel void @mul_i32() #0 {
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4i32 = mul <4 x i32> undef, undef
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5i32 = mul <5 x i32> undef, undef
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v8i32 = mul <8 x i32> undef, undef
-; ALL-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %v9i32 = mul <9 x i32> undef, undef
+; ALL-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %v9i32 = mul <9 x i32> undef, undef
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'mul_i32'
@@ -23,7 +23,7 @@ define amdgpu_kernel void @mul_i32() #0 {
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4i32 = mul <4 x i32> undef, undef
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5i32 = mul <5 x i32> undef, undef
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8i32 = mul <8 x i32> undef, undef
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v9i32 = mul <9 x i32> undef, undef
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %v9i32 = mul <9 x i32> undef, undef
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %i32 = mul i32 undef, undef

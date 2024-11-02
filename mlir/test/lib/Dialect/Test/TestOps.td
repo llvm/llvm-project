@@ -186,9 +186,11 @@ def PositiveIntAttrOp : TEST_Op<"positive_int_attr"> {
 def TypeArrayAttrOp : TEST_Op<"type_array_attr"> {
   let arguments = (ins TypeArrayAttr:$attr);
 }
+
 def TypeArrayAttrWithDefaultOp : TEST_Op<"type_array_attr_with_default"> {
   let arguments = (ins DefaultValuedAttr<TypeArrayAttr, "{}">:$attr);
 }
+
 def TypeStringAttrWithTypeOp : TEST_Op<"string_attr_with_type"> {
   let arguments = (ins TypedStrAttr<AnyType>:$attr);
   let assemblyFormat = "$attr attr-dict";
@@ -202,22 +204,10 @@ def FloatAttrOp : TEST_Op<"float_attrs"> {
   );
 }
 
-def I32Case5:  I32EnumAttrCase<"case5", 5>;
-def I32Case10: I32EnumAttrCase<"case10", 10>;
-
-def SomeI32Enum: I32EnumAttr<
-  "SomeI32Enum", "", [I32Case5, I32Case10]>;
-
 def I32EnumAttrOp : TEST_Op<"i32_enum_attr"> {
   let arguments = (ins SomeI32Enum:$attr);
   let results = (outs I32:$val);
 }
-
-def I64Case5:  I64EnumAttrCase<"case5", 5>;
-def I64Case10: I64EnumAttrCase<"case10", 10>;
-
-def SomeI64Enum: I64EnumAttr<
-  "SomeI64Enum", "", [I64Case5, I64Case10]>;
 
 def I64EnumAttrOp : TEST_Op<"i64_enum_attr"> {
   let arguments = (ins SomeI64Enum:$attr);
@@ -304,6 +294,10 @@ def DenseArrayAttrOp : TEST_Op<"dense_array_attr"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// Test Attributes Constraints
+//===----------------------------------------------------------------------===//
+
 def ConfinedDenseArrayAttrOp : TEST_Op<"confined_dense_array_attr"> {
   let arguments = (ins
       ConfinedAttr<DenseI16ArrayAttr,
@@ -315,20 +309,50 @@ def ConfinedDenseArrayAttrOp : TEST_Op<"confined_dense_array_attr"> {
   );
 }
 
+// It does not make sense to have this constraint on a DenseBoolArrayAttr.
+def DenseArrayStrictlyPositiveAttrOp : TEST_Op<"confined_strictly_positive_attr"> {
+  let arguments = (ins
+      ConfinedAttr<DenseI8ArrayAttr,
+                   [DenseArrayStrictlyPositive<DenseI8ArrayAttr>]>:$i8attr,
+      ConfinedAttr<DenseI16ArrayAttr,
+                   [DenseArrayStrictlyPositive<DenseI16ArrayAttr>]>:$i16attr,
+      ConfinedAttr<DenseI32ArrayAttr,
+                   [DenseArrayStrictlyPositive<DenseI32ArrayAttr>]>:$i32attr,
+      ConfinedAttr<DenseI64ArrayAttr,
+                   [DenseArrayStrictlyPositive<DenseI64ArrayAttr>]>:$i64attr,
+      ConfinedAttr<DenseF32ArrayAttr,
+                   [DenseArrayStrictlyPositive<DenseF32ArrayAttr>]>:$f32attr,
+      ConfinedAttr<DenseF64ArrayAttr,
+                   [DenseArrayStrictlyPositive<DenseF64ArrayAttr>]>:$f64attr,
+      ConfinedAttr<DenseI16ArrayAttr,
+                   [DenseArrayStrictlyPositive<DenseI16ArrayAttr>]>:$emptyattr
+  );
+}
+
+// It does not make sense to have this constraint on a DenseBoolArrayAttr.
+// It is always true.
+def DenseArrayNonNegativeOp : TEST_Op<"confined_non_negative_attr"> {
+  let arguments = (ins
+      ConfinedAttr<DenseI8ArrayAttr,
+                   [DenseArrayNonNegative<DenseI8ArrayAttr>]>:$i8attr,
+      ConfinedAttr<DenseI16ArrayAttr,
+                   [DenseArrayNonNegative<DenseI16ArrayAttr>]>:$i16attr,
+      ConfinedAttr<DenseI32ArrayAttr,
+                   [DenseArrayNonNegative<DenseI32ArrayAttr>]>:$i32attr,
+      ConfinedAttr<DenseI64ArrayAttr,
+                   [DenseArrayNonNegative<DenseI64ArrayAttr>]>:$i64attr,
+      ConfinedAttr<DenseF32ArrayAttr,
+                   [DenseArrayNonNegative<DenseF32ArrayAttr>]>:$f32attr,
+      ConfinedAttr<DenseF64ArrayAttr,
+                   [DenseArrayNonNegative<DenseF64ArrayAttr>]>:$f64attr,
+      ConfinedAttr<DenseI16ArrayAttr,
+                   [DenseArrayNonNegative<DenseI16ArrayAttr>]>:$emptyattr
+  );
+}
+
 //===----------------------------------------------------------------------===//
 // Test Enum Attributes
 //===----------------------------------------------------------------------===//
-
-// Define the C++ enum.
-def TestEnum
-    : I32EnumAttr<"TestEnum", "a test enum", [
-        I32EnumAttrCase<"First", 0, "first">,
-        I32EnumAttrCase<"Second", 1, "second">,
-        I32EnumAttrCase<"Third", 2, "third">,
-      ]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "test";
-}
 
 // Define the enum attribute.
 def TestEnumAttr : EnumAttr<Test_Dialect, TestEnum, "enum">;
@@ -351,18 +375,6 @@ def : Pat<(OpWithEnum ConstantAttr<TestEnumAttr,
 // Test Bit Enum Attributes
 //===----------------------------------------------------------------------===//
 
-// Define the C++ enum.
-def TestBitEnum
-    : I32BitEnumAttr<"TestBitEnum", "a test bit enum", [
-        I32BitEnumAttrCaseBit<"Read", 0, "read">,
-        I32BitEnumAttrCaseBit<"Write", 1, "write">,
-        I32BitEnumAttrCaseBit<"Execute", 2, "execute">,
-      ]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "test";
-  let separator = ", ";
-}
-
 // Define the enum attribute.
 def TestBitEnumAttr : EnumAttr<Test_Dialect, TestBitEnum, "bit_enum"> {
   let assemblyFormat = "`<` $value `>`";
@@ -372,18 +384,6 @@ def TestBitEnumAttr : EnumAttr<Test_Dialect, TestBitEnum, "bit_enum"> {
 def OpWithBitEnum : TEST_Op<"op_with_bit_enum"> {
   let arguments = (ins TestBitEnumAttr:$value, OptionalAttr<AnyAttr>:$tag);
   let assemblyFormat = "$value (`tag` $tag^)? attr-dict";
-}
-
-// Define an enum with a different separator
-def TestBitEnumVerticalBar
-    : I32BitEnumAttr<"TestBitEnumVerticalBar", "another test bit enum", [
-        I32BitEnumAttrCaseBit<"User", 0, "user">,
-        I32BitEnumAttrCaseBit<"Group", 1, "group">,
-        I32BitEnumAttrCaseBit<"Other", 2, "other">,
-      ]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "test";
-  let separator = " | ";
 }
 
 def TestBitEnumVerticalBarAttr
@@ -717,8 +717,8 @@ def TestProducingBranchOp : TEST_Op<"producing_br",
 
 // Produces an error value on the error path
 def TestInternalBranchOp : TEST_Op<"internal_br",
-	[DeclareOpInterfaceMethods<BranchOpInterface>, Terminator,
-	 AttrSizedOperandSegments]> {
+    [DeclareOpInterfaceMethods<BranchOpInterface>, Terminator,
+     AttrSizedOperandSegments]> {
 
   let arguments = (ins Variadic<AnyType>:$successOperands,
                        Variadic<AnyType>:$errorOperands);
@@ -1392,22 +1392,6 @@ def : Pat<(OpC $input), (OpB $input, ConstantAttr<I32Attr, "17">:$attr)>;
 def : Pat<(I32EnumAttrOp I32Case5), (I32EnumAttrOp I32Case10)>;
 def : Pat<(I64EnumAttrOp I64Case5), (I64EnumAttrOp I64Case10)>;
 
-//===----------------------------------------------------------------------===//
-// Test Patterns (Multi-result Ops)
-
-def MultiResultOpKind1: I64EnumAttrCase<"kind1", 1>;
-def MultiResultOpKind2: I64EnumAttrCase<"kind2", 2>;
-def MultiResultOpKind3: I64EnumAttrCase<"kind3", 3>;
-def MultiResultOpKind4: I64EnumAttrCase<"kind4", 4>;
-def MultiResultOpKind5: I64EnumAttrCase<"kind5", 5>;
-def MultiResultOpKind6: I64EnumAttrCase<"kind6", 6>;
-
-def MultiResultOpEnum: I64EnumAttr<
-  "MultiResultOpEnum", "Multi-result op kinds", [
-    MultiResultOpKind1, MultiResultOpKind2, MultiResultOpKind3,
-    MultiResultOpKind4, MultiResultOpKind5, MultiResultOpKind6
-  ]>;
-
 def ThreeResultOp : TEST_Op<"three_result"> {
   let arguments = (ins MultiResultOpEnum:$kind);
   let results = (outs I32:$result1, F32:$result2, F32:$result3);
@@ -1826,6 +1810,11 @@ def ParseIntegerLiteralOp : TEST_Op<"parse_integer_literal"> {
 
 def ParseWrappedKeywordOp : TEST_Op<"parse_wrapped_keyword"> {
   let arguments = (ins StrAttr:$keyword);
+  let hasCustomAssemblyFormat = 1;
+}
+
+def ParseB64BytesOp : TEST_Op<"parse_b64"> {
+  let arguments = (ins StrAttr:$b64);
   let hasCustomAssemblyFormat = 1;
 }
 
@@ -2824,8 +2813,10 @@ def TestLinalgConvOp :
       return &regionBuilder;
     }
 
-    mlir::ArrayAttr getIteratorTypes() {
-      return getOperation()->getAttrOfType<mlir::ArrayAttr>("iterator_types");
+    llvm::SmallVector<mlir::utils::IteratorType> getIteratorTypesArray() {
+      auto attrs = getOperation()->getAttrOfType<mlir::ArrayAttr>("iterator_types");
+      auto range = attrs.getAsValueRange<IteratorTypeAttr, mlir::utils::IteratorType>();
+      return {range.begin(), range.end()};
     }
 
     mlir::ArrayAttr getIndexingMaps() {
@@ -2884,8 +2875,10 @@ def TestLinalgFillOp :
       return &regionBuilder;
     }
 
-    mlir::ArrayAttr getIteratorTypes() {
-      return getOperation()->getAttrOfType<mlir::ArrayAttr>("iterator_types");
+    llvm::SmallVector<mlir::utils::IteratorType> getIteratorTypesArray() {
+      auto attrs = getOperation()->getAttrOfType<mlir::ArrayAttr>("iterator_types");
+      auto range = attrs.getAsValueRange<IteratorTypeAttr, mlir::utils::IteratorType>();
+      return {range.begin(), range.end()};
     }
 
     mlir::ArrayAttr getIndexingMaps() {
@@ -3102,6 +3095,21 @@ def RecursivelySpeculatableOp : TEST_Op<"recursively_speculatable_op", [
   }];
   let results = (outs I32:$result);
   let regions = (region SizedRegion<1>:$body);
+}
+
+//===---------------------------------------------------------------------===//
+// Test CSE
+//===---------------------------------------------------------------------===//
+
+def TestCSEOfSingleBlockOp : TEST_Op<"cse_of_single_block_op",
+    [SingleBlockImplicitTerminator<"RegionYieldOp">, Pure]> {
+  let arguments = (ins Variadic<AnyType>:$inputs);
+  let results = (outs Variadic<AnyType>:$outputs);
+  let regions = (region SizedRegion<1>:$region);
+  let assemblyFormat = [{
+    attr-dict `inputs` `(` $inputs `)`
+    $region `:` type($inputs)  `->` type($outputs)
+  }];
 }
 
 #endif // TEST_OPS

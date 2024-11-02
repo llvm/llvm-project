@@ -26,18 +26,11 @@ using namespace llvm;
 DwarfCFIExceptionBase::DwarfCFIExceptionBase(AsmPrinter *A) : EHStreamer(A) {}
 
 void DwarfCFIExceptionBase::markFunctionEnd() {
-  endFragment();
-
   // Map all labels and get rid of any dead landing pads.
   if (!Asm->MF->getLandingPads().empty()) {
     MachineFunction *NonConstMF = const_cast<MachineFunction*>(Asm->MF);
     NonConstMF->tidyLandingPads();
   }
-}
-
-void DwarfCFIExceptionBase::endFragment() {
-  if (shouldEmitCFI && !Asm->MF->hasBBSections())
-    Asm->OutStreamer->emitCFIEndProc();
 }
 
 DwarfCFIException::DwarfCFIException(AsmPrinter *A)
@@ -66,11 +59,6 @@ void DwarfCFIException::endModule() {
     MCSymbol *Sym = Asm->getSymbol(Personality);
     TLOF.emitPersonalityValue(*Asm->OutStreamer, Asm->getDataLayout(), Sym);
   }
-}
-
-static MCSymbol *getExceptionSym(AsmPrinter *Asm,
-                                 const MachineBasicBlock *MBB) {
-  return Asm->getMBBExceptionSym(*MBB);
 }
 
 void DwarfCFIException::beginFunction(const MachineFunction *MF) {
@@ -114,12 +102,9 @@ void DwarfCFIException::beginFunction(const MachineFunction *MF) {
         MAI.usesCFIForEH() && (shouldEmitPersonality || shouldEmitMoves);
   else
     shouldEmitCFI = Asm->needsCFIForDebug() && shouldEmitMoves;
-
-  beginFragment(&*MF->begin(), getExceptionSym);
 }
 
-void DwarfCFIException::beginFragment(const MachineBasicBlock *MBB,
-                                      ExceptionSymbolProvider ESP) {
+void DwarfCFIException::beginBasicBlockSection(const MachineBasicBlock &MBB) {
   if (!shouldEmitCFI)
     return;
 
@@ -141,7 +126,7 @@ void DwarfCFIException::beginFragment(const MachineBasicBlock *MBB,
   if (!shouldEmitPersonality)
     return;
 
-  auto &F = MBB->getParent()->getFunction();
+  auto &F = MBB.getParent()->getFunction();
   auto *P = dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
   assert(P && "Expected personality function");
 
@@ -157,7 +142,13 @@ void DwarfCFIException::beginFragment(const MachineBasicBlock *MBB,
 
   // Provide LSDA information.
   if (shouldEmitLSDA)
-    Asm->OutStreamer->emitCFILsda(ESP(Asm, MBB), TLOF.getLSDAEncoding());
+    Asm->OutStreamer->emitCFILsda(Asm->getMBBExceptionSym(MBB),
+                                  TLOF.getLSDAEncoding());
+}
+
+void DwarfCFIException::endBasicBlockSection(const MachineBasicBlock &MBB) {
+  if (shouldEmitCFI)
+    Asm->OutStreamer->emitCFIEndProc();
 }
 
 /// endFunction - Gather and emit post-function exception information.
@@ -167,13 +158,4 @@ void DwarfCFIException::endFunction(const MachineFunction *MF) {
     return;
 
   emitExceptionTable();
-}
-
-void DwarfCFIException::beginBasicBlock(const MachineBasicBlock &MBB) {
-  beginFragment(&MBB, getExceptionSym);
-}
-
-void DwarfCFIException::endBasicBlock(const MachineBasicBlock &MBB) {
-  if (shouldEmitCFI)
-    Asm->OutStreamer->emitCFIEndProc();
 }

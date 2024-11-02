@@ -68,7 +68,7 @@ func.func @use_after_free_recursive_side_effects() {
     transform.sequence %0 : !pdl.operation failures(propagate) attributes { ord = 3 } {
     ^bb3(%arg3: !pdl.operation):
     }
-    
+
     // `transform.sequence` has recursive side effects so it has the same "free"
     // as the child op it contains.
     // expected-note @below {{freed here}}
@@ -100,7 +100,7 @@ func.func @use_after_free() {
     transform.sequence %0 : !pdl.operation failures(propagate) attributes { ord = 3 } {
     ^bb3(%arg3: !pdl.operation):
     }
-    
+
     // expected-note @below {{freed here}}
     test_consume_operand_if_matches_param_or_fail %0[42]
     // expected-warning @below {{operand #0 may be used after free}}

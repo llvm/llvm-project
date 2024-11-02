@@ -62,3 +62,34 @@ a:
 b:
   ret void
 }
+
+; CHECK-LABEL: @ifThen_fpclass(
+; CHECK: %class = call i1 @llvm.is.fpclass.f32(float %x, i32 11)
+; CHECK-NEXT: br i1 true
+define void @ifThen_fpclass(float %x) {
+  br i1 true, label %a, label %b
+
+a:
+  %class = call i1 @llvm.is.fpclass.f32(float %x, i32 11)
+  br label %b
+
+b:
+  ret void
+}
+
+; CHECK-LABEL: @ifThen_arithmetic_fence(
+; CHECK: %fence = call float @llvm.arithmetic.fence.f32(float %x)
+; CHECK-NEXT: br i1 true
+define void @ifThen_arithmetic_fence(float %x) {
+  br i1 true, label %a, label %b
+
+a:
+  %fence = call float @llvm.arithmetic.fence.f32(float %x)
+  br label %b
+
+b:
+  ret void
+}
+
+declare i1 @llvm.is.fpclass.f32(float, i32)
+declare float @llvm.arithmetic.fence.f32(float)

@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <cassert>
 
+#include "test_allocator.h"
 #include "test_macros.h"
 #include "min_allocator.h"
 
@@ -119,11 +120,37 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
+TEST_CONSTEXPR_CXX20 bool test_alloc() {
+  {
+    using alloc  = test_allocator<char>;
+    using string = std::basic_string<char, std::char_traits<char>, alloc>;
+    test_allocator_statistics stats;
+    {
+      string str = string(alloc(&stats));
+      stats = test_allocator_statistics();
+      (void)str.substr();
+      assert(stats.moved == 0);
+      assert(stats.copied == 0);
+    }
+    {
+      string str = string(alloc(&stats));
+      stats = test_allocator_statistics();
+      (void)std::move(str).substr();
+      assert(stats.moved == 0);
+      assert(stats.copied == 0);
+    }
+  }
+
+  return true;
+}
+
 int main(int, char**)
 {
   test();
+  test_alloc();
 #if TEST_STD_VER > 17
   static_assert(test());
+  static_assert(test_alloc());
 #endif
 
   return 0;

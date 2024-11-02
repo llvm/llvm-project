@@ -17,7 +17,7 @@ body:             |
     %4:vgpr_32 = V_LSHLREV_B32_e64 killed %3, %0, implicit $exec
     %5:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %6:vreg_64 = REG_SEQUENCE killed %4, %subreg.sub0, killed %5, %subreg.sub1
-    %7:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 %6, %2, 0, 4, 0, 0, 0, implicit $exec
+    %7:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 %6, %2, 0, 4, 0, 0, implicit $exec
     %8:sreg_32_xm0 = S_MOV_B32 65535
     %9:vgpr_32 = COPY %8
     %10:vgpr_32 = V_AND_B32_e32 %7, %9, implicit $exec

@@ -37,6 +37,8 @@ constexpr size_t SectionHeaderSize64 = 72;
 constexpr size_t SymbolTableEntrySize = 18;
 constexpr size_t RelocationSerializationSize32 = 10;
 constexpr size_t RelocationSerializationSize64 = 14;
+constexpr size_t ExceptionSectionEntrySize32 = 6;
+constexpr size_t ExceptionSectionEntrySize64 = 10;
 constexpr uint16_t RelocOverflow = 65535;
 constexpr uint8_t AllocRegNo = 31;
 

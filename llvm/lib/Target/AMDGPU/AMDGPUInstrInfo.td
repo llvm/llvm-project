@@ -388,7 +388,7 @@ def AMDGPUldexp : PatFrags<(ops node:$src0, node:$src1),
 
 def AMDGPUfp_class : PatFrags<(ops node:$src0, node:$src1),
   [(int_amdgcn_class node:$src0, node:$src1),
-  (AMDGPUfp_class_impl node:$src0, node:$src1)]>;
+   (AMDGPUfp_class_impl node:$src0, node:$src1)]>;
 
 def AMDGPUfmed3 : PatFrags<(ops node:$src0, node:$src1, node:$src2),
   [(int_amdgcn_fmed3 node:$src0, node:$src1, node:$src2),

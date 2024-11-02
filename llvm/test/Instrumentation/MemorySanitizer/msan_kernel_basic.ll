@@ -31,9 +31,9 @@ entry:
 
 ; Check instrumentation of stores
 
-define void @Store1(i8* nocapture %p, i8 %x) nounwind uwtable sanitize_memory {
+define void @Store1(ptr nocapture %p, i8 %x) nounwind uwtable sanitize_memory {
 entry:
-  store i8 %x, i8* %p
+  store i8 %x, ptr %p
   ret void
 }
 
@@ -43,13 +43,13 @@ entry:
 ; CHECK: [[PARAM_SHADOW:%[a-z0-9_]+]] = getelementptr {{.*}} i32 0, i32 0
 ; CHECK: [[BASE:%[0-9]+]] = ptrtoint {{.*}} [[PARAM_SHADOW]]
 ; CHECK: [[SHADOW_PTR:%[a-z0-9_]+]] = inttoptr {{.*}} [[BASE]]
-; CHECK: [[SHADOW:%[a-z0-9]+]] = load i64, i64* [[SHADOW_PTR]]
+; CHECK: [[SHADOW:%[a-z0-9]+]] = load i64, ptr [[SHADOW_PTR]]
 ; CHECK: [[BASE2:%[0-9]+]] = ptrtoint {{.*}} [[PARAM_SHADOW]]
 ; Load the shadow of %p and check it
 ; CHECK: icmp ne i64 [[SHADOW]]
 ; CHECK: br i1
 ; CHECK: {{^[0-9]+}}:
-; CHECK: @__msan_metadata_ptr_for_store_1(i8* %p)
+; CHECK: @__msan_metadata_ptr_for_store_1(ptr %p)
 ; CHECK: store i8
 ; If the new shadow is non-zero, jump to __msan_chain_origin()
 ; CHECK: icmp
@@ -63,9 +63,9 @@ entry:
 ; CHECK: store i8
 ; CHECK: ret void
 
-define void @Store2(i16* nocapture %p, i16 %x) nounwind uwtable sanitize_memory {
+define void @Store2(ptr nocapture %p, i16 %x) nounwind uwtable sanitize_memory {
 entry:
-  store i16 %x, i16* %p
+  store i16 %x, ptr %p
   ret void
 }
 
@@ -79,8 +79,7 @@ entry:
 ; CHECK: icmp
 ; CHECK: br i1
 ; CHECK: {{^[0-9]+}}:
-; CHECK: [[REG:%[0-9]+]] = bitcast i16* %p to i8*
-; CHECK: @__msan_metadata_ptr_for_store_2(i8* [[REG]])
+; CHECK: @__msan_metadata_ptr_for_store_2(ptr %p)
 ; CHECK: store i16
 ; If the new shadow is non-zero, jump to __msan_chain_origin()
 ; CHECK: icmp
@@ -95,9 +94,9 @@ entry:
 ; CHECK: ret void
 
 
-define void @Store4(i32* nocapture %p, i32 %x) nounwind uwtable sanitize_memory {
+define void @Store4(ptr nocapture %p, i32 %x) nounwind uwtable sanitize_memory {
 entry:
-  store i32 %x, i32* %p
+  store i32 %x, ptr %p
   ret void
 }
 
@@ -111,8 +110,7 @@ entry:
 ; CHECK: icmp
 ; CHECK: br i1
 ; CHECK: {{^[0-9]+}}:
-; CHECK: [[REG:%[0-9]+]] = bitcast i32* %p to i8*
-; CHECK: @__msan_metadata_ptr_for_store_4(i8* [[REG]])
+; CHECK: @__msan_metadata_ptr_for_store_4(ptr %p)
 ; CHECK: store i32
 ; If the new shadow is non-zero, jump to __msan_chain_origin()
 ; CHECK: icmp
@@ -126,9 +124,9 @@ entry:
 ; CHECK: store i32
 ; CHECK: ret void
 
-define void @Store8(i64* nocapture %p, i64 %x) nounwind uwtable sanitize_memory {
+define void @Store8(ptr nocapture %p, i64 %x) nounwind uwtable sanitize_memory {
 entry:
-  store i64 %x, i64* %p
+  store i64 %x, ptr %p
   ret void
 }
 
@@ -142,8 +140,7 @@ entry:
 ; CHECK: icmp
 ; CHECK: br i1
 ; CHECK: {{^[0-9]+}}:
-; CHECK: [[REG:%[0-9]+]] = bitcast i64* %p to i8*
-; CHECK: @__msan_metadata_ptr_for_store_8(i8* [[REG]])
+; CHECK: @__msan_metadata_ptr_for_store_8(ptr %p)
 ; CHECK: store i64
 ; If the new shadow is non-zero, jump to __msan_chain_origin()
 ; CHECK: icmp
@@ -157,9 +154,9 @@ entry:
 ; CHECK: store i64
 ; CHECK: ret void
 
-define void @Store16(i128* nocapture %p, i128 %x) nounwind uwtable sanitize_memory {
+define void @Store16(ptr nocapture %p, i128 %x) nounwind uwtable sanitize_memory {
 entry:
-  store i128 %x, i128* %p
+  store i128 %x, ptr %p
   ret void
 }
 
@@ -173,8 +170,7 @@ entry:
 ; CHECK: icmp
 ; CHECK: br i1
 ; CHECK: {{^[0-9]+}}:
-; CHECK: [[REG:%[0-9]+]] = bitcast i128* %p to i8*
-; CHECK: @__msan_metadata_ptr_for_store_n(i8* [[REG]], i64 16)
+; CHECK: @__msan_metadata_ptr_for_store_n(ptr %p, i64 16)
 ; CHECK: store i128
 ; If the new shadow is non-zero, jump to __msan_chain_origin()
 ; CHECK: icmp
@@ -191,9 +187,9 @@ entry:
 
 ; Check instrumentation of loads
 
-define i8 @Load1(i8* nocapture %p) nounwind uwtable sanitize_memory {
+define i8 @Load1(ptr nocapture %p) nounwind uwtable sanitize_memory {
 entry:
-  %0 = load i8, i8* %p
+  %0 = load i8, ptr %p
   ret i8 %0
 }
 
@@ -210,15 +206,15 @@ entry:
 ; Load the value from %p. This is done before accessing the shadow
 ; to ease atomic handling.
 ; CHECK: load i8
-; CHECK: @__msan_metadata_ptr_for_load_1(i8* %p)
+; CHECK: @__msan_metadata_ptr_for_load_1(ptr %p)
 ; Load the shadow and origin.
 ; CHECK: load i8
 ; CHECK: load i32
 
 
-define i16 @Load2(i16* nocapture %p) nounwind uwtable sanitize_memory {
+define i16 @Load2(ptr nocapture %p) nounwind uwtable sanitize_memory {
 entry:
-  %0 = load i16, i16* %p
+  %0 = load i16, ptr %p
   ret i16 %0
 }
 
@@ -235,16 +231,15 @@ entry:
 ; Load the value from %p. This is done before accessing the shadow
 ; to ease atomic handling.
 ; CHECK: load i16
-; CHECK: [[REG:%[0-9]+]] = bitcast i16* %p to i8*
-; CHECK: @__msan_metadata_ptr_for_load_2(i8* [[REG]])
+; CHECK: @__msan_metadata_ptr_for_load_2(ptr %p)
 ; Load the shadow and origin.
 ; CHECK: load i16
 ; CHECK: load i32
 
 
-define i32 @Load4(i32* nocapture %p) nounwind uwtable sanitize_memory {
+define i32 @Load4(ptr nocapture %p) nounwind uwtable sanitize_memory {
 entry:
-  %0 = load i32, i32* %p
+  %0 = load i32, ptr %p
   ret i32 %0
 }
 
@@ -261,15 +256,14 @@ entry:
 ; Load the value from %p. This is done before accessing the shadow
 ; to ease atomic handling.
 ; CHECK: load i32
-; CHECK: [[REG:%[0-9]+]] = bitcast i32* %p to i8*
-; CHECK: @__msan_metadata_ptr_for_load_4(i8* [[REG]])
+; CHECK: @__msan_metadata_ptr_for_load_4(ptr %p)
 ; Load the shadow and origin.
 ; CHECK: load i32
 ; CHECK: load i32
 
-define i64 @Load8(i64* nocapture %p) nounwind uwtable sanitize_memory {
+define i64 @Load8(ptr nocapture %p) nounwind uwtable sanitize_memory {
 entry:
-  %0 = load i64, i64* %p
+  %0 = load i64, ptr %p
   ret i64 %0
 }
 
@@ -286,15 +280,14 @@ entry:
 ; Load the value from %p. This is done before accessing the shadow
 ; to ease atomic handling.
 ; CHECK: load i64
-; CHECK: [[REG:%[0-9]+]] = bitcast i64* %p to i8*
-; CHECK: @__msan_metadata_ptr_for_load_8(i8* [[REG]])
+; CHECK: @__msan_metadata_ptr_for_load_8(ptr %p)
 ; Load the shadow and origin.
 ; CHECK: load i64
 ; CHECK: load i32
 
-define i128 @Load16(i128* nocapture %p) nounwind uwtable sanitize_memory {
+define i128 @Load16(ptr nocapture %p) nounwind uwtable sanitize_memory {
 entry:
-  %0 = load i128, i128* %p
+  %0 = load i128, ptr %p
   ret i128 %0
 }
 
@@ -311,8 +304,7 @@ entry:
 ; Load the value from %p. This is done before accessing the shadow
 ; to ease atomic handling.
 ; CHECK: load i128
-; CHECK: [[REG:%[0-9]+]] = bitcast i128* %p to i8*
-; CHECK: @__msan_metadata_ptr_for_load_n(i8* [[REG]], i64 16)
+; CHECK: @__msan_metadata_ptr_for_load_n(ptr %p, i64 16)
 ; Load the shadow and origin.
 ; CHECK: load i128
 ; CHECK: load i32
@@ -320,21 +312,19 @@ entry:
 
 ; Test kernel-specific va_list instrumentation
 
-%struct.__va_list_tag = type { i32, i32, i8*, i8* }
-declare void @llvm.va_start(i8*) nounwind
-declare void @llvm.va_end(i8*)
+%struct.__va_list_tag = type { i32, i32, ptr, ptr }
+declare void @llvm.va_start(ptr) nounwind
+declare void @llvm.va_end(ptr)
 @.str = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
-declare dso_local i32 @VAListFn(i8*, %struct.__va_list_tag*) local_unnamed_addr
+declare dso_local i32 @VAListFn(ptr, ptr) local_unnamed_addr
 
 ; Function Attrs: nounwind uwtable
-define dso_local i32 @VarArgFn(i8* %fmt, ...) local_unnamed_addr sanitize_memory #0 {
+define dso_local i32 @VarArgFn(ptr %fmt, ...) local_unnamed_addr sanitize_memory #0 {
 entry:
   %args = alloca [1 x %struct.__va_list_tag], align 16
-  %0 = bitcast [1 x %struct.__va_list_tag]* %args to i8*
-  %arraydecay = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %args, i64 0, i64 0
-  call void @llvm.va_start(i8* nonnull %0)
-  %call = call i32 @VAListFn(i8* %fmt, %struct.__va_list_tag* nonnull %arraydecay)
-  call void @llvm.va_end(i8* nonnull %0)
+  call void @llvm.va_start(ptr nonnull %args)
+  %call = call i32 @VAListFn(ptr %fmt, ptr nonnull %args)
+  call void @llvm.va_end(ptr nonnull %args)
   ret i32 %call
 }
 
@@ -347,21 +337,19 @@ attributes #0 = { "target-features"="+fxsr,+x87,-sse" }
 ; CHECK: [[VA_ARG_ORIGIN:%[a-z0-9_]+]] = getelementptr {{.*}} i32 0, i32 3
 ; CHECK: [[VA_ARG_OVERFLOW_SIZE:%[a-z0-9_]+]] = getelementptr {{.*}} i32 0, i32 4
 
-; CHECK: [[OSIZE:%[0-9]+]] = load i64, i64* [[VA_ARG_OVERFLOW_SIZE]]
+; CHECK: [[OSIZE:%[0-9]+]] = load i64, ptr [[VA_ARG_OVERFLOW_SIZE]]
 ; Register save area is 48 bytes for non-SSE builds.
 ; CHECK: [[SIZE:%[0-9]+]] = add i64 48, [[OSIZE]]
 ; CHECK: [[SHADOWS:%[0-9]+]] = alloca i8, i64 [[SIZE]]
-; CHECK: [[VA_ARG_SHADOW]]
-; CHECK: call void @llvm.memcpy{{.*}}(i8* align 8 [[SHADOWS]], {{.*}}, i64 [[SIZE]]
+; CHECK: call void @llvm.memcpy{{.*}}(ptr align 8 [[SHADOWS]], ptr align 8 [[VA_ARG_SHADOW]], i64 [[SIZE]]
 ; CHECK: [[ORIGINS:%[0-9]+]] = alloca i8, i64 [[SIZE]]
-; CHECK: [[VA_ARG_ORIGIN]]
-; CHECK: call void @llvm.memcpy{{.*}}(i8* align 8 [[ORIGINS]], {{.*}}, i64 [[SIZE]]
+; CHECK: call void @llvm.memcpy{{.*}}(ptr align 8 [[ORIGINS]], ptr align 8 [[VA_ARG_ORIGIN]], i64 [[SIZE]]
 ; CHECK: call i32 @VAListFn
 
 ; Function Attrs: nounwind uwtable
 define dso_local void @VarArgCaller() local_unnamed_addr sanitize_memory {
 entry:
-  %call = tail call i32 (i8*, ...) @VarArgFn(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32 123)
+  %call = tail call i32 (ptr, ...) @VarArgFn(ptr @.str, i32 123)
   ret void
 }
 
@@ -374,19 +362,19 @@ entry:
 ; CHECK: [[VA_ARG_OVERFLOW_SIZE:%[a-z0-9_]+]] = getelementptr {{.*}} i32 0, i32 4
 
 ; CHECK: [[PARAM_SI:%[_a-z0-9]+]] = ptrtoint {{.*}} [[PARAM_SHADOW]]
-; CHECK: [[ARG1_S:%[_a-z0-9]+]] = inttoptr i64 [[PARAM_SI]] to i64*
+; CHECK: [[ARG1_S:%[_a-z0-9]+]] = inttoptr i64 [[PARAM_SI]] to ptr
 ; First argument is initialized
-; CHECK: store i64 0, i64* [[ARG1_S]]
+; CHECK: store i64 0, ptr [[ARG1_S]]
 
 ; Dangling cast of va_arg_shadow[0], unused because the first argument is fixed.
 ; CHECK: [[VA_CAST0:%[_a-z0-9]+]] = ptrtoint {{.*}} [[VA_ARG_SHADOW]] to i64
 
 ; CHECK: [[VA_CAST1:%[_a-z0-9]+]] = ptrtoint {{.*}} [[VA_ARG_SHADOW]] to i64
 ; CHECK: [[ARG1_SI:%[_a-z0-9]+]] = add i64 [[VA_CAST1]], 8
-; CHECK: [[PARG1_S:%[_a-z0-9]+]] = inttoptr i64 [[ARG1_SI]] to i32*
+; CHECK: [[PARG1_S:%[_a-z0-9]+]] = inttoptr i64 [[ARG1_SI]] to ptr
 
 ; Shadow for 123 is 0.
-; CHECK: store i32 0, i32* [[ARG1_S]]
+; CHECK: store i32 0, ptr [[ARG1_S]]
 
-; CHECK: store i64 0, i64* [[VA_ARG_OVERFLOW_SIZE]]
-; CHECK: call i32 (i8*, ...) @VarArgFn({{.*}} @.str{{.*}} i32 123)
+; CHECK: store i64 0, ptr [[VA_ARG_OVERFLOW_SIZE]]
+; CHECK: call i32 (ptr, ...) @VarArgFn({{.*}} @.str{{.*}} i32 123)

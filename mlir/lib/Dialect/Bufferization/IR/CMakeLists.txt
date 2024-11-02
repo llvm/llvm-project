@@ -10,6 +10,7 @@ add_mlir_dialect_library(MLIRBufferizationDialect
   DEPENDS
   MLIRAllocationOpInterfaceIncGen
   MLIRBufferizationOpsIncGen
+  MLIRBufferizationEnumsIncGen
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect

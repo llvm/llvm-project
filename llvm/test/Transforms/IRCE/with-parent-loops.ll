@@ -5,11 +5,11 @@
 ; of parents, uncles and cousins.
 
 ; Function Attrs: alwaysinline
-define void @inner_loop(i32* %arr, i32* %a_len_ptr, i32 %n) #0 {
+define void @inner_loop(ptr %arr, ptr %a_len_ptr, i32 %n) #0 {
 ; CHECK: irce: in function inner_loop: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   %first.itr.check = icmp sgt i32 %n, 0
   br i1 %first.itr.check, label %loop, label %exit
 
@@ -20,8 +20,8 @@ loop:                                             ; preds = %in.bounds, %entry
   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1
 
 in.bounds:                                        ; preds = %loop
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, %n
   br i1 %next, label %loop, label %exit
 
@@ -33,7 +33,7 @@ exit:                                             ; preds = %in.bounds, %entry
 }
 
 ; Function Attrs: alwaysinline
-define void @with_parent(i32* %arr, i32* %a_len_ptr, i32 %n, i32 %parent.count) #0 {
+define void @with_parent(ptr %arr, ptr %a_len_ptr, i32 %n, i32 %parent.count) #0 {
 ; CHECK: irce: in function with_parent: constrained Loop at depth 2 containing: %loop.i<header><exiting>,%in.bounds.i<latch><exiting>
 
 entry:
@@ -43,7 +43,7 @@ loop:                                             ; preds = %inner_loop.exit, %e
   %idx = phi i32 [ 0, %entry ], [ %idx.next, %inner_loop.exit ]
   %idx.next = add i32 %idx, 1
   %next = icmp ult i32 %idx.next, %parent.count
-  %len.i = load i32, i32* %a_len_ptr, !range !0
+  %len.i = load i32, ptr %a_len_ptr, !range !0
   %first.itr.check.i = icmp sgt i32 %n, 0
   br i1 %first.itr.check.i, label %loop.i, label %exit.i
 
@@ -54,8 +54,8 @@ loop.i:                                           ; preds = %in.bounds.i, %loop
   br i1 %abc.i, label %in.bounds.i, label %out.of.bounds.i, !prof !1
 
 in.bounds.i:                                      ; preds = %loop.i
-  %addr.i = getelementptr i32, i32* %arr, i32 %idx.i
-  store i32 0, i32* %addr.i
+  %addr.i = getelementptr i32, ptr %arr, i32 %idx.i
+  store i32 0, ptr %addr.i
   %next.i = icmp slt i32 %idx.next.i, %n
   br i1 %next.i, label %loop.i, label %exit.i
 
@@ -73,7 +73,7 @@ exit:                                             ; preds = %inner_loop.exit
 }
 
 ; Function Attrs: alwaysinline
-define void @with_grandparent(i32* %arr, i32* %a_len_ptr, i32 %n, i32 %parent.count, i32 %grandparent.count) #0 {
+define void @with_grandparent(ptr %arr, ptr %a_len_ptr, i32 %n, i32 %parent.count, i32 %grandparent.count) #0 {
 ; CHECK: irce: in function with_grandparent: constrained Loop at depth 3 containing: %loop.i.i<header><exiting>,%in.bounds.i.i<latch><exiting>
 
 entry:
@@ -89,7 +89,7 @@ loop.i:                                           ; preds = %inner_loop.exit.i, 
   %idx.i = phi i32 [ 0, %loop ], [ %idx.next.i, %inner_loop.exit.i ]
   %idx.next.i = add i32 %idx.i, 1
   %next.i = icmp ult i32 %idx.next.i, %parent.count
-  %len.i.i = load i32, i32* %a_len_ptr, !range !0
+  %len.i.i = load i32, ptr %a_len_ptr, !range !0
   %first.itr.check.i.i = icmp sgt i32 %n, 0
   br i1 %first.itr.check.i.i, label %loop.i.i, label %exit.i.i
 
@@ -100,8 +100,8 @@ loop.i.i:                                         ; preds = %in.bounds.i.i, %loo
   br i1 %abc.i.i, label %in.bounds.i.i, label %out.of.bounds.i.i, !prof !1
 
 in.bounds.i.i:                                    ; preds = %loop.i.i
-  %addr.i.i = getelementptr i32, i32* %arr, i32 %idx.i.i
-  store i32 0, i32* %addr.i.i
+  %addr.i.i = getelementptr i32, ptr %arr, i32 %idx.i.i
+  store i32 0, ptr %addr.i.i
   %next.i.i = icmp slt i32 %idx.next.i.i, %n
   br i1 %next.i.i, label %loop.i.i, label %exit.i.i
 
@@ -122,7 +122,7 @@ exit:                                             ; preds = %with_parent.exit
 }
 
 ; Function Attrs: alwaysinline
-define void @with_sibling(i32* %arr, i32* %a_len_ptr, i32 %n, i32 %parent.count) #0 {
+define void @with_sibling(ptr %arr, ptr %a_len_ptr, i32 %n, i32 %parent.count) #0 {
 ; CHECK: irce: in function with_sibling: constrained Loop at depth 2 containing: %loop.i<header><exiting>,%in.bounds.i<latch><exiting>
 ; CHECK: irce: in function with_sibling: constrained Loop at depth 2 containing: %loop.i6<header><exiting>,%in.bounds.i9<latch><exiting>
 
@@ -133,7 +133,7 @@ loop:                                             ; preds = %inner_loop.exit12, 
   %idx = phi i32 [ 0, %entry ], [ %idx.next, %inner_loop.exit12 ]
   %idx.next = add i32 %idx, 1
   %next = icmp ult i32 %idx.next, %parent.count
-  %len.i = load i32, i32* %a_len_ptr, !range !0
+  %len.i = load i32, ptr %a_len_ptr, !range !0
   %first.itr.check.i = icmp sgt i32 %n, 0
   br i1 %first.itr.check.i, label %loop.i, label %exit.i
 
@@ -144,8 +144,8 @@ loop.i:                                           ; preds = %in.bounds.i, %loop
   br i1 %abc.i, label %in.bounds.i, label %out.of.bounds.i, !prof !1
 
 in.bounds.i:                                      ; preds = %loop.i
-  %addr.i = getelementptr i32, i32* %arr, i32 %idx.i
-  store i32 0, i32* %addr.i
+  %addr.i = getelementptr i32, ptr %arr, i32 %idx.i
+  store i32 0, ptr %addr.i
   %next.i = icmp slt i32 %idx.next.i, %n
   br i1 %next.i, label %loop.i, label %exit.i
 
@@ -156,7 +156,7 @@ exit.i:                                           ; preds = %in.bounds.i, %loop
   br label %inner_loop.exit
 
 inner_loop.exit:                                  ; preds = %exit.i, %out.of.bounds.i
-  %len.i1 = load i32, i32* %a_len_ptr, !range !0
+  %len.i1 = load i32, ptr %a_len_ptr, !range !0
   %first.itr.check.i2 = icmp sgt i32 %n, 0
   br i1 %first.itr.check.i2, label %loop.i6, label %exit.i11
 
@@ -167,8 +167,8 @@ loop.i6:                                          ; preds = %in.bounds.i9, %inne
   br i1 %abc.i5, label %in.bounds.i9, label %out.of.bounds.i10, !prof !1
 
 in.bounds.i9:                                     ; preds = %loop.i6
-  %addr.i7 = getelementptr i32, i32* %arr, i32 %idx.i3
-  store i32 0, i32* %addr.i7
+  %addr.i7 = getelementptr i32, ptr %arr, i32 %idx.i3
+  store i32 0, ptr %addr.i7
   %next.i8 = icmp slt i32 %idx.next.i4, %n
   br i1 %next.i8, label %loop.i6, label %exit.i11
 
@@ -186,7 +186,7 @@ exit:                                             ; preds = %inner_loop.exit12
 }
 
 ; Function Attrs: alwaysinline
-define void @with_cousin(i32* %arr, i32* %a_len_ptr, i32 %n, i32 %parent.count, i32 %grandparent.count) #0 {
+define void @with_cousin(ptr %arr, ptr %a_len_ptr, i32 %n, i32 %parent.count, i32 %grandparent.count) #0 {
 ; CHECK: irce: in function with_cousin: constrained Loop at depth 3 containing: %loop.i.i<header><exiting>,%in.bounds.i.i<latch><exiting>
 ; CHECK: irce: in function with_cousin: constrained Loop at depth 3 containing: %loop.i.i10<header><exiting>,%in.bounds.i.i13<latch><exiting>
 
@@ -203,7 +203,7 @@ loop.i:                                           ; preds = %inner_loop.exit.i, 
   %idx.i = phi i32 [ 0, %loop ], [ %idx.next.i, %inner_loop.exit.i ]
   %idx.next.i = add i32 %idx.i, 1
   %next.i = icmp ult i32 %idx.next.i, %parent.count
-  %len.i.i = load i32, i32* %a_len_ptr, !range !0
+  %len.i.i = load i32, ptr %a_len_ptr, !range !0
   %first.itr.check.i.i = icmp sgt i32 %n, 0
   br i1 %first.itr.check.i.i, label %loop.i.i, label %exit.i.i
 
@@ -214,8 +214,8 @@ loop.i.i:                                         ; preds = %in.bounds.i.i, %loo
   br i1 %abc.i.i, label %in.bounds.i.i, label %out.of.bounds.i.i, !prof !1
 
 in.bounds.i.i:                                    ; preds = %loop.i.i
-  %addr.i.i = getelementptr i32, i32* %arr, i32 %idx.i.i
-  store i32 0, i32* %addr.i.i
+  %addr.i.i = getelementptr i32, ptr %arr, i32 %idx.i.i
+  store i32 0, ptr %addr.i.i
   %next.i.i = icmp slt i32 %idx.next.i.i, %n
   br i1 %next.i.i, label %loop.i.i, label %exit.i.i
 
@@ -235,7 +235,7 @@ loop.i6:                                          ; preds = %inner_loop.exit.i16
   %idx.i1 = phi i32 [ 0, %with_parent.exit ], [ %idx.next.i2, %inner_loop.exit.i16 ]
   %idx.next.i2 = add i32 %idx.i1, 1
   %next.i3 = icmp ult i32 %idx.next.i2, %parent.count
-  %len.i.i4 = load i32, i32* %a_len_ptr, !range !0
+  %len.i.i4 = load i32, ptr %a_len_ptr, !range !0
   %first.itr.check.i.i5 = icmp sgt i32 %n, 0
   br i1 %first.itr.check.i.i5, label %loop.i.i10, label %exit.i.i15
 
@@ -246,8 +246,8 @@ loop.i.i10:                                       ; preds = %in.bounds.i.i13, %l
   br i1 %abc.i.i9, label %in.bounds.i.i13, label %out.of.bounds.i.i14, !prof !1
 
 in.bounds.i.i13:                                  ; preds = %loop.i.i10
-  %addr.i.i11 = getelementptr i32, i32* %arr, i32 %idx.i.i7
-  store i32 0, i32* %addr.i.i11
+  %addr.i.i11 = getelementptr i32, ptr %arr, i32 %idx.i.i7
+  store i32 0, ptr %addr.i.i11
   %next.i.i12 = icmp slt i32 %idx.next.i.i8, %n
   br i1 %next.i.i12, label %loop.i.i10, label %exit.i.i15
 
@@ -268,7 +268,7 @@ exit:                                             ; preds = %with_parent.exit17
 }
 
 ; Function Attrs: alwaysinline
-define void @with_uncle(i32* %arr, i32* %a_len_ptr, i32 %n, i32 %parent.count, i32 %grandparent.count) #0 {
+define void @with_uncle(ptr %arr, ptr %a_len_ptr, i32 %n, i32 %parent.count, i32 %grandparent.count) #0 {
 ; CHECK: irce: in function with_uncle: constrained Loop at depth 2 containing: %loop.i<header><exiting>,%in.bounds.i<latch><exiting>
 ; CHECK: irce: in function with_uncle: constrained Loop at depth 3 containing: %loop.i.i<header><exiting>,%in.bounds.i.i<latch><exiting>
 
@@ -279,7 +279,7 @@ loop:                                             ; preds = %with_parent.exit, %
   %idx = phi i32 [ 0, %entry ], [ %idx.next, %with_parent.exit ]
   %idx.next = add i32 %idx, 1
   %next = icmp ult i32 %idx.next, %grandparent.count
-  %len.i = load i32, i32* %a_len_ptr, !range !0
+  %len.i = load i32, ptr %a_len_ptr, !range !0
   %first.itr.check.i = icmp sgt i32 %n, 0
   br i1 %first.itr.check.i, label %loop.i, label %exit.i
 
@@ -290,8 +290,8 @@ loop.i:                                           ; preds = %in.bounds.i, %loop
   br i1 %abc.i, label %in.bounds.i, label %out.of.bounds.i, !prof !1
 
 in.bounds.i:                                      ; preds = %loop.i
-  %addr.i = getelementptr i32, i32* %arr, i32 %idx.i
-  store i32 0, i32* %addr.i
+  %addr.i = getelementptr i32, ptr %arr, i32 %idx.i
+  store i32 0, ptr %addr.i
   %next.i = icmp slt i32 %idx.next.i, %n
   br i1 %next.i, label %loop.i, label %exit.i
 
@@ -308,7 +308,7 @@ loop.i4:                                          ; preds = %inner_loop.exit.i, 
   %idx.i1 = phi i32 [ 0, %inner_loop.exit ], [ %idx.next.i2, %inner_loop.exit.i ]
   %idx.next.i2 = add i32 %idx.i1, 1
   %next.i3 = icmp ult i32 %idx.next.i2, %parent.count
-  %len.i.i = load i32, i32* %a_len_ptr, !range !0
+  %len.i.i = load i32, ptr %a_len_ptr, !range !0
   %first.itr.check.i.i = icmp sgt i32 %n, 0
   br i1 %first.itr.check.i.i, label %loop.i.i, label %exit.i.i
 
@@ -319,8 +319,8 @@ loop.i.i:                                         ; preds = %in.bounds.i.i, %loo
   br i1 %abc.i.i, label %in.bounds.i.i, label %out.of.bounds.i.i, !prof !1
 
 in.bounds.i.i:                                    ; preds = %loop.i.i
-  %addr.i.i = getelementptr i32, i32* %arr, i32 %idx.i.i
-  store i32 0, i32* %addr.i.i
+  %addr.i.i = getelementptr i32, ptr %arr, i32 %idx.i.i
+  store i32 0, ptr %addr.i.i
   %next.i.i = icmp slt i32 %idx.next.i.i, %n
   br i1 %next.i.i, label %loop.i.i, label %exit.i.i
 

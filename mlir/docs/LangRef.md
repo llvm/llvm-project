@@ -725,7 +725,7 @@ part of the syntax into an equivalent, but lighter weight form:
 !foo.something<abcd>
 ```
 
-See [here](AttributesAndTypes.md) to learn how to define dialect types.
+See [here](DefiningDialects/AttributesAndTypes.md) to learn how to define dialect types.
 
 ### Builtin Types
 
@@ -837,7 +837,7 @@ part of the syntax into an equivalent, but lighter weight form:
 #foo.string<"">
 ```
 
-See [here](AttributesAndTypes.md) on how to define dialect attribute values.
+See [here](DefiningDialects/AttributesAndTypes.md) on how to define dialect attribute values.
 
 ### Builtin Attribute Values
 

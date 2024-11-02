@@ -44,7 +44,7 @@ end:
 define i1 @baz() {
   call void @foo()
   %c = call i32 @bar(i1 true)
-  %p = call i1 @llvm.type.test(i8* undef, metadata !"typeid1")
+  %p = call i1 @llvm.type.test(ptr undef, metadata !"typeid1")
   ret i1 %p
 }
 
@@ -55,4 +55,4 @@ define i1 @baz() {
 
 !0 = !{i32 0, !"typeid1"}
 
-declare i1 @llvm.type.test(i8* %ptr, metadata %bitset) nounwind readnone
+declare i1 @llvm.type.test(ptr %ptr, metadata %bitset) nounwind readnone

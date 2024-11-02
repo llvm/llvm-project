@@ -65,7 +65,7 @@ check_failed:
 }
 
 ; General case. If both %N and %M are non-negative, we do not need a preloop.
-define i32 @test_increasing_slt_slt_wide_non-negative(i32* %n_ptr, i64* %m_ptr) {
+define i32 @test_increasing_slt_slt_wide_non-negative(ptr %n_ptr, ptr %m_ptr) {
 
 ; CHECK-LABEL: @test_increasing_slt_slt_wide_non-negative(
 ; CHECK-NOT:   preloop
@@ -77,8 +77,8 @@ define i32 @test_increasing_slt_slt_wide_non-negative(i32* %n_ptr, i64* %m_ptr) 
 ; CHECK:       postloop
 
 entry:
-  %N = load i32, i32* %n_ptr, !range !2
-  %M = load i64, i64* %m_ptr, !range !1
+  %N = load i32, ptr %n_ptr, !range !2
+  %M = load i64, ptr %m_ptr, !range !1
   br label %loop
 
 loop:
@@ -102,7 +102,7 @@ check_failed:
 ; General case. Even though %M may be negative, we do not need a preloop because
 ; we make a non-negativity runtime check against M and do not go to main loop if
 ; M was negative.
-define i32 @test_increasing_slt_slt_wide_general(i32* %n_ptr, i64* %m_ptr) {
+define i32 @test_increasing_slt_slt_wide_general(ptr %n_ptr, ptr %m_ptr) {
 
 ; CHECK-LABEL: @test_increasing_slt_slt_wide_general(
 ; CHECK-NOT:   preloop
@@ -114,8 +114,8 @@ define i32 @test_increasing_slt_slt_wide_general(i32* %n_ptr, i64* %m_ptr) {
 ; CHECK:       postloop
 
 entry:
-  %N = load i32, i32* %n_ptr, !range !2
-  %M = load i64, i64* %m_ptr
+  %N = load i32, ptr %n_ptr, !range !2
+  %M = load i64, ptr %m_ptr
   br label %loop
 
 loop:
@@ -137,7 +137,7 @@ check_failed:
 }
 
 ; General case with preloop.
-define i32 @test_increasing_slt_slt_wide_general_preloop(i32* %n_ptr, i64* %m_ptr) {
+define i32 @test_increasing_slt_slt_wide_general_preloop(ptr %n_ptr, ptr %m_ptr) {
 
 ; CHECK-LABEL: @test_increasing_slt_slt_wide_general_preloop(
 ; CHECK:       loop:
@@ -149,8 +149,8 @@ define i32 @test_increasing_slt_slt_wide_general_preloop(i32* %n_ptr, i64* %m_pt
 ; CHECK:       postloop
 
 entry:
-  %N = load i32, i32* %n_ptr, !range !2
-  %M = load i64, i64* %m_ptr
+  %N = load i32, ptr %n_ptr, !range !2
+  %M = load i64, ptr %m_ptr
   br label %loop
 
 loop:
@@ -172,7 +172,7 @@ check_failed:
 }
 
 ; Same as above, multiple checks.
-define i32 @test_increasing_slt_slt_wide_multiple_checks(i32* %n_ptr, i64* %m1_ptr, i64* %m2_ptr, i64* %m3_ptr, i64* %m4_ptr) {
+define i32 @test_increasing_slt_slt_wide_multiple_checks(ptr %n_ptr, ptr %m1_ptr, ptr %m2_ptr, ptr %m3_ptr, ptr %m4_ptr) {
 ; CHECK-LABEL: @test_increasing_slt_slt_wide_multiple_checks(
 ; CHECK-NOT:   preloop
 ; CHECK:       loop:
@@ -186,11 +186,11 @@ define i32 @test_increasing_slt_slt_wide_multiple_checks(i32* %n_ptr, i64* %m1_p
 ; CHECK:       postloop
 
 entry:
-  %N = load i32, i32* %n_ptr, !range !2
-  %M1 = load i64, i64* %m1_ptr
-  %M2 = load i64, i64* %m2_ptr
-  %M3 = load i64, i64* %m3_ptr
-  %M4 = load i64, i64* %m4_ptr
+  %N = load i32, ptr %n_ptr, !range !2
+  %M1 = load i64, ptr %m1_ptr
+  %M2 = load i64, ptr %m2_ptr
+  %M3 = load i64, ptr %m3_ptr
+  %M4 = load i64, ptr %m4_ptr
   br label %loop
 
 loop:
@@ -309,7 +309,7 @@ check_failed:
 }
 
 ; General case. If both %N and %M are non-negative, we do not need a preloop.
-define i32 @test_increasing_ult_ult_wide_non-negative(i32* %n_ptr, i64* %m_ptr) {
+define i32 @test_increasing_ult_ult_wide_non-negative(ptr %n_ptr, ptr %m_ptr) {
 
 ; CHECK-LABEL: @test_increasing_ult_ult_wide_non-negative(
 ; CHECK-NOT:   preloop
@@ -321,8 +321,8 @@ define i32 @test_increasing_ult_ult_wide_non-negative(i32* %n_ptr, i64* %m_ptr) 
 ; CHECK:       postloop
 
 entry:
-  %N = load i32, i32* %n_ptr, !range !2
-  %M = load i64, i64* %m_ptr, !range !1
+  %N = load i32, ptr %n_ptr, !range !2
+  %M = load i64, ptr %m_ptr, !range !1
   br label %loop
 
 loop:
@@ -346,7 +346,7 @@ check_failed:
 ; General case. Even though %M may be negative, we do not need a preloop because
 ; we make a non-negativity runtime check against M and do not go to main loop if
 ; M was negative.
-define i32 @test_increasing_ult_ult_wide_general(i32* %n_ptr, i64* %m_ptr) {
+define i32 @test_increasing_ult_ult_wide_general(ptr %n_ptr, ptr %m_ptr) {
 
 ; CHECK-LABEL: @test_increasing_ult_ult_wide_general(
 ; CHECK-NOT:   preloop
@@ -358,8 +358,8 @@ define i32 @test_increasing_ult_ult_wide_general(i32* %n_ptr, i64* %m_ptr) {
 ; CHECK:       postloop
 
 entry:
-  %N = load i32, i32* %n_ptr, !range !2
-  %M = load i64, i64* %m_ptr
+  %N = load i32, ptr %n_ptr, !range !2
+  %M = load i64, ptr %m_ptr
   br label %loop
 
 loop:
@@ -381,7 +381,7 @@ check_failed:
 }
 
 ; Same as above, multiple checks.
-define i32 @test_increasing_ult_ult_wide_multiple_checks(i32* %n_ptr, i64* %m1_ptr, i64* %m2_ptr, i64* %m3_ptr, i64* %m4_ptr) {
+define i32 @test_increasing_ult_ult_wide_multiple_checks(ptr %n_ptr, ptr %m1_ptr, ptr %m2_ptr, ptr %m3_ptr, ptr %m4_ptr) {
 ; CHECK-LABEL: @test_increasing_ult_ult_wide_multiple_checks(
 ; CHECK-NOT:   preloop
 ; CHECK:       loop:
@@ -395,11 +395,11 @@ define i32 @test_increasing_ult_ult_wide_multiple_checks(i32* %n_ptr, i64* %m1_p
 ; CHECK:       postloop
 
 entry:
-  %N = load i32, i32* %n_ptr, !range !2
-  %M1 = load i64, i64* %m1_ptr
-  %M2 = load i64, i64* %m2_ptr
-  %M3 = load i64, i64* %m3_ptr
-  %M4 = load i64, i64* %m4_ptr
+  %N = load i32, ptr %n_ptr, !range !2
+  %M1 = load i64, ptr %m1_ptr
+  %M2 = load i64, ptr %m2_ptr
+  %M3 = load i64, ptr %m3_ptr
+  %M4 = load i64, ptr %m4_ptr
   br label %loop
 
 loop:

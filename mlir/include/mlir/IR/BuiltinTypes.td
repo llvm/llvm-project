@@ -89,7 +89,7 @@ def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2"> {
       * bit encoding: S1E5M2
       * exponent bias: 15
       * infinities: supported with exponent set to all 1s and mantissa 0s
-      * NaNs: supported with exponent bits set to all 1s and mantissa of 
+      * NaNs: supported with exponent bits set to all 1s and mantissa of
         (01, 10, or 11)
       * denormals when exponent is 0
 
@@ -97,6 +97,27 @@ def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// Float8E4M3FNType
+
+def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN"> {
+  let summary = "8-bit floating point with 3 bit mantissa";
+  let description = [{
+    An 8-bit floating point type with 1 sign bit, 4 bits exponent and 3 bits
+    mantissa. This is not a standard type as defined by IEEE-754, but it follows
+    similar conventions, with the exception that there are no infinity values
+    and only two NaN representations. This type has the following
+    characteristics:
+
+      * bit encoding: S1E4M3
+      * exponent bias: 7
+      * infinities: Not supported
+      * NaNs: supported with exponent bits and mantissa bits set to all 1s
+      * denormals when exponent is 0
+
+    Described in: https://arxiv.org/abs/2209.05433
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // BFloat16Type
@@ -400,7 +421,7 @@ def Builtin_MemRef : Builtin_Type<"MemRef", [
     affine form through explicit linearization:
 
     ```mlir
-    affine_map<(d0, ... dN)[offset, stride0, ... strideN] -> 
+    affine_map<(d0, ... dN)[offset, stride0, ... strideN] ->
                 (offset + d0 * stride0 + ... dN * strideN)>
     ```
 
@@ -563,12 +584,6 @@ def Builtin_MemRef : Builtin_Type<"MemRef", [
     /// New `Attribute getMemorySpace()` method should be used instead.
     unsigned getMemorySpaceAsInt() const;
 
-    // TODO: merge these two special values in a single one used everywhere.
-    // Unfortunately, uses of `-1` have crept deep into the codebase now and are
-    // hard to track.
-    static int64_t getDynamicStrideOrOffset() {
-      return ShapedType::kDynamicStrideOrOffset;
-    }
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;

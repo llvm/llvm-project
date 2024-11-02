@@ -26,26 +26,24 @@ $_ZN5DeltaD2Ev = comdat any
 define void @_Z5Bravov() !dbg !7 {
   %Hotel = alloca %struct.Delta, align 4
   %India = alloca %struct.Echo, align 4
-  call void @llvm.dbg.declare(metadata %struct.Delta* %Hotel, metadata !10, metadata !DIExpression()), !dbg !22
-  call void @_ZN4EchoD2Ev(%struct.Echo* %India), !dbg !28
+  call void @llvm.dbg.declare(metadata ptr %Hotel, metadata !10, metadata !DIExpression()), !dbg !22
+  call void @_ZN4EchoD2Ev(ptr %India), !dbg !28
   ret void, !dbg !28
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
-define linkonce_odr void @_ZN4EchoD2Ev(%struct.Echo* %this) unnamed_addr comdat align 2 {
-  %this.addr.i = alloca %struct.Charlie*, align 8
-  call void @llvm.dbg.declare(metadata %struct.Charlie** %this.addr.i, metadata !29, metadata !DIExpression()), !dbg !32
-  %this1.i = load %struct.Charlie*, %struct.Charlie** %this.addr.i, align 8
-  %Golf.i = getelementptr inbounds %struct.Charlie, %struct.Charlie* %this1.i, i32 0, i32 0, !dbg !33
+define linkonce_odr void @_ZN4EchoD2Ev(ptr %this) unnamed_addr comdat align 2 {
+  %this.addr.i = alloca ptr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr.i, metadata !29, metadata !DIExpression()), !dbg !32
+  %this1.i = load ptr, ptr %this.addr.i, align 8
   ret void
 }
 
-define linkonce_odr void @_ZN5DeltaD2Ev(%struct.Delta* %this) unnamed_addr comdat align 2 !dbg !36 {
-  %this.addr.i = alloca %struct.Charlie*, align 8
-  call void @llvm.dbg.declare(metadata %struct.Charlie** %this.addr.i, metadata !29, metadata !DIExpression()), !dbg !41
-  %this1.i = load %struct.Charlie*, %struct.Charlie** %this.addr.i, align 8
-  %Golf.i = getelementptr inbounds %struct.Charlie, %struct.Charlie* %this1.i, i32 0, i32 0, !dbg !48
+define linkonce_odr void @_ZN5DeltaD2Ev(ptr %this) unnamed_addr comdat align 2 !dbg !36 {
+  %this.addr.i = alloca ptr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr.i, metadata !29, metadata !DIExpression()), !dbg !41
+  %this1.i = load ptr, ptr %this.addr.i, align 8
   ret void
 }
 

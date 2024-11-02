@@ -16,6 +16,7 @@
 #include "llvm/Support/JSON.h"
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -81,6 +82,10 @@ public:
     return getDataType<T>() == Type;
   }
 
+  TensorSpec(const std::string &NewName, const TensorSpec &Other)
+      : TensorSpec(NewName, Other.Port, Other.Type, Other.ElementSize,
+                   Other.Shape) {}
+
 private:
   TensorSpec(const std::string &Name, int Port, TensorType Type,
              size_t ElementSize, const std::vector<int64_t> &Shape);
@@ -104,23 +109,6 @@ private:
 /// TFUTILS_SUPPORTED_TYPES.
 Optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
                                            const json::Value &Value);
-
-struct LoggedFeatureSpec {
-  TensorSpec Spec;
-  Optional<std::string> LoggingName;
-  const std::string &getLoggingName() const {
-    return LoggingName ? *LoggingName : Spec.name();
-  }
-};
-
-/// Load the output specs. If SpecFileOverride is not empty, that path is used.
-/// Otherwise, the file is assumed to be called 'output_spec.json' and be found
-/// under ModelPath (the model directory).
-/// The first output tensor name must match ExpectedDecisionName.
-/// In case of error, the return is None and the error is logged.
-Optional<std::vector<LoggedFeatureSpec>>
-loadOutputSpecs(LLVMContext &Ctx, StringRef ExpectedDecisionName,
-                StringRef ModelPath, StringRef SpecFileOverride = StringRef());
 
 #define TFUTILS_GETDATATYPE_DEF(T, Name)                                       \
   template <> TensorType TensorSpec::getDataType<T>();

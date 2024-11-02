@@ -7,9 +7,10 @@
  *
  *===-----------------------------------------------------------------------===
  */
-#ifndef __IMMINTRIN_H
-#error "Never use <cmpccxaddintrin.h> directly; include <immintrin.h> instead."
-#endif // __IMMINTRIN_H
+#ifndef __X86GPRINTRIN_H
+#error                                                                         \
+    "Never use <cmpccxaddintrin.h> directly; include <x86gprintrin.h> instead."
+#endif // __X86GPRINTRIN_H
 
 #ifndef __CMPCCXADDINTRIN_H
 #define __CMPCCXADDINTRIN_H

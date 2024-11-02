@@ -39,7 +39,7 @@ Optional<wasm::ValType> WebAssembly::parseType(StringRef Type) {
     return wasm::ValType::FUNCREF;
   if (Type == "externref")
     return wasm::ValType::EXTERNREF;
-  return Optional<wasm::ValType>();
+  return std::nullopt;
 }
 
 WebAssembly::BlockType WebAssembly::parseBlockType(StringRef Type) {

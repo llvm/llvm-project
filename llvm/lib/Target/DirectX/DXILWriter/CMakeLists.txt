@@ -9,8 +9,10 @@ add_llvm_component_library(LLVMDXILBitWriter
   intrinsics_gen
 
   LINK_COMPONENTS
+  Analysis
   BitWriter
   Core
+  DirectXPointerTypeAnalysis
   MC
   Object
   Support

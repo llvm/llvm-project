@@ -429,15 +429,15 @@ class ARMAsmParser : public MCTargetAsmParser {
       VPTState.CurPosition = ~0U;
   }
 
-  void Note(SMLoc L, const Twine &Msg, SMRange Range = None) {
+  void Note(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) {
     return getParser().Note(L, Msg, Range);
   }
 
-  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = None) {
+  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) {
     return getParser().Warning(L, Msg, Range);
   }
 
-  bool Error(SMLoc L, const Twine &Msg, SMRange Range = None) {
+  bool Error(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) {
     return getParser().Error(L, Msg, Range);
   }
 
@@ -11399,7 +11399,7 @@ bool ARMAsmParser::parseDirectiveEabiAttr(SMLoc L) {
   TagLoc = Parser.getTok().getLoc();
   if (Parser.getTok().is(AsmToken::Identifier)) {
     StringRef Name = Parser.getTok().getIdentifier();
-    Optional<unsigned> Ret = ELFAttrs::attrTypeFromString(
+    std::optional<unsigned> Ret = ELFAttrs::attrTypeFromString(
         Name, ARMBuildAttrs::getARMAttributeTags());
     if (!Ret) {
       Error(TagLoc, "attribute name not recognised: " + Name);
@@ -11856,9 +11856,9 @@ bool ARMAsmParser::parseDirectiveEven(SMLoc L) {
 
   assert(Section && "must have section to emit alignment");
   if (Section->useCodeAlign())
-    getStreamer().emitCodeAlignment(2, &getSTI());
+    getStreamer().emitCodeAlignment(Align(2), &getSTI());
   else
-    getStreamer().emitValueToAlignment(2);
+    getStreamer().emitValueToAlignment(Align(2));
 
   return false;
 }
@@ -12054,9 +12054,9 @@ bool ARMAsmParser::parseDirectiveAlign(SMLoc L) {
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     assert(Section && "must have section to emit alignment");
     if (Section->useCodeAlign())
-      getStreamer().emitCodeAlignment(4, &getSTI(), 0);
+      getStreamer().emitCodeAlignment(Align(4), &getSTI(), 0);
     else
-      getStreamer().emitValueToAlignment(4, 0, 1, 0);
+      getStreamer().emitValueToAlignment(Align(4), 0, 1, 0);
     return false;
   }
   return true;

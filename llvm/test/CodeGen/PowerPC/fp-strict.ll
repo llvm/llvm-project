@@ -594,8 +594,8 @@ define float @fmadd_f32(float %f0, float %f1, float %f2) #0 {
 ; SPE-LABEL: fmadd_f32:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -16(r1)
+; SPE-NEXT:    stw r0, 20(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 16
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    bl fmaf
@@ -625,8 +625,8 @@ define double @fmadd_f64(double %f0, double %f1, double %f2) #0 {
 ; SPE-LABEL: fmadd_f64:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -16(r1)
+; SPE-NEXT:    stw r0, 20(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 16
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    evmergelo r8, r7, r8
@@ -699,8 +699,8 @@ define <4 x float> @fmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> 
 ; SPE-LABEL: fmadd_v4f32:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -96(r1)
+; SPE-NEXT:    stw r0, 100(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 96
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    .cfi_offset r21, -88
@@ -791,8 +791,8 @@ define <2 x double> @fmadd_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x doub
 ; SPE-LABEL: fmadd_v2f64:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -64(r1)
+; SPE-NEXT:    stw r0, 68(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 64
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    .cfi_offset r26, -48
@@ -868,8 +868,8 @@ define float @fmsub_f32(float %f0, float %f1, float %f2) #0 {
 ; SPE-LABEL: fmsub_f32:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -16(r1)
+; SPE-NEXT:    stw r0, 20(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 16
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    efsneg r5, r5
@@ -901,8 +901,8 @@ define double @fmsub_f64(double %f0, double %f1, double %f2) #0 {
 ; SPE-LABEL: fmsub_f64:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -16(r1)
+; SPE-NEXT:    stw r0, 20(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 16
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    evmergelo r6, r5, r6
@@ -980,8 +980,8 @@ define <4 x float> @fmsub_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> 
 ; SPE-LABEL: fmsub_v4f32:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -96(r1)
+; SPE-NEXT:    stw r0, 100(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 96
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    .cfi_offset r21, -88
@@ -1077,8 +1077,8 @@ define <2 x double> @fmsub_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x doub
 ; SPE-LABEL: fmsub_v2f64:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -64(r1)
+; SPE-NEXT:    stw r0, 68(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 64
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    .cfi_offset r26, -48
@@ -1157,8 +1157,8 @@ define float @fnmadd_f32(float %f0, float %f1, float %f2) #0 {
 ; SPE-LABEL: fnmadd_f32:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -16(r1)
+; SPE-NEXT:    stw r0, 20(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 16
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    bl fmaf
@@ -1190,8 +1190,8 @@ define double @fnmadd_f64(double %f0, double %f1, double %f2) #0 {
 ; SPE-LABEL: fnmadd_f64:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -16(r1)
+; SPE-NEXT:    stw r0, 20(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 16
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    evmergelo r8, r7, r8
@@ -1269,8 +1269,8 @@ define <4 x float> @fnmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float>
 ; SPE-LABEL: fnmadd_v4f32:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -96(r1)
+; SPE-NEXT:    stw r0, 100(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 96
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    .cfi_offset r21, -88
@@ -1363,8 +1363,8 @@ define <2 x double> @fnmadd_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x dou
 ; SPE-LABEL: fnmadd_v2f64:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -64(r1)
+; SPE-NEXT:    stw r0, 68(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 64
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    .cfi_offset r26, -48
@@ -1443,8 +1443,8 @@ define float @fnmsub_f32(float %f0, float %f1, float %f2) #0 {
 ; SPE-LABEL: fnmsub_f32:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -16(r1)
+; SPE-NEXT:    stw r0, 20(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 16
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    efsneg r5, r5
@@ -1478,8 +1478,8 @@ define double @fnmsub_f64(double %f0, double %f1, double %f2) #0 {
 ; SPE-LABEL: fnmsub_f64:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -16(r1)
+; SPE-NEXT:    stw r0, 20(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 16
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    evmergelo r6, r5, r6
@@ -1560,8 +1560,8 @@ define <4 x float> @fnmsub_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float>
 ; SPE-LABEL: fnmsub_v4f32:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -96(r1)
+; SPE-NEXT:    stw r0, 100(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 96
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    .cfi_offset r21, -88
@@ -1659,8 +1659,8 @@ define <2 x double> @fnmsub_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x dou
 ; SPE-LABEL: fnmsub_v2f64:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -64(r1)
+; SPE-NEXT:    stw r0, 68(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 64
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    .cfi_offset r26, -48
@@ -1741,8 +1741,8 @@ define float @fsqrt_f32(float %f1) #0 {
 ; SPE-LABEL: fsqrt_f32:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -16(r1)
+; SPE-NEXT:    stw r0, 20(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 16
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    bl sqrtf
@@ -1771,8 +1771,8 @@ define double @fsqrt_f64(double %f1) #0 {
 ; SPE-LABEL: fsqrt_f64:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -16(r1)
+; SPE-NEXT:    stw r0, 20(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 16
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    evmergelo r4, r3, r4
@@ -1824,8 +1824,8 @@ define <4 x float> @fsqrt_v4f32(<4 x float> %vf1) #0 {
 ; SPE-LABEL: fsqrt_v4f32:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -48(r1)
+; SPE-NEXT:    stw r0, 52(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 48
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    .cfi_offset r27, -40
@@ -1883,8 +1883,8 @@ define <2 x double> @fsqrt_v2f64(<2 x double> %vf1) #0 {
 ; SPE-LABEL: fsqrt_v2f64:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stw r0, 4(r1)
 ; SPE-NEXT:    stwu r1, -48(r1)
+; SPE-NEXT:    stw r0, 52(r1)
 ; SPE-NEXT:    .cfi_def_cfa_offset 48
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    .cfi_offset r28, -32

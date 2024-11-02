@@ -284,9 +284,8 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
   do {
     CB = PBI->getSuccessor(1 - Idx);
     // Delete the conditional branch.
-    FirstCondBlock->getInstList().pop_back();
-    FirstCondBlock->getInstList()
-        .splice(FirstCondBlock->end(), CB->getInstList());
+    FirstCondBlock->back().eraseFromParent();
+    FirstCondBlock->splice(FirstCondBlock->end(), CB);
     PBI = cast<BranchInst>(FirstCondBlock->getTerminator());
     Value *CC = PBI->getCondition();
     // Merge conditions.
@@ -480,9 +479,8 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
   }
 
   // Merge \param SecondEntryBlock into \param FirstEntryBlock.
-  FirstEntryBlock->getInstList().pop_back();
-  FirstEntryBlock->getInstList()
-      .splice(FirstEntryBlock->end(), SecondEntryBlock->getInstList());
+  FirstEntryBlock->back().eraseFromParent();
+  FirstEntryBlock->splice(FirstEntryBlock->end(), SecondEntryBlock);
   BranchInst *PBI = cast<BranchInst>(FirstEntryBlock->getTerminator());
   assert(PBI->getCondition() == CInst2);
   BasicBlock *SaveInsertBB = Builder.GetInsertBlock();

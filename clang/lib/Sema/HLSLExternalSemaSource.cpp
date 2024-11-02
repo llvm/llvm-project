@@ -385,9 +385,9 @@ void HLSLExternalSemaSource::InitializeSema(Sema &S) {
   NamespaceDecl *PrevDecl = nullptr;
   if (S.LookupQualifiedName(Result, AST.getTranslationUnitDecl()))
     PrevDecl = Result.getAsSingle<NamespaceDecl>();
-  HLSLNamespace = NamespaceDecl::Create(AST, AST.getTranslationUnitDecl(),
-                                        false, SourceLocation(),
-                                        SourceLocation(), &HLSL, PrevDecl);
+  HLSLNamespace = NamespaceDecl::Create(
+      AST, AST.getTranslationUnitDecl(), /*Inline=*/false, SourceLocation(),
+      SourceLocation(), &HLSL, PrevDecl, /*Nested=*/false);
   HLSLNamespace->setImplicit(true);
   HLSLNamespace->setHasExternalLexicalStorage();
   AST.getTranslationUnitDecl()->addDecl(HLSLNamespace);

@@ -55,10 +55,10 @@ body:             |
     %26 = V_LSHL_B64_e64 killed %25, 2, implicit $exec
     %16 = REG_SEQUENCE killed %4, 17, %12, 18
     %18 = COPY %26
-    %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, 0, implicit $exec
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, implicit $exec
     %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
     %21 = V_MAX_F32_e64 0, killed %20, 0, killed %20, 0, 0, implicit $mode, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -117,10 +117,10 @@ body:             |
     %26 = V_LSHL_B64_e64 killed %25, 2, implicit $exec
     %16 = REG_SEQUENCE killed %4, 17, %12, 18
     %18 = COPY %26
-    %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, 0, implicit $exec
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, implicit $exec
     %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
     %21 = V_MAX_F32_e64 0, killed %20, 0, killed %20, 1, 3, implicit $mode, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -180,10 +180,10 @@ body:             |
     %26 = V_LSHL_B64_e64 killed %25, 2, implicit $exec
     %16 = REG_SEQUENCE killed %4, 17, %12, 18
     %18 = COPY %26
-    %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, 0, implicit $exec
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, implicit $exec
     %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
     %21 = V_MUL_F32_e64 0, killed %20, 0, 1056964608, 0, 3, implicit $mode, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -245,10 +245,10 @@ body:             |
     %26 = V_LSHL_B64_e64 killed %25, 2, implicit $exec
     %16 = REG_SEQUENCE killed %4, 17, %12, 18
     %18 = COPY %26
-    %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, 0, implicit $exec
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, implicit $exec
     %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
     %21 = V_MUL_F32_e64 0, killed %20, 0, 1056964608, 1, 0, implicit $mode, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -322,10 +322,10 @@ body:             |
     %26 = V_LSHL_B64_e64 killed %25, 2, implicit $exec
     %16 = REG_SEQUENCE killed %4, 17, %12, 18
     %18 = COPY %26
-    %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, 0, implicit $exec
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, implicit $exec
     %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
     %21 = V_ADD_F32_e64 0, killed %20, 0, killed %20, 0, 3, implicit $mode, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -387,10 +387,10 @@ body:             |
     %26 = V_LSHL_B64_e64 killed %25, 2, implicit $exec
     %16 = REG_SEQUENCE killed %4, 17, %12, 18
     %18 = COPY %26
-    %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, 0, implicit $exec
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, implicit $exec
     %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
     %21 = V_ADD_F32_e64 0, killed %20, 0, killed %20, 1, 0, implicit $mode, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 killed %21, %26, killed %16, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...

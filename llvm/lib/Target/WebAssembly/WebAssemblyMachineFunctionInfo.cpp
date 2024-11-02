@@ -28,10 +28,9 @@ MachineFunctionInfo *WebAssemblyFunctionInfo::clone(
     BumpPtrAllocator &Allocator, MachineFunction &DestMF,
     const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
     const {
-  WebAssemblyFunctionInfo *Clone =
-      DestMF.cloneInfo<WebAssemblyFunctionInfo>(*this);
-  Clone->MF = &DestMF;
-  return Clone;
+  // TODO: Implement cloning for WasmEHFuncInfo. This will have invalid block
+  // references.
+  return DestMF.cloneInfo<WebAssemblyFunctionInfo>(*this);
 }
 
 void WebAssemblyFunctionInfo::initWARegs(MachineRegisterInfo &MRI) {
@@ -122,11 +121,8 @@ llvm::signatureFromMVTs(const SmallVectorImpl<MVT> &Results,
 }
 
 yaml::WebAssemblyFunctionInfo::WebAssemblyFunctionInfo(
-    const llvm::WebAssemblyFunctionInfo &MFI)
+    const llvm::MachineFunction &MF, const llvm::WebAssemblyFunctionInfo &MFI)
     : CFGStackified(MFI.isCFGStackified()) {
-  auto *EHInfo = MFI.getWasmEHFuncInfo();
-  const llvm::MachineFunction &MF = MFI.getMachineFunction();
-
   for (auto VT : MFI.getParams())
     Params.push_back(EVT(VT).getEVTString());
   for (auto VT : MFI.getResults())
@@ -134,7 +130,8 @@ yaml::WebAssemblyFunctionInfo::WebAssemblyFunctionInfo(
 
   //  MFI.getWasmEHFuncInfo() is non-null only for functions with the
   //  personality function.
-  if (EHInfo) {
+
+  if (auto *EHInfo = MF.getWasmEHFuncInfo()) {
     // SrcToUnwindDest can contain stale mappings in case BBs are removed in
     // optimizations, in case, for example, they are unreachable. We should not
     // include their info.
@@ -155,15 +152,19 @@ void yaml::WebAssemblyFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
 }
 
 void WebAssemblyFunctionInfo::initializeBaseYamlFields(
-    const yaml::WebAssemblyFunctionInfo &YamlMFI) {
+    MachineFunction &MF, const yaml::WebAssemblyFunctionInfo &YamlMFI) {
   CFGStackified = YamlMFI.CFGStackified;
   for (auto VT : YamlMFI.Params)
     addParam(WebAssembly::parseMVT(VT.Value));
   for (auto VT : YamlMFI.Results)
     addResult(WebAssembly::parseMVT(VT.Value));
-  if (WasmEHInfo) {
+
+  // FIXME: WasmEHInfo is defined in the MachineFunction, but serialized
+  // here. Either WasmEHInfo should be moved out of MachineFunction, or the
+  // serialization handling should be moved to MachineFunction.
+  if (WasmEHFuncInfo *WasmEHInfo = MF.getWasmEHFuncInfo()) {
     for (auto KV : YamlMFI.SrcToUnwindDest)
-      WasmEHInfo->setUnwindDest(MF->getBlockNumbered(KV.first),
-                                MF->getBlockNumbered(KV.second));
+      WasmEHInfo->setUnwindDest(MF.getBlockNumbered(KV.first),
+                                MF.getBlockNumbered(KV.second));
   }
 }

@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef SUPPORT_SET_WINDOWS_CRT_REPORT_MODE_H
 #define SUPPORT_SET_WINDOWS_CRT_REPORT_MODE_H
 

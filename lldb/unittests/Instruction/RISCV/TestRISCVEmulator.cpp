@@ -24,6 +24,7 @@ using namespace lldb_private;
 
 struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
   RegisterInfoPOSIX_riscv64::GPR gpr;
+  RegisterInfoPOSIX_riscv64::FPR fpr;
   uint8_t memory[1024] = {0};
 
   RISCVEmulatorTester()
@@ -32,6 +33,7 @@ struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
     EmulateInstruction::SetWriteRegCallback(WriteRegisterCallback);
     EmulateInstruction::SetReadMemCallback(ReadMemoryCallback);
     EmulateInstruction::SetWriteMemCallback(WriteMemoryCallback);
+    ClearAll();
   }
 
   static bool ReadRegisterCallback(EmulateInstruction *instruction, void *baton,
@@ -41,8 +43,13 @@ struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
     uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
     if (reg == gpr_x0_riscv)
       reg_value.SetUInt(0, reg_info->byte_size);
-    else
+    if (reg >= gpr_pc_riscv && reg <= gpr_x31_riscv)
       reg_value.SetUInt(tester->gpr.gpr[reg], reg_info->byte_size);
+    if (reg >= fpr_f0_riscv && reg <= fpr_f31_riscv)
+      reg_value.SetUInt(tester->fpr.fpr[reg - fpr_f0_riscv],
+                        reg_info->byte_size);
+    if (reg == fpr_fcsr_riscv)
+      reg_value.SetUInt(tester->fpr.fcsr, reg_info->byte_size);
     return true;
   }
 
@@ -52,8 +59,12 @@ struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
                                     const RegisterValue &reg_value) {
     RISCVEmulatorTester *tester = (RISCVEmulatorTester *)instruction;
     uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
-    if (reg != gpr_x0_riscv)
+    if (reg >= gpr_pc_riscv && reg <= gpr_x31_riscv)
       tester->gpr.gpr[reg] = reg_value.GetAsUInt64();
+    if (reg >= fpr_f0_riscv && reg <= fpr_f31_riscv)
+      tester->fpr.fpr[reg - fpr_f0_riscv] = reg_value.GetAsUInt64();
+    if (reg == fpr_fcsr_riscv)
+      tester->fpr.fcsr = reg_value.GetAsUInt32();
     return true;
   }
 
@@ -80,6 +91,12 @@ struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
     return Decode(inst)
         .transform([&](DecodeResult res) { return Execute(res, ignore_cond); })
         .value_or(false);
+  }
+
+  void ClearAll() {
+    memset(&gpr, 0, sizeof(gpr));
+    memset(&fpr, 0, sizeof(fpr));
+    memset(memory, 0, sizeof(memory));
   }
 };
 
@@ -155,8 +172,8 @@ constexpr uint32_t BGEU(uint32_t rs1, uint32_t rs2, int32_t offset) {
 
 using EncoderB = uint32_t (*)(uint32_t rs1, uint32_t rs2, int32_t offset);
 
-void testBranch(RISCVEmulatorTester *tester, EncoderB encoder, bool branched,
-                uint64_t rs1, uint64_t rs2) {
+static void testBranch(RISCVEmulatorTester *tester, EncoderB encoder,
+                       bool branched, uint64_t rs1, uint64_t rs2) {
   // prepare test registers
   lldb::addr_t old_pc = 0x114514;
   tester->WritePC(old_pc);
@@ -178,12 +195,13 @@ void testBranch(RISCVEmulatorTester *tester, EncoderB encoder, bool branched,
     testBranch(this, name, false, rs1, rs2_continued);                         \
   }
 
-void CheckRD(RISCVEmulatorTester *tester, uint64_t rd, uint64_t value) {
+static void CheckRD(RISCVEmulatorTester *tester, uint64_t rd, uint64_t value) {
   ASSERT_EQ(tester->gpr.gpr[rd], value);
 }
 
 template <typename T>
-void CheckMem(RISCVEmulatorTester *tester, uint64_t addr, uint64_t value) {
+static void CheckMem(RISCVEmulatorTester *tester, uint64_t addr,
+                     uint64_t value) {
   auto mem = tester->ReadMem<T>(addr);
   ASSERT_TRUE(mem.has_value());
   ASSERT_EQ(*mem, value);
@@ -194,8 +212,8 @@ using RS2 = uint64_t;
 using PC = uint64_t;
 using RDComputer = std::function<uint64_t(RS1, RS2, PC)>;
 
-void TestInst(RISCVEmulatorTester *tester, DecodeResult inst, bool has_rs2,
-              RDComputer rd_val) {
+static void TestInst(RISCVEmulatorTester *tester, DecodeResult inst,
+                     bool has_rs2, RDComputer rd_val) {
 
   lldb::addr_t old_pc = 0x114514;
   tester->WritePC(old_pc);
@@ -223,8 +241,8 @@ void TestInst(RISCVEmulatorTester *tester, DecodeResult inst, bool has_rs2,
 }
 
 template <typename T>
-void TestAtomic(RISCVEmulatorTester *tester, uint64_t inst, T rs1_val,
-                T rs2_val, T rd_expected, T mem_expected) {
+static void TestAtomic(RISCVEmulatorTester *tester, uint64_t inst, T rs1_val,
+                       T rs2_val, T rd_expected, T mem_expected) {
   // Atomic inst must have rs1 and rs2
 
   uint32_t rd = DecodeRD(inst);
@@ -261,7 +279,7 @@ struct TestDecode {
   RISCVInst inst_type;
 };
 
-bool compareInst(const RISCVInst &lhs, const RISCVInst &rhs) {
+static bool compareInst(const RISCVInst &lhs, const RISCVInst &rhs) {
   if (lhs.index() != rhs.index())
     return false;
   return std::visit(
@@ -445,4 +463,189 @@ TEST_F(RISCVEmulatorTester, TestAMOMINU) {
 TEST_F(RISCVEmulatorTester, TestAMOMAXU) {
   TestAtomic<uint32_t>(this, 0xE0F7282F, 0x1, 0x2, 0x1, 0x2);
   TestAtomic<uint64_t>(this, 0xE0F7382F, 0x1, 0x2, 0x1, 0x2);
+}
+
+struct FloatCalInst {
+  uint32_t inst;
+  std::string name;
+  float rs1_val;
+  float rs2_val;
+  float rd_val;
+};
+
+static void TestFloatCalInst(RISCVEmulatorTester *tester, DecodeResult inst,
+                             float rs1_val, float rs2_val, float rd_exp) {
+  std::vector<std::string> FloatCMP = {"FEQ_S", "FLT_S", "FLE_S"};
+  std::vector<std::string> FloatCal3 = {"FMADD_S", "FMSUB_S", "FNMSUB_S",
+                                        "FNMADD_S"};
+
+  uint32_t rd = DecodeRD(inst.inst);
+  uint32_t rs1 = DecodeRS1(inst.inst);
+  uint32_t rs2 = DecodeRS2(inst.inst);
+
+  llvm::APFloat ap_rs1_val(rs1_val);
+  llvm::APFloat ap_rs2_val(rs2_val);
+  llvm::APFloat ap_rs3_val(0.5f);
+
+  if (rs1)
+    tester->fpr.fpr[rs1] = ap_rs1_val.bitcastToAPInt().getZExtValue();
+  if (rs2)
+    tester->fpr.fpr[rs2] = ap_rs2_val.bitcastToAPInt().getZExtValue();
+  for (auto i : FloatCal3) {
+    if (inst.pattern.name == i) {
+      uint32_t rs3 = DecodeRS3(inst.inst);
+      tester->fpr.fpr[rs3] = ap_rs3_val.bitcastToAPInt().getZExtValue();
+    }
+  }
+  ASSERT_TRUE(tester->Execute(inst, false));
+  for (auto i : FloatCMP) {
+    if (inst.pattern.name == i) {
+      ASSERT_EQ(tester->gpr.gpr[rd], rd_exp);
+      return;
+    }
+  }
+
+  llvm::APInt apInt(32, tester->fpr.fpr[rd]);
+  llvm::APFloat rd_val(apInt.bitsToFloat());
+  ASSERT_EQ(rd_val.convertToFloat(), rd_exp);
+}
+
+TEST_F(RISCVEmulatorTester, TestFloatInst) {
+  std::vector<FloatCalInst> tests = {
+      {0x21F253, "FADD_S", 0.5f, 0.5f, 1.0f},
+      {0x821F253, "FSUB_S", 1.0f, 0.5f, 0.5f},
+      {0x1021F253, "FMUL_S", 0.5f, 0.5f, 0.25f},
+      {0x1821F253, "FDIV_S", 0.1f, 0.1f, 1.0f},
+      {0x20218253, "FSGNJ_S", 0.5f, 0.2f, 0.5f},
+      {0x20219253, "FSGNJN_S", 0.5f, -1.0f, 0.5f},
+      {0x2021A253, "FSGNJX_S", -0.5f, -0.5f, 0.5f},
+      {0x2021A253, "FSGNJX_S", -0.5f, 0.5f, -0.5f},
+      {0x28218253, "FMIN_S", -0.5f, 0.5f, -0.5f},
+      {0x28218253, "FMIN_S", -0.5f, -0.6f, -0.6f},
+      {0x28218253, "FMIN_S", 0.5f, 0.6f, 0.5f},
+      {0x28219253, "FMAX_S", -0.5f, -0.6f, -0.5f},
+      {0x28219253, "FMAX_S", 0.5f, 0.6f, 0.6f},
+      {0x28219253, "FMAX_S", 0.5f, -0.6f, 0.5f},
+      {0xA221A253, "FEQ_S", 0.5f, 0.5f, 1},
+      {0xA221A253, "FEQ_S", 0.5f, -0.5f, 0},
+      {0xA221A253, "FEQ_S", -0.5f, 0.5f, 0},
+      {0xA221A253, "FEQ_S", 0.4f, 0.5f, 0},
+      {0xA2219253, "FLT_S", 0.4f, 0.5f, 1},
+      {0xA2219253, "FLT_S", 0.5f, 0.5f, 0},
+      {0xA2218253, "FLE_S", 0.4f, 0.5f, 1},
+      {0xA2218253, "FLE_S", 0.5f, 0.5f, 1},
+      {0x4021F243, "FMADD_S", 0.5f, 0.5f, 0.75f},
+      {0x4021F247, "FMSUB_S", 0.5f, 0.5f, -0.25f},
+      {0x4021F24B, "FNMSUB_S", 0.5f, 0.5f, 0.25f},
+      {0x4021F24F, "FNMADD_S", 0.5f, 0.5f, -0.75f},
+  };
+  for (auto i : tests) {
+    auto decode = this->Decode(i.inst);
+    ASSERT_TRUE(decode.has_value());
+    std::string name = decode->pattern.name;
+    ASSERT_EQ(name, i.name);
+    TestFloatCalInst(this, decode.value(), i.rs1_val, i.rs2_val, i.rd_val);
+  }
+}
+
+static void TestFCVT(RISCVEmulatorTester *tester, DecodeResult inst) {
+  std::vector<std::string> FloatToInt = {"FCVT_W_S", "FCVT_WU_S"};
+  std::vector<std::string> IntToFloat = {"FCVT_S_W", "FCVT_S_WU"};
+
+  uint32_t rd = DecodeRD(inst.inst);
+  uint32_t rs1 = DecodeRS1(inst.inst);
+
+  for (auto i : FloatToInt) {
+    if (inst.pattern.name == i) {
+      llvm::APFloat apf_rs1_val(12.0f);
+      tester->fpr.fpr[rs1] = apf_rs1_val.bitcastToAPInt().getZExtValue();
+      ASSERT_TRUE(tester->Execute(inst, false));
+      ASSERT_EQ(tester->gpr.gpr[rd], uint64_t(12));
+      return;
+    }
+  }
+
+  for (auto i : IntToFloat) {
+    if (inst.pattern.name == i) {
+      tester->gpr.gpr[rs1] = 12;
+      ASSERT_TRUE(tester->Execute(inst, false));
+      llvm::APInt apInt(32, tester->fpr.fpr[rd]);
+      llvm::APFloat rd_val(apInt.bitsToFloat());
+      ASSERT_EQ(rd_val.convertToFloat(), 12.0f);
+      return;
+    }
+  }
+}
+
+struct FCVTInst {
+  uint32_t inst;
+  std::string name;
+};
+
+TEST_F(RISCVEmulatorTester, TestFCVTInst) {
+  std::vector<FCVTInst> tests = {
+      {0xC001F253, "FCVT_W_S"},
+      {0xC011F253, "FCVT_WU_S"},
+      {0xD001F253, "FCVT_S_W"},
+      {0xD011F253, "FCVT_S_WU"},
+  };
+  for (auto i : tests) {
+    auto decode = this->Decode(i.inst);
+    ASSERT_TRUE(decode.has_value());
+    std::string name = decode->pattern.name;
+    ASSERT_EQ(name, i.name);
+    TestFCVT(this, decode.value());
+  }
+}
+
+TEST_F(RISCVEmulatorTester, TestFloatLSInst) {
+  uint32_t FLWInst = 0x1A207;  // imm = 0
+  uint32_t FSWInst = 0x21A827; // imm = 16
+
+  llvm::APFloat apf(12.0f);
+  uint64_t bits = apf.bitcastToAPInt().getZExtValue();
+
+  *(uint64_t *)this->memory = bits;
+  auto decode = this->Decode(FLWInst);
+  ASSERT_TRUE(decode.has_value());
+  std::string name = decode->pattern.name;
+  ASSERT_EQ(name, "FLW");
+  ASSERT_TRUE(this->Execute(decode.value(), false));
+  ASSERT_EQ(this->fpr.fpr[DecodeRD(FLWInst)], bits);
+
+  this->fpr.fpr[DecodeRS2(FSWInst)] = bits;
+  decode = this->Decode(FSWInst);
+  ASSERT_TRUE(decode.has_value());
+  name = decode->pattern.name;
+  ASSERT_EQ(name, "FSW");
+  ASSERT_TRUE(this->Execute(decode.value(), false));
+  ASSERT_EQ(*(uint32_t *)(this->memory + 16), bits);
+}
+
+TEST_F(RISCVEmulatorTester, TestFMV_X_WInst) {
+  auto FMV_X_WInst = 0xE0018253;
+
+  llvm::APFloat apf(12.0f);
+  auto bits = NanBoxing(apf.bitcastToAPInt().getZExtValue());
+  this->fpr.fpr[DecodeRS1(FMV_X_WInst)] = bits;
+  auto decode = this->Decode(FMV_X_WInst);
+  ASSERT_TRUE(decode.has_value());
+  std::string name = decode->pattern.name;
+  ASSERT_EQ(name, "FMV_X_W");
+  ASSERT_TRUE(this->Execute(decode.value(), false));
+  ASSERT_EQ(this->gpr.gpr[DecodeRD(FMV_X_WInst)], bits);
+}
+
+TEST_F(RISCVEmulatorTester, TestFMV_W_XInst) {
+  auto FMV_W_XInst = 0xF0018253;
+
+  llvm::APFloat apf(12.0f);
+  uint64_t bits = NanUnBoxing(apf.bitcastToAPInt().getZExtValue());
+  this->gpr.gpr[DecodeRS1(FMV_W_XInst)] = bits;
+  auto decode = this->Decode(FMV_W_XInst);
+  ASSERT_TRUE(decode.has_value());
+  std::string name = decode->pattern.name;
+  ASSERT_EQ(name, "FMV_W_X");
+  ASSERT_TRUE(this->Execute(decode.value(), false));
+  ASSERT_EQ(this->fpr.fpr[DecodeRD(FMV_W_XInst)], bits);
 }

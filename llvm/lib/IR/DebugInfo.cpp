@@ -1755,10 +1755,10 @@ static Optional<AssignmentInfo> getAssignmentInfoImpl(const DataLayout &DL,
   uint64_t OffsetInBytes = GEPOffset.getLimitedValue();
   // Check for overflow.
   if (OffsetInBytes == UINT64_MAX)
-    return None;
+    return std::nullopt;
   if (const auto *Alloca = dyn_cast<AllocaInst>(Base))
     return AssignmentInfo(DL, Alloca, OffsetInBytes * 8, SizeInBits);
-  return None;
+  return std::nullopt;
 }
 
 Optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
@@ -1768,7 +1768,7 @@ Optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
   auto *ConstLengthInBytes = dyn_cast<ConstantInt>(I->getLength());
   if (!ConstLengthInBytes)
     // We can't use a non-const size, bail.
-    return None;
+    return std::nullopt;
   uint64_t SizeInBits = 8 * ConstLengthInBytes->getZExtValue();
   return getAssignmentInfoImpl(DL, StoreDest, SizeInBits);
 }
@@ -1793,14 +1793,16 @@ static CallInst *emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
   assert(ID && "Store instruction must have DIAssignID metadata");
   (void)ID;
 
-  DIExpression *Expr = DIExpression::get(StoreLikeInst.getContext(), None);
+  DIExpression *Expr =
+      DIExpression::get(StoreLikeInst.getContext(), std::nullopt);
   if (!Info.StoreToWholeAlloca) {
     auto R = DIExpression::createFragmentExpression(Expr, Info.OffsetInBits,
                                                     Info.SizeInBits);
     assert(R.has_value() && "failed to create fragment expression");
     Expr = R.value();
   }
-  DIExpression *AddrExpr = DIExpression::get(StoreLikeInst.getContext(), None);
+  DIExpression *AddrExpr =
+      DIExpression::get(StoreLikeInst.getContext(), std::nullopt);
   return DIB.insertDbgAssign(&StoreLikeInst, Val, VarRec.Var, Expr, Dest,
                              AddrExpr, VarRec.DL);
 }
@@ -1827,7 +1829,7 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
   for (auto BBI = Start; BBI != End; ++BBI) {
     for (Instruction &I : *BBI) {
 
-      Optional<AssignmentInfo> Info = None;
+      Optional<AssignmentInfo> Info = std::nullopt;
       Value *ValueComponent = nullptr;
       Value *DestComponent = nullptr;
       if (auto *AI = dyn_cast<AllocaInst>(&I)) {
@@ -1946,10 +1948,9 @@ void AssignmentTrackingPass::runOnFunction(Function &F) {
       // Assert that the alloca that DDI uses is now linked to a dbg.assign
       // describing the same variable (i.e. check that this dbg.declare
       // has been replaced by a dbg.assign).
-      assert(std::find_if(Markers.begin(), Markers.end(),
-                          [DDI](DbgAssignIntrinsic *DAI) {
-                            return DebugVariable(DAI) == DebugVariable(DDI);
-                          }) != Markers.end());
+      assert(llvm::any_of(Markers, [DDI](DbgAssignIntrinsic *DAI) {
+        return DebugVariable(DAI) == DebugVariable(DDI);
+      }));
       // Delete DDI because the variable location is now tracked using
       // assignment tracking.
       DDI->eraseFromParent();

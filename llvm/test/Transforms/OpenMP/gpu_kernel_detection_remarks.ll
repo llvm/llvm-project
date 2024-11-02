@@ -1,5 +1,4 @@
 ; RUN: opt -passes=openmp-opt-cgscc -pass-remarks-analysis=openmp-opt -openmp-print-gpu-kernels -disable-output < %s 2>&1 | FileCheck %s --implicit-check-not=non_kernel
-; RUN: opt        -openmp-opt-cgscc -pass-remarks-analysis=openmp-opt -openmp-print-gpu-kernels -disable-output < %s 2>&1 | FileCheck %s --implicit-check-not=non_kernel
 
 ; CHECK-DAG: remark: <unknown>:0:0: OpenMP GPU kernel kernel1
 ; CHECK-DAG: remark: <unknown>:0:0: OpenMP GPU kernel kernel2

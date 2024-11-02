@@ -32,5 +32,5 @@ InitializeCOMRAII::InitializeCOMRAII(COMThreadingMode Threading,
 }
 
 InitializeCOMRAII::~InitializeCOMRAII() { ::CoUninitialize(); }
-}
-}
+} // namespace sys
+} // namespace llvm

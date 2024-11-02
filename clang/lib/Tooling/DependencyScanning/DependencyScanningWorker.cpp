@@ -103,7 +103,7 @@ static void visitPrebuiltModule(StringRef PrebuiltModuleFilename,
 
   while (!Worklist.empty())
     ASTReader::readASTFileControlBlock(
-        Worklist.pop_back_val(), CI.getFileManager(),
+        Worklist.pop_back_val(), CI.getFileManager(), CI.getModuleCache(),
         CI.getPCHContainerReader(),
         /*FindModuleFileExtensions=*/false, Listener,
         /*ValidateDiagnosticOptions=*/false);
@@ -135,8 +135,8 @@ static void sanitizeDiagOpts(DiagnosticOptions &DiagOpts) {
   DiagOpts.ShowCarets = false;
   // Don't write out diagnostic file.
   DiagOpts.DiagnosticSerializationFile.clear();
-  // Don't treat warnings as errors.
-  DiagOpts.Warnings.push_back("no-error");
+  // Don't emit warnings as errors (and all other warnings too).
+  DiagOpts.IgnoreWarnings = true;
 }
 
 /// A clang tool that runs the preprocessor in a mode that's optimized for

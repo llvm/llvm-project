@@ -206,17 +206,22 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   bool Changed = false;
   std::vector<DominatorTree::UpdateType> Updates;
 
+  // TODO: For now we unify all exit blocks, even though they are uniformly
+  // reachable, if there are any exits not uniformly reached. This is to
+  // workaround the limitation of structurizer, which can not handle multiple
+  // function exits. After structurizer is able to handle multiple function
+  // exits, we should only unify UnreachableBlocks that are not uniformly
+  // reachable.
+  bool HasDivergentExitBlock = llvm::any_of(
+      PDT.roots(), [&](auto BB) { return !isUniformlyReached(DA, *BB); });
+
   for (BasicBlock *BB : PDT.roots()) {
     if (isa<ReturnInst>(BB->getTerminator())) {
-      if (!isUniformlyReached(DA, *BB))
+      if (HasDivergentExitBlock)
         ReturningBlocks.push_back(BB);
     } else if (isa<UnreachableInst>(BB->getTerminator())) {
-      // TODO: For now we unify UnreachableBlocks even though they are uniformly
-      // reachable. This is to workaround the limitation of structurizer, which
-      // can not handle multiple function exits. After structurizer is able to
-      // handle multiple function exits, we should only unify UnreachableBlocks
-      // that are not uniformly reachable.
-      UnreachableBlocks.push_back(BB);
+      if (HasDivergentExitBlock)
+        UnreachableBlocks.push_back(BB);
     } else if (BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator())) {
 
       ConstantInt *BoolTrue = ConstantInt::getTrue(F.getContext());
@@ -224,7 +229,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
         DummyReturnBB = BasicBlock::Create(F.getContext(),
                                            "DummyReturnBlock", &F);
         Type *RetTy = F.getReturnType();
-        Value *RetVal = RetTy->isVoidTy() ? nullptr : UndefValue::get(RetTy);
+        Value *RetVal = RetTy->isVoidTy() ? nullptr : PoisonValue::get(RetTy);
         ReturnInst::Create(F.getContext(), RetVal, DummyReturnBB);
         ReturningBlocks.push_back(DummyReturnBB);
       }
@@ -286,7 +291,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
       // structurizer/annotator can't handle the multiple exits
 
       Type *RetTy = F.getReturnType();
-      Value *RetVal = RetTy->isVoidTy() ? nullptr : UndefValue::get(RetTy);
+      Value *RetVal = RetTy->isVoidTy() ? nullptr : PoisonValue::get(RetTy);
       // Remove and delete the unreachable inst.
       UnreachableBlock->getTerminator()->eraseFromParent();
 

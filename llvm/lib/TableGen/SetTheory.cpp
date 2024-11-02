@@ -210,26 +210,21 @@ struct SequenceOp : public SetTheory::Operator {
       PrintFatalError(Loc, "To out of range");
 
     RecordKeeper &Records =
-        cast<DefInit>(Expr->getOperator())->getDef()->getRecords();
+      cast<DefInit>(Expr->getOperator())->getDef()->getRecords();
 
     Step *= From <= To ? 1 : -1;
-    const char FallbackFmt[] = "%u";
     while (true) {
       if (Step > 0 && From > To)
         break;
       else if (Step < 0 && From < To)
         break;
-      const char *const VerifiedFmt = PrintfStyleFormatReader::ensureCompatible(
-          FallbackFmt, Format.c_str());
-      if (VerifiedFmt == FallbackFmt)
-        PrintFatalError(Loc, "Format string '" + Format +
-                                 "' is incompatible with '%u'!");
       std::string Name;
-      raw_string_ostream(Name) << format(VerifiedFmt, unsigned(From));
-      Record *Rec = Records.getDef(Name);
+      raw_string_ostream OS(Name);
+      OS << format(Format.c_str(), unsigned(From));
+      Record *Rec = Records.getDef(OS.str());
       if (!Rec)
-        PrintFatalError(Loc,
-                        "No def named '" + Name + "': " + Expr->getAsString());
+        PrintFatalError(Loc, "No def named '" + Name + "': " +
+          Expr->getAsString());
       // Try to reevaluate Rec in case it is a set.
       if (const RecVec *Result = ST.expand(Rec))
         Elts.insert(Result->begin(), Result->end());

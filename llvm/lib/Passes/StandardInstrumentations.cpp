@@ -71,22 +71,23 @@ static cl::opt<std::string>
 // An option that determines the colour used for elements that are only
 // in the before part.  Must be a colour named in appendix J of
 // https://graphviz.org/pdf/dotguide.pdf
-cl::opt<std::string>
+static cl::opt<std::string>
     BeforeColour("dot-cfg-before-color",
-                 cl::desc("Color for dot-cfg before elements."), cl::Hidden,
+                 cl::desc("Color for dot-cfg before elements"), cl::Hidden,
                  cl::init("red"));
 // An option that determines the colour used for elements that are only
 // in the after part.  Must be a colour named in appendix J of
 // https://graphviz.org/pdf/dotguide.pdf
-cl::opt<std::string> AfterColour("dot-cfg-after-color",
-                                 cl::desc("Color for dot-cfg after elements."),
-                                 cl::Hidden, cl::init("forestgreen"));
+static cl::opt<std::string>
+    AfterColour("dot-cfg-after-color",
+                cl::desc("Color for dot-cfg after elements"), cl::Hidden,
+                cl::init("forestgreen"));
 // An option that determines the colour used for elements that are in both
 // the before and after parts.  Must be a colour named in appendix J of
 // https://graphviz.org/pdf/dotguide.pdf
-cl::opt<std::string>
+static cl::opt<std::string>
     CommonColour("dot-cfg-common-color",
-                 cl::desc("Color for dot-cfg common elements."), cl::Hidden,
+                 cl::desc("Color for dot-cfg common elements"), cl::Hidden,
                  cl::init("black"));
 
 // An option that determines where the generated website file (named
@@ -100,7 +101,7 @@ static cl::opt<std::string> DotCfgDir(
 static cl::opt<bool>
     PrintCrashIR("print-on-crash",
                  cl::desc("Print the last form of the IR before crash"),
-                 cl::init(false), cl::Hidden);
+                 cl::Hidden);
 
 static cl::opt<std::string> OptBisectPrintIRPath(
     "opt-bisect-print-ir-path",
@@ -766,27 +767,35 @@ bool OptNoneInstrumentation::shouldRun(StringRef PassID, Any IR) {
   return ShouldRun;
 }
 
-void OptBisectInstrumentation::registerCallbacks(
+bool OptPassGateInstrumentation::shouldRun(StringRef PassName, Any IR) {
+  if (isIgnored(PassName))
+    return true;
+
+  bool ShouldRun =
+      Context.getOptPassGate().shouldRunPass(PassName, getIRName(IR));
+  if (!ShouldRun && !this->HasWrittenIR && !OptBisectPrintIRPath.empty()) {
+    // FIXME: print IR if limit is higher than number of opt-bisect
+    // invocations
+    this->HasWrittenIR = true;
+    const Module *M = unwrapModule(IR, /*Force=*/true);
+    assert((M && &M->getContext() == &Context) && "Missing/Mismatching Module");
+    std::error_code EC;
+    raw_fd_ostream OS(OptBisectPrintIRPath, EC);
+    if (EC)
+      report_fatal_error(errorCodeToError(EC));
+    M->print(OS, nullptr);
+  }
+  return ShouldRun;
+}
+
+void OptPassGateInstrumentation::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
-  if (!getOptBisector().isEnabled())
+  OptPassGate &PassGate = Context.getOptPassGate();
+  if (!PassGate.isEnabled())
     return;
-  PIC.registerShouldRunOptionalPassCallback([this](StringRef PassID, Any IR) {
-    if (isIgnored(PassID))
-      return true;
-    bool ShouldRun = getOptBisector().checkPass(PassID, getIRName(IR));
-    if (!ShouldRun && !this->HasWrittenIR && !OptBisectPrintIRPath.empty()) {
-      // FIXME: print IR if limit is higher than number of opt-bisect
-      // invocations
-      this->HasWrittenIR = true;
-      const Module *M = unwrapModule(IR, /*Force=*/true);
-      assert(M && "expected Module");
-      std::error_code EC;
-      raw_fd_ostream OS(OptBisectPrintIRPath, EC);
-      if (EC)
-        report_fatal_error(errorCodeToError(EC));
-      M->print(OS, nullptr);
-    }
-    return ShouldRun;
+
+  PIC.registerShouldRunOptionalPassCallback([this](StringRef PassName, Any IR) {
+    return this->shouldRun(PassName, IR);
   });
 }
 
@@ -2036,8 +2045,11 @@ void DotCfgChangeReporter::registerCallbacks(
 }
 
 StandardInstrumentations::StandardInstrumentations(
-    bool DebugLogging, bool VerifyEach, PrintPassOptions PrintPassOpts)
-    : PrintPass(DebugLogging, PrintPassOpts), OptNone(DebugLogging),
+    LLVMContext &Context, bool DebugLogging, bool VerifyEach,
+    PrintPassOptions PrintPassOpts)
+    : PrintPass(DebugLogging, PrintPassOpts),
+      OptNone(DebugLogging),
+      OptPassGate(Context),
       PrintChangedIR(PrintChanged == ChangePrinter::Verbose),
       PrintChangedDiff(PrintChanged == ChangePrinter::DiffVerbose ||
                            PrintChanged == ChangePrinter::ColourDiffVerbose,
@@ -2098,7 +2110,7 @@ void StandardInstrumentations::registerCallbacks(
   PrintPass.registerCallbacks(PIC);
   TimePasses.registerCallbacks(PIC);
   OptNone.registerCallbacks(PIC);
-  OptBisect.registerCallbacks(PIC);
+  OptPassGate.registerCallbacks(PIC);
   if (FAM)
     PreservedCFGChecker.registerCallbacks(PIC, *FAM);
   PrintChangedIR.registerCallbacks(PIC);

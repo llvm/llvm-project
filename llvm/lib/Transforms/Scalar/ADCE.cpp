@@ -29,6 +29,7 @@
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Dominators.h"
@@ -543,6 +544,11 @@ bool AggressiveDeadCodeElimination::removeDeadInstructions() {
       continue;
 
     if (auto *DII = dyn_cast<DbgInfoIntrinsic>(&I)) {
+      // Avoid removing a dbg.assign that is linked to instructions because it
+      // holds information about an existing store.
+      if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DII))
+        if (!at::getAssignmentInsts(DAI).empty())
+          continue;
       // Check if the scope of this variable location is alive.
       if (AliveScopes.count(DII->getDebugLoc()->getScope()))
         continue;

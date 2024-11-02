@@ -87,11 +87,13 @@ void StopTheWorld(StopTheWorldCallback callback, void *argument) {
 
 #if defined(__x86_64__)
 typedef x86_thread_state64_t regs_struct;
+#define regs_flavor x86_THREAD_STATE64
 
 #define SP_REG __rsp
 
 #elif defined(__aarch64__)
 typedef arm_thread_state64_t regs_struct;
+#define regs_flavor ARM_THREAD_STATE64
 
 # if __DARWIN_UNIX03
 #  define SP_REG __sp
@@ -101,6 +103,7 @@ typedef arm_thread_state64_t regs_struct;
 
 #elif defined(__i386)
 typedef x86_thread_state32_t regs_struct;
+#define regs_flavor x86_THREAD_STATE32
 
 #define SP_REG __esp
 
@@ -146,8 +149,8 @@ PtraceRegistersStatus SuspendedThreadsListMac::GetRegistersAndSP(
   thread_t thread = GetThread(index);
   regs_struct regs;
   int err;
-  mach_msg_type_number_t reg_count = MACHINE_THREAD_STATE_COUNT;
-  err = thread_get_state(thread, MACHINE_THREAD_STATE, (thread_state_t)&regs,
+  mach_msg_type_number_t reg_count = sizeof(regs) / sizeof(natural_t);
+  err = thread_get_state(thread, regs_flavor, (thread_state_t)&regs,
                          &reg_count);
   if (err != KERN_SUCCESS) {
     VReport(1, "Error - unable to get registers for a thread\n");

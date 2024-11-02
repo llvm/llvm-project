@@ -95,7 +95,7 @@ define <vscale x 2 x float> @masked_gather_nxv2f32(float* %base, <vscale x 2 x i
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    sxth z0.d, p1/m, z0.d
-; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, z0.d, sxtw #2]
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, z0.d, lsl #2]
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr float, float* %base, <vscale x 2 x i16> %indices
   %data = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32(<vscale x 2 x float*> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x float> undef)

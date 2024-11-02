@@ -52,10 +52,10 @@ define i32 @test_sroa_select_gep_volatile_load(i1 %cond) {
 ; CHECK-NEXT:    store i32 12, ptr [[B_SROA_0]], align 4
 ; CHECK-NEXT:    store i32 21, ptr [[A_SROA_2]], align 4
 ; CHECK-NEXT:    store i32 22, ptr [[B_SROA_2]], align 4
-; CHECK-NEXT:    [[SELECT_SROA_SEL:%.*]] = select i1 [[COND:%.*]], ptr [[A_SROA_0]], ptr [[B_SROA_0]]
-; CHECK-NEXT:    [[LOAD1:%.*]] = load volatile i32, ptr [[SELECT_SROA_SEL]], align 4
-; CHECK-NEXT:    [[SELECT_SROA_SEL3:%.*]] = select i1 [[COND]], ptr [[A_SROA_2]], ptr [[B_SROA_2]]
-; CHECK-NEXT:    [[LOAD2:%.*]] = load volatile i32, ptr [[SELECT_SROA_SEL3]], align 4
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], ptr [[A_SROA_0]], ptr [[B_SROA_0]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load volatile i32, ptr [[SELECT]], align 4
+; CHECK-NEXT:    [[SELECT_SROA_SEL:%.*]] = select i1 [[COND]], ptr [[A_SROA_2]], ptr [[B_SROA_2]]
+; CHECK-NEXT:    [[LOAD2:%.*]] = load volatile i32, ptr [[SELECT_SROA_SEL]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LOAD1]], [[LOAD2]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
@@ -99,8 +99,8 @@ define i32 @test_sroa_gep_select_gep(i1 %cond) {
 ; CHECK-NEXT:    [[B_SROA_0:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 1, ptr [[A_SROA_0]], align 4
 ; CHECK-NEXT:    store i32 2, ptr [[B_SROA_0]], align 4
-; CHECK-NEXT:    [[SELECT_SROA_SEL:%.*]] = select i1 [[COND:%.*]], ptr [[A_SROA_0]], ptr [[B_SROA_0]]
-; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[COND]], ptr [[SELECT_SROA_SEL]], ptr [[A_SROA_0]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], ptr [[A_SROA_0]], ptr [[B_SROA_0]]
+; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[COND]], ptr [[SELECT]], ptr [[A_SROA_0]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[SELECT2]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;

@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-- -amdgpu-scalarize-global-loads=false -mcpu=tahiti -verify-machineinstrs < %s | FileCheck %s -allow-deprecated-dag-overlap -enable-var-scope --check-prefix=SI
 ; RUN: llc -mtriple=amdgcn-- -amdgpu-scalarize-global-loads=false -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck %s -allow-deprecated-dag-overlap -enable-var-scope --check-prefix=VI
 
-define amdgpu_kernel void @s_sext_i1_to_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
+define amdgpu_kernel void @s_sext_i1_to_i32(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind {
 ; SI-LABEL: s_sext_i1_to_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -32,11 +32,11 @@ define amdgpu_kernel void @s_sext_i1_to_i32(i32 addrspace(1)* %out, i32 %a, i32 
 ; VI-NEXT:    s_endpgm
   %cmp = icmp eq i32 %a, %b
   %sext = sext i1 %cmp to i32
-  store i32 %sext, i32 addrspace(1)* %out, align 4
+  store i32 %sext, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_kernel void @test_s_sext_i32_to_i64(i64 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) nounwind {
+define amdgpu_kernel void @test_s_sext_i32_to_i64(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c) nounwind {
 ; SI-LABEL: test_s_sext_i32_to_i64:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -74,11 +74,11 @@ entry:
   %mul = mul i32 %a, %b
   %add = add i32 %mul, %c
   %sext = sext i32 %add to i64
-  store i64 %sext, i64 addrspace(1)* %out, align 8
+  store i64 %sext, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @s_sext_i1_to_i64(i64 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
+define amdgpu_kernel void @s_sext_i1_to_i64(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind {
 ; SI-LABEL: s_sext_i1_to_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -110,11 +110,11 @@ define amdgpu_kernel void @s_sext_i1_to_i64(i64 addrspace(1)* %out, i32 %a, i32 
 ; VI-NEXT:    s_endpgm
   %cmp = icmp eq i32 %a, %b
   %sext = sext i1 %cmp to i64
-  store i64 %sext, i64 addrspace(1)* %out, align 8
+  store i64 %sext, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @s_sext_i32_to_i64(i64 addrspace(1)* %out, i32 %a) nounwind {
+define amdgpu_kernel void @s_sext_i32_to_i64(ptr addrspace(1) %out, i32 %a) nounwind {
 ; SI-LABEL: s_sext_i32_to_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -141,11 +141,11 @@ define amdgpu_kernel void @s_sext_i32_to_i64(i64 addrspace(1)* %out, i32 %a) nou
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %sext = sext i32 %a to i64
-  store i64 %sext, i64 addrspace(1)* %out, align 8
+  store i64 %sext, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @v_sext_i32_to_i64(i64 addrspace(1)* %out, i32 addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @v_sext_i32_to_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: v_sext_i32_to_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -181,13 +181,13 @@ define amdgpu_kernel void @v_sext_i32_to_i64(i64 addrspace(1)* %out, i32 addrspa
 ; VI-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
-  %val = load i32, i32 addrspace(1)* %in, align 4
+  %val = load i32, ptr addrspace(1) %in, align 4
   %sext = sext i32 %val to i64
-  store i64 %sext, i64 addrspace(1)* %out, align 8
+  store i64 %sext, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @s_sext_i16_to_i64(i64 addrspace(1)* %out, i16 %a) nounwind {
+define amdgpu_kernel void @s_sext_i16_to_i64(ptr addrspace(1) %out, i16 %a) nounwind {
 ; SI-LABEL: s_sext_i16_to_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -214,11 +214,11 @@ define amdgpu_kernel void @s_sext_i16_to_i64(i64 addrspace(1)* %out, i16 %a) nou
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %sext = sext i16 %a to i64
-  store i64 %sext, i64 addrspace(1)* %out, align 8
+  store i64 %sext, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @s_sext_i1_to_i16(i16 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
+define amdgpu_kernel void @s_sext_i1_to_i16(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind {
 ; SI-LABEL: s_sext_i1_to_i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -248,7 +248,7 @@ define amdgpu_kernel void @s_sext_i1_to_i16(i16 addrspace(1)* %out, i32 %a, i32 
 ; VI-NEXT:    s_endpgm
   %cmp = icmp eq i32 %a, %b
   %sext = sext i1 %cmp to i16
-  store i16 %sext, i16 addrspace(1)* %out
+  store i16 %sext, ptr addrspace(1) %out
   ret void
 }
 
@@ -256,7 +256,7 @@ define amdgpu_kernel void @s_sext_i1_to_i16(i16 addrspace(1)* %out, i32 %a, i32 
 ; makes it all the way throught the legalizer/optimizer to make sure
 ; we select this correctly.  In the s_sext_i1_to_i16, the sign_extend node
 ; is optimized to a select very early.
-define amdgpu_kernel void @s_sext_i1_to_i16_with_and(i16 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
+define amdgpu_kernel void @s_sext_i1_to_i16_with_and(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
 ; SI-LABEL: s_sext_i1_to_i16_with_and:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xb
@@ -292,11 +292,11 @@ define amdgpu_kernel void @s_sext_i1_to_i16_with_and(i16 addrspace(1)* %out, i32
   %cmp1 = icmp eq i32 %c, %d
   %cmp = and i1 %cmp0, %cmp1
   %sext = sext i1 %cmp to i16
-  store i16 %sext, i16 addrspace(1)* %out
+  store i16 %sext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_sext_i1_to_i16_with_and(i16 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) nounwind {
+define amdgpu_kernel void @v_sext_i1_to_i16_with_and(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c) nounwind {
 ; SI-LABEL: v_sext_i1_to_i16_with_and:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -335,7 +335,7 @@ define amdgpu_kernel void @v_sext_i1_to_i16_with_and(i16 addrspace(1)* %out, i32
   %cmp1 = icmp eq i32 %b, %c
   %cmp = and i1 %cmp0, %cmp1
   %sext = sext i1 %cmp to i16
-  store i16 %sext, i16 addrspace(1)* %out
+  store i16 %sext, ptr addrspace(1) %out
   ret void
 }
 
@@ -347,7 +347,7 @@ define amdgpu_kernel void @v_sext_i1_to_i16_with_and(i16 addrspace(1)* %out, i32
 ; t55: i16 = srl t29, Constant:i32<8>
 ; t63: i32 = any_extend t55
 ; t64: i32 = sign_extend_inreg t63, ValueType:ch:i8
-define amdgpu_kernel void @s_sext_v4i8_to_v4i32(i32 addrspace(1)* %out, i32 %a) nounwind {
+define amdgpu_kernel void @s_sext_v4i8_to_v4i32(ptr addrspace(1) %out, i32 %a) nounwind {
 ; SI-LABEL: s_sext_v4i8_to_v4i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -403,16 +403,16 @@ define amdgpu_kernel void @s_sext_v4i8_to_v4i32(i32 addrspace(1)* %out, i32 %a) 
   %elt1 = extractelement <4 x i32> %ext, i32 1
   %elt2 = extractelement <4 x i32> %ext, i32 2
   %elt3 = extractelement <4 x i32> %ext, i32 3
-  store volatile i32 %elt0, i32 addrspace(1)* %out
-  store volatile i32 %elt1, i32 addrspace(1)* %out
-  store volatile i32 %elt2, i32 addrspace(1)* %out
-  store volatile i32 %elt3, i32 addrspace(1)* %out
+  store volatile i32 %elt0, ptr addrspace(1) %out
+  store volatile i32 %elt1, ptr addrspace(1) %out
+  store volatile i32 %elt2, ptr addrspace(1) %out
+  store volatile i32 %elt3, ptr addrspace(1) %out
   ret void
 }
 
 ; FIXME: need to optimize same sequence as above test to avoid
 ; this shift.
-define amdgpu_kernel void @v_sext_v4i8_to_v4i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @v_sext_v4i8_to_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: v_sext_v4i8_to_v4i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -469,22 +469,22 @@ define amdgpu_kernel void @v_sext_v4i8_to_v4i32(i32 addrspace(1)* %out, i32 addr
 ; VI-NEXT:    buffer_store_dword v2, off, s[4:7], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
-  %a = load i32, i32 addrspace(1)* %in
+  %a = load i32, ptr addrspace(1) %in
   %cast = bitcast i32 %a to <4 x i8>
   %ext = sext <4 x i8> %cast to <4 x i32>
   %elt0 = extractelement <4 x i32> %ext, i32 0
   %elt1 = extractelement <4 x i32> %ext, i32 1
   %elt2 = extractelement <4 x i32> %ext, i32 2
   %elt3 = extractelement <4 x i32> %ext, i32 3
-  store volatile i32 %elt0, i32 addrspace(1)* %out
-  store volatile i32 %elt1, i32 addrspace(1)* %out
-  store volatile i32 %elt2, i32 addrspace(1)* %out
-  store volatile i32 %elt3, i32 addrspace(1)* %out
+  store volatile i32 %elt0, ptr addrspace(1) %out
+  store volatile i32 %elt1, ptr addrspace(1) %out
+  store volatile i32 %elt2, ptr addrspace(1) %out
+  store volatile i32 %elt3, ptr addrspace(1) %out
   ret void
 }
 
 ; FIXME: s_bfe_i64, same on SI and VI
-define amdgpu_kernel void @s_sext_v4i16_to_v4i32(i32 addrspace(1)* %out, i64 %a) nounwind {
+define amdgpu_kernel void @s_sext_v4i16_to_v4i32(ptr addrspace(1) %out, i64 %a) nounwind {
 ; SI-LABEL: s_sext_v4i16_to_v4i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -542,14 +542,14 @@ define amdgpu_kernel void @s_sext_v4i16_to_v4i32(i32 addrspace(1)* %out, i64 %a)
   %elt1 = extractelement <4 x i32> %ext, i32 1
   %elt2 = extractelement <4 x i32> %ext, i32 2
   %elt3 = extractelement <4 x i32> %ext, i32 3
-  store volatile i32 %elt0, i32 addrspace(1)* %out
-  store volatile i32 %elt1, i32 addrspace(1)* %out
-  store volatile i32 %elt2, i32 addrspace(1)* %out
-  store volatile i32 %elt3, i32 addrspace(1)* %out
+  store volatile i32 %elt0, ptr addrspace(1) %out
+  store volatile i32 %elt1, ptr addrspace(1) %out
+  store volatile i32 %elt2, ptr addrspace(1) %out
+  store volatile i32 %elt3, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_sext_v4i16_to_v4i32(i32 addrspace(1)* %out, i64 addrspace(1)* %in) nounwind {
+define amdgpu_kernel void @v_sext_v4i16_to_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; SI-LABEL: v_sext_v4i16_to_v4i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -605,17 +605,17 @@ define amdgpu_kernel void @v_sext_v4i16_to_v4i32(i32 addrspace(1)* %out, i64 add
 ; VI-NEXT:    buffer_store_dword v2, off, s[4:7], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
-  %a = load i64, i64 addrspace(1)* %in
+  %a = load i64, ptr addrspace(1) %in
   %cast = bitcast i64 %a to <4 x i16>
   %ext = sext <4 x i16> %cast to <4 x i32>
   %elt0 = extractelement <4 x i32> %ext, i32 0
   %elt1 = extractelement <4 x i32> %ext, i32 1
   %elt2 = extractelement <4 x i32> %ext, i32 2
   %elt3 = extractelement <4 x i32> %ext, i32 3
-  store volatile i32 %elt0, i32 addrspace(1)* %out
-  store volatile i32 %elt1, i32 addrspace(1)* %out
-  store volatile i32 %elt2, i32 addrspace(1)* %out
-  store volatile i32 %elt3, i32 addrspace(1)* %out
+  store volatile i32 %elt0, ptr addrspace(1) %out
+  store volatile i32 %elt1, ptr addrspace(1) %out
+  store volatile i32 %elt2, ptr addrspace(1) %out
+  store volatile i32 %elt3, ptr addrspace(1) %out
   ret void
 }
 

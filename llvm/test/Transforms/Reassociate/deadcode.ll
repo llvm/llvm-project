@@ -1,4 +1,4 @@
-; RUN: opt < %s -reassociate -disable-output
+; RUN: opt < %s -passes=reassociate -disable-output
 
 ; It has been detected that dead loops like the one in this test case can be
 ; created by -jump-threading (it was detected by a csmith generated program).

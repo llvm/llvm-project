@@ -63,8 +63,6 @@ static hsa_status_t locking_async_memcpy(enum CopyDirection direction,
   case D2H:
     err = invoke_hsa_copy(signal, lockedPtr, agent, src, size);
     break;
-  default:
-    err = HSA_STATUS_ERROR; // fall into unlock before returning
   }
 
   if (err != HSA_STATUS_SUCCESS) {

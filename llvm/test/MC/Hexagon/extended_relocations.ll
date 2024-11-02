@@ -9,12 +9,12 @@ target triple = "hexagon-unknown--elf"
 
 @.str = private unnamed_addr constant [10 x i8] c"cxfir.log\00", align 1
 
-declare i32 @printf(i8*, ...) #1
+declare i32 @printf(ptr, ...) #1
 
 ; Function Attrs: nounwind
 define i32 @main() #0 {
 entry:
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str, i32 0, i32 0))
+  %call = call i32 (ptr, ...) @printf(ptr @.str)
   ret i32 0
 }
 

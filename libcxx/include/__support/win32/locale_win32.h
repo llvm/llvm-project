@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_SUPPORT_WIN32_LOCALE_WIN32_H
-#define _LIBCPP_SUPPORT_WIN32_LOCALE_WIN32_H
+#ifndef _LIBCPP___SUPPORT_WIN32_LOCALE_WIN32_H
+#define _LIBCPP___SUPPORT_WIN32_LOCALE_WIN32_H
 
 #include <__config>
 #include <cstddef>
@@ -279,4 +279,4 @@ inline int iswblank_l( wint_t __c, locale_t /*loc*/ )
     return ( __c == L' ' || __c == L'\t' );
 }
 
-#endif // _LIBCPP_SUPPORT_WIN32_LOCALE_WIN32_H
+#endif // _LIBCPP___SUPPORT_WIN32_LOCALE_WIN32_H

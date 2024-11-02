@@ -1078,7 +1078,7 @@ private:
     void setTypeInfo(AsmTypeInfo Type) { CurType = Type; }
   };
 
-  bool Error(SMLoc L, const Twine &Msg, SMRange Range = None,
+  bool Error(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt,
              bool MatchingInlineAsm = false) {
     MCAsmParser &Parser = getParser();
     if (MatchingInlineAsm) {
@@ -4137,7 +4137,7 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               bool MatchingInlineAsm) {
   assert(!Operands.empty() && "Unexpect empty operand list!");
   assert((*Operands[0]).isToken() && "Leading operand should always be a mnemonic!");
-  SMRange EmptyRange = None;
+  SMRange EmptyRange = std::nullopt;
 
   // First, handle aliases that expand to multiple instructions.
   MatchFPUWaitAlias(IDLoc, static_cast<X86Operand &>(*Operands[0]), Operands,
@@ -4396,7 +4396,7 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
   assert(!Operands.empty() && "Unexpect empty operand list!");
   assert((*Operands[0]).isToken() && "Leading operand should always be a mnemonic!");
   StringRef Mnemonic = (static_cast<X86Operand &>(*Operands[0])).getToken();
-  SMRange EmptyRange = None;
+  SMRange EmptyRange = std::nullopt;
   StringRef Base = (static_cast<X86Operand &>(*Operands[0])).getToken();
   unsigned Prefixes = getPrefixes(Operands);
 
@@ -4727,9 +4727,9 @@ bool X86AsmParser::parseDirectiveEven(SMLoc L) {
     Section = getStreamer().getCurrentSectionOnly();
   }
   if (Section->useCodeAlign())
-    getStreamer().emitCodeAlignment(2, &getSTI(), 0);
+    getStreamer().emitCodeAlignment(Align(2), &getSTI(), 0);
   else
-    getStreamer().emitValueToAlignment(2, 0, 1, 0);
+    getStreamer().emitValueToAlignment(Align(2), 0, 1, 0);
   return false;
 }
 
@@ -4887,7 +4887,7 @@ bool X86AsmParser::parseDirectiveSEHPushReg(SMLoc Loc) {
     return true;
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
-    return TokError("unexpected token in directive");
+    return TokError("expected end of directive");
 
   getParser().Lex();
   getStreamer().emitWinCFIPushReg(Reg, Loc);
@@ -4907,7 +4907,7 @@ bool X86AsmParser::parseDirectiveSEHSetFrame(SMLoc Loc) {
     return true;
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
-    return TokError("unexpected token in directive");
+    return TokError("expected end of directive");
 
   getParser().Lex();
   getStreamer().emitWinCFISetFrame(Reg, Off, Loc);
@@ -4927,7 +4927,7 @@ bool X86AsmParser::parseDirectiveSEHSaveReg(SMLoc Loc) {
     return true;
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
-    return TokError("unexpected token in directive");
+    return TokError("expected end of directive");
 
   getParser().Lex();
   getStreamer().emitWinCFISaveReg(Reg, Off, Loc);
@@ -4947,7 +4947,7 @@ bool X86AsmParser::parseDirectiveSEHSaveXMM(SMLoc Loc) {
     return true;
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
-    return TokError("unexpected token in directive");
+    return TokError("expected end of directive");
 
   getParser().Lex();
   getStreamer().emitWinCFISaveXMM(Reg, Off, Loc);
@@ -4968,7 +4968,7 @@ bool X86AsmParser::parseDirectiveSEHPushFrame(SMLoc Loc) {
   }
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
-    return TokError("unexpected token in directive");
+    return TokError("expected end of directive");
 
   getParser().Lex();
   getStreamer().emitWinCFIPushFrame(Code, Loc);

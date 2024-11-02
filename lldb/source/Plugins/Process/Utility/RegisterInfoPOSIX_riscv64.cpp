@@ -104,7 +104,7 @@ RegisterInfoPOSIX_riscv64::RegisterInfoPOSIX_riscv64(
       m_register_info_count(GetRegisterInfoCount(target_arch)) {}
 
 uint32_t RegisterInfoPOSIX_riscv64::GetRegisterCount() const {
-  return k_num_gpr_registers;
+  return m_register_info_count;
 }
 
 size_t RegisterInfoPOSIX_riscv64::GetGPRSize() const {
@@ -121,7 +121,7 @@ RegisterInfoPOSIX_riscv64::GetRegisterInfo() const {
 }
 
 size_t RegisterInfoPOSIX_riscv64::GetRegisterSetCount() const {
-  return k_num_register_sets - 1;
+  return k_num_register_sets;
 }
 
 size_t RegisterInfoPOSIX_riscv64::GetRegisterSetFromRegisterIndex(

@@ -722,9 +722,13 @@ void DAGTypeLegalizer::SetPromotedInteger(SDValue Op, SDValue Result) {
 }
 
 void DAGTypeLegalizer::SetSoftenedFloat(SDValue Op, SDValue Result) {
-  assert(Result.getValueType() ==
-         TLI.getTypeToTransformTo(*DAG.getContext(), Op.getValueType()) &&
+#ifndef NDEBUG
+  EVT VT = Result.getValueType();
+  LLVMContext &Ctx = *DAG.getContext();
+  assert((VT == EVT::getIntegerVT(Ctx, 80) ||
+          VT == TLI.getTypeToTransformTo(Ctx, Op.getValueType())) &&
          "Invalid type for softened float");
+#endif
   AnalyzeNewValue(Result);
 
   auto &OpIdEntry = SoftenedFloats[getTableId(Op)];

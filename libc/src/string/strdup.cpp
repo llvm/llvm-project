@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strdup.h"
+#include "src/string/allocating_string_utils.h"
 #include "src/string/memory_utils/memcpy_implementations.h"
-#include "src/string/string_utils.h"
 
 #include "src/__support/common.h"
 

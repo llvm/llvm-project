@@ -100,7 +100,7 @@ Optional<DestSourcePair>
 Mips16InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   if (MI.isMoveReg())
     return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
-  return None;
+  return std::nullopt;
 }
 
 void Mips16InstrInfo::storeRegToStack(MachineBasicBlock &MBB,

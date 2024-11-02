@@ -155,22 +155,21 @@ end:
 define hidden void @pointer_phi_v8i16_add1(i16* noalias nocapture readonly %A, i16* noalias nocapture %B, i32 %y) {
 ; CHECK-LABEL: @pointer_phi_v8i16_add1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[Y:%.*]] to i16
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i16> poison, i16 [[TMP0]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[VEC_Y:%.*]] = bitcast i32 [[Y:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[VEC_Y]], <2 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i16, i16* [[A:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i16, i16* [[B:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[NEXT_GEP]] to <8 x i16>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, <8 x i16>* [[TMP1]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = add <8 x i16> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16* [[NEXT_GEP4]] to <8 x i16>*
-; CHECK-NEXT:    store <8 x i16> [[TMP2]], <8 x i16>* [[TMP3]], align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i16* [[NEXT_GEP]] to <8 x i16>*
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, <8 x i16>* [[TMP0]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add <8 x i16> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16* [[NEXT_GEP4]] to <8 x i16>*
+; CHECK-NEXT:    store <8 x i16> [[TMP1]], <8 x i16>* [[TMP2]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP4]], label [[END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP3]], label [[END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
 ;

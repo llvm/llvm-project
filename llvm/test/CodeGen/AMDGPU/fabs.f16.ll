@@ -7,7 +7,7 @@
 ; (fabs (f16 bitcast (i16 a))) => (f16 bitcast (and (i16 a), 0x7FFFFFFF))
 ; unless isFabsFree returns true
 
-define amdgpu_kernel void @s_fabs_free_f16(half addrspace(1)* %out, i16 %in) {
+define amdgpu_kernel void @s_fabs_free_f16(ptr addrspace(1) %out, i16 %in) {
 ; CI-LABEL: s_fabs_free_f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -44,11 +44,11 @@ define amdgpu_kernel void @s_fabs_free_f16(half addrspace(1)* %out, i16 %in) {
 ; GFX9-NEXT:    s_endpgm
   %bc= bitcast i16 %in to half
   %fabs = call half @llvm.fabs.f16(half %bc)
-  store half %fabs, half addrspace(1)* %out
+  store half %fabs, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_fabs_f16(half addrspace(1)* %out, half %in) {
+define amdgpu_kernel void @s_fabs_f16(ptr addrspace(1) %out, half %in) {
 ; CI-LABEL: s_fabs_f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -84,11 +84,11 @@ define amdgpu_kernel void @s_fabs_f16(half addrspace(1)* %out, half %in) {
 ; GFX9-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %fabs = call half @llvm.fabs.f16(half %in)
-  store half %fabs, half addrspace(1)* %out
+  store half %fabs, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) {
+define amdgpu_kernel void @s_fabs_v2f16(ptr addrspace(1) %out, <2 x half> %in) {
 ; CI-LABEL: s_fabs_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -124,11 +124,11 @@ define amdgpu_kernel void @s_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
-  store <2 x half> %fabs, <2 x half> addrspace(1)* %out
+  store <2 x half> %fabs, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half> %in) {
+define amdgpu_kernel void @s_fabs_v4f16(ptr addrspace(1) %out, <4 x half> %in) {
 ; CI-LABEL: s_fabs_v4f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -167,11 +167,11 @@ define amdgpu_kernel void @s_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %fabs = call <4 x half> @llvm.fabs.v4f16(<4 x half> %in)
-  store <4 x half> %fabs, <4 x half> addrspace(1)* %out
+  store <4 x half> %fabs, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @fabs_fold_f16(half addrspace(1)* %out, half %in0, half %in1) {
+define amdgpu_kernel void @fabs_fold_f16(ptr addrspace(1) %out, half %in0, half %in1) {
 ; CI-LABEL: fabs_fold_f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x2
@@ -214,11 +214,11 @@ define amdgpu_kernel void @fabs_fold_f16(half addrspace(1)* %out, half %in0, hal
 ; GFX9-NEXT:    s_endpgm
   %fabs = call half @llvm.fabs.f16(half %in0)
   %fmul = fmul half %fabs, %in1
-  store half %fmul, half addrspace(1)* %out
+  store half %fmul, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_fabs_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CI-LABEL: v_fabs_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
@@ -258,15 +258,15 @@ define amdgpu_kernel void @v_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.in = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
-  %gep.out = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
-  %val = load <2 x half>, <2 x half> addrspace(1)* %gep.in, align 2
+  %gep.in = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %tid
+  %gep.out = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %tid
+  %val = load <2 x half>, ptr addrspace(1) %gep.in, align 2
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %val)
-  store <2 x half> %fabs, <2 x half> addrspace(1)* %gep.out
+  store <2 x half> %fabs, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @fabs_free_v2f16(<2 x half> addrspace(1)* %out, i32 %in) #0 {
+define amdgpu_kernel void @fabs_free_v2f16(ptr addrspace(1) %out, i32 %in) #0 {
 ; CI-LABEL: fabs_free_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dword s2, s[4:5], 0x2
@@ -303,13 +303,13 @@ define amdgpu_kernel void @fabs_free_v2f16(<2 x half> addrspace(1)* %out, i32 %i
 ; GFX9-NEXT:    s_endpgm
   %bc = bitcast i32 %in to <2 x half>
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %bc)
-  store <2 x half> %fabs, <2 x half> addrspace(1)* %out
+  store <2 x half> %fabs, ptr addrspace(1) %out
   ret void
 }
 
 ; FIXME: Should do fabs after conversion to avoid converting multiple
 ; times in this particular case.
-define amdgpu_kernel void @v_fabs_fold_self_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_fabs_fold_self_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CI-LABEL: v_fabs_fold_self_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -367,15 +367,15 @@ define amdgpu_kernel void @v_fabs_fold_self_v2f16(<2 x half> addrspace(1)* %out,
 ; GFX9-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
-  %val = load <2 x half>, <2 x half> addrspace(1)* %gep
+  %gep = getelementptr <2 x half>, ptr addrspace(1) %in, i32 %tid
+  %val = load <2 x half>, ptr addrspace(1) %gep
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %val)
   %fmul = fmul <2 x half> %fabs, %val
-  store <2 x half> %fmul, <2 x half> addrspace(1)* %out
+  store <2 x half> %fmul, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_fabs_fold_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in, i32 %other.val) #0 {
+define amdgpu_kernel void @v_fabs_fold_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %other.val) #0 {
 ; CI-LABEL: v_fabs_fold_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
@@ -439,16 +439,16 @@ define amdgpu_kernel void @v_fabs_fold_v2f16(<2 x half> addrspace(1)* %out, <2 x
 ; GFX9-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
-  %val = load <2 x half>, <2 x half> addrspace(1)* %gep
+  %gep = getelementptr <2 x half>, ptr addrspace(1) %in, i32 %tid
+  %val = load <2 x half>, ptr addrspace(1) %gep
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %val)
   %other.val.cvt = bitcast i32 %other.val to <2 x half>
   %fmul = fmul <2 x half> %fabs, %other.val.cvt
-  store <2 x half> %fmul, <2 x half> addrspace(1)* %out
+  store <2 x half> %fmul, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_extract_fabs_fold_v2f16(<2 x half> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_extract_fabs_fold_v2f16(ptr addrspace(1) %in) #0 {
 ; CI-LABEL: v_extract_fabs_fold_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -507,20 +507,20 @@ define amdgpu_kernel void @v_extract_fabs_fold_v2f16(<2 x half> addrspace(1)* %i
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.in = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
-  %val = load <2 x half>, <2 x half> addrspace(1)* %gep.in
+  %gep.in = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %tid
+  %val = load <2 x half>, ptr addrspace(1) %gep.in
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %val)
   %elt0 = extractelement <2 x half> %fabs, i32 0
   %elt1 = extractelement <2 x half> %fabs, i32 1
 
   %fmul0 = fmul half %elt0, 4.0
   %fadd1 = fadd half %elt1, 2.0
-  store volatile half %fmul0, half addrspace(1)* undef
-  store volatile half %fadd1, half addrspace(1)* undef
+  store volatile half %fmul0, ptr addrspace(1) undef
+  store volatile half %fadd1, ptr addrspace(1) undef
   ret void
 }
 
-define amdgpu_kernel void @v_extract_fabs_no_fold_v2f16(<2 x half> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_extract_fabs_no_fold_v2f16(ptr addrspace(1) %in) #0 {
 ; CI-LABEL: v_extract_fabs_no_fold_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -571,13 +571,13 @@ define amdgpu_kernel void @v_extract_fabs_no_fold_v2f16(<2 x half> addrspace(1)*
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.in = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
-  %val = load <2 x half>, <2 x half> addrspace(1)* %gep.in
+  %gep.in = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %tid
+  %val = load <2 x half>, ptr addrspace(1) %gep.in
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %val)
   %elt0 = extractelement <2 x half> %fabs, i32 0
   %elt1 = extractelement <2 x half> %fabs, i32 1
-  store volatile half %elt0, half addrspace(1)* undef
-  store volatile half %elt1, half addrspace(1)* undef
+  store volatile half %elt0, ptr addrspace(1) undef
+  store volatile half %elt1, ptr addrspace(1) undef
   ret void
 }
 

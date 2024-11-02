@@ -53,6 +53,10 @@ public:
 protected:
   bool printSysAlias(const MCInst *MI, const MCSubtargetInfo &STI,
                      raw_ostream &O);
+  bool printSyspAlias(const MCInst *MI, const MCSubtargetInfo &STI,
+                      raw_ostream &O);
+  bool printRangePrefetchAlias(const MCInst *MI, const MCSubtargetInfo &STI,
+                               raw_ostream &O, StringRef Annot);
   // Operand printers
   void printOperand(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
@@ -138,6 +142,9 @@ protected:
   void printPrefetchOp(const MCInst *MI, unsigned OpNum,
                        const MCSubtargetInfo &STI, raw_ostream &O);
 
+  void printRPRFMOperand(const MCInst *MI, unsigned OpNum,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
+
   void printPSBHintOp(const MCInst *MI, unsigned OpNum,
                       const MCSubtargetInfo &STI, raw_ostream &O);
 
@@ -222,6 +229,8 @@ protected:
                       const MCSubtargetInfo &STI, raw_ostream &O);
   void printGPR64x8(const MCInst *MI, unsigned OpNum,
                     const MCSubtargetInfo &STI, raw_ostream &O);
+  void printSyspXzrPair(const MCInst *MI, unsigned OpNum,
+                        const MCSubtargetInfo &STI, raw_ostream &O);
   template <int Width>
   void printZPRasFPR(const MCInst *MI, unsigned OpNum,
                      const MCSubtargetInfo &STI, raw_ostream &O);

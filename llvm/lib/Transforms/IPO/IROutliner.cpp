@@ -26,6 +26,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
+#include <optional>
 #include <vector>
 
 #define DEBUG_TYPE "iroutliner"
@@ -133,7 +134,7 @@ struct OutlinableGroup {
 
   /// The argument that needs to be marked with the swifterr attribute.  If not
   /// needed, there is no value.
-  Optional<unsigned> SwiftErrorArgument;
+  std::optional<unsigned> SwiftErrorArgument;
 
   /// For the \ref Regions, we look at every Value.  If it is a constant,
   /// we check whether it is the same in Region.
@@ -2671,7 +2672,7 @@ void IROutliner::updateOutputMapping(OutlinableRegion &Region,
                                      LoadInst *LI) {
   // For and load instructions following the call
   Value *Operand = LI->getPointerOperand();
-  Optional<unsigned> OutputIdx;
+  std::optional<unsigned> OutputIdx;
   // Find if the operand it is an output register.
   for (unsigned ArgIdx = Region.NumExtractedInputs;
        ArgIdx < Region.Call->arg_size(); ArgIdx++) {

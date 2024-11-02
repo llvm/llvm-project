@@ -22,6 +22,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -1790,6 +1791,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case RISCVISD::VFMV_S_F_VL:
   case RISCVISD::VMV_V_X_VL:
   case RISCVISD::VFMV_V_F_VL: {
+    // Only if we have optimized zero-stride vector load.
+    if (!Subtarget->hasOptimizedZeroStrideLoad())
+      break;
+
     // Try to match splat of a scalar load to a strided load with stride of x0.
     bool IsScalarMove = Node->getOpcode() == RISCVISD::VMV_S_X_VL ||
                         Node->getOpcode() == RISCVISD::VFMV_S_F_VL;
@@ -1829,10 +1834,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         /*IsMasked*/ false, /*IsTU*/ false, /*IsStrided*/ true, /*FF*/ false,
         Log2SEW, static_cast<unsigned>(LMUL));
     MachineSDNode *Load =
-        CurDAG->getMachineNode(P->Pseudo, DL, Node->getVTList(), Operands);
-
+        CurDAG->getMachineNode(P->Pseudo, DL, {VT, MVT::Other}, Operands);
+    // Update the chain.
+    ReplaceUses(Src.getValue(1), SDValue(Load, 1));
+    // Record the mem-refs
     CurDAG->setNodeMemRefs(Load, {Ld->getMemOperand()});
-
+    // Replace the splat with the vlse.
     ReplaceNode(Node, Load);
     return;
   }
@@ -2117,16 +2124,16 @@ bool RISCVDAGToDAGISel::selectSExti32(SDValue N, SDValue &Val) {
   return false;
 }
 
-bool RISCVDAGToDAGISel::selectZExti32(SDValue N, SDValue &Val) {
+bool RISCVDAGToDAGISel::selectZExtBits(SDValue N, unsigned Bits, SDValue &Val) {
   if (N.getOpcode() == ISD::AND) {
     auto *C = dyn_cast<ConstantSDNode>(N.getOperand(1));
-    if (C && C->getZExtValue() == UINT64_C(0xFFFFFFFF)) {
+    if (C && C->getZExtValue() == maskTrailingOnes<uint64_t>(Bits)) {
       Val = N.getOperand(0);
       return true;
     }
   }
   MVT VT = N.getSimpleValueType();
-  APInt Mask = APInt::getHighBitsSet(VT.getSizeInBits(), 32);
+  APInt Mask = APInt::getBitsSetFrom(VT.getSizeInBits(), Bits);
   if (CurDAG->MaskedValueIsZero(N, Mask)) {
     Val = N;
     return true;
@@ -2230,6 +2237,43 @@ bool RISCVDAGToDAGISel::selectSHXADDOp(SDValue N, unsigned ShAmt,
   return false;
 }
 
+/// Look for various patterns that can be done with a SHL that can be folded
+/// into a SHXADD_UW. \p ShAmt contains 1, 2, or 3 and is set based on which
+/// SHXADD_UW we are trying to match.
+bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
+                                          SDValue &Val) {
+  if (N.getOpcode() == ISD::AND && isa<ConstantSDNode>(N.getOperand(1)) &&
+      N.hasOneUse()) {
+    SDValue N0 = N.getOperand(0);
+    if (N0.getOpcode() == ISD::SHL && isa<ConstantSDNode>(N0.getOperand(1)) &&
+        N0.hasOneUse()) {
+      uint64_t Mask = N.getConstantOperandVal(1);
+      unsigned C2 = N0.getConstantOperandVal(1);
+
+      Mask &= maskTrailingZeros<uint64_t>(C2);
+
+      // Look for (and (shl y, c2), c1) where c1 is a shifted mask with
+      // 32-ShAmt leading zeros and c2 trailing zeros. We can use SLLI by
+      // c2-ShAmt followed by SHXADD_UW with ShAmt for the X amount.
+      if (isShiftedMask_64(Mask)) {
+        unsigned Leading = countLeadingZeros(Mask);
+        unsigned Trailing = countTrailingZeros(Mask);
+        if (Leading == 32 - ShAmt && Trailing == C2 && Trailing > ShAmt) {
+          SDLoc DL(N);
+          EVT VT = N.getValueType();
+          Val = SDValue(CurDAG->getMachineNode(
+                            RISCV::SLLI, DL, VT, N0.getOperand(0),
+                            CurDAG->getTargetConstant(C2 - ShAmt, DL, VT)),
+                        0);
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
 // Return true if all users of this SDNode* only consume the lower \p Bits.
 // This can be used to form W instructions for add/sub/mul/shl even when the
 // root isn't a sext_inreg. This can allow the ADDW/SUBW/MULW/SLLIW to CSE if
@@ -2319,6 +2363,7 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
       break;
     }
     case RISCV::SEXT_B:
+    case RISCV::PACKH:
       if (Bits < 8)
         return false;
       break;
@@ -2326,7 +2371,12 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
     case RISCV::FMV_H_X:
     case RISCV::ZEXT_H_RV32:
     case RISCV::ZEXT_H_RV64:
+    case RISCV::PACKW:
       if (Bits < 16)
+        return false;
+      break;
+    case RISCV::PACK:
+      if (Bits < (Subtarget->getXLen() / 2))
         return false;
       break;
     case RISCV::ADD_UW:
@@ -2528,6 +2578,7 @@ bool RISCVDAGToDAGISel::doPeepholeSExtW(SDNode *N) {
   case RISCV::SUBW:
   case RISCV::MULW:
   case RISCV::SLLIW:
+  case RISCV::PACKW:
     // Result is already sign extended just remove the sext.w.
     // NOTE: We only handle the nodes that are selected with hasAllWUsers.
     ReplaceUses(N, N0.getNode());
@@ -2588,7 +2639,7 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
     return false;
 
   // Retrieve the tail policy operand index, if any.
-  Optional<unsigned> TailPolicyOpIdx;
+  std::optional<unsigned> TailPolicyOpIdx;
   const RISCVInstrInfo &TII = *Subtarget->getInstrInfo();
   const MCInstrDesc &MaskedMCID = TII.get(N->getMachineOpcode());
 

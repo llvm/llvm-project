@@ -11,7 +11,7 @@ function test_real4(x)
 end function
 
 ! ALL-LABEL: @_QPtest_real4
-! ALL: {{%[A-Za-z0-9._]+}} = fir.call @j1f({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+! ALL: {{%[A-Za-z0-9._]+}} = fir.call @j1f({{%[A-Za-z0-9._]+}}) {{.*}}: (f32) -> f32
 
 function test_real8(x)
   real(8) :: x, test_real8
@@ -19,4 +19,4 @@ function test_real8(x)
 end function
 
 ! ALL-LABEL: @_QPtest_real8
-! ALL: {{%[A-Za-z0-9._]+}} = fir.call @j1({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+! ALL: {{%[A-Za-z0-9._]+}} = fir.call @j1({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> f64

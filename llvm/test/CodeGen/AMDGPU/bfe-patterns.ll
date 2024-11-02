@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=SI %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI %s
 
-define amdgpu_kernel void @v_ubfe_sub_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in0, i32 addrspace(1)* %in1) #1 {
+define amdgpu_kernel void @v_ubfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
 ; SI-LABEL: v_ubfe_sub_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -40,19 +40,19 @@ define amdgpu_kernel void @v_ubfe_sub_i32(i32 addrspace(1)* %out, i32 addrspace(
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %in0.gep = getelementptr i32, i32 addrspace(1)* %in0, i32 %id.x
-  %in1.gep = getelementptr i32, i32 addrspace(1)* %in1, i32 %id.x
-  %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 %id.x
-  %src = load volatile i32, i32 addrspace(1)* %in0.gep
-  %width = load volatile i32, i32 addrspace(1)* %in0.gep
+  %in0.gep = getelementptr i32, ptr addrspace(1) %in0, i32 %id.x
+  %in1.gep = getelementptr i32, ptr addrspace(1) %in1, i32 %id.x
+  %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 %id.x
+  %src = load volatile i32, ptr addrspace(1) %in0.gep
+  %width = load volatile i32, ptr addrspace(1) %in0.gep
   %sub = sub i32 32, %width
   %shl = shl i32 %src, %sub
   %bfe = lshr i32 %shl, %sub
-  store i32 %bfe, i32 addrspace(1)* %out.gep
+  store i32 %bfe, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_ubfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in0, i32 addrspace(1)* %in1) #1 {
+define amdgpu_kernel void @v_ubfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
 ; SI-LABEL: v_ubfe_sub_multi_use_shl_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -99,20 +99,20 @@ define amdgpu_kernel void @v_ubfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, 
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %in0.gep = getelementptr i32, i32 addrspace(1)* %in0, i32 %id.x
-  %in1.gep = getelementptr i32, i32 addrspace(1)* %in1, i32 %id.x
-  %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 %id.x
-  %src = load volatile i32, i32 addrspace(1)* %in0.gep
-  %width = load volatile i32, i32 addrspace(1)* %in0.gep
+  %in0.gep = getelementptr i32, ptr addrspace(1) %in0, i32 %id.x
+  %in1.gep = getelementptr i32, ptr addrspace(1) %in1, i32 %id.x
+  %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 %id.x
+  %src = load volatile i32, ptr addrspace(1) %in0.gep
+  %width = load volatile i32, ptr addrspace(1) %in0.gep
   %sub = sub i32 32, %width
   %shl = shl i32 %src, %sub
   %bfe = lshr i32 %shl, %sub
-  store i32 %bfe, i32 addrspace(1)* %out.gep
-  store volatile i32 %shl, i32 addrspace(1)* undef
+  store i32 %bfe, ptr addrspace(1) %out.gep
+  store volatile i32 %shl, ptr addrspace(1) undef
   ret void
 }
 
-define amdgpu_kernel void @s_ubfe_sub_i32(i32 addrspace(1)* %out, i32 %src, i32 %width) #1 {
+define amdgpu_kernel void @s_ubfe_sub_i32(ptr addrspace(1) %out, i32 %src, i32 %width) #1 {
 ; SI-LABEL: s_ubfe_sub_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -144,15 +144,15 @@ define amdgpu_kernel void @s_ubfe_sub_i32(i32 addrspace(1)* %out, i32 %src, i32 
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 %id.x
+  %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 %id.x
   %sub = sub i32 32, %width
   %shl = shl i32 %src, %sub
   %bfe = lshr i32 %shl, %sub
-  store i32 %bfe, i32 addrspace(1)* %out.gep
+  store i32 %bfe, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @s_ubfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, i32 %src, i32 %width) #1 {
+define amdgpu_kernel void @s_ubfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, i32 %src, i32 %width) #1 {
 ; SI-LABEL: s_ubfe_sub_multi_use_shl_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -191,16 +191,16 @@ define amdgpu_kernel void @s_ubfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, 
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 %id.x
+  %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 %id.x
   %sub = sub i32 32, %width
   %shl = shl i32 %src, %sub
   %bfe = lshr i32 %shl, %sub
-  store i32 %bfe, i32 addrspace(1)* %out.gep
-  store volatile i32 %shl, i32 addrspace(1)* undef
+  store i32 %bfe, ptr addrspace(1) %out.gep
+  store volatile i32 %shl, ptr addrspace(1) undef
   ret void
 }
 
-define amdgpu_kernel void @v_sbfe_sub_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in0, i32 addrspace(1)* %in1) #1 {
+define amdgpu_kernel void @v_sbfe_sub_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
 ; SI-LABEL: v_sbfe_sub_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -238,19 +238,19 @@ define amdgpu_kernel void @v_sbfe_sub_i32(i32 addrspace(1)* %out, i32 addrspace(
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %in0.gep = getelementptr i32, i32 addrspace(1)* %in0, i32 %id.x
-  %in1.gep = getelementptr i32, i32 addrspace(1)* %in1, i32 %id.x
-  %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 %id.x
-  %src = load volatile i32, i32 addrspace(1)* %in0.gep
-  %width = load volatile i32, i32 addrspace(1)* %in0.gep
+  %in0.gep = getelementptr i32, ptr addrspace(1) %in0, i32 %id.x
+  %in1.gep = getelementptr i32, ptr addrspace(1) %in1, i32 %id.x
+  %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 %id.x
+  %src = load volatile i32, ptr addrspace(1) %in0.gep
+  %width = load volatile i32, ptr addrspace(1) %in0.gep
   %sub = sub i32 32, %width
   %shl = shl i32 %src, %sub
   %bfe = ashr i32 %shl, %sub
-  store i32 %bfe, i32 addrspace(1)* %out.gep
+  store i32 %bfe, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @v_sbfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in0, i32 addrspace(1)* %in1) #1 {
+define amdgpu_kernel void @v_sbfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) #1 {
 ; SI-LABEL: v_sbfe_sub_multi_use_shl_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -297,20 +297,20 @@ define amdgpu_kernel void @v_sbfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, 
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %in0.gep = getelementptr i32, i32 addrspace(1)* %in0, i32 %id.x
-  %in1.gep = getelementptr i32, i32 addrspace(1)* %in1, i32 %id.x
-  %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 %id.x
-  %src = load volatile i32, i32 addrspace(1)* %in0.gep
-  %width = load volatile i32, i32 addrspace(1)* %in0.gep
+  %in0.gep = getelementptr i32, ptr addrspace(1) %in0, i32 %id.x
+  %in1.gep = getelementptr i32, ptr addrspace(1) %in1, i32 %id.x
+  %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 %id.x
+  %src = load volatile i32, ptr addrspace(1) %in0.gep
+  %width = load volatile i32, ptr addrspace(1) %in0.gep
   %sub = sub i32 32, %width
   %shl = shl i32 %src, %sub
   %bfe = ashr i32 %shl, %sub
-  store i32 %bfe, i32 addrspace(1)* %out.gep
-  store volatile i32 %shl, i32 addrspace(1)* undef
+  store i32 %bfe, ptr addrspace(1) %out.gep
+  store volatile i32 %shl, ptr addrspace(1) undef
   ret void
 }
 
-define amdgpu_kernel void @s_sbfe_sub_i32(i32 addrspace(1)* %out, i32 %src, i32 %width) #1 {
+define amdgpu_kernel void @s_sbfe_sub_i32(ptr addrspace(1) %out, i32 %src, i32 %width) #1 {
 ; SI-LABEL: s_sbfe_sub_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -342,15 +342,15 @@ define amdgpu_kernel void @s_sbfe_sub_i32(i32 addrspace(1)* %out, i32 %src, i32 
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 %id.x
+  %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 %id.x
   %sub = sub i32 32, %width
   %shl = shl i32 %src, %sub
   %bfe = ashr i32 %shl, %sub
-  store i32 %bfe, i32 addrspace(1)* %out.gep
+  store i32 %bfe, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @s_sbfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, i32 %src, i32 %width) #1 {
+define amdgpu_kernel void @s_sbfe_sub_multi_use_shl_i32(ptr addrspace(1) %out, i32 %src, i32 %width) #1 {
 ; SI-LABEL: s_sbfe_sub_multi_use_shl_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -389,16 +389,16 @@ define amdgpu_kernel void @s_sbfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, 
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 %id.x
+  %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 %id.x
   %sub = sub i32 32, %width
   %shl = shl i32 %src, %sub
   %bfe = ashr i32 %shl, %sub
-  store i32 %bfe, i32 addrspace(1)* %out.gep
-  store volatile i32 %shl, i32 addrspace(1)* undef
+  store i32 %bfe, ptr addrspace(1) %out.gep
+  store volatile i32 %shl, ptr addrspace(1) undef
   ret void
 }
 
-define amdgpu_kernel void @s_sbfe_or_shl_shl_uniform_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in0, i32 addrspace(1)* %in1) {
+define amdgpu_kernel void @s_sbfe_or_shl_shl_uniform_i32(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) {
 ; SI-LABEL: s_sbfe_or_shl_shl_uniform_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -430,18 +430,18 @@ define amdgpu_kernel void @s_sbfe_or_shl_shl_uniform_i32(i32 addrspace(1)* %out,
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
-  %a0 = load i32, i32 addrspace(1) * %in0
-  %b0 = load i32, i32 addrspace(1) * %in1
+  %a0 = load i32, ptr addrspace(1) %in0
+  %b0 = load i32, ptr addrspace(1) %in1
   %a1 = shl i32 %a0, 17
   %b1 = shl i32 %b0, 17
   %or = or i32 %a1, %b1
   %result = ashr i32 %or, 17
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 ; TODO ashr(or(shl(x,c1),shl(y,c2)),c1) -> sign_extend_inreg(or(x,shl(y,c2-c1))) iff c2 >= c1
-define amdgpu_kernel void @s_sbfe_or_shl_shl_nonuniform_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %x, i32 addrspace(1)* %y) {
+define amdgpu_kernel void @s_sbfe_or_shl_shl_nonuniform_i32(ptr addrspace(1) %out, ptr addrspace(1) %x, ptr addrspace(1) %y) {
 ; SI-LABEL: s_sbfe_or_shl_shl_nonuniform_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -477,18 +477,18 @@ define amdgpu_kernel void @s_sbfe_or_shl_shl_nonuniform_i32(i32 addrspace(1)* %o
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
-  %a0 = load i32, i32 addrspace(1) * %x
-  %b0 = load i32, i32 addrspace(1) * %y
+  %a0 = load i32, ptr addrspace(1) %x
+  %b0 = load i32, ptr addrspace(1) %y
   %a1 = shl i32 %a0, 17
   %b1 = shl i32 %b0, 19
   %or = or i32 %a1, %b1
   %result = ashr i32 %or, 17
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
 ; Don't fold as 'other shl' amount is less than the sign_extend_inreg type.
-define amdgpu_kernel void @s_sbfe_or_shl_shl_toosmall_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %x, i32 addrspace(1)* %y) {
+define amdgpu_kernel void @s_sbfe_or_shl_shl_toosmall_i32(ptr addrspace(1) %out, ptr addrspace(1) %x, ptr addrspace(1) %y) {
 ; SI-LABEL: s_sbfe_or_shl_shl_toosmall_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -524,13 +524,13 @@ define amdgpu_kernel void @s_sbfe_or_shl_shl_toosmall_i32(i32 addrspace(1)* %out
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
-  %a0 = load i32, i32 addrspace(1) * %x
-  %b0 = load i32, i32 addrspace(1) * %y
+  %a0 = load i32, ptr addrspace(1) %x
+  %b0 = load i32, ptr addrspace(1) %y
   %a1 = shl i32 %a0, 17
   %b1 = shl i32 %b0, 16
   %or = or i32 %a1, %b1
   %result = ashr i32 %or, 17
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 

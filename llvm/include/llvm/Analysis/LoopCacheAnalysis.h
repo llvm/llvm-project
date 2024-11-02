@@ -16,6 +16,7 @@
 
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
+#include <optional>
 
 namespace llvm {
 
@@ -199,7 +200,7 @@ public:
   /// classified to have temporal reuse.
   CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI, ScalarEvolution &SE,
             TargetTransformInfo &TTI, AAResults &AA, DependenceInfo &DI,
-            Optional<unsigned> TRT = None);
+            Optional<unsigned> TRT = std::nullopt);
 
   /// Create a CacheCost for the loop nest rooted by \p Root.
   /// The optional parameter \p TRT can be used to specify the max. distance
@@ -207,7 +208,7 @@ public:
   /// classified to have temporal reuse.
   static std::unique_ptr<CacheCost>
   getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR, DependenceInfo &DI,
-               Optional<unsigned> TRT = None);
+               Optional<unsigned> TRT = std::nullopt);
 
   /// Return the estimated cost of loop \p L if the given loop is part of the
   /// loop nest associated with this object. Return -1 otherwise.
@@ -269,7 +270,7 @@ private:
 
   /// The max. distance between array elements accessed in a loop so that the
   /// elements are classified to have temporal reuse.
-  Optional<unsigned> TRT;
+  std::optional<unsigned> TRT;
 
   const LoopInfo &LI;
   ScalarEvolution &SE;

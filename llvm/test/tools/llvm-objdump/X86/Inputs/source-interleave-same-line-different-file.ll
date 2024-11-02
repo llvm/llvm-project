@@ -14,9 +14,9 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local i32 @add1(i32 %a) #0 !dbg !7 {
 entry:
   %a.addr = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !12, metadata !DIExpression()), !dbg !13
-  %0 = load i32, i32* %a.addr, align 4, !dbg !14
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !12, metadata !DIExpression()), !dbg !13
+  %0 = load i32, ptr %a.addr, align 4, !dbg !14
   %add = add nsw i32 %0, 1, !dbg !15
   ret i32 %add, !dbg !16
 }

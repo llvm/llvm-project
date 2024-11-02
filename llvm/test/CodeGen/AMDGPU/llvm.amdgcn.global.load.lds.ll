@@ -5,9 +5,9 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s --check-prefix=GFX10
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck %s --check-prefix=GFX900-GISEL
 
-declare void @llvm.amdgcn.global.load.lds(i8 addrspace(1)* nocapture %gptr, i8 addrspace(3)* nocapture %lptr, i32 %size, i32 %offset, i32 %aux)
+declare void @llvm.amdgcn.global.load.lds(ptr addrspace(1) nocapture %gptr, ptr addrspace(3) nocapture %lptr, i32 %size, i32 %offset, i32 %aux)
 
-define amdgpu_ps void @global_load_lds_dword_vaddr(i8 addrspace(1)* nocapture %gptr, i8 addrspace(3)* nocapture %lptr) {
+define amdgpu_ps void @global_load_lds_dword_vaddr(ptr addrspace(1) nocapture %gptr, ptr addrspace(3) nocapture %lptr) {
 ; GFX900-LABEL: global_load_lds_dword_vaddr:
 ; GFX900:       ; %bb.0: ; %main_body
 ; GFX900-NEXT:    v_readfirstlane_b32 s0, v2
@@ -46,11 +46,11 @@ define amdgpu_ps void @global_load_lds_dword_vaddr(i8 addrspace(1)* nocapture %g
 ; GFX900-GISEL-NEXT:    global_load_dword v[0:1], off offset:16 glc lds
 ; GFX900-GISEL-NEXT:    s_endpgm
 main_body:
-  call void @llvm.amdgcn.global.load.lds(i8 addrspace(1)* %gptr, i8 addrspace(3)* %lptr, i32 4, i32 16, i32 1)
+  call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %gptr, ptr addrspace(3) %lptr, i32 4, i32 16, i32 1)
   ret void
 }
 
-define amdgpu_ps void @global_load_lds_dword_saddr(i8 addrspace(1)* nocapture inreg %gptr, i8 addrspace(3)* nocapture %lptr) {
+define amdgpu_ps void @global_load_lds_dword_saddr(ptr addrspace(1) nocapture inreg %gptr, ptr addrspace(3) nocapture %lptr) {
 ; GFX900-LABEL: global_load_lds_dword_saddr:
 ; GFX900:       ; %bb.0: ; %main_body
 ; GFX900-NEXT:    v_readfirstlane_b32 s2, v0
@@ -94,11 +94,11 @@ define amdgpu_ps void @global_load_lds_dword_saddr(i8 addrspace(1)* nocapture in
 ; GFX900-GISEL-NEXT:    global_load_dword v0, s[0:1] offset:32 slc lds
 ; GFX900-GISEL-NEXT:    s_endpgm
 main_body:
-  call void @llvm.amdgcn.global.load.lds(i8 addrspace(1)* %gptr, i8 addrspace(3)* %lptr, i32 4, i32 32, i32 2)
+  call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %gptr, ptr addrspace(3) %lptr, i32 4, i32 32, i32 2)
   ret void
 }
 
-define amdgpu_ps void @global_load_lds_dword_saddr_and_vaddr(i8 addrspace(1)* nocapture inreg %gptr, i8 addrspace(3)* nocapture %lptr, i32 %voffset) {
+define amdgpu_ps void @global_load_lds_dword_saddr_and_vaddr(ptr addrspace(1) nocapture inreg %gptr, ptr addrspace(3) nocapture %lptr, i32 %voffset) {
 ; GFX900-LABEL: global_load_lds_dword_saddr_and_vaddr:
 ; GFX900:       ; %bb.0: ; %main_body
 ; GFX900-NEXT:    v_readfirstlane_b32 s2, v0
@@ -138,12 +138,12 @@ define amdgpu_ps void @global_load_lds_dword_saddr_and_vaddr(i8 addrspace(1)* no
 ; GFX900-GISEL-NEXT:    s_endpgm
 main_body:
   %voffset.64 = zext i32 %voffset to i64
-  %gep = getelementptr i8, i8 addrspace(1)* %gptr, i64 %voffset.64
-  call void @llvm.amdgcn.global.load.lds(i8 addrspace(1)* %gep, i8 addrspace(3)* %lptr, i32 4, i32 48, i32 16)
+  %gep = getelementptr i8, ptr addrspace(1) %gptr, i64 %voffset.64
+  call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %gep, ptr addrspace(3) %lptr, i32 4, i32 48, i32 16)
   ret void
 }
 
-define amdgpu_ps void @global_load_lds_ushort_vaddr(i8 addrspace(1)* nocapture %gptr, i8 addrspace(3)* nocapture %lptr) {
+define amdgpu_ps void @global_load_lds_ushort_vaddr(ptr addrspace(1) nocapture %gptr, ptr addrspace(3) nocapture %lptr) {
 ; GFX900-LABEL: global_load_lds_ushort_vaddr:
 ; GFX900:       ; %bb.0: ; %main_body
 ; GFX900-NEXT:    v_readfirstlane_b32 s0, v2
@@ -182,11 +182,11 @@ define amdgpu_ps void @global_load_lds_ushort_vaddr(i8 addrspace(1)* nocapture %
 ; GFX900-GISEL-NEXT:    global_load_ushort v[0:1], off lds
 ; GFX900-GISEL-NEXT:    s_endpgm
 main_body:
-  call void @llvm.amdgcn.global.load.lds(i8 addrspace(1)* %gptr, i8 addrspace(3)* %lptr, i32 2, i32 0, i32 4)
+  call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %gptr, ptr addrspace(3) %lptr, i32 2, i32 0, i32 4)
   ret void
 }
 
-define amdgpu_ps void @global_load_lds_ubyte_vaddr(i8 addrspace(1)* nocapture %gptr, i8 addrspace(3)* nocapture %lptr) {
+define amdgpu_ps void @global_load_lds_ubyte_vaddr(ptr addrspace(1) nocapture %gptr, ptr addrspace(3) nocapture %lptr) {
 ; GFX900-LABEL: global_load_lds_ubyte_vaddr:
 ; GFX900:       ; %bb.0: ; %main_body
 ; GFX900-NEXT:    v_readfirstlane_b32 s0, v2
@@ -225,6 +225,6 @@ define amdgpu_ps void @global_load_lds_ubyte_vaddr(i8 addrspace(1)* nocapture %g
 ; GFX900-GISEL-NEXT:    global_load_ubyte v[0:1], off lds
 ; GFX900-GISEL-NEXT:    s_endpgm
 main_body:
-  call void @llvm.amdgcn.global.load.lds(i8 addrspace(1)* %gptr, i8 addrspace(3)* %lptr, i32 1, i32 0, i32 0)
+  call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %gptr, ptr addrspace(3) %lptr, i32 1, i32 0, i32 0)
   ret void
 }

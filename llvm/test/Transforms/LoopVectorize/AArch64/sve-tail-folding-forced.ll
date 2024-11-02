@@ -19,7 +19,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VPLANS-NEXT:   vector.body:
 ; VPLANS-NEXT:     EMIT vp<%4> = CANONICAL-INDUCTION
 ; VPLANS-NEXT:     ACTIVE-LANE-MASK-PHI vp<%5> = phi vp<%3>, vp<%10>
-; VPLANS-NEXT:     vp<%6>    = SCALAR-STEPS vp<%4>, ir<0>, ir<1>
+; VPLANS-NEXT:     vp<%6>    = SCALAR-STEPS vp<%4>, ir<1>
 ; VPLANS-NEXT:     CLONE ir<%gep> = getelementptr ir<%ptr>, vp<%6>
 ; VPLANS-NEXT:     WIDEN store ir<%gep>, ir<%val>, vp<%5>
 ; VPLANS-NEXT:     EMIT vp<%8> = VF * UF +  vp<%4>

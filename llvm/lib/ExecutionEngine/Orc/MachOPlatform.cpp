@@ -15,6 +15,7 @@
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "orc"
 
@@ -479,7 +480,7 @@ void MachOPlatform::pushInitializersLoop(
 
   // Otherwise issue a lookup and re-run this phase when it completes.
   lookupInitSymbolsAsync(
-      [this, SendResult = std::move(SendResult), &JD](Error Err) mutable {
+      [this, SendResult = std::move(SendResult), JD](Error Err) mutable {
         if (Err)
           SendResult(std::move(Err));
         else
@@ -820,7 +821,7 @@ Error MachOPlatform::MachOPlatformPlugin::fixTLVSectionsAndEdges(
 
   // Store key in __thread_vars struct fields.
   if (auto *ThreadDataSec = G.findSectionByName(ThreadVarsSectionName)) {
-    Optional<uint64_t> Key;
+    std::optional<uint64_t> Key;
     {
       std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
       auto I = MP.JITDylibToPThreadKey.find(&JD);
@@ -945,7 +946,7 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
   }
 
   if (!MachOPlatformSecs.empty()) {
-    Optional<ExecutorAddr> HeaderAddr;
+    std::optional<ExecutorAddr> HeaderAddr;
     {
       std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
       auto I = MP.JITDylibToHeaderAddr.find(&JD);

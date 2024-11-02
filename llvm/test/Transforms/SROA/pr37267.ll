@@ -12,7 +12,6 @@ define i16 @f1() {
 ; CHECK-NEXT:    [[RC:%.*]] = add i16 2, 2
 ; CHECK-NEXT:    ret i16 [[RC]]
 ;
-
 bb1:
 ; This 12-byte alloca is split into partitions as [0,2), [2,4), [4,8), [8,10), [10, 12).
 ; The reported error happened when rewriteIntegerStore try to widen a split tail of slice 1 for [4, 8) partition.
@@ -53,7 +52,6 @@ define i16 @f2() {
 ; CHECK-NEXT:    [[RC:%.*]] = add i16 2, undef
 ; CHECK-NEXT:    ret i16 [[RC]]
 ;
-
 bb1:
 ; This 12-byte alloca is split into partitions as [0,2), [2,4), [4,8), [8,10), [10, 12).
 ; The reported error happened when visitLoadInst rewrites a split tail of slice 1 for [4, 8) partition.

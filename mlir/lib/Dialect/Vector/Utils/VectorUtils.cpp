@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IntegerSet.h"
@@ -25,7 +26,6 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/MathExtras.h"
-#include <numeric>
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
@@ -41,78 +41,6 @@ Value mlir::vector::createOrFoldDimOp(OpBuilder &b, Location loc, Value source,
   if (source.getType().isa<UnrankedTensorType, RankedTensorType>())
     return b.createOrFold<tensor::DimOp>(loc, source, dim);
   llvm_unreachable("Expected MemRefType or TensorType");
-}
-
-/// Return the number of elements of basis, `0` if empty.
-int64_t mlir::computeMaxLinearIndex(ArrayRef<int64_t> basis) {
-  if (basis.empty())
-    return 0;
-  return std::accumulate(basis.begin(), basis.end(), 1,
-                         std::multiplies<int64_t>());
-}
-
-SmallVector<int64_t, 4> mlir::computeStrides(ArrayRef<int64_t> shape,
-                                             ArrayRef<int64_t> sizes) {
-  int64_t rank = shape.size();
-  // Compute the count for each dimension.
-  SmallVector<int64_t, 4> sliceDimCounts(rank);
-  for (int64_t r = 0; r < rank; ++r)
-    sliceDimCounts[r] = ceilDiv(shape[r], sizes[r]);
-  // Use that to compute the slice stride for each dimension.
-  SmallVector<int64_t, 4> sliceStrides(rank);
-  sliceStrides[rank - 1] = 1;
-  for (int64_t r = rank - 2; r >= 0; --r)
-    sliceStrides[r] = sliceStrides[r + 1] * sliceDimCounts[r + 1];
-  return sliceStrides;
-}
-
-SmallVector<int64_t, 4> mlir::computeElementOffsetsFromVectorSliceOffsets(
-    ArrayRef<int64_t> sizes, ArrayRef<int64_t> vectorOffsets) {
-  SmallVector<int64_t, 4> result;
-  for (auto it : llvm::zip(vectorOffsets, sizes))
-    result.push_back(std::get<0>(it) * std::get<1>(it));
-  return result;
-}
-
-Optional<SmallVector<int64_t, 4>> mlir::shapeRatio(ArrayRef<int64_t> superShape,
-                                                   ArrayRef<int64_t> subShape) {
-  if (superShape.size() < subShape.size()) {
-    return Optional<SmallVector<int64_t, 4>>();
-  }
-
-  // Starting from the end, compute the integer divisors.
-  std::vector<int64_t> result;
-  result.reserve(superShape.size());
-  for (auto [superSize, subSize] :
-       llvm::zip(llvm::reverse(superShape), llvm::reverse(subShape))) {
-    assert(superSize > 0 && "superSize must be > 0");
-    assert(subSize > 0 && "subSize must be > 0");
-
-    // If integral division does not occur, return and let the caller decide.
-    if (superSize % subSize != 0)
-      return None;
-    result.push_back(superSize / subSize);
-  }
-
-  // At this point we computed the ratio (in reverse) for the common
-  // size. Fill with the remaining entries from the super-vector shape (still in
-  // reverse).
-  int commonSize = subShape.size();
-  std::copy(superShape.rbegin() + commonSize, superShape.rend(),
-            std::back_inserter(result));
-
-  assert(result.size() == superShape.size() &&
-         "super to sub shape ratio is not of the same size as the super rank");
-
-  // Reverse again to get it back in the proper order and return.
-  return SmallVector<int64_t, 4>{result.rbegin(), result.rend()};
-}
-
-Optional<SmallVector<int64_t, 4>> mlir::shapeRatio(VectorType superVectorType,
-                                                   VectorType subVectorType) {
-  assert(superVectorType.getElementType() == subVectorType.getElementType() &&
-         "vector types must be of the same elemental type");
-  return shapeRatio(superVectorType.getShape(), subVectorType.getShape());
 }
 
 /// Constructs a permutation map from memref indices to vector dimension.
@@ -144,8 +72,8 @@ static AffineMap makePermutationMap(
     return AffineMap();
   MLIRContext *context =
       enclosingLoopToVectorDim.begin()->getFirst()->getContext();
-  SmallVector<AffineExpr, 4> perm(enclosingLoopToVectorDim.size(),
-                                  getAffineConstantExpr(0, context));
+  SmallVector<AffineExpr> perm(enclosingLoopToVectorDim.size(),
+                               getAffineConstantExpr(0, context));
 
   for (auto kvp : enclosingLoopToVectorDim) {
     assert(kvp.second < perm.size());
@@ -252,7 +180,8 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
   }
 
   // Get the ratio.
-  auto ratio = shapeRatio(superVectorType, subVectorType);
+  auto ratio =
+      computeShapeRatio(superVectorType.getShape(), subVectorType.getShape());
 
   // Sanity check.
   assert((ratio || !mustDivide) &&

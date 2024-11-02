@@ -60,18 +60,28 @@ define dso_local i32 @f() {
 ; CHECK-NEXT:  Loop %for.cond6: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for for.cond6: 0
 ; CHECK-NEXT:    exit count for for.end: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %for.cond6: max backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.cond6: constant max backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.cond6: symbolic max backedge-taken count is 0
+; CHECK-NEXT:    symbolic max exit count for for.cond6: 0
+; CHECK-NEXT:    symbolic max exit count for for.end: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:  Loop %for.cond6: Unpredictable predicated backedge-taken count.
 ; CHECK-NEXT:  Loop %inner.loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for inner.loop: 0
 ; CHECK-NEXT:    exit count for for.end.3: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %inner.loop: max backedge-taken count is 0
+; CHECK-NEXT:  Loop %inner.loop: constant max backedge-taken count is 0
+; CHECK-NEXT:  Loop %inner.loop: symbolic max backedge-taken count is 0
+; CHECK-NEXT:    symbolic max exit count for inner.loop: 0
+; CHECK-NEXT:    symbolic max exit count for for.end.3: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:  Loop %inner.loop: Unpredictable predicated backedge-taken count.
 ; CHECK-NEXT:  Loop %outer.loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for for.cond6: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for inner.loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for for.inc13.3: 2
-; CHECK-NEXT:  Loop %outer.loop: max backedge-taken count is 2
+; CHECK-NEXT:  Loop %outer.loop: constant max backedge-taken count is 2
+; CHECK-NEXT:  Loop %outer.loop: symbolic max backedge-taken count is 2
+; CHECK-NEXT:    symbolic max exit count for for.cond6: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    symbolic max exit count for inner.loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    symbolic max exit count for for.inc13.3: 2
 ; CHECK-NEXT:  Loop %outer.loop: Unpredictable predicated backedge-taken count.
 ;
 entry:

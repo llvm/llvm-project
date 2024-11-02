@@ -14,6 +14,7 @@
 #include "llvm/Remarks/YAMLRemarkSerializer.h"
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Support/FileSystem.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::remarks;
@@ -216,7 +217,8 @@ static void emitVersion(raw_ostream &OS) {
   OS.write(Version.data(), Version.size());
 }
 
-static void emitStrTab(raw_ostream &OS, Optional<const StringTable *> StrTab) {
+static void emitStrTab(raw_ostream &OS,
+                       std::optional<const StringTable *> StrTab) {
   // Emit the string table in the section.
   uint64_t StrTabSize = StrTab ? (*StrTab)->SerializedSize : 0;
   // Emit the total size of the string table (the size itself excluded):

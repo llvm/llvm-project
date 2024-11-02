@@ -2,7 +2,7 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; Extract the high bit of the 1st quarter
-define amdgpu_kernel void @v_uextract_bit_31_i128(i128 addrspace(1)* %out, i128 addrspace(1)* %in) #1 {
+define amdgpu_kernel void @v_uextract_bit_31_i128(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
 ; GCN-LABEL: v_uextract_bit_31_i128:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -24,17 +24,17 @@ define amdgpu_kernel void @v_uextract_bit_31_i128(i128 addrspace(1)* %out, i128 
 ; GCN-NEXT:    buffer_store_dwordx4 v[0:3], v[4:5], s[4:7], 0 addr64
 ; GCN-NEXT:    s_endpgm
   %id.x = tail call i32 @llvm.amdgcn.workgroup.id.x()
-  %in.gep = getelementptr i128, i128 addrspace(1)* %in, i32 %id.x
-  %out.gep = getelementptr i128, i128 addrspace(1)* %out, i32 %id.x
-  %ld.64 = load i128, i128 addrspace(1)* %in.gep
+  %in.gep = getelementptr i128, ptr addrspace(1) %in, i32 %id.x
+  %out.gep = getelementptr i128, ptr addrspace(1) %out, i32 %id.x
+  %ld.64 = load i128, ptr addrspace(1) %in.gep
   %srl = lshr i128 %ld.64, 31
   %bit = and i128 %srl, 1
-  store i128 %bit, i128 addrspace(1)* %out.gep
+  store i128 %bit, ptr addrspace(1) %out.gep
   ret void
 }
 
 ; Extract the high bit of the 2nd quarter
-define amdgpu_kernel void @v_uextract_bit_63_i128(i128 addrspace(1)* %out, i128 addrspace(1)* %in) #1 {
+define amdgpu_kernel void @v_uextract_bit_63_i128(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
 ; GCN-LABEL: v_uextract_bit_63_i128:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -55,17 +55,17 @@ define amdgpu_kernel void @v_uextract_bit_63_i128(i128 addrspace(1)* %out, i128 
 ; GCN-NEXT:    buffer_store_dwordx4 v[0:3], v[4:5], s[4:7], 0 addr64
 ; GCN-NEXT:    s_endpgm
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %in.gep = getelementptr i128, i128 addrspace(1)* %in, i32 %id.x
-  %out.gep = getelementptr i128, i128 addrspace(1)* %out, i32 %id.x
-  %ld.64 = load i128, i128 addrspace(1)* %in.gep
+  %in.gep = getelementptr i128, ptr addrspace(1) %in, i32 %id.x
+  %out.gep = getelementptr i128, ptr addrspace(1) %out, i32 %id.x
+  %ld.64 = load i128, ptr addrspace(1) %in.gep
   %srl = lshr i128 %ld.64, 63
   %bit = and i128 %srl, 1
-  store i128 %bit, i128 addrspace(1)* %out.gep
+  store i128 %bit, ptr addrspace(1) %out.gep
   ret void
 }
 
 ; Extract the high bit of the 3rd quarter
-define amdgpu_kernel void @v_uextract_bit_95_i128(i128 addrspace(1)* %out, i128 addrspace(1)* %in) #1 {
+define amdgpu_kernel void @v_uextract_bit_95_i128(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
 ; GCN-LABEL: v_uextract_bit_95_i128:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -88,17 +88,17 @@ define amdgpu_kernel void @v_uextract_bit_95_i128(i128 addrspace(1)* %out, i128 
 ; GCN-NEXT:    buffer_store_dwordx4 v[0:3], v[4:5], s[0:3], 0 addr64
 ; GCN-NEXT:    s_endpgm
   %id.x = tail call i32 @llvm.amdgcn.workgroup.id.x()
-  %in.gep = getelementptr i128, i128 addrspace(1)* %in, i32 %id.x
-  %out.gep = getelementptr i128, i128 addrspace(1)* %out, i32 %id.x
-  %ld.64 = load i128, i128 addrspace(1)* %in.gep
+  %in.gep = getelementptr i128, ptr addrspace(1) %in, i32 %id.x
+  %out.gep = getelementptr i128, ptr addrspace(1) %out, i32 %id.x
+  %ld.64 = load i128, ptr addrspace(1) %in.gep
   %srl = lshr i128 %ld.64, 95
   %bit = and i128 %srl, 1
-  store i128 %bit, i128 addrspace(1)* %out.gep
+  store i128 %bit, ptr addrspace(1) %out.gep
   ret void
 }
 
 ; Extract the high bit of the 4th quarter
-define amdgpu_kernel void @v_uextract_bit_127_i128(i128 addrspace(1)* %out, i128 addrspace(1)* %in) #1 {
+define amdgpu_kernel void @v_uextract_bit_127_i128(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
 ; GCN-LABEL: v_uextract_bit_127_i128:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -119,17 +119,17 @@ define amdgpu_kernel void @v_uextract_bit_127_i128(i128 addrspace(1)* %out, i128
 ; GCN-NEXT:    buffer_store_dwordx4 v[0:3], v[4:5], s[4:7], 0 addr64
 ; GCN-NEXT:    s_endpgm
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %in.gep = getelementptr i128, i128 addrspace(1)* %in, i32 %id.x
-  %out.gep = getelementptr i128, i128 addrspace(1)* %out, i32 %id.x
-  %ld.64 = load i128, i128 addrspace(1)* %in.gep
+  %in.gep = getelementptr i128, ptr addrspace(1) %in, i32 %id.x
+  %out.gep = getelementptr i128, ptr addrspace(1) %out, i32 %id.x
+  %ld.64 = load i128, ptr addrspace(1) %in.gep
   %srl = lshr i128 %ld.64, 127
   %bit = and i128 %srl, 1
-  store i128 %bit, i128 addrspace(1)* %out.gep
+  store i128 %bit, ptr addrspace(1) %out.gep
   ret void
 }
 
 ; Spans more than 2 dword boundaries
-define amdgpu_kernel void @v_uextract_bit_34_100_i128(i128 addrspace(1)* %out, i128 addrspace(1)* %in) #1 {
+define amdgpu_kernel void @v_uextract_bit_34_100_i128(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
 ; GCN-LABEL: v_uextract_bit_34_100_i128:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -150,12 +150,12 @@ define amdgpu_kernel void @v_uextract_bit_34_100_i128(i128 addrspace(1)* %out, i
 ; GCN-NEXT:    buffer_store_dwordx4 v[4:7], v[8:9], s[0:3], 0 addr64
 ; GCN-NEXT:    s_endpgm
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %in.gep = getelementptr i128, i128 addrspace(1)* %in, i32 %id.x
-  %out.gep = getelementptr i128, i128 addrspace(1)* %out, i32 %id.x
-  %ld.64 = load i128, i128 addrspace(1)* %in.gep
+  %in.gep = getelementptr i128, ptr addrspace(1) %in, i32 %id.x
+  %out.gep = getelementptr i128, ptr addrspace(1) %out, i32 %id.x
+  %ld.64 = load i128, ptr addrspace(1) %in.gep
   %srl = lshr i128 %ld.64, 34
   %bit = and i128 %srl, 73786976294838206463
-  store i128 %bit, i128 addrspace(1)* %out.gep
+  store i128 %bit, ptr addrspace(1) %out.gep
   ret void
 }
 

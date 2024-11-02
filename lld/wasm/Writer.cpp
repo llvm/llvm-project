@@ -288,11 +288,12 @@ void Writer::layoutMemory() {
 
   out.dylinkSec->memAlign = 0;
   for (OutputSegment *seg : segments) {
-    out.dylinkSec->memAlign = std::max(out.dylinkSec->memAlign, seg->alignment);
-    memoryPtr = alignTo(memoryPtr, 1ULL << seg->alignment);
+    out.dylinkSec->memAlign =
+        std::max(out.dylinkSec->memAlign, Log2(seg->alignment));
+    memoryPtr = alignTo(memoryPtr, seg->alignment);
     seg->startVA = memoryPtr;
     log(formatv("mem: {0,-15} offset={1,-8} size={2,-8} align={3}", seg->name,
-                memoryPtr, seg->size, seg->alignment));
+                memoryPtr, seg->size, Log2(seg->alignment)));
 
     if (!config->relocatable && seg->isTLS()) {
       if (WasmSym::tlsSize) {
@@ -301,7 +302,7 @@ void Writer::layoutMemory() {
       }
       if (WasmSym::tlsAlign) {
         auto *tlsAlign = cast<DefinedGlobal>(WasmSym::tlsAlign);
-        setGlobalPtr(tlsAlign, int64_t{1} << seg->alignment);
+        setGlobalPtr(tlsAlign, seg->alignment.value());
       }
       if (!config->sharedMemory && WasmSym::tlsBase) {
         auto *tlsBase = cast<DefinedGlobal>(WasmSym::tlsBase);

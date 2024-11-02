@@ -93,11 +93,11 @@ declare half @llvm.vp.reduce.fadd.nxv64f16(half, <vscale x 64 x half>, <vscale x
 define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fadd_nxv64f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a2, a1, 1
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    srli a1, a2, 1
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v24, v0, a2
-; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    vslidedown.vx v24, v0, a1
+; CHECK-NEXT:    slli a2, a2, 2
 ; CHECK-NEXT:    sub a1, a0, a2
 ; CHECK-NEXT:    sltu a3, a0, a1
 ; CHECK-NEXT:    addi a3, a3, -1
@@ -125,11 +125,11 @@ define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 
 define half @vpreduce_ord_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_ord_fadd_nxv64f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a2, a1, 1
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    srli a1, a2, 1
 ; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v24, v0, a2
-; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    vslidedown.vx v24, v0, a1
+; CHECK-NEXT:    slli a2, a2, 2
 ; CHECK-NEXT:    sub a1, a0, a2
 ; CHECK-NEXT:    sltu a3, a0, a1
 ; CHECK-NEXT:    addi a3, a3, -1

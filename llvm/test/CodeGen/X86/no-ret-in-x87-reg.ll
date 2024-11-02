@@ -117,7 +117,6 @@ entry:
   ret double %0
 }
 
-; FIXME: We should not generate x87 instructions when x87 is disabled.
 define x86_fp80 @f6(x86_fp80 %a, x86_fp80 %b) nounwind {
 ; X87-LABEL: f6:
 ; X87:       # %bb.0: # %entry
@@ -128,31 +127,17 @@ define x86_fp80 @f6(x86_fp80 %a, x86_fp80 %b) nounwind {
 ;
 ; NOX87-LABEL: f6:
 ; NOX87:       # %bb.0: # %entry
-; NOX87-NEXT:    pushl %ebp
-; NOX87-NEXT:    movl %esp, %ebp
-; NOX87-NEXT:    andl $-8, %esp
-; NOX87-NEXT:    subl $48, %esp
-; NOX87-NEXT:    movl 20(%ebp), %eax
-; NOX87-NEXT:    movl 24(%ebp), %ecx
-; NOX87-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; NOX87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; NOX87-NEXT:    movl 28(%ebp), %eax
-; NOX87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; NOX87-NEXT:    movl 8(%ebp), %eax
-; NOX87-NEXT:    movl 12(%ebp), %ecx
-; NOX87-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; NOX87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; NOX87-NEXT:    movl 16(%ebp), %eax
-; NOX87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; NOX87-NEXT:    fldt {{[0-9]+}}(%esp)
-; NOX87-NEXT:    fldt {{[0-9]+}}(%esp)
-; NOX87-NEXT:    faddp %st, %st(1)
-; NOX87-NEXT:    fstpt (%esp)
-; NOX87-NEXT:    movl (%esp), %eax
-; NOX87-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; NOX87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; NOX87-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; NOX87-NEXT:    movl %ebp, %esp
-; NOX87-NEXT:    popl %ebp
+; NOX87-NEXT:    pushl %ecx
+; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NOX87-NEXT:    pushl %eax
+; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NOX87-NEXT:    calll __addxf3
+; NOX87-NEXT:    addl $24, %esp
+; NOX87-NEXT:    movzwl %cx, %ecx
 ; NOX87-NEXT:    retl
 entry:
   %0 = fadd x86_fp80 %a, %b
@@ -190,4 +175,53 @@ entry:
   %1 = insertvalue {float, float, float} %0, float %a, 1
   %2 = insertvalue {float, float, float} %1, float %b, 2
   ret {float, float, float} %2
+}
+
+define x86_fp80 @f8(i64 %a) nounwind {
+; X87-LABEL: f8:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    fildll {{[0-9]+}}(%esp)
+; X87-NEXT:    retl
+;
+; NOX87-LABEL: f8:
+; NOX87:       # %bb.0: # %entry
+; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NOX87-NEXT:    calll __floatdixf
+; NOX87-NEXT:    addl $8, %esp
+; NOX87-NEXT:    movzwl %cx, %ecx
+; NOX87-NEXT:    retl
+entry:
+  %0 = sitofp i64 %a to x86_fp80
+  ret x86_fp80 %0
+}
+
+define i32 @f9(x86_fp80 %a) nounwind {
+; X87-LABEL: f9:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    fldt {{[0-9]+}}(%esp)
+; X87-NEXT:    fnstcw (%esp)
+; X87-NEXT:    movzwl (%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw (%esp)
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    addl $8, %esp
+; X87-NEXT:    retl
+;
+; NOX87-LABEL: f9:
+; NOX87:       # %bb.0: # %entry
+; NOX87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; NOX87-NEXT:    pushl %eax
+; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NOX87-NEXT:    calll __fixxfsi
+; NOX87-NEXT:    addl $12, %esp
+; NOX87-NEXT:    retl
+entry:
+  %0 = fptosi x86_fp80 %a to i32
+  ret i32 %0
 }

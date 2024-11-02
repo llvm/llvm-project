@@ -1,0 +1,78 @@
+//===- DebugImporter.h - LLVM to MLIR Debug conversion -------*- C++ -*----===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements the translation between LLVMIR debug information and
+// the corresponding MLIR representation.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef MLIR_LIB_TARGET_LLVMIR_DEBUGIMPORT_H_
+#define MLIR_LIB_TARGET_LLVMIR_DEBUGIMPORT_H_
+
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/MLIRContext.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+
+namespace mlir {
+class Operation;
+
+namespace LLVM {
+class LLVMFuncOp;
+
+namespace detail {
+
+class DebugImporter {
+public:
+  DebugImporter(MLIRContext *context) : context(context) {}
+
+  /// Translates the given LLVM debug location to an MLIR location.
+  Location translateLoc(llvm::DILocation *loc);
+
+  /// Translates the debug information for the given function.
+  void translate(llvm::Function *func, LLVMFuncOp funcOp);
+
+  /// Translates the given LLVM debug metadata to MLIR.
+  DINodeAttr translate(llvm::DINode *node);
+
+  /// Infers the metadata type and translates it to MLIR.
+  template <typename DINodeT>
+  auto translate(DINodeT *node) {
+    // Infer the MLIR type from the LLVM metadata type.
+    using MLIRTypeT = decltype(translateImpl(node));
+    return cast_or_null<MLIRTypeT>(
+        translate(static_cast<llvm::DINode *>(node)));
+  }
+
+private:
+  /// Translates the given LLVM debug metadata to the corresponding attribute.
+  DIBasicTypeAttr translateImpl(llvm::DIBasicType *node);
+  DICompileUnitAttr translateImpl(llvm::DICompileUnit *node);
+  DICompositeTypeAttr translateImpl(llvm::DICompositeType *node);
+  DIDerivedTypeAttr translateImpl(llvm::DIDerivedType *node);
+  DIFileAttr translateImpl(llvm::DIFile *node);
+  DILexicalBlockAttr translateImpl(llvm::DILexicalBlock *node);
+  DILexicalBlockFileAttr translateImpl(llvm::DILexicalBlockFile *node);
+  DILocalVariableAttr translateImpl(llvm::DILocalVariable *node);
+  DIScopeAttr translateImpl(llvm::DIScope *node);
+  DISubprogramAttr translateImpl(llvm::DISubprogram *node);
+  DISubrangeAttr translateImpl(llvm::DISubrange *node);
+  DISubroutineTypeAttr translateImpl(llvm::DISubroutineType *node);
+  DITypeAttr translateImpl(llvm::DIType *node);
+
+  /// A mapping between LLVM debug metadata and the corresponding attribute.
+  DenseMap<llvm::DINode *, DINodeAttr> nodeToAttr;
+
+  MLIRContext *context;
+};
+
+} // namespace detail
+} // namespace LLVM
+} // namespace mlir
+
+#endif // MLIR_LIB_TARGET_LLVMIR_DEBUIMPORTN_H_

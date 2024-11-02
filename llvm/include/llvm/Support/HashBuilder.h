@@ -23,6 +23,7 @@
 #include "llvm/Support/type_traits.h"
 
 #include <iterator>
+#include <optional>
 #include <utility>
 
 namespace llvm {
@@ -80,7 +81,7 @@ protected:
         Hasher(*OptionalHasher) {}
 
 private:
-  Optional<HasherT> OptionalHasher;
+  std::optional<HasherT> OptionalHasher;
   HasherT &Hasher;
 };
 

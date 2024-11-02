@@ -237,25 +237,25 @@ def simm12_lsb0 : Operand<XLenVT>,
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class CStackLoad<bits<3> funct3, string OpcodeStr,
                  RegisterClass cls, DAGOperand opnd>
-    : RVInst16CI<funct3, 0b10, (outs cls:$rd), (ins SP:$rs1, opnd:$imm),
+    : RVInst16CI<funct3, 0b10, (outs cls:$rd), (ins SPMem:$rs1, opnd:$imm),
                  OpcodeStr, "$rd, ${imm}(${rs1})">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class CStackStore<bits<3> funct3, string OpcodeStr,
                   RegisterClass cls, DAGOperand opnd>
-    : RVInst16CSS<funct3, 0b10, (outs), (ins cls:$rs2, SP:$rs1, opnd:$imm),
+    : RVInst16CSS<funct3, 0b10, (outs), (ins cls:$rs2, SPMem:$rs1, opnd:$imm),
                   OpcodeStr, "$rs2, ${imm}(${rs1})">;
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class CLoad_ri<bits<3> funct3, string OpcodeStr,
                RegisterClass cls, DAGOperand opnd>
-    : RVInst16CL<funct3, 0b00, (outs cls:$rd), (ins GPRC:$rs1, opnd:$imm),
+    : RVInst16CL<funct3, 0b00, (outs cls:$rd), (ins GPRCMem:$rs1, opnd:$imm),
                  OpcodeStr, "$rd, ${imm}(${rs1})">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class CStore_rri<bits<3> funct3, string OpcodeStr,
                  RegisterClass cls, DAGOperand opnd>
-    : RVInst16CS<funct3, 0b00, (outs), (ins cls:$rs2, GPRC:$rs1, opnd:$imm),
+    : RVInst16CS<funct3, 0b00, (outs), (ins cls:$rs2,GPRCMem:$rs1, opnd:$imm),
                  OpcodeStr, "$rs2, ${imm}(${rs1})">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -311,7 +311,7 @@ def C_ADDI4SPN : RVInst16CIW<0b000, 0b00, (outs GPRC:$rd),
   let Inst{5} = imm{3};
 }
 
-let Predicates = [HasStdExtC, HasStdExtD] in
+let Predicates = [HasStdExtCOrZcd, HasStdExtD] in
 def C_FLD  : CLoad_ri<0b001, "c.fld", FPR64C, uimm8_lsb000>,
              Sched<[WriteFLD64, ReadMemBase]> {
   bits<8> imm;
@@ -328,7 +328,7 @@ def C_LW : CLoad_ri<0b010, "c.lw", GPRC, uimm7_lsb00>,
 }
 
 let DecoderNamespace = "RISCV32Only_",
-    Predicates = [HasStdExtC, HasStdExtF, IsRV32] in
+    Predicates = [HasStdExtCOrZcf, HasStdExtF, IsRV32] in
 def C_FLW  : CLoad_ri<0b011, "c.flw", FPR32C, uimm7_lsb00>,
              Sched<[WriteFLD32, ReadMemBase]> {
   bits<7> imm;
@@ -345,7 +345,7 @@ def C_LD : CLoad_ri<0b011, "c.ld", GPRC, uimm8_lsb000>,
   let Inst{6-5} = imm{7-6};
 }
 
-let Predicates = [HasStdExtC, HasStdExtD] in
+let Predicates = [HasStdExtCOrZcd, HasStdExtD] in
 def C_FSD  : CStore_rri<0b101, "c.fsd", FPR64C, uimm8_lsb000>,
              Sched<[WriteFST64, ReadStoreData, ReadMemBase]> {
   bits<8> imm;
@@ -362,7 +362,7 @@ def C_SW : CStore_rri<0b110, "c.sw", GPRC, uimm7_lsb00>,
 }
 
 let DecoderNamespace = "RISCV32Only_",
-    Predicates = [HasStdExtC, HasStdExtF, IsRV32]  in
+    Predicates = [HasStdExtCOrZcf, HasStdExtF, IsRV32]  in
 def C_FSW  : CStore_rri<0b111, "c.fsw", FPR32C, uimm7_lsb00>,
              Sched<[WriteFST32, ReadStoreData, ReadMemBase]> {
   bits<7> imm;
@@ -501,7 +501,7 @@ def C_SLLI : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd_wb),
   let Inst{6-2} = imm{4-0};
 }
 
-let Predicates = [HasStdExtC, HasStdExtD] in
+let Predicates = [HasStdExtCOrZcd, HasStdExtD] in
 def C_FLDSP  : CStackLoad<0b001, "c.fldsp", FPR64, uimm9_lsb000>,
                Sched<[WriteFLD64, ReadMemBase]> {
   let Inst{6-5} = imm{4-3};
@@ -515,7 +515,7 @@ def C_LWSP : CStackLoad<0b010, "c.lwsp", GPRNoX0, uimm8_lsb00>,
 }
 
 let DecoderNamespace = "RISCV32Only_",
-    Predicates = [HasStdExtC, HasStdExtF, IsRV32] in
+    Predicates = [HasStdExtCOrZcf, HasStdExtF, IsRV32] in
 def C_FLWSP  : CStackLoad<0b011, "c.flwsp", FPR32, uimm8_lsb00>,
                Sched<[WriteFLD32, ReadMemBase]> {
   let Inst{6-4} = imm{4-2};
@@ -561,7 +561,7 @@ def C_ADD : RVInst16CR<0b1001, 0b10, (outs GPRNoX0:$rs1_wb),
   let Constraints = "$rs1 = $rs1_wb";
 }
 
-let Predicates = [HasStdExtC, HasStdExtD] in
+let Predicates = [HasStdExtCOrZcd, HasStdExtD] in
 def C_FSDSP  : CStackStore<0b101, "c.fsdsp", FPR64, uimm9_lsb000>,
                Sched<[WriteFST64, ReadStoreData, ReadMemBase]> {
   let Inst{12-10} = imm{5-3};
@@ -575,7 +575,7 @@ def C_SWSP : CStackStore<0b110, "c.swsp", GPR, uimm8_lsb00>,
 }
 
 let DecoderNamespace = "RISCV32Only_",
-    Predicates = [HasStdExtC, HasStdExtF, IsRV32] in
+    Predicates = [HasStdExtCOrZcf, HasStdExtF, IsRV32] in
 def C_FSWSP  : CStackStore<0b111, "c.fswsp", FPR32, uimm8_lsb00>,
                Sched<[WriteFST32, ReadStoreData, ReadMemBase]> {
   let Inst{12-9} = imm{5-2};
@@ -720,31 +720,31 @@ def : InstAlias<"c.ntl.all", (C_ADD_HINT X0, X5)>;
 
 let EmitPriority = 0 in {
 let Predicates = [HasStdExtCOrZca] in {
-def : InstAlias<"c.lw $rd, (${rs1})", (C_LW GPRC:$rd, GPRC:$rs1, 0)>;
-def : InstAlias<"c.sw $rs2, (${rs1})", (C_SW GPRC:$rs2, GPRC:$rs1, 0)>;
-def : InstAlias<"c.lwsp $rd, (${rs1})", (C_LWSP GPRC:$rd, SP:$rs1, 0)>;
-def : InstAlias<"c.swsp $rs2, (${rs1})", (C_SWSP GPRC:$rs2, SP:$rs1, 0)>;
+def : InstAlias<"c.lw $rd, (${rs1})", (C_LW GPRC:$rd, GPRCMem:$rs1, 0)>;
+def : InstAlias<"c.sw $rs2, (${rs1})", (C_SW GPRC:$rs2, GPRCMem:$rs1, 0)>;
+def : InstAlias<"c.lwsp $rd, (${rs1})", (C_LWSP GPRC:$rd, SPMem:$rs1, 0)>;
+def : InstAlias<"c.swsp $rs2, (${rs1})", (C_SWSP GPRC:$rs2, SPMem:$rs1, 0)>;
 }
 
 let Predicates = [HasStdExtCOrZca, IsRV64] in {
-def : InstAlias<"c.ld $rd, (${rs1})", (C_LD GPRC:$rd, GPRC:$rs1, 0)>;
-def : InstAlias<"c.sd $rs2, (${rs1})", (C_SD GPRC:$rs2, GPRC:$rs1, 0)>;
-def : InstAlias<"c.ldsp $rd, (${rs1})", (C_LDSP GPRC:$rd, SP:$rs1, 0)>;
-def : InstAlias<"c.sdsp $rs2, (${rs1})", (C_SDSP GPRC:$rs2, SP:$rs1, 0)>;
+def : InstAlias<"c.ld $rd, (${rs1})", (C_LD GPRC:$rd, GPRCMem:$rs1, 0)>;
+def : InstAlias<"c.sd $rs2, (${rs1})", (C_SD GPRC:$rs2, GPRCMem:$rs1, 0)>;
+def : InstAlias<"c.ldsp $rd, (${rs1})", (C_LDSP GPRC:$rd, SPMem:$rs1, 0)>;
+def : InstAlias<"c.sdsp $rs2, (${rs1})", (C_SDSP GPRC:$rs2, SPMem:$rs1, 0)>;
 }
 
-let Predicates = [HasStdExtC, HasStdExtF, IsRV32] in {
-def : InstAlias<"c.flw $rd, (${rs1})", (C_FLW FPR32C:$rd, GPRC:$rs1, 0)>;
-def : InstAlias<"c.fsw $rs2, (${rs1})", (C_FSW FPR32C:$rs2, GPRC:$rs1, 0)>;
-def : InstAlias<"c.flwsp $rd, (${rs1})", (C_FLWSP FPR32C:$rd, SP:$rs1, 0)>;
-def : InstAlias<"c.fswsp $rs2, (${rs1})", (C_FSWSP FPR32C:$rs2, SP:$rs1, 0)>;
+let Predicates = [HasStdExtCOrZcf, HasStdExtF, IsRV32] in {
+def : InstAlias<"c.flw $rd, (${rs1})", (C_FLW FPR32C:$rd, GPRCMem:$rs1, 0)>;
+def : InstAlias<"c.fsw $rs2, (${rs1})", (C_FSW FPR32C:$rs2, GPRCMem:$rs1, 0)>;
+def : InstAlias<"c.flwsp $rd, (${rs1})", (C_FLWSP FPR32C:$rd, SPMem:$rs1, 0)>;
+def : InstAlias<"c.fswsp $rs2, (${rs1})", (C_FSWSP FPR32C:$rs2, SPMem:$rs1, 0)>;
 }
 
-let Predicates = [HasStdExtC, HasStdExtD] in {
-def : InstAlias<"c.fld $rd, (${rs1})", (C_FLD FPR64C:$rd, GPRC:$rs1, 0)>;
-def : InstAlias<"c.fsd $rs2, (${rs1})", (C_FSD FPR64C:$rs2, GPRC:$rs1, 0)>;
-def : InstAlias<"c.fldsp $rd, (${rs1})", (C_FLDSP FPR64C:$rd, SP:$rs1, 0)>;
-def : InstAlias<"c.fsdsp $rs2, (${rs1})", (C_FSDSP FPR64C:$rs2, SP:$rs1, 0)>;
+let Predicates = [HasStdExtCOrZcd, HasStdExtD] in {
+def : InstAlias<"c.fld $rd, (${rs1})", (C_FLD FPR64C:$rd, GPRCMem:$rs1, 0)>;
+def : InstAlias<"c.fsd $rs2, (${rs1})", (C_FSD FPR64C:$rs2, GPRCMem:$rs1, 0)>;
+def : InstAlias<"c.fldsp $rd, (${rs1})", (C_FLDSP FPR64C:$rd, SPMem:$rs1, 0)>;
+def : InstAlias<"c.fsdsp $rs2, (${rs1})", (C_FSDSP FPR64C:$rs2, SPMem:$rs1, 0)>;
 }
 } // EmitPriority = 0
 
@@ -756,69 +756,69 @@ def : InstAlias<"c.fsdsp $rs2, (${rs1})", (C_FSDSP FPR64C:$rs2, SP:$rs1, 0)>;
 // on page 82 of the ISA manual.
 
 // Quadrant 0
-let Predicates = [HasStdExtC] in {
+let Predicates = [HasStdExtCOrZca] in {
 def : CompressPat<(ADDI GPRC:$rd, SP:$rs1, uimm10_lsb00nonzero:$imm),
                   (C_ADDI4SPN GPRC:$rd, SP:$rs1, uimm10_lsb00nonzero:$imm)>;
-} // Predicates = [HasStdExtC]
+} // Predicates = [HasStdExtCOrZca]
 
-let Predicates = [HasStdExtC, HasStdExtD] in {
-def : CompressPat<(FLD FPR64C:$rd, GPRC:$rs1, uimm8_lsb000:$imm),
-                  (C_FLD FPR64C:$rd, GPRC:$rs1, uimm8_lsb000:$imm)>;
-} // Predicates = [HasStdExtC, HasStdExtD]
+let Predicates = [HasStdExtCOrZcd, HasStdExtD] in {
+def : CompressPat<(FLD FPR64C:$rd, GPRCMem:$rs1, uimm8_lsb000:$imm),
+                  (C_FLD FPR64C:$rd, GPRCMem:$rs1, uimm8_lsb000:$imm)>;
+} // Predicates = [HasStdExtCOrZcd, HasStdExtD]
 
-let Predicates = [HasStdExtC] in {
-def : CompressPat<(LW GPRC:$rd, GPRC:$rs1, uimm7_lsb00:$imm),
-                  (C_LW GPRC:$rd, GPRC:$rs1, uimm7_lsb00:$imm)>;
-} // Predicates = [HasStdExtC]
+let Predicates = [HasStdExtCOrZca] in {
+def : CompressPat<(LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm),
+                  (C_LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
+} // Predicates = [HasStdExtCOrZca]
 
-let Predicates = [HasStdExtC, HasStdExtF, IsRV32] in {
-def : CompressPat<(FLW FPR32C:$rd, GPRC:$rs1, uimm7_lsb00:$imm),
-                  (C_FLW FPR32C:$rd, GPRC:$rs1, uimm7_lsb00:$imm)>;
+let Predicates = [HasStdExtCOrZcf, HasStdExtF, IsRV32] in {
+def : CompressPat<(FLW FPR32C:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm),
+                  (C_FLW FPR32C:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
 } // Predicates = [HasStdExtC, HasStdExtF, IsRV32]
 
-let Predicates = [HasStdExtC, IsRV64] in {
-def : CompressPat<(LD GPRC:$rd, GPRC:$rs1, uimm8_lsb000:$imm),
-                  (C_LD GPRC:$rd, GPRC:$rs1, uimm8_lsb000:$imm)>;
-} // Predicates = [HasStdExtC, IsRV64]
+let Predicates = [HasStdExtCOrZca, IsRV64] in {
+def : CompressPat<(LD GPRC:$rd, GPRCMem:$rs1, uimm8_lsb000:$imm),
+                  (C_LD GPRC:$rd, GPRCMem:$rs1, uimm8_lsb000:$imm)>;
+} // Predicates = [HasStdExtCOrZca, IsRV64]
 
-let Predicates = [HasStdExtC, HasStdExtD] in {
-def : CompressPat<(FSD FPR64C:$rs2, GPRC:$rs1, uimm8_lsb000:$imm),
-                  (C_FSD FPR64C:$rs2, GPRC:$rs1, uimm8_lsb000:$imm)>;
-} // Predicates = [HasStdExtC, HasStdExtD]
+let Predicates = [HasStdExtCOrZcd, HasStdExtD] in {
+def : CompressPat<(FSD FPR64C:$rs2, GPRCMem:$rs1, uimm8_lsb000:$imm),
+                  (C_FSD FPR64C:$rs2, GPRCMem:$rs1, uimm8_lsb000:$imm)>;
+} // Predicates = [HasStdExtCOrZcd, HasStdExtD]
 
-let Predicates = [HasStdExtC] in {
-def : CompressPat<(SW GPRC:$rs2, GPRC:$rs1, uimm7_lsb00:$imm),
-                  (C_SW GPRC:$rs2, GPRC:$rs1, uimm7_lsb00:$imm)>;
-} // Predicates = [HasStdExtC]
+let Predicates = [HasStdExtCOrZca] in {
+def : CompressPat<(SW GPRC:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm),
+                  (C_SW GPRC:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
+} // Predicates = [HasStdExtCOrZca]
 
-let Predicates = [HasStdExtC, HasStdExtF, IsRV32] in {
-def : CompressPat<(FSW FPR32C:$rs2, GPRC:$rs1, uimm7_lsb00:$imm),
-                  (C_FSW FPR32C:$rs2, GPRC:$rs1, uimm7_lsb00:$imm)>;
+let Predicates = [HasStdExtCOrZcf, HasStdExtF, IsRV32] in {
+def : CompressPat<(FSW FPR32C:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm),
+                  (C_FSW FPR32C:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
 } // Predicates = [HasStdExtC, HasStdExtF, IsRV32]
 
-let Predicates = [HasStdExtC, IsRV64] in {
-def : CompressPat<(SD GPRC:$rs2, GPRC:$rs1, uimm8_lsb000:$imm),
-                  (C_SD GPRC:$rs2, GPRC:$rs1, uimm8_lsb000:$imm)>;
-} // Predicates = [HasStdExtC, IsRV64]
+let Predicates = [HasStdExtCOrZca, IsRV64] in {
+def : CompressPat<(SD GPRC:$rs2, GPRCMem:$rs1, uimm8_lsb000:$imm),
+                  (C_SD GPRC:$rs2, GPRCMem:$rs1, uimm8_lsb000:$imm)>;
+} // Predicates = [HasStdExtCOrZca, IsRV64]
 
 // Quadrant 1
-let Predicates = [HasStdExtC] in {
+let Predicates = [HasStdExtCOrZca] in {
 def : CompressPat<(ADDI X0, X0, 0), (C_NOP)>;
 def : CompressPat<(ADDI GPRNoX0:$rs1, GPRNoX0:$rs1, simm6nonzero:$imm),
                   (C_ADDI GPRNoX0:$rs1, simm6nonzero:$imm)>;
-} // Predicates = [HasStdExtC]
+} // Predicates = [HasStdExtCOrZca]
 
-let Predicates = [HasStdExtC, IsRV32] in {
+let Predicates = [HasStdExtCOrZca, IsRV32] in {
 def : CompressPat<(JAL X1, simm12_lsb0:$offset),
                   (C_JAL simm12_lsb0:$offset)>;
-} // Predicates = [HasStdExtC, IsRV32]
+} // Predicates = [HasStdExtCOrZca, IsRV32]
 
-let Predicates = [HasStdExtC, IsRV64] in {
+let Predicates = [HasStdExtCOrZca, IsRV64] in {
 def : CompressPat<(ADDIW GPRNoX0:$rs1, GPRNoX0:$rs1, simm6:$imm),
                   (C_ADDIW GPRNoX0:$rs1, simm6:$imm)>;
-} // Predicates = [HasStdExtC, IsRV64]
+} // Predicates = [HasStdExtCOrZca, IsRV64]
 
-let Predicates = [HasStdExtC] in {
+let Predicates = [HasStdExtCOrZca] in {
 def : CompressPat<(ADDI GPRNoX0:$rd, X0, simm6:$imm),
                   (C_LI GPRNoX0:$rd, simm6:$imm)>;
 def : CompressPat<(ADDI X2, X2, simm10_lsb0000nonzero:$imm),
@@ -848,9 +848,9 @@ def : CompressPat<(AND GPRC:$rs1, GPRC:$rs1, GPRC:$rs2),
 let isCompressOnly = true in
 def : CompressPat<(AND GPRC:$rs1, GPRC:$rs2, GPRC:$rs1),
                   (C_AND GPRC:$rs1, GPRC:$rs2)>;
-} // Predicates = [HasStdExtC]
+} // Predicates = [HasStdExtCOrZca]
 
-let Predicates = [HasStdExtC, IsRV64] in {
+let Predicates = [HasStdExtCOrZca, IsRV64] in {
 let isCompressOnly = true in
 def : CompressPat<(ADDIW GPRNoX0:$rd, X0, simm6:$imm),
                   (C_LI GPRNoX0:$rd, simm6:$imm)>;
@@ -861,44 +861,44 @@ def : CompressPat<(ADDW GPRC:$rs1, GPRC:$rs1, GPRC:$rs2),
 let isCompressOnly = true in
 def : CompressPat<(ADDW GPRC:$rs1, GPRC:$rs2, GPRC:$rs1),
                    (C_ADDW GPRC:$rs1, GPRC:$rs2)>;
-} // Predicates = [HasStdExtC, IsRV64]
+} // Predicates = [HasStdExtCOrZca, IsRV64]
 
-let Predicates = [HasStdExtC] in {
+let Predicates = [HasStdExtCOrZca] in {
 def : CompressPat<(JAL X0, simm12_lsb0:$offset),
                   (C_J simm12_lsb0:$offset)>;
 def : CompressPat<(BEQ GPRC:$rs1, X0, simm9_lsb0:$imm),
                   (C_BEQZ GPRC:$rs1, simm9_lsb0:$imm)>;
 def : CompressPat<(BNE GPRC:$rs1, X0, simm9_lsb0:$imm),
                   (C_BNEZ GPRC:$rs1, simm9_lsb0:$imm)>;
-} // Predicates = [HasStdExtC]
+} // Predicates = [HasStdExtCOrZca]
 
 // Quadrant 2
-let Predicates = [HasStdExtC] in {
+let Predicates = [HasStdExtCOrZca] in {
 def : CompressPat<(SLLI GPRNoX0:$rs1, GPRNoX0:$rs1, uimmlog2xlennonzero:$imm),
                   (C_SLLI GPRNoX0:$rs1, uimmlog2xlennonzero:$imm)>;
-} // Predicates = [HasStdExtC]
+} // Predicates = [HasStdExtCOrZca]
 
-let Predicates = [HasStdExtC, HasStdExtD] in {
-def : CompressPat<(FLD FPR64:$rd, SP:$rs1, uimm9_lsb000:$imm),
-                  (C_FLDSP FPR64:$rd, SP:$rs1, uimm9_lsb000:$imm)>;
-} // Predicates = [HasStdExtC, HasStdExtD]
+let Predicates = [HasStdExtCOrZcd, HasStdExtD] in {
+def : CompressPat<(FLD FPR64:$rd, SPMem:$rs1, uimm9_lsb000:$imm),
+                  (C_FLDSP FPR64:$rd, SPMem:$rs1, uimm9_lsb000:$imm)>;
+} // Predicates = [HasStdExtCOrZcd, HasStdExtD]
 
-let Predicates = [HasStdExtC] in {
-def : CompressPat<(LW GPRNoX0:$rd, SP:$rs1,  uimm8_lsb00:$imm),
-                  (C_LWSP GPRNoX0:$rd, SP:$rs1, uimm8_lsb00:$imm)>;
-} // Predicates = [HasStdExtC]
+let Predicates = [HasStdExtCOrZca] in {
+def : CompressPat<(LW GPRNoX0:$rd, SPMem:$rs1,  uimm8_lsb00:$imm),
+                  (C_LWSP GPRNoX0:$rd, SPMem:$rs1, uimm8_lsb00:$imm)>;
+} // Predicates = [HasStdExtCOrZca]
 
-let Predicates = [HasStdExtC, HasStdExtF, IsRV32] in {
-def : CompressPat<(FLW FPR32:$rd, SP:$rs1, uimm8_lsb00:$imm),
-                  (C_FLWSP FPR32:$rd, SP:$rs1, uimm8_lsb00:$imm)>;
+let Predicates = [HasStdExtCOrZcf, HasStdExtF, IsRV32] in {
+def : CompressPat<(FLW FPR32:$rd, SPMem:$rs1, uimm8_lsb00:$imm),
+                  (C_FLWSP FPR32:$rd, SPMem:$rs1, uimm8_lsb00:$imm)>;
 } // Predicates = [HasStdExtC, HasStdExtF, IsRV32]
 
-let Predicates = [HasStdExtC, IsRV64] in {
-def : CompressPat<(LD GPRNoX0:$rd, SP:$rs1, uimm9_lsb000:$imm),
-                  (C_LDSP GPRNoX0:$rd, SP:$rs1, uimm9_lsb000:$imm)>;
-} // Predicates = [HasStdExtC, IsRV64]
+let Predicates = [HasStdExtCOrZca, IsRV64] in {
+def : CompressPat<(LD GPRNoX0:$rd, SPMem:$rs1, uimm9_lsb000:$imm),
+                  (C_LDSP GPRNoX0:$rd, SPMem:$rs1, uimm9_lsb000:$imm)>;
+} // Predicates = [HasStdExtCOrZca, IsRV64]
 
-let Predicates = [HasStdExtC] in {
+let Predicates = [HasStdExtCOrZca] in {
 def : CompressPat<(JALR X0, GPRNoX0:$rs1, 0),
                   (C_JR GPRNoX0:$rs1)>;
 let isCompressOnly = true in {
@@ -918,24 +918,24 @@ def : CompressPat<(ADD GPRNoX0:$rs1, GPRNoX0:$rs1, GPRNoX0:$rs2),
 let isCompressOnly = true in
 def : CompressPat<(ADD GPRNoX0:$rs1, GPRNoX0:$rs2, GPRNoX0:$rs1),
                   (C_ADD GPRNoX0:$rs1, GPRNoX0:$rs2)>;
-} // Predicates = [HasStdExtC]
+} // Predicates = [HasStdExtCOrZca]
 
-let Predicates = [HasStdExtC, HasStdExtD] in {
-def : CompressPat<(FSD FPR64:$rs2, SP:$rs1, uimm9_lsb000:$imm),
-                  (C_FSDSP FPR64:$rs2, SP:$rs1, uimm9_lsb000:$imm)>;
-} // Predicates = [HasStdExtC, HasStdExtD]
+let Predicates = [HasStdExtCOrZcd, HasStdExtD] in {
+def : CompressPat<(FSD FPR64:$rs2, SPMem:$rs1, uimm9_lsb000:$imm),
+                  (C_FSDSP FPR64:$rs2, SPMem:$rs1, uimm9_lsb000:$imm)>;
+} // Predicates = [HasStdExtCOrZcd, HasStdExtD]
 
-let Predicates = [HasStdExtC] in {
-def : CompressPat<(SW GPR:$rs2, SP:$rs1, uimm8_lsb00:$imm),
-                  (C_SWSP GPR:$rs2, SP:$rs1, uimm8_lsb00:$imm)>;
-} // Predicates = [HasStdExtC]
+let Predicates = [HasStdExtCOrZca] in {
+def : CompressPat<(SW GPR:$rs2, SPMem:$rs1, uimm8_lsb00:$imm),
+                  (C_SWSP GPR:$rs2, SPMem:$rs1, uimm8_lsb00:$imm)>;
+} // Predicates = [HasStdExtCOrZca]
 
-let Predicates = [HasStdExtC, HasStdExtF, IsRV32] in {
-def : CompressPat<(FSW FPR32:$rs2, SP:$rs1, uimm8_lsb00:$imm),
-                  (C_FSWSP FPR32:$rs2, SP:$rs1, uimm8_lsb00:$imm)>;
+let Predicates = [HasStdExtCOrZcf, HasStdExtF, IsRV32] in {
+def : CompressPat<(FSW FPR32:$rs2, SPMem:$rs1, uimm8_lsb00:$imm),
+                  (C_FSWSP FPR32:$rs2, SPMem:$rs1, uimm8_lsb00:$imm)>;
 } // Predicates = [HasStdExtC, HasStdExtF, IsRV32]
 
-let Predicates = [HasStdExtC, IsRV64] in {
-def : CompressPat<(SD GPR:$rs2, SP:$rs1, uimm9_lsb000:$imm),
-                  (C_SDSP GPR:$rs2, SP:$rs1, uimm9_lsb000:$imm)>;
-} // Predicates = [HasStdExtC, IsRV64]
+let Predicates = [HasStdExtCOrZca, IsRV64] in {
+def : CompressPat<(SD GPR:$rs2, SPMem:$rs1, uimm9_lsb000:$imm),
+                  (C_SDSP GPR:$rs2, SPMem:$rs1, uimm9_lsb000:$imm)>;
+} // Predicates = [HasStdExtCOrZca, IsRV64]

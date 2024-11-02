@@ -1124,6 +1124,17 @@ llvm.func @zeroextattr(%arg0: i1 {llvm.zeroext}) {
 // CHECK-LABEL: declare void @zeroextattr_decl(i1 zeroext)
 llvm.func @zeroextattr_decl(i1 {llvm.zeroext})
 
+// CHECK-LABEL: declare align 4 ptr @alignattr_ret_decl()
+llvm.func @alignattr_ret_decl() -> (!llvm.ptr<i32> {llvm.align = 4})
+// CHECK-LABEL: declare noalias ptr @noaliasattr_ret_decl()
+llvm.func @noaliasattr_ret_decl() -> (!llvm.ptr<i32> {llvm.noalias})
+// CHECK-LABEL: declare noundef ptr @noundefattr_ret_decl()
+llvm.func @noundefattr_ret_decl() -> (!llvm.ptr<i32> {llvm.noundef})
+// CHECK-LABEL: declare signext i1 @signextattr_ret_decl()
+llvm.func @signextattr_ret_decl() -> (i1 {llvm.signext})
+// CHECK-LABEL: declare zeroext i1 @zeroextattr_ret_decl()
+llvm.func @zeroextattr_ret_decl() -> (i1 {llvm.zeroext})
+
 // CHECK-LABEL: @llvm_varargs(...)
 llvm.func @llvm_varargs(...)
 

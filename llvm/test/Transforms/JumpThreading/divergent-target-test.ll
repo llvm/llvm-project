@@ -1,8 +1,8 @@
 ; REQUIRES: amdgpu-registered-target && x86-registered-target
-; RUN: opt < %s -mtriple=amdgcn -jump-threading -S | FileCheck %s  -check-prefixes=CHECK,DIVERGENT
-; RUN: opt < %s -mtriple=amdgcn -passes=jump-threading -S | FileCheck %s  -check-prefixes=CHECK,DIVERGENT
-; RUN: opt < %s -mtriple=x86_64 -jump-threading -S | FileCheck %s  -check-prefixes=CHECK,UNIFORM
-; RUN: opt < %s -mtriple=x86_64 -passes=jump-threading -S | FileCheck %s  -check-prefixes=CHECK,UNIFORM
+; RUN: opt < %s -mtriple=amdgcn -passes=jump-threading -S | FileCheck %s -check-prefixes=CHECK,DIVERGENT
+; RUN: opt < %s -mtriple=amdgcn -passes=jump-threading -S | FileCheck %s -check-prefixes=CHECK,DIVERGENT
+; RUN: opt < %s -mtriple=x86_64 -passes=jump-threading -S | FileCheck %s -check-prefixes=CHECK,UNIFORM
+; RUN: opt < %s -mtriple=x86_64 -passes=jump-threading -S | FileCheck %s -check-prefixes=CHECK,UNIFORM
 
 ; Here we assure that for the target with no branch divergence usual Jump Threading optimization performed
 ; For target with branch divergence - no optimization, so the IR is unchanged.

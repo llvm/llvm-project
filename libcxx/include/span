@@ -211,7 +211,7 @@ public:
     using const_pointer          = const _Tp *;
     using reference              = _Tp &;
     using const_reference        = const _Tp &;
-#ifdef _LIBCPP_ENABLE_DEBUG_MODE
+#ifdef _LIBCPP_DEBUG_ITERATOR_BOUNDS_CHECKING
     using iterator               = __bounded_iter<pointer>;
 #else
     using iterator               = __wrap_iter<pointer>;
@@ -355,14 +355,14 @@ public:
 
 // [span.iter], span iterator support
     _LIBCPP_INLINE_VISIBILITY constexpr iterator begin() const noexcept {
-#ifdef _LIBCPP_ENABLE_DEBUG_MODE
+#ifdef _LIBCPP_DEBUG_ITERATOR_BOUNDS_CHECKING
         return std::__make_bounded_iter(data(), data(), data() + size());
 #else
         return iterator(this, data());
 #endif
     }
     _LIBCPP_INLINE_VISIBILITY constexpr iterator end() const noexcept {
-#ifdef _LIBCPP_ENABLE_DEBUG_MODE
+#ifdef _LIBCPP_DEBUG_ITERATOR_BOUNDS_CHECKING
         return std::__make_bounded_iter(data() + size(), data(), data() + size());
 #else
         return iterator(this, data() + size());
@@ -394,7 +394,7 @@ public:
     using const_pointer          = const _Tp *;
     using reference              = _Tp &;
     using const_reference        = const _Tp &;
-#ifdef _LIBCPP_ENABLE_DEBUG_MODE
+#ifdef _LIBCPP_DEBUG_ITERATOR_BOUNDS_CHECKING
     using iterator               = __bounded_iter<pointer>;
 #else
     using iterator               = __wrap_iter<pointer>;
@@ -522,14 +522,14 @@ public:
 
 // [span.iter], span iterator support
     _LIBCPP_INLINE_VISIBILITY constexpr iterator begin() const noexcept {
-#ifdef _LIBCPP_ENABLE_DEBUG_MODE
+#ifdef _LIBCPP_DEBUG_ITERATOR_BOUNDS_CHECKING
         return std::__make_bounded_iter(data(), data(), data() + size());
 #else
         return iterator(this, data());
 #endif
     }
     _LIBCPP_INLINE_VISIBILITY constexpr iterator end() const noexcept {
-#ifdef _LIBCPP_ENABLE_DEBUG_MODE
+#ifdef _LIBCPP_DEBUG_ITERATOR_BOUNDS_CHECKING
         return std::__make_bounded_iter(data() + size(), data(), data() + size());
 #else
         return iterator(this, data() + size());

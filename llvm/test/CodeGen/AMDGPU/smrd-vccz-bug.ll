@@ -12,14 +12,14 @@
 ; GCN: buffer_store_dword
 ; GCN: [[EXIT]]:
 ; GCN: s_endpgm
-define amdgpu_kernel void @vccz_workaround(i32 addrspace(4)* %in, i32 addrspace(1)* %out, float %cond) {
+define amdgpu_kernel void @vccz_workaround(ptr addrspace(4) %in, ptr addrspace(1) %out, float %cond) {
 entry:
   %cnd = fcmp oeq float 0.0, %cond
-  %sgpr = load volatile i32, i32 addrspace(4)* %in
+  %sgpr = load volatile i32, ptr addrspace(4) %in
   br i1 %cnd, label %if, label %endif
 
 if:
-  store i32 %sgpr, i32 addrspace(1)* %out
+  store i32 %sgpr, ptr addrspace(1) %out
   br label %endif
 
 endif:
@@ -34,14 +34,14 @@ endif:
 ; GCN: buffer_store_dword
 ; GCN: [[EXIT]]:
 ; GCN: s_endpgm
-define amdgpu_kernel void @vccz_noworkaround(float addrspace(1)* %in, float addrspace(1)* %out) {
+define amdgpu_kernel void @vccz_noworkaround(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 entry:
-  %vgpr = load volatile float, float addrspace(1)* %in
+  %vgpr = load volatile float, ptr addrspace(1) %in
   %cnd = fcmp oeq float 0.0, %vgpr
   br i1 %cnd, label %if, label %endif
 
 if:
-  store float %vgpr, float addrspace(1)* %out
+  store float %vgpr, ptr addrspace(1) %out
   br label %endif
 
 endif:

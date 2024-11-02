@@ -165,7 +165,7 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
                                            int LookUpDepth) {
   // Can not look any further - give up now
   if (LookUpDepth <= 0)
-    return None;
+    return std::nullopt;
 
   // Spill location is known for gc relocates
   if (const auto *Relocate = dyn_cast<GCRelocateInst>(Val)) {
@@ -173,18 +173,18 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
     assert((isa<GCStatepointInst>(Statepoint) || isa<UndefValue>(Statepoint)) &&
            "GetStatepoint must return one of two types");
     if (isa<UndefValue>(Statepoint))
-      return None;
+      return std::nullopt;
 
     const auto &RelocationMap = Builder.FuncInfo.StatepointRelocationMaps
                                     [cast<GCStatepointInst>(Statepoint)];
 
     auto It = RelocationMap.find(Relocate);
     if (It == RelocationMap.end())
-      return None;
+      return std::nullopt;
 
     auto &Record = It->second;
     if (Record.type != RecordType::Spill)
-      return None;
+      return std::nullopt;
 
     return Record.payload.FI;
   }
@@ -203,10 +203,10 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
       Optional<int> SpillSlot =
           findPreviousSpillSlot(IncomingValue, Builder, LookUpDepth - 1);
       if (!SpillSlot)
-        return None;
+        return std::nullopt;
 
       if (MergedResult && *MergedResult != *SpillSlot)
-        return None;
+        return std::nullopt;
 
       MergedResult = SpillSlot;
     }
@@ -241,7 +241,7 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
   // which we visit values is unspecified.
 
   // Don't know any information about this instruction
-  return None;
+  return std::nullopt;
 }
 
 /// Return true if-and-only-if the given SDValue can be lowered as either a
@@ -920,7 +920,7 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     auto *RetTy = Relocate->getType();
     Register Reg = FuncInfo.CreateRegs(RetTy);
     RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
-                     DAG.getDataLayout(), Reg, RetTy, None);
+                     DAG.getDataLayout(), Reg, RetTy, std::nullopt);
     SDValue Chain = DAG.getRoot();
     RFV.getCopyToRegs(Relocated, DAG, getCurSDLoc(), Chain, nullptr);
     PendingExports.push_back(Chain);
@@ -1265,7 +1265,7 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
     Register InReg = Record.payload.Reg;
     RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
                      DAG.getDataLayout(), InReg, Relocate.getType(),
-                     None); // This is not an ABI copy.
+                     std::nullopt); // This is not an ABI copy.
     // We generate copy to/from regs even for local uses, hence we must
     // chain with current root to ensure proper ordering of copies w.r.t.
     // statepoint.

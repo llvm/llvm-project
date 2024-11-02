@@ -391,3 +391,41 @@ define i32 @select_ne_10001_10002(i32 signext %a, i32 signext %b) {
   %2 = select i1 %1, i32 10001, i32 10002
   ret i32 %2
 }
+
+define i32 @select_slt_zero_constant1_constant2(i32 signext %x) {
+; RV32-LABEL: select_slt_zero_constant1_constant2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srai a0, a0, 31
+; RV32-NEXT:    andi a0, a0, 10
+; RV32-NEXT:    addi a0, a0, -3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: select_slt_zero_constant1_constant2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srai a0, a0, 63
+; RV64-NEXT:    andi a0, a0, 10
+; RV64-NEXT:    addi a0, a0, -3
+; RV64-NEXT:    ret
+  %cmp = icmp slt i32 %x, 0
+  %cond = select i1 %cmp, i32 7, i32 -3
+  ret i32 %cond
+}
+
+define i32 @select_sgt_negative_one_constant1_constant2(i32 signext %x) {
+; RV32-LABEL: select_sgt_negative_one_constant1_constant2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srai a0, a0, 31
+; RV32-NEXT:    andi a0, a0, -10
+; RV32-NEXT:    addi a0, a0, 7
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: select_sgt_negative_one_constant1_constant2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srai a0, a0, 63
+; RV64-NEXT:    andi a0, a0, -10
+; RV64-NEXT:    addi a0, a0, 7
+; RV64-NEXT:    ret
+  %cmp = icmp sgt i32 %x, -1
+  %cond = select i1 %cmp, i32 7, i32 -3
+  ret i32 %cond
+}

@@ -6,31 +6,31 @@ define dso_local signext i32 @callee(i32 signext %c1, i32 signext %c2) !prof !30
 ; CHECK-LABEL: @callee(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RC:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 0, i32* [[RC]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[RC]], align 4
 ; CHECK-NEXT:    switch i32 [[C1:%.*]], label [[SW_DEFAULT:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[SW_BB:%.*]]
 ; CHECK-NEXT:    i32 1, label [[SW_BB1:%.*]]
 ; CHECK-NEXT:    i32 2, label [[SW_BB2:%.*]]
 ; CHECK-NEXT:    ], !prof !31
 ; CHECK:       sw.bb:
-; CHECK-NEXT:    store i32 1, i32* [[RC]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[RC]], align 4
 ; CHECK-NEXT:    br label [[SW_EPILOG:%.*]]
 ; CHECK:       sw.bb1:
-; CHECK-NEXT:    store i32 2, i32* [[RC]], align 4
+; CHECK-NEXT:    store i32 2, ptr [[RC]], align 4
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw.bb2:
-; CHECK-NEXT:    store i32 4, i32* [[RC]], align 4
+; CHECK-NEXT:    store i32 4, ptr [[RC]], align 4
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw.default:
-; CHECK-NEXT:    store i32 [[C2:%.*]], i32* [[RC]], align 4
+; CHECK-NEXT:    store i32 [[C2:%.*]], ptr [[RC]], align 4
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw.epilog:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[RC]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RC]], align 4
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
   %rc = alloca i32, align 4
-  store i32 0, i32* %rc, align 4
+  store i32 0, ptr %rc, align 4
   switch i32 %c1, label %sw.default [
   i32 0, label %sw.bb
   i32 1, label %sw.bb1
@@ -38,23 +38,23 @@ entry:
   ], !prof !31
 
 sw.bb: ;; cold
-  store i32 1, i32* %rc, align 4
+  store i32 1, ptr %rc, align 4
   br label %sw.epilog
 
 sw.bb1:
-  store i32 2, i32* %rc, align 4
+  store i32 2, ptr %rc, align 4
   br label %sw.epilog
 
 sw.bb2: ;; cold
-  store i32 4, i32* %rc, align 4
+  store i32 4, ptr %rc, align 4
   br label %sw.epilog
 
 sw.default:
-  store i32 %c2, i32* %rc, align 4
+  store i32 %c2, ptr %rc, align 4
   br label %sw.epilog
 
 sw.epilog:
-  %0 = load i32, i32* %rc, align 4
+  %0 = load i32, ptr %rc, align 4
   ret i32 %0
 }
 
@@ -62,30 +62,28 @@ define dso_local signext i32 @caller(i32 signext %c) !prof !30 {
 ; CHECK-LABEL: @caller(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RC_I:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[RC_I]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* [[TMP0]])
-; CHECK-NEXT:    store i32 0, i32* [[RC_I]], align 4
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[RC_I]])
+; CHECK-NEXT:    store i32 0, ptr [[RC_I]], align 4
 ; CHECK-NEXT:    switch i32 [[C:%.*]], label [[SW_DEFAULT_I:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[CODEREPL_I:%.*]]
 ; CHECK-NEXT:    i32 1, label [[SW_BB1_I:%.*]]
 ; CHECK-NEXT:    i32 2, label [[CODEREPL1_I:%.*]]
 ; CHECK-NEXT:    ], !prof !31
 ; CHECK:       codeRepl.i:
-; CHECK-NEXT:    call void @callee.1.sw.bb(i32* [[RC_I]])
+; CHECK-NEXT:    call void @callee.1.sw.bb(ptr [[RC_I]])
 ; CHECK-NEXT:    br label [[CALLEE_1_EXIT:%.*]]
 ; CHECK:       sw.bb1.i:
-; CHECK-NEXT:    store i32 2, i32* [[RC_I]], align 4
+; CHECK-NEXT:    store i32 2, ptr [[RC_I]], align 4
 ; CHECK-NEXT:    br label [[CALLEE_1_EXIT]]
 ; CHECK:       codeRepl1.i:
-; CHECK-NEXT:    call void @callee.1.sw.bb2(i32* [[RC_I]])
+; CHECK-NEXT:    call void @callee.1.sw.bb2(ptr [[RC_I]])
 ; CHECK-NEXT:    br label [[CALLEE_1_EXIT]]
 ; CHECK:       sw.default.i:
-; CHECK-NEXT:    store i32 [[C]], i32* [[RC_I]], align 4
+; CHECK-NEXT:    store i32 [[C]], ptr [[RC_I]], align 4
 ; CHECK-NEXT:    br label [[CALLEE_1_EXIT]]
 ; CHECK:       callee.1.exit:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[RC_I]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[RC_I]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* [[TMP2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[RC_I]], align 4
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[RC_I]])
 ;
 entry:
   %0 = call signext i32 @callee(i32 signext %c, i32 signext %c)

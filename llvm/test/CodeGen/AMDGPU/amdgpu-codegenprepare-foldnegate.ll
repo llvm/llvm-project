@@ -28,13 +28,13 @@ define i1 @fold_negate_intrinsic_test_mask_dbl(double %x) nounwind {
 ; Negative test: should not transform for variable test masks
 ; CHECK: @fold_negate_intrinsic_test_mask_neg_var
 ; CHECK: %[[X0:.*]] = alloca i32
-; CHECK: %[[X1:.*]] = load i32, i32* %[[X0]]
+; CHECK: %[[X1:.*]] = load i32, i32 addrspace(5)* %[[X0]]
 ; CHECK: call i1 @llvm.amdgcn.class.f32(float %x, i32 %[[X1]])
 ; CHECK: xor
 define i1 @fold_negate_intrinsic_test_mask_neg_var(float %x) nounwind {
-  %1 = alloca i32
-  store i32 7, i32* %1
-  %2 = load i32, i32* %1
+  %1 = alloca i32, addrspace(5)
+  store i32 7, i32 addrspace(5)* %1
+  %2 = load i32, i32 addrspace(5)* %1
   %3 = call i1 @llvm.amdgcn.class.f32(float %x, i32 %2)
   %4 = xor i1 %3, -1
   ret i1 %4
@@ -47,10 +47,10 @@ define i1 @fold_negate_intrinsic_test_mask_neg_var(float %x) nounwind {
 ; CHECK: store i1 %[[X1]]
 ; CHECK: %[[X2:.*]] = xor i1 %[[X1]]
 define i1 @fold_negate_intrinsic_test_mask_neg_multiple_uses(float %x) nounwind {
-  %y = alloca i1
+  %y = alloca i1, addrspace(5)
   %1 = call i1 @llvm.amdgcn.class.f32(float %x, i32 7)
   %2 = xor i1 %1, -1
-  store i1 %1, i1* %y
+  store i1 %1, i1 addrspace(5)* %y
   %3 = xor i1 %1, -1
   ret i1 %2
 }

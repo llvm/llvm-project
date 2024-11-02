@@ -27,7 +27,7 @@ body:             |
     ; MUBUF-NEXT: {{  $}}
     ; MUBUF-NEXT: $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; MUBUF-NEXT: $sgpr6 = S_ADD_I32 $sgpr32, 1048832, implicit-def dead $scc
-    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr6, 0, 0, 0, 0, implicit $exec :: (store (s32) into %stack.3, addrspace 5)
+    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr6, 0, 0, 0, implicit $exec :: (store (s32) into %stack.3, addrspace 5)
     ; MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr4_sgpr5
     ; MUBUF-NEXT: $vgpr2 = V_WRITELANE_B32 $sgpr33, 0, undef $vgpr2
     ; MUBUF-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
@@ -43,7 +43,7 @@ body:             |
     ; MUBUF-NEXT: $sgpr33 = V_READLANE_B32 $vgpr2, 0
     ; MUBUF-NEXT: $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; MUBUF-NEXT: $sgpr6 = S_ADD_I32 $sgpr32, 1048832, implicit-def dead $scc
-    ; MUBUF-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr6, 0, 0, 0, 0, implicit $exec :: (load (s32) from %stack.3, addrspace 5)
+    ; MUBUF-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr6, 0, 0, 0, implicit $exec :: (load (s32) from %stack.3, addrspace 5)
     ; MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr4_sgpr5
     ; MUBUF-NEXT: S_ENDPGM 0, implicit $vcc
     ; FLATSCR-LABEL: name: scavenge_sgpr_pei_no_sgprs

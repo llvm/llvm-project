@@ -292,11 +292,47 @@ class YAMLGenerator : public Generator {
 public:
   static const char *Format;
 
+  llvm::Error generateDocs(StringRef RootDir,
+                           llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+                           const ClangDocContext &CDCtx) override;
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx) override;
 };
 
 const char *YAMLGenerator::Format = "yaml";
+
+llvm::Error
+YAMLGenerator::generateDocs(StringRef RootDir,
+                            llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+                            const ClangDocContext &CDCtx) {
+  for (const auto &Group : Infos) {
+    doc::Info *Info = Group.getValue().get();
+
+    // Output file names according to the USR except the global namesapce.
+    // Anonymous namespaces are taken care of in serialization, so here we can
+    // safely assume an unnamed namespace is the global one.
+    llvm::SmallString<128> Path;
+    llvm::sys::path::native(RootDir, Path);
+    if (Info->IT == InfoType::IT_namespace && Info->Name.empty()) {
+      llvm::sys::path::append(Path, "index.yaml");
+    } else {
+      llvm::sys::path::append(Path, Group.getKey() + ".yaml");
+    }
+
+    std::error_code FileErr;
+    llvm::raw_fd_ostream InfoOS(Path, FileErr, llvm::sys::fs::OF_None);
+    if (FileErr) {
+      return llvm::createStringError(FileErr, "Error opening file '%s'",
+                                     Path.c_str());
+    }
+
+    if (llvm::Error Err = generateDocForInfo(Info, InfoOS, CDCtx)) {
+      return Err;
+    }
+  }
+
+  return llvm::Error::success();
+}
 
 llvm::Error YAMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                               const ClangDocContext &CDCtx) {

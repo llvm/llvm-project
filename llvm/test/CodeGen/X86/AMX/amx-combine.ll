@@ -18,9 +18,9 @@ define <256 x i32> @combine_store_2user(ptr%p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca <256 x i32>, align 64
 ; CHECK-NEXT:    [[T1:%.*]] = call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
 ; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 16, i16 64, ptr [[TMP1]], i64 64, x86_amx [[T1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = load <256 x i32>, ptr [[TMP1]], align 1024
+; CHECK-NEXT:    [[TMP2:%.*]] = load <256 x i32>, ptr [[TMP1]], align 1024
 ; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 16, i16 64, ptr [[P:%.*]], i64 64, x86_amx [[T1]])
-; CHECK-NEXT:    ret <256 x i32> [[TMP3]]
+; CHECK-NEXT:    ret <256 x i32> [[TMP2]]
 ;
   %t1 = call x86_amx @llvm.x86.tilezero.internal(i16 16, i16 64)
   %t2 = call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx %t1)
@@ -30,8 +30,8 @@ define <256 x i32> @combine_store_2user(ptr%p) {
 
 define void @combine_load(ptr%p, ptr%p2) {
 ; CHECK-LABEL: @combine_load(
-; CHECK-NEXT:    [[TMP2:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr [[P:%.*]], i64 64)
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 16, i16 64, ptr [[P2:%.*]], i64 64, x86_amx [[TMP2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr [[P:%.*]], i64 64)
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 16, i16 64, ptr [[P2:%.*]], i64 64, x86_amx [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   %t1 = load <256 x i32>, ptr %p, align 64
@@ -42,9 +42,9 @@ define void @combine_load(ptr%p, ptr%p2) {
 
 define void @combine_cast_across_store(ptr%p, ptr%p2) {
 ; CHECK-LABEL: @combine_cast_across_store(
-; CHECK-NEXT:    [[TMP2:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr [[P:%.*]], i64 64)
+; CHECK-NEXT:    [[TMP1:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr [[P:%.*]], i64 64)
 ; CHECK-NEXT:    store <256 x i32> zeroinitializer, ptr [[P]], align 64
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 16, i16 64, ptr [[P2:%.*]], i64 64, x86_amx [[TMP2]])
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 16, i16 64, ptr [[P2:%.*]], i64 64, x86_amx [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   %t1 = load <256 x i32>, ptr %p, align 64
@@ -59,8 +59,8 @@ define <256 x i32> @combine_load_2user(ptr%p, ptr%p2) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca <256 x i32>, align 64
 ; CHECK-NEXT:    [[T1:%.*]] = load <256 x i32>, ptr [[P:%.*]], align 64
 ; CHECK-NEXT:    store <256 x i32> [[T1]], ptr [[TMP1]], align 1024
-; CHECK-NEXT:    [[TMP3:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr [[TMP1]], i64 64)
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 16, i16 64, ptr [[P2:%.*]], i64 64, x86_amx [[TMP3]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 64, ptr [[TMP1]], i64 64)
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 16, i16 64, ptr [[P2:%.*]], i64 64, x86_amx [[TMP2]])
 ; CHECK-NEXT:    ret <256 x i32> [[T1]]
 ;
   %t1 = load <256 x i32>, ptr %p, align 64
@@ -75,9 +75,9 @@ define <256 x i32> @combine_load_3user(ptr%p, ptr%p2) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca <256 x i32>, align 64
 ; CHECK-NEXT:    [[T1:%.*]] = load <256 x i32>, ptr [[P:%.*]], align 64
 ; CHECK-NEXT:    store <256 x i32> [[T1]], ptr [[TMP1]], align 1024
-; CHECK-NEXT:    [[TMP3:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 16, ptr [[TMP1]], i64 16)
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 16, i16 64, ptr [[P2:%.*]], i64 64, x86_amx [[TMP3]])
-; CHECK-NEXT:    [[TMP4:%.*]] = call x86_amx @llvm.x86.tdpbssd.internal(i16 16, i16 16, i16 64, x86_amx [[TMP3]], x86_amx [[TMP3]], x86_amx [[TMP3]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 16, i16 16, ptr [[TMP1]], i64 16)
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 16, i16 64, ptr [[P2:%.*]], i64 64, x86_amx [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call x86_amx @llvm.x86.tdpbssd.internal(i16 16, i16 16, i16 64, x86_amx [[TMP2]], x86_amx [[TMP2]], x86_amx [[TMP2]])
 ; CHECK-NEXT:    ret <256 x i32> [[T1]]
 ;
   %t1 = load <256 x i32>, ptr %p, align 64
@@ -86,6 +86,48 @@ define <256 x i32> @combine_load_3user(ptr%p, ptr%p2) {
   %t3 = call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx %t2)
   call x86_amx @llvm.x86.tdpbssd.internal(i16 16, i16 16, i16 64, x86_amx %t2, x86_amx %t2, x86_amx %t2)
   ret <256 x i32> %t3
+}
+
+; the shape is loaded after tile.
+%struct.__tile1024i_str = type <{ i16, i16, [60 x i8], <256 x i32> }>
+define void @test_tile_dpbssd(ptr byval(%struct.__tile1024i_str) align 64 %a, ptr byval(%struct.__tile1024i_str) align 64 %b, ptr byval(%struct.__tile1024i_str) align 64 %c) {
+; CHECK-LABEL: @test_tile_dpbssd(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = alloca <256 x i32>, align 64
+; CHECK-NEXT:    [[B_ROW_PTR:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i64 2
+; CHECK-NEXT:    [[B_ROW:%.*]] = load i16, ptr [[B_ROW_PTR]], align 2
+; CHECK-NEXT:    [[B_TILE_PTR:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 64
+; CHECK-NEXT:    [[B_TILE:%.*]] = load <256 x i32>, ptr [[B_TILE_PTR]], align 64
+; CHECK-NEXT:    store <256 x i32> [[B_TILE]], ptr [[TMP0]], align 1024
+; CHECK-NEXT:    [[A_ROW:%.*]] = load i16, ptr [[A:%.*]], align 64
+; CHECK-NEXT:    [[A_COL_PTR:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 2
+; CHECK-NEXT:    [[A_COL:%.*]] = load i16, ptr [[A_COL_PTR]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i16 [[A_COL]], 4
+; CHECK-NEXT:    [[A_TILE_PTR:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 64
+; CHECK-NEXT:    [[TMP2:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[A_ROW]], i16 [[A_COL]], ptr [[A_TILE_PTR]], i64 64)
+; CHECK-NEXT:    [[C_TILE_PTR:%.*]] = getelementptr inbounds [[STRUCT___TILE1024I_STR:%.*]], ptr [[C:%.*]], i64 0, i32 3
+; CHECK-NEXT:    [[TMP3:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[A_ROW]], i16 [[B_ROW]], ptr [[C_TILE_PTR]], i64 64)
+; CHECK-NEXT:    [[TMP4:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP1]], i16 [[B_ROW]], ptr [[TMP0]], i64 64)
+; CHECK-NEXT:    [[RES:%.*]] = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 [[A_ROW]], i16 [[B_ROW]], i16 [[A_COL]], x86_amx [[TMP3]], x86_amx [[TMP2]], x86_amx [[TMP4]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %b.row.ptr= getelementptr inbounds i8, ptr %b, i64 2
+  %b.row = load i16, ptr %b.row.ptr, align 2
+  %b.tile.ptr = getelementptr inbounds i8, ptr %b, i64 64
+  %b.tile = load <256 x i32>, ptr %b.tile.ptr, align 64
+  %a.row = load i16, ptr %a, align 64
+  %a.col.ptr = getelementptr inbounds i8, ptr %a, i64 2
+  %a.col = load i16, ptr %a.col.ptr, align 2
+  %a.tile.ptr = getelementptr inbounds i8, ptr %a, i64 64
+  %a.tile = load <256 x i32>, ptr %a.tile.ptr, align 64
+  %c.tile.ptr = getelementptr inbounds %struct.__tile1024i_str, ptr %c, i64 0, i32 3
+  %c.tile = load <256 x i32>, ptr %c.tile.ptr, align 64
+  %c.amx = tail call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> %c.tile)
+  %a.amx = tail call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> %a.tile)
+  %b.amx = tail call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> %b.tile)
+  %res = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 %a.row, i16 %b.row, i16 %a.col, x86_amx %c.amx, x86_amx %a.amx, x86_amx %b.amx)
+  ret void
 }
 
 declare x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32>)

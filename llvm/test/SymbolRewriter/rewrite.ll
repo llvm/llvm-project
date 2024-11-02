@@ -1,5 +1,3 @@
-; RUN: opt -mtriple i686-win32 -rewrite-symbols -rewrite-map-file %p/rewrite.map \
-; RUN:   %s -o - | llvm-dis | FileCheck %s
 ; RUN: opt -mtriple i686-win32 -passes='rewrite-symbols' -rewrite-map-file %p/rewrite.map \
 ; RUN:   %s -o - | llvm-dis | FileCheck %s
 
@@ -22,11 +20,11 @@ define i32 @caller() {
 }
 
 %struct.S = type { i8 }
-@_ZN1SC1Ev = alias void (%struct.S*), void (%struct.S*)* @_ZN1SC2Ev
-define void @_ZN1SC2Ev(%struct.S* %this) unnamed_addr align 2 {
+@_ZN1SC1Ev = alias void (ptr), ptr @_ZN1SC2Ev
+define void @_ZN1SC2Ev(ptr %this) unnamed_addr align 2 {
 entry:
-  %this.addr = alloca %struct.S*, align 4
-  store %struct.S* %this, %struct.S** %this.addr, align 4
+  %this.addr = alloca ptr, align 4
+  store ptr %this, ptr %this.addr, align 4
   ret void
 }
 

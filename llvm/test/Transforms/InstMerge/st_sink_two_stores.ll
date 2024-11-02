@@ -3,40 +3,40 @@
 ; RUN: opt -mldst-motion -S < %s | FileCheck %s
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
-%struct.node = type { i32, %struct.node*, %struct.node*, %struct.node*, i32, i32, i32, i32 }
+%struct.node = type { i32, ptr, ptr, ptr, i32, i32, i32, i32 }
 
 ; Function Attrs: nounwind uwtable
-define void @sink_store(%struct.node* nocapture %r, i32 %index) {
+define void @sink_store(ptr nocapture %r, i32 %index) {
 entry:
-  %node.0.in16 = getelementptr inbounds %struct.node, %struct.node* %r, i64 0, i32 2
-  %node.017 = load %struct.node*, %struct.node** %node.0.in16, align 8
+  %node.0.in16 = getelementptr inbounds %struct.node, ptr %r, i64 0, i32 2
+  %node.017 = load ptr, ptr %node.0.in16, align 8
   %index.addr = alloca i32, align 4
-  store i32 %index, i32* %index.addr, align 4
-  %0 = load i32, i32* %index.addr, align 4
+  store i32 %index, ptr %index.addr, align 4
+  %0 = load i32, ptr %index.addr, align 4
   %cmp = icmp slt i32 %0, 0
   br i1 %cmp, label %if.then, label %if.else
 
 ; CHECK: if.then
 if.then:                                          ; preds = %entry
-  %1 = load i32, i32* %index.addr, align 4
-  %p1 = getelementptr inbounds %struct.node, %struct.node* %node.017, i32 0, i32 6
+  %1 = load i32, ptr %index.addr, align 4
+  %p1 = getelementptr inbounds %struct.node, ptr %node.017, i32 0, i32 6
   ; CHECK-NOT: store i32
-  store i32 %1, i32* %p1, align 4
-  %p2 = getelementptr inbounds %struct.node, %struct.node* %node.017, i32 4, i32 6
+  store i32 %1, ptr %p1, align 4
+  %p2 = getelementptr inbounds %struct.node, ptr %node.017, i32 4, i32 6
   ; CHECK-NOT: store i32
-  store i32 %1, i32* %p2, align 4
+  store i32 %1, ptr %p2, align 4
   br label %if.end
 
 ; CHECK: if.else
 if.else:                                          ; preds = %entry
-  %2 = load i32, i32* %index.addr, align 4
+  %2 = load i32, ptr %index.addr, align 4
   %add = add nsw i32 %2, 1
-  %p3 = getelementptr inbounds %struct.node, %struct.node* %node.017, i32 0, i32 6
+  %p3 = getelementptr inbounds %struct.node, ptr %node.017, i32 0, i32 6
   ; CHECK-NOT: store i32
-  store i32 %add, i32* %p3, align 4
-  %p4 = getelementptr inbounds %struct.node, %struct.node* %node.017, i32 4, i32 6
+  store i32 %add, ptr %p3, align 4
+  %p4 = getelementptr inbounds %struct.node, ptr %node.017, i32 4, i32 6
   ; CHECK-NOT: store i32
-  store i32 %2, i32* %p4, align 4  
+  store i32 %2, ptr %p4, align 4
   br label %if.end
 
 ; CHECK: if.end

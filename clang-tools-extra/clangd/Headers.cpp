@@ -15,24 +15,13 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Tooling/Inclusions/HeaderAnalysis.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
 #include <cstring>
 
 namespace clang {
 namespace clangd {
-
-llvm::Optional<StringRef> parseIWYUPragma(const char *Text) {
-  // This gets called for every comment seen in the preamble, so it's quite hot.
-  constexpr llvm::StringLiteral IWYUPragma = "// IWYU pragma: ";
-  if (strncmp(Text, IWYUPragma.data(), IWYUPragma.size()))
-    return llvm::None;
-  Text += IWYUPragma.size();
-  const char *End = Text;
-  while (*End != 0 && *End != '\n')
-    ++End;
-  return StringRef(Text, End - Text);
-}
 
 class IncludeStructure::RecordHeaders : public PPCallbacks,
                                         public CommentHandler {
@@ -121,12 +110,10 @@ public:
         // isSelfContainedHeader only returns true once the full header-guard
         // structure has been seen, i.e. when exiting the *outer* copy of the
         // file. So last result wins.
-        if (isSelfContainedHeader(FE, PrevFID, SM, HeaderInfo))
-          Out->NonSelfContained.erase(
-              *Out->getID(SM.getFileEntryForID(PrevFID)));
+        if (tooling::isSelfContainedHeader(FE, SM, HeaderInfo))
+          Out->NonSelfContained.erase(*Out->getID(FE));
         else
-          Out->NonSelfContained.insert(
-              *Out->getID(SM.getFileEntryForID(PrevFID)));
+          Out->NonSelfContained.insert(*Out->getID(FE));
       }
       break;
     }
@@ -137,7 +124,8 @@ public:
   }
 
   bool HandleComment(Preprocessor &PP, SourceRange Range) override {
-    auto Pragma = parseIWYUPragma(SM.getCharacterData(Range.getBegin()));
+    auto Pragma =
+        tooling::parseIWYUPragma(SM.getCharacterData(Range.getBegin()));
     if (!Pragma)
       return false;
 

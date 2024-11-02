@@ -12,10 +12,10 @@
 define void @func1() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@func1
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    store i32 0, i32* @x, align 4
+; CHECK-NEXT:    store i32 0, ptr @x, align 4
 ; CHECK-NEXT:    ret void
 ;
-  store i32 0, i32* @x
+  store i32 0, ptr @x
   ret void
 }
 

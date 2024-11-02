@@ -35,6 +35,8 @@ static lto::Config createConfig() {
   lto::Config c;
   c.Options = initTargetOptionsFromCodeGenFlags();
   c.Options.EmitAddrsig = config->icfLevel == ICFLevel::safe;
+  for (StringRef C : config->mllvmOpts)
+    c.MllvmArgs.emplace_back(C.str());
   c.CodeModel = getCodeModelFromCMModel();
   c.CPU = getCPUStr();
   c.MAttrs = getMAttrs();
@@ -55,7 +57,7 @@ static lto::Config createConfig() {
 // If `originalPath` exists, hardlinks `path` to `originalPath`. If that fails,
 // or `originalPath` is not set, saves `buffer` to `path`.
 static void saveOrHardlinkBuffer(StringRef buffer, const Twine &path,
-                                 Optional<StringRef> originalPath) {
+                                 std::optional<StringRef> originalPath) {
   if (originalPath) {
     auto err = fs::create_hard_link(*originalPath, path);
     if (!err)
@@ -127,21 +129,21 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
   // specified, configure LTO to use it as the cache directory.
   FileCache cache;
   if (!config->thinLTOCacheDir.empty())
-    cache =
-        check(localCache("ThinLTO", "Thin", config->thinLTOCacheDir,
-                         [&](size_t task, std::unique_ptr<MemoryBuffer> mb) {
-                           files[task] = std::move(mb);
-                         }));
+    cache = check(localCache("ThinLTO", "Thin", config->thinLTOCacheDir,
+                             [&](size_t task, const Twine &moduleName,
+                                 std::unique_ptr<MemoryBuffer> mb) {
+                               files[task] = std::move(mb);
+                             }));
 
   checkError(ltoObj->run(
-      [&](size_t task) {
+      [&](size_t task, const Twine &moduleName) {
         return std::make_unique<CachedFileStream>(
             std::make_unique<raw_svector_ostream>(buf[task]));
       },
       cache));
 
   if (!config->thinLTOCacheDir.empty())
-    pruneCache(config->thinLTOCacheDir, config->thinLTOCachePolicy);
+    pruneCache(config->thinLTOCacheDir, config->thinLTOCachePolicy, files);
 
   // In ThinLTO mode, Clang passes a temporary directory in -object_path_lto,
   // while the argument is a single file in FullLTO mode.
@@ -166,7 +168,7 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
     // not use the cached MemoryBuffer directly to ensure dsymutil does not
     // race with the cache pruner.
     StringRef objBuf;
-    Optional<StringRef> cachePath = llvm::None;
+    std::optional<StringRef> cachePath = llvm::None;
     if (files[i]) {
       objBuf = files[i]->getBuffer();
       cachePath = files[i]->getBufferIdentifier();

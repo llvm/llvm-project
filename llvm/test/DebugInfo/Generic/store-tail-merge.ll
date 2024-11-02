@@ -1,9 +1,9 @@
-; RUN: opt -instcombine -S < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 ;
 ; Generated with:
 ;
 ; clang -S -gmlt -emit-llvm test.c -o 1.ll
-; opt -sroa -S 1.ll -o test.ll
+; opt -passes=sroa -S 1.ll -o test.ll
 ;
 ; extern int bar(int i);
 ; extern int bar2(int i);

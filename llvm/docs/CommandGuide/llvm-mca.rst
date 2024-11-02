@@ -227,6 +227,12 @@ option specifies "``-``", then the output will also be sent to standard output.
   detect any custom hazards or make any post processing modifications to
   instructions.
 
+.. option:: -disable-im
+
+  Force usage of the generic InstrumentManager rather than using the target
+  specific implementation. The generic class creates Instruments that provide
+  no extra information, and InstrumentManager never overrides the default
+  schedule class for a given instruction.
 
 EXIT STATUS
 -----------
@@ -238,9 +244,9 @@ USING MARKERS TO ANALYZE SPECIFIC CODE BLOCKS
 ---------------------------------------------
 :program:`llvm-mca` allows for the optional usage of special code comments to
 mark regions of the assembly code to be analyzed.  A comment starting with
-substring ``LLVM-MCA-BEGIN`` marks the beginning of a code region. A comment
-starting with substring ``LLVM-MCA-END`` marks the end of a code region.  For
-example:
+substring ``LLVM-MCA-BEGIN`` marks the beginning of an analysis region. A
+comment starting with substring ``LLVM-MCA-END`` marks the end of a region.
+For example:
 
 .. code-block:: none
 
@@ -251,9 +257,9 @@ example:
 If no user-defined region is specified, then :program:`llvm-mca` assumes a
 default region which contains every instruction in the input file.  Every region
 is analyzed in isolation, and the final performance report is the union of all
-the reports generated for every code region.
+the reports generated for every analysis region.
 
-Code regions can have names. For example:
+Analysis regions can have names. For example:
 
 .. code-block:: none
 
@@ -314,6 +320,91 @@ to emit markers, then the recommendation is to always verify that the output
 assembly is equivalent to the assembly generated in the absence of markers.
 The `Clang options to emit optimization reports <https://clang.llvm.org/docs/UsersManual.html#options-to-emit-optimization-reports>`_
 can also help in detecting missed optimizations.
+
+INSTRUMENT REGIONS
+------------------
+
+An InstrumentRegion describes a region of assembly code guarded by
+special LLVM-MCA comment directives.
+
+.. code-block:: none
+
+  # LLVM-MCA-<INSTRUMENT_TYPE> <data>
+    ...  ## asm
+
+where `INSTRUMENT_TYPE` is a type defined by the target and expects
+to use `data`.
+
+A comment starting with substring `LLVM-MCA-<INSTRUMENT_TYPE>`
+brings data into scope for llvm-mca to use in its analysis for
+all following instructions.
+
+If a comment with the same `INSTRUMENT_TYPE` is found later in the
+instruction list, then the original InstrumentRegion will be
+automatically ended, and a new InstrumentRegion will begin.
+
+If there are comments containing the different `INSTRUMENT_TYPE`,
+then both data sets remain available. In contrast with an AnalysisRegion,
+an InstrumentRegion does not need a comment to end the region.
+
+Comments that are prefixed with `LLVM-MCA-` but do not correspond to
+a valid `INSTRUMENT_TYPE` for the target cause an error, except for
+`BEGIN` and `END`, since those correspond to AnalysisRegions. Comments
+that do not start with `LLVM-MCA-` are ignored by :program `llvm-mca`.
+
+An instruction (a MCInst) is added to an InstrumentRegion R only
+if its location is in range [R.RangeStart, R.RangeEnd].
+
+On RISCV targets, vector instructions have different behaviour depending
+on the LMUL. Code can be instrumented with a comment that takes the
+following form:
+
+.. code-block:: none
+
+  # LLVM-MCA-RISCV-LMUL <M1|M2|M4|M8|MF2|MF4|MF8>
+
+The RISCV InstrumentManager will override the schedule class for vector
+instructions to use the scheduling behaviour of its pseudo-instruction
+which is LMUL dependent. It makes sense to place RISCV instrument
+comments directly after `vset{i}vl{i}` instructions, although
+they can be placed anywhere in the program.
+
+Example of program with no call to `vset{i}vl{i}`:
+
+.. code-block:: none
+
+  # LLVM-MCA-RISCV-LMUL M2
+  vadd.vv v2, v2, v2
+
+Example of program with call to `vset{i}vl{i}`:
+
+.. code-block:: none
+
+  vsetvli zero, a0, e8, m1, tu, mu
+  # LLVM-MCA-RISCV-LMUL M1
+  vadd.vv v2, v2, v2
+
+Example of program with multiple calls to `vset{i}vl{i}`:
+
+.. code-block:: none
+
+  vsetvli zero, a0, e8, m1, tu, mu
+  # LLVM-MCA-RISCV-LMUL M1
+  vadd.vv v2, v2, v2
+  vsetvli zero, a0, e8, m8, tu, mu
+  # LLVM-MCA-RISCV-LMUL M8
+  vadd.vv v2, v2, v2
+
+Example of program with call to `vsetvl`:
+
+.. code-block:: none
+
+ vsetvl rd, rs1, rs2
+ # LLVM-MCA-RISCV-LMUL M1
+ vadd.vv v12, v12, v12
+ vsetvl rd, rs1, rs2
+ # LLVM-MCA-RISCV-LMUL M4
+ vadd.vv v12, v12, v12
 
 HOW LLVM-MCA WORKS
 ------------------
@@ -1023,6 +1114,28 @@ If you'd like to add a CustomBehaviour class for a target that doesn't
 already have one, refer to an existing implementation to see how to set it
 up. The classes are implemented within the target specific backend (for
 example `/llvm/lib/Target/AMDGPU/MCA/`) so that they can access backend symbols.
+
+Instrument Manager
+""""""""""""""""""""""""""""""""""""
+On certain architectures, scheduling information for certain instructions
+do not contain all of the information required to identify the most precise
+schedule class. For example, data that can have an impact on scheduling can
+be stored in CSR registers.
+
+One example of this is on RISCV, where values in registers such as `vtype`
+and `vl` change the scheduling behaviour of vector instructions. Since MCA
+does not keep track of the values in registers, instrument comments can
+be used to specify these values.
+
+InstrumentManager's main function is `getSchedClassID()` which has access
+to the MCInst and all of the instruments that are active for that MCInst.
+This function can use the instruments to override the schedule class of
+the MCInst.
+
+On RISCV, instrument comments containing LMUL information are used
+by `getSchedClassID()` to map a vector instruction and the active
+LMUL to the scheduling class of the pseudo-instruction that describes
+that base instruction and the active LMUL.
 
 Custom Views
 """"""""""""""""""""""""""""""""""""

@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify %s
 // RUN: %clang_cc1 -std=c++20 -verify=ref %s
 
+void test_alignas_operand() {
+  alignas(8) char dummy;
+  static_assert(__alignof(dummy) == 8);
+}
 
 constexpr int getMinus5() {
   int a = 10;

@@ -180,6 +180,16 @@ func.func @sparse_wrong_arity_compression(%arg0: memref<?xf64>,
 
 // -----
 
+#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
+
+func.func @sparse_new(%arg0: !llvm.ptr<i8>) {
+  // expected-error@+1 {{expand_symmetry can only be used for 2D tensors}}
+  %0 = sparse_tensor.new expand_symmetry %arg0 : !llvm.ptr<i8> to tensor<128xf64, #SparseVector>
+  return
+}
+
+// -----
+
 func.func @sparse_convert_unranked(%arg0: tensor<*xf32>) -> tensor<10xf32> {
   // expected-error@+1 {{unexpected type in convert}}
   %0 = sparse_tensor.convert %arg0 : tensor<*xf32> to tensor<10xf32>

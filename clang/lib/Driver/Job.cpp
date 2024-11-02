@@ -302,7 +302,7 @@ void Command::setEnvironment(llvm::ArrayRef<const char *> NewEnvironment) {
 }
 
 void Command::setRedirectFiles(
-    const std::vector<Optional<std::string>> &Redirects) {
+    const std::vector<std::optional<std::string>> &Redirects) {
   RedirectFiles = Redirects;
 }
 
@@ -314,7 +314,7 @@ void Command::PrintFileNames() const {
   }
 }
 
-int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
+int Command::Execute(ArrayRef<std::optional<StringRef>> Redirects,
                      std::string *ErrMsg, bool *ExecutionFailed) const {
   PrintFileNames();
 
@@ -347,7 +347,7 @@ int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
     }
   }
 
-  Optional<ArrayRef<StringRef>> Env;
+  std::optional<ArrayRef<StringRef>> Env;
   std::vector<StringRef> ArgvVectorStorage;
   if (!Environment.empty()) {
     assert(Environment.back() == nullptr &&
@@ -360,12 +360,12 @@ int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
 
   // Use Job-specific redirect files if they are present.
   if (!RedirectFiles.empty()) {
-    std::vector<Optional<StringRef>> RedirectFilesOptional;
+    std::vector<std::optional<StringRef>> RedirectFilesOptional;
     for (const auto &Ele : RedirectFiles)
       if (Ele)
-        RedirectFilesOptional.push_back(Optional<StringRef>(*Ele));
+        RedirectFilesOptional.push_back(std::optional<StringRef>(*Ele));
       else
-        RedirectFilesOptional.push_back(None);
+        RedirectFilesOptional.push_back(std::nullopt);
 
     return llvm::sys::ExecuteAndWait(Executable, Args, Env,
                                      makeArrayRef(RedirectFilesOptional),
@@ -395,7 +395,7 @@ void CC1Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
   Command::Print(OS, Terminator, Quote, CrashInfo);
 }
 
-int CC1Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
+int CC1Command::Execute(ArrayRef<std::optional<StringRef>> Redirects,
                         std::string *ErrMsg, bool *ExecutionFailed) const {
   // FIXME: Currently, if there're more than one job, we disable
   // -fintegrate-cc1. If we're no longer a integrated-cc1 job, fallback to
@@ -452,7 +452,7 @@ void ForceSuccessCommand::Print(raw_ostream &OS, const char *Terminator,
   OS << " || (exit 0)" << Terminator;
 }
 
-int ForceSuccessCommand::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
+int ForceSuccessCommand::Execute(ArrayRef<std::optional<StringRef>> Redirects,
                                  std::string *ErrMsg,
                                  bool *ExecutionFailed) const {
   int Status = Command::Execute(Redirects, ErrMsg, ExecutionFailed);

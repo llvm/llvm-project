@@ -118,9 +118,9 @@ public:
   void mangleDynamicAtExitDestructor(const VarDecl *D,
                                      raw_ostream &Out) override;
   void mangleDynamicStermFinalizer(const VarDecl *D, raw_ostream &Out) override;
-  void mangleSEHFilterExpression(const NamedDecl *EnclosingDecl,
+  void mangleSEHFilterExpression(GlobalDecl EnclosingDecl,
                                  raw_ostream &Out) override;
-  void mangleSEHFinallyBlock(const NamedDecl *EnclosingDecl,
+  void mangleSEHFinallyBlock(GlobalDecl EnclosingDecl,
                              raw_ostream &Out) override;
   void mangleItaniumThreadLocalInit(const VarDecl *D, raw_ostream &) override;
   void mangleItaniumThreadLocalWrapper(const VarDecl *D,
@@ -602,9 +602,9 @@ NamespaceDecl *ItaniumMangleContextImpl::getStdNamespace() {
   if (!StdNamespace) {
     StdNamespace = NamespaceDecl::Create(
         getASTContext(), getASTContext().getTranslationUnitDecl(),
-        /*Inline*/ false, SourceLocation(), SourceLocation(),
+        /*Inline=*/false, SourceLocation(), SourceLocation(),
         &getASTContext().Idents.get("std"),
-        /*PrevDecl*/ nullptr);
+        /*PrevDecl=*/nullptr, /*Nested=*/false);
     StdNamespace->setImplicit();
   }
   return StdNamespace;
@@ -6430,23 +6430,25 @@ void ItaniumMangleContextImpl::mangleDynamicStermFinalizer(const VarDecl *D,
 }
 
 void ItaniumMangleContextImpl::mangleSEHFilterExpression(
-    const NamedDecl *EnclosingDecl, raw_ostream &Out) {
+    GlobalDecl EnclosingDecl, raw_ostream &Out) {
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "__filt_";
-  if (shouldMangleDeclName(EnclosingDecl))
+  auto *EnclosingFD = cast<FunctionDecl>(EnclosingDecl.getDecl());
+  if (shouldMangleDeclName(EnclosingFD))
     Mangler.mangle(EnclosingDecl);
   else
-    Mangler.getStream() << EnclosingDecl->getName();
+    Mangler.getStream() << EnclosingFD->getName();
 }
 
 void ItaniumMangleContextImpl::mangleSEHFinallyBlock(
-    const NamedDecl *EnclosingDecl, raw_ostream &Out) {
+    GlobalDecl EnclosingDecl, raw_ostream &Out) {
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "__fin_";
-  if (shouldMangleDeclName(EnclosingDecl))
+  auto *EnclosingFD = cast<FunctionDecl>(EnclosingDecl.getDecl());
+  if (shouldMangleDeclName(EnclosingFD))
     Mangler.mangle(EnclosingDecl);
   else
-    Mangler.getStream() << EnclosingDecl->getName();
+    Mangler.getStream() << EnclosingFD->getName();
 }
 
 void ItaniumMangleContextImpl::mangleItaniumThreadLocalInit(const VarDecl *D,

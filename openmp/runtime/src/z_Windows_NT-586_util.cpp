@@ -12,7 +12,7 @@
 
 #include "kmp.h"
 
-#if (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_AARCH64)
+#if (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_AARCH64 || KMP_ARCH_ARM)
 /* Only 32-bit "add-exchange" instruction on IA-32 architecture causes us to
    use compare_and_store for these routines */
 
@@ -134,7 +134,9 @@ kmp_uint64 __kmp_test_then_and64(volatile kmp_uint64 *p, kmp_uint64 d) {
   return old_value;
 }
 
-#if KMP_ARCH_AARCH64
+#if KMP_ARCH_AARCH64 && KMP_COMPILER_MSVC
+// For !KMP_COMPILER_MSVC, this function is provided in assembly form
+// by z_Linux_asm.S.
 int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
                            void *p_argv[]
 #if OMPT_SUPPORT
@@ -187,4 +189,95 @@ int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
 }
 #endif
 
-#endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_AARCH64 */
+#if KMP_ARCH_ARM
+// This matches the generic fallback implementation of __kmp_invoke_microtask
+// from z_Linux_util.cpp, which is used on Linux on ARM.
+int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
+                           void *p_argv[]
+#if OMPT_SUPPORT
+                           ,
+                           void **exit_frame_ptr
+#endif
+) {
+#if OMPT_SUPPORT
+  *exit_frame_ptr = OMPT_GET_FRAME_ADDRESS(0);
+#endif
+
+  switch (argc) {
+  default:
+    fprintf(stderr, "Too many args to microtask: %d!\n", argc);
+    fflush(stderr);
+    exit(-1);
+  case 0:
+    (*pkfn)(&gtid, &tid);
+    break;
+  case 1:
+    (*pkfn)(&gtid, &tid, p_argv[0]);
+    break;
+  case 2:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1]);
+    break;
+  case 3:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2]);
+    break;
+  case 4:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3]);
+    break;
+  case 5:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4]);
+    break;
+  case 6:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5]);
+    break;
+  case 7:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5], p_argv[6]);
+    break;
+  case 8:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5], p_argv[6], p_argv[7]);
+    break;
+  case 9:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5], p_argv[6], p_argv[7], p_argv[8]);
+    break;
+  case 10:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9]);
+    break;
+  case 11:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10]);
+    break;
+  case 12:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+            p_argv[11]);
+    break;
+  case 13:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+            p_argv[11], p_argv[12]);
+    break;
+  case 14:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+            p_argv[11], p_argv[12], p_argv[13]);
+    break;
+  case 15:
+    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
+            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+            p_argv[11], p_argv[12], p_argv[13], p_argv[14]);
+    break;
+  }
+
+#if OMPT_SUPPORT
+  *exit_frame_ptr = 0;
+#endif
+
+  return 1;
+}
+#endif
+
+#endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_AARCH64 || KMP_ARCH_ARM */

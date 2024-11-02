@@ -1600,5 +1600,9 @@ TEST_F(FormatTestCSharp, ShortFunctions) {
                Style);
 }
 
+TEST_F(FormatTestCSharp, BrokenBrackets) {
+  EXPECT_NE("", format("int where b <")); // reduced from crasher
+}
+
 } // namespace format
 } // end namespace clang

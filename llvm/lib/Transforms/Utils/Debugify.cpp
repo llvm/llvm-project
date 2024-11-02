@@ -243,10 +243,15 @@ applyDebugify(Module &M,
 bool llvm::stripDebugifyMetadata(Module &M) {
   bool Changed = false;
 
-  // Remove the llvm.debugify module-level named metadata.
+  // Remove the llvm.debugify and llvm.mir.debugify module-level named metadata.
   NamedMDNode *DebugifyMD = M.getNamedMetadata("llvm.debugify");
   if (DebugifyMD) {
     M.eraseNamedMetadata(DebugifyMD);
+    Changed = true;
+  }
+
+  if (auto *MIRDebugifyMD = M.getNamedMetadata("llvm.mir.debugify")) {
+    M.eraseNamedMetadata(MIRDebugifyMD);
     Changed = true;
   }
 

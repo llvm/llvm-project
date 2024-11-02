@@ -1244,7 +1244,7 @@ TEST_F(OpenMPIRBuilderTest, CanonicalLoopSimple) {
   EXPECT_EQ(Loop->getTripCount(), TripCount);
 
   BasicBlock *Body = Loop->getBody();
-  Instruction *CmpInst = &Body->getInstList().front();
+  Instruction *CmpInst = &Body->front();
   EXPECT_TRUE(isa<ICmpInst>(CmpInst));
   EXPECT_EQ(CmpInst->getOperand(0), IndVar);
 
@@ -5504,17 +5504,18 @@ TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysArguments) {
 
 TEST_F(OpenMPIRBuilderTest, OffloadEntriesInfoManager) {
   OffloadEntriesInfoManager InfoManager;
+  InfoManager.setConfig(OpenMPIRBuilderConfig(true, false, false));
   TargetRegionEntryInfo EntryInfo("parent", 1, 2, 4, 0);
   InfoManager.initializeTargetRegionEntryInfo(EntryInfo, 0);
-  EXPECT_TRUE(InfoManager.hasTargetRegionEntryInfo(EntryInfo, true));
+  EXPECT_TRUE(InfoManager.hasTargetRegionEntryInfo(EntryInfo));
   InfoManager.initializeDeviceGlobalVarEntryInfo(
       "gvar", OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo, 0);
   InfoManager.registerTargetRegionEntryInfo(
       EntryInfo, nullptr, nullptr,
-      OffloadEntriesInfoManager::OMPTargetRegionEntryTargetRegion, true);
+      OffloadEntriesInfoManager::OMPTargetRegionEntryTargetRegion);
   InfoManager.registerDeviceGlobalVarEntryInfo(
       "gvar", 0x0, 8, OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo,
-      GlobalValue::WeakAnyLinkage, true);
+      GlobalValue::WeakAnyLinkage);
   EXPECT_TRUE(InfoManager.hasDeviceGlobalVarEntryInfo("gvar"));
 }
 } // namespace

@@ -111,7 +111,7 @@ LoongArchRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return TFI->hasFP(MF) ? LoongArch::R22 : LoongArch::R3;
 }
 
-void LoongArchRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+bool LoongArchRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                                 int SPAdj,
                                                 unsigned FIOperandNum,
                                                 RegScavenger *RS) const {
@@ -155,7 +155,7 @@ void LoongArchRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
           .addReg(FrameReg)
           .addReg(ScratchReg, RegState::Kill);
       MI.eraseFromParent();
-      return;
+      return true;
     }
     BuildMI(MBB, II, DL, TII->get(Add), ScratchReg)
         .addReg(FrameReg)
@@ -175,7 +175,7 @@ void LoongArchRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
         .addReg(FrameReg)
         .addImm(Offset.getFixed());
     MI.eraseFromParent();
-    return;
+    return true;
   }
 
   // Reload CFRs.
@@ -189,10 +189,11 @@ void LoongArchRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
         .add(MI.getOperand(0))
         .addReg(ScratchReg, RegState::Kill);
     MI.eraseFromParent();
-    return;
+    return true;
   }
 
   MI.getOperand(FIOperandNum)
       .ChangeToRegister(FrameReg, false, false, FrameRegIsKill);
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset.getFixed());
+  return false;
 }

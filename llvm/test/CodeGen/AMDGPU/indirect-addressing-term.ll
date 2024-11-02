@@ -100,7 +100,7 @@ define amdgpu_kernel void @extract_w_offset_vgpr(i32 addrspace(1)* %out) {
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = SI_SPILL_S128_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s128) from %stack.1, align 4, addrspace 5)
-  ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET [[V_INDIRECT_REG_READ_GPR_IDX_B32_V16_]], killed renamable $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec :: (store (s32) into %ir.out.load, addrspace 1)
+  ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET [[V_INDIRECT_REG_READ_GPR_IDX_B32_V16_]], killed renamable $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (store (s32) into %ir.out.load, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
 entry:
   %id = call i32 @llvm.amdgcn.workitem.id.x() #1

@@ -75,7 +75,57 @@ PPCInstructionSelector::PPCInstructionSelector(const PPCTargetMachine &TM,
 {
 }
 
+static const TargetRegisterClass *getRegClass(LLT Ty, const RegisterBank *RB) {
+  if (RB->getID() == PPC::GPRRegBankID) {
+    if (Ty.getSizeInBits() == 64)
+      return &PPC::G8RCRegClass;
+  }
+  if (RB->getID() == PPC::FPRRegBankID) {
+    if (Ty.getSizeInBits() == 32)
+      return &PPC::F4RCRegClass;
+    if (Ty.getSizeInBits() == 64)
+      return &PPC::F8RCRegClass;
+  }
+
+  llvm_unreachable("Unknown RegBank!");
+}
+
+static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
+                       MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
+                       const RegisterBankInfo &RBI) {
+  Register DstReg = I.getOperand(0).getReg();
+
+  if (DstReg.isPhysical())
+    return true;
+
+  const RegisterBank *DstRegBank = RBI.getRegBank(DstReg, MRI, TRI);
+  const TargetRegisterClass *DstRC =
+      getRegClass(MRI.getType(DstReg), DstRegBank);
+
+  // No need to constrain SrcReg. It will get constrained when we hit another of
+  // its use or its defs.
+  // Copies do not have constraints.
+  if (!RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
+    LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
+                      << " operand\n");
+    return false;
+  }
+
+  return true;
+}
+
 bool PPCInstructionSelector::select(MachineInstr &I) {
+  auto &MBB = *I.getParent();
+  auto &MF = *MBB.getParent();
+  auto &MRI = MF.getRegInfo();
+
+  if (!isPreISelGenericOpcode(I.getOpcode())) {
+    if (I.isCopy())
+      return selectCopy(I, TII, MRI, TRI, RBI);
+
+    return true;
+  }
+
   if (selectImpl(I, *CoverageInfo))
     return true;
   return false;

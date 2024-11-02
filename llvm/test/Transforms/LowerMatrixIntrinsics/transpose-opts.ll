@@ -9,7 +9,7 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "aarch64-apple-ios"
 
-define void @double_transpose(<9 x double>* %A, <9 x double>* %B) {
+define void @double_transpose(ptr %A, ptr %B) {
 ; REMARK:      Pass:            lower-matrix-intrinsics
 ; REMARK-NEXT: Name:            matrix-lowered
 ; REMARK-NEXT: Function:        double_transpose
@@ -29,35 +29,27 @@ define void @double_transpose(<9 x double>* %A, <9 x double>* %B) {
 ; REMARK-NEXT:        addr %B)
 ; CHECK-LABEL: @double_transpose(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <9 x double>* [[A:%.*]] to double*
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[TMP0]] to <3 x double>*
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, <3 x double>* [[VEC_CAST]], align 16
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP0]], i64 3
-; CHECK-NEXT:    [[VEC_CAST1:%.*]] = bitcast double* [[VEC_GEP]] to <3 x double>*
-; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <3 x double>, <3 x double>* [[VEC_CAST1]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, double* [[TMP0]], i64 6
-; CHECK-NEXT:    [[VEC_CAST4:%.*]] = bitcast double* [[VEC_GEP3]] to <3 x double>*
-; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <3 x double>, <3 x double>* [[VEC_CAST4]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <9 x double>* [[B:%.*]] to double*
-; CHECK-NEXT:    [[VEC_CAST6:%.*]] = bitcast double* [[TMP1]] to <3 x double>*
-; CHECK-NEXT:    store <3 x double> [[COL_LOAD]], <3 x double>* [[VEC_CAST6]], align 16
-; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, double* [[TMP1]], i64 3
-; CHECK-NEXT:    [[VEC_CAST8:%.*]] = bitcast double* [[VEC_GEP7]] to <3 x double>*
-; CHECK-NEXT:    store <3 x double> [[COL_LOAD2]], <3 x double>* [[VEC_CAST8]], align 8
-; CHECK-NEXT:    [[VEC_GEP9:%.*]] = getelementptr double, double* [[TMP1]], i64 6
-; CHECK-NEXT:    [[VEC_CAST10:%.*]] = bitcast double* [[VEC_GEP9]] to <3 x double>*
-; CHECK-NEXT:    store <3 x double> [[COL_LOAD5]], <3 x double>* [[VEC_CAST10]], align 16
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 3
+; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[A]], i64 6
+; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <3 x double>, ptr [[VEC_GEP3]], align 16
+; CHECK-NEXT:    store <3 x double> [[COL_LOAD]], ptr [[B:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[B]], i64 3
+; CHECK-NEXT:    store <3 x double> [[COL_LOAD2]], ptr [[VEC_GEP7]], align 8
+; CHECK-NEXT:    [[VEC_GEP9:%.*]] = getelementptr double, ptr [[B]], i64 6
+; CHECK-NEXT:    store <3 x double> [[COL_LOAD5]], ptr [[VEC_GEP9]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a = load <9 x double>, <9 x double>* %A, align 16
+  %a = load <9 x double>, ptr %A, align 16
   %at = call <9 x double> @llvm.matrix.transpose.v9f64.v9f64(<9 x double> %a, i32 3, i32 3)
   %att = call <9 x double> @llvm.matrix.transpose.v9f64.v9f64(<9 x double> %at, i32 3, i32 3)
-  store <9 x double> %att, <9 x double>* %B, align 16
+  store <9 x double> %att, ptr %B, align 16
   ret void
 }
 
-define void @multiply_ntt(<6 x double>* %A, <6 x double>* %B, <8 x double>* %C, <8 x double>* %R) {
+define void @multiply_ntt(ptr %A, ptr %B, ptr %C, ptr %R) {
 ; REMARK:      Pass:            lower-matrix-intrinsics
 ; REMARK-NEXT: Name:            matrix-lowered
 ; REMARK-NEXT: Function:        multiply_ntt
@@ -81,33 +73,22 @@ define void @multiply_ntt(<6 x double>* %A, <6 x double>* %B, <8 x double>* %C, 
 ; REMARK-NEXT:        addr %R)
 ; CHECK-LABEL: @multiply_ntt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <6 x double>* [[A:%.*]] to double*
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[TMP0]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST]], align 16
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP0]], i64 2
-; CHECK-NEXT:    [[VEC_CAST39:%.*]] = bitcast double* [[VEC_GEP]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD40:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST39]], align 16
-; CHECK-NEXT:    [[VEC_GEP41:%.*]] = getelementptr double, double* [[TMP0]], i64 4
-; CHECK-NEXT:    [[VEC_CAST42:%.*]] = bitcast double* [[VEC_GEP41]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD43:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST42]], align 16
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[COL_LOAD40:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 16
+; CHECK-NEXT:    [[VEC_GEP41:%.*]] = getelementptr double, ptr [[A]], i64 4
+; CHECK-NEXT:    [[COL_LOAD43:%.*]] = load <2 x double>, ptr [[VEC_GEP41]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> [[COL_LOAD40]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[COL_LOAD43]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> [[TMP2]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <6 x double>* [[B:%.*]] to double*
-; CHECK-NEXT:    [[VEC_CAST44:%.*]] = bitcast double* [[TMP4]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD45:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST44]], align 16
-; CHECK-NEXT:    [[VEC_GEP46:%.*]] = getelementptr double, double* [[TMP4]], i64 2
-; CHECK-NEXT:    [[VEC_CAST47:%.*]] = bitcast double* [[VEC_GEP46]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD48:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST47]], align 16
-; CHECK-NEXT:    [[VEC_GEP49:%.*]] = getelementptr double, double* [[TMP4]], i64 4
-; CHECK-NEXT:    [[VEC_CAST50:%.*]] = bitcast double* [[VEC_GEP49]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD51:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST50]], align 16
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x double>* [[C:%.*]] to double*
-; CHECK-NEXT:    [[VEC_CAST52:%.*]] = bitcast double* [[TMP5]] to <4 x double>*
-; CHECK-NEXT:    [[COL_LOAD53:%.*]] = load <4 x double>, <4 x double>* [[VEC_CAST52]], align 16
-; CHECK-NEXT:    [[VEC_GEP54:%.*]] = getelementptr double, double* [[TMP5]], i64 4
-; CHECK-NEXT:    [[VEC_CAST55:%.*]] = bitcast double* [[VEC_GEP54]] to <4 x double>*
-; CHECK-NEXT:    [[COL_LOAD56:%.*]] = load <4 x double>, <4 x double>* [[VEC_CAST55]], align 16
+; CHECK-NEXT:    [[COL_LOAD45:%.*]] = load <2 x double>, ptr [[B:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP46:%.*]] = getelementptr double, ptr [[B]], i64 2
+; CHECK-NEXT:    [[COL_LOAD48:%.*]] = load <2 x double>, ptr [[VEC_GEP46]], align 16
+; CHECK-NEXT:    [[VEC_GEP49:%.*]] = getelementptr double, ptr [[B]], i64 4
+; CHECK-NEXT:    [[COL_LOAD51:%.*]] = load <2 x double>, ptr [[VEC_GEP49]], align 16
+; CHECK-NEXT:    [[COL_LOAD53:%.*]] = load <4 x double>, ptr [[C:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP54:%.*]] = getelementptr double, ptr [[C]], i64 4
+; CHECK-NEXT:    [[COL_LOAD56:%.*]] = load <4 x double>, ptr [[VEC_GEP54]], align 16
 ; CHECK-NEXT:    [[BLOCK57:%.*]] = shufflevector <4 x double> [[COL_LOAD53]], <4 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[COL_LOAD45]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT58:%.*]] = insertelement <2 x double> poison, double [[TMP6]], i32 0
@@ -271,33 +252,28 @@ define void @multiply_ntt(<6 x double>* %A, <6 x double>* %B, <8 x double>* %C, 
 ; CHECK-NEXT:    [[TMP88:%.*]] = fadd <2 x double> [[TMP85]], [[TMP87]]
 ; CHECK-NEXT:    [[TMP89:%.*]] = shufflevector <2 x double> [[TMP88]], <2 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP90:%.*]] = shufflevector <2 x double> undef, <2 x double> [[TMP89]], <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP91:%.*]] = bitcast <8 x double>* [[R:%.*]] to double*
-; CHECK-NEXT:    [[VEC_CAST93:%.*]] = bitcast double* [[TMP91]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP60]], <2 x double>* [[VEC_CAST93]], align 16
-; CHECK-NEXT:    [[VEC_GEP94:%.*]] = getelementptr double, double* [[TMP91]], i64 2
-; CHECK-NEXT:    [[VEC_CAST95:%.*]] = bitcast double* [[VEC_GEP94]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP70]], <2 x double>* [[VEC_CAST95]], align 16
-; CHECK-NEXT:    [[VEC_GEP96:%.*]] = getelementptr double, double* [[TMP91]], i64 4
-; CHECK-NEXT:    [[VEC_CAST97:%.*]] = bitcast double* [[VEC_GEP96]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP80]], <2 x double>* [[VEC_CAST97]], align 16
-; CHECK-NEXT:    [[VEC_GEP98:%.*]] = getelementptr double, double* [[TMP91]], i64 6
-; CHECK-NEXT:    [[VEC_CAST99:%.*]] = bitcast double* [[VEC_GEP98]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP90]], <2 x double>* [[VEC_CAST99]], align 16
+; CHECK-NEXT:    store <2 x double> [[TMP60]], ptr [[R:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP94:%.*]] = getelementptr double, ptr [[R]], i64 2
+; CHECK-NEXT:    store <2 x double> [[TMP70]], ptr [[VEC_GEP94]], align 16
+; CHECK-NEXT:    [[VEC_GEP96:%.*]] = getelementptr double, ptr [[R]], i64 4
+; CHECK-NEXT:    store <2 x double> [[TMP80]], ptr [[VEC_GEP96]], align 16
+; CHECK-NEXT:    [[VEC_GEP98:%.*]] = getelementptr double, ptr [[R]], i64 6
+; CHECK-NEXT:    store <2 x double> [[TMP90]], ptr [[VEC_GEP98]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a = load <6 x double>, <6 x double>* %A, align 16
-  %b = load <6 x double>, <6 x double>* %B, align 16
-  %c = load <8 x double>, <8 x double>* %C, align 16
+  %a = load <6 x double>, ptr %A, align 16
+  %b = load <6 x double>, ptr %B, align 16
+  %c = load <8 x double>, ptr %C, align 16
   %b_t = call <6 x double> @llvm.matrix.transpose.v6f64.v6f64(<6 x double> %b, i32 2, i32 3)
   %c_t = call <8 x double> @llvm.matrix.transpose.v8f64.v8f64(<8 x double> %c, i32 4, i32 2)
   %m1 = call <12 x double> @llvm.matrix.multiply.v12f64.v6f64.v8f64(<6 x double> %b_t, <8 x double> %c_t, i32 3, i32 2, i32 4)
   %m2 = call <8 x double> @llvm.matrix.multiply.v8f64.v6f64.v12f64(<6 x double> %a, <12 x double> %m1, i32 2, i32 3, i32 4)
-  store <8 x double> %m2, <8 x double>* %R, align 16
+  store <8 x double> %m2, ptr %R, align 16
   ret void
 }
 
-define void @multiply_tt_t(<9 x double>* %A, <9 x double>* %B, <9 x double>* %C) {
+define void @multiply_tt_t(ptr %A, ptr %B, ptr %C) {
 ; REMARK:      Pass:            lower-matrix-intrinsics
 ; REMARK-NEXT: Name:            matrix-lowered
 ; REMARK-NEXT: Function:        multiply_tt_t
@@ -319,24 +295,16 @@ define void @multiply_tt_t(<9 x double>* %A, <9 x double>* %B, <9 x double>* %C)
 ; REMARK-NEXT:        addr %C)
 ; CHECK-LABEL: @multiply_tt_t(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <9 x double>* [[A:%.*]] to double*
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[TMP0]] to <3 x double>*
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, <3 x double>* [[VEC_CAST]], align 16
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP0]], i64 3
-; CHECK-NEXT:    [[VEC_CAST1:%.*]] = bitcast double* [[VEC_GEP]] to <3 x double>*
-; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <3 x double>, <3 x double>* [[VEC_CAST1]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, double* [[TMP0]], i64 6
-; CHECK-NEXT:    [[VEC_CAST4:%.*]] = bitcast double* [[VEC_GEP3]] to <3 x double>*
-; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <3 x double>, <3 x double>* [[VEC_CAST4]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <9 x double>* [[B:%.*]] to double*
-; CHECK-NEXT:    [[VEC_CAST6:%.*]] = bitcast double* [[TMP1]] to <3 x double>*
-; CHECK-NEXT:    [[COL_LOAD7:%.*]] = load <3 x double>, <3 x double>* [[VEC_CAST6]], align 16
-; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr double, double* [[TMP1]], i64 3
-; CHECK-NEXT:    [[VEC_CAST9:%.*]] = bitcast double* [[VEC_GEP8]] to <3 x double>*
-; CHECK-NEXT:    [[COL_LOAD10:%.*]] = load <3 x double>, <3 x double>* [[VEC_CAST9]], align 8
-; CHECK-NEXT:    [[VEC_GEP11:%.*]] = getelementptr double, double* [[TMP1]], i64 6
-; CHECK-NEXT:    [[VEC_CAST12:%.*]] = bitcast double* [[VEC_GEP11]] to <3 x double>*
-; CHECK-NEXT:    [[COL_LOAD13:%.*]] = load <3 x double>, <3 x double>* [[VEC_CAST12]], align 16
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 3
+; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[A]], i64 6
+; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <3 x double>, ptr [[VEC_GEP3]], align 16
+; CHECK-NEXT:    [[COL_LOAD7:%.*]] = load <3 x double>, ptr [[B:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr double, ptr [[B]], i64 3
+; CHECK-NEXT:    [[COL_LOAD10:%.*]] = load <3 x double>, ptr [[VEC_GEP8]], align 8
+; CHECK-NEXT:    [[VEC_GEP11:%.*]] = getelementptr double, ptr [[B]], i64 6
+; CHECK-NEXT:    [[COL_LOAD13:%.*]] = load <3 x double>, ptr [[VEC_GEP11]], align 16
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <3 x double> [[COL_LOAD7]], <3 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x double> [[COL_LOAD]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i32 0
@@ -451,29 +419,25 @@ define void @multiply_tt_t(<9 x double>* %A, <9 x double>* %B, <9 x double>* %C)
 ; CHECK-NEXT:    [[TMP59:%.*]] = fadd <1 x double> [[TMP56]], [[TMP58]]
 ; CHECK-NEXT:    [[TMP60:%.*]] = shufflevector <1 x double> [[TMP59]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP61:%.*]] = shufflevector <3 x double> [[TMP51]], <3 x double> [[TMP60]], <3 x i32> <i32 0, i32 1, i32 3>
-; CHECK-NEXT:    [[TMP62:%.*]] = bitcast <9 x double>* [[C:%.*]] to double*
-; CHECK-NEXT:    [[VEC_CAST65:%.*]] = bitcast double* [[TMP62]] to <3 x double>*
-; CHECK-NEXT:    store <3 x double> [[TMP21]], <3 x double>* [[VEC_CAST65]], align 16
-; CHECK-NEXT:    [[VEC_GEP66:%.*]] = getelementptr double, double* [[TMP62]], i64 3
-; CHECK-NEXT:    [[VEC_CAST67:%.*]] = bitcast double* [[VEC_GEP66]] to <3 x double>*
-; CHECK-NEXT:    store <3 x double> [[TMP41]], <3 x double>* [[VEC_CAST67]], align 8
-; CHECK-NEXT:    [[VEC_GEP68:%.*]] = getelementptr double, double* [[TMP62]], i64 6
-; CHECK-NEXT:    [[VEC_CAST69:%.*]] = bitcast double* [[VEC_GEP68]] to <3 x double>*
-; CHECK-NEXT:    store <3 x double> [[TMP61]], <3 x double>* [[VEC_CAST69]], align 16
+; CHECK-NEXT:    store <3 x double> [[TMP21]], ptr [[C:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP66:%.*]] = getelementptr double, ptr [[C]], i64 3
+; CHECK-NEXT:    store <3 x double> [[TMP41]], ptr [[VEC_GEP66]], align 8
+; CHECK-NEXT:    [[VEC_GEP68:%.*]] = getelementptr double, ptr [[C]], i64 6
+; CHECK-NEXT:    store <3 x double> [[TMP61]], ptr [[VEC_GEP68]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a = load <9 x double>, <9 x double>* %A, align 16
+  %a = load <9 x double>, ptr %A, align 16
   %at = call <9 x double> @llvm.matrix.transpose.v9f64.v9f64(<9 x double> %a, i32 3, i32 3)
-  %b = load <9 x double>, <9 x double>* %B, align 16
+  %b = load <9 x double>, ptr %B, align 16
   %bt = call <9 x double> @llvm.matrix.transpose.v9f64.v9f64(<9 x double> %b, i32 3, i32 3)
   %c = call <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64(<9 x double> %at, <9 x double> %bt, i32 3, i32 3, i32 3)
   %ct = call <9 x double> @llvm.matrix.transpose.v9f64.v9f64(<9 x double> %c, i32 3, i32 3)
-  store <9 x double> %ct, <9 x double>* %C, align 16
+  store <9 x double> %ct, ptr %C, align 16
   ret void
 }
 
-define void @multiply_nt_t(<6 x double>* %A, <12 x double>* %B, <8 x double>* %C) {
+define void @multiply_nt_t(ptr %A, ptr %B, ptr %C) {
 ; REMARK:      Pass:            lower-matrix-intrinsics
 ; REMARK-NEXT: Name:            matrix-lowered
 ; REMARK-NEXT: Function:        multiply_nt_t
@@ -495,27 +459,19 @@ define void @multiply_nt_t(<6 x double>* %A, <12 x double>* %B, <8 x double>* %C
 ; REMARK-NEXT:        addr %C)
 ; CHECK-LABEL: @multiply_nt_t(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <6 x double>* [[A:%.*]] to double*
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[TMP0]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST]], align 16
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP0]], i64 2
-; CHECK-NEXT:    [[VEC_CAST39:%.*]] = bitcast double* [[VEC_GEP]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD40:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST39]], align 16
-; CHECK-NEXT:    [[VEC_GEP41:%.*]] = getelementptr double, double* [[TMP0]], i64 4
-; CHECK-NEXT:    [[VEC_CAST42:%.*]] = bitcast double* [[VEC_GEP41]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD43:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST42]], align 16
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[COL_LOAD40:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 16
+; CHECK-NEXT:    [[VEC_GEP41:%.*]] = getelementptr double, ptr [[A]], i64 4
+; CHECK-NEXT:    [[COL_LOAD43:%.*]] = load <2 x double>, ptr [[VEC_GEP41]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> [[COL_LOAD40]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[COL_LOAD43]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> [[TMP2]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <12 x double>* [[B:%.*]] to double*
-; CHECK-NEXT:    [[VEC_CAST44:%.*]] = bitcast double* [[TMP4]] to <4 x double>*
-; CHECK-NEXT:    [[COL_LOAD45:%.*]] = load <4 x double>, <4 x double>* [[VEC_CAST44]], align 16
-; CHECK-NEXT:    [[VEC_GEP46:%.*]] = getelementptr double, double* [[TMP4]], i64 4
-; CHECK-NEXT:    [[VEC_CAST47:%.*]] = bitcast double* [[VEC_GEP46]] to <4 x double>*
-; CHECK-NEXT:    [[COL_LOAD48:%.*]] = load <4 x double>, <4 x double>* [[VEC_CAST47]], align 16
-; CHECK-NEXT:    [[VEC_GEP49:%.*]] = getelementptr double, double* [[TMP4]], i64 8
-; CHECK-NEXT:    [[VEC_CAST50:%.*]] = bitcast double* [[VEC_GEP49]] to <4 x double>*
-; CHECK-NEXT:    [[COL_LOAD51:%.*]] = load <4 x double>, <4 x double>* [[VEC_CAST50]], align 16
+; CHECK-NEXT:    [[COL_LOAD45:%.*]] = load <4 x double>, ptr [[B:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP46:%.*]] = getelementptr double, ptr [[B]], i64 4
+; CHECK-NEXT:    [[COL_LOAD48:%.*]] = load <4 x double>, ptr [[VEC_GEP46]], align 16
+; CHECK-NEXT:    [[VEC_GEP49:%.*]] = getelementptr double, ptr [[B]], i64 8
+; CHECK-NEXT:    [[COL_LOAD51:%.*]] = load <4 x double>, ptr [[VEC_GEP49]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[COL_LOAD45]], <4 x double> [[COL_LOAD48]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> [[COL_LOAD51]], <4 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x double> [[TMP5]], <8 x double> [[TMP6]], <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
@@ -601,25 +557,22 @@ define void @multiply_nt_t(<6 x double>* %A, <12 x double>* %B, <8 x double>* %C
 ; CHECK-NEXT:    [[TMP45:%.*]] = fadd <2 x double> [[TMP42]], [[TMP44]]
 ; CHECK-NEXT:    [[TMP46:%.*]] = shufflevector <2 x double> [[TMP45]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP47:%.*]] = shufflevector <4 x double> [[TMP37]], <4 x double> [[TMP46]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP48:%.*]] = bitcast <8 x double>* [[C:%.*]] to double*
-; CHECK-NEXT:    [[VEC_CAST52:%.*]] = bitcast double* [[TMP48]] to <4 x double>*
-; CHECK-NEXT:    store <4 x double> [[TMP27]], <4 x double>* [[VEC_CAST52]], align 16
-; CHECK-NEXT:    [[VEC_GEP53:%.*]] = getelementptr double, double* [[TMP48]], i64 4
-; CHECK-NEXT:    [[VEC_CAST54:%.*]] = bitcast double* [[VEC_GEP53]] to <4 x double>*
-; CHECK-NEXT:    store <4 x double> [[TMP47]], <4 x double>* [[VEC_CAST54]], align 16
+; CHECK-NEXT:    store <4 x double> [[TMP27]], ptr [[C:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP53:%.*]] = getelementptr double, ptr [[C]], i64 4
+; CHECK-NEXT:    store <4 x double> [[TMP47]], ptr [[VEC_GEP53]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a = load <6 x double>, <6 x double>* %A, align 16
-  %b = load <12 x double>, <12 x double>* %B, align 16
+  %a = load <6 x double>, ptr %A, align 16
+  %b = load <12 x double>, ptr %B, align 16
   %bt = call <12 x double> @llvm.matrix.transpose.v12f64.v12f64(<12 x double> %b, i32 4, i32 3)
   %c = call <8 x double> @llvm.matrix.multiply.v8f64.v6f64.v12f64(<6 x double> %a, <12 x double> %bt, i32 2, i32 3, i32 4)
   %ct = call <8 x double> @llvm.matrix.transpose.v8f64.v8f64(<8 x double> %c, i32 2, i32 4)
-  store <8 x double> %ct, <8 x double>* %C, align 16
+  store <8 x double> %ct, ptr %C, align 16
   ret void
 }
 
-define void @multiply_ntt_t(<9 x double>* %A, <9 x double>* %B, <9 x double>* %C, <9 x double>* %R) {
+define void @multiply_ntt_t(ptr %A, ptr %B, ptr %C, ptr %R) {
 ; REMARK:      Pass:            lower-matrix-intrinsics
 ; REMARK-NEXT: Name:            matrix-lowered
 ; REMARK-NEXT: Function:        multiply_ntt_t
@@ -643,36 +596,24 @@ define void @multiply_ntt_t(<9 x double>* %A, <9 x double>* %B, <9 x double>* %C
 ; REMARK-NEXT:        addr %R)
 ; CHECK-LABEL: @multiply_ntt_t(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <9 x double>* [[A:%.*]] to double*
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[TMP0]] to <3 x double>*
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, <3 x double>* [[VEC_CAST]], align 16
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP0]], i64 3
-; CHECK-NEXT:    [[VEC_CAST58:%.*]] = bitcast double* [[VEC_GEP]] to <3 x double>*
-; CHECK-NEXT:    [[COL_LOAD59:%.*]] = load <3 x double>, <3 x double>* [[VEC_CAST58]], align 8
-; CHECK-NEXT:    [[VEC_GEP60:%.*]] = getelementptr double, double* [[TMP0]], i64 6
-; CHECK-NEXT:    [[VEC_CAST61:%.*]] = bitcast double* [[VEC_GEP60]] to <3 x double>*
-; CHECK-NEXT:    [[COL_LOAD62:%.*]] = load <3 x double>, <3 x double>* [[VEC_CAST61]], align 16
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 3
+; CHECK-NEXT:    [[COL_LOAD59:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    [[VEC_GEP60:%.*]] = getelementptr double, ptr [[A]], i64 6
+; CHECK-NEXT:    [[COL_LOAD62:%.*]] = load <3 x double>, ptr [[VEC_GEP60]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x double> [[COL_LOAD]], <3 x double> [[COL_LOAD59]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x double> [[COL_LOAD62]], <3 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <6 x double> [[TMP1]], <6 x double> [[TMP2]], <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <9 x double>* [[B:%.*]] to double*
-; CHECK-NEXT:    [[VEC_CAST63:%.*]] = bitcast double* [[TMP4]] to <3 x double>*
-; CHECK-NEXT:    [[COL_LOAD64:%.*]] = load <3 x double>, <3 x double>* [[VEC_CAST63]], align 16
-; CHECK-NEXT:    [[VEC_GEP65:%.*]] = getelementptr double, double* [[TMP4]], i64 3
-; CHECK-NEXT:    [[VEC_CAST66:%.*]] = bitcast double* [[VEC_GEP65]] to <3 x double>*
-; CHECK-NEXT:    [[COL_LOAD67:%.*]] = load <3 x double>, <3 x double>* [[VEC_CAST66]], align 8
-; CHECK-NEXT:    [[VEC_GEP68:%.*]] = getelementptr double, double* [[TMP4]], i64 6
-; CHECK-NEXT:    [[VEC_CAST69:%.*]] = bitcast double* [[VEC_GEP68]] to <3 x double>*
-; CHECK-NEXT:    [[COL_LOAD70:%.*]] = load <3 x double>, <3 x double>* [[VEC_CAST69]], align 16
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <9 x double>* [[C:%.*]] to double*
-; CHECK-NEXT:    [[VEC_CAST71:%.*]] = bitcast double* [[TMP5]] to <3 x double>*
-; CHECK-NEXT:    [[COL_LOAD72:%.*]] = load <3 x double>, <3 x double>* [[VEC_CAST71]], align 16
-; CHECK-NEXT:    [[VEC_GEP73:%.*]] = getelementptr double, double* [[TMP5]], i64 3
-; CHECK-NEXT:    [[VEC_CAST74:%.*]] = bitcast double* [[VEC_GEP73]] to <3 x double>*
-; CHECK-NEXT:    [[COL_LOAD75:%.*]] = load <3 x double>, <3 x double>* [[VEC_CAST74]], align 8
-; CHECK-NEXT:    [[VEC_GEP76:%.*]] = getelementptr double, double* [[TMP5]], i64 6
-; CHECK-NEXT:    [[VEC_CAST77:%.*]] = bitcast double* [[VEC_GEP76]] to <3 x double>*
-; CHECK-NEXT:    [[COL_LOAD78:%.*]] = load <3 x double>, <3 x double>* [[VEC_CAST77]], align 16
+; CHECK-NEXT:    [[COL_LOAD64:%.*]] = load <3 x double>, ptr [[B:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP65:%.*]] = getelementptr double, ptr [[B]], i64 3
+; CHECK-NEXT:    [[COL_LOAD67:%.*]] = load <3 x double>, ptr [[VEC_GEP65]], align 8
+; CHECK-NEXT:    [[VEC_GEP68:%.*]] = getelementptr double, ptr [[B]], i64 6
+; CHECK-NEXT:    [[COL_LOAD70:%.*]] = load <3 x double>, ptr [[VEC_GEP68]], align 16
+; CHECK-NEXT:    [[COL_LOAD72:%.*]] = load <3 x double>, ptr [[C:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP73:%.*]] = getelementptr double, ptr [[C]], i64 3
+; CHECK-NEXT:    [[COL_LOAD75:%.*]] = load <3 x double>, ptr [[VEC_GEP73]], align 8
+; CHECK-NEXT:    [[VEC_GEP76:%.*]] = getelementptr double, ptr [[C]], i64 6
+; CHECK-NEXT:    [[COL_LOAD78:%.*]] = load <3 x double>, ptr [[VEC_GEP76]], align 16
 ; CHECK-NEXT:    [[BLOCK79:%.*]] = shufflevector <3 x double> [[COL_LOAD72]], <3 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <3 x double> [[COL_LOAD64]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT80:%.*]] = insertelement <2 x double> poison, double [[TMP6]], i32 0
@@ -910,27 +851,23 @@ define void @multiply_ntt_t(<9 x double>* %A, <9 x double>* %B, <9 x double>* %C
 ; CHECK-NEXT:    [[TMP126:%.*]] = fadd <1 x double> [[TMP123]], [[TMP125]]
 ; CHECK-NEXT:    [[TMP127:%.*]] = shufflevector <1 x double> [[TMP126]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP128:%.*]] = shufflevector <3 x double> [[TMP118]], <3 x double> [[TMP127]], <3 x i32> <i32 0, i32 1, i32 3>
-; CHECK-NEXT:    [[TMP129:%.*]] = bitcast <9 x double>* [[R:%.*]] to double*
-; CHECK-NEXT:    [[VEC_CAST133:%.*]] = bitcast double* [[TMP129]] to <3 x double>*
-; CHECK-NEXT:    store <3 x double> [[TMP88]], <3 x double>* [[VEC_CAST133]], align 16
-; CHECK-NEXT:    [[VEC_GEP134:%.*]] = getelementptr double, double* [[TMP129]], i64 3
-; CHECK-NEXT:    [[VEC_CAST135:%.*]] = bitcast double* [[VEC_GEP134]] to <3 x double>*
-; CHECK-NEXT:    store <3 x double> [[TMP108]], <3 x double>* [[VEC_CAST135]], align 8
-; CHECK-NEXT:    [[VEC_GEP136:%.*]] = getelementptr double, double* [[TMP129]], i64 6
-; CHECK-NEXT:    [[VEC_CAST137:%.*]] = bitcast double* [[VEC_GEP136]] to <3 x double>*
-; CHECK-NEXT:    store <3 x double> [[TMP128]], <3 x double>* [[VEC_CAST137]], align 16
+; CHECK-NEXT:    store <3 x double> [[TMP88]], ptr [[R:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP134:%.*]] = getelementptr double, ptr [[R]], i64 3
+; CHECK-NEXT:    store <3 x double> [[TMP108]], ptr [[VEC_GEP134]], align 8
+; CHECK-NEXT:    [[VEC_GEP136:%.*]] = getelementptr double, ptr [[R]], i64 6
+; CHECK-NEXT:    store <3 x double> [[TMP128]], ptr [[VEC_GEP136]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a = load <9 x double>, <9 x double>* %A, align 16
-  %b = load <9 x double>, <9 x double>* %B, align 16
+  %a = load <9 x double>, ptr %A, align 16
+  %b = load <9 x double>, ptr %B, align 16
   %bt = call <9 x double> @llvm.matrix.transpose.v9f64.v9f64(<9 x double> %b, i32 3, i32 3)
-  %c = load <9 x double>, <9 x double>* %C, align 16
+  %c = load <9 x double>, ptr %C, align 16
   %ct = call <9 x double> @llvm.matrix.transpose.v9f64.v9f64(<9 x double> %c, i32 3, i32 3)
   %btct = call <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64(<9 x double> %bt, <9 x double> %ct, i32 3, i32 3, i32 3)
   %abtct= call <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64(<9 x double> %a, <9 x double> %btct, i32 3, i32 3, i32 3)
   %abtct_t = call <9 x double> @llvm.matrix.transpose.v9f64.v9f64(<9 x double> %abtct, i32 3, i32 3)
-  store <9 x double> %abtct_t, <9 x double>* %R, align 16
+  store <9 x double> %abtct_t, ptr %R, align 16
   ret void
 }
 
@@ -984,26 +921,22 @@ entry:
   ret <4 x float> %m
 }
 
-define <6 x double> @transpose_of_transpose_of_non_matrix_op(double* %a) {
+define <6 x double> @transpose_of_transpose_of_non_matrix_op(ptr %a) {
 ; CHECK-LABEL: @transpose_of_transpose_of_non_matrix_op(
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[A:%.*]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[A]], i64 4
-; CHECK-NEXT:    [[VEC_CAST1:%.*]] = bitcast double* [[VEC_GEP]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST1]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, double* [[A]], i64 8
-; CHECK-NEXT:    [[VEC_CAST4:%.*]] = bitcast double* [[VEC_GEP3]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST4]], align 8
-; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr double, double* [[A]], i64 12
-; CHECK-NEXT:    [[VEC_CAST7:%.*]] = bitcast double* [[VEC_GEP6]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST7]], align 8
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 4
+; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[A]], i64 8
+; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
+; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr double, ptr [[A]], i64 12
+; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <2 x double>, ptr [[VEC_GEP6]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> [[COL_LOAD2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[COL_LOAD5]], <2 x double> [[COL_LOAD8]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <8 x double> [[TMP3]], <8 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    ret <6 x double> [[SHUF]]
 ;
-  %load = call <8 x double> @llvm.matrix.column.major.load.v8f64(double* %a, i64 4, i1 false, i32 2, i32 4)
+  %load = call <8 x double> @llvm.matrix.column.major.load.v8f64(ptr %a, i64 4, i1 false, i32 2, i32 4)
   %shuf = shufflevector <8 x double> %load, <8 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 4, i32 5, i32 6>
   %t = call <6 x double> @llvm.matrix.transpose.v6f64.v6f64(<6 x double> %shuf, i32 3, i32 2)
   %tt = call <6 x double> @llvm.matrix.transpose.v6f64.v6f64(<6 x double> %t, i32 2, i32 3)
@@ -1139,4 +1072,4 @@ declare <6 x double> @llvm.matrix.transpose.v6f64.v6f64(<6 x double>, i32, i32)
 declare <8 x double> @llvm.matrix.transpose.v8f64.v8f64(<8 x double>, i32, i32)
 declare <12 x double> @llvm.matrix.transpose.v12f64.v12f64(<12 x double>, i32, i32)
 declare <4 x float> @llvm.matrix.transpose.v4f32(<4 x float>, i32, i32)
-declare <8 x double> @llvm.matrix.column.major.load.v8f64(double*, i64, i1, i32, i32)
+declare <8 x double> @llvm.matrix.column.major.load.v8f64(ptr, i64, i1, i32, i32)

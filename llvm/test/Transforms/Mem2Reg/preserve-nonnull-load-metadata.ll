@@ -5,130 +5,130 @@
 ; from allocas that get optimized out.
 
 ; Check the case where the alloca in question has a single store.
-define float* @single_store(float** %arg) {
+define ptr @single_store(ptr %arg) {
 ; CHECK-LABEL: @single_store(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARG_LOAD:%.*]] = load float*, float** [[ARG:%.*]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne float* [[ARG_LOAD]], null
+; CHECK-NEXT:    [[ARG_LOAD:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne ptr [[ARG_LOAD]], null
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
-; CHECK-NEXT:    ret float* [[ARG_LOAD]]
+; CHECK-NEXT:    ret ptr [[ARG_LOAD]]
 ;
 entry:
-  %buf = alloca float*
-  %arg.load = load float*, float** %arg, align 8
-  store float* %arg.load, float** %buf, align 8
-  %buf.load = load float*, float **%buf, !nonnull !0
-  ret float* %buf.load
+  %buf = alloca ptr
+  %arg.load = load ptr, ptr %arg, align 8
+  store ptr %arg.load, ptr %buf, align 8
+  %buf.load = load ptr, ptr %buf, !nonnull !0
+  ret ptr %buf.load
 }
 
 ; Check the case where the alloca in question has more than one
 ; store but still within one basic block.
-define float* @single_block(float** %arg) {
+define ptr @single_block(ptr %arg) {
 ; CHECK-LABEL: @single_block(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARG_LOAD:%.*]] = load float*, float** [[ARG:%.*]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne float* [[ARG_LOAD]], null
+; CHECK-NEXT:    [[ARG_LOAD:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne ptr [[ARG_LOAD]], null
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
-; CHECK-NEXT:    ret float* [[ARG_LOAD]]
+; CHECK-NEXT:    ret ptr [[ARG_LOAD]]
 ;
 entry:
-  %buf = alloca float*
-  %arg.load = load float*, float** %arg, align 8
-  store float* null, float** %buf, align 8
-  store float* %arg.load, float** %buf, align 8
-  %buf.load = load float*, float **%buf, !nonnull !0
-  ret float* %buf.load
+  %buf = alloca ptr
+  %arg.load = load ptr, ptr %arg, align 8
+  store ptr null, ptr %buf, align 8
+  store ptr %arg.load, ptr %buf, align 8
+  %buf.load = load ptr, ptr %buf, !nonnull !0
+  ret ptr %buf.load
 }
 
 ; Check the case where the alloca in question has more than one
 ; store and also reads ands writes in multiple blocks.
-define float* @multi_block(float** %arg) {
+define ptr @multi_block(ptr %arg) {
 ; CHECK-LABEL: @multi_block(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARG_LOAD:%.*]] = load float*, float** [[ARG:%.*]], align 8
+; CHECK-NEXT:    [[ARG_LOAD:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne float* [[ARG_LOAD]], null
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne ptr [[ARG_LOAD]], null
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
-; CHECK-NEXT:    ret float* [[ARG_LOAD]]
+; CHECK-NEXT:    ret ptr [[ARG_LOAD]]
 ;
 entry:
-  %buf = alloca float*
-  %arg.load = load float*, float** %arg, align 8
-  store float* null, float** %buf, align 8
+  %buf = alloca ptr
+  %arg.load = load ptr, ptr %arg, align 8
+  store ptr null, ptr %buf, align 8
   br label %next
 next:
-  store float* %arg.load, float** %buf, align 8
-  %buf.load = load float*, float** %buf, !nonnull !0
-  ret float* %buf.load
+  store ptr %arg.load, ptr %buf, align 8
+  %buf.load = load ptr, ptr %buf, !nonnull !0
+  ret ptr %buf.load
 }
 
 ; Check that we don't add an assume if it's not
 ; necessary i.e. the value is already implied to be nonnull
-define float* @no_assume(float** %arg) {
+define ptr @no_assume(ptr %arg) {
 ; CHECK-LABEL: @no_assume(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARG_LOAD:%.*]] = load float*, float** [[ARG:%.*]], align 8
-; CHECK-NEXT:    [[CN:%.*]] = icmp ne float* [[ARG_LOAD]], null
+; CHECK-NEXT:    [[ARG_LOAD:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
+; CHECK-NEXT:    [[CN:%.*]] = icmp ne ptr [[ARG_LOAD]], null
 ; CHECK-NEXT:    br i1 [[CN]], label [[NEXT:%.*]], label [[FIN:%.*]]
 ; CHECK:       next:
-; CHECK-NEXT:    ret float* [[ARG_LOAD]]
+; CHECK-NEXT:    ret ptr [[ARG_LOAD]]
 ; CHECK:       fin:
-; CHECK-NEXT:    ret float* null
+; CHECK-NEXT:    ret ptr null
 ;
 entry:
-  %buf = alloca float*
-  %arg.load = load float*, float** %arg, align 8
-  %cn = icmp ne float* %arg.load, null
+  %buf = alloca ptr
+  %arg.load = load ptr, ptr %arg, align 8
+  %cn = icmp ne ptr %arg.load, null
   br i1 %cn, label %next, label %fin
 next:
 ; At this point the above nonnull check ensures that
 ; the value %arg.load is nonnull in this block and thus
 ; we need not add the assume.
-  store float* %arg.load, float** %buf, align 8
-  %buf.load = load float*, float** %buf, !nonnull !0
-  ret float* %buf.load
+  store ptr %arg.load, ptr %buf, align 8
+  %buf.load = load ptr, ptr %buf, !nonnull !0
+  ret ptr %buf.load
 fin:
-  ret float* null
+  ret ptr null
 }
 
-define float* @no_store_single_load() {
+define ptr @no_store_single_load() {
 ; CHECK-LABEL: @no_store_single_load(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne float* undef, null
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne ptr undef, null
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
-; CHECK-NEXT:    ret float* undef
+; CHECK-NEXT:    ret ptr undef
 ;
 entry:
-  %buf = alloca float*
-  %buf.load = load float*, float **%buf, !nonnull !0
-  ret float* %buf.load
+  %buf = alloca ptr
+  %buf.load = load ptr, ptr %buf, !nonnull !0
+  ret ptr %buf.load
 }
 
-define float* @no_store_multiple_loads(i1 %c) {
+define ptr @no_store_multiple_loads(i1 %c) {
 ; CHECK-LABEL: @no_store_multiple_loads(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne float* undef, null
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne ptr undef, null
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
-; CHECK-NEXT:    ret float* undef
+; CHECK-NEXT:    ret ptr undef
 ; CHECK:       else:
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne float* undef, null
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne ptr undef, null
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
-; CHECK-NEXT:    ret float* undef
+; CHECK-NEXT:    ret ptr undef
 ;
 entry:
-  %buf = alloca float*
+  %buf = alloca ptr
   br i1 %c, label %if, label %else
 
 if:
-  %buf.load = load float*, float **%buf, !nonnull !0
-  ret float* %buf.load
+  %buf.load = load ptr, ptr %buf, !nonnull !0
+  ret ptr %buf.load
 
   else:
-  %buf.load2 = load float*, float **%buf, !nonnull !0
-  ret float* %buf.load2
+  %buf.load2 = load ptr, ptr %buf, !nonnull !0
+  ret ptr %buf.load2
 }
 
 !0 = !{}

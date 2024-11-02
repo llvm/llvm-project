@@ -106,9 +106,6 @@ public:
 
 /// Models the trivially true formula, which is Top in the lattice of boolean
 /// formulas.
-///
-/// FIXME: Given the subtlety of comparison involving `TopBoolValue`, define
-/// `operator==` for `Value`.
 class TopBoolValue final : public BoolValue {
 public:
   TopBoolValue() : BoolValue(Kind::TopBool) {}

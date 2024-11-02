@@ -522,7 +522,7 @@ def Mxloadi16 : PatFrag<(ops node:$ptr), (i16 (unindexedload node:$ptr)), [{
   if (ExtType == ISD::NON_EXTLOAD)
     return true;
   if (ExtType == ISD::EXTLOAD)
-    return LD->getAlignment() >= 2 && !LD->isSimple();
+    return LD->getAlign() >= 2 && !LD->isSimple();
   return false;
 }]>;
 
@@ -532,7 +532,7 @@ def Mxloadi32 : PatFrag<(ops node:$ptr), (i32 (unindexedload node:$ptr)), [{
   if (ExtType == ISD::NON_EXTLOAD)
     return true;
   if (ExtType == ISD::EXTLOAD)
-    return LD->getAlignment() >= 4 && !LD->isSimple();
+    return LD->getAlign() >= 4 && !LD->isSimple();
   return false;
 }]>;
 

@@ -95,13 +95,16 @@ static Value genIndexAndValueForDense(OpBuilder &builder, Location loc,
 //===----------------------------------------------------------------------===//
 
 SparseTensorLoopEmitter::SparseTensorLoopEmitter(ValueRange tensors,
+                                                 StringAttr loopTag,
                                                  bool hasOutput,
-                                                 bool isSparseOut)
-    : hasOutput(hasOutput), isSparseOut(isSparseOut),
+                                                 bool isSparseOut,
+                                                 ArrayRef<unsigned> topSort)
+    : loopTag(loopTag), hasOutput(hasOutput), isSparseOut(isSparseOut),
       tensors(tensors.begin(), tensors.end()), dimTypes(tensors.size()),
       pidxs(tensors.size()), coord(tensors.size()), highs(tensors.size()),
       ptrBuffer(tensors.size()), idxBuffer(tensors.size()),
-      valBuffer(tensors.size()), loopStack() {
+      valBuffer(tensors.size()), loopStack(),
+      sparsiferLoopLvlMap(topSort.size(), 0) {
   for (size_t tid = 0, e = tensors.size(); tid < e; tid++) {
     auto t = tensors[tid];
     // a scalar or 0-dimension tensors
@@ -125,6 +128,13 @@ SparseTensorLoopEmitter::SparseTensorLoopEmitter(ValueRange tensors,
     ptrBuffer[tid].assign(rank, Value());
     idxBuffer[tid].assign(rank, Value());
   }
+
+  for (unsigned i = 0, e = topSort.size(); i < e; i++) {
+    // This is an inverse map of the topologically sorted loop index from
+    // sparsifier. This is needed to map the AffineDimExpr back to the loopStack
+    // index used in loop emitter.
+    sparsiferLoopLvlMap[topSort[i]] = i;
+  }
 }
 
 void SparseTensorLoopEmitter::initializeLoopEmit(
@@ -142,7 +152,7 @@ void SparseTensorLoopEmitter::initializeLoopEmit(
     auto rank = rtp.getRank();
     auto shape = rtp.getShape();
     auto enc = getSparseTensorEncoding(rtp);
-    auto dynShape = {ShapedType::kDynamicSize};
+    auto dynShape = {ShapedType::kDynamic};
     // Scan all dimensions of current tensor.
     for (int64_t d = 0; d < rank; d++) {
       // This should be called only once at beginning.
@@ -193,7 +203,7 @@ void SparseTensorLoopEmitter::initializeLoopEmit(
     } else {
       // Annotated sparse tensors.
       // We also need the value buffer for annotated all dense `sparse` tensor.
-      auto dynShape = {ShapedType::kDynamicSize};
+      auto dynShape = {ShapedType::kDynamic};
       auto sparseTp = MemRefType::get(dynShape, elementType);
       valBuffer[t] = builder.create<ToValuesOp>(loc, sparseTp, tensor);
     }
@@ -213,6 +223,34 @@ void SparseTensorLoopEmitter::enterNewLoopSeq(OpBuilder &builder, Location loc,
   // Prepares for all the tensors used in the current loop sequence.
   for (auto [tid, dim] : llvm::zip(tids, dims))
     prepareLoopOverTensorAtDim(builder, loc, tid, dim);
+}
+
+Value SparseTensorLoopEmitter::genAffine(OpBuilder &builder, AffineExpr a,
+                                         Location loc) {
+  switch (a.getKind()) {
+  case AffineExprKind::DimId: {
+    unsigned idx = a.cast<AffineDimExpr>().getPosition();
+    return loopStack[sparsiferLoopLvlMap[idx]].iv;
+  }
+  case AffineExprKind::Add: {
+    auto binOp = a.cast<AffineBinaryOpExpr>();
+    return builder.create<arith::AddIOp>(
+        loc, genAffine(builder, binOp.getLHS(), loc),
+        genAffine(builder, binOp.getRHS(), loc));
+  }
+  case AffineExprKind::Mul: {
+    auto binOp = a.cast<AffineBinaryOpExpr>();
+    return builder.create<arith::MulIOp>(
+        loc, genAffine(builder, binOp.getLHS(), loc),
+        genAffine(builder, binOp.getRHS(), loc));
+  }
+  case AffineExprKind::Constant: {
+    int64_t c = a.cast<AffineConstantExpr>().getValue();
+    return constantIndex(builder, loc, c);
+  }
+  default:
+    llvm_unreachable("unexpected affine subscript");
+  }
 }
 
 Operation *SparseTensorLoopEmitter::enterLoopOverTensorAtDim(
@@ -284,11 +322,85 @@ Operation *SparseTensorLoopEmitter::enterLoopOverTensorAtDim(
   // NOTE: we can also prepares for next dim here in advance
   // Push the loop into stack
   loopStack.emplace_back(ArrayRef<size_t>(tid), ArrayRef<size_t>(dim), loop,
-                         coord[tid][dim]);
+                         coord[tid][dim], loopTag);
   // Emit extra locals.
   emitExtraLocalsForTensorsAtDenseDims(builder, loc, extraTids, extraDims);
 
   return loop;
+}
+
+Operation *SparseTensorLoopEmitter::enterFilterLoopOverTensorAtDim(
+    OpBuilder &builder, Location loc, size_t tid, size_t dim, AffineExpr affine,
+    MutableArrayRef<Value> reduc) {
+  assert(!affine.isa<AffineDimExpr>() && !isDenseDLT(dimTypes[tid][dim]));
+  assert(dimTypes[tid].size() > dim);
+  // We can not re-enter the same level.
+  assert(!coord[tid][dim]);
+
+  Value step = constantIndex(builder, loc, 1);
+
+  Value lo = pidxs[tid][dim];
+  Value hi = highs[tid][dim];
+
+  // TODO: We should instead use a whileOp for filter loop to allow early
+  // break when exceeding (for ordered dimensions).
+  // TODO: There are many other potiential opportunities that we might apply in
+  // the future. E.g., we could use binary search to located the pointer index.
+  scf::ForOp forOp = builder.create<scf::ForOp>(loc, lo, hi, step, reduc);
+
+  // In-place update on the reduction variable vector.
+  assert(forOp.getNumRegionIterArgs() == reduc.size());
+  for (int i = 0, e = reduc.size(); i < e; i++)
+    reduc[i] = forOp.getRegionIterArg(i);
+
+  builder.setInsertionPointToStart(forOp.getBody());
+  Value iv = forOp.getInductionVar();
+
+  pidxs[tid][dim] = iv;
+  // Generating a load on the indices array yields the coordinate.
+  Value ptr = idxBuffer[tid][dim];
+  coord[tid][dim] = genIndexLoad(builder, loc, ptr, iv);
+
+  // Generate an if condition to filter out indices that is not equal to the
+  // result of the affine expression.
+  Value expected = genAffine(builder, affine, loc);
+  auto pred = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
+                                            coord[tid][dim], expected);
+  SmallVector<Type> types;
+  for (Value red : reduc) {
+    types.push_back(red.getType());
+  }
+
+  bool hasReduc = !types.empty();
+  scf::IfOp ifOp =
+      builder.create<scf::IfOp>(loc, types, pred, /*else*/ hasReduc);
+  if (hasReduc) {
+    // scf.for (a) -> v
+    //  %s = scf.if (a) -> v
+    //    user-generated code.
+    //  else
+    //    yield a
+    //  yield %s
+    builder.create<scf::YieldOp>(loc, ifOp.getResults());
+    builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+    // On mismatch.
+    builder.create<scf::YieldOp>(loc, reduc);
+  }
+  // Set the insert point to matched branch.
+  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+
+  // NOTE: we can also prepares for next dim here in advance
+  // Push the loop into stack
+  loopStack.emplace_back(ArrayRef<size_t>(tid), ArrayRef<size_t>(dim), forOp,
+                         coord[tid][dim], nullptr);
+  return forOp;
+}
+
+void SparseTensorLoopEmitter::genDenseAffineAddressAtCurLevel(
+    OpBuilder &builder, Location loc, size_t tid, size_t dim,
+    AffineExpr affine) {
+  Value affineV = genAffine(builder, affine, loc);
+  pidxs[tid][dim] = genAddress(builder, loc, tid, dim, affineV);
 }
 
 Operation *SparseTensorLoopEmitter::enterCoIterationOverTensorsAtDims(
@@ -296,8 +408,8 @@ Operation *SparseTensorLoopEmitter::enterCoIterationOverTensorsAtDims(
     ArrayRef<size_t> dims, bool needsUniv, MutableArrayRef<Value> reduc,
     ArrayRef<size_t> extraTids, ArrayRef<size_t> extraDims) {
   assert(tids.size() == dims.size());
-  SmallVector<Type, 4> types;
-  SmallVector<Value, 4> operands;
+  SmallVector<Type> types;
+  SmallVector<Value> operands;
   // Construct the while-loop with a parameter for each index.
   Type indexType = builder.getIndexType();
   for (auto [tid, dim] : llvm::zip(tids, dims)) {
@@ -386,7 +498,7 @@ Operation *SparseTensorLoopEmitter::enterCoIterationOverTensorsAtDims(
     // NOTE: we can also prepares for next dim here in advance
   }
   // Sets up the loop stack.
-  loopStack.emplace_back(tids, dims, whileOp, min);
+  loopStack.emplace_back(tids, dims, whileOp, min, loopTag);
   assert(loopStack.size() == loopSeqStack.size());
 
   // Emits extra locals
@@ -469,7 +581,6 @@ void SparseTensorLoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
   if (forOp) {
     if (!reduc.empty()) {
       assert(reduc.size() == forOp.getNumResults());
-      rewriter.setInsertionPointToEnd(forOp.getBody());
       rewriter.create<scf::YieldOp>(loc, reduc);
     }
     // Exit the loop.
@@ -556,7 +667,7 @@ void SparseTensorLoopEmitter::exitCoIterationLoop(
   // instructions during code generation. Moreover, performing the induction
   // after the if-statements more closely resembles code generated by TACO.
   unsigned o = 0;
-  SmallVector<Value, 4> operands;
+  SmallVector<Value> operands;
   Value one = constantIndex(builder, loc, 1);
   for (auto [tid, dim] : llvm::zip(tids, dims)) {
     if (isCompressedDLT(dimTypes[tid][dim]) ||
@@ -577,10 +688,10 @@ void SparseTensorLoopEmitter::exitCoIterationLoop(
   }
 
   // Reduction value from users.
-  for (unsigned i = 0, e = reduc.size(); i < e; i++) {
-    operands.push_back(reduc[i]);
+  for (auto &i : reduc) {
+    operands.push_back(i);
     // In place update reduction variable.
-    reduc[i] = whileOp->getResult(o++);
+    i = whileOp->getResult(o++);
   }
 
   // An (optional) universal index.
@@ -604,7 +715,7 @@ void SparseTensorLoopEmitter::exitCurrentLoop(RewriterBase &rewriter,
   // earlier stage (instead of silently using a wrong value).
   LoopLevelInfo &loopInfo = loopStack.back();
   assert(loopInfo.tids.size() == loopInfo.dims.size());
-  SmallVector<Value, 2> red;
+  SmallVector<Value> red;
   if (llvm::isa<scf::WhileOp>(loopInfo.loop)) {
     exitCoIterationLoop(rewriter, loc, reduc);
   } else {
@@ -777,7 +888,7 @@ Value mlir::sparse_tensor::genIsNonzero(OpBuilder &builder, mlir::Location loc,
 }
 
 void mlir::sparse_tensor::genReshapeDstShape(
-    Location loc, PatternRewriter &rewriter, SmallVector<Value, 4> &dstShape,
+    Location loc, PatternRewriter &rewriter, SmallVectorImpl<Value> &dstShape,
     ArrayRef<Value> srcShape, ArrayRef<int64_t> staticDstShape,
     ArrayRef<ReassociationIndices> reassociation) {
   // Collapse shape.
@@ -808,12 +919,12 @@ void mlir::sparse_tensor::genReshapeDstShape(
       // expanded from the i-th dimension in srcShape.
       // For example, if srcDim = 8, then the expanded shape could be <2x?x2>,
       // but not <2x?x?>.
-      if (staticDstShape[j] == ShapedType::kDynamicSize) {
+      if (staticDstShape[j] == ShapedType::kDynamic) {
         // The expanded dimension has dynamic size. We compute the dimension
         // by dividing srcDim by the product of the static dimensions.
         int64_t product = 1;
         for (unsigned k = start; k < start + map.size(); k++) {
-          if (staticDstShape[k] != ShapedType::kDynamicSize) {
+          if (staticDstShape[k] != ShapedType::kDynamic) {
             product *= staticDstShape[k];
           }
         }
@@ -921,7 +1032,7 @@ Value mlir::sparse_tensor::genAlloca(OpBuilder &builder, Location loc,
 
 Value mlir::sparse_tensor::genAlloca(OpBuilder &builder, Location loc, Value sz,
                                      Type tp) {
-  auto memTp = MemRefType::get({ShapedType::kDynamicSize}, tp);
+  auto memTp = MemRefType::get({ShapedType::kDynamic}, tp);
   return builder.create<memref::AllocaOp>(loc, memTp, ValueRange{sz});
 }
 
@@ -938,7 +1049,7 @@ Value mlir::sparse_tensor::allocDenseTensor(OpBuilder &builder, Location loc,
   auto memTp = MemRefType::get(shape, elemTp);
   SmallVector<Value> dynamicSizes;
   for (unsigned i = 0, rank = tensorTp.getRank(); i < rank; i++) {
-    if (shape[i] == ShapedType::kDynamicSize)
+    if (shape[i] == ShapedType::kDynamic)
       dynamicSizes.push_back(sizes[i]);
   }
   Value mem = builder.create<memref::AllocOp>(loc, memTp, dynamicSizes);
@@ -967,7 +1078,7 @@ Value mlir::sparse_tensor::genValueForDense(OpBuilder &builder, Location loc,
 void mlir::sparse_tensor::genDenseTensorOrSparseConstantIterLoop(
     OpBuilder &builder, Location loc, Value src, unsigned rank,
     function_ref<void(OpBuilder &, Location, Value, ValueRange)> bodyBuilder) {
-  SmallVector<Value, 4> indicesArray;
+  SmallVector<Value> indicesArray;
   SmallVector<Value> lo;
   SmallVector<Value> hi;
   SmallVector<Value> st;
@@ -1007,7 +1118,7 @@ void mlir::sparse_tensor::genDenseTensorOrSparseConstantIterLoop(
 }
 
 void mlir::sparse_tensor::sizesFromSrc(OpBuilder &builder,
-                                       SmallVector<Value, 4> &sizes,
+                                       SmallVectorImpl<Value> &sizes,
                                        Location loc, Value src) {
   unsigned rank = src.getType().cast<ShapedType>().getRank();
   for (unsigned i = 0; i < rank; i++)
@@ -1022,4 +1133,37 @@ Operation *mlir::sparse_tensor::getTop(Operation *op) {
        op = op->getParentOp())
     ;
   return op;
+}
+
+void sparse_tensor::foreachInSparseConstant(
+    Location loc, RewriterBase &rewriter, SparseElementsAttr attr,
+    function_ref<void(ArrayRef<Value>, Value)> callback) {
+  int64_t rank = attr.getType().getRank();
+  // Foreach on constant.
+  DenseElementsAttr indicesAttr = attr.getIndices();
+  DenseElementsAttr valuesAttr = attr.getValues();
+
+  SmallVector<Value> coords;
+  for (int i = 0, e = valuesAttr.size(); i < e; i++) {
+    coords.clear();
+    for (int j = 0; j < rank; j++) {
+      auto coordAttr = indicesAttr.getValues<IntegerAttr>()[i * rank + j];
+      auto coord =
+          rewriter.create<arith::ConstantIndexOp>(loc, coordAttr.getInt());
+      // Remaps coordinates.
+      coords.push_back(coord);
+    }
+    Value val;
+    if (attr.getElementType().isa<ComplexType>()) {
+      auto valAttr = valuesAttr.getValues<ArrayAttr>()[i];
+      val = rewriter.create<complex::ConstantOp>(loc, attr.getElementType(),
+                                                 valAttr);
+    } else {
+      auto valAttr = valuesAttr.getValues<TypedAttr>()[i];
+      // Remaps value.
+      val = rewriter.create<arith::ConstantOp>(loc, valAttr);
+    }
+    assert(val);
+    callback(coords, val);
+  }
 }

@@ -70,9 +70,9 @@ namespace test3 {
   // CHECK:      [[GUARDBYTE:%.*]] = load i8, ptr @_ZGVN5test31AIiE1xE
   // CHECK-NEXT: [[UNINITIALIZED:%.*]] = icmp eq i8 [[GUARDBYTE]], 0
   // CHECK-NEXT: br i1 [[UNINITIALIZED]]
-  // CHECK:      [[TMP:%.*]] = call noundef i32 @_ZN5test33fooEv()
+  // CHECK:      store i8 1, ptr @_ZGVN5test31AIiE1xE
+  // CHECK-NEXT: [[TMP:%.*]] = call noundef i32 @_ZN5test33fooEv()
   // CHECK-NEXT: store i32 [[TMP]], ptr @_ZN5test31AIiE1xE, align 4
-  // CHECK-NEXT: store i8 1, ptr @_ZGVN5test31AIiE1xE
   // CHECK-NEXT: br label
   // CHECK:      ret void
 }

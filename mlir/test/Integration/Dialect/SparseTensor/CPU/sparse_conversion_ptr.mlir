@@ -1,8 +1,15 @@
-// RUN: mlir-opt %s --sparse-compiler | \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
+// DEFINE: mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// DEFINE: FileCheck %s
+//
+// RUN: %{command}
+//
+// Do the same run, but now with direct IR generation.
+// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true"
+// RUN: %{command}
 
 #DCSR  = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed", "compressed" ],
@@ -37,28 +44,28 @@ module {
   //
   func.func @dumpf64(%arg0: memref<?xf64>) {
     %c = arith.constant 0 : index
-    %d = arith.constant -1.0 : f64
+    %d = arith.constant 0.0 : f64
     %0 = vector.transfer_read %arg0[%c], %d: memref<?xf64>, vector<8xf64>
     vector.print %0 : vector<8xf64>
     return
   }
   func.func @dumpi08(%arg0: memref<?xi8>) {
     %c = arith.constant 0 : index
-    %d = arith.constant -1 : i8
+    %d = arith.constant 0 : i8
     %0 = vector.transfer_read %arg0[%c], %d: memref<?xi8>, vector<8xi8>
     vector.print %0 : vector<8xi8>
     return
   }
   func.func @dumpi32(%arg0: memref<?xi32>) {
     %c = arith.constant 0 : index
-    %d = arith.constant -1 : i32
+    %d = arith.constant 0 : i32
     %0 = vector.transfer_read %arg0[%c], %d: memref<?xi32>, vector<8xi32>
     vector.print %0 : vector<8xi32>
     return
   }
   func.func @dumpi64(%arg0: memref<?xi64>) {
     %c = arith.constant 0 : index
-    %d = arith.constant -1 : i64
+    %d = arith.constant 0 : i64
     %0 = vector.transfer_read %arg0[%c], %d: memref<?xi64>, vector<8xi64>
     vector.print %0 : vector<8xi64>
     return
@@ -84,12 +91,12 @@ module {
     //
     // All proper row-/column-wise?
     //
-    // CHECK:      ( 1, 2, 3, 4, 5, 6, 7, -1 )
-    // CHECK-NEXT: ( 1, 4, 6, 2, 5, 3, 7, -1 )
-    // CHECK-NEXT: ( 1, 4, 6, 2, 5, 3, 7, -1 )
-    // CHECK-NEXT: ( 1, 4, 6, 2, 5, 3, 7, -1 )
-    // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, -1 )
-    // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, -1 )
+    // CHECK:      ( 1, 2, 3, 4, 5, 6, 7, 0 )
+    // CHECK-NEXT: ( 1, 4, 6, 2, 5, 3, 7, 0 )
+    // CHECK-NEXT: ( 1, 4, 6, 2, 5, 3, 7, 0 )
+    // CHECK-NEXT: ( 1, 4, 6, 2, 5, 3, 7, 0 )
+    // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, 0 )
+    // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, 0 )
     //
     %m1 = sparse_tensor.values %1 : tensor<32x64xf64, #DCSR> to memref<?xf64>
     %m2 = sparse_tensor.values %2 : tensor<32x64xf64, #DCSC> to memref<?xf64>
@@ -107,12 +114,12 @@ module {
     //
     // Sanity check on indices.
     //
-    // CHECK-NEXT: ( 0, 1, 63, 0, 1, 0, 63, -1 )
-    // CHECK-NEXT: ( 0, 1, 31, 0, 1, 0, 31, -1 )
-    // CHECK-NEXT: ( 0, 1, 31, 0, 1, 0, 31, -1 )
-    // CHECK-NEXT: ( 0, 1, 31, 0, 1, 0, 31, -1 )
-    // CHECK-NEXT: ( 0, 1, 63, 0, 1, 0, 63, -1 )
-    // CHECK-NEXT: ( 0, 1, 63, 0, 1, 0, 63, -1 )
+    // CHECK-NEXT: ( 0, 1, 63, 0, 1, 0, 63, 0 )
+    // CHECK-NEXT: ( 0, 1, 31, 0, 1, 0, 31, 0 )
+    // CHECK-NEXT: ( 0, 1, 31, 0, 1, 0, 31, 0 )
+    // CHECK-NEXT: ( 0, 1, 31, 0, 1, 0, 31, 0 )
+    // CHECK-NEXT: ( 0, 1, 63, 0, 1, 0, 63, 0 )
+    // CHECK-NEXT: ( 0, 1, 63, 0, 1, 0, 63, 0 )
     //
     %i1 = sparse_tensor.indices %1 { dimension = 1 : index } : tensor<32x64xf64, #DCSR> to memref<?xi8>
     %i2 = sparse_tensor.indices %2 { dimension = 1 : index } : tensor<32x64xf64, #DCSC> to memref<?xi64>

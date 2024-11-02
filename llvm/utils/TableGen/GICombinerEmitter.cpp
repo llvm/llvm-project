@@ -823,16 +823,19 @@ void GICombinerEmitter::generateCodeForTree(raw_ostream &OS,
          << Indent << "      "
          << CodeExpander(Rule->getMatchingFixupCode()->getValue(), Expansions,
                          RuleDef.getLoc(), ShowExpansions)
-         << "\n"
+         << '\n'
          << Indent << "      return true;\n"
          << Indent << "  }()";
     }
     OS << Indent << "     ) {\n" << Indent << "   ";
 
     if (const StringInit *Code = dyn_cast<StringInit>(Applyer->getArg(0))) {
-      OS << CodeExpander(Code->getAsUnquotedString(), Expansions,
+      OS << "    LLVM_DEBUG(dbgs() << \"Applying rule '"
+         << RuleDef.getName()
+         << "'\\n\");\n"
+         << CodeExpander(Code->getAsUnquotedString(), Expansions,
                          RuleDef.getLoc(), ShowExpansions)
-         << "\n"
+         << '\n'
          << Indent << "    return true;\n"
          << Indent << "  }\n";
     } else {

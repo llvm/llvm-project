@@ -42,7 +42,9 @@ function(libomp_get_cxxflags cxxflags)
   libomp_append(flags_local /GS LIBOMP_HAVE_GS_FLAG)
   libomp_append(flags_local /EHsc LIBOMP_HAVE_EHSC_FLAG)
   libomp_append(flags_local /Oy- LIBOMP_HAVE_OY__FLAG)
-  libomp_append(flags_local -mrtm LIBOMP_HAVE_MRTM_FLAG)
+  if(${IA32} OR ${INTEL64})
+    libomp_append(flags_local -mrtm LIBOMP_HAVE_MRTM_FLAG)
+  endif()
   # Intel(R) C Compiler flags
   libomp_append(flags_local /Qsafeseh LIBOMP_HAVE_QSAFESEH_FLAG)
   libomp_append(flags_local -Qoption,cpp,--extended_float_types LIBOMP_HAVE_EXTENDED_FLOAT_TYPES_FLAG)
@@ -97,7 +99,6 @@ function(libomp_get_ldflags ldflags)
     IF_DEFINED CMAKE_C_OSX_CURRENT_VERSION_FLAG)
   libomp_append(ldflags_local "${CMAKE_C_OSX_COMPATIBILITY_VERSION_FLAG}${LIBOMP_VERSION_MAJOR}.${LIBOMP_VERSION_MINOR}"
     IF_DEFINED CMAKE_C_OSX_COMPATIBILITY_VERSION_FLAG)
-  libomp_append(ldflags_local -Wl,--warn-shared-textrel LIBOMP_HAVE_WARN_SHARED_TEXTREL_FLAG)
   libomp_append(ldflags_local -Wl,--as-needed LIBOMP_HAVE_AS_NEEDED_FLAG)
   libomp_append(ldflags_local "-Wl,--version-script=${LIBOMP_SRC_DIR}/exports_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
   libomp_append(ldflags_local "-Wl,--undefined-version" LIBOMP_HAVE_UNDEFINED_VERSION_FLAG)  # FIXME issue #58858

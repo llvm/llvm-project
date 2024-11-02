@@ -86,9 +86,9 @@ def err_fe_backend_unsupported : Error<"%0">, BackendInfo;
 def warn_fe_backend_unsupported : Warning<"%0">, BackendInfo;
 
 def err_fe_backend_error_attr :
-  Error<"call to %0 declared with 'error' attribute: %1">, BackendInfo;
+  Error<"call to '%0' declared with 'error' attribute: %1">, BackendInfo;
 def warn_fe_backend_warning_attr :
-  Warning<"call to %0 declared with 'warning' attribute: %1">, BackendInfo,
+  Warning<"call to '%0' declared with 'warning' attribute: %1">, BackendInfo,
   InGroup<BackendWarningAttributes>;
 
 def err_fe_invalid_code_complete_file : Error<
@@ -132,9 +132,6 @@ def err_fe_invalid_alignment : Error<
     "invalid value '%1' in '%0'; alignment must be a power of 2">;
 def err_fe_invalid_exception_model
    : Error<"invalid exception model '%select{none|sjlj|seh|dwarf|wasm}0' for target '%1'">;
-def warn_fe_concepts_ts_flag : Warning<
-  "-fconcepts-ts is deprecated - use '-std=c++20' for Concepts support">,
-  InGroup<Deprecated>;
 def err_fe_invalid_source_date_epoch : Error<
     "environment variable 'SOURCE_DATE_EPOCH' ('%0') must be a non-negative decimal integer <= %1">;
 
@@ -213,9 +210,6 @@ def err_module_build_requires_fmodules : Error<
   "module compilation requires '-fmodules'">;
 def err_module_interface_requires_cpp_modules : Error<
   "module interface compilation requires '-std=c++20' or '-fmodules-ts'">;
-def err_header_module_requires_modules : Error<
-  "header module compilation requires '-fmodules', '-std=c++20', or "
-  "'-fmodules-ts'">;
 def warn_module_config_mismatch : Warning<
   "module file %0 cannot be loaded due to a configuration mismatch with the current "
   "compilation">, InGroup<DiagGroup<"module-file-config-mismatch">>, DefaultError;
@@ -279,7 +273,7 @@ def warn_avx_calling_convention
     : Warning<"AVX vector %select{return|argument}0 of type %1 without '%2' "
               "enabled changes the ABI">,
       InGroup<DiagGroup<"psabi">>;
-def err_avx_calling_convention : Error<warn_avx_calling_convention.Text>;
+def err_avx_calling_convention : Error<warn_avx_calling_convention.Summary>;
 
 def err_alias_to_undefined : Error<
   "%select{alias|ifunc}0 must point to a defined "

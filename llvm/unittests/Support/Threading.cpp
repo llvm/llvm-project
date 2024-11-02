@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Threading.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/thread.h"
 #include "gtest/gtest.h"
 
@@ -17,12 +19,42 @@ using namespace llvm;
 
 namespace {
 
+static bool isThreadingSupportedArchAndOS() {
+#if LLVM_ENABLE_THREADS
+  Triple Host(Triple::normalize(sys::getProcessTriple()));
+
+  // Initially this is only testing detection of the number of
+  // physical cores, which is currently only supported/tested on
+  // some systems.
+  return (Host.isOSWindows() && llvm_is_multithreaded()) || Host.isOSDarwin() ||
+         (Host.isX86() && Host.isOSLinux()) ||
+         (Host.isOSLinux() && !Host.isAndroid()) ||
+         (Host.isSystemZ() && Host.isOSzOS());
+#else
+  return false;
+#endif
+}
+
 TEST(Threading, PhysicalConcurrency) {
   auto Num = heavyweight_hardware_concurrency();
   // Since Num is unsigned this will also catch us trying to
   // return -1.
   ASSERT_LE(Num.compute_thread_count(),
             hardware_concurrency().compute_thread_count());
+}
+
+TEST(Threading, NumPhysicalCoresSupported) {
+  if (!isThreadingSupportedArchAndOS())
+    GTEST_SKIP();
+  int Num = get_physical_cores();
+  ASSERT_GT(Num, 0);
+}
+
+TEST(Threading, NumPhysicalCoresUnsupported) {
+  if (isThreadingSupportedArchAndOS())
+    GTEST_SKIP();
+  int Num = get_physical_cores();
+  ASSERT_EQ(Num, -1);
 }
 
 #if LLVM_ENABLE_THREADS
@@ -91,4 +123,4 @@ TEST(Threading, AppleStackSize) {
 #endif
 #endif
 
-} // end anon namespace
+} // namespace

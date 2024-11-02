@@ -11,11 +11,11 @@
 ; CHECK: irce: in function test_08: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 
 ; IV = 0; IV <s 100; IV += 7; 0 <= Len <= 50. IRCE is allowed.
-define void @test_01(i32* %arr, i32* %a_len_ptr) {
+define void @test_01(ptr %arr, ptr %a_len_ptr) {
 
 ; CHECK:      @test_01(
 ; CHECK:      entry:
-; CHECK-NEXT:   %exit.mainloop.at = load i32, i32* %a_len_ptr
+; CHECK-NEXT:   %exit.mainloop.at = load i32, ptr %a_len_ptr
 ; CHECK-NEXT:   [[COND1:%[^ ]+]] = icmp slt i32 0, %exit.mainloop.at
 ; CHECK-NEXT:   br i1 [[COND1]], label %loop.preheader, label %main.pseudo.exit
 ; CHECK:      loop.preheader:
@@ -26,8 +26,8 @@ define void @test_01(i32* %arr, i32* %a_len_ptr) {
 ; CHECK-NEXT:   %abc = icmp slt i32 %idx, %exit.mainloop.at
 ; CHECK-NEXT:   br i1 true, label %in.bounds, label %out.of.bounds.loopexit1
 ; CHECK:      in.bounds:
-; CHECK-NEXT:   %addr = getelementptr i32, i32* %arr, i32 %idx
-; CHECK-NEXT:   store i32 0, i32* %addr
+; CHECK-NEXT:   %addr = getelementptr i32, ptr %arr, i32 %idx
+; CHECK-NEXT:   store i32 0, ptr %addr
 ; CHECK-NEXT:   %next = icmp slt i32 %idx.next, 100
 ; CHECK-NEXT:   [[COND2:%[^ ]+]] = icmp slt i32 %idx.next, %exit.mainloop.at
 ; CHECK-NEXT:   br i1 [[COND2]], label %loop, label %main.exit.selector
@@ -47,13 +47,13 @@ define void @test_01(i32* %arr, i32* %a_len_ptr) {
 ; CHECK-NEXT:   %abc.postloop = icmp slt i32 %idx.postloop, %exit.mainloop.at
 ; CHECK-NEXT:   br i1 %abc.postloop, label %in.bounds.postloop, label %out.of.bounds.loopexit
 ; CHECK:      in.bounds.postloop:
-; CHECK-NEXT:   %addr.postloop = getelementptr i32, i32* %arr, i32 %idx.postloop
-; CHECK-NEXT:   store i32 0, i32* %addr.postloop
+; CHECK-NEXT:   %addr.postloop = getelementptr i32, ptr %arr, i32 %idx.postloop
+; CHECK-NEXT:   store i32 0, ptr %addr.postloop
 ; CHECK-NEXT:   %next.postloop = icmp slt i32 %idx.next.postloop, 100
 ; CHECK-NEXT:   br i1 %next.postloop, label %loop.postloop, label %exit.loopexit
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -63,8 +63,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, 100
   br i1 %next, label %loop, label %exit
 
@@ -76,11 +76,11 @@ exit:
 }
 
 ; IV = 0; IV <s MAX_INT - 7; IV += 7; 0 <= Len <= 50. IRCE is allowed.
-define void @test_02(i32* %arr, i32* %a_len_ptr) {
+define void @test_02(ptr %arr, ptr %a_len_ptr) {
 
 ; CHECK:      @test_02(
 ; CHECK:      entry:
-; CHECK-NEXT:   %exit.mainloop.at = load i32, i32* %a_len_ptr
+; CHECK-NEXT:   %exit.mainloop.at = load i32, ptr %a_len_ptr
 ; CHECK-NEXT:   [[COND1:%[^ ]+]] = icmp slt i32 0, %exit.mainloop.at
 ; CHECK-NEXT:   br i1 [[COND1]], label %loop.preheader, label %main.pseudo.exit
 ; CHECK:      loop.preheader:
@@ -91,8 +91,8 @@ define void @test_02(i32* %arr, i32* %a_len_ptr) {
 ; CHECK-NEXT:   %abc = icmp slt i32 %idx, %exit.mainloop.at
 ; CHECK-NEXT:   br i1 true, label %in.bounds, label %out.of.bounds.loopexit1
 ; CHECK:      in.bounds:
-; CHECK-NEXT:   %addr = getelementptr i32, i32* %arr, i32 %idx
-; CHECK-NEXT:   store i32 0, i32* %addr
+; CHECK-NEXT:   %addr = getelementptr i32, ptr %arr, i32 %idx
+; CHECK-NEXT:   store i32 0, ptr %addr
 ; CHECK-NEXT:   %next = icmp slt i32 %idx.next, 2147483640
 ; CHECK-NEXT:   [[COND2:%[^ ]+]] = icmp slt i32 %idx.next, %exit.mainloop.at
 ; CHECK-NEXT:   br i1 [[COND2]], label %loop, label %main.exit.selector
@@ -112,13 +112,13 @@ define void @test_02(i32* %arr, i32* %a_len_ptr) {
 ; CHECK-NEXT:   %abc.postloop = icmp slt i32 %idx.postloop, %exit.mainloop.at
 ; CHECK-NEXT:   br i1 %abc.postloop, label %in.bounds.postloop, label %out.of.bounds.loopexit
 ; CHECK:      in.bounds.postloop:
-; CHECK-NEXT:   %addr.postloop = getelementptr i32, i32* %arr, i32 %idx.postloop
-; CHECK-NEXT:   store i32 0, i32* %addr.postloop
+; CHECK-NEXT:   %addr.postloop = getelementptr i32, ptr %arr, i32 %idx.postloop
+; CHECK-NEXT:   store i32 0, ptr %addr.postloop
 ; CHECK-NEXT:   %next.postloop = icmp slt i32 %idx.next.postloop, 2147483640
 ; CHECK-NEXT:   br i1 %next.postloop, label %loop.postloop, label %exit.loopexit
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -128,8 +128,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, 2147483640
   br i1 %next, label %loop, label %exit
 
@@ -142,11 +142,11 @@ exit:
 
 ; IV = 0; IV <s MAX_INT; IV += 7; 0 <= Len <= MAX_INT - 7. This is the greatest
 ; value of Len for which IRCE is allowed.
-define void @test_03(i32* %arr, i32* %a_len_ptr) {
+define void @test_03(ptr %arr, ptr %a_len_ptr) {
 
 ; CHECK:      @test_03(
 ; CHECK:      entry:
-; CHECK-NEXT:   %exit.mainloop.at = load i32, i32* %a_len_ptr
+; CHECK-NEXT:   %exit.mainloop.at = load i32, ptr %a_len_ptr
 ; CHECK-NEXT:   [[COND1:%[^ ]+]] = icmp slt i32 0, %exit.mainloop.at
 ; CHECK-NEXT:   br i1 [[COND1]], label %loop.preheader, label %main.pseudo.exit
 ; CHECK:      loop.preheader:
@@ -157,8 +157,8 @@ define void @test_03(i32* %arr, i32* %a_len_ptr) {
 ; CHECK-NEXT:   %abc = icmp slt i32 %idx, %exit.mainloop.at
 ; CHECK-NEXT:   br i1 true, label %in.bounds, label %out.of.bounds.loopexit1
 ; CHECK:      in.bounds:
-; CHECK-NEXT:   %addr = getelementptr i32, i32* %arr, i32 %idx
-; CHECK-NEXT:   store i32 0, i32* %addr
+; CHECK-NEXT:   %addr = getelementptr i32, ptr %arr, i32 %idx
+; CHECK-NEXT:   store i32 0, ptr %addr
 ; CHECK-NEXT:   %next = icmp slt i32 %idx.next, 2147483647
 ; CHECK-NEXT:   [[COND2:%[^ ]+]] = icmp slt i32 %idx.next, %exit.mainloop.at
 ; CHECK-NEXT:   br i1 [[COND2]], label %loop, label %main.exit.selector
@@ -178,13 +178,13 @@ define void @test_03(i32* %arr, i32* %a_len_ptr) {
 ; CHECK-NEXT:   %abc.postloop = icmp slt i32 %idx.postloop, %exit.mainloop.at
 ; CHECK-NEXT:   br i1 %abc.postloop, label %in.bounds.postloop, label %out.of.bounds.loopexit
 ; CHECK:      in.bounds.postloop:
-; CHECK-NEXT:   %addr.postloop = getelementptr i32, i32* %arr, i32 %idx.postloop
-; CHECK-NEXT:   store i32 0, i32* %addr.postloop
+; CHECK-NEXT:   %addr.postloop = getelementptr i32, ptr %arr, i32 %idx.postloop
+; CHECK-NEXT:   store i32 0, ptr %addr.postloop
 ; CHECK-NEXT:   %next.postloop = icmp slt i32 %idx.next.postloop, 2147483647
 ; CHECK-NEXT:   br i1 %next.postloop, label %loop.postloop, label %exit.loopexit
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !1
+  %len = load i32, ptr %a_len_ptr, !range !1
   br label %loop
 
 loop:
@@ -194,8 +194,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, 2147483647
   br i1 %next, label %loop, label %exit
 
@@ -209,7 +209,7 @@ exit:
 ; IV = 0; IV <s MAX_INT; IV += 7; 0 <= Len <= MAX_INT - 6. IRCE is allowed
 ; because the branch would fail once idx.next == MAX_INT - 1 keeping the
 ; access in bounds.
-define void @test_04(i32* %arr, i32* %a_len_ptr) {
+define void @test_04(ptr %arr, ptr %a_len_ptr) {
   ; CHECK:  @test_04(
   ; CHECK:  loop:
   ; CHECK:  [[IV:%[^ ]+]] = phi i32
@@ -226,7 +226,7 @@ define void @test_04(i32* %arr, i32* %a_len_ptr) {
   ; CHECK: br i1 [[COND_POST]], label %in.bounds.postloop, label %out.of.bounds.loopexit
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !2
+  %len = load i32, ptr %a_len_ptr, !range !2
   br label %loop
 
 loop:
@@ -236,8 +236,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, 2147483647
   br i1 %next, label %loop, label %exit
 
@@ -249,11 +249,11 @@ exit:
 }
 
 ; IV = 100; IV >s -1; IV -= 7; 0 <= Len <= 50. IRCE is allowed.
-define void @test_05(i32* %arr, i32* %a_len_ptr) {
+define void @test_05(ptr %arr, ptr %a_len_ptr) {
 
 ; CHECK:      @test_05(
 ; CHECK:      entry:
-; CHECK-NEXT:   %len = load i32, i32* %a_len_ptr
+; CHECK-NEXT:   %len = load i32, ptr %a_len_ptr
 ; CHECK-NEXT:   %exit.preloop.at = add nsw i32 %len, -1
 ; CHECK-NEXT:   [[COND1:%[^ ]+]] = icmp sgt i32 100, %exit.preloop.at
 ; CHECK-NEXT:   br i1 [[COND1]], label %loop.preloop.preheader, label %preloop.pseudo.exit
@@ -267,8 +267,8 @@ define void @test_05(i32* %arr, i32* %a_len_ptr) {
 ; CHECK-NEXT:   %abc = icmp slt i32 %idx, %len
 ; CHECK-NEXT:   br i1 true, label %in.bounds, label %out.of.bounds.loopexit1
 ; CHECK:      in.bounds:
-; CHECK-NEXT:   %addr = getelementptr i32, i32* %arr, i32 %idx
-; CHECK-NEXT:   store i32 0, i32* %addr
+; CHECK-NEXT:   %addr = getelementptr i32, ptr %arr, i32 %idx
+; CHECK-NEXT:   store i32 0, ptr %addr
 ; CHECK-NEXT:   %next = icmp sgt i32 %idx.next, -1
 ; CHECK-NEXT:   br i1 %next, label %loop, label %exit.loopexit
 ; CHECK:      loop.preloop:
@@ -277,8 +277,8 @@ define void @test_05(i32* %arr, i32* %a_len_ptr) {
 ; CHECK-NEXT:   %abc.preloop = icmp slt i32 %idx.preloop, %len
 ; CHECK-NEXT:   br i1 %abc.preloop, label %in.bounds.preloop, label %out.of.bounds.loopexit
 ; CHECK:      in.bounds.preloop:
-; CHECK-NEXT:   %addr.preloop = getelementptr i32, i32* %arr, i32 %idx.preloop
-; CHECK-NEXT:   store i32 0, i32* %addr.preloop
+; CHECK-NEXT:   %addr.preloop = getelementptr i32, ptr %arr, i32 %idx.preloop
+; CHECK-NEXT:   store i32 0, ptr %addr.preloop
 ; CHECK-NEXT:   %next.preloop = icmp sgt i32 %idx.next.preloop, -1
 ; CHECK-NEXT:   [[COND2:%[^ ]+]] = icmp sgt i32 %idx.next.preloop, %exit.preloop.at
 ; CHECK-NEXT:   br i1 [[COND2]], label %loop.preloop, label %preloop.exit.selector
@@ -292,7 +292,7 @@ define void @test_05(i32* %arr, i32* %a_len_ptr) {
 ; CHECK-NEXT:   br label %mainloop
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -302,8 +302,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp sgt i32 %idx.next, -1
   br i1 %next, label %loop, label %exit
 
@@ -315,11 +315,11 @@ exit:
 }
 
 ; IV = MAX_INT - 7; IV >u 6; IV -= 7; 10 <= Len <= 50. IRCE is allowed.
-define void @test_06(i32* %arr, i32* %a_len_ptr) {
+define void @test_06(ptr %arr, ptr %a_len_ptr) {
 
 ; CHECK:      @test_06(
 ; CHECK:      entry:
-; CHECK-NEXT:   %len = load i32, i32* %a_len_ptr
+; CHECK-NEXT:   %len = load i32, ptr %a_len_ptr
 ; CHECK-NEXT:   %exit.preloop.at = add nsw i32 %len, -1
 ; CHECK-NEXT:   [[COND1:%[^ ]+]] = icmp ugt i32 2147483640, %exit.preloop.at
 ; CHECK-NEXT:   br i1 [[COND1]], label %loop.preloop.preheader, label %preloop.pseudo.exit
@@ -333,8 +333,8 @@ define void @test_06(i32* %arr, i32* %a_len_ptr) {
 ; CHECK-NEXT:   %abc = icmp slt i32 %idx, %len
 ; CHECK-NEXT:   br i1 true, label %in.bounds, label %out.of.bounds.loopexit1
 ; CHECK:      in.bounds:
-; CHECK-NEXT:   %addr = getelementptr i32, i32* %arr, i32 %idx
-; CHECK-NEXT:   store i32 0, i32* %addr
+; CHECK-NEXT:   %addr = getelementptr i32, ptr %arr, i32 %idx
+; CHECK-NEXT:   store i32 0, ptr %addr
 ; CHECK-NEXT:   %next = icmp ugt i32 %idx.next, 6
 ; CHECK-NEXT:   br i1 %next, label %loop, label %exit.loopexit
 ; CHECK:      loop.preloop:
@@ -343,8 +343,8 @@ define void @test_06(i32* %arr, i32* %a_len_ptr) {
 ; CHECK-NEXT:   %abc.preloop = icmp slt i32 %idx.preloop, %len
 ; CHECK-NEXT:   br i1 %abc.preloop, label %in.bounds.preloop, label %out.of.bounds.loopexit
 ; CHECK:      in.bounds.preloop:
-; CHECK-NEXT:   %addr.preloop = getelementptr i32, i32* %arr, i32 %idx.preloop
-; CHECK-NEXT:   store i32 0, i32* %addr.preloop
+; CHECK-NEXT:   %addr.preloop = getelementptr i32, ptr %arr, i32 %idx.preloop
+; CHECK-NEXT:   store i32 0, ptr %addr.preloop
 ; CHECK-NEXT:   %next.preloop = icmp ugt i32 %idx.next.preloop, 6
 ; CHECK-NEXT:   [[COND2:%[^ ]+]] = icmp ugt i32 %idx.next.preloop, %exit.preloop.at
 ; CHECK-NEXT:   br i1 [[COND2]], label %loop.preloop, label %preloop.exit.selector
@@ -358,7 +358,7 @@ define void @test_06(i32* %arr, i32* %a_len_ptr) {
 ; CHECK-NEXT:   br label %mainloop
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !3
+  %len = load i32, ptr %a_len_ptr, !range !3
   br label %loop
 
 loop:
@@ -368,8 +368,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ugt i32 %idx.next, 6
   br i1 %next, label %loop, label %exit
 
@@ -382,12 +382,12 @@ exit:
 
 ; IV = MAX_INT - 7; IV >u 5; IV -= 7; 10 <= Len <= 50. IRCE is not allowed,
 ; because we can cross the 0 border.
-define void @test_07(i32* %arr, i32* %a_len_ptr) {
+define void @test_07(ptr %arr, ptr %a_len_ptr) {
 
 ; CHECK:      @test_07(
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !3
+  %len = load i32, ptr %a_len_ptr, !range !3
   br label %loop
 
 loop:
@@ -397,8 +397,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ugt i32 %idx.next, 5
   br i1 %next, label %loop, label %exit
 
@@ -410,11 +410,11 @@ exit:
 }
 
 ; IV = MAX_INT; IV >u 6; IV -= 7; 10 <= Len <= 50. IRCE is allowed.
-define void @test_08(i32* %arr, i32* %a_len_ptr) {
+define void @test_08(ptr %arr, ptr %a_len_ptr) {
 
 ; CHECK:      @test_08(
 ; CHECK:      entry:
-; CHECK-NEXT:   %len = load i32, i32* %a_len_ptr
+; CHECK-NEXT:   %len = load i32, ptr %a_len_ptr
 ; CHECK-NEXT:   %exit.preloop.at = add nsw i32 %len, -1
 ; CHECK-NEXT:   [[COND1:%[^ ]+]] = icmp ugt i32 2147483647, %exit.preloop.at
 ; CHECK-NEXT:   br i1 [[COND1]], label %loop.preloop.preheader, label %preloop.pseudo.exit
@@ -428,8 +428,8 @@ define void @test_08(i32* %arr, i32* %a_len_ptr) {
 ; CHECK-NEXT:   %abc = icmp slt i32 %idx, %len
 ; CHECK-NEXT:   br i1 true, label %in.bounds, label %out.of.bounds.loopexit1
 ; CHECK:      in.bounds:
-; CHECK-NEXT:   %addr = getelementptr i32, i32* %arr, i32 %idx
-; CHECK-NEXT:   store i32 0, i32* %addr
+; CHECK-NEXT:   %addr = getelementptr i32, ptr %arr, i32 %idx
+; CHECK-NEXT:   store i32 0, ptr %addr
 ; CHECK-NEXT:   %next = icmp ugt i32 %idx.next, 6
 ; CHECK-NEXT:   br i1 %next, label %loop, label %exit.loopexit
 ; CHECK:      loop.preloop:
@@ -438,8 +438,8 @@ define void @test_08(i32* %arr, i32* %a_len_ptr) {
 ; CHECK-NEXT:   %abc.preloop = icmp slt i32 %idx.preloop, %len
 ; CHECK-NEXT:   br i1 %abc.preloop, label %in.bounds.preloop, label %out.of.bounds.loopexit
 ; CHECK:      in.bounds.preloop:
-; CHECK-NEXT:   %addr.preloop = getelementptr i32, i32* %arr, i32 %idx.preloop
-; CHECK-NEXT:   store i32 0, i32* %addr.preloop
+; CHECK-NEXT:   %addr.preloop = getelementptr i32, ptr %arr, i32 %idx.preloop
+; CHECK-NEXT:   store i32 0, ptr %addr.preloop
 ; CHECK-NEXT:   %next.preloop = icmp ugt i32 %idx.next.preloop, 6
 ; CHECK-NEXT:   [[COND2:%[^ ]+]] = icmp ugt i32 %idx.next.preloop, %exit.preloop.at
 ; CHECK-NEXT:   br i1 [[COND2]], label %loop.preloop, label %preloop.exit.selector
@@ -453,7 +453,7 @@ define void @test_08(i32* %arr, i32* %a_len_ptr) {
 ; CHECK-NEXT:   br label %mainloop
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !3
+  %len = load i32, ptr %a_len_ptr, !range !3
   br label %loop
 
 loop:
@@ -463,8 +463,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ugt i32 %idx.next, 6
   br i1 %next, label %loop, label %exit
 

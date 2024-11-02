@@ -214,7 +214,7 @@ class NameLookup {
 
 public:
   explicit NameLookup(const NamedDecl *ND) : Data(ND, false) {}
-  explicit NameLookup(llvm::NoneType) : Data(nullptr, true) {}
+  explicit NameLookup(std::nullopt_t) : Data(nullptr, true) {}
   explicit NameLookup(std::nullptr_t) : Data(nullptr, false) {}
   NameLookup() : NameLookup(nullptr) {}
 

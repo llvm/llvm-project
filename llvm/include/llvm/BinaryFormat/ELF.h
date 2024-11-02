@@ -620,6 +620,9 @@ enum {
   EF_HEXAGON_MACH_V67T = 0x00008067, // Hexagon V67T
   EF_HEXAGON_MACH_V68 = 0x00000068,  // Hexagon V68
   EF_HEXAGON_MACH_V69 = 0x00000069,  // Hexagon V69
+  EF_HEXAGON_MACH_V71 = 0x00000071,  // Hexagon V71
+  EF_HEXAGON_MACH_V71T = 0x00008071, // Hexagon V71T
+  EF_HEXAGON_MACH_V73 = 0x00000073,  // Hexagon V73
   EF_HEXAGON_MACH = 0x000003ff,      // Hexagon V..
 
   // Highest ISA version flags
@@ -637,6 +640,9 @@ enum {
   EF_HEXAGON_ISA_V67 = 0x00000067,  // Hexagon V67 ISA
   EF_HEXAGON_ISA_V68 = 0x00000068,  // Hexagon V68 ISA
   EF_HEXAGON_ISA_V69 = 0x00000069,  // Hexagon V69 ISA
+  EF_HEXAGON_ISA_V71 = 0x00000071,  // Hexagon V71 ISA
+  EF_HEXAGON_ISA_V73 = 0x00000073,  // Hexagon V73 ISA
+  EF_HEXAGON_ISA_V75 = 0x00000075,  // Hexagon V75 ISA
   EF_HEXAGON_ISA = 0x000003ff,      // Hexagon V.. ISA
 };
 
@@ -1029,6 +1035,10 @@ enum : unsigned {
   SHT_ARM_ATTRIBUTES = 0x70000003U,
   SHT_ARM_DEBUGOVERLAY = 0x70000004U,
   SHT_ARM_OVERLAYSECTION = 0x70000005U,
+  // Special aarch64-specific sections for MTE support, as described in:
+  // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#7section-types
+  SHT_AARCH64_MEMTAG_GLOBALS_STATIC = 0x70000007U,
+  SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC = 0x70000008U,
   SHT_HEX_ORDERED = 0x70000000,   // Link editor is to sort the entries in
                                   // this section based on their sizes
   SHT_X86_64_UNWIND = 0x70000001, // Unwind information
@@ -1376,6 +1386,7 @@ enum {
   PT_GNU_RELRO = 0x6474e552,    // Read-only after relocation.
   PT_GNU_PROPERTY = 0x6474e553, // .note.gnu.property notes sections.
 
+  PT_OPENBSD_MUTABLE = 0x65a3dbe5,   // Like bss, but not immutable.
   PT_OPENBSD_RANDOMIZE = 0x65a3dbe6, // Fill with random data.
   PT_OPENBSD_WXNEEDED = 0x65a3dbe7,  // Program does W^X violations.
   PT_OPENBSD_BOOTDATA = 0x65a41be6,  // Section for boot arguments.

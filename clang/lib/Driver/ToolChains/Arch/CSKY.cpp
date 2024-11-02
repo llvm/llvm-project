@@ -33,7 +33,7 @@ csky::getCSKYArchName(const Driver &D, const ArgList &Args,
 
     if (ArchKind == llvm::CSKY::ArchKind::INVALID) {
       D.Diag(clang::diag::err_drv_invalid_arch_name) << A->getAsString(Args);
-      return llvm::Optional<llvm::StringRef>();
+      return llvm::None;
     }
     return llvm::Optional<llvm::StringRef>(A->getValue());
   }
@@ -42,7 +42,7 @@ csky::getCSKYArchName(const Driver &D, const ArgList &Args,
     llvm::CSKY::ArchKind ArchKind = llvm::CSKY::parseCPUArch(A->getValue());
     if (ArchKind == llvm::CSKY::ArchKind::INVALID) {
       D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
-      return llvm::Optional<llvm::StringRef>();
+      return llvm::None;
     }
     return llvm::Optional<llvm::StringRef>(llvm::CSKY::getArchName(ArchKind));
   }

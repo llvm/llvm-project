@@ -1,4 +1,4 @@
-; RUN: opt -S -inferattrs < %s | FileCheck %s
+; RUN: opt -S -passes=inferattrs < %s | FileCheck %s
 
 ; CHECK: Function Attrs: nobuiltin allocsize(0){{$}}
 ; CHECK: declare i8* @_Znwm(i32)

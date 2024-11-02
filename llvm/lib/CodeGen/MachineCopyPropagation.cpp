@@ -98,7 +98,7 @@ static Optional<DestSourcePair> isCopyInstr(const MachineInstr &MI,
     return Optional<DestSourcePair>(
         DestSourcePair{MI.getOperand(0), MI.getOperand(1)});
 
-  return None;
+  return std::nullopt;
 }
 
 class CopyTracker {

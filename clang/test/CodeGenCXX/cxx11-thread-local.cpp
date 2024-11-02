@@ -193,10 +193,10 @@ int f() {
 // CHECK: %[[VF_M_INITIALIZED:.*]] = icmp eq i8 %{{.*}}, 0
 // CHECK: br i1 %[[VF_M_INITIALIZED]],
 // need init:
+// CHECK: store i8 1, i8* bitcast (i64* @_ZGVN1VIfE1mE to i8*)
 // CHECK: call{{.*}} i32 @_Z1gv()
 // CHECK: [[VFM_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZN1VIfE1mE)
 // CHECK: store i32 %{{.*}}, i32* [[VFM_ADDR]], align 4
-// CHECK: store i8 1, i8* bitcast (i64* @_ZGVN1VIfE1mE to i8*)
 // CHECK: br label
 
 // LINUX_AIX: define internal void @[[XF_M_INIT]]()
@@ -206,11 +206,11 @@ int f() {
 // CHECK: %[[XF_M_INITIALIZED:.*]] = icmp eq i8 %{{.*}}, 0
 // CHECK: br i1 %[[XF_M_INITIALIZED]],
 // need init:
+// CHECK: store i8 1, i8* bitcast (i64* @_ZGVN1XIfE1mE to i8*)
 // AIX-NOT: br
 // LINUX: call {{.*}}__cxa_thread_atexit
 // AIX: call {{.*}}__pt_atexit_np
 // DARWIN: call {{.*}}_tlv_atexit
-// CHECK: store i8 1, i8* bitcast (i64* @_ZGVN1XIfE1mE to i8*)
 // CHECK: br label
 
 // LINUX: declare i32 @__cxa_thread_atexit(void (i8*)*, i8*, i8*)
@@ -329,10 +329,10 @@ void set_anon_i() {
 // CHECK: %[[V_M_INITIALIZED:.*]] = icmp eq i8 %{{.*}}, 0
 // CHECK: br i1 %[[V_M_INITIALIZED]],
 // need init:
+// CHECK: store i8 1, i8* bitcast (i64* @_ZGVN1VIiE1mE to i8*)
 // CHECK: call{{.*}} i32 @_Z1gv()
 // CHECK: [[VEM_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZN1VIiE1mE)
 // CHECK: store i32 %{{.*}}, i32* [[VEM_ADDR]], align 4
-// CHECK: store i8 1, i8* bitcast (i64* @_ZGVN1VIiE1mE to i8*)
 // CHECK: br label
 
 // LINUX_AIX: define internal void @[[X_M_INIT]]()
@@ -342,10 +342,10 @@ void set_anon_i() {
 // CHECK: %[[X_M_INITIALIZED:.*]] = icmp eq i8 %{{.*}}, 0
 // CHECK: br i1 %[[X_M_INITIALIZED]],
 // need init:
+// CHECK: store i8 1, i8* bitcast (i64* @_ZGVN1XIiE1mE to i8*)
 // LINUX: call {{.*}}__cxa_thread_atexit
 // AIX: call {{.*}}__pt_atexit_np
 // DARWIN: call {{.*}}_tlv_atexit
-// CHECK: store i8 1, i8* bitcast (i64* @_ZGVN1XIiE1mE to i8*)
 // CHECK: br label
 
 // CHECK: define {{.*}}@[[GLOBAL_INIT:.*]]()

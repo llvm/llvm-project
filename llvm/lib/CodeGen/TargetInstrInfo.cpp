@@ -870,12 +870,12 @@ void TargetInstrInfo::reassociateOps(
 
   // Create new instructions for insertion.
   MachineInstrBuilder MIB1 =
-      BuildMI(*MF, Prev.getDebugLoc(), TII->get(Opcode), NewVR)
+      BuildMI(*MF, MIMetadata(Prev), TII->get(Opcode), NewVR)
           .addReg(RegX, getKillRegState(KillX))
           .addReg(RegY, getKillRegState(KillY))
           .setMIFlags(Prev.getFlags());
   MachineInstrBuilder MIB2 =
-      BuildMI(*MF, Root.getDebugLoc(), TII->get(Opcode), RegC)
+      BuildMI(*MF, MIMetadata(Root), TII->get(Opcode), RegC)
           .addReg(RegA, getKillRegState(KillA))
           .addReg(NewVR, getKillRegState(true))
           .setMIFlags(Root.getFlags());
@@ -1201,7 +1201,7 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
     assert(!TRI->isSuperOrSubRegisterEq(Reg, DestReg) &&
            "TargetInstrInfo::describeLoadedValue can't describe super- or "
            "sub-regs for copy instructions");
-    return None;
+    return std::nullopt;
   } else if (auto RegImm = isAddImmediate(MI, Reg)) {
     Register SrcReg = RegImm->Reg;
     Offset = RegImm->Imm;
@@ -1219,16 +1219,16 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
     // If the address points to "special" memory (e.g. a spill slot), it's
     // sufficient to check that it isn't aliased by any high-level IR value.
     if (!PSV || PSV->mayAlias(&MFI))
-      return None;
+      return std::nullopt;
 
     const MachineOperand *BaseOp;
     if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable,
                                       TRI))
-      return None;
+      return std::nullopt;
 
     // FIXME: Scalable offsets are not yet handled in the offset code below.
     if (OffsetIsScalable)
-      return None;
+      return std::nullopt;
 
     // TODO: Can currently only handle mem instructions with a single define.
     // An example from the x86 target:
@@ -1237,7 +1237,7 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
     //    ...
     //
     if (MI.getNumExplicitDefs() != 1)
-      return None;
+      return std::nullopt;
 
     // TODO: In what way do we need to take Reg into consideration here?
 
@@ -1249,7 +1249,7 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
     return ParamLoadedValue(*BaseOp, Expr);
   }
 
-  return None;
+  return std::nullopt;
 }
 
 /// Both DefMI and UseMI must be valid.  By default, call directly to the

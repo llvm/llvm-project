@@ -12,9 +12,9 @@ define signext i32 @main() nounwind {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %L.entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -48(1)
 ; CHECK-NEXT:    li 3, -32477
+; CHECK-NEXT:    std 0, 64(1)
 ; CHECK-NEXT:    li 4, 234
 ; CHECK-NEXT:    addi 6, 1, 46
 ; CHECK-NEXT:    sth 3, 46(1)
@@ -65,16 +65,16 @@ define signext i32 @main() nounwind {
 ; CHECK-P7-LABEL: main:
 ; CHECK-P7:       # %bb.0: # %L.entry
 ; CHECK-P7-NEXT:    mflr 0
-; CHECK-P7-NEXT:    std 0, 16(1)
 ; CHECK-P7-NEXT:    stdu 1, -48(1)
 ; CHECK-P7-NEXT:    li 3, -32477
 ; CHECK-P7-NEXT:    lis 5, 0
 ; CHECK-P7-NEXT:    addi 4, 1, 46
 ; CHECK-P7-NEXT:    li 7, 0
+; CHECK-P7-NEXT:    std 0, 64(1)
 ; CHECK-P7-NEXT:    sth 3, 46(1)
 ; CHECK-P7-NEXT:    li 6, 234
-; CHECK-P7-NEXT:    ori 5, 5, 33059
 ; CHECK-P7-NEXT:    rlwinm 3, 4, 3, 27, 27
+; CHECK-P7-NEXT:    ori 5, 5, 33059
 ; CHECK-P7-NEXT:    ori 7, 7, 65535
 ; CHECK-P7-NEXT:    sync
 ; CHECK-P7-NEXT:    slw 6, 6, 3

@@ -1504,6 +1504,31 @@ class Cursor(Structure):
         """
         return conf.lib.clang_CXXMethod_isCopyAssignmentOperator(self)
 
+    def is_move_assignment_operator_method(self):
+        """Returnrs True if the cursor refers to a move-assignment operator.
+
+        A move-assignment operator `X::operator=` is a non-static,
+        non-template member function of _class_ `X` with exactly one
+        parameter of type `X&&`, `const X&&`, `volatile X&&` or `const
+        volatile X&&`.
+
+
+        That is, for example, the `operator=` in:
+
+           class Foo {
+               bool operator=(const volatile Foo&&);
+           };
+
+        Is a move-assignment operator, while the `operator=` in:
+
+           class Bar {
+               bool operator=(const int&&);
+           };
+
+        Is not.
+        """
+        return conf.lib.clang_CXXMethod_isMoveAssignmentOperator(self)
+
     def is_mutable_field(self):
         """Returns True if the cursor refers to a C++ field that is declared
         'mutable'.
@@ -3462,6 +3487,10 @@ functionList = [
    bool),
 
   ("clang_CXXMethod_isCopyAssignmentOperator",
+   [Cursor],
+   bool),
+
+  ("clang_CXXMethod_isMoveAssignmentOperator",
    [Cursor],
    bool),
 

@@ -367,6 +367,12 @@ OpFoldResult arith::DivUIOp::fold(ArrayRef<Attribute> operands) {
   return div0 ? Attribute() : result;
 }
 
+Speculation::Speculatability arith::DivUIOp::getSpeculatability() {
+  // X / 0 => UB
+  return matchPattern(getRhs(), m_NonZero()) ? Speculation::Speculatable
+                                             : Speculation::NotSpeculatable;
+}
+
 //===----------------------------------------------------------------------===//
 // DivSIOp
 //===----------------------------------------------------------------------===//
@@ -388,6 +394,18 @@ OpFoldResult arith::DivSIOp::fold(ArrayRef<Attribute> operands) {
       });
 
   return overflowOrDiv0 ? Attribute() : result;
+}
+
+Speculation::Speculatability arith::DivSIOp::getSpeculatability() {
+  bool mayHaveUB = true;
+
+  APInt constRHS;
+  // X / 0 => UB
+  // INT_MIN / -1 => UB
+  if (matchPattern(getRhs(), m_ConstantInt(&constRHS)))
+    mayHaveUB = constRHS.isAllOnes() || constRHS.isZero();
+
+  return mayHaveUB ? Speculation::NotSpeculatable : Speculation::Speculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -426,6 +444,12 @@ OpFoldResult arith::CeilDivUIOp::fold(ArrayRef<Attribute> operands) {
       });
 
   return overflowOrDiv0 ? Attribute() : result;
+}
+
+Speculation::Speculatability arith::CeilDivUIOp::getSpeculatability() {
+  // X / 0 => UB
+  return matchPattern(getRhs(), m_NonZero()) ? Speculation::Speculatable
+                                             : Speculation::NotSpeculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -475,6 +499,18 @@ OpFoldResult arith::CeilDivSIOp::fold(ArrayRef<Attribute> operands) {
       });
 
   return overflowOrDiv0 ? Attribute() : result;
+}
+
+Speculation::Speculatability arith::CeilDivSIOp::getSpeculatability() {
+  bool mayHaveUB = true;
+
+  APInt constRHS;
+  // X / 0 => UB
+  // INT_MIN / -1 => UB
+  if (matchPattern(getRhs(), m_ConstantInt(&constRHS)))
+    mayHaveUB = constRHS.isAllOnes() || constRHS.isZero();
+
+  return mayHaveUB ? Speculation::NotSpeculatable : Speculation::Speculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -576,6 +612,23 @@ OpFoldResult arith::RemSIOp::fold(ArrayRef<Attribute> operands) {
 // AndIOp
 //===----------------------------------------------------------------------===//
 
+/// Fold `and(a, and(a, b))` to `and(a, b)`
+static Value foldAndIofAndI(arith::AndIOp op) {
+  for (bool reversePrev : {false, true}) {
+    auto prev = (reversePrev ? op.getRhs() : op.getLhs())
+                    .getDefiningOp<arith::AndIOp>();
+    if (!prev)
+      continue;
+
+    Value other = (reversePrev ? op.getLhs() : op.getRhs());
+    if (other != prev.getLhs() && other != prev.getRhs())
+      continue;
+
+    return prev.getResult();
+  }
+  return {};
+}
+
 OpFoldResult arith::AndIOp::fold(ArrayRef<Attribute> operands) {
   /// and(x, 0) -> 0
   if (matchPattern(getRhs(), m_Zero()))
@@ -594,6 +647,10 @@ OpFoldResult arith::AndIOp::fold(ArrayRef<Attribute> operands) {
                                           m_ConstantInt(&intValue))) &&
       intValue.isAllOnes())
     return IntegerAttr::get(getType(), 0);
+
+  /// and(a, and(a, b)) -> and(a, b)
+  if (Value result = foldAndIofAndI(*this))
+    return result;
 
   return constFoldBinaryOp<IntegerAttr>(
       operands, [](APInt a, const APInt &b) { return std::move(a) & b; });

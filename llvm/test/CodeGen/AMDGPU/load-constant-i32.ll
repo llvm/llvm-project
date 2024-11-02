@@ -9,7 +9,7 @@
 ; GCN: s_load_dword s{{[0-9]+}}
 
 ; EG: VTX_READ_32 T{{[0-9]+}}.X, T{{[0-9]+}}.X, 0
-define amdgpu_kernel void @constant_load_i32(i32 addrspace(1)* %out, i32 addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_load_i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 entry:
   %ld = load i32, i32 addrspace(4)* %in
   store i32 %ld, i32 addrspace(1)* %out
@@ -20,7 +20,7 @@ entry:
 ; GCN: s_load_dwordx2
 
 ; EG: VTX_READ_64
-define amdgpu_kernel void @constant_load_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_load_v2i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 entry:
   %ld = load <2 x i32>, <2 x i32> addrspace(4)* %in
   store <2 x i32> %ld, <2 x i32> addrspace(1)* %out
@@ -31,7 +31,7 @@ entry:
 ; GCN: s_load_dwordx4
 
 ; EG: VTX_READ_128
-define amdgpu_kernel void @constant_load_v3i32(<3 x i32> addrspace(1)* %out, <3 x i32> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_load_v3i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 entry:
   %ld = load <3 x i32>, <3 x i32> addrspace(4)* %in
   store <3 x i32> %ld, <3 x i32> addrspace(1)* %out
@@ -42,7 +42,7 @@ entry:
 ; GCN: s_load_dwordx4
 
 ; EG: VTX_READ_128
-define amdgpu_kernel void @constant_load_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_load_v4i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 entry:
   %ld = load <4 x i32>, <4 x i32> addrspace(4)* %in
   store <4 x i32> %ld, <4 x i32> addrspace(1)* %out
@@ -54,10 +54,66 @@ entry:
 
 ; EG: VTX_READ_128
 ; EG: VTX_READ_128
-define amdgpu_kernel void @constant_load_v8i32(<8 x i32> addrspace(1)* %out, <8 x i32> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_load_v8i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 entry:
   %ld = load <8 x i32>, <8 x i32> addrspace(4)* %in
   store <8 x i32> %ld, <8 x i32> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}constant_load_v9i32:
+; GCN: s_load_dword
+; GCN: s_load_dwordx8
+
+; EG: VTX_READ_128
+; EG: VTX_READ_128
+; EG: VTX_READ_32
+define amdgpu_kernel void @constant_load_v9i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+entry:
+  %ld = load <9 x i32>, <9 x i32> addrspace(4)* %in
+  store <9 x i32> %ld, <9 x i32> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}constant_load_v10i32:
+; GCN: s_load_dwordx2
+; GCN: s_load_dwordx8
+
+; EG: VTX_READ_128
+; EG: VTX_READ_128
+; EG: VTX_READ_128
+define amdgpu_kernel void @constant_load_v10i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+entry:
+  %ld = load <10 x i32>, <10 x i32> addrspace(4)* %in
+  store <10 x i32> %ld, <10 x i32> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}constant_load_v11i32:
+; GCN: s_load_dwordx4
+; GCN: s_load_dwordx8
+
+; EG: VTX_READ_128
+; EG: VTX_READ_128
+; EG: VTX_READ_128
+define amdgpu_kernel void @constant_load_v11i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+entry:
+  %ld = load <11 x i32>, <11 x i32> addrspace(4)* %in
+  store <11 x i32> %ld, <11 x i32> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}constant_load_v12i32:
+; GCN: s_load_dwordx4
+; GCN: s_load_dwordx8
+
+; EG: VTX_READ_128
+; EG: VTX_READ_128
+; EG: VTX_READ_128
+define amdgpu_kernel void @constant_load_v12i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+entry:
+  %ld = load <12 x i32>, <12 x i32> addrspace(4)* %in
+  store <12 x i32> %ld, <12 x i32> addrspace(1)* %out
   ret void
 }
 
@@ -68,7 +124,7 @@ entry:
 ; EG: VTX_READ_128
 ; EG: VTX_READ_128
 ; EG: VTX_READ_128
-define amdgpu_kernel void @constant_load_v16i32(<16 x i32> addrspace(1)* %out, <16 x i32> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_load_v16i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 entry:
   %ld = load <16 x i32>, <16 x i32> addrspace(4)* %in
   store <16 x i32> %ld, <16 x i32> addrspace(1)* %out
@@ -83,7 +139,7 @@ entry:
 ; EG: MEM_RAT_CACHELESS STORE_RAW T{{[0-9]+}}.XY
 ; EG: CF_END
 ; EG: VTX_READ_32
-define amdgpu_kernel void @constant_zextload_i32_to_i64(i64 addrspace(1)* %out, i32 addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_i32_to_i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
   %ld = load i32, i32 addrspace(4)* %in
   %ext = zext i32 %ld to i64
   store i64 %ext, i64 addrspace(1)* %out
@@ -100,7 +156,7 @@ define amdgpu_kernel void @constant_zextload_i32_to_i64(i64 addrspace(1)* %out, 
 ; EG: VTX_READ_32
 ; EG: ASHR {{[* ]*}}T{{[0-9]\.[XYZW]}}, T{{[0-9]\.[XYZW]}},  literal.
 ; EG: 31
-define amdgpu_kernel void @constant_sextload_i32_to_i64(i64 addrspace(1)* %out, i32 addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_i32_to_i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
   %ld = load i32, i32 addrspace(4)* %in
   %ext = sext i32 %ld to i64
   store i64 %ext, i64 addrspace(1)* %out
@@ -110,7 +166,7 @@ define amdgpu_kernel void @constant_sextload_i32_to_i64(i64 addrspace(1)* %out, 
 ; FUNC-LABEL: {{^}}constant_zextload_v1i32_to_v1i64:
 ; GCN: s_load_dword
 ; GCN: store_dwordx2
-define amdgpu_kernel void @constant_zextload_v1i32_to_v1i64(<1 x i64> addrspace(1)* %out, <1 x i32> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_v1i32_to_v1i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
   %ld = load <1 x i32>, <1 x i32> addrspace(4)* %in
   %ext = zext <1 x i32> %ld to <1 x i64>
   store <1 x i64> %ext, <1 x i64> addrspace(1)* %out
@@ -121,7 +177,7 @@ define amdgpu_kernel void @constant_zextload_v1i32_to_v1i64(<1 x i64> addrspace(
 ; GCN: s_load_dword s[[LO:[0-9]+]]
 ; GCN: s_ashr_i32 s[[HI:[0-9]+]], s[[LO]], 31
 ; GCN: store_dwordx2
-define amdgpu_kernel void @constant_sextload_v1i32_to_v1i64(<1 x i64> addrspace(1)* %out, <1 x i32> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_v1i32_to_v1i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
   %ld = load <1 x i32>, <1 x i32> addrspace(4)* %in
   %ext = sext <1 x i32> %ld to <1 x i64>
   store <1 x i64> %ext, <1 x i64> addrspace(1)* %out
@@ -131,7 +187,7 @@ define amdgpu_kernel void @constant_sextload_v1i32_to_v1i64(<1 x i64> addrspace(
 ; FUNC-LABEL: {{^}}constant_zextload_v2i32_to_v2i64:
 ; GCN: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0{{$}}
 ; GCN: store_dwordx4
-define amdgpu_kernel void @constant_zextload_v2i32_to_v2i64(<2 x i64> addrspace(1)* %out, <2 x i32> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_v2i32_to_v2i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
   %ld = load <2 x i32>, <2 x i32> addrspace(4)* %in
   %ext = zext <2 x i32> %ld to <2 x i64>
   store <2 x i64> %ext, <2 x i64> addrspace(1)* %out
@@ -145,7 +201,7 @@ define amdgpu_kernel void @constant_zextload_v2i32_to_v2i64(<2 x i64> addrspace(
 ; GCN-DAG: s_ashr_i32
 
 ; GCN: store_dwordx4
-define amdgpu_kernel void @constant_sextload_v2i32_to_v2i64(<2 x i64> addrspace(1)* %out, <2 x i32> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_v2i32_to_v2i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
   %ld = load <2 x i32>, <2 x i32> addrspace(4)* %in
   %ext = sext <2 x i32> %ld to <2 x i64>
   store <2 x i64> %ext, <2 x i64> addrspace(1)* %out
@@ -157,7 +213,7 @@ define amdgpu_kernel void @constant_sextload_v2i32_to_v2i64(<2 x i64> addrspace(
 
 ; GCN: store_dwordx4
 ; GCN: store_dwordx4
-define amdgpu_kernel void @constant_zextload_v4i32_to_v4i64(<4 x i64> addrspace(1)* %out, <4 x i32> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_v4i32_to_v4i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
   %ld = load <4 x i32>, <4 x i32> addrspace(4)* %in
   %ext = zext <4 x i32> %ld to <4 x i64>
   store <4 x i64> %ext, <4 x i64> addrspace(1)* %out
@@ -174,7 +230,7 @@ define amdgpu_kernel void @constant_zextload_v4i32_to_v4i64(<4 x i64> addrspace(
 
 ; GCN: store_dwordx4
 ; GCN: store_dwordx4
-define amdgpu_kernel void @constant_sextload_v4i32_to_v4i64(<4 x i64> addrspace(1)* %out, <4 x i32> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_v4i32_to_v4i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
   %ld = load <4 x i32>, <4 x i32> addrspace(4)* %in
   %ext = sext <4 x i32> %ld to <4 x i64>
   store <4 x i64> %ext, <4 x i64> addrspace(1)* %out
@@ -193,7 +249,7 @@ define amdgpu_kernel void @constant_sextload_v4i32_to_v4i64(<4 x i64> addrspace(
 ; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
 ; GCN-SA-DAG: {{flat|global}}_store_dwordx4
 ; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
-define amdgpu_kernel void @constant_zextload_v8i32_to_v8i64(<8 x i64> addrspace(1)* %out, <8 x i32> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_v8i32_to_v8i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
   %ld = load <8 x i32>, <8 x i32> addrspace(4)* %in
   %ext = zext <8 x i32> %ld to <8 x i64>
   store <8 x i64> %ext, <8 x i64> addrspace(1)* %out
@@ -221,7 +277,7 @@ define amdgpu_kernel void @constant_zextload_v8i32_to_v8i64(<8 x i64> addrspace(
 ; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
 ; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
 ; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
-define amdgpu_kernel void @constant_sextload_v8i32_to_v8i64(<8 x i64> addrspace(1)* %out, <8 x i32> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_v8i32_to_v8i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
   %ld = load <8 x i32>, <8 x i32> addrspace(4)* %in
   %ext = sext <8 x i32> %ld to <8 x i64>
   store <8 x i64> %ext, <8 x i64> addrspace(1)* %out
@@ -242,7 +298,7 @@ define amdgpu_kernel void @constant_sextload_v8i32_to_v8i64(<8 x i64> addrspace(
 ; GCN: store_dwordx4
 ; GCN: store_dwordx4
 ; GCN: store_dwordx4
-define amdgpu_kernel void @constant_sextload_v16i32_to_v16i64(<16 x i64> addrspace(1)* %out, <16 x i32> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_v16i32_to_v16i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
   %ld = load <16 x i32>, <16 x i32> addrspace(4)* %in
   %ext = sext <16 x i32> %ld to <16 x i64>
   store <16 x i64> %ext, <16 x i64> addrspace(1)* %out
@@ -269,7 +325,7 @@ define amdgpu_kernel void @constant_sextload_v16i32_to_v16i64(<16 x i64> addrspa
 ; GCN-HSA: {{flat|global}}_store_dwordx4
 ; GCN-HSA: {{flat|global}}_store_dwordx4
 ; GCN-HSA: {{flat|global}}_store_dwordx4
-define amdgpu_kernel void @constant_zextload_v16i32_to_v16i64(<16 x i64> addrspace(1)* %out, <16 x i32> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_v16i32_to_v16i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
   %ld = load <16 x i32>, <16 x i32> addrspace(4)* %in
   %ext = zext <16 x i32> %ld to <16 x i64>
   store <16 x i64> %ext, <16 x i64> addrspace(1)* %out
@@ -321,7 +377,7 @@ define amdgpu_kernel void @constant_zextload_v16i32_to_v16i64(<16 x i64> addrspa
 ; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
 ; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
 
-define amdgpu_kernel void @constant_sextload_v32i32_to_v32i64(<32 x i64> addrspace(1)* %out, <32 x i32> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_sextload_v32i32_to_v32i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
   %ld = load <32 x i32>, <32 x i32> addrspace(4)* %in
   %ext = sext <32 x i32> %ld to <32 x i64>
   store <32 x i64> %ext, <32 x i64> addrspace(1)* %out
@@ -372,7 +428,7 @@ define amdgpu_kernel void @constant_sextload_v32i32_to_v32i64(<32 x i64> addrspa
 ; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
 ; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
 ; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
-define amdgpu_kernel void @constant_zextload_v32i32_to_v32i64(<32 x i64> addrspace(1)* %out, <32 x i32> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_zextload_v32i32_to_v32i64(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
   %ld = load <32 x i32>, <32 x i32> addrspace(4)* %in
   %ext = zext <32 x i32> %ld to <32 x i64>
   store <32 x i64> %ext, <32 x i64> addrspace(1)* %out
@@ -424,7 +480,7 @@ define amdgpu_kernel void @constant_zextload_v32i32_to_v32i64(<32 x i64> addrspa
 ; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
 ; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
 ; GCN-HSA-DAG: {{flat|global}}_store_dwordx4
-define amdgpu_kernel void @constant_load_v32i32(<32 x i32> addrspace(1)* %out, <32 x i32> addrspace(4)* %in) #0 {
+define amdgpu_kernel void @constant_load_v32i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
   %ld = load <32 x i32>, <32 x i32> addrspace(4)* %in
   store <32 x i32> %ld, <32 x i32> addrspace(1)* %out
   ret void

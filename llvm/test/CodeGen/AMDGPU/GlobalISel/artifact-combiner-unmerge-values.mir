@@ -215,11 +215,9 @@ body:             |
     ; CHECK-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[ANYEXT1]](s16)
     ; CHECK-NEXT: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[ANYEXT]](s16)
     ; CHECK-NEXT: [[ZEXT3:%[0-9]+]]:_(s32) = G_ZEXT [[ANYEXT1]](s16)
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[ZEXT]](s32)
-    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[ZEXT1]](s32)
-    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[ZEXT2]](s32)
-    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[ZEXT3]](s32)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST]](<2 x s16>), implicit [[BITCAST1]](<2 x s16>), implicit [[BITCAST2]](<2 x s16>), implicit [[BITCAST3]](<2 x s16>)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[ZEXT]](s32), [[ZEXT1]](s32)
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[ZEXT2]](s32), [[ZEXT3]](s32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<2 x s32>), implicit [[BUILD_VECTOR1]](<2 x s32>)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %2:_(s32), %3:_(s32) = G_UNMERGE_VALUES %0(<2 x s32>)
@@ -230,8 +228,8 @@ body:             |
     %9:_(s16) = G_ANYEXT %7
     %10:_(<4 x s16>) = G_BUILD_VECTOR %8, %9, %8, %9
     %11:_(<4 x s32>) = G_ZEXT %10
-    %12:_(<2 x s16>), %13:_(<2 x s16>), %14:_(<2 x s16>), %15:_(<2 x s16>) = G_UNMERGE_VALUES %11
-    S_ENDPGM 0, implicit %12, implicit %13, implicit %14, implicit %15
+    %12:_(<2 x s32>), %13:_(<2 x s32>) = G_UNMERGE_VALUES %11
+    S_ENDPGM 0, implicit %12, implicit %13
 
 ...
 

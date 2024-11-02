@@ -82,7 +82,7 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
     SmallVector<Value> newReturnValues;
     BitVector erasedResultIndices(funcOp.getFunctionType().getNumResults());
     DenseMap<int64_t, int64_t> resultToArgs;
-    for (const auto &it : llvm::enumerate(returnOp.operands())) {
+    for (const auto &it : llvm::enumerate(returnOp.getOperands())) {
       bool erased = false;
       for (BlockArgument bbArg : funcOp.getArguments()) {
         Value val = it.value();
@@ -105,7 +105,7 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
 
     // Update function.
     funcOp.eraseResults(erasedResultIndices);
-    returnOp.operandsMutable().assign(newReturnValues);
+    returnOp.getOperandsMutable().assign(newReturnValues);
 
     // Update function calls.
     module.walk([&](func::CallOp callOp) {
@@ -114,7 +114,7 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
 
       rewriter.setInsertionPoint(callOp);
       auto newCallOp = rewriter.create<func::CallOp>(callOp.getLoc(), funcOp,
-                                                     callOp.operands());
+                                                     callOp.getOperands());
       SmallVector<Value> newResults;
       int64_t nextResult = 0;
       for (int64_t i = 0; i < callOp.getNumResults(); ++i) {

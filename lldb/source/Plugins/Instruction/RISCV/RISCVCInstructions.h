@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <variant>
 
+#include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
 #include "RISCVInstructions.h"
 #include "llvm/ADT/Optional.h"
 

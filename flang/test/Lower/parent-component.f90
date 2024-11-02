@@ -55,16 +55,16 @@ contains
   ! CHECK: %[[SLICE:.*]] = fir.slice %[[C1]], %[[UB]], %[[STRIDE]] path %[[FIELD]] : (index, index, index, !fir.field) -> !fir.slice<1>
   ! CHECK: %[[BOX:.*]] = fir.embox %[[Y]](%[[SHAPE]]) [%[[SLICE]]] : (!fir.ref<!fir.array<2x!fir.type<_QFTc{a:i32,b:i32}>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<2x!fir.type<_QFTp{a:i32}>>>
   ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[BOX]] : (!fir.box<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) -> !fir.box<none>
-  ! CHECK: %[[IS_CONTIGOUS:.*]] = fir.call @_FortranAIsContiguous(%[[BOX_NONE]]) : (!fir.box<none>) -> i1
+  ! CHECK: %[[IS_CONTIGOUS:.*]] = fir.call @_FortranAIsContiguous(%[[BOX_NONE]]) {{.*}}: (!fir.box<none>) -> i1
   ! CHECK: %[[TEMP:.*]] = fir.if %[[IS_CONTIGOUS]] -> (!fir.heap<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) {
   ! CHECK: } else {
   ! CHECK: %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<2x!fir.type<_QFTp{a:i32}>>)
   ! CHECK: %{{.*}} = fir.field_index a, !fir.type<_QFTp{a:i32}>
   ! CHECK-NOT: %{{.*}} = fir.field_index b, !fir.type<_QFTp{a:i32}>
   ! CHECK: %[[TEMP_CAST:.*]] = fir.convert %[[TEMP]] : (!fir.heap<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) -> !fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>>
-  ! CHECK: fir.call @_QFPprint_p(%[[TEMP_CAST]]) : (!fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) -> ()
+  ! CHECK: fir.call @_QFPprint_p(%[[TEMP_CAST]]) {{.*}}: (!fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) -> ()
 
-  ! CHECK-LABEL: %{{.*}} = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+  ! CHECK-LABEL: %{{.*}} = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
   ! CHECK: %[[C1:.*]] = arith.constant 1 : index
   ! CHECK: %[[C1_I64:.*]] = arith.constant 1 : i64
   ! CHECK: %[[STRIDE:.*]] = fir.convert %[[C1_I64]] : (i64) -> index
@@ -75,7 +75,7 @@ contains
   ! CHECK: %[[SLICE:.*]] = fir.slice %[[C1]], %[[UB]], %[[STRIDE]] path %[[FIELD]] : (index, index, index, !fir.field) -> !fir.slice<1>
   ! CHECK: %[[BOX:.*]] = fir.embox %[[Y]](%[[SHAPE]]) [%[[SLICE]]] : (!fir.ref<!fir.array<2x!fir.type<_QFTc{a:i32,b:i32}>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<2x!fir.type<_QFTp{a:i32}>>>
   ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[BOX]] : (!fir.box<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) -> !fir.box<none>
-  ! CHECK: %{{.*}} = fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[BOX_NONE]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
+  ! CHECK: %{{.*}} = fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[BOX_NONE]]) {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
 
   subroutine init_no_slice()
     type(c) :: y(2) = [ c(11, 21), c(12, 22) ]
@@ -93,16 +93,16 @@ contains
   ! CHECK: %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIM]]#1, %[[C1]] path %[[FIELD]] : (index, index, index, !fir.field) -> !fir.slice<1>
   ! CHECK: %[[BOX:.*]] = fir.embox %[[Y]](%[[SHAPE]]) [%[[SLICE]]] : (!fir.ref<!fir.array<2x!fir.type<_QFTc{a:i32,b:i32}>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<2x!fir.type<_QFTp{a:i32}>>>
   ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[BOX]] : (!fir.box<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) -> !fir.box<none>
-  ! CHECK: %[[IS_CONTIGOUS:.*]] = fir.call @_FortranAIsContiguous(%[[BOX_NONE]]) : (!fir.box<none>) -> i1
+  ! CHECK: %[[IS_CONTIGOUS:.*]] = fir.call @_FortranAIsContiguous(%[[BOX_NONE]]) {{.*}}: (!fir.box<none>) -> i1
   ! CHECK: %[[TEMP:.*]] = fir.if %[[IS_CONTIGOUS]] -> (!fir.heap<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) {
   ! CHECK: } else {
   ! CHECK: %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<2x!fir.type<_QFTp{a:i32}>>)
   ! CHECK: %{{.*}} = fir.field_index a, !fir.type<_QFTp{a:i32}>
   ! CHECK-NOT: %{{.*}} = fir.field_index b, !fir.type<_QFTp{a:i32}>
   ! CHECK: %[[TEMP_CAST:.*]] = fir.convert %[[TEMP]] : (!fir.heap<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) -> !fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>>
-  ! CHECK: fir.call @_QFPprint_p(%[[TEMP_CAST]]) : (!fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) -> ()
+  ! CHECK: fir.call @_QFPprint_p(%[[TEMP_CAST]]) {{.*}}: (!fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) -> ()
 
-  ! CHECK-LABEL: %{{.*}} = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+  ! CHECK-LABEL: %{{.*}} = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
   ! CHECK: %[[SHAPE:.*]] = fir.shape %[[C2]] : (index) -> !fir.shape<1>
   ! CHECK: %[[FIELD:.*]] = fir.field_index a, !fir.type<_QFTc{a:i32,b:i32}>
   ! CHECK: %[[C0:.*]] = arith.constant 0 : index
@@ -111,7 +111,7 @@ contains
   ! CHECK: %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD]] : (index, index, index, !fir.field) -> !fir.slice<1>
   ! CHECK: %[[BOX:.*]] = fir.embox %[[Y]](%[[SHAPE]]) [%[[SLICE]]] : (!fir.ref<!fir.array<2x!fir.type<_QFTc{a:i32,b:i32}>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<2x!fir.type<_QFTp{a:i32}>>>
   ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[BOX]] : (!fir.box<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) -> !fir.box<none>
-  ! CHECK: %{{.*}} = fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[BOX_NONE]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
+  ! CHECK: %{{.*}} = fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[BOX_NONE]]) {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
 
   subroutine init_allocatable()
     type(c), allocatable :: y(:)
@@ -138,16 +138,16 @@ contains
   ! CHECK: %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD]] : (index, index, index, !fir.field) -> !fir.slice<1>
   ! CHECK: %[[BOX:.*]] = fir.embox %[[MEM]](%[[SHAPE_SHIFT]]) [%[[SLICE]]] : (!fir.heap<!fir.array<?x!fir.type<_QFTc{a:i32,b:i32}>>>, !fir.shapeshift<1>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.type<_QFTp{a:i32}>>>
   ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[BOX]] : (!fir.box<!fir.array<?x!fir.type<_QFTp{a:i32}>>>) -> !fir.box<none> 
-  ! CHECK: %[[IS_CONTIGOUS:.*]] = fir.call @_FortranAIsContiguous(%[[BOX_NONE]]) : (!fir.box<none>) -> i1
+  ! CHECK: %[[IS_CONTIGOUS:.*]] = fir.call @_FortranAIsContiguous(%[[BOX_NONE]]) {{.*}}: (!fir.box<none>) -> i1
   ! CHECK: %[[TEMP:.*]] = fir.if %[[IS_CONTIGOUS]] -> (!fir.heap<!fir.array<?x!fir.type<_QFTp{a:i32}>>>) {
   ! CHECK: } else {
   ! CHECK: %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<?x!fir.type<_QFTp{a:i32}>>)
   ! CHECK: %{{.*}} = fir.field_index a, !fir.type<_QFTp{a:i32}>
   ! CHECK-NOT: %{{.*}} = fir.field_index b, !fir.type<_QFTp{a:i32}>
   ! CHECK: %[[TEMP_CAST:.*]] = fir.convert %[[TEMP]] : (!fir.heap<!fir.array<?x!fir.type<_QFTp{a:i32}>>>) -> !fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>>
-  ! CHECK: fir.call @_QFPprint_p(%[[TEMP_CAST]]) : (!fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) -> ()
+  ! CHECK: fir.call @_QFPprint_p(%[[TEMP_CAST]]) {{.*}}: (!fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) -> ()
 
-  ! CHECK-LABEL: %{{.*}} = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+  ! CHECK-LABEL: %{{.*}} = fir.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
   ! CHECK: %[[LOAD_LB0:.*]] = fir.load %[[LB0]] : !fir.ref<index>
   ! CHECK: %[[LOAD_EXT0:.*]] = fir.load %[[EXT0]] : !fir.ref<index>
   ! CHECK: %[[LOAD_ALLOC:.*]] = fir.load %[[ALLOC]] : !fir.ref<!fir.heap<!fir.array<?x!fir.type<_QFTc{a:i32,b:i32}>>>>
@@ -159,7 +159,7 @@ contains
   ! CHECK: %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD]] : (index, index, index, !fir.field) -> !fir.slice<1>
   ! CHECK: %[[BOX:.*]] = fir.embox %[[LOAD_ALLOC]](%[[SHAPE_SHIFT]]) [%[[SLICE]]] : (!fir.heap<!fir.array<?x!fir.type<_QFTc{a:i32,b:i32}>>>, !fir.shapeshift<1>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.type<_QFTp{a:i32}>>>
   ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[BOX]] : (!fir.box<!fir.array<?x!fir.type<_QFTp{a:i32}>>>) -> !fir.box<none>
-  ! CHECK: %{{.*}} = fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[BOX_NONE]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
+  ! CHECK: %{{.*}} = fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[BOX_NONE]]) {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
 
   subroutine init_scalar()
     type(c) :: s = c(11, 21)
@@ -170,11 +170,11 @@ contains
   ! CHECK-LABEL: func.func @_QFPinit_scalar()
   ! CHECK: %[[S:.*]] = fir.address_of(@_QFinit_scalarEs) : !fir.ref<!fir.type<_QFTc{a:i32,b:i32}>>
   ! CHECK: %[[CAST:.*]] = fir.convert %[[S]] : (!fir.ref<!fir.type<_QFTc{a:i32,b:i32}>>) -> !fir.ref<!fir.type<_QFTp{a:i32}>>
-  ! CHECK: fir.call @_QFPprint_scalar(%[[CAST]]) : (!fir.ref<!fir.type<_QFTp{a:i32}>>) -> ()
+  ! CHECK: fir.call @_QFPprint_scalar(%[[CAST]]) {{.*}}: (!fir.ref<!fir.type<_QFTp{a:i32}>>) -> ()
 
   ! CHECK: %[[BOX:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.type<_QFTc{a:i32,b:i32}>>) -> !fir.box<!fir.type<_QFTp{a:i32}>>
   ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[BOX]] : (!fir.box<!fir.type<_QFTp{a:i32}>>) -> !fir.box<none>
-  ! CHECK: %{{.*}} = fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[BOX_NONE]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
+  ! CHECK: %{{.*}} = fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[BOX_NONE]]) {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
 
   subroutine init_assumed(y)
     type(c) :: y(:)
@@ -200,7 +200,7 @@ contains
   ! CHECK: %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD]] : (index, index, index, !fir.field) -> !fir.slice<1>
   ! CHECK: %[[REBOX:.*]] = fir.rebox %arg0 [%[[SLICE]]] : (!fir.box<!fir.array<?x!fir.type<_QFTc{a:i32,b:i32}>>>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.type<_QFTp{a:i32}>>>
   ! CHECK: %[[REBOX_CAST:.*]] = fir.convert %[[REBOX]] : (!fir.box<!fir.array<?x!fir.type<_QFTp{a:i32}>>>) -> !fir.box<none>
-  ! CHECK: %{{.*}} = fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[REBOX_CAST]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
+  ! CHECK: %{{.*}} = fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[REBOX_CAST]]) {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
 
   subroutine init_existing_field()
     type(z) :: y(2)

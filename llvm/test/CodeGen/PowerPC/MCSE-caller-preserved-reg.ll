@@ -18,9 +18,9 @@ define noalias ptr @_ZN2CC3funEv(ptr %this) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -48(1)
 ; CHECK-NEXT:    std 2, 24(1)
+; CHECK-NEXT:    std 0, 64(1)
 ; CHECK-NEXT:    mr 30, 3
 ; CHECK-NEXT:    ld 12, 0(3)
 ; CHECK-NEXT:    mtctr 12

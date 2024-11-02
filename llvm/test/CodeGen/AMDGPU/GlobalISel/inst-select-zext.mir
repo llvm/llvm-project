@@ -127,10 +127,9 @@ body: |
     ; GCN: liveins: $sgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN-NEXT: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[DEF]], %subreg.sub1
-    ; GCN-NEXT: [[S_BFE_U64_:%[0-9]+]]:sreg_64 = S_BFE_U64 [[REG_SEQUENCE]], 2097152, implicit-def $scc
-    ; GCN-NEXT: $sgpr0_sgpr1 = COPY [[S_BFE_U64_]]
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1
+    ; GCN-NEXT: $sgpr0_sgpr1 = COPY [[REG_SEQUENCE]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s64) = G_ZEXT %0
     $sgpr0_sgpr1 = COPY %1

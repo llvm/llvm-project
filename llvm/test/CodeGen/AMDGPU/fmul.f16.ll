@@ -13,14 +13,14 @@
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fmul_f16(
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %b) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) {
 entry:
-  %a.val = load volatile half, half addrspace(1)* %a
-  %b.val = load volatile half, half addrspace(1)* %b
+  %a.val = load volatile half, ptr addrspace(1) %a
+  %b.val = load volatile half, ptr addrspace(1) %b
   %r.val = fmul half %a.val, %b.val
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -33,12 +33,12 @@ entry:
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fmul_f16_imm_a(
-    half addrspace(1)* %r,
-    half addrspace(1)* %b) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %b) {
 entry:
-  %b.val = load volatile half, half addrspace(1)* %b
+  %b.val = load volatile half, ptr addrspace(1) %b
   %r.val = fmul half 3.0, %b.val
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -52,12 +52,12 @@ entry:
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fmul_f16_imm_b(
-    half addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load volatile half, half addrspace(1)* %a
+  %a.val = load volatile half, ptr addrspace(1) %a
   %r.val = fmul half %a.val, 4.0
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -89,14 +89,14 @@ entry:
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fmul_v2f16(
-    <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a,
-    <2 x half> addrspace(1)* %b) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) {
 entry:
-  %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
-  %b.val = load <2 x half>, <2 x half> addrspace(1)* %b
+  %a.val = load <2 x half>, ptr addrspace(1) %a
+  %b.val = load <2 x half>, ptr addrspace(1) %b
   %r.val = fmul <2 x half> %a.val, %b.val
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -124,12 +124,12 @@ entry:
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fmul_v2f16_imm_a(
-    <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %b) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %b) {
 entry:
-  %b.val = load <2 x half>, <2 x half> addrspace(1)* %b
+  %b.val = load <2 x half>, ptr addrspace(1) %b
   %r.val = fmul <2 x half> <half 3.0, half 4.0>, %b.val
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -156,12 +156,12 @@ entry:
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fmul_v2f16_imm_b(
-    <2 x half> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
+  %a.val = load <2 x half>, ptr addrspace(1) %a
   %r.val = fmul <2 x half> %a.val, <half 4.0, half 3.0>
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -182,14 +182,14 @@ entry:
 ; VI: v_or_b32
 ; VI: v_or_b32
 define amdgpu_kernel void @fmul_v4f16(
-    <4 x half> addrspace(1)* %r,
-    <4 x half> addrspace(1)* %a,
-    <4 x half> addrspace(1)* %b) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) {
 entry:
-  %a.val = load <4 x half>, <4 x half> addrspace(1)* %a
-  %b.val = load <4 x half>, <4 x half> addrspace(1)* %b
+  %a.val = load <4 x half>, ptr addrspace(1) %a
+  %b.val = load <4 x half>, ptr addrspace(1) %b
   %r.val = fmul <4 x half> %a.val, %b.val
-  store <4 x half> %r.val, <4 x half> addrspace(1)* %r
+  store <4 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -214,11 +214,11 @@ entry:
 
 ; VI: buffer_store_dwordx2 v[[[OR0]]:[[OR1]]]
 define amdgpu_kernel void @fmul_v4f16_imm_a(
-    <4 x half> addrspace(1)* %r,
-    <4 x half> addrspace(1)* %b) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %b) {
 entry:
-  %b.val = load <4 x half>, <4 x half> addrspace(1)* %b
+  %b.val = load <4 x half>, ptr addrspace(1) %b
   %r.val = fmul <4 x half> <half 8.0, half 2.0, half 3.0, half 4.0>, %b.val
-  store <4 x half> %r.val, <4 x half> addrspace(1)* %r
+  store <4 x half> %r.val, ptr addrspace(1) %r
   ret void
 }

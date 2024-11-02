@@ -98,14 +98,6 @@ bool Dialect::useDefaultTypePrinterParser() const {
   return def->getValueAsBit("useDefaultTypePrinterParser");
 }
 
-Dialect::EmitPrefix Dialect::getEmitAccessorPrefix() const {
-  int prefix = def->getValueAsInt("emitAccessorPrefix");
-  if (prefix < 0 || prefix > static_cast<int>(EmitPrefix::Both))
-    PrintFatalError(def->getLoc(), "Invalid accessor prefix value");
-
-  return static_cast<EmitPrefix>(prefix);
-}
-
 bool Dialect::isExtensible() const {
   return def->getValueAsBit("isExtensible");
 }

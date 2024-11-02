@@ -17,6 +17,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManagerInternals.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -615,6 +616,7 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
   if (!(NextLocalOffset + FileSize + 1 > NextLocalOffset &&
         NextLocalOffset + FileSize + 1 <= CurrentLoadedOffset)) {
     Diag.Report(IncludePos, diag::err_include_too_large);
+    noteSLocAddressSpaceUsage(Diag);
     return FileID();
   }
   LocalSLocEntryTable.push_back(
@@ -671,6 +673,7 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
     return SourceLocation::getMacroLoc(LoadedOffset);
   }
   LocalSLocEntryTable.push_back(SLocEntry::get(NextLocalOffset, Info));
+  // FIXME: Produce a proper diagnostic for this case.
   assert(NextLocalOffset + Length + 1 > NextLocalOffset &&
          NextLocalOffset + Length + 1 <= CurrentLoadedOffset &&
          "Ran out of source locations!");
@@ -1278,22 +1281,21 @@ LineOffsetMapping LineOffsetMapping::get(llvm::MemoryBufferRef Buffer,
   // Line #1 starts at char 0.
   LineOffsets.push_back(0);
 
-  const unsigned char *Buf = (const unsigned char *)Buffer.getBufferStart();
+  const unsigned char *Start = (const unsigned char *)Buffer.getBufferStart();
   const unsigned char *End = (const unsigned char *)Buffer.getBufferEnd();
-  const std::size_t BufLen = End - Buf;
+  const unsigned char *Buf = Start;
 
-  unsigned I = 0;
   uint64_t Word;
 
   // scan sizeof(Word) bytes at a time for new lines.
   // This is much faster than scanning each byte independently.
-  if (BufLen > sizeof(Word)) {
+  if ((unsigned long)(End - Start) > sizeof(Word)) {
     do {
-      Word = llvm::support::endian::read64(Buf + I, llvm::support::little);
+      Word = llvm::support::endian::read64(Buf, llvm::support::little);
       // no new line => jump over sizeof(Word) bytes.
       auto Mask = likelyhasbetween(Word, '\n', '\r');
       if (!Mask) {
-        I += sizeof(Word);
+        Buf += sizeof(Word);
         continue;
       }
 
@@ -1304,30 +1306,33 @@ LineOffsetMapping LineOffsetMapping::get(llvm::MemoryBufferRef Buffer,
       unsigned N =
           llvm::countTrailingZeros(Mask) - 7; // -7 because 0x80 is the marker
       Word >>= N;
-      I += N / 8 + 1;
+      Buf += N / 8 + 1;
       unsigned char Byte = Word;
-      if (Byte == '\n') {
-        LineOffsets.push_back(I);
-      } else if (Byte == '\r') {
+      switch (Byte) {
+      case 'r':
         // If this is \r\n, skip both characters.
-        if (Buf[I] == '\n')
-          ++I;
-        LineOffsets.push_back(I);
-      }
-    } while (I < BufLen - sizeof(Word) - 1);
+        if (*Buf == '\n') {
+          ++Buf;
+        }
+        LLVM_FALLTHROUGH;
+      case '\n':
+        LineOffsets.push_back(Buf - Start);
+      };
+    } while (Buf < End - sizeof(Word) - 1);
   }
 
   // Handle tail using a regular check.
-  while (I < BufLen) {
-    if (Buf[I] == '\n') {
-      LineOffsets.push_back(I + 1);
-    } else if (Buf[I] == '\r') {
+  while (Buf < End) {
+    if (*Buf == '\n') {
+      LineOffsets.push_back(Buf - Start + 1);
+    } else if (*Buf == '\r') {
       // If this is \r\n, skip both characters.
-      if (I + 1 < BufLen && Buf[I + 1] == '\n')
-        ++I;
-      LineOffsets.push_back(I + 1);
+      if (Buf + 1 < End && Buf[1] == '\n') {
+        ++Buf;
+      }
+      LineOffsets.push_back(Buf - Start + 1);
     }
-    ++I;
+    ++Buf;
   }
 
   return LineOffsetMapping(LineOffsets, Alloc);
@@ -2227,6 +2232,94 @@ LLVM_DUMP_METHOD void SourceManager::dump() const {
     } else {
       NextStart = None;
     }
+  }
+}
+
+void SourceManager::noteSLocAddressSpaceUsage(
+    DiagnosticsEngine &Diag, Optional<unsigned> MaxNotes) const {
+  struct Info {
+    // A location where this file was entered.
+    SourceLocation Loc;
+    // Number of times this FileEntry was entered.
+    unsigned Inclusions = 0;
+    // Size usage from the file itself.
+    uint64_t DirectSize = 0;
+    // Total size usage from the file and its macro expansions.
+    uint64_t TotalSize = 0;
+  };
+  using UsageMap = llvm::MapVector<const FileEntry*, Info>;
+
+  UsageMap Usage;
+  uint64_t CountedSize = 0;
+
+  auto AddUsageForFileID = [&](FileID ID) {
+    // The +1 here is because getFileIDSize doesn't include the extra byte for
+    // the one-past-the-end location.
+    unsigned Size = getFileIDSize(ID) + 1;
+
+    // Find the file that used this address space, either directly or by
+    // macro expansion.
+    SourceLocation FileStart = getFileLoc(getComposedLoc(ID, 0));
+    FileID FileLocID = getFileID(FileStart);
+    const FileEntry *Entry = getFileEntryForID(FileLocID);
+
+    Info &EntryInfo = Usage[Entry];
+    if (EntryInfo.Loc.isInvalid())
+      EntryInfo.Loc = FileStart;
+    if (ID == FileLocID) {
+      ++EntryInfo.Inclusions;
+      EntryInfo.DirectSize += Size;
+    }
+    EntryInfo.TotalSize += Size;
+    CountedSize += Size;
+  };
+
+  // Loaded SLocEntries have indexes counting downwards from -2.
+  for (size_t Index = 0; Index != LoadedSLocEntryTable.size(); ++Index) {
+    AddUsageForFileID(FileID::get(-2 - Index));
+  }
+  // Local SLocEntries have indexes counting upwards from 0.
+  for (size_t Index = 0; Index != LocalSLocEntryTable.size(); ++Index) {
+    AddUsageForFileID(FileID::get(Index));
+  }
+
+  // Sort the usage by size from largest to smallest. Break ties by raw source
+  // location.
+  auto SortedUsage = Usage.takeVector();
+  auto Cmp = [](const UsageMap::value_type &A, const UsageMap::value_type &B) {
+    return A.second.TotalSize > B.second.TotalSize ||
+           (A.second.TotalSize == B.second.TotalSize &&
+            A.second.Loc < B.second.Loc);
+  };
+  auto SortedEnd = SortedUsage.end();
+  if (MaxNotes && SortedUsage.size() > *MaxNotes) {
+    SortedEnd = SortedUsage.begin() + *MaxNotes;
+    std::nth_element(SortedUsage.begin(), SortedEnd, SortedUsage.end(), Cmp);
+  }
+  std::sort(SortedUsage.begin(), SortedEnd, Cmp);
+
+  // Produce note on sloc address space usage total.
+  uint64_t LocalUsage = NextLocalOffset;
+  uint64_t LoadedUsage = MaxLoadedOffset - CurrentLoadedOffset;
+  int UsagePercent = static_cast<int>(100.0 * double(LocalUsage + LoadedUsage) /
+                                      MaxLoadedOffset);
+  Diag.Report(SourceLocation(), diag::note_total_sloc_usage)
+    << LocalUsage << LoadedUsage << (LocalUsage + LoadedUsage) << UsagePercent;
+
+  // Produce notes on sloc address space usage for each file with a high usage.
+  uint64_t ReportedSize = 0;
+  for (auto &[Entry, FileInfo] :
+       llvm::make_range(SortedUsage.begin(), SortedEnd)) {
+    Diag.Report(FileInfo.Loc, diag::note_file_sloc_usage)
+        << FileInfo.Inclusions << FileInfo.DirectSize
+        << (FileInfo.TotalSize - FileInfo.DirectSize);
+    ReportedSize += FileInfo.TotalSize;
+  }
+
+  // Describe any remaining usage not reported in the per-file usage.
+  if (ReportedSize != CountedSize) {
+    Diag.Report(SourceLocation(), diag::note_file_misc_sloc_usage)
+        << (SortedUsage.end() - SortedEnd) << CountedSize - ReportedSize;
   }
 }
 

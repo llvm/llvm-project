@@ -652,7 +652,7 @@ bool swiftcall::shouldPassIndirectly(CodeGenModule &CGM,
 CharUnits swiftcall::getMaximumVoluntaryIntegerSize(CodeGenModule &CGM) {
   // Currently always the size of an ordinary pointer.
   return CGM.getContext().toCharUnitsFromBits(
-           CGM.getContext().getTargetInfo().getPointerWidth(0));
+      CGM.getContext().getTargetInfo().getPointerWidth(LangAS::Default));
 }
 
 CharUnits swiftcall::getNaturalAlignment(CodeGenModule &CGM, llvm::Type *type) {

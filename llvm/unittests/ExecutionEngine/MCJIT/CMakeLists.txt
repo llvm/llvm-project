@@ -2,10 +2,9 @@ set(LLVM_LINK_COMPONENTS
   Analysis
   Core
   ExecutionEngine
-  IPO
-  InstCombine
   MC
   MCJIT
+  Passes
   RuntimeDyld
   ScalarOpts
   Support

@@ -7,7 +7,7 @@
 ; We evaluate call to function _ZL3bazP3Foo casting its parameter and check that evaluated value (nullptr)
 ; is handled correctly
 
-; RUN: opt -globalopt -instcombine -S %s -o - | FileCheck %s
+; RUN: opt -passes=globalopt,instcombine -S %s -o - | FileCheck %s
 
 ; CHECK:      @gBar = local_unnamed_addr global %struct.Bar { i32 2 }
 ; CHECK-NEXT: @_s = local_unnamed_addr global %struct.S { i32 1 }, align 4

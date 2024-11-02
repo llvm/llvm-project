@@ -10,11 +10,10 @@ define amdgpu_ps void @amdgpu_ps() {
 ; MESA-LABEL: amdgpu_ps:
 ; MESA:       ; %bb.0:
 ; MESA-NEXT:    s_add_u32 flat_scratch_lo, s2, s4
-; MESA-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_SH_MEM_BASES, 0, 16)
+; MESA-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; MESA-NEXT:    s_addc_u32 flat_scratch_hi, s3, 0
-; MESA-NEXT:    s_lshl_b32 s0, s0, 16
 ; MESA-NEXT:    v_mov_b32_e32 v0, 4
-; MESA-NEXT:    v_mov_b32_e32 v1, s0
+; MESA-NEXT:    v_mov_b32_e32 v1, s1
 ; MESA-NEXT:    v_mov_b32_e32 v2, 0
 ; MESA-NEXT:    flat_store_dword v[0:1], v2
 ; MESA-NEXT:    s_waitcnt vmcnt(0)
@@ -30,16 +29,15 @@ define amdgpu_ps void @amdgpu_ps() {
 ; PAL-NEXT:    s_waitcnt lgkmcnt(0)
 ; PAL-NEXT:    s_and_b32 s3, s3, 0xffff
 ; PAL-NEXT:    s_add_u32 flat_scratch_lo, s2, s0
-; PAL-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_SH_MEM_BASES, 0, 16)
+; PAL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; PAL-NEXT:    s_addc_u32 flat_scratch_hi, s3, 0
-; PAL-NEXT:    s_lshl_b32 s0, s0, 16
-; PAL-NEXT:    v_mov_b32_e32 v1, s0
+; PAL-NEXT:    v_mov_b32_e32 v1, s1
 ; PAL-NEXT:    flat_store_dword v[0:1], v2
 ; PAL-NEXT:    s_waitcnt vmcnt(0)
 ; PAL-NEXT:    s_endpgm
   %alloca = alloca i32, addrspace(5)
-  %cast = addrspacecast i32 addrspace(5)* %alloca to i32*
-  store volatile i32 0, i32* %cast
+  %cast = addrspacecast ptr addrspace(5) %alloca to ptr
+  store volatile i32 0, ptr %cast
   ret void
 }
 

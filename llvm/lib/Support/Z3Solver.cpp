@@ -878,7 +878,7 @@ public:
     if (res == Z3_L_FALSE)
       return false;
 
-    return Optional<bool>();
+    return None;
   }
 
   void push() override { return Z3_solver_push(Context.Context, Solver); }

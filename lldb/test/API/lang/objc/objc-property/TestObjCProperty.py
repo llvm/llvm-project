@@ -104,8 +104,8 @@ class ObjCPropertyTestCase(TestBase):
         self.assertSuccess(backed_error)
         backing_value = mine.GetChildMemberWithName("_backedInt")
         self.assertTrue(backing_value.IsValid())
-        self.assertTrue(backed_value.GetValueAsUnsigned(12345)
-                        == backing_value.GetValueAsUnsigned(23456))
+        self.assertEqual(backed_value.GetValueAsUnsigned(12345),
+                        backing_value.GetValueAsUnsigned(23456))
 
         value_from_typedef = frame.EvaluateExpression("typedefd.backedInt", False)
         self.assertSuccess(value_from_typedef.GetError())

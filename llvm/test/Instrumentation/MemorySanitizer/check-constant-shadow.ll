@@ -13,16 +13,16 @@ entry:
 }
 
 ; CHECK-LABEL: @main
-; CHECK: store i32 0, i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*)
+; CHECK: store i32 0, ptr @__msan_retval_tls
 ; CONST: call void @__msan_warning_with_origin_noreturn
 ; CHECK: ret i32 undef
 
 
 ; This function stores known initialized value.
 ; Expect 2 stores: one for the shadow (0), one for the value (42), but no origin.
-define void @StoreConstant(i32* nocapture %p) nounwind uwtable sanitize_memory {
+define void @StoreConstant(ptr nocapture %p) nounwind uwtable sanitize_memory {
 entry:
-  store i32 42, i32* %p, align 4
+  store i32 42, ptr %p, align 4
   ret void
 }
 
@@ -35,9 +35,9 @@ entry:
 ; This function stores known uninitialized value.
 ; Expect 3 stores: shadow, value and origin.
 ; Expect no icmp(s): everything here is unconditional.
-define void @StoreUndef(i32* nocapture %p) nounwind uwtable sanitize_memory {
+define void @StoreUndef(ptr nocapture %p) nounwind uwtable sanitize_memory {
 entry:
-  store i32 undef, i32* %p, align 4
+  store i32 undef, ptr %p, align 4
   ret void
 }
 
@@ -59,8 +59,8 @@ entry:
 }
 
 ; CHECK-LABEL: @MaybeUninitialized
-; CHECK: store i32 extractelement (<4 x i32> bitcast (<2 x i64> <i64 0, i64 undef> to <4 x i32>), i64 0), i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8
-; CHECK: store i32 0, i32* @__msan_retval_origin_tls
+; CHECK: store i32 extractelement (<4 x i32> bitcast (<2 x i64> <i64 0, i64 undef> to <4 x i32>), i64 0), ptr @__msan_retval_tls, align 8
+; CHECK: store i32 0, ptr @__msan_retval_origin_tls
 
 ; This function stores known initialized value, but msan can't prove this.
 define noundef i32 @MaybeUninitializedRetNoUndef(<2 x i64> noundef %acc) nounwind uwtable sanitize_memory {

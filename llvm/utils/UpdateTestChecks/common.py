@@ -199,8 +199,10 @@ class TestInfo(object):
       yield line_info
 
   def get_checks_for_unused_prefixes(self, run_list, used_prefixes: List[str]) -> List[str]:
-    unused_prefixes = set(
-        [prefix for sublist in run_list for prefix in sublist[0]]).difference(set(used_prefixes))
+    run_list = [element for element in run_list if element[0] is not None]
+    unused_prefixes = set([
+        prefix for sublist in run_list for prefix in sublist[0]
+    ]).difference(set(used_prefixes))
 
     ret = []
     if not unused_prefixes:
@@ -499,9 +501,9 @@ class FunctionTestBuilder:
     self._processed_prefixes = set()
     for tuple in run_list:
       for prefix in tuple[0]:
-        self._func_dict.update({prefix:dict()})
+        self._func_dict.update({prefix: dict()})
         self._func_order.update({prefix: []})
-        self._global_var_dict.update({prefix:dict()})
+        self._global_var_dict.update({prefix: dict()})
 
   def finish_and_get_func_dict(self):
     for prefix in self.get_failed_prefixes():
@@ -599,7 +601,7 @@ class FunctionTestBuilder:
             else:
               # This means a previous RUN line produced a body for this function
               # that is different from the one produced by this current RUN line,
-              # so the body can't be common accross RUN lines. We use None to
+              # so the body can't be common across RUN lines. We use None to
               # indicate that.
               self._func_dict[prefix][func] = None
         else:
@@ -1123,6 +1125,7 @@ def add_global_checks(glob_val_dict, comment_marker, prefix_list, output_lines, 
 
   if printed_prefixes:
     output_lines.append(comment_marker + SEPARATOR)
+  return printed_prefixes
 
 
 def check_prefix(prefix):
@@ -1245,7 +1248,7 @@ def add_checks_at_end(output_lines, prefix_list, func_order,
         # The func order can contain the same functions multiple times.
         # If we see one again we are done.
         if (func, prefix) in added:
-            continue
+          continue
         if added:
           output_lines.append(comment_string)
 
@@ -1265,6 +1268,6 @@ def add_checks_at_end(output_lines, prefix_list, func_order,
         # mode.
         for generated_prefix in check_generator(output_lines,
                         [([prefix], tool_args)], func):
-            added.add((func, generated_prefix))
-            generated_prefixes.add(generated_prefix)
+          added.add((func, generated_prefix))
+          generated_prefixes.add(generated_prefix)
   return generated_prefixes

@@ -23,6 +23,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <optional>
 #include <system_error>
 
 using namespace llvm;
@@ -878,7 +879,7 @@ void Context::print(StringRef filename, StringRef gcno, StringRef gcda,
 
     if (options.NoOutput || options.Intermediate)
       continue;
-    Optional<raw_fd_ostream> os;
+    std::optional<raw_fd_ostream> os;
     if (!options.UseStdout) {
       std::error_code ec;
       os.emplace(gcovName, ec, sys::fs::OF_TextWithCRLF);

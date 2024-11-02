@@ -75,7 +75,7 @@ private:
 template <class ELFT>
 static uint64_t getAddend(InputSectionBase &sec,
                           const typename ELFT::Rel &rel) {
-  return target->getImplicitAddend(sec.rawData.begin() + rel.r_offset,
+  return target->getImplicitAddend(sec.content().begin() + rel.r_offset,
                                    rel.getType(config->isMips64EL));
 }
 

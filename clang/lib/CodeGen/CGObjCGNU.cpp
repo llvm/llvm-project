@@ -985,7 +985,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
 
     auto LiteralLength = SL->getLength();
 
-    if ((CGM.getTarget().getPointerWidth(0) == 64) &&
+    if ((CGM.getTarget().getPointerWidth(LangAS::Default) == 64) &&
         (LiteralLength < 9) && !isNonASCII) {
       // Tiny strings are only used on 64-bit platforms.  They store 8 7-bit
       // ASCII characters in the high 56 bits, followed by a 4-bit length and a

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fexperimental-strict-floating-point -S -emit-llvm -triple i386-linux -Wno-unknown-pragmas %s -o - | FileCheck %s
+// RUN: %clang_cc1 -S -emit-llvm -triple i386-linux -Wno-unknown-pragmas %s -o - | FileCheck %s
 
 // nextUp(1.F) == 0x1.000002p0F
 
@@ -13,6 +13,9 @@ float F3u = 0x1.000001p0;
 // CHECK: @F2u = {{.*}} float 0x3FF0000020000000
 // CHECK: @F3u = {{.*}} float 0x3FF0000020000000
 
+float FI1u = 0xFFFFFFFFU;
+// CHECK: @FI1u = {{.*}} float 0x41F0000000000000
+
 float _Complex C1u = C0;
 // CHECK: @C1u = {{.*}} { float, float } { float 0x3FF0000020000000, float 0x3FF0000020000000 }
 
@@ -26,6 +29,9 @@ float F3d = 0x1.000001p0;
 // CHECK: @F1d = {{.*}} float 0x3FF0000020000000
 // CHECK: @F2d = {{.*}} float 1.000000e+00
 // CHECK: @F3d = {{.*}} float 1.000000e+00
+
+float FI1d = 0xFFFFFFFFU;
+// CHECK: @FI1d = {{.*}} float 0x41EFFFFFE0000000
 
 float _Complex C1d = C0;
 // CHECK: @C1d = {{.*}} { float, float } { float 1.000000e+00, float 1.000000e+00 }

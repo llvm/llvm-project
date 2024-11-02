@@ -23,10 +23,10 @@ define void @test() {
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %v5, ptr %out5, align 1
 ; AVX1:  LV: Found an estimated cost of 27 for VF 2 For instruction: store i8 %v5, ptr %out5, align 1
-; AVX1:  LV: Found an estimated cost of 54 for VF 4 For instruction: store i8 %v5, ptr %out5, align 1
-; AVX1:  LV: Found an estimated cost of 101 for VF 8 For instruction: store i8 %v5, ptr %out5, align 1
-; AVX1:  LV: Found an estimated cost of 201 for VF 16 For instruction: store i8 %v5, ptr %out5, align 1
-; AVX1:  LV: Found an estimated cost of 408 for VF 32 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX1:  LV: Found an estimated cost of 53 for VF 4 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX1:  LV: Found an estimated cost of 100 for VF 8 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX1:  LV: Found an estimated cost of 198 for VF 16 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX1:  LV: Found an estimated cost of 402 for VF 32 For instruction: store i8 %v5, ptr %out5, align 1
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %v5, ptr %out5, align 1
@@ -43,7 +43,7 @@ define void @test() {
 ; AVX512DQ:  LV: Found an estimated cost of 19 for VF 8 For instruction: store i8 %v5, ptr %out5, align 1
 ; AVX512DQ:  LV: Found an estimated cost of 29 for VF 16 For instruction: store i8 %v5, ptr %out5, align 1
 ; AVX512DQ:  LV: Found an estimated cost of 93 for VF 32 For instruction: store i8 %v5, ptr %out5, align 1
-; AVX512DQ:  LV: Found an estimated cost of 816 for VF 64 For instruction: store i8 %v5, ptr %out5, align 1
+; AVX512DQ:  LV: Found an estimated cost of 810 for VF 64 For instruction: store i8 %v5, ptr %out5, align 1
 ;
 ; AVX512BW-LABEL: 'test'
 ; AVX512BW:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %v5, ptr %out5, align 1

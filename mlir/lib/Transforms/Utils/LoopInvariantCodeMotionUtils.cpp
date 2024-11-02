@@ -13,7 +13,7 @@
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Transforms/SideEffectUtils.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/Support/Debug.h"
 #include <queue>
 

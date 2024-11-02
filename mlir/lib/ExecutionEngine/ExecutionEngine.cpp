@@ -96,7 +96,7 @@ void SimpleObjectCache::dumpToObjectFile(StringRef outputFilename) {
   file->keep();
 }
 
-bool SimpleObjectCache::isEmpty() { return cachedObjects.size() == 0; }
+bool SimpleObjectCache::isEmpty() { return cachedObjects.empty(); }
 
 void ExecutionEngine::dumpToObjectFile(StringRef filename) {
   if (cache == nullptr) {

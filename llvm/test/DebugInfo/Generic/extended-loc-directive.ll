@@ -1,4 +1,4 @@
-; XFAIL: -aix
+; XFAIL: target={{.*}}-aix{{.*}}
 ; RUN: llc -filetype=asm -asm-verbose=0 -O0 -dwarf-extended-loc=Enable < %s | FileCheck %s --check-prefix ENABLED --check-prefix CHECK
 ; RUN: llc -filetype=asm -asm-verbose=0 -O0 -dwarf-extended-loc=Disable < %s | FileCheck %s --check-prefix DISABLED --check-prefix CHECK
 

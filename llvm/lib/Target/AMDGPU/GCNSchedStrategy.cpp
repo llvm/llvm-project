@@ -933,6 +933,9 @@ bool GCNSchedStage::shouldRevertScheduling(unsigned WavesAfter) {
 }
 
 bool OccInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
+  if (PressureAfter == PressureBefore)
+    return false;
+
   if (GCNSchedStage::shouldRevertScheduling(WavesAfter))
     return true;
 
@@ -956,6 +959,9 @@ bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
 }
 
 bool ClusteredLowOccStage::shouldRevertScheduling(unsigned WavesAfter) {
+  if (PressureAfter == PressureBefore)
+    return false;
+
   if (GCNSchedStage::shouldRevertScheduling(WavesAfter))
     return true;
 
@@ -1187,7 +1193,7 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
       // LiveRangeEdit::canRematerializeAt().
       TII->reMaterialize(*InsertPos->getParent(), InsertPos, Reg,
                          Def->getOperand(0).getSubReg(), *Def, *DAG.TRI);
-      MachineInstr *NewMI = &*(--InsertPos);
+      MachineInstr *NewMI = &*std::prev(InsertPos);
       LIS->InsertMachineInstrInMaps(*NewMI);
       LIS->removeInterval(Reg);
       LIS->createAndComputeVirtRegInterval(Reg);

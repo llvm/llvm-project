@@ -603,11 +603,9 @@ public:
   /// \param LabelSym - Label on the block of storage.
   /// \param Size - The size of the block of storage.
   /// \param CsectSym - Csect name for the block of storage.
-  /// \param ByteAlignment - The alignment of the symbol in bytes. Must be a
-  /// power of 2.
+  /// \param Alignment - The alignment of the symbol in bytes.
   virtual void emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
-                                          MCSymbol *CsectSym,
-                                          unsigned ByteAlignment);
+                                          MCSymbol *CsectSym, Align Alignment);
 
   /// Emit a symbol's linkage and visibility with a linkage directive for XCOFF.
   ///
@@ -634,7 +632,8 @@ public:
   /// \param Symbol - The function containing the trap.
   /// \param Lang - The language code for the exception entry.
   /// \param Reason - The reason code for the exception entry.
-  virtual void emitXCOFFExceptDirective(const MCSymbol *Symbol, MCSymbol *Trap,
+  virtual void emitXCOFFExceptDirective(const MCSymbol *Symbol, 
+                                        const MCSymbol *Trap,
                                         unsigned Lang, unsigned Reason,
                                         unsigned FunctionSize, bool hasDebug);
 
@@ -855,15 +854,14 @@ public:
   ///
   /// This used to implement the .align assembler directive.
   ///
-  /// \param ByteAlignment - The alignment to reach. This must be a power of
-  /// two on some targets.
+  /// \param Alignment - The alignment to reach.
   /// \param Value - The value to use when filling bytes.
   /// \param ValueSize - The size of the integer (in bytes) to emit for
   /// \p Value. This must match a native machine width.
   /// \param MaxBytesToEmit - The maximum numbers of bytes to emit, or 0. If
   /// the alignment cannot be reached in this many bytes, no bytes are
   /// emitted.
-  virtual void emitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
+  virtual void emitValueToAlignment(Align Alignment, int64_t Value = 0,
                                     unsigned ValueSize = 1,
                                     unsigned MaxBytesToEmit = 0);
 
@@ -872,14 +870,12 @@ public:
   /// This used to align code where the alignment bytes may be executed.  This
   /// can emit different bytes for different sizes to optimize execution.
   ///
-  /// \param ByteAlignment - The alignment to reach. This must be a power of
-  /// two on some targets.
+  /// \param Alignment - The alignment to reach.
   /// \param STI - The MCSubtargetInfo in operation when padding is emitted.
   /// \param MaxBytesToEmit - The maximum numbers of bytes to emit, or 0. If
   /// the alignment cannot be reached in this many bytes, no bytes are
   /// emitted.
-  virtual void emitCodeAlignment(unsigned ByteAlignment,
-                                 const MCSubtargetInfo *STI,
+  virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                  unsigned MaxBytesToEmit = 0);
 
   /// Emit some number of copies of \p Value until the byte offset \p
@@ -1109,9 +1105,8 @@ public:
                                MCSymbol *FnSym);
 
   /// Set the bundle alignment mode from now on in the section.
-  /// The argument is the power of 2 to which the alignment is set. The
-  /// value 0 means turn the bundle alignment off.
-  virtual void emitBundleAlignMode(unsigned AlignPow2);
+  /// The value 1 means turn the bundle alignment off.
+  virtual void emitBundleAlignMode(Align Alignment);
 
   /// The following instructions are a bundle-locked group.
   ///

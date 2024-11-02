@@ -1034,7 +1034,7 @@ inline bool operator!=(StringRef lhs, StringAttr rhs) { return !(lhs == rhs); }
 
 namespace mlir {
 
-/// Given a list of strides (in which MemRefType::getDynamicStrideOrOffset()
+/// Given a list of strides (in which ShapedType::kDynamic
 /// represents a dynamic value), return the single result AffineMap which
 /// represents the linearized strided layout map. Dimensions correspond to the
 /// offset followed by the strides in order. Symbols are inserted for each

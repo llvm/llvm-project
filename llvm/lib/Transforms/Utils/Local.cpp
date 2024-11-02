@@ -80,6 +80,7 @@
 #include <cstdint>
 #include <iterator>
 #include <map>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -798,7 +799,7 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB,
 
   // Splice all the instructions from PredBB to DestBB.
   PredBB->getTerminator()->eraseFromParent();
-  DestBB->getInstList().splice(DestBB->begin(), PredBB->getInstList());
+  DestBB->splice(DestBB->begin(), PredBB);
   new UnreachableInst(PredBB->getContext(), PredBB);
 
   // If the PredBB is the entry block of the function, move DestBB up to
@@ -807,7 +808,7 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB,
     DestBB->moveAfter(PredBB);
 
   if (DTU) {
-    assert(PredBB->getInstList().size() == 1 &&
+    assert(PredBB->size() == 1 &&
            isa<UnreachableInst>(PredBB->getTerminator()) &&
            "The successor list of PredBB isn't empty before "
            "applying corresponding DTU updates.");
@@ -1203,8 +1204,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
 
     // Copy over any phi, debug or lifetime instruction.
     BB->getTerminator()->eraseFromParent();
-    Succ->getInstList().splice(Succ->getFirstNonPHI()->getIterator(),
-                               BB->getInstList());
+    Succ->splice(Succ->getFirstNonPHI()->getIterator(), BB);
   } else {
     while (PHINode *PN = dyn_cast<PHINode>(&BB->front())) {
       // We explicitly check for such uses in CanPropagatePredecessorsForPHIs.
@@ -1228,7 +1228,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
 
   // Clear the successor list of BB to match updates applying to DTU later.
   if (BB->getTerminator())
-    BB->getInstList().pop_back();
+    BB->back().eraseFromParent();
   new UnreachableInst(BB->getContext(), BB);
   assert(succ_empty(BB) && "The successor list of BB isn't empty before "
                            "applying corresponding DTU updates.");
@@ -1499,7 +1499,7 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
 /// that has an associated llvm.dbg.declare or llvm.dbg.addr intrinsic.
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                            StoreInst *SI, DIBuilder &Builder) {
-  assert(DII->isAddressOfVariable());
+  assert(DII->isAddressOfVariable() || isa<DbgAssignIntrinsic>(DII));
   auto *DIVar = DII->getVariable();
   assert(DIVar && "Missing variable");
   auto *DIExpr = DII->getExpression();
@@ -2048,7 +2048,7 @@ Value *llvm::salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
 }
 
 /// A replacement for a dbg.value expression.
-using DbgValReplacement = Optional<DIExpression *>;
+using DbgValReplacement = std::optional<DIExpression *>;
 
 /// Point debug users of \p From to \p To using exprs given by \p RewriteExpr,
 /// possibly moving/undefing users to prevent use-before-def. Returns true if
@@ -2238,7 +2238,7 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool PreserveLCSSA,
   while (BBI != BBE) {
     if (!BBI->use_empty())
       BBI->replaceAllUsesWith(PoisonValue::get(BBI->getType()));
-    BB->getInstList().erase(BBI++);
+    BBI++->eraseFromParent();
     ++NumInstrsRemoved;
   }
   if (DTU) {
@@ -2308,7 +2308,7 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
                                  CI->getName() + ".noexc");
 
   // Delete the unconditional branch inserted by SplitBlock
-  BB->getInstList().pop_back();
+  BB->back().eraseFromParent();
 
   // Create the new invoke instruction.
   SmallVector<Value *, 8> InvokeArgs(CI->args());
@@ -2336,7 +2336,7 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
   CI->replaceAllUsesWith(II);
 
   // Delete the original call
-  Split->getInstList().pop_front();
+  Split->front().eraseFromParent();
   return Split;
 }
 
@@ -2389,7 +2389,9 @@ static bool markAliveBlocks(Function &F,
               }
           }
         } else if ((isa<ConstantPointerNull>(Callee) &&
-                    !NullPointerIsDefined(CI->getFunction())) ||
+                    !NullPointerIsDefined(CI->getFunction(),
+                                          cast<PointerType>(Callee->getType())
+                                              ->getAddressSpace())) ||
                    isa<UndefValue>(Callee)) {
           changeToUnreachable(CI, false, DTU);
           Changed = true;
@@ -2959,9 +2961,8 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
     I->setDebugLoc(InsertPt->getDebugLoc());
     ++II;
   }
-  DomBlock->getInstList().splice(InsertPt->getIterator(), BB->getInstList(),
-                                 BB->begin(),
-                                 BB->getTerminator()->getIterator());
+  DomBlock->splice(InsertPt->getIterator(), BB, BB->begin(),
+                   BB->getTerminator()->getIterator());
 }
 
 namespace {

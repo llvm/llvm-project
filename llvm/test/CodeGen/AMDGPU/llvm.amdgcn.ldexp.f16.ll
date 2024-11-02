@@ -74,13 +74,13 @@ define amdgpu_kernel void @ldexp_f16(
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    i32 addrspace(1)* %b) {
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load i32, i32 addrspace(1)* %b
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) {
+  %a.val = load half, ptr addrspace(1) %a
+  %b.val = load i32, ptr addrspace(1) %b
   %r.val = call half @llvm.amdgcn.ldexp.f16(half %a.val, i32 %b.val)
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -139,11 +139,11 @@ define amdgpu_kernel void @ldexp_f16_imm_a(
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-    half addrspace(1)* %r,
-    i32 addrspace(1)* %b) {
-  %b.val = load i32, i32 addrspace(1)* %b
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %b) {
+  %b.val = load i32, ptr addrspace(1) %b
   %r.val = call half @llvm.amdgcn.ldexp.f16(half 2.0, i32 %b.val)
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -202,10 +202,10 @@ define amdgpu_kernel void @ldexp_f16_imm_b(
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-    half addrspace(1)* %r,
-    half addrspace(1)* %a) {
-  %a.val = load half, half addrspace(1)* %a
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
+  %a.val = load half, ptr addrspace(1) %a
   %r.val = call half @llvm.amdgcn.ldexp.f16(half %a.val, i32 2)
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }

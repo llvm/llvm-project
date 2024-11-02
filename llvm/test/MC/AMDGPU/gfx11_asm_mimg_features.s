@@ -163,8 +163,8 @@ image_sample_d v[64:66], [v32, v16, v8], s[4:11], s[100:103] dmask:0x7 dim:SQ_RS
 image_sample_d v[64:66], v[32:39], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_2D
 // GFX11: image_sample_d v[64:66], v[32:39], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_2D ; encoding: [0x04,0x07,0x70,0xf0,0x20,0x40,0x01,0x64]
 
-image_sample_d v[64:66], v[32:47], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_3D
-// GFX11: image_sample_d v[64:66], v[32:47], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_3D ; encoding: [0x08,0x07,0x70,0xf0,0x20,0x40,0x01,0x64]
+image_sample_d v[64:66], v[32:40], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_3D
+// GFX11: image_sample_d v[64:66], v[32:40], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_3D ; encoding: [0x08,0x07,0x70,0xf0,0x20,0x40,0x01,0x64]
 
 image_sample_d v[64:66], [v32, v16, v8, v4], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_1D_ARRAY
 // GFX11: image_sample_d v[64:66], [v32, v16, v8, v4], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_1D_ARRAY ; encoding: [0x11,0x07,0x70,0xf0,0x20,0x40,0x01,0x64,0x10,0x08,0x04,0x00]
@@ -286,17 +286,17 @@ image_msaa_load v[1:2], v[5:8], s[8:15] dmask:0x2 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY 
 image_msaa_load v[10:13], [v204, v11, v14, v19], s[40:47] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY
 // GFX11: image_msaa_load v[10:13], [v204, v11, v14, v19], s[40:47] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY ; encoding: [0x1d,0x01,0x60,0xf0,0xcc,0x0a,0x0a,0x00,0x0b,0x0e,0x13,0x00]
 
-image_bvh_intersect_ray v[4:7], v[9:24], s[4:7]
-// GFX11: image_bvh_intersect_ray v[4:7], v[9:24], s[4:7] ; encoding: [0x80,0x8f,0x64,0xf0,0x09,0x04,0x01,0x00]
+image_bvh_intersect_ray v[4:7], v[9:19], s[4:7]
+// GFX11: image_bvh_intersect_ray v[4:7], v[9:19], s[4:7] ; encoding: [0x80,0x8f,0x64,0xf0,0x09,0x04,0x01,0x00]
 
 image_bvh_intersect_ray v[4:7], v[9:16], s[4:7] a16
 // GFX11: image_bvh_intersect_ray v[4:7], v[9:16], s[4:7] a16 ; encoding: [0x80,0x8f,0x65,0xf0,0x09,0x04,0x01,0x00]
 
-image_bvh64_intersect_ray v[4:7], v[9:24], s[4:7]
-// GFX11: image_bvh64_intersect_ray v[4:7], v[9:24], s[4:7] ; encoding: [0x80,0x8f,0x68,0xf0,0x09,0x04,0x01,0x00]
+image_bvh64_intersect_ray v[4:7], v[9:20], s[4:7]
+// GFX11: image_bvh64_intersect_ray v[4:7], v[9:20], s[4:7] ; encoding: [0x80,0x8f,0x68,0xf0,0x09,0x04,0x01,0x00]
 
-image_bvh64_intersect_ray v[4:7], v[9:24], s[4:7] a16
-// GFX11: image_bvh64_intersect_ray v[4:7], v[9:24], s[4:7] a16 ; encoding: [0x80,0x8f,0x69,0xf0,0x09,0x04,0x01,0x00]
+image_bvh64_intersect_ray v[4:7], v[9:17], s[4:7] a16
+// GFX11: image_bvh64_intersect_ray v[4:7], v[9:17], s[4:7] a16 ; encoding: [0x80,0x8f,0x69,0xf0,0x09,0x04,0x01,0x00]
 
 image_bvh_intersect_ray v[39:42], [v50, v46, v[20:22], v[40:42], v[47:49]], s[12:15]
 // GFX11: image_bvh_intersect_ray v[39:42], [v50, v46, v[20:22], v[40:42], v[47:49]], s[12:15] ; encoding: [0x81,0x8f,0x64,0xf0,0x32,0x27,0x03,0x00,0x2e,0x14,0x28,0x2f]

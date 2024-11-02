@@ -384,6 +384,36 @@ func.func @shru_edge() -> index {
   return %0 : index
 }
 
+// CHECK-LABEL: @and
+func.func @and() -> index {
+  %lhs = index.constant 5
+  %rhs = index.constant 1
+  // CHECK: %[[A:.*]] = index.constant 1
+  %0 = index.and %lhs, %rhs
+  // CHECK: return %[[A]]
+  return %0 : index
+}
+
+// CHECK-LABEL: @or
+func.func @or() -> index {
+  %lhs = index.constant 5
+  %rhs = index.constant 2
+  // CHECK: %[[A:.*]] = index.constant 7
+  %0 = index.or %lhs, %rhs
+  // CHECK: return %[[A]]
+  return %0 : index
+}
+
+// CHECK-LABEL: @xor
+func.func @xor() -> index {
+  %lhs = index.constant 5
+  %rhs = index.constant 1
+  // CHECK: %[[A:.*]] = index.constant 4
+  %0 = index.xor %lhs, %rhs
+  // CHECK: return %[[A]]
+  return %0 : index
+}
+
 // CHECK-LABEL: @cmp
 func.func @cmp() -> (i1, i1, i1, i1) {
   %a = index.constant 0

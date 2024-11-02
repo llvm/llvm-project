@@ -500,6 +500,11 @@ bool PPCPassConfig::addInstSelector() {
 }
 
 void PPCPassConfig::addMachineSSAOptimization() {
+  // Run CTR loops pass before any cfg modification pass to prevent the
+  // canonical form of hardware loop from being destroied.
+  if (!DisableCTRLoops && getOptLevel() != CodeGenOpt::None)
+    addPass(createPPCCTRLoopsPass());
+
   // PPCBranchCoalescingPass need to be done before machine sinking
   // since it merges empty blocks.
   if (EnableBranchCoalescing && getOptLevel() != CodeGenOpt::None)
@@ -539,16 +544,6 @@ void PPCPassConfig::addPreRegAlloc() {
   }
   if (EnableExtraTOCRegDeps)
     addPass(createPPCTOCRegDepsPass());
-
-  // Run CTR loops pass before MachinePipeliner pass.
-  // MachinePipeliner will pipeline all instructions before the terminator, but
-  // we don't want DecreaseCTRPseudo to be pipelined.
-  // Note we may lose some MachinePipeliner opportunities if we run CTR loops
-  // generation pass before MachinePipeliner and the loop is converted back to
-  // a normal loop. We can revisit this later for running PPCCTRLoops after
-  // MachinePipeliner and handling DecreaseCTRPseudo in MachinePipeliner pass.
-  if (getOptLevel() != CodeGenOpt::None)
-    addPass(createPPCCTRLoopsPass());
 
   if (getOptLevel() != CodeGenOpt::None)
     addPass(&MachinePipelinerID);

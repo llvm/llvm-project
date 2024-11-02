@@ -403,15 +403,16 @@ public:
 
   void setSupportedOpenCLOpts() override { supportAllOpenCLOpts(); }
 
-  uint64_t getPointerWidthV(unsigned AddrSpace) const override {
-    if (AddrSpace == ptr32_sptr || AddrSpace == ptr32_uptr)
+  uint64_t getPointerWidthV(LangAS AS) const override {
+    unsigned TargetAddrSpace = getTargetAddressSpace(AS);
+    if (TargetAddrSpace == ptr32_sptr || TargetAddrSpace == ptr32_uptr)
       return 32;
-    if (AddrSpace == ptr64)
+    if (TargetAddrSpace == ptr64)
       return 64;
     return PointerWidth;
   }
 
-  uint64_t getPointerAlignV(unsigned AddrSpace) const override {
+  uint64_t getPointerAlignV(LangAS AddrSpace) const override {
     return getPointerWidthV(AddrSpace);
   }
 

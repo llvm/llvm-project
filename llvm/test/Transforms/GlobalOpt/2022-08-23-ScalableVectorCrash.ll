@@ -1,4 +1,4 @@
-; RUN: opt -globalopt < %s
+; RUN: opt -passes=globalopt < %s
 
 ; Ensure we don't ICE by trying to optimize a scalable vector load of a global
 ; variable.

@@ -14,6 +14,7 @@ include "mlir/Dialect/Index/IR/IndexEnums.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/OpBase.td"
 
 //===----------------------------------------------------------------------===//
@@ -344,6 +345,63 @@ def Index_ShrUOp : IndexBinaryOp<"shru"> {
 }
 
 //===----------------------------------------------------------------------===//
+// AndOp
+//===----------------------------------------------------------------------===//
+
+def Index_AndOp : IndexBinaryOp<"and"> {
+  let summary = "index bitwise and";
+  let description = [{
+    The `index.and` operation takes two index values and computes their bitwise
+    and.
+
+    Example:
+
+    ```mlir
+    // c = a & b
+    %c = index.and %a, %b
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// OrOp
+//===----------------------------------------------------------------------===//
+
+def Index_OrOp : IndexBinaryOp<"or"> {
+  let summary = "index bitwise or";
+  let description = [{
+    The `index.or` operation takes two index values and computes their bitwise
+    or.
+
+    Example:
+
+    ```mlir
+    // c = a | b
+    %c = index.or %a, %b
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// XorOp
+//===----------------------------------------------------------------------===//
+
+def Index_XOrOp : IndexBinaryOp<"xor"> {
+  let summary = "index bitwise xor";
+  let description = [{
+    The `index.xor` operation takes two index values and computes their bitwise
+    xor.
+
+    Example:
+
+    ```mlir
+    // c = a ^ b
+    %c = index.xor %a, %b
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // CastSOp
 //===----------------------------------------------------------------------===//
 
@@ -471,7 +529,10 @@ def Index_SizeOfOp : IndexOp<"sizeof"> {
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
-def Index_ConstantOp : IndexOp<"constant", [ConstantLike]> {
+def Index_ConstantOp : IndexOp<"constant", [
+    ConstantLike,
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
+  ]> {
   let summary = "index constant";
   let description = [{
     The `index.constant` operation produces an index-typed SSA value equal to
@@ -496,7 +557,10 @@ def Index_ConstantOp : IndexOp<"constant", [ConstantLike]> {
 // BoolConstantOp
 //===----------------------------------------------------------------------===//
 
-def Index_BoolConstantOp : IndexOp<"bool.constant", [ConstantLike]> {
+def Index_BoolConstantOp : IndexOp<"bool.constant", [
+    ConstantLike,
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
+  ]> {
   let summary = "boolean constant";
   let description = [{
     The `index.bool.constant` operation produces an bool-typed SSA value equal

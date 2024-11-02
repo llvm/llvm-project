@@ -733,8 +733,8 @@ define i64 @imm_left_shifted_lui_2() nounwind {
 define i64 @imm_left_shifted_lui_3() nounwind {
 ; RV32I-LABEL: imm_left_shifted_lui_3:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a0, 1
-; RV32I-NEXT:    addi a1, a0, 1
+; RV32I-NEXT:    lui a1, 1
+; RV32I-NEXT:    addi a1, a1, 1
 ; RV32I-NEXT:    li a0, 0
 ; RV32I-NEXT:    ret
 ;
@@ -2316,8 +2316,8 @@ define i64 @li_rori_1() {
 define i64 @li_rori_2() {
 ; RV32I-LABEL: li_rori_2:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a0, 720896
-; RV32I-NEXT:    addi a1, a0, -1
+; RV32I-NEXT:    lui a1, 720896
+; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    li a0, -6
 ; RV32I-NEXT:    ret
 ;

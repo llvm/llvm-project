@@ -766,3 +766,24 @@ void use2() {
   __iterator_traits_member_pointer_or_arrow_or_void<counted_iterator<int>> f;
 }
 }// namespace InheritedFromPartialSpec
+
+namespace GH48182 {
+template<typename, typename..., typename = int> // expected-error{{template parameter pack must be the last template parameter}}
+concept invalid = true;
+
+template<typename> requires invalid<int> // expected-error{{use of undeclared identifier 'invalid'}}
+no errors are printed
+;
+
+static_assert(invalid<int> also here ; // expected-error{{use of undeclared identifier 'invalid'}}
+
+int foo() {
+    bool b;
+    b = invalid<int> not just in declarations; // expected-error{{expected ';' after expression}}
+                                               // expected-error@-1{{use of undeclared identifier 'invalid'}}
+                                               // expected-error@-2{{expected ';' after expression}}
+                                               // expected-error@-3{{use of undeclared identifier 'just'}}
+                                               // expected-error@-4{{unknown type name 'in'}}
+    return b;
+}
+} // namespace GH48182

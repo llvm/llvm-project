@@ -90,8 +90,8 @@ define i64 @dont_fold_urem_i64(i64 %x) {
 ; CHECK-LABEL: dont_fold_urem_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stw 0, 4(1)
 ; CHECK-NEXT:    stwu 1, -16(1)
+; CHECK-NEXT:    stw 0, 20(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset lr, 4
 ; CHECK-NEXT:    li 5, 0

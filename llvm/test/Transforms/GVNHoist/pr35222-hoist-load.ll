@@ -1,4 +1,4 @@
-; RUN: opt -S -gvn-hoist < %s | FileCheck %s
+; RUN: opt -S -passes=gvn-hoist < %s | FileCheck %s
 ; CHECK-LABEL: build_tree
 ; CHECK: load
 ; CHECK: load

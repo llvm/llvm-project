@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -O1 -disable-llvm-passes -emit-llvm %s -o - -triple=x86_64-linux-gnu | opt --lower-expect -S | FileCheck %s
+// RUN: %clang_cc1 -O1 -disable-llvm-passes -emit-llvm %s -o - -triple=x86_64-linux-gnu | opt -passes=lower-expect -S | FileCheck %s
 
 // Verifies the output of __builtin_expect versus the output of the likelihood
 // attributes. They should generate the same probabilities for the branches.

@@ -16,5 +16,9 @@ if(LIBOMP_OMPD_SUPPORT)
     add_subdirectory(src)
     if(LIBOMP_OMPD_GDB_SUPPORT)
         add_subdirectory(gdb-plugin)
+        # temporarily disabled
+        # test/CMakeLists.txt breaks DeviceRTL in LLVM_ENABLE_PROJECTS builds.
+        # find_package(LLVM) is likely the source of the trouble.
+        # add_subdirectory(test)
     endif()
 endif()

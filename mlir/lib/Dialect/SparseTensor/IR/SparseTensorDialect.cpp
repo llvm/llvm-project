@@ -41,6 +41,18 @@ static bool acceptBitWidth(unsigned bitWidth) {
   }
 }
 
+Type SparseTensorEncodingAttr::getPointerType() const {
+  unsigned ptrWidth = getPointerBitWidth();
+  Type indexType = IndexType::get(getContext());
+  return ptrWidth ? IntegerType::get(getContext(), ptrWidth) : indexType;
+}
+
+Type SparseTensorEncodingAttr::getIndexType() const {
+  unsigned idxWidth = getIndexBitWidth();
+  Type indexType = IndexType::get(getContext());
+  return idxWidth ? IntegerType::get(getContext(), idxWidth) : indexType;
+}
+
 Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseLess()))
     return {};
@@ -51,7 +63,7 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseGreater()))
     return {};
   // Process the data from the parsed dictionary value into struct-like data.
-  SmallVector<DimLevelType, 4> dlt;
+  SmallVector<DimLevelType> dlt;
   AffineMap dimOrd = {};
   AffineMap higherOrd = {};
   unsigned ptr = 0;
@@ -300,7 +312,10 @@ uint64_t mlir::sparse_tensor::toStoredDim(const SparseTensorEncodingAttr &enc,
     auto order = enc.getDimOrdering();
     if (order) {
       assert(order.isPermutation());
-      return order.getPermutedPosition(d);
+      auto maybePos =
+          order.getResultPosition(getAffineDimExpr(d, enc.getContext()));
+      assert(maybePos.has_value());
+      return *maybePos;
     }
   }
   return d;
@@ -334,6 +349,13 @@ static LogicalResult isMatchingWidth(Value result, unsigned width) {
   return failure();
 }
 
+LogicalResult NewOp::verify() {
+  if (getExpandSymmetry() &&
+      getResult().getType().cast<RankedTensorType>().getRank() != 2)
+    return emitOpError("expand_symmetry can only be used for 2D tensors");
+  return success();
+}
+
 LogicalResult ConvertOp::verify() {
   if (auto tp1 = getSource().getType().dyn_cast<RankedTensorType>()) {
     if (auto tp2 = getDest().getType().dyn_cast<RankedTensorType>()) {
@@ -345,7 +367,7 @@ LogicalResult ConvertOp::verify() {
       // (e.g. 10 vs. 10, 10 vs. ?, or ? vs. ?), but reject direct mismatches or
       // matches that would need a runtime assert (e.g. 10 vs. 20 or ? vs. 10).
       for (unsigned d = 0, rank = tp1.getRank(); d < rank; d++)
-        if (shape1[d] != shape2[d] && shape2[d] != ShapedType::kDynamicSize)
+        if (shape1[d] != shape2[d] && shape2[d] != ShapedType::kDynamic)
           return emitError("unexpected conversion mismatch in dimension ") << d;
       return success();
     }
@@ -499,7 +521,7 @@ LogicalResult ConcatenateOp::verify() {
   for (auto type : getInputs().getTypes()) {
     auto shape = type.cast<RankedTensorType>().getShape();
     for (auto dim : shape) {
-      if (dim == ShapedType::kDynamicSize)
+      if (ShapedType::isDynamic(dim))
         return emitError("Only statically-sized input tensors are supported.");
     }
   }
@@ -522,7 +544,7 @@ LogicalResult ConcatenateOp::verify() {
   for (unsigned i = 0; i < rank; i++) {
     auto dstDim = dstTp.getShape()[i];
     if (i == concatDim) {
-      if (dstDim != ShapedType::kDynamicSize) {
+      if (!ShapedType::isDynamic(dstDim)) {
         unsigned sumDim = 0;
         for (auto src : getInputs()) {
           // If we reach here, all inputs should have static shapes.
@@ -540,7 +562,7 @@ LogicalResult ConcatenateOp::verify() {
       int64_t prev = dstDim;
       for (auto src : getInputs()) {
         auto d = src.getType().cast<RankedTensorType>().getShape()[i];
-        if (prev != ShapedType::kDynamicSize && d != prev)
+        if (!ShapedType::isDynamic(prev) && d != prev)
           return emitError("All dimensions (expect for the concatenating one) "
                            "should be equal.");
         prev = d;
@@ -601,7 +623,7 @@ void ForeachOp::build(
   auto rtp = tensor.getType().cast<RankedTensorType>();
   int64_t rank = rtp.getRank();
 
-  SmallVector<Type, 4> blockArgTypes;
+  SmallVector<Type> blockArgTypes;
   // Starts with n index.
   std::fill_n(std::back_inserter(blockArgTypes), rank, builder.getIndexType());
   // Followed by one value.
@@ -609,7 +631,7 @@ void ForeachOp::build(
   // Followed by reduction variable.
   blockArgTypes.append(initArgs.getTypes().begin(), initArgs.getTypes().end());
 
-  SmallVector<Location, 4> blockArgLocs;
+  SmallVector<Location> blockArgLocs;
   std::fill_n(std::back_inserter(blockArgLocs), blockArgTypes.size(),
               tensor.getLoc());
 
@@ -701,7 +723,7 @@ LogicalResult SortOp::verify() {
       int64_t dim = mtp.getShape()[0];
       // We can't check the size of dynamic dimension at compile-time, but all
       // xs and ys should have a dimension not less than n at runtime.
-      if (n && dim != ShapedType::kDynamicSize && dim < n.value())
+      if (n && !ShapedType::isDynamic(dim) && dim < n.value())
         return emitError(llvm::formatv("xs and ys need to have a dimension >= n"
                                        ": {0} < {1}",
                                        dim, n.value()));
@@ -744,7 +766,7 @@ LogicalResult SortCooOp::verify() {
   auto checkDim = [&](Value v, uint64_t min, const char *message) {
     MemRefType tp = v.getType().cast<MemRefType>();
     int64_t dim = tp.getShape()[0];
-    if (dim != ShapedType::kDynamicSize && dim < (int64_t)min) {
+    if (!ShapedType::isDynamic(dim) && dim < (int64_t)min) {
       emitError(llvm::formatv("{0} got {1} < {2}", message, dim, min));
     }
   };

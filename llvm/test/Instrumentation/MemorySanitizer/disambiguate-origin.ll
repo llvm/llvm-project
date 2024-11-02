@@ -20,18 +20,18 @@ target triple = "x86_64-unknown-linux-gnu"
 declare void @OneArg(i32 noundef %a) nounwind uwtable sanitize_memory;
 declare void @ManyArgs(i32 noundef %a, i32 noundef %b, i32 noundef %c) nounwind uwtable sanitize_memory;
 
-define void @TestOne(i32* noundef %a)  nounwind uwtable sanitize_memory {
+define void @TestOne(ptr noundef %a)  nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @TestOne(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1:![0-9]+]]
-; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[A:%.*]], align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i32* [[A]] to i64, !dbg [[DBG1]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A:%.*]], align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[TMP0]], 87960930222080, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to i32*, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP1]], 17592186044416, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to i32*, !dbg [[DBG1]]
-; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, i32* [[TMP2]], align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP4]], align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr, !dbg [[DBG1]]
+; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP2]], align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[_MSLD]], 0, !dbg [[DBG7:![0-9]+]]
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !dbg [[DBG7]], !prof [[PROF8:![0-9]+]]
 ; CHECK:       6:
@@ -42,39 +42,39 @@ define void @TestOne(i32* noundef %a)  nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %v = load i32, i32* %a, !dbg !11
+  %v = load i32, ptr %a, !dbg !11
   call void @OneArg(i32 noundef %v), !dbg !10
   ret void
 }
 
-define void @TestMany(i32* noundef %a)  nounwind uwtable sanitize_memory {
+define void @TestMany(ptr noundef %a)  nounwind uwtable sanitize_memory {
 ; CHECK-LABEL: @TestMany(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG1]]
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[A:%.*]], align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i32* [[A]] to i64, !dbg [[DBG1]]
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[A:%.*]], align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[TMP0]], 87960930222080, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to i32*, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr, !dbg [[DBG1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP1]], 17592186044416, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to i32*, !dbg [[DBG1]]
-; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, i32* [[TMP2]], align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP4]], align 4, !dbg [[DBG1]]
-; CHECK-NEXT:    [[Y:%.*]] = load i32, i32* [[A]], align 4, !dbg [[DBG9:![0-9]+]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint i32* [[A]] to i64, !dbg [[DBG9]]
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr, !dbg [[DBG1]]
+; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP2]], align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4, !dbg [[DBG1]]
+; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr [[A]], align 4, !dbg [[DBG9:![0-9]+]]
+; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[A]] to i64, !dbg [[DBG9]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 87960930222080, !dbg [[DBG9]]
-; CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to i32*, !dbg [[DBG9]]
+; CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr, !dbg [[DBG9]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP7]], 17592186044416, !dbg [[DBG9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to i32*, !dbg [[DBG9]]
-; CHECK-NEXT:    [[_MSLD1:%.*]] = load i32, i32* [[TMP8]], align 4, !dbg [[DBG9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, i32* [[TMP10]], align 4, !dbg [[DBG9]]
-; CHECK-NEXT:    [[Z:%.*]] = load i32, i32* [[A]], align 4, !dbg [[DBG10:![0-9]+]]
-; CHECK-NEXT:    [[TMP12:%.*]] = ptrtoint i32* [[A]] to i64, !dbg [[DBG10]]
+; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr, !dbg [[DBG9]]
+; CHECK-NEXT:    [[_MSLD1:%.*]] = load i32, ptr [[TMP8]], align 4, !dbg [[DBG9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4, !dbg [[DBG9]]
+; CHECK-NEXT:    [[Z:%.*]] = load i32, ptr [[A]], align 4, !dbg [[DBG10:![0-9]+]]
+; CHECK-NEXT:    [[TMP12:%.*]] = ptrtoint ptr [[A]] to i64, !dbg [[DBG10]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = xor i64 [[TMP12]], 87960930222080, !dbg [[DBG10]]
-; CHECK-NEXT:    [[TMP14:%.*]] = inttoptr i64 [[TMP13]] to i32*, !dbg [[DBG10]]
+; CHECK-NEXT:    [[TMP14:%.*]] = inttoptr i64 [[TMP13]] to ptr, !dbg [[DBG10]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP13]], 17592186044416, !dbg [[DBG10]]
-; CHECK-NEXT:    [[TMP16:%.*]] = inttoptr i64 [[TMP15]] to i32*, !dbg [[DBG10]]
-; CHECK-NEXT:    [[_MSLD2:%.*]] = load i32, i32* [[TMP14]], align 4, !dbg [[DBG10]]
-; CHECK-NEXT:    [[TMP17:%.*]] = load i32, i32* [[TMP16]], align 4, !dbg [[DBG10]]
+; CHECK-NEXT:    [[TMP16:%.*]] = inttoptr i64 [[TMP15]] to ptr, !dbg [[DBG10]]
+; CHECK-NEXT:    [[_MSLD2:%.*]] = load i32, ptr [[TMP14]], align 4, !dbg [[DBG10]]
+; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP16]], align 4, !dbg [[DBG10]]
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[_MSLD]], 0, !dbg [[DBG7]]
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP18:%.*]], label [[TMP20:%.*]], !dbg [[DBG7]], !prof [[PROF8]]
 ; CHECK:       18:
@@ -100,9 +100,9 @@ define void @TestMany(i32* noundef %a)  nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %x = load i32, i32* %a, !dbg !11
-  %y = load i32, i32* %a, !dbg !12
-  %z = load i32, i32* %a, !dbg !13
+  %x = load i32, ptr %a, !dbg !11
+  %y = load i32, ptr %a, !dbg !12
+  %z = load i32, ptr %a, !dbg !13
   call void @ManyArgs(i32 noundef %x, i32 noundef %y, i32 noundef %z), !dbg !10
   ret void
 }

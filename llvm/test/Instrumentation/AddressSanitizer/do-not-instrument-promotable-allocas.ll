@@ -6,8 +6,8 @@ target triple = "x86_64-apple-macosx10.10.0"
 define i32 @test_promotable_allocas() sanitize_address {
 entry:
 ; CHECK: %0 = alloca i32, align 4
-; CHECK: store i32 0, i32* %0, align 4
-; CHECK: %1 = load i32, i32* %0, align 4
+; CHECK: store i32 0, ptr %0, align 4
+; CHECK: %1 = load i32, ptr %0, align 4
 ; CHECK: ret i32 %1
 
 ; CHECK-NOT: __asan_stack_malloc_0
@@ -15,7 +15,7 @@ entry:
 ; CHECK-NOT: call void @__asan_report_store4
 
   %0 = alloca i32, align 4
-  store i32 0, i32* %0, align 4
-  %1 = load i32, i32* %0, align 4
+  store i32 0, ptr %0, align 4
+  %1 = load i32, ptr %0, align 4
   ret i32 %1
 }

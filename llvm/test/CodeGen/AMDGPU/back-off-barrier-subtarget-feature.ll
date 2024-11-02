@@ -8,7 +8,7 @@
 ; Subtargets must wait for outstanding memory instructions before a barrier if
 ; they cannot back off of the barrier.
 
-define void @back_off_barrier_no_fence(i32* %in, i32* %out) #0 {
+define void @back_off_barrier_no_fence(ptr %in, ptr %out) #0 {
 ; GFX9-NO-BACKOFF-LABEL: back_off_barrier_no_fence:
 ; GFX9-NO-BACKOFF:       ; %bb.0:
 ; GFX9-NO-BACKOFF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -40,13 +40,13 @@ define void @back_off_barrier_no_fence(i32* %in, i32* %out) #0 {
 ; GFX10-BACKOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-BACKOFF-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-BACKOFF-NEXT:    s_setpc_b64 s[30:31]
-  %load = load i32, i32* %in
+  %load = load i32, ptr %in
   call void @llvm.amdgcn.s.barrier()
-  store i32 %load, i32* %out
+  store i32 %load, ptr %out
   ret void
 }
 
-define void @back_off_barrier_with_fence(i32* %in, i32* %out) #0 {
+define void @back_off_barrier_with_fence(ptr %in, ptr %out) #0 {
 ; GFX9-NO-BACKOFF-LABEL: back_off_barrier_with_fence:
 ; GFX9-NO-BACKOFF:       ; %bb.0:
 ; GFX9-NO-BACKOFF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -84,11 +84,11 @@ define void @back_off_barrier_with_fence(i32* %in, i32* %out) #0 {
 ; GFX10-BACKOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-BACKOFF-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-BACKOFF-NEXT:    s_setpc_b64 s[30:31]
-  %load = load i32, i32* %in
+  %load = load i32, ptr %in
   fence syncscope("workgroup") release
   call void @llvm.amdgcn.s.barrier()
   fence syncscope("workgroup") acquire
-  store i32 %load, i32* %out
+  store i32 %load, ptr %out
   ret void
 }
 

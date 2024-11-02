@@ -41,7 +41,7 @@ subroutine test(name, value, length, status, trim_name, errmsg)
 ! CHECK:  %[[VAL_27:.*]] = fir.convert %[[VAL_9]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 ! CHECK:  %[[VAL_28:.*]] = fir.convert %[[VAL_13]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 ! CHECK:  %[[VAL_29:.*]] = fir.convert %[[VAL_17]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
-! CHECK:  %[[VAL_31:.*]] = fir.call @_FortranAEnvVariableValue(%[[VAL_27]], %[[VAL_28]], %[[VAL_32:.*]], %[[VAL_29]], %{{.*}}, %{{.*}}) : (!fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:  %[[VAL_31:.*]] = fir.call @_FortranAEnvVariableValue(%[[VAL_27]], %[[VAL_28]], %[[VAL_32:.*]], %[[VAL_29]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK:  %[[VAL_33:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i32>) -> i64
 ! CHECK:  %[[VAL_34:.*]] = arith.constant 0 : i64
 ! CHECK:  %[[VAL_35:.*]] = arith.cmpi ne, %[[VAL_33]], %[[VAL_34]] : i64
@@ -53,7 +53,7 @@ subroutine test(name, value, length, status, trim_name, errmsg)
 ! CHECK:  %[[VAL_38:.*]] = arith.cmpi ne, %[[VAL_36]], %[[VAL_37]] : i64
 ! CHECK:  fir.if %[[VAL_38]] {
 ! CHECK:    %[[VAL_41:.*]] = fir.convert %[[VAL_9]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
-! CHECK:    %[[VAL_43:.*]] = fir.call @_FortranAEnvVariableLength(%[[VAL_41]], %[[VAL_32]], %{{.*}}, %{{.*}}) : (!fir.box<none>, i1, !fir.ref<i8>, i32) -> i64
+! CHECK:    %[[VAL_43:.*]] = fir.call @_FortranAEnvVariableLength(%[[VAL_41]], %[[VAL_32]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, i1, !fir.ref<i8>, i32) -> i64
 ! CHECK:    %[[VAL_44:.*]] = fir.convert %[[VAL_43]] : (i64) -> i32
 ! CHECK:    fir.store %[[VAL_44]] to %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:  }

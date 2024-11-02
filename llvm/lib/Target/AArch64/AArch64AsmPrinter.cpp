@@ -256,7 +256,7 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
 void AArch64AsmPrinter::emitFunctionHeaderComment() {
   const AArch64FunctionInfo *FI = MF->getInfo<AArch64FunctionInfo>();
   Optional<std::string> OutlinerString = FI->getOutliningStyle();
-  if (OutlinerString != None)
+  if (OutlinerString != std::nullopt)
     OutStreamer->getCommentOS() << ' ' << OutlinerString;
 }
 
@@ -306,7 +306,7 @@ void AArch64AsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
   //   ;DATA: higher 32 bits of the address of the trampoline
   //   LDP X0, X30, [SP], #16 ; pop X0 and the link register from the stack
   //
-  OutStreamer->emitCodeAlignment(4, &getSubtargetInfo());
+  OutStreamer->emitCodeAlignment(Align(4), &getSubtargetInfo());
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
   OutStreamer->emitLabel(CurSled);
   auto Target = OutContext.createTempSymbol();

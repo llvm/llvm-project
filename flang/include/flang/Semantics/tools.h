@@ -53,6 +53,7 @@ const Symbol *FindInterface(const Symbol &);
 const Symbol *FindSubprogram(const Symbol &);
 const Symbol *FindFunctionResult(const Symbol &);
 const Symbol *FindOverriddenBinding(const Symbol &);
+const Symbol *FindGlobal(const Symbol &);
 
 const DeclTypeSpec *FindParentTypeSpec(const DerivedTypeSpec &);
 const DeclTypeSpec *FindParentTypeSpec(const DeclTypeSpec &);
@@ -608,11 +609,6 @@ std::optional<ArraySpec> ToArraySpec(
 // Searches a derived type and a scope for a particular user defined I/O
 // procedure.
 bool HasDefinedIo(
-    GenericKind::DefinedIo, const DerivedTypeSpec &, const Scope * = nullptr);
-// Seeks out an allocatable or pointer ultimate component that is not
-// nested in a nonallocatable/nonpointer component with a specific
-// defined I/O procedure.
-const Symbol *FindUnsafeIoDirectComponent(
     GenericKind::DefinedIo, const DerivedTypeSpec &, const Scope * = nullptr);
 
 // Some intrinsic operators have more than one name (e.g. `operator(.eq.)` and

@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -tensor-copy-insertion="allow-return-allocs" | FileCheck %s
-// RUN: mlir-opt %s -tensor-copy-insertion="bufferize-function-boundaries allow-return-allocs" | FileCheck %s --check-prefix=CHECK-FUNC
+// RUN: mlir-opt %s -test-tensor-copy-insertion="allow-return-allocs" | FileCheck %s
+// RUN: mlir-opt %s -test-tensor-copy-insertion="bufferize-function-boundaries allow-return-allocs" | FileCheck %s --check-prefix=CHECK-FUNC
 
 #DCSR = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed", "compressed" ],
@@ -52,9 +52,9 @@ func.func @sparse_tensor_convert() -> tensor<20x40xf32> {
 }
 
 // CHECK-LABEL: func @update_notinplace(
-//  CHECK-SAME:    %[[argb:.*]]: tensor<10xf32> 
+//  CHECK-SAME:    %[[argb:.*]]: tensor<10xf32>
 // CHECK-FUNC-LABEL: func @update_notinplace(
-//  CHECK-FUNC-SAME:    %[[argb:.*]]: tensor<10xf32> 
+//  CHECK-FUNC-SAME:    %[[argb:.*]]: tensor<10xf32>
 func.func @update_notinplace(%argb: tensor<10xf32>, %arga: tensor<10xf32, #SV>)
   -> (tensor<10xf32>, tensor<10xf32>)
 {

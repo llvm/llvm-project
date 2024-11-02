@@ -354,6 +354,18 @@ void ReportBadParamsToAnnotateContiguousContainer(uptr beg, uptr end,
   in_report.ReportError(error);
 }
 
+void ReportBadParamsToAnnotateDoubleEndedContiguousContainer(
+    uptr storage_beg, uptr storage_end, uptr old_container_beg,
+    uptr old_container_end, uptr new_container_beg, uptr new_container_end,
+    BufferedStackTrace *stack) {
+  ScopedInErrorReport in_report;
+  ErrorBadParamsToAnnotateDoubleEndedContiguousContainer error(
+      GetCurrentTidOrInvalid(), stack, storage_beg, storage_end,
+      old_container_beg, old_container_end, new_container_beg,
+      new_container_end);
+  in_report.ReportError(error);
+}
+
 void ReportODRViolation(const __asan_global *g1, u32 stack_id1,
                         const __asan_global *g2, u32 stack_id2) {
   ScopedInErrorReport in_report;

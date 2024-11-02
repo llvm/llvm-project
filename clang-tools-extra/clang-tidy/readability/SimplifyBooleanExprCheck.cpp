@@ -567,7 +567,7 @@ public:
       if (Check->reportDeMorgan(Context, Op, BinaryOp, !IsProcessing, parent(),
                                 Parens) &&
           !Check->areDiagsSelfContained()) {
-        llvm::SaveAndRestore<bool> RAII(IsProcessing, true);
+        llvm::SaveAndRestore RAII(IsProcessing, true);
         return Base::TraverseUnaryOperator(Op);
       }
     }

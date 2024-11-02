@@ -111,21 +111,21 @@ def vfp_f64imm : Operand<f64>,
 }
 
 def alignedload16 : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() >= 2;
+  return cast<LoadSDNode>(N)->getAlign() >= 2;
 }]>;
 
 def alignedload32 : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() >= 4;
+  return cast<LoadSDNode>(N)->getAlign() >= 4;
 }]>;
 
 def alignedstore16 : PatFrag<(ops node:$val, node:$ptr),
                              (store node:$val, node:$ptr), [{
-  return cast<StoreSDNode>(N)->getAlignment() >= 2;
+  return cast<StoreSDNode>(N)->getAlign() >= 2;
 }]>;
 
 def alignedstore32 : PatFrag<(ops node:$val, node:$ptr),
                              (store node:$val, node:$ptr), [{
-  return cast<StoreSDNode>(N)->getAlignment() >= 4;
+  return cast<StoreSDNode>(N)->getAlign() >= 4;
 }]>;
 
 // The VCVT to/from fixed-point instructions encode the 'fbits' operand

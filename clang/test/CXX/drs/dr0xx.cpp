@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
 // RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
+// RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
+// RUN: %clang_cc1 -std=c++2b %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
 
 namespace dr1 { // dr1: no
   namespace X { extern "C" void dr1_f(int a = 1); }
@@ -448,6 +450,94 @@ namespace dr33 { // dr33: yes
 
 // dr34: na
 // dr35: dup 178
+
+namespace dr36 { // dr36: yes
+namespace example1 {
+  namespace A {
+    int i;
+  }
+  
+  namespace A1 {
+    using A::i;
+    using A::i;
+  }
+  
+  void f()
+  {
+    using A::i;
+    using A::i;
+  }
+}
+
+namespace example2 {
+  struct A
+  {
+    int i;
+    static int j;
+  };
+
+  struct B : A { };
+  struct C : A { };
+
+  struct D : virtual B, virtual C
+  {
+    using B::i; // expected-note {{previous using declaration}}
+    using B::i; // expected-error {{redeclaration of using declaration}}
+
+    using C::i; // expected-note {{previous using declaration}}
+    using C::i; // expected-error {{redeclaration of using declaration}}
+
+    using B::j; // expected-note {{previous using declaration}}
+    using B::j; // expected-error {{redeclaration of using declaration}}
+
+    using C::j; // expected-note {{previous using declaration}}
+    using C::j; // expected-error {{redeclaration of using declaration}}
+  };
+}
+
+namespace example3 {
+  template<typename T>
+  struct A
+  {
+    T i;
+    static T j;
+  };
+
+  template<typename T>
+  struct B : A<T> { };
+  template<typename T>
+  struct C : A<T> { };
+
+  template<typename T>
+  struct D : virtual B<T>, virtual C<T>
+  {
+    using B<T>::i; // expected-note {{previous using declaration}}
+    using B<T>::i; // expected-error {{redeclaration of using declaration}}
+
+    using C<T>::i; // expected-note {{previous using declaration}}
+    using C<T>::i; // expected-error {{redeclaration of using declaration}}
+
+    using B<T>::j; // expected-note {{previous using declaration}}
+    using B<T>::j; // expected-error {{redeclaration of using declaration}}
+
+    using C<T>::j; // expected-note {{previous using declaration}}
+    using C<T>::j; // expected-error {{redeclaration of using declaration}}
+  };
+}
+namespace example4 {
+  template<typename T>
+  struct E {
+    T k;
+  };
+
+  template<typename T>
+  struct G : E<T> {
+    using E<T>::k; // expected-note {{previous using declaration}}
+    using E<T>::k; // expected-error {{redeclaration of using declaration}}
+  };
+}
+}
+
 // dr37: sup 475
 
 namespace dr38 { // dr38: yes
@@ -699,6 +789,8 @@ namespace dr58 { // dr58: yes
 }
 
 namespace dr59 { // dr59: yes
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-volatile"
   template<typename T> struct convert_to { operator T() const; };
   struct A {}; // expected-note 5+{{candidate}}
   struct B : A {}; // expected-note 0+{{candidate}}
@@ -732,6 +824,7 @@ namespace dr59 { // dr59: yes
   int n3 = convert_to<const int>();
   int n4 = convert_to<const volatile int>();
   int n5 = convert_to<const volatile int&>();
+#pragma clang diagnostic pop
 }
 
 namespace dr60 { // dr60: yes

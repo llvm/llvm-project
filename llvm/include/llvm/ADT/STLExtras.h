@@ -376,13 +376,6 @@ void adl_swap(T &&lhs, T &&rhs) noexcept(
   adl_detail::adl_swap(std::forward<T>(lhs), std::forward<T>(rhs));
 }
 
-/// Test whether \p RangeOrContainer is empty. Similar to C++17 std::empty.
-template <typename T>
-LLVM_DEPRECATED("Use x.empty() instead", "empty")
-constexpr bool empty(const T &RangeOrContainer) {
-  return adl_begin(RangeOrContainer) == adl_end(RangeOrContainer);
-}
-
 /// Returns true if the given container only contains a single element.
 template <typename ContainerTy> bool hasSingleElement(ContainerTy &&C) {
   auto B = std::begin(C), E = std::end(C);
@@ -727,11 +720,14 @@ make_early_inc_range(RangeT &&Range) {
                     EarlyIncIteratorT(std::end(std::forward<RangeT>(Range))));
 }
 
-// forward declarations required by zip_shortest/zip_first/zip_longest
+// Forward declarations required by zip_shortest/zip_equal/zip_first/zip_longest
 template <typename R, typename UnaryPredicate>
 bool all_of(R &&range, UnaryPredicate P);
+
 template <typename R, typename UnaryPredicate>
 bool any_of(R &&range, UnaryPredicate P);
+
+template <typename T> bool all_equal(std::initializer_list<T> Values);
 
 namespace detail {
 
@@ -877,19 +873,41 @@ public:
 
 } // end namespace detail
 
-/// zip iterator for two or more iteratable types.
+/// zip iterator for two or more iteratable types. Iteration continues until the
+/// end of the *shortest* iteratee is reached.
 template <typename T, typename U, typename... Args>
 detail::zippy<detail::zip_shortest, T, U, Args...> zip(T &&t, U &&u,
-                                                       Args &&... args) {
+                                                       Args &&...args) {
   return detail::zippy<detail::zip_shortest, T, U, Args...>(
       std::forward<T>(t), std::forward<U>(u), std::forward<Args>(args)...);
 }
 
+/// zip iterator that assumes that all iteratees have the same length.
+/// In builds with assertions on, this assumption is checked before the
+/// iteration starts.
+template <typename T, typename U, typename... Args>
+detail::zippy<detail::zip_first, T, U, Args...> zip_equal(T &&t, U &&u,
+                                                          Args &&...args) {
+  assert(all_equal({std::distance(adl_begin(t), adl_end(t)),
+                    std::distance(adl_begin(u), adl_end(u)),
+                    std::distance(adl_begin(args), adl_end(args))...}) &&
+         "Iteratees do not have equal length");
+  return detail::zippy<detail::zip_first, T, U, Args...>(
+      std::forward<T>(t), std::forward<U>(u), std::forward<Args>(args)...);
+}
+
 /// zip iterator that, for the sake of efficiency, assumes the first iteratee to
-/// be the shortest.
+/// be the shortest. Iteration continues until the end of the first iteratee is
+/// reached. In builds with assertions on, we check that the assumption about
+/// the first iteratee being the shortest holds.
 template <typename T, typename U, typename... Args>
 detail::zippy<detail::zip_first, T, U, Args...> zip_first(T &&t, U &&u,
-                                                          Args &&... args) {
+                                                          Args &&...args) {
+  assert(std::distance(adl_begin(t), adl_end(t)) <=
+             std::min({std::distance(adl_begin(u), adl_end(u)),
+                       std::distance(adl_begin(args), adl_end(args))...}) &&
+         "First iteratee is not the shortest");
+
   return detail::zippy<detail::zip_first, T, U, Args...>(
       std::forward<T>(t), std::forward<U>(u), std::forward<Args>(args)...);
 }
@@ -906,7 +924,7 @@ template <typename Iter>
 auto deref_or_none(const Iter &I, const Iter &End) -> llvm::Optional<
     std::remove_const_t<std::remove_reference_t<decltype(*I)>>> {
   if (I == End)
-    return None;
+    return std::nullopt;
   return *I;
 }
 

@@ -7,7 +7,7 @@
 //  CHECK-SAME: memref<1xindex>, memref<3xindex>, memref<?xindex>, memref<?xindex>, memref<?xf64>
 //   CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-//   CHECK-DAG: %[[F0:.*]] = arith.constant 0.{{0*}}e+00 : f64
+//   CHECK-DAG: %[[F0:.*]] = arith.constant 0.000000e+00 : f64
 //       CHECK: %[[T0:.*]] = memref.alloc() : memref<1xindex>
 //       CHECK: %[[T1:.*]] = memref.alloc() : memref<3xindex>
 //       CHECK: %[[T2:.*]] = memref.alloc() : memref<16xindex>

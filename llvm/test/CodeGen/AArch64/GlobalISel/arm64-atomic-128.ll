@@ -5,7 +5,7 @@
 ; RUN: llc < %s -mtriple=arm64-linux-gnu -verify-machineinstrs -O0 -mattr=+lse -global-isel -global-isel-abort=1 | FileCheck %s --check-prefix=CHECK-CAS-O0
 @var = global i128 0
 
-define void @val_compare_and_swap(i128* %p, i128 %oldval, i128 %newval) {
+define void @val_compare_and_swap(ptr %p, i128 %oldval, i128 %newval) {
 ; CHECK-LLSC-O1-LABEL: val_compare_and_swap:
 ; CHECK-LLSC-O1:       // %bb.0:
 ; CHECK-LLSC-O1-NEXT:  .LBB0_1: // =>This Inner Loop Header: Depth=1
@@ -84,13 +84,13 @@ define void @val_compare_and_swap(i128* %p, i128 %oldval, i128 %newval) {
 ; CHECK-CAS-O0-NEXT:    add sp, sp, #16
 ; CHECK-CAS-O0-NEXT:    ret
 
-%pair = cmpxchg i128* %p, i128 %oldval, i128 %newval acquire acquire
+%pair = cmpxchg ptr %p, i128 %oldval, i128 %newval acquire acquire
   %val = extractvalue { i128, i1 } %pair, 0
-  store i128 %val, i128* %p
+  store i128 %val, ptr %p
   ret void
 }
 
-define void @val_compare_and_swap_monotonic_seqcst(i128* %p, i128 %oldval, i128 %newval) {
+define void @val_compare_and_swap_monotonic_seqcst(ptr %p, i128 %oldval, i128 %newval) {
 ; CHECK-LLSC-O1-LABEL: val_compare_and_swap_monotonic_seqcst:
 ; CHECK-LLSC-O1:       // %bb.0:
 ; CHECK-LLSC-O1-NEXT:  .LBB1_1: // =>This Inner Loop Header: Depth=1
@@ -169,13 +169,13 @@ define void @val_compare_and_swap_monotonic_seqcst(i128* %p, i128 %oldval, i128 
 ; CHECK-CAS-O0-NEXT:    add sp, sp, #16
 ; CHECK-CAS-O0-NEXT:    ret
 
-  %pair = cmpxchg i128* %p, i128 %oldval, i128 %newval monotonic seq_cst
+  %pair = cmpxchg ptr %p, i128 %oldval, i128 %newval monotonic seq_cst
   %val = extractvalue { i128, i1 } %pair, 0
-  store i128 %val, i128* %p
+  store i128 %val, ptr %p
   ret void
 }
 
-define void @val_compare_and_swap_release_acquire(i128* %p, i128 %oldval, i128 %newval) {
+define void @val_compare_and_swap_release_acquire(ptr %p, i128 %oldval, i128 %newval) {
 ; CHECK-LLSC-O1-LABEL: val_compare_and_swap_release_acquire:
 ; CHECK-LLSC-O1:       // %bb.0:
 ; CHECK-LLSC-O1-NEXT:  .LBB2_1: // =>This Inner Loop Header: Depth=1
@@ -254,13 +254,13 @@ define void @val_compare_and_swap_release_acquire(i128* %p, i128 %oldval, i128 %
 ; CHECK-CAS-O0-NEXT:    add sp, sp, #16
 ; CHECK-CAS-O0-NEXT:    ret
 
-  %pair = cmpxchg i128* %p, i128 %oldval, i128 %newval release acquire
+  %pair = cmpxchg ptr %p, i128 %oldval, i128 %newval release acquire
   %val = extractvalue { i128, i1 } %pair, 0
-  store i128 %val, i128* %p
+  store i128 %val, ptr %p
   ret void
 }
 
-define void @val_compare_and_swap_monotonic(i128* %p, i128 %oldval, i128 %newval) {
+define void @val_compare_and_swap_monotonic(ptr %p, i128 %oldval, i128 %newval) {
 ; CHECK-LLSC-O1-LABEL: val_compare_and_swap_monotonic:
 ; CHECK-LLSC-O1:       // %bb.0:
 ; CHECK-LLSC-O1-NEXT:  .LBB3_1: // =>This Inner Loop Header: Depth=1
@@ -338,13 +338,13 @@ define void @val_compare_and_swap_monotonic(i128* %p, i128 %oldval, i128 %newval
 ; CHECK-CAS-O0-NEXT:    str q0, [x0]
 ; CHECK-CAS-O0-NEXT:    add sp, sp, #16
 ; CHECK-CAS-O0-NEXT:    ret
-  %pair = cmpxchg i128* %p, i128 %oldval, i128 %newval release acquire
+  %pair = cmpxchg ptr %p, i128 %oldval, i128 %newval release acquire
   %val = extractvalue { i128, i1 } %pair, 0
-  store i128 %val, i128* %p
+  store i128 %val, ptr %p
   ret void
 }
 
-define void @atomic_load_relaxed(i64, i64, i128* %p, i128* %p2) {
+define void @atomic_load_relaxed(i64, i64, ptr %p, ptr %p2) {
 ; CHECK-LLSC-O1-LABEL: atomic_load_relaxed:
 ; CHECK-LLSC-O1:       // %bb.0:
 ; CHECK-LLSC-O1-NEXT:  .LBB4_1: // %atomicrmw.start
@@ -411,12 +411,12 @@ define void @atomic_load_relaxed(i64, i64, i128* %p, i128* %p2) {
 ; CHECK-CAS-O0-NEXT:    str q0, [x3]
 ; CHECK-CAS-O0-NEXT:    ret
 
-    %r = load atomic i128, i128* %p monotonic, align 16
-    store i128 %r, i128* %p2
+    %r = load atomic i128, ptr %p monotonic, align 16
+    store i128 %r, ptr %p2
     ret void
 }
 
-define i128 @val_compare_and_swap_return(i128* %p, i128 %oldval, i128 %newval) {
+define i128 @val_compare_and_swap_return(ptr %p, i128 %oldval, i128 %newval) {
 ; CHECK-LLSC-O1-LABEL: val_compare_and_swap_return:
 ; CHECK-LLSC-O1:       // %bb.0:
 ; CHECK-LLSC-O1-NEXT:  .LBB5_1: // =>This Inner Loop Header: Depth=1
@@ -482,7 +482,7 @@ define i128 @val_compare_and_swap_return(i128* %p, i128 %oldval, i128 %newval) {
 ; CHECK-CAS-O0-NEXT:    mov x1, x3
 ; CHECK-CAS-O0-NEXT:    ret
 
-  %pair = cmpxchg i128* %p, i128 %oldval, i128 %newval acquire acquire
+  %pair = cmpxchg ptr %p, i128 %oldval, i128 %newval acquire acquire
   %val = extractvalue { i128, i1 } %pair, 0
   ret i128 %val
 }

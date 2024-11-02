@@ -5,7 +5,7 @@
 subroutine omp_taskwait
   !OMPDialect: omp.taskwait
   !$omp taskwait
-  !FIRDialect: fir.call @_QPfoo() : () -> ()
+  !FIRDialect: fir.call @_QPfoo() {{.*}}: () -> ()
   call foo()
   !OMPDialect: omp.taskwait
   !$omp taskwait
