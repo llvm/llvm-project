@@ -2722,17 +2722,19 @@ public:
   }
 
   /// This represents an addressing mode of:
-  ///    BaseGV + BaseOffs + BaseReg + Scale*ScaleReg
+  ///    BaseGV + BaseOffs + BaseReg + Scale*ScaleReg + ScalableOffset*vscale
   /// If BaseGV is null,  there is no BaseGV.
   /// If BaseOffs is zero, there is no base offset.
   /// If HasBaseReg is false, there is no base register.
   /// If Scale is zero, there is no ScaleReg.  Scale of 1 indicates a reg with
   /// no scale.
+  /// If ScalableOffset is zero, there is no scalable offset.
   struct AddrMode {
     GlobalValue *BaseGV = nullptr;
     int64_t      BaseOffs = 0;
     bool         HasBaseReg = false;
     int64_t      Scale = 0;
+    int64_t ScalableOffset = 0;
     AddrMode() = default;
   };
 
@@ -2769,6 +2771,12 @@ public:
   virtual bool isLegalAddImmediate(int64_t) const {
     return true;
   }
+
+  /// Return true if adding the specified scalable immediate is legal, that is
+  /// the target has add instructions which can add a register with the
+  /// immediate (multiplied by vscale) without having to materialize the
+  /// immediate into a register.
+  virtual bool isLegalAddScalableImmediate(int64_t) const { return false; }
 
   /// Return true if the specified immediate is legal for the value input of a
   /// store instruction.

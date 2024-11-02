@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 ! RUN: %python %S/../test_errors.py %s %flang -fopenmp
 ! OpenMP version 5.0.0
 ! 2.8.1 sections construct

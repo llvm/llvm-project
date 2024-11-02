@@ -538,8 +538,8 @@ Value *Mapper::mapValue(const Value *V) {
 }
 
 void Mapper::remapDbgRecord(DbgRecord &DR) {
-  if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
-    DPL->setLabel(cast<DILabel>(mapMetadata(DPL->getLabel())));
+  if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+    DLR->setLabel(cast<DILabel>(mapMetadata(DLR->getLabel())));
     return;
   }
 

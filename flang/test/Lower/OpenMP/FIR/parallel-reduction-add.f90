@@ -1,7 +1,7 @@
 ! RUN: bbc -emit-fir -hlfir=false -fopenmp -o - %s 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 
-!CHECK-LABEL: omp.reduction.declare
+!CHECK-LABEL: omp.declare_reduction
 !CHECK-SAME: @[[RED_F32_NAME:.*]] : f32 init {
 !CHECK: ^bb0(%{{.*}}: f32):
 !CHECK:  %[[C0_1:.*]] = arith.constant 0.000000e+00 : f32
@@ -12,7 +12,7 @@
 !CHECK:  omp.yield(%[[RES]] : f32)
 !CHECK: }
 
-!CHECK-LABEL: omp.reduction.declare
+!CHECK-LABEL: omp.declare_reduction
 !CHECK-SAME: @[[RED_I32_NAME:.*]] : i32 init {
 !CHECK: ^bb0(%{{.*}}: i32):
 !CHECK:  %[[C0_1:.*]] = arith.constant 0 : i32

@@ -7270,6 +7270,34 @@ QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
 }
 
 template <typename Derived>
+QualType TreeTransform<Derived>::TransformCountAttributedType(
+    TypeLocBuilder &TLB, CountAttributedTypeLoc TL) {
+  const CountAttributedType *OldTy = TL.getTypePtr();
+  QualType InnerTy = getDerived().TransformType(TLB, TL.getInnerLoc());
+  if (InnerTy.isNull())
+    return QualType();
+
+  Expr *OldCount = TL.getCountExpr();
+  Expr *NewCount = nullptr;
+  if (OldCount) {
+    ExprResult CountResult = getDerived().TransformExpr(OldCount);
+    if (CountResult.isInvalid())
+      return QualType();
+    NewCount = CountResult.get();
+  }
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() || InnerTy != OldTy->desugar() ||
+      OldCount != NewCount) {
+    // Currently, CountAttributedType can only wrap incomplete array types.
+    Result = SemaRef.BuildCountAttributedArrayType(InnerTy, NewCount);
+  }
+
+  TLB.push<CountAttributedTypeLoc>(Result);
+  return Result;
+}
+
+template <typename Derived>
 QualType TreeTransform<Derived>::TransformBTFTagAttributedType(
     TypeLocBuilder &TLB, BTFTagAttributedTypeLoc TL) {
   // The BTFTagAttributedType is available for C only.
@@ -13714,6 +13742,16 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
     // Capturing 'this' is trivial.
     if (C->capturesThis()) {
+      // If this is a lambda that is part of a default member initialiser
+      // and which we're instantiating outside the class that 'this' is
+      // supposed to refer to, adjust the type of 'this' accordingly.
+      //
+      // Otherwise, leave the type of 'this' as-is.
+      Sema::CXXThisScopeRAII ThisScope(
+          getSema(),
+          dyn_cast_if_present<CXXRecordDecl>(
+              getSema().getFunctionLevelDeclContext()),
+          Qualifiers());
       getSema().CheckCXXThisCapture(C->getLocation(), C->isExplicit(),
                                     /*BuildAndDiagnose*/ true, nullptr,
                                     C->getCaptureKind() == LCK_StarThis);

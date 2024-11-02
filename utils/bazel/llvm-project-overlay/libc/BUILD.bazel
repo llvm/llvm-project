@@ -65,11 +65,36 @@ config_setting(
 ################################# Include Files ################################
 
 libc_support_library(
-    name = "internal_includes",
-    textual_hdrs = glob([
-        "include/llvm-libc-macros/*.h",
-        "include/llvm-libc-types/*",
-    ]),
+    name = "llvm_libc_macros_math_macros",
+    hdrs = ["include/llvm-libc-macros/math-macros.h"],
+    deps = [":llvm_libc_macros_limits_macros"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_limits_macros",
+    hdrs = ["include/llvm-libc-macros/limits-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_float_macros",
+    hdrs = ["include/llvm-libc-macros/float-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_stdint_macros",
+    hdrs = ["include/llvm-libc-macros/stdint-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_stdfix_macros",
+    hdrs = ["include/llvm-libc-macros/stdfix-macros.h"],
+    deps = [":llvm_libc_macros_float_macros"],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_float128",
+    hdrs = ["include/llvm-libc-types/float128.h"],
+    deps = [":llvm_libc_macros_float_macros"],
 )
 
 ############################### Support libraries ##############################
@@ -691,7 +716,7 @@ libc_support_library(
         ":__support_macros_properties_architectures",
         ":__support_macros_sanitizer",
         ":errno",
-        ":internal_includes",
+        ":llvm_libc_macros_math_macros",
     ],
 )
 
@@ -764,7 +789,7 @@ libc_support_library(
         ":__support_fputil_normal_float",
         ":__support_macros_optimization",
         ":__support_uint128",
-        ":internal_includes",
+        ":llvm_libc_macros_math_macros",
     ],
 )
 
@@ -778,7 +803,7 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
         ":__support_macros_attributes",
-        ":internal_includes",
+        ":llvm_libc_macros_math_macros",
     ],
 )
 
@@ -1007,33 +1032,6 @@ libc_support_library(
     ],
 )
 
-libc_support_library(
-    name = "llvm_libc_macros_limits_macros",
-    hdrs = ["include/llvm-libc-macros/limits-macros.h"],
-)
-
-libc_support_library(
-    name = "llvm_libc_macros_float_macros",
-    hdrs = ["include/llvm-libc-macros/float-macros.h"],
-)
-
-libc_support_library(
-    name = "llvm_libc_macros_stdint_macros",
-    hdrs = ["include/llvm-libc-macros/stdint-macros.h"],
-)
-
-libc_support_library(
-    name = "llvm_libc_macros_stdfix_macros",
-    hdrs = ["include/llvm-libc-macros/stdfix-macros.h"],
-    deps = [":llvm_libc_macros_float_macros"],
-)
-
-libc_support_library(
-    name = "llvm_libc_types_float128",
-    hdrs = ["include/llvm-libc-types/float128.h"],
-    deps = [":llvm_libc_macros_float_macros"],
-)
-
 ############################### errno targets ################################
 
 libc_function(
@@ -1200,7 +1198,7 @@ libc_support_library(
         "__support_cpp_type_traits",
         ":__support_common",
         ":errno",
-        ":internal_includes",
+        ":llvm_libc_macros_math_macros",
     ],
 )
 

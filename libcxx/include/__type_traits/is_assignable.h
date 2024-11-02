@@ -10,7 +10,6 @@
 #define _LIBCPP___TYPE_TRAITS_IS_ASSIGNABLE_H
 
 #include <__config>
-#include <__type_traits/add_const.h>
 #include <__type_traits/add_lvalue_reference.h>
 #include <__type_traits/add_rvalue_reference.h>
 #include <__type_traits/integral_constant.h>
@@ -31,9 +30,8 @@ inline constexpr bool is_assignable_v = __is_assignable(_Tp, _Arg);
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_copy_assignable
-    : public integral_constant<
-          bool,
-          __is_assignable(__add_lvalue_reference_t<_Tp>, __add_lvalue_reference_t<typename add_const<_Tp>::type>)> {};
+    : public integral_constant<bool,
+                               __is_assignable(__add_lvalue_reference_t<_Tp>, __add_lvalue_reference_t<const _Tp>)> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>

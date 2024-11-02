@@ -32,6 +32,7 @@ using ObjCInterfaceRecord = llvm::MachO::ObjCInterfaceRecord;
 using ObjCCategoryRecord = llvm::MachO::ObjCCategoryRecord;
 using ObjCIVarRecord = llvm::MachO::ObjCIVarRecord;
 using Records = llvm::MachO::Records;
+using RecordsSlice = llvm::MachO::RecordsSlice;
 using BinaryAttrs = llvm::MachO::RecordsSlice::BinaryAttrs;
 using SymbolSet = llvm::MachO::SymbolSet;
 using SimpleSymbol = llvm::MachO::SimpleSymbol;

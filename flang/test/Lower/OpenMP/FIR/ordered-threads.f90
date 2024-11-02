@@ -10,8 +10,8 @@ subroutine ordered
         integer :: i
         integer :: a(20)
 
-!FIRDialect: omp.ordered_region  {
-!LLVMIRDialect: omp.ordered_region  {
+!FIRDialect: omp.ordered.region  {
+!LLVMIRDialect: omp.ordered.region  {
 !LLVMIR: [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB0:[0-9]+]])
 !LLVMIR-NEXT: call void @__kmpc_ordered(ptr @[[GLOB0]], i32 [[TMP0]])
 !$OMP ORDERED
@@ -23,8 +23,8 @@ subroutine ordered
 !LLVMIR: call void @__kmpc_end_ordered(ptr @[[GLOB0]], i32 [[TMP0]])
 !$OMP END ORDERED
 
-!FIRDialect: omp.ordered_region  {
-!LLVMIRDialect: omp.ordered_region  {
+!FIRDialect: omp.ordered.region  {
+!LLVMIRDialect: omp.ordered.region  {
 !LLVMIR: [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
 !LLVMIR-NEXT: call void @__kmpc_ordered(ptr @[[GLOB1]], i32 [[TMP1]])
 !$OMP ORDERED THREADS
