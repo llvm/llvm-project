@@ -996,18 +996,6 @@ Function *CodeExtractor::constructFunctionDeclaration(
     newFunction->addFnAttr(Attr);
   }
 
-  if (NumExitBlocks == 0) {
-    // Mark the new function `noreturn` if applicable. Terminators which resume
-    // exception propagation are treated as returning instructions. This is to
-    // avoid inserting traps after calls to outlined functions which unwind.
-    if (none_of(Blocks, [](const BasicBlock *BB) {
-          const Instruction *Term = BB->getTerminator();
-          return isa<ReturnInst>(Term) || isa<ResumeInst>(Term);
-        }))
-      newFunction->setDoesNotReturn();
-  }
-
-
   // Create scalar and aggregate iterators to name all of the arguments we
   // inserted.
   Function::arg_iterator ScalarAI = newFunction->arg_begin();
@@ -1488,16 +1476,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
   fixupDebugInfoPostExtraction(*oldFunction, *newFunction, *TheCall);
 
-  // Mark the new function `noreturn` if applicable. Terminators which resume
-  // exception propagation are treated as returning instructions. This is to
-  // avoid inserting traps after calls to outlined functions which unwind.
-  bool doesNotReturn = none_of(*newFunction, [](const BasicBlock &BB) {
-    const Instruction *Term = BB.getTerminator();
-    return isa<ReturnInst>(Term) || isa<ResumeInst>(Term);
-  });
-  if (doesNotReturn)
-    newFunction->setDoesNotReturn();
-
   LLVM_DEBUG(if (verifyFunction(*newFunction, &errs())) {
     newFunction->dump();
     report_fatal_error("verification of newFunction failed!");
@@ -1742,6 +1720,17 @@ void CodeExtractor::emitFunctionBody(
       ++ScalarAI;
     }
   }
+
+  if (SwitchCases.empty()) {
+    // Mark the new function `noreturn` if applicable. Terminators which resume
+    // exception propagation are treated as returning instructions. This is to
+    // avoid inserting traps after calls to outlined functions which unwind.
+    if (none_of(Blocks, [](const BasicBlock *BB) {
+          const Instruction *Term = BB->getTerminator();
+          return isa<ReturnInst>(Term) || isa<ResumeInst>(Term);
+        }))
+      newFunction->setDoesNotReturn();
+  }
 }
 
 CallInst *CodeExtractor::emitReplacerCall(
@@ -1887,10 +1876,12 @@ CallInst *CodeExtractor::emitReplacerCall(
   case 0:
     // There are no successors (the block containing the switch itself), which
     // means that previously this was the last part of the function, and hence
-    // this should be rewritten as a `ret'
-
-    // Check if the function should return a value
-    if (OldFnRetTy->isVoidTy()) {
+    // this should be rewritten as a `ret` or `unreachable`.
+    if (newFunction->doesNotReturn()) {
+      // If fn is no return, end with an unreachable terminator.
+      (void)new UnreachableInst(Context, TheSwitch->getIterator());
+    } else if (OldFnRetTy->isVoidTy()) {
+      // We have no return value.
       ReturnInst::Create(Context, nullptr,
                          TheSwitch->getIterator()); // Return void
     } else if (OldFnRetTy == TheSwitch->getCondition()->getType()) {
