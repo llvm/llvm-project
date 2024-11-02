@@ -3705,6 +3705,9 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
     Token Comma = Tok;
     ConsumeToken();
     checkPotentialAngleBracketDelimiter(Comma);
+
+    if (Tok.is(tok::r_paren))
+      break;
   }
   if (SawError) {
     // Ensure typos get diagnosed when errors were encountered while parsing the
