@@ -67,7 +67,7 @@ void JITLinkRedirectableSymbolManager::emitRedirectableSymbols(
 }
 
 Error JITLinkRedirectableSymbolManager::redirect(
-    JITDylib &TargetJD, const SymbolAddrMap &NewDests) {
+    JITDylib &JD, const SymbolAddrMap &NewDests) {
   auto &ES = ObjLinkingLayer.getExecutionSession();
   SymbolLookupSet LS;
   DenseMap<NonOwningSymbolStringPtr, SymbolStringPtr> PtrToStub;
@@ -76,8 +76,8 @@ Error JITLinkRedirectableSymbolManager::redirect(
     PtrToStub[NonOwningSymbolStringPtr(PtrName)] = StubName;
     LS.add(std::move(PtrName));
   }
-  auto PtrSyms = ES.lookup({{&TargetJD, JITDylibLookupFlags::MatchAllSymbols}},
-                           std::move(LS));
+  auto PtrSyms =
+      ES.lookup({{&JD, JITDylibLookupFlags::MatchAllSymbols}}, std::move(LS));
   if (!PtrSyms)
     return PtrSyms.takeError();
 
