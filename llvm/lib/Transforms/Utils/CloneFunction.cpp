@@ -674,7 +674,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
       continue; // Dead block.
 
     // Add the new block to the new function.
-    NewFunc->insertBasicBlockAt(NewFunc->end(), NewBB);
+    NewFunc->insert(NewFunc->end(), NewBB);
 
     // Handle PHI nodes specially, as we have to remove references to dead
     // blocks.

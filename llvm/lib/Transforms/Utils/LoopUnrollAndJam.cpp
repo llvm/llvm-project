@@ -374,7 +374,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
     for (LoopBlocksDFS::RPOIterator BB = BlockBegin; BB != BlockEnd; ++BB) {
       ValueToValueMapTy VMap;
       BasicBlock *New = CloneBasicBlock(*BB, VMap, "." + Twine(It));
-      Header->getParent()->insertBasicBlockAt(Header->getParent()->end(), New);
+      Header->getParent()->insert(Header->getParent()->end(), New);
 
       // Tell LI about New.
       addClonedBlockToLoopInfo(*BB, New, LI, NewLoops);
