@@ -31,19 +31,10 @@
 #include <vector>
 
 #include "../types.h"
-#include "__compare/three_way_comparable.h"
-#include "__concepts/equality_comparable.h"
-#include "__concepts/same_as.h"
-#include "__iterator/concepts.h"
-#include "__iterator/default_sentinel.h"
-#include "__iterator/distance.h"
-#include "__ranges/access.h"
-#include "__ranges/concepts.h"
-#include "__ranges/stride_view.h"
 #include "test_iterators.h"
 
 template <class T>
-concept CanPlusEqual = std::is_same_v<T&, decltype(std::declval<T>() += 1)> && requires(T& t) { t += 1; };
+concept CanPlus = std::is_same_v<T&, decltype(std::declval<T>() += 1)> && requires(T& t) { t += 1; };
 template <class T>
 concept CanMinusEqual = std::is_same_v<T&, decltype(std::declval<T>() -= 1)> && requires(T& t) { t -= 1; };
 
@@ -88,7 +79,7 @@ static_assert(std::weakly_incrementable<StrideViewOverInputViewIterator>);
 
 static_assert(!CanPostDecrement<StrideViewOverInputViewIterator>);
 static_assert(!CanPreDecrement<StrideViewOverInputViewIterator>);
-static_assert(!CanPlusEqual<StrideViewOverInputViewIterator>);
+static_assert(!CanPlus<StrideViewOverInputViewIterator>);
 static_assert(!CanMinusEqual<StrideViewOverInputViewIterator>);
 static_assert(!CanMinus<StrideViewOverInputViewIterator>);
 static_assert(!CanDifferencePlus<StrideViewOverInputViewIterator>);
@@ -116,7 +107,7 @@ static_assert(std::weakly_incrementable<StrideViewOverForwardViewIterator>);
 
 static_assert(!CanPostDecrement<StrideViewOverForwardViewIterator>);
 static_assert(!CanPreDecrement<StrideViewOverForwardViewIterator>);
-static_assert(!CanPlusEqual<StrideViewOverForwardViewIterator>);
+static_assert(!CanPlus<StrideViewOverForwardViewIterator>);
 static_assert(!CanMinusEqual<StrideViewOverForwardViewIterator>);
 static_assert(!CanMinus<StrideViewOverForwardViewIterator>);
 static_assert(!CanDifferencePlus<StrideViewOverForwardViewIterator>);
@@ -143,7 +134,7 @@ using StrideViewOverBidirectionalViewIterator = std::ranges::iterator_t<std::ran
 
 static_assert(CanPostDecrement<StrideViewOverBidirectionalViewIterator>);
 static_assert(CanPreDecrement<StrideViewOverBidirectionalViewIterator>);
-static_assert(!CanPlusEqual<StrideViewOverBidirectionalViewIterator>);
+static_assert(!CanPlus<StrideViewOverBidirectionalViewIterator>);
 static_assert(!CanMinusEqual<StrideViewOverBidirectionalViewIterator>);
 static_assert(!CanMinus<StrideViewOverBidirectionalViewIterator>);
 static_assert(!CanDifferencePlus<StrideViewOverBidirectionalViewIterator>);
@@ -178,7 +169,7 @@ static_assert(std::weakly_incrementable<StrideViewOverRandomAccessViewIterator>)
 
 static_assert(CanPostDecrement<StrideViewOverRandomAccessViewIterator>);
 static_assert(CanPreDecrement<StrideViewOverRandomAccessViewIterator>);
-static_assert(CanPlusEqual<StrideViewOverRandomAccessViewIterator>);
+static_assert(CanPlus<StrideViewOverRandomAccessViewIterator>);
 static_assert(CanMinusEqual<StrideViewOverRandomAccessViewIterator>);
 static_assert(CanMinus<StrideViewOverRandomAccessViewIterator>);
 static_assert(CanDifferencePlus<StrideViewOverRandomAccessViewIterator>);
@@ -248,7 +239,7 @@ constexpr bool test_non_forward_operator_plus(Iter zero_begin, Iter one_begin, I
 
   static_assert(!CanPostDecrement<StrideViewIterator>);
   static_assert(!CanPreDecrement<StrideViewIterator>);
-  static_assert(!CanPlusEqual<StrideViewIterator>);
+  static_assert(!CanPlus<StrideViewIterator>);
   static_assert(!CanMinusEqual<StrideViewIterator>);
   static_assert(!CanDifferencePlus<StrideViewIterator>);
   static_assert(!CanDifferenceMinus<StrideViewIterator>);
