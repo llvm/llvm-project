@@ -3652,10 +3652,6 @@ void SelectionDAGBuilder::visitICmp(const ICmpInst &I) {
     Op2 = DAG.getPtrExtOrTrunc(Op2, getCurSDLoc(), MemVT);
   }
 
-  SDNodeFlags Flags;
-  Flags.setSameSign(I.hasSameSign());
-  SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
-
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
   setValue(&I, DAG.getSetCC(getCurSDLoc(), DestVT, Op1, Op2, Opcode));
