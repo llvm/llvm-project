@@ -5251,7 +5251,7 @@ ParseStatus ARMAsmParser::parseMSRMaskOperand(OperandVector &Operands) {
   StringRef Flags = "";
   std::string SpecReg = Mask.slice(Start, Next).lower();
   if (Next != StringRef::npos)
-    Flags = Mask.slice(Next+1, Mask.size());
+    Flags = Mask.substr(Next + 1);
 
   // FlagsVal contains the complete mask:
   // 3-0: Mask
@@ -6648,15 +6648,15 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic, StringRef ExtraToken,
 
   // The "it" instruction has the condition mask on the end of the mnemonic.
   if (Mnemonic.starts_with("it")) {
-    ITMask = Mnemonic.slice(2, Mnemonic.size());
+    ITMask = Mnemonic.substr(2);
     Mnemonic = Mnemonic.slice(0, 2);
   }
 
   if (Mnemonic.starts_with("vpst")) {
-    ITMask = Mnemonic.slice(4, Mnemonic.size());
+    ITMask = Mnemonic.substr(4);
     Mnemonic = Mnemonic.slice(0, 4);
   } else if (Mnemonic.starts_with("vpt")) {
-    ITMask = Mnemonic.slice(3, Mnemonic.size());
+    ITMask = Mnemonic.substr(3);
     Mnemonic = Mnemonic.slice(0, 3);
   }
 
@@ -13090,9 +13090,9 @@ bool ARMAsmParser::isMnemonicVPTPredicable(StringRef Mnemonic,
       "vshrn",      "vsli",     "vsri",      "vstrb",      "vstrd",
       "vstrw",      "vsub"};
 
-  return std::any_of(
-      std::begin(predicable_prefixes), std::end(predicable_prefixes),
-      [&Mnemonic](const char *prefix) { return Mnemonic.starts_with(prefix); });
+  return any_of(predicable_prefixes, [&Mnemonic](const char *prefix) {
+    return Mnemonic.starts_with(prefix);
+  });
 }
 
 std::unique_ptr<ARMOperand> ARMAsmParser::defaultCondCodeOp() {

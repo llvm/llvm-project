@@ -1024,6 +1024,55 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
 }
 
 //===----------------------------------------------------------------------===//
+// Type Constraints
+//===----------------------------------------------------------------------===//
+
+/// Find all type constraints for which a C++ function should be generated.
+static std::vector<Constraint>
+getAllTypeConstraints(const llvm::RecordKeeper &records) {
+  std::vector<Constraint> result;
+  for (llvm::Record *def :
+       records.getAllDerivedDefinitionsIfDefined("TypeConstraint")) {
+    // Ignore constraints defined outside of the top-level file.
+    if (llvm::SrcMgr.FindBufferContainingLoc(def->getLoc()[0]) !=
+        llvm::SrcMgr.getMainFileID())
+      continue;
+    Constraint constr(def);
+    // Generate C++ function only if "cppFunctionName" is set.
+    if (!constr.getCppFunctionName())
+      continue;
+    result.push_back(constr);
+  }
+  return result;
+}
+
+static void emitTypeConstraintDecls(const llvm::RecordKeeper &records,
+                                    raw_ostream &os) {
+  static const char *const typeConstraintDecl = R"(
+bool {0}(::mlir::Type type);
+)";
+
+  for (Constraint constr : getAllTypeConstraints(records))
+    os << strfmt(typeConstraintDecl, *constr.getCppFunctionName());
+}
+
+static void emitTypeConstraintDefs(const llvm::RecordKeeper &records,
+                                   raw_ostream &os) {
+  static const char *const typeConstraintDef = R"(
+bool {0}(::mlir::Type type) {
+  return ({1});
+}
+)";
+
+  for (Constraint constr : getAllTypeConstraints(records)) {
+    FmtContext ctx;
+    ctx.withSelf("type");
+    std::string condition = tgfmt(constr.getConditionTemplate(), &ctx);
+    os << strfmt(typeConstraintDef, *constr.getCppFunctionName(), condition);
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // GEN: Registration hooks
 //===----------------------------------------------------------------------===//
 
@@ -1070,3 +1119,18 @@ static mlir::GenRegistration
                    TypeDefGenerator generator(records, os);
                    return generator.emitDecls(typeDialect);
                  });
+
+static mlir::GenRegistration
+    genTypeConstrDefs("gen-type-constraint-defs",
+                      "Generate type constraint definitions",
+                      [](const llvm::RecordKeeper &records, raw_ostream &os) {
+                        emitTypeConstraintDefs(records, os);
+                        return false;
+                      });
+static mlir::GenRegistration
+    genTypeConstrDecls("gen-type-constraint-decls",
+                       "Generate type constraint declarations",
+                       [](const llvm::RecordKeeper &records, raw_ostream &os) {
+                         emitTypeConstraintDecls(records, os);
+                         return false;
+                       });

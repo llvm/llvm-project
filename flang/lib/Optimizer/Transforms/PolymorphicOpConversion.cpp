@@ -205,7 +205,10 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
     // Make the call.
     llvm::SmallVector<mlir::Value> args{funcPtr};
     args.append(dispatch.getArgs().begin(), dispatch.getArgs().end());
-    rewriter.replaceOpWithNewOp<fir::CallOp>(dispatch, resTypes, nullptr, args);
+    // FIXME: add procedure_attrs to fir.dispatch and propagate to fir.call.
+    rewriter.replaceOpWithNewOp<fir::CallOp>(
+        dispatch, resTypes, nullptr, args,
+        /*procedure_attrs=*/fir::FortranProcedureFlagsEnumAttr{});
     return mlir::success();
   }
 

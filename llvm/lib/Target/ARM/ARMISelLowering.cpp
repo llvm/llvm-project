@@ -2841,7 +2841,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Ops.push_back(Callee);
 
   if (isTailCall) {
-    Ops.push_back(DAG.getTargetConstant(SPDiff, dl, MVT::i32));
+    Ops.push_back(
+        DAG.getSignedConstant(SPDiff, dl, MVT::i32, /*isTarget=*/true));
   }
 
   // Add argument registers to the end of the list so that they are known live
@@ -2892,7 +2893,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // we need to undo that after it returns to restore the status-quo.
   bool TailCallOpt = getTargetMachine().Options.GuaranteedTailCallOpt;
   uint64_t CalleePopBytes =
-      canGuaranteeTCO(CallConv, TailCallOpt) ? alignTo(NumBytes, 16) : -1ULL;
+      canGuaranteeTCO(CallConv, TailCallOpt) ? alignTo(NumBytes, 16) : -1U;
 
   Chain = DAG.getCALLSEQ_END(Chain, NumBytes, CalleePopBytes, InGlue, dl);
   if (!Ins.empty())
@@ -8551,7 +8552,7 @@ static SDValue LowerVECTOR_SHUFFLEv8i8(SDValue Op,
 
   SmallVector<SDValue, 8> VTBLMask;
   for (int I : ShuffleMask)
-    VTBLMask.push_back(DAG.getConstant(I, DL, MVT::i32));
+    VTBLMask.push_back(DAG.getSignedConstant(I, DL, MVT::i32));
 
   if (V2.getNode()->isUndef())
     return DAG.getNode(ARMISD::VTBL1, DL, MVT::v8i8, V1,
@@ -15443,6 +15444,9 @@ static SDValue PerformVECTOR_REG_CASTCombine(SDNode *N, SelectionDAG &DAG,
   if (ST->isLittle())
     return DAG.getNode(ISD::BITCAST, dl, VT, Op);
 
+  // VT VECTOR_REG_CAST (VT Op) -> Op
+  if (Op.getValueType() == VT)
+    return Op;
   // VECTOR_REG_CAST undef -> undef
   if (Op.isUndef())
     return DAG.getUNDEF(VT);
@@ -20671,7 +20675,8 @@ void ARMTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
         }
         return;
     }
-    Result = DAG.getTargetConstant(CVal, SDLoc(Op), Op.getValueType());
+    Result = DAG.getSignedConstant(CVal, SDLoc(Op), Op.getValueType(),
+                                   /*isTarget=*/true);
     break;
   }
 

@@ -1452,28 +1452,30 @@ describes the various floating point semantic modes and the corresponding option
   "fhonor-infinities", "{on, off}"
   "fsigned-zeros", "{on, off}"
   "freciprocal-math", "{on, off}"
-  "allow_approximate_fns", "{on, off}"
+  "fallow-approximate-fns", "{on, off}"
   "fassociative-math", "{on, off}"
+  "fcomplex-arithmetic", "{basic, improved, full, promoted}"
 
 This table describes the option settings that correspond to the three
 floating point semantic models: precise (the default), strict, and fast.
 
 
 .. csv-table:: Floating Point Models
-  :header: "Mode", "Precise", "Strict", "Fast"
-  :widths: 25, 15, 15, 15
+  :header: "Mode", "Precise", "Strict", "Fast", "Aggressive"
+  :widths: 25, 25, 25, 25, 25
 
-  "except_behavior", "ignore", "strict", "ignore"
-  "fenv_access", "off", "on", "off"
-  "rounding_mode", "tonearest", "dynamic", "tonearest"
-  "contract", "on", "off", "fast"
-  "support_math_errno", "on", "on", "off"
-  "no_honor_nans", "off", "off", "on"
-  "no_honor_infinities", "off", "off", "on"
-  "no_signed_zeros", "off", "off", "on"
-  "allow_reciprocal", "off", "off", "on"
-  "allow_approximate_fns", "off", "off", "on"
-  "allow_reassociation", "off", "off", "on"
+  "except_behavior", "ignore", "strict", "ignore", "ignore"
+  "fenv_access", "off", "on", "off", "off"
+  "rounding_mode", "tonearest", "dynamic", "tonearest", "tonearest"
+  "contract", "on", "off", "fast", "fast"
+  "support_math_errno", "on", "on", "off", "off"
+  "no_honor_nans", "off", "off", "off", "on"
+  "no_honor_infinities", "off", "off", "off", "on"
+  "no_signed_zeros", "off", "off", "on", "on"
+  "allow_reciprocal", "off", "off", "on", "on"
+  "allow_approximate_fns", "off", "off", "on", "on"
+  "allow_reassociation", "off", "off", "on", "on"
+  "complex_arithmetic", "full", "full", "promoted", "basic"
 
 The ``-ffp-model`` option does not modify the ``fdenormal-fp-math``
 setting, but it does have an impact on whether ``crtfastmath.o`` is
@@ -1492,9 +1494,9 @@ for more details.
    * Floating-point math obeys regular algebraic rules for real numbers (e.g.
      ``+`` and ``*`` are associative, ``x/y == x * (1/y)``, and
      ``(a + b) * c == a * c + b * c``),
-   * Operands to floating-point operations are not equal to ``NaN`` and
-     ``Inf``, and
-   * ``+0`` and ``-0`` are interchangeable.
+   * No ``NaN`` or infinite values will be operands or results of
+     floating-point operations,
+   * ``+0`` and ``-0`` may be treated as interchangeable.
 
    ``-ffast-math`` also defines the ``__FAST_MATH__`` preprocessor
    macro. Some math libraries recognize this macro and change their behavior.
@@ -1753,7 +1755,7 @@ for more details.
    Specify floating point behavior. ``-ffp-model`` is an umbrella
    option that encompasses functionality provided by other, single
    purpose, floating point options.  Valid values are: ``precise``, ``strict``,
-   and ``fast``.
+   ``fast``, and ``aggressive``.
    Details:
 
    * ``precise`` Disables optimizations that are not value-safe on
@@ -1766,7 +1768,10 @@ for more details.
      ``STDC FENV_ACCESS``: by default ``FENV_ACCESS`` is disabled. This option
      setting behaves as though ``#pragma STDC FENV_ACCESS ON`` appeared at the
      top of the source file.
-   * ``fast`` Behaves identically to specifying both ``-ffast-math`` and
+   * ``fast`` Behaves identically to specifying ``-funsafe-math-optimizations``,
+     ``-fno-math-errno`` and ``-fcomplex-arithmetic=promoted``
+     ``ffp-contract=fast``
+   * ``aggressive`` Behaves identically to specifying both ``-ffast-math`` and
      ``ffp-contract=fast``
 
    Note: If your command line specifies multiple instances
@@ -2063,6 +2068,8 @@ are listed below.
       integrity.
    -  ``-fsanitize=safe-stack``: :doc:`safe stack <SafeStack>`
       protection against stack-based memory corruption errors.
+   -  ``-fsanitize=realtime``: :doc:`RealtimeSanitizer`,
+      a real-time safety checker.
 
    There are more fine-grained checks available: see
    the :ref:`list <ubsan-checks>` of specific kinds of

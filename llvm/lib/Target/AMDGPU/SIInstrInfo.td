@@ -304,13 +304,11 @@ def SIdenorm_mode : SDNode<"AMDGPUISD::DENORM_MODE",
   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]
 >;
 
-def SIfptrunc_round_upward : SDNode<"AMDGPUISD::FPTRUNC_ROUND_UPWARD",
-  SDTFPRoundOp
->;
+def SDTFPRoundModeOp  : SDTypeProfile<1, 2, [
+  SDTCisFP<0>, SDTCisFP<1>, SDTCisInt<2>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>
+]>;
 
-def SIfptrunc_round_downward : SDNode<"AMDGPUISD::FPTRUNC_ROUND_DOWNWARD",
-  SDTFPRoundOp
->;
+def SIfptrunc_round : SDNode<"AMDGPUISD::FPTRUNC_ROUND", SDTFPRoundModeOp>;
 
 //===----------------------------------------------------------------------===//
 // ValueType helpers
@@ -2344,6 +2342,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
 
   field bit IsFP8SrcByteSel = 0;
   field bit IsFP8DstByteSel = 0;
+  field bit HasFP8DstByteSel = 0;
   field bit IsFP8ByteSel = !or(IsFP8SrcByteSel, IsFP8DstByteSel);
 
   field bit HasDst = !ne(DstVT.Value, untyped.Value);
@@ -2921,6 +2920,15 @@ def getVCMPXOpFromVCMP : InstrMapping {
   let ColFields = ["IsVCMPX"];
   let KeyCol = ["0"];
   let ValueCols = [["1"]];
+}
+
+def FP8DstByteSelTable : GenericTable {
+  let FilterClass = "VOP3_Pseudo";
+  let CppTypeName = "FP8DstByteSelInfo";
+  let Fields = ["Opcode", "HasFP8DstByteSel"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getFP8DstByteSelHelper";
 }
 
 def VOPDComponentTable : GenericTable {

@@ -469,6 +469,11 @@ generic-no-localization)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-localization.cmake"
     check-runtimes
 ;;
+generic-no-terminal)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-terminal.cmake"
+    check-runtimes
+;;
 generic-no-unicode)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-unicode.cmake"

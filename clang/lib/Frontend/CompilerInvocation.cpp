@@ -4267,6 +4267,24 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
   }
 
+  if (auto *A =
+          Args.getLastArg(OPT_fsanitize_undefined_ignore_overflow_pattern_EQ)) {
+    for (int i = 0, n = A->getNumValues(); i != n; ++i) {
+      Opts.OverflowPatternExclusionMask |=
+          llvm::StringSwitch<unsigned>(A->getValue(i))
+              .Case("none", LangOptionsBase::None)
+              .Case("all", LangOptionsBase::All)
+              .Case("add-unsigned-overflow-test",
+                    LangOptionsBase::AddUnsignedOverflowTest)
+              .Case("add-signed-overflow-test",
+                    LangOptionsBase::AddSignedOverflowTest)
+              .Case("negated-unsigned-const", LangOptionsBase::NegUnsignedConst)
+              .Case("unsigned-post-decr-while",
+                    LangOptionsBase::PostDecrInWhile)
+              .Default(0);
+    }
+  }
+
   // Parse -fsanitize= arguments.
   parseSanitizerKinds("-fsanitize=", Args.getAllArgValues(OPT_fsanitize_EQ),
                       Diags, Opts.Sanitize);

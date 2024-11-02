@@ -1,4 +1,4 @@
-# RUN: llvm-mc -no-type-check -show-encoding -triple=wasm32-unknown-unknown -mattr=+simd128,+relaxed-simd,+half-precision < %s | FileCheck %s
+# RUN: llvm-mc -no-type-check -show-encoding -triple=wasm32-unknown-unknown -mattr=+simd128,+relaxed-simd,+fp16 < %s | FileCheck %s
 
 main:
     .functype main () -> ()

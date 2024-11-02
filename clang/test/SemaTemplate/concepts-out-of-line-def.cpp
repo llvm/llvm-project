@@ -599,3 +599,26 @@ template <class DerT>
 unsigned long DerivedCollection<DerTs...>::index() {}
 
 } // namespace GH72557
+
+namespace GH101735 {
+
+template <class, class>
+concept True = true;
+
+template <typename T>
+class A {
+  template <typename... Ts>
+  void method(Ts&... ts)
+    requires requires (T t) {
+      { t.method(static_cast<Ts &&>(ts)...) } -> True<void>;
+    };
+};
+
+template <typename T>
+template <typename... Ts>
+void A<T>::method(Ts&... ts)
+  requires requires (T t) {
+    { t.method(static_cast<Ts &&>(ts)...) } -> True<void>;
+  } {}
+
+}

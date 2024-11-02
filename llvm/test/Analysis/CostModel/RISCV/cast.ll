@@ -1016,6 +1016,11 @@ define void @zext() {
 
 define void @trunc() {
 ; RV32-LABEL: 'trunc'
+; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_v2i2 = trunc <2 x i16> undef to <2 x i2>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_v2i4 = trunc <2 x i16> undef to <2 x i4>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_v2i6 = trunc <2 x i16> undef to <2 x i6>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2i4_v2i2 = trunc <2 x i4> undef to <2 x i2>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2i6_v2i4 = trunc <2 x i6> undef to <2 x i4>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_v2i8 = trunc <2 x i16> undef to <2 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i32_v2i8 = trunc <2 x i32> undef to <2 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i64_v2i8 = trunc <2 x i64> undef to <2 x i8>
@@ -1169,6 +1174,11 @@ define void @trunc() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; RV64-LABEL: 'trunc'
+; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_v2i2 = trunc <2 x i16> undef to <2 x i2>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_v2i4 = trunc <2 x i16> undef to <2 x i4>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_v2i6 = trunc <2 x i16> undef to <2 x i6>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2i4_v2i2 = trunc <2 x i4> undef to <2 x i2>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2i6_v2i4 = trunc <2 x i6> undef to <2 x i4>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i16_v2i8 = trunc <2 x i16> undef to <2 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i32_v2i8 = trunc <2 x i32> undef to <2 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i64_v2i8 = trunc <2 x i64> undef to <2 x i8>
@@ -1321,6 +1331,13 @@ define void @trunc() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %nxv64i64_nxv64i1 = trunc <vscale x 64 x i64> undef to <vscale x 64 x i1>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
+
+  %v2i16_v2i2 = trunc <2 x i16> undef to <2 x i2>
+  %v2i16_v2i4 = trunc <2 x i16> undef to <2 x i4>
+  %v2i16_v2i6 = trunc <2 x i16> undef to <2 x i6>
+  %v2i4_v2i2 = trunc <2 x i4> undef to <2 x i2>
+  %v2i6_v2i4 = trunc <2 x i6> undef to <2 x i4>
+
   %v2i16_v2i8 = trunc <2 x i16> undef to <2 x i8>
   %v2i32_v2i8 = trunc <2 x i32> undef to <2 x i8>
   %v2i64_v2i8 = trunc <2 x i64> undef to <2 x i8>

@@ -100,10 +100,10 @@ namespace Intrinsic {
                                 StringRef Name);
 
   /// Map a Clang builtin name to an intrinsic ID.
-  ID getIntrinsicForClangBuiltin(const char *Prefix, StringRef BuiltinName);
+  ID getIntrinsicForClangBuiltin(StringRef TargetPrefix, StringRef BuiltinName);
 
   /// Map a MS builtin name to an intrinsic ID.
-  ID getIntrinsicForMSBuiltin(const char *Prefix, StringRef BuiltinName);
+  ID getIntrinsicForMSBuiltin(StringRef TargetPrefix, StringRef BuiltinName);
 
   /// Returns true if the intrinsic ID is for one of the "Constrained
   /// Floating-Point Intrinsics".

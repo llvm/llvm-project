@@ -213,21 +213,18 @@ define i64 @PR89533(<64 x i8> %a0) {
 ; SSE-NEXT:    shll $16, %ecx
 ; SSE-NEXT:    orl %eax, %ecx
 ; SSE-NEXT:    pcmpeqb %xmm4, %xmm2
-; SSE-NEXT:    pmovmskb %xmm2, %edx
-; SSE-NEXT:    xorl $65535, %edx # imm = 0xFFFF
+; SSE-NEXT:    pmovmskb %xmm2, %eax
+; SSE-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; SSE-NEXT:    pcmpeqb %xmm4, %xmm3
-; SSE-NEXT:    pmovmskb %xmm3, %eax
-; SSE-NEXT:    notl %eax
-; SSE-NEXT:    shll $16, %eax
-; SSE-NEXT:    orl %edx, %eax
-; SSE-NEXT:    shlq $32, %rax
-; SSE-NEXT:    orq %rcx, %rax
-; SSE-NEXT:    je .LBB11_2
-; SSE-NEXT:  # %bb.1: # %cond.false
-; SSE-NEXT:    rep bsfq %rax, %rax
-; SSE-NEXT:    retq
-; SSE-NEXT:  .LBB11_2: # %cond.end
+; SSE-NEXT:    pmovmskb %xmm3, %edx
+; SSE-NEXT:    notl %edx
+; SSE-NEXT:    shll $16, %edx
+; SSE-NEXT:    orl %eax, %edx
+; SSE-NEXT:    shlq $32, %rdx
+; SSE-NEXT:    orq %rcx, %rdx
+; SSE-NEXT:    bsfq %rdx, %rcx
 ; SSE-NEXT:    movl $64, %eax
+; SSE-NEXT:    cmovneq %rcx, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: PR89533:
@@ -243,23 +240,19 @@ define i64 @PR89533(<64 x i8> %a0) {
 ; AVX1-NEXT:    shll $16, %ecx
 ; AVX1-NEXT:    orl %eax, %ecx
 ; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %edx
-; AVX1-NEXT:    xorl $65535, %edx # imm = 0xFFFF
+; AVX1-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm0
 ; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %eax
-; AVX1-NEXT:    notl %eax
-; AVX1-NEXT:    shll $16, %eax
-; AVX1-NEXT:    orl %edx, %eax
-; AVX1-NEXT:    shlq $32, %rax
-; AVX1-NEXT:    orq %rcx, %rax
-; AVX1-NEXT:    je .LBB11_2
-; AVX1-NEXT:  # %bb.1: # %cond.false
-; AVX1-NEXT:    rep bsfq %rax, %rax
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-; AVX1-NEXT:  .LBB11_2: # %cond.end
+; AVX1-NEXT:    vpmovmskb %xmm0, %edx
+; AVX1-NEXT:    notl %edx
+; AVX1-NEXT:    shll $16, %edx
+; AVX1-NEXT:    orl %eax, %edx
+; AVX1-NEXT:    shlq $32, %rdx
+; AVX1-NEXT:    orq %rcx, %rdx
+; AVX1-NEXT:    bsfq %rdx, %rcx
 ; AVX1-NEXT:    movl $64, %eax
+; AVX1-NEXT:    cmovneq %rcx, %rax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;

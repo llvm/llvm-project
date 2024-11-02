@@ -70,7 +70,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     addRegisterClass(MVT::v2i64, &WebAssembly::V128RegClass);
     addRegisterClass(MVT::v2f64, &WebAssembly::V128RegClass);
   }
-  if (Subtarget->hasHalfPrecision()) {
+  if (Subtarget->hasFP16()) {
     addRegisterClass(MVT::v8f16, &WebAssembly::V128RegClass);
   }
   if (Subtarget->hasReferenceTypes()) {
@@ -146,7 +146,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setTruncStoreAction(T, MVT::f16, Expand);
   }
 
-  if (Subtarget->hasHalfPrecision()) {
+  if (Subtarget->hasFP16()) {
     setOperationAction(ISD::FMINIMUM, MVT::v8f16, Legal);
     setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Legal);
   }

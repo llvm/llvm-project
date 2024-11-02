@@ -6074,8 +6074,8 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
     // check if the range contains a call.  These require a save + restore of
     // the link register.
     outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
-    if (std::any_of(FirstCand.begin(), std::prev(FirstCand.end()),
-                    [](const MachineInstr &MI) { return MI.isCall(); }))
+    if (any_of(drop_end(FirstCand),
+               [](const MachineInstr &MI) { return MI.isCall(); }))
       NumBytesToCreateFrame += Costs.SaveRestoreLROnStack;
 
     // Handle the last instruction separately.  If it is tail call, then the

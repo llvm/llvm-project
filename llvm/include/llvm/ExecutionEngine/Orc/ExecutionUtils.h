@@ -319,9 +319,6 @@ private:
                                    Error &Err);
   Error buildObjectFilesMap();
 
-  static Expected<std::pair<size_t, size_t>>
-  getSliceRangeForArch(object::MachOUniversalBinary &UB, const Triple &TT);
-
   ObjectLayer &L;
   GetObjectFileInterface GetObjFileInterface;
   std::set<std::string> ImportedDynamicLibraries;

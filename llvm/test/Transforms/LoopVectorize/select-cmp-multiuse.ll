@@ -916,13 +916,13 @@ define i32 @multi_user_cmp_branch_use_and_outside_bb_use(ptr readonly %a, i64 no
 ; CHECK-VF4-IC1-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4-IC1-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK-VF4-IC1:       middle.block:
-; CHECK-VF4-IC1-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP3]], i32 3
 ; CHECK-VF4-IC1-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
 ; CHECK-VF4-IC1-NEXT:    [[TMP10:%.*]] = freeze i1 [[TMP9]]
 ; CHECK-VF4-IC1-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP10]], i1 false, i1 true
 ; CHECK-VF4-IC1-NEXT:    [[TMP11:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP4]])
 ; CHECK-VF4-IC1-NEXT:    [[TMP12:%.*]] = freeze i1 [[TMP11]]
 ; CHECK-VF4-IC1-NEXT:    [[RDX_SELECT2:%.*]] = select i1 [[TMP12]], i1 true, i1 false
+; CHECK-VF4-IC1-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP3]], i32 3
 ; CHECK-VF4-IC1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-VF4-IC1-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-VF4-IC1:       scalar.ph:
@@ -986,7 +986,6 @@ define i32 @multi_user_cmp_branch_use_and_outside_bb_use(ptr readonly %a, i64 no
 ; CHECK-VF4-IC2-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4-IC2-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK-VF4-IC2:       middle.block:
-; CHECK-VF4-IC2-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP7]], i32 3
 ; CHECK-VF4-IC2-NEXT:    [[BIN_RDX:%.*]] = or <4 x i1> [[TMP13]], [[TMP12]]
 ; CHECK-VF4-IC2-NEXT:    [[TMP16:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[BIN_RDX]])
 ; CHECK-VF4-IC2-NEXT:    [[TMP17:%.*]] = freeze i1 [[TMP16]]
@@ -995,6 +994,7 @@ define i32 @multi_user_cmp_branch_use_and_outside_bb_use(ptr readonly %a, i64 no
 ; CHECK-VF4-IC2-NEXT:    [[TMP18:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[BIN_RDX5]])
 ; CHECK-VF4-IC2-NEXT:    [[TMP19:%.*]] = freeze i1 [[TMP18]]
 ; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT6:%.*]] = select i1 [[TMP19]], i1 true, i1 false
+; CHECK-VF4-IC2-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP7]], i32 3
 ; CHECK-VF4-IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-VF4-IC2-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-VF4-IC2:       scalar.ph:

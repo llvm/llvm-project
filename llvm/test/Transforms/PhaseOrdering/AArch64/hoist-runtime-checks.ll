@@ -13,7 +13,7 @@ define i32 @read_only_loop_with_runtime_check(ptr noundef %array, i32 noundef %c
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ult i32 [[TMP1]], [[COUNT]]
+; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ugt i32 [[COUNT]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label [[FOR_BODY_PREHEADER10:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       for.body.preheader10:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 8
@@ -128,7 +128,7 @@ define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1
 ; CHECK-NEXT:    br i1 [[CMP5_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
-; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ult i64 [[TMP0]], [[S_COERCE1]]
+; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ugt i64 [[S_COERCE1]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label [[FOR_BODY_PREHEADER8:%.*]], label [[COND_FALSE_I:%.*]], !prof [[PROF4:![0-9]+]]
 ; CHECK:       for.body.preheader8:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
@@ -156,7 +156,7 @@ define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    [[ADD]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[N]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_PREHEADER11]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[RET_0_LCSSA1:%.*]] = phi i32 [ 0, [[ENTRY1:%.*]] ], [ [[ADD]], [[SPAN_CHECKED_ACCESS_EXIT]] ], [ [[ADD1:%.*]], [[FOR_BODY1]] ]
@@ -227,7 +227,7 @@ define hidden noundef nonnull align 4 dereferenceable(4) ptr @span_checked_acces
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SIZE__I:%.*]] = getelementptr inbounds i8, ptr [[THIS]], i64 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[__SIZE__I]], align 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[TMP0]], [[__IDX]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[__IDX]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]], !prof [[PROF4]]
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    tail call void @llvm.trap()

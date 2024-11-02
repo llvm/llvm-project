@@ -55,8 +55,8 @@ body:             |
     ; GCN-LABEL: name: func_add_constant_to_fi_uniform_i32
     ; GCN: liveins: $sgpr30_sgpr31
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: $sgpr0 = S_LSHR_B32 $sgpr32, 6, implicit-def dead $scc
-    ; GCN-NEXT: renamable $sgpr4 = nuw S_ADD_I32 killed $sgpr0, 4, implicit-def dead $scc
+    ; GCN-NEXT: renamable $sgpr0 = S_LSHR_B32 $sgpr32, 6, implicit-def dead $scc
+    ; GCN-NEXT: renamable $sgpr4 = nuw S_ADD_I32 $sgpr0, 4, implicit-def dead $scc
     ; GCN-NEXT: renamable $vgpr0 = COPY killed renamable $sgpr4, implicit $exec
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: DS_WRITE_B32 undef renamable $vgpr0, killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec

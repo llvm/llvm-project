@@ -409,21 +409,21 @@ __nsan_dump_shadow_mem(const u8 *addr, size_t size_bytes, size_t bytes_per_line,
   }
 }
 
-alignas(16) SANITIZER_INTERFACE_ATTRIBUTE
+alignas(64) SANITIZER_INTERFACE_ATTRIBUTE
     thread_local uptr __nsan_shadow_ret_tag = 0;
 
-alignas(16) SANITIZER_INTERFACE_ATTRIBUTE
+alignas(64) SANITIZER_INTERFACE_ATTRIBUTE
     thread_local char __nsan_shadow_ret_ptr[kMaxVectorWidth *
                                             sizeof(__float128)];
 
-alignas(16) SANITIZER_INTERFACE_ATTRIBUTE
+alignas(64) SANITIZER_INTERFACE_ATTRIBUTE
     thread_local uptr __nsan_shadow_args_tag = 0;
 
 // Maximum number of args. This should be enough for anyone (tm). An alternate
 // scheme is to have the generated code create an alloca and make
 // __nsan_shadow_args_ptr point ot the alloca.
 constexpr const int kMaxNumArgs = 128;
-alignas(16) SANITIZER_INTERFACE_ATTRIBUTE
+alignas(64) SANITIZER_INTERFACE_ATTRIBUTE
     thread_local char __nsan_shadow_args_ptr[kMaxVectorWidth * kMaxNumArgs *
                                              sizeof(__float128)];
 
@@ -444,6 +444,32 @@ int32_t checkFT(const FT value, ShadowFT Shadow, CheckTypeT CheckType,
   using InternalFT = LargestFT<FT, ShadowFT>;
   const InternalFT check_value = value;
   const InternalFT check_shadow = Shadow;
+
+  // We only check for NaNs in the value, not the shadow.
+  if (flags().check_nan && isnan(value)) {
+    GET_CALLER_PC_BP;
+    BufferedStackTrace stack;
+    stack.Unwind(pc, bp, nullptr, false);
+    if (GetSuppressionForStack(&stack, CheckKind::Consistency)) {
+      // FIXME: optionally print.
+      return flags().resume_after_suppression ? kResumeFromValue
+                                              : kContinueWithShadow;
+    }
+    Decorator D;
+    Printf("%s", D.Warning());
+    Printf("WARNING: NumericalStabilitySanitizer: NaN detected\n");
+    Printf("%s", D.Default());
+    stack.Print();
+    if (flags().halt_on_error) {
+      if (common_flags()->abort_on_error)
+        Printf("ABORTING\n");
+      else
+        Printf("Exiting\n");
+      Die();
+    }
+    // Performing other tests for NaN values is meaningless when dealing with numbers.
+    return kResumeFromValue;
+  }
 
   // See this article for an interesting discussion of how to compare floats:
   // https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/

@@ -986,10 +986,21 @@ def : InstRW<[ZnWritePCMPGTQYm], (instrs VPCMPGTQYrm)>;
 //-- Move instructions --//
 
 // VPERM2F128 / VPERM2I128.
-def : InstRW<[WriteMicrocoded], (instrs VPERM2F128rr,
-                                        VPERM2I128rr)>;
-def : InstRW<[WriteMicrocoded], (instrs VPERM2F128rm,
-                                        VPERM2I128rm)>;
+def ZnWriteVPERM2r : SchedWriteRes<[ZnFPU0, ZnFPU12]> {
+  let NumMicroOps = 8;
+  let Latency = 3;
+  let ReleaseAtCycles = [3,3];
+}
+def : InstRW<[ZnWriteVPERM2r], (instrs VPERM2F128rr,
+                                       VPERM2I128rr)>;
+
+def ZnWriteVPERM2m : SchedWriteRes<[ZnAGU, ZnFPU0, ZnFPU12]> {
+  let NumMicroOps = 12;
+  let Latency = 8;
+  let ReleaseAtCycles = [1,3,3];
+}
+def : InstRW<[ZnWriteVPERM2m], (instrs VPERM2F128rm,
+                                       VPERM2I128rm)>;
 
 def ZnWriteBROADCAST : SchedWriteRes<[ZnAGU, ZnFPU13]> {
   let NumMicroOps = 2;

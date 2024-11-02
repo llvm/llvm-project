@@ -109,6 +109,10 @@ class Symbolizer:
     self.__html = False
     self.__last_access_address = None
     self.__last_access_tag = None
+    self.__tag_dump = []
+    self.__tag_dump_match_idx = None
+    self.__matched_stack_uas = False
+    self.__offsets = []
 
   def enable_html(self, enable):
     self.__html = enable
@@ -311,6 +315,34 @@ class Symbolizer:
     if match:
       self.__last_access_tag = int(match.group(2), 16)
 
+  def process_tag_dump_line(self, line, ignore_tags=False):
+    m = re.match(r'.*?(0x[0-9a-f]+):' + '([ ]*[\[ ][0-9a-f][0-9a-f]\]?)' * 16, line)
+    if m is None:
+      return False
+    addr = m.group(1)
+    tags = m.group(*range(2, 18))
+    fault = [i for i, x in enumerate(tags) if '[' in x]
+    if fault:
+      self.__tag_dump_match_idx = len(self.__tag_dump) + fault[0]
+    self.__tag_dump.extend(int(x.strip(' [').rstrip('] '), 16) for x in tags)
+    return True
+
+  def finish_tag_dump(self):
+    if self.__matched_stack_uas or self.__tag_dump_match_idx is None:
+      return
+    for offset, size, local in sorted(self.__offsets, key=lambda x: abs(x[0])):
+      idx = self.__tag_dump_match_idx - offset // 16
+      if idx < 0 or idx > len(self.__tag_dump):
+        continue
+      if self.__tag_dump[idx] == self.__last_access_tag:
+        self.print('')
+        self.print('Potentially referenced stack object:')
+        if offset > 0:
+          self.print('  %d bytes after a variable "%s" in stack frame of function "%s"' % (offset - size, local[2], local[0]))
+        if offset < 0:
+          self.print('  %d bytes before a variable "%s" in stack frame of function "%s"' % (-offset, local[2], local[0]))
+        self.print('  at %s' % (local[1],))
+
   def process_stack_history(self, line, ignore_tags=False):
     if self.__last_access_address is None or self.__last_access_tag is None:
       return
@@ -336,16 +368,18 @@ class Symbolizer:
         size = local[4]
         if frame_offset is None or size is None:
           continue
-        obj_offset = (self.__last_access_address - fp - frame_offset) & fp_mask
-        if obj_offset >= size:
-          continue
+        obj_offset = (self.__last_access_address & fp_mask) - ((fp & fp_mask) + frame_offset)
         tag_offset = local[5]
         if not ignore_tags and (tag_offset is None or base_tag ^ tag_offset != self.__last_access_tag):
+          continue
+        if obj_offset < 0 or obj_offset >= size:
+          self.__offsets.append((obj_offset, size, local))
           continue
         self.print('')
         self.print('Potentially referenced stack object:')
         self.print('  %d bytes inside a variable "%s" in stack frame of function "%s"' % (obj_offset, local[2], local[0]))
         self.print('  at %s' % (local[1],))
+        self.__matched_stack_uas = True
       return True
     return False
 
@@ -456,9 +490,18 @@ def main():
       sys.exit(1)
     symbolizer.read_linkify(args.linkify)
 
+  tag_dump = False
   for line in sys.stdin:
     if sys.version_info.major < 3:
       line = line.decode('utf-8')
+    if tag_dump:
+      tag_dump = symbolizer.process_tag_dump_line(line)
+      if tag_dump:
+        continue
+      symbolizer.finish_tag_dump()
+    if 'Memory tags around the buggy address' in line:
+      tag_dump = True
+
     symbolizer.save_access_address(line)
     if symbolizer.process_stack_history(line, ignore_tags=args.ignore_tags):
       continue

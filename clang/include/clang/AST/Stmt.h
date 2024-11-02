@@ -650,6 +650,11 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasFPFeatures : 1;
 
+    /// Whether or not this BinaryOperator should be excluded from integer
+    /// overflow sanitization.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ExcludedOverflowPattern : 1;
+
     SourceLocation OpLoc;
   };
 

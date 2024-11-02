@@ -1957,7 +1957,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           consumeToken();
           StringRef LHS = Identifier.slice(0, DotOffset);
           StringRef Dot = Identifier.slice(DotOffset, DotOffset + 1);
-          StringRef RHS = Identifier.slice(DotOffset + 1, StringRef::npos);
+          StringRef RHS = Identifier.substr(DotOffset + 1);
           if (!RHS.empty()) {
             getLexer().UnLex(AsmToken(AsmToken::Identifier, RHS));
           }

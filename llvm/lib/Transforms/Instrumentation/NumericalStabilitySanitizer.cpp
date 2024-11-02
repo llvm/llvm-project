@@ -2038,7 +2038,8 @@ static void moveFastMathFlags(Function &F,
 
 bool NumericalStabilitySanitizer::sanitizeFunction(
     Function &F, const TargetLibraryInfo &TLI) {
-  if (!F.hasFnAttribute(Attribute::SanitizeNumericalStability))
+  if (!F.hasFnAttribute(Attribute::SanitizeNumericalStability) ||
+      F.isDeclaration())
     return false;
 
   // This is required to prevent instrumenting call to __nsan_init from within

@@ -289,12 +289,10 @@ static bool runIPSCCP(
       if (ReturnValue.isConstantRangeIncludingUndef())
         continue;
 
-      // Do not touch existing attribute for now.
-      // TODO: We should be able to take the intersection of the existing
-      // attribute and the inferred range.
+      // Take the intersection of the existing attribute and the inferred range.
+      ConstantRange CR = ReturnValue.getConstantRange();
       if (F->hasRetAttribute(Attribute::Range))
-        continue;
-      auto &CR = ReturnValue.getConstantRange();
+        CR = CR.intersectWith(F->getRetAttribute(Attribute::Range).getRange());
       F->addRangeRetAttr(CR);
       continue;
     }

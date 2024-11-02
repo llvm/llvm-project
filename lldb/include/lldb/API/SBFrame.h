@@ -104,6 +104,10 @@ public:
 
   bool IsArtificial() const;
 
+  /// Return whether a frame recognizer decided this frame should not
+  /// be displayes in backtraces etc.
+  bool IsHidden() const;
+
   /// The version that doesn't supply a 'use_dynamic' value will use the
   /// target's default.
   lldb::SBValue EvaluateExpression(const char *expr);

@@ -402,6 +402,15 @@ void DataSharingProcessor::collectSymbols(
                              /*collectSymbols=*/true,
                              /*collectHostAssociatedSymbols=*/true);
 
+  // Add implicitly referenced symbols from statement functions.
+  if (curScope) {
+    for (const auto &sym : curScope->GetSymbols()) {
+      if (sym->test(semantics::Symbol::Flag::OmpFromStmtFunction) &&
+          sym->test(flag))
+        allSymbols.insert(&*sym);
+    }
+  }
+
   llvm::SetVector<const semantics::Symbol *> symbolsInNestedRegions;
   collectSymbolsInNestedRegions(eval, flag, symbolsInNestedRegions);
 

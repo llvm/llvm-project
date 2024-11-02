@@ -306,7 +306,7 @@ define i32 @nabs_canonical_9(i32 %a, i32 %b) {
 ; CHECK-LABEL: @nabs_canonical_9(
 ; CHECK-NEXT:    [[T1:%.*]] = sub i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.abs.i32(i32 [[T1]], i1 false)
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[A]], [[TMP1]]
 ; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[B]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
@@ -417,7 +417,7 @@ declare void @extra_use_i1(i1)
 define i8 @shifty_abs_too_many_uses(i8 %x) {
 ; CHECK-LABEL: @shifty_abs_too_many_uses(
 ; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[SIGNBIT]], [[X]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], [[SIGNBIT]]
 ; CHECK-NEXT:    [[ABS:%.*]] = xor i8 [[ADD]], [[SIGNBIT]]
 ; CHECK-NEXT:    call void @extra_use(i8 [[SIGNBIT]])
 ; CHECK-NEXT:    ret i8 [[ABS]]

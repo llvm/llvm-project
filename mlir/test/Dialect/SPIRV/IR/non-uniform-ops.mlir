@@ -29,6 +29,62 @@ func.func @group_non_uniform_ballot(%predicate: i1) -> vector<4xsi32> {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformBallotFindLSB
+//===----------------------------------------------------------------------===//
+
+func.func @group_non_uniform_ballot_find_lsb(%value : vector<4xi32>) -> i32 {
+  // CHECK: %{{.*}} = spirv.GroupNonUniformBallotFindLSB <Subgroup> %{{.*}}: vector<4xi32>, i32
+  %0 = spirv.GroupNonUniformBallotFindLSB <Subgroup> %value : vector<4xi32>, i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_find_lsb(%value : vector<4xi32>) -> i32 {
+  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  %0 = spirv.GroupNonUniformBallotFindLSB <Device> %value : vector<4xi32>, i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_find_lsb(%value : vector<4xi32>) -> si32 {
+  // expected-error @+1 {{op result #0 must be 8/16/32/64-bit signless/unsigned integer, but got 'si32'}}
+  %0 = spirv.GroupNonUniformBallotFindLSB <Subgroup> %value : vector<4xi32>, si32
+  return %0: si32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformBallotFindLSB
+//===----------------------------------------------------------------------===//
+
+func.func @group_non_uniform_ballot_find_msb(%value : vector<4xi32>) -> i32 {
+  // CHECK: %{{.*}} = spirv.GroupNonUniformBallotFindMSB <Subgroup> %{{.*}}: vector<4xi32>, i32
+  %0 = spirv.GroupNonUniformBallotFindMSB <Subgroup> %value : vector<4xi32>, i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_find_msb(%value : vector<4xi32>) -> i32 {
+  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  %0 = spirv.GroupNonUniformBallotFindMSB <Device> %value : vector<4xi32>, i32
+  return %0: i32
+}
+
+// -----
+
+func.func @group_non_uniform_ballot_find_msb(%value : vector<4xi32>) -> si32 {
+  // expected-error @+1 {{op result #0 must be 8/16/32/64-bit signless/unsigned integer, but got 'si32'}}
+  %0 = spirv.GroupNonUniformBallotFindMSB <Subgroup> %value : vector<4xi32>, si32
+  return %0: si32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.NonUniformGroupBroadcast
 //===----------------------------------------------------------------------===//
 

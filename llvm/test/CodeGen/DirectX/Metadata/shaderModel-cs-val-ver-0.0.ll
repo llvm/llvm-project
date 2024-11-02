@@ -17,5 +17,7 @@ attributes #0 = { noinline nounwind "exp-shader"="cs" "hlsl.numthreads"="1,2,1" 
 !0 = !{i32 0, i32 0}
 
 ; ANALYSIS: Shader Model Version : 6.6
-; ANALYSIS: DXIL Version : 1.6
-; ANALYSIS: Shader Stage : compute
+; ANALYSIS-NEXT: DXIL Version : 1.6
+; ANALYSIS-NEXT: Shader Stage : compute
+; ANALYSIS-NEXT: Validator Version : 0
+; ANALYSIS-EMPTY:

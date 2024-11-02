@@ -202,6 +202,11 @@ class DAPTestCaseBase(TestBase):
             "console", timeout_secs=timeout_secs, pattern=pattern
         )
 
+    def collect_stdout(self, timeout_secs, pattern=None):
+        return self.dap_server.collect_output(
+            "stdout", timeout_secs=timeout_secs, pattern=pattern
+        )
+
     def get_local_as_int(self, name, threadId=None):
         value = self.dap_server.get_local_variable_value(name, threadId=threadId)
         # 'value' may have the variable value and summary.
@@ -222,14 +227,18 @@ class DAPTestCaseBase(TestBase):
         """Set a top level global variable only."""
         return self.dap_server.request_setVariable(2, name, str(value), id=id)
 
-    def stepIn(self, threadId=None, targetId=None, waitForStop=True):
-        self.dap_server.request_stepIn(threadId=threadId, targetId=targetId)
+    def stepIn(
+        self, threadId=None, targetId=None, waitForStop=True, granularity="statement"
+    ):
+        self.dap_server.request_stepIn(
+            threadId=threadId, targetId=targetId, granularity=granularity
+        )
         if waitForStop:
             return self.dap_server.wait_for_stopped()
         return None
 
-    def stepOver(self, threadId=None, waitForStop=True):
-        self.dap_server.request_next(threadId=threadId)
+    def stepOver(self, threadId=None, waitForStop=True, granularity="statement"):
+        self.dap_server.request_next(threadId=threadId, granularity=granularity)
         if waitForStop:
             return self.dap_server.wait_for_stopped()
         return None

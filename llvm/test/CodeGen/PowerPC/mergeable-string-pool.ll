@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr8 \
+; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr8 -enable-global-merge=false \
 ; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefixes=AIX32,AIXDATA
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr8 \
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr8 -enable-global-merge=false \
 ; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefixes=AIX64,AIXDATA
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-unknown-linux -mcpu=pwr8 \
 ; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefixes=LINUX64BE,LINUXDATA

@@ -134,7 +134,7 @@ static unsigned getCPUType(const MachOObjectFile &O) {
 }
 
 static unsigned getCPUSubType(const MachOObjectFile &O) {
-  return O.getHeader().cpusubtype;
+  return O.getHeader().cpusubtype & ~MachO::CPU_SUBTYPE_MASK;
 }
 
 static uint32_t
@@ -2341,7 +2341,7 @@ void MachOObjectFile::getRelocationTypeName(
         "ARM64_RELOC_PAGEOFF12",          "ARM64_RELOC_GOT_LOAD_PAGE21",
         "ARM64_RELOC_GOT_LOAD_PAGEOFF12", "ARM64_RELOC_POINTER_TO_GOT",
         "ARM64_RELOC_TLVP_LOAD_PAGE21",   "ARM64_RELOC_TLVP_LOAD_PAGEOFF12",
-        "ARM64_RELOC_ADDEND"
+        "ARM64_RELOC_ADDEND",             "ARM64_RELOC_AUTHENTICATED_POINTER"
       };
 
       if (RType >= std::size(Table))
@@ -2436,12 +2436,12 @@ StringRef MachOObjectFile::guessLibraryShortName(StringRef Name,
   a = Name.rfind('/');
   if (a == Name.npos || a == 0)
     goto guess_library;
-  Foo = Name.slice(a+1, Name.npos);
+  Foo = Name.substr(a + 1);
 
   // Look for a suffix starting with a '_'
   Idx = Foo.rfind('_');
   if (Idx != Foo.npos && Foo.size() >= 2) {
-    Suffix = Foo.slice(Idx, Foo.npos);
+    Suffix = Foo.substr(Idx);
     if (Suffix != "_debug" && Suffix != "_profile")
       Suffix = StringRef();
     else
@@ -2468,7 +2468,7 @@ StringRef MachOObjectFile::guessLibraryShortName(StringRef Name,
   c =  Name.rfind('/', b);
   if (c == Name.npos || c == 0)
     goto guess_library;
-  V = Name.slice(c+1, Name.npos);
+  V = Name.substr(c + 1);
   if (!V.starts_with("Versions/"))
     goto guess_library;
   d =  Name.rfind('/', c);
@@ -2489,7 +2489,7 @@ guess_library:
   a = Name.rfind('.');
   if (a == Name.npos || a == 0)
     return StringRef();
-  Dylib = Name.slice(a, Name.npos);
+  Dylib = Name.substr(a);
   if (Dylib != ".dylib")
     goto guess_qtx;
 
@@ -2527,7 +2527,7 @@ guess_library:
   return Lib;
 
 guess_qtx:
-  Qtx = Name.slice(a, Name.npos);
+  Qtx = Name.substr(a);
   if (Qtx != ".qtx")
     return StringRef();
   b = Name.rfind('/', a);

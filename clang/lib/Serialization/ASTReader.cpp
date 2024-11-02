@@ -1887,6 +1887,7 @@ Token ASTReader::ReadToken(ModuleFile &M, const RecordDataImpl &Record,
     case tok::annot_pragma_unused:
     case tok::annot_pragma_openacc:
     case tok::annot_pragma_openacc_end:
+    case tok::annot_repl_input_end:
       break;
     default:
       llvm_unreachable("missing deserialization code for annotation token");
@@ -9953,6 +9954,45 @@ void ASTReader::finishPendingActions() {
       cast<RedeclarableTemplateDecl>(R)->Common = RTD->Common;
   }
   PendingDefinitions.clear();
+
+  for (auto [D, Previous] : PendingWarningForDuplicatedDefsInModuleUnits) {
+    auto hasDefinitionImpl = [this](Decl *D, auto hasDefinitionImpl) {
+      if (auto *VD = dyn_cast<VarDecl>(D))
+        return VD->isThisDeclarationADefinition() ||
+               VD->isThisDeclarationADemotedDefinition();
+
+      if (auto *TD = dyn_cast<TagDecl>(D))
+        return TD->isThisDeclarationADefinition() ||
+               TD->isThisDeclarationADemotedDefinition();
+
+      if (auto *FD = dyn_cast<FunctionDecl>(D))
+        return FD->isThisDeclarationADefinition() || PendingBodies.count(FD);
+
+      if (auto *RTD = dyn_cast<RedeclarableTemplateDecl>(D))
+        return hasDefinitionImpl(RTD->getTemplatedDecl(), hasDefinitionImpl);
+
+      // Conservatively return false here.
+      return false;
+    };
+
+    auto hasDefinition = [&hasDefinitionImpl](Decl *D) {
+      return hasDefinitionImpl(D, hasDefinitionImpl);
+    };
+
+    // It is not good to prevent multiple declarations since the forward
+    // declaration is common. Let's try to avoid duplicated definitions
+    // only.
+    if (!hasDefinition(D) || !hasDefinition(Previous))
+      continue;
+
+    Module *PM = Previous->getOwningModule();
+    Module *DM = D->getOwningModule();
+    Diag(D->getLocation(), diag::warn_decls_in_multiple_modules)
+        << cast<NamedDecl>(Previous) << PM->getTopLevelModuleName()
+        << (DM ? DM->getTopLevelModuleName() : "global module");
+    Diag(Previous->getLocation(), diag::note_also_found);
+  }
+  PendingWarningForDuplicatedDefsInModuleUnits.clear();
 
   // Load the bodies of any functions or methods we've encountered. We do
   // this now (delayed) so that we can be sure that the declaration chains

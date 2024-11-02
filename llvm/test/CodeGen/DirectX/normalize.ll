@@ -22,7 +22,6 @@ entry:
 
 define noundef <2 x half> @test_normalize_half2(<2 x half> noundef %p0) {
 entry:
-  ; CHECK: extractelement <2 x half> %{{.*}}, i64 0
   ; EXPCHECK: [[doth2:%.*]] = call half @llvm.dx.dot2.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
   ; DOPCHECK: [[doth2:%.*]] = call half @dx.op.dot2.f16(i32 54, half %{{.*}}, half %{{.*}}, half %{{.*}}, half %{{.*}})
   ; EXPCHECK: [[rsqrt:%.*]] = call half @llvm.dx.rsqrt.f16(half [[doth2]])
@@ -37,7 +36,6 @@ entry:
 
 define noundef <3 x half> @test_normalize_half3(<3 x half> noundef %p0) {
 entry:
-  ; CHECK: extractelement <3 x half> %{{.*}}, i64 0
   ; EXPCHECK: [[doth3:%.*]] = call half @llvm.dx.dot3.v3f16(<3 x half> %{{.*}}, <3 x half> %{{.*}})
   ; DOPCHECK: [[doth3:%.*]] = call half @dx.op.dot3.f16(i32 55, half %{{.*}}, half %{{.*}}, half %{{.*}}, half %{{.*}})
   ; EXPCHECK: [[rsqrt:%.*]] = call half @llvm.dx.rsqrt.f16(half [[doth3]])
@@ -52,7 +50,6 @@ entry:
 
 define noundef <4 x half> @test_normalize_half4(<4 x half> noundef %p0) {
 entry:
-  ; CHECK: extractelement <4 x half> %{{.*}}, i64 0
   ; EXPCHECK: [[doth4:%.*]] = call half @llvm.dx.dot4.v4f16(<4 x half> %{{.*}}, <4 x half> %{{.*}})
   ; DOPCHECK: [[doth4:%.*]] = call half @dx.op.dot4.f16(i32 56, half %{{.*}}, half %{{.*}}, half %{{.*}}, half %{{.*}})
   ; EXPCHECK: [[rsqrt:%.*]] = call half @llvm.dx.rsqrt.f16(half [[doth4]])
@@ -74,7 +71,6 @@ entry:
 
 define noundef <2 x float> @test_normalize_float2(<2 x float> noundef %p0) {
 entry:
-  ; CHECK: extractelement <2 x float> %{{.*}}, i64 0
   ; EXPCHECK: [[dotf2:%.*]] = call float @llvm.dx.dot2.v2f32(<2 x float> %{{.*}}, <2 x float> %{{.*}})
   ; DOPCHECK: [[dotf2:%.*]] = call float @dx.op.dot2.f32(i32 54, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}})
   ; EXPCHECK: [[rsqrt:%.*]] = call float @llvm.dx.rsqrt.f32(float [[dotf2]])
@@ -89,7 +85,6 @@ entry:
 
 define noundef <3 x float> @test_normalize_float3(<3 x float> noundef %p0) {
 entry:
-  ; CHECK: extractelement <3 x float> %{{.*}}, i64 0
   ; EXPCHECK: [[dotf3:%.*]] = call float @llvm.dx.dot3.v3f32(<3 x float> %{{.*}}, <3 x float> %{{.*}})
   ; DOPCHECK: [[dotf3:%.*]] = call float @dx.op.dot3.f32(i32 55, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}})
   ; EXPCHECK: [[rsqrt:%.*]] = call float @llvm.dx.rsqrt.f32(float [[dotf3]])
@@ -104,7 +99,6 @@ entry:
 
 define noundef <4 x float> @test_normalize_float4(<4 x float> noundef %p0) {
 entry:
-  ; CHECK: extractelement <4 x float> %{{.*}}, i64 0
   ; EXPCHECK: [[dotf4:%.*]] = call float @llvm.dx.dot4.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   ; DOPCHECK: [[dotf4:%.*]] = call float @dx.op.dot4.f32(i32 56, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}})
   ; EXPCHECK: [[rsqrt:%.*]] = call float @llvm.dx.rsqrt.f32(float [[dotf4]])

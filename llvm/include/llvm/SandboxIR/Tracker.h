@@ -59,6 +59,10 @@ class StoreInst;
 class Instruction;
 class Tracker;
 class AllocaInst;
+class CatchSwitchInst;
+class SwitchInst;
+class ConstantInt;
+class ShuffleVectorInst;
 
 /// The base class for IR Change classes.
 class IRChangeBase {
@@ -92,25 +96,6 @@ public:
   void accept() final {}
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const final { OS << "UseSet"; }
-  LLVM_DUMP_METHOD void dump() const final;
-#endif
-};
-
-class PHISetIncoming : public IRChangeBase {
-  PHINode *PHI;
-  unsigned Idx;
-  PointerUnion<Value *, BasicBlock *> OrigValueOrBB;
-
-public:
-  enum class What {
-    Value,
-    Block,
-  };
-  PHISetIncoming(PHINode *PHI, unsigned Idx, What What);
-  void revert(Tracker &Tracker) final;
-  void accept() final {}
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const final { OS << "PHISetIncoming"; }
   LLVM_DUMP_METHOD void dump() const final;
 #endif
 };
@@ -226,13 +211,13 @@ public:
 ///
 template <auto GetterFn, auto SetterFn>
 class GenericSetter final : public IRChangeBase {
-  /// Helper for getting the class type from the getter
-  template <typename ClassT, typename RetT>
-  static ClassT getClassTypeFromGetter(RetT (ClassT::*Fn)() const);
-  template <typename ClassT, typename RetT>
-  static ClassT getClassTypeFromGetter(RetT (ClassT::*Fn)());
-
-  using InstrT = decltype(getClassTypeFromGetter(GetterFn));
+  /// Traits for getting the class type from GetterFn type.
+  template <typename> struct GetClassTypeFromGetter;
+  template <typename RetT, typename ClassT>
+  struct GetClassTypeFromGetter<RetT (ClassT::*)() const> {
+    using ClassType = ClassT;
+  };
+  using InstrT = typename GetClassTypeFromGetter<decltype(GetterFn)>::ClassType;
   using SavedValT = std::invoke_result_t<decltype(GetterFn), InstrT>;
   InstrT *I;
   SavedValT OrigVal;
@@ -250,19 +235,82 @@ public:
 #endif
 };
 
-class CallBrInstSetIndirectDest : public IRChangeBase {
-  CallBrInst *CallBr;
+/// Similar to GenericSetter but the setters/getters have an index as their
+/// first argument. This is commont in cases like: getOperand(unsigned Idx)
+template <auto GetterFn, auto SetterFn>
+class GenericSetterWithIdx final : public IRChangeBase {
+  /// Helper for getting the class type from the getter
+  template <typename ClassT, typename RetT>
+  static ClassT getClassTypeFromGetter(RetT (ClassT::*Fn)(unsigned) const);
+  template <typename ClassT, typename RetT>
+  static ClassT getClassTypeFromGetter(RetT (ClassT::*Fn)(unsigned));
+
+  using InstrT = decltype(getClassTypeFromGetter(GetterFn));
+  using SavedValT = std::invoke_result_t<decltype(GetterFn), InstrT, unsigned>;
+  InstrT *I;
+  SavedValT OrigVal;
   unsigned Idx;
-  BasicBlock *OrigIndirectDest;
 
 public:
-  CallBrInstSetIndirectDest(CallBrInst *CallBr, unsigned Idx);
+  GenericSetterWithIdx(InstrT *I, unsigned Idx)
+      : I(I), OrigVal((I->*GetterFn)(Idx)), Idx(Idx) {}
+  void revert(Tracker &Tracker) final { (I->*SetterFn)(Idx, OrigVal); }
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final { OS << "GenericSetterWithIdx"; }
+  LLVM_DUMP_METHOD void dump() const final {
+    dump(dbgs());
+    dbgs() << "\n";
+  }
+#endif
+};
+
+class CatchSwitchAddHandler : public IRChangeBase {
+  CatchSwitchInst *CSI;
+  unsigned HandlerIdx;
+
+public:
+  CatchSwitchAddHandler(CatchSwitchInst *CSI);
   void revert(Tracker &Tracker) final;
   void accept() final {}
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const final { OS << "CallBrInstSetIndirectDest"; }
+  void dump(raw_ostream &OS) const final { OS << "CatchSwitchAddHandler"; }
+  LLVM_DUMP_METHOD void dump() const final {
+    dump(dbgs());
+    dbgs() << "\n";
+  }
+#endif // NDEBUG
+};
+
+class SwitchAddCase : public IRChangeBase {
+  SwitchInst *Switch;
+  ConstantInt *Val;
+
+public:
+  SwitchAddCase(SwitchInst *Switch, ConstantInt *Val)
+      : Switch(Switch), Val(Val) {}
+  void revert(Tracker &Tracker) final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final { OS << "SwitchAddCase"; }
   LLVM_DUMP_METHOD void dump() const final;
-#endif
+#endif // NDEBUG
+};
+
+class SwitchRemoveCase : public IRChangeBase {
+  SwitchInst *Switch;
+  ConstantInt *Val;
+  BasicBlock *Dest;
+
+public:
+  SwitchRemoveCase(SwitchInst *Switch, ConstantInt *Val, BasicBlock *Dest)
+      : Switch(Switch), Val(Val), Dest(Dest) {}
+  void revert(Tracker &Tracker) final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final { OS << "SwitchRemoveCase"; }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif // NDEBUG
 };
 
 class MoveInstr : public IRChangeBase {
@@ -304,6 +352,20 @@ public:
   void accept() final {}
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const final { OS << "CreateAndInsertInst"; }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class ShuffleVectorSetMask final : public IRChangeBase {
+  ShuffleVectorInst *SVI;
+  SmallVector<int, 8> PrevMask;
+
+public:
+  ShuffleVectorSetMask(ShuffleVectorInst *SVI);
+  void revert(Tracker &Tracker) final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final { OS << "ShuffleVectorSetMask"; }
   LLVM_DUMP_METHOD void dump() const final;
 #endif
 };

@@ -512,8 +512,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   auto Action = std::make_unique<ClangdFrontendAction>();
   const FrontendInputFile &MainInput = Clang->getFrontendOpts().Inputs[0];
   if (!Action->BeginSourceFile(*Clang, MainInput)) {
-    log("BeginSourceFile() failed when building AST for {0}",
-        MainInput.getFile());
+    elog("BeginSourceFile() failed when building AST for {0}",
+         MainInput.getFile());
     return std::nullopt;
   }
   // If we saw an include guard in the preamble section of the main file,

@@ -333,7 +333,8 @@ def note_constexpr_new : Note<
 def note_constexpr_new_non_replaceable : Note<
   "call to %select{placement|class-specific}0 %1">;
 def note_constexpr_new_placement : Note<
-  "this placement new expression is not yet supported in constant expressions">;
+  "this placement new expression is not supported in constant expressions "
+  "%select{|before C++2c}0">;
 def note_constexpr_placement_new_wrong_type : Note<
   "placement new would change type of storage from %0 to %1">;
 def note_constexpr_new_negative : Note<
@@ -394,10 +395,9 @@ def warn_integer_constant_overflow : Warning<
 def warn_fixedpoint_constant_overflow : Warning<
   "overflow in expression; result is %0 with type %1">,
   InGroup<DiagGroup<"fixed-point-overflow">>;
-def warn_constexpr_unscoped_enum_out_of_range : Warning<
+def note_constexpr_unscoped_enum_out_of_range : Note<
   "integer value %0 is outside the valid range of values [%1, %2] for the "
-  "enumeration type %3">, DefaultError, ShowInSystemHeader, ShowInSystemMacro,
-  InGroup<DiagGroup<"enum-constexpr-conversion">>;
+  "enumeration type %3">;
 
 // This is a temporary diagnostic, and shall be removed once our
 // implementation is complete, and like the preceding constexpr notes belongs

@@ -47,7 +47,6 @@ static bool supportsX86_64(uint64_t Type) {
   case ELF::R_X86_64_PC64:
   case ELF::R_X86_64_32:
   case ELF::R_X86_64_32S:
-  case ELF::R_X86_64_GLOB_DAT:
     return true;
   default:
     return false;
@@ -69,8 +68,6 @@ static uint64_t resolveX86_64(uint64_t Type, uint64_t Offset, uint64_t S,
   case ELF::R_X86_64_32:
   case ELF::R_X86_64_32S:
     return (S + Addend) & 0xFFFFFFFF;
-  case ELF::R_X86_64_GLOB_DAT:
-    return S;
   default:
     llvm_unreachable("Invalid relocation type");
   }

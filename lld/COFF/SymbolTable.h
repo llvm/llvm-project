@@ -116,6 +116,9 @@ public:
   // A list of chunks which to be added to .rdata.
   std::vector<Chunk *> localImportChunks;
 
+  // A list of EC EXP+ symbols.
+  std::vector<Symbol *> expSymbols;
+
   // Iterates symbols in non-determinstic hash table order.
   template <typename T> void forEachSymbol(T callback) {
     for (auto &pair : symMap)

@@ -394,11 +394,6 @@ public:
     return TargetTransformInfoImplBase::isNumRegsMajorCostOfLSR();
   }
 
-  bool shouldFoldTerminatingConditionAfterLSR() const {
-    return TargetTransformInfoImplBase::
-        shouldFoldTerminatingConditionAfterLSR();
-  }
-
   bool shouldDropLSRSolutionIfLessProfitable() const {
     return TargetTransformInfoImplBase::shouldDropLSRSolutionIfLessProfitable();
   }
@@ -2036,6 +2031,12 @@ public:
       break;
     case Intrinsic::maximum:
       ISD = ISD::FMAXIMUM;
+      break;
+    case Intrinsic::minimumnum:
+      ISD = ISD::FMINIMUMNUM;
+      break;
+    case Intrinsic::maximumnum:
+      ISD = ISD::FMAXIMUMNUM;
       break;
     case Intrinsic::copysign:
       ISD = ISD::FCOPYSIGN;

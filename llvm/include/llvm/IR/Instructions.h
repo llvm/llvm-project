@@ -4942,6 +4942,23 @@ inline std::optional<SyncScope::ID> getAtomicSyncScopeID(const Instruction *I) {
   llvm_unreachable("unhandled atomic operation");
 }
 
+/// A helper function that sets an atomic operation's sync scope.
+inline void setAtomicSyncScopeID(Instruction *I, SyncScope::ID SSID) {
+  assert(I->isAtomic());
+  if (auto *AI = dyn_cast<LoadInst>(I))
+    AI->setSyncScopeID(SSID);
+  else if (auto *AI = dyn_cast<StoreInst>(I))
+    AI->setSyncScopeID(SSID);
+  else if (auto *AI = dyn_cast<FenceInst>(I))
+    AI->setSyncScopeID(SSID);
+  else if (auto *AI = dyn_cast<AtomicCmpXchgInst>(I))
+    AI->setSyncScopeID(SSID);
+  else if (auto *AI = dyn_cast<AtomicRMWInst>(I))
+    AI->setSyncScopeID(SSID);
+  else
+    llvm_unreachable("unhandled atomic operation");
+}
+
 //===----------------------------------------------------------------------===//
 //                              FreezeInst Class
 //===----------------------------------------------------------------------===//

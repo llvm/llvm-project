@@ -47,6 +47,8 @@ struct Range {
   }
 };
 
+using FallibleMemory64Iterator = llvm::object::MinidumpFile::FallibleMemory64Iterator;
+
 class MinidumpParser {
 public:
   static llvm::Expected<MinidumpParser>
@@ -91,6 +93,8 @@ public:
   /// Returns a list of memory regions and a flag indicating whether the list is
   /// complete (includes all regions mapped into the process memory).
   std::pair<MemoryRegionInfos, bool> BuildMemoryRegions();
+
+  llvm::iterator_range<FallibleMemory64Iterator> GetMemory64Iterator(llvm::Error &err);
 
   static llvm::StringRef GetStreamTypeAsString(StreamType stream_type);
 

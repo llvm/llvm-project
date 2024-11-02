@@ -59,6 +59,18 @@ TEST(StringExtrasTest, isUpper) {
   EXPECT_FALSE(isUpper('\?'));
 }
 
+TEST(StringExtrasTest, isPunct) {
+  EXPECT_FALSE(isPunct('a'));
+  EXPECT_FALSE(isPunct('b'));
+  EXPECT_FALSE(isPunct('z'));
+  EXPECT_TRUE(isPunct('-'));
+  EXPECT_TRUE(isPunct(';'));
+  EXPECT_TRUE(isPunct('@'));
+  EXPECT_FALSE(isPunct('0'));
+  EXPECT_FALSE(isPunct('1'));
+  EXPECT_FALSE(isPunct('x'));
+}
+
 template <class ContainerT> void testJoin() {
   ContainerT Items;
   EXPECT_EQ("", join(Items.begin(), Items.end(), " <sep> "));

@@ -3888,6 +3888,7 @@ protected:
   /// Construct an empty binary operator.
   explicit BinaryOperator(EmptyShell Empty) : Expr(BinaryOperatorClass, Empty) {
     BinaryOperatorBits.Opc = BO_Comma;
+    BinaryOperatorBits.ExcludedOverflowPattern = false;
   }
 
 public:
@@ -4042,6 +4043,15 @@ public:
   /// allocated in Trailing Storage
   void setHasStoredFPFeatures(bool B) { BinaryOperatorBits.HasFPFeatures = B; }
   bool hasStoredFPFeatures() const { return BinaryOperatorBits.HasFPFeatures; }
+
+  /// Set and get the bit that informs arithmetic overflow sanitizers whether
+  /// or not they should exclude certain BinaryOperators from instrumentation
+  void setExcludedOverflowPattern(bool B) {
+    BinaryOperatorBits.ExcludedOverflowPattern = B;
+  }
+  bool hasExcludedOverflowPattern() const {
+    return BinaryOperatorBits.ExcludedOverflowPattern;
+  }
 
   /// Get FPFeatures from trailing storage
   FPOptionsOverride getStoredFPFeatures() const {

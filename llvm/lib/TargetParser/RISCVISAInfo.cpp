@@ -508,7 +508,7 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
 
     size_t Idx = Arch.find('_');
     StringRef Ext = Arch.slice(0, Idx);
-    Arch = Arch.slice(Idx, StringRef::npos);
+    Arch = Arch.substr(Idx);
 
     StringRef Prefix, MinorVersionStr;
     std::tie(Prefix, MinorVersionStr) = Ext.rsplit('p');
@@ -533,7 +533,7 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
       return getError("missing extension name");
 
     StringRef ExtName = Prefix.slice(0, VersionStart);
-    StringRef MajorVersionStr = Prefix.slice(VersionStart, StringRef::npos);
+    StringRef MajorVersionStr = Prefix.substr(VersionStart);
     if (MajorVersionStr.getAsInteger(10, MajorVersion))
       return getError("failed to parse major version number");
 
@@ -662,7 +662,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
     size_t Idx = Arch.find('_');
     StringRef Ext = Arch.slice(0, Idx);
-    Arch = Arch.slice(Idx, StringRef::npos);
+    Arch = Arch.substr(Idx);
 
     do {
       StringRef Name, Vers, Desc;
@@ -721,6 +721,16 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   return RISCVISAInfo::postProcessAndChecking(std::move(ISAInfo));
 }
 
+static Error getIncompatibleError(StringRef Ext1, StringRef Ext2) {
+  return getError("'" + Ext1 + "' and '" + Ext2 +
+                  "' extensions are incompatible");
+}
+
+static Error getExtensionRequiresError(StringRef Ext, StringRef ReqExt) {
+  return getError("'" + Ext + "' requires '" + ReqExt +
+                  "' extension to also be specified");
+}
+
 Error RISCVISAInfo::checkDependency() {
   bool HasE = Exts.count("e") != 0;
   bool HasI = Exts.count("i") != 0;
@@ -733,32 +743,24 @@ Error RISCVISAInfo::checkDependency() {
   bool HasZcmt = Exts.count("zcmt") != 0;
 
   if (HasI && HasE)
-    return getError("'I' and 'E' extensions are incompatible");
+    return getIncompatibleError("i", "e");
 
   if (HasF && HasZfinx)
-    return getError("'f' and 'zfinx' extensions are incompatible");
+    return getIncompatibleError("f", "zfinx");
 
   if (HasZvl && !HasVector)
-    return getError(
-        "'zvl*b' requires 'v' or 'zve*' extension to also be specified");
+    return getExtensionRequiresError("zvl*b", "v' or 'zve*");
 
-  if (Exts.count("zvbb") && !HasVector)
-    return getError(
-        "'zvbb' requires 'v' or 'zve*' extension to also be specified");
+  if (!HasVector)
+    for (auto Ext :
+         {"zvbb", "zvbc32e", "zvkb", "zvkg", "zvkgs", "zvkned", "zvknha", "zvksed", "zvksh"})
+      if (Exts.count(Ext))
+        return getExtensionRequiresError(Ext, "v' or 'zve*");
 
-  if (Exts.count("zvbc") && !Exts.count("zve64x"))
-    return getError(
-        "'zvbc' requires 'v' or 'zve64*' extension to also be specified");
-
-  if ((Exts.count("zvkb") || Exts.count("zvkg") || Exts.count("zvkned") ||
-       Exts.count("zvknha") || Exts.count("zvksed") || Exts.count("zvksh")) &&
-      !HasVector)
-    return getError(
-        "'zvk*' requires 'v' or 'zve*' extension to also be specified");
-
-  if (Exts.count("zvknhb") && !Exts.count("zve64x"))
-    return getError(
-        "'zvknhb' requires 'v' or 'zve64*' extension to also be specified");
+  if (!Exts.count("zve64x"))
+    for (auto Ext : {"zvknhb", "zvbc"})
+      if (Exts.count(Ext))
+        return getExtensionRequiresError(Ext, "v' or 'zve64*");
 
   if ((HasZcmt || Exts.count("zcmp")) && HasD && (HasC || Exts.count("zcd")))
     return getError(Twine("'") + (HasZcmt ? "zcmt" : "zcmp") +
@@ -769,23 +771,20 @@ Error RISCVISAInfo::checkDependency() {
   if (XLen != 32 && Exts.count("zcf"))
     return getError("'zcf' is only supported for 'rv32'");
 
-  if (Exts.count("zacas") && !(Exts.count("a") || Exts.count("zaamo")))
-    return getError(
-        "'zacas' requires 'a' or 'zaamo' extension to also be specified");
-
-  if (Exts.count("zabha") && !(Exts.count("a") || Exts.count("zaamo")))
-    return getError(
-        "'zabha' requires 'a' or 'zaamo' extension to also be specified");
+  if (!(Exts.count("a") || Exts.count("zaamo")))
+    for (auto Ext : {"zacas", "zabha"})
+      if (Exts.count(Ext))
+        return getExtensionRequiresError(Ext, "a' or 'zaamo");
 
   if (Exts.count("xwchc") != 0) {
     if (XLen != 32)
-      return getError("'Xwchc' is only supported for 'rv32'");
+      return getError("'xwchc' is only supported for 'rv32'");
 
     if (HasD)
-      return getError("'D' and 'Xwchc' extensions are incompatible");
+      return getIncompatibleError("d", "xwchc");
 
     if (Exts.count("zcb") != 0)
-      return getError("'Xwchc' and 'Zcb' extensions are incompatible");
+      return getIncompatibleError("xwchc", "zcb");
   }
 
   return Error::success();

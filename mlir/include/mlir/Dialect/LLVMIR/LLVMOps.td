@@ -835,7 +835,8 @@ def LLVM_ShuffleVectorOp : LLVM_Op<"shufflevector",
 def LLVM_SelectOp
     : LLVM_Op<"select",
           [Pure, AllTypesMatch<["trueValue", "falseValue", "res"]>,
-           DeclareOpInterfaceMethods<FastmathFlagsInterface>]>,
+           DeclareOpInterfaceMethods<FastmathFlagsInterface>,
+           DeclareOpInterfaceMethods<SelectLikeOpInterface>]>,
       LLVM_Builder<
           "$res = builder.CreateSelect($condition, $trueValue, $falseValue);"> {
   let arguments = (ins LLVM_ScalarOrVectorOf<I1>:$condition,
@@ -1619,19 +1620,30 @@ def LLVM_ConstantOp
   let description = [{
     Unlike LLVM IR, MLIR does not have first-class constant values. Therefore,
     all constants must be created as SSA values before being used in other
-    operations. `llvm.mlir.constant` creates such values for scalars and
-    vectors. It has a mandatory `value` attribute, which may be an integer,
-    floating point attribute; dense or sparse attribute containing integers or
-    floats. The type of the attribute is one of the corresponding MLIR builtin
-    types. It may be omitted for `i64` and `f64` types that are implied.
+    operations. `llvm.mlir.constant` creates such values for scalars, vectors,
+    strings, and structs. It has a mandatory `value` attribute whose type
+    depends on the type of the constant value. The type of the constant value
+    must correspond to the attribute type converted to LLVM IR type.
 
-    The operation produces a new SSA value of the specified LLVM IR dialect
-    type. Certain builtin types such as integer, float and vector types are
-    also allowed. The result type _must_ correspond to the attribute type
-    converted to LLVM IR. In particular, the number of elements of a container
-    type must match the number of elements in the attribute. If the type is or
-    contains a scalable vector type, the attribute must be a splat elements
-    attribute.
+    When creating constant scalars, the `value` attribute must be either an
+    integer attribute or a floating point attribute. The type of the attribute
+    may be omitted for `i64` and `f64` types that are implied.
+
+    When creating constant vectors, the `value` attribute must be either an
+    array attribute, a dense attribute, or a sparse attribute that contains
+    integers or floats. The number of elements in the result vector must match
+    the number of elements in the attribute.
+
+    When creating constant strings, the `value` attribute must be a string
+    attribute. The type of the constant must be an LLVM array of `i8`s, and the
+    length of the array must match the length of the attribute.
+
+    When creating constant structs, the `value` attribute must be an array
+    attribute that contains integers or floats. The type of the constant must be
+    an LLVM struct type. The number of fields in the struct must match the
+    number of elements in the attribute, and the type of each LLVM struct field
+    must correspond to the type of the corresponding attribute element converted
+    to LLVM IR.
 
     Examples:
 

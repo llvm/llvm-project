@@ -476,7 +476,8 @@ namespace llvm {
   ///
   Pass *createGlobalMergePass(const TargetMachine *TM, unsigned MaximalOffset,
                               bool OnlyOptimizeForSize = false,
-                              bool MergeExternalByDefault = false);
+                              bool MergeExternalByDefault = false,
+                              bool MergeConstantByDefault = false);
 
   /// This pass splits the stack into a safe stack and an unsafe stack to
   /// protect against stack-based overflow vulnerabilities.

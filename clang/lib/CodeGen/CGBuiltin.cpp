@@ -58,6 +58,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -987,7 +988,7 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
     // attribute.
     return nullptr;
 
-  const FieldDecl *CountedByFD = FindCountedByField(FAMDecl);
+  const FieldDecl *CountedByFD = FAMDecl->findCountedByField();
   if (!CountedByFD)
     // Can't find the field referenced by the "counted_by" attribute.
     return nullptr;
@@ -14370,13 +14371,13 @@ Value *CodeGenFunction::EmitAArch64CpuInit() {
 }
 
 Value *CodeGenFunction::EmitRISCVCpuInit() {
-  llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
+  llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, {VoidPtrTy}, false);
   llvm::FunctionCallee Func =
       CGM.CreateRuntimeFunction(FTy, "__init_riscv_feature_bits");
   auto *CalleeGV = cast<llvm::GlobalValue>(Func.getCallee());
   CalleeGV->setDSOLocal(true);
   CalleeGV->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
-  return Builder.CreateCall(Func);
+  return Builder.CreateCall(Func, {llvm::ConstantPointerNull::get(VoidPtrTy)});
 }
 
 Value *CodeGenFunction::EmitX86CpuInit() {
@@ -14438,33 +14439,59 @@ Value *CodeGenFunction::EmitRISCVCpuSupports(const CallExpr *E) {
   if (!getContext().getTargetInfo().validateCpuSupports(FeatureStr))
     return Builder.getFalse();
 
-  // Note: We are making an unchecked assumption that the size of the
-  // feature array is >= 1.  This holds for any version of compiler-rt
-  // which defines this interface.
-  llvm::ArrayType *ArrayOfInt64Ty = llvm::ArrayType::get(Int64Ty, 1);
+  return EmitRISCVCpuSupports(ArrayRef<StringRef>(FeatureStr));
+}
+
+static Value *loadRISCVFeatureBits(unsigned Index, CGBuilderTy &Builder,
+                                   CodeGenModule &CGM) {
+  llvm::Type *Int32Ty = Builder.getInt32Ty();
+  llvm::Type *Int64Ty = Builder.getInt64Ty();
+  llvm::ArrayType *ArrayOfInt64Ty =
+      llvm::ArrayType::get(Int64Ty, llvm::RISCVISAInfo::FeatureBitSize);
   llvm::Type *StructTy = llvm::StructType::get(Int32Ty, ArrayOfInt64Ty);
   llvm::Constant *RISCVFeaturesBits =
       CGM.CreateRuntimeVariable(StructTy, "__riscv_feature_bits");
-  auto *GV = cast<llvm::GlobalValue>(RISCVFeaturesBits);
-  GV->setDSOLocal(true);
+  cast<llvm::GlobalValue>(RISCVFeaturesBits)->setDSOLocal(true);
+  Value *IndexVal = llvm::ConstantInt::get(Int32Ty, Index);
+  llvm::Value *GEPIndices[] = {Builder.getInt32(0), Builder.getInt32(1),
+                               IndexVal};
+  Value *Ptr =
+      Builder.CreateInBoundsGEP(StructTy, RISCVFeaturesBits, GEPIndices);
+  Value *FeaturesBit =
+      Builder.CreateAlignedLoad(Int64Ty, Ptr, CharUnits::fromQuantity(8));
+  return FeaturesBit;
+}
 
-  auto LoadFeatureBit = [&](unsigned Index) {
-    // Create GEP then load.
-    Value *IndexVal = llvm::ConstantInt::get(Int32Ty, Index);
-    llvm::Value *GEPIndices[] = {Builder.getInt32(0), Builder.getInt32(1),
-                                 IndexVal};
-    Value *Ptr =
-        Builder.CreateInBoundsGEP(StructTy, RISCVFeaturesBits, GEPIndices);
-    Value *FeaturesBit =
-        Builder.CreateAlignedLoad(Int64Ty, Ptr, CharUnits::fromQuantity(8));
-    return FeaturesBit;
-  };
+Value *CodeGenFunction::EmitRISCVCpuSupports(ArrayRef<StringRef> FeaturesStrs) {
+  const unsigned RISCVFeatureLength = llvm::RISCVISAInfo::FeatureBitSize;
+  uint64_t RequireBitMasks[RISCVFeatureLength] = {0};
 
-  auto [GroupID, BitPos] = RISCVISAInfo::getRISCVFeaturesBitsInfo(FeatureStr);
-  assert(BitPos != -1 && "validation should have rejected this feature");
-  Value *MaskV = Builder.getInt64(1ULL << BitPos);
-  Value *Bitset = Builder.CreateAnd(LoadFeatureBit(GroupID), MaskV);
-  return Builder.CreateICmpEQ(Bitset, MaskV);
+  for (auto Feat : FeaturesStrs) {
+    auto [GroupID, BitPos] = RISCVISAInfo::getRISCVFeaturesBitsInfo(Feat);
+
+    // If there isn't BitPos for this feature, skip this version.
+    // It also report the warning to user during compilation.
+    if (BitPos == -1)
+      return Builder.getFalse();
+
+    RequireBitMasks[GroupID] |= (1ULL << BitPos);
+  }
+
+  Value *Result = nullptr;
+  for (unsigned Idx = 0; Idx < RISCVFeatureLength; Idx++) {
+    if (RequireBitMasks[Idx] == 0)
+      continue;
+
+    Value *Mask = Builder.getInt64(RequireBitMasks[Idx]);
+    Value *Bitset =
+        Builder.CreateAnd(loadRISCVFeatureBits(Idx, Builder, CGM), Mask);
+    Value *CmpV = Builder.CreateICmpEQ(Bitset, Mask);
+    Result = (!Result) ? CmpV : Builder.CreateAnd(Result, CmpV);
+  }
+
+  assert(Result && "Should have value here.");
+
+  return Result;
 }
 
 Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
@@ -18470,22 +18497,14 @@ llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
   return Arg;
 }
 
-Intrinsic::ID getDotProductIntrinsic(QualType QT, int elementCount) {
-  if (QT->hasFloatingRepresentation()) {
-    switch (elementCount) {
-    case 2:
-      return Intrinsic::dx_dot2;
-    case 3:
-      return Intrinsic::dx_dot3;
-    case 4:
-      return Intrinsic::dx_dot4;
-    }
-  }
-  if (QT->hasSignedIntegerRepresentation())
-    return Intrinsic::dx_sdot;
-
-  assert(QT->hasUnsignedIntegerRepresentation());
-  return Intrinsic::dx_udot;
+// Return dot product intrinsic that corresponds to the QT scalar type
+Intrinsic::ID getDotProductIntrinsic(CGHLSLRuntime &RT, QualType QT) {
+  if (QT->isFloatingType())
+    return RT.getFDotIntrinsic();
+  if (QT->isSignedIntegerType())
+    return RT.getSDotIntrinsic();
+  assert(QT->isUnsignedIntegerType());
+  return RT.getUDotIntrinsic();
 }
 
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
@@ -18528,37 +18547,38 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     llvm::Type *T0 = Op0->getType();
     llvm::Type *T1 = Op1->getType();
+
+    // If the arguments are scalars, just emit a multiply
     if (!T0->isVectorTy() && !T1->isVectorTy()) {
       if (T0->isFloatingPointTy())
-        return Builder.CreateFMul(Op0, Op1, "dx.dot");
+        return Builder.CreateFMul(Op0, Op1, "hlsl.dot");
 
       if (T0->isIntegerTy())
-        return Builder.CreateMul(Op0, Op1, "dx.dot");
+        return Builder.CreateMul(Op0, Op1, "hlsl.dot");
 
-      // Bools should have been promoted
       llvm_unreachable(
           "Scalar dot product is only supported on ints and floats.");
     }
+    // For vectors, validate types and emit the appropriate intrinsic
+
     // A VectorSplat should have happened
     assert(T0->isVectorTy() && T1->isVectorTy() &&
            "Dot product of vector and scalar is not supported.");
 
-    // A vector sext or sitofp should have happened
-    assert(T0->getScalarType() == T1->getScalarType() &&
-           "Dot product of vectors need the same element types.");
-
     auto *VecTy0 = E->getArg(0)->getType()->getAs<VectorType>();
     [[maybe_unused]] auto *VecTy1 =
         E->getArg(1)->getType()->getAs<VectorType>();
-    // A HLSLVectorTruncation should have happend
+
+    assert(VecTy0->getElementType() == VecTy1->getElementType() &&
+           "Dot product of vectors need the same element types.");
+
     assert(VecTy0->getNumElements() == VecTy1->getNumElements() &&
            "Dot product requires vectors to be of the same size.");
 
     return Builder.CreateIntrinsic(
         /*ReturnType=*/T0->getScalarType(),
-        getDotProductIntrinsic(E->getArg(0)->getType(),
-                               VecTy0->getNumElements()),
-        ArrayRef<Value *>{Op0, Op1}, nullptr, "dx.dot");
+        getDotProductIntrinsic(CGM.getHLSLRuntime(), VecTy0->getElementType()),
+        ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.dot");
   } break;
   case Builtin::BI__builtin_hlsl_lerp: {
     Value *X = EmitScalarExpr(E->getArg(0));
@@ -18665,6 +18685,15 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     return Builder.CreateIntrinsic(
         /*ReturnType=*/Op0->getType(), CGM.getHLSLRuntime().getRsqrtIntrinsic(),
         ArrayRef<Value *>{Op0}, nullptr, "hlsl.rsqrt");
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_saturate: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           "saturate operand must have a float representation");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/Op0->getType(),
+        CGM.getHLSLRuntime().getSaturateIntrinsic(), ArrayRef<Value *>{Op0},
+        nullptr, "hlsl.saturate");
   }
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
     return EmitRuntimeCall(CGM.CreateRuntimeFunction(
@@ -18918,78 +18947,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Value *Src0 = EmitScalarExpr(E->getArg(0));
     Function *F = CGM.getIntrinsic(Intrin, { Src0->getType() });
     return Builder.CreateCall(F, { Src0, Builder.getFalse() });
-  }
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f64:
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f32:
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2f16:
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_fmin_f64:
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_fmax_f64:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f64:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmin_f64:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmax_f64:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f32:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2f16: {
-    Intrinsic::ID IID;
-    llvm::Type *ArgTy = llvm::Type::getDoubleTy(getLLVMContext());
-    switch (BuiltinID) {
-    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f32:
-      ArgTy = llvm::Type::getFloatTy(getLLVMContext());
-      IID = Intrinsic::amdgcn_global_atomic_fadd;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2f16:
-      ArgTy = llvm::FixedVectorType::get(
-          llvm::Type::getHalfTy(getLLVMContext()), 2);
-      IID = Intrinsic::amdgcn_global_atomic_fadd;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f64:
-      IID = Intrinsic::amdgcn_global_atomic_fadd;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_global_atomic_fmin_f64:
-      IID = Intrinsic::amdgcn_global_atomic_fmin;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_global_atomic_fmax_f64:
-      IID = Intrinsic::amdgcn_global_atomic_fmax;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f64:
-      IID = Intrinsic::amdgcn_flat_atomic_fadd;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmin_f64:
-      IID = Intrinsic::amdgcn_flat_atomic_fmin;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmax_f64:
-      IID = Intrinsic::amdgcn_flat_atomic_fmax;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f32:
-      ArgTy = llvm::Type::getFloatTy(getLLVMContext());
-      IID = Intrinsic::amdgcn_flat_atomic_fadd;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2f16:
-      ArgTy = llvm::FixedVectorType::get(
-          llvm::Type::getHalfTy(getLLVMContext()), 2);
-      IID = Intrinsic::amdgcn_flat_atomic_fadd;
-      break;
-    }
-    llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
-    llvm::Value *Val = EmitScalarExpr(E->getArg(1));
-    llvm::Function *F =
-        CGM.getIntrinsic(IID, {ArgTy, Addr->getType(), Val->getType()});
-    return Builder.CreateCall(F, {Addr, Val});
-  }
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2bf16:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2bf16: {
-    Intrinsic::ID IID;
-    switch (BuiltinID) {
-    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2bf16:
-      IID = Intrinsic::amdgcn_global_atomic_fadd_v2bf16;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2bf16:
-      IID = Intrinsic::amdgcn_flat_atomic_fadd_v2bf16;
-      break;
-    }
-    llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
-    llvm::Value *Val = EmitScalarExpr(E->getArg(1));
-    llvm::Function *F = CGM.getIntrinsic(IID, {Addr->getType()});
-    return Builder.CreateCall(F, {Addr, Val});
   }
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_v2i32:
@@ -19366,7 +19323,19 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16:
   case AMDGPU::BI__builtin_amdgcn_ds_faddf:
   case AMDGPU::BI__builtin_amdgcn_ds_fminf:
-  case AMDGPU::BI__builtin_amdgcn_ds_fmaxf: {
+  case AMDGPU::BI__builtin_amdgcn_ds_fmaxf:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f32:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f64:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2f16:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2f16:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f32:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f64:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2bf16:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2bf16:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fmin_f64:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fmax_f64:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmin_f64:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmax_f64: {
     llvm::AtomicRMWInst::BinOp BinOp;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
@@ -19382,11 +19351,23 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_f32:
     case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2f16:
     case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16:
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f32:
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f64:
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2f16:
+    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2f16:
+    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f32:
+    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f64:
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2bf16:
+    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2bf16:
       BinOp = llvm::AtomicRMWInst::FAdd;
       break;
     case AMDGPU::BI__builtin_amdgcn_ds_fminf:
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_fmin_f64:
+    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmin_f64:
       BinOp = llvm::AtomicRMWInst::FMin;
       break;
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_fmax_f64:
+    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fmax_f64:
     case AMDGPU::BI__builtin_amdgcn_ds_fmaxf:
       BinOp = llvm::AtomicRMWInst::FMax;
       break;
@@ -19416,12 +19397,19 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(2)),
                               EmitScalarExpr(E->getArg(3)), AO, SSID);
     } else {
-      // The ds_atomic_fadd_* builtins do not have syncscope/order arguments.
-      SSID = llvm::SyncScope::System;
-      AO = AtomicOrdering::SequentiallyConsistent;
+      // Most of the builtins do not have syncscope/order arguments. For DS
+      // atomics the scope doesn't really matter, as they implicitly operate at
+      // workgroup scope.
+      //
+      // The global/flat cases need to use agent scope to consistently produce
+      // the native instruction instead of a cmpxchg expansion.
+      SSID = getLLVMContext().getOrInsertSyncScopeID("agent");
+      AO = AtomicOrdering::Monotonic;
 
       // The v2bf16 builtin uses i16 instead of a natural bfloat type.
-      if (BuiltinID == AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16) {
+      if (BuiltinID == AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16 ||
+          BuiltinID == AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2bf16 ||
+          BuiltinID == AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2bf16) {
         llvm::Type *V2BF16Ty = FixedVectorType::get(
             llvm::Type::getBFloatTy(Builder.getContext()), 2);
         Val = Builder.CreateBitCast(Val, V2BF16Ty);
@@ -19432,6 +19420,20 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         Builder.CreateAtomicRMW(BinOp, Ptr, Val, AO, SSID);
     if (Volatile)
       RMW->setVolatile(true);
+
+    unsigned AddrSpace = Ptr.getType()->getAddressSpace();
+    if (AddrSpace != llvm::AMDGPUAS::LOCAL_ADDRESS) {
+      // Most targets require "amdgpu.no.fine.grained.memory" to emit the native
+      // instruction for flat and global operations.
+      llvm::MDTuple *EmptyMD = MDNode::get(getLLVMContext(), {});
+      RMW->setMetadata("amdgpu.no.fine.grained.memory", EmptyMD);
+
+      // Most targets require "amdgpu.ignore.denormal.mode" to emit the native
+      // instruction, but this only matters for float fadd.
+      if (BinOp == llvm::AtomicRMWInst::FAdd && Val->getType()->isFloatTy())
+        RMW->setMetadata("amdgpu.ignore.denormal.mode", EmptyMD);
+    }
+
     return Builder.CreateBitCast(RMW, OrigTy);
   }
   case AMDGPU::BI__builtin_amdgcn_s_sendmsg_rtn:

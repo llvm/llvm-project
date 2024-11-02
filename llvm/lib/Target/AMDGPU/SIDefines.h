@@ -371,7 +371,7 @@ enum : unsigned {
   REG_IDX_MASK = 0xff,
   IS_VGPR = 1 << 8,
   IS_AGPR = 1 << 9,
-  IS_HI = 1 << 10, // High 16-bit register.
+  IS_HI16 = 1 << 10,
 };
 } // namespace HWEncoding
 

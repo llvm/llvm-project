@@ -767,15 +767,6 @@ def zext_trunc_fold: GICombineRule <
   (apply [{ Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
-// Fold ([asz]ext ([asz]ext x)) -> ([asz]ext x).
-def ext_ext_fold_matchinfo : GIDefMatchData<"std::tuple<Register, unsigned>">;
-def ext_ext_fold: GICombineRule <
-  (defs root:$root, ext_ext_fold_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_ANYEXT, G_SEXT, G_ZEXT):$root,
-         [{ return Helper.matchCombineExtOfExt(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.applyCombineExtOfExt(*${root}, ${matchinfo}); }])
->;
-
 def not_cmp_fold_matchinfo : GIDefMatchData<"SmallVector<Register, 4>">;
 def not_cmp_fold : GICombineRule<
   (defs root:$d, not_cmp_fold_matchinfo:$info),
@@ -1850,13 +1841,47 @@ def select_of_zext : select_of_opcode<G_ZEXT>;
 def select_of_anyext : select_of_opcode<G_ANYEXT>;
 def select_of_truncate : select_of_opcode<G_TRUNC>;
 
+// Fold ([asz]ext ([asz]ext x)) -> ([asz]ext x).
+class ext_of_ext_opcodes<Instruction ext1Opcode, Instruction ext2Opcode> : GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (ext2Opcode $second, $src):$Second,
+         (ext1Opcode $root, $second):$First,
+         [{ return Helper.matchExtOfExt(*${First}, *${Second}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${First}, ${matchinfo}); }])>;
+
+def zext_of_zext : ext_of_ext_opcodes<G_ZEXT, G_ZEXT>;
+def zext_of_anyext : ext_of_ext_opcodes<G_ZEXT, G_ANYEXT>;
+def sext_of_sext : ext_of_ext_opcodes<G_SEXT, G_SEXT>;
+def sext_of_anyext : ext_of_ext_opcodes<G_SEXT, G_ANYEXT>;
+def anyext_of_anyext : ext_of_ext_opcodes<G_ANYEXT, G_ANYEXT>;
+def anyext_of_zext : ext_of_ext_opcodes<G_ANYEXT, G_ZEXT>;
+def anyext_of_sext : ext_of_ext_opcodes<G_ANYEXT, G_SEXT>;
+
+// Push cast through build vector.
+class buildvector_of_opcode<Instruction castOpcode> : GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_BUILD_VECTOR $bv, GIVariadic<>:$unused):$Build,
+         (castOpcode $root, $bv):$Cast,
+         [{ return Helper.matchCastOfBuildVector(*${Cast}, *${Build}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${Cast}, ${matchinfo}); }])>;
+
+def buildvector_of_truncate : buildvector_of_opcode<G_TRUNC>;
+
 def cast_combines: GICombineGroup<[
   truncate_of_zext,
   truncate_of_sext,
   truncate_of_anyext,
   select_of_zext,
   select_of_anyext,
-  select_of_truncate
+  select_of_truncate,
+  zext_of_zext,
+  zext_of_anyext,
+  sext_of_sext,
+  sext_of_anyext,
+  anyext_of_anyext,
+  anyext_of_zext,
+  anyext_of_sext,
+  buildvector_of_truncate
 ]>;
 
 
@@ -1928,7 +1953,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     reassocs, ptr_add_immed_chain,
     shl_ashr_to_sext_inreg, sext_inreg_of_load,
     width_reduction_combines, select_combines,
-    known_bits_simplifications, ext_ext_fold,
+    known_bits_simplifications,
     not_cmp_fold, opt_brcond_by_inverting_cond,
     unmerge_merge, unmerge_cst, unmerge_dead_to_trunc,
     unmerge_zext_to_zext, merge_unmerge, trunc_shift,

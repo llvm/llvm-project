@@ -47,6 +47,8 @@ public:
   bool match(SDValue N, unsigned Opcode) const {
     return N->getOpcode() == Opcode;
   }
+
+  unsigned getNumOperands(SDValue N) const { return N->getNumOperands(); }
 };
 
 template <typename Pattern, typename MatchContext>
@@ -390,7 +392,8 @@ template <unsigned OpIdx, typename... OpndPreds> struct Operands_match {
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
     // Returns false if there are more operands than predicates;
-    return N->getNumOperands() == OpIdx;
+    // Ignores the last two operands if both the Context and the Node are VP
+    return Ctx.getNumOperands(N) == OpIdx;
   }
 };
 
@@ -424,8 +427,9 @@ template <bool ExcludeChain> struct EffectiveOperands {
   unsigned Size = 0;
   unsigned FirstIndex = 0;
 
-  explicit EffectiveOperands(SDValue N) {
-    const unsigned TotalNumOps = N->getNumOperands();
+  template <typename MatchContext>
+  explicit EffectiveOperands(SDValue N, const MatchContext &Ctx) {
+    const unsigned TotalNumOps = Ctx.getNumOperands(N);
     FirstIndex = TotalNumOps;
     for (unsigned I = 0; I < TotalNumOps; ++I) {
       // Count the number of non-chain and non-glue nodes (we ignore chain
@@ -444,7 +448,9 @@ template <> struct EffectiveOperands<false> {
   unsigned Size = 0;
   unsigned FirstIndex = 0;
 
-  explicit EffectiveOperands(SDValue N) : Size(N->getNumOperands()) {}
+  template <typename MatchContext>
+  explicit EffectiveOperands(SDValue N, const MatchContext &Ctx)
+      : Size(Ctx.getNumOperands(N)) {}
 };
 
 // === Ternary operations ===
@@ -463,7 +469,7 @@ struct TernaryOpc_match {
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
     if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
-      EffectiveOperands<ExcludeChain> EO(N);
+      EffectiveOperands<ExcludeChain> EO(N, Ctx);
       assert(EO.Size == 3);
       return ((Op0.match(Ctx, N->getOperand(EO.FirstIndex)) &&
                Op1.match(Ctx, N->getOperand(EO.FirstIndex + 1))) ||
@@ -508,19 +514,28 @@ struct BinaryOpc_match {
   unsigned Opcode;
   LHS_P LHS;
   RHS_P RHS;
-
-  BinaryOpc_match(unsigned Opc, const LHS_P &L, const RHS_P &R)
-      : Opcode(Opc), LHS(L), RHS(R) {}
+  std::optional<SDNodeFlags> Flags;
+  BinaryOpc_match(unsigned Opc, const LHS_P &L, const RHS_P &R,
+                  std::optional<SDNodeFlags> Flgs = std::nullopt)
+      : Opcode(Opc), LHS(L), RHS(R), Flags(Flgs) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
     if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
-      EffectiveOperands<ExcludeChain> EO(N);
+      EffectiveOperands<ExcludeChain> EO(N, Ctx);
       assert(EO.Size == 2);
-      return (LHS.match(Ctx, N->getOperand(EO.FirstIndex)) &&
-              RHS.match(Ctx, N->getOperand(EO.FirstIndex + 1))) ||
-             (Commutable && LHS.match(Ctx, N->getOperand(EO.FirstIndex + 1)) &&
-              RHS.match(Ctx, N->getOperand(EO.FirstIndex)));
+      if (!((LHS.match(Ctx, N->getOperand(EO.FirstIndex)) &&
+             RHS.match(Ctx, N->getOperand(EO.FirstIndex + 1))) ||
+            (Commutable && LHS.match(Ctx, N->getOperand(EO.FirstIndex + 1)) &&
+             RHS.match(Ctx, N->getOperand(EO.FirstIndex)))))
+        return false;
+
+      if (!Flags.has_value())
+        return true;
+
+      SDNodeFlags TmpFlags = *Flags;
+      TmpFlags.intersectWith(N->getFlags());
+      return TmpFlags == *Flags;
     }
 
     return false;
@@ -573,6 +588,19 @@ inline BinaryOpc_match<LHS, RHS, true> m_And(const LHS &L, const RHS &R) {
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_Or(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS, true>(ISD::OR, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, true> m_DisjointOr(const LHS &L,
+                                                    const RHS &R) {
+  SDNodeFlags Flags;
+  Flags.setDisjoint(true);
+  return BinaryOpc_match<LHS, RHS, true>(ISD::OR, L, R, Flags);
+}
+
+template <typename LHS, typename RHS>
+inline auto m_AddLike(const LHS &L, const RHS &R) {
+  return m_AnyOf(m_Add(L, R), m_DisjointOr(L, R));
 }
 
 template <typename LHS, typename RHS>
@@ -661,15 +689,24 @@ inline BinaryOpc_match<LHS, RHS> m_FRem(const LHS &L, const RHS &R) {
 template <typename Opnd_P, bool ExcludeChain = false> struct UnaryOpc_match {
   unsigned Opcode;
   Opnd_P Opnd;
-
-  UnaryOpc_match(unsigned Opc, const Opnd_P &Op) : Opcode(Opc), Opnd(Op) {}
+  std::optional<SDNodeFlags> Flags;
+  UnaryOpc_match(unsigned Opc, const Opnd_P &Op,
+                 std::optional<SDNodeFlags> Flgs = std::nullopt)
+      : Opcode(Opc), Opnd(Op), Flags(Flgs) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
     if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
-      EffectiveOperands<ExcludeChain> EO(N);
+      EffectiveOperands<ExcludeChain> EO(N, Ctx);
       assert(EO.Size == 1);
-      return Opnd.match(Ctx, N->getOperand(EO.FirstIndex));
+      if (!Opnd.match(Ctx, N->getOperand(EO.FirstIndex)))
+        return false;
+      if (!Flags.has_value())
+        return true;
+
+      SDNodeFlags TmpFlags = *Flags;
+      TmpFlags.intersectWith(N->getFlags());
+      return TmpFlags == *Flags;
     }
 
     return false;
@@ -693,6 +730,13 @@ inline UnaryOpc_match<Opnd> m_BitReverse(const Opnd &Op) {
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_ZExt(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::ZERO_EXTEND, Op);
+}
+
+template <typename Opnd>
+inline UnaryOpc_match<Opnd> m_NNegZExt(const Opnd &Op) {
+  SDNodeFlags Flags;
+  Flags.setNonNeg(true);
+  return UnaryOpc_match<Opnd>(ISD::ZERO_EXTEND, Op, Flags);
 }
 
 template <typename Opnd> inline auto m_SExt(const Opnd &Op) {
@@ -719,6 +763,10 @@ template <typename Opnd> inline auto m_SExtOrSelf(const Opnd &Op) {
   return m_AnyOf(m_SExt(Op), Op);
 }
 
+template <typename Opnd> inline auto m_SExtLike(const Opnd &Op) {
+  return m_AnyOf(m_SExt(Op), m_NNegZExt(Op));
+}
+
 /// Match a aext or identity
 /// Allows to peek through optional extensions
 template <typename Opnd>
@@ -735,6 +783,14 @@ inline Or<UnaryOpc_match<Opnd>, Opnd> m_TruncOrSelf(const Opnd &Op) {
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_VScale(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::VSCALE, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_FPToUI(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::FP_TO_UINT, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_FPToSI(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::FP_TO_SINT, Op);
 }
 
 // === Constants ===

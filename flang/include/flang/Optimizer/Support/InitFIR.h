@@ -46,6 +46,7 @@ namespace fir::support {
 inline void registerNonCodegenDialects(mlir::DialectRegistry &registry) {
   registry.insert<FLANG_NONCODEGEN_DIALECT_LIST>();
   mlir::func::registerInlinerExtension(registry);
+  mlir::LLVM::registerInlinerInterface(registry);
 }
 
 /// Register all the dialects used by flang.

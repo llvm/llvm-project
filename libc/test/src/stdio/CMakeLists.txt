@@ -286,6 +286,20 @@ add_libc_test(
     ${use_system_file}
 )
 
+add_libc_test(
+  vfscanf_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    vfscanf_test.cpp
+  DEPENDS
+    libc.src.stdio.vfscanf
+    ${fscanf_test_deps}
+    libc.src.__support.CPP.string_view
+  COMPILE_OPTIONS
+    ${use_system_file}
+)
+
 if(LIBC_CONF_SCANF_DISABLE_FLOAT)
   list(APPEND sscanf_test_copts "-DLIBC_COPT_SCANF_DISABLE_FLOAT")
 endif()

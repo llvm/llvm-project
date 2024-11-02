@@ -28,6 +28,6 @@ int main(void) {
 // CHECK:  dataDelete
 // CHECK:  omp_target_free
 
-// CHECK: Last allocation of size 8:
+// CHECK: Last allocation of size 8 -> device pointer
 // CHECK:  dataAlloc
 // CHECK:  omp_target_alloc

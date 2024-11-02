@@ -828,6 +828,8 @@ void TargetPassConfig::addIRPasses() {
     if (!DisableLSR) {
       addPass(createCanonicalizeFreezeInLoopsPass());
       addPass(createLoopStrengthReducePass());
+      if (EnableLoopTermFold)
+        addPass(createLoopTermFoldPass());
       if (PrintLSR)
         addPass(createPrintFunctionPass(dbgs(),
                                         "\n\n*** Code after LSR ***\n"));

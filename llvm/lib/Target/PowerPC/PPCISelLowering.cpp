@@ -3388,17 +3388,15 @@ static void updateForAIXShLibTLSModelOpt(TLSModel::Model &Model,
     // global variables (global variables taken as the first parameter to
     // Intrinsic::threadlocal_address).
     const Function &Func = DAG.getMachineFunction().getFunction();
-    for (Function::const_iterator BI = Func.begin(), BE = Func.end(); BI != BE;
-         ++BI)
-      for (BasicBlock::const_iterator II = BI->begin(), IE = BI->end();
-           II != IE; ++II)
-        if (II->getOpcode() == Instruction::Call)
-          if (const CallInst *CI = dyn_cast<const CallInst>(&*II))
+    for (const BasicBlock &BB : Func)
+      for (const Instruction &I : BB)
+        if (I.getOpcode() == Instruction::Call)
+          if (const CallInst *CI = dyn_cast<const CallInst>(&I))
             if (Function *CF = CI->getCalledFunction())
               if (CF->isDeclaration() &&
                   CF->getIntrinsicID() == Intrinsic::threadlocal_address)
                 if (const GlobalValue *GV =
-                        dyn_cast<GlobalValue>(II->getOperand(0))) {
+                        dyn_cast<GlobalValue>(I.getOperand(0))) {
                   TLSModel::Model GVModel = TM.getTLSModel(GV);
                   if (GVModel == TLSModel::LocalDynamic)
                     TLSGV.insert(GV);
@@ -9515,10 +9513,8 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     } else {
       // We may lose precision, so we have to use XXSPLTI32DX.
 
-      uint32_t Hi =
-          (uint32_t)((APSplatBits.getZExtValue() & 0xFFFFFFFF00000000LL) >> 32);
-      uint32_t Lo =
-          (uint32_t)(APSplatBits.getZExtValue() & 0xFFFFFFFF);
+      uint32_t Hi = Hi_32(APSplatBits.getZExtValue());
+      uint32_t Lo = Lo_32(APSplatBits.getZExtValue());
       SDValue SplatNode = DAG.getUNDEF(MVT::v2i64);
 
       if (!Hi || !Lo)
@@ -9662,8 +9658,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                   dl);
 
   // If the sign extended value is in the range [-16,15], use VSPLTI[bhw].
-  int32_t SextVal= (int32_t(SplatBits << (32-SplatBitSize)) >>
-                    (32-SplatBitSize));
+  int32_t SextVal = SignExtend32(SplatBits, SplatBitSize);
   if (SextVal >= -16 && SextVal <= 15)
     return getCanonicalConstSplat(SextVal, SplatSize, Op.getValueType(), DAG,
                                   dl);

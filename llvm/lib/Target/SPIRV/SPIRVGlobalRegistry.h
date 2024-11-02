@@ -430,7 +430,7 @@ private:
   getOrCreateSpecialType(const Type *Ty, MachineIRBuilder &MIRBuilder,
                          SPIRV::AccessQualifier::AccessQualifier AccQual);
 
-  std::tuple<Register, ConstantInt *, bool> getOrCreateConstIntReg(
+  std::tuple<Register, ConstantInt *, bool, unsigned> getOrCreateConstIntReg(
       uint64_t Val, SPIRVType *SpvType, MachineIRBuilder *MIRBuilder,
       MachineInstr *I = nullptr, const SPIRVInstrInfo *TII = nullptr);
   std::tuple<Register, ConstantFP *, bool, unsigned> getOrCreateConstFloatReg(
@@ -455,7 +455,7 @@ private:
 
 public:
   Register buildConstantInt(uint64_t Val, MachineIRBuilder &MIRBuilder,
-                            SPIRVType *SpvType = nullptr, bool EmitIR = true);
+                            SPIRVType *SpvType, bool EmitIR = true);
   Register getOrCreateConstInt(uint64_t Val, MachineInstr &I,
                                SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                                bool ZeroAsNull = true);
@@ -550,6 +550,9 @@ public:
   SPIRVType *getOrCreateOpTypeByOpcode(const Type *Ty,
                                        MachineIRBuilder &MIRBuilder,
                                        unsigned Opcode);
+
+  const TargetRegisterClass *getRegClass(SPIRVType *SpvType) const;
+  LLT getRegType(SPIRVType *SpvType) const;
 };
 } // end namespace llvm
 #endif // LLLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H

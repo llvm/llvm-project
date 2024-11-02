@@ -9,6 +9,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Allocator.h"
 #include "Configuration.h"
 #include "Types.h"
 
@@ -127,6 +128,33 @@ double omp_get_wtime(void) { return ompx::impl::getWTime(); }
 
 void *__llvm_omp_indirect_call_lookup(void *HstPtr) {
   return ompx::impl::indirectCallLookup(HstPtr);
+}
+
+void *omp_alloc(size_t size, omp_allocator_handle_t allocator) {
+  switch (allocator) {
+  case omp_default_mem_alloc:
+  case omp_large_cap_mem_alloc:
+  case omp_const_mem_alloc:
+  case omp_high_bw_mem_alloc:
+  case omp_low_lat_mem_alloc:
+    return malloc(size);
+  default:
+    return nullptr;
+  }
+}
+
+void omp_free(void *ptr, omp_allocator_handle_t allocator) {
+  switch (allocator) {
+  case omp_default_mem_alloc:
+  case omp_large_cap_mem_alloc:
+  case omp_const_mem_alloc:
+  case omp_high_bw_mem_alloc:
+  case omp_low_lat_mem_alloc:
+    free(ptr);
+  case omp_null_allocator:
+  default:
+    return;
+  }
 }
 }
 

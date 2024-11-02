@@ -33,7 +33,11 @@ Static Compiler Commands
    Command: `llc -O1 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_arbitrary_precision_integers input.ll -o output.spvt`
    Description: Compiles an LLVM IL file to SPIR-V with (`-O1`) optimizations, targeting a 64-bit architecture. It enables the SPV_INTEL_arbitrary_precision_integers extension.
 
-3. **SPIR-V Binary Generation**
+3. **Compilation with experimental NonSemantic.Shader.DebugInfo.100 support**
+   Command: `llc --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info input.ll -o output.spvt`
+   Description: Compiles an LLVM IL file to SPIR-V with additional NonSemantic.Shader.DebugInfo.100 instructions. It enables the required SPV_KHR_non_semantic_info extension.
+
+4. **SPIR-V Binary Generation**
    Command: `llc -O0 -mtriple=spirv64-unknown-unknown -filetype=obj input.ll -o output.spvt`
    Description: Generates a SPIR-V object file (`output.spvt`) from an LLVM module, targeting a 64-bit SPIR-V architecture with no optimizations.
 
@@ -181,6 +185,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds a new instruction that enables rotating values across invocations within a subgroup.
    * - ``SPV_KHR_uniform_group_instructions``
      - Allows support for additional group operations within uniform control flow.
+   * - ``SPV_KHR_non_semantic_info``
+     - Adds the ability to declare extended instruction sets that have no semantic impact and can be safely removed from a module.
 
 To enable multiple extensions, list them separated by spaces. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 

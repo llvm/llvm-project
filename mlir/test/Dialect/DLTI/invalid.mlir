@@ -5,6 +5,11 @@
 
 // -----
 
+// expected-error@below {{'dlti.map' is expected to be a #dlti.map attribute}}
+"test.unknown_op"() { dlti.map = 42 } : () -> ()
+
+// -----
+
 // expected-error@below {{'dlti.dl_spec' is expected to be a #dlti.dl_spec attribute}}
 "test.unknown_op"() { dlti.dl_spec = 42 } : () -> ()
 

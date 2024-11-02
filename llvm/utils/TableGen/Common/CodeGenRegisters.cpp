@@ -625,7 +625,8 @@ struct TupleExpander : SetTheory::Expander {
   TupleExpander(std::vector<std::unique_ptr<Record>> &SynthDefs)
       : SynthDefs(SynthDefs) {}
 
-  void expand(SetTheory &ST, Record *Def, SetTheory::RecSet &Elts) override {
+  void expand(SetTheory &ST, const Record *Def,
+              SetTheory::RecSet &Elts) override {
     std::vector<Record *> Indices = Def->getValueAsListOfDefs("SubRegIndices");
     unsigned Dim = Indices.size();
     ListInit *SubRegs = Def->getValueAsListInit("SubRegs");

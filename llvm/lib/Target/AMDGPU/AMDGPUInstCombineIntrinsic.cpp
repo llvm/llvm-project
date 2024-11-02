@@ -440,6 +440,21 @@ static bool canContractSqrtToRsq(const FPMathOperator *SqrtOp) {
          SqrtOp->getType()->isHalfTy();
 }
 
+/// Return true if we can easily prove that use U is uniform.
+static bool isTriviallyUniform(const Use &U) {
+  Value *V = U.get();
+  if (isa<Constant>(V))
+    return true;
+  if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
+    if (!AMDGPU::isIntrinsicAlwaysUniform(II->getIntrinsicID()))
+      return false;
+    // If II and U are in different blocks then there is a possibility of
+    // temporal divergence.
+    return II->getParent() == cast<Instruction>(U.getUser())->getParent();
+  }
+  return false;
+}
+
 std::optional<Instruction *>
 GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
@@ -1060,46 +1075,12 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     return IC.replaceOperand(II, 0, UndefValue::get(VDstIn->getType()));
   }
   case Intrinsic::amdgcn_permlane64:
-    // A constant value is trivially uniform.
-    if (Constant *C = dyn_cast<Constant>(II.getArgOperand(0))) {
-      return IC.replaceInstUsesWith(II, C);
-    }
-    break;
   case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_readlane: {
-    // A constant value is trivially uniform.
-    if (Constant *C = dyn_cast<Constant>(II.getArgOperand(0))) {
-      return IC.replaceInstUsesWith(II, C);
-    }
-
-    // The rest of these may not be safe if the exec may not be the same between
-    // the def and use.
-    Value *Src = II.getArgOperand(0);
-    Instruction *SrcInst = dyn_cast<Instruction>(Src);
-    if (SrcInst && SrcInst->getParent() != II.getParent())
-      break;
-
-    // readfirstlane (readfirstlane x) -> readfirstlane x
-    // readlane (readfirstlane x), y -> readfirstlane x
-    if (match(Src,
-              PatternMatch::m_Intrinsic<Intrinsic::amdgcn_readfirstlane>())) {
-      return IC.replaceInstUsesWith(II, Src);
-    }
-
-    if (IID == Intrinsic::amdgcn_readfirstlane) {
-      // readfirstlane (readlane x, y) -> readlane x, y
-      if (match(Src, PatternMatch::m_Intrinsic<Intrinsic::amdgcn_readlane>())) {
-        return IC.replaceInstUsesWith(II, Src);
-      }
-    } else {
-      // readlane (readlane x, y), y -> readlane x, y
-      if (match(Src, PatternMatch::m_Intrinsic<Intrinsic::amdgcn_readlane>(
-                         PatternMatch::m_Value(),
-                         PatternMatch::m_Specific(II.getArgOperand(1))))) {
-        return IC.replaceInstUsesWith(II, Src);
-      }
-    }
-
+    // If the first argument is uniform these intrinsics return it unchanged.
+    const Use &Src = II.getArgOperandUse(0);
+    if (isTriviallyUniform(Src))
+      return IC.replaceInstUsesWith(II, Src.get());
     break;
   }
   case Intrinsic::amdgcn_trig_preop: {

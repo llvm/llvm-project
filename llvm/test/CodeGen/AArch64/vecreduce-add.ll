@@ -3812,51 +3812,72 @@ define i16 @add_v24i8_v24i16_zext(<24 x i8> %x) {
 ;
 ; CHECK-GI-LABEL: add_v24i8_v24i16_zext:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov s4, w0
-; CHECK-GI-NEXT:    fmov s5, w4
-; CHECK-GI-NEXT:    ldr s0, [sp]
-; CHECK-GI-NEXT:    ldr s6, [sp, #8]
-; CHECK-GI-NEXT:    ldr s1, [sp, #32]
-; CHECK-GI-NEXT:    ldr s7, [sp, #40]
-; CHECK-GI-NEXT:    ldr s2, [sp, #64]
-; CHECK-GI-NEXT:    ldr s16, [sp, #72]
-; CHECK-GI-NEXT:    ldr s3, [sp, #96]
-; CHECK-GI-NEXT:    ldr s17, [sp, #104]
-; CHECK-GI-NEXT:    mov v4.s[1], w1
-; CHECK-GI-NEXT:    mov v5.s[1], w5
-; CHECK-GI-NEXT:    mov v0.s[1], v6.s[0]
-; CHECK-GI-NEXT:    mov v1.s[1], v7.s[0]
-; CHECK-GI-NEXT:    mov v2.s[1], v16.s[0]
-; CHECK-GI-NEXT:    mov v3.s[1], v17.s[0]
-; CHECK-GI-NEXT:    ldr s6, [sp, #16]
-; CHECK-GI-NEXT:    ldr s7, [sp, #48]
-; CHECK-GI-NEXT:    ldr s16, [sp, #80]
-; CHECK-GI-NEXT:    ldr s17, [sp, #112]
-; CHECK-GI-NEXT:    mov v4.s[2], w2
-; CHECK-GI-NEXT:    mov v5.s[2], w6
-; CHECK-GI-NEXT:    mov v0.s[2], v6.s[0]
-; CHECK-GI-NEXT:    mov v1.s[2], v7.s[0]
-; CHECK-GI-NEXT:    mov v2.s[2], v16.s[0]
-; CHECK-GI-NEXT:    mov v3.s[2], v17.s[0]
-; CHECK-GI-NEXT:    ldr s6, [sp, #24]
-; CHECK-GI-NEXT:    ldr s7, [sp, #56]
-; CHECK-GI-NEXT:    ldr s16, [sp, #88]
-; CHECK-GI-NEXT:    ldr s17, [sp, #120]
-; CHECK-GI-NEXT:    mov v4.s[3], w3
-; CHECK-GI-NEXT:    mov v5.s[3], w7
-; CHECK-GI-NEXT:    mov v0.s[3], v6.s[0]
-; CHECK-GI-NEXT:    mov v1.s[3], v7.s[0]
-; CHECK-GI-NEXT:    mov v2.s[3], v16.s[0]
-; CHECK-GI-NEXT:    mov v3.s[3], v17.s[0]
-; CHECK-GI-NEXT:    uzp1 v4.8h, v4.8h, v5.8h
-; CHECK-GI-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    uzp1 v1.8h, v2.8h, v3.8h
-; CHECK-GI-NEXT:    uzp1 v0.16b, v4.16b, v0.16b
-; CHECK-GI-NEXT:    xtn v1.8b, v1.8h
-; CHECK-GI-NEXT:    uaddlv h0, v0.16b
+; CHECK-GI-NEXT:    fmov s0, w0
+; CHECK-GI-NEXT:    fmov s1, w1
+; CHECK-GI-NEXT:    ldr w8, [sp]
+; CHECK-GI-NEXT:    ldr w9, [sp, #64]
+; CHECK-GI-NEXT:    ldr w10, [sp, #72]
+; CHECK-GI-NEXT:    mov v0.b[1], v1.b[0]
+; CHECK-GI-NEXT:    fmov s1, w2
+; CHECK-GI-NEXT:    fmov s2, w10
+; CHECK-GI-NEXT:    mov v0.b[2], v1.b[0]
+; CHECK-GI-NEXT:    fmov s1, w3
+; CHECK-GI-NEXT:    mov v0.b[3], v1.b[0]
+; CHECK-GI-NEXT:    fmov s1, w4
+; CHECK-GI-NEXT:    mov v0.b[4], v1.b[0]
+; CHECK-GI-NEXT:    fmov s1, w5
+; CHECK-GI-NEXT:    mov v0.b[5], v1.b[0]
+; CHECK-GI-NEXT:    fmov s1, w6
+; CHECK-GI-NEXT:    mov v0.b[6], v1.b[0]
+; CHECK-GI-NEXT:    fmov s1, w7
+; CHECK-GI-NEXT:    mov v0.b[7], v1.b[0]
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    ldr w8, [sp, #8]
+; CHECK-GI-NEXT:    fmov s3, w8
+; CHECK-GI-NEXT:    ldr w8, [sp, #16]
+; CHECK-GI-NEXT:    mov v0.b[8], v1.b[0]
+; CHECK-GI-NEXT:    fmov s1, w9
+; CHECK-GI-NEXT:    ldr w9, [sp, #80]
+; CHECK-GI-NEXT:    mov v1.b[1], v2.b[0]
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    ldr w9, [sp, #88]
+; CHECK-GI-NEXT:    mov v0.b[9], v3.b[0]
+; CHECK-GI-NEXT:    fmov s3, w8
+; CHECK-GI-NEXT:    ldr w8, [sp, #24]
+; CHECK-GI-NEXT:    mov v1.b[2], v2.b[0]
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    ldr w9, [sp, #96]
+; CHECK-GI-NEXT:    mov v0.b[10], v3.b[0]
+; CHECK-GI-NEXT:    fmov s3, w8
+; CHECK-GI-NEXT:    ldr w8, [sp, #32]
+; CHECK-GI-NEXT:    mov v1.b[3], v2.b[0]
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    ldr w9, [sp, #104]
+; CHECK-GI-NEXT:    mov v0.b[11], v3.b[0]
+; CHECK-GI-NEXT:    fmov s3, w8
+; CHECK-GI-NEXT:    ldr w8, [sp, #40]
+; CHECK-GI-NEXT:    mov v1.b[4], v2.b[0]
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    ldr w9, [sp, #112]
+; CHECK-GI-NEXT:    mov v0.b[12], v3.b[0]
+; CHECK-GI-NEXT:    fmov s3, w8
+; CHECK-GI-NEXT:    ldr w8, [sp, #48]
+; CHECK-GI-NEXT:    mov v1.b[5], v2.b[0]
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    ldr w9, [sp, #120]
+; CHECK-GI-NEXT:    mov v0.b[13], v3.b[0]
+; CHECK-GI-NEXT:    fmov s3, w8
+; CHECK-GI-NEXT:    ldr w8, [sp, #56]
+; CHECK-GI-NEXT:    mov v1.b[6], v2.b[0]
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    mov v0.b[14], v3.b[0]
+; CHECK-GI-NEXT:    fmov s3, w8
+; CHECK-GI-NEXT:    mov v1.b[7], v2.b[0]
+; CHECK-GI-NEXT:    mov v0.b[15], v3.b[0]
 ; CHECK-GI-NEXT:    uaddlv h1, v1.8b
-; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    uaddlv h0, v0.16b
 ; CHECK-GI-NEXT:    fmov w9, s1
+; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    add w0, w8, w9
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3938,51 +3959,72 @@ define i16 @add_v24i8_v24i16_sext(<24 x i8> %x) {
 ;
 ; CHECK-GI-LABEL: add_v24i8_v24i16_sext:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov s4, w0
-; CHECK-GI-NEXT:    fmov s5, w4
-; CHECK-GI-NEXT:    ldr s0, [sp]
-; CHECK-GI-NEXT:    ldr s6, [sp, #8]
-; CHECK-GI-NEXT:    ldr s1, [sp, #32]
-; CHECK-GI-NEXT:    ldr s7, [sp, #40]
-; CHECK-GI-NEXT:    ldr s2, [sp, #64]
-; CHECK-GI-NEXT:    ldr s16, [sp, #72]
-; CHECK-GI-NEXT:    ldr s3, [sp, #96]
-; CHECK-GI-NEXT:    ldr s17, [sp, #104]
-; CHECK-GI-NEXT:    mov v4.s[1], w1
-; CHECK-GI-NEXT:    mov v5.s[1], w5
-; CHECK-GI-NEXT:    mov v0.s[1], v6.s[0]
-; CHECK-GI-NEXT:    mov v1.s[1], v7.s[0]
-; CHECK-GI-NEXT:    mov v2.s[1], v16.s[0]
-; CHECK-GI-NEXT:    mov v3.s[1], v17.s[0]
-; CHECK-GI-NEXT:    ldr s6, [sp, #16]
-; CHECK-GI-NEXT:    ldr s7, [sp, #48]
-; CHECK-GI-NEXT:    ldr s16, [sp, #80]
-; CHECK-GI-NEXT:    ldr s17, [sp, #112]
-; CHECK-GI-NEXT:    mov v4.s[2], w2
-; CHECK-GI-NEXT:    mov v5.s[2], w6
-; CHECK-GI-NEXT:    mov v0.s[2], v6.s[0]
-; CHECK-GI-NEXT:    mov v1.s[2], v7.s[0]
-; CHECK-GI-NEXT:    mov v2.s[2], v16.s[0]
-; CHECK-GI-NEXT:    mov v3.s[2], v17.s[0]
-; CHECK-GI-NEXT:    ldr s6, [sp, #24]
-; CHECK-GI-NEXT:    ldr s7, [sp, #56]
-; CHECK-GI-NEXT:    ldr s16, [sp, #88]
-; CHECK-GI-NEXT:    ldr s17, [sp, #120]
-; CHECK-GI-NEXT:    mov v4.s[3], w3
-; CHECK-GI-NEXT:    mov v5.s[3], w7
-; CHECK-GI-NEXT:    mov v0.s[3], v6.s[0]
-; CHECK-GI-NEXT:    mov v1.s[3], v7.s[0]
-; CHECK-GI-NEXT:    mov v2.s[3], v16.s[0]
-; CHECK-GI-NEXT:    mov v3.s[3], v17.s[0]
-; CHECK-GI-NEXT:    uzp1 v4.8h, v4.8h, v5.8h
-; CHECK-GI-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    uzp1 v1.8h, v2.8h, v3.8h
-; CHECK-GI-NEXT:    uzp1 v0.16b, v4.16b, v0.16b
-; CHECK-GI-NEXT:    xtn v1.8b, v1.8h
-; CHECK-GI-NEXT:    saddlv h0, v0.16b
+; CHECK-GI-NEXT:    fmov s0, w0
+; CHECK-GI-NEXT:    fmov s1, w1
+; CHECK-GI-NEXT:    ldr w8, [sp]
+; CHECK-GI-NEXT:    ldr w9, [sp, #64]
+; CHECK-GI-NEXT:    ldr w10, [sp, #72]
+; CHECK-GI-NEXT:    mov v0.b[1], v1.b[0]
+; CHECK-GI-NEXT:    fmov s1, w2
+; CHECK-GI-NEXT:    fmov s2, w10
+; CHECK-GI-NEXT:    mov v0.b[2], v1.b[0]
+; CHECK-GI-NEXT:    fmov s1, w3
+; CHECK-GI-NEXT:    mov v0.b[3], v1.b[0]
+; CHECK-GI-NEXT:    fmov s1, w4
+; CHECK-GI-NEXT:    mov v0.b[4], v1.b[0]
+; CHECK-GI-NEXT:    fmov s1, w5
+; CHECK-GI-NEXT:    mov v0.b[5], v1.b[0]
+; CHECK-GI-NEXT:    fmov s1, w6
+; CHECK-GI-NEXT:    mov v0.b[6], v1.b[0]
+; CHECK-GI-NEXT:    fmov s1, w7
+; CHECK-GI-NEXT:    mov v0.b[7], v1.b[0]
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    ldr w8, [sp, #8]
+; CHECK-GI-NEXT:    fmov s3, w8
+; CHECK-GI-NEXT:    ldr w8, [sp, #16]
+; CHECK-GI-NEXT:    mov v0.b[8], v1.b[0]
+; CHECK-GI-NEXT:    fmov s1, w9
+; CHECK-GI-NEXT:    ldr w9, [sp, #80]
+; CHECK-GI-NEXT:    mov v1.b[1], v2.b[0]
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    ldr w9, [sp, #88]
+; CHECK-GI-NEXT:    mov v0.b[9], v3.b[0]
+; CHECK-GI-NEXT:    fmov s3, w8
+; CHECK-GI-NEXT:    ldr w8, [sp, #24]
+; CHECK-GI-NEXT:    mov v1.b[2], v2.b[0]
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    ldr w9, [sp, #96]
+; CHECK-GI-NEXT:    mov v0.b[10], v3.b[0]
+; CHECK-GI-NEXT:    fmov s3, w8
+; CHECK-GI-NEXT:    ldr w8, [sp, #32]
+; CHECK-GI-NEXT:    mov v1.b[3], v2.b[0]
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    ldr w9, [sp, #104]
+; CHECK-GI-NEXT:    mov v0.b[11], v3.b[0]
+; CHECK-GI-NEXT:    fmov s3, w8
+; CHECK-GI-NEXT:    ldr w8, [sp, #40]
+; CHECK-GI-NEXT:    mov v1.b[4], v2.b[0]
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    ldr w9, [sp, #112]
+; CHECK-GI-NEXT:    mov v0.b[12], v3.b[0]
+; CHECK-GI-NEXT:    fmov s3, w8
+; CHECK-GI-NEXT:    ldr w8, [sp, #48]
+; CHECK-GI-NEXT:    mov v1.b[5], v2.b[0]
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    ldr w9, [sp, #120]
+; CHECK-GI-NEXT:    mov v0.b[13], v3.b[0]
+; CHECK-GI-NEXT:    fmov s3, w8
+; CHECK-GI-NEXT:    ldr w8, [sp, #56]
+; CHECK-GI-NEXT:    mov v1.b[6], v2.b[0]
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    mov v0.b[14], v3.b[0]
+; CHECK-GI-NEXT:    fmov s3, w8
+; CHECK-GI-NEXT:    mov v1.b[7], v2.b[0]
+; CHECK-GI-NEXT:    mov v0.b[15], v3.b[0]
 ; CHECK-GI-NEXT:    saddlv h1, v1.8b
-; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    saddlv h0, v0.16b
 ; CHECK-GI-NEXT:    fmov w9, s1
+; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    add w0, w8, w9
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -4125,106 +4167,149 @@ define i32 @add_v24i8_v24i32_zext(<24 x i8> %x) {
 ;
 ; CHECK-GI-BASE-LABEL: add_v24i8_v24i32_zext:
 ; CHECK-GI-BASE:       // %bb.0: // %entry
-; CHECK-GI-BASE-NEXT:    fmov s4, w0
-; CHECK-GI-BASE-NEXT:    fmov s5, w4
-; CHECK-GI-BASE-NEXT:    ldr s0, [sp]
-; CHECK-GI-BASE-NEXT:    ldr s6, [sp, #8]
-; CHECK-GI-BASE-NEXT:    ldr s1, [sp, #32]
-; CHECK-GI-BASE-NEXT:    ldr s7, [sp, #40]
-; CHECK-GI-BASE-NEXT:    ldr s2, [sp, #64]
-; CHECK-GI-BASE-NEXT:    ldr s16, [sp, #72]
-; CHECK-GI-BASE-NEXT:    ldr s3, [sp, #96]
-; CHECK-GI-BASE-NEXT:    ldr s17, [sp, #104]
-; CHECK-GI-BASE-NEXT:    mov v4.s[1], w1
-; CHECK-GI-BASE-NEXT:    mov v5.s[1], w5
-; CHECK-GI-BASE-NEXT:    mov v0.s[1], v6.s[0]
-; CHECK-GI-BASE-NEXT:    mov v1.s[1], v7.s[0]
-; CHECK-GI-BASE-NEXT:    mov v2.s[1], v16.s[0]
-; CHECK-GI-BASE-NEXT:    mov v3.s[1], v17.s[0]
-; CHECK-GI-BASE-NEXT:    ldr s6, [sp, #16]
-; CHECK-GI-BASE-NEXT:    ldr s7, [sp, #48]
-; CHECK-GI-BASE-NEXT:    ldr s16, [sp, #80]
-; CHECK-GI-BASE-NEXT:    ldr s17, [sp, #112]
-; CHECK-GI-BASE-NEXT:    mov v4.s[2], w2
-; CHECK-GI-BASE-NEXT:    mov v5.s[2], w6
-; CHECK-GI-BASE-NEXT:    mov v0.s[2], v6.s[0]
-; CHECK-GI-BASE-NEXT:    mov v1.s[2], v7.s[0]
-; CHECK-GI-BASE-NEXT:    mov v2.s[2], v16.s[0]
-; CHECK-GI-BASE-NEXT:    mov v3.s[2], v17.s[0]
-; CHECK-GI-BASE-NEXT:    ldr s6, [sp, #24]
-; CHECK-GI-BASE-NEXT:    ldr s7, [sp, #56]
-; CHECK-GI-BASE-NEXT:    ldr s16, [sp, #88]
-; CHECK-GI-BASE-NEXT:    ldr s17, [sp, #120]
-; CHECK-GI-BASE-NEXT:    mov v4.s[3], w3
-; CHECK-GI-BASE-NEXT:    mov v5.s[3], w7
-; CHECK-GI-BASE-NEXT:    mov v0.s[3], v6.s[0]
-; CHECK-GI-BASE-NEXT:    mov v1.s[3], v7.s[0]
-; CHECK-GI-BASE-NEXT:    mov v2.s[3], v16.s[0]
-; CHECK-GI-BASE-NEXT:    mov v3.s[3], v17.s[0]
-; CHECK-GI-BASE-NEXT:    uzp1 v4.8h, v4.8h, v5.8h
-; CHECK-GI-BASE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-GI-BASE-NEXT:    uzp1 v1.8h, v2.8h, v3.8h
-; CHECK-GI-BASE-NEXT:    uzp1 v0.16b, v4.16b, v0.16b
-; CHECK-GI-BASE-NEXT:    xtn v1.8b, v1.8h
-; CHECK-GI-BASE-NEXT:    uaddlv h0, v0.16b
+; CHECK-GI-BASE-NEXT:    fmov s0, w0
+; CHECK-GI-BASE-NEXT:    fmov s1, w1
+; CHECK-GI-BASE-NEXT:    ldr w8, [sp]
+; CHECK-GI-BASE-NEXT:    ldr w9, [sp, #64]
+; CHECK-GI-BASE-NEXT:    ldr w10, [sp, #72]
+; CHECK-GI-BASE-NEXT:    mov v0.b[1], v1.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s1, w2
+; CHECK-GI-BASE-NEXT:    fmov s2, w10
+; CHECK-GI-BASE-NEXT:    mov v0.b[2], v1.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s1, w3
+; CHECK-GI-BASE-NEXT:    mov v0.b[3], v1.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s1, w4
+; CHECK-GI-BASE-NEXT:    mov v0.b[4], v1.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s1, w5
+; CHECK-GI-BASE-NEXT:    mov v0.b[5], v1.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s1, w6
+; CHECK-GI-BASE-NEXT:    mov v0.b[6], v1.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s1, w7
+; CHECK-GI-BASE-NEXT:    mov v0.b[7], v1.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s1, w8
+; CHECK-GI-BASE-NEXT:    ldr w8, [sp, #8]
+; CHECK-GI-BASE-NEXT:    fmov s3, w8
+; CHECK-GI-BASE-NEXT:    ldr w8, [sp, #16]
+; CHECK-GI-BASE-NEXT:    mov v0.b[8], v1.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s1, w9
+; CHECK-GI-BASE-NEXT:    ldr w9, [sp, #80]
+; CHECK-GI-BASE-NEXT:    mov v1.b[1], v2.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s2, w9
+; CHECK-GI-BASE-NEXT:    ldr w9, [sp, #88]
+; CHECK-GI-BASE-NEXT:    mov v0.b[9], v3.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s3, w8
+; CHECK-GI-BASE-NEXT:    ldr w8, [sp, #24]
+; CHECK-GI-BASE-NEXT:    mov v1.b[2], v2.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s2, w9
+; CHECK-GI-BASE-NEXT:    ldr w9, [sp, #96]
+; CHECK-GI-BASE-NEXT:    mov v0.b[10], v3.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s3, w8
+; CHECK-GI-BASE-NEXT:    ldr w8, [sp, #32]
+; CHECK-GI-BASE-NEXT:    mov v1.b[3], v2.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s2, w9
+; CHECK-GI-BASE-NEXT:    ldr w9, [sp, #104]
+; CHECK-GI-BASE-NEXT:    mov v0.b[11], v3.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s3, w8
+; CHECK-GI-BASE-NEXT:    ldr w8, [sp, #40]
+; CHECK-GI-BASE-NEXT:    mov v1.b[4], v2.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s2, w9
+; CHECK-GI-BASE-NEXT:    ldr w9, [sp, #112]
+; CHECK-GI-BASE-NEXT:    mov v0.b[12], v3.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s3, w8
+; CHECK-GI-BASE-NEXT:    ldr w8, [sp, #48]
+; CHECK-GI-BASE-NEXT:    mov v1.b[5], v2.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s2, w9
+; CHECK-GI-BASE-NEXT:    ldr w9, [sp, #120]
+; CHECK-GI-BASE-NEXT:    mov v0.b[13], v3.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s3, w8
+; CHECK-GI-BASE-NEXT:    ldr w8, [sp, #56]
+; CHECK-GI-BASE-NEXT:    mov v1.b[6], v2.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s2, w9
+; CHECK-GI-BASE-NEXT:    mov v0.b[14], v3.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s3, w8
+; CHECK-GI-BASE-NEXT:    mov v1.b[7], v2.b[0]
+; CHECK-GI-BASE-NEXT:    mov v0.b[15], v3.b[0]
 ; CHECK-GI-BASE-NEXT:    uaddlv h1, v1.8b
-; CHECK-GI-BASE-NEXT:    fmov w8, s0
+; CHECK-GI-BASE-NEXT:    uaddlv h0, v0.16b
 ; CHECK-GI-BASE-NEXT:    fmov w9, s1
+; CHECK-GI-BASE-NEXT:    fmov w8, s0
 ; CHECK-GI-BASE-NEXT:    add w8, w8, w9
 ; CHECK-GI-BASE-NEXT:    and w0, w8, #0xffff
 ; CHECK-GI-BASE-NEXT:    ret
 ;
 ; CHECK-GI-DOT-LABEL: add_v24i8_v24i32_zext:
 ; CHECK-GI-DOT:       // %bb.0: // %entry
-; CHECK-GI-DOT-NEXT:    fmov s4, w0
-; CHECK-GI-DOT-NEXT:    fmov s5, w4
-; CHECK-GI-DOT-NEXT:    ldr s0, [sp]
-; CHECK-GI-DOT-NEXT:    ldr s6, [sp, #8]
-; CHECK-GI-DOT-NEXT:    ldr s1, [sp, #32]
-; CHECK-GI-DOT-NEXT:    ldr s7, [sp, #40]
-; CHECK-GI-DOT-NEXT:    ldr s2, [sp, #64]
-; CHECK-GI-DOT-NEXT:    ldr s16, [sp, #72]
-; CHECK-GI-DOT-NEXT:    ldr s3, [sp, #96]
-; CHECK-GI-DOT-NEXT:    ldr s17, [sp, #104]
-; CHECK-GI-DOT-NEXT:    mov v4.s[1], w1
-; CHECK-GI-DOT-NEXT:    mov v5.s[1], w5
-; CHECK-GI-DOT-NEXT:    mov v0.s[1], v6.s[0]
-; CHECK-GI-DOT-NEXT:    mov v1.s[1], v7.s[0]
-; CHECK-GI-DOT-NEXT:    mov v2.s[1], v16.s[0]
-; CHECK-GI-DOT-NEXT:    mov v3.s[1], v17.s[0]
-; CHECK-GI-DOT-NEXT:    ldr s6, [sp, #16]
-; CHECK-GI-DOT-NEXT:    ldr s7, [sp, #48]
-; CHECK-GI-DOT-NEXT:    ldr s16, [sp, #80]
-; CHECK-GI-DOT-NEXT:    ldr s17, [sp, #112]
-; CHECK-GI-DOT-NEXT:    mov v4.s[2], w2
-; CHECK-GI-DOT-NEXT:    mov v5.s[2], w6
-; CHECK-GI-DOT-NEXT:    mov v0.s[2], v6.s[0]
-; CHECK-GI-DOT-NEXT:    mov v1.s[2], v7.s[0]
-; CHECK-GI-DOT-NEXT:    mov v2.s[2], v16.s[0]
-; CHECK-GI-DOT-NEXT:    mov v3.s[2], v17.s[0]
-; CHECK-GI-DOT-NEXT:    ldr s6, [sp, #24]
-; CHECK-GI-DOT-NEXT:    ldr s7, [sp, #56]
-; CHECK-GI-DOT-NEXT:    ldr s16, [sp, #88]
-; CHECK-GI-DOT-NEXT:    ldr s17, [sp, #120]
-; CHECK-GI-DOT-NEXT:    mov v4.s[3], w3
-; CHECK-GI-DOT-NEXT:    mov v5.s[3], w7
-; CHECK-GI-DOT-NEXT:    mov v0.s[3], v6.s[0]
-; CHECK-GI-DOT-NEXT:    mov v1.s[3], v7.s[0]
-; CHECK-GI-DOT-NEXT:    mov v2.s[3], v16.s[0]
-; CHECK-GI-DOT-NEXT:    mov v3.s[3], v17.s[0]
-; CHECK-GI-DOT-NEXT:    uzp1 v4.8h, v4.8h, v5.8h
-; CHECK-GI-DOT-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-GI-DOT-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-GI-DOT-NEXT:    uzp1 v1.8h, v2.8h, v3.8h
+; CHECK-GI-DOT-NEXT:    fmov s0, w0
+; CHECK-GI-DOT-NEXT:    fmov s1, w1
+; CHECK-GI-DOT-NEXT:    ldr w8, [sp]
+; CHECK-GI-DOT-NEXT:    ldr w9, [sp, #64]
+; CHECK-GI-DOT-NEXT:    ldr w10, [sp, #72]
+; CHECK-GI-DOT-NEXT:    movi v4.8b, #1
+; CHECK-GI-DOT-NEXT:    fmov s2, w8
+; CHECK-GI-DOT-NEXT:    ldr w8, [sp, #8]
+; CHECK-GI-DOT-NEXT:    mov v0.b[1], v1.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s1, w2
+; CHECK-GI-DOT-NEXT:    fmov s3, w10
+; CHECK-GI-DOT-NEXT:    mov v0.b[2], v1.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s1, w3
+; CHECK-GI-DOT-NEXT:    mov v0.b[3], v1.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s1, w4
+; CHECK-GI-DOT-NEXT:    mov v0.b[4], v1.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s1, w5
+; CHECK-GI-DOT-NEXT:    mov v0.b[5], v1.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s1, w6
+; CHECK-GI-DOT-NEXT:    mov v0.b[6], v1.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s1, w7
+; CHECK-GI-DOT-NEXT:    mov v0.b[7], v1.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s1, w9
+; CHECK-GI-DOT-NEXT:    ldr w9, [sp, #80]
+; CHECK-GI-DOT-NEXT:    mov v1.b[1], v3.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s3, w9
+; CHECK-GI-DOT-NEXT:    ldr w9, [sp, #88]
+; CHECK-GI-DOT-NEXT:    mov v0.b[8], v2.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s2, w8
+; CHECK-GI-DOT-NEXT:    ldr w8, [sp, #16]
+; CHECK-GI-DOT-NEXT:    mov v1.b[2], v3.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s3, w9
+; CHECK-GI-DOT-NEXT:    ldr w9, [sp, #96]
+; CHECK-GI-DOT-NEXT:    mov v0.b[9], v2.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s2, w8
+; CHECK-GI-DOT-NEXT:    ldr w8, [sp, #24]
+; CHECK-GI-DOT-NEXT:    mov v1.b[3], v3.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s3, w9
+; CHECK-GI-DOT-NEXT:    ldr w9, [sp, #104]
+; CHECK-GI-DOT-NEXT:    mov v0.b[10], v2.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s2, w8
+; CHECK-GI-DOT-NEXT:    ldr w8, [sp, #32]
+; CHECK-GI-DOT-NEXT:    mov v1.b[4], v3.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s3, w9
+; CHECK-GI-DOT-NEXT:    ldr w9, [sp, #112]
+; CHECK-GI-DOT-NEXT:    mov v0.b[11], v2.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s2, w8
+; CHECK-GI-DOT-NEXT:    ldr w8, [sp, #40]
+; CHECK-GI-DOT-NEXT:    mov v1.b[5], v3.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s3, w9
+; CHECK-GI-DOT-NEXT:    ldr w9, [sp, #120]
+; CHECK-GI-DOT-NEXT:    mov v0.b[12], v2.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s2, w8
+; CHECK-GI-DOT-NEXT:    ldr w8, [sp, #48]
+; CHECK-GI-DOT-NEXT:    fmov s5, w9
+; CHECK-GI-DOT-NEXT:    mov v1.b[6], v3.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s3, w8
+; CHECK-GI-DOT-NEXT:    ldr w8, [sp, #56]
+; CHECK-GI-DOT-NEXT:    mov v0.b[13], v2.b[0]
 ; CHECK-GI-DOT-NEXT:    movi v2.8b, #1
-; CHECK-GI-DOT-NEXT:    movi v3.8b, #1
-; CHECK-GI-DOT-NEXT:    uzp1 v0.16b, v4.16b, v0.16b
-; CHECK-GI-DOT-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-GI-DOT-NEXT:    xtn v1.8b, v1.8h
-; CHECK-GI-DOT-NEXT:    mov v3.d[1], v2.d[0]
-; CHECK-GI-DOT-NEXT:    udot v5.4s, v0.16b, v3.16b
-; CHECK-GI-DOT-NEXT:    udot v4.4s, v1.16b, v2.16b
-; CHECK-GI-DOT-NEXT:    add v0.4s, v5.4s, v4.4s
+; CHECK-GI-DOT-NEXT:    mov v1.b[7], v5.b[0]
+; CHECK-GI-DOT-NEXT:    movi v5.2d, #0000000000000000
+; CHECK-GI-DOT-NEXT:    mov v0.b[14], v3.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s3, w8
+; CHECK-GI-DOT-NEXT:    mov v4.d[1], v2.d[0]
+; CHECK-GI-DOT-NEXT:    fmov d1, d1
+; CHECK-GI-DOT-NEXT:    mov v0.b[15], v3.b[0]
+; CHECK-GI-DOT-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-GI-DOT-NEXT:    udot v5.4s, v0.16b, v4.16b
+; CHECK-GI-DOT-NEXT:    udot v3.4s, v1.16b, v2.16b
+; CHECK-GI-DOT-NEXT:    add v0.4s, v5.4s, v3.4s
 ; CHECK-GI-DOT-NEXT:    addv s0, v0.4s
 ; CHECK-GI-DOT-NEXT:    fmov w0, s0
 ; CHECK-GI-DOT-NEXT:    ret
@@ -4398,106 +4483,149 @@ define i32 @add_v24i8_v24i32_sext(<24 x i8> %x) {
 ;
 ; CHECK-GI-BASE-LABEL: add_v24i8_v24i32_sext:
 ; CHECK-GI-BASE:       // %bb.0: // %entry
-; CHECK-GI-BASE-NEXT:    fmov s4, w0
-; CHECK-GI-BASE-NEXT:    fmov s5, w4
-; CHECK-GI-BASE-NEXT:    ldr s0, [sp]
-; CHECK-GI-BASE-NEXT:    ldr s6, [sp, #8]
-; CHECK-GI-BASE-NEXT:    ldr s1, [sp, #32]
-; CHECK-GI-BASE-NEXT:    ldr s7, [sp, #40]
-; CHECK-GI-BASE-NEXT:    ldr s2, [sp, #64]
-; CHECK-GI-BASE-NEXT:    ldr s16, [sp, #72]
-; CHECK-GI-BASE-NEXT:    ldr s3, [sp, #96]
-; CHECK-GI-BASE-NEXT:    ldr s17, [sp, #104]
-; CHECK-GI-BASE-NEXT:    mov v4.s[1], w1
-; CHECK-GI-BASE-NEXT:    mov v5.s[1], w5
-; CHECK-GI-BASE-NEXT:    mov v0.s[1], v6.s[0]
-; CHECK-GI-BASE-NEXT:    mov v1.s[1], v7.s[0]
-; CHECK-GI-BASE-NEXT:    mov v2.s[1], v16.s[0]
-; CHECK-GI-BASE-NEXT:    mov v3.s[1], v17.s[0]
-; CHECK-GI-BASE-NEXT:    ldr s6, [sp, #16]
-; CHECK-GI-BASE-NEXT:    ldr s7, [sp, #48]
-; CHECK-GI-BASE-NEXT:    ldr s16, [sp, #80]
-; CHECK-GI-BASE-NEXT:    ldr s17, [sp, #112]
-; CHECK-GI-BASE-NEXT:    mov v4.s[2], w2
-; CHECK-GI-BASE-NEXT:    mov v5.s[2], w6
-; CHECK-GI-BASE-NEXT:    mov v0.s[2], v6.s[0]
-; CHECK-GI-BASE-NEXT:    mov v1.s[2], v7.s[0]
-; CHECK-GI-BASE-NEXT:    mov v2.s[2], v16.s[0]
-; CHECK-GI-BASE-NEXT:    mov v3.s[2], v17.s[0]
-; CHECK-GI-BASE-NEXT:    ldr s6, [sp, #24]
-; CHECK-GI-BASE-NEXT:    ldr s7, [sp, #56]
-; CHECK-GI-BASE-NEXT:    ldr s16, [sp, #88]
-; CHECK-GI-BASE-NEXT:    ldr s17, [sp, #120]
-; CHECK-GI-BASE-NEXT:    mov v4.s[3], w3
-; CHECK-GI-BASE-NEXT:    mov v5.s[3], w7
-; CHECK-GI-BASE-NEXT:    mov v0.s[3], v6.s[0]
-; CHECK-GI-BASE-NEXT:    mov v1.s[3], v7.s[0]
-; CHECK-GI-BASE-NEXT:    mov v2.s[3], v16.s[0]
-; CHECK-GI-BASE-NEXT:    mov v3.s[3], v17.s[0]
-; CHECK-GI-BASE-NEXT:    uzp1 v4.8h, v4.8h, v5.8h
-; CHECK-GI-BASE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-GI-BASE-NEXT:    uzp1 v1.8h, v2.8h, v3.8h
-; CHECK-GI-BASE-NEXT:    uzp1 v0.16b, v4.16b, v0.16b
-; CHECK-GI-BASE-NEXT:    xtn v1.8b, v1.8h
-; CHECK-GI-BASE-NEXT:    saddlv h0, v0.16b
+; CHECK-GI-BASE-NEXT:    fmov s0, w0
+; CHECK-GI-BASE-NEXT:    fmov s1, w1
+; CHECK-GI-BASE-NEXT:    ldr w8, [sp]
+; CHECK-GI-BASE-NEXT:    ldr w9, [sp, #64]
+; CHECK-GI-BASE-NEXT:    ldr w10, [sp, #72]
+; CHECK-GI-BASE-NEXT:    mov v0.b[1], v1.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s1, w2
+; CHECK-GI-BASE-NEXT:    fmov s2, w10
+; CHECK-GI-BASE-NEXT:    mov v0.b[2], v1.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s1, w3
+; CHECK-GI-BASE-NEXT:    mov v0.b[3], v1.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s1, w4
+; CHECK-GI-BASE-NEXT:    mov v0.b[4], v1.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s1, w5
+; CHECK-GI-BASE-NEXT:    mov v0.b[5], v1.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s1, w6
+; CHECK-GI-BASE-NEXT:    mov v0.b[6], v1.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s1, w7
+; CHECK-GI-BASE-NEXT:    mov v0.b[7], v1.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s1, w8
+; CHECK-GI-BASE-NEXT:    ldr w8, [sp, #8]
+; CHECK-GI-BASE-NEXT:    fmov s3, w8
+; CHECK-GI-BASE-NEXT:    ldr w8, [sp, #16]
+; CHECK-GI-BASE-NEXT:    mov v0.b[8], v1.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s1, w9
+; CHECK-GI-BASE-NEXT:    ldr w9, [sp, #80]
+; CHECK-GI-BASE-NEXT:    mov v1.b[1], v2.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s2, w9
+; CHECK-GI-BASE-NEXT:    ldr w9, [sp, #88]
+; CHECK-GI-BASE-NEXT:    mov v0.b[9], v3.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s3, w8
+; CHECK-GI-BASE-NEXT:    ldr w8, [sp, #24]
+; CHECK-GI-BASE-NEXT:    mov v1.b[2], v2.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s2, w9
+; CHECK-GI-BASE-NEXT:    ldr w9, [sp, #96]
+; CHECK-GI-BASE-NEXT:    mov v0.b[10], v3.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s3, w8
+; CHECK-GI-BASE-NEXT:    ldr w8, [sp, #32]
+; CHECK-GI-BASE-NEXT:    mov v1.b[3], v2.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s2, w9
+; CHECK-GI-BASE-NEXT:    ldr w9, [sp, #104]
+; CHECK-GI-BASE-NEXT:    mov v0.b[11], v3.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s3, w8
+; CHECK-GI-BASE-NEXT:    ldr w8, [sp, #40]
+; CHECK-GI-BASE-NEXT:    mov v1.b[4], v2.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s2, w9
+; CHECK-GI-BASE-NEXT:    ldr w9, [sp, #112]
+; CHECK-GI-BASE-NEXT:    mov v0.b[12], v3.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s3, w8
+; CHECK-GI-BASE-NEXT:    ldr w8, [sp, #48]
+; CHECK-GI-BASE-NEXT:    mov v1.b[5], v2.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s2, w9
+; CHECK-GI-BASE-NEXT:    ldr w9, [sp, #120]
+; CHECK-GI-BASE-NEXT:    mov v0.b[13], v3.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s3, w8
+; CHECK-GI-BASE-NEXT:    ldr w8, [sp, #56]
+; CHECK-GI-BASE-NEXT:    mov v1.b[6], v2.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s2, w9
+; CHECK-GI-BASE-NEXT:    mov v0.b[14], v3.b[0]
+; CHECK-GI-BASE-NEXT:    fmov s3, w8
+; CHECK-GI-BASE-NEXT:    mov v1.b[7], v2.b[0]
+; CHECK-GI-BASE-NEXT:    mov v0.b[15], v3.b[0]
 ; CHECK-GI-BASE-NEXT:    saddlv h1, v1.8b
-; CHECK-GI-BASE-NEXT:    fmov w8, s0
+; CHECK-GI-BASE-NEXT:    saddlv h0, v0.16b
 ; CHECK-GI-BASE-NEXT:    fmov w9, s1
+; CHECK-GI-BASE-NEXT:    fmov w8, s0
 ; CHECK-GI-BASE-NEXT:    add w8, w8, w9
 ; CHECK-GI-BASE-NEXT:    sxth w0, w8
 ; CHECK-GI-BASE-NEXT:    ret
 ;
 ; CHECK-GI-DOT-LABEL: add_v24i8_v24i32_sext:
 ; CHECK-GI-DOT:       // %bb.0: // %entry
-; CHECK-GI-DOT-NEXT:    fmov s4, w0
-; CHECK-GI-DOT-NEXT:    fmov s5, w4
-; CHECK-GI-DOT-NEXT:    ldr s0, [sp]
-; CHECK-GI-DOT-NEXT:    ldr s6, [sp, #8]
-; CHECK-GI-DOT-NEXT:    ldr s1, [sp, #32]
-; CHECK-GI-DOT-NEXT:    ldr s7, [sp, #40]
-; CHECK-GI-DOT-NEXT:    ldr s2, [sp, #64]
-; CHECK-GI-DOT-NEXT:    ldr s16, [sp, #72]
-; CHECK-GI-DOT-NEXT:    ldr s3, [sp, #96]
-; CHECK-GI-DOT-NEXT:    ldr s17, [sp, #104]
-; CHECK-GI-DOT-NEXT:    mov v4.s[1], w1
-; CHECK-GI-DOT-NEXT:    mov v5.s[1], w5
-; CHECK-GI-DOT-NEXT:    mov v0.s[1], v6.s[0]
-; CHECK-GI-DOT-NEXT:    mov v1.s[1], v7.s[0]
-; CHECK-GI-DOT-NEXT:    mov v2.s[1], v16.s[0]
-; CHECK-GI-DOT-NEXT:    mov v3.s[1], v17.s[0]
-; CHECK-GI-DOT-NEXT:    ldr s6, [sp, #16]
-; CHECK-GI-DOT-NEXT:    ldr s7, [sp, #48]
-; CHECK-GI-DOT-NEXT:    ldr s16, [sp, #80]
-; CHECK-GI-DOT-NEXT:    ldr s17, [sp, #112]
-; CHECK-GI-DOT-NEXT:    mov v4.s[2], w2
-; CHECK-GI-DOT-NEXT:    mov v5.s[2], w6
-; CHECK-GI-DOT-NEXT:    mov v0.s[2], v6.s[0]
-; CHECK-GI-DOT-NEXT:    mov v1.s[2], v7.s[0]
-; CHECK-GI-DOT-NEXT:    mov v2.s[2], v16.s[0]
-; CHECK-GI-DOT-NEXT:    mov v3.s[2], v17.s[0]
-; CHECK-GI-DOT-NEXT:    ldr s6, [sp, #24]
-; CHECK-GI-DOT-NEXT:    ldr s7, [sp, #56]
-; CHECK-GI-DOT-NEXT:    ldr s16, [sp, #88]
-; CHECK-GI-DOT-NEXT:    ldr s17, [sp, #120]
-; CHECK-GI-DOT-NEXT:    mov v4.s[3], w3
-; CHECK-GI-DOT-NEXT:    mov v5.s[3], w7
-; CHECK-GI-DOT-NEXT:    mov v0.s[3], v6.s[0]
-; CHECK-GI-DOT-NEXT:    mov v1.s[3], v7.s[0]
-; CHECK-GI-DOT-NEXT:    mov v2.s[3], v16.s[0]
-; CHECK-GI-DOT-NEXT:    mov v3.s[3], v17.s[0]
-; CHECK-GI-DOT-NEXT:    uzp1 v4.8h, v4.8h, v5.8h
-; CHECK-GI-DOT-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-GI-DOT-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-GI-DOT-NEXT:    uzp1 v1.8h, v2.8h, v3.8h
+; CHECK-GI-DOT-NEXT:    fmov s0, w0
+; CHECK-GI-DOT-NEXT:    fmov s1, w1
+; CHECK-GI-DOT-NEXT:    ldr w8, [sp]
+; CHECK-GI-DOT-NEXT:    ldr w9, [sp, #64]
+; CHECK-GI-DOT-NEXT:    ldr w10, [sp, #72]
+; CHECK-GI-DOT-NEXT:    movi v4.8b, #1
+; CHECK-GI-DOT-NEXT:    fmov s2, w8
+; CHECK-GI-DOT-NEXT:    ldr w8, [sp, #8]
+; CHECK-GI-DOT-NEXT:    mov v0.b[1], v1.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s1, w2
+; CHECK-GI-DOT-NEXT:    fmov s3, w10
+; CHECK-GI-DOT-NEXT:    mov v0.b[2], v1.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s1, w3
+; CHECK-GI-DOT-NEXT:    mov v0.b[3], v1.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s1, w4
+; CHECK-GI-DOT-NEXT:    mov v0.b[4], v1.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s1, w5
+; CHECK-GI-DOT-NEXT:    mov v0.b[5], v1.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s1, w6
+; CHECK-GI-DOT-NEXT:    mov v0.b[6], v1.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s1, w7
+; CHECK-GI-DOT-NEXT:    mov v0.b[7], v1.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s1, w9
+; CHECK-GI-DOT-NEXT:    ldr w9, [sp, #80]
+; CHECK-GI-DOT-NEXT:    mov v1.b[1], v3.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s3, w9
+; CHECK-GI-DOT-NEXT:    ldr w9, [sp, #88]
+; CHECK-GI-DOT-NEXT:    mov v0.b[8], v2.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s2, w8
+; CHECK-GI-DOT-NEXT:    ldr w8, [sp, #16]
+; CHECK-GI-DOT-NEXT:    mov v1.b[2], v3.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s3, w9
+; CHECK-GI-DOT-NEXT:    ldr w9, [sp, #96]
+; CHECK-GI-DOT-NEXT:    mov v0.b[9], v2.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s2, w8
+; CHECK-GI-DOT-NEXT:    ldr w8, [sp, #24]
+; CHECK-GI-DOT-NEXT:    mov v1.b[3], v3.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s3, w9
+; CHECK-GI-DOT-NEXT:    ldr w9, [sp, #104]
+; CHECK-GI-DOT-NEXT:    mov v0.b[10], v2.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s2, w8
+; CHECK-GI-DOT-NEXT:    ldr w8, [sp, #32]
+; CHECK-GI-DOT-NEXT:    mov v1.b[4], v3.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s3, w9
+; CHECK-GI-DOT-NEXT:    ldr w9, [sp, #112]
+; CHECK-GI-DOT-NEXT:    mov v0.b[11], v2.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s2, w8
+; CHECK-GI-DOT-NEXT:    ldr w8, [sp, #40]
+; CHECK-GI-DOT-NEXT:    mov v1.b[5], v3.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s3, w9
+; CHECK-GI-DOT-NEXT:    ldr w9, [sp, #120]
+; CHECK-GI-DOT-NEXT:    mov v0.b[12], v2.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s2, w8
+; CHECK-GI-DOT-NEXT:    ldr w8, [sp, #48]
+; CHECK-GI-DOT-NEXT:    fmov s5, w9
+; CHECK-GI-DOT-NEXT:    mov v1.b[6], v3.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s3, w8
+; CHECK-GI-DOT-NEXT:    ldr w8, [sp, #56]
+; CHECK-GI-DOT-NEXT:    mov v0.b[13], v2.b[0]
 ; CHECK-GI-DOT-NEXT:    movi v2.8b, #1
-; CHECK-GI-DOT-NEXT:    movi v3.8b, #1
-; CHECK-GI-DOT-NEXT:    uzp1 v0.16b, v4.16b, v0.16b
-; CHECK-GI-DOT-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-GI-DOT-NEXT:    xtn v1.8b, v1.8h
-; CHECK-GI-DOT-NEXT:    mov v3.d[1], v2.d[0]
-; CHECK-GI-DOT-NEXT:    sdot v5.4s, v0.16b, v3.16b
-; CHECK-GI-DOT-NEXT:    sdot v4.4s, v1.16b, v2.16b
-; CHECK-GI-DOT-NEXT:    add v0.4s, v5.4s, v4.4s
+; CHECK-GI-DOT-NEXT:    mov v1.b[7], v5.b[0]
+; CHECK-GI-DOT-NEXT:    movi v5.2d, #0000000000000000
+; CHECK-GI-DOT-NEXT:    mov v0.b[14], v3.b[0]
+; CHECK-GI-DOT-NEXT:    fmov s3, w8
+; CHECK-GI-DOT-NEXT:    mov v4.d[1], v2.d[0]
+; CHECK-GI-DOT-NEXT:    fmov d1, d1
+; CHECK-GI-DOT-NEXT:    mov v0.b[15], v3.b[0]
+; CHECK-GI-DOT-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-GI-DOT-NEXT:    sdot v5.4s, v0.16b, v4.16b
+; CHECK-GI-DOT-NEXT:    sdot v3.4s, v1.16b, v2.16b
+; CHECK-GI-DOT-NEXT:    add v0.4s, v5.4s, v3.4s
 ; CHECK-GI-DOT-NEXT:    addv s0, v0.4s
 ; CHECK-GI-DOT-NEXT:    fmov w0, s0
 ; CHECK-GI-DOT-NEXT:    ret

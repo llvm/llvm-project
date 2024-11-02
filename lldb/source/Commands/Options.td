@@ -1048,6 +1048,8 @@ let Command = "thread backtrace" in {
   Arg<"FrameIndex">, Desc<"Frame in which to start the backtrace">;
   def thread_backtrace_extended : Option<"extended", "e">, Group<1>,
   Arg<"Boolean">, Desc<"Show the extended backtrace, if available">;
+  def thread_backtrace_unfiltered : Option<"unfiltered", "u">, Group<1>,
+  Desc<"Filter out frames according to installed frame recognizers">;
 }
 
 let Command = "thread step scope" in {

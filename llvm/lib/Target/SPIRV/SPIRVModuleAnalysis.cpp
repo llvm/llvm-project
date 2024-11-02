@@ -21,7 +21,6 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
-#include "TargetInfo/SPIRVTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -427,7 +426,19 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
         if (MAI.getSkipEmission(&MI))
           continue;
         const unsigned OpCode = MI.getOpcode();
-        if (OpCode == SPIRV::OpName || OpCode == SPIRV::OpMemberName) {
+        if (OpCode == SPIRV::OpString) {
+          collectOtherInstr(MI, MAI, SPIRV::MB_DebugStrings, IS);
+        } else if (OpCode == SPIRV::OpExtInst) {
+          MachineOperand Ins = MI.getOperand(3);
+          namespace NS = SPIRV::NonSemanticExtInst;
+          static constexpr int64_t GlobalNonSemanticDITy[] = {
+              NS::DebugSource, NS::DebugCompilationUnit};
+          bool IsGlobalDI = false;
+          for (unsigned Idx = 0; Idx < std::size(GlobalNonSemanticDITy); ++Idx)
+            IsGlobalDI |= Ins.getImm() == GlobalNonSemanticDITy[Idx];
+          if (IsGlobalDI)
+            collectOtherInstr(MI, MAI, SPIRV::MB_NonSemanticGlobalDI, IS);
+        } else if (OpCode == SPIRV::OpName || OpCode == SPIRV::OpMemberName) {
           collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames, IS);
         } else if (OpCode == SPIRV::OpEntryPoint) {
           collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints, IS);
@@ -897,6 +908,14 @@ void addInstrRequirements(const MachineInstr &MI,
     if (TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
         TypeDef->getOperand(1).getImm() == 16)
       Reqs.addCapability(SPIRV::Capability::Float16Buffer);
+    break;
+  }
+  case SPIRV::OpExtInst: {
+    if (MI.getOperand(2).getImm() ==
+        static_cast<int64_t>(
+            SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
+    }
     break;
   }
   case SPIRV::OpBitReverse:

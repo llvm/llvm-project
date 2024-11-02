@@ -226,6 +226,8 @@ def CC_SystemZ_XPLINK64 : CallingConv<[
   // Although we assign the f32 vararg to be bitcast, it will first be promoted
   // to an f64 within convertValVTToLocVT().
   CCIfType<[f32, f64], CCIfNotFixed<CCBitConvertToType<i64>>>,
+  // Pointers are always passed in full 64-bit registers.
+  CCIfPtr<CCCustom<"CC_XPLINK64_Pointer">>,
   // long double, can only be passed in GPR2 and GPR3, if available,
   // hence R2Q
   CCIfType<[f128], CCIfNotFixed<CCCustom<"CC_XPLINK64_Allocate128BitVararg">>>,

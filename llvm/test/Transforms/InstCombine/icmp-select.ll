@@ -35,7 +35,7 @@ define i1 @icmp_select_var_commuted(i8 %x, i8 %y, i8 %_z) {
 ; CHECK-LABEL: @icmp_select_var_commuted(
 ; CHECK-NEXT:    [[Z:%.*]] = udiv i8 42, [[_Z:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[CMP21:%.*]] = icmp eq i8 [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp eq i8 [[Y:%.*]], [[Z]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP21]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
@@ -122,7 +122,7 @@ define i1 @icmp_select_var_pred_ult(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @icmp_select_var_pred_ult(
 ; CHECK-NEXT:    [[Z1:%.*]] = add nuw i8 [[Z:%.*]], 2
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[CMP21:%.*]] = icmp ugt i8 [[Z1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp ult i8 [[Y:%.*]], [[Z1]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP21]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
@@ -137,7 +137,7 @@ define i1 @icmp_select_var_pred_uge(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @icmp_select_var_pred_uge(
 ; CHECK-NEXT:    [[Z1:%.*]] = add nuw i8 [[Z:%.*]], 2
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[CMP21:%.*]] = icmp ule i8 [[Z1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp uge i8 [[Y:%.*]], [[Z1]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 [[CMP21]], i1 false
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
@@ -152,7 +152,7 @@ define i1 @icmp_select_var_pred_uge_commuted(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @icmp_select_var_pred_uge_commuted(
 ; CHECK-NEXT:    [[Z1:%.*]] = add nuw i8 [[Z:%.*]], 2
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[CMP21:%.*]] = icmp uge i8 [[Z1]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp ule i8 [[Y:%.*]], [[Z1]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP21]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
