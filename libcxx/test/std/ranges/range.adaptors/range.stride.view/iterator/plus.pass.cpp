@@ -12,6 +12,7 @@
 // constexpr __iterator operator+(const __iterator &__i, difference_type __n)
 
 #include <ranges>
+#include <vector>
 
 #include "../types.h"
 #include "test_iterators.h"
