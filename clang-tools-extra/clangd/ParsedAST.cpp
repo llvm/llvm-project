@@ -23,6 +23,7 @@
 #include "HeuristicResolver.h"
 #include "IncludeCleaner.h"
 #include "IncludeFixer.h"
+#include "NoLintFixes.h"
 #include "Preamble.h"
 #include "SourceCode.h"
 #include "TidyProvider.h"
@@ -655,10 +656,20 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
               : Symbol::Include;
       FixIncludes.emplace(Filename, Inserter, *Inputs.Index,
                           /*IndexRequestLimit=*/5, Directive);
-      ASTDiags.contributeFixes([&FixIncludes](DiagnosticsEngine::Level DiagLevl,
-                                              const clang::Diagnostic &Info) {
-        return FixIncludes->fix(DiagLevl, Info);
-      });
+      ASTDiags.contributeMainDiagFixes(
+          [&FixIncludes, &CTContext](const Diag &Diag,
+                                     const clang::Diagnostic &Info) {
+            auto Fixes = std::vector<Fix>();
+            auto NoLintFixes = noLintFixes(*CTContext, Info, Diag);
+            Fixes.insert(Fixes.end(), NoLintFixes.begin(), NoLintFixes.end());
+            auto IncludeFixes = FixIncludes->fix(Diag.Severity, Info);
+            Fixes.insert(Fixes.end(), IncludeFixes.begin(), IncludeFixes.end());
+            return Fixes;
+          });
+      ASTDiags.contributeNoteDiagFixes(
+          [&FixIncludes](const Diag &Diag, const clang::Diagnostic &Info) {
+            return FixIncludes->fix(Diag.Severity, Info);
+          });
       Clang->setExternalSemaSource(FixIncludes->unresolvedNameRecorder());
     }
   }

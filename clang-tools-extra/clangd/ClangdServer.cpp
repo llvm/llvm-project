@@ -15,6 +15,7 @@
 #include "Format.h"
 #include "HeaderSourceSwitch.h"
 #include "InlayHints.h"
+#include "NoLintFixes.h"
 #include "ParsedAST.h"
 #include "Preamble.h"
 #include "Protocol.h"
@@ -661,7 +662,7 @@ tryConvertToRename(const Diag *Diag, const Fix &Fix) {
   bool IsClangTidyRename = Diag->Source == Diag::ClangTidy &&
                            Diag->Name == "readability-identifier-naming" &&
                            !Fix.Edits.empty();
-  if (IsClangTidyRename && Diag->InsideMainFile) {
+  if (IsClangTidyRename && !isNoLintFixes(Fix) && Diag->InsideMainFile) {
     ClangdServer::CodeActionResult::Rename R;
     R.NewName = Fix.Edits.front().newText;
     R.FixMessage = Fix.Message;

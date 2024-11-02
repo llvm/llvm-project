@@ -9,6 +9,7 @@
 #include "Diagnostics.h"
 #include "../clang-tidy/ClangTidyDiagnosticConsumer.h"
 #include "Compiler.h"
+#include "NoLintFixes.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
@@ -311,8 +312,18 @@ std::string mainMessage(const Diag &D, const ClangdDiagnosticOptions &Opts) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   OS << D.Message;
-  if (Opts.DisplayFixesCount && !D.Fixes.empty())
-    OS << " (" << (D.Fixes.size() > 1 ? "fixes" : "fix") << " available)";
+
+  // NOLINT fixes are somewhat not real fixes and to say "(fix available)" when
+  // the fixes is just to suppress could be misleading.
+  int RealFixCount = D.Fixes.size();
+  for (auto const &Fix : D.Fixes) {
+    if (isNoLintFixes(Fix)) {
+      RealFixCount--;
+    }
+  }
+
+  if (Opts.DisplayFixesCount && RealFixCount > 0)
+    OS << " (" << (RealFixCount > 1 ? "fixes" : "fix") << " available)";
   // If notes aren't emitted as structured info, add them to the message.
   if (!Opts.EmitRelatedLocations)
     for (auto &Note : D.Notes) {
@@ -822,8 +833,8 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     LastDiagOriginallyError = OriginallyError;
     if (!Info.getFixItHints().empty())
       AddFix(true /* try to invent a message instead of repeating the diag */);
-    if (Fixer) {
-      auto ExtraFixes = Fixer(LastDiag->Severity, Info);
+    if (MainFixer) {
+      auto ExtraFixes = MainFixer(*LastDiag, Info);
       LastDiag->Fixes.insert(LastDiag->Fixes.end(), ExtraFixes.begin(),
                              ExtraFixes.end());
     }
@@ -841,8 +852,8 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
       return;
 
     // Give include-fixer a chance to replace a note with a fix.
-    if (Fixer) {
-      auto ReplacementFixes = Fixer(LastDiag->Severity, Info);
+    if (NoteFixer) {
+      auto ReplacementFixes = NoteFixer(*LastDiag, Info);
       if (!ReplacementFixes.empty()) {
         assert(Info.getNumFixItHints() == 0 &&
                "Include-fixer replaced a note with clang fix-its attached!");
