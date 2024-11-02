@@ -48,9 +48,7 @@ using DataFunc =
     }                                                                          \
   } while (0)
 
-/// Float is a special case that sometimes needs the floating point semantics
-/// to be available.
-#define BITCAST_TYPE_SWITCH_WITH_FLOAT(Expr, B)                                \
+#define BITCAST_TYPE_SWITCH_FIXED_SIZE(Expr, B)                                \
   do {                                                                         \
     switch (Expr) {                                                            \
       TYPE_SWITCH_CASE(PT_Sint8, B)                                            \
@@ -61,10 +59,7 @@ using DataFunc =
       TYPE_SWITCH_CASE(PT_Uint32, B)                                           \
       TYPE_SWITCH_CASE(PT_Sint64, B)                                           \
       TYPE_SWITCH_CASE(PT_Uint64, B)                                           \
-      TYPE_SWITCH_CASE(PT_IntAP, B)                                            \
-      TYPE_SWITCH_CASE(PT_IntAPS, B)                                           \
       TYPE_SWITCH_CASE(PT_Bool, B)                                             \
-      TYPE_SWITCH_CASE(PT_Float, B)                                            \
     default:                                                                   \
       llvm_unreachable("Unhandled bitcast type");                              \
     }                                                                          \
@@ -91,6 +86,12 @@ struct BitcastBuffer {
   size_t size() const { return SizeInBits; }
 
   const std::byte *data() const { return Data.data(); }
+
+  std::byte *getBytes(unsigned BitOffset) const {
+    if (BitOffset % 8 == 0)
+      return const_cast<std::byte *>(data() + (BitOffset / 8));
+    assert(false && "hmm, how to best handle this?");
+  }
 
   bool allInitialized() const {
     // FIXME: Implement.
@@ -374,6 +375,48 @@ bool clang::interp::DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   if (llvm::sys::IsBigEndianHost)
     swapBytes(Buff, BuffSize);
+
+  return Success;
+}
+
+bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
+                                 const Pointer &FromPtr, Pointer &ToPtr) {
+  assert(FromPtr.isLive());
+  assert(FromPtr.isBlockPointer());
+  assert(ToPtr.isBlockPointer());
+
+  QualType FromType = FromPtr.getType();
+  QualType ToType = ToPtr.getType();
+
+  if (!CheckBitcastType(S, OpPC, FromType, /*IsToType=*/false))
+    return false;
+
+  if (!CheckBitcastType(S, OpPC, ToType, /*IsToType=*/true))
+    return false;
+
+  BitcastBuffer Buffer;
+  readPointerToBuffer(S.getContext(), FromPtr, Buffer,
+                      /*ReturnOnUninit=*/false);
+
+  // Now read the values out of the buffer again and into ToPtr.
+  size_t BitOffset = 0;
+  bool Success = enumeratePointerFields(
+      ToPtr, S.getContext(),
+      [&](const Pointer &P, PrimType T, size_t _) -> bool {
+        BITCAST_TYPE_SWITCH_FIXED_SIZE(T, {
+          T &Val = P.deref<T>();
+
+          std::byte *M = Buffer.getBytes(BitOffset);
+
+          if (llvm::sys::IsBigEndianHost)
+            swapBytes(M, T::bitWidth() / 8);
+
+          Val = T::bitcastFromMemory(M, T::bitWidth());
+          P.initialize();
+          BitOffset += T::bitWidth();
+        });
+        return true;
+      });
 
   return Success;
 }
