@@ -12,6 +12,7 @@
 
 #include <ranges>
 #include <utility>
+#include <vector>
 
 #include "../types.h"
 #include "test_iterators.h"
