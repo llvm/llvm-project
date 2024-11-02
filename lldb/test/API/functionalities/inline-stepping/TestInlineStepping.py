@@ -291,7 +291,7 @@ class TestInlineStepping(TestBase):
         break_1_in_main = target.BreakpointCreateBySourceRegex(
             "// At second call of caller_ref_1 in main.", self.main_source_spec
         )
-        self.assertTrue(break_1_in_main, VALID_BREAKPOINT)
+        self.assertGreater(break_1_in_main.GetNumLocations(), 0, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
         self.process = target.LaunchSimple(
@@ -316,6 +316,24 @@ class TestInlineStepping(TestBase):
             ["// At increment in caller_ref_2.", "over"],
         ]
         self.run_step_sequence(step_sequence)
+
+        # Now make sure that next to a virtual inlined call stack
+        # gets the call stack depth correct.
+        break_2_in_main = target.BreakpointCreateBySourceRegex(
+            "// Call max_value specialized", self.main_source_spec
+        )
+        self.assertGreater(break_2_in_main.GetNumLocations(), 0, VALID_BREAKPOINT)
+        threads = lldbutil.continue_to_breakpoint(self.process, break_2_in_main)
+        self.assertEqual(len(threads), 1, "Hit our second breakpoint")
+        self.assertEqual(threads[0].id, self.thread.id, "Stopped at right thread")
+        self.thread.StepOver()
+        frame_0 = self.thread.frames[0]
+        line_entry = frame_0.line_entry
+        self.assertEqual(line_entry.file.basename, self.main_source_spec.basename, "File matches")
+        target_line = line_number("calling.cpp", "// At caller_trivial_inline_1")
+        self.assertEqual(line_entry.line, target_line, "Lines match as well.")
+        
+        
 
     def step_in_template(self):
         """Use Python APIs to test stepping in to templated functions."""
