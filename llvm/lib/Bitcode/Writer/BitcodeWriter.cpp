@@ -849,6 +849,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_SANITIZE_NUMERICAL_STABILITY;
   case Attribute::SanitizeRealtime:
     return bitc::ATTR_KIND_SANITIZE_REALTIME;
+  case Attribute::SanitizeRealtimeUnsafe:
+    return bitc::ATTR_KIND_SANITIZE_REALTIME_UNSAFE;
   case Attribute::SpeculativeLoadHardening:
     return bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING;
   case Attribute::SwiftError:

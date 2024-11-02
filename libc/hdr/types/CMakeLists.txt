@@ -199,3 +199,30 @@ add_proxy_header_library(
     libc.include.setjmp
 )
 
+
+add_proxy_header_library(
+  struct_msghdr
+  HDRS
+    struct_msghdr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_msghdr
+    libc.include.sys_socket
+)
+
+add_proxy_header_library(
+  struct_sockaddr
+  HDRS
+    struct_sockaddr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_sockaddr
+    libc.include.sys_socket
+)
+
+add_proxy_header_library(
+  socklen_t
+  HDRS
+    socklen_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.socklen_t
+    libc.include.sys_socket
+)
